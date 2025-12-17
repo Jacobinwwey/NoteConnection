@@ -1,0 +1,60 @@
+{
+  "nodes": [
+    {
+      "id": "Concept A",
+      "label": "Concept A"
+    },
+    {
+      "id": "Concept B",
+      "label": "Concept B"
+    },
+    {
+      "id": "Concept C",
+      "label": "Concept C"
+    },
+    {
+      "id": "Concept D",
+      "label": "Concept D"
+    },
+    {
+      "id": "Empty Concept",
+      "label": "Empty Concept"
+    },
+    {
+      "id": "Special (Char) Concept",
+      "label": "Special (Char) Concept"
+    }
+  ],
+  "edges": [
+    {
+      "source": "Concept B",
+      "target": "Concept A",
+      "type": "keyword",
+      "weight": 1
+    },
+    {
+      "source": "Concept C",
+      "target": "Concept B",
+      "type": "keyword",
+      "weight": 1
+    },
+    {
+      "source": "Concept A",
+      "target": "Concept C",
+      "type": "keyword",
+      "weight": 1
+    },
+    {
+      "source": "Concept A",
+      "target": "Concept D",
+      "type": "keyword",
+      "weight": 1
+    },
+    {
+      "source": "Concept A",
+      "target": "Special (Char) Concept",
+      "type": "keyword",
+      "weight": 1
+    }
+  ]
+}
