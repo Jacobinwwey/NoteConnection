@@ -1,0 +1,2 @@
+src/frontend/graph_data.json filter=lfs diff=lfs merge=lfs -text
+src/frontend/data.js filter=lfs diff=lfs merge=lfs -text
