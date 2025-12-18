@@ -95,6 +95,19 @@ NoteConnection/
     ```
     然后打开显示的 URL (例如 `http://127.0.0.1:8080`)。
 
+## v0.1.1 独立构建器使用指南 (Independent Builder Usage - v0.1.1)
+
+此版本引入了不依赖外部 API 的独立 DAG 构建流程。
+
+1.  **生成数据 (Generate Data)**:
+    运行以下命令扫描 `testconcept` 目录并生成 `graph_data.json`：
+    ```bash
+    npx ts-node src/backend/build_dag.ts
+    ```
+
+2.  **查看图表 (View Graph)**:
+    确保启动了本地服务器（见上文），然后刷新浏览器页面。
+
 ## 当前功能 (Current Features)
 
 *   **摄取**: 扫描 Markdown 文件。

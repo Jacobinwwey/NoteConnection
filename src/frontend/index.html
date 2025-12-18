@@ -7,36 +7,63 @@
     <style>
         body { margin: 0; overflow: hidden; font-family: sans-serif; background-color: #f9f9f9; }
         #graph-container { width: 100vw; height: 100vh; }
-        .node circle { stroke: #fff; stroke-width: 1.5px; cursor: pointer; }
+        .node circle { stroke: #fff; stroke-width: 1.5px; cursor: pointer; transition: all 0.3s; }
+        .node circle:hover { stroke: #000; stroke-width: 2px; r: 8; }
         .node text { font-size: 10px; pointer-events: none; text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff; }
         .link { stroke: #999; stroke-opacity: 0.6; stroke-width: 1px; }
-        .tooltip { position: absolute; background: rgba(0,0,0,0.8); color: #fff; padding: 5px; border-radius: 4px; pointer-events: none; font-size: 12px; display: none; }
+        .tooltip { position: absolute; background: rgba(0,0,0,0.8); color: #fff; padding: 5px; border-radius: 4px; pointer-events: none; font-size: 12px; display: none; z-index: 10; }
+        
+        /* Legend / Controls */
+        #controls { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 5px; box-shadow: 0 0 5px rgba(0,0,0,0.2); }
     </style>
     <!-- D3.js V7 -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
+    <div id="controls">
+        <h3>NoteConnection</h3>
+        <p>Scroll to Zoom / Drag to Pan</p>
+        <p>滚动缩放 / 拖拽平移</p>
+    </div>
     <div id="graph-container"></div>
     <div id="tooltip" class="tooltip"></div>
 
     <script>
+        /**
+         * Load the graph data and initialize rendering.
+         * 加载图数据并初始化渲染。
+         */
         async function loadGraph() {
             try {
+                console.log("Fetching graph_data.json...");
                 const response = await fetch('./graph_data.json');
-                if (!response.ok) throw new Error("Failed to load graph_data.json");
+                if (!response.ok) throw new Error(`Failed to load graph_data.json: ${response.statusText}`);
+                
                 const data = await response.json();
+                console.log(`Data loaded: ${data.nodes.length} nodes, ${data.links.length} links`);
+                
                 renderGraph(data);
             } catch (error) {
                 console.error(error);
-                alert("Error loading graph data. Note: If opening locally, you must use a local server (e.g., 'npx http-server .') due to CORS restrictions.");
+                alert("Error loading graph data. Please ensure you are running a local server (e.g., 'npx http-server src/frontend').\n\n加载数据失败。请确保您正在运行本地服务器。");
             }
         }
 
+        /**
+         * Render the D3 Force Directed Graph.
+         * 渲染 D3 力导向图。
+         * @param {Object} data - The graph data {nodes, links}
+         */
         function renderGraph(data) {
             const width = window.innerWidth;
             const height = window.innerHeight;
 
-            // Zoom support
+            // Clear previous SVG if any
+            // 清除之前的 SVG（如果有）
+            d3.select("#graph-container").html("");
+
+            // Setup Zoom behavior
+            // 设置缩放行为
             const zoom = d3.zoom()
                 .scaleExtent([0.1, 8])
                 .on("zoom", (event) => {
@@ -46,11 +73,15 @@
             const svg = d3.select("#graph-container").append("svg")
                 .attr("width", width)
                 .attr("height", height)
-                .call(zoom);
+                .call(zoom)
+                .on("dblclick.zoom", null); // Disable double click zoom
 
+            // Main group for transformations
+            // 用于变换的主组
             const g = svg.append("g");
 
-            // Define Arrow Marker
+            // Define Arrow Marker for Directed Edges
+            // 为有向边定义箭头标记
             svg.append("defs").selectAll("marker")
                 .data(["end"])
                 .enter().append("marker")
@@ -65,23 +96,26 @@
                 .attr("d", "M0,-5L10,0L0,5")
                 .attr("fill", "#999");
 
-            // Force Simulation
+            // Initialize Force Simulation
+            // 初始化力模拟
             const simulation = d3.forceSimulation(data.nodes)
-                .force("link", d3.forceLink(data.edges).id(d => d.id).distance(100))
-                .force("charge", d3.forceManyBody().strength(-200))
+                .force("link", d3.forceLink(data.links).id(d => d.id).distance(100))
+                .force("charge", d3.forceManyBody().strength(-300))
                 .force("center", d3.forceCenter(width / 2, height / 2))
                 .force("collide", d3.forceCollide(20));
 
             // Render Links
+            // 渲染连接线
             const link = g.append("g")
                 .attr("class", "links")
                 .selectAll("line")
-                .data(data.edges)
+                .data(data.links)
                 .enter().append("line")
                 .attr("class", "link")
                 .attr("marker-end", "url(#arrow)");
 
             // Render Nodes
+            // 渲染节点
             const node = g.append("g")
                 .attr("class", "nodes")
                 .selectAll("g")
@@ -94,28 +128,39 @@
                     .on("end", dragended));
 
             // Node Circles
+            // 节点圆圈
             node.append("circle")
                 .attr("r", 5)
                 .attr("fill", "#69b3a2");
 
             // Node Labels
+            // 节点标签
             node.append("text")
                 .attr("dx", 8)
                 .attr("dy", ".35em")
-                .text(d => d.label);
+                .text(d => d.id); // Changed from d.label to d.id based on backend output
 
-            // Hover Tooltip
+            // Hover Tooltip Interaction
+            // 悬停提示框交互
             const tooltip = d3.select("#tooltip");
             node.on("mouseover", (event, d) => {
                 tooltip.style("display", "block")
                        .style("left", (event.pageX + 10) + "px")
                        .style("top", (event.pageY - 10) + "px")
-                       .html(`<strong>${d.label}</strong><br>ID: ${d.id}`);
+                       .html(`<strong>${d.id}</strong>`);
+                
+                // Highlight connected links
+                link.style('stroke', l => (l.source === d || l.target === d) ? '#555' : '#999')
+                    .style('stroke-opacity', l => (l.source === d || l.target === d) ? 1 : 0.1);
             }).on("mouseout", () => {
                 tooltip.style("display", "none");
+                // Reset links
+                link.style('stroke', '#999')
+                    .style('stroke-opacity', 0.6);
             });
 
-            // Simulation Tick
+            // Simulation Tick Update
+            // 模拟滴答更新
             simulation.on("tick", () => {
                 link
                     .attr("x1", d => d.source.x)
@@ -127,6 +172,8 @@
                     .attr("transform", d => `translate(${d.x},${d.y})`);
             });
 
+            // Drag Functions
+            // 拖拽函数
             function dragstarted(event, d) {
                 if (!event.active) simulation.alphaTarget(0.3).restart();
                 d.fx = d.x;
@@ -145,6 +192,7 @@
             }
         }
 
+        // Start the application
         loadGraph();
     </script>
 </body>
