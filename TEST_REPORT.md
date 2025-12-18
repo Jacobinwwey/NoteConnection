@@ -121,3 +121,34 @@ v0.1.1 版本的独立构建器已成功实现并验证。它为后续的算法�
 
 ## 4. Conclusion
 The v0.1.1 independent builder is successfully implemented and verified. It provides a solid data foundation and visualization platform for upcoming algorithmic optimizations (Cycle Detection, Hybrid Inference).
+
+---
+
+### 2025-12-18 v0.1.2 - In/Out-Degree Visualization Test
+
+## 1. Test Environment
+*   **Backend**: Updated `src/backend/build_dag.ts` with degree calculation.
+*   **Frontend**: Updated `src/frontend/index.html` with filters and highlighting logic.
+*   **Data**: `graph_data.json` regenerated from `testconcept/`.
+
+## 2. Test Execution Summary
+
+| Feature | Action | Result | Status |
+| :--- | :--- | :--- | :--- |
+| **Data Integrity** | Inspect `graph_data.json`. | Nodes contain `inDegree` and `outDegree` integers. | ✅ PASS |
+| **Tooltip Display** | Hover over a node in UI. | Tooltip shows "In-Degree: X, Out-Degree: Y". | ✅ PASS |
+| **Visual Separation** | Hover over a node (Filter: "All"). | Incoming edges turn Orange, Outgoing edges turn Blue. Arrowheads match color. | ✅ PASS |
+| **Filter Logic (In)** | Set Filter to "In-Degree Only". Hover node. | Only Orange (incoming) edges are visible. Outgoing are hidden/dimmed. | ✅ PASS |
+| **Filter Logic (Out)** | Set Filter to "Out-Degree Only". Hover node. | Only Blue (outgoing) edges are visible. Incoming are hidden/dimmed. | ✅ PASS |
+
+## 3. Observations
+*   **Usability**: The separation of colors (Orange vs. Blue) significantly improves the readability of the graph, especially for "hub" nodes with many connections.
+*   **Data Insight**: Immediately reveals which concepts are "Fundamental" (High Out-degree, Low In-degree in this context) vs. "Integrative" (High In-degree).
+    *   *Note*: Directionality assumption (Mentioner -> Mentioned) means "Fundamental" nodes are actually pointed *to* by many files (High In-degree).
+    *   *Correction*: In current logic, `A` mentions `B` creates `B -> A`.
+        *   `B` (Fundamental) is source. `A` (Derived) is target.
+        *   So Fundamental Concept = High Out-Degree (Source of many edges).
+        *   Derived Concept = High In-Degree (Target of many edges).
+
+## 4. Conclusion
+v0.1.2 successfully implements degree visualization and filtering, meeting the user requirements for distinct UI operations.
