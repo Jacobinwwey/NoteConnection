@@ -114,6 +114,18 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 8.  **Testing**: Functional testing after each stage, updated to `TEST_REPORT.md` (Bilingual).
 9.  **Git**: Backup before modifications. No new branches.
 
+### 2025-12-18 v0.1.2 - In-Degree/Out-Degree Visualization
+
+**Objective**: Enhance the UI to clearly distinguish and filter between in-degree (prerequisites) and out-degree (derived concepts).
+
+**Requirements**:
+1.  **Backend**: Calculate `inDegree` and `outDegree` for each node during the build process and include it in `graph_data.json`.
+2.  **Frontend Visualization**:
+    *   **Visual Distinction**: Use distinct colors or styles for incoming vs. outgoing edges when a node is highlighted.
+    *   **Tooltip**: Display degree counts (e.g., "In: 2, Out: 5").
+    *   **Controls**: Add UI controls to filter view (e.g., "Show Incoming Only", "Show Outgoing Only", "Show All").
+3.  **Documentation**: Update `Interface Document.md` to reflect the new data structure fields.
+
 ---
 ---
 
@@ -230,3 +242,531 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 7.  **一致性**: 更改后更新 `Interface Document.md`、`README.md`、`TODO.md`。
 8.  **测试**: 每个阶段后进行功能测试，更新至 `TEST_REPORT.md`（双语）。
 9.  **Git**: 修改前备份。不创建新分支。
+
+### 2025-12-18 v0.1.2 - 入度/出度可视化
+
+**目标**: 增强用户界面，以清晰区分和过滤入度（先决条件）和出度（派生概念）。
+
+**要求**:
+1.  **后端**: 在构建过程中计算每个节点的 `inDegree` 和 `outDegree`，并将其包含在 `graph_data.json` 中。
+2.  **前端可视化**:
+    *   **视觉区分**: 节点高亮时，使用不同的颜色或样式区分传入与传出的边。
+    *   **Tooltip**: 显示度数计数（例如“入: 2, 出: 5”）。
+    *   **控件**: 添加 UI 控件以过滤视图（例如“仅显示传入”、“仅显示传出”、“显示全部”）。
+3.  **文档**: 更新 `Interface Document.md` 以反映新的数据结构字段。
+
+---
+---
+
+# 项目构建计划：渐进式层级知识图谱
+
+本文档概述了构建 `NoteConnection` 的路线图，该系统能够将数万个知识点可视化为有向无环图 (DAG)，重点突出层级关系和学习路径。
+
+---
+
+### 2025-12-17 v0.1.0 - 基础与数据结构 (Foundation & Data Structures)
+
+**目标**: 建立独立的项目环境和有向图的核心数据结构，初期独立于特定的笔记应用 API。
+
+- [ ] **项目初始化**
+    - 在 `NoteConnection` 中初始化一个新的 TypeScript/Node.js 项目。
+    - 配置 ESLint, Prettier 和 Jest 用于测试。
+
+- [ ] **图核心实现**
+    - 实现支持元数据（如 `rank`, `clusterId`）的 `Node` 和 `Edge` 接口。
+    - 实现 `Graph` 类，包含方法：`addNode`, `addEdge`, `getNeighbors`, `getIncomingEdges`, `getOutgoingEdges`。
+
+### 2026-01-15 v0.2.0 - 数据摄取与定向解析 (Data Ingestion & Directional Parsing)
+
+**目标**: 从 Markdown 文件中摄取数据，专门解析 Frontmatter 中的定向依赖关系。
+
+- [ ] **Markdown 解析服务**
+    - 实现文件系统读取器以递归扫描目录。
+    - 创建基于正则或 AST 的解析器以提取 YAML Frontmatter。
+
+- [ ] **依赖提取**
+    - 定义模式：`prerequisites: [[Note A]]`, `next: [[Note B]]`。
+    - 将这些元数据字段转换为 `Graph` 对象中的有向边的逻辑。
+
+### 2026-02-01 v0.3.0 - 算法核心 (DAG 逻辑) (Algorithmic Core)
+
+**目标**: 确保图是有效的 DAG 并计算层级布局位置。
+
+- [ ] **循环检测与解决**
+    - 实现基于 DFS 的循环检测。
+    - 策略：向用户报告循环或自动打破循环（例如，删除指向最深节点的边）。
+
+- [ ] **拓扑排序与排名**
+    - 实现算法为每个节点分配 `rank` (0, 1, 2...)。
+    - 确保没有依赖关系的节点为 Rank 0。
+
+### 2026-03-01 v0.4.0 - 可视化引擎 (Visualization Engine)
+
+**目标**: 使用分层布局引擎在 Web 视图中渲染处理后的图。
+
+- [ ] **布局引擎集成**
+    - 评估并集成 `d3-dag` or `dagre` 用于坐标计算 (x, y)。
+    - 将 `Graph` 节点/边映射到布局引擎的输入格式。
+
+- [ ] **Canvas/SVG 渲染**
+    - 开发前端组件 (React/Vue/Vanilla) 来绘制计算出的图。
+    - 为依赖关系绘制弯曲的贝塞尔线，以清晰指示流向。
+
+### 2026-04-01 v0.5.0 - 可扩展性 (聚类) (Scalability)
+
+**目标**: 通过将节点分组为高级聚类来处理 10,000+ 节点。
+
+- [ ] **聚类算法**
+    - 实现基于文件夹路径的分组逻辑（例如 "Physics/Mechanics" -> 聚类 "Mechanics"）。
+    - 可选：用于基于标签的聚类的 Louvain 社区检测。
+
+- [ ] **语义缩放/向下钻取**
+    - 在低缩放级别渲染“超级节点”（聚类）。
+    - 点击聚类时展开显示详细的依赖图。
+
+### 2026-05-01 v0.6.0 - 混合推断策略 (AI 与统计) (Hybrid Inference Strategy)
+
+**目标**: 结合统计和向量化方法，在缺乏显式元数据的情况下推断依赖关系和关联。
+
+- [ ] **基于向量的关联 (相似度)**
+    - 实现嵌入生成（使用类似于 `obsidian-smart-connections` 的本地模型或 API）。
+    - 使用余弦相似度确定概念之间**关联**（无向关系）的强度。
+
+- [ ] **统计依赖推断**
+    - 计算笔记语料库中的**共现频率**和**条件概率** ($P(B|A)$)。
+    - 假设：如果 A 经常出现在 B 之前或在定义 B 的上下文中，则 A 可能是依赖项。
+
+- [ ] **混合判断引擎**
+    - 结合向量相似度（用于相关性）+ 统计概率（用于方向）+ LLM 验证（用于最终检查）。
+    - 规则：如果 `Similarity(A, B) > Threshold` 且 `P(B|A) >> P(A|B)`，则建议边 `A -> B`。
+
+- [ ] **AI 推断服务 (LLM 验证)**
+    - 使用 LLM 验证来自混合引擎的高置信度候选项。
+    - 任务：“给定统计证据，确认 A 是否为 B 的先决条件。”
+
+### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
+
+**目标**: 完成与 Joplin/Obsidian 插件的集成并打磨用户体验。
+
+- [ ] **插件封装**
+    - 将 `NoteConnection` 核心逻辑封装为 Joplin 插件和 Obsidian 插件。
+
+- [ ] **用户设置与文档**
+    - 确定配置选项（颜色、排除规则）。
+    - 发布用户手册。
+
+### 2025-12-18 v0.1.1 - 指令：测试概念的 DAG 构建
+
+**参考**: `analysis.md` 中对 `E:\Knowledge_project\ref` 的分析。
+
+**目标**: 继续开发 `NoteConnection`，为 `E:\Knowledge_project\NoteConnection\testconcept` 中的概念构建 DAG。
+
+**要求**:
+1.  **独立项目**: 不依赖特定的软件平台。
+2.  **架构**: HTML 可视化；后端处理与前端显示分离。
+3.  **代码质量**: 健壮、可解释，**双语注释（中/英）**。
+4.  **无 LLM**: 优先考虑系统工程设计，而非 LLM API。
+5.  **接口文档**: 维护 `Interface Document.md`，清晰说明输入/输出。
+6.  **文档格式**: Markdown。结构：“时间 和 版本号 - 英文 - 中文”。
+7.  **一致性**: 更改后更新 `Interface Document.md`、`README.md`、`TODO.md`。
+8.  **测试**: 每个阶段后进行功能测试，更新至 `TEST_REPORT.md`（双语）。
+9.  **Git**: 修改前备份。不创建新分支。
+
+### 2025-12-18 v0.1.2 - 入度/出度可视化
+
+**目标**: 增强用户界面，以清晰区分和过滤入度（先决条件）和出度（派生概念）。
+
+**要求**:
+1.  **后端**: 在构建过程中计算每个节点的 `inDegree` 和 `outDegree`，并将其包含在 `graph_data.json` 中。
+2.  **前端可视化**:
+    *   **视觉区分**: 节点高亮时，使用不同的颜色或样式区分传入与传出的边。
+    *   **Tooltip**: 显示度数计数（例如“入: 2, 出: 5”）。
+    *   **控件**: 添加 UI 控件以过滤视图（例如“仅显示传入”、“仅显示传出”、“显示全部”）。
+3.  **文档**: 更新 `Interface Document.md` 以反映新的数据结构字段。
+
+---
+---
+
+# 项目构建计划：渐进式层级知识图谱
+
+本文档概述了构建 `NoteConnection` 的路线图，该系统能够将数万个知识点可视化为有向无环图 (DAG)，重点突出层级关系和学习路径。
+
+---
+
+### 2025-12-17 v0.1.0 - 基础与数据结构 (Foundation & Data Structures)
+
+**目标**: 建立独立的项目环境和有向图的核心数据结构，初期独立于特定的笔记应用 API。
+
+- [ ] **项目初始化**
+    - 在 `NoteConnection` 中初始化一个新的 TypeScript/Node.js 项目。
+    - 配置 ESLint, Prettier 和 Jest 用于测试。
+
+- [ ] **图核心实现**
+    - 实现支持元数据（如 `rank`, `clusterId`）的 `Node` 和 `Edge` 接口。
+    - 实现 `Graph` 类，包含方法：`addNode`, `addEdge`, `getNeighbors`, `getIncomingEdges`, `getOutgoingEdges`。
+
+### 2026-01-15 v0.2.0 - 数据摄取与定向解析 (Data Ingestion & Directional Parsing)
+
+**目标**: 从 Markdown 文件中摄取数据，专门解析 Frontmatter 中的定向依赖关系。
+
+- [ ] **Markdown 解析服务**
+    - 实现文件系统读取器以递归扫描目录。
+    - 创建基于正则或 AST 的解析器以提取 YAML Frontmatter。
+
+- [ ] **依赖提取**
+    - 定义模式：`prerequisites: [[Note A]]`, `next: [[Note B]]`。
+    - 将这些元数据字段转换为 `Graph` 对象中的有向边的逻辑。
+
+### 2026-02-01 v0.3.0 - 算法核心 (DAG 逻辑) (Algorithmic Core)
+
+**目标**: 确保图是有效的 DAG 并计算层级布局位置。
+
+- [ ] **循环检测与解决**
+    - 实现基于 DFS 的循环检测。
+    - 策略：向用户报告循环或自动打破循环（例如，删除指向最深节点的边）。
+
+- [ ] **拓扑排序与排名**
+    - 实现算法为每个节点分配 `rank` (0, 1, 2...)。
+    - 确保没有依赖关系的节点为 Rank 0。
+
+### 2026-03-01 v0.4.0 - 可视化引擎 (Visualization Engine)
+
+**目标**: 使用分层布局引擎在 Web 视图中渲染处理后的图。
+
+- [ ] **布局引擎集成**
+    - 评估并集成 `d3-dag` or `dagre` 用于坐标计算 (x, y)。
+    - 将 `Graph` 节点/边映射到布局引擎的输入格式。
+
+- [ ] **Canvas/SVG 渲染**
+    - 开发前端组件 (React/Vue/Vanilla) 来绘制计算出的图。
+    - 为依赖关系绘制弯曲的贝塞尔线，以清晰指示流向。
+
+### 2026-04-01 v0.5.0 - 可扩展性 (聚类) (Scalability)
+
+**目标**: 通过将节点分组为高级聚类来处理 10,000+ 节点。
+
+- [ ] **聚类算法**
+    - 实现基于文件夹路径的分组逻辑（例如 "Physics/Mechanics" -> 聚类 "Mechanics"）。
+    - 可选：用于基于标签的聚类的 Louvain 社区检测。
+
+- [ ] **语义缩放/向下钻取**
+    - 在低缩放级别渲染“超级节点”（聚类）。
+    - 点击聚类时展开显示详细的依赖图。
+
+### 2026-05-01 v0.6.0 - 混合推断策略 (AI 与统计) (Hybrid Inference Strategy)
+
+**目标**: 结合统计和向量化方法，在缺乏显式元数据的情况下推断依赖关系和关联。
+
+- [ ] **基于向量的关联 (相似度)**
+    - 实现嵌入生成（使用类似于 `obsidian-smart-connections` 的本地模型或 API）。
+    - 使用余弦相似度确定概念之间**关联**（无向关系）的强度。
+
+- [ ] **统计依赖推断**
+    - 计算笔记语料库中的**共现频率**和**条件概率** ($P(B|A)$)。
+    - 假设：如果 A 经常出现在 B 之前或在定义 B 的上下文中，则 A 可能是依赖项。
+
+- [ ] **混合判断引擎**
+    - 结合向量相似度（用于相关性）+ 统计概率（用于方向）+ LLM 验证（用于最终检查）。
+    - 规则：如果 `Similarity(A, B) > Threshold` 且 `P(B|A) >> P(A|B)`，则建议边 `A -> B`。
+
+- [ ] **AI 推断服务 (LLM 验证)**
+    - 使用 LLM 验证来自混合引擎的高置信度候选项。
+    - 任务：“给定统计证据，确认 A 是否为 B 的先决条件。”
+
+### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
+
+**目标**: 完成与 Joplin/Obsidian 插件的集成并打磨用户体验。
+
+- [ ] **插件封装**
+    - 将 `NoteConnection` 核心逻辑封装为 Joplin 插件和 Obsidian 插件。
+
+- [ ] **用户设置与文档**
+    - 确定配置选项（颜色、排除规则）。
+    - 发布用户手册。
+
+### 2025-12-18 v0.1.1 - 指令：测试概念的 DAG 构建
+
+**参考**: `analysis.md` 中对 `E:\Knowledge_project\ref` 的分析。
+
+**目标**: 继续开发 `NoteConnection`，为 `E:\Knowledge_project\NoteConnection\testconcept` 中的概念构建 DAG。
+
+**要求**:
+1.  **独立项目**: 不依赖特定的软件平台。
+2.  **架构**: HTML 可视化；后端处理与前端显示分离。
+3.  **代码质量**: 健壮、可解释，**双语注释（中/英）**。
+4.  **无 LLM**: 优先考虑系统工程设计，而非 LLM API。
+5.  **接口文档**: 维护 `Interface Document.md`，清晰说明输入/output。
+6.  **文档格式**: Markdown。结构：“时间 和 版本号 - 英文 - 中文”。
+7.  **一致性**: 更改后更新 `Interface Document.md`、`README.md`、`TODO.md`。
+8.  **测试**: 每个阶段后进行功能测试，更新至 `TEST_REPORT.md`（双语）。
+9.  **Git**: 修改前备份。不创建新分支。
+
+### 2025-12-18 v0.1.2 - 入度/出度可视化
+
+**目标**: 增强用户界面，以清晰区分和过滤入度（先决条件）和出度（派生概念）。
+
+**要求**:
+1.  **后端**: 在构建过程中计算每个节点的 `inDegree` 和 `outDegree`，并将其包含在 `graph_data.json` 中。
+2.  **前端可视化**:
+    *   **视觉区分**: 节点高亮时，使用不同的颜色或样式区分传入与传出的边。
+    *   **Tooltip**: 显示度数计数（例如“入: 2, 出: 5”）。
+    *   **控件**: 添加 UI 控件以过滤视图（例如“仅显示传入”、“仅显示传出”、“显示全部”）。
+3.  **文档**: 更新 `Interface Document.md` 以反映新的数据结构字段。
+
+---
+---
+
+# 项目构建计划：渐进式层级知识图谱
+
+本文档概述了构建 `NoteConnection` 的路线图，该系统能够将数万个知识点可视化为有向无环图 (DAG)，重点突出层级关系和学习路径。
+
+---
+
+### 2025-12-17 v0.1.0 - 基础与数据结构 (Foundation & Data Structures)
+
+**目标**: 建立独立的项目环境和有向图的核心数据结构，初期独立于特定的笔记应用 API。
+
+- [ ] **项目初始化**
+    - 在 `NoteConnection` 中初始化一个新的 TypeScript/Node.js 项目。
+    - 配置 ESLint, Prettier 和 Jest 用于测试。
+
+- [ ] **图核心实现**
+    - 实现支持元数据（如 `rank`, `clusterId`）的 `Node` 和 `Edge` 接口。
+    - 实现 `Graph` 类，包含方法：`addNode`, `addEdge`, `getNeighbors`, `getIncomingEdges`, `getOutgoingEdges`。
+
+### 2026-01-15 v0.2.0 - 数据摄取与定向解析 (Data Ingestion & Directional Parsing)
+
+**目标**: 从 Markdown 文件中摄取数据，专门解析 Frontmatter 中的定向依赖关系。
+
+- [ ] **Markdown 解析服务**
+    - 实现文件系统读取器以递归扫描目录。
+    - 创建基于正则或 AST 的解析器以提取 YAML Frontmatter。
+
+- [ ] **依赖提取**
+    - 定义模式：`prerequisites: [[Note A]]`, `next: [[Note B]]`。
+    - 将这些元数据字段转换为 `Graph` 对象中的有向边的逻辑。
+
+### 2026-02-01 v0.3.0 - 算法核心 (DAG 逻辑) (Algorithmic Core)
+
+**目标**: 确保图是有效的 DAG 并计算层级布局位置。
+
+- [ ] **循环检测与解决**
+    - 实现基于 DFS 的循环检测。
+    - 策略：向用户报告循环或自动打破循环（例如，删除指向最深节点的边）。
+
+- [ ] **拓扑排序与排名**
+    - 实现算法为每个节点分配 `rank` (0, 1, 2...)。
+    - 确保没有依赖关系的节点为 Rank 0。
+
+### 2026-03-01 v0.4.0 - 可视化引擎 (Visualization Engine)
+
+**目标**: 使用分层布局引擎在 Web 视图中渲染处理后的图。
+
+- [ ] **布局引擎集成**
+    - 评估并集成 `d3-dag` or `dagre` 用于坐标计算 (x, y)。
+    - 将 `Graph` 节点/边映射到布局引擎的输入格式。
+
+- [ ] **Canvas/SVG 渲染**
+    - 开发前端组件 (React/Vue/Vanilla) 来绘制计算出的图。
+    - 为依赖关系绘制弯曲的贝塞尔线，以清晰指示流向。
+
+### 2026-04-01 v0.5.0 - 可扩展性 (聚类) (Scalability)
+
+**目标**: 通过将节点分组为高级聚类来处理 10,000+ 节点。
+
+- [ ] **聚类算法**
+    - 实现基于文件夹路径的分组逻辑（例如 "Physics/Mechanics" -> 聚类 "Mechanics"）。
+    - 可选：用于基于标签的聚类的 Louvain 社区检测。
+
+- [ ] **语义缩放/向下钻取**
+    - 在低缩放级别渲染“超级节点”（聚类）。
+    - 点击聚类时展开显示详细的依赖图。
+
+### 2026-05-01 v0.6.0 - 混合推断策略 (AI 与统计) (Hybrid Inference Strategy)
+
+**目标**: 结合统计和向量化方法，在缺乏显式元数据的情况下推断依赖关系和关联。
+
+- [ ] **基于向量的关联 (Similarity)**
+    - 实现嵌入生成（使用类似于 `obsidian-smart-connections` 的本地模型或 API）。
+    - 使用余弦相似度确定概念之间**关联**（无向关系）的强度。
+
+- [ ] **统计依赖推断**
+    - 计算笔记语料库中的**共现频率**和**条件概率** ($P(B|A)$)。
+    - 假设：如果 A 经常出现在 B 之前或在定义 B 的上下文中，则 A 可能是依赖项。
+
+- [ ] **混合判断引擎**
+    - 结合向量相似度（用于相关性）+ 统计概率（用于方向）+ LLM 验证（用于最终检查）。
+    - 规则：如果 `Similarity(A, B) > Threshold` 且 `P(B|A) >> P(A|B)`，则建议边 `A -> B`。
+
+- [ ] **AI 推断服务 (LLM 验证)**
+    - 使用 LLM 验证来自混合引擎的高置信度候选项。
+    - 任务：“给定统计证据，确认 A 是否为 B 的先决条件。”
+
+### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
+
+**目标**: 完成与 Joplin/Obsidian 插件的集成并打磨用户体验。
+
+- [ ] **插件封装**
+    - 将 `NoteConnection` 核心逻辑封装为 Joplin 插件和 Obsidian 插件。
+
+- [ ] **用户设置与文档**
+    - 确定配置选项（颜色、排除规则）。
+    - 发布用户手册。
+
+### 2025-12-18 v0.1.1 - 指令：测试概念的 DAG 构建
+
+**参考**: `analysis.md` 中对 `E:\Knowledge_project\ref` 的分析。
+
+**目标**: 继续开发 `NoteConnection`，为 `E:\Knowledge_project\NoteConnection\testconcept` 中的概念构建 DAG。
+
+**要求**:
+1.  **独立项目**: 不依赖特定的软件平台。
+2.  **架构**: HTML 可视化；后端处理与前端显示分离。
+3.  **代码质量**: 健壮、可解释，**双语注释（中/英）**。
+4.  **无 LLM**: 优先考虑系统工程设计，而非 LLM API。
+5.  **接口文档**: 维护 `Interface Document.md`，清晰说明输入/output。
+6.  **文档格式**: Markdown。结构：“时间 和 版本号 - 英文 - 中文”。
+7.  **一致性**: 更改后更新 `Interface Document.md`、`README.md`、`TODO.md`。
+8.  **测试**: 每个阶段后进行功能测试，更新至 `TEST_REPORT.md`（双语）。
+9.  **Git**: 修改前备份。不创建新分支。
+
+### 2025-12-18 v0.1.2 - 入度/出度可视化
+
+**目标**: 增强用户界面，以清晰区分和过滤入度（先决条件）和出度（派生概念）。
+
+**要求**:
+1.  **后端**: 在构建过程中计算每个节点的 `inDegree` 和 `outDegree`，并将其包含在 `graph_data.json` 中。
+2.  **前端可视化**:
+    *   **视觉区分**: 节点高亮时，使用不同的颜色或样式区分传入与传出的边。
+    *   **Tooltip**: 显示度数计数（例如“入: 2, 出: 5”）。
+    *   **控件**: 添加 UI 控件以过滤视图（例如“仅显示传入”、“仅显示传出”、“显示全部”）。
+3.  **文档**: 更新 `Interface Document.md` 以反映新的数据结构字段。
+
+---
+---
+
+# 项目构建计划：渐进式层级知识图谱
+
+本文档概述了构建 `NoteConnection` 的路线图，该系统能够将数万个知识点可视化为有向无环图 (DAG)，重点突出层级关系和学习路径。
+
+---
+
+### 2025-12-17 v0.1.0 - 基础与数据结构 (Foundation & Data Structures)
+
+**目标**: 建立独立的项目环境和有向图的核心数据结构，初期独立于特定的笔记应用 API。
+
+- [ ] **项目初始化**
+    - 在 `NoteConnection` 中初始化一个新的 TypeScript/Node.js 项目。
+    - 配置 ESLint, Prettier 和 Jest 用于测试。
+
+- [ ] **图核心实现**
+    - 实现支持元数据（如 `rank`, `clusterId`）的 `Node` 和 `Edge` 接口。
+    - 实现 `Graph` 类，包含方法：`addNode`, `addEdge`, `getNeighbors`, `getIncomingEdges`, `getOutgoingEdges`。
+
+### 2026-01-15 v0.2.0 - 数据摄取与定向解析 (Data Ingestion & Directional Parsing)
+
+**目标**: 从 Markdown 文件中摄取数据，专门解析 Frontmatter 中的定向依赖关系。
+
+- [ ] **Markdown 解析服务**
+    - 实现文件系统读取器以递归扫描目录。
+    - 创建基于正则或 AST 的解析器以提取 YAML Frontmatter。
+
+- [ ] **依赖提取**
+    - 定义模式：`prerequisites: [[Note A]]`, `next: [[Note B]]`。
+    - 将这些元数据字段转换为 `Graph` 对象中的有向边的逻辑。
+
+### 2026-02-01 v0.3.0 - 算法核心 (DAG 逻辑) (Algorithmic Core)
+
+**目标**: 确保图是有效的 DAG 并计算层级布局位置。
+
+- [ ] **循环检测与解决**
+    - 实现基于 DFS 的循环检测。
+    - 策略：向用户报告循环或自动打破循环（例如，删除指向最深节点的边）。
+
+- [ ] **拓扑排序与排名**
+    - 实现算法为每个节点分配 `rank` (0, 1, 2...)。
+    - 确保没有依赖关系的节点为 Rank 0。
+
+### 2026-03-01 v0.4.0 - 可视化引擎 (Visualization Engine)
+
+**目标**: 使用分层布局引擎在 Web 视图中渲染处理后的图。
+
+- [ ] **布局引擎集成**
+    - 评估并集成 `d3-dag` or `dagre` 用于坐标计算 (x, y)。
+    - 将 `Graph` 节点/边映射到布局引擎的输入格式。
+
+- [ ] **Canvas/SVG 渲染**
+    - 开发前端组件 (React/Vue/Vanilla) 来绘制计算出的图。
+    - 为依赖关系绘制弯曲的贝塞尔线，以清晰指示流向。
+
+### 2026-04-01 v0.5.0 - 可扩展性 (聚类) (Scalability)
+
+**目标**: 通过将节点分组为高级聚类来处理 10,000+ 节点。
+
+- [ ] **聚类算法**
+    - 实现基于文件夹路径的分组逻辑（例如 "Physics/Mechanics" -> 聚类 "Mechanics"）。
+    - 可选：用于基于标签的聚类的 Louvain 社区检测。
+
+- [ ] **语义缩放/向下钻取**
+    - 在低缩放级别渲染“超级节点”（聚类）。
+    - 点击聚类时展开显示详细的依赖图。
+
+### 2026-05-01 v0.6.0 - 混合推断策略 (AI 与统计) (Hybrid Inference Strategy)
+
+**目标**: 结合统计和向量化方法，在缺乏显式元数据的情况下推断依赖关系和关联。
+
+- [ ] **基于向量的关联 (Similarity)**
+    - 实现嵌入生成（使用类似于 `obsidian-smart-connections` 的本地模型或 API）。
+    - 使用余弦相似度确定概念之间**关联**（无向关系）的强度。
+
+- [ ] **统计依赖推断**
+    - 计算笔记语料库中的**共现频率**和**条件概率** ($P(B|A)$)。
+    - 假设：如果 A 经常出现在 B 之前或在定义 B 的上下文中，则 A 可能是依赖项。
+
+- [ ] **混合判断引擎**
+    - 结合向量相似度（用于相关性）+ 统计概率（用于方向）+ LLM 验证（用于最终检查）。
+    - 规则：如果 `Similarity(A, B) > Threshold` 且 `P(B|A) >> P(A|B)`，则建议边 `A -> B`。
+
+- [ ] **AI 推断服务 (LLM 验证)**
+    - 使用 LLM 验证来自混合引擎的高置信度候选项。
+    - 任务：“给定统计证据，确认 A 是否为 B 的先决条件。”
+
+### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
+
+**目标**: 完成与 Joplin/Obsidian 插件的集成并打磨用户体验。
+
+- [ ] **插件封装**
+    - 将 `NoteConnection` 核心逻辑封装为 Joplin 插件和 Obsidian 插件。
+
+- [ ] **用户设置与文档**
+    - 确定配置选项（颜色、排除规则）。
+    - 发布用户手册。
+
+### 2025-12-18 v0.1.1 - 指令：测试概念的 DAG 构建
+
+**参考**: `analysis.md` 中对 `E:\Knowledge_project\ref` 的分析。
+
+**目标**: 继续开发 `NoteConnection`，为 `E:\Knowledge_project\NoteConnection\testconcept` 中的概念构建 DAG。
+
+**要求**:
+1.  **独立项目**: 不依赖特定的软件平台。
+2.  **架构**: HTML 可视化；后端处理与前端显示分离。
+3.  **代码质量**: 健壮、可解释，**双语注释（中/英）**。
+4.  **无 LLM**: 优先考虑系统工程设计，而非 LLM API。
+5.  **接口文档**: 维护 `Interface Document.md`，清晰说明输入/output。
+6.  **文档格式**: Markdown。结构：“时间 和 版本号 - 英文 - 中文”。
+7.  **一致性**: 更改后更新 `Interface Document.md`、`README.md`、`TODO.md`。
+8.  **测试**: 每个阶段后进行功能测试，更新至 `TEST_REPORT.md`（双语）。
+9.  **Git**: 修改前备份。不创建新分支。
+
+### 2025-12-18 v0.1.2 - 入度/出度可视化
+
+**目标**: 增强用户界面，以清晰区分和过滤入度（先决条件）和出度（派生概念）。
+
+**要求**:
+1.  **后端**: 在构建过程中计算每个节点的 `inDegree` 和 `outDegree`，并将其包含在 `graph_data.json` 中。
+2.  **前端可视化**:
+    *   **视觉区分**: 节点高亮时，使用不同的颜色或样式区分传入与传出的边。
+    *   **Tooltip**: 显示度数计数（例如“入: 2, 出: 5”）。
+    *   **控件**: 添加 UI 控件以过滤视图（例如“仅显示传入”、“仅显示传出”、“显示全部”）。
+3.  **文档**: 更新 `Interface Document.md` 以反映新的数据结构字段。

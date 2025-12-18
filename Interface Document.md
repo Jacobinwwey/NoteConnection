@@ -214,6 +214,10 @@ Renders the JSON data into an interactive DAG.
     *   **Sugiyama Layout**: 分层可视化。
     *   **Zoom/Pan**: D3 缩放行为。
     *   **Tooltip**: 悬停时显示节点详情。
+    *   **Degree Analysis (v0.1.2)**:
+        *   **In-degree**: 显示入度（作为先决条件被引用的次数）。
+        *   **Out-degree**: 显示出度（引用的先决条件数量）。
+        *   **Visual Filters**: 支持单独查看入度或出度连接。
 
 ---
 
@@ -278,6 +282,8 @@ Renders the JSON data into an interactive DAG.
     interface D3Node {
         id: string;
         group: number; // 基于聚类或目录
+        inDegree: number;  // 入度
+        outDegree: number; // 出度
     }
 
     interface D3Link {

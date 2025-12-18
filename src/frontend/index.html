@@ -10,60 +10,87 @@
         .node circle { stroke: #fff; stroke-width: 1.5px; cursor: pointer; transition: all 0.3s; }
         .node circle:hover { stroke: #000; stroke-width: 2px; r: 8; }
         .node text { font-size: 10px; pointer-events: none; text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff; }
-        .link { stroke: #999; stroke-opacity: 0.6; stroke-width: 1px; }
-        .tooltip { position: absolute; background: rgba(0,0,0,0.8); color: #fff; padding: 5px; border-radius: 4px; pointer-events: none; font-size: 12px; display: none; z-index: 10; }
+        .link { stroke: #999; stroke-opacity: 0.6; stroke-width: 1px; transition: stroke 0.3s, stroke-opacity 0.3s; }
+        .tooltip { position: absolute; background: rgba(0,0,0,0.8); color: #fff; padding: 8px; border-radius: 4px; pointer-events: none; font-size: 12px; display: none; z-index: 10; line-height: 1.4; }
         
         /* Legend / Controls */
-        #controls { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 5px; box-shadow: 0 0 5px rgba(0,0,0,0.2); }
+        #controls { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 220px; }
+        h3 { margin-top: 0; margin-bottom: 10px; font-size: 16px; color: #333; }
+        .control-group { margin-bottom: 10px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; color: #555; }
+        select { width: 100%; padding: 5px; border-radius: 4px; border: 1px solid #ddd; }
+        
+        /* Highlight Styles */
+        .link.incoming { stroke: #ff7f0e !important; stroke-opacity: 1 !important; stroke-width: 2px !important; } /* Orange */
+        .link.outgoing { stroke: #1f77b4 !important; stroke-opacity: 1 !important; stroke-width: 2px !important; } /* Blue */
+        .link.dimmed { stroke-opacity: 0.05 !important; }
+        .node.dimmed { opacity: 0.2; }
+        
+        .legend-item { display: flex; align-items: center; margin-bottom: 4px; font-size: 12px; }
+        .legend-color { width: 12px; height: 12px; margin-right: 8px; border-radius: 2px; }
     </style>
     <!-- D3.js V7 -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
     <div id="controls">
-        <h3>NoteConnection</h3>
-        <p>Scroll to Zoom / Drag to Pan</p>
-        <p>滚动缩放 / 拖拽平移</p>
+        <h3>NoteConnection v0.1.2</h3>
+        <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
+            Scroll to Zoom / Drag to Pan<br>
+            滚动缩放 / 拖拽平移
+        </p>
+
+        <div class="control-group">
+            <label>Connection Filter (连接过滤)</label>
+            <select id="filter-mode">
+                <option value="all">Show All (显示全部)</option>
+                <option value="in">In-Degree Only (仅入度/来源)</option>
+                <option value="out">Out-Degree Only (仅出度/去向)</option>
+            </select>
+        </div>
+
+        <div style="border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px;">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ff7f0e;"></div>
+                <span>Incoming (来源/入度)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #1f77b4;"></div>
+                <span>Outgoing (去向/出度)</span>
+            </div>
+        </div>
     </div>
+
     <div id="graph-container"></div>
     <div id="tooltip" class="tooltip"></div>
 
     <script>
-        /**
-         * Load the graph data and initialize rendering.
-         * 加载图数据并初始化渲染。
-         */
+        // Global State
+        let graphData = null;
+        let simulation = null;
+        let currentNode = null; // Currently hovered/selected node
+        let filterMode = 'all'; // 'all', 'in', 'out'
+
         async function loadGraph() {
             try {
-                console.log("Fetching graph_data.json...");
                 const response = await fetch('./graph_data.json');
                 if (!response.ok) throw new Error(`Failed to load graph_data.json: ${response.statusText}`);
-                
-                const data = await response.json();
-                console.log(`Data loaded: ${data.nodes.length} nodes, ${data.links.length} links`);
-                
-                renderGraph(data);
+                graphData = await response.json();
+                console.log(`Data loaded: ${graphData.nodes.length} nodes, ${graphData.links.length} links`);
+                renderGraph(graphData);
             } catch (error) {
                 console.error(error);
-                alert("Error loading graph data. Please ensure you are running a local server (e.g., 'npx http-server src/frontend').\n\n加载数据失败。请确保您正在运行本地服务器。");
+                alert("Error loading graph data. Please ensure you are running a local server.");
             }
         }
 
-        /**
-         * Render the D3 Force Directed Graph.
-         * 渲染 D3 力导向图。
-         * @param {Object} data - The graph data {nodes, links}
-         */
         function renderGraph(data) {
             const width = window.innerWidth;
             const height = window.innerHeight;
 
-            // Clear previous SVG if any
-            // 清除之前的 SVG（如果有）
             d3.select("#graph-container").html("");
 
-            // Setup Zoom behavior
-            // 设置缩放行为
+            // Zoom
             const zoom = d3.zoom()
                 .scaleExtent([0.1, 8])
                 .on("zoom", (event) => {
@@ -74,20 +101,19 @@
                 .attr("width", width)
                 .attr("height", height)
                 .call(zoom)
-                .on("dblclick.zoom", null); // Disable double click zoom
+                .on("dblclick.zoom", null)
+                .on("click", resetHighlight); // Click background to reset
 
-            // Main group for transformations
-            // 用于变换的主组
             const g = svg.append("g");
 
-            // Define Arrow Marker for Directed Edges
-            // 为有向边定义箭头标记
-            svg.append("defs").selectAll("marker")
-                .data(["end"])
-                .enter().append("marker")
+            // Markers
+            const defs = svg.append("defs");
+            
+            // Standard Arrow
+            defs.append("marker")
                 .attr("id", "arrow")
                 .attr("viewBox", "0 -5 10 10")
-                .attr("refX", 15) // Position of arrow tip relative to node center (adjust based on node radius)
+                .attr("refX", 15)
                 .attr("refY", 0)
                 .attr("markerWidth", 6)
                 .attr("markerHeight", 6)
@@ -96,16 +122,40 @@
                 .attr("d", "M0,-5L10,0L0,5")
                 .attr("fill", "#999");
 
-            // Initialize Force Simulation
-            // 初始化力模拟
-            const simulation = d3.forceSimulation(data.nodes)
+            // Incoming Arrow (Orange)
+            defs.append("marker")
+                .attr("id", "arrow-incoming")
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 15)
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-5L10,0L0,5")
+                .attr("fill", "#ff7f0e");
+
+            // Outgoing Arrow (Blue)
+            defs.append("marker")
+                .attr("id", "arrow-outgoing")
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 15)
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-5L10,0L0,5")
+                .attr("fill", "#1f77b4");
+
+            // Simulation
+            simulation = d3.forceSimulation(data.nodes)
                 .force("link", d3.forceLink(data.links).id(d => d.id).distance(100))
                 .force("charge", d3.forceManyBody().strength(-300))
                 .force("center", d3.forceCenter(width / 2, height / 2))
                 .force("collide", d3.forceCollide(20));
 
-            // Render Links
-            // 渲染连接线
+            // Links
             const link = g.append("g")
                 .attr("class", "links")
                 .selectAll("line")
@@ -114,8 +164,7 @@
                 .attr("class", "link")
                 .attr("marker-end", "url(#arrow)");
 
-            // Render Nodes
-            // 渲染节点
+            // Nodes
             const node = g.append("g")
                 .attr("class", "nodes")
                 .selectAll("g")
@@ -125,42 +174,24 @@
                 .call(d3.drag()
                     .on("start", dragstarted)
                     .on("drag", dragged)
-                    .on("end", dragended));
+                    .on("end", dragended))
+                .on("mouseover", handleMouseOver)
+                .on("mouseout", handleMouseOut)
+                .on("click", (event, d) => {
+                    event.stopPropagation(); // Prevent background click
+                    // Optional: Sticky selection logic could go here
+                });
 
-            // Node Circles
-            // 节点圆圈
             node.append("circle")
                 .attr("r", 5)
                 .attr("fill", "#69b3a2");
 
-            // Node Labels
-            // 节点标签
             node.append("text")
                 .attr("dx", 8)
                 .attr("dy", ".35em")
-                .text(d => d.id); // Changed from d.label to d.id based on backend output
+                .text(d => d.id);
 
-            // Hover Tooltip Interaction
-            // 悬停提示框交互
-            const tooltip = d3.select("#tooltip");
-            node.on("mouseover", (event, d) => {
-                tooltip.style("display", "block")
-                       .style("left", (event.pageX + 10) + "px")
-                       .style("top", (event.pageY - 10) + "px")
-                       .html(`<strong>${d.id}</strong>`);
-                
-                // Highlight connected links
-                link.style('stroke', l => (l.source === d || l.target === d) ? '#555' : '#999')
-                    .style('stroke-opacity', l => (l.source === d || l.target === d) ? 1 : 0.1);
-            }).on("mouseout", () => {
-                tooltip.style("display", "none");
-                // Reset links
-                link.style('stroke', '#999')
-                    .style('stroke-opacity', 0.6);
-            });
-
-            // Simulation Tick Update
-            // 模拟滴答更新
+            // Ticker
             simulation.on("tick", () => {
                 link
                     .attr("x1", d => d.source.x)
@@ -168,31 +199,104 @@
                     .attr("x2", d => d.target.x)
                     .attr("y2", d => d.target.y);
 
-                node
-                    .attr("transform", d => `translate(${d.x},${d.y})`);
+                node.attr("transform", d => `translate(${d.x},${d.y})`);
             });
 
-            // Drag Functions
-            // 拖拽函数
+            // --- Interaction Logic ---
+
+            function handleMouseOver(event, d) {
+                currentNode = d;
+                const tooltip = d3.select("#tooltip");
+                
+                tooltip.style("display", "block")
+                       .style("left", (event.pageX + 10) + "px")
+                       .style("top", (event.pageY - 10) + "px")
+                       .html(`
+                           <strong>${d.id}</strong><br>
+                           In-Degree (入): ${d.inDegree}<br>
+                           Out-Degree (出): ${d.outDegree}
+                       `);
+
+                highlightGraph(d);
+            }
+
+            function handleMouseOut() {
+                currentNode = null;
+                d3.select("#tooltip").style("display", "none");
+                resetHighlight();
+            }
+
+            function highlightGraph(d) {
+                // Dim all
+                node.classed("dimmed", true);
+                link.classed("dimmed", true);
+                link.classed("incoming", false).classed("outgoing", false)
+                    .attr("marker-end", "url(#arrow)"); // Reset marker
+
+                // Highlight Selected Node
+                const connectedNodeIds = new Set();
+                connectedNodeIds.add(d.id);
+
+                // Highlight Links based on filter
+                d3.selectAll(".link").each(function(l) {
+                    const isIncoming = l.target.id === d.id;
+                    const isOutgoing = l.source.id === d.id;
+                    
+                    const showIncoming = (filterMode === 'all' || filterMode === 'in') && isIncoming;
+                    const showOutgoing = (filterMode === 'all' || filterMode === 'out') && isOutgoing;
+
+                    if (showIncoming) {
+                        d3.select(this)
+                            .classed("dimmed", false)
+                            .classed("incoming", true)
+                            .attr("marker-end", "url(#arrow-incoming)");
+                        connectedNodeIds.add(l.source.id);
+                    } else if (showOutgoing) {
+                        d3.select(this)
+                            .classed("dimmed", false)
+                            .classed("outgoing", true)
+                            .attr("marker-end", "url(#arrow-outgoing)");
+                        connectedNodeIds.add(l.target.id);
+                    }
+                });
+
+                // Highlight connected nodes
+                d3.selectAll(".node").classed("dimmed", n => !connectedNodeIds.has(n.id));
+            }
+
+            function resetHighlight() {
+                node.classed("dimmed", false);
+                link.classed("dimmed", false)
+                    .classed("incoming", false)
+                    .classed("outgoing", false)
+                    .attr("marker-end", "url(#arrow)");
+            }
+
+            // Drag Helpers
             function dragstarted(event, d) {
                 if (!event.active) simulation.alphaTarget(0.3).restart();
                 d.fx = d.x;
                 d.fy = d.y;
             }
-
             function dragged(event, d) {
                 d.fx = event.x;
                 d.fy = event.y;
             }
-
             function dragended(event, d) {
                 if (!event.active) simulation.alphaTarget(0);
                 d.fx = null;
                 d.fy = null;
             }
+
+            // Filter Dropdown Listener
+            document.getElementById('filter-mode').addEventListener('change', (e) => {
+                filterMode = e.target.value;
+                if (currentNode) {
+                    highlightGraph(currentNode);
+                }
+            });
         }
 
-        // Start the application
         loadGraph();
     </script>
 </body>

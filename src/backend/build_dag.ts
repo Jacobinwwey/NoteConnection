@@ -28,6 +28,8 @@ interface DiscoveredEdge {
 interface D3Node {
     id: string;
     group: number; // 1 for now
+    inDegree: number;
+    outDegree: number;
 }
 
 interface D3Link {
@@ -118,13 +120,34 @@ class KeywordMatcher {
 
 class StructureGenerator {
     /**
-     * Converts to D3 JSON format.
-     * 转换为 D3 JSON 格式。
+     * Converts to D3 JSON format with Degree calculation.
+     * 转换为 D3 JSON 格式并计算度数。
      */
     static generateJSON(notes: RawNote[], edges: DiscoveredEdge[]): GraphData {
+        // Calculate degrees
+        const inDegreeMap = new Map<string, number>();
+        const outDegreeMap = new Map<string, number>();
+
+        // Initialize maps
+        notes.forEach(n => {
+            inDegreeMap.set(n.id, 0);
+            outDegreeMap.set(n.id, 0);
+        });
+
+        // Sum degrees
+        edges.forEach(e => {
+            const currentIn = inDegreeMap.get(e.target) || 0;
+            inDegreeMap.set(e.target, currentIn + 1);
+
+            const currentOut = outDegreeMap.get(e.source) || 0;
+            outDegreeMap.set(e.source, currentOut + 1);
+        });
+
         const d3Nodes: D3Node[] = notes.map(n => ({
             id: n.id,
-            group: 1
+            group: 1,
+            inDegree: inDegreeMap.get(n.id) || 0,
+            outDegree: outDegreeMap.get(n.id) || 0
         }));
 
         const d3Links: D3Link[] = edges.map(e => ({

@@ -2,859 +2,1287 @@
   "nodes": [
     {
       "id": "Absorption",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 22
     },
     {
       "id": "Aging through plastic deformation",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "Airy disk",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 4
     },
     {
       "id": "all atom models",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "all atom water models",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "ambient liquid water",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "amorphization pressure",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "Amorphous ice",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 12
     },
     {
       "id": "anisotropic interactions",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "anomalous behavior",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 1
     },
     {
       "id": "atomistic models",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "attenuation",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 5
     },
     {
       "id": "Avrami coefficient",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "Avrami Kolmogorov equation",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "Avrami Kolmogorov kinetics",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "axial (z) resolution",
-      "group": 1
+      "group": 1,
+      "inDegree": 7,
+      "outDegree": 0
     },
     {
       "id": "back focal plane",
-      "group": 1
+      "group": 1,
+      "inDegree": 6,
+      "outDegree": 1
     },
     {
       "id": "ball milling",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 2
     },
     {
       "id": "band pass filter",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 1
     },
     {
       "id": "Birefringence",
-      "group": 1
+      "group": 1,
+      "inDegree": 6,
+      "outDegree": 8
     },
     {
       "id": "bond order parameter",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 1
     },
     {
       "id": "chopping frequency",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "Coarse grained models",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "coherent light",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 0
     },
     {
       "id": "Collection Efficiency",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "confocal pinhole",
-      "group": 1
+      "group": 1,
+      "inDegree": 5,
+      "outDegree": 0
     },
     {
       "id": "continuous transformation",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "coordination shell",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "critical angle",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 2
     },
     {
       "id": "critical point",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 11
     },
     {
       "id": "cyclic shearing",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "decompression",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 5
     },
     {
       "id": "density anomaly",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "Dichroic Mirror",
-      "group": 1
+      "group": 1,
+      "inDegree": 6,
+      "outDegree": 5
     },
     {
       "id": "dielectric mirrors",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 2
     },
     {
       "id": "diffraction limited spot",
-      "group": 1
+      "group": 1,
+      "inDegree": 6,
+      "outDegree": 0
     },
     {
       "id": "Diffraction",
-      "group": 1
+      "group": 1,
+      "inDegree": 5,
+      "outDegree": 29
     },
     {
       "id": "diffusive dynamics",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "dislocation induced structural changes",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "electron hole pairs",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "enthalpy of crystallization",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "enthalpy",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 10
     },
     {
       "id": "excited singlet state",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 2
     },
     {
       "id": "extraordinary ray",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 2
     },
     {
       "id": "field of view diaphragm control",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 0
     },
     {
       "id": "first order liquid liquid transition",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "first order transition",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "first strong peak",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "fluorescence anisotropy",
-      "group": 1
+      "group": 1,
+      "inDegree": 5,
+      "outDegree": 1
     },
     {
       "id": "fluorescence",
-      "group": 1
+      "group": 1,
+      "inDegree": 8,
+      "outDegree": 16
     },
     {
       "id": "fluorescent emitters",
-      "group": 1
+      "group": 1,
+      "inDegree": 8,
+      "outDegree": 0
     },
     {
       "id": "four coordinated molecule",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "Fourier Optics",
-      "group": 1
+      "group": 1,
+      "inDegree": 4,
+      "outDegree": 7
     },
     {
       "id": "free energy landscape",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 3
     },
     {
       "id": "free energy",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 31
     },
     {
       "id": "frequency doubling",
-      "group": 1
+      "group": 1,
+      "inDegree": 5,
+      "outDegree": 0
     },
     {
       "id": "gain register",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "Gaussian intensity profile",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "glass polyamorphism",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "glass transition line",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "grain boundary sliding",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 4
     },
     {
       "id": "ground state",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 4
     },
     {
       "id": "Half Wave Plate",
-      "group": 1
+      "group": 1,
+      "inDegree": 5,
+      "outDegree": 0
     },
     {
       "id": "heterogeneous mechanisms",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "hexagonal ice",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 3
     },
     {
       "id": "high density amorphous ice",
-      "group": 1
+      "group": 1,
+      "inDegree": 6,
+      "outDegree": 1
     },
     {
       "id": "high density liquid",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "history dependent",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "homogeneous mechanism",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 1
     },
     {
       "id": "homogeneous melting",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "hyperquenched glass",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "hyperquenched water glass",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "hyperquenching",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 5
     },
     {
       "id": "ice amorphization",
-      "group": 1
+      "group": 1,
+      "inDegree": 5,
+      "outDegree": 0
     },
     {
       "id": "ice crystallization",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "ice formation",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 0
     },
     {
       "id": "ice grain",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 0
     },
     {
       "id": "ice Ib",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "ice polymorph",
-      "group": 1
+      "group": 1,
+      "inDegree": 4,
+      "outDegree": 0
     },
     {
       "id": "impact ionization",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "induction time",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "inherent structure",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "instantaneously quenched liquid water",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "intensive variable",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "interfacial order",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "interference filter",
-      "group": 1
+      "group": 1,
+      "inDegree": 4,
+      "outDegree": 0
     },
     {
       "id": "isobaric cooling",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "isobaric isothermal conditions",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "isobaric shearing",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "isochoric shearing",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "isothermal isobaric simulations",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "Köhler illumination",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 1
     },
     {
       "id": "landscape dominated dynamics",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "laser cavity",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 1
     },
     {
       "id": "Law of Reflection",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 2
     },
     {
       "id": "line of maximum density",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "linear polarization",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 4
     },
     {
       "id": "liquid liquid coexistence temperature",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "liquid liquid critical point",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "liquid liquid phase transition",
-      "group": 1
+      "group": 1,
+      "inDegree": 6,
+      "outDegree": 0
     },
     {
       "id": "liquid liquid transition",
-      "group": 1
+      "group": 1,
+      "inDegree": 6,
+      "outDegree": 0
     },
     {
       "id": "local tetrahedral order",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "lock in amplifier",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "logarithmic response",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "long pass filter",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 0
     },
     {
       "id": "long range structural correlation",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "low density amorphous ice",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "low density liquid",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "Mach Zehnder interferometer",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "machine learned bond order parameter",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "machine learned bond order potential",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "maximum density",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 3
     },
     {
       "id": "mechanical collapse",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "Medium density amorphous ice",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "megabasin",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 1
     },
     {
       "id": "megabasins",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "melting line",
-      "group": 1
+      "group": 1,
+      "inDegree": 4,
+      "outDegree": 0
     },
     {
       "id": "metastability",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 5
     },
     {
       "id": "metastable phase transition",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "ML BOP",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "molar volumes",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "molecular orientation",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "monochromatic",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 1
     },
     {
       "id": "monocrystalline ice",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 0
     },
     {
       "id": "mW",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 12
     },
     {
       "id": "nanocrystalline state",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 0
     },
     {
       "id": "Neutral Density Filter",
-      "group": 1
+      "group": 1,
+      "inDegree": 7,
+      "outDegree": 0
     },
     {
       "id": "no man's land",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 2
     },
     {
       "id": "non radiative relaxation",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "nonequilibrium phase diagram",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "nonequilibrium phase",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 1
     },
     {
       "id": "nonequilibrium stationary state",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "nonideal mixture",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "nonlinear crystal",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 1
     },
     {
       "id": "nonstationary state",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "NpT ensemble",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 1
     },
     {
       "id": "Numerical Aperture (NA)",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 0
     },
     {
       "id": "Oil Immersion",
-      "group": 1
+      "group": 1,
+      "inDegree": 4,
+      "outDegree": 0
     },
     {
       "id": "ordinary ray",
-      "group": 1
+      "group": 1,
+      "inDegree": 4,
+      "outDegree": 2
     },
     {
       "id": "out of focus",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "oxygen oxygen radial distribution function",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "p polarization",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "pair distribution function",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 1
     },
     {
       "id": "parent state",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "pathway of amorphization",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "phase equilibrium",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "phase shift",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 5
     },
     {
       "id": "photobleaching",
-      "group": 1
+      "group": 1,
+      "inDegree": 5,
+      "outDegree": 3
     },
     {
       "id": "photoelectric effect",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 0
     },
     {
       "id": "photon",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 15
     },
     {
       "id": "piezo stage",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "Pinhole",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 2
     },
     {
       "id": "plane wave",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 1
     },
     {
       "id": "plastic ice phase",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "polarization analyzer",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 0
     },
     {
       "id": "polarization resolved single molecule fluorescence microscopy",
-      "group": 1
+      "group": 1,
+      "inDegree": 9,
+      "outDegree": 0
     },
     {
       "id": "polarization state",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 5
     },
     {
       "id": "polarization",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 21
     },
     {
       "id": "Polarizing Beam Splitter",
-      "group": 1
+      "group": 1,
+      "inDegree": 4,
+      "outDegree": 1
     },
     {
       "id": "polyamorphic transformation",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "Polyamorphic Transitions",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "polycrystalline ice",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 3
     },
     {
       "id": "pressure induced amorphization",
-      "group": 1
+      "group": 1,
+      "inDegree": 5,
+      "outDegree": 1
     },
     {
       "id": "Pressure Induced Ice Amorphization",
-      "group": 1
+      "group": 1,
+      "inDegree": 4,
+      "outDegree": 0
     },
     {
       "id": "quantum dots",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 2
     },
     {
       "id": "quantum mechanical process",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "read noise",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 1
     },
     {
       "id": "red shifted",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "Reflection",
-      "group": 1
+      "group": 1,
+      "inDegree": 6,
+      "outDegree": 21
     },
     {
       "id": "Refraction",
-      "group": 1
+      "group": 1,
+      "inDegree": 4,
+      "outDegree": 7
     },
     {
       "id": "refractive indices",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 0
     },
     {
       "id": "Resolution",
-      "group": 1
+      "group": 1,
+      "inDegree": 4,
+      "outDegree": 23
     },
     {
       "id": "rotational dynamics",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 1
     },
     {
       "id": "s polarization",
-      "group": 1
+      "group": 1,
+      "inDegree": 5,
+      "outDegree": 0
     },
     {
       "id": "saturation",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 5
     },
     {
       "id": "shear acoustic wave",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "shear driven amorphous ice",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "shear rate",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 1
     },
     {
       "id": "sigmoidal shape",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "signal to noise ratios",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "single photons",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "Spatial Filtering",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 3
     },
     {
       "id": "spatial frequencies",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 1
     },
     {
       "id": "Specular Reflection",
-      "group": 1
+      "group": 1,
+      "inDegree": 4,
+      "outDegree": 1
     },
     {
       "id": "spinodal like decomposition",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "spinodal like mechanism",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "spinodal like nonequilibrium transformation",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "stacking disordered polycrystalline ice",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "steady state nonequilibrium",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "Stillinger Weber potential",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "Stimulated Emission",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 8
     },
     {
       "id": "supercooled water",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 4
     },
     {
       "id": "temperature of maximum density",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 1
     },
     {
       "id": "Tersoff functional form",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "tetrahedral substance",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "tetrahedrality",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "thermodynamic variable",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "thin film interference",
-      "group": 1
+      "group": 1,
+      "inDegree": 4,
+      "outDegree": 0
     },
     {
       "id": "time translation invariance",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "TIP4PIce",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "Total Internal Reflection (TIR)",
-      "group": 1
+      "group": 1,
+      "inDegree": 5,
+      "outDegree": 0
     },
     {
       "id": "transition dipole moment",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 1
     },
     {
       "id": "true glass",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "two phase coexistence",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "two phase melting",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "two state thermodynamics model",
-      "group": 1
+      "group": 1,
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "two state thermodynamics",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 1
     },
     {
       "id": "unannealed HDA",
-      "group": 1
+      "group": 1,
+      "inDegree": 3,
+      "outDegree": 0
     },
     {
       "id": "velocity Verlet algorithm",
-      "group": 1
+      "group": 1,
+      "inDegree": 0,
+      "outDegree": 0
     },
     {
       "id": "very high density amorphous ice",
-      "group": 1
+      "group": 1,
+      "inDegree": 4,
+      "outDegree": 0
     },
     {
       "id": "water glass",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 2
     },
     {
       "id": "Water glasses",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "water model",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 2
     },
     {
       "id": "Widom line",
-      "group": 1
+      "group": 1,
+      "inDegree": 1,
+      "outDegree": 3
     }
   ],
   "links": [
