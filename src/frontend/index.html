@@ -7,18 +7,18 @@
     <style>
         body { margin: 0; overflow: hidden; font-family: sans-serif; background-color: #f9f9f9; }
         #graph-container { width: 100vw; height: 100vh; }
-        .node circle { stroke: #fff; stroke-width: 1.5px; cursor: pointer; transition: all 0.3s; }
-        .node circle:hover { stroke: #000; stroke-width: 2px; r: 8; }
-        .node text { font-size: 10px; pointer-events: none; text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff; }
+        .node circle { stroke: #fff; stroke-width: 1.5px; cursor: pointer; transition: all 0.5s ease; }
+        .node circle:hover { stroke: #333; stroke-width: 2px; }
+        .node text { font-size: 10px; pointer-events: none; text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff; transition: opacity 0.3s; }
         .link { stroke: #999; stroke-opacity: 0.6; stroke-width: 1px; transition: stroke 0.3s, stroke-opacity 0.3s; }
         .tooltip { position: absolute; background: rgba(0,0,0,0.8); color: #fff; padding: 8px; border-radius: 4px; pointer-events: none; font-size: 12px; display: none; z-index: 10; line-height: 1.4; }
         
         /* Legend / Controls */
-        #controls { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 220px; }
+        #controls { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 240px; }
         h3 { margin-top: 0; margin-bottom: 10px; font-size: 16px; color: #333; }
-        .control-group { margin-bottom: 10px; }
+        .control-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; color: #555; }
-        select { width: 100%; padding: 5px; border-radius: 4px; border: 1px solid #ddd; }
+        select { width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 13px; }
         
         /* Highlight Styles */
         .link.incoming { stroke: #ff7f0e !important; stroke-opacity: 1 !important; stroke-width: 2px !important; } /* Orange */
@@ -28,6 +28,7 @@
         
         .legend-item { display: flex; align-items: center; margin-bottom: 4px; font-size: 12px; }
         .legend-color { width: 12px; height: 12px; margin-right: 8px; border-radius: 2px; }
+        .legend-circle { border-radius: 50%; border: 1px solid #fff; }
     </style>
     <!-- D3.js V7 -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -41,22 +42,27 @@
         </p>
 
         <div class="control-group">
-            <label>Connection Filter (连接过滤)</label>
+            <label>View Mode (视图模式)</label>
+            <p style="font-size: 11px; color: #888; margin-bottom: 5px; margin-top: 0;">Resizes nodes by degree & filters edges on hover.<br>按度数缩放节点 & 悬停过滤边。</p>
             <select id="filter-mode">
-                <option value="all">Show All (显示全部)</option>
-                <option value="in">In-Degree Only (仅入度/来源)</option>
-                <option value="out">Out-Degree Only (仅出度/去向)</option>
+                <option value="all">Default (默认)</option>
+                <option value="in">In-Degree (入度/被引用数)</option>
+                <option value="out">Out-Degree (出度/引用数)</option>
             </select>
         </div>
 
-        <div style="border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px;">
+        <div style="border-top: 1px solid #eee; padding-top: 10px;">
+            <div class="legend-item">
+                <div class="legend-color legend-circle" style="background-color: #69b3a2; width: 8px; height: 8px;"></div>
+                <span>Node Size: Degree</span>
+            </div>
             <div class="legend-item">
                 <div class="legend-color" style="background-color: #ff7f0e;"></div>
-                <span>Incoming (来源/入度)</span>
+                <span>Incoming (来源)</span>
             </div>
             <div class="legend-item">
                 <div class="legend-color" style="background-color: #1f77b4;"></div>
-                <span>Outgoing (去向/出度)</span>
+                <span>Outgoing (去向)</span>
             </div>
         </div>
     </div>
@@ -70,13 +76,16 @@
         let simulation = null;
         let currentNode = null; // Currently hovered/selected node
         let filterMode = 'all'; // 'all', 'in', 'out'
+        
+        // Configuration
+        const BASE_RADIUS = 4;
+        const DEGREE_SCALE = 1.5; // Pixels per degree
 
         async function loadGraph() {
             try {
                 const response = await fetch('./graph_data.json');
                 if (!response.ok) throw new Error(`Failed to load graph_data.json: ${response.statusText}`);
                 graphData = await response.json();
-                console.log(`Data loaded: ${graphData.nodes.length} nodes, ${graphData.links.length} links`);
                 renderGraph(graphData);
             } catch (error) {
                 console.error(error);
@@ -102,58 +111,46 @@
                 .attr("height", height)
                 .call(zoom)
                 .on("dblclick.zoom", null)
-                .on("click", resetHighlight); // Click background to reset
+                .on("click", resetHighlight);
 
             const g = svg.append("g");
 
-            // Markers
+            // Definitions for Markers
             const defs = svg.append("defs");
+            const markerAttrs = { viewBox: "0 -5 10 10", refX: 15, refY: 0, markerWidth: 6, markerHeight: 6, orient: "auto" };
             
-            // Standard Arrow
-            defs.append("marker")
-                .attr("id", "arrow")
-                .attr("viewBox", "0 -5 10 10")
-                .attr("refX", 15)
-                .attr("refY", 0)
-                .attr("markerWidth", 6)
-                .attr("markerHeight", 6)
-                .attr("orient", "auto")
-                .append("path")
-                .attr("d", "M0,-5L10,0L0,5")
-                .attr("fill", "#999");
+            defs.append("marker").attr("id", "arrow").attr("fill", "#999").attrs(markerAttrs).append("path").attr("d", "M0,-5L10,0L0,5");
+            defs.append("marker").attr("id", "arrow-incoming").attr("fill", "#ff7f0e").attrs(markerAttrs).append("path").attr("d", "M0,-5L10,0L0,5");
+            defs.append("marker").attr("id", "arrow-outgoing").attr("fill", "#1f77b4").attrs(markerAttrs).append("path").attr("d", "M0,-5L10,0L0,5");
 
-            // Incoming Arrow (Orange)
-            defs.append("marker")
-                .attr("id", "arrow-incoming")
-                .attr("viewBox", "0 -5 10 10")
-                .attr("refX", 15)
-                .attr("refY", 0)
-                .attr("markerWidth", 6)
-                .attr("markerHeight", 6)
-                .attr("orient", "auto")
-                .append("path")
-                .attr("d", "M0,-5L10,0L0,5")
-                .attr("fill", "#ff7f0e");
+            // Helper for d3 multi-attr (if d3-selection-multi is not used, standard chaining above is fine, but let's fix the .attrs call if needed)
+            // Correction: .attrs is part of d3-selection-multi. Standard d3 uses .attr chaining. 
+            // Rewriting markers to be safe without external plugins.
+            defs.selectAll("*").remove(); // Clear
+            const createMarker = (id, color) => {
+                defs.append("marker")
+                    .attr("id", id)
+                    .attr("viewBox", "0 -5 10 10")
+                    .attr("refX", 15) // Will need dynamic update based on radius, but 15 is safe for small nodes
+                    .attr("refY", 0)
+                    .attr("markerWidth", 6)
+                    .attr("markerHeight", 6)
+                    .attr("orient", "auto")
+                    .append("path")
+                    .attr("d", "M0,-5L10,0L0,5")
+                    .attr("fill", color);
+            };
+            createMarker("arrow", "#999");
+            createMarker("arrow-incoming", "#ff7f0e");
+            createMarker("arrow-outgoing", "#1f77b4");
 
-            // Outgoing Arrow (Blue)
-            defs.append("marker")
-                .attr("id", "arrow-outgoing")
-                .attr("viewBox", "0 -5 10 10")
-                .attr("refX", 15)
-                .attr("refY", 0)
-                .attr("markerWidth", 6)
-                .attr("markerHeight", 6)
-                .attr("orient", "auto")
-                .append("path")
-                .attr("d", "M0,-5L10,0L0,5")
-                .attr("fill", "#1f77b4");
 
             // Simulation
             simulation = d3.forceSimulation(data.nodes)
                 .force("link", d3.forceLink(data.links).id(d => d.id).distance(100))
                 .force("charge", d3.forceManyBody().strength(-300))
                 .force("center", d3.forceCenter(width / 2, height / 2))
-                .force("collide", d3.forceCollide(20));
+                .force("collide", d3.forceCollide(d => calculateRadius(d) + 5)); // Dynamic collision radius
 
             // Links
             const link = g.append("g")
@@ -176,18 +173,14 @@
                     .on("drag", dragged)
                     .on("end", dragended))
                 .on("mouseover", handleMouseOver)
-                .on("mouseout", handleMouseOut)
-                .on("click", (event, d) => {
-                    event.stopPropagation(); // Prevent background click
-                    // Optional: Sticky selection logic could go here
-                });
+                .on("mouseout", handleMouseOut);
 
-            node.append("circle")
-                .attr("r", 5)
+            const circles = node.append("circle")
+                .attr("r", d => calculateRadius(d)) // Initial radius
                 .attr("fill", "#69b3a2");
 
             node.append("text")
-                .attr("dx", 8)
+                .attr("dx", 10)
                 .attr("dy", ".35em")
                 .text(d => d.id);
 
@@ -202,7 +195,37 @@
                 node.attr("transform", d => `translate(${d.x},${d.y})`);
             });
 
-            // --- Interaction Logic ---
+            // --- Logic Functions ---
+
+            function calculateRadius(d) {
+                let deg = 0;
+                if (filterMode === 'in') deg = d.inDegree;
+                else if (filterMode === 'out') deg = d.outDegree;
+                else deg = (d.inDegree + d.outDegree) / 2; // Average for default
+                
+                return BASE_RADIUS + (deg * DEGREE_SCALE);
+            }
+
+            function updateVisuals() {
+                // Animate radius change
+                circles.transition().duration(500)
+                    .attr("r", d => calculateRadius(d));
+                
+                // Update text position
+                node.selectAll("text").transition().duration(500)
+                    .attr("dx", d => calculateRadius(d) + 4);
+
+                // Update collision force
+                simulation.force("collide", d3.forceCollide(d => calculateRadius(d) + 5));
+                simulation.alpha(0.3).restart(); // Wake up simulation to adjust spacing
+
+                // If a node is selected/hovered, re-apply highlight logic
+                if (currentNode) {
+                    highlightGraph(currentNode);
+                } else {
+                    resetHighlight();
+                }
+            }
 
             function handleMouseOver(event, d) {
                 currentNode = d;
@@ -213,8 +236,8 @@
                        .style("top", (event.pageY - 10) + "px")
                        .html(`
                            <strong>${d.id}</strong><br>
-                           In-Degree (入): ${d.inDegree}<br>
-                           Out-Degree (出): ${d.outDegree}
+                           In-Degree (被引): ${d.inDegree}<br>
+                           Out-Degree (引用): ${d.outDegree}
                        `);
 
                 highlightGraph(d);
@@ -227,17 +250,17 @@
             }
 
             function highlightGraph(d) {
-                // Dim all
+                // Dim everything first
                 node.classed("dimmed", true);
                 link.classed("dimmed", true);
+                
+                // Reset specialized classes
                 link.classed("incoming", false).classed("outgoing", false)
-                    .attr("marker-end", "url(#arrow)"); // Reset marker
+                    .attr("marker-end", "url(#arrow)");
 
-                // Highlight Selected Node
-                const connectedNodeIds = new Set();
-                connectedNodeIds.add(d.id);
+                const connectedNodeIds = new Set([d.id]);
 
-                // Highlight Links based on filter
+                // Filter logic
                 d3.selectAll(".link").each(function(l) {
                     const isIncoming = l.target.id === d.id;
                     const isOutgoing = l.source.id === d.id;
@@ -249,19 +272,26 @@
                         d3.select(this)
                             .classed("dimmed", false)
                             .classed("incoming", true)
-                            .attr("marker-end", "url(#arrow-incoming)");
+                            .attr("marker-end", "url(#arrow-incoming)")
+                            .raise(); // Bring to front
                         connectedNodeIds.add(l.source.id);
                     } else if (showOutgoing) {
                         d3.select(this)
                             .classed("dimmed", false)
                             .classed("outgoing", true)
-                            .attr("marker-end", "url(#arrow-outgoing)");
+                            .attr("marker-end", "url(#arrow-outgoing)")
+                            .raise(); // Bring to front
                         connectedNodeIds.add(l.target.id);
                     }
                 });
 
-                // Highlight connected nodes
+                // Undim connected nodes
                 d3.selectAll(".node").classed("dimmed", n => !connectedNodeIds.has(n.id));
+                
+                // Always undim the current node
+                d3.select(event.target.parentNode).classed("dimmed", false); 
+                // Note: event.target might not be available in all contexts, usage of 'd' is safer
+                d3.selectAll(".node").filter(n => n.id === d.id).classed("dimmed", false);
             }
 
             function resetHighlight() {
@@ -288,12 +318,10 @@
                 d.fy = null;
             }
 
-            // Filter Dropdown Listener
+            // Listeners
             document.getElementById('filter-mode').addEventListener('change', (e) => {
                 filterMode = e.target.value;
-                if (currentNode) {
-                    highlightGraph(currentNode);
-                }
+                updateVisuals();
             });
         }
 
