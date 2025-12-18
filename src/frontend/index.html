@@ -35,7 +35,7 @@
 </head>
 <body>
     <div id="controls">
-        <h3>NoteConnection v0.1.2</h3>
+        <h3>NoteConnection v0.1.2 (Patched)</h3>
         <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
             Scroll to Zoom / Drag to Pan<br>
             滚动缩放 / 拖拽平移
@@ -83,13 +83,14 @@
 
         async function loadGraph() {
             try {
-                const response = await fetch('./graph_data.json');
-                if (!response.ok) throw new Error(`Failed to load graph_data.json: ${response.statusText}`);
+                // Append timestamp to bypass cache
+                const response = await fetch('./graph_data.json?t=' + new Date().getTime());
+                if (!response.ok) throw new Error(`Failed to load graph_data.json: ${response.status} ${response.statusText}`);
                 graphData = await response.json();
                 renderGraph(graphData);
             } catch (error) {
                 console.error(error);
-                alert("Error loading graph data. Please ensure you are running a local server.");
+                alert(`Error loading graph data:\n${error.message}\n\nPlease check the console for details.`);
             }
         }
 
@@ -117,12 +118,7 @@
 
             // Definitions for Markers
             const defs = svg.append("defs");
-            const markerAttrs = { viewBox: "0 -5 10 10", refX: 15, refY: 0, markerWidth: 6, markerHeight: 6, orient: "auto" };
             
-            defs.append("marker").attr("id", "arrow").attr("fill", "#999").attrs(markerAttrs).append("path").attr("d", "M0,-5L10,0L0,5");
-            defs.append("marker").attr("id", "arrow-incoming").attr("fill", "#ff7f0e").attrs(markerAttrs).append("path").attr("d", "M0,-5L10,0L0,5");
-            defs.append("marker").attr("id", "arrow-outgoing").attr("fill", "#1f77b4").attrs(markerAttrs).append("path").attr("d", "M0,-5L10,0L0,5");
-
             // Helper for d3 multi-attr (if d3-selection-multi is not used, standard chaining above is fine, but let's fix the .attrs call if needed)
             // Correction: .attrs is part of d3-selection-multi. Standard d3 uses .attr chaining. 
             // Rewriting markers to be safe without external plugins.
