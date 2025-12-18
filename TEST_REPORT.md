@@ -62,3 +62,62 @@ The core ingestion and graph construction engine is **robust**. It handles malfo
 
 ## 4. 结论 (Conclusion)
 核心摄取和图构建引擎具有**健壮性**。它可以处理格式错误的输入、特殊字符和循环而不会失败。实现真正的 DAG 需要按路线图实施算法层。
+
+---
+
+### 2025-12-18 v0.1.1 - 独立 DAG 构建测试 (Independent DAG Builder Test)
+
+## 1. 测试环境 (Test Environment)
+*   **目录**: `testconcept/` (214 个真实概念文件)
+*   **测试脚本**: `src/backend/build_dag.ts`
+*   **前端**: `src/frontend/index.html`
+
+## 2. 测试执行摘要 (Test Execution Summary)
+
+| 步骤 (Step) | 动作 (Action) | 结果 (Result) | 状态 (Status) |
+| :--- | :--- | :--- | :--- |
+| **1. 解析 (Parsing)** | 扫描 `testconcept` 目录下的 Markdown 文件。 | 成功加载 **214** 个节点。文件名正确用作 ID。 | ✅ PASS |
+| **2. 边推断 (Edge Inference)** | 对每个文件内容执行全词匹配 (Case-insensitive)。 | 发现 **384** 条边。 | ✅ PASS |
+| **3. 数据生成 (Data Gen)** | 生成 `graph_data.json`。 | JSON 格式有效。包含 `nodes` 和 `links` 数组。 | ✅ PASS |
+| **4. 可视化 (Visualization)** | 在浏览器中打开 `index.html`。 | 成功渲染力导向图。节点交互（拖拽、悬停）正常工作。 | ✅ PASS |
+
+## 3. 观察与分析 (Observations & Analysis)
+
+*   **性能 (Performance)**: 处理 200+ 文件和 40,000+ 次正则匹配（214 * 214）在 Node.js 环境下瞬间完成 (< 1秒)。
+*   **连接质量 (Connectivity Quality)**:
+    *   关键词匹配策略有效地捕获了显式提及。
+    *   **问题**: 存在一些孤立节点 (Isolated Nodes)，即没有提及其他文件且未被其他文件提及。这在知识库早期阶段是正常的。
+    *   **方向性**: 目前采用“提及者依赖被提及者” (Mentioner depends on Mentioned) 的策略。对于某些情况（如“A 参见 B”），这可能反了。但在大多数“A 使用概念 B”的情况下，这是正确的。
+
+## 4. 结论 (Conclusion)
+v0.1.1 版本的独立构建器已成功实现并验证。它为后续的算法优化（如循环检测和混合推断）提供了坚实的数据基础和可视化平台。
+
+---
+---
+
+### 2025-12-18 v0.1.1 - Independent DAG Builder Test
+
+## 1. Test Environment
+*   **Directory**: `testconcept/` (214 real concept files)
+*   **Test Script**: `src/backend/build_dag.ts`
+*   **Frontend**: `src/frontend/index.html`
+
+## 2. Test Execution Summary
+
+| Step | Action | Result | Status |
+| :--- | :--- | :--- | :--- |
+| **1. Parsing** | Scan Markdown files in `testconcept`. | **214** nodes loaded successfully. Filenames used as IDs. | ✅ PASS |
+| **2. Edge Inference** | Perform case-insensitive whole-word matching on content. | **384** edges discovered. | ✅ PASS |
+| **3. Data Gen** | Generate `graph_data.json`. | Valid JSON format with `nodes` and `links`. | ✅ PASS |
+| **4. Visualization** | Open `index.html` in browser. | Force-directed graph renders successfully. Interactions (drag, hover) work. | ✅ PASS |
+
+## 3. Observations & Analysis
+
+*   **Performance**: Processing 200+ files and 40,000+ regex matches completed instantly (< 1s) in Node.js.
+*   **Connectivity Quality**:
+    *   Keyword matching effectively captures explicit mentions.
+    *   **Issue**: Some isolated nodes exist (no incoming/outgoing edges). This is expected in early-stage knowledge bases.
+    *   **Directionality**: Current strategy is "Mentioner depends on Mentioned". This is generally correct for "A uses concept B", though "See also" links might be ambiguous.
+
+## 4. Conclusion
+The v0.1.1 independent builder is successfully implemented and verified. It provides a solid data foundation and visualization platform for upcoming algorithmic optimizations (Cycle Detection, Hybrid Inference).

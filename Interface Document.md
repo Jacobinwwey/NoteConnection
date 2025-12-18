@@ -215,4 +215,82 @@ Renders the JSON data into an interactive DAG.
     *   **Zoom/Pan**: D3 缩放行为。
     *   **Tooltip**: 悬停时显示节点详情。
 
+---
+
+## 3. 独立 DAG 构建器 (Independent DAG Builder - v0.1.1)
+
+本节定义了 v0.1.1 版本中用于独立构建 DAG 的特定接口，不依赖于外部 API。
+
+### 3.1 本地文件加载 (Local File Loading)
+
+#### `ILocalFileLoader`
+负责从本地文件系统读取 Markdown 文件。
+
+*   **函数**: `load(dirPath: string): Promise<RawNote[]>`
+*   **输入**:
+    *   `dirPath` (string): 目标目录路径 (例如 `testconcept/`)。
+*   **输出**:
+    *   `Promise<RawNote[]>`: 包含文件名和内容的对象数组。
+*   **类型定义**:
+    ```typescript
+    interface RawNote {
+        id: string;      // 文件名 (无后缀)
+        content: string; // 完整文本内容
+    }
+    ```
+
+### 3.2 关键词匹配 (Keyword Matching)
+
+#### `IKeywordMatcher`
+基于文件名在内容中的出现频率建立连接。
+
+*   **函数**: `findMatches(notes: RawNote[]): DiscoveredEdge[]`
+*   **输入**:
+    *   `notes` (RawNote[]): 所有加载的笔记。
+*   **输出**:
+    *   `DiscoveredEdge[]`: 推断出的边列表。
+*   **逻辑**:
+    *   构建所有 `Note.id` 的字典。
+    *   对于每个 `Note A`，扫描其内容以查找其他 `Note B` 的 `id`。
+    *   如果找到，创建边 `B -> A` (假设 B 是 A 的基础概念/被提及者)。
+*   **类型定义**:
+    ```typescript
+    interface DiscoveredEdge {
+        source: string; // 被提及的概念 (Prerequisite)
+        target: string; // 当前文件 (Context)
+        weight: number; // 匹配次数或相关性分数
+    }
+    ```
+
+### 3.3 结构生成 (Structure Generation)
+
+#### `IStructureGenerator`
+将节点和边转换为前端可视化的 JSON 格式。
+
+*   **函数**: `generateJSON(nodes: RawNote[], edges: DiscoveredEdge[]): GraphData`
+*   **输入**:
+    *   `nodes`: 原始节点列表。
+    *   `edges`: 发现的边列表。
+*   **输出**:
+    *   `GraphData`: D3 可视化所需的最终对象。
+*   **类型定义**:
+    ```typescript
+    interface D3Node {
+        id: string;
+        group: number; // 基于聚类或目录
+    }
+
+    interface D3Link {
+        source: string;
+        target: string;
+        value: number;
+    }
+
+    interface GraphData {
+        nodes: D3Node[];
+        links: D3Link[];
+    }
+    ```
+
+
 ```
