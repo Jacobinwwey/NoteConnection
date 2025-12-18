@@ -142,13 +142,19 @@ The v0.1.1 independent builder is successfully implemented and verified. It prov
 | **Filter Logic (Out)** | Set Filter to "Out-Degree Only". Hover node. | Only Blue (outgoing) edges are visible. Incoming are hidden/dimmed. | ✅ PASS |
 
 ## 3. Observations
-*   **Usability**: The separation of colors (Orange vs. Blue) significantly improves the readability of the graph, especially for "hub" nodes with many connections.
-*   **Data Insight**: Immediately reveals which concepts are "Fundamental" (High Out-degree, Low In-degree in this context) vs. "Integrative" (High In-degree).
-    *   *Note*: Directionality assumption (Mentioner -> Mentioned) means "Fundamental" nodes are actually pointed *to* by many files (High In-degree).
-    *   *Correction*: In current logic, `A` mentions `B` creates `B -> A`.
-        *   `B` (Fundamental) is source. `A` (Derived) is target.
-        *   So Fundamental Concept = High Out-Degree (Source of many edges).
-        *   Derived Concept = High In-Degree (Target of many edges).
+
+*   **Global Visualization**: Changing the "View Mode" now dynamically resizes nodes based on the selected degree type.
+
+    *   **In-Degree Mode**: Immediately highlights "Integrative" concepts (large nodes = heavily referenced).
+
+    *   **Out-Degree Mode**: Highlights "Fundamental" concepts (large nodes = many prerequisites).
+
+*   **Interaction**: The combination of global node sizing and local edge filtering (on hover) provides a comprehensive tool for analyzing graph structure.
+
+*   **Clarity**: The "distinction" requested is now evident both globally (node size) and locally (edge color).
+
+
 
 ## 4. Conclusion
+
 v0.1.2 successfully implements degree visualization and filtering, meeting the user requirements for distinct UI operations.
