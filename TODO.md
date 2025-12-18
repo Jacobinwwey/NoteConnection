@@ -97,6 +97,23 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - Finalize configuration options (colors, exclusion rules).
     - Publish user manual.
 
+### 2025-12-18 v0.1.1 - Directive: DAG Construction for Test Concepts
+
+**Reference**: Analysis of `E:\Knowledge_project\ref` in `analysis.md`.
+
+**Objective**: Continue developing `NoteConnection` by building the DAG for the concepts in `E:\Knowledge_project\NoteConnection\testconcept`.
+
+**Requirements**:
+1.  **Independent Project**: No specific software platform dependency.
+2.  **Architecture**: HTML visualization; separated backend and frontend.
+3.  **Code Quality**: Robust, interpretable, **Bilingual Comments (Chinese/English)**.
+4.  **No LLM**: Prioritize systems engineering over LLM APIs.
+5.  **Interface Documentation**: Maintain `Interface Document.md` with clear input/output.
+6.  **Documentation Format**: Markdown. Structure: "Time and Version Number - English - Chinese".
+7.  **Consistency**: Update `Interface Document.md`, `README.md`, `TODO.md` after changes.
+8.  **Testing**: Functional testing after each stage, updated to `TEST_REPORT.md` (Bilingual).
+9.  **Git**: Backup before modifications. No new branches.
+
 ---
 ---
 
@@ -196,3 +213,20 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [ ] **用户设置与文档**
     - 确定配置选项（颜色、排除规则）。
     - 发布用户手册。
+
+### 2025-12-18 v0.1.1 - 指令：测试概念的 DAG 构建
+
+**参考**: `analysis.md` 中对 `E:\Knowledge_project\ref` 的分析。
+
+**目标**: 继续开发 `NoteConnection`，为 `E:\Knowledge_project\NoteConnection\testconcept` 中的概念构建 DAG。
+
+**要求**:
+1.  **独立项目**: 不依赖特定的软件平台。
+2.  **架构**: HTML 可视化；后端处理与前端显示分离。
+3.  **代码质量**: 健壮、可解释，**双语注释（中/英）**。
+4.  **无 LLM**: 优先考虑系统工程设计，而非 LLM API。
+5.  **接口文档**: 维护 `Interface Document.md`，清晰说明输入/输出。
+6.  **文档格式**: Markdown。结构：“时间 和 版本号 - 英文 - 中文”。
+7.  **一致性**: 更改后更新 `Interface Document.md`、`README.md`、`TODO.md`。
+8.  **测试**: 每个阶段后进行功能测试，更新至 `TEST_REPORT.md`（双语）。
+9.  **Git**: 修改前备份。不创建新分支。
