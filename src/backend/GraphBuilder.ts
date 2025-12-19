@@ -2,12 +2,14 @@ import { Graph } from '../core/Graph';
 import { NoteNode } from '../core/types';
 import { RawFile } from './FileLoader';
 import { config } from './config';
+import * as path from 'path';
 import { CommunityDetection } from './CommunityDetection';
 import { GraphMetrics } from './GraphMetrics';
 import { isSimilar } from './utils/stringUtils';
 import { FrontmatterParser } from './utils/frontmatterParser';
 import { CycleDetector } from './algorithms/CycleDetection';
 import { TopologicalSort } from './algorithms/TopologicalSort';
+import { StatisticalAnalyzer } from './algorithms/StatisticalAnalyzer';
 
 /**
  * Service to build the graph from raw files.
@@ -150,17 +152,49 @@ export class GraphBuilder {
       });
     });
 
-    // 3. Community Detection (v0.1.6)
-    const clusters = CommunityDetection.detect(graph);
-    clusters.forEach((clusterId, nodeId) => {
-        const node = graph.getNode(nodeId);
-        if (node) {
-            // Don't overwrite special cluster IDs like 'tags'
-            if (node.clusterId !== 'tags') {
-                node.clusterId = clusterId;
+    // 2c. Statistical Inference (v0.6.0)
+    if (config.enableStatisticalInference) {
+        console.log('[GraphBuilder] Running Statistical Inference...');
+        const terms = Array.from(fileMap.keys());
+        const matrix = StatisticalAnalyzer.analyze(files, terms);
+        const inferredEdges = StatisticalAnalyzer.inferDependencies(matrix, 0.05, 0.1); // Using test thresholds
+        
+        inferredEdges.forEach(dep => {
+            // Only add if edge doesn't exist to avoid duplicates with explicit/keyword links
+            // Graph.addEdge usually allows multi-edges or updates weight?
+            // Our Graph implementation is simple. Let's add with a distinct type.
+            graph.addEdge(dep.source, dep.target, 'statistical-inferred', dep.confidence);
+        });
+        console.log(`[GraphBuilder] Added ${inferredEdges.length} inferred edges.`);
+    }
+
+    // 3. Community Detection (v0.1.6) or Folder Clustering (v0.5.0)
+    if (config.clusteringStrategy === 'folder') {
+        // Folder-based Clustering
+        graph.getNodes().forEach(node => {
+             // Skip special nodes like tags which might not have filepath
+             if (node.clusterId === 'tags') return;
+             
+             if (node.metadata && node.metadata.filepath) {
+                 const dirName = path.basename(path.dirname(node.metadata.filepath));
+                 node.clusterId = dirName;
+             } else {
+                 node.clusterId = 'root'; // Fallback
+             }
+        });
+    } else {
+        // Label Propagation (Default)
+        const clusters = CommunityDetection.detect(graph);
+        clusters.forEach((clusterId, nodeId) => {
+            const node = graph.getNode(nodeId);
+            if (node) {
+                // Don't overwrite special cluster IDs like 'tags'
+                if (node.clusterId !== 'tags') {
+                    node.clusterId = clusterId;
+                }
             }
-        }
-    });
+        });
+    }
 
     // 4. Graph Metrics (v0.1.7)
     const centrality = GraphMetrics.calculateBetweenness(graph);

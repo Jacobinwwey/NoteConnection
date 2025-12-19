@@ -59,13 +59,13 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 **Goal**: Handle 10,000+ nodes by grouping them into high-level clusters based on File Structure or Semantic Tags.
 
-- [ ] **Clustering Logic**
-    - [ ] Implement **Folder-based Clustering**: Parse directory structure (e.g., `Physics/Mechanics` -> Cluster `Mechanics`).
-    - [ ] Add Configuration Strategy: Switch between `Label Propagation` (current) and `Folder Path` for `clusterId` assignment.
+- [x] **Clustering Logic**
+    - [x] Implement **Folder-based Clustering**: Parse directory structure (e.g., `Physics/Mechanics` -> Cluster `Mechanics`).
+    - [x] Add Configuration Strategy: Switch between `Label Propagation` (current) and `Folder Path` for `clusterId` assignment.
 
-- [ ] **Semantic Zoom / Drill-down**
-    - [ ] Render "Super Nodes" (Clusters) at low zoom levels.
-    - [ ] Expand to show detailed dependency graphs when a cluster is clicked.
+- [x] **Semantic Zoom / Drill-down**
+    - [x] Render "Super Nodes" (Clusters) at low zoom levels (Implemented as "Cluster View" toggle).
+    - [x] Expand to show detailed dependency graphs when a cluster is clicked (Drill-down via Filter).
 
 ### 2026-05-01 v0.6.0 - Hybrid Inference Strategy (AI & Stats)
 
@@ -75,9 +75,9 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - Implement embedding generation (using local models or APIs similar to `obsidian-smart-connections`).
     - Use Cosine Similarity to determine the strength of **association** (undirected relationship) between concepts.
 
-- [ ] **Statistical Dependency Inference**
-    - Calculate **Co-occurrence Frequency** and **Conditional Probability** ($P(B|A)$) across the note corpus.
-    - Hypothesis: If A frequently appears before B or in the context of defining B, A might be a dependency.
+- [x] **Statistical Dependency Inference**
+    - [x] Calculate **Co-occurrence Frequency** and **Conditional Probability** ($P(B|A)$) across the note corpus.
+    - [x] Hypothesis: If A frequently appears before B or in the context of defining B, A might be a dependency.
 
 - [ ] **Hybrid Judgment Engine**
     - Combine Vector Similarity (for relevance) + Statistical Probability (for direction) + LLM Verification (for final check).

@@ -53,8 +53,9 @@ export class Graph {
    * @param source Source node ID | 源节点 ID
    * @param target Target node ID | 目标节点 ID
    * @param type Relationship type | 关系类型
+   * @param weight Edge weight (confidence) | 边权重 (置信度)
    */
-  addEdge(source: string, target: string, type: string = 'dependency'): void {
+  addEdge(source: string, target: string, type: string = 'dependency', weight: number = 1): void {
     if (!this.nodes.has(source)) {
       this.addNode({ id: source, label: source, inDegree: 0, outDegree: 0 });
     }
@@ -62,7 +63,7 @@ export class Graph {
       this.addNode({ id: target, label: target, inDegree: 0, outDegree: 0 });
     }
 
-    const edge: NoteEdge = { source, target, type };
+    const edge: NoteEdge = { source, target, type, weight };
     
     // Add to adjacency list (outgoing)
     const outgoing = this.adjacencyList.get(source) || [];
