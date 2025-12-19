@@ -10,11 +10,11 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 **Goal**: Establish the standalone project environment and core data structures for a Directed Graph, independent of specific note-taking app APIs initially.
 
-- [ ] **Project Initialization**
+- [x] **Project Initialization**
     - Initialize a new TypeScript/Node.js project in `NoteConnection`.
     - Configure ESLint, Prettier, and Jest for testing.
 
-- [ ] **Graph Core Implementation**
+- [x] **Graph Core Implementation**
     - Implement `Node` and `Edge` interfaces supporting metadata (e.g., `rank`, `clusterId`).
     - Implement a `Graph` class with methods: `addNode`, `addEdge`, `getNeighbors`, `getIncomingEdges`, `getOutgoingEdges`.
 
@@ -23,8 +23,8 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Ingest data from Markdown files, specifically parsing frontmatter for directional dependencies.
 
 - [ ] **Markdown Parser Service**
-    - Implement a file system reader to scan directories recursively.
-    - Create a regex or AST-based parser to extract YAML frontmatter.
+    - [x] Implement a file system reader to scan directories recursively.
+    - [ ] Create a regex or AST-based parser to extract YAML frontmatter.
 
 - [ ] **Dependency Extraction**
     - Define the schema: `prerequisites: [[Note A]]`, `next: [[Note B]]`.
@@ -132,15 +132,28 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Objective**: Based on `v0.1.1` and `v0.1.2`, proceed with the implementation of the DAG for concepts in `testconcept`.
 
 **Requirements**:
-1.  **Independent Implementation**: Do not rely on specific software platforms; use independent project code.
-2.  **Architecture**: Visual solution uses HTML; separate backend processing and frontend display.
-3.  **Robustness & Interpretability**: Code must be robust and interpretable. **Bilingual Comments (Chinese/English)** are required.
-4.  **No LLM Dependency**: Prioritize systems engineering design over LLM API calls.
-5.  **Interface Documentation**: Clearly state interface code info for each function. Maintain `Interface Document.md` for input/output interfaces.
-6.  **Documentation Format**: Markdown (.md). Structure: "Time and Version Number - English - Chinese".
-7.  **Consistency**: Update `Interface Document.md`, `README.md`, and `TODO.md` after code updates.
-8.  **Functional Testing**: Conduct functional testing after each stage and update `TEST_REPORT.md` (Bilingual: "Time and Version - English - Chinese").
-9.  **Git Usage**: Backup before modification. Avoid opening new branches.
+- [x] **Independent Implementation**: Do not rely on specific software platforms; use independent project code.
+- [x] **Architecture**: Visual solution uses HTML; separate backend processing and frontend display.
+- [x] **Robustness & Interpretability**: Code must be robust and interpretable. **Bilingual Comments (Chinese/English)** are required.
+- [x] **No LLM Dependency**: Prioritize systems engineering design over LLM API calls.
+- [x] **Interface Documentation**: Clearly state interface code info for each function. Maintain `Interface Document.md` for input/output interfaces.
+- [x] **Documentation Format**: Markdown (.md). Structure: "Time and Version Number - English - Chinese".
+- [x] **Consistency**: Update `Interface Document.md`, `README.md`, and `TODO.md` after code updates.
+- [x] **Functional Testing**: Conduct functional testing after each stage and update `TEST_REPORT.md` (Bilingual: "Time and Version - English - Chinese").
+- [x] **Git Usage**: Backup before modification. Avoid opening new branches.
+
+### 2025-12-25 v0.1.4 - Refinement & Advanced Filtering
+
+**Objective**: Improve the accuracy of connection discovery and enhance frontend filtering capabilities.
+
+- [ ] **Refine Keyword Matching**:
+    - Implement exclusion list (ignore common words).
+    - Support "Exact Phrase" vs "Fuzzy Match" options.
+- [ ] **Advanced Frontend Controls**:
+    - Filter by Degree range (slider).
+    - Toggle "Orphan Nodes" visibility.
+- [ ] **Data Export**:
+    - Allow user to export the visible graph as SVG/PNG.
 
 ---
 
@@ -154,11 +167,11 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 **目标**: 建立独立的项目环境和有向图的核心数据结构，初期独立于特定的笔记应用 API。
 
-- [ ] **项目初始化**
+- [x] **项目初始化**
     - 在 `NoteConnection` 中初始化一个新的 TypeScript/Node.js 项目。
     - 配置 ESLint, Prettier 和 Jest 用于测试。
 
-- [ ] **图核心实现**
+- [x] **图核心实现**
     - 实现支持元数据（如 `rank`, `clusterId`）的 `Node` 和 `Edge` 接口。
     - 实现 `Graph` 类，包含方法：`addNode`, `addEdge`, `getNeighbors`, `getIncomingEdges`, `getOutgoingEdges`。
 
@@ -167,8 +180,8 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 从 Markdown 文件中摄取数据，专门解析 Frontmatter 中的定向依赖关系。
 
 - [ ] **Markdown 解析服务**
-    - 实现文件系统读取器以递归扫描目录。
-    - 创建基于正则或 AST 的解析器以提取 YAML Frontmatter。
+    - [x] 实现文件系统读取器以递归扫描目录。
+    - [ ] 创建基于正则或 AST 的解析器以提取 YAML Frontmatter。
 
 - [ ] **依赖提取**
     - 定义模式：`prerequisites: [[Note A]]`, `next: [[Note B]]`。
@@ -276,12 +289,12 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 基于 `v0.1.1` 和 `v0.1.2`，推进 `testconcept` 中概念的 DAG 实现。
 
 **要求**:
-1.  **独立实现**: 不依赖特定软件平台，通过独立项目代码实现。
-2.  **架构**: 可视化方案使用 HTML；后端处理与前端显示分离。
-3.  **健壮性与可解释性**: 代码应具有良好的健壮性和可解释性，注释需支持**中英双语**阅读。
-4.  **非 LLM 依赖**: 优先通过系统工程设计实现功能，而非依赖 LLM API 调用。
-5.  **接口文档**: 明确说明每个功能的接口代码信息，并维护专用的 `Interface Document.md` 文件用于输入输出接口。
-6.  **文档格式**: 推荐 md 格式。支持中英双语阅读。文档结构应为“时间 和 版本号 - 英文 - 中文”。
-7.  **一致性**: 代码更新后，需更新 `Interface Document.md`, `README.md` 和 `TODO.md`。
-8.  **功能测试**: 每个开发阶段完成后，需进行功能测试并更新至 `TEST_REPORT.md`（双语文档结构：“时间 和 版本号 - 英文文档 - 中文文档”）。
-9.  **Git 使用**: 修改前备份版本。使用 git 时尽量不开新分支。
+- [x] **独立实现**: 不依赖特定软件平台，通过独立项目代码实现。
+- [x] **架构**: 可视化方案使用 HTML；后端处理与前端显示分离。
+- [x] **健壮性与可解释性**: 代码应具有良好的健壮性和可解释性，注释需支持**中英双语**阅读。
+- [x] **非 LLM 依赖**: 优先通过系统工程设计实现功能，而非依赖 LLM API 调用。
+- [x] **接口文档**: 明确说明每个功能的接口代码信息，并维护专用的 `Interface Document.md` 文件用于输入输出接口。
+- [x] **文档格式**: 推荐 md 格式。支持中英双语阅读。文档结构应为“时间 和 版本号 - 英文 - 中文”。
+- [x] **一致性**: 代码更新后，需更新 `Interface Document.md`, `README.md` 和 `TODO.md`。
+- [x] **功能测试**: 每个开发阶段完成后，需进行功能测试并更新至 `TEST_REPORT.md`（双语文档结构：“时间 和 版本号 - 英文文档 - 中文文档”）。
+- [x] **Git 使用**: 修改前备份版本。使用 git 时尽量不开新分支。
