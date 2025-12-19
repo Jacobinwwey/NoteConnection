@@ -146,14 +146,36 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 **Objective**: Improve the accuracy of connection discovery and enhance frontend filtering capabilities.
 
-- [ ] **Refine Keyword Matching**:
-    - Implement exclusion list (ignore common words).
-    - Support "Exact Phrase" vs "Fuzzy Match" options.
-- [ ] **Advanced Frontend Controls**:
-    - Filter by Degree range (slider).
-    - Toggle "Orphan Nodes" visibility.
-- [ ] **Data Export**:
-    - Allow user to export the visible graph as SVG/PNG.
+- [x] **Refine Keyword Matching**:
+    - [x] Implement exclusion list (ignore common words).
+    - [x] Support "Exact Phrase" vs "Fuzzy Match" options.
+- [x] **Advanced Frontend Controls**:
+    - [x] Filter by Degree range (slider).
+    - [x] Toggle "Orphan Nodes" visibility.
+- [x] **Data Export**:
+    - [x] Allow user to export the visible graph as SVG/PNG.
+
+### 2025-12-25 v0.1.5 - Analysis & Flexible Export
+
+**Objective**: Implement degree distribution visualization and flexible export options (Top %, Min Degree, ZIP/JSON).
+
+- [x] **Degree Distribution Graph**:
+    - [x] Histogram of Node Degrees.
+- [x] **Flexible Export**:
+    - [x] Filter by "Top %" or "Min Degree".
+    - [x] Export to JSON (with content).
+    - [x] Export to ZIP (Markdown files).
+
+### 2026-01-15 v0.1.6 - Data Persistence & Layout Optimization
+
+**Objective**: Allow saving of layout positions and improve large graph rendering.
+
+- [ ] **Persist Layout**:
+    - Save `x, y` coordinates to `graph_data.json` so the graph doesn't re-simulate every reload.
+- [ ] **Cluster Visualization**:
+    - Group nodes visually by folder or detected clusters (colors/hulls).
+- [ ] **Performance**:
+    - Optimize for 1000+ nodes (Canvas rendering option?).
 
 ---
 

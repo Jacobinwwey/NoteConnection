@@ -1,6 +1,7 @@
 import { Graph } from '../core/Graph';
 import { NoteNode } from '../core/types';
 import { RawFile } from './FileLoader';
+import { config } from './config';
 
 /**
  * Service to build the graph from raw files.
@@ -19,11 +20,17 @@ export class GraphBuilder {
     // 1. 首先添加所有节点
     const fileMap = new Map<string, RawFile>();
     files.forEach(file => {
+      // Check exclusion list for Nodes? Usually we want all nodes, just not edges TO excluded nodes?
+      // Or do we exclude the node entirely? Usually exclusion list in this context implies "Don't link TO this common word".
+      // But if it's a file in the folder, it's a node.
+      // Let's keep all files as nodes, but prevent edges if they are in exclusion list.
+      
       const node: NoteNode = {
         id: file.filename,
         label: file.filename,
         inDegree: 0,
         outDegree: 0,
+        content: file.content,
         metadata: { filepath: file.filepath }
       };
       graph.addNode(node);
@@ -43,19 +50,12 @@ export class GraphBuilder {
         const targetId = targetFile.filename;
         if (sourceId === targetId) return; // Skip self | 跳过自身
 
-        // Simple case-insensitive exact match of the title
-        // 简单的标题不区分大小写精确匹配
-        // We use a regex with word boundaries to avoid partial matches (e.g., "Ice" inside "Nice")
-        // 我们使用带有单词边界的正则表达式以避免部分匹配（例如，“Nice”中的“Ice”）。
-        
-        // Escape special characters in title for regex
-        const escapedTitle = targetId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(escapedTitle, 'i'); // Removed \b for broader matching initially, or keep it?
-        // Let's use strict containment to avoid too much noise, but maybe without \b for phrases?
-        // Actually, titles can be phrases. "High density amorphous ice".
-        // Let's just check if content includes the title string for now.
-        
-        if (content.toLowerCase().includes(targetId.toLowerCase())) {
+        // Exclusion Check
+        if (config.exclusionList.includes(targetId)) {
+            return;
+        }
+
+        if (this.isMatch(content, targetId)) {
              // Found a reference!
              // Target (Concept) -> Source (Context)
              graph.addEdge(targetId, sourceId, 'keyword-match');
@@ -64,5 +64,24 @@ export class GraphBuilder {
     });
 
     return graph;
+  }
+
+  /**
+   * Checks if the content contains the term based on the configured strategy.
+   * 根据配置的策略检查内容是否包含术语。
+   */
+  private static isMatch(content: string, term: string): boolean {
+      if (config.matchingStrategy === 'exact-phrase') {
+          // Regex with word boundaries for exact phrase matching
+          // Escape special characters in title for regex
+          const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          // \b might not work well with non-ASCII or some symbols, but good for English concepts.
+          // For robustness, we might want to ensure we don't match inside a word.
+          const regex = new RegExp(`\\b${escapedTerm}\\b`, 'i');
+          return regex.test(content);
+      } else {
+          // 'fuzzy' or simple inclusion (fallback)
+          return content.toLowerCase().includes(term.toLowerCase());
+      }
   }
 }

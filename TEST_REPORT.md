@@ -1,77 +1,53 @@
 # Test Report (测试报告)
 
-## 2025-12-19 v0.1.3 - DAG Construction & Visualization
+## 2025-12-25 v0.1.5 - Analysis & Flexible Export
 
 ### English Report
 
-**Objective**: Verify the implementation of the DAG construction backend and the HTML/D3.js frontend visualization.
+**Objective**: Implement degree distribution visualization and flexible export options (Top %, Min Degree, ZIP/JSON).
 
-**Test Environment**:
-- OS: Win32
-- Runtime: Node.js (ts-node)
-- Browser Target: Modern Browsers (Chrome/Edge/Firefox)
+**1. Degree Distribution Visualization**
+- **Feature**: Added "Analysis & Export" modal.
+- **Visual**: Histogram bar chart showing frequency of Total Degrees (In + Out).
+- **Implementation**: Uses D3.js to render bars dynamically based on loaded graph data.
+- **Verification**: Opening the modal displays the distribution correctly.
 
-**1. Backend Data Construction**
-- **Input**: 214 Markdown files in `testconcept/`.
-- **Process**:
-    - `FileLoader` successfully read all files.
-    - `GraphBuilder` applied "Keyword Matching" strategy (scanning content for other note titles).
-- **Output**:
-    - Nodes: 214
-    - Edges: 419
-    - File: `src/frontend/graph_data.json` generated valid JSON.
-    - File: `src/frontend/data.js` generated for easy frontend import.
-- **Verification**: `inDegree` and `outDegree` calculated correctly (e.g., Absorption: In=2, Out=22).
+**2. Flexible Export**
+- **Criteria**:
+    - **Top X Percent**: Slider selects top rankers (e.g., Top 5%).
+    - **Min Degree**: Slider selects nodes with degree > Threshold.
+- **Formats**:
+    - **JSON**: Exports array of nodes with `id`, `inDegree`, `outDegree`, and full `content`.
+    - **ZIP**: Client-side generation of a .zip file containing Markdown files.
+- **Implementation**:
+    - Backend: `GraphBuilder` now embeds `content` in `graph_data.json`.
+    - Frontend: `JSZip` library used to package files in the browser.
+    - Verified: Downloaded ZIP contains readable MD files.
 
-**2. Frontend Visualization**
-- **Files Created**: `index.html`, `app.js`, `styles.css`.
-- **Features Implemented**:
-    - **Force-Directed Layout**: Nodes repel, edges connect.
-    - **Visual Distinction**:
-        - Nodes colored by total degree (Blue heatmap).
-        - Highlight: Hovering a node highlights neighbors.
-        - **In-Degree Edges**: Red (`#ff6b6b`).
-        - **Out-Degree Edges**: Cyan (`#4ecdc4`).
-    - **Filtering**: Radio buttons to show "All", "Incoming Only", or "Outgoing Only".
-    - **Search**: Real-time filtering by node name.
-    - **Tooltip**: Shows ID, In-Degree, and Out-Degree on hover.
-
-**Conclusion**: The system successfully transforms raw markdown files into an interactive knowledge graph without external platform dependencies.
+**Conclusion**: The system now supports deep analysis of graph structure and easy data extraction for external use.
 
 ---
 
 ### 中文报告
 
-**目标**: 验证 DAG 构建后端和 HTML/D3.js 前端可视化的实现。
+**目标**: 实现度数分布可视化和灵活的导出选项（前百分比、最小度数、ZIP/JSON）。
 
-**测试环境**:
-- 操作系统: Win32
-- 运行环境: Node.js (ts-node)
-- 目标浏览器: 现代浏览器 (Chrome/Edge/Firefox)
+**1. 度数分布可视化**
+- **功能**: 添加了“分析与导出”模态框。
+- **视觉**: 显示总度数（入度+出度）频率的直方图条形图。
+- **实现**: 使用 D3.js 根据加载的图数据动态渲染条形图。
+- **验证**: 打开模态框能正确显示分布。
 
-**1. 后端数据构建**
-- **输入**: `testconcept/` 目录下的 214 个 Markdown 文件。
-- **过程**:
-    - `FileLoader` 成功读取所有文件。
-    - `GraphBuilder` 应用了“关键词匹配”策略（扫描内容以查找其他笔记标题）。
-- **输出**:
-    - 节点数: 214
-    - 边数: 419
-    - 文件: `src/frontend/graph_data.json` 生成了有效的 JSON。
-    - 文件: `src/frontend/data.js` 生成用于前端导入的文件。
-- **验证**: `inDegree`（入度）和 `outDegree`（出度）计算正确（例如，Absorption: In=2, Out=22）。
+**2. 灵活导出**
+- **标准**:
+    - **前 X 百分比**: 滑块选择排名靠前的节点（例如，前 5%）。
+    - **最小度数**: 滑块选择度数 > 阈值的节点。
+- **格式**:
+    - **JSON**: 导出包含 `id`、`inDegree`、`outDegree` 和完整 `content` 的节点数组。
+    - **ZIP**: 浏览器端生成包含 Markdown 文件的 .zip 文件。
+- **实现**:
+    - 后端: `GraphBuilder` 现在将 `content` 嵌入到 `graph_data.json` 中。
+    - 前端: 使用 `JSZip` 库在浏览器中打包文件。
+    - 验证: 下载的 ZIP 包含可读的 MD 文件。
 
-**2. 前端可视化**
-- **创建的文件**: `index.html`, `app.js`, `styles.css`.
-- **实现的功能**:
-    - **力导向布局**: 节点排斥，边连接。
-    - **视觉区分**:
-        - 节点根据总度数着色（蓝色热力图）。
-        - 高亮: 悬停节点时高亮邻居。
-        - **入度边**: 红色 (`#ff6b6b`)。
-        - **出度边**: 青色 (`#4ecdc4`)。
-    - **过滤**: 单选按钮显示“全部”、“仅入度”或“仅出度”。
-    - **搜索**: 按节点名称实时过滤。
-    - **提示框**: 悬停时显示 ID、入度和出度。
-
-**结论**: 系统成功地将原始 Markdown 文件转换为交互式知识图谱，无需依赖外部平台。
+**结论**: 系统现在支持对图结构的深入分析以及便于外部使用的数据提取。

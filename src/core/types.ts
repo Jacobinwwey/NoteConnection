@@ -9,6 +9,7 @@ export interface NoteNode {
   outDegree: number; // Number of outgoing edges | 出度数量
   rank?: number; // Topological rank or hierarchy level | 拓扑排名或层级
   clusterId?: string; // ID of the cluster this node belongs to | 该节点所属的聚类 ID
+  content?: string; // Full text content of the note | 笔记的全文内容
   metadata?: Record<string, any>; // Additional metadata from frontmatter | 来自 frontmatter 的额外元数据
 }
 
