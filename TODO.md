@@ -71,16 +71,18 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 **Goal**: Combine statistical and vectorized methods to infer dependencies and associations where explicit metadata is missing.
 
-- [ ] **Vector-based Association (Similarity)**
-    - Implement embedding generation (using local models or APIs similar to `obsidian-smart-connections`).
-    - Use Cosine Similarity to determine the strength of **association** (undirected relationship) between concepts.
+- [x] **Vector-based Association (Similarity)**
+    - [x] Implement embedding generation (using local TF-IDF VectorSpace).
+    - [x] Use Cosine Similarity to determine the strength of **association** (undirected relationship) between concepts.
 
 - [x] **Statistical Dependency Inference**
     - [x] Calculate **Co-occurrence Frequency** and **Conditional Probability** ($P(B|A)$) across the note corpus.
     - [x] Hypothesis: If A frequently appears before B or in the context of defining B, A might be a dependency.
 
+### 2026-06-01 v1.0.0 - Production Release (Hybrid & Polish)
+
 - [ ] **Hybrid Judgment Engine**
-    - Combine Vector Similarity (for relevance) + Statistical Probability (for direction) + LLM Verification (for final check).
+    - Combine Vector Similarity (for relevance) + Statistical Probability (for direction).
     - Rule: If `Similarity(A, B) > Threshold` AND `P(B|A) >> P(A|B)`, suggest edge `A -> B`.
 
 - [ ] **AI Inference Service (LLM Verification)**

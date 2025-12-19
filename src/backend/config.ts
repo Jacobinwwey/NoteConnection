@@ -4,6 +4,7 @@ export interface AppConfig {
     fuzzyThreshold: number; // Max Levenshtein distance for fuzzy match
     enableTags: boolean; // Create nodes for tags
     enableStatisticalInference: boolean; // Use statistical analysis to infer edges
+    enableVectorSimilarity: boolean; // Use TF-IDF/Vector similarity for associations
     exclusionList: string[]; // List of concept IDs (filenames) to ignore when creating edges
 }
 
@@ -12,7 +13,8 @@ export const config: AppConfig = {
     clusteringStrategy: 'label-propagation', // Default to current behavior
     fuzzyThreshold: 2,
     enableTags: true,
-    enableStatisticalInference: false, // Default off for performance/noise control
+    enableStatisticalInference: false, // Default off
+    enableVectorSimilarity: false, // Default off
     exclusionList: [
         // Add common words or concepts here that cause too much noise
         // e.g., "Introduction", "Summary", etc.
