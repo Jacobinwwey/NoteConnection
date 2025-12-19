@@ -30,6 +30,33 @@ Responsible for reading raw files from the file system.
 
 ### 1.2 Parsing & Extraction
 
+#### `FrontmatterParser` (Updated v0.2.0)
+Parses YAML frontmatter to extract structured metadata.
+
+*   **Function**: `parse(content: string): ParsedMetadata`
+*   **Input**:
+    *   `content` (string): The full content of the Markdown file.
+*   **Output**:
+    *   `ParsedMetadata`: Object containing extracted fields.
+*   **Type Definitions**:
+    ```typescript
+    interface ParsedMetadata {
+        tags: string[];         // Extracted from 'tags' (list or inline)
+        prerequisites: string[];// Extracted from 'prerequisites'
+        next: string[];         // Extracted from 'next'
+        [key: string]: any;
+    }
+    ```
+*   **Supported Formats**:
+    *   Inline Array: `field: [Item A, Item B]`
+    *   List: 
+        ```yaml
+        field:
+          - Item A
+          - [[Item B]]
+        ```
+    *   Single Value: `field: [[Item A]]`
+
 #### `INoteParser`
 Parses raw content into structured Concept objects.
 

@@ -57,6 +57,13 @@
             <div class="search-box">
                  <input type="text" id="search-input" placeholder="Search node..." data-i18n-placeholder="search_placeholder">
             </div>
+            
+            <div class="renderer-controls" style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px;">
+                <span style="font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 3px;" data-i18n="renderer">Renderer:</span>
+                <label style="font-size: 0.9rem; margin-right: 10px;"><input type="radio" name="rendererMode" value="svg" checked> SVG</label>
+                <label style="font-size: 0.9rem;"><input type="radio" name="rendererMode" value="canvas"> Canvas</label>
+            </div>
+
             <div class="advanced-controls" style="margin-top: 15px; border-top: 1px solid #555; padding-top: 10px;">
                 <label style="font-size: 0.9rem; color: #aaa;"><span data-i18n="min_degree">Min Degree:</span> <span id="min-degree-val">0</span></label>
                 <input type="range" id="min-degree-slider" min="0" max="20" value="0" style="width: 100%;">
@@ -72,7 +79,9 @@
             </div>
         </div>
 
-        <div id="graph-container"></div>
+        <div id="graph-container">
+            <canvas id="graph-canvas" style="display: none; width: 100%; height: 100%;"></canvas>
+        </div>
     </div>
 
     <!-- Resizer Handle -->

@@ -1,4 +1,4 @@
-# 2025-12-17 v0.1.0
+# 2025-12-19 v0.1.4
 
 # Project Build Plan: Progressive Hierarchical Knowledge Graph
 
@@ -22,13 +22,13 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 **Goal**: Ingest data from Markdown files, specifically parsing frontmatter for directional dependencies.
 
-- [ ] **Markdown Parser Service**
+- [x] **Markdown Parser Service**
     - [x] Implement a file system reader to scan directories recursively.
-    - [ ] Create a regex or AST-based parser to extract YAML frontmatter.
+    - [x] Create a regex or AST-based parser to extract YAML frontmatter.
 
-- [ ] **Dependency Extraction**
-    - Define the schema: `prerequisites: [[Note A]]`, `next: [[Note B]]`.
-    - Logic to convert these metadata fields into directed edges in the `Graph` object.
+- [x] **Dependency Extraction**
+    - [x] Define the schema: `prerequisites: [[Note A]]`, `next: [[Note B]]`.
+    - [x] Logic to convert these metadata fields into directed edges in the `Graph` object.
 
 ### 2026-02-01 v0.3.0 - Algorithmic Core (DAG Logic)
 
@@ -154,6 +154,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] Toggle "Orphan Nodes" visibility.
 - [x] **Data Export**:
     - [x] Allow user to export the visible graph as SVG/PNG.
+    - [x] **JSON/ZIP Export**: Updated to include complete edge context (v0.1.4 update).
 
 ### 2025-12-25 v0.1.5 - Analysis & Flexible Export
 
@@ -166,6 +167,8 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] Export to JSON (with content).
     - [x] Export to ZIP (Markdown files).
     - [x] **Node Table**: Sortable list of filtered nodes.
+- [x] **Localization**:
+    - [x] Full Bilingual Support (English/Chinese) for UI and Analysis Panel.
 
 ### 2026-01-15 v0.1.6 - Data Persistence & Layout Optimization
 
@@ -194,14 +197,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] **Graph Metrics**:
     - [x] Calculate Betweenness Centrality (Brandes Algorithm).
     - [x] Visualize Centrality via Node Size and Label Weight.
-
-### 2026-02-15 v0.1.8 - Performance Optimization & Large Scale Rendering
-
-**Objective**: Ensure the system can handle 10,000+ nodes smoothly.
-
-- [ ] **Canvas Rendering**: Implement a Canvas-based renderer (alongside SVG) for high performance.
-- [ ] **Data Pagination/Streaming**: Optimize loading for large JSON files.
-- [ ] **Search Optimization**: Add an index for instant search on large datasets.
 
 ### 2026-06-01 v1.0.0 - Production Release
 
@@ -370,6 +365,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] 切换“孤立节点”可见性。
 - [x] **数据导出**:
     - [x] 允许用户将可见图导出为 SVG/PNG。
+    - [x] **JSON/ZIP 导出**: 已更新为包含完整的边上下文（v0.1.4 更新）。
 
 ### 2025-12-25 v0.1.5 - 分析与灵活导出
 
@@ -382,6 +378,8 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] 导出为 JSON（包含内容）。
     - [x] 导出为 ZIP（Markdown 文件）。
     - [x] **节点表**: 过滤后节点的可排序列表。
+- [x] **本地化**:
+    - [x] UI 和分析面板的完整双语支持（英语/中文）。
 
 ### 2026-01-15 v0.1.6 - 数据持久化与布局优化
 
@@ -410,11 +408,13 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] **图指标**:
     - [x] 计算介数中心性 (Brandes 算法)。
     - [x] 通过节点大小和标签粗细可视化中心性。
+### 2026-06-01 v1.0.0 - 正式发布
 
-### 2026-02-15 v0.1.8 - 性能优化与大规模渲染
+**Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.
 
-**目标**: 确保系统能够流畅处理 10,000+ 节点。
+- [ ] **Plugin Wrapper**
+    - Wrap the `NoteConnection` core logic into a Joplin Plugin and an Obsidian Plugin.
 
-- [ ] **Canvas 渲染**: 实现基于 Canvas 的渲染器（与 SVG 并存）以实现高性能。
-- [ ] **数据分页/流式传输**: 优化大型 JSON 文件的加载。
-- [ ] **搜索优化**: 为大型数据集添加即时搜索索引。
+- [ ] **User Settings & Documentation**
+    - Finalize configuration options (colors, exclusion rules).
+    - Publish user manual.
