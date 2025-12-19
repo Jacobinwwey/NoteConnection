@@ -81,3 +81,47 @@
 *   **组件**: `GraphBuilder`。
 *   **验证**: 代码审查确认现在会遍历 `metadata.prerequisites` 和 `metadata.next`，以创建类型为 `explicit-prerequisite` 和 `explicit-next` 的边。
 *   **回退逻辑**: 如果找不到目标 ID（例如 "Concept"），构建器会尝试 "Concept.md" 以匹配基于文件名的 ID。
+
+# Test Report (2025-12-19 v0.3.0)
+
+## English Document
+
+### 1. Cycle Detection
+*   **Component**: `CycleDetector` (Backend).
+*   **Test Script**: `src/backend/algorithms/test_cycle.ts`.
+*   **Scenarios Verified**:
+    *   **Simple Cycle**: `A -> B -> C -> A`. Correctly detected `[A, B, C, A]`.
+    *   **Real Data Integration**: Tested on `testconcept` (214 files). Detected 25 cycles without crashing.
+*   **Result**: PASS.
+
+### 2. Topological Sorting
+*   **Component**: `TopologicalSort` (Backend).
+*   **Test Script**: `src/backend/algorithms/test_sort.ts`.
+*   **Algorithm**: Kahn's Algorithm variant (Longest Path).
+*   **Scenarios Verified**:
+    *   **DAG**: `A -> B, A -> C, B -> D, C -> D`.
+    *   **Expected Ranks**: `A=0, B=1, C=1, D=2`. Verified correctly.
+    *   **Cyclic Graph**: Warns and returns partial ranks.
+*   **Result**: PASS.
+
+---
+
+## 中文文档 (Chinese Document)
+
+### 1. 循环检测
+*   **组件**: `CycleDetector` (后端)。
+*   **测试脚本**: `src/backend/algorithms/test_cycle.ts`。
+*   **验证场景**:
+    *   **简单循环**: `A -> B -> C -> A`。正确检测到 `[A, B, C, A]`。
+    *   **真实数据集成**: 在 `testconcept` (214 个文件) 上测试。检测到 25 个循环且未崩溃。
+*   **结果**: 通过 (PASS)。
+
+### 2. 拓扑排序
+*   **组件**: `TopologicalSort` (后端)。
+*   **测试脚本**: `src/backend/algorithms/test_sort.ts`。
+*   **算法**: Kahn 算法变体 (最长路径)。
+*   **验证场景**:
+    *   **DAG**: `A -> B, A -> C, B -> D, C -> D`。
+    *   **预期等级**: `A=0, B=1, C=1, D=2`。验证正确。
+    *   **循环图**: 发出警告并返回部分等级。
+*   **结果**: 通过 (PASS)。

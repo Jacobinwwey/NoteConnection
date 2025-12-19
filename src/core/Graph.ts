@@ -98,6 +98,23 @@ export class Graph {
   }
 
   /**
+   * Gets all outgoing neighbor IDs for a node.
+   * 获取节点的所有出度邻居 ID。
+   * @param id Node ID | 节点 ID
+   */
+  getNeighbors(id: string): string[] {
+      return (this.adjacencyList.get(id) || []).map(edge => edge.target);
+  }
+
+  /**
+   * Gets all nodes in the graph.
+   * 获取图中的所有节点。
+   */
+  getNodes(): NoteNode[] {
+      return Array.from(this.nodes.values());
+  }
+
+  /**
    * Gets all incoming edges to a node.
    * 获取节点的所有入边。
    * @param id Node ID | 节点 ID
