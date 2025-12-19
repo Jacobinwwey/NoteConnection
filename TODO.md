@@ -181,6 +181,17 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [ ] **Performance**:
     - Optimize for 1000+ nodes (Canvas rendering option?). (Deferred to future optimization phase if needed).
 
+### 2026-02-01 v0.1.7 - Intelligent Association Analysis
+
+**Objective**: Introduce basic semantic analysis to suggest connections beyond simple keyword matching.
+
+- [ ] **Fuzzy String Matching**:
+    - Use Levenshtein distance or similar to find "similar" concepts (e.g., "Water" vs "water").
+- [ ] **Tag-based Linking**:
+    - If notes share sufficient tags (metadata), suggest a "Related" edge.
+- [ ] **Graph Metrics**:
+    - Calculate Betweenness Centrality to identify key "Bridge" nodes.
+
 ### 2026-06-01 v1.0.0 - Production Release
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.

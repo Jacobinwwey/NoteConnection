@@ -10,6 +10,7 @@ export interface NoteNode {
   content?: string;  // Full text content (v0.1.5)
   x?: number;        // Saved X position | 保存的 X 坐标
   y?: number;        // Saved Y position | 保存的 Y 坐标
+  centrality?: number; // Betweenness Centrality | 介数中心性
   rank?: number;     // Topological rank or hierarchy level | 拓扑排名或层级
   clusterId?: string;// ID of the cluster this node belongs to | 该节点所属的聚类 ID
   metadata?: Record<string, any>; // Additional metadata from frontmatter | 来自 frontmatter 的额外元数据

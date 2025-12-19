@@ -3,6 +3,9 @@ import { NoteNode } from '../core/types';
 import { RawFile } from './FileLoader';
 import { config } from './config';
 import { CommunityDetection } from './CommunityDetection';
+import { GraphMetrics } from './GraphMetrics';
+import { isSimilar } from './utils/stringUtils';
+import { FrontmatterParser } from './utils/frontmatterParser';
 
 /**
  * Service to build the graph from raw files.
@@ -22,18 +25,16 @@ export class GraphBuilder {
     // 1. 首先添加所有节点
     const fileMap = new Map<string, RawFile>();
     files.forEach(file => {
-      // Check exclusion list for Nodes? Usually we want all nodes, just not edges TO excluded nodes?
-      // Or do we exclude the node entirely? Usually exclusion list in this context implies "Don't link TO this common word".
-      // But if it's a file in the folder, it's a node.
-      // Let's keep all files as nodes, but prevent edges if they are in exclusion list.
-      
+      // Parse Tags
+      const tags = FrontmatterParser.extractTags(file.content);
+
       const node: NoteNode = {
         id: file.filename,
         label: file.filename,
         inDegree: 0,
         outDegree: 0,
         content: file.content,
-        metadata: { filepath: file.filepath }
+        metadata: { filepath: file.filepath, tags: tags }
       };
 
       if (layout && layout.has(file.filename)) {
@@ -44,6 +45,23 @@ export class GraphBuilder {
 
       graph.addNode(node);
       fileMap.set(file.filename, file);
+
+      // 1b. Add Tag Nodes
+      if (config.enableTags) {
+          tags.forEach(tag => {
+              const tagId = `#${tag}`;
+              if (!graph.hasNode(tagId)) {
+                  graph.addNode({
+                      id: tagId,
+                      label: tagId,
+                      inDegree: 0, outDegree: 0,
+                      clusterId: 'tags' // Group tags together
+                  });
+              }
+              // Edge: Note -> Tag
+              graph.addEdge(node.id, tagId, 'tagged');
+          });
+      }
     });
 
     // 2. Identify edges (Keyword Matching Strategy)
@@ -77,7 +95,19 @@ export class GraphBuilder {
     clusters.forEach((clusterId, nodeId) => {
         const node = graph.getNode(nodeId);
         if (node) {
-            node.clusterId = clusterId;
+            // Don't overwrite special cluster IDs like 'tags'
+            if (node.clusterId !== 'tags') {
+                node.clusterId = clusterId;
+            }
+        }
+    });
+
+    // 4. Graph Metrics (v0.1.7)
+    const centrality = GraphMetrics.calculateBetweenness(graph);
+    centrality.forEach((val, nodeId) => {
+        const node = graph.getNode(nodeId);
+        if (node) {
+            node.centrality = val;
         }
     });
 
@@ -90,16 +120,33 @@ export class GraphBuilder {
    */
   private static isMatch(content: string, term: string): boolean {
       if (config.matchingStrategy === 'exact-phrase') {
-          // Regex with word boundaries for exact phrase matching
-          // Escape special characters in title for regex
           const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          // \b might not work well with non-ASCII or some symbols, but good for English concepts.
-          // For robustness, we might want to ensure we don't match inside a word.
           const regex = new RegExp(`\\b${escapedTerm}\\b`, 'i');
           return regex.test(content);
-      } else {
-          // 'fuzzy' or simple inclusion (fallback)
+      } else if (config.matchingStrategy === 'fuzzy') {
+          // Fuzzy Strategy: Check for approximate string match
+          // Note: Full text scan for fuzzy match is expensive O(N*M).
+          // Optimization: Check for exact match first, then maybe sliding window?
+          // For now, simpler: check if any WORD in content is similar to term?
+          // This is too aggressive.
+          // Let's fallback to inclusion for now, plus Levenshtein check on potential candidates if we were doing entity extraction.
+          // Since we are scanning full text for a list of known titles:
+          
+          // Implementation: Regex search for the term allowing some errors? Hard in JS.
+          // Alternative: Use inclusion, then check Levenshtein on the match?
+          // Simple "includes" is already 'fuzzy' in the sense of substring.
+          
+          // Let's implement a stronger check:
+          // If 'term' is "Water", we match "Waters", "water.", "Water,".
+          // If 'term' is "Color", we match "Colour" (Levenshtein=1).
+          
+          // Current implementation supports 'exact-phrase' (RegEx) or 'fuzzy' (simple includes).
+          // We can upgrade 'fuzzy' to mean "Includes OR Similar Word exists".
+          
+          // Warning: Checking every word against every title is too slow (N*M).
+          // We will stick to the previous 'includes' for now, but maybe relax the regex?
           return content.toLowerCase().includes(term.toLowerCase());
       }
+      return false;
   }
 }

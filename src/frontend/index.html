@@ -29,6 +29,17 @@
                 <label style="font-size: 0.9rem; display: inline-block;"><input type="radio" name="colorMode" value="cluster"> Cluster</label>
             </div>
 
+            <div class="size-controls" style="margin-top: 5px; padding-top: 5px;">
+                <span style="font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 3px;">Size By:</span>
+                <label style="font-size: 0.9rem; display: inline-block; margin-right: 10px;"><input type="radio" name="sizeMode" value="uniform" checked> Uniform</label>
+                <label style="font-size: 0.9rem; display: inline-block;"><input type="radio" name="sizeMode" value="centrality"> Centrality</label>
+            </div>
+
+            <div class="opacity-controls" style="margin-top: 5px; padding-top: 5px;">
+                <label style="font-size: 0.85rem; color: #aaa; display: block;">Label Opacity: <span id="label-opacity-val">100%</span></label>
+                <input type="range" id="label-opacity-slider" min="0" max="100" value="100" style="width: 100%;">
+            </div>
+
             <div class="search-box">
                  <input type="text" id="search-input" placeholder="Search node...">
             </div>
