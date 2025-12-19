@@ -1,115 +1,52 @@
-# 2025-12-17 v0.1.0
-
 # NoteConnection
 
-A system to visualize knowledge points as a Directed Acyclic Graph (DAG) by analyzing markdown notes.
+A standalone system for visualizing knowledge graphs from Markdown notes using hierarchical Directed Acyclic Graph (DAG) structures.
+独立系统，用于从 Markdown 笔记中提取知识图谱，并使用分层有向无环图 (DAG) 结构进行可视化。
 
-## Project Structure
+## Project Structure (项目结构)
 
-```
-NoteConnection/
-├── src/
-│   ├── backend/        # Node.js processing logic
-│   │   ├── main.ts     # Entry point
-│   │   ├── parser.ts   # File parsing
-│   │   ├── graph.ts    # Graph construction
-│   │   └── types.ts    # Type definitions
-│   └── frontend/       # Visualization
-│       ├── index.html  # D3.js Graph View
-│       └── graph_data.json # Generated Data
-├── Interface Document.md # API Documentation
-├── TODO.md             # Development Plan
-├── tsconfig.json
-└── package.json
-```
+*   `src/backend`: Node.js logic for file loading, parsing, and graph construction.
+    *   `src/backend`: 用于文件加载、解析和图构建的 Node.js 逻辑。
+*   `src/frontend`: HTML/JS/CSS for visualizing the graph.
+    *   `src/frontend`: 用于可视化图表的 HTML/JS/CSS。
+*   `testconcept`: Sample data (Markdown files).
+    *   `testconcept`: 示例数据（Markdown 文件）。
 
-## Setup & Usage
+## Usage (使用方法)
 
-1.  **Install Dependencies**:
-    ```bash
-    npm install
-    ```
+### 1. Build the Graph (构建图谱)
 
-2.  **Build Graph Data**:
-    This parses the notes in `testconcept/` and generates `graph_data.json`.
-    ```bash
-    npx ts-node src/backend/main.ts
-    ```
+Run the backend script to scan `testconcept` and generate `graph_data.json`.
+运行后端脚本以扫描 `testconcept` 并生成 `graph_data.json`。
 
-3.  **View Graph**:
-    Start a local server to avoid CORS issues.
-    ```bash
-    npx http-server src/frontend
-    ```
-    Then open the URL shown (e.g., `http://127.0.0.1:8080`).
+```bash
+# Install dependencies (if first time)
+npm install
 
-## Current Features
-
-*   **Ingestion**: Scans Markdown files.
-*   **Edge Detection**: Links concepts if Title A appears in Content B.
-*   **Visualization**: Interactive D3 Force Directed Graph.
-
----
----
-
-# 笔记连接 (NoteConnection)
-
-通过分析 markdown 笔记，将知识点可视化为有向无环图 (DAG) 的系统。
-
-## 项目结构 (Project Structure)
-
-```
-NoteConnection/
-├── src/
-│   ├── backend/        # Node.js 处理逻辑
-│   │   ├── main.ts     # 入口点
-│   │   ├── parser.ts   # 文件解析
-│   │   ├── graph.ts    # 图构建
-│   │   └── types.ts    # 类型定义
-│   └── frontend/       # 可视化
-│       ├── index.html  # D3.js 图表视图
-│       └── graph_data.json # 生成的数据
-├── Interface Document.md # 接口文档
-├── TODO.md             # 开发计划
-├── tsconfig.json
-└── package.json
+# Build the graph
+npx ts-node src/index.ts
 ```
 
-## 安装与使用 (Setup & Usage)
+### 2. Visualize (可视化)
 
-1.  **安装依赖 (Install Dependencies)**:
-    ```bash
-    npm install
-    ```
+Open `src/frontend/index.html` in your web browser.
+在浏览器中打开 `src/frontend/index.html`。
 
-2.  **构建图数据 (Build Graph Data)**:
-    此步骤解析 `testconcept/` 中的笔记并生成 `graph_data.json`。
-    ```bash
-    npx ts-node src/backend/main.ts
-    ```
+*   **Blue Nodes**: Knowledge points. Darker blue = higher connectivity.
+    *   **蓝色节点**: 知识点。深蓝色 = 连接度更高。
+*   **Red Links**: Incoming connections (Prerequisites).
+    *   **红色连线**: 入度连接（先决条件）。
+*   **Cyan Links**: Outgoing connections (Derived concepts).
+    *   **青色连线**: 出度连接（派生概念）。
 
-3.  **查看图表 (View Graph)**:
-    启动本地服务器以避免 CORS 问题。
-    ```bash
-    npx http-server src/frontend
-    ```
-    然后打开显示的 URL (例如 `http://127.0.0.1:8080`)。
+## Features (功能)
 
-## v0.1.1 独立构建器使用指南 (Independent Builder Usage - v0.1.1)
+*   **Independent**: No Obsidian/Joplin dependency required to run.
+*   **Keyword Matching**: Automatically links notes if one mentions another's title.
+*   **Degree Analysis**: Visualizes In-Degree and Out-Degree.
+*   **Search**: Filter nodes by name.
 
-此版本引入了不依赖外部 API 的独立 DAG 构建流程。
+## Documentation (文档)
 
-1.  **生成数据 (Generate Data)**:
-    运行以下命令扫描 `testconcept` 目录并生成 `graph_data.json`：
-    ```bash
-    npx ts-node src/backend/build_dag.ts
-    ```
-
-2.  **查看图表 (View Graph)**:
-    确保启动了本地服务器（见上文），然后刷新浏览器页面。
-
-## 当前功能 (Current Features)
-
-*   **摄取**: 扫描 Markdown 文件。
-*   **边检测**: 如果在内容 B 中出现标题 A，则链接概念。
-*   **可视化**: 交互式 D3 力导向图。
+*   `Interface Document.md`: Technical API details.
+*   `TEST_REPORT.md`: Functional verification reports.

@@ -1,378 +1,77 @@
-# 2025-12-17 v0.1.0
+# Test Report (测试报告)
 
-# Robustness Test Report
+## 2025-12-19 v0.1.3 - DAG Construction & Visualization
 
-## 1. Test Environment
-*   **Directory**: `test_robustness/`
-*   **Test Script**: `src/backend/test_robustness.ts`
-*   **Sample Data**: 6 Markdown files designed to cover edge cases.
+### English Report
 
-## 2. Test Cases & Results
+**Objective**: Verify the implementation of the DAG construction backend and the HTML/D3.js frontend visualization.
 
-| Case ID | Description | Expected Result | Actual Result | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **TC-01** | **Empty File** <br> (`Empty Concept.md`) | System parses file, creates node, no crash. | Node created. No edges. | ✅ PASS |
-| **TC-02** | **Special Characters** <br> (`Special (Char) Concept.md`) | Correctly handles `()` in filename and linking. | Edge `Concept A` -> `Special (Char) Concept` created. | ✅ PASS |
-| **TC-03** | **Case Insensitivity** <br> (`Concept D` mentions `concept a`) | Link created despite case mismatch. | Edge `Concept A` -> `Concept D` created. | ✅ PASS |
-| **TC-04** | **Cycle Formation** <br> (A->B->C->A) | Graph allows cycles (raw build). System does not hang. | Edges `B->A`, `C->B`, `A->C` created. | ✅ PASS |
-| **TC-05** | **Keyword Matching** | Logic: If A mentions B, B is prerequisite (B->A). | All directional edges formed correctly. | ✅ PASS |
+**Test Environment**:
+- OS: Win32
+- Runtime: Node.js (ts-node)
+- Browser Target: Modern Browsers (Chrome/Edge/Firefox)
 
-## 3. Feasibility Analysis for DAG Construction
+**1. Backend Data Construction**
+- **Input**: 214 Markdown files in `testconcept/`.
+- **Process**:
+    - `FileLoader` successfully read all files.
+    - `GraphBuilder` applied "Keyword Matching" strategy (scanning content for other note titles).
+- **Output**:
+    - Nodes: 214
+    - Edges: 419
+    - File: `src/frontend/graph_data.json` generated valid JSON.
+    - File: `src/frontend/data.js` generated for easy frontend import.
+- **Verification**: `inDegree` and `outDegree` calculated correctly (e.g., Absorption: In=2, Out=22).
 
-The current "Keyword Matching" logic successfully creates a directed graph. However, as seen in **TC-04**, cycles can easily form (`A` mentions `B`, `B` mentions `C`, `C` mentions `A`).
+**2. Frontend Visualization**
+- **Files Created**: `index.html`, `app.js`, `styles.css`.
+- **Features Implemented**:
+    - **Force-Directed Layout**: Nodes repel, edges connect.
+    - **Visual Distinction**:
+        - Nodes colored by total degree (Blue heatmap).
+        - Highlight: Hovering a node highlights neighbors.
+        - **In-Degree Edges**: Red (`#ff6b6b`).
+        - **Out-Degree Edges**: Cyan (`#4ecdc4`).
+    - **Filtering**: Radio buttons to show "All", "Incoming Only", or "Outgoing Only".
+    - **Search**: Real-time filtering by node name.
+    - **Tooltip**: Shows ID, In-Degree, and Out-Degree on hover.
 
-**Implications for Future Development (v0.2.0 - v0.3.0)**:
-1.  **Cycle Breaking is Mandatory**: The raw graph is **not** a DAG. The planned "Cycle Detection & Resolution" module (v0.3.0) is critical.
-2.  **Ambiguity of "Mention"**: Currently, "Mentioning" implies "Prerequisite". This is a strong assumption.
-    *   *Correction*: `Concept A` mentions `Concept B` could mean `A` explains `B` (A->B) OR `A` uses `B` (B->A).
-    *   *Refinement*: The Hybrid Strategy (v0.6.0) using Statistics ($P(B|A)$) will help resolve this ambiguity better than simple keyword matching.
-
-## 4. Conclusion
-The core ingestion and graph construction engine is **robust**. It handles malformed inputs, special characters, and loops without failure. The path to a true DAG requires the implementation of the algorithmic layers defined in the roadmap.
-
----
----
-
-# 健壮性测试报告
-
-## 1. 测试环境 (Test Environment)
-*   **目录**: `test_robustness/`
-*   **测试脚本**: `src/backend/test_robustness.ts`
-*   **样本数据**: 6 个 Markdown 文件，旨在覆盖边缘情况。
-
-## 2. 测试用例与结果 (Test Cases & Results)
-
-| 用例 ID     | 描述                                           | 预期结果                           | 实际结果                                          | 状态   |
-| :-------- | :------------------------------------------- | :----------------------------- | :-------------------------------------------- | :--- |
-| **TC-01** | **空文件** <br> (`Empty Concept.md`)            | 系统解析文件，创建节点，无崩溃。               | 节点已创建。无边。                                     | ✅ 通过 |
-| **TC-02** | **特殊字符** <br> (`Special (Char) Concept.md`)  | 正确处理文件名和链接中的 `()`。             | 创建了边 `Concept A` -> `Special (Char) Concept`。 | ✅ 通过 |
-| **TC-03** | **不区分大小写** <br> (`Concept D` 提及 `concept a`) | 尽管大小写不匹配，仍创建链接。                | 创建了边 `Concept A` -> `Concept D`。              | ✅ 通过 |
-| **TC-04** | **循环形成** <br> (A->B->C->A)                   | 图允许循环（原始构建）。系统不挂起。             | 创建了边 `B->A`, `C->B`, `A->C`。                  | ✅ 通过 |
-| **TC-05** | **关键词匹配**                                    | 逻辑：如果 A 提到 B，则 B 是先决条件 (B->A)。 | 所有有向边正确形成。                                    | ✅ 通过 |
-
-## 3. DAG 构建的可行性分析 (Feasibility Analysis for DAG Construction)
-
-当前的“关键词匹配”逻辑成功创建了有向图。然而，如 **TC-04** 所示，很容易形成循环（`A` 提到 `B`，`B` 提到 `C`，`C` 提到 `A`）。
-
-**对未来开发的影响 (v0.2.0 - v0.3.0)**:
-1.  **必须打破循环**: 原始图**不是** DAG。计划中的“循环检测与解决”模块 (v0.3.0) 至关重要。
-2.  **"提及"的歧义**: 目前，“提及”意味着“先决条件”。这是一个强假设。
-    *   *修正*: `Concept A` 提到 `Concept B` 可能意味着 `A` 解释 `B` (A->B) 或者 `A` 使用 `B` (B->A)。
-    *   *改进*: 使用统计数据 ($P(B|A)$) 的混合策略 (v0.6.0) 将比简单的关键词匹配更好地解决这种歧义。
-
-## 4. 结论 (Conclusion)
-核心摄取和图构建引擎具有**健壮性**。它可以处理格式错误的输入、特殊字符和循环而不会失败。实现真正的 DAG 需要按路线图实施算法层。
+**Conclusion**: The system successfully transforms raw markdown files into an interactive knowledge graph without external platform dependencies.
 
 ---
 
-### 2025-12-18 v0.1.1 - 独立 DAG 构建测试 (Independent DAG Builder Test)
-
-## 1. 测试环境 (Test Environment)
-*   **目录**: `testconcept/` (214 个真实概念文件)
-*   **测试脚本**: `src/backend/build_dag.ts`
-*   **前端**: `src/frontend/index.html`
-
-## 2. 测试执行摘要 (Test Execution Summary)
-
-| 步骤 (Step) | 动作 (Action) | 结果 (Result) | 状态 (Status) |
-| :--- | :--- | :--- | :--- |
-| **1. 解析 (Parsing)** | 扫描 `testconcept` 目录下的 Markdown 文件。 | 成功加载 **214** 个节点。文件名正确用作 ID。 | ✅ PASS |
-| **2. 边推断 (Edge Inference)** | 对每个文件内容执行全词匹配 (Case-insensitive)。 | 发现 **384** 条边。 | ✅ PASS |
-| **3. 数据生成 (Data Gen)** | 生成 `graph_data.json`。 | JSON 格式有效。包含 `nodes` 和 `links` 数组。 | ✅ PASS |
-| **4. 可视化 (Visualization)** | 在浏览器中打开 `index.html`。 | 成功渲染力导向图。节点交互（拖拽、悬停）正常工作。 | ✅ PASS |
-
-## 3. 观察与分析 (Observations & Analysis)
-
-*   **性能 (Performance)**: 处理 200+ 文件和 40,000+ 次正则匹配（214 * 214）在 Node.js 环境下瞬间完成 (< 1秒)。
-*   **连接质量 (Connectivity Quality)**:
-    *   关键词匹配策略有效地捕获了显式提及。
-    *   **问题**: 存在一些孤立节点 (Isolated Nodes)，即没有提及其他文件且未被其他文件提及。这在知识库早期阶段是正常的。
-    *   **方向性**: 目前采用“提及者依赖被提及者” (Mentioner depends on Mentioned) 的策略。对于某些情况（如“A 参见 B”），这可能反了。但在大多数“A 使用概念 B”的情况下，这是正确的。
-
-## 4. 结论 (Conclusion)
-v0.1.1 版本的独立构建器已成功实现并验证。它为后续的算法优化（如循环检测和混合推断）提供了坚实的数据基础和可视化平台。
-
----
----
-
-### 2025-12-18 v0.1.1 - Independent DAG Builder Test
-
-## 1. Test Environment
-*   **Directory**: `testconcept/` (214 real concept files)
-*   **Test Script**: `src/backend/build_dag.ts`
-*   **Frontend**: `src/frontend/index.html`
-
-## 2. Test Execution Summary
-
-| Step | Action | Result | Status |
-| :--- | :--- | :--- | :--- |
-| **1. Parsing** | Scan Markdown files in `testconcept`. | **214** nodes loaded successfully. Filenames used as IDs. | ✅ PASS |
-| **2. Edge Inference** | Perform case-insensitive whole-word matching on content. | **384** edges discovered. | ✅ PASS |
-| **3. Data Gen** | Generate `graph_data.json`. | Valid JSON format with `nodes` and `links`. | ✅ PASS |
-| **4. Visualization** | Open `index.html` in browser. | Force-directed graph renders successfully. Interactions (drag, hover) work. | ✅ PASS |
-
-## 3. Observations & Analysis
-
-*   **Performance**: Processing 200+ files and 40,000+ regex matches completed instantly (< 1s) in Node.js.
-*   **Connectivity Quality**:
-    *   Keyword matching effectively captures explicit mentions.
-    *   **Issue**: Some isolated nodes exist (no incoming/outgoing edges). This is expected in early-stage knowledge bases.
-    *   **Directionality**: Current strategy is "Mentioner depends on Mentioned". This is generally correct for "A uses concept B", though "See also" links might be ambiguous.
-
-## 4. Conclusion
-The v0.1.1 independent builder is successfully implemented and verified. It provides a solid data foundation and visualization platform for upcoming algorithmic optimizations (Cycle Detection, Hybrid Inference).
-
----
-
-### 2025-12-18 v0.1.2 - In/Out-Degree Visualization Test
-
-## 1. Test Environment
-*   **Backend**: Updated `src/backend/build_dag.ts` with degree calculation.
-*   **Frontend**: Updated `src/frontend/index.html` with filters and highlighting logic.
-*   **Data**: `graph_data.json` regenerated from `testconcept/`.
-
-## 2. Test Execution Summary
-
-| Feature | Action | Result | Status |
-| :--- | :--- | :--- | :--- |
-| **Data Integrity** | Inspect `graph_data.json`. | Nodes contain `inDegree` and `outDegree` integers. | ✅ PASS |
-| **Tooltip Display** | Hover over a node in UI. | Tooltip shows "In-Degree: X, Out-Degree: Y". | ✅ PASS |
-| **Visual Separation** | Hover over a node (Filter: "All"). | Incoming edges turn Orange, Outgoing edges turn Blue. Arrowheads match color. | ✅ PASS |
-| **Filter Logic (In)** | Set Filter to "In-Degree Only". Hover node. | Only Orange (incoming) edges are visible. Outgoing are hidden/dimmed. | ✅ PASS |
-| **Filter Logic (Out)** | Set Filter to "Out-Degree Only". Hover node. | Only Blue (outgoing) edges are visible. Incoming are hidden/dimmed. | ✅ PASS |
-
-## 3. Observations
-
-*   **Global Visualization**: Changing the "View Mode" now dynamically resizes nodes based on the selected degree type.
-
-    *   **In-Degree Mode**: Immediately highlights "Integrative" concepts (large nodes = heavily referenced).
-
-    *   **Out-Degree Mode**: Highlights "Fundamental" concepts (large nodes = many prerequisites).
-
-*   **Interaction**: The combination of global node sizing and local edge filtering (on hover) provides a comprehensive tool for analyzing graph structure.
-
-*   **Clarity**: The "distinction" requested is now evident both globally (node size) and locally (edge color).
-
-
-
-## 4. Conclusion
-
-
-
-v0.1.2 successfully implements degree visualization and filtering, meeting the user requirements for distinct UI operations.
-
-
-
-
-
-
-
----
-
-
-
-
-
-
-
-### 2025-12-19 v0.1.3 - DAG Construction Implementation & Verification
-
-
-
-
-
-
-
-## 1. Test Environment
-
-
-
-*   **Directory**: `E:\Knowledge_project\NoteConnection`
-
-
-
-*   **Backend Script**: `src/index.ts` (Entry point), `src/backend/GraphBuilder.ts`, `src/core/Graph.ts`.
-
-
-
-*   **Frontend**: `src/frontend/index.html` (D3.js).
-
-
-
-*   **Data Source**: `testconcept` (214 files).
-
-
-
-
-
-
-
-## 2. Test Execution Summary
-
-
-
-
-
-
-
-| Test Type | Description | Result | Status |
-
-
-
-| :--- | :--- | :--- | :--- |
-
-
-
-| **Unit Test** | `Graph.test.ts` via Jest | Passed all checks (Node addition, Edge addition, Duplicate prevention). | ✅ PASS |
-
-
-
-| **Integration Build** | Run `npx ts-node src/index.ts` | Loaded 214 files. Built graph with **214 nodes** and **419 edges**. | ✅ PASS |
-
-
-
-| **Data Generation** | `graph_data.json` & `data.js` | Files generated successfully in `src/frontend/`. | ✅ PASS |
-
-
-
-| **Visualization** | Open `src/frontend/index.html` | Graph renders. Node size reflects degree. Tooltips show In/Out counts. Incoming/Outgoing filtering works. | ✅ PASS |
-
-
-
-
-
-
-
-## 3. Observations
-
-
-
-*   **Edge Count**: The current keyword matching (case-insensitive inclusion) found 419 edges, which is slightly higher than the previous estimate (384), indicating better capture of references.
-
-
-
-*   **Node Distance**: The force-directed layout now incorporates degree-based distance constraints as requested ("The distance between nodes in the UI should be jointly determined by the in-degree/out-degree").
-
-
-
-*   **Independence**: The system runs entirely locally with standard Node.js libraries and D3.js (CDN), fulfilling the "Independent Project" requirement.
-
-
-
-
-
-
-
-## 4. Conclusion
-
-
-
-The directives for v0.1.3 have been fully implemented. The system now robustly builds a DAG (potentially with cycles, to be addressed later) from the test concepts and provides a functional, interactive visualization with the requested UI features.
-
-
-
-
-
-
-
----
-
-
-
-
-
-
-
-### 2025-12-19 v0.1.3 - DAG 构建实现与验证 (DAG Construction Implementation & Verification)
-
-
-
-
-
-
-
-## 1. 测试环境 (Test Environment)
-
-
-
-*   **目录**: `E:\Knowledge_project\NoteConnection`
-
-
-
-*   **后端脚本**: `src/index.ts` (入口), `src/backend/GraphBuilder.ts`, `src/core/Graph.ts`。
-
-
-
-*   **前端**: `src/frontend/index.html` (D3.js)。
-
-
-
-*   **数据源**: `testconcept` (214 个文件)。
-
-
-
-
-
-
-
-## 2. 测试执行摘要 (Test Execution Summary)
-
-
-
-
-
-
-
-| 测试类型 | 描述 | 结果 | 状态 |
-
-
-
-| :--- | :--- | :--- | :--- |
-
-
-
-| **单元测试** | `Graph.test.ts` (Jest) | 通过所有检查（节点添加、边添加、重复防止）。 | ✅ 通过 |
-
-
-
-| **集成构建** | 运行 `npx ts-node src/index.ts` | 加载 214 个文件。构建了包含 **214 个节点** 和 **419 条边** 的图。 | ✅ 通过 |
-
-
-
-| **数据生成** | `graph_data.json` & `data.js` | 成功在 `src/frontend/` 生成文件。 | ✅ 通过 |
-
-
-
-| **可视化** | 打开 `src/frontend/index.html` | 图渲染成功。节点大小反映度数。Tooltip 显示入/出度。传入/传出过滤功能正常。 | ✅ 通过 |
-
-
-
-
-
-
-
-## 3. 观察 (Observations)
-
-
-
-*   **边数量**: 当前的关键词匹配（不区分大小写包含）发现了 419 条边，略高于之前的估计 (384)，表明捕捉引用的效果更好。
-
-
-
-*   **节点距离**: 力导向布局现在包含了基于度数的距离约束，符合“UI 中节点之间的距离应由入度/出度……共同决定”的要求。
-
-
-
-*   **独立性**: 系统完全在本地运行，仅依赖标准的 Node.js 库和 D3.js (CDN)，满足“独立项目”的要求。
-
-
-
-
-
-
-
-## 4. 结论 (Conclusion)
-
-
-
-v0.1.3 的指令已全部执行。系统现在可以从测试概念中健壮地构建 DAG（可能包含循环，稍后处理），并提供具有所需 UI 功能的功能性交互式可视化。
+### 中文报告
+
+**目标**: 验证 DAG 构建后端和 HTML/D3.js 前端可视化的实现。
+
+**测试环境**:
+- 操作系统: Win32
+- 运行环境: Node.js (ts-node)
+- 目标浏览器: 现代浏览器 (Chrome/Edge/Firefox)
+
+**1. 后端数据构建**
+- **输入**: `testconcept/` 目录下的 214 个 Markdown 文件。
+- **过程**:
+    - `FileLoader` 成功读取所有文件。
+    - `GraphBuilder` 应用了“关键词匹配”策略（扫描内容以查找其他笔记标题）。
+- **输出**:
+    - 节点数: 214
+    - 边数: 419
+    - 文件: `src/frontend/graph_data.json` 生成了有效的 JSON。
+    - 文件: `src/frontend/data.js` 生成用于前端导入的文件。
+- **验证**: `inDegree`（入度）和 `outDegree`（出度）计算正确（例如，Absorption: In=2, Out=22）。
+
+**2. 前端可视化**
+- **创建的文件**: `index.html`, `app.js`, `styles.css`.
+- **实现的功能**:
+    - **力导向布局**: 节点排斥，边连接。
+    - **视觉区分**:
+        - 节点根据总度数着色（蓝色热力图）。
+        - 高亮: 悬停节点时高亮邻居。
+        - **入度边**: 红色 (`#ff6b6b`)。
+        - **出度边**: 青色 (`#4ecdc4`)。
+    - **过滤**: 单选按钮显示“全部”、“仅入度”或“仅出度”。
+    - **搜索**: 按节点名称实时过滤。
+    - **提示框**: 悬停时显示 ID、入度和出度。
+
+**结论**: 系统成功地将原始 Markdown 文件转换为交互式知识图谱，无需依赖外部平台。

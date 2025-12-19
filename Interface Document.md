@@ -63,6 +63,16 @@ Core data structure for managing notes and dependencies.
     *   `getOutgoingEdges(id: string): NoteEdge[]`
     *   `getIncomingEdges(id: string): NoteEdge[]`
     *   `toJSON(): GraphData`
+
+#### `GraphBuilder` Service
+*   **Strategy**: Keyword Matching (Content Scanning).
+*   **Logic**:
+    *   Iterates through all file pairs (Source, Target).
+    *   If `Source.content` includes `Target.filename` (Case-Insensitive):
+        *   Creates Edge: `Target -> Source` (Target is a concept used in Source).
+        *   Edge Type: `keyword-match`.
+*   **Note**: Simple string inclusion is used. Future versions may implement exact phrase matching or fuzzy matching.
+
 *   **Type Definitions**:
     ```typescript
     interface NoteNode {
@@ -176,6 +186,16 @@ Renders the JSON data into an interactive DAG.
     *   `getOutgoingEdges(id: string): NoteEdge[]`
     *   `getIncomingEdges(id: string): NoteEdge[]`
     *   `toJSON(): GraphData`
+
+#### `GraphBuilder` 服务
+*   **策略**: 关键词匹配 (内容扫描)。
+*   **逻辑**:
+    *   遍历所有文件对 (Source, Target)。
+    *   如果 `Source.content` 包含 `Target.filename` (不区分大小写):
+        *   创建边: `Target -> Source` (Target 是 Source 中使用的概念)。
+        *   边类型: `keyword-match`。
+*   **注意**:目前使用简单的字符串包含匹配。未来版本可能会实现精确短语匹配或模糊匹配。
+
 *   **类型定义**:
     ```typescript
     interface NoteNode {
