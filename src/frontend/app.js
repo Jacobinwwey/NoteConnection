@@ -119,30 +119,55 @@ const texts = node.append("text")
 updateColor();
 updateSize();
 
+// Helper to get degree based on selection
+function getDegree(d) {
+    const mode = document.querySelector('input[name="degreeMode"]:checked').value;
+    if (mode === 'in') return d.inDegree || 0;
+    if (mode === 'out') return d.outDegree || 0;
+    return (d.inDegree || 0) + (d.outDegree || 0);
+}
+
 function updateColor() {
     const mode = document.querySelector('input[name="colorMode"]:checked').value;
     if (mode === 'cluster') {
         circles.attr("fill", d => colorScaleCluster(d.clusterId || 'unknown'));
     } else {
-        circles.attr("fill", d => colorScaleDegree(d.inDegree + d.outDegree));
+        // Update domain based on current max degree
+        const maxDeg = d3.max(nodes, d => getDegree(d)) || 1;
+        colorScaleDegree.domain([0, maxDeg]);
+        circles.attr("fill", d => colorScaleDegree(getDegree(d)));
     }
 }
 
 function updateSize() {
     const mode = document.querySelector('input[name="sizeMode"]:checked').value;
+    
     if (mode === 'centrality') {
-        // Node Size
+        // Node Size by Centrality
         circles.transition().duration(300).attr("r", d => sizeScaleCentrality(d.centrality || 0));
         
-        // Label Size & Weight
         texts.transition().duration(300)
              .attr("font-size", d => Math.max(10, sizeScaleCentrality(d.centrality || 0) * 1.2) + "px")
              .attr("font-weight", d => (d.centrality || 0) > maxCentrality * 0.5 ? "bold" : "normal")
-             .attr("dx", d => sizeScaleCentrality(d.centrality || 0) + 4); // Adjust offset
+             .attr("dx", d => sizeScaleCentrality(d.centrality || 0) + 4);
 
-        // Update Collision Force
         simulation.force("collide", d3.forceCollide().radius(d => sizeScaleCentrality(d.centrality || 0) + 5));
+    
+    } else if (mode === 'degree') {
+        // Node Size by Degree
+        const maxDeg = d3.max(nodes, d => getDegree(d)) || 1;
+        const sizeScaleDegree = d3.scaleSqrt().domain([0, maxDeg]).range([3, 12]);
+
+        circles.transition().duration(300).attr("r", d => sizeScaleDegree(getDegree(d)));
+        
+        texts.transition().duration(300)
+             .attr("font-size", d => Math.max(10, sizeScaleDegree(getDegree(d)) * 1.2) + "px")
+             .attr("dx", d => sizeScaleDegree(getDegree(d)) + 4);
+
+        simulation.force("collide", d3.forceCollide().radius(d => sizeScaleDegree(getDegree(d)) + 5));
+
     } else {
+        // Uniform
         circles.transition().duration(300).attr("r", 5);
         texts.transition().duration(300)
              .attr("font-size", "10px")
@@ -154,17 +179,7 @@ function updateSize() {
     simulation.alpha(0.3).restart();
 }
 
-// Opacity Control
-const opacitySlider = document.getElementById('label-opacity-slider');
-const opacityVal = document.getElementById('label-opacity-val');
-
-if (opacitySlider) {
-    opacitySlider.addEventListener('input', (e) => {
-        const val = e.target.value;
-        opacityVal.innerText = val + "%\n";
-        texts.style("opacity", val / 100);
-    });
-}
+// ... existing code ...
 
 // Listeners
 document.querySelectorAll('input[name="colorMode"]').forEach(radio => {
@@ -173,6 +188,139 @@ document.querySelectorAll('input[name="colorMode"]').forEach(radio => {
 document.querySelectorAll('input[name="sizeMode"]').forEach(radio => {
     radio.addEventListener('change', updateSize);
 });
+document.querySelectorAll('input[name="degreeMode"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+        updateColor(); // Color might depend on degree mode
+        updateSize();  // Size might depend on degree mode
+    });
+});
+
+// Localization
+const translations = {
+    en: {
+        show_all: "Show All",
+        show_in: "Incoming Only",
+        show_out: "Outgoing Only",
+        degree_basis: "Degree Basis:",
+        all: "All",
+        in: "In",
+        out: "Out",
+        color_by: "Color By:",
+        degree: "Degree",
+        cluster: "Cluster",
+        size_by: "Size By:",
+        uniform: "Uniform",
+        centrality: "Centrality",
+        nodes: "Nodes:",
+        edges: "Edges:",
+        label_opacity: "Label Opacity:",
+        min_degree: "Min Degree:",
+        show_orphans: "Show Orphans",
+        export_image: "Export Image",
+        save_layout: "Save Layout (JSON)",
+        analysis_export: "Analysis & Export",
+        search_placeholder: "Search node...",
+        
+        // Analysis Panel
+        analysis_title: "Degree Analysis",
+        filter_strategy: "Filter Strategy:",
+        cluster_filter: "Cluster Filter:",
+        threshold: "Threshold:",
+        selected: "Selected:",
+        export_json: "JSON",
+        export_zip: "ZIP (MD)",
+        filtered_nodes: "Filtered Nodes",
+        
+        // Strategy Options
+        strat_top: "Top X% (by Degree)",
+        strat_min: "Min Degree > X",
+        cluster_all: "All Clusters",
+        
+        // Table Headers
+        th_name: "Name",
+        th_cluster: "Cluster",
+        th_in: "In",
+        th_out: "Out",
+        th_total: "Total"
+    },
+    zh: {
+        show_all: "显示全部",
+        show_in: "仅入度",
+        show_out: "仅出度",
+        degree_basis: "度数基准:",
+        all: "总",
+        in: "入",
+        out: "出",
+        color_by: "颜色依据:",
+        degree: "度数",
+        cluster: "聚类",
+        size_by: "大小依据:",
+        uniform: "统一",
+        centrality: "中心性",
+        nodes: "节点:",
+        edges: "边:",
+        label_opacity: "标签透明度:",
+        min_degree: "最小度数:",
+        show_orphans: "显示孤立节点",
+        export_image: "导出图片",
+        save_layout: "保存布局 (JSON)",
+        analysis_export: "分析与导出",
+        search_placeholder: "搜索节点...",
+        
+        // Analysis Panel
+        analysis_title: "度数分析",
+        filter_strategy: "过滤策略:",
+        cluster_filter: "聚类过滤:",
+        threshold: "阈值:",
+        selected: "已选:",
+        export_json: "JSON",
+        export_zip: "ZIP (MD)",
+        filtered_nodes: "过滤后节点",
+        
+        // Strategy Options
+        strat_top: "Top X% (按度数)",
+        strat_min: "最小度数 > X",
+        cluster_all: "所有聚类",
+        
+        // Table Headers
+        th_name: "名称",
+        th_cluster: "聚类",
+        th_in: "入",
+        th_out: "出",
+        th_total: "总计"
+    }
+};
+
+window.t = function(key) {
+    const lang = document.getElementById('lang-select').value;
+    return translations[lang][key] || key;
+}
+
+window.updateLanguage = function(lang) {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        if (translations[lang] && translations[lang][key]) {
+            el.innerText = translations[lang][key];
+        }
+    });
+    
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.dataset.i18nPlaceholder;
+        if (translations[lang] && translations[lang][key]) {
+            el.placeholder = translations[lang][key];
+        }
+    });
+
+    // Trigger update for Analysis Panel components if they exist
+    if (typeof window.updateAnalysisUI === 'function') {
+        window.updateAnalysisUI();
+    }
+}
+
+document.getElementById('lang-select').addEventListener('change', (e) => {
+    window.updateLanguage(e.target.value);
+});
+
 
 // Interactions
 let transform = d3.zoomIdentity;

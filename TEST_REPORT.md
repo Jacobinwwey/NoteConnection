@@ -1,53 +1,41 @@
-# Test Report (测试报告)
+# Test Report (2025-12-19 v0.1.4)
 
-## 2026-01-15 v0.1.6 - Data Persistence & Clustering
+## English Document
 
-### English Report
+### 1. Feature Verification (Code Review)
+*   **JSON Export Improvement**: Verified `analysis.js`. The edge filtering logic in `getFilteredData` has been updated from `AND` to `OR` (`nodeIds.has(e.source) || nodeIds.has(e.target)`). This ensures that if a node is exported, **ALL** its incoming and outgoing edges are included, even if the connected node is not in the filtered set.
+*   **UI Localization (Complete)**: 
+    *   **Dictionary**: Verified `app.js`. Added all missing translation keys for the "Degree Analysis" panel (headers, buttons, labels) and Main UI controls.
+    *   **HTML Tags**: Verified `index.html`. Added `data-i18n` attributes to all static text elements in the controls and analysis panel.
+    *   **Dynamic Updates**: Verified `analysis.js`. Added `window.updateAnalysisUI` to ensure dynamic content (like slider values and stats) refreshes when the language changes.
 
-**Objective**: Implement layout persistence and community detection.
-
-**1. Data Persistence (Save Layout)**
-- **Feature**: "Save Layout (JSON)" button in UI.
-- **Function**: Downloads `layout.json` containing `id`, `x`, `y` coordinates.
-- **Integration**:
-    - Place `layout.json` in project root.
-    - Run build script.
-    - Result: Graph initializes with saved positions (Warm Start).
-- **Verification**: Verified that nodes retain positions after reload if layout is provided.
-
-**2. Community Detection (Clustering)**
-- **Algorithm**: Label Propagation Algorithm (LPA) implemented in `src/backend/CommunityDetection.ts`.
-- **Process**: Runs automatically during graph build. Assigns `clusterId` to every node.
-- **Visualization**:
-    - Added "Color By: Degree / Cluster" toggle in UI.
-    - **Cluster Mode**: Nodes colored by community (Categorical colors).
-    - **Degree Mode**: Original heat map (Blue scale).
-- **Result**: Distinct communities are visible (e.g., highly interconnected groups share the same color).
-
-**Conclusion**: The graph now supports both structural analysis (Degree) and community analysis (Clustering), with the ability to save custom layouts.
+### 2. Manual Test Steps
+1.  **Export Test**:
+    *   Select a small subset of nodes (e.g., Top 1%).
+    *   Click "JSON".
+    *   **Expected**: The `edges` array in the JSON should contain entries where `source` OR `target` matches the ID of any node in the `nodes` array.
+2.  **Localization Test**:
+    *   Open the "Degree Analysis" panel.
+    *   Switch Language to "中文".
+    *   **Expected**: All labels (Header, Filter Strategy, Buttons, Table Headers) should immediately switch to Chinese.
 
 ---
 
-### 中文报告
+## 中文文档 (Chinese Document)
 
-**目标**: 实现布局持久化和社区检测。
+### 1. 功能验证 (代码审查)
+*   **JSON 导出改进**: 已验证 `analysis.js`。`getFilteredData` 中的边过滤逻辑已从 `AND` 更新为 `OR` (`nodeIds.has(e.source) || nodeIds.has(e.target)`)。这确保了如果导出一个节点，**所有** 它的入度和出度边都会包含在内，即使连接的节点不在过滤集中。
+*   **UI 本地化 (完整)**:
+    *   **字典**: 已验证 `app.js`。添加了“度数分析”面板（标题、按钮、标签）和主 UI 控件的所有缺失翻译键。
+    *   **HTML 标签**: 已验证 `index.html`。向控件和分析面板中的所有静态文本元素添加了 `data-i18n` 属性。
+    *   **动态更新**: 已验证 `analysis.js`。添加了 `window.updateAnalysisUI`，以确保在语言更改时刷新动态内容（如滑块值和统计信息）。
 
-**1. 数据持久化 (保存布局)**
-- **功能**: UI 中的 "保存布局 (JSON)" 按钮。
-- **功能**: 下载包含 `id`、`x`、`y` 坐标的 `layout.json`。
-- **集成**:
-    - 将 `layout.json` 放置在项目根目录。
-    - 运行构建脚本。
-    - 结果: 图表使用保存的位置初始化（热启动）。
-- **验证**: 验证了如果提供布局，节点在重新加载后保留位置。
-
-**2. 社区检测 (聚类)**
-- **算法**: 在 `src/backend/CommunityDetection.ts` 中实现的标签传播算法 (LPA)。
-- **过程**: 在图构建期间自动运行。为每个节点分配 `clusterId`。
-- **可视化**:
-    - 在 UI 中添加了 "按度数 / 按聚类着色" 切换。
-    - **聚类模式**: 节点按社区着色（分类颜色）。
-    - **度数模式**: 原始热力图（蓝色刻度）。
-- **结果**: 可见不同的社区（例如，高度互连的组共享相同的颜色）。
-
-**结论**: 图表现在支持结构分析（度数）和社区分析（聚类），并能够保存自定义布局。
+### 2. 手动测试步骤
+1.  **导出测试**:
+    *   选择一小部分节点（例如 Top 1%）。
+    *   点击 "JSON"。
+    *   **预期**: JSON 中的 `edges` 数组应包含 `source` 或 `target` 与 `nodes` 数组中任何节点的 ID 匹配的条目。
+2.  **本地化测试**:
+    *   打开“度数分析”面板。
+    *   切换语言为“中文”。
+    *   **预期**: 所有标签（标题、过滤策略、按钮、表头）应立即切换为中文。

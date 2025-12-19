@@ -1,4 +1,4 @@
-# 2025-12-17 v0.1.0
+# 2025-12-19 v0.1.3
 
 # Interface Document
 
@@ -112,6 +112,9 @@ Core data structure for managing notes and dependencies.
 Saves the graph for frontend consumption.
 
 *   **Function**: `exportToJSON(graph: DirectedGraph, outputPath: string): Promise<void>`
+*   **Filtered Export (Frontend)**: 
+    *   Export now includes both filtered nodes and the edges connecting them.
+    *   Structure: `{ nodes: NoteNode[], edges: NoteEdge[] }`.
 
 ---
 
@@ -127,6 +130,7 @@ Renders the JSON data into an interactive DAG.
     *   **Sugiyama Layout**: Layered visualization.
     *   **Zoom/Pan**: D3-zoom behavior.
     *   **Tooltip**: Show node details on hover.
+    *   **Localization (v0.1.9)**: Supports English ('en') and Chinese ('zh').
 
 ---
 ---
@@ -243,6 +247,9 @@ Renders the JSON data into an interactive DAG.
 保存图数据以供前端使用。
 
 *   **函数**: `exportToJSON(graph: DirectedGraph, outputPath: string): Promise<void>`
+*   **过滤导出 (前端)**:
+    *   导出现在的 JSON 包含过滤后的节点以及连接它们的边。
+    *   结构: `{ nodes: NoteNode[], edges: NoteEdge[] }`。
 
 ---
 
@@ -262,6 +269,7 @@ Renders the JSON data into an interactive DAG.
         *   **In-degree**: 显示入度（作为先决条件被引用的次数）。
         *   **Out-degree**: 显示出度（引用的先决条件数量）。
         *   **Visual Filters**: 支持单独查看入度或出度连接。
+    *   **本地化 (v0.1.9)**: 支持英文 ('en') 和中文 ('zh')。
 
 ---
 

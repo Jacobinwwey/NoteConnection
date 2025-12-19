@@ -45,9 +45,13 @@ Open `src/frontend/index.html` in your web browser.
 *   **Keyword Matching**: Automatically links notes if one mentions another's title.
 *   **Degree Analysis**: Visualizes In-Degree and Out-Degree.
 *   **Community Detection**: Auto-detects clusters (Label Propagation) and colors nodes by community.
+*   **Localization (New)**: Support for English and Chinese UI.
+*   **Advanced Degree Visualization**: 
+    *   Size nodes by Degree or Centrality.
+    *   Filter visualization by All/Incoming/Outgoing edges.
 *   **Distribution & Export**:
     *   View Degree Distribution Histogram.
-    *   Export Top X% nodes or High-Degree nodes to **JSON** or **ZIP**.
+    *   Export Top X% nodes or High-Degree nodes to **JSON** (with complete edge info) or **ZIP**.
 *   **Persistence**: Save and restore graph layout (`layout.json`).
 *   **Search**: Filter nodes by name.
 

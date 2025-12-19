@@ -245,7 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // --- 6. Export & Filter Logic ---
-    function getFiltered() {
+    function getFilteredData() {
         let nodes = graphData.nodes;
         
         // 1. Cluster Filter
@@ -254,28 +254,51 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         // 2. Degree/Rank Filter
+        let filteredNodes = [];
         if (AppState.strategy === 'min-degree') {
-            return nodes.filter(n => (n.inDegree + n.outDegree) >= AppState.threshold);
+            filteredNodes = nodes.filter(n => (n.inDegree + n.outDegree) >= AppState.threshold);
         } else {
             // Top Percent
             const sorted = [...nodes].sort((a,b)=>(b.inDegree+b.outDegree)-(a.inDegree+a.outDegree));
             const cut = Math.ceil(nodes.length * (AppState.threshold/100));
-            return sorted.slice(0, cut);
+            filteredNodes = sorted.slice(0, cut);
         }
+
+        // 3. Filter Edges
+        const nodeIds = new Set(filteredNodes.map(n => n.id));
+        
+        // Requirement: Export complete in-degree and out-degree relationships of exported nodes.
+        // This means we include an edge if AT LEAST ONE of its endpoints is in our filtered node list.
+        const filteredEdges = graphData.edges.filter(e => 
+            nodeIds.has(e.source) || nodeIds.has(e.target)
+        );
+
+        return { nodes: filteredNodes, edges: filteredEdges };
     }
 
     function updateStats() {
-        const res = getFiltered();
+        const { nodes } = getFilteredData();
         if (UI.count) {
-            // Show percentage of TOTAL, or percentage of CLUSTER?
-            // "Filtered / Total" usually implies total graph.
             const tot = graphData.nodes.length;
-            const pct = ((res.length/tot)*100).toFixed(1);
-            UI.count.innerText = `${res.length} / ${tot} (${pct}%)`;
+            const pct = ((nodes.length/tot)*100).toFixed(1);
+            // Use translation for "Selected:" label is handled in HTML, here just numbers
+            // But wait, the label is separate <span data-i18n="selected">
+            UI.count.innerText = `${nodes.length} / ${tot} (${pct}%)`;
         }
-        renderTable(res);
-        renderHistogram(); // Re-render histogram to reflect cluster context
+        renderTable(nodes);
+        renderHistogram(); 
     }
+
+    // Expose update function for Localization
+    window.updateAnalysisUI = function() {
+        // Re-render table to update headers if we were generating them via JS (we are not, they are HTML)
+        // But we need to update dynamic text that might contain English words
+        if (UI.val) {
+             const suffix = AppState.strategy === 'top-percent' ? '%' : '';
+             UI.val.innerText = AppState.threshold + suffix;
+        }
+        updateStats();
+    };
 
     if (UI.clusterFilter) UI.clusterFilter.addEventListener("change", (e) => {
         AppState.cluster = e.target.value;
@@ -289,22 +312,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (UI.slider) UI.slider.addEventListener("input", (e) => {
         AppState.threshold = parseInt(e.target.value);
-        if (UI.val) UI.val.innerText = AppState.threshold + (AppState.strategy==='top-percent'?'%':'');
+        if (UI.val) {
+             const suffix = AppState.strategy === 'top-percent' ? '%' : '';
+             UI.val.innerText = AppState.threshold + suffix;
+        }
         updateStats();
     });
 
     if (UI.btnJson) UI.btnJson.addEventListener("click", () => {
-        const data = getFiltered().map(n => ({
-            id: n.id, in: n.inDegree, out: n.outDegree, cluster: n.clusterId, content: n.content
-        }));
+        const data = getFilteredData();
+        // Export full graph structure with edge info
         download(JSON.stringify(data, null, 2), "export.json", "application/json");
     });
 
     if (UI.btnZip) UI.btnZip.addEventListener("click", () => {
         if (typeof JSZip === 'undefined') return alert("JSZip missing");
         const zip = new JSZip();
+        const { nodes, edges } = getFilteredData();
+        
+        // Add JSON export to ZIP
+        zip.file("graph_data.json", JSON.stringify({ nodes, edges }, null, 2));
+
         const f = zip.folder("notes");
-        getFiltered().forEach(n => {
+        nodes.forEach(n => {
             const name = n.id.endsWith(".md") ? n.id : n.id+".md";
             f.file(name, (n.content||"") + `\n\n---\nDegree: ${n.inDegree+n.outDegree}\nCluster: ${n.clusterId}`);
         });
