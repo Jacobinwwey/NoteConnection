@@ -157,4 +157,222 @@ The v0.1.1 independent builder is successfully implemented and verified. It prov
 
 ## 4. Conclusion
 
+
+
 v0.1.2 successfully implements degree visualization and filtering, meeting the user requirements for distinct UI operations.
+
+
+
+
+
+
+
+---
+
+
+
+
+
+
+
+### 2025-12-19 v0.1.3 - DAG Construction Implementation & Verification
+
+
+
+
+
+
+
+## 1. Test Environment
+
+
+
+*   **Directory**: `E:\Knowledge_project\NoteConnection`
+
+
+
+*   **Backend Script**: `src/index.ts` (Entry point), `src/backend/GraphBuilder.ts`, `src/core/Graph.ts`.
+
+
+
+*   **Frontend**: `src/frontend/index.html` (D3.js).
+
+
+
+*   **Data Source**: `testconcept` (214 files).
+
+
+
+
+
+
+
+## 2. Test Execution Summary
+
+
+
+
+
+
+
+| Test Type | Description | Result | Status |
+
+
+
+| :--- | :--- | :--- | :--- |
+
+
+
+| **Unit Test** | `Graph.test.ts` via Jest | Passed all checks (Node addition, Edge addition, Duplicate prevention). | ✅ PASS |
+
+
+
+| **Integration Build** | Run `npx ts-node src/index.ts` | Loaded 214 files. Built graph with **214 nodes** and **419 edges**. | ✅ PASS |
+
+
+
+| **Data Generation** | `graph_data.json` & `data.js` | Files generated successfully in `src/frontend/`. | ✅ PASS |
+
+
+
+| **Visualization** | Open `src/frontend/index.html` | Graph renders. Node size reflects degree. Tooltips show In/Out counts. Incoming/Outgoing filtering works. | ✅ PASS |
+
+
+
+
+
+
+
+## 3. Observations
+
+
+
+*   **Edge Count**: The current keyword matching (case-insensitive inclusion) found 419 edges, which is slightly higher than the previous estimate (384), indicating better capture of references.
+
+
+
+*   **Node Distance**: The force-directed layout now incorporates degree-based distance constraints as requested ("The distance between nodes in the UI should be jointly determined by the in-degree/out-degree").
+
+
+
+*   **Independence**: The system runs entirely locally with standard Node.js libraries and D3.js (CDN), fulfilling the "Independent Project" requirement.
+
+
+
+
+
+
+
+## 4. Conclusion
+
+
+
+The directives for v0.1.3 have been fully implemented. The system now robustly builds a DAG (potentially with cycles, to be addressed later) from the test concepts and provides a functional, interactive visualization with the requested UI features.
+
+
+
+
+
+
+
+---
+
+
+
+
+
+
+
+### 2025-12-19 v0.1.3 - DAG 构建实现与验证 (DAG Construction Implementation & Verification)
+
+
+
+
+
+
+
+## 1. 测试环境 (Test Environment)
+
+
+
+*   **目录**: `E:\Knowledge_project\NoteConnection`
+
+
+
+*   **后端脚本**: `src/index.ts` (入口), `src/backend/GraphBuilder.ts`, `src/core/Graph.ts`。
+
+
+
+*   **前端**: `src/frontend/index.html` (D3.js)。
+
+
+
+*   **数据源**: `testconcept` (214 个文件)。
+
+
+
+
+
+
+
+## 2. 测试执行摘要 (Test Execution Summary)
+
+
+
+
+
+
+
+| 测试类型 | 描述 | 结果 | 状态 |
+
+
+
+| :--- | :--- | :--- | :--- |
+
+
+
+| **单元测试** | `Graph.test.ts` (Jest) | 通过所有检查（节点添加、边添加、重复防止）。 | ✅ 通过 |
+
+
+
+| **集成构建** | 运行 `npx ts-node src/index.ts` | 加载 214 个文件。构建了包含 **214 个节点** 和 **419 条边** 的图。 | ✅ 通过 |
+
+
+
+| **数据生成** | `graph_data.json` & `data.js` | 成功在 `src/frontend/` 生成文件。 | ✅ 通过 |
+
+
+
+| **可视化** | 打开 `src/frontend/index.html` | 图渲染成功。节点大小反映度数。Tooltip 显示入/出度。传入/传出过滤功能正常。 | ✅ 通过 |
+
+
+
+
+
+
+
+## 3. 观察 (Observations)
+
+
+
+*   **边数量**: 当前的关键词匹配（不区分大小写包含）发现了 419 条边，略高于之前的估计 (384)，表明捕捉引用的效果更好。
+
+
+
+*   **节点距离**: 力导向布局现在包含了基于度数的距离约束，符合“UI 中节点之间的距离应由入度/出度……共同决定”的要求。
+
+
+
+*   **独立性**: 系统完全在本地运行，仅依赖标准的 Node.js 库和 D3.js (CDN)，满足“独立项目”的要求。
+
+
+
+
+
+
+
+## 4. 结论 (Conclusion)
+
+
+
+v0.1.3 的指令已全部执行。系统现在可以从测试概念中健壮地构建 DAG（可能包含循环，稍后处理），并提供具有所需 UI 功能的功能性交互式可视化。

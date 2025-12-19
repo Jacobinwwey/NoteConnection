@@ -4,324 +4,250 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NoteConnection Knowledge Graph</title>
-    <style>
-        body { margin: 0; overflow: hidden; font-family: sans-serif; background-color: #f9f9f9; }
-        #graph-container { width: 100vw; height: 100vh; }
-        .node circle { stroke: #fff; stroke-width: 1.5px; cursor: pointer; transition: all 0.5s ease; }
-        .node circle:hover { stroke: #333; stroke-width: 2px; }
-        .node text { font-size: 10px; pointer-events: none; text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff; transition: opacity 0.3s; }
-        .link { stroke: #999; stroke-opacity: 0.6; stroke-width: 1px; transition: stroke 0.3s, stroke-opacity 0.3s; }
-        .tooltip { position: absolute; background: rgba(0,0,0,0.8); color: #fff; padding: 8px; border-radius: 4px; pointer-events: none; font-size: 12px; display: none; z-index: 10; line-height: 1.4; }
-        
-        /* Legend / Controls */
-        #controls { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 240px; }
-        h3 { margin-top: 0; margin-bottom: 10px; font-size: 16px; color: #333; }
-        .control-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; color: #555; }
-        select { width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 13px; }
-        
-        /* Highlight Styles */
-        .link.incoming { stroke: #ff7f0e !important; stroke-opacity: 1 !important; stroke-width: 2px !important; } /* Orange */
-        .link.outgoing { stroke: #1f77b4 !important; stroke-opacity: 1 !important; stroke-width: 2px !important; } /* Blue */
-        .link.dimmed { stroke-opacity: 0.05 !important; }
-        .node.dimmed { opacity: 0.2; }
-        
-        .legend-item { display: flex; align-items: center; margin-bottom: 4px; font-size: 12px; }
-        .legend-color { width: 12px; height: 12px; margin-right: 8px; border-radius: 2px; }
-        .legend-circle { border-radius: 50%; border: 1px solid #fff; }
-    </style>
-    <!-- D3.js V7 -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="data.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: sans-serif; background-color: #f0f0f0; }
+        #container { width: 100vw; height: 100vh; }
+        .node circle { stroke: #fff; stroke-width: 1.5px; cursor: pointer; }
+        .node text { font-size: 10px; pointer-events: none; }
+        .link { stroke: #999; stroke-opacity: 0.6; stroke-width: 1px; }
+        .tooltip {
+            position: absolute;
+            text-align: left;
+            padding: 8px;
+            font: 12px sans-serif;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            border-radius: 4px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+        button { cursor: pointer; margin-right: 5px; }
+        
+        /* Highlight styles */
+        .link.incoming { stroke: #ff0000; stroke-opacity: 1; stroke-width: 2px; }
+        .link.outgoing { stroke: #00ff00; stroke-opacity: 1; stroke-width: 2px; }
+        .node.highlighted circle { stroke: #333; stroke-width: 3px; }
+    </style>
 </head>
 <body>
     <div id="controls">
-        <h3>NoteConnection v0.1.2 (Patched)</h3>
-        <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
-            Scroll to Zoom / Drag to Pan<br>
-            滚动缩放 / 拖拽平移
-        </p>
-
-        <div class="control-group">
-            <label>View Mode (视图模式)</label>
-            <p style="font-size: 11px; color: #888; margin-bottom: 5px; margin-top: 0;">Resizes nodes by degree & filters edges on hover.<br>按度数缩放节点 & 悬停过滤边。</p>
-            <select id="filter-mode">
-                <option value="all">Default (默认)</option>
-                <option value="in">In-Degree (入度/被引用数)</option>
-                <option value="out">Out-Degree (出度/引用数)</option>
-            </select>
-        </div>
-
-        <div style="border-top: 1px solid #eee; padding-top: 10px;">
-            <div class="legend-item">
-                <div class="legend-color legend-circle" style="background-color: #69b3a2; width: 8px; height: 8px;"></div>
-                <span>Node Size: Degree</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background-color: #ff7f0e;"></div>
-                <span>Incoming (来源)</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background-color: #1f77b4;"></div>
-                <span>Outgoing (去向)</span>
-            </div>
+        <strong>Controls / 控制</strong><br>
+        <button onclick="resetView()">Reset View / 重置视图</button>
+        <div style="margin-top: 5px;">
+            <label><input type="radio" name="filter" value="all" checked onchange="updateFilter()"> All / 全部</label>
+            <label><input type="radio" name="filter" value="incoming" onchange="updateFilter()"> Incoming Only / 仅显示传入</label>
+            <label><input type="radio" name="filter" value="outgoing" onchange="updateFilter()"> Outgoing Only / 仅显示传出</label>
         </div>
     </div>
-
-    <div id="graph-container"></div>
-    <div id="tooltip" class="tooltip"></div>
+    <div id="container"></div>
+    <div class="tooltip" id="tooltip"></div>
 
     <script>
-        // Global State
-        let graphData = null;
-        let simulation = null;
-        let currentNode = null; // Currently hovered/selected node
-        let filterMode = 'all'; // 'all', 'in', 'out'
-        
-        // Configuration
-        const BASE_RADIUS = 4;
-        const DEGREE_SCALE = 1.5; // Pixels per degree
+        // Use graphData from data.js
+        const width = window.innerWidth;
+        const height = window.innerHeight;
 
-        async function loadGraph() {
-            try {
-                // Append timestamp to bypass cache
-                const response = await fetch('./graph_data.json?t=' + new Date().getTime());
-                if (!response.ok) throw new Error(`Failed to load graph_data.json: ${response.status} ${response.statusText}`);
-                graphData = await response.json();
-                renderGraph(graphData);
-            } catch (error) {
-                console.error(error);
-                alert(`Error loading graph data:\n${error.message}\n\nPlease check the console for details.`);
-            }
+        const svg = d3.select("#container").append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .call(d3.zoom().on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            }))
+            .append("g");
+
+        const g = svg.append("g");
+
+        // Arrow markers
+        svg.append("defs").selectAll("marker")
+            .data(["end"])
+            .enter().append("marker")
+            .attr("id", "arrow")
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 15)
+            .attr("refY", 0)
+            .attr("markerWidth", 6)
+            .attr("markerHeight", 6)
+            .attr("orient", "auto")
+            .append("path")
+            .attr("d", "M0,-5L10,0L0,5")
+            .attr("fill", "#999");
+
+        // Hybrid Distance Calculation (Simple Implementation)
+        // 节点距离：由入度/出度决定 (Simple implementation: link distance based on degrees)
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.edges).id(d => d.id).distance(link => {
+                // Example logic: Higher combined degree -> Shorter distance (tighter clusters)
+                // 示例逻辑：组合度数越高 -> 距离越短（更紧密的聚类）
+                const sourceDegree = link.source.outDegree + link.source.inDegree;
+                const targetDegree = link.target.outDegree + link.target.inDegree;
+                return 150 / Math.max(1, Math.log2(sourceDegree + targetDegree + 1));
+            }))
+            .force("charge", d3.forceManyBody().strength(-300))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("collide", d3.forceCollide(30));
+
+        const link = g.append("g")
+            .attr("class", "links")
+            .selectAll("line")
+            .data(graphData.edges)
+            .enter().append("line")
+            .attr("class", "link")
+            .attr("marker-end", "url(#arrow)");
+
+        const node = g.append("g")
+            .attr("class", "nodes")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", "node")
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        node.append("circle")
+            .attr("r", d => 5 + Math.sqrt(d.inDegree + d.outDegree)) // Size by degree
+            .attr("fill", d => d.outDegree === 0 ? "#ffcccb" : (d.inDegree === 0 ? "#ccffcc" : "#ccccff")); // Color by type (Source/Sink/Flow)
+
+        node.append("text")
+            .attr("dx", 12)
+            .attr("dy", ".35em")
+            .text(d => d.label);
+
+        const tooltip = d3.select("#tooltip");
+
+        // Interaction State
+        let selectedNode = null;
+        let filterMode = 'all';
+
+        node.on("mouseover", (event, d) => {
+            tooltip.transition().duration(200).style("opacity", .9);
+            tooltip.html(`<strong>${d.label}</strong><br/>In: ${d.inDegree}, Out: ${d.outDegree}`)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 28) + "px");
+        })
+        .on("mouseout", (event, d) => {
+            tooltip.transition().duration(500).style("opacity", 0);
+        })
+        .on("click", (event, d) => {
+            selectedNode = d;
+            highlightNeighbors(d);
+            event.stopPropagation();
+        });
+
+        svg.on("click", () => {
+            selectedNode = null;
+            resetHighlight();
+        });
+
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node
+                .attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
         }
 
-        function renderGraph(data) {
-            const width = window.innerWidth;
-            const height = window.innerHeight;
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
 
-            d3.select("#graph-container").html("");
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
 
-            // Zoom
-            const zoom = d3.zoom()
-                .scaleExtent([0.1, 8])
-                .on("zoom", (event) => {
-                    g.attr("transform", event.transform);
-                });
+        function highlightNeighbors(d) {
+            // Reset basic style
+            link.attr("class", "link").attr("marker-end", "url(#arrow)");
+            node.classed("highlighted", false);
 
-            const svg = d3.select("#graph-container").append("svg")
-                .attr("width", width)
-                .attr("height", height)
-                .call(zoom)
-                .on("dblclick.zoom", null)
-                .on("click", resetHighlight);
+            if (!d) return;
 
-            const g = svg.append("g");
+            // Highlight Node
+            d3.select(event.currentTarget).classed("highlighted", true); // Note: event.currentTarget might be lost if calling programmatically
 
-            // Definitions for Markers
-            const defs = svg.append("defs");
-            
-            // Helper for d3 multi-attr (if d3-selection-multi is not used, standard chaining above is fine, but let's fix the .attrs call if needed)
-            // Correction: .attrs is part of d3-selection-multi. Standard d3 uses .attr chaining. 
-            // Rewriting markers to be safe without external plugins.
-            defs.selectAll("*").remove(); // Clear
-            const createMarker = (id, color) => {
-                defs.append("marker")
-                    .attr("id", id)
-                    .attr("viewBox", "0 -5 10 10")
-                    .attr("refX", 15) // Will need dynamic update based on radius, but 15 is safe for small nodes
-                    .attr("refY", 0)
-                    .attr("markerWidth", 6)
-                    .attr("markerHeight", 6)
-                    .attr("orient", "auto")
-                    .append("path")
-                    .attr("d", "M0,-5L10,0L0,5")
-                    .attr("fill", color);
-            };
-            createMarker("arrow", "#999");
-            createMarker("arrow-incoming", "#ff7f0e");
-            createMarker("arrow-outgoing", "#1f77b4");
+            // Find neighbors
+            const linkedNodeIds = new Set();
+            linkedNodeIds.add(d.id);
 
-
-            // Simulation
-            simulation = d3.forceSimulation(data.nodes)
-                .force("link", d3.forceLink(data.links).id(d => d.id).distance(100))
-                .force("charge", d3.forceManyBody().strength(-300))
-                .force("center", d3.forceCenter(width / 2, height / 2))
-                .force("collide", d3.forceCollide(d => calculateRadius(d) + 5)); // Dynamic collision radius
-
-            // Links
-            const link = g.append("g")
-                .attr("class", "links")
-                .selectAll("line")
-                .data(data.links)
-                .enter().append("line")
-                .attr("class", "link")
-                .attr("marker-end", "url(#arrow)");
-
-            // Nodes
-            const node = g.append("g")
-                .attr("class", "nodes")
-                .selectAll("g")
-                .data(data.nodes)
-                .enter().append("g")
-                .attr("class", "node")
-                .call(d3.drag()
-                    .on("start", dragstarted)
-                    .on("drag", dragged)
-                    .on("end", dragended))
-                .on("mouseover", handleMouseOver)
-                .on("mouseout", handleMouseOut);
-
-            const circles = node.append("circle")
-                .attr("r", d => calculateRadius(d)) // Initial radius
-                .attr("fill", "#69b3a2");
-
-            node.append("text")
-                .attr("dx", 10)
-                .attr("dy", ".35em")
-                .text(d => d.id);
-
-            // Ticker
-            simulation.on("tick", () => {
-                link
-                    .attr("x1", d => d.source.x)
-                    .attr("y1", d => d.source.y)
-                    .attr("x2", d => d.target.x)
-                    .attr("y2", d => d.target.y);
-
-                node.attr("transform", d => `translate(${d.x},${d.y})`);
+            link.each(function(l) {
+                const sel = d3.select(this);
+                if (l.source.id === d.id) {
+                    // Outgoing
+                    if (filterMode === 'all' || filterMode === 'outgoing') {
+                        sel.attr("class", "link outgoing").attr("marker-end", "url(#arrow)"); // You might want different markers for color
+                        linkedNodeIds.add(l.target.id);
+                    } else {
+                        sel.style("opacity", 0.1);
+                    }
+                } else if (l.target.id === d.id) {
+                    // Incoming
+                    if (filterMode === 'all' || filterMode === 'incoming') {
+                        sel.attr("class", "link incoming").attr("marker-end", "url(#arrow)");
+                        linkedNodeIds.add(l.source.id);
+                    } else {
+                        sel.style("opacity", 0.1);
+                    }
+                } else {
+                    sel.style("opacity", 0.1);
+                }
             });
 
-            // --- Logic Functions ---
+            node.style("opacity", n => linkedNodeIds.has(n.id) ? 1 : 0.1);
+        }
 
-            function calculateRadius(d) {
-                let deg = 0;
-                if (filterMode === 'in') deg = d.inDegree;
-                else if (filterMode === 'out') deg = d.outDegree;
-                else deg = (d.inDegree + d.outDegree) / 2; // Average for default
-                
-                return BASE_RADIUS + (deg * DEGREE_SCALE);
-            }
+        function resetHighlight() {
+            link.attr("class", "link").style("opacity", 1).attr("marker-end", "url(#arrow)");
+            node.classed("highlighted", false).style("opacity", 1);
+        }
 
-            function updateVisuals() {
-                // Animate radius change
-                circles.transition().duration(500)
-                    .attr("r", d => calculateRadius(d));
-                
-                // Update text position
-                node.selectAll("text").transition().duration(500)
-                    .attr("dx", d => calculateRadius(d) + 4);
-
-                // Update collision force
-                simulation.force("collide", d3.forceCollide(d => calculateRadius(d) + 5));
-                simulation.alpha(0.3).restart(); // Wake up simulation to adjust spacing
-
-                // If a node is selected/hovered, re-apply highlight logic
-                if (currentNode) {
-                    highlightGraph(currentNode);
-                } else {
-                    resetHighlight();
+        function updateFilter() {
+            const radios = document.getElementsByName('filter');
+            for (const r of radios) {
+                if (r.checked) {
+                    filterMode = r.value;
+                    break;
                 }
             }
-
-            function handleMouseOver(event, d) {
-                currentNode = d;
-                const tooltip = d3.select("#tooltip");
-                
-                tooltip.style("display", "block")
-                       .style("left", (event.pageX + 10) + "px")
-                       .style("top", (event.pageY - 10) + "px")
-                       .html(`
-                           <strong>${d.id}</strong><br>
-                           In-Degree (被引): ${d.inDegree}<br>
-                           Out-Degree (引用): ${d.outDegree}
-                       `);
-
-                highlightGraph(d);
+            if (selectedNode) {
+                highlightNeighbors(selectedNode);
             }
-
-            function handleMouseOut() {
-                currentNode = null;
-                d3.select("#tooltip").style("display", "none");
-                resetHighlight();
-            }
-
-            function highlightGraph(d) {
-                // Dim everything first
-                node.classed("dimmed", true);
-                link.classed("dimmed", true);
-                
-                // Reset specialized classes
-                link.classed("incoming", false).classed("outgoing", false)
-                    .attr("marker-end", "url(#arrow)");
-
-                const connectedNodeIds = new Set([d.id]);
-
-                // Filter logic
-                d3.selectAll(".link").each(function(l) {
-                    const isIncoming = l.target.id === d.id;
-                    const isOutgoing = l.source.id === d.id;
-                    
-                    const showIncoming = (filterMode === 'all' || filterMode === 'in') && isIncoming;
-                    const showOutgoing = (filterMode === 'all' || filterMode === 'out') && isOutgoing;
-
-                    if (showIncoming) {
-                        d3.select(this)
-                            .classed("dimmed", false)
-                            .classed("incoming", true)
-                            .attr("marker-end", "url(#arrow-incoming)")
-                            .raise(); // Bring to front
-                        connectedNodeIds.add(l.source.id);
-                    } else if (showOutgoing) {
-                        d3.select(this)
-                            .classed("dimmed", false)
-                            .classed("outgoing", true)
-                            .attr("marker-end", "url(#arrow-outgoing)")
-                            .raise(); // Bring to front
-                        connectedNodeIds.add(l.target.id);
-                    }
-                });
-
-                // Undim connected nodes
-                d3.selectAll(".node").classed("dimmed", n => !connectedNodeIds.has(n.id));
-                
-                // Always undim the current node
-                d3.select(event.target.parentNode).classed("dimmed", false); 
-                // Note: event.target might not be available in all contexts, usage of 'd' is safer
-                d3.selectAll(".node").filter(n => n.id === d.id).classed("dimmed", false);
-            }
-
-            function resetHighlight() {
-                node.classed("dimmed", false);
-                link.classed("dimmed", false)
-                    .classed("incoming", false)
-                    .classed("outgoing", false)
-                    .attr("marker-end", "url(#arrow)");
-            }
-
-            // Drag Helpers
-            function dragstarted(event, d) {
-                if (!event.active) simulation.alphaTarget(0.3).restart();
-                d.fx = d.x;
-                d.fy = d.y;
-            }
-            function dragged(event, d) {
-                d.fx = event.x;
-                d.fy = event.y;
-            }
-            function dragended(event, d) {
-                if (!event.active) simulation.alphaTarget(0);
-                d.fx = null;
-                d.fy = null;
-            }
-
-            // Listeners
-            document.getElementById('filter-mode').addEventListener('change', (e) => {
-                filterMode = e.target.value;
-                updateVisuals();
-            });
         }
 
-        loadGraph();
+        function resetView() {
+            svg.transition().duration(750).call(
+                d3.zoom().transform,
+                d3.zoomIdentity,
+                d3.zoomTransform(svg.node()).invert([width / 2, height / 2])
+            );
+        }
+
+        window.resetView = resetView;
+        window.updateFilter = updateFilter;
     </script>
 </body>
 </html>

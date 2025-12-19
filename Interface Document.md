@@ -51,36 +51,40 @@ Parses raw content into structured Concept objects.
     }
     ```
 
-### 1.3 Graph Construction
+### 1.3 Graph Construction (Updated 2025-12-19 v0.1.3)
 
-#### `IGraphBuilder`
-Constructs the initial graph and infers edges based on strategies.
+#### `Graph` Class
+Core data structure for managing notes and dependencies.
 
-*   **Function**: `buildGraph(concepts: Concept[]): DirectedGraph`
-*   **Input**:
-    *   `concepts` (Concept[]): Parsed concepts.
-*   **Output**:
-    *   `DirectedGraph`: The constructed graph.
-*   **Logic**:
-    *   **Keyword Matching**: If `Concept A.content` contains `Concept B.title`, create potential edge $B \rightarrow A$ (B is prerequisite for A).
+*   **Class**: `Graph`
+*   **Methods**:
+    *   `addNode(node: NoteNode): void`
+    *   `addEdge(source: string, target: string, type?: string): void`
+    *   `getOutgoingEdges(id: string): NoteEdge[]`
+    *   `getIncomingEdges(id: string): NoteEdge[]`
+    *   `toJSON(): GraphData`
 *   **Type Definitions**:
     ```typescript
-    interface GraphNode {
-        id: string;
-        label: string;
-        rank?: number; // Topological rank
+    interface NoteNode {
+        id: string;        // Unique identifier (usually the note title)
+        label: string;     // Display label
+        inDegree: number;  // Number of incoming edges
+        outDegree: number; // Number of outgoing edges
+        rank?: number;     // Topological rank or hierarchy level
+        clusterId?: string;// ID of the cluster this node belongs to
+        metadata?: Record<string, any>; // Additional metadata
     }
 
-    interface GraphEdge {
-        source: string; // Source Node ID (Prerequisite)
-        target: string; // Target Node ID (Derived Concept)
-        type: 'explicit' | 'keyword' | 'statistical'; // Edge origin
-        weight: number; // Confidence score
+    interface NoteEdge {
+        source: string; // Source node ID
+        target: string; // Target node ID
+        type?: string;  // Type of relationship (e.g., "dependency")
+        weight?: number;// Weight of the edge
     }
 
-    interface DirectedGraph {
-        nodes: GraphNode[];
-        edges: GraphEdge[];
+    interface GraphData {
+        nodes: NoteNode[];
+        edges: NoteEdge[];
     }
     ```
 
@@ -160,36 +164,40 @@ Renders the JSON data into an interactive DAG.
     }
     ```
 
-### 1.3 图构建 (Graph Construction)
+### 1.3 图构建 (Graph Construction) (更新于 2025-12-19 v0.1.3)
 
-#### `IGraphBuilder`
-构建初始图并根据策略推断边。
+#### `Graph` 类
+用于管理笔记和依赖关系的核心数据结构。
 
-*   **函数**: `buildGraph(concepts: Concept[]): DirectedGraph`
-*   **输入**:
-    *   `concepts` (Concept[]): 解析后的概念。
-*   **输出**:
-    *   `DirectedGraph`: 构建的图。
-*   **逻辑**:
-    *   **关键词匹配**: 如果 `Concept A.content` 包含 `Concept B.title`，创建潜在边 $B \rightarrow A$ (B 是 A 的先决条件)。
+*   **类**: `Graph`
+*   **方法**:
+    *   `addNode(node: NoteNode): void`
+    *   `addEdge(source: string, target: string, type?: string): void`
+    *   `getOutgoingEdges(id: string): NoteEdge[]`
+    *   `getIncomingEdges(id: string): NoteEdge[]`
+    *   `toJSON(): GraphData`
 *   **类型定义**:
     ```typescript
-    interface GraphNode {
-        id: string;
-        label: string;
-        rank?: number; // 拓扑排名
+    interface NoteNode {
+        id: string;        // 唯一标识符（通常是笔记标题）
+        label: string;     // 显示标签
+        inDegree: number;  // 入度数量
+        outDegree: number; // 出度数量
+        rank?: number;     // 拓扑排名或层级
+        clusterId?: string;// 该节点所属的聚类 ID
+        metadata?: Record<string, any>; // 额外元数据
     }
 
-    interface GraphEdge {
-        source: string; // 源节点 ID (先决条件)
-        target: string; // 目标节点 ID (派生概念)
-        type: 'explicit' | 'keyword' | 'statistical'; // 边来源
-        weight: number; // 置信度
+    interface NoteEdge {
+        source: string; // 源节点 ID
+        target: string; // 目标节点 ID
+        type?: string;  // 关系类型（例如“依赖”）
+        weight?: number;// 边的权重
     }
 
-    interface DirectedGraph {
-        nodes: GraphNode[];
-        edges: GraphEdge[];
+    interface GraphData {
+        nodes: NoteNode[];
+        edges: NoteEdge[];
     }
     ```
 
