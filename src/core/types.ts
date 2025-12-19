@@ -13,7 +13,13 @@ export interface NoteNode {
   centrality?: number; // Betweenness Centrality | 介数中心性
   rank?: number;     // Topological rank or hierarchy level | 拓扑排名或层级
   clusterId?: string;// ID of the cluster this node belongs to | 该节点所属的聚类 ID
-  metadata?: Record<string, any>; // Additional metadata from frontmatter | 来自 frontmatter 的额外元数据
+  metadata?: {
+      tags?: string[];
+      prerequisites?: string[];
+      next?: string[];
+      filepath?: string;
+      [key: string]: any;
+  }; // Additional metadata from frontmatter | 来自 frontmatter 的额外元数据
 }
 
 /**

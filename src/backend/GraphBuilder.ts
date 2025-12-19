@@ -25,8 +25,8 @@ export class GraphBuilder {
     // 1. 首先添加所有节点
     const fileMap = new Map<string, RawFile>();
     files.forEach(file => {
-      // Parse Tags
-      const tags = FrontmatterParser.extractTags(file.content);
+      // Parse Metadata (Tags, Prerequisites, Next)
+      const metadata = FrontmatterParser.parse(file.content);
 
       const node: NoteNode = {
         id: file.filename,
@@ -34,7 +34,12 @@ export class GraphBuilder {
         inDegree: 0,
         outDegree: 0,
         content: file.content,
-        metadata: { filepath: file.filepath, tags: tags }
+        metadata: { 
+            filepath: file.filepath, 
+            tags: metadata.tags,
+            prerequisites: metadata.prerequisites,
+            next: metadata.next
+        }
       };
 
       if (layout && layout.has(file.filename)) {
@@ -48,7 +53,7 @@ export class GraphBuilder {
 
       // 1b. Add Tag Nodes
       if (config.enableTags) {
-          tags.forEach(tag => {
+          metadata.tags.forEach(tag => {
               const tagId = `#${tag}`;
               if (!graph.hasNode(tagId)) {
                   graph.addNode({
@@ -64,8 +69,60 @@ export class GraphBuilder {
       }
     });
 
-    // 2. Identify edges (Keyword Matching Strategy)
-    // 2. 识别边（关键词匹配策略）
+    // 2. Identify edges
+    
+    // 2a. Explicit Dependencies (Frontmatter)
+    // 2a. 显式依赖 (Frontmatter)
+    files.forEach(sourceFile => {
+        const sourceId = sourceFile.filename;
+        const node = graph.getNode(sourceId);
+        if (!node || !node.metadata) return;
+
+        // Handle 'prerequisites': Target (Prereq) -> Source (Current)
+        if (node.metadata.prerequisites && Array.isArray(node.metadata.prerequisites)) {
+            node.metadata.prerequisites.forEach((prereq: string) => {
+                // Check if prereq exists as a file (simple ID match or filename match)
+                // We assume prereq string is the ID/filename
+                // Need to handle partial matches or extension issues? 
+                // For now, assume exact ID match (without extension if ID is sans-extension).
+                
+                // Try to find the node
+                let targetId = prereq;
+                if (!graph.hasNode(targetId)) {
+                    // Try adding .md or checking map? 
+                    // If node doesn't exist, we might skip or add a "missing" node.
+                    // For robustness, skip if not found in file list.
+                    // But wait, the ID in graph is `filename` (e.g. "Concept A.md").
+                    // The prereq might be "Concept A".
+                    if (graph.hasNode(targetId + '.md')) {
+                        targetId = targetId + '.md';
+                    } else {
+                        return; // Target not found
+                    }
+                }
+                
+                graph.addEdge(targetId, sourceId, 'explicit-prerequisite');
+            });
+        }
+
+        // Handle 'next': Source (Current) -> Target (Next)
+        if (node.metadata.next && Array.isArray(node.metadata.next)) {
+            node.metadata.next.forEach((nextItem: string) => {
+                 let targetId = nextItem;
+                 if (!graph.hasNode(targetId)) {
+                     if (graph.hasNode(targetId + '.md')) {
+                         targetId = targetId + '.md';
+                     } else {
+                         return;
+                     }
+                 }
+                 graph.addEdge(sourceId, targetId, 'explicit-next');
+            });
+        }
+    });
+
+    // 2b. Keyword Matching Strategy
+    // 2b. 关键词匹配策略
     // Logic: If Note A contains "Note B", then Note B -> Note A (B is a concept used in A)
     // 逻辑：如果笔记 A 包含“笔记 B”，则 笔记 B -> 笔记 A（B 是 A 中使用的概念）
     

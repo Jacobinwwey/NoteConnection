@@ -39,3 +39,45 @@
     *   打开“度数分析”面板。
     *   切换语言为“中文”。
     *   **预期**: 所有标签（标题、过滤策略、按钮、表头）应立即切换为中文。
+
+# Test Report (2025-12-19 v0.2.0)
+
+## English Document
+
+### 1. Frontmatter Parsing (Dependency Extraction)
+*   **Component**: `FrontmatterParser` (Backend).
+*   **Test Script**: `src/backend/test_frontmatter.ts`.
+*   **Scenarios Verified**:
+    *   **Inline Array**: `tags: [a, b]` -> Correctly extracted as `['a', 'b']`.
+    *   **List Format**: `next:
+ - Item A
+ - Item B` -> Correctly extracted.
+    *   **WikiLinks**: `prerequisites: [[Concept A]]` -> Correctly extracted as `['Concept A']`.
+    *   **Hybrid**: `prerequisites: [ [[A]], B ]` -> Correctly extracted.
+*   **Result**: PASS. The parser robustly handles standard YAML and Obsidian-style WikiLinks in frontmatter.
+
+### 2. Graph Construction with Explicit Dependencies
+*   **Component**: `GraphBuilder`.
+*   **Verification**: Code review confirms that `metadata.prerequisites` and `metadata.next` are now iterated to create edges with types `explicit-prerequisite` and `explicit-next`.
+*   **Fallback Logic**: If the target ID (e.g., "Concept") is not found, the builder tries "Concept.md" to match the filename-based ID.
+
+---
+
+## 中文文档 (Chinese Document)
+
+### 1. Frontmatter 解析 (依赖提取)
+*   **组件**: `FrontmatterParser` (后端)。
+*   **测试脚本**: `src/backend/test_frontmatter.ts`。
+*   **验证场景**:
+    *   **内联数组**: `tags: [a, b]` -> 正确提取为 `['a', 'b']`。
+    *   **列表格式**: `next:
+ - Item A
+ - Item B` -> 正确提取。
+    *   **WikiLinks**: `prerequisites: [[Concept A]]` -> 正确提取为 `['Concept A']`。
+    *   **混合**: `prerequisites: [ [[A]], B ]` -> 正确提取。
+*   **结果**: 通过 (PASS)。解析器能稳健地处理标准 YAML 和 Frontmatter 中的 Obsidian 风格 WikiLink。
+
+### 2. 显式依赖的图构建
+*   **组件**: `GraphBuilder`。
+*   **验证**: 代码审查确认现在会遍历 `metadata.prerequisites` 和 `metadata.next`，以创建类型为 `explicit-prerequisite` 和 `explicit-next` 的边。
+*   **回退逻辑**: 如果找不到目标 ID（例如 "Concept"），构建器会尝试 "Concept.md" 以匹配基于文件名的 ID。
