@@ -1,6 +1,11 @@
 // Initialize Graph
 const container = document.getElementById('graph-container');
 
+// State for Cluster Filtering
+let activeClusterFilter = localStorage.getItem('activeClusterFilter') || 'all';
+// Clear it immediately so it doesn't persist unwantedly on manual refreshes? 
+// No, user might want to refresh. We need a UI to clear it.
+
 // Create SVG with 100% dimensions
 const svg = d3.select("#graph-container")
     .append("svg")
@@ -24,6 +29,33 @@ const links = graphData.edges.map(d => Object.create(d));
 // Update stats
 document.getElementById('node-count').innerText = nodes.length;
 document.getElementById('edge-count').innerText = links.length;
+
+// Inject Filter Reset UI if needed
+if (activeClusterFilter !== 'all') {
+    const controls = document.getElementById('controls');
+    const filterMsg = document.createElement('div');
+    filterMsg.style.background = '#742a2a';
+    filterMsg.style.color = 'white';
+    filterMsg.style.padding = '5px';
+    filterMsg.style.marginTop = '10px';
+    filterMsg.style.borderRadius = '4px';
+    filterMsg.style.fontSize = '0.85rem';
+    filterMsg.style.display = 'flex';
+    filterMsg.style.justifyContent = 'space-between';
+    filterMsg.style.alignItems = 'center';
+    filterMsg.innerHTML = `<span>Filter: <b>${activeClusterFilter}</b></span> <button id="clear-cluster-filter" style="font-size:0.8em; cursor:pointer;">X</button>`;
+    
+    // Insert after Search box
+    const searchBox = document.querySelector('.search-box');
+    searchBox.parentNode.insertBefore(filterMsg, searchBox.nextSibling);
+    
+    setTimeout(() => {
+        document.getElementById('clear-cluster-filter').addEventListener('click', () => {
+            localStorage.removeItem('activeClusterFilter');
+            window.location.reload();
+        });
+    }, 100);
+}
 
 // Initialize Controls
 const maxDegree = d3.max(nodes, d => d.inDegree + d.outDegree) || 0;
@@ -247,59 +279,13 @@ document.querySelectorAll('input[name="degreeMode"]').forEach(radio => {
 
 // Localization
 const translations = {
-    en: {
-        show_all: "Show All",
-        show_in: "Incoming Only",
-        show_out: "Outgoing Only",
-        degree_basis: "Degree Basis:",
-        all: "All",
-        in: "In",
-        out: "Out",
-        color_by: "Color By:",
-        degree: "Degree",
-        cluster: "Cluster",
-        size_by: "Size By:",
-        uniform: "Uniform",
-        centrality: "Centrality",
-        nodes: "Nodes:",
-        edges: "Edges:",
-        label_opacity: "Label Opacity:",
-        min_degree: "Min Degree:",
-        show_orphans: "Show Orphans",
-        export_image: "Export Image",
-        save_layout: "Save Layout (JSON)",
-        analysis_export: "Analysis & Export",
-        search_placeholder: "Search node...",
-        layout: "Layout:",
-        layout_force: "Force",
-        layout_dag: "DAG (Hierarchical)",
-        
-        // Analysis Panel
-        analysis_title: "Degree Analysis",
-        filter_strategy: "Filter Strategy:",
-        cluster_filter: "Cluster Filter:",
-        threshold: "Threshold:",
-        selected: "Selected:",
-        export_json: "JSON",
-        export_zip: "ZIP (MD)",
-        filtered_nodes: "Filtered Nodes",
-        
-        // Strategy Options
-        strat_top: "Top X% (by Degree)",
-        strat_min: "Min Degree > X",
-        cluster_all: "All Clusters",
-        
-        // Table Headers
-        th_name: "Name",
-        th_cluster: "Cluster",
-        th_in: "In",
-        th_out: "Out",
-        th_total: "Total"
-    },
     zh: {
         show_all: "显示全部",
         show_in: "仅入度",
         show_out: "仅出度",
+        view_mode: "视图模式:",
+        view_nodes: "节点",
+        view_clusters: "聚类 (概览)",
         degree_basis: "度数基准:",
         all: "总",
         in: "入",
@@ -344,6 +330,58 @@ const translations = {
         th_in: "入",
         th_out: "出",
         th_total: "总计"
+    },
+    en: {
+        show_all: "Show All",
+        show_in: "Incoming Only",
+        show_out: "Outgoing Only",
+        view_mode: "View Mode:",
+        view_nodes: "Nodes",
+        view_clusters: "Clusters (Overview)",
+        degree_basis: "Degree Basis:",
+        all: "All",
+        in: "In",
+        out: "Out",
+        color_by: "Color By:",
+        degree: "Degree",
+        cluster: "Cluster",
+        size_by: "Size By:",
+        uniform: "Uniform",
+        centrality: "Centrality",
+        nodes: "Nodes:",
+        edges: "Edges:",
+        label_opacity: "Label Opacity:",
+        min_degree: "Min Degree:",
+        show_orphans: "Show Orphans",
+        export_image: "Export Image",
+        save_layout: "Save Layout (JSON)",
+        analysis_export: "Analysis & Export",
+        search_placeholder: "Search node...",
+        layout: "Layout:",
+        layout_force: "Force",
+        layout_dag: "DAG (Hierarchical)",
+        
+        // Analysis Panel
+        analysis_title: "Degree Analysis",
+        filter_strategy: "Filter Strategy:",
+        cluster_filter: "Cluster Filter:",
+        threshold: "Threshold:",
+        selected: "Selected:",
+        export_json: "JSON",
+        export_zip: "ZIP (MD)",
+        filtered_nodes: "Filtered Nodes",
+        
+        // Strategy Options
+        strat_top: "Top X% (by Degree)",
+        strat_min: "Min Degree > X",
+        cluster_all: "All Clusters",
+        
+        // Table Headers
+        th_name: "Name",
+        th_cluster: "Cluster",
+        th_in: "In",
+        th_out: "Out",
+        th_total: "Total"
     }
 };
 
@@ -375,6 +413,159 @@ window.updateLanguage = function(lang) {
 
 document.getElementById('lang-select').addEventListener('change', (e) => {
     window.updateLanguage(e.target.value);
+});
+
+
+// Aggregation Logic for Cluster View
+let clusterNodes = [];
+let clusterLinks = [];
+
+function buildClusterGraph() {
+    const clusters = new Map();
+    
+    // 1. Create Cluster Nodes
+    nodes.forEach(n => {
+        const cId = n.clusterId || 'unknown';
+        if (!clusters.has(cId)) {
+            clusters.set(cId, {
+                id: cId,
+                label: cId,
+                count: 0,
+                x: n.x, y: n.y, // Initial pos
+                clusterId: cId
+            });
+        }
+        clusters.get(cId).count++;
+    });
+    
+    clusterNodes = Array.from(clusters.values());
+    
+    // 2. Create Cluster Links
+    const linkMap = new Map();
+    links.forEach(l => {
+        const sourceCluster = l.source.clusterId || 'unknown';
+        const targetCluster = l.target.clusterId || 'unknown';
+        
+        if (sourceCluster !== targetCluster) {
+            const key = sourceCluster < targetCluster 
+                ? `${sourceCluster}|${targetCluster}`
+                : `${targetCluster}|${sourceCluster}`;
+            
+            if (!linkMap.has(key)) {
+                linkMap.set(key, { source: sourceCluster, target: targetCluster, weight: 0 });
+            }
+            linkMap.get(key).weight++;
+        }
+    });
+    
+    clusterLinks = Array.from(linkMap.values());
+}
+
+function updateViewMode() {
+    const mode = document.querySelector('input[name="viewMode"]:checked').value;
+    
+    // Stop current simulation
+    simulation.stop();
+    
+    if (mode === 'clusters') {
+        if (clusterNodes.length === 0) buildClusterGraph();
+        
+        // Update Data
+        link.data(clusterLinks, d => d.source + "-" + d.target).exit().remove();
+        const linkEnter = link.data(clusterLinks, d => d.source + "-" + d.target).enter().append("path")
+            .attr("class", "link")
+            .attr("stroke-width", d => Math.sqrt(d.weight)) // Thicker links for more connections
+            .attr("marker-end", "url(#arrow)");
+        // Merge
+        // Note: We need to re-select 'link' properly
+        // Simplify: Clear and rebuild for prototype
+        g.select(".links").selectAll("*").remove();
+        g.select(".nodes").selectAll("*").remove();
+        
+        const newLinks = g.select(".links").selectAll("path")
+            .data(clusterLinks)
+            .enter().append("path")
+            .attr("class", "link")
+            .attr("stroke-width", d => Math.min(5, Math.sqrt(d.weight || 1)))
+            .attr("marker-end", "url(#arrow)");
+            
+        const newNodes = g.select(".nodes").selectAll("g")
+            .data(clusterNodes)
+            .enter().append("g")
+            .attr("class", "node")
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+        
+        newNodes.append("circle")
+            .attr("r", d => Math.sqrt(d.count) * 3 + 5) // Size by count
+            .attr("fill", d => colorScaleCluster(d.id));
+            
+        newNodes.append("text")
+            .attr("dx", d => Math.sqrt(d.count) * 3 + 8)
+            .attr("dy", ".35em")
+            .text(d => `${d.label} (${d.count})`);
+            
+        // Restart Simulation
+        simulation.nodes(clusterNodes);
+        simulation.force("link").links(clusterLinks).distance(150);
+        simulation.force("charge").strength(-500); // Stronger repulsion for big bubbles
+        simulation.force("collide").radius(d => Math.sqrt(d.count) * 3 + 20);
+        
+        // Click to drill down
+        newNodes.on("click", (event, d) => {
+             // Drill down into cluster
+             localStorage.setItem('activeClusterFilter', d.id);
+             window.location.reload();
+        });
+
+    } else {
+        // Nodes Mode (Restore)
+        g.select(".links").selectAll("*").remove();
+        g.select(".nodes").selectAll("*").remove();
+        
+        // Rebuild standard graph
+        // This is a bit brute force but safe
+        const restoreLinks = g.select(".links").selectAll("path")
+            .data(links)
+            .enter().append("path")
+            .attr("class", "link")
+            .attr("marker-end", "url(#arrow)");
+            
+        const restoreNodes = g.select(".nodes").selectAll("g")
+            .data(nodes)
+            .enter().append("g")
+            .attr("class", "node")
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+                
+        // Add circles and texts back
+        // Note: The global 'circles' and 'texts' variables need re-binding or we just re-run initial setup
+        // For simplicity, we just reload the page? No, let's re-append.
+        
+        const c = restoreNodes.append("circle").attr("r", 5);
+        const t = restoreNodes.append("text").attr("dx", 8).attr("dy", ".35em").text(d => d.label);
+        
+        // Re-assign globals if needed by other functions (like updateColor)
+        // In this architecture, 'node', 'link', 'circles', 'texts' are const selections.
+        // We can't reassign const.
+        // We should have used let.
+        // FIX: We need to reload the page or restructure the app to support dynamic data swapping better.
+        // FOR NOW: Let's just reload the page if going back to Nodes, OR better:
+        // Use a wrapper function `render(dataNodes, dataLinks)`
+        
+        location.reload(); // Simplest robust way to restore full graph state for now
+        return;
+    }
+    
+    simulation.alpha(1).restart();
+}
+
+document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
+    radio.addEventListener('change', updateViewMode);
 });
 
 
@@ -498,8 +689,11 @@ function isNodeVisible(d) {
     const isOrphan = degree === 0;
     const allowedOrphan = !isOrphan || showOrphans;
     const matchesSearch = !term || d.label.toLowerCase().includes(term);
+    
+    // Check Cluster Filter
+    const matchesCluster = activeClusterFilter === 'all' || (d.clusterId === activeClusterFilter);
 
-    return matchesDegree && allowedOrphan && matchesSearch;
+    return matchesDegree && allowedOrphan && matchesSearch && matchesCluster;
 }
 
 function updateVisibility() {

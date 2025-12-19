@@ -106,6 +106,8 @@ Core data structure for managing notes and dependencies.
     ```typescript
     interface AppConfig {
         matchingStrategy: 'exact-phrase' | 'fuzzy';
+        clusteringStrategy: 'label-propagation' | 'folder';
+        enableStatisticalInference: boolean; // Toggle statistical analysis
         exclusionList: string[];
     }
     

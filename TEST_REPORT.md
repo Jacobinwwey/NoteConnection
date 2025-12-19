@@ -165,3 +165,117 @@
 *   **原因**: 错误地使用了 `strength(null)` 试图重置链接力的强度。
 *   **修复**: 更新了 `app.js` 中的 `updateLayout`，在切换到 Force 模式时完全重新初始化 `d3.forceLink`。这恢复了基于节点度数的默认强度计算。
 *   **结果**: 通过 (PASS)。现在返回 Force 模式时，节点可以正确地重新聚类。
+
+# Test Report (2025-12-19 v0.5.0)
+
+## English Document
+
+### 1. Folder-based Clustering
+*   **Component**: `GraphBuilder` (Backend).
+*   **Feature**: Switchable clustering strategy via `config.clusteringStrategy`.
+*   **Test Method**:
+    1.  Created a test directory `testconcept/clustering_test`.
+    2.  Created a file `NoteInCluster.md` inside it.
+    3.  Set `config.clusteringStrategy = 'folder'`.
+    4.  ran `ts-node src/index.ts`.
+*   **Verification**: Checked `graph_data.json`.
+    *   **Expected**: `"clusterId": "clustering_test"`.
+    *   **Actual**: `"clusterId": "clustering_test"`.
+*   **Result**: PASS. The system correctly maps the parent directory name to the node's cluster ID when enabled.
+
+---
+
+## 中文文档 (Chinese Document)
+
+### 1. 基于文件夹的聚类
+*   **组件**: `GraphBuilder` (后端)。
+*   **特性**: 通过 `config.clusteringStrategy` 切换聚类策略。
+*   **测试方法**:
+    1.  创建测试目录 `testconcept/clustering_test`。
+    2.  在其中创建文件 `NoteInCluster.md`。
+    3.  设置 `config.clusteringStrategy = 'folder'`。
+    4.  运行 `ts-node src/index.ts`。
+*   **验证**: 检查 `graph_data.json`。
+    *   **预期**: `"clusterId": "clustering_test"`。
+    *   **实际**: `"clusterId": "clustering_test"`。
+*   **结果**: 通过 (PASS)。系统在启用时能正确地将父目录名称映射为节点的聚类 ID。
+
+# Test Report (2025-12-19 v0.5.1)
+
+## English Document
+
+### 1. Semantic Zoom (Cluster View)
+*   **Component**: `app.js` (Frontend).
+*   **Feature**: "View Mode" toggle (Nodes vs Clusters).
+*   **Logic Verified**:
+    *   `buildClusterGraph()`: Iterates through all nodes, groups them by `clusterId`.
+    *   Aggregates links: Counts edges between clusters to assign weight (thickness).
+    *   Visuals: Cluster nodes sized by `sqrt(count)`. Links sized by `sqrt(weight)`.
+*   **Result**: PASS.
+
+### 2. Drill-down (Cluster Filter)
+*   **Component**: `app.js` (Frontend).
+*   **Feature**: Click on a Cluster Bubble to drill down.
+*   **Mechanism**:
+    *   Click triggers `localStorage.setItem('activeClusterFilter', id)`.
+    *   Page reloads (Prototype approach).
+    *   On load, `activeClusterFilter` is retrieved.
+    *   `isNodeVisible` checks `d.clusterId === activeClusterFilter`.
+    *   UI shows a "Filter: [Name] [X]" banner.
+*   **Result**: PASS. Logic ensures only nodes within the selected cluster are rendered/interactive.
+
+---
+
+## 中文文档 (Chinese Document)
+
+### 1. 语义缩放 (聚类视图)
+*   **组件**: `app.js` (前端)。
+*   **特性**: "视图模式" 切换 (节点 vs 聚类)。
+*   **逻辑验证**:
+    *   `buildClusterGraph()`: 遍历所有节点，按 `clusterId` 分组。
+    *   聚合链接: 计算聚类之间的边数以分配权重（粗细）。
+    *   视觉效果: 聚类节点大小由 `sqrt(count)` 决定。链接大小由 `sqrt(weight)` 决定。
+*   **结果**: 通过 (PASS)。
+
+### 2. 向下钻取 (聚类过滤)
+*   **组件**: `app.js` (前端)。
+*   **特性**: 点击聚类气泡进行向下钻取。
+*   **机制**:
+    *   点击触发 `localStorage.setItem('activeClusterFilter', id)`。
+    *   页面重新加载（原型方法）。
+    *   加载时，获取 `activeClusterFilter`。
+    *   `isNodeVisible` 检查 `d.clusterId === activeClusterFilter`。
+    *   UI 显示 "Filter: [Name] [X]" 横幅。
+*   **结果**: 通过 (PASS)。逻辑确保仅渲染/交互所选聚类中的节点。
+
+# Test Report (2025-12-19 v0.6.0)
+
+## English Document
+
+### 1. Statistical Dependency Inference
+*   **Component**: `StatisticalAnalyzer` (Backend).
+*   **Logic**:
+    *   Calculates Co-occurrence Matrix.
+    *   Calculates Conditional Probability $P(A|B)$ vs $P(B|A)$.
+    *   **Inference Rule**: If $P(Parent|Child) - P(Child|Parent) > Threshold$, implies hierarchical relationship.
+*   **Test Script**: `src/backend/test_robustness/test_statistics.ts`.
+*   **Results**:
+    *   Tested on `testconcept`.
+    *   Identified strong hierarchical links like `[fluorescence] -> [band pass filter]` (Confidence 0.94) and `[Diffraction] -> [plane wave]`.
+    *   Confirms that general context concepts can be statistically inferred as "Parents" of specific concepts.
+
+---
+
+## 中文文档 (Chinese Document)
+
+### 1. 统计依赖推断
+*   **组件**: `StatisticalAnalyzer` (后端)。
+*   **逻辑**:
+    *   计算共现矩阵。
+    *   计算条件概率 $P(A|B)$ vs $P(B|A)$。
+    *   **推断规则**: 如果 $P(Parent|Child) - P(Child|Parent) > Threshold$ (阈值)，则暗示层级关系。
+*   **测试脚本**: `src/backend/test_robustness/test_statistics.ts`。
+*   **结果**:
+    *   在 `testconcept` 上测试。
+    *   识别出强层级链接，如 `[fluorescence] (荧光) -> [band pass filter] (带通滤波器)` (置信度 0.94) 和 `[Diffraction] (衍射) -> [plane wave] (平面波)`。
+    *   确认一般语境概念可以在统计上被推断为特定概念的“父级”。
