@@ -100,11 +100,24 @@ const uniqueClusters = Array.from(new Set(nodes.map(d => d.clusterId))).sort();
 const colorScaleCluster = d3.scaleOrdinal(d3.schemeCategory10)
     .domain(uniqueClusters);
 
+// Size Scale
+const maxCentrality = d3.max(nodes, d => d.centrality || 0) || 1;
+const sizeScaleCentrality = d3.scaleSqrt()
+    .domain([0, maxCentrality])
+    .range([3, 12]); // Min 3px, Max 12px
+
 const circles = node.append("circle")
     .attr("r", 5);
 
-// Initial Color
+// Labels
+const texts = node.append("text")
+    .attr("dx", 8)
+    .attr("dy", ".35em")
+    .text(d => d.label);
+
+// Initial State
 updateColor();
+updateSize();
 
 function updateColor() {
     const mode = document.querySelector('input[name="colorMode"]:checked').value;
@@ -115,16 +128,51 @@ function updateColor() {
     }
 }
 
-// Color Mode Listeners
+function updateSize() {
+    const mode = document.querySelector('input[name="sizeMode"]:checked').value;
+    if (mode === 'centrality') {
+        // Node Size
+        circles.transition().duration(300).attr("r", d => sizeScaleCentrality(d.centrality || 0));
+        
+        // Label Size & Weight
+        texts.transition().duration(300)
+             .attr("font-size", d => Math.max(10, sizeScaleCentrality(d.centrality || 0) * 1.2) + "px")
+             .attr("font-weight", d => (d.centrality || 0) > maxCentrality * 0.5 ? "bold" : "normal")
+             .attr("dx", d => sizeScaleCentrality(d.centrality || 0) + 4); // Adjust offset
+
+        // Update Collision Force
+        simulation.force("collide", d3.forceCollide().radius(d => sizeScaleCentrality(d.centrality || 0) + 5));
+    } else {
+        circles.transition().duration(300).attr("r", 5);
+        texts.transition().duration(300)
+             .attr("font-size", "10px")
+             .attr("font-weight", "normal")
+             .attr("dx", 8);
+        
+        simulation.force("collide", d3.forceCollide().radius(8));
+    }
+    simulation.alpha(0.3).restart();
+}
+
+// Opacity Control
+const opacitySlider = document.getElementById('label-opacity-slider');
+const opacityVal = document.getElementById('label-opacity-val');
+
+if (opacitySlider) {
+    opacitySlider.addEventListener('input', (e) => {
+        const val = e.target.value;
+        opacityVal.innerText = val + "%\n";
+        texts.style("opacity", val / 100);
+    });
+}
+
+// Listeners
 document.querySelectorAll('input[name="colorMode"]').forEach(radio => {
     radio.addEventListener('change', updateColor);
 });
-
-// Node Labels
-node.append("text")
-    .attr("dx", 8)
-    .attr("dy", ".35em")
-    .text(d => d.label);
+document.querySelectorAll('input[name="sizeMode"]').forEach(radio => {
+    radio.addEventListener('change', updateSize);
+});
 
 // Interactions
 let transform = d3.zoomIdentity;
