@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
         histogram: document.getElementById("histogram-container"),
         // Controls
         strategy: document.getElementById("export-strategy"),
+        clusterFilter: document.getElementById("cluster-filter"),
         slider: document.getElementById("export-threshold-slider"),
         val: document.getElementById("export-threshold-val"),
         count: document.getElementById("selected-count"),
@@ -27,9 +28,35 @@ document.addEventListener("DOMContentLoaded", () => {
     const AppState = {
         threshold: 5,
         strategy: 'top-percent',
-        sortField: 'total', // 'name', 'in', 'out', 'total'
+        cluster: 'all',     // 'all' or specific clusterId
+        sortField: 'total', // 'name', 'cluster', 'in', 'out', 'total'
         sortOrder: 'desc'   // 'asc', 'desc'
     };
+
+    // --- 0. Init Cluster Options ---
+    function initClusters() {
+        if (!UI.clusterFilter || typeof graphData === 'undefined') return;
+        
+        // Find unique clusters
+        const clusters = new Set();
+        graphData.nodes.forEach(n => {
+            if (n.clusterId) clusters.add(n.clusterId);
+        });
+        
+        // Sort
+        const sortedClusters = Array.from(clusters).sort();
+        
+        // Populate
+        sortedClusters.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c; // Or "Cluster " + c
+            UI.clusterFilter.appendChild(opt);
+        });
+    }
+    // Delay slightly to ensure data.js is parsed
+    setTimeout(initClusters, 0);
+
 
     // --- 1. Quick Distribution (Immediate) ---
     function initQuickDist() {
@@ -68,12 +95,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 UI.resizer.style.display = "block";
                 
                 if (!UI.panel.style.height || UI.panel.style.height === '0px') {
-                    UI.panel.style.height = "500px"; // Taller for table
+                    UI.panel.style.height = "500px"; 
                 }
                 
                 requestAnimationFrame(() => {
                     renderHistogram();
-                    updateStats(); // Triggers table render
+                    updateStats(); 
                 });
             }
         });
@@ -124,15 +151,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const margin = {top: 10, right: 10, bottom: 20, left: 30};
         const counts = new Map();
-        graphData.nodes.forEach(n => {
+        
+        // Use filtered nodes for histogram? Or all? Usually histogram shows ALL context.
+        // Let's stick to ALL nodes for the main histogram to show global context.
+        // OR: should it reflect the current cluster filter?
+        // Requirement: "support users to perform clustering filtering".
+        // It's better if the histogram reflects the CURRENTLY VIEWED set (filtered by cluster).
+        
+        // Get nodes filtered ONLY by cluster (ignore threshold for histogram context)
+        let contextNodes = graphData.nodes;
+        if (AppState.cluster !== 'all') {
+            contextNodes = contextNodes.filter(n => n.clusterId === AppState.cluster);
+        }
+
+        contextNodes.forEach(n => {
             const d = n.inDegree + n.outDegree;
             counts.set(d, (counts.get(d)||0)+1);
         });
         const data = Array.from(counts, ([d, c]) => ({d, c})).sort((a,b)=>a.d - b.d);
 
         const svg = d3.select(UI.histogram).append("svg").attr("width", w).attr("height", h);
-        const x = d3.scaleLinear().domain([0, d3.max(data, i=>i.d)]).range([margin.left, w-margin.right]);
-        const y = d3.scaleLinear().domain([0, d3.max(data, i=>i.c)]).range([h-margin.bottom, margin.top]);
+        const x = d3.scaleLinear().domain([0, d3.max(data, i=>i.d)||0]).range([margin.left, w-margin.right]);
+        const y = d3.scaleLinear().domain([0, d3.max(data, i=>i.c)||0]).range([h-margin.bottom, margin.top]);
 
         svg.selectAll("rect").data(data).join("rect")
             .attr("x", i => x(i.d)-2).attr("y", i => y(i.c))
@@ -155,6 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
             
             switch(AppState.sortField) {
                 case 'name': valA = a.label.toLowerCase(); valB = b.label.toLowerCase(); break;
+                case 'cluster': valA = a.clusterId || ''; valB = b.clusterId || ''; break;
                 case 'in': valA = a.inDegree; valB = b.inDegree; break;
                 case 'out': valA = a.outDegree; valB = b.outDegree; break;
                 case 'total': default: valA = a.inDegree + a.outDegree; valB = b.inDegree + b.outDegree; break;
@@ -181,6 +222,7 @@ document.addEventListener("DOMContentLoaded", () => {
         UI.tableBody.innerHTML = sorted.map(n => `
             <div class="node-row" title="${n.label}">
                 <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${n.label}</div>
+                <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: #aaa;">${n.clusterId || '-'}</div>
                 <div>${n.inDegree}</div>
                 <div>${n.outDegree}</div>
                 <div>${n.inDegree + n.outDegree}</div>
@@ -188,28 +230,34 @@ document.addEventListener("DOMContentLoaded", () => {
         `).join('');
     }
 
-    // Table Sorting Events
     UI.headers.forEach(h => {
         h.addEventListener('click', () => {
             const field = h.dataset.sort;
             if (AppState.sortField === field) {
-                // Toggle order
                 AppState.sortOrder = AppState.sortOrder === 'asc' ? 'desc' : 'asc';
             } else {
                 AppState.sortField = field;
-                AppState.sortOrder = 'desc'; // Default new sort to desc
+                AppState.sortOrder = 'desc';
             }
-            updateStats(); // Re-render table
+            updateStats();
         });
     });
 
 
     // --- 6. Export & Filter Logic ---
     function getFiltered() {
-        const nodes = graphData.nodes;
+        let nodes = graphData.nodes;
+        
+        // 1. Cluster Filter
+        if (AppState.cluster !== 'all') {
+            nodes = nodes.filter(n => n.clusterId === AppState.cluster);
+        }
+
+        // 2. Degree/Rank Filter
         if (AppState.strategy === 'min-degree') {
             return nodes.filter(n => (n.inDegree + n.outDegree) >= AppState.threshold);
         } else {
+            // Top Percent
             const sorted = [...nodes].sort((a,b)=>(b.inDegree+b.outDegree)-(a.inDegree+a.outDegree));
             const cut = Math.ceil(nodes.length * (AppState.threshold/100));
             return sorted.slice(0, cut);
@@ -219,12 +267,20 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateStats() {
         const res = getFiltered();
         if (UI.count) {
+            // Show percentage of TOTAL, or percentage of CLUSTER?
+            // "Filtered / Total" usually implies total graph.
             const tot = graphData.nodes.length;
             const pct = ((res.length/tot)*100).toFixed(1);
             UI.count.innerText = `${res.length} / ${tot} (${pct}%)`;
         }
         renderTable(res);
+        renderHistogram(); // Re-render histogram to reflect cluster context
     }
+
+    if (UI.clusterFilter) UI.clusterFilter.addEventListener("change", (e) => {
+        AppState.cluster = e.target.value;
+        updateStats();
+    });
 
     if (UI.strategy) UI.strategy.addEventListener("change", (e) => {
         AppState.strategy = e.target.value;
@@ -239,7 +295,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (UI.btnJson) UI.btnJson.addEventListener("click", () => {
         const data = getFiltered().map(n => ({
-            id: n.id, in: n.inDegree, out: n.outDegree, content: n.content
+            id: n.id, in: n.inDegree, out: n.outDegree, cluster: n.clusterId, content: n.content
         }));
         download(JSON.stringify(data, null, 2), "export.json", "application/json");
     });
@@ -250,7 +306,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const f = zip.folder("notes");
         getFiltered().forEach(n => {
             const name = n.id.endsWith(".md") ? n.id : n.id+".md";
-            f.file(name, (n.content||"") + `\n\n---\nDegree: ${n.inDegree+n.outDegree}`);
+            f.file(name, (n.content||"") + `\n\n---\nDegree: ${n.inDegree+n.outDegree}\nCluster: ${n.clusterId}`);
         });
         zip.generateAsync({type:"blob"}).then(b => {
             const url = URL.createObjectURL(b);

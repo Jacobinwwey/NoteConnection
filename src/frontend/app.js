@@ -92,12 +92,33 @@ const node = g.append("g")
         .on("end", dragended));
 
 // Node Circles (Color by degree)
-const colorScale = d3.scaleSequential(d3.interpolateBlues)
+// Scales
+const colorScaleDegree = d3.scaleSequential(d3.interpolateBlues)
     .domain([0, maxDegree]);
 
-node.append("circle")
-    .attr("r", 5)
-    .attr("fill", d => colorScale(d.inDegree + d.outDegree));
+const uniqueClusters = Array.from(new Set(nodes.map(d => d.clusterId))).sort();
+const colorScaleCluster = d3.scaleOrdinal(d3.schemeCategory10)
+    .domain(uniqueClusters);
+
+const circles = node.append("circle")
+    .attr("r", 5);
+
+// Initial Color
+updateColor();
+
+function updateColor() {
+    const mode = document.querySelector('input[name="colorMode"]:checked').value;
+    if (mode === 'cluster') {
+        circles.attr("fill", d => colorScaleCluster(d.clusterId || 'unknown'));
+    } else {
+        circles.attr("fill", d => colorScaleDegree(d.inDegree + d.outDegree));
+    }
+}
+
+// Color Mode Listeners
+document.querySelectorAll('input[name="colorMode"]').forEach(radio => {
+    radio.addEventListener('change', updateColor);
+});
 
 // Node Labels
 node.append("text")
@@ -279,6 +300,25 @@ function exportSVG() {
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
+}
+
+// Save Layout
+document.getElementById('save-layout-btn').addEventListener('click', saveLayout);
+
+function saveLayout() {
+    const layoutData = nodes.map(n => ({
+        id: n.id,
+        x: Math.round(n.x),
+        y: Math.round(n.y)
+    }));
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(layoutData, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "layout.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
 }
 
 // Drag functions
