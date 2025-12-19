@@ -44,6 +44,9 @@ Open `src/frontend/index.html` in your web browser.
 *   **Independent**: No Obsidian/Joplin dependency required to run.
 *   **Keyword Matching**: Automatically links notes if one mentions another's title.
 *   **Degree Analysis**: Visualizes In-Degree and Out-Degree.
+*   **Distribution & Export**:
+    *   View Degree Distribution Histogram.
+    *   Export Top X% nodes or High-Degree nodes to **JSON** or **ZIP**.
 *   **Search**: Filter nodes by name.
 
 ## Documentation (文档)

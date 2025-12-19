@@ -65,21 +65,29 @@ Core data structure for managing notes and dependencies.
     *   `toJSON(): GraphData`
 
 #### `GraphBuilder` Service
-*   **Strategy**: Keyword Matching (Content Scanning).
+*   **Strategy**: Configurable Keyword Matching.
+*   **Configuration**:
+    *   `matchingStrategy`: 'exact-phrase' (Regex `\bterm\b`) or 'fuzzy' (`includes`). Default: 'exact-phrase'.
+    *   `exclusionList`: Array of strings to ignore.
 *   **Logic**:
     *   Iterates through all file pairs (Source, Target).
-    *   If `Source.content` includes `Target.filename` (Case-Insensitive):
-        *   Creates Edge: `Target -> Source` (Target is a concept used in Source).
-        *   Edge Type: `keyword-match`.
-*   **Note**: Simple string inclusion is used. Future versions may implement exact phrase matching or fuzzy matching.
+    *   Checks if `Target.id` is in `exclusionList`.
+    *   Checks if `Source.content` matches `Target.id` using the selected strategy.
+    *   If matched: Creates Edge `Target -> Source`.
 
 *   **Type Definitions**:
     ```typescript
+    interface AppConfig {
+        matchingStrategy: 'exact-phrase' | 'fuzzy';
+        exclusionList: string[];
+    }
+    
     interface NoteNode {
         id: string;        // Unique identifier (usually the note title)
         label: string;     // Display label
         inDegree: number;  // Number of incoming edges
         outDegree: number; // Number of outgoing edges
+        content?: string;  // Full text content (v0.1.5)
         rank?: number;     // Topological rank or hierarchy level
         clusterId?: string;// ID of the cluster this node belongs to
         metadata?: Record<string, any>; // Additional metadata
@@ -188,21 +196,29 @@ Renders the JSON data into an interactive DAG.
     *   `toJSON(): GraphData`
 
 #### `GraphBuilder` 服务
-*   **策略**: 关键词匹配 (内容扫描)。
+*   **策略**: 可配置的关键词匹配。
+*   **配置**:
+    *   `matchingStrategy`: 'exact-phrase' (正则 `\bterm\b`) 或 'fuzzy' (`includes`)。默认: 'exact-phrase'。
+    *   `exclusionList`: 要忽略的字符串数组。
 *   **逻辑**:
     *   遍历所有文件对 (Source, Target)。
-    *   如果 `Source.content` 包含 `Target.filename` (不区分大小写):
-        *   创建边: `Target -> Source` (Target 是 Source 中使用的概念)。
-        *   边类型: `keyword-match`。
-*   **注意**:目前使用简单的字符串包含匹配。未来版本可能会实现精确短语匹配或模糊匹配。
+    *   检查 `Target.id` 是否在 `exclusionList` 中。
+    *   使用选定的策略检查 `Source.content` 是否匹配 `Target.id`。
+    *   如果匹配: 创建边 `Target -> Source`。
 
 *   **类型定义**:
     ```typescript
+    interface AppConfig {
+        matchingStrategy: 'exact-phrase' | 'fuzzy';
+        exclusionList: string[];
+    }
+
     interface NoteNode {
         id: string;        // 唯一标识符（通常是笔记标题）
         label: string;     // 显示标签
         inDegree: number;  // 入度数量
         outDegree: number; // 出度数量
+        content?: string;  // 全文内容 (v0.1.5)
         rank?: number;     // 拓扑排名或层级
         clusterId?: string;// 该节点所属的聚类 ID
         metadata?: Record<string, any>; // 额外元数据

@@ -1,13 +1,11 @@
 // Initialize Graph
 const container = document.getElementById('graph-container');
-const width = container.clientWidth;
-const height = container.clientHeight;
 
-// Create SVG
+// Create SVG with 100% dimensions
 const svg = d3.select("#graph-container")
     .append("svg")
-    .attr("width", width)
-    .attr("height", height)
+    .attr("width", "100%")
+    .attr("height", "100%")
     .call(d3.zoom().on("zoom", (event) => {
         g.attr("transform", event.transform);
     }));
@@ -27,12 +25,35 @@ const links = graphData.edges.map(d => Object.create(d));
 document.getElementById('node-count').innerText = nodes.length;
 document.getElementById('edge-count').innerText = links.length;
 
+// Initialize Controls
+const maxDegree = d3.max(nodes, d => d.inDegree + d.outDegree) || 0;
+const minDegreeSlider = document.getElementById('min-degree-slider');
+minDegreeSlider.max = maxDegree;
+document.getElementById('min-degree-val').innerText = minDegreeSlider.value;
+
 // Simulation
+// Initial Center
+let width = container.clientWidth;
+let height = container.clientHeight;
+
 const simulation = d3.forceSimulation(nodes)
     .force("link", d3.forceLink(links).id(d => d.id).distance(100))
     .force("charge", d3.forceManyBody().strength(-300))
     .force("center", d3.forceCenter(width / 2, height / 2))
     .force("collide", d3.forceCollide().radius(20)); // Avoid overlap
+
+// Handle Resize
+const resizeObserver = new ResizeObserver(entries => {
+    for (let entry of entries) {
+        const newWidth = entry.contentRect.width;
+        const newHeight = entry.contentRect.height;
+        
+        // Update Center Force
+        simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+        simulation.alpha(0.3).restart();
+    }
+});
+resizeObserver.observe(container);
 
 // Arrows for edges
 svg.append("defs").selectAll("marker")
@@ -72,7 +93,7 @@ const node = g.append("g")
 
 // Node Circles (Color by degree)
 const colorScale = d3.scaleSequential(d3.interpolateBlues)
-    .domain([0, d3.max(nodes, d => d.inDegree + d.outDegree)]);
+    .domain([0, maxDegree]);
 
 node.append("circle")
     .attr("r", 5)
@@ -136,38 +157,129 @@ node.on("mouseover", function(event, d) {
     .style("top", (event.pageY - 28) + "px");
 
 }).on("mouseout", function() {
-    // Reset styles
-    node.style("opacity", 1).classed("highlight-main", false);
-    link.style("opacity", 0.6)
-        .classed("highlight-out", false)
-        .classed("highlight-in", false);
-    
+    // Reset styles to filtered state
     tooltip.transition().duration(500).style("opacity", 0);
+    d3.select(this).classed("highlight-main", false);
+    link.classed("highlight-out", false).classed("highlight-in", false);
+    updateVisibility(); // Restore visibility based on filters
 });
 
 // Simulation Tick
 simulation.on("tick", () => {
     link.attr("d", d => {
-        // Curved lines
         const dx = d.target.x - d.source.x;
         const dy = d.target.y - d.source.y;
-        const dr = Math.sqrt(dx * dx + dy * dy);
-        // return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`; // Arc
-        return `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`; // Straight line for now (better for performance with many edges)
+        // const dr = Math.sqrt(dx * dx + dy * dy);
+        return `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`;
     });
 
     node.attr("transform", d => `translate(${d.x},${d.y})`);
 });
 
-// Search
-document.getElementById('search-input').addEventListener('input', function(e) {
-    const term = e.target.value.toLowerCase();
-    if (!term) {
-        node.style("opacity", 1);
-        return;
+// Controls & Filtering
+const controls = {
+    minDegree: document.getElementById('min-degree-slider'),
+    showOrphans: document.getElementById('show-orphans'),
+    search: document.getElementById('search-input'),
+    export: document.getElementById('export-btn')
+};
+
+controls.minDegree.addEventListener('input', updateVisibility);
+controls.showOrphans.addEventListener('change', updateVisibility);
+controls.search.addEventListener('input', updateVisibility);
+controls.export.addEventListener('click', exportSVG);
+
+function isNodeVisible(d) {
+    const minDegree = parseInt(controls.minDegree.value);
+    const showOrphans = controls.showOrphans.checked;
+    const term = controls.search.value.toLowerCase();
+    
+    const degree = d.inDegree + d.outDegree;
+    const matchesDegree = degree >= minDegree;
+    const isOrphan = degree === 0;
+    const allowedOrphan = !isOrphan || showOrphans;
+    const matchesSearch = !term || d.label.toLowerCase().includes(term);
+
+    return matchesDegree && allowedOrphan && matchesSearch;
+}
+
+function updateVisibility() {
+    const minVal = controls.minDegree.value;
+    document.getElementById('min-degree-val').innerText = minVal;
+
+    node.style("opacity", d => isNodeVisible(d) ? 1 : 0.1)
+        .style("pointer-events", d => isNodeVisible(d) ? "all" : "none");
+
+    link.style("opacity", d => {
+        const sourceVis = isNodeVisible(d.source);
+        const targetVis = isNodeVisible(d.target);
+        return (sourceVis && targetVis) ? 0.6 : 0.05;
+    });
+}
+
+function exportSVG() {
+    const svgEl = document.querySelector("#graph-container svg");
+    
+    // 1. Clone the SVG to manipulate it without affecting the UI
+    const clone = svgEl.cloneNode(true);
+    
+    // 2. Add Background Rect
+    const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    bgRect.setAttribute("width", "100%");
+    bgRect.setAttribute("height", "100%");
+    bgRect.setAttribute("fill", "#1e1e1e"); // Match body background
+    clone.insertBefore(bgRect, clone.firstChild);
+
+    // 3. Inline Computed Styles for Nodes and Links
+    // We need to match elements in clone with original to get computed styles
+    const originalNodes = svgEl.querySelectorAll('.node circle, .node text');
+    const cloneNodes = clone.querySelectorAll('.node circle, .node text');
+    
+    originalNodes.forEach((orig, i) => {
+        const cl = cloneNodes[i];
+        const style = window.getComputedStyle(orig);
+        cl.setAttribute("fill", style.fill);
+        cl.setAttribute("stroke", style.stroke);
+        cl.setAttribute("stroke-width", style.strokeWidth);
+        cl.setAttribute("opacity", style.opacity);
+        cl.setAttribute("font-size", style.fontSize);
+        cl.setAttribute("font-family", style.fontFamily);
+    });
+
+    const originalLinks = svgEl.querySelectorAll('.link');
+    const cloneLinks = clone.querySelectorAll('.link');
+    
+    originalLinks.forEach((orig, i) => {
+        const cl = cloneLinks[i];
+        const style = window.getComputedStyle(orig);
+        cl.setAttribute("stroke", style.stroke);
+        cl.setAttribute("stroke-width", style.strokeWidth);
+        cl.setAttribute("stroke-opacity", style.strokeOpacity);
+        cl.setAttribute("fill", "none"); // Links shouldn't have fill
+    });
+
+    // 4. Serialize
+    const serializer = new XMLSerializer();
+    let source = serializer.serializeToString(clone);
+
+    // Add namespaces if missing
+    if(!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
+        source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
     }
-    node.style("opacity", d => d.label.toLowerCase().includes(term) ? 1 : 0.1);
-});
+    if(!source.match(/^<svg[^>]+\"http\:\/\/www\.w3\.org\/1999\/xlink"/)){
+        source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+    }
+
+    const preamble = '<?xml version="1.0" standalone="no"?>\r\n';
+    const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(preamble + source);
+    
+    const downloadLink = document.createElement("a");
+    downloadLink.href = url;
+    downloadLink.download = "note_connection_graph.svg";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+}
 
 // Drag functions
 function dragstarted(event, d) {

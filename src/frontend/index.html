@@ -6,24 +6,91 @@
     <title>NoteConnection Knowledge Graph</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="data.js"></script> <!-- Defines const graphData -->
 </head>
 <body>
-    <div id="controls">
-        <h3>NoteConnection</h3>
-        <div class="stats">
-            Nodes: <span id="node-count">0</span> | Edges: <span id="edge-count">0</span>
+    <!-- Top Graph Area -->
+    <div id="graph-wrapper">
+        <div id="controls">
+            <h3>NoteConnection</h3>
+                                <div class="stats" style="display: flex; align-items: center;">
+                                    <span>Nodes: <span id="node-count">0</span> | Edges: <span id="edge-count">0</span></span>
+                                    <div id="quick-distribution" title="Degree Distribution"></div>
+                                </div>                    <div class="filter-controls">                <label><input type="radio" name="mode" value="all" checked> Show All</label>
+                <label><input type="radio" name="mode" value="in"> Incoming Only</label>
+                <label><input type="radio" name="mode" value="out"> Outgoing Only</label>
+            </div>
+            <div class="search-box">
+                 <input type="text" id="search-input" placeholder="Search node...">
+            </div>
+            <div class="advanced-controls" style="margin-top: 15px; border-top: 1px solid #555; padding-top: 10px;">
+                <label style="font-size: 0.9rem; color: #aaa;">Min Degree: <span id="min-degree-val">0</span></label>
+                <input type="range" id="min-degree-slider" min="0" max="20" value="0" style="width: 100%;">
+                
+                <label style="display: flex; align-items: center; margin-top: 5px;">
+                    <input type="checkbox" id="show-orphans" checked> 
+                    <span style="margin-left: 5px;">Show Orphans</span>
+                </label>
+
+                <button id="export-btn" style="margin-top: 10px; width: 100%; padding: 5px; cursor: pointer; background: #333; color: white; border: 1px solid #555; border-radius: 4px;">Export Image</button>
+                <button id="analysis-btn" style="margin-top: 5px; width: 100%; padding: 5px; cursor: pointer; background: #2c5282; color: white; border: 1px solid #555; border-radius: 4px;">Analysis & Export</button>
+            </div>
         </div>
-        <div class="filter-controls">
-            <label><input type="radio" name="mode" value="all" checked> Show All</label>
-            <label><input type="radio" name="mode" value="in"> Incoming Only</label>
-            <label><input type="radio" name="mode" value="out"> Outgoing Only</label>
+
+        <div id="graph-container"></div>
+    </div>
+
+    <!-- Resizer Handle -->
+    <div id="analysis-resizer"></div>
+
+    <!-- Bottom Analysis Panel -->
+    <div id="analysis-panel">
+        <div class="panel-header">
+            <h2>Degree Analysis</h2>
+            <span class="close-panel">&times;</span>
         </div>
-        <div class="search-box">
-             <input type="text" id="search-input" placeholder="Search node...">
+        <div class="panel-body">
+            <div id="histogram-container"></div>
+            
+            <div class="export-controls">
+                <div class="control-group">
+                    <label>Filter Strategy:</label>
+                    <select id="export-strategy" style="width: 100%; margin-top: 5px;">
+                        <option value="top-percent">Top X% (by Degree)</option>
+                        <option value="min-degree">Min Degree > X</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Threshold: <span id="export-threshold-val">5</span></label>
+                    <input type="range" id="export-threshold-slider" min="1" max="100" value="5" style="width: 100%;">
+                </div>
+                <div class="stats-preview">
+                    Selected: <span id="selected-count">0</span>
+                </div>
+                <div class="action-buttons">
+                    <button id="export-json-btn" style="flex: 1;">JSON</button>
+                    <button id="export-zip-btn" style="flex: 1;">ZIP (MD)</button>
+                </div>
+            </div>
+
+            <!-- Node List Table -->
+            <div id="node-list-wrapper" style="margin-top: 15px; flex: 1; overflow: hidden; display: flex; flex-direction: column;">
+                <h3 style="margin: 0 0 5px 0; font-size: 0.9rem; color: #aaa;">Filtered Nodes</h3>
+                <div class="table-header" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 5px; padding: 5px; background: #222; font-weight: bold; font-size: 0.85rem;">
+                    <div class="sortable" data-sort="name">Name <span></span></div>
+                    <div class="sortable" data-sort="in">In <span></span></div>
+                    <div class="sortable" data-sort="out">Out <span></span></div>
+                    <div class="sortable" data-sort="total">Total <span></span></div>
+                </div>
+                <div id="node-table-body" style="overflow-y: auto; flex: 1; border: 1px solid #444;">
+                    <!-- Rows injected here -->
+                </div>
+            </div>
         </div>
     </div>
-    <div id="graph-container"></div>
+
     <script src="app.js"></script>
+    <script src="analysis.js"></script>
 </body>
 </html>
