@@ -11,6 +11,9 @@
 *   **⚙️ Algorithmic Core (New v0.3.0)**:
     *   **Cycle Detection**: Automatically identifies circular dependencies to ensure structural integrity.
     *   **Topological Ranking**: Assigns a hierarchy level (Rank) to each node using Longest Path layering, enabling true DAG visualization.
+*   **🎨 Visualization Engine (New v0.4.0)**:
+    *   **DAG Layout**: Hierarchical visualization mode (Sugiyama-style) that arranges nodes based on their topological rank.
+    *   **Bezier Curves**: Dynamically renders smooth S-curve edges in DAG mode to clearly indicate top-down flow direction.
 *   **🔗 Directional Parsing (v0.2.0)**:
     *   **Explicit Dependencies**: Parses `prerequisites` and `next` fields from YAML Frontmatter to create directed edges.
     *   **Metadata Extraction**: Robustly extracts tags and WikiLinks for structured graph building.
@@ -67,6 +70,9 @@ Open `src/frontend/index.html` in your web browser.
 *   **⚙️ 算法核心 (v0.3.0 新增)**:
     *   **循环检测**: 自动识别循环依赖以确保结构完整性。
     *   **拓扑分级**: 使用最长路径分层为每个节点分配层级（Rank），实现真正的 DAG 可视化。
+*   **🎨 可视化引擎 (v0.4.0 新增)**:
+    *   **DAG 布局**: 基于拓扑等级排列节点的分层可视化模式（Sugiyama 风格）。
+    *   **贝塞尔曲线**: 在 DAG 模式下动态渲染平滑的 S 形曲线边，以清晰指示自上而下的流向。
 *   **🔗 定向解析 (v0.2.0)**:
     *   **显式依赖**: 解析 YAML Frontmatter 中的 `prerequisites` (先决条件) 和 `next` (后续) 字段以创建有向边。
     *   **元数据提取**: 稳健地提取标签和 WikiLinks 以用于结构化图构建。

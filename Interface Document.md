@@ -154,7 +154,9 @@ Renders the JSON data into an interactive DAG.
 
 *   **Input**: `graph.json` (Structure matches `DirectedGraph`)
 *   **Features**:
-    *   **Sugiyama Layout**: Layered visualization.
+    *   **Layout Modes (v0.4.0)**:
+        *   **Force Directed**: Standard physics-based layout.
+        *   **DAG (Hierarchical)**: Sugiyama-style layered layout using `rank` for Y-coordinates and curved Bezier lines for edges.
     *   **Zoom/Pan**: D3-zoom behavior.
     *   **Tooltip**: Show node details on hover.
     *   **Localization (v0.1.9)**: Supports English ('en') and Chinese ('zh').
@@ -289,7 +291,9 @@ Renders the JSON data into an interactive DAG.
 
 *   **输入**: `graph.json` (结构匹配 `DirectedGraph`)
 *   **功能**:
-    *   **Sugiyama Layout**: 分层可视化。
+    *   **布局模式 (v0.4.0)**:
+        *   **力导向 (Force Directed)**: 标准的基于物理的布局。
+        *   **DAG (层级)**: Sugiyama 风格的分层布局，使用 `rank` 作为 Y 坐标，并使用弯曲的贝塞尔线绘制边。
     *   **Zoom/Pan**: D3 缩放行为。
     *   **Tooltip**: 悬停时显示节点详情。
     *   **Degree Analysis (v0.1.2)**:

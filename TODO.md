@@ -47,13 +47,13 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 **Goal**: Render the processed graph in a web view using a layered layout engine (Sugiyama-style).
 
-- [ ] **Layout Engine Integration**
-    - [ ] Implement "Layout Mode" switch in UI (Force vs DAG).
-    - [ ] Map `rank` to Y-coordinates in the visualization.
+- [x] **Layout Engine Integration**
+    - [x] Implement "Layout Mode" switch in UI (Force vs DAG).
+    - [x] Map `rank` to Y-coordinates in the visualization.
 
-- [ ] **Canvas/SVG Rendering**
-    - [ ] Optimize rendering for hierarchical structures.
-    - [ ] Draw curved bezier lines for dependencies to indicate flow direction clearly.
+- [x] **Canvas/SVG Rendering**
+    - [x] Optimize rendering for hierarchical structures.
+    - [x] Draw curved bezier lines for dependencies to indicate flow direction clearly.
 
 ### 2026-04-01 v0.5.0 - Scalability (Clustering)
 
@@ -147,13 +147,13 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 **目标**: 使用分层布局引擎（Sugiyama 风格）在 Web 视图中渲染处理后的图。
 
-- [ ] **布局引擎集成**
-    - [ ] 在 UI 中实现“布局模式”切换（力导向 vs DAG 分层）。
-    - [ ] 将 `rank` 映射到可视化中的 Y 坐标。
+- [x] **布局引擎集成**
+    - [x] 在 UI 中实现“布局模式”切换（力导向 vs DAG 分层）。
+    - [x] 将 `rank` 映射到可视化中的 Y 坐标。
 
-- [ ] **Canvas/SVG 渲染**
-    - [ ] 优化层级结构的渲染。
-    - [ ] 为依赖关系绘制弯曲的贝塞尔线，以清晰指示流向。
+- [x] **Canvas/SVG 渲染**
+    - [x] 优化层级结构的渲染。
+    - [x] 为依赖关系绘制弯曲的贝塞尔线，以清晰指示流向。
 
 ### 2026-04-01 v0.5.0 - 可扩展性 (聚类) (Scalability)
 

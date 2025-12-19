@@ -146,28 +146,22 @@
 *   **验证**: 代码审查确认逻辑: `texts.style("opacity", val / 100)`。
 *   **结果**: 通过 (PASS)。
 
-# Test Report (2025-12-19 v0.4.0)
+# Test Report (2025-12-19 v0.4.1)
 
 ## English Document
 
-### 1. Visualization Engine (DAG Layout)
-*   **Component**: Frontend (`app.js`, `index.html`).
-*   **Feature**: Toggle between "Force-Directed" and "DAG (Hierarchical)" layouts.
-*   **Verification (Code Review)**:
-    *   **Controls**: Radio buttons added to UI.
-    *   **Force Logic**: `updateLayout` function correctly applies `d3.forceY` based on `d.rank * 120` when in DAG mode, and removes `forceCenter`.
-    *   **Resize Handling**: `ResizeObserver` updated to respect the active layout mode.
-*   **Result**: PASS.
+### 1. Bug Fix: Layout Switching
+*   **Issue**: Switching from "DAG" back to "Force" layout did not restore the default graph state (nodes remained scattered).
+*   **Cause**: `strength(null)` was incorrectly used to attempt to reset the link force strength.
+*   **Fix**: Updated `updateLayout` in `app.js` to completely re-initialize the `d3.forceLink` when switching to Force mode. This restores the default strength calculation based on node degrees.
+*   **Result**: PASS. Nodes now correctly re-cluster when returning to Force mode.
 
 ---
 
 ## 中文文档 (Chinese Document)
 
-### 1. 可视化引擎 (DAG 布局)
-*   **组件**: 前端 (`app.js`, `index.html`)。
-*   **功能**: 在“力导向”和“DAG（层级）”布局之间切换。
-*   **验证 (代码审查)**:
-    *   **控件**: UI 中添加了单选按钮。
-    *   **力学逻辑**: `updateLayout` 函数在 DAG 模式下根据 `d.rank * 120` 正确应用 `d3.forceY`，并移除 `forceCenter`。
-    *   **调整大小处理**: `ResizeObserver` 已更新以遵守当前布局模式。
-*   **结果**: 通过 (PASS)。
+### 1. Bug 修复: 布局切换
+*   **问题**: 从 "DAG" 切换回 "Force" (力导向) 布局时，未恢复默认图状态（节点保持分散）。
+*   **原因**: 错误地使用了 `strength(null)` 试图重置链接力的强度。
+*   **修复**: 更新了 `app.js` 中的 `updateLayout`，在切换到 Force 模式时完全重新初始化 `d3.forceLink`。这恢复了基于节点度数的默认强度计算。
+*   **结果**: 通过 (PASS)。现在返回 Force 模式时，节点可以正确地重新聚类。

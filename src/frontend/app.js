@@ -217,7 +217,10 @@ function updateLayout() {
         
         // Restore Standard forces
         simulation.force("center", d3.forceCenter(width / 2, height / 2));
-        simulation.force("link").distance(100).strength(null); // Revert to default
+        
+        // Re-initialize Link Force to restore default strength calculation
+        simulation.force("link", d3.forceLink(links).id(d => d.id).distance(100));
+        
         simulation.force("charge").strength(-300);
     }
     
@@ -436,12 +439,26 @@ node.on("mouseover", function(event, d) {
 
 // Simulation Tick
 simulation.on("tick", () => {
-    link.attr("d", d => {
-        const dx = d.target.x - d.source.x;
-        const dy = d.target.y - d.source.y;
-        // const dr = Math.sqrt(dx * dx + dy * dy);
-        return `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`;
-    });
+    const mode = document.querySelector('input[name="layoutMode"]:checked') ? document.querySelector('input[name="layoutMode"]:checked').value : 'force';
+
+    if (mode === 'dag') {
+        link.attr("d", d => {
+            const sx = d.source.x;
+            const sy = d.source.y;
+            const tx = d.target.x;
+            const ty = d.target.y;
+            
+            // Vertical Bezier Curve for top-down flow
+            // Control points are halfway between source and target vertically,
+            // but aligned with source/target x respectively to create a smooth S-curve
+            return `M${sx},${sy} C${sx},${(sy + ty) / 2} ${tx},${(sy + ty) / 2} ${tx},${ty}`;
+        });
+    } else {
+        link.attr("d", d => {
+            // Straight line for force layout
+            return `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`;
+        });
+    }
 
     node.attr("transform", d => `translate(${d.x},${d.y})`);
 });
