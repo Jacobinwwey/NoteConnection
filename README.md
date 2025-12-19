@@ -1,4 +1,4 @@
-# 2025-12-19 v0.6.0
+# 2025-12-19 v0.6.1
 
 # NoteConnection: Hierarchical Knowledge Graph Visualization System
 > **Unlock the Structure of Your Knowledge.**
@@ -9,7 +9,7 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
-## 🌟 Core Features (v0.6.0)
+## 🌟 Core Features (v0.6.1)
 
 ### 1. Structure Over Chaos (DAG vs. Force)
 *   **Directed Dependencies**: Identifies "Prerequisites" and "Next Steps" to arrange concepts in logical layers.
@@ -21,7 +21,8 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ### 3. Intelligent Inference Engine (No AI Required)
 *   **Statistical Association**: Uses conditional probability ($P(A|B)$) to infer hidden dependencies (e.g., "Fluorescence" implies "Photon") without external LLM APIs.
-*   **Hybrid Analysis**: Combines explicit links (`[[WikiLink]]`), YAML frontmatter (`prerequisites:`), and statistical patterns.
+*   **Vector Similarity**: Uses TF-IDF and Cosine Similarity to find related concepts even without explicit links.
+*   **Hybrid Analysis**: Combines explicit links (`[[WikiLink]]`), YAML frontmatter (`prerequisites:`), and statistical/vector patterns.
 
 ### 4. Platform Agnostic & Future-Proof
 *   **Pure TypeScript**: Runs directly on your file system.
@@ -53,7 +54,7 @@ Open `src/frontend/index.html` in your modern web browser (Chrome/Edge/Firefox).
 ---
 ---
 
-# 2025-12-19 v0.6.0
+# 2025-12-19 v0.6.1
 
 # NoteConnection: 层级知识图谱可视化系统
 > **解锁你知识库的深层结构。**
@@ -64,7 +65,7 @@ Open `src/frontend/index.html` in your modern web browser (Chrome/Edge/Firefox).
 
 ---
 
-## 🌟 核心特性 (v0.6.0)
+## 🌟 核心特性 (v0.6.1)
 
 ### 1. 结构优于混沌 (DAG vs. 力导向)
 *   **有向依赖**: 识别“先决条件”和“后续步骤”，将概念按逻辑分层排列。
@@ -76,7 +77,8 @@ Open `src/frontend/index.html` in your modern web browser (Chrome/Edge/Firefox).
 
 ### 3. 智能推断引擎 (无需 AI)
 *   **统计关联**: 使用条件概率 ($P(A|B)$) 推断隐藏的依赖关系（例如，“荧光”隐含“光子”），无需外部 LLM API。
-*   **混合分析**: 结合显式链接 (`[[WikiLink]]`)、YAML 元数据 (`prerequisites:`) 和统计模式。
+*   **向量相似度**: 使用 TF-IDF 和余弦相似度发现相关概念，即使没有显式链接。
+*   **混合分析**: 结合显式链接 (`[[WikiLink]]`)、YAML 元数据 (`prerequisites:`) 和统计/向量模式。
 
 ### 4. 跨平台与面向未来
 *   **纯 TypeScript**: 直接在文件系统上运行。
