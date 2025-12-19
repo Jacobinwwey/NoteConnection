@@ -45,11 +45,18 @@ const simulation = d3.forceSimulation(nodes)
 // Handle Resize
 const resizeObserver = new ResizeObserver(entries => {
     for (let entry of entries) {
-        const newWidth = entry.contentRect.width;
-        const newHeight = entry.contentRect.height;
+        width = entry.contentRect.width;
+        height = entry.contentRect.height;
         
-        // Update Center Force
-        simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+        const mode = document.querySelector('input[name="layoutMode"]:checked') ? document.querySelector('input[name="layoutMode"]:checked').value : 'force';
+
+        if (mode === 'dag') {
+             // Update X centering
+             simulation.force("x", d3.forceX(width / 2).strength(0.05));
+        } else {
+             // Update Center Force
+             simulation.force("center", d3.forceCenter(width / 2, height / 2));
+        }
         simulation.alpha(0.3).restart();
     }
 });
@@ -179,9 +186,49 @@ function updateSize() {
     simulation.alpha(0.3).restart();
 }
 
-// ... existing code ...
+function updateLayout() {
+    const mode = document.querySelector('input[name="layoutMode"]:checked').value;
+    
+    if (mode === 'dag') {
+        // DAG Layout: Vertical layering based on Rank
+        const layerHeight = 120; // Pixels per rank
+        
+        // Remove standard Center force
+        simulation.force("center", null);
+        
+        // Add Hierarchical forces
+        // Force Y: Strong pull to rank-based layer
+        simulation.force("y", d3.forceY(d => (d.rank || 0) * layerHeight).strength(1));
+        
+        // Force X: Weak pull to center X to keep tree compact, but allow spread
+        simulation.force("x", d3.forceX(width / 2).strength(0.05));
+        
+        // Modify Link force: Reduce strength so layers don't collapse
+        simulation.force("link").distance(100).strength(0.3);
+        
+        // Charge: Keep repulsion to avoid overlap within layers
+        simulation.force("charge").strength(-300);
+
+    } else {
+        // Force Layout (Default)
+        // Remove DAG forces
+        simulation.force("y", null);
+        simulation.force("x", null);
+        
+        // Restore Standard forces
+        simulation.force("center", d3.forceCenter(width / 2, height / 2));
+        simulation.force("link").distance(100).strength(null); // Revert to default
+        simulation.force("charge").strength(-300);
+    }
+    
+    simulation.alpha(1).restart();
+}
 
 // Listeners
+document.querySelectorAll('input[name="layoutMode"]').forEach(radio => {
+    radio.addEventListener('change', updateLayout);
+});
+
 document.querySelectorAll('input[name="colorMode"]').forEach(radio => {
     radio.addEventListener('change', updateColor);
 });
@@ -220,6 +267,9 @@ const translations = {
         save_layout: "Save Layout (JSON)",
         analysis_export: "Analysis & Export",
         search_placeholder: "Search node...",
+        layout: "Layout:",
+        layout_force: "Force",
+        layout_dag: "DAG (Hierarchical)",
         
         // Analysis Panel
         analysis_title: "Degree Analysis",
@@ -266,6 +316,9 @@ const translations = {
         save_layout: "保存布局 (JSON)",
         analysis_export: "分析与导出",
         search_placeholder: "搜索节点...",
+        layout: "布局:",
+        layout_force: "力导向",
+        layout_dag: "DAG (层级)",
         
         // Analysis Panel
         analysis_title: "度数分析",

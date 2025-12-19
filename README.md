@@ -1,4 +1,4 @@
-# 2025-12-19 v0.2.0
+# 2025-12-19 v0.4.0
 
 # NoteConnection: Hierarchical Knowledge Graph Visualization System
 
@@ -8,7 +8,10 @@
 
 *   **🚀 Platform Independent**: Pure TypeScript/Node.js implementation. Works with any folder of Markdown files. No plugin dependencies required.
 *   **🌐 Bilingual UI & Documentation**: Full support for **English** and **Chinese (Simplified)** in both the user interface and all documentation.
-*   **🔗 Directional Parsing (New v0.2.0)**:
+*   **⚙️ Algorithmic Core (New v0.3.0)**:
+    *   **Cycle Detection**: Automatically identifies circular dependencies to ensure structural integrity.
+    *   **Topological Ranking**: Assigns a hierarchy level (Rank) to each node using Longest Path layering, enabling true DAG visualization.
+*   **🔗 Directional Parsing (v0.2.0)**:
     *   **Explicit Dependencies**: Parses `prerequisites` and `next` fields from YAML Frontmatter to create directed edges.
     *   **Metadata Extraction**: Robustly extracts tags and WikiLinks for structured graph building.
 *   **📊 Advanced Degree Analysis**:
@@ -25,7 +28,7 @@
 
 ## Project Structure
 
-*   `src/backend`: Core logic for file loading, parsing, graph construction, and metric calculation.
+*   `src/backend`: Core logic for file loading, parsing, graph construction, cycle detection, topological sorting, and metric calculation.
 *   `src/frontend`: Interactive Web Visualization using D3.js.
 *   `testconcept`: Sample knowledge base for testing and demonstration.
 
@@ -61,7 +64,10 @@ Open `src/frontend/index.html` in your web browser.
 
 *   **🚀 平台独立**: 纯 TypeScript/Node.js 实现。适用于任何 Markdown 文件夹。无需依赖特定插件。
 *   **🌐 双语 UI 与文档**: 用户界面和所有文档均完全支持**英文**和**中文（简体）**。
-*   **🔗 定向解析 (v0.2.0 新增)**:
+*   **⚙️ 算法核心 (v0.3.0 新增)**:
+    *   **循环检测**: 自动识别循环依赖以确保结构完整性。
+    *   **拓扑分级**: 使用最长路径分层为每个节点分配层级（Rank），实现真正的 DAG 可视化。
+*   **🔗 定向解析 (v0.2.0)**:
     *   **显式依赖**: 解析 YAML Frontmatter 中的 `prerequisites` (先决条件) 和 `next` (后续) 字段以创建有向边。
     *   **元数据提取**: 稳健地提取标签和 WikiLinks 以用于结构化图构建。
 *   **📊 高级度数分析**:
@@ -78,7 +84,7 @@ Open `src/frontend/index.html` in your web browser.
 
 ## 项目结构
 
-*   `src/backend`: 文件加载、解析、图构建和指标计算的核心逻辑。
+*   `src/backend`: 文件加载、解析、图构建、循环检测、拓扑排序和指标计算的核心逻辑。
 *   `src/frontend`: 使用 D3.js 的交互式 Web 可视化。
 *   `testconcept`: 用于测试和演示的示例知识库。
 
