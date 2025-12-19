@@ -57,15 +57,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ### 2026-04-01 v0.5.0 - Scalability (Clustering)
 
-**Goal**: Handle 10,000+ nodes by grouping them into high-level clusters.
+**Goal**: Handle 10,000+ nodes by grouping them into high-level clusters based on File Structure or Semantic Tags.
 
-- [ ] **Clustering Algorithm**
-    - Implement grouping logic based on Folder paths (e.g., "Physics/Mechanics" -> Cluster "Mechanics").
-    - Optional: Louvain community detection for tag-based clusters.
+- [ ] **Clustering Logic**
+    - [ ] Implement **Folder-based Clustering**: Parse directory structure (e.g., `Physics/Mechanics` -> Cluster `Mechanics`).
+    - [ ] Add Configuration Strategy: Switch between `Label Propagation` (current) and `Folder Path` for `clusterId` assignment.
 
 - [ ] **Semantic Zoom / Drill-down**
-    - Render "Super Nodes" (Clusters) at low zoom levels.
-    - Expand to show detailed dependency graphs when a cluster is clicked.
+    - [ ] Render "Super Nodes" (Clusters) at low zoom levels.
+    - [ ] Expand to show detailed dependency graphs when a cluster is clicked.
 
 ### 2026-05-01 v0.6.0 - Hybrid Inference Strategy (AI & Stats)
 
@@ -157,15 +157,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ### 2026-04-01 v0.5.0 - 可扩展性 (聚类) (Scalability)
 
-**目标**: 通过将节点分组为高级聚类来处理 10,000+ 节点。
+**目标**: 通过基于文件结构或语义标签将节点分组为高级聚类，以处理 10,000+ 节点。
 
-- [ ] **聚类算法**
-    - 实现基于文件夹路径的分组逻辑（例如 "Physics/Mechanics" -> 聚类 "Mechanics"）。
-    - 可选：用于基于标签的聚类的 Louvain 社区检测。
+- [ ] **聚类逻辑**
+    - [ ] 实现**基于文件夹的聚类**: 解析目录结构（例如 `Physics/Mechanics` -> 聚类 `Mechanics`）。
+    - [ ] 添加配置策略: 在 `clusterId` 分配的 `标签传播` (当前) 和 `文件夹路径` 之间切换。
 
 - [ ] **语义缩放/向下钻取**
-    - 在低缩放级别渲染“超级节点”（聚类）。
-    - 点击聚类时展开显示详细的依赖图。
+    - [ ] 在低缩放级别渲染“超级节点”（聚类）。
+    - [ ] 点击聚类时展开显示详细的依赖图。
 
 ### 2026-05-01 v0.6.0 - 混合推断策略 (AI 与统计) (Hybrid Inference Strategy)
 
