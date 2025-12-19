@@ -406,6 +406,18 @@ controls.showOrphans.addEventListener('change', updateVisibility);
 controls.search.addEventListener('input', updateVisibility);
 controls.export.addEventListener('click', exportSVG);
 
+// Label Opacity Control
+const labelOpacitySlider = document.getElementById('label-opacity-slider');
+const labelOpacityVal = document.getElementById('label-opacity-val');
+
+if (labelOpacitySlider && labelOpacityVal) {
+    labelOpacitySlider.addEventListener('input', (e) => {
+        const val = e.target.value;
+        labelOpacityVal.innerText = val + '%';
+        texts.style("opacity", val / 100);
+    });
+}
+
 function isNodeVisible(d) {
     const minDegree = parseInt(controls.minDegree.value);
     const showOrphans = controls.showOrphans.checked;
