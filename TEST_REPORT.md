@@ -279,3 +279,27 @@
     *   在 `testconcept` 上测试。
     *   识别出强层级链接，如 `[fluorescence] (荧光) -> [band pass filter] (带通滤波器)` (置信度 0.94) 和 `[Diffraction] (衍射) -> [plane wave] (平面波)`。
     *   确认一般语境概念可以在统计上被推断为特定概念的“父级”。
+
+### 2. 向量相似度关联 (Vector Similarity)
+*   **组件**: `VectorSpace` (后端)。
+*   **逻辑**:
+    *   **TF-IDF**: 词频-逆文档频率矩阵构建。
+    *   **余弦相似度**: 计算文档向量之间的角度。
+*   **测试脚本**: `src/backend/test_robustness/test_vector.ts`。
+*   **结果**:
+    *   对 `Absorption` (吸收) 的查询返回了 `attenuation` (衰减, Score 0.29) 和 `Reflection` (反射, Score 0.16)。
+    *   验证了语义相关的概念可以在没有显式链接的情况下被关联。
+
+# Test Report (2025-12-19 v0.6.1)
+
+## English Document
+
+### 1. Vector Similarity Association
+*   **Component**: `VectorSpace` (Backend).
+*   **Logic**:
+    *   **TF-IDF**: Construction of Term Frequency-Inverse Document Frequency matrix.
+    *   **Cosine Similarity**: Calculation of angles between document vectors.
+*   **Test Script**: `src/backend/test_robustness/test_vector.ts`.
+*   **Results**:
+    *   Query for `Absorption` returned `attenuation` (Score 0.29) and `Reflection` (Score 0.16).
+    *   Verified that semantically related concepts can be associated without explicit links.

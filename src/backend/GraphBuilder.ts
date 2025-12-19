@@ -10,6 +10,7 @@ import { FrontmatterParser } from './utils/frontmatterParser';
 import { CycleDetector } from './algorithms/CycleDetection';
 import { TopologicalSort } from './algorithms/TopologicalSort';
 import { StatisticalAnalyzer } from './algorithms/StatisticalAnalyzer';
+import { VectorSpace } from './algorithms/VectorSpace';
 
 /**
  * Service to build the graph from raw files.
@@ -157,15 +158,36 @@ export class GraphBuilder {
         console.log('[GraphBuilder] Running Statistical Inference...');
         const terms = Array.from(fileMap.keys());
         const matrix = StatisticalAnalyzer.analyze(files, terms);
-        const inferredEdges = StatisticalAnalyzer.inferDependencies(matrix, 0.05, 0.1); // Using test thresholds
+        const inferredEdges = StatisticalAnalyzer.inferDependencies(matrix, 0.05, 0.1); 
         
         inferredEdges.forEach(dep => {
-            // Only add if edge doesn't exist to avoid duplicates with explicit/keyword links
-            // Graph.addEdge usually allows multi-edges or updates weight?
-            // Our Graph implementation is simple. Let's add with a distinct type.
             graph.addEdge(dep.source, dep.target, 'statistical-inferred', dep.confidence);
         });
         console.log(`[GraphBuilder] Added ${inferredEdges.length} inferred edges.`);
+    }
+
+    // 2d. Vector Similarity (v0.6.0)
+    if (config.enableVectorSimilarity) {
+        console.log('[GraphBuilder] Running Vector Similarity Analysis...');
+        const vectorSpace = new VectorSpace(files);
+        let similarityEdges = 0;
+        
+        files.forEach(file => {
+             const similar = vectorSpace.getSimilar(file.filename, 3); // Top 3 similar
+             similar.forEach(sim => {
+                 if (sim.score > 0.3) { // Threshold
+                     // Add UNDIRECTED association (or bidirectional)
+                     // Since graph is directed, we add an association edge.
+                     // Often 'related-to' is conceptualized as bidirectional.
+                     // We will add it as 'vector-association' (Target -> Source or Source -> Target?)
+                     // Similarity is symmetric. Let's add Source -> Target for now.
+                     // Avoid duplicates if already exists.
+                     graph.addEdge(file.filename, sim.id, 'vector-association', sim.score);
+                     similarityEdges++;
+                 }
+             });
+        });
+        console.log(`[GraphBuilder] Added ${similarityEdges} vector association edges.`);
     }
 
     // 3. Community Detection (v0.1.6) or Folder Clustering (v0.5.0)
