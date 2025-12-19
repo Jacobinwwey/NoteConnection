@@ -11,6 +11,7 @@ import { CycleDetector } from './algorithms/CycleDetection';
 import { TopologicalSort } from './algorithms/TopologicalSort';
 import { StatisticalAnalyzer } from './algorithms/StatisticalAnalyzer';
 import { VectorSpace } from './algorithms/VectorSpace';
+import { HybridEngine } from './algorithms/HybridEngine';
 
 /**
  * Service to build the graph from raw files.
@@ -167,7 +168,7 @@ export class GraphBuilder {
     }
 
     // 2d. Vector Similarity (v0.6.0)
-    if (config.enableVectorSimilarity) {
+    if (config.enableVectorSimilarity && !config.enableHybridInference) {
         console.log('[GraphBuilder] Running Vector Similarity Analysis...');
         const vectorSpace = new VectorSpace(files);
         let similarityEdges = 0;
@@ -176,18 +177,31 @@ export class GraphBuilder {
              const similar = vectorSpace.getSimilar(file.filename, 3); // Top 3 similar
              similar.forEach(sim => {
                  if (sim.score > 0.3) { // Threshold
-                     // Add UNDIRECTED association (or bidirectional)
-                     // Since graph is directed, we add an association edge.
-                     // Often 'related-to' is conceptualized as bidirectional.
-                     // We will add it as 'vector-association' (Target -> Source or Source -> Target?)
-                     // Similarity is symmetric. Let's add Source -> Target for now.
-                     // Avoid duplicates if already exists.
+                     // Add UNDIRECTED association
                      graph.addEdge(file.filename, sim.id, 'vector-association', sim.score);
                      similarityEdges++;
                  }
              });
         });
         console.log(`[GraphBuilder] Added ${similarityEdges} vector association edges.`);
+    }
+
+    // 2e. Hybrid Inference (v0.7.0)
+    if (config.enableHybridInference) {
+        console.log('[GraphBuilder] Running Hybrid Inference (Stats + Vector)...');
+        // We need both Stats Matrix and Vector Space
+        const terms = Array.from(fileMap.keys());
+        const matrix = StatisticalAnalyzer.analyze(files, terms);
+        const vectorSpace = new VectorSpace(files);
+
+        const hybridEdges = HybridEngine.infer(matrix, vectorSpace, 0.25, 0.1); // Tune thresholds
+        
+        hybridEdges.forEach(dep => {
+             graph.addEdge(dep.source, dep.target, 'hybrid-inferred', dep.confidence);
+             // Maybe add metadata/reason?
+             // Graph edge types currently only store weight/type.
+        });
+        console.log(`[GraphBuilder] Added ${hybridEdges.length} hybrid inferred edges.`);
     }
 
     // 3. Community Detection (v0.1.6) or Folder Clustering (v0.5.0)

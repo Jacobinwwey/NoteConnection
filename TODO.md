@@ -81,9 +81,9 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ### 2026-06-01 v1.0.0 - Production Release (Hybrid & Polish)
 
-- [ ] **Hybrid Judgment Engine**
-    - Combine Vector Similarity (for relevance) + Statistical Probability (for direction).
-    - Rule: If `Similarity(A, B) > Threshold` AND `P(B|A) >> P(A|B)`, suggest edge `A -> B`.
+- [x] **Hybrid Judgment Engine**
+    - [x] Combine Vector Similarity (for relevance) + Statistical Probability (for direction).
+    - [x] Rule: If `Similarity(A, B) > Threshold` AND `P(B|A) >> P(A|B)`, suggest edge `A -> B`.
 
 - [ ] **AI Inference Service (LLM Verification)**
     - Use LLMs to verify high-confidence candidates from the hybrid engine.

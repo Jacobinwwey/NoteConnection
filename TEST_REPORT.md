@@ -290,6 +290,40 @@
     *   对 `Absorption` (吸收) 的查询返回了 `attenuation` (衰减, Score 0.29) 和 `Reflection` (反射, Score 0.16)。
     *   验证了语义相关的概念可以在没有显式链接的情况下被关联。
 
+# Test Report (2025-12-19 v0.7.0)
+
+## English Document
+
+### 1. Hybrid Judgment Engine
+*   **Component**: `HybridEngine` (Backend).
+*   **Logic**: 
+    *   Iterates Co-occurrence Matrix (from StatisticalAnalyzer).
+    *   Checks Vector Similarity (from VectorSpace).
+    *   Applies Rule: `Similarity > Threshold` AND `|P(A|B) - P(B|A)| > AsymmetryThreshold`.
+*   **Test Script**: `src/backend/test_robustness/test_hybrid.ts`.
+*   **Results**:
+    *   Inferred 89 high-quality edges.
+    *   Example: `[fluorescence] -> [fluorescent emitters]` (Sim: 0.52, Asym: 0.94).
+    *   Example: `[photon] -> [photoelectric effect]` (Sim: 0.21, Asym: 0.97).
+    *   Significantly reduces noise compared to pure statistical inference by enforcing content similarity.
+
+---
+
+## 中文文档 (Chinese Document)
+
+### 1. 混合判断引擎 (Hybrid Judgment Engine)
+*   **组件**: `HybridEngine` (后端)。
+*   **逻辑**:
+    *   遍历共现矩阵 (来自 StatisticalAnalyzer)。
+    *   检查向量相似度 (来自 VectorSpace)。
+    *   应用规则: `Similarity > Threshold` 且 `|P(A|B) - P(B|A)| > AsymmetryThreshold`。
+*   **测试脚本**: `src/backend/test_robustness/test_hybrid.ts`。
+*   **结果**:
+    *   推断出 89 条高质量边。
+    *   示例: `[fluorescence] (荧光) -> [fluorescent emitters] (荧光发射体)` (相似度: 0.52, 不对称性: 0.94)。
+    *   示例: `[photon] (光子) -> [photoelectric effect] (光电效应)` (相似度: 0.21, 不对称性: 0.97)。
+    *   通过强制内容相似性，相比纯统计推断显著减少了噪声。
+
 # Test Report (2025-12-19 v0.6.1)
 
 ## English Document
