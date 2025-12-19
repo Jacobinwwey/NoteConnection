@@ -34,13 +34,14 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 **Goal**: Ensure the graph is a valid DAG and calculate hierarchical layout positions.
 
-- [ ] **Cycle Detection & Resolution**
-    - Implement DFS-based cycle detection.
-    - Strategy: Report cycles to the user or automatically break them (e.g., remove the edge pointing to the deepest node).
+- [x] **Cycle Detection & Resolution**
+    - [x] Implement DFS-based cycle detection.
+    - [x] Strategy: Report cycles to the user (Console Warning).
 
-- [ ] **Topological Sorting & Ranking**
-    - Implement algorithms to assign a `rank` (0, 1, 2...) to every node.
-    - Ensure nodes with no dependencies are Rank 0.
+- [x] **Topological Sorting & Ranking**
+    - [x] Implement algorithms to assign a `rank` (0, 1, 2...) to every node.
+    - [x] Ensure nodes with no dependencies are Rank 0.
+    - [x] Integrated Kahn's Algorithm variant for Longest Path layering.
 
 ### 2026-03-01 v0.4.0 - Visualization Engine
 

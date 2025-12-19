@@ -6,6 +6,8 @@ import { CommunityDetection } from './CommunityDetection';
 import { GraphMetrics } from './GraphMetrics';
 import { isSimilar } from './utils/stringUtils';
 import { FrontmatterParser } from './utils/frontmatterParser';
+import { CycleDetector } from './algorithms/CycleDetection';
+import { TopologicalSort } from './algorithms/TopologicalSort';
 
 /**
  * Service to build the graph from raw files.
@@ -112,7 +114,8 @@ export class GraphBuilder {
                  if (!graph.hasNode(targetId)) {
                      if (graph.hasNode(targetId + '.md')) {
                          targetId = targetId + '.md';
-                     } else {
+                     }
+                     else {
                          return;
                      }
                  }
@@ -165,6 +168,23 @@ export class GraphBuilder {
         const node = graph.getNode(nodeId);
         if (node) {
             node.centrality = val;
+        }
+    });
+
+    // 5. Algorithmic Core (v0.3.0)
+    // Cycle Detection
+    if (CycleDetector.hasCycle(graph)) {
+        const cycles = CycleDetector.detectCycles(graph);
+        console.warn(`[GraphBuilder] Detected ${cycles.length} cycles. Topological Sort may be partial.`);
+        // Note: We proceed anyway, but ranks might be inaccurate for cyclic nodes.
+    }
+
+    // Topological Sort & Ranking
+    const ranks = TopologicalSort.assignRanks(graph);
+    ranks.forEach((rank, nodeId) => {
+        const node = graph.getNode(nodeId);
+        if (node) {
+            node.rank = rank;
         }
     });
 
