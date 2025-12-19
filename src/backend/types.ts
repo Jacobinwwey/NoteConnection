@@ -27,6 +27,11 @@ export interface GraphNode {
     id: string;
     label: string;
     rank?: number;
+    inDegree?: number;
+    outDegree?: number;
+    centrality?: number;
+    clusterId?: string;
+    content?: string;
 }
 
 // Graph Edge

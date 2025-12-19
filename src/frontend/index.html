@@ -12,49 +12,63 @@
 <body>
     <!-- Top Graph Area -->
     <div id="graph-wrapper">
+        <div style="position: absolute; top: 10px; right: 20px; z-index: 1000;">
+            <select id="lang-select" style="background: #333; color: white; border: 1px solid #555; padding: 2px;">
+                <option value="en">English</option>
+                <option value="zh">中文</option>
+            </select>
+        </div>
         <div id="controls">
             <h3>NoteConnection</h3>
                                 <div class="stats" style="display: flex; align-items: center;">
-                                    <span>Nodes: <span id="node-count">0</span> | Edges: <span id="edge-count">0</span></span>
+                                    <span><span data-i18n="nodes">Nodes:</span> <span id="node-count">0</span> | <span data-i18n="edges">Edges:</span> <span id="edge-count">0</span></span>
                                     <div id="quick-distribution" title="Degree Distribution"></div>
                                 </div>            <div class="filter-controls">
-                <label><input type="radio" name="mode" value="all" checked> Show All</label>
-                <label><input type="radio" name="mode" value="in"> Incoming Only</label>
-                <label><input type="radio" name="mode" value="out"> Outgoing Only</label>
+                <label><input type="radio" name="mode" value="all" checked> <span data-i18n="show_all">Show All</span></label>
+                <label><input type="radio" name="mode" value="in"> <span data-i18n="show_in">Incoming Only</span></label>
+                <label><input type="radio" name="mode" value="out"> <span data-i18n="show_out">Outgoing Only</span></label>
             </div>
             
-            <div class="color-controls" style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px;">
-                <span style="font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 3px;">Color By:</span>
-                <label style="font-size: 0.9rem; display: inline-block; margin-right: 10px;"><input type="radio" name="colorMode" value="degree" checked> Degree</label>
-                <label style="font-size: 0.9rem; display: inline-block;"><input type="radio" name="colorMode" value="cluster"> Cluster</label>
+            <div class="degree-controls" style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px;">
+                <span style="font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 3px;" data-i18n="degree_basis">Degree Basis:</span>
+                <label style="font-size: 0.9rem; margin-right: 5px;"><input type="radio" name="degreeMode" value="all" checked> <span data-i18n="all">All</span></label>
+                <label style="font-size: 0.9rem; margin-right: 5px;"><input type="radio" name="degreeMode" value="in"> <span data-i18n="in">In</span></label>
+                <label style="font-size: 0.9rem;"><input type="radio" name="degreeMode" value="out"> <span data-i18n="out">Out</span></label>
+            </div>
+
+            <div class="color-controls" style="margin-top: 5px; padding-top: 5px;">
+                <span style="font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 3px;" data-i18n="color_by">Color By:</span>
+                <label style="font-size: 0.9rem; display: inline-block; margin-right: 10px;"><input type="radio" name="colorMode" value="degree" checked> <span data-i18n="degree">Degree</span></label>
+                <label style="font-size: 0.9rem; display: inline-block;"><input type="radio" name="colorMode" value="cluster"> <span data-i18n="cluster">Cluster</span></label>
             </div>
 
             <div class="size-controls" style="margin-top: 5px; padding-top: 5px;">
-                <span style="font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 3px;">Size By:</span>
-                <label style="font-size: 0.9rem; display: inline-block; margin-right: 10px;"><input type="radio" name="sizeMode" value="uniform" checked> Uniform</label>
-                <label style="font-size: 0.9rem; display: inline-block;"><input type="radio" name="sizeMode" value="centrality"> Centrality</label>
+                <span style="font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 3px;" data-i18n="size_by">Size By:</span>
+                <label style="font-size: 0.9rem; display: inline-block; margin-right: 10px;"><input type="radio" name="sizeMode" value="uniform" checked> <span data-i18n="uniform">Uniform</span></label>
+                <label style="font-size: 0.9rem; display: inline-block; margin-right: 10px;"><input type="radio" name="sizeMode" value="degree"> <span data-i18n="degree">Degree</span></label>
+                <label style="font-size: 0.9rem; display: inline-block;"><input type="radio" name="sizeMode" value="centrality"> <span data-i18n="centrality">Centrality</span></label>
             </div>
 
             <div class="opacity-controls" style="margin-top: 5px; padding-top: 5px;">
-                <label style="font-size: 0.85rem; color: #aaa; display: block;">Label Opacity: <span id="label-opacity-val">100%</span></label>
+                <label style="font-size: 0.85rem; color: #aaa; display: block;"><span data-i18n="label_opacity">Label Opacity:</span> <span id="label-opacity-val">100%</span></label>
                 <input type="range" id="label-opacity-slider" min="0" max="100" value="100" style="width: 100%;">
             </div>
 
             <div class="search-box">
-                 <input type="text" id="search-input" placeholder="Search node...">
+                 <input type="text" id="search-input" placeholder="Search node..." data-i18n-placeholder="search_placeholder">
             </div>
             <div class="advanced-controls" style="margin-top: 15px; border-top: 1px solid #555; padding-top: 10px;">
-                <label style="font-size: 0.9rem; color: #aaa;">Min Degree: <span id="min-degree-val">0</span></label>
+                <label style="font-size: 0.9rem; color: #aaa;"><span data-i18n="min_degree">Min Degree:</span> <span id="min-degree-val">0</span></label>
                 <input type="range" id="min-degree-slider" min="0" max="20" value="0" style="width: 100%;">
                 
                 <label style="display: flex; align-items: center; margin-top: 5px;">
                     <input type="checkbox" id="show-orphans" checked> 
-                    <span style="margin-left: 5px;">Show Orphans</span>
+                    <span style="margin-left: 5px;" data-i18n="show_orphans">Show Orphans</span>
                 </label>
 
-                <button id="export-btn" style="margin-top: 10px; width: 100%; padding: 5px; cursor: pointer; background: #333; color: white; border: 1px solid #555; border-radius: 4px;">Export Image</button>
-                <button id="save-layout-btn" style="margin-top: 5px; width: 100%; padding: 5px; cursor: pointer; background: #333; color: white; border: 1px solid #555; border-radius: 4px;">Save Layout (JSON)</button>
-                <button id="analysis-btn" style="margin-top: 5px; width: 100%; padding: 5px; cursor: pointer; background: #2c5282; color: white; border: 1px solid #555; border-radius: 4px;">Analysis & Export</button>
+                <button id="export-btn" style="margin-top: 10px; width: 100%; padding: 5px; cursor: pointer; background: #333; color: white; border: 1px solid #555; border-radius: 4px;" data-i18n="export_image">Export Image</button>
+                <button id="save-layout-btn" style="margin-top: 5px; width: 100%; padding: 5px; cursor: pointer; background: #333; color: white; border: 1px solid #555; border-radius: 4px;" data-i18n="save_layout">Save Layout (JSON)</button>
+                <button id="analysis-btn" style="margin-top: 5px; width: 100%; padding: 5px; cursor: pointer; background: #2c5282; color: white; border: 1px solid #555; border-radius: 4px;" data-i18n="analysis_export">Analysis & Export</button>
             </div>
         </div>
 
@@ -67,7 +81,7 @@
     <!-- Bottom Analysis Panel -->
     <div id="analysis-panel">
         <div class="panel-header">
-            <h2>Degree Analysis</h2>
+            <h2 data-i18n="analysis_title">Degree Analysis</h2>
             <span class="close-panel">&times;</span>
         </div>
         <div class="panel-body">
@@ -75,41 +89,41 @@
             
             <div class="export-controls">
                 <div class="control-group">
-                    <label>Filter Strategy:</label>
+                    <label data-i18n="filter_strategy">Filter Strategy:</label>
                     <select id="export-strategy" style="width: 100%; margin-top: 5px;">
-                        <option value="top-percent">Top X% (by Degree)</option>
-                        <option value="min-degree">Min Degree > X</option>
+                        <option value="top-percent" data-i18n="strat_top">Top X% (by Degree)</option>
+                        <option value="min-degree" data-i18n="strat_min">Min Degree > X</option>
                     </select>
                 </div>
                 <div class="control-group">
-                    <label>Cluster Filter:</label>
+                    <label data-i18n="cluster_filter">Cluster Filter:</label>
                     <select id="cluster-filter" style="width: 100%; margin-top: 5px;">
-                        <option value="all">All Clusters</option>
+                        <option value="all" data-i18n="cluster_all">All Clusters</option>
                         <!-- Clusters injected here -->
                     </select>
                 </div>
                 <div class="control-group">
-                    <label>Threshold: <span id="export-threshold-val">5</span></label>
+                    <label><span data-i18n="threshold">Threshold:</span> <span id="export-threshold-val">5</span></label>
                     <input type="range" id="export-threshold-slider" min="1" max="100" value="5" style="width: 100%;">
                 </div>
                 <div class="stats-preview">
-                    Selected: <span id="selected-count">0</span>
+                    <span data-i18n="selected">Selected:</span> <span id="selected-count">0</span>
                 </div>
                 <div class="action-buttons">
-                    <button id="export-json-btn" style="flex: 1;">JSON</button>
-                    <button id="export-zip-btn" style="flex: 1;">ZIP (MD)</button>
+                    <button id="export-json-btn" style="flex: 1;" data-i18n="export_json">JSON</button>
+                    <button id="export-zip-btn" style="flex: 1;" data-i18n="export_zip">ZIP (MD)</button>
                 </div>
             </div>
 
             <!-- Node List Table -->
             <div id="node-list-wrapper" style="margin-top: 15px; flex: 1; overflow: hidden; display: flex; flex-direction: column;">
-                <h3 style="margin: 0 0 5px 0; font-size: 0.9rem; color: #aaa;">Filtered Nodes</h3>
+                <h3 style="margin: 0 0 5px 0; font-size: 0.9rem; color: #aaa;" data-i18n="filtered_nodes">Filtered Nodes</h3>
                 <div class="table-header" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 5px; padding: 5px; background: #222; font-weight: bold; font-size: 0.85rem;">
-                    <div class="sortable" data-sort="name">Name <span></span></div>
-                    <div class="sortable" data-sort="cluster">Cluster <span></span></div>
-                    <div class="sortable" data-sort="in">In <span></span></div>
-                    <div class="sortable" data-sort="out">Out <span></span></div>
-                    <div class="sortable" data-sort="total">Total <span></span></div>
+                    <div class="sortable" data-sort="name"><span data-i18n="th_name">Name</span> <span></span></div>
+                    <div class="sortable" data-sort="cluster"><span data-i18n="th_cluster">Cluster</span> <span></span></div>
+                    <div class="sortable" data-sort="in"><span data-i18n="th_in">In</span> <span></span></div>
+                    <div class="sortable" data-sort="out"><span data-i18n="th_out">Out</span> <span></span></div>
+                    <div class="sortable" data-sort="total"><span data-i18n="th_total">Total</span> <span></span></div>
                 </div>
                 <div id="node-table-body" style="overflow-y: auto; flex: 1; border: 1px solid #444;">
                     <!-- Rows injected here -->
