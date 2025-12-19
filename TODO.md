@@ -165,17 +165,32 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] Filter by "Top %" or "Min Degree".
     - [x] Export to JSON (with content).
     - [x] Export to ZIP (Markdown files).
+    - [x] **Node Table**: Sortable list of filtered nodes.
 
 ### 2026-01-15 v0.1.6 - Data Persistence & Layout Optimization
 
 **Objective**: Allow saving of layout positions and improve large graph rendering.
 
-- [ ] **Persist Layout**:
-    - Save `x, y` coordinates to `graph_data.json` so the graph doesn't re-simulate every reload.
-- [ ] **Cluster Visualization**:
-    - Group nodes visually by folder or detected clusters (colors/hulls).
+- [x] **Persist Layout**:
+    - [x] Save `x, y` coordinates to `graph_data.json` via `layout.json` injection.
+    - [x] Frontend: Button to "Save Layout".
+    - [x] Backend: Load `layout.json` during build.
+- [x] **Cluster Visualization**:
+    - [x] Implemented Label Propagation Algorithm (LPA).
+    - [x] Group nodes visually by detected clusters (colors).
 - [ ] **Performance**:
-    - Optimize for 1000+ nodes (Canvas rendering option?).
+    - Optimize for 1000+ nodes (Canvas rendering option?). (Deferred to future optimization phase if needed).
+
+### 2026-06-01 v1.0.0 - Production Release
+
+**Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.
+
+- [ ] **Plugin Wrapper**
+    - Wrap the `NoteConnection` core logic into a Joplin Plugin and an Obsidian Plugin.
+
+- [ ] **User Settings & Documentation**
+    - Finalize configuration options (colors, exclusion rules).
+    - Publish user manual.
 
 ---
 

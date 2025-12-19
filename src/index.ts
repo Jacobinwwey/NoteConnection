@@ -13,7 +13,30 @@ async function main() {
   console.log(`Loaded ${files.length} files.`);
 
   console.log('Building graph...');
-  const graph = GraphBuilder.build(files);
+  
+  // Try to load layout.json
+  let layoutMap: Map<string, {x: number, y: number}> | undefined;
+  const layoutPath = path.join(projectRoot, 'layout.json');
+  
+  if (fs.existsSync(layoutPath)) {
+      console.log(`Found layout file: ${layoutPath}`);
+      try {
+          const rawLayout = JSON.parse(fs.readFileSync(layoutPath, 'utf-8'));
+          if (Array.isArray(rawLayout)) {
+              layoutMap = new Map();
+              rawLayout.forEach((n: any) => {
+                  if (n.id && typeof n.x === 'number' && typeof n.y === 'number') {
+                      layoutMap!.set(n.id, { x: n.x, y: n.y });
+                  }
+              });
+              console.log(`Loaded layout for ${layoutMap.size} nodes.`);
+          }
+      } catch (e) {
+          console.warn('Failed to parse layout.json', e);
+      }
+  }
+
+  const graph = GraphBuilder.build(files, layoutMap);
   const data = graph.toJSON();
   
   console.log(`Graph built: ${data.nodes.length} nodes, ${data.edges.length} edges.`);

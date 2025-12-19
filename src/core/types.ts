@@ -7,9 +7,11 @@ export interface NoteNode {
   label: string; // Display label | 显示标签
   inDegree: number; // Number of incoming edges | 入度数量
   outDegree: number; // Number of outgoing edges | 出度数量
-  rank?: number; // Topological rank or hierarchy level | 拓扑排名或层级
-  clusterId?: string; // ID of the cluster this node belongs to | 该节点所属的聚类 ID
-  content?: string; // Full text content of the note | 笔记的全文内容
+  content?: string;  // Full text content (v0.1.5)
+  x?: number;        // Saved X position | 保存的 X 坐标
+  y?: number;        // Saved Y position | 保存的 Y 坐标
+  rank?: number;     // Topological rank or hierarchy level | 拓扑排名或层级
+  clusterId?: string;// ID of the cluster this node belongs to | 该节点所属的聚类 ID
   metadata?: Record<string, any>; // Additional metadata from frontmatter | 来自 frontmatter 的额外元数据
 }
 

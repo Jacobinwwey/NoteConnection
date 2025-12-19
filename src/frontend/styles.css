@@ -249,5 +249,5 @@ div.tooltip {
 /* Node Table Styles */
 .sortable { cursor: pointer; user-select: none; }
 .sortable:hover { color: white; }
-.node-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 5px; padding: 4px 5px; border-bottom: 1px solid #333; font-size: 0.85rem; }
+.node-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 5px; padding: 4px 5px; border-bottom: 1px solid #333; font-size: 0.85rem; }
 .node-row:hover { background: #333; }

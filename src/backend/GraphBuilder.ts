@@ -2,6 +2,7 @@ import { Graph } from '../core/Graph';
 import { NoteNode } from '../core/types';
 import { RawFile } from './FileLoader';
 import { config } from './config';
+import { CommunityDetection } from './CommunityDetection';
 
 /**
  * Service to build the graph from raw files.
@@ -12,8 +13,9 @@ export class GraphBuilder {
    * Builds a graph from raw files using keyword matching.
    * 使用关键词匹配从原始文件构建图。
    * @param files Array of raw files | 原始文件数组
+   * @param layout Optional map of saved node positions | 可选的保存节点位置映射
    */
-  static build(files: RawFile[]): Graph {
+  static build(files: RawFile[], layout?: Map<string, {x: number, y: number}>): Graph {
     const graph = new Graph();
 
     // 1. Add all nodes first
@@ -33,6 +35,13 @@ export class GraphBuilder {
         content: file.content,
         metadata: { filepath: file.filepath }
       };
+
+      if (layout && layout.has(file.filename)) {
+          const pos = layout.get(file.filename)!;
+          node.x = pos.x;
+          node.y = pos.y;
+      }
+
       graph.addNode(node);
       fileMap.set(file.filename, file);
     });
@@ -61,6 +70,15 @@ export class GraphBuilder {
              graph.addEdge(targetId, sourceId, 'keyword-match');
         }
       });
+    });
+
+    // 3. Community Detection (v0.1.6)
+    const clusters = CommunityDetection.detect(graph);
+    clusters.forEach((clusterId, nodeId) => {
+        const node = graph.getNode(nodeId);
+        if (node) {
+            node.clusterId = clusterId;
+        }
     });
 
     return graph;

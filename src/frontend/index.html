@@ -17,10 +17,18 @@
                                 <div class="stats" style="display: flex; align-items: center;">
                                     <span>Nodes: <span id="node-count">0</span> | Edges: <span id="edge-count">0</span></span>
                                     <div id="quick-distribution" title="Degree Distribution"></div>
-                                </div>                    <div class="filter-controls">                <label><input type="radio" name="mode" value="all" checked> Show All</label>
+                                </div>            <div class="filter-controls">
+                <label><input type="radio" name="mode" value="all" checked> Show All</label>
                 <label><input type="radio" name="mode" value="in"> Incoming Only</label>
                 <label><input type="radio" name="mode" value="out"> Outgoing Only</label>
             </div>
+            
+            <div class="color-controls" style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px;">
+                <span style="font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 3px;">Color By:</span>
+                <label style="font-size: 0.9rem; display: inline-block; margin-right: 10px;"><input type="radio" name="colorMode" value="degree" checked> Degree</label>
+                <label style="font-size: 0.9rem; display: inline-block;"><input type="radio" name="colorMode" value="cluster"> Cluster</label>
+            </div>
+
             <div class="search-box">
                  <input type="text" id="search-input" placeholder="Search node...">
             </div>
@@ -34,6 +42,7 @@
                 </label>
 
                 <button id="export-btn" style="margin-top: 10px; width: 100%; padding: 5px; cursor: pointer; background: #333; color: white; border: 1px solid #555; border-radius: 4px;">Export Image</button>
+                <button id="save-layout-btn" style="margin-top: 5px; width: 100%; padding: 5px; cursor: pointer; background: #333; color: white; border: 1px solid #555; border-radius: 4px;">Save Layout (JSON)</button>
                 <button id="analysis-btn" style="margin-top: 5px; width: 100%; padding: 5px; cursor: pointer; background: #2c5282; color: white; border: 1px solid #555; border-radius: 4px;">Analysis & Export</button>
             </div>
         </div>
@@ -62,6 +71,13 @@
                     </select>
                 </div>
                 <div class="control-group">
+                    <label>Cluster Filter:</label>
+                    <select id="cluster-filter" style="width: 100%; margin-top: 5px;">
+                        <option value="all">All Clusters</option>
+                        <!-- Clusters injected here -->
+                    </select>
+                </div>
+                <div class="control-group">
                     <label>Threshold: <span id="export-threshold-val">5</span></label>
                     <input type="range" id="export-threshold-slider" min="1" max="100" value="5" style="width: 100%;">
                 </div>
@@ -77,8 +93,9 @@
             <!-- Node List Table -->
             <div id="node-list-wrapper" style="margin-top: 15px; flex: 1; overflow: hidden; display: flex; flex-direction: column;">
                 <h3 style="margin: 0 0 5px 0; font-size: 0.9rem; color: #aaa;">Filtered Nodes</h3>
-                <div class="table-header" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 5px; padding: 5px; background: #222; font-weight: bold; font-size: 0.85rem;">
+                <div class="table-header" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 5px; padding: 5px; background: #222; font-weight: bold; font-size: 0.85rem;">
                     <div class="sortable" data-sort="name">Name <span></span></div>
+                    <div class="sortable" data-sort="cluster">Cluster <span></span></div>
                     <div class="sortable" data-sort="in">In <span></span></div>
                     <div class="sortable" data-sort="out">Out <span></span></div>
                     <div class="sortable" data-sort="total">Total <span></span></div>
