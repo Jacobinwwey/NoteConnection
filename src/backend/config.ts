@@ -5,6 +5,7 @@ export interface AppConfig {
     enableTags: boolean; // Create nodes for tags
     enableStatisticalInference: boolean; // Use statistical analysis to infer edges
     enableVectorSimilarity: boolean; // Use TF-IDF/Vector similarity for associations
+    enableHybridInference: boolean; // Use Hybrid Engine (Stats + Vector)
     exclusionList: string[]; // List of concept IDs (filenames) to ignore when creating edges
 }
 
@@ -15,6 +16,7 @@ export const config: AppConfig = {
     enableTags: true,
     enableStatisticalInference: false, // Default off
     enableVectorSimilarity: false, // Default off
+    enableHybridInference: false, // Default off
     exclusionList: [
         // Add common words or concepts here that cause too much noise
         // e.g., "Introduction", "Summary", etc.
