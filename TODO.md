@@ -185,12 +185,45 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 **Objective**: Introduce basic semantic analysis to suggest connections beyond simple keyword matching.
 
-- [ ] **Fuzzy String Matching**:
-    - Use Levenshtein distance or similar to find "similar" concepts (e.g., "Water" vs "water").
-- [ ] **Tag-based Linking**:
-    - If notes share sufficient tags (metadata), suggest a "Related" edge.
-- [ ] **Graph Metrics**:
-    - Calculate Betweenness Centrality to identify key "Bridge" nodes.
+- [x] **Fuzzy String Matching**:
+    - [x] Implemented Levenshtein distance utils.
+    - [x] Configurable matching strategy in `config.ts`.
+- [x] **Tag-based Linking**:
+    - [x] Extract tags from Frontmatter and `[[WikiLinks]]`.
+    - [x] Create Tag Nodes to cluster related concepts.
+- [x] **Graph Metrics**:
+    - [x] Calculate Betweenness Centrality (Brandes Algorithm).
+    - [x] Visualize Centrality via Node Size and Label Weight.
+
+### 2026-02-15 v0.1.8 - Performance Optimization & Large Scale Rendering
+
+**Objective**: Ensure the system can handle 10,000+ nodes smoothly.
+
+- [ ] **Canvas Rendering**: Implement a Canvas-based renderer (alongside SVG) for high performance.
+- [ ] **Data Pagination/Streaming**: Optimize loading for large JSON files.
+- [ ] **Search Optimization**: Add an index for instant search on large datasets.
+
+### 2026-02-01 v0.1.7 - 智能关联分析
+
+**目标**: 引入基本的语义分析，以提出超越简单关键词匹配的连接建议。
+
+- [x] **模糊字符串匹配**:
+    - [x] 实现了 Levenshtein 距离工具。
+    - [x] 在 `config.ts` 中可配置的匹配策略。
+- [x] **基于标签的链接**:
+    - [x] 从 Frontmatter 和 `[[WikiLinks]]` 中提取标签。
+    - [x] 创建标签节点以聚类相关概念。
+- [x] **图指标**:
+    - [x] 计算介数中心性 (Brandes 算法)。
+    - [x] 通过节点大小和标签粗细可视化中心性。
+
+### 2026-02-15 v0.1.8 - 性能优化与大规模渲染
+
+**目标**: 确保系统能够流畅处理 10,000+ 节点。
+
+- [ ] **Canvas 渲染**: 实现基于 Canvas 的渲染器（与 SVG 并存）以实现高性能。
+- [ ] **数据分页/流式传输**: 优化大型 JSON 文件的加载。
+- [ ] **搜索优化**: 为大型数据集添加即时搜索索引。
 
 ### 2026-06-01 v1.0.0 - Production Release
 
