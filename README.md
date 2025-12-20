@@ -65,6 +65,7 @@ Open `src/frontend/index.html` in your modern web browser (Chrome/Edge/Firefox).
 **NoteConnection** 是一个高性能的独立可视化系统，旨在将非结构化的 Markdown 知识库转化为**有向无环图 (DAG)**。
 
 与展示杂乱链接网的传统“网络”视图不同，NoteConnection 揭示了隐藏在笔记中的**层级关系**、**学习路径**和**依赖结构**。它专为可扩展性而设计，能够轻松处理数万个节点，并且完全独立于任何特定的笔记应用程序运行。
+<img width="2784" height="2034" alt="image" src="https://github.com/user-attachments/assets/0ea42609-4296-42ea-978d-c6cb7d448068" />
 
 ---
 
@@ -77,11 +78,13 @@ Open `src/frontend/index.html` in your modern web browser (Chrome/Edge/Firefox).
 ### 2. 可扩展的语义缩放 (Semantic Zoom)
 *   **聚类视图**: 基于文件夹结构或标签，将数千个节点聚合为高级“概念气泡”。
 *   **向下钻取**: 点击聚类即可放大并探索该特定领域内的详细连接。
+<img width="3404" height="2028" alt="image" src="https://github.com/user-attachments/assets/39ea71da-be14-4fdc-9fec-9f33cab92e1b" />
 
 ### 3. 智能推断引擎 (无需 AI)
 *   **统计关联**: 使用条件概率 ($P(A|B)$) 推断隐藏的依赖关系（例如，“荧光”隐含“光子”），无需外部 LLM API。
 *   **向量相似度**: 使用 TF-IDF 和余弦相似度发现相关概念，即使没有显式链接。
 *   **混合分析**: 结合显式链接 (`[[WikiLink]]`)、YAML 元数据 (`prerequisites:`) 和统计/向量模式。
+<img width="3723" height="2007" alt="image" src="https://github.com/user-attachments/assets/10978984-3e2d-4ab6-8b44-342d4f3c3800" />
 
 ### 4. 跨平台与面向未来
 *   **纯 TypeScript**: 直接在文件系统上运行。
