@@ -6,6 +6,7 @@
 **NoteConnection** is a high-performance, standalone visualization system engineered to transform unstructured Markdown knowledge bases into **Directed Acyclic Graphs (DAGs)**.
 
 Unlike traditional "network" views that show a messy web of links, NoteConnection reveals the **hierarchy**, **learning paths**, and **dependency structures** hidden within your notes. It is built for scalability, capable of handling tens of thousands of nodes with ease, and operates completely independently of any specific note-taking app.
+<img width="2010" height="2011" alt="image" src="https://github.com/user-attachments/assets/fa55676d-f58d-414e-943c-7a10567f88a5" />
 
 ---
 
@@ -14,6 +15,7 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 ### 1. Structure Over Chaos (DAG vs. Force)
 *   **Directed Dependencies**: Identifies "Prerequisites" and "Next Steps" to arrange concepts in logical layers.
 *   **Sugiyama Layout**: Renders a clear top-down hierarchy instead of a hairball.
+<img width="2010" height="2011" alt="image" src="https://github.com/user-attachments/assets/52785445-20bf-4ecc-847a-23863f291b6a" />
 
 ### 2. Scalable Semantic Zoom
 *   **Cluster View**: Aggregates thousands of nodes into high-level "Concept Bubbles" based on folder structure or tags.
@@ -23,6 +25,7 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 *   **Statistical Association**: Uses conditional probability ($P(A|B)$) to infer hidden dependencies (e.g., "Fluorescence" implies "Photon") without external LLM APIs.
 *   **Vector Similarity**: Uses TF-IDF and Cosine Similarity to find related concepts even without explicit links.
 *   **Hybrid Analysis**: Combines explicit links (`[[WikiLink]]`), YAML frontmatter (`prerequisites:`), and statistical/vector patterns.
+<img width="3723" height="1992" alt="image" src="https://github.com/user-attachments/assets/9e56e567-1742-48cf-b720-cf65a47fd317" />
 
 ### 4. Platform Agnostic & Future-Proof
 *   **Pure TypeScript**: Runs directly on your file system.
