@@ -7,6 +7,13 @@
     <link rel="stylesheet" href="styles.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Reading Mode Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    
     <script src="data.js"></script> <!-- Defines const graphData -->
 </head>
 <body>
@@ -160,6 +167,24 @@
         </div>
     </div>
 
+    <!-- Reading Window -->
+    <div id="reading-window" class="reading-overlay" style="display: none;">
+        <div id="reading-content-box" class="reading-box window-mode">
+            <div class="reading-header">
+                <span id="reading-title">Title</span>
+                <div class="reading-controls">
+                    <button id="btn-reader-lock" class="reader-btn" title="Lock/Unlock Sizing">🔒</button>
+                    <button id="btn-reader-zoom-out" class="reader-btn">A-</button>
+                    <button id="btn-reader-zoom-in" class="reader-btn">A+</button>
+                    <button id="btn-reader-close" class="reader-btn close">&times;</button>
+                </div>
+            </div>
+            <div id="reading-body" class="reading-body locked">
+                <!-- Content injected here -->
+            </div>
+        </div>
+    </div>
+
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
@@ -195,6 +220,17 @@
                         <span class="value-display" id="val-opacity"></span>
                     </div>
                 </div>
+
+                <div class="settings-group">
+                    <h3 data-i18n="grp_reading">Reading</h3>
+                    <div class="setting-item">
+                        <label data-i18n="lbl_reading_mode">Open Mode</label>
+                        <select id="set-reading-mode" style="background: #444; color: white; border: 1px solid #555; padding: 2px;">
+                            <option value="window" data-i18n="opt_window">Window</option>
+                            <option value="fullscreen" data-i18n="opt_fullscreen">Full Screen</option>
+                        </select>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="btn-reset-settings" data-i18n="btn_reset">Reset</button>
@@ -209,6 +245,7 @@
     </button>
 
     <script src="settings.js"></script>
+    <script src="reader.js"></script>
     <script src="app.js"></script>
     <script src="analysis.js"></script>
 </body>

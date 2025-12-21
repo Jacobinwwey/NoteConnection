@@ -12,6 +12,9 @@ const defaultSettings = {
     visuals: {
         edgeOpacity: 0.6,
         baseNodeSize: 5
+    },
+    reading: {
+        mode: 'window' // 'window' or 'fullscreen'
     }
 };
 

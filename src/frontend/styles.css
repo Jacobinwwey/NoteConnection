@@ -404,6 +404,156 @@ div.tooltip {
     color: white;
 }
 
-.btn:hover {
-    opacity: 0.9;
+/* Reading Window */
+.reading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1500;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(3px);
+}
+
+.reading-box {
+    background: #1e1e1e;
+    color: #e0e0e0;
+    border: 1px solid #555;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.reading-box.window-mode {
+    width: 70%;
+    height: 80%;
+    border-radius: 8px;
+}
+
+.reading-box.fullscreen-mode {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    border: none;
+}
+
+.reading-header {
+    padding: 10px 20px;
+    background: #2d2d2d;
+    border-bottom: 1px solid #444;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#reading-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #61dafb;
+}
+
+.reading-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.reader-btn {
+    background: #444;
+    border: 1px solid #555;
+    color: #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 0.9rem;
+}
+
+.reader-btn:hover {
+    background: #555;
+}
+
+.reader-btn.close {
+    background: #742a2a;
+    border-color: #742a2a;
+}
+
+.reader-btn.close:hover {
+    background: #9b2c2c;
+}
+
+.reading-body {
+    padding: 30px;
+    overflow-y: auto;
+    font-family: 'Segoe UI', sans-serif;
+    line-height: 1.6;
+    flex: 1;
+}
+
+/* Content Styling */
+.reading-body h1, .reading-body h2, .reading-body h3 {
+    color: #61dafb;
+    border-bottom: 1px solid #333;
+    padding-bottom: 5px;
+}
+
+.reading-body code {
+    background: #333;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+.reading-body pre {
+    background: #252525;
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+    border: 1px solid #444;
+}
+
+.reading-body blockquote {
+    border-left: 4px solid #61dafb;
+    margin: 0;
+    padding-left: 10px;
+    color: #aaa;
+}
+
+/* Image Resizing & Locking */
+.reading-body img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #444;
+    margin: 10px 0;
+    display: block;
+}
+
+/* Unlocked State: Allow Image Resizing via CSS */
+.reading-body.unlocked img {
+    resize: both;
+    overflow: hidden; /* Required for resize to work */
+    cursor: nwse-resize;
+    max-width: none; /* Allow resizing beyond container if needed, or keep max-width */
+}
+
+/* Zoom support on body */
+.reading-body.unlocked {
+    /* User can zoom via buttons logic */
+}
+
+.reading-body.locked {
+    /* Locked state */
+}
+
+/* Mermaid background */
+.mermaid {
+    background: rgba(255, 255, 255, 0.03); /* Dark transparent */
+    border: 1px solid #444;
+    padding: 10px;
+    border-radius: 4px;
+    margin: 10px 0;
 }

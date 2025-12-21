@@ -342,7 +342,13 @@ const translations = {
         lbl_collision: "碰撞半径",
         lbl_opacity: "边透明度",
         btn_reset: "重置默认",
-        btn_done: "完成"
+        btn_done: "完成",
+        
+        // Reader
+        grp_reading: "阅读窗口",
+        lbl_reading_mode: "打开模式",
+        opt_window: "窗口",
+        opt_fullscreen: "全屏"
     },
     en: {
         show_all: "Show All",
@@ -406,7 +412,13 @@ const translations = {
         lbl_collision: "Collision Radius",
         lbl_opacity: "Edge Opacity",
         btn_reset: "Reset Defaults",
-        btn_done: "Done"
+        btn_done: "Done",
+        
+        // Reader
+        grp_reading: "Reading Window",
+        lbl_reading_mode: "Open Mode",
+        opt_window: "Window",
+        opt_fullscreen: "Full Screen"
     }
 };
 
@@ -858,12 +870,18 @@ document.getElementById('btn-exit-focus').addEventListener('click', exitFocusMod
       // We need to re-bind the click event or add it to the existing selection
       // Since 'node' is a selection of groups 'g', we can add it.
       // Note: We used 'click' for drill-down in Cluster Mode.
-      // In Node Mode, we want Focus Mode.
+      // In Node Mode, we want Focus Mode or Reader.
       node.on("click", (event, d) => {
           // If in Cluster Mode, ignore (handled by updateViewMode logic)
           const viewMode = document.querySelector('input[name="viewMode"]:checked').value;
           if (viewMode === 'nodes') {
-              enterFocusMode(d);
+              if (focusNode && focusNode.id === d.id) {
+                  // Clicked on ALREADY focused node -> Open Reader
+                  if (window.reader) window.reader.open(d);
+              } else {
+                  // Enter Focus Mode
+                  enterFocusMode(d);
+              }
               event.stopPropagation();
           }
       });
@@ -1090,6 +1108,9 @@ function initSettingsUI() {
         collision: document.getElementById('val-collision'),
         opacity: document.getElementById('val-opacity')
     };
+    
+    // Reader Settings
+    const inputReadingMode = document.getElementById('set-reading-mode');
 
     // Load initial values
     const updateUIFromSettings = (settings) => {
@@ -1104,6 +1125,10 @@ function initSettingsUI() {
 
         inputs.opacity.value = settings.visuals.edgeOpacity;
         displays.opacity.innerText = settings.visuals.edgeOpacity;
+        
+        if (settings.reading && settings.reading.mode) {
+            inputReadingMode.value = settings.reading.mode;
+        }
     };
 
     updateUIFromSettings(settingsManager.settings);
@@ -1131,6 +1156,10 @@ function initSettingsUI() {
         const val = parseFloat(e.target.value);
         settingsManager.set('visuals', 'edgeOpacity', val);
         displays.opacity.innerText = val;
+    });
+    
+    inputReadingMode.addEventListener('change', (e) => {
+        settingsManager.set('reading', 'mode', e.target.value);
     });
 
     // Modal Actions
