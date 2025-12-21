@@ -89,10 +89,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] Calculate **Co-occurrence Frequency** and **Conditional Probability** ($P(B|A)$) across the note corpus.
     - [x] Hypothesis: If A frequently appears before B or in the context of defining B, A might be a dependency.
 
-### 2026-06-01 v1.0.0 - Production Release (Hybrid & Polish)
-
-**Goal**: Combine statistical and vectorized methods to infer dependencies and associations where explicit metadata is missing.
-
 - [x] **Hybrid Judgment Engine (v0.6.5)**
     - [x] Combine Vector Similarity (for relevance) + Statistical Probability (for direction).
     - [x] Rule: If `Similarity(A, B) > Threshold` AND `P(B|A) >> P(A|B)`, suggest edge `A -> B`.
@@ -108,8 +104,8 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [ ] **Plugin Wrapper**
     - Wrap the `NoteConnection` core logic into a Joplin Plugin and an Obsidian Plugin.
 
-- [ ] **User Settings & Documentation (v0.7.0)**
-    - [ ] **Settings Manager**: Centralized management of application state (Physics, Visuals) with `localStorage` persistence.
+- [x] **User Settings & Documentation (v0.7.0)**
+    - [x] **Settings Manager**: Centralized management of application state (Physics, Visuals) with `localStorage` persistence.
     - [x] **Configuration UI**: Settings Modal for tuning Graph Physics (Gravity, Repulsion) and Visual preferences.
     - [x] **Reading Window (v0.8.0)**
         - [x] **Trigger**: Click focused node to open.
@@ -210,9 +206,9 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] 计算笔记语料库中的**共现频率**和**条件概率** ($P(B|A)$)。
     - [x] 假设：如果 A 经常出现在 B 之前或在定义 B 的上下文中，则 A 可能是依赖项。
 
-- [ ] **混合判断引擎**
-    - 结合向量相似度（用于相关性）+ 统计概率（用于方向）。
-    - 规则：如果 `Similarity(A, B) > Threshold` 且 `P(B|A) >> P(A|B)`，则建议边 `A -> B`。
+- [x] **混合判断引擎 (Hybrid Judgment Engine - v0.6.5)**
+    - [x] 结合向量相似度（用于相关性）+ 统计概率（用于方向）。
+    - [x] 规则：如果 `Similarity(A, B) > Threshold` 且 `P(B|A) >> P(A|B)`，则建议边 `A -> B`。
 
 - [ ] **AI 推断服务 (LLM 验证)**
     - 使用 LLM 验证来自混合引擎的高置信度候选项。
@@ -226,7 +222,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - 将 `NoteConnection` 核心逻辑封装为 Joplin 插件和 Obsidian 插件。
 
 - [ ] **用户设置与文档 (User Settings & Documentation - v0.7.0)**
-    - [ ] **设置管理器**: 集中管理应用状态（物理、视觉），支持 `localStorage` 持久化。
+    - [x] **设置管理器**: 集中管理应用状态（物理、视觉），支持 `localStorage` 持久化。
     - [x] **配置 UI**: 用于调整图谱物理（重力、排斥力）和视觉偏好的设置模态框。
     - [x] **阅读窗口 (Reading Window - v0.8.0)**
         - [x] **触发**: 点击焦点节点以打开。

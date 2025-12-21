@@ -21,13 +21,13 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 *   **Cluster View**: Aggregates thousands of nodes into high-level "Concept Bubbles" based on folder structure or tags.
 *   **Drill-Down**: Click on a cluster to zoom in and explore detailed connections within that specific domain.
 
-### 3. Intelligent Inference Engine (No AI Required)
-*   **Statistical Association**: Uses conditional probability ($P(A|B)$) to infer hidden dependencies (e.g., "Fluorescence" implies "Photon") without external LLM APIs.
-*   **Vector Similarity**: Uses TF-IDF and Cosine Similarity to find related concepts even without explicit links.
-*   **Hybrid Analysis**: Combines explicit links (`[[WikiLink]]`), YAML frontmatter (`prerequisites:`), and statistical/vector patterns.
+### 3. Intelligent Inference Engine (v0.6.5)
+*   **Hybrid Analysis**: Combines **Statistical Probability** ($P(A|B)$) and **Vector Similarity** (TF-IDF) to infer hidden dependencies (e.g., "Fluorescence" implies "Photon") without external AI.
+*   **No AI Required**: Runs locally and offline.
+*   **Bilingual Support**: Intelligent processing for both English and Chinese content.
 <img width="3723" height="1992" alt="image" src="https://github.com/user-attachments/assets/9e56e567-1742-48cf-b720-cf65a47fd317" />
 
-### 4. Interactive Focus Mode (v0.6.5)
+### 4. Interactive Focus Mode
 *   **Deep Dive**: Click any node to isolate it and its immediate context.
 *   **Smart Layout**: Auto-arranges **Superiors** (Out-degree) and **Subordinates** (In-degree) with relative height positioning based on relevance.
 *   **Clean Visualization**: Prevents label overlap using staggered positioning and highlights high-value paths.
@@ -85,13 +85,13 @@ Open `src/frontend/index.html` in your modern web browser (Chrome/Edge/Firefox).
 *   **向下钻取**: 点击聚类即可放大并探索该特定领域内的详细连接。
 <img width="3404" height="2028" alt="image" src="https://github.com/user-attachments/assets/39ea71da-be14-4fdc-9fec-9f33cab92e1b" />
 
-### 3. 智能推断引擎 (无需 AI)
-*   **统计关联**: 使用条件概率 ($P(A|B)$) 推断隐藏的依赖关系（例如，“荧光”隐含“光子”），无需外部 LLM API。
-*   **向量相似度**: 使用 TF-IDF 和余弦相似度发现相关概念，即使没有显式链接。
-*   **混合分析**: 结合显式链接 (`[[WikiLink]]`)、YAML 元数据 (`prerequisites:`) 和统计/向量模式。
+### 3. 智能推断引擎 (v0.6.5)
+*   **混合分析**: 结合**统计概率** ($P(A|B)$) 和 **向量相似度** (TF-IDF) 推断隐藏的依赖关系（例如，“荧光”隐含“光子”），无需外部 AI。
+*   **无需 AI**: 本地离线运行。
+*   **双语支持**: 支持英文和中文内容的智能处理。
 <img width="3723" height="2007" alt="image" src="https://github.com/user-attachments/assets/10978984-3e2d-4ab6-8b44-342d4f3c3800" />
 
-### 4. 交互式专注模式 (Focus Mode - v0.6.5)
+### 4. 交互式专注模式
 *   **深度探索**: 点击任意节点以隔离它及其直接上下文。
 *   **智能布局**: 自动排列**上级**（出度）和**下级**（入度），并基于相关性进行相对高度定位。
 *   **清晰可视化**: 使用交错定位防止标签重叠，并高亮显示高价值路径。
@@ -112,7 +112,7 @@ Open `src/frontend/index.html` in your modern web browser (Chrome/Edge/Firefox).
 # 安装依赖
 npm install
 
-# 构建图谱 (可在 src/backend/config.ts 中启用推断)
+# 构建图谱 (推理功能已默认启用)
 npx ts-node src/index.ts
 ```
 
