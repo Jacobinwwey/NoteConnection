@@ -60,6 +60,9 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **Hierarchical Layout**: Auto-arrange Superiors (Out-degree) and Subordinates (In-degree) in layers.
     - [x] **Intra-layer Sorting**: Sort neighbors by importance (Degree Ratio).
     - [x] **Context Filtering**: Show only direct neighbors and high-correlation nodes.
+    - [x] **Layout Optimization**: 
+        - [x] Relative Height Positioning based on criteria (Score).
+        - [x] Staggered Label Placement to prevent overlap.
 
 ### 2026-04-01 v0.5.0 - Scalability (Clustering)
 
@@ -168,6 +171,9 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **层级布局**: 自动将上级（出度）和下级（入度）排列在分层中。
     - [x] **层内排序**: 按重要性（度数比）对邻居进行排序。
     - [x] **上下文过滤**: 仅显示直接邻居和高相关性节点。
+    - [x] **布局优化**:
+        - [x] 基于标准（分数）的相对高度定位。
+        - [x] 交错标签放置以防止重叠。
 
 ### 2026-04-01 v0.5.0 - 可扩展性 (聚类) (Scalability)
 

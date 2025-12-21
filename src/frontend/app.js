@@ -844,195 +844,445 @@ function dragended(event, d) {
       });
       
       function enterFocusMode(focusD) {
+      
           if (focusNode && focusNode.id === focusD.id) return; // Already focused
+      
           focusNode = focusD;
+      
           
+      
           // 1. UI Updates
+      
           document.getElementById('focus-exit-btn').style.display = 'flex';
+      
           document.getElementById('focus-node-name').innerText = focusD.label;
+      
           document.getElementById('controls').style.opacity = '0.3'; // Dim controls
+      
           document.getElementById('controls').style.pointerEvents = 'none'; // Disable controls
+      
           
+      
           // 2. Identify Nodes
+      
           const superiors = []; // Outgoing: Focus -> Target (Superior)
+      
           const subordinates = []; // Incoming: Source -> Focus (Subordinate)
+      
           
+      
           links.forEach(l => {
+      
               if (l.source.id === focusD.id) superiors.push(l.target);
+      
               if (l.target.id === focusD.id) subordinates.push(l.source);
+      
           });
+      
           
+      
           const uniqueSup = [...new Set(superiors)];
+      
           const uniqueSub = [...new Set(subordinates)];
+      
           
-          // 3. Intra-layer Sorting
-          // Sort by Degree Ratio (Out/In) as a proxy for "importance" or "flow"
-          const sortFn = (a, b) => {
-              const ratioA = (a.outDegree || 0) / ((a.inDegree || 1));
-              const ratioB = (b.outDegree || 0) / ((b.inDegree || 1));
-              return ratioB - ratioA; // Descending
+      
+          // 3. Intra-layer Sorting & Scoring
+      
+          // Calculate a "Focus Score" for relative positioning
+      
+          // Score based on: Edge Weight (Similarity) + Degree Ratio
+      
+          const getFocusScore = (n) => {
+      
+              // Find connecting edge
+      
+              const edge = links.find(l => 
+      
+                  (l.source.id === focusD.id && l.target.id === n.id) || 
+      
+                  (l.target.id === focusD.id && l.source.id === n.id)
+      
+              );
+      
+              const weight = edge ? (edge.weight || 0.5) : 0.5;
+      
+              const degreeRatio = (n.outDegree || 0) / ((n.inDegree || 0) + 1);
+      
+              // Normalize ratio slightly roughly to 0-1 range impact
+      
+              const normRatio = Math.min(degreeRatio, 5) / 5; 
+      
+              
+      
+              return (weight * 0.7) + (normRatio * 0.3);
+      
           };
+      
+      
+      
+          // Attach scores for sorting
+      
+          uniqueSup.forEach(n => n._focusScore = getFocusScore(n));
+      
+          uniqueSub.forEach(n => n._focusScore = getFocusScore(n));
+      
+      
+      
+          // Sort by Score Descending (Higher score = more central/important)
+      
+          const sortFn = (a, b) => b._focusScore - a._focusScore;
+      
           uniqueSup.sort(sortFn);
+      
           uniqueSub.sort(sortFn);
+      
           
+      
           // 4. Layout Calculation
+      
           const cx = width / 2;
+      
           const cy = height / 2;
+      
           const layerGap = 250; // Considerable distance
+      
           
-          // Helper to spread nodes
-          const spreadNodes = (nodeList, y) => {
+      
+          // Helper to spread nodes with Relative Height & Staggered Labels
+      
+          const spreadNodes = (nodeList, baselineY, direction) => {
+      
               const count = nodeList.length;
+      
               if (count === 0) return;
+      
               
-              // Dynamic width based on count, maxing at screen width * 0.8
+      
+              // Dynamic width
+      
               const spreadWidth = Math.min(width * 0.9, Math.max(count * 80, 200)); 
+      
               const startX = cx - spreadWidth / 2;
+      
               const step = count > 1 ? spreadWidth / (count - 1) : 0;
+      
               
+      
               nodeList.forEach((n, i) => {
+      
+                  // X Position
+      
                   n.fx = count === 1 ? cx : startX + i * step;
-                  n.fy = y;
+      
+                  
+      
+                  // Y Position (Relative Height)
+      
+                  // "Based on criteria" -> Use _focusScore
+      
+                  // Higher score -> Closer to Focus Node? Or just vertically distinct?
+      
+                  // "Prevent overlapping of node labels... higher nodes... above... lower... below"
+      
+                  // We use score to determine a vertical offset from baseline.
+      
+                  // Let's map score 0..1 to -40..+40 px relative to baseline.
+      
+                  // But to ensure "higher/lower" are distinct for label placement, we can also use index parity
+      
+                  // or simply the score itself.
+      
+                  // Let's imply: Higher Importance (Score) -> Closer to Focus Node (Center).
+      
+                  // Top Layer (Direction -1): Higher Score -> Larger Y (Closer to Center).
+      
+                  // Bottom Layer (Direction 1): Higher Score -> Smaller Y (Closer to Center).
+      
+                  
+      
+                  const offsetMagnitude = (n._focusScore - 0.5) * 60; // +/- 30px range roughly
+      
+                  
+      
+                  // Apply direction. 
+      
+                  // If direction is -1 (Top Layer): Baseline is Y=Low. Center is Y=High.
+      
+                  // Actually in SVG: Top is 0. Center is 500.
+      
+                  // Top Layer Baseline: 250. Center: 500.
+      
+                  // We want Higher Score to be closer to 500 (Larger Y).
+      
+                  // So: Y = Baseline + Offset.
+      
+                  
+      
+                  // But wait, the requirement says:
+      
+                  // "labels of relatively higher nodes should be placed slightly above... lower... below"
+      
+                  // This refers to the physical visual position.
+      
+                  // "Higher Node" (Smaller Y) -> Label Above.
+      
+                  // "Lower Node" (Larger Y) -> Label Below.
+      
+                  
+      
+                  // To ensure we have Higher and Lower nodes to prevent overlap,
+      
+                  // we will add a staggered offset based on index, modulated by score.
+      
+                  // This ensures neighbors don't form a flat line.
+      
+                  
+      
+                  const stagger = (i % 2 === 0 ? -1 : 1) * 20; // Zigzag 20px
+      
+                  const criteriaOffset = (n._focusScore * 20); // Score impact
+      
+                  
+      
+                  // Combined Vertical Offset from Baseline
+      
+                  const totalOffset = stagger + criteriaOffset; 
+      
+                  
+      
+                  n.fy = baselineY + totalOffset;
+      
                   n.isFocusVisible = true;
+      
+                  
+      
+                  // Determine Label Position based on Relative Height
+      
+                  // If n.fy < baselineY (Physically Higher) -> Label Above
+      
+                  // If n.fy > baselineY (Physically Lower) -> Label Below
+      
+                  if (n.fy < baselineY) {
+      
+                      n._labelDy = -15; // Above
+      
+                  } else {
+      
+                      n._labelDy = 25; // Below
+      
+                  }
+      
               });
+      
           };
+      
           
+      
           // Focus Node
+      
           focusD.fx = cx;
+      
           focusD.fy = cy;
+      
           focusD.isFocusVisible = true;
+      
+          focusD._labelDy = 35; // Default below for center
+      
           
-          // Superiors (Out-degree) -> Top
-          spreadNodes(uniqueSup, cy - layerGap);
+      
+          // Superiors (Out-degree) -> Top Layer
+      
+          spreadNodes(uniqueSup, cy - layerGap, -1);
+      
           
-          // Subordinates (In-degree) -> Bottom
-          spreadNodes(uniqueSub, cy + layerGap);
+      
+          // Subordinates (In-degree) -> Bottom Layer
+      
+          spreadNodes(uniqueSub, cy + layerGap, 1);
+      
           
-          // Associated Nodes (High Correlation, e.g., > 0.5 weight, not direct)
-          // For now, let's keep it simple: Only show Direct Connections as requested by "Superior/Subordinate" logic first.
-          // The prompt says "only nodes that meet specific conditions... correlation scores > threshold OR having direct... highlighted".
-          // Let's check for strong associations that are NOT direct neighbors.
-          // Since we don't have easy access to non-neighbor edges without scanning all links:
-          
+      
+          // Associated Nodes (High Correlation, e.g., > 0.6 weight, not direct)
+      
           const associated = [];
+      
           links.forEach(l => {
-              if ((l.source.id === focusD.id || l.target.id === focusD.id) && l.weight > 0.6) { // High threshold
+      
+              if ((l.source.id === focusD.id || l.target.id === focusD.id) && l.weight > 0.6) { 
+      
                    const other = l.source.id === focusD.id ? l.target : l.source;
+      
                    if (!uniqueSup.includes(other) && !uniqueSub.includes(other)) {
+      
                        associated.push(other);
+      
                    }
+      
               }
+      
           });
+      
           
-          // Place associated nodes on sides
+      
           if (associated.length > 0) {
+      
               const left = [];
+      
               const right = [];
+      
               associated.forEach((n, i) => {
+      
                   n.isFocusVisible = true;
+      
                   if (i % 2 === 0) left.push(n);
+      
                   else right.push(n);
+      
               });
+      
               
+      
               const sideGap = 200;
+      
               left.forEach((n, i) => {
+      
                   n.fx = cx - sideGap - 100 - (i * 60);
+      
                   n.fy = cy + (i % 2 === 0 ? -20 : 20);
+      
+                  n._labelDy = 25;
+      
               });
+      
               right.forEach((n, i) => {
+      
                   n.fx = cx + sideGap + 100 + (i * 60);
+      
                   n.fy = cy + (i % 2 === 0 ? -20 : 20);
+      
+                  n._labelDy = 25;
+      
               });
+      
           }
       
+      
+      
           // 5. Apply Updates
-          simulation.stop(); // Stop physics to enforce layout
-          
-          // Hide Lines
+      
+          simulation.stop();
+      
           link.style("display", "none");
+      
+          updateVisibility();
+      
           
-          // Update Nodes
-          updateVisibility(); // Will use isFocusVisible
-          
-          // Animate to positions
+      
+          // Animate
+      
           node.each(function(d) {
+      
               if (isNodeVisible(d)) {
-                  d3.select(this).transition().duration(750)
+      
+                  const el = d3.select(this);
+      
+                  el.transition().duration(750)
+      
                       .attr("transform", `translate(${d.fx},${d.fy})`);
+      
                       
+      
+                  // Update Label Position
+      
+                  el.select("text")
+      
+                      .transition().duration(750)
+      
+                      .attr("dy", d._labelDy ? d._labelDy : ".35em");
+      
+      
+      
                   if (d.id === focusD.id) {
-                      // Enlarge Focus Node
-                      d3.select(this).select("circle")
-                          .transition().duration(750)
-                          .attr("r", 25)
-                          .attr("fill", "#ffd700")
-                          .attr("stroke", "#fff")
-                          .attr("stroke-width", "3px");
-                      d3.select(this).select("text")
-                          .transition().duration(750)
-                          .attr("font-size", "16px")
-                          .attr("font-weight", "bold")
-                          .attr("fill", "#fff");
+      
+                      el.select("circle").transition().duration(750)
+      
+                          .attr("r", 25).attr("fill", "#ffd700").attr("stroke", "#fff").attr("stroke-width", "3px");
+      
+                      el.select("text").transition().duration(750)
+      
+                          .attr("font-size", "16px").attr("font-weight", "bold").attr("fill", "#fff");
+      
                   } else {
-                      // Style Neighbors
+      
                       const isSup = uniqueSup.includes(d);
+      
                       const isSub = uniqueSub.includes(d);
+      
                       const color = isSup ? "#4ecdc4" : (isSub ? "#ff6b6b" : "#aaa");
-                      
-                      d3.select(this).select("circle")
-                          .transition().duration(750)
-                          .attr("r", 8)
-                          .attr("fill", color);
+      
+                      el.select("circle").transition().duration(750)
+      
+                          .attr("r", 8).attr("fill", color);
+      
+                      el.select("text").transition().duration(750)
+      
+                          .attr("font-size", "10px").attr("font-weight", "normal").attr("fill", "#ccc");
+      
                   }
+      
               } else {
-                   // Clear fx/fy for hidden nodes so they don't get stuck if we switch back
-                   d.fx = null;
-                   d.fy = null;
-                   d.isFocusVisible = false;
+      
+                   d.fx = null; d.fy = null; d.isFocusVisible = false; d._labelDy = null;
+      
               }
+      
           });
-          
-          // Restart simulation gently to handle any manual drag interactions if needed, 
-          // but keep alpha low or forces off?
-          // Actually, if we want them fixed, we leave them fixed.
-          // If user drags, 'dragged' updates fx/fy.
+      
           simulation.alpha(0.1).restart();
+      
       }
       
+      
+      
       function exitFocusMode() {
+      
           focusNode = null;
-          
-          // Reset UI
+      
           document.getElementById('focus-exit-btn').style.display = 'none';
+      
           document.getElementById('controls').style.opacity = '1';
+      
           document.getElementById('controls').style.pointerEvents = 'all';
-          
-          // Show Lines
+      
           link.style("display", "block");
+      
           
-          // Release Positions
+      
           nodes.forEach(d => {
-              d.fx = null;
-              d.fy = null;
-              d.isFocusVisible = false;
+      
+              d.fx = null; d.fy = null; d.isFocusVisible = false; d._labelDy = null;
+      
           });
+      
           
-          // Reset Visibility & Styles
-          updateVisibility(); 
-          updateSize(); 
-          updateColor();
+      
+          updateVisibility(); updateSize(); updateColor();
+      
           
-          // Reset Text/Circle Styles for all
-          node.selectAll("text")
-              .transition().duration(500)
-              .attr("font-size", "10px")
-              .attr("font-weight", "normal")
-              .attr("fill", "#ccc");
+      
+          // Reset Texts
+      
+          node.selectAll("text").transition().duration(500)
+      
+              .attr("dy", ".35em") // Restore default
+      
+              .attr("font-size", "10px").attr("font-weight", "normal").attr("fill", "#ccc");
+      
               
-          node.selectAll("circle")
-              .transition().duration(500)
-              .attr("stroke-width", "1.5px");
-          
-          // Restart Simulation
+      
+          node.selectAll("circle").transition().duration(500).attr("stroke-width", "1.5px");
+      
           simulation.alpha(1).restart();
+      
       }}

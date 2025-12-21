@@ -358,6 +358,40 @@
     5.  **Exit**: Clicked "Exit Focus Mode" button. Graph returned to original state (Force layout, all nodes visible).
 *   **Result**: PASS.
 
+# Test Report (2025-12-19 v0.6.3)
+
+## English Document
+
+### 1. Focus Mode Layout Optimization
+*   **Component**: `app.js` (Frontend).
+*   **Feature**: Enhanced Focus Mode with Relative Height & Staggered Labels.
+*   **Manual Verification**:
+    1.  **Staggering**: Entered Focus Mode for a node with many neighbors (e.g., "Absorption").
+    2.  **Observation**: 
+        *   Neighbor nodes in the top/bottom layers were not in a straight line. They formed a "Zig-Zag" pattern (staggered height).
+        *   **Labels**: Verified that nodes positioned physically "higher" (relative to layer baseline) had labels ABOVE (`dy = -15`).
+        *   **Labels**: Verified that nodes positioned "lower" had labels BELOW (`dy = 25`).
+        *   **Result**: Text overlap was significantly reduced compared to the flat layout.
+    3.  **Scoring**: Confirmed that nodes were still sorted by importance (Focus Score) from left to right.
+*   **Result**: PASS.
+
+---
+
+## 中文文档 (Chinese Document)
+
+### 1. 专注模式布局优化
+*   **组件**: `app.js` (前端)。
+*   **特性**: 具有相对高度和交错标签的增强专注模式。
+*   **手动验证**:
+    1.  **交错**: 对具有许多邻居的节点（例如 "Absorption"）进入专注模式。
+    2.  **观察**:
+        *   顶层/底层的邻居节点不在一条直线上。它们形成了一种“之字形”图案（高度交错）。
+        *   **标签**: 验证物理位置“较高”（相对于层基线）的节点标签位于**上方** (`dy = -15`)。
+        *   **标签**: 验证物理位置“较低”的节点标签位于**下方** (`dy = 25`)。
+        *   **结果**: 与平坦布局相比，文本重叠显著减少。
+    3.  **评分**: 确认节点仍按重要性（专注分数）从左到右排序。
+*   **结果**: 通过 (PASS)。
+
 ---
 
 ## 中文文档 (Chinese Document)
