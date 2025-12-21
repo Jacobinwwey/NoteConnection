@@ -97,6 +97,7 @@ Open `src/frontend/index.html` in your modern web browser (Chrome/Edge/Firefox).
 *   **深度探索**: 点击任意节点以隔离它及其直接上下文。
 *   **智能布局**: 自动排列**上级**（出度）和**下级**（入度），并基于相关性进行相对高度定位。
 *   **清晰可视化**: 使用交错定位防止标签重叠，并高亮显示高价值路径。
+<img width="2012" height="2024" alt="image" src="https://github.com/user-attachments/assets/bf6e7508-7e42-46cb-9a3e-b92be063ad3d" />
 
 ### 5. 跨平台与面向未来
 *   **纯 TypeScript**: 直接在文件系统上运行。
