@@ -322,7 +322,53 @@
     *   推断出 89 条高质量边。
     *   示例: `[fluorescence] (荧光) -> [fluorescent emitters] (荧光发射体)` (相似度: 0.52, 不对称性: 0.94)。
     *   示例: `[photon] (光子) -> [photoelectric effect] (光电效应)` (相似度: 0.21, 不对称性: 0.97)。
-    *   通过强制内容相似性，相比纯统计推断显著减少了噪声。
+*   **Result**: PASS.
+
+# Test Report (2025-12-21 v0.7.0)
+
+## English Document
+
+### 1. Settings Manager & Persistence
+*   **Component**: `settings.js` (Frontend).
+*   **Feature**: Centralized configuration with localStorage persistence.
+*   **Manual Verification**:
+    1.  **Defaults**: Cleared `localStorage`. Reloaded page. Verified defaults (Charge: -300).
+    2.  **Modification**: Changed Charge to -800. Reloaded page.
+    3.  **Persistence**: Verified that the graph initialized with Charge -800 (stronger repulsion).
+*   **Result**: PASS. Settings persist across sessions.
+
+### 2. Settings UI & Real-time Updates
+*   **Component**: `app.js`, `index.html`.
+*   **Feature**: Modal UI for tuning physics and visuals.
+*   **Manual Verification**:
+    1.  Opened Settings Modal.
+    2.  **Physics**: Dragged "Repulsion Strength" slider. Graph immediately expanded/contracted.
+    3.  **Visuals**: Dragged "Edge Opacity" slider. Links became transparent/opaque in real-time.
+    4.  **Reset**: Clicked "Reset Defaults". Sliders and Graph snapped back to original state.
+*   **Result**: PASS. Integration is responsive and stable.
+
+---
+
+## 中文文档 (Chinese Document)
+
+### 1. 设置管理器与持久化
+*   **组件**: `settings.js` (前端)。
+*   **特性**: 具有 localStorage 持久化的集中式配置。
+*   **手动验证**:
+    1.  **默认值**: 清除 `localStorage`。重新加载页面。验证默认值（电荷：-300）。
+    2.  **修改**: 将电荷更改为 -800。重新加载页面。
+    3.  **持久化**: 验证图谱初始化时电荷为 -800（更强的排斥力）。
+*   **结果**: 通过 (PASS)。设置在会话之间保持。
+
+### 2. 设置 UI 与实时更新
+*   **组件**: `app.js`, `index.html`。
+*   **特性**: 用于调整物理和视觉效果的模态框 UI。
+*   **手动验证**:
+    1.  打开设置模态框。
+    2.  **物理**: 拖动“排斥力”滑块。图谱立即展开/收缩。
+    3.  **视觉**: 拖动“边透明度”滑块。连接线实时变透明/不透明。
+    4.  **重置**: 点击“重置默认”。滑块和图谱恢复到原始状态。
+*   **结果**: 通过 (PASS)。集成响应迅速且稳定。
 
 # Test Report (2025-12-19 v0.6.1)
 
@@ -374,6 +420,36 @@
         *   **Result**: Text overlap was significantly reduced compared to the flat layout.
     3.  **Scoring**: Confirmed that nodes were still sorted by importance (Focus Score) from left to right.
 *   **Result**: PASS.
+
+# Test Report (2025-12-19 v0.6.4)
+
+## English Document
+
+### 1. Bug Fix: Focus Mode Accumulation
+*   **Component**: `app.js` (Frontend).
+*   **Issue**: Clicking multiple nodes in Focus Mode sequentially (A -> B -> A) accumulated visible nodes from all visited states.
+*   **Fix**: Added a global reset for `isFocusVisible` and `fx/fy` properties for all nodes at the start of `enterFocusMode`.
+*   **Manual Verification**:
+    1.  Click "Absorption" -> Focus Mode A (Correct nodes visible).
+    2.  Click neighbor "photon" -> Focus Mode B (Correct nodes visible, nodes from A hidden).
+    3.  Click "Absorption" again -> Focus Mode A.
+    4.  **Verification**: Only "Absorption" and its immediate neighbors are visible. No "zombie" nodes from previous states.
+*   **Result**: PASS.
+
+---
+
+## 中文文档 (Chinese Document)
+
+### 1. Bug 修复: 专注模式累积问题
+*   **组件**: `app.js` (前端)。
+*   **问题**: 在专注模式下连续点击多个节点 (A -> B -> A) 会累积所有访问过的状态中的可见节点。
+*   **修复**: 在 `enterFocusMode` 开始时，为所有节点添加了 `isFocusVisible` 和 `fx/fy` 属性的全局重置。
+*   **手动验证**:
+    1.  点击 "Absorption" -> 专注模式 A (可见节点正确)。
+    2.  点击邻居 "photon" -> 专注模式 B (可见节点正确，来自 A 的节点隐藏)。
+    3.  再次点击 "Absorption" -> 专注模式 A。
+    4.  **验证**: 仅 "Absorption" 及其直接邻居可见。没有来自先前状态的“僵尸”节点。
+*   **结果**: 通过 (PASS)。
 
 ---
 

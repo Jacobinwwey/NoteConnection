@@ -160,6 +160,55 @@
         </div>
     </div>
 
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 data-i18n="settings_title">Settings</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-group">
+                    <h3 data-i18n="grp_physics">Physics</h3>
+                    <div class="setting-item">
+                        <label data-i18n="lbl_repulsion">Repulsion Strength</label>
+                        <input type="range" id="set-charge" min="-1000" max="-50" step="50">
+                        <span class="value-display" id="val-charge"></span>
+                    </div>
+                    <div class="setting-item">
+                        <label data-i18n="lbl_distance">Link Distance</label>
+                        <input type="range" id="set-distance" min="20" max="300" step="10">
+                        <span class="value-display" id="val-distance"></span>
+                    </div>
+                    <div class="setting-item">
+                        <label data-i18n="lbl_collision">Collision Radius</label>
+                        <input type="range" id="set-collision" min="5" max="50" step="5">
+                        <span class="value-display" id="val-collision"></span>
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <h3 data-i18n="grp_visuals">Visuals</h3>
+                    <div class="setting-item">
+                        <label data-i18n="lbl_opacity">Edge Opacity</label>
+                        <input type="range" id="set-opacity" min="0.1" max="1.0" step="0.1">
+                        <span class="value-display" id="val-opacity"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="btn-reset-settings" data-i18n="btn_reset">Reset</button>
+                <button class="btn btn-primary modal-close" data-i18n="btn_done">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Toggle Button (Absolute Position top right) -->
+    <button id="btn-open-settings" style="position: absolute; top: 10px; right: 110px; z-index: 1000; background: #333; color: white; border: 1px solid #555; padding: 3px 8px; cursor: pointer;">
+        ⚙️ <span data-i18n="btn_settings">Settings</span>
+    </button>
+
+    <script src="settings.js"></script>
     <script src="app.js"></script>
     <script src="analysis.js"></script>
 </body>

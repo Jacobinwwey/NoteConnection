@@ -1,4 +1,4 @@
-# 2025-12-19 v0.4.0
+# 2025-12-21 v0.6.5
 
 # Project Build Plan: Progressive Hierarchical Knowledge Graph
 
@@ -63,6 +63,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **Layout Optimization**: 
         - [x] Relative Height Positioning based on criteria (Score).
         - [x] Staggered Label Placement to prevent overlap.
+        - [x] Fix: Prevents node accumulation when switching context within Focus Mode.
 
 ### 2026-04-01 v0.5.0 - Scalability (Clustering)
 
@@ -105,9 +106,11 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [ ] **Plugin Wrapper**
     - Wrap the `NoteConnection` core logic into a Joplin Plugin and an Obsidian Plugin.
 
-- [ ] **User Settings & Documentation**
-    - Finalize configuration options (colors, exclusion rules).
-    - Publish user manual.
+- [ ] **User Settings & Documentation (v0.7.0)**
+    - [ ] **Settings Manager**: Centralized management of application state (Physics, Visuals) with `localStorage` persistence.
+    - [ ] **Configuration UI**: Settings Modal for tuning Graph Physics (Gravity, Repulsion) and Visual preferences.
+    - [ ] **Finalize Documentation**: Complete User Manual and Developer Guide.
+    - [ ] **Release**: Package for v1.0.0.
 
 ---
 
@@ -174,6 +177,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **布局优化**:
         - [x] 基于标准（分数）的相对高度定位。
         - [x] 交错标签放置以防止重叠。
+        - [x] 修复: 防止在专注模式内切换上下文时节点累积。
 
 ### 2026-04-01 v0.5.0 - 可扩展性 (聚类) (Scalability)
 
@@ -214,6 +218,8 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [ ] **插件封装**
     - 将 `NoteConnection` 核心逻辑封装为 Joplin 插件和 Obsidian 插件。
 
-- [ ] **用户设置与文档**
-    - 确定配置选项（颜色、排除规则）。
-    - 发布用户手册。
+- [ ] **用户设置与文档 (User Settings & Documentation - v0.7.0)**
+    - [ ] **设置管理器**: 集中管理应用状态（物理、视觉），支持 `localStorage` 持久化。
+    - [ ] **配置 UI**: 用于调整图谱物理（重力、排斥力）和视觉偏好的设置模态框。
+    - [ ] **完善文档**: 完成用户手册和开发人员指南。
+    - [ ] **发布**: 打包 v1.0.0。

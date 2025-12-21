@@ -1,4 +1,4 @@
-# 2025-12-19 v0.6.1
+# 2025-12-21 v0.6.5
 
 # NoteConnection: Hierarchical Knowledge Graph Visualization System
 > **Unlock the Structure of Your Knowledge.**
@@ -10,7 +10,7 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
-## 🌟 Core Features (v0.6.1)
+## 🌟 Core Features (v0.6.5)
 
 ### 1. Structure Over Chaos (DAG vs. Force)
 *   **Directed Dependencies**: Identifies "Prerequisites" and "Next Steps" to arrange concepts in logical layers.
@@ -27,10 +27,10 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 *   **Hybrid Analysis**: Combines explicit links (`[[WikiLink]]`), YAML frontmatter (`prerequisites:`), and statistical/vector patterns.
 <img width="3723" height="1992" alt="image" src="https://github.com/user-attachments/assets/9e56e567-1742-48cf-b720-cf65a47fd317" />
 
-### 4. Interactive Focus Mode (v0.6.2)
+### 4. Interactive Focus Mode (v0.6.5)
 *   **Deep Dive**: Click any node to isolate it and its immediate context.
-*   **Hierarchical View**: Automatically arranges connections into **Superior** (Out-degree) and **Subordinate** (In-degree) layers.
-*   **Contextual Filtering**: Highlights relevant paths while dimming noise.
+*   **Smart Layout**: Auto-arranges **Superiors** (Out-degree) and **Subordinates** (In-degree) with relative height positioning based on relevance.
+*   **Clean Visualization**: Prevents label overlap using staggered positioning and highlights high-value paths.
 
 ### 5. Platform Agnostic & Future-Proof
 *   **Pure TypeScript**: Runs directly on your file system.
@@ -62,7 +62,7 @@ Open `src/frontend/index.html` in your modern web browser (Chrome/Edge/Firefox).
 ---
 ---
 
-# 2025-12-19 v0.6.1
+# 2025-12-21 v0.6.5
 
 # NoteConnection: 层级知识图谱可视化系统
 > **解锁你知识库的深层结构。**
@@ -74,7 +74,7 @@ Open `src/frontend/index.html` in your modern web browser (Chrome/Edge/Firefox).
 
 ---
 
-## 🌟 核心特性 (v0.6.1)
+## 🌟 核心特性 (v0.6.5)
 
 ### 1. 结构优于混沌 (DAG vs. 力导向)
 *   **有向依赖**: 识别“先决条件”和“后续步骤”，将概念按逻辑分层排列。
@@ -91,10 +91,10 @@ Open `src/frontend/index.html` in your modern web browser (Chrome/Edge/Firefox).
 *   **混合分析**: 结合显式链接 (`[[WikiLink]]`)、YAML 元数据 (`prerequisites:`) 和统计/向量模式。
 <img width="3723" height="2007" alt="image" src="https://github.com/user-attachments/assets/10978984-3e2d-4ab6-8b44-342d4f3c3800" />
 
-### 4. 交互式专注模式 (Focus Mode - v0.6.2)
+### 4. 交互式专注模式 (Focus Mode - v0.6.5)
 *   **深度探索**: 点击任意节点以隔离它及其直接上下文。
-*   **层级视图**: 自动将连接排列为**上级**（出度）和**下级**（入度）层。
-*   **上下文过滤**: 高亮显示相关路径，同时降低噪音。
+*   **智能布局**: 自动排列**上级**（出度）和**下级**（入度），并基于相关性进行相对高度定位。
+*   **清晰可视化**: 使用交错定位防止标签重叠，并高亮显示高价值路径。
 
 ### 5. 跨平台与面向未来
 *   **纯 TypeScript**: 直接在文件系统上运行。
