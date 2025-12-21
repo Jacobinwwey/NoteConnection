@@ -170,6 +170,12 @@ Renders the JSON data into an interactive DAG.
             *   **Subordinates**: In-degree neighbors, placed in bottom layer. Relative height based on Score.
         *   **Sorting**: Intra-layer nodes sorted by Focus Score (Edge Weight + Degree Ratio).
         *   **Labeling**: Staggered (Above/Below) based on vertical offset to prevent overlap.
+    *   **Settings (v0.7.0)**:
+        *   **Interface**: `SettingsManager` (Frontend)
+        *   **Persistence**: `localStorage('nc_settings')`
+        *   **Configurable**:
+            *   **Physics**: Repulsion, Link Distance, Collision Radius.
+            *   **Visuals**: Edge Opacity.
     *   **Degree Analysis (v0.1.2)**:
         *   **In-degree**: Show incoming degree count.
     *   **Localization (v0.1.9)**: Supports English ('en') and Chinese ('zh').
@@ -318,6 +324,12 @@ Renders the JSON data into an interactive DAG.
             *   **下级**: 入度邻居，置于下层。相对高度基于分数。
         *   **排序**: 层内节点按专注分数（边权重 + 度数比）排序。
         *   **标签**: 基于垂直偏移交错（上方/下方）以防止重叠。
+    *   **设置 (Settings - v0.7.0)**:
+        *   **接口**: `SettingsManager` (前端)
+        *   **持久化**: `localStorage('nc_settings')`
+        *   **可配置项**:
+            *   **物理**: 排斥力、连接距离、碰撞半径。
+            *   **视觉**: 边透明度。
     *   **Degree Analysis (v0.1.2)**:
         *   **In-degree**: 显示入度（作为先决条件被引用的次数）。
         *   **Out-degree**: 显示出度（引用的先决条件数量）。

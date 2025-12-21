@@ -281,4 +281,129 @@ div.tooltip {
 .sortable { cursor: pointer; user-select: none; }
 .sortable:hover { color: white; }
 .node-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 5px; padding: 4px 5px; border-bottom: 1px solid #333; font-size: 0.85rem; }
-.node-row:hover { background: #333; }
+/* Settings Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(2px);
+}
+
+.modal-content {
+    background: #2d2d2d;
+    width: 400px;
+    max-width: 90%;
+    border-radius: 8px;
+    border: 1px solid #555;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.modal-header {
+    padding: 15px;
+    background: #333;
+    border-bottom: 1px solid #444;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #61dafb;
+}
+
+.modal-close {
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: #aaa;
+    background: none;
+    border: none;
+}
+
+.modal-close:hover {
+    color: white;
+}
+
+.modal-body {
+    padding: 20px;
+    color: #e0e0e0;
+}
+
+.settings-group {
+    margin-bottom: 20px;
+}
+
+.settings-group h3 {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #444;
+    padding-bottom: 5px;
+}
+
+.setting-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+}
+
+.setting-item label {
+    flex: 1;
+}
+
+.setting-item input[type="range"] {
+    flex: 2;
+    margin: 0 10px;
+}
+
+.setting-item .value-display {
+    width: 40px;
+    text-align: right;
+    font-family: monospace;
+    color: #61dafb;
+}
+
+.modal-footer {
+    padding: 15px;
+    background: #333;
+    border-top: 1px solid #444;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.btn {
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    font-size: 0.9rem;
+}
+
+.btn-secondary {
+    background: #555;
+    color: white;
+}
+
+.btn-primary {
+    background: #2c5282;
+    color: white;
+}
+
+.btn:hover {
+    opacity: 0.9;
+}

@@ -330,7 +330,19 @@ const translations = {
         th_cluster: "聚类",
         th_in: "入",
         th_out: "出",
-        th_total: "总计"
+        th_total: "总计",
+        
+        // Settings
+        settings_title: "可视化设置",
+        btn_settings: "设置",
+        grp_physics: "物理模拟",
+        grp_visuals: "视觉外观",
+        lbl_repulsion: "排斥力",
+        lbl_distance: "连接长度",
+        lbl_collision: "碰撞半径",
+        lbl_opacity: "边透明度",
+        btn_reset: "重置默认",
+        btn_done: "完成"
     },
     en: {
         show_all: "Show All",
@@ -382,7 +394,19 @@ const translations = {
         th_cluster: "Cluster",
         th_in: "In",
         th_out: "Out",
-        th_total: "Total"
+        th_total: "Total",
+        
+        // Settings
+        settings_title: "Visualization Settings",
+        btn_settings: "Settings",
+        grp_physics: "Physics Simulation",
+        grp_visuals: "Visual Appearance",
+        lbl_repulsion: "Repulsion",
+        lbl_distance: "Link Length",
+        lbl_collision: "Collision Radius",
+        lbl_opacity: "Edge Opacity",
+        btn_reset: "Reset Defaults",
+        btn_done: "Done"
     }
 };
 
@@ -824,10 +848,11 @@ function dragended(event, d) {
   if (!focusNode) {
         d.fx = null;
         d.fy = null;
-      }
-      
-      // Focus Mode Logic
-      document.getElementById('btn-exit-focus').addEventListener('click', exitFocusMode);
+  }
+}
+
+// Focus Mode Logic
+document.getElementById('btn-exit-focus').addEventListener('click', exitFocusMode);
       
       // Wire up click event to nodes
       // We need to re-bind the click event or add it to the existing selection
@@ -844,404 +869,160 @@ function dragended(event, d) {
       });
       
       function enterFocusMode(focusD) {
-      
-          if (focusNode && focusNode.id === focusD.id) return; // Already focused
-      
-          focusNode = focusD;
-      
-          
-      
-          // 1. UI Updates
-      
-          document.getElementById('focus-exit-btn').style.display = 'flex';
-      
-          document.getElementById('focus-node-name').innerText = focusD.label;
-      
-          document.getElementById('controls').style.opacity = '0.3'; // Dim controls
-      
-          document.getElementById('controls').style.pointerEvents = 'none'; // Disable controls
-      
-          
-      
-          // 2. Identify Nodes
-      
-          const superiors = []; // Outgoing: Focus -> Target (Superior)
-      
-          const subordinates = []; // Incoming: Source -> Focus (Subordinate)
-      
-          
-      
-          links.forEach(l => {
-      
-              if (l.source.id === focusD.id) superiors.push(l.target);
-      
-              if (l.target.id === focusD.id) subordinates.push(l.source);
-      
-          });
-      
-          
-      
-          const uniqueSup = [...new Set(superiors)];
-      
-          const uniqueSub = [...new Set(subordinates)];
-      
-          
-      
-          // 3. Intra-layer Sorting & Scoring
-      
-          // Calculate a "Focus Score" for relative positioning
-      
-          // Score based on: Edge Weight (Similarity) + Degree Ratio
-      
-          const getFocusScore = (n) => {
-      
-              // Find connecting edge
-      
-              const edge = links.find(l => 
-      
-                  (l.source.id === focusD.id && l.target.id === n.id) || 
-      
-                  (l.target.id === focusD.id && l.source.id === n.id)
-      
-              );
-      
-              const weight = edge ? (edge.weight || 0.5) : 0.5;
-      
-              const degreeRatio = (n.outDegree || 0) / ((n.inDegree || 0) + 1);
-      
-              // Normalize ratio slightly roughly to 0-1 range impact
-      
-              const normRatio = Math.min(degreeRatio, 5) / 5; 
-      
-              
-      
-              return (weight * 0.7) + (normRatio * 0.3);
-      
-          };
-      
-      
-      
-          // Attach scores for sorting
-      
-          uniqueSup.forEach(n => n._focusScore = getFocusScore(n));
-      
-          uniqueSub.forEach(n => n._focusScore = getFocusScore(n));
-      
-      
-      
-          // Sort by Score Descending (Higher score = more central/important)
-      
-          const sortFn = (a, b) => b._focusScore - a._focusScore;
-      
-          uniqueSup.sort(sortFn);
-      
-          uniqueSub.sort(sortFn);
-      
-          
-      
-          // 4. Layout Calculation
-      
-          const cx = width / 2;
-      
-          const cy = height / 2;
-      
-          const layerGap = 250; // Considerable distance
-      
-          
-      
-          // Helper to spread nodes with Relative Height & Staggered Labels
-      
-          const spreadNodes = (nodeList, baselineY, direction) => {
-      
-              const count = nodeList.length;
-      
-              if (count === 0) return;
-      
-              
-      
-              // Dynamic width
-      
-              const spreadWidth = Math.min(width * 0.9, Math.max(count * 80, 200)); 
-      
-              const startX = cx - spreadWidth / 2;
-      
-              const step = count > 1 ? spreadWidth / (count - 1) : 0;
-      
-              
-      
-              nodeList.forEach((n, i) => {
-      
-                  // X Position
-      
-                  n.fx = count === 1 ? cx : startX + i * step;
-      
-                  
-      
-                  // Y Position (Relative Height)
-      
-                  // "Based on criteria" -> Use _focusScore
-      
-                  // Higher score -> Closer to Focus Node? Or just vertically distinct?
-      
-                  // "Prevent overlapping of node labels... higher nodes... above... lower... below"
-      
-                  // We use score to determine a vertical offset from baseline.
-      
-                  // Let's map score 0..1 to -40..+40 px relative to baseline.
-      
-                  // But to ensure "higher/lower" are distinct for label placement, we can also use index parity
-      
-                  // or simply the score itself.
-      
-                  // Let's imply: Higher Importance (Score) -> Closer to Focus Node (Center).
-      
-                  // Top Layer (Direction -1): Higher Score -> Larger Y (Closer to Center).
-      
-                  // Bottom Layer (Direction 1): Higher Score -> Smaller Y (Closer to Center).
-      
-                  
-      
-                  const offsetMagnitude = (n._focusScore - 0.5) * 60; // +/- 30px range roughly
-      
-                  
-      
-                  // Apply direction. 
-      
-                  // If direction is -1 (Top Layer): Baseline is Y=Low. Center is Y=High.
-      
-                  // Actually in SVG: Top is 0. Center is 500.
-      
-                  // Top Layer Baseline: 250. Center: 500.
-      
-                  // We want Higher Score to be closer to 500 (Larger Y).
-      
-                  // So: Y = Baseline + Offset.
-      
-                  
-      
-                  // But wait, the requirement says:
-      
-                  // "labels of relatively higher nodes should be placed slightly above... lower... below"
-      
-                  // This refers to the physical visual position.
-      
-                  // "Higher Node" (Smaller Y) -> Label Above.
-      
-                  // "Lower Node" (Larger Y) -> Label Below.
-      
-                  
-      
-                  // To ensure we have Higher and Lower nodes to prevent overlap,
-      
-                  // we will add a staggered offset based on index, modulated by score.
-      
-                  // This ensures neighbors don't form a flat line.
-      
-                  
-      
-                  const stagger = (i % 2 === 0 ? -1 : 1) * 20; // Zigzag 20px
-      
-                  const criteriaOffset = (n._focusScore * 20); // Score impact
-      
-                  
-      
-                  // Combined Vertical Offset from Baseline
-      
-                  const totalOffset = stagger + criteriaOffset; 
-      
-                  
-      
-                  n.fy = baselineY + totalOffset;
-      
-                  n.isFocusVisible = true;
-      
-                  
-      
-                  // Determine Label Position based on Relative Height
-      
-                  // If n.fy < baselineY (Physically Higher) -> Label Above
-      
-                  // If n.fy > baselineY (Physically Lower) -> Label Below
-      
-                  if (n.fy < baselineY) {
-      
-                      n._labelDy = -15; // Above
-      
-                  } else {
-      
-                      n._labelDy = 25; // Below
-      
-                  }
-      
-              });
-      
-          };
-      
-          
-      
-          // Focus Node
-      
-          focusD.fx = cx;
-      
-          focusD.fy = cy;
-      
-          focusD.isFocusVisible = true;
-      
-          focusD._labelDy = 35; // Default below for center
-      
-          
-      
-          // Superiors (Out-degree) -> Top Layer
-      
-          spreadNodes(uniqueSup, cy - layerGap, -1);
-      
-          
-      
-          // Subordinates (In-degree) -> Bottom Layer
-      
-          spreadNodes(uniqueSub, cy + layerGap, 1);
-      
-          
-      
-          // Associated Nodes (High Correlation, e.g., > 0.6 weight, not direct)
-      
-          const associated = [];
-      
-          links.forEach(l => {
-      
-              if ((l.source.id === focusD.id || l.target.id === focusD.id) && l.weight > 0.6) { 
-      
-                   const other = l.source.id === focusD.id ? l.target : l.source;
-      
-                   if (!uniqueSup.includes(other) && !uniqueSub.includes(other)) {
-      
-                       associated.push(other);
-      
-                   }
-      
-              }
-      
-          });
-      
-          
-      
-          if (associated.length > 0) {
-      
-              const left = [];
-      
-              const right = [];
-      
-              associated.forEach((n, i) => {
-      
-                  n.isFocusVisible = true;
-      
-                  if (i % 2 === 0) left.push(n);
-      
-                  else right.push(n);
-      
-              });
-      
-              
-      
-              const sideGap = 200;
-      
-              left.forEach((n, i) => {
-      
-                  n.fx = cx - sideGap - 100 - (i * 60);
-      
-                  n.fy = cy + (i % 2 === 0 ? -20 : 20);
-      
-                  n._labelDy = 25;
-      
-              });
-      
-              right.forEach((n, i) => {
-      
-                  n.fx = cx + sideGap + 100 + (i * 60);
-      
-                  n.fy = cy + (i % 2 === 0 ? -20 : 20);
-      
-                  n._labelDy = 25;
-      
-              });
-      
-          }
-      
-      
-      
-          // 5. Apply Updates
-      
-          simulation.stop();
-      
-          link.style("display", "none");
-      
-          updateVisibility();
-      
-          
-      
-          // Animate
-      
-          node.each(function(d) {
-      
-              if (isNodeVisible(d)) {
-      
-                  const el = d3.select(this);
-      
-                  el.transition().duration(750)
-      
-                      .attr("transform", `translate(${d.fx},${d.fy})`);
-      
-                      
-      
-                  // Update Label Position
-      
-                  el.select("text")
-      
-                      .transition().duration(750)
-      
-                      .attr("dy", d._labelDy ? d._labelDy : ".35em");
-      
-      
-      
-                  if (d.id === focusD.id) {
-      
-                      el.select("circle").transition().duration(750)
-      
-                          .attr("r", 25).attr("fill", "#ffd700").attr("stroke", "#fff").attr("stroke-width", "3px");
-      
-                      el.select("text").transition().duration(750)
-      
-                          .attr("font-size", "16px").attr("font-weight", "bold").attr("fill", "#fff");
-      
-                  } else {
-      
-                      const isSup = uniqueSup.includes(d);
-      
-                      const isSub = uniqueSub.includes(d);
-      
-                      const color = isSup ? "#4ecdc4" : (isSub ? "#ff6b6b" : "#aaa");
-      
-                      el.select("circle").transition().duration(750)
-      
-                          .attr("r", 8).attr("fill", color);
-      
-                      el.select("text").transition().duration(750)
-      
-                          .attr("font-size", "10px").attr("font-weight", "normal").attr("fill", "#ccc");
-      
-                  }
-      
-              } else {
-      
-                   d.fx = null; d.fy = null; d.isFocusVisible = false; d._labelDy = null;
-      
-              }
-      
-          });
-      
-          simulation.alpha(0.1).restart();
-      
-      }
+    if (focusNode && focusNode.id === focusD.id) return; // Already focused
+
+    // RESET ALL NODES first to prevent accumulation of visible nodes
+    nodes.forEach(n => {
+        n.isFocusVisible = false;
+        // Optional: Reset fx/fy for cleanliness, but important one is visibility flag
+        // We generally want to release nodes that are no longer part of the focus set
+        n.fx = null;
+        n.fy = null; 
+        n._labelDy = null;
+    });
+
+    focusNode = focusD;
+    
+    // 1. UI Updates
+    document.getElementById('focus-exit-btn').style.display = 'flex';
+    document.getElementById('focus-node-name').innerText = focusD.label;
+    document.getElementById('controls').style.opacity = '0.3'; // Dim controls
+    document.getElementById('controls').style.pointerEvents = 'none'; // Disable controls
+    
+    // 2. Identify Nodes
+    const superiors = []; // Outgoing: Focus -> Target (Superior)
+    const subordinates = []; // Incoming: Source -> Focus (Subordinate)
+    
+    links.forEach(l => {
+        if (l.source.id === focusD.id) superiors.push(l.target);
+        if (l.target.id === focusD.id) subordinates.push(l.source);
+    });
+    
+    const uniqueSup = [...new Set(superiors)];
+    const uniqueSub = [...new Set(subordinates)];
+    
+    // 3. Intra-layer Sorting & Scoring
+    const getFocusScore = (n) => {
+        const edge = links.find(l => 
+            (l.source.id === focusD.id && l.target.id === n.id) || 
+            (l.target.id === focusD.id && l.source.id === n.id)
+        );
+        const weight = edge ? (edge.weight || 0.5) : 0.5;
+        const degreeRatio = (n.outDegree || 0) / ((n.inDegree || 0) + 1);
+        const normRatio = Math.min(degreeRatio, 5) / 5; 
+        return (weight * 0.7) + (normRatio * 0.3);
+    };
+
+    uniqueSup.forEach(n => n._focusScore = getFocusScore(n));
+    uniqueSub.forEach(n => n._focusScore = getFocusScore(n));
+
+    const sortFn = (a, b) => b._focusScore - a._focusScore;
+    uniqueSup.sort(sortFn);
+    uniqueSub.sort(sortFn);
+    
+    // 4. Layout Calculation
+    const cx = width / 2;
+    const cy = height / 2;
+    const layerGap = 250; 
+    
+    const spreadNodes = (nodeList, baselineY) => {
+        const count = nodeList.length;
+        if (count === 0) return;
+        
+        const spreadWidth = Math.min(width * 0.9, Math.max(count * 80, 200)); 
+        const startX = cx - spreadWidth / 2;
+        const step = count > 1 ? spreadWidth / (count - 1) : 0;
+        
+        nodeList.forEach((n, i) => {
+            n.fx = count === 1 ? cx : startX + i * step;
+            
+            // Relative Height & Staggered Labels
+            const stagger = (i % 2 === 0 ? -1 : 1) * 20; 
+            const criteriaOffset = (n._focusScore * 20); 
+            const totalOffset = stagger + criteriaOffset; 
+            
+            n.fy = baselineY + totalOffset;
+            n.isFocusVisible = true;
+            
+            if (n.fy < baselineY) n._labelDy = -15; // Above
+            else n._labelDy = 25; // Below
+        });
+    };
+    
+    // Focus Node
+    focusD.fx = cx;
+    focusD.fy = cy;
+    focusD.isFocusVisible = true;
+    focusD._labelDy = 35; 
+    
+    spreadNodes(uniqueSup, cy - layerGap);
+    spreadNodes(uniqueSub, cy + layerGap);
+    
+    // Associated Nodes
+    const associated = [];
+    links.forEach(l => {
+        if ((l.source.id === focusD.id || l.target.id === focusD.id) && l.weight > 0.6) { 
+             const other = l.source.id === focusD.id ? l.target : l.source;
+             if (!uniqueSup.includes(other) && !uniqueSub.includes(other)) {
+                 associated.push(other);
+             }
+        }
+    });
+    
+    if (associated.length > 0) {
+        const left = [];
+        const right = [];
+        associated.forEach((n, i) => {
+            n.isFocusVisible = true;
+            if (i % 2 === 0) left.push(n); else right.push(n);
+        });
+        
+        const sideGap = 200;
+        const placeSide = (list, dir) => {
+             list.forEach((n, i) => {
+                n.fx = cx + (dir * (sideGap + 100 + (i * 60)));
+                n.fy = cy + (i % 2 === 0 ? -20 : 20);
+                n._labelDy = 25;
+             });
+        };
+        placeSide(left, -1);
+        placeSide(right, 1);
+    }
+
+    // 5. Apply Updates
+    simulation.stop();
+    link.style("display", "none");
+    updateVisibility();
+    
+    node.each(function(d) {
+        if (isNodeVisible(d)) {
+            const el = d3.select(this);
+            el.transition().duration(750)
+                .attr("transform", `translate(${d.fx},${d.fy})`);
+            
+            el.select("text").transition().duration(750)
+                .attr("dy", d._labelDy ? d._labelDy : ".35em");
+
+            if (d.id === focusD.id) {
+                el.select("circle").transition().duration(750)
+                    .attr("r", 25).attr("fill", "#ffd700").attr("stroke", "#fff").attr("stroke-width", "3px");
+                el.select("text").transition().duration(750)
+                    .attr("font-size", "16px").attr("font-weight", "bold").attr("fill", "#fff");
+            } else {
+                const isSup = uniqueSup.includes(d);
+                const isSub = uniqueSub.includes(d);
+                const color = isSup ? "#4ecdc4" : (isSub ? "#ff6b6b" : "#aaa");
+                el.select("circle").transition().duration(750)
+                    .attr("r", 8).attr("fill", color);
+                el.select("text").transition().duration(750)
+                    .attr("font-size", "10px").attr("font-weight", "normal").attr("fill", "#ccc");
+            }
+        } else {
+             d.fx = null; d.fy = null; d.isFocusVisible = false; d._labelDy = null;
+        }
+    });
+    simulation.alpha(0.1).restart();
+}
       
       
       
@@ -1285,4 +1066,109 @@ function dragended(event, d) {
       
           simulation.alpha(1).restart();
       
-      }}
+}
+
+// --- Settings Integration ---
+
+function initSettingsUI() {
+    const modal = document.getElementById('settings-modal');
+    const openBtn = document.getElementById('btn-open-settings');
+    const closeBtns = document.querySelectorAll('.modal-close');
+    const resetBtn = document.getElementById('btn-reset-settings');
+
+    // Controls
+    const inputs = {
+        charge: document.getElementById('set-charge'),
+        distance: document.getElementById('set-distance'),
+        collision: document.getElementById('set-collision'),
+        opacity: document.getElementById('set-opacity')
+    };
+
+    const displays = {
+        charge: document.getElementById('val-charge'),
+        distance: document.getElementById('val-distance'),
+        collision: document.getElementById('val-collision'),
+        opacity: document.getElementById('val-opacity')
+    };
+
+    // Load initial values
+    const updateUIFromSettings = (settings) => {
+        inputs.charge.value = settings.physics.chargeStrength;
+        displays.charge.innerText = settings.physics.chargeStrength;
+
+        inputs.distance.value = settings.physics.linkDistance;
+        displays.distance.innerText = settings.physics.linkDistance;
+
+        inputs.collision.value = settings.physics.collisionRadius;
+        displays.collision.innerText = settings.physics.collisionRadius;
+
+        inputs.opacity.value = settings.visuals.edgeOpacity;
+        displays.opacity.innerText = settings.visuals.edgeOpacity;
+    };
+
+    updateUIFromSettings(settingsManager.settings);
+
+    // Event Listeners for Inputs
+    inputs.charge.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value);
+        settingsManager.set('physics', 'chargeStrength', val);
+        displays.charge.innerText = val;
+    });
+
+    inputs.distance.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value);
+        settingsManager.set('physics', 'linkDistance', val);
+        displays.distance.innerText = val;
+    });
+
+    inputs.collision.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value);
+        settingsManager.set('physics', 'collisionRadius', val);
+        displays.collision.innerText = val;
+    });
+
+    inputs.opacity.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        settingsManager.set('visuals', 'edgeOpacity', val);
+        displays.opacity.innerText = val;
+    });
+
+    // Modal Actions
+    openBtn.addEventListener('click', () => modal.style.display = 'flex');
+    closeBtns.forEach(btn => btn.addEventListener('click', () => modal.style.display = 'none'));
+    
+    // Close on click outside
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.style.display = 'none';
+    });
+
+    resetBtn.addEventListener('click', () => {
+        settingsManager.reset();
+        updateUIFromSettings(settingsManager.settings);
+    });
+
+    // Subscribe to changes
+    settingsManager.subscribe((settings) => {
+        // Apply Physics
+        if (!focusNode) { // Only apply physics updates if NOT in Focus Mode (which locks positions)
+            simulation.force("charge").strength(settings.physics.chargeStrength);
+            simulation.force("link").distance(settings.physics.linkDistance);
+            simulation.force("collide").radius(settings.physics.collisionRadius);
+            simulation.alpha(0.3).restart();
+        }
+
+        // Apply Visuals
+        g.selectAll(".link").style("stroke-opacity", settings.visuals.edgeOpacity);
+    });
+}
+
+// Initialize Settings
+if (window.settingsManager) {
+    initSettingsUI();
+    // Apply initial settings immediately
+    const s = settingsManager.settings;
+    simulation.force("charge").strength(s.physics.chargeStrength);
+    simulation.force("link").distance(s.physics.linkDistance);
+    simulation.force("collide").radius(s.physics.collisionRadius);
+    g.selectAll(".link").style("stroke-opacity", s.visuals.edgeOpacity);
+}
