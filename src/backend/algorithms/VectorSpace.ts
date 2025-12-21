@@ -63,8 +63,11 @@ export class VectorSpace {
     }
 
     private tokenize(text: string): string[] {
-        // Simple regex tokenizer: alphanumeric, lowercase
-        return (text.match(/[a-zA-Z0-9]+/g) || []).map(t => t.toLowerCase());
+        // Bilingual tokenizer: English words or Chinese characters
+        // 双语分词器：匹配英文单词或单个中文字符
+        // Matches sequence of Alphanumeric OR Single CJK character
+        const regex = /[a-zA-Z0-9]+|[\u4e00-\u9fa5]/g;
+        return (text.match(regex) || []).map(t => t.toLowerCase());
     }
 
     public getVector(fileId: string): number[] | undefined {

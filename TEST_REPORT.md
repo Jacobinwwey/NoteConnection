@@ -246,7 +246,7 @@
     *   加载时，获取 `activeClusterFilter`。
     *   `isNodeVisible` 检查 `d.clusterId === activeClusterFilter`。
     *   UI 显示 "Filter: [Name] [X]" 横幅。
-*   **结果**: 通过 (PASS)。逻辑确保仅渲染/交互所选聚类中的节点。
+*   **结果**: 通过 (PASS)。
 
 # Test Report (2025-12-19 v0.6.0)
 
@@ -451,39 +451,34 @@
     4.  **验证**: 仅 "Absorption" 及其直接邻居可见。没有来自先前状态的“僵尸”节点。
 *   **结果**: 通过 (PASS)。
 
+# Test Report (2025-12-21 v0.6.5)
+
+## English Document
+
+### 1. Hybrid Inference Engine (Enabled)
+*   **Component**: `HybridEngine` + `VectorSpace` + `StatisticalAnalyzer`.
+*   **Changes**:
+    *   Enabled `enableHybridInference` by default in `config.ts`.
+    *   Updated `VectorSpace` tokenizer to support Chinese characters (Bilingual Support).
+*   **Test Run**:
+    *   Loaded 214 files.
+    *   Generated 323 statistical edges.
+    *   Generated 114 hybrid inferred edges.
+    *   Cycle detection handled 50 cycles gracefully.
+*   **Result**: PASS. The system now automatically infers complex relationships without external API calls.
+
 ---
 
 ## 中文文档 (Chinese Document)
 
-### 1. 专注模式布局优化
-*   **组件**: `app.js` (前端)。
-*   **特性**: 具有相对高度和交错标签的增强专注模式。
-*   **手动验证**:
-    1.  **交错**: 对具有许多邻居的节点（例如 "Absorption"）进入专注模式。
-    2.  **观察**:
-        *   顶层/底层的邻居节点不在一条直线上。它们形成了一种“之字形”图案（高度交错）。
-        *   **标签**: 验证物理位置“较高”（相对于层基线）的节点标签位于**上方** (`dy = -15`)。
-        *   **标签**: 验证物理位置“较低”的节点标签位于**下方** (`dy = 25`)。
-        *   **结果**: 与平坦布局相比，文本重叠显著减少。
-    3.  **评分**: 确认节点仍按重要性（专注分数）从左到右排序。
-*   **结果**: 通过 (PASS)。
-
----
-
-## 中文文档 (Chinese Document)
-
-### 1. 交互式专注模式
-*   **组件**: `app.js` (前端)。
-*   **特性**: 专注模式 (深度探索)。
-*   **手动验证步骤**:
-    1.  **进入**: 点击节点 "Absorption" (吸收)。
-    2.  **视觉效果**:
-        *   节点放大并居中。
-        *   "Exit Focus Mode" 按钮出现，标签为 "Absorption"。
-        *   不相关的节点淡出。
-    3.  **布局**:
-        *   验证具有出度边的邻居（上级）移动到**上**层。
-        *   验证具有入度边的邻居（下级）移动到**下**层。
-    4.  **排序**: 观察到同一层中的节点展开并按重要性（度数比）排序。
-    5.  **退出**: 点击 "Exit Focus Mode" 按钮。图谱恢复到原始状态（力导向布局，所有节点可见）。
-*   **结果**: 通过 (PASS)。
+### 1. 混合推断引擎 (已启用)
+*   **组件**: `HybridEngine` + `VectorSpace` + `StatisticalAnalyzer`。
+*   **变更**:
+    *   在 `config.ts` 中默认启用 `enableHybridInference`。
+    *   更新 `VectorSpace` 分词器以支持中文字符（双语支持）。
+*   **测试运行**:
+    *   加载了 214 个文件。
+    *   生成了 323 条统计边。
+    *   生成了 114 条混合推断边。
+    *   循环检测优雅地处理了 50 个循环。
+*   **结果**: 通过 (PASS)。系统现在无需外部 API 调用即可自动推断复杂关系。

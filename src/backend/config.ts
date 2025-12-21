@@ -14,9 +14,9 @@ export const config: AppConfig = {
     clusteringStrategy: 'label-propagation', // Default to current behavior
     fuzzyThreshold: 2,
     enableTags: true,
-    enableStatisticalInference: false, // Default off
-    enableVectorSimilarity: false, // Default off
-    enableHybridInference: false, // Default off
+    enableStatisticalInference: true, // Default on
+    enableVectorSimilarity: true, // Default on
+    enableHybridInference: true, // Default on
     exclusionList: [
         // Add common words or concepts here that cause too much noise
         // e.g., "Introduction", "Summary", etc.
