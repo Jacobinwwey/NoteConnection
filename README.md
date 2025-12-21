@@ -31,6 +31,7 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 *   **Deep Dive**: Click any node to isolate it and its immediate context.
 *   **Smart Layout**: Auto-arranges **Superiors** (Out-degree) and **Subordinates** (In-degree) with relative height positioning based on relevance.
 *   **Clean Visualization**: Prevents label overlap using staggered positioning and highlights high-value paths.
+<img width="2012" height="2024" alt="image" src="https://github.com/user-attachments/assets/e5e4c42d-54a7-463c-bc43-0feb42469a12" />
 
 ### 5. Platform Agnostic & Future-Proof
 *   **Pure TypeScript**: Runs directly on your file system.
@@ -71,6 +72,7 @@ Open `src/frontend/index.html` in your modern web browser (Chrome/Edge/Firefox).
 
 与展示杂乱链接网的传统“网络”视图不同，NoteConnection 揭示了隐藏在笔记中的**层级关系**、**学习路径**和**依赖结构**。它专为可扩展性而设计，能够轻松处理数万个节点，并且完全独立于任何特定的笔记应用程序运行。
 <img width="2784" height="2034" alt="image" src="https://github.com/user-attachments/assets/0ea42609-4296-42ea-978d-c6cb7d448068" />
+<img width="3543" height="2159" alt="image" src="https://github.com/user-attachments/assets/0b2d80f5-ec8c-4ac1-9607-b925d4ab5f82" />
 
 ---
 
@@ -95,6 +97,7 @@ Open `src/frontend/index.html` in your modern web browser (Chrome/Edge/Firefox).
 *   **深度探索**: 点击任意节点以隔离它及其直接上下文。
 *   **智能布局**: 自动排列**上级**（出度）和**下级**（入度），并基于相关性进行相对高度定位。
 *   **清晰可视化**: 使用交错定位防止标签重叠，并高亮显示高价值路径。
+<img width="2012" height="2024" alt="image" src="https://github.com/user-attachments/assets/bf6e7508-7e42-46cb-9a3e-b92be063ad3d" />
 
 ### 5. 跨平台与面向未来
 *   **纯 TypeScript**: 直接在文件系统上运行。
