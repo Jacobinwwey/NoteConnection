@@ -108,7 +108,12 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 - [ ] **User Settings & Documentation (v0.7.0)**
     - [ ] **Settings Manager**: Centralized management of application state (Physics, Visuals) with `localStorage` persistence.
-    - [ ] **Configuration UI**: Settings Modal for tuning Graph Physics (Gravity, Repulsion) and Visual preferences.
+    - [x] **Configuration UI**: Settings Modal for tuning Graph Physics (Gravity, Repulsion) and Visual preferences.
+    - [x] **Reading Window (v0.8.0)**
+        - [x] **Trigger**: Click focused node to open.
+        - [x] **Content**: Renders Markdown, KaTeX (Math), Mermaid (Diagrams).
+        - [x] **Interaction**: Zoom text and Resize images (Unlocked mode).
+        - [x] **Config**: Window/Fullscreen toggle.
     - [ ] **Finalize Documentation**: Complete User Manual and Developer Guide.
     - [ ] **Release**: Package for v1.0.0.
 
@@ -220,6 +225,11 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 - [ ] **用户设置与文档 (User Settings & Documentation - v0.7.0)**
     - [ ] **设置管理器**: 集中管理应用状态（物理、视觉），支持 `localStorage` 持久化。
-    - [ ] **配置 UI**: 用于调整图谱物理（重力、排斥力）和视觉偏好的设置模态框。
+    - [x] **配置 UI**: 用于调整图谱物理（重力、排斥力）和视觉偏好的设置模态框。
+    - [x] **阅读窗口 (Reading Window - v0.8.0)**
+        - [x] **触发**: 点击焦点节点以打开。
+        - [x] **内容**: 渲染 Markdown, KaTeX (数学), Mermaid (图表)。
+        - [x] **交互**: 缩放文本和调整图片大小（解锁模式）。
+        - [x] **配置**: 窗口/全屏切换。
     - [ ] **完善文档**: 完成用户手册和开发人员指南。
     - [ ] **发布**: 打包 v1.0.0。
