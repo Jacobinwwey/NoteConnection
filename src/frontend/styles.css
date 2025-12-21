@@ -551,9 +551,27 @@ div.tooltip {
 
 /* Mermaid background */
 .mermaid {
-    background: rgba(255, 255, 255, 0.03); /* Dark transparent */
+    background: transparent;
     border: 1px solid #444;
     padding: 10px;
     border-radius: 4px;
     margin: 10px 0;
+    transition: border 0.3s;
+}
+
+/* Unlocked State: Allow Mermaid Resizing */
+.reading-body.unlocked .mermaid {
+    resize: both;
+    overflow: hidden; /* Required for resize to work */
+    border: 1px dashed #61dafb; /* Visual cue */
+    min-width: 200px;
+    min-height: 100px;
+    max-width: 100%; /* Can be overridden by user resize */
+}
+
+/* Ensure SVG fills the resized container */
+.mermaid svg {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
 }
