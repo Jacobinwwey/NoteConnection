@@ -161,6 +161,16 @@ Renders the JSON data into an interactive DAG.
         *   **DAG (Hierarchical)**: Sugiyama-style layered layout using `rank` for Y-coordinates and curved Bezier lines for edges.
     *   **Zoom/Pan**: D3-zoom behavior.
     *   **Tooltip**: Show node details on hover.
+    *   **Focus Mode (v0.6.2)**:
+        *   **Function**: `enterFocusMode(node)` / `exitFocusMode()`
+        *   **Description**: Isolates a node and its direct context.
+        *   **Layout**:
+            *   **Focus Node**: Center.
+            *   **Superiors**: Out-degree neighbors, placed in top layer.
+            *   **Subordinates**: In-degree neighbors, placed in bottom layer.
+        *   **Sorting**: Intra-layer nodes sorted by Out/In Degree Ratio.
+    *   **Degree Analysis (v0.1.2)**:
+        *   **In-degree**: Show incoming degree count.
     *   **Localization (v0.1.9)**: Supports English ('en') and Chinese ('zh').
 
 ---
@@ -298,6 +308,14 @@ Renders the JSON data into an interactive DAG.
         *   **DAG (层级)**: Sugiyama 风格的分层布局，使用 `rank` 作为 Y 坐标，并使用弯曲的贝塞尔线绘制边。
     *   **Zoom/Pan**: D3 缩放行为。
     *   **Tooltip**: 悬停时显示节点详情。
+    *   **专注模式 (Focus Mode - v0.6.2)**:
+        *   **函数**: `enterFocusMode(node)` / `exitFocusMode()`
+        *   **描述**: 隔离一个节点及其直接上下文。
+        *   **布局**:
+            *   **焦点节点**: 居中。
+            *   **上级**: 出度邻居，置于上层。
+            *   **下级**: 入度邻居，置于下层。
+        *   **排序**: 层内节点按出/入度比率排序。
     *   **Degree Analysis (v0.1.2)**:
         *   **In-degree**: 显示入度（作为先决条件被引用的次数）。
         *   **Out-degree**: 显示出度（引用的先决条件数量）。

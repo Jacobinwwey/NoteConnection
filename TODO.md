@@ -55,6 +55,12 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] Optimize rendering for hierarchical structures.
     - [x] Draw curved bezier lines for dependencies to indicate flow direction clearly.
 
+- [x] **Focus Mode (v0.6.2)**
+    - [x] **Interactive Focus**: Click node to center and isolate context.
+    - [x] **Hierarchical Layout**: Auto-arrange Superiors (Out-degree) and Subordinates (In-degree) in layers.
+    - [x] **Intra-layer Sorting**: Sort neighbors by importance (Degree Ratio).
+    - [x] **Context Filtering**: Show only direct neighbors and high-correlation nodes.
+
 ### 2026-04-01 v0.5.0 - Scalability (Clustering)
 
 **Goal**: Handle 10,000+ nodes by grouping them into high-level clusters based on File Structure or Semantic Tags.
@@ -156,6 +162,12 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] **Canvas/SVG 渲染**
     - [x] 优化层级结构的渲染。
     - [x] 为依赖关系绘制弯曲的贝塞尔线，以清晰指示流向。
+
+- [x] **专注模式 (Focus Mode - v0.6.2)**
+    - [x] **交互式专注**: 点击节点以居中并隔离上下文。
+    - [x] **层级布局**: 自动将上级（出度）和下级（入度）排列在分层中。
+    - [x] **层内排序**: 按重要性（度数比）对邻居进行排序。
+    - [x] **上下文过滤**: 仅显示直接邻居和高相关性节点。
 
 ### 2026-04-01 v0.5.0 - 可扩展性 (聚类) (Scalability)
 

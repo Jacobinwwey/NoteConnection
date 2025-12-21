@@ -1,5 +1,6 @@
 // Initialize Graph
 const container = document.getElementById('graph-container');
+let focusNode = null;
 
 // State for Cluster Filtering
 let activeClusterFilter = localStorage.getItem('activeClusterFilter') || 'all';
@@ -680,6 +681,18 @@ if (labelOpacitySlider && labelOpacityVal) {
 }
 
 function isNodeVisible(d) {
+    if (focusNode) {
+        // In Focus Mode, visibility is controlled by the enterFocusMode logic setting classes or explicit styles.
+        // However, updateVisibility() is called by mouseout and controls.
+        // We should respect the 'focus-visible' flag if we use one, OR check against the focus set.
+        // To keep it simple and robust: If focusNode is set, we let enterFocusMode handle opacity.
+        // But wait, updateVisibility resets opacity.
+        // So we need logic here:
+        if (d.id === focusNode.id) return true;
+        if (d.isFocusVisible) return true; // We will tag nodes in enterFocusMode
+        return false;
+    }
+
     const minDegree = parseInt(controls.minDegree.value);
     const showOrphans = controls.showOrphans.checked;
     const term = controls.search.value.toLowerCase();
@@ -807,6 +820,219 @@ function dragged(event, d) {
 
 function dragended(event, d) {
   if (!event.active) simulation.alphaTarget(0);
-  d.fx = null;
-  d.fy = null;
-}
+  // In Focus Mode, we want nodes to stay where they are (or where layout put them)
+  if (!focusNode) {
+        d.fx = null;
+        d.fy = null;
+      }
+      
+      // Focus Mode Logic
+      document.getElementById('btn-exit-focus').addEventListener('click', exitFocusMode);
+      
+      // Wire up click event to nodes
+      // We need to re-bind the click event or add it to the existing selection
+      // Since 'node' is a selection of groups 'g', we can add it.
+      // Note: We used 'click' for drill-down in Cluster Mode.
+      // In Node Mode, we want Focus Mode.
+      node.on("click", (event, d) => {
+          // If in Cluster Mode, ignore (handled by updateViewMode logic)
+          const viewMode = document.querySelector('input[name="viewMode"]:checked').value;
+          if (viewMode === 'nodes') {
+              enterFocusMode(d);
+              event.stopPropagation();
+          }
+      });
+      
+      function enterFocusMode(focusD) {
+          if (focusNode && focusNode.id === focusD.id) return; // Already focused
+          focusNode = focusD;
+          
+          // 1. UI Updates
+          document.getElementById('focus-exit-btn').style.display = 'flex';
+          document.getElementById('focus-node-name').innerText = focusD.label;
+          document.getElementById('controls').style.opacity = '0.3'; // Dim controls
+          document.getElementById('controls').style.pointerEvents = 'none'; // Disable controls
+          
+          // 2. Identify Nodes
+          const superiors = []; // Outgoing: Focus -> Target (Superior)
+          const subordinates = []; // Incoming: Source -> Focus (Subordinate)
+          
+          links.forEach(l => {
+              if (l.source.id === focusD.id) superiors.push(l.target);
+              if (l.target.id === focusD.id) subordinates.push(l.source);
+          });
+          
+          const uniqueSup = [...new Set(superiors)];
+          const uniqueSub = [...new Set(subordinates)];
+          
+          // 3. Intra-layer Sorting
+          // Sort by Degree Ratio (Out/In) as a proxy for "importance" or "flow"
+          const sortFn = (a, b) => {
+              const ratioA = (a.outDegree || 0) / ((a.inDegree || 1));
+              const ratioB = (b.outDegree || 0) / ((b.inDegree || 1));
+              return ratioB - ratioA; // Descending
+          };
+          uniqueSup.sort(sortFn);
+          uniqueSub.sort(sortFn);
+          
+          // 4. Layout Calculation
+          const cx = width / 2;
+          const cy = height / 2;
+          const layerGap = 250; // Considerable distance
+          
+          // Helper to spread nodes
+          const spreadNodes = (nodeList, y) => {
+              const count = nodeList.length;
+              if (count === 0) return;
+              
+              // Dynamic width based on count, maxing at screen width * 0.8
+              const spreadWidth = Math.min(width * 0.9, Math.max(count * 80, 200)); 
+              const startX = cx - spreadWidth / 2;
+              const step = count > 1 ? spreadWidth / (count - 1) : 0;
+              
+              nodeList.forEach((n, i) => {
+                  n.fx = count === 1 ? cx : startX + i * step;
+                  n.fy = y;
+                  n.isFocusVisible = true;
+              });
+          };
+          
+          // Focus Node
+          focusD.fx = cx;
+          focusD.fy = cy;
+          focusD.isFocusVisible = true;
+          
+          // Superiors (Out-degree) -> Top
+          spreadNodes(uniqueSup, cy - layerGap);
+          
+          // Subordinates (In-degree) -> Bottom
+          spreadNodes(uniqueSub, cy + layerGap);
+          
+          // Associated Nodes (High Correlation, e.g., > 0.5 weight, not direct)
+          // For now, let's keep it simple: Only show Direct Connections as requested by "Superior/Subordinate" logic first.
+          // The prompt says "only nodes that meet specific conditions... correlation scores > threshold OR having direct... highlighted".
+          // Let's check for strong associations that are NOT direct neighbors.
+          // Since we don't have easy access to non-neighbor edges without scanning all links:
+          
+          const associated = [];
+          links.forEach(l => {
+              if ((l.source.id === focusD.id || l.target.id === focusD.id) && l.weight > 0.6) { // High threshold
+                   const other = l.source.id === focusD.id ? l.target : l.source;
+                   if (!uniqueSup.includes(other) && !uniqueSub.includes(other)) {
+                       associated.push(other);
+                   }
+              }
+          });
+          
+          // Place associated nodes on sides
+          if (associated.length > 0) {
+              const left = [];
+              const right = [];
+              associated.forEach((n, i) => {
+                  n.isFocusVisible = true;
+                  if (i % 2 === 0) left.push(n);
+                  else right.push(n);
+              });
+              
+              const sideGap = 200;
+              left.forEach((n, i) => {
+                  n.fx = cx - sideGap - 100 - (i * 60);
+                  n.fy = cy + (i % 2 === 0 ? -20 : 20);
+              });
+              right.forEach((n, i) => {
+                  n.fx = cx + sideGap + 100 + (i * 60);
+                  n.fy = cy + (i % 2 === 0 ? -20 : 20);
+              });
+          }
+      
+          // 5. Apply Updates
+          simulation.stop(); // Stop physics to enforce layout
+          
+          // Hide Lines
+          link.style("display", "none");
+          
+          // Update Nodes
+          updateVisibility(); // Will use isFocusVisible
+          
+          // Animate to positions
+          node.each(function(d) {
+              if (isNodeVisible(d)) {
+                  d3.select(this).transition().duration(750)
+                      .attr("transform", `translate(${d.fx},${d.fy})`);
+                      
+                  if (d.id === focusD.id) {
+                      // Enlarge Focus Node
+                      d3.select(this).select("circle")
+                          .transition().duration(750)
+                          .attr("r", 25)
+                          .attr("fill", "#ffd700")
+                          .attr("stroke", "#fff")
+                          .attr("stroke-width", "3px");
+                      d3.select(this).select("text")
+                          .transition().duration(750)
+                          .attr("font-size", "16px")
+                          .attr("font-weight", "bold")
+                          .attr("fill", "#fff");
+                  } else {
+                      // Style Neighbors
+                      const isSup = uniqueSup.includes(d);
+                      const isSub = uniqueSub.includes(d);
+                      const color = isSup ? "#4ecdc4" : (isSub ? "#ff6b6b" : "#aaa");
+                      
+                      d3.select(this).select("circle")
+                          .transition().duration(750)
+                          .attr("r", 8)
+                          .attr("fill", color);
+                  }
+              } else {
+                   // Clear fx/fy for hidden nodes so they don't get stuck if we switch back
+                   d.fx = null;
+                   d.fy = null;
+                   d.isFocusVisible = false;
+              }
+          });
+          
+          // Restart simulation gently to handle any manual drag interactions if needed, 
+          // but keep alpha low or forces off?
+          // Actually, if we want them fixed, we leave them fixed.
+          // If user drags, 'dragged' updates fx/fy.
+          simulation.alpha(0.1).restart();
+      }
+      
+      function exitFocusMode() {
+          focusNode = null;
+          
+          // Reset UI
+          document.getElementById('focus-exit-btn').style.display = 'none';
+          document.getElementById('controls').style.opacity = '1';
+          document.getElementById('controls').style.pointerEvents = 'all';
+          
+          // Show Lines
+          link.style("display", "block");
+          
+          // Release Positions
+          nodes.forEach(d => {
+              d.fx = null;
+              d.fy = null;
+              d.isFocusVisible = false;
+          });
+          
+          // Reset Visibility & Styles
+          updateVisibility(); 
+          updateSize(); 
+          updateColor();
+          
+          // Reset Text/Circle Styles for all
+          node.selectAll("text")
+              .transition().duration(500)
+              .attr("font-size", "10px")
+              .attr("font-weight", "normal")
+              .attr("fill", "#ccc");
+              
+          node.selectAll("circle")
+              .transition().duration(500)
+              .attr("stroke-width", "1.5px");
+          
+          // Restart Simulation
+          simulation.alpha(1).restart();
+      }}
