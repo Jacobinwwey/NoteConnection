@@ -39,6 +39,37 @@ body {
     width: 240px;
 }
 
+/* Focus Mode Button */
+#focus-exit-btn {
+    position: absolute;
+    top: 20px;
+    left: 50%; /* Center */
+    transform: translateX(-50%);
+    background: rgba(45, 45, 45, 0.95);
+    padding: 10px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    z-index: 100; /* Higher than controls */
+    border: 1px solid #61dafb;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#focus-exit-btn button {
+    background: #2c5282;
+    color: white;
+    border: none;
+    padding: 5px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+#focus-exit-btn button:hover {
+    background: #3b6b9e;
+}
+
 h3 {
     margin: 0 0 10px 0;
     font-size: 1.2rem;

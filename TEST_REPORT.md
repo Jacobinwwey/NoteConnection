@@ -337,3 +337,43 @@
 *   **Results**:
     *   Query for `Absorption` returned `attenuation` (Score 0.29) and `Reflection` (Score 0.16).
     *   Verified that semantically related concepts can be associated without explicit links.
+
+# Test Report (2025-12-19 v0.6.2)
+
+## English Document
+
+### 1. Interactive Focus Mode
+*   **Component**: `app.js` (Frontend).
+*   **Feature**: Focus Mode (Deep Dive).
+*   **Manual Verification Steps**:
+    1.  **Entry**: Clicked on node "Absorption".
+    2.  **Visuals**:
+        *   Node enlarged and centered.
+        *   "Exit Focus Mode" button appeared with label "Absorption".
+        *   Unrelated nodes faded out.
+    3.  **Layout**:
+        *   Verified that neighbors with Outgoing edges (Superiors) moved to the TOP layer.
+        *   Verified that neighbors with Incoming edges (Subordinates) moved to the BOTTOM layer.
+    4.  **Sorting**: Observed that nodes in the same layer were spread out and sorted by importance (degree ratio).
+    5.  **Exit**: Clicked "Exit Focus Mode" button. Graph returned to original state (Force layout, all nodes visible).
+*   **Result**: PASS.
+
+---
+
+## 中文文档 (Chinese Document)
+
+### 1. 交互式专注模式
+*   **组件**: `app.js` (前端)。
+*   **特性**: 专注模式 (深度探索)。
+*   **手动验证步骤**:
+    1.  **进入**: 点击节点 "Absorption" (吸收)。
+    2.  **视觉效果**:
+        *   节点放大并居中。
+        *   "Exit Focus Mode" 按钮出现，标签为 "Absorption"。
+        *   不相关的节点淡出。
+    3.  **布局**:
+        *   验证具有出度边的邻居（上级）移动到**上**层。
+        *   验证具有入度边的邻居（下级）移动到**下**层。
+    4.  **排序**: 观察到同一层中的节点展开并按重要性（度数比）排序。
+    5.  **退出**: 点击 "Exit Focus Mode" 按钮。图谱恢复到原始状态（力导向布局，所有节点可见）。
+*   **结果**: 通过 (PASS)。

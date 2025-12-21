@@ -12,6 +12,7 @@
 <body>
     <!-- Top Graph Area -->
     <div id="graph-wrapper">
+        <button id="exit-focus-btn" style="display: none;">Exit Focus Mode</button>
         <div style="position: absolute; top: 10px; right: 20px; z-index: 1000;">
             <select id="lang-select" style="background: #333; color: white; border: 1px solid #555; padding: 2px;">
                 <option value="en">English</option>
@@ -89,6 +90,12 @@
                 <button id="save-layout-btn" style="margin-top: 5px; width: 100%; padding: 5px; cursor: pointer; background: #333; color: white; border: 1px solid #555; border-radius: 4px;" data-i18n="save_layout">Save Layout (JSON)</button>
                 <button id="analysis-btn" style="margin-top: 5px; width: 100%; padding: 5px; cursor: pointer; background: #2c5282; color: white; border: 1px solid #555; border-radius: 4px;" data-i18n="analysis_export">Analysis & Export</button>
             </div>
+        </div>
+
+        <!-- Focus Mode Exit Button -->
+        <div id="focus-exit-btn" style="display: none;">
+            <span id="focus-node-name" style="color: #61dafb; font-weight: bold;"></span>
+            <button id="btn-exit-focus">Exit Focus Mode</button>
         </div>
 
         <div id="graph-container">

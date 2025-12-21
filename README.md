@@ -27,7 +27,12 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 *   **Hybrid Analysis**: Combines explicit links (`[[WikiLink]]`), YAML frontmatter (`prerequisites:`), and statistical/vector patterns.
 <img width="3723" height="1992" alt="image" src="https://github.com/user-attachments/assets/9e56e567-1742-48cf-b720-cf65a47fd317" />
 
-### 4. Platform Agnostic & Future-Proof
+### 4. Interactive Focus Mode (v0.6.2)
+*   **Deep Dive**: Click any node to isolate it and its immediate context.
+*   **Hierarchical View**: Automatically arranges connections into **Superior** (Out-degree) and **Subordinate** (In-degree) layers.
+*   **Contextual Filtering**: Highlights relevant paths while dimming noise.
+
+### 5. Platform Agnostic & Future-Proof
 *   **Pure TypeScript**: Runs directly on your file system.
 *   **Data Sovereignty**: Export your graph as JSON, SVG, or ZIP.
 *   **Bilingual**: Native support for **English** and **Chinese**.
@@ -86,7 +91,12 @@ Open `src/frontend/index.html` in your modern web browser (Chrome/Edge/Firefox).
 *   **混合分析**: 结合显式链接 (`[[WikiLink]]`)、YAML 元数据 (`prerequisites:`) 和统计/向量模式。
 <img width="3723" height="2007" alt="image" src="https://github.com/user-attachments/assets/10978984-3e2d-4ab6-8b44-342d4f3c3800" />
 
-### 4. 跨平台与面向未来
+### 4. 交互式专注模式 (Focus Mode - v0.6.2)
+*   **深度探索**: 点击任意节点以隔离它及其直接上下文。
+*   **层级视图**: 自动将连接排列为**上级**（出度）和**下级**（入度）层。
+*   **上下文过滤**: 高亮显示相关路径，同时降低噪音。
+
+### 5. 跨平台与面向未来
 *   **纯 TypeScript**: 直接在文件系统上运行。
 *   **数据主权**: 将图谱导出为 JSON, SVG 或 ZIP。
 *   **双语支持**: 原生支持**英文**和**中文**。
