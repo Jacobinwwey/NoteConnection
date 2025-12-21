@@ -348,7 +348,10 @@ const translations = {
         grp_reading: "阅读窗口",
         lbl_reading_mode: "打开模式",
         opt_window: "窗口",
-        opt_fullscreen: "全屏"
+        opt_fullscreen: "全屏",
+        
+        // Focus Mode
+        exit_focus: "退出专注模式"
     },
     en: {
         show_all: "Show All",
@@ -418,7 +421,10 @@ const translations = {
         grp_reading: "Reading Window",
         lbl_reading_mode: "Open Mode",
         opt_window: "Window",
-        opt_fullscreen: "Full Screen"
+        opt_fullscreen: "Full Screen",
+        
+        // Focus Mode
+        exit_focus: "Exit Focus Mode"
     }
 };
 
