@@ -71,16 +71,25 @@ class Reader {
             // Re-configure for robustness & High Contrast
             mermaid.initialize({ 
                 startOnLoad: false, 
-                theme: 'base', // Use base to allow full variable override or 'dark'
+                theme: 'dark', // Switch to 'dark' base for better defaults
                 themeVariables: {
                     darkMode: true,
-                    background: '#1e1e1e',
-                    primaryColor: '#2d2d2d',
-                    primaryTextColor: '#ffffff', // Pure white text
-                    primaryBorderColor: '#61dafb', // App accent
-                    lineColor: '#aaa',
+                    background: '#1e1e1e', // Match app bg
+                    mainBkg: '#1e1e1e',    // Container bg
+                    
+                    // Node Colors (High Contrast)
+                    primaryColor: '#2d2d2d', 
+                    primaryTextColor: '#ffffff',
+                    primaryBorderColor: '#61dafb',
+                    
+                    // Edges & Arrows
+                    lineColor: '#a0a0a0',
                     secondaryColor: '#333',
-                    tertiaryColor: '#333'
+                    tertiaryColor: '#2d2d2d',
+                    
+                    // Text
+                    textColor: '#ffffff',
+                    fontSize: '16px' // Bump base size
                 },
                 securityLevel: 'loose', // Allow HTML in nodes
                 htmlLabels: true
