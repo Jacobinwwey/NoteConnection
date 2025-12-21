@@ -91,7 +91,9 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ### 2026-06-01 v1.0.0 - Production Release (Hybrid & Polish)
 
-- [x] **Hybrid Judgment Engine**
+**Goal**: Combine statistical and vectorized methods to infer dependencies and associations where explicit metadata is missing.
+
+- [x] **Hybrid Judgment Engine (v0.6.5)**
     - [x] Combine Vector Similarity (for relevance) + Statistical Probability (for direction).
     - [x] Rule: If `Similarity(A, B) > Threshold` AND `P(B|A) >> P(A|B)`, suggest edge `A -> B`.
 

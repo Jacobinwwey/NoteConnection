@@ -48,7 +48,7 @@ Run the backend to scan your notes (default: `testconcept`) and generate the gra
 # Install dependencies
 npm install
 
-# Build the graph (Enable inference in src/backend/config.ts)
+# Build the graph (Inference enabled by default)
 npx ts-node src/index.ts
 ```
 

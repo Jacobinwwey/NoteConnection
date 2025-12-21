@@ -180,6 +180,29 @@ Renders the JSON data into an interactive DAG.
         *   **In-degree**: Show incoming degree count.
     *   **Localization (v0.1.9)**: Supports English ('en') and Chinese ('zh').
 
+### 3. Inference Engines (v0.6.5)
+
+#### `StatisticalAnalyzer`
+Infers dependencies based on co-occurrence and probability asymmetry.
+
+*   **Function**: `analyze(files: RawFile[], terms: string[]): Matrix`
+*   **Logic**: Calculates $P(A|B)$ and $P(B|A)$.
+*   **Metric**: Asymmetry = $P(Parent|Child) - P(Child|Parent)$.
+
+#### `VectorSpace`
+Calculates semantic similarity using TF-IDF and Cosine Similarity.
+
+*   **Tokenizer**: Bilingual (English words + Chinese characters).
+*   **Function**: `getSimilar(fileId, topK)`
+*   **Output**: List of similar files with score.
+
+#### `HybridEngine`
+Combines statistical and vector methods to infer directed edges.
+
+*   **Rule**: Suggest Edge $A \rightarrow B$ if:
+    1.  $Similarity(A, B) > VectorThreshold$ (Content Relevance)
+    2.  $P(A|B) - P(B|A) > AsymmetryThreshold$ (Directionality: B implies A context)
+
 ---
 ---
 
@@ -414,6 +437,31 @@ Renders the JSON data into an interactive DAG.
         links: D3Link[];
     }
     ```
+
+## 4. 推断引擎 (Inference Engines - v0.6.5)
+
+本节定义了用于推断隐式连接的算法接口。
+
+### 4.1 统计分析器 (`StatisticalAnalyzer`)
+基于共现和概率不对称性推断依赖关系。
+
+*   **函数**: `analyze(files: RawFile[], terms: string[]): Matrix`
+*   **逻辑**: 计算 $P(A|B)$ 和 $P(B|A)$。
+*   **指标**: 不对称性 = $P(Parent|Child) - P(Child|Parent)$。
+
+### 4.2 向量空间 (`VectorSpace`)
+使用 TF-IDF 和余弦相似度计算语义相似度。
+
+*   **分词器**: 双语支持（英文单词 + 中文字符）。
+*   **函数**: `getSimilar(fileId, topK)`
+*   **输出**: 带有分数的相似文件列表。
+
+### 4.3 混合引擎 (`HybridEngine`)
+结合统计和向量方法推断有向边。
+
+*   **规则**: 如果满足以下条件，建议边 $A \rightarrow B$：
+    1.  $Similarity(A, B) > VectorThreshold$ (内容相关性)
+    2.  $P(A|B) - P(B|A) > AsymmetryThreshold$ (方向性：B 暗示 A 语境)
 
 
 ```
