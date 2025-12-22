@@ -20,6 +20,13 @@
     <!-- Top Graph Area -->
     <div id="graph-wrapper">
         <button id="exit-focus-btn" style="display: none;">Exit Focus Mode</button>
+        <div id="source-control" style="position: absolute; top: 10px; left: 20px; z-index: 1000; display: flex; gap: 5px;">
+            <select id="folder-select" style="background: #333; color: white; border: 1px solid #555; padding: 2px;">
+                <option value="" disabled selected>Select Knowledge Base...</option>
+                <option value="ALL_FOLDERS">All Folders</option>
+            </select>
+            <button id="btn-load-source" style="background: #2c5282; color: white; border: 1px solid #555; padding: 2px 8px; cursor: pointer;">Load</button>
+        </div>
         <div style="position: absolute; top: 10px; right: 20px; z-index: 1000;">
             <select id="lang-select" style="background: #333; color: white; border: 1px solid #555; padding: 2px;">
                 <option value="en">English</option>
@@ -248,5 +255,6 @@
     <script src="reader.js"></script>
     <script src="app.js"></script>
     <script src="analysis.js"></script>
+    <script src="source_manager.js"></script>
 </body>
 </html>
