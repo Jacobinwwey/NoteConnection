@@ -438,7 +438,20 @@ Combines statistical and vector methods to infer directed edges.
     }
     ```
 
-## 4. 推断引擎 (Inference Engines - v0.6.5)
+## 4. Server API (v0.8.5)
+
+### 4.1 Endpoints
+
+#### `GET /api/folders`
+Lists available knowledge base directories.
+*   **Response**: `{ "folders": ["testconcept", "folder2"] }`
+
+#### `POST /api/build`
+Triggers a graph build for the specified target.
+*   **Body**: `{ "target": "testconcept" }` or `{ "target": "" }` (for all).
+*   **Response**: `{ "success": true }` or `{ "success": false, "error": "..." }`
+
+## 5. Inference Engines (Inference Engines - v0.6.5)
 
 本节定义了用于推断隐式连接的算法接口。
 

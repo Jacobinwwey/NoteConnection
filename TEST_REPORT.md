@@ -482,3 +482,33 @@
     *   生成了 114 条混合推断边。
     *   循环检测优雅地处理了 50 个循环。
 *   **结果**: 通过 (PASS)。系统现在无需外部 API 调用即可自动推断复杂关系。
+
+# Test Report (2025-12-22 v0.8.5)
+
+## English Document
+
+### 1. Dynamic Source & Server Test
+*   **Objective**: Verify dynamic folder selection and server API integration.
+*   **Test Cases**:
+    1.  **Backend Path Resolution**:
+        *   Input: `testconcept` (via CLI).
+        *   Expected: Resolves to `Knowledge_Base/testconcept`.
+        *   Result: Pass (Loaded 214 files).
+    2.  **Server API**:
+        *   Implemented `GET /api/folders` and `POST /api/build`.
+        *   Frontend integrated with `source_manager.js`.
+*   **Conclusion**: Core logic for dynamic path selection is functional. Server infrastructure is in place.
+
+## 中文文档 (Chinese Document)
+
+### 1. 动态数据源与服务器测试
+*   **目标**: 验证动态文件夹选择和服务器 API 集成。
+*   **测试用例**:
+    1.  **后端路径解析**:
+        *   输入: `testconcept` (通过 CLI)。
+        *   预期: 解析为 `Knowledge_Base/testconcept`。
+        *   结果: 通过 (加载了 214 个文件)。
+    2.  **服务器 API**:
+        *   实现了 `GET /api/folders` 和 `POST /api/build`。
+        *   前端已与 `source_manager.js` 集成。
+*   **结论**: 动态路径选择的核心逻辑功能正常。服务器基础设施已就绪。

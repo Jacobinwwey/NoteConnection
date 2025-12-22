@@ -97,6 +97,17 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - Use LLMs to verify high-confidence candidates from the hybrid engine.
     - Task: "Given statistical evidence, confirm if A is a prerequisite for B."
 
+    - [ ] **Release**: Package for v1.0.0.
+
+### 2025-12-22 v0.8.5 - Dynamic Data Source & Server
+
+**Goal**: Support dynamic selection of knowledge base folders and independent server deployment.
+
+- [x] **Dynamic Path Selection**
+    - [x] Backend: Support variable input paths under `Knowledge_Base`.
+    - [x] Server: Implement `http` server for API (`/api/folders`, `/api/build`) and static serving.
+    - [x] Frontend: Add UI to list and select knowledge base folders.
+
 ### 2026-06-01 v1.0.0 - Production Release
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.
