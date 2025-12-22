@@ -1,4 +1,4 @@
-# 2025-12-21 v0.6.5
+# 2025-12-22 v0.8.5
 
 # Project Build Plan: Progressive Hierarchical Knowledge Graph
 
@@ -97,8 +97,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - Use LLMs to verify high-confidence candidates from the hybrid engine.
     - Task: "Given statistical evidence, confirm if A is a prerequisite for B."
 
-    - [ ] **Release**: Package for v1.0.0.
-
 ### 2025-12-22 v0.8.5 - Dynamic Data Source & Server
 
 **Goal**: Support dynamic selection of knowledge base folders and independent server deployment.
@@ -124,6 +122,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
         - [x] **Interaction**: Zoom text and Resize images (Unlocked mode).
         - [x] **Config**: Window/Fullscreen toggle.
     - [ ] **Finalize Documentation**: Complete User Manual and Developer Guide.
+    - [ ] **Final Polish & Demo Packaging**: Ensure zero-config startup (`npm start`) works seamlessly for promotion.
     - [ ] **Release**: Package for v1.0.0.
 
 ---
@@ -225,6 +224,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - 使用 LLM 验证来自混合引擎的高置信度候选项。
     - 任务：“给定统计证据，确认 A 是否为 B 的先决条件。”
 
+### 2025-12-22 v0.8.5 - 动态数据源与服务器 (Dynamic Data Source & Server)
+
+**目标**: 支持动态选择知识库文件夹和独立服务器部署。
+
+- [x] **动态路径选择**
+    - [x] 后端: 支持 `Knowledge_Base` 下的可变输入路径。
+    - [x] 服务器: 实现用于 API (`/api/folders`, `/api/build`) 和静态服务的 `http` 服务器。
+    - [x] 前端: 添加 UI 以列出和选择知识库文件夹。
+
 ### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
 
 **目标**: 完成与 Joplin/Obsidian 插件的集成并打磨用户体验。
@@ -241,4 +249,5 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
         - [x] **交互**: 缩放文本和调整图片大小（解锁模式）。
         - [x] **配置**: 窗口/全屏切换。
     - [ ] **完善文档**: 完成用户手册和开发人员指南。
+    - [ ] **最终打磨与演示打包**: 确保零配置启动 (`npm start`) 无缝工作以用于推广。
     - [ ] **发布**: 打包 v1.0.0。
