@@ -198,6 +198,9 @@ Renders the JSON data into an interactive DAG.
             *   **Settings Integration**: Language selector moved to Settings modal to save screen space.
         *   **Touch Gestures**:
             *   **Reader**: Implements `touchstart`/`touchmove` for 2-finger pinch-to-zoom (scales `fontSize`).
+    *   **Interaction Logic (v0.9.3)**:
+        *   **Highlight/Tooltip**: Triggered by **MouseOver** (Desktop) or **Single Click** (Mobile/Desktop).
+        *   **Focus Mode**: Triggered by **Double Click**.
 
     *   **Scalability Defaults (v0.8.8)**:
         *   **Orphans**: Hidden by default.
@@ -459,6 +462,9 @@ Transforms the web project into a standalone Android APK.
             *   **设置集成**: 语言选择器移至设置模态框以节省屏幕空间。
         *   **触摸手势**:
             *   **阅读器**: 实现 `touchstart`/`touchmove` 以支持双指捏合缩放 (调整 `fontSize`)。
+    *   **交互逻辑 (v0.9.3)**:
+        *   **高亮/提示框**: 由 **鼠标悬停 (MouseOver)** (桌面端) 或 **单击 (Single Click)** (移动/桌面端) 触发。
+        *   **专注模式**: 由 **双击 (Double Click)** 触发。
     *   **可扩展性默认值 (v0.8.8)**:
         *   **孤立节点**: 默认隐藏。
         *   **边**: 默认隐藏 (透明度 0)，悬停/选择时可见。

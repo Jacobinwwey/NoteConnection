@@ -665,9 +665,10 @@ if (freezeLayoutCheckbox) {
 
 // Interactions
 let transform = d3.zoomIdentity;
+let clickTimer = null;
 
-// Highlight Logic
-node.on("mouseover", function(event, d) {
+// Highlight Logic (Extracted)
+function highlightNode(d, event) {
     // 1. Lock position to prevent drift while inspecting
     if (!focusNode && !freezeLayoutCheckbox.checked) {
         d.fx = d.x;
@@ -685,7 +686,9 @@ node.on("mouseover", function(event, d) {
     link.style("opacity", 0); // Hide all first
 
     // Highlight current
-    d3.select(this).style("opacity", 1).classed("highlight-main", true);
+    // Note: 'this' might not be the element if called programmatically, so we use selection by ID or class if needed.
+    // But since we have 'd', we can select based on data.
+    node.filter(n => n.id === d.id).style("opacity", 1).classed("highlight-main", true);
 
     // Find neighbors
     const connectedLinks = links.filter(l => l.source.id === d.id || l.target.id === d.id);
@@ -715,16 +718,20 @@ node.on("mouseover", function(event, d) {
         .style("opacity", 1);
 
     // Tooltip
-    tooltip.transition().duration(200).style("opacity", .9);
-    tooltip.html(`
-        <strong>${d.label}</strong><br/>
-        In-Degree: ${d.inDegree}<br/>
-        Out-Degree: ${d.outDegree}
-    `)
-    .style("left", (event.pageX + 10) + "px")
-    .style("top", (event.pageY - 28) + "px");
+    // If event is provided (mouse/click), position tooltip
+    if (event) {
+        tooltip.transition().duration(200).style("opacity", .9);
+        tooltip.html(`
+            <strong>${d.label}</strong><br/>
+            In-Degree: ${d.inDegree}<br/>
+            Out-Degree: ${d.outDegree}
+        `)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 28) + "px");
+    }
+}
 
-}).on("mouseout", function(event, d) {
+function unhighlightNode(d) {
     // 1. Unlock position (unless focused or globally frozen)
     if (!focusNode && !freezeLayoutCheckbox.checked) {
         d.fx = null;
@@ -737,34 +744,61 @@ node.on("mouseover", function(event, d) {
 
     // Reset styles to filtered state
     tooltip.transition().duration(500).style("opacity", 0);
-    d3.select(this).classed("highlight-main", false);
+    node.classed("highlight-main", false);
     link.classed("highlight-out", false).classed("highlight-in", false);
     updateVisibility(); // Restore visibility based on filters
+}
+
+// Bind Events
+node.on("mouseover", function(event, d) {
+    highlightNode(d, event);
+}).on("mouseout", function(event, d) {
+    // We only unhighlight on mouseout if we didn't "click-lock" it? 
+    // The requirement says "conditions... need to change from... cursor to click".
+    // If I keep mouseout, the click effect vanishes when moving mouse away (desktop).
+    // On mobile, there is no mouseout usually unless tapping elsewhere.
+    // For robustness: Just use unhighlight.
+    unhighlightNode(d);
 });
 
-// Canvas Setup
-const canvas = document.getElementById('graph-canvas');
-const ctx = canvas.getContext('2d');
-let currentTransform = d3.zoomIdentity;
+// Click & Double Click Logic
+node.on("click", (event, d) => {
+    // If in Cluster Mode, ignore (handled by updateViewMode logic)
+    const viewMode = document.querySelector('input[name="viewMode"]:checked').value;
+    if (viewMode !== 'nodes') return;
 
-// Resize Canvas
-function resizeCanvas() {
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
-    if (document.querySelector('input[name="rendererMode"]:checked').value === 'canvas') {
-        ticked();
+    if (clickTimer) {
+        clearTimeout(clickTimer);
+        clickTimer = null;
+        // Double Click Detected
+        handleDoubleClick(event, d);
+    } else {
+        clickTimer = setTimeout(() => {
+            clickTimer = null;
+            // Single Click Detected
+            handleSingleClick(event, d);
+        }, 250); // 250ms delay to wait for potential second click
+    }
+    event.stopPropagation();
+});
+
+function handleSingleClick(event, d) {
+    // Requirement: Click displays in-degree/out-degree (Highlight)
+    // We explicitly trigger highlight.
+    // This is useful for mobile where there is no hover.
+    highlightNode(d, event);
+}
+
+function handleDoubleClick(event, d) {
+    // Requirement: Double Click enters Focus Mode
+    if (focusNode && focusNode.id === d.id) {
+        // Already focused -> Open Reader
+        if (window.reader) window.reader.open(d);
+    } else {
+        // Enter Focus Mode
+        enterFocusMode(d);
     }
 }
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
-
-// Canvas Zoom
-d3.select(canvas).call(d3.zoom()
-    .scaleExtent([0.1, 8])
-    .on("zoom", (event) => {
-        currentTransform = event.transform;
-        ticked();
-    }));
 
 
 // Simulation Tick
@@ -1125,6 +1159,7 @@ function dragended(event, d) {
   }
 }
 
+// Old click listener removed.
 // Focus Mode Logic
 document.getElementById('btn-exit-focus').addEventListener('click', exitFocusMode);
 document.getElementById('focus-spacing-slider').addEventListener('input', () => {
@@ -1134,25 +1169,6 @@ document.getElementById('focus-h-spacing-slider').addEventListener('input', () =
     if (focusNode) enterFocusMode(focusNode); // Re-calculate layout
 });
       
-      // Wire up click event to nodes
-      // We need to re-bind the click event or add it to the existing selection
-      // Since 'node' is a selection of groups 'g', we can add it.
-      // Note: We used 'click' for drill-down in Cluster Mode.
-      // In Node Mode, we want Focus Mode or Reader.
-      node.on("click", (event, d) => {
-          // If in Cluster Mode, ignore (handled by updateViewMode logic)
-          const viewMode = document.querySelector('input[name="viewMode"]:checked').value;
-          if (viewMode === 'nodes') {
-              if (focusNode && focusNode.id === d.id) {
-                  // Clicked on ALREADY focused node -> Open Reader
-                  if (window.reader) window.reader.open(d);
-              } else {
-                  // Enter Focus Mode
-                  enterFocusMode(d);
-              }
-              event.stopPropagation();
-          }
-      });
       
       function enterFocusMode(focusD) {
     // If we re-enter (e.g. slider change), we don't return early unless it's strictly same state

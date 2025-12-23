@@ -175,6 +175,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **Pinch-to-Zoom**: Added multi-touch support in Reading Window for text scaling.
     - [x] **Touch Targets**: Enlarged buttons and inputs for touch accuracy.
 
+### 2025-12-23 v0.9.3 - Mobile Interaction Iteration
+
+**Goal**: Refine interaction logic for mobile usability.
+
+- [x] **Interaction Logic Update**
+    - [x] **Single Click**: Triggers node highlight and tooltip (In/Out Degree display).
+    - [x] **Double Click**: Triggers Focus Mode entry.
+    - [x] **Desktop Compatibility**: Preserved `mouseover` for desktop hover while unifying click logic.
+
 ### 2026-06-01 v1.0.0 - Production Release
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.
