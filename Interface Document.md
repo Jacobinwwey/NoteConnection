@@ -10,21 +10,23 @@ This document defines the core interfaces for the NoteConnection system, separat
 
 ### 1.1 Data Ingestion
 
-#### `IFileLoader`
-Responsible for reading raw files from the file system.
+#### `IFileLoader` (Updated v0.8.6)
+Responsible for reading raw files from the file system asynchronously.
 
-*   **Function**: `loadFiles(directory: string): Promise<RawFile[]>`
+*   **Function**: `loadFiles(directory: string, extensions?: string[]): Promise<RawFile[]>`
 *   **Input**:
     *   `directory` (string): Absolute path to the concept directory.
+    *   `extensions` (string[]): Optional file extensions to filter (default: `['.md']`).
 *   **Output**:
     *   `Promise<RawFile[]>`: Array of loaded file objects.
+*   **Concurrency**: Implements batch processing to handle large file counts without exhausting file handles.
 *   **Type Definitions**:
     ```typescript
     interface RawFile {
         filepath: string;  // Full path
         filename: string;  // Name with extension
         content: string;   // File body
-        modifiedTime: Date; // Last modification time
+        modifiedTime?: Date; // Last modification time (optional)
     }
     ```
 
@@ -216,21 +218,23 @@ Combines statistical and vector methods to infer directed edges.
 
 ### 1.1 数据摄取 (Data Ingestion)
 
-#### `IFileLoader`
-负责从文件系统读取原始文件。
+#### `IFileLoader` (更新于 v0.8.6)
+负责从文件系统异步读取原始文件。
 
-*   **函数**: `loadFiles(directory: string): Promise<RawFile[]>`
+*   **函数**: `loadFiles(directory: string, extensions?: string[]): Promise<RawFile[]>`
 *   **输入**:
     *   `directory` (string): 概念目录的绝对路径。
+    *   `extensions` (string[]): 可选的文件扩展名过滤 (默认: `['.md']`)。
 *   **输出**:
     *   `Promise<RawFile[]>`: 加载的文件对象数组。
+*   **并发性**: 实现批量处理以在不耗尽文件句柄的情况下处理大量文件。
 *   **类型定义**:
     ```typescript
     interface RawFile {
         filepath: string;  // 完整路径
         filename: string;  // 带后缀的文件名
         content: string;   // 文件内容
-        modifiedTime: Date; // 最后修改时间
+        modifiedTime?: Date; // 最后修改时间 (可选)
     }
     ```
 
@@ -437,6 +441,33 @@ Combines statistical and vector methods to infer directed edges.
         links: D3Link[];
     }
     ```
+
+### 3.4 Parallel Processing (v0.8.6)
+
+#### `GraphBuilder.runParallelMatching`
+Utilizes Node.js `worker_threads` to parallelize the computationally expensive keyword matching process.
+
+*   **Logic**:
+    *   Detects available CPU cores.
+    *   Spawns workers (capped at 4 for stability).
+    *   Splits the file list into chunks.
+    *   Workers perform `checkMatch` (shared logic) against the full list of target IDs.
+    *   Results are aggregated in the main thread.
+*   **Worker Interface**:
+    ```typescript
+    interface WorkerData {
+        filesChunk: RawFile[];
+        targetIds: string[];
+        strategy: 'exact-phrase' | 'fuzzy';
+        exclusionList: string[];
+    }
+    
+    interface MatchResult {
+        source: string;
+        target: string;
+    }
+    ```
+*   **Fallback**: Automatically degrades to sequential processing if worker spawning fails.
 
 ## 4. Server API (v0.8.5)
 

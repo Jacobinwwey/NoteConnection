@@ -57,7 +57,7 @@ export async function buildGraph(targetPath?: string) {
       }
   }
 
-  const graph = GraphBuilder.build(files, layoutMap);
+  const graph = await GraphBuilder.build(files, layoutMap);
   const data = graph.toJSON();
   
   console.log(`Graph built: ${data.nodes.length} nodes, ${data.edges.length} edges.`);

@@ -46,3 +46,22 @@ export function isSimilar(a: string, b: string, threshold: number = 2): boolean 
     if (Math.abs(a.length - b.length) > threshold) return false;
     return levenshtein(a.toLowerCase(), b.toLowerCase()) <= threshold;
 }
+
+/**
+ * Checks if the content contains the term based on the provided strategy.
+ * 根据提供的策略检查内容是否包含术语。
+ * @param content The text content to search within
+ * @param term The term to search for
+ * @param strategy 'exact-phrase' or 'fuzzy'
+ */
+export function checkMatch(content: string, term: string, strategy: 'exact-phrase' | 'fuzzy' = 'exact-phrase'): boolean {
+    if (strategy === 'exact-phrase') {
+        const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`\\b${escapedTerm}\\b`, 'i');
+        return regex.test(content);
+    } else if (strategy === 'fuzzy') {
+        // Simple inclusion as per original logic
+        return content.toLowerCase().includes(term.toLowerCase());
+    }
+    return false;
+}

@@ -19,7 +19,7 @@ export class FileLoader {
    * @param extensions File extensions to include (e.g., ['.md']) | 要包含的文件扩展名
    */
   static async loadFiles(dirPath: string, extensions: string[] = ['.md']): Promise<RawFile[]> {
-    const results: RawFile[] = [];
+    const filePaths: string[] = [];
     
     // Check if directory exists
     if (!fs.existsSync(dirPath)) {
@@ -27,26 +27,55 @@ export class FileLoader {
       return [];
     }
 
-    const files = fs.readdirSync(dirPath);
-
-    for (const file of files) {
-      const fullPath = path.join(dirPath, file);
-      const stat = fs.statSync(fullPath);
-
-      if (stat.isDirectory()) {
-        const subFiles = await FileLoader.loadFiles(fullPath, extensions);
-        results.push(...subFiles);
-      } else {
-        const ext = path.extname(file).toLowerCase();
-        if (extensions.includes(ext)) {
-          const content = fs.readFileSync(fullPath, 'utf-8');
-          results.push({
-            filepath: fullPath,
-            filename: path.basename(file, ext), // ID is usually filename without ext
-            content: content
-          });
+    // 1. Gather all file paths first (Sequential directory scan is safer for handles)
+    async function scanDir(currentPath: string) {
+        // Use withFileTypes to avoid extra stat calls
+        try {
+            const entries = await fs.promises.readdir(currentPath, { withFileTypes: true });
+            for (const entry of entries) {
+                const fullPath = path.join(currentPath, entry.name);
+                if (entry.isDirectory()) {
+                    await scanDir(fullPath);
+                } else if (entry.isFile()) {
+                    const ext = path.extname(entry.name).toLowerCase();
+                    if (extensions.includes(ext)) {
+                        filePaths.push(fullPath);
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn(`Failed to read directory: ${currentPath}`, e);
         }
-      }
+    }
+
+    await scanDir(dirPath);
+
+    // 2. Read files with concurrency limit
+    const results: RawFile[] = [];
+    const CONCURRENCY_LIMIT = 100; // Conservative limit
+
+    // Helper to process in batches
+    for (let i = 0; i < filePaths.length; i += CONCURRENCY_LIMIT) {
+        const batch = filePaths.slice(i, i + CONCURRENCY_LIMIT);
+        const batchPromises = batch.map(async (fullPath) => {
+            try {
+                const content = await fs.promises.readFile(fullPath, 'utf-8');
+                const filename = path.basename(fullPath, path.extname(fullPath));
+                return {
+                    filepath: fullPath,
+                    filename: filename,
+                    content: content
+                };
+            } catch (e) {
+                console.warn(`Failed to read file: ${fullPath}`, e);
+                return null;
+            }
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        batchResults.forEach(res => {
+            if (res) results.push(res);
+        });
     }
 
     return results;
