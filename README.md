@@ -1,4 +1,4 @@
-# 2025-12-23 v0.8.6
+# 2025-12-23 v0.9.0
 
 # NoteConnection: Hierarchical Knowledge Graph Visualization System
 > **Unlock the Structure of Your Knowledge.**
@@ -110,7 +110,7 @@ npm start
 ---
 ---
 
-# 2025-12-23 v0.8.6
+# 2025-12-23 v0.9.0
 
 # NoteConnection: 层级知识图谱可视化系统
 > **解锁你知识库的深层结构。**
