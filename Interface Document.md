@@ -201,6 +201,10 @@ Renders the JSON data into an interactive DAG.
     *   **Interaction Logic (v0.9.3)**:
         *   **Highlight/Tooltip**: Triggered by **MouseOver** (Desktop) or **Single Click** (Mobile/Desktop).
         *   **Focus Mode**: Triggered by **Double Click**.
+    *   **Mermaid Zoom (v0.9.4)**:
+        *   **Trigger**: Click on any rendered Mermaid diagram in the Reader.
+        *   **Interface**: Full-screen modal with independent Pan/Zoom (unlimited scaling).
+        *   **Exit**: dedicated '×' button.
 
     *   **Scalability Defaults (v0.8.8)**:
         *   **Orphans**: Hidden by default.
@@ -465,6 +469,10 @@ Transforms the web project into a standalone Android APK.
     *   **交互逻辑 (v0.9.3)**:
         *   **高亮/提示框**: 由 **鼠标悬停 (MouseOver)** (桌面端) 或 **单击 (Single Click)** (移动/桌面端) 触发。
         *   **专注模式**: 由 **双击 (Double Click)** 触发。
+    *   **Mermaid 缩放 (v0.9.4)**:
+        *   **触发**: 点击阅读器中任何已渲染的 Mermaid 图表。
+        *   **界面**: 全屏模态框，具有独立的平移/缩放功能（无限制缩放）。
+        *   **退出**: 专用的 '×' 按钮。
     *   **可扩展性默认值 (v0.8.8)**:
         *   **孤立节点**: 默认隐藏。
         *   **边**: 默认隐藏 (透明度 0)，悬停/选择时可见。

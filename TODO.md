@@ -184,6 +184,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **Double Click**: Triggers Focus Mode entry.
     - [x] **Desktop Compatibility**: Preserved `mouseover` for desktop hover while unifying click logic.
 
+### 2025-12-23 v0.9.4 - Mermaid Image Optimization
+
+**Goal**: Enhance reading experience for diagrams on mobile devices.
+
+- [x] **Mermaid Zoom Mode**
+    - [x] **Interaction**: Clicking a Mermaid diagram opens a full-screen overlay.
+    - [x] **Gestures**: Implemented Pan (drag) and Zoom (pinch/wheel) logic within the overlay.
+    - [x] **UX**: Added a prominent Exit button to close the zoom mode.
+
 ### 2026-06-01 v1.0.0 - Production Release
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.
