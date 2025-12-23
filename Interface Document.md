@@ -183,6 +183,12 @@ Renders the JSON data into an interactive DAG.
         *   **Canvas**: High-performance raster rendering for large datasets (>2000 nodes). Supports Zoom/Pan.
     *   **Focus Mode Enhancements (v0.8.7)**:
         *   **Dynamic Spacing**: User adjustable `layerGap` via UI slider (50px - 500px).
+    *   **Focus Mode Enhancements (v0.8.8)**:
+        *   **Horizontal Spacing**: User adjustable `hSpacing` via UI slider (20px - 300px).
+    *   **Scalability Defaults (v0.8.8)**:
+        *   **Orphans**: Hidden by default.
+        *   **Edges**: Hidden by default (opacity 0), visible on Hover/Select.
+        *   **Node Size**: Defaults to 'Degree'.
     *   **Degree Analysis (v0.1.2)**:
         *   **In-degree**: Show incoming degree count.
     *   **Localization (v0.1.9)**: Supports English ('en') and Chinese ('zh').
@@ -367,6 +373,12 @@ Combines statistical and vector methods to infer directed edges.
         *   **Canvas**: 高性能光栅渲染，适用于大数据集 (>2000 节点)。支持缩放/平移。
     *   **专注模式增强 (v0.8.7)**:
         *   **动态间距**: 用户可通过 UI 滑块调整 `layerGap` (50px - 500px)。
+    *   **专注模式增强 (v0.8.8)**:
+        *   **水平间距**: 用户可通过 UI 滑块调整 `hSpacing` (20px - 300px)。
+    *   **可扩展性默认值 (v0.8.8)**:
+        *   **孤立节点**: 默认隐藏。
+        *   **边**: 默认隐藏 (透明度 0)，悬停/选择时可见。
+        *   **节点大小**: 默认为“度数”。
     *   **Degree Analysis (v0.1.2)**:
         *   **In-degree**: 显示入度（作为先决条件被引用的次数）。
         *   **Out-degree**: 显示出度（引用的先决条件数量）。

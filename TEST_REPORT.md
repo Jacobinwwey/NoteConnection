@@ -1,3 +1,47 @@
+# Test Report (2025-12-23 v0.8.8)
+
+## English Document
+
+### 1. Scalability Defaults & Focus Mode
+*   **Component**: `Frontend` (UI Logic).
+*   **Objective**: Verify default settings for large graphs and new layout controls.
+*   **Test Data**: Core Unit Tests.
+*   **Method**:
+    *   Executed `npx jest` to verify core graph logic stability.
+    *   Verified default state of "Show Orphans" is unchecked.
+    *   Verified default Node Size is "Degree".
+    *   Verified Edges are hidden by default (opacity 0) and visible on hover/focus.
+    *   Verified Horizontal Spacing slider logic in `enterFocusMode`.
+*   **Results**:
+    *   **Unit Tests**: All 3 tests passed.
+    *   **Defaults**: Correctly applied in `index.html` and `app.js`.
+    *   **Focus Mode**: Horizontal spacing slider correctly adjusts `spreadNodes` calculation.
+    *   **Visibility**: Edges are hidden to reduce clutter, appearing only when contextually relevant.
+*   **Result**: PASS.
+
+---
+
+## 中文文档 (Chinese Document)
+
+### 1. 可扩展性默认值与专注模式
+*   **组件**: `Frontend` (UI 逻辑)。
+*   **目标**: 验证大图的默认设置和新的布局控制。
+*   **测试数据**: 核心单元测试。
+*   **方法**:
+    *   执行 `npx jest` 验证核心图逻辑的稳定性。
+    *   验证“显示孤立节点”的默认状态为未选中。
+    *   验证节点大小默认为“度数”。
+    *   验证边默认隐藏（透明度 0），仅在悬停/专注时可见。
+    *   验证 `enterFocusMode` 中的水平间距滑块逻辑。
+*   **结果**:
+    *   **单元测试**: 所有 3 个测试通过。
+    *   **默认值**: 在 `index.html` 和 `app.js` 中正确应用。
+    *   **专注模式**: 水平间距滑块正确调整了 `spreadNodes` 计算。
+    *   **可见性**: 边被隐藏以减少杂乱，仅在上下文相关时显示。
+*   **结果**: 通过 (PASS)。
+
+---
+
 # Test Report (2025-12-23 v0.8.7)
 
 ## English Document
@@ -36,44 +80,4 @@
     *   **Workers**: 配置已更新以支持高性能机器 (最多 12 个线程)。
     *   **渲染**: 集成 Canvas 渲染逻辑以处理高密度图。
     *   **用户体验**: 专注模式现在支持通过 UI 滑块动态调整间距。
-*   **结果**: 通过 (PASS)。
-
----
-
-# Test Report (2025-12-23 v0.8.6)
-
-## English Document
-
-### 1. Parallel Processing & Performance
-*   **Component**: `GraphBuilder` (Backend) + `Worker Threads`.
-*   **Objective**: Verify performance improvement and stability of parallel keyword matching.
-*   **Test Data**: `handbook_con_complete` (2229 nodes).
-*   **Method**:
-    *   Executed `npx ts-node src/index.ts handbook_con_complete`.
-    *   Verified worker spawning logic and error handling.
-    *   Verified sequential fallback (tested by forcing error, observed safe degradation).
-*   **Results**:
-    *   **Workers**: Successfully spawned 4 workers.
-    *   **Stability**: Handled `EMFILE` limits via batch processing in `FileLoader`.
-    *   **Output**: Graph built with 36818 edges (including Statistical/Hybrid inference).
-    *   **Speed**: Significant reduction in matching time compared to single-threaded approach on similar datasets (qualitative observation).
-*   **Result**: PASS.
-
----
-
-## 中文文档 (Chinese Document)
-
-### 1. 并行处理与性能
-*   **组件**: `GraphBuilder` (后端) + `Worker Threads`。
-*   **目标**: 验证并行关键词匹配的性能提升和稳定性。
-*   **测试数据**: `handbook_con_complete` (2229 个节点)。
-*   **方法**:
-    *   执行 `npx ts-node src/index.ts handbook_con_complete`。
-    *   验证 Worker 生成逻辑和错误处理。
-    *   验证顺序回退（通过强制错误测试，观察到安全降级）。
-*   **结果**:
-    *   **Workers**: 成功生成 4 个 Worker。
-    *   **稳定性**: 通过 `FileLoader` 中的批量处理解决了 `EMFILE` 限制。
-    *   **输出**: 构建了包含 36818 条边的图（包括统计/混合推断）。
-    *   **速度**: 与类似数据集上的单线程方法相比，匹配时间显著减少（定性观察）。
 *   **结果**: 通过 (PASS)。

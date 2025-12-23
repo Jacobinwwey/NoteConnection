@@ -730,13 +730,30 @@ function renderCanvas(layoutMode) {
     ctx.scale(currentTransform.k, currentTransform.k);
 
     // Draw Links
-    ctx.globalAlpha = settingsManager.settings.visuals.edgeOpacity || 0.6;
-    ctx.strokeStyle = "#555";
+    // Logic: Default Hidden (0). Visible if Focus Mode OR Hover.
+    // We iterate links and check visibility per link.
     ctx.lineWidth = 1;
 
     links.forEach(d => {
         // Check Visibility
-        if (d.source.isFocusVisible === false || d.target.isFocusVisible === false) return; // Simple check
+        // 1. Focus Mode
+        if (focusNode) {
+            if (d.source.isFocusVisible === false || d.target.isFocusVisible === false) return;
+            ctx.globalAlpha = 0.6;
+            ctx.strokeStyle = "#555";
+        } 
+        // 2. Hover Mode (Global hoverNode variable needed)
+        else if (window.hoverNode) {
+             if (d.source.id === window.hoverNode.id || d.target.id === window.hoverNode.id) {
+                 ctx.globalAlpha = 0.8;
+                 ctx.strokeStyle = "#888"; // Highlight color
+             } else {
+                 return; // Hide others
+             }
+        }
+        else {
+            return; // Default Hidden
+        }
 
         ctx.beginPath();
         if (layoutMode === 'dag') {
@@ -763,13 +780,20 @@ function renderCanvas(layoutMode) {
         if (!isNodeVisible(d)) return;
 
         ctx.beginPath();
-        const r = d.id === (focusNode ? focusNode.id : null) ? 25 : (d.centrality ? Math.max(3, Math.sqrt(d.centrality) * 3) : 5);
+        const isHover = window.hoverNode && window.hoverNode.id === d.id;
+        const isFocus = focusNode && focusNode.id === d.id;
+        
+        let r = isFocus ? 25 : (d.centrality ? Math.max(3, Math.sqrt(d.centrality) * 3) : 5);
+        if (isHover) r += 2; // Slight enlarge on hover
+
         ctx.arc(d.x, d.y, r, 0, 2 * Math.PI);
         
         // Color
-        ctx.fillStyle = d.id === (focusNode ? focusNode.id : null) ? "#ffd700" : "#61dafb"; // Simplified color
-        // Use computed color if possible, but accessing D3 scale is easy
-        if (d.id !== (focusNode ? focusNode.id : null)) {
+        if (isFocus) {
+            ctx.fillStyle = "#ffd700";
+        } else if (isHover) {
+            ctx.fillStyle = "#ffaa00";
+        } else {
              const mode = document.querySelector('input[name="colorMode"]:checked').value;
              if (mode === 'cluster') ctx.fillStyle = colorScaleCluster(d.clusterId || 'unknown');
              else ctx.fillStyle = colorScaleDegree(getDegree(d));
@@ -781,9 +805,10 @@ function renderCanvas(layoutMode) {
         ctx.stroke();
 
         // Label
-        if (d.id === (focusNode ? focusNode.id : null) || currentTransform.k > 1.2) {
+        // Show if Focus, Hover, or Zoomed in
+        if (isFocus || isHover || currentTransform.k > 1.2) {
             ctx.fillStyle = "#ccc";
-            ctx.font = d.id === (focusNode ? focusNode.id : null) ? "bold 16px Sans-Serif" : "10px Sans-Serif";
+            ctx.font = isFocus ? "bold 16px Sans-Serif" : "10px Sans-Serif";
             ctx.fillText(d.label, d.x + 8, d.y + 4);
         }
     });
@@ -873,9 +898,21 @@ function updateVisibility() {
         .style("pointer-events", d => isNodeVisible(d) ? "all" : "none");
 
     link.style("opacity", d => {
-        const sourceVis = isNodeVisible(d.source);
-        const targetVis = isNodeVisible(d.target);
-        return (sourceVis && targetVis) ? 0.6 : 0.05;
+        // If in Focus Mode, show connections to focus node
+        if (focusNode) {
+            const isConnected = d.source.id === focusNode.id || d.target.id === focusNode.id;
+            // Also show edges between visible nodes in focus mode? 
+            // The requirement says "Context Filtering: Show only direct neighbors".
+            // So edges between visible nodes should be fine.
+            const sourceVis = isNodeVisible(d.source);
+            const targetVis = isNodeVisible(d.target);
+            return (sourceVis && targetVis) ? 0.6 : 0;
+        }
+        
+        // Default Mode: Hide edges (0 opacity) to reduce clutter, unless hover handles it.
+        // Hover logic in 'mouseover' sets opacity to 1.
+        // Here we set the "base" state.
+        return 0; 
     });
 }
 
@@ -988,6 +1025,9 @@ document.getElementById('btn-exit-focus').addEventListener('click', exitFocusMod
 document.getElementById('focus-spacing-slider').addEventListener('input', () => {
     if (focusNode) enterFocusMode(focusNode); // Re-calculate layout
 });
+document.getElementById('focus-h-spacing-slider').addEventListener('input', () => {
+    if (focusNode) enterFocusMode(focusNode); // Re-calculate layout
+});
       
       // Wire up click event to nodes
       // We need to re-bind the click event or add it to the existing selection
@@ -1067,17 +1107,22 @@ document.getElementById('focus-spacing-slider').addEventListener('input', () => 
     const cy = height / 2;
     // Get spacing from slider
     const layerGap = parseInt(document.getElementById('focus-spacing-slider').value) || 250; 
+    const hSpacing = parseInt(document.getElementById('focus-h-spacing-slider').value) || 80;
     
     const spreadNodes = (nodeList, baselineY) => {
         const count = nodeList.length;
         if (count === 0) return;
         
-        const spreadWidth = Math.min(width * 0.9, Math.max(count * 80, 200)); 
-        const startX = cx - spreadWidth / 2;
-        const step = count > 1 ? spreadWidth / (count - 1) : 0;
+        // Use H-Spacing slider to control width
+        // const spreadWidth = Math.min(width * 0.9, Math.max(count * 80, 200)); 
+        // New Logic: Fixed spacing from slider * count
+        // Center the group
+        
+        const totalWidth = (count - 1) * hSpacing;
+        const startX = cx - totalWidth / 2;
         
         nodeList.forEach((n, i) => {
-            n.fx = count === 1 ? cx : startX + i * step;
+            n.fx = count === 1 ? cx : startX + i * hSpacing;
             
             // Relative Height & Staggered Labels
             const stagger = (i % 2 === 0 ? -1 : 1) * 20; 

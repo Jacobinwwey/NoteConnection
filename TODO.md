@@ -126,6 +126,16 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] **Focus Mode UX**
     - [x] **Spacing Control**: Added UI slider to adjust node layer spacing.
 
+### 2025-12-23 v0.8.8 - Scalability Defaults & Advanced Layout
+
+**Goal**: Optimize default view for massive graphs and refine Focus Mode layout.
+
+- [x] **Scalability Defaults**
+    - [x] **Clutter Reduction**: Edges hidden by default; Orphans hidden by default.
+    - [x] **On-Demand Context**: Relationships revealed on Hover or Focus.
+- [x] **Focus Mode Enhancements**
+    - [x] **Horizontal Spacing**: Added control for horizontal node separation to prevent overlap.
+
 ### 2026-06-01 v1.0.0 - Production Release
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.
@@ -272,6 +282,16 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **双引擎**: 实现了 Canvas 渲染器，用于 10k+ 节点的高性能绘制。
 - [x] **专注模式 UX**
     - [x] **间距控制**: 添加了 UI 滑块以调整节点层间距。
+
+### 2025-12-23 v0.8.8 - 可扩展性默认值与高级布局 (Scalability Defaults & Advanced Layout)
+
+**目标**: 优化大规模图谱的默认视图并完善专注模式布局。
+
+- [x] **可扩展性默认值**
+    - [x] **减少杂乱**: 默认隐藏边和孤立节点。
+    - [x] **按需上下文**: 仅在悬停或专注时显示关系。
+- [x] **专注模式增强**
+    - [x] **水平间距**: 添加了水平节点分隔控制以防止重叠。
 
 ### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
 
