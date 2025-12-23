@@ -91,6 +91,16 @@
                 <label style="font-size: 0.9rem;"><input type="radio" name="layoutMode" value="dag"> <span data-i18n="layout_dag">DAG (Hierarchical)</span></label>
             </div>
 
+            <div class="simulation-controls" style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px;">
+                <span style="font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 3px;" data-i18n="simulation">Simulation:</span>
+                <label style="display: flex; align-items: center; margin-bottom: 5px;">
+                    <input type="checkbox" id="freeze-layout"> 
+                    <span style="margin-left: 5px; font-size: 0.9rem;" data-i18n="freeze_layout">Freeze Layout</span>
+                </label>
+                <label style="font-size: 0.8rem; color: #aaa; display: block;"><span data-i18n="speed">Speed (Damping):</span> <span id="sim-speed-val">0.4</span></label>
+                <input type="range" id="sim-speed-slider" min="0" max="1" step="0.01" value="0.4" style="width: 100%;">
+            </div>
+
             <div class="advanced-controls" style="margin-top: 15px; border-top: 1px solid #555; padding-top: 10px;">
                 <label style="font-size: 0.9rem; color: #aaa;"><span data-i18n="min_degree">Min Degree:</span> <span id="min-degree-val">0</span></label>
                 <input type="range" id="min-degree-slider" min="0" max="20" value="0" style="width: 100%;">

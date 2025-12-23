@@ -352,7 +352,12 @@ const translations = {
         
         // Focus Mode
         exit_focus: "退出专注模式",
-        auto_arrange: "自动排列"
+        auto_arrange: "自动排列",
+        
+        // Simulation
+        simulation: "物理模拟",
+        freeze_layout: "冻结布局 (停止刷新)",
+        speed: "速度 (阻尼):"
     },
     en: {
         show_all: "Show All",
@@ -425,7 +430,12 @@ const translations = {
         opt_fullscreen: "Full Screen",
         
         // Focus Mode
-        exit_focus: "Exit Focus Mode"
+        exit_focus: "Exit Focus Mode",
+        
+        // Simulation
+        simulation: "Simulation",
+        freeze_layout: "Freeze Layout",
+        speed: "Speed (Damping):"
     }
 };
 
@@ -613,16 +623,60 @@ document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
 });
 
 
+// Simulation Controls
+const simSpeedSlider = document.getElementById('sim-speed-slider');
+const simSpeedVal = document.getElementById('sim-speed-val');
+const freezeLayoutCheckbox = document.getElementById('freeze-layout');
+
+if (simSpeedSlider) {
+    simSpeedSlider.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        simSpeedVal.innerText = val;
+        // D3 velocityDecay: 1 = frictionless, 0 = frozen? No.
+        // D3: velocityDecay(0.4) is default. 
+        // We map slider 0-1 to reasonable decay. 
+        // Let's treat slider as "Friction": 1 = high friction (stop), 0 = low friction.
+        // Actually, d3.velocityDecay corresponds to (1 - friction) per tick.
+        // Standard range [0, 1]. 
+        simulation.velocityDecay(val);
+        simulation.alphaTarget(0.3).restart();
+    });
+}
+
+if (freezeLayoutCheckbox) {
+    freezeLayoutCheckbox.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            simulation.stop();
+            // Optional: Fix all nodes in place to be sure?
+            // simulation.nodes().forEach(d => { d.fx = d.x; d.fy = d.y; });
+        } else {
+            // Release nodes? Only if we fixed them. 
+            // For now, just restart.
+            simulation.alphaTarget(0.3).restart();
+        }
+    });
+}
+
 // Interactions
 let transform = d3.zoomIdentity;
 
 // Highlight Logic
 node.on("mouseover", function(event, d) {
+    // 1. Lock position to prevent drift while inspecting
+    if (!focusNode && !freezeLayoutCheckbox.checked) {
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    // 2. Global Hover State
+    window.hoverNode = d;
+    ticked(); // Force render update for Canvas to show hover edges
+
     const mode = document.querySelector('input[name="mode"]:checked').value;
     
     // Dim all
     node.style("opacity", 0.1);
-    link.style("opacity", 0.1);
+    link.style("opacity", 0); // Hide all first
 
     // Highlight current
     d3.select(this).style("opacity", 1).classed("highlight-main", true);
@@ -664,7 +718,17 @@ node.on("mouseover", function(event, d) {
     .style("left", (event.pageX + 10) + "px")
     .style("top", (event.pageY - 28) + "px");
 
-}).on("mouseout", function() {
+}).on("mouseout", function(event, d) {
+    // 1. Unlock position (unless focused or globally frozen)
+    if (!focusNode && !freezeLayoutCheckbox.checked) {
+        d.fx = null;
+        d.fy = null;
+    }
+
+    // 2. Clear Hover State
+    window.hoverNode = null;
+    ticked();
+
     // Reset styles to filtered state
     tooltip.transition().duration(500).style("opacity", 0);
     d3.select(this).classed("highlight-main", false);
@@ -1020,7 +1084,10 @@ function dragended(event, d) {
   // So if in Focus Mode, we simply RETAIN the fx/fy set during drag.
   // If NOT in Focus Mode (Force Layout), we release them to the simulation.
   
-  if (!focusNode) {
+  // v0.9.0: Also check Freeze Layout. If frozen, we treat it like Focus Mode (manual placement).
+  const isFrozen = document.getElementById('freeze-layout').checked;
+
+  if (!focusNode && !isFrozen) {
         d.fx = null;
         d.fy = null;
   }

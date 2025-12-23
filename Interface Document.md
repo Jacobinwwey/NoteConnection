@@ -187,6 +187,10 @@ Renders the JSON data into an interactive DAG.
         *   **Horizontal Spacing**: User adjustable `hSpacing` via UI slider (20px - 300px).
     *   **Focus Mode Enhancements (v0.8.9)**:
         *   **Position Lock**: Nodes in Focus Mode retain their position after dragging (Freeze on Select) to prevent layout drift.
+    *   **Simulation Controls (v0.9.0)**:
+        *   **Freeze Layout**: Checkbox to stop the physics simulation completely. Allows manual positioning without snap-back.
+        *   **Speed (Damping)**: Slider (0-1) to control `velocityDecay`. Higher values = more friction (slower movement).
+        *   **Hover Lock**: Hovering a node temporarily locks its position to prevent drift during inspection.
     *   **Scalability Defaults (v0.8.8)**:
         *   **Orphans**: Hidden by default.
         *   **Edges**: Hidden by default (opacity 0), visible on Hover/Select.
@@ -379,6 +383,10 @@ Combines statistical and vector methods to infer directed edges.
         *   **水平间距**: 用户可通过 UI 滑块调整 `hSpacing` (20px - 300px)。
     *   **专注模式增强 (v0.8.9)**:
         *   **位置锁定**: 专注模式下的节点在拖动后保留其位置（选中冻结），以防止布局漂移。
+    *   **模拟控制 (v0.9.0)**:
+        *   **冻结布局**: 用于完全停止物理模拟的复选框。允许手动定位而不回弹。
+        *   **速度 (阻尼)**: 滑块 (0-1) 用于控制 `velocityDecay`。较高值 = 更多摩擦（移动更慢）。
+        *   **悬停锁定**: 悬停节点时暂时锁定其位置，以防止检查期间的漂移。
     *   **可扩展性默认值 (v0.8.8)**:
         *   **孤立节点**: 默认隐藏。
         *   **边**: 默认隐藏 (透明度 0)，悬停/选择时可见。

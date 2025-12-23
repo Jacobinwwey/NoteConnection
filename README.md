@@ -10,6 +10,16 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
+### 2025-12-23 v0.9.0 - Precise Control & Stability
+
+**Goal**: Empower users with fine-grained control over graph physics and stability.
+
+- [x] **Hover Lock**
+    - [x] **Inspection Stability**: Hovering over a node now temporarily locks its position, preventing it from drifting away while you are trying to read connections.
+- [x] **Simulation Controls**
+    - [x] **Freeze Switch**: Toggle to completely pause the simulation, allowing for stable manual arrangement.
+    - [x] **Speed/Damping Slider**: Adjust the physics friction (`velocityDecay`) to slow down chaotic graphs or speed up convergence.
+
 ### 2025-12-23 v0.8.9 - Stability Improvements
 
 **Goal**: Enhance observation stability during deep analysis.
@@ -112,6 +122,16 @@ npm start
 <img width="3543" height="2159" alt="image" src="https://github.com/user-attachments/assets/0b2d80f5-ec8c-4ac1-9607-b925d4ab5f82" />
 
 ---
+
+### 2025-12-23 v0.9.0 - 精确控制与稳定性
+
+**目标**: 赋予用户对图谱物理和稳定性的细粒度控制权。
+
+- [x] **悬停锁定**
+    - [x] **检查稳定性**: 悬停在节点上现在会暂时锁定其位置，防止其在您尝试阅读连接时漂移。
+- [x] **模拟控制**
+    - [x] **冻结开关**: 切换以完全暂停模拟，允许稳定的手动排列。
+    - [x] **速度/阻尼滑块**: 调整物理摩擦力 (`velocityDecay`) 以减缓混乱的图表或加速收敛。
 
 ### 2025-12-23 v0.8.9 - 稳定性改进
 
