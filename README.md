@@ -1,6 +1,8 @@
 # NoteConnection: Hierarchical Knowledge Graph Visualization System
 > **Unlock the Structure of Your Knowledge.**
 
+[![npm version](https://badge.fury.io/js/noteconnection.svg)](https://badge.fury.io/js/noteconnection)
+
 **NoteConnection** is a high-performance, standalone visualization system engineered to transform unstructured Markdown knowledge bases into **Directed Acyclic Graphs (DAGs)**.
 
 Unlike traditional "network" views that show a messy web of links, NoteConnection reveals the **hierarchy**, **learning paths**, and **dependency structures** hidden within your notes. It is built for scalability, capable of handling tens of thousands of nodes with ease, and operates completely independently of any specific note-taking app.
@@ -15,18 +17,15 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 *   **Structure Over Chaos**: Switch between **Force-Directed** (Physics) and **DAG** (Hierarchical) layouts. The DAG layout automatically identifies "Prerequisites" and "Next Steps" to arrange concepts in logical layers.
 *   **Dual Rendering Engine (v0.8.7)**: Seamlessly toggle between **SVG** (for interactivity) and **Canvas** (for high-performance rendering of 10,000+ nodes).
 *   **Interactive Focus Mode**: Click any node to isolate it and its context. Features **Freeze on Select** (v0.8.9) to prevent drift and adjustable **Vertical/Horizontal Spacing** (v0.8.8) to prevent overlap.
-
 <img width="2010" height="2011" alt="image" src="https://github.com/user-attachments/assets/52785445-20bf-4ecc-847a-23863f291b6a" />
 ### 2. Intelligence & Inference
 *   **Hybrid Inference Engine**: Combines **Statistical Probability** ($P(A|B)$) and **Vector Similarity** (TF-IDF) to infer hidden dependencies (e.g., "Fluorescence" implies "Photon") without external AI APIs.
 *   **Scalable Clustering**: Aggregates thousands of nodes into high-level "Concept Bubbles" based on folder structure or tags for a cleaner overview.
-
 <img width="3723" height="1992" alt="image" src="https://github.com/user-attachments/assets/9e56e567-1742-48cf-b720-cf65a47fd317" />
 ### 3. Performance & Control
 *   **High-Capacity Parallel Processing**: Utilizes Node.js `worker_threads` (up to 12 cores) to distribute computationally intensive keyword matching.
 *   **Simulation Controls (v0.9.0)**: Fine-tune the physics with a **Speed/Damping Slider** or use the **Freeze Layout** switch to stop the simulation for stable manual arrangement.
 *   **Hover Lock**: Hovering over a node temporarily locks its position, allowing for stable inspection of connections.
-
 <img width="2012" height="2024" alt="image" src="https://github.com/user-attachments/assets/e5e4c42d-54a7-463c-bc43-0feb42469a12" />
 
 ---
@@ -54,16 +53,26 @@ NoteConnection is built on a modular architecture designed for performance and e
 
 ## 📦 Quick Start
 
-### 1. Installation
+### Option 1: Run with npx (Recommended)
+No installation required.
 ```bash
-npm install
+npx noteconnection
 ```
 
-### 2. Run the Server
-Launch the integrated server. This allows you to browse and build graphs from your browser.
+### Option 2: Global Installation
 ```bash
+npm install -g noteconnection
+noteconnection
+```
+
+### Option 3: Local Development
+```bash
+git clone https://github.com/your-repo/NoteConnection.git
+cd NoteConnection
+npm install
 npm start
 ```
+
 *   Server runs at: `http://localhost:3000`
 
 ### 3. Usage Guide
@@ -157,16 +166,26 @@ NoteConnection 基于模块化架构构建，旨在实现高性能和可扩展�
 
 ## 📦 快速开始
 
-### 1. 安装
+### 选项 1: 使用 npx 运行 (推荐)
+无需安装。
 ```bash
-npm install
+npx noteconnection
 ```
 
-### 2. 运行服务器
-启动集成服务器。这允许您从浏览器浏览和构建图谱。
+### 选项 2: 全局安装
 ```bash
+npm install -g noteconnection
+noteconnection
+```
+
+### 选项 3: 本地开发
+```bash
+git clone https://github.com/your-repo/NoteConnection.git
+cd NoteConnection
+npm install
 npm start
 ```
+
 *   服务器运行于: `http://localhost:3000`
 
 ### 3. 使用指南
@@ -177,6 +196,8 @@ npm start
     *   **渲染器**: 如果图表感觉迟缓，请切换到 **Canvas**。
     *   **专注**: 点击节点进入专注模式。使用滑块调整间距。
     *   **控制**: 使用 **Simulation** 面板冻结布局或调整速度。
+
+---
 
 ---
 
