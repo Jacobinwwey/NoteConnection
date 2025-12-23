@@ -1,3 +1,5 @@
+<img width="606" height="309" alt="banner" src="https://github.com/user-attachments/assets/92e90de5-2b1a-4398-8e8b-6e142c92b6a2" />
+
 # NoteConnection: Hierarchical Knowledge Graph Visualization System
 > **Unlock the Structure of Your Knowledge.**
 
@@ -109,6 +111,7 @@ npm start
 
 ---
 ---
+<img width="606" height="309" alt="banner" src="https://github.com/user-attachments/assets/92e90de5-2b1a-4398-8e8b-6e142c92b6a2" />
 
 # NoteConnection: 层级知识图谱可视化系统
 > **解锁你知识库的深层结构。**
