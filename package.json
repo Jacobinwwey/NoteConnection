@@ -1,14 +1,30 @@
 {
   "name": "noteconnection",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "0.9.0",
+  "description": "Hierarchical Knowledge Graph Visualization System",
+  "main": "dist/index.js",
+  "bin": {
+    "noteconnection": "dist/server.js"
+  },
   "scripts": {
     "start": "ts-node src/server.ts",
-    "build": "ts-node src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start:prod": "node dist/server.js",
+    "build": "tsc && node scripts/copy-assets.js",
+    "prepublishOnly": "npm run build",
+    "test": "jest"
   },
-  "keywords": [],
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "keywords": [
+    "knowledge-graph",
+    "visualization",
+    "markdown",
+    "dag",
+    "hierarchical"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
