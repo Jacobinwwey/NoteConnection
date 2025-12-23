@@ -914,6 +914,32 @@ controls.showOrphans.addEventListener('change', updateVisibility);
 controls.search.addEventListener('input', updateVisibility);
 controls.export.addEventListener('click', exportSVG);
 
+// Mobile: Toggle Controls Panel
+const controlsPanel = document.getElementById('controls');
+if (controlsPanel) {
+    controlsPanel.addEventListener('click', (e) => {
+        // Only toggle if strictly clicking the container (or the hamburger icon background)
+        // AND screen is small (checked via class or simple width check, but let's just toggle 'expanded' class)
+        // But we must NOT toggle if clicking an input/button inside
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.tagName === 'LABEL' || e.target.tagName === 'SELECT') {
+            return;
+        }
+        
+        // If it's already expanded, and we clicked "empty space" inside, we might want to keep it open.
+        // The requirement is to make it usable. A simple toggle on the "header" or just the container when collapsed is best.
+        // Since we hid children with opacity 0 when collapsed, clicking 'controls' when collapsed hits the div.
+        
+        if (!controlsPanel.classList.contains('expanded')) {
+            controlsPanel.classList.add('expanded');
+        } else {
+            // If clicking the header h3, toggle close?
+            if (e.target.tagName === 'H3' || e.target === controlsPanel) {
+               controlsPanel.classList.remove('expanded');
+            }
+        }
+    });
+}
+
 // Label Opacity Control
 const labelOpacitySlider = document.getElementById('label-opacity-slider');
 const labelOpacityVal = document.getElementById('label-opacity-val');

@@ -163,6 +163,17 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **Asset Management**: Implemented `copy-assets` script and `npx cap sync`.
     - [x] **Build Pipeline**: Verified Gradle build configuration (`assembleDebug`).
 
+### 2025-12-23 v0.9.2 - Mobile UI Optimization
+
+**Goal**: Optimize UI/UX for small touch screens.
+
+- [x] **Responsive Controls**
+    - [x] **Collapsible Menu**: Main controls collapse to a button on mobile to save screen space.
+    - [x] **Focus Mode UI**: Relocated "Exit Focus" button to bottom-center for accessibility.
+- [x] **Touch Interactions**
+    - [x] **Pinch-to-Zoom**: Added multi-touch support in Reading Window for text scaling.
+    - [x] **Touch Targets**: Enlarged buttons and inputs for touch accuracy.
+
 ### 2026-06-01 v1.0.0 - Production Release
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.

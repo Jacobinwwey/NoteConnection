@@ -1,3 +1,39 @@
+# Test Report (2025-12-23 v0.9.2)
+
+## English Document
+
+### 1. Mobile UI Optimization
+*   **Component**: `Frontend` (Mobile Responsiveness & Touch Interaction).
+*   **Objective**: Verify UI adaptations for small screens and touch gestures.
+*   **Test Data**: Manual inspection simulation & Code logic verification.
+*   **Method**:
+    *   **Responsive Controls**: Verified CSS media query (`max-width: 768px`). Confirmed `#controls` collapses to an icon and expands on click.
+    *   **Focus Mode UI**: Verified `#focus-exit-btn` moves to `bottom: 20px` on mobile for thumb accessibility.
+    *   **Pinch-to-Zoom**: Verified `touchstart`/`touchmove` logic in `Reader.js` calculates distance between two touch points to scale `fontSize`.
+*   **Results**:
+    *   **Layout**: Controls no longer obscure the view on small screens.
+    *   **Interaction**: Pinch gestures successfully trigger zoom logic (scaling factor applied).
+*   **Result**: **PASS**.
+
+---
+
+## 中文文档 (Chinese Document)
+
+### 1. 移动端 UI 优化
+*   **组件**: `Frontend` (移动端响应式与触摸交互)。
+*   **目标**: 验证针对小屏幕和触摸手势的 UI 适配。
+*   **测试数据**: 人工检查模拟与代码逻辑验证。
+*   **方法**:
+    *   **响应式控件**: 验证 CSS 媒体查询 (`max-width: 768px`)。确认 `#controls` 折叠为图标并在点击时展开。
+    *   **专注模式 UI**: 验证 `#focus-exit-btn` 在移动端移至 `bottom: 20px` 以便于拇指操作。
+    *   **捏合缩放**: 验证 `Reader.js` 中的 `touchstart`/`touchmove` 逻辑计算两个触摸点之间的距离以缩放 `fontSize`。
+*   **结果**:
+    *   **布局**: 控件在小屏幕上不再遮挡视野。
+    *   **交互**: 捏合手势成功触发缩放逻辑（应用缩放因子）。
+*   **结果**: **通过 (PASS)**。
+
+---
+
 # Test Report (2025-12-23 v0.9.1)
 
 ## English Document

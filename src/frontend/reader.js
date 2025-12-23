@@ -40,6 +40,51 @@ class Reader {
         if (window.mermaid) {
             mermaid.initialize({ startOnLoad: false, theme: 'dark' });
         }
+        
+        // Touch Gestures (Pinch to Zoom)
+        this.initTouchZoom();
+    }
+    
+    initTouchZoom() {
+        let initialDistance = 0;
+        let initialZoom = 1.0;
+        
+        this.body.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                initialDistance = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+                initialZoom = this.currentZoom;
+                e.preventDefault(); // Prevent default browser zoom if possible
+            }
+        }, { passive: false });
+
+        this.body.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                const currentDistance = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+                
+                if (initialDistance > 0) {
+                    const scale = currentDistance / initialDistance;
+                    // Apply relative to initial zoom of this gesture
+                    // We directly update currentZoom but might want to debounce render
+                    const newZoom = initialZoom * scale;
+                    // Clamp
+                    this.currentZoom = Math.max(0.5, Math.min(4.0, newZoom));
+                    this.updateZoom();
+                }
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        this.body.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                initialDistance = 0;
+            }
+        });
     }
 
     open(node) {
