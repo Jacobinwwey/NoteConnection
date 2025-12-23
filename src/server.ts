@@ -1,12 +1,12 @@
+#!/usr/bin/env node
 import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
 import { buildGraph } from './index';
 
 const PORT = 3000;
-const PROJECT_ROOT = path.resolve(__dirname, '..');
-const FRONTEND_DIR = path.join(PROJECT_ROOT, 'src', 'frontend');
-const KB_ROOT = path.join(PROJECT_ROOT, 'Knowledge_Base');
+const FRONTEND_DIR = path.join(__dirname, 'frontend');
+const KB_ROOT = path.join(process.cwd(), 'Knowledge_Base');
 
 const server = http.createServer(async (req, res) => {
     // CORS headers
