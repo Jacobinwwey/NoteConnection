@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NoteConnection</string>
+    <string name="title_activity_main">NoteConnection</string>
+    <string name="package_name">com.example.noteconnection</string>
+    <string name="custom_url_scheme">com.example.noteconnection</string>
+</resources>

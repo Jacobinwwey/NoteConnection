@@ -153,6 +153,16 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **Controls**: Add Speed slider and Freeze Layout toggle.
     - [x] **Manual Placement**: Allow manual node positioning when layout is frozen without auto-revert.
 
+### 2025-12-23 v0.9.1 - Mobile Transformation
+
+**Goal**: Transform the current web project into an Android APK application.
+
+- [x] **Capacitor Integration**
+    - [x] **Initialization**: Configured `capacitor.config.ts`.
+    - [x] **Platform Support**: Added Android platform via `@capacitor/android`.
+    - [x] **Asset Management**: Implemented `copy-assets` script and `npx cap sync`.
+    - [x] **Build Pipeline**: Verified Gradle build configuration (`assembleDebug`).
+
 ### 2026-06-01 v1.0.0 - Production Release
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.
@@ -326,6 +336,16 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] **模拟 UX**
     - [x] **控制**: 添加速度滑块和冻结布局切换。
     - [x] **手动放置**: 允许在布局冻结时手动定位节点而不自动恢复。
+
+### 2025-12-23 v0.9.1 - 移动端转换 (Mobile Transformation)
+
+**目标**: 将当前的 Web 项目转换为 Android APK 应用程序。
+
+- [x] **Capacitor 集成**
+    - [x] **初始化**: 配置了 `capacitor.config.ts`。
+    - [x] **平台支持**: 通过 `@capacitor/android` 添加了 Android 平台。
+    - [x] **资源管理**: 实现了 `copy-assets` 脚本和 `npx cap sync`。
+    - [x] **构建流水线**: 验证了 Gradle 构建配置 (`assembleDebug`)。
 
 ### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
 

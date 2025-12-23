@@ -222,6 +222,63 @@ Combines statistical and vector methods to infer directed edges.
     1.  $Similarity(A, B) > VectorThreshold$ (Content Relevance)
     2.  $P(A|B) - P(B|A) > AsymmetryThreshold$ (Directionality: B implies A context)
 
+### 3.4 Parallel Processing (v0.8.6)
+
+#### `GraphBuilder.runParallelMatching`
+Utilizes Node.js `worker_threads` to parallelize the computationally expensive keyword matching process.
+
+*   **Logic**:
+    *   Detects available CPU cores.
+    *   Spawns workers (capped at 4 for stability).
+    *   Splits the file list into chunks.
+    *   Workers perform `checkMatch` (shared logic) against the full list of target IDs.
+    *   Results are aggregated in the main thread.
+*   **Worker Interface**:
+    ```typescript
+    interface WorkerData {
+        filesChunk: RawFile[];
+        targetIds: string[];
+        strategy: 'exact-phrase' | 'fuzzy';
+        exclusionList: string[];
+    }
+    
+    interface MatchResult {
+        source: string;
+        target: string;
+    }
+    ```
+*   **Fallback**: Automatically degrades to sequential processing if worker spawning fails.
+
+## 4. Server API (v0.8.5)
+
+### 4.1 Endpoints
+
+#### `GET /api/folders`
+Lists available knowledge base directories.
+*   **Response**: `{ "folders": ["testconcept", "folder2"] }`
+
+#### `POST /api/build`
+Triggers a graph build for the specified target.
+*   **Body**: `{ "target": "testconcept" }` or `{ "target": "" }` (for all).
+*   **Response**: `{ "success": true }` or `{ "success": false, "error": "..." }`
+
+### 5. Mobile Build (v0.9.1)
+
+#### `Capacitor Pipeline`
+Transforms the web project into a standalone Android APK.
+
+*   **Component**: Capacitor Build System / Gradle.
+*   **Input**: 
+    *   `dist/frontend`: Static web assets (HTML, CSS, JS).
+    *   `src/frontend/data.js`: Pre-generated graph data (must be built before sync).
+*   **Output**: `android/app/build/outputs/apk/debug/app-debug.apk`.
+*   **Process**:
+    1.  **Data Generation**: `ts-node src/index.ts [target]` -> Generates `data.js`.
+    2.  **Asset Compilation**: `npm run build` -> Populates `dist/frontend`.
+    3.  **Sync**: `npx cap sync android` -> Copies `dist/frontend` to `android/app/src/main/assets/public`.
+    4.  **Native Build**: `gradlew assembleDebug` -> Compiles the APK.
+
+
 ---
 ---
 
@@ -476,46 +533,6 @@ Combines statistical and vector methods to infer directed edges.
     }
     ```
 
-### 3.4 Parallel Processing (v0.8.6)
-
-#### `GraphBuilder.runParallelMatching`
-Utilizes Node.js `worker_threads` to parallelize the computationally expensive keyword matching process.
-
-*   **Logic**:
-    *   Detects available CPU cores.
-    *   Spawns workers (capped at 4 for stability).
-    *   Splits the file list into chunks.
-    *   Workers perform `checkMatch` (shared logic) against the full list of target IDs.
-    *   Results are aggregated in the main thread.
-*   **Worker Interface**:
-    ```typescript
-    interface WorkerData {
-        filesChunk: RawFile[];
-        targetIds: string[];
-        strategy: 'exact-phrase' | 'fuzzy';
-        exclusionList: string[];
-    }
-    
-    interface MatchResult {
-        source: string;
-        target: string;
-    }
-    ```
-*   **Fallback**: Automatically degrades to sequential processing if worker spawning fails.
-
-## 4. Server API (v0.8.5)
-
-### 4.1 Endpoints
-
-#### `GET /api/folders`
-Lists available knowledge base directories.
-*   **Response**: `{ "folders": ["testconcept", "folder2"] }`
-
-#### `POST /api/build`
-Triggers a graph build for the specified target.
-*   **Body**: `{ "target": "testconcept" }` or `{ "target": "" }` (for all).
-*   **Response**: `{ "success": true }` or `{ "success": false, "error": "..." }`
-
 ## 5. Inference Engines (Inference Engines - v0.6.5)
 
 本节定义了用于推断隐式连接的算法接口。
@@ -540,6 +557,22 @@ Triggers a graph build for the specified target.
 *   **规则**: 如果满足以下条件，建议边 $A \rightarrow B$：
     1.  $Similarity(A, B) > VectorThreshold$ (内容相关性)
     2.  $P(A|B) - P(B|A) > AsymmetryThreshold$ (方向性：B 暗示 A 语境)
+
+### 5. 移动端构建 (Mobile Build - v0.9.1)
+
+#### `Capacitor Pipeline`
+将 Web 项目转换为独立的 Android APK。
+
+*   **组件**: Capacitor 构建系统 / Gradle。
+*   **输入**:
+    *   `dist/frontend`: 静态 Web 资源 (HTML, CSS, JS)。
+    *   `src/frontend/data.js`: 预生成的图数据 (必须在同步前构建)。
+*   **输出**: `android/app/build/outputs/apk/debug/app-debug.apk`。
+*   **流程**:
+    1.  **数据生成**: `ts-node src/index.ts [target]` -> 生成 `data.js`。
+    2.  **资源编译**: `npm run build` -> 填充 `dist/frontend`。
+    3.  **同步**: `npx cap sync android` -> 将 `dist/frontend` 复制到 `android/app/src/main/assets/public`。
+    4.  **原生构建**: `gradlew assembleDebug` -> 编译 APK。
 
 
 ```

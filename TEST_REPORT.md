@@ -1,3 +1,45 @@
+# Test Report (2025-12-23 v0.9.1)
+
+## English Document
+
+### 1. Android APK Transformation Feasibility
+*   **Component**: `Build System` (Capacitor / Android Gradle).
+*   **Objective**: Verify the feasibility of transforming the web project into an Android APK.
+*   **Test Data**: Project Source Code.
+*   **Method**:
+    *   Ran `npm run build` to generate `dist/frontend`.
+    *   Executed `npx cap add android` to initialize the native project.
+    *   Executed `npx cap sync` to inject web assets.
+    *   Attempted `gradlew assembleDebug` to trigger the build.
+*   **Results**:
+    *   **Configuration**: The Android project structure was successfully created in `android/`.
+    *   **Assets**: `dist/frontend` was correctly copied to `android/app/src/main/assets/public`.
+    *   **Build Execution**: The Gradle wrapper was successfully invoked. The build process completed successfully (`BUILD SUCCESSFUL`).
+    *   **Feasibility**: The code and configuration are **Fully Functional**. The APK was generated at `android/app/build/outputs/apk/debug/app-debug.apk`.
+*   **Result**: **PASS** (Build Verified).
+
+---
+
+## 中文文档 (Chinese Document)
+
+### 1. Android APK 转换可行性
+*   **组件**: `构建系统` (Capacitor / Android Gradle)。
+*   **目标**: 验证将 Web 项目转换为 Android APK 的可行性。
+*   **测试数据**: 项目源代码。
+*   **方法**:
+    *   运行 `npm run build` 生成 `dist/frontend`。
+    *   执行 `npx cap add android` 初始化原生项目。
+    *   执行 `npx cap sync` 注入 Web 资源。
+    *   尝试 `gradlew assembleDebug` 触发构建。
+*   **结果**:
+    *   **配置**: Android 项目结构已在 `android/` 中成功创建。
+    *   **资源**: `dist/frontend` 已正确复制到 `android/app/src/main/assets/public`。
+    *   **构建执行**: Gradle 包装器被成功调用。构建过程成功完成 (`BUILD SUCCESSFUL`)。
+    *   **可行性**: 代码和配置**完全功能正常**。APK 已生成于 `android/app/build/outputs/apk/debug/app-debug.apk`。
+*   **结果**: **通过 (PASS)** (构建已验证)。
+
+---
+
 # Test Report (2025-12-23 v0.9.0)
 
 ## English Document

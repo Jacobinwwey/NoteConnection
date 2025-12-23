@@ -79,6 +79,30 @@ npm start
 
 *   Server runs at: `http://localhost:3000`
 
+### Option 4: Mobile Support (Android)
+NoteConnection uses **Capacitor** to build native mobile apps.
+
+#### Prerequisites
+*   Android Studio (latest version)
+*   Android SDK (configured in `ANDROID_HOME` or `local.properties`)
+
+#### Build Steps
+1.  **Build Web Assets**:
+    ```bash
+    npm run build
+    ```
+2.  **Sync to Android Platform**:
+    ```bash
+    npx cap sync
+    ```
+3.  **Build APK**:
+    Open the `android` directory in Android Studio and build, or use the command line:
+    ```bash
+    cd android
+    ./gradlew assembleDebug
+    ```
+    The APK will be located at: `android/app/build/outputs/apk/debug/app-debug.apk`
+
 ### 3. Usage Guide
 1.  **Select Source**: Use the dropdown in the top-left to choose a folder from `Knowledge_Base`.
 2.  **Load**: Click "Load". For large datasets (>200 files), parallel processing engages automatically.
@@ -191,6 +215,30 @@ npm start
 ```
 
 *   服务器运行于: `http://localhost:3000`
+
+### 选项 4: 移动端支持 (Android)
+NoteConnection 使用 **Capacitor** 构建原生移动应用。
+
+#### 先决条件
+*   Android Studio (最新版)
+*   Android SDK (配置在 `ANDROID_HOME` 或 `local.properties` 中)
+
+#### 构建步骤
+1.  **构建 Web 资源**:
+    ```bash
+    npm run build
+    ```
+2.  **同步到 Android 平台**:
+    ```bash
+    npx cap sync
+    ```
+3.  **构建 APK**:
+    在 Android Studio 中打开 `android` 目录并构建，或使用命令行:
+    ```bash
+    cd android
+    ./gradlew assembleDebug
+    ```
+    APK 将位于: `android/app/build/outputs/apk/debug/app-debug.apk`
 
 ### 3. 使用指南
 1.  **选择数据源**: 使用左上角的下拉菜单从 `Knowledge_Base` 中选择文件夹。
