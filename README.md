@@ -116,6 +116,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.2 - Mobile UI Optimization
+- [x] **Responsive Controls**: Main panel collapses on mobile; Focus UI moved to bottom.
+- [x] **Touch Zoom**: Added pinch-to-zoom support in the Reading Window.
+
 ### v0.9.0 - Precise Control & Stability (2025-12-23)
 - [x] **Hover Lock**: Hovering over a node locks its position to prevent inspection drift.
 - [x] **Simulation Controls**: Added **Freeze Layout** checkbox and **Speed/Damping** slider.
@@ -254,6 +258,10 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.2 - 移动端 UI 优化
+- [x] **响应式控件**: 主面板在移动端折叠；专注 UI 移至底部。
+- [x] **触摸缩放**: 阅读窗口添加了捏合缩放支持。
 
 ### v0.9.0 - 精确控制与稳定性 (2025-12-23)
 - [x] **悬停锁定**: 悬停节点时锁定其位置，防止检查时漂移。

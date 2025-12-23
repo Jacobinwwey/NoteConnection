@@ -575,3 +575,96 @@ div.tooltip {
     height: 100% !important;
     max-width: none !important;
 }
+
+/* --- Mobile Responsiveness (v0.9.2) --- */
+@media (max-width: 768px) {
+    /* 1. Main Controls: Collapsible or Compact */
+    #controls {
+        width: 40px;
+        height: 40px;
+        overflow: hidden;
+        padding: 0;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+        background: rgba(45, 45, 45, 0.95) url('data:image/svg+xml;utf8,<svg fill="white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>') no-repeat center;
+        background-size: 24px;
+        cursor: pointer;
+    }
+
+    #controls.expanded {
+        width: 85%;
+        height: auto;
+        max-height: 80vh;
+        overflow-y: auto;
+        border-radius: 8px;
+        padding: 15px;
+        background: rgba(45, 45, 45, 0.98);
+    }
+
+    /* Hide internal elements when collapsed */
+    #controls:not(.expanded) > * {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    /* 2. Focus Mode Controls */
+    #focus-exit-btn {
+        top: auto;
+        bottom: 20px; /* Move to bottom for easier thumb reach */
+        width: 90%;
+        left: 50%;
+        flex-direction: column;
+        gap: 10px;
+        padding: 15px;
+    }
+
+    #focus-exit-btn span {
+        font-size: 1.1rem;
+        text-align: center;
+    }
+    
+    #focus-exit-btn div {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    #focus-exit-btn button {
+        width: 100%;
+        padding: 10px;
+    }
+
+    /* 3. Reading Window */
+    .reading-box.window-mode {
+        width: 95%;
+        height: 90%;
+    }
+
+    /* 4. Top Bar Adjustments */
+    #source-control {
+        left: 70px; /* Make room for menu button */
+        flex-direction: column;
+        align-items: flex-start;
+        top: 5px;
+    }
+    
+    #btn-open-settings {
+        right: 10px;
+        top: 5px;
+        font-size: 0px; /* Hide text, keep icon */
+        padding: 5px;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    #btn-open-settings::before {
+        content: "⚙️";
+        font-size: 16px;
+    }
+
+    #lang-select {
+        display: none; /* Hide language selector on mobile to save space, or move to settings */
+    }
+}

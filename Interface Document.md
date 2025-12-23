@@ -191,6 +191,13 @@ Renders the JSON data into an interactive DAG.
         *   **Freeze Layout**: Checkbox to stop the physics simulation completely. Allows manual positioning without snap-back.
         *   **Speed (Damping)**: Slider (0-1) to control `velocityDecay`. Higher values = more friction (slower movement).
         *   **Hover Lock**: Hovering a node temporarily locks its position to prevent drift during inspection.
+    *   **Mobile Optimizations (v0.9.2)**:
+        *   **Responsive Layout**: CSS Media Queries (`max-width: 768px`) adapt the UI.
+            *   **Collapsed Controls**: Main panel becomes a toggleable icon.
+            *   **Focus Bar**: Relocated to viewport bottom for thumb access.
+        *   **Touch Gestures**:
+            *   **Reader**: Implements `touchstart`/`touchmove` for 2-finger pinch-to-zoom (scales `fontSize`).
+
     *   **Scalability Defaults (v0.8.8)**:
         *   **Orphans**: Hidden by default.
         *   **Edges**: Hidden by default (opacity 0), visible on Hover/Select.
@@ -444,6 +451,12 @@ Transforms the web project into a standalone Android APK.
         *   **冻结布局**: 用于完全停止物理模拟的复选框。允许手动定位而不回弹。
         *   **速度 (阻尼)**: 滑块 (0-1) 用于控制 `velocityDecay`。较高值 = 更多摩擦（移动更慢）。
         *   **悬停锁定**: 悬停节点时暂时锁定其位置，以防止检查期间的漂移。
+    *   **移动端优化 (v0.9.2)**:
+        *   **响应式布局**: CSS 媒体查询 (`max-width: 768px`) 适配 UI。
+            *   **折叠控件**: 主面板变为可切换图标。
+            *   **专注栏**: 重新定位到视口底部以便拇指操作。
+        *   **触摸手势**:
+            *   **阅读器**: 实现 `touchstart`/`touchmove` 以支持双指捏合缩放 (调整 `fontSize`)。
     *   **可扩展性默认值 (v0.8.8)**:
         *   **孤立节点**: 默认隐藏。
         *   **边**: 默认隐藏 (透明度 0)，悬停/选择时可见。
