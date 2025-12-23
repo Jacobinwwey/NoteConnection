@@ -3,9 +3,11 @@ import { NoteNode } from '../core/types';
 import { RawFile } from './FileLoader';
 import { config } from './config';
 import * as path from 'path';
+import * as os from 'os';
+import { Worker } from 'worker_threads';
 import { CommunityDetection } from './CommunityDetection';
 import { GraphMetrics } from './GraphMetrics';
-import { isSimilar } from './utils/stringUtils';
+import { isSimilar, checkMatch } from './utils/stringUtils';
 import { FrontmatterParser } from './utils/frontmatterParser';
 import { CycleDetector } from './algorithms/CycleDetection';
 import { TopologicalSort } from './algorithms/TopologicalSort';
@@ -24,7 +26,7 @@ export class GraphBuilder {
    * @param files Array of raw files | 原始文件数组
    * @param layout Optional map of saved node positions | 可选的保存节点位置映射
    */
-  static build(files: RawFile[], layout?: Map<string, {x: number, y: number}>): Graph {
+  static async build(files: RawFile[], layout?: Map<string, {x: number, y: number}>): Promise<Graph> {
     const graph = new Graph();
 
     // 1. Add all nodes first
@@ -87,26 +89,14 @@ export class GraphBuilder {
         // Handle 'prerequisites': Target (Prereq) -> Source (Current)
         if (node.metadata.prerequisites && Array.isArray(node.metadata.prerequisites)) {
             node.metadata.prerequisites.forEach((prereq: string) => {
-                // Check if prereq exists as a file (simple ID match or filename match)
-                // We assume prereq string is the ID/filename
-                // Need to handle partial matches or extension issues? 
-                // For now, assume exact ID match (without extension if ID is sans-extension).
-                
-                // Try to find the node
                 let targetId = prereq;
                 if (!graph.hasNode(targetId)) {
-                    // Try adding .md or checking map? 
-                    // If node doesn't exist, we might skip or add a "missing" node.
-                    // For robustness, skip if not found in file list.
-                    // But wait, the ID in graph is `filename` (e.g. "Concept A.md").
-                    // The prereq might be "Concept A".
                     if (graph.hasNode(targetId + '.md')) {
                         targetId = targetId + '.md';
                     } else {
                         return; // Target not found
                     }
                 }
-                
                 graph.addEdge(targetId, sourceId, 'explicit-prerequisite');
             });
         }
@@ -130,30 +120,16 @@ export class GraphBuilder {
 
     // 2b. Keyword Matching Strategy
     // 2b. 关键词匹配策略
-    // Logic: If Note A contains "Note B", then Note B -> Note A (B is a concept used in A)
-    // 逻辑：如果笔记 A 包含“笔记 B”，则 笔记 B -> 笔记 A（B 是 A 中使用的概念）
+    console.log(`[GraphBuilder] Starting keyword matching for ${files.length} files...`);
+    if (files.length > 200) {
+        // Use Parallel Processing
+        console.log(`[GraphBuilder] Using Parallel Processing (Workers)`);
+        await this.runParallelMatching(files, graph);
+    } else {
+        // Use Single Thread (Legacy)
+        this.runSequentialMatching(files, graph);
+    }
     
-    files.forEach(sourceFile => {
-      const sourceId = sourceFile.filename;
-      const content = sourceFile.content;
-
-      files.forEach(targetFile => {
-        const targetId = targetFile.filename;
-        if (sourceId === targetId) return; // Skip self | 跳过自身
-
-        // Exclusion Check
-        if (config.exclusionList.includes(targetId)) {
-            return;
-        }
-
-        if (this.isMatch(content, targetId)) {
-             // Found a reference!
-             // Target (Concept) -> Source (Context)
-             graph.addEdge(targetId, sourceId, 'keyword-match');
-        }
-      });
-    });
-
     // 2c. Statistical Inference (v0.6.0)
     if (config.enableStatisticalInference) {
         console.log('[GraphBuilder] Running Statistical Inference...');
@@ -261,39 +237,105 @@ export class GraphBuilder {
     return graph;
   }
 
-  /**
-   * Checks if the content contains the term based on the configured strategy.
-   * 根据配置的策略检查内容是否包含术语。
-   */
-  private static isMatch(content: string, term: string): boolean {
-      if (config.matchingStrategy === 'exact-phrase') {
-          const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const regex = new RegExp(`\\b${escapedTerm}\\b`, 'i');
-          return regex.test(content);
-      } else if (config.matchingStrategy === 'fuzzy') {
-          // Fuzzy Strategy: Check for approximate string match
-          // Note: Full text scan for fuzzy match is expensive O(N*M).
-          // Optimization: Check for exact match first, then maybe sliding window?
-          // For now, simpler: check if any WORD in content is similar to term?
-          // This is too aggressive.
-          // Let's fallback to inclusion for now, plus Levenshtein check on potential candidates if we were doing entity extraction.
-          // Since we are scanning full text for a list of known titles:
-          
-          // Implementation: Regex search for the term allowing some errors? Hard in JS.
-          // Alternative: Use inclusion, then check Levenshtein on the match?
-          // Simple "includes" is already 'fuzzy' in the sense of substring.
-          
-          // Let's implement a stronger check:
-          // If 'term' is "Water", we match "Waters", "water.", "Water,".
-          // If 'term' is "Color", we match "Colour" (Levenshtein=1).
-          
-          // Current implementation supports 'exact-phrase' (RegEx) or 'fuzzy' (simple includes).
-          // We can upgrade 'fuzzy' to mean "Includes OR Similar Word exists".
-          
-          // Warning: Checking every word against every title is too slow (N*M).
-          // We will stick to the previous 'includes' for now, but maybe relax the regex?
-          return content.toLowerCase().includes(term.toLowerCase());
+  // --- Parallel Execution Helpers ---
+
+  private static async runParallelMatching(files: RawFile[], graph: Graph) {
+      const numCPUs = os.cpus().length;
+      const workerCount = Math.min(4, Math.max(1, numCPUs - 1)); // Cap at 4 workers for stability
+      const chunkSize = Math.ceil(files.length / workerCount);
+      const targetIds = files.map(f => f.filename);
+
+      const workerPromises: Promise<void>[] = [];
+      const workerPath = path.join(__dirname, 'workers', 'keywordMatchWorker.ts');
+      
+      // Check if we are in TS execution (ts-node) or JS (dist)
+      // If extension is .ts, we assume ts-node.
+      const isTsNode = path.extname(__filename) === '.ts';
+      const actualWorkerPath = isTsNode 
+        ? workerPath 
+        : workerPath.replace('.ts', '.js');
+
+      console.log(`[GraphBuilder] Worker Path: ${actualWorkerPath}`);
+      console.log(`[GraphBuilder] isTsNode: ${isTsNode}`);
+      console.log(`[GraphBuilder] Spawning ${workerCount} workers...`);
+
+      for (let i = 0; i < workerCount; i++) {
+          const start = i * chunkSize;
+          const end = Math.min(start + chunkSize, files.length);
+          if (start >= files.length) break;
+
+          const filesChunk = files.slice(start, end);
+
+          const p = new Promise<void>((resolve, reject) => {
+              try {
+                  const execArgv = isTsNode ? ['-r', require.resolve('ts-node/register')] : undefined;
+                  const worker = new Worker(actualWorkerPath, {
+                      workerData: {
+                          filesChunk,
+                          targetIds,
+                          strategy: config.matchingStrategy,
+                          exclusionList: config.exclusionList
+                      },
+                      execArgv
+                  });
+
+                  worker.on('message', (results: {source: string, target: string}[]) => {
+                      results.forEach(res => {
+                          graph.addEdge(res.target, res.source, 'keyword-match');
+                      });
+                  });
+
+                  worker.on('error', (err) => {
+                      console.error(`[GraphBuilder] Worker error:`, err);
+                      reject(err);
+                  });
+                  
+                  worker.on('exit', (code) => {
+                      if (code !== 0) {
+                          console.error(`[GraphBuilder] Worker exited with code ${code}`);
+                          reject(new Error(`Worker stopped with exit code ${code}`));
+                      } else {
+                          resolve();
+                      }
+                  });
+              } catch (e) {
+                  console.error(`[GraphBuilder] Failed to spawn worker:`, e);
+                  reject(e);
+              }
+          });
+          workerPromises.push(p);
       }
-      return false;
+
+      try {
+        await Promise.all(workerPromises);
+        console.log(`[GraphBuilder] Parallel matching complete.`);
+      } catch (err) {
+          console.error('[GraphBuilder] Parallel matching failed, falling back to sequential.', err);
+          // Fallback
+          this.runSequentialMatching(files, graph);
+      }
+  }
+
+  private static runSequentialMatching(files: RawFile[], graph: Graph) {
+      files.forEach(sourceFile => {
+        const sourceId = sourceFile.filename;
+        const content = sourceFile.content;
+  
+        files.forEach(targetFile => {
+          const targetId = targetFile.filename;
+          if (sourceId === targetId) return; // Skip self | 跳过自身
+  
+          // Exclusion Check
+          if (config.exclusionList.includes(targetId)) {
+              return;
+          }
+  
+          if (checkMatch(content, targetId, config.matchingStrategy)) {
+               // Found a reference!
+               // Target (Concept) -> Source (Context)
+               graph.addEdge(targetId, sourceId, 'keyword-match');
+          }
+        });
+      });
   }
 }
