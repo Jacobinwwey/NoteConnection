@@ -178,6 +178,11 @@ Renders the JSON data into an interactive DAG.
         *   **Configurable**:
             *   **Physics**: Repulsion, Link Distance, Collision Radius.
             *   **Visuals**: Edge Opacity.
+    *   **Rendering Modes (v0.8.7)**:
+        *   **SVG**: Default D3 implementation for interactivity and styling.
+        *   **Canvas**: High-performance raster rendering for large datasets (>2000 nodes). Supports Zoom/Pan.
+    *   **Focus Mode Enhancements (v0.8.7)**:
+        *   **Dynamic Spacing**: User adjustable `layerGap` via UI slider (50px - 500px).
     *   **Degree Analysis (v0.1.2)**:
         *   **In-degree**: Show incoming degree count.
     *   **Localization (v0.1.9)**: Supports English ('en') and Chinese ('zh').
@@ -357,6 +362,11 @@ Combines statistical and vector methods to infer directed edges.
         *   **可配置项**:
             *   **物理**: 排斥力、连接距离、碰撞半径。
             *   **视觉**: 边透明度。
+    *   **渲染模式 (v0.8.7)**:
+        *   **SVG**: 默认 D3 实现，用于交互和样式。
+        *   **Canvas**: 高性能光栅渲染，适用于大数据集 (>2000 节点)。支持缩放/平移。
+    *   **专注模式增强 (v0.8.7)**:
+        *   **动态间距**: 用户可通过 UI 滑块调整 `layerGap` (50px - 500px)。
     *   **Degree Analysis (v0.1.2)**:
         *   **In-degree**: 显示入度（作为先决条件被引用的次数）。
         *   **Out-degree**: 显示出度（引用的先决条件数量）。

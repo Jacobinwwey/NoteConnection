@@ -671,30 +671,144 @@ node.on("mouseover", function(event, d) {
     updateVisibility(); // Restore visibility based on filters
 });
 
-// Simulation Tick
-simulation.on("tick", () => {
-    const mode = document.querySelector('input[name="layoutMode"]:checked') ? document.querySelector('input[name="layoutMode"]:checked').value : 'force';
+// Canvas Setup
+const canvas = document.getElementById('graph-canvas');
+const ctx = canvas.getContext('2d');
+let currentTransform = d3.zoomIdentity;
 
-    if (mode === 'dag') {
-        link.attr("d", d => {
+// Resize Canvas
+function resizeCanvas() {
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    if (document.querySelector('input[name="rendererMode"]:checked').value === 'canvas') {
+        ticked();
+    }
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// Canvas Zoom
+d3.select(canvas).call(d3.zoom()
+    .scaleExtent([0.1, 8])
+    .on("zoom", (event) => {
+        currentTransform = event.transform;
+        ticked();
+    }));
+
+
+// Simulation Tick
+function ticked() {
+    const renderer = document.querySelector('input[name="rendererMode"]:checked').value;
+    const layoutMode = document.querySelector('input[name="layoutMode"]:checked').value;
+
+    if (renderer === 'svg') {
+        // SVG Update Logic
+        if (layoutMode === 'dag') {
+            link.attr("d", d => {
+                const sx = d.source.x;
+                const sy = d.source.y;
+                const tx = d.target.x;
+                const ty = d.target.y;
+                return `M${sx},${sy} C${sx},${(sy + ty) / 2} ${tx},${(sy + ty) / 2} ${tx},${ty}`;
+            });
+        } else {
+            link.attr("d", d => `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`);
+        }
+        node.attr("transform", d => `translate(${d.x},${d.y})`);
+    } else {
+        // Canvas Update Logic
+        renderCanvas(layoutMode);
+    }
+}
+
+function renderCanvas(layoutMode) {
+    ctx.save();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Apply Zoom/Pan
+    ctx.translate(currentTransform.x, currentTransform.y);
+    ctx.scale(currentTransform.k, currentTransform.k);
+
+    // Draw Links
+    ctx.globalAlpha = settingsManager.settings.visuals.edgeOpacity || 0.6;
+    ctx.strokeStyle = "#555";
+    ctx.lineWidth = 1;
+
+    links.forEach(d => {
+        // Check Visibility
+        if (d.source.isFocusVisible === false || d.target.isFocusVisible === false) return; // Simple check
+
+        ctx.beginPath();
+        if (layoutMode === 'dag') {
             const sx = d.source.x;
             const sy = d.source.y;
             const tx = d.target.x;
             const ty = d.target.y;
-            
-            // Vertical Bezier Curve for top-down flow
-            // Control points are halfway between source and target vertically,
-            // but aligned with source/target x respectively to create a smooth S-curve
-            return `M${sx},${sy} C${sx},${(sy + ty) / 2} ${tx},${(sy + ty) / 2} ${tx},${ty}`;
-        });
-    } else {
-        link.attr("d", d => {
-            // Straight line for force layout
-            return `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`;
-        });
-    }
+            const cp1x = sx;
+            const cp1y = (sy + ty) / 2;
+            const cp2x = tx;
+            const cp2y = (sy + ty) / 2;
+            ctx.moveTo(sx, sy);
+            ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, tx, ty);
+        } else {
+            ctx.moveTo(d.source.x, d.source.y);
+            ctx.lineTo(d.target.x, d.target.y);
+        }
+        ctx.stroke();
+    });
 
-    node.attr("transform", d => `translate(${d.x},${d.y})`);
+    // Draw Nodes
+    ctx.globalAlpha = 1;
+    nodes.forEach(d => {
+        if (!isNodeVisible(d)) return;
+
+        ctx.beginPath();
+        const r = d.id === (focusNode ? focusNode.id : null) ? 25 : (d.centrality ? Math.max(3, Math.sqrt(d.centrality) * 3) : 5);
+        ctx.arc(d.x, d.y, r, 0, 2 * Math.PI);
+        
+        // Color
+        ctx.fillStyle = d.id === (focusNode ? focusNode.id : null) ? "#ffd700" : "#61dafb"; // Simplified color
+        // Use computed color if possible, but accessing D3 scale is easy
+        if (d.id !== (focusNode ? focusNode.id : null)) {
+             const mode = document.querySelector('input[name="colorMode"]:checked').value;
+             if (mode === 'cluster') ctx.fillStyle = colorScaleCluster(d.clusterId || 'unknown');
+             else ctx.fillStyle = colorScaleDegree(getDegree(d));
+        }
+
+        ctx.fill();
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Label
+        if (d.id === (focusNode ? focusNode.id : null) || currentTransform.k > 1.2) {
+            ctx.fillStyle = "#ccc";
+            ctx.font = d.id === (focusNode ? focusNode.id : null) ? "bold 16px Sans-Serif" : "10px Sans-Serif";
+            ctx.fillText(d.label, d.x + 8, d.y + 4);
+        }
+    });
+
+    ctx.restore();
+}
+
+simulation.on("tick", ticked);
+
+// Renderer Toggle
+document.querySelectorAll('input[name="rendererMode"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        const mode = e.target.value;
+        if (mode === 'canvas') {
+            document.querySelector('#graph-container svg').style.display = 'none';
+            canvas.style.display = 'block';
+            ticked();
+        } else {
+            document.querySelector('#graph-container svg').style.display = 'block';
+            canvas.style.display = 'none';
+            // Sync zoom state
+            g.attr("transform", currentTransform);
+            ticked();
+        }
+    });
 });
 
 // Controls & Filtering
@@ -871,6 +985,9 @@ function dragended(event, d) {
 
 // Focus Mode Logic
 document.getElementById('btn-exit-focus').addEventListener('click', exitFocusMode);
+document.getElementById('focus-spacing-slider').addEventListener('input', () => {
+    if (focusNode) enterFocusMode(focusNode); // Re-calculate layout
+});
       
       // Wire up click event to nodes
       // We need to re-bind the click event or add it to the existing selection
@@ -893,7 +1010,8 @@ document.getElementById('btn-exit-focus').addEventListener('click', exitFocusMod
       });
       
       function enterFocusMode(focusD) {
-    if (focusNode && focusNode.id === focusD.id) return; // Already focused
+    // If we re-enter (e.g. slider change), we don't return early unless it's strictly same state
+    // But here we want to update positions, so we proceed.
 
     // RESET ALL NODES first to prevent accumulation of visible nodes
     nodes.forEach(n => {
@@ -947,7 +1065,8 @@ document.getElementById('btn-exit-focus').addEventListener('click', exitFocusMod
     // 4. Layout Calculation
     const cx = width / 2;
     const cy = height / 2;
-    const layerGap = 250; 
+    // Get spacing from slider
+    const layerGap = parseInt(document.getElementById('focus-spacing-slider').value) || 250; 
     
     const spreadNodes = (nodeList, baselineY) => {
         const count = nodeList.length;
@@ -1046,6 +1165,7 @@ document.getElementById('btn-exit-focus').addEventListener('click', exitFocusMod
         }
     });
     simulation.alpha(0.1).restart();
+    ticked(); // Force render update (Canvas)
 }
       
       
