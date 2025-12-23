@@ -1,4 +1,4 @@
-# 2025-12-22 v0.8.5
+# 2025-12-23 v0.8.6
 
 # Project Build Plan: Progressive Hierarchical Knowledge Graph
 
@@ -105,6 +105,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] Backend: Support variable input paths under `Knowledge_Base`.
     - [x] Server: Implement `http` server for API (`/api/folders`, `/api/build`) and static serving.
     - [x] Frontend: Add UI to list and select knowledge base folders.
+
+### 2025-12-23 v0.8.6 - Performance Optimization (Parallel Processing)
+
+**Goal**: Optimize graph construction for large datasets (>10,000 nodes) to reduce build time.
+
+- [x] **Parallel Graph Building**
+    - [x] **Worker Threads**: Offload intensive keyword matching to multiple CPU cores.
+    - [x] **Async I/O**: Refactor `FileLoader` to use asynchronous batch processing to prevent `EMFILE` errors.
+    - [x] **Robustness**: Implement fallback to sequential processing if workers fail.
 
 ### 2026-06-01 v1.0.0 - Production Release
 
@@ -232,6 +241,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] 后端: 支持 `Knowledge_Base` 下的可变输入路径。
     - [x] 服务器: 实现用于 API (`/api/folders`, `/api/build`) 和静态服务的 `http` 服务器。
     - [x] 前端: 添加 UI 以列出和选择知识库文件夹。
+
+### 2025-12-23 v0.8.6 - 性能优化 (并行处理) (Performance Optimization)
+
+**目标**: 优化大数据集 (>10,000 节点) 的图构建过程，以缩短构建时间。
+
+- [x] **并行图构建**
+    - [x] **Worker 线程**: 将密集的关键词匹配任务分流到多个 CPU 核心。
+    - [x] **异步 I/O**: 重构 `FileLoader` 使用异步批量处理以防止 `EMFILE` 错误。
+    - [x] **稳健性**: 实现 Worker 失败时的顺序处理回退机制。
 
 ### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
 

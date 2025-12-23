@@ -1,4 +1,4 @@
-# 2025-12-22 v0.8.5
+# 2025-12-23 v0.8.6
 
 # NoteConnection: Hierarchical Knowledge Graph Visualization System
 > **Unlock the Structure of Your Knowledge.**
@@ -10,29 +10,34 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
-## 🌟 Core Features (v0.8.5)
+## 🌟 Core Features (v0.8.6)
 
-### 1. Dynamic Knowledge Base & Server (New v0.8.5)
+### 1. High-Performance Parallel Processing (New v0.8.6)
+*   **Multi-Core Architecture**: Utilizes Node.js `worker_threads` to distribute computationally intensive keyword matching across available CPU cores.
+*   **Async I/O Optimization**: Implements non-blocking, batched file loading to handle large datasets (>10,000 files) without resource exhaustion.
+*   **Automatic Scaling**: Automatically detects system capabilities and scales worker count (up to 4) for optimal performance.
+
+### 2. Dynamic Knowledge Base & Server (v0.8.5)
 *   **Dynamic Source Selection**: Switch between different knowledge base folders (e.g., `Knowledge_Base/ProjectA`, `Knowledge_Base/testconcept`) instantly via the UI.
 *   **Integrated Server**: A built-in HTTP server (`npm start`) handles API requests and serves the frontend, making it easy to deploy locally or on a private network.
 *   **Promotional Readiness**: Zero-config startup. Just run `npm start` and explore.
 
-### 2. Structure Over Chaos (DAG vs. Force)
+### 3. Structure Over Chaos (DAG vs. Force)
 *   **Directed Dependencies**: Identifies "Prerequisites" and "Next Steps" to arrange concepts in logical layers.
 *   **Sugiyama Layout**: Renders a clear top-down hierarchy instead of a hairball.
 <img width="2010" height="2011" alt="image" src="https://github.com/user-attachments/assets/52785445-20bf-4ecc-847a-23863f291b6a" />
 
-### 3. Scalable Semantic Zoom
+### 4. Scalable Semantic Zoom
 *   **Cluster View**: Aggregates thousands of nodes into high-level "Concept Bubbles" based on folder structure or tags.
 *   **Drill-Down**: Click on a cluster to zoom in and explore detailed connections within that specific domain.
 
-### 4. Intelligent Inference Engine
+### 5. Intelligent Inference Engine
 *   **Hybrid Analysis**: Combines **Statistical Probability** ($P(A|B)$) and **Vector Similarity** (TF-IDF) to infer hidden dependencies (e.g., "Fluorescence" implies "Photon") without external AI.
 *   **No AI Required**: Runs locally and offline.
 *   **Bilingual Support**: Intelligent processing for both English and Chinese content.
 <img width="3723" height="1992" alt="image" src="https://github.com/user-attachments/assets/9e56e567-1742-48cf-b720-cf65a47fd317" />
 
-### 5. Interactive Focus Mode
+### 6. Interactive Focus Mode
 *   **Deep Dive**: Click any node to isolate it and its immediate context.
 *   **Smart Layout**: Auto-arranges **Superiors** (Out-degree) and **Subordinates** (In-degree) with relative height positioning based on relevance.
 *   **Clean Visualization**: Prevents label overlap using staggered positioning and highlights high-value paths.
@@ -57,7 +62,7 @@ npm start
 ### 3. Usage
 1.  Open `http://localhost:3000`.
 2.  **Select Source**: Use the dropdown in the top-left to choose a folder from `Knowledge_Base`.
-3.  **Load**: Click "Load" to build the graph dynamically.
+3.  **Load**: Click "Load" to build the graph dynamically. Note: For large datasets (>200 files), parallel processing is automatically enabled.
 4.  **Explore**:
     *   **View Mode**: Toggle between **Nodes** (Detailed) and **Clusters** (Overview).
     *   **Layout**: Switch between **Force** (Physics) and **DAG** (Hierarchy).
@@ -66,7 +71,7 @@ npm start
 ---
 ---
 
-# 2025-12-22 v0.8.5
+# 2025-12-23 v0.8.6
 
 # NoteConnection: 层级知识图谱可视化系统
 > **解锁你知识库的深层结构。**
@@ -79,29 +84,34 @@ npm start
 
 ---
 
-## 🌟 核心特性 (v0.8.5)
+## 🌟 核心特性 (v0.8.6)
 
-### 1. 动态知识库与服务器 (v0.8.5 新增)
+### 1. 高性能并行处理 (v0.8.6 新增)
+*   **多核架构**: 利用 Node.js `worker_threads` 将计算密集的关键词匹配任务分发到可用的 CPU 核心。
+*   **异步 I/O 优化**: 实现非阻塞、分批次的文件加载，以处理大数据集 (>10,000 文件) 而不耗尽系统资源。
+*   **自动扩展**: 自动检测系统能力并调整 Worker 数量（最多 4 个）以获得最佳性能。
+
+### 2. 动态知识库与服务器 (v0.8.5)
 *   **动态数据源选择**: 通过 UI 即时切换不同的知识库文件夹（例如 `Knowledge_Base/ProjectA`, `Knowledge_Base/testconcept`）。
 *   **集成服务器**: 内置 HTTP 服务器 (`npm start`) 处理 API 请求并服务前端，使其易于在本地或专用网络上部署。
 *   **便于推广**: 零配置启动。只需运行 `npm start` 即可探索。
 
-### 2. 结构优于混沌 (DAG vs. 力导向)
+### 3. 结构优于混沌 (DAG vs. 力导向)
 *   **有向依赖**: 识别“先决条件”和“后续步骤”，将概念按逻辑分层排列。
 *   **Sugiyama 布局**: 渲染清晰的自上而下的层级结构，而非混乱的毛线球。
 
-### 3. 可扩展的语义缩放 (Semantic Zoom)
+### 4. 可扩展的语义缩放 (Semantic Zoom)
 *   **聚类视图**: 基于文件夹结构或标签，将数千个节点聚合为高级“概念气泡”。
 *   **向下钻取**: 点击聚类即可放大并探索该特定领域内的详细连接。
 <img width="3404" height="2028" alt="image" src="https://github.com/user-attachments/assets/39ea71da-be14-4fdc-9fec-9f33cab92e1b" />
 
-### 4. 智能推断引擎
+### 5. 智能推断引擎
 *   **混合分析**: 结合**统计概率** ($P(A|B)$) 和 **向量相似度** (TF-IDF) 推断隐藏的依赖关系（例如，“荧光”隐含“光子”），无需外部 AI。
 *   **无需 AI**: 本地离线运行。
 *   **双语支持**: 支持英文和中文内容的智能处理。
 <img width="3723" height="2007" alt="image" src="https://github.com/user-attachments/assets/10978984-3e2d-4ab6-8b44-342d4f3c3800" />
 
-### 5. 交互式专注模式
+### 6. 交互式专注模式
 *   **深度探索**: 点击任意节点以隔离它及其直接上下文。
 *   **智能布局**: 自动排列**上级**（出度）和**下级**（入度），并基于相关性进行相对高度定位。
 *   **清晰可视化**: 使用交错定位防止标签重叠，并高亮显示高价值路径。
@@ -126,7 +136,7 @@ npm start
 ### 3. 使用方法
 1.  打开 `http://localhost:3000`。
 2.  **选择数据源**: 使用左上角的下拉菜单从 `Knowledge_Base` 中选择文件夹。
-3.  **加载**: 点击 "Load" 动态构建图谱。
+3.  **加载**: 点击 "Load" 动态构建图谱。注意：对于大数据集 (>200 文件)，将自动启用并行处理。
 4.  **探索**:
     *   **视图模式**: 在**节点** (详细) 和 **聚类** (概览) 之间切换。
     *   **布局**: 在 **Force** (力导向) 和 **DAG** (层级) 之间切换。
