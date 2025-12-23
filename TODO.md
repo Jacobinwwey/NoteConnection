@@ -143,6 +143,16 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] **Interaction Stability**
     - [x] **Freeze**: Prevent node drift when selecting or dragging in Focus Mode.
 
+### 2025-12-23 v0.9.0 - Precise Control & Stability
+
+**Goal**: Provide tools for manual layout control and stable inspection.
+
+- [x] **Hover Logic**
+    - [x] **Auto-Freeze**: Lock node position on hover to facilitate inspection.
+- [x] **Simulation UX**
+    - [x] **Controls**: Add Speed slider and Freeze Layout toggle.
+    - [x] **Manual Placement**: Allow manual node positioning when layout is frozen without auto-revert.
+
 ### 2026-06-01 v1.0.0 - Production Release
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.
@@ -306,6 +316,16 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 - [x] **交互稳定性**
     - [x] **冻结**: 防止在专注模式下选择或拖动时节点漂移。
+
+### 2025-12-23 v0.9.0 - 精确控制与稳定性 (Precise Control & Stability)
+
+**目标**: 提供用于手动布局控制和稳定检查的工具。
+
+- [x] **悬停逻辑**
+    - [x] **自动冻结**: 悬停时锁定节点位置以便于检查。
+- [x] **模拟 UX**
+    - [x] **控制**: 添加速度滑块和冻结布局切换。
+    - [x] **手动放置**: 允许在布局冻结时手动定位节点而不自动恢复。
 
 ### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
 
