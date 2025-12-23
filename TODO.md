@@ -136,6 +136,13 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] **Focus Mode Enhancements**
     - [x] **Horizontal Spacing**: Added control for horizontal node separation to prevent overlap.
 
+### 2025-12-23 v0.8.9 - Stability Improvements
+
+**Goal**: Enhance observation stability.
+
+- [x] **Interaction Stability**
+    - [x] **Freeze**: Prevent node drift when selecting or dragging in Focus Mode.
+
 ### 2026-06-01 v1.0.0 - Production Release
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.
@@ -292,6 +299,13 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **按需上下文**: 仅在悬停或专注时显示关系。
 - [x] **专注模式增强**
     - [x] **水平间距**: 添加了水平节点分隔控制以防止重叠。
+
+### 2025-12-23 v0.8.9 - 稳定性改进 (Stability Improvements)
+
+**目标**: 增强观察稳定性。
+
+- [x] **交互稳定性**
+    - [x] **冻结**: 防止在专注模式下选择或拖动时节点漂移。
 
 ### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
 
