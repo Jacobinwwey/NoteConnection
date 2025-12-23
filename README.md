@@ -10,7 +10,19 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
-## 🌟 Core Features (v0.8.6)
+### 2025-12-23 v0.8.7 - Scalability & UX Polish
+
+**Goal**: Address performance bottlenecks for tens of thousands of nodes and improve layout control.
+
+- [x] **High-Capacity Parallel Processing**
+    - [x] Increased worker thread cap from 4 to 12 to leverage high-core CPUs.
+- [x] **Canvas Rendering Engine**
+    - [x] Implemented a dual-renderer system (SVG / Canvas).
+    - [x] **Canvas Mode**: Offers smooth performance for 10,000+ nodes by removing DOM overhead.
+- [x] **Adjustable Focus Layout**
+    - [x] Added UI slider to dynamically control vertical node spacing in Focus Mode to prevent overlap.
+
+### 2025-12-23 v0.8.6 - Performance Optimization (Parallel Processing)
 
 ### 1. High-Performance Parallel Processing (New v0.8.6)
 *   **Multi-Core Architecture**: Utilizes Node.js `worker_threads` to distribute computationally intensive keyword matching across available CPU cores.
@@ -84,7 +96,19 @@ npm start
 
 ---
 
-## 🌟 核心特性 (v0.8.6)
+### 2025-12-23 v0.8.7 - 可扩展性与用户体验打磨
+
+**目标**: 解决数万个节点的性能瓶颈并改进布局控制。
+
+- [x] **高容量并行处理**
+    - [x] 将工作线程上限从 4 增加到 12，以利用多核 CPU。
+- [x] **Canvas 渲染引擎**
+    - [x] 实现了双渲染器系统 (SVG / Canvas)。
+    - [x] **Canvas 模式**: 通过消除 DOM 开销，为 10,000+ 节点提供流畅的性能。
+- [x] **可调节专注布局**
+    - [x] 添加了 UI 滑块，以动态控制专注模式下的垂直节点间距，防止重叠。
+
+### 2025-12-23 v0.8.6 - 性能优化 (并行处理) (Performance Optimization)
 
 ### 1. 高性能并行处理 (v0.8.6 新增)
 *   **多核架构**: 利用 Node.js `worker_threads` 将计算密集的关键词匹配任务分发到可用的 CPU 核心。

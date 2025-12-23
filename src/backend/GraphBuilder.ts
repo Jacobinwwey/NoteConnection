@@ -241,7 +241,7 @@ export class GraphBuilder {
 
   private static async runParallelMatching(files: RawFile[], graph: Graph) {
       const numCPUs = os.cpus().length;
-      const workerCount = Math.min(4, Math.max(1, numCPUs - 1)); // Cap at 4 workers for stability
+      const workerCount = Math.min(12, Math.max(1, numCPUs - 1)); // Cap at 12 workers for performance
       const chunkSize = Math.ceil(files.length / workerCount);
       const targetIds = files.map(f => f.filename);
 

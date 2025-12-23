@@ -115,6 +115,17 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **Async I/O**: Refactor `FileLoader` to use asynchronous batch processing to prevent `EMFILE` errors.
     - [x] **Robustness**: Implement fallback to sequential processing if workers fail.
 
+### 2025-12-23 v0.8.7 - Scalability & UX Polish
+
+**Goal**: Address rendering bottlenecks and improve layout control for large graphs.
+
+- [x] **High-Capacity Processing**
+    - [x] **Worker Scaling**: Increased thread limit to 12.
+- [x] **Canvas Rendering**
+    - [x] **Dual Engine**: implemented Canvas renderer for high-performance drawing of 10k+ nodes.
+- [x] **Focus Mode UX**
+    - [x] **Spacing Control**: Added UI slider to adjust node layer spacing.
+
 ### 2026-06-01 v1.0.0 - Production Release
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.
@@ -250,6 +261,17 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **Worker 线程**: 将密集的关键词匹配任务分流到多个 CPU 核心。
     - [x] **异步 I/O**: 重构 `FileLoader` 使用异步批量处理以防止 `EMFILE` 错误。
     - [x] **稳健性**: 实现 Worker 失败时的顺序处理回退机制。
+
+### 2025-12-23 v0.8.7 - 可扩展性与用户体验打磨 (Scalability & UX Polish)
+
+**目标**: 解决渲染瓶颈并改进大图的布局控制。
+
+- [x] **高容量处理**
+    - [x] **Worker 扩展**: 将线程限制增加到 12。
+- [x] **Canvas 渲染**
+    - [x] **双引擎**: 实现了 Canvas 渲染器，用于 10k+ 节点的高性能绘制。
+- [x] **专注模式 UX**
+    - [x] **间距控制**: 添加了 UI 滑块以调整节点层间距。
 
 ### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
 
