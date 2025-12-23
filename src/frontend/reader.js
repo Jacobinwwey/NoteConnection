@@ -256,6 +256,7 @@ class Reader {
 
         // Touch Events
         let lastTouchDistance = 0;
+        let lastTouchCenter = { x: 0, y: 0 };
         
         const getDistance = (touches) => {
             return Math.hypot(
@@ -264,11 +265,19 @@ class Reader {
             );
         };
 
+        const getCenter = (touches) => {
+            return {
+                x: (touches[0].clientX + touches[1].clientX) / 2,
+                y: (touches[0].clientY + touches[1].clientY) / 2
+            };
+        };
+
         overlay.ontouchstart = (e) => {
             if (e.touches.length === 1) {
                 startPanning(e.touches[0].clientX, e.touches[0].clientY);
             } else if (e.touches.length === 2) {
                 lastTouchDistance = getDistance(e.touches);
+                lastTouchCenter = getCenter(e.touches);
             }
         };
 
@@ -282,13 +291,24 @@ class Reader {
                 pan(e.touches[0].clientX, e.touches[0].clientY);
             } else if (e.touches.length === 2) {
                 const dist = getDistance(e.touches);
+                const center = getCenter(e.touches);
+
                 if (lastTouchDistance > 0) {
                     const zoomFactor = dist / lastTouchDistance;
-                    scale *= zoomFactor;
-                    scale = Math.max(0.1, Math.min(scale, 10));
-                    setTransform();
+                    const newScale = scale * zoomFactor;
+                    
+                    // Limit zoom
+                    if (newScale >= 0.1 && newScale <= 10) {
+                        // Calculate new translation to keep the center stationary
+                        // Formula: newPos = center - (center - oldPos) * factor
+                        pointX = center.x - (center.x - pointX) * zoomFactor;
+                        pointY = center.y - (center.y - pointY) * zoomFactor;
+                        scale = newScale;
+                        setTransform();
+                    }
                 }
                 lastTouchDistance = dist;
+                lastTouchCenter = center;
             }
         };
 
