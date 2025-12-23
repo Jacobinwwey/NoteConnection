@@ -1,3 +1,87 @@
+# Test Report (2025-12-23 v0.9.4)
+
+## English Document
+
+### 1. Mermaid Image Optimization
+*   **Component**: `Reader` (Mermaid Rendering & Interaction).
+*   **Objective**: Verify the Mermaid scaling mode for mobile readability.
+*   **Test Data**: Markdown note containing a Mermaid flowchart.
+*   **Method**:
+    *   **Trigger**: Clicked on the rendered Mermaid diagram.
+    *   **Overlay**: Verified full-screen black overlay appears with the SVG centered.
+    *   **Zoom/Pan**:
+        *   **Mouse**: Wheel zooms in/out (centering cursor). Dragging moves the image.
+        *   **Touch**: Pinching zooms. Single finger drag pans.
+    *   **Exit**: Clicked the '×' button to close overlay.
+*   **Results**:
+    *   **Functionality**: Diagrams are fully explorable regardless of screen size.
+    *   **Stability**: No scrolling conflict with the background page.
+*   **Result**: **PASS**.
+
+---
+
+## 中文文档 (Chinese Document)
+
+### 1. Mermaid 图片优化
+*   **组件**: `Reader` (Mermaid 渲染与交互)。
+*   **目标**: 验证 Mermaid 缩放模式在移动端的易读性。
+*   **测试数据**: 包含 Mermaid 流程图的 Markdown 笔记。
+*   **方法**:
+    *   **触发**: 点击已渲染的 Mermaid 图表。
+    *   **覆盖层**: 验证全屏黑色覆盖层出现，SVG 居中。
+    *   **缩放/平移**:
+        *   **鼠标**: 滚轮缩放（以光标为中心）。拖动移动图片。
+        *   **触摸**: 捏合缩放。单指拖动平移。
+    *   **退出**: 点击 '×' 按钮关闭覆盖层。
+*   **结果**:
+    *   **功能**: 无论屏幕大小如何，图表均可完全浏览。
+    *   **稳定性**: 与背景页面无滚动冲突。
+*   **结果**: **通过 (PASS)**。
+
+---
+
+# Test Report (2025-12-23 v0.9.4)
+
+## English Document
+
+### 1. Mermaid Image Optimization
+*   **Component**: `Reader` (Mermaid Rendering & Interaction).
+*   **Objective**: Verify the Mermaid scaling mode for mobile readability.
+*   **Test Data**: Markdown note containing a Mermaid flowchart.
+*   **Method**:
+    *   **Trigger**: Clicked on the rendered Mermaid diagram.
+    *   **Overlay**: Verified full-screen black overlay appears with the SVG centered.
+    *   **Zoom/Pan**:
+        *   **Mouse**: Wheel zooms in/out (centering cursor). Dragging moves the image.
+        *   **Touch**: Pinching zooms. Single finger drag pans.
+    *   **Exit**: Clicked the '×' button to close overlay.
+*   **Results**:
+    *   **Functionality**: Diagrams are fully explorable regardless of screen size.
+    *   **Stability**: No scrolling conflict with the background page.
+*   **Result**: **PASS**.
+
+---
+
+## 中文文档 (Chinese Document)
+
+### 1. Mermaid 图片优化
+*   **组件**: `Reader` (Mermaid 渲染与交互)。
+*   **目标**: 验证 Mermaid 缩放模式在移动端的易读性。
+*   **测试数据**: 包含 Mermaid 流程图的 Markdown 笔记。
+*   **方法**:
+    *   **触发**: 点击已渲染的 Mermaid 图表。
+    *   **覆盖层**: 验证全屏黑色覆盖层出现，SVG 居中。
+    *   **缩放/平移**:
+        *   **鼠标**: 滚轮缩放（以光标为中心）。拖动移动图片。
+        *   **触摸**: 捏合缩放。单指拖动平移。
+    *   **退出**: 点击 '×' 按钮关闭覆盖层。
+*   **结果**:
+    *   **功能**: 无论屏幕大小如何，图表均可完全浏览。
+    *   **稳定性**: 与背景页面无滚动冲突。
+*   **结果**: **通过 (PASS)**。
+
+---
+
 # Test Report (2025-12-23 v0.9.3)
 
 ## English Document

@@ -161,7 +161,9 @@ class Reader {
             if (mermaidBlocks.length > 0) {
                 // Slight delay to ensure DOM is reflowed after show
                 setTimeout(() => {
-                    mermaid.run().catch(err => {
+                    mermaid.run().then(() => {
+                        this.initMermaidZoom();
+                    }).catch(err => {
                         console.error("Mermaid error:", err);
                         // Fallback: Show error in UI
                         // Mermaid usually handles this, but we can log it.
@@ -175,6 +177,132 @@ class Reader {
         this.currentZoom = 1.0;
         this.updateLockState();
         this.updateZoom();
+    }
+
+    initMermaidZoom() {
+        const mermaidDivs = this.body.querySelectorAll('.mermaid');
+        mermaidDivs.forEach(div => {
+            div.style.cursor = 'zoom-in';
+            div.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent Reader close
+                this.openMermaidOverlay(div.innerHTML);
+            });
+        });
+    }
+
+    openMermaidOverlay(svgContent) {
+        // Create Overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'mermaid-zoom-overlay';
+        overlay.className = 'mermaid-overlay';
+        
+        // Container for transform
+        const container = document.createElement('div');
+        container.className = 'mermaid-zoom-container';
+        container.innerHTML = svgContent;
+        overlay.appendChild(container);
+
+        // Close Button
+        const closeBtn = document.createElement('button');
+        closeBtn.innerText = '×';
+        closeBtn.className = 'mermaid-close-btn';
+        closeBtn.onclick = () => document.body.removeChild(overlay);
+        overlay.appendChild(closeBtn);
+
+        document.body.appendChild(overlay);
+
+        // Pan/Zoom State
+        let scale = 1;
+        let panning = false;
+        let pointX = 0;
+        let pointY = 0;
+        let startX = 0;
+        let startY = 0;
+
+        const setTransform = () => {
+            container.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
+        };
+
+        // Mouse Events
+        overlay.onmousedown = (e) => {
+            e.preventDefault();
+            startPanning(e.clientX, e.clientY);
+        };
+
+        overlay.onmouseup = () => {
+            panning = false;
+        };
+
+        overlay.onmousemove = (e) => {
+            e.preventDefault();
+            if (!panning) return;
+            pan(e.clientX, e.clientY);
+        };
+
+        overlay.onwheel = (e) => {
+            e.preventDefault();
+            const xs = (e.clientX - pointX) / scale;
+            const ys = (e.clientY - pointY) / scale;
+            const delta = -e.deltaY;
+            
+            (delta > 0) ? (scale *= 1.2) : (scale /= 1.2);
+            scale = Math.max(0.1, Math.min(scale, 10)); // Limit zoom
+
+            pointX = e.clientX - xs * scale;
+            pointY = e.clientY - ys * scale;
+
+            setTransform();
+        };
+
+        // Touch Events
+        let lastTouchDistance = 0;
+        
+        const getDistance = (touches) => {
+            return Math.hypot(
+                touches[0].pageX - touches[1].pageX,
+                touches[0].pageY - touches[1].pageY
+            );
+        };
+
+        overlay.ontouchstart = (e) => {
+            if (e.touches.length === 1) {
+                startPanning(e.touches[0].clientX, e.touches[0].clientY);
+            } else if (e.touches.length === 2) {
+                lastTouchDistance = getDistance(e.touches);
+            }
+        };
+
+        overlay.ontouchend = () => {
+            panning = false;
+        };
+
+        overlay.ontouchmove = (e) => {
+            e.preventDefault();
+            if (e.touches.length === 1 && panning) {
+                pan(e.touches[0].clientX, e.touches[0].clientY);
+            } else if (e.touches.length === 2) {
+                const dist = getDistance(e.touches);
+                if (lastTouchDistance > 0) {
+                    const zoomFactor = dist / lastTouchDistance;
+                    scale *= zoomFactor;
+                    scale = Math.max(0.1, Math.min(scale, 10));
+                    setTransform();
+                }
+                lastTouchDistance = dist;
+            }
+        };
+
+        function startPanning(x, y) {
+            startX = x - pointX;
+            startY = y - pointY;
+            panning = true;
+        }
+
+        function pan(x, y) {
+            pointX = x - startX;
+            pointY = y - startY;
+            setTransform();
+        }
     }
 
     close() {
