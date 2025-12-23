@@ -170,6 +170,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] **Responsive Controls**
     - [x] **Collapsible Menu**: Main controls collapse to a button on mobile to save screen space.
     - [x] **Focus Mode UI**: Relocated "Exit Focus" button to bottom-center for accessibility.
+    - [x] **Settings Consolidation**: Moved Language Selector into Settings Modal to declutter the interface.
 - [x] **Touch Interactions**
     - [x] **Pinch-to-Zoom**: Added multi-touch support in Reading Window for text scaling.
     - [x] **Touch Targets**: Enlarged buttons and inputs for touch accuracy.

@@ -440,7 +440,9 @@ const translations = {
 };
 
 window.t = function(key) {
-    const lang = document.getElementById('lang-select').value;
+    const langSelect = document.getElementById('set-language');
+    // Fallback if element not found yet (race condition safety)
+    const lang = langSelect ? langSelect.value : 'en';
     return translations[lang][key] || key;
 }
 
@@ -465,9 +467,13 @@ window.updateLanguage = function(lang) {
     }
 }
 
-document.getElementById('lang-select').addEventListener('change', (e) => {
-    window.updateLanguage(e.target.value);
-});
+// Language Selector in Settings
+const langSelect = document.getElementById('set-language');
+if (langSelect) {
+    langSelect.addEventListener('change', (e) => {
+        window.updateLanguage(e.target.value);
+    });
+}
 
 
 // Aggregation Logic for Cluster View

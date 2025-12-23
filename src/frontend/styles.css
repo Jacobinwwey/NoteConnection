@@ -649,11 +649,11 @@ div.tooltip {
     
     #btn-open-settings {
         right: 10px;
-        top: 5px;
+        top: 10px;
         font-size: 0px; /* Hide text, keep icon */
         padding: 5px;
-        width: 30px;
-        height: 30px;
+        width: 35px;
+        height: 35px;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -661,10 +661,6 @@ div.tooltip {
     
     #btn-open-settings::before {
         content: "⚙️";
-        font-size: 16px;
-    }
-
-    #lang-select {
-        display: none; /* Hide language selector on mobile to save space, or move to settings */
+        font-size: 20px;
     }
 }
