@@ -27,12 +27,7 @@
             </select>
             <button id="btn-load-source" style="background: #2c5282; color: white; border: 1px solid #555; padding: 2px 8px; cursor: pointer;">Load</button>
         </div>
-        <div style="position: absolute; top: 10px; right: 20px; z-index: 1000;">
-            <select id="lang-select" style="background: #333; color: white; border: 1px solid #555; padding: 2px;">
-                <option value="en">English</option>
-                <option value="zh">中文</option>
-            </select>
-        </div>
+        
         <div id="controls">
             <h3>NoteConnection</h3>
                                 <div class="stats" style="display: flex; align-items: center;">
@@ -220,6 +215,17 @@
             </div>
             <div class="modal-body">
                 <div class="settings-group">
+                    <h3 data-i18n="grp_general">General</h3>
+                    <div class="setting-item">
+                        <label data-i18n="lbl_language">Language</label>
+                        <select id="set-language" style="background: #444; color: white; border: 1px solid #555; padding: 2px;">
+                            <option value="en">English</option>
+                            <option value="zh">中文</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="settings-group">
                     <h3 data-i18n="grp_physics">Physics</h3>
                     <div class="setting-item">
                         <label data-i18n="lbl_repulsion">Repulsion Strength</label>
@@ -266,7 +272,7 @@
     </div>
 
     <!-- Settings Toggle Button (Absolute Position top right) -->
-    <button id="btn-open-settings" style="position: absolute; top: 10px; right: 110px; z-index: 1000; background: #333; color: white; border: 1px solid #555; padding: 3px 8px; cursor: pointer;">
+    <button id="btn-open-settings" style="position: absolute; top: 10px; right: 20px; z-index: 1000; background: #333; color: white; border: 1px solid #555; padding: 3px 8px; cursor: pointer;">
         ⚙️ <span data-i18n="btn_settings">Settings</span>
     </button>
 

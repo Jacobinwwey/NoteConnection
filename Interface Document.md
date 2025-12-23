@@ -195,6 +195,7 @@ Renders the JSON data into an interactive DAG.
         *   **Responsive Layout**: CSS Media Queries (`max-width: 768px`) adapt the UI.
             *   **Collapsed Controls**: Main panel becomes a toggleable icon.
             *   **Focus Bar**: Relocated to viewport bottom for thumb access.
+            *   **Settings Integration**: Language selector moved to Settings modal to save screen space.
         *   **Touch Gestures**:
             *   **Reader**: Implements `touchstart`/`touchmove` for 2-finger pinch-to-zoom (scales `fontSize`).
 
@@ -455,6 +456,7 @@ Transforms the web project into a standalone Android APK.
         *   **响应式布局**: CSS 媒体查询 (`max-width: 768px`) 适配 UI。
             *   **折叠控件**: 主面板变为可切换图标。
             *   **专注栏**: 重新定位到视口底部以便拇指操作。
+            *   **设置集成**: 语言选择器移至设置模态框以节省屏幕空间。
         *   **触摸手势**:
             *   **阅读器**: 实现 `touchstart`/`touchmove` 以支持双指捏合缩放 (调整 `fontSize`)。
     *   **可扩展性默认值 (v0.8.8)**:

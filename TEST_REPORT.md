@@ -9,9 +9,11 @@
 *   **Method**:
     *   **Responsive Controls**: Verified CSS media query (`max-width: 768px`). Confirmed `#controls` collapses to an icon and expands on click.
     *   **Focus Mode UI**: Verified `#focus-exit-btn` moves to `bottom: 20px` on mobile for thumb accessibility.
+    *   **Settings Integration**: Verified Language Selector presence in Settings Modal and functionality of language switching (`window.updateLanguage` triggered).
     *   **Pinch-to-Zoom**: Verified `touchstart`/`touchmove` logic in `Reader.js` calculates distance between two touch points to scale `fontSize`.
 *   **Results**:
     *   **Layout**: Controls no longer obscure the view on small screens.
+    *   **Functionality**: Language switching works seamlessly from the Settings modal.
     *   **Interaction**: Pinch gestures successfully trigger zoom logic (scaling factor applied).
 *   **Result**: **PASS**.
 
@@ -26,9 +28,11 @@
 *   **方法**:
     *   **响应式控件**: 验证 CSS 媒体查询 (`max-width: 768px`)。确认 `#controls` 折叠为图标并在点击时展开。
     *   **专注模式 UI**: 验证 `#focus-exit-btn` 在移动端移至 `bottom: 20px` 以便于拇指操作。
+    *   **设置集成**: 验证设置模态框中语言选择器的存在及语言切换功能 (`window.updateLanguage` 被触发)。
     *   **捏合缩放**: 验证 `Reader.js` 中的 `touchstart`/`touchmove` 逻辑计算两个触摸点之间的距离以缩放 `fontSize`。
 *   **结果**:
     *   **布局**: 控件在小屏幕上不再遮挡视野。
+    *   **功能**: 语言切换在设置模态框中工作流畅。
     *   **交互**: 捏合手势成功触发缩放逻辑（应用缩放因子）。
 *   **结果**: **通过 (PASS)**。
 
