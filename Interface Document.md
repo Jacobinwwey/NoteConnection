@@ -185,6 +185,8 @@ Renders the JSON data into an interactive DAG.
         *   **Dynamic Spacing**: User adjustable `layerGap` via UI slider (50px - 500px).
     *   **Focus Mode Enhancements (v0.8.8)**:
         *   **Horizontal Spacing**: User adjustable `hSpacing` via UI slider (20px - 300px).
+    *   **Focus Mode Enhancements (v0.8.9)**:
+        *   **Position Lock**: Nodes in Focus Mode retain their position after dragging (Freeze on Select) to prevent layout drift.
     *   **Scalability Defaults (v0.8.8)**:
         *   **Orphans**: Hidden by default.
         *   **Edges**: Hidden by default (opacity 0), visible on Hover/Select.
@@ -375,6 +377,8 @@ Combines statistical and vector methods to infer directed edges.
         *   **动态间距**: 用户可通过 UI 滑块调整 `layerGap` (50px - 500px)。
     *   **专注模式增强 (v0.8.8)**:
         *   **水平间距**: 用户可通过 UI 滑块调整 `hSpacing` (20px - 300px)。
+    *   **专注模式增强 (v0.8.9)**:
+        *   **位置锁定**: 专注模式下的节点在拖动后保留其位置（选中冻结），以防止布局漂移。
     *   **可扩展性默认值 (v0.8.8)**:
         *   **孤立节点**: 默认隐藏。
         *   **边**: 默认隐藏 (透明度 0)，悬停/选择时可见。

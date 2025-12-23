@@ -351,7 +351,8 @@ const translations = {
         opt_fullscreen: "全屏",
         
         // Focus Mode
-        exit_focus: "退出专注模式"
+        exit_focus: "退出专注模式",
+        auto_arrange: "自动排列"
     },
     en: {
         show_all: "Show All",
@@ -1013,7 +1014,12 @@ function dragged(event, d) {
 
 function dragended(event, d) {
   if (!event.active) simulation.alphaTarget(0);
-  // In Focus Mode, we want nodes to stay where they are (or where layout put them)
+  
+  // In Focus Mode, nodes have fixed positions (fx, fy) set by the layout.
+  // We want to allow manual adjustment (dragging) without them snapping back or drifting.
+  // So if in Focus Mode, we simply RETAIN the fx/fy set during drag.
+  // If NOT in Focus Mode (Force Layout), we release them to the simulation.
+  
   if (!focusNode) {
         d.fx = null;
         d.fy = null;

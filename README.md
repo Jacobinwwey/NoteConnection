@@ -10,6 +10,13 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
+### 2025-12-23 v0.8.9 - Stability Improvements
+
+**Goal**: Enhance observation stability during deep analysis.
+
+- [x] **Freeze on Select**
+    - [x] **Drift Prevention**: Nodes in Focus Mode now strictly retain their position after interaction, preventing simulation drift.
+
 ### 2025-12-23 v0.8.8 - Scalability Defaults & Advanced Layout
 
 **Goal**: Optimize default view for massive graphs and refine Focus Mode layout.
@@ -105,6 +112,13 @@ npm start
 <img width="3543" height="2159" alt="image" src="https://github.com/user-attachments/assets/0b2d80f5-ec8c-4ac1-9607-b925d4ab5f82" />
 
 ---
+
+### 2025-12-23 v0.8.9 - 稳定性改进
+
+**目标**: 增强深度分析时的观察稳定性。
+
+- [x] **选中冻结**
+    - [x] **防止漂移**: 专注模式下的节点现在交互后严格保持其位置，防止模拟漂移。
 
 ### 2025-12-23 v0.8.8 - 可扩展性默认值与高级布局
 
