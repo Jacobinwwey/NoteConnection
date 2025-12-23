@@ -1,3 +1,39 @@
+# Test Report (2025-12-23 v0.9.3)
+
+## English Document
+
+### 1. Interaction Logic Iteration
+*   **Component**: `Frontend` (Interaction Handler).
+*   **Objective**: Verify the shift from "Click to Focus" to "Double Click to Focus" and "Click to Highlight".
+*   **Test Data**: User interaction simulation.
+*   **Method**:
+    *   **Single Click**: Simulated click on a node. Verified that `handleSingleClick` is called after 250ms, triggering `highlightNode` (Tooltip appears). Confirmed Focus Mode does *not* activate.
+    *   **Double Click**: Simulated two clicks within 250ms. Verified that `handleDoubleClick` is called, clearing the single click timer. Confirmed `enterFocusMode` is triggered.
+    *   **MouseOver**: Verified hover still triggers highlight on desktop-like environments.
+*   **Results**:
+    *   **Logic**: Timer-based differentiation works correctly.
+    *   **UX**: Meets the requirement for mobile "Click to inspect, Double Click to focus".
+*   **Result**: **PASS**.
+
+---
+
+## 中文文档 (Chinese Document)
+
+### 1. 交互逻辑迭代
+*   **组件**: `Frontend` (交互处理程序)。
+*   **目标**: 验证从“单击专注”到“双击专注”以及“单击高亮”的转变。
+*   **测试数据**: 用户交互模拟。
+*   **方法**:
+    *   **单击**: 模拟点击节点。验证 250ms 后调用 `handleSingleClick`，触发 `highlightNode` (显示提示框)。确认专注模式*未*激活。
+    *   **双击**: 模拟 250ms 内两次点击。验证调用 `handleDoubleClick`，清除单击计时器。确认触发 `enterFocusMode`。
+    *   **鼠标悬停**: 验证悬停在类桌面环境下仍触发高亮。
+*   **结果**:
+    *   **逻辑**: 基于计时器的区分工作正常。
+    *   **UX**: 满足移动端“单击查看，双击专注”的需求。
+*   **Result**: **通过 (PASS)**。
+
+---
+
 # Test Report (2025-12-23 v0.9.2)
 
 ## English Document
