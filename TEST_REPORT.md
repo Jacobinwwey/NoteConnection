@@ -1,3 +1,183 @@
+# 2025-12-24 v0.9.18 - English Document
+
+## Test Report: Node Highlighting System Refactor
+
+### 1. NodeHighlightManager Module Loading
+*   **Test**: Open browser developer console and check for JavaScript errors during page load.
+*   **Result**: No errors. `window.NodeHighlightManager` and `window.createNodeHighlightManager` are defined.
+*   **Status**: **Pass**
+
+### 2. PC Hover Interaction (Non-Frozen)
+*   **Test**: Hover mouse over a node without clicking.
+*   **Result**: 
+    *   Node and connected nodes remain at full opacity (1.0).
+    *   Unconnected nodes dim to 0.05 opacity.
+    *   Outgoing edges turn Blue (#4488ff) with 2.5px width.
+    *   Incoming edges turn Red (#ff6b6b) with 2.5px width.
+    *   Tooltip appears with node statistics.
+*   **Test**: Move mouse away from node.
+*   **Result**: Highlighting clears, all nodes and edges return to default visibility.
+*   **Status**: **Pass**
+
+### 3. Mobile Click Interaction (Frozen)
+*   **Test**: Single click on a node.
+*   **Result**: 
+    *   Simulation stops (all nodes freeze).
+    *   Node highlighting applied (same visual as hover).
+    *   Statistics popup appears showing In/Out degree counts and neighbor lists.
+*   **Test**: Click background (SVG area).
+*   **Result**: 
+    *   Highlight clears.
+    *   Statistics popup closes.
+    *   Simulation resumes (nodes start moving).
+*   **Status**: **Pass**
+
+### 4. Double Click Focus Mode Entry
+*   **Test**: Double click on a node.
+*   **Result**: 
+    *   Focus Mode activates.
+    *   Node arranges with inbound/outbound neighbors.
+    *   Semantic labels appear ("Helping to understand", "Further exploration").
+    *   highlightManager properly disables during focus mode.
+*   **Status**: **Pass**
+
+### 5. Focus Mode State Awareness
+*   **Test**: While in Focus Mode, hover over a neighbor node.
+*   **Result**: No hover highlighting occurs (Focus Mode handles its own visualization).
+*   **Test**: Exit Focus Mode, then hover over the same node.
+*   **Result**: Normal hover highlighting resumes.
+*   **Status**: **Pass**
+
+### 6. Canvas Mode Rendering
+*   **Test**: Switch to Canvas renderer, hover over a node.
+*   **Result**: 
+    *   Visual effects match SVG mode (Blue/Red edges, dimmed unconnected nodes).
+    *   Performance remains smooth even with highlighting active.
+*   **Test**: Click a node in Canvas mode.
+*   **Result**: Same freeze behavior as SVG mode.
+*   **Status**: **Pass**
+
+### 7. Analysis Panel Integration
+*   **Test**: Open Analysis Panel, click a node row in the table.
+*   **Result**: 
+    *   Graph highlights the node using highlightManager.
+    *   Tooltip appears at node position.
+    *   No simulation freeze (freeze=false parameter used).
+*   **Status**: **Pass**
+
+### 8. Background Click Clearing
+*   **Test**: Click a node to freeze highlight, then click SVG background.
+*   **Result**: 
+    *   Highlight clears completely.
+    *   Statistics popup closes.
+    *   Simulation resumes.
+*   **Status**: **Pass**
+
+### 9. State Management Robustness
+*   **Test**: Rapidly click multiple nodes in succession.
+*   **Result**: 
+    *   Each click properly updates the frozen state.
+    *   No stale highlights remain.
+    *   Statistics popup updates for each new node.
+*   **Status**: **Pass**
+
+### 10. Bilingual Comments Verification
+*   **Test**: Review `nodeHighlight.js` source code.
+*   **Result**: All functions and logic blocks have Chinese and English comments.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-24 v0.9.18 - Chinese Document
+
+## 测试报告：节点高亮系统重构
+
+### 1. NodeHighlightManager 模块加载
+*   **测试**: 打开浏览器开发者控制台，检查页面加载期间是否有 JavaScript 错误。
+*   **结果**: 无错误。`window.NodeHighlightManager` 和 `window.createNodeHighlightManager` 已定义。
+*   **状态**: **通过**
+
+### 2. PC 悬停交互（非冻结）
+*   **测试**: 将鼠标悬停在节点上但不点击。
+*   **结果**: 
+    *   节点和连接的节点保持完全不透明 (1.0)。
+    *   未连接的节点变暗至 0.05 不透明度。
+    *   出度边变为蓝色 (#4488ff)，宽度 2.5px。
+    *   入度边变为红色 (#ff6b6b)，宽度 2.5px。
+    *   显示带有节点统计信息的提示框。
+*   **测试**: 将鼠标移开节点。
+*   **结果**: 高亮清除，所有节点和边恢复到默认可见性。
+*   **状态**: **通过**
+
+### 3. 移动端点击交互（冻结）
+*   **测试**: 单击某个节点。
+*   **结果**: 
+    *   模拟停止（所有节点冻结）。
+    *   应用节点高亮（与悬停相同的视觉效果）。
+    *   出现统计弹窗，显示入/出度计数和邻居列表。
+*   **测试**: 点击背景（SVG 区域）。
+*   **结果**: 
+    *   高亮清除。
+    *   统计弹窗关闭。
+    *   模拟恢复（节点开始移动）。
+*   **状态**: **通过**
+
+### 4. 双击进入专注模式
+*   **测试**: 双击某个节点。
+*   **结果**: 
+    *   激活专注模式。
+    *   节点与入度/出度邻居一起排列。
+    *   出现语义标签（"帮助理解"、"进一步探索"）。
+    *   highlightManager 在专注模式期间正确禁用。
+*   **状态**: **通过**
+
+### 5. 专注模式状态感知
+*   **测试**: 在专注模式下，悬停在邻居节点上。
+*   **结果**: 不发生悬停高亮（专注模式处理自己的可视化）。
+*   **测试**: 退出专注模式，然后悬停在同一节点上。
+*   **结果**: 正常的悬停高亮恢复。
+*   **状态**: **通过**
+
+### 6. Canvas 模式渲染
+*   **测试**: 切换到 Canvas 渲染器，悬停在节点上。
+*   **结果**: 
+    *   视觉效果与 SVG 模式匹配（蓝/红边，变暗的未连接节点）。
+    *   即使在高亮激活时性能仍然流畅。
+*   **测试**: 在 Canvas 模式下点击节点。
+*   **结果**: 与 SVG 模式相同的冻结行为。
+*   **状态**: **通过**
+
+### 7. 分析面板集成
+*   **测试**: 打开分析面板，点击表格中的节点行。
+*   **结果**: 
+    *   图表使用 highlightManager 高亮显示节点。
+    *   提示框出现在节点位置。
+    *   不冻结模拟（使用了 freeze=false 参数）。
+*   **状态**: **通过**
+
+### 8. 背景点击清除
+*   **测试**: 点击节点以冻结高亮，然后点击 SVG 背景。
+*   **结果**: 
+    *   高亮完全清除。
+    *   统计弹窗关闭。
+    *   模拟恢复。
+*   **状态**: **通过**
+
+### 9. 状态管理稳健性
+*   **测试**: 快速连续点击多个节点。
+*   **结果**: 
+    *   每次点击都正确更新冻结状态。
+    *   没有残留的陈旧高亮。
+    *   统计弹窗为每个新节点更新。
+*   **状态**: **通过**
+
+### 10. 双语注释验证
+*   **测试**: 查看 `nodeHighlight.js` 源代码。
+*   **结果**: 所有函数和逻辑块都有中文和英文注释。
+*   **状态**: **通过**
+
+---
+
 # 2025-12-24 v0.9.17 - English Document
 
 ## Test Report: SVG Visual Completeness
