@@ -16,9 +16,20 @@ const svg = d3.select("#graph-container")
         // Clear highlight on background click
         if (event.target.tagName === 'svg') {
              // Only if not in Focus Mode (Focus Mode has its own exit)
-             // And if we have a hover/highlight state
-             if (!focusNode && window.hoverNode) {
-                 unhighlightNode(window.hoverNode);
+             if (!focusNode) {
+                 if (window.hoverNode) {
+                     unhighlightNode(window.hoverNode);
+                 }
+                 
+                 // Resume simulation if it was frozen by click interaction
+                 if (window.isInteractionFrozen) {
+                     window.isInteractionFrozen = false;
+                     // Respect the manual freeze checkbox
+                     const isManualFreeze = document.getElementById('freeze-layout') && document.getElementById('freeze-layout').checked;
+                     if (!isManualFreeze) {
+                         simulation.alphaTarget(0.3).restart();
+                     }
+                 }
              }
         }
     })
@@ -815,9 +826,15 @@ node.on("click", (event, d) => {
 });
 
 function handleSingleClick(event, d) {
-    // Requirement: Click displays in-degree/out-degree (Highlight)
-    // We explicitly trigger highlight.
-    // This is useful for mobile where there is no hover.
+    // Requirement: Click displays in-degree/out-degree (Highlight) AND stops movement
+    
+    // 1. Stop the simulation to freeze all other nodes
+    // Respect manual freeze checkbox - if it's already checked, we just stay frozen.
+    // If it's NOT checked, we freeze temporarily.
+    simulation.stop();
+    window.isInteractionFrozen = true;
+
+    // 2. Highlight the node and show connections
     highlightNode(d, event);
 }
 

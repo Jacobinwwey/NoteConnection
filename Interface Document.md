@@ -223,6 +223,9 @@ Renders the JSON data into an interactive DAG.
         *   **Slide Gesture**: Drag the panel header (or handle) up/down to resize the panel on touch devices.
         *   **Auto-Snap**: Dragging near the top automatically snaps to Full Screen mode.
         *   **Drag Handle**: Visual indicator for the draggable area on mobile.
+    *   **Graph Inspection (v0.9.10)**:
+        *   **Click-to-Freeze**: Clicking a node pauses the physics simulation (`simulation.stop()`) to allow stable inspection of connections.
+        *   **Resume**: Clicking the background resumes the simulation (`simulation.restart()`) unless "Freeze Layout" is globally enabled.
 
     *   **Scalability Defaults (v0.8.8)**:
         *   **Orphans**: Hidden by default.
@@ -509,6 +512,9 @@ Transforms the web project into a standalone Android APK.
         *   **滑动操作**: 在触摸设备上上下拖动面板头部（或手柄）以调整面板大小。
         *   **自动吸附**: 拖动至顶部附近时自动吸附至全屏模式。
         *   **拖动手柄**: 移动端可拖动区域的视觉指示器。
+    *   **图表检查 (v0.9.10)**:
+        *   **点击冻结**: 点击节点会暂停物理模拟 (`simulation.stop()`)，以便稳定地检查连接。
+        *   **恢复**: 点击背景会恢复模拟 (`simulation.restart()`)，除非全局启用了“冻结布局”。
 
     *   **可扩展性默认值 (v0.8.8)**:
         *   **孤立节点**: 默认隐藏。

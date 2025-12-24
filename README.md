@@ -119,6 +119,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.10 - Interaction Refinement (Click-to-Freeze)
+- [x] **Inspection**: Clicking a node now freezes the entire simulation for stable inspection of connections.
+- [x] **Resume**: Clicking the background resumes the simulation (if not manually frozen).
+
 ### v0.9.9 - Mobile Analysis Panel Polish
 - [x] **Mobile Adaptation**: Implemented slide gestures (up/down) to resize the analysis panel, full-screen drag snap, and drag handle.
 - [x] **Interaction**: Verified node click sync between analysis panel and graph.
@@ -283,6 +287,10 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.10 - 交互完善 (点击冻结)
+- [x] **检查**: 点击节点现在会冻结整个模拟，以便稳定地检查连接。
+- [x] **恢复**: 点击背景会恢复模拟（如果未手动冻结）。
 
 ### v0.9.9 - 移动端分析面板打磨
 - [x] **移动端适配**: 实现了滑动（上/下）手势以调整分析面板大小、全屏拖动吸附以及移动端拖动手柄。
