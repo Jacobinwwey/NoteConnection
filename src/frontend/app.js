@@ -1197,6 +1197,9 @@ document.getElementById('focus-spacing-slider').addEventListener('input', () => 
 document.getElementById('focus-h-spacing-slider').addEventListener('input', () => {
     if (focusNode) enterFocusMode(focusNode); // Re-calculate layout
 });
+document.getElementById('focus-layout-select').addEventListener('change', () => {
+    if (focusNode) enterFocusMode(focusNode); // Re-calculate layout
+});
       
       
 // Helper to expose highlightNode for external modules (like Analysis)

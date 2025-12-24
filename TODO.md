@@ -221,6 +221,13 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] **Graph Interaction**
     - [x] **Robustness**: Added background click handler to clear highlights.
 
+### 2025-12-24 v0.9.7 - Focus Mode Interaction Fix
+
+**Goal**: Fix usability bugs in Focus Mode.
+
+- [x] **Layout Switching**
+    - [x] **Fix**: Switching between "Horizontal" and "Vertical" layouts now immediately refreshes the graph without requiring slider adjustment.
+
 ### 2026-06-01 v1.0.0 - Production Release
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.
@@ -462,6 +469,13 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **交互**: 验证了点击高亮逻辑在各视图中均有效。
 - [x] **图表交互**
     - [x] **稳健性**: 添加了背景点击处理程序以清除高亮。
+
+### 2025-12-24 v0.9.7 - 专注模式交互修复 (Focus Mode Interaction Fix)
+
+**目标**: 修复专注模式下的可用性 Bug。
+
+- [x] **布局切换**
+    - [x] **修复**: 在 "水平" 和 "垂直" 布局之间切换现在会立即刷新图表，无需调整滑块。
 
 ### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
 
