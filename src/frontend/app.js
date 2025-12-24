@@ -13,30 +13,22 @@ const svg = d3.select("#graph-container")
     .attr("width", "100%")
     .attr("height", "100%")
     .on("click", (event) => {
-        // Clear highlight on background click
+        // Clear highlight on background click using highlightManager
+        // 使用highlightManager在背景点击时清除高亮
         if (event.target.tagName === 'svg') {
              // Only if not in Focus Mode (Focus Mode has its own exit)
-             if (!focusNode) {
-                 // Check if we need to release a frozen state
-                 if (window.isInteractionFrozen) {
-                     window.isInteractionFrozen = false;
-                     window.frozenNode = null;
+             // 仅当不在专注模式时（专注模式有自己的退出方式）
+             if (!focusNode && window.highlightManager) {
+                 const state = window.highlightManager.getState();
+                 if (state.isFrozen || state.currentNode) {
+                     // Clear highlight with force option
+                     // 使用强制选项清除高亮
+                     window.highlightManager.unhighlight({ force: true });
                      
-                     // Force clear current hover/frozen node
-                     if (window.hoverNode) {
-                         // We manually reset because unhighlightNode might have been blocked
-                         const nodeToClear = window.hoverNode;
-                         // Temporarily disable the flag just to be sure (already false above)
-                         unhighlightNode(nodeToClear);
-                     }
-
-                     // Respect the manual freeze checkbox
-                     const isManualFreeze = document.getElementById('freeze-layout') && document.getElementById('freeze-layout').checked;
-                     if (!isManualFreeze) {
-                         simulation.alphaTarget(0.3).restart();
-                     }
-                 } else if (window.hoverNode) {
-                     unhighlightNode(window.hoverNode);
+                     // Hide statistics popup if visible
+                     // 如果统计弹窗可见则隐藏
+                     const popup = document.getElementById('node-stats-popup');
+                     if (popup) popup.style.display = 'none';
                  }
              }
         }
@@ -190,6 +182,28 @@ const texts = node.append("text")
     .attr("dx", 8)
     .attr("dy", ".35em")
     .text(d => d.label);
+
+// Initialize Node Highlight Manager
+// 初始化节点高亮管理器
+const focusModeState = { active: false, node: null };
+const highlightManager = window.createNodeHighlightManager({
+    nodes: nodes,
+    links: links,
+    nodeSelection: node,
+    linkSelection: link,
+    tooltip: tooltip,
+    simulation: simulation,
+    onTick: ticked
+});
+window.highlightManager = highlightManager;
+
+// Update focus mode state helper
+// 更新专注模式状态辅助函数
+function updateFocusModeState(active, node = null) {
+    focusModeState.active = active;
+    focusModeState.node = node;
+    highlightManager.setFocusMode(focusModeState);
+}
 
 // Initial State
 updateColor();
@@ -715,149 +729,17 @@ if (freezeLayoutCheckbox) {
 let transform = d3.zoomIdentity;
 let clickTimer = null;
 
-// Highlight Logic (Extracted)
-function highlightNode(d, event) {
-    // 0. If in frozen interaction mode, only allow highlighting the frozen node
-    if (window.isInteractionFrozen && window.frozenNode && d.id !== window.frozenNode.id) {
-        return;
-    }
-
-    // 1. Lock position to prevent drift while inspecting
-    if (!focusNode && !freezeLayoutCheckbox.checked) {
-        d.fx = d.x;
-        d.fy = d.y;
-    }
-
-    // 2. Global Hover State
-    window.hoverNode = d;
-
-    // Find neighbors FIRST
-    const connectedLinks = links.filter(l => l.source.id === d.id || l.target.id === d.id);
-    const connectedNodeIds = new Set();
-    connectedNodeIds.add(d.id);
-
-    connectedLinks.forEach(l => {
-        connectedNodeIds.add(l.source.id);
-        connectedNodeIds.add(l.target.id);
-    });
-
-    // Dim ALL nodes first (iterate over D3 selection)
-    node.each(function(n) {
-        const el = d3.select(this);
-        if (n.id === d.id) {
-            // Main node - full opacity
-            el.style("opacity", "1");
-        } else if (connectedNodeIds.has(n.id)) {
-            // Connected nodes - full opacity
-            el.style("opacity", "1");
-        } else {
-            // Unconnected nodes - very dim
-            el.style("opacity", "0.05");
-        }
-    });
-
-    // Update ALL links - use direct DOM styling for maximum override
-    link.each(function(l) {
-        const el = d3.select(this);
-        // Note: After simulation starts, l.source and l.target are objects not IDs
-        const sourceId = (typeof l.source === 'object') ? l.source.id : l.source;
-        const targetId = (typeof l.target === 'object') ? l.target.id : l.target;
-        const isConnected = (sourceId === d.id || targetId === d.id);
-        
-        if (isConnected) {
-            const isOutgoing = sourceId === d.id;
-            const color = isOutgoing ? "#4488ff" : "#ff6b6b";
-            const marker = isOutgoing ? "url(#arrow-out)" : "url(#arrow-in)";
-            
-            // CRITICAL: Use setAttri bute for SVG properties to override CSS
-            this.setAttribute("marker-end", marker);
-            this.setAttribute("stroke", color);
-            this.setAttribute("stroke-width", "2.5");
-            this.setAttribute("opacity", "1");
-            this.style.opacity = "1";
-        } else {
-            this.setAttribute("opacity", "0");
-            this.style.opacity = "0";
-        }
-    });
-
-    // Force Canvas render update
-    ticked();
-
-    // Tooltip
-    // If event is provided (mouse/click), position tooltip. 
-    // If no event (e.g. from Analysis panel), calculate position from node coordinates.
-    tooltip.transition().duration(200).style("opacity", .9);
-    tooltip.html(`
-        <strong>${d.label}</strong><br/>
-        In-Degree: ${d.inDegree}<br/>
-        Out-Degree: ${d.outDegree}
-    `);
-
-    if (event) {
-        tooltip.style("left", (event.pageX + 10) + "px")
-               .style("top", (event.pageY - 28) + "px");
-    } else {
-        // Calculate screen position
-        // currentTransform is global from d3 zoom
-        // Note: 'currentTransform' might need to be retrieved from the svg node if not tracked perfectly globally
-        // But we have 'transform' variable in 'ticked' scope? No, 'currentTransform' is usually updated in zoom listener.
-        // In this file, we have:
-        // const svg = ... .call(d3.zoom().on("zoom", (event) => { g.attr("transform", event.transform); currentTransform = event.transform; }));
-        // Wait, I need to ensure 'currentTransform' is available globally or accessible.
-        
-        // Let's get it directly from the SVG element to be safe.
-        const t = d3.zoomTransform(svg.node());
-        const screenX = d.x * t.k + t.x;
-        const screenY = d.y * t.y + t.y; // Wait, t.y + t.y is wrong.
-        
-        // Correct formula:
-        const finalX = d.x * t.k + t.x;
-        const finalY = d.y * t.k + t.y;
-        
-        tooltip.style("left", (finalX + 10) + "px")
-               .style("top", (finalY - 28) + "px");
-    }
-}
-
-function unhighlightNode(d) {
-    // 0. If in frozen interaction mode, do not clear the highlight of the frozen node
-    if (window.isInteractionFrozen && window.frozenNode && d.id === window.frozenNode.id) {
-        return;
-    }
-
-    // 1. Unlock position (unless focused or globally frozen)
-    if (!focusNode && !freezeLayoutCheckbox.checked) {
-        d.fx = null;
-        d.fy = null;
-    }
-
-    // 2. Clear Hover State
-    window.hoverNode = null;
-    ticked();
-
-    // Reset styles to filtered state
-    tooltip.transition().duration(500).style("opacity", 0);
-    node.classed("highlight-main", false);
-    link.classed("highlight-out", false)
-        .classed("highlight-in", false)
-        .style("stroke", null)
-        .style("stroke-width", null)
-        .attr("marker-end", "url(#arrow)");
-    updateVisibility(); // Restore visibility based on filters
-}
-
-// Bind Events
+// Event Handlers using highlightManager
+// 使用highlightManager的事件处理器
 node.on("mouseover", function(event, d) {
-    // Only highlight on hover if not in frozen/clicked state
-    if (!window.isInteractionFrozen && !focusNode) {
-        highlightNode(d, event);
+    const state = highlightManager.getState();
+    if (!state.isFrozen && !focusModeState.active) {
+        highlightManager.highlight(d, { event: event });
     }
 }).on("mouseout", function(event, d) {
-    // Only unhighlight on mouseout if NOT in frozen/clicked state
-    // This allows click to "lock" the highlighting
-    if (!window.isInteractionFrozen && !focusNode) {
-        unhighlightNode(d);
+    const state = highlightManager.getState();
+    if (!state.isFrozen && !focusModeState.active) {
+        highlightManager.unhighlight();
     }
 });
 
@@ -886,29 +768,28 @@ function handleSingleClick(event, d) {
     // Requirement: "this effect does not exist in 'Focus mode'"
     if (focusNode) return;
 
-    // Requirement: Click displays in-degree/out-degree (Highlight) AND stops movement
+    // Use highlightManager with freeze option
+    // 使用带冻结选项的highlightManager
+    highlightManager.highlight(d, { 
+        event: event, 
+        freeze: true 
+    });
     
-    // 1. Stop the simulation to freeze all other nodes
-    simulation.stop();
-    window.isInteractionFrozen = true;
-    window.frozenNode = d;
-
-    // 2. Highlight the node and show connections
-    highlightNode(d, event);
-    
-    // 3. Show Statistics Panel (Floating Popup)
+    // Show Statistics Panel (Floating Popup)
+    // 显示统计弹窗
     showNodePopup(d.id);
 }
 
-// ... (existing code) ...
-
 function handleDoubleClick(event, d) {
     // Requirement: Double Click enters Focus Mode
+    // 要求：双击进入专注模式
     if (focusNode && focusNode.id === d.id) {
         // Already focused -> Open Reader
+        // 已经专注 -> 打开阅读器
         if (window.reader) window.reader.open(d);
     } else {
         // Enter Focus Mode
+        // 进入专注模式
         enterFocusMode(d);
     }
 }
@@ -922,24 +803,10 @@ if (popupCloseBtn) {
     popupCloseBtn.addEventListener('click', () => {
         if (statsPopup) statsPopup.style.display = 'none';
         
-        // Also clear highlight? The prompt says "After clicking a node... display... and show...".
-        // It doesn't explicitly say closing the popup clears the highlight, but it's good UX.
-        // However, "click background" clears highlight. 
-        // Let's leave highlight state alone when just closing the popup, 
-        // OR clear it if the user explicitly closes the stats for that node.
-        // Given 'click background' exists, explicit close usually implies "I'm done looking at this".
-        
-        // But wait, if I close the popup, the node is still "Frozen" and "Highlighted".
-        // If I don't unhighlight, the user is stuck in frozen state until they click background.
-        // So clicking X should probably clear everything.
-        
-        if (window.frozenNode) {
-            unhighlightNode(window.frozenNode);
-            window.isInteractionFrozen = false;
-            window.frozenNode = null;
-            if (!document.getElementById('freeze-layout').checked) {
-                simulation.alphaTarget(0.3).restart();
-            }
+        // Clear highlight using highlightManager
+        // 使用highlightManager清除高亮
+        if (window.highlightManager) {
+            window.highlightManager.unhighlight({ force: true });
         }
     });
 }
@@ -1016,48 +883,46 @@ function renderCanvas(layoutMode) {
     ctx.translate(currentTransform.x, currentTransform.y);
     ctx.scale(currentTransform.k, currentTransform.k);
 
-    // Build connected node set if highlighting
-    let connectedNodeIds = new Set();
-    if (window.hoverNode) {
-        connectedNodeIds.add(window.hoverNode.id);
-        links.forEach(l => {
-            if (l.source.id === window.hoverNode.id || l.target.id === window.hoverNode.id) {
-                connectedNodeIds.add(l.source.id);
-                connectedNodeIds.add(l.target.id);
-            }
-        });
-    }
+    // Get highlight state from highlightManager
+    // 从highlightManager获取高亮状态
+    const highlightState = window.highlightManager ? window.highlightManager.getState() : null;
+    const highlightConnections = highlightState && highlightState.currentNode ? 
+        window.highlightManager.getCurrentConnections() : null;
 
-    // Draw Links
-    // Logic: Default Hidden (0). Visible if Focus Mode OR Hover.
-    // We iterate links and check visibility per link.
+    // Draw Links / 绘制连接
     ctx.lineWidth = 1;
 
     links.forEach(d => {
-        // Check Visibility
-        // 1. Focus Mode
+        // Check Visibility / 检查可见性
+        // 1. Focus Mode / 专注模式
         if (focusNode) {
             if (d.source.isFocusVisible === false || d.target.isFocusVisible === false) return;
             ctx.globalAlpha = 0.6;
             ctx.strokeStyle = "#555";
             ctx.lineWidth = 1;
         } 
-        // 2. Hover Mode (Global hoverNode variable needed)
-        else if (window.hoverNode) {
-             if (d.source.id === window.hoverNode.id) {
-                 ctx.globalAlpha = 1;
-                 ctx.strokeStyle = "#4488ff"; // Blue for Outgoing
-                 ctx.lineWidth = 2.5;
-             } else if (d.target.id === window.hoverNode.id) {
-                 ctx.globalAlpha = 1;
-                 ctx.strokeStyle = "#ff6b6b"; // Red for Incoming
-                 ctx.lineWidth = 2.5;
-             } else {
-                 return; // Hide others
-             }
+        // 2. Highlight Mode (using highlightManager) / 高亮模式（使用highlightManager）
+        else if (highlightConnections) {
+            const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+            const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+            const currentNodeId = highlightState.currentNode.id;
+            
+            if (sourceId === currentNodeId) {
+                // Outgoing edge / 出度边
+                ctx.globalAlpha = 1;
+                ctx.strokeStyle = "#4488ff"; // Blue for outgoing / 蓝色表示出度
+                ctx.lineWidth = 2.5;
+            } else if (targetId === currentNodeId) {
+                // Incoming edge / 入度边
+                ctx.globalAlpha = 1;
+                ctx.strokeStyle = "#ff6b6b"; // Red for incoming / 红色表示入度
+                ctx.lineWidth = 2.5;
+            } else {
+                return; // Hide others / 隐藏其他
+            }
         }
         else {
-            return; // Default Hidden
+            return; // Default Hidden / 默认隐藏
         }
 
         ctx.beginPath();
@@ -1079,29 +944,30 @@ function renderCanvas(layoutMode) {
         ctx.stroke();
     });
 
-    // Draw Nodes
+    // Draw Nodes / 绘制节点
     nodes.forEach(d => {
         if (!isNodeVisible(d)) return;
 
-        // Determine if this node should be dimmed
-        const isHover = window.hoverNode && window.hoverNode.id === d.id;
+        // Determine if this node should be dimmed / 确定节点是否应变暗
+        const isHighlightedNode = highlightState && highlightState.currentNode && 
+            highlightState.currentNode.id === d.id;
         const isFocus = focusNode && focusNode.id === d.id;
-        const isConnected = window.hoverNode && connectedNodeIds.has(d.id);
-        const shouldDim = window.hoverNode && !isConnected && !focusNode;
+        const isConnected = highlightConnections && highlightConnections.nodeIds.has(d.id);
+        const shouldDim = highlightState && highlightState.currentNode && !isConnected && !focusNode;
 
-        // Set opacity for dimming effect
+        // Set opacity for dimming effect / 设置变暗效果的透明度
         ctx.globalAlpha = shouldDim ? 0.05 : 1;
 
         ctx.beginPath();
         let r = isFocus ? 25 : (d.centrality ? Math.max(3, Math.sqrt(d.centrality) * 3) : 5);
-        if (isHover) r += 2; // Slight enlarge on hover
+        if (isHighlightedNode) r += 2; // Slight enlarge on highlight / 高亮时略微放大
 
         ctx.arc(d.x, d.y, r, 0, 2 * Math.PI);
         
-        // Color
+        // Color / 颜色
         if (isFocus) {
             ctx.fillStyle = "#ffd700";
-        } else if (isHover) {
+        } else if (isHighlightedNode) {
             ctx.fillStyle = "#ffaa00";
         } else {
              const mode = document.querySelector('input[name="colorMode"]:checked').value;
@@ -1114,8 +980,8 @@ function renderCanvas(layoutMode) {
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Label - only show if not dimmed or if important
-        if (!shouldDim && (isFocus || isHover || currentTransform.k > 1.2)) {
+        // Label - only show if not dimmed or if important / 标签 - 仅在未变暗或重要时显示
+        if (!shouldDim && (isFocus || isHighlightedNode || currentTransform.k > 1.2)) {
             ctx.globalAlpha = 1;
             ctx.fillStyle = "#ccc";
             ctx.font = isFocus ? "bold 16px Sans-Serif" : "10px Sans-Serif";
@@ -1123,7 +989,7 @@ function renderCanvas(layoutMode) {
         }
     });
 
-    // Draw Focus Labels (Canvas)
+    // Draw Focus Labels (Canvas) / 绘制专注标签（Canvas）
     if (focusNode && window.focusLabels) {
         ctx.save();
         ctx.font = "bold 16px Segoe UI";
@@ -1140,6 +1006,30 @@ function renderCanvas(layoutMode) {
 
     ctx.restore();
 }
+
+// Canvas Setup / Canvas设置
+const canvas = document.getElementById('graph-canvas');
+const ctx = canvas.getContext('2d');
+let currentTransform = d3.zoomIdentity;
+
+// Resize Canvas / 调整Canvas大小
+function resizeCanvas() {
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    if (document.querySelector('input[name="rendererMode"]:checked').value === 'canvas') {
+        ticked();
+    }
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// Canvas Zoom / Canvas缩放
+d3.select(canvas).call(d3.zoom()
+    .scaleExtent([0.1, 8])
+    .on("zoom", (event) => {
+        currentTransform = event.transform;
+        ticked();
+    }));
 
 simulation.on("tick", ticked);
 
@@ -1245,8 +1135,14 @@ function updateVisibility() {
     const minVal = controls.minDegree.value;
     document.getElementById('min-degree-val').innerText = minVal;
 
-    // Don't reset opacity if we're in highlighting mode (interaction frozen)
-    if (!window.isInteractionFrozen && !window.hoverNode) {
+    // Check highlight state from highlightManager
+    // 从highlightManager检查高亮状态
+    const highlightState = window.highlightManager ? window.highlightManager.getState() : null;
+    const isHighlighting = highlightState && highlightState.currentNode;
+
+    // Don't reset opacity if we're in highlighting mode
+    // 如果在高亮模式中则不重置透明度
+    if (!isHighlighting) {
         node.style("opacity", d => isNodeVisible(d) ? 1 : 0.1)
             .style("pointer-events", d => isNodeVisible(d) ? "all" : "none");
 
@@ -1254,9 +1150,6 @@ function updateVisibility() {
             // If in Focus Mode, show connections to focus node
             if (focusNode) {
                 const isConnected = d.source.id === focusNode.id || d.target.id === focusNode.id;
-                // Also show edges between visible nodes in focus mode? 
-                // The requirement says "Context Filtering: Show only direct neighbors".
-                // So edges between visible nodes should be fine.
                 const sourceVis = isNodeVisible(d.source);
                 const targetVis = isNodeVisible(d.target);
                 return (sourceVis && targetVis) ? 0.6 : 0;
@@ -1396,16 +1289,19 @@ document.getElementById('focus-layout-select').addEventListener('change', () => 
       
       
 // Helper to expose highlightNode for external modules (like Analysis)
+// 为外部模块（如Analysis）公开highlightNode
 window.highlightNode = function(id) {
     const d = nodes.find(n => n.id === id);
-    if (d) {
-        highlightNode(d, null);
-        // Also center view on it?
-        // svg.transition().duration(750).call(d3.zoom().transform, d3.zoomIdentity.translate(width/2 - d.x, height/2 - d.y).scale(1.5));
+    if (d && window.highlightManager) {
+        window.highlightManager.highlight(d, { freeze: false });
     }
 };
 
 function enterFocusMode(focusD) {
+    // Update focus mode state
+    // 更新专注模式状态
+    updateFocusModeState(true, focusD);
+
     // If we re-enter (e.g. slider change), we don't return early unless it's strictly same state
     // But here we want to update positions, so we proceed.
 
@@ -1646,6 +1542,10 @@ function enterFocusMode(focusD) {
       
       function exitFocusMode() {
       
+          // Update focus mode state
+          // 更新专注模式状态
+          updateFocusModeState(false, null);
+          
           focusNode = null;
       
           document.getElementById('focus-exit-btn').style.display = 'none';
