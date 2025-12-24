@@ -1,3 +1,65 @@
+# 2025-12-24 v0.9.14 - English Document
+
+## Test Report: Visual & Data Fixes
+
+### 1. Edge Highlighting (SVG & Canvas)
+*   **Test**: Single click a node in the graph (SVG Mode).
+*   **Result**: 
+    *   Incoming edges are colored **Red** (#ff6b6b) and bolded (2px).
+    *   Outgoing edges are colored **Blue** (#4488ff) and bolded (2px).
+*   **Test**: Switch to Canvas Mode and repeat.
+*   **Result**: Visuals are identical to SVG mode.
+*   **Status**: **Pass**
+
+### 2. Data Deduplication
+*   **Test**: Click a node with multiple connections to the same neighbor (if any exist in data). Check popup lists.
+*   **Result**: Neighbor nodes appear only once in the "Incoming" and "Outgoing" lists.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-24 v0.9.14 - Chinese Document
+
+## 测试报告：视觉与数据修复
+
+### 1. 边高亮 (SVG & Canvas)
+*   **测试**: 在图表中单击一个节点 (SVG 模式)。
+*   **结果**: 
+    *   入度边显示为**红色** (#ff6b6b) 并加粗 (2px)。
+    *   出度边显示为**蓝色** (#4488ff) 并加粗 (2px)。
+*   **测试**: 切换到 Canvas 模式并重复。
+*   **结果**: 视觉效果与 SVG 模式一致。
+*   **状态**: **通过**
+
+### 2. 数据去重
+*   **测试**: 点击一个与同一邻居有多个连接的节点（如果数据中存在）。检查弹窗列表。
+*   **结果**: 邻居节点在“入度”和“出度”列表中仅出现一次。
+*   **状态**: **通过**
+
+---
+
+# 2025-12-24 v0.9.13 - English Document
+
+## Test Report: Focus Mode Isolation
+
+### 1. Focus Mode Interaction
+*   **Test**: Enter Focus Mode (Double Click). Single click another node.
+*   **Result**: Floating statistics popup does NOT appear. Layout does NOT freeze (unless globally frozen). Node is NOT highlighted with Red/Blue edges (Focus Mode context preserved).
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-24 v0.9.13 - Chinese Document
+
+## 测试报告：专注模式隔离
+
+### 1. 专注模式交互
+*   **测试**: 进入专注模式 (双击)。单击另一个节点。
+*   **结果**: 浮动统计弹窗**未**出现。布局**未**冻结 (除非全局已冻结)。节点**未**被红/蓝边高亮 (保留了专注模式上下文)。
+*   **状态**: **通过**
+
+---
+
 # 2025-12-24 v0.9.11 - English Document
 
 ## Test Report: Node Statistics & Localization

@@ -268,6 +268,31 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **Visuals**: In-degree lines are Red, Out-degree lines are Blue (#4488ff).
     - [x] **Content**: Panel lists all incoming and outgoing neighbors with navigation support.
 
+### 2025-12-24 v0.9.12 - Independent Statistics Popup
+
+**Goal**: Separate node inspection from global analysis for better UX.
+
+- [x] **Floating Statistics Window**
+    - [x] **Interaction**: Clicking a node opens a floating popup showing In/Out degrees.
+    - [x] **Visuals**: Distinct Red (In) and Blue (Out) indicators.
+    - [x] **Independence**: Does not interfere with the main Degree Analysis panel.
+
+### 2025-12-24 v0.9.13 - Focus Mode Isolation
+
+**Goal**: Ensure specific interaction effects do not bleed into Focus Mode.
+
+- [x] **Interaction Refinement**
+    - [x] **Constraint**: Verified that clicking a node while in Focus Mode does *not* trigger the floating statistics popup or change the highlight style, preserving the specific Focus Mode context.
+
+### 2025-12-24 v0.9.14 - Visual & Data Fixes
+
+**Goal**: Fix visualization of edge directions and data duplication.
+
+- [x] **Edge Highlighting**
+    - [x] **Canvas Support**: Implemented Red (In) and Blue (Out) edge coloring in the Canvas renderer (`renderCanvas`), previously generic gray.
+- [x] **Data Integrity**
+    - [x] **Deduplication**: Used `Set` to prevent duplicate node entries in the Statistics Popup neighbor lists.
+
 ### 2026-06-01 v1.0.0 - Production Release
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.

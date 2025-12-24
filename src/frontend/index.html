@@ -230,6 +230,35 @@
         </div>
     </div>
 
+    <!-- Node Statistics Popup -->
+    <div id="node-stats-popup" class="stats-popup" style="display: none;">
+        <div class="popup-header">
+            <h3 id="popup-node-name">Node Name</h3>
+            <button id="popup-close-btn">&times;</button>
+        </div>
+        <div class="popup-content">
+            <div class="stat-row">
+                <span class="stat-label" style="color: #ff6b6b;">In-Degree (Red):</span>
+                <span id="popup-in-count" class="stat-value">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label" style="color: #4488ff;">Out-Degree (Blue):</span>
+                <span id="popup-out-count" class="stat-value">0</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-lists">
+                <div class="stat-list-col">
+                    <span class="list-header">Incoming</span>
+                    <ul id="popup-in-list"></ul>
+                </div>
+                <div class="stat-list-col">
+                    <span class="list-header">Outgoing</span>
+                    <ul id="popup-out-list"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Reading Window -->
     <div id="reading-window" class="reading-overlay" style="display: none;">
         <div id="reading-content-box" class="reading-box window-mode">

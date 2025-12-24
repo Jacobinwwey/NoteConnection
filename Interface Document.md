@@ -230,11 +230,13 @@ Renders the JSON data into an interactive DAG.
     *   **Graph Inspection (v0.9.10)**:
         *   **Click-to-Freeze**: Clicking a node pauses the physics simulation (`simulation.stop()`) to allow stable inspection of connections.
         *   **Resume**: Clicking the background resumes the simulation (`simulation.restart()`) unless "Freeze Layout" is globally enabled.
-    *   **Node Statistics Panel (v0.9.11)**:
-        *   **Trigger**: Clicking a node opens the details panel within the Analysis area.
-        *   **Content**: Displays In-degree and Out-degree counts, plus scrollable lists of connected nodes.
-        *   **Navigation**: Clicking a node in the list highlights it and navigates to its details.
-        *   **Localization**: Focus Mode labels ("Helping to understand", "Further exploration") are now fully localized.
+    *   **Node Statistics Popup (v0.9.12)**:
+        *   **Type**: Independent Floating Window (`#node-stats-popup`).
+        *   **Trigger**: Single Click on a node (Disabled in Focus Mode v0.9.13).
+        *   **Content**: Displays In-degree (Red) and Out-degree (Blue) counts, plus separate scrollable lists of incoming and outgoing neighbors.
+        *   **Visual Feedback (v0.9.14)**: Connected edges are now explicitly colored (Red/Blue) and bolded (2px) in both SVG and Canvas renderers.
+        *   **Interaction**: Clicking a neighbor in the list navigates to that node (highlights and updates popup).
+        *   **Independence**: Separate from the main Degree Analysis panel to allow focused inspection without losing global context.
 
     *   **Scalability Defaults (v0.8.8)**:
         *   **Orphans**: Hidden by default.
@@ -524,6 +526,13 @@ Transforms the web project into a standalone Android APK.
     *   **图表检查 (v0.9.10)**:
         *   **点击冻结**: 点击节点会暂停物理模拟 (`simulation.stop()`)，以便稳定地检查连接。
         *   **恢复**: 点击背景会恢复模拟 (`simulation.restart()`)，除非全局启用了“冻结布局”。
+    *   **节点统计弹窗 (Node Statistics Popup - v0.9.12)**:
+        *   **类型**: 独立浮动窗口 (`#node-stats-popup`)。
+        *   **触发**: 单击节点 (专注模式下禁用 v0.9.13)。
+        *   **内容**: 显示入度 (红色) 和出度 (蓝色) 计数，以及单独的可滚动入度和出度邻居列表。
+        *   **视觉反馈 (v0.9.14)**: 连接的边现在在 SVG 和 Canvas 渲染器中均显式着色 (红/蓝) 并加粗 (2px)。
+        *   **交互**: 点击列表中的邻居会导航到该节点 (高亮并更新弹窗)。
+        *   **独立性**: 独立于主度数分析面板，允许在不丢失全局上下文的情况下进行重点检查。
 
     *   **可扩展性默认值 (v0.8.8)**:
         *   **孤立节点**: 默认隐藏。
