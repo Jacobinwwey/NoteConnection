@@ -113,14 +113,26 @@
 
         <!-- Focus Mode Exit Button -->
         <div id="focus-exit-btn" style="display: none; align-items: center; gap: 15px;">
-            <span id="focus-node-name" style="color: #61dafb; font-weight: bold;"></span>
+            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                <span id="focus-node-name" style="color: #61dafb; font-weight: bold;"></span>
+                <span id="focus-node-stats" style="color: #aaa; font-size: 0.75rem;"></span>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 5px; border-left: 1px solid #555; padding-left: 10px;">
+                <label for="focus-layout-select" style="color: #aaa; font-size: 0.8rem;">Layout:</label>
+                <select id="focus-layout-select" style="background: #333; color: white; border: 1px solid #555; font-size: 0.8rem;">
+                    <option value="horizontal">Horizontal (Standard)</option>
+                    <option value="vertical">Vertical (L-R)</option>
+                </select>
+            </div>
+
             <div style="display: flex; align-items: center; gap: 5px;">
-                <label for="focus-spacing-slider" style="color: #aaa; font-size: 0.8rem;">V-Space:</label>
-                <input type="range" id="focus-spacing-slider" min="50" max="500" value="250" style="width: 80px;" title="Vertical Spacing">
+                <label for="focus-spacing-slider" style="color: #aaa; font-size: 0.8rem;">Layer-Space:</label>
+                <input type="range" id="focus-spacing-slider" min="50" max="500" value="250" style="width: 80px;" title="Layer Spacing">
             </div>
             <div style="display: flex; align-items: center; gap: 5px;">
-                <label for="focus-h-spacing-slider" style="color: #aaa; font-size: 0.8rem;">H-Space:</label>
-                <input type="range" id="focus-h-spacing-slider" min="20" max="300" value="80" style="width: 80px;" title="Horizontal Spacing">
+                <label for="focus-h-spacing-slider" style="color: #aaa; font-size: 0.8rem;">Node-Space:</label>
+                <input type="range" id="focus-h-spacing-slider" min="20" max="300" value="80" style="width: 80px;" title="Node Spacing">
             </div>
             <button id="btn-arrange-focus" data-i18n="auto_arrange" style="margin-right: 5px;">Auto-Arrange</button>
             <button id="btn-exit-focus" data-i18n="exit_focus">Exit Focus Mode</button>

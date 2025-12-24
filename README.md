@@ -116,6 +116,11 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.5 - Refined Mobile Experience & Focus Semantics
+- [x] **Focus Mode**: Added "Hierarchical (Left-Right)" layout and semantic labels ("Helping to understand" / "Further exploration").
+- [x] **Analysis Panel**: Optimized for mobile (scrollable) and added click-to-highlight interaction with the main graph.
+- [x] **Visuals**: Enhanced Mermaid diagram text visibility for light backgrounds; Fixed Focus Mode centering.
+
 ### v0.9.2 - Mobile UI Optimization
 - [x] **Responsive Controls**: Main panel collapses on mobile; Focus UI moved to bottom.
 - [x] **Touch Zoom**: Added pinch-to-zoom support in the Reading Window.
@@ -258,6 +263,11 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.5 - 移动体验优化与专注语义
+- [x] **专注模式**: 添加了 "层级 (从左到右)" 布局和语义标签 ("Helping to understand" / "Further exploration")。
+- [x] **分析面板**: 针对移动端优化（可滚动），并添加了与主图的点击高亮交互。
+- [x] **视觉效果**: 增强了 Mermaid 图表在浅色背景下的文本可见性；修复了专注模式居中问题。
 
 ### v0.9.2 - 移动端 UI 优化
 - [x] **响应式控件**: 主面板在移动端折叠；专注 UI 移至底部。

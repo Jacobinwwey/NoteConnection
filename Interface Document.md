@@ -205,6 +205,17 @@ Renders the JSON data into an interactive DAG.
         *   **Trigger**: Click on any rendered Mermaid diagram in the Reader.
         *   **Interface**: Full-screen modal with independent Pan/Zoom (unlimited scaling).
         *   **Exit**: dedicated '×' button.
+    *   **Focus Mode Semantics (v0.9.5)**:
+        *   **Centering**: Viewport automatically pans to center the focused node without displacing its simulation coordinates.
+        *   **Semantic Labels**:
+            *   **Inbound Area**: Labeled "Helping to understand" (Left/Bottom).
+            *   **Outbound Area**: Labeled "Further exploration" (Right/Top).
+        *   **Layouts**:
+            *   **Horizontal**: Standard Top-Bottom flow.
+            *   **Hierarchical (L-R)**: Left-to-Right flow (Inbound -> Selected -> Outbound).
+    *   **Analysis Interaction (v0.9.5)**:
+        *   **Mobile View**: Scrollable full-width panel on small screens.
+        *   **Graph Sync**: Clicking a row in the analysis table highlights the corresponding node and its edges in the main graph.
 
     *   **Scalability Defaults (v0.8.8)**:
         *   **Orphans**: Hidden by default.
@@ -473,6 +484,18 @@ Transforms the web project into a standalone Android APK.
         *   **触发**: 点击阅读器中任何已渲染的 Mermaid 图表。
         *   **界面**: 全屏模态框，具有独立的平移/缩放功能（无限制缩放）。
         *   **退出**: 专用的 '×' 按钮。
+    *   **专注模式语义 (v0.9.5)**:
+        *   **居中**: 视口自动平移以使焦点节点居中，而不改变其模拟坐标。
+        *   **语义标签**:
+            *   **入度区域**: 标记为 "Helping to understand" (左/下)。
+            *   **出度区域**: 标记为 "Further exploration" (右/上)。
+        *   **布局**:
+            *   **水平**: 标准的上下流向。
+            *   **层级 (L-R)**: 从左到右流向 (入度 -> 选中 -> 出度)。
+    *   **分析交互 (v0.9.5)**:
+        *   **移动视图**: 小屏幕上可滚动的全宽面板。
+        *   **图表同步**: 点击分析表中的行会在主图中高亮显示相应的节点及其边。
+
     *   **可扩展性默认值 (v0.8.8)**:
         *   **孤立节点**: 默认隐藏。
         *   **边**: 默认隐藏 (透明度 0)，悬停/选择时可见。

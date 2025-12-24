@@ -193,6 +193,21 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **Gestures**: Implemented Pan (drag) and Zoom (pinch/wheel) logic within the overlay.
     - [x] **UX**: Added a prominent Exit button to close the zoom mode.
 
+### 2025-12-24 v0.9.5 - Refined Mobile Experience & Focus Semantics
+
+**Goal**: Polish interaction details and visual clarity for mobile and complex graphs.
+
+- [x] **Focus Mode Enhancements**
+    - [x] **Centering**: Viewport automatically centers on the focused node's original position.
+    - [x] **Semantics**: Added clear area labels ("Helping to understand", "Further exploration").
+    - [x] **Layout**: Implemented "Hierarchical (Left-Right)" layout option.
+- [x] **Analysis Panel**
+    - [x] **Mobile**: Panel is now scrollable and adapted for touch screens.
+    - [x] **Interaction**: Clicking rows highlights the node and its connections in the graph.
+- [x] **Visual Polish**
+    - [x] **Mermaid**: Enhanced text visibility (shadow/outline) for light-colored diagrams.
+    - [x] **Lines**: Ensured edges are hidden by default and only visible on interaction.
+
 ### 2026-06-01 v1.0.0 - Production Release
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.
@@ -376,6 +391,51 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **平台支持**: 通过 `@capacitor/android` 添加了 Android 平台。
     - [x] **资源管理**: 实现了 `copy-assets` 脚本和 `npx cap sync`。
     - [x] **构建流水线**: 验证了 Gradle 构建配置 (`assembleDebug`)。
+
+### 2025-12-23 v0.9.2 - 移动端 UI 优化 (Mobile UI Optimization)
+
+**目标**: 针对小触摸屏优化 UI/UX。
+
+- [x] **响应式控件**
+    - [x] **折叠菜单**: 主控件在移动端折叠为按钮以节省空间。
+    - [x] **专注模式 UI**: 将“退出专注”按钮移至底部中央以便操作。
+    - [x] **设置合并**: 将语言选择器移入设置模态框以净化界面。
+- [x] **触摸交互**
+    - [x] **捏合缩放**: 阅读窗口添加了多点触控支持以缩放文本。
+    - [x] **触摸目标**: 增大了按钮和输入框以提高触摸精度。
+
+### 2025-12-23 v0.9.3 - 移动端交互迭代 (Mobile Interaction Iteration)
+
+**目标**: 改进移动端可用性的交互逻辑。
+
+- [x] **交互逻辑更新**
+    - [x] **单击**: 触发节点高亮和提示框（显示入/出度）。
+    - [x] **双击**: 触发进入专注模式。
+    - [x] **桌面兼容性**: 保留了桌面的 `mouseover` 悬停，同时统一了点击逻辑。
+
+### 2025-12-23 v0.9.4 - Mermaid 图片优化 (Mermaid Image Optimization)
+
+**目标**: 增强移动设备上的图表阅读体验。
+
+- [x] **Mermaid 缩放模式**
+    - [x] **交互**: 点击 Mermaid 图表打开全屏覆盖层。
+    - [x] **手势**: 在覆盖层内实现了平移 (拖动) 和缩放 (捏合/滚轮) 逻辑。
+    - [x] **UX**: 添加了显眼的退出按钮以关闭缩放模式。
+
+### 2025-12-24 v0.9.5 - 移动体验优化与专注语义 (Refined Mobile Experience & Focus Semantics)
+
+**目标**: 打磨移动端和复杂图谱的交互细节与视觉清晰度。
+
+- [x] **专注模式增强**
+    - [x] **居中**: 视口自动以焦点节点的原始位置为中心。
+    - [x] **语义**: 添加了清晰的区域标签 ("Helping to understand", "Further exploration")。
+    - [x] **布局**: 实现了 "层级 (从左到右)" 布局选项。
+- [x] **分析面板**
+    - [x] **移动端**: 面板现在可滚动并适配触摸屏。
+    - [x] **交互**: 点击行会在图表中高亮显示节点及其连接。
+- [x] **视觉打磨**
+    - [x] **Mermaid**: 增强了浅色图表的文本可见性（阴影/描边）。
+    - [x] **连线**: 确保边默认隐藏，仅在交互时可见。
 
 ### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
 
