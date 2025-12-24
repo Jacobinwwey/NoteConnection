@@ -748,7 +748,10 @@ div.tooltip {
 .mermaid .edgeLabel, 
 .mermaid .messageText, 
 .mermaid .loopText, 
-.mermaid .noteText {
+.mermaid .noteText,
+.mermaid-zoom-container text,
+.mermaid-zoom-container .nodeLabel,
+.mermaid-zoom-container .edgeLabel {
     font-family: 'Segoe UI', sans-serif !important;
     text-shadow: 
         -1px -1px 0 #000,  
@@ -762,12 +765,22 @@ div.tooltip {
 
 /* Ensure paths (arrows) are visible */
 .mermaid .edgePaths path, 
-.mermaid .flowchart-link {
+.mermaid .flowchart-link,
+.mermaid-zoom-container .edgePaths path, 
+.mermaid-zoom-container .flowchart-link {
     stroke: #aaa !important;
 }
-.mermaid .marker {
+.mermaid .marker,
+.mermaid-zoom-container .marker {
     fill: #aaa !important;
     stroke: #aaa !important;
+}
+
+/* Analysis Panel Full Screen Mode */
+#analysis-panel.full-screen {
+    height: 100% !important;
+    top: 0;
+    z-index: 2200;
 }
 
 /* --- Focus Mode Semantic Labels --- */

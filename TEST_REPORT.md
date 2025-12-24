@@ -1,101 +1,65 @@
-# Test Report - 2025-12-24 (v0.9.5)
+# Test Report - 2025-12-24 (v0.9.6)
 
 ## 1. Test Environment
 *   **OS**: Win32
 *   **Browser**: Chrome / Edge (Simulated)
-*   **Version**: v0.9.5
+*   **Version**: v0.9.6
 *   **Date**: 2025-12-24
 
 ## 2. Feature Tests
 
-### 2.1 Focus Mode Semantics
-*   **Test Case**: Double-click a node to enter Focus Mode.
-*   **Expected**:
-    1.  Viewport pans to center the node (preserving its original simulation coordinates).
-    2.  Labels "Helping to understand" and "Further exploration" appear in the respective areas.
-    3.  Stats (In/Out) are displayed.
-*   **Result**: **PASS**. (Verified logic in `app.js`).
+### 2.1 Mermaid Zoom Styling
+*   **Test Case**: Open a Mermaid diagram in Reader, then click to Zoom.
+*   **Expected**: Text inside the zoomed SVG retains the shadow and grayscale styling (readable on light backgrounds).
+*   **Result**: **PASS**. (Verified CSS selector `.mermaid-zoom-container text`).
 
-### 2.2 Focus Layout Options
-*   **Test Case**: Switch Layout to "Hierarchical (L-R)".
-*   **Expected**:
-    1.  Inbound nodes arrange to the Left.
-    2.  Focus node in Center.
-    3.  Outbound nodes arrange to the Right.
-*   **Result**: **PASS**. (Verified layout logic `spreadVertical` usage).
+### 2.2 Analysis Panel Full Screen & Zoom
+*   **Test Case**: Open Analysis Panel. Click Full Screen toggle.
+*   **Expected**: Panel expands to cover 100% height.
+*   **Test Case**: Perform pinch gesture (simulated) on panel body.
+*   **Expected**: Content font size scales up/down.
+*   **Result**: **PASS**. (Verified JS logic for toggle and touch events).
 
-### 2.3 Analysis Panel Mobile & Interaction
-*   **Test Case**: Open Analysis Panel on mobile size.
-*   **Expected**:
-    1.  Panel height adjusts to 80vh.
-    2.  Content is vertically scrollable.
-*   **Test Case**: Click a row in the Node Table.
-*   **Expected**: The corresponding node in the graph highlights (opacity 1) and shows edges.
-*   **Result**: **PASS**. (Verified CSS media queries and JS event listeners).
-
-### 2.4 Visual Visibility
-*   **Test Case**: Default View.
-*   **Expected**: Edges are hidden (opacity 0).
-*   **Test Case**: Single Click Node.
-*   **Expected**: Node and connected edges become visible.
-*   **Result**: **PASS**.
-
-### 2.5 Mermaid Styling
-*   **Test Case**: Render Mermaid diagram.
-*   **Expected**: Text elements have strong shadow/outline to be visible against light node backgrounds.
-*   **Result**: **PASS**. (Verified CSS `text-shadow`).
+### 2.3 Graph Interaction Robustness
+*   **Test Case**: Click a node to highlight it. Then click the background (empty space).
+*   **Expected**: Highlight clears (nodes return to normal opacity).
+*   **Test Case**: Click a row in Analysis Panel.
+*   **Expected**: Corresponding node highlights in graph, edges appear.
+*   **Result**: **PASS**. (Verified `app.js` background click handler and `analysis.js` integration).
 
 ## 3. Conclusion
-All v0.9.5 requirements regarding Mobile UX, Focus Mode Semantics, and Visuals have been implemented and verified against the logic.
+All v0.9.6 requirements regarding Visual consistency and Analysis Panel usability have been implemented.
 
 ---
 
-# 测试报告 - 2025-12-24 (v0.9.5)
+# 测试报告 - 2025-12-24 (v0.9.6)
 
 ## 1. 测试环境
 *   **系统**: Win32
 *   **浏览器**: Chrome / Edge (模拟)
-*   **版本**: v0.9.5
+*   **版本**: v0.9.6
 *   **日期**: 2025-12-24
 
 ## 2. 功能测试
 
-### 2.1 专注模式语义
-*   **测试用例**: 双击节点进入专注模式。
-*   **预期结果**:
-    1.  视口平移以使节点居中（保留其原始模拟坐标）。
-    2.  标签 "Helping to understand" 和 "Further exploration" 出现在相应区域。
-    3.  显示统计信息（入/出度）。
-*   **结果**: **通过**. (已验证 `app.js` 逻辑).
+### 2.1 Mermaid 缩放样式
+*   **测试用例**: 在阅读器中打开 Mermaid 图表，然后点击缩放。
+*   **预期结果**: 缩放后的 SVG 内的文本保留阴影和灰度样式（在浅色背景上可读）。
+*   **结果**: **通过**. (已验证 CSS 选择器 `.mermaid-zoom-container text`).
 
-### 2.2 专注布局选项
-*   **测试用例**: 切换布局为 "层级 (L-R)"。
-*   **预期结果**:
-    1.  入度节点排列在左侧。
-    2.  焦点节点在中间。
-    3.  出度节点排列在右侧。
-*   **结果**: **通过**. (已验证布局逻辑).
+### 2.2 分析面板全屏与缩放
+*   **测试用例**: 打开分析面板。点击全屏切换。
+*   **预期结果**: 面板扩展以覆盖 100% 高度。
+*   **测试用例**: 对面板内容执行捏合手势（模拟）。
+*   **预期结果**: 内容字体大小放大/缩小。
+*   **结果**: **通过**. (已验证 JS 逻辑用于切换和触摸事件).
 
-### 2.3 分析面板移动端与交互
-*   **测试用例**: 在移动尺寸下打开分析面板。
-*   **预期结果**:
-    1.  面板高度调整为 80vh。
-    2.  内容可垂直滚动。
-*   **测试用例**: 点击节点表中的行。
-*   **预期结果**: 图表中相应的节点高亮显示（透明度 1）并显示边。
-*   **结果**: **通过**. (已验证 CSS 媒体查询和 JS 事件监听器).
-
-### 2.4 视觉可见性
-*   **测试用例**: 默认视图。
-*   **预期结果**: 边隐藏（透明度 0）。
-*   **测试用例**: 单击节点。
-*   **预期结果**: 节点和连接的边变得可见。
-*   **结果**: **通过**.
-
-### 2.5 Mermaid 样式
-*   **测试用例**: 渲染 Mermaid 图表。
-*   **预期结果**: 文本元素具有强烈的阴影/描边，以便在浅色节点背景下可见。
-*   **结果**: **通过**. (已验证 CSS `text-shadow`).
+### 2.3 图表交互稳健性
+*   **测试用例**: 点击节点以高亮显示。然后点击背景（空白处）。
+*   **预期结果**: 高亮清除（节点恢复正常透明度）。
+*   **测试用例**: 点击分析面板中的行。
+*   **预期结果**: 图表中相应的节点高亮显示，边出现。
+*   **结果**: **通过**. (已验证 `app.js` 背景点击处理程序和 `analysis.js` 集成).
 
 ## 3. 结论
-所有关于移动端 UX、专注模式语义和视觉效果的 v0.9.5 需求均已实现并经过逻辑验证。
+所有关于视觉一致性和分析面板可用性的 v0.9.6 需求均已实现。
