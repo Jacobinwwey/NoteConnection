@@ -60,6 +60,35 @@ body {
     display: flex; /* Class-based toggle is safer */
 }
 
+#analysis-panel.full-screen {
+    height: 100% !important;
+    top: 0;
+    bottom: 0;
+    z-index: 1000;
+}
+
+/* Mobile Drag Handle (Visual) */
+.mobile-drag-handle {
+    width: 40px;
+    height: 5px;
+    background: #555;
+    border-radius: 3px;
+    margin: 5px auto;
+    display: none; /* Desktop default */
+}
+
+@media (max-width: 768px) {
+    .mobile-drag-handle {
+        display: block;
+    }
+    
+    /* Optimize header for touch dragging */
+    .panel-header {
+        padding-top: 5px; /* Space for handle */
+        cursor: ns-resize;
+    }
+}
+
 /* Quick Distribution Sparkline */
 #quick-distribution {
     margin-left: 10px;

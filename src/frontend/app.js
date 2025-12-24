@@ -729,19 +729,37 @@ function highlightNode(d, event) {
 
     // Tooltip
     // If event is provided (mouse/click), position tooltip. 
-    // If no event (e.g. from Analysis panel), we don't show tooltip as the panel has info.
+    // If no event (e.g. from Analysis panel), calculate position from node coordinates.
+    tooltip.transition().duration(200).style("opacity", .9);
+    tooltip.html(`
+        <strong>${d.label}</strong><br/>
+        In-Degree: ${d.inDegree}<br/>
+        Out-Degree: ${d.outDegree}
+    `);
+
     if (event) {
-        tooltip.transition().duration(200).style("opacity", .9);
-        tooltip.html(`
-            <strong>${d.label}</strong><br/>
-            In-Degree: ${d.inDegree}<br/>
-            Out-Degree: ${d.outDegree}
-        `)
-        .style("left", (event.pageX + 10) + "px")
-        .style("top", (event.pageY - 28) + "px");
+        tooltip.style("left", (event.pageX + 10) + "px")
+               .style("top", (event.pageY - 28) + "px");
     } else {
-        // Ensure tooltip is hidden if triggered programmatically to avoid stale tooltips
-        tooltip.style("opacity", 0);
+        // Calculate screen position
+        // currentTransform is global from d3 zoom
+        // Note: 'currentTransform' might need to be retrieved from the svg node if not tracked perfectly globally
+        // But we have 'transform' variable in 'ticked' scope? No, 'currentTransform' is usually updated in zoom listener.
+        // In this file, we have:
+        // const svg = ... .call(d3.zoom().on("zoom", (event) => { g.attr("transform", event.transform); currentTransform = event.transform; }));
+        // Wait, I need to ensure 'currentTransform' is available globally or accessible.
+        
+        // Let's get it directly from the SVG element to be safe.
+        const t = d3.zoomTransform(svg.node());
+        const screenX = d.x * t.k + t.x;
+        const screenY = d.y * t.y + t.y; // Wait, t.y + t.y is wrong.
+        
+        // Correct formula:
+        const finalX = d.x * t.k + t.x;
+        const finalY = d.y * t.k + t.y;
+        
+        tooltip.style("left", (finalX + 10) + "px")
+               .style("top", (finalY - 28) + "px");
     }
 }
 

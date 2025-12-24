@@ -119,6 +119,14 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.9 - Mobile Analysis Panel Polish
+- [x] **Mobile Adaptation**: Implemented slide gestures (up/down) to resize the analysis panel, full-screen drag snap, and drag handle.
+- [x] **Interaction**: Verified node click sync between analysis panel and graph.
+
+### v0.9.8 - Analysis Interaction Refinement
+- [x] **Graph Sync**: Clicking table rows now highlights nodes in the graph.
+- [x] **Mobile UX**: Fixed mobile scrolling in Analysis Panel.
+
 ### v0.9.7 - Focus Mode Interaction Fix
 - [x] **Focus Mode**: Fixed a bug where changing the layout type did not trigger an immediate refresh.
 
@@ -275,6 +283,14 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.9 - 移动端分析面板打磨
+- [x] **移动端适配**: 实现了滑动（上/下）手势以调整分析面板大小、全屏拖动吸附以及移动端拖动手柄。
+- [x] **交互**: 验证了分析面板与图表之间的节点点击同步。
+
+### v0.9.8 - 分析交互完善
+- [x] **图表同步**: 点击表格行现在会高亮显示图表中的节点。
+- [x] **移动端 UX**: 修复了分析面板中的移动端滚动问题。
 
 ### v0.9.7 - 专注模式交互修复
 - [x] **专注模式**: 修复了切换布局类型不会触发立即刷新的 Bug。

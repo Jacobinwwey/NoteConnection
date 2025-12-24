@@ -223,7 +223,7 @@ div.tooltip {
 
 .panel-body {
     padding: 15px;
-    overflow-y: auto;
+    overflow: hidden; /* Prevent double scrollbars; internal elements handle scroll */
     flex: 1;
     display: flex;
     flex-direction: column;

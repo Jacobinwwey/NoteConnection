@@ -138,6 +138,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     e.touches[0].pageY - e.touches[1].pageY
                 );
                 initialZoom = AppState.currentZoom;
+                e.preventDefault(); // Prevent scroll while pinching
             }
         }, { passive: false });
 
@@ -154,28 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     newZoom = Math.max(0.8, Math.min(2.0, newZoom)); // Clamp zoom
                     
                     AppState.currentZoom = newZoom;
-                    // Apply zoom to children (container wrapper) or font-size
-                    // Scaling the whole body might break scrolling if not careful
-                    // Let's use CSS transform on the content wrapper
-                    // We might need to wrap content if not already wrapped. 
-                    // Actually, let's just scale font-size for reflow support, 
-                    // OR use zoom property (non-standard but works) 
-                    // OR transform-origin: top left; transform: scale(...)
-                    
-                    // Transform approach:
-                    // UI.panelBody.style.transform = `scale(${newZoom})`;
-                    // UI.panelBody.style.transformOrigin = 'top left';
-                    // UI.panelBody.style.width = `${100/newZoom}%`; // Compensate width
-                    
-                    // Font-size approach (better for "responsive" feel):
-                    // Base size is ~16px (1rem). 
-                    // UI.panelBody.style.fontSize = `${newZoom}rem`;
-                    
-                    // User asked for "Zoom interface", implies visual scaling.
-                    // Let's try font-size scaling on the table container specifically?
-                    
                     document.getElementById('node-list-wrapper').style.fontSize = `${newZoom * 0.85}rem`; 
-                    // 0.85rem is base size in CSS for table
                 }
                 e.preventDefault(); // Prevent native zoom
             }
@@ -185,6 +165,52 @@ document.addEventListener("DOMContentLoaded", () => {
             if (e.touches.length < 2) {
                 initialDistance = 0;
             }
+        });
+    }
+
+    // --- 2.6 Mobile Panel Slide/Drag ---
+    const panelHeader = document.querySelector('.panel-header');
+    if (panelHeader) {
+        let startY = 0;
+        let startHeight = 0;
+        let isDragging = false;
+
+        panelHeader.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                isDragging = true;
+                startY = e.touches[0].clientY;
+                startHeight = UI.panel.clientHeight;
+                // Don't prevent default here, we might want to click buttons
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            const deltaY = startY - e.touches[0].clientY; // Drag up = positive
+            let newHeight = startHeight + deltaY;
+            
+            // Constrain
+            const maxH = window.innerHeight;
+            if (newHeight < 100) newHeight = 100;
+            if (newHeight > maxH) newHeight = maxH;
+
+            UI.panel.style.height = `${newHeight}px`;
+            
+            // Auto-snap to full screen if dragged near top
+            if (newHeight > maxH * 0.9) {
+                UI.panel.classList.add('full-screen');
+                UI.panel.style.height = ''; // Reset inline height to let CSS handle it
+                if (UI.fullScreenBtn) UI.fullScreenBtn.innerText = "⤓";
+            } else {
+                UI.panel.classList.remove('full-screen');
+                if (UI.fullScreenBtn) UI.fullScreenBtn.innerText = "⤢";
+            }
+            
+            e.preventDefault(); // Prevent page scroll
+        }, { passive: false });
+
+        document.addEventListener('touchend', () => {
+            isDragging = false;
         });
     }
 
