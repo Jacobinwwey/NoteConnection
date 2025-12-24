@@ -248,6 +248,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] **Interaction Verification**
     - [x] **Node Click**: Verified that clicking a node in the panel displays in-degree and out-degree relationships on the graph.
 
+### 2025-12-24 v0.9.10 - Interaction Refinement (Click-to-Freeze)
+
+**Goal**: Improve graph inspection stability by freezing the simulation on node click.
+
+- [x] **Click Interaction**
+    - [x] **Freeze on Click**: Clicking a node now immediately stops the force simulation (freezes all nodes) to prevent movement during inspection.
+    - [x] **Resume on Cancel**: Clicking the background (blank area) unhighlights the node and resumes the simulation (unless manually frozen).
+    - [x] **Visualization**: Ensured in-degree and out-degree lines are displayed clearly when frozen.
+
 ### 2026-06-01 v1.0.0 - Production Release
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.
@@ -516,6 +525,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **缩放**: 验证了界面的双指捏合缩放支持。
 - [x] **交互验证**
     - [x] **节点点击**: 验证了点击面板中的节点会在图表中显示入度和出度关系。
+
+### 2025-12-24 v0.9.10 - 交互完善 (点击冻结) (Interaction Refinement)
+
+**目标**: 通过在点击节点时冻结模拟来提高图表检查的稳定性。
+
+- [x] **点击交互**
+    - [x] **点击冻结**: 点击节点现在会立即停止力导向模拟（冻结所有节点），以防止检查期间的移动。
+    - [x] **取消恢复**: 点击背景（空白区域）会取消高亮并恢复模拟（除非手动冻结）。
+    - [x] **可视化**: 确保在冻结时清晰显示入度和出度连线。
 
 ### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
 

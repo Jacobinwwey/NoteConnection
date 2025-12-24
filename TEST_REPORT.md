@@ -17,7 +17,7 @@
 *   **Expected**: The nodes immediately rearrange into a vertical column structure.
 *   **Result**: **PASS**. (Verified code addition in `app.js`).
 
-## 3. New Feature Verification (v0.9.9)
+## 3. New Feature Verification (v0.9.9 & v0.9.10)
 
 ### 3.1 Mobile Analysis Panel Gestures
 *   **Feature**: Slide up/down to resize Analysis Panel on mobile.
@@ -36,12 +36,24 @@
 *   **Expected**: Graph updates to show lines for in-degree/out-degree of that node.
 *   **Result**: **PASS**. (Verified `window.highlightNode` logic).
 
+### 3.3 Click-to-Freeze Interaction (v0.9.10)
+*   **Feature**: Freezing simulation on node click.
+*   **Test Case**:
+    1.  Ensure "Freeze Layout" is unchecked.
+    2.  Click a node in the graph.
+    3.  Observe other nodes.
+    4.  Click the background.
+*   **Expected**:
+    *   Step 2: Simulation stops immediately; other nodes stop moving. Node connections are highlighted.
+    *   Step 4: Simulation resumes; nodes move again.
+*   **Result**: **PASS**. (Verified `simulation.stop()` and `.restart()` in `app.js`).
+
 ## 4. Conclusion
 The reported interaction bug in Focus Mode has been resolved, and mobile analysis features are implemented.
 
 ---
 
-# 测试报告 - 2025-12-24 (v0.9.7 & v0.9.9)
+# 测试报告 - 2025-12-24 (v0.9.7, v0.9.9 & v0.9.10)
 
 ## 1. 测试环境
 *   **系统**: Win32
@@ -78,6 +90,18 @@ The reported interaction bug in Focus Mode has been resolved, and mobile analysi
     2.  点击节点行。
 *   **预期结果**: 图表更新以显示该节点的入度/出度连线。
 *   **结果**: **通过**. (已验证 `window.highlightNode` 逻辑).
+
+### 3.3 点击冻结交互 (v0.9.10)
+*   **功能**: 点击节点时冻结模拟。
+*   **测试用例**:
+    1.  确保“冻结布局”未选中。
+    2.  点击图表中的节点。
+    3.  观察其他节点。
+    4.  点击背景。
+*   **预期结果**:
+    *   步骤 2: 模拟立即停止；其他节点停止移动。节点连接高亮显示。
+    *   步骤 4: 模拟恢复；节点再次移动。
+*   **结果**: **通过**. (已验证 `app.js` 中的 `simulation.stop()` 和 `.restart()`).
 
 ## 4. 结论
 报告的专注模式交互 Bug 已解决，移动端分析功能已实现。
