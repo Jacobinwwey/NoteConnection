@@ -752,7 +752,9 @@ function highlightNode(d, event) {
         const linkSel = link.filter(ld => ld === l);
         linkSel.style("opacity", 1)
                .classed("highlight-out", isOutgoing)
-               .classed("highlight-in", isIncoming);
+               .classed("highlight-in", isIncoming)
+               .style("stroke", isOutgoing ? "#4488ff" : "#ff6b6b")
+               .style("stroke-width", "2px");
 
         // Add neighbor ID
         connectedNodeIds.add(l.source.id);
@@ -818,7 +820,10 @@ function unhighlightNode(d) {
     // Reset styles to filtered state
     tooltip.transition().duration(500).style("opacity", 0);
     node.classed("highlight-main", false);
-    link.classed("highlight-out", false).classed("highlight-in", false);
+    link.classed("highlight-out", false)
+        .classed("highlight-in", false)
+        .style("stroke", null)
+        .style("stroke-width", null);
     updateVisibility(); // Restore visibility based on filters
 }
 
@@ -856,6 +861,9 @@ node.on("click", (event, d) => {
 });
 
 function handleSingleClick(event, d) {
+    // Requirement: "this effect does not exist in 'Focus mode'"
+    if (focusNode) return;
+
     // Requirement: Click displays in-degree/out-degree (Highlight) AND stops movement
     
     // 1. Stop the simulation to freeze all other nodes
@@ -866,11 +874,11 @@ function handleSingleClick(event, d) {
     // 2. Highlight the node and show connections
     highlightNode(d, event);
     
-    // 3. Show Statistics Panel (Node Details)
-    if (window.showNodeAnalysis) {
-        window.showNodeAnalysis(d.id);
-    }
+    // 3. Show Statistics Panel (Floating Popup)
+    showNodePopup(d.id);
 }
+
+// ... (existing code) ...
 
 function handleDoubleClick(event, d) {
     // Requirement: Double Click enters Focus Mode
@@ -882,6 +890,75 @@ function handleDoubleClick(event, d) {
         enterFocusMode(d);
     }
 }
+
+
+// --- Node Statistics Popup Logic ---
+const statsPopup = document.getElementById('node-stats-popup');
+const popupCloseBtn = document.getElementById('popup-close-btn');
+
+if (popupCloseBtn) {
+    popupCloseBtn.addEventListener('click', () => {
+        if (statsPopup) statsPopup.style.display = 'none';
+        
+        // Also clear highlight? The prompt says "After clicking a node... display... and show...".
+        // It doesn't explicitly say closing the popup clears the highlight, but it's good UX.
+        // However, "click background" clears highlight. 
+        // Let's leave highlight state alone when just closing the popup, 
+        // OR clear it if the user explicitly closes the stats for that node.
+        // Given 'click background' exists, explicit close usually implies "I'm done looking at this".
+        
+        // But wait, if I close the popup, the node is still "Frozen" and "Highlighted".
+        // If I don't unhighlight, the user is stuck in frozen state until they click background.
+        // So clicking X should probably clear everything.
+        
+        if (window.frozenNode) {
+            unhighlightNode(window.frozenNode);
+            window.isInteractionFrozen = false;
+            window.frozenNode = null;
+            if (!document.getElementById('freeze-layout').checked) {
+                simulation.alphaTarget(0.3).restart();
+            }
+        }
+    });
+}
+
+function showNodePopup(nodeId) {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node || !statsPopup) return;
+
+    // Populate Data
+    document.getElementById('popup-node-name').innerText = node.label;
+    document.getElementById('popup-in-count').innerText = node.inDegree;
+    document.getElementById('popup-out-count').innerText = node.outDegree;
+
+    // Find Edges
+    const inList = document.getElementById('popup-in-list');
+    const outList = document.getElementById('popup-out-list');
+    inList.innerHTML = '';
+    outList.innerHTML = '';
+
+    const inNeighbors = [...new Set(links.filter(l => l.target.id === nodeId).map(l => l.source))];
+    const outNeighbors = [...new Set(links.filter(l => l.source.id === nodeId).map(l => l.target))];
+
+    const createItem = (n) => {
+        const li = document.createElement('li');
+        li.innerText = n.label;
+        li.title = n.label; // Tooltip for long names
+        li.addEventListener('click', (e) => {
+            // Navigate to neighbor
+            e.stopPropagation(); // Prevent background click
+            handleSingleClick(e, n); // Recursively show stats for neighbor
+        });
+        return li;
+    };
+
+    inNeighbors.forEach(n => inList.appendChild(createItem(n)));
+    outNeighbors.forEach(n => outList.appendChild(createItem(n)));
+
+    // Show Popup
+    statsPopup.style.display = 'flex';
+}
+
 
 
 // Simulation Tick
@@ -932,9 +1009,12 @@ function renderCanvas(layoutMode) {
         } 
         // 2. Hover Mode (Global hoverNode variable needed)
         else if (window.hoverNode) {
-             if (d.source.id === window.hoverNode.id || d.target.id === window.hoverNode.id) {
-                 ctx.globalAlpha = 0.8;
-                 ctx.strokeStyle = "#888"; // Highlight color
+             if (d.source.id === window.hoverNode.id) {
+                 ctx.globalAlpha = 1;
+                 ctx.strokeStyle = "#4488ff"; // Blue for Outgoing
+             } else if (d.target.id === window.hoverNode.id) {
+                 ctx.globalAlpha = 1;
+                 ctx.strokeStyle = "#ff6b6b"; // Red for Incoming
              } else {
                  return; // Hide others
              }

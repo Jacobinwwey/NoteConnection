@@ -119,6 +119,17 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.14 - Visual & Data Fixes
+- [x] **Edge Highlighting**: Fixed an issue where edge colors (Red/Blue) and bold styling were not applying correctly in SVG mode.
+- [x] **Data Deduplication**: Ensured neighbor lists in the Statistics Popup do not contain duplicate entries.
+
+### v0.9.13 - Focus Mode Isolation
+- [x] **Interaction Constraint**: Ensured that the floating statistics popup and associated highlighting are strictly disabled when Focus Mode is active, preventing context conflict.
+
+### v0.9.12 - Independent Statistics Popup
+- [x] **Node Statistics**: Implemented a separate floating window for node details (In/Out Degree) to decouple it from the main Degree Analysis panel.
+- [x] **Visualization**: In-degree and Out-degree relationships are clearly distinguished with Red/Blue indicators in the popup.
+
 ### v0.9.10 - Interaction Refinement (Click-to-Freeze)
 - [x] **Inspection**: Clicking a node now freezes the entire simulation for stable inspection of connections.
 - [x] **Resume**: Clicking the background resumes the simulation (if not manually frozen).
@@ -287,6 +298,15 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.14 - 视觉与数据修复 (Visual & Data Fixes)
+- [x] **边高亮**: 修复了 SVG 模式下边颜色（红/蓝）和加粗样式未正确应用的问题。
+- [x] **数据去重**: 确保统计弹窗中的邻居列表不包含重复条目。
+
+### v0.9.13 - 专注模式隔离 (Focus Mode Isolation)
+- [x] **交互约束**: 确保在专注模式处于激活状态时，严格禁用浮动统计弹窗和相关高亮显示，以防止上下文冲突。
+
+### v0.9.12 - 独立统计弹窗 (Independent Statistics Popup)
 
 ### v0.9.10 - 交互完善 (点击冻结)
 - [x] **检查**: 点击节点现在会冻结整个模拟，以便稳定地检查连接。
