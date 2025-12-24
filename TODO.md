@@ -208,6 +208,19 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **Mermaid**: Enhanced text visibility (shadow/outline) for light-colored diagrams.
     - [x] **Lines**: Ensured edges are hidden by default and only visible on interaction.
 
+### 2025-12-24 v0.9.6 - Analysis & Visuals Polish
+
+**Goal**: Further refine Analysis Panel mobile usability and fix visual inconsistencies.
+
+- [x] **Mermaid Zoom Styling**
+    - [x] **Fix**: Ensured Mermaid text shadow/grayscale persists in Full-screen Zoom mode.
+- [x] **Degree Analysis Mobile**
+    - [x] **Full Screen**: Added toggle to switch panel between half-height and full-screen.
+    - [x] **Zoom**: Implemented pinch-to-zoom for the panel content.
+    - [x] **Interaction**: Verified click-to-highlight logic works across views.
+- [x] **Graph Interaction**
+    - [x] **Robustness**: Added background click handler to clear highlights.
+
 ### 2026-06-01 v1.0.0 - Production Release
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.
@@ -436,6 +449,19 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] **视觉打磨**
     - [x] **Mermaid**: 增强了浅色图表的文本可见性（阴影/描边）。
     - [x] **连线**: 确保边默认隐藏，仅在交互时可见。
+
+### 2025-12-24 v0.9.6 - 分析与视觉打磨 (Analysis & Visuals Polish)
+
+**目标**: 进一步完善分析面板的移动端可用性并修复视觉不一致。
+
+- [x] **Mermaid 缩放样式**
+    - [x] **修复**: 确保 Mermaid 文本阴影/灰度在全屏缩放模式下持久保留。
+- [x] **度数分析移动端**
+    - [x] **全屏**: 添加了在半高和全屏之间切换面板的开关。
+    - [x] **缩放**: 为面板内容实现了捏合缩放。
+    - [x] **交互**: 验证了点击高亮逻辑在各视图中均有效。
+- [x] **图表交互**
+    - [x] **稳健性**: 添加了背景点击处理程序以清除高亮。
 
 ### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
 

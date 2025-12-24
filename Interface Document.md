@@ -216,6 +216,9 @@ Renders the JSON data into an interactive DAG.
     *   **Analysis Interaction (v0.9.5)**:
         *   **Mobile View**: Scrollable full-width panel on small screens.
         *   **Graph Sync**: Clicking a row in the analysis table highlights the corresponding node and its edges in the main graph.
+    *   **Analysis Panel Enhancements (v0.9.6)**:
+        *   **Full Screen Toggle**: Button to expand panel to 100% height.
+        *   **Pinch Zoom**: Touch gestures to scale the panel content for better readability.
 
     *   **Scalability Defaults (v0.8.8)**:
         *   **Orphans**: Hidden by default.
@@ -495,6 +498,9 @@ Transforms the web project into a standalone Android APK.
     *   **分析交互 (v0.9.5)**:
         *   **移动视图**: 小屏幕上可滚动的全宽面板。
         *   **图表同步**: 点击分析表中的行会在主图中高亮显示相应的节点及其边。
+    *   **分析面板增强 (v0.9.6)**:
+        *   **全屏切换**: 按钮将面板扩展到 100% 高度。
+        *   **捏合缩放**: 触摸手势缩放面板内容以提高可读性。
 
     *   **可扩展性默认值 (v0.8.8)**:
         *   **孤立节点**: 默认隐藏。

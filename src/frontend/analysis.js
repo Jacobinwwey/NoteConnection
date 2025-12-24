@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", () => {
         resizer: document.getElementById("analysis-resizer"),
         btn: document.getElementById("analysis-btn"),
         closeBtn: document.querySelector(".close-panel"),
+        fullScreenBtn: document.getElementById("analysis-fullscreen-btn"),
+        panelBody: document.querySelector("#analysis-panel .panel-body"),
         quickDist: document.getElementById("quick-distribution"),
         histogram: document.getElementById("histogram-container"),
         // Controls
@@ -30,7 +32,8 @@ document.addEventListener("DOMContentLoaded", () => {
         strategy: 'top-percent',
         cluster: 'all',     // 'all' or specific clusterId
         sortField: 'total', // 'name', 'cluster', 'in', 'out', 'total'
-        sortOrder: 'desc'   // 'asc', 'desc'
+        sortOrder: 'desc',  // 'asc', 'desc'
+        currentZoom: 1.0
     };
 
     // --- 0. Init Cluster Options ---
@@ -109,8 +112,80 @@ document.addEventListener("DOMContentLoaded", () => {
             UI.closeBtn.addEventListener("click", () => {
                 UI.panel.classList.remove("open");
                 UI.resizer.style.display = "none";
+                UI.panel.classList.remove("full-screen"); // Reset full screen on close
             });
         }
+        
+        if (UI.fullScreenBtn) {
+            UI.fullScreenBtn.addEventListener("click", () => {
+                UI.panel.classList.toggle("full-screen");
+                // Update button icon/text?
+                UI.fullScreenBtn.innerText = UI.panel.classList.contains("full-screen") ? "⤓" : "⤢";
+                renderHistogram(); // Re-render histogram for new width
+            });
+        }
+    }
+    
+    // --- 2.5 Touch Zoom (Pinch) ---
+    if (UI.panelBody) {
+        let initialDistance = 0;
+        let initialZoom = 1.0;
+
+        UI.panelBody.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                initialDistance = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+                initialZoom = AppState.currentZoom;
+            }
+        }, { passive: false });
+
+        UI.panelBody.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                const currentDistance = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+
+                if (initialDistance > 0) {
+                    const scale = currentDistance / initialDistance;
+                    let newZoom = initialZoom * scale;
+                    newZoom = Math.max(0.8, Math.min(2.0, newZoom)); // Clamp zoom
+                    
+                    AppState.currentZoom = newZoom;
+                    // Apply zoom to children (container wrapper) or font-size
+                    // Scaling the whole body might break scrolling if not careful
+                    // Let's use CSS transform on the content wrapper
+                    // We might need to wrap content if not already wrapped. 
+                    // Actually, let's just scale font-size for reflow support, 
+                    // OR use zoom property (non-standard but works) 
+                    // OR transform-origin: top left; transform: scale(...)
+                    
+                    // Transform approach:
+                    // UI.panelBody.style.transform = `scale(${newZoom})`;
+                    // UI.panelBody.style.transformOrigin = 'top left';
+                    // UI.panelBody.style.width = `${100/newZoom}%`; // Compensate width
+                    
+                    // Font-size approach (better for "responsive" feel):
+                    // Base size is ~16px (1rem). 
+                    // UI.panelBody.style.fontSize = `${newZoom}rem`;
+                    
+                    // User asked for "Zoom interface", implies visual scaling.
+                    // Let's try font-size scaling on the table container specifically?
+                    
+                    document.getElementById('node-list-wrapper').style.fontSize = `${newZoom * 0.85}rem`; 
+                    // 0.85rem is base size in CSS for table
+                }
+                e.preventDefault(); // Prevent native zoom
+            }
+        }, { passive: false });
+        
+        UI.panelBody.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                initialDistance = 0;
+            }
+        });
     }
 
     // --- 3. Resizer ---

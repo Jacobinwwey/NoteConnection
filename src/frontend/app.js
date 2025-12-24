@@ -12,6 +12,16 @@ const svg = d3.select("#graph-container")
     .append("svg")
     .attr("width", "100%")
     .attr("height", "100%")
+    .on("click", (event) => {
+        // Clear highlight on background click
+        if (event.target.tagName === 'svg') {
+             // Only if not in Focus Mode (Focus Mode has its own exit)
+             // And if we have a hover/highlight state
+             if (!focusNode && window.hoverNode) {
+                 unhighlightNode(window.hoverNode);
+             }
+        }
+    })
     .call(d3.zoom().on("zoom", (event) => {
         g.attr("transform", event.transform);
     }));
@@ -718,7 +728,8 @@ function highlightNode(d, event) {
         .style("opacity", 1);
 
     // Tooltip
-    // If event is provided (mouse/click), position tooltip
+    // If event is provided (mouse/click), position tooltip. 
+    // If no event (e.g. from Analysis panel), we don't show tooltip as the panel has info.
     if (event) {
         tooltip.transition().duration(200).style("opacity", .9);
         tooltip.html(`
@@ -728,6 +739,9 @@ function highlightNode(d, event) {
         `)
         .style("left", (event.pageX + 10) + "px")
         .style("top", (event.pageY - 28) + "px");
+    } else {
+        // Ensure tooltip is hidden if triggered programmatically to avoid stale tooltips
+        tooltip.style("opacity", 0);
     }
 }
 
