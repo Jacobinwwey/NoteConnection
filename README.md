@@ -119,6 +119,11 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.20 - Selection State Auto-Clear on Focus Entry (2025-12-24)
+- [x] **Clean Focus Transition**: When double-clicking a node to enter Focus Mode, any existing selection or highlight state is now automatically cleared, providing a clean and uncluttered focused view.
+- [x] **Auto-Hide Popup**: The statistics popup is automatically hidden when entering Focus Mode, preventing visual conflicts.
+- [x] **Enhanced UX**: Ensures users always start with a pristine focused context without residual artifacts from previous node selections.
+
 ### v0.9.19 - Focus Mode & Popup Enhancements (2025-12-24)
 - [x] **Focus Mode Re-entry**: Fixed issue where double-clicking a related node while in focus mode wouldn't refresh properly. Now seamlessly switches focus between connected nodes.
 - [x] **Draggable Popup**: Node statistics popup can now be dragged by its header to any screen position for better workspace organization.

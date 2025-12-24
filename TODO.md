@@ -1,8 +1,30 @@
-# 2025-12-24 v0.9.19
+# 2025-12-24 v0.9.20
 
 # Project Build Plan: Progressive Hierarchical Knowledge Graph
 
 This document outlines the roadmap for building `NoteConnection`, a system capable of visualizing tens of thousands of knowledge points as a Directed Acyclic Graph (DAG), highlighting hierarchical relationships and learning paths.
+
+---
+
+# 2025-12-24 v0.9.20 - Selection State Auto-Clear on Focus Entry
+
+**Goal**: Automatically clear any existing selection or highlight state when entering Focus Mode via double-click for a clean transition.
+
+- [x] **Auto-Clear Implementation**
+    - [x] **Highlight Clearing**: Modified `handleDoubleClick()` to call `highlightManager.unhighlight({ force: true })` before entering focus mode.
+    - [x] **Popup Hiding**: Automatically hide the statistics popup (`#node-stats-popup`) when entering focus mode.
+    - [x] **State Management**: Ensures clean state transition without residual visual artifacts.
+
+- [x] **User Experience Enhancement**
+    - [x] **Clean Transition**: Users always start with a pristine focused context.
+    - [x] **Visual Clarity**: Prevents confusion from overlapping highlights between normal and focus modes.
+    - [x] **Consistent Behavior**: Standardized focus mode entry behavior across all scenarios.
+
+- [x] **Documentation**
+    - [x] **Interface Document**: Updated with v0.9.20 selection auto-clear specifications.
+    - [x] **README**: Added v0.9.20 changelog entries in both English and Chinese.
+    - [x] **Code Comments**: Bilingual comments explaining the auto-clear logic.
+    - [x] **TODO**: Documented completed feature implementation.
 
 ---
 

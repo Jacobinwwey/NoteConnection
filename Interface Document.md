@@ -1,4 +1,4 @@
-# 2025-12-24 v0.9.19
+# 2025-12-24 v0.9.20
 
 # Interface Document
 
@@ -249,6 +249,13 @@ Renders the JSON data into an interactive DAG.
         *   **Behavior**: Double-clicking a related node while already in focus mode now properly refreshes the view to show the new node's context.
         *   **Fix**: Removes restriction that prevented switching focus between related nodes, enabling seamless exploration of connected concepts.
         *   **State Reset**: All node visibility flags are reset before entering new focus mode to prevent accumulation issues.
+    
+    *   **Selection State Auto-Clear (v0.9.20)**:
+        *   **Behavior**: When double-clicking a node to enter Focus Mode, any existing selection/highlight state is automatically cleared before entering the focused view.
+        *   **Implementation**: 
+            *   Calls `highlightManager.unhighlight({ force: true })` to clear highlight state.
+            *   Hides the statistics popup if visible (`#node-stats-popup`).
+        *   **User Experience**: Provides a clean transition into Focus Mode without residual visual artifacts from previous selections, ensuring the focused view is always clear and uncluttered.
 
     *   **Scalability Defaults (v0.8.8)**:
         *   **Orphans**: Hidden by default.
@@ -484,7 +491,6 @@ Manages node highlighting interactions for both PC and mobile interfaces.
     *   **Focus Mode**: Highlighting disabled, focus mode handles visualization.
 
 
-```
 
 
 
@@ -833,4 +839,3 @@ Manages node highlighting interactions for both PC and mobile interfaces.
     2.  **资源编译**: `npm run build` -> 填充 `dist/frontend`。
     3.  **同步**: `npx cap sync android` -> 将 `dist/frontend` 复制到 `android/app/src/main/assets/public`。
     4.  **原生构建**: `gradlew assembleDebug` -> 编译 APK。
-
