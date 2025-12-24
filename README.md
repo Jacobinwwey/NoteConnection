@@ -119,6 +119,13 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.19 - Focus Mode & Popup Enhancements (2025-12-24)
+- [x] **Focus Mode Re-entry**: Fixed issue where double-clicking a related node while in focus mode wouldn't refresh properly. Now seamlessly switches focus between connected nodes.
+- [x] **Draggable Popup**: Node statistics popup can now be dragged by its header to any screen position for better workspace organization.
+- [x] **Zoomable Popup**: Added zoom controls (+/−/⟲) to scale popup content from 0.5x to 2.0x for improved readability.
+- [x] **Resizable Popup**: Enabled browser-native resize handle for manual popup size adjustment.
+- [x] **State Management**: Improved node visibility flag reset to prevent accumulation issues when switching focus contexts.
+
 ### v0.9.18 - Node Highlighting Refactor (2025-12-24)
 - [x] **Modular Architecture**: Created dedicated `NodeHighlightManager` class for clean separation of highlighting logic.
 - [x] **Unified Interface**: Single API for both PC (hover) and mobile (click) interactions.
@@ -313,6 +320,13 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.19 - 专注模式与弹窗增强 (Focus Mode & Popup Enhancements) (2025-12-24)
+- [x] **专注模式重新进入**: 修复了在专注模式下双击相关节点时无法正确刷新的问题。现在可以在连接的节点之间无缝切换专注。
+- [x] **可拖动弹窗**: 节点统计弹窗现在可以通过标题栏拖动到屏幕上的任何位置，以便更好地组织工作区。
+- [x] **可缩放弹窗**: 添加了缩放控制 (+/−/⟲)，可将弹窗内容从 0.5x 缩放到 2.0x，以提高可读性。
+- [x] **可调整大小弹窗**: 启用了浏览器原生调整大小手柄，用于手动调整弹窗大小。
+- [x] **状态管理**: 改进了节点可见性标志重置，以防止切换专注上下文时出现累积问题。
 
 ### v0.9.18 - 节点高亮重构 (Node Highlighting Refactor) (2025-12-24)
 - [x] **模块化架构**: 创建了专用的 `NodeHighlightManager` 类，实现高亮逻辑的清晰分离。

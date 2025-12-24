@@ -1,4 +1,4 @@
-# 2025-12-19 v0.1.3
+# 2025-12-24 v0.9.19
 
 # Interface Document
 
@@ -241,6 +241,14 @@ Renders the JSON data into an interactive DAG.
         *   **Visual Feedback (v0.9.14)**: Connected edges are now explicitly colored (Red/Blue) and bolded (2px) in both SVG and Canvas renderers.
         *   **Interaction**: Clicking a neighbor in the list navigates to that node (highlights and updates popup).
         *   **Independence**: Separate from the main Degree Analysis panel to allow focused inspection without losing global context.
+        *   **Draggable (v0.9.19)**: Users can drag the popup by clicking on the header to reposition it anywhere on the screen.
+        *   **Zoomable (v0.9.19)**: Three zoom control buttons (+/−/⟲) allow users to scale content from 0.5x to 2.0x for better readability.
+        *   **Resizable (v0.9.19)**: CSS `resize: both` enables manual resize using browser's native resize handle.
+    
+    *   **Focus Mode Re-entry (v0.9.19)**:
+        *   **Behavior**: Double-clicking a related node while already in focus mode now properly refreshes the view to show the new node's context.
+        *   **Fix**: Removes restriction that prevented switching focus between related nodes, enabling seamless exploration of connected concepts.
+        *   **State Reset**: All node visibility flags are reset before entering new focus mode to prevent accumulation issues.
 
     *   **Scalability Defaults (v0.8.8)**:
         *   **Orphans**: Hidden by default.
@@ -328,6 +336,156 @@ Transforms the web project into a standalone Android APK.
     2.  **Asset Compilation**: `npm run build` -> Populates `dist/frontend`.
     3.  **Sync**: `npx cap sync android` -> Copies `dist/frontend` to `android/app/src/main/assets/public`.
     4.  **Native Build**: `gradlew assembleDebug` -> Compiles the APK.
+### 6. Node Statistics Popup (v0.9.19)
+
+#### Drag and Zoom Functionality
+Enhances the node statistics popup with user-friendly positioning and scaling controls.
+
+*   **Drag Interface**:
+    *   **Trigger**: `mousedown` on `#popup-drag-handle` (header element).
+    *   **Behavior**: 
+        *   Tracks mouse movement and updates popup `left` and `top` CSS properties.
+        *   Prevents dragging when clicking on buttons within the header.
+        *   Adds `.dragging` class for visual feedback.
+    *   **State**:
+        ```typescript
+        interface PopupDragState {
+            isDragging: boolean;
+            startX: number;        // Initial mouse X
+            startY: number;        // Initial mouse Y  
+            startLeft: number;     // Initial popup left position
+            startTop: number;      // Initial popup top position
+            currentScale: number;  // Current zoom scale (0.5-2.0)
+        }
+        ```
+
+*   **Zoom Interface**:
+    *   **Controls**:
+        *   `#popup-zoom-in`: Increases scale by 0.1 (max 2.0).
+        *   `#popup-zoom-out`: Decreases scale by 0.1 (min 0.5).
+        *   `#popup-reset-size`: Resets scale to 1.0 and dimensions to default (280px width, auto height).
+    *   **Application**: Scales `.popup-content` using `fontSize` CSS property.
+    *   **Formula**: `fontSize = ${scale}rem`
+
+*   **Reset Behavior**:
+    *   On popup close (`#popup-close-btn`), position is reset to default:
+        *   `left: auto`
+        *   `right: 20px`
+        *   `top: 80px`
+
+*   **CSS Properties**:
+    *   **Draggable**: `cursor: move` on header, `cursor: grabbing` when active.
+    *   **Resizable**: `resize: both` enables browser-native resize handle.
+    *   **Constraints**: `min-width: 200px`, `min-height: 250px`, `max-width: 90vw`, `max-height: 90vh`.
+
+### 7. Node Highlighting System (v0.9.18)
+
+#### `NodeHighlightManager` Class
+Manages node highlighting interactions for both PC and mobile interfaces.
+
+*   **Module**: `nodeHighlight.js`
+*   **Constructor**: `new NodeHighlightManager(config: HighlightConfig)`
+*   **Configuration**:
+    ```typescript
+    interface HighlightConfig {
+        nodes: NoteNode[];           // Array of all graph nodes
+        links: NoteEdge[];           // Array of all graph edges
+        nodeSelection: D3Selection;  // D3 selection of node elements
+        linkSelection: D3Selection;  // D3 selection of link elements
+        tooltip: D3Selection;        // Tooltip element
+        simulation: D3Simulation;    // Force simulation instance
+        onTick: () => void;          // Callback to trigger re-render
+        onHighlight?: (node, connections) => void;  // Optional callback
+        onUnhighlight?: (node) => void;             // Optional callback
+    }
+    ```
+
+*   **Public Methods**:
+    *   `highlight(node: NoteNode, options: HighlightOptions): void`
+        *   **Description**: Highlights a node and its connections.
+        *   **Input**:
+            *   `node`: The node to highlight.
+            *   `options`: Optional configuration.
+                ```typescript
+                interface HighlightOptions {
+                    event?: Event;       // Mouse/touch event for tooltip positioning
+                    freeze?: boolean;    // Whether to freeze simulation
+                    mode?: 'all' | 'in' | 'out';  // Filter mode
+                }
+                ```
+        *   **Visual Effects**:
+            *   Main node: Full opacity (1.0)
+            *   Connected nodes: Full opacity (1.0)
+            *   Unconnected nodes: Dimmed (0.05 opacity)
+            *   Outgoing edges: Blue (#4488ff), 2.5px width
+            *   Incoming edges: Red (#ff6b6b), 2.5px width
+    
+    *   `unhighlight(options: UnhighlightOptions): void`
+        *   **Description**: Removes highlighting from current node.
+        *   **Input**:
+            ```typescript
+            interface UnhighlightOptions {
+                force?: boolean;  // Force unhighlight even if frozen
+            }
+            ```
+    
+    *   `setFocusMode(focusState: FocusState): void`
+        *   **Description**: Updates focus mode reference.
+        *   **Input**:
+            ```typescript
+            interface FocusState {
+                active: boolean;
+                node?: NoteNode;
+            }
+            ```
+    
+    *   `getState(): HighlightState`
+        *   **Description**: Returns current highlight state.
+        *   **Output**:
+            ```typescript
+            interface HighlightState {
+                currentNode: NoteNode | null;
+                isFrozen: boolean;
+                frozenNode: NoteNode | null;
+            }
+            ```
+    
+    *   `isHighlighted(nodeId: string): boolean`
+        *   **Description**: Checks if a node is currently highlighted.
+    
+    *   `getCurrentConnections(): ConnectionData | null`
+        *   **Description**: Gets connections for the currently highlighted node.
+        *   **Output**:
+            ```typescript
+            interface ConnectionData {
+                links: NoteEdge[];
+                nodeIds: Set<string>;
+                incomingLinks: NoteEdge[];
+                outgoingLinks: NoteEdge[];
+            }
+            ```
+
+*   **Integration Pattern**:
+    1.  Initialize after graph elements are created.
+    2.  Attach event handlers (hover, click).
+    3.  Update focus mode state when entering/exiting focus mode.
+    4.  Use in canvas renderer for visual consistency.
+
+*   **Mobile Optimization**:
+    *   **Single Click**: Highlights node and freezes simulation for stable inspection.
+    *   **Double Click**: Enters focus mode.
+    *   **Hover (PC)**: Highlights without freezing.
+    *   **Background Click**: Clears highlight and resumes simulation.
+
+*   **Interaction States**:
+    *   **Normal**: No highlighting.
+    *   **Hover (PC)**: Temporary highlight, removable by mouseout.
+    *   **Frozen (Mobile/PC)**: Persistent highlight after click, requires background click or force clear.
+    *   **Focus Mode**: Highlighting disabled, focus mode handles visualization.
+
+
+```
+
 
 
 ---
@@ -537,6 +695,14 @@ Transforms the web project into a standalone Android APK.
         *   **视觉反馈 (v0.9.14)**: 连接的边现在在 SVG 和 Canvas 渲染器中均显式着色 (红/蓝) 并加粗 (2px)。
         *   **交互**: 点击列表中的邻居会导航到该节点 (高亮并更新弹窗)。
         *   **独立性**: 独立于主度数分析面板，允许在不丢失全局上下文的情况下进行重点检查。
+        *   **可拖动 (v0.9.19)**: 用户可以通过点击标题栏拖动弹窗以重新定位到屏幕上的任何位置。
+        *   **可缩放 (v0.9.19)**: 三个缩放控制按钮 (+/−/⟲) 允许用户将内容从 0.5x 缩放到 2.0x 以提高可读性。
+        *   **可调整大小 (v0.9.19)**: CSS `resize: both` 启用使用浏览器原生调整大小手柄进行手动调整大小。
+    
+    *   **专注模式重新进入 (Focus Mode Re-entry - v0.9.19)**:
+        *   **行为**: 在已处于专注模式时双击相关节点现在会正确刷新视图以显示新节点的上下文。
+        *   **修复**: 移除了阻止在相关节点之间切换专注的限制，使连接概念的无缝探索成为可能。
+        *   **状态重置**: 在进入新的专注模式之前重置所有节点可见性标志，以防止累积问题。
 
     *   **可扩展性默认值 (v0.8.8)**:
         *   **孤立节点**: 默认隐藏。
@@ -668,110 +834,3 @@ Transforms the web project into a standalone Android APK.
     3.  **同步**: `npx cap sync android` -> 将 `dist/frontend` 复制到 `android/app/src/main/assets/public`。
     4.  **原生构建**: `gradlew assembleDebug` -> 编译 APK。
 
-### 6. Node Highlighting System (v0.9.18)
-
-#### `NodeHighlightManager` Class
-Manages node highlighting interactions for both PC and mobile interfaces.
-
-*   **Module**: `nodeHighlight.js`
-*   **Constructor**: `new NodeHighlightManager(config: HighlightConfig)`
-*   **Configuration**:
-    ```typescript
-    interface HighlightConfig {
-        nodes: NoteNode[];           // Array of all graph nodes
-        links: NoteEdge[];           // Array of all graph edges
-        nodeSelection: D3Selection;  // D3 selection of node elements
-        linkSelection: D3Selection;  // D3 selection of link elements
-        tooltip: D3Selection;        // Tooltip element
-        simulation: D3Simulation;    // Force simulation instance
-        onTick: () => void;          // Callback to trigger re-render
-        onHighlight?: (node, connections) => void;  // Optional callback
-        onUnhighlight?: (node) => void;             // Optional callback
-    }
-    ```
-
-*   **Public Methods**:
-    *   `highlight(node: NoteNode, options: HighlightOptions): void`
-        *   **Description**: Highlights a node and its connections.
-        *   **Input**:
-            *   `node`: The node to highlight.
-            *   `options`: Optional configuration.
-                ```typescript
-                interface HighlightOptions {
-                    event?: Event;       // Mouse/touch event for tooltip positioning
-                    freeze?: boolean;    // Whether to freeze simulation
-                    mode?: 'all' | 'in' | 'out';  // Filter mode
-                }
-                ```
-        *   **Visual Effects**:
-            *   Main node: Full opacity (1.0)
-            *   Connected nodes: Full opacity (1.0)
-            *   Unconnected nodes: Dimmed (0.05 opacity)
-            *   Outgoing edges: Blue (#4488ff), 2.5px width
-            *   Incoming edges: Red (#ff6b6b), 2.5px width
-    
-    *   `unhighlight(options: UnhighlightOptions): void`
-        *   **Description**: Removes highlighting from current node.
-        *   **Input**:
-            ```typescript
-            interface UnhighlightOptions {
-                force?: boolean;  // Force unhighlight even if frozen
-            }
-            ```
-    
-    *   `setFocusMode(focusState: FocusState): void`
-        *   **Description**: Updates focus mode reference.
-        *   **Input**:
-            ```typescript
-            interface FocusState {
-                active: boolean;
-                node?: NoteNode;
-            }
-            ```
-    
-    *   `getState(): HighlightState`
-        *   **Description**: Returns current highlight state.
-        *   **Output**:
-            ```typescript
-            interface HighlightState {
-                currentNode: NoteNode | null;
-                isFrozen: boolean;
-                frozenNode: NoteNode | null;
-            }
-            ```
-    
-    *   `isHighlighted(nodeId: string): boolean`
-        *   **Description**: Checks if a node is currently highlighted.
-    
-    *   `getCurrentConnections(): ConnectionData | null`
-        *   **Description**: Gets connections for the currently highlighted node.
-        *   **Output**:
-            ```typescript
-            interface ConnectionData {
-                links: NoteEdge[];
-                nodeIds: Set<string>;
-                incomingLinks: NoteEdge[];
-                outgoingLinks: NoteEdge[];
-            }
-            ```
-
-*   **Integration Pattern**:
-    1.  Initialize after graph elements are created.
-    2.  Attach event handlers (hover, click).
-    3.  Update focus mode state when entering/exiting focus mode.
-    4.  Use in canvas renderer for visual consistency.
-
-*   **Mobile Optimization**:
-    *   **Single Click**: Highlights node and freezes simulation for stable inspection.
-    *   **Double Click**: Enters focus mode.
-    *   **Hover (PC)**: Highlights without freezing.
-    *   **Background Click**: Clears highlight and resumes simulation.
-
-*   **Interaction States**:
-    *   **Normal**: No highlighting.
-    *   **Hover (PC)**: Temporary highlight, removable by mouseout.
-    *   **Frozen (Mobile/PC)**: Persistent highlight after click, requires background click or force clear.
-    *   **Focus Mode**: Highlighting disabled, focus mode handles visualization.
-
-
-```
