@@ -730,41 +730,53 @@ function highlightNode(d, event) {
 
     // 2. Global Hover State
     window.hoverNode = d;
-    ticked(); // Force render update for Canvas to show hover edges
 
-    // Dim all
-    node.style("opacity", 0.05); // Deep dim to simulate "temporarily hidden"
-    link.style("opacity", 0); // Hide all first
-
-    // Highlight current
-    node.filter(n => n.id === d.id).style("opacity", 1).classed("highlight-main", true);
-
-    // Find neighbors
+    // Find neighbors FIRST
     const connectedLinks = links.filter(l => l.source.id === d.id || l.target.id === d.id);
     const connectedNodeIds = new Set();
     connectedNodeIds.add(d.id);
 
     connectedLinks.forEach(l => {
-        const isOutgoing = l.source.id === d.id;
-        const isIncoming = l.target.id === d.id;
-
-        // Highlight Link
-        const linkSel = link.filter(ld => ld === l);
-        linkSel.style("opacity", 1)
-               .classed("highlight-out", isOutgoing)
-               .classed("highlight-in", isIncoming)
-               .style("stroke", isOutgoing ? "#4488ff" : "#ff6b6b")
-               .style("stroke-width", "2.5px")
-               .attr("marker-end", isOutgoing ? "url(#arrow-out)" : "url(#arrow-in)");
-
-        // Add neighbor ID
         connectedNodeIds.add(l.source.id);
         connectedNodeIds.add(l.target.id);
     });
 
-    // Highlight Neighbors
-    node.filter(n => connectedNodeIds.has(n.id))
-        .style("opacity", 1);
+    // Dim ALL nodes first (iterate over D3 selection)
+    node.each(function(n) {
+        const el = d3.select(this);
+        if (n.id === d.id) {
+            // Main node - full opacity
+            el.style("opacity", "1");
+        } else if (connectedNodeIds.has(n.id)) {
+            // Connected nodes - full opacity
+            el.style("opacity", "1");
+        } else {
+            // Unconnected nodes - very dim
+            el.style("opacity", "0.05");
+        }
+    });
+
+    // Update ALL links
+    link.each(function(l) {
+        const el = d3.select(this);
+        const isConnected = (l.source.id === d.id || l.target.id === d.id);
+        
+        if (isConnected) {
+            const isOutgoing = l.source.id === d.id;
+            const color = isOutgoing ? "#4488ff" : "#ff6b6b";
+            const marker = isOutgoing ? "url(#arrow-out)" : "url(#arrow-in)";
+            
+            el.style("opacity", "1")
+              .style("stroke", color)
+              .style("stroke-width", "2.5px")
+              .attr("marker-end", marker);
+        } else {
+            el.style("opacity", "0");
+        }
+    });
+
+    // Force Canvas render update
+    ticked();
 
     // Tooltip
     // If event is provided (mouse/click), position tooltip. 
