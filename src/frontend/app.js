@@ -756,22 +756,28 @@ function highlightNode(d, event) {
         }
     });
 
-    // Update ALL links
+    // Update ALL links - use direct DOM styling for maximum override
     link.each(function(l) {
         const el = d3.select(this);
-        const isConnected = (l.source.id === d.id || l.target.id === d.id);
+        // Note: After simulation starts, l.source and l.target are objects not IDs
+        const sourceId = (typeof l.source === 'object') ? l.source.id : l.source;
+        const targetId = (typeof l.target === 'object') ? l.target.id : l.target;
+        const isConnected = (sourceId === d.id || targetId === d.id);
         
         if (isConnected) {
-            const isOutgoing = l.source.id === d.id;
+            const isOutgoing = sourceId === d.id;
             const color = isOutgoing ? "#4488ff" : "#ff6b6b";
             const marker = isOutgoing ? "url(#arrow-out)" : "url(#arrow-in)";
             
-            el.style("opacity", "1")
-              .style("stroke", color)
-              .style("stroke-width", "2.5px")
-              .attr("marker-end", marker);
+            // CRITICAL: Use setAttri bute for SVG properties to override CSS
+            this.setAttribute("marker-end", marker);
+            this.setAttribute("stroke", color);
+            this.setAttribute("stroke-width", "2.5");
+            this.setAttribute("opacity", "1");
+            this.style.opacity = "1";
         } else {
-            el.style("opacity", "0");
+            this.setAttribute("opacity", "0");
+            this.style.opacity = "0";
         }
     });
 
