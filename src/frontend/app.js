@@ -17,18 +17,26 @@ const svg = d3.select("#graph-container")
         if (event.target.tagName === 'svg') {
              // Only if not in Focus Mode (Focus Mode has its own exit)
              if (!focusNode) {
-                 if (window.hoverNode) {
-                     unhighlightNode(window.hoverNode);
-                 }
-                 
-                 // Resume simulation if it was frozen by click interaction
+                 // Check if we need to release a frozen state
                  if (window.isInteractionFrozen) {
                      window.isInteractionFrozen = false;
+                     window.frozenNode = null;
+                     
+                     // Force clear current hover/frozen node
+                     if (window.hoverNode) {
+                         // We manually reset because unhighlightNode might have been blocked
+                         const nodeToClear = window.hoverNode;
+                         // Temporarily disable the flag just to be sure (already false above)
+                         unhighlightNode(nodeToClear);
+                     }
+
                      // Respect the manual freeze checkbox
                      const isManualFreeze = document.getElementById('freeze-layout') && document.getElementById('freeze-layout').checked;
                      if (!isManualFreeze) {
                          simulation.alphaTarget(0.3).restart();
                      }
+                 } else if (window.hoverNode) {
+                     unhighlightNode(window.hoverNode);
                  }
              }
         }
@@ -333,6 +341,7 @@ const translations = {
         
         // Analysis Panel
         analysis_title: "度数分析",
+        node_details: "节点详情",
         filter_strategy: "过滤策略:",
         cluster_filter: "聚类过滤:",
         threshold: "阈值:",
@@ -340,6 +349,9 @@ const translations = {
         export_json: "JSON",
         export_zip: "ZIP (MD)",
         filtered_nodes: "过滤后节点",
+        back: "返回",
+        inbound_rels: "入度 (帮助理解)",
+        outbound_rels: "出度 (进一步探索)",
         
         // Strategy Options
         strat_top: "Top X% (按度数)",
@@ -374,6 +386,8 @@ const translations = {
         // Focus Mode
         exit_focus: "退出专注模式",
         auto_arrange: "自动排列",
+        focus_inbound: "帮助理解",
+        focus_outbound: "进一步探索",
         
         // Simulation
         simulation: "物理模拟",
@@ -412,6 +426,7 @@ const translations = {
         
         // Analysis Panel
         analysis_title: "Degree Analysis",
+        node_details: "Node Details",
         filter_strategy: "Filter Strategy:",
         cluster_filter: "Cluster Filter:",
         threshold: "Threshold:",
@@ -419,6 +434,9 @@ const translations = {
         export_json: "JSON",
         export_zip: "ZIP (MD)",
         filtered_nodes: "Filtered Nodes",
+        back: "Back",
+        inbound_rels: "Inbound (Helping to understand)",
+        outbound_rels: "Outbound (Further exploration)",
         
         // Strategy Options
         strat_top: "Top X% (by Degree)",
@@ -452,6 +470,8 @@ const translations = {
         
         // Focus Mode
         exit_focus: "Exit Focus Mode",
+        focus_inbound: "Helping to understand",
+        focus_outbound: "Further exploration",
         
         // Simulation
         simulation: "Simulation",
@@ -690,6 +710,11 @@ let clickTimer = null;
 
 // Highlight Logic (Extracted)
 function highlightNode(d, event) {
+    // 0. If in frozen interaction mode, only allow highlighting the frozen node
+    if (window.isInteractionFrozen && window.frozenNode && d.id !== window.frozenNode.id) {
+        return;
+    }
+
     // 1. Lock position to prevent drift while inspecting
     if (!focusNode && !freezeLayoutCheckbox.checked) {
         d.fx = d.x;
@@ -775,6 +800,11 @@ function highlightNode(d, event) {
 }
 
 function unhighlightNode(d) {
+    // 0. If in frozen interaction mode, do not clear the highlight of the frozen node
+    if (window.isInteractionFrozen && window.frozenNode && d.id === window.frozenNode.id) {
+        return;
+    }
+
     // 1. Unlock position (unless focused or globally frozen)
     if (!focusNode && !freezeLayoutCheckbox.checked) {
         d.fx = null;
@@ -829,13 +859,17 @@ function handleSingleClick(event, d) {
     // Requirement: Click displays in-degree/out-degree (Highlight) AND stops movement
     
     // 1. Stop the simulation to freeze all other nodes
-    // Respect manual freeze checkbox - if it's already checked, we just stay frozen.
-    // If it's NOT checked, we freeze temporarily.
     simulation.stop();
     window.isInteractionFrozen = true;
+    window.frozenNode = d;
 
     // 2. Highlight the node and show connections
     highlightNode(d, event);
+    
+    // 3. Show Statistics Panel (Node Details)
+    if (window.showNodeAnalysis) {
+        window.showNodeAnalysis(d.id);
+    }
 }
 
 function handleDoubleClick(event, d) {
@@ -1359,8 +1393,8 @@ function enterFocusMode(focusD) {
         spreadVertical(uniqueSup, cx + layerGap); // Right: Outbound
 
         // Add Labels
-        window.focusLabels.push({ text: "Helping to understand", x: cx - layerGap, y: cy - (uniqueSub.length * hSpacing / 2) - 40, align: "middle" });
-        window.focusLabels.push({ text: "Further exploration", x: cx + layerGap, y: cy - (uniqueSup.length * hSpacing / 2) - 40, align: "middle" });
+        window.focusLabels.push({ text: t("focus_inbound"), x: cx - layerGap, y: cy - (uniqueSub.length * hSpacing / 2) - 40, align: "middle" });
+        window.focusLabels.push({ text: t("focus_outbound"), x: cx + layerGap, y: cy - (uniqueSup.length * hSpacing / 2) - 40, align: "middle" });
 
     } else {
         // Horizontal Layout (Standard / Top-Bottom)
@@ -1390,9 +1424,9 @@ function enterFocusMode(focusD) {
 
         // Labels
         // Top Area (Outbound) -> "Further exploration"
-        window.focusLabels.push({ text: "Further exploration", x: cx, y: cy - layerGap - 60, align: "middle" });
+        window.focusLabels.push({ text: t("focus_outbound"), x: cx, y: cy - layerGap - 60, align: "middle" });
         // Bottom Area (Inbound) -> "Helping to understand"
-        window.focusLabels.push({ text: "Helping to understand", x: cx, y: cy + layerGap + 80, align: "middle" });
+        window.focusLabels.push({ text: t("focus_inbound"), x: cx, y: cy + layerGap + 80, align: "middle" });
     }
     
     // Associated Nodes (Side placement - simplified for now, keep existing logic but adapt to cx/cy)

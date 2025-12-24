@@ -223,9 +223,18 @@ Renders the JSON data into an interactive DAG.
         *   **Slide Gesture**: Drag the panel header (or handle) up/down to resize the panel on touch devices.
         *   **Auto-Snap**: Dragging near the top automatically snaps to Full Screen mode.
         *   **Drag Handle**: Visual indicator for the draggable area on mobile.
+    *   **Analysis Mobile Interactions (v0.9.9)**:
+        *   **Slide Gesture**: Drag the panel header (or handle) up/down to resize the panel on touch devices.
+        *   **Auto-Snap**: Dragging near the top automatically snaps to Full Screen mode.
+        *   **Drag Handle**: Visual indicator for the draggable area on mobile.
     *   **Graph Inspection (v0.9.10)**:
         *   **Click-to-Freeze**: Clicking a node pauses the physics simulation (`simulation.stop()`) to allow stable inspection of connections.
         *   **Resume**: Clicking the background resumes the simulation (`simulation.restart()`) unless "Freeze Layout" is globally enabled.
+    *   **Node Statistics Panel (v0.9.11)**:
+        *   **Trigger**: Clicking a node opens the details panel within the Analysis area.
+        *   **Content**: Displays In-degree and Out-degree counts, plus scrollable lists of connected nodes.
+        *   **Navigation**: Clicking a node in the list highlights it and navigates to its details.
+        *   **Localization**: Focus Mode labels ("Helping to understand", "Further exploration") are now fully localized.
 
     *   **Scalability Defaults (v0.8.8)**:
         *   **Orphans**: Hidden by default.
