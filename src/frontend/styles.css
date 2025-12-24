@@ -367,7 +367,17 @@ div.tooltip {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    transition: opacity 0.3s;
+    transition: opacity 0.3s, transform 0.1s;
+    resize: both; /* Allow resizing / 允许调整大小 */
+    min-width: 200px;
+    min-height: 250px;
+    max-width: 90vw;
+    max-height: 90vh;
+}
+
+.stats-popup.dragging {
+    cursor: move;
+    transition: none;
 }
 
 .popup-header {
@@ -377,6 +387,12 @@ div.tooltip {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    cursor: move; /* Indicate draggable / 指示可拖动 */
+    user-select: none; /* Prevent text selection while dragging / 拖动时防止文本选择 */
+}
+
+.popup-header:active {
+    cursor: grabbing;
 }
 
 .popup-header h3 {
@@ -402,9 +418,33 @@ div.tooltip {
     color: #fff;
 }
 
+.popup-controls {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.popup-zoom-btn {
+    background: #444;
+    border: 1px solid #555;
+    color: #e0e0e0;
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 2px 6px;
+    font-size: 0.85rem;
+    line-height: 1;
+}
+
+.popup-zoom-btn:hover {
+    background: #555;
+    color: #fff;
+}
+
 .popup-content {
     padding: 15px;
     font-size: 0.9rem;
+    overflow: auto; /* Allow scrolling when content is large / 内容过大时允许滚动 */
+    flex: 1;
 }
 
 .stat-row {

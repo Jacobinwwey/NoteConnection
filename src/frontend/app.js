@@ -783,25 +783,128 @@ function handleSingleClick(event, d) {
 function handleDoubleClick(event, d) {
     // Requirement: Double Click enters Focus Mode
     // 要求：双击进入专注模式
+    // v0.9.19 Fix: Allow re-entering focus mode for different nodes
+    // v0.9.19 修复：允许为不同节点重新进入专注模式
+    
     if (focusNode && focusNode.id === d.id) {
-        // Already focused -> Open Reader
-        // 已经专注 -> 打开阅读器
+        // Already focused on same node -> Open Reader
+        // 已经专注于同一节点 -> 打开阅读器
         if (window.reader) window.reader.open(d);
     } else {
-        // Enter Focus Mode
-        // 进入专注模式
+        // Enter or Re-enter Focus Mode for new node
+        // 为新节点进入或重新进入专注模式
+        // This properly handles the case when double-clicking a related node while in focus mode
+        // 这正确处理了在专注模式下双击相关节点的情况
         enterFocusMode(d);
     }
 }
 
 
 // --- Node Statistics Popup Logic ---
+// --- 节点统计弹窗逻辑 ---
 const statsPopup = document.getElementById('node-stats-popup');
 const popupCloseBtn = document.getElementById('popup-close-btn');
 
+// Popup drag functionality / 弹窗拖动功能
+// v0.9.19: Add draggable support for statistics popup
+// v0.9.19: 为统计弹窗添加可拖动支持
+let popupDragState = {
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    startLeft: 0,
+    startTop: 0,
+    currentScale: 1
+};
+
+const popupDragHandle = document.getElementById('popup-drag-handle');
+if (popupDragHandle && statsPopup) {
+    popupDragHandle.addEventListener('mousedown', (e) => {
+        // Only start drag if clicking on header, not on buttons
+        // 仅在点击标题时开始拖动，不在按钮上
+        if (e.target.closest('button')) return;
+        
+        popupDragState.isDragging = true;
+        popupDragState.startX = e.clientX;
+        popupDragState.startY = e.clientY;
+        
+        const rect = statsPopup.getBoundingClientRect();
+        popupDragState.startLeft = rect.left;
+        popupDragState.startTop = rect.top;
+        
+        statsPopup.classList.add('dragging');
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!popupDragState.isDragging) return;
+        
+        const deltaX = e.clientX - popupDragState.startX;
+        const deltaY = e.clientY - popupDragState.startY;
+        
+        const newLeft = popupDragState.startLeft + deltaX;
+        const newTop = popupDragState.startTop + deltaY;
+        
+        // Update position / 更新位置
+        statsPopup.style.left = `${newLeft}px`;
+        statsPopup.style.top = `${newTop}px`;
+        statsPopup.style.right = 'auto'; // Remove default right positioning
+        
+        e.preventDefault();
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (popupDragState.isDragging) {
+            popupDragState.isDragging = false;
+            statsPopup.classList.remove('dragging');
+        }
+    });
+}
+
+// Popup zoom functionality / 弹窗缩放功能
+// v0.9.19: Add zoom controls for statistics popup
+// v0.9.19: 为统计弹窗添加缩放控制
+const popupZoomIn = document.getElementById('popup-zoom-in');
+const popupZoomOut = document.getElementById('popup-zoom-out');
+const popupResetSize = document.getElementById('popup-reset-size');
+
+if (popupZoomIn && popupZoomOut && popupResetSize && statsPopup) {
+    popupZoomIn.addEventListener('click', () => {
+        popupDragState.currentScale = Math.min(popupDragState.currentScale + 0.1, 2.0);
+        applyPopupZoom();
+    });
+    
+    popupZoomOut.addEventListener('click', () => {
+        popupDragState.currentScale = Math.max(popupDragState.currentScale - 0.1, 0.5);
+        applyPopupZoom();
+    });
+    
+    popupResetSize.addEventListener('click', () => {
+        popupDragState.currentScale = 1.0;
+        applyPopupZoom();
+        // Also reset size if manually resized / 如果手动调整了大小也重置
+        statsPopup.style.width = '280px';
+        statsPopup.style.height = 'auto';
+    });
+    
+    function applyPopupZoom() {
+        const content = statsPopup.querySelector('.popup-content');
+        if (content) {
+            content.style.fontSize = `${popupDragState.currentScale}rem`;
+        }
+    }
+}
+
+// Close button handler / 关闭按钮处理器
 if (popupCloseBtn) {
     popupCloseBtn.addEventListener('click', () => {
-        if (statsPopup) statsPopup.style.display = 'none';
+        if (statsPopup) {
+            statsPopup.style.display = 'none';
+            // Reset position to default / 重置位置到默认
+            statsPopup.style.left = 'auto';
+            statsPopup.style.right = '20px';
+            statsPopup.style.top = '80px';
+        }
         
         // Clear highlight using highlightManager
         // 使用highlightManager清除高亮
