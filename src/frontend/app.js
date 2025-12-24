@@ -785,12 +785,27 @@ function handleDoubleClick(event, d) {
     // 要求：双击进入专注模式
     // v0.9.19 Fix: Allow re-entering focus mode for different nodes
     // v0.9.19 修复：允许为不同节点重新进入专注模式
+    // v0.9.20 Enhancement: Auto-clear selection state when entering focus mode
+    // v0.9.20 增强：进入专注模式时自动清除选择状态
     
     if (focusNode && focusNode.id === d.id) {
         // Already focused on same node -> Open Reader
         // 已经专注于同一节点 -> 打开阅读器
         if (window.reader) window.reader.open(d);
     } else {
+        // Clear any existing selection/highlight state before entering focus mode
+        // 在进入专注模式前清除任何现有的选择/高亮状态
+        if (window.highlightManager) {
+            window.highlightManager.unhighlight({ force: true });
+        }
+        
+        // Hide statistics popup if visible
+        // 如果统计弹窗可见则隐藏
+        const popup = document.getElementById('node-stats-popup');
+        if (popup && popup.style.display !== 'none') {
+            popup.style.display = 'none';
+        }
+        
         // Enter or Re-enter Focus Mode for new node
         // 为新节点进入或重新进入专注模式
         // This properly handles the case when double-clicking a related node while in focus mode
