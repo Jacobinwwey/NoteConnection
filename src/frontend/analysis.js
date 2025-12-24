@@ -228,6 +228,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div>${n.inDegree + n.outDegree}</div>
             </div>
         `).join('');
+
+        // Add Click Listeners to Rows
+        UI.tableBody.querySelectorAll('.node-row').forEach((row, index) => {
+            row.addEventListener('click', () => {
+                const nodeData = sorted[index];
+                if (window.highlightNode) {
+                    window.highlightNode(nodeData.id);
+                }
+            });
+            row.style.cursor = 'pointer';
+        });
     }
 
     UI.headers.forEach(h => {

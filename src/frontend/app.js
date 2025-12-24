@@ -918,6 +918,21 @@ function renderCanvas(layoutMode) {
         }
     });
 
+    // Draw Focus Labels (Canvas)
+    if (focusNode && window.focusLabels) {
+        ctx.save();
+        ctx.font = "bold 16px Segoe UI";
+        ctx.fillStyle = "#61dafb";
+        ctx.textAlign = "center";
+        ctx.shadowColor = "rgba(0,0,0,0.8)";
+        ctx.shadowBlur = 4;
+        
+        window.focusLabels.forEach(lbl => {
+            ctx.fillText(lbl.text, lbl.x, lbl.y);
+        });
+        ctx.restore();
+    }
+
     ctx.restore();
 }
 
@@ -1170,9 +1185,22 @@ document.getElementById('focus-h-spacing-slider').addEventListener('input', () =
 });
       
       
-      function enterFocusMode(focusD) {
+// Helper to expose highlightNode for external modules (like Analysis)
+window.highlightNode = function(id) {
+    const d = nodes.find(n => n.id === id);
+    if (d) {
+        highlightNode(d, null);
+        // Also center view on it?
+        // svg.transition().duration(750).call(d3.zoom().transform, d3.zoomIdentity.translate(width/2 - d.x, height/2 - d.y).scale(1.5));
+    }
+};
+
+function enterFocusMode(focusD) {
     // If we re-enter (e.g. slider change), we don't return early unless it's strictly same state
     // But here we want to update positions, so we proceed.
+
+    // Update Stats
+    document.getElementById('focus-node-stats').innerText = `In: ${focusD.inDegree} | Out: ${focusD.outDegree}`;
 
     // RESET ALL NODES first to prevent accumulation of visible nodes
     nodes.forEach(n => {
@@ -1193,8 +1221,8 @@ document.getElementById('focus-h-spacing-slider').addEventListener('input', () =
     document.getElementById('controls').style.pointerEvents = 'none'; // Disable controls
     
     // 2. Identify Nodes
-    const superiors = []; // Outgoing: Focus -> Target (Superior)
-    const subordinates = []; // Incoming: Source -> Focus (Subordinate)
+    const superiors = []; // Outgoing: Focus -> Target (Superior / Further Exploration)
+    const subordinates = []; // Incoming: Source -> Focus (Subordinate / Helping to understand)
     
     links.forEach(l => {
         if (l.source.id === focusD.id) superiors.push(l.target);
@@ -1224,50 +1252,98 @@ document.getElementById('focus-h-spacing-slider').addEventListener('input', () =
     uniqueSub.sort(sortFn);
     
     // 4. Layout Calculation
-    const cx = width / 2;
-    const cy = height / 2;
-    // Get spacing from slider
+    // Requirement: "central position of this node should be the original position"
+    // We use focusD.x / focusD.y as the anchor.
+    // If the node hasn't been simulated yet (unlikely), fallback to center.
+    const cx = focusD.x || width / 2;
+    const cy = focusD.y || height / 2;
+    
+    // Center the view on this node (Optional, but good UX if we keep original pos)
+    // We need to transform the graph so (cx, cy) is at screen center.
+    // currentTransform is k, x, y. 
+    // We want: newX + cx*k = screenWidth/2
+    // newX = screenWidth/2 - cx*k
+    // Let's preserve current scale 'k' or zoom in slightly?
+    const targetScale = Math.max(1, d3.zoomTransform(svg.node()).k);
+    svg.transition().duration(750).call(
+        d3.zoom().transform, 
+        d3.zoomIdentity.translate(width/2 - cx * targetScale, height/2 - cy * targetScale).scale(targetScale)
+    );
+
+    // Get settings
     const layerGap = parseInt(document.getElementById('focus-spacing-slider').value) || 250; 
     const hSpacing = parseInt(document.getElementById('focus-h-spacing-slider').value) || 80;
-    
-    const spreadNodes = (nodeList, baselineY) => {
-        const count = nodeList.length;
-        if (count === 0) return;
-        
-        // Use H-Spacing slider to control width
-        // const spreadWidth = Math.min(width * 0.9, Math.max(count * 80, 200)); 
-        // New Logic: Fixed spacing from slider * count
-        // Center the group
-        
-        const totalWidth = (count - 1) * hSpacing;
-        const startX = cx - totalWidth / 2;
-        
-        nodeList.forEach((n, i) => {
-            n.fx = count === 1 ? cx : startX + i * hSpacing;
-            
-            // Relative Height & Staggered Labels
-            const stagger = (i % 2 === 0 ? -1 : 1) * 20; 
-            const criteriaOffset = (n._focusScore * 20); 
-            const totalOffset = stagger + criteriaOffset; 
-            
-            n.fy = baselineY + totalOffset;
-            n.isFocusVisible = true;
-            
-            if (n.fy < baselineY) n._labelDy = -15; // Above
-            else n._labelDy = 25; // Below
-        });
-    };
-    
-    // Focus Node
+    const layoutType = document.getElementById('focus-layout-select') ? document.getElementById('focus-layout-select').value : 'horizontal';
+
+    // Set Focus Node Fixed Position
     focusD.fx = cx;
     focusD.fy = cy;
     focusD.isFocusVisible = true;
     focusD._labelDy = 35; 
+
+    // Define Semantic Labels for rendering
+    window.focusLabels = [];
+
+    if (layoutType === 'vertical') {
+        // Vertical Layout (Left-to-Right structure: Inbound -> Selected -> Outbound)
+        // Requirement: "arranged from left to right as 'inbound node - selected node - outbound node'"
+        // So: Left = Inbound (Sub), Center = Focus, Right = Outbound (Sup)
+        
+        const spreadVertical = (nodeList, baselineX) => {
+            const count = nodeList.length;
+            if (count === 0) return;
+            const totalHeight = (count - 1) * hSpacing;
+            const startY = cy - totalHeight / 2;
+            
+            nodeList.forEach((n, i) => {
+                n.fx = baselineX;
+                n.fy = startY + i * hSpacing;
+                n.isFocusVisible = true;
+                n._labelDy = 25;
+            });
+        };
+
+        spreadVertical(uniqueSub, cx - layerGap); // Left: Inbound
+        spreadVertical(uniqueSup, cx + layerGap); // Right: Outbound
+
+        // Add Labels
+        window.focusLabels.push({ text: "Helping to understand", x: cx - layerGap, y: cy - (uniqueSub.length * hSpacing / 2) - 40, align: "middle" });
+        window.focusLabels.push({ text: "Further exploration", x: cx + layerGap, y: cy - (uniqueSup.length * hSpacing / 2) - 40, align: "middle" });
+
+    } else {
+        // Horizontal Layout (Standard / Top-Bottom)
+        // Top = Outbound (Sup), Bottom = Inbound (Sub)
+        
+        const spreadHorizontal = (nodeList, baselineY) => {
+            const count = nodeList.length;
+            if (count === 0) return;
+            const totalWidth = (count - 1) * hSpacing;
+            const startX = cx - totalWidth / 2;
+            
+            nodeList.forEach((n, i) => {
+                n.fx = startX + i * hSpacing;
+                
+                // Stagger
+                const stagger = (i % 2 === 0 ? -1 : 1) * 20; 
+                const criteriaOffset = (n._focusScore * 20); 
+                n.fy = baselineY + stagger + criteriaOffset;
+                
+                n.isFocusVisible = true;
+                if (n.fy < baselineY) n._labelDy = -15; else n._labelDy = 25;
+            });
+        };
+
+        spreadHorizontal(uniqueSup, cy - layerGap); // Top (Outbound)
+        spreadHorizontal(uniqueSub, cy + layerGap); // Bottom (Inbound)
+
+        // Labels
+        // Top Area (Outbound) -> "Further exploration"
+        window.focusLabels.push({ text: "Further exploration", x: cx, y: cy - layerGap - 60, align: "middle" });
+        // Bottom Area (Inbound) -> "Helping to understand"
+        window.focusLabels.push({ text: "Helping to understand", x: cx, y: cy + layerGap + 80, align: "middle" });
+    }
     
-    spreadNodes(uniqueSup, cy - layerGap);
-    spreadNodes(uniqueSub, cy + layerGap);
-    
-    // Associated Nodes
+    // Associated Nodes (Side placement - simplified for now, keep existing logic but adapt to cx/cy)
     const associated = [];
     links.forEach(l => {
         if ((l.source.id === focusD.id || l.target.id === focusD.id) && l.weight > 0.6) { 
@@ -1286,11 +1362,12 @@ document.getElementById('focus-h-spacing-slider').addEventListener('input', () =
             if (i % 2 === 0) left.push(n); else right.push(n);
         });
         
-        const sideGap = 200;
+        // Place associated nodes loosely around
+        const sideGap = layerGap * 1.2; 
         const placeSide = (list, dir) => {
              list.forEach((n, i) => {
-                n.fx = cx + (dir * (sideGap + 100 + (i * 60)));
-                n.fy = cy + (i % 2 === 0 ? -20 : 20);
+                n.fx = cx + (dir * sideGap);
+                n.fy = cy + (i * 60) - (list.length * 30);
                 n._labelDy = 25;
              });
         };
@@ -1303,6 +1380,27 @@ document.getElementById('focus-h-spacing-slider').addEventListener('input', () =
     link.style("display", "none");
     updateVisibility();
     
+    // Render Focus Labels (SVG)
+    g.selectAll(".focus-label-group").remove(); // Clear old
+    if (document.querySelector('input[name="rendererMode"]:checked').value === 'svg') {
+        const labelGroup = g.append("g").attr("class", "focus-label-group");
+        window.focusLabels.forEach(lbl => {
+            // Background rect for readability
+            /*
+            labelGroup.append("rect")
+                .attr("class", "focus-bg-rect")
+                .attr("x", lbl.x - 100).attr("y", lbl.y - 15)
+                .attr("width", 200).attr("height", 30);
+            */
+            labelGroup.append("text")
+                .attr("class", "focus-label")
+                .attr("x", lbl.x)
+                .attr("y", lbl.y)
+                .attr("text-anchor", lbl.align || "middle")
+                .text(lbl.text);
+        });
+    }
+
     node.each(function(d) {
         if (isNodeVisible(d)) {
             const el = d3.select(this);
@@ -1373,6 +1471,10 @@ document.getElementById('focus-h-spacing-slider').addEventListener('input', () =
               
       
           node.selectAll("circle").transition().duration(500).attr("stroke-width", "1.5px");
+          
+          // Clear Focus Labels (SVG)
+          g.selectAll(".focus-label-group").remove();
+          window.focusLabels = [];
       
           simulation.alpha(1).restart();
       

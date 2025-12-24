@@ -717,4 +717,76 @@ div.tooltip {
         content: "⚙️";
         font-size: 20px;
     }
+
+    /* 5. Analysis Panel Mobile */
+    #analysis-panel.open {
+        height: 80vh !important; /* Increased height */
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        z-index: 2100; /* Above others */
+        border-top: 2px solid #61dafb;
+        transition: height 0.3s ease; /* Smooth toggle */
+    }
+    
+    #analysis-panel .panel-body {
+        padding: 10px;
+        overflow-y: auto; /* Ensure scroll */
+        -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+    }
+    
+    #node-table-body {
+        font-size: 0.8rem; /* Smaller text */
+    }
+}
+
+/* --- Mermaid Text Visibility --- */
+/* Add grayscale and shadow to the font to expand the compatibility of mermaid diagrams */
+.mermaid text, 
+.mermaid .nodeLabel, 
+.mermaid .edgeLabel, 
+.mermaid .messageText, 
+.mermaid .loopText, 
+.mermaid .noteText {
+    font-family: 'Segoe UI', sans-serif !important;
+    text-shadow: 
+        -1px -1px 0 #000,  
+         1px -1px 0 #000,
+        -1px  1px 0 #000,
+         1px  1px 0 #000,
+         0px 0px 4px rgba(0,0,0,0.8) !important;
+    fill: #f0f0f0 !important; /* Ensure light text */
+    font-weight: 600 !important;
+}
+
+/* Ensure paths (arrows) are visible */
+.mermaid .edgePaths path, 
+.mermaid .flowchart-link {
+    stroke: #aaa !important;
+}
+.mermaid .marker {
+    fill: #aaa !important;
+    stroke: #aaa !important;
+}
+
+/* --- Focus Mode Semantic Labels --- */
+.focus-label {
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 16px;
+    font-weight: bold;
+    fill: #61dafb;
+    text-anchor: middle;
+    opacity: 0.9;
+    pointer-events: none;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    text-shadow: 0px 2px 4px rgba(0,0,0,0.8);
+}
+
+.focus-bg-rect {
+    fill: rgba(0, 0, 0, 0.4);
+    rx: 10;
+    ry: 10;
+    pointer-events: none;
 }
