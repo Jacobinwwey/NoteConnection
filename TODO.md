@@ -1,8 +1,39 @@
-# 2025-12-24 v0.9.18
+# 2025-12-24 v0.9.19
 
 # Project Build Plan: Progressive Hierarchical Knowledge Graph
 
 This document outlines the roadmap for building `NoteConnection`, a system capable of visualizing tens of thousands of knowledge points as a Directed Acyclic Graph (DAG), highlighting hierarchical relationships and learning paths.
+
+---
+
+# 2025-12-24 v0.9.19 - Focus Mode & Popup Enhancements
+
+**Goal**: Fix focus mode refresh issues and add drag/zoom functionality to the statistics popup for better user experience.
+
+- [x] **Focus Mode Re-entry Fix**
+    - [x] **Double-Click Behavior**: Modified `handleDoubleClick()` to allow re-entering focus mode on related nodes while already in focus mode.
+    - [x] **State Reset**: Ensured all node visibility flags (`isFocusVisible`, `fx`, `fy`, `_labelDy`) are properly reset before entering new focus context.
+    - [x] **Prevention**: Removed the restriction that blocked switching focus between related nodes in `enterFocusMode()`.
+
+- [x] **Statistics Popup Enhancements**
+    - [x] **Drag Functionality**: Implemented mouse-based dragging by clicking and dragging the popup header.
+        - [x] **State Tracking**: Created `popupDragState` to track drag position and scale.
+        - [x] **Event Handlers**: Added `mousedown`, `mousemove`, and `mouseup` listeners for drag control.
+        - [x] **Visual Feedback**: Added `.dragging` class for cursor feedback during drag.
+    - [x] **Zoom Controls**: Added three zoom buttons (+, −, ⟲) to scale popup content.
+        - [x] **Scale Range**: 0.5x to 2.0x with 0.1 increments.
+        - [x] **Implementation**: Applied scaling via `fontSize` CSS property on `.popup-content`.
+        - [x] **Reset Function**: Reset button restores default size and scale.
+    - [x] **Resizable**: Enabled CSS `resize: both` for browser-native resize functionality.
+        - [x] **Constraints**: Set min/max width and height constraints.
+        - [x] **Scrolling**: Ensured content scrolls properly when resized.
+    - [x] **Position Reset**: On close, popup position resets to default (top-right).
+    
+- [x] **Documentation**
+    - [x] **Interface Document**: Updated with v0.9.19 drag/zoom interface specifications.
+    - [x] **README**: Added v0.9.19 changelog entries in both English and Chinese.
+    - [x] **Bilingual Comments**: Code comments in both languages for all new functionality.
+    - [x] **CSS**: Documented new styles for draggable, zoomable, and resizable popup.
 
 ---
 
