@@ -116,6 +116,9 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.7 - Focus Mode Interaction Fix
+- [x] **Focus Mode**: Fixed a bug where changing the layout type did not trigger an immediate refresh.
+
 ### v0.9.6 - Analysis & Visuals Polish
 - [x] **Analysis Panel**: Added "Full Screen" toggle and "Pinch-to-Zoom" for better mobile readability.
 - [x] **Visuals**: Fixed Mermaid Zoom text styling; Added background click to clear highlights.
@@ -267,6 +270,9 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.7 - 专注模式交互修复
+- [x] **专注模式**: 修复了切换布局类型不会触发立即刷新的 Bug。
 
 ### v0.9.6 - 分析与视觉打磨
 - [x] **分析面板**: 添加了 "全屏" 切换和 "捏合缩放" 以提高移动端可读性。
