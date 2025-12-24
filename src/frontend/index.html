@@ -233,9 +233,14 @@
 
     <!-- Node Statistics Popup -->
     <div id="node-stats-popup" class="stats-popup" style="display: none;">
-        <div class="popup-header">
+        <div class="popup-header" id="popup-drag-handle">
             <h3 id="popup-node-name">Node Name</h3>
-            <button id="popup-close-btn">&times;</button>
+            <div class="popup-controls">
+                <button class="popup-zoom-btn" id="popup-zoom-in" title="Zoom In">+</button>
+                <button class="popup-zoom-btn" id="popup-zoom-out" title="Zoom Out">−</button>
+                <button class="popup-zoom-btn" id="popup-reset-size" title="Reset Size">⟲</button>
+                <button id="popup-close-btn">&times;</button>
+            </div>
         </div>
         <div class="popup-content">
             <div class="stat-row">
