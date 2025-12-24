@@ -106,6 +106,23 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] Server: Implement `http` server for API (`/api/folders`, `/api/build`) and static serving.
     - [x] Frontend: Add UI to list and select knowledge base folders.
 
+# 2025-12-24 v0.9.17 - SVG Visual Completeness
+
+**Goal**: Complete the visual feedback loop for SVG mode interactions.
+
+- [x] **SVG Renderer**
+    - [x] **Colored Markers**: Implemented dynamic marker switching (Red/Blue arrows) to match the edge color during highlight.
+    - [x] **Visual Consistency**: Ensured arrows revert to gray when highlighting is cleared.
+
+# 2025-12-24 v0.9.16 - Interaction Completeness
+
+**Goal**: Ensure complete visualization of node relationships during inspection.
+
+- [x] **Interaction Logic**
+    - [x] **Always-On Context**: Clicking a node now forces the display of *all* In-degree and Out-degree relationships, overriding any active "Incoming Only" or "Outgoing Only" filters to ensure complete context is visible.
+- [x] **Canvas Renderer**
+    - [x] **Visual Parity**: Implemented bold line rendering (2.5px width) for highlighted edges in the Canvas engine to match SVG styling.
+
 ### 2025-12-23 v0.8.6 - Performance Optimization (Parallel Processing)
 
 **Goal**: Optimize graph construction for large datasets (>10,000 nodes) to reduce build time.
@@ -292,6 +309,14 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **Canvas Support**: Implemented Red (In) and Blue (Out) edge coloring in the Canvas renderer (`renderCanvas`), previously generic gray.
 - [x] **Data Integrity**
     - [x] **Deduplication**: Used `Set` to prevent duplicate node entries in the Statistics Popup neighbor lists.
+
+### 2025-12-24 v0.9.15 - Enhanced Isolation
+
+**Goal**: Optimize visual focus by effectively hiding unrelated context during inspection.
+
+- [x] **Visual Optimization**
+    - [x] **Deep Dimming**: Reduced opacity of unrelated nodes from 0.1 to 0.05 to better satisfy the "temporarily hidden" requirement while maintaining minimal context.
+    - [x] **Edge Emphasis**: Increased highlighted edge width to 2.5px for clearer Red/Blue distinction.
 
 ### 2026-06-01 v1.0.0 - Production Release
 

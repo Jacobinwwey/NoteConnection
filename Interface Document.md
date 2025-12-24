@@ -201,6 +201,10 @@ Renders the JSON data into an interactive DAG.
     *   **Interaction Logic (v0.9.3)**:
         *   **Highlight/Tooltip**: Triggered by **MouseOver** (Desktop) or **Single Click** (Mobile/Desktop).
         *   **Focus Mode**: Triggered by **Double Click**.
+    *   **Interaction Logic (v0.9.16)**:
+        *   **Context Reveal**: Highlighting a node (Hover or Click) now explicitly displays **all** incoming and outgoing edges, disregarding the global "Incoming/Outgoing Only" filter, to provide a complete inspection view.
+    *   **SVG Markers (v0.9.17)**:
+        *   **Dynamic Arrows**: The system now supports and utilizes colored arrow markers (`#arrow-in` [Red], `#arrow-out` [Blue]) which are dynamically applied to edges during highlight events to ensure visual consistency with the colored lines.
     *   **Mermaid Zoom (v0.9.4)**:
         *   **Trigger**: Click on any rendered Mermaid diagram in the Reader.
         *   **Interface**: Full-screen modal with independent Pan/Zoom (unlimited scaling).

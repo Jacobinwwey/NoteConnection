@@ -125,10 +125,17 @@ const resizeObserver = new ResizeObserver(entries => {
 resizeObserver.observe(container);
 
 // Arrows for edges
-svg.append("defs").selectAll("marker")
-    .data(["end"])
+const defs = svg.append("defs");
+const markers = [
+    { id: "arrow", color: "#555" },
+    { id: "arrow-in", color: "#ff6b6b" },
+    { id: "arrow-out", color: "#4488ff" }
+];
+
+defs.selectAll("marker")
+    .data(markers)
     .enter().append("marker")
-    .attr("id", "arrow")
+    .attr("id", d => d.id)
     .attr("viewBox", "0 -5 10 10")
     .attr("refX", 15) // Position of arrow
     .attr("refY", 0)
@@ -137,7 +144,7 @@ svg.append("defs").selectAll("marker")
     .attr("orient", "auto")
     .append("path")
     .attr("d", "M0,-5L10,0L0,5")
-    .attr("fill", "#555");
+    .attr("fill", d => d.color);
 
 // Render Links
 const link = g.append("g")
@@ -725,15 +732,11 @@ function highlightNode(d, event) {
     window.hoverNode = d;
     ticked(); // Force render update for Canvas to show hover edges
 
-    const mode = document.querySelector('input[name="mode"]:checked').value;
-    
     // Dim all
-    node.style("opacity", 0.1);
+    node.style("opacity", 0.05); // Deep dim to simulate "temporarily hidden"
     link.style("opacity", 0); // Hide all first
 
     // Highlight current
-    // Note: 'this' might not be the element if called programmatically, so we use selection by ID or class if needed.
-    // But since we have 'd', we can select based on data.
     node.filter(n => n.id === d.id).style("opacity", 1).classed("highlight-main", true);
 
     // Find neighbors
@@ -745,16 +748,14 @@ function highlightNode(d, event) {
         const isOutgoing = l.source.id === d.id;
         const isIncoming = l.target.id === d.id;
 
-        if (mode === 'in' && !isIncoming) return;
-        if (mode === 'out' && !isOutgoing) return;
-
         // Highlight Link
         const linkSel = link.filter(ld => ld === l);
         linkSel.style("opacity", 1)
                .classed("highlight-out", isOutgoing)
                .classed("highlight-in", isIncoming)
                .style("stroke", isOutgoing ? "#4488ff" : "#ff6b6b")
-               .style("stroke-width", "2px");
+               .style("stroke-width", "2.5px")
+               .attr("marker-end", isOutgoing ? "url(#arrow-out)" : "url(#arrow-in)");
 
         // Add neighbor ID
         connectedNodeIds.add(l.source.id);
@@ -823,7 +824,8 @@ function unhighlightNode(d) {
     link.classed("highlight-out", false)
         .classed("highlight-in", false)
         .style("stroke", null)
-        .style("stroke-width", null);
+        .style("stroke-width", null)
+        .attr("marker-end", "url(#arrow)");
     updateVisibility(); // Restore visibility based on filters
 }
 
@@ -1006,15 +1008,18 @@ function renderCanvas(layoutMode) {
             if (d.source.isFocusVisible === false || d.target.isFocusVisible === false) return;
             ctx.globalAlpha = 0.6;
             ctx.strokeStyle = "#555";
+            ctx.lineWidth = 1;
         } 
         // 2. Hover Mode (Global hoverNode variable needed)
         else if (window.hoverNode) {
              if (d.source.id === window.hoverNode.id) {
                  ctx.globalAlpha = 1;
                  ctx.strokeStyle = "#4488ff"; // Blue for Outgoing
+                 ctx.lineWidth = 2.5;
              } else if (d.target.id === window.hoverNode.id) {
                  ctx.globalAlpha = 1;
                  ctx.strokeStyle = "#ff6b6b"; // Red for Incoming
+                 ctx.lineWidth = 2.5;
              } else {
                  return; // Hide others
              }
