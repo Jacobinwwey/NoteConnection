@@ -219,6 +219,10 @@ Renders the JSON data into an interactive DAG.
     *   **Analysis Panel Enhancements (v0.9.6)**:
         *   **Full Screen Toggle**: Button to expand panel to 100% height.
         *   **Pinch Zoom**: Touch gestures to scale the panel content for better readability.
+    *   **Analysis Mobile Interactions (v0.9.9)**:
+        *   **Slide Gesture**: Drag the panel header (or handle) up/down to resize the panel on touch devices.
+        *   **Auto-Snap**: Dragging near the top automatically snaps to Full Screen mode.
+        *   **Drag Handle**: Visual indicator for the draggable area on mobile.
 
     *   **Scalability Defaults (v0.8.8)**:
         *   **Orphans**: Hidden by default.
@@ -501,6 +505,10 @@ Transforms the web project into a standalone Android APK.
     *   **分析面板增强 (v0.9.6)**:
         *   **全屏切换**: 按钮将面板扩展到 100% 高度。
         *   **捏合缩放**: 触摸手势缩放面板内容以提高可读性。
+    *   **分析面板移动端交互 (v0.9.9)**:
+        *   **滑动操作**: 在触摸设备上上下拖动面板头部（或手柄）以调整面板大小。
+        *   **自动吸附**: 拖动至顶部附近时自动吸附至全屏模式。
+        *   **拖动手柄**: 移动端可拖动区域的视觉指示器。
 
     *   **可扩展性默认值 (v0.8.8)**:
         *   **孤立节点**: 默认隐藏。

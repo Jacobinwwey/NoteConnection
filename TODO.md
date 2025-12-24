@@ -228,6 +228,26 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] **Layout Switching**
     - [x] **Fix**: Switching between "Horizontal" and "Vertical" layouts now immediately refreshes the graph without requiring slider adjustment.
 
+### 2025-12-24 v0.9.8 - Analysis Interaction Refinement
+
+**Goal**: Ensure seamless interaction between Analysis Panel and Graph.
+
+- [x] **Graph Sync**
+    - [x] **Tooltip**: Clicking a node in the Analysis Panel now displays the tooltip (stats) on the graph at the node's position.
+- [x] **Mobile UX**
+    - [x] **Scrolling**: Fixed scroll behavior in Analysis Panel to prevent conflicts.
+
+### 2025-12-24 v0.9.9 - Mobile Analysis Panel Polish
+
+**Goal**: Enhance "Degree Analysis" page for mobile usability with gesture controls.
+
+- [x] **Mobile Adaptation**
+    - [x] **Slide Gesture**: Implemented "slide up and down" via touch drag on panel header.
+    - [x] **Full Screen**: Supported toggling between floating window and full-screen page, with auto-snap on drag.
+    - [x] **Zoom**: Verified two-finger pinch-to-zoom support for the interface.
+- [x] **Interaction Verification**
+    - [x] **Node Click**: Verified that clicking a node in the panel displays in-degree and out-degree relationships on the graph.
+
 ### 2026-06-01 v1.0.0 - Production Release
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.
@@ -476,6 +496,26 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 - [x] **布局切换**
     - [x] **修复**: 在 "水平" 和 "垂直" 布局之间切换现在会立即刷新图表，无需调整滑块。
+
+### 2025-12-24 v0.9.8 - 分析交互完善 (Analysis Interaction Refinement)
+
+**目标**: 确保分析面板与图表之间的无缝交互。
+
+- [x] **图表同步**
+    - [x] **提示框**: 点击分析面板中的节点现在会在图表上节点的位置显示提示框（统计数据）。
+- [x] **移动端 UX**
+    - [x] **滚动**: 修复了分析面板中的滚动行为以防止冲突。
+
+### 2025-12-24 v0.9.9 - 移动端分析面板打磨 (Mobile Analysis Panel Polish)
+
+**目标**: 增强“度数分析”页面的移动端可用性，增加手势控制。
+
+- [x] **移动端适配**
+    - [x] **滑动操作**: 实现了通过触摸拖动面板头部的“上下滑动”功能。
+    - [x] **全屏**: 支持在浮动窗口和全屏页面之间切换，并具有拖动自动吸附功能。
+    - [x] **缩放**: 验证了界面的双指捏合缩放支持。
+- [x] **交互验证**
+    - [x] **节点点击**: 验证了点击面板中的节点会在图表中显示入度和出度关系。
 
 ### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
 
