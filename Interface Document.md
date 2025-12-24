@@ -668,5 +668,110 @@ Transforms the web project into a standalone Android APK.
     3.  **同步**: `npx cap sync android` -> 将 `dist/frontend` 复制到 `android/app/src/main/assets/public`。
     4.  **原生构建**: `gradlew assembleDebug` -> 编译 APK。
 
+### 6. Node Highlighting System (v0.9.18)
+
+#### `NodeHighlightManager` Class
+Manages node highlighting interactions for both PC and mobile interfaces.
+
+*   **Module**: `nodeHighlight.js`
+*   **Constructor**: `new NodeHighlightManager(config: HighlightConfig)`
+*   **Configuration**:
+    ```typescript
+    interface HighlightConfig {
+        nodes: NoteNode[];           // Array of all graph nodes
+        links: NoteEdge[];           // Array of all graph edges
+        nodeSelection: D3Selection;  // D3 selection of node elements
+        linkSelection: D3Selection;  // D3 selection of link elements
+        tooltip: D3Selection;        // Tooltip element
+        simulation: D3Simulation;    // Force simulation instance
+        onTick: () => void;          // Callback to trigger re-render
+        onHighlight?: (node, connections) => void;  // Optional callback
+        onUnhighlight?: (node) => void;             // Optional callback
+    }
+    ```
+
+*   **Public Methods**:
+    *   `highlight(node: NoteNode, options: HighlightOptions): void`
+        *   **Description**: Highlights a node and its connections.
+        *   **Input**:
+            *   `node`: The node to highlight.
+            *   `options`: Optional configuration.
+                ```typescript
+                interface HighlightOptions {
+                    event?: Event;       // Mouse/touch event for tooltip positioning
+                    freeze?: boolean;    // Whether to freeze simulation
+                    mode?: 'all' | 'in' | 'out';  // Filter mode
+                }
+                ```
+        *   **Visual Effects**:
+            *   Main node: Full opacity (1.0)
+            *   Connected nodes: Full opacity (1.0)
+            *   Unconnected nodes: Dimmed (0.05 opacity)
+            *   Outgoing edges: Blue (#4488ff), 2.5px width
+            *   Incoming edges: Red (#ff6b6b), 2.5px width
+    
+    *   `unhighlight(options: UnhighlightOptions): void`
+        *   **Description**: Removes highlighting from current node.
+        *   **Input**:
+            ```typescript
+            interface UnhighlightOptions {
+                force?: boolean;  // Force unhighlight even if frozen
+            }
+            ```
+    
+    *   `setFocusMode(focusState: FocusState): void`
+        *   **Description**: Updates focus mode reference.
+        *   **Input**:
+            ```typescript
+            interface FocusState {
+                active: boolean;
+                node?: NoteNode;
+            }
+            ```
+    
+    *   `getState(): HighlightState`
+        *   **Description**: Returns current highlight state.
+        *   **Output**:
+            ```typescript
+            interface HighlightState {
+                currentNode: NoteNode | null;
+                isFrozen: boolean;
+                frozenNode: NoteNode | null;
+            }
+            ```
+    
+    *   `isHighlighted(nodeId: string): boolean`
+        *   **Description**: Checks if a node is currently highlighted.
+    
+    *   `getCurrentConnections(): ConnectionData | null`
+        *   **Description**: Gets connections for the currently highlighted node.
+        *   **Output**:
+            ```typescript
+            interface ConnectionData {
+                links: NoteEdge[];
+                nodeIds: Set<string>;
+                incomingLinks: NoteEdge[];
+                outgoingLinks: NoteEdge[];
+            }
+            ```
+
+*   **Integration Pattern**:
+    1.  Initialize after graph elements are created.
+    2.  Attach event handlers (hover, click).
+    3.  Update focus mode state when entering/exiting focus mode.
+    4.  Use in canvas renderer for visual consistency.
+
+*   **Mobile Optimization**:
+    *   **Single Click**: Highlights node and freezes simulation for stable inspection.
+    *   **Double Click**: Enters focus mode.
+    *   **Hover (PC)**: Highlights without freezing.
+    *   **Background Click**: Clears highlight and resumes simulation.
+
+*   **Interaction States**:
+    *   **Normal**: No highlighting.
+    *   **Hover (PC)**: Temporary highlight, removable by mouseout.
+    *   **Frozen (Mobile/PC)**: Persistent highlight after click, requires background click or force clear.
+    *   **Focus Mode**: Highlighting disabled, focus mode handles visualization.
+
 
 ```
