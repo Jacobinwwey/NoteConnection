@@ -1,8 +1,39 @@
-# 2025-12-23 v0.8.6
+# 2025-12-24 v0.9.18
 
 # Project Build Plan: Progressive Hierarchical Knowledge Graph
 
 This document outlines the roadmap for building `NoteConnection`, a system capable of visualizing tens of thousands of knowledge points as a Directed Acyclic Graph (DAG), highlighting hierarchical relationships and learning paths.
+
+---
+
+# 2025-12-24 v0.9.18 - Node Highlighting System Refactor
+
+**Goal**: Reconstruct node highlighting logic with modular architecture for better maintainability and robustness.
+
+- [x] **Modular Architecture**
+    - [x] **NodeHighlightManager Class**: Created dedicated module (`nodeHighlight.js`) with complete state management.
+    - [x] **API Design**: Implemented clean public API with `highlight()`, `unhighlight()`, `getState()`, and helper methods.
+    - [x] **Integration**: Fully integrated into app.js replacing old highlighting functions.
+
+- [x] **Unified Interaction Model**
+    - [x] **PC Support**: Hover-based highlighting without freezing simulation.
+    - [x] **Mobile Support**: Click-based highlighting with simulation freeze for stable inspection.
+    - [x] **State Consistency**: Proper tracking of frozen vs temporary highlight states.
+
+- [x] **Rendering Enhancements**
+    - [x] **SVG Mode**: Directional edge coloring (Blue=#4488ff outgoing, Red=#ff6b6b incoming) with matching arrow markers.
+    - [x] **Canvas Mode**: Updated to use highlightManager state for consistent visual behavior.
+    - [x] **Dimming Effect**: Unconnected nodes dim to 0.05 opacity during highlight for clearer focus.
+
+- [x] **Focus Mode Integration**
+    - [x] **State Awareness**: highlightManager respects focus mode and doesn't interfere.
+    - [x] **Coordination**: Focus mode entry/exit properly updates highlightManager state.
+
+- [x] **Documentation**
+    - [x] **Bilingual Comments**: Comprehensive Chinese/English comments throughout code.
+    - [x] **Interface Document**: Updated with complete NodeHighlightManager API reference.
+    - [x] **README**: Added v0.9.18 changelog entry in both languages.
+    - [x] **Integration Guide**: Created detailed integration instructions.
 
 ---
 

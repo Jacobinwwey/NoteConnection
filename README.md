@@ -119,6 +119,14 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.18 - Node Highlighting Refactor (2025-12-24)
+- [x] **Modular Architecture**: Created dedicated `NodeHighlightManager` class for clean separation of highlighting logic.
+- [x] **Unified Interface**: Single API for both PC (hover) and mobile (click) interactions.
+- [x] **State Management**: Proper tracking of highlight/frozen states with focus mode awareness.
+- [x] **Enhanced Rendering**: Consistent visual behavior across SVG and Canvas modes.
+- [x] **Bilingual Documentation**: Comprehensive Chinese/English comments throughout the codebase.
+- [x] **Robust Integration**: Full compatibility with existing focus mode, analysis panel, and statistics popup features.
+
 ### v0.9.17 - SVG Visual Completeness
 - [x] **Colored Arrows**: SVG edges now use Red and Blue arrowheads when highlighted, ensuring the entire connection is color-coded.
 
@@ -305,6 +313,14 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.18 - 节点高亮重构 (Node Highlighting Refactor) (2025-12-24)
+- [x] **模块化架构**: 创建了专用的 `NodeHighlightManager` 类，实现高亮逻辑的清晰分离。
+- [x] **统一接口**: 为 PC（悬停）和移动端（点击）交互提供单一 API。
+- [x] **状态管理**: 正确跟踪高亮/冻结状态，并具备专注模式感知能力。
+- [x] **增强渲染**: SVG 和 Canvas 模式之间的一致视觉行为。
+- [x] **双语文档**: 整个代码库中全面的中英文注释。
+- [x] **稳健集成**: 与现有的专注模式、分析面板和统计弹窗功能完全兼容。
 
 ### v0.9.17 - SVG 视觉完整性 (SVG Visual Completeness)
 - [x] **彩色箭头**: SVG 边现在在高亮时使用红色和蓝色箭头，确保整个连接颜色编码一致。
