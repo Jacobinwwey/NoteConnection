@@ -996,6 +996,18 @@ function renderCanvas(layoutMode) {
     ctx.translate(currentTransform.x, currentTransform.y);
     ctx.scale(currentTransform.k, currentTransform.k);
 
+    // Build connected node set if highlighting
+    let connectedNodeIds = new Set();
+    if (window.hoverNode) {
+        connectedNodeIds.add(window.hoverNode.id);
+        links.forEach(l => {
+            if (l.source.id === window.hoverNode.id || l.target.id === window.hoverNode.id) {
+                connectedNodeIds.add(l.source.id);
+                connectedNodeIds.add(l.target.id);
+            }
+        });
+    }
+
     // Draw Links
     // Logic: Default Hidden (0). Visible if Focus Mode OR Hover.
     // We iterate links and check visibility per link.
@@ -1048,14 +1060,19 @@ function renderCanvas(layoutMode) {
     });
 
     // Draw Nodes
-    ctx.globalAlpha = 1;
     nodes.forEach(d => {
         if (!isNodeVisible(d)) return;
 
-        ctx.beginPath();
+        // Determine if this node should be dimmed
         const isHover = window.hoverNode && window.hoverNode.id === d.id;
         const isFocus = focusNode && focusNode.id === d.id;
-        
+        const isConnected = window.hoverNode && connectedNodeIds.has(d.id);
+        const shouldDim = window.hoverNode && !isConnected && !focusNode;
+
+        // Set opacity for dimming effect
+        ctx.globalAlpha = shouldDim ? 0.05 : 1;
+
+        ctx.beginPath();
         let r = isFocus ? 25 : (d.centrality ? Math.max(3, Math.sqrt(d.centrality) * 3) : 5);
         if (isHover) r += 2; // Slight enlarge on hover
 
@@ -1077,9 +1094,9 @@ function renderCanvas(layoutMode) {
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Label
-        // Show if Focus, Hover, or Zoomed in
-        if (isFocus || isHover || currentTransform.k > 1.2) {
+        // Label - only show if not dimmed or if important
+        if (!shouldDim && (isFocus || isHover || currentTransform.k > 1.2)) {
+            ctx.globalAlpha = 1;
             ctx.fillStyle = "#ccc";
             ctx.font = isFocus ? "bold 16px Sans-Serif" : "10px Sans-Serif";
             ctx.fillText(d.label, d.x + 8, d.y + 4);
@@ -1208,26 +1225,29 @@ function updateVisibility() {
     const minVal = controls.minDegree.value;
     document.getElementById('min-degree-val').innerText = minVal;
 
-    node.style("opacity", d => isNodeVisible(d) ? 1 : 0.1)
-        .style("pointer-events", d => isNodeVisible(d) ? "all" : "none");
+    // Don't reset opacity if we're in highlighting mode (interaction frozen)
+    if (!window.isInteractionFrozen && !window.hoverNode) {
+        node.style("opacity", d => isNodeVisible(d) ? 1 : 0.1)
+            .style("pointer-events", d => isNodeVisible(d) ? "all" : "none");
 
-    link.style("opacity", d => {
-        // If in Focus Mode, show connections to focus node
-        if (focusNode) {
-            const isConnected = d.source.id === focusNode.id || d.target.id === focusNode.id;
-            // Also show edges between visible nodes in focus mode? 
-            // The requirement says "Context Filtering: Show only direct neighbors".
-            // So edges between visible nodes should be fine.
-            const sourceVis = isNodeVisible(d.source);
-            const targetVis = isNodeVisible(d.target);
-            return (sourceVis && targetVis) ? 0.6 : 0;
-        }
-        
-        // Default Mode: Hide edges (0 opacity) to reduce clutter, unless hover handles it.
-        // Hover logic in 'mouseover' sets opacity to 1.
-        // Here we set the "base" state.
-        return 0; 
-    });
+        link.style("opacity", d => {
+            // If in Focus Mode, show connections to focus node
+            if (focusNode) {
+                const isConnected = d.source.id === focusNode.id || d.target.id === focusNode.id;
+                // Also show edges between visible nodes in focus mode? 
+                // The requirement says "Context Filtering: Show only direct neighbors".
+                // So edges between visible nodes should be fine.
+                const sourceVis = isNodeVisible(d.source);
+                const targetVis = isNodeVisible(d.target);
+                return (sourceVis && targetVis) ? 0.6 : 0;
+            }
+            
+            // Default Mode: Hide edges (0 opacity) to reduce clutter, unless hover handles it.
+            // Hover logic in 'mouseover' sets opacity to 1.
+            // Here we set the "base" state.
+            return 0; 
+        });
+    }
 }
 
 function exportSVG() {
