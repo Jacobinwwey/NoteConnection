@@ -257,6 +257,17 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **Resume on Cancel**: Clicking the background (blank area) unhighlights the node and resumes the simulation (unless manually frozen).
     - [x] **Visualization**: Ensured in-degree and out-degree lines are displayed clearly when frozen.
 
+### 2025-12-24 v0.9.11 - Node Statistics & Localization
+
+**Goal**: Enhance detailed inspection of nodes and complete internationalization.
+
+- [x] **Focus Mode Localization**
+    - [x] **Multi-language**: Implemented `t()` calls for semantic labels ("Helping to understand" / "Further exploration").
+- [x] **Node Statistics Panel**
+    - [x] **Interaction**: Clicking a node opens a dedicated panel showing relationships.
+    - [x] **Visuals**: In-degree lines are Red, Out-degree lines are Blue (#4488ff).
+    - [x] **Content**: Panel lists all incoming and outgoing neighbors with navigation support.
+
 ### 2026-06-01 v1.0.0 - Production Release
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.

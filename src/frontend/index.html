@@ -157,48 +157,74 @@
             </div>
         </div>
         <div class="panel-body">
-            <div id="histogram-container"></div>
-            
-            <div class="export-controls">
-                <div class="control-group">
-                    <label data-i18n="filter_strategy">Filter Strategy:</label>
-                    <select id="export-strategy" style="width: 100%; margin-top: 5px;">
-                        <option value="top-percent" data-i18n="strat_top">Top X% (by Degree)</option>
-                        <option value="min-degree" data-i18n="strat_min">Min Degree > X</option>
-                    </select>
+            <!-- Global Analysis View -->
+            <div id="global-analysis-container">
+                <div id="histogram-container"></div>
+                
+                <div class="export-controls">
+                    <div class="control-group">
+                        <label data-i18n="filter_strategy">Filter Strategy:</label>
+                        <select id="export-strategy" style="width: 100%; margin-top: 5px;">
+                            <option value="top-percent" data-i18n="strat_top">Top X% (by Degree)</option>
+                            <option value="min-degree" data-i18n="strat_min">Min Degree > X</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label data-i18n="cluster_filter">Cluster Filter:</label>
+                        <select id="cluster-filter" style="width: 100%; margin-top: 5px;">
+                            <option value="all" data-i18n="cluster_all">All Clusters</option>
+                            <!-- Clusters injected here -->
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label><span data-i18n="threshold">Threshold:</span> <span id="export-threshold-val">5</span></label>
+                        <input type="range" id="export-threshold-slider" min="1" max="100" value="5" style="width: 100%;">
+                    </div>
+                    <div class="stats-preview">
+                        <span data-i18n="selected">Selected:</span> <span id="selected-count">0</span>
+                    </div>
+                    <div class="action-buttons">
+                        <button id="export-json-btn" style="flex: 1;" data-i18n="export_json">JSON</button>
+                        <button id="export-zip-btn" style="flex: 1;" data-i18n="export_zip">ZIP (MD)</button>
+                    </div>
                 </div>
-                <div class="control-group">
-                    <label data-i18n="cluster_filter">Cluster Filter:</label>
-                    <select id="cluster-filter" style="width: 100%; margin-top: 5px;">
-                        <option value="all" data-i18n="cluster_all">All Clusters</option>
-                        <!-- Clusters injected here -->
-                    </select>
-                </div>
-                <div class="control-group">
-                    <label><span data-i18n="threshold">Threshold:</span> <span id="export-threshold-val">5</span></label>
-                    <input type="range" id="export-threshold-slider" min="1" max="100" value="5" style="width: 100%;">
-                </div>
-                <div class="stats-preview">
-                    <span data-i18n="selected">Selected:</span> <span id="selected-count">0</span>
-                </div>
-                <div class="action-buttons">
-                    <button id="export-json-btn" style="flex: 1;" data-i18n="export_json">JSON</button>
-                    <button id="export-zip-btn" style="flex: 1;" data-i18n="export_zip">ZIP (MD)</button>
+
+                <!-- Node List Table -->
+                <div id="node-list-wrapper" style="margin-top: 15px; flex: 1; overflow: hidden; display: flex; flex-direction: column;">
+                    <h3 style="margin: 0 0 5px 0; font-size: 0.9rem; color: #aaa;" data-i18n="filtered_nodes">Filtered Nodes</h3>
+                    <div class="table-header" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 5px; padding: 5px; background: #222; font-weight: bold; font-size: 0.85rem;">
+                        <div class="sortable" data-sort="name"><span data-i18n="th_name">Name</span> <span></span></div>
+                        <div class="sortable" data-sort="cluster"><span data-i18n="th_cluster">Cluster</span> <span></span></div>
+                        <div class="sortable" data-sort="in"><span data-i18n="th_in">In</span> <span></span></div>
+                        <div class="sortable" data-sort="out"><span data-i18n="th_out">Out</span> <span></span></div>
+                        <div class="sortable" data-sort="total"><span data-i18n="th_total">Total</span> <span></span></div>
+                    </div>
+                    <div id="node-table-body" style="overflow-y: auto; flex: 1; border: 1px solid #444;">
+                        <!-- Rows injected here -->
+                    </div>
                 </div>
             </div>
 
-            <!-- Node List Table -->
-            <div id="node-list-wrapper" style="margin-top: 15px; flex: 1; overflow: hidden; display: flex; flex-direction: column;">
-                <h3 style="margin: 0 0 5px 0; font-size: 0.9rem; color: #aaa;" data-i18n="filtered_nodes">Filtered Nodes</h3>
-                <div class="table-header" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 5px; padding: 5px; background: #222; font-weight: bold; font-size: 0.85rem;">
-                    <div class="sortable" data-sort="name"><span data-i18n="th_name">Name</span> <span></span></div>
-                    <div class="sortable" data-sort="cluster"><span data-i18n="th_cluster">Cluster</span> <span></span></div>
-                    <div class="sortable" data-sort="in"><span data-i18n="th_in">In</span> <span></span></div>
-                    <div class="sortable" data-sort="out"><span data-i18n="th_out">Out</span> <span></span></div>
-                    <div class="sortable" data-sort="total"><span data-i18n="th_total">Total</span> <span></span></div>
+            <!-- Node Details View (Hidden by default) -->
+            <div id="node-details-container" style="display: none;">
+                <div id="node-details-header">
+                    <div>
+                        <strong id="details-node-name" style="color: #61dafb; font-size: 1.1rem;">Node Name</strong>
+                        <div style="color: #aaa; font-size: 0.8rem;">
+                            <span data-i18n="cluster">Cluster</span>: <span id="details-cluster">-</span>
+                        </div>
+                    </div>
+                    <button id="btn-back-analysis" style="background: #444; color: white; border: 1px solid #555; padding: 4px 8px; cursor: pointer;">← <span data-i18n="back">Back</span></button>
                 </div>
-                <div id="node-table-body" style="overflow-y: auto; flex: 1; border: 1px solid #444;">
-                    <!-- Rows injected here -->
+                <div id="node-details-content">
+                    <div class="detail-column">
+                        <h4 style="color: #ff6b6b;"><span data-i18n="inbound_rels">Inbound (Helping to understand)</span> (<span id="details-in-count">0</span>)</h4>
+                        <div id="details-in-list" class="detail-list"></div>
+                    </div>
+                    <div class="detail-column">
+                        <h4 style="color: #4488ff;"><span data-i18n="outbound_rels">Outbound (Further exploration)</span> (<span id="details-out-count">0</span>)</h4>
+                        <div id="details-out-list" class="detail-list"></div>
+                    </div>
                 </div>
             </div>
         </div>

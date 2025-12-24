@@ -356,6 +356,93 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
 
+    // --- 7. Node Details Logic (v0.9.11) ---
+    const NodeDetails = {
+        globalContainer: document.getElementById("global-analysis-container"),
+        nodeContainer: document.getElementById("node-details-container"),
+        backBtn: document.getElementById("btn-back-analysis"),
+        name: document.getElementById("details-node-name"),
+        cluster: document.getElementById("details-cluster"),
+        inCount: document.getElementById("details-in-count"),
+        outCount: document.getElementById("details-out-count"),
+        inList: document.getElementById("details-in-list"),
+        outList: document.getElementById("details-out-list")
+    };
+
+    if (NodeDetails.backBtn) {
+        NodeDetails.backBtn.addEventListener('click', () => {
+            showGlobalView();
+        });
+    }
+
+    function showGlobalView() {
+        if (NodeDetails.globalContainer) NodeDetails.globalContainer.style.display = "block";
+        if (NodeDetails.nodeContainer) NodeDetails.nodeContainer.style.display = "none";
+        // Update Title
+        document.querySelector("#analysis-panel h2").setAttribute("data-i18n", "analysis_title");
+        document.querySelector("#analysis-panel h2").innerText = window.t ? window.t("analysis_title") : "Degree Analysis";
+    }
+
+    function showNodeDetails(nodeId) {
+        // Open Panel if closed
+        if (!UI.panel.classList.contains("open")) {
+            UI.btn.click();
+        }
+
+        // Switch View
+        if (NodeDetails.globalContainer) NodeDetails.globalContainer.style.display = "none";
+        if (NodeDetails.nodeContainer) NodeDetails.nodeContainer.style.display = "flex";
+
+        // Find Node
+        const node = graphData.nodes.find(n => n.id === nodeId);
+        if (!node) return;
+
+        // Populate Info
+        NodeDetails.name.innerText = node.label;
+        NodeDetails.cluster.innerText = node.clusterId || '-';
+        
+        // Find Edges
+        const inEdges = [];
+        const outEdges = [];
+        
+        graphData.edges.forEach(e => {
+            if (e.target === nodeId) inEdges.push(graphData.nodes.find(n => n.id === e.source));
+            if (e.source === nodeId) outEdges.push(graphData.nodes.find(n => n.id === e.target));
+        });
+
+        NodeDetails.inCount.innerText = inEdges.length;
+        NodeDetails.outCount.innerText = outEdges.length;
+
+        // Render Lists
+        const renderList = (list, container) => {
+            container.innerHTML = list.map(n => `
+                <div class="detail-item" data-id="${n.id}">
+                    <span>${n.label}</span>
+                    <span style="color: #888; font-size: 0.8em;">${n.clusterId || ''}</span>
+                </div>
+            `).join('');
+            
+            // Add click listeners
+            container.querySelectorAll('.detail-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    const id = el.dataset.id;
+                    if (window.highlightNode) window.highlightNode(id);
+                    // Also navigate to this node in the panel?
+                    showNodeDetails(id);
+                });
+            });
+        };
+
+        renderList(inEdges, NodeDetails.inList);
+        renderList(outEdges, NodeDetails.outList);
+        
+        // Update Header Title (Optional, or keep static)
+        document.querySelector("#analysis-panel h2").innerText = window.t ? window.t("node_details") : "Node Details";
+    }
+
+    // Expose
+    window.showNodeAnalysis = showNodeDetails;
+
     // --- 6. Export & Filter Logic ---
     function getFilteredData() {
         let nodes = graphData.nodes;
