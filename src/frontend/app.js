@@ -1244,10 +1244,9 @@ function updateVisibility() {
                 return (sourceVis && targetVis) ? 0.6 : 0;
             }
             
-            // Default Mode: Hide edges (0 opacity) to reduce clutter, unless hover handles it.
-            // Hover logic in 'mouseover' sets opacity to 1.
-            // Here we set the "base" state.
-            return 0; 
+            // Default Mode: Show edges with low opacity
+            // Hover/click will increase opacity to 1 for highlighted edges
+            return 0.15; 
         });
     }
 }
