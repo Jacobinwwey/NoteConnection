@@ -831,14 +831,16 @@ function unhighlightNode(d) {
 
 // Bind Events
 node.on("mouseover", function(event, d) {
-    highlightNode(d, event);
+    // Only highlight on hover if not in frozen/clicked state
+    if (!window.isInteractionFrozen && !focusNode) {
+        highlightNode(d, event);
+    }
 }).on("mouseout", function(event, d) {
-    // We only unhighlight on mouseout if we didn't "click-lock" it? 
-    // The requirement says "conditions... need to change from... cursor to click".
-    // If I keep mouseout, the click effect vanishes when moving mouse away (desktop).
-    // On mobile, there is no mouseout usually unless tapping elsewhere.
-    // For robustness: Just use unhighlight.
-    unhighlightNode(d);
+    // Only unhighlight on mouseout if NOT in frozen/clicked state
+    // This allows click to "lock" the highlighting
+    if (!window.isInteractionFrozen && !focusNode) {
+        unhighlightNode(d);
+    }
 });
 
 // Click & Double Click Logic
