@@ -1,3 +1,67 @@
+# 2025-12-24 v0.9.17 - English Document
+
+## Test Report: SVG Visual Completeness
+
+### 1. Colored Arrow Markers
+*   **Test**: In SVG Mode, click on a node with both incoming and outgoing edges.
+*   **Result**: 
+    *   Incoming edges are Red with **Red arrowheads**.
+    *   Outgoing edges are Blue with **Blue arrowheads**.
+    *   Previously, arrowheads remained gray.
+*   **Test**: Click the background to clear highlight.
+*   **Result**: All edges (if visible) revert to Gray lines with **Gray arrowheads**.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-24 v0.9.17 - Chinese Document
+
+## 测试报告：SVG 视觉完整性
+
+### 1. 彩色箭头标记
+*   **测试**: 在 SVG 模式下，点击一个同时具有入度和出度边的节点。
+*   **结果**: 
+    *   入度边为红色，且带有**红色箭头**。
+    *   出度边为蓝色，且带有**蓝色箭头**。
+    *   （此前箭头保持灰色）。
+*   **测试**: 点击背景清除高亮。
+*   **结果**: 所有边（如果可见）恢复为灰色线条和**灰色箭头**。
+*   **状态**: **通过**
+
+---
+
+# 2025-12-24 v0.9.16 - English Document
+
+## Test Report: Interaction Completeness
+
+### 1. Highlight Logic Override
+*   **Test**: Set filter mode to "Incoming Only". Single click a node that has both incoming and outgoing edges.
+*   **Result**: The graph highlights **both** incoming (Red) and outgoing (Blue) edges, overriding the filter for the inspected node.
+*   **Status**: **Pass**
+
+### 2. Canvas Renderer Styling
+*   **Test**: Switch to Canvas Mode. Click a node.
+*   **Result**: Highlighted edges are drawn with increased thickness (2.5px), matching the visual weight of the SVG renderer.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-24 v0.9.16 - Chinese Document
+
+## 测试报告：交互完整性
+
+### 1. 高亮逻辑覆盖
+*   **测试**: 将过滤器模式设置为 "仅入度" (Incoming Only)。单击一个同时具有入度和出度边的节点。
+*   **结果**: 图表高亮显示**所有**入度 (红) 和出度 (蓝) 边，覆盖了被检查节点的过滤器设置。
+*   **状态**: **通过**
+
+### 2. Canvas 渲染器样式
+*   **测试**: 切换到 Canvas 模式。点击一个节点。
+*   **结果**: 高亮边的绘制宽度增加 (2.5px)，与 SVG 渲染器的视觉权重相匹配。
+*   **状态**: **通过**
+
+---
+
 # 2025-12-24 v0.9.14 - English Document
 
 ## Test Report: Visual & Data Fixes

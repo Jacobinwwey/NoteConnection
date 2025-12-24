@@ -119,6 +119,13 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.17 - SVG Visual Completeness
+- [x] **Colored Arrows**: SVG edges now use Red and Blue arrowheads when highlighted, ensuring the entire connection is color-coded.
+
+### v0.9.16 - Interaction Completeness
+- [x] **Full Context**: Clicking or hovering a node now reveals **all** connections (In & Out) regardless of the active filter mode.
+- [x] **Canvas Polish**: Added bold styling for highlighted edges in the Canvas renderer.
+
 ### v0.9.14 - Visual & Data Fixes
 - [x] **Edge Highlighting**: Fixed an issue where edge colors (Red/Blue) and bold styling were not applying correctly in SVG mode.
 - [x] **Data Deduplication**: Ensured neighbor lists in the Statistics Popup do not contain duplicate entries.
@@ -298,6 +305,13 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.17 - SVG 视觉完整性 (SVG Visual Completeness)
+- [x] **彩色箭头**: SVG 边现在在高亮时使用红色和蓝色箭头，确保整个连接颜色编码一致。
+
+### v0.9.16 - 交互完整性 (Interaction Completeness)
+- [x] **完整上下文**: 点击或悬停节点现在会显示**所有**连接 (入度和出度)，无论当前过滤器模式如何。
+- [x] **Canvas 打磨**: 为 Canvas 渲染器中的高亮边添加了加粗样式。
 
 ### v0.9.14 - 视觉与数据修复 (Visual & Data Fixes)
 - [x] **边高亮**: 修复了 SVG 模式下边颜色（红/蓝）和加粗样式未正确应用的问题。
