@@ -338,6 +338,15 @@ document.addEventListener("DOMContentLoaded", () => {
                     window.highlightNode(nodeData.id);
                 }
             });
+            
+            // Double Click to Focus
+            row.addEventListener('dblclick', () => {
+                const nodeData = sorted[index];
+                if (window.focusOnNode) {
+                    window.focusOnNode(nodeData.id);
+                }
+            });
+            
             row.style.cursor = 'pointer';
         });
     }
