@@ -6,6 +6,20 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2025-12-25 v0.9.23 - Default Settings Adjustment
+
+**Goal**: Adjust default settings for Reading Window font size and Simulation Damping based on user feedback.
+
+- [x] **Reading Window Font Size**
+    - [x] **Implementation**: Modified `Reader` class in `reader.js` to set `currentZoom` to 0.5 by default.
+    - [x] **Logic**: Affects initialization and reset on open.
+
+- [x] **Simulation Damping**
+    - [x] **Implementation**: Updated `app.js` to initialize `d3.forceSimulation` with `.velocityDecay(0.6)`.
+    - [x] **UI**: Updated `index.html` slider default value and display text to 0.6.
+
+---
+
 # 2025-12-25 v0.9.22 - Mobile Popup Adaptation
 
 **Goal**: Adapt the node statistics popup for mobile devices with touch-based drag and pinch-to-zoom capabilities.
