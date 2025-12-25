@@ -1,3 +1,43 @@
+# 2025-12-25 v0.9.23 - English Document
+
+## Test Report: Default Settings Adjustment
+
+### 1. Reading Window Font Size
+*   **Test**: Open the Reading Window by clicking a node (after double-clicking to focus, or if focusing opens reader).
+*   **Result**: 
+    *   The font size of the content is small (0.5rem).
+    *   Zoom controls work to increase size.
+*   **Status**: **Pass**
+
+### 2. Simulation Damping
+*   **Test**: Reload the page. Check the "Speed (Damping)" slider value.
+*   **Result**: Slider shows "0.6" and handle is at 0.6 position.
+*   **Test**: Observe graph movement.
+*   **Result**: Nodes settle slightly faster than before (higher damping/friction).
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-25 v0.9.23 - Chinese Document
+
+## 测试报告：默认设置调整
+
+### 1. 阅读窗口字体大小
+*   **测试**: 点击节点打开阅读窗口（双击专注后，或如果专注模式打开阅读器）。
+*   **结果**: 
+    *   内容字体大小较小 (0.5rem)。
+    *   缩放控件可以增加大小。
+*   **状态**: **通过**
+
+### 2. 模拟阻尼 (Damping)
+*   **测试**: 重新加载页面。检查“速度（阻尼）”滑块值。
+*   **结果**: 滑块显示 "0.6"，手柄位于 0.6 位置。
+*   **测试**: 观察图表移动。
+*   **结果**: 节点稳定速度比以前稍快（更高的阻尼/摩擦力）。
+*   **状态**: **通过**
+
+---
+
 # 2025-12-25 v0.9.22 - English Document
 
 ## Test Report: Mobile Popup Adaptation

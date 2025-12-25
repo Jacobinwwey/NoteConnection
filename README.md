@@ -119,6 +119,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.23 - Default Settings Adjustment (2025-12-25)
+- [x] **Reading Window**: Set default font size (zoom level) to minimum (0.5x) for compact reading.
+- [x] **Simulation Physics**: Increased default Damping (velocityDecay) from 0.4 to 0.6 for more stable graph movement.
+
 ### v0.9.22 - Mobile Popup Adaptation (2025-12-25)
 - [x] **Touch Interaction**: Added support for dragging the statistics popup on mobile devices by holding the title bar.
 - [x] **Pinch-to-Zoom**: Implemented two-finger pinch gesture to resize/scale the popup content on touch screens.

@@ -11,7 +11,7 @@ class Reader {
         this.title = document.getElementById('reading-title');
         
         this.isLocked = true;
-        this.currentZoom = 1.0;
+        this.currentZoom = 0.5;
         
         this.init();
     }
@@ -174,7 +174,7 @@ class Reader {
 
         // 6. Reset State
         this.isLocked = true;
-        this.currentZoom = 1.0;
+        this.currentZoom = 0.5;
         this.updateLockState();
         this.updateZoom();
     }
