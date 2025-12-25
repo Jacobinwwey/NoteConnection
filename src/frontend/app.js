@@ -1515,9 +1515,6 @@ function enterFocusMode(focusD) {
     // 更新专注模式状态
     updateFocusModeState(true, focusD);
 
-    // If we re-enter (e.g. slider change), we don't return early unless it's strictly same state
-    // But here we want to update positions, so we proceed.
-
     // Update Stats
     document.getElementById('focus-node-stats').innerText = `In: ${focusD.inDegree} | Out: ${focusD.outDegree}`;
 
@@ -1699,18 +1696,21 @@ function enterFocusMode(focusD) {
     link.style("display", "none");
     updateVisibility();
     
+    // Optimization: Subset Simulation
+    // To reduce memory/cpu expenditure, we only simulate the visible nodes.
+    // Background nodes are removed from simulation, freezing them in place.
+    const activeNodes = [focusD, ...uniqueSup, ...uniqueSub, ...associated];
+    const activeNodeIds = new Set(activeNodes.map(n => n.id));
+    const activeLinks = links.filter(l => activeNodeIds.has(l.source.id) && activeNodeIds.has(l.target.id));
+    
+    simulation.nodes(activeNodes);
+    simulation.force("link").links(activeLinks);
+
     // Render Focus Labels (SVG)
     g.selectAll(".focus-label-group").remove(); // Clear old
     if (document.querySelector('input[name="rendererMode"]:checked').value === 'svg') {
         const labelGroup = g.append("g").attr("class", "focus-label-group");
         window.focusLabels.forEach(lbl => {
-            // Background rect for readability
-            /*
-            labelGroup.append("rect")
-                .attr("class", "focus-bg-rect")
-                .attr("x", lbl.x - 100).attr("y", lbl.y - 15)
-                .attr("width", 200).attr("height", 30);
-            */
             labelGroup.append("text")
                 .attr("class", "focus-label")
                 .attr("x", lbl.x)
@@ -1754,53 +1754,44 @@ function enterFocusMode(focusD) {
       
       
       function exitFocusMode() {
-      
-          // Update focus mode state
-          // 更新专注模式状态
-          updateFocusModeState(false, null);
-          
-          focusNode = null;
-      
-          document.getElementById('focus-exit-btn').style.display = 'none';
-      
-          document.getElementById('controls').style.opacity = '1';
-      
-          document.getElementById('controls').style.pointerEvents = 'all';
-      
-          link.style("display", "block");
-      
-          
-      
-          nodes.forEach(d => {
-      
-              d.fx = null; d.fy = null; d.isFocusVisible = false; d._labelDy = null;
-      
-          });
-      
-          
-      
-          updateVisibility(); updateSize(); updateColor();
-      
-          
-      
-          // Reset Texts
-      
-          node.selectAll("text").transition().duration(500)
-      
-              .attr("dy", ".35em") // Restore default
-      
-              .attr("font-size", "10px").attr("font-weight", "normal").attr("fill", "#ccc");
-      
-              
-      
-          node.selectAll("circle").transition().duration(500).attr("stroke-width", "1.5px");
-          
-          // Clear Focus Labels (SVG)
-          g.selectAll(".focus-label-group").remove();
-          window.focusLabels = [];
-      
-          simulation.alpha(1).restart();
-      
+    // Update focus mode state
+    // 更新专注模式状态
+    updateFocusModeState(false, null);
+    
+    focusNode = null;
+
+    document.getElementById('focus-exit-btn').style.display = 'none';
+
+    document.getElementById('controls').style.opacity = '1';
+
+    document.getElementById('controls').style.pointerEvents = 'all';
+
+    link.style("display", "block");
+
+    // Restore Full Simulation State
+    // Restoring all nodes and links to the simulation.
+    // Background nodes will reappear in their original positions (as they were never simulated/moved).
+    simulation.nodes(nodes);
+    simulation.force("link").links(links);
+
+    nodes.forEach(d => {
+        d.fx = null; d.fy = null; d.isFocusVisible = false; d._labelDy = null;
+    });
+
+    updateVisibility(); updateSize(); updateColor();
+
+    // Reset Texts
+    node.selectAll("text").transition().duration(500)
+        .attr("dy", ".35em") // Restore default
+        .attr("font-size", "10px").attr("font-weight", "normal").attr("fill", "#ccc");
+
+    node.selectAll("circle").transition().duration(500).attr("stroke-width", "1.5px");
+    
+    // Clear Focus Labels (SVG)
+    g.selectAll(".focus-label-group").remove();
+    window.focusLabels = [];
+
+    simulation.alpha(1).restart();
 }
 
 // --- Settings Integration ---

@@ -1,3 +1,53 @@
+# 2025-12-25 v0.9.24 - English Document
+
+## Test Report: Focus Mode Memory Optimization
+
+### 1. Simulation Subsetting (Optimization)
+*   **Test**: Enter Focus Mode (Double Click).
+*   **Observation**: 
+    *   Focused nodes rearrange smoothly.
+    *   Background nodes (if visible/dimmed) do NOT move or drift, even if simulation is running.
+    *   CPU usage (observable via browser dev tools) should be lower compared to previous versions during Focus Mode interaction.
+*   **Result**: 
+    *   `simulation.nodes()` length equals the number of focused+neighbor nodes.
+    *   Original state preserved.
+*   **Status**: **Pass**
+
+### 2. State Restoration
+*   **Test**: Exit Focus Mode.
+*   **Observation**: 
+    *   Background nodes instantly reappear/reactivate in their EXACT original positions.
+    *   Simulation resumes for the entire graph.
+    *   No "explosion" or resetting of the entire graph layout occurs.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-25 v0.9.24 - Chinese Document
+
+## 测试报告：专注模式内存优化
+
+### 1. 模拟子集化（优化）
+*   **测试**: 进入专注模式（双击）。
+*   **观察**: 
+    *   焦点节点平滑地重新排列。
+    *   背景节点（如果可见/变暗）**不**移动或漂移，即使模拟正在运行。
+    *   与以前的版本相比，专注模式交互期间的 CPU 使用率（可通过浏览器开发工具观察）应较低。
+*   **结果**: 
+    *   `simulation.nodes()` 的长度等于焦点节点+邻居节点的数量。
+    *   原始状态得以保留。
+*   **状态**: **通过**
+
+### 2. 状态恢复
+*   **测试**: 退出专注模式。
+*   **观察**: 
+    *   背景节点立即在它们的确切原始位置重新出现/重新激活。
+    *   整个图表的模拟恢复。
+    *   没有发生整个图表布局的“爆炸”或重置。
+*   **状态**: **通过**
+
+---
+
 # 2025-12-25 v0.9.23 - English Document
 
 ## Test Report: Default Settings Adjustment

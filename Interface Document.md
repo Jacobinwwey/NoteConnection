@@ -267,6 +267,11 @@ Renders the JSON data into an interactive DAG.
         *   **Pinch-to-Zoom**: Two-finger pinch gesture on the popup body scales the content size (`fontSize`) from 0.5x to 2.0x.
         *   **Event Handling**: Uses `passive: false` to prevent default page scrolling while interacting with the popup.
 
+    *   **Focus Mode Optimization (v0.9.24)**:
+        *   **Behavior**: When entering Focus Mode, the physics simulation is restricted to *only* the focused node and its neighbors.
+        *   **State Preservation**: Background nodes are removed from the simulation, effectively freezing them in their last known state (position) without incurring CPU cost for physics calculations.
+        *   **Restoration**: Upon exiting Focus Mode, all nodes are restored to the simulation in their original positions.
+
     *   **Scalability Defaults (v0.8.8)**:
         *   **Orphans**: Hidden by default.
         *   **Edges**: Hidden by default (opacity 0), visible on Hover/Select.
