@@ -119,6 +119,11 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.24 - Focus Mode Memory Optimization (2025-12-25)
+- [x] **Simulation Optimization**: Restricted physics simulation during Focus Mode to only active nodes (focus center + neighbors).
+- [x] **Resource Saving**: Background nodes are frozen (removed from simulation loop), significantly reducing CPU/Memory usage while maintaining their exact visual state.
+- [x] **Seamless Restoration**: Background nodes are instantly restored to their original positions upon exiting Focus Mode.
+
 ### v0.9.23 - Default Settings Adjustment (2025-12-25)
 - [x] **Reading Window**: Set default font size (zoom level) to minimum (0.5x) for compact reading.
 - [x] **Simulation Physics**: Increased default Damping (velocityDecay) from 0.4 to 0.6 for more stable graph movement.

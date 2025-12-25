@@ -6,6 +6,22 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2025-12-25 v0.9.24 - Focus Mode Memory Optimization
+
+**Goal**: Reduce memory/CPU expenditure in SVG mode by freezing background nodes during Focus Mode.
+
+- [x] **Simulation Optimization**
+    - [x] **Subsetting**: Modified `enterFocusMode` to filter `simulation.nodes()` and `simulation.force("link").links()` to only include the focused subset.
+    - [x] **Freezing**: Background nodes are effectively frozen as they are no longer processed by D3 forces.
+    - [x] **Restoration**: Modified `exitFocusMode` to restore the full set of nodes and links to the simulation.
+
+- [x] **Documentation**
+    - [x] **Interface Document**: Updated with optimization details.
+    - [x] **README**: Added changelog entry.
+    - [x] **Test Report**: Verified optimization behavior.
+
+---
+
 # 2025-12-25 v0.9.23 - Default Settings Adjustment
 
 **Goal**: Adjust default settings for Reading Window font size and Simulation Damping based on user feedback.
