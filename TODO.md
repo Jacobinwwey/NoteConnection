@@ -6,6 +6,22 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2025-12-25 v0.9.25 - Freeze Layout Optimization
+
+**Goal**: Minimize resource usage by strictly freezing the main graph when requested, preventing user interactions that would wake the simulation.
+
+- [x] **Freeze Layout Enhancement**
+    - [x] **Behavior**: Checking "Freeze Layout" now disables node dragging in the main interface (SVG Mode).
+    - [x] **Constraint**: This restriction does *not* apply to Focus Mode, where manual adjustment is still permitted.
+    - [x] **Performance**: Prevents `simulation.restart()` triggers from drag events, ensuring the simulation stays effectively stopped (0% CPU usage).
+
+- [x] **Documentation**
+    - [x] **Interface Document**: Updated Simulation Controls section.
+    - [x] **README**: Added changelog entry.
+    - [x] **Test Report**: Verified behavior.
+
+---
+
 # 2025-12-25 v0.9.24 - Focus Mode Memory Optimization
 
 **Goal**: Reduce memory/CPU expenditure in SVG mode by freezing background nodes during Focus Mode.

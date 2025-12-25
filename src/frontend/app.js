@@ -1460,17 +1460,27 @@ function saveLayout() {
 
 // Drag functions
 function dragstarted(event, d) {
+  const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
+  // Requirement: If frozen and NOT in focus mode, prevent dragging to reduce memory/cpu usage
+  if (isFrozen && !focusNode) return;
+
   if (!event.active) simulation.alphaTarget(0.3).restart();
   d.fx = d.x;
   d.fy = d.y;
 }
 
 function dragged(event, d) {
+  const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
+  if (isFrozen && !focusNode) return;
+
   d.fx = event.x;
   d.fy = event.y;
 }
 
 function dragended(event, d) {
+  const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
+  if (isFrozen && !focusNode) return;
+
   if (!event.active) simulation.alphaTarget(0);
   
   // In Focus Mode, nodes have fixed positions (fx, fy) set by the layout.
@@ -1479,8 +1489,8 @@ function dragended(event, d) {
   // If NOT in Focus Mode (Force Layout), we release them to the simulation.
   
   // v0.9.0: Also check Freeze Layout. If frozen, we treat it like Focus Mode (manual placement).
-  const isFrozen = document.getElementById('freeze-layout').checked;
-
+  // v0.9.25 Update: If frozen, dragging is disabled above, so this logic mainly applies when NOT frozen or in Focus Mode.
+  
   if (!focusNode && !isFrozen) {
         d.fx = null;
         d.fy = null;
