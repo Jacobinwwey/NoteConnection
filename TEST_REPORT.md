@@ -1,3 +1,57 @@
+# 2025-12-25 v0.9.21 - English Document
+
+## Test Report: Strict Edge Visibility & Optimization
+
+### 1. Default Edge Visibility (SVG)
+*   **Test**: Load the graph in SVG Mode.
+*   **Result**: 
+    *   No edges are visible by default (Opacity: 0).
+    *   Graph appears cleaner with only nodes visible.
+*   **Status**: **Pass**
+
+### 2. Interaction Visibility (SVG)
+*   **Test**: Hover over a node (PC) or click a node (Mobile/PC).
+*   **Result**: 
+    *   Edges connected to the target node immediately become visible.
+    *   Incoming edges are Red, Outgoing are Blue.
+*   **Test**: Move mouse away or click background.
+*   **Result**: Edges revert to invisible (Opacity: 0).
+*   **Status**: **Pass**
+
+### 3. Canvas Consistency
+*   **Test**: Switch to Canvas Mode.
+*   **Result**: Edges remain hidden by default, matching SVG behavior.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-25 v0.9.21 - Chinese Document
+
+## 测试报告：严格的边可见性与优化
+
+### 1. 默认边可见性 (SVG)
+*   **测试**: 在 SVG 模式下加载图表。
+*   **结果**: 
+    *   默认情况下无边可见 (透明度: 0)。
+    *   图表看起来更整洁，仅显示节点。
+*   **状态**: **通过**
+
+### 2. 交互可见性 (SVG)
+*   **测试**: 悬停在节点上 (PC) 或点击节点 (移动端/PC)。
+*   **结果**: 
+    *   连接到目标节点的边立即变得可见。
+    *   入度边为红色，出度边为蓝色。
+*   **测试**: 移开鼠标或点击背景。
+*   **结果**: 边恢复为不可见 (透明度: 0)。
+*   **状态**: **通过**
+
+### 3. Canvas 一致性
+*   **测试**: 切换到 Canvas 模式。
+*   **结果**: 边保持默认隐藏，与 SVG 行为匹配。
+*   **状态**: **通过**
+
+---
+
 # 2025-12-24 v0.9.18 - English Document
 
 ## Test Report: Node Highlighting System Refactor

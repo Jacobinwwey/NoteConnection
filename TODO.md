@@ -6,6 +6,22 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2025-12-25 v0.9.21 - Strict Edge Visibility & Optimization
+
+**Goal**: Enforce strict edge visibility rules (hidden by default) and optimize rendering for large graphs.
+
+- [x] **Strict Edge Visibility**
+    - [x] **SVG Mode**: Modified `updateVisibility` in `app.js` to set default edge opacity to 0 (was 0.15).
+    - [x] **Consistency**: Ensured SVG behavior matches Canvas mode (hidden by default).
+    - [x] **Performance**: Reduced visual clutter and rendering cost for initial view.
+
+- [x] **Documentation**
+    - [x] **Interface Document**: Updated to reflect strict edge visibility in v0.9.21.
+    - [x] **README**: Added v0.9.21 changelog.
+    - [x] **Test Report**: Verified behavior for v0.9.21.
+
+---
+
 # 2025-12-24 v0.9.20 - Selection State Auto-Clear on Focus Entry
 
 **Goal**: Automatically clear any existing selection or highlight state when entering Focus Mode via double-click for a clean transition.

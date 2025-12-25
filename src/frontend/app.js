@@ -1275,7 +1275,7 @@ function updateVisibility() {
             
             // Default Mode: Show edges with low opacity
             // Hover/click will increase opacity to 1 for highlighted edges
-            return 0.15; 
+            return 0; 
         });
     }
 }
