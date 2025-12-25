@@ -256,6 +256,11 @@ Renders the JSON data into an interactive DAG.
             *   Calls `highlightManager.unhighlight({ force: true })` to clear highlight state.
             *   Hides the statistics popup if visible (`#node-stats-popup`).
         *   **User Experience**: Provides a clean transition into Focus Mode without residual visual artifacts from previous selections, ensuring the focused view is always clear and uncluttered.
+    
+    *   **Strict Edge Visibility (v0.9.21)**:
+        *   **Behavior**: Edges are now strictly hidden (Opacity 0) by default in both SVG and Canvas modes to reduce visual clutter and improve rendering performance.
+        *   **Interaction**: Edges become visible only when a connected node is highlighted (Hover/Click) or focused.
+        *   **Optimization**: Ensures consistent "clean slate" initial view for large graphs (10k+ nodes).
 
     *   **Scalability Defaults (v0.8.8)**:
         *   **Orphans**: Hidden by default.

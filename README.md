@@ -119,6 +119,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.21 - Strict Edge Visibility & Optimization (2025-12-25)
+- [x] **Strict Edge Visibility**: Enforced rule where edges are completely hidden (opacity 0) by default in SVG mode, matching Canvas mode behavior.
+- [x] **Performance Optimization**: Reduced rendering overhead by ensuring relationship lines are calculated and drawn *only* during interaction (Hover/Click/Focus), complying with strict visibility requirements.
+
 ### v0.9.20 - Selection State Auto-Clear on Focus Entry (2025-12-24)
 - [x] **Clean Focus Transition**: When double-clicking a node to enter Focus Mode, any existing selection or highlight state is now automatically cleared, providing a clean and uncluttered focused view.
 - [x] **Auto-Hide Popup**: The statistics popup is automatically hidden when entering Focus Mode, preventing visual conflicts.
