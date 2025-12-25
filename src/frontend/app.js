@@ -1530,7 +1530,38 @@ document.getElementById('focus-layout-select').addEventListener('change', () => 
 window.highlightNode = function(id) {
     const d = nodes.find(n => n.id === id);
     if (d && window.highlightManager) {
-        window.highlightManager.highlight(d, { freeze: false });
+        // Requirement: Clicking in Analysis should have SAME effect as clicking in graph.
+        // Graph click triggers: highlight(freeze=true) AND showNodePopup.
+        
+        // 1. Clear previous highlight to ensure we can switch nodes
+        // (If previous was frozen, highlight() would block switching otherwise)
+        window.highlightManager.unhighlight({ force: true });
+        
+        // 2. Highlight with freeze option
+        window.highlightManager.highlight(d, { freeze: true });
+        
+        // 3. Show Popup
+        showNodePopup(id);
+    }
+};
+
+// Helper to expose focusOnNode for external modules
+// 为外部模块公开focusOnNode
+window.focusOnNode = function(id) {
+    const d = nodes.find(n => n.id === id);
+    if (d) {
+        // Reuse double click logic or call enterFocusMode directly
+        // Clear highlight first
+        if (window.highlightManager) {
+            window.highlightManager.unhighlight({ force: true });
+        }
+        
+        // Hide popup
+        const popup = document.getElementById('node-stats-popup');
+        if (popup) popup.style.display = 'none';
+
+        // Enter Focus Mode
+        enterFocusMode(d);
     }
 };
 
