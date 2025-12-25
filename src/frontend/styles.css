@@ -1033,3 +1033,9 @@ div.tooltip {
     ry: 10;
     pointer-events: none;
 }
+
+/* Active state for quick action buttons */
+#btn-quick-freeze.active {
+    background-color: #c53030 !important; /* Red */
+    border-color: #9b2c2c !important;
+}

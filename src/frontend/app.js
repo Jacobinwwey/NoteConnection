@@ -419,10 +419,10 @@ const translations = {
         // Quick Start & UI
         help: "帮助",
         manual_title: "快速开始指南",
-        manual_step1_title: "1. 加载知识库",
+        manual_step1_title: "1. 加载知识库（移动端请忽略这步）",
         manual_step1_desc: "从下拉菜单（左上角）选择一个文件夹，然后点击“加载”以可视化您的笔记。",
         manual_step2_title: "2. 导航",
-        manual_step2_desc: "• <strong>平移/缩放</strong>: 拖动背景移动，滚动/捏合缩放。<br>• <strong>检查</strong>: 点击（移动端）或悬停（PC）节点以查看连接。",
+        manual_step2_desc: "• <strong>平移/缩放</strong>: 拖动背景移动，滚动/捏合缩放。<br>• <strong>检查</strong>: 单击（移动端）或悬停（PC）节点以查看连接。",
         manual_step3_title: "3. 专注模式",
         manual_step3_desc: "<strong>双击</strong>节点进入专注模式。这将隔离概念并按层级排列其依赖关系。",
         manual_step4_title: "4. 控制",
@@ -1933,3 +1933,77 @@ if (window.settingsManager) {
     simulation.force("collide").radius(s.physics.collisionRadius);
     g.selectAll(".link").style("stroke-opacity", s.visuals.edgeOpacity);
 }
+
+// --- Quick Actions Logic (v0.9.26) ---
+
+// 1. Freeze Layout Quick Button
+const btnQuickFreeze = document.getElementById('btn-quick-freeze');
+const checkboxFreeze = document.getElementById('freeze-layout');
+
+if (btnQuickFreeze && checkboxFreeze) {
+    btnQuickFreeze.addEventListener('click', () => {
+        // Toggle Checkbox
+        checkboxFreeze.checked = !checkboxFreeze.checked;
+        
+        // Trigger Change Event for Simulation Logic
+        const event = new Event('change');
+        checkboxFreeze.dispatchEvent(event);
+        
+        // Update Button Visuals
+        updateFreezeButtonState();
+    });
+    
+    // Sync Button with Checkbox (in case checkbox is clicked directly)
+    checkboxFreeze.addEventListener('change', updateFreezeButtonState);
+    
+    function updateFreezeButtonState() {
+        if (checkboxFreeze.checked) {
+            btnQuickFreeze.classList.add('active');
+            // Optional: Change icon?
+        } else {
+            btnQuickFreeze.classList.remove('active');
+        }
+    }
+}
+
+// 2. Quick Start Manual
+const btnHelp = document.getElementById('btn-help');
+const manualModal = document.getElementById('manual-modal');
+const checkboxDontShow = document.getElementById('dont-show-manual');
+
+// Check and Show on Startup
+window.addEventListener('load', () => {
+    const seen = localStorage.getItem('nc_manual_seen');
+    if (!seen && manualModal) {
+        manualModal.style.display = 'flex';
+    }
+});
+
+if (btnHelp && manualModal) {
+    btnHelp.addEventListener('click', () => {
+        manualModal.style.display = 'flex';
+    });
+    
+    // Close Logic (using shared .modal-close class)
+    const manualCloseBtns = manualModal.querySelectorAll('.modal-close');
+    manualCloseBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            manualModal.style.display = 'none';
+            handleManualClose();
+        });
+    });
+    
+    manualModal.addEventListener('click', (e) => {
+        if (e.target === manualModal) {
+            manualModal.style.display = 'none';
+            handleManualClose();
+        }
+    });
+    
+    function handleManualClose() {
+        if (checkboxDontShow && checkboxDontShow.checked) {
+            localStorage.setItem('nc_manual_seen', 'true');
+        }
+    }
+}
+

@@ -272,6 +272,16 @@ Renders the JSON data into an interactive DAG.
     *   **Focus Mode Restoration (v0.9.24)**:
         *   **Restoration**: Upon exiting Focus Mode, all background nodes are restored to the simulation in their original positions.
 
+    *   **Quick Actions (v0.9.26)**:
+        *   **Freeze Layout Button**:
+            *   **UI**: Dedicated button (❄️) in the top-right toolbar.
+            *   **Function**: Toggles the global "Freeze Layout" state. Synced with the main control panel checkbox.
+            *   **Visual**: Button turns Red (.active) when layout is frozen.
+        *   **Quick Start Manual**:
+            *   **UI**: Modal window showing a 4-step guide.
+            *   **Trigger**: Auto-shows on first load (if not dismissed forever) or via the Help (❓) button.
+            *   **Persistence**: "Don't show again" checkbox writes `nc_manual_seen = true` to localStorage.
+
     *   **Freeze Layout Quick Button (v0.9.26)**:
         *   **UI**: Dedicated button (❄️) in the top-right toolbar for quick access.
         *   **Function**: Toggles the global "Freeze Layout" state (synced with the checkbox in controls).
