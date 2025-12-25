@@ -6,6 +6,28 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2025-12-25 v0.9.22 - Mobile Popup Adaptation
+
+**Goal**: Adapt the node statistics popup for mobile devices with touch-based drag and pinch-to-zoom capabilities.
+
+- [x] **Touch Drag Support**
+    - [x] **Implementation**: Added `touchstart`, `touchmove`, `touchend` listeners to `popupDragHandle`.
+    - [x] **Logic**: Mirrors mouse drag logic using `touches[0]` coordinates.
+    - [x] **Constraint**: Requires single-finger touch on the header.
+
+- [x] **Pinch-to-Zoom Support**
+    - [x] **Implementation**: Added `touchstart`, `touchmove`, `touchend` listeners to `statsPopup`.
+    - [x] **Logic**: Calculates distance between two fingers (`Math.hypot`) to determine scale ratio.
+    - [x] **Scaling**: Updates `popupDragState.currentScale` and applies to `fontSize`.
+    - [x] **Clamping**: Restricted scale between 0.5x and 2.0x.
+
+- [x] **Documentation**
+    - [x] **Interface Document**: Updated with mobile interaction specs.
+    - [x] **README**: Added changelog entry.
+    - [x] **Test Report**: Verified mobile interactions.
+
+---
+
 # 2025-12-25 v0.9.21 - Strict Edge Visibility & Optimization
 
 **Goal**: Enforce strict edge visibility rules (hidden by default) and optimize rendering for large graphs.

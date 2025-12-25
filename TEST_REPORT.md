@@ -1,3 +1,71 @@
+# 2025-12-25 v0.9.22 - English Document
+
+## Test Report: Mobile Popup Adaptation
+
+### 1. Touch Drag Interaction
+*   **Test**: Open the application in mobile view (or device simulation). Click a node to open the popup.
+*   **Action**: Touch and hold the popup header (title bar) with one finger and move.
+*   **Result**: 
+    *   The popup follows the finger movement smoothly.
+    *   The page background does NOT scroll while dragging the popup.
+    *   `dragging` class is added during interaction.
+*   **Status**: **Pass**
+
+### 2. Pinch-to-Zoom Interaction
+*   **Test**: Open the popup on a touch device.
+*   **Action**: Place two fingers on the popup content and spread them apart (pinch out).
+*   **Result**: 
+    *   The text size inside the popup increases.
+    *   The scale is clamped at maximum 2.0x.
+*   **Action**: Pinch two fingers together (pinch in).
+*   **Result**: 
+    *   The text size decreases.
+    *   The scale is clamped at minimum 0.5x.
+*   **Status**: **Pass**
+
+### 3. Interaction Conflict Prevention
+*   **Test**: Try to drag the popup by touching the content area (not the header).
+*   **Result**: The popup does NOT move (Drag is restricted to header).
+*   **Test**: Try to pinch zoom while dragging the header.
+*   **Result**: Pinch logic requires 2 fingers on the popup; drag logic requires 1 finger on the header. Logic separation holds.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-25 v0.9.22 - Chinese Document
+
+## 测试报告：移动端弹窗适配
+
+### 1. 触摸拖动交互
+*   **测试**: 在移动视图（或设备模拟）中打开应用。点击节点打开弹窗。
+*   **操作**: 单指按住弹窗头部（标题栏）并移动。
+*   **结果**: 
+    *   弹窗平滑地跟随手指移动。
+    *   拖动弹窗时页面背景**不会**滚动。
+    *   交互期间添加了 `dragging` 类。
+*   **状态**: **通过**
+
+### 2. 捏合缩放交互
+*   **测试**: 在触摸设备上打开弹窗。
+*   **操作**: 双指放在弹窗内容上并张开（捏合放大）。
+*   **结果**: 
+    *   弹窗内的文字大小增加。
+    *   缩放比例被限制在最大 2.0x。
+*   **操作**: 双指捏合（缩小）。
+*   **结果**: 
+    *   文字大小减小。
+    *   缩放比例被限制在最小 0.5x。
+*   **状态**: **通过**
+
+### 3. 交互冲突预防
+*   **测试**: 尝试通过触摸内容区域（非头部）来拖动弹窗。
+*   **结果**: 弹窗**不**移动（拖动仅限于头部）。
+*   **测试**: 尝试在拖动头部时进行捏合缩放。
+*   **结果**: 捏合逻辑需要双指作用于弹窗；拖动逻辑需要单指作用于头部。逻辑分离有效。
+*   **状态**: **通过**
+
+---
+
 # 2025-12-25 v0.9.21 - English Document
 
 ## Test Report: Strict Edge Visibility & Optimization

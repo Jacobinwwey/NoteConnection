@@ -262,6 +262,11 @@ Renders the JSON data into an interactive DAG.
         *   **Interaction**: Edges become visible only when a connected node is highlighted (Hover/Click) or focused.
         *   **Optimization**: Ensures consistent "clean slate" initial view for large graphs (10k+ nodes).
 
+    *   **Mobile Statistics Popup (v0.9.22)**:
+        *   **Touch Drag**: Mobile users can hold and drag the popup header (`touchstart`/`touchmove`) to reposition it.
+        *   **Pinch-to-Zoom**: Two-finger pinch gesture on the popup body scales the content size (`fontSize`) from 0.5x to 2.0x.
+        *   **Event Handling**: Uses `passive: false` to prevent default page scrolling while interacting with the popup.
+
     *   **Scalability Defaults (v0.8.8)**:
         *   **Orphans**: Hidden by default.
         *   **Edges**: Hidden by default (opacity 0), visible on Hover/Select.

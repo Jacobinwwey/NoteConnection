@@ -834,6 +834,7 @@ let popupDragState = {
 
 const popupDragHandle = document.getElementById('popup-drag-handle');
 if (popupDragHandle && statsPopup) {
+    // --- Mouse Drag Support ---
     popupDragHandle.addEventListener('mousedown', (e) => {
         // Only start drag if clicking on header, not on buttons
         // 仅在点击标题时开始拖动，不在按钮上
@@ -872,6 +873,99 @@ if (popupDragHandle && statsPopup) {
         if (popupDragState.isDragging) {
             popupDragState.isDragging = false;
             statsPopup.classList.remove('dragging');
+        }
+    });
+
+    // --- Touch Drag Support (Mobile) ---
+    popupDragHandle.addEventListener('touchstart', (e) => {
+        if (e.target.closest('button')) return;
+        if (e.touches.length !== 1) return; // Single finger for drag
+        
+        popupDragState.isDragging = true;
+        popupDragState.startX = e.touches[0].clientX;
+        popupDragState.startY = e.touches[0].clientY;
+        
+        const rect = statsPopup.getBoundingClientRect();
+        popupDragState.startLeft = rect.left;
+        popupDragState.startTop = rect.top;
+        
+        statsPopup.classList.add('dragging');
+        e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!popupDragState.isDragging) return;
+        if (e.touches.length !== 1) return;
+        
+        const deltaX = e.touches[0].clientX - popupDragState.startX;
+        const deltaY = e.touches[0].clientY - popupDragState.startY;
+        
+        const newLeft = popupDragState.startLeft + deltaX;
+        const newTop = popupDragState.startTop + deltaY;
+        
+        statsPopup.style.left = `${newLeft}px`;
+        statsPopup.style.top = `${newTop}px`;
+        statsPopup.style.right = 'auto';
+        
+        e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchend', () => {
+        if (popupDragState.isDragging) {
+            popupDragState.isDragging = false;
+            statsPopup.classList.remove('dragging');
+        }
+    });
+
+    // --- Pinch to Zoom Support (Mobile) ---
+    let pinchState = {
+        isPinching: false,
+        startDist: 0,
+        startScale: 1
+    };
+
+    statsPopup.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+            // Two fingers detected - Start Pinch
+            pinchState.isPinching = true;
+            pinchState.startDist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            pinchState.startScale = popupDragState.currentScale;
+            e.preventDefault(); // Prevent default browser zoom
+        }
+    }, { passive: false });
+
+    statsPopup.addEventListener('touchmove', (e) => {
+        if (pinchState.isPinching && e.touches.length === 2) {
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            
+            if (pinchState.startDist > 0) {
+                const scaleDiff = dist / pinchState.startDist;
+                let newScale = pinchState.startScale * scaleDiff;
+                
+                // Clamp scale between 0.5 and 2.0
+                newScale = Math.max(0.5, Math.min(2.0, newScale));
+                
+                popupDragState.currentScale = newScale;
+                
+                // Apply Scale
+                const content = statsPopup.querySelector('.popup-content');
+                if (content) {
+                    content.style.fontSize = `${newScale}rem`;
+                }
+            }
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    statsPopup.addEventListener('touchend', (e) => {
+        if (e.touches.length < 2) {
+            pinchState.isPinching = false;
         }
     });
 }
