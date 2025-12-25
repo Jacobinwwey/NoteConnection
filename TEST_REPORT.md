@@ -1,3 +1,51 @@
+# 2025-12-25 v0.9.25 - English Document
+
+## Test Report: Freeze Layout Optimization
+
+### 1. Main Interface Frozen State
+*   **Test**: Enable "Freeze Layout" checkbox in the Simulation panel.
+*   **Action**: Attempt to drag any node in the main graph (SVG Mode).
+*   **Result**: 
+    *   Node does NOT move.
+    *   Simulation does NOT restart (no CPU spike).
+    *   Drag cursor interaction is effectively suppressed.
+*   **Status**: **Pass**
+
+### 2. Focus Mode Interaction (Exemption)
+*   **Test**: While "Freeze Layout" is enabled, enter Focus Mode (Double Click).
+*   **Action**: Attempt to drag the focused node or its neighbors.
+*   **Result**: 
+    *   Node moves with the mouse (Drag works).
+    *   Layout settles after drag (Simulation works for the active subset).
+    *   This confirms the global freeze does not hinder focused exploration.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-25 v0.9.25 - Chinese Document
+
+## 测试报告：冻结布局优化
+
+### 1. 主界面冻结状态
+*   **测试**: 在模拟面板中启用“冻结布局”复选框。
+*   **操作**: 尝试拖动主图（SVG 模式）中的任何节点。
+*   **结果**: 
+    *   节点**不**移动。
+    *   模拟**不**重启（无 CPU 峰值）。
+    *   拖动光标交互被有效抑制。
+*   **状态**: **通过**
+
+### 2. 专注模式交互（豁免）
+*   **测试**: 在启用“冻结布局”时，进入专注模式（双击）。
+*   **操作**: 尝试拖动焦点节点或其邻居。
+*   **结果**: 
+    *   节点跟随鼠标移动（拖动有效）。
+    *   拖动后布局稳定（模拟对活动子集有效）。
+    *   这证实了全局冻结不会阻碍专注探索。
+*   **状态**: **通过**
+
+---
+
 # 2025-12-25 v0.9.24 - English Document
 
 ## Test Report: Focus Mode Memory Optimization

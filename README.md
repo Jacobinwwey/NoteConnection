@@ -119,6 +119,11 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.25 - Freeze Layout Optimization (2025-12-25)
+- [x] **Resource Optimization**: In the main interface (SVG Mode), enabling "Freeze Layout" now completely disables node dragging in addition to stopping the simulation.
+- [x] **Logic**: Prevents the physics simulation from restarting (waking up) due to drag events, ensuring maximum CPU/Memory savings.
+- [x] **Focus Mode Preservation**: Dragging and manual positioning capabilities remain fully active in Focus Mode, unaffected by the global freeze setting.
+
 ### v0.9.24 - Focus Mode Memory Optimization (2025-12-25)
 - [x] **Simulation Optimization**: Restricted physics simulation during Focus Mode to only active nodes (focus center + neighbors).
 - [x] **Resource Saving**: Background nodes are frozen (removed from simulation loop), significantly reducing CPU/Memory usage while maintaining their exact visual state.
@@ -343,6 +348,11 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.25 - 冻结布局优化 (Freeze Layout Optimization) (2025-12-25)
+- [x] **资源优化**: 在主界面（SVG 模式）中，启用“冻结布局”现在除了停止模拟外，还会完全禁用节点拖动。
+- [x] **逻辑**: 防止因拖动事件而重启（唤醒）物理模拟，从而确保最大限度地节省 CPU/内存。
+- [x] **专注模式保留**: 专注模式下的拖动和手动定位功能保持完全激活，不受全局冻结设置的影响。
 
 ### v0.9.19 - 专注模式与弹窗增强 (Focus Mode & Popup Enhancements) (2025-12-24)
 - [x] **专注模式重新进入**: 修复了在专注模式下双击相关节点时无法正确刷新的问题。现在可以在连接的节点之间无缝切换专注。

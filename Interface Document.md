@@ -187,8 +187,10 @@ Renders the JSON data into an interactive DAG.
         *   **Horizontal Spacing**: User adjustable `hSpacing` via UI slider (20px - 300px).
     *   **Focus Mode Enhancements (v0.8.9)**:
         *   **Position Lock**: Nodes in Focus Mode retain their position after dragging (Freeze on Select) to prevent layout drift.
-    *   **Simulation Controls (v0.9.0)**:
-        *   **Freeze Layout**: Checkbox to stop the physics simulation completely. Allows manual positioning without snap-back.
+    *   **Simulation Controls (v0.9.0 & v0.9.25)**:
+        *   **Freeze Layout**: Checkbox to completely stop the physics simulation.
+            *   **Main Interface**: Stops simulation and **disables node dragging** to minimize memory/CPU usage and prevent accidental layout changes.
+            *   **Focus Mode**: Does not affect Focus Mode; dragging and manual positioning remain enabled for context exploration.
         *   **Speed (Damping)**: Slider (0-1) to control `velocityDecay`. Higher values = more friction (slower movement).
         *   **Hover Lock**: Hovering a node temporarily locks its position to prevent drift during inspection.
     *   **Mobile Optimizations (v0.9.2)**:
@@ -670,8 +672,10 @@ Manages node highlighting interactions for both PC and mobile interfaces.
         *   **水平间距**: 用户可通过 UI 滑块调整 `hSpacing` (20px - 300px)。
     *   **专注模式增强 (v0.8.9)**:
         *   **位置锁定**: 专注模式下的节点在拖动后保留其位置（选中冻结），以防止布局漂移。
-    *   **模拟控制 (v0.9.0)**:
-        *   **冻结布局**: 用于完全停止物理模拟的复选框。允许手动定位而不回弹。
+    *   **模拟控制 (v0.9.0 & v0.9.25)**:
+        *   **冻结布局**: 用于完全停止物理模拟的复选框。
+            *   **主界面**: 停止模拟并**禁用节点拖动**，以最小化内存/CPU 使用并防止意外的布局更改。
+            *   **专注模式**: 不影响专注模式；拖动和手动定位仍然启用以进行上下文探索。
         *   **速度 (阻尼)**: 滑块 (0-1) 用于控制 `velocityDecay`。较高值 = 更多摩擦（移动更慢）。
         *   **悬停锁定**: 悬停节点时暂时锁定其位置，以防止检查期间的漂移。
     *   **移动端优化 (v0.9.2)**:
