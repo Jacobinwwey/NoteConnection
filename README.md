@@ -119,6 +119,11 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.22 - Mobile Popup Adaptation (2025-12-25)
+- [x] **Touch Interaction**: Added support for dragging the statistics popup on mobile devices by holding the title bar.
+- [x] **Pinch-to-Zoom**: Implemented two-finger pinch gesture to resize/scale the popup content on touch screens.
+- [x] **UX Polish**: Prevented page scrolling during popup interactions for a smoother experience.
+
 ### v0.9.21 - Strict Edge Visibility & Optimization (2025-12-25)
 - [x] **Strict Edge Visibility**: Enforced rule where edges are completely hidden (opacity 0) by default in SVG mode, matching Canvas mode behavior.
 - [x] **Performance Optimization**: Reduced rendering overhead by ensuring relationship lines are calculated and drawn *only* during interaction (Hover/Click/Focus), complying with strict visibility requirements.
