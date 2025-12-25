@@ -271,6 +271,9 @@ Renders the JSON data into an interactive DAG.
 
     *   **Focus Mode Restoration (v0.9.24)**:
         *   **Restoration**: Upon exiting Focus Mode, all background nodes are restored to the simulation in their original positions.
+        *   **Conditional Restart (v0.9.27)**:
+            *   **Logic**: If "Freeze Layout" is enabled when exiting Focus Mode, the simulation remains stopped (`simulation.stop()`) to maintain the visual state.
+            *   **Behavior**: Prevents the graph from "exploding" or moving if the user expects it to stay frozen.
 
     *   **Quick Actions (v0.9.26)**:
         *   **Freeze Layout Button**:

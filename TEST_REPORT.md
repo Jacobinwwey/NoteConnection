@@ -1,3 +1,43 @@
+# 2025-12-26 v0.9.27 - English Document
+
+## Test Report: Conditional Restart (Freeze vs Focus)
+
+### 1. Exit Focus with Freeze Enabled
+*   **Pre-condition**: Enable "Freeze Layout". Double click a node to enter Focus Mode.
+*   **Action**: Click "Exit Focus Mode".
+*   **Result**: 
+    *   The graph returns to the global view.
+    *   Nodes do **NOT** move (Simulation remains stopped).
+    *   The visual layout is static (might look like the focus grid or a mix, but it is frozen as requested).
+*   **Status**: **Pass**
+
+### 2. Resume after Exit
+*   **Action**: Uncheck "Freeze Layout".
+*   **Result**: The simulation restarts, and nodes move back to their force-directed positions.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.27 - Chinese Document
+
+## 测试报告：条件重启 (冻结 vs 专注)
+
+### 1. 启用冻结时退出专注模式
+*   **前置条件**: 启用“冻结布局”。双击节点进入专注模式。
+*   **操作**: 点击“退出专注模式”。
+*   **结果**: 
+    *   图表返回全局视图。
+    *   节点**不**移动 (模拟保持停止)。
+    *   视觉布局是静态的（可能看起来像专注网格或混合体，但按要求已冻结）。
+*   **状态**: **通过**
+
+### 2. 退出后恢复
+*   **操作**: 取消选中“冻结布局”。
+*   **结果**: 模拟重启，节点移动回其力导向位置。
+*   **状态**: **通过**
+
+---
+
 # 2025-12-26 v0.9.26 - English Document
 
 ## Test Report: UX Enhancements & Quick Start

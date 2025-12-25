@@ -119,6 +119,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.27 - Freeze Layout Priority Fix (2025-12-26)
+- [x] **Logic Correction**: Resolved a conflict where "Exit Focus Mode" would unconditionally restart the physics simulation, overriding the "Freeze Layout" state.
+- [x] **Priority Enforcement**: If "Freeze Layout" is checked, exiting Focus Mode now stops the simulation and forces a static render update, ensuring nodes remain strictly inactive as requested.
+
 ### v0.9.26 - UX Enhancements & Quick Start (2025-12-26)
 - [x] **Freeze Layout Quick Button**: Added a dedicated freeze button (❄️) to the main interface for instant access, improving mobile usability.
     - [x] **Sync**: State is synchronized with the simulation panel checkbox.

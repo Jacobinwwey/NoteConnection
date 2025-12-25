@@ -1815,7 +1815,15 @@ function enterFocusMode(focusD) {
     g.selectAll(".focus-label-group").remove();
     window.focusLabels = [];
 
-    simulation.alpha(1).restart();
+    // Check Freeze Layout State
+    const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
+
+    if (isFrozen) {
+        simulation.stop();
+        ticked(); // Force one render to show all nodes in their current positions
+    } else {
+        simulation.alpha(1).restart();
+    }
 }
 
 // --- Settings Integration ---

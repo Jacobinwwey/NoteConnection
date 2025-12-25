@@ -6,6 +6,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2025-12-26 v0.9.27 - Conditional Restart
+
+**Goal**: Ensure "Freeze Layout" state is respected when exiting Focus Mode.
+
+- [x] **Conflict Resolution**
+    - [x] **Logic**: In `exitFocusMode`, check if "Freeze Layout" is checked.
+    - [x] **Behavior**: If checked, call `simulation.stop()` instead of `restart()`, preventing unwanted movement.
+    - [x] **Visual**: Manually trigger `ticked()` to ensure the graph renders the restored nodes in their current positions.
+
 # 2025-12-26 v0.9.26 - UX Enhancements
 
 **Goal**: Improve mobile usability and onboard new users effectively.
