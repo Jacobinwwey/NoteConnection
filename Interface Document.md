@@ -269,10 +269,18 @@ Renders the JSON data into an interactive DAG.
         *   **Pinch-to-Zoom**: Two-finger pinch gesture on the popup body scales the content size (`fontSize`) from 0.5x to 2.0x.
         *   **Event Handling**: Uses `passive: false` to prevent default page scrolling while interacting with the popup.
 
-    *   **Focus Mode Optimization (v0.9.24)**:
-        *   **Behavior**: When entering Focus Mode, the physics simulation is restricted to *only* the focused node and its neighbors.
-        *   **State Preservation**: Background nodes are removed from the simulation, effectively freezing them in their last known state (position) without incurring CPU cost for physics calculations.
-        *   **Restoration**: Upon exiting Focus Mode, all nodes are restored to the simulation in their original positions.
+    *   **Focus Mode Restoration (v0.9.24)**:
+        *   **Restoration**: Upon exiting Focus Mode, all background nodes are restored to the simulation in their original positions.
+
+    *   **Freeze Layout Quick Button (v0.9.26)**:
+        *   **UI**: Dedicated button (❄️) in the top-right toolbar for quick access.
+        *   **Function**: Toggles the global "Freeze Layout" state (synced with the checkbox in controls).
+        *   **Visual Feedback**: Button turns Red when active (Frozen).
+
+    *   **Quick Start Manual (v0.9.26)**:
+        *   **UI**: Modal window displaying a 4-step guide.
+        *   **Trigger**: Automatically on first visit (localStorage check) or via the "Help" (❓) button.
+        *   **Persistence**: "Don't show again" checkbox sets a flag in localStorage to suppress auto-opening.
 
     *   **Scalability Defaults (v0.8.8)**:
         *   **Orphans**: Hidden by default.
@@ -728,6 +736,16 @@ Manages node highlighting interactions for both PC and mobile interfaces.
         *   **行为**: 在已处于专注模式时双击相关节点现在会正确刷新视图以显示新节点的上下文。
         *   **修复**: 移除了阻止在相关节点之间切换专注的限制，使连接概念的无缝探索成为可能。
         *   **状态重置**: 在进入新的专注模式之前重置所有节点可见性标志，以防止累积问题。
+
+    *   **冻结布局快速按钮 (v0.9.26)**:
+        *   **UI**: 右上角工具栏中的专用按钮 (❄️)，用于快速访问。
+        *   **功能**: 切换全局“冻结布局”状态（与控件中的复选框同步）。
+        *   **视觉反馈**: 激活（冻结）时按钮变红。
+
+    *   **快速开始指南 (v0.9.26)**:
+        *   **UI**: 显示 4 步指南的模态窗口。
+        *   **触发**: 首次访问时自动触发（localStorage 检查）或通过“帮助” (❓) 按钮触发。
+        *   **持久化**: “不再显示”复选框在 localStorage 中设置标志以抑制自动打开。
 
     *   **可扩展性默认值 (v0.8.8)**:
         *   **孤立节点**: 默认隐藏。

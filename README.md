@@ -119,6 +119,16 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.26 - UX Enhancements & Quick Start (2025-12-26)
+- [x] **Freeze Layout Quick Button**: Added a dedicated freeze button (❄️) to the main interface for instant access, improving mobile usability.
+    - [x] **Sync**: State is synchronized with the simulation panel checkbox.
+    - [x] **Visuals**: Button turns red when frozen.
+- [x] **Quick Start Manual**: Implemented a "Quick Start Guide" modal for new users.
+    - [x] **Content**: Covers Loading, Navigation, Focus Mode, and Controls.
+    - [x] **Onboarding**: Automatically shows on first visit (unless "Don't show again" is checked).
+    - [x] **Access**: Accessible anytime via the new "Help" (❓) button.
+- [x] **Localization**: Fully localized new UI elements in English and Chinese.
+
 ### v0.9.25 - Freeze Layout Optimization (2025-12-25)
 - [x] **Resource Optimization**: In the main interface (SVG Mode), enabling "Freeze Layout" now completely disables node dragging in addition to stopping the simulation.
 - [x] **Logic**: Prevents the physics simulation from restarting (waking up) due to drag events, ensuring maximum CPU/Memory savings.
@@ -348,6 +358,16 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.26 - UX 增强与快速开始 (UX Enhancements & Quick Start) (2025-12-26)
+- [x] **冻结布局快速按钮**: 在主界面添加了专用的冻结按钮 (❄️) 以便即时访问，提高了移动端可用性。
+    - [x] **同步**: 状态与模拟面板复选框同步。
+    - [x] **视觉**: 冻结时按钮变红。
+- [x] **快速开始指南**: 为新用户实现了“快速开始指南”模态框。
+    - [x] **内容**: 涵盖加载、导航、专注模式和控制。
+    - [x] **引导**: 首次访问时自动显示（除非选中“不再显示”）。
+    - [x] **访问**: 可通过新的“帮助” (❓) 按钮随时访问。
+- [x] **本地化**: 全面本地化了新的 UI 元素（中/英）。
 
 ### v0.9.25 - 冻结布局优化 (Freeze Layout Optimization) (2025-12-25)
 - [x] **资源优化**: 在主界面（SVG 模式）中，启用“冻结布局”现在除了停止模拟外，还会完全禁用节点拖动。

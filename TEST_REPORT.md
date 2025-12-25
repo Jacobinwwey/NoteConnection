@@ -1,3 +1,85 @@
+# 2025-12-26 v0.9.26 - English Document
+
+## Test Report: UX Enhancements & Quick Start
+
+### 1. Freeze Layout Quick Button
+*   **Test**: Click the snowflake (❄️) button in the top-right corner.
+*   **Result**: 
+    *   Button background turns Red.
+    *   "Freeze Layout" checkbox in the Simulation panel becomes checked.
+    *   Simulation stops and node dragging is disabled (per v0.9.25 logic).
+*   **Test**: Click the button again.
+*   **Result**: 
+    *   Button background reverts to dark gray.
+    *   Checkbox becomes unchecked.
+    *   Simulation resumes.
+*   **Test**: Manually check/uncheck the checkbox in the panel.
+*   **Result**: The quick button visual state updates to match the checkbox.
+*   **Status**: **Pass**
+
+### 2. Quick Start Manual (Onboarding)
+*   **Test**: Clear `localStorage.removeItem('noteconnection_manual_seen')` and reload.
+*   **Result**: The "Quick Start Guide" modal appears automatically after a short delay.
+*   **Test**: Click "Don't show again" and close the modal. Reload the page.
+*   **Result**: The modal does NOT appear automatically.
+*   **Status**: **Pass**
+
+### 3. Help Button Access
+*   **Test**: Click the "Help" (❓) button.
+*   **Result**: The Quick Start Guide modal opens immediately.
+*   **Status**: **Pass**
+
+### 4. Localization
+*   **Test**: Switch language to Chinese.
+*   **Result**: 
+    *   Quick Button tooltip/label (if visible) shows Chinese.
+    *   Manual title becomes "快速开始指南".
+    *   All manual steps and descriptions are in Chinese.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.26 - Chinese Document
+
+## 测试报告：UX 增强与快速开始
+
+### 1. 冻结布局快速按钮
+*   **测试**: 点击右上角的雪花 (❄️) 按钮。
+*   **结果**: 
+    *   按钮背景变红。
+    *   模拟面板中的“冻结布局”复选框被选中。
+    *   模拟停止且节点拖动被禁用（根据 v0.9.25 逻辑）。
+*   **测试**: 再次点击该按钮。
+*   **结果**: 
+    *   按钮背景恢复为深灰色。
+    *   复选框变为未选中。
+    *   模拟恢复。
+*   **测试**: 手动选中/取消选中面板中的复选框。
+*   **结果**: 快速按钮的视觉状态更新以匹配复选框。
+*   **状态**: **通过**
+
+### 2. 快速开始指南 (引导)
+*   **测试**: 清除 `localStorage.removeItem('noteconnection_manual_seen')` 并重新加载。
+*   **结果**: “快速开始指南”模态框在短暂延迟后自动出现。
+*   **测试**: 点击“不再显示”并关闭模态框。重新加载页面。
+*   **结果**: 模态框**不**会自动出现。
+*   **状态**: **通过**
+
+### 3. 帮助按钮访问
+*   **测试**: 点击“帮助” (❓) 按钮。
+*   **结果**: 快速开始指南模态框立即打开。
+*   **状态**: **通过**
+
+### 4. 本地化
+*   **测试**: 切换语言至中文。
+*   **结果**: 
+    *   快速按钮提示/标签（如果可见）显示中文。
+    *   指南标题变为“快速开始指南”。
+    *   所有指南步骤和描述均为中文。
+*   **状态**: **通过**
+
+---
+
 # 2025-12-25 v0.9.25 - English Document
 
 ## Test Report: Freeze Layout Optimization

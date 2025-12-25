@@ -6,6 +6,32 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2025-12-26 v0.9.26 - UX Enhancements
+
+**Goal**: Improve mobile usability and onboard new users effectively.
+
+- [x] **Freeze Layout Button**
+    - [x] **UI**: Add a dedicated "Freeze Layout" button to the main interface (top-right or near controls) for quick access, especially on mobile.
+    - [x] **Logic**: Link button to the existing simulation freeze functionality. Sync state with the checkbox in controls.
+    - [x] **Visual**: Use an icon (e.g., Lock/Unlock) to indicate state.
+
+- [x] **Quick Start Manual**
+    - [x] **Content**: Create a concise "How to Use" guide covering:
+        - Loading Data
+        - Navigation (Pan/Zoom)
+        - Focus Mode (Double Click)
+        - Inspection (Click/Hover)
+        - Analysis Panel
+    - [x] **UI**: Implement as a Modal that opens on first load (localStorage check) or via a "Help" button.
+    - [x] **Localization**: Support English and Chinese.
+
+- [x] **Documentation**
+    - [x] **Interface Document**: Update with new UI elements.
+    - [x] **README**: Add changelog.
+    - [x] **Test Report**: Verify new features.
+
+---
+
 # 2025-12-25 v0.9.25 - Freeze Layout Optimization
 
 **Goal**: Minimize resource usage by strictly freezing the main graph when requested, preventing user interactions that would wake the simulation.

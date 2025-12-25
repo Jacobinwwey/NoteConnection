@@ -348,10 +348,58 @@
         </div>
     </div>
 
-    <!-- Settings Toggle Button (Absolute Position top right) -->
-    <button id="btn-open-settings" style="position: absolute; top: 10px; right: 20px; z-index: 1000; background: #333; color: white; border: 1px solid #555; padding: 3px 8px; cursor: pointer;">
-        ⚙️ <span data-i18n="btn_settings">Settings</span>
-    </button>
+    <!-- Quick Actions (Absolute Position top right) -->
+    <div style="position: absolute; top: 10px; right: 20px; z-index: 1000; display: flex; gap: 10px;">
+        <button id="btn-quick-freeze" style="background: #333; color: white; border: 1px solid #555; padding: 5px 10px; cursor: pointer; border-radius: 4px;" title="Freeze Layout">
+            ❄️ <span class="btn-label" data-i18n="freeze_layout" style="display:none;">Freeze</span>
+        </button>
+        <button id="btn-help" style="background: #333; color: white; border: 1px solid #555; padding: 5px 10px; cursor: pointer; border-radius: 4px;" title="Quick Start Guide">
+            ❓ <span class="btn-label" data-i18n="help" style="display:none;">Help</span>
+        </button>
+        <button id="btn-open-settings" style="background: #333; color: white; border: 1px solid #555; padding: 5px 10px; cursor: pointer; border-radius: 4px;">
+            ⚙️ <span class="btn-label" data-i18n="btn_settings">Settings</span>
+        </button>
+    </div>
+
+    <!-- Quick Start Manual Modal -->
+    <div id="manual-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 data-i18n="manual_title">Quick Start Guide</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" style="font-size: 0.95rem; line-height: 1.6;">
+                <div class="manual-section">
+                    <h3 data-i18n="manual_step1_title">1. Load Knowledge Base</h3>
+                    <p data-i18n="manual_step1_desc">Select a folder from the dropdown (top-left) and click "Load" to visualize your notes.</p>
+                </div>
+                <div class="manual-section">
+                    <h3 data-i18n="manual_step2_title">2. Navigation</h3>
+                    <p data-i18n="manual_step2_desc">
+                        • <strong>Pan/Zoom</strong>: Drag background to move, Scroll/Pinch to zoom.<br>
+                        • <strong>Inspect</strong>: Click (Mobile) or Hover (PC) a node to see connections.
+                    </p>
+                </div>
+                <div class="manual-section">
+                    <h3 data-i18n="manual_step3_title">3. Focus Mode</h3>
+                    <p data-i18n="manual_step3_desc"><strong>Double Click</strong> a node to enter Focus Mode. This isolates the concept and arranges its dependencies hierarchically.</p>
+                </div>
+                <div class="manual-section">
+                    <h3 data-i18n="manual_step4_title">4. Controls</h3>
+                    <p data-i18n="manual_step4_desc">
+                        • <strong>Freeze (❄️)</strong>: Stop movement to easily click/read nodes.<br>
+                        • <strong>Layout</strong>: Switch between "Force" (Cluster) and "DAG" (Tree) layouts in the side panel.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <label style="display: flex; align-items: center; margin-right: auto; font-size: 0.9rem; color: #aaa;">
+                    <input type="checkbox" id="dont-show-manual"> <span style="margin-left: 5px;" data-i18n="dont_show_again">Don't show again</span>
+                </label>
+                <button class="btn btn-primary modal-close" data-i18n="btn_got_it">Got it!</button>
+            </div>
+        </div>
+    </div>
 
     <script src="settings.js"></script>
     <script src="reader.js"></script>

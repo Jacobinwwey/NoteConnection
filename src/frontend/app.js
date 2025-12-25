@@ -414,7 +414,21 @@ const translations = {
         // Simulation
         simulation: "物理模拟",
         freeze_layout: "冻结布局 (停止刷新)",
-        speed: "速度 (阻尼):"
+        speed: "速度 (阻尼):",
+        
+        // Quick Start & UI
+        help: "帮助",
+        manual_title: "快速开始指南",
+        manual_step1_title: "1. 加载知识库",
+        manual_step1_desc: "从下拉菜单（左上角）选择一个文件夹，然后点击“加载”以可视化您的笔记。",
+        manual_step2_title: "2. 导航",
+        manual_step2_desc: "• <strong>平移/缩放</strong>: 拖动背景移动，滚动/捏合缩放。<br>• <strong>检查</strong>: 点击（移动端）或悬停（PC）节点以查看连接。",
+        manual_step3_title: "3. 专注模式",
+        manual_step3_desc: "<strong>双击</strong>节点进入专注模式。这将隔离概念并按层级排列其依赖关系。",
+        manual_step4_title: "4. 控制",
+        manual_step4_desc: "• <strong>冻结 (❄️)</strong>: 停止移动以便轻松点击/阅读节点。<br>• <strong>布局</strong>: 在侧面板中切换“力导向”（聚类）和“DAG”（树状）布局。",
+        dont_show_again: "不再显示",
+        btn_got_it: "知道了！"
     },
     en: {
         show_all: "Show All",
