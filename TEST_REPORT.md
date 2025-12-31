@@ -1,3 +1,49 @@
+# 2025-12-26 v0.9.28 - English Document
+
+## Test Report: Focus Mode Specific Content Button
+
+### 1. Button Visibility
+*   **Pre-condition**: Double click a node to enter Focus Mode.
+*   **Observation**: A new button "Specific Content" is visible in the bottom control panel (`#focus-exit-btn`), placed before the "Exit" button.
+*   **Status**: **Pass**
+
+### 2. Functional Interaction
+*   **Action**: Click the "Specific Content" button.
+*   **Result**: 
+    *   The Reading Window opens displaying the content of the currently focused node.
+    *   The behavior matches exactly that of double-clicking the focused node.
+*   **Status**: **Pass**
+
+### 3. Localization
+*   **Test**: Switch language to Chinese. Enter Focus Mode.
+*   **Result**: Button label shows "打开具体内容".
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.28 - Chinese Document
+
+## 测试报告：专注模式具体内容按钮
+
+### 1. 按钮可见性
+*   **前置条件**: 双击节点进入专注模式。
+*   **观察**: 底部控制面板 (`#focus-exit-btn`) 中出现一个新的按钮“打开具体内容”，位于“退出”按钮之前。
+*   **状态**: **通过**
+
+### 2. 功能交互
+*   **操作**: 点击“打开具体内容”按钮。
+*   **结果**: 
+    *   阅读窗口打开，显示当前聚焦节点的内容。
+    *   该行为与双击聚焦节点的行为完全一致。
+*   **状态**: **通过**
+
+### 3. 本地化
+*   **测试**: 切换语言至中文。进入专注模式。
+*   **结果**: 按钮标签显示“打开具体内容”。
+*   **状态**: **通过**
+
+---
+
 # 2025-12-26 v0.9.27 - English Document
 
 ## Test Report: Conditional Restart (Freeze vs Focus)

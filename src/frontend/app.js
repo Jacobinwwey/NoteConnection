@@ -408,6 +408,7 @@ const translations = {
         // Focus Mode
         exit_focus: "退出专注模式",
         auto_arrange: "自动排列",
+        open_content: "打开具体内容",
         focus_inbound: "帮助理解",
         focus_outbound: "进一步探索",
         
@@ -506,6 +507,7 @@ const translations = {
         
         // Focus Mode
         exit_focus: "Exit Focus Mode",
+        open_content: "Open Specific Content",
         focus_inbound: "Helping to understand",
         focus_outbound: "Further exploration",
         
@@ -1514,6 +1516,11 @@ function dragended(event, d) {
 // Old click listener removed.
 // Focus Mode Logic
 document.getElementById('btn-exit-focus').addEventListener('click', exitFocusMode);
+document.getElementById('btn-open-content').addEventListener('click', () => {
+    if (focusNode && window.reader) {
+        window.reader.open(focusNode);
+    }
+});
 document.getElementById('focus-spacing-slider').addEventListener('input', () => {
     if (focusNode) enterFocusMode(focusNode); // Re-calculate layout
 });

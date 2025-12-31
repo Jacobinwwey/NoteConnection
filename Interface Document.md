@@ -275,6 +275,11 @@ Renders the JSON data into an interactive DAG.
             *   **Logic**: If "Freeze Layout" is enabled when exiting Focus Mode, the simulation remains stopped (`simulation.stop()`) to maintain the visual state.
             *   **Behavior**: Prevents the graph from "exploding" or moving if the user expects it to stay frozen.
 
+    *   **Focus Mode Specific Content (v0.9.28)**:
+        *   **UI**: "Specific Content" button added to the Focus Mode control panel.
+        *   **Function**: Opens the reading window for the currently focused node (`window.reader.open(focusNode)`).
+        *   **UX**: Provides a clear, discoverable alternative to double-clicking for accessing node content.
+
     *   **Quick Actions (v0.9.26)**:
         *   **Freeze Layout Button**:
             *   **UI**: Dedicated button (❄️) in the top-right toolbar.
@@ -772,6 +777,11 @@ Manages node highlighting interactions for both PC and mobile interfaces.
         *   **条件重启 (Conditional Restart - v0.9.27)**:
             *   **逻辑**: 如果在退出专注模式时启用了“冻结布局”，模拟将保持停止状态 (`simulation.stop()`) 以维持视觉状态。
             *   **行为**: 如果用户期望图表保持冻结，则防止图表“爆炸”或移动。
+
+    *   **专注模式具体内容 (v0.9.28)**:
+        *   **UI**: 专注模式控制面板中添加了“打开具体内容”按钮。
+        *   **功能**: 为当前聚焦的节点打开阅读窗口 (`window.reader.open(focusNode)`)。
+        *   **UX**: 提供了一个清晰、易于发现的替代方案，用于通过双击访问节点内容。
 
     *   **冻结布局快速按钮 (v0.9.26)**:
         *   **UI**: 右上角工具栏中的专用按钮 (❄️)，用于快速访问。

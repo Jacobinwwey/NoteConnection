@@ -1,8 +1,24 @@
-# 2025-12-24 v0.9.20
+# 2025-12-26 v0.9.28
 
 # Project Build Plan: Progressive Hierarchical Knowledge Graph
 
 This document outlines the roadmap for building `NoteConnection`, a system capable of visualizing tens of thousands of knowledge points as a Directed Acyclic Graph (DAG), highlighting hierarchical relationships and learning paths.
+
+---
+
+# 2025-12-26 v0.9.28 - Focus Mode Specific Content Access
+
+**Goal**: Optimize user experience by providing a direct way to open specific node content within Focus Mode, avoiding the need for double-clicking.
+
+- [x] **Specific Content Button**
+    - [x] **UI**: Added a "Specific Content" button (`#btn-open-content`) to the Focus Mode control panel (`#focus-exit-btn`).
+    - [x] **Logic**: Clicking the button triggers `window.reader.open(focusNode)`, mimicking the double-click behavior on a focused node.
+    - [x] **Localization**: Added support for English ("Open Specific Content") and Chinese ("打开具体内容").
+
+- [x] **Documentation**
+    - [x] **User Manual**: Updated Focus Mode section.
+    - [x] **Interface Document**: Updated Focus Mode capabilities.
+    - [x] **TEST_REPORT**: Added test case for the new button.
 
 ---
 
