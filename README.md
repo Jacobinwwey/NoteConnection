@@ -119,6 +119,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.29 - Freeze Layout Persistence (2025-12-26)
+- [x] **Bug Fix**: Resolved an issue where opening the Analysis Panel or resizing the window would override the "Freeze Layout" state, causing unwanted node movement.
+- [x] **Robustness**: The physics simulation now strictly respects the frozen state during layout changes, ensuring nodes remain stationary as expected.
+
 ### v0.9.27 - Freeze Layout Priority Fix (2025-12-26)
 - [x] **Logic Correction**: Resolved a conflict where "Exit Focus Mode" would unconditionally restart the physics simulation, overriding the "Freeze Layout" state.
 - [x] **Priority Enforcement**: If "Freeze Layout" is checked, exiting Focus Mode now stops the simulation and forces a static render update, ensuring nodes remain strictly inactive as requested.
@@ -362,6 +366,10 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.29 - 冻结布局持久化 (Freeze Layout Persistence) (2025-12-26)
+- [x] **Bug 修复**: 解决了打开分析面板或调整窗口大小时会覆盖“冻结布局”状态，导致节点意外移动的问题。
+- [x] **稳健性**: 物理模拟现在在布局变更期间严格遵守冻结状态，确保节点按预期保持静止。
 
 ### v0.9.27 - 条件重启 (Conditional Restart) (2025-12-26)
 - [x] **逻辑修正**: 解决了“退出专注模式”会无条件重启物理模拟，覆盖“冻结布局”状态的冲突。
