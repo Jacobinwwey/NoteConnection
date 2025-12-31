@@ -24,6 +24,7 @@ NoteConnection is a visualization tool that transforms your Markdown notes into 
     *   **Helping to understand (Left/Bottom)**: Prerequisites and incoming connections.
     *   **Further exploration (Right/Top)**: Next steps and outgoing connections.
 *   **Controls**: Use the sliders at the bottom to adjust Vertical and Horizontal spacing.
+*   **Open Content**: Click the "Specific Content" button to read the node's full text.
 *   **Exit**: Click the "Exit Focus" button or double-click the background.
 *   **Note**: "Freeze Layout" allows you to manually arrange nodes in this mode without them snapping back.
 
@@ -75,6 +76,7 @@ NoteConnection 是一个可视化工具，可将您的 Markdown 笔记转换为�
     *   **帮助理解 (左/下)**: 先决条件和入度连接。
     *   **进一步探索 (右/上)**: 后续步骤和出度连接。
 *   **控制**: 使用底部的滑块调整垂直和水平间距。
+*   **打开内容**: 点击“打开具体内容”按钮以阅读节点的全文。
 *   **退出**: 点击“退出专注”按钮或双击背景。
 *   **注意**: “冻结布局”允许您在此模式下手动排列节点，而不会自动弹回。
 
