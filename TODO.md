@@ -6,6 +6,17 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2025-12-26 v0.9.29 - Freeze Layout Persistence
+
+**Goal**: Fix bug where "Analysis & Export" (and other layout resizes) would override the "Freeze Layout" state, causing unwanted node movement.
+
+- [x] **Layout Resize Logic**
+    - [x] **Behavior**: Modified `ResizeObserver` in `app.js` to strictly check the "Freeze Layout" checkbox state before calling `simulation.restart()`.
+    - [x] **Canvas Sync**: Ensured `resizeCanvas()` is called during layout changes to keep the canvas resolution correct even if the simulation is frozen.
+    - [x] **Result**: Opening the Analysis Panel or resizing the window now respects the frozen state, keeping nodes stationary.
+
+---
+
 # 2025-12-26 v0.9.28 - Focus Mode Specific Content Access
 
 **Goal**: Optimize user experience by providing a direct way to open specific node content within Focus Mode, avoiding the need for double-clicking.

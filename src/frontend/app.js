@@ -103,6 +103,9 @@ const resizeObserver = new ResizeObserver(entries => {
         width = entry.contentRect.width;
         height = entry.contentRect.height;
         
+        // Ensure canvas matches new container size (handled here because window.resize doesn't catch flex layout changes)
+        if (typeof resizeCanvas === 'function') resizeCanvas();
+
         const mode = document.querySelector('input[name="layoutMode"]:checked') ? document.querySelector('input[name="layoutMode"]:checked').value : 'force';
 
         if (mode === 'dag') {
@@ -112,7 +115,18 @@ const resizeObserver = new ResizeObserver(entries => {
              // Update Center Force
              simulation.force("center", d3.forceCenter(width / 2, height / 2));
         }
-        simulation.alpha(0.3).restart();
+        
+        // Check Freeze Layout State
+        const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
+        
+        // Only restart if NOT frozen
+        if (!isFrozen) {
+            simulation.alpha(0.3).restart();
+        } else {
+            // If frozen, we might want to ensure one tick happens if using Canvas to handle clear/redraw?
+            // resizeCanvas already calls ticked() if mode is canvas.
+            // For SVG, it handles itself via CSS, and nodes don't move, so no tick needed.
+        }
     }
 });
 resizeObserver.observe(container);

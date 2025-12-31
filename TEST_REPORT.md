@@ -1,3 +1,51 @@
+# 2025-12-26 v0.9.29 - English Document
+
+## Test Report: Freeze Layout Persistence (Analysis & Resize)
+
+### 1. Analysis Panel Interaction
+*   **Pre-condition**: Enable "Freeze Layout". Ensure nodes are stationary.
+*   **Action**: Click "Analysis & Export" button.
+*   **Observation**: 
+    *   Analysis Panel opens (changing the graph container size).
+    *   Nodes do **NOT** move or jitter.
+    *   Simulation remains stopped.
+*   **Status**: **Pass**
+
+### 2. Window Resize Interaction
+*   **Pre-condition**: Enable "Freeze Layout".
+*   **Action**: Resize the browser window.
+*   **Observation**: 
+    *   Graph container resizes.
+    *   Nodes maintain their relative positions (Simulation does not restart).
+    *   Canvas (if active) redraws correctly at new resolution.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.29 - Chinese Document
+
+## 测试报告：冻结布局持久化 (分析与调整大小)
+
+### 1. 分析面板交互
+*   **前置条件**: 启用“冻结布局”。确保节点静止。
+*   **操作**: 点击“分析与导出”按钮。
+*   **观察**: 
+    *   分析面板打开（改变了图表容器大小）。
+    *   节点**不**移动或抖动。
+    *   模拟保持停止。
+*   **状态**: **通过**
+
+### 2. 窗口调整大小交互
+*   **前置条件**: 启用“冻结布局”。
+*   **操作**: 调整浏览器窗口大小。
+*   **观察**: 
+    *   图表容器调整大小。
+    *   节点保持其相对位置（模拟不重启）。
+    *   Canvas（如果激活）在分辨率下正确重绘。
+*   **状态**: **通过**
+
+---
+
 # 2025-12-26 v0.9.28 - English Document
 
 ## Test Report: Focus Mode Specific Content Button
