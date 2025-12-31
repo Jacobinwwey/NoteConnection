@@ -192,8 +192,12 @@ Renders the JSON data into an interactive DAG.
             *   **Main Interface**: Stops simulation and **disables node dragging** to minimize memory/CPU usage and prevent accidental layout changes.
             *   **Focus Mode**: Does not affect Focus Mode; dragging and manual positioning remain enabled for context exploration.
             *   **Robustness (v0.9.29)**: Prevents simulation restart during layout events (e.g., resizing window, opening Analysis Panel), ensuring nodes remain strictly stationary.
-        *   **Speed (Damping)**: Slider (0-1) to control `velocityDecay`. Higher values = more friction (slower movement).
-        *   **Hover Lock**: Hovering a node temporarily locks its position to prevent drift during inspection.
+        *   **Viewport Culling (v0.9.31)**:
+            *   **Full View Freeze**: Automatically stops simulation when zoomed out (< 0.4x) to save resources.
+            *   **Off-screen Freezing**: When zoomed in, nodes outside the visible viewport are frozen (`fx`/`fy` locked), while visible nodes remain active. Reduced calculation load.
+        *   **Layout State Caching (v0.9.33)**:
+            *   **Persistence**: Caches node positions (`x, y, fx, fy`) for each layout mode ('Force', 'DAG').
+            *   **Instant Switch**: Restores exact positions when switching back to a previously visited layout, bypassing recalculation and movement animation.
     *   **Mobile Optimizations (v0.9.2)**:
         *   **Responsive Layout**: CSS Media Queries (`max-width: 768px`) adapt the UI.
             *   **Collapsed Controls**: Main panel becomes a toggleable icon.
@@ -275,6 +279,10 @@ Renders the JSON data into an interactive DAG.
         *   **Conditional Restart (v0.9.27)**:
             *   **Logic**: If "Freeze Layout" is enabled when exiting Focus Mode, the simulation remains stopped (`simulation.stop()`) to maintain the visual state.
             *   **Behavior**: Prevents the graph from "exploding" or moving if the user expects it to stay frozen.
+        *   **Layout Isolation (v0.9.30)**:
+            *   **Backup**: Stores node coordinates (`x`, `y`, `fx`, `fy`) upon entering Focus Mode.
+            *   **Restoration**: Reverts nodes to these exact coordinates upon exit, discarding any layout changes made within Focus Mode.
+            *   **Goal**: Ensures main interface layout remains absolutely consistent before and after Focus Mode sessions.
 
     *   **Focus Mode Specific Content (v0.9.28)**:
         *   **UI**: "Specific Content" button added to the Focus Mode control panel.
@@ -704,8 +712,12 @@ Manages node highlighting interactions for both PC and mobile interfaces.
             *   **主界面**: 停止模拟并**禁用节点拖动**，以最小化内存/CPU 使用并防止意外的布局更改。
             *   **专注模式**: 不影响专注模式；拖动和手动定位仍然启用以进行上下文探索。
             *   **稳健性 (v0.9.29)**: 防止在布局事件（如调整窗口大小、打开分析面板）期间重启模拟，确保节点严格保持静止。
-        *   **速度 (阻尼)**: 滑块 (0-1) 用于控制 `velocityDecay`。较高值 = 更多摩擦（移动更慢）。
-        *   **悬停锁定**: 悬停节点时暂时锁定其位置，以防止检查期间的漂移。
+        *   **视口剔除 (Viewport Culling - v0.9.31)**:
+            *   **全景冻结**: 当缩小到足以查看全景 (< 0.4x) 时自动停止模拟以节省资源。
+            *   **屏幕外冻结**: 放大时，可见视口外的节点被冻结（`fx`/`fy` 锁定），而可见节点保持活动状态。减少计算负载。
+        *   **布局状态缓存 (Layout State Caching - v0.9.33)**:
+            *   **持久化**: 为每个布局模式（'Force', 'DAG'）缓存节点位置（`x, y, fx, fy`）。
+            *   **即时切换**: 切换回先前访问的布局时恢复精确位置，绕过重新计算和移动动画。
     *   **移动端优化 (v0.9.2)**:
         *   **响应式布局**: CSS 媒体查询 (`max-width: 768px`) 适配 UI。
             *   **折叠控件**: 主面板变为可切换图标。
