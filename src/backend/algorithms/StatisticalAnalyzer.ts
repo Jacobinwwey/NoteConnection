@@ -1,4 +1,7 @@
 import { RawFile } from '../FileLoader';
+import * as path from 'path';
+import * as os from 'os';
+import { Worker } from 'worker_threads';
 
 interface CooccurrenceMetrics {
     count: number;
@@ -8,6 +11,136 @@ interface CooccurrenceMetrics {
 
 export class StatisticalAnalyzer {
     
+    /**
+     * Analyze co-occurrence of terms across the corpus using Parallel Workers.
+     * 使用并行 Worker 分析语料库中术语的共现情况。
+     */
+    static async analyzeAsync(files: RawFile[], terms: string[]): Promise<Map<string, Map<string, CooccurrenceMetrics>>> {
+        const termDocCounts = new Map<string, number>();
+        const fileHasTerm = new Map<string, Set<string>>(); // fileId -> Set<term>
+        terms.forEach(term => termDocCounts.set(term, 0));
+
+        // 1. Parallel Term Extraction
+        // 1. 并行术语提取
+        console.log(`[StatisticalAnalyzer] Starting parallel term extraction for ${files.length} files...`);
+        const fileTermsMap = await this.runParallelTermExtraction(files, terms);
+
+        // 2. Aggregate Results
+        // 2. 聚合结果
+        for (const [filename, foundTerms] of Object.entries(fileTermsMap)) {
+            const termSet = new Set(foundTerms);
+            fileHasTerm.set(filename, termSet);
+            
+            foundTerms.forEach(term => {
+                termDocCounts.set(term, (termDocCounts.get(term) || 0) + 1);
+            });
+        }
+
+        // 3. Calculate Co-occurrences (Optimized with Inverted Index)
+        // 3. 计算共现 (使用倒排索引优化)
+        return this.calculateMatrixOptimized(terms, termDocCounts, fileHasTerm);
+    }
+
+    private static async runParallelTermExtraction(files: RawFile[], terms: string[]): Promise<Record<string, string[]>> {
+        const numCPUs = os.cpus().length;
+        const workerCount = Math.min(12, Math.max(1, numCPUs - 1));
+        const chunkSize = Math.ceil(files.length / workerCount);
+        
+        const workerPromises: Promise<Record<string, string[]>>[] = [];
+        // Worker path resolution (handling ts-node vs dist)
+        const workerPath = path.join(__dirname, '..', 'workers', 'statisticalWorker.ts');
+        const isTsNode = path.extname(__filename) === '.ts' || process.argv.some(arg => arg.includes('ts-node'));
+        const actualWorkerPath = isTsNode ? workerPath : workerPath.replace('.ts', '.js').replace('src', 'dist');
+
+        for (let i = 0; i < workerCount; i++) {
+            const start = i * chunkSize;
+            const end = Math.min(start + chunkSize, files.length);
+            if (start >= files.length) break;
+
+            const filesChunk = files.slice(start, end);
+            
+            const p = new Promise<Record<string, string[]>>((resolve, reject) => {
+                const execArgv = isTsNode ? ['-r', require.resolve('ts-node/register')] : undefined;
+                const worker = new Worker(actualWorkerPath, {
+                    workerData: { filesChunk, terms },
+                    execArgv
+                });
+
+                worker.on('message', (result: Record<string, string[]>) => resolve(result));
+                worker.on('error', reject);
+                worker.on('exit', (code) => {
+                    if (code !== 0) reject(new Error(`Worker stopped with exit code ${code}`));
+                });
+            });
+            workerPromises.push(p);
+        }
+
+        const results = await Promise.all(workerPromises);
+        // Merge results
+        return results.reduce((acc, curr) => ({ ...acc, ...curr }), {});
+    }
+
+    private static calculateMatrixOptimized(
+        terms: string[], 
+        termDocCounts: Map<string, number>, 
+        fileHasTerm: Map<string, Set<string>>
+    ): Map<string, Map<string, CooccurrenceMetrics>> {
+        const matrix = new Map<string, Map<string, CooccurrenceMetrics>>();
+        
+        // Build Inverted Index: Term -> Set<FileID>
+        const invertedIndex = new Map<string, Set<string>>();
+        terms.forEach(term => invertedIndex.set(term, new Set()));
+
+        fileHasTerm.forEach((termSet, fileId) => {
+            termSet.forEach(term => {
+                invertedIndex.get(term)?.add(fileId);
+            });
+        });
+
+        // Calculate Matrix
+        terms.forEach(source => {
+            const row = new Map<string, CooccurrenceMetrics>();
+            matrix.set(source, row);
+            
+            const sourceCount = termDocCounts.get(source) || 0;
+            const sourceFiles = invertedIndex.get(source);
+
+            if (sourceCount === 0 || !sourceFiles) return;
+
+            terms.forEach(target => {
+                if (source === target) return;
+
+                const targetFiles = invertedIndex.get(target);
+                if (!targetFiles) return;
+
+                // Intersection of two sets (Optimization: iterate smaller set)
+                let intersection = 0;
+                if (sourceFiles.size < targetFiles.size) {
+                    sourceFiles.forEach(fileId => {
+                        if (targetFiles.has(fileId)) intersection++;
+                    });
+                } else {
+                    targetFiles.forEach(fileId => {
+                        if (sourceFiles.has(fileId)) intersection++;
+                    });
+                }
+
+                if (intersection > 0) {
+                    const targetCount = termDocCounts.get(target) || 0;
+                    const union = sourceCount + targetCount - intersection;
+                    
+                    row.set(target, {
+                        count: intersection,
+                        jaccard: union === 0 ? 0 : intersection / union,
+                        conditionalProb: intersection / sourceCount
+                    });
+                }
+            });
+        });
+
+        return matrix;
+    }
+
     /**
      * Analyze co-occurrence of terms across the corpus.
      * 分析语料库中术语的共现情况。
