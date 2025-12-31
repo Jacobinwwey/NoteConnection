@@ -119,6 +119,24 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.33 - Layout State Caching (Instant Switch) (2025-12-26)
+- [x] **Template States**: Implemented independent state caching for "Force" and "DAG" layouts.
+- [x] **Instant Switch**: Switching layouts now saves the current state and restores the target state instantly without recalculation or visual movement, preserving the exact arrangement of each view.
+
+### v0.9.32 - High Damping & Render Optimization (2025-12-26)
+- [x] **Damping**: Increased default friction to 0.92 for faster settling.
+- [x] **Render Culling**: DOM updates are skipped for off-screen frozen nodes.
+
+### v0.9.31 - Simulation Optimization (Viewport Culling) (2025-12-26)
+- [x] **Performance**: Implemented smart viewport culling to reduce simulation load.
+- [x] **Full View Freeze**: Automatically freezes the simulation when zoomed out (< 0.4x) to view the entire graph.
+- [x] **Off-screen Freezing**: When zoomed in, only nodes within the visible viewport (plus a buffer) are simulated; off-screen nodes are frozen.
+
+### v0.9.30 - Focus Mode Layout Isolation (2025-12-26)
+- [x] **Position Consistency**: Implemented coordinate backup/restore logic (`x`, `y`, `fx`, `fy`) for Focus Mode.
+- [x] **Behavior**: Exiting Focus Mode now reverts the graph layout to its *exact* state prior to entry, discarding any temporary arrangements or drags made during the focused session.
+- [x] **UX**: Fulfills the requirement that Focus Mode should have zero impact on the main interface's layout structure.
+
 ### v0.9.29 - Freeze Layout Persistence (2025-12-26)
 - [x] **Bug Fix**: Resolved an issue where opening the Analysis Panel or resizing the window would override the "Freeze Layout" state, causing unwanted node movement.
 - [x] **Robustness**: The physics simulation now strictly respects the frozen state during layout changes, ensuring nodes remain stationary as expected.
@@ -366,6 +384,24 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.33 - 布局状态缓存 (即时切换) (2025-12-26)
+- [x] **模板状态**: 为“Force”和“DAG”布局实现了独立的状态缓存。
+- [x] **即时切换**: 切换布局现在会保存当前状态并立即恢复目标状态，无需重新计算或视觉移动，从而保留每个视图的精确排列。
+
+### v0.9.32 - 高阻尼与渲染优化 (2025-12-26)
+- [x] **阻尼**: 将默认摩擦力增加到 0.92 以加快稳定速度。
+- [x] **渲染剔除**: 跳过屏幕外冻结节点的 DOM 更新。
+
+### v0.9.31 - 模拟优化 (视口剔除) (2025-12-26)
+- [x] **性能**: 实现了智能视口剔除以减少模拟负载。
+- [x] **全景冻结**: 当缩小到查看整个图表 (< 0.4x) 时自动冻结模拟。
+- [x] **屏幕外冻结**: 放大时，仅模拟可见视口（加上缓冲区）内的节点；屏幕外的节点被冻结。
+
+### v0.9.30 - 专注模式布局隔离 (Focus Mode Layout Isolation) (2025-12-26)
+- [x] **位置一致性**: 为专注模式实现了坐标备份/恢复逻辑 (`x`, `y`, `fx`, `fy`)。
+- [x] **行为**: 退出专注模式现在会将图表布局恢复到进入前的*精确*状态，丢弃专注会话期间所做的任何临时排列或拖动。
+- [x] **UX**: 满足了专注模式应对主界面布局结构零影响的要求。
 
 ### v0.9.29 - 冻结布局持久化 (Freeze Layout Persistence) (2025-12-26)
 - [x] **Bug 修复**: 解决了打开分析面板或调整窗口大小时会覆盖“冻结布局”状态，导致节点意外移动的问题。

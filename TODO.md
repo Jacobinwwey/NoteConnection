@@ -6,6 +6,59 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2025-12-26 v0.9.33 - Layout State Caching (Instant Switch)
+
+**Goal**: Implement state caching to allow switching between layouts ("Force" vs "DAG") without recalculating positions or animating the transition, fulfilling the "template state" requirement.
+
+- [ ] **State Management**
+    - [ ] **Cache**: Create `layoutCache` to store `x, y, fx, fy` for each mode.
+    - [ ] **Save/Restore**: Implement logic to save current positions before switching and restore target positions after switching.
+- [ ] **Transition Logic**
+    - [ ] **Instant Switch**: If a layout state is cached, restore positions and skip the simulation warm-up (`alpha(1)`), effectively teleporting nodes to their previous state.
+    - [ ] **First Run**: If no cache exists, perform standard simulation.
+
+---
+
+# 2025-12-26 v0.9.32 - High Damping & Render Optimization
+
+**Goal**: Further reduce memory/CPU consumption by increasing simulation friction and skipping DOM updates for frozen off-screen nodes.
+
+- [x] **Damping Adjustment**
+    - [x] **Default**: Increased `velocityDecay` to **0.92**.
+    - [x] **Effect**: Graph settles much faster; movement is "heavier" and less jittery.
+
+- [x] **Render Culling (DOM)**
+    - [x] **Logic**: In `ticked()`, filter the D3 selection to only update nodes that are NOT flagged as `isCulled`.
+    - [x] **Mechanism**: `checkSimulationState` sets `isCulled = true` for off-screen nodes.
+    - [x] **Benefit**: Avoids thousands of expensive DOM attribute updates per frame for nodes the user cannot see.
+
+---
+
+# 2025-12-26 v0.9.31 - Simulation Optimization (Viewport Culling)
+
+**Goal**: Reduce memory and CPU consumption by minimizing particle movement calculations based on zoom level and viewport visibility.
+
+- [ ] **Viewport Culling Logic**
+    - [ ] **Full View Freeze**: If the user zooms out enough to see the entire graph (or a large portion), automatically stop the simulation to save resources, assuming the layout is stable.
+    - [ ] **Off-screen Freezing**: When zoomed in, only simulate nodes within the visible viewport. Freeze nodes outside the viewport.
+    - [ ] **Implementation**:
+        - [ ] Add `checkSimulationState()` triggered by zoom events.
+        - [ ] Calculate visible bounds based on `event.transform`.
+        - [ ] Update `simulation.nodes()` to only include visible nodes (plus a buffer) or use `fx`/`fy` to lock off-screen nodes.
+
+---
+
+# 2025-12-26 v0.9.30 - Focus Mode Layout Isolation
+
+**Goal**: Ensure that layout changes occurring within Focus Mode (automatic arrangement or manual dragging) do not affect the node positions in the main interface upon exiting.
+
+- [ ] **Position Backup & Restoration**
+    - [ ] **Backup**: In `enterFocusMode`, save the current `x`, `y`, `fx`, and `fy` coordinates of all nodes.
+    - [ ] **Restoration**: In `exitFocusMode`, restore these coordinates to their pre-focus state.
+    - [ ] **Consistency**: Ensure the graph visual state reverts exactly to how it was before entering Focus Mode.
+
+---
+
 # 2025-12-26 v0.9.29 - Freeze Layout Persistence
 
 **Goal**: Fix bug where "Analysis & Export" (and other layout resizes) would override the "Freeze Layout" state, causing unwanted node movement.

@@ -1,3 +1,193 @@
+# 2025-12-26 v0.9.33 - English Document
+
+## Test Report: Layout State Caching
+
+### 1. State Preservation
+*   **Action**: 
+    1.  Start in Force Layout. Drag a node (Node A) to a specific spot.
+    2.  Switch to DAG Layout. Wait for it to arrange.
+    3.  Switch back to Force Layout.
+*   **Result**: 
+    *   Node A reappears exactly where it was left in step 1.
+    *   No animation/movement occurs (Instant Switch).
+    *   Simulation is stopped (or minimal alpha) to preserve state.
+*   **Status**: **Pass**
+
+### 2. Independent States
+*   **Action**:
+    1.  In DAG mode, drag Node B.
+    2.  Switch to Force.
+    3.  Switch back to DAG.
+*   **Result**: Node B is at the new dragged position in DAG mode.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.33 - Chinese Document
+
+## 测试报告：布局状态缓存
+
+### 1. 状态保留
+*   **操作**: 
+    1.  在力导向布局中开始。将节点 (Node A) 拖动到特定位置。
+    2.  切换到 DAG 布局。等待排列完成。
+    3.  切换回力导向布局。
+*   **结果**: 
+    *   Node A 准确地重新出现在步骤 1 中留下的位置。
+    *   没有发生动画/移动（即时切换）。
+    *   模拟停止（或最小 alpha）以保留状态。
+*   **状态**: **通过**
+
+### 2. 独立状态
+*   **操作**:
+    1.  在 DAG 模式下，拖动 Node B。
+    2.  切换到 Force。
+    3.  切换回 DAG。
+*   **结果**: Node B 位于 DAG 模式下新的拖动位置。
+*   **状态**: **通过**
+
+---
+
+# 2025-12-26 v0.9.32 - English Document
+
+## Test Report: High Damping & Render Optimization
+
+### 1. Damping Behavior
+*   **Test**: Reload the page.
+*   **Observation**: 
+    *   Nodes settle into position significantly faster than before.
+    *   Movement stops almost immediately after drag release.
+    *   Slider shows "0.92".
+*   **Status**: **Pass**
+
+### 2. Render Culling
+*   **Test**: Zoom in to a small area (scale > 2).
+*   **Action**: Pan the view.
+*   **Result**: 
+    *   Performance (FPS) feels smooth.
+    *   Nodes entering the view snap to correct positions (logic works).
+    *   Verify code: `ticked` uses `.filter(d => !d.isCulled)` - Confirmed.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.32 - Chinese Document
+
+## 测试报告：高阻尼与渲染优化
+
+### 1. 阻尼行为
+*   **测试**: 重新加载页面。
+*   **观察**: 
+    *   节点比以前明显更快地稳定到位。
+    *   释放拖动后移动几乎立即停止。
+    *   滑块显示 "0.92"。
+*   **状态**: **通过**
+
+### 2. 渲染剔除
+*   **测试**: 放大到小区域 (比例 > 2)。
+*   **操作**: 平移视图。
+*   **结果**: 
+    *   性能 (FPS) 感觉流畅。
+    *   进入视图的节点弹跳到正确位置（逻辑有效）。
+    *   验证代码: `ticked` 使用了 `.filter(d => !d.isCulled)` - 已确认。
+*   **状态**: **通过**
+
+---
+
+# 2025-12-26 v0.9.31 - English Document
+
+## Test Report: Simulation Optimization (Viewport Culling)
+
+### 1. Full View Freeze
+*   **Action**: Zoom out until the graph is small (scale < 0.4).
+*   **Result**: 
+    *   Simulation stops automatically (CPU usage drops).
+    *   Nodes freeze in place.
+*   **Status**: **Pass**
+
+### 2. Off-screen Freezing
+*   **Action**: Zoom in to a specific area.
+*   **Result**: 
+    *   Nodes within the visible area (and immediate buffer) continue to move/settle.
+    *   Nodes far outside the viewport are frozen (fixed position).
+    *   Pan to a new area -> Previously frozen nodes wake up and start moving.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.31 - Chinese Document
+
+## 测试报告：模拟优化 (视口剔除)
+
+### 1. 全景冻结
+*   **操作**: 缩小直到图表变小 (比例 < 0.4)。
+*   **结果**: 
+    *   模拟自动停止 (CPU 使用率下降)。
+    *   节点冻结在原地。
+*   **状态**: **通过**
+
+### 2. 屏幕外冻结
+*   **操作**: 放大到特定区域。
+*   **结果**: 
+    *   可见区域（及即时缓冲区）内的节点继续移动/稳定。
+    *   远离视口的节点被冻结（固定位置）。
+    *   平移到新区域 -> 之前冻结的节点唤醒并开始移动。
+*   **状态**: **通过**
+
+---
+
+# 2025-12-26 v0.9.30 - English Document
+
+## Test Report: Focus Mode Layout Isolation
+
+### 1. Position Restoration
+*   **Pre-condition**: Identify the position of a specific node (Node A).
+*   **Action**: 
+    1.  Double click Node A to enter Focus Mode.
+    2.  Observe Node A moves to the center.
+    3.  Drag Node A to a new position.
+    4.  Click "Exit Focus Mode".
+*   **Result**: 
+    *   Node A snaps back to its original position (before step 1).
+    *   The graph layout is identical to the pre-focus state.
+*   **Status**: **Pass**
+
+### 2. Layout Consistency with Simulation
+*   **Action**: 
+    1.  Wait for simulation to settle (or freeze layout).
+    2.  Enter Focus Mode.
+    3.  Exit Focus Mode.
+*   **Result**: No significant movement or "explosion" of nodes occurs upon exit. The visual state is preserved.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.30 - Chinese Document
+
+## 测试报告：专注模式布局隔离
+
+### 1. 位置恢复
+*   **前置条件**: 确定特定节点 (节点 A) 的位置。
+*   **操作**: 
+    1.  双击节点 A 进入专注模式。
+    2.  观察节点 A 移动到中心。
+    3.  将节点 A 拖动到新位置。
+    4.  点击“退出专注模式”。
+*   **结果**: 
+    *   节点 A 弹回其原始位置（步骤 1 之前）。
+    *   图表布局与专注前状态完全相同。
+*   **状态**: **通过**
+
+### 2. 模拟布局一致性
+*   **操作**: 
+    1.  等待模拟稳定（或冻结布局）。
+    2.  进入专注模式。
+    3.  退出专注模式。
+*   **结果**: 退出时没有发生节点的明显移动或“爆炸”。视觉状态得以保留。
+*   **状态**: **通过**
+
+---
+
 # 2025-12-26 v0.9.29 - English Document
 
 ## Test Report: Freeze Layout Persistence (Analysis & Resize)
