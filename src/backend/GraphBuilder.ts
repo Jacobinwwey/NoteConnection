@@ -134,7 +134,7 @@ export class GraphBuilder {
     if (config.enableStatisticalInference) {
         console.log('[GraphBuilder] Running Statistical Inference...');
         const terms = Array.from(fileMap.keys());
-        const matrix = StatisticalAnalyzer.analyze(files, terms);
+        const matrix = await StatisticalAnalyzer.analyzeAsync(files, terms);
         const inferredEdges = StatisticalAnalyzer.inferDependencies(matrix, 0.05, 0.1); 
         
         inferredEdges.forEach(dep => {
@@ -167,7 +167,7 @@ export class GraphBuilder {
         console.log('[GraphBuilder] Running Hybrid Inference (Stats + Vector)...');
         // We need both Stats Matrix and Vector Space
         const terms = Array.from(fileMap.keys());
-        const matrix = StatisticalAnalyzer.analyze(files, terms);
+        const matrix = await StatisticalAnalyzer.analyzeAsync(files, terms);
         const vectorSpace = new VectorSpace(files);
 
         const hybridEdges = HybridEngine.infer(matrix, vectorSpace, 0.25, 0.1); // Tune thresholds
