@@ -6,6 +6,27 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2025-12-26 v0.9.35 - Viewport Culling Relaxation
+
+**Goal**: Relax the viewport culling restrictions to provide a smoother user experience, preventing premature freezing of nodes just outside the viewport and allowing for deeper zooms before global freeze.
+
+- [x] **Culling Optimization**
+    - [x] **Full Freeze Threshold**: Lowered from `scale < 0.4` to `scale < 0.1` to allow simulation at broader zoom levels.
+    - [x] **Dynamic Buffer**: Increased off-screen buffer from fixed `100` units to `800 / scale` (approx 800 visual pixels), ensuring "fixed range extending outward" behavior.
+
+---
+
+# 2025-12-26 v0.9.34 - Global Layout Update Fix
+
+**Goal**: Ensure that layout switching applies to all nodes in the graph, overriding any optimization constraints (like viewport culling) that might have frozen off-screen nodes.
+
+- [x] **Layout Transition Logic**
+    - [x] **Global Unfreeze**: In `updateLayout()`, explicitly clear `fx` and `fy` properties for all nodes when initiating a new simulation.
+    - [x] **Culling Reset**: Reset the `isCulled` flag to ensure off-screen nodes are included in the new layout calculation and rendering.
+    - [x] **Result**: Switching from 'Force' to 'DAG' (or vice versa) correctly rearranges the entire graph, even if the user is zoomed in and many nodes were previously frozen.
+
+---
+
 # 2025-12-26 v0.9.33 - Layout State Caching (Instant Switch)
 
 **Goal**: Implement state caching to allow switching between layouts ("Force" vs "DAG") without recalculating positions or animating the transition, fulfilling the "template state" requirement.

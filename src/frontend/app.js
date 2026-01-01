@@ -356,6 +356,16 @@ function updateLayout() {
         ticked();            // Force render
     } else {
         // First time: Run simulation
+        
+        // v0.9.34: Force Unfreeze
+        // Requirement: "switching layouts ... takes effect on all nodes and should not be limited by the user's scaling degree"
+        // Clear any 'fx/fy' locks that might have been set by viewport culling (checkSimulationState)
+        nodes.forEach(n => {
+            n.fx = null;
+            n.fy = null;
+            n.isCulled = false; // Reset culled flag so they are rendered
+        });
+
         simulation.alpha(1).restart();
     }
 }
@@ -1142,7 +1152,8 @@ function checkSimulationState() {
     // If zoomed out enough to see everything (approximate), freeze simulation
     // 如果缩小到足以看到所有内容（近似值），冻结模拟
     // Assuming initial scale 1 fits mostly. scale < 0.4 is definitely "bird's eye view".
-    if (scale < 0.4) {
+    // v0.9.35: Relaxed threshold to 0.1 per user request
+    if (scale < 0.1) {
         simulation.stop();
         return;
     }
@@ -1155,8 +1166,9 @@ function checkSimulationState() {
     const visibleX = -transform.x / scale;
     const visibleY = -transform.y / scale;
     
-    // Add buffer (e.g., 100px)
-    const buffer = 100;
+    // Add buffer (e.g., 800px visual range)
+    // v0.9.35: Dynamic buffer based on scale ("fixed range extending outward")
+    const buffer = 800 / scale;
     const minX = visibleX - buffer;
     const maxX = visibleX + visibleWidth + buffer;
     const minY = visibleY - buffer;

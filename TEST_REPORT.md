@@ -1,3 +1,42 @@
+# 2025-12-26 v0.9.35 - English Document
+
+## Test Report: Viewport Culling Relaxation
+
+### 1. Extended Zoom Threshold
+*   **Action**: Zoom out slowly from 1.0x.
+*   **Observation**: 
+    *   At 0.4x (previous limit), simulation CONTINUES running.
+    *   Continue zooming out.
+    *   Simulation stops only when scale drops below 0.1x.
+*   **Status**: **Pass**
+
+### 2. Smooth Panning Buffer
+*   **Action**: Zoom in (scale ~2.0). Pan rapidly to the side.
+*   **Observation**: 
+    *   Nodes entering the viewport are already in motion or settled correctly (not frozen in "mid-air").
+    *   No "pop-in" effect where nodes suddenly wake up after entering the screen.
+    *   The 800px buffer ensures seamless transition.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.34 - English Document
+
+## Test Report: Global Layout Update Fix
+
+### 1. Layout Switching with Culling
+*   **Pre-condition**: 
+    1.  Zoom in significantly (Scale > 2) so that >50% of nodes are off-screen.
+    2.  Verify off-screen nodes are culled (check via console `isCulled=true` or simulation CPU drop).
+*   **Action**: Switch Layout Mode (e.g., Force -> DAG).
+*   **Result**: 
+    *   All nodes (including previously off-screen ones) immediately start moving to their new positions.
+    *   Zooming out reveals the graph has fully rearranged according to the new layout (DAG layers).
+    *   Nodes are NOT stuck in their previous positions.
+*   **Status**: **Pass**
+
+---
+
 # 2025-12-26 v0.9.33 - English Document
 
 ## Test Report: Layout State Caching
@@ -20,6 +59,45 @@
     3.  Switch back to DAG.
 *   **Result**: Node B is at the new dragged position in DAG mode.
 *   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.35 - Chinese Document
+
+## 测试报告：视口剔除放宽
+
+### 1. 扩展缩放阈值
+*   **操作**: 从 1.0x 缓慢缩小。
+*   **观察**: 
+    *   在 0.4x (之前的限制) 时，模拟**继续**运行。
+    *   继续缩小。
+    *   仅当比例降至 0.1x 以下时，模拟才停止。
+*   **状态**: **通过**
+
+### 2. 平滑平移缓冲
+*   **操作**: 放大 (比例 ~2.0)。快速向侧面平移。
+*   **观察**: 
+    *   进入视口的节点已经在移动或正确稳定（未冻结在“半空中”）。
+    *   没有节点进入屏幕后突然唤醒的“弹出”效应。
+    *   800px 缓冲区确保了无缝过渡。
+*   **状态**: **通过**
+
+---
+
+# 2025-12-26 v0.9.34 - Chinese Document
+
+## 测试报告：全局布局更新修复
+
+### 1. 带剔除的布局切换
+*   **前置条件**: 
+    1.  大幅放大 (比例 > 2)，使得超过 50% 的节点在屏幕外。
+    2.  验证屏幕外节点被剔除（通过控制台检查 `isCulled=true` 或观察模拟 CPU 下降）。
+*   **操作**: 切换布局模式（例如 Force -> DAG）。
+*   **结果**: 
+    *   所有节点（包括之前在屏幕外的）立即开始移动到新位置。
+    *   缩小视图显示图表已完全按照新布局（DAG 层）重新排列。
+    *   节点**没有**卡在以前的位置。
+*   **状态**: **通过**
 
 ---
 
