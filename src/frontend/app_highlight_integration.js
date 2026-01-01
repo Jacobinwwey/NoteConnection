@@ -100,9 +100,9 @@ node.on("mouseout", function(event, d) {
 // 点击事件（移动端和PC）
 node.on("click", (event, d) => {
     // If in Cluster Mode, ignore (handled by updateViewMode logic)
-    // 如果在聚类模式中则忽略
-    const viewMode = document.querySelector('input[name="viewMode"]:checked').value;
-    if (viewMode !== 'nodes') return;
+    // View Mode removed v0.9.45
+    // const viewMode = document.querySelector('input[name="viewMode"]:checked').value;
+    // if (viewMode !== 'nodes') return;
 
     if (clickTimer) {
         clearTimeout(clickTimer);

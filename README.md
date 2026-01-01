@@ -119,6 +119,11 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.45 - Canvas Interactivity & Cleanup (2025-12-26)
+- [x] **Canvas Interactive**: Canvas mode now supports Hover (Highlight), Single Click (Stats), and Double Click (Focus Mode) interactions, bringing it to feature parity with SVG.
+- [x] **Visual Fixes**: Fixed an issue where nodes in Canvas mode were rendered too large; they now respect "Size By" settings.
+- [x] **Cleanup**: Removed the deprecated "View Mode" (Clusters) feature.
+
 ### v0.9.44 - Independent Focus Mode Spacing (2025-12-26)
 - [x] **Smart Spacing**: "Layer-Space" and "Node-Space" settings are now saved independently for "Horizontal" and "Vertical" focus layouts.
 - [x] **Optimized Defaults**: Reduced default Horizontal Layer-Space by 50% and Vertical Node-Space by 75% for tighter, more readable layouts.
@@ -423,6 +428,11 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.45 - Canvas 交互与清理 (Canvas Interactivity & Cleanup) (2025-12-26)
+- [x] **Canvas 交互**: Canvas 模式现在支持悬停 (高亮)、单击 (统计) 和双击 (专注模式) 交互，与 SVG 功能对齐。
+- [x] **视觉修复**: 修复了 Canvas 模式下节点渲染过大的问题；现在它们遵循“大小依据”设置。
+- [x] **清理**: 移除了已弃用的“视图模式” (聚类) 功能。
 
 ### v0.9.44 - 独立专注模式间距 (Independent Focus Mode Spacing) (2025-12-26)
 - [x] **智能间距**: “层间距”和“节点间距”设置现在针对“水平”和“垂直”专注布局独立保存。

@@ -659,158 +659,8 @@ if (langSelect) {
 }
 
 
-// Aggregation Logic for Cluster View
-let clusterNodes = [];
-let clusterLinks = [];
-
-function buildClusterGraph() {
-    const clusters = new Map();
-    
-    // 1. Create Cluster Nodes
-    nodes.forEach(n => {
-        const cId = n.clusterId || 'unknown';
-        if (!clusters.has(cId)) {
-            clusters.set(cId, {
-                id: cId,
-                label: cId,
-                count: 0,
-                x: n.x, y: n.y, // Initial pos
-                clusterId: cId
-            });
-        }
-        clusters.get(cId).count++;
-    });
-    
-    clusterNodes = Array.from(clusters.values());
-    
-    // 2. Create Cluster Links
-    const linkMap = new Map();
-    links.forEach(l => {
-        const sourceCluster = l.source.clusterId || 'unknown';
-        const targetCluster = l.target.clusterId || 'unknown';
-        
-        if (sourceCluster !== targetCluster) {
-            const key = sourceCluster < targetCluster 
-                ? `${sourceCluster}|${targetCluster}`
-                : `${targetCluster}|${sourceCluster}`;
-            
-            if (!linkMap.has(key)) {
-                linkMap.set(key, { source: sourceCluster, target: targetCluster, weight: 0 });
-            }
-            linkMap.get(key).weight++;
-        }
-    });
-    
-    clusterLinks = Array.from(linkMap.values());
-}
-
-function updateViewMode() {
-    const mode = document.querySelector('input[name="viewMode"]:checked').value;
-    
-    // Stop current simulation
-    simulation.stop();
-    
-    if (mode === 'clusters') {
-        if (clusterNodes.length === 0) buildClusterGraph();
-        
-        // Update Data
-        link.data(clusterLinks, d => d.source + "-" + d.target).exit().remove();
-        const linkEnter = link.data(clusterLinks, d => d.source + "-" + d.target).enter().append("path")
-            .attr("class", "link")
-            .attr("stroke-width", d => Math.sqrt(d.weight)) // Thicker links for more connections
-            .attr("marker-end", "url(#arrow)");
-        // Merge
-        // Note: We need to re-select 'link' properly
-        // Simplify: Clear and rebuild for prototype
-        g.select(".links").selectAll("*").remove();
-        g.select(".nodes").selectAll("*").remove();
-        
-        const newLinks = g.select(".links").selectAll("path")
-            .data(clusterLinks)
-            .enter().append("path")
-            .attr("class", "link")
-            .attr("stroke-width", d => Math.min(5, Math.sqrt(d.weight || 1)))
-            .attr("marker-end", "url(#arrow)");
-            
-        const newNodes = g.select(".nodes").selectAll("g")
-            .data(clusterNodes)
-            .enter().append("g")
-            .attr("class", "node")
-            .call(d3.drag()
-                .on("start", dragstarted)
-                .on("drag", dragged)
-                .on("end", dragended));
-        
-        newNodes.append("circle")
-            .attr("r", d => Math.sqrt(d.count) * 3 + 5) // Size by count
-            .attr("fill", d => colorScaleCluster(d.id));
-            
-        newNodes.append("text")
-            .attr("dx", d => Math.sqrt(d.count) * 3 + 8)
-            .attr("dy", ".35em")
-            .text(d => `${d.label} (${d.count})`);
-            
-        // Restart Simulation
-        simulation.nodes(clusterNodes);
-        simulation.force("link").links(clusterLinks).distance(150);
-        simulation.force("charge").strength(-500); // Stronger repulsion for big bubbles
-        simulation.force("collide").radius(d => Math.sqrt(d.count) * 3 + 20);
-        
-        // Click to drill down
-        newNodes.on("click", (event, d) => {
-             // Drill down into cluster
-             localStorage.setItem('activeClusterFilter', d.id);
-             window.location.reload();
-        });
-
-    } else {
-        // Nodes Mode (Restore)
-        g.select(".links").selectAll("*").remove();
-        g.select(".nodes").selectAll("*").remove();
-        
-        // Rebuild standard graph
-        // This is a bit brute force but safe
-        const restoreLinks = g.select(".links").selectAll("path")
-            .data(links)
-            .enter().append("path")
-            .attr("class", "link")
-            .attr("marker-end", "url(#arrow)");
-            
-        const restoreNodes = g.select(".nodes").selectAll("g")
-            .data(nodes)
-            .enter().append("g")
-            .attr("class", "node")
-            .call(d3.drag()
-                .on("start", dragstarted)
-                .on("drag", dragged)
-                .on("end", dragended));
-                
-        // Add circles and texts back
-        // Note: The global 'circles' and 'texts' variables need re-binding or we just re-run initial setup
-        // For simplicity, we just reload the page? No, let's re-append.
-        
-        const c = restoreNodes.append("circle").attr("r", 5);
-        const t = restoreNodes.append("text").attr("dx", 8).attr("dy", ".35em").text(d => d.label);
-        
-        // Re-assign globals if needed by other functions (like updateColor)
-        // In this architecture, 'node', 'link', 'circles', 'texts' are const selections.
-        // We can't reassign const.
-        // We should have used let.
-        // FIX: We need to reload the page or restructure the app to support dynamic data swapping better.
-        // FOR NOW: Let's just reload the page if going back to Nodes, OR better:
-        // Use a wrapper function `render(dataNodes, dataLinks)`
-        
-        location.reload(); // Simplest robust way to restore full graph state for now
-        return;
-    }
-    
-    simulation.alpha(1).restart();
-}
-
-document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
-    radio.addEventListener('change', updateViewMode);
-});
-
+// v0.9.45: View Mode Removed
+// Cluster aggregation logic removed.
 
 // Simulation Controls
 const simSpeedSlider = document.getElementById('sim-speed-slider');
@@ -866,10 +716,6 @@ node.on("mouseover", function(event, d) {
 
 // Click & Double Click Logic
 node.on("click", (event, d) => {
-    // If in Cluster Mode, ignore (handled by updateViewMode logic)
-    const viewMode = document.querySelector('input[name="viewMode"]:checked').value;
-    if (viewMode !== 'nodes') return;
-
     if (clickTimer) {
         clearTimeout(clickTimer);
         clickTimer = null;
@@ -1382,7 +1228,27 @@ function renderCanvas(layoutMode) {
         ctx.globalAlpha = shouldDim ? 0.05 : 1;
 
         ctx.beginPath();
-        let r = isFocus ? 25 : (d.centrality ? Math.max(3, Math.sqrt(d.centrality) * 3) : 5);
+        
+        // v0.9.45: Fix Canvas Node Sizing to match SVG
+        let r = 5;
+        const sizeMode = document.querySelector('input[name="sizeMode"]:checked') ? document.querySelector('input[name="sizeMode"]:checked').value : 'uniform';
+        
+        if (isFocus) {
+            r = 25;
+        } else if (sizeMode === 'centrality') {
+            r = sizeScaleCentrality(d.centrality || 0);
+        } else if (sizeMode === 'degree') {
+            // Re-calculate or use scale. We need the scale defined earlier.
+            // sizeScaleDegree is local to updateSize(). We need to expose it or recreate it.
+            // Recreating is cheap.
+            const maxDeg = d3.max(nodes, n => (n.inDegree||0) + (n.outDegree||0)) || 1;
+            const s = d3.scaleSqrt().domain([0, maxDeg]).range([3, 12]);
+            const deg = (d.inDegree||0) + (d.outDegree||0); // Simplification: using Total degree for sizing usually
+            r = s(deg);
+        } else {
+            r = 5;
+        }
+
         if (isHighlightedNode) r += 2; // Slight enlarge on highlight / 高亮时略微放大
 
         ctx.arc(d.x, d.y, r, 0, 2 * Math.PI);
@@ -1453,6 +1319,86 @@ d3.select(canvas).call(d3.zoom()
         currentTransform = event.transform;
         ticked();
     }));
+
+// v0.9.45: Canvas Interactivity
+function findNodeAt(x, y) {
+    const tx = (x - currentTransform.x) / currentTransform.k;
+    const ty = (y - currentTransform.y) / currentTransform.k;
+    
+    // Search radius: constant 10px visual, converted to simulation space
+    const searchRadius = 15 / currentTransform.k; 
+    let closest = null;
+    let minDist = Infinity;
+
+    for (const n of nodes) {
+        if (!isNodeVisible(n)) continue;
+        
+        // Approximate hit test
+        const dist = (n.x - tx) ** 2 + (n.y - ty) ** 2;
+        // Use squared distance for performance
+        // Check against searchRadius^2 + nodeRadius^2 estimate
+        // Simple radius check:
+        const r = 10; // Avg node radius
+        const threshold = (r + searchRadius) ** 2;
+        
+        if (dist < threshold && dist < minDist) {
+            minDist = dist;
+            closest = n;
+        }
+    }
+    return closest;
+}
+
+canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const node = findNodeAt(e.clientX - rect.left, e.clientY - rect.top);
+    
+    if (node) {
+        canvas.style.cursor = 'pointer';
+        const state = highlightManager.getState();
+        // Only highlight if not frozen (or if we want to allow hover highlight in frozen state too?)
+        // SVG Logic: node.on("mouseover", ...) checks !state.isFrozen && !focusModeState.active
+        if (!state.isFrozen && !focusModeState.active) {
+             highlightManager.highlight(node, { event: e });
+        }
+    } else {
+        canvas.style.cursor = 'default';
+        const state = highlightManager.getState();
+        if (!state.isFrozen && !focusModeState.active) {
+             highlightManager.unhighlight();
+        }
+    }
+});
+
+canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const node = findNodeAt(e.clientX - rect.left, e.clientY - rect.top);
+    
+    if (node) {
+        if (clickTimer) {
+            clearTimeout(clickTimer);
+            clickTimer = null;
+            // Double Click
+            handleDoubleClick(e, node);
+        } else {
+            clickTimer = setTimeout(() => {
+                clickTimer = null;
+                // Single Click
+                handleSingleClick(e, node);
+            }, 250);
+        }
+    } else {
+        // Background Click
+        if (!focusNode && window.highlightManager) {
+             const state = window.highlightManager.getState();
+             if (state.isFrozen || state.currentNode) {
+                 window.highlightManager.unhighlight({ force: true });
+                 const popup = document.getElementById('node-stats-popup');
+                 if (popup) popup.style.display = 'none';
+             }
+        }
+    }
+});
 
 simulation.on("tick", ticked);
 
