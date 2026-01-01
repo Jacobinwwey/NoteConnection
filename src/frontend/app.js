@@ -1673,6 +1673,25 @@ document.getElementById('btn-open-content').addEventListener('click', () => {
     }
 });
 
+document.getElementById('btn-reset-focus-layout').addEventListener('click', () => {
+    const mode = focusLayoutSelect.value;
+    // Reset to defaults
+    if (mode === 'horizontal') {
+        focusSpacingSettings.horizontal.layer = 125;
+        focusSpacingSettings.horizontal.node = 80;
+    } else {
+        focusSpacingSettings.vertical.layer = 250;
+        focusSpacingSettings.vertical.node = 20;
+    }
+    
+    // Update UI
+    focusSpacingSlider.value = focusSpacingSettings[mode].layer;
+    focusHSpacingSlider.value = focusSpacingSettings[mode].node;
+    
+    // Refresh
+    if (focusNode) enterFocusMode(focusNode);
+});
+
 // Update Settings on Slider Change
 focusSpacingSlider.addEventListener('input', (e) => {
     const mode = focusLayoutSelect.value;
