@@ -119,6 +119,25 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.41 - Settings Modal Simulation Freeze (2025-12-26)
+- [x] **Resource Saving**: The simulation now automatically pauses when the "Visualization Settings" modal is opened, reducing CPU usage during configuration. It resumes upon closing unless "Freeze Layout" is globally enabled.
+
+### v0.9.40 - Freeze Layout Priority Fix (Settings Modal) (2025-12-26)
+- [x] **Settings Isolation**: Adjusting parameters in the "Visualization Settings" modal (e.g., Repulsion, Opacity) no longer triggers a simulation restart if the layout is frozen. Visual changes apply immediately, while physics updates await unfreezing.
+
+### v0.9.39 - Layout Switch Relaxation & Freeze Logic (2025-12-26)
+- [x] **Consistent Transition**: Switching layouts now triggers the same "Rapid Relaxation" (0.2 damping for 2s) as the initial load, ensuring nodes arrange themselves quickly.
+- [x] **Smart Freeze**: If "Freeze Layout" is active during a switch, the simulation runs for the 2-second relaxation period to establish the new structure before automatically freezing.
+
+### v0.9.38 - Quick Start Guide HTML Rendering Fix (2025-12-26)
+- [x] **Rich Text Support**: Fixed an issue where HTML tags (e.g., bold text, line breaks) in the localized UI were displayed as raw text. The system now correctly renders HTML formatting in translations.
+
+### v0.9.37 - Rapid Relaxation Strategy (2025-12-26)
+- [x] **Smart Damping**: The simulation now starts with low friction (0.2) for 2 seconds to allow rapid untangling of nodes ("relaxation"), then automatically increases to high friction (0.95) for stability.
+
+### v0.9.36 - Freeze Layout Priority Fix (2025-12-26)
+- [x] **Strict Freeze**: Changing "Degree Basis" or "Size By" settings no longer wakes up the simulation if "Freeze Layout" is active. Visuals update (node sizes change) while positions remain strictly locked.
+
 ### v0.9.35 - Viewport Culling Relaxation (2025-12-26)
 - [x] **Smoother Culling**: Increased the off-screen "active" buffer to 800px (visual), preventing nodes near the edge from freezing abruptly during panning.
 - [x] **Extended Zoom**: Lowered the global simulation freeze threshold from 0.4x to 0.1x, allowing physics to continue running even when significantly zoomed out.
@@ -392,6 +411,25 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.41 - 设置模态框模拟冻结 (Settings Modal Simulation Freeze) (2025-12-26)
+- [x] **资源节省**: 打开“可视化设置”模态框时，模拟现在会自动暂停，从而减少配置期间的 CPU 使用率。关闭时会自动恢复，除非全局启用了“冻结布局”。
+
+### v0.9.40 - 冻结布局优先级修复 (设置模态框) (2025-12-26)
+- [x] **设置隔离**: 如果布局已冻结，在“可视化设置”模态框中调整参数（例如排斥力、透明度）不再触发模拟重启。视觉更改立即生效，而物理更新等待解冻。
+
+### v0.9.39 - 布局切换松弛与冻结逻辑 (Layout Switch Relaxation & Freeze Logic) (2025-12-26)
+- [x] **一致过渡**: 切换布局现在会触发与初始加载相同的“快速松弛”（0.2 阻尼持续 2 秒），确保节点快速排列。
+- [x] **智能冻结**: 如果在切换期间激活了“冻结布局”，模拟将运行 2 秒的松弛期以建立新结构，然后自动冻结。
+
+### v0.9.38 - 快速开始指南 HTML 渲染修复 (Quick Start Guide HTML Rendering Fix) (2025-12-26)
+- [x] **富文本支持**: 修复了本地化 UI 中的 HTML 标签（例如粗体文本、换行符）显示为原始文本的问题。系统现在可以正确渲染翻译中的 HTML 格式。
+
+### v0.9.37 - 快速松弛策略 (Rapid Relaxation Strategy) (2025-12-26)
+- [x] **智能阻尼**: 模拟现在以低摩擦 (0.2) 启动 2 秒，以允许节点快速解开（“松弛”），然后自动增加到高摩擦 (0.95) 以保持稳定。
+
+### v0.9.36 - 冻结布局优先级修复 (Freeze Layout Priority Fix) (2025-12-26)
+- [x] **严格冻结**: 如果“冻结布局”处于激活状态，更改“度数基准”或“大小依据”设置不再唤醒模拟。视觉效果更新（节点大小改变），而位置严格锁定。
 
 ### v0.9.35 - 视口剔除放宽 (Viewport Culling Relaxation) (2025-12-26)
 - [x] **平滑剔除**: 将屏幕外“活动”缓冲区增加到 800px (视觉)，防止边缘附近的节点在平移期间突然冻结。
