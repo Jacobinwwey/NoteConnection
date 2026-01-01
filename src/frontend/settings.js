@@ -5,7 +5,8 @@
 
 const defaultSettings = {
     physics: {
-        chargeStrength: -300,
+        repulsionForce: -550,
+        repulsionDAG: -850,
         linkDistance: 100,
         collisionRadius: 20
     },

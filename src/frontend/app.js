@@ -355,14 +355,14 @@ function updateLayout() {
         simulation.force("y", d3.forceY(d => (d.rank || 0) * layerHeight).strength(1));
         simulation.force("x", d3.forceX(width / 2).strength(0.05));
         simulation.force("link").distance(100).strength(0.3);
-        simulation.force("charge").strength(-300);
+        simulation.force("charge").strength(settingsManager.get('physics', 'repulsionDAG'));
     } else {
         // Force Layout Forces
         simulation.force("y", null);
         simulation.force("x", null);
         simulation.force("center", d3.forceCenter(width / 2, height / 2));
         simulation.force("link", d3.forceLink(links).id(d => d.id).distance(100));
-        simulation.force("charge").strength(-300);
+        simulation.force("charge").strength(settingsManager.get('physics', 'repulsionForce'));
     }
     
     // 2. Attempt to Restore State
@@ -2119,8 +2119,27 @@ function initSettingsUI() {
 
     // Load initial values
     const updateUIFromSettings = (settings) => {
-        inputs.charge.value = settings.physics.chargeStrength;
-        displays.charge.innerText = settings.physics.chargeStrength;
+        const mode = document.querySelector('input[name="layoutMode"]:checked') ? document.querySelector('input[name="layoutMode"]:checked').value : 'force';
+        const chargeVal = mode === 'dag' ? settings.physics.repulsionDAG : settings.physics.repulsionForce;
+        
+        // Update Label
+        const repLabel = document.querySelector('label[for="set-charge"]');
+        if (repLabel) {
+            repLabel.innerText = mode === 'dag' ? "Repulsion (DAG)" : "Repulsion (Force)";
+            // If localized
+            if (repLabel.hasAttribute('data-i18n')) {
+                 // We might need dynamic keys or just manual update. 
+                 // Simple manual update for now as 't' function handles static keys.
+                 // Let's stick to English/Simple text or update based on language.
+                 const lang = document.getElementById('set-language') ? document.getElementById('set-language').value : 'en';
+                 if (lang === 'zh') {
+                     repLabel.innerText = mode === 'dag' ? "排斥力 (DAG)" : "排斥力 (力导向)";
+                 }
+            }
+        }
+
+        inputs.charge.value = chargeVal;
+        displays.charge.innerText = chargeVal;
 
         inputs.distance.value = settings.physics.linkDistance;
         displays.distance.innerText = settings.physics.linkDistance;
@@ -2141,7 +2160,9 @@ function initSettingsUI() {
     // Event Listeners for Inputs
     inputs.charge.addEventListener('input', (e) => {
         const val = parseInt(e.target.value);
-        settingsManager.set('physics', 'chargeStrength', val);
+        const mode = document.querySelector('input[name="layoutMode"]:checked') ? document.querySelector('input[name="layoutMode"]:checked').value : 'force';
+        const key = mode === 'dag' ? 'repulsionDAG' : 'repulsionForce';
+        settingsManager.set('physics', key, val);
         displays.charge.innerText = val;
     });
 
@@ -2179,7 +2200,9 @@ function initSettingsUI() {
     };
 
     // Modal Actions
+    // v0.9.42: When opening settings, update UI to reflect current mode's values
     openBtn.addEventListener('click', () => {
+        updateUIFromSettings(settingsManager.settings);
         modal.style.display = 'flex';
         isSettingsModalOpen = true;
         simulation.stop(); // v0.9.41: Force freeze to save resources
@@ -2201,7 +2224,10 @@ function initSettingsUI() {
     settingsManager.subscribe((settings) => {
         // Apply Physics
         if (!focusNode) { // Only apply physics updates if NOT in Focus Mode (which locks positions)
-            simulation.force("charge").strength(settings.physics.chargeStrength);
+            const mode = document.querySelector('input[name="layoutMode"]:checked') ? document.querySelector('input[name="layoutMode"]:checked').value : 'force';
+            const chargeVal = mode === 'dag' ? settings.physics.repulsionDAG : settings.physics.repulsionForce;
+
+            simulation.force("charge").strength(chargeVal);
             simulation.force("link").distance(settings.physics.linkDistance);
             simulation.force("collide").radius(settings.physics.collisionRadius);
             
@@ -2225,7 +2251,9 @@ if (window.settingsManager) {
     initSettingsUI();
     // Apply initial settings immediately
     const s = settingsManager.settings;
-    simulation.force("charge").strength(s.physics.chargeStrength);
+    const mode = document.querySelector('input[name="layoutMode"]:checked') ? document.querySelector('input[name="layoutMode"]:checked').value : 'force';
+    const chargeVal = mode === 'dag' ? s.physics.repulsionDAG : s.physics.repulsionForce;
+    simulation.force("charge").strength(chargeVal);
     simulation.force("link").distance(s.physics.linkDistance);
     simulation.force("collide").radius(s.physics.collisionRadius);
     g.selectAll(".link").style("stroke-opacity", s.visuals.edgeOpacity);

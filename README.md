@@ -119,6 +119,14 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.43 - Context-Aware Settings UI (2025-12-26)
+- [x] **Dynamic Labels**: The "Repulsion Strength" label in the settings now dynamically changes between "Repulsion (Force)" and "Repulsion (DAG)" to clearly indicate which layout configuration is being modified.
+
+### v0.9.42 - Distinct Repulsion Settings (2025-12-26)
+- [x] **Mode-Specific Physics**: "Repulsion Strength" is now configured independently for "Force" and "DAG" modes.
+- [x] **Smart Defaults**: Set default repulsion to **-550** for Force layout (clusters) and **-850** for DAG layout (hierarchy) to optimize initial visual separation.
+- [x] **Context-Aware Settings**: The Settings Modal automatically shows the repulsion value for the current layout.
+
 ### v0.9.41 - Settings Modal Simulation Freeze (2025-12-26)
 - [x] **Resource Saving**: The simulation now automatically pauses when the "Visualization Settings" modal is opened, reducing CPU usage during configuration. It resumes upon closing unless "Freeze Layout" is globally enabled.
 
@@ -411,6 +419,14 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.43 - 上下文感知设置 UI (Context-Aware Settings UI) (2025-12-26)
+- [x] **动态标签**: 设置中的“排斥力强度”标签现在会在“排斥力 (力导向)”和“排斥力 (DAG)”之间动态变化，以清晰指示正在修改哪种布局配置。
+
+### v0.9.42 - 独立排斥力设置 (Distinct Repulsion Settings) (2025-12-26)
+- [x] **特定模式物理**: “排斥力强度”现在可以针对“力导向”和“DAG”模式独立配置。
+- [x] **智能默认值**: 将力导向布局（聚类）的默认排斥力设置为 **-550**，DAG 布局（层级）设置为 **-850**，以优化初始视觉分离。
+- [x] **上下文感知设置**: 设置模态框会自动显示当前布局的排斥力数值。
 
 ### v0.9.41 - 设置模态框模拟冻结 (Settings Modal Simulation Freeze) (2025-12-26)
 - [x] **资源节省**: 打开“可视化设置”模态框时，模拟现在会自动暂停，从而减少配置期间的 CPU 使用率。关闭时会自动恢复，除非全局启用了“冻结布局”。
