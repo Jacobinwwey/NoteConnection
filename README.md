@@ -119,6 +119,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.46 - Focus Mode UI Cleanup & Canvas Edge Fix (2025-12-26)
+- [x] **Immersive Focus**: The main control panel and source selection bar are now completely hidden during Focus Mode for a distraction-free experience.
+- [x] **Canvas Polish**: Removed edge rendering in Canvas Focus Mode to reduce visual noise.
+
 ### v0.9.45 - Canvas Interactivity & Cleanup (2025-12-26)
 - [x] **Canvas Interactive**: Canvas mode now supports Hover (Highlight), Single Click (Stats), and Double Click (Focus Mode) interactions, bringing it to feature parity with SVG.
 - [x] **Visual Fixes**: Fixed an issue where nodes in Canvas mode were rendered too large; they now respect "Size By" settings.
@@ -428,6 +432,10 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.46 - 专注模式 UI 清理与 Canvas 边修复 (Focus Mode UI Cleanup & Canvas Edge Fix) (2025-12-26)
+- [x] **沉浸式专注**: 专注模式期间，主控制面板和源选择栏现在完全隐藏，以提供无干扰的体验。
+- [x] **Canvas 打磨**: 移除了 Canvas 专注模式下的边渲染，以减少视觉噪音。
 
 ### v0.9.45 - Canvas 交互与清理 (Canvas Interactivity & Cleanup) (2025-12-26)
 - [x] **Canvas 交互**: Canvas 模式现在支持悬停 (高亮)、单击 (统计) 和双击 (专注模式) 交互，与 SVG 功能对齐。

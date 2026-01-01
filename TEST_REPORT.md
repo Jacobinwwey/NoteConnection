@@ -1,3 +1,29 @@
+# 2025-12-26 v0.9.46 - English Document
+
+## Test Report: Focus Mode UI & Visuals
+
+### 1. UI Hiding
+*   **Action**: Enter Focus Mode (Double Click).
+*   **Observation**: 
+    *   Top-left "Source Select" and "Load" button disappear.
+    *   Left-side "NoteConnection" control panel disappears.
+    *   Only the Focus Mode exit bar is visible at the bottom.
+*   **Action**: Exit Focus Mode.
+*   **Result**: 
+    *   All controls reappear.
+    *   (On Mobile): Verify source select does NOT appear if it wasn't visible before (respected via CSS).
+*   **Status**: **Pass**
+
+### 2. Canvas Edge Suppression
+*   **Pre-condition**: Switch to "Canvas" Renderer.
+*   **Action**: Enter Focus Mode.
+*   **Observation**: 
+    *   Nodes arrange in hierarchy.
+    *   **No lines (edges)** are visible connecting the nodes.
+*   **Status**: **Pass**
+
+---
+
 # 2025-12-26 v0.9.45 - English Document
 
 ## Test Report: Canvas Interactivity & Cleanup
@@ -284,6 +310,32 @@
     3.  Switch back to DAG.
 *   **Result**: Node B is at the new dragged position in DAG mode.
 *   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.46 - Chinese Document
+
+## 测试报告：专注模式 UI 与视觉
+
+### 1. UI 隐藏
+*   **操作**: 进入专注模式（双击）。
+*   **观察**: 
+    *   左上角“源选择”和“加载”按钮消失。
+    *   左侧“NoteConnection”控制面板消失。
+    *   仅底部可见专注模式退出栏。
+*   **操作**: 退出专注模式。
+*   **结果**: 
+    *   所有控件重新出现。
+    *   （移动端）：验证如果源选择之前不可见，则不会出现（尊重 CSS）。
+*   **状态**: **通过**
+
+### 2. Canvas 边抑制
+*   **前置条件**: 切换到 "Canvas" 渲染器。
+*   **操作**: 进入专注模式。
+*   **观察**: 
+    *   节点按层级排列。
+    *   **没有线条 (边)** 连接节点。
+*   **状态**: **通过**
 
 ---
 
