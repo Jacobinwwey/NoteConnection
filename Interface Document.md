@@ -192,12 +192,16 @@ Renders the JSON data into an interactive DAG.
             *   **Main Interface**: Stops simulation and **disables node dragging** to minimize memory/CPU usage and prevent accidental layout changes.
             *   **Focus Mode**: Does not affect Focus Mode; dragging and manual positioning remain enabled for context exploration.
             *   **Robustness (v0.9.29)**: Prevents simulation restart during layout events (e.g., resizing window, opening Analysis Panel), ensuring nodes remain strictly stationary.
-        *   **Viewport Culling (v0.9.31)**:
-            *   **Full View Freeze**: Automatically stops simulation when zoomed out (< 0.4x) to save resources.
-            *   **Off-screen Freezing**: When zoomed in, nodes outside the visible viewport are frozen (`fx`/`fy` locked), while visible nodes remain active. Reduced calculation load.
+        *   **Viewport Culling (v0.9.31 & v0.9.35)**:
+            *   **Full View Freeze**: Automatically stops simulation when zoomed out excessively (< 0.1x, previously 0.4x) to save resources.
+            *   **Off-screen Freezing**: When zoomed in, nodes outside the visible viewport are frozen (`fx`/`fy` locked).
+            *   **Buffer Zone**: Active area extends `800 / scale` pixels beyond the viewport edges to ensure smooth panning and continuity.
         *   **Layout State Caching (v0.9.33)**:
             *   **Persistence**: Caches node positions (`x, y, fx, fy`) for each layout mode ('Force', 'DAG').
             *   **Instant Switch**: Restores exact positions when switching back to a previously visited layout, bypassing recalculation and movement animation.
+        *   **Global Layout Transition (v0.9.34)**:
+            *   **Unfreeze Override**: When switching to a new layout (where no cache exists), the system explicitly clears all culling locks (`isCulled`, `fx`, `fy`) on all nodes.
+            *   **Goal**: Ensures that off-screen nodes, which were frozen by Viewport Culling, are released to participate in the new global layout arrangement.
     *   **Mobile Optimizations (v0.9.2)**:
         *   **Responsive Layout**: CSS Media Queries (`max-width: 768px`) adapt the UI.
             *   **Collapsed Controls**: Main panel becomes a toggleable icon.
@@ -712,12 +716,16 @@ Manages node highlighting interactions for both PC and mobile interfaces.
             *   **主界面**: 停止模拟并**禁用节点拖动**，以最小化内存/CPU 使用并防止意外的布局更改。
             *   **专注模式**: 不影响专注模式；拖动和手动定位仍然启用以进行上下文探索。
             *   **稳健性 (v0.9.29)**: 防止在布局事件（如调整窗口大小、打开分析面板）期间重启模拟，确保节点严格保持静止。
-        *   **视口剔除 (Viewport Culling - v0.9.31)**:
-            *   **全景冻结**: 当缩小到足以查看全景 (< 0.4x) 时自动停止模拟以节省资源。
-            *   **屏幕外冻结**: 放大时，可见视口外的节点被冻结（`fx`/`fy` 锁定），而可见节点保持活动状态。减少计算负载。
+        *   **视口剔除 (Viewport Culling - v0.9.31 & v0.9.35)**:
+            *   **全景冻结**: 当过度缩小 (< 0.1x，此前为 0.4x) 时自动停止模拟以节省资源。
+            *   **屏幕外冻结**: 放大时，可见视口外的节点被冻结（`fx`/`fy` 锁定）。
+            *   **缓冲区**: 活动区域在视口边缘之外扩展 `800 / scale` 像素，以确保平滑的平移和连续性。
         *   **布局状态缓存 (Layout State Caching - v0.9.33)**:
             *   **持久化**: 为每个布局模式（'Force', 'DAG'）缓存节点位置（`x, y, fx, fy`）。
             *   **即时切换**: 切换回先前访问的布局时恢复精确位置，绕过重新计算和移动动画。
+        *   **全局布局转换 (Global Layout Transition - v0.9.34)**:
+            *   **解冻覆盖**: 当切换到新布局（无缓存）时，系统显式清除所有节点上的所有剔除锁定（`isCulled`，`fx`，`fy`）。
+            *   **目标**: 确保被视口剔除冻结的屏幕外节点被释放，以参与新的全局布局排列。
     *   **移动端优化 (v0.9.2)**:
         *   **响应式布局**: CSS 媒体查询 (`max-width: 768px`) 适配 UI。
             *   **折叠控件**: 主面板变为可切换图标。

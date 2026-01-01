@@ -119,6 +119,14 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.35 - Viewport Culling Relaxation (2025-12-26)
+- [x] **Smoother Culling**: Increased the off-screen "active" buffer to 800px (visual), preventing nodes near the edge from freezing abruptly during panning.
+- [x] **Extended Zoom**: Lowered the global simulation freeze threshold from 0.4x to 0.1x, allowing physics to continue running even when significantly zoomed out.
+
+### v0.9.34 - Global Layout Update Fix (2025-12-26)
+- [x] **Layout Transition Logic**: Implemented a global unfreeze mechanism during layout switching.
+- [x] **Override Culling**: Switching layouts (e.g., Force to DAG) now forcefully clears viewport culling locks (`isCulled`, `fx`, `fy`), ensuring all nodes, including off-screen ones, correctly participate in the new layout arrangement.
+
 ### v0.9.33 - Layout State Caching (Instant Switch) (2025-12-26)
 - [x] **Template States**: Implemented independent state caching for "Force" and "DAG" layouts.
 - [x] **Instant Switch**: Switching layouts now saves the current state and restores the target state instantly without recalculation or visual movement, preserving the exact arrangement of each view.
@@ -384,6 +392,14 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.35 - 视口剔除放宽 (Viewport Culling Relaxation) (2025-12-26)
+- [x] **平滑剔除**: 将屏幕外“活动”缓冲区增加到 800px (视觉)，防止边缘附近的节点在平移期间突然冻结。
+- [x] **扩展缩放**: 将全局模拟冻结阈值从 0.4x 降低到 0.1x，允许物理模拟在大幅缩小时继续运行。
+
+### v0.9.34 - 全局布局更新修复 (Global Layout Update Fix) (2025-12-26)
+- [x] **布局转换逻辑**: 实现了布局切换期间的全局解冻机制。
+- [x] **覆盖剔除**: 切换布局（例如从 Force 到 DAG）现在会强制清除视口剔除锁定（`isCulled`，`fx`，`fy`），确保所有节点（包括屏幕外的节点）都能正确参与新的布局排列。
 
 ### v0.9.33 - 布局状态缓存 (即时切换) (2025-12-26)
 - [x] **模板状态**: 为“Force”和“DAG”布局实现了独立的状态缓存。
