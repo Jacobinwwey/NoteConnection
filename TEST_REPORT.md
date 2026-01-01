@@ -1,3 +1,38 @@
+# 2025-12-26 v0.9.43 - English Document
+
+## Test Report: Context-Aware Settings UI
+
+### 1. Label Switching
+*   **Action**: Select "Force" Layout. Open Settings.
+*   **Result**: Label shows "Repulsion (Force)".
+*   **Action**: Close Settings. Select "DAG" Layout. Open Settings.
+*   **Result**: Label shows "Repulsion (DAG)".
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.42 - English Document
+
+## Test Report: Distinct Repulsion Settings
+
+### 1. Default Values
+*   **Action**: Clear `localStorage` and reload. Check Settings in "Force" mode.
+*   **Result**: Repulsion shows -550.
+*   **Action**: Switch to "DAG" mode. Open Settings.
+*   **Result**: Repulsion shows -850.
+*   **Status**: **Pass**
+
+### 2. Independent Configuration
+*   **Action**: 
+    1.  In "Force" mode, set Repulsion to -200.
+    2.  Switch to "DAG" mode. Check Settings -> Should be -850 (default).
+    3.  Set DAG Repulsion to -900.
+    4.  Switch back to "Force". Check Settings -> Should be -200.
+*   **Result**: Values persist independently.
+*   **Status**: **Pass**
+
+---
+
 # 2025-12-26 v0.9.41 - English Document
 
 ## Test Report: Settings Modal Simulation Freeze
@@ -200,6 +235,41 @@
     3.  Switch back to DAG.
 *   **Result**: Node B is at the new dragged position in DAG mode.
 *   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.43 - Chinese Document
+
+## 测试报告：上下文感知设置 UI
+
+### 1. 标签切换
+*   **操作**: 选择“力导向”布局。打开设置。
+*   **结果**: 标签显示“排斥力 (力导向)”。
+*   **操作**: 关闭设置。选择“DAG”布局。打开设置。
+*   **结果**: 标签显示“排斥力 (DAG)”。
+*   **状态**: **通过**
+
+---
+
+# 2025-12-26 v0.9.42 - Chinese Document
+
+## 测试报告：独立排斥力设置
+
+### 1. 默认值
+*   **操作**: 清除 `localStorage` 并重新加载。在“力导向”模式下检查设置。
+*   **结果**: 排斥力显示 -550。
+*   **操作**: 切换到“DAG”模式。打开设置。
+*   **结果**: 排斥力显示 -850。
+*   **状态**: **通过**
+
+### 2. 独立配置
+*   **操作**: 
+    1.  在“力导向”模式下，将排斥力设置为 -200。
+    2.  切换到“DAG”模式。检查设置 -> 应为 -850 (默认)。
+    3.  将 DAG 排斥力设置为 -900。
+    4.  切换回“力导向”。检查设置 -> 应为 -200。
+*   **结果**: 数值独立持久化。
+*   **状态**: **通过**
 
 ---
 

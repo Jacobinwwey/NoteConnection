@@ -6,6 +6,27 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2025-12-26 v0.9.43 - Context-Aware Settings UI
+
+**Goal**: Improve user clarity by dynamically updating the labels in the Settings Modal to reflect the currently active layout mode.
+
+- [x] **UI Enhancement**
+    - [x] **Label Switching**: The label for the repulsion slider now updates to "Repulsion (Force)" or "Repulsion (DAG)" based on the active layout when the settings modal is opened.
+    - [x] **Localization**: Supports dynamic label switching for both English and Chinese locales.
+
+---
+
+# 2025-12-26 v0.9.42 - Distinct Repulsion Settings
+
+**Goal**: Allow users to configure distinct "Repulsion Strength" values for "Force" and "DAG" layout modes, with layout-specific defaults.
+
+- [x] **Settings Logic**
+    - [x] **Data Structure**: Updated `defaultSettings` in `settings.js` to store separate keys: `repulsionForce` (Default: -550) and `repulsionDAG` (Default: -850).
+    - [x] **Context-Aware UI**: The "Visualization Settings" modal now automatically displays and updates the repulsion value corresponding to the currently active layout mode.
+    - [x] **Dynamic Application**: Switching layouts (`updateLayout`) or changing settings (`settingsManager.subscribe`) dynamically applies the correct force strength.
+
+---
+
 # 2025-12-26 v0.9.41 - Settings Modal Simulation Freeze
 
 **Goal**: Automatically freeze the simulation when the "Visualization Settings" modal is opened to conserve memory/CPU and prevent background activity during configuration.

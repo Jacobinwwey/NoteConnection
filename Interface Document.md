@@ -176,7 +176,10 @@ Renders the JSON data into an interactive DAG.
         *   **Interface**: `SettingsManager` (Frontend)
         *   **Persistence**: `localStorage('nc_settings')`
         *   **Configurable**:
-            *   **Physics**: Repulsion, Link Distance, Collision Radius.
+            *   **Physics**: 
+                *   **Repulsion**: Split into `repulsionForce` (Default: -550) and `repulsionDAG` (Default: -850).
+                *   **UI Context**: The settings modal dynamically updates the input label to "Repulsion (Force)" or "Repulsion (DAG)" to clearly indicate which mode is being configured.
+                *   **Others**: Link Distance, Collision Radius.
             *   **Visuals**: Edge Opacity.
     *   **Rendering Modes (v0.8.7)**:
         *   **SVG**: Default D3 implementation for interactivity and styling.
@@ -707,7 +710,10 @@ Manages node highlighting interactions for both PC and mobile interfaces.
         *   **接口**: `SettingsManager` (前端)
         *   **持久化**: `localStorage('nc_settings')`
         *   **可配置项**:
-            *   **物理**: 排斥力、连接距离、碰撞半径。
+            *   **物理**: 
+                *   **排斥力**: 拆分为 `repulsionForce` (默认: -550) 和 `repulsionDAG` (默认: -850)。
+                *   **UI 上下文**: 设置模态框会动态将输入标签更新为“排斥力 (力导向)”或“排斥力 (DAG)”，以清晰指示正在配置的模式。
+                *   **其他**: 连接距离、碰撞半径。
             *   **视觉**: 边透明度。
     *   **渲染模式 (v0.8.7)**:
         *   **SVG**: 默认 D3 实现，用于交互和样式。
