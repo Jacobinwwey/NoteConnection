@@ -1165,10 +1165,8 @@ function renderCanvas(layoutMode) {
         // Check Visibility / 检查可见性
         // 1. Focus Mode / 专注模式
         if (focusNode) {
-            if (d.source.isFocusVisible === false || d.target.isFocusVisible === false) return;
-            ctx.globalAlpha = 0.6;
-            ctx.strokeStyle = "#555";
-            ctx.lineWidth = 1;
+            // v0.9.46: Do not display any edges in Focus Mode under Canvas
+            return; 
         } 
         // 2. Highlight Mode (using highlightManager) / 高亮模式（使用highlightManager）
         else if (highlightConnections) {
@@ -1773,9 +1771,13 @@ function enterFocusMode(focusD) {
     
     // 1. UI Updates
     document.getElementById('focus-exit-btn').style.display = 'flex';
+    // v0.9.46: Hide main interface settings in Focus Mode
+    document.getElementById('source-control').style.display = 'none';
+    document.getElementById('controls').style.display = 'none';
+
     document.getElementById('focus-node-name').innerText = focusD.label;
-    document.getElementById('controls').style.opacity = '0.3'; // Dim controls
-    document.getElementById('controls').style.pointerEvents = 'none'; // Disable controls
+    // document.getElementById('controls').style.opacity = '0.3'; // Dim controls - Removed as we hide it now
+    // document.getElementById('controls').style.pointerEvents = 'none'; // Disable controls - Removed as we hide it now
     
     // 2. Identify Nodes
     const superiors = []; // Outgoing: Focus -> Target (Superior / Further Exploration)
@@ -2010,9 +2012,9 @@ function enterFocusMode(focusD) {
 
     document.getElementById('focus-exit-btn').style.display = 'none';
 
-    document.getElementById('controls').style.opacity = '1';
-
-    document.getElementById('controls').style.pointerEvents = 'all';
+    // v0.9.46: Restore main interface settings
+    document.getElementById('source-control').style.display = ''; 
+    document.getElementById('controls').style.display = '';
 
     link.style("display", "block");
 

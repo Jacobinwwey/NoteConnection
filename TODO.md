@@ -6,6 +6,19 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2025-12-26 v0.9.46 - Focus Mode UI Cleanup & Canvas Edge Fix
+
+**Goal**: Clean up the UI during Focus Mode to reduce clutter and fix visual rendering in Canvas mode.
+
+- [x] **UI Hiding**
+    - [x] **Main Controls**: "Select Knowledge Base", "Load", and the main "NoteConnection" dropdown are now completely hidden (`display: none`) when entering Focus Mode.
+    - [x] **Restoration**: Elements are restored to their default state (`display: ''`) upon exiting Focus Mode, respecting CSS rules (e.g., mobile visibility).
+
+- [x] **Canvas Visualization**
+    - [x] **Edge Hiding**: In Canvas Focus Mode, *all* edges are now hidden to provide a cleaner look, matching the "do not display any edges" requirement.
+
+---
+
 # 2025-12-26 v0.9.45 - Canvas Interactivity & cleanup
 
 **Goal**: Enable full interactivity (Hover, Click, Focus) in Canvas mode and remove the deprecated "View Mode" (Clusters) feature.

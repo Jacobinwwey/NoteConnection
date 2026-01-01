@@ -165,6 +165,8 @@ Renders the JSON data into an interactive DAG.
     *   **Tooltip**: Show node details on hover.
     *   **Focus Mode (v0.6.2)**:
         *   **Function**: `enterFocusMode(node)` / `exitFocusMode()`
+        *   **UI Behavior (v0.9.46)**: Main controls (Source Select, Settings) are hidden (`display: none`) to provide a focused view.
+        *   **Canvas Rendering (v0.9.46)**: Edges are suppressed in Canvas Focus Mode for clarity.
         *   **Description**: Isolates a node and its direct context.
         *   **Layout**:
             *   **Focus Node**: Center.
@@ -701,6 +703,8 @@ Manages node highlighting interactions for both PC and mobile interfaces.
     *   **Tooltip**: 悬停时显示节点详情。
     *   **专注模式 (Focus Mode - v0.6.2)**:
         *   **函数**: `enterFocusMode(node)` / `exitFocusMode()`
+        *   **UI 行为 (v0.9.46)**: 主控件（源选择、设置）被隐藏 (`display: none`) 以提供专注视图。
+        *   **Canvas 渲染 (v0.9.46)**: Canvas 专注模式下隐藏边以保持清晰。
         *   **描述**: 隔离一个节点及其直接上下文。
         *   **布局**:
             *   **焦点节点**: 居中。
