@@ -119,6 +119,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.44 - Independent Focus Mode Spacing (2025-12-26)
+- [x] **Smart Spacing**: "Layer-Space" and "Node-Space" settings are now saved independently for "Horizontal" and "Vertical" focus layouts.
+- [x] **Optimized Defaults**: Reduced default Horizontal Layer-Space by 50% and Vertical Node-Space by 75% for tighter, more readable layouts.
+
 ### v0.9.43 - Context-Aware Settings UI (2025-12-26)
 - [x] **Dynamic Labels**: The "Repulsion Strength" label in the settings now dynamically changes between "Repulsion (Force)" and "Repulsion (DAG)" to clearly indicate which layout configuration is being modified.
 
@@ -419,6 +423,10 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.44 - 独立专注模式间距 (Independent Focus Mode Spacing) (2025-12-26)
+- [x] **智能间距**: “层间距”和“节点间距”设置现在针对“水平”和“垂直”专注布局独立保存。
+- [x] **优化默认值**: 将默认水平层间距减少 50%，垂直节点间距减少 75%，以获得更紧凑、更易读的布局。
 
 ### v0.9.43 - 上下文感知设置 UI (Context-Aware Settings UI) (2025-12-26)
 - [x] **动态标签**: 设置中的“排斥力强度”标签现在会在“排斥力 (力导向)”和“排斥力 (DAG)”之间动态变化，以清晰指示正在修改哪种布局配置。

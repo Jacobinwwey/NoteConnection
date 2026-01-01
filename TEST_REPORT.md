@@ -1,3 +1,25 @@
+# 2025-12-26 v0.9.44 - English Document
+
+## Test Report: Independent Focus Mode Spacing
+
+### 1. Default Values
+*   **Action**: Enter Focus Mode. Select "Horizontal" layout.
+*   **Result**: "Layer-Space" slider is at 125 (or approx 1/2 of max).
+*   **Action**: Select "Vertical" layout.
+*   **Result**: "Node-Space" slider is at 20 (or approx 1/4 of max). "Layer-Space" is at 250.
+*   **Status**: **Pass**
+
+### 2. Independent Persistence
+*   **Action**: 
+    1.  In "Horizontal" mode, set Layer-Space to 200.
+    2.  Switch to "Vertical". Slider updates to 250 (default).
+    3.  Set Vertical Layer-Space to 300.
+    4.  Switch back to "Horizontal". Slider reverts to 200.
+*   **Result**: Settings are preserved independently for each layout type.
+*   **Status**: **Pass**
+
+---
+
 # 2025-12-26 v0.9.43 - English Document
 
 ## Test Report: Context-Aware Settings UI
@@ -235,6 +257,28 @@
     3.  Switch back to DAG.
 *   **Result**: Node B is at the new dragged position in DAG mode.
 *   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.44 - Chinese Document
+
+## 测试报告：独立专注模式间距
+
+### 1. 默认值
+*   **操作**: 进入专注模式。选择“水平”布局。
+*   **结果**: “层间距”滑块位于 125（或最大值的约 1/2）。
+*   **操作**: 选择“垂直”布局。
+*   **结果**: “节点间距”滑块位于 20（或最大值的约 1/4）。“层间距”位于 250。
+*   **状态**: **通过**
+
+### 2. 独立持久化
+*   **操作**: 
+    1.  在“水平”模式下，将层间距设置为 200。
+    2.  切换到“垂直”。滑块更新为 250（默认）。
+    3.  将垂直层间距设置为 300。
+    4.  切换回“水平”。滑块恢复为 200。
+*   **结果**: 设置为每种布局类型独立保存。
+*   **状态**: **通过**
 
 ---
 
