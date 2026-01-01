@@ -97,7 +97,22 @@ const simulation = d3.forceSimulation(nodes)
     .force("charge", d3.forceManyBody().strength(-300))
     .force("center", d3.forceCenter(width / 2, height / 2))
     .force("collide", d3.forceCollide().radius(20)) // Avoid overlap
-    .velocityDecay(0.92); // Default Damping (v0.9.32: High friction for stability)
+    .velocityDecay(0.2); // v0.9.37: Initial low damping (0.2) for 2s to ensure relaxation
+
+// v0.9.37: Two-stage Damping Strategy
+setTimeout(() => {
+    // Only increase if user hasn't manually adjusted it (still at initial 0.2)
+    if (Math.abs(simulation.velocityDecay() - 0.2) < 0.001) {
+        simulation.velocityDecay(0.95);
+        // Sync UI
+        if (typeof simSpeedSlider !== 'undefined' && simSpeedSlider) {
+            simSpeedSlider.value = 0.95;
+            if (typeof simSpeedVal !== 'undefined' && simSpeedVal) {
+                simSpeedVal.innerText = "0.95";
+            }
+        }
+    }
+}, 2000);
 
 // Handle Resize
 const resizeObserver = new ResizeObserver(entries => {
@@ -283,7 +298,13 @@ function updateSize() {
         
         simulation.force("collide", d3.forceCollide().radius(8));
     }
-    simulation.alpha(0.3).restart();
+    
+    // v0.9.36: Check Freeze Layout State before restarting
+    // Requirement: "when I modified 'Degree Basis' or 'Size By', the node started to move again... node should not start to move"
+    const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
+    if (!isFrozen) {
+        simulation.alpha(0.3).restart();
+    }
 }
 
 // Layout State Caching (v0.9.33)
@@ -366,7 +387,31 @@ function updateLayout() {
             n.isCulled = false; // Reset culled flag so they are rendered
         });
 
+        // v0.9.39: Rapid Relaxation on Layout Switch
+        simulation.velocityDecay(0.2);
         simulation.alpha(1).restart();
+
+        setTimeout(() => {
+            // Check if user manually adjusted speed
+            if (Math.abs(simulation.velocityDecay() - 0.2) < 0.001) {
+                simulation.velocityDecay(0.95);
+                
+                // Sync UI
+                if (typeof simSpeedSlider !== 'undefined' && simSpeedSlider) {
+                    simSpeedSlider.value = 0.95;
+                    if (typeof simSpeedVal !== 'undefined' && simSpeedVal) {
+                        simSpeedVal.innerText = "0.95";
+                    }
+                }
+
+                // Check Freeze Layout State
+                // If frozen, stop now that relaxation is done
+                const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
+                if (isFrozen) {
+                    simulation.stop();
+                }
+            }
+        }, 2000);
     }
 }
 
@@ -588,7 +633,7 @@ window.updateLanguage = function(lang) {
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.dataset.i18n;
         if (translations[lang] && translations[lang][key]) {
-            el.innerText = translations[lang][key];
+            el.innerHTML = translations[lang][key];
         }
     });
     
@@ -2050,6 +2095,9 @@ function initSettingsUI() {
     const openBtn = document.getElementById('btn-open-settings');
     const closeBtns = document.querySelectorAll('.modal-close');
     const resetBtn = document.getElementById('btn-reset-settings');
+    
+    // v0.9.41: Track modal state to freeze simulation
+    let isSettingsModalOpen = false;
 
     // Controls
     const inputs = {
@@ -2119,13 +2167,29 @@ function initSettingsUI() {
         settingsManager.set('reading', 'mode', e.target.value);
     });
 
+    // Helper to close settings
+    const closeSettings = () => {
+        modal.style.display = 'none';
+        isSettingsModalOpen = false;
+        // Resume if not globally frozen
+        const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
+        if (!isFrozen) {
+            simulation.alpha(0.3).restart();
+        }
+    };
+
     // Modal Actions
-    openBtn.addEventListener('click', () => modal.style.display = 'flex');
-    closeBtns.forEach(btn => btn.addEventListener('click', () => modal.style.display = 'none'));
+    openBtn.addEventListener('click', () => {
+        modal.style.display = 'flex';
+        isSettingsModalOpen = true;
+        simulation.stop(); // v0.9.41: Force freeze to save resources
+    });
+    
+    closeBtns.forEach(btn => btn.addEventListener('click', closeSettings));
     
     // Close on click outside
     modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.style.display = 'none';
+        if (e.target === modal) closeSettings();
     });
 
     resetBtn.addEventListener('click', () => {
@@ -2140,7 +2204,15 @@ function initSettingsUI() {
             simulation.force("charge").strength(settings.physics.chargeStrength);
             simulation.force("link").distance(settings.physics.linkDistance);
             simulation.force("collide").radius(settings.physics.collisionRadius);
-            simulation.alpha(0.3).restart();
+            
+            // v0.9.40: Check Freeze Layout State before restarting
+            const globalFreeze = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
+            // v0.9.41: Also check isSettingsModalOpen
+            const isFrozen = globalFreeze || isSettingsModalOpen;
+            
+            if (!isFrozen) {
+                simulation.alpha(0.3).restart();
+            }
         }
 
         // Apply Visuals

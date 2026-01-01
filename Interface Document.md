@@ -187,11 +187,14 @@ Renders the JSON data into an interactive DAG.
         *   **Horizontal Spacing**: User adjustable `hSpacing` via UI slider (20px - 300px).
     *   **Focus Mode Enhancements (v0.8.9)**:
         *   **Position Lock**: Nodes in Focus Mode retain their position after dragging (Freeze on Select) to prevent layout drift.
-    *   **Simulation Controls (v0.9.0, v0.9.25 & v0.9.29)**:
-        *   **Freeze Layout**: Checkbox to completely stop the physics simulation.
-            *   **Main Interface**: Stops simulation and **disables node dragging** to minimize memory/CPU usage and prevent accidental layout changes.
+                    *   **Simulation Controls (v0.9.0, v0.9.25, v0.9.29 & v0.9.37)**:
+                        *   **Rapid Relaxation (v0.9.37)**: Upon initialization, `velocityDecay` is set to **0.2** for 2 seconds to facilitate rapid layout expansion. It then automatically transitions to **0.95** for stability.
+                        *   **Freeze Layout**: Checkbox to completely stop the physics simulation.            *   **Main Interface**: Stops simulation and **disables node dragging** to minimize memory/CPU usage and prevent accidental layout changes.
             *   **Focus Mode**: Does not affect Focus Mode; dragging and manual positioning remain enabled for context exploration.
             *   **Robustness (v0.9.29)**: Prevents simulation restart during layout events (e.g., resizing window, opening Analysis Panel), ensuring nodes remain strictly stationary.
+            *   **Visual Settings Priority (v0.9.36)**: Changing visual parameters (Degree Basis, Size By) updates the node appearance (radius, color) but does **not** restart the simulation if Freeze Layout is enabled.
+            *   **Modal Settings Priority (v0.9.40)**: Changing physics or visual parameters within the "Visualization Settings" modal (Repulsion, Opacity, etc.) updates the underlying force configuration and visual styles immediately, but does **not** restart the simulation if Freeze Layout is enabled.
+            *   **Settings Modal Freeze (v0.9.41)**: Opening the Settings Modal automatically forces a temporary simulation freeze (`simulation.stop()`) to conserve resources. The simulation resumes upon closing only if it wasn't globally frozen.
         *   **Viewport Culling (v0.9.31 & v0.9.35)**:
             *   **Full View Freeze**: Automatically stops simulation when zoomed out excessively (< 0.1x, previously 0.4x) to save resources.
             *   **Off-screen Freezing**: When zoomed in, nodes outside the visible viewport are frozen (`fx`/`fy` locked).
@@ -199,9 +202,11 @@ Renders the JSON data into an interactive DAG.
         *   **Layout State Caching (v0.9.33)**:
             *   **Persistence**: Caches node positions (`x, y, fx, fy`) for each layout mode ('Force', 'DAG').
             *   **Instant Switch**: Restores exact positions when switching back to a previously visited layout, bypassing recalculation and movement animation.
-        *   **Global Layout Transition (v0.9.34)**:
+        *   **Global Layout Transition (v0.9.34 & v0.9.39)**:
             *   **Unfreeze Override**: When switching to a new layout (where no cache exists), the system explicitly clears all culling locks (`isCulled`, `fx`, `fy`) on all nodes.
-            *   **Goal**: Ensures that off-screen nodes, which were frozen by Viewport Culling, are released to participate in the new global layout arrangement.
+            *   **Rapid Relaxation (v0.9.39)**: The new layout simulation starts with **0.2** damping for 2 seconds (matching initial load) before stabilizing at **0.95**.
+            *   **Delayed Freeze**: If "Freeze Layout" is checked, the simulation will run for the 2-second relaxation phase to form the layout and then automatically stop.
+            *   **Goal**: Ensures that off-screen nodes are released and the new structure forms quickly and correctly before stabilizing or freezing.
     *   **Mobile Optimizations (v0.9.2)**:
         *   **Responsive Layout**: CSS Media Queries (`max-width: 768px`) adapt the UI.
             *   **Collapsed Controls**: Main panel becomes a toggleable icon.
@@ -319,7 +324,9 @@ Renders the JSON data into an interactive DAG.
         *   **Node Size**: Defaults to 'Degree'.
     *   **Degree Analysis (v0.1.2)**:
         *   **In-degree**: Show incoming degree count.
-    *   **Localization (v0.1.9)**: Supports English ('en') and Chinese ('zh').
+    *   **Localization (v0.9.38)**:
+        *   **Support**: English ('en') and Chinese ('zh').
+        *   **Rendering**: Supports HTML tags (e.g., `<br>`, `<strong>`) within translation strings via `.innerHTML` injection.
 
 ### 3. Inference Engines (v0.6.5)
 
@@ -711,11 +718,14 @@ Manages node highlighting interactions for both PC and mobile interfaces.
         *   **水平间距**: 用户可通过 UI 滑块调整 `hSpacing` (20px - 300px)。
     *   **专注模式增强 (v0.8.9)**:
         *   **位置锁定**: 专注模式下的节点在拖动后保留其位置（选中冻结），以防止布局漂移。
-    *   **模拟控制 (v0.9.0, v0.9.25 & v0.9.29)**:
-        *   **冻结布局**: 用于完全停止物理模拟的复选框。
-            *   **主界面**: 停止模拟并**禁用节点拖动**，以最小化内存/CPU 使用并防止意外的布局更改。
+                    *   **模拟控制 (v0.9.0, v0.9.25, v0.9.29 & v0.9.37)**:
+                        *   **快速松弛 (Rapid Relaxation - v0.9.37)**: 初始化时，`velocityDecay` 设置为 **0.2** 并持续 2 秒，以促进布局快速展开。随后自动过渡到 **0.95** 以保持稳定。
+                        *   **冻结布局**: 用于完全停止物理模拟的复选框。            *   **主界面**: 停止模拟并**禁用节点拖动**，以最小化内存/CPU 使用并防止意外的布局更改。
             *   **专注模式**: 不影响专注模式；拖动和手动定位仍然启用以进行上下文探索。
             *   **稳健性 (v0.9.29)**: 防止在布局事件（如调整窗口大小、打开分析面板）期间重启模拟，确保节点严格保持静止。
+            *   **视觉设置优先级 (v0.9.36)**: 如果启用了冻结布局，更改视觉参数（度数基准、大小依据）会更新节点外观（半径、颜色），但**不**会重启模拟。
+            *   **模态框设置优先级 (v0.9.40)**: 在“可视化设置”模态框中更改物理或视觉参数（排斥力、透明度等）会立即更新底层力配置和视觉样式，但如果启用了冻结布局，则**不**会重启模拟。
+            *   **设置模态框冻结 (v0.9.41)**: 打开设置模态框会自动强制进行临时模拟冻结 (`simulation.stop()`) 以节省资源。仅当模拟未被全局冻结时，关闭时才会恢复。
         *   **视口剔除 (Viewport Culling - v0.9.31 & v0.9.35)**:
             *   **全景冻结**: 当过度缩小 (< 0.1x，此前为 0.4x) 时自动停止模拟以节省资源。
             *   **屏幕外冻结**: 放大时，可见视口外的节点被冻结（`fx`/`fy` 锁定）。
@@ -723,9 +733,11 @@ Manages node highlighting interactions for both PC and mobile interfaces.
         *   **布局状态缓存 (Layout State Caching - v0.9.33)**:
             *   **持久化**: 为每个布局模式（'Force', 'DAG'）缓存节点位置（`x, y, fx, fy`）。
             *   **即时切换**: 切换回先前访问的布局时恢复精确位置，绕过重新计算和移动动画。
-        *   **全局布局转换 (Global Layout Transition - v0.9.34)**:
+        *   **全局布局转换 (Global Layout Transition - v0.9.34 & v0.9.39)**:
             *   **解冻覆盖**: 当切换到新布局（无缓存）时，系统显式清除所有节点上的所有剔除锁定（`isCulled`，`fx`，`fy`）。
-            *   **目标**: 确保被视口剔除冻结的屏幕外节点被释放，以参与新的全局布局排列。
+            *   **快速松弛 (Rapid Relaxation - v0.9.39)**: 新的布局模拟以 **0.2** 的阻尼开始并持续 2 秒（与初始加载匹配），然后稳定在 **0.95**。
+            *   **延迟冻结**: 如果选中了“冻结布局”，模拟将运行 2 秒的松弛阶段以形成布局，然后自动停止。
+            *   **目标**: 确保释放屏幕外节点，并在稳定或冻结之前快速正确地形成新结构。
     *   **移动端优化 (v0.9.2)**:
         *   **响应式布局**: CSS 媒体查询 (`max-width: 768px`) 适配 UI。
             *   **折叠控件**: 主面板变为可切换图标。
@@ -823,7 +835,9 @@ Manages node highlighting interactions for both PC and mobile interfaces.
         *   **In-degree**: 显示入度（作为先决条件被引用的次数）。
         *   **Out-degree**: 显示出度（引用的先决条件数量）。
         *   **Visual Filters**: 支持单独查看入度或出度连接。
-    *   **本地化 (v0.1.9)**: 支持英文 ('en') 和中文 ('zh')。
+    *   **本地化 (v0.9.38)**:
+        *   **支持**: 英文 ('en') 和中文 ('zh')。
+        *   **渲染**: 支持翻译字符串中的 HTML 标签（例如 `<br>`, `<strong>`），通过 `.innerHTML` 注入。
 
 ---
 

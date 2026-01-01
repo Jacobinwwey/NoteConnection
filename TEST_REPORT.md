@@ -1,3 +1,144 @@
+# 2025-12-26 v0.9.41 - English Document
+
+## Test Report: Settings Modal Simulation Freeze
+
+### 1. Auto-Freeze on Open
+*   **Action**: Ensure "Freeze Layout" is unchecked and simulation is running (nodes moving). Click "Settings" button.
+*   **Observation**: 
+    *   Settings modal opens.
+    *   Background nodes stop moving immediately (`simulation.stop()` triggered).
+    *   CPU usage drops.
+*   **Status**: **Pass**
+
+### 2. Resume on Close
+*   **Action**: Close the Settings modal (via X or background click).
+*   **Result**: 
+    *   Simulation restarts automatically.
+    *   Nodes resume movement.
+*   **Status**: **Pass**
+
+### 3. Interaction with Global Freeze
+*   **Pre-condition**: Check "Freeze Layout". Open Settings.
+*   **Action**: Close Settings.
+*   **Result**: 
+    *   Simulation remains stopped (respects global freeze).
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.40 - English Document
+
+## Test Report: Freeze Layout Priority (Settings Modal)
+
+### 1. Settings Change with Freeze
+*   **Pre-condition**: Enable "Freeze Layout". Ensure nodes are stationary. Open "Settings" modal.
+*   **Action**: Change "Repulsion" slider value significantly.
+*   **Observation**: 
+    *   Nodes do **NOT** move or jitter.
+    *   Simulation remains stopped.
+*   **Action**: Change "Edge Opacity" slider.
+*   **Observation**: 
+    *   Edges fade in/out immediately (Visual update works).
+    *   Nodes remain stationary.
+*   **Status**: **Pass**
+
+### 2. Unfreeze Physics Application
+*   **Action**: Close modal. Uncheck "Freeze Layout".
+*   **Result**: 
+    *   Simulation restarts.
+    *   Nodes move to new positions reflecting the updated Repulsion strength (e.g., spreading out more if repulsion increased).
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.39 - English Document
+
+## Test Report: Layout Switch Relaxation & Freeze
+
+### 1. Layout Switch Relaxation
+*   **Action**: Switch from "Force" to "DAG" layout (ensure DAG wasn't cached/visited recently).
+*   **Observation**: 
+    *   Nodes move rapidly (low friction) to form the DAG structure.
+    *   After ~2 seconds, movement slows down as friction increases to 0.95.
+*   **Status**: **Pass**
+
+### 2. Delayed Freeze on Switch
+*   **Pre-condition**: Enable "Freeze Layout".
+*   **Action**: Switch Layout Mode (e.g., Force -> DAG).
+*   **Result**: 
+    *   Simulation starts and runs visibly for 2 seconds (Relaxation Phase).
+    *   Nodes arrange into the new layout.
+    *   After 2 seconds, simulation stops completely (Nodes freeze).
+    *   "Freeze Layout" checkbox remains checked.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.38 - English Document
+
+## Test Report: Quick Start Guide HTML Rendering
+
+### 1. HTML Tag Rendering
+*   **Pre-condition**: Switch language to Chinese (where `<br>` tags are present).
+*   **Action**: Open "Quick Start Guide" (Help button).
+*   **Observation**: 
+    *   Line breaks `<br>` are rendered as actual new lines, not text.
+    *   Bold tags `<strong>` are rendered as bold text.
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.37 - English Document
+
+## Test Report: Rapid Relaxation Strategy
+
+### 1. Initialization Behavior
+*   **Action**: Reload the page.
+*   **Observation**: 
+    *   Nodes move rapidly initially (expanding outward).
+    *   Check console `simulation.velocityDecay()` within first 2s -> Should be roughly 0.2.
+*   **Status**: **Pass**
+
+### 2. Stabilization Transition
+*   **Action**: Wait 2 seconds after reload.
+*   **Observation**: 
+    *   Movement slows down noticeably as friction increases.
+    *   "Speed" Slider UI snaps to 0.95 position.
+    *   Check console `simulation.velocityDecay()` -> Should be 0.95.
+*   **Status**: **Pass**
+
+### 3. Manual Override
+*   **Action**: Reload page, immediately drag Speed Slider to 0.5 (within 1s).
+*   **Observation**: 
+    *   Wait 3 seconds.
+    *   Slider remains at 0.5.
+    *   Simulation friction stays at 0.5 (does not force 0.95).
+*   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.36 - English Document
+
+## Test Report: Freeze Layout Priority Fix
+
+### 1. Visual Settings Change with Freeze
+*   **Pre-condition**: Enable "Freeze Layout". Ensure nodes are stationary.
+*   **Action**: Change "Size By" from "Uniform" to "Degree".
+*   **Observation**: 
+    *   Node circles visibly change size (larger for high degree).
+    *   Nodes do **NOT** move or jitter.
+    *   Simulation remains stopped (0 CPU usage).
+*   **Status**: **Pass**
+
+### 2. Unfreeze Behavior
+*   **Action**: Uncheck "Freeze Layout".
+*   **Result**: 
+    *   Simulation restarts.
+    *   Nodes adjust position based on new sizes (collision radius updated in background).
+*   **Status**: **Pass**
+
+---
+
 # 2025-12-26 v0.9.35 - English Document
 
 ## Test Report: Viewport Culling Relaxation
@@ -59,6 +200,147 @@
     3.  Switch back to DAG.
 *   **Result**: Node B is at the new dragged position in DAG mode.
 *   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.41 - Chinese Document
+
+## 测试报告：设置模态框模拟冻结
+
+### 1. 打开时自动冻结
+*   **操作**: 确保“冻结布局”未选中且模拟正在运行（节点移动）。点击“设置”按钮。
+*   **观察**: 
+    *   设置模态框打开。
+    *   背景节点立即停止移动（触发了 `simulation.stop()`）。
+    *   CPU 使用率下降。
+*   **状态**: **通过**
+
+### 2. 关闭时恢复
+*   **操作**: 关闭设置模态框（通过 X 或点击背景）。
+*   **结果**: 
+    *   模拟自动重启。
+    *   节点恢复移动。
+*   **状态**: **通过**
+
+### 3. 与全局冻结的交互
+*   **前置条件**: 选中“冻结布局”。打开设置。
+*   **操作**: 关闭设置。
+*   **结果**: 
+    *   模拟保持停止状态（尊重全局冻结）。
+*   **状态**: **通过**
+
+---
+
+# 2025-12-26 v0.9.40 - Chinese Document
+
+## 测试报告：冻结布局优先级 (设置模态框)
+
+### 1. 冻结时更改设置
+*   **前置条件**: 启用“冻结布局”。确保节点静止。打开“设置”模态框。
+*   **操作**: 大幅更改“排斥力”滑块值。
+*   **观察**: 
+    *   节点**不**移动或抖动。
+    *   模拟保持停止。
+*   **操作**: 更改“边透明度”滑块。
+*   **观察**: 
+    *   边立即淡入/淡出（视觉更新有效）。
+    *   节点保持静止。
+*   **状态**: **通过**
+
+### 2. 解冻物理应用
+*   **操作**: 关闭模态框。取消选中“冻结布局”。
+*   **结果**: 
+    *   模拟重启。
+    *   节点移动到反映更新后排斥力强度的新位置（例如，如果排斥力增加，则扩散得更开）。
+*   **状态**: **通过**
+
+---
+
+# 2025-12-26 v0.9.39 - Chinese Document
+
+## 测试报告：布局切换松弛与冻结
+
+### 1. 布局切换松弛
+*   **操作**: 从“力导向”切换到“DAG”布局（确保 DAG 最近未缓存/访问）。
+*   **观察**: 
+    *   节点快速移动（低摩擦）以形成 DAG 结构。
+    *   约 2 秒后，随着摩擦力增加到 0.95，移动减慢。
+*   **状态**: **通过**
+
+### 2. 切换时的延迟冻结
+*   **前置条件**: 启用“冻结布局”。
+*   **操作**: 切换布局模式（例如 Force -> DAG）。
+*   **结果**: 
+    *   模拟开始并明显运行 2 秒（松弛阶段）。
+    *   节点排列成新的布局。
+    *   2 秒后，模拟完全停止（节点冻结）。
+    *   “冻结布局”复选框保持选中状态。
+*   **状态**: **通过**
+
+---
+
+# 2025-12-26 v0.9.38 - Chinese Document
+
+## 测试报告：快速开始指南 HTML 渲染
+
+### 1. HTML 标签渲染
+*   **前置条件**: 切换语言至中文（包含 `<br>` 标签）。
+*   **操作**: 打开“快速开始指南”（帮助按钮）。
+*   **观察**: 
+    *   换行符 `<br>` 被渲染为实际换行，而非文本。
+    *   粗体标签 `<strong>` 被渲染为粗体文本。
+*   **状态**: **通过**
+
+---
+
+# 2025-12-26 v0.9.37 - Chinese Document
+
+## 测试报告：快速松弛策略
+
+### 1. 初始化行为
+*   **操作**: 重新加载页面。
+*   **观察**: 
+    *   节点最初快速移动（向外扩展）。
+    *   在最初 2 秒内检查控制台 `simulation.velocityDecay()` -> 应约为 0.2。
+*   **状态**: **通过**
+
+### 2. 稳定过渡
+*   **操作**: 重新加载后等待 2 秒。
+*   **观察**: 
+    *   随着摩擦力增加，移动明显减慢。
+    *   “速度”滑块 UI 弹跳到 0.95 位置。
+    *   检查控制台 `simulation.velocityDecay()` -> 应为 0.95。
+*   **状态**: **通过**
+
+### 3. 手动覆盖
+*   **操作**: 重新加载页面，立即将速度滑块拖动到 0.5（在 1 秒内）。
+*   **观察**: 
+    *   等待 3 秒。
+    *   滑块保持在 0.5。
+    *   模拟摩擦力保持在 0.5（不强制为 0.95）。
+*   **状态**: **通过**
+
+---
+
+# 2025-12-26 v0.9.36 - Chinese Document
+
+## 测试报告：冻结布局优先级修复
+
+### 1. 冻结时更改视觉设置
+*   **前置条件**: 启用“冻结布局”。确保节点静止。
+*   **操作**: 将“大小依据”从“统一”更改为“度数”。
+*   **观察**: 
+    *   节点圆圈大小明显改变（高度数节点变大）。
+    *   节点**不**移动或抖动。
+    *   模拟保持停止 (0 CPU 使用率)。
+*   **状态**: **通过**
+
+### 2. 解冻行为
+*   **操作**: 取消选中“冻结布局”。
+*   **结果**: 
+    *   模拟重启。
+    *   节点根据新大小调整位置（碰撞半径已在后台更新）。
+*   **状态**: **通过**
 
 ---
 

@@ -6,6 +6,70 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2025-12-26 v0.9.41 - Settings Modal Simulation Freeze
+
+**Goal**: Automatically freeze the simulation when the "Visualization Settings" modal is opened to conserve memory/CPU and prevent background activity during configuration.
+
+- [x] **Modal State Logic**
+    - [x] **Auto-Freeze**: Opening the Settings Modal (`initSettingsUI`) now triggers `simulation.stop()` and sets an internal `isSettingsModalOpen` flag.
+    - [x] **Conditional Resume**: Closing the modal resumes the simulation *only* if the global "Freeze Layout" checkbox is not checked.
+    - [x] **Update Suppression**: Updates triggered by `settingsManager` while the modal is open (e.g. slider drags) apply values but do *not* restart the simulation loop.
+
+---
+
+# 2025-12-26 v0.9.40 - Freeze Layout Priority Fix (Settings Modal)
+
+**Goal**: Ensure that changing Physics or Visual settings in the "Visualization Settings" modal does not restart the simulation if "Freeze Layout" is currently enabled.
+
+- [x] **Settings Application Logic**
+    - [x] **Conditional Restart**: Modified `settingsManager.subscribe` callback in `app.js` to check the "Freeze Layout" checkbox state.
+    - [x] **Behavior**:
+        - **Frozen**: Forces (charge, distance, collision) are updated in the background, but `simulation.restart()` is skipped. Visual changes (opacity) apply immediately.
+        - **Unfrozen**: Forces are updated and simulation restarts (alpha 0.3).
+
+---
+
+# 2025-12-26 v0.9.39 - Layout Switch Relaxation & Freeze Logic
+
+**Goal**: Apply the "Rapid Relaxation" strategy (0.2 damping -> 0.95 damping) when switching layouts, ensuring consistent behavior with initial load. Additionally, ensure "Freeze Layout" is respected after the relaxation period.
+
+- [x] **Layout Transition Logic**
+    - [x] **Relaxation**: Switching to a new layout (Force/DAG) resets `velocityDecay` to **0.2** for 2 seconds to allow nodes to find their new positions quickly.
+    - [x] **Stabilization**: Automatically transitions to **0.95** damping after 2 seconds.
+    - [x] **Delayed Freeze**: If "Freeze Layout" is enabled during the switch, the simulation runs for the 2-second relaxation phase and then automatically **stops**, freezing the new layout in its stabilized state.
+
+---
+
+# 2025-12-26 v0.9.38 - Quick Start Guide HTML Rendering Fix
+
+**Goal**: Fix the issue where HTML tags (like `<br>` and `<strong>`) in the localized Quick Start Guide content were being displayed as raw text instead of being rendered.
+
+- [x] **Rendering Logic**
+    - [x] **HTML Support**: Updated `window.updateLanguage` in `app.js` to use `.innerHTML` instead of `.innerText` when injecting translated content. This ensures rich text elements in the guide are displayed correctly.
+
+---
+
+# 2025-12-26 v0.9.37 - Rapid Relaxation Strategy
+
+**Goal**: Implement a two-stage damping process to allow the graph to "unfold" quickly upon load before stabilizing.
+
+- [x] **Damping Logic**
+    - [x] **Initial Phase**: Set `velocityDecay` to **0.2** for the first 2 seconds. This low friction allows nodes to rapidly move away from the center and untangle.
+    - [x] **Stable Phase**: Automatically transition to **0.95** (high friction) after 2 seconds to stabilize the layout (Updated from 0.92).
+    - [x] **Interaction Safety**: Ensures the auto-transition does not override manual slider adjustments made during the initial phase.
+
+---
+
+# 2025-12-26 v0.9.36 - Freeze Layout Priority Fix (Visual Settings)
+
+**Goal**: Ensure that changing visual settings (Degree Basis, Size By) does not trigger a simulation restart if "Freeze Layout" is enabled, respecting the user's command to keep nodes stationary.
+
+- [x] **Visual Update Logic**
+    - [x] **Conditional Restart**: Modified `updateSize()` in `app.js` to check the "Freeze Layout" checkbox state.
+    - [x] **Behavior**: If frozen, visual attributes (radius, font size) update immediately, but `simulation.restart()` is skipped. The collision force is updated in the background, ready for when the user unfreezes.
+
+---
+
 # 2025-12-26 v0.9.35 - Viewport Culling Relaxation
 
 **Goal**: Relax the viewport culling restrictions to provide a smoother user experience, preventing premature freezing of nodes just outside the viewport and allowing for deeper zooms before global freeze.
