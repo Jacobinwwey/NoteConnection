@@ -6,6 +6,23 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2025-12-26 v0.9.45 - Canvas Interactivity & cleanup
+
+**Goal**: Enable full interactivity (Hover, Click, Focus) in Canvas mode and remove the deprecated "View Mode" (Clusters) feature.
+
+- [x] **Canvas Interactivity**
+    - [x] **Hit Testing**: Implemented `findNodeAt(x, y)` to detect nodes under the mouse cursor in Canvas mode, accounting for zoom/pan transforms.
+    - [x] **Event Listeners**: Added `mousemove` (highlighting) and `click` (inspection/focus) handlers to the canvas element.
+    - [x] **Consistency**: Canvas interaction now matches SVG behavior (Single click -> Stats, Double click -> Focus).
+
+- [x] **Visual Fixes**
+    - [x] **Node Sizing**: Updated `renderCanvas` to respect the "Size By" setting (Degree/Centrality/Uniform), fixing the issue where nodes were rendered too large.
+
+- [x] **Cleanup**
+    - [x] **View Mode Removal**: Removed "View Mode" (Nodes/Clusters) controls and associated logic from the codebase as it was deprecated.
+
+---
+
 # 2025-12-26 v0.9.44 - Independent Focus Mode Spacing
 
 **Goal**: Allow users to configure "Layer-Space" and "Node-Space" independently for "Horizontal" and "Vertical" layouts in Focus Mode, preventing settings from one layout affecting the other.

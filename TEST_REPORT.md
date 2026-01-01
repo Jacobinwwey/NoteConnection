@@ -1,3 +1,30 @@
+# 2025-12-26 v0.9.45 - English Document
+
+## Test Report: Canvas Interactivity & Cleanup
+
+### 1. Canvas Hover & Click
+*   **Pre-condition**: Switch to "Canvas" Renderer.
+*   **Action**: Hover over a node.
+*   **Result**: Node highlights, connections appear (Red/Blue), cursor changes to pointer.
+*   **Action**: Single Click a node.
+*   **Result**: Simulation freezes, Statistics Popup opens.
+*   **Action**: Double Click a node.
+*   **Result**: Enters Focus Mode.
+*   **Status**: **Pass**
+
+### 2. Node Sizing
+*   **Action**: Switch "Size By" to "Degree".
+*   **Result**: High-degree nodes appear larger in Canvas mode, matching SVG proportions.
+*   **Action**: Switch "Size By" to "Uniform".
+*   **Result**: All nodes appear small (r=5).
+*   **Status**: **Pass**
+
+### 3. Cleanup
+*   **Observation**: "View Mode" (Nodes/Clusters) radio buttons are gone from the UI.
+*   **Status**: **Pass**
+
+---
+
 # 2025-12-26 v0.9.44 - English Document
 
 ## Test Report: Independent Focus Mode Spacing
@@ -257,6 +284,33 @@
     3.  Switch back to DAG.
 *   **Result**: Node B is at the new dragged position in DAG mode.
 *   **Status**: **Pass**
+
+---
+
+# 2025-12-26 v0.9.45 - Chinese Document
+
+## 测试报告：Canvas 交互与清理
+
+### 1. Canvas 悬停与点击
+*   **前置条件**: 切换到 "Canvas" 渲染器。
+*   **操作**: 悬停在节点上。
+*   **结果**: 节点高亮，连接显示 (红/蓝)，光标变为指针。
+*   **操作**: 单击节点。
+*   **结果**: 模拟冻结，统计弹窗打开。
+*   **操作**: 双击节点。
+*   **结果**: 进入专注模式。
+*   **状态**: **通过**
+
+### 2. 节点大小
+*   **操作**: 将“大小依据”切换为“度数”。
+*   **结果**: 高度数节点在 Canvas 模式下显示得更大，与 SVG 比例匹配。
+*   **操作**: 将“大小依据”切换为“统一”。
+*   **结果**: 所有节点显示为小尺寸 (r=5)。
+*   **状态**: **通过**
+
+### 3. 清理
+*   **观察**: “视图模式” (节点/聚类) 单选按钮已从 UI 中消失。
+*   **状态**: **通过**
 
 ---
 

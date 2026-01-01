@@ -181,9 +181,11 @@ Renders the JSON data into an interactive DAG.
                 *   **UI Context**: The settings modal dynamically updates the input label to "Repulsion (Force)" or "Repulsion (DAG)" to clearly indicate which mode is being configured.
                 *   **Others**: Link Distance, Collision Radius.
             *   **Visuals**: Edge Opacity.
-    *   **Rendering Modes (v0.8.7)**:
+    *   **Rendering Modes (v0.8.7 & v0.9.45)**:
         *   **SVG**: Default D3 implementation for interactivity and styling.
-        *   **Canvas**: High-performance raster rendering for large datasets (>2000 nodes). Supports Zoom/Pan.
+        *   **Canvas**: High-performance raster rendering for large datasets.
+            *   **Interactivity (v0.9.45)**: Supports Hover (Highlight), Click (Stats), and Double Click (Focus) via manual hit-testing (`findNodeAt`).
+            *   **Visuals**: Matches SVG styling (Size By, Color By, Highlight Colors).
     *   **Focus Mode Enhancements (v0.8.7, v0.8.8 & v0.9.44)**:
         *   **Dynamic Spacing**: User adjustable `layerGap` via UI slider.
         *   **Horizontal Spacing**: User adjustable `hSpacing` via UI slider.
@@ -715,9 +717,11 @@ Manages node highlighting interactions for both PC and mobile interfaces.
                 *   **UI 上下文**: 设置模态框会动态将输入标签更新为“排斥力 (力导向)”或“排斥力 (DAG)”，以清晰指示正在配置的模式。
                 *   **其他**: 连接距离、碰撞半径。
             *   **视觉**: 边透明度。
-    *   **渲染模式 (v0.8.7)**:
+    *   **渲染模式 (v0.8.7 & v0.9.45)**:
         *   **SVG**: 默认 D3 实现，用于交互和样式。
-        *   **Canvas**: 高性能光栅渲染，适用于大数据集 (>2000 节点)。支持缩放/平移。
+        *   **Canvas**: 高性能光栅渲染，适用于大数据集。
+            *   **交互性 (v0.9.45)**: 通过手动命中测试 (`findNodeAt`) 支持悬停 (高亮)、点击 (统计) 和双击 (专注)。
+            *   **视觉**: 匹配 SVG 样式（大小依据、颜色依据、高亮颜色）。
     *   **专注模式增强 (v0.8.7, v0.8.8 & v0.9.44)**:
         *   **动态间距**: 用户可通过 UI 滑块调整 `layerGap`。
         *   **水平间距**: 用户可通过 UI 滑块调整 `hSpacing`。
