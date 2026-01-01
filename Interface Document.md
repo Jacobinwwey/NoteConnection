@@ -184,10 +184,10 @@ Renders the JSON data into an interactive DAG.
     *   **Rendering Modes (v0.8.7)**:
         *   **SVG**: Default D3 implementation for interactivity and styling.
         *   **Canvas**: High-performance raster rendering for large datasets (>2000 nodes). Supports Zoom/Pan.
-    *   **Focus Mode Enhancements (v0.8.7)**:
-        *   **Dynamic Spacing**: User adjustable `layerGap` via UI slider (50px - 500px).
-    *   **Focus Mode Enhancements (v0.8.8)**:
-        *   **Horizontal Spacing**: User adjustable `hSpacing` via UI slider (20px - 300px).
+    *   **Focus Mode Enhancements (v0.8.7, v0.8.8 & v0.9.44)**:
+        *   **Dynamic Spacing**: User adjustable `layerGap` via UI slider.
+        *   **Horizontal Spacing**: User adjustable `hSpacing` via UI slider.
+        *   **Independent Settings (v0.9.44)**: Spacing values are stored separately for "Horizontal" and "Vertical" layouts. Defaults are optimized for each (Horizontal: 125/80, Vertical: 250/20).
     *   **Focus Mode Enhancements (v0.8.9)**:
         *   **Position Lock**: Nodes in Focus Mode retain their position after dragging (Freeze on Select) to prevent layout drift.
                     *   **Simulation Controls (v0.9.0, v0.9.25, v0.9.29 & v0.9.37)**:
@@ -718,10 +718,10 @@ Manages node highlighting interactions for both PC and mobile interfaces.
     *   **渲染模式 (v0.8.7)**:
         *   **SVG**: 默认 D3 实现，用于交互和样式。
         *   **Canvas**: 高性能光栅渲染，适用于大数据集 (>2000 节点)。支持缩放/平移。
-    *   **专注模式增强 (v0.8.7)**:
-        *   **动态间距**: 用户可通过 UI 滑块调整 `layerGap` (50px - 500px)。
-    *   **专注模式增强 (v0.8.8)**:
-        *   **水平间距**: 用户可通过 UI 滑块调整 `hSpacing` (20px - 300px)。
+    *   **专注模式增强 (v0.8.7, v0.8.8 & v0.9.44)**:
+        *   **动态间距**: 用户可通过 UI 滑块调整 `layerGap`。
+        *   **水平间距**: 用户可通过 UI 滑块调整 `hSpacing`。
+        *   **独立设置 (v0.9.44)**: 间距值分别为“水平”和“垂直”布局独立存储。默认值针对每种布局进行了优化（水平：125/80，垂直：250/20）。
     *   **专注模式增强 (v0.8.9)**:
         *   **位置锁定**: 专注模式下的节点在拖动后保留其位置（选中冻结），以防止布局漂移。
                     *   **模拟控制 (v0.9.0, v0.9.25, v0.9.29 & v0.9.37)**:

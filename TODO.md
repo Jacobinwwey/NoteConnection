@@ -6,6 +6,20 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2025-12-26 v0.9.44 - Independent Focus Mode Spacing
+
+**Goal**: Allow users to configure "Layer-Space" and "Node-Space" independently for "Horizontal" and "Vertical" layouts in Focus Mode, preventing settings from one layout affecting the other.
+
+- [x] **Spacing Logic**
+    - [x] **State Management**: Created `focusSpacingSettings` to store separate `layer` and `node` values for `horizontal` and `vertical` modes.
+    - [x] **Defaults**:
+        - **Horizontal**: Layer-Space defaulted to **125** (was 250).
+        - **Vertical**: Node-Space defaulted to **20** (was 80).
+    - [x] **UI Sync**: Switching the Focus Layout dropdown now automatically updates the sliders to reflect the stored values for that specific mode.
+    - [x] **Persistence**: Adjusting sliders updates the setting for the *current* mode only.
+
+---
+
 # 2025-12-26 v0.9.43 - Context-Aware Settings UI
 
 **Goal**: Improve user clarity by dynamically updating the labels in the Settings Modal to reflect the currently active layout mode.

@@ -1712,20 +1712,44 @@ function dragended(event, d) {
 
 // Old click listener removed.
 // Focus Mode Logic
+// v0.9.44: Independent spacing settings for Horizontal/Vertical layouts
+const focusSpacingSettings = {
+    horizontal: { layer: 125, node: 80 }, // Layer 1/2 of original (250->125)
+    vertical: { layer: 250, node: 20 }    // Node 1/4 of original (80->20)
+};
+
+const focusSpacingSlider = document.getElementById('focus-spacing-slider');
+const focusHSpacingSlider = document.getElementById('focus-h-spacing-slider');
+const focusLayoutSelect = document.getElementById('focus-layout-select');
+
 document.getElementById('btn-exit-focus').addEventListener('click', exitFocusMode);
 document.getElementById('btn-open-content').addEventListener('click', () => {
     if (focusNode && window.reader) {
         window.reader.open(focusNode);
     }
 });
-document.getElementById('focus-spacing-slider').addEventListener('input', () => {
-    if (focusNode) enterFocusMode(focusNode); // Re-calculate layout
+
+// Update Settings on Slider Change
+focusSpacingSlider.addEventListener('input', (e) => {
+    const mode = focusLayoutSelect.value;
+    focusSpacingSettings[mode].layer = parseInt(e.target.value);
+    if (focusNode) enterFocusMode(focusNode);
 });
-document.getElementById('focus-h-spacing-slider').addEventListener('input', () => {
-    if (focusNode) enterFocusMode(focusNode); // Re-calculate layout
+
+focusHSpacingSlider.addEventListener('input', (e) => {
+    const mode = focusLayoutSelect.value;
+    focusSpacingSettings[mode].node = parseInt(e.target.value);
+    if (focusNode) enterFocusMode(focusNode);
 });
-document.getElementById('focus-layout-select').addEventListener('change', () => {
-    if (focusNode) enterFocusMode(focusNode); // Re-calculate layout
+
+// Sync Sliders on Layout Change
+focusLayoutSelect.addEventListener('change', () => {
+    const mode = focusLayoutSelect.value;
+    // Update UI controls to match stored settings
+    focusSpacingSlider.value = focusSpacingSettings[mode].layer;
+    focusHSpacingSlider.value = focusSpacingSettings[mode].node;
+    
+    if (focusNode) enterFocusMode(focusNode);
 });
       
       
@@ -1858,9 +1882,16 @@ function enterFocusMode(focusD) {
     );
 
     // Get settings
+    const layoutType = document.getElementById('focus-layout-select') ? document.getElementById('focus-layout-select').value : 'horizontal';
+
+    // v0.9.44: Sync sliders from stored settings for this mode
+    if (typeof focusSpacingSettings !== 'undefined' && focusSpacingSettings[layoutType]) {
+        document.getElementById('focus-spacing-slider').value = focusSpacingSettings[layoutType].layer;
+        document.getElementById('focus-h-spacing-slider').value = focusSpacingSettings[layoutType].node;
+    }
+
     const layerGap = parseInt(document.getElementById('focus-spacing-slider').value) || 250; 
     const hSpacing = parseInt(document.getElementById('focus-h-spacing-slider').value) || 80;
-    const layoutType = document.getElementById('focus-layout-select') ? document.getElementById('focus-layout-select').value : 'horizontal';
 
     // Set Focus Node Fixed Position
     focusD.fx = cx;
