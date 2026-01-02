@@ -183,6 +183,8 @@ Renders the JSON data into an interactive DAG.
                 *   **Repulsion**: Split into `repulsionForce` (Default: -550) and `repulsionDAG` (Default: -850).
                 *   **UI Context**: The settings modal dynamically updates the input label to "Repulsion (Force)" or "Repulsion (DAG)" to clearly indicate which mode is being configured.
                 *   **Others**: Link Distance, Collision Radius.
+            *   **Performance**:
+                *   **Max Workers**: Slider/Input to control concurrent worker threads (Default: 4).
             *   **Visuals**: Edge Opacity.
     *   **Rendering Modes (v0.8.7 & v0.9.45)**:
         *   **SVG**: Default D3 implementation for interactivity and styling.
@@ -399,7 +401,7 @@ Lists available knowledge base directories.
 
 #### `POST /api/build`
 Triggers a graph build for the specified target.
-*   **Body**: `{ "target": "testconcept" }` or `{ "target": "" }` (for all).
+*   **Body**: `{ "target": "testconcept", "maxWorkers": 12 }` or `{ "target": "" }` (for all).
 *   **Response**: `{ "success": true }` or `{ "success": false, "error": "..." }`
 
 ### 5. Mobile Build (v0.9.1)

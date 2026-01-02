@@ -35,10 +35,12 @@ document.addEventListener('DOMContentLoaded', () => {
         loadBtn.disabled = true;
         loadBtn.textContent = '...';
 
+        const maxWorkers = window.settingsManager ? window.settingsManager.get('performance', 'maxWorkers') : undefined;
+
         fetch('/api/build', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target: target })
+            body: JSON.stringify({ target: target, maxWorkers: maxWorkers })
         })
         .then(response => response.json())
         .then(data => {

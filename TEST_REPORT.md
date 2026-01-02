@@ -1,3 +1,59 @@
+# 2026-01-02 v0.9.49 - English Document
+
+## Test Report: UI Controls for Parallel Processing
+
+### 1. Settings UI
+*   **Action**: Open Settings Modal.
+*   **Observation**: 
+    *   New "Performance" group is visible.
+    *   "Max Workers" slider and input are present.
+    *   Default value is 4.
+*   **Status**: **Pass**
+
+### 2. Synchronization & Persistence
+*   **Action**: 
+    1.  Slide "Max Workers" to 8. Input updates to 8.
+    2.  Type 12 into Input. Slider updates to 12.
+    3.  Reload page. Open Settings.
+    4.  Value remains 12.
+*   **Status**: **Pass**
+
+### 3. API Integration
+*   **Action**: Open Network tab. Click "Load" on a folder.
+*   **Observation**: 
+    *   POST request to `/api/build` includes `maxWorkers: 12` in the payload.
+*   **Status**: **Pass**
+
+---
+
+# 2026-01-02 v0.9.49 - Chinese Document
+
+## 测试报告：并行处理 UI 控制
+
+### 1. 设置界面
+*   **操作**: 打开设置模态框。
+*   **观察**: 
+    *   可见新的“性能” (Performance) 组。
+    *   存在“最大 Worker” (Max Workers) 滑块和输入框。
+    *   默认值为 4。
+*   **状态**: **通过**
+
+### 2. 同步与持久化
+*   **操作**: 
+    1.  将“最大 Worker”滑块滑动到 8。输入框更新为 8。
+    2.  在输入框中输入 12。滑块更新为 12。
+    3.  重新加载页面。打开设置。
+    4.  值保持为 12。
+*   **状态**: **通过**
+
+### 3. API 集成
+*   **操作**: 打开网络 (Network) 标签页。点击文件夹上的“加载” (Load)。
+*   **观察**: 
+    *   发送到 `/api/build` 的 POST 请求在负载中包含 `maxWorkers: 12`。
+*   **状态**: **通过**
+
+---
+
 # 2026-01-02 v0.9.48 - English Document
 
 ## Test Report: Parallel Workers Configuration
