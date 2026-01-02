@@ -6,6 +6,18 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-02 v0.9.49 - Statistical Analysis Memory Optimization
+
+**Goal**: Fix "Heap out of memory" errors when processing large datasets (10k+ files) by optimizing the Co-occurrence Matrix calculation.
+
+- [x] **Algorithm Optimization**
+    - [x] **Sparse Matrix Calculation**: Refactored `calculateMatrixOptimized` to use a file-centric iteration approach ($O(Files \times TermsPerFile^2)$) instead of the dense term-pair iteration ($O(TotalTerms^2)$).
+    - [x] **Reduction of Complexity**: Reduced complexity from ~170 million iterations (for 13k nodes) to ~5 million iterations.
+    - [x] **Data Structure Efficiency**: Removed unnecessary intermediate object conversions (`Set` <-> `Array`) during worker result aggregation.
+    - [x] **Worker Result Merging**: Optimized `runParallelTermExtraction` to merge chunks iteratively instead of using `reduce` to prevent memory spikes.
+
+---
+
 # 2026-01-02 v0.9.48 - Parallel Processing Optimization
 
 **Goal**: Optimize graph building performance by allowing configurable worker thread limits, utilizing more CPU cores for large datasets.

@@ -18,28 +18,33 @@ export class StatisticalAnalyzer {
      */
     static async analyzeAsync(files: RawFile[], terms: string[]): Promise<Map<string, Map<string, CooccurrenceMetrics>>> {
         const termDocCounts = new Map<string, number>();
-        const fileHasTerm = new Map<string, Set<string>>(); // fileId -> Set<term>
+        // Initialize counts
         terms.forEach(term => termDocCounts.set(term, 0));
 
         // 1. Parallel Term Extraction
         // 1. 并行术语提取
         console.log(`[StatisticalAnalyzer] Starting parallel term extraction for ${files.length} files...`);
+        // Returns filename -> string[] (list of terms in that file)
         const fileTermsMap = await this.runParallelTermExtraction(files, terms);
 
-        // 2. Aggregate Results
-        // 2. 聚合结果
-        for (const [filename, foundTerms] of Object.entries(fileTermsMap)) {
-            const termSet = new Set(foundTerms);
-            fileHasTerm.set(filename, termSet);
-            
-            foundTerms.forEach(term => {
+        // 2. Aggregate Counts
+        // 2. 聚合计数
+        // We use the array directly to avoid Set overhead during matrix calc
+        for (const termsInFile of Object.values(fileTermsMap)) {
+            // Deduplicate terms per file for counting (document frequency)
+            // A term counts once per document even if it appears multiple times?
+            // Usually Co-occurrence is binary (present/absent) or weighted. 
+            // Current implementation implies binary presence for Jaccard.
+            const uniqueTerms = new Set(termsInFile);
+            uniqueTerms.forEach(term => {
                 termDocCounts.set(term, (termDocCounts.get(term) || 0) + 1);
             });
         }
 
-        // 3. Calculate Co-occurrences (Optimized with Inverted Index)
-        // 3. 计算共现 (使用倒排索引优化)
-        return this.calculateMatrixOptimized(terms, termDocCounts, fileHasTerm);
+        // 3. Calculate Co-occurrences (Optimized Sparse Approach)
+        // 3. 计算共现 (优化稀疏方法)
+        // Pass the raw map (filename -> terms[]) to avoid reconstructing structures
+        return this.calculateMatrixSparse(termDocCounts, fileTermsMap);
     }
 
     private static async runParallelTermExtraction(files: RawFile[], terms: string[]): Promise<Record<string, string[]>> {
@@ -77,65 +82,75 @@ export class StatisticalAnalyzer {
         }
 
         const results = await Promise.all(workerPromises);
-        // Merge results
-        return results.reduce((acc, curr) => ({ ...acc, ...curr }), {});
+        
+        // Merge results efficiently
+        const finalMap: Record<string, string[]> = {};
+        for (const chunkResult of results) {
+            Object.assign(finalMap, chunkResult);
+        }
+        return finalMap;
     }
 
-    private static calculateMatrixOptimized(
-        terms: string[], 
+    /**
+     * Calculates the co-occurrence matrix using a sparse, file-centric approach.
+     * 使用稀疏、以文件为中心的方法计算共现矩阵。
+     * O(Files * TermsPerFile^2) instead of O(TotalTerms^2).
+     */
+    private static calculateMatrixSparse(
         termDocCounts: Map<string, number>, 
-        fileHasTerm: Map<string, Set<string>>
+        fileTermsMap: Record<string, string[]>
     ): Map<string, Map<string, CooccurrenceMetrics>> {
         const matrix = new Map<string, Map<string, CooccurrenceMetrics>>();
         
-        // Build Inverted Index: Term -> Set<FileID>
-        const invertedIndex = new Map<string, Set<string>>();
-        terms.forEach(term => invertedIndex.set(term, new Set()));
+        // Temporary storage for intersection counts: Source -> Target -> Count
+        // 临时存储交集计数：源 -> 目标 -> 计数
+        const intersectionCounts = new Map<string, Map<string, number>>();
 
-        fileHasTerm.forEach((termSet, fileId) => {
-            termSet.forEach(term => {
-                invertedIndex.get(term)?.add(fileId);
-            });
-        });
+        // Iterate over files to find co-occurring pairs
+        // 遍历文件以查找共现对
+        for (const termsInFile of Object.values(fileTermsMap)) {
+            // Ensure unique terms per file to avoid self-loops or double counting within same file
+            const uniqueTerms = Array.from(new Set(termsInFile));
+            
+            for (let i = 0; i < uniqueTerms.length; i++) {
+                const source = uniqueTerms[i];
+                
+                // Initialize row if needed
+                if (!intersectionCounts.has(source)) {
+                    intersectionCounts.set(source, new Map());
+                }
+                const sourceRow = intersectionCounts.get(source)!;
 
-        // Calculate Matrix
-        terms.forEach(source => {
+                for (let j = 0; j < uniqueTerms.length; j++) {
+                    if (i === j) continue; // Skip self
+                    const target = uniqueTerms[j];
+
+                    // Increment intersection count
+                    sourceRow.set(target, (sourceRow.get(target) || 0) + 1);
+                }
+            }
+        }
+
+        // Compute final metrics based on intersection counts
+        // 基于交集计数计算最终指标
+        intersectionCounts.forEach((targets, source) => {
+            const sourceCount = termDocCounts.get(source) || 0;
+            if (sourceCount === 0) return;
+
             const row = new Map<string, CooccurrenceMetrics>();
             matrix.set(source, row);
-            
-            const sourceCount = termDocCounts.get(source) || 0;
-            const sourceFiles = invertedIndex.get(source);
 
-            if (sourceCount === 0 || !sourceFiles) return;
-
-            terms.forEach(target => {
-                if (source === target) return;
-
-                const targetFiles = invertedIndex.get(target);
-                if (!targetFiles) return;
-
-                // Intersection of two sets (Optimization: iterate smaller set)
-                let intersection = 0;
-                if (sourceFiles.size < targetFiles.size) {
-                    sourceFiles.forEach(fileId => {
-                        if (targetFiles.has(fileId)) intersection++;
-                    });
-                } else {
-                    targetFiles.forEach(fileId => {
-                        if (sourceFiles.has(fileId)) intersection++;
-                    });
-                }
-
-                if (intersection > 0) {
-                    const targetCount = termDocCounts.get(target) || 0;
-                    const union = sourceCount + targetCount - intersection;
-                    
-                    row.set(target, {
-                        count: intersection,
-                        jaccard: union === 0 ? 0 : intersection / union,
-                        conditionalProb: intersection / sourceCount
-                    });
-                }
+            targets.forEach((intersection, target) => {
+                const targetCount = termDocCounts.get(target) || 0;
+                
+                // Union = A + B - (A ∩ B)
+                const union = sourceCount + targetCount - intersection;
+                
+                row.set(target, {
+                    count: intersection,
+                    jaccard: union === 0 ? 0 : intersection / union,
+                    conditionalProb: intersection / sourceCount // P(B|A)
+                });
             });
         });
 
