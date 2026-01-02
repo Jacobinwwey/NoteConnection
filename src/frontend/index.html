@@ -315,6 +315,18 @@
                         <span class="value-display" id="val-collision"></span>
                     </div>
                 </div>
+
+                <div class="settings-group">
+                    <h3 data-i18n="grp_performance">Performance</h3>
+                    <div class="setting-item">
+                        <label data-i18n="lbl_max_workers">Max Workers (Memory)</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="range" id="set-workers-slider" min="1" max="32" value="4" style="flex: 1;">
+                            <input type="number" id="set-workers-input" min="1" max="128" value="4" style="width: 50px; background: #333; color: white; border: 1px solid #555;">
+                        </div>
+                        <div style="font-size: 0.75rem; color: #888; margin-top: 2px;" data-i18n="desc_workers">Lower this if Node.js runs out of memory.</div>
+                    </div>
+                </div>
                 
                 <div class="settings-group">
                     <h3 data-i18n="grp_visuals">Visuals</h3>
