@@ -6,6 +6,17 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-02 v0.9.48 - Parallel Processing Optimization
+
+**Goal**: Optimize graph building performance by allowing configurable worker thread limits, utilizing more CPU cores for large datasets.
+
+- [x] **Worker Configuration**
+    - [x] **Configurable Limit**: Added `maxWorkers` to `AppConfig` to override the default worker limit.
+    - [x] **Removal of Cap**: Removed the hardcoded 12-worker limit in `GraphBuilder` and `StatisticalAnalyzer`. Defaults to `numCPUs - 1` if not specified.
+    - [x] **Verification**: Validated with 50 workers on test dataset.
+
+---
+
 # 2026-01-02 v0.9.47 - Focus Mode Interaction & Layout Fixes
 
 **Goal**: Improve Focus Mode usability by preventing accidental zooming and fixing label overlap in Vertical layouts.

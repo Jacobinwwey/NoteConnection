@@ -119,6 +119,9 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.48 - Parallel Processing Optimization (2026-01-02)
+- [x] **Configurable Workers**: Added 'maxWorkers' configuration to allow utilizing more CPU cores for graph building and statistical inference. Removed the hardcoded limit of 12 workers.
+
 ### v0.9.47 - Focus Mode Interaction & Layout Fixes (2026-01-02)
 - [x] **Interaction Logic**: Fixed an issue where double-clicking a node to enter Focus Mode would accidentally trigger a zoom-in event. Added event propagation control to prevent this (SVG & Canvas).
 - [x] **Vertical Layout Spacing**: Increased the horizontal offset of node labels in Vertical Focus Mode to prevent text from overlapping with nodes, improving readability (SVG & Canvas).
@@ -436,6 +439,9 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.48 - 并行处理优化 (Parallel Processing Optimization) (2026-01-02)
+- [x] **可配置 Worker**: 添加了 'maxWorkers' 配置，允许利用更多 CPU 核心进行图构建和统计推断。移除了 12 个 Worker 的硬编码限制。
 
 ### v0.9.46 - 专注模式 UI 清理与 Canvas 边修复 (Focus Mode UI Cleanup & Canvas Edge Fix) (2025-12-26)
 - [x] **沉浸式专注**: 专注模式期间，主控制面板和源选择栏现在完全隐藏，以提供无干扰的体验。

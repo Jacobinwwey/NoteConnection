@@ -110,6 +110,7 @@ Core data structure for managing notes and dependencies.
         matchingStrategy: 'exact-phrase' | 'fuzzy';
         clusteringStrategy: 'label-propagation' | 'folder';
         enableStatisticalInference: boolean; // Toggle statistical analysis
+        maxWorkers?: number; // Max concurrent workers (Default: CPU count - 1)
         exclusionList: string[];
     }
     
@@ -368,7 +369,7 @@ Utilizes Node.js `worker_threads` to parallelize the computationally expensive k
 
 *   **Logic**:
     *   Detects available CPU cores.
-    *   Spawns workers (capped at 4 for stability).
+    *   Spawns workers (Configurable via `maxWorkers`, default `numCPUs - 1`).
     *   Splits the file list into chunks.
     *   Workers perform `checkMatch` (shared logic) against the full list of target IDs.
     *   Results are aggregated in the main thread.

@@ -6,6 +6,7 @@ export interface AppConfig {
     enableStatisticalInference: boolean; // Use statistical analysis to infer edges
     enableVectorSimilarity: boolean; // Use TF-IDF/Vector similarity for associations
     enableHybridInference: boolean; // Use Hybrid Engine (Stats + Vector)
+    maxWorkers?: number; // Maximum number of worker threads. If undefined, uses (CPU cores - 1).
     exclusionList: string[]; // List of concept IDs (filenames) to ignore when creating edges
 }
 
