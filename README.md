@@ -119,6 +119,11 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.49 - UI Controls for Parallel Processing (2026-01-02)
+- [x] **Settings UI**: Added a "Performance" section to the Settings Modal with a slider and number input to control "Max Workers".
+- [x] **API Integration**: The "Load" button now sends the user-defined worker limit to the backend build process.
+- [x] **Persistence**: The worker setting is saved in `localStorage` alongside other preferences.
+
 ### v0.9.48 - Parallel Processing Optimization (2026-01-02)
 - [x] **Configurable Workers**: Added 'maxWorkers' configuration to allow utilizing more CPU cores for graph building and statistical inference. Removed the hardcoded limit of 12 workers.
 
@@ -439,6 +444,11 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.49 - 并行处理 UI 控制 (UI Controls for Parallel Processing) (2026-01-02)
+- [x] **设置界面**: 在设置模态框中添加了“性能” (Performance) 部分，包含用于控制“最大 Worker”的滑块和数字输入框。
+- [x] **API 集成**: “加载”按钮现在会将用户定义的 Worker 限制发送到后端构建流程。
+- [x] **持久化**: Worker 设置与其他偏好一起保存在 `localStorage` 中。
 
 ### v0.9.48 - 并行处理优化 (Parallel Processing Optimization) (2026-01-02)
 - [x] **可配置 Worker**: 添加了 'maxWorkers' 配置，允许利用更多 CPU 核心进行图构建和统计推断。移除了 12 个 Worker 的硬编码限制。
