@@ -1,3 +1,29 @@
+# 2026-01-02 v0.9.48 - English Document
+
+## Test Report: Parallel Workers Configuration
+
+### 1. Max Workers Configuration
+*   **Action**: Set `config.maxWorkers` to 50 in a test script and trigger graph build.
+*   **Observation**: 
+    *   Console log shows `[GraphBuilder] Spawning 50 workers...`.
+    *   Parallel matching proceeds with 50 worker threads.
+*   **Status**: **Pass**
+
+---
+
+# 2026-01-02 v0.9.48 - Chinese Document
+
+## 测试报告：并行 Worker 配置
+
+### 1. 最大 Worker 配置
+*   **操作**: 在测试脚本中将 `config.maxWorkers` 设置为 50 并触发图构建。
+*   **观察**: 
+    *   控制台日志显示 `[GraphBuilder] Spawning 50 workers...`。
+    *   并行匹配使用 50 个 Worker 线程进行。
+*   **状态**: **通过**
+
+---
+
 # 2026-01-02 v0.9.47 - English Document
 
 ## Test Report: Focus Mode Interaction & Layout

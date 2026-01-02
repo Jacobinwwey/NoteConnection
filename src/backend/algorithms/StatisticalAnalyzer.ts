@@ -2,6 +2,7 @@ import { RawFile } from '../FileLoader';
 import * as path from 'path';
 import * as os from 'os';
 import { Worker } from 'worker_threads';
+import { config } from '../config';
 
 interface CooccurrenceMetrics {
     count: number;
@@ -43,7 +44,7 @@ export class StatisticalAnalyzer {
 
     private static async runParallelTermExtraction(files: RawFile[], terms: string[]): Promise<Record<string, string[]>> {
         const numCPUs = os.cpus().length;
-        const workerCount = Math.min(12, Math.max(1, numCPUs - 1));
+        const workerCount = config.maxWorkers ?? Math.max(1, numCPUs - 1);
         const chunkSize = Math.ceil(files.length / workerCount);
         
         const workerPromises: Promise<Record<string, string[]>>[] = [];
