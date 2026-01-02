@@ -2,9 +2,16 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { FileLoader } from './backend/FileLoader';
 import { GraphBuilder } from './backend/GraphBuilder';
+import { config } from './backend/config';
 
-export async function buildGraph(targetPath?: string) {
+export async function buildGraph(targetPath?: string, maxWorkers?: number) {
   const projectRoot = path.resolve(__dirname, '..');
+  
+  if (maxWorkers !== undefined) {
+      console.log(`[Config] Setting maxWorkers to ${maxWorkers}`);
+      config.maxWorkers = maxWorkers;
+  }
+
   // Default to Knowledge_Base if no path provided, or specific folder if provided
   // If targetPath is absolute, use it. If relative, assume relative to Knowledge_Base
   

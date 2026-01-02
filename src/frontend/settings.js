@@ -14,6 +14,9 @@ const defaultSettings = {
         edgeOpacity: 0.6,
         baseNodeSize: 5
     },
+    performance: {
+        maxWorkers: 4 // Default safe limit
+    },
     reading: {
         mode: 'window' // 'window' or 'fullscreen'
     }

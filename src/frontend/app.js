@@ -2103,6 +2103,23 @@ function enterFocusMode(focusD) {
     }
 }
 
+// Max Workers (Performance)
+const workersSlider = document.getElementById('set-workers-slider');
+const workersInput = document.getElementById('set-workers-input');
+
+if (workersSlider && workersInput) {
+    const updateWorkers = (val) => {
+        const num = parseInt(val);
+        if (isNaN(num) || num < 1) return;
+        workersSlider.value = num;
+        workersInput.value = num;
+        settingsManager.set('performance', 'maxWorkers', num);
+    };
+
+    workersSlider.addEventListener('input', (e) => updateWorkers(e.target.value));
+    workersInput.addEventListener('change', (e) => updateWorkers(e.target.value));
+}
+
 // --- Settings Integration ---
 
 function initSettingsUI() {
