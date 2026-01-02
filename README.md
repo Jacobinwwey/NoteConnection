@@ -119,6 +119,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.49 - Statistical Analysis Memory Optimization (2026-01-02)
+- [x] **Performance**: Fixed a critical "Heap out of memory" crash when processing large datasets (>10,000 files) by optimizing the Statistical Analyzer algorithm.
+- [x] **Efficiency**: Reduced the complexity of co-occurrence matrix calculation by ~30x using a sparse, file-centric approach.
+
 ### v0.9.49 - UI Controls for Parallel Processing (2026-01-02)
 - [x] **Settings UI**: Added a "Performance" section to the Settings Modal with a slider and number input to control "Max Workers".
 - [x] **API Integration**: The "Load" button now sends the user-defined worker limit to the backend build process.
@@ -444,6 +448,10 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.49 - 统计分析内存优化 (Statistical Analysis Memory Optimization) (2026-01-02)
+- [x] **性能**: 通过优化统计分析器算法，修复了处理大数据集 (>10,000 文件) 时关键的“堆内存溢出”崩溃问题。
+- [x] **效率**: 使用稀疏的、以文件为中心的方法，将共现矩阵计算的复杂度降低了约 30 倍。
 
 ### v0.9.49 - 并行处理 UI 控制 (UI Controls for Parallel Processing) (2026-01-02)
 - [x] **设置界面**: 在设置模态框中添加了“性能” (Performance) 部分，包含用于控制“最大 Worker”的滑块和数字输入框。
