@@ -2185,6 +2185,13 @@ function initSettingsUI() {
         if (settings.reading && settings.reading.mode) {
             inputReadingMode.value = settings.reading.mode;
         }
+
+        // Performance
+        if (settings.performance && settings.performance.maxWorkers) {
+            const num = settings.performance.maxWorkers;
+            if (workersSlider) workersSlider.value = num;
+            if (workersInput) workersInput.value = num;
+        }
     };
 
     updateUIFromSettings(settingsManager.settings);
