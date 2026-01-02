@@ -1,3 +1,33 @@
+# 2026-01-02 v0.9.47 - English Document
+
+## Test Report: Focus Mode Interaction & Layout
+
+### 1. Double Click Zoom Prevention
+*   **Action**: Double click a node to enter Focus Mode.
+*   **Result**: 
+    *   Focus Mode activates.
+    *   The window (viewport) zoom level remains unchanged.
+    *   The view centers on the node, but does not zoom in/out (unless centering animation implies scale, but double-click zoom event is suppressed).
+*   **Status**: **Pass**
+
+### 2. Vertical Layout Label Spacing
+*   **Action**: Enter Focus Mode. Select "Vertical" layout.
+*   **Result**: 
+    *   Nodes arrange in a vertical column.
+    *   Text labels are positioned to the right of the nodes with increased spacing (dx=35).
+    *   Text does not overlap with the node body or adjacent nodes.
+*   **Status**: **Pass**
+
+### 3. Canvas Mode Verification
+*   **Pre-condition**: Switch renderer to "Canvas".
+*   **Action**: Double click a node.
+*   **Result**: Enters Focus Mode without zooming.
+*   **Action**: Select "Vertical" layout.
+*   **Result**: Labels are offset by 35px, avoiding overlap.
+*   **Status**: **Pass**
+
+---
+
 # 2025-12-26 v0.9.46 - English Document
 
 ## Test Report: Focus Mode UI & Visuals
@@ -310,6 +340,36 @@
     3.  Switch back to DAG.
 *   **Result**: Node B is at the new dragged position in DAG mode.
 *   **Status**: **Pass**
+
+---
+
+# 2026-01-02 v0.9.47 - Chinese Document
+
+## 测试报告：专注模式交互与布局
+
+### 1. 双击缩放预防
+*   **操作**: 双击节点进入专注模式。
+*   **结果**: 
+    *   专注模式激活。
+    *   窗口（视口）缩放级别保持不变。
+    *   视图以节点为中心，但不会放大/缩小（双击缩放事件被抑制）。
+*   **状态**: **通过**
+
+### 2. 垂直布局标签间距
+*   **操作**: 进入专注模式。选择“垂直”布局。
+*   **结果**: 
+    *   节点排列成垂直列。
+    *   文本标签位于节点右侧，间距增加 (dx=35)。
+    *   文本不与节点主体或相邻节点重叠。
+*   **状态**: **通过**
+
+### 3. Canvas 模式验证
+*   **前置条件**: 将渲染器切换为 "Canvas"。
+*   **操作**: 双击节点。
+*   **结果**: 进入专注模式且不缩放。
+*   **操作**: 选择“垂直”布局。
+*   **结果**: 标签偏移 35px，避免重叠。
+*   **状态**: **通过**
 
 ---
 

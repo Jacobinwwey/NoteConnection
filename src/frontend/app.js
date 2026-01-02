@@ -712,7 +712,7 @@ node.on("mouseover", function(event, d) {
     if (!state.isFrozen && !focusModeState.active) {
         highlightManager.unhighlight();
     }
-});
+}).on("dblclick", (event) => event.stopPropagation());
 
 // Click & Double Click Logic
 node.on("click", (event, d) => {
@@ -1272,7 +1272,9 @@ function renderCanvas(layoutMode) {
             ctx.globalAlpha = 1;
             ctx.fillStyle = "#ccc";
             ctx.font = isFocus ? "bold 16px Sans-Serif" : "10px Sans-Serif";
-            ctx.fillText(d.label, d.x + 8, d.y + 4);
+            // v0.9.47: Use custom offset if set (for Focus Mode Vertical Layout)
+            const labelDx = d._labelDx !== undefined ? d._labelDx : 8;
+            ctx.fillText(d.label, d.x + labelDx, d.y + 4);
         }
     });
 
@@ -1313,6 +1315,18 @@ resizeCanvas();
 // Canvas Zoom / Canvas缩放
 d3.select(canvas).call(d3.zoom()
     .scaleExtent([0.1, 8])
+    .filter(function(event) {
+        // v0.9.47: Prevent double-click zoom if clicking on a node (to allow Focus Mode)
+        if (event.type === 'dblclick') {
+            const rect = canvas.getBoundingClientRect();
+            // findNodeAt might not be hoisted/available if defined below. 
+            // However, function declarations are hoisted. 
+            // We need to ensure 'currentTransform' is available. It is defined above.
+            const node = findNodeAt(event.clientX - rect.left, event.clientY - rect.top);
+            if (node) return false;
+        }
+        return !event.ctrlKey && !event.button; // Default filter: no ctrl, left button only
+    })
     .on("zoom", (event) => {
         currentTransform = event.transform;
         ticked();
@@ -1865,6 +1879,7 @@ function enterFocusMode(focusD) {
     focusD.fy = cy;
     focusD.isFocusVisible = true;
     focusD._labelDy = 35; 
+    if (layoutType === 'vertical') focusD._labelDx = 25; 
 
     // Define Semantic Labels for rendering
     window.focusLabels = [];
@@ -1885,6 +1900,7 @@ function enterFocusMode(focusD) {
                 n.fy = startY + i * hSpacing;
                 n.isFocusVisible = true;
                 n._labelDy = 25;
+                n._labelDx = 25;
             });
         };
 
@@ -1996,7 +2012,8 @@ function enterFocusMode(focusD) {
                 .attr("transform", `translate(${d.fx},${d.fy})`);
             
             el.select("text").transition().duration(750)
-                .attr("dy", d._labelDy ? d._labelDy : ".35em");
+                .attr("dy", d._labelDy ? d._labelDy : ".35em")
+                .attr("dx", d._labelDx ? d._labelDx : (d.id === focusD.id ? 29 : 12));
 
             if (d.id === focusD.id) {
                 el.select("circle").transition().duration(750)

@@ -6,6 +6,19 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-02 v0.9.47 - Focus Mode Interaction & Layout Fixes
+
+**Goal**: Improve Focus Mode usability by preventing accidental zooming and fixing label overlap in Vertical layouts.
+
+- [x] **Interaction Logic**
+    - [x] **Double Click Zoom Prevention**: Added `stopPropagation` to the node double-click handler to prevent `d3.zoom` from triggering a zoom-in event when entering Focus Mode.
+
+- [x] **Focus Mode Layout**
+    - [x] **Vertical Spacing**: In "Vertical" (L-R) layout, increased the horizontal offset (`dx`) of node labels to **35px** (from default ~12px) to prevent overlap between text and nodes.
+    - [x] **Focus Node**: Applied the same horizontal offset to the central Focus Node in vertical layout for consistency.
+
+---
+
 # 2025-12-26 v0.9.46 - Focus Mode UI Cleanup & Canvas Edge Fix
 
 **Goal**: Clean up the UI during Focus Mode to reduce clutter and fix visual rendering in Canvas mode.
