@@ -194,6 +194,9 @@ Renders the JSON data into an interactive DAG.
         *   **Independent Settings (v0.9.44)**: Spacing values are stored separately for "Horizontal" and "Vertical" layouts. Defaults are optimized for each (Horizontal: 125/80, Vertical: 250/20).
     *   **Focus Mode Enhancements (v0.8.9)**:
         *   **Position Lock**: Nodes in Focus Mode retain their position after dragging (Freeze on Select) to prevent layout drift.
+    *   **Focus Mode Controls (v0.9.47)**:
+        *   **Interaction**: Double-clicking a node no longer triggers window zoom behavior (d3-zoom propagation stopped).
+        *   **Vertical Layout**: Increased horizontal label offset (`dx`) to 35px (from default ~12px) in Vertical mode to prevent text overlap.
                     *   **Simulation Controls (v0.9.0, v0.9.25, v0.9.29 & v0.9.37)**:
                         *   **Rapid Relaxation (v0.9.37)**: Upon initialization, `velocityDecay` is set to **0.2** for 2 seconds to facilitate rapid layout expansion. It then automatically transitions to **0.95** for stability.
                         *   **Freeze Layout**: Checkbox to completely stop the physics simulation.            *   **Main Interface**: Stops simulation and **disables node dragging** to minimize memory/CPU usage and prevent accidental layout changes.
@@ -733,10 +736,8 @@ Manages node highlighting interactions for both PC and mobile interfaces.
     *   **专注模式增强 (v0.8.9)**:
         *   **位置锁定**: 专注模式下的节点在拖动后保留其位置（选中冻结），以防止布局漂移。
     *   **专注模式控制 (Focus Mode Controls - v0.9.47)**:
-        *   **重置布局**: "自动排列"按钮替换为"RESET"按钮，点击可将间距设置恢复为默认值 (水平: 125/80, 垂直: 250/20)。
-        *   **标签布局**: 通过增加垂直偏移量 (`_labelDy` 从 25 增至 120) 改善了垂直模式下的文本可见性，减少重叠。
-        *   **交互**: 双击节点不再触发缩放行为，防止不必要的窗口调整。
-        *   **UI**: 增强了专注模式统计数据显示的宽度，防止文本换行。
+        *   **交互**: 双击节点不再触发缩放行为（停止了 d3-zoom 传播），防止不必要的窗口调整。
+        *   **垂直布局**: 将垂直模式下的节点标签水平偏移量 (`dx`) 增加到 35px（默认约 12px），以防止文本与节点重叠。
                     *   **模拟控制 (v0.9.0, v0.9.25, v0.9.29 & v0.9.37)**:
                         *   **快速松弛 (Rapid Relaxation - v0.9.37)**: 初始化时，`velocityDecay` 设置为 **0.2** 并持续 2 秒，以促进布局快速展开。随后自动过渡到 **0.95** 以保持稳定。
                         *   **冻结布局**: 用于完全停止物理模拟的复选框。            *   **主界面**: 停止模拟并**禁用节点拖动**，以最小化内存/CPU 使用并防止意外的布局更改。

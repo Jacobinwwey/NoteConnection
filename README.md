@@ -119,6 +119,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.47 - Focus Mode Interaction & Layout Fixes (2026-01-02)
+- [x] **Interaction Logic**: Fixed an issue where double-clicking a node to enter Focus Mode would accidentally trigger a zoom-in event. Added event propagation control to prevent this (SVG & Canvas).
+- [x] **Vertical Layout Spacing**: Increased the horizontal offset of node labels in Vertical Focus Mode to prevent text from overlapping with nodes, improving readability (SVG & Canvas).
+
 ### v0.9.46 - Focus Mode UI Cleanup & Canvas Edge Fix (2025-12-26)
 - [x] **Immersive Focus**: The main control panel and source selection bar are now completely hidden during Focus Mode for a distraction-free experience.
 - [x] **Canvas Polish**: Removed edge rendering in Canvas Focus Mode to reduce visual noise.
