@@ -6,6 +6,20 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-02 v0.9.50 - GPU Acceleration Feasibility
+
+**Goal**: Verify and implement GPU acceleration for mathematical operations (Matrix Multiplication) to further speed up Graph Construction on supported hardware (verified on AMD 7900XT).
+
+- [x] **Feasibility Verification**
+    - [x] **Library**: Installed `gpu.js` to bridge Node.js with GPU via WebGL/OpenCL.
+    - [x] **Hardware Check**: Verified successful kernel compilation and execution on AMD Radeon 7900XT (Windows 10).
+    - [x] **Benchmark**: Matrix Multiplication (512x512) completed successfully in GPU mode.
+- [ ] **Implementation Plan**
+    - [ ] **Vector Space**: Offload the $N \times N$ Cosine Similarity matrix calculation to GPU.
+    - [ ] **Constraint**: Keep string processing (Keyword Matching) on CPU (Workers) as data transfer overhead to GPU outweighs benefits for text.
+
+---
+
 # 2026-01-02 v0.9.49 - Statistical Analysis Memory Optimization
 
 **Goal**: Fix "Heap out of memory" errors when processing large datasets (10k+ files) by optimizing the Co-occurrence Matrix calculation.
