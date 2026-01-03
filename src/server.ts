@@ -3,6 +3,10 @@ import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
 import { buildGraph } from './index';
+import { CrashLogger } from './backend/utils/CrashLogger';
+
+// Initialize Global Crash Handlers
+CrashLogger.initGlobalHandlers();
 
 const PORT = 3000;
 const FRONTEND_DIR = path.join(__dirname, 'frontend');
@@ -39,6 +43,7 @@ const server = http.createServer(async (req, res) => {
                 res.end(JSON.stringify({ folders }));
             } catch (error) {
                 console.error(error);
+                CrashLogger.log(error, 'API:GET /api/folders');
                 res.writeHead(500, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: String(error) }));
             }
@@ -69,6 +74,7 @@ const server = http.createServer(async (req, res) => {
                     res.writeHead(404);
                     res.end('File not found');
                 } else {
+                    CrashLogger.log(error, `StaticFile: ${safeSuffix}`);
                     res.writeHead(500);
                     res.end('Server Error: '+error.code);
                 }
@@ -98,6 +104,7 @@ const server = http.createServer(async (req, res) => {
                     res.end(JSON.stringify({ success: true }));
                 } catch (error) {
                     console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/build');
                     res.writeHead(500, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ success: false, error: String(error) }));
                 }

@@ -1,6 +1,9 @@
 import { parentPort, workerData } from 'worker_threads';
 import { RawFile } from '../FileLoader';
 import { checkMatch } from '../utils/stringUtils';
+import { CrashLogger } from '../utils/CrashLogger';
+
+CrashLogger.initGlobalHandlers();
 
 interface WorkerData {
   filesChunk: RawFile[];
@@ -14,25 +17,30 @@ interface MatchResult {
   target: string;
 }
 
-const { filesChunk, targetIds, strategy, exclusionList } = workerData as WorkerData;
+try {
+    const { filesChunk, targetIds, strategy, exclusionList } = workerData as WorkerData;
 
-const results: MatchResult[] = [];
+    const results: MatchResult[] = [];
 
-filesChunk.forEach(sourceFile => {
-  const sourceId = sourceFile.filename;
-  const content = sourceFile.content;
+    filesChunk.forEach(sourceFile => {
+      const sourceId = sourceFile.filename;
+      const content = sourceFile.content;
 
-  targetIds.forEach(targetId => {
-    if (sourceId === targetId) return;
+      targetIds.forEach(targetId => {
+        if (sourceId === targetId) return;
 
-    if (exclusionList.includes(targetId)) return;
+        if (exclusionList.includes(targetId)) return;
 
-    if (checkMatch(content, targetId, strategy)) {
-      results.push({ source: sourceId, target: targetId });
+        if (checkMatch(content, targetId, strategy)) {
+          results.push({ source: sourceId, target: targetId });
+        }
+      });
+    });
+
+    if (parentPort) {
+      parentPort.postMessage(results);
     }
-  });
-});
-
-if (parentPort) {
-  parentPort.postMessage(results);
+} catch (error) {
+    CrashLogger.log(error, 'KeywordMatchWorker');
+    process.exit(1);
 }
