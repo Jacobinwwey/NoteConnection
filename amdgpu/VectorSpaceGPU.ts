@@ -1,4 +1,3 @@
-import { GPU } from 'gpu.js';
 import { VectorSpace } from '../src/backend/algorithms/VectorSpace';
 import { RawFile } from '../src/backend/FileLoader';
 
@@ -9,11 +8,24 @@ export class VectorSpaceGPU extends VectorSpace {
 
     constructor(files: RawFile[]) {
         super(files);
-        this.gpu = new GPU();
-        this.precomputeSimilarityMatrix();
+        try {
+            // Dynamically require gpu.js to handle optional dependency failure
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const { GPU } = require('gpu.js');
+            this.gpu = new GPU();
+        } catch (e) {
+            console.warn('[VectorSpaceGPU] GPU.js not available or failed to load. Falling back to CPU.');
+            this.gpu = null;
+        }
+        
+        if (this.gpu) {
+            this.precomputeSimilarityMatrix();
+        }
     }
 
     private precomputeSimilarityMatrix() {
+        if (!this.gpu) return;
+
         console.log('[VectorSpaceGPU] Preparing data for GPU...');
         
         // 1. Convert Map<string, number[]> to 2D Array
