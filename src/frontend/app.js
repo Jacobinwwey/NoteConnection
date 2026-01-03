@@ -500,6 +500,8 @@ const translations = {
         lbl_distance: "连接长度",
         lbl_collision: "碰撞半径",
         lbl_opacity: "边透明度",
+        lbl_gpu: "启用 GPU 加速",
+        desc_gpu: "使用 GPU 进行相似度计算（需要重新加载）。",
         btn_reset: "重置默认",
         btn_done: "完成",
         
@@ -600,6 +602,8 @@ const translations = {
         lbl_distance: "Link Length",
         lbl_collision: "Collision Radius",
         lbl_opacity: "Edge Opacity",
+        lbl_gpu: "Enable GPU Acceleration",
+        desc_gpu: "Use GPU for similarity calculation (Requires page reload).",
         btn_reset: "Reset Defaults",
         btn_done: "Done",
         
@@ -2105,23 +2109,29 @@ function enterFocusMode(focusD) {
 
 // Max Workers (Performance)
 const workersSlider = document.getElementById('set-workers-slider');
-const workersInput = document.getElementById('set-workers-input');
+    const workersInput = document.getElementById('set-workers-input');
+    const gpuCheckbox = document.getElementById('set-gpu');
 
-if (workersSlider && workersInput) {
-    const updateWorkers = (val) => {
-        const num = parseInt(val);
-        if (isNaN(num) || num < 1) return;
-        workersSlider.value = num;
-        workersInput.value = num;
-        settingsManager.set('performance', 'maxWorkers', num);
-    };
+    if (workersSlider && workersInput) {
+        const updateWorkers = (val) => {
+            const num = parseInt(val);
+            if (isNaN(num) || num < 1) return;
+            workersSlider.value = num;
+            workersInput.value = num;
+            settingsManager.set('performance', 'maxWorkers', num);
+        };
 
-    workersSlider.addEventListener('input', (e) => updateWorkers(e.target.value));
-    workersInput.addEventListener('change', (e) => updateWorkers(e.target.value));
-}
+        workersSlider.addEventListener('input', (e) => updateWorkers(e.target.value));
+        workersInput.addEventListener('change', (e) => updateWorkers(e.target.value));
+    }
+    
+    if (gpuCheckbox) {
+        gpuCheckbox.addEventListener('change', (e) => {
+            settingsManager.set('performance', 'enableGPU', e.target.checked);
+        });
+    }
 
-// --- Settings Integration ---
-
+    // --- Settings Integration ---
 function initSettingsUI() {
     const modal = document.getElementById('settings-modal');
     const openBtn = document.getElementById('btn-open-settings');
@@ -2187,10 +2197,15 @@ function initSettingsUI() {
         }
 
         // Performance
-        if (settings.performance && settings.performance.maxWorkers) {
-            const num = settings.performance.maxWorkers;
-            if (workersSlider) workersSlider.value = num;
-            if (workersInput) workersInput.value = num;
+        if (settings.performance) {
+            if (settings.performance.maxWorkers) {
+                const num = settings.performance.maxWorkers;
+                if (workersSlider) workersSlider.value = num;
+                if (workersInput) workersInput.value = num;
+            }
+            if (settings.performance.enableGPU !== undefined) {
+                if (gpuCheckbox) gpuCheckbox.checked = settings.performance.enableGPU;
+            }
         }
     };
 

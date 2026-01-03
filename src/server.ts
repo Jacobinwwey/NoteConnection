@@ -83,8 +83,8 @@ const server = http.createServer(async (req, res) => {
             req.on('data', chunk => { body += chunk.toString(); });
             req.on('end', async () => {
                 try {
-                    const { target, maxWorkers } = JSON.parse(body);
-                    console.log('Received build request for:', target, 'maxWorkers:', maxWorkers);
+                    const { target, maxWorkers, enableGPU } = JSON.parse(body);
+                    console.log('Received build request for:', target, 'maxWorkers:', maxWorkers, 'enableGPU:', enableGPU);
                     
                     // If target is "ALL_FOLDERS", pass empty string or specific flag to buildGraph?
                     // buildGraph handles empty/undefined as "Knowledge_Base" root scan (recursive).
@@ -92,7 +92,7 @@ const server = http.createServer(async (req, res) => {
                     
                     const buildTarget = target === 'ALL_FOLDERS' ? '' : target;
                     
-                    await buildGraph(buildTarget, maxWorkers);
+                    await buildGraph(buildTarget, maxWorkers, enableGPU);
                     
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ success: true }));

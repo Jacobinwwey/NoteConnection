@@ -36,11 +36,12 @@ document.addEventListener('DOMContentLoaded', () => {
         loadBtn.textContent = '...';
 
         const maxWorkers = window.settingsManager ? window.settingsManager.get('performance', 'maxWorkers') : undefined;
+        const enableGPU = window.settingsManager ? window.settingsManager.get('performance', 'enableGPU') : undefined;
 
         fetch('/api/build', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target: target, maxWorkers: maxWorkers })
+            body: JSON.stringify({ target: target, maxWorkers: maxWorkers, enableGPU: enableGPU })
         })
         .then(response => response.json())
         .then(data => {

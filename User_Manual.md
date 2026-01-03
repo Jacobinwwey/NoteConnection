@@ -50,6 +50,7 @@ NoteConnection is a visualization tool that transforms your Markdown notes into 
 *   **Options**:
     *   **Language**: Switch between English and Chinese.
     *   **Physics**: Tune gravity and repulsion forces.
+    *   **Performance**: Enable/Disable GPU Acceleration (for similarity calculation).
     *   **Visuals**: Adjust edge opacity.
 
 ---
@@ -102,4 +103,5 @@ NoteConnection 是一个可视化工具，可将您的 Markdown 笔记转换为�
 *   **选项**:
     *   **语言**: 在英语和中文之间切换。
     *   **物理**: 调整重力和排斥力。
+    *   **性能**: 启用/禁用 GPU 加速（用于相似度计算）。
     *   **视觉**: 调整边透明度。

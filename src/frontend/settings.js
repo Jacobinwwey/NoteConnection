@@ -15,7 +15,8 @@ const defaultSettings = {
         baseNodeSize: 5
     },
     performance: {
-        maxWorkers: 4 // Default safe limit
+        maxWorkers: 4, // Default safe limit
+        enableGPU: true // Default to using GPU
     },
     reading: {
         mode: 'window' // 'window' or 'fullscreen'

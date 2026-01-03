@@ -4,12 +4,17 @@ import { FileLoader } from './backend/FileLoader';
 import { GraphBuilder } from './backend/GraphBuilder';
 import { config } from './backend/config';
 
-export async function buildGraph(targetPath?: string, maxWorkers?: number) {
+export async function buildGraph(targetPath?: string, maxWorkers?: number, enableGPU?: boolean) {
   const projectRoot = path.resolve(__dirname, '..');
   
   if (maxWorkers !== undefined) {
       console.log(`[Config] Setting maxWorkers to ${maxWorkers}`);
       config.maxWorkers = maxWorkers;
+  }
+
+  if (enableGPU !== undefined) {
+      console.log(`[Config] Setting enableGPU to ${enableGPU}`);
+      config.enableGPU = enableGPU;
   }
 
   // Default to Knowledge_Base if no path provided, or specific folder if provided
