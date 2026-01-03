@@ -419,7 +419,22 @@ Transforms the web project into a standalone Android APK.
     2.  **Asset Compilation**: `npm run build` -> Populates `dist/frontend`.
     3.  **Sync**: `npx cap sync android` -> Copies `dist/frontend` to `android/app/src/main/assets/public`.
     4.  **Native Build**: `gradlew assembleDebug` -> Compiles the APK.
-### 6. Node Statistics Popup (v0.9.19)
+### 8. GPU Acceleration (v0.9.50)
+
+#### `VectorSpaceGPU` Class
+GPU-accelerated implementation of the Vector Space Model, utilizing the AMD 7900XT (or compatible GPUs) for matrix operations.
+
+*   **Location**: `amdgpu/VectorSpaceGPU.ts`
+*   **Extends**: `VectorSpace`
+*   **Key Features**:
+    *   **Matrix Multiplication**: Offloads the $N \times N$ cosine similarity calculation to the GPU using WebGL (headless-gl).
+    *   **Performance**: Reduces complexity from $O(N^2 \times D)$ on CPU to massively parallel execution.
+    *   **Fallback**: Automatically falls back to CPU if GPU initialization fails.
+*   **Methods**:
+    *   `constructor(files: RawFile[])`: Builds vectors (CPU) and precomputes similarity matrix (GPU).
+    *   `getSimilar(fileId: string, topK: number)`: Retrieval is $O(1)$ (row lookup) + sorting, reading from the precomputed matrix.
+    *   `destroy()`: Releases GPU resources (WebGL context).
+
 
 #### Drag and Zoom Functionality
 Enhances the node statistics popup with user-friendly positioning and scaling controls.

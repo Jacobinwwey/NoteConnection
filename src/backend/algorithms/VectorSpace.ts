@@ -1,9 +1,9 @@
 import { RawFile } from '../FileLoader';
 
 export class VectorSpace {
-    private vocab: Map<string, number>; // Term -> Index
-    private idf: Map<string, number>; // Term -> Inverse Document Frequency
-    private vectors: Map<string, number[]>; // FileID -> Vector
+    protected vocab: Map<string, number>; // Term -> Index
+    protected idf: Map<string, number>; // Term -> Inverse Document Frequency
+    protected vectors: Map<string, number[]>; // FileID -> Vector
 
     constructor(files: RawFile[]) {
         this.vocab = new Map();

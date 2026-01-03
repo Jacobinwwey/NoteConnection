@@ -13,6 +13,7 @@ import { CycleDetector } from './algorithms/CycleDetection';
 import { TopologicalSort } from './algorithms/TopologicalSort';
 import { StatisticalAnalyzer } from './algorithms/StatisticalAnalyzer';
 import { VectorSpace } from './algorithms/VectorSpace';
+import { VectorSpaceGPU } from '../../amdgpu/VectorSpaceGPU';
 import { HybridEngine } from './algorithms/HybridEngine';
 
 /**
@@ -146,7 +147,15 @@ export class GraphBuilder {
     // 2d. Vector Similarity (v0.6.0)
     if (config.enableVectorSimilarity && !config.enableHybridInference) {
         console.log('[GraphBuilder] Running Vector Similarity Analysis...');
-        const vectorSpace = new VectorSpace(files);
+        
+        let vectorSpace: VectorSpace;
+        if (config.enableGPU) {
+             console.log('[GraphBuilder] Using GPU Acceleration for Vector Space...');
+             vectorSpace = new VectorSpaceGPU(files);
+        } else {
+             vectorSpace = new VectorSpace(files);
+        }
+
         let similarityEdges = 0;
         
         files.forEach(file => {
@@ -159,6 +168,11 @@ export class GraphBuilder {
                  }
              });
         });
+        
+        if (vectorSpace instanceof VectorSpaceGPU) {
+            vectorSpace.destroy();
+        }
+        
         console.log(`[GraphBuilder] Added ${similarityEdges} vector association edges.`);
     }
 
@@ -168,7 +182,14 @@ export class GraphBuilder {
         // We need both Stats Matrix and Vector Space
         const terms = Array.from(fileMap.keys());
         const matrix = await StatisticalAnalyzer.analyzeAsync(files, terms);
-        const vectorSpace = new VectorSpace(files);
+        
+        let vectorSpace: VectorSpace;
+        if (config.enableGPU) {
+             console.log('[GraphBuilder] Using GPU Acceleration for Vector Space...');
+             vectorSpace = new VectorSpaceGPU(files);
+        } else {
+             vectorSpace = new VectorSpace(files);
+        }
 
         const hybridEdges = HybridEngine.infer(matrix, vectorSpace, 0.25, 0.1); // Tune thresholds
         
@@ -177,6 +198,11 @@ export class GraphBuilder {
              // Maybe add metadata/reason?
              // Graph edge types currently only store weight/type.
         });
+        
+        if (vectorSpace instanceof VectorSpaceGPU) {
+            vectorSpace.destroy();
+        }
+
         console.log(`[GraphBuilder] Added ${hybridEdges.length} hybrid inferred edges.`);
     }
 

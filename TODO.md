@@ -14,9 +14,9 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] **Library**: Installed `gpu.js` to bridge Node.js with GPU via WebGL/OpenCL.
     - [x] **Hardware Check**: Verified successful kernel compilation and execution on AMD Radeon 7900XT (Windows 10).
     - [x] **Benchmark**: Matrix Multiplication (512x512) completed successfully in GPU mode.
-- [ ] **Implementation Plan**
-    - [ ] **Vector Space**: Offload the $N \times N$ Cosine Similarity matrix calculation to GPU.
-    - [ ] **Constraint**: Keep string processing (Keyword Matching) on CPU (Workers) as data transfer overhead to GPU outweighs benefits for text.
+- [x] **Implementation Plan**
+    - [x] **Vector Space**: Offload the $N \times N$ Cosine Similarity matrix calculation to GPU (`amdgpu/VectorSpaceGPU.ts`).
+    - [x] **Constraint**: Keep string processing (Keyword Matching) on CPU (Workers) as data transfer overhead to GPU outweighs benefits for text.
 
 ---
 

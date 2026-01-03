@@ -1,0 +1,109 @@
+import { GPU } from 'gpu.js';
+import { VectorSpace } from '../src/backend/algorithms/VectorSpace';
+import { RawFile } from '../src/backend/FileLoader';
+
+export class VectorSpaceGPU extends VectorSpace {
+    private gpu: any;
+    private similarityMatrix: number[][] | null = null;
+    private fileIndex: string[] = []; // Map index -> fileId
+
+    constructor(files: RawFile[]) {
+        super(files);
+        this.gpu = new GPU();
+        this.precomputeSimilarityMatrix();
+    }
+
+    private precomputeSimilarityMatrix() {
+        console.log('[VectorSpaceGPU] Preparing data for GPU...');
+        
+        // 1. Convert Map<string, number[]> to 2D Array
+        this.fileIndex = Array.from(this.vectors.keys());
+        const vectorArray: number[][] = this.fileIndex.map(id => this.vectors.get(id)!);
+        const numDocs = vectorArray.length;
+        
+        if (numDocs === 0) return;
+
+        const vectorSize = vectorArray[0].length;
+        console.log(`[VectorSpaceGPU] Matrix size: ${numDocs} documents x ${vectorSize} dimensions`);
+
+        // 2. Create Kernel
+        // Compute A * A^T
+        // Each thread (y, x) computes dot product of Document Y and Document X
+        
+        // GPU.js optimization: flatten input if needed, but 2D array is standard
+        // Note: 7900XT should handle large textures, but let's check basic limits safety later.
+        
+        try {
+            const matrixMul = this.gpu.createKernel(function(this: any, A: number[][]) {
+                let sum = 0;
+                // this.constants.vectorSize is not directly supported in all modes without passing as var or const
+                // We iterate over the vector dimension
+                for (let i = 0; i < this.constants.vectorSize; i++) {
+                    sum += A[this.thread.y][i] * A[this.thread.x][i];
+                }
+                return sum;
+            })
+            .setConstants({ vectorSize: vectorSize })
+            .setOutput([numDocs, numDocs])
+            //.setPipeline(true) // For larger datasets, pipeline might avoid CPU readback loop if we did top-k on GPU
+            .setPrecision('single'); // Use float32
+
+            console.log('[VectorSpaceGPU] Executing GPU Kernel...');
+            const start = Date.now();
+            
+            // Execute
+            const result = matrixMul(vectorArray) as number[][];
+            
+            // GPU.js returns a texture or array depending on mode. 
+            // Since we didn't set pipeline: true, it returns JS Array (Float32Array usually)
+            
+            // Deep copy or use directly? result is usually a distinct object tree.
+            // For very large arrays, this might be a Float32Array[] or similar.
+            // We need to ensure it's indexable as matrix[y][x].
+            this.similarityMatrix = result; // Assuming standard array output mode
+
+            const end = Date.now();
+            console.log(`[VectorSpaceGPU] GPU Calculation finished in ${end - start}ms`);
+            
+            // Cleanup kernel
+            matrixMul.destroy();
+
+        } catch (error) {
+            console.error('[VectorSpaceGPU] GPU Computation Failed. Falling back to CPU on-demand.', error);
+            this.similarityMatrix = null;
+        }
+    }
+
+    public getSimilar(fileId: string, topK: number = 5): {id: string, score: number}[] {
+        // If GPU failed or matrix not built, fall back to super (CPU)
+        if (!this.similarityMatrix) {
+            return super.getSimilar(fileId, topK);
+        }
+
+        const sourceIndex = this.fileIndex.indexOf(fileId);
+        if (sourceIndex === -1) return [];
+
+        // Read row from matrix
+        const row = this.similarityMatrix[sourceIndex];
+        const results: {id: string, score: number}[] = [];
+
+        // Convert row to results
+        for (let i = 0; i < row.length; i++) {
+            if (i !== sourceIndex) { // Skip self
+                const score = row[i];
+                if (score > 0) {
+                    results.push({ id: this.fileIndex[i], score });
+                }
+            }
+        }
+
+        // Sort and slice
+        return results.sort((a, b) => b.score - a.score).slice(0, topK);
+    }
+    
+    public destroy() {
+        if (this.gpu) {
+            this.gpu.destroy();
+        }
+    }
+}

@@ -6,6 +6,7 @@ export interface AppConfig {
     enableStatisticalInference: boolean; // Use statistical analysis to infer edges
     enableVectorSimilarity: boolean; // Use TF-IDF/Vector similarity for associations
     enableHybridInference: boolean; // Use Hybrid Engine (Stats + Vector)
+    enableGPU: boolean; // Use GPU acceleration where available
     maxWorkers?: number; // Maximum number of worker threads. If undefined, uses (CPU cores - 1).
     exclusionList: string[]; // List of concept IDs (filenames) to ignore when creating edges
 }
@@ -18,6 +19,7 @@ export const config: AppConfig = {
     enableStatisticalInference: true, // Default on
     enableVectorSimilarity: true, // Default on
     enableHybridInference: true, // Default on
+    enableGPU: true, // Default on (auto-detects compatibility)
     exclusionList: [
         // Add common words or concepts here that cause too much noise
         // e.g., "Introduction", "Summary", etc.

@@ -2,13 +2,13 @@
   "name": "noteconnection",
   "version": "0.9.27",
   "description": "Hierarchical Knowledge Graph Visualization System",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "bin": {
-    "noteconnection": "dist/server.js"
+    "noteconnection": "dist/src/server.js"
   },
   "scripts": {
     "start": "ts-node src/server.ts",
-    "start:prod": "node dist/server.js",
+    "start:prod": "node dist/src/server.js",
     "build": "tsc && node scripts/copy-assets.js",
     "prepublishOnly": "npm run build",
     "test": "jest"

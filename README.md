@@ -119,9 +119,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
-### v0.9.50 - GPU Acceleration Feasibility (2026-01-02)
+### v0.9.50 - GPU Acceleration (2026-01-02)
 - [x] **Verification**: Confirmed feasibility of using **AMD Radeon 7900XT** for graph construction acceleration via `gpu.js`.
 - [x] **Strategy**: Validated that Mathematical Inference (Vector Similarity) can be offloaded to GPU, while Text Processing remains optimized on CPU.
+- [x] **Implementation**: Added `amdgpu` module with `VectorSpaceGPU` class. Integrated into `GraphBuilder` to automatically use GPU for Cosine Similarity matrix calculations when enabled.
 
 ### v0.9.49 - Statistical Analysis Memory Optimization (2026-01-02)
 - [x] **Performance**: Fixed a critical "Heap out of memory" crash when processing large datasets (>10,000 files) by optimizing the Statistical Analyzer algorithm.
@@ -453,9 +454,10 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 
 ## 📅 更新日志 (Changelog)
 
-### v0.9.50 - GPU 加速可行性 (GPU Acceleration Feasibility) (2026-01-02)
+### v0.9.50 - GPU 加速 (GPU Acceleration) (2026-01-02)
 - [x] **验证**: 确认了使用 **AMD Radeon 7900XT** 通过 `gpu.js` 加速图构建的可行性。
 - [x] **策略**: 验证了数学推断（向量相似度）可以卸载到 GPU，而文本处理仍保留在 CPU 上进行优化。
+- [x] **实现**: 添加了 `amdgpu` 模块和 `VectorSpaceGPU` 类。集成到 `GraphBuilder` 中，在启用时自动使用 GPU 进行余弦相似度矩阵计算。
 
 ### v0.9.49 - 统计分析内存优化 (Statistical Analysis Memory Optimization) (2026-01-02)
 - [x] **性能**: 通过优化统计分析器算法，修复了处理大数据集 (>10,000 文件) 时关键的“堆内存溢出”崩溃问题。

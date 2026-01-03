@@ -1,3 +1,49 @@
+# 2026-01-02 v0.9.50 - English Document
+
+## Test Report: GPU Acceleration
+
+### 1. Module Integration
+*   **Action**: Run `npm run build`.
+*   **Result**: 
+    *   Build succeeds without errors.
+    *   `amdgpu` folder is compiled to `dist/amdgpu`.
+    *   `VectorSpaceGPU` is correctly instantiated in `GraphBuilder`.
+*   **Status**: **Pass**
+
+### 2. Fallback Mechanism
+*   **Test**: (Simulated) GPU initialization fails.
+*   **Result**: 
+    *   `VectorSpaceGPU` catches the error.
+    *   `similarityMatrix` remains null.
+    *   `getSimilar` calls fall back to `super.getSimilar` (CPU).
+    *   Application continues without crashing.
+*   **Status**: **Pass**
+
+---
+
+# 2026-01-02 v0.9.50 - Chinese Document
+
+## 测试报告：GPU 加速
+
+### 1. 模块集成
+*   **操作**: 运行 `npm run build`。
+*   **结果**: 
+    *   构建成功，无错误。
+    *   `amdgpu` 文件夹被编译到 `dist/amdgpu`。
+    *   `VectorSpaceGPU` 在 `GraphBuilder` 中被正确实例化。
+*   **状态**: **通过**
+
+### 2. 回退机制
+*   **测试**: (模拟) GPU 初始化失败。
+*   **结果**: 
+    *   `VectorSpaceGPU` 捕获错误。
+    *   `similarityMatrix` 保持为 null。
+    *   `getSimilar` 调用回退到 `super.getSimilar` (CPU)。
+    *   应用程序继续运行，未崩溃。
+*   **状态**: **通过**
+
+---
+
 # 2026-01-02 v0.9.49 - English Document
 
 ## Test Report: UI Controls for Parallel Processing
