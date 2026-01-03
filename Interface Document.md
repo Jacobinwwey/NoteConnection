@@ -169,6 +169,21 @@ Static utility for tracking and logging system performance metrics (CPU, Memory,
     [Perf] Memory (Heap/RSS): 55.00 MB / 105.00 MB
     ```
 
+#### `CrashLogger` Class
+Static utility for capturing and logging unhandled exceptions, rejections, and critical errors to a persistent file.
+
+*   **Location**: `src/backend/utils/CrashLogger.ts`
+*   **Log File**: `crash.log` (Project Root)
+*   **Methods**:
+    *   `initGlobalHandlers()`: Attaches listeners to `uncaughtException` and `unhandledRejection` events.
+    *   `log(error: any, context: string)`: Writes a formatted error entry with timestamp, system info (OS, Memory), and stack trace.
+*   **Output Format**:
+    ```text
+    [ISO-Timestamp] [Context] [PID:12345] Error: Error Message...
+    System: win32 10.0.22631 | Mem: 4096.00MB / 16384.00MB
+    --------------------------------------------------------------------------------
+    ```
+
 ---
 
 ## 2. Frontend Interfaces
@@ -746,6 +761,21 @@ Manages node highlighting interactions for both PC and mobile interfaces.
     [Perf] Time: 123.45ms
     [Perf] CPU (User/Sys): 10.00ms / 5.00ms
     [Perf] Memory (Heap/RSS): 55.00 MB / 105.00 MB
+    ```
+
+#### `CrashLogger` 类
+用于将未处理的异常、拒绝和关键错误捕获并记录到持久化文件的静态工具类。
+
+*   **位置**: `src/backend/utils/CrashLogger.ts`
+*   **日志文件**: `crash.log` (项目根目录)
+*   **方法**:
+    *   `initGlobalHandlers()`: 将监听器附加到 `uncaughtException` 和 `unhandledRejection` 事件。
+    *   `log(error: any, context: string)`: 写入带时间戳、系统信息（操作系统、内存）和堆栈跟踪的格式化错误条目。
+*   **输出格式**:
+    ```text
+    [ISO-Timestamp] [Context] [PID:12345] Error: Error Message...
+    System: win32 10.0.22631 | Mem: 4096.00MB / 16384.00MB
+    --------------------------------------------------------------------------------
     ```
 
 ---

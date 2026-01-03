@@ -119,9 +119,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
-### v0.9.51 - Performance Logging (2026-01-03)
+### v0.9.51 - Performance Logging & Crash Reporting (2026-01-03)
 - [x] **System Monitoring**: Implemented comprehensive performance logging for backend processes (CPU, Memory, Time).
 - [x] **GPU Diagnostics**: Added execution timing and memory tracking for GPU acceleration steps.
+- [x] **Crash Reporting**: Implemented `CrashLogger` to automatically record unhandled exceptions and worker failures to `crash.log` for debugging stability issues on Windows 11.
 - [x] **Optimization**: Integrated `PerformanceLogger` across the entire Graph Construction pipeline (Node Init, Edge Matching, Inference).
 
 ### v0.9.50 - GPU Acceleration (2026-01-02)
@@ -459,9 +460,10 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 
 ## 📅 更新日志 (Changelog)
 
-### v0.9.51 - 性能日志 (Performance Logging) (2026-01-03)
+### v0.9.51 - 性能日志与崩溃报告 (Performance Logging & Crash Reporting) (2026-01-03)
 - [x] **系统监控**: 为后端流程（CPU、内存、时间）实现了全面的性能日志记录。
 - [x] **GPU 诊断**: 为 GPU 加速步骤添加了执行计时和内存跟踪。
+- [x] **崩溃报告**: 实现了 `CrashLogger`，自动将未处理的异常和 Worker 故障记录到 `crash.log`，以便调试 Windows 11 上的稳定性问题。
 - [x] **优化**: 将 `PerformanceLogger` 集成到整个图构建管道（节点初始化、边匹配、推断）中。
 
 ### v0.9.50 - GPU 加速 (GPU Acceleration) (2026-01-02)

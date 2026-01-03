@@ -6,14 +6,18 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
-# 2026-01-03 v0.9.51 - Performance Logging
+# 2026-01-03 v0.9.51 - Performance Logging & Crash Reporting
 
-**Goal**: Enhance system observability by implementing detailed performance metrics for all major processing steps, including GPU and CPU operations.
+**Goal**: Enhance system observability by implementing detailed performance metrics and automatic crash reporting to facilitate debugging.
 
 - [x] **Performance Logger**
     - [x] **Utility**: Created `PerformanceLogger` class to track Time, CPU (User/Sys), and Memory (Heap/RSS).
     - [x] **Integration**: Wrapped all `GraphBuilder` stages (Node Init, Edge Matching, Inference) with logging.
     - [x] **GPU Tracking**: Integrated logging into `VectorSpaceGPU` to monitor kernel execution time.
+- [x] **Crash Reporting**
+    - [x] **Utility**: Created `CrashLogger` to write unhandled errors to `crash.log`.
+    - [x] **Integration**: Attached global handlers (`uncaughtException`, `unhandledRejection`) in `server.ts`.
+    - [x] **Workers**: Added try-catch blocks and logger integration to `keywordMatchWorker` and `statisticalWorker`.
 
 # 2026-01-02 v0.9.50 - GPU Acceleration Feasibility
 

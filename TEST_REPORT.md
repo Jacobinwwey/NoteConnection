@@ -23,6 +23,21 @@
     *   Logs matrix size and execution time.
 *   **Status**: **Pass**
 
+## Test Report: Crash Reporting
+
+### 1. Global Handler Initialization
+*   **Action**: Start server.
+*   **Observation**: `CrashLogger.initGlobalHandlers()` is called in `server.ts`.
+*   **Status**: **Pass**
+
+### 2. Worker Error Capture
+*   **Test**: Code Review of Workers (`keywordMatchWorker.ts`, `statisticalWorker.ts`).
+*   **Observation**: 
+    *   Main logic is wrapped in `try...catch`.
+    *   `CrashLogger.log()` writes to `crash.log` on error.
+    *   `process.exit(1)` ensures worker terminates properly after logging.
+*   **Status**: **Pass**
+
 ---
 
 # 2026-01-03 v0.9.51 - Chinese Document
@@ -48,6 +63,21 @@
 *   **观察**: 
     *   `PerformanceLogger` 包裹了 GPU 内核执行。
     *   记录了矩阵大小和执行时间。
+*   **状态**: **通过**
+
+## 测试报告：崩溃报告
+
+### 1. 全局处理程序初始化
+*   **操作**: 启动服务器。
+*   **观察**: `server.ts` 中调用了 `CrashLogger.initGlobalHandlers()`。
+*   **状态**: **通过**
+
+### 2. Worker 错误捕获
+*   **测试**: 代码审查 Worker (`keywordMatchWorker.ts`, `statisticalWorker.ts`)。
+*   **观察**: 
+    *   主逻辑包裹在 `try...catch` 中。
+    *   出错时 `CrashLogger.log()` 写入 `crash.log`。
+    *   `process.exit(1)` 确保 Worker 在日志记录后正确终止。
 *   **状态**: **通过**
 
 ---
