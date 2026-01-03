@@ -6,6 +6,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-03 v0.9.51 - Performance Logging
+
+**Goal**: Enhance system observability by implementing detailed performance metrics for all major processing steps, including GPU and CPU operations.
+
+- [x] **Performance Logger**
+    - [x] **Utility**: Created `PerformanceLogger` class to track Time, CPU (User/Sys), and Memory (Heap/RSS).
+    - [x] **Integration**: Wrapped all `GraphBuilder` stages (Node Init, Edge Matching, Inference) with logging.
+    - [x] **GPU Tracking**: Integrated logging into `VectorSpaceGPU` to monitor kernel execution time.
+
 # 2026-01-02 v0.9.50 - GPU Acceleration Feasibility
 
 **Goal**: Verify and implement GPU acceleration for mathematical operations (Matrix Multiplication) to further speed up Graph Construction on supported hardware (verified on AMD 7900XT).
@@ -210,12 +219,12 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 **Goal**: Implement state caching to allow switching between layouts ("Force" vs "DAG") without recalculating positions or animating the transition, fulfilling the "template state" requirement.
 
-- [ ] **State Management**
-    - [ ] **Cache**: Create `layoutCache` to store `x, y, fx, fy` for each mode.
-    - [ ] **Save/Restore**: Implement logic to save current positions before switching and restore target positions after switching.
-- [ ] **Transition Logic**
-    - [ ] **Instant Switch**: If a layout state is cached, restore positions and skip the simulation warm-up (`alpha(1)`), effectively teleporting nodes to their previous state.
-    - [ ] **First Run**: If no cache exists, perform standard simulation.
+- [x] **State Management**
+    - [x] **Cache**: Create `layoutCache` to store `x, y, fx, fy` for each mode.
+    - [x] **Save/Restore**: Implement logic to save current positions before switching and restore target positions after switching.
+- [x] **Transition Logic**
+    - [x] **Instant Switch**: If a layout state is cached, restore positions and skip the simulation warm-up (`alpha(1)`), effectively teleporting nodes to their previous state.
+    - [x] **First Run**: If no cache exists, perform standard simulation.
 
 ---
 
@@ -238,13 +247,13 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 **Goal**: Reduce memory and CPU consumption by minimizing particle movement calculations based on zoom level and viewport visibility.
 
-- [ ] **Viewport Culling Logic**
-    - [ ] **Full View Freeze**: If the user zooms out enough to see the entire graph (or a large portion), automatically stop the simulation to save resources, assuming the layout is stable.
-    - [ ] **Off-screen Freezing**: When zoomed in, only simulate nodes within the visible viewport. Freeze nodes outside the viewport.
-    - [ ] **Implementation**:
-        - [ ] Add `checkSimulationState()` triggered by zoom events.
-        - [ ] Calculate visible bounds based on `event.transform`.
-        - [ ] Update `simulation.nodes()` to only include visible nodes (plus a buffer) or use `fx`/`fy` to lock off-screen nodes.
+- [x] **Viewport Culling Logic**
+    - [x] **Full View Freeze**: If the user zooms out enough to see the entire graph (or a large portion), automatically stop the simulation to save resources, assuming the layout is stable.
+    - [x] **Off-screen Freezing**: When zoomed in, only simulate nodes within the visible viewport. Freeze nodes outside the viewport.
+    - [x] **Implementation**:
+        - [x] Add `checkSimulationState()` triggered by zoom events.
+        - [x] Calculate visible bounds based on `event.transform`.
+        - [x] Update `simulation.nodes()` to only include visible nodes (plus a buffer) or use `fx`/`fy` to lock off-screen nodes.
 
 ---
 
@@ -252,10 +261,10 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 **Goal**: Ensure that layout changes occurring within Focus Mode (automatic arrangement or manual dragging) do not affect the node positions in the main interface upon exiting.
 
-- [ ] **Position Backup & Restoration**
-    - [ ] **Backup**: In `enterFocusMode`, save the current `x`, `y`, `fx`, and `fy` coordinates of all nodes.
-    - [ ] **Restoration**: In `exitFocusMode`, restore these coordinates to their pre-focus state.
-    - [ ] **Consistency**: Ensure the graph visual state reverts exactly to how it was before entering Focus Mode.
+- [x] **Position Backup & Restoration**
+    - [x] **Backup**: In `enterFocusMode`, save the current `x`, `y`, `fx`, and `fy` coordinates of all nodes.
+    - [x] **Restoration**: In `exitFocusMode`, restore these coordinates to their pre-focus state.
+    - [x] **Consistency**: Ensure the graph visual state reverts exactly to how it was before entering Focus Mode.
 
 ---
 

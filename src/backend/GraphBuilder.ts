@@ -15,6 +15,7 @@ import { StatisticalAnalyzer } from './algorithms/StatisticalAnalyzer';
 import { VectorSpace } from './algorithms/VectorSpace';
 import { VectorSpaceGPU } from '../../amdgpu/VectorSpaceGPU';
 import { HybridEngine } from './algorithms/HybridEngine';
+import { PerformanceLogger } from './utils/PerformanceLogger';
 
 /**
  * Service to build the graph from raw files.
@@ -28,9 +29,11 @@ export class GraphBuilder {
    * @param layout Optional map of saved node positions | 可选的保存节点位置映射
    */
   static async build(files: RawFile[], layout?: Map<string, {x: number, y: number}>): Promise<Graph> {
+    PerformanceLogger.logSystemInfo();
     const graph = new Graph();
 
     // 1. Add all nodes first
+    PerformanceLogger.start('Node Initialization');
     // 1. 首先添加所有节点
     const fileMap = new Map<string, RawFile>();
     files.forEach(file => {
@@ -77,8 +80,10 @@ export class GraphBuilder {
           });
       }
     });
+    PerformanceLogger.end('Node Initialization');
 
     // 2. Identify edges
+    PerformanceLogger.start('Edge Identification (Explicit)');
     
     // 2a. Explicit Dependencies (Frontmatter)
     // 2a. 显式依赖 (Frontmatter)
@@ -118,9 +123,11 @@ export class GraphBuilder {
             });
         }
     });
+    PerformanceLogger.end('Edge Identification (Explicit)');
 
     // 2b. Keyword Matching Strategy
     // 2b. 关键词匹配策略
+    PerformanceLogger.start('Keyword Matching');
     console.log(`[GraphBuilder] Starting keyword matching for ${files.length} files...`);
     if (files.length > 200) {
         // Use Parallel Processing
@@ -130,9 +137,11 @@ export class GraphBuilder {
         // Use Single Thread (Legacy)
         this.runSequentialMatching(files, graph);
     }
+    PerformanceLogger.end('Keyword Matching');
     
     // 2c. Statistical Inference (v0.6.0)
     if (config.enableStatisticalInference) {
+        PerformanceLogger.start('Statistical Inference');
         console.log('[GraphBuilder] Running Statistical Inference...');
         const terms = Array.from(fileMap.keys());
         const matrix = await StatisticalAnalyzer.analyzeAsync(files, terms);
@@ -142,10 +151,12 @@ export class GraphBuilder {
             graph.addEdge(dep.source, dep.target, 'statistical-inferred', dep.confidence);
         });
         console.log(`[GraphBuilder] Added ${inferredEdges.length} inferred edges.`);
+        PerformanceLogger.end('Statistical Inference');
     }
 
     // 2d. Vector Similarity (v0.6.0)
     if (config.enableVectorSimilarity && !config.enableHybridInference) {
+        PerformanceLogger.start('Vector Similarity');
         console.log('[GraphBuilder] Running Vector Similarity Analysis...');
         
         let vectorSpace: VectorSpace;
@@ -174,10 +185,12 @@ export class GraphBuilder {
         }
         
         console.log(`[GraphBuilder] Added ${similarityEdges} vector association edges.`);
+        PerformanceLogger.end('Vector Similarity');
     }
 
     // 2e. Hybrid Inference (v0.7.0)
     if (config.enableHybridInference) {
+        PerformanceLogger.start('Hybrid Inference');
         console.log('[GraphBuilder] Running Hybrid Inference (Stats + Vector)...');
         // We need both Stats Matrix and Vector Space
         const terms = Array.from(fileMap.keys());
@@ -204,9 +217,11 @@ export class GraphBuilder {
         }
 
         console.log(`[GraphBuilder] Added ${hybridEdges.length} hybrid inferred edges.`);
+        PerformanceLogger.end('Hybrid Inference');
     }
 
     // 3. Community Detection (v0.1.6) or Folder Clustering (v0.5.0)
+    PerformanceLogger.start('Community Detection');
     if (config.clusteringStrategy === 'folder') {
         // Folder-based Clustering
         graph.getNodes().forEach(node => {
@@ -233,8 +248,10 @@ export class GraphBuilder {
             }
         });
     }
+    PerformanceLogger.end('Community Detection');
 
     // 4. Graph Metrics (v0.1.7)
+    PerformanceLogger.start('Graph Metrics');
     const centrality = GraphMetrics.calculateBetweenness(graph);
     centrality.forEach((val, nodeId) => {
         const node = graph.getNode(nodeId);
@@ -242,8 +259,10 @@ export class GraphBuilder {
             node.centrality = val;
         }
     });
+    PerformanceLogger.end('Graph Metrics');
 
     // 5. Algorithmic Core (v0.3.0)
+    PerformanceLogger.start('Algorithmic Core');
     // Cycle Detection
     if (CycleDetector.hasCycle(graph)) {
         const cycles = CycleDetector.detectCycles(graph);
@@ -259,6 +278,7 @@ export class GraphBuilder {
             node.rank = rank;
         }
     });
+    PerformanceLogger.end('Algorithmic Core');
 
     return graph;
   }

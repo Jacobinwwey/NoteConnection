@@ -148,6 +148,27 @@ Saves the graph for frontend consumption.
     *   Export now includes both filtered nodes and the edges connecting them.
     *   Structure: `{ nodes: NoteNode[], edges: NoteEdge[] }`.
 
+### 1.5 Utilities (v0.9.51)
+
+#### `PerformanceLogger` Class
+Static utility for tracking and logging system performance metrics (CPU, Memory, Time) during graph construction.
+
+*   **Location**: `src/backend/utils/PerformanceLogger.ts`
+*   **Methods**:
+    *   `logSystemInfo()`: Logs OS, CPU model/cores, and Total Memory.
+    *   `start(stepName: string)`: Marks the start of a named step, recording time and resource usage.
+    *   `end(stepName: string)`: Marks the end of a step, calculating and logging the duration, CPU time (User/Sys), and Memory delta.
+*   **Output Format**:
+    ```text
+    [Perf] Starting: Step Name
+    [Perf] Initial Memory: 50.00 MB / 100.00 MB (Heap/RSS)
+    ...
+    [Perf] Finished: Step Name
+    [Perf] Time: 123.45ms
+    [Perf] CPU (User/Sys): 10.00ms / 5.00ms
+    [Perf] Memory (Heap/RSS): 55.00 MB / 105.00 MB
+    ```
+
 ---
 
 ## 2. Frontend Interfaces
@@ -705,6 +726,27 @@ Manages node highlighting interactions for both PC and mobile interfaces.
 *   **过滤导出 (前端)**:
     *   导出现在的 JSON 包含过滤后的节点以及连接它们的边。
     *   结构: `{ nodes: NoteNode[], edges: NoteEdge[] }`。
+
+### 1.5 工具类 (v0.9.51)
+
+#### `PerformanceLogger` 类
+用于跟踪和记录图构建过程中的系统性能指标（CPU、内存、时间）的静态工具类。
+
+*   **位置**: `src/backend/utils/PerformanceLogger.ts`
+*   **方法**:
+    *   `logSystemInfo()`: 记录操作系统、CPU 型号/核心数和总内存。
+    *   `start(stepName: string)`: 标记步骤的开始，记录时间和资源使用情况。
+    *   `end(stepName: string)`: 标记步骤的结束，计算并记录持续时间、CPU 时间（用户/系统）和内存变化。
+*   **输出格式**:
+    ```text
+    [Perf] Starting: Step Name
+    [Perf] Initial Memory: 50.00 MB / 100.00 MB (Heap/RSS)
+    ...
+    [Perf] Finished: Step Name
+    [Perf] Time: 123.45ms
+    [Perf] CPU (User/Sys): 10.00ms / 5.00ms
+    [Perf] Memory (Heap/RSS): 55.00 MB / 105.00 MB
+    ```
 
 ---
 

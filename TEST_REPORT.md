@@ -1,3 +1,57 @@
+# 2026-01-03 v0.9.51 - English Document
+
+## Test Report: Performance Logging
+
+### 1. System Info Logging
+*   **Action**: Run `npm run build`.
+*   **Result**: 
+    *   Code compiles.
+    *   `PerformanceLogger` is integrated.
+*   **Status**: **Pass**
+
+### 2. Step Timing & Resource Tracking
+*   **Test**: Code Review of `GraphBuilder.ts`.
+*   **Observation**: 
+    *   `PerformanceLogger.start/end` wraps all major steps: "Node Initialization", "Edge Identification", "Keyword Matching", "Inference", etc.
+    *   Output format includes Time, CPU, and Memory usage as requested.
+*   **Status**: **Pass**
+
+### 3. GPU Tracking
+*   **Test**: Code Review of `VectorSpaceGPU.ts`.
+*   **Observation**: 
+    *   `PerformanceLogger` wraps the GPU kernel execution.
+    *   Logs matrix size and execution time.
+*   **Status**: **Pass**
+
+---
+
+# 2026-01-03 v0.9.51 - Chinese Document
+
+## 测试报告：性能日志
+
+### 1. 系统信息日志
+*   **操作**: 运行 `npm run build`。
+*   **结果**: 
+    *   代码编译通过。
+    *   `PerformanceLogger` 已集成。
+*   **状态**: **通过**
+
+### 2. 步骤计时与资源跟踪
+*   **测试**: 代码审查 `GraphBuilder.ts`。
+*   **观察**: 
+    *   `PerformanceLogger.start/end` 包裹了所有主要步骤：“节点初始化”、“边识别”、“关键词匹配”、“推断”等。
+    *   输出格式包含请求的时间、CPU 和内存使用情况。
+*   **状态**: **通过**
+
+### 3. GPU 跟踪
+*   **测试**: 代码审查 `VectorSpaceGPU.ts`。
+*   **观察**: 
+    *   `PerformanceLogger` 包裹了 GPU 内核执行。
+    *   记录了矩阵大小和执行时间。
+*   **状态**: **通过**
+
+---
+
 # 2026-01-02 v0.9.50 - English Document
 
 ## Test Report: GPU Acceleration

@@ -1,5 +1,6 @@
 import { VectorSpace } from '../src/backend/algorithms/VectorSpace';
 import { RawFile } from '../src/backend/FileLoader';
+import { PerformanceLogger } from '../src/backend/utils/PerformanceLogger';
 
 export class VectorSpaceGPU extends VectorSpace {
     private gpu: any;
@@ -61,7 +62,7 @@ export class VectorSpaceGPU extends VectorSpace {
             .setPrecision('single'); // Use float32
 
             console.log('[VectorSpaceGPU] Executing GPU Kernel...');
-            const start = Date.now();
+            PerformanceLogger.start('GPU Matrix Kernel');
             
             // Execute
             const result = matrixMul(vectorArray) as number[][];
@@ -74,8 +75,7 @@ export class VectorSpaceGPU extends VectorSpace {
             // We need to ensure it's indexable as matrix[y][x].
             this.similarityMatrix = result; // Assuming standard array output mode
 
-            const end = Date.now();
-            console.log(`[VectorSpaceGPU] GPU Calculation finished in ${end - start}ms`);
+            PerformanceLogger.end('GPU Matrix Kernel');
             
             // Cleanup kernel
             matrixMul.destroy();
