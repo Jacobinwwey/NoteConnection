@@ -6,6 +6,17 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-05 v0.9.54 - Welcome & Empty State Experience
+
+**Goal**: Improve the new user onboarding experience by providing clear guidance when the graph is empty.
+
+- [x] **Empty State Handling**
+    - [x] **Detection**: Logic in `welcome.js` detects if `graphData` is empty or missing.
+    - [x] **Welcome Modal**: Implemented a "Welcome to NoteConnection" modal that guides users to:
+        1. Select a Source Folder.
+        2. Click Load.
+    - [x] **Visual Cues**: Highlights the Source Control area when the modal is active.
+
 # 2026-01-05 v0.9.53 - Core API Decoupling
 
 **Goal**: Prepare the codebase for Plugin integration (Joplin/Obsidian) by decoupling the core logic from the CLI environment.

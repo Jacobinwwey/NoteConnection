@@ -119,6 +119,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.54 - Welcome Experience (2026-01-05)
+- [x] **Onboarding**: Added a "Welcome" modal that appears when the graph is empty, guiding new users to select a source and load data.
+- [x] **UX**: Highlights the "Source Select" controls during the welcome state.
+
 ### v0.9.53 - Core API Decoupling (2026-01-05)
 - [x] **Architecture Refactor**: Extracted the core graph building logic into a standalone `NoteConnection` class (`src/core/NoteConnection.ts`).
 - [x] **Plugin Prep**: Decoupled the core API from CLI/Server-specific file operations, enabling direct integration with future Joplin/Obsidian plugins.
@@ -468,6 +472,10 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.54 - 欢迎体验 (Welcome Experience) (2026-01-05)
+- [x] **引导 (Onboarding)**: 添加了一个“欢迎”模态框，当图谱为空时出现，引导新用户选择数据源并加载数据。
+- [x] **用户体验 (UX)**: 在欢迎状态下高亮显示“源选择”控件。
 
 ### v0.9.53 - 核心 API 解耦 (Core API Decoupling) (2026-01-05)
 - [x] **架构重构**: 将核心图构建逻辑提取到独立的 `NoteConnection` 类 (`src/core/NoteConnection.ts`) 中。
