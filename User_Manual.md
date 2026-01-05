@@ -50,7 +50,9 @@ NoteConnection is a visualization tool that transforms your Markdown notes into 
 *   **Options**:
     *   **Language**: Switch between English and Chinese.
     *   **Physics**: Tune gravity and repulsion forces.
-    *   **Performance**: Enable/Disable GPU Acceleration (for similarity calculation).
+    *   **Performance**: 
+        *   **Enable/Disable GPU Acceleration**: Toggle GPU usage for similarity calculation (requires supported hardware).
+        *   **Max Workers**: Adjust the number of CPU threads used for parallel processing (Default: 4). Higher values speed up large builds but use more memory.
     *   **Visuals**: Adjust edge opacity.
 
 ---
@@ -103,5 +105,7 @@ NoteConnection 是一个可视化工具，可将您的 Markdown 笔记转换为�
 *   **选项**:
     *   **语言**: 在英语和中文之间切换。
     *   **物理**: 调整重力和排斥力。
-    *   **性能**: 启用/禁用 GPU 加速（用于相似度计算）。
+    *   **性能**: 
+        *   **启用/禁用 GPU 加速**: 切换用于相似度计算的 GPU 使用（需要支持的硬件）。
+        *   **最大 Worker 数**: 调整用于并行处理的 CPU 线程数（默认：4）。较高的值可加快大型构建速度，但会占用更多内存。
     *   **视觉**: 调整边透明度。

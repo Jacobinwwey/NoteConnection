@@ -209,6 +209,35 @@ Assigns hierarchical ranks to nodes.
 *   **Methods**:
     *   `assignRanks(graph: Graph): Map<string, number>`
 
+### 1.7 Core API (v0.9.53)
+
+#### `NoteConnection` Class
+The main entry point for the core logic, decoupled from CLI/Server environment. Ideal for plugin integration.
+
+*   **Location**: `src/core/NoteConnection.ts`
+*   **Method**: `static async build(options: BuildOptions): Promise<GraphBuildResult>`
+*   **Input**:
+    ```typescript
+    interface BuildOptions {
+        targetPath?: string;    // Relative or absolute path to source
+        maxWorkers?: number;    // Parallelism limit
+        enableGPU?: boolean;    // GPU acceleration toggle
+        projectRoot?: string;   // Override project root (default: ../..)
+    }
+    ```
+*   **Output**:
+    ```typescript
+    interface GraphBuildResult {
+        graph: Graph;           // The internal Graph object
+        data: any;              // Serialized JSON data ready for frontend
+        stats: {
+            nodeCount: number;
+            edgeCount: number;
+            fileCount: number;
+        };
+    }
+    ```
+
 ## 2. Frontend Interfaces
 
 ### 2.1 Visualization
@@ -825,6 +854,35 @@ Manages node highlighting interactions for both PC and mobile interfaces.
 *   **位置**: `src/backend/algorithms/TopologicalSort.ts`
 *   **方法**:
     *   `assignRanks(graph: Graph): Map<string, number>`
+
+### 1.7 核心 API (Core API) (v0.9.53)
+
+#### `NoteConnection` 类
+核心逻辑的主要入口点，与 CLI/服务器环境解耦。非常适合插件集成。
+
+*   **位置**: `src/core/NoteConnection.ts`
+*   **方法**: `static async build(options: BuildOptions): Promise<GraphBuildResult>`
+*   **输入**:
+    ```typescript
+    interface BuildOptions {
+        targetPath?: string;    // 源的相对或绝对路径
+        maxWorkers?: number;    // 并行限制
+        enableGPU?: boolean;    // GPU 加速开关
+        projectRoot?: string;   // 覆盖项目根目录 (默认: ../..)
+    }
+    ```
+*   **输出**:
+    ```typescript
+    interface GraphBuildResult {
+        graph: Graph;           // 内部 Graph 对象
+        data: any;              // 准备好用于前端的序列化 JSON 数据
+        stats: {
+            nodeCount: number;  // 节点数
+            edgeCount: number;  // 边数
+            fileCount: number;  // 文件数
+        };
+    }
+    ```
 
 ## 2. 前端接口 (Frontend Interfaces)
 

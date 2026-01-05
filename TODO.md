@@ -6,6 +6,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-05 v0.9.53 - Core API Decoupling
+
+**Goal**: Prepare the codebase for Plugin integration (Joplin/Obsidian) by decoupling the core logic from the CLI environment.
+
+- [x] **Core Refactoring**
+    - [x] **NoteConnection Class**: Created `src/core/NoteConnection.ts` as the main facade.
+    - [x] **Decoupling**: Moved `buildGraph` logic out of `src/index.ts` to allow library-style usage.
+    - [x] **CLI Update**: Refactored `src/index.ts` to consume the new Core API.
+
 # 2026-01-05 v0.9.52 - Cycle Detection Memory Optimization
 
 **Goal**: Solve the "Heap out of memory" crash on Windows 10/11 when processing large graphs with many cycles (100k+ edges).
@@ -838,7 +847,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
         - [x] **Content**: Renders Markdown, KaTeX (Math), Mermaid (Diagrams).
         - [x] **Interaction**: Zoom text and Resize images (Unlocked mode).
         - [x] **Config**: Window/Fullscreen toggle.
-    - [ ] **Finalize Documentation**: Complete User Manual and Developer Guide.
+    - [x] **Finalize Documentation**: Complete User Manual and Developer Guide.
     - [ ] **Final Polish & Demo Packaging**: Ensure zero-config startup (`npm start`) works seamlessly for promotion.
     - [ ] **Release**: Package for v1.0.0.
 

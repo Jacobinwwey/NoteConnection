@@ -119,6 +119,11 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.53 - Core API Decoupling (2026-01-05)
+- [x] **Architecture Refactor**: Extracted the core graph building logic into a standalone `NoteConnection` class (`src/core/NoteConnection.ts`).
+- [x] **Plugin Prep**: Decoupled the core API from CLI/Server-specific file operations, enabling direct integration with future Joplin/Obsidian plugins.
+- [x] **Documentation**: Updated User Manual with missing "Max Workers" performance setting.
+
 ### v0.9.52 - Cycle Detection Memory Optimization (2026-01-05)
 - [x] **Stability Fix**: Resolved a critical "Heap out of memory" crash on Windows 10/11 when building large graphs with many cycles.
 - [x] **Algorithm Optimization**: Updated `CycleDetector` to limit the number of detected cycles, preventing excessive memory consumption during recursion.
@@ -463,6 +468,11 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.53 - 核心 API 解耦 (Core API Decoupling) (2026-01-05)
+- [x] **架构重构**: 将核心图构建逻辑提取到独立的 `NoteConnection` 类 (`src/core/NoteConnection.ts`) 中。
+- [x] **插件准备**: 将核心 API 与 CLI/服务器特定的文件操作解耦，从而支持与未来的 Joplin/Obsidian 插件直接集成。
+- [x] **文档**: 更新了用户手册，补充了缺失的“最大 Worker”性能设置。
 
 ### v0.9.52 - 循环检测内存优化 (Cycle Detection Memory Optimization) (2026-01-05)
 - [x] **稳定性修复**: 解决了在构建具有大量循环的大型图谱时，Windows 10/11 上发生的关键“堆内存溢出”崩溃问题。
