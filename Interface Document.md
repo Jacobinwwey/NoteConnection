@@ -186,6 +186,29 @@ Static utility for capturing and logging unhandled exceptions, rejections, and c
 
 ---
 
+### 1.6 Algorithms (v0.9.52)
+
+#### `CycleDetector` Class
+Service to detect cycles in the graph structure to ensure DAG validity.
+
+*   **Location**: `src/backend/algorithms/CycleDetection.ts`
+*   **Methods**:
+    *   `detectCycles(graph: Graph, limit?: number): string[][]`
+        *   **Description**: Detects simple cycles using DFS.
+        *   **Input**:
+            *   `graph`: The graph to analyze.
+            *   `limit` (optional): Maximum number of cycles to return. Defaults to 0 (unlimited). **Added in v0.9.52** to prevent OOM on large cyclic graphs.
+        *   **Output**: Array of cycles (each cycle is an array of node IDs).
+    *   `hasCycle(graph: Graph): boolean`
+        *   **Description**: Checks if at least one cycle exists. Optimized to stop early.
+
+#### `TopologicalSort` Class
+Assigns hierarchical ranks to nodes.
+
+*   **Location**: `src/backend/algorithms/TopologicalSort.ts`
+*   **Methods**:
+    *   `assignRanks(graph: Graph): Map<string, number>`
+
 ## 2. Frontend Interfaces
 
 ### 2.1 Visualization
@@ -779,6 +802,29 @@ Manages node highlighting interactions for both PC and mobile interfaces.
     ```
 
 ---
+
+### 1.6 算法 (Algorithms) (v0.9.52)
+
+#### `CycleDetector` 类
+用于检测图结构中的循环以确保 DAG 有效性的服务。
+
+*   **位置**: `src/backend/algorithms/CycleDetection.ts`
+*   **方法**:
+    *   `detectCycles(graph: Graph, limit?: number): string[][]`
+        *   **描述**: 使用 DFS 检测简单循环。
+        *   **输入**:
+            *   `graph`: 要分析的图。
+            *   `limit` (可选): 返回循环的最大数量。默认为 0（无限制）。**v0.9.52 新增**，以防止在大型循环图上发生 OOM。
+        *   **输出**: 循环数组（每个循环是一个节点 ID 数组）。
+    *   `hasCycle(graph: Graph): boolean`
+        *   **描述**: 检查是否存在至少一个循环。已优化为提前停止。
+
+#### `TopologicalSort` 类
+为节点分配层级排名。
+
+*   **位置**: `src/backend/algorithms/TopologicalSort.ts`
+*   **方法**:
+    *   `assignRanks(graph: Graph): Map<string, number>`
 
 ## 2. 前端接口 (Frontend Interfaces)
 

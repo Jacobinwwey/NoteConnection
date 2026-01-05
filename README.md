@@ -119,6 +119,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.52 - Cycle Detection Memory Optimization (2026-01-05)
+- [x] **Stability Fix**: Resolved a critical "Heap out of memory" crash on Windows 10/11 when building large graphs with many cycles.
+- [x] **Algorithm Optimization**: Updated `CycleDetector` to limit the number of detected cycles, preventing excessive memory consumption during recursion.
+
 ### v0.9.51 - Performance Logging & Crash Reporting (2026-01-03)
 - [x] **System Monitoring**: Implemented comprehensive performance logging for backend processes (CPU, Memory, Time).
 - [x] **GPU Diagnostics**: Added execution timing and memory tracking for GPU acceleration steps.
@@ -459,6 +463,10 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.52 - 循环检测内存优化 (Cycle Detection Memory Optimization) (2026-01-05)
+- [x] **稳定性修复**: 解决了在构建具有大量循环的大型图谱时，Windows 10/11 上发生的关键“堆内存溢出”崩溃问题。
+- [x] **算法优化**: 更新了 `CycleDetector` 以限制检测到的循环数量，防止递归期间过度的内存消耗。
 
 ### v0.9.51 - 性能日志与崩溃报告 (Performance Logging & Crash Reporting) (2026-01-03)
 - [x] **系统监控**: 为后端流程（CPU、内存、时间）实现了全面的性能日志记录。

@@ -14,9 +14,10 @@ export class CycleDetector {
      * 这对于检测图是否为 DAG 足够了。
      * 
      * @param graph The graph to analyze.
+     * @param limit Optional limit on the number of cycles to return. Defaults to 0 (no limit). | 可选的返回循环数量限制。默认为 0（无限制）。
      * @returns Array of cycles, where each cycle is an array of node IDs.
      */
-    static detectCycles(graph: Graph): string[][] {
+    static detectCycles(graph: Graph, limit: number = 0): string[][] {
         const visited = new Set<string>();
         const recursionStack = new Set<string>();
         const cycles: string[][] = [];
@@ -24,13 +25,20 @@ export class CycleDetector {
 
         const nodes = graph.getNodes();
 
+        // Recursion breaker flag
+        let stop = false;
+
         const dfs = (nodeId: string) => {
+            if (stop) return;
+
             visited.add(nodeId);
             recursionStack.add(nodeId);
             path.push(nodeId);
 
             const neighbors = graph.getNeighbors(nodeId); // Outgoing neighbors
             for (const neighbor of neighbors) {
+                if (stop) break;
+                
                 if (!visited.has(neighbor)) {
                     dfs(neighbor);
                 } else if (recursionStack.has(neighbor)) {
@@ -39,6 +47,9 @@ export class CycleDetector {
                     const cycleStartIndex = path.indexOf(neighbor);
                     if (cycleStartIndex !== -1) {
                         cycles.push([...path.slice(cycleStartIndex), neighbor]);
+                        if (limit > 0 && cycles.length >= limit) {
+                            stop = true;
+                        }
                     }
                 }
             }
@@ -48,6 +59,7 @@ export class CycleDetector {
         };
 
         for (const node of nodes) {
+            if (stop) break;
             if (!visited.has(node.id)) {
                 dfs(node.id);
             }
@@ -61,7 +73,8 @@ export class CycleDetector {
      * 检查图是否有任何循环。
      */
     static hasCycle(graph: Graph): boolean {
-        const cycles = this.detectCycles(graph);
+        // Optimized: Stop after finding 1 cycle
+        const cycles = this.detectCycles(graph, 1);
         return cycles.length > 0;
     }
 }

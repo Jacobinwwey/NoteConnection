@@ -1,3 +1,47 @@
+# 2026-01-05 v0.9.52 - English Document
+
+## Test Report: Cycle Detection Memory Optimization
+
+### 1. Cycle Limit Enforcement
+*   **Test**: Run `npm test src/backend/algorithms/CycleDetection.test.ts`.
+*   **Result**: 
+    *   `detectCycles(graph, 1)` correctly returns 1 cycle even if more exist.
+    *   `detectCycles(graph, 100)` correctly limits the output.
+    *   `detectCycles(graph)` (no limit) finds all cycles.
+*   **Status**: **Pass**
+
+### 2. Graph Build Integration
+*   **Action**: Review `GraphBuilder.ts`.
+*   **Observation**: 
+    *   `CycleDetector.detectCycles` is called with a limit of 100.
+    *   Double invocation (`hasCycle` + `detectCycles`) is removed.
+    *   Warning message logic handles the limited count correctly ("100+").
+*   **Status**: **Pass**
+
+---
+
+# 2026-01-05 v0.9.52 - Chinese Document
+
+## 测试报告：循环检测内存优化
+
+### 1. 循环限制执行
+*   **测试**: 运行 `npm test src/backend/algorithms/CycleDetection.test.ts`。
+*   **结果**: 
+    *   `detectCycles(graph, 1)` 正确返回 1 个循环，即使存在更多。
+    *   `detectCycles(graph, 100)` 正确限制输出。
+    *   `detectCycles(graph)` (无限制) 找到所有循环。
+*   **状态**: **通过**
+
+### 2. 图构建集成
+*   **操作**: 审查 `GraphBuilder.ts`。
+*   **观察**: 
+    *   调用 `CycleDetector.detectCycles` 时使用了 100 的限制。
+    *   移除了双重调用 (`hasCycle` + `detectCycles`)。
+    *   警告消息逻辑正确处理了受限计数 ("100+")。
+*   **状态**: **通过**
+
+---
+
 # 2026-01-03 v0.9.51 - English Document
 
 ## Test Report: Performance Logging

@@ -264,9 +264,11 @@ export class GraphBuilder {
     // 5. Algorithmic Core (v0.3.0)
     PerformanceLogger.start('Algorithmic Core');
     // Cycle Detection
-    if (CycleDetector.hasCycle(graph)) {
-        const cycles = CycleDetector.detectCycles(graph);
-        console.warn(`[GraphBuilder] Detected ${cycles.length} cycles. Topological Sort may be partial.`);
+    // Limit to 100 cycles to prevent OOM on large graphs with many cycles
+    const cycles = CycleDetector.detectCycles(graph, 100);
+    if (cycles.length > 0) {
+        const countStr = cycles.length >= 100 ? '100+' : cycles.length.toString();
+        console.warn(`[GraphBuilder] Detected ${countStr} cycles. Topological Sort may be partial.`);
         // Note: We proceed anyway, but ranks might be inaccurate for cyclic nodes.
     }
 

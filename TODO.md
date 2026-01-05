@@ -6,6 +6,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-05 v0.9.52 - Cycle Detection Memory Optimization
+
+**Goal**: Solve the "Heap out of memory" crash on Windows 10/11 when processing large graphs with many cycles (100k+ edges).
+
+- [x] **Cycle Detection Optimization**
+    - [x] **Limit Logic**: Updated `CycleDetector` to accept a `limit` parameter.
+    - [x] **Termination**: Stops recursion/search immediately after finding the specified number of cycles (100) instead of collecting all of them.
+    - [x] **Verification**: Added unit tests to ensure limit is respected.
+
 # 2026-01-03 v0.9.51 - Performance Logging & Crash Reporting
 
 **Goal**: Enhance system observability by implementing detailed performance metrics and automatic crash reporting to facilitate debugging.
