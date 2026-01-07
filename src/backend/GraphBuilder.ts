@@ -289,7 +289,7 @@ export class GraphBuilder {
 
     // 4. Graph Metrics (v0.1.7)
     PerformanceLogger.start('Graph Metrics');
-    const centrality = GraphMetrics.calculateBetweenness(graph);
+    const centrality = await GraphMetrics.calculateBetweennessAsync(graph);
     centrality.forEach((val, nodeId) => {
         const node = graph.getNode(nodeId);
         if (node) {

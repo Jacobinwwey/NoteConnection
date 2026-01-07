@@ -125,6 +125,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 - [x] **Experience**: Polished UI with Quick Start Guide, Welcome experience, and Bilingual support (En/Zh).
 - [x] **API**: Decoupled Core API ready for plugin integrations.
 
+### v0.9.60 - Parallel Graph Metrics (2026-01-07)
+- [x] **Performance**: Parallelized the "Graph Metrics" calculation (Betweenness Centrality) using worker threads.
+- [x] **Scalability**: Distributed heavy Brandes Algorithm computations across multiple CPU cores, ensuring faster graph construction for large datasets.
+
 # 2026-01-07 v0.9.59 - Vector Space Memory Fix (Sparse Matrix)
 
 **Goal**: Resolve the "Heap out of memory" crash on Windows 10/11 (128GB RAM) when processing 13k+ files by replacing the dense TF-IDF matrix with a Sparse Vector implementation.
@@ -512,6 +516,10 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 - [x] **稳定性**: 通过混合推断和 Worker 线程，针对大数据集（50k+ 节点）进行了全面优化。
 - [x] **体验**: 抛光的用户界面，包含快速开始指南、欢迎体验和双语支持（中/英）。
 - [x] **API**: 解耦的核心 API，已准备好进行插件集成。
+
+### v0.9.60 - 并行图指标计算 (Parallel Graph Metrics) (2026-01-07)
+- [x] **性能**: 使用 Worker 线程并行化了“图指标”计算（介数中心性）。
+- [x] **可扩展性**: 将繁重的 Brandes 算法计算分发到多个 CPU 核心，确保大数据集的图构建更快。
 
 ### v0.9.58 - 混合推断资源重用 (优化) (Hybrid Inference Resource Reuse) (2026-01-07)
 - [x] **内存优化**: 在 `GraphBuilder` 中为“统计矩阵”和“向量空间”实现了资源重用逻辑。

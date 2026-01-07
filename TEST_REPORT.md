@@ -1,3 +1,43 @@
+# 2026-01-07 v0.9.60 - English Document
+
+## Test Report: Parallel Graph Metrics
+
+### 1. Parallel Execution Verification
+*   **Test**: Run `npx ts-node src/backend/test_robustness/test_metrics_parallel.ts`.
+*   **Conditions**: Dataset with 513 nodes (threshold > 500).
+*   **Result**: 
+    *   Console log confirmed parallel execution: `[GraphMetrics] Starting Parallel Betweenness Centrality with 4 workers...`.
+    *   Centrality values were correctly calculated (non-zero for central nodes).
+    *   Execution completed without error.
+*   **Status**: **Pass**
+
+### 2. Integration Check
+*   **Action**: Review `GraphBuilder.ts`.
+*   **Observation**: `GraphMetrics.calculateBetweennessAsync` is awaited properly in the pipeline.
+*   **Status**: **Pass**
+
+---
+
+# 2026-01-07 v0.9.60 - Chinese Document
+
+## 测试报告：并行图指标计算
+
+### 1. 并行执行验证
+*   **测试**: 运行 `npx ts-node src/backend/test_robustness/test_metrics_parallel.ts`。
+*   **条件**: 包含 513 个节点的数据集 (阈值 > 500)。
+*   **结果**: 
+    *   控制台日志确认了并行执行: `[GraphMetrics] Starting Parallel Betweenness Centrality with 4 workers...`。
+    *   中心性值计算正确（中心节点非零）。
+    *   执行无误完成。
+*   **状态**: **通过**
+
+### 2. 集成检查
+*   **操作**: 审查 `GraphBuilder.ts`。
+*   **观察**: `GraphMetrics.calculateBetweennessAsync` 在管道中被正确等待。
+*   **状态**: **通过**
+
+---
+
 # 2026-06-01 v1.0.0 - English Document
 
 ## Test Report: Production Release Verification

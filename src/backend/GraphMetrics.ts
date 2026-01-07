@@ -1,7 +1,108 @@
 import { Graph } from '../core/Graph';
 import { NoteNode } from '../core/types';
+import { Worker } from 'worker_threads';
+import * as path from 'path';
+import * as os from 'os';
+import { config } from './config';
 
 export class GraphMetrics {
+    /**
+     * Calculates Betweenness Centrality for all nodes (Parallel Version).
+     * Uses Worker threads to distribute the Brandes Algorithm.
+     * 计算所有节点的介数中心性（并行版本）。
+     * 使用 Worker 线程分发 Brandes 算法。
+     */
+    static async calculateBetweennessAsync(graph: Graph): Promise<Map<string, number>> {
+        const nodes = graph.toJSON().nodes;
+        const allNodeIds = nodes.map(n => n.id);
+        const nodeCount = nodes.length;
+
+        // Create a lightweight adjacency list for workers
+        // 为 Workers 创建轻量级邻接表
+        const adj: Record<string, string[]> = {};
+        nodes.forEach(n => {
+            adj[n.id] = graph.getOutgoingEdges(n.id).map(e => e.target);
+        });
+
+        // Determine worker count
+        const numCPUs = os.cpus().length;
+        const workerCount = config.maxWorkers ?? Math.max(1, numCPUs - 1);
+        
+        // Threshold for parallelization
+        // 并行化阈值
+        if (nodeCount < 500) {
+            return this.calculateBetweenness(graph);
+        }
+
+        console.log(`[GraphMetrics] Starting Parallel Betweenness Centrality with ${workerCount} workers...`);
+
+        const chunkSize = Math.ceil(nodeCount / workerCount);
+        const workerPromises: Promise<Record<string, number>>[] = [];
+        
+        // Resolve worker path
+        const workerPath = path.join(__dirname, 'workers', 'betweennessWorker.ts');
+        const isTsNode = path.extname(__filename) === '.ts';
+        const actualWorkerPath = isTsNode 
+            ? workerPath 
+            : workerPath.replace('.ts', '.js');
+
+        for (let i = 0; i < workerCount; i++) {
+            const start = i * chunkSize;
+            const end = Math.min(start + chunkSize, nodeCount);
+            if (start >= nodeCount) break;
+
+            const startNodeIds = allNodeIds.slice(start, end);
+
+            const p = new Promise<Record<string, number>>((resolve, reject) => {
+                const execArgv = isTsNode ? ['-r', require.resolve('ts-node/register')] : undefined;
+                const worker = new Worker(actualWorkerPath, {
+                    workerData: {
+                        startNodeIds,
+                        allNodeIds,
+                        adj
+                    },
+                    execArgv
+                });
+
+                worker.on('message', (partialCB: Record<string, number>) => {
+                    resolve(partialCB);
+                });
+
+                worker.on('error', (err) => {
+                    console.error(`[GraphMetrics] Worker error:`, err);
+                    reject(err);
+                });
+
+                worker.on('exit', (code) => {
+                    if (code !== 0) {
+                        reject(new Error(`Worker stopped with exit code ${code}`));
+                    }
+                });
+            });
+            workerPromises.push(p);
+        }
+
+        try {
+            const results = await Promise.all(workerPromises);
+            
+            // Merge results
+            // 合并结果
+            const totalCB = new Map<string, number>();
+            nodes.forEach(n => totalCB.set(n.id, 0));
+
+            results.forEach(partial => {
+                for (const [id, val] of Object.entries(partial)) {
+                    totalCB.set(id, (totalCB.get(id) || 0) + val);
+                }
+            });
+
+            return totalCB;
+        } catch (err) {
+            console.error('[GraphMetrics] Parallel calculation failed, falling back to sequential.', err);
+            return this.calculateBetweenness(graph);
+        }
+    }
+
     /**
      * Calculates Betweenness Centrality for all nodes.
      * Brandes Algorithm (Unweighted).

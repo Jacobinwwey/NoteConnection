@@ -6,6 +6,16 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-07 v0.9.60 - Parallel Graph Metrics
+
+**Goal**: Optimize graph construction performance by parallelizing the "Graph Metrics" calculation (Betweenness Centrality), which was previously single-threaded.
+
+- [x] **Parallelization**
+    - [x] **Worker Implementation**: Created `betweennessWorker.ts` to calculate partial centrality scores for a subset of nodes using Brandes Algorithm.
+    - [x] **Async Logic**: Updated `GraphMetrics` to `calculateBetweennessAsync` using a pool of workers (Default: `numCPUs - 1`).
+    - [x] **Integration**: Integrated async metrics calculation into `GraphBuilder` pipeline.
+    - [x] **Verification**: Validated functionality with `test_metrics_parallel.ts` on 500+ nodes.
+
 # 2026-01-07 v0.9.59 - Vector Space Memory Fix (Sparse Matrix)
 
 **Goal**: Resolve the "Heap out of memory" crash on Windows 10/11 (128GB RAM) when processing 13k+ files by replacing the dense TF-IDF matrix with a Sparse Vector implementation.

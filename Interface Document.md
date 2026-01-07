@@ -1,4 +1,4 @@
-# 2025-12-26 v0.9.27
+# 2026-01-07 v0.9.60
 
 # Interface Document
 
@@ -237,6 +237,22 @@ The main entry point for the core logic, decoupled from CLI/Server environment. 
         };
     }
     ```
+
+### 1.8 Graph Metrics (v0.9.60)
+
+#### `GraphMetrics` Class
+Static utility for calculating graph topology metrics (Centrality).
+
+*   **Location**: `src/backend/GraphMetrics.ts`
+*   **Methods**:
+    *   `calculateBetweennessAsync(graph: Graph): Promise<Map<string, number>>`
+        *   **Description**: Calculates Betweenness Centrality (Brandes Algorithm) in parallel using Worker threads.
+        *   **Optimization**: 
+            *   Distributes source nodes across available CPU cores.
+            *   Aggregates partial centrality scores from workers.
+            *   Falls back to sequential if node count < 500.
+    *   `calculateBetweenness(graph: Graph): Map<string, number>`
+        *   **Description**: Sequential fallback implementation.
 
 ## 2. Frontend Interfaces
 
@@ -904,6 +920,22 @@ Manages node highlighting interactions for both PC and mobile interfaces.
         };
     }
     ```
+
+### 1.8 图指标 (Graph Metrics) (v0.9.60)
+
+#### `GraphMetrics` 类
+用于计算图拓扑指标（中心性）的静态工具类。
+
+*   **位置**: `src/backend/GraphMetrics.ts`
+*   **方法**:
+    *   `calculateBetweennessAsync(graph: Graph): Promise<Map<string, number>>`
+        *   **描述**: 使用 Worker 线程并行计算介数中心性（Brandes 算法）。
+        *   **优化**: 
+            *   将源节点分发到可用的 CPU 核心。
+            *   聚合来自 Workers 的部分中心性分数。
+            *   如果节点数 < 500，则回退到顺序计算。
+    *   `calculateBetweenness(graph: Graph): Map<string, number>`
+        *   **描述**: 顺序回退实现。
 
 ## 2. 前端接口 (Frontend Interfaces)
 
