@@ -192,10 +192,15 @@ export class GraphBuilder {
     if (config.enableHybridInference) {
         PerformanceLogger.start('Hybrid Inference');
         console.log('[GraphBuilder] Running Hybrid Inference (Stats + Vector)...');
-        // We need both Stats Matrix and Vector Space
+        
+        // Step 1: Stats Matrix
+        PerformanceLogger.start('Hybrid: Stats Matrix');
         const terms = Array.from(fileMap.keys());
         const matrix = await StatisticalAnalyzer.analyzeAsync(files, terms);
-        
+        PerformanceLogger.end('Hybrid: Stats Matrix');
+
+        // Step 2: Vector Space
+        PerformanceLogger.start('Hybrid: Vector Space');
         let vectorSpace: VectorSpace;
         if (config.enableGPU) {
              console.log('[GraphBuilder] Using GPU Acceleration for Vector Space...');
@@ -203,8 +208,12 @@ export class GraphBuilder {
         } else {
              vectorSpace = new VectorSpace(files);
         }
+        PerformanceLogger.end('Hybrid: Vector Space');
 
+        // Step 3: Inference
+        PerformanceLogger.start('Hybrid: Inference Engine');
         const hybridEdges = HybridEngine.infer(matrix, vectorSpace, 0.25, 0.1); // Tune thresholds
+        PerformanceLogger.end('Hybrid: Inference Engine');
         
         hybridEdges.forEach(dep => {
              graph.addEdge(dep.source, dep.target, 'hybrid-inferred', dep.confidence);
@@ -212,9 +221,14 @@ export class GraphBuilder {
              // Graph edge types currently only store weight/type.
         });
         
+        // Cleanup Memory Immediately
+        console.log('[GraphBuilder] Cleaning up Hybrid Inference memory...');
+        matrix.clear(); // Clear the massive stats matrix
         if (vectorSpace instanceof VectorSpaceGPU) {
             vectorSpace.destroy();
         }
+        // @ts-ignore
+        vectorSpace = null; // Drop reference
 
         console.log(`[GraphBuilder] Added ${hybridEdges.length} hybrid inferred edges.`);
         PerformanceLogger.end('Hybrid Inference');

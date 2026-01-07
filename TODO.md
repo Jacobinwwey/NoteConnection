@@ -6,6 +6,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-05 v0.9.56 - Hybrid Inference Memory Analysis
+
+**Goal**: Analyze and optimize the memory usage of the "Hybrid Inference" engine to resolve "Heap out of memory" errors on Windows 10, preventing large object retention during graph construction.
+
+- [x] **Granular Logging**
+    - [x] **Implementation**: Added detailed `PerformanceLogger` steps within `HybridEngine.infer` and `GraphBuilder` (Stats Matrix, Vector Space, Inference Engine).
+    - [x] **Progress Tracking**: Logs memory usage every 1000 nodes processed during inference to pinpoint spikes.
+    - [x] **Optimization**: Explicitly clears the large `matrix` and nullifies `vectorSpace` immediately after inference to release heap memory before subsequent steps.
+
 # 2026-01-05 v0.9.55 - Heap OOM Fix & Iterative DFS
 
 **Goal**: Resolve "Heap out of memory" crash on Windows 10/11 by optimizing memory usage during graph construction and refactoring recursion to iteration.

@@ -119,6 +119,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.56 - Hybrid Inference Memory Optimization (2026-01-05)
+- [x] **Memory Analysis**: Added granular performance logging to the Hybrid Inference engine, tracking heap usage every 1000 nodes to identify memory spikes on Windows.
+- [x] **Optimization**: Implemented aggressive memory cleanup (clearing matrices and nullifying vector space) immediately after inference completion to prevent Heap OOM.
+
 ### v0.9.55 - Heap OOM Fix & Iterative DFS (2026-01-05)
 - [x] **Stability Fix**: Resolved "Heap out of memory" crashes on Windows 10/11 by implementing explicit memory clearing for file content before the algorithmic phase.
 - [x] **Robustness**: Refactored `CycleDetector` to use an **Iterative DFS** (stack-based) approach, eliminating stack overflow risks on deep graphs.
@@ -477,6 +481,10 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.56 - 混合推断内存优化 (Hybrid Inference Memory Optimization) (2026-01-05)
+- [x] **内存分析**: 为混合推断引擎添加了细粒度的性能日志，每 1000 个节点跟踪一次堆内存使用情况，以识别 Windows 上的内存峰值。
+- [x] **优化**: 在推断完成后立即实施激进的内存清理（清除矩阵和置空向量空间），以防止堆内存溢出。
 
 ### v0.9.55 - 堆内存溢出修复与迭代 DFS (Heap OOM Fix & Iterative DFS) (2026-01-05)
 - [x] **稳定性修复**: 通过在算法阶段之前显式清除文件内容内存，解决了 Windows 10/11 上的“堆内存溢出”崩溃问题。

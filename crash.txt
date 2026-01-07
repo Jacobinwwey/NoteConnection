@@ -1,12 +1,8 @@
-PS C:\Codes\NoteConnection> npm start
-
 > noteconnection@0.9.27 start
 > ts-node src/server.ts
 
 Server running at http://localhost:3000/
 Knowledge Base Root: C:\Codes\NoteConnection\Knowledge_Base
-(node:21604) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
-(Use `node --trace-deprecation ...` to show where the warning was created)
 Received build request for: feynman_concepts_complete maxWorkers: 16 enableGPU: false
 [Config] Setting maxWorkers to 16
 [Config] Setting enableGPU to false
@@ -17,21 +13,21 @@ Building graph...
 [System] CPU: AMD RYZEN AI MAX+ 395 w/ Radeon 8060S           (32 cores)
 [System] Total Memory: 123.65 GB
 [Perf] Starting: Node Initialization
-[Perf] Initial Memory: 168.04 MB / 235.55 MB (Heap/RSS)
+[Perf] Initial Memory: 729.71 MB / 901.27 MB (Heap/RSS)
 [Perf] Finished: Node Initialization
-[Perf] Time: 789.91ms
-[Perf] CPU (User/Sys): 297.00ms / 532.00ms
-[Perf] Memory (Heap/RSS): 185.16 MB / 264.88 MB
+[Perf] Time: 11.67ms
+[Perf] CPU (User/Sys): 15.00ms / 0.00ms
+[Perf] Memory (Heap/RSS): 742.70 MB / 905.90 MB
 --------------------------------------------------
 [Perf] Starting: Edge Identification (Explicit)
-[Perf] Initial Memory: 185.16 MB / 264.88 MB (Heap/RSS)
+[Perf] Initial Memory: 742.71 MB / 905.90 MB (Heap/RSS)
 [Perf] Finished: Edge Identification (Explicit)
-[Perf] Time: 2.25ms
+[Perf] Time: 3.07ms
 [Perf] CPU (User/Sys): 0.00ms / 0.00ms
-[Perf] Memory (Heap/RSS): 186.67 MB / 264.89 MB
+[Perf] Memory (Heap/RSS): 744.69 MB / 905.91 MB
 --------------------------------------------------
 [Perf] Starting: Keyword Matching
-[Perf] Initial Memory: 186.67 MB / 264.89 MB (Heap/RSS)
+[Perf] Initial Memory: 744.70 MB / 905.91 MB (Heap/RSS)
 [GraphBuilder] Starting keyword matching for 13659 files...
 [GraphBuilder] Using Parallel Processing (Workers)
 [GraphBuilder] Worker Path: C:\Codes\NoteConnection\src\backend\workers\keywordMatchWorker.ts
@@ -39,63 +35,28 @@ Building graph...
 [GraphBuilder] Spawning 16 workers...
 [GraphBuilder] Parallel matching complete.
 [Perf] Finished: Keyword Matching
-[Perf] Time: 217127.46ms
-[Perf] CPU (User/Sys): 3068109.00ms / 27234.00ms
-[Perf] Memory (Heap/RSS): 337.58 MB / 792.96 MB
+[Perf] Time: 220855.79ms
+[Perf] CPU (User/Sys): 3062938.00ms / 28250.00ms
+[Perf] Memory (Heap/RSS): 893.02 MB / 1471.03 MB
 --------------------------------------------------
-[Perf] Starting: Statistical Analysis
-[Perf] Initial Memory: 337.59 MB / 792.96 MB (Heap/RSS)
-[GraphBuilder] Running Statistical Analysis...
+[Perf] Starting: Statistical Inference
+[Perf] Initial Memory: 893.02 MB / 1471.03 MB (Heap/RSS)
+[GraphBuilder] Running Statistical Inference...
 [StatisticalAnalyzer] Starting parallel term extraction for 13659 files...
-[Perf] Finished: Statistical Analysis
-[Perf] Time: 127544.27ms
-[Perf] CPU (User/Sys): 1283469.00ms / 12844.00ms
-[Perf] Memory (Heap/RSS): 979.27 MB / 1581.25 MB
---------------------------------------------------
-[GraphBuilder] Applying Statistical Inference...
-[GraphBuilder] Added 146083 inferred edges.
-[Perf] Starting: Vector Space Construction
-[Perf] Initial Memory: 1698.38 MB / 2096.38 MB (Heap/RSS)
-[VectorSpace] Building Vocabulary...
-[VectorSpace] Vocabulary Size: 83865
-[VectorSpace] Computing Vectors...
-[Perf] Finished: Vector Space Construction
-[Perf] Time: 11390.27ms
-[Perf] CPU (User/Sys): 10844.00ms / 1125.00ms
-[Perf] Memory (Heap/RSS): 581.73 MB / 1798.11 MB
+[GraphBuilder] Added 145677 inferred edges.
+[Perf] Finished: Statistical Inference
+[Perf] Time: 146930.23ms
+[Perf] CPU (User/Sys): 1296000.00ms / 15813.00ms
+[Perf] Memory (Heap/RSS): 3003.66 MB / 3629.36 MB
 --------------------------------------------------
 [Perf] Starting: Hybrid Inference
-[Perf] Initial Memory: 581.73 MB / 1798.11 MB (Heap/RSS)
+[Perf] Initial Memory: 3003.67 MB / 3629.36 MB (Heap/RSS)
 [GraphBuilder] Running Hybrid Inference (Stats + Vector)...
-[GraphBuilder] Added 126377 hybrid inferred edges.
-[Perf] Finished: Hybrid Inference
-[Perf] Time: 69802.02ms
-[Perf] CPU (User/Sys): 68500.00ms / 1656.00ms
-[Perf] Memory (Heap/RSS): 1175.64 MB / 2076.42 MB
---------------------------------------------------
-[Perf] Starting: Community Detection
-[Perf] Initial Memory: 1175.64 MB / 2076.42 MB (Heap/RSS)
-[Perf] Finished: Community Detection
-[Perf] Time: 1529.45ms
-[Perf] CPU (User/Sys): 1594.00ms / 0.00ms
-[Perf] Memory (Heap/RSS): 1169.06 MB / 2079.08 MB
---------------------------------------------------
-[Perf] Starting: Graph Metrics
-[Perf] Initial Memory: 1169.07 MB / 2079.08 MB (Heap/RSS)
-[GraphMetrics] Using Degree Centrality for performance optimization.
-[Perf] Finished: Graph Metrics
-[Perf] Time: 1.51ms
-[Perf] CPU (User/Sys): 0.00ms / 0.00ms
-[Perf] Memory (Heap/RSS): 1170.06 MB / 2079.83 MB
---------------------------------------------------
-[Perf] Starting: Algorithmic Core
-[Perf] Initial Memory: 1170.06 MB / 2079.83 MB (Heap/RSS)
+[StatisticalAnalyzer] Starting parallel term extraction for 13659 files...
 
 <--- Last few GCs --->
 
-[21604:0000020E54372000]   488126 ms: Mark-Compact 3990.5 (4148.9) -> 3956.5 (4171.9) MB, pooled: 0.5 MB, 457.32 / 0.00 ms (average mu = 0.764, current mu = 0.160) allocation failure; scavenge might not succeed
-[21604:0000020E54372000]   488622 ms: Mark-Compact 4020.5 (4203.9) -> 3982.3 (4231.1) MB, pooled: 1.5 MB, 483.52 / 0.00 ms (average mu = 0.608, current mu = 0.025) allocation failure; scavenge might not succeed
-
+[2336:00000246A5069000]   615392 ms: Mark-Compact (reduce) 4092.9 (4106.0) -> 4092.0 (4105.2) MB, pooled: 0.0 MB, 321.69 / 0.00 ms (+ 77.6 ms in 16 steps since start of marking, biggest step 6.5 ms, walltime since start of marking 419 ms) (average mu = 0.
 FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory
 ----- Native stack trace -----
 
@@ -105,6 +66,11 @@ FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memor
  4: 00007FF709E15BDF EVP_PKEY_asn1_set_get_priv_key+453695
  5: 00007FF709E335E0 X509_STORE_set_cleanup+5664
  6: 00007FF709E3230E X509_STORE_set_cleanup+846
- 7: 00007FF709E3FF5B EVP_PKEY_meth_set_digestsign+21131
- 8: 00007FF709A3FEEE v8::String::Utf8Value::~Utf8Value+152750
- 9: 0000020E1FE7B4FA
+ 7: 00007FF709E3F7DE EVP_PKEY_meth_set_digestsign+19214
+ 8: 00007FF709E5751E EVP_PKEY_meth_set_digestsign+116814
+ 9: 00007FF709E574B5 EVP_PKEY_meth_set_digestsign+116709
+10: 00007FF709B5A45B v8::RegExp::GetFlags+17307
+11: 00007FF709B59CDD v8::RegExp::GetFlags+15389
+12: 00007FF709B5AE88 v8::RegExp::GetFlags+19912
+13: 00007FF709A4A8E7 v8::String::Utf8Value::~Utf8Value+196263
+14: 00000246DCFBB4FA

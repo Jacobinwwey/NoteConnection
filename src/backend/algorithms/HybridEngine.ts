@@ -1,4 +1,5 @@
 import { VectorSpace } from './VectorSpace';
+import { PerformanceLogger } from '../utils/PerformanceLogger';
 
 interface CooccurrenceMetrics {
     count: number;
@@ -21,12 +22,24 @@ export class HybridEngine {
         vectorThreshold: number = 0.3,
         asymmetryThreshold: number = 0.1
     ): {source: string, target: string, weight: number, confidence: number, reason: string}[] {
+        PerformanceLogger.start('Hybrid Inference Logic');
+        console.log(`[HybridEngine] Starting inference on ${matrix.size} nodes...`);
+
         const results: {source: string, target: string, weight: number, confidence: number, reason: string}[] = [];
         const checkedPairs = new Set<string>();
 
-        matrix.forEach((targets, nodeA) => {
+        let processedCount = 0;
+        const totalNodes = matrix.size;
+
+        for (const [nodeA, targets] of matrix) {
+            processedCount++;
+            if (processedCount % 1000 === 0) {
+                const mem = process.memoryUsage();
+                console.log(`[HybridEngine] Processed ${processedCount}/${totalNodes} nodes. Heap: ${(mem.heapUsed / 1024 / 1024).toFixed(2)} MB`);
+            }
+
             targets.forEach((metricsAtoB, nodeB) => {
-                const pairKey = [nodeA, nodeB].sort().join('|');
+                const pairKey = nodeA < nodeB ? `${nodeA}|${nodeB}` : `${nodeB}|${nodeA}`;
                 if (checkedPairs.has(pairKey)) return;
                 checkedPairs.add(pairKey);
 
@@ -75,7 +88,13 @@ export class HybridEngine {
                     });
                 }
             });
-        });
+        }
+
+        console.log(`[HybridEngine] Inference complete. Found ${results.length} edges.`);
+        PerformanceLogger.end('Hybrid Inference Logic');
+        
+        // Optimize: Clear checkedPairs to free memory immediately
+        checkedPairs.clear();
 
         return results.sort((a, b) => b.confidence - a.confidence);
     }

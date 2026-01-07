@@ -1,3 +1,85 @@
+# 2026-01-05 v0.9.56 - English Document
+
+## Test Report: Hybrid Inference Memory Analysis
+
+### 1. Granular Logging
+*   **Action**: Review `src/backend/algorithms/HybridEngine.ts`.
+*   **Result**: 
+    *   Code includes `processedCount % 1000` check.
+    *   Logs current Heap usage to console.
+*   **Status**: **Pass**
+
+### 2. Memory Cleanup
+*   **Action**: Review `src/backend/GraphBuilder.ts`.
+*   **Result**: 
+    *   `matrix.clear()` is called immediately after inference.
+    *   `vectorSpace` is nullified.
+    *   Logging verifies cleanup step.
+*   **Status**: **Pass**
+
+---
+
+# 2026-01-05 v0.9.56 - Chinese Document
+
+## 测试报告：混合推断内存分析
+
+### 1. 细粒度日志
+*   **操作**: 审查 `src/backend/algorithms/HybridEngine.ts`。
+*   **结果**: 
+    *   代码包含 `processedCount % 1000` 检查。
+    *   向控制台记录当前堆内存使用情况。
+*   **状态**: **通过**
+
+### 2. 内存清理
+*   **操作**: 审查 `src/backend/GraphBuilder.ts`。
+*   **结果**: 
+    *   `matrix.clear()` 在推断后立即被调用。
+    *   `vectorSpace` 被置空。
+    *   日志验证了清理步骤。
+*   **状态**: **通过**
+
+---
+
+# 2026-01-05 v0.9.55 - English Document
+
+## Test Report: Heap OOM Fix & Iterative DFS
+
+### 1. Iterative Cycle Detection
+*   **Test**: Run `npm test src/backend/algorithms/CycleDetection.test.ts`.
+*   **Result**: 
+    *   Iterative implementation passes all existing logic tests.
+    *   No stack overflow risk for deep graphs.
+*   **Status**: **Pass**
+
+### 2. Memory Optimization
+*   **Action**: Review `GraphBuilder.ts`.
+*   **Observation**: 
+    *   `fileMap.clear()` is called before `Algorithmic Core` to release file content memory.
+    *   Logging is granular to track execution steps.
+*   **Status**: **Pass**
+
+---
+
+# 2026-01-05 v0.9.55 - Chinese Document
+
+## 测试报告：堆内存溢出修复与迭代 DFS
+
+### 1. 迭代循环检测
+*   **测试**: 运行 `npm test src/backend/algorithms/CycleDetection.test.ts`。
+*   **结果**: 
+    *   迭代实现通过了所有现有的逻辑测试。
+    *   消除了深度图的堆栈溢出风险。
+*   **状态**: **通过**
+
+### 2. 内存优化
+*   **操作**: 审查 `GraphBuilder.ts`。
+*   **观察**: 
+    *   在 `Algorithmic Core` 之前调用 `fileMap.clear()` 以释放文件内容内存。
+    *   日志记录细粒度化，以便跟踪执行步骤。
+*   **状态**: **通过**
+
+---
+
 # 2026-01-05 v0.9.52 - English Document
 
 ## Test Report: Cycle Detection Memory Optimization

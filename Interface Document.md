@@ -194,7 +194,7 @@ Service to detect cycles in the graph structure to ensure DAG validity.
 *   **Location**: `src/backend/algorithms/CycleDetection.ts`
 *   **Methods**:
     *   `detectCycles(graph: Graph, limit?: number): string[][]`
-        *   **Description**: Detects simple cycles using DFS.
+        *   **Description**: Detects simple cycles using Iterative DFS (Stack-based) to prevent stack overflow on deep graphs.
         *   **Input**:
             *   `graph`: The graph to analyze.
             *   `limit` (optional): Maximum number of cycles to return. Defaults to 0 (unlimited). **Added in v0.9.52** to prevent OOM on large cyclic graphs.
@@ -451,6 +451,9 @@ Combines statistical and vector methods to infer directed edges.
 *   **Rule**: Suggest Edge $A \rightarrow B$ if:
     1.  $Similarity(A, B) > VectorThreshold$ (Content Relevance)
     2.  $P(A|B) - P(B|A) > AsymmetryThreshold$ (Directionality: B implies A context)
+*   **Performance Monitoring (v0.9.56)**: 
+    *   Logs execution progress every 1000 nodes.
+    *   Tracks Heap usage during inference loop.
 
 ### 3.4 Parallel Processing (v0.8.6)
 
@@ -840,7 +843,7 @@ Manages node highlighting interactions for both PC and mobile interfaces.
 *   **位置**: `src/backend/algorithms/CycleDetection.ts`
 *   **方法**:
     *   `detectCycles(graph: Graph, limit?: number): string[][]`
-        *   **描述**: 使用 DFS 检测简单循环。
+        *   **描述**: 使用迭代 DFS（基于栈）检测简单循环，以防止深度图上的堆栈溢出。
         *   **输入**:
             *   `graph`: 要分析的图。
             *   `limit` (可选): 返回循环的最大数量。默认为 0（无限制）。**v0.9.52 新增**，以防止在大型循环图上发生 OOM。
@@ -1156,6 +1159,9 @@ Manages node highlighting interactions for both PC and mobile interfaces.
 *   **规则**: 如果满足以下条件，建议边 $A \rightarrow B$：
     1.  $Similarity(A, B) > VectorThreshold$ (内容相关性)
     2.  $P(A|B) - P(B|A) > AsymmetryThreshold$ (方向性：B 暗示 A 语境)
+*   **性能监控 (v0.9.56)**:
+    *   每处理 1000 个节点记录一次执行进度。
+    *   在推断循环期间跟踪堆内存使用情况。
 
 ### 5. 移动端构建 (Mobile Build - v0.9.1)
 
