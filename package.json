@@ -7,7 +7,7 @@
     "noteconnection": "dist/src/server.js"
   },
   "scripts": {
-    "start": "ts-node --max-old-space-size=12288 src/server.ts",
+    "start": "node --max-old-space-size=12288 -r ts-node/register src/server.ts",
     "start:prod": "node dist/src/server.js",
     "build": "tsc && node scripts/copy-assets.js",
     "prepublishOnly": "npm run build",

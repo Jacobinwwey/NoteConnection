@@ -1421,6 +1421,8 @@
         -   `HybridEngine` (Sparse Dot Product)
         -   `StatisticalAnalyzer` (Shared Matrix reuse)
 3.  **Robustness**: Checked behavior with 513 files, detecting 100+ cycles (handled by limit).
+4.  **API Validation**: Triggered build via `POST /api/build` on running server.
+    -   **Result**: Success. Server remained stable, and graph was generated correctly.
 
 **Conclusion**: The system is now robust against OOM errors for large datasets (projected 13k+ files) due to significant memory reduction (>95% for vectors) and increased heap limit (12GB).
 
