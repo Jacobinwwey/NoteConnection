@@ -53,9 +53,8 @@ export class HybridEngine {
                 const vecB = vectorSpace.getVector(nodeB);
                 if (!vecA || !vecB) return;
 
-                // Simple dot product for L2 normalized vectors
-                let similarity = 0;
-                for(let i=0; i<vecA.length; i++) similarity += vecA[i] * vecB[i];
+                // Use the sparse cosine similarity method
+                const similarity = vectorSpace.cosineSimilarity(vecA, vecB);
 
                 if (similarity < vectorThreshold) return;
 

@@ -29,9 +29,19 @@ export class VectorSpaceGPU extends VectorSpace {
 
         console.log('[VectorSpaceGPU] Preparing data for GPU...');
         
-        // 1. Convert Map<string, number[]> to 2D Array
+        // 1. Convert Map<string, SparseVector> to 2D Array (Dense)
         this.fileIndex = Array.from(this.vectors.keys());
-        const vectorArray: number[][] = this.fileIndex.map(id => this.vectors.get(id)!);
+        const vocabSize = this.vocab.size;
+        
+        const vectorArray: number[][] = this.fileIndex.map(id => {
+            const sparse = this.vectors.get(id)!;
+            const dense = new Array(vocabSize).fill(0);
+            for(let k = 0; k < sparse.indices.length; k++) {
+                dense[sparse.indices[k]] = sparse.values[k];
+            }
+            return dense;
+        });
+
         const numDocs = vectorArray.length;
         
         if (numDocs === 0) return;

@@ -1,5 +1,3 @@
-PS C:\Codes\NoteConnection> npm start
-
 > noteconnection@0.9.27 start
 > ts-node src/server.ts
 
@@ -15,21 +13,21 @@ Building graph...
 [System] CPU: AMD RYZEN AI MAX+ 395 w/ Radeon 8060S           (32 cores)
 [System] Total Memory: 123.65 GB
 [Perf] Starting: Node Initialization
-[Perf] Initial Memory: 738.93 MB / 941.86 MB (Heap/RSS)
+[Perf] Initial Memory: 738.06 MB / 945.19 MB (Heap/RSS)
 [Perf] Finished: Node Initialization
-[Perf] Time: 11.79ms
+[Perf] Time: 10.59ms
 [Perf] CPU (User/Sys): 0.00ms / 0.00ms
-[Perf] Memory (Heap/RSS): 751.93 MB / 946.40 MB
+[Perf] Memory (Heap/RSS): 751.07 MB / 949.70 MB
 --------------------------------------------------
 [Perf] Starting: Edge Identification (Explicit)
-[Perf] Initial Memory: 751.94 MB / 946.40 MB (Heap/RSS)
+[Perf] Initial Memory: 751.07 MB / 949.70 MB (Heap/RSS)
 [Perf] Finished: Edge Identification (Explicit)
-[Perf] Time: 3.23ms
-[Perf] CPU (User/Sys): 0.00ms / 0.00ms
-[Perf] Memory (Heap/RSS): 753.93 MB / 946.41 MB
+[Perf] Time: 2.40ms
+[Perf] CPU (User/Sys): 15.00ms / 0.00ms
+[Perf] Memory (Heap/RSS): 753.06 MB / 949.70 MB
 --------------------------------------------------
 [Perf] Starting: Keyword Matching
-[Perf] Initial Memory: 753.93 MB / 946.41 MB (Heap/RSS)
+[Perf] Initial Memory: 753.07 MB / 949.70 MB (Heap/RSS)
 [GraphBuilder] Starting keyword matching for 13659 files...
 [GraphBuilder] Using Parallel Processing (Workers)
 [GraphBuilder] Worker Path: C:\Codes\NoteConnection\src\backend\workers\keywordMatchWorker.ts
@@ -37,39 +35,43 @@ Building graph...
 [GraphBuilder] Spawning 16 workers...
 [GraphBuilder] Parallel matching complete.
 [Perf] Finished: Keyword Matching
-[Perf] Time: 220594.63ms
-[Perf] CPU (User/Sys): 3055953.00ms / 25500.00ms
-[Perf] Memory (Heap/RSS): 875.19 MB / 1455.11 MB
+[Perf] Time: 217677.08ms
+[Perf] CPU (User/Sys): 3072813.00ms / 31234.00ms
+[Perf] Memory (Heap/RSS): 874.30 MB / 1363.60 MB
 --------------------------------------------------
-[Perf] Starting: Statistical Inference
-[Perf] Initial Memory: 875.20 MB / 1455.11 MB (Heap/RSS)
-[GraphBuilder] Running Statistical Inference...
+[Perf] Starting: Statistical Inference (Shared)
+[Perf] Initial Memory: 874.29 MB / 1363.60 MB (Heap/RSS)
+[GraphBuilder] Running Statistical Analysis (Shared)...
 [StatisticalAnalyzer] Starting parallel term extraction for 13659 files...
+[GraphBuilder] Applying Statistical Inference rules...
 [GraphBuilder] Added 145677 inferred edges.
-[Perf] Finished: Statistical Inference
-[Perf] Time: 148814.70ms
-[Perf] CPU (User/Sys): 1293328.00ms / 14969.00ms
-[Perf] Memory (Heap/RSS): 2978.72 MB / 3598.11 MB
+[Perf] Finished: Statistical Inference (Shared)
+[Perf] Time: 147812.91ms
+[Perf] CPU (User/Sys): 1299781.00ms / 14750.00ms
+[Perf] Memory (Heap/RSS): 3005.26 MB / 3898.12 MB
 --------------------------------------------------
-[Perf] Starting: Hybrid Inference
-[Perf] Initial Memory: 2978.73 MB / 3598.13 MB (Heap/RSS)
-[GraphBuilder] Running Hybrid Inference (Stats + Vector)...
-[Perf] Starting: Hybrid: Stats Matrix
-[Perf] Initial Memory: 2978.99 MB / 3598.13 MB (Heap/RSS)
-[StatisticalAnalyzer] Starting parallel term extraction for 13659 files...
+[Perf] Starting: Vector Similarity (Shared)
+[Perf] Initial Memory: 3005.27 MB / 3898.13 MB (Heap/RSS)
+[GraphBuilder] Initializing Vector Space (Shared)...
 
 <--- Last few GCs --->
 
-[11116:0000027B97105000]   518109 ms: Mark-Compact (reduce) 4091.8 (4105.2) -> 4091.5 (4105.0) MB, pooled: 0.0 MB, 367.29 / 0.00 ms (+ 35.0 ms in 7 steps since start of marking, biggest step 5.0 ms, walltime since start of marking 411 ms) (average mu = 0.
-FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory
+[7144:000001D654910000]   392889 ms: Scavenge (during sweeping) 4081.9 (4089.8) -> 4079.7 (4087.9) MB, pooled: 0.0 MB, 4.53 / 0.00 ms (average mu = 0.263, current mu = 0.220) allocation failure;
+[7144:000001D654910000]   393404 ms: Mark-Compact (reduce) 4087.7 (4096.4) -> 4082.5 (4090.2) MB, pooled: 0.0 MB, 370.36 / 0.00 ms (+ 52.4 ms in 15 steps since start of marking, biggest step 5.8 ms, walltime since start of marking 430 ms) (average mu = 0.
+FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory
 ----- Native stack trace -----
 
  1: 00007FF70946B106 node::OnFatalError+1318
  2: 00007FF70A009C67 v8::Function::NewInstance+423
  3: 00007FF709E18077 EVP_PKEY_asn1_set_get_priv_key+463063
- 4: 00007FF709E15BDF EVP_PKEY_asn1_set_get_priv_key+453695
- 5: 00007FF709E335E0 X509_STORE_set_cleanup+5664
- 6: 00007FF709E3230E X509_STORE_set_cleanup+846
- 7: 00007FF709E3FF5B EVP_PKEY_meth_set_digestsign+21131
- 8: 00007FF709A3FFEF v8::String::Utf8Value::~Utf8Value+153007
- 9: 0000027BCF77B4FA
+ 4: 00007FF709E1BF87 EVP_PKEY_asn1_set_get_priv_key+479207
+ 5: 00007FF709E2DB88 v8::internal::StrongRootAllocatorBase::deallocate_impl+19176
+ 6: 00007FF709E2D3BB v8::internal::StrongRootAllocatorBase::deallocate_impl+17179
+ 7: 00007FF70B3EF9AD v8::base::DiyFp::Multiply+10628941
+ 8: 00007FF709E159A8 EVP_PKEY_asn1_set_get_priv_key+453128
+ 9: 00007FF709E335E0 X509_STORE_set_cleanup+5664
+10: 00007FF709E3230E X509_STORE_set_cleanup+846
+11: 00007FF709E3F7DE EVP_PKEY_meth_set_digestsign+19214
+12: 00007FF709E57732 EVP_PKEY_meth_set_digestsign+117346
+13: 00007FF709FE3171 v8::internal::ThreadIsolation::LookupJumpTableAllocations+543025
+14: 000001D61FE7B43A

@@ -1,9 +1,14 @@
 import { RawFile } from '../FileLoader';
 
+interface SparseVector {
+    indices: Uint32Array; // Sorted indices of non-zero terms
+    values: Float32Array; // Corresponding TF-IDF values
+}
+
 export class VectorSpace {
     protected vocab: Map<string, number>; // Term -> Index
     protected idf: Map<string, number>; // Term -> Inverse Document Frequency
-    protected vectors: Map<string, number[]>; // FileID -> Vector
+    protected vectors: Map<string, SparseVector>; // FileID -> SparseVector
 
     constructor(files: RawFile[]) {
         this.vocab = new Map();
@@ -33,32 +38,47 @@ export class VectorSpace {
         docFreq.forEach((count, term) => {
             if (count > 1) { // Ignore rare terms (min_doc_freq = 2)
                 this.vocab.set(term, index++);
-                this.idf.set(term, Math.log(docCount / (1 + count)));
+                this.idf.set(term, Math.log(docCount / count));
             }
         });
 
-        // 3. Compute TF-IDF Vectors
+        console.log(`[VectorSpace] Vocabulary size: ${this.vocab.size}`);
+
+        // 3. Compute TF-IDF Vectors (Sparse)
         tokenizedDocs.forEach((tokens, fileId) => {
-            const vector = new Array(this.vocab.size).fill(0);
             const termCounts = new Map<string, number>();
-            
             tokens.forEach(t => termCounts.set(t, (termCounts.get(t) || 0) + 1));
             
+            // Collect non-zero entries
+            const tempEntries: { idx: number, val: number }[] = [];
+
             termCounts.forEach((count, term) => {
                 const idx = this.vocab.get(term);
                 if (idx !== undefined) {
                     const tf = count / tokens.length;
-                    vector[idx] = tf * this.idf.get(term)!;
+                    const val = tf * this.idf.get(term)!;
+                    tempEntries.push({ idx, val });
                 }
             });
 
-            // L2 Normalize
-            const norm = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0));
-            if (norm > 0) {
-                for (let i = 0; i < vector.length; i++) vector[i] /= norm;
+            // Sort by index for efficient dot product
+            tempEntries.sort((a, b) => a.idx - b.idx);
+
+            // Create TypedArrays
+            const indices = new Uint32Array(tempEntries.length);
+            const values = new Float32Array(tempEntries.length);
+
+            // L2 Normalization Calculation
+            let sumSq = 0;
+            for (const e of tempEntries) sumSq += e.val * e.val;
+            const norm = Math.sqrt(sumSq);
+
+            for (let i = 0; i < tempEntries.length; i++) {
+                indices[i] = tempEntries[i].idx;
+                values[i] = norm > 0 ? tempEntries[i].val / norm : 0;
             }
 
-            this.vectors.set(fileId, vector);
+            this.vectors.set(fileId, { indices, values });
         });
     }
 
@@ -70,7 +90,7 @@ export class VectorSpace {
         return (text.match(regex) || []).map(t => t.toLowerCase());
     }
 
-    public getVector(fileId: string): number[] | undefined {
+    public getVector(fileId: string): SparseVector | undefined {
         return this.vectors.get(fileId);
     }
 
@@ -92,11 +112,30 @@ export class VectorSpace {
         return results.sort((a, b) => b.score - a.score).slice(0, topK);
     }
 
-    private cosineSimilarity(vecA: number[], vecB: number[]): number {
+    // Public static to be used by HybridEngine if needed, but here it's instance method
+    public cosineSimilarity(vecA: SparseVector, vecB: SparseVector): number {
         let dot = 0;
-        // Since vectors are L2 normalized, cosine sim is just dot product
-        for (let i = 0; i < vecA.length; i++) {
-            dot += vecA[i] * vecB[i];
+        let i = 0;
+        let j = 0;
+        
+        const lenA = vecA.indices.length;
+        const lenB = vecB.indices.length;
+
+        // Efficient sparse dot product (O(min(N, M)))
+        while (i < lenA && j < lenB) {
+            const idxA = vecA.indices[i];
+            const idxB = vecB.indices[j];
+
+            if (idxA < idxB) {
+                i++;
+            } else if (idxA > idxB) {
+                j++;
+            } else {
+                // Indices match
+                dot += vecA.values[i] * vecB.values[j];
+                i++;
+                j++;
+            }
         }
         return dot;
     }

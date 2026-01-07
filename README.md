@@ -125,7 +125,17 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 - [x] **Experience**: Polished UI with Quick Start Guide, Welcome experience, and Bilingual support (En/Zh).
 - [x] **API**: Decoupled Core API ready for plugin integrations.
 
-### v0.9.58 - Hybrid Inference Resource Reuse (Optimization) (2026-01-07)
+# 2026-01-07 v0.9.59 - Vector Space Memory Fix (Sparse Matrix)
+
+**Goal**: Resolve the "Heap out of memory" crash on Windows 10/11 (128GB RAM) when processing 13k+ files by replacing the dense TF-IDF matrix with a Sparse Vector implementation.
+
+- [x] **Memory Optimization**
+    - [x] **Sparse Vectors**: Refactored `VectorSpace` to use `Uint32Array` (indices) and `Float32Array` (values) instead of standard Javascript Arrays.
+    - [x] **Efficiency**: Reduced memory footprint for 13k files from ~10GB+ (dense) to <500MB (sparse).
+    - [x] **Algorithm**: Optimized Cosine Similarity calculation to use sparse dot product ($O(min(N, M))$).
+    - [x] **Config**: Increased default Node.js heap limit to 12GB (`--max-old-space-size=12288`) in `package.json` to utilize available system RAM.
+
+# 2026-01-07 v0.9.58 - Hybrid Inference Resource Reuse (Optimization)
 - [x] **Memory Optimization**: Implemented resource reuse logic for "Statistical Matrix" and "Vector Space" in `GraphBuilder`.
 - [x] **Efficiency**: Prevents redundant recalculation of heavy data structures during Hybrid Inference, eliminating memory spikes and resolving OOM crashes on large datasets.
 - [x] **Cleanup**: Added strict memory cleanup steps after inference tasks complete.

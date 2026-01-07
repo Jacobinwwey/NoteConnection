@@ -1170,6 +1170,10 @@ Manages node highlighting interactions for both PC and mobile interfaces.
 *   **分词器**: 双语支持（英文单词 + 中文字符）。
 *   **函数**: `getSimilar(fileId, topK)`
 *   **输出**: 带有分数的相似文件列表。
+*   **优化 (v0.9.59)**:
+    *   **稀疏向量**: 内部使用 `Uint32Array` (索引) 和 `Float32Array` (值) 存储 TF-IDF 向量。
+    *   **内存**: 仅存储非零元素，将内存占用减少 95% 以上（对于稀疏文本）。
+    *   **计算**: 点积计算优化为 $O(\min(|A|, |B|))$。
 
 ### 4.3 混合引擎 (`HybridEngine`)
 结合统计和向量方法推断有向边。
