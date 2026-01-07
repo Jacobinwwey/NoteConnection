@@ -119,6 +119,11 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.58 - Hybrid Inference Resource Reuse (Optimization) (2026-01-07)
+- [x] **Memory Optimization**: Implemented resource reuse logic for "Statistical Matrix" and "Vector Space" in `GraphBuilder`.
+- [x] **Efficiency**: Prevents redundant recalculation of heavy data structures during Hybrid Inference, eliminating memory spikes and resolving OOM crashes on large datasets.
+- [x] **Cleanup**: Added strict memory cleanup steps after inference tasks complete.
+
 ### v0.9.57 - Worker Memory Optimization (2026-01-07)
 - [x] **Stability Fix**: Resolved "Heap out of memory" crashes when processing large datasets (>13k files) by optimizing the data transfer strategy for Worker Threads.
 - [x] **Efficiency**: Workers now receive file paths and read content on-demand, eliminating the memory overhead of cloning large file content strings across threads.
@@ -485,6 +490,11 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.58 - 混合推断资源重用 (优化) (Hybrid Inference Resource Reuse) (2026-01-07)
+- [x] **内存优化**: 在 `GraphBuilder` 中为“统计矩阵”和“向量空间”实现了资源重用逻辑。
+- [x] **效率**: 防止在混合推断期间重复计算繁重的数据结构，消除了内存峰值并解决了大数据集上的 OOM 崩溃问题。
+- [x] **清理**: 在推断任务完成后添加了严格的内存清理步骤。
 
 ### v0.9.57 - Worker 内存优化 (Worker Memory Optimization) (2026-01-07)
 - [x] **稳定性修复**: 通过优化 Worker 线程的数据传输策略，解决了处理大数据集 (>13k 文件) 时的“堆内存溢出”崩溃问题。

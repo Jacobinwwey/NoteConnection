@@ -4,7 +4,7 @@ import * as os from 'os';
 import { Worker } from 'worker_threads';
 import { config } from '../config';
 
-interface CooccurrenceMetrics {
+export interface CooccurrenceMetrics {
     count: number;
     jaccard: number; // |A ∩ B| / |A ∪ B|
     conditionalProb: number; // P(B|A) = Count(A ∩ B) / Count(A) - Probability B appears given A

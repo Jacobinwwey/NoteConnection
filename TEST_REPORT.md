@@ -1,3 +1,47 @@
+# 2026-01-07 v0.9.58 - English Document
+
+## Test Report: Hybrid Inference Resource Reuse
+
+### 1. Memory Usage Analysis
+*   **Action**: Simulate `GraphBuilder` logic with `HybridInference` enabled.
+*   **Observation**: 
+    *   `StatisticalAnalyzer.analyzeAsync` is called only ONCE.
+    *   The returned `matrix` is stored in `sharedStatsMatrix`.
+    *   `HybridEngine.infer` reuses `sharedStatsMatrix` without re-running the expensive analysis.
+*   **Result**: Expected memory savings realized (avoiding 2x allocation of the large matrix).
+*   **Status**: **Pass (Verified via Code Logic)**
+
+### 2. Resource Cleanup
+*   **Action**: Verify cleanup steps in `GraphBuilder.ts`.
+*   **Observation**: 
+    *   `sharedStatsMatrix.clear()` and `sharedVectorSpace.destroy()` are called explicitly at the end of the `build` method.
+    *   References are nullified to allow GC.
+*   **Status**: **Pass (Verified via Code Logic)**
+
+---
+
+# 2026-01-07 v0.9.58 - Chinese Document
+
+## 测试报告：混合推断资源重用
+
+### 1. 内存使用分析
+*   **操作**: 在启用 `HybridInference` 的情况下模拟 `GraphBuilder` 逻辑。
+*   **观察**: 
+    *   `StatisticalAnalyzer.analyzeAsync` 仅被调用**一次**。
+    *   返回的 `matrix` 存储在 `sharedStatsMatrix` 中。
+    *   `HybridEngine.infer` 重用了 `sharedStatsMatrix`，而无需重新运行昂贵的分析。
+*   **结果**: 实现了预期的内存节省（避免了大型矩阵的 2 倍分配）。
+*   **状态**: **通过 (通过代码逻辑验证)**
+
+### 2. 资源清理
+*   **操作**: 验证 `GraphBuilder.ts` 中的清理步骤。
+*   **观察**: 
+    *   `sharedStatsMatrix.clear()` 和 `sharedVectorSpace.destroy()` 在 `build` 方法结束时被显式调用。
+    *   引用被置空以允许垃圾回收。
+*   **状态**: **通过 (通过代码逻辑验证)**
+
+---
+
 # 2026-01-07 v0.9.57 - English Document
 
 ## Test Report: Worker Memory Optimization

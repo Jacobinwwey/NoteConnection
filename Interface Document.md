@@ -482,6 +482,24 @@ Utilizes Node.js `worker_threads` to parallelize computationally expensive tasks
     *   Results are aggregated in the main thread.
 *   **Fallback**: Automatically degrades to sequential processing if worker spawning fails.
 
+### 3.5 Resource Optimization (v0.9.58)
+
+#### `GraphBuilder` Shared State
+Implements resource reuse to prevent OOM errors during Hybrid Inference.
+
+*   **Mechanism**: Pre-calculates and reuses `sharedStatsMatrix` and `sharedVectorSpace` across `StatisticalInference` (Step 2c) and `HybridInference` (Step 2e).
+*   **Cleanup**: Explicitly clears these resources (`matrix.clear()`, `vectorSpace.destroy()`) after the inference pipeline concludes.
+
+#### `CooccurrenceMetrics` Interface
+Exported from `StatisticalAnalyzer` for type safety in shared state.
+```typescript
+interface CooccurrenceMetrics {
+    count: number;
+    jaccard: number;        // |A ∩ B| / |A ∪ B|
+    conditionalProb: number;// P(B|A)
+}
+```
+
 ## 4. Server API (v0.8.5)
 
 ### 4.1 Endpoints
@@ -1162,6 +1180,24 @@ Manages node highlighting interactions for both PC and mobile interfaces.
 *   **性能监控 (v0.9.56)**:
     *   每处理 1000 个节点记录一次执行进度。
     *   在推断循环期间跟踪堆内存使用情况。
+
+### 4.4 资源优化 (Resource Optimization - v0.9.58)
+
+#### `GraphBuilder` 共享状态
+实现资源重用以防止混合推断期间的 OOM 错误。
+
+*   **机制**: 在 `StatisticalInference` (步骤 2c) 和 `HybridInference` (步骤 2e) 之间预计算并重用 `sharedStatsMatrix` 和 `sharedVectorSpace`。
+*   **清理**: 在推断管道结束后显式清除这些资源 (`matrix.clear()`, `vectorSpace.destroy()`)。
+
+#### `CooccurrenceMetrics` 接口
+从 `StatisticalAnalyzer` 导出，用于共享状态的类型安全。
+```typescript
+interface CooccurrenceMetrics {
+    count: number;
+    jaccard: number;        // |A ∩ B| / |A ∪ B|
+    conditionalProb: number;// P(B|A)
+}
+```
 
 ### 5. 移动端构建 (Mobile Build - v0.9.1)
 

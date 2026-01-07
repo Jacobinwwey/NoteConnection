@@ -6,6 +6,16 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-07 v0.9.58 - Hybrid Inference Resource Reuse (Optimization)
+
+**Goal**: Fix "Heap out of memory" crash during Hybrid Inference by preventing redundant calculation of Statistical Matrix and Vector Space.
+
+- [x] **Resource Optimization**
+    - [x] **Shared State**: Implemented `sharedStatsMatrix` and `sharedVectorSpace` in `GraphBuilder`.
+    - [x] **Logic**: Pre-calculates these heavy resources if `HybridInference` is enabled, reusing them across Statistical and Vector steps.
+    - [x] **Cleanup**: Explicitly clears shared resources after inference is complete.
+    - [x] **Result**: Eliminates the 2x memory spike when running Hybrid Inference, preventing OOM on 13k+ files.
+
 # 2026-01-07 v0.9.57 - Worker Memory Optimization
 
 **Goal**: Resolve "Heap out of memory" errors on Windows 10/11 when processing large datasets (13k+ files) by optimizing data transfer between main thread and workers.

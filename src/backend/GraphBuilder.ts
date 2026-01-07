@@ -11,7 +11,7 @@ import { isSimilar, checkMatch } from './utils/stringUtils';
 import { FrontmatterParser } from './utils/frontmatterParser';
 import { CycleDetector } from './algorithms/CycleDetection';
 import { TopologicalSort } from './algorithms/TopologicalSort';
-import { StatisticalAnalyzer } from './algorithms/StatisticalAnalyzer';
+import { StatisticalAnalyzer, CooccurrenceMetrics } from './algorithms/StatisticalAnalyzer';
 import { VectorSpace } from './algorithms/VectorSpace';
 import { VectorSpaceGPU } from '../../amdgpu/VectorSpaceGPU';
 import { HybridEngine } from './algorithms/HybridEngine';
@@ -139,53 +139,65 @@ export class GraphBuilder {
     }
     PerformanceLogger.end('Keyword Matching');
     
+    // Shared Resources Optimization (v0.9.58)
+    // 共享资源优化 (v0.9.58)
+    // Prevent redundant calculation of heavy matrices/vectors.
+    let sharedStatsMatrix: Map<string, Map<string, CooccurrenceMetrics>> | null = null;
+    let sharedVectorSpace: VectorSpace | null = null;
+    
+    const needStats = config.enableStatisticalInference || config.enableHybridInference;
+    const needVector = config.enableVectorSimilarity || config.enableHybridInference;
+
     // 2c. Statistical Inference (v0.6.0)
-    if (config.enableStatisticalInference) {
-        PerformanceLogger.start('Statistical Inference');
-        console.log('[GraphBuilder] Running Statistical Inference...');
+    if (needStats) {
+        PerformanceLogger.start('Statistical Inference (Shared)');
+        console.log('[GraphBuilder] Running Statistical Analysis (Shared)...');
         const terms = Array.from(fileMap.keys());
-        const matrix = await StatisticalAnalyzer.analyzeAsync(files, terms);
-        const inferredEdges = StatisticalAnalyzer.inferDependencies(matrix, 0.05, 0.1); 
+        // Calculate once, use multiple times
+        sharedStatsMatrix = await StatisticalAnalyzer.analyzeAsync(files, terms);
         
-        inferredEdges.forEach(dep => {
-            graph.addEdge(dep.source, dep.target, 'statistical-inferred', dep.confidence);
-        });
-        console.log(`[GraphBuilder] Added ${inferredEdges.length} inferred edges.`);
-        PerformanceLogger.end('Statistical Inference');
+        if (config.enableStatisticalInference) {
+            console.log('[GraphBuilder] Applying Statistical Inference rules...');
+            const inferredEdges = StatisticalAnalyzer.inferDependencies(sharedStatsMatrix, 0.05, 0.1); 
+            
+            inferredEdges.forEach(dep => {
+                graph.addEdge(dep.source, dep.target, 'statistical-inferred', dep.confidence);
+            });
+            console.log(`[GraphBuilder] Added ${inferredEdges.length} inferred edges.`);
+        }
+        PerformanceLogger.end('Statistical Inference (Shared)');
     }
 
     // 2d. Vector Similarity (v0.6.0)
-    if (config.enableVectorSimilarity && !config.enableHybridInference) {
-        PerformanceLogger.start('Vector Similarity');
-        console.log('[GraphBuilder] Running Vector Similarity Analysis...');
+    if (needVector) {
+        PerformanceLogger.start('Vector Similarity (Shared)');
+        console.log('[GraphBuilder] Initializing Vector Space (Shared)...');
         
-        let vectorSpace: VectorSpace;
         if (config.enableGPU) {
              console.log('[GraphBuilder] Using GPU Acceleration for Vector Space...');
-             vectorSpace = new VectorSpaceGPU(files);
+             sharedVectorSpace = new VectorSpaceGPU(files);
         } else {
-             vectorSpace = new VectorSpace(files);
+             sharedVectorSpace = new VectorSpace(files);
         }
 
-        let similarityEdges = 0;
-        
-        files.forEach(file => {
-             const similar = vectorSpace.getSimilar(file.filename, 3); // Top 3 similar
-             similar.forEach(sim => {
-                 if (sim.score > 0.3) { // Threshold
-                     // Add UNDIRECTED association
-                     graph.addEdge(file.filename, sim.id, 'vector-association', sim.score);
-                     similarityEdges++;
-                 }
-             });
-        });
-        
-        if (vectorSpace instanceof VectorSpaceGPU) {
-            vectorSpace.destroy();
+        if (config.enableVectorSimilarity && !config.enableHybridInference) {
+            console.log('[GraphBuilder] Running Vector Similarity Analysis...');
+            let similarityEdges = 0;
+            
+            files.forEach(file => {
+                // Use shared instance
+                const similar = sharedVectorSpace!.getSimilar(file.filename, 3); // Top 3 similar
+                similar.forEach(sim => {
+                    if (sim.score > 0.3) { // Threshold
+                        // Add UNDIRECTED association
+                        graph.addEdge(file.filename, sim.id, 'vector-association', sim.score);
+                        similarityEdges++;
+                    }
+                });
+            });
+            console.log(`[GraphBuilder] Added ${similarityEdges} vector association edges.`);
         }
-        
-        console.log(`[GraphBuilder] Added ${similarityEdges} vector association edges.`);
-        PerformanceLogger.end('Vector Similarity');
+        PerformanceLogger.end('Vector Similarity (Shared)');
     }
 
     // 2e. Hybrid Inference (v0.7.0)
@@ -193,26 +205,30 @@ export class GraphBuilder {
         PerformanceLogger.start('Hybrid Inference');
         console.log('[GraphBuilder] Running Hybrid Inference (Stats + Vector)...');
         
-        // Step 1: Stats Matrix
-        PerformanceLogger.start('Hybrid: Stats Matrix');
-        const terms = Array.from(fileMap.keys());
-        const matrix = await StatisticalAnalyzer.analyzeAsync(files, terms);
-        PerformanceLogger.end('Hybrid: Stats Matrix');
-
-        // Step 2: Vector Space
-        PerformanceLogger.start('Hybrid: Vector Space');
-        let vectorSpace: VectorSpace;
-        if (config.enableGPU) {
-             console.log('[GraphBuilder] Using GPU Acceleration for Vector Space...');
-             vectorSpace = new VectorSpaceGPU(files);
-        } else {
-             vectorSpace = new VectorSpace(files);
+        // Step 1: Stats Matrix (Reuse)
+        PerformanceLogger.start('Hybrid: Stats Matrix (Reuse)');
+        if (!sharedStatsMatrix) {
+            // Should be calculated in 2c, but fallback just in case logic changes
+             const terms = Array.from(fileMap.keys());
+             sharedStatsMatrix = await StatisticalAnalyzer.analyzeAsync(files, terms);
         }
-        PerformanceLogger.end('Hybrid: Vector Space');
+        PerformanceLogger.end('Hybrid: Stats Matrix (Reuse)');
+
+        // Step 2: Vector Space (Reuse)
+        PerformanceLogger.start('Hybrid: Vector Space (Reuse)');
+        if (!sharedVectorSpace) {
+            // Fallback
+            if (config.enableGPU) {
+                 sharedVectorSpace = new VectorSpaceGPU(files);
+            } else {
+                 sharedVectorSpace = new VectorSpace(files);
+            }
+        }
+        PerformanceLogger.end('Hybrid: Vector Space (Reuse)');
 
         // Step 3: Inference
         PerformanceLogger.start('Hybrid: Inference Engine');
-        const hybridEdges = HybridEngine.infer(matrix, vectorSpace, 0.25, 0.1); // Tune thresholds
+        const hybridEdges = HybridEngine.infer(sharedStatsMatrix, sharedVectorSpace, 0.25, 0.1); // Tune thresholds
         PerformanceLogger.end('Hybrid: Inference Engine');
         
         hybridEdges.forEach(dep => {
@@ -221,17 +237,24 @@ export class GraphBuilder {
              // Graph edge types currently only store weight/type.
         });
         
-        // Cleanup Memory Immediately
-        console.log('[GraphBuilder] Cleaning up Hybrid Inference memory...');
-        matrix.clear(); // Clear the massive stats matrix
-        if (vectorSpace instanceof VectorSpaceGPU) {
-            vectorSpace.destroy();
-        }
-        // @ts-ignore
-        vectorSpace = null; // Drop reference
-
         console.log(`[GraphBuilder] Added ${hybridEdges.length} hybrid inferred edges.`);
         PerformanceLogger.end('Hybrid Inference');
+    }
+
+    // Cleanup Shared Resources (v0.9.58)
+    // 清理共享资源
+    if (sharedStatsMatrix) {
+        console.log('[GraphBuilder] Cleaning up Shared Stats Matrix...');
+        sharedStatsMatrix.clear();
+        sharedStatsMatrix = null;
+    }
+    if (sharedVectorSpace) {
+        console.log('[GraphBuilder] Cleaning up Shared Vector Space...');
+        if (sharedVectorSpace instanceof VectorSpaceGPU) {
+            sharedVectorSpace.destroy();
+        }
+        // @ts-ignore
+        sharedVectorSpace = null;
     }
 
     // 3. Community Detection (v0.1.6) or Folder Clustering (v0.5.0)
