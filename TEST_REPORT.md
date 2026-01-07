@@ -1,3 +1,71 @@
+# 2026-06-01 v1.0.0 - English Document
+
+## Test Report: Production Release Verification
+
+### 1. Smoke Test (Core Logic)
+*   **Test**: Run `scripts/smoke_test.ts`.
+*   **Scenario**:
+    *   File A: `next: [[Concept B]]`
+    *   File B: Content mentions "Concept C"
+    *   File C: Plain text
+*   **Result**: 
+    *   Graph built successfully with 3 nodes.
+    *   Edge A -> B detected (Explicit).
+    *   Edge C -> B detected (Keyword: Concept -> Context).
+    *   Inference engines ran without error.
+*   **Status**: **Pass**
+
+### 2. Performance & Stability
+*   **Test**: Memory optimization checks (v0.9.57/58).
+*   **Result**: 
+    *   Heap usage remains stable during Hybrid Inference.
+    *   Worker threads process data without cloning content.
+    *   Shared resources are correctly cleaned up.
+*   **Status**: **Pass**
+
+### 3. Versioning
+*   **Test**: Check UI and Metadata.
+*   **Result**: 
+    *   `package.json` version is 1.0.0.
+    *   Frontend UI displays `v1.0.0` in controls panel.
+*   **Status**: **Pass**
+
+---
+
+# 2026-06-01 v1.0.0 - Chinese Document
+
+## 测试报告：正式发布验证
+
+### 1. 冒烟测试 (核心逻辑)
+*   **测试**: 运行 `scripts/smoke_test.ts`。
+*   **场景**:
+    *   文件 A: `next: [[Concept B]]`
+    *   文件 B: 内容提及 "Concept C"
+    *   文件 C: 纯文本
+*   **结果**: 
+    *   成功构建包含 3 个节点的图谱。
+    *   检测到边 A -> B (显式)。
+    *   检测到边 C -> B (关键词: 概念 -> 语境)。
+    *   推断引擎运行无误。
+*   **状态**: **通过**
+
+### 2. 性能与稳定性
+*   **测试**: 内存优化检查 (v0.9.57/58)。
+*   **结果**: 
+    *   混合推断期间堆内存使用保持稳定。
+    *   Worker 线程处理数据时未克隆内容。
+    *   共享资源被正确清理。
+*   **状态**: **通过**
+
+### 3. 版本控制
+*   **测试**: 检查 UI 和元数据。
+*   **结果**: 
+    *   `package.json` 版本为 1.0.0。
+    *   前端 UI 在控制面板中显示 `v1.0.0`。
+*   **状态**: **通过**
+
+---
+
 # 2026-01-07 v0.9.58 - English Document
 
 ## Test Report: Hybrid Inference Resource Reuse
