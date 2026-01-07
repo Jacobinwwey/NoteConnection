@@ -338,13 +338,14 @@ export class GraphBuilder {
           if (start >= files.length) break;
 
           const filesChunk = files.slice(start, end);
+          const filePaths = filesChunk.map(f => f.filepath);
 
           const p = new Promise<void>((resolve, reject) => {
               try {
                   const execArgv = isTsNode ? ['-r', require.resolve('ts-node/register')] : undefined;
                   const worker = new Worker(actualWorkerPath, {
                       workerData: {
-                          filesChunk,
+                          filePaths,
                           targetIds,
                           strategy: config.matchingStrategy,
                           exclusionList: config.exclusionList

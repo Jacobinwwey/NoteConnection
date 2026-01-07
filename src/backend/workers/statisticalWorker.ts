@@ -1,11 +1,12 @@
 import { parentPort, workerData } from 'worker_threads';
-import { RawFile } from '../FileLoader';
+import * as fs from 'fs';
+import * as path from 'path';
 import { CrashLogger } from '../utils/CrashLogger';
 
 CrashLogger.initGlobalHandlers();
 
 interface WorkerData {
-  filesChunk: RawFile[];
+  filePaths: string[];
   terms: string[];
 }
 
@@ -13,23 +14,28 @@ interface WorkerData {
 type FileTermsResult = Record<string, string[]>;
 
 try {
-    const { filesChunk, terms } = workerData as WorkerData;
+    const { filePaths, terms } = workerData as WorkerData;
 
     const results: FileTermsResult = {};
 
-    filesChunk.forEach(file => {
-        const content = file.content.toLowerCase();
-        const foundTerms: string[] = [];
-        
-        terms.forEach(term => {
-            // Simple inclusion check
-            if (content.includes(term.toLowerCase())) {
-                foundTerms.push(term);
-            }
-        });
+    filePaths.forEach(filePath => {
+        try {
+            const content = fs.readFileSync(filePath, 'utf-8').toLowerCase();
+            const filename = path.basename(filePath, path.extname(filePath));
+            const foundTerms: string[] = [];
+            
+            terms.forEach(term => {
+                // Simple inclusion check
+                if (content.includes(term.toLowerCase())) {
+                    foundTerms.push(term);
+                }
+            });
 
-        if (foundTerms.length > 0) {
-            results[file.filename] = foundTerms;
+            if (foundTerms.length > 0) {
+                results[filename] = foundTerms;
+            }
+        } catch (err) {
+            console.warn(`[StatisticalWorker] Failed to read file: ${filePath}`, err);
         }
     });
 

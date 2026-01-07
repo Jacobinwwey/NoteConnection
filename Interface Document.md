@@ -455,31 +455,31 @@ Combines statistical and vector methods to infer directed edges.
     *   Logs execution progress every 1000 nodes.
     *   Tracks Heap usage during inference loop.
 
-### 3.4 Parallel Processing (v0.8.6)
+### 3.4 Parallel Processing (v0.9.57)
 
-#### `GraphBuilder.runParallelMatching`
-Utilizes Node.js `worker_threads` to parallelize the computationally expensive keyword matching process.
+#### `GraphBuilder.runParallelMatching` & `StatisticalAnalyzer.runParallelTermExtraction`
+Utilizes Node.js `worker_threads` to parallelize computationally expensive tasks (Keyword Matching, Term Extraction).
 
-*   **Logic**:
-    *   Detects available CPU cores.
-    *   Spawns workers (Configurable via `maxWorkers`, default `numCPUs - 1`).
-    *   Splits the file list into chunks.
-    *   Workers perform `checkMatch` (shared logic) against the full list of target IDs.
-    *   Results are aggregated in the main thread.
+*   **Optimization (v0.9.57)**:
+    *   **Strategy**: Instead of passing the full `RawFile[]` (containing file content) to workers, the system now passes `filePaths: string[]`.
+    *   **Implementation**: Workers use `fs` to read file content on demand from the disk.
+    *   **Benefit**: Drastically reduces memory consumption by avoiding the structural cloning of massive file content strings when spawning workers, resolving Heap OOM issues on large datasets (10k+ files).
+
 *   **Worker Interface**:
     ```typescript
     interface WorkerData {
-        filesChunk: RawFile[];
-        targetIds: string[];
+        filePaths: string[]; // Updated from filesChunk: RawFile[]
+        targetIds: string[]; // or terms: string[]
         strategy: 'exact-phrase' | 'fuzzy';
         exclusionList: string[];
     }
-    
-    interface MatchResult {
-        source: string;
-        target: string;
-    }
     ```
+*   **Logic**:
+    *   Detects available CPU cores.
+    *   Spawns workers (Configurable via `maxWorkers`).
+    *   Splits the file list into chunks of *paths*.
+    *   Workers perform processing and return lightweight results.
+    *   Results are aggregated in the main thread.
 *   **Fallback**: Automatically degrades to sequential processing if worker spawning fails.
 
 ## 4. Server API (v0.8.5)

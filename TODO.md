@@ -6,6 +6,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-07 v0.9.57 - Worker Memory Optimization
+
+**Goal**: Resolve "Heap out of memory" errors on Windows 10/11 when processing large datasets (13k+ files) by optimizing data transfer between main thread and workers.
+
+- [x] **Worker Data Transfer**
+    - [x] **Optimization**: Refactored `keywordMatchWorker` and `statisticalWorker` to accept `filePaths: string[]` instead of `filesChunk: RawFile[]` (which contained full content).
+    - [x] **Implementation**: Workers now read file content on-demand from disk using `fs`, avoiding the massive memory overhead of cloning content strings during serialization.
+    - [x] **Result**: Significantly reduced heap usage during parallel processing steps.
+
 # 2026-01-05 v0.9.56 - Hybrid Inference Memory Analysis
 
 **Goal**: Analyze and optimize the memory usage of the "Hybrid Inference" engine to resolve "Heap out of memory" errors on Windows 10, preventing large object retention during graph construction.

@@ -119,6 +119,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.57 - Worker Memory Optimization (2026-01-07)
+- [x] **Stability Fix**: Resolved "Heap out of memory" crashes when processing large datasets (>13k files) by optimizing the data transfer strategy for Worker Threads.
+- [x] **Efficiency**: Workers now receive file paths and read content on-demand, eliminating the memory overhead of cloning large file content strings across threads.
+
 ### v0.9.56 - Hybrid Inference Memory Optimization (2026-01-05)
 - [x] **Memory Analysis**: Added granular performance logging to the Hybrid Inference engine, tracking heap usage every 1000 nodes to identify memory spikes on Windows.
 - [x] **Optimization**: Implemented aggressive memory cleanup (clearing matrices and nullifying vector space) immediately after inference completion to prevent Heap OOM.
@@ -481,6 +485,10 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.57 - Worker 内存优化 (Worker Memory Optimization) (2026-01-07)
+- [x] **稳定性修复**: 通过优化 Worker 线程的数据传输策略，解决了处理大数据集 (>13k 文件) 时的“堆内存溢出”崩溃问题。
+- [x] **效率**: Worker 现在接收文件路径并按需读取内容，消除了跨线程克隆大型文件内容字符串的内存开销。
 
 ### v0.9.56 - 混合推断内存优化 (Hybrid Inference Memory Optimization) (2026-01-05)
 - [x] **内存分析**: 为混合推断引擎添加了细粒度的性能日志，每 1000 个节点跟踪一次堆内存使用情况，以识别 Windows 上的内存峰值。

@@ -64,11 +64,12 @@ export class StatisticalAnalyzer {
             if (start >= files.length) break;
 
             const filesChunk = files.slice(start, end);
+            const filePaths = filesChunk.map(f => f.filepath);
             
             const p = new Promise<Record<string, string[]>>((resolve, reject) => {
                 const execArgv = isTsNode ? ['-r', require.resolve('ts-node/register')] : undefined;
                 const worker = new Worker(actualWorkerPath, {
-                    workerData: { filesChunk, terms },
+                    workerData: { filePaths, terms },
                     execArgv
                 });
 

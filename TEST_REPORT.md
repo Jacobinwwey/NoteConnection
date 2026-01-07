@@ -1,3 +1,31 @@
+# 2026-01-07 v0.9.57 - English Document
+
+## Test Report: Worker Memory Optimization
+
+### 1. Data Transfer Logic
+*   **Action**: Review `src/backend/algorithms/StatisticalAnalyzer.ts` and `statisticalWorker.ts`.
+*   **Result**: 
+    *   Main thread extracts file paths (`f.filepath`).
+    *   Worker receives `filePaths` and uses `fs.readFileSync`.
+    *   No cloning of `file.content` observed in message passing.
+*   **Status**: **Pass**
+
+---
+
+# 2026-01-07 v0.9.57 - Chinese Document
+
+## 测试报告：Worker 内存优化
+
+### 1. 数据传输逻辑
+*   **操作**: 审查 `src/backend/algorithms/StatisticalAnalyzer.ts` 和 `statisticalWorker.ts`。
+*   **结果**: 
+    *   主线程提取文件路径 (`f.filepath`)。
+    *   Worker 接收 `filePaths` 并使用 `fs.readFileSync`。
+    *   在消息传递中未观察到 `file.content` 的克隆。
+*   **状态**: **通过**
+
+---
+
 # 2026-01-05 v0.9.56 - English Document
 
 ## Test Report: Hybrid Inference Memory Analysis
