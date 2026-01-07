@@ -5,7 +5,7 @@ PS C:\Codes\NoteConnection> npm start
 
 Server running at http://localhost:3000/
 Knowledge Base Root: C:\Codes\NoteConnection\Knowledge_Base
-(node:16120) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(node:21604) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
 (Use `node --trace-deprecation ...` to show where the warning was created)
 Received build request for: feynman_concepts_complete maxWorkers: 16 enableGPU: false
 [Config] Setting maxWorkers to 16
@@ -17,21 +17,21 @@ Building graph...
 [System] CPU: AMD RYZEN AI MAX+ 395 w/ Radeon 8060S           (32 cores)
 [System] Total Memory: 123.65 GB
 [Perf] Starting: Node Initialization
-[Perf] Initial Memory: 167.97 MB / 236.10 MB (Heap/RSS)
+[Perf] Initial Memory: 168.04 MB / 235.55 MB (Heap/RSS)
 [Perf] Finished: Node Initialization
-[Perf] Time: 683.13ms
-[Perf] CPU (User/Sys): 172.00ms / 531.00ms
-[Perf] Memory (Heap/RSS): 183.45 MB / 265.31 MB
+[Perf] Time: 789.91ms
+[Perf] CPU (User/Sys): 297.00ms / 532.00ms
+[Perf] Memory (Heap/RSS): 185.16 MB / 264.88 MB
 --------------------------------------------------
 [Perf] Starting: Edge Identification (Explicit)
-[Perf] Initial Memory: 183.45 MB / 265.31 MB (Heap/RSS)
+[Perf] Initial Memory: 185.16 MB / 264.88 MB (Heap/RSS)
 [Perf] Finished: Edge Identification (Explicit)
-[Perf] Time: 2.96ms
+[Perf] Time: 2.25ms
 [Perf] CPU (User/Sys): 0.00ms / 0.00ms
-[Perf] Memory (Heap/RSS): 185.44 MB / 265.31 MB
+[Perf] Memory (Heap/RSS): 186.67 MB / 264.89 MB
 --------------------------------------------------
 [Perf] Starting: Keyword Matching
-[Perf] Initial Memory: 185.44 MB / 265.31 MB (Heap/RSS)
+[Perf] Initial Memory: 186.67 MB / 264.89 MB (Heap/RSS)
 [GraphBuilder] Starting keyword matching for 13659 files...
 [GraphBuilder] Using Parallel Processing (Workers)
 [GraphBuilder] Worker Path: C:\Codes\NoteConnection\src\backend\workers\keywordMatchWorker.ts
@@ -39,62 +39,62 @@ Building graph...
 [GraphBuilder] Spawning 16 workers...
 [GraphBuilder] Parallel matching complete.
 [Perf] Finished: Keyword Matching
-[Perf] Time: 221115.87ms
-[Perf] CPU (User/Sys): 3063828.00ms / 24766.00ms
-[Perf] Memory (Heap/RSS): 319.42 MB / 780.55 MB
+[Perf] Time: 217127.46ms
+[Perf] CPU (User/Sys): 3068109.00ms / 27234.00ms
+[Perf] Memory (Heap/RSS): 337.58 MB / 792.96 MB
 --------------------------------------------------
 [Perf] Starting: Statistical Analysis
-[Perf] Initial Memory: 319.44 MB / 780.55 MB (Heap/RSS)
+[Perf] Initial Memory: 337.59 MB / 792.96 MB (Heap/RSS)
 [GraphBuilder] Running Statistical Analysis...
 [StatisticalAnalyzer] Starting parallel term extraction for 13659 files...
 [Perf] Finished: Statistical Analysis
-[Perf] Time: 126348.16ms
-[Perf] CPU (User/Sys): 1281437.00ms / 11656.00ms
-[Perf] Memory (Heap/RSS): 982.73 MB / 1660.49 MB
+[Perf] Time: 127544.27ms
+[Perf] CPU (User/Sys): 1283469.00ms / 12844.00ms
+[Perf] Memory (Heap/RSS): 979.27 MB / 1581.25 MB
 --------------------------------------------------
 [GraphBuilder] Applying Statistical Inference...
 [GraphBuilder] Added 146083 inferred edges.
 [Perf] Starting: Vector Space Construction
-[Perf] Initial Memory: 1698.12 MB / 2097.90 MB (Heap/RSS)
+[Perf] Initial Memory: 1698.38 MB / 2096.38 MB (Heap/RSS)
 [VectorSpace] Building Vocabulary...
 [VectorSpace] Vocabulary Size: 83865
 [VectorSpace] Computing Vectors...
 [Perf] Finished: Vector Space Construction
-[Perf] Time: 11675.91ms
-[Perf] CPU (User/Sys): 11219.00ms / 1250.00ms
-[Perf] Memory (Heap/RSS): 606.58 MB / 1747.37 MB
+[Perf] Time: 11390.27ms
+[Perf] CPU (User/Sys): 10844.00ms / 1125.00ms
+[Perf] Memory (Heap/RSS): 581.73 MB / 1798.11 MB
 --------------------------------------------------
 [Perf] Starting: Hybrid Inference
-[Perf] Initial Memory: 606.58 MB / 1747.37 MB (Heap/RSS)
+[Perf] Initial Memory: 581.73 MB / 1798.11 MB (Heap/RSS)
 [GraphBuilder] Running Hybrid Inference (Stats + Vector)...
 [GraphBuilder] Added 126377 hybrid inferred edges.
 [Perf] Finished: Hybrid Inference
-[Perf] Time: 70248.25ms
-[Perf] CPU (User/Sys): 69125.00ms / 1390.00ms
-[Perf] Memory (Heap/RSS): 1202.10 MB / 2027.78 MB
+[Perf] Time: 69802.02ms
+[Perf] CPU (User/Sys): 68500.00ms / 1656.00ms
+[Perf] Memory (Heap/RSS): 1175.64 MB / 2076.42 MB
 --------------------------------------------------
 [Perf] Starting: Community Detection
-[Perf] Initial Memory: 1202.11 MB / 2027.78 MB (Heap/RSS)
+[Perf] Initial Memory: 1175.64 MB / 2076.42 MB (Heap/RSS)
 [Perf] Finished: Community Detection
-[Perf] Time: 1536.13ms
-[Perf] CPU (User/Sys): 1609.00ms / 0.00ms
-[Perf] Memory (Heap/RSS): 1193.03 MB / 2029.10 MB
+[Perf] Time: 1529.45ms
+[Perf] CPU (User/Sys): 1594.00ms / 0.00ms
+[Perf] Memory (Heap/RSS): 1169.06 MB / 2079.08 MB
 --------------------------------------------------
 [Perf] Starting: Graph Metrics
-[Perf] Initial Memory: 1193.04 MB / 2029.10 MB (Heap/RSS)
+[Perf] Initial Memory: 1169.07 MB / 2079.08 MB (Heap/RSS)
 [GraphMetrics] Using Degree Centrality for performance optimization.
 [Perf] Finished: Graph Metrics
-[Perf] Time: 1.48ms
+[Perf] Time: 1.51ms
 [Perf] CPU (User/Sys): 0.00ms / 0.00ms
-[Perf] Memory (Heap/RSS): 1194.03 MB / 2029.85 MB
+[Perf] Memory (Heap/RSS): 1170.06 MB / 2079.83 MB
 --------------------------------------------------
 [Perf] Starting: Algorithmic Core
-[Perf] Initial Memory: 1194.03 MB / 2029.85 MB (Heap/RSS)
+[Perf] Initial Memory: 1170.06 MB / 2079.83 MB (Heap/RSS)
 
 <--- Last few GCs --->
 
-[16120:000001A339526000]   496280 ms: Mark-Compact 3994.1 (4152.1) -> 3960.8 (4175.4) MB, pooled: 0.8 MB, 451.77 / 0.00 ms (average mu = 0.745, current mu = 0.156) allocation failure; scavenge might not succeed
-[16120:000001A339526000]   497808 ms: Mark-Compact 4026.1 (4208.7) -> 3986.9 (4234.1) MB, pooled: 0.8 MB, 1514.34 / 0.00 ms (average mu = 0.407, current mu = 0.009) allocation failure; scavenge might not succeed
+[21604:0000020E54372000]   488126 ms: Mark-Compact 3990.5 (4148.9) -> 3956.5 (4171.9) MB, pooled: 0.5 MB, 457.32 / 0.00 ms (average mu = 0.764, current mu = 0.160) allocation failure; scavenge might not succeed
+[21604:0000020E54372000]   488622 ms: Mark-Compact 4020.5 (4203.9) -> 3982.3 (4231.1) MB, pooled: 1.5 MB, 483.52 / 0.00 ms (average mu = 0.608, current mu = 0.025) allocation failure; scavenge might not succeed
 
 FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory
 ----- Native stack trace -----
@@ -107,4 +107,4 @@ FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memor
  6: 00007FF709E3230E X509_STORE_set_cleanup+846
  7: 00007FF709E3FF5B EVP_PKEY_meth_set_digestsign+21131
  8: 00007FF709A3FEEE v8::String::Utf8Value::~Utf8Value+152750
- 9: 000001A37147B4FA
+ 9: 0000020E1FE7B4FA

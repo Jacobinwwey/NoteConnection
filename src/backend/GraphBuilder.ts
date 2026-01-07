@@ -261,9 +261,15 @@ export class GraphBuilder {
     });
     PerformanceLogger.end('Graph Metrics');
 
+    // Free up memory before Algorithmic Core
+    fileMap.clear();
+
     // 5. Algorithmic Core (v0.3.0)
-    PerformanceLogger.start('Algorithmic Core');
+    console.log('[GraphBuilder] Starting Algorithmic Core...');
+    
     // Cycle Detection
+    PerformanceLogger.start('Cycle Detection');
+    console.log('[GraphBuilder] Running Cycle Detection...');
     // Limit to 100 cycles to prevent OOM on large graphs with many cycles
     const cycles = CycleDetector.detectCycles(graph, 100);
     if (cycles.length > 0) {
@@ -271,8 +277,11 @@ export class GraphBuilder {
         console.warn(`[GraphBuilder] Detected ${countStr} cycles. Topological Sort may be partial.`);
         // Note: We proceed anyway, but ranks might be inaccurate for cyclic nodes.
     }
+    PerformanceLogger.end('Cycle Detection');
 
     // Topological Sort & Ranking
+    PerformanceLogger.start('Topological Sort');
+    console.log('[GraphBuilder] Running Topological Sort...');
     const ranks = TopologicalSort.assignRanks(graph);
     ranks.forEach((rank, nodeId) => {
         const node = graph.getNode(nodeId);
@@ -280,7 +289,8 @@ export class GraphBuilder {
             node.rank = rank;
         }
     });
-    PerformanceLogger.end('Algorithmic Core');
+    PerformanceLogger.end('Topological Sort');
+    console.log('[GraphBuilder] Algorithmic Core Complete.');
 
     return graph;
   }

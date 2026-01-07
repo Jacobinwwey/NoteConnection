@@ -6,12 +6,8 @@ import { Graph } from '../../core/Graph';
  */
 export class CycleDetector {
     /**
-     * Detects all simple cycles in the graph using DFS.
-     * 使用 DFS 检测图中的所有简单循环。
-     * Note: Finding ALL cycles is NP-Hard. This implementation finds cycles reachable via DFS traversals.
-     * It is sufficient for detecting if the graph is a DAG.
-     * 注意：查找所有循环是 NP-Hard 问题。此实现查找通过 DFS 遍历可达的循环。
-     * 这对于检测图是否为 DAG 足够了。
+     * Detects all simple cycles in the graph using Iterative DFS.
+     * 使用迭代 DFS 检测图中的所有简单循环。
      * 
      * @param graph The graph to analyze.
      * @param limit Optional limit on the number of cycles to return. Defaults to 0 (no limit). | 可选的返回循环数量限制。默认为 0（无限制）。
@@ -19,49 +15,67 @@ export class CycleDetector {
      */
     static detectCycles(graph: Graph, limit: number = 0): string[][] {
         const visited = new Set<string>();
-        const recursionStack = new Set<string>();
+        const onPath = new Set<string>(); // Tracks nodes in current DFS path
+        const path: string[] = []; // Current path for cycle reconstruction
         const cycles: string[][] = [];
-        const path: string[] = [];
 
         const nodes = graph.getNodes();
 
-        // Recursion breaker flag
-        let stop = false;
+        for (const node of nodes) {
+            if (cycles.length >= limit && limit > 0) break;
+            if (visited.has(node.id)) continue;
 
-        const dfs = (nodeId: string) => {
-            if (stop) return;
+            // Iterative DFS Stack
+            // Stores: [currentNodeId, neighborsIterator, neighborsArray]
+            // We use an iterator approach to simulate the recursion stack frames
+            const stack: { id: string; neighbors: string[]; index: number }[] = [];
+            
+            // Push start node
+            stack.push({ 
+                id: node.id, 
+                neighbors: graph.getNeighbors(node.id), 
+                index: 0 
+            });
+            visited.add(node.id);
+            onPath.add(node.id);
+            path.push(node.id);
 
-            visited.add(nodeId);
-            recursionStack.add(nodeId);
-            path.push(nodeId);
-
-            const neighbors = graph.getNeighbors(nodeId); // Outgoing neighbors
-            for (const neighbor of neighbors) {
-                if (stop) break;
+            while (stack.length > 0) {
+                const frame = stack[stack.length - 1];
                 
-                if (!visited.has(neighbor)) {
-                    dfs(neighbor);
-                } else if (recursionStack.has(neighbor)) {
+                // If we have explored all neighbors of this node
+                if (frame.index >= frame.neighbors.length) {
+                    onPath.delete(frame.id);
+                    path.pop();
+                    stack.pop();
+                    continue;
+                }
+
+                // Get next neighbor
+                const neighborId = frame.neighbors[frame.index];
+                frame.index++; // Advance for next time
+
+                if (onPath.has(neighborId)) {
                     // Cycle detected!
-                    // Extract the cycle from the current path
-                    const cycleStartIndex = path.indexOf(neighbor);
+                    // Extract cycle from path
+                    const cycleStartIndex = path.indexOf(neighborId);
                     if (cycleStartIndex !== -1) {
-                        cycles.push([...path.slice(cycleStartIndex), neighbor]);
+                        cycles.push([...path.slice(cycleStartIndex), neighborId]);
                         if (limit > 0 && cycles.length >= limit) {
-                            stop = true;
+                            return cycles;
                         }
                     }
+                } else if (!visited.has(neighborId)) {
+                    // Recurse (Push to stack)
+                    visited.add(neighborId);
+                    onPath.add(neighborId);
+                    path.push(neighborId);
+                    stack.push({
+                        id: neighborId,
+                        neighbors: graph.getNeighbors(neighborId),
+                        index: 0
+                    });
                 }
-            }
-
-            recursionStack.delete(nodeId);
-            path.pop();
-        };
-
-        for (const node of nodes) {
-            if (stop) break;
-            if (!visited.has(node.id)) {
-                dfs(node.id);
             }
         }
 
