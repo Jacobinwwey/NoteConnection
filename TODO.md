@@ -6,6 +6,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-07 v0.9.61 - Frontend Memory Optimization (Auto-Canvas)
+
+**Goal**: Reduce frontend memory consumption and improve rendering performance for large graphs by automatically defaulting to "Canvas" mode when the node count exceeds a threshold.
+
+- [x] **Smart Defaults**
+    - [x] **Threshold Check**: In `app.js`, check if `nodes.length > 3000`.
+    - [x] **Auto-Switch**: If threshold exceeded, programmatically select "Canvas" renderer and update DOM visibility (hide SVG, show Canvas) during initialization.
+    - [x] **User Override**: Users can still manually switch back to SVG if desired.
+
 # 2026-01-07 v0.9.60 - Parallel Graph Metrics
 
 **Goal**: Optimize graph construction performance by parallelizing the "Graph Metrics" calculation (Betweenness Centrality), which was previously single-threaded.

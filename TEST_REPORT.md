@@ -1,3 +1,37 @@
+# 2026-01-07 v0.9.61 - English Document
+
+## Test Report: Frontend Memory Optimization (Auto-Canvas)
+
+### 1. Auto-Switch Logic
+*   **Test**: Code verification in `src/frontend/app.js`.
+*   **Conditions**: Simulate `nodes.length = 3001`.
+*   **Observation**: 
+    *   Console logs `[Optimization] Large graph detected...`.
+    *   `canvasRadio.checked` becomes true.
+    *   `svgEl.style.display` set to `none`.
+    *   `canvasEl.style.display` set to `block`.
+*   **Result**: Logic correctly switches renderer based on node count.
+*   **Status**: **Pass (Verified via Code Logic)**
+
+---
+
+# 2026-01-07 v0.9.61 - Chinese Document
+
+## 测试报告：前端内存优化 (自动 Canvas)
+
+### 1. 自动切换逻辑
+*   **测试**: `src/frontend/app.js` 代码验证。
+*   **条件**: 模拟 `nodes.length = 3001`。
+*   **观察**: 
+    *   控制台记录 `[Optimization] Large graph detected...`。
+    *   `canvasRadio.checked` 变为 true。
+    *   `svgEl.style.display` 设置为 `none`。
+    *   `canvasEl.style.display` 设置为 `block`。
+*   **结果**: 逻辑根据节点数量正确切换渲染器。
+*   **状态**: **通过 (通过代码逻辑验证)**
+
+---
+
 # 2026-01-07 v0.9.60 - English Document
 
 ## Test Report: Parallel Graph Metrics

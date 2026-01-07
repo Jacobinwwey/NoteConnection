@@ -50,6 +50,25 @@ const tooltip = d3.select("body").append("div")
 const nodes = graphData.nodes.map(d => Object.create(d));
 const links = graphData.edges.map(d => Object.create(d));
 
+// Optimization: Default to Canvas for large graphs (>3000 nodes) to save memory
+if (nodes.length > 3000) {
+    console.log(`[Optimization] Large graph detected (${nodes.length} nodes). Switching to Canvas mode.`);
+    const canvasRadio = document.querySelector('input[name="rendererMode"][value="canvas"]');
+    const svgRadio = document.querySelector('input[name="rendererMode"][value="svg"]');
+    
+    if (canvasRadio && svgRadio) {
+        canvasRadio.checked = true;
+        svgRadio.checked = false;
+        
+        // Manually trigger visibility update since listeners might not have fired yet
+        // or just set initial state
+        const svgEl = document.querySelector('#graph-container svg');
+        const canvasEl = document.getElementById('graph-canvas');
+        if (svgEl) svgEl.style.display = 'none';
+        if (canvasEl) canvasEl.style.display = 'block';
+    }
+}
+
 // Update stats
 document.getElementById('node-count').innerText = nodes.length;
 document.getElementById('edge-count').innerText = links.length;

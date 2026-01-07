@@ -125,6 +125,10 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 - [x] **Experience**: Polished UI with Quick Start Guide, Welcome experience, and Bilingual support (En/Zh).
 - [x] **API**: Decoupled Core API ready for plugin integrations.
 
+### v0.9.61 - Frontend Memory Optimization (2026-01-07)
+- [x] **Smart Rendering**: Automatically switches to **Canvas** mode by default when the graph contains more than 3000 nodes.
+- [x] **Performance**: Reduces browser memory footprint and improves frame rates for large datasets on initial load.
+
 ### v0.9.60 - Parallel Graph Metrics (2026-01-07)
 - [x] **Performance**: Parallelized the "Graph Metrics" calculation (Betweenness Centrality) using worker threads.
 - [x] **Scalability**: Distributed heavy Brandes Algorithm computations across multiple CPU cores, ensuring faster graph construction for large datasets.
@@ -516,6 +520,10 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 - [x] **稳定性**: 通过混合推断和 Worker 线程，针对大数据集（50k+ 节点）进行了全面优化。
 - [x] **体验**: 抛光的用户界面，包含快速开始指南、欢迎体验和双语支持（中/英）。
 - [x] **API**: 解耦的核心 API，已准备好进行插件集成。
+
+### v0.9.61 - 前端内存优化 (Frontend Memory Optimization) (2026-01-07)
+- [x] **智能渲染**: 当图谱包含超过 3000 个节点时，默认自动切换到 **Canvas** 模式。
+- [x] **性能**: 降低浏览器内存占用，并提高大数据集初始加载时的帧率。
 
 ### v0.9.60 - 并行图指标计算 (Parallel Graph Metrics) (2026-01-07)
 - [x] **性能**: 使用 Worker 线程并行化了“图指标”计算（介数中心性）。
