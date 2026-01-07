@@ -6,6 +6,18 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-05 v0.9.55 - Heap OOM Fix & Iterative DFS
+
+**Goal**: Resolve "Heap out of memory" crash on Windows 10/11 by optimizing memory usage during graph construction and refactoring recursion to iteration.
+
+- [x] **Memory Optimization**
+    - [x] **Scope Management**: Explicitly clear `fileMap` (holding file contents) before entering the memory-intensive `Algorithmic Core` phase in `GraphBuilder`.
+    - [x] **Granular Logging**: Split `Algorithmic Core` logging into `Cycle Detection` and `Topological Sort` for precise error tracking.
+
+- [x] **Algorithm Robustness**
+    - [x] **Iterative DFS**: Refactored `CycleDetector.detectCycles` to use an iterative stack-based approach instead of recursion to prevent stack overflow on deep graphs.
+    - [x] **Verification**: Validated logic with existing unit tests.
+
 # 2026-01-05 v0.9.54 - Welcome & Empty State Experience
 
 **Goal**: Improve the new user onboarding experience by providing clear guidance when the graph is empty.

@@ -119,6 +119,11 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v0.9.55 - Heap OOM Fix & Iterative DFS (2026-01-05)
+- [x] **Stability Fix**: Resolved "Heap out of memory" crashes on Windows 10/11 by implementing explicit memory clearing for file content before the algorithmic phase.
+- [x] **Robustness**: Refactored `CycleDetector` to use an **Iterative DFS** (stack-based) approach, eliminating stack overflow risks on deep graphs.
+- [x] **Observability**: Split performance logging for "Algorithmic Core" into distinct "Cycle Detection" and "Topological Sort" phases for precise debugging.
+
 ### v0.9.54 - Welcome Experience (2026-01-05)
 - [x] **Onboarding**: Added a "Welcome" modal that appears when the graph is empty, guiding new users to select a source and load data.
 - [x] **UX**: Highlights the "Source Select" controls during the welcome state.
@@ -472,6 +477,11 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.55 - 堆内存溢出修复与迭代 DFS (Heap OOM Fix & Iterative DFS) (2026-01-05)
+- [x] **稳定性修复**: 通过在算法阶段之前显式清除文件内容内存，解决了 Windows 10/11 上的“堆内存溢出”崩溃问题。
+- [x] **稳健性**: 重构 `CycleDetector` 使用 **迭代 DFS**（基于栈）方法，消除了深度图上的堆栈溢出风险。
+- [x] **可观测性**: 将“算法核心”的性能日志拆分为“循环检测”和“拓扑排序”两个独立阶段，以便进行精确调试。
 
 ### v0.9.54 - 欢迎体验 (Welcome Experience) (2026-01-05)
 - [x] **引导 (Onboarding)**: 添加了一个“欢迎”模态框，当图谱为空时出现，引导新用户选择数据源并加载数据。
