@@ -37,6 +37,31 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
+## 💻 Hardware & Driver Requirements
+
+### Supported AMDGPU Architectures
+NoteConnection utilizes `gpu.js` for WebGL-based acceleration and plans to support local AI inference via ROCm.
+
+*   **RDNA 3 (Recommended)**: Radeon RX 7000 Series (e.g., **RX 7900 XT/XTX**).
+    *   *Status*: Best performance for both WebGL and Compute.
+*   **RDNA 2**: Radeon RX 6000 Series.
+    *   *Status*: Stable and mature support.
+
+### Driver Configuration
+
+#### Windows (Development Environment)
+*   **Driver**: **AMD Software: Adrenalin Edition** (23.12.1+).
+    *   Required for DirectX 12/Vulkan/OpenGL support which underpins WebGL.
+*   **Build Tools**: To compile `headless-gl` for Node.js:
+    *   Python 3.x installed and in PATH.
+    *   Visual Studio Build Tools (C++ workload).
+
+#### Linux (Recommended for AI)
+*   **Mesa (RADV/Radeonsi)**: Default open-source driver. Best for general WebGL and `gpu.js`.
+*   **ROCm (Radeon Open Compute)**: Install **only** if planning to develop the AI inference features (future roadmap). NoteConnection's core visualization runs fine on standard Mesa drivers.
+
+---
+
 ## 🏗️ System Architecture
 
 NoteConnection is built on a modular architecture designed for performance and extensibility.
@@ -428,6 +453,31 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 <img width="2012" height="2024" alt="image" src="https://github.com/user-attachments/assets/bf6e7508-7e42-46cb-9a3e-b92be063ad3d" />
 
+
+---
+
+## 💻 硬件与驱动要求 (Hardware & Driver Requirements)
+
+### 支持的 AMDGPU 架构
+NoteConnection 利用 `gpu.js` 进行基于 WebGL 的加速，并计划通过 ROCm 支持本地 AI 推断。
+
+*   **RDNA 3 (推荐)**: Radeon RX 7000 系列 (例如 **RX 7900 XT/XTX**)。
+    *   *状态*: WebGL 和计算性能最佳。
+*   **RDNA 2**: Radeon RX 6000 系列。
+    *   *状态*: 稳定且成熟的支持。
+
+### 驱动配置
+
+#### Windows (开发环境)
+*   **驱动程序**: **AMD Software: Adrenalin Edition** (23.12.1+)。
+    *   需要 DirectX 12/Vulkan/OpenGL 支持以底层支持 WebGL。
+*   **构建工具**: 用于为 Node.js 编译 `headless-gl`：
+    *   安装 Python 3.x 并加入 PATH。
+    *   Visual Studio Build Tools (C++ 工作负载)。
+
+#### Linux (AI 推荐)
+*   **Mesa (RADV/Radeonsi)**: 默认开源驱动。最适合通用 WebGL 和 `gpu.js`。
+*   **ROCm (Radeon Open Compute)**: 仅在计划开发 AI 推断功能（未来路线图）时安装。NoteConnection 的核心可视化在标准 Mesa 驱动上运行良好。
 
 ---
 

@@ -6,6 +6,13 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-07 v0.9.62 - Documentation Update (AMDGPU Guide)
+
+**Goal**: Provide detailed hardware and software guidance for AMDGPU users, specifically for `gpu.js` acceleration and future AI integration.
+
+- [x] **Documentation**
+    - [x] **README.md**: Add "Hardware & Driver Requirements" section detailing RDNA architectures, driver selection (Adrenalin vs Mesa/ROCm), and build dependencies for `headless-gl`.
+
 # 2026-01-07 v0.9.61 - Frontend Memory Optimization (Auto-Canvas)
 
 **Goal**: Reduce frontend memory consumption and improve rendering performance for large graphs by automatically defaulting to "Canvas" mode when the node count exceeds a threshold.
