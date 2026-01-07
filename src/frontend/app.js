@@ -241,6 +241,22 @@ function updateFocusModeState(active, node = null) {
 updateColor();
 updateSize();
 
+// Version Info
+const APP_VERSION = "1.0.0";
+const controlsPanelEl = document.getElementById('controls');
+if (controlsPanelEl) {
+    const versionEl = document.createElement('div');
+    versionEl.style.marginTop = '15px';
+    versionEl.style.borderTop = '1px solid #444';
+    versionEl.style.paddingTop = '10px';
+    versionEl.style.fontSize = '0.7rem';
+    versionEl.style.color = '#666';
+    versionEl.style.textAlign = 'center';
+    versionEl.innerText = `v${APP_VERSION}`;
+    controlsPanelEl.appendChild(versionEl);
+}
+
+
 // Helper to get degree based on selection
 function getDegree(d) {
     const mode = document.querySelector('input[name="degreeMode"]:checked').value;

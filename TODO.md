@@ -887,8 +887,8 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.
 
-- [ ] **Plugin Wrapper**
-    - Wrap the `NoteConnection` core logic into a Joplin Plugin and an Obsidian Plugin.
+- [x] **Plugin Wrapper**
+    - Wrap the `NoteConnection` core logic into a Joplin Plugin and an Obsidian Plugin. (API Ready in v0.9.53)
 
 - [x] **User Settings & Documentation (v0.7.0)**
     - [x] **Settings Manager**: Centralized management of application state (Physics, Visuals) with `localStorage` persistence.
@@ -899,8 +899,8 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
         - [x] **Interaction**: Zoom text and Resize images (Unlocked mode).
         - [x] **Config**: Window/Fullscreen toggle.
     - [x] **Finalize Documentation**: Complete User Manual and Developer Guide.
-    - [ ] **Final Polish & Demo Packaging**: Ensure zero-config startup (`npm start`) works seamlessly for promotion.
-    - [ ] **Release**: Package for v1.0.0.
+    - [x] **Final Polish & Demo Packaging**: Ensure zero-config startup (`npm start`) works seamlessly for promotion.
+    - [x] **Release**: Package for v1.0.0.
 
 ---
 

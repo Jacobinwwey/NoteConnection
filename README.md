@@ -119,6 +119,12 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 ## 📅 Changelog
 
+### v1.0.0 - Production Release (2026-06-01)
+- [x] **Milestone**: Official production release of NoteConnection.
+- [x] **Stability**: Fully optimized for large datasets (50k+ nodes) with Hybrid Inference and Worker threading.
+- [x] **Experience**: Polished UI with Quick Start Guide, Welcome experience, and Bilingual support (En/Zh).
+- [x] **API**: Decoupled Core API ready for plugin integrations.
+
 ### v0.9.58 - Hybrid Inference Resource Reuse (Optimization) (2026-01-07)
 - [x] **Memory Optimization**: Implemented resource reuse logic for "Statistical Matrix" and "Vector Space" in `GraphBuilder`.
 - [x] **Efficiency**: Prevents redundant recalculation of heavy data structures during Hybrid Inference, eliminating memory spikes and resolving OOM crashes on large datasets.
@@ -490,6 +496,12 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v1.0.0 - 正式发布 (Production Release) (2026-06-01)
+- [x] **里程碑**: NoteConnection 正式生产版本发布。
+- [x] **稳定性**: 通过混合推断和 Worker 线程，针对大数据集（50k+ 节点）进行了全面优化。
+- [x] **体验**: 抛光的用户界面，包含快速开始指南、欢迎体验和双语支持（中/英）。
+- [x] **API**: 解耦的核心 API，已准备好进行插件集成。
 
 ### v0.9.58 - 混合推断资源重用 (优化) (Hybrid Inference Resource Reuse) (2026-01-07)
 - [x] **内存优化**: 在 `GraphBuilder` 中为“统计矩阵”和“向量空间”实现了资源重用逻辑。
