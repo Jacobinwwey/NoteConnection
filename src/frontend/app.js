@@ -573,6 +573,10 @@ const translations = {
         lbl_opacity: "边透明度",
         lbl_gpu: "启用 GPU 加速",
         desc_gpu: "使用 GPU 进行相似度计算（需要重新加载）。",
+        lbl_memory_saving: "大文件内存节省策略",
+        desc_memory_saving: "使用低精度策略以防止大文件导致的内存溢出。",
+        lbl_deep_debug: "深度调试",
+        desc_deep_debug: "启用详细日志以进行调试。",
         btn_reset: "重置默认",
         btn_done: "完成",
         
@@ -675,6 +679,10 @@ const translations = {
         lbl_opacity: "Edge Opacity",
         lbl_gpu: "Enable GPU Acceleration",
         desc_gpu: "Use GPU for similarity calculation (Requires page reload).",
+        lbl_memory_saving: "Large File Memory Saving Strategy",
+        desc_memory_saving: "Use lower precision strategies to prevent OOM on large files.",
+        lbl_deep_debug: "Deep Debug",
+        desc_deep_debug: "Enable detailed logging for debugging.",
         btn_reset: "Reset Defaults",
         btn_done: "Done",
         
