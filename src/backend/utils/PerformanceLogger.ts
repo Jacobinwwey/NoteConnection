@@ -94,32 +94,21 @@ export class PerformanceLogger {
 
     static printSummary() {
         console.log("\n==================== PERFORMANCE SUMMARY ====================");
-        console.log("| %-30s | %-12s | %-12s | %-12s | %-12s |", "Stage", "Time (ms)", "Max Heap", "Max RSS", "Max VRAM");
+        const headers = `| ${"Stage".padEnd(30)} | ${"Time (ms)".padEnd(12)} | ${"Max Heap".padEnd(12)} | ${"Max RSS".padEnd(12)} | ${"Max VRAM".padEnd(12)} |`;
+        console.log(headers);
         console.log("|" + "-".repeat(32) + "+" + "-".repeat(14) + "+" + "-".repeat(14) + "+" + "-".repeat(14) + "+" + "-".repeat(14) + "|");
 
         let totalTime = 0;
         
         this.stepHistory.forEach(step => {
             totalTime += step.durationMs;
-            console.log(
-                "| %-30s | %-12s | %-12s | %-12s | %-12s |", 
-                step.name.substring(0, 30),
-                step.durationMs.toFixed(0),
-                this.formatMemory(step.endHeap),
-                this.formatMemory(step.endRSS),
-                step.maxGPU > 0 ? this.formatMemory(step.maxGPU) : '-'
-            );
+            const line = `| ${step.name.substring(0, 30).padEnd(30)} | ${step.durationMs.toFixed(0).padEnd(12)} | ${this.formatMemory(step.endHeap).padEnd(12)} | ${this.formatMemory(step.endRSS).padEnd(12)} | ${(step.maxGPU > 0 ? this.formatMemory(step.maxGPU) : '-').padEnd(12)} |`;
+            console.log(line);
         });
 
         console.log("|" + "-".repeat(32) + "+" + "-".repeat(14) + "+" + "-".repeat(14) + "+" + "-".repeat(14) + "+" + "-".repeat(14) + "|");
-        console.log(
-            "| %-30s | %-12s | %-12s | %-12s | %-12s |",
-            "TOTAL / PEAK",
-            totalTime.toFixed(0),
-            this.formatMemory(this.maxHeap),
-            this.formatMemory(this.maxRSS),
-            this.formatMemory(this.maxGPUMemory)
-        );
+        const totalLine = `| ${"TOTAL / PEAK".padEnd(30)} | ${totalTime.toFixed(0).padEnd(12)} | ${this.formatMemory(this.maxHeap).padEnd(12)} | ${this.formatMemory(this.maxRSS).padEnd(12)} | ${this.formatMemory(this.maxGPUMemory).padEnd(12)} |`;
+        console.log(totalLine);
         console.log("=============================================================\n");
     }
 
