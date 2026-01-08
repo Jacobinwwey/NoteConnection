@@ -4,3 +4,4 @@ coverage
 .DS_Store
 *.log
 Knowledge_Base
+result.txt
