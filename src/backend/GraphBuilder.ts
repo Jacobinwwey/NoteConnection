@@ -206,16 +206,16 @@ export class GraphBuilder {
         console.log('[GraphBuilder] Running Hybrid Inference (Stats + Vector)...');
         
         // Step 1: Stats Matrix (Reuse)
-        PerformanceLogger.start('Hybrid: Stats Matrix (Reuse)');
+        if (config.deepDebug) PerformanceLogger.start('Hybrid: Stats Matrix (Reuse)');
         if (!sharedStatsMatrix) {
             // Should be calculated in 2c, but fallback just in case logic changes
              const terms = Array.from(fileMap.keys());
              sharedStatsMatrix = await StatisticalAnalyzer.analyzeAsync(files, terms);
         }
-        PerformanceLogger.end('Hybrid: Stats Matrix (Reuse)');
+        if (config.deepDebug) PerformanceLogger.end('Hybrid: Stats Matrix (Reuse)');
 
         // Step 2: Vector Space (Reuse)
-        PerformanceLogger.start('Hybrid: Vector Space (Reuse)');
+        if (config.deepDebug) PerformanceLogger.start('Hybrid: Vector Space (Reuse)');
         if (!sharedVectorSpace) {
             // Fallback
             if (config.enableGPU) {
@@ -224,12 +224,12 @@ export class GraphBuilder {
                  sharedVectorSpace = new VectorSpace(files);
             }
         }
-        PerformanceLogger.end('Hybrid: Vector Space (Reuse)');
+        if (config.deepDebug) PerformanceLogger.end('Hybrid: Vector Space (Reuse)');
 
         // Step 3: Inference
-        PerformanceLogger.start('Hybrid: Inference Engine');
+        if (config.deepDebug) PerformanceLogger.start('Hybrid: Inference Engine');
         const hybridEdges = HybridEngine.infer(sharedStatsMatrix, sharedVectorSpace, 0.25, 0.1); // Tune thresholds
-        PerformanceLogger.end('Hybrid: Inference Engine');
+        if (config.deepDebug) PerformanceLogger.end('Hybrid: Inference Engine');
         
         hybridEdges.forEach(dep => {
              graph.addEdge(dep.source, dep.target, 'hybrid-inferred', dep.confidence);
@@ -307,10 +307,15 @@ export class GraphBuilder {
     // Cycle Detection
     PerformanceLogger.start('Cycle Detection');
     console.log('[GraphBuilder] Running Cycle Detection...');
-    // Limit to 100 cycles to prevent OOM on large graphs with many cycles
-    const cycles = CycleDetector.detectCycles(graph, 100);
+    
+    // Configurable Cycle Limit
+    // 可配置的循环限制
+    const cycleLimit = config.memorySavingMode ? 100 : 10000;
+    
+    // Limit to 100 cycles to prevent OOM on large graphs with many cycles (if optimization on)
+    const cycles = CycleDetector.detectCycles(graph, cycleLimit);
     if (cycles.length > 0) {
-        const countStr = cycles.length >= 100 ? '100+' : cycles.length.toString();
+        const countStr = cycles.length >= cycleLimit ? `${cycleLimit}+` : cycles.length.toString();
         console.warn(`[GraphBuilder] Detected ${countStr} cycles. Topological Sort may be partial.`);
         // Note: We proceed anyway, but ranks might be inaccurate for cyclic nodes.
     }
@@ -361,18 +366,29 @@ export class GraphBuilder {
           if (start >= files.length) break;
 
           const filesChunk = files.slice(start, end);
-          const filePaths = filesChunk.map(f => f.filepath);
 
           const p = new Promise<void>((resolve, reject) => {
               try {
                   const execArgv = isTsNode ? ['-r', require.resolve('ts-node/register')] : undefined;
+                  
+                  // Configurable Data Transfer Strategy
+                  // 可配置的数据传输策略
+                  let workerPayload: any = {
+                      targetIds,
+                      strategy: config.matchingStrategy,
+                      exclusionList: config.exclusionList
+                  };
+
+                  if (config.memorySavingMode) {
+                      // Low Memory: Pass paths
+                      workerPayload.filePaths = filesChunk.map(f => f.filepath);
+                  } else {
+                      // High Performance: Pass content
+                      workerPayload.filesChunk = filesChunk;
+                  }
+
                   const worker = new Worker(actualWorkerPath, {
-                      workerData: {
-                          filePaths,
-                          targetIds,
-                          strategy: config.matchingStrategy,
-                          exclusionList: config.exclusionList
-                      },
+                      workerData: workerPayload,
                       execArgv
                   });
 

@@ -50,6 +50,35 @@ const tooltip = d3.select("body").append("div")
 const nodes = graphData.nodes.map(d => Object.create(d));
 const links = graphData.edges.map(d => Object.create(d));
 
+// Optimization: Pre-resolve links to ensure they are objects, not strings.
+// This allows us to feed a SUBSET to the physics engine while keeping ALL links for rendering.
+// 优化：预解析连接以确保它们是对象而不是字符串。
+// 这允许我们将子集提供给物理引擎，同时保留所有连接以供渲染。
+const nodeMap = new Map(nodes.map(n => [n.id, n]));
+links.forEach(l => {
+    if (typeof l.source !== 'object') l.source = nodeMap.get(l.source);
+    if (typeof l.target !== 'object') l.target = nodeMap.get(l.target);
+});
+
+// Filter out broken links (where source/target missing)
+// 过滤掉断开的连接（源/目标丢失）
+const validLinks = links.filter(l => l.source && l.target);
+// Replace original links array with valid ones to avoid errors in render
+// 用有效的链接数组替换原始链接数组以避免渲染错误
+// Note: We modify the 'links' const reference? No, 'links' is const. 
+// We should have declared 'links' as let or just use validLinks.
+// Since 'links' is used globally in this scope, and it's 'const', we can't reassign.
+// But 'links' is an array, we can clear and push? Or just rely on validLinks for simulation.
+// Actually, 'links' is used in 'link' selection for SVG.
+// Let's assume input data is mostly correct, but for safety/optimization:
+// We will use 'validLinks' for everything henceforth.
+// But to keep 'const links' valid, we'll just ignore the few broken ones if any? 
+// Or better, let's just use validLinks for the simulation. 
+// For rendering, if we use 'links' and it has strings, it crashes.
+// So we MUST update 'links' content.
+links.length = 0;
+links.push(...validLinks);
+
 // Optimization: Default to Canvas for large graphs (>3000 nodes) to save memory
 if (nodes.length > 3000) {
     console.log(`[Optimization] Large graph detected (${nodes.length} nodes). Switching to Canvas mode.`);
@@ -111,8 +140,15 @@ document.getElementById('min-degree-val').innerText = minDegreeSlider.value;
 let width = container.clientWidth;
 let height = container.clientHeight;
 
+// Optimization: Limit Physics Edges
+let physicsLinks = links;
+if (links.length > 20000) {
+    console.warn(`[Optimization] Too many edges (${links.length}). Limiting physics simulation to subset to prevent freeze.`);
+    physicsLinks = links.slice(0, 20000); 
+}
+
 const simulation = d3.forceSimulation(nodes)
-    .force("link", d3.forceLink(links).id(d => d.id).distance(100))
+    .force("link", d3.forceLink(physicsLinks).id(d => d.id).distance(100))
     .force("charge", d3.forceManyBody().strength(-300))
     .force("center", d3.forceCenter(width / 2, height / 2))
     .force("collide", d3.forceCollide().radius(20)) // Avoid overlap

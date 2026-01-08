@@ -28,9 +28,10 @@ export class GraphMetrics {
         const numCPUs = os.cpus().length;
         const workerCount = config.maxWorkers ?? Math.max(1, numCPUs - 1);
         
-        // Threshold for parallelization
-        // 并行化阈值
-        if (nodeCount < 500) {
+        // Threshold for parallelization or Memory Saving Check
+        // 并行化阈值或内存节省检查
+        if (nodeCount < 500 || config.memorySavingMode) {
+            console.log(`[GraphMetrics] Using Single-Core calculation (Memory Saving: ${config.memorySavingMode}, Nodes: ${nodeCount})`);
             return this.calculateBetweenness(graph);
         }
 

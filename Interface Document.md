@@ -112,6 +112,8 @@ Core data structure for managing notes and dependencies.
         enableStatisticalInference: boolean; // Toggle statistical analysis
         maxWorkers?: number; // Max concurrent workers (Default: CPU count - 1)
         exclusionList: string[];
+        memorySavingMode: boolean; // v0.9.63: Optimize for low memory (default: true)
+        deepDebug: boolean; // v0.9.63: Detailed logging (default: false)
     }
     
     interface NoteNode {
@@ -296,6 +298,7 @@ Renders the JSON data into an interactive DAG.
             *   **Interactivity (v0.9.45)**: Supports Hover (Highlight), Click (Stats), and Double Click (Focus) via manual hit-testing (`findNodeAt`).
             *   **Visuals**: Matches SVG styling (Size By, Color By, Highlight Colors).
             *   **Auto-Switch (v0.9.61)**: Automatically enabled by default if `nodes.length > 3000` to prevent DOM-based memory issues.
+            *   **Physics Culling (v0.9.63)**: If `edges.length > 20000`, the physics simulation operates on a subset (20k edges) to prevent Main Thread freeze, while rendering still displays all edges on interaction.
     *   **Focus Mode Enhancements (v0.8.7, v0.8.8 & v0.9.44)**:
         *   **Dynamic Spacing**: User adjustable `layerGap` via UI slider.
         *   **Horizontal Spacing**: User adjustable `hSpacing` via UI slider.

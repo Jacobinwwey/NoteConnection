@@ -6,8 +6,11 @@ import { CrashLogger } from '../utils/CrashLogger';
 
 CrashLogger.initGlobalHandlers();
 
+import { RawFile } from '../FileLoader';
+
 interface WorkerData {
-  filePaths: string[];
+  filePaths?: string[];
+  filesChunk?: RawFile[];
   targetIds: string[];
   strategy: 'exact-phrase' | 'fuzzy';
   exclusionList: string[];
@@ -19,28 +22,42 @@ interface MatchResult {
 }
 
 try {
-    const { filePaths, targetIds, strategy, exclusionList } = workerData as WorkerData;
+    const { filePaths, filesChunk, targetIds, strategy, exclusionList } = workerData as WorkerData;
+    
+    // Determine input source
+    const usePaths = !!filePaths;
+    const itemsCount = usePaths ? filePaths!.length : filesChunk!.length;
 
     const results: MatchResult[] = [];
 
-    filePaths.forEach(filePath => {
-      try {
-          const content = fs.readFileSync(filePath, 'utf-8');
-          const sourceId = path.basename(filePath, path.extname(filePath));
-
-          targetIds.forEach(targetId => {
-            if (sourceId === targetId) return;
-
-            if (exclusionList.includes(targetId)) return;
-
-            if (checkMatch(content, targetId, strategy)) {
-              results.push({ source: sourceId, target: targetId });
+    for (let i = 0; i < itemsCount; i++) {
+        let content = '';
+        let sourceId = '';
+        
+        try {
+            if (usePaths) {
+                const filePath = filePaths![i];
+                content = fs.readFileSync(filePath, 'utf-8');
+                sourceId = path.basename(filePath, path.extname(filePath));
+            } else {
+                const file = filesChunk![i];
+                content = file.content;
+                sourceId = file.filename;
             }
-          });
-      } catch (err) {
-          console.warn(`[KeywordMatchWorker] Failed to read file: ${filePath}`, err);
-      }
-    });
+
+            targetIds.forEach(targetId => {
+              if (sourceId === targetId) return;
+
+              if (exclusionList.includes(targetId)) return;
+
+              if (checkMatch(content, targetId, strategy)) {
+                results.push({ source: sourceId, target: targetId });
+              }
+            });
+        } catch (err) {
+            console.warn(`[KeywordMatchWorker] Failed to process item ${i}`, err);
+        }
+    }
 
     if (parentPort) {
       parentPort.postMessage(results);

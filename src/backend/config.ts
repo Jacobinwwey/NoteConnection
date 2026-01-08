@@ -7,6 +7,8 @@ export interface AppConfig {
     enableVectorSimilarity: boolean; // Use TF-IDF/Vector similarity for associations
     enableHybridInference: boolean; // Use Hybrid Engine (Stats + Vector)
     enableGPU: boolean; // Use GPU acceleration where available
+    memorySavingMode: boolean; // Optimize for low memory usage (Sparse Vectors, filePaths in workers, etc.)
+    deepDebug: boolean; // Enable detailed logging
     maxWorkers?: number; // Maximum number of worker threads. If undefined, uses (CPU cores - 1).
     exclusionList: string[]; // List of concept IDs (filenames) to ignore when creating edges
 }
@@ -20,6 +22,8 @@ export const config: AppConfig = {
     enableVectorSimilarity: true, // Default on
     enableHybridInference: true, // Default on
     enableGPU: true, // Default on (auto-detects compatibility)
+    memorySavingMode: true, // Default to true (optimized)
+    deepDebug: false, // Default off
     exclusionList: [
         // Add common words or concepts here that cause too much noise
         // e.g., "Introduction", "Summary", etc.

@@ -6,6 +6,25 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-08 v0.9.63 - 10k Node Optimization & Memory Strategy
+
+**Goal**: Solve the "stuck" rendering issue for 10k+ nodes/1.2M edges and implement configurable memory strategies for backend processing.
+
+- [x] **Frontend Optimization**
+    - [x] **Physics Culling**: Implemented edge limit (20k) for the D3 Force Simulation. If total edges exceed this, only a subset drives the physics to prevent Main Thread freeze, while all edges remain available for rendering/traversal.
+    - [x] **Link Resolution**: Pre-resolved link source/target to objects to support robust rendering even when physics uses a subset.
+    - [x] **UI Unblocking**: Fixed "Quick Start Guide" not appearing by freeing up the main thread.
+
+- [x] **Backend Memory Strategy**
+    - [x] **Configuration**: Added `memorySavingMode` and `deepDebug` to `AppConfig`.
+    - [x] **Worker Optimization**: Refactored `keywordMatchWorker` and `statisticalWorker` to support both `filePaths` (Low Memory) and `filesChunk` (High Performance/Precision) modes.
+    - [x] **Graph Metrics**: Added check to force Single-Core execution for `Betweenness Centrality` when `memorySavingMode` is active.
+    - [x] **Cycle Detection**: Adjusted limit (100 vs 10000) based on memory mode.
+
+- [x] **System Monitoring**
+    - [x] **Peak Memory**: Updated `PerformanceLogger` to track and log Peak Heap/RSS memory usage.
+    - [x] **Deep Debug**: Implemented conditional detailed logging based on `deepDebug` flag.
+
 # 2026-01-07 v0.9.62 - Documentation Update (AMDGPU Guide)
 
 **Goal**: Provide detailed hardware and software guidance for AMDGPU users, specifically for `gpu.js` acceleration and future AI integration.

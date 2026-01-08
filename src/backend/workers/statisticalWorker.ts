@@ -5,8 +5,11 @@ import { CrashLogger } from '../utils/CrashLogger';
 
 CrashLogger.initGlobalHandlers();
 
+import { RawFile } from '../FileLoader';
+
 interface WorkerData {
-  filePaths: string[];
+  filePaths?: string[];
+  filesChunk?: RawFile[];
   terms: string[];
 }
 
@@ -14,14 +17,28 @@ interface WorkerData {
 type FileTermsResult = Record<string, string[]>;
 
 try {
-    const { filePaths, terms } = workerData as WorkerData;
+    const { filePaths, filesChunk, terms } = workerData as WorkerData;
+    
+    const usePaths = !!filePaths;
+    const itemsCount = usePaths ? filePaths!.length : filesChunk!.length;
 
     const results: FileTermsResult = {};
 
-    filePaths.forEach(filePath => {
+    for (let i = 0; i < itemsCount; i++) {
         try {
-            const content = fs.readFileSync(filePath, 'utf-8').toLowerCase();
-            const filename = path.basename(filePath, path.extname(filePath));
+            let content = '';
+            let filename = '';
+
+            if (usePaths) {
+                const filePath = filePaths![i];
+                content = fs.readFileSync(filePath, 'utf-8').toLowerCase();
+                filename = path.basename(filePath, path.extname(filePath));
+            } else {
+                const file = filesChunk![i];
+                content = file.content.toLowerCase();
+                filename = file.filename;
+            }
+
             const foundTerms: string[] = [];
             
             terms.forEach(term => {
@@ -35,9 +52,9 @@ try {
                 results[filename] = foundTerms;
             }
         } catch (err) {
-            console.warn(`[StatisticalWorker] Failed to read file: ${filePath}`, err);
+            console.warn(`[StatisticalWorker] Failed to process item ${i}`, err);
         }
-    });
+    }
 
     if (parentPort) {
       parentPort.postMessage(results);

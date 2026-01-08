@@ -63,13 +63,24 @@ export class StatisticalAnalyzer {
             const end = Math.min(start + chunkSize, files.length);
             if (start >= files.length) break;
 
-            const filesChunk = files.slice(start, end);
-            const filePaths = filesChunk.map(f => f.filepath);
+            const chunk = files.slice(start, end);
+            
+            // Check memory saving config
+            // 检查内存节省配置
+            let workerData: any = { terms };
+            
+            if (config.memorySavingMode) {
+                 // Low Memory: Pass paths, worker reads file
+                 workerData.filePaths = chunk.map(f => f.filepath);
+            } else {
+                 // High Precision/Speed: Pass content directly
+                 workerData.filesChunk = chunk;
+            }
             
             const p = new Promise<Record<string, string[]>>((resolve, reject) => {
                 const execArgv = isTsNode ? ['-r', require.resolve('ts-node/register')] : undefined;
                 const worker = new Worker(actualWorkerPath, {
-                    workerData: { filePaths, terms },
+                    workerData,
                     execArgv
                 });
 
