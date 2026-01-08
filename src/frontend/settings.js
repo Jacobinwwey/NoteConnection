@@ -16,7 +16,9 @@ const defaultSettings = {
     },
     performance: {
         maxWorkers: 4, // Default safe limit
-        enableGPU: true // Default to using GPU
+        enableGPU: true, // Default to using GPU
+        memorySavingMode: false, // Large File Memory Saving Strategy
+        deepDebug: false // Deep Debug
     },
     reading: {
         mode: 'window' // 'window' or 'fullscreen'

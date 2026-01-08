@@ -9,6 +9,8 @@ export interface BuildOptions {
     targetPath?: string;
     maxWorkers?: number;
     enableGPU?: boolean;
+    memorySavingMode?: boolean;
+    deepDebug?: boolean;
     projectRoot?: string; // Optional override for project root
 }
 
@@ -42,6 +44,16 @@ export class NoteConnection {
         if (options.enableGPU !== undefined) {
             console.log(`[Config] Setting enableGPU to ${options.enableGPU}`);
             config.enableGPU = options.enableGPU;
+        }
+
+        if (options.memorySavingMode !== undefined) {
+            console.log(`[Config] Setting memorySavingMode to ${options.memorySavingMode}`);
+            config.memorySavingMode = options.memorySavingMode;
+        }
+
+        if (options.deepDebug !== undefined) {
+            console.log(`[Config] Setting deepDebug to ${options.deepDebug}`);
+            config.deepDebug = options.deepDebug;
         }
 
         // 2. Resolve Directory

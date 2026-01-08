@@ -1,11 +1,22 @@
 import * as os from 'os';
 
+interface StepMetric {
+    name: string;
+    durationMs: number;
+    endHeap: number;
+    endRSS: number;
+    maxGPU: number;
+}
+
 export class PerformanceLogger {
     private static stepStartTimes: Map<string, number> = new Map();
     private static stepStartCpu: Map<string, NodeJS.CpuUsage> = new Map();
+    private static stepHistory: StepMetric[] = [];
+    
     private static maxHeap: number = 0;
     private static maxRSS: number = 0;
-    private static maxGPUMemory: number = 0; // Placeholder for GPU memory
+    private static maxGPUMemory: number = 0; // Session Peak
+    private static currentStepGPU: number = 0; // Peak during current step (simplified)
 
     static logSystemInfo() {
         console.log(`[System] Platform: ${os.platform()} ${os.release()}`);
@@ -17,8 +28,11 @@ export class PerformanceLogger {
         const mem = process.memoryUsage();
         if (mem.heapUsed > this.maxHeap) this.maxHeap = mem.heapUsed;
         if (mem.rss > this.maxRSS) this.maxRSS = mem.rss;
-        // GPU memory tracking would require binding to gpu.js or driver, which is complex.
-        // For now, we leave it as 0 or manually update if we had a way.
+    }
+
+    static recordGPUUsage(bytes: number) {
+        if (bytes > this.maxGPUMemory) this.maxGPUMemory = bytes;
+        if (bytes > this.currentStepGPU) this.currentStepGPU = bytes;
     }
 
     static getPeakMemory() {
@@ -33,6 +47,7 @@ export class PerformanceLogger {
         this.updatePeakMemory();
         this.stepStartTimes.set(stepName, performance.now());
         this.stepStartCpu.set(stepName, process.cpuUsage());
+        this.currentStepGPU = 0; // Reset for this step (rough approx for nested steps)
         console.log(`[Perf] Starting: ${stepName}`);
         const mem = process.memoryUsage();
         console.log(`[Perf] Initial Memory: ${this.formatMemory(mem.heapUsed)} / ${this.formatMemory(mem.rss)} (Heap/RSS)`);
@@ -50,26 +65,62 @@ export class PerformanceLogger {
 
         const endTime = performance.now();
         const endCpu = process.cpuUsage(startCpu);
-        const duration = (endTime - startTime).toFixed(2);
+        const duration = endTime - startTime; // Keep exact number for summary
         
-        // CPU usage is in microseconds. Convert to ms for display.
         const userTime = (endCpu.user / 1000).toFixed(2);
         const systemTime = (endCpu.system / 1000).toFixed(2);
 
         const mem = process.memoryUsage();
 
         console.log(`[Perf] Finished: ${stepName}`);
-        console.log(`[Perf] Time: ${duration}ms`);
+        console.log(`[Perf] Time: ${duration.toFixed(2)}ms`);
         console.log(`[Perf] CPU (User/Sys): ${userTime}ms / ${systemTime}ms`);
         console.log(`[Perf] Memory (Heap/RSS): ${this.formatMemory(mem.heapUsed)} / ${this.formatMemory(mem.rss)}`);
-        console.log(`[Perf] Peak Memory (Session): Heap ${this.formatMemory(this.maxHeap)} / RSS ${this.formatMemory(this.maxRSS)}`);
-        if (this.maxGPUMemory > 0) {
-             console.log(`[Perf] Peak GPU Memory: ${this.formatMemory(this.maxGPUMemory)}`);
-        }
+        
+        // Store metric
+        this.stepHistory.push({
+            name: stepName,
+            durationMs: duration,
+            endHeap: mem.heapUsed,
+            endRSS: mem.rss,
+            maxGPU: this.currentStepGPU
+        });
+
         console.log('--------------------------------------------------');
         
         this.stepStartTimes.delete(stepName);
         this.stepStartCpu.delete(stepName);
+    }
+
+    static printSummary() {
+        console.log("\n==================== PERFORMANCE SUMMARY ====================");
+        console.log("| %-30s | %-12s | %-12s | %-12s | %-12s |", "Stage", "Time (ms)", "Max Heap", "Max RSS", "Max VRAM");
+        console.log("|" + "-".repeat(32) + "+" + "-".repeat(14) + "+" + "-".repeat(14) + "+" + "-".repeat(14) + "+" + "-".repeat(14) + "|");
+
+        let totalTime = 0;
+        
+        this.stepHistory.forEach(step => {
+            totalTime += step.durationMs;
+            console.log(
+                "| %-30s | %-12s | %-12s | %-12s | %-12s |", 
+                step.name.substring(0, 30),
+                step.durationMs.toFixed(0),
+                this.formatMemory(step.endHeap),
+                this.formatMemory(step.endRSS),
+                step.maxGPU > 0 ? this.formatMemory(step.maxGPU) : '-'
+            );
+        });
+
+        console.log("|" + "-".repeat(32) + "+" + "-".repeat(14) + "+" + "-".repeat(14) + "+" + "-".repeat(14) + "+" + "-".repeat(14) + "|");
+        console.log(
+            "| %-30s | %-12s | %-12s | %-12s | %-12s |",
+            "TOTAL / PEAK",
+            totalTime.toFixed(0),
+            this.formatMemory(this.maxHeap),
+            this.formatMemory(this.maxRSS),
+            this.formatMemory(this.maxGPUMemory)
+        );
+        console.log("=============================================================\n");
     }
 
     private static formatMemory(bytes: number): string {

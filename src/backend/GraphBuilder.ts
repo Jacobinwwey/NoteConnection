@@ -333,6 +333,8 @@ export class GraphBuilder {
     });
     PerformanceLogger.end('Topological Sort');
     console.log('[GraphBuilder] Algorithmic Core Complete.');
+    
+    PerformanceLogger.printSummary();
 
     return graph;
   }

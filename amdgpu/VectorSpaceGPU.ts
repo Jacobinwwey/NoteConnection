@@ -48,6 +48,10 @@ export class VectorSpaceGPU extends VectorSpace {
 
         const vectorSize = vectorArray[0].length;
         console.log(`[VectorSpaceGPU] Matrix size: ${numDocs} documents x ${vectorSize} dimensions`);
+        
+        // Estimate VRAM usage: Input (numDocs * vectorSize * 4 bytes) + Output (numDocs * numDocs * 4 bytes)
+        const estimatedVRAM = (numDocs * vectorSize * 4) + (numDocs * numDocs * 4);
+        PerformanceLogger.recordGPUUsage(estimatedVRAM);
 
         // 2. Create Kernel
         // Compute A * A^T

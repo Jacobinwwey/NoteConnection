@@ -2227,6 +2227,13 @@ function initSettingsUI() {
         opacity: document.getElementById('val-opacity')
     };
     
+    // Performance Controls
+    const workersSlider = document.getElementById('set-workers-slider');
+    const workersInput = document.getElementById('set-workers-input');
+    const gpuCheckbox = document.getElementById('set-gpu');
+    const memorySavingCheckbox = document.getElementById('set-memory-saving');
+    const deepDebugCheckbox = document.getElementById('set-deep-debug');
+    
     // Reader Settings
     const inputReadingMode = document.getElementById('set-reading-mode');
 
@@ -2239,15 +2246,9 @@ function initSettingsUI() {
         const repLabel = document.querySelector('label[for="set-charge"]');
         if (repLabel) {
             repLabel.innerText = mode === 'dag' ? "Repulsion (DAG)" : "Repulsion (Force)";
-            // If localized
-            if (repLabel.hasAttribute('data-i18n')) {
-                 // We might need dynamic keys or just manual update. 
-                 // Simple manual update for now as 't' function handles static keys.
-                 // Let's stick to English/Simple text or update based on language.
-                 const lang = document.getElementById('set-language') ? document.getElementById('set-language').value : 'en';
-                 if (lang === 'zh') {
-                     repLabel.innerText = mode === 'dag' ? "排斥力 (DAG)" : "排斥力 (力导向)";
-                 }
+            const lang = document.getElementById('set-language') ? document.getElementById('set-language').value : 'en';
+            if (lang === 'zh') {
+                 repLabel.innerText = mode === 'dag' ? "排斥力 (DAG)" : "排斥力 (力导向)";
             }
         }
 
@@ -2276,6 +2277,12 @@ function initSettingsUI() {
             }
             if (settings.performance.enableGPU !== undefined) {
                 if (gpuCheckbox) gpuCheckbox.checked = settings.performance.enableGPU;
+            }
+            if (settings.performance.memorySavingMode !== undefined) {
+                if (memorySavingCheckbox) memorySavingCheckbox.checked = settings.performance.memorySavingMode;
+            }
+            if (settings.performance.deepDebug !== undefined) {
+                if (deepDebugCheckbox) deepDebugCheckbox.checked = settings.performance.deepDebug;
             }
         }
     };
@@ -2308,6 +2315,36 @@ function initSettingsUI() {
         settingsManager.set('visuals', 'edgeOpacity', val);
         displays.opacity.innerText = val;
     });
+    
+    // Performance Listeners
+    if (workersSlider && workersInput) {
+        workersSlider.addEventListener('input', (e) => {
+            workersInput.value = e.target.value;
+            settingsManager.set('performance', 'maxWorkers', parseInt(e.target.value));
+        });
+        workersInput.addEventListener('input', (e) => {
+            workersSlider.value = e.target.value;
+            settingsManager.set('performance', 'maxWorkers', parseInt(e.target.value));
+        });
+    }
+    
+    if (gpuCheckbox) {
+        gpuCheckbox.addEventListener('change', (e) => {
+            settingsManager.set('performance', 'enableGPU', e.target.checked);
+        });
+    }
+
+    if (memorySavingCheckbox) {
+        memorySavingCheckbox.addEventListener('change', (e) => {
+            settingsManager.set('performance', 'memorySavingMode', e.target.checked);
+        });
+    }
+
+    if (deepDebugCheckbox) {
+        deepDebugCheckbox.addEventListener('change', (e) => {
+            settingsManager.set('performance', 'deepDebug', e.target.checked);
+        });
+    }
     
     inputReadingMode.addEventListener('change', (e) => {
         settingsManager.set('reading', 'mode', e.target.value);
