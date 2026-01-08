@@ -1,4 +1,4 @@
-# 2025-12-26 v0.9.27
+# 2026-01-08 v0.9.63
 
 # User Manual
 
@@ -51,9 +51,14 @@ NoteConnection is a visualization tool that transforms your Markdown notes into 
     *   **Language**: Switch between English and Chinese.
     *   **Physics**: Tune gravity and repulsion forces.
     *   **Performance**: 
-        *   **Enable/Disable GPU Acceleration**: Toggle GPU usage for similarity calculation (requires supported hardware).
-        *   **Max Workers**: Adjust the number of CPU threads used for parallel processing (Default: 4). Higher values speed up large builds but use more memory.
+        *   **Enable GPU Acceleration**: Toggle GPU usage for accelerated matrix operations (e.g., Cosine Similarity). Recommended for AMD Radeon 7900XT or compatible GPUs.
+        *   **Max Workers**: Adjust the number of CPU threads used for parallel processing (Default: CPU Cores - 1). Higher values speed up large builds but use more memory.
+        *   **Memory Saving Mode**: (v0.9.63) Enable to optimize backend memory usage for large datasets (10k+ files). Reduces Peak Heap by streaming file content and serializing data efficiently. Default: Enabled.
     *   **Visuals**: Adjust edge opacity.
+
+### 6. Performance Features (Auto-Optimization)
+*   **Canvas Auto-Switch**: If your graph contains more than 3000 nodes, NoteConnection automatically switches to the **Canvas Renderer** to ensure smooth performance. You can manually switch back to SVG in the controls if needed.
+*   **Physics Culling**: For extremely dense graphs (>20,000 edges), the physics simulation will only calculate forces for a subset of edges to prevent freezing the interface, while still rendering all connections.
 
 ---
 
@@ -106,6 +111,11 @@ NoteConnection 是一个可视化工具，可将您的 Markdown 笔记转换为�
     *   **语言**: 在英语和中文之间切换。
     *   **物理**: 调整重力和排斥力。
     *   **性能**: 
-        *   **启用/禁用 GPU 加速**: 切换用于相似度计算的 GPU 使用（需要支持的硬件）。
-        *   **最大 Worker 数**: 调整用于并行处理的 CPU 线程数（默认：4）。较高的值可加快大型构建速度，但会占用更多内存。
+        *   **启用 GPU 加速**: 切换用于加速矩阵运算（如余弦相似度）的 GPU 使用。推荐用于 AMD Radeon 7900XT 或兼容 GPU。
+        *   **最大 Worker 数**: 调整用于并行处理的 CPU 线程数（默认：CPU 核心数 - 1）。较高的值可加快大型构建速度，但会占用更多内存。
+        *   **省内存模式 (Memory Saving Mode)**: (v0.9.63) 启用以优化大数据集（10k+ 文件）的后端内存使用。通过流式传输文件内容和高效序列化数据来降低峰值堆内存。默认：已启用。
     *   **视觉**: 调整边透明度。
+
+### 6. 性能特性 (自动优化)
+*   **Canvas 自动切换**: 如果您的图谱包含超过 3000 个节点，NoteConnection 会自动切换到 **Canvas 渲染器**以确保流畅的性能。如有需要，您可以在控件中手动切回 SVG。
+*   **物理剔除**: 对于极其密集的图谱（>20,000 条边），物理模拟将仅计算边的一个子集的力，以防止界面冻结，同时仍渲染所有连接。
