@@ -116,6 +116,14 @@ export class Graph {
   }
 
   /**
+   * Gets all edges in the graph.
+   * 获取图中的所有边。
+   */
+  getEdges(): NoteEdge[] {
+      return Array.from(this.adjacencyList.values()).flat();
+  }
+
+  /**
    * Gets all incoming edges to a node.
    * 获取节点的所有入边。
    * @param id Node ID | 节点 ID
