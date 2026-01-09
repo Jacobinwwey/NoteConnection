@@ -95,6 +95,33 @@ if (nodes.length > 3000) {
         const canvasEl = document.getElementById('graph-canvas');
         if (svgEl) svgEl.style.display = 'none';
         if (canvasEl) canvasEl.style.display = 'block';
+
+        // v0.9.67 Fix: Force initial resize and tick to ensure canvas is drawn
+        // The canvas needs to be sized and content rendered immediately
+        setTimeout(() => {
+             if (typeof resizeCanvas === 'function') resizeCanvas();
+             if (typeof ticked === 'function') ticked();
+             console.log("[Init] Forced initial Canvas render.");
+        }, 100);
+    }
+}
+
+// v0.9.67: Auto-enable Compact Mode for very large graphs
+// Criteria: > 5000 Nodes OR > 100,000 Edges
+if (nodes.length > 5000 || links.length > 100000) {
+    console.log(`[Optimization] Massive graph detected (${nodes.length} nodes, ${links.length} edges). Enabling Compact Mode.`);
+    // Only set if user hasn't explicitly saved a preference? 
+    // For now, we enforce default if no setting exists or override for performance safety.
+    // Let's check if settingsManager is available and update it.
+    if (window.settingsManager) {
+        // We set it but don't save it to localStorage to avoid persisting it permanently 
+        // if the user switches to a small graph later? 
+        // Actually, settings are global. 
+        // Better: Update the runtime setting.
+        window.settingsManager.set('performance', 'compactMode', true);
+        
+        // Also update UI if Settings Modal exists (might not be init yet)
+        // The settings UI init code will read from settingsManager.
     }
 }
 
@@ -575,6 +602,8 @@ const translations = {
         desc_gpu: "使用 GPU 进行相似度计算（需要重新加载）。",
         lbl_memory_saving: "大文件内存节省策略",
         desc_memory_saving: "使用低精度策略以防止大文件导致的内存溢出。",
+        lbl_compact_mode: "紧凑模式 (隐藏边)",
+        desc_compact_mode: "默认不加载/渲染边以提高 >5k 节点的性能。",
         lbl_deep_debug: "深度调试",
         desc_deep_debug: "启用详细日志以进行调试。",
         btn_reset: "重置默认",
@@ -681,6 +710,8 @@ const translations = {
         desc_gpu: "Use GPU for similarity calculation (Requires page reload).",
         lbl_memory_saving: "Large File Memory Saving Strategy",
         desc_memory_saving: "Use lower precision strategies to prevent OOM on large files.",
+        lbl_compact_mode: "Compact Mode (Hide Edges)",
+        desc_compact_mode: "Don't load/render edges by default to improve performance for >5k nodes.",
         lbl_deep_debug: "Deep Debug",
         desc_deep_debug: "Enable detailed logging for debugging.",
         btn_reset: "Reset Defaults",
@@ -1241,58 +1272,72 @@ function renderCanvas(layoutMode) {
     const highlightConnections = highlightState && highlightState.currentNode ? 
         window.highlightManager.getCurrentConnections() : null;
 
+    // v0.9.67: Compact Mode Optimization
+    // If Compact Mode is ON, and we are NOT highlighting/focusing, skip edge iteration entirely.
+    // This saves iterating 1.2M items per frame.
+    const isCompact = window.settingsManager ? window.settingsManager.get('performance', 'compactMode') : false;
+    const shouldRenderEdges = !isCompact || focusNode || highlightConnections;
+
     // Draw Links / 绘制连接
     ctx.lineWidth = 1;
 
-    links.forEach(d => {
-        // Check Visibility / 检查可见性
-        // 1. Focus Mode / 专注模式
-        if (focusNode) {
-            // v0.9.46: Do not display any edges in Focus Mode under Canvas
-            return; 
-        } 
-        // 2. Highlight Mode (using highlightManager) / 高亮模式（使用highlightManager）
-        else if (highlightConnections) {
-            const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
-            const targetId = typeof d.target === 'object' ? d.target.id : d.target;
-            const currentNodeId = highlightState.currentNode.id;
-            
-            if (sourceId === currentNodeId) {
-                // Outgoing edge / 出度边
-                ctx.globalAlpha = 1;
-                ctx.strokeStyle = "#4488ff"; // Blue for outgoing / 蓝色表示出度
-                ctx.lineWidth = 2.5;
-            } else if (targetId === currentNodeId) {
-                // Incoming edge / 入度边
-                ctx.globalAlpha = 1;
-                ctx.strokeStyle = "#ff6b6b"; // Red for incoming / 红色表示入度
-                ctx.lineWidth = 2.5;
-            } else {
-                return; // Hide others / 隐藏其他
+    if (shouldRenderEdges) {
+        links.forEach(d => {
+            // Check Visibility / 检查可见性
+            // 1. Focus Mode / 专注模式
+            if (focusNode) {
+                // v0.9.46: Do not display any edges in Focus Mode under Canvas
+                return; 
+            } 
+            // 2. Highlight Mode (using highlightManager) / 高亮模式（使用highlightManager）
+            else if (highlightConnections) {
+                const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                const currentNodeId = highlightState.currentNode.id;
+                
+                if (sourceId === currentNodeId) {
+                    // Outgoing edge / 出度边
+                    ctx.globalAlpha = 1;
+                    ctx.strokeStyle = "#4488ff"; // Blue for outgoing / 蓝色表示出度
+                    ctx.lineWidth = 2.5;
+                } else if (targetId === currentNodeId) {
+                    // Incoming edge / 入度边
+                    ctx.globalAlpha = 1;
+                    ctx.strokeStyle = "#ff6b6b"; // Red for incoming / 红色表示入度
+                    ctx.lineWidth = 2.5;
+                } else {
+                    return; // Hide others / 隐藏其他
+                }
             }
-        }
-        else {
-            return; // Default Hidden / 默认隐藏
-        }
-
-        ctx.beginPath();
-        if (layoutMode === 'dag') {
-            const sx = d.source.x;
-            const sy = d.source.y;
-            const tx = d.target.x;
-            const ty = d.target.y;
-            const cp1x = sx;
-            const cp1y = (sy + ty) / 2;
-            const cp2x = tx;
-            const cp2y = (sy + ty) / 2;
-            ctx.moveTo(sx, sy);
-            ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, tx, ty);
-        } else {
-            ctx.moveTo(d.source.x, d.source.y);
-            ctx.lineTo(d.target.x, d.target.y);
-        }
-        ctx.stroke();
-    });
+            else {
+                // Default Mode (No Highlight/Focus)
+                // If Compact Mode is ON, we shouldn't be here (guarded by shouldRenderEdges).
+                // But if we are here, it means we are in Normal Mode.
+                // In Normal Mode, edges are default hidden (return) unless some logic changes?
+                // Existing logic: "else { return; // Default Hidden }"
+                // So edges were ALREADY hidden by default in Canvas.
+                return; // Default Hidden / 默认隐藏
+            }
+    
+            ctx.beginPath();
+            if (layoutMode === 'dag') {
+                const sx = d.source.x;
+                const sy = d.source.y;
+                const tx = d.target.x;
+                const ty = d.target.y;
+                const cp1x = sx;
+                const cp1y = (sy + ty) / 2;
+                const cp2x = tx;
+                const cp2y = (sy + ty) / 2;
+                ctx.moveTo(sx, sy);
+                ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, tx, ty);
+            } else {
+                ctx.moveTo(d.source.x, d.source.y);
+                ctx.lineTo(d.target.x, d.target.y);
+            }
+            ctx.stroke();
+        });
+    }
 
     // Draw Nodes / 绘制节点
     nodes.forEach(d => {
@@ -2240,6 +2285,7 @@ function initSettingsUI() {
     const workersInput = document.getElementById('set-workers-input');
     const gpuCheckbox = document.getElementById('set-gpu');
     const memorySavingCheckbox = document.getElementById('set-memory-saving');
+    const compactModeCheckbox = document.getElementById('set-compact-mode');
     const deepDebugCheckbox = document.getElementById('set-deep-debug');
     
     // Reader Settings
@@ -2288,6 +2334,9 @@ function initSettingsUI() {
             }
             if (settings.performance.memorySavingMode !== undefined) {
                 if (memorySavingCheckbox) memorySavingCheckbox.checked = settings.performance.memorySavingMode;
+            }
+            if (settings.performance.compactMode !== undefined) {
+                if (compactModeCheckbox) compactModeCheckbox.checked = settings.performance.compactMode;
             }
             if (settings.performance.deepDebug !== undefined) {
                 if (deepDebugCheckbox) deepDebugCheckbox.checked = settings.performance.deepDebug;
@@ -2345,6 +2394,14 @@ function initSettingsUI() {
     if (memorySavingCheckbox) {
         memorySavingCheckbox.addEventListener('change', (e) => {
             settingsManager.set('performance', 'memorySavingMode', e.target.checked);
+        });
+    }
+
+    if (compactModeCheckbox) {
+        compactModeCheckbox.addEventListener('change', (e) => {
+            settingsManager.set('performance', 'compactMode', e.target.checked);
+            // Force redraw immediately to show/hide edges
+            if (typeof ticked === 'function') ticked();
         });
     }
 

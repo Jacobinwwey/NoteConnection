@@ -291,6 +291,7 @@ Renders the JSON data into an interactive DAG.
                 *   **Others**: Link Distance, Collision Radius.
             *   **Performance**:
                 *   **Max Workers**: Slider/Input to control concurrent worker threads (Default: 4).
+                *   **Compact Mode (v0.9.67)**: Checkbox to hide edges by default for performance (Default: Off, Auto-On for >5k nodes).
             *   **Visuals**: Edge Opacity.
     *   **Rendering Modes (v0.8.7 & v0.9.45)**:
         *   **SVG**: Default D3 implementation for interactivity and styling.

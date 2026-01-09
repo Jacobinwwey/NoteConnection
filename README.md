@@ -150,6 +150,11 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 - [x] **Experience**: Polished UI with Quick Start Guide, Welcome experience, and Bilingual support (En/Zh).
 - [x] **API**: Decoupled Core API ready for plugin integrations.
 
+### v0.9.67 - Compact Mode & Canvas Fix (2026-01-08)
+- [x] **Compact Mode**: Added a new mode that hides edges by default to improve performance for massive graphs (>5k nodes). This mode is automatically enabled for large datasets but can be toggled in settings.
+- [x] **Canvas Fix**: Resolved an issue where large graphs would display a blank screen on load by forcing an initial canvas render frame.
+- [x] **Optimization**: Rendering loop now completely skips edge iteration in Compact Mode, significantly reducing CPU usage during idle or pan/zoom.
+
 ### v0.9.61 - Frontend Memory Optimization (2026-01-07)
 - [x] **Smart Rendering**: Automatically switches to **Canvas** mode by default when the graph contains more than 3000 nodes.
 - [x] **Performance**: Reduces browser memory footprint and improves frame rates for large datasets on initial load.

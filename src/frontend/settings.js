@@ -18,6 +18,7 @@ const defaultSettings = {
         maxWorkers: 4, // Default safe limit
         enableGPU: true, // Default to using GPU
         memorySavingMode: false, // Large File Memory Saving Strategy
+        compactMode: false, // Compact Mode (Hide Edges) for large graphs
         deepDebug: false // Deep Debug
     },
     reading: {

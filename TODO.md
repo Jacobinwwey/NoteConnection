@@ -6,6 +6,17 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-08 v0.9.67 - Compact Mode & Canvas Fix
+
+**Goal**: Solve the display issue for 10k+ nodes and implement a performance mode that hides edges by default.
+
+- [x] **Compact Mode**
+    - [x] **Auto-Enable**: Automatically activates for >5000 nodes or >100,000 edges.
+    - [x] **Edge Culling**: Rendering loop skips edge iteration entirely in Compact Mode unless highlighting is active.
+    - [x] **Settings UI**: Added "Compact Mode (Hide Edges)" checkbox to Performance settings.
+- [x] **Canvas Fix**
+    - [x] **Initial Render**: Forced explicit `resizeCanvas()` and `ticked()` calls after initialization to prevent blank screen.
+
 # 2026-01-08 v0.9.63 - 10k Node Optimization & Memory Strategy
 
 **Goal**: Solve the "stuck" rendering issue for 10k+ nodes/1.2M edges and implement configurable memory strategies for backend processing.
