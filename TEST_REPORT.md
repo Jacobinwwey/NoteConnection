@@ -1,3 +1,67 @@
+# 2026-06-01 v1.0.0 - Production Release Verification
+
+## English Document
+
+### 1. Smoke Test (Core Logic)
+*   **Test**: Run `scripts/smoke_test.ts`.
+*   **Scenario**:
+    *   File A: `next: [[Concept B]]`
+    *   File B: Content mentions "Concept C"
+    *   File C: Plain text
+*   **Result**: 
+    *   Graph built successfully with 3 nodes.
+    *   Edge A -> B detected (Explicit).
+    *   Edge C -> B detected (Keyword: Concept -> Context).
+    *   Inference engines ran without error.
+*   **Status**: **Pass**
+
+### 2. Performance & Stability
+*   **Test**: Memory optimization checks (v0.9.57/58).
+*   **Result**: 
+    *   Heap usage remains stable during Hybrid Inference.
+    *   Worker threads process data without cloning content.
+    *   Shared resources are correctly cleaned up.
+*   **Status**: **Pass**
+
+### 3. Versioning
+*   **Test**: Check UI and Metadata.
+*   **Result**: 
+    *   `package.json` version is 1.0.0.
+    *   Frontend UI displays `v1.0.0` in controls panel.
+*   **Status**: **Pass**
+
+## Chinese Document
+
+### 1. 冒烟测试 (核心逻辑)
+*   **测试**: 运行 `scripts/smoke_test.ts`。
+*   **场景**:
+    *   文件 A: `next: [[Concept B]]`
+    *   文件 B: 内容提及 "Concept C"
+    *   文件 C: 纯文本
+*   **结果**: 
+    *   成功构建包含 3 个节点的图谱。
+    *   检测到边 A -> B (显式)。
+    *   检测到边 C -> B (关键词: 概念 -> 语境)。
+    *   推断引擎运行无误。
+*   **状态**: **通过**
+
+### 2. 性能与稳定性
+*   **测试**: 内存优化检查 (v0.9.57/58)。
+*   **结果**: 
+    *   混合推断期间堆内存使用保持稳定。
+    *   Worker 线程处理数据时未克隆内容。
+    *   共享资源被正确清理。
+*   **状态**: **通过**
+
+### 3. 版本控制
+*   **测试**: 检查 UI 和元数据。
+*   **结果**: 
+    *   `package.json` 版本为 1.0.0。
+    *   前端 UI 在控制面板中显示 `v1.0.0`。
+*   **状态**: **通过**
+
+---
+
 # 2026-01-08 v0.9.67 - Compact Mode & Canvas Fix
 
 ## English Document
@@ -44,7 +108,11 @@
 *   [x] **自动切换**: 渲染器自动切换为 "Canvas"。
 *   [x] **紧凑模式**: 设置中的“紧凑模式”复选框自动被选中。
 
-## Test Report: Frontend Memory Optimization (Auto-Canvas)
+---
+
+# 2026-01-07 v0.9.61 - Frontend Memory Optimization (Auto-Canvas)
+
+## English Document
 
 ### 1. Auto-Switch Logic
 *   **Test**: Code verification in `src/frontend/app.js`.
@@ -57,11 +125,7 @@
 *   **Result**: Logic correctly switches renderer based on node count.
 *   **Status**: **Pass (Verified via Code Logic)**
 
----
-
-# 2026-01-07 v0.9.61 - Chinese Document
-
-## 测试报告：前端内存优化 (自动 Canvas)
+## Chinese Document
 
 ### 1. 自动切换逻辑
 *   **测试**: `src/frontend/app.js` 代码验证。
@@ -76,9 +140,9 @@
 
 ---
 
-# 2026-01-07 v0.9.60 - English Document
+# 2026-01-07 v0.9.60 - Parallel Graph Metrics
 
-## Test Report: Parallel Graph Metrics
+## English Document
 
 ### 1. Parallel Execution Verification
 *   **Test**: Run `npx ts-node src/backend/test_robustness/test_metrics_parallel.ts`.
@@ -94,11 +158,7 @@
 *   **Observation**: `GraphMetrics.calculateBetweennessAsync` is awaited properly in the pipeline.
 *   **Status**: **Pass**
 
----
-
-# 2026-01-07 v0.9.60 - Chinese Document
-
-## 测试报告：并行图指标计算
+## Chinese Document
 
 ### 1. 并行执行验证
 *   **测试**: 运行 `npx ts-node src/backend/test_robustness/test_metrics_parallel.ts`。
@@ -116,77 +176,65 @@
 
 ---
 
-# 2026-06-01 v1.0.0 - English Document
+# 2026-01-07 v0.9.59 - Memory Optimization Verification
 
-## Test Report: Production Release Verification
+## English Document
 
-### 1. Smoke Test (Core Logic)
-*   **Test**: Run `scripts/smoke_test.ts`.
-*   **Scenario**:
-    *   File A: `next: [[Concept B]]`
-    *   File B: Content mentions "Concept C"
-    *   File C: Plain text
-*   **Result**: 
-    *   Graph built successfully with 3 nodes.
-    *   Edge A -> B detected (Explicit).
-    *   Edge C -> B detected (Keyword: Concept -> Context).
-    *   Inference engines ran without error.
-*   **Status**: **Pass**
+**Test Goal**: Verify that the "Heap out of memory" error is resolved by the Sparse Vector implementation and that the graph building pipeline functions correctly.
 
-### 2. Performance & Stability
-*   **Test**: Memory optimization checks (v0.9.57/58).
-*   **Result**: 
-    *   Heap usage remains stable during Hybrid Inference.
-    *   Worker threads process data without cloning content.
-    *   Shared resources are correctly cleaned up.
-*   **Status**: **Pass**
+**Test Environment**:
+- **OS**: Windows 10
+- **Dataset**: `testconcept` (513 files)
+- **Configuration**: GPU Enabled (auto-detected), Max Workers: 15
 
-### 3. Versioning
-*   **Test**: Check UI and Metadata.
-*   **Result**: 
-    *   `package.json` version is 1.0.0.
-    *   Frontend UI displays `v1.0.0` in controls panel.
-*   **Status**: **Pass**
+**Test Steps**:
+1.  **Unit Test**: Verified `VectorSpace` logic with `scripts/verify_vector_sparse.ts`.
+    -   **Result**: Sparse vectors created correctly (Uint32Array/Float32Array). Similarity calculation returned expected results with new IDF logic.
+2.  **Integration Test**: Ran full build via `src/index.ts testconcept`.
+    -   **Result**: Build completed successfully.
+    -   **Memory**: Heap usage remained stable around 270MB (peak 450MB RSS).
+    -   **Components Verified**:
+        -   `VectorSpace` (Sparse construction)
+        -   `VectorSpaceGPU` (Sparse -> Dense conversion fallback)
+        -   `HybridEngine` (Sparse Dot Product)
+        -   `StatisticalAnalyzer` (Shared Matrix reuse)
+3.  **Robustness**: Checked behavior with 513 files, detecting 100+ cycles (handled by limit).
+4.  **API Validation**: Triggered build via `POST /api/build` on running server.
+    -   **Result**: Success. Server remained stable, and graph was generated correctly.
 
----
+**Conclusion**: The system is now robust against OOM errors for large datasets (projected 13k+ files) due to significant memory reduction (>95% for vectors) and increased heap limit (12GB).
 
-# 2026-06-01 v1.0.0 - Chinese Document
+## Chinese Document
 
-## 测试报告：正式发布验证
+**测试目标**: 验证“堆内存溢出”错误是否已通过稀疏向量实现得到解决，并且图构建管道功能正常。
 
-### 1. 冒烟测试 (核心逻辑)
-*   **测试**: 运行 `scripts/smoke_test.ts`。
-*   **场景**:
-    *   文件 A: `next: [[Concept B]]`
-    *   文件 B: 内容提及 "Concept C"
-    *   文件 C: 纯文本
-*   **结果**: 
-    *   成功构建包含 3 个节点的图谱。
-    *   检测到边 A -> B (显式)。
-    *   检测到边 C -> B (关键词: 概念 -> 语境)。
-    *   推断引擎运行无误。
-*   **状态**: **通过**
+**测试环境**:
+- **操作系统**: Windows 10
+- **数据集**: `testconcept` (513 个文件)
+- **配置**: GPU 已启用 (自动检测), 最大 Worker 数: 15
 
-### 2. 性能与稳定性
-*   **测试**: 内存优化检查 (v0.9.57/58)。
-*   **结果**: 
-    *   混合推断期间堆内存使用保持稳定。
-    *   Worker 线程处理数据时未克隆内容。
-    *   共享资源被正确清理。
-*   **状态**: **通过**
+**测试步骤**:
+1.  **单元测试**: 使用 `scripts/verify_vector_sparse.ts` 验证 `VectorSpace` 逻辑。
+    -   **结果**: 稀疏向量创建正确 (Uint32Array/Float32Array)。使用新的 IDF 逻辑计算的相似度返回了预期结果。
+2.  **集成测试**: 通过 `src/index.ts testconcept` 运行完整构建。
+    -   **结果**: 构建成功完成。
+    -   **内存**: 堆使用量保持稳定在 270MB 左右 (峰值 450MB RSS)。
+    -   **验证组件**:
+        -   `VectorSpace` (稀疏构建)
+        -   `VectorSpaceGPU` (稀疏 -> 密集转换回退)
+        -   `HybridEngine` (稀疏点积)
+        -   `StatisticalAnalyzer` (共享矩阵重用)
+3.  **稳健性**: 检查 513 个文件的行为，检测到 100+ 个循环 (由限制处理)。
+4.  **API 验证**: 在运行的服务器上通过 `POST /api/build` 触发构建。
+    -   **结果**: 成功。服务器保持稳定，图谱生成正确。
 
-### 3. 版本控制
-*   **测试**: 检查 UI 和元数据。
-*   **结果**: 
-    *   `package.json` 版本为 1.0.0。
-    *   前端 UI 在控制面板中显示 `v1.0.0`。
-*   **状态**: **通过**
+**结论**: 由于显著的内存减少 (向量减少 >95%) 和增加的堆限制 (12GB)，系统现在对大数据集 (预计 13k+ 文件) 的 OOM 错误具有稳健性。
 
 ---
 
-# 2026-01-07 v0.9.58 - English Document
+# 2026-01-07 v0.9.58 - Hybrid Inference Resource Reuse
 
-## Test Report: Hybrid Inference Resource Reuse
+## English Document
 
 ### 1. Memory Usage Analysis
 *   **Action**: Simulate `GraphBuilder` logic with `HybridInference` enabled.
@@ -204,11 +252,7 @@
     *   References are nullified to allow GC.
 *   **Status**: **Pass (Verified via Code Logic)**
 
----
-
-# 2026-01-07 v0.9.58 - Chinese Document
-
-## 测试报告：混合推断资源重用
+## Chinese Document
 
 ### 1. 内存使用分析
 *   **操作**: 在启用 `HybridInference` 的情况下模拟 `GraphBuilder` 逻辑。
@@ -228,9 +272,9 @@
 
 ---
 
-# 2026-01-07 v0.9.57 - English Document
+# 2026-01-07 v0.9.57 - Worker Memory Optimization
 
-## Test Report: Worker Memory Optimization
+## English Document
 
 ### 1. Data Transfer Logic
 *   **Action**: Review `src/backend/algorithms/StatisticalAnalyzer.ts` and `statisticalWorker.ts`.
@@ -240,11 +284,7 @@
     *   No cloning of `file.content` observed in message passing.
 *   **Status**: **Pass**
 
----
-
-# 2026-01-07 v0.9.57 - Chinese Document
-
-## 测试报告：Worker 内存优化
+## Chinese Document
 
 ### 1. 数据传输逻辑
 *   **操作**: 审查 `src/backend/algorithms/StatisticalAnalyzer.ts` 和 `statisticalWorker.ts`。
@@ -256,9 +296,9 @@
 
 ---
 
-# 2026-01-05 v0.9.56 - English Document
+# 2026-01-05 v0.9.56 - Hybrid Inference Memory Analysis
 
-## Test Report: Hybrid Inference Memory Analysis
+## English Document
 
 ### 1. Granular Logging
 *   **Action**: Review `src/backend/algorithms/HybridEngine.ts`.
@@ -275,11 +315,7 @@
     *   Logging verifies cleanup step.
 *   **Status**: **Pass**
 
----
-
-# 2026-01-05 v0.9.56 - Chinese Document
-
-## 测试报告：混合推断内存分析
+## Chinese Document
 
 ### 1. 细粒度日志
 *   **操作**: 审查 `src/backend/algorithms/HybridEngine.ts`。
@@ -298,9 +334,9 @@
 
 ---
 
-# 2026-01-05 v0.9.55 - English Document
+# 2026-01-05 v0.9.55 - Heap OOM Fix & Iterative DFS
 
-## Test Report: Heap OOM Fix & Iterative DFS
+## English Document
 
 ### 1. Iterative Cycle Detection
 *   **Test**: Run `npm test src/backend/algorithms/CycleDetection.test.ts`.
@@ -316,11 +352,7 @@
     *   Logging is granular to track execution steps.
 *   **Status**: **Pass**
 
----
-
-# 2026-01-05 v0.9.55 - Chinese Document
-
-## 测试报告：堆内存溢出修复与迭代 DFS
+## Chinese Document
 
 ### 1. 迭代循环检测
 *   **测试**: 运行 `npm test src/backend/algorithms/CycleDetection.test.ts`。
@@ -338,9 +370,9 @@
 
 ---
 
-# 2026-01-05 v0.9.52 - English Document
+# 2026-01-05 v0.9.52 - Cycle Detection Memory Optimization
 
-## Test Report: Cycle Detection Memory Optimization
+## English Document
 
 ### 1. Cycle Limit Enforcement
 *   **Test**: Run `npm test src/backend/algorithms/CycleDetection.test.ts`.
@@ -358,11 +390,7 @@
     *   Warning message logic handles the limited count correctly ("100+").
 *   **Status**: **Pass**
 
----
-
-# 2026-01-05 v0.9.52 - Chinese Document
-
-## 测试报告：循环检测内存优化
+## Chinese Document
 
 ### 1. 循环限制执行
 *   **测试**: 运行 `npm test src/backend/algorithms/CycleDetection.test.ts`。
@@ -382,9 +410,11 @@
 
 ---
 
-# 2026-01-03 v0.9.51 - English Document
+# 2026-01-03 v0.9.51 - Performance Logging & Crash Reporting
 
-## Test Report: Performance Logging
+## English Document
+
+### Test Report: Performance Logging
 
 ### 1. System Info Logging
 *   **Action**: Run `npm run build`.
@@ -407,7 +437,7 @@
     *   Logs matrix size and execution time.
 *   **Status**: **Pass**
 
-## Test Report: Crash Reporting
+### Test Report: Crash Reporting
 
 ### 1. Global Handler Initialization
 *   **Action**: Start server.
@@ -422,11 +452,9 @@
     *   `process.exit(1)` ensures worker terminates properly after logging.
 *   **Status**: **Pass**
 
----
+## Chinese Document
 
-# 2026-01-03 v0.9.51 - Chinese Document
-
-## 测试报告：性能日志
+### 测试报告：性能日志
 
 ### 1. 系统信息日志
 *   **操作**: 运行 `npm run build`。
@@ -449,7 +477,7 @@
     *   记录了矩阵大小和执行时间。
 *   **状态**: **通过**
 
-## 测试报告：崩溃报告
+### 测试报告：崩溃报告
 
 ### 1. 全局处理程序初始化
 *   **操作**: 启动服务器。
@@ -466,9 +494,9 @@
 
 ---
 
-# 2026-01-02 v0.9.50 - English Document
+# 2026-01-02 v0.9.50 - GPU Acceleration
 
-## Test Report: GPU Acceleration
+## English Document
 
 ### 1. Module Integration
 *   **Action**: Run `npm run build`.
@@ -487,11 +515,7 @@
     *   Application continues without crashing.
 *   **Status**: **Pass**
 
----
-
-# 2026-01-02 v0.9.50 - Chinese Document
-
-## 测试报告：GPU 加速
+## Chinese Document
 
 ### 1. 模块集成
 *   **操作**: 运行 `npm run build`。
@@ -512,9 +536,9 @@
 
 ---
 
-# 2026-01-02 v0.9.49 - English Document
+# 2026-01-02 v0.9.49 - UI Controls for Parallel Processing
 
-## Test Report: UI Controls for Parallel Processing
+## English Document
 
 ### 1. Settings UI
 *   **Action**: Open Settings Modal.
@@ -538,11 +562,7 @@
     *   POST request to `/api/build` includes `maxWorkers: 12` in the payload.
 *   **Status**: **Pass**
 
----
-
-# 2026-01-02 v0.9.49 - Chinese Document
-
-## 测试报告：并行处理 UI 控制
+## Chinese Document
 
 ### 1. 设置界面
 *   **操作**: 打开设置模态框。
@@ -568,9 +588,9 @@
 
 ---
 
-# 2026-01-02 v0.9.48 - English Document
+# 2026-01-02 v0.9.48 - Parallel Workers Configuration
 
-## Test Report: Parallel Workers Configuration
+## English Document
 
 ### 1. Max Workers Configuration
 *   **Action**: Set `config.maxWorkers` to 50 in a test script and trigger graph build.
@@ -579,11 +599,7 @@
     *   Parallel matching proceeds with 50 worker threads.
 *   **Status**: **Pass**
 
----
-
-# 2026-01-02 v0.9.48 - Chinese Document
-
-## 测试报告：并行 Worker 配置
+## Chinese Document
 
 ### 1. 最大 Worker 配置
 *   **操作**: 在测试脚本中将 `config.maxWorkers` 设置为 50 并触发图构建。
@@ -594,9 +610,9 @@
 
 ---
 
-# 2026-01-02 v0.9.47 - English Document
+# 2026-01-02 v0.9.47 - Focus Mode Interaction & Layout
 
-## Test Report: Focus Mode Interaction & Layout
+## English Document
 
 ### 1. Double Click Zoom Prevention
 *   **Action**: Double click a node to enter Focus Mode.
@@ -622,326 +638,7 @@
 *   **Result**: Labels are offset by 35px, avoiding overlap.
 *   **Status**: **Pass**
 
----
-
-# 2025-12-26 v0.9.46 - English Document
-
-## Test Report: Focus Mode UI & Visuals
-
-### 1. UI Hiding
-*   **Action**: Enter Focus Mode (Double Click).
-*   **Observation**: 
-    *   Top-left "Source Select" and "Load" button disappear.
-    *   Left-side "NoteConnection" control panel disappears.
-    *   Only the Focus Mode exit bar is visible at the bottom.
-*   **Action**: Exit Focus Mode.
-*   **Result**: 
-    *   All controls reappear.
-    *   (On Mobile): Verify source select does NOT appear if it wasn't visible before (respected via CSS).
-*   **Status**: **Pass**
-
-### 2. Canvas Edge Suppression
-*   **Pre-condition**: Switch to "Canvas" Renderer.
-*   **Action**: Enter Focus Mode.
-*   **Observation**: 
-    *   Nodes arrange in hierarchy.
-    *   **No lines (edges)** are visible connecting the nodes.
-*   **Status**: **Pass**
-
----
-
-# 2025-12-26 v0.9.45 - English Document
-
-## Test Report: Canvas Interactivity & Cleanup
-
-### 1. Canvas Hover & Click
-*   **Pre-condition**: Switch to "Canvas" Renderer.
-*   **Action**: Hover over a node.
-*   **Result**: Node highlights, connections appear (Red/Blue), cursor changes to pointer.
-*   **Action**: Single Click a node.
-*   **Result**: Simulation freezes, Statistics Popup opens.
-*   **Action**: Double Click a node.
-*   **Result**: Enters Focus Mode.
-*   **Status**: **Pass**
-
-### 2. Node Sizing
-*   **Action**: Switch "Size By" to "Degree".
-*   **Result**: High-degree nodes appear larger in Canvas mode, matching SVG proportions.
-*   **Action**: Switch "Size By" to "Uniform".
-*   **Result**: All nodes appear small (r=5).
-*   **Status**: **Pass**
-
-### 3. Cleanup
-*   **Observation**: "View Mode" (Nodes/Clusters) radio buttons are gone from the UI.
-*   **Status**: **Pass**
-
----
-
-# 2025-12-26 v0.9.44 - English Document
-
-## Test Report: Independent Focus Mode Spacing
-
-### 1. Default Values
-*   **Action**: Enter Focus Mode. Select "Horizontal" layout.
-*   **Result**: "Layer-Space" slider is at 125 (or approx 1/2 of max).
-*   **Action**: Select "Vertical" layout.
-*   **Result**: "Node-Space" slider is at 20 (or approx 1/4 of max). "Layer-Space" is at 250.
-*   **Status**: **Pass**
-
-### 2. Independent Persistence
-*   **Action**: 
-    1.  In "Horizontal" mode, set Layer-Space to 200.
-    2.  Switch to "Vertical". Slider updates to 250 (default).
-    3.  Set Vertical Layer-Space to 300.
-    4.  Switch back to "Horizontal". Slider reverts to 200.
-*   **Result**: Settings are preserved independently for each layout type.
-*   **Status**: **Pass**
-
----
-
-# 2025-12-26 v0.9.43 - English Document
-
-## Test Report: Context-Aware Settings UI
-
-### 1. Label Switching
-*   **Action**: Select "Force" Layout. Open Settings.
-*   **Result**: Label shows "Repulsion (Force)".
-*   **Action**: Close Settings. Select "DAG" Layout. Open Settings.
-*   **Result**: Label shows "Repulsion (DAG)".
-*   **Status**: **Pass**
-
----
-
-# 2025-12-26 v0.9.42 - English Document
-
-## Test Report: Distinct Repulsion Settings
-
-### 1. Default Values
-*   **Action**: Clear `localStorage` and reload. Check Settings in "Force" mode.
-*   **Result**: Repulsion shows -550.
-*   **Action**: Switch to "DAG" mode. Open Settings.
-*   **Result**: Repulsion shows -850.
-*   **Status**: **Pass**
-
-### 2. Independent Configuration
-*   **Action**: 
-    1.  In "Force" mode, set Repulsion to -200.
-    2.  Switch to "DAG" mode. Check Settings -> Should be -850 (default).
-    3.  Set DAG Repulsion to -900.
-    4.  Switch back to "Force". Check Settings -> Should be -200.
-*   **Result**: Values persist independently.
-*   **Status**: **Pass**
-
----
-
-# 2025-12-26 v0.9.41 - English Document
-
-## Test Report: Settings Modal Simulation Freeze
-
-### 1. Auto-Freeze on Open
-*   **Action**: Ensure "Freeze Layout" is unchecked and simulation is running (nodes moving). Click "Settings" button.
-*   **Observation**: 
-    *   Settings modal opens.
-    *   Background nodes stop moving immediately (`simulation.stop()` triggered).
-    *   CPU usage drops.
-*   **Status**: **Pass**
-
-### 2. Resume on Close
-*   **Action**: Close the Settings modal (via X or background click).
-*   **Result**: 
-    *   Simulation restarts automatically.
-    *   Nodes resume movement.
-*   **Status**: **Pass**
-
-### 3. Interaction with Global Freeze
-*   **Pre-condition**: Check "Freeze Layout". Open Settings.
-*   **Action**: Close Settings.
-*   **Result**: 
-    *   Simulation remains stopped (respects global freeze).
-*   **Status**: **Pass**
-
----
-
-# 2025-12-26 v0.9.40 - English Document
-
-## Test Report: Freeze Layout Priority (Settings Modal)
-
-### 1. Settings Change with Freeze
-*   **Pre-condition**: Enable "Freeze Layout". Ensure nodes are stationary. Open "Settings" modal.
-*   **Action**: Change "Repulsion" slider value significantly.
-*   **Observation**: 
-    *   Nodes do **NOT** move or jitter.
-    *   Simulation remains stopped.
-*   **Action**: Change "Edge Opacity" slider.
-*   **Observation**: 
-    *   Edges fade in/out immediately (Visual update works).
-    *   Nodes remain stationary.
-*   **Status**: **Pass**
-
-### 2. Unfreeze Physics Application
-*   **Action**: Close modal. Uncheck "Freeze Layout".
-*   **Result**: 
-    *   Simulation restarts.
-    *   Nodes move to new positions reflecting the updated Repulsion strength (e.g., spreading out more if repulsion increased).
-*   **Status**: **Pass**
-
----
-
-# 2025-12-26 v0.9.39 - English Document
-
-## Test Report: Layout Switch Relaxation & Freeze
-
-### 1. Layout Switch Relaxation
-*   **Action**: Switch from "Force" to "DAG" layout (ensure DAG wasn't cached/visited recently).
-*   **Observation**: 
-    *   Nodes move rapidly (low friction) to form the DAG structure.
-    *   After ~2 seconds, movement slows down as friction increases to 0.95.
-*   **Status**: **Pass**
-
-### 2. Delayed Freeze on Switch
-*   **Pre-condition**: Enable "Freeze Layout".
-*   **Action**: Switch Layout Mode (e.g., Force -> DAG).
-*   **Result**: 
-    *   Simulation starts and runs visibly for 2 seconds (Relaxation Phase).
-    *   Nodes arrange into the new layout.
-    *   After 2 seconds, simulation stops completely (Nodes freeze).
-    *   "Freeze Layout" checkbox remains checked.
-*   **Status**: **Pass**
-
----
-
-# 2025-12-26 v0.9.38 - English Document
-
-## Test Report: Quick Start Guide HTML Rendering
-
-### 1. HTML Tag Rendering
-*   **Pre-condition**: Switch language to Chinese (where `<br>` tags are present).
-*   **Action**: Open "Quick Start Guide" (Help button).
-*   **Observation**: 
-    *   Line breaks `<br>` are rendered as actual new lines, not text.
-    *   Bold tags `<strong>` are rendered as bold text.
-*   **Status**: **Pass**
-
----
-
-# 2025-12-26 v0.9.37 - English Document
-
-## Test Report: Rapid Relaxation Strategy
-
-### 1. Initialization Behavior
-*   **Action**: Reload the page.
-*   **Observation**: 
-    *   Nodes move rapidly initially (expanding outward).
-    *   Check console `simulation.velocityDecay()` within first 2s -> Should be roughly 0.2.
-*   **Status**: **Pass**
-
-### 2. Stabilization Transition
-*   **Action**: Wait 2 seconds after reload.
-*   **Observation**: 
-    *   Movement slows down noticeably as friction increases.
-    *   "Speed" Slider UI snaps to 0.95 position.
-    *   Check console `simulation.velocityDecay()` -> Should be 0.95.
-*   **Status**: **Pass**
-
-### 3. Manual Override
-*   **Action**: Reload page, immediately drag Speed Slider to 0.5 (within 1s).
-*   **Observation**: 
-    *   Wait 3 seconds.
-    *   Slider remains at 0.5.
-    *   Simulation friction stays at 0.5 (does not force 0.95).
-*   **Status**: **Pass**
-
----
-
-# 2025-12-26 v0.9.36 - English Document
-
-## Test Report: Freeze Layout Priority Fix
-
-### 1. Visual Settings Change with Freeze
-*   **Pre-condition**: Enable "Freeze Layout". Ensure nodes are stationary.
-*   **Action**: Change "Size By" from "Uniform" to "Degree".
-*   **Observation**: 
-    *   Node circles visibly change size (larger for high degree).
-    *   Nodes do **NOT** move or jitter.
-    *   Simulation remains stopped (0 CPU usage).
-*   **Status**: **Pass**
-
-### 2. Unfreeze Behavior
-*   **Action**: Uncheck "Freeze Layout".
-*   **Result**: 
-    *   Simulation restarts.
-    *   Nodes adjust position based on new sizes (collision radius updated in background).
-*   **Status**: **Pass**
-
----
-
-# 2025-12-26 v0.9.35 - English Document
-
-## Test Report: Viewport Culling Relaxation
-
-### 1. Extended Zoom Threshold
-*   **Action**: Zoom out slowly from 1.0x.
-*   **Observation**: 
-    *   At 0.4x (previous limit), simulation CONTINUES running.
-    *   Continue zooming out.
-    *   Simulation stops only when scale drops below 0.1x.
-*   **Status**: **Pass**
-
-### 2. Smooth Panning Buffer
-*   **Action**: Zoom in (scale ~2.0). Pan rapidly to the side.
-*   **Observation**: 
-    *   Nodes entering the viewport are already in motion or settled correctly (not frozen in "mid-air").
-    *   No "pop-in" effect where nodes suddenly wake up after entering the screen.
-    *   The 800px buffer ensures seamless transition.
-*   **Status**: **Pass**
-
----
-
-# 2025-12-26 v0.9.34 - English Document
-
-## Test Report: Global Layout Update Fix
-
-### 1. Layout Switching with Culling
-*   **Pre-condition**: 
-    1.  Zoom in significantly (Scale > 2) so that >50% of nodes are off-screen.
-    2.  Verify off-screen nodes are culled (check via console `isCulled=true` or simulation CPU drop).
-*   **Action**: Switch Layout Mode (e.g., Force -> DAG).
-*   **Result**: 
-    *   All nodes (including previously off-screen ones) immediately start moving to their new positions.
-    *   Zooming out reveals the graph has fully rearranged according to the new layout (DAG layers).
-    *   Nodes are NOT stuck in their previous positions.
-*   **Status**: **Pass**
-
----
-
-# 2025-12-26 v0.9.33 - English Document
-
-## Test Report: Layout State Caching
-
-### 1. State Preservation
-*   **Action**: 
-    1.  Start in Force Layout. Drag a node (Node A) to a specific spot.
-    2.  Switch to DAG Layout. Wait for it to arrange.
-    3.  Switch back to Force Layout.
-*   **Result**: 
-    *   Node A reappears exactly where it was left in step 1.
-    *   No animation/movement occurs (Instant Switch).
-    *   Simulation is stopped (or minimal alpha) to preserve state.
-*   **Status**: **Pass**
-
-### 2. Independent States
-*   **Action**:
-    1.  In DAG mode, drag Node B.
-    2.  Switch to Force.
-    3.  Switch back to DAG.
-*   **Result**: Node B is at the new dragged position in DAG mode.
-*   **Status**: **Pass**
-
----
-
-# 2026-01-02 v0.9.47 - Chinese Document
-
-## 测试报告：专注模式交互与布局
+## Chinese Document
 
 ### 1. 双击缩放预防
 *   **操作**: 双击节点进入专注模式。
@@ -969,9 +666,31 @@
 
 ---
 
-# 2025-12-26 v0.9.46 - Chinese Document
+# 2025-12-26 v0.9.46 - Focus Mode UI & Visuals
 
-## 测试报告：专注模式 UI 与视觉
+## English Document
+
+### 1. UI Hiding
+*   **Action**: Enter Focus Mode (Double Click).
+*   **Observation**: 
+    *   Top-left "Source Select" and "Load" button disappear.
+    *   Left-side "NoteConnection" control panel disappears.
+    *   Only the Focus Mode exit bar is visible at the bottom.
+*   **Action**: Exit Focus Mode.
+*   **Result**: 
+    *   All controls reappear.
+    *   (On Mobile): Verify source select does NOT appear if it wasn't visible before (respected via CSS).
+*   **Status**: **Pass**
+
+### 2. Canvas Edge Suppression
+*   **Pre-condition**: Switch to "Canvas" Renderer.
+*   **Action**: Enter Focus Mode.
+*   **Observation**: 
+    *   Nodes arrange in hierarchy.
+    *   **No lines (edges)** are visible connecting the nodes.
+*   **Status**: **Pass**
+
+## Chinese Document
 
 ### 1. UI 隐藏
 *   **操作**: 进入专注模式（双击）。
@@ -995,9 +714,32 @@
 
 ---
 
-# 2025-12-26 v0.9.45 - Chinese Document
+# 2025-12-26 v0.9.45 - Canvas Interactivity & Cleanup
 
-## 测试报告：Canvas 交互与清理
+## English Document
+
+### 1. Canvas Hover & Click
+*   **Pre-condition**: Switch to "Canvas" Renderer.
+*   **Action**: Hover over a node.
+*   **Result**: Node highlights, connections appear (Red/Blue), cursor changes to pointer.
+*   **Action**: Single Click a node.
+*   **Result**: Simulation freezes, Statistics Popup opens.
+*   **Action**: Double Click a node.
+*   **Result**: Enters Focus Mode.
+*   **Status**: **Pass**
+
+### 2. Node Sizing
+*   **Action**: Switch "Size By" to "Degree".
+*   **Result**: High-degree nodes appear larger in Canvas mode, matching SVG proportions.
+*   **Action**: Switch "Size By" to "Uniform".
+*   **Result**: All nodes appear small (r=5).
+*   **Status**: **Pass**
+
+### 3. Cleanup
+*   **Observation**: "View Mode" (Nodes/Clusters) radio buttons are gone from the UI.
+*   **Status**: **Pass**
+
+## Chinese Document
 
 ### 1. Canvas 悬停与点击
 *   **前置条件**: 切换到 "Canvas" 渲染器。
@@ -1022,9 +764,27 @@
 
 ---
 
-# 2025-12-26 v0.9.44 - Chinese Document
+# 2025-12-26 v0.9.44 - Independent Focus Mode Spacing
 
-## 测试报告：独立专注模式间距
+## English Document
+
+### 1. Default Values
+*   **Action**: Enter Focus Mode. Select "Horizontal" layout.
+*   **Result**: "Layer-Space" slider is at 125 (or approx 1/2 of max).
+*   **Action**: Select "Vertical" layout.
+*   **Result**: "Node-Space" slider is at 20 (or approx 1/4 of max). "Layer-Space" is at 250.
+*   **Status**: **Pass**
+
+### 2. Independent Persistence
+*   **Action**: 
+    1.  In "Horizontal" mode, set Layer-Space to 200.
+    2.  Switch to "Vertical". Slider updates to 250 (default).
+    3.  Set Vertical Layer-Space to 300.
+    4.  Switch back to "Horizontal". Slider reverts to 200.
+*   **Result**: Settings are preserved independently for each layout type.
+*   **Status**: **Pass**
+
+## Chinese Document
 
 ### 1. 默认值
 *   **操作**: 进入专注模式。选择“水平”布局。
@@ -1044,9 +804,18 @@
 
 ---
 
-# 2025-12-26 v0.9.43 - Chinese Document
+# 2025-12-26 v0.9.43 - Context-Aware Settings UI
 
-## 测试报告：上下文感知设置 UI
+## English Document
+
+### 1. Label Switching
+*   **Action**: Select "Force" Layout. Open Settings.
+*   **Result**: Label shows "Repulsion (Force)".
+*   **Action**: Close Settings. Select "DAG" Layout. Open Settings.
+*   **Result**: Label shows "Repulsion (DAG)".
+*   **Status**: **Pass**
+
+## Chinese Document
 
 ### 1. 标签切换
 *   **操作**: 选择“力导向”布局。打开设置。
@@ -1057,9 +826,27 @@
 
 ---
 
-# 2025-12-26 v0.9.42 - Chinese Document
+# 2025-12-26 v0.9.42 - Distinct Repulsion Settings
 
-## 测试报告：独立排斥力设置
+## English Document
+
+### 1. Default Values
+*   **Action**: Clear `localStorage` and reload. Check Settings in "Force" mode.
+*   **Result**: Repulsion shows -550.
+*   **Action**: Switch to "DAG" mode. Open Settings.
+*   **Result**: Repulsion shows -850.
+*   **Status**: **Pass**
+
+### 2. Independent Configuration
+*   **Action**: 
+    1.  In "Force" mode, set Repulsion to -200.
+    2.  Switch to "DAG" mode. Check Settings -> Should be -850 (default).
+    3.  Set DAG Repulsion to -900.
+    4.  Switch back to "Force". Check Settings -> Should be -200.
+*   **Result**: Values persist independently.
+*   **Status**: **Pass**
+
+## Chinese Document
 
 ### 1. 默认值
 *   **操作**: 清除 `localStorage` 并重新加载。在“力导向”模式下检查设置。
@@ -1079,9 +866,33 @@
 
 ---
 
-# 2025-12-26 v0.9.41 - Chinese Document
+# 2025-12-26 v0.9.41 - Settings Modal Simulation Freeze
 
-## 测试报告：设置模态框模拟冻结
+## English Document
+
+### 1. Auto-Freeze on Open
+*   **Action**: Ensure "Freeze Layout" is unchecked and simulation is running (nodes moving). Click "Settings" button.
+*   **Observation**: 
+    *   Settings modal opens.
+    *   Background nodes stop moving immediately (`simulation.stop()` triggered).
+    *   CPU usage drops.
+*   **Status**: **Pass**
+
+### 2. Resume on Close
+*   **Action**: Close the Settings modal (via X or background click).
+*   **Result**: 
+    *   Simulation restarts automatically.
+    *   Nodes resume movement.
+*   **Status**: **Pass**
+
+### 3. Interaction with Global Freeze
+*   **Pre-condition**: Check "Freeze Layout". Open Settings.
+*   **Action**: Close Settings.
+*   **Result**: 
+    *   Simulation remains stopped (respects global freeze).
+*   **Status**: **Pass**
+
+## Chinese Document
 
 ### 1. 打开时自动冻结
 *   **操作**: 确保“冻结布局”未选中且模拟正在运行（节点移动）。点击“设置”按钮。
@@ -1107,9 +918,30 @@
 
 ---
 
-# 2025-12-26 v0.9.40 - Chinese Document
+# 2025-12-26 v0.9.40 - Freeze Layout Priority (Settings Modal)
 
-## 测试报告：冻结布局优先级 (设置模态框)
+## English Document
+
+### 1. Settings Change with Freeze
+*   **Pre-condition**: Enable "Freeze Layout". Ensure nodes are stationary. Open "Settings" modal.
+*   **Action**: Change "Repulsion" slider value significantly.
+*   **Observation**: 
+    *   Nodes do **NOT** move or jitter.
+    *   Simulation remains stopped.
+*   **Action**: Change "Edge Opacity" slider.
+*   **Observation**: 
+    *   Edges fade in/out immediately (Visual update works).
+    *   Nodes remain stationary.
+*   **Status**: **Pass**
+
+### 2. Unfreeze Physics Application
+*   **Action**: Close modal. Uncheck "Freeze Layout".
+*   **Result**: 
+    *   Simulation restarts.
+    *   Nodes move to new positions reflecting the updated Repulsion strength (e.g., spreading out more if repulsion increased).
+*   **Status**: **Pass**
+
+## Chinese Document
 
 ### 1. 冻结时更改设置
 *   **前置条件**: 启用“冻结布局”。确保节点静止。打开“设置”模态框。
@@ -1132,9 +964,28 @@
 
 ---
 
-# 2025-12-26 v0.9.39 - Chinese Document
+# 2025-12-26 v0.9.39 - Layout Switch Relaxation & Freeze
 
-## 测试报告：布局切换松弛与冻结
+## English Document
+
+### 1. Layout Switch Relaxation
+*   **Action**: Switch from "Force" to "DAG" layout (ensure DAG wasn't cached/visited recently).
+*   **Observation**: 
+    *   Nodes move rapidly (low friction) to form the DAG structure.
+    *   After ~2 seconds, movement slows down as friction increases to 0.95.
+*   **Status**: **Pass**
+
+### 2. Delayed Freeze on Switch
+*   **Pre-condition**: Enable "Freeze Layout".
+*   **Action**: Switch Layout Mode (e.g., Force -> DAG).
+*   **Result**: 
+    *   Simulation starts and runs visibly for 2 seconds (Relaxation Phase).
+    *   Nodes arrange into the new layout.
+    *   After 2 seconds, simulation stops completely (Nodes freeze).
+    *   "Freeze Layout" checkbox remains checked.
+*   **Status**: **Pass**
+
+## Chinese Document
 
 ### 1. 布局切换松弛
 *   **操作**: 从“力导向”切换到“DAG”布局（确保 DAG 最近未缓存/访问）。
@@ -1155,9 +1006,19 @@
 
 ---
 
-# 2025-12-26 v0.9.38 - Chinese Document
+# 2025-12-26 v0.9.38 - Quick Start Guide HTML Rendering
 
-## 测试报告：快速开始指南 HTML 渲染
+## English Document
+
+### 1. HTML Tag Rendering
+*   **Pre-condition**: Switch language to Chinese (where `<br>` tags are present).
+*   **Action**: Open "Quick Start Guide" (Help button).
+*   **Observation**: 
+    *   Line breaks `<br>` are rendered as actual new lines, not text.
+    *   Bold tags `<strong>` are rendered as bold text.
+*   **Status**: **Pass**
+
+## Chinese Document
 
 ### 1. HTML 标签渲染
 *   **前置条件**: 切换语言至中文（包含 `<br>` 标签）。
@@ -1169,9 +1030,34 @@
 
 ---
 
-# 2025-12-26 v0.9.37 - Chinese Document
+# 2025-12-26 v0.9.37 - Rapid Relaxation Strategy
 
-## 测试报告：快速松弛策略
+## English Document
+
+### 1. Initialization Behavior
+*   **Action**: Reload the page.
+*   **Observation**: 
+    *   Nodes move rapidly initially (expanding outward).
+    *   Check console `simulation.velocityDecay()` within first 2s -> Should be roughly 0.2.
+*   **Status**: **Pass**
+
+### 2. Stabilization Transition
+*   **Action**: Wait 2 seconds after reload.
+*   **Observation**: 
+    *   Movement slows down noticeably as friction increases.
+    *   "Speed" Slider UI snaps to 0.95 position.
+    *   Check console `simulation.velocityDecay()` -> Should be 0.95.
+*   **Status**: **Pass**
+
+### 3. Manual Override
+*   **Action**: Reload page, immediately drag Speed Slider to 0.5 (within 1s).
+*   **Observation**: 
+    *   Wait 3 seconds.
+    *   Slider remains at 0.5.
+    *   Simulation friction stays at 0.5 (does not force 0.95).
+*   **Status**: **Pass**
+
+## Chinese Document
 
 ### 1. 初始化行为
 *   **操作**: 重新加载页面。
@@ -1198,9 +1084,27 @@
 
 ---
 
-# 2025-12-26 v0.9.36 - Chinese Document
+# 2025-12-26 v0.9.36 - Freeze Layout Priority Fix
 
-## 测试报告：冻结布局优先级修复
+## English Document
+
+### 1. Visual Settings Change with Freeze
+*   **Pre-condition**: Enable "Freeze Layout". Ensure nodes are stationary.
+*   **Action**: Change "Size By" from "Uniform" to "Degree".
+*   **Observation**: 
+    *   Node circles visibly change size (larger for high degree).
+    *   Nodes do **NOT** move or jitter.
+    *   Simulation remains stopped (0 CPU usage).
+*   **Status**: **Pass**
+
+### 2. Unfreeze Behavior
+*   **Action**: Uncheck "Freeze Layout".
+*   **Result**: 
+    *   Simulation restarts.
+    *   Nodes adjust position based on new sizes (collision radius updated in background).
+*   **Status**: **Pass**
+
+## Chinese Document
 
 ### 1. 冻结时更改视觉设置
 *   **前置条件**: 启用“冻结布局”。确保节点静止。
@@ -1220,9 +1124,27 @@
 
 ---
 
-# 2025-12-26 v0.9.35 - Chinese Document
+# 2025-12-26 v0.9.35 - Viewport Culling Relaxation
 
-## 测试报告：视口剔除放宽
+## English Document
+
+### 1. Extended Zoom Threshold
+*   **Action**: Zoom out slowly from 1.0x.
+*   **Observation**: 
+    *   At 0.4x (previous limit), simulation CONTINUES running.
+    *   Continue zooming out.
+    *   Simulation stops only when scale drops below 0.1x.
+*   **Status**: **Pass**
+
+### 2. Smooth Panning Buffer
+*   **Action**: Zoom in (scale ~2.0). Pan rapidly to the side.
+*   **Observation**: 
+    *   Nodes entering the viewport are already in motion or settled correctly (not frozen in "mid-air").
+    *   No "pop-in" effect where nodes suddenly wake up after entering the screen.
+    *   The 800px buffer ensures seamless transition.
+*   **Status**: **Pass**
+
+## Chinese Document
 
 ### 1. 扩展缩放阈值
 *   **操作**: 从 1.0x 缓慢缩小。
@@ -1242,9 +1164,22 @@
 
 ---
 
-# 2025-12-26 v0.9.34 - Chinese Document
+# 2025-12-26 v0.9.34 - Global Layout Update Fix
 
-## 测试报告：全局布局更新修复
+## English Document
+
+### 1. Layout Switching with Culling
+*   **Pre-condition**: 
+    1.  Zoom in significantly (Scale > 2) so that >50% of nodes are off-screen.
+    2.  Verify off-screen nodes are culled (check via console `isCulled=true` or simulation CPU drop).
+*   **Action**: Switch Layout Mode (e.g., Force -> DAG).
+*   **Result**: 
+    *   All nodes (including previously off-screen ones) immediately start moving to their new positions.
+    *   Zooming out reveals the graph has fully rearranged according to the new layout (DAG layers).
+    *   Nodes are NOT stuck in their previous positions.
+*   **Status**: **Pass**
+
+## Chinese Document
 
 ### 1. 带剔除的布局切换
 *   **前置条件**: 
@@ -1259,9 +1194,30 @@
 
 ---
 
-# 2025-12-26 v0.9.33 - Chinese Document
+# 2025-12-26 v0.9.33 - Layout State Caching
 
-## 测试报告：布局状态缓存
+## English Document
+
+### 1. State Preservation
+*   **Action**: 
+    1.  Start in Force Layout. Drag a node (Node A) to a specific spot.
+    2.  Switch to DAG Layout. Wait for it to arrange.
+    3.  Switch back to Force Layout.
+*   **Result**: 
+    *   Node A reappears exactly where it was left in step 1.
+    *   No animation/movement occurs (Instant Switch).
+    *   Simulation is stopped (or minimal alpha) to preserve state.
+*   **Status**: **Pass**
+
+### 2. Independent States
+*   **Action**:
+    1.  In DAG mode, drag Node B.
+    2.  Switch to Force.
+    3.  Switch back to DAG.
+*   **Result**: Node B is at the new dragged position in DAG mode.
+*   **Status**: **Pass**
+
+## Chinese Document
 
 ### 1. 状态保留
 *   **操作**: 
@@ -1284,9 +1240,9 @@
 
 ---
 
-# 2025-12-26 v0.9.32 - English Document
+# 2025-12-26 v0.9.32 - High Damping & Render Optimization
 
-## Test Report: High Damping & Render Optimization
+## English Document
 
 ### 1. Damping Behavior
 *   **Test**: Reload the page.
@@ -1305,11 +1261,7 @@
     *   Verify code: `ticked` uses `.filter(d => !d.isCulled)` - Confirmed.
 *   **Status**: **Pass**
 
----
-
-# 2025-12-26 v0.9.32 - Chinese Document
-
-## 测试报告：高阻尼与渲染优化
+## Chinese Document
 
 ### 1. 阻尼行为
 *   **测试**: 重新加载页面。
@@ -1330,9 +1282,9 @@
 
 ---
 
-# 2025-12-26 v0.9.31 - English Document
+# 2025-12-26 v0.9.31 - Simulation Optimization (Viewport Culling)
 
-## Test Report: Simulation Optimization (Viewport Culling)
+## English Document
 
 ### 1. Full View Freeze
 *   **Action**: Zoom out until the graph is small (scale < 0.4).
@@ -1349,11 +1301,7 @@
     *   Pan to a new area -> Previously frozen nodes wake up and start moving.
 *   **Status**: **Pass**
 
----
-
-# 2025-12-26 v0.9.31 - Chinese Document
-
-## 测试报告：模拟优化 (视口剔除)
+## Chinese Document
 
 ### 1. 全景冻结
 *   **操作**: 缩小直到图表变小 (比例 < 0.4)。
@@ -1372,9 +1320,9 @@
 
 ---
 
-# 2025-12-26 v0.9.30 - English Document
+# 2025-12-26 v0.9.30 - Focus Mode Layout Isolation
 
-## Test Report: Focus Mode Layout Isolation
+## English Document
 
 ### 1. Position Restoration
 *   **Pre-condition**: Identify the position of a specific node (Node A).
@@ -1396,11 +1344,7 @@
 *   **Result**: No significant movement or "explosion" of nodes occurs upon exit. The visual state is preserved.
 *   **Status**: **Pass**
 
----
-
-# 2025-12-26 v0.9.30 - Chinese Document
-
-## 测试报告：专注模式布局隔离
+## Chinese Document
 
 ### 1. 位置恢复
 *   **前置条件**: 确定特定节点 (节点 A) 的位置。
@@ -1424,9 +1368,9 @@
 
 ---
 
-# 2025-12-26 v0.9.29 - English Document
+# 2025-12-26 v0.9.29 - Freeze Layout Persistence (Analysis & Resize)
 
-## Test Report: Freeze Layout Persistence (Analysis & Resize)
+## English Document
 
 ### 1. Analysis Panel Interaction
 *   **Pre-condition**: Enable "Freeze Layout". Ensure nodes are stationary.
@@ -1446,11 +1390,7 @@
     *   Canvas (if active) redraws correctly at new resolution.
 *   **Status**: **Pass**
 
----
-
-# 2025-12-26 v0.9.29 - Chinese Document
-
-## 测试报告：冻结布局持久化 (分析与调整大小)
+## Chinese Document
 
 ### 1. 分析面板交互
 *   **前置条件**: 启用“冻结布局”。确保节点静止。
@@ -1472,9 +1412,9 @@
 
 ---
 
-# 2025-12-26 v0.9.28 - English Document
+# 2025-12-26 v0.9.28 - Focus Mode Specific Content Button
 
-## Test Report: Focus Mode Specific Content Button
+## English Document
 
 ### 1. Button Visibility
 *   **Pre-condition**: Double click a node to enter Focus Mode.
@@ -1493,11 +1433,7 @@
 *   **Result**: Button label shows "打开具体内容".
 *   **Status**: **Pass**
 
----
-
-# 2025-12-26 v0.9.28 - Chinese Document
-
-## 测试报告：专注模式具体内容按钮
+## Chinese Document
 
 ### 1. 按钮可见性
 *   **前置条件**: 双击节点进入专注模式。
@@ -1518,35 +1454,9 @@
 
 ---
 
-# 2026-01-07 v0.9.59 - Memory Optimization Verification
-
-**Test Goal**: Verify that the "Heap out of memory" error is resolved by the Sparse Vector implementation and that the graph building pipeline functions correctly.
-
-**Test Environment**:
-- **OS**: Windows 10
-- **Dataset**: `testconcept` (513 files)
-- **Configuration**: GPU Enabled (auto-detected), Max Workers: 15
-
-**Test Steps**:
-1.  **Unit Test**: Verified `VectorSpace` logic with `scripts/verify_vector_sparse.ts`.
-    -   **Result**: Sparse vectors created correctly (Uint32Array/Float32Array). Similarity calculation returned expected results with new IDF logic.
-2.  **Integration Test**: Ran full build via `src/index.ts testconcept`.
-    -   **Result**: Build completed successfully.
-    -   **Memory**: Heap usage remained stable around 270MB (peak 450MB RSS).
-    -   **Components Verified**:
-        -   `VectorSpace` (Sparse construction)
-        -   `VectorSpaceGPU` (Sparse -> Dense conversion fallback)
-        -   `HybridEngine` (Sparse Dot Product)
-        -   `StatisticalAnalyzer` (Shared Matrix reuse)
-3.  **Robustness**: Checked behavior with 513 files, detecting 100+ cycles (handled by limit).
-4.  **API Validation**: Triggered build via `POST /api/build` on running server.
-    -   **Result**: Success. Server remained stable, and graph was generated correctly.
-
-**Conclusion**: The system is now robust against OOM errors for large datasets (projected 13k+ files) due to significant memory reduction (>95% for vectors) and increased heap limit (12GB).
-
 # 2025-12-26 v0.9.27 - Conditional Restart
 
-## Test Report: Conditional Restart (Freeze vs Focus)
+## English Document
 
 ### 1. Exit Focus with Freeze Enabled
 *   **Pre-condition**: Enable "Freeze Layout". Double click a node to enter Focus Mode.
@@ -1562,11 +1472,7 @@
 *   **Result**: The simulation restarts, and nodes move back to their force-directed positions.
 *   **Status**: **Pass**
 
----
-
-# 2025-12-26 v0.9.27 - Chinese Document
-
-## 测试报告：条件重启 (冻结 vs 专注)
+## Chinese Document
 
 ### 1. 启用冻结时退出专注模式
 *   **前置条件**: 启用“冻结布局”。双击节点进入专注模式。
@@ -1584,9 +1490,9 @@
 
 ---
 
-# 2025-12-26 v0.9.26 - English Document
+# 2025-12-26 v0.9.26 - UX Enhancements & Quick Start
 
-## Test Report: UX Enhancements & Quick Start
+## English Document
 
 ### 1. Freeze Layout Quick Button
 *   **Test**: Click the snowflake (❄️) button in the top-right corner.
@@ -1623,11 +1529,7 @@
     *   All manual steps and descriptions are in Chinese.
 *   **Status**: **Pass**
 
----
-
-# 2025-12-26 v0.9.26 - Chinese Document
-
-## 测试报告：UX 增强与快速开始
+## Chinese Document
 
 ### 1. 冻结布局快速按钮
 *   **测试**: 点击右上角的雪花 (❄️) 按钮。
@@ -1666,9 +1568,9 @@
 
 ---
 
-# 2025-12-25 v0.9.25 - English Document
+# 2025-12-25 v0.9.25 - Freeze Layout Optimization
 
-## Test Report: Freeze Layout Optimization
+## English Document
 
 ### 1. Main Interface Frozen State
 *   **Test**: Enable "Freeze Layout" checkbox in the Simulation panel.
@@ -1688,11 +1590,7 @@
     *   This confirms the global freeze does not hinder focused exploration.
 *   **Status**: **Pass**
 
----
-
-# 2025-12-25 v0.9.25 - Chinese Document
-
-## 测试报告：冻结布局优化
+## Chinese Document
 
 ### 1. 主界面冻结状态
 *   **测试**: 在模拟面板中启用“冻结布局”复选框。
@@ -1714,9 +1612,9 @@
 
 ---
 
-# 2025-12-25 v0.9.24 - English Document
+# 2025-12-25 v0.9.24 - Focus Mode Memory Optimization
 
-## Test Report: Focus Mode Memory Optimization
+## English Document
 
 ### 1. Simulation Subsetting (Optimization)
 *   **Test**: Enter Focus Mode (Double Click).
@@ -1737,11 +1635,7 @@
     *   No "explosion" or resetting of the entire graph layout occurs.
 *   **Status**: **Pass**
 
----
-
-# 2025-12-25 v0.9.24 - Chinese Document
-
-## 测试报告：专注模式内存优化
+## Chinese Document
 
 ### 1. 模拟子集化（优化）
 *   **测试**: 进入专注模式（双击）。
@@ -1764,9 +1658,9 @@
 
 ---
 
-# 2025-12-25 v0.9.23 - English Document
+# 2025-12-25 v0.9.23 - Default Settings Adjustment
 
-## Test Report: Default Settings Adjustment
+## English Document
 
 ### 1. Reading Window Font Size
 *   **Test**: Open the Reading Window by clicking a node (after double-clicking to focus, or if focusing opens reader).
@@ -1782,11 +1676,7 @@
 *   **Result**: Nodes settle slightly faster than before (higher damping/friction).
 *   **Status**: **Pass**
 
----
-
-# 2025-12-25 v0.9.23 - Chinese Document
-
-## 测试报告：默认设置调整
+## Chinese Document
 
 ### 1. 阅读窗口字体大小
 *   **测试**: 点击节点打开阅读窗口（双击专注后，或如果专注模式打开阅读器）。
@@ -1804,9 +1694,9 @@
 
 ---
 
-# 2025-12-25 v0.9.22 - English Document
+# 2025-12-25 v0.9.22 - Mobile Popup Adaptation
 
-## Test Report: Mobile Popup Adaptation
+## English Document
 
 ### 1. Touch Drag Interaction
 *   **Test**: Open the application in mobile view (or device simulation). Click a node to open the popup.
@@ -1836,11 +1726,7 @@
 *   **Result**: Pinch logic requires 2 fingers on the popup; drag logic requires 1 finger on the header. Logic separation holds.
 *   **Status**: **Pass**
 
----
-
-# 2025-12-25 v0.9.22 - Chinese Document
-
-## 测试报告：移动端弹窗适配
+## Chinese Document
 
 ### 1. 触摸拖动交互
 *   **测试**: 在移动视图（或设备模拟）中打开应用。点击节点打开弹窗。
@@ -1872,9 +1758,9 @@
 
 ---
 
-# 2025-12-25 v0.9.21 - English Document
+# 2025-12-25 v0.9.21 - Strict Edge Visibility & Optimization
 
-## Test Report: Strict Edge Visibility & Optimization
+## English Document
 
 ### 1. Default Edge Visibility (SVG)
 *   **Test**: Load the graph in SVG Mode.
@@ -1897,11 +1783,7 @@
 *   **Result**: Edges remain hidden by default, matching SVG behavior.
 *   **Status**: **Pass**
 
----
-
-# 2025-12-25 v0.9.21 - Chinese Document
-
-## 测试报告：严格的边可见性与优化
+## Chinese Document
 
 ### 1. 默认边可见性 (SVG)
 *   **测试**: 在 SVG 模式下加载图表。
@@ -1926,9 +1808,9 @@
 
 ---
 
-# 2025-12-24 v0.9.18 - English Document
+# 2025-12-24 v0.9.18 - Node Highlighting System Refactor
 
-## Test Report: Node Highlighting System Refactor
+## English Document
 
 ### 1. NodeHighlightManager Module Loading
 *   **Test**: Open browser developer console and check for JavaScript errors during page load.
