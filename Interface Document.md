@@ -1223,7 +1223,34 @@ Manages node highlighting interactions for both PC and mobile interfaces.
     *   每处理 1000 个节点记录一次执行进度。
     *   在推断循环期间跟踪堆内存使用情况。
 
-### 4.4 资源优化 (Resource Optimization - v0.9.58)
+### 3.4 并行处理 (Parallel Processing - v0.9.57)
+
+#### `GraphBuilder.runParallelMatching` & `StatisticalAnalyzer.runParallelTermExtraction`
+利用 Node.js `worker_threads` 并行化计算密集型任务（关键词匹配、术语提取）。
+
+*   **优化 (v0.9.57)**:
+    *   **策略**: 系统不再向 Worker 传递包含文件内容的完整 `RawFile[]`，而是传递 `filePaths: string[]`。
+    *   **实现**: Worker 使用 `fs` 按需从磁盘读取文件内容。
+    *   **优势**: 大幅减少了在生成 Worker 时克隆大量文件内容字符串的结构性内存开销，解决了大数据集（10k+ 文件）上的堆内存溢出 (Heap OOM) 问题。
+
+*   **Worker 接口**:
+    ```typescript
+    interface WorkerData {
+        filePaths: string[]; // 更新自 filesChunk: RawFile[]
+        targetIds: string[]; // 或 terms: string[]
+        strategy: 'exact-phrase' | 'fuzzy';
+        exclusionList: string[];
+    }
+    ```
+*   **逻辑**:
+    *   检测可用的 CPU 核心。
+    *   生成 Worker（可通过 `maxWorkers` 配置）。
+    *   将文件列表拆分为*路径*块。
+    *   Worker 执行处理并返回轻量级结果。
+    *   结果在主线程中聚合。
+*   **回退**: 如果 Worker 生成失败，自动降级为顺序处理。
+
+### 3.5 资源优化 (Resource Optimization - v0.9.58)
 
 #### `GraphBuilder` 共享状态
 实现资源重用以防止混合推断期间的 OOM 错误。
@@ -1256,3 +1283,164 @@ interface CooccurrenceMetrics {
     2.  **资源编译**: `npm run build` -> 填充 `dist/frontend`。
     3.  **同步**: `npx cap sync android` -> 将 `dist/frontend` 复制到 `android/app/src/main/assets/public`。
     4.  **原生构建**: `gradlew assembleDebug` -> 编译 APK。
+
+### 6. 节点高亮系统 (Node Highlighting System - v0.9.18)
+
+#### `NodeHighlightManager` 类
+管理 PC 和移动端界面的节点高亮交互。
+
+*   **模块**: `nodeHighlight.js`
+*   **构造函数**: `new NodeHighlightManager(config: HighlightConfig)`
+*   **配置**:
+    ```typescript
+    interface HighlightConfig {
+        nodes: NoteNode[];           // 所有图节点数组
+        links: NoteEdge[];           // 所有图边数组
+        nodeSelection: D3Selection;  // 节点元素的 D3 选择集
+        linkSelection: D3Selection;  // 边元素的 D3 选择集
+        tooltip: D3Selection;        // 提示框元素
+        simulation: D3Simulation;    // 力导向模拟实例
+        onTick: () => void;          // 触发重绘的回调
+        onHighlight?: (node, connections) => void;  // 可选回调
+        onUnhighlight?: (node) => void;             // 可选回调
+    }
+    ```
+
+*   **公共方法**:
+    *   `highlight(node: NoteNode, options: HighlightOptions): void`
+        *   **描述**: 高亮显示节点及其连接。
+        *   **输入**:
+            *   `node`: 要高亮的节点。
+            *   `options`: 可选配置。
+                ```typescript
+                interface HighlightOptions {
+                    event?: Event;       // 用于提示框定位的鼠标/触摸事件
+                    freeze?: boolean;    // 是否冻结模拟
+                    mode?: 'all' | 'in' | 'out';  // 过滤模式
+                }
+                ```
+        *   **视觉效果**:
+            *   主节点: 完全不透明 (1.0)
+            *   连接节点: 完全不透明 (1.0)
+            *   未连接节点: 变暗 (0.05 不透明度)
+            *   出度边: 蓝色 (#4488ff), 2.5px 宽度
+            *   入度边: 红色 (#ff6b6b), 2.5px 宽度
+
+    *   `unhighlight(options: UnhighlightOptions): void`
+        *   **描述**: 移除当前节点的高亮。
+        *   **输入**:
+            ```typescript
+            interface UnhighlightOptions {
+                force?: boolean;  // 即使冻结也强制取消高亮
+            }
+            ```
+
+    *   `setFocusMode(focusState: FocusState): void`
+        *   **描述**: 更新专注模式引用。
+        *   **输入**:
+            ```typescript
+            interface FocusState {
+                active: boolean;
+                node?: NoteNode;
+            }
+            ```
+
+    *   `getState(): HighlightState`
+        *   **描述**: 返回当前高亮状态。
+        *   **输出**:
+            ```typescript
+            interface HighlightState {
+                currentNode: NoteNode | null;
+                isFrozen: boolean;
+                frozenNode: NoteNode | null;
+            }
+            ```
+
+    *   `isHighlighted(nodeId: string): boolean`
+        *   **描述**: 检查节点当前是否被高亮。
+
+    *   `getCurrentConnections(): ConnectionData | null`
+        *   **描述**: 获取当前高亮节点的连接。
+        *   **输出**:
+            ```typescript
+            interface ConnectionData {
+                links: NoteEdge[];
+                nodeIds: Set<string>;
+                incomingLinks: NoteEdge[];
+                outgoingLinks: NoteEdge[];
+            }
+            ```
+
+*   **集成模式**:
+    1.  在创建图元素后初始化。
+    2.  附加事件处理程序（悬停、点击）。
+    3.  进入/退出专注模式时更新专注模式状态。
+    4.  在 Canvas 渲染器中使用以保持视觉一致性。
+
+*   **移动端优化**:
+    *   **单击**: 高亮节点并冻结模拟以便稳定检查。
+    *   **双击**: 进入专注模式。
+    *   **悬停 (PC)**: 高亮但不冻结。
+    *   **背景点击**: 清除高亮并恢复模拟。
+
+*   **交互状态**:
+    *   **正常**: 无高亮。
+    *   **悬停 (PC)**: 临时高亮，鼠标移出时移除。
+    *   **冻结 (移动端/PC)**: 点击后持续高亮，需要背景点击或强制清除。
+    *   **专注模式**: 高亮禁用，专注模式处理可视化。
+
+### 7. GPU 加速 (GPU Acceleration - v0.9.50)
+
+#### `VectorSpaceGPU` 类
+向量空间模型的 GPU 加速实现，利用 AMD 7900XT（或兼容 GPU）进行矩阵运算。
+
+*   **位置**: `amdgpu/VectorSpaceGPU.ts`
+*   **继承**: `VectorSpace`
+*   **核心特性**:
+    *   **矩阵乘法**: 使用 WebGL (headless-gl) 将 $N \times N$ 余弦相似度计算卸载到 GPU。
+    *   **性能**: 将 CPU 上的 $O(N^2 \times D)$ 复杂度降低为大规模并行执行。
+    *   **回退**: 如果 GPU 初始化失败，自动回退到 CPU。
+*   **方法**:
+    *   `constructor(files: RawFile[])`: 构建向量 (CPU) 并预计算相似度矩阵 (GPU)。
+    *   `getSimilar(fileId: string, topK: number)`: 检索为 $O(1)$ (行查找) + 排序，从预计算矩阵中读取。
+    *   `destroy()`: 释放 GPU 资源 (WebGL 上下文)。
+
+### 8. 拖动与缩放功能 (Drag and Zoom Functionality)
+增强节点统计弹窗，提供用户友好的定位和缩放控制。
+
+*   **拖动接口**:
+    *   **触发**: `#popup-drag-handle` (头部元素) 上的 `mousedown`。
+    *   **行为**:
+        *   跟踪鼠标移动并更新弹窗的 `left` 和 `top` CSS 属性。
+        *   在点击头部内的按钮时防止拖动。
+        *   添加 `.dragging` 类以提供视觉反馈。
+    *   **状态**:
+        ```typescript
+        interface PopupDragState {
+            isDragging: boolean;
+            startX: number;        // 初始鼠标 X
+            startY: number;        // 初始鼠标 Y
+            startLeft: number;     // 初始弹窗左侧位置
+            startTop: number;      // 初始弹窗顶部位置
+            currentScale: number;  // 当前缩放比例 (0.5-2.0)
+        }
+        ```
+
+*   **缩放接口**:
+    *   **控制**:
+        *   `#popup-zoom-in`: 增加比例 0.1 (最大 2.0)。
+        *   `#popup-zoom-out`: 减少比例 0.1 (最小 0.5)。
+        *   `#popup-reset-size`: 重置比例为 1.0，尺寸为默认 (280px 宽，自动高度)。
+    *   **应用**: 使用 `fontSize` CSS 属性缩放 `.popup-content`。
+    *   **公式**: `fontSize = ${scale}rem`
+
+*   **重置行为**:
+    *   关闭弹窗 (`#popup-close-btn`) 时，位置重置为默认值：
+        *   `left: auto`
+        *   `right: 20px`
+        *   `top: 80px`
+
+*   **CSS 属性**:
+    *   **可拖动**: 头部显示 `cursor: move`，激活时显示 `cursor: grabbing`。
+    *   **可调整大小**: `resize: both` 启用浏览器原生调整大小手柄。
+    *   **约束**: `min-width: 200px`, `min-height: 250px`, `max-width: 90vw`, `max-height: 90vh`。
