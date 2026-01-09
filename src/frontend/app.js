@@ -150,6 +150,15 @@ const minDegreeSlider = document.getElementById('min-degree-slider');
 minDegreeSlider.max = maxDegree;
 document.getElementById('min-degree-val').innerText = minDegreeSlider.value;
 
+// v0.9.69 Fix: Move controls definition UP to prevent ResizeObserver/setTimeout race condition
+// caused by renderCanvas accessing 'controls' before it was defined.
+const controls = {
+    minDegree: document.getElementById('min-degree-slider'),
+    showOrphans: document.getElementById('show-orphans'),
+    search: document.getElementById('search-input'),
+    export: document.getElementById('export-btn')
+};
+
 // Simulation
 // Initial Center
 let width = container.clientWidth;
@@ -1247,169 +1256,175 @@ function ticked() {
 }
 
 function renderCanvas(layoutMode) {
-    ctx.save();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!ctx) return; // Canvas context missing
     
-    // Apply Zoom/Pan
-    ctx.translate(currentTransform.x, currentTransform.y);
-    ctx.scale(currentTransform.k, currentTransform.k);
-
-    // Get highlight state from highlightManager
-    // 从highlightManager获取高亮状态
-    const highlightState = window.highlightManager ? window.highlightManager.getState() : null;
-    const highlightConnections = highlightState && highlightState.currentNode ? 
-        window.highlightManager.getCurrentConnections() : null;
-
-    // v0.9.67: Compact Mode Optimization
-    // If Compact Mode is ON, and we are NOT highlighting/focusing, skip edge iteration entirely.
-    // This saves iterating 1.2M items per frame.
-    const isCompact = window.settingsManager ? window.settingsManager.get('performance', 'compactMode') : false;
-    const shouldRenderEdges = !isCompact || focusNode || highlightConnections;
-
-    // Draw Links / 绘制连接
-    ctx.lineWidth = 1;
-
-    if (shouldRenderEdges) {
-        links.forEach(d => {
-            // Check Visibility / 检查可见性
-            // 1. Focus Mode / 专注模式
-            if (focusNode) {
-                // v0.9.46: Do not display any edges in Focus Mode under Canvas
-                return; 
-            } 
-            // 2. Highlight Mode (using highlightManager) / 高亮模式（使用highlightManager）
-            else if (highlightConnections) {
-                const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
-                const targetId = typeof d.target === 'object' ? d.target.id : d.target;
-                const currentNodeId = highlightState.currentNode.id;
-                
-                if (sourceId === currentNodeId) {
-                    // Outgoing edge / 出度边
-                    ctx.globalAlpha = 1;
-                    ctx.strokeStyle = "#4488ff"; // Blue for outgoing / 蓝色表示出度
-                    ctx.lineWidth = 2.5;
-                } else if (targetId === currentNodeId) {
-                    // Incoming edge / 入度边
-                    ctx.globalAlpha = 1;
-                    ctx.strokeStyle = "#ff6b6b"; // Red for incoming / 红色表示入度
-                    ctx.lineWidth = 2.5;
-                } else {
-                    return; // Hide others / 隐藏其他
-                }
-            }
-            else {
-                // Default Mode (No Highlight/Focus)
-                // If Compact Mode is ON, we shouldn't be here (guarded by shouldRenderEdges).
-                // But if we are here, it means we are in Normal Mode.
-                // In Normal Mode, edges are default hidden (return) unless some logic changes?
-                // Existing logic: "else { return; // Default Hidden }"
-                // So edges were ALREADY hidden by default in Canvas.
-                return; // Default Hidden / 默认隐藏
-            }
-    
-            ctx.beginPath();
-            if (layoutMode === 'dag') {
-                const sx = d.source.x;
-                const sy = d.source.y;
-                const tx = d.target.x;
-                const ty = d.target.y;
-                const cp1x = sx;
-                const cp1y = (sy + ty) / 2;
-                const cp2x = tx;
-                const cp2y = (sy + ty) / 2;
-                ctx.moveTo(sx, sy);
-                ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, tx, ty);
-            } else {
-                ctx.moveTo(d.source.x, d.source.y);
-                ctx.lineTo(d.target.x, d.target.y);
-            }
-            ctx.stroke();
-        });
-    }
-
-    // Draw Nodes / 绘制节点
-    nodes.forEach(d => {
-        if (!isNodeVisible(d)) return;
-
-        // Determine if this node should be dimmed / 确定节点是否应变暗
-        const isHighlightedNode = highlightState && highlightState.currentNode && 
-            highlightState.currentNode.id === d.id;
-        const isFocus = focusNode && focusNode.id === d.id;
-        const isConnected = highlightConnections && highlightConnections.nodeIds.has(d.id);
-        const shouldDim = highlightState && highlightState.currentNode && !isConnected && !focusNode;
-
-        // Set opacity for dimming effect / 设置变暗效果的透明度
-        ctx.globalAlpha = shouldDim ? 0.05 : 1;
-
-        ctx.beginPath();
-        
-        // v0.9.45: Fix Canvas Node Sizing to match SVG
-        let r = 5;
-        const sizeMode = document.querySelector('input[name="sizeMode"]:checked') ? document.querySelector('input[name="sizeMode"]:checked').value : 'uniform';
-        
-        if (isFocus) {
-            r = 25;
-        } else if (sizeMode === 'centrality') {
-            r = sizeScaleCentrality(d.centrality || 0);
-        } else if (sizeMode === 'degree') {
-            // Re-calculate or use scale. We need the scale defined earlier.
-            // sizeScaleDegree is local to updateSize(). We need to expose it or recreate it.
-            // Recreating is cheap.
-            const maxDeg = d3.max(nodes, n => (n.inDegree||0) + (n.outDegree||0)) || 1;
-            const s = d3.scaleSqrt().domain([0, maxDeg]).range([3, 12]);
-            const deg = (d.inDegree||0) + (d.outDegree||0); // Simplification: using Total degree for sizing usually
-            r = s(deg);
-        } else {
-            r = 5;
-        }
-
-        if (isHighlightedNode) r += 2; // Slight enlarge on highlight / 高亮时略微放大
-
-        ctx.arc(d.x, d.y, r, 0, 2 * Math.PI);
-        
-        // Color / 颜色
-        if (isFocus) {
-            ctx.fillStyle = "#ffd700";
-        } else if (isHighlightedNode) {
-            ctx.fillStyle = "#ffaa00";
-        } else {
-             const mode = document.querySelector('input[name="colorMode"]:checked').value;
-             if (mode === 'cluster') ctx.fillStyle = colorScaleCluster(d.clusterId || 'unknown');
-             else ctx.fillStyle = colorScaleDegree(getDegree(d));
-        }
-
-        ctx.fill();
-        ctx.strokeStyle = "#fff";
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-
-        // Label - only show if not dimmed or if important / 标签 - 仅在未变暗或重要时显示
-        if (!shouldDim && (isFocus || isHighlightedNode || currentTransform.k > 1.2)) {
-            ctx.globalAlpha = 1;
-            ctx.fillStyle = "#ccc";
-            ctx.font = isFocus ? "bold 16px Sans-Serif" : "10px Sans-Serif";
-            // v0.9.47: Use custom offset if set (for Focus Mode Vertical Layout)
-            const labelDx = d._labelDx !== undefined ? d._labelDx : 8;
-            ctx.fillText(d.label, d.x + labelDx, d.y + 4);
-        }
-    });
-
-    // Draw Focus Labels (Canvas) / 绘制专注标签（Canvas）
-    if (focusNode && window.focusLabels) {
+    try {
         ctx.save();
-        ctx.font = "bold 16px Segoe UI";
-        ctx.fillStyle = "#61dafb";
-        ctx.textAlign = "center";
-        ctx.shadowColor = "rgba(0,0,0,0.8)";
-        ctx.shadowBlur = 4;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        window.focusLabels.forEach(lbl => {
-            ctx.fillText(lbl.text, lbl.x, lbl.y);
-        });
-        ctx.restore();
-    }
+        // Apply Zoom/Pan
+        ctx.translate(currentTransform.x, currentTransform.y);
+        ctx.scale(currentTransform.k, currentTransform.k);
 
-    ctx.restore();
+        // Get highlight state from highlightManager
+        // 从highlightManager获取高亮状态
+        const highlightState = window.highlightManager ? window.highlightManager.getState() : null;
+        const highlightConnections = highlightState && highlightState.currentNode ? 
+            window.highlightManager.getCurrentConnections() : null;
+
+        // v0.9.67: Compact Mode Optimization
+        // If Compact Mode is ON, and we are NOT highlighting/focusing, skip edge iteration entirely.
+        // This saves iterating 1.2M items per frame.
+        const isCompact = window.settingsManager ? window.settingsManager.get('performance', 'compactMode') : false;
+        const shouldRenderEdges = !isCompact || focusNode || highlightConnections;
+
+        // Draw Links / 绘制连接
+        ctx.lineWidth = 1;
+
+        if (shouldRenderEdges) {
+            links.forEach(d => {
+                // Check Visibility / 检查可见性
+                // 1. Focus Mode / 专注模式
+                if (focusNode) {
+                    // v0.9.46: Do not display any edges in Focus Mode under Canvas
+                    return; 
+                } 
+                // 2. Highlight Mode (using highlightManager) / 高亮模式（使用highlightManager）
+                else if (highlightConnections) {
+                    const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                    const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                    const currentNodeId = highlightState.currentNode.id;
+                    
+                    if (sourceId === currentNodeId) {
+                        // Outgoing edge / 出度边
+                        ctx.globalAlpha = 1;
+                        ctx.strokeStyle = "#4488ff"; // Blue for outgoing / 蓝色表示出度
+                        ctx.lineWidth = 2.5;
+                    } else if (targetId === currentNodeId) {
+                        // Incoming edge / 入度边
+                        ctx.globalAlpha = 1;
+                        ctx.strokeStyle = "#ff6b6b"; // Red for incoming / 红色表示入度
+                        ctx.lineWidth = 2.5;
+                    } else {
+                        return; // Hide others / 隐藏其他
+                    }
+                }
+                else {
+                    // Default Mode (No Highlight/Focus)
+                    // If Compact Mode is ON, we shouldn't be here (guarded by shouldRenderEdges).
+                    // But if we are here, it means we are in Normal Mode.
+                    // In Normal Mode, edges are default hidden (return) unless some logic changes?
+                    // Existing logic: "else { return; // Default Hidden }"
+                    // So edges were ALREADY hidden by default in Canvas.
+                    return; // Default Hidden / 默认隐藏
+                }
+        
+                ctx.beginPath();
+                if (layoutMode === 'dag') {
+                    const sx = d.source.x;
+                    const sy = d.source.y;
+                    const tx = d.target.x;
+                    const ty = d.target.y;
+                    const cp1x = sx;
+                    const cp1y = (sy + ty) / 2;
+                    const cp2x = tx;
+                    const cp2y = (sy + ty) / 2;
+                    ctx.moveTo(sx, sy);
+                    ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, tx, ty);
+                } else {
+                    ctx.moveTo(d.source.x, d.source.y);
+                    ctx.lineTo(d.target.x, d.target.y);
+                }
+                ctx.stroke();
+            });
+        }
+
+        // Draw Nodes / 绘制节点
+        nodes.forEach(d => {
+            if (!isNodeVisible(d)) return;
+
+            // Determine if this node should be dimmed / 确定节点是否应变暗
+            const isHighlightedNode = highlightState && highlightState.currentNode && 
+                highlightState.currentNode.id === d.id;
+            const isFocus = focusNode && focusNode.id === d.id;
+            const isConnected = highlightConnections && highlightConnections.nodeIds.has(d.id);
+            const shouldDim = highlightState && highlightState.currentNode && !isConnected && !focusNode;
+
+            // Set opacity for dimming effect / 设置变暗效果的透明度
+            ctx.globalAlpha = shouldDim ? 0.05 : 1;
+
+            ctx.beginPath();
+            
+            // v0.9.45: Fix Canvas Node Sizing to match SVG
+            let r = 5;
+            const sizeMode = document.querySelector('input[name="sizeMode"]:checked') ? document.querySelector('input[name="sizeMode"]:checked').value : 'uniform';
+            
+            if (isFocus) {
+                r = 25;
+            } else if (sizeMode === 'centrality') {
+                r = sizeScaleCentrality(d.centrality || 0);
+            } else if (sizeMode === 'degree') {
+                // Re-calculate or use scale. We need the scale defined earlier.
+                // sizeScaleDegree is local to updateSize(). We need to expose it or recreate it.
+                // Recreating is cheap.
+                const maxDeg = d3.max(nodes, n => (n.inDegree||0) + (n.outDegree||0)) || 1;
+                const s = d3.scaleSqrt().domain([0, maxDeg]).range([3, 12]);
+                const deg = (d.inDegree||0) + (d.outDegree||0); // Simplification: using Total degree for sizing usually
+                r = s(deg);
+            } else {
+                r = 5;
+            }
+
+            if (isHighlightedNode) r += 2; // Slight enlarge on highlight / 高亮时略微放大
+
+            ctx.arc(d.x, d.y, r, 0, 2 * Math.PI);
+            
+            // Color / 颜色
+            if (isFocus) {
+                ctx.fillStyle = "#ffd700";
+            } else if (isHighlightedNode) {
+                ctx.fillStyle = "#ffaa00";
+            } else {
+                 const mode = document.querySelector('input[name="colorMode"]:checked').value;
+                 if (mode === 'cluster') ctx.fillStyle = colorScaleCluster(d.clusterId || 'unknown');
+                 else ctx.fillStyle = colorScaleDegree(getDegree(d));
+            }
+
+            ctx.fill();
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Label - only show if not dimmed or if important / 标签 - 仅在未变暗或重要时显示
+            if (!shouldDim && (isFocus || isHighlightedNode || currentTransform.k > 1.2)) {
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = "#ccc";
+                ctx.font = isFocus ? "bold 16px Sans-Serif" : "10px Sans-Serif";
+                // v0.9.47: Use custom offset if set (for Focus Mode Vertical Layout)
+                const labelDx = d._labelDx !== undefined ? d._labelDx : 8;
+                ctx.fillText(d.label, d.x + labelDx, d.y + 4);
+            }
+        });
+
+        // Draw Focus Labels (Canvas) / 绘制专注标签（Canvas）
+        if (focusNode && window.focusLabels) {
+            ctx.save();
+            ctx.font = "bold 16px Segoe UI";
+            ctx.fillStyle = "#61dafb";
+            ctx.textAlign = "center";
+            ctx.shadowColor = "rgba(0,0,0,0.8)";
+            ctx.shadowBlur = 4;
+            
+            window.focusLabels.forEach(lbl => {
+                ctx.fillText(lbl.text, lbl.x, lbl.y);
+            });
+            ctx.restore();
+        }
+
+        ctx.restore();
+    } catch (e) {
+        console.error("Canvas Render Error:", e);
+    }
 }
 
 // Canvas Setup / Canvas设置
@@ -1549,17 +1564,12 @@ document.querySelectorAll('input[name="rendererMode"]').forEach(radio => {
 });
 
 // Controls & Filtering
-const controls = {
-    minDegree: document.getElementById('min-degree-slider'),
-    showOrphans: document.getElementById('show-orphans'),
-    search: document.getElementById('search-input'),
-    export: document.getElementById('export-btn')
-};
+// Controls object moved to top (v0.9.69) to fix initialization race condition.
 
-controls.minDegree.addEventListener('input', updateVisibility);
-controls.showOrphans.addEventListener('change', updateVisibility);
-controls.search.addEventListener('input', updateVisibility);
-controls.export.addEventListener('click', exportSVG);
+if (controls.minDegree) controls.minDegree.addEventListener('input', updateVisibility);
+if (controls.showOrphans) controls.showOrphans.addEventListener('change', updateVisibility);
+if (controls.search) controls.search.addEventListener('input', updateVisibility);
+if (controls.export) controls.export.addEventListener('click', exportSVG);
 
 // Mobile: Toggle Controls Panel
 const controlsPanel = document.getElementById('controls');
@@ -1611,6 +1621,9 @@ function isNodeVisible(d) {
         if (d.isFocusVisible) return true; // We will tag nodes in enterFocusMode
         return false;
     }
+
+    // v0.9.69 Fix: Guard against controls not being ready
+    if (!controls || !controls.minDegree) return true;
 
     const minDegree = parseInt(controls.minDegree.value);
     const showOrphans = controls.showOrphans.checked;

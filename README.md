@@ -150,6 +150,9 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 - [x] **Experience**: Polished UI with Quick Start Guide, Welcome experience, and Bilingual support (En/Zh).
 - [x] **API**: Decoupled Core API ready for plugin integrations.
 
+### v0.9.70 - Frontend Initialization Fix (2026-01-09)
+- [x] **Critical Fix**: Fixed a race condition where the rendering loop started before UI controls were fully initialized, causing blank screens and unresponsive buttons on large datasets.
+
 ### v0.9.69 - Frontend Crash Fix (2026-01-09)
 - [x] **Critical Fix**: Resolved a "Maximum call stack size exceeded" crash in the frontend when loading graphs with over 100,000 edges. This fixes the "Nodes: 0" issue for massive datasets.
 

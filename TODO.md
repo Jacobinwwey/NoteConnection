@@ -6,6 +6,16 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-09 v0.9.70 - Frontend Initialization Fix (Race Condition)
+
+**Goal**: Resolve the "No nodes displayed" and "Unresponsive Buttons" issue caused by a race condition in the initialization sequence for large datasets.
+
+- [x] **Bug Fix**
+    - [x] **Race Condition**: Identified that `renderCanvas` was being called by `ResizeObserver` or `setTimeout` *before* the `controls` object was defined, causing a fatal error that halted script execution.
+    - [x] **Refactor**: Moved `controls` definition to the top of `app.js`.
+    - [x] **Robustness**: Added safety checks in `isNodeVisible` and `renderCanvas` to prevent crashes during initialization.
+    - [x] **Result**: UI buttons (Freeze, Settings) should now initialize correctly, and the canvas should render immediately.
+
 # 2026-01-09 v0.9.69 - Frontend Crash Fix (10k+ Nodes)
 
 **Goal**: Fix the critical "Nodes: 0" bug caused by a stack overflow when processing 1.2 million edges in the frontend.

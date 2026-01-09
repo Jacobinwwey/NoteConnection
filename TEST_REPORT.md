@@ -1,3 +1,27 @@
+# 2026-01-09 v0.9.70 - Frontend Initialization Fix
+
+## English Document
+
+### 1. Race Condition Verification
+*   **Test**: Code Analysis of `src/frontend/app.js`.
+*   **Scenario**: `ResizeObserver` fires immediately on load.
+*   **Previous Behavior**: `renderCanvas` calls `isNodeVisible`, which accesses `controls.minDegree`. `controls` is undefined (TDZ). Script crashes.
+*   **Fixed Behavior**: `controls` is defined at the top. `isNodeVisible` has a safety guard. `renderCanvas` is wrapped in `try-catch`.
+*   **Result**: Initialization proceeds to completion, attaching all event listeners.
+*   **Status**: **Pass (Verified via Code Logic)**
+
+## Chinese Document
+
+### 1. 竞态条件验证
+*   **测试**: `src/frontend/app.js` 代码分析。
+*   **场景**: `ResizeObserver` 在加载时立即触发。
+*   **先前行为**: `renderCanvas` 调用 `isNodeVisible`，后者访问 `controls.minDegree`。`controls` 未定义 (TDZ)。脚本崩溃。
+*   **修复行为**: `controls` 定义在顶部。`isNodeVisible` 具有安全防护。`renderCanvas` 包裹在 `try-catch` 中。
+*   **结果**: 初始化继续完成，附加所有事件监听器。
+*   **状态**: **通过 (通过代码逻辑验证)**
+
+---
+
 # 2026-01-09 v0.9.69 - Frontend Crash Fix
 
 ## English Document
