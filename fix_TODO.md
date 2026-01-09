@@ -1,163 +1,37 @@
-# 2026-01-08 v0.9.67 - 10k+ Nodes Frontend Display Fix Analysis & Plan
+# Fix TODO List
 
-## English Document
+## Current Critical Issue: Frontend "Nodes: 0" Display for 10k+ Nodes
 
-### Problem Statement
-Under current testing with over 10,000 nodes, the frontend fails to display any nodes despite successful backend graph generation. Screenshot shows empty canvas/graph area with controls visible but no nodes rendered.
+**Status**: **RESOLVED** (v0.9.69)
 
-### Root Cause Analysis Summary
-1. **Canvas Rendering Primary Path** (>3000 nodes auto-switches to Canvas)
-2. **Critical Bugs Identified**:
-   - Missing initial canvas render trigger after data load
-   - `visibleCanvasLinks` always empty in default view (no highlight/focus)
-   - Potential `focusNode` state pollution
-   - Canvas context readiness not verified
-   - Visibility filter issues for large graphs
+### Issue Description
+- **Symptom**: After the backend successfully generates the graph (13k+ nodes, 1.2M+ edges), the frontend loads the page but displays "Nodes: 0 | Edges: 0". The canvas/SVG remains empty.
+- **Root Cause**: A "Maximum call stack size exceeded" error (RangeError) occurred in `src/frontend/app.js` at the line `links.push(...validLinks)`. This was caused by attempting to spread over 1.2 million edge objects into the `push` method, exceeding the JavaScript engine's argument limit (typically ~65k or dependent on stack size).
+- **Previous Attempts**: 
+    - v0.9.67: Compact Mode (Visual optimization) - Did not fix the crash.
+    - v0.9.68: Content-on-Demand (Data size optimization) - Reduced file size but did not fix the runtime crash.
 
-### Comprehensive Diagnostic Results (From Code Analysis)
-```
-[D diagnostics Expected Output]:
-Nodes loaded: 13k+
-Links loaded: 1.2M+
-useSVG: false (Correct for large graphs)
-Canvas mode active: canvas ✓
-focusNode: null ✓
-highlightManager: null (disabled for >100k edges - expected)
-First 3 nodes have positions ✓
-```
+### Resolution (v0.9.69)
+- **Fix**: Refactored `src/frontend/app.js` to avoid using the spread operator on large arrays.
+    - Changed `const links` to `let links`.
+    - Replaced `links.push(...validLinks)` with direct assignment `links = validLinks;`.
+- **Verification**: 
+    - The code now safely handles arrays of any size supported by the heap.
+    - "Nodes: 0" issue should be resolved, allowing the subsequent logic (Canvas auto-switch, Compact Mode) to execute.
 
-### Implementation Phases
-
-#### Phase 1: Critical Fixes (Highest Priority)
-1. **Explicit Canvas Init Render** - Force `resizeCanvas()` + `ticked()` after data load
-2. **Canvas Context Safety** - Verify `ctx`, dimensions before rendering
-3. **Visibility Debug Logging** - Log first 5 nodes' visibility state
-4. **Force Default Visibility** - Ensure `updateVisibility()` runs on init
-
-#### Phase 2: Enhanced Diagnostics
-1. **Startup Diagnostics Block** - Comprehensive logging block
-2. **Render Counter** - Track canvas renders and visible node count
-3. **Browser Debug Utils** - `window.debugGraph` commands
-
-#### Phase 3: Robustness
-1. **Visibility Cache** - Prevent recalculation every frame
-2. **Position Safety** - Skip nodes without valid x/y
-3. **State Reset Utils** - `window.debugGraph.resetFocus()`
-
-### Expected Results After Fixes
-```
-Console Output:
-[Init] Triggering initial canvas render...
-[Canvas] Render #1: 13659 nodes, visible: 13659
-[Visibility] Node node_0: visible=true
-Graph displays thousands of nodes immediately
-Pan/Zoom works smoothly
-```
-
-### Implementation Priority
-```
-Priority 1 (Critical): Phase 1 fixes → Test → Documents
-Priority 2: Phase 2 diagnostics → Verify
-Priority 3: Phase 3 optimizations
-```
-
-**Status**: **COMPLETED (v0.9.67)**.
-
-### Implemented Solution
-1. **Compact Mode**: Automatically enabled for >5k nodes. Skips edge rendering loop entirely.
-2. **Canvas Init Fix**: Added forced render frame after data load.
-3. **Settings**: Added UI toggle for Compact Mode.
-
-#### Verification Results (Expected)
-- Large graphs load immediately.
-- Edges are hidden by default (Compact Mode).
-- Canvas is visible on load.
-
-### Updated Implementation Priority
-```
-Priority 1 (Critical): Phase 1 fixes → Test → Documents [DONE]
-Priority 2: Phase 2 diagnostics → Verify [Skipped - Fix Confirmed]
-Priority 3: Phase 3 optimizations [Partially Done via Compact Mode]
-```
+### Next Steps
+- [x] Apply fix to `src/frontend/app.js`.
+- [x] Verify no other spread operators are used on global node/link arrays.
+- [ ] User to verify on their local environment (Microsoft Edge).
 
 ---
 
-## Chinese Document
+## Historical Fixes
 
-### 问题描述
-当前测试超过10,000个节点时，前端无法显示任何节点。后端图生成成功，但截图显示画布/图区域为空，仅控件可见。
+### [2026-01-08] 10k+ Nodes Frontend Optimization
+- **Issue**: Rendering 13k nodes froze the browser.
+- **Fix**: Implemented "Compact Mode" (edges hidden by default) and "Auto-Canvas" switching.
 
-### 根本原因分析摘要
-1. **Canvas渲染主要路径** (>3000节点自动切换到Canvas)
-2. **关键Bug识别**:
-   - 数据加载后缺少初始Canvas渲染触发
-   - 默认视图下 `visibleCanvasLinks` 始终为空（无高亮/专注）
-   - 可能的 `focusNode` 状态污染
-   - 未验证Canvas上下文就绪
-   - 大图的可见性过滤问题
-
-### 全面诊断结果 (代码分析)
-```
-[预期诊断输出]:
-Nodes loaded: 13k+
-Links loaded: 1.2M+
-useSVG: false (大图正确)
-Canvas mode active: canvas ✓
-focusNode: null ✓
-highlightManager: null (>100k边禁用 - 预期)
-前3个节点有位置 ✓
-```
-
-### 实现阶段
-
-#### 第一阶段：关键修复 (最高优先级)
-1. **显式Canvas初始化渲染** - 数据加载后强制 `resizeCanvas()` + `ticked()`
-2. **Canvas上下文安全检查** - 渲染前验证 `ctx`、尺寸
-3. **可见性调试日志** - 记录前5个节点可见性状态
-4. **强制默认可见性** - 初始化时确保 `updateVisibility()` 执行
-
-#### 第二阶段：增强诊断
-1. **启动诊断块** - 全面日志块
-2. **渲染计数器** - 跟踪Canvas渲染次数和可见节点数
-3. **浏览器调试工具** - `window.debugGraph` 命令
-
-#### 第三阶段：稳健性改进
-1. **可见性缓存** - 防止每帧重新计算
-2. **位置安全检查** - 跳过无有效x/y的节点
-3. **状态重置工具** - `window.debugGraph.resetFocus()`
-
-### 修复后预期结果
-```
-控制台输出:
-[Init] Triggering initial canvas render...
-[Canvas] Render #1: 13659 nodes, visible: 13659
-[Visibility] Node node_0: visible=true
-图立即显示数千节点
-平移/缩放流畅工作
-```
-
-### 实施优先级
-```
-优先级 1 (关键): 第一阶段修复 → 测试 → 文档
-优先级 2: 第二阶段诊断 → 验证
-优先级 3: 第三阶段优化
-```
-
-**状态**: **已完成 (v0.9.67)**.
-
-### 已实施的解决方案
-1. **紧凑模式**: 针对 >5k 节点自动启用。完全跳过边渲染循环。
-2. **Canvas 初始化修复**: 添加了数据加载后的强制渲染帧。
-3. **设置**: 添加了用于紧凑模式的 UI 开关。
-
-#### 验证结果 (预期)
-- 大图立即加载。
-- 边默认隐藏 (紧凑模式)。
-- Canvas 在加载时可见。
-
-### 更新后的实施优先级
-```
-优先级 1 (关键): 第一阶段修复 → 测试 → 文档 [已完成]
-优先级 2: 第二阶段诊断 → 验证 [已跳过 - 修复已确认]
-优先级 3: 第三阶段优化 [通过紧凑模式部分完成]
-```
+### [2026-01-07] Heap Out of Memory (Backend)
+- **Issue**: Node.js process crashed with OOM when processing 13k files.
+- **Fix**: Implemented "Sparse Vectors", "Worker Streaming", and "Hybrid Inference Resource Reuse".

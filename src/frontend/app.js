@@ -48,7 +48,7 @@ const tooltip = d3.select("body").append("div")
 
 // Data
 const nodes = graphData.nodes.map(d => Object.create(d));
-const links = graphData.edges.map(d => Object.create(d));
+let links = graphData.edges.map(d => Object.create(d));
 
 // Optimization: Pre-resolve links to ensure they are objects, not strings.
 // This allows us to feed a SUBSET to the physics engine while keeping ALL links for rendering.
@@ -65,19 +65,7 @@ links.forEach(l => {
 const validLinks = links.filter(l => l.source && l.target);
 // Replace original links array with valid ones to avoid errors in render
 // 用有效的链接数组替换原始链接数组以避免渲染错误
-// Note: We modify the 'links' const reference? No, 'links' is const. 
-// We should have declared 'links' as let or just use validLinks.
-// Since 'links' is used globally in this scope, and it's 'const', we can't reassign.
-// But 'links' is an array, we can clear and push? Or just rely on validLinks for simulation.
-// Actually, 'links' is used in 'link' selection for SVG.
-// Let's assume input data is mostly correct, but for safety/optimization:
-// We will use 'validLinks' for everything henceforth.
-// But to keep 'const links' valid, we'll just ignore the few broken ones if any? 
-// Or better, let's just use validLinks for the simulation. 
-// For rendering, if we use 'links' and it has strings, it crashes.
-// So we MUST update 'links' content.
-links.length = 0;
-links.push(...validLinks);
+links = validLinks;
 
 // Optimization: Default to Canvas for large graphs (>3000 nodes) to save memory
 if (nodes.length > 3000) {

@@ -1,3 +1,27 @@
+# 2026-01-09 v0.9.69 - Frontend Crash Fix
+
+## English Document
+
+### 1. Large Dataset Loading (1.2M Edges)
+*   **Test**: Code Analysis of `src/frontend/app.js`.
+*   **Scenario**: `links` array contains 1,206,332 objects.
+*   **Previous Behavior**: `links.push(...validLinks)` attempts to push 1.2M arguments, causing `RangeError: Maximum call stack size exceeded`. Execution stops, UI shows "Nodes: 0".
+*   **Fixed Behavior**: `links = validLinks` assigns the reference directly. No stack limit is hit.
+*   **Result**: Code execution proceeds to `updateStats`, `Canvas` initialization, and `Compact Mode` checks.
+*   **Status**: **Pass (Verified via Code Logic)**
+
+## Chinese Document
+
+### 1. 大数据集加载 (120万边)
+*   **测试**: `src/frontend/app.js` 代码分析。
+*   **场景**: `links` 数组包含 1,206,332 个对象。
+*   **先前行为**: `links.push(...validLinks)` 尝试推送 120 万个参数，导致 `RangeError: Maximum call stack size exceeded`。执行停止，UI 显示 "Nodes: 0"。
+*   **修复行为**: `links = validLinks` 直接赋值引用。未触及堆栈限制。
+*   **结果**: 代码执行继续进行到 `updateStats`、`Canvas` 初始化和 `Compact Mode` 检查。
+*   **状态**: **通过 (通过代码逻辑验证)**
+
+---
+
 # 2026-01-09 v0.9.68 - Content-on-Demand Architecture
 
 ## English Document

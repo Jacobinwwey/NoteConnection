@@ -150,6 +150,9 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 - [x] **Experience**: Polished UI with Quick Start Guide, Welcome experience, and Bilingual support (En/Zh).
 - [x] **API**: Decoupled Core API ready for plugin integrations.
 
+### v0.9.69 - Frontend Crash Fix (2026-01-09)
+- [x] **Critical Fix**: Resolved a "Maximum call stack size exceeded" crash in the frontend when loading graphs with over 100,000 edges. This fixes the "Nodes: 0" issue for massive datasets.
+
 ### v0.9.67 - Compact Mode & Canvas Fix (2026-01-08)
 - [x] **Compact Mode**: Added a new mode that hides edges by default to improve performance for massive graphs (>5k nodes). This mode is automatically enabled for large datasets but can be toggled in settings.
 - [x] **Canvas Fix**: Resolved an issue where large graphs would display a blank screen on load by forcing an initial canvas render frame.

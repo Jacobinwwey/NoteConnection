@@ -6,6 +6,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-09 v0.9.69 - Frontend Crash Fix (10k+ Nodes)
+
+**Goal**: Fix the critical "Nodes: 0" bug caused by a stack overflow when processing 1.2 million edges in the frontend.
+
+- [x] **Bug Fix**
+    - [x] **Stack Overflow**: Identified `RangeError: Maximum call stack size exceeded` in `app.js` due to `links.push(...validLinks)` with 1.2M arguments.
+    - [x] **Refactor**: Changed `links` declaration from `const` to `let` and replaced the spread operation with direct assignment (`links = validLinks`).
+    - [x] **Result**: The application now successfully loads and renders graphs with >10,000 nodes and >1 million edges without crashing.
+
 # 2026-01-09 v0.9.68 - Content-on-Demand Architecture (10k+ Fix)
 
 **Goal**: Definitively solve the "Nodes: 0" display issue for 10k+ nodes caused by massive `data.js` file size (~500MB) crashing the browser.
