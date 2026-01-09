@@ -799,7 +799,12 @@ Manages node highlighting interactions for both PC and mobile interfaces.
     ```typescript
     interface AppConfig {
         matchingStrategy: 'exact-phrase' | 'fuzzy';
+        clusteringStrategy: 'label-propagation' | 'folder';
+        enableStatisticalInference: boolean; // 切换统计分析
+        maxWorkers?: number; // 最大并发 Worker 数 (默认: CPU 核心数 - 1)
         exclusionList: string[];
+        memorySavingMode: boolean; // v0.9.63: 针对低内存进行优化 (默认: true)
+        deepDebug: boolean; // v0.9.63: 详细日志 (默认: false)
     }
 
     interface NoteNode {
