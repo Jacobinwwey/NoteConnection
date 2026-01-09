@@ -1,191 +1,172 @@
+PS E:\Knowledge_project\NoteConnection_app> npm start
+
 > noteconnection@1.0.0 start
 > node --max-old-space-size=12288 -r ts-node/register src/server.ts
 
 Server running at http://localhost:3000/
-Knowledge Base Root: C:\Codes\NoteConnection\Knowledge_Base
-Received build request for: feynman_concepts_complete maxWorkers: 16 enableGPU: false memorySavingMode: false deepDebug: true
-[Config] Setting maxWorkers to 16
-[Config] Setting enableGPU to false
+Knowledge Base Root: E:\Knowledge_project\NoteConnection_app\Knowledge_Base
+Received build request for: feynman_concepts_complete maxWorkers: 10 enableGPU: true memorySavingMode: false deepDebug: false
+[Config] Setting maxWorkers to 10
+[Config] Setting enableGPU to true
 [Config] Setting memorySavingMode to false
-[Config] Setting deepDebug to true
-Loading files from: C:\Codes\NoteConnection\Knowledge_Base\feynman_concepts_complete
+[Config] Setting deepDebug to false
+Loading files from: E:\Knowledge_project\NoteConnection_app\Knowledge_Base\feynman_concepts_complete
 Loaded 13659 files.
 Building graph...
-[System] Platform: win32 10.0.26100
-[System] CPU: AMD RYZEN AI MAX+ 395 w/ Radeon 8060S           (32 cores)
-[System] Total Memory: 123.65 GB
+[System] Platform: win32 10.0.19045
+[System] CPU: 12th Gen Intel(R) Core(TM) i5-12600K (16 cores)
+[System] Total Memory: 63.79 GB
 [Perf] Starting: Node Initialization
-[Perf] Initial Memory: 740.08 MB / 948.93 MB (Heap/RSS)
+[Perf] Initial Memory: 725.41 MB / 831.09 MB (Heap/RSS)
 [Perf] Finished: Node Initialization
-[Perf] Time: 11.45ms
-[Perf] CPU (User/Sys): 0.00ms / 0.00ms
-[Perf] Memory (Heap/RSS): 753.06 MB / 953.43 MB
+[Perf] Time: 20.09ms
+[Perf] CPU (User/Sys): 47.00ms / 0.00ms
+[Perf] Memory (Heap/RSS): 733.84 MB / 842.26 MB
 --------------------------------------------------
 [Perf] Starting: Edge Identification (Explicit)
-[Perf] Initial Memory: 753.07 MB / 953.43 MB (Heap/RSS)
+[Perf] Initial Memory: 733.86 MB / 842.27 MB (Heap/RSS)
 [Perf] Finished: Edge Identification (Explicit)
-[Perf] Time: 3.72ms
-[Perf] CPU (User/Sys): 16.00ms / 0.00ms
-[Perf] Memory (Heap/RSS): 755.06 MB / 953.44 MB
+[Perf] Time: 5.02ms
+[Perf] CPU (User/Sys): 0.00ms / 0.00ms
+[Perf] Memory (Heap/RSS): 735.85 MB / 842.28 MB
 --------------------------------------------------
 [Perf] Starting: Keyword Matching
-[Perf] Initial Memory: 755.07 MB / 953.44 MB (Heap/RSS)
+[Perf] Initial Memory: 735.86 MB / 842.28 MB (Heap/RSS)
 [GraphBuilder] Starting keyword matching for 13659 files...
 [GraphBuilder] Using Parallel Processing (Workers)
-[GraphBuilder] Worker Path: C:\Codes\NoteConnection\src\backend\workers\keywordMatchWorker.ts
+[GraphBuilder] Worker Path: E:\Knowledge_project\NoteConnection_app\src\backend\workers\keywordMatchWorker.ts
 [GraphBuilder] isTsNode: true
-[GraphBuilder] Spawning 16 workers...
+[GraphBuilder] Spawning 10 workers...
 [GraphBuilder] Parallel matching complete.
 [Perf] Finished: Keyword Matching
-[Perf] Time: 220453.53ms
-[Perf] CPU (User/Sys): 3072265.00ms / 27172.00ms
-[Perf] Memory (Heap/RSS): 877.10 MB / 1446.61 MB
+[Perf] Time: 538742.04ms
+[Perf] CPU (User/Sys): 4521781.00ms / 5469.00ms
+[Perf] Memory (Heap/RSS): 869.12 MB / 969.52 MB
 --------------------------------------------------
 [Perf] Starting: Statistical Inference (Shared)
-[Perf] Initial Memory: 877.11 MB / 1446.61 MB (Heap/RSS)
+[Perf] Initial Memory: 869.12 MB / 969.53 MB (Heap/RSS)
 [GraphBuilder] Running Statistical Analysis (Shared)...
 [StatisticalAnalyzer] Starting parallel term extraction for 13659 files...
 [GraphBuilder] Applying Statistical Inference rules...
 [GraphBuilder] Added 145677 inferred edges.
 [Perf] Finished: Statistical Inference (Shared)
-[Perf] Time: 148098.98ms
-[Perf] CPU (User/Sys): 1295328.00ms / 14984.00ms
-[Perf] Memory (Heap/RSS): 3693.85 MB / 4017.98 MB
+[Perf] Time: 221008.03ms
+[Perf] CPU (User/Sys): 1485344.00ms / 5062.00ms
+[Perf] Memory (Heap/RSS): 3672.08 MB / 3840.00 MB
 --------------------------------------------------
 [Perf] Starting: Vector Similarity (Shared)
-[Perf] Initial Memory: 3693.86 MB / 4018.00 MB (Heap/RSS)
+[Perf] Initial Memory: 3672.09 MB / 3840.00 MB (Heap/RSS)
 [GraphBuilder] Initializing Vector Space (Shared)...
+[GraphBuilder] Using GPU Acceleration for Vector Space...
 [VectorSpace] Vocabulary size: 83865
+[VectorSpaceGPU] Preparing data for GPU...
+[VectorSpaceGPU] Matrix size: 13659 documents x 83865 dimensions
+[VectorSpaceGPU] Executing GPU Kernel...
+[Perf] Starting: GPU Matrix Kernel
+[Perf] Initial Memory: 11227.80 MB / 11581.02 MB (Heap/RSS)
+[VectorSpaceGPU] GPU Computation Failed. Falling back to CPU on-demand. Error: Argument texture width of 16924 larger than maximum size of 16384 for your GPU
+    at WebGLKernelValueSingleArray.checkSize (E:\Knowledge_project\NoteConnection_app\node_modules\gpu.js\src\backend\web-gl\kernel-value\array.js:18:15)
+    at new WebGLKernelValueSingleArray (E:\Knowledge_project\NoteConnection_app\node_modules\gpu.js\src\backend\web-gl\kernel-value\single-array.js:11:10)
+    at HeadlessGLKernel.setupArguments (E:\Knowledge_project\NoteConnection_app\node_modules\gpu.js\src\backend\web-gl\kernel.js:400:30)
+    at HeadlessGLKernel.build (E:\Knowledge_project\NoteConnection_app\node_modules\gpu.js\src\backend\web-gl\kernel.js:484:10)
+    at HeadlessGLKernel.build (E:\Knowledge_project\NoteConnection_app\node_modules\gpu.js\src\backend\headless-gl\kernel.js:103:17)
+    at HeadlessGLKernel.run (E:\Knowledge_project\NoteConnection_app\node_modules\gpu.js\src\kernel-run-shortcut.js:10:18)
+    at shortcut (E:\Knowledge_project\NoteConnection_app\node_modules\gpu.js\src\kernel-run-shortcut.js:30:16)
+    at VectorSpaceGPU.precomputeSimilarityMatrix (E:\Knowledge_project\NoteConnection_app\amdgpu\VectorSpaceGPU.ts:82:28)
+    at new VectorSpaceGPU (E:\Knowledge_project\NoteConnection_app\amdgpu\VectorSpaceGPU.ts:23:18)
+    at Function.build (E:\Knowledge_project\NoteConnection_app\src\backend\GraphBuilder.ts:178:34)
 [Perf] Finished: Vector Similarity (Shared)
-[Perf] Time: 9214.16ms
-[Perf] CPU (User/Sys): 10672.00ms / 735.00ms
-[Perf] Memory (Heap/RSS): 3732.67 MB / 4877.72 MB
+[Perf] Time: 23417.64ms
+[Perf] CPU (User/Sys): 32141.00ms / 2360.00ms
+[Perf] Memory (Heap/RSS): 11228.82 MB / 11581.29 MB
 --------------------------------------------------
 [Perf] Starting: Hybrid Inference
-[Perf] Initial Memory: 3732.67 MB / 4877.72 MB (Heap/RSS)
+[Perf] Initial Memory: 11228.82 MB / 11581.30 MB (Heap/RSS)
 [GraphBuilder] Running Hybrid Inference (Stats + Vector)...
-[Perf] Starting: Hybrid: Stats Matrix (Reuse)
-[Perf] Initial Memory: 3732.67 MB / 4877.72 MB (Heap/RSS)
-[Perf] Finished: Hybrid: Stats Matrix (Reuse)
-[Perf] Time: 0.17ms
-[Perf] CPU (User/Sys): 0.00ms / 0.00ms
-[Perf] Memory (Heap/RSS): 3732.68 MB / 4877.72 MB
---------------------------------------------------
-[Perf] Starting: Hybrid: Vector Space (Reuse)
-[Perf] Initial Memory: 3732.68 MB / 4877.72 MB (Heap/RSS)
-[Perf] Finished: Hybrid: Vector Space (Reuse)
-[Perf] Time: 0.05ms
-[Perf] CPU (User/Sys): 0.00ms / 0.00ms
-[Perf] Memory (Heap/RSS): 3732.68 MB / 4877.72 MB
---------------------------------------------------
-[Perf] Starting: Hybrid: Inference Engine
-[Perf] Initial Memory: 3732.69 MB / 4877.72 MB (Heap/RSS)
 [Perf] Starting: Hybrid Inference Logic
-[Perf] Initial Memory: 3732.69 MB / 4877.72 MB (Heap/RSS)
+[Perf] Initial Memory: 11228.83 MB / 11581.30 MB (Heap/RSS)
 [HybridEngine] Starting inference on 13553 nodes...
-[HybridEngine] Processed 1000/13553 nodes. Heap: 4067.27 MB
-[HybridEngine] Processed 2000/13553 nodes. Heap: 3030.18 MB
-[HybridEngine] Processed 3000/13553 nodes. Heap: 3129.05 MB
-[HybridEngine] Processed 4000/13553 nodes. Heap: 3186.97 MB
-[HybridEngine] Processed 5000/13553 nodes. Heap: 3255.07 MB
-[HybridEngine] Processed 6000/13553 nodes. Heap: 3303.54 MB
-[HybridEngine] Processed 7000/13553 nodes. Heap: 3339.48 MB
-[HybridEngine] Processed 8000/13553 nodes. Heap: 3342.53 MB
-[HybridEngine] Processed 9000/13553 nodes. Heap: 3329.17 MB
-[HybridEngine] Processed 10000/13553 nodes. Heap: 3362.67 MB
-[HybridEngine] Processed 11000/13553 nodes. Heap: 3388.66 MB
-[HybridEngine] Processed 12000/13553 nodes. Heap: 3410.28 MB
-[HybridEngine] Processed 13000/13553 nodes. Heap: 3367.45 MB
+[HybridEngine] Processed 1000/13553 nodes. Heap: 11623.75 MB
+[HybridEngine] Processed 2000/13553 nodes. Heap: 3019.65 MB
+[HybridEngine] Processed 3000/13553 nodes. Heap: 3125.23 MB
+[HybridEngine] Processed 4000/13553 nodes. Heap: 3201.86 MB
+[HybridEngine] Processed 5000/13553 nodes. Heap: 3163.28 MB
+[HybridEngine] Processed 6000/13553 nodes. Heap: 3210.52 MB
+[HybridEngine] Processed 7000/13553 nodes. Heap: 3231.54 MB
+[HybridEngine] Processed 8000/13553 nodes. Heap: 3248.09 MB
+[HybridEngine] Processed 9000/13553 nodes. Heap: 3264.41 MB
+[HybridEngine] Processed 10000/13553 nodes. Heap: 3282.64 MB
+[HybridEngine] Processed 11000/13553 nodes. Heap: 3293.23 MB
+[HybridEngine] Processed 12000/13553 nodes. Heap: 3299.37 MB
+[HybridEngine] Processed 13000/13553 nodes. Heap: 3302.92 MB
 [HybridEngine] Inference complete. Found 125217 edges.
 [Perf] Finished: Hybrid Inference Logic
-[Perf] Time: 59922.51ms
-[Perf] CPU (User/Sys): 60157.00ms / 2375.00ms
-[Perf] Memory (Heap/RSS): 3377.44 MB / 5064.48 MB
---------------------------------------------------
-[Perf] Finished: Hybrid: Inference Engine
-[Perf] Time: 59958.61ms
-[Perf] CPU (User/Sys): 60188.00ms / 2375.00ms
-[Perf] Memory (Heap/RSS): 3403.63 MB / 5066.23 MB
+[Perf] Time: 69873.61ms
+[Perf] CPU (User/Sys): 74156.00ms / 828.00ms
+[Perf] Memory (Heap/RSS): 3312.92 MB / 3627.61 MB
 --------------------------------------------------
 [GraphBuilder] Added 125217 hybrid inferred edges.
 [Perf] Finished: Hybrid Inference
-[Perf] Time: 61209.95ms
-[Perf] CPU (User/Sys): 61407.00ms / 2375.00ms
-[Perf] Memory (Heap/RSS): 3432.26 MB / 5066.30 MB
+[Perf] Time: 72126.46ms
+[Perf] CPU (User/Sys): 76406.00ms / 828.00ms
+[Perf] Memory (Heap/RSS): 3322.99 MB / 3638.05 MB
 --------------------------------------------------
 [GraphBuilder] Cleaning up Shared Stats Matrix...
 [GraphBuilder] Cleaning up Shared Vector Space...
 [Perf] Starting: Community Detection
-[Perf] Initial Memory: 3432.26 MB / 5066.30 MB (Heap/RSS)
+[Perf] Initial Memory: 3323.00 MB / 3638.05 MB (Heap/RSS)
 [Perf] Finished: Community Detection
-[Perf] Time: 2392.55ms
-[Perf] CPU (User/Sys): 2406.00ms / 15.00ms
-[Perf] Memory (Heap/RSS): 3416.01 MB / 5066.87 MB
+[Perf] Time: 3536.64ms
+[Perf] CPU (User/Sys): 3531.00ms / 31.00ms
+[Perf] Memory (Heap/RSS): 3340.49 MB / 3666.77 MB
 --------------------------------------------------
 [Perf] Starting: Graph Metrics
-[Perf] Initial Memory: 3416.02 MB / 5066.87 MB (Heap/RSS)
-[GraphMetrics] Starting Parallel Betweenness Centrality with 16 workers...
+[Perf] Initial Memory: 3340.50 MB / 3666.77 MB (Heap/RSS)
+[GraphMetrics] Starting Parallel Betweenness Centrality with 10 workers...
 [Perf] Finished: Graph Metrics
-[Perf] Time: 85639.81ms
-[Perf] CPU (User/Sys): 1271031.00ms / 30406.00ms
-[Perf] Memory (Heap/RSS): 991.07 MB / 11940.21 MB
+[Perf] Time: 193866.90ms
+[Perf] CPU (User/Sys): 1902907.00ms / 52422.00ms
+[Perf] Memory (Heap/RSS): 978.46 MB / 1138.38 MB
 --------------------------------------------------
 [GraphBuilder] Starting Algorithmic Core...
 [Perf] Starting: Cycle Detection
-[Perf] Initial Memory: 991.07 MB / 11940.21 MB (Heap/RSS)
+[Perf] Initial Memory: 978.47 MB / 1138.38 MB (Heap/RSS)
 [GraphBuilder] Running Cycle Detection...
 [GraphBuilder] Detected 10000+ cycles. Topological Sort may be partial.
 [Perf] Finished: Cycle Detection
-[Perf] Time: 118.31ms
-[Perf] CPU (User/Sys): 219.00ms / 0.00ms
-[Perf] Memory (Heap/RSS): 1143.85 MB / 11937.55 MB
+[Perf] Time: 320.79ms
+[Perf] CPU (User/Sys): 718.00ms / 63.00ms
+[Perf] Memory (Heap/RSS): 1107.47 MB / 1287.62 MB
 --------------------------------------------------
 [Perf] Starting: Topological Sort
-[Perf] Initial Memory: 1143.85 MB / 11937.55 MB (Heap/RSS)
+[Perf] Initial Memory: 1107.47 MB / 1287.62 MB (Heap/RSS)
 [GraphBuilder] Running Topological Sort...
 Graph contains cycles! Processed 4/13659 nodes.
 [Perf] Finished: Topological Sort
-[Perf] Time: 7.32ms
+[Perf] Time: 11.64ms
 [Perf] CPU (User/Sys): 78.00ms / 0.00ms
-[Perf] Memory (Heap/RSS): 1145.88 MB / 11939.05 MB
---------------------------------------------------
-[Perf] Starting: Layout Calculation
-[Perf] Initial Memory: 1145.89 MB / 11939.05 MB (Heap/RSS)
-[GraphBuilder] Running Server-Side Layout...
-[GraphBuilder] Massive graph detected (1206332 edges). Filtering edges for layout...
-[GraphBuilder] Using 50000 edges for layout simulation.
-[LayoutWorker] Starting layout for 13659 nodes and 50000 edges...
-[Perf] Finished: Layout Calculation
-[Perf] Time: 14699.40ms
-[Perf] CPU (User/Sys): 17375.00ms / 1938.00ms
-[Perf] Memory (Heap/RSS): 1154.20 MB / 2560.40 MB
+[Perf] Memory (Heap/RSS): 1109.46 MB / 1289.02 MB
 --------------------------------------------------
 [GraphBuilder] Algorithmic Core Complete.
 
 ==================== PERFORMANCE SUMMARY ====================
 | Stage                          | Time (ms)    | Max Heap     | Max RSS      | Max VRAM     |
 |--------------------------------+--------------+--------------+--------------+--------------|
-| Node Initialization            | 11           | 753.06 MB    | 953.43 MB    | -            |
-| Edge Identification (Explicit) | 4            | 755.06 MB    | 953.44 MB    | -            |
-| Keyword Matching               | 220454       | 877.10 MB    | 1446.61 MB   | -            |
-| Statistical Inference (Shared) | 148099       | 3693.85 MB   | 4017.98 MB   | -            |
-| Vector Similarity (Shared)     | 9214         | 3732.67 MB   | 4877.72 MB   | -            |
-| Hybrid: Stats Matrix (Reuse)   | 0            | 3732.68 MB   | 4877.72 MB   | -            |
-| Hybrid: Vector Space (Reuse)   | 0            | 3732.68 MB   | 4877.72 MB   | -            |
-| Hybrid Inference Logic         | 59923        | 3377.44 MB   | 5064.48 MB   | -            |
-| Hybrid: Inference Engine       | 59959        | 3403.63 MB   | 5066.23 MB   | -            |
-| Hybrid Inference               | 61210        | 3432.26 MB   | 5066.30 MB   | -            |
-| Community Detection            | 2393         | 3416.01 MB   | 5066.87 MB   | -            |
-| Graph Metrics                  | 85640        | 991.07 MB    | 11940.21 MB  | -            |
-| Cycle Detection                | 118          | 1143.85 MB   | 11937.55 MB  | -            |
-| Topological Sort               | 7            | 1145.88 MB   | 11939.05 MB  | -            |
-| Layout Calculation             | 14699        | 1154.20 MB   | 2560.40 MB   | -            |
+| Node Initialization            | 20           | 733.84 MB    | 842.26 MB    | -            |
+| Edge Identification (Explicit) | 5            | 735.85 MB    | 842.28 MB    | -            |
+| Keyword Matching               | 538742       | 869.12 MB    | 969.52 MB    | -            |
+| Statistical Inference (Shared) | 221008       | 3672.08 MB   | 3840.00 MB   | -            |
+| Vector Similarity (Shared)     | 23418        | 11228.82 MB  | 11581.29 MB  | -            |
+| Hybrid Inference Logic         | 69874        | 3312.92 MB   | 3627.61 MB   | -            |
+| Hybrid Inference               | 72126        | 3322.99 MB   | 3638.05 MB   | -            |
+| Community Detection            | 3537         | 3340.49 MB   | 3666.77 MB   | -            |
+| Graph Metrics                  | 193867       | 978.46 MB    | 1138.38 MB   | -            |
+| Cycle Detection                | 321          | 1107.47 MB   | 1287.62 MB   | -            |
+| Topological Sort               | 12           | 1109.46 MB   | 1289.02 MB   | -            |
 |--------------------------------+--------------+--------------+--------------+--------------|
-| TOTAL / PEAK                   | 661731       | 3732.69 MB   | 11940.21 MB  | 0.00 MB      |
+| TOTAL / PEAK                   | 1122929      | 11228.83 MB  | 11581.30 MB  | 5081.48 MB   |
 =============================================================
 
 Graph built: 13659 nodes, 1206332 edges.
-Graph data saved to: C:\Codes\NoteConnection\src\frontend\graph_data.json
-Graph data JS saved to: C:\Codes\NoteConnection\src\frontend\data.js
-[LayoutWorker] Simulating... (Max Iterations: 150)
-[LayoutWorker] Simulation complete.
+Graph data saved to: E:\Knowledge_project\NoteConnection_app\src\frontend\graph_data.json
+Graph data JS saved to: E:\Knowledge_project\NoteConnection_app\src\frontend\data.js

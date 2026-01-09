@@ -50,6 +50,64 @@ const server = http.createServer(async (req, res) => {
             return;
         }
 
+        if (req.url?.startsWith('/api/content')) {
+            try {
+                const urlObj = new URL(req.url, `http://${req.headers.host}`);
+                const requestedPath = urlObj.searchParams.get('path');
+                
+                if (!requestedPath) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Missing path parameter' }));
+                    return;
+                }
+
+                // Security: Ensure path is within allowed directories
+                // We allow access if it's within KB_ROOT or if it was explicitly loaded (we trust metadata.filepath from build)
+                // However, for safety in this server, we should probably check if it exists and is a file.
+                // Ideally, we verify it is within project root or KB root.
+                // Let's rely on checking if it exists for now, but to prevent arbitrary system read, enforce some bounds?
+                // The user is local, but good practice.
+                // For now, let's allow if it exists and is a file.
+                
+                const filePath = path.resolve(decodeURIComponent(requestedPath));
+                
+                // Simple security check: Must be inside project root
+                const projectRoot = process.cwd();
+                if (!filePath.startsWith(projectRoot)) {
+                     // Warn but maybe allow if it's a test case outside? 
+                     // Stricter: Must be inside Knowledge_Base? 
+                     // The user said "E:\Knowledge_project\NoteConnection_app\Knowledge_Base\..."
+                     // So strict check on KB_ROOT is safer.
+                     if (!filePath.startsWith(KB_ROOT)) {
+                         // Double check if it matches target passed in build? 
+                         // We don't know the build target here easily.
+                         // Let's allow but log warning? Or just block.
+                         // Block is safer.
+                         res.writeHead(403, { 'Content-Type': 'application/json' });
+                         res.end(JSON.stringify({ error: 'Access denied: Path outside Knowledge Base' }));
+                         return;
+                     }
+                }
+
+                if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'File not found' }));
+                    return;
+                }
+
+                const content = fs.readFileSync(filePath, 'utf-8');
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ content }));
+
+            } catch (error) {
+                console.error(error);
+                CrashLogger.log(error, 'API:GET /api/content');
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: String(error) }));
+            }
+            return;
+        }
+
         // Serve Static Files
         let urlPath = req.url === '/' ? 'index.html' : req.url!;
         // Security check: prevent traversing up

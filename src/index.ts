@@ -28,8 +28,19 @@ export async function buildGraph(targetPath?: string, maxWorkers?: number, enabl
   fs.writeFileSync(outputPath, JSON.stringify(data, null, 2));
   console.log(`Graph data saved to: ${outputPath}`);
 
+  // Optimization: Create a "Lite" version for frontend initial load (data.js)
+  // Exclude 'content' to drastically reduce file size and parsing time.
+  const liteData = {
+      nodes: data.nodes.map((n: any) => {
+          // Destructure to exclude content, keep everything else including metadata
+          const { content, ...rest } = n;
+          return rest;
+      }),
+      edges: data.edges
+  };
+
   const jsOutputPath = path.join(projectRoot, 'src', 'frontend', 'data.js');
-  const jsContent = `const graphData = ${JSON.stringify(data, null, 2)};`;
+  const jsContent = `const graphData = ${JSON.stringify(liteData, null, 2)};`;
   fs.writeFileSync(jsOutputPath, jsContent);
   console.log(`Graph data JS saved to: ${jsOutputPath}`);
   

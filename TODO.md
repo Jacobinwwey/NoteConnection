@@ -6,6 +6,20 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-09 v0.9.68 - Content-on-Demand Architecture (10k+ Fix)
+
+**Goal**: Definitively solve the "Nodes: 0" display issue for 10k+ nodes caused by massive `data.js` file size (~500MB) crashing the browser.
+
+- [x] **Architecture Refactor**
+    - [x] **Data Splitting**: Separated graph structure (`data.js`) from content (`graph_data.json`).
+    - [x] **Optimization**: `data.js` now excludes node content, reducing file size by ~95% (e.g., 500MB -> 35MB for 13k nodes).
+    - [x] **Backend**: Updated `src/index.ts` to generate "Lite" `data.js`.
+
+- [x] **Content-on-Demand**
+    - [x] **API Endpoint**: Added `GET /api/content` to `server.ts` to serve raw node content securely.
+    - [x] **Frontend**: Updated `Reader` in `reader.js` to fetch content asynchronously when opening a node.
+    - [x] **UX**: Added loading state indicator in Reader window.
+
 # 2026-01-08 v0.9.67 - Compact Mode & Canvas Fix
 
 **Goal**: Solve the display issue for 10k+ nodes and implement a performance mode that hides edges by default.

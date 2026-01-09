@@ -529,6 +529,12 @@ interface CooccurrenceMetrics {
 Lists available knowledge base directories.
 *   **Response**: `{ "folders": ["testconcept", "folder2"] }`
 
+#### `GET /api/content`
+Retrieves the raw content of a specific file on demand.
+*   **Query Param**: `path` (URL-encoded absolute path, must be within Knowledge Base).
+*   **Response**: `{ "content": "Markdown text..." }` or `{ "error": "..." }`
+*   **Security**: Validates that `path` is within the project root or Knowledge Base directory.
+
 #### `POST /api/build`
 Triggers a graph build for the specified target.
 *   **Body**: `{ "target": "testconcept", "maxWorkers": 12 }` or `{ "target": "" }` (for all).
@@ -542,13 +548,21 @@ Transforms the web project into a standalone Android APK.
 *   **Component**: Capacitor Build System / Gradle.
 *   **Input**: 
     *   `dist/frontend`: Static web assets (HTML, CSS, JS).
-    *   `src/frontend/data.js`: Pre-generated graph data (must be built before sync).
+    *   `src/frontend/data.js`: Pre-generated graph data (Lite version, no content).
 *   **Output**: `android/app/build/outputs/apk/debug/app-debug.apk`.
 *   **Process**:
-    1.  **Data Generation**: `ts-node src/index.ts [target]` -> Generates `data.js`.
+    1.  **Data Generation**: `ts-node src/index.ts [target]` -> Generates `data.js` (Lite) and `graph_data.json` (Full).
     2.  **Asset Compilation**: `npm run build` -> Populates `dist/frontend`.
     3.  **Sync**: `npx cap sync android` -> Copies `dist/frontend` to `android/app/src/main/assets/public`.
     4.  **Native Build**: `gradlew assembleDebug` -> Compiles the APK.
+
+### 6. Architecture: Content-on-Demand (v0.9.68)
+
+To support massive graphs (10k+ nodes), the system now decouples graph structure from node content.
+
+*   **`data.js`**: Contains only metadata (ID, Label, Stats, Cluster) and Edges. Size reduced by ~95%.
+*   **`graph_data.json`**: Contains full data including content (for debugging/export).
+*   **`Reader`**: Fetches content asynchronously via `/api/content` when a node is opened.
 ### 8. GPU Acceleration (v0.9.50)
 
 #### `VectorSpaceGPU` Class

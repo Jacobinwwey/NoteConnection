@@ -87,19 +87,40 @@ class Reader {
         });
     }
 
-    open(node) {
+    async open(node) {
         // 1. Set Title
         this.title.innerText = node.label;
 
-        // 2. Prepare Content
-        let rawContent = node.content || "*No content available.*";
-        let htmlContent = marked.parse(rawContent);
-        this.body.innerHTML = htmlContent;
-
-        // 3. Show Window EARLY (Crucial for Mermaid layout calculation)
+        // Show Window with loading state
         const settings = window.settingsManager.get('reading', 'mode');
         this.contentBox.className = `reading-box ${settings === 'fullscreen' ? 'fullscreen-mode' : 'window-mode'}`;
         this.window.style.display = 'flex';
+        this.body.innerHTML = '<div style="padding: 20px; text-align: center; color: #aaa;">Loading content...</div>';
+
+        // 2. Prepare Content
+        let rawContent = node.content;
+        
+        if (!rawContent && node.metadata && node.metadata.filepath) {
+            try {
+                // Fetch from server
+                const res = await fetch(`/api/content?path=${encodeURIComponent(node.metadata.filepath)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    rawContent = data.content;
+                } else {
+                    console.error("Failed to load content:", res.status, res.statusText);
+                    rawContent = `*Error loading content: ${res.statusText}*`;
+                }
+            } catch (e) {
+                console.error("Fetch error:", e);
+                rawContent = `*Error loading content: ${e.message}*`;
+            }
+        }
+        
+        if (!rawContent) rawContent = "*No content available.*";
+
+        let htmlContent = marked.parse(rawContent);
+        this.body.innerHTML = htmlContent;
 
         // 4. Render Latex (KaTeX)
         if (window.renderMathInElement) {

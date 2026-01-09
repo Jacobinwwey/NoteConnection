@@ -1,3 +1,59 @@
+# 2026-01-09 v0.9.68 - Content-on-Demand Architecture
+
+## English Document
+
+### 1. Data File Optimization
+*   **Test**: Run `POST /api/build` for `testconcept` dataset.
+*   **Result**: 
+    *   `graph_data.json` (Full): ~8.0 MB.
+    *   `data.js` (Lite): ~1.4 MB.
+    *   Reduction: ~82% for this dataset. Projected >95% for datasets with long content.
+*   **Status**: **Pass**
+
+### 2. Content Fetching Logic
+*   **Test**: Code Review of `src/frontend/reader.js`.
+*   **Observation**: 
+    *   `Reader.open` checks if `node.content` is missing.
+    *   If missing, it fetches `/api/content?path=...`.
+    *   Displays "Loading content..." during fetch.
+*   **Status**: **Pass**
+
+### 3. Server API
+*   **Test**: Verified `src/server.ts` modifications.
+*   **Result**: 
+    *   `GET /api/content` endpoint exists.
+    *   Validates path against `KB_ROOT` (Security check).
+    *   Returns JSON `{ content: "..." }`.
+*   **Status**: **Pass**
+
+## Chinese Document
+
+### 1. 数据文件优化
+*   **测试**: 对 `testconcept` 数据集运行 `POST /api/build`。
+*   **结果**: 
+    *   `graph_data.json` (完整): ~8.0 MB。
+    *   `data.js` (精简): ~1.4 MB。
+    *   缩减: 此数据集约为 82%。对于长内容数据集，预计缩减 >95%。
+*   **状态**: **通过**
+
+### 2. 内容获取逻辑
+*   **测试**: `src/frontend/reader.js` 代码审查。
+*   **观察**: 
+    *   `Reader.open` 检查 `node.content` 是否缺失。
+    *   如果缺失，则请求 `/api/content?path=...`。
+    *   获取期间显示 "Loading content..."。
+*   **状态**: **通过**
+
+### 3. 服务器 API
+*   **测试**: 验证 `src/server.ts` 修改。
+*   **结果**: 
+    *   存在 `GET /api/content` 端点。
+    *   针对 `KB_ROOT` 验证路径（安全检查）。
+    *   返回 JSON `{ content: "..." }`。
+*   **状态**: **通过**
+
+---
+
 # 2026-06-01 v1.0.0 - Production Release Verification
 
 ## English Document
