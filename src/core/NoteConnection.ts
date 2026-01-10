@@ -13,6 +13,7 @@ export interface BuildOptions {
     memorySavingMode?: boolean;
     deepDebug?: boolean;
     projectRoot?: string; // Optional override for project root
+    outputPrefix?: string; // Optional output filename prefix (e.g. for CLI run timestamps)
 }
 
 export interface GraphBuildResult {

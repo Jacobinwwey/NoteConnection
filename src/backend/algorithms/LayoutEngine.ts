@@ -24,7 +24,7 @@ export class LayoutEngine {
         if (config && config.enableGPU) {
             try {
                 // Try to load GPU module dynamically
-                const { LayoutGPU } = require('../../amdgpu/LayoutGPU');
+                const { LayoutGPU } = require('../../../amdgpu/LayoutGPU');
                 const layoutGPU = new LayoutGPU();
                 
                 if (layoutGPU.isAvailable()) {

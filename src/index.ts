@@ -1,19 +1,26 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { NoteConnection } from './core/NoteConnection';
+import { NoteConnection, BuildOptions } from './core/NoteConnection';
 
-export async function buildGraph(targetPath?: string, maxWorkers?: number, enableGPU?: boolean, enableGPULayout?: boolean, memorySavingMode?: boolean, deepDebug?: boolean) {
+export async function buildGraph(options: BuildOptions | string, maxWorkers?: number, enableGPU?: boolean, enableGPULayout?: boolean, memorySavingMode?: boolean, deepDebug?: boolean) {
   const projectRoot = path.resolve(__dirname, '..');
   
-  const result = await NoteConnection.build({
-      targetPath,
-      maxWorkers,
-      enableGPU,
-      enableGPULayout,
-      memorySavingMode,
-      deepDebug,
-      projectRoot
-  });
+  let buildOptions: BuildOptions = { projectRoot };
+
+  if (typeof options === 'string') {
+      // Legacy signature support
+      buildOptions.targetPath = options;
+      buildOptions.maxWorkers = maxWorkers;
+      buildOptions.enableGPU = enableGPU;
+      buildOptions.enableGPULayout = enableGPULayout;
+      buildOptions.memorySavingMode = memorySavingMode;
+      buildOptions.deepDebug = deepDebug;
+  } else {
+      // New object signature
+      buildOptions = { ...options, projectRoot };
+  }
+  
+  const result = await NoteConnection.build(buildOptions);
 
   const data = result.data;
 
@@ -26,9 +33,6 @@ export async function buildGraph(targetPath?: string, maxWorkers?: number, enabl
     fs.mkdirSync(frontendDir, { recursive: true });
   }
 
-  fs.writeFileSync(outputPath, JSON.stringify(data, null, 2));
-  console.log(`Graph data saved to: ${outputPath}`);
-
   // Optimization: Create a "Lite" version for frontend initial load (data.js)
   // Exclude 'content' to drastically reduce file size and parsing time.
   const liteData = {
@@ -40,10 +44,32 @@ export async function buildGraph(targetPath?: string, maxWorkers?: number, enabl
       edges: data.edges
   };
 
-  const jsOutputPath = path.join(projectRoot, 'src', 'frontend', 'data.js');
-  const jsContent = `const graphData = ${JSON.stringify(liteData, null, 2)};`;
-  fs.writeFileSync(jsOutputPath, jsContent);
-  console.log(`Graph data JS saved to: ${jsOutputPath}`);
+  // Logic:
+  // If running from CLI (outputPrefix is set):
+  // 1. Do NOT touch original 'graph_data.json' or 'data.js'.
+  // 2. Save as 'graph_data_cli_{time}.json' and 'data_cli_{time}.js'.
+  
+  if (buildOptions.outputPrefix) {
+      // CLI Mode
+      const timestampedPath = path.join(projectRoot, 'src', 'frontend', `graph_data_cli_${buildOptions.outputPrefix}.json`);
+      fs.writeFileSync(timestampedPath, JSON.stringify(data, null, 2));
+      console.log(`CLI graph data saved to: ${timestampedPath}`);
+
+      const timestampedJsPath = path.join(projectRoot, 'src', 'frontend', `data_cli_${buildOptions.outputPrefix}.js`);
+      const tsJsContent = `const graphData = ${JSON.stringify(liteData, null, 2)};`;
+      fs.writeFileSync(timestampedJsPath, tsJsContent);
+      console.log(`CLI JS data saved to: ${timestampedJsPath}`);
+  } else {
+      // Standard/Server Mode
+      // Save standard file for frontend to work
+      fs.writeFileSync(outputPath, JSON.stringify(data, null, 2));
+      console.log(`Graph data saved to: ${outputPath}`);
+
+      const jsOutputPath = path.join(projectRoot, 'src', 'frontend', 'data.js');
+      const jsContent = `const graphData = ${JSON.stringify(liteData, null, 2)};`;
+      fs.writeFileSync(jsOutputPath, jsContent);
+      console.log(`Graph data JS saved to: ${jsOutputPath}`);
+  }
   
   return data;
 }

@@ -113,15 +113,6 @@ if (nodes.length > 5000 || links.length > 100000) {
     }
 }
 
-// v0.9.71: Auto-enable Static Mode for massive graphs
-// Criteria: > 5000 Nodes OR > 200,000 Edges (Prompt requirement)
-if (nodes.length > 5000 || links.length > 200000) {
-     console.log('[Optimization] Massive graph detected. Enabling Static Mode.');
-     if (window.settingsManager) {
-         window.settingsManager.set('performance', 'staticMode', true);
-     }
-}
-
 // Update stats
 document.getElementById('node-count').innerText = nodes.length;
 document.getElementById('edge-count').innerText = links.length;
@@ -189,9 +180,6 @@ const simulation = d3.forceSimulation(nodes)
 
 // v0.9.37: Two-stage Damping Strategy
 setTimeout(() => {
-    // Check Static Mode
-    const isStatic = window.settingsManager ? window.settingsManager.get('performance', 'staticMode') : false;
-
     // Only increase if user hasn't manually adjusted it (still at initial 0.2)
     if (Math.abs(simulation.velocityDecay() - 0.2) < 0.001) {
         simulation.velocityDecay(0.95);
@@ -201,11 +189,6 @@ setTimeout(() => {
             if (typeof simSpeedVal !== 'undefined' && simSpeedVal) {
                 simSpeedVal.innerText = "0.95";
             }
-        }
-        
-        if (isStatic) {
-             console.log('[Simulation] Static Mode active. Stopping simulation after warm-up.');
-             simulation.stop();
         }
     }
 }, 2000);
@@ -519,9 +502,7 @@ function updateLayout() {
                 // Check Freeze Layout State
                 // If frozen, stop now that relaxation is done
                 const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
-                const isStatic = window.settingsManager ? window.settingsManager.get('performance', 'staticMode') : false;
-
-                if (isFrozen || isStatic) {
+                if (isFrozen) {
                     simulation.stop();
                 }
             }
@@ -620,10 +601,6 @@ const translations = {
         desc_memory_saving: "使用低精度策略以防止大文件导致的内存溢出。",
         lbl_compact_mode: "紧凑模式 (隐藏边)",
         desc_compact_mode: "默认不加载/渲染边以提高 >5k 节点的性能。",
-        lbl_static_mode: "静态模式",
-        desc_static_mode: "2秒后停止模拟。推荐用于大图。",
-        lbl_gpu_rendering: "GPU 优化渲染",
-        desc_gpu_rendering: "启用 AMDGPU 加速进行加载和定位。",
         lbl_deep_debug: "深度调试",
         desc_deep_debug: "启用详细日志以进行调试。",
         btn_reset: "重置默认",
@@ -732,10 +709,6 @@ const translations = {
         desc_memory_saving: "Use lower precision strategies to prevent OOM on large files.",
         lbl_compact_mode: "Compact Mode (Hide Edges)",
         desc_compact_mode: "Don't load/render edges by default to improve performance for >5k nodes.",
-        lbl_static_mode: "Static Mode",
-        desc_static_mode: "Stop simulation after 2 seconds. Recommended for large graphs.",
-        lbl_gpu_rendering: "GPU Optimised Rendering",
-        desc_gpu_rendering: "Enable AMDGPU acceleration for loading and positioning.",
         lbl_deep_debug: "Deep Debug",
         desc_deep_debug: "Enable detailed logging for debugging.",
         btn_reset: "Reset Defaults",
@@ -2312,10 +2285,8 @@ function initSettingsUI() {
     const workersSlider = document.getElementById('set-workers-slider');
     const workersInput = document.getElementById('set-workers-input');
     const gpuCheckbox = document.getElementById('set-gpu');
-    const gpuRenderingCheckbox = document.getElementById('set-gpu-rendering');
     const memorySavingCheckbox = document.getElementById('set-memory-saving');
     const compactModeCheckbox = document.getElementById('set-compact-mode');
-    const staticModeCheckbox = document.getElementById('set-static-mode');
     const deepDebugCheckbox = document.getElementById('set-deep-debug');
     
     // Reader Settings
@@ -2362,17 +2333,11 @@ function initSettingsUI() {
             if (settings.performance.enableGPU !== undefined) {
                 if (gpuCheckbox) gpuCheckbox.checked = settings.performance.enableGPU;
             }
-            if (settings.performance.gpuRendering !== undefined) {
-                if (gpuRenderingCheckbox) gpuRenderingCheckbox.checked = settings.performance.gpuRendering;
-            }
             if (settings.performance.memorySavingMode !== undefined) {
                 if (memorySavingCheckbox) memorySavingCheckbox.checked = settings.performance.memorySavingMode;
             }
             if (settings.performance.compactMode !== undefined) {
                 if (compactModeCheckbox) compactModeCheckbox.checked = settings.performance.compactMode;
-            }
-            if (settings.performance.staticMode !== undefined) {
-                if (staticModeCheckbox) staticModeCheckbox.checked = settings.performance.staticMode;
             }
             if (settings.performance.deepDebug !== undefined) {
                 if (deepDebugCheckbox) deepDebugCheckbox.checked = settings.performance.deepDebug;
@@ -2427,12 +2392,6 @@ function initSettingsUI() {
         });
     }
 
-    if (gpuRenderingCheckbox) {
-        gpuRenderingCheckbox.addEventListener('change', (e) => {
-            settingsManager.set('performance', 'gpuRendering', e.target.checked);
-        });
-    }
-
     if (memorySavingCheckbox) {
         memorySavingCheckbox.addEventListener('change', (e) => {
             settingsManager.set('performance', 'memorySavingMode', e.target.checked);
@@ -2444,12 +2403,6 @@ function initSettingsUI() {
             settingsManager.set('performance', 'compactMode', e.target.checked);
             // Force redraw immediately to show/hide edges
             if (typeof ticked === 'function') ticked();
-        });
-    }
-
-    if (staticModeCheckbox) {
-        staticModeCheckbox.addEventListener('change', (e) => {
-            settingsManager.set('performance', 'staticMode', e.target.checked);
         });
     }
 
