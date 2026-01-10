@@ -1,4 +1,4 @@
-# 2026-01-07 v0.9.61
+# 2026-01-10 v0.9.71
 
 # Interface Document
 
@@ -112,6 +112,8 @@ Core data structure for managing notes and dependencies.
         enableStatisticalInference: boolean; // Toggle statistical analysis
         maxWorkers?: number; // Max concurrent workers (Default: CPU count - 1)
         exclusionList: string[];
+        enableGPU: boolean; // Vector Space GPU
+        enableGPULayout?: boolean; // Layout GPU
         memorySavingMode: boolean; // v0.9.63: Optimize for low memory (default: true)
         deepDebug: boolean; // v0.9.63: Detailed logging (default: false)
     }
@@ -223,7 +225,8 @@ The main entry point for the core logic, decoupled from CLI/Server environment. 
     interface BuildOptions {
         targetPath?: string;    // Relative or absolute path to source
         maxWorkers?: number;    // Parallelism limit
-        enableGPU?: boolean;    // GPU acceleration toggle
+        enableGPU?: boolean;    // GPU acceleration toggle (Vector)
+        enableGPULayout?: boolean; // GPU acceleration toggle (Layout)
         projectRoot?: string;   // Override project root (default: ../..)
     }
     ```

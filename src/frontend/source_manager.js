@@ -37,13 +37,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const maxWorkers = window.settingsManager ? window.settingsManager.get('performance', 'maxWorkers') : undefined;
         const enableGPU = window.settingsManager ? window.settingsManager.get('performance', 'enableGPU') : undefined;
+        // Map frontend 'gpuRendering' to backend 'enableGPULayout'
+        const enableGPULayout = window.settingsManager ? window.settingsManager.get('performance', 'gpuRendering') : undefined;
         const memorySavingMode = window.settingsManager ? window.settingsManager.get('performance', 'memorySavingMode') : undefined;
         const deepDebug = window.settingsManager ? window.settingsManager.get('performance', 'deepDebug') : undefined;
 
         fetch('/api/build', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target, maxWorkers, enableGPU, memorySavingMode, deepDebug })
+            body: JSON.stringify({ target, maxWorkers, enableGPU, enableGPULayout, memorySavingMode, deepDebug })
         })
         .then(response => response.json())
         .then(data => {

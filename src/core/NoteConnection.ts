@@ -9,6 +9,7 @@ export interface BuildOptions {
     targetPath?: string;
     maxWorkers?: number;
     enableGPU?: boolean;
+    enableGPULayout?: boolean;
     memorySavingMode?: boolean;
     deepDebug?: boolean;
     projectRoot?: string; // Optional override for project root
@@ -44,6 +45,11 @@ export class NoteConnection {
         if (options.enableGPU !== undefined) {
             console.log(`[Config] Setting enableGPU to ${options.enableGPU}`);
             config.enableGPU = options.enableGPU;
+        }
+
+        if (options.enableGPULayout !== undefined) {
+            console.log(`[Config] Setting enableGPULayout to ${options.enableGPULayout}`);
+            config.enableGPULayout = options.enableGPULayout;
         }
 
         if (options.memorySavingMode !== undefined) {

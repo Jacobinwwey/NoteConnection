@@ -52,7 +52,7 @@ export class LayoutGPU {
 
         // 2. Compile Repulsion Kernel (O(N^2))
         // Calculates force on Node I from all Nodes J
-        const repulsionKernel = this.gpu.createKernel(function(posX: number[], posY: number[], strength: number, k: number) {
+        const repulsionKernel = this.gpu.createKernel(function(this: { thread: { x: number }, constants: { size: number } }, posX: number[], posY: number[], strength: number, k: number) {
             let fx = 0;
             let fy = 0;
             const px = posX[this.thread.x];

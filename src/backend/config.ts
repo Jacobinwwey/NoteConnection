@@ -7,6 +7,7 @@ export interface AppConfig {
     enableVectorSimilarity: boolean; // Use TF-IDF/Vector similarity for associations
     enableHybridInference: boolean; // Use Hybrid Engine (Stats + Vector)
     enableGPU: boolean; // Use GPU acceleration where available
+    enableGPULayout?: boolean; // Use GPU acceleration for Layout
     memorySavingMode: boolean; // Optimize for low memory usage (Sparse Vectors, filePaths in workers, etc.)
     deepDebug: boolean; // Enable detailed logging
     maxWorkers?: number; // Maximum number of worker threads. If undefined, uses (CPU cores - 1).
@@ -22,6 +23,7 @@ export const config: AppConfig = {
     enableVectorSimilarity: true, // Default on
     enableHybridInference: true, // Default on
     enableGPU: true, // Default on (auto-detects compatibility)
+    enableGPULayout: true, // Default on (AMD GPU Layout)
     memorySavingMode: true, // Default to true (optimized)
     deepDebug: false, // Default off
     exclusionList: [

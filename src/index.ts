@@ -2,13 +2,14 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { NoteConnection } from './core/NoteConnection';
 
-export async function buildGraph(targetPath?: string, maxWorkers?: number, enableGPU?: boolean, memorySavingMode?: boolean, deepDebug?: boolean) {
+export async function buildGraph(targetPath?: string, maxWorkers?: number, enableGPU?: boolean, enableGPULayout?: boolean, memorySavingMode?: boolean, deepDebug?: boolean) {
   const projectRoot = path.resolve(__dirname, '..');
   
   const result = await NoteConnection.build({
       targetPath,
       maxWorkers,
       enableGPU,
+      enableGPULayout,
       memorySavingMode,
       deepDebug,
       projectRoot

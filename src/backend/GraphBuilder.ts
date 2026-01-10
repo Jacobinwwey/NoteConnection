@@ -341,7 +341,8 @@ export class GraphBuilder {
         console.log('[GraphBuilder] Running Backend Layout Calculation...');
         await LayoutEngine.computeLayout(graph, {
             repulsion: -550, // Match frontend defaults
-            distance: 100
+            distance: 100,
+            enableGPU: config.enableGPULayout // Use specific layout flag
         });
     }
 
