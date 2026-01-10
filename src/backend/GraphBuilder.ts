@@ -16,6 +16,7 @@ import { VectorSpace } from './algorithms/VectorSpace';
 import { VectorSpaceGPU } from '../../amdgpu/VectorSpaceGPU';
 import { HybridEngine } from './algorithms/HybridEngine';
 import { PerformanceLogger } from './utils/PerformanceLogger';
+import { LayoutEngine } from './algorithms/LayoutEngine';
 
 /**
  * Service to build the graph from raw files.
@@ -332,6 +333,18 @@ export class GraphBuilder {
         }
     });
     PerformanceLogger.end('Topological Sort');
+    
+    // 6. Backend Layout Calculation (Parallel)
+    // 6. 后端布局计算 (并行)
+    // Requirement: Accelerate front-end loading and positional calculation speeds through parallel processing on the backend
+    if (graph.getNodes().length > 100) { // Only worthwhile for non-trivial graphs
+        console.log('[GraphBuilder] Running Backend Layout Calculation...');
+        await LayoutEngine.computeLayout(graph, {
+            repulsion: -550, // Match frontend defaults
+            distance: 100
+        });
+    }
+
     console.log('[GraphBuilder] Algorithmic Core Complete.');
     
     PerformanceLogger.printSummary();
