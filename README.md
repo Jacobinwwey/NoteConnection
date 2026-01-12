@@ -208,8 +208,6 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 - **Layout Switching Fix**: Implemented robust state preservation (`layoutCache`) for Force and DAG layouts, ensuring node positions are saved and restored without "teleportation". Fixed a critical crash in `updateLayout`.
 - **GPU Robustness**: Refactored `layout_gpu.js` to use a Singleton pattern, preventing WebGL context leaks (limit 16) when switching settings.
-- **布局切换修复**: 实现了 Force 和 DAG 布局的稳健状态保存 (`layoutCache`)，确保节点位置在切换时被保存和恢复，消除了“瞬移”现象。修复了 `updateLayout` 中的关键崩溃问题。
-- **GPU 稳健性**: 重构 `layout_gpu.js` 使用单例模式，防止在切换设置时发生 WebGL 上下文泄漏 (限制 16 个)。
 
 ### v0.9.71 (2026-01-10)
 
@@ -734,6 +732,11 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v0.9.74 (2026-01-12)
+
+- **布局切换修复**: 实现了 Force 和 DAG 布局的稳健状态保存 (`layoutCache`)，确保节点位置在切换时被保存和恢复，消除了“瞬移”现象。修复了 `updateLayout` 中的关键崩溃问题。
+- **GPU 稳健性**: 重构 `layout_gpu.js` 使用单例模式，防止在切换设置时发生 WebGL 上下文泄漏 (限制 16 个)。
 
 ### v1.0.0 - 正式发布 (Production Release) (2026-06-01)
 

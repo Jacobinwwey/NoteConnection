@@ -1111,6 +1111,22 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-12 v0.9.74 - 布局切换与 GPU 稳健性
+
+**目标**: 完成稳定的布局切换状态保存，并解决 GPU 资源管理问题（WebGL 上下文泄漏）。
+
+- [x] **布局切换修复**
+
+  - [x] **状态保存**: 实现了 `layoutCache`，独立存储和恢复 'Force' 和 'DAG' 布局的节点位置 (`x, y, fx, fy`)。
+  - [x] **崩溃解决**: 通过重构 `applyPhysics` 的使用，修复了 `updateLayout` 中在初始化前访问 `simulation.force` 导致的关键崩溃。
+  - [x] **逻辑**: 布局切换现在可以平滑过渡，没有视觉上的“瞬移”闪烁或模拟重置。
+
+- [x] **GPU 稳健性**
+  - [x] **单例模式**: 重构 `layout_gpu.js`，为 `GPUManyBodyForce` 使用单例实例，防止在切换设置时发生 WebGL 上下文溢出（限制 16 个上下文）。
+  - [x] **构造安全**: 增强了对 `GPU.GPU` 的检测，以处理不同的库打包方式 (Webpack/Rollup)。
+
+---
+
 ### 2025-12-17 v0.1.0 - 基础与数据结构 (Foundation & Data Structures)
 
 **目标**: 建立独立的项目环境和有向图的核心数据结构，初期独立于特定的笔记应用 API。
