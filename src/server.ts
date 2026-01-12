@@ -274,6 +274,10 @@ const startServer = async () => {
                 urlPath = `/data_cli_${cliOptions.outputPrefix}.js`;
                 console.log(`[Server] CLI Mode: Serving ${urlPath} instead of /data.js`);
             }
+            if (urlPath === '/graph_data.json' && hasCliBuild && cliOptions.outputPrefix) {
+                urlPath = `/graph_data_cli_${cliOptions.outputPrefix}.json`;
+                console.log(`[Server] CLI Mode: Serving ${urlPath} instead of /graph_data.json`);
+            }
     
             // Security check: prevent traversing up
             const safeSuffix = path.normalize(urlPath).replace(/^(\.\.[/\\])+/, '');

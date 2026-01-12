@@ -190,6 +190,15 @@ setTimeout(() => {
                 simSpeedVal.innerText = "0.95";
             }
         }
+        
+        // v0.9.72: Static Mode Enforcement
+        // "When nodes exceed 5,000 or edges surpass 200,000... After 2 seconds, all node positions cease updating"
+        if (nodes.length > 5000 || links.length > 200000) {
+            console.log("[Simulation] Large graph detected. Freezing simulation after relaxation.");
+            simulation.stop();
+            // Force one last tick to ensure render matches final state?
+            // Usually stop() leaves it as is.
+        }
     }
 }, 2000);
 
@@ -502,7 +511,12 @@ function updateLayout() {
                 // Check Freeze Layout State
                 // If frozen, stop now that relaxation is done
                 const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
-                if (isFrozen) {
+                
+                // v0.9.72: Static Mode Enforcement on Layout Switch
+                const isLargeGraph = nodes.length > 5000 || links.length > 200000;
+                
+                if (isFrozen || isLargeGraph) {
+                    if (isLargeGraph) console.log("[Simulation] Large graph detected. Freezing simulation after layout switch.");
                     simulation.stop();
                 }
             }
@@ -1276,7 +1290,13 @@ function renderCanvas(layoutMode) {
         // If Compact Mode is ON, and we are NOT highlighting/focusing, skip edge iteration entirely.
         // This saves iterating 1.2M items per frame.
         const isCompact = window.settingsManager ? window.settingsManager.get('performance', 'compactMode') : false;
-        const shouldRenderEdges = !isCompact || focusNode || highlightConnections;
+        
+        // v0.9.72: Extreme Scale Constraint
+        // "When the number of nodes or edges becomes excessive (exceeding 10,000 nodes or 1,000,000 edges), 
+        // edges shall never be rendered in the frontend display (even when a node is selected on the canvas)."
+        const isExtremeScale = nodes.length > 10000 || links.length > 1000000;
+        
+        const shouldRenderEdges = !isExtremeScale && (!isCompact || focusNode || highlightConnections);
 
         // Draw Links / 绘制连接
         ctx.lineWidth = 1;

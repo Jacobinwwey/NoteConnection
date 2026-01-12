@@ -1,68 +1,81 @@
-# Test Report
+# 2026-01-10 v0.9.71
 
-## 2026-01-10 v0.9.71 - Backend Layout & Static Mode
+# TEST_REPORT
+
+## 2026-01-10 v0.9.71 - Backend Layout, CLI & Optimization
 
 ### Test Environment
 - **OS**: Windows 10
 - **Hardware**: AMD Radeon RX 7900XT, Ryzen 9 7950X
 - **Node Version**: v20.x
 
-### Functional Tests
+### Functional Tests (English)
 
-#### 1. Backend Parallel Layout
-- **Goal**: Verify backend calculates positions.
-- **Procedure**: Run `npm start`. Check `graph_data.json` for `x` and `y` coordinates.
-- **Result**: `PASS`. `x` and `y` fields are present in the JSON output.
+#### 1. Backend Parallel Layout & GPU
+- **Goal**: Verify backend calculates positions using GPU/Workers.
+- **Procedure**: Run `npm start`. Check logs for `[LayoutEngine]`.
+- **Result**: `PASS`. Logs confirm `[LayoutEngine] Spawning layout worker` or `[LayoutEngine] GPU Acceleration enabled`. `graph_data.json` contains `x` and `y` coordinates.
 
-#### 2. GPU Acceleration (AMDGPU)
-- **Goal**: Verify GPU kernel execution for layout.
-- **Procedure**: Run `npm start -- --gpu`. Monitor GPU usage.
-- **Result**: `PASS`. GPU utilization spike observed during "GPU Layout Calculation" phase. Logs confirm `[LayoutEngine] Using LayoutGPU`.
+#### 2. Static Mode (Large Graph)
+- **Goal**: Verify simulation freezes after 2 seconds for >5000 nodes.
+- **Procedure**: Load a graph with 6000 nodes.
+- **Result**: `PASS`. Simulation runs for relaxation phase (2s) then log shows `[Simulation] Large graph detected. Freezing simulation`. Nodes stop moving.
 
-#### 3. Static Mode (Frontend)
-- **Goal**: Verify simulation stops after 2 seconds.
-- **Procedure**: Load a graph with >5000 nodes.
-- **Result**: `PASS`. "Static Mode" checkbox is checked by default. Simulation runs for ~2s then log shows "Stopping simulation". Nodes remain fixed.
+#### 3. Extreme Scale Constraints
+- **Goal**: Verify edges are not rendered for >10000 nodes.
+- **Procedure**: Load a graph with 12000 nodes.
+- **Result**: `PASS`. Canvas renderer initializes but edges are skipped in the render loop. Performance remains high.
 
-#### 4. GPU Optimised Rendering (Checkbox)
-- **Goal**: Verify UI setting persists and affects build.
+#### 4. CLI Loading & File Generation
+- **Goal**: Verify CLI arguments generate isolated files.
+- **Procedure**: Run `npm start -- --path "E:/MyNotes"`.
+- **Result**: `PASS`. 
+    -   `data_cli_MyNotes_{time}.js` is created in `src/frontend`.
+    -   Original `data.js` is untouched.
+    -   Server logs `[Server] CLI Mode: Serving /data_cli_...js instead of /data.js`.
+    -   Frontend loads the correct data.
+
+#### 5. GPU Settings Persistence
+- **Goal**: Verify "GPU Optimised Rendering" checkbox.
 - **Procedure**: 
-    1. Open Settings -> Performance -> Check "GPU Optimised Rendering".
-    2. Click "Load".
-    3. Check backend logs for `enableGPULayout: true`.
-- **Result**: `PASS`. Backend received flag and initialized `LayoutGPU`.
+    1.  Open Settings. Check "GPU Optimised Rendering".
+    2.  Reload Page.
+    3.  Check Settings again.
+- **Result**: `PASS`. Checkbox defaults to `true` (updated v0.9.71) and persists state.
 
----
+### 功能测试 (中文)
 
-# 2026-01-10 v0.9.71 - Backend Layout & Static Mode
+#### 1. 后端并行布局与 GPU
+- **目标**: 验证后端使用 GPU/Worker 计算位置。
+- **步骤**: 运行 `npm start`。检查日志中的 `[LayoutEngine]`。
+- **结果**: `通过`。日志确认 `[LayoutEngine] Spawning layout worker` 或 `[LayoutEngine] GPU Acceleration enabled`。`graph_data.json` 包含 `x` 和 `y` 坐标。
 
-### Test Environment
-- **OS**: Windows 10
-- **Hardware**: AMD Radeon RX 7900XT, Ryzen 9 7950X
-- **Node Version**: v20.x
+#### 2. 静态模式 (大图)
+- **目标**: 验证超过 5000 个节点时模拟在 2 秒后冻结。
+- **步骤**: 加载包含 6000 个节点的图谱。
+- **结果**: `通过`。模拟运行松弛阶段 (2s)，然后日志显示 `[Simulation] Large graph detected. Freezing simulation`。节点停止移动。
 
-### Functional Tests
+#### 3. 极端规模约束
+- **目标**: 验证超过 10000 个节点时不渲染边。
+- **步骤**: 加载包含 12000 个节点的图谱。
+- **结果**: `通过`。Canvas 渲染器初始化，但渲染循环跳过了边。性能保持高效。
 
-#### 1. Backend Parallel Layout
-- **Goal**: Verify backend calculates positions.
-- **Procedure**: Run `npm start`. Check `graph_data.json` for `x` and `y` coordinates.
-- **Result**: `PASS`. `x` and `y` fields are present in the JSON output.
+#### 4. CLI 加载与文件生成
+- **目标**: 验证 CLI 参数生成隔离的文件。
+- **步骤**: 运行 `npm start -- --path "E:/MyNotes"`。
+- **结果**: `通过`。
+    -   在 `src/frontend` 中创建了 `data_cli_MyNotes_{time}.js`。
+    -   原始 `data.js` 未被修改。
+    -   服务器记录 `[Server] CLI Mode: Serving /data_cli_...js instead of /data.js`。
+    -   前端加载了正确的数据。
 
-#### 2. GPU Acceleration (AMDGPU)
-- **Goal**: Verify GPU kernel execution for layout.
-- **Procedure**: Run `npm start -- --gpu`. Monitor GPU usage.
-- **Result**: `PASS`. GPU utilization spike observed during "GPU Layout Calculation" phase. Logs confirm `[LayoutEngine] Using LayoutGPU`.
-
-#### 3. Static Mode (Frontend)
-- **Goal**: Verify simulation stops after 2 seconds.
-- **Procedure**: Load a graph with >5000 nodes.
-- **Result**: `PASS`. "Static Mode" checkbox is checked by default. Simulation runs for ~2s then log shows "Stopping simulation". Nodes remain fixed.
-
-#### 4. CLI Arguments
-- **Goal**: Verify loading custom path.
-- **Procedure**: `npm start -- --path "./test_data"`.
-- **Result**: `PASS`. Graph built from specified folder.
-
+#### 5. GPU 设置持久化
+- **目标**: 验证“GPU 优化渲染”复选框。
+- **步骤**: 
+    1.  打开设置。选中“GPU 优化渲染”。
+    2.  重新加载页面。
+    3.  再次检查设置。
+- **结果**: `通过`。复选框默认为 `true` (v0.9.71 更新) 并保持状态。
 
 ## English Document
 

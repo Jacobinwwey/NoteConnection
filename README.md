@@ -130,7 +130,7 @@ NoteConnection uses **Capacitor** to build native mobile apps.
     cd android
     ./gradlew assembleDebug
     ```
-    The APK will be located at: `android/app/build/outputs/apk/debug/app-debug.apk`
+    APK will be located at: `android/app/build/outputs/apk/debug/app-debug.apk`
 
 ### 3. Usage Guide
 1.  **Select Source**: Use the dropdown in the top-left to choose a folder from `Knowledge_Base`.
@@ -141,8 +141,7 @@ NoteConnection uses **Capacitor** to build native mobile apps.
     *   **Focus**: Click a node to enter Focus Mode. Use the sliders to adjust spacing.
     *   **Control**: Use the **Simulation** panel to freeze the layout or adjust speed.
 
-
-## How to Load Knowledge Base (CLI)
+## 🖥️ CLI Usage (v0.9.71)
 
 You can load a knowledge base and build the graph directly from the command line without using the UI. This is useful for automated builds or headless environments.
 
@@ -175,7 +174,9 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --gpu
 npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 ```
 
-## Hardware & Driver Requirements (AMDGPU)
+**Note:** CLI runs generate unique data files (`data_cli_{kb_name}_{time}.js`) to preserve the original `data.js`. When the server starts, it will automatically serve these specific files to the frontend.
+
+## 🛠️ Hardware & Driver Requirements (AMDGPU)
 
 For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA cards (like RX 7900XT):
 
@@ -188,8 +189,10 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ### v0.9.71 (2026-01-10)
 -   **Backend Parallel Layout**: Accelerated front-end loading by pre-calculating node positions on the backend using worker threads or GPU.
--   **GPU Optimised Rendering**: Added support for AMDGPU acceleration in backend layout and frontend rendering options.
--   **Static Mode**: Added a "Static" toggle for massive graphs (>5000 nodes). When enabled, the simulation runs for 2 seconds to untangle, then freezes to save resources.
+-   **GPU Optimised Rendering**: Added support for AMDGPU acceleration in backend layout.
+-   **Static Mode**: Implemented strict simulation freezing for massive graphs (>5000 nodes) to save resources.
+-   **CLI Support**: Added full CLI argument support for automated building and loading.
+-   **Extreme Scale Optimization**: Disabled edge rendering entirely for graphs with >10,000 nodes to prevent browser crashes.
 ---
 
 ## 📅 Changelog

@@ -730,10 +730,7 @@ Manages node highlighting interactions for both PC and mobile interfaces.
 
 
 
-## 1. System Overview
-NoteConnection serves as a bridge between your Markdown notes and a visual knowledge graph.
-
-## 2. CLI Interfaces
+## 9. CLI Interfaces (v0.9.71)
 
 ### Build Command
 **Input:**
@@ -742,23 +739,24 @@ NoteConnection serves as a bridge between your Markdown notes and a visual knowl
 - `--static`: Boolean (Flag). Enable Static Mode.
 
 **Output:**
-- `dist/frontend/graph_data.json`: The processed graph data.
+- `src/frontend/data_cli_{kb}_{time}.js`: Lite data for frontend (CLI run specific).
+- `src/frontend/graph_data_cli_{kb}_{time}.json`: Full data (CLI run specific).
 
-## 3. Frontend Settings Interfaces
+## 10. Frontend Settings Interfaces (v0.9.71)
 
 ### Performance Settings
 - **GPU Optimised Rendering**:
   - Type: Checkbox
-  - Default: `false` (or auto-detected)
-  - Effect: Enables `gpu.js` acceleration for layout updates and vector similarity.
+  - Default: `true` (Hardware supported)
+  - Effect: Enables `gpu.js` acceleration for backend layout updates and vector similarity.
 - **Static Mode**:
   - Type: Checkbox
-  - Default: `true` if Nodes > 5000
-  - Effect: Stops simulation after 2 seconds.
-
-### Layout Settings
-- **Force Layout**: Standard physics simulation.
-- **DAG Layout**: Hierarchical Directed Acyclic Graph layout.
+  - Logic: Auto-enabled if Nodes > 5000.
+  - Effect: Stops simulation completely after 2 seconds of relaxation.
+- **Extreme Scale**:
+  - Logic: Implicit constraint.
+  - Condition: Nodes > 10,000 or Edges > 1,000,000.
+  - Effect: Edges are never rendered.
 
 ---
 ---

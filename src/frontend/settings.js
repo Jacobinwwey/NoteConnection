@@ -17,7 +17,7 @@ const defaultSettings = {
     performance: {
         maxWorkers: 4, // Default safe limit
         enableGPU: true, // Default to using GPU
-        gpuRendering: false, // GPU Optimised Rendering
+        gpuRendering: true, // GPU Optimised Rendering (Default enabled per requirement)
         memorySavingMode: false, // Large File Memory Saving Strategy
         compactMode: false, // Compact Mode (Hide Edges) for large graphs
         staticMode: false, // Static Mode (Freeze after 2s)

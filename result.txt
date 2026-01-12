@@ -1,172 +1,189 @@
-PS E:\Knowledge_project\NoteConnection_app> npm start
+PS E:\Knowledge_project\NoteConnection_app> npm start -- --path "E:\Knowledge_project\NoteConnection_app\Knowledge_Base\waterglass" --static --workers 10 --gpu
+npm warn "E:\Knowledge_project\NoteConnection_app\Knowledge_Base\waterglass" is being parsed as a normal command line argument.
+npm warn "10" is being parsed as a normal command line argument.
+npm warn Unknown cli config "--path". This will stop working in the next major version of npm.
+npm warn Unknown cli config "--static". This will stop working in the next major version of npm.
+npm warn Unknown cli config "--workers". This will stop working in the next major version of npm.
+npm warn Unknown cli config "--gpu". This will stop working in the next major version of npm.
 
 > noteconnection@1.0.0 start
-> node --max-old-space-size=12288 -r ts-node/register src/server.ts
+> node --max-old-space-size=12288 -r ts-node/register src/server.ts E:\Knowledge_project\NoteConnection_app\Knowledge_Base\waterglass 10
 
-Server running at http://localhost:3000/
-Knowledge Base Root: E:\Knowledge_project\NoteConnection_app\Knowledge_Base
-Received build request for: feynman_concepts_complete maxWorkers: 10 enableGPU: true memorySavingMode: false deepDebug: false
+[CLI] Static mode requested (via env).
+[CLI] Parsed Options: {
+  targetPath: 'E:\\Knowledge_project\\NoteConnection_app\\Knowledge_Base\\waterglass',
+  enableGPU: true,
+  enableGPULayout: true,
+  maxWorkers: 10
+}
+[CLI] Generating new knowledge graph for: E:\Knowledge_project\NoteConnection_app\Knowledge_Base\waterglass
 [Config] Setting maxWorkers to 10
 [Config] Setting enableGPU to true
-[Config] Setting memorySavingMode to false
-[Config] Setting deepDebug to false
-Loading files from: E:\Knowledge_project\NoteConnection_app\Knowledge_Base\feynman_concepts_complete
-Loaded 13659 files.
+[Config] Setting enableGPULayout to true
+Loading files from: E:\Knowledge_project\NoteConnection_app\Knowledge_Base\waterglass
+Loaded 214 files.
 Building graph...
 [System] Platform: win32 10.0.19045
 [System] CPU: 12th Gen Intel(R) Core(TM) i5-12600K (16 cores)
 [System] Total Memory: 63.79 GB
 [Perf] Starting: Node Initialization
-[Perf] Initial Memory: 725.41 MB / 831.09 MB (Heap/RSS)
+[Perf] Initial Memory: 171.13 MB / 254.68 MB (Heap/RSS)
 [Perf] Finished: Node Initialization
-[Perf] Time: 20.09ms
-[Perf] CPU (User/Sys): 47.00ms / 0.00ms
-[Perf] Memory (Heap/RSS): 733.84 MB / 842.26 MB
+[Perf] Time: 0.77ms
+[Perf] CPU (User/Sys): 0.00ms / 0.00ms
+[Perf] Memory (Heap/RSS): 171.35 MB / 254.70 MB
 --------------------------------------------------
 [Perf] Starting: Edge Identification (Explicit)
-[Perf] Initial Memory: 733.86 MB / 842.27 MB (Heap/RSS)
+[Perf] Initial Memory: 171.37 MB / 254.71 MB (Heap/RSS)
 [Perf] Finished: Edge Identification (Explicit)
-[Perf] Time: 5.02ms
+[Perf] Time: 0.31ms
 [Perf] CPU (User/Sys): 0.00ms / 0.00ms
-[Perf] Memory (Heap/RSS): 735.85 MB / 842.28 MB
+[Perf] Memory (Heap/RSS): 171.40 MB / 254.71 MB
 --------------------------------------------------
 [Perf] Starting: Keyword Matching
-[Perf] Initial Memory: 735.86 MB / 842.28 MB (Heap/RSS)
-[GraphBuilder] Starting keyword matching for 13659 files...
+[Perf] Initial Memory: 171.41 MB / 254.71 MB (Heap/RSS)
+[GraphBuilder] Starting keyword matching for 214 files...
 [GraphBuilder] Using Parallel Processing (Workers)
 [GraphBuilder] Worker Path: E:\Knowledge_project\NoteConnection_app\src\backend\workers\keywordMatchWorker.ts
 [GraphBuilder] isTsNode: true
 [GraphBuilder] Spawning 10 workers...
 [GraphBuilder] Parallel matching complete.
 [Perf] Finished: Keyword Matching
-[Perf] Time: 538742.04ms
-[Perf] CPU (User/Sys): 4521781.00ms / 5469.00ms
-[Perf] Memory (Heap/RSS): 869.12 MB / 969.52 MB
+[Perf] Time: 4466.46ms
+[Perf] CPU (User/Sys): 41860.00ms / 7125.00ms
+[Perf] Memory (Heap/RSS): 172.64 MB / 264.38 MB
 --------------------------------------------------
 [Perf] Starting: Statistical Inference (Shared)
-[Perf] Initial Memory: 869.12 MB / 969.53 MB (Heap/RSS)
+[Perf] Initial Memory: 172.65 MB / 264.38 MB (Heap/RSS)
 [GraphBuilder] Running Statistical Analysis (Shared)...
-[StatisticalAnalyzer] Starting parallel term extraction for 13659 files...
+[StatisticalAnalyzer] Starting parallel term extraction for 214 files...
 [GraphBuilder] Applying Statistical Inference rules...
-[GraphBuilder] Added 145677 inferred edges.
+[GraphBuilder] Added 323 inferred edges.
 [Perf] Finished: Statistical Inference (Shared)
-[Perf] Time: 221008.03ms
-[Perf] CPU (User/Sys): 1485344.00ms / 5062.00ms
-[Perf] Memory (Heap/RSS): 3672.08 MB / 3840.00 MB
+[Perf] Time: 3899.88ms
+[Perf] CPU (User/Sys): 39375.00ms / 6203.00ms
+[Perf] Memory (Heap/RSS): 175.46 MB / 472.16 MB
 --------------------------------------------------
 [Perf] Starting: Vector Similarity (Shared)
-[Perf] Initial Memory: 3672.09 MB / 3840.00 MB (Heap/RSS)
+[Perf] Initial Memory: 175.47 MB / 463.95 MB (Heap/RSS)
 [GraphBuilder] Initializing Vector Space (Shared)...
 [GraphBuilder] Using GPU Acceleration for Vector Space...
-[VectorSpace] Vocabulary size: 83865
+[VectorSpace] Vocabulary size: 6143
 [VectorSpaceGPU] Preparing data for GPU...
-[VectorSpaceGPU] Matrix size: 13659 documents x 83865 dimensions
+[VectorSpaceGPU] Matrix size: 214 documents x 6143 dimensions
 [VectorSpaceGPU] Executing GPU Kernel...
 [Perf] Starting: GPU Matrix Kernel
-[Perf] Initial Memory: 11227.80 MB / 11581.02 MB (Heap/RSS)
-[VectorSpaceGPU] GPU Computation Failed. Falling back to CPU on-demand. Error: Argument texture width of 16924 larger than maximum size of 16384 for your GPU
-    at WebGLKernelValueSingleArray.checkSize (E:\Knowledge_project\NoteConnection_app\node_modules\gpu.js\src\backend\web-gl\kernel-value\array.js:18:15)
-    at new WebGLKernelValueSingleArray (E:\Knowledge_project\NoteConnection_app\node_modules\gpu.js\src\backend\web-gl\kernel-value\single-array.js:11:10)
-    at HeadlessGLKernel.setupArguments (E:\Knowledge_project\NoteConnection_app\node_modules\gpu.js\src\backend\web-gl\kernel.js:400:30)
-    at HeadlessGLKernel.build (E:\Knowledge_project\NoteConnection_app\node_modules\gpu.js\src\backend\web-gl\kernel.js:484:10)
-    at HeadlessGLKernel.build (E:\Knowledge_project\NoteConnection_app\node_modules\gpu.js\src\backend\headless-gl\kernel.js:103:17)
-    at HeadlessGLKernel.run (E:\Knowledge_project\NoteConnection_app\node_modules\gpu.js\src\kernel-run-shortcut.js:10:18)
-    at shortcut (E:\Knowledge_project\NoteConnection_app\node_modules\gpu.js\src\kernel-run-shortcut.js:30:16)
-    at VectorSpaceGPU.precomputeSimilarityMatrix (E:\Knowledge_project\NoteConnection_app\amdgpu\VectorSpaceGPU.ts:82:28)
-    at new VectorSpaceGPU (E:\Knowledge_project\NoteConnection_app\amdgpu\VectorSpaceGPU.ts:23:18)
-    at Function.build (E:\Knowledge_project\NoteConnection_app\src\backend\GraphBuilder.ts:178:34)
+[Perf] Initial Memory: 207.27 MB / 327.03 MB (Heap/RSS)
+[Perf] Finished: GPU Matrix Kernel
+[Perf] Time: 1577.88ms
+[Perf] CPU (User/Sys): 1547.00ms / 125.00ms
+[Perf] Memory (Heap/RSS): 179.19 MB / 343.78 MB
+--------------------------------------------------
 [Perf] Finished: Vector Similarity (Shared)
-[Perf] Time: 23417.64ms
-[Perf] CPU (User/Sys): 32141.00ms / 2360.00ms
-[Perf] Memory (Heap/RSS): 11228.82 MB / 11581.29 MB
+[Perf] Time: 2085.71ms
+[Perf] CPU (User/Sys): 1984.00ms / 344.00ms
+[Perf] Memory (Heap/RSS): 179.20 MB / 343.78 MB
 --------------------------------------------------
 [Perf] Starting: Hybrid Inference
-[Perf] Initial Memory: 11228.82 MB / 11581.30 MB (Heap/RSS)
+[Perf] Initial Memory: 179.21 MB / 343.78 MB (Heap/RSS)
 [GraphBuilder] Running Hybrid Inference (Stats + Vector)...
 [Perf] Starting: Hybrid Inference Logic
-[Perf] Initial Memory: 11228.83 MB / 11581.30 MB (Heap/RSS)
-[HybridEngine] Starting inference on 13553 nodes...
-[HybridEngine] Processed 1000/13553 nodes. Heap: 11623.75 MB
-[HybridEngine] Processed 2000/13553 nodes. Heap: 3019.65 MB
-[HybridEngine] Processed 3000/13553 nodes. Heap: 3125.23 MB
-[HybridEngine] Processed 4000/13553 nodes. Heap: 3201.86 MB
-[HybridEngine] Processed 5000/13553 nodes. Heap: 3163.28 MB
-[HybridEngine] Processed 6000/13553 nodes. Heap: 3210.52 MB
-[HybridEngine] Processed 7000/13553 nodes. Heap: 3231.54 MB
-[HybridEngine] Processed 8000/13553 nodes. Heap: 3248.09 MB
-[HybridEngine] Processed 9000/13553 nodes. Heap: 3264.41 MB
-[HybridEngine] Processed 10000/13553 nodes. Heap: 3282.64 MB
-[HybridEngine] Processed 11000/13553 nodes. Heap: 3293.23 MB
-[HybridEngine] Processed 12000/13553 nodes. Heap: 3299.37 MB
-[HybridEngine] Processed 13000/13553 nodes. Heap: 3302.92 MB
-[HybridEngine] Inference complete. Found 125217 edges.
+[Perf] Initial Memory: 179.21 MB / 343.78 MB (Heap/RSS)
+[HybridEngine] Starting inference on 161 nodes...
+[HybridEngine] Inference complete. Found 111 edges.
 [Perf] Finished: Hybrid Inference Logic
-[Perf] Time: 69873.61ms
-[Perf] CPU (User/Sys): 74156.00ms / 828.00ms
-[Perf] Memory (Heap/RSS): 3312.92 MB / 3627.61 MB
+[Perf] Time: 6.14ms
+[Perf] CPU (User/Sys): 0.00ms / 0.00ms
+[Perf] Memory (Heap/RSS): 181.12 MB / 343.80 MB
 --------------------------------------------------
-[GraphBuilder] Added 125217 hybrid inferred edges.
+[GraphBuilder] Added 111 hybrid inferred edges.
 [Perf] Finished: Hybrid Inference
-[Perf] Time: 72126.46ms
-[Perf] CPU (User/Sys): 76406.00ms / 828.00ms
-[Perf] Memory (Heap/RSS): 3322.99 MB / 3638.05 MB
+[Perf] Time: 8.02ms
+[Perf] CPU (User/Sys): 31.00ms / 0.00ms
+[Perf] Memory (Heap/RSS): 181.19 MB / 343.81 MB
 --------------------------------------------------
 [GraphBuilder] Cleaning up Shared Stats Matrix...
 [GraphBuilder] Cleaning up Shared Vector Space...
 [Perf] Starting: Community Detection
-[Perf] Initial Memory: 3323.00 MB / 3638.05 MB (Heap/RSS)
+[Perf] Initial Memory: 181.21 MB / 343.81 MB (Heap/RSS)
 [Perf] Finished: Community Detection
-[Perf] Time: 3536.64ms
-[Perf] CPU (User/Sys): 3531.00ms / 31.00ms
-[Perf] Memory (Heap/RSS): 3340.49 MB / 3666.77 MB
+[Perf] Time: 12.87ms
+[Perf] CPU (User/Sys): 0.00ms / 0.00ms
+[Perf] Memory (Heap/RSS): 191.98 MB / 343.88 MB
 --------------------------------------------------
 [Perf] Starting: Graph Metrics
-[Perf] Initial Memory: 3340.50 MB / 3666.77 MB (Heap/RSS)
-[GraphMetrics] Starting Parallel Betweenness Centrality with 10 workers...
+[Perf] Initial Memory: 192.00 MB / 343.88 MB (Heap/RSS)
+[GraphMetrics] Using Single-Core calculation (Memory Saving: true, Nodes: 214)
 [Perf] Finished: Graph Metrics
-[Perf] Time: 193866.90ms
-[Perf] CPU (User/Sys): 1902907.00ms / 52422.00ms
-[Perf] Memory (Heap/RSS): 978.46 MB / 1138.38 MB
+[Perf] Time: 14.48ms
+[Perf] CPU (User/Sys): 0.00ms / 16.00ms
+[Perf] Memory (Heap/RSS): 193.83 MB / 344.02 MB
 --------------------------------------------------
 [GraphBuilder] Starting Algorithmic Core...
 [Perf] Starting: Cycle Detection
-[Perf] Initial Memory: 978.47 MB / 1138.38 MB (Heap/RSS)
+[Perf] Initial Memory: 193.87 MB / 344.02 MB (Heap/RSS)
 [GraphBuilder] Running Cycle Detection...
-[GraphBuilder] Detected 10000+ cycles. Topological Sort may be partial.
+[GraphBuilder] Detected 70 cycles. Topological Sort may be partial.
 [Perf] Finished: Cycle Detection
-[Perf] Time: 320.79ms
-[Perf] CPU (User/Sys): 718.00ms / 63.00ms
-[Perf] Memory (Heap/RSS): 1107.47 MB / 1287.62 MB
+[Perf] Time: 1.14ms
+[Perf] CPU (User/Sys): 0.00ms / 0.00ms
+[Perf] Memory (Heap/RSS): 194.00 MB / 344.02 MB
 --------------------------------------------------
 [Perf] Starting: Topological Sort
-[Perf] Initial Memory: 1107.47 MB / 1287.62 MB (Heap/RSS)
+[Perf] Initial Memory: 194.01 MB / 344.02 MB (Heap/RSS)
 [GraphBuilder] Running Topological Sort...
-Graph contains cycles! Processed 4/13659 nodes.
+Graph contains cycles! Processed 69/214 nodes.
 [Perf] Finished: Topological Sort
-[Perf] Time: 11.64ms
-[Perf] CPU (User/Sys): 78.00ms / 0.00ms
-[Perf] Memory (Heap/RSS): 1109.46 MB / 1289.02 MB
+[Perf] Time: 0.74ms
+[Perf] CPU (User/Sys): 0.00ms / 0.00ms
+[Perf] Memory (Heap/RSS): 194.06 MB / 344.02 MB
+--------------------------------------------------
+[GraphBuilder] Running Backend Layout Calculation...
+[Perf] Starting: Backend Layout Calculation
+[Perf] Initial Memory: 194.07 MB / 344.02 MB (Heap/RSS)
+[LayoutEngine] Spawning layout worker: E:\Knowledge_project\NoteConnection_app\src\backend\workers\layoutWorker.ts
+[LayoutEngine] GPU Acceleration enabled. Using LayoutGPU.
+[LayoutGPU] Starting Layout Calculation for 214 nodes on GPU...
+[Perf] Starting: GPU Layout Calculation
+[Perf] Initial Memory: 188.22 MB / 349.23 MB (Heap/RSS)
+[Perf] Finished: GPU Layout Calculation
+[Perf] Time: 808.25ms
+[Perf] CPU (User/Sys): 750.00ms / 63.00ms
+[Perf] Memory (Heap/RSS): 186.51 MB / 353.63 MB
+--------------------------------------------------
+[Perf] Finished: Backend Layout Calculation
+[Perf] Time: 900.67ms
+[Perf] CPU (User/Sys): 1016.00ms / 78.00ms
+[Perf] Memory (Heap/RSS): 186.58 MB / 353.63 MB
 --------------------------------------------------
 [GraphBuilder] Algorithmic Core Complete.
 
 ==================== PERFORMANCE SUMMARY ====================
 | Stage                          | Time (ms)    | Max Heap     | Max RSS      | Max VRAM     |
 |--------------------------------+--------------+--------------+--------------+--------------|
-| Node Initialization            | 20           | 733.84 MB    | 842.26 MB    | -            |
-| Edge Identification (Explicit) | 5            | 735.85 MB    | 842.28 MB    | -            |
-| Keyword Matching               | 538742       | 869.12 MB    | 969.52 MB    | -            |
-| Statistical Inference (Shared) | 221008       | 3672.08 MB   | 3840.00 MB   | -            |
-| Vector Similarity (Shared)     | 23418        | 11228.82 MB  | 11581.29 MB  | -            |
-| Hybrid Inference Logic         | 69874        | 3312.92 MB   | 3627.61 MB   | -            |
-| Hybrid Inference               | 72126        | 3322.99 MB   | 3638.05 MB   | -            |
-| Community Detection            | 3537         | 3340.49 MB   | 3666.77 MB   | -            |
-| Graph Metrics                  | 193867       | 978.46 MB    | 1138.38 MB   | -            |
-| Cycle Detection                | 321          | 1107.47 MB   | 1287.62 MB   | -            |
-| Topological Sort               | 12           | 1109.46 MB   | 1289.02 MB   | -            |
+| Node Initialization            | 1            | 171.35 MB    | 254.70 MB    | -            |
+| Edge Identification (Explicit) | 0            | 171.40 MB    | 254.71 MB    | -            |
+| Keyword Matching               | 4466         | 172.64 MB    | 264.38 MB    | -            |
+| Statistical Inference (Shared) | 3900         | 175.46 MB    | 472.16 MB    | -            |
+| GPU Matrix Kernel              | 1578         | 179.19 MB    | 343.78 MB    | -            |
+| Vector Similarity (Shared)     | 2086         | 179.20 MB    | 343.78 MB    | -            |
+| Hybrid Inference Logic         | 6            | 181.12 MB    | 343.80 MB    | -            |
+| Hybrid Inference               | 8            | 181.19 MB    | 343.81 MB    | -            |
+| Community Detection            | 13           | 191.98 MB    | 343.88 MB    | -            |
+| Graph Metrics                  | 14           | 193.83 MB    | 344.02 MB    | -            |
+| Cycle Detection                | 1            | 194.00 MB    | 344.02 MB    | -            |
+| Topological Sort               | 1            | 194.06 MB    | 344.02 MB    | -            |
+| GPU Layout Calculation         | 808          | 186.51 MB    | 353.63 MB    | -            |
+| Backend Layout Calculation     | 901          | 186.58 MB    | 353.63 MB    | -            |
 |--------------------------------+--------------+--------------+--------------+--------------|
-| TOTAL / PEAK                   | 1122929      | 11228.83 MB  | 11581.30 MB  | 5081.48 MB   |
+| TOTAL / PEAK                   | 13783        | 207.27 MB    | 472.65 MB    | 5.19 MB      |
 =============================================================
 
-Graph built: 13659 nodes, 1206332 edges.
-Graph data saved to: E:\Knowledge_project\NoteConnection_app\src\frontend\graph_data.json
-Graph data JS saved to: E:\Knowledge_project\NoteConnection_app\src\frontend\data.js
+Graph built: 214 nodes, 818 edges.
+CLI graph data saved to: E:\Knowledge_project\NoteConnection_app\src\frontend\graph_data_cli_waterglass_20260112021142..json
+CLI JS data saved to: E:\Knowledge_project\NoteConnection_app\src\frontend\data_cli_waterglass_20260112021142..js
+[CLI] Generation complete.
+Server running at http://localhost:3000/
+Knowledge Base Root: E:\Knowledge_project\NoteConnection_app\Knowledge_Base
+[CLI] Ready.
+[Server] CLI Mode: Serving /data_cli_waterglass_20260112021142..js instead of /data.js

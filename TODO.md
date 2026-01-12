@@ -22,6 +22,12 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
         - [x] **Behavior**: Simulation runs for 2 seconds (warm-up) then stops to save CPU.
         - [x] **Layout Switch**: Respects static mode during layout transitions (Force <-> DAG).
     - [x] **GPU Settings**: Added "GPU Optimised Rendering" checkbox to settings to control acceleration flags.
+    - [x] **Extreme Scale**: Strictly disabled edge rendering for graphs >10,000 nodes to prevent rendering bottlenecks.
+
+- [x] **CLI & File Management**
+    - [x] **CLI Arguments**: Added `--path` and `--gpu` support to `npm start`.
+    - [x] **File Isolation**: CLI runs generate unique `data_cli_*.js` files to protect the original `data.js`.
+    - [x] **Server Logic**: `server.ts` automatically serves the correct CLI data file based on build parameters.
 
 ---
 
