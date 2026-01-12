@@ -2212,10 +2212,14 @@ function enterFocusMode(focusD) {
             el.transition().duration(750)
                 .attr("transform", `translate(${d.fx},${d.fy})`);
             
+            // Safe Attribute Interpolation
+            // Ensure values are numbers before adding 'px', or use safe defaults
+            const safeDy = d._labelDy !== undefined && !isNaN(d._labelDy) ? d._labelDy + "px" : ".35em";
+            const safeDx = d._labelDx !== undefined && !isNaN(d._labelDx) ? d._labelDx + "px" : (d.id === focusD.id ? "29px" : "12px");
+
             el.select("text").transition().duration(750)
-                .attr("dy", d._labelDy ? d._labelDy + "px" : ".35em")
-                .attr("dx", d._labelDx ? d._labelDx + "px" : (d.id === focusD.id ? "29px" : "12px"));
-                
+                .attr("dy", safeDy)
+                .attr("dx", safeDx);
             if (d.id === focusD.id) {
                 el.select("circle").transition().duration(750)
                     .attr("r", 25).attr("fill", "#ffd700").attr("stroke", "#fff").attr("stroke-width", "3px");
