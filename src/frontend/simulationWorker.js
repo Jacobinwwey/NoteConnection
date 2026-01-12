@@ -42,6 +42,9 @@ onmessage = function(event) {
         case 'fixNodes':
              fixNodes(payload); // payload: [{id, fx, fy}, ...]
              break;
+        case 'layoutSwitchDone':
+             postMessage({ type: 'layoutSwitchDone' });
+             break;
     }
 };
 

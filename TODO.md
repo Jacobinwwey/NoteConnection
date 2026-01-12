@@ -23,14 +23,16 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
   - [x] **Shadowing Fix**: Renamed internal `links` to `_links` in `GPULinkForce` to prevent property-method collision.
   - [x] **Focus Mode Support**: Updated `enterFocusMode` and `exitFocusMode` in `app.js` to handle GPU forces.
   - [x] **Focus Mode Isolation**: Enforced completely independent node dimensions and positioning, with zero leakage to the main interface upon exit.
-  - [x] **Query History**: Implemented a history dropdown in Focus Mode to allow easy re-selection of previous central nodes.
-  - [x] **Analysis Stability**: Added auto-freeze functionality when opening Degree Analysis to prevent layout shifts.
+  - [x] **Focus Mode Interactions**: Enabled manual node dragging (without physics) and fixed race condition causing position reset.
+  - [x] **Query History**: Implemented a history dropdown in Focus Mode; pins duplicate nodes to top of list.
+  - [x] **Analysis Stability**: Added auto-freeze and prevented redundant layout updates (center force reset) during resize.
   - [x] **Analysis Scroll**: Fixed container styles to ensure the "Filtered Nodes" list is vertically scrollable.
 
 - [x] **Layout Switching & Resource Fixes**
-  - [x] **State Preservation**: Implemented `layoutCache` for 'Force' and 'DAG' layouts.
-  - [x] **Crash Resolution**: Fixed `TypeError` in `updateLayout` during force reconfiguration.
-  - [x] **Singleton Pattern**: Refactored `layout_gpu.js` to use a Singleton instance for `SharedGPU`, preventing WebGL context leaks.
+  - [x] **Switch Logic**: Implemented "First Switch" relaxation vs "Subsequent Switch" restoration logic.
+  - [x] **Cache Persistence**: Enforced strict validation of cached layout states; falls back to relaxation if cache is invalid or partial.
+  - [x] **Race Condition Fix**: Implemented Worker Handshake Protocol (`isLayoutSwitching`) to block stale ticks causing layout reversion.
+  - [x] **GPU Resource**: Prevented redundant GPU kernal re-compilation on layout switches by reusing manager instances. for `SharedGPU`, preventing WebGL context leaks.
   - [x] **Constructor Safety**: Enhanced `GPU.GPU` detection for varying library builds.
   - [x] **Responsiveness**: Optimized layout switching to be near-instant by deferring worker synchronization.
 

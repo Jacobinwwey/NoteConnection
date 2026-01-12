@@ -201,6 +201,10 @@ let currentPositions = new Map();
 simulationWorker.onmessage = function(event) {
     const { type, nodes: workerNodes } = event.data;
     if (type === 'tick') {
+        // v0.9.80: Ignore worker ticks in Focus Mode to prevent position overwrite
+        // In Focus Mode, positions are managed by the main thread's highlightManager
+        if (focusNode) return;
+
         // Update positions
         workerNodes.forEach(n => {
             currentPositions.set(n.id, { x: n.x, y: n.y });
@@ -504,6 +508,7 @@ function updateSize() {
 // Layout State Caching (v0.9.33)
 const layoutCache = { force: null, dag: null };
 let currentLayoutMode = 'force'; // Default start mode
+let isLayoutSwitching = false; // v0.9.82: Handshake flag
 
 function cacheLayoutState(mode) {
     console.log(`[Layout] Caching state for mode: ${mode} (${nodes.length} nodes)`);
@@ -535,12 +540,22 @@ function restoreLayoutState(mode) {
             restoredCount++;
         }
     });
-    console.log(`[Layout] Restored ${restoredCount} nodes from cache`);
-    return restoredCount > 0;
+    console.log(`[Layout] Restored ${restoredCount}/${nodes.length} nodes from cache`);
+    // v0.9.81: Strict restoration check. If we lost most nodes (filter?), treat as cache miss.
+    return restoredCount > (nodes.length * 0.5);
 }
 
 function updateLayout() {
     const newMode = document.querySelector('input[name="layoutMode"]:checked').value;
+    
+    // v0.9.79: Prevent layout shift on resize when frozen
+    // If mode hasn't changed and we are frozen, do not re-send layout params (which resets center).
+    const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
+    if (newMode === currentLayoutMode && isFrozen) {
+        console.log("[Layout] Update blocked by Freeze Layout.");
+        return;
+    }
+
     console.log(`[Layout] Switching from ${currentLayoutMode} to ${newMode}`);
     
     // 1. Cache previous state if mode changed
@@ -553,11 +568,19 @@ function updateLayout() {
     const settings = settingsManager ? settingsManager.settings.physics : {};
 
     // 2. Attempt to Restore State
+    // 2. Attempt to Restore State
     const hasCache = !!layoutCache[newMode];
     let restored = false;
 
+    if (hasCache) {
+        restored = restoreLayoutState(newMode);
+    }
+    
+    // v0.9.81: User Logic - If cache exists and valid, use it. Else restart (relax).
+    // If restore failed (restored=false) even if hasCache=true, we MUST restart.
+    const shouldRestart = !restored;
+
     // Send command to worker
-    // If we have a cache, we DO NOT want the worker to auto-restart. We want to set positions first.
     simulationWorker.postMessage({ 
         type: 'updateLayout', 
         payload: { 
@@ -567,45 +590,44 @@ function updateLayout() {
             settings: { 
                 repulsion: settings.repulsionForce || -300, 
              },
-            restart: !hasCache // Only restart if we don't have a cache
+            restart: shouldRestart // Restart if no cache OR restore failed
         } 
     });
-
-    if (hasCache) {
-        restored = restoreLayoutState(newMode);
-    }
 
     // 3. Simulation Control
     if (restored) {
         // IMMEDIATE UI UPDATE: Render the restored state instantly
-        // This makes the switch feel "saved" immediately to the user
         ticked();
 
         console.log("[Layout] State restored. Syncing worker in background.");
         
-        // Defer heavy worker sync to avoid blocking the render
-        setTimeout(() => {
-             // Sync Worker with restored positions
-            const workerNodes = nodes.map(n => ({
-                id: n.id,
-                x: n.x, y: n.y,
-                fx: n.fx, fy: n.fy,
-                vx: n.vx, vy: n.vy,
-                rank: n.rank // Ensure rank is respected for DAG
-            }));
-            
-            simulationWorker.postMessage({
-                type: 'setNodes',
-                payload: {
-                    nodes: workerNodes,
-                    links: physicsLinks.map(l => ({ source: l.source.id, target: l.target.id })),
-                    restart: false // keep stopped
-                }
-            });
+        // v0.9.82: Remove setTimeout to prioritize sync and prevent stale ticks.
+        // We use a handshake to ignore ticks until this sync is complete.
+        isLayoutSwitching = true; // Block ticks
 
-            // Ensure it stays stopped
-            simulationWorker.postMessage({ type: 'stop' });
-        }, 0);
+        // Sync Worker with restored positions
+        const workerNodes = nodes.map(n => ({
+            id: n.id,
+            x: n.x, y: n.y,
+            fx: n.fx, fy: n.fy,
+            vx: n.vx, vy: n.vy,
+            rank: n.rank 
+        }));
+        
+        simulationWorker.postMessage({
+            type: 'setNodes',
+            payload: {
+                nodes: workerNodes,
+                links: physicsLinks.map(l => ({ source: l.source.id, target: l.target.id })),
+                restart: false // keep stopped
+            }
+        });
+
+        // Ensure it stays stopped
+        simulationWorker.postMessage({ type: 'stop' });
+        
+        // Send handshake
+        simulationWorker.postMessage({ type: 'layoutSwitchDone' });
                    
     } else {
         // v0.9.34: Force Unfreeze
@@ -1576,6 +1598,13 @@ let currentTransform = d3.zoomIdentity;
 function resizeCanvas() {
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
+    
+    // v0.9.78: Fix Analysis stability - Guard against simulation restart/movement
+    const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
+    if (isFrozen) {
+        simulation.stop();
+    }
+
     if (document.querySelector('input[name="rendererMode"]:checked').value === 'canvas') {
         ticked();
     }
@@ -1900,7 +1929,14 @@ function saveLayout() {
 function dragstarted(event, d) {
   d.isDragging = true; 
   const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
-  if (isFrozen && !focusNode) return;
+  
+  // v0.9.79: Allow manual drag in Focus Mode (No Physics)
+  if (focusNode) {
+      d.fx = d.x; d.fy = d.y; // Lock position
+      return; 
+  }
+  
+  if (isFrozen) return; 
 
   // Notify Worker
   simulationWorker.postMessage({ type: 'dragStart', payload: { id: d.id, x: d.x, y: d.y, active: event.active } });
@@ -1912,7 +1948,18 @@ function dragstarted(event, d) {
 
 function dragged(event, d) {
   const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
-  if (isFrozen && !focusNode) return;
+  
+   // v0.9.79: Allow manual drag in Focus Mode (No Physics)
+  if (focusNode) {
+      if (!d.isDragging) return;
+      // Manually update position
+      d.x = event.x; d.y = event.y;
+      d.fx = event.x; d.fy = event.y;
+      ticked(); // Force render
+      return;
+  }
+
+  if (isFrozen) return;
 
   // Notify Worker
   simulationWorker.postMessage({ type: 'drag', payload: { id: d.id, x: event.x, y: event.y, active: event.active } });
@@ -1925,9 +1972,16 @@ function dragged(event, d) {
 function dragended(event, d) {
   d.isDragging = false; 
   const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
-  if (isFrozen && !focusNode) return;
+  
+   // v0.9.79: Focus Mode Drag End
+  if (focusNode) {
+      // Keep fixed (fx/fy already set in dragged)
+      return;
+  }
 
-  const shouldClear = !focusNode && !isFrozen;
+  if (isFrozen) return;
+
+  const shouldClear = !focusNode && !isFrozen; // Standard logic
 
   // Notify Worker
   simulationWorker.postMessage({ 
@@ -2056,8 +2110,9 @@ window.focusHistory = [];
 const MAX_HISTORY = 10;
 
 function updateFocusHistory(newNode) {
-    // Avoid duplicates at the top of the stack
-    if (window.focusHistory.length > 0 && window.focusHistory[0].id === newNode.id) return;
+    // Avoid duplicates: Remove if exists, then add to top
+    // Requirement: "pin the corresponding node to the top"
+    window.focusHistory = window.focusHistory.filter(n => n.id !== newNode.id);
     
     // Add to specific history list
     window.focusHistory.unshift(newNode);
@@ -2277,6 +2332,10 @@ function enterFocusMode(focusD) {
     // Set Focus Node Fixed Position
     focusD.fx = cx;
     focusD.fy = cy;
+    // v0.9.80: Sync internal position to prevent snap-back on drag
+    focusD.x = cx;
+    focusD.y = cy;
+    
     focusD.isFocusVisible = true;
     focusD._labelDy = 35; 
     if (layoutType === 'vertical') focusD._labelDx = 25; 
@@ -2298,6 +2357,9 @@ function enterFocusMode(focusD) {
             nodeList.forEach((n, i) => {
                 n.fx = baselineX;
                 n.fy = startY + i * hSpacing;
+                // v0.9.80: Sync internal position
+                n.x = n.fx; n.y = n.fy;
+                
                 n.isFocusVisible = true;
                 n._labelDy = 25;
                 n._labelDx = 25;
@@ -2328,6 +2390,9 @@ function enterFocusMode(focusD) {
                 const stagger = (i % 2 === 0 ? -1 : 1) * 20; 
                 const criteriaOffset = (n._focusScore * 20); 
                 n.fy = baselineY + stagger + criteriaOffset;
+                
+                // v0.9.80: Sync internal position
+                n.x = n.fx; n.y = n.fy;
                 
                 n.isFocusVisible = true;
                 if (n.fy < baselineY) n._labelDy = -15; else n._labelDy = 25;
@@ -2370,6 +2435,8 @@ function enterFocusMode(focusD) {
                 n.fx = cx + (dir * sideGap);
                 n.fy = cy + (i * 60) - (list.length * 30);
                 n._labelDy = 25;
+                // v0.9.80: Sync internal position for associated nodes too
+                n.x = n.fx; n.y = n.fy;
              });
         };
         placeSide(left, -1);
