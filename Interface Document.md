@@ -855,6 +855,34 @@ Manages node highlighting interactions for both PC and mobile interfaces.
 
 ### 1.2 解析与提取 (Parsing & Extraction)
 
+#### `FrontmatterParser` (更新于 v0.2.0)
+
+解析 YAML Frontmatter 以提取结构化元数据。
+
+- **函数**: `parse(content: string): ParsedMetadata`
+- **输入**:
+  - `content` (string): Markdown 文件的完整内容。
+- **输出**:
+  - `ParsedMetadata`: 包含提取字段的对象。
+- **类型定义**:
+  ```typescript
+  interface ParsedMetadata {
+    tags: string[]; // 从 'tags' 提取 (列表或内联)
+    prerequisites: string[]; // 从 'prerequisites' 提取
+    next: string[]; // 从 'next' 提取
+    [key: string]: any;
+  }
+  ```
+- **支持格式**:
+  - 内联数组: `field: [Item A, Item B]`
+  - 列表:
+    ```yaml
+    field:
+      - Item A
+      - [[Item B]]
+    ```
+  - 单个值: `field: [[Item A]]`
+
 #### `INoteParser`
 
 将原始内容解析为结构化的 Concept 对象。
@@ -1606,3 +1634,35 @@ interface CooccurrenceMetrics {
   - **可拖动**: 头部显示 `cursor: move`，激活时显示 `cursor: grabbing`。
   - **可调整大小**: `resize: both` 启用浏览器原生调整大小手柄。
   - **约束**: `min-width: 200px`, `min-height: 250px`, `max-width: 90vw`, `max-height: 90vh`。
+
+## 9. CLI 接口 (CLI Interfaces - v0.9.71)
+
+### 构建命令
+
+**输入:**
+
+- `--path`: 字符串。知识库路径。
+- `--gpu`: 布尔值 (Flag)。启用 GPU。
+- `--static`: 布尔值 (Flag)。启用静态模式。
+
+**输出:**
+
+- `src/frontend/data_cli_{kb}_{time}.js`: 前端轻量数据 (CLI 运行专用)。
+- `src/frontend/graph_data_cli_{kb}_{time}.json`: 完整数据 (CLI 运行专用)。
+
+## 10. 前端设置接口 (Frontend Settings Interfaces - v0.9.71)
+
+### 性能设置
+
+- **GPU 优化渲染**:
+  - 类型: 复选框
+  - 默认值: `true` (硬件支持时)
+  - 效果: 为后端布局更新和向量相似度启用 `gpu.js` 加速。
+- **静态模式**:
+  - 类型: 复选框
+  - 逻辑: 节点数 > 5000 时自动启用。
+  - 效果: 在 2 秒松弛后完全停止模拟。
+- **极端规模**:
+  - 逻辑: 隐式约束。
+  - 条件: 节点数 > 10,000 或 边数 > 1,000,000。
+  - 效果: 永远不渲染边。

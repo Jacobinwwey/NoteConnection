@@ -70,7 +70,7 @@ NoteConnection utilizes `gpu.js` for WebGL-based acceleration and plans to suppo
 
 ---
 
-## 🏗️ System Architecture
+## 🏢 System Architecture
 
 NoteConnection is built on a modular architecture designed for performance and extensibility.
 
@@ -148,6 +148,7 @@ NoteConnection uses **Capacitor** to build native mobile apps.
     ```
     APK will be located at: `android/app/build/outputs/apk/debug/app-debug.apk`
 
+
 ### 3. Usage Guide
 
 1.  **Select Source**: Use the dropdown in the top-left to choose a folder from `Knowledge_Base`.
@@ -202,7 +203,7 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
     - On Windows, this usually works out of the box with standard build tools (`windows-build-tools`).
     - If you encounter `gl` errors, ensure Python and C++ compilers are available.
 
-## Changelog
+## 📅 Changelog
 
 ### v0.9.74 (2026-01-12)
 
@@ -216,10 +217,6 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 - **Static Mode**: Implemented strict simulation freezing for massive graphs (>5000 nodes) to save resources.
 - **CLI Support**: Added full CLI argument support for automated building and loading.
 - **Extreme Scale Optimization**: Disabled edge rendering entirely for graphs with >10,000 nodes to prevent browser crashes.
-
----
-
-## 📅 Changelog
 
 ### v1.0.0 - Production Release (2026-06-01)
 
@@ -717,17 +714,42 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
     ```
     APK 将位于: `android/app/build/outputs/apk/debug/app-debug.apk`
 
-### 3. 使用指南
-
-1.  **选择数据源**: 使用左上角的下拉菜单从 `Knowledge_Base` 中选择文件夹。
-2.  **加载**: 点击 "Load"。对于大数据集 (>200 文件)，并行处理将自动启用。
-3.  **探索**:
-    - **布局**: 切换 **DAG** 查看层级或 **Force** 查看聚类。
-    - **渲染器**: 如果图表感觉迟缓，请切换到 **Canvas**。
-    - **专注**: 点击节点进入专注模式。使用滑块调整间距。
-    - **控制**: 使用 **Simulation** 面板冻结布局或调整速度。
-
 ---
+
+## 🖥️ CLI 命令行使用 (v0.9.71)
+
+您可以直接从命令行加载知识库并构建图谱，而无需使用 UI。这对于自动构建或无头环境非常有用。
+
+### 使用方法
+
+```bash
+npm start -- --path "<知识库路径>" [选项]
+```
+
+### 选项
+
+| 选项        | 描述                                      | 默认值                |
+| ----------- | ----------------------------------------- | --------------------- |
+| `--path`    | 包含 Markdown 文件的文件夹的绝对路径。    | `Knowledge_Base`      |
+| `--gpu`     | 为布局和向量计算启用 AMDGPU/WebGL 加速。  | `true` (如果硬件支持) |
+| `--no-gpu`  | 禁用 GPU 加速 (强制使用 CPU)。            | `false`               |
+| `--static`  | 启用静态模式 (仅后端计算，前端布局冻结)。 | `false`               |
+| `--workers` | 要使用的 Worker 线程数。                  | `numCPUs - 1`         |
+
+### 示例
+
+```bash
+# 基础加载
+npm start -- --path "C:/Users/MyName/Documents/MyNotes"
+
+# GPU 加速构建
+npm start -- --path "E:/Knowledge/ObsidianVault" --gpu
+
+# 强制 CPU (如果 GPU 出现问题)
+npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
+```
+
+**注意:** CLI 运行会生成唯一的静态数据文件 (`data_cli_{kb_name}_{time}.js`) 以保护原始 `data.js`。服务器启动时，它会自动为前端提供这些特定的文件。
 
 ---
 
@@ -737,6 +759,14 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 
 - **布局切换修复**: 实现了 Force 和 DAG 布局的稳健状态保存 (`layoutCache`)，确保节点位置在切换时被保存和恢复，消除了“瞬移”现象。修复了 `updateLayout` 中的关键崩溃问题。
 - **GPU 稳健性**: 重构 `layout_gpu.js` 使用单例模式，防止在切换设置时发生 WebGL 上下文泄漏 (限制 16 个)。
+
+### v0.9.71 (2026-01-10)
+
+- **后端并行布局**: 通过使用 Worker 线程或 GPU 在后端预计算节点位置，加速前端加载。
+- **GPU 优化渲染**: 在后端布局中添加了对 AMDGPU 加速的支持。
+- **静态模式**: 为海量图谱 (>5000 节点) 实现了严格的模拟冻结以节省资源。
+- **CLI 支持**: 添加了完整的 CLI 参数支持，用于自动化构建和加载。
+- **极端规模优化**: 对于超过 10,000 个节点的图谱，完全禁用了边渲染，以防止浏览器崩溃。
 
 ### v1.0.0 - 正式发布 (Production Release) (2026-06-01)
 
