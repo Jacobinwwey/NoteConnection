@@ -471,7 +471,10 @@ function updateLayout() {
         
         // Additional DAG specific link tuning if needed, 
         // but applyPhysics sets distance. We might want to override strength?
-        simulation.force("link").strength(0.3);
+        const linkForce = simulation.force("link");
+        if (linkForce) linkForce.strength(0.3);
+        const gpuLink = simulation.force("gpuLink");
+        if (gpuLink) gpuLink.strength(0.3);
     } else {
         // Force Layout Forces
         simulation.force("y", null);
@@ -482,7 +485,11 @@ function updateLayout() {
         applyPhysics(settingsManager.settings);
         
         // Reset Link Strength default
-        simulation.force("link").strength(1);
+        // Reset Link Strength default
+        const linkForceF = simulation.force("link");
+        if (linkForceF) linkForceF.strength(1);
+        const gpuLinkF = simulation.force("gpuLink");
+        if (gpuLinkF) gpuLinkF.strength(1);
     }
     
     // 2. Attempt to Restore State
@@ -2155,7 +2162,14 @@ function enterFocusMode(focusD) {
     const activeLinks = links.filter(l => activeNodeIds.has(l.source.id) && activeNodeIds.has(l.target.id));
     
     simulation.nodes(activeNodes);
-    simulation.force("link").links(activeLinks);
+    simulation.nodes(activeNodes);
+    
+    // Update Links (CPU or GPU)
+    const linkForce = simulation.force("link");
+    if (linkForce) linkForce.links(activeLinks);
+    
+    const gpuLink = simulation.force("gpuLink");
+    if (gpuLink) gpuLink.links(activeLinks);
 
     // Render Focus Labels (SVG)
     g.selectAll(".focus-label-group").remove(); // Clear old
@@ -2224,7 +2238,14 @@ function enterFocusMode(focusD) {
     // Restoring all nodes and links to the simulation.
     // Background nodes will reappear in their original positions (as they were never simulated/moved).
     simulation.nodes(nodes);
-    simulation.force("link").links(links);
+    simulation.nodes(nodes);
+    
+    // Restore Links (CPU or GPU)
+    const linkForceRestored = simulation.force("link");
+    if (linkForceRestored) linkForceRestored.links(links);
+    
+    const gpuLinkRestored = simulation.force("gpuLink");
+    if (gpuLinkRestored) gpuLinkRestored.links(links);
 
     nodes.forEach(d => {
         // Restore original positions (v0.9.30)
@@ -2531,22 +2552,35 @@ function applyPhysics(settings) {
                    gpuFactory().isAvailable();
     
     if (useGPU && mode === 'force') { // DAG uses different Y/X forces, complex to GPU-ify quickly. Only GPU-ify Force mode for now.
-        console.log("[Physics] Using GPU Optimized Force");
-        // Remove CPU charge
+        console.log("[Physics] Using GPU Optimized Force (ManyBody + Link)");
+        // Remove CPU forces
         simulation.force("charge", null);
-        // Add GPU charge
-        // We need to ensure singleton or correct instance
-        // D3 force re-initialization handles 'nodes' assignment
+        simulation.force("link", null);
+
+        // Add GPU forces
+        // ManyBody
         simulation.force("gpuCharge", window.gpuManyBody().strength(chargeVal));
+        
+        // Link
+        // We need to pass the current set of links (physicsLinks) 
+        // Note: 'physicsLinks' is global in app.js scope (defined around line 168)
+        simulation.force("gpuLink", window.gpuLink(physicsLinks).distance(settings.physics.linkDistance).strength(1));
+        
     } else {
         // CPU Mode
-        if (useGPU) console.log("[Physics] GPU disabled or not supported for this mode. Using CPU.");
+        if (useGPU) console.log("[Physics] GPU disabled or not supported for this mode (or GPU init failed). Using CPU.");
         
         simulation.force("gpuCharge", null);
+        simulation.force("gpuLink", null);
+        
         simulation.force("charge", d3.forceManyBody().strength(chargeVal));
+        simulation.force("link", d3.forceLink(physicsLinks).id(d => d.id).distance(settings.physics.linkDistance));
     }
 
-    simulation.force("link").distance(settings.physics.linkDistance);
+    // Link distance handled inside GPU block if GPU active, but we should sync just in case logic splits? 
+    // Actually, we replaced "link" force entirely in CPU block above. 
+    // So line 2549 (original) `simulation.force("link").distance(...)` would crash if force("link") is null.
+    // We remove it from here and handle it inside the if/else logic above.
     simulation.force("collide").radius(settings.physics.collisionRadius);
 }
 

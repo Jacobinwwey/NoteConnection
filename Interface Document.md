@@ -627,6 +627,22 @@ GPU-accelerated implementation of the Vector Space Model, utilizing the AMD 7900
   - `getSimilar(fileId: string, topK: number)`: Retrieval is $O(1)$ (row lookup) + sorting, reading from the precomputed matrix.
   - `destroy()`: Releases GPU resources (WebGL context).
 
+#### `Layout Forces (v0.9.74)`
+
+GPU-accelerated physics engine for frontend layout, implementing D3-compatible forces.
+
+- **Location**: `src/frontend/layout_gpu.js`
+- **Architecture**:
+  - **Shared Context**: Uses a singleton `SharedGPU` to manage a single WebGL context for all forces, preventing browser context limits (16 max).
+- **Classes**:
+  - **`GPUManyBodyForce`**: N-body repulsion. Replaces `d3.forceManyBody`.
+  - **`GPULinkForce`**: Spring force. Replaces `d3.forceLink`.
+    - **Algorithm**: "Gather" kernel where each node calculates forces from all connected neighbors.
+    - **Robustness**:
+      - **Velocity Clamping**: Caps velocity at `100` to prevent explosion.
+      - **NaN Safety**: Safeguards against division by zero and infinite results.
+      - **Type Safety**: Strict input casting.
+
 #### Drag and Zoom Functionality
 
 Enhances the node statistics popup with user-friendly positioning and scaling controls.
@@ -1413,12 +1429,28 @@ Manages node highlighting interactions for both PC and mobile interfaces.
     exclusionList: string[];
   }
   ```
-- **逻辑**:
-  - 检测可用的 CPU 核心。
-  - 生成 Worker（可通过 `maxWorkers` 配置）。
-  - 将文件列表拆分为*路径*块。
-  - Worker 执行处理并返回轻量级结果。
-  - 结果在主线程中聚合。
+  - `destroy()`: 释放 GPU 资源 (WebGL 上下文)。
+
+#### `Layout Forces (v0.9.74)`
+
+用于前端布局的 GPU 加速物理引擎，实现了与 D3 兼容的力。
+
+- **位置**: `src/frontend/layout_gpu.js`
+- **架构**:
+  - **共享上下文**: 使用单例 `SharedGPU` 管理所有力的单个 WebGL 上下文，防止达到浏览器上下文限制（最大 16 个）。
+- **类**:
+  - **`GPUManyBodyForce`**: N 体排斥力。替换 `d3.forceManyBody`。
+  - **`GPULinkForce`**: 弹簧力。替换 `d3.forceLink`。
+    - **算法**: "Gather" 核函数，每个节点计算所有连接邻居的力。
+    - **稳健性**:
+      - **速度钳位**: 将速度限制在 `100` 以防止爆炸。
+      - **NaN 安全**: 防止除以零和无限结果。
+      - **类型安全**: 严格的输入转换。
+- 检测可用的 CPU 核心。
+- 生成 Worker（可通过 `maxWorkers` 配置）。
+- 将文件列表拆分为*路径*块。
+- Worker 执行处理并返回轻量级结果。
+- 结果在主线程中聚合。
 - **回退**: 如果 Worker 生成失败，自动降级为顺序处理。
 
 ### 3.5 资源优化 (Resource Optimization - v0.9.58)
