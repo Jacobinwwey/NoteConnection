@@ -416,6 +416,7 @@ const layoutCache = { force: null, dag: null };
 let currentLayoutMode = 'force'; // Default start mode
 
 function cacheLayoutState(mode) {
+    console.log(`[Layout] Caching state for mode: ${mode} (${nodes.length} nodes)`);
     // Deep copy specific properties
     layoutCache[mode] = nodes.map(n => ({
         id: n.id,
@@ -426,7 +427,11 @@ function cacheLayoutState(mode) {
 }
 
 function restoreLayoutState(mode) {
-    if (!layoutCache[mode]) return false;
+    console.log(`[Layout] Attempting to restore mode: ${mode}`);
+    if (!layoutCache[mode]) {
+        console.log(`[Layout] No cache found for ${mode}`);
+        return false;
+    }
     
     const cacheMap = new Map(layoutCache[mode].map(c => [c.id, c]));
     let restoredCount = 0;
@@ -440,11 +445,13 @@ function restoreLayoutState(mode) {
             restoredCount++;
         }
     });
+    console.log(`[Layout] Restored ${restoredCount} nodes from cache`);
     return restoredCount > 0;
 }
 
 function updateLayout() {
     const newMode = document.querySelector('input[name="layoutMode"]:checked').value;
+    console.log(`[Layout] Switching from ${currentLayoutMode} to ${newMode}`);
     
     // 1. Cache previous state if mode changed
     if (newMode !== currentLayoutMode) {
@@ -458,15 +465,24 @@ function updateLayout() {
         simulation.force("center", null);
         simulation.force("y", d3.forceY(d => (d.rank || 0) * layerHeight).strength(1));
         simulation.force("x", d3.forceX(width / 2).strength(0.05));
-        simulation.force("link").distance(100).strength(0.3);
-        simulation.force("charge").strength(settingsManager.get('physics', 'repulsionDAG'));
+        
+        // Use applyPhysics to handle repulsion (CPU only for DAG)
+        applyPhysics(settingsManager.settings);
+        
+        // Additional DAG specific link tuning if needed, 
+        // but applyPhysics sets distance. We might want to override strength?
+        simulation.force("link").strength(0.3);
     } else {
         // Force Layout Forces
         simulation.force("y", null);
         simulation.force("x", null);
         simulation.force("center", d3.forceCenter(width / 2, height / 2));
-        simulation.force("link", d3.forceLink(links).id(d => d.id).distance(100));
-        simulation.force("charge").strength(settingsManager.get('physics', 'repulsionForce'));
+        
+        // Use applyPhysics to handle repulsion (GPU/CPU)
+        applyPhysics(settingsManager.settings);
+        
+        // Reset Link Strength default
+        simulation.force("link").strength(1);
     }
     
     // 2. Attempt to Restore State
@@ -474,6 +490,7 @@ function updateLayout() {
 
     // 3. Simulation Control
     if (restored) {
+        console.log("[Layout] State restored. Stopping simulation and forcing render.");
         // Instant Switch: Stop simulation and render immediately
         // v0.9.33: "remains unchanged before and after the switch"
         simulation.alpha(0); // Kill alpha
@@ -2506,7 +2523,12 @@ function applyPhysics(settings) {
     const chargeVal = mode === 'dag' ? settings.physics.repulsionDAG : settings.physics.repulsionForce;
     
     // GPU Rendering Switch
-    const useGPU = settings.performance && settings.performance.gpuRendering && window.gpuManyBody;
+    // Check if Setting is ON, Library is loaded, and Hardware is initialized
+    const gpuFactory = window.gpuManyBody;
+    const useGPU = settings.performance && 
+                   settings.performance.gpuRendering && 
+                   gpuFactory && 
+                   gpuFactory().isAvailable();
     
     if (useGPU && mode === 'force') { // DAG uses different Y/X forces, complex to GPU-ify quickly. Only GPU-ify Force mode for now.
         console.log("[Physics] Using GPU Optimized Force");

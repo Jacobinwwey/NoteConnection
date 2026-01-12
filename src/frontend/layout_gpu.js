@@ -18,11 +18,34 @@ class GPUManyBodyForce {
                 console.warn("[GPU Force] GPU.js not loaded.");
                 this.available = false;
             } else {
-                this.gpu = new GPU();
+                // Handle potential UMD/CommonJS export mismatch where GPU is { GPU: class }
+                
+                // Attempt to find constructor
+                let GPUConstructor = null;
+                if (typeof GPU === 'function') {
+                    GPUConstructor = GPU;
+                } else if (typeof GPU === 'object' && GPU !== null && typeof GPU.GPU === 'function') {
+                    GPUConstructor = GPU.GPU;
+                }
+
+                if (!GPUConstructor) {
+                     // Last ditch: check if 'GPU' key exists but is not a function
+                     throw new Error(`GPU constructor not found. typeof GPU: ${typeof GPU}`);
+                }
+
+                if (typeof GPUConstructor !== 'function') {
+                     throw new Error(`GPU constructor not found. typeof GPU: ${typeof GPU}`);
+                }
+
+                this.gpu = new GPUConstructor();
                 this.available = true;
             }
         } catch (e) {
-            console.error("[GPU Force] Error initializing GPU:", e);
+            console.error("[GPU Force] Error initializing GPU. Details:", {
+                message: e.message,
+                stack: e.stack,
+                errorObject: e
+            });
             this.available = false;
         }
     }
@@ -124,7 +147,12 @@ class GPUManyBodyForce {
 }
 
 // Expose factory
+// Singleton instance to prevent multiple WebGL contexts
+let _gpuInstance = null;
+
 window.gpuManyBody = function() {
+    if (_gpuInstance) return _gpuInstance;
+
     const force = new GPUManyBodyForce();
     
     function impl(alpha) {
@@ -136,8 +164,15 @@ window.gpuManyBody = function() {
     };
 
     impl.strength = function(x) {
-        return force.strength(x);
+        if (arguments.length === 0) return force.strength();
+        force.strength(x);
+        return impl;
     };
 
+    impl.isAvailable = function() {
+        return force.available;
+    };
+
+    _gpuInstance = impl;
     return impl;
 };
