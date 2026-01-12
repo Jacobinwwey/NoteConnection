@@ -28,6 +28,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
   - [x] **Crash Resolution**: Fixed `TypeError` in `updateLayout` during force reconfiguration.
   - [x] **Singleton Pattern**: Refactored `layout_gpu.js` to use a Singleton instance for `SharedGPU`, preventing WebGL context leaks.
   - [x] **Constructor Safety**: Enhanced `GPU.GPU` detection for varying library builds.
+  - [x] **Responsiveness**: Optimized layout switching to be near-instant by deferring worker synchronization.
 
 ---
 

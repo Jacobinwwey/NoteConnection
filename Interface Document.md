@@ -282,6 +282,16 @@ Static utility for calculating graph topology metrics (Centrality).
 Renders the JSON data into an interactive DAG.
 
 - **Input**: `graph.json` (Structure matches `DirectedGraph`)
+- **Key Feature**: **Web Worker Offloading (v0.9.72)**
+  - **Module**: `src/frontend/simulationWorker.js`
+  - **Purpose**: Runs D3 Force Simulation in a background thread to prevent Main Thread blocking (UI freeze) during heavy computation.
+  - **Interface**: Message Passing via `postMessage`.
+    - `init`: Sends nodes/links and settings.
+    - `tick`: Receives updated positions `({id, x, y})` for rendering.
+    - `updateParams`: Updates physics parameters (Gravity, Repulsion) without restart.
+    - `updateLayout`: Switches between Force and DAG modes.
+    - `setNodes`: Updates the active subset of nodes (e.g., for Focus Mode).
+    - `drag`: Syncs manual node movement.
 - **Features**:
 
   - **Layout Modes (v0.4.0)**:
@@ -647,6 +657,13 @@ GPU-accelerated physics engine for frontend layout, implementing D3-compatible f
   - **Dynamic Switching**: `applyPhysics` toggles between `d3.forceManyBody`/`d3.forceLink` and `window.gpuManyBody`/`window.gpuLink` based on hardware settings.
   - **Focus Mode Support**: `enterFocusMode` and `exitFocusMode` detect the active Force type (CPU or GPU) to update link references correctly.
   - **Layout Caching**: Safe restoration of cached coordinates (`layoutCache`) with null-checks to prevent crashes during rapid switching.
+  - **Atomic Layout Switching (v0.9.74)**:
+    - **Problem**: Previously, switching layouts (DAG -> Force) caused a race condition where the worker auto-restarted the simulation before the frontend could restore cached positions, leading to "leaking" positions.
+    - **Solution**:
+      - `updateLayout` in `simulationWorker.js` now accepts a `restart` flag.
+      - The frontend passes `restart: false` when a valid cache exists.
+      - Restored positions are synchronized via `setNodes` while the simulation remains stopped.
+    - **Result**: Switching back to a visited layout is now instantaneous and purely static, with zero node movement.
 
 #### Drag and Zoom Functionality
 

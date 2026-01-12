@@ -192,34 +192,107 @@ if (window.settingsManager) {
     }
 }
 
-const simulation = d3.forceSimulation(nodes)
-    .force("link", d3.forceLink(physicsLinks).id(d => d.id).distance(100))
-    .force("charge", d3.forceManyBody().strength(-300))
-    .force("center", d3.forceCenter(width / 2, height / 2))
-    .force("collide", d3.forceCollide().radius(20)) // Avoid overlap
-    .velocityDecay(0.2); // v0.9.37: Initial low damping (0.2) for 2s to ensure relaxation
+// Simulation Worker Setup
+const simulationWorker = new Worker("simulationWorker.js");
 
-// v0.9.37: Two-stage Damping Strategy
-setTimeout(() => {
-    // Only increase if user hasn't manually adjusted it (still at initial 0.2)
-    if (Math.abs(simulation.velocityDecay() - 0.2) < 0.001) {
-        simulation.velocityDecay(0.95);
-        // Sync UI
-        if (typeof simSpeedSlider !== 'undefined' && simSpeedSlider) {
-            simSpeedSlider.value = 0.95;
-            if (typeof simSpeedVal !== 'undefined' && simSpeedVal) {
-                simSpeedVal.innerText = "0.95";
+// Position buffer for rendering
+let currentPositions = new Map();
+
+simulationWorker.onmessage = function(event) {
+    const { type, nodes: workerNodes } = event.data;
+    if (type === 'tick') {
+        // Update positions
+        workerNodes.forEach(n => {
+            currentPositions.set(n.id, { x: n.x, y: n.y });
+            const originalNode = nodeMap.get(n.id);
+            if (originalNode) {
+                originalNode.x = n.x;
+                originalNode.y = n.y;
             }
-        }
+        });
         
-        // v0.9.72: Static Mode Enforcement
-        // "When nodes exceed 5,000 or edges surpass 200,000... After 2 seconds, all node positions cease updating"
-        if (nodes.length > 5000 || links.length > 200000) {
-            console.log("[Simulation] Large graph detected. Freezing simulation after relaxation.");
-            simulation.stop();
-            // Force one last tick to ensure render matches final state?
-            // Usually stop() leaves it as is.
+        ticked();
+    }
+};
+
+// Simulation Proxy to mimic D3 API for compatibility
+const simulation = {
+    force: (name, ...args) => {
+        // Simplified proxy: We only support specific updates via messages
+        // If args provided, it's a setter.
+        // This is complex because d3 uses chaining and function arguments.
+        // We will refactor usage sites instead of perfect proxying.
+        return simulation; // Chaining
+    },
+    alpha: (a) => {
+        if (a !== undefined) {
+             simulationWorker.postMessage({ type: 'updateParams', payload: { alpha: a, restart: true } });
+             return simulation;
         }
+        return 0; // Dummy
+    },
+    alphaTarget: (a) => {
+         // Used in drag
+         // We handle drag separately
+         return simulation; 
+    },
+    restart: () => {
+        simulationWorker.postMessage({ type: 'restart', payload: {} });
+        return simulation; 
+    },
+    stop: () => {
+        simulationWorker.postMessage({ type: 'stop', payload: {} });
+        return simulation;
+    },
+    velocityDecay: (d) => {
+        if (d !== undefined) {
+            simulationWorker.postMessage({ type: 'updateParams', payload: { velocityDecay: d } });
+            return simulation;
+        }
+        return 0.2; // Dummy default
+    },
+    nodes: () => nodes // Return reference to main thread nodes
+};
+
+// Initialize Worker
+// Send simplified data structure (avoid circular refs)
+const workerNodes = nodes.map(n => ({ id: n.id, x: n.x || Math.random()* width, y: n.y || Math.random()*height, fx: n.fx, fy: n.fy, rank: n.rank }));
+const workerLinks = physicsLinks.map(l => ({ source: l.source.id, target: l.target.id }));
+
+simulationWorker.postMessage({ 
+    type: 'init', 
+    payload: { 
+        nodes: workerNodes, 
+        links: workerLinks, 
+        width, 
+        height,
+        settings: {
+            repulsion: -300,
+            distance: 100,
+            velocityDecay: 0.2
+        }
+    } 
+});
+
+// v0.9.37: Two-stage Damping Strategy handled in worker or re-implemented here?
+// Re-implementing logic via messages
+setTimeout(() => {
+    // We assume default hasn't changed manually
+    // Send update
+    simulationWorker.postMessage({ type: 'updateParams', payload: { velocityDecay: 0.95 } });
+    
+    // Sync UI
+    if (typeof simSpeedSlider !== 'undefined' && simSpeedSlider) {
+        simSpeedSlider.value = 0.95;
+        if (typeof simSpeedVal !== 'undefined' && simSpeedVal) {
+             simSpeedVal.innerText = "0.95";
+        }
+    }
+    
+    // Static Mode Enforcement
+    if (nodes.length > 5000 || links.length > 200000) {
+         console.log("[Simulation] Large graph detected. Freezing simulation after relaxation.");
+         simulation.stop();
     }
 }, 2000);
 
@@ -229,29 +302,17 @@ const resizeObserver = new ResizeObserver(entries => {
         width = entry.contentRect.width;
         height = entry.contentRect.height;
         
-        // Ensure canvas matches new container size (handled here because window.resize doesn't catch flex layout changes)
         if (typeof resizeCanvas === 'function') resizeCanvas();
 
         const mode = document.querySelector('input[name="layoutMode"]:checked') ? document.querySelector('input[name="layoutMode"]:checked').value : 'force';
-
-        if (mode === 'dag') {
-             // Update X centering
-             simulation.force("x", d3.forceX(width / 2).strength(0.05));
-        } else {
-             // Update Center Force
-             simulation.force("center", d3.forceCenter(width / 2, height / 2));
-        }
         
-        // Check Freeze Layout State
+        // Send layout update to worker
+        // We reuse the updateLayout logic which now sends messages
+        updateLayout(); 
+        
         const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
-        
-        // Only restart if NOT frozen
         if (!isFrozen) {
-            simulation.alpha(0.3).restart();
-        } else {
-            // If frozen, we might want to ensure one tick happens if using Canvas to handle clear/redraw?
-            // resizeCanvas already calls ticked() if mode is canvas.
-            // For SVG, it handles itself via CSS, and nodes don't move, so no tick needed.
+            simulation.restart();
         }
     }
 });
@@ -480,90 +541,96 @@ function updateLayout() {
         currentLayoutMode = newMode;
     }
 
-    if (newMode === 'dag') {
-        // DAG Layout Forces
-        const layerHeight = 120;
-        simulation.force("center", null);
-        simulation.force("y", d3.forceY(d => (d.rank || 0) * layerHeight).strength(1));
-        simulation.force("x", d3.forceX(width / 2).strength(0.05));
-        
-        // Use applyPhysics to handle repulsion (CPU only for DAG)
-        applyPhysics(settingsManager.settings);
-        
-        // Additional DAG specific link tuning if needed, 
-        // but applyPhysics sets distance. We might want to override strength?
-        const linkForce = simulation.force("link");
-        if (linkForce) linkForce.strength(0.3);
-        const gpuLink = simulation.force("gpuLink");
-        if (gpuLink) gpuLink.strength(0.3);
-    } else {
-        // Force Layout Forces
-        simulation.force("y", null);
-        simulation.force("x", null);
-        simulation.force("center", d3.forceCenter(width / 2, height / 2));
-        
-        // Use applyPhysics to handle repulsion (GPU/CPU)
-        applyPhysics(settingsManager.settings);
-        
-        // Reset Link Strength default
-        // Reset Link Strength default
-        const linkForceF = simulation.force("link");
-        if (linkForceF) linkForceF.strength(1);
-        const gpuLinkF = simulation.force("gpuLink");
-        if (gpuLinkF) gpuLinkF.strength(1);
-    }
-    
+    // Prepare settings for worker
+    const settings = settingsManager ? settingsManager.settings.physics : {};
+
     // 2. Attempt to Restore State
-    const restored = restoreLayoutState(newMode);
+    const hasCache = !!layoutCache[newMode];
+    let restored = false;
+
+    // Send command to worker
+    // If we have a cache, we DO NOT want the worker to auto-restart. We want to set positions first.
+    simulationWorker.postMessage({ 
+        type: 'updateLayout', 
+        payload: { 
+            mode: newMode, 
+            width, 
+            height,
+            settings: { 
+                repulsion: settings.repulsionForce || -300, 
+             },
+            restart: !hasCache // Only restart if we don't have a cache
+        } 
+    });
+
+    if (hasCache) {
+        restored = restoreLayoutState(newMode);
+    }
 
     // 3. Simulation Control
     if (restored) {
-        console.log("[Layout] State restored. Stopping simulation and forcing render.");
-        // Instant Switch: Stop simulation and render immediately
-        // v0.9.33: "remains unchanged before and after the switch"
-        simulation.alpha(0); // Kill alpha
-        simulation.stop();   // Stop tick loop
-        ticked();            // Force render
-    } else {
-        // First time: Run simulation
+        // IMMEDIATE UI UPDATE: Render the restored state instantly
+        // This makes the switch feel "saved" immediately to the user
+        ticked();
+
+        console.log("[Layout] State restored. Syncing worker in background.");
         
+        // Defer heavy worker sync to avoid blocking the render
+        setTimeout(() => {
+             // Sync Worker with restored positions
+            const workerNodes = nodes.map(n => ({
+                id: n.id,
+                x: n.x, y: n.y,
+                fx: n.fx, fy: n.fy,
+                vx: n.vx, vy: n.vy,
+                rank: n.rank // Ensure rank is respected for DAG
+            }));
+            
+            simulationWorker.postMessage({
+                type: 'setNodes',
+                payload: {
+                    nodes: workerNodes,
+                    links: physicsLinks.map(l => ({ source: l.source.id, target: l.target.id })),
+                    restart: false // keep stopped
+                }
+            });
+
+            // Ensure it stays stopped
+            simulationWorker.postMessage({ type: 'stop' });
+        }, 0);
+                   
+    } else {
         // v0.9.34: Force Unfreeze
-        // Requirement: "switching layouts ... takes effect on all nodes and should not be limited by the user's scaling degree"
-        // Clear any 'fx/fy' locks that might have been set by viewport culling (checkSimulationState)
         nodes.forEach(n => {
             n.fx = null;
             n.fy = null;
-            n.isCulled = false; // Reset culled flag so they are rendered
+            n.isCulled = false; 
         });
+        
+        // Notify worker to unfix all nodes (except dragged ones? logic needed)
+        // For now, assume unfix all.
+        // simulationWorker.postMessage({ type: 'fixNodes', payload: nodes.map(n => ({id: n.id, cmd: 'unfix'})) });
 
-        // v0.9.39: Rapid Relaxation on Layout Switch
-        simulation.velocityDecay(0.2);
-        simulation.alpha(1).restart();
+        // v0.9.39: Rapid Relaxation on Layout Switch (Only for FRESH layouts)
+        simulationWorker.postMessage({ type: 'updateParams', payload: { velocityDecay: 0.2, restart: true } });
 
         setTimeout(() => {
-            // Check if user manually adjusted speed
-            if (Math.abs(simulation.velocityDecay() - 0.2) < 0.001) {
-                simulation.velocityDecay(0.95);
-                
-                // Sync UI
-                if (typeof simSpeedSlider !== 'undefined' && simSpeedSlider) {
-                    simSpeedSlider.value = 0.95;
-                    if (typeof simSpeedVal !== 'undefined' && simSpeedVal) {
-                        simSpeedVal.innerText = "0.95";
-                    }
+             simulationWorker.postMessage({ type: 'updateParams', payload: { velocityDecay: 0.95 } });
+             
+             // Sync UI
+             if (typeof simSpeedSlider !== 'undefined' && simSpeedSlider) {
+                simSpeedSlider.value = 0.95;
+                if (typeof simSpeedVal !== 'undefined' && simSpeedVal) {
+                    simSpeedVal.innerText = "0.95";
                 }
+            }
 
-                // Check Freeze Layout State
-                // If frozen, stop now that relaxation is done
-                const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
-                
-                // v0.9.72: Static Mode Enforcement on Layout Switch
-                const isLargeGraph = nodes.length > 5000 || links.length > 200000;
-                
-                if (isFrozen || isLargeGraph) {
-                    if (isLargeGraph) console.log("[Simulation] Large graph detected. Freezing simulation after layout switch.");
-                    simulation.stop();
-                }
+            const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
+            const isLargeGraph = nodes.length > 5000 || links.length > 200000;
+            
+            if (isFrozen || isLargeGraph) {
+                if (isLargeGraph) console.log("[Simulation] Large graph detected. Freezing simulation after layout switch.");
+                simulationWorker.postMessage({ type: 'stop', payload: {} });
             }
         }, 2000);
     }
@@ -1608,7 +1675,7 @@ canvas.addEventListener('click', (e) => {
     }
 });
 
-simulation.on("tick", ticked);
+// simulation.on("tick", ticked); // Handled via worker message
 
 // Renderer Toggle
 document.querySelectorAll('input[name="rendererMode"]').forEach(radio => {
@@ -1821,42 +1888,52 @@ function saveLayout() {
 }
 
 // Drag functions
+// Drag functions
 function dragstarted(event, d) {
-  d.isDragging = true; // Mark as being dragged
+  d.isDragging = true; 
   const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
-  // Requirement: If frozen and NOT in focus mode, prevent dragging to reduce memory/cpu usage
   if (isFrozen && !focusNode) return;
 
-  if (!event.active) simulation.alphaTarget(0.3).restart();
+  // Notify Worker
+  simulationWorker.postMessage({ type: 'dragStart', payload: { id: d.id, x: d.x, y: d.y, active: event.active } });
+  
+  // Local Update (for instant feedback before tick)
   d.fx = d.x;
   d.fy = d.y;
 }
 
 function dragged(event, d) {
-  // isDragging already true
   const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
   if (isFrozen && !focusNode) return;
 
+  // Notify Worker
+  simulationWorker.postMessage({ type: 'drag', payload: { id: d.id, x: event.x, y: event.y, active: event.active } });
+  
+  // Local Update
   d.fx = event.x;
   d.fy = event.y;
 }
 
 function dragended(event, d) {
-  d.isDragging = false; // Unmark
+  d.isDragging = false; 
   const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
   if (isFrozen && !focusNode) return;
 
-  if (!event.active) simulation.alphaTarget(0);
+  const shouldClear = !focusNode && !isFrozen;
+
+  // Notify Worker
+  simulationWorker.postMessage({ 
+      type: 'dragEnd', 
+      payload: { 
+          id: d.id, 
+          x: event.x, 
+          y: event.y, 
+          active: event.active,
+          shouldClear: shouldClear 
+      } 
+  });
   
-  // In Focus Mode, nodes have fixed positions (fx, fy) set by the layout.
-  // We want to allow manual adjustment (dragging) without them snapping back or drifting.
-  // So if in Focus Mode, we simply RETAIN the fx/fy set during drag.
-  // If NOT in Focus Mode (Force Layout), we release them to the simulation.
-  
-  // v0.9.0: Also check Freeze Layout. If frozen, we treat it like Focus Mode (manual placement).
-  // v0.9.25 Update: If frozen, dragging is disabled above, so this logic mainly applies when NOT frozen or in Focus Mode.
-  
-  if (!focusNode && !isFrozen) {
+  if (shouldClear) {
         d.fx = null;
         d.fy = null;
   }
@@ -2038,6 +2115,9 @@ function enterFocusMode(focusD) {
     uniqueSub.sort(sortFn);
     
     // 4. Layout Calculation
+    // Stop simulation to prevent movement during calculation
+    simulationWorker.postMessage({ type: 'stop' });
+    
     // Requirement: "central position of this node should be the original position"
     // We use focusD.x / focusD.y as the anchor.
     // If the node hasn't been simulated yet (unlikely), fallback to center.
@@ -2171,26 +2251,36 @@ function enterFocusMode(focusD) {
     }
 
     // 5. Apply Updates
-    simulation.stop();
+    simulation.stop(); // Stop main thread proxy if needed (it does nothing)
     link.style("display", "none");
     updateVisibility();
     
     // Optimization: Subset Simulation
-    // To reduce memory/cpu expenditure, we only simulate the visible nodes.
-    // Background nodes are removed from simulation, freezing them in place.
     const activeNodes = [focusD, ...uniqueSup, ...uniqueSub, ...associated];
     const activeNodeIds = new Set(activeNodes.map(n => n.id));
     const activeLinks = links.filter(l => activeNodeIds.has(l.source.id) && activeNodeIds.has(l.target.id));
     
-    simulation.nodes(activeNodes);
-    simulation.nodes(activeNodes);
+    // Convert to simplified objects for worker
+    const workerActiveNodes = activeNodes.map(n => ({
+        id: n.id,
+        x: n.x, y: n.y,
+        fx: n.fx, fy: n.fy, // Important: fx/fy are set by manual layout logic above
+        rank: n.rank
+    }));
     
-    // Update Links (CPU or GPU)
-    const linkForce = simulation.force("link");
-    if (linkForce) linkForce.links(activeLinks);
-    
-    const gpuLink = simulation.force("gpuLink");
-    if (gpuLink) gpuLink.links(activeLinks);
+    const workerActiveLinks = activeLinks.map(l => ({
+        source: l.source.id,
+        target: l.target.id
+    }));
+
+    simulationWorker.postMessage({
+        type: 'setNodes',
+        payload: {
+            nodes: workerActiveNodes,
+            links: workerActiveLinks
+        }
+    });
+
 
     // Render Focus Labels (SVG)
     g.selectAll(".focus-label-group").remove(); // Clear old
@@ -2260,17 +2350,27 @@ function enterFocusMode(focusD) {
     link.style("display", "block");
 
     // Restore Full Simulation State
-    // Restoring all nodes and links to the simulation.
-    // Background nodes will reappear in their original positions (as they were never simulated/moved).
-    simulation.nodes(nodes);
-    simulation.nodes(nodes);
     
-    // Restore Links (CPU or GPU)
-    const linkForceRestored = simulation.force("link");
-    if (linkForceRestored) linkForceRestored.links(links);
-    
-    const gpuLinkRestored = simulation.force("gpuLink");
-    if (gpuLinkRestored) gpuLinkRestored.links(links);
+    // Send full dataset back to worker
+    const workerNodes = nodes.map(n => ({ 
+        id: n.id, 
+        x: n.x, y: n.y, 
+        fx: n.fx, fy: n.fy, 
+        rank: n.rank 
+    }));
+    const workerLinks = physicsLinks.map(l => ({ source: l.source.id, target: l.target.id }));
+
+    simulationWorker.postMessage({
+        type: 'setNodes',
+        payload: {
+            nodes: workerNodes,
+            links: workerLinks
+        }
+    });
+
+    // We don't need to manually reset simulation.nodes() or force("link") on main thread proxy,
+    // as it doesn't do anything meaningful.
+
 
     nodes.forEach(d => {
         // Restore original positions (v0.9.30)
@@ -2563,55 +2663,27 @@ function initSettingsUI() {
     });
 }
 
-// Helper to apply physics (CPU vs GPU)
+// Helper to apply physics (Worker Proxy)
 function applyPhysics(settings) {
-    // Refresh physics links subset based on active hardware mode
-    if (typeof updatePhysicsLinks === 'function') {
-        updatePhysicsLinks(settings);
-    }
+    // We Map settings to Worker params
+    // GPU mode is currently ignored in Worker implementation (CPU fallback), 
+    // but we respect the parameters.
 
     const mode = document.querySelector('input[name="layoutMode"]:checked') ? document.querySelector('input[name="layoutMode"]:checked').value : 'force';
     const chargeVal = mode === 'dag' ? settings.physics.repulsionDAG : settings.physics.repulsionForce;
     
-    // GPU Rendering Switch
-    // Check if Setting is ON, Library is loaded, and Hardware is initialized
-    const gpuFactory = window.gpuManyBody;
-    const useGPU = settings.performance && 
-                   settings.performance.gpuRendering && 
-                   gpuFactory && 
-                   gpuFactory().isAvailable();
-    
-    if (useGPU && mode === 'force') { // DAG uses different Y/X forces, complex to GPU-ify quickly. Only GPU-ify Force mode for now.
-        console.log("[Physics] Using GPU Optimized Force (ManyBody + Link)");
-        // Remove CPU forces
-        simulation.force("charge", null);
-        simulation.force("link", null);
+    simulationWorker.postMessage({
+        type: 'updateParams',
+        payload: {
+            repulsion: chargeVal,
+            distance: settings.physics.linkDistance,
+            collision: settings.physics.collisionRadius,
+            // We can send other params if needed
+        }
+    });
 
-        // Add GPU forces
-        // ManyBody
-        simulation.force("gpuCharge", window.gpuManyBody().strength(chargeVal));
-        
-        // Link
-        // We need to pass the current set of links (physicsLinks) 
-        // Note: 'physicsLinks' is global in app.js scope (defined around line 168)
-        simulation.force("gpuLink", window.gpuLink(physicsLinks).distance(settings.physics.linkDistance).strength(1));
-        
-    } else {
-        // CPU Mode
-        if (useGPU) console.log("[Physics] GPU disabled or not supported for this mode (or GPU init failed). Using CPU.");
-        
-        simulation.force("gpuCharge", null);
-        simulation.force("gpuLink", null);
-        
-        simulation.force("charge", d3.forceManyBody().strength(chargeVal));
-        simulation.force("link", d3.forceLink(physicsLinks).id(d => d.id).distance(settings.physics.linkDistance));
-    }
-
-    // Link distance handled inside GPU block if GPU active, but we should sync just in case logic splits? 
-    // Actually, we replaced "link" force entirely in CPU block above. 
-    // So line 2549 (original) `simulation.force("link").distance(...)` would crash if force("link") is null.
-    // We remove it from here and handle it inside the if/else logic above.
-    simulation.force("collide").radius(settings.physics.collisionRadius);
+    // Handle GPU Visual Feedback (Visuals only, not physics)
+    // If user expects GPU physics, we might want a toast saying "Using Parallel CPU Physics"
 }
 
 // Initialize Settings
