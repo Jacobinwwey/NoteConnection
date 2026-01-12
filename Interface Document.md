@@ -872,6 +872,36 @@ Manages node highlighting interactions for both PC and mobile interfaces.
   - Condition: Nodes > 10,000 or Edges > 1,000,000.
   - Effect: Edges are never rendered.
 
+## 11. Task Synchronization & Robustness (v0.9.82)
+
+### 11.1 Worker Handshake Protocol
+
+Resolves display race conditions caused by asynchronous Web Worker messages during layout switching.
+
+- **State Flag**: `isLayoutSwitching` (Boolean). Set to `true` at the start of `updateLayout`, and `false` after receiving a `layoutSwitchDone` response.
+- **Message Exchange**:
+  1.  **Main -> Worker**: Sends `setNodes` to sync latest coordinates, followed by `{ type: 'layoutSwitchDone' }`.
+  2.  **Worker -> Main**: Upon receiving `layoutSwitchDone`, the worker echoes the message back immediately.
+- **Filtering Logic**: While `isLayoutSwitching === true`, the main thread ignores all `tick` messages from the worker.
+- **Benefit**: Ensures that only frames processed after the worker has synchronized with the new layout are rendered, preventing "layout bounce" or teleportation to stale coordinates.
+
+### 11.2 Focus Mode Dragging Isolation
+
+Optimizes manual interaction in Focus Mode by decoupling it from background physics simulation.
+
+- **Interaction Logic**:
+  - **Manual Drive**: Nodes in Focus Mode are updated directly by the main thread (`x, y` and `fx, fy`).
+  - **Simulation Bypass**: Drag events no longer trigger Worker `drag` messages, preventing delayed `tick` messages from overwriting precise manual positioning.
+  - **State Persistence**: After dragging ends, nodes remain `fx, fy` locked until exiting Focus Mode.
+
+### 11.3 Layout Cache Validation
+
+Enhances the security of layout restoration.
+
+- **Threshold**: 50%.
+- **Logic**: `restoreLayoutState` calculates the percentage of nodes successfully restored. If less than 50% (e.g., due to significant graph data changes), the cache is deemed invalid, and a simulation relaxation is forced (`restart: true`).
+- **Fallback**: Ensures users always see a stable layout after data updates, rather than a broken cached state.
+
 ---
 
 ---
@@ -1741,3 +1771,33 @@ interface CooccurrenceMetrics {
   - 逻辑: 隐式约束。
   - 条件: 节点数 > 10,000 或 边数 > 1,000,000。
   - 效果: 永远不渲染边。
+
+## 11. 任务同步与稳健性 (Worker Sync & Robustness - v0.9.82)
+
+### 11.1 Worker 握手协议 (Worker Handshake Protocol)
+
+解决布局切换期间由于 Web Worker 异步消息导致的显示竞态条件。
+
+- **状态标志**: `isLayoutSwitching` (Boolean)。在 `updateLayout` 开始时设为 `true`，在收到 `layoutSwitchDone` 响应后设为 `false`。
+- **消息交换**:
+  1.  **Main -> Worker**: 发送 `setNodes` 同步最新坐标，紧接着发送 `{ type: 'layoutSwitchDone' }`。
+  2.  **Worker -> Main**: 收到 `layoutSwitchDone` 后立即原样返回该消息。
+- **过滤逻辑**: 当 `isLayoutSwitching === true` 时，主线程忽略所有来自 Worker 的 `tick` 消息。
+- **优势**: 确保只有在 Worker 完成新布局同步后的帧才会被渲染，防止布局“回弹”或瞬移到旧坐标。
+
+### 11.2 专注模式拖动隔离 (Focus Mode Dragging Isolation)
+
+优化专注模式下的手动交互，使其完全独立于背景物理模拟。
+
+- **交互逻辑**:
+  - **手动驱动**: 专注模式下的节点通过主线程直接更新 `x, y` 和 `fx, fy`。
+  - **模拟绕过**: 拖动事件不再触发 Worker 的 `drag` 消息，从而防止延迟的 `tick` 消息覆盖手动的精确定位。
+  - **状态持久化**: 在拖动结束后，节点保持 `fx, fy` 锁定，直到退出专注模式。
+
+### 11.3 布局缓存验证 (Layout Cache Validation)
+
+增强布局恢复的安全性。
+
+- **阈值**: 50%。
+- **逻辑**: `restoreLayoutState` 计算成功恢复位置的节点百分比。如果小于 50%（例如由于图谱数据大幅变动），则判定缓存无效，强制执行模拟松弛 (`restart: true`)。
+- **回退**: 确保用户在数据更新后始终能看到稳定的布局，而不是破碎的缓存状态。

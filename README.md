@@ -204,6 +204,13 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ## 📅 Changelog
 
+### v0.9.82 (2026-01-12)
+
+- **Worker Sync & Stability**: Introduced the Worker Handshake Protocol (`isLayoutSwitching`) to eliminate layout "bounce" and race conditions during transitions.
+- **Focus Mode Interaction**: Decoupled manual dragging from physics in Focus Mode, ensuring nodes stay exactly where positioned without simulation interference.
+- **Layout Persistence**: Added a 50% restoration safety threshold to the layout cache; automatically falls back to simulation relaxation if data is inconsistent.
+- **Analysis Stability**: Optimized layout logic to prevent redundant resets during panel resizing while "Freeze Layout" is active.
+
 ### v0.9.74 (2026-01-12)
 
 - **GPU Link Force**: Implemented high-performance GPU-accelerated spring forces using `gpu.js`. Supports "Gather" algorithm for efficient neighbor processing.
@@ -799,6 +806,13 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 - [x] **内存优化**: 在 `GraphBuilder` 中为“统计矩阵”和“向量空间”实现了资源重用逻辑。
 - [x] **效率**: 防止在混合推断期间重复计算繁重的数据结构，消除了内存峰值并解决了大数据集上的 OOM 崩溃问题。
 - [x] **清理**: 在推断任务完成后添加了严格的内存清理步骤。
+
+### v0.9.82 - 稳健性增强与交互优化 (2026-01-12)
+
+- [x] **握手协议**: 引入了 Worker 握手协议 (`isLayoutSwitching`)，有效解决了布局切换竞态，防止延迟消息导致 UI 跳变。
+- [x] **专注模式隔离**: 为专注模式实现了完全的手动坐标管理，拖动节点不再受物理引擎干扰，确保定位精准。
+- [x] **布局缓存安全**: 增加了 50% 的布局恢复安全阈值，缓存异常时自动执行物理松弛，防止图谱崩溃。
+- [x] **分析面板稳定**: 优化了面板缩放时的渲染逻辑，在“冻结布局”激活时严格禁止不必要的物理重启。
 
 ### v0.9.57 - Worker 内存优化 (Worker Memory Optimization) (2026-01-07)
 

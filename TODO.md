@@ -1,3 +1,19 @@
+# 2026-01-12 v0.9.82 - Worker Sync & Interaction Stability
+
+**Goal**: Resolve race conditions during layout switching due to asynchronous Worker messages, enhance interaction stability in Focus Mode, and improve layout restoration security.
+
+- [x] **Worker Handshake Protocol**
+  - [x] **Display Lock**: Implemented `isLayoutSwitching` state machine to block stale `tick` messages during transitions.
+  - [x] **Bi-directional Sync**: Introduced `layoutSwitchDone` loop to ensure UI and Worker coordinates are perfectly aligned.
+- [x] **Focus Mode Dragging Isolation**
+  - [x] **Manual Dragging**: Focus Mode nodes no longer send drag messages to the Worker; coordinates are calculated directly on the main thread.
+  - [x] **Display Refresh**: Fixed race condition bug where late messages would overwrite manually set coordinates.
+- [x] **Layout Restoration Safety**
+  - [x] **Threshold Validation**: Set a 50% success threshold for cache restoration.
+  - [x] **Auto Fallback**: If many nodes are missing or data is inconsistent, automatically force a physics relaxation phase.
+- [x] **Analysis Panel Stability**
+  - [x] **Render Optimization**: Adjusted `updateLayout` logic to strictly prohibit center force resets during panel resizing under "Freeze Layout".
+
 # 2026-01-12 v0.9.74
 
 # Project Build Plan: Progressive Hierarchical Knowledge Graph
@@ -1120,6 +1136,22 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
   - [x] **Release**: Package for v1.0.0.
 
 ---
+
+# 2026-01-12 v0.9.82 - 稳健性增强与交互优化 (Worker Sync & Interaction Stability)
+
+**目标**: 解决布局切换时由于 Worker 异步消息导致的竞态条件，增强专注模式下的交互稳定性，并提高布局恢复的安全性。
+
+- [x] **Worker 握手协议 (Handshake Protocol)**
+  - [x] **显示锁定**: 实现了 `isLayoutSwitching` 状态机，切换期间阻塞过期 `tick` 消息。
+  - [x] **双向同步**: 引入 `layoutSwitchDone` 消息回环，确保 UI 与 Worker 坐标完全对齐。
+- [x] **专注模式隔离 (Focus Mode Isolation)**
+  - [x] **手动拖动**: 专注模式节点不再向 Worker 发送拖动消息，由主线程直接计算坐标，防止位置回弹。
+  - [x] **显示刷新**: 修复了在延迟消息到来时覆盖手动设置坐标的竞态 Bug。
+- [x] **布局恢复安全 (Layout Cache Safety)**
+  - [x] **阈值验证**: 为缓存恢复设置了 50% 的成功率阈值。
+  - [x] **自动回退**: 如果节点缺失较多或数据不一致，自动强制进入物理松弛过程，保证图谱呈现的稳健性。
+- [x] **分析面板稳定性 (Analysis Panel Stability)**
+  - [x] **渲染优化**: 调整了 `updateLayout` 逻辑，在冻结布局下调整面板大小时严禁重置中心力，解决节点偏移问题。
 
 # 项目构建计划：渐进式层级知识图谱
 
