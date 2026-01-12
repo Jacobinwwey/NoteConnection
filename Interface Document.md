@@ -295,6 +295,7 @@ Renders the JSON data into an interactive DAG.
             *   **Performance**:
                 *   **Max Workers**: Slider/Input to control concurrent worker threads (Default: 4).
                 *   **Compact Mode (v0.9.67)**: Checkbox to hide edges by default for performance (Default: Off, Auto-On for >5k nodes).
+                *   **GPU Optimised Rendering (v0.9.72)**: Checkbox to enable GPU-accelerated force simulation (Default: On). Switches between `d3.forceManyBody` (CPU) and `gpuManyBody` (GPU).
             *   **Visuals**: Edge Opacity.
     *   **Rendering Modes (v0.8.7 & v0.9.45)**:
         *   **SVG**: Default D3 implementation for interactivity and styling.

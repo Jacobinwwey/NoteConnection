@@ -6,6 +6,22 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
+# 2026-01-12 v0.9.72 - GPU Optimized Rendering (Geek Edition)
+
+**Goal**: Fulfill the "Geek" requirement to leverage AMDGPU (RX 7900XT) for smoother frontend rendering and parallel backend processing.
+
+- [x] **Frontend GPU Rendering**
+    - [x] **GPU Force Engine**: Implemented `GPUManyBodyForce` in `layout_gpu.js` using `gpu.js`.
+    - [x] **Integration**: Added `libs/gpu-browser.min.js` and integrated into `app.js`.
+    - [x] **UI Control**: Verified "GPU Optimised Rendering" checkbox in Settings. Default: Enabled.
+    - [x] **Logic**: Dynamic switching between CPU (`d3.forceManyBody`) and GPU (`gpuManyBody`) physics engines.
+
+- [x] **Backend Optimization Confirmation**
+    - [x] **Parallelism**: Confirmed `GraphBuilder` uses `LayoutEngine` with Worker threads.
+    - [x] **GPU Backend**: Confirmed `LayoutEngine` uses `amdgpu/LayoutGPU.ts` if enabled.
+
+---
+
 # 2026-01-10 v0.9.71 - Backend Layout & Static Mode
 
 **Goal**: Optimize performance for massive graphs (50k+ nodes) by offloading layout calculations to backend workers and implementing a static rendering mode.

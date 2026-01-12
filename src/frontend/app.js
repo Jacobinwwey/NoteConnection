@@ -2305,6 +2305,7 @@ function initSettingsUI() {
     const workersSlider = document.getElementById('set-workers-slider');
     const workersInput = document.getElementById('set-workers-input');
     const gpuCheckbox = document.getElementById('set-gpu');
+    const gpuRenderingCheckbox = document.getElementById('set-gpu-rendering');
     const memorySavingCheckbox = document.getElementById('set-memory-saving');
     const compactModeCheckbox = document.getElementById('set-compact-mode');
     const deepDebugCheckbox = document.getElementById('set-deep-debug');
@@ -2352,6 +2353,9 @@ function initSettingsUI() {
             }
             if (settings.performance.enableGPU !== undefined) {
                 if (gpuCheckbox) gpuCheckbox.checked = settings.performance.enableGPU;
+            }
+            if (settings.performance.gpuRendering !== undefined) {
+                if (gpuRenderingCheckbox) gpuRenderingCheckbox.checked = settings.performance.gpuRendering;
             }
             if (settings.performance.memorySavingMode !== undefined) {
                 if (memorySavingCheckbox) memorySavingCheckbox.checked = settings.performance.memorySavingMode;
@@ -2409,6 +2413,14 @@ function initSettingsUI() {
     if (gpuCheckbox) {
         gpuCheckbox.addEventListener('change', (e) => {
             settingsManager.set('performance', 'enableGPU', e.target.checked);
+        });
+    }
+
+    if (gpuRenderingCheckbox) {
+        gpuRenderingCheckbox.addEventListener('change', (e) => {
+            settingsManager.set('performance', 'gpuRendering', e.target.checked);
+            // Apply GPU Force immediately
+            applyPhysics(settingsManager.settings);
         });
     }
 
@@ -2471,17 +2483,11 @@ function initSettingsUI() {
     // Subscribe to changes
     settingsManager.subscribe((settings) => {
         // Apply Physics
-        if (!focusNode) { // Only apply physics updates if NOT in Focus Mode (which locks positions)
-            const mode = document.querySelector('input[name="layoutMode"]:checked') ? document.querySelector('input[name="layoutMode"]:checked').value : 'force';
-            const chargeVal = mode === 'dag' ? settings.physics.repulsionDAG : settings.physics.repulsionForce;
-
-            simulation.force("charge").strength(chargeVal);
-            simulation.force("link").distance(settings.physics.linkDistance);
-            simulation.force("collide").radius(settings.physics.collisionRadius);
+        if (!focusNode) { 
+            applyPhysics(settings);
             
             // v0.9.40: Check Freeze Layout State before restarting
             const globalFreeze = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
-            // v0.9.41: Also check isSettingsModalOpen
             const isFrozen = globalFreeze || isSettingsModalOpen;
             
             if (!isFrozen) {
@@ -2494,16 +2500,40 @@ function initSettingsUI() {
     });
 }
 
+// Helper to apply physics (CPU vs GPU)
+function applyPhysics(settings) {
+    const mode = document.querySelector('input[name="layoutMode"]:checked') ? document.querySelector('input[name="layoutMode"]:checked').value : 'force';
+    const chargeVal = mode === 'dag' ? settings.physics.repulsionDAG : settings.physics.repulsionForce;
+    
+    // GPU Rendering Switch
+    const useGPU = settings.performance && settings.performance.gpuRendering && window.gpuManyBody;
+    
+    if (useGPU && mode === 'force') { // DAG uses different Y/X forces, complex to GPU-ify quickly. Only GPU-ify Force mode for now.
+        console.log("[Physics] Using GPU Optimized Force");
+        // Remove CPU charge
+        simulation.force("charge", null);
+        // Add GPU charge
+        // We need to ensure singleton or correct instance
+        // D3 force re-initialization handles 'nodes' assignment
+        simulation.force("gpuCharge", window.gpuManyBody().strength(chargeVal));
+    } else {
+        // CPU Mode
+        if (useGPU) console.log("[Physics] GPU disabled or not supported for this mode. Using CPU.");
+        
+        simulation.force("gpuCharge", null);
+        simulation.force("charge", d3.forceManyBody().strength(chargeVal));
+    }
+
+    simulation.force("link").distance(settings.physics.linkDistance);
+    simulation.force("collide").radius(settings.physics.collisionRadius);
+}
+
 // Initialize Settings
 if (window.settingsManager) {
     initSettingsUI();
     // Apply initial settings immediately
     const s = settingsManager.settings;
-    const mode = document.querySelector('input[name="layoutMode"]:checked') ? document.querySelector('input[name="layoutMode"]:checked').value : 'force';
-    const chargeVal = mode === 'dag' ? s.physics.repulsionDAG : s.physics.repulsionForce;
-    simulation.force("charge").strength(chargeVal);
-    simulation.force("link").distance(s.physics.linkDistance);
-    simulation.force("collide").radius(s.physics.collisionRadius);
+    applyPhysics(s);
     g.selectAll(".link").style("stroke-opacity", s.visuals.edgeOpacity);
 }
 
