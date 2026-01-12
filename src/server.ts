@@ -293,6 +293,7 @@ const startServer = async () => {
                 case '.png': contentType = 'image/png'; break;
                 case '.jpg': contentType = 'image/jpeg'; break;
                 case '.svg': contentType = 'image/svg+xml'; break;
+                case '.ico': contentType = 'image/x-icon'; break;
             }
     
             fs.readFile(filePath, (error, content) => {

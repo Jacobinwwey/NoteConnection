@@ -2213,9 +2213,9 @@ function enterFocusMode(focusD) {
                 .attr("transform", `translate(${d.fx},${d.fy})`);
             
             el.select("text").transition().duration(750)
-                .attr("dy", d._labelDy ? d._labelDy : ".35em")
-                .attr("dx", d._labelDx ? d._labelDx : (d.id === focusD.id ? 29 : 12));
-
+                .attr("dy", d._labelDy ? d._labelDy + "px" : ".35em")
+                .attr("dx", d._labelDx ? d._labelDx + "px" : (d.id === focusD.id ? "29px" : "12px"));
+                
             if (d.id === focusD.id) {
                 el.select("circle").transition().duration(750)
                     .attr("r", 25).attr("fill", "#ffd700").attr("stroke", "#fff").attr("stroke-width", "3px");

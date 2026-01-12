@@ -1,144 +1,472 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NoteConnection Knowledge Graph</title>
-    <link rel="stylesheet" href="styles.css">
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔗</text></svg>"
+    />
+    <link rel="stylesheet" href="styles.css" />
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Reading Mode Dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
+    />
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    
-    <script src="data.js"></script> <!-- Defines const graphData -->
-    <script src="nodeHighlight.js"></script> <!-- Node highlighting module -->
+
+    <script src="data.js"></script>
+    <!-- Defines const graphData -->
+    <script src="nodeHighlight.js"></script>
+    <!-- Node highlighting module -->
     <script src="libs/gpu-browser.min.js"></script>
     <script src="layout_gpu.js"></script>
-</head>
-<body>
+  </head>
+  <body>
     <!-- Top Graph Area -->
     <div id="graph-wrapper">
-        <button id="exit-focus-btn" style="display: none;">Exit Focus Mode</button>
-        <div id="source-control" style="position: absolute; top: 10px; left: 20px; z-index: 1000; display: flex; gap: 5px;">
-            <select id="folder-select" style="background: #333; color: white; border: 1px solid #555; padding: 2px;">
-                <option value="" disabled selected>Select Knowledge Base...</option>
-                <option value="ALL_FOLDERS">All Folders</option>
-            </select>
-            <button id="btn-load-source" style="background: #2c5282; color: white; border: 1px solid #555; padding: 2px 8px; cursor: pointer;">Load</button>
+      <button id="exit-focus-btn" style="display: none">Exit Focus Mode</button>
+      <div
+        id="source-control"
+        style="
+          position: absolute;
+          top: 10px;
+          left: 20px;
+          z-index: 1000;
+          display: flex;
+          gap: 5px;
+        "
+      >
+        <select
+          id="folder-select"
+          style="
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 2px;
+          "
+        >
+          <option value="" disabled selected>Select Knowledge Base...</option>
+          <option value="ALL_FOLDERS">All Folders</option>
+        </select>
+        <button
+          id="btn-load-source"
+          style="
+            background: #2c5282;
+            color: white;
+            border: 1px solid #555;
+            padding: 2px 8px;
+            cursor: pointer;
+          "
+        >
+          Load
+        </button>
+      </div>
+
+      <div id="controls">
+        <h3>NoteConnection</h3>
+        <div class="stats" style="display: flex; align-items: center">
+          <span
+            ><span data-i18n="nodes">Nodes:</span>
+            <span id="node-count">0</span> |
+            <span data-i18n="edges">Edges:</span>
+            <span id="edge-count">0</span></span
+          >
+          <div id="quick-distribution" title="Degree Distribution"></div>
         </div>
-        
-        <div id="controls">
-            <h3>NoteConnection</h3>
-                                <div class="stats" style="display: flex; align-items: center;">
-                                    <span><span data-i18n="nodes">Nodes:</span> <span id="node-count">0</span> | <span data-i18n="edges">Edges:</span> <span id="edge-count">0</span></span>
-                                    <div id="quick-distribution" title="Degree Distribution"></div>
-                                </div>            <div class="filter-controls">
-                <label><input type="radio" name="mode" value="all" checked> <span data-i18n="show_all">Show All</span></label>
-                <label><input type="radio" name="mode" value="in"> <span data-i18n="show_in">Incoming Only</span></label>
-                <label><input type="radio" name="mode" value="out"> <span data-i18n="show_out">Outgoing Only</span></label>
-            </div>
-            
-            <div class="degree-controls" style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px;">
-                <span style="font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 3px;" data-i18n="degree_basis">Degree Basis:</span>
-                <label style="font-size: 0.9rem; margin-right: 5px;"><input type="radio" name="degreeMode" value="all" checked> <span data-i18n="all">All</span></label>
-                <label style="font-size: 0.9rem; margin-right: 5px;"><input type="radio" name="degreeMode" value="in"> <span data-i18n="in">In</span></label>
-                <label style="font-size: 0.9rem;"><input type="radio" name="degreeMode" value="out"> <span data-i18n="out">Out</span></label>
-            </div>
-
-            <div class="color-controls" style="margin-top: 5px; padding-top: 5px;">
-                <span style="font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 3px;" data-i18n="color_by">Color By:</span>
-                <label style="font-size: 0.9rem; display: inline-block; margin-right: 10px;"><input type="radio" name="colorMode" value="degree" checked> <span data-i18n="degree">Degree</span></label>
-                <label style="font-size: 0.9rem; display: inline-block;"><input type="radio" name="colorMode" value="cluster"> <span data-i18n="cluster">Cluster</span></label>
-            </div>
-
-            <div class="size-controls" style="margin-top: 5px; padding-top: 5px;">
-                <span style="font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 3px;" data-i18n="size_by">Size By:</span>
-                <label style="font-size: 0.9rem; display: inline-block; margin-right: 10px;"><input type="radio" name="sizeMode" value="uniform"> <span data-i18n="uniform">Uniform</span></label>
-                <label style="font-size: 0.9rem; display: inline-block; margin-right: 10px;"><input type="radio" name="sizeMode" value="degree" checked> <span data-i18n="degree">Degree</span></label>
-                <label style="font-size: 0.9rem; display: inline-block;"><input type="radio" name="sizeMode" value="centrality"> <span data-i18n="centrality">Centrality</span></label>
-            </div>
-
-            <div class="opacity-controls" style="margin-top: 5px; padding-top: 5px;">
-                <label style="font-size: 0.85rem; color: #aaa; display: block;"><span data-i18n="label_opacity">Label Opacity:</span> <span id="label-opacity-val">100%</span></label>
-                <input type="range" id="label-opacity-slider" min="0" max="100" value="100" style="width: 100%;">
-            </div>
-
-            <div class="search-box">
-                 <input type="text" id="search-input" placeholder="Search node..." data-i18n-placeholder="search_placeholder">
-            </div>
-            
-            <div class="renderer-controls" style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px;">
-                <span style="font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 3px;" data-i18n="renderer">Renderer:</span>
-                <label style="font-size: 0.9rem; margin-right: 10px;"><input type="radio" name="rendererMode" value="svg" checked> SVG</label>
-                <label style="font-size: 0.9rem;"><input type="radio" name="rendererMode" value="canvas"> Canvas</label>
-            </div>
-
-            <div class="layout-controls" style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px;">
-                <span style="font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 3px;" data-i18n="layout">Layout:</span>
-                <label style="font-size: 0.9rem; margin-right: 10px;"><input type="radio" name="layoutMode" value="force" checked> <span data-i18n="layout_force">Force</span></label>
-                <label style="font-size: 0.9rem;"><input type="radio" name="layoutMode" value="dag"> <span data-i18n="layout_dag">DAG (Hierarchical)</span></label>
-            </div>
-
-            <div class="simulation-controls" style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px;">
-                <span style="font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 3px;" data-i18n="simulation">Simulation:</span>
-                <label style="display: flex; align-items: center; margin-bottom: 5px;">
-                    <input type="checkbox" id="freeze-layout"> 
-                    <span style="margin-left: 5px; font-size: 0.9rem;" data-i18n="freeze_layout">Freeze Layout</span>
-                </label>
-                <label style="font-size: 0.8rem; color: #aaa; display: block;"><span data-i18n="speed">Speed (Damping):</span> <span id="sim-speed-val">0.92</span></label>
-                <input type="range" id="sim-speed-slider" min="0" max="1" step="0.01" value="0.92" style="width: 100%;">
-            </div>
-
-            <div class="advanced-controls" style="margin-top: 15px; border-top: 1px solid #555; padding-top: 10px;">
-                <label style="font-size: 0.9rem; color: #aaa;"><span data-i18n="min_degree">Min Degree:</span> <span id="min-degree-val">0</span></label>
-                <input type="range" id="min-degree-slider" min="0" max="20" value="0" style="width: 100%;">
-                
-                <label style="display: flex; align-items: center; margin-top: 5px;">
-                    <input type="checkbox" id="show-orphans"> 
-                    <span style="margin-left: 5px;" data-i18n="show_orphans">Show Orphans</span>
-                </label>
-
-                <button id="export-btn" style="margin-top: 10px; width: 100%; padding: 5px; cursor: pointer; background: #333; color: white; border: 1px solid #555; border-radius: 4px;" data-i18n="export_image">Export Image</button>
-                <button id="save-layout-btn" style="margin-top: 5px; width: 100%; padding: 5px; cursor: pointer; background: #333; color: white; border: 1px solid #555; border-radius: 4px;" data-i18n="save_layout">Save Layout (JSON)</button>
-                <button id="analysis-btn" style="margin-top: 5px; width: 100%; padding: 5px; cursor: pointer; background: #2c5282; color: white; border: 1px solid #555; border-radius: 4px;" data-i18n="analysis_export">Analysis & Export</button>
-            </div>
+        <div class="filter-controls">
+          <label
+            ><input type="radio" name="mode" value="all" checked />
+            <span data-i18n="show_all">Show All</span></label
+          >
+          <label
+            ><input type="radio" name="mode" value="in" />
+            <span data-i18n="show_in">Incoming Only</span></label
+          >
+          <label
+            ><input type="radio" name="mode" value="out" />
+            <span data-i18n="show_out">Outgoing Only</span></label
+          >
         </div>
 
-        <!-- Focus Mode Exit Button -->
-        <div id="focus-exit-btn" style="display: none; align-items: center; gap: 15px;">
-            <div style="display: flex; flex-direction: column; align-items: flex-start; min-width: 250px;">
-                <span id="focus-node-name" style="color: #61dafb; font-weight: bold; white-space: nowrap;"></span>
-                <span id="focus-node-stats" style="color: #aaa; font-size: 0.75rem; white-space: nowrap;"></span>
-            </div>
-            
-            <div style="display: flex; align-items: center; gap: 5px; border-left: 1px solid #555; padding-left: 10px;">
-                <label for="focus-layout-select" style="color: #aaa; font-size: 0.8rem;">Layout:</label>
-                <select id="focus-layout-select" style="background: #333; color: white; border: 1px solid #555; font-size: 0.8rem;">
-                    <option value="horizontal">Horizontal (Standard)</option>
-                    <option value="vertical">Vertical (L-R)</option>
-                </select>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 5px;">
-                <label for="focus-spacing-slider" style="color: #aaa; font-size: 0.8rem;">Layer-Space:</label>
-                <input type="range" id="focus-spacing-slider" min="50" max="500" value="250" style="width: 80px;" title="Layer Spacing">
-            </div>
-            <div style="display: flex; align-items: center; gap: 5px;">
-                <label for="focus-h-spacing-slider" style="color: #aaa; font-size: 0.8rem;">Node-Space:</label>
-                <input type="range" id="focus-h-spacing-slider" min="20" max="300" value="80" style="width: 80px;" title="Node Spacing">
-            </div>
-            <button id="btn-reset-focus-layout" style="margin-right: 5px; font-size: 0.8rem; padding: 2px 6px;">RESET</button>
-            <button id="btn-open-content" data-i18n="open_content" style="margin-right: 5px;">Specific Content</button>
-            <button id="btn-exit-focus" data-i18n="exit_focus">Exit Focus Mode</button>
+        <div
+          class="degree-controls"
+          style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px"
+        >
+          <span
+            style="
+              font-size: 0.85rem;
+              color: #aaa;
+              display: block;
+              margin-bottom: 3px;
+            "
+            data-i18n="degree_basis"
+            >Degree Basis:</span
+          >
+          <label style="font-size: 0.9rem; margin-right: 5px"
+            ><input type="radio" name="degreeMode" value="all" checked />
+            <span data-i18n="all">All</span></label
+          >
+          <label style="font-size: 0.9rem; margin-right: 5px"
+            ><input type="radio" name="degreeMode" value="in" />
+            <span data-i18n="in">In</span></label
+          >
+          <label style="font-size: 0.9rem"
+            ><input type="radio" name="degreeMode" value="out" />
+            <span data-i18n="out">Out</span></label
+          >
         </div>
 
-        <div id="graph-container">
-            <canvas id="graph-canvas" style="display: none; width: 100%; height: 100%;"></canvas>
+        <div class="color-controls" style="margin-top: 5px; padding-top: 5px">
+          <span
+            style="
+              font-size: 0.85rem;
+              color: #aaa;
+              display: block;
+              margin-bottom: 3px;
+            "
+            data-i18n="color_by"
+            >Color By:</span
+          >
+          <label
+            style="font-size: 0.9rem; display: inline-block; margin-right: 10px"
+            ><input type="radio" name="colorMode" value="degree" checked />
+            <span data-i18n="degree">Degree</span></label
+          >
+          <label style="font-size: 0.9rem; display: inline-block"
+            ><input type="radio" name="colorMode" value="cluster" />
+            <span data-i18n="cluster">Cluster</span></label
+          >
         </div>
+
+        <div class="size-controls" style="margin-top: 5px; padding-top: 5px">
+          <span
+            style="
+              font-size: 0.85rem;
+              color: #aaa;
+              display: block;
+              margin-bottom: 3px;
+            "
+            data-i18n="size_by"
+            >Size By:</span
+          >
+          <label
+            style="font-size: 0.9rem; display: inline-block; margin-right: 10px"
+            ><input type="radio" name="sizeMode" value="uniform" />
+            <span data-i18n="uniform">Uniform</span></label
+          >
+          <label
+            style="font-size: 0.9rem; display: inline-block; margin-right: 10px"
+            ><input type="radio" name="sizeMode" value="degree" checked />
+            <span data-i18n="degree">Degree</span></label
+          >
+          <label style="font-size: 0.9rem; display: inline-block"
+            ><input type="radio" name="sizeMode" value="centrality" />
+            <span data-i18n="centrality">Centrality</span></label
+          >
+        </div>
+
+        <div class="opacity-controls" style="margin-top: 5px; padding-top: 5px">
+          <label style="font-size: 0.85rem; color: #aaa; display: block"
+            ><span data-i18n="label_opacity">Label Opacity:</span>
+            <span id="label-opacity-val">100%</span></label
+          >
+          <input
+            type="range"
+            id="label-opacity-slider"
+            min="0"
+            max="100"
+            value="100"
+            style="width: 100%"
+          />
+        </div>
+
+        <div class="search-box">
+          <input
+            type="text"
+            id="search-input"
+            placeholder="Search node..."
+            data-i18n-placeholder="search_placeholder"
+          />
+        </div>
+
+        <div
+          class="renderer-controls"
+          style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px"
+        >
+          <span
+            style="
+              font-size: 0.85rem;
+              color: #aaa;
+              display: block;
+              margin-bottom: 3px;
+            "
+            data-i18n="renderer"
+            >Renderer:</span
+          >
+          <label style="font-size: 0.9rem; margin-right: 10px"
+            ><input type="radio" name="rendererMode" value="svg" checked />
+            SVG</label
+          >
+          <label style="font-size: 0.9rem"
+            ><input type="radio" name="rendererMode" value="canvas" />
+            Canvas</label
+          >
+        </div>
+
+        <div
+          class="layout-controls"
+          style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px"
+        >
+          <span
+            style="
+              font-size: 0.85rem;
+              color: #aaa;
+              display: block;
+              margin-bottom: 3px;
+            "
+            data-i18n="layout"
+            >Layout:</span
+          >
+          <label style="font-size: 0.9rem; margin-right: 10px"
+            ><input type="radio" name="layoutMode" value="force" checked />
+            <span data-i18n="layout_force">Force</span></label
+          >
+          <label style="font-size: 0.9rem"
+            ><input type="radio" name="layoutMode" value="dag" />
+            <span data-i18n="layout_dag">DAG (Hierarchical)</span></label
+          >
+        </div>
+
+        <div
+          class="simulation-controls"
+          style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px"
+        >
+          <span
+            style="
+              font-size: 0.85rem;
+              color: #aaa;
+              display: block;
+              margin-bottom: 3px;
+            "
+            data-i18n="simulation"
+            >Simulation:</span
+          >
+          <label style="display: flex; align-items: center; margin-bottom: 5px">
+            <input type="checkbox" id="freeze-layout" />
+            <span
+              style="margin-left: 5px; font-size: 0.9rem"
+              data-i18n="freeze_layout"
+              >Freeze Layout</span
+            >
+          </label>
+          <label style="font-size: 0.8rem; color: #aaa; display: block"
+            ><span data-i18n="speed">Speed (Damping):</span>
+            <span id="sim-speed-val">0.92</span></label
+          >
+          <input
+            type="range"
+            id="sim-speed-slider"
+            min="0"
+            max="1"
+            step="0.01"
+            value="0.92"
+            style="width: 100%"
+          />
+        </div>
+
+        <div
+          class="advanced-controls"
+          style="
+            margin-top: 15px;
+            border-top: 1px solid #555;
+            padding-top: 10px;
+          "
+        >
+          <label style="font-size: 0.9rem; color: #aaa"
+            ><span data-i18n="min_degree">Min Degree:</span>
+            <span id="min-degree-val">0</span></label
+          >
+          <input
+            type="range"
+            id="min-degree-slider"
+            min="0"
+            max="20"
+            value="0"
+            style="width: 100%"
+          />
+
+          <label style="display: flex; align-items: center; margin-top: 5px">
+            <input type="checkbox" id="show-orphans" />
+            <span style="margin-left: 5px" data-i18n="show_orphans"
+              >Show Orphans</span
+            >
+          </label>
+
+          <button
+            id="export-btn"
+            style="
+              margin-top: 10px;
+              width: 100%;
+              padding: 5px;
+              cursor: pointer;
+              background: #333;
+              color: white;
+              border: 1px solid #555;
+              border-radius: 4px;
+            "
+            data-i18n="export_image"
+          >
+            Export Image
+          </button>
+          <button
+            id="save-layout-btn"
+            style="
+              margin-top: 5px;
+              width: 100%;
+              padding: 5px;
+              cursor: pointer;
+              background: #333;
+              color: white;
+              border: 1px solid #555;
+              border-radius: 4px;
+            "
+            data-i18n="save_layout"
+          >
+            Save Layout (JSON)
+          </button>
+          <button
+            id="analysis-btn"
+            style="
+              margin-top: 5px;
+              width: 100%;
+              padding: 5px;
+              cursor: pointer;
+              background: #2c5282;
+              color: white;
+              border: 1px solid #555;
+              border-radius: 4px;
+            "
+            data-i18n="analysis_export"
+          >
+            Analysis & Export
+          </button>
+        </div>
+      </div>
+
+      <!-- Focus Mode Exit Button -->
+      <div
+        id="focus-exit-btn"
+        style="display: none; align-items: center; gap: 15px"
+      >
+        <div
+          style="
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            min-width: 250px;
+          "
+        >
+          <span
+            id="focus-node-name"
+            style="color: #61dafb; font-weight: bold; white-space: nowrap"
+          ></span>
+          <span
+            id="focus-node-stats"
+            style="color: #aaa; font-size: 0.75rem; white-space: nowrap"
+          ></span>
+        </div>
+
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border-left: 1px solid #555;
+            padding-left: 10px;
+          "
+        >
+          <label
+            for="focus-layout-select"
+            style="color: #aaa; font-size: 0.8rem"
+            >Layout:</label
+          >
+          <select
+            id="focus-layout-select"
+            style="
+              background: #333;
+              color: white;
+              border: 1px solid #555;
+              font-size: 0.8rem;
+            "
+          >
+            <option value="horizontal">Horizontal (Standard)</option>
+            <option value="vertical">Vertical (L-R)</option>
+          </select>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 5px">
+          <label
+            for="focus-spacing-slider"
+            style="color: #aaa; font-size: 0.8rem"
+            >Layer-Space:</label
+          >
+          <input
+            type="range"
+            id="focus-spacing-slider"
+            min="50"
+            max="500"
+            value="250"
+            style="width: 80px"
+            title="Layer Spacing"
+          />
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px">
+          <label
+            for="focus-h-spacing-slider"
+            style="color: #aaa; font-size: 0.8rem"
+            >Node-Space:</label
+          >
+          <input
+            type="range"
+            id="focus-h-spacing-slider"
+            min="20"
+            max="300"
+            value="80"
+            style="width: 80px"
+            title="Node Spacing"
+          />
+        </div>
+        <button
+          id="btn-reset-focus-layout"
+          style="margin-right: 5px; font-size: 0.8rem; padding: 2px 6px"
+        >
+          RESET
+        </button>
+        <button
+          id="btn-open-content"
+          data-i18n="open_content"
+          style="margin-right: 5px"
+        >
+          Specific Content
+        </button>
+        <button id="btn-exit-focus" data-i18n="exit_focus">
+          Exit Focus Mode
+        </button>
+      </div>
+
+      <div id="graph-container">
+        <canvas
+          id="graph-canvas"
+          style="display: none; width: 100%; height: 100%"
+        ></canvas>
+      </div>
     </div>
 
     <!-- Resizer Handle -->
@@ -146,316 +474,642 @@
 
     <!-- Bottom Analysis Panel -->
     <div id="analysis-panel">
-        <div class="panel-header">
-            <div class="mobile-drag-handle"></div>
-            <h2 data-i18n="analysis_title">Degree Analysis</h2>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <button id="analysis-fullscreen-btn" style="background: none; border: none; color: #aaa; cursor: pointer; font-size: 1.2rem;" title="Toggle Full Screen">⤢</button>
-                <span class="close-panel">&times;</span>
-            </div>
+      <div class="panel-header">
+        <div class="mobile-drag-handle"></div>
+        <h2 data-i18n="analysis_title">Degree Analysis</h2>
+        <div style="display: flex; gap: 10px; align-items: center">
+          <button
+            id="analysis-fullscreen-btn"
+            style="
+              background: none;
+              border: none;
+              color: #aaa;
+              cursor: pointer;
+              font-size: 1.2rem;
+            "
+            title="Toggle Full Screen"
+          >
+            ⤢
+          </button>
+          <span class="close-panel">&times;</span>
         </div>
-        <div class="panel-body">
-            <!-- Global Analysis View -->
-            <div id="global-analysis-container">
-                <div id="histogram-container"></div>
-                
-                <div class="export-controls">
-                    <div class="control-group">
-                        <label data-i18n="filter_strategy">Filter Strategy:</label>
-                        <select id="export-strategy" style="width: 100%; margin-top: 5px;">
-                            <option value="top-percent" data-i18n="strat_top">Top X% (by Degree)</option>
-                            <option value="min-degree" data-i18n="strat_min">Min Degree > X</option>
-                        </select>
-                    </div>
-                    <div class="control-group">
-                        <label data-i18n="cluster_filter">Cluster Filter:</label>
-                        <select id="cluster-filter" style="width: 100%; margin-top: 5px;">
-                            <option value="all" data-i18n="cluster_all">All Clusters</option>
-                            <!-- Clusters injected here -->
-                        </select>
-                    </div>
-                    <div class="control-group">
-                        <label><span data-i18n="threshold">Threshold:</span> <span id="export-threshold-val">5</span></label>
-                        <input type="range" id="export-threshold-slider" min="1" max="100" value="5" style="width: 100%;">
-                    </div>
-                    <div class="stats-preview">
-                        <span data-i18n="selected">Selected:</span> <span id="selected-count">0</span>
-                    </div>
-                    <div class="action-buttons">
-                        <button id="export-json-btn" style="flex: 1;" data-i18n="export_json">JSON</button>
-                        <button id="export-zip-btn" style="flex: 1;" data-i18n="export_zip">ZIP (MD)</button>
-                    </div>
-                </div>
+      </div>
+      <div class="panel-body">
+        <!-- Global Analysis View -->
+        <div id="global-analysis-container">
+          <div id="histogram-container"></div>
 
-                <!-- Node List Table -->
-                <div id="node-list-wrapper" style="margin-top: 15px; flex: 1; overflow: hidden; display: flex; flex-direction: column;">
-                    <h3 style="margin: 0 0 5px 0; font-size: 0.9rem; color: #aaa;" data-i18n="filtered_nodes">Filtered Nodes</h3>
-                    <div class="table-header" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 5px; padding: 5px; background: #222; font-weight: bold; font-size: 0.85rem;">
-                        <div class="sortable" data-sort="name"><span data-i18n="th_name">Name</span> <span></span></div>
-                        <div class="sortable" data-sort="cluster"><span data-i18n="th_cluster">Cluster</span> <span></span></div>
-                        <div class="sortable" data-sort="in"><span data-i18n="th_in">In</span> <span></span></div>
-                        <div class="sortable" data-sort="out"><span data-i18n="th_out">Out</span> <span></span></div>
-                        <div class="sortable" data-sort="total"><span data-i18n="th_total">Total</span> <span></span></div>
-                    </div>
-                    <div id="node-table-body" style="overflow-y: auto; flex: 1; border: 1px solid #444;">
-                        <!-- Rows injected here -->
-                    </div>
-                </div>
+          <div class="export-controls">
+            <div class="control-group">
+              <label data-i18n="filter_strategy">Filter Strategy:</label>
+              <select id="export-strategy" style="width: 100%; margin-top: 5px">
+                <option value="top-percent" data-i18n="strat_top">
+                  Top X% (by Degree)
+                </option>
+                <option value="min-degree" data-i18n="strat_min">
+                  Min Degree > X
+                </option>
+              </select>
             </div>
+            <div class="control-group">
+              <label data-i18n="cluster_filter">Cluster Filter:</label>
+              <select id="cluster-filter" style="width: 100%; margin-top: 5px">
+                <option value="all" data-i18n="cluster_all">
+                  All Clusters
+                </option>
+                <!-- Clusters injected here -->
+              </select>
+            </div>
+            <div class="control-group">
+              <label
+                ><span data-i18n="threshold">Threshold:</span>
+                <span id="export-threshold-val">5</span></label
+              >
+              <input
+                type="range"
+                id="export-threshold-slider"
+                min="1"
+                max="100"
+                value="5"
+                style="width: 100%"
+              />
+            </div>
+            <div class="stats-preview">
+              <span data-i18n="selected">Selected:</span>
+              <span id="selected-count">0</span>
+            </div>
+            <div class="action-buttons">
+              <button
+                id="export-json-btn"
+                style="flex: 1"
+                data-i18n="export_json"
+              >
+                JSON
+              </button>
+              <button
+                id="export-zip-btn"
+                style="flex: 1"
+                data-i18n="export_zip"
+              >
+                ZIP (MD)
+              </button>
+            </div>
+          </div>
 
-            <!-- Node Details View (Hidden by default) -->
-            <div id="node-details-container" style="display: none;">
-                <div id="node-details-header">
-                    <div>
-                        <strong id="details-node-name" style="color: #61dafb; font-size: 1.1rem;">Node Name</strong>
-                        <div style="color: #aaa; font-size: 0.8rem;">
-                            <span data-i18n="cluster">Cluster</span>: <span id="details-cluster">-</span>
-                        </div>
-                    </div>
-                    <button id="btn-back-analysis" style="background: #444; color: white; border: 1px solid #555; padding: 4px 8px; cursor: pointer;">← <span data-i18n="back">Back</span></button>
-                </div>
-                <div id="node-details-content">
-                    <div class="detail-column">
-                        <h4 style="color: #ff6b6b;"><span data-i18n="inbound_rels">Inbound (Helping to understand)</span> (<span id="details-in-count">0</span>)</h4>
-                        <div id="details-in-list" class="detail-list"></div>
-                    </div>
-                    <div class="detail-column">
-                        <h4 style="color: #4488ff;"><span data-i18n="outbound_rels">Outbound (Further exploration)</span> (<span id="details-out-count">0</span>)</h4>
-                        <div id="details-out-list" class="detail-list"></div>
-                    </div>
-                </div>
+          <!-- Node List Table -->
+          <div
+            id="node-list-wrapper"
+            style="
+              margin-top: 15px;
+              flex: 1;
+              overflow: hidden;
+              display: flex;
+              flex-direction: column;
+            "
+          >
+            <h3
+              style="margin: 0 0 5px 0; font-size: 0.9rem; color: #aaa"
+              data-i18n="filtered_nodes"
+            >
+              Filtered Nodes
+            </h3>
+            <div
+              class="table-header"
+              style="
+                display: grid;
+                grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+                gap: 5px;
+                padding: 5px;
+                background: #222;
+                font-weight: bold;
+                font-size: 0.85rem;
+              "
+            >
+              <div class="sortable" data-sort="name">
+                <span data-i18n="th_name">Name</span> <span></span>
+              </div>
+              <div class="sortable" data-sort="cluster">
+                <span data-i18n="th_cluster">Cluster</span> <span></span>
+              </div>
+              <div class="sortable" data-sort="in">
+                <span data-i18n="th_in">In</span> <span></span>
+              </div>
+              <div class="sortable" data-sort="out">
+                <span data-i18n="th_out">Out</span> <span></span>
+              </div>
+              <div class="sortable" data-sort="total">
+                <span data-i18n="th_total">Total</span> <span></span>
+              </div>
             </div>
+            <div
+              id="node-table-body"
+              style="overflow-y: auto; flex: 1; border: 1px solid #444"
+            >
+              <!-- Rows injected here -->
+            </div>
+          </div>
         </div>
+
+        <!-- Node Details View (Hidden by default) -->
+        <div id="node-details-container" style="display: none">
+          <div id="node-details-header">
+            <div>
+              <strong
+                id="details-node-name"
+                style="color: #61dafb; font-size: 1.1rem"
+                >Node Name</strong
+              >
+              <div style="color: #aaa; font-size: 0.8rem">
+                <span data-i18n="cluster">Cluster</span>:
+                <span id="details-cluster">-</span>
+              </div>
+            </div>
+            <button
+              id="btn-back-analysis"
+              style="
+                background: #444;
+                color: white;
+                border: 1px solid #555;
+                padding: 4px 8px;
+                cursor: pointer;
+              "
+            >
+              ← <span data-i18n="back">Back</span>
+            </button>
+          </div>
+          <div id="node-details-content">
+            <div class="detail-column">
+              <h4 style="color: #ff6b6b">
+                <span data-i18n="inbound_rels"
+                  >Inbound (Helping to understand)</span
+                >
+                (<span id="details-in-count">0</span>)
+              </h4>
+              <div id="details-in-list" class="detail-list"></div>
+            </div>
+            <div class="detail-column">
+              <h4 style="color: #4488ff">
+                <span data-i18n="outbound_rels"
+                  >Outbound (Further exploration)</span
+                >
+                (<span id="details-out-count">0</span>)
+              </h4>
+              <div id="details-out-list" class="detail-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Node Statistics Popup -->
-    <div id="node-stats-popup" class="stats-popup" style="display: none;">
-        <div class="popup-header" id="popup-drag-handle">
-            <h3 id="popup-node-name">Node Name</h3>
-            <div class="popup-controls">
-                <button class="popup-zoom-btn" id="popup-zoom-in" title="Zoom In">+</button>
-                <button class="popup-zoom-btn" id="popup-zoom-out" title="Zoom Out">−</button>
-                <button class="popup-zoom-btn" id="popup-reset-size" title="Reset Size">⟲</button>
-                <button id="popup-close-btn">&times;</button>
-            </div>
+    <div id="node-stats-popup" class="stats-popup" style="display: none">
+      <div class="popup-header" id="popup-drag-handle">
+        <h3 id="popup-node-name">Node Name</h3>
+        <div class="popup-controls">
+          <button class="popup-zoom-btn" id="popup-zoom-in" title="Zoom In">
+            +
+          </button>
+          <button class="popup-zoom-btn" id="popup-zoom-out" title="Zoom Out">
+            −
+          </button>
+          <button
+            class="popup-zoom-btn"
+            id="popup-reset-size"
+            title="Reset Size"
+          >
+            ⟲
+          </button>
+          <button id="popup-close-btn">&times;</button>
         </div>
-        <div class="popup-content">
-            <div class="stat-row">
-                <span class="stat-label" style="color: #ff6b6b;">In-Degree (Red):</span>
-                <span id="popup-in-count" class="stat-value">0</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label" style="color: #4488ff;">Out-Degree (Blue):</span>
-                <span id="popup-out-count" class="stat-value">0</span>
-            </div>
-            <div class="stat-divider"></div>
-            <div class="stat-lists">
-                <div class="stat-list-col">
-                    <span class="list-header">Incoming</span>
-                    <ul id="popup-in-list"></ul>
-                </div>
-                <div class="stat-list-col">
-                    <span class="list-header">Outgoing</span>
-                    <ul id="popup-out-list"></ul>
-                </div>
-            </div>
+      </div>
+      <div class="popup-content">
+        <div class="stat-row">
+          <span class="stat-label" style="color: #ff6b6b"
+            >In-Degree (Red):</span
+          >
+          <span id="popup-in-count" class="stat-value">0</span>
         </div>
+        <div class="stat-row">
+          <span class="stat-label" style="color: #4488ff"
+            >Out-Degree (Blue):</span
+          >
+          <span id="popup-out-count" class="stat-value">0</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-lists">
+          <div class="stat-list-col">
+            <span class="list-header">Incoming</span>
+            <ul id="popup-in-list"></ul>
+          </div>
+          <div class="stat-list-col">
+            <span class="list-header">Outgoing</span>
+            <ul id="popup-out-list"></ul>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Reading Window -->
-    <div id="reading-window" class="reading-overlay" style="display: none;">
-        <div id="reading-content-box" class="reading-box window-mode">
-            <div class="reading-header">
-                <span id="reading-title">Title</span>
-                <div class="reading-controls">
-                    <button id="btn-reader-lock" class="reader-btn" title="Lock/Unlock Sizing">🔒</button>
-                    <button id="btn-reader-zoom-out" class="reader-btn">A-</button>
-                    <button id="btn-reader-zoom-in" class="reader-btn">A+</button>
-                    <button id="btn-reader-close" class="reader-btn close">&times;</button>
-                </div>
-            </div>
-            <div id="reading-body" class="reading-body locked">
-                <!-- Content injected here -->
-            </div>
+    <div id="reading-window" class="reading-overlay" style="display: none">
+      <div id="reading-content-box" class="reading-box window-mode">
+        <div class="reading-header">
+          <span id="reading-title">Title</span>
+          <div class="reading-controls">
+            <button
+              id="btn-reader-lock"
+              class="reader-btn"
+              title="Lock/Unlock Sizing"
+            >
+              🔒
+            </button>
+            <button id="btn-reader-zoom-out" class="reader-btn">A-</button>
+            <button id="btn-reader-zoom-in" class="reader-btn">A+</button>
+            <button id="btn-reader-close" class="reader-btn close">
+              &times;
+            </button>
+          </div>
         </div>
+        <div id="reading-body" class="reading-body locked">
+          <!-- Content injected here -->
+        </div>
+      </div>
     </div>
 
     <!-- Settings Modal -->
-    <div id="settings-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 data-i18n="settings_title">Settings</h2>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="settings-group">
-                    <h3 data-i18n="grp_general">General</h3>
-                    <div class="setting-item">
-                        <label data-i18n="lbl_language">Language</label>
-                        <select id="set-language" style="background: #444; color: white; border: 1px solid #555; padding: 2px;">
-                            <option value="en">English</option>
-                            <option value="zh">中文</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="settings-group">
-                    <h3 data-i18n="grp_physics">Physics</h3>
-                    <div class="setting-item">
-                        <label data-i18n="lbl_repulsion">Repulsion Strength</label>
-                        <input type="range" id="set-charge" min="-1000" max="-50" step="50">
-                        <span class="value-display" id="val-charge"></span>
-                    </div>
-                    <div class="setting-item">
-                        <label data-i18n="lbl_distance">Link Distance</label>
-                        <input type="range" id="set-distance" min="20" max="300" step="10">
-                        <span class="value-display" id="val-distance"></span>
-                    </div>
-                    <div class="setting-item">
-                        <label data-i18n="lbl_collision">Collision Radius</label>
-                        <input type="range" id="set-collision" min="5" max="50" step="5">
-                        <span class="value-display" id="val-collision"></span>
-                    </div>
-                </div>
-
-                <div class="settings-group">
-                    <h3 data-i18n="grp_performance">Performance</h3>
-                    <div class="setting-item">
-                        <label data-i18n="lbl_max_workers">Max Workers (Memory)</label>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <input type="range" id="set-workers-slider" min="1" max="32" value="4" style="flex: 1;">
-                            <input type="number" id="set-workers-input" min="1" max="128" value="4" style="width: 50px; background: #333; color: white; border: 1px solid #555;">
-                        </div>
-                        <div style="font-size: 0.75rem; color: #888; margin-top: 2px;" data-i18n="desc_workers">Lower this if Node.js runs out of memory.</div>
-                    </div>
-                    
-                    <div class="setting-item">
-                        <label style="display: flex; align-items: center; cursor: pointer;">
-                            <input type="checkbox" id="set-gpu" checked>
-                            <span style="margin-left: 10px;" data-i18n="lbl_gpu">Enable GPU Acceleration</span>
-                        </label>
-                        <div style="font-size: 0.75rem; color: #888; margin-top: 2px;" data-i18n="desc_gpu">Use GPU for similarity calculation (Requires page reload).</div>
-                    </div>
-
-                    <div class="setting-item">
-                        <label style="display: flex; align-items: center; cursor: pointer;">
-                            <input type="checkbox" id="set-memory-saving">
-                            <span style="margin-left: 10px;" data-i18n="lbl_memory_saving">Large File Memory Saving Strategy</span>
-                        </label>
-                        <div style="font-size: 0.75rem; color: #888; margin-top: 2px;" data-i18n="desc_memory_saving">Use lower precision strategies to prevent OOM on large files.</div>
-                    </div>
-
-                    <div class="setting-item">
-                        <label style="display: flex; align-items: center; cursor: pointer;">
-                            <input type="checkbox" id="set-compact-mode">
-                            <span style="margin-left: 10px;" data-i18n="lbl_compact_mode">Compact Mode (Hide Edges)</span>
-                        </label>
-                        <div style="font-size: 0.75rem; color: #888; margin-top: 2px;" data-i18n="desc_compact_mode">Don't load/render edges by default to improve performance for >5k nodes.</div>
-                    </div>
-
-                    <div class="setting-item">
-                        <label style="display: flex; align-items: center; cursor: pointer;">
-                            <input type="checkbox" id="set-static-mode">
-                            <span style="margin-left: 10px;" data-i18n="lbl_static_mode">Static Mode</span>
-                        </label>
-                        <div style="font-size: 0.75rem; color: #888; margin-top: 2px;" data-i18n="desc_static_mode">Stop simulation after 2 seconds. Recommended for large graphs.</div>
-                    </div>
-
-                    <div class="setting-item">
-                        <label style="display: flex; align-items: center; cursor: pointer;">
-                            <input type="checkbox" id="set-gpu-rendering">
-                            <span style="margin-left: 10px;" data-i18n="lbl_gpu_rendering">GPU Optimised Rendering</span>
-                        </label>
-                        <div style="font-size: 0.75rem; color: #888; margin-top: 2px;" data-i18n="desc_gpu_rendering">Enable AMDGPU acceleration for loading and positioning.</div>
-                    </div>
-
-                    <div class="setting-item">
-                        <label style="display: flex; align-items: center; cursor: pointer;">
-                            <input type="checkbox" id="set-deep-debug">
-                            <span style="margin-left: 10px;" data-i18n="lbl_deep_debug">Deep Debug</span>
-                        </label>
-                        <div style="font-size: 0.75rem; color: #888; margin-top: 2px;" data-i18n="desc_deep_debug">Enable detailed logging for debugging.</div>
-                    </div>
-                </div>
-                
-                <div class="settings-group">
-                    <h3 data-i18n="grp_visuals">Visuals</h3>
-                    <div class="setting-item">
-                        <label data-i18n="lbl_opacity">Edge Opacity</label>
-                        <input type="range" id="set-opacity" min="0.1" max="1.0" step="0.1">
-                        <span class="value-display" id="val-opacity"></span>
-                    </div>
-                </div>
-
-                <div class="settings-group">
-                    <h3 data-i18n="grp_reading">Reading</h3>
-                    <div class="setting-item">
-                        <label data-i18n="lbl_reading_mode">Open Mode</label>
-                        <select id="set-reading-mode" style="background: #444; color: white; border: 1px solid #555; padding: 2px;">
-                            <option value="window" data-i18n="opt_window">Window</option>
-                            <option value="fullscreen" data-i18n="opt_fullscreen">Full Screen</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="btn-reset-settings" data-i18n="btn_reset">Reset</button>
-                <button class="btn btn-primary modal-close" data-i18n="btn_done">Done</button>
-            </div>
+    <div id="settings-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 data-i18n="settings_title">Settings</h2>
+          <button class="modal-close">&times;</button>
         </div>
+        <div class="modal-body">
+          <div class="settings-group">
+            <h3 data-i18n="grp_general">General</h3>
+            <div class="setting-item">
+              <label data-i18n="lbl_language">Language</label>
+              <select
+                id="set-language"
+                style="
+                  background: #444;
+                  color: white;
+                  border: 1px solid #555;
+                  padding: 2px;
+                "
+              >
+                <option value="en">English</option>
+                <option value="zh">中文</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h3 data-i18n="grp_physics">Physics</h3>
+            <div class="setting-item">
+              <label data-i18n="lbl_repulsion">Repulsion Strength</label>
+              <input
+                type="range"
+                id="set-charge"
+                min="-1000"
+                max="-50"
+                step="50"
+              />
+              <span class="value-display" id="val-charge"></span>
+            </div>
+            <div class="setting-item">
+              <label data-i18n="lbl_distance">Link Distance</label>
+              <input
+                type="range"
+                id="set-distance"
+                min="20"
+                max="300"
+                step="10"
+              />
+              <span class="value-display" id="val-distance"></span>
+            </div>
+            <div class="setting-item">
+              <label data-i18n="lbl_collision">Collision Radius</label>
+              <input
+                type="range"
+                id="set-collision"
+                min="5"
+                max="50"
+                step="5"
+              />
+              <span class="value-display" id="val-collision"></span>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h3 data-i18n="grp_performance">Performance</h3>
+            <div class="setting-item">
+              <label data-i18n="lbl_max_workers">Max Workers (Memory)</label>
+              <div style="display: flex; gap: 10px; align-items: center">
+                <input
+                  type="range"
+                  id="set-workers-slider"
+                  min="1"
+                  max="32"
+                  value="4"
+                  style="flex: 1"
+                />
+                <input
+                  type="number"
+                  id="set-workers-input"
+                  min="1"
+                  max="128"
+                  value="4"
+                  style="
+                    width: 50px;
+                    background: #333;
+                    color: white;
+                    border: 1px solid #555;
+                  "
+                />
+              </div>
+              <div
+                style="font-size: 0.75rem; color: #888; margin-top: 2px"
+                data-i18n="desc_workers"
+              >
+                Lower this if Node.js runs out of memory.
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <label
+                style="display: flex; align-items: center; cursor: pointer"
+              >
+                <input type="checkbox" id="set-gpu" checked />
+                <span style="margin-left: 10px" data-i18n="lbl_gpu"
+                  >Enable GPU Acceleration</span
+                >
+              </label>
+              <div
+                style="font-size: 0.75rem; color: #888; margin-top: 2px"
+                data-i18n="desc_gpu"
+              >
+                Use GPU for similarity calculation (Requires page reload).
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <label
+                style="display: flex; align-items: center; cursor: pointer"
+              >
+                <input type="checkbox" id="set-memory-saving" />
+                <span style="margin-left: 10px" data-i18n="lbl_memory_saving"
+                  >Large File Memory Saving Strategy</span
+                >
+              </label>
+              <div
+                style="font-size: 0.75rem; color: #888; margin-top: 2px"
+                data-i18n="desc_memory_saving"
+              >
+                Use lower precision strategies to prevent OOM on large files.
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <label
+                style="display: flex; align-items: center; cursor: pointer"
+              >
+                <input type="checkbox" id="set-compact-mode" />
+                <span style="margin-left: 10px" data-i18n="lbl_compact_mode"
+                  >Compact Mode (Hide Edges)</span
+                >
+              </label>
+              <div
+                style="font-size: 0.75rem; color: #888; margin-top: 2px"
+                data-i18n="desc_compact_mode"
+              >
+                Don't load/render edges by default to improve performance for
+                >5k nodes.
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <label
+                style="display: flex; align-items: center; cursor: pointer"
+              >
+                <input type="checkbox" id="set-static-mode" />
+                <span style="margin-left: 10px" data-i18n="lbl_static_mode"
+                  >Static Mode</span
+                >
+              </label>
+              <div
+                style="font-size: 0.75rem; color: #888; margin-top: 2px"
+                data-i18n="desc_static_mode"
+              >
+                Stop simulation after 2 seconds. Recommended for large graphs.
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <label
+                style="display: flex; align-items: center; cursor: pointer"
+              >
+                <input type="checkbox" id="set-gpu-rendering" />
+                <span style="margin-left: 10px" data-i18n="lbl_gpu_rendering"
+                  >GPU Optimised Rendering</span
+                >
+              </label>
+              <div
+                style="font-size: 0.75rem; color: #888; margin-top: 2px"
+                data-i18n="desc_gpu_rendering"
+              >
+                Enable AMDGPU acceleration for loading and positioning.
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <label
+                style="display: flex; align-items: center; cursor: pointer"
+              >
+                <input type="checkbox" id="set-deep-debug" />
+                <span style="margin-left: 10px" data-i18n="lbl_deep_debug"
+                  >Deep Debug</span
+                >
+              </label>
+              <div
+                style="font-size: 0.75rem; color: #888; margin-top: 2px"
+                data-i18n="desc_deep_debug"
+              >
+                Enable detailed logging for debugging.
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h3 data-i18n="grp_visuals">Visuals</h3>
+            <div class="setting-item">
+              <label data-i18n="lbl_opacity">Edge Opacity</label>
+              <input
+                type="range"
+                id="set-opacity"
+                min="0.1"
+                max="1.0"
+                step="0.1"
+              />
+              <span class="value-display" id="val-opacity"></span>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h3 data-i18n="grp_reading">Reading</h3>
+            <div class="setting-item">
+              <label data-i18n="lbl_reading_mode">Open Mode</label>
+              <select
+                id="set-reading-mode"
+                style="
+                  background: #444;
+                  color: white;
+                  border: 1px solid #555;
+                  padding: 2px;
+                "
+              >
+                <option value="window" data-i18n="opt_window">Window</option>
+                <option value="fullscreen" data-i18n="opt_fullscreen">
+                  Full Screen
+                </option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="btn btn-secondary"
+            id="btn-reset-settings"
+            data-i18n="btn_reset"
+          >
+            Reset
+          </button>
+          <button class="btn btn-primary modal-close" data-i18n="btn_done">
+            Done
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Quick Actions (Absolute Position top right) -->
-    <div style="position: absolute; top: 10px; right: 20px; z-index: 1000; display: flex; gap: 10px;">
-        <button id="btn-quick-freeze" style="background: #333; color: white; border: 1px solid #555; padding: 5px 10px; cursor: pointer; border-radius: 4px;" title="Freeze Layout">
-            ❄️ <span class="btn-label" data-i18n="freeze_layout" style="display:none;">Freeze</span>
-        </button>
-        <button id="btn-help" style="background: #333; color: white; border: 1px solid #555; padding: 5px 10px; cursor: pointer; border-radius: 4px;" title="Quick Start Guide">
-            ❓ <span class="btn-label" data-i18n="help" style="display:none;">Help</span>
-        </button>
-        <button id="btn-open-settings" style="background: #333; color: white; border: 1px solid #555; padding: 5px 10px; cursor: pointer; border-radius: 4px;">
-            ⚙️ <span class="btn-label" data-i18n="btn_settings">Settings</span>
-        </button>
+    <div
+      style="
+        position: absolute;
+        top: 10px;
+        right: 20px;
+        z-index: 1000;
+        display: flex;
+        gap: 10px;
+      "
+    >
+      <button
+        id="btn-quick-freeze"
+        style="
+          background: #333;
+          color: white;
+          border: 1px solid #555;
+          padding: 5px 10px;
+          cursor: pointer;
+          border-radius: 4px;
+        "
+        title="Freeze Layout"
+      >
+        ❄️
+        <span class="btn-label" data-i18n="freeze_layout" style="display: none"
+          >Freeze</span
+        >
+      </button>
+      <button
+        id="btn-help"
+        style="
+          background: #333;
+          color: white;
+          border: 1px solid #555;
+          padding: 5px 10px;
+          cursor: pointer;
+          border-radius: 4px;
+        "
+        title="Quick Start Guide"
+      >
+        ❓
+        <span class="btn-label" data-i18n="help" style="display: none"
+          >Help</span
+        >
+      </button>
+      <button
+        id="btn-open-settings"
+        style="
+          background: #333;
+          color: white;
+          border: 1px solid #555;
+          padding: 5px 10px;
+          cursor: pointer;
+          border-radius: 4px;
+        "
+      >
+        ⚙️ <span class="btn-label" data-i18n="btn_settings">Settings</span>
+      </button>
     </div>
 
     <!-- Quick Start Manual Modal -->
-    <div id="manual-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h2 data-i18n="manual_title">Quick Start Guide</h2>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body" style="font-size: 0.95rem; line-height: 1.6;">
-                <div class="manual-section">
-                    <h3 data-i18n="manual_step1_title">1. Load Knowledge Base</h3>
-                    <p data-i18n="manual_step1_desc">Select a folder from the dropdown (top-left) and click "Load" to visualize your notes.</p>
-                </div>
-                <div class="manual-section">
-                    <h3 data-i18n="manual_step2_title">2. Navigation</h3>
-                    <p data-i18n="manual_step2_desc">
-                        • <strong>Pan/Zoom</strong>: Drag background to move, Scroll/Pinch to zoom.<br>
-                        • <strong>Inspect</strong>: Click (Mobile) or Hover (PC) a node to see connections.
-                    </p>
-                </div>
-                <div class="manual-section">
-                    <h3 data-i18n="manual_step3_title">3. Focus Mode</h3>
-                    <p data-i18n="manual_step3_desc"><strong>Double Click</strong> a node to enter Focus Mode. This isolates the concept and arranges its dependencies hierarchically.</p>
-                </div>
-                <div class="manual-section">
-                    <h3 data-i18n="manual_step4_title">4. Controls</h3>
-                    <p data-i18n="manual_step4_desc">
-                        • <strong>Freeze (❄️)</strong>: Stop movement to easily click/read nodes.<br>
-                        • <strong>Layout</strong>: Switch between "Force" (Cluster) and "DAG" (Tree) layouts in the side panel.
-                    </p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <label style="display: flex; align-items: center; margin-right: auto; font-size: 0.9rem; color: #aaa;">
-                    <input type="checkbox" id="dont-show-manual"> <span style="margin-left: 5px;" data-i18n="dont_show_again">Don't show again</span>
-                </label>
-                <button class="btn btn-primary modal-close" data-i18n="btn_got_it">Got it!</button>
-            </div>
+    <div id="manual-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content" style="max-width: 600px">
+        <div class="modal-header">
+          <h2 data-i18n="manual_title">Quick Start Guide</h2>
+          <button class="modal-close">&times;</button>
         </div>
+        <div class="modal-body" style="font-size: 0.95rem; line-height: 1.6">
+          <div class="manual-section">
+            <h3 data-i18n="manual_step1_title">1. Load Knowledge Base</h3>
+            <p data-i18n="manual_step1_desc">
+              Select a folder from the dropdown (top-left) and click "Load" to
+              visualize your notes.
+            </p>
+          </div>
+          <div class="manual-section">
+            <h3 data-i18n="manual_step2_title">2. Navigation</h3>
+            <p data-i18n="manual_step2_desc">
+              • <strong>Pan/Zoom</strong>: Drag background to move, Scroll/Pinch
+              to zoom.<br />
+              • <strong>Inspect</strong>: Click (Mobile) or Hover (PC) a node to
+              see connections.
+            </p>
+          </div>
+          <div class="manual-section">
+            <h3 data-i18n="manual_step3_title">3. Focus Mode</h3>
+            <p data-i18n="manual_step3_desc">
+              <strong>Double Click</strong> a node to enter Focus Mode. This
+              isolates the concept and arranges its dependencies hierarchically.
+            </p>
+          </div>
+          <div class="manual-section">
+            <h3 data-i18n="manual_step4_title">4. Controls</h3>
+            <p data-i18n="manual_step4_desc">
+              • <strong>Freeze (❄️)</strong>: Stop movement to easily click/read
+              nodes.<br />
+              • <strong>Layout</strong>: Switch between "Force" (Cluster) and
+              "DAG" (Tree) layouts in the side panel.
+            </p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <label
+            style="
+              display: flex;
+              align-items: center;
+              margin-right: auto;
+              font-size: 0.9rem;
+              color: #aaa;
+            "
+          >
+            <input type="checkbox" id="dont-show-manual" />
+            <span style="margin-left: 5px" data-i18n="dont_show_again"
+              >Don't show again</span
+            >
+          </label>
+          <button class="btn btn-primary modal-close" data-i18n="btn_got_it">
+            Got it!
+          </button>
+        </div>
+      </div>
     </div>
 
     <script src="settings.js"></script>
@@ -464,5 +1118,5 @@
     <script src="analysis.js"></script>
     <script src="source_manager.js"></script>
     <script src="welcome.js"></script>
-</body>
+  </body>
 </html>
