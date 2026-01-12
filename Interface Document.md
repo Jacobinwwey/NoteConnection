@@ -447,10 +447,26 @@ Renders the JSON data into an interactive DAG.
     - **Conditional Restart (v0.9.27)**:
       - **Logic**: If "Freeze Layout" is enabled when exiting Focus Mode, the simulation remains stopped (`simulation.stop()`) to maintain the visual state.
       - **Behavior**: Prevents the graph from "exploding" or moving if the user expects it to stay frozen.
-    - **Layout Isolation (v0.9.30)**:
-      - **Backup**: Stores node coordinates (`x`, `y`, `fx`, `fy`) upon entering Focus Mode.
       - **Restoration**: Reverts nodes to these exact coordinates upon exit, discarding any layout changes made within Focus Mode.
       - **Goal**: Ensures main interface layout remains absolutely consistent before and after Focus Mode sessions.
+    - **Strict Isolation (v0.9.75)**:
+
+      - **Static Layout**: Focus Mode now strictly enforces a static layout using `fx`/`fy` locks and explicitly stops the physics simulation (`restart: false`), complying with "cease simulating" requirements.
+      - **Dimension Independence**: Node sizes and typography in the main interface are protected. Upon exiting Focus Mode, dimensions are restored via the central `updateSize()` logic rather than hardcoded resets, ensuring custom configurations (e.g., Size by Centrality) are preserved.
+      - **Event Protection**: `ResizeObserver` is now aware of Focus Mode and ignores window resize events that would otherwise trigger a simulation restart.
+
+    - **Correct Restoration Order (v0.9.76)**:
+
+      - **Fix**: Resolved a race condition where the worker was re-initialized with Focus Mode positions effectively overwriting the backup. Now, positions are restored locally _before_ syncing with the worker.
+
+    - **Query History (v0.9.77)**:
+
+      - **UI**: Added a "History ▼" dropdown in the Focus Mode toolbar.
+      - **Functionality**: Tracks the last 10 visited central nodes. Clicking an item effectively "backtracks" or jumps to that node's Focus View.
+
+    - **Analysis Layout Stability (v0.9.77)**:
+      - **Auto-Freeze**: Opening the "Degree Analysis" panel automatically engages "Freeze Layout" to strictly maintain node positions during analysis.
+      - **Scrolling**: Enhanced valid CSS flexbox structures to guarantee the "Filtered Nodes" table scrolls vertically without overflowing the panel.
 
   - **Focus Mode Specific Content (v0.9.28)**:
 

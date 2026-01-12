@@ -101,6 +101,28 @@ document.addEventListener("DOMContentLoaded", () => {
                     UI.panel.style.height = "500px"; 
                 }
                 
+                // Requirement 4: Freeze Layout when entering Degree Analysis
+                const freezeChk = document.getElementById('freeze-layout');
+                if (freezeChk && !freezeChk.checked) {
+                    freezeChk.checked = true;
+                    // Trigger change event to ensure app.js handles the stop() logic
+                    freezeChk.dispatchEvent(new Event('change'));
+                }
+
+                // Requirement 5: Ensure vertical scrolling
+                // Apply flex styles dynamically to ensure the table fills the space
+                UI.panelBody.style.display = 'flex';
+                UI.panelBody.style.flexDirection = 'column';
+                UI.panelBody.style.overflow = 'hidden'; // Inner containers handle scroll
+                
+                const globalContainer = document.getElementById('global-analysis-container');
+                if (globalContainer) {
+                    globalContainer.style.display = 'flex';
+                    globalContainer.style.flexDirection = 'column';
+                    globalContainer.style.height = '100%';
+                    globalContainer.style.overflow = 'hidden';
+                }
+
                 requestAnimationFrame(() => {
                     renderHistogram();
                     updateStats(); 

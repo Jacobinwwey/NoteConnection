@@ -304,6 +304,14 @@ const resizeObserver = new ResizeObserver(entries => {
         
         if (typeof resizeCanvas === 'function') resizeCanvas();
 
+        // v0.9.75: Skip layout updates if in Focus Mode to maintain static state
+        if (focusModeState && focusModeState.active) {
+            console.log("[Resize] Focus Mode active. Skipping layout update.");
+            // Optional: Re-center focus node? For now, just render.
+            ticked();
+            return;
+        }
+
         const mode = document.querySelector('input[name="layoutMode"]:checked') ? document.querySelector('input[name="layoutMode"]:checked').value : 'force';
         
         // Send layout update to worker
@@ -2041,6 +2049,121 @@ window.focusOnNode = function(id) {
     }
 };
 
+
+
+// --- Query History Implementation (v0.9.77) ---
+window.focusHistory = [];
+const MAX_HISTORY = 10;
+
+function updateFocusHistory(newNode) {
+    // Avoid duplicates at the top of the stack
+    if (window.focusHistory.length > 0 && window.focusHistory[0].id === newNode.id) return;
+    
+    // Add to specific history list
+    window.focusHistory.unshift(newNode);
+    if (window.focusHistory.length > MAX_HISTORY) window.focusHistory.pop();
+    
+    renderFocusHistory();
+}
+
+function renderFocusHistory() {
+    const container = document.getElementById('focus-history-list');
+    if (!container) return; // Should be created by init
+    
+    container.innerHTML = '';
+    
+    if (window.focusHistory.length === 0) {
+        container.innerHTML = '<div style="padding:5px; color:#aaa; font-style:italic">No history</div>';
+        return;
+    }
+
+    window.focusHistory.forEach(node => {
+        const item = document.createElement('div');
+        item.style.padding = '4px 8px';
+        item.style.cursor = 'pointer';
+        item.style.borderBottom = '1px solid #444';
+        item.style.fontSize = '0.8rem';
+        item.style.color = '#eee';
+        item.innerText = node.label;
+        item.title = `Cluster: ${node.clusterId || '-'}`;
+        
+        item.addEventListener('mouseenter', () => item.style.background = '#444');
+        item.addEventListener('mouseleave', () => item.style.background = '');
+        
+        item.addEventListener('click', (e) => {
+             e.stopPropagation(); // prevent closing dropdown immediately?
+             // Close dropdown handled by global click?
+             document.getElementById('focus-history-dropdown').style.display = 'none';
+             enterFocusMode(node);
+        });
+        
+        container.appendChild(item);
+    });
+}
+
+// Inject History UI
+function initFocusHistoryUI() {
+    const parent = document.getElementById('focus-exit-btn');
+    if (!parent || document.getElementById('btn-focus-history')) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'relative';
+    wrapper.style.marginRight = '5px';
+
+    const btn = document.createElement('button');
+    btn.id = 'btn-focus-history';
+    btn.innerText = 'History ▼';
+    btn.style.fontSize = '0.8rem';
+    btn.style.padding = '2px 6px';
+    btn.style.cursor = 'pointer';
+    
+    const dropdown = document.createElement('div');
+    dropdown.id = 'focus-history-dropdown';
+    dropdown.style.display = 'none';
+    dropdown.style.position = 'absolute';
+    dropdown.style.top = '100%';
+    dropdown.style.left = '0';
+    dropdown.style.background = '#222';
+    dropdown.style.border = '1px solid #555';
+    dropdown.style.zIndex = '2000';
+    dropdown.style.minWidth = '150px';
+    dropdown.style.maxHeight = '300px';
+    dropdown.style.overflowY = 'auto';
+    dropdown.style.boxShadow = '0 4px 6px rgba(0,0,0,0.3)';
+
+    const list = document.createElement('div');
+    list.id = 'focus-history-list';
+    
+    dropdown.appendChild(list);
+    wrapper.appendChild(btn);
+    wrapper.appendChild(dropdown);
+    
+    // Insert before 'Specific Content' button
+    const neighbor = document.getElementById('btn-open-content');
+    if (neighbor) {
+        parent.insertBefore(wrapper, neighbor);
+    } else {
+        parent.appendChild(wrapper);
+    }
+
+    // Toggle Logic
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isVisible = dropdown.style.display === 'block';
+        dropdown.style.display = isVisible ? 'none' : 'block';
+    });
+    
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!wrapper.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
+}
+
+// Ensure init happens
+initFocusHistoryUI();
+
 function enterFocusMode(focusD) {
     // Backup original positions to ensure layout consistency upon exit (v0.9.30)
     // 备份原始位置以确保退出时布局一致
@@ -2057,6 +2180,9 @@ function enterFocusMode(focusD) {
     // Update focus mode state
     // 更新专注模式状态
     updateFocusModeState(true, focusD);
+    
+    // v0.9.77: Add to History
+    updateFocusHistory(focusD);
 
     // Update Stats
     document.getElementById('focus-node-stats').innerText = `In: ${focusD.inDegree} | Out: ${focusD.outDegree}`;
@@ -2277,7 +2403,8 @@ function enterFocusMode(focusD) {
         type: 'setNodes',
         payload: {
             nodes: workerActiveNodes,
-            links: workerActiveLinks
+            links: workerActiveLinks,
+            restart: false // v0.9.75: Ensure simulation is STOPPED in Focus Mode
         }
     });
 
@@ -2328,7 +2455,8 @@ function enterFocusMode(focusD) {
              d.fx = null; d.fy = null; d.isFocusVisible = false; d._labelDy = null;
         }
     });
-    simulation.alpha(0.1).restart();
+    // v0.9.75: Removed simulation.alpha(0.1).restart() to comply with "cease simulating" requirement.
+    // simulation.alpha(0.1).restart();
     ticked(); // Force render update (Canvas)
 }
       
@@ -2349,29 +2477,8 @@ function enterFocusMode(focusD) {
 
     link.style("display", "block");
 
-    // Restore Full Simulation State
-    
-    // Send full dataset back to worker
-    const workerNodes = nodes.map(n => ({ 
-        id: n.id, 
-        x: n.x, y: n.y, 
-        fx: n.fx, fy: n.fy, 
-        rank: n.rank 
-    }));
-    const workerLinks = physicsLinks.map(l => ({ source: l.source.id, target: l.target.id }));
-
-    simulationWorker.postMessage({
-        type: 'setNodes',
-        payload: {
-            nodes: workerNodes,
-            links: workerLinks
-        }
-    });
-
-    // We don't need to manually reset simulation.nodes() or force("link") on main thread proxy,
-    // as it doesn't do anything meaningful.
-
-
+    // 1. Restore Original Positions FIRST (Critical Step)
+    // We must revert to the pre-focus state *before* syncing with the worker
     nodes.forEach(d => {
         // Restore original positions (v0.9.30)
         // 恢复原始位置
@@ -2391,25 +2498,49 @@ function enterFocusMode(focusD) {
         d._labelDy = null;
     });
 
-    updateVisibility(); updateSize(); updateColor();
+    // 2. Restore Visual State (Dimensions & Colors)
+    // Call these explicitly to reset sizes from Focus Mode values (25px/8px) back to global settings
+    updateVisibility(); 
+    
+    // Instant restoration of size/color to avoid "morphing" from focus state
+    // We can use a special flag or just rely on the transition being fast/imperceptible if we remove delay?
+    // Let's force a "clean" update.
+    updateColor();
+    updateSize();
 
-    // Reset Texts
-    node.selectAll("text").transition().duration(500)
-        .attr("dy", ".35em") // Restore default
-        .attr("font-size", "10px").attr("font-weight", "normal").attr("fill", "#ccc");
-
+    // Reset Texts specific focus overrides (dy)
+    node.selectAll("text").transition().duration(500).attr("dy", ".35em");
     node.selectAll("circle").transition().duration(500).attr("stroke-width", "1.5px");
     
     // Clear Focus Labels (SVG)
     g.selectAll(".focus-label-group").remove();
     window.focusLabels = [];
 
-    // Check Freeze Layout State
+    // 3. Sync Worker with Restored State
+    const workerNodes = nodes.map(n => ({ 
+        id: n.id, 
+        x: n.x, y: n.y, 
+        fx: n.fx, fy: n.fy, 
+        rank: n.rank,
+        vx: n.vx || 0, vy: n.vy || 0 // optionally reset velocity?
+    }));
+    const workerLinks = physicsLinks.map(l => ({ source: l.source.id, target: l.target.id }));
+
+    simulationWorker.postMessage({
+        type: 'setNodes',
+        payload: {
+            nodes: workerNodes,
+            links: workerLinks,
+            restart: false // Set data, don't restart yet
+        }
+    });
+
+    // 4. Check Freeze Layout State & Restart if needed
     const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
 
     if (isFrozen) {
         simulation.stop();
-        ticked(); // Force one render to show all nodes in their current positions
+        ticked(); // Force one render to show all nodes in their current (restored) positions
     } else {
         simulation.alpha(1).restart();
     }
