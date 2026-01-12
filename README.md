@@ -148,7 +148,6 @@ NoteConnection uses **Capacitor** to build native mobile apps.
     ```
     APK will be located at: `android/app/build/outputs/apk/debug/app-debug.apk`
 
-
 ### 3. Usage Guide
 
 1.  **Select Source**: Use the dropdown in the top-left to choose a folder from `Knowledge_Base`.
@@ -207,8 +206,10 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ### v0.9.74 (2026-01-12)
 
-- **Layout Switching Fix**: Implemented robust state preservation (`layoutCache`) for Force and DAG layouts, ensuring node positions are saved and restored without "teleportation". Fixed a critical crash in `updateLayout`.
-- **GPU Robustness**: Refactored `layout_gpu.js` to use a Singleton pattern, preventing WebGL context leaks (limit 16) when switching settings.
+- **GPU Link Force**: Implemented high-performance GPU-accelerated spring forces using `gpu.js`. Supports "Gather" algorithm for efficient neighbor processing.
+- **Physics Robustness**: Introduced velocity clamping (MAX_VELOCITY=100) and NaN/Infinity safety guards in GPU kernels to prevent node "explosions" and disappearing nodes.
+- **Layout Switching Fix**: Implemented robust state preservation (`layoutCache`) for Force and DAG layouts, ensuring node positions are saved and restored without "teleportation". Fixed a critical crash in `updateLayout` and added Focus Mode support for GPU forces.
+- **GPU Resource Management**: Refactored `layout_gpu.js` to use a Singleton pattern for the GPU context, preventing WebGL context leaks (limit 16) when toggling settings.
 
 ### v0.9.71 (2026-01-10)
 
@@ -757,8 +758,10 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 
 ### v0.9.74 (2026-01-12)
 
-- **布局切换修复**: 实现了 Force 和 DAG 布局的稳健状态保存 (`layoutCache`)，确保节点位置在切换时被保存和恢复，消除了“瞬移”现象。修复了 `updateLayout` 中的关键崩溃问题。
-- **GPU 稳健性**: 重构 `layout_gpu.js` 使用单例模式，防止在切换设置时发生 WebGL 上下文泄漏 (限制 16 个)。
+- **GPU 链接力 (Link Force)**: 使用 `gpu.js` 实现了高性能的 GPU 加速弹簧力。支持 "Gather" 算法，用于高效的邻居处理。
+- **物理稳健性**: 在 GPU 核函数中引入了速度钳位 (MAX_VELOCITY=100) 和 NaN/无穷大安全防护，防止节点“爆炸”和消失。
+- **布局切换修复**: 实现了 Force 和 DAG 布局的稳健状态保存 (`layoutCache`)，确保节点位置在切换时被保存和恢复，消除了“瞬移”现象。修复了 `updateLayout` 中的关键崩溃，并增加了专注于模式对 GPU 力的支持。
+- **GPU 资源管理**: 重构 `layout_gpu.js` 使用单例模式管理 GPU 上下文，防止在切换设置时发生 WebGL 上下文泄漏 (限制 16 个)。
 
 ### v0.9.71 (2026-01-10)
 

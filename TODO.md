@@ -1,4 +1,4 @@
-# 2025-12-26 v0.9.28
+# 2026-01-12 v0.9.74
 
 # Project Build Plan: Progressive Hierarchical Knowledge Graph
 
@@ -6,19 +6,28 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
-# 2026-01-12 v0.9.74 - Layout Switching & GPU Robustness
+# 2026-01-12 v0.9.74 - GPU Link Force & Robustness
 
-**Goal**: Finalize stable layout switching with state preservation and resolve GPU resource management issues (WebGL Context Leaks).
+**Goal**: Implement GPU-accelerated Link Force and finalize stable layout switching with state preservation and WebGL resource management.
 
-- [x] **Layout Switching Fix**
+- [x] **GPU Link Force Acceleration**
 
-  - [x] **State Preservation**: Implemented `layoutCache` to independently store and restore node positions (`x, y, fx, fy`) for 'Force' and 'DAG' layouts.
-  - [x] **Crash Resolution**: Fixed a critical crash in `updateLayout` where `simulation.force` was accessed before initialization by refactoring usage of `applyPhysics`.
-  - [x] **Logic**: Switching layouts now seamlessly transitions without visual "teleportation" glitches or simulation resets.
+  - [x] **GPULinkForce Class**: Implemented high-performance spring force in `layout_gpu.js`.
+  - [x] **Gather Algorithm**: Optimized neighbor processing using flattened adjacency structures.
+  - [x] **D3 Integration**: Added API shims (`links`, `strength`, `distance`) for seamless `app.js` integration.
 
-- [x] **GPU Robustness**
-  - [x] **Singleton Pattern**: Refactored `layout_gpu.js` to use a Singleton instance for `GPUManyBodyForce`, preventing WebGL context leaks (limit 16 contexts) when toggling settings.
-  - [x] **Constructor Safety**: Enhanced `GPU.GPU` detection to handle variable library packing (Webpack/Rollup).
+- [x] **Physics Robustness & Stability**
+
+  - [x] **Velocity Clamping**: Prevents node "explosions" by capping velocity at 100.
+  - [x] **NaN Safety**: Implemented math guards in GPU kernels and `isFinite` checks in JS.
+  - [x] **Shadowing Fix**: Renamed internal `links` to `_links` in `GPULinkForce` to prevent property-method collision.
+  - [x] **Focus Mode Support**: Updated `enterFocusMode` and `exitFocusMode` in `app.js` to handle GPU forces.
+
+- [x] **Layout Switching & Resource Fixes**
+  - [x] **State Preservation**: Implemented `layoutCache` for 'Force' and 'DAG' layouts.
+  - [x] **Crash Resolution**: Fixed `TypeError` in `updateLayout` during force reconfiguration.
+  - [x] **Singleton Pattern**: Refactored `layout_gpu.js` to use a Singleton instance for `SharedGPU`, preventing WebGL context leaks.
+  - [x] **Constructor Safety**: Enhanced `GPU.GPU` detection for varying library builds.
 
 ---
 

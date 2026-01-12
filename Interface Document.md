@@ -633,15 +633,20 @@ GPU-accelerated physics engine for frontend layout, implementing D3-compatible f
 
 - **Location**: `src/frontend/layout_gpu.js`
 - **Architecture**:
-  - **Shared Context**: Uses a singleton `SharedGPU` to manage a single WebGL context for all forces, preventing browser context limits (16 max).
+  - **Shared Context**: Uses a singleton `SharedGPU` to manage a single WebGL context for all forces, preventing browser context limits (16 max contexts per browser).
 - **Classes**:
   - **`GPUManyBodyForce`**: N-body repulsion. Replaces `d3.forceManyBody`.
   - **`GPULinkForce`**: Spring force. Replaces `d3.forceLink`.
-    - **Algorithm**: "Gather" kernel where each node calculates forces from all connected neighbors.
-    - **Robustness**:
-      - **Velocity Clamping**: Caps velocity at `100` to prevent explosion.
-      - **NaN Safety**: Safeguards against division by zero and infinite results.
-      - **Type Safety**: Strict input casting.
+    - **Algorithm**: "Gather" kernel where each node calculates forces from all connected neighbors by iterating through a flattened adjacency list.
+    - **Property Naming**: Internal data uses `this._links` to avoid shadowing the `links()` shim method.
+    - **Robustness & Safety**:
+      - **Velocity Clamping**: Caps `vx`/`vy` at `100` to prevent "explosive" movements where nodes disappear from the viewport.
+      - **NaN Mitigation**: Kernel uses safe division (distance offset `+0.0001`) and `isFinite()` checks before applying results to node objects.
+      - **Type Safety**: Explicit `Number()` casting for kernel parameters (`alpha`, `strength`, `distance`).
+- **Integration (`app.js`)**:
+  - **Dynamic Switching**: `applyPhysics` toggles between `d3.forceManyBody`/`d3.forceLink` and `window.gpuManyBody`/`window.gpuLink` based on hardware settings.
+  - **Focus Mode Support**: `enterFocusMode` and `exitFocusMode` detect the active Force type (CPU or GPU) to update link references correctly.
+  - **Layout Caching**: Safe restoration of cached coordinates (`layoutCache`) with null-checks to prevent crashes during rapid switching.
 
 #### Drag and Zoom Functionality
 
@@ -1437,15 +1442,20 @@ Manages node highlighting interactions for both PC and mobile interfaces.
 
 - **位置**: `src/frontend/layout_gpu.js`
 - **架构**:
-  - **共享上下文**: 使用单例 `SharedGPU` 管理所有力的单个 WebGL 上下文，防止达到浏览器上下文限制（最大 16 个）。
+  - **共享上下文**: 使用单例 `SharedGPU` 管理所有力的单个 WebGL 上下文，防止达到浏览器上下文限制（每个浏览器最大 16 个上下文）。
 - **类**:
   - **`GPUManyBodyForce`**: N 体排斥力。替换 `d3.forceManyBody`。
   - **`GPULinkForce`**: 弹簧力。替换 `d3.forceLink`。
-    - **算法**: "Gather" 核函数，每个节点计算所有连接邻居的力。
-    - **稳健性**:
-      - **速度钳位**: 将速度限制在 `100` 以防止爆炸。
-      - **NaN 安全**: 防止除以零和无限结果。
-      - **类型安全**: 严格的输入转换。
+    - **算法**: "Gather" 核函数，每个节点通过遍历扁平化的邻接列表来计算所有连接邻居的力。
+    - **属性命名**: 内部数据使用 `this._links` 以避免遮蔽 `links()` Shim 方法。
+    - **稳健性与安全**:
+      - **速度钳位**: 将 `vx`/`vy` 限制在 `100` 以防止节点从视口中消失的“爆炸性”运动。
+      - **NaN 缓解**: 核函数使用安全除法（距离偏移 `+0.0001`），并在将结果应用于节点对象之前进行 `isFinite()` 检查。
+      - **类型安全**: 对核函数参数 (`alpha`, `strength`, `distance`) 进行显式 `Number()` 转换。
+- **集成 (`app.js`)**:
+  - **动态切换**: `applyPhysics` 根据硬件设置在 `d3.forceManyBody`/`d3.forceLink` 和 `window.gpuManyBody`/`window.gpuLink` 之间切换。
+  - **专注模式支持**: `enterFocusMode` 和 `exitFocusMode` 检测活动力类型（CPU 或 GPU）以正确更新连接引用。
+  - **布局缓存**: 安全恢复缓存坐标 (`layoutCache`)，并带有空值检查以防止在快速切换期间发生崩溃。
 - 检测可用的 CPU 核心。
 - 生成 Worker（可通过 `maxWorkers` 配置）。
 - 将文件列表拆分为*路径*块。
