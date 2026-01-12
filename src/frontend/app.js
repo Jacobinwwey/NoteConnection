@@ -165,10 +165,31 @@ let width = container.clientWidth;
 let height = container.clientHeight;
 
 // Optimization: Limit Physics Edges
+// For CPU physics (d3.forceLink), we must limit edges to prevent main thread freeze.
+// For GPU physics (gpuLink), we can handle significantly more.
 let physicsLinks = links;
-if (links.length > 20000) {
-    console.warn(`[Optimization] Too many edges (${links.length}). Limiting physics simulation to subset to prevent freeze.`);
-    physicsLinks = links.slice(0, 20000); 
+
+function updatePhysicsLinks(settings) {
+    const isGPUEnabled = settings && settings.performance && settings.performance.gpuRendering;
+    const limit = isGPUEnabled ? 2000000 : 20000;
+    
+    if (links.length > limit) {
+        console.log(`[Optimization] Too many edges (${links.length}). Limiting physics simulation to ${limit} to prevent freeze.`);
+        physicsLinks = links.slice(0, limit); 
+    } else {
+        physicsLinks = links;
+    }
+}
+
+// Initial update using current settings
+if (window.settingsManager) {
+    updatePhysicsLinks(settingsManager.settings);
+} else {
+    // Fallback default
+    if (links.length > 20000) {
+        console.warn(`[Optimization] Too many edges (${links.length}). Limiting physics simulation to 20000 (Safe Default).`);
+        physicsLinks = links.slice(0, 20000);
+    }
 }
 
 const simulation = d3.forceSimulation(nodes)
@@ -2540,6 +2561,11 @@ function initSettingsUI() {
 
 // Helper to apply physics (CPU vs GPU)
 function applyPhysics(settings) {
+    // Refresh physics links subset based on active hardware mode
+    if (typeof updatePhysicsLinks === 'function') {
+        updatePhysicsLinks(settings);
+    }
+
     const mode = document.querySelector('input[name="layoutMode"]:checked') ? document.querySelector('input[name="layoutMode"]:checked').value : 'force';
     const chargeVal = mode === 'dag' ? settings.physics.repulsionDAG : settings.physics.repulsionForce;
     

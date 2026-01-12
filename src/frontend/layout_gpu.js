@@ -84,7 +84,10 @@ class GPUManyBodyForce {
         })
         .setOutput([n])
         .setPipeline(false)
-        .setTactic('precision');
+        .setTactic('precision')
+        .setLoopMaxIterations(100000); // Allow N^2 loop for 13k nodes (13k iterations per thread)
+
+        console.log("[GPUManyBody] Kernel compiled successfully.");
     }
 
     force(alpha) {
@@ -108,11 +111,25 @@ class GPUManyBodyForce {
             this.initialize(this.nodes);
         }
 
-        const results = this.kernel(posX, posY, s, n);
+        let results;
+        try {
+            results = this.kernel(posX, posY, s, n);
+        } catch (e) {
+            console.error("[GPUManyBody] Kernel Execution Failed!", e);
+            this.available = false; // Disable to prevent freeze loop
+            return;
+        }
 
         for (let i = 0; i < n; i++) {
-            this.nodes[i].vx += results[i][0];
-            this.nodes[i].vy += results[i][1];
+            if (results[i]) {
+                const dvx = results[i][0];
+                const dvy = results[i][1];
+                if (isFinite(dvx) && isFinite(dvy)) {
+                    // Clamp for safety
+                    this.nodes[i].vx += (dvx > 100 ? 100 : (dvx < -100 ? -100 : dvx));
+                    this.nodes[i].vy += (dvy > 100 ? 100 : (dvy < -100 ? -100 : dvy));
+                }
+            }
         }
     }
 
@@ -278,20 +295,20 @@ class GPULinkForce {
                 fy += y;
             }
             
-            // Bias: In D3, each end gets weighted by degree.
+        // Bias: In D3, each end gets weighted by degree.
             // Here each node gathers, so we effectively apply 100% of the calculated force from its perspective.
             // For correct "bias", we'd need to weight by 1 / degree?
             // D3 default bias = 1 / (count[u] + count[v]).
             // Simplifying to 1/degree(u) usually approximates it fast.
-            // Or just use a lower global strength.
-            
-            // We'll normalize by count to stabilize? 
-            // D3 Link Strength default is: 1 / Math.min(count[u], count[v])
+            // ...
             
             return [fx, fy];
         })
         .setOutput([n])
-        .setTactic('precision');
+        .setTactic('precision')
+        .setLoopMaxIterations(100000); // CRITICAL: Allow large neighbor loops for high-degree nodes
+
+        console.log("[GPULink] Kernel compiled successfully.");
     }
 
     force(alpha) {
@@ -316,16 +333,25 @@ class GPULinkForce {
         // D3 strength is usually function. We approximate with constant.
         const strength = this.strengthVal ? (typeof this.strengthVal === 'function' ? 0.3 : this.strengthVal) : 0.3; 
         
-        const results = this.kernel(
-            posX, 
-            posY, 
-            this.adjHead, 
-            this.adjCount, 
-            this.flatIndices, 
-            Number(this.distanceVal), 
-            Number(alpha),
-            Number(strength)
-        );
+        let results;
+        try {
+            // console.time("GPU_Link_Force"); // Clean log spam
+            results = this.kernel(
+                posX, 
+                posY, 
+                this.adjHead, 
+                this.adjCount, 
+                this.flatIndices, 
+                Number(this.distanceVal), 
+                Number(alpha),
+                Number(strength)
+            );
+            // console.timeEnd("GPU_Link_Force");
+        } catch (e) {
+            console.error("[GPULink] Kernel Execution Failed!", e);
+            this.available = false; // Disable to prevent loop crash
+            return;
+        }
         
         // Default Bias approximation: 0.5 (Assume symmetric contribution)
         // Or weight by degree. Since we summed forces, we just add them.
