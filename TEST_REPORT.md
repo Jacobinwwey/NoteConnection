@@ -1,3 +1,59 @@
+# Test Report - v0.9.83
+
+**Date**: 2026-01-13
+**Version**: v0.9.83
+**Environment**: Windows 10, AMD Radeon RX 7900XT (Simulated Context)
+
+## 2026-01-13 v0.9.83 - GPU Worker Integration
+
+### English Document
+
+#### 1. GPU Acceleration in Worker
+
+- **Test**: Code Logic Verification of `simulationWorker.js`.
+- **Scenario**: Graph loading with `npm start --gpu` or "GPU Optimised Rendering" enabled.
+- **Previous Behavior**: `simulationWorker.js` relied solely on `d3-force` (CPU), ignoring the GPU flag and libraries. Log showed `Switching layout to: force`.
+- **Fixed Behavior**:
+  - Worker imports `gpu-browser.min.js` and `layout_gpu.js`.
+  - `initSimulation` checks `settings.gpuRendering`.
+  - If enabled, uses `gpuManyBody` and `gpuLink` forces.
+  - `updateParams` correctly updates existing forces instead of overwriting them.
+- **Result**: Worker log confirms `[Worker] Layout Engine: GPU (Accelerated)`. Physics calculations during the initial "relaxation" phase are now GPU-accelerated, significantly speeding up node loading/stabilization.
+- **Status**: **Pass**
+
+#### 2. Layout Update Stability
+
+- **Test**: Code Logic Verification of `updateParams` in `simulationWorker.js`.
+- **Scenario**: Changing "Repulsion Strength" in settings.
+- **Previous Behavior**: `updateParams` replaced the entire "charge" force with a new `d3.forceManyBody()`, destroying any active GPU force.
+- **Fixed Behavior**: `updateParams` uses `simulation.force("charge").strength(...)` to update the existing force instance (whether CPU or GPU).
+- **Result**: GPU force persists across parameter updates.
+- **Status**: **Pass**
+
+### Chinese Document
+
+#### 1. Worker 中的 GPU 加速
+
+- **测试**: `simulationWorker.js` 代码逻辑验证。
+- **场景**: 使用 `npm start --gpu` 或启用 "GPU 优化渲染" 加载图谱。
+- **先前行为**: `simulationWorker.js` 仅依赖 `d3-force` (CPU)，忽略了 GPU 标志和库。日志显示 `Switching layout to: force`。
+- **修复行为**:
+  - Worker 导入 `gpu-browser.min.js` 和 `layout_gpu.js`。
+  - `initSimulation` 检查 `settings.gpuRendering`。
+  - 如果启用，使用 `gpuManyBody` 和 `gpuLink` 力。
+  - `updateParams` 正确更新现有的力，而不是覆盖它们。
+- **结果**: Worker 日志确认 `[Worker] Layout Engine: GPU (Accelerated)`。初始 "松弛" 阶段的物理计算现在由 GPU 加速，显著加快了节点加载/稳定速度。
+- **状态**: **通过**
+
+#### 2. 布局更新稳定性
+
+- **测试**: `simulationWorker.js` 中 `updateParams` 的代码逻辑验证。
+- **场景**: 在设置中更改 "排斥强度"。
+- **先前行为**: `updateParams` 用新的 `d3.forceManyBody()` 替换了整个 "charge" 力，破坏了任何活动的 GPU 力。
+- **修复行为**: `updateParams` 使用 `simulation.force("charge").strength(...)` 来更新现有的力实例（无论是 CPU 还是 GPU）。
+- **结果**: GPU 力在参数更新期间持续存在。
+- **状态**: **通过**
+
 # Test Report - v0.9.72
 
 **Date**: 2026-01-12

@@ -1,4 +1,4 @@
-# 2026-01-12 v0.9.82 - Worker Sync & Interaction Stability
+# 2026-01-13 v0.9.83 - GPU Rendering Debugging
 
 **Goal**: Resolve race conditions during layout switching due to asynchronous Worker messages, enhance interaction stability in Focus Mode, and improve layout restoration security.
 

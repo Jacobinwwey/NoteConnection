@@ -418,7 +418,10 @@ class GPULinkForce {
 // ------------------------------------------------
 
 let _gpuManyBodyInstance = null;
-window.gpuManyBody = function() {
+// Export to Global Scope (Window or Worker)
+const globalScope = typeof window !== 'undefined' ? window : self;
+
+globalScope.gpuManyBody = function() {
     if (_gpuManyBodyInstance) return _gpuManyBodyInstance;
 
     const force = new GPUManyBodyForce();
@@ -439,7 +442,7 @@ window.gpuManyBody = function() {
 };
 
 let _gpuLinkInstance = null;
-window.gpuLink = function(links) {
+globalScope.gpuLink = function(links) {
     // If instance exists, we might want to update links?
     // D3 creates new forces. We should act like a factory but maybe reuse internals?
     // For now, new instance to match D3 pattern, but reuse GPU context.

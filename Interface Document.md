@@ -286,7 +286,7 @@ Renders the JSON data into an interactive DAG.
   - **Module**: `src/frontend/simulationWorker.js`
   - **Purpose**: Runs D3 Force Simulation in a background thread to prevent Main Thread blocking (UI freeze) during heavy computation.
   - **Interface**: Message Passing via `postMessage`.
-    - `init`: Sends nodes/links and settings.
+    - `init`: Sends nodes/links and settings (including `gpuRendering`).
     - `tick`: Receives updated positions `({id, x, y})` for rendering.
     - `updateParams`: Updates physics parameters (Gravity, Repulsion) without restart.
     - `updateLayout`: Switches between Force and DAG modes.

@@ -270,11 +270,12 @@ simulationWorker.postMessage({
         links: workerLinks, 
         width, 
         height,
-        settings: {
-            repulsion: -300,
-            distance: 100,
-            velocityDecay: 0.2
-        }
+            settings: {
+                repulsion: -300,
+                distance: 100,
+                velocityDecay: 0.2,
+                gpuRendering: (window.settingsManager ? window.settingsManager.settings.performance.gpuRendering : true)
+            }
     } 
 });
 

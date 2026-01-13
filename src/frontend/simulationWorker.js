@@ -1,4 +1,4 @@
-importScripts("https://d3js.org/d3.v6.min.js");
+importScripts("https://d3js.org/d3.v6.min.js", "libs/gpu-browser.min.js", "layout_gpu.js");
 
 let simulation;
 let nodes = [];
@@ -60,9 +60,20 @@ function initSimulation(data) {
         currentSettings = { ...currentSettings, ...settings };
     }
 
+    // GPU Check
+    const useGPU = settings && settings.gpuRendering && (typeof gpuManyBody === 'function');
+    console.log(`[Worker] Layout Engine: ${useGPU ? 'GPU (Accelerated)' : 'CPU (Standard)'}`);
+
+    const linkForce = useGPU ? gpuLink(links) : d3.forceLink(links);
+    const chargeForce = useGPU ? gpuManyBody() : d3.forceManyBody();
+
+    // Configure Forces
+    linkForce.id(d => d.id).distance(currentSettings.distance);
+    chargeForce.strength(currentSettings.repulsion);
+
     simulation = d3.forceSimulation(nodes)
-        .force("link", d3.forceLink(links).id(d => d.id).distance(currentSettings.distance))
-        .force("charge", d3.forceManyBody().strength(currentSettings.repulsion))
+        .force("link", linkForce)
+        .force("charge", chargeForce)
         .force("center", d3.forceCenter(width / 2, height / 2))
         .force("collide", d3.forceCollide().radius(20))
         .velocityDecay(currentSettings.velocityDecay);
@@ -83,7 +94,8 @@ function updateParams(params) {
     
     // Handle specific parameter updates
     if (params.repulsion !== undefined) {
-        simulation.force("charge", d3.forceManyBody().strength(params.repulsion));
+        // Update existing force instead of replacing it
+        simulation.force("charge").strength(params.repulsion);
     }
     if (params.distance !== undefined) {
         simulation.force("link").distance(params.distance);
@@ -92,7 +104,11 @@ function updateParams(params) {
         simulation.velocityDecay(params.velocityDecay);
     }
     if (params.collision !== undefined) {
-        simulation.force("collide", d3.forceCollide().radius(params.collision));
+        // Collide is usually CPU fast enough, or we can use GPU if implemented. 
+        // For now, assuming standard d3 collide, we can just update radius if it supports it?
+        // d3.forceCollide().radius(...) is a setter. 
+        // simulation.force("collide").radius(...) updates it.
+        simulation.force("collide").radius(params.collision);
     }
 
     // Restart if requested (often params update implies restart)

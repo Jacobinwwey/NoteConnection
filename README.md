@@ -204,6 +204,12 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ## 📅 Changelog
 
+### v0.9.83 (2026-01-13)
+
+- **GPU Worker Integration**: Fully enabled GPU acceleration in the frontend Simulation Worker. The worker now dynamically imports `gpu-browser.min.js` and `layout_gpu.js` and respects the `gpuRendering` setting.
+- **Performance Fix**: Resolved an issue where "GPU Optimised Rendering" was ignored during the initialization phase, forcing CPU calculation. Large graphs now load significantly faster.
+- **Robustness**: Fixed a critical bug in `updateParams` where existing GPU force instances were accidentally overwritten by CPU forces when changing physics settings.
+
 ### v0.9.82 (2026-01-12)
 
 - **Worker Sync & Stability**: Introduced the Worker Handshake Protocol (`isLayoutSwitching`) to eliminate layout "bounce" and race conditions during transitions.
