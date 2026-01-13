@@ -1503,70 +1503,95 @@ function renderCanvas(layoutMode) {
         }
 
         // Draw Nodes / 绘制节点
+        // Draw Nodes / 绘制节点 (Batched Optimization)
+        const batches = new Map(); // Key: "fill|alpha", Value: [nodes]
+        const textToDraw = [];
+
+        // Scales Setup
+        const sizeMode = document.querySelector('input[name="sizeMode"]:checked') ? document.querySelector('input[name="sizeMode"]:checked').value : 'uniform';
+        const colorMode = document.querySelector('input[name="colorMode"]:checked') ? document.querySelector('input[name="colorMode"]:checked').value : 'degree';
+        
+        let sizeScale = null;
+        if (sizeMode === 'degree') {
+             const maxDeg = d3.max(nodes, n => (n.inDegree||0) + (n.outDegree||0)) || 1;
+             sizeScale = d3.scaleSqrt().domain([0, maxDeg]).range([3, 12]);
+        }
+
         nodes.forEach(d => {
             if (!isNodeVisible(d)) return;
 
-            // Determine if this node should be dimmed / 确定节点是否应变暗
-            const isHighlightedNode = highlightState && highlightState.currentNode && 
-                highlightState.currentNode.id === d.id;
+            // Determine State
+            const isHighlightedNode = highlightState && highlightState.currentNode && highlightState.currentNode.id === d.id;
             const isFocus = focusNode && focusNode.id === d.id;
             const isConnected = highlightConnections && highlightConnections.nodeIds.has(d.id);
             const shouldDim = highlightState && highlightState.currentNode && !isConnected && !focusNode;
 
-            // Set opacity for dimming effect / 设置变暗效果的透明度
-            ctx.globalAlpha = shouldDim ? 0.05 : 1;
-
-            ctx.beginPath();
+            const alpha = shouldDim ? 0.05 : 1.0;
             
-            // v0.9.45: Fix Canvas Node Sizing to match SVG
+            // Determine Size
             let r = 5;
-            const sizeMode = document.querySelector('input[name="sizeMode"]:checked') ? document.querySelector('input[name="sizeMode"]:checked').value : 'uniform';
-            
             if (isFocus) {
                 r = 25;
             } else if (sizeMode === 'centrality') {
                 r = sizeScaleCentrality(d.centrality || 0);
             } else if (sizeMode === 'degree') {
-                // Re-calculate or use scale. We need the scale defined earlier.
-                // sizeScaleDegree is local to updateSize(). We need to expose it or recreate it.
-                // Recreating is cheap.
-                const maxDeg = d3.max(nodes, n => (n.inDegree||0) + (n.outDegree||0)) || 1;
-                const s = d3.scaleSqrt().domain([0, maxDeg]).range([3, 12]);
-                const deg = (d.inDegree||0) + (d.outDegree||0); // Simplification: using Total degree for sizing usually
-                r = s(deg);
+                const deg = (d.inDegree||0) + (d.outDegree||0);
+                r = sizeScale ? sizeScale(deg) : 5;
             } else {
                 r = 5;
             }
 
-            if (isHighlightedNode) r += 2; // Slight enlarge on highlight / 高亮时略微放大
+            if (isHighlightedNode) r += 2; 
+            d._renderR = r; // Cache
 
-            ctx.arc(d.x, d.y, r, 0, 2 * Math.PI);
-            
-            // Color / 颜色
+            // Determine Color
+            let fill = "#ccc";
             if (isFocus) {
-                ctx.fillStyle = "#ffd700";
+                fill = "#ffd700";
             } else if (isHighlightedNode) {
-                ctx.fillStyle = "#ffaa00";
+                fill = "#ffaa00";
             } else {
-                 const mode = document.querySelector('input[name="colorMode"]:checked').value;
-                 if (mode === 'cluster') ctx.fillStyle = colorScaleCluster(d.clusterId || 'unknown');
-                 else ctx.fillStyle = colorScaleDegree(getDegree(d));
+                 if (colorMode === 'cluster') fill = colorScaleCluster(d.clusterId || 'unknown');
+                 else fill = colorScaleDegree(getDegree(d));
             }
+            
+            // Add to Batch
+            const key = fill + '|' + alpha;
+            if (!batches.has(key)) batches.set(key, []);
+            batches.get(key).push(d);
 
-            ctx.fill();
-            ctx.strokeStyle = "#fff";
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-
-            // Label - only show if not dimmed or if important / 标签 - 仅在未变暗或重要时显示
+            // Check Label
             if (!shouldDim && (isFocus || isHighlightedNode || currentTransform.k > 1.2)) {
-                ctx.globalAlpha = 1;
-                ctx.fillStyle = "#ccc";
-                ctx.font = isFocus ? "bold 16px Sans-Serif" : "10px Sans-Serif";
-                // v0.9.47: Use custom offset if set (for Focus Mode Vertical Layout)
-                const labelDx = d._labelDx !== undefined ? d._labelDx : 8;
-                ctx.fillText(d.label, d.x + labelDx, d.y + 4);
+                textToDraw.push(d);
             }
+        });
+
+        // Execute Batches
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 1.5;
+
+        batches.forEach((batchNodes, key) => {
+            const [fill, alphaStr] = key.split('|');
+            ctx.fillStyle = fill;
+            ctx.globalAlpha = parseFloat(alphaStr);
+            
+            ctx.beginPath();
+            batchNodes.forEach(d => {
+                 ctx.moveTo(d.x + d._renderR, d.y);
+                 ctx.arc(d.x, d.y, d._renderR, 0, 2 * Math.PI);
+            });
+            ctx.fill();
+            ctx.stroke();
+        });
+
+        // Draw Labels
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = "#ccc";
+        textToDraw.forEach(d => {
+            const isFocus = focusNode && focusNode.id === d.id;
+            ctx.font = isFocus ? "bold 16px Sans-Serif" : "10px Sans-Serif";
+            const labelDx = d._labelDx !== undefined ? d._labelDx : 8;
+            ctx.fillText(d.label, d.x + labelDx, d.y + 4);
         });
 
         // Draw Focus Labels (Canvas) / 绘制专注标签（Canvas）
@@ -1740,6 +1765,21 @@ if (controls.minDegree) controls.minDegree.addEventListener('input', updateVisib
 if (controls.showOrphans) controls.showOrphans.addEventListener('change', updateVisibility);
 if (controls.search) controls.search.addEventListener('input', updateVisibility);
 if (controls.export) controls.export.addEventListener('click', exportSVG);
+
+const btnRandom = document.getElementById('btn-random-focus');
+if (btnRandom) {
+    btnRandom.addEventListener('click', () => {
+        if (!nodes || nodes.length === 0) return;
+        const candidates = nodes.filter(n => isNodeVisible(n));
+        if (candidates.length === 0) return;
+        const rnd = candidates[Math.floor(Math.random() * candidates.length)];
+        
+        if (window.highlightManager) window.highlightManager.unhighlight({ force: true });
+        // Use focusOnNode helper if available, or direct
+        if (window.focusOnNode) window.focusOnNode(rnd.id);
+        else enterFocusMode(rnd);
+    });
+}
 
 // Mobile: Toggle Controls Panel
 const controlsPanel = document.getElementById('controls');
@@ -2265,24 +2305,67 @@ function enterFocusMode(focusD) {
     // document.getElementById('controls').style.opacity = '0.3'; // Dim controls - Removed as we hide it now
     // document.getElementById('controls').style.pointerEvents = 'none'; // Disable controls - Removed as we hide it now
     
-    // 2. Identify Nodes
+    // 2. Identify Nodes (OPTIMIZED with adjacency cache)
     const superiors = []; // Outgoing: Focus -> Target (Superior / Further Exploration)
     const subordinates = []; // Incoming: Source -> Focus (Subordinate / Helping to understand)
     
-    links.forEach(l => {
-        if (l.source.id === focusD.id) superiors.push(l.target);
-        if (l.target.id === focusD.id) subordinates.push(l.source);
-    });
+    const startTime = performance.now();
+    
+    // Fast lookup using adjacency cache (built once, reused)
+    if (!window._adjacencyCache || window._adjacencyCacheStale) {
+        console.log('[Focus] Building adjacency cache...');
+        const cacheStart = performance.now();
+        
+        window._adjacencyCache = {
+            outgoing: new Map(), // nodeId -> [targetNodes]
+            incoming: new Map()  // nodeId -> [sourceNodes]
+        };
+        
+        links.forEach(l => {
+            const srcId = l.source.id;
+            const tgtId = l.target.id;
+            
+            if (!window._adjacencyCache.outgoing.has(srcId)) {
+                window._adjacencyCache.outgoing.set(srcId, []);
+            }
+            window._adjacencyCache.outgoing.get(srcId).push(l.target);
+            
+            if (!window._adjacencyCache.incoming.has(tgtId)) {
+                window._adjacencyCache.incoming.set(tgtId, []);
+            }
+            window._adjacencyCache.incoming.get(tgtId).push(l.source);
+        });
+        
+        window._adjacencyCacheStale = false;
+        console.log(`[Focus] Cache built in ${(performance.now() - cacheStart).toFixed(2)}ms`);
+    }
+    
+    // Fast retrieval O(1) instead of O(N) for each lookup
+    const outgoingNodes = window._adjacencyCache.outgoing.get(focusD.id) || [];
+    const incomingNodes = window._adjacencyCache.incoming.get(focusD.id) || [];
+    
+    superiors.push(...outgoingNodes);
+    subordinates.push(...incomingNodes);
     
     const uniqueSup = [...new Set(superiors)];
     const uniqueSub = [...new Set(subordinates)];
     
-    // 3. Intra-layer Sorting & Scoring
+    console.log(`[Focus] Node lookup: ${(performance.now() - startTime).toFixed(2)}ms (${uniqueSup.length} outgoing, ${uniqueSub.length} incoming)`);
+    
+    // 3. Intra-layer Sorting & Scoring (OPTIMIZED with cached edge lookup)
+    // Build edge lookup map for scoring (only for focus node edges)
+    const edgeMap = new Map();
+    links.forEach(l => {
+        if (l.source.id === focusD.id || l.target.id === focusD.id) {
+            const key = `${l.source.id}-${l.target.id}`;
+            edgeMap.set(key, l);
+        }
+    });
+    
     const getFocusScore = (n) => {
-        const edge = links.find(l => 
-            (l.source.id === focusD.id && l.target.id === n.id) || 
-            (l.target.id === focusD.id && l.source.id === n.id)
-        );
+        const key1 = `${focusD.id}-${n.id}`;
+        const key2 = `${n.id}-${focusD.id}`;
+        const edge = edgeMap.get(key1) || edgeMap.get(key2);
         const weight = edge ? (edge.weight || 0.5) : 0.5;
         const degreeRatio = (n.outDegree || 0) / ((n.inDegree || 0) + 1);
         const normRatio = Math.min(degreeRatio, 5) / 5; 

@@ -28,8 +28,27 @@ const SharedGPU = {
 
             if (!GPUConstructor) throw new Error("GPU constructor not found.");
 
-            this.instance = new GPUConstructor();
+            this.instance = new GPUConstructor({ mode: 'gpu' }); // Force GPU mode
+            
+            // Detailed logging
             console.log("[SharedGPU] Initialized new GPU context.");
+            console.log("[SharedGPU] Instance mode:", this.instance.mode || 'unknown');
+            console.log("[SharedGPU] Canvas:", this.instance.canvas ? 'Created' : 'None');
+            
+            // Check WebGL support
+            if (this.instance.canvas) {
+                const gl = this.instance.canvas.getContext('webgl') || this.instance.canvas.getContext('webgl2');
+                if (gl) {
+                    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                    if (debugInfo) {
+                        console.log("[SharedGPU] GPU Vendor:", gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL));
+                        console.log("[SharedGPU] GPU Renderer:", gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL));
+                    }
+                } else {
+                    console.warn("[SharedGPU] WebGL context not available!");
+                }
+            }
+            
             return this.instance;
         } catch (e) {
             console.error("[SharedGPU] Failed to initialize:", e);
@@ -83,11 +102,41 @@ class GPUManyBodyForce {
             return [fx, fy];
         })
         .setOutput([n])
-        .setPipeline(false)
-        .setTactic('precision')
+        .setPipeline(true) // Enable GPU pipeline for better throughput
+        .setTactic('speed') // Prioritize performance over precision
         .setLoopMaxIterations(100000); // Allow N^2 loop for 13k nodes (13k iterations per thread)
 
-        console.log("[GPUManyBody] Kernel compiled successfully.");
+        console.log(`[GPUManyBody] Kernel compiled (${n} nodes, speed mode, pipelined).`);
+        
+        // Log GPU backend info for diagnostics
+        try {
+            // GPU.js kernels expose mode differently depending on version
+            let mode = 'unknown';
+            
+            if (this.kernel.kernel && this.kernel.kernel.constructor) {
+                const constructorName = this.kernel.kernel.constructor.name;
+                if (constructorName.includes('WebGL')) mode = 'gpu';
+                else if (constructorName.includes('CPU')) mode = 'cpu';
+            } else if (this.kernel.constructor && this.kernel.constructor.name) {
+                const constructorName = this.kernel.constructor.name;
+                if (constructorName.includes('WebGL')) mode = 'gpu';
+                else if (constructorName.includes('CPU')) mode = 'cpu';
+            }
+            
+            // Fallback: Check if GPU instance has a valid mode
+            if (mode === 'unknown' && this.gpu && this.gpu.mode) {
+                mode = this.gpu.mode;
+            }
+            
+            // Final check: if we have a canvas, assume GPU
+            if (mode === 'unknown' && this.gpu && this.gpu.canvas) {
+                mode = 'gpu (inferred)';
+            }
+            
+            console.log(`[GPUManyBody] Running on: ${mode} ${mode.includes('gpu') ? '(Hardware Accelerated ✓)' : '(CPU Fallback ⚠)'}`);
+        } catch (e) {
+            console.warn('[GPUManyBody] Could not determine GPU mode:', e);
+        }
     }
 
     force(alpha) {
@@ -112,12 +161,19 @@ class GPUManyBodyForce {
         }
 
         let results;
+        const startTime = performance.now();
         try {
             results = this.kernel(posX, posY, s, n);
         } catch (e) {
             console.error("[GPUManyBody] Kernel Execution Failed!", e);
             this.available = false; // Disable to prevent freeze loop
             return;
+        }
+        const execTime = performance.now() - startTime;
+        
+        // Log only occasionally to avoid spam (every ~60 ticks at 60 fps = 1 sec)
+        if (Math.random() < 0.016) {
+            console.log(`[GPUManyBody] Force calc: ${execTime.toFixed(2)}ms for ${n} nodes`);
         }
 
         for (let i = 0; i < n; i++) {

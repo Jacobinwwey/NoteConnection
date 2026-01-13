@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://d3js.org https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:;">
     <title>NoteConnection Knowledge Graph</title>
     <link
       rel="icon"
@@ -187,13 +188,15 @@
           />
         </div>
 
-        <div class="search-box">
+        <div class="search-box" style="display: flex; gap: 5px;">
           <input
             type="text"
             id="search-input"
             placeholder="Search node..."
             data-i18n-placeholder="search_placeholder"
+            style="flex: 1;"
           />
+          <button id="btn-random-focus" style="background: #333; color: white; border: 1px solid #555; cursor: pointer; padding: 0 8px;" title="Random Exploration">🎲</button>
         </div>
 
         <div
@@ -1116,6 +1119,7 @@
     <script src="reader.js"></script>
     <script src="app.js"></script>
     <script src="analysis.js"></script>
+    <script src="loading.js"></script>
     <script src="source_manager.js"></script>
     <script src="welcome.js"></script>
   </body>

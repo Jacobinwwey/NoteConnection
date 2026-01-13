@@ -14,6 +14,7 @@ export interface BuildOptions {
     deepDebug?: boolean;
     projectRoot?: string; // Optional override for project root
     outputPrefix?: string; // Optional output filename prefix (e.g. for CLI run timestamps)
+    onLog?: (msg: string) => void;
 }
 
 export interface GraphBuildResult {
@@ -38,28 +39,34 @@ export class NoteConnection {
      */
     static async build(options: BuildOptions): Promise<GraphBuildResult> {
         // 1. Configure Global Settings
+        const log = (msg: string) => {
+            console.log(msg);
+            if (options.onLog) options.onLog(msg);
+        };
+
+        // 1. Configure Global Settings
         if (options.maxWorkers !== undefined) {
-            console.log(`[Config] Setting maxWorkers to ${options.maxWorkers}`);
+            log(`[Config] Setting maxWorkers to ${options.maxWorkers}`);
             config.maxWorkers = options.maxWorkers;
         }
 
         if (options.enableGPU !== undefined) {
-            console.log(`[Config] Setting enableGPU to ${options.enableGPU}`);
+            log(`[Config] Setting enableGPU to ${options.enableGPU}`);
             config.enableGPU = options.enableGPU;
         }
 
         if (options.enableGPULayout !== undefined) {
-            console.log(`[Config] Setting enableGPULayout to ${options.enableGPULayout}`);
+            log(`[Config] Setting enableGPULayout to ${options.enableGPULayout}`);
             config.enableGPULayout = options.enableGPULayout;
         }
 
         if (options.memorySavingMode !== undefined) {
-            console.log(`[Config] Setting memorySavingMode to ${options.memorySavingMode}`);
+            log(`[Config] Setting memorySavingMode to ${options.memorySavingMode}`);
             config.memorySavingMode = options.memorySavingMode;
         }
 
         if (options.deepDebug !== undefined) {
-            console.log(`[Config] Setting deepDebug to ${options.deepDebug}`);
+            log(`[Config] Setting deepDebug to ${options.deepDebug}`);
             config.deepDebug = options.deepDebug;
         }
 
@@ -83,9 +90,9 @@ export class NoteConnection {
         }
 
         // 3. Load Files
-        console.log(`Loading files from: ${conceptDir}`);
+        log(`Loading files from: ${conceptDir}`);
         const files = await FileLoader.loadFiles(conceptDir);
-        console.log(`Loaded ${files.length} files.`);
+        log(`Loaded ${files.length} files.`);
 
         // 4. Load Layout (Optional)
         // Note: Layout logic is slightly coupled to file system here, 
@@ -94,7 +101,7 @@ export class NoteConnection {
         const layoutPath = path.join(projectRoot, 'layout.json');
         
         if (fs.existsSync(layoutPath)) {
-            console.log(`Found layout file: ${layoutPath}`);
+            log(`Found layout file: ${layoutPath}`);
             try {
                 const rawLayout = JSON.parse(fs.readFileSync(layoutPath, 'utf-8'));
                 if (Array.isArray(rawLayout)) {
@@ -104,7 +111,7 @@ export class NoteConnection {
                             layoutMap!.set(n.id, { x: n.x, y: n.y });
                         }
                     });
-                    console.log(`Loaded layout for ${layoutMap.size} nodes.`);
+                    log(`Loaded layout for ${layoutMap.size} nodes.`);
                 }
             } catch (e) {
                 console.warn('Failed to parse layout.json', e);
@@ -112,11 +119,11 @@ export class NoteConnection {
         }
 
         // 5. Build Graph
-        console.log('Building graph...');
+        log('Building graph...');
         const graph = await GraphBuilder.build(files, layoutMap);
         const data = graph.toJSON();
         
-        console.log(`Graph built: ${data.nodes.length} nodes, ${data.edges.length} edges.`);
+        log(`Graph built: ${data.nodes.length} nodes, ${data.edges.length} edges.`);
 
         return {
             graph,

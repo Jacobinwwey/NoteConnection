@@ -55,6 +55,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const buildPayload = { target, maxWorkers, enableGPU, enableGPULayout, memorySavingMode, deepDebug };
 
         const runBuild = async () => {
+            // Show Loading Screen
+            if (window.loadingManager) window.loadingManager.show();
+
             try {
                 let success = false;
                 let error = '';
@@ -64,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Standardize result. Controller returns 'data' on success, or throws.
                     // Actually buildGraph returns data directly. If it throws, we catch it.
                     success = true; 
+                    if (window.loadingManager) window.loadingManager.log("Build Success! Reloading interface...");
                 } else {
                     const res = await fetch('/api/build', {
                         method: 'POST',
@@ -71,16 +75,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         body: JSON.stringify(buildPayload)
                     });
                     const data = await res.json();
-                    if (data.success) success = true;
-                    else error = data.error;
+                    if (data.success) {
+                        success = true;
+                        if (window.loadingManager) window.loadingManager.log("Build Success! Reloading interface...");
+                    } else {
+                        error = data.error;
+                    }
                 }
 
                 if (success) {
-                    window.location.reload();
+                    // Delay reload slightly to show success
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
                 } else {
+                    if (window.loadingManager) window.loadingManager.hide();
                     alert('Build Failed: ' + (error || 'Unknown error'));
                 }
             } catch (err) {
+                if (window.loadingManager) window.loadingManager.hide();
                 alert('Error: ' + err);
             }
         };
@@ -88,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
         runBuild().finally(() => {
              loadBtn.disabled = false;
              loadBtn.textContent = 'Load';
+             // Note: If success, page reloads anyway. If failure, we hid it above.
         });
 
     });

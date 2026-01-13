@@ -23,6 +23,15 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
+// Force GPU Acceleration (CRITICAL for performance)
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('disable-gpu-vsync'); // Reduce input latency
+app.commandLine.appendSwitch('use-angle', 'default'); // Use ANGLE for better WebGL
+app.commandLine.appendSwitch('enable-webgl');
+app.commandLine.appendSwitch('enable-accelerated-2d-canvas'); // Canvas 2D GPU acceleration
+app.commandLine.appendSwitch('num-raster-threads', '4'); // Multi-threaded rasterization
+
 // Register Custom Protocol 'app://'
 protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } }
@@ -37,7 +46,8 @@ const createWindow = async () => {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'), 
+      preload: path.join(__dirname, 'preload.js'),
+      webgl: true, // Enable WebGL
     },
     backgroundColor: '#1a1a1a', 
     show: true // Force show to debug
@@ -89,7 +99,7 @@ const createWindow = async () => {
                         },
                         autoHideMenuBar: true
                     });
-                    helpWindow.loadURL('app://./help.html');
+                    helpWindow.loadURL('app://./manual.html');
                 }
             }
         ]
@@ -147,7 +157,13 @@ app.whenReady().then(async () => {
 
     ipcMain.handle('buildGraph', async (event, options) => {
         // Merge with current KB root
-        const buildOpts = { ...options, targetPath: currentKbRoot };
+        const buildOpts = { 
+            ...options, 
+            targetPath: currentKbRoot,
+            onLog: (msg: string) => {
+                event.sender.send('build-log', msg);
+            }
+        };
         return await NoteController.triggerBuild(buildOpts);
     });
 

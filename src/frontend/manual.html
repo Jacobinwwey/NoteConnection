@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data:;">
+    <title>NoteConnection User Manual</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #1a1a1a;
+        color: #eeeeee;
+        padding: 20px;
+        max-width: 900px;
+        margin: 0 auto;
+        line-height: 1.6;
+      }
+      a {
+        color: #61dafb;
+      }
+      pre {
+        background: #2d2d2d;
+        padding: 15px;
+        border-radius: 5px;
+        overflow-x: auto;
+      }
+      code {
+        font-family: "Consolas", "Monaco", monospace;
+        background: #333;
+        padding: 2px 4px;
+        border-radius: 3px;
+      }
+      pre code {
+        background: none;
+        padding: 0;
+      }
+      h1,
+      h2,
+      h3 {
+        border-bottom: 1px solid #333;
+        padding-bottom: 10px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 20px;
+      }
+      th, td {
+        border: 1px solid #444;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background-color: #333;
+      }
+      blockquote {
+        border-left: 4px solid #61dafb;
+        margin: 0;
+        padding-left: 15px;
+        color: #aaa;
+      }
+      img {
+        max-width: 100%;
+        border-radius: 5px;
+      }
+      .back-btn {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #2c5282;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        text-decoration: none;
+        z-index: 100;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+      }
+      .back-btn:hover {
+        background: #3182ce;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  </head>
+  <body>
+    <button class="back-btn" onclick="window.close()">Close</button>
+    <div id="content">Loading documentation...</div>
+
+    <script>
+      fetch("User_Manual.md")
+        .then((response) => {
+          if (response.ok) return response.text();
+          // Fallback to README if Manual not found
+          console.warn("User_Manual.md not found, trying README.md");
+          return fetch("README.md").then(res => {
+              if(!res.ok) throw new Error("Documentation files not found.");
+              return res.text();
+          });
+        })
+        .then((text) => {
+          document.getElementById("content").innerHTML = marked.parse(text);
+        })
+        .catch((err) => {
+          document.getElementById("content").innerHTML = `
+                    <h2 style="color: #ff6b6b">Error Loading Documentation</h2>
+                    <p>Could not load User_Manual.md or README.md.</p>
+                    <p>Technical details: ${err.message}</p>
+                `;
+        });
+    </script>
+  </body>
+</html>
