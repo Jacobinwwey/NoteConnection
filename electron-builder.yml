@@ -1,7 +1,7 @@
 appId: com.noteconnection.app
 productName: NoteConnection
 directories:
-  output: release
+  output: dist_electron_release
 files:
   - "dist/**/*"
   - "package.json"

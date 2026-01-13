@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NoteConnection Documentation</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #1a1a1a;
+        color: #eeeeee;
+        padding: 20px;
+        max-width: 900px;
+        margin: 0 auto;
+        line-height: 1.6;
+      }
+      a {
+        color: #61dafb;
+      }
+      pre {
+        background: #2d2d2d;
+        padding: 15px;
+        border-radius: 5px;
+        overflow-x: auto;
+      }
+      code {
+        font-family: "Consolas", "Monaco", monospace;
+        background: #333;
+        padding: 2px 4px;
+        border-radius: 3px;
+      }
+      pre code {
+        background: none;
+        padding: 0;
+      }
+      h1,
+      h2,
+      h3 {
+        border-bottom: 1px solid #333;
+        padding-bottom: 10px;
+      }
+      blockquote {
+        border-left: 4px solid #61dafb;
+        margin: 0;
+        padding-left: 15px;
+        color: #aaa;
+      }
+      img {
+        max-width: 100%;
+        border-radius: 5px;
+      }
+      .back-btn {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #2c5282;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      .back-btn:hover {
+        background: #3182ce;
+      }
+    </style>
+    <!-- Use the local marked lib if available, or CDN as fallback (though CDN requires internet) -->
+    <!-- We should rely on the one copied to libs or node_modules if we want true offline -->
+    <!-- For now, we assume internet or cached. Ideally we copy marked.min.js to assets. -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  </head>
+  <body>
+    <button class="back-btn" onclick="window.close()">Close</button>
+    <div id="content">Loading documentation...</div>
+
+    <script>
+      fetch("README.md")
+        .then((response) => {
+          if (!response.ok) throw new Error("Documentation file not found.");
+          return response.text();
+        })
+        .then((text) => {
+          document.getElementById("content").innerHTML = marked.parse(text);
+        })
+        .catch((err) => {
+          document.getElementById("content").innerHTML = `
+                    <h2 style="color: #ff6b6b">Error Loading Documentation</h2>
+                    <p>Could not load the local README.md file.</p>
+                    <p>Technical details: ${err.message}</p>
+                `;
+        });
+    </script>
+  </body>
+</html>

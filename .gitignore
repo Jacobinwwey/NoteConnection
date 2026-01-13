@@ -1,6 +1,7 @@
 node_modules
 dist
 release
+dist_electron_release
 coverage
 .DS_Store
 *.log

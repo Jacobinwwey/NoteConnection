@@ -102,17 +102,21 @@ class Reader {
         
         if (!rawContent && node.metadata && node.metadata.filepath) {
             try {
-                // Fetch from server
-                const res = await fetch(`/api/content?path=${encodeURIComponent(node.metadata.filepath)}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    rawContent = data.content;
+                if (window.electronAPI) {
+                     rawContent = await window.electronAPI.getContent(node.metadata.filepath);
                 } else {
-                    console.error("Failed to load content:", res.status, res.statusText);
-                    rawContent = `*Error loading content: ${res.statusText}*`;
+                    // Fetch from server
+                    const res = await fetch(`/api/content?path=${encodeURIComponent(node.metadata.filepath)}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        rawContent = data.content;
+                    } else {
+                        console.error("Failed to load content:", res.status, res.statusText);
+                        rawContent = `*Error loading content: ${res.statusText}*`;
+                    }
                 }
             } catch (e) {
-                console.error("Fetch error:", e);
+                console.error("Content load error:", e);
                 rawContent = `*Error loading content: ${e.message}*`;
             }
         }

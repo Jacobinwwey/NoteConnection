@@ -1,30 +1,49 @@
-import { app, BrowserWindow, Menu, dialog, shell } from 'electron';
+import { app, BrowserWindow, Menu, dialog, shell, ipcMain, protocol, net } from 'electron';
 import * as path from 'path';
-import * as http from 'http';
-import { startServer } from '../server';
+import * as url from 'url';
+import { NoteController } from '../backend/controller';
 
 let mainWindow: BrowserWindow | null = null;
-let serverInstance: http.Server | null = null;
-let currentPort = 3000;
+let currentKbRoot = path.join(process.cwd(), 'Knowledge_Base'); // Default
+
+import * as fs from 'fs';
+
+const logPath = path.join(app.getPath('userData'), 'debug_log.txt');
+const log = (msg: string) => {
+    try {
+        fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${msg}\n`);
+    } catch (e) {
+        // ignore
+    }
+};
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
+  log('Squirrel startup detected, quitting...');
   app.quit();
 }
 
+// Register Custom Protocol 'app://'
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } }
+]);
+
 const createWindow = async () => {
+  log('Creating Browser Window...');
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     webPreferences: {
-      nodeIntegration: false, // Security: Keep true isolation
+      nodeIntegration: false,
       contextIsolation: true,
-      // preload: path.join(__dirname, 'preload.js'), // Add if needed later
+      preload: path.join(__dirname, 'preload.js'), 
     },
     backgroundColor: '#1a1a1a', 
-    show: false // Don't show until loaded
+    show: true // Force show to debug
   });
+
+  mainWindow.webContents.openDevTools();
 
   // Native Menu
   const menuTemplate: Electron.MenuItemConstructorOptions[] = [
@@ -40,8 +59,9 @@ const createWindow = async () => {
                 title: 'Select Knowledge Base Folder'
              });
              if (!result.canceled && result.filePaths.length > 0) {
-                 const newPath = result.filePaths[0];
-                 await restartServer(newPath);
+                 currentKbRoot = result.filePaths[0];
+                 console.log(`Switched Knowledge Base to: ${currentKbRoot}`);
+                 mainWindow?.reload();
              }
           }
         },
@@ -58,7 +78,18 @@ const createWindow = async () => {
             {
                 label: 'Documentation',
                 click: async () => {
-                    await shell.openExternal('https://github.com/Jacobinwwey/NoteConnection');
+                    // Open offline documentation
+                    const helpWindow = new BrowserWindow({
+                        width: 1000,
+                        height: 800,
+                        title: 'NoteConnection Documentation',
+                        webPreferences: {
+                            nodeIntegration: false,
+                            contextIsolation: true,
+                        },
+                        autoHideMenuBar: true
+                    });
+                    helpWindow.loadURL('app://./help.html');
                 }
             }
         ]
@@ -68,15 +99,16 @@ const createWindow = async () => {
   const menu = Menu.buildFromTemplate(menuTemplate);
   Menu.setApplicationMenu(menu);
 
-  // Load the index.html from the local server
-  const startUrl = `http://localhost:${currentPort}`;
+  // Load via Custom Protocol
+  const startUrl = 'app://./index.html';
+  log(`Loading URL: ${startUrl}`);
   
-  mainWindow.loadURL(startUrl).catch(e => {
-      console.error('Failed to load URL:', e);
-      // Retry or show error
-  });
+  mainWindow.loadURL(startUrl)
+      .then(() => log('URL loaded successfully'))
+      .catch(e => log(`Failed to load app: ${e}`));
 
   mainWindow.once('ready-to-show', () => {
+      log('Window ready to show');
       mainWindow?.show();
   });
 
@@ -85,35 +117,40 @@ const createWindow = async () => {
   });
 };
 
-const restartServer = async (targetPath: string) => {
-    if (serverInstance) {
-        console.log('Stopping current server...');
-        serverInstance.close();
-        serverInstance = null;
-    }
-    
-    console.log(`Starting server for path: ${targetPath}`);
-    // You might want to find a free port dynamically here if 3000 is taken,
-    // but for now we stick to one.
-    
-    serverInstance = await startServer({ port: currentPort, targetPath });
-    
-    // Reload window
-    if (mainWindow) {
-        mainWindow.loadURL(`http://localhost:${currentPort}`);
-    }
-};
-
 app.whenReady().then(async () => {
-    // Start default server (empty targetPath -> uses default logic handled in server.ts, probably process.cwd() or embedded)
-    // For standalone, maybe we prompt? Or default to an internal "Data" folder?
-    // Let's start with no specific target, relying on server default (which creates/uses 'Knowledge_Base' in CWD).
-    // In Electron compiled app, CWD might be the executable dir.
-    
-    // Better: pass a user-data path?
-    // For first iteration: Let it use default.
-    
-    serverInstance = await startServer({ port: currentPort });
+    log('App Ready');
+    // Protocol Handler
+    protocol.handle('app', (request) => {
+        const reqUrl = request.url;
+        log(`[Protocol] Request: ${reqUrl}`);
+        const parsedUrl = url.parse(reqUrl);
+        
+        let normalizedPath = parsedUrl.pathname ? path.normalize(parsedUrl.pathname).replace(/^(\\|\/)/, '') : '';
+        
+        // Map to frontend directory
+        // __dirname is 'dist/src/electron'
+        const baseDir = path.join(__dirname, '../frontend');
+        const filePath = path.join(baseDir, normalizedPath || 'index.html');
+        console.log(`[Protocol] Serving: ${filePath}`);
+
+        return net.fetch(url.pathToFileURL(filePath).toString());
+    });
+
+    // IPC Handlers
+    ipcMain.handle('getFolders', async () => {
+        return NoteController.getFolders(currentKbRoot);
+    });
+
+    ipcMain.handle('getContent', async (event, targetPath) => {
+        return NoteController.getContent(targetPath, currentKbRoot);
+    });
+
+    ipcMain.handle('buildGraph', async (event, options) => {
+        // Merge with current KB root
+        const buildOpts = { ...options, targetPath: currentKbRoot };
+        return await NoteController.triggerBuild(buildOpts);
+    });
+
     createWindow();
 
     app.on('activate', () => {
@@ -127,10 +164,4 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
-});
-
-app.on('will-quit', () => {
-    if (serverInstance) {
-        serverInstance.close();
-    }
 });

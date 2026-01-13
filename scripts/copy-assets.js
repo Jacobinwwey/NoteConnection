@@ -25,6 +25,17 @@ function copyDir(src, dest) {
 
 try {
     copyDir(src, dest);
+    
+    // Copy README.md for offline docs
+    const readmeSrc = path.join(__dirname, '../README.md');
+    const readmeDest = path.join(dest, 'README.md');
+    if (fs.existsSync(readmeSrc)) {
+         fs.copyFileSync(readmeSrc, readmeDest);
+         console.log(`README.md copied to ${readmeDest}`);
+    } else {
+        console.warn('README.md not found for offline docs.');
+    }
+
     console.log(`Assets copied from ${src} to ${dest}`);
 } catch (e) {
     console.error('Error copying assets:', e);
