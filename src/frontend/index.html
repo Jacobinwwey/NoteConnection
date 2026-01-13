@@ -3,27 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://d3js.org https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:;">
     <title>NoteConnection Knowledge Graph</title>
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔗</text></svg>"
     />
     <link rel="stylesheet" href="styles.css" />
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Local Dependencies (Fully Offline) -->
+    <script src="libs/d3.v7.min.js"></script>
+    
+    <!-- Local Dependencies -->
+    <script src="libs/jszip.min.js"></script>
     <!-- Reading Mode Dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
-    />
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="libs/marked.min.js"></script>
+    <link rel="stylesheet" href="libs/katex/katex.min.css" />
+    <script src="libs/katex/katex.min.js"></script>
+    <script src="libs/katex/contrib/auto-render.min.js"></script>
+    <script src="libs/mermaid.min.js"></script>
 
-    <script src="data.js"></script>
-    <!-- Defines const graphData -->
+    <script src="data.js" onerror="window.graphData = null; console.log('[Init] No pre-bundled data (Mini Mode)');"></script>
+    <!-- Defines const graphData (optional in mini build) -->
     <script src="nodeHighlight.js"></script>
     <!-- Node highlighting module -->
     <script src="libs/gpu-browser.min.js"></script>

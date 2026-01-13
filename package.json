@@ -10,6 +10,7 @@
     "start": "node --max-old-space-size=12288 -r ts-node/register src/server.ts",
     "start:prod": "node dist/src/server.js",
     "electron:dev": "npm run build && electron .",
+    "electron:dev:mini": "npm run build:mini && electron .",
     "electron:build": "npm run build && electron-builder",
     "electron:build:mini": "npm run build:mini && electron-builder",
     "build": "tsc && node scripts/copy-assets.js",

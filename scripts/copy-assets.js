@@ -52,6 +52,12 @@ function copyDir(src, dest) {
         if (!entry.isDirectory() && shouldExclude(entry.name)) {
             const sizeMB = (fs.statSync(srcPath).size / 1024 / 1024).toFixed(2);
             console.log(`  [Excluded] ${entry.name} (${sizeMB} MB)`);
+            
+            // Critical Fix: Ensure the file is removed from dist if it exists from a previous build
+            if (fs.existsSync(destPath)) {
+                fs.unlinkSync(destPath);
+                console.log(`  [Cleaned] Removed existing artifact: ${entry.name}`);
+            }
             continue;
         }
 

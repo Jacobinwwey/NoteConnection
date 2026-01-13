@@ -28,6 +28,22 @@
   - **Mini**: Installer size ~200MB. Bundled `data.js` excluded.
 - **Status**: **Pass**
 
+#### 3. Installer Cleanup Logic (Mini Mode)
+
+- **Bug**: Installer size appeared bloated (236MB) even in Mini mode because `copy-assets.js` skipped copying but didn't remove existing files from previous Full builds in the `dist` folder.
+- **Fix**: Updated `scripts/copy-assets.js` to explicitly delete excluded files from the destination if they exist.
+- **Status**: **Fixed**
+
+#### 4. Mini Build First-Run Crash (ERR_UNEXPECTED)
+
+- **Bug**: After installing mini build and selecting KB folder on first run, app crashed with `GET app://./data.js net::ERR_UNEXPECTED` and `ReferenceError: graphData is not defined`.
+- **Cause**: `index.html` unconditionally loads `data.js`, which doesn't exist in mini builds. `app.js` expected `graphData` to be pre-defined.
+- **Fix**:
+  - Added `onerror` handler to `data.js` script tag in `index.html` to set `window.graphData = null` on load failure.
+  - Updated `app.js` to check for null `graphData` and initialize with empty arrays `[]` for graceful fallback.
+  - Added diagnostic logging to distinguish "Full Build" vs "Mini Build" startup.
+- **Status**: **Fixed**
+
 ### Chinese Document
 
 #### 1. 用户定义知识库路径 (User-Defined KB Path)
@@ -49,6 +65,22 @@
   - **完整**: 安装包大小 ~270MB。包含 `data.js`。
   - **精简**: 安装包大小 ~200MB。排除 `data.js`。
 - **状态**: **通过**
+
+#### 3. 安装程序清理逻辑 (精简模式)
+
+- **Bug**: 即使在精简模式下，由于 `copy-assets.js` 仅跳过复制而未移除 `dist` 文件夹中先前完整构建遗留的文件，安装程序大小仍显得臃肿 (236MB)。
+- **修复**: 更新了 `scripts/copy-assets.js`，以显式从目标中删除排除的文件（如果存在）。
+- **状态**: **已修复**
+
+#### 4. 精简模式首次运行崩溃 (ERR_UNEXPECTED)
+
+- **Bug**: 安装精简版本并在首次运行时选择知识库文件夹后，应用崩溃，显示 `GET app://./data.js net::ERR_UNEXPECTED` 和 `ReferenceError: graphData is not defined`。
+- **原因**: `index.html` 无条件加载 `data.js`，该文件在精简构建中不存在。`app.js` 期望 `graphData` 已预定义。
+- **修复**:
+  - 在 `index.html` 中为 `data.js` 脚本标签添加 `onerror` 处理器，在加载失败时设置 `window.graphData = null`。
+  - 更新 `app.js` 以检查 `graphData` 是否为 null，并使用空数组 `[]` 初始化以实现优雅降级。
+  - 添加了诊断日志以区分"完整构建"与"精简构建"启动。
+- **状态**: **已修复**
 
 # Test Report - v0.9.83
 

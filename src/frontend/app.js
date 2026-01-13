@@ -47,8 +47,16 @@ const tooltip = d3.select("body").append("div")
     .style("opacity", 0);
 
 // Data
-const nodes = graphData.nodes.map(d => Object.create(d));
-let links = graphData.edges.map(d => Object.create(d));
+// Handle Mini Build: graphData may be null if data.js is excluded
+const nodes = (graphData && graphData.nodes) ? graphData.nodes.map(d => Object.create(d)) : [];
+let links = (graphData && graphData.edges) ? graphData.edges.map(d => Object.create(d)) : [];
+
+// Log startup mode for diagnostics
+if (!graphData || !graphData.nodes) {
+    console.log('[Init] Mini Build detected: No pre-bundled data loaded. Please select a Knowledge Base.');
+} else {
+    console.log(`[Init] Full Build detected: Loaded ${nodes.length} nodes from bundled data.js`);
+}
 
 // Optimization: Pre-resolve links to ensure they are objects, not strings.
 // This allows us to feed a SUBSET to the physics engine while keeping ALL links for rendering.
