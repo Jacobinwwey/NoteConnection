@@ -15,9 +15,17 @@
   - [x] **Persistence**: Implemented `kb_config.json` to store user-selected paths.
   - [x] **First-Run Experience**: Added setup wizard for selecting initial KB folder.
   - [x] **Menu Integration**: Added "Change Knowledge Base" and "Reset to Default" to File menu.
-- [x] **Installer Optimization**
-  - [x] **Build Modes**: Implemented "FULL" (Demo) and "MINI" (Production) build configurations.
-  - [x] **Size Reduction**: Reduced production installer size by ~70MB by intelligently excluding runtime data.
+- [x] **Stability & Installer Reliability**
+  - [x] **Mini Build Fix**: Resolved first-run crashes and implemented automatic cleanup of pre-generated data files in mini mode.
+  - [x] **Worker Paths**: Fixed worker path resolution issues in production environment.
+- [x] **Absolute Offline Support**
+  - [x] **Local Assets**: Migrated all CDN dependencies (D3, KaTeX, Mermaid, etc.) to local assets.
+  - [x] **CSP Security**: Updated CSP to support absolute offline operation.
+- [x] **Focus Mode Fidelity**
+  - [x] **Visual Restoration**: Guaranteed perfect radius and font-size restoration when exiting focus mode.
+  - [x] **Interaction**: Fixed D3 sibling selection errors in Focus Mode.
+- [x] **Physics Defaults**
+  - [x] **Spacing**: Increased default link distance to 250px and collision to 25px for better legibility.
 
 ---
 
@@ -2225,22 +2233,19 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
   - [x] **手动驱动**: 专注模式节点不再向 Worker 发送拖动消息，坐标直接在主线程计算。
   - [x] **显示刷新**: 修复了由于延迟消息覆盖手动设置坐标导致的竞态条件。
 
-### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
+### v1.0.0 - 生产环境正式发布 (Production Release) (2026-01-14)
 
-**目标**: 完成与 Joplin/Obsidian 插件的集成并打磨用户体验。
+**目标**: 显著提升系统稳定性、离线可靠性及专注模式视觉体验。
 
-- [ ] **插件封装**
-
-  - 将 `NoteConnection` 核心逻辑封装为 Joplin 插件和 Obsidian 插件。
-
-- [ ] **用户设置与文档 (User Settings & Documentation - v0.7.0)**
-  - [x] **设置管理器**: 集中管理应用状态（物理、视觉），支持 `localStorage` 持久化。
-  - [x] **配置 UI**: 用于调整图谱物理（重力、排斥力）和视觉偏好的设置模态框。
-  - [x] **阅读窗口 (Reading Window - v0.8.0)**
-    - [x] **触发**: 点击焦点节点以打开。
-    - [x] **内容**: 渲染 Markdown, KaTeX (数学), Mermaid (图表)。
-    - [x] **交互**: 缩放文本和调整图片大小（解锁模式）。
-    - [x] **配置**: 窗口/全屏切换。
-  - [ ] **完善文档**: 完成用户手册和开发人员指南。
-  - [ ] **最终打磨与演示打包**: 确保零配置启动 (`npm start`) 无缝工作以用于推广。
-  - [ ] **发布**: 打包 v1.0.0。
+- [x] **稳定性与构建 (v1.0.0)**:
+  - **精简版修复**: 解决首屏崩溃、Worker 路径及数据清理问题。
+  - **离线支持**: 100% 本地化渲染库 (D3, KaTeX, Mermaid)。
+- [x] **专注模式优化 (v1.0.0)**:
+  - **视觉恢复**: 修复退出后的尺寸还原 Bug。
+  - **O(1) 邻居查找**: 实现客户端邻接缓存，消除切换延迟。
+  - **批量 UI 更新**: 使用 `requestAnimationFrame` 同步渲染。
+- [x] **物理引擎打磨**:
+  - **更高间距**: 默认链接距离增加至 250px，支持更广范围自定义。
+- [x] **随机专注**: 在搜索栏旁添加骰子图标，支持即时随机聚焦。
+- [x] **GPU 诊断增强**: 增加详细的 GPU 上下文报告（供应商/渲染器）。
+- [x] **安全与 CSP**: 更新 CSP 以实现严密的离线环境安全。

@@ -317,7 +317,7 @@ Renders the JSON data into an interactive DAG.
       - **Physics**:
         - **Repulsion**: Split into `repulsionForce` (Default: -550) and `repulsionDAG` (Default: -850).
         - **UI Context**: The settings modal dynamically updates the input label to "Repulsion (Force)" or "Repulsion (DAG)" to clearly indicate which mode is being configured.
-        - **Others**: Link Distance, Collision Radius.
+        - **Others**: Link Distance (Default: 250), Collision Radius (Default: 25).
       - **Performance**:
         - **Max Workers**: Slider/Input to control concurrent worker threads (Default: 4).
         - **Compact Mode (v0.9.67)**: Checkbox to hide edges by default for performance (Default: Off, Auto-On for >5k nodes).
@@ -452,7 +452,7 @@ Renders the JSON data into an interactive DAG.
     - **Strict Isolation (v0.9.75)**:
 
       - **Static Layout**: Focus Mode now strictly enforces a static layout using `fx`/`fy` locks and explicitly stops the physics simulation (`restart: false`), complying with "cease simulating" requirements.
-      - **Dimension Independence**: Node sizes and typography in the main interface are protected. Upon exiting Focus Mode, dimensions are restored via the central `updateSize()` logic rather than hardcoded resets, ensuring custom configurations (e.g., Size by Centrality) are preserved.
+      - **Dimension Independence**: Node sizes and typography in the main interface are protected. Upon exiting Focus Mode, dimensions (radius and font-size) are explicitly restored from pre-focus backups before calling the central `updateSize()` logic, ensuring absolute visual consistency with custom configurations (e.g., Size by Centrality).
       - **Event Protection**: `ResizeObserver` is now aware of Focus Mode and ignores window resize events that would otherwise trigger a simulation restart.
 
     - **Correct Restoration Order (v0.9.76)**:
@@ -944,6 +944,11 @@ UI updates in Focus Mode are batched using `requestAnimationFrame`:
 - **Feature**: A dice icon next to the search bar allows for a random node to be selected and immediately entered into Focus Mode.
 - **Implementation**: The `handleRandomFocus` function selects a random visible node index and calls `enterFocusMode`.
 
+### 13.4 Visual State Restoration
+
+- **Logic**: Upon exiting Focus Mode, the system explicitly restores the backed-up `_origRadius` and `_origFontSize` to the respective D3 elements _before_ calling `updateSize()`.
+- **Purpose**: Ensures that nodes return to their exact pre-focus dimensions immediately, eliminating any visual discrepancies in radius or typography.
+
 ---
 
 ## 14. GPU Diagnostics (v1.0.0)
@@ -996,6 +1001,13 @@ NoteConnection supports dual build configurations to optimize installer size.
 - **File Menu**:
   - **Change Knowledge Base...**: Triggers `dialog.showOpenDialog` -> Updates config -> Reloads.
   - **Reset to Default**: Reverts to bundled `./Knowledge_Base` -> Updates config -> Reloads.
+
+## 17. Physics Algorithm Defaults (v1.0.0)
+
+To provide a clearer initial layout, v1.0.0 adjusts the default values and adjustable ranges for physics parameters:
+
+- **Link Distance**: Default increased to **250** (from 100). Max range expanded to **600**.
+- **Collision Radius**: Default increased to **25** (from 20). Max range expanded to **100**.
 
 ---
 
@@ -1943,6 +1955,11 @@ interface CooccurrenceMetrics {
 - **功能**: 搜索栏旁的骰子图标允许随机选择一个可见节点并立即进入其专注模式。
 - **实现**: `handleRandomFocus` 函数选择一个随机的可见节点索引并调用 `enterFocusMode`。
 
+### 13.4 视觉状态还原 (Visual State Restoration)
+
+- **逻辑**: 在退出专注模式时，系统会在调用 `updateSize()` 之前，先将备份的 `_origRadius` 和 `_origFontSize` 显式还原给对应的 D3 元素。
+- **目的**: 确保节点在退出后能立即恢复到进入前的精确视觉状态，消除半径或字体大小的残留偏差。
+
 ---
 
 ## 14. GPU 诊断 (v1.0.0)
@@ -1966,7 +1983,9 @@ NoteConnection 支持双重构建配置以优化安装包大小。
 
 - **精简模式 (MINI Mode)**:
   - **命令**: `npm run build:mini` / `npm run electron:build:mini`
-  - **排除内容**: `copy-assets.js` 过滤掉大型运行时生成的数据文件。
+  - **排除内容**: `copy-assets.js` 过滤掉大型运行时生成的数据文件 (`data.js`, `graph_data.json`)。
+  - **稳定性改进**: 增加了对 `graphData` 的类型检查，防止在首次启动无数据时崩溃。
+  - **路径修正**: 修复了生产环境下工作线程 (Worker) 的双层 `dist` 路径解析错误。
   - **逻辑**: 检查 `process.argv.includes('--mini')`。
   - **大小节省**: 压缩后的安装包减少约 70MB。
 
@@ -1995,5 +2014,12 @@ NoteConnection 支持双重构建配置以优化安装包大小。
 - **文件菜单**:
   - **更改知识库... (Change Knowledge Base)**: 触发 `dialog.showOpenDialog` -> 更新配置 -> 重载应用。
   - **重置为默认 (Reset to Default)**: 恢复为捆绑的 `./Knowledge_Base` -> 更新配置 -> 重载应用。
+
+## 17. 物理算法默认参数 (v1.0.0)
+
+为了提供更清晰的初始布局，v1.0.0 调整了以下物理参数的默认值及范围：
+
+- **链接距离 (Link Distance)**: 默认值提升至 **250** (原 100)，最大可调至 **600**。
+- **碰撞半径 (Collision Radius)**: 默认值提升至 **25** (原 20)，最大可调至 **100**。
 
 ---

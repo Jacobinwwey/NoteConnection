@@ -1,3 +1,5 @@
+# 2026-01-14 v1.0.0
+
 # NoteConnection Knowledge Graph
 
 <img width="606" height="309" alt="banner" src="https://github.com/user-attachments/assets/92e90de5-2b1a-4398-8e8b-6e142c92b6a2" />
@@ -22,7 +24,8 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 - **Structure Over Chaos**: Switch between **Force-Directed** (Physics) and **DAG** (Hierarchical) layouts. The DAG layout automatically identifies "Prerequisites" and "Next Steps" to arrange concepts in logical layers.
 - **Dual Rendering Engine (v0.8.7)**: Seamlessly toggle between **SVG** (for interactivity) and **Canvas** (for high-performance rendering of 10,000+ nodes).
-- **Interactive Focus Mode**: Click any node to isolate it and its context. Features **Freeze on Select** (v0.8.9) to prevent drift and adjustable **Vertical/Horizontal Spacing** (v0.8.8). Use the **Random Focus** (dice icon) to discover new connections (v1.1.0).
+- **Interactive Focus Mode**: Click any node to isolate it and its context. Features **Freeze on Select** (v0.8.9) to prevent drift, adjustable **Vertical/Horizontal Spacing** (v0.8.8), and absolute visual consistency upon exit. Use the **Random Focus** (dice icon) to discover new connections (v1.0.0).
+- **Absolute Offline Support (v1.0.0)**: All library dependencies (D3, KaTeX, Marked, Mermaid, JSZip) are migrated to local assets, ensuring 100% functionality without internet.
   <img width="2010" height="2011" alt="image" src="https://github.com/user-attachments/assets/52785445-20bf-4ecc-847a-23863f291b6a" />
 
 ### 2. Intelligence & Inference
@@ -222,14 +225,23 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ### v1.0.0 - Production Release (2026-01-14)
 
-- **Performance & Focus Overhaul**: Official release with major Focus Mode optimizations.
+- **Stability & Mini Build Reliability**: Major fixes for the "Mini" build mode.
+  - **First-Run Fix**: Resolved critical crashes when no data is present on first launch (Added `typeof` safety checks).
+  - **Artifact Cleanup**: Build process now automatically cleans up previous data artifacts to ensure minimum installer size (~70MB).
+  - **Worker Path Fix**: Corrected path resolution for backend workers in production builds (Resolved double-dist folder issue).
+- **Absolute Offline Strategy**: All external CDN dependencies migrated to local assets. The system is now 100% functional without an internet connection.
+- **Focus Mode Refinement**:
+  - **Visual Restoration**: Fixed a bug where nodes retained Focus Mode sizes after exit. Now perfectly restores pre-focus radius and font-size.
+  - **Stability**: Fixed D3 sibling selection (`getAttribute`) errors during Focus entry.
+- **Physics & Spacing Overhaul**:
+  - **New Defaults**: Standard link distance increased to **250px** and collision radius to **25px**.
+  - **Expanded Customization**: Slider ranges increased significantly (up to 600px distance / 100px collision).
+- **Quality of Life**: Knowledge Base "All Folders" is now automatically selected in Electron mode for a smoother start.
+- **Performance & Focus Overhaul**:
   - **O(1) Neighbor Lookup**: Adjacency caching reduces transition time from O(N\*M) to O(1).
-  - **Batched Rendering**: UI updates synchronized via `requestAnimationFrame` for high performance.
-- **Random Focus**: Added a dice icon for instant discovery of random nodes.
-- **GPU Diagnostics**: Detailed hardware reporting (Vendor/Renderer) and forced GPU mode.
-- **User-Defined Knowledge Base**: New First-Run Setup, persistent configuration, and menu controls for managing data sources.
-- **Build Optimization**: Introduced "Mini" build mode (~70MB) alongside "Full" demo mode, significantly reducing installer size.
-- **Security & CSP**: Enhanced CSP for Google Fonts and removed deprecated Electron-specific flags.
+  - **Batched Rendering**: UI updates synchronized via `requestAnimationFrame`.
+- **User-Defined Knowledge Base**: New First-Run Setup, persistent configuration, and menu controls.
+- **Security & CSP**: Enhanced CSP for extreme offline security and removed deprecated flags.
 
 ### v0.9.83 (2026-01-13)
 
@@ -621,7 +633,8 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 - **结构优于混沌**: 在 **力导向 (Force-Directed)** 和 **DAG (层级)** 布局之间切换。DAG 布局自动识别“先决条件”和“后续步骤”，将概念按逻辑分层排列。
 - **双渲染引擎 (v0.8.7)**: 无缝切换 **SVG** (用于交互) 和 **Canvas** (用于 10,000+ 节点的高性能渲染)。
-- **交互式专注模式**: 点击任意节点以隔离它及其上下文。包含 **选中冻结** (v0.8.9) 以防止漂移，以及可调节的 **垂直/水平间距** (v0.8.8) 以防止重叠。
+- **交互式专注模式**: 点击任意节点以隔离它及其上下文。包含 **选中冻结** (v0.8.9) 以防止漂移，可调节的 **垂直/水平间距** (v0.8.8)，以及退出后完美的视觉状态恢复 (v1.0.0)。
+- **完全离线化支持 (v1.0.0)**: 所有关键库依赖（D3, KaTeX, Marked, Mermaid 等）均已本地化，确保 100% 离线可用性。
 
 <img width="3404" height="2028" alt="image" src="https://github.com/user-attachments/assets/39ea71da-be14-4fdc-9fec-9f33cab92e1b" />
 
@@ -809,14 +822,22 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 
 ### v1.0.0 - 正式发布 (Production Release) (2026-01-14)
 
-- **性能与专注模式重构**: 包含主要专注模式优化的正式版本。
-  - **O(1) 邻居查找**: 邻接缓存将转换时间从 O(N\*M) 减少到 O(1)。
-  - **批量渲染**: 通过 `requestAnimationFrame` 同步 UI 更新以获得高性能。
-- **随机专注**: 添加了骰子图标，用于即时发现随机节点。
-- **GPU 诊断**: 详细的硬件报告 (Vendor/Renderer) 和强制 GPU 模式。
-- **用户定义知识库**: 全新的知识库路径管理和持久化。
-- **构建优化**: 双构建模式 (Full/Mini) 大幅减小了生产安装包体积。
-- **安全与 CSP**: 增强了 Google Fonts 的 CSP 并移除了已弃用的 Electron 特定标志。
+- **稳定性与精简版可靠性**: 对“精简模式”进行了重大修复。
+  - **首次启动修复**: 解决了应用在无数据状态下首次启动时的崩溃问题（增加了 `typeof` 安全检查）。
+  - **产物自动清理**: 构建过程自动清理旧的数据残留，确保安装包体积最小化 (~70MB)。
+  - **Worker 路径修复**: 修正了生产构建中后端工作线程的双层 `dist` 路径解析错误。
+- **完全离线化策略**: 所有外部依赖均已迁移为本地资源。系统现在可在完全离线环境下运行。
+- **专注模式细化**:
+  - **视觉状态恢复**: 修复了退出专注模式后节点大小错误的 Bug。现在能完美恢复原始半径和字体大小。
+  - **交互稳定性**: 修复了进入专注模式时的 D3 事件关联错误。
+- **物理与间距优化**:
+  - **全新默认值**: 默认链接距离增加至 **250px**，碰撞半径增加至 **25px**。
+  - **扩展自定义范围**: 滑动条范围增加至 600px 距离 / 100px 碰撞。
+- **性能与专注模式重构**:
+  - **O(1) 邻居查找**: 在客户端实现邻接缓存，将切换耗时从 $O(N \times M)$ 降低至 $O(1)$。
+  - **批量渲染**: 使用 `requestAnimationFrame` 同步渲染，确保平滑过渡。
+- **用户定义知识库**: 全新的知识库路径管理、持久化配置及菜单控制。
+- **安全与 CSP**: 增强了 CSP 以支持极端的离线安全，并移除了已弃用的 Electron 标志。
 
 ### v0.9.83 (2026-01-13)
 
@@ -1129,13 +1150,19 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 - [x] **Canvas 渲染器**: 添加 HTML5 Canvas 支持以实现高性能。
 - [x] **Worker 扩展**: 将线程限制增加到 12。
 
-### v1.0.0 - 性能与专注模式优化 (Performance & Focus Overhaul) (2026-01-14)
+### v1.0.0 - 生产环境正式发布 (Production Release) (2026-01-14)
 
-**目标**: 显著提升专注模式响应速度并优化 GPU 诊断与安全性。
+**目标**: 显著提升系统稳定性、离线可靠性及专注模式视觉体验。
 
+- [x] **稳定性与构建 (v1.0.0)**:
+  - **精简版修复**: 解决首屏崩溃、Worker 路径及数据清理问题。
+  - **离线支持**: 100% 本地化渲染库 (D3, KaTeX, Mermaid)。
 - [x] **专注模式优化 (v1.0.0)**:
-  - **O(1) 邻居查找**: 在客户端实现邻接缓存，将切换耗时从 $O(N \times M)$ 降低至 $O(1)$。
-  - **批量 UI 更新**: 使用 `requestAnimationFrame` 同步渲染，确保大图模式下的平滑过渡。
-- [x] **随机专注**: 在搜索栏旁添加骰子图标，支持即时发现并聚焦随机节点。
-- [x] **GPU 诊断增强**: 增加详细的 GPU 上下文报告（供应商/渲染器），并在兼容硬件上强制启用 GPU 模式。
-- [x] **安全与 CSP**: 更新 CSP 以支持外部字体加载（Google Fonts），并移除过时的 Electron 安全标志。
+  - **视觉恢复**: 修复退出后的尺寸还原 Bug。
+  - **O(1) 邻居查找**: 实现客户端邻接缓存，消除切换延迟。
+  - **批量 UI 更新**: 使用 `requestAnimationFrame` 同步渲染。
+- [x] **物理引擎打磨**:
+  - **更高间距**: 默认链接距离增加至 250px，支持更广范围自定义。
+- [x] **随机专注**: 在搜索栏旁添加骰子图标，支持即时随机聚焦。
+- [x] **GPU 诊断增强**: 增加详细的 GPU 上下文报告（供应商/渲染器）。
+- [x] **安全与 CSP**: 更新 CSP 以实现严密的离线环境安全。
