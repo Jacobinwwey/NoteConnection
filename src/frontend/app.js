@@ -1560,8 +1560,11 @@ function renderCanvas(layoutMode) {
             if (!batches.has(key)) batches.set(key, []);
             batches.get(key).push(d);
 
-            // Check Label
-            if (!shouldDim && (isFocus || isHighlightedNode || currentTransform.k > 1.2)) {
+            // Check Label with adaptive threshold for large graphs
+            // For graphs >3000 nodes, require higher zoom (2.5x) to show labels
+            const isLargeGraph = nodes.length > 3000;
+            const labelZoomThreshold = isLargeGraph ? 2.5 : 1.2;
+            if (!shouldDim && (isFocus || isHighlightedNode || currentTransform.k > labelZoomThreshold)) {
                 textToDraw.push(d);
             }
         });
@@ -1584,8 +1587,11 @@ function renderCanvas(layoutMode) {
             ctx.stroke();
         });
 
-        // Draw Labels
-        ctx.globalAlpha = 1;
+        // Draw Labels with adaptive opacity for large graphs
+        // For graphs >3000 nodes, use 70% opacity by default to reduce overlap
+        const isLargeGraph = nodes.length > 3000;
+        const labelOpacity = isLargeGraph ? 0.7 : 1.0;
+        ctx.globalAlpha = labelOpacity;
         ctx.fillStyle = "#ccc";
         textToDraw.forEach(d => {
             const isFocus = focusNode && focusNode.id === d.id;

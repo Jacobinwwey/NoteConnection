@@ -11,7 +11,9 @@
     "start:prod": "node dist/src/server.js",
     "electron:dev": "npm run build && electron .",
     "electron:build": "npm run build && electron-builder",
+    "electron:build:mini": "npm run build:mini && electron-builder",
     "build": "tsc && node scripts/copy-assets.js",
+    "build:mini": "tsc && node scripts/copy-assets.js --mini",
     "prepublishOnly": "npm run build",
     "test": "jest"
   },
@@ -27,7 +29,19 @@
     "dag",
     "hierarchical"
   ],
-  "author": "",
+  "author": {
+    "name": "Jacob",
+    "email": "Jacob.hxx.cn@outlook.com",
+    "url": "https://github.com/Jacobinwwey"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Jacobinwwey/NoteConnection"
+  },
+  "homepage": "https://github.com/Jacobinwwey/NoteConnection#readme",
+  "bugs": {
+    "url": "https://github.com/Jacobinwwey/NoteConnection/issues"
+  },
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {

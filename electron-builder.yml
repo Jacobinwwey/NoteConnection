@@ -2,6 +2,10 @@ appId: com.noteconnection.app
 productName: NoteConnection
 directories:
   output: dist_electron_release
+compression: maximum
+asar: true
+asarUnpack:
+  - "**/*.node"
 files:
   - "dist/**/*"
   - "package.json"
@@ -11,15 +15,29 @@ files:
   - "!**/*.ts"
   - "!scripts/**/*"
   - "!test_robustness/**/*"
+  # OPTION 1: Exclude Knowledge_Base for smaller installer (~200MB)
+  # Users select their own folder on first run
   - "!Knowledge_Base/**/*"
+  # OPTION 2: Include Knowledge_Base for demo/sample notes (~270MB)
+  # Uncomment below and comment above to bundle sample KB
+  # - "Knowledge_Base/**/*"
   - "!.vscode/**/*"
+  - "!*.md"
+  - "!LICENSE"
+  # Exclude development/test files from node_modules
+  - "!**/node_modules/**/{README,README.md,readme.md,readme,CHANGELOG,CHANGELOG.md,*.map}"
+  - "!**/node_modules/**/{test,tests,__tests__,examples,docs,doc}"
+  - "!**/node_modules/**/*.{ts,coffee,flow,md,markdown}"
+  - "!**/node_modules/.bin/**/*"
 win:
   target:
     - target: nsis
       arch:
         - x64
+  compression: maximum
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   deleteAppDataOnUninstall: true
+  differentialPackage: false

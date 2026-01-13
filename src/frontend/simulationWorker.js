@@ -60,6 +60,16 @@ function initSimulation(data) {
         currentSettings = { ...currentSettings, ...settings };
     }
 
+    // Adaptive Repulsion Scaling based on node count
+    // For larger graphs, increase repulsion strength to improve spacing
+    // Formula: base * (1 + log10(nodes/1000)) if nodes > 1000, capped at 3x
+    const baseRepulsion = currentSettings.repulsion;
+    if (nodes.length > 1000) {
+        const scaleFactor = Math.min(3.0, 1 + Math.log10(nodes.length / 1000));
+        currentSettings.repulsion = Math.floor(baseRepulsion * scaleFactor);
+        console.log(`[Worker] Adaptive Repulsion: ${baseRepulsion} -> ${currentSettings.repulsion} (${nodes.length} nodes, scale: ${scaleFactor.toFixed(2)}x)`);
+    }
+
     // GPU Check
     const useGPU = settings && settings.gpuRendering && (typeof gpuManyBody === 'function');
     console.log(`[Worker] Layout Engine: ${useGPU ? 'GPU (Accelerated)' : 'CPU (Standard)'}`);

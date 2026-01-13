@@ -11,6 +11,13 @@
   - [x] **Forced GPU Mode**: Explicitly set GPU mode with detailed hardware vendor/renderer reporting.
   - [x] **CSP Enhancement**: Updated Content Security Policy to allow external font loading (Google Fonts).
   - [x] **Security Hardening**: Removed insecure `enableBlinkFeatures` flag.
+- [x] **User-Defined Knowledge Base**
+  - [x] **Persistence**: Implemented `kb_config.json` to store user-selected paths.
+  - [x] **First-Run Experience**: Added setup wizard for selecting initial KB folder.
+  - [x] **Menu Integration**: Added "Change Knowledge Base" and "Reset to Default" to File menu.
+- [x] **Installer Optimization**
+  - [x] **Build Modes**: Implemented "FULL" (Demo) and "MINI" (Production) build configurations.
+  - [x] **Size Reduction**: Reduced production installer size by ~70MB by intelligently excluding runtime data.
 
 ---
 

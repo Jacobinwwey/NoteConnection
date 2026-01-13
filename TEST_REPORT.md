@@ -1,3 +1,55 @@
+# Test Report - v1.0.0
+
+**Date**: 2026-01-14
+**Version**: v1.0.0
+**Environment**: Windows 10, Production Build
+
+## 2026-01-14 v1.0.0 - Build Modes & KB Path
+
+### English Document
+
+#### 1. User-Defined KB Path
+
+- **Test**: Manual Verification.
+- **Steps**:
+  1. Ran `npm start`.
+  2. Selected a custom folder in the First Run setup.
+  3. Verified `kb_config.json` was created in `AppData`.
+  4. Used "File > Reset to Default" and "File > Change Knowledge Base" menus.
+- **Result**: Config updates correctly; app reloads and loads the specific folder.
+- **Status**: **Pass**
+
+#### 2. Dual Build Modes
+
+- **Test**: Build Verification.
+- **Command**: `npm run electron:build` (Full) vs `npm run electron:build:mini` (Mini).
+- **Result**:
+  - **Full**: Installer size ~270MB. Bundled `data.js` present.
+  - **Mini**: Installer size ~200MB. Bundled `data.js` excluded.
+- **Status**: **Pass**
+
+### Chinese Document
+
+#### 1. 用户定义知识库路径 (User-Defined KB Path)
+
+- **测试**: 手动验证。
+- **步骤**:
+  1. 运行 `npm start`。
+  2. 在首次运行设置中选择自定义文件夹。
+  3. 验证 `kb_config.json` 已在 `AppData` 中创建。
+  4. 使用“文件 > 重置为默认”和“文件 > 更改知识库”菜单。
+- **结果**: 配置更新正确；应用重载并加载指定文件夹。
+- **状态**: **通过**
+
+#### 2. 双构建模式 (Dual Build Modes)
+
+- **测试**: 构建验证。
+- **命令**: `npm run electron:build` (完整) vs `npm run electron:build:mini` (精简)。
+- **结果**:
+  - **完整**: 安装包大小 ~270MB。包含 `data.js`。
+  - **精简**: 安装包大小 ~200MB。排除 `data.js`。
+- **状态**: **通过**
+
 # Test Report - v0.9.83
 
 **Date**: 2026-01-13

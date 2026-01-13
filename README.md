@@ -193,6 +193,22 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 
 **Note:** CLI runs generate unique data files (`data_cli_{kb_name}_{time}.js`) to preserve the original `data.js`. When the server starts, it will automatically serve these specific files to the frontend.
 
+## 📂 User-Defined Knowledge Base (v1.0.0)
+
+Managing your knowledge base source is now easier than ever.
+
+- **First Run Setup**: On first launch, you will be prompted to select your `Knowledge_Base` folder.
+- **Persistent Config**: Your selection is saved in `kb_config.json` and remembered across restarts.
+- **Change Anytime**: Use the **File > Change Knowledge Base...** menu option to switch folders instantly.
+- **Reset**: Use **File > Reset to Default** to return to the bundled demo notes.
+
+## 🏗️ Build & Deployment
+
+For developers building from source, NoteConnection offers two build modes:
+
+- **Full Mode (`npm run electron:build`)**: Includes demo data (~600MB). Best for testing/demos.
+- **Mini Mode (`npm run electron:build:mini`)**: Excludes large pre-generated files (~70MB installer). Best for distribution.
+
 ## 🛠️ Hardware & Driver Requirements (AMDGPU)
 
 For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA cards (like RX 7900XT):
@@ -211,6 +227,8 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
   - **Batched Rendering**: UI updates synchronized via `requestAnimationFrame` for high performance.
 - **Random Focus**: Added a dice icon for instant discovery of random nodes.
 - **GPU Diagnostics**: Detailed hardware reporting (Vendor/Renderer) and forced GPU mode.
+- **User-Defined Knowledge Base**: New First-Run Setup, persistent configuration, and menu controls for managing data sources.
+- **Build Optimization**: Introduced "Mini" build mode (~70MB) alongside "Full" demo mode, significantly reducing installer size.
 - **Security & CSP**: Enhanced CSP for Google Fonts and removed deprecated Electron-specific flags.
 
 ### v0.9.83 (2026-01-13)
@@ -769,7 +787,36 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 
 ---
 
+## 📂 用户定义知识库 (User-Defined Knowledge Base - v1.0.0)
+
+管理知识库源现在变得更加简单。
+
+- **首次运行设置**: 首次启动时，系统会提示您选择 `Knowledge_Base` 文件夹。
+- **持久化配置**: 您的选择保存在 `kb_config.json` 中，并在重启后自动加载。
+- **随时更改**: 使用 **文件 > 更改知识库...** 菜单选项即时切换文件夹。
+- **重置**: 使用 **文件 > 重置为默认** 返回由捆绑的演示笔记。
+
+## 🏗️ 构建与部署 (Build & Deployment)
+
+对于从源码构建的开发者，NoteConnection 提供两种构建模式：
+
+- **完整模式 (Full Mode)** (`npm run electron:build`): 包含演示数据 (~600MB)。最适合测试/演示。
+- **精简模式 (Mini Mode)** (`npm run electron:build:mini`): 排除大型预生成文件 (~70MB 安装包)。最适合分发。
+
+---
+
 ## 📅 更新日志 (Changelog)
+
+### v1.0.0 - 正式发布 (Production Release) (2026-01-14)
+
+- **性能与专注模式重构**: 包含主要专注模式优化的正式版本。
+  - **O(1) 邻居查找**: 邻接缓存将转换时间从 O(N\*M) 减少到 O(1)。
+  - **批量渲染**: 通过 `requestAnimationFrame` 同步 UI 更新以获得高性能。
+- **随机专注**: 添加了骰子图标，用于即时发现随机节点。
+- **GPU 诊断**: 详细的硬件报告 (Vendor/Renderer) 和强制 GPU 模式。
+- **用户定义知识库**: 全新的知识库路径管理和持久化。
+- **构建优化**: 双构建模式 (Full/Mini) 大幅减小了生产安装包体积。
+- **安全与 CSP**: 增强了 Google Fonts 的 CSP 并移除了已弃用的 Electron 特定标志。
 
 ### v0.9.83 (2026-01-13)
 

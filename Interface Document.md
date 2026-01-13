@@ -953,6 +953,50 @@ The `SharedGPU` instance provides enhanced logging:
 - **`Instance mode`**: Reports whether the system is using `gpu` or `cpu` fallback.
 - **`Hardware Info`**: Reports GPU `Vendor` (e.g., AMD, NVIDIA) and `Renderer` when available via the WebGL context.
 
+## 15. Deployment & Build System (v1.0.0)
+
+### 15.1 Build Modes
+
+NoteConnection supports dual build configurations to optimize installer size.
+
+- **FULL Mode** (Default):
+
+  - **Command**: `npm run build` / `npm run electron:build`
+  - **Inclusions**: Bundles `data.js` (~170MB) and `graph_data.json` (~470MB) for instant demo capability.
+  - **Use Case**: Demos, Pre-packaged knowledge bases.
+
+- **MINI Mode**:
+  - **Command**: `npm run build:mini` / `npm run electron:build:mini`
+  - **Exclusions**: `copy-assets.js` filters out large runtime-generated data files unless they are required.
+  - **Logic**: Checks for `process.argv.includes('--mini')`.
+  - **Size Savings**: ~70MB reduction in compressed installer.
+
+## 16. User-Defined KB Configuration (v1.0.0)
+
+### 16.1 Persistent Storage
+
+- **File**: `kb_config.json`
+- **Location**: `app.getPath('userData')` (e.g., `%APPDATA%/NoteConnection/`)
+- **Structure**:
+  ```json
+  {
+    "knowledgeBasePath": "E:\\path\\to\\custom\\folder"
+  }
+  ```
+
+### 16.2 IPC API
+
+- **Channel**: `getKbPath`
+- **Direction**: Renderer -> Main
+- **Response**: `Promise<string>` (The absolute path to the currently active Knowledge Base root).
+- **Usage**: Used by Frontend to display current path in UI or request relative content.
+
+### 16.3 Menu Integration
+
+- **File Menu**:
+  - **Change Knowledge Base...**: Triggers `dialog.showOpenDialog` -> Updates config -> Reloads.
+  - **Reset to Default**: Reverts to bundled `./Knowledge_Base` -> Updates config -> Reloads.
+
 ---
 
 # 接口文档
@@ -1907,5 +1951,49 @@ interface CooccurrenceMetrics {
 
 - **`Instance mode` (实例模式)**: 报告系统是使用 `gpu` 还是 `cpu` 回退模式。
 - **`Hardware Info` (硬件信息)**: 在 WebGL 上下文可用时，报告 GPU 的 `Vendor` (供应商，如 AMD、NVIDIA) 和 `Renderer` (渲染器)。
+
+## 15. 部署与构建系统 (Deployment & Build System - v1.0.0)
+
+### 15.1 构建模式 (Build Modes)
+
+NoteConnection 支持双重构建配置以优化安装包大小。
+
+- **完整模式 (FULL Mode)** (默认):
+
+  - **命令**: `npm run build` / `npm run electron:build`
+  - **包含内容**: 捆绑 `data.js` (~170MB) 和 `graph_data.json` (~470MB) 以具备即时演示能力。
+  - **用例**: 演示、预打包知识库。
+
+- **精简模式 (MINI Mode)**:
+  - **命令**: `npm run build:mini` / `npm run electron:build:mini`
+  - **排除内容**: `copy-assets.js` 过滤掉大型运行时生成的数据文件。
+  - **逻辑**: 检查 `process.argv.includes('--mini')`。
+  - **大小节省**: 压缩后的安装包减少约 70MB。
+
+## 16. 用户定义知识库配置 (v1.0.0)
+
+### 16.1 持久化存储
+
+- **文件**: `kb_config.json`
+- **位置**: `app.getPath('userData')` (例如 `%APPDATA%/NoteConnection/`)
+- **结构**:
+  ```json
+  {
+    "knowledgeBasePath": "E:\\path\\to\\custom\\folder"
+  }
+  ```
+
+### 16.2 IPC API
+
+- **通道**: `getKbPath`
+- **方向**: 渲染进程 -> 主进程
+- **响应**: `Promise<string>` (当前活动的知识库根目录的绝对路径)。
+- **用途**: 前端用于在 UI 中显示当前路径或请求相对内容。
+
+### 16.3 菜单集成
+
+- **文件菜单**:
+  - **更改知识库... (Change Knowledge Base)**: 触发 `dialog.showOpenDialog` -> 更新配置 -> 重载应用。
+  - **重置为默认 (Reset to Default)**: 恢复为捆绑的 `./Knowledge_Base` -> 更新配置 -> 重载应用。
 
 ---
