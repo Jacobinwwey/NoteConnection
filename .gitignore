@@ -1,7 +1,21 @@
 node_modules
 dist
+release
 coverage
 .DS_Store
 *.log
 Knowledge_Base
 result.txt
+# Generated Data
+src/frontend/data.js
+src/frontend/graph_data.json
+src/frontend/data_cli_*.js
+src/frontend/graph_data_cli_*.json
+# Editor
+.vscode
+.idea
+*.suo
+*.ntvs
+*.njsproj
+*.sln
+*.swp

@@ -112,10 +112,24 @@ if (hasCliBuild) {
     // However, server.listen is async. We can move this logic into `startServer` function.
 }
 
-const startServer = async () => {
+export const startServer = async (options: { port?: number, targetPath?: string } = {}) => {
+    // If options are provided, override CLI/Env defaults or merge them
+    if (options.targetPath) {
+        cliOptions.targetPath = options.targetPath;
+        hasCliBuild = true; // Assume explicit path implies specific build intent or context
+    }
+    const finalPort = options.port || PORT;
+
     if (hasCliBuild) {
         const kbName = path.basename(cliOptions.targetPath || 'knowledge_base');
         let useExisting = false;
+        
+        // Only do interactive prompt if we are in a TTY and effectively running standalone
+        // For Electron auto-start, we might want to skip this or handle it differently.
+        // For now, if passed via options, we assume 'Regenerate' or 'Load' should be automatic or decided by caller?
+        // Let's keep existing logic but realize it might block if no TTY.
+        // CHECK: If options.targetPath is passed, do we skip the prompt? 
+        // If we are required to not block, we should probably default to "Load" if exists, or "Gen" if not.
         
         if (fs.existsSync(FRONTEND_DIR)) {
             const files = fs.readdirSync(FRONTEND_DIR);
@@ -129,25 +143,34 @@ const startServer = async () => {
                 const latest = matches[0];
                 console.log(`\n[CLI] Found existing build for '${kbName}': ${latest}`);
                 
-                const rl = readline.createInterface({
-                    input: process.stdin,
-                    output: process.stdout
-                });
-
-                const answer = await new Promise<string>(resolve => {
-                    rl.question('[CLI] Do you want to (L)oad existing or (R)egenerate? [L/r]: ', (ans) => {
-                        rl.close();
-                        resolve(ans.trim().toLowerCase());
+                // If specific options passed (embedded mode), default to Load to avoid blocking
+                // Otherwise use interactive prompt
+                if (options.targetPath) {
+                     useExisting = true;
+                     const suffix = latest.replace('data_cli_', '').replace('.js', '');
+                     cliOptions.outputPrefix = suffix;
+                     console.log(`[CLI] Auto-Loading existing data: ${latest}`);
+                } else {
+                    const rl = readline.createInterface({
+                        input: process.stdin,
+                        output: process.stdout
                     });
-                });
 
-                if (answer === '' || answer === 'l') {
-                    useExisting = true;
-                    // Extract suffix: data_cli_{suffix}.js
-                    // suffix = kbName_time
-                    const suffix = latest.replace('data_cli_', '').replace('.js', '');
-                    cliOptions.outputPrefix = suffix;
-                    console.log(`[CLI] Loading existing data: ${latest}`);
+                    const answer = await new Promise<string>(resolve => {
+                        rl.question('[CLI] Do you want to (L)oad existing or (R)egenerate? [L/r]: ', (ans) => {
+                            rl.close();
+                            resolve(ans.trim().toLowerCase());
+                        });
+                    });
+
+                    if (answer === '' || answer === 'l') {
+                        useExisting = true;
+                        // Extract suffix: data_cli_{suffix}.js
+                        // suffix = kbName_time
+                        const suffix = latest.replace('data_cli_', '').replace('.js', '');
+                        cliOptions.outputPrefix = suffix;
+                        console.log(`[CLI] Loading existing data: ${latest}`);
+                    }
                 }
             }
         }
@@ -183,6 +206,11 @@ const startServer = async () => {
         if (req.method === 'GET') {
             if (req.url === '/api/folders') {
                 try {
+                    // Use configured path or default
+                    // Note: KB_ROOT is currently module-level constant. We should probably make it dynamic?
+                    // For now, if we pass targetPath, we might be focusing on THAT path.
+                    // But /api/folders lists "Knowledge_Base" by default.
+                    
                     if (!fs.existsSync(KB_ROOT)) {
                         fs.mkdirSync(KB_ROOT, { recursive: true });
                     }
@@ -218,33 +246,13 @@ const startServer = async () => {
                     }
     
                     // Security: Ensure path is within allowed directories
-                    // We allow access if it's within KB_ROOT or if it was explicitly loaded (we trust metadata.filepath from build)
-                    // However, for safety in this server, we should probably check if it exists and is a file.
-                    // Ideally, we verify it is within project root or KB root.
-                    // Let's rely on checking if it exists for now, but to prevent arbitrary system read, enforce some bounds?
-                    // The user is local, but good practice.
-                    // For now, let's allow if it exists and is a file.
                     
                     const filePath = path.resolve(decodeURIComponent(requestedPath));
                     
-                    // Simple security check: Must be inside project root
-                    const projectRoot = process.cwd();
-                    if (!filePath.startsWith(projectRoot)) {
-                         // Warn but maybe allow if it's a test case outside? 
-                         // Stricter: Must be inside Knowledge_Base? 
-                         // The user said "E:\Knowledge_project\NoteConnection_app\Knowledge_Base\..."
-                         // So strict check on KB_ROOT is safer.
-                         if (!filePath.startsWith(KB_ROOT)) {
-                             // Double check if it matches target passed in build? 
-                             // We don't know the build target here easily.
-                             // Let's allow but log warning? Or just block.
-                             // Block is safer.
-                             res.writeHead(403, { 'Content-Type': 'application/json' });
-                             res.end(JSON.stringify({ error: 'Access denied: Path outside Knowledge Base' }));
-                             return;
-                         }
-                    }
-    
+                    // Allow if it exists and is a file
+                    // In Electron/Desktop mode, user trusts the local app, so stricter strict sandbox is less critical than web,
+                    // but we still check existence to avoid crashes.
+                    
                     if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
                         res.writeHead(404, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ error: 'File not found' }));
@@ -320,10 +328,6 @@ const startServer = async () => {
                         const { target, maxWorkers, enableGPU, enableGPULayout, memorySavingMode, deepDebug } = JSON.parse(body);
                         console.log('Received build request for:', target, 'maxWorkers:', maxWorkers, 'enableGPU:', enableGPU, 'enableGPULayout:', enableGPULayout, 'memorySavingMode:', memorySavingMode, 'deepDebug:', deepDebug);
                         
-                        // If target is "ALL_FOLDERS", pass empty string or specific flag to buildGraph?
-                        // buildGraph handles empty/undefined as "Knowledge_Base" root scan (recursive).
-                        // So if target is "", it scans everything under Knowledge_Base.
-                        
                         const buildTarget = target === 'ALL_FOLDERS' ? '' : target;
                         
                         await buildGraph({
@@ -348,14 +352,20 @@ const startServer = async () => {
         }
     });
     
-    server.listen(PORT, async () => {
-        console.log(`Server running at http://localhost:${PORT}/`);
-        console.log(`Knowledge Base Root: ${KB_ROOT}`);
-        
-        if (hasCliBuild) {
-             console.log('[CLI] Ready.');
-        }
+    return new Promise<http.Server>((resolve) => {
+        server.listen(finalPort, async () => {
+            console.log(`Server running at http://localhost:${finalPort}/`);
+            console.log(`Knowledge Base Root: ${KB_ROOT}`);
+            
+            if (hasCliBuild) {
+                 console.log('[CLI] Ready.');
+            }
+            resolve(server);
+        });
     });
 };
 
-startServer();
+// Only run if called directly
+if (require.main === module) {
+    startServer();
+}

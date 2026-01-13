@@ -1,0 +1,25 @@
+appId: com.noteconnection.app
+productName: NoteConnection
+directories:
+  output: release
+files:
+  - "dist/**/*"
+  - "package.json"
+  # Dependencies are auto-included by smart prune
+  # We explicitly exclude src to save space, as we only need dist
+  - "!src/**/*"
+  - "!**/*.ts"
+  - "!scripts/**/*"
+  - "!test_robustness/**/*"
+  - "!Knowledge_Base/**/*"
+  - "!.vscode/**/*"
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  deleteAppDataOnUninstall: true
