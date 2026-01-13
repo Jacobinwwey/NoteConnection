@@ -904,6 +904,20 @@ Enhances the security of layout restoration.
 
 ---
 
+### 12. GPU Worker Integration (v0.9.83)
+
+#### `simulationWorker.js` & `layout_gpu.js`
+
+Fully offloads force calculations to the GPU within the Web Worker context.
+
+- **Initialization**:
+  - Automatically imports `gpu-browser.min.js` and `layout_gpu.js` via `importScripts`.
+  - Determines the layout engine (GPU vs CPU) based on the `gpuRendering` settings flag and `gpuManyBody` availability.
+- **Dynamic Parameter Updates**:
+  - `updateParams` message now modifies existing force instances (including GPU forces) using `.strength()`, ensuring settings changes do not fallback to CPU physics accidentally.
+- **Environment Compatibility**:
+  - `layout_gpu.js` utilizes `globalScope` (resolving to `self` in workers) to allow instance-sharing across both main thread and worker thread environments.
+
 ---
 
 # 接口文档
@@ -1186,6 +1200,18 @@ Enhances the security of layout restoration.
 
 - **输入**: `graph.json` (结构匹配 `DirectedGraph`)
 - **功能**:
+
+  - **Web Worker 卸载 (v0.9.72 & v0.9.83)**:
+
+    - **模块**: `src/frontend/simulationWorker.js`
+    - **目的**: 在后台线程运行 D3 力导向模拟，防止重计算期间主线程阻塞（UI 冻结）。
+    - **接口**: 通过 `postMessage` 进行消息传递。
+      - `init`: 发送节点/链接和设置 (包括 `gpuRendering`)。
+      - `tick`: 接收用于渲染的更新位置 `({id, x, y})`。
+      - `updateParams`: 在不重启的情况下更新物理参数（重力、排斥力）。
+      - `updateLayout`: 在力导向和 DAG 模式之间切换。
+      - `setNodes`: 更新活动的节点子集（例如用于专注模式）。
+      - `drag`: 同步手动节点移动。
 
   - **布局模式 (v0.4.0)**:
     - **力导向 (Force Directed)**: 标准的基于物理的布局。
@@ -1801,3 +1827,19 @@ interface CooccurrenceMetrics {
 - **阈值**: 50%。
 - **逻辑**: `restoreLayoutState` 计算成功恢复位置的节点百分比。如果小于 50%（例如由于图谱数据大幅变动），则判定缓存无效，强制执行模拟松弛 (`restart: true`)。
 - **回退**: 确保用户在数据更新后始终能看到稳定的布局，而不是破碎的缓存状态。
+
+---
+
+## 12. GPU 工作线程集成 (GPU Worker Integration - v0.9.83)
+
+#### `simulationWorker.js` & `layout_gpu.js`
+
+在 Web Worker 上下文中将力计算完全卸载到 GPU。
+
+- **初始化**:
+  - 通过 `importScripts` 自动导入 `gpu-browser.min.js` 和 `layout_gpu.js`。
+  - 根据 `gpuRendering` 设置标志和 `gpuManyBody` 的可用性确定布局引擎（GPU vs CPU）。
+- **动态参数更新**:
+  - `updateParams` 消息现在使用 `.strength()` 修改现有的力实例（包括 GPU 力），确保设置更改不会意外回退到 CPU 物理。
+- **环境兼容性**:
+  - `layout_gpu.js` 利用 `globalScope`（在 Worker 中解析为 `self`）以允许在主线程和工作线程环境中共享实例。

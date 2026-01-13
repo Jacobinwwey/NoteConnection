@@ -13,6 +13,11 @@
   - [x] **Auto Fallback**: If many nodes are missing or data is inconsistent, automatically force a physics relaxation phase.
 - [x] **Analysis Panel Stability**
   - [x] **Render Optimization**: Adjusted `updateLayout` logic to strictly prohibit center force resets during panel resizing under "Freeze Layout".
+- [x] **GPU Worker Integration**
+  - [x] **Worker Acceleration**: Fully enabled GPU forces (`gpuManyBody`, `gpuLink`) within `simulationWorker.js`.
+  - [x] **Environment Fix**: Refactored `layout_gpu.js` to be compatible with Web Worker `self` context via `globalScope`.
+  - [x] **Persistence Fix**: Optimized `updateParams` in Worker to update existing forces using `.strength()` instead of replacing them, preventing accidental CPU-fallback.
+  - [x] **Settings Sync**: Verified `gpuRendering` flag is correctly passed to the Worker during initialization.
 
 # 2026-01-12 v0.9.74
 
@@ -2164,6 +2169,22 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
   - [x] **设置 UI**: 向性能设置添加了 "紧凑模式 (隐藏边)" 复选框。
 - [x] **Canvas 修复**:
   - [x] **初始渲染**: 初始化后强制显式调用 `resizeCanvas()` 和 `ticked()` 以防止白屏。
+
+### 2026-01-13 v0.9.83 - GPU 工作线程集成 (GPU Worker Integration)
+
+**目标**: 在模拟工作线程中全面启用 GPU 加速，解决设置不一致和 Worker 环境兼容性问题。
+
+- [x] **GPU 工作线程集成**:
+  - [x] **工作线程加速**: 在 `simulationWorker.js` 中全面启用了 GPU 力 (`gpuManyBody`, `gpuLink`)。
+  - [x] **环境修复**: 重构了 `layout_gpu.js`，通过 `globalScope` 兼容 Web Worker 的 `self` 上下文。
+  - [x] **持久性修复**: 优化了 Worker 中的 `updateParams` 逻辑，使用 `.strength()` 更新现有的力，而不是替换它们，防止意外回退到 CPU 物理。
+  - [x] **设置同步**: 验证了 `gpuRendering` 标志在初始化期间已正确传递给 Worker。
+- [x] **Worker 握手协议**:
+  - [x] **显示锁定**: 实现了 `isLayoutSwitching` 状态机，以在转换期间阻止过时的 `tick` 消息。
+  - [x] **双向同步**: 引入了 `layoutSwitchDone` 循环，确保 UI 和 Worker 坐标完美对应。
+- [x] **专注模式拖动隔离**:
+  - [x] **手动驱动**: 专注模式节点不再向 Worker 发送拖动消息，坐标直接在主线程计算。
+  - [x] **显示刷新**: 修复了由于延迟消息覆盖手动设置坐标导致的竞态条件。
 
 ### 2026-06-01 v1.0.0 - 正式发布 (Production Release)
 

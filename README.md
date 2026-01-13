@@ -769,6 +769,12 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 
 ## 📅 更新日志 (Changelog)
 
+### v0.9.83 (2026-01-13)
+
+- **GPU 工作线程集成**: 全面启用了前端模拟工作线程 (Simulation Worker) 中的 GPU 加速。工作线程现在可以动态导入 `gpu-browser.min.js` 和 `layout_gpu.js`，并遵循 `gpuRendering` 设置。
+- **性能修复**: 解决了在初始化阶段忽略“GPU 优化渲染”设置、导致强制使用 CPU 计算的问题。现在大型图谱的加载速度显著提升。
+- **稳健性**: 修复了 `updateParams` 中的一个关键错误，即在更改物理设置时，现有的 GPU 力实例会被意外地替换为 CPU 力。
+
 ### v0.9.74 (2026-01-12)
 
 - **GPU 链接力 (Link Force)**: 使用 `gpu.js` 实现了高性能的 GPU 加速弹簧力。支持 "Gather" 算法，用于高效的邻居处理。
