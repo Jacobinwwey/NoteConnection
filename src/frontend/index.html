@@ -22,7 +22,7 @@
     <script src="libs/katex/contrib/auto-render.min.js"></script>
     <script src="libs/mermaid.min.js"></script>
 
-    <script src="data.js" onerror="window.graphData = null; console.log('[Init] No pre-bundled data (Mini Mode)');"></script>
+    <script src="data.js"></script>
     <!-- Defines const graphData (optional in mini build) -->
     <script src="nodeHighlight.js"></script>
     <!-- Node highlighting module -->
@@ -784,7 +784,7 @@
                 type="range"
                 id="set-distance"
                 min="20"
-                max="300"
+                max="900"
                 step="10"
               />
               <span class="value-display" id="val-distance"></span>
@@ -795,7 +795,7 @@
                 type="range"
                 id="set-collision"
                 min="5"
-                max="50"
+                max="100"
                 step="5"
               />
               <span class="value-display" id="val-collision"></span>

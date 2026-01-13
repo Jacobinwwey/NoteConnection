@@ -34,14 +34,28 @@
 - **Fix**: Updated `scripts/copy-assets.js` to explicitly delete excluded files from the destination if they exist.
 - **Status**: **Fixed**
 
-#### 4. Mini Build First-Run Crash (ERR_UNEXPECTED)
+#### 4. Mini Build First-Run Crash (ERR_UNEXPECTED & CSP Violation)
 
-- **Bug**: After installing mini build and selecting KB folder on first run, app crashed with `GET app://./data.js net::ERR_UNEXPECTED` and `ReferenceError: graphData is not defined`.
-- **Cause**: `index.html` unconditionally loads `data.js`, which doesn't exist in mini builds. `app.js` expected `graphData` to be pre-defined.
+- **Bug**: After installing mini build and selecting KB folder on first run, app crashed with:
+  - `GET app://./data.js net::ERR_UNEXPECTED`
+  - `ReferenceError: graphData is not defined`
+  - `Executing inline event handler violates CSP 'script-src' directive`
+- **Cause**:
+  - `index.html` unconditionally loads `data.js`, which doesn't exist in mini builds.
+  - Initial fix used inline `onerror` handler, which violated Content Security Policy.
+  - `app.js` accessed `graphData` without checking if it was defined, causing `ReferenceError`.
 - **Fix**:
-  - Added `onerror` handler to `data.js` script tag in `index.html` to set `window.graphData = null` on load failure.
-  - Updated `app.js` to check for null `graphData` and initialize with empty arrays `[]` for graceful fallback.
+  - Removed inline `onerror` handler from `data.js` script tag (CSP compliant).
+  - Updated `app.js` to use `typeof graphData !== 'undefined'` to safely check existence.
+  - Initialize with empty arrays `[]` for graceful mini build startup.
   - Added diagnostic logging to distinguish "Full Build" vs "Mini Build" startup.
+- **Status**: **Fixed**
+
+#### 5. Worker Thread Path Resolution (Double dist/)
+
+- **Bug**: Graph build failed with `Cannot find module 'E:\...\dist\dist\backend\workers\statisticalWorker.js'`.
+- **Cause**: `StatisticalAnalyzer.ts` used `.replace('src', 'dist')` which incorrectly transformed paths containing `dist/src` into `dist/dist`.
+- **Fix**: Replaced string manipulation with proper `path.join(__dirname, '..', 'workers', 'statisticalWorker.js')` that respects actual directory structure.
 - **Status**: **Fixed**
 
 ### Chinese Document
@@ -72,14 +86,28 @@
 - **修复**: 更新了 `scripts/copy-assets.js`，以显式从目标中删除排除的文件（如果存在）。
 - **状态**: **已修复**
 
-#### 4. 精简模式首次运行崩溃 (ERR_UNEXPECTED)
+#### 4. 精简模式首次运行崩溃 (ERR_UNEXPECTED & CSP 违规)
 
-- **Bug**: 安装精简版本并在首次运行时选择知识库文件夹后，应用崩溃，显示 `GET app://./data.js net::ERR_UNEXPECTED` 和 `ReferenceError: graphData is not defined`。
-- **原因**: `index.html` 无条件加载 `data.js`，该文件在精简构建中不存在。`app.js` 期望 `graphData` 已预定义。
+- **Bug**: 安装精简版本并在首次运行时选择知识库文件夹后，应用崩溃，显示：
+  - `GET app://./data.js net::ERR_UNEXPECTED`
+  - `ReferenceError: graphData is not defined`
+  - `Executing inline event handler violates CSP 'script-src' directive`
+- **原因**:
+  - `index.html` 无条件加载 `data.js`，该文件在精简构建中不存在。
+  - 初始修复使用了内联 `onerror` 处理器，违反了内容安全策略 (CSP)。
+  - `app.js` 在未检查 `graphData` 是否已定义的情况下访问它，导致 `ReferenceError`。
 - **修复**:
-  - 在 `index.html` 中为 `data.js` 脚本标签添加 `onerror` 处理器，在加载失败时设置 `window.graphData = null`。
-  - 更新 `app.js` 以检查 `graphData` 是否为 null，并使用空数组 `[]` 初始化以实现优雅降级。
+  - 移除了 `data.js` 脚本标签的内联 `onerror` 处理器（符合 CSP）。
+  - 更新 `app.js` 使用 `typeof graphData !== 'undefined'` 安全检查存在性。
+  - 使用空数组 `[]` 初始化以实现精简构建的优雅启动。
   - 添加了诊断日志以区分"完整构建"与"精简构建"启动。
+- **状态**: **已修复**
+
+#### 5. Worker 线程路径解析 (双 dist/)
+
+- **Bug**: 图谱构建失败，显示 `Cannot find module 'E:\...\dist\dist\backend\workers\statisticalWorker.js'`。
+- **原因**: `StatisticalAnalyzer.ts` 使用了 `.replace('src', 'dist')`，错误地将包含 `dist/src` 的路径转换为 `dist/dist`。
+- **修复**: 用正确的 `path.join(__dirname, '..', 'workers', 'statisticalWorker.js')` 替换字符串操作，尊重实际目录结构。
 - **状态**: **已修复**
 
 # Test Report - v0.9.83

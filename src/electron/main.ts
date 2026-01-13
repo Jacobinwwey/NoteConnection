@@ -254,6 +254,9 @@ const createWindow = async () => {
 app.whenReady().then(async () => {
     log('App Ready');
     
+    // Suppress security warnings in dev mode (unsafe-eval is required for GPU.js)
+    process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
+    
     // Load saved knowledge base path or show first-run setup
     currentKbRoot = loadKbPath();
     

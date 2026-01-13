@@ -47,12 +47,14 @@ const tooltip = d3.select("body").append("div")
     .style("opacity", 0);
 
 // Data
-// Handle Mini Build: graphData may be null if data.js is excluded
-const nodes = (graphData && graphData.nodes) ? graphData.nodes.map(d => Object.create(d)) : [];
-let links = (graphData && graphData.edges) ? graphData.edges.map(d => Object.create(d)) : [];
+// Handle Mini Build: graphData may be undefined if data.js is excluded
+// Use typeof to avoid ReferenceError
+const graphDataExists = typeof graphData !== 'undefined' && graphData !== null;
+const nodes = (graphDataExists && graphData.nodes) ? graphData.nodes.map(d => Object.create(d)) : [];
+let links = (graphDataExists && graphData.edges) ? graphData.edges.map(d => Object.create(d)) : [];
 
 // Log startup mode for diagnostics
-if (!graphData || !graphData.nodes) {
+if (!graphDataExists) {
     console.log('[Init] Mini Build detected: No pre-bundled data loaded. Please select a Knowledge Base.');
 } else {
     console.log(`[Init] Full Build detected: Loaded ${nodes.length} nodes from bundled data.js`);
@@ -2275,15 +2277,32 @@ function initFocusHistoryUI() {
 initFocusHistoryUI();
 
 function enterFocusMode(focusD) {
-    // Backup original positions to ensure layout consistency upon exit (v0.9.30)
-    // 备份原始位置以确保退出时布局一致
-    nodes.forEach(n => {
+    // Backup original positions AND visual properties to ensure complete restoration upon exit (v1.0.0)
+    // 备份原始位置和视觉属性以确保退出时完全恢复
+    nodes.forEach((n, idx) => {
         // Only backup if not already backed up (in case of re-entry/nested calls)
         if (n._origX === undefined) {
             n._origX = n.x;
             n._origY = n.y;
             n._origFx = n.fx;
             n._origFy = n.fy;
+            
+            // NEW: Save visual properties (size)
+            // Get the actual rendered radius and font size from DOM elements
+            const circleEl = circles.filter(d => d.id === n.id);
+            const textEl = texts.filter(d => d.id === n.id);
+            
+            if (!circleEl.empty()) {
+                n._origRadius = parseFloat(circleEl.attr('r')) || 5;
+            } else {
+                n._origRadius = 5; // fallback
+            }
+            
+            if (!textEl.empty()) {
+                n._origFontSize = textEl.attr('font-size') || '10px';
+            } else {
+                n._origFontSize = '10px'; //fallback
+            }
         }
     });
 
@@ -2663,7 +2682,29 @@ function enterFocusMode(focusD) {
         d._labelDy = null;
     });
 
-    // 2. Restore Visual State (Dimensions & Colors)
+    // 2. Restore Visual State (Dimensions & Colors) - IMMEDIATELY without transition
+    // NEW v1.0.0: Restore exact pre-focus sizes before calling updateSize()
+    nodes.forEach(d => {
+        // Restore circle radius
+        if (d._origRadius !== undefined) {
+            const circleEl = circles.filter(node => node.id === d.id);
+            if (!circleEl.empty()) {
+                // Instantly restore original radius (no transition to avoid morphing artifact)
+                circleEl.attr('r', d._origRadius);
+            }
+            delete d._origRadius;
+        }
+        
+        // Restore text font size
+        if (d._origFontSize !== undefined) {
+            const textEl = texts.filter(node => node.id === d.id);
+            if (!textEl.empty()) {
+                textEl.attr('font-size', d._origFontSize);
+            }
+            delete d._origFontSize;
+        }
+    });
+    
     // Call these explicitly to reset sizes from Focus Mode values (25px/8px) back to global settings
     updateVisibility(); 
     

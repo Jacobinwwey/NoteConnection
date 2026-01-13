@@ -7,8 +7,8 @@ const defaultSettings = {
     physics: {
         repulsionForce: -550,
         repulsionDAG: -850,
-        linkDistance: 100,
-        collisionRadius: 20
+        linkDistance: 250,
+        collisionRadius: 25
     },
     visuals: {
         edgeOpacity: 0.6,

@@ -54,9 +54,16 @@ export class StatisticalAnalyzer {
         
         const workerPromises: Promise<Record<string, string[]>>[] = [];
         // Worker path resolution (handling ts-node vs dist)
-        const workerPath = path.join(__dirname, '..', 'workers', 'statisticalWorker.ts');
         const isTsNode = path.extname(__filename) === '.ts' || process.argv.some(arg => arg.includes('ts-node'));
-        const actualWorkerPath = isTsNode ? workerPath : workerPath.replace('.ts', '.js').replace('src', 'dist');
+        
+        let actualWorkerPath: string;
+        if (isTsNode) {
+            // Running via ts-node: src/backend/algorithms -> src/backend/workers
+            actualWorkerPath = path.join(__dirname, '..', 'workers', 'statisticalWorker.ts');
+        } else {
+            // Running from compiled dist: dist/src/backend/algorithms -> dist/src/backend/workers
+            actualWorkerPath = path.join(__dirname, '..', 'workers', 'statisticalWorker.js');
+        }
 
         for (let i = 0; i < workerCount; i++) {
             const start = i * chunkSize;

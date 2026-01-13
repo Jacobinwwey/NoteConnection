@@ -7,10 +7,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Fetch folders
     const fetchFolders = async () => {
         try {
-            let folders = [];
+            let folders =[];
             if (window.electronAPI) {
-                // Electron Mode
-                folders = await window.electronAPI.getFolders();
+                // Electron Mode: KB path is already configured via File menu
+                // Auto-select "All Folders" since we're using the configured path
+                folders = ['ALL_FOLDERS'];
+                console.log('[SourceManager] Electron mode: Using configured KB path');
             } else {
                 // Web Mode Fallback (if server running)
                 const res = await fetch('/api/folders');
@@ -25,6 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     option.textContent = folder;
                     folderSelect.appendChild(option);
                 });
+                
+                // Auto-select first option in Electron mode
+                if (window.electronAPI) {
+                    folderSelect.value = 'ALL_FOLDERS';
+                    console.log('[SourceManager] Auto-selected ALL_FOLDERS');
+                }
             }
         } catch (err) {
             console.warn('Failed to fetch folders:', err);
