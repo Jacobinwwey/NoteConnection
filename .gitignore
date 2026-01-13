@@ -6,11 +6,6 @@ coverage
 *.log
 Knowledge_Base
 result.txt
-# Generated Data
-src/frontend/data.js
-src/frontend/graph_data.json
-src/frontend/data_cli_*.js
-src/frontend/graph_data_cli_*.json
 # Editor
 .vscode
 .idea
