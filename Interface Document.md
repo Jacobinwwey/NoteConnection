@@ -1,4 +1,4 @@
-# 2026-01-12 v0.9.74
+# 2026-01-14 v1.0.0
 
 # Interface Document
 
@@ -704,6 +704,10 @@ Enhances the node statistics popup with user-friendly positioning and scaling co
     }
     ```
 
+  ```
+
+  ```
+
 - **Zoom Interface**:
 
   - **Controls**:
@@ -917,6 +921,37 @@ Fully offloads force calculations to the GPU within the Web Worker context.
   - `updateParams` message now modifies existing force instances (including GPU forces) using `.strength()`, ensuring settings changes do not fallback to CPU physics accidentally.
 - **Environment Compatibility**:
   - `layout_gpu.js` utilizes `globalScope` (resolving to `self` in workers) to allow instance-sharing across both main thread and worker thread environments.
+
+---
+
+## 13. Focus Mode Performance (v1.0.0)
+
+### 13.1 Adjacency Cache
+
+To ensure O(1) performance when identifying neighbors in Focus Mode:
+
+- **`window._adjacencyCache`**: A transient Map storing `outgoing` and `incoming` connections for all nodes.
+- **`window._adjacencyCacheStale`**: A boolean flag set to `true` when graph data changes, triggering a cache rebuild upon entering Focus Mode.
+
+### 13.2 Batched Rendering
+
+UI updates in Focus Mode are batched using `requestAnimationFrame`:
+
+- **Implementation**: The final `updateVisibility()` and `ticked()` calls are wrapped in an animation frame to prevent layout thrashing and ensure visual consistency.
+
+### 13.3 Random Focus
+
+- **Feature**: A dice icon next to the search bar allows for a random node to be selected and immediately entered into Focus Mode.
+- **Implementation**: The `handleRandomFocus` function selects a random visible node index and calls `enterFocusMode`.
+
+---
+
+## 14. GPU Diagnostics (v1.0.0)
+
+The `SharedGPU` instance provides enhanced logging:
+
+- **`Instance mode`**: Reports whether the system is using `gpu` or `cpu` fallback.
+- **`Hardware Info`**: Reports GPU `Vendor` (e.g., AMD, NVIDIA) and `Renderer` when available via the WebGL context.
 
 ---
 
@@ -1843,3 +1878,34 @@ interface CooccurrenceMetrics {
   - `updateParams` 消息现在使用 `.strength()` 修改现有的力实例（包括 GPU 力），确保设置更改不会意外回退到 CPU 物理。
 - **环境兼容性**:
   - `layout_gpu.js` 利用 `globalScope`（在 Worker 中解析为 `self`）以允许在主线程和工作线程环境中共享实例。
+
+## 13. 专注模式性能优化 (v1.0.0)
+
+### 13.1 邻接缓存 (Adjacency Cache)
+
+为了确保在进入专注模式时识别邻居节点的效率达到 O(1)：
+
+- **`window._adjacencyCache`**: 一个临时的 Map，存储所有节点的“出度”和“入度”连接。
+- **`window._adjacencyCacheStale`**: 一个布尔标志，每当图谱数据发生变化时设置为 `true`，从而在下次进入专注模式时触发缓存重建。
+
+### 13.2 批量渲染 (Batched Rendering)
+
+专注模式下的 UI 更新使用 `requestAnimationFrame` 进行批量处理：
+
+- **实现**: 最后的 `updateVisibility()` 和 `ticked()` 调用被包装在一个动画帧中，以防止页面布局抖动 (Layout Thrashing) 并确保视觉上的一致性。
+
+### 13.3 随机专注 (Random Focus)
+
+- **功能**: 搜索栏旁的骰子图标允许随机选择一个可见节点并立即进入其专注模式。
+- **实现**: `handleRandomFocus` 函数选择一个随机的可见节点索引并调用 `enterFocusMode`。
+
+---
+
+## 14. GPU 诊断 (v1.0.0)
+
+`SharedGPU` 实例提供了增强的日志记录：
+
+- **`Instance mode` (实例模式)**: 报告系统是使用 `gpu` 还是 `cpu` 回退模式。
+- **`Hardware Info` (硬件信息)**: 在 WebGL 上下文可用时，报告 GPU 的 `Vendor` (供应商，如 AMD、NVIDIA) 和 `Renderer` (渲染器)。
+
+---

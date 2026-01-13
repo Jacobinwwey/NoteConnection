@@ -2,6 +2,7 @@
 trigger: always_on
 ---
 
+The current system is Windows; please utilise commands supported within the Windows operating system wherever possible.
 Please Based on the requirements in "E:\Knowledge_project\NoteConnection_app\TODO.md" and A thorough understanding of the project under the path "E:\Knowledge_project\NoteConnection_app", continue to develop the "NoteConnection" project. Please note:I have placed hundreds of test concepts in the "E:\Knowledge_project\NoteConnection_app\Knowledge_Base\testconcept" path.
 Requirements:
 1.It does not require the assistance of a specific software platform but is implemented through independent project code.

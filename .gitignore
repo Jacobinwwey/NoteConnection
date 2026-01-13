@@ -10,6 +10,7 @@ result.txt
 # Editor
 .vscode
 .idea
+.agent
 *.suo
 *.ntvs
 *.njsproj

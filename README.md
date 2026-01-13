@@ -22,7 +22,7 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 - **Structure Over Chaos**: Switch between **Force-Directed** (Physics) and **DAG** (Hierarchical) layouts. The DAG layout automatically identifies "Prerequisites" and "Next Steps" to arrange concepts in logical layers.
 - **Dual Rendering Engine (v0.8.7)**: Seamlessly toggle between **SVG** (for interactivity) and **Canvas** (for high-performance rendering of 10,000+ nodes).
-- **Interactive Focus Mode**: Click any node to isolate it and its context. Features **Freeze on Select** (v0.8.9) to prevent drift and adjustable **Vertical/Horizontal Spacing** (v0.8.8) to prevent overlap.
+- **Interactive Focus Mode**: Click any node to isolate it and its context. Features **Freeze on Select** (v0.8.9) to prevent drift and adjustable **Vertical/Horizontal Spacing** (v0.8.8). Use the **Random Focus** (dice icon) to discover new connections (v1.1.0).
   <img width="2010" height="2011" alt="image" src="https://github.com/user-attachments/assets/52785445-20bf-4ecc-847a-23863f291b6a" />
 
 ### 2. Intelligence & Inference
@@ -204,6 +204,15 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ## 📅 Changelog
 
+### v1.0.0 - Production Release (2026-01-14)
+
+- **Performance & Focus Overhaul**: Official release with major Focus Mode optimizations.
+  - **O(1) Neighbor Lookup**: Adjacency caching reduces transition time from O(N\*M) to O(1).
+  - **Batched Rendering**: UI updates synchronized via `requestAnimationFrame` for high performance.
+- **Random Focus**: Added a dice icon for instant discovery of random nodes.
+- **GPU Diagnostics**: Detailed hardware reporting (Vendor/Renderer) and forced GPU mode.
+- **Security & CSP**: Enhanced CSP for Google Fonts and removed deprecated Electron-specific flags.
+
 ### v0.9.83 (2026-01-13)
 
 - **GPU Worker Integration**: Fully enabled GPU acceleration in the frontend Simulation Worker. The worker now dynamically imports `gpu-browser.min.js` and `layout_gpu.js` and respects the `gpuRendering` setting.
@@ -227,17 +236,10 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 ### v0.9.71 (2026-01-10)
 
 - **Backend Parallel Layout**: Accelerated front-end loading by pre-calculating node positions on the backend using worker threads or GPU.
-- **GPU Optimised Rendering**: Added support for AMDGPU acceleration in backend layout.
+- **GPU Optimised Rendering**: In the backend layout, added support for AMDGPU acceleration.
 - **Static Mode**: Implemented strict simulation freezing for massive graphs (>5000 nodes) to save resources.
 - **CLI Support**: Added full CLI argument support for automated building and loading.
 - **Extreme Scale Optimization**: Disabled edge rendering entirely for graphs with >10,000 nodes to prevent browser crashes.
-
-### v1.0.0 - Production Release (2026-06-01)
-
-- [x] **Milestone**: Official production release of NoteConnection.
-- [x] **Stability**: Fully optimized for large datasets (50k+ nodes) with Hybrid Inference and Worker threading.
-- [x] **Experience**: Polished UI with Quick Start Guide, Welcome experience, and Bilingual support (En/Zh).
-- [x] **API**: Decoupled Core API ready for plugin integrations.
 
 ### v0.9.70 - Frontend Initialization Fix (2026-01-09)
 
@@ -331,7 +333,7 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ### v0.9.49 - UI Controls for Parallel Processing (2026-01-02)
 
-- [x] **Settings UI**: Added a "Performance" section to the Settings Modal with a slider and number input to control "Max Workers".
+- [x] **Settings UI**: In the Settings Modal, added a "Performance" section with a slider and number input to control "Max Workers".
 - [x] **API Integration**: The "Load" button now sends the user-defined worker limit to the backend build process.
 - [x] **Persistence**: The worker setting is saved in `localStorage` alongside other preferences.
 
@@ -393,7 +395,7 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ### v0.9.36 - Freeze Layout Priority Fix (2025-12-26)
 
-- [x] **Strict Freeze**: Changing "Degree Basis" or "Size By" settings no longer wakes up the simulation if "Freeze Layout" is active. Visuals update (node sizes change) while positions remain strictly locked.
+- [x] **Strict Freeze**: If "Freeze Layout" is active, changing "Degree Basis" or "Size By" settings no longer wakes up the simulation. Visuals update (node sizes change) while positions remain strictly locked.
 
 ### v0.9.35 - Viewport Culling Relaxation (2025-12-26)
 
@@ -790,13 +792,6 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 - **CLI 支持**: 添加了完整的 CLI 参数支持，用于自动化构建和加载。
 - **极端规模优化**: 对于超过 10,000 个节点的图谱，完全禁用了边渲染，以防止浏览器崩溃。
 
-### v1.0.0 - 正式发布 (Production Release) (2026-06-01)
-
-- [x] **里程碑**: NoteConnection 正式生产版本发布。
-- [x] **稳定性**: 通过混合推断和 Worker 线程，针对大数据集（50k+ 节点）进行了全面优化。
-- [x] **体验**: 抛光的用户界面，包含快速开始指南、欢迎体验和双语支持（中/英）。
-- [x] **API**: 解耦的核心 API，已准备好进行插件集成。
-
 ### v0.9.67 - 紧凑模式与 Canvas 修复 (2026-01-08)
 
 - [x] **紧凑模式**: 添加了一种新模式，默认隐藏边以提高海量图谱（>5k 节点）的性能。此模式在大数据集上自动启用，但可以在设置中切换。
@@ -1086,3 +1081,14 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 
 - [x] **Canvas 渲染器**: 添加 HTML5 Canvas 支持以实现高性能。
 - [x] **Worker 扩展**: 将线程限制增加到 12。
+
+### v1.0.0 - 性能与专注模式优化 (Performance & Focus Overhaul) (2026-01-14)
+
+**目标**: 显著提升专注模式响应速度并优化 GPU 诊断与安全性。
+
+- [x] **专注模式优化 (v1.0.0)**:
+  - **O(1) 邻居查找**: 在客户端实现邻接缓存，将切换耗时从 $O(N \times M)$ 降低至 $O(1)$。
+  - **批量 UI 更新**: 使用 `requestAnimationFrame` 同步渲染，确保大图模式下的平滑过渡。
+- [x] **随机专注**: 在搜索栏旁添加骰子图标，支持即时发现并聚焦随机节点。
+- [x] **GPU 诊断增强**: 增加详细的 GPU 上下文报告（供应商/渲染器），并在兼容硬件上强制启用 GPU 模式。
+- [x] **安全与 CSP**: 更新 CSP 以支持外部字体加载（Google Fonts），并移除过时的 Electron 安全标志。

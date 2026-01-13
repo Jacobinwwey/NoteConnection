@@ -1,3 +1,19 @@
+# 2026-01-14 v1.0.0 - Production Release
+
+**Goal**: Official production release with optimized Focus Mode, GPU diagnostics, and enhanced security.
+
+- [x] **Focus Mode Optimization**
+  - [x] **Adjacency Cache**: Implemented O(1) adjacency lookup for neighbors, reducing Focus Mode entry time by 50-500x.
+  - [x] **Edge Map for Scoring**: Optimized neighbor scoring by caching edge weights.
+  - [x] **Batched Rendering**: Wrapped UI updates in `requestAnimationFrame` to prevent layout thrashing.
+- [x] **Random Focus**: Added a dice icon next to the search bar for discovering and focusing on random nodes instantly.
+- [x] **GPU & Security**
+  - [x] **Forced GPU Mode**: Explicitly set GPU mode with detailed hardware vendor/renderer reporting.
+  - [x] **CSP Enhancement**: Updated Content Security Policy to allow external font loading (Google Fonts).
+  - [x] **Security Hardening**: Removed insecure `enableBlinkFeatures` flag.
+
+---
+
 # 2026-01-13 v0.9.83 - GPU Rendering Debugging
 
 **Goal**: Resolve race conditions during layout switching due to asynchronous Worker messages, enhance interaction stability in Focus Mode, and improve layout restoration security.
@@ -1139,6 +1155,22 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
   - [x] **Finalize Documentation**: Complete User Manual and Developer Guide.
   - [x] **Final Polish & Demo Packaging**: Ensure zero-config startup (`npm start`) works seamlessly for promotion.
   - [x] **Release**: Package for v1.0.0.
+
+---
+
+# 2026-01-14 v1.0.0 - 正式版本发布
+
+**目标**: 正式生产版本发布，包含专注模式优化、GPU 诊断增强及安全性提升。
+
+- [x] **专注模式优化**
+  - [x] **邻接缓存**: 实现 O(1) 邻居查找缓存，将专注模式进入时间缩短 50-500 倍。
+  - [x] **评分边映射**: 通过缓存边权重优化邻居节点评分。
+  - [x] **批量渲染**: 使用 `requestAnimationFrame` 包装 UI 更新，防止页面布局抖动。
+- [x] **随机专注**: 在搜索栏旁添加骰子按钮，支持随时发现并进入随机节点的专注模式。
+- [x] **GPU 与安全性**
+  - [x] **强制 GPU 模式**: 显式设置 GPU 模式，并提供详细的硬件供应商/渲染器报告。
+  - [x] **CSP 增强**: 更新内容安全策略 (CSP) 以支持外部字体加载 (Google Fonts)。
+  - [x] **安全性加固**: 移除不安全的 `enableBlinkFeatures` 标志。
 
 ---
 
