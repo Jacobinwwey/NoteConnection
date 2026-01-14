@@ -70,10 +70,12 @@ class I18nManager {
             
             // Save preference
             localStorage.setItem('user_language', lang);
+            
+            this.isInitialized = true;
+
             // Notify listeners
             this.notifyListeners(lang);
             
-            this.isInitialized = true;
             console.log(`[i18n] Language set to: ${lang}`);
         } catch (error) {
             console.error(`[i18n] Error loading language ${lang}:`, error);
@@ -203,6 +205,7 @@ class I18nManager {
 
 // Create global instance
 window.i18n = new I18nManager();
+window.t = window.i18n.t.bind(window.i18n);
 
 // Initialize on DOM ready
 if (document.readyState === 'loading') {

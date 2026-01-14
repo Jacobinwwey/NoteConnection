@@ -75,8 +75,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Initial fetch
-    fetchFolders();
+    // Initial fetch - wait for i18n
+    const init = () => {
+        if (window.i18n && window.i18n.isInitialized) {
+            fetchFolders();
+        } else if (window.i18n) {
+            window.i18n.onLanguageChange(() => {
+                fetchFolders();
+            });
+        } else {
+            // Fallback (shouldn't happen given script order)
+            setTimeout(fetchFolders, 500);
+        }
+    };
+    
+    init();
 
     // Add refresh functionality (will be triggered by IPC event from main process)
     if (window.electronAPI && window.electronAPI.onKbPathChanged) {
