@@ -1,0 +1,126 @@
+/* tutorial.css - Tutorial System Styling */
+
+/* Tutorial Spotlight Effect */
+.tutorial-spotlight {
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7),
+    0 0 30px 10px rgba(97, 218, 251, 0.8) !important;
+  position: relative !important;
+  z-index: 9000 !important;
+  border-radius: 8px;
+  transition: box-shadow 0.3s ease;
+}
+
+/* Animated pulse effect for spotlight */
+@keyframes tutorialPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7),
+      0 0 30px 10px rgba(97, 218, 251, 0.8);
+  }
+  50% {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7),
+      0 0 40px 15px rgba(97, 218, 251, 1);
+  }
+}
+
+.tutorial-spotlight {
+  animation: tutorialPulse 2s ease-in-out infinite;
+}
+
+/* Tutorial Dialog */
+#tutorial-dialog {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#tutorial-dialog button {
+  transition: all 0.3s ease;
+}
+
+#tutorial-dialog button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+#tutorial-dialog button:active {
+  transform: translateY(0);
+}
+
+#tutorial-skip:hover {
+  background: #3a3a3a !important;
+  color: #fff !important;
+}
+
+#tutorial-prev:hover {
+  background: #555 !important;
+}
+
+#tutorial-next:hover {
+  background: #3182ce !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #tutorial-dialog {
+    max-width: 90% !important;
+    padding: 20px !important;
+  }
+
+  .tutorial-header h3 {
+    font-size: 1.1rem !important;
+  }
+
+  .tutorial-body {
+    font-size: 0.9rem !important;
+  }
+
+  .tutorial-footer {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .tutorial-footer > div {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Arrow indicators for tutorial */
+.tutorial-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  z-index: 9100;
+}
+
+.tutorial-arrow.arrow-bottom {
+  border-width: 15px 15px 0 15px;
+  border-color: #61dafb transparent transparent transparent;
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.tutorial-arrow.arrow-top {
+  border-width: 0 15px 15px 15px;
+  border-color: transparent transparent #61dafb transparent;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.tutorial-arrow.arrow-left {
+  border-width: 15px 15px 15px 0;
+  border-color: transparent #61dafb transparent transparent;
+  left: -15px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.tutorial-arrow.arrow-right {
+  border-width: 15px 0 15px 15px;
+  border-color: transparent transparent transparent #61dafb;
+  right: -15px;
+  top: 50%;
+  transform: translateY(-50%);
+}

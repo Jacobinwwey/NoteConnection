@@ -1,18 +1,34 @@
 document.addEventListener('DOMContentLoaded', () => {
     const folderSelect = document.getElementById('folder-select');
     const loadBtn = document.getElementById('btn-load-source');
+    const currentPathEl = document.getElementById('kb-current-path'); // Will add to HTML
 
     if (!folderSelect || !loadBtn) return;
 
-    // Fetch folders
+    // Translation helper
+    const t = (key, params) => window.i18n ? window.i18n.t(key, params) : key;
+
+    // Fetch folders from backend
     const fetchFolders = async () => {
         try {
-            let folders =[];
+            let folders = [];
+            
             if (window.electronAPI) {
-                // Electron Mode: KB path is already configured via File menu
-                // Auto-select "All Folders" since we're using the configured path
-                folders = ['ALL_FOLDERS'];
-                console.log('[SourceManager] Electron mode: Using configured KB path');
+                // Electron Mode: Get KB path and enumerate folders
+                const kbPath = await window.electronAPI.getKbPath();
+                
+                // Display current path
+                if (currentPathEl) {
+                    currentPathEl.textContent = t('source.currentPath', { path: kbPath });
+                    currentPathEl.title = kbPath;
+                }
+                
+                // Get folder listing vie IPC
+                const folderData = await window.electronAPI.getFolders();
+                folders = folderData || [];
+                
+                console.log('[SourceManager] Electron mode, KB path:', kbPath);
+                console.log('[SourceManager] Found folders:', folders);
             } else {
                 // Web Mode Fallback (if server running)
                 const res = await fetch('/api/folders');
@@ -20,38 +36,66 @@ document.addEventListener('DOMContentLoaded', () => {
                 folders = data.folders || [];
             }
 
+            // Clear existing options
+            folderSelect.innerHTML = '';
+
+            // Always add "All Folders" option first
+            const allOption = document.createElement('option');
+            allOption.value = 'ALL_FOLDERS';
+            allOption.textContent = t('source.allFolders');
+            folderSelect.appendChild(allOption);
+
+            // Add individual folders
             if (folders && folders.length > 0) {
                 folders.forEach(folder => {
-                    const option = document.createElement('option');
-                    option.value = folder;
-                    option.textContent = folder;
-                    folderSelect.appendChild(option);
+                    // Don't add ALL_FOLDERS again if it's in the list
+                    if (folder !== 'ALL_FOLDERS') {
+                        const option = document.createElement('option');
+                        option.value = folder;
+                        option.textContent = folder;
+                        folderSelect.appendChild(option);
+                    }
                 });
-                
-                // Auto-select first option in Electron mode
-                if (window.electronAPI) {
-                    folderSelect.value = 'ALL_FOLDERS';
-                    console.log('[SourceManager] Auto-selected ALL_FOLDERS');
-                }
             }
+            
+            // Auto-select first option (All Folders)
+            folderSelect.value = 'ALL_FOLDERS';
+            console.log('[SourceManager] Folder dropdown populated with', folderSelect.options.length, 'options');
+            
         } catch (err) {
-            console.warn('Failed to fetch folders:', err);
-             const container = document.getElementById('source-control');
-            if (container) container.style.display = 'none';
+            console.error('[SourceManager] Failed to fetch folders:', err);
+            
+            // Show error in dropdown
+            folderSelect.innerHTML = '';
+            const errorOption = document.createElement('option');
+            errorOption.value = '';
+            errorOption.textContent = t('source.error.loadFailed', { error: err.message });
+            errorOption.disabled = true;
+            folderSelect.appendChild(errorOption);
         }
     };
+
+    // Initial fetch
     fetchFolders();
+
+    // Add refresh functionality (will be triggered by IPC event from main process)
+    if (window.electronAPI && window.electronAPI.onKbPathChanged) {
+        window.electronAPI.onKbPathChanged(() => {
+            console.log('[SourceManager] KB path changed, refreshing folders');
+            fetchFolders();
+        });
+    }
 
     // Handle Load
     loadBtn.addEventListener('click', () => {
         const target = folderSelect.value;
         if (!target) {
-            alert('Please select a folder first.');
+            alert(t('source.error.noFolder'));
             return;
         }
 
         loadBtn.disabled = true;
-        loadBtn.textContent = '...';
+        loadBtn.textContent = t('source.loading');
 
         const maxWorkers = window.settingsManager ? window.settingsManager.get('performance', 'maxWorkers') : undefined;
         const enableGPU = window.settingsManager ? window.settingsManager.get('performance', 'enableGPU') : undefined;
@@ -75,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Standardize result. Controller returns 'data' on success, or throws.
                     // Actually buildGraph returns data directly. If it throws, we catch it.
                     success = true; 
-                    if (window.loadingManager) window.loadingManager.log("Build Success! Reloading interface...");
+                    if (window.loadingManager) window.loadingManager.log(t('notifications.buildSuccess'));
                 } else {
                     const res = await fetch('/api/build', {
                         method: 'POST',
@@ -85,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const data = await res.json();
                     if (data.success) {
                         success = true;
-                        if (window.loadingManager) window.loadingManager.log("Build Success! Reloading interface...");
+                        if (window.loadingManager) window.loadingManager.log(t('notifications.buildSuccess'));
                     } else {
                         error = data.error;
                     }
@@ -98,19 +142,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     }, 1000);
                 } else {
                     if (window.loadingManager) window.loadingManager.hide();
-                    alert('Build Failed: ' + (error || 'Unknown error'));
+                    alert(t('source.error.loadFailed', { error: error || 'Unknown error' }));
                 }
             } catch (err) {
                 if (window.loadingManager) window.loadingManager.hide();
-                alert('Error: ' + err);
+                alert(t('source.error.loadFailed', { error: err.message }));
             }
         };
 
         runBuild().finally(() => {
              loadBtn.disabled = false;
-             loadBtn.textContent = 'Load';
+             loadBtn.textContent = t('source.loadButton');
              // Note: If success, page reloads anyway. If failure, we hid it above.
         });
 
     });
+
+    // Listen for language changes and update labels
+    if (window.i18n) {
+        window.i18n.onLanguageChange(() => {
+            loadBtn.textContent = t('source.loadButton');
+            // Re-fetch to update folder labels if needed
+            // (Currently folder names are file system names, so no translation needed)
+        });
+    }
 });

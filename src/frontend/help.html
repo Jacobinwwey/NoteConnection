@@ -69,27 +69,10 @@
     <!-- We should rely on the one copied to libs or node_modules if we want true offline -->
     <!-- For now, we assume internet or cached. Ideally we copy marked.min.js to assets. -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="help.js"></script>
   </head>
   <body>
-    <button class="back-btn" onclick="window.close()">Close</button>
+    <button class="back-btn">Close</button>
     <div id="content">Loading documentation...</div>
-
-    <script>
-      fetch("README.md")
-        .then((response) => {
-          if (!response.ok) throw new Error("Documentation file not found.");
-          return response.text();
-        })
-        .then((text) => {
-          document.getElementById("content").innerHTML = marked.parse(text);
-        })
-        .catch((err) => {
-          document.getElementById("content").innerHTML = `
-                    <h2 style="color: #ff6b6b">Error Loading Documentation</h2>
-                    <p>Could not load the local README.md file.</p>
-                    <p>Technical details: ${err.message}</p>
-                `;
-        });
-    </script>
   </body>
 </html>

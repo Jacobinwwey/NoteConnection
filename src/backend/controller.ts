@@ -5,11 +5,29 @@ import { buildGraph } from '../index';
 export class NoteController {
     static getFolders(kbRoot: string): string[] {
         if (!fs.existsSync(kbRoot)) {
+            console.warn(`[Controller] KB root does not exist: ${kbRoot}`);
             return [];
         }
-        return fs.readdirSync(kbRoot).filter(file => {
-            return fs.statSync(path.join(kbRoot, file)).isDirectory();
-        });
+        
+        try {
+            const subdirs = fs.readdirSync(kbRoot).filter(file => {
+                const fullPath = path.join(kbRoot, file);
+                try {
+                    return fs.statSync(fullPath).isDirectory();
+                } catch (err) {
+                    console.warn(`[Controller] Cannot access ${fullPath}:`, err);
+                    return false;
+                }
+            });
+            
+            // Always include ALL_FOLDERS option
+            // Return subdirectories only (frontend will prepend ALL_FOLDERS)
+            console.log(`[Controller] Found ${subdirs.length} subdirectories in KB root`);
+            return subdirs;
+        } catch (err) {
+            console.error(`[Controller] Error reading KB root:`, err);
+            return [];
+        }
     }
 
     static getContent(targetPath: string, kbRoot: string): string {

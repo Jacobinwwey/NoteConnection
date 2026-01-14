@@ -1,0 +1,294 @@
+{
+  "app": {
+    "name": "NoteConnection",
+    "version": "v1.0.0"
+  },
+  "menu": {
+    "file": {
+      "label": "文件",
+      "changeKB": "更改知识库...",
+      "resetKB": "重置为默认位置",
+      "currentKB": "当前: {name}",
+      "quit": "退出"
+    },
+    "edit": {
+      "label": "编辑"
+    },
+    "view": {
+      "label": "查看"
+    },
+    "window": {
+      "label": "窗口"
+    },
+    "help": {
+      "label": "帮助",
+      "documentation": "文档",
+      "tutorial": "启动教程",
+      "about": "关于"
+    }
+  },
+  "language": {
+    "selector": {
+      "title": "选择您的语言",
+      "description": "为 NoteConnection 选择您偏好的语言",
+      "confirm": "确认"
+    },
+    "english": "English",
+    "chinese": "中文"
+  },
+  "welcome": {
+    "title": "欢迎使用 NoteConnection",
+    "subtitle": "您的知识图谱似乎是空的。",
+    "subtitle2": "让我们开始吧！",
+    "step1": {
+      "title": "1. 选择来源",
+      "description": "使用左上角的下拉菜单从您的 <code>Knowledge_Base</code> 中选择一个文件夹。"
+    },
+    "step2": {
+      "title": "2. 加载图谱",
+      "description": "点击 <span style=\"background: #2c5282; padding: 2px 6px; border-radius: 3px; color: white; font-size: 0.8rem;\">加载</span> 按钮来分析您的笔记。"
+    },
+    "tip": "提示：确保您的 Markdown 文件放置在 <code>Knowledge_Base</code> 目录中。",
+    "needHelp": "需要帮助？",
+    "helpContent": {
+      "intro": "这是完整的入门指南：",
+      "step1": "<strong>步骤 1：</strong> 点击 <strong>文件</strong> 菜单 → <strong>更改知识库</strong> 来选择包含 Markdown 笔记的文件夹。",
+      "step2": "<strong>步骤 2：</strong> 选择后，应用会重新加载。您会在顶部下拉菜单中看到子文件夹列表。",
+      "step3": "<strong>步骤 3：</strong> 选择 <strong>所有文件夹</strong> 来分析所有内容，或选择特定的子文件夹。",
+      "step4": "<strong>步骤 4：</strong> 点击 <strong>加载</strong> 按钮。系统将处理您的笔记并构建知识图谱。",
+      "step5": "<strong>步骤 5：</strong> 加载完成后，探索图谱！双击任意节点进入 <strong>专注模式</strong> 进行详细探索。",
+      "tutorialLink": "想要guided tour吗？ <a href=\"#\" id=\"launch-tutorial-link\">启动交互式教程</a>"
+    }
+  },
+  "source": {
+    "label": "知识库",
+    "allFolders": "所有文件夹",
+    "selectFolder": "选择文件夹...",
+    "loadButton": "加载",
+    "loading": "加载中...",
+    "currentPath": "当前路径: {path}",
+    "refresh": "刷新",
+    "error": {
+      "noFolder": "请先选择一个文件夹。",
+      "loadFailed": "构建失败: {error}"
+    }
+  },
+  "tutorial": {
+    "skip": "跳过教程",
+    "next": "下一步",
+    "prev": "上一步",
+    "finish": "完成",
+    "progress": "第 {current} 步，共 {total} 步",
+    "steps": {
+      "welcome": {
+        "title": "欢迎使用 NoteConnection！",
+        "content": "本教程将引导您了解关键功能。您可以随时跳过或从帮助菜单重新启动。"
+      },
+      "kbSelection": {
+        "title": "知识库选择",
+        "content": "使用<strong>此下拉菜单</strong>选择要分析的文件夹（或子文件夹）。选择<em>所有文件夹</em>以包含所有内容。"
+      },
+      "loadButton": {
+        "title": "加载您的图谱",
+        "content": "选择来源后，点击<strong>加载</strong>按钮处理您的笔记。系统将分析关系并构建您的知识图谱。"
+      },
+      "analysis": {
+        "title": "分析界面",
+        "content": "<strong>分析面板</strong>显示节点统计信息，如度中心性。点击任何行以在图中高亮显示该节点。非常适合识别关键概念！"
+      },
+      "focusMode": {
+        "title": "专注模式",
+        "content": "<strong>双击任意节点</strong>进入专注模式。这会隔离选定的概念及其直接连接。使用滑块调整间距。双击背景退出。"
+      },
+      "controls": {
+        "title": "导航与控制",
+        "content": "使用<strong>鼠标滚轮</strong>缩放，<strong>点击拖动</strong>平移。设置面板（⚙️）允许您自定义物理、渲染和视觉选项。试试<strong>冻结布局</strong>按钮（❄️）停止节点移动！"
+      }
+    }
+  },
+  "settings": {
+    "title": "可视化设置",
+    "language": {
+      "label": "语言",
+      "description": "选择您偏好的语言"
+    },
+    "groups": {
+      "general": "常规",
+      "physics": "物理引擎",
+      "performance": "性能优化",
+      "visuals": "视觉效果"
+    },
+    "labels": {
+      "language": "语言",
+      "repulsion": "排斥力强度",
+      "distance": "链接距离",
+      "collision": "碰撞半径",
+      "maxWorkers": "最大工作线程 (内存)",
+      "gpu": "启用 GPU 加速",
+      "memorySaving": "大文件内存节省策略",
+      "compactMode": "紧凑模式 (隐藏边)",
+      "staticMode": "静态模式",
+      "gpuRendering": "GPU 布局优化 (Beta)",
+      "deepDebug": "深度调试模式"
+    },
+    "descriptions": {
+      "workers": "如果 Node.js 内存不足，请降低此值。",
+      "gpu": "使用 GPU 进行相似度计算（需要重新加载页面）。",
+      "memorySaving": "使用低精度策略防止大文件 OOM。",
+      "compactMode": "默认不加载/渲染边以提高 >5k 节点的性能。",
+      "staticMode": "构建后立即停止模拟。图谱不会移动。",
+      "gpuRendering": "将布局计算卸载到 GPU（AMD Radeon 7900XT 或兼容GPU，低于 2k 节点可能更慢）。",
+      "deepDebug": "在构建期间启用详细日志。"
+    },
+    "save": "保存",
+    "cancel": "取消",
+    "reset": "重置为默认",
+    "close": "关闭"
+  },
+  "dialogs": {
+    "kbChange": {
+      "title": "选择知识库文件夹",
+      "buttonLabel": "选择",
+      "success": {
+        "title": "知识库已更改",
+        "message": "知识库已更新为:\n{path}",
+        "detail": "应用程序将重新加载以应用更改。"
+      }
+    },
+    "kbReset": {
+      "title": "重置知识库",
+      "message": "重置为默认知识库位置？",
+      "detail": "默认: {path}",
+      "confirm": "重置",
+      "cancel": "取消"
+    },
+    "firstRun": {
+      "title": "欢迎使用 NoteConnection",
+      "message": "知识库设置",
+      "detail": "您想选择知识库文件夹吗？\n\n默认: {path}",
+      "selectFolder": "选择文件夹",
+      "useDefault": "使用默认",
+      "cancel": "取消"
+    },
+    "about": {
+      "title": "关于 NoteConnection",
+      "message": "NoteConnection v1.0.0",
+      "detail": "知识库: {path}\n\n开发者: Jacob\nGitHub: https://github.com/Jacobinwwey"
+    }
+  },
+  "help": {
+    "quickStart": {
+      "title": "快速入门指南",
+      "dontShowAgain": "不再显示",
+      "loading": "加载中...",
+      "navigation": "导航",
+      "focusMode": "专注模式",
+      "controls": "控制"
+    }
+  },
+  "notifications": {
+    "buildSuccess": "构建成功！重新加载界面...",
+    "buildFailed": "构建失败。请检查您的知识库路径。",
+    "noData": "无可用数据。请先加载知识库。"
+  },
+  "nodes": "节点",
+  "edges": "边",
+  "show_all": "显示全部",
+  "show_in": "仅入度",
+  "show_out": "仅出度",
+  "degree_basis": "度数基准",
+  "all": "全部",
+  "in": "入度",
+  "out": "出度",
+  "color_by": "着色依据",
+  "degree": "度数",
+  "cluster": "聚类",
+  "size_by": "大小依据",
+  "uniform": "统一",
+  "centrality": "中心性",
+  "label_opacity": "标签不透明度",
+  "search_placeholder": "搜索节点...",
+  "renderer": "渲染器",
+  "layout": "布局",
+  "layout_force": "力导向",
+  "layout_dag": "DAG (层级)",
+  "simulation": "模拟",
+  "freeze_layout": "冻结布局",
+  "speed": "速度 (阻尼)",
+  "min_degree": "最小度数",
+  "show_orphans": "显示孤立节点",
+  "export_image": "导出图像",
+  "save_layout": "保存布局 (JSON)",
+  "analysis_export": "分析 & 导出",
+  "open_content": "查看具体内容",
+  "exit_focus": "退出专注模式",
+  "analysis_title": "度数分析",
+  "filter_strategy": "筛选策略",
+  "strat_top": "前 X% (按度数)",
+  "strat_min": "最小度数 > X",
+  "cluster_filter": "聚类筛选",
+  "cluster_all": "所有聚类",
+  "threshold": "阈值",
+  "selected": "已选",
+  "export_json": "JSON",
+  "export_zip": "ZIP (MD)",
+  "filtered_nodes": "过滤后的节点",
+  "th_name": "名称",
+  "th_cluster": "聚类",
+  "th_in": "入度",
+  "th_out": "出度",
+  "th_total": "总计",
+  "back": "返回",
+  "inbound_rels": "入度 (帮助理解)",
+  "outbound_rels": "出度 (进一步探索)",
+  "settings_title": "可视化设置",
+  "grp_general": "常规",
+  "grp_physics": "物理引擎",
+  "grp_performance": "性能优化",
+  "grp_visuals": "视觉效果",
+  "grp_reading": "阅读",
+  "lbl_language": "语言",
+  "lbl_repulsion": "排斥力强度",
+  "lbl_distance": "链接距离",
+  "lbl_collision": "碰撞半径",
+  "lbl_max_workers": "最大工作线程 (内存)",
+  "lbl_gpu": "启用 GPU 加速",
+  "lbl_memory_saving": "大文件内存节省策略",
+  "lbl_compact_mode": "紧凑模式 (隐藏边)",
+  "lbl_static_mode": "静态模式",
+  "lbl_gpu_rendering": "GPU 布局优化 (Beta)",
+  "lbl_deep_debug": "深度调试模式",
+  "lbl_opacity": "边透明度",
+  "lbl_reading_mode": "打开模式",
+  "desc_workers": "如果 Node.js 内存不足，请降低此值。",
+  "desc_gpu": "使用 GPU 进行相似度计算（需要重新加载页面）。",
+  "desc_memory_saving": "使用低精度策略防止大文件 OOM。",
+  "desc_compact_mode": "默认不加载/渲染边以提高 >5k 节点的性能。",
+  "desc_static_mode": "2秒后停止模拟。推荐用于大图谱。",
+  "desc_gpu_rendering": "启用 AMD GPU 加速用于加载和定位。",
+  "desc_deep_debug": "启用调试的详细日志。",
+  "opt_window": "窗口",
+  "opt_fullscreen": "全屏",
+  "btn_reset": "重置",
+  "btn_done": "完成",
+  "btn_got_it": "知道了!",
+  "dont_show_again": "不再显示",
+  "manual": {
+    "loading": "正在加载文档...",
+    "error": "加载文档时出错",
+    "errorDetail": "无法加载 User_Manual.md 或 README.md。",
+    "technicalDetail": "技术细节: {error}",
+    "close": "关闭"
+  },
+  "btn_settings": "设置",
+  "manual_title": "快速入门指南",
+  "manual_step1_title": "1. 加载知识库",
+  "manual_step1_desc": "从左上角的下拉菜单中选择一个文件夹，然后点击“加载”以可视化您的笔记。",
+  "manual_step2_title": "2. 导航",
+  "manual_step2_desc": "• <strong>平移/缩放</strong>：拖动背景以移动，滚动/捏合以缩放。<br />• <strong>检查</strong>：点击（移动端）或悬停（PC）节点以查看连接。",
+  "manual_step3_title": "3. 专注模式",
+  "manual_step3_desc": "<strong>双击</strong>任意节点进入专注模式。这将隔离该概念并按层级排列其依赖项。",
+  "manual_step4_title": "4. 控制",
+  "manual_step4_desc": "• <strong>冻结 (❄️)</strong>：停止移动以便轻松点击/阅读节点。<br />• <strong>布局</strong>：在侧面板中切换“力导向”（聚类）和“DAG”（树状）布局。",
+  "btn_got_it": "明白了！"
+}

@@ -72,25 +72,57 @@ function copyDir(src, dest) {
 try {
     copyDir(src, dest);
     
-    // Copy README.md and User_Manual.md for offline docs
+    // Copy locale files for i18n support
+    const localesSrc = path.join(src, 'locales');
+    const localesDest = path.join(dest, 'locales');
+    if (fs.existsSync(localesSrc)) {
+        console.log('\\n📁 Copying locale files...');
+        copyDir(localesSrc, localesDest);
+        console.log('  ✓ Locale files copied');
+    }
+    
+    // Copy README.md for offline docs fallback
     const readmeSrc = path.join(__dirname, '../README.md');
     const readmeDest = path.join(dest, 'README.md');
     if (fs.existsSync(readmeSrc)) {
          fs.copyFileSync(readmeSrc, readmeDest);
-         console.log(`README.md copied to ${readmeDest}`);
+         console.log('  ✓ README.md copied');
     }
 
-    const manualSrc = path.join(__dirname, '../User_Manual.md');
+    // Copy User Manual (English) - PRIMARY offline documentation
+    const manualSrc = path.join(src, 'User_Manual.md');
     const manualDest = path.join(dest, 'User_Manual.md');
     if (fs.existsSync(manualSrc)) {
          fs.copyFileSync(manualSrc, manualDest);
-         console.log(`User_Manual.md copied to ${manualDest}`);
+         console.log('  ✓ User_Manual.md (English) copied');
     } else {
-        console.warn('User_Manual.md not found.');
+        console.warn('  ⚠️  User_Manual.md not found in src/frontend');
+        
+        // Fallback: Try root directory
+        const manualRootSrc = path.join(__dirname, '../User_Manual.md');
+        if (fs.existsSync(manualRootSrc)) {
+            fs.copyFileSync(manualRootSrc, manualDest);
+            console.log('  ✓ User_Manual.md copied from root');
+        }
+    }
+    
+    // Copy User Manual (Chinese) - For Chinese language support
+    const manualZhSrc = path.join(src, 'User_Manual_zh.md');
+    const manualZhDest = path.join(dest, 'User_Manual_zh.md');
+    if (fs.existsSync(manualZhSrc)) {
+         fs.copyFileSync(manualZhSrc, manualZhDest);
+         console.log('  ✓ User_Manual_zh.md (Chinese) copied');
+    } else {
+        console.warn('  ⚠️  User_Manual_zh.md not found');
     }
 
-    console.log(`Assets copied from ${src} to ${dest}`);
+    console.log(`\\n✅ Assets copied from ${src} to ${dest}`);
+    console.log(`\\n📊 Build Summary:`);
+    console.log(`  - Mode: ${isMiniMode ? 'MINI' : 'FULL'}`);
+    console.log(`  - i18n: Locale files included`);
+    console.log(`  - Docs: User manuals (EN + ZH) included`);
+    console.log(`  - Tutorial: CSS and scripts included`);
 } catch (e) {
-    console.error('Error copying assets:', e);
+    console.error('❌ Error copying assets:', e);
     process.exit(1);
 }

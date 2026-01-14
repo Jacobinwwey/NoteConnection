@@ -1,0 +1,294 @@
+{
+  "app": {
+    "name": "NoteConnection",
+    "version": "v1.0.0"
+  },
+  "menu": {
+    "file": {
+      "label": "File",
+      "changeKB": "Change Knowledge Base...",
+      "resetKB": "Reset to Default Location",
+      "currentKB": "Current: {name}",
+      "quit": "Quit"
+    },
+    "edit": {
+      "label": "Edit"
+    },
+    "view": {
+      "label": "View"
+    },
+    "window": {
+      "label": "Window"
+    },
+    "help": {
+      "label": "Help",
+      "documentation": "Documentation",
+      "tutorial": "Launch Tutorial",
+      "about": "About"
+    }
+  },
+  "language": {
+    "selector": {
+      "title": "Select Your Language",
+      "description": "Choose your preferred language for NoteConnection",
+      "confirm": "Confirm"
+    },
+    "english": "English",
+    "chinese": "中文"
+  },
+  "welcome": {
+    "title": "Welcome to NoteConnection",
+    "subtitle": "It looks like your Knowledge Graph is empty.",
+    "subtitle2": "Let's get you started!",
+    "step1": {
+      "title": "1. Select Source",
+      "description": "Use the dropdown in the top-left corner to choose a folder from your <code>Knowledge_Base</code>."
+    },
+    "step2": {
+      "title": "2. Load Graph",
+      "description": "Click the <span style=\"background: #2c5282; padding: 2px 6px; border-radius: 3px; color: white; font-size: 0.8rem;\">Load</span> button to analyze your notes."
+    },
+    "tip": "Tip: Ensure your Markdown files are placed in the <code>Knowledge_Base</code> directory.",
+    "needHelp": "Need Help?",
+    "helpContent": {
+      "intro": "Here's a complete guide to get started:",
+      "step1": "<strong>Step 1:</strong> Click the <strong>File</strong> menu → <strong>Change Knowledge Base</strong> to select the folder containing your Markdown notes.",
+      "step2": "<strong>Step 2:</strong> After selecting, the app will reload. You'll see subfolders listed in the dropdown at the top.",
+      "step3": "<strong>Step 3:</strong> Choose <strong>All Folders</strong> to analyze everything, or select a specific subfolder.",
+      "step4": "<strong>Step 4:</strong> Click the <strong>Load</strong> button. The system will process your notes and build the knowledge graph.",
+      "step5": "<strong>Step 5:</strong> Once loaded, explore the graph! Double-click any node to enter <strong>Focus Mode</strong> for detailed exploration.",
+      "tutorialLink": "Want a guided tour? <a href=\"#\" id=\"launch-tutorial-link\">Launch the interactive tutorial</a>"
+    }
+  },
+  "source": {
+    "label": "Knowledge Base",
+    "allFolders": "All Folders",
+    "selectFolder": "Select a folder...",
+    "loadButton": "Load",
+    "loading": "Loading...",
+    "currentPath": "Current Path: {path}",
+    "refresh": "Refresh",
+    "error": {
+      "noFolder": "Please select a folder first.",
+      "loadFailed": "Build Failed: {error}"
+    }
+  },
+  "tutorial": {
+    "skip": "Skip Tutorial",
+    "next": "Next",
+    "prev": "Previous",
+    "finish": "Finish",
+    "progress": "Step {current} of {total}",
+    "steps": {
+      "welcome": {
+        "title": "Welcome to NoteConnection!",
+        "content": "This tutorial will guide you through the key features. You can skip at any time or restart from the Help menu."
+      },
+      "kbSelection": {
+        "title": "Knowledge Base Selection",
+        "content": "Use the <strong>dropdown menu</strong> here to select which folder (or subfolder) you want to analyze. Choose <em>All Folders</em> to include everything."
+      },
+      "loadButton": {
+        "title": "Load Your Graph",
+        "content": "Once you've selected a source, click the <strong>Load</strong> button to process your notes. The system will analyze relationships and build your knowledge graph."
+      },
+      "analysis": {
+        "title": "Analysis Interface",
+        "content": "The <strong>Analysis Panel</strong> shows node statistics like degree centrality. Click any row to highlight that node in the graph. Perfect for identifying key concepts!"
+      },
+      "focusMode": {
+        "title": "Focus Mode",
+        "content": "<strong>Double-click any node</strong> to enter Focus Mode. This isolates the selected concept and its immediate connections. Use the sliders to adjust spacing. Double-click the background to exit."
+      },
+      "controls": {
+        "title": "Navigation & Controls",
+        "content": "Use <strong>mouse wheel</strong> to zoom, <strong>click and drag</strong> to pan. The settings panel (⚙️) lets you customize physics, rendering, and visual options. Try the <strong>Freeze Layout</strong> button (❄️) to stop node movement!"
+      }
+    }
+  },
+  "settings": {
+    "title": "Visualization Settings",
+    "language": {
+      "label": "Language",
+      "description": "Select your preferred language"
+    },
+    "groups": {
+      "general": "General",
+      "physics": "Physics",
+      "performance": "Performance",
+      "visuals": "Visuals"
+    },
+    "labels": {
+      "language": "Language",
+      "repulsion": "Repulsion Strength",
+      "distance": "Link Distance",
+      "collision": "Collision Radius",
+      "maxWorkers": "Max Workers (Memory)",
+      "gpu": "Enable GPU Acceleration",
+      "memorySaving": "Large File Memory Saving Strategy",
+      "compactMode": "Compact Mode (Hide Edges)",
+      "staticMode": "Static Mode",
+      "gpuRendering": "GPU Layout Optimization (Beta)",
+      "deepDebug": "Deep Debug Mode"
+    },
+    "descriptions": {
+      "workers": "Lower this if Node.js runs out of memory.",
+      "gpu": "Use GPU for similarity calculation (Requires page reload).",
+      "memorySaving": "Use lower precision strategies to prevent OOM on large files.",
+      "compactMode": "Don't load/render edges by default to improve performance for >5k nodes.",
+      "staticMode": "Stop simulation immediately after build. Graph won't move.",
+      "gpuRendering": "Offload layout calculations to GPU (AMD Radeon 7900XT or compatible, may be slower for <2k nodes).",
+      "deepDebug": "Enable verbose logging during build."
+    },
+    "save": "Save",
+    "cancel": "Cancel",
+    "reset": "Reset to Defaults",
+    "close": "Close"
+  },
+  "dialogs": {
+    "kbChange": {
+      "title": "Select Knowledge Base Folder",
+      "buttonLabel": "Select",
+      "success": {
+        "title": "Knowledge Base Changed",
+        "message": "Knowledge Base updated to:\n{path}",
+        "detail": "The application will reload to apply changes."
+      }
+    },
+    "kbReset": {
+      "title": "Reset Knowledge Base",
+      "message": "Reset to default knowledge base location?",
+      "detail": "Default: {path}",
+      "confirm": "Reset",
+      "cancel": "Cancel"
+    },
+    "firstRun": {
+      "title": "Welcome to NoteConnection",
+      "message": "Knowledge Base Setup",
+      "detail": "Would you like to select your knowledge base folder?\n\nDefault: {path}",
+      "selectFolder": "Select Folder",
+      "useDefault": "Use Default",
+      "cancel": "Cancel"
+    },
+    "about": {
+      "title": "About NoteConnection",
+      "message": "NoteConnection v1.0.0",
+      "detail": "Knowledge Base: {path}\n\nDeveloped by Jacob\nGitHub: https://github.com/Jacobinwwey"
+    }
+  },
+  "help": {
+    "quickStart": {
+      "title": "Quick Start Guide",
+      "dontShowAgain": "Don't show again",
+      "loading": "Loading...",
+      "navigation": "Navigation",
+      "focusMode": "Focus Mode",
+      "controls": "Controls"
+    }
+  },
+  "nodes": "Nodes",
+  "edges": "Edges",
+  "show_all": "Show All",
+  "show_in": "Incoming Only",
+  "show_out": "Outgoing Only",
+  "degree_basis": "Degree Basis",
+  "all": "All",
+  "in": "In",
+  "out": "Out",
+  "color_by": "Color By",
+  "degree": "Degree",
+  "cluster": "Cluster",
+  "size_by": "Size By",
+  "uniform": "Uniform",
+  "centrality": "Centrality",
+  "label_opacity": "Label Opacity",
+  "search_placeholder": "Search node...",
+  "renderer": "Renderer",
+  "layout": "Layout",
+  "layout_force": "Force",
+  "layout_dag": "DAG (Hierarchical)",
+  "simulation": "Simulation",
+  "freeze_layout": "Freeze Layout",
+  "speed": "Speed (Damping)",
+  "min_degree": "Min Degree",
+  "show_orphans": "Show Orphans",
+  "export_image": "Export Image",
+  "save_layout": "Save Layout (JSON)",
+  "analysis_export": "Analysis & Export",
+  "open_content": "Specific Content",
+  "exit_focus": "Exit Focus Mode",
+  "analysis_title": "Degree Analysis",
+  "filter_strategy": "Filter Strategy",
+  "strat_top": "Top X% (by Degree)",
+  "strat_min": "Min Degree > X",
+  "cluster_filter": "Cluster Filter",
+  "cluster_all": "All Clusters",
+  "threshold": "Threshold",
+  "selected": "Selected",
+  "export_json": "JSON",
+  "export_zip": "ZIP (MD)",
+  "filtered_nodes": "Filtered Nodes",
+  "th_name": "Name",
+  "th_cluster": "Cluster",
+  "th_in": "In",
+  "th_out": "Out",
+  "th_total": "Total",
+  "back": "Back",
+  "inbound_rels": "Inbound (Helping to understand)",
+  "outbound_rels": "Outbound (Further exploration)",
+  "settings_title": "Visualization Settings",
+  "grp_general": "General",
+  "grp_physics": "Physics",
+  "grp_performance": "Performance",
+  "grp_visuals": "Visuals",
+  "grp_reading": "Reading",
+  "lbl_language": "Language",
+  "lbl_repulsion": "Repulsion Strength",
+  "lbl_distance": "Link Distance",
+  "lbl_collision": "Collision Radius",
+  "lbl_max_workers": "Max Workers (Memory)",
+  "lbl_gpu": "Enable GPU Acceleration",
+  "lbl_memory_saving": "Large File Memory Saving Strategy",
+  "lbl_compact_mode": "Compact Mode (Hide Edges)",
+  "lbl_static_mode": "Static Mode",
+  "lbl_gpu_rendering": "GPU Layout Optimization (Beta)",
+  "lbl_deep_debug": "Deep Debug Mode",
+  "lbl_opacity": "Edge Opacity",
+  "lbl_reading_mode": "Open Mode",
+  "desc_workers": "Lower this if Node.js runs out of memory.",
+  "desc_gpu": "Use GPU for similarity calculation (Requires page reload).",
+  "desc_memory_saving": "Use lower precision strategies to prevent OOM on large files.",
+  "desc_compact_mode": "Don't load/render edges by default to improve performance for >5k nodes.",
+  "desc_static_mode": "Stop simulation after 2 seconds. Recommended for large graphs.",
+  "desc_gpu_rendering": "Enable AMDGPU acceleration for loading and positioning.",
+  "desc_deep_debug": "Enable detailed logging for debugging.",
+  "opt_window": "Window",
+  "opt_fullscreen": "Full Screen",
+  "btn_reset": "Reset",
+  "btn_done": "Done",
+  "btn_got_it": "Got it!",
+  "dont_show_again": "Don't show again",
+  "notifications": {
+    "buildSuccess": "Build Success! Reloading interface...",
+    "buildFailed": "Build failed. Please check your knowledge base path.",
+    "noData": "No data available. Please load a knowledge base first."
+  },
+  "manual": {
+    "loading": "Loading documentation...",
+    "error": "Error Loading Documentation",
+    "errorDetail": "Could not load User_Manual.md or README.md.",
+    "technicalDetail": "Technical details: {error}",
+    "close": "Close"
+  },
+  "btn_settings": "Settings",
+  "manual_title": "Quick Start Guide",
+  "manual_step1_title": "1. Load Knowledge Base",
+  "manual_step1_desc": "Select a folder from the dropdown (top-left) and click \"Load\" to visualize your notes.",
+  "manual_step2_title": "2. Navigation",
+  "manual_step2_desc": "• <strong>Pan/Zoom</strong>: Drag background to move, Scroll/Pinch to zoom.<br />• <strong>Inspect</strong>: Click (Mobile) or Hover (PC) a node to see connections.",
+  "manual_step3_title": "3. Focus Mode",
+  "manual_step3_desc": "<strong>Double Click</strong> a node to enter Focus Mode. This isolates the concept and arranges its dependencies hierarchically.",
+  "manual_step4_title": "4. Controls",
+  "manual_step4_desc": "• <strong>Freeze (❄️)</strong>: Stop movement to easily click/read nodes.<br />• <strong>Layout</strong>: Switch between \"Force\" (Cluster) and \"DAG\" (Tree) layouts in the side panel.",
+  "btn_got_it": "Got it!"
+}

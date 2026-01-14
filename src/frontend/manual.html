@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data:;">
-    <title>NoteConnection User Manual</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:;">
+    <title data-i18n="manual.title">NoteConnection User Manual</title>
     <style>
       body {
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -81,31 +81,55 @@
         background: #3182ce;
       }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Load offline marked.js library -->
+    <script src="libs/marked.min.js"></script>
   </head>
   <body>
-    <button class="back-btn" onclick="window.close()">Close</button>
-    <div id="content">Loading documentation...</div>
+    <button class="back-btn" onclick="window.close()" data-i18n="manual.close">Close</button>
+    <div id="content" data-i18n="manual.loading">Loading documentation...</div>
 
     <script>
-      fetch("User_Manual.md")
+      // Detect user language (check localStorage or default to 'en')
+      let userLang = 'en';
+      try {
+        userLang = localStorage.getItem('user_language') || 'en';
+      } catch (e) {
+        console.warn('Could not access localStorage:', e);
+      }
+
+      // Select manual file based on language
+      const manualFile = userLang === 'zh' ? 'User_Manual_zh.md' : 'User_Manual.md';
+
+      fetch(manualFile)
         .then((response) => {
           if (response.ok) return response.text();
-          // Fallback to README if Manual not found
-          console.warn("User_Manual.md not found, trying README.md");
+          // Fallback to README if User_Manual not found
+          console.warn(`${manualFile} not found, trying README.md`);
           return fetch("README.md").then(res => {
               if(!res.ok) throw new Error("Documentation files not found.");
               return res.text();
           });
         })
         .then((text) => {
-          document.getElementById("content").innerHTML = marked.parse(text);
+          // Use marked to parse markdown
+          if (typeof marked !== 'undefined' && marked.marked) {
+            document.getElementById("content").innerHTML = marked.marked(text);
+          } else if (typeof marked !== 'undefined' && marked.parse) {
+            document.getElementById("content").innerHTML = marked.parse(text);
+          } else {
+            // If marked isn't loaded, just display as plain text
+            document.getElementById("content").textContent = text;
+          }
         })
         .catch((err) => {
+          const errorTitle = userLang === 'zh' ? '加载文档时出错' : 'Error Loading Documentation';
+          const errorMsg = userLang === 'zh' ? '无法加载 User_Manual.md 或 README.md。' : 'Could not load User_Manual.md or README.md.';
+          const techDetail = userLang === 'zh' ? '技术细节' : 'Technical details';
+          
           document.getElementById("content").innerHTML = `
-                    <h2 style="color: #ff6b6b">Error Loading Documentation</h2>
-                    <p>Could not load User_Manual.md or README.md.</p>
-                    <p>Technical details: ${err.message}</p>
+                    <h2 style="color: #ff6b6b">${errorTitle}</h2>
+                    <p>${errorMsg}</p>
+                    <p>${techDetail}: ${err.message}</p>
                 `;
         });
     </script>

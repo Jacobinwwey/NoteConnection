@@ -40,15 +40,52 @@ function loadKbPath(): string {
     return DEFAULT_KB_PATH;
 }
 
-// Save knowledge base path
-function saveKbPath(kbPath: string): void {
+// Save knowledge base path and language
+function saveKbPath(kbPath: string, language?: string): void {
     try {
-        const config = { knowledgeBasePath: kbPath };
+        // Load existing config to preserve language if not updating
+        let existingConfig: any = {};
+        if (fs.existsSync(configPath)) {
+            existingConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        }
+        
+        const config = {
+            knowledgeBasePath: kbPath,
+            userLanguage: language !== undefined ? language : existingConfig.userLanguage
+        };
         fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
         log(`Saved KB path to config: ${kbPath}`);
     } catch (e) {
         log(`Failed to save KB config: ${e}`);
     }
+}
+
+// Save user language preference
+function saveLanguage(language: string): void {
+    try {
+        let config: any = {};
+        if (fs.existsSync(configPath)) {
+            config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        }
+        config.userLanguage = language;
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+        log( `Saved user language: ${language}`);
+    } catch (e) {
+        log(`Failed to save language: ${e}`);
+    }
+}
+
+// Load user language preference
+function loadLanguage(): string | null {
+    try {
+        if (fs.existsSync(configPath)) {
+            const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+            return config.userLanguage || null;
+        }
+    } catch (e) {
+        log(`Failed to load language: ${e}`);
+    }
+    return null;
 }
 
 // Show first-run setup dialog if no configuration exists
@@ -317,6 +354,16 @@ app.whenReady().then(async () => {
             }
         };
         return await NoteController.triggerBuild(buildOpts);
+    });
+
+    // Language management IPC handlers
+    ipcMain.handle('getUserLanguage', async () => {
+        return loadLanguage();
+    });
+
+    ipcMain.handle('setUserLanguage', async (event, language: string) => {
+        saveLanguage(language);
+        return language;
     });
 
     createWindow();
