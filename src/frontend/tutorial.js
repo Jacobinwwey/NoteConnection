@@ -229,7 +229,31 @@ class TutorialManager {
             this.dialog = null;
         }
         // Remove all spotlights
-        document.querySelectorAll('.tutorial-spotlight').forEach(el => el.classList.remove('tutorial-spotlight'));
+        this.clearSpotlights();
+    }
+
+    /**
+     * Helper to remove spotlight classes and restore original styles
+     */
+    clearSpotlights() {
+        document.querySelectorAll('.tutorial-spotlight').forEach(el => {
+            el.classList.remove('tutorial-spotlight');
+            
+            // Restore original styles
+            if (el.dataset.originalPosition !== undefined) {
+                el.style.position = el.dataset.originalPosition;
+                delete el.dataset.originalPosition;
+            } else {
+                el.style.position = '';
+            }
+
+            if (el.dataset.originalZIndex !== undefined) {
+                el.style.zIndex = el.dataset.originalZIndex;
+                delete el.dataset.originalZIndex;
+            } else {
+                el.style.zIndex = '';
+            }
+        });
     }
 
     /**
@@ -252,15 +276,15 @@ class TutorialManager {
         }
 
         // Remove previous spotlights
-        document.querySelectorAll('.tutorial-spotlight').forEach(el => {
-            el.classList.remove('tutorial-spotlight');
-            el.style.position = '';
-            el.style.zIndex = '';
-        });
+        this.clearSpotlights();
 
         // Highlight target element
         const targetEl = step.target ? document.querySelector(step.target) : null;
         if (targetEl) {
+            // Save original styles
+            targetEl.dataset.originalPosition = targetEl.style.position;
+            targetEl.dataset.originalZIndex = targetEl.style.zIndex;
+            
             targetEl.classList.add('tutorial-spotlight');
             targetEl.style.position = 'relative';
             targetEl.style.zIndex = '9000';

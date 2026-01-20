@@ -1,9 +1,12 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:;">
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:;"
+    />
     <title>NoteConnection Knowledge Graph</title>
     <link
       rel="icon"
@@ -12,7 +15,7 @@
     <link rel="stylesheet" href="styles.css" />
     <!-- Local Dependencies (Fully Offline) -->
     <script src="libs/d3.v7.min.js"></script>
-    
+
     <!-- Local Dependencies -->
     <script src="libs/jszip.min.js"></script>
     <!-- Reading Mode Dependencies -->
@@ -71,7 +74,21 @@
       </div>
 
       <div id="controls">
-        <h3>NoteConnection</h3>
+        <h3
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
+        >
+          NoteConnection
+          <span
+            id="btn-toggle-controls"
+            style="cursor: pointer; font-size: 0.8rem; padding: 0 5px"
+            title="Toggle Panel"
+            >▼</span
+          >
+        </h3>
         <div class="stats" style="display: flex; align-items: center">
           <span
             ><span data-i18n="nodes">Nodes:</span>
@@ -188,15 +205,27 @@
           />
         </div>
 
-        <div class="search-box" style="display: flex; gap: 5px;">
+        <div class="search-box" style="display: flex; gap: 5px">
           <input
             type="text"
             id="search-input"
             placeholder="Search node..."
             data-i18n-placeholder="search_placeholder"
-            style="flex: 1;"
+            style="flex: 1"
           />
-          <button id="btn-random-focus" style="background: #333; color: white; border: 1px solid #555; cursor: pointer; padding: 0 8px;" title="Random Exploration">🎲</button>
+          <button
+            id="btn-random-focus"
+            style="
+              background: #333;
+              color: white;
+              border: 1px solid #555;
+              cursor: pointer;
+              padding: 0 8px;
+            "
+            title="Random Exploration"
+          >
+            🎲
+          </button>
         </div>
 
         <div
@@ -1120,7 +1149,7 @@
     <script src="i18n.js"></script>
     <script src="language_selector.js"></script>
     <script src="tutorial.js"></script>
-    
+
     <!-- Application Scripts -->
     <script src="settings.js"></script>
     <script src="reader.js"></script>

@@ -3106,3 +3106,18 @@ if (btnHelp && manualModal) {
     }
 }
 
+// 3. Controls Toggle (v1.0.1)
+const btnToggleControls = document.getElementById('btn-toggle-controls');
+const controlsPanelToggleTarget = document.getElementById('controls');
+
+if (btnToggleControls && controlsPanelToggleTarget) {
+    btnToggleControls.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent bubbling
+        controlsPanelToggleTarget.classList.toggle('collapsed');
+        
+        // Save state if needed (optional)
+        // const isCollapsed = controlsPanelEl.classList.contains('collapsed');
+        // localStorage.setItem('controls_collapsed', isCollapsed);
+    });
+}
+

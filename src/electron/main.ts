@@ -140,19 +140,49 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } }
 ]);
 
-// Update menu with current KB path
-function updateMenu() {
+// Menu Localization
+const menuTranslations: { [key: string]: any } = {
+    'en': {
+        'file': 'File',
+        'changeKB': 'Change Knowledge Base...',
+        'resetKB': 'Reset to Default Location',
+        'quit': 'Quit',
+        'edit': 'Edit',
+        'view': 'View',
+        'window': 'Window',
+        'help': 'Help',
+        'documentation': 'Documentation',
+        'about': 'About'
+    },
+    'zh': {
+        'file': '文件',
+        'changeKB': '更改知识库...',
+        'resetKB': '重置为默认位置',
+        'quit': '退出',
+        'edit': '编辑',
+        'view': '视图',
+        'window': '窗口',
+        'help': '帮助',
+        'documentation': '文档',
+        'about': '关于'
+    }
+};
+
+// Update menu with current KB path and Language
+function updateMenu(language: string = 'en') {
+  const t = menuTranslations[language] || menuTranslations['en'];
+  
   const menuTemplate: Electron.MenuItemConstructorOptions[] = [
     {
-      label: 'File',
+      label: t['file'],
       submenu: [
         {
-          label: 'Change Knowledge Base...',
+          label: t['changeKB'],
           accelerator: 'CmdOrCtrl+O',
           click: async () => {
              const result = await dialog.showOpenDialog(mainWindow!, {
                 properties: ['openDirectory', 'createDirectory'],
-                title: 'Select Knowledge Base Folder',
+                title: t['changeKB'],
                 defaultPath: currentKbRoot,
                 buttonLabel: 'Select'
              });
@@ -161,7 +191,6 @@ function updateMenu() {
                  saveKbPath(currentKbRoot);
                  log(`Changed Knowledge Base to: ${currentKbRoot}`);
                  
-                 // Show confirmation and reload
                  dialog.showMessageBox(mainWindow!, {
                      type: 'info',
                      title: 'Knowledge Base Changed',
@@ -175,7 +204,7 @@ function updateMenu() {
           }
         },
         {
-          label: 'Reset to Default Location',
+          label: t['resetKB'],
           click: async () => {
               const response = await dialog.showMessageBox(mainWindow!, {
                   type: 'question',
@@ -190,7 +219,6 @@ function updateMenu() {
               if (response.response === 0) {
                   currentKbRoot = DEFAULT_KB_PATH;
                   saveKbPath(currentKbRoot);
-                  log(`Reset Knowledge Base to default: ${DEFAULT_KB_PATH}`);
                   mainWindow?.reload();
               }
           }
@@ -202,19 +230,19 @@ function updateMenu() {
           sublabel: currentKbRoot
         },
         { type: 'separator' },
-        { role: 'quit' }
+        { role: 'quit', label: t['quit'] }
       ]
     },
-    { role: 'editMenu' },
-    { role: 'viewMenu' },
-    { role: 'windowMenu' },
+    { role: 'editMenu', label: t['edit'] },
+    { role: 'viewMenu', label: t['view'] },
+    { role: 'windowMenu', label: t['window'] },
     {
         role: 'help',
+        label: t['help'],
         submenu: [
             {
-                label: 'Documentation',
+                label: t['documentation'],
                 click: async () => {
-                    // Open offline documentation
                     const helpWindow = new BrowserWindow({
                         width: 1000,
                         height: 800,
@@ -230,12 +258,12 @@ function updateMenu() {
             },
             { type: 'separator' },
             {
-                label: 'About',
+                label: t['about'],
                 click: async () => {
                     dialog.showMessageBox(mainWindow!, {
                         type: 'info',
                         title: 'About NoteConnection',
-                        message: 'NoteConnection v1.0.0',
+                        message: 'NoteConnection v1.0.1',
                         detail: `Knowledge Base: ${currentKbRoot}\n\nDeveloped by Jacob\nGitHub: https://github.com/Jacobinwwey`,
                         buttons: ['OK']
                     });
@@ -267,8 +295,9 @@ const createWindow = async () => {
 
  mainWindow.webContents.openDevTools();
 
-  // Setup Menu with current KB path
-  updateMenu();
+    // Setup Menu with current KB path and Language
+  const lang = loadLanguage() || 'en';
+  updateMenu(lang);
 
   // Load via Custom Protocol
   const startUrl = 'app://./index.html';
@@ -363,6 +392,8 @@ app.whenReady().then(async () => {
 
     ipcMain.handle('setUserLanguage', async (event, language: string) => {
         saveLanguage(language);
+        updateMenu(language); // Immediately update menu
+        log(`Menu language updated to: ${language}`);
         return language;
     });
 
