@@ -1058,20 +1058,25 @@ div.tooltip {
 
 /* Collapsed Controls State - Small Circle */
 #controls.collapsed {
-    width: 40px;
-    height: 40px;
+    width: 45px;
+    height: 45px;
     padding: 0;
     border-radius: 50%;
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer; /* Ensure pointer cursor on the whole circle */
+    background: #2c5282; /* Distinct color when collapsed */
+    border: 2px solid #61dafb;
+    box-shadow: 0 0 15px rgba(97, 218, 251, 0.3);
 }
 
 #controls.collapsed h3 {
     display: none; /* Hide title text */
 }
 
+/* Hide everything else */
 #controls.collapsed .stats,
 #controls.collapsed .filter-controls,
 #controls.collapsed .degree-controls,
@@ -1088,14 +1093,15 @@ div.tooltip {
 }
 
 #controls.collapsed #btn-toggle-controls {
-    font-size: 1.2rem;
-    padding: 0;
-    margin: 0;
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
+    display: none !important; /* Hide the original arrow, we'll use a pseudo-element for the pattern */
+}
+
+/* Add a pattern/icon for the collapsed state */
+#controls.collapsed::after {
+    content: "☰"; /* Hamburger menu or specific icon */
+    font-size: 1.5rem;
+    color: white;
+    font-weight: bold;
 }
 
 #btn-toggle-controls {

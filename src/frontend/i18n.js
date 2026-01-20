@@ -76,6 +76,11 @@ class I18nManager {
             // Notify listeners
             this.notifyListeners(lang);
             
+            // Sync with Backend (Electron) to update Menu
+            if (window.electronAPI && window.electronAPI.setUserLanguage) {
+                window.electronAPI.setUserLanguage(lang);
+            }
+            
             console.log(`[i18n] Language set to: ${lang}`);
         } catch (error) {
             console.error(`[i18n] Error loading language ${lang}:`, error);

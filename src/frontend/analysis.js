@@ -282,6 +282,12 @@ document.addEventListener("DOMContentLoaded", () => {
         // It's better if the histogram reflects the CURRENTLY VIEWED set (filtered by cluster).
         
         // Get nodes filtered ONLY by cluster (ignore threshold for histogram context)
+        // Guard: Check if graphData is available (may not be in MINI mode)
+        if (typeof graphData === 'undefined' || !graphData || !graphData.nodes) {
+            console.warn('[Analysis] graphData not available, skipping histogram render.');
+            return;
+        }
+        
         let contextNodes = graphData.nodes;
         if (AppState.cluster !== 'all') {
             contextNodes = contextNodes.filter(n => n.clusterId === AppState.cluster);

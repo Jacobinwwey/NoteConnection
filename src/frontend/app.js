@@ -3130,14 +3130,33 @@ if (btnHelp && manualModal) {
 const btnToggleControls = document.getElementById('btn-toggle-controls');
 const controlsPanelToggleTarget = document.getElementById('controls');
 
-if (btnToggleControls && controlsPanelToggleTarget) {
-    btnToggleControls.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent bubbling
-        controlsPanelToggleTarget.classList.toggle('collapsed');
+// Toggle Controls Logic
+if (controlsPanelToggleTarget) {
+    const controlsPanel = document.getElementById('controls');
+    
+    const toggleControls = (e) => {
+        // Prevent event bubbling issues
+        e.stopPropagation();
         
-        // Save state if needed (optional)
-        // const isCollapsed = controlsPanelEl.classList.contains('collapsed');
-        // localStorage.setItem('controls_collapsed', isCollapsed);
+        controlsPanel.classList.toggle('collapsed');
+        
+        // Update icon/pattern based on state
+        const isCollapsed = controlsPanel.classList.contains('collapsed');
+        // Use a specific class or check to change content if needed
+        // Currently done via CSS rotation
+        
+        // Save state preference if needed (optional)
+    };
+
+    // The toggle button itself
+    if (btnToggleControls) {
+        btnToggleControls.addEventListener('click', toggleControls);
+    }
+    
+    // Also allow clicking the main panel ONLY when collapsed
+    controlsPanel.addEventListener('click', (e) => {
+        if (controlsPanel.classList.contains('collapsed')) {
+            toggleControls(e);
+        }
     });
 }
-

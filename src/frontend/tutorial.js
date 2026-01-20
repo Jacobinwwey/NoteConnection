@@ -36,13 +36,13 @@ class TutorialManager {
             {
                 id: 'analysis',
                 target: '#analysis-btn',
-                position: 'bottom',
+                position: 'right', // Adjusted position for better visibility
                 beforeShow: () => {
-                    // Highlight the Analysis button, and open panel if clicked
+                    // Highlight the Analysis button, and open panel if NOT already open
                     const btn = document.getElementById('analysis-btn');
-                    if (btn) {
-                        // Temporarily add click handler to open panel
-                        btn.click(); // Open the panel
+                    const panel = document.getElementById('analysis-panel');
+                    if (btn && panel && !panel.classList.contains('open')) {
+                         btn.click();
                     }
                 }
             },
@@ -56,7 +56,13 @@ class TutorialManager {
                 id: 'controls',
                 target: '#btn-open-settings', // Settings button (top right)
                 position: 'left',
-                beforeShow: null
+                beforeShow: () => {
+                    // Ensure visibility of the settings button
+                    const settingsBtn = document.getElementById('btn-open-settings');
+                    if (settingsBtn) {
+                        settingsBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
             },
             {
                 id: 'quickStart',
@@ -243,24 +249,54 @@ class TutorialManager {
      * Helper to remove spotlight classes and restore original styles
      */
     clearSpotlights() {
+        // Restore parent elevation if any
+        const controls = document.getElementById('controls');
+        if (controls && controls.dataset.tutorialTempZ !== undefined) {
+             controls.style.zIndex = controls.dataset.tutorialTempZ;
+             delete controls.dataset.tutorialTempZ;
+        }
+
         document.querySelectorAll('.tutorial-spotlight').forEach(el => {
             el.classList.remove('tutorial-spotlight');
             
             // Restore original styles
             if (el.dataset.originalPosition !== undefined) {
-                el.style.position = el.dataset.originalPosition;
+                el.style.position = el.dataset.originalPosition || '';
                 delete el.dataset.originalPosition;
             } else {
                 el.style.position = '';
             }
 
             if (el.dataset.originalZIndex !== undefined) {
-                el.style.zIndex = el.dataset.originalZIndex;
+                el.style.zIndex = el.dataset.originalZIndex || '';
                 delete el.dataset.originalZIndex;
             } else {
                 el.style.zIndex = '';
             }
+            
+            // Clear any pointer-events override (just in case)
+            el.style.pointerEvents = '';
         });
+        
+        // Also ensure #source-control (dropdown area) is explicitly reset
+        const sourceControl = document.getElementById('source-control');
+        if (sourceControl) {
+            sourceControl.style.position = '';
+            sourceControl.style.zIndex = '';
+            sourceControl.style.pointerEvents = 'auto'; // Force auto
+        }
+        
+        // Ensure dropdown select is functional
+        const folderSelect = document.getElementById('folder-select');
+        if (folderSelect) {
+            folderSelect.style.pointerEvents = 'auto'; // Force auto
+            folderSelect.disabled = false;
+        }
+        
+        const loadBtn = document.getElementById('btn-load-source');
+        if (loadBtn) {
+             loadBtn.style.pointerEvents = 'auto';
+        }
     }
 
     /**
@@ -294,7 +330,21 @@ class TutorialManager {
             
             targetEl.classList.add('tutorial-spotlight');
             targetEl.style.position = 'relative';
+            // targetEl.style.zIndex = '9000'; // CSS handles this now via !important, but keeping for safety? 
+            // Actually, CSS marks it !important, so inline style might be overridden or redundant. 
+            // Let's set it anyway to be sure.
             targetEl.style.zIndex = '9000';
+
+            // Check if target is inside #controls and elevate parent logic
+            const controls = document.getElementById('controls');
+            if (controls && (controls === targetEl || controls.contains(targetEl))) {
+                // Save original
+                if (controls.dataset.tutorialTempZ === undefined) {
+                    controls.dataset.tutorialTempZ = controls.style.zIndex || getComputedStyle(controls).zIndex;
+                }
+                // Elevate parent above overlay (8000)
+                controls.style.zIndex = '9001';
+            }
         }
 
         // Create or update dialog
