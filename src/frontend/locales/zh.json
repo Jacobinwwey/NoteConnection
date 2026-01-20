@@ -58,7 +58,8 @@
       "step4": "<strong>步骤 4：</strong> 点击 <strong>加载</strong> 按钮。系统将处理您的笔记并构建知识图谱。",
       "step5": "<strong>步骤 5：</strong> 加载完成后，探索图谱！双击任意节点进入 <strong>专注模式</strong> 进行详细探索。",
       "tutorialLink": "想要guided tour吗？ <a href=\"#\" id=\"launch-tutorial-link\">启动交互式教程</a>"
-    }
+    },
+    "startTutorial": "🎓 启动交互式教程"
   },
   "source": {
     "label": "知识库",
@@ -103,6 +104,10 @@
       "controls": {
         "title": "导航与控制",
         "content": "使用<strong>鼠标滚轮</strong>缩放，<strong>点击拖动</strong>平移。设置面板（⚙️）允许您自定义物理、渲染和视觉选项。试试<strong>冻结布局</strong>按钮（❄️）停止节点移动！"
+      },
+      "quickStart": {
+        "title": "快速入门指南",
+        "content": "以上就是基本操作！接下来会显示<strong>快速入门指南</strong>，总结关键操作。您可以随时从<strong>帮助菜单</strong>访问它。祝您探索愉快！"
       }
     }
   },
@@ -289,6 +294,5 @@
   "manual_step3_title": "3. 专注模式",
   "manual_step3_desc": "<strong>双击</strong>任意节点进入专注模式。这将隔离该概念并按层级排列其依赖项。",
   "manual_step4_title": "4. 控制",
-  "manual_step4_desc": "• <strong>冻结 (❄️)</strong>：停止移动以便轻松点击/阅读节点。<br />• <strong>布局</strong>：在侧面板中切换“力导向”（聚类）和“DAG”（树状）布局。",
-  "btn_got_it": "明白了！"
+  "manual_step4_desc": "• <strong>冻结 (❄️)</strong>：停止移动以便轻松点击/阅读节点。<br />• <strong>布局</strong>：在侧面板中切换“力导向”（聚类）和“DAG”（树状）布局。"
 }

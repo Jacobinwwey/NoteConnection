@@ -56,6 +56,15 @@ class TutorialManager {
                 target: '#settings-btn', // Settings button
                 position: 'bottom',
                 beforeShow: null
+            },
+            {
+                id: 'quickStart',
+                target: null, // No specific target, centered dialog
+                position: 'center',
+                beforeShow: () => {
+                    // This step triggers the Quick Start Guide display
+                    // The guide will show after this step is acknowledged
+                }
             }
         ];
     }
@@ -76,11 +85,98 @@ class TutorialManager {
 
     /**
      * Stop and close the tutorial
+     * @param {boolean} skipped - Whether user clicked Skip (true) or finished naturally (false)
      */
-    stop() {
+    stop(skipped = true) {
         this.isActive = false;
         this.destroyOverlay();
+        
+        // If user skipped before reaching quickStart step, show the Quick Start Guide
+        const quickStartStepIndex = this.steps.findIndex(s => s.id === 'quickStart');
+        if (skipped && this.currentStep < quickStartStepIndex) {
+            console.log('[Tutorial] Skipped - showing Quick Start Guide');
+            this.showQuickStartGuide();
+        }
+        
         console.log('[Tutorial] Stopped');
+    }
+
+    /**
+     * Show the Quick Start Guide modal
+     * Called when user skips tutorial or reaches quickStart step
+     */
+    showQuickStartGuide() {
+        // Check if manual modal already exists
+        if (document.getElementById('quick-start-modal')) return;
+        
+        const t = window.i18n ? window.i18n.t.bind(window.i18n) : (k) => k;
+        
+        const modal = document.createElement('div');
+        modal.id = 'quick-start-modal';
+        modal.className = 'modal-overlay';
+        modal.style.cssText = 'display: flex; z-index: 3000;';
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 550px; max-height: 80vh; overflow-y: auto;">
+                <div class="modal-header">
+                    <h2 data-i18n="manual_title">${t('manual_title')}</h2>
+                    <button class="modal-close" id="quick-start-close">&times;</button>
+                </div>
+                <div class="modal-body" style="text-align: left;">
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="color: #61dafb; margin-bottom: 10px;" data-i18n="manual_step1_title">${t('manual_step1_title')}</h3>
+                        <p style="color: #ccc; font-size: 0.9rem;" data-i18n="manual_step1_desc">${t('manual_step1_desc')}</p>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="color: #61dafb; margin-bottom: 10px;" data-i18n="manual_step2_title">${t('manual_step2_title')}</h3>
+                        <p style="color: #ccc; font-size: 0.9rem;" data-i18n="manual_step2_desc">${t('manual_step2_desc')}</p>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="color: #61dafb; margin-bottom: 10px;" data-i18n="manual_step3_title">${t('manual_step3_title')}</h3>
+                        <p style="color: #ccc; font-size: 0.9rem;" data-i18n="manual_step3_desc">${t('manual_step3_desc')}</p>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="color: #61dafb; margin-bottom: 10px;" data-i18n="manual_step4_title">${t('manual_step4_title')}</h3>
+                        <p style="color: #ccc; font-size: 0.9rem;" data-i18n="manual_step4_desc">${t('manual_step4_desc')}</p>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #444;">
+                        <input type="checkbox" id="quick-start-dont-show" />
+                        <label for="quick-start-dont-show" style="color: #888; font-size: 0.85rem;" data-i18n="dont_show_again">${t('dont_show_again')}</label>
+                    </div>
+                </div>
+                <div class="modal-footer" style="text-align: right; padding: 15px 20px; border-top: 1px solid #444;">
+                    <button id="quick-start-got-it" style="
+                        background: #2c5282;
+                        color: white;
+                        border: none;
+                        padding: 10px 25px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 1rem;
+                    " data-i18n="btn_got_it">${t('btn_got_it')}</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Update i18n
+        if (window.i18n) window.i18n.updateDOM();
+        
+        // Event listeners
+        const closeModal = () => {
+            const dontShow = document.getElementById('quick-start-dont-show');
+            if (dontShow && dontShow.checked) {
+                localStorage.setItem('quick_start_hidden', 'true');
+            }
+            modal.remove();
+        };
+        
+        document.getElementById('quick-start-close').addEventListener('click', closeModal);
+        document.getElementById('quick-start-got-it').addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
     }
 
     /**
@@ -142,7 +238,7 @@ class TutorialManager {
      */
     showStep(stepIndex) {
         if (stepIndex < 0 || stepIndex >= this.steps.length) {
-            this.stop();
+            this.stop(false); // Natural completion
             this.markCompleted();
             return;
         }
@@ -330,7 +426,7 @@ class TutorialManager {
         const nextBtn = this.dialog.querySelector('#tutorial-next');
 
         if (skipBtn) {
-            skipBtn.addEventListener('click', () => this.stop());
+            skipBtn.addEventListener('click', () => this.stop(true)); // true = skipped
         }
 
         if (prevBtn) {
@@ -340,8 +436,10 @@ class TutorialManager {
         if (nextBtn) {
             nextBtn.addEventListener('click', () => {
                 if (this.currentStep === this.steps.length - 1) {
-                    this.stop();
+                    // On final step (quickStart), stop and show the guide
+                    this.stop(false); // false = not skipped, completed normally
                     this.markCompleted();
+                    this.showQuickStartGuide(); // Show guide when completing tutorial
                 } else {
                     this.showStep(this.currentStep + 1);
                 }

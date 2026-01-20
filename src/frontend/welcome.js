@@ -58,6 +58,24 @@ function showWelcomeModal() {
                         ${t('welcome.tip')}
                     </p>
 
+                    <!-- Prominent Tutorial Button -->
+                    <button id="btn-start-tutorial" style="
+                        width: 100%;
+                        padding: 15px 25px;
+                        margin-bottom: 20px;
+                        background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%);
+                        border: 2px solid #61dafb;
+                        border-radius: 10px;
+                        color: #61dafb;
+                        font-size: 1.1rem;
+                        font-weight: bold;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        box-shadow: 0 4px 15px rgba(97, 218, 251, 0.3);
+                    " data-i18n="welcome.startTutorial">
+                        ${t('welcome.startTutorial')}
+                    </button>
+
                     <!-- Expandable Help Section -->
                     <div id="welcome-help-section" style="
                         background: #2a2a2a;
@@ -162,7 +180,43 @@ function showWelcomeModal() {
             }
         });
 
-        // Setup tutorial launch link
+        // Setup prominent tutorial button
+        const tutorialBtn = document.getElementById('btn-start-tutorial');
+        if (tutorialBtn) {
+            // Hover effects
+            tutorialBtn.addEventListener('mouseenter', () => {
+                tutorialBtn.style.transform = 'translateY(-2px)';
+                tutorialBtn.style.boxShadow = '0 6px 20px rgba(97, 218, 251, 0.5)';
+                tutorialBtn.style.background = 'linear-gradient(135deg, #3d6ca8 0%, #2c5282 100%)';
+            });
+            tutorialBtn.addEventListener('mouseleave', () => {
+                tutorialBtn.style.transform = 'translateY(0)';
+                tutorialBtn.style.boxShadow = '0 4px 15px rgba(97, 218, 251, 0.3)';
+                tutorialBtn.style.background = 'linear-gradient(135deg, #2c5282 0%, #1a365d 100%)';
+            });
+            
+            // Click handler
+            tutorialBtn.addEventListener('click', () => {
+                // Close welcome modal
+                const modal = document.getElementById('welcome-modal');
+                if (modal) modal.remove();
+                
+                // Remove highlight
+                if (sourceControl) {
+                    sourceControl.style.boxShadow = '';
+                    sourceControl.style.zIndex = '';
+                }
+
+                // Launch tutorial
+                if (window.tutorialManager) {
+                    setTimeout(() => {
+                        window.tutorialManager.start();
+                    }, 300);
+                }
+            });
+        }
+
+        // Setup tutorial launch link (inside help section - keep for backwards compat)
         const tutorialLink = document.getElementById('launch-tutorial-link');
         if (tutorialLink) {
             tutorialLink.addEventListener('click', (e) => {

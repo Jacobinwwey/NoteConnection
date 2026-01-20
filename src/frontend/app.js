@@ -3069,13 +3069,14 @@ const btnHelp = document.getElementById('btn-help');
 const manualModal = document.getElementById('manual-modal');
 const checkboxDontShow = document.getElementById('dont-show-manual');
 
-// Check and Show on Startup
-window.addEventListener('load', () => {
-    const seen = localStorage.getItem('nc_manual_seen');
-    if (!seen && manualModal) {
-        manualModal.style.display = 'flex';
-    }
-});
+// Quick Start Guide is now managed by tutorial.js
+// Auto-display removed - shows only when tutorial reaches quickStart step or user skips
+// window.addEventListener('load', () => {
+//     const seen = localStorage.getItem('nc_manual_seen');
+//     if (!seen && manualModal) {
+//         manualModal.style.display = 'flex';
+//     }
+// });
 
 if (btnHelp && manualModal) {
     btnHelp.addEventListener('click', () => {

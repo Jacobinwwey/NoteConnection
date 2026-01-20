@@ -58,7 +58,8 @@
       "step4": "<strong>Step 4:</strong> Click the <strong>Load</strong> button. The system will process your notes and build the knowledge graph.",
       "step5": "<strong>Step 5:</strong> Once loaded, explore the graph! Double-click any node to enter <strong>Focus Mode</strong> for detailed exploration.",
       "tutorialLink": "Want a guided tour? <a href=\"#\" id=\"launch-tutorial-link\">Launch the interactive tutorial</a>"
-    }
+    },
+    "startTutorial": "🎓 Start Interactive Tutorial"
   },
   "source": {
     "label": "Knowledge Base",
@@ -103,6 +104,10 @@
       "controls": {
         "title": "Navigation & Controls",
         "content": "Use <strong>mouse wheel</strong> to zoom, <strong>click and drag</strong> to pan. The settings panel (⚙️) lets you customize physics, rendering, and visual options. Try the <strong>Freeze Layout</strong> button (❄️) to stop node movement!"
+      },
+      "quickStart": {
+        "title": "Quick Start Guide",
+        "content": "That covers the basics! Next, you'll see the <strong>Quick Start Guide</strong> summarizing key actions. You can access it anytime from the <strong>Help menu</strong>. Happy exploring!"
       }
     }
   },
@@ -289,6 +294,5 @@
   "manual_step3_title": "3. Focus Mode",
   "manual_step3_desc": "<strong>Double Click</strong> a node to enter Focus Mode. This isolates the concept and arranges its dependencies hierarchically.",
   "manual_step4_title": "4. Controls",
-  "manual_step4_desc": "• <strong>Freeze (❄️)</strong>: Stop movement to easily click/read nodes.<br />• <strong>Layout</strong>: Switch between \"Force\" (Cluster) and \"DAG\" (Tree) layouts in the side panel.",
-  "btn_got_it": "Got it!"
+  "manual_step4_desc": "• <strong>Freeze (❄️)</strong>: Stop movement to easily click/read nodes.<br />• <strong>Layout</strong>: Switch between \"Force\" (Cluster) and \"DAG\" (Tree) layouts in the side panel."
 }
