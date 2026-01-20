@@ -28,7 +28,7 @@ body {
 
 #controls {
   position: absolute;
-  top: 20px;
+  top: 55px; /* Moved down to avoid overlapping source-control */
   left: 20px;
   background: rgba(45, 45, 45, 0.95);
   padding: 15px;
@@ -37,6 +37,7 @@ body {
   z-index: 10;
   border: 1px solid #444;
   width: 240px;
+  transition: all 0.3s ease;
 }
 
 /* Focus Mode Button */
@@ -1055,12 +1056,20 @@ div.tooltip {
   border-color: #9b2c2c !important;
 }
 
-/* Collapsed Controls State */
+/* Collapsed Controls State - Small Circle */
 #controls.collapsed {
-  height: 30px;
-  padding: 10px 15px;
-  overflow: hidden;
-  width: 200px; /* Maintain width but reduce height */
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#controls.collapsed h3 {
+    display: none; /* Hide title text */
 }
 
 #controls.collapsed .stats,
@@ -1069,15 +1078,30 @@ div.tooltip {
 #controls.collapsed .color-controls,
 #controls.collapsed .size-controls,
 #controls.collapsed .layout-controls,
+#controls.collapsed .renderer-controls,
+#controls.collapsed .simulation-controls,
+#controls.collapsed .advanced-controls,
+#controls.collapsed .opacity-controls,
 #controls.collapsed #quick-actions,
 #controls.collapsed .search-box {
-  display: none !important;
-}
-
-#btn-toggle-controls {
-  transition: transform 0.3s;
+    display: none !important;
 }
 
 #controls.collapsed #btn-toggle-controls {
-  transform: rotate(180deg);
+    font-size: 1.2rem;
+    padding: 0;
+    margin: 0;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+#btn-toggle-controls {
+    transition: transform 0.3s;
+}
+
+#controls.collapsed #btn-toggle-controls {
+    transform: rotate(180deg);
 }

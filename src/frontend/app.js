@@ -931,9 +931,29 @@ window.updateLanguage = function(lang) {
 // Language Selector in Settings
 const langSelect = document.getElementById('set-language');
 if (langSelect) {
-    langSelect.addEventListener('change', (e) => {
-        window.updateLanguage(e.target.value);
+    // Sync with i18n on load
+    if (window.i18n && window.i18n.currentLanguage) {
+        langSelect.value = window.i18n.currentLanguage;
+    }
+    
+    // Listen for changes from the dropdown
+    langSelect.addEventListener('change', async (e) => {
+        const newLang = e.target.value;
+        if (window.i18n) {
+            await window.i18n.setLanguage(newLang);
+        } else {
+            window.updateLanguage(newLang);
+        }
     });
+    
+    // Also sync when language changes externally (e.g., from language selector modal)
+    if (window.i18n && window.i18n.onLanguageChange) {
+        window.i18n.onLanguageChange((newLang) => {
+            if (langSelect.value !== newLang) {
+                langSelect.value = newLang;
+            }
+        });
+    }
 }
 
 

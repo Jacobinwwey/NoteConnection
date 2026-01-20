@@ -35,13 +35,14 @@ class TutorialManager {
             },
             {
                 id: 'analysis',
-                target: '#analysis-panel',
-                position: 'left',
+                target: '#analysis-btn',
+                position: 'bottom',
                 beforeShow: () => {
-                    // Ensure analysis panel is visible
-                    const panel = document.getElementById('analysis-panel');
-                    if (panel && panel.style.display === 'none') {
-                        panel.style.display = 'block';
+                    // Highlight the Analysis button, and open panel if clicked
+                    const btn = document.getElementById('analysis-btn');
+                    if (btn) {
+                        // Temporarily add click handler to open panel
+                        btn.click(); // Open the panel
                     }
                 }
             },
@@ -53,8 +54,8 @@ class TutorialManager {
             },
             {
                 id: 'controls',
-                target: '#settings-btn', // Settings button
-                position: 'bottom',
+                target: '#btn-open-settings', // Settings button (top right)
+                position: 'left',
                 beforeShow: null
             },
             {
@@ -201,6 +202,12 @@ class TutorialManager {
      * Create overlay backdrop
      */
     createOverlay() {
+        // Prevent duplicate overlays
+        const existingOverlay = document.getElementById('tutorial-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+        
         this.overlay = document.createElement('div');
         this.overlay.id = 'tutorial-overlay';
         this.overlay.style.cssText = `
