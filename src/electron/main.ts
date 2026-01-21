@@ -407,6 +407,54 @@ app.whenReady().then(async () => {
         return language;
     });
 
+    // Caching Handlers
+    ipcMain.handle('checkCache', async (event, target) => {
+        if (!target || target === 'ALL_FOLDERS') return null;
+        try {
+            const targetName = target.replace(/[^a-z0-9_\-]/gi, '_');
+            const frontendDir = path.join(__dirname, '../frontend');
+            const cachePath = path.join(frontendDir, `data_${targetName}.js`);
+            
+            if (fs.existsSync(cachePath)) {
+                const stats = fs.statSync(cachePath);
+                return {
+                    date: stats.mtime.toLocaleString(),
+                    size: stats.size
+                };
+            }
+        } catch (e) {
+            log(`CheckCache error: ${e}`);
+        }
+        return null;
+    });
+
+    ipcMain.handle('restoreCache', async (event, target) => {
+        if (!target) return false;
+        try {
+            const targetName = target.replace(/[^a-z0-9_\-]/gi, '_');
+            const frontendDir = path.join(__dirname, '../frontend');
+            
+            const cacheJs = path.join(frontendDir, `data_${targetName}.js`);
+            const targetJs = path.join(frontendDir, 'data.js');
+            
+            const cacheJson = path.join(frontendDir, `graph_data_${targetName}.json`);
+            const targetJson = path.join(frontendDir, 'graph_data.json');
+            
+            if (fs.existsSync(cacheJs)) {
+                fs.copyFileSync(cacheJs, targetJs);
+                // Also copy JSON if it exists
+                if (fs.existsSync(cacheJson)) {
+                    fs.copyFileSync(cacheJson, targetJson);
+                }
+                log(`Restored cache for ${target} -> data.js`);
+                return true;
+            }
+        } catch (e) {
+            log(`Error restoring cache: ${e}`);
+        }
+        return false;
+    });
+
     createWindow();
 
     app.on('activate', () => {

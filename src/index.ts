@@ -72,7 +72,7 @@ export async function buildGraph(options: BuildOptions | string, maxWorkers?: nu
       console.log(`CLI JS data saved to: ${timestampedJsPath}`);
   } else {
       // Standard/Server Mode
-      // Save standard file for frontend to work
+      // Save standard file for frontend to work (Active Graph)
       fs.writeFileSync(outputPath, JSON.stringify(data, null, 2));
       console.log(`Graph data saved to: ${outputPath}`);
 
@@ -80,6 +80,27 @@ export async function buildGraph(options: BuildOptions | string, maxWorkers?: nu
       const jsContent = `const graphData = ${JSON.stringify(liteData, null, 2)};`;
       fs.writeFileSync(jsOutputPath, jsContent);
       console.log(`Graph data JS saved to: ${jsOutputPath}`);
+
+      // MULTI-FOLDER CACHING FEATURE
+      // If a specific subfolder target was provided, save a cached copy
+      if (buildOptions.targetPath) {
+          try {
+              const targetName = path.basename(buildOptions.targetPath).replace(/[^a-z0-9_\-]/gi, '_'); // Sanitize
+              // Only cache if not the root KB itself (heuristically check name or usually targetPath is empty for root in frontend logic?)
+              // In our logic: targetPath is undefined for "All Folders". So if it exists, it's a subfolder.
+              
+              if (targetName && targetName.toLowerCase() !== 'knowledge_base') {
+                  const cacheJsPath = path.join(projectRoot, 'src', 'frontend', `data_${targetName}.js`);
+                  const cacheJsonPath = path.join(projectRoot, 'src', 'frontend', `graph_data_${targetName}.json`);
+                  
+                  fs.writeFileSync(cacheJsPath, jsContent);
+                  fs.writeFileSync(cacheJsonPath, JSON.stringify(data, null, 2));
+                  console.log(`[Cache] Saved cached graph for '${targetName}' to: ${cacheJsPath}`);
+              }
+          } catch (e) {
+              console.warn('[Cache] Failed to save cached copy:', e);
+          }
+      }
   }
   
   return data;

@@ -1,4 +1,28 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Dynamic Script Loader (Cache Busting & Order Guarantee)
+    const loadScript = (src) => {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src + '?v=' + Date.now();
+            script.onload = resolve;
+            script.onerror = reject;
+            document.body.appendChild(script);
+        });
+    };
+
+    // Load data.js first (Critical Data), then app.js (Application Logic)
+    loadScript('data.js')
+        .then(() => {
+            console.log('[Loader] data.js loaded successfully');
+            return loadScript('app.js');
+        })
+        .then(() => {
+            console.log('[Loader] app.js loaded successfully');
+        })
+        .catch(err => {
+            console.error('[Loader] Failed to load essential scripts:', err);
+        });
+
     const folderSelect = document.getElementById('folder-select');
     const loadBtn = document.getElementById('btn-load-source');
     const currentPathEl = document.getElementById('kb-current-path'); // Will add to HTML
@@ -100,11 +124,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Handle Load
-    loadBtn.addEventListener('click', () => {
+    loadBtn.addEventListener('click', async () => {
         const target = folderSelect.value;
         if (!target) {
             alert(t('source.error.noFolder'));
             return;
+        }
+
+        // Feature: Check for cached graph (Multi-Session Optimization)
+        if (target !== 'ALL_FOLDERS' && window.electronAPI && window.electronAPI.checkCache) {
+            try {
+                const cached = await window.electronAPI.checkCache(target);
+                if (cached) {
+                    // Simple bilingual fallback since we haven't updated json files yet
+                    const isZh = window.i18n && window.i18n.locale === 'zh';
+                    const msg = isZh 
+                        ? `发现 '${target}' 的现有图谱 (构建于: ${cached.date})。\n\n点击"确定"直接加载 (速度快)。\n点击"取消"重新生成 (如果文件有变动)。`
+                        : `Found existing graph for '${target}' (Built: ${cached.date}).\n\nClick OK to load directly (Fast).\nClick Cancel to regenerate (If files changed).`;
+                    
+                    if (confirm(msg)) {
+                        loadBtn.disabled = true;
+                        loadBtn.textContent = 'Loading Cache...';
+                        const success = await window.electronAPI.restoreCache(target);
+                        if (success) {
+                            // Reload with cache busting handled by dynamic loader
+                            window.location.reload();
+                            return;
+                        } else {
+                            console.warn('[SourceManager] Cache restore failed, falling back to build.');
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('[SourceManager] Cache check failed', e);
+            }
         }
 
         loadBtn.disabled = true;

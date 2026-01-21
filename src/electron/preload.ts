@@ -7,6 +7,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getContent: (filePath: string) => ipcRenderer.invoke('getContent', filePath),
     buildGraph: (options: any) => ipcRenderer.invoke('buildGraph', options),
     
+    // Caching
+    checkCache: (target: string) => ipcRenderer.invoke('checkCache', target),
+    restoreCache: (target: string) => ipcRenderer.invoke('restoreCache', target),
+    
     // Language management  
     getUserLanguage: () => ipcRenderer.invoke('getUserLanguage'),
     setUserLanguage: (lang: string) => ipcRenderer.invoke('setUserLanguage', lang),
