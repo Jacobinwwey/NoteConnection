@@ -304,9 +304,6 @@ class TutorialManager {
             if (el && el.dataset.tutorialTempZ !== undefined) {
                 el.style.zIndex = el.dataset.tutorialTempZ;
                 delete el.dataset.tutorialTempZ;
-            } else if (el) {
-                // If no tempZ, ensure it's not stuck at 9001
-                el.style.zIndex = '';
             }
         };
 
@@ -338,13 +335,12 @@ class TutorialManager {
             el.style.pointerEvents = '';
         });
         
-        // Also ensure #source-control (dropdown area) is explicitly reset
+        // Force reset #source-control to correct state (Robust Fix)
         const sourceControl = document.getElementById('source-control');
         if (sourceControl) {
-            // DO NOT reset position here, it breaks 'absolute' from CSS/HTML
-            // sourceControl.style.position = ''; 
-            // sourceControl.style.zIndex = ''; // Handled by restoreZ above
-            sourceControl.style.pointerEvents = 'auto'; // Force auto
+            sourceControl.style.position = 'absolute';
+            sourceControl.style.zIndex = '1000';
+            sourceControl.style.pointerEvents = 'auto';
         }
         
         // Ensure dropdown select is functional
@@ -389,19 +385,9 @@ class TutorialManager {
         // Highlight target element
         const targetEl = step.target ? document.querySelector(step.target) : null;
         if (targetEl) {
-            // Save original styles
-            targetEl.dataset.originalPosition = targetEl.style.position;
-            targetEl.dataset.originalZIndex = targetEl.style.zIndex;
-            
-            targetEl.classList.add('tutorial-spotlight');
-            targetEl.style.position = 'relative';
-            // targetEl.style.zIndex = '9000'; // CSS handles this now via !important, but keeping for safety? 
-            // Actually, CSS marks it !important, so inline style might be overridden or redundant. 
-            // Let's set it anyway to be sure.
-            targetEl.style.zIndex = '9000';
-
             // Check for Parent Containers and Elevate them
             // This fixes Stacking Context issues where parent z-index (1000) traps child z-index (9000) below overlay (8000)
+            // MOVED UP: Must execute before modifying targetEl to save correct original state!
             const elevateParent = (parentId) => {
                 const parent = document.getElementById(parentId);
                 if (parent && (parent === targetEl || parent.contains(targetEl))) {
@@ -415,6 +401,17 @@ class TutorialManager {
             elevateParent('controls');
             elevateParent('source-control');
             elevateParent('quick-actions');
+            
+            // Save original styles
+            targetEl.dataset.originalPosition = targetEl.style.position;
+            targetEl.dataset.originalZIndex = targetEl.style.zIndex;
+            
+            targetEl.classList.add('tutorial-spotlight');
+            targetEl.style.position = 'relative';
+            // targetEl.style.zIndex = '9000'; // CSS handles this now via !important, but keeping for safety? 
+            // Actually, CSS marks it !important, so inline style might be overridden or redundant. 
+            // Let's set it anyway to be sure.
+            targetEl.style.zIndex = '9000';
         }
 
         // Create or update dialog
