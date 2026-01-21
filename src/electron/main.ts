@@ -347,17 +347,35 @@ app.whenReady().then(async () => {
     protocol.handle('app', (request) => {
         const reqUrl = request.url;
         log(`[Protocol] Request: ${reqUrl}`);
-        const parsedUrl = url.parse(reqUrl);
         
-        let normalizedPath = parsedUrl.pathname ? path.normalize(parsedUrl.pathname).replace(/^(\\|\/)/,  '') : '';
-        
-        // Map to frontend directory
-        // __dirname is 'dist/src/electron'
-        const baseDir = path.join(__dirname, '../frontend');
-        const filePath = path.join(baseDir, normalizedPath || 'index.html');
-        console.log(`[Protocol] Serving: ${filePath}`);
+        try {
+            const parsedUrl = new URL(reqUrl);
+            let pathname = parsedUrl.pathname;
+            
+            // Handle Windows drive letters if needed, but usually strictly relative to our root
+            // Decode URI components (e.g. spaces)
+            pathname = decodeURIComponent(pathname);
+            
+            // Normalize and strip leading slashes/backslashes
+            let normalizedPath = path.normalize(pathname).replace(/^(\\|\/)+/, '');
+            
+            // Map to frontend directory
+            const baseDir = path.join(__dirname, '../frontend');
+            const filePath = path.join(baseDir, normalizedPath || 'index.html');
+            
+            console.log(`[Protocol] Serving: ${filePath}`);
+            
+            if (!fs.existsSync(filePath)) {
+                return new Response('Not Found', { status: 404 });
+            }
 
-        return net.fetch(url.pathToFileURL(filePath).toString());
+            return net.fetch(url.pathToFileURL(filePath).toString());
+        } catch (error) {
+            log(`[Protocol] Error serving ${reqUrl}: ${error}`);
+            // Return 404 or 500 depending on error? 
+            // If URL parse fails, it's 400. If something else, 500.
+            return new Response('Internal Server Error', { status: 500 });
+        }
     });
 
     // IPC Handlers

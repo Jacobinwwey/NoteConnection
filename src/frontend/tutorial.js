@@ -58,13 +58,33 @@ class TutorialManager {
                 id: 'focusMode',
                 target: '#graph-container', // Main graph area
                 position: 'center',
-                beforeShow: null
+                beforeShow: () => {
+                    // Feature: Auto-demo Focus Mode
+                    // Step 8: Randomly focus a node if graph exists
+                    if (window.highlightManager && typeof graphData !== 'undefined' && graphData.nodes && graphData.nodes.length > 0) {
+                         const nodes = graphData.nodes;
+                         const randomNode = nodes[Math.floor(Math.random() * nodes.length)];
+                         
+                         // We can trigger it via global exposed function
+                         if (randomNode) {
+                             console.log('[Tutorial] Auto-focusing node:', randomNode.label);
+                             if (typeof window.enterFocusMode === 'function') {
+                                 window.enterFocusMode(randomNode);
+                             }
+                         }
+                    }
+                }
             },
             {
                 id: 'controls',
                 target: '#btn-open-settings', // Settings button (top right)
                 position: 'left',
                 beforeShow: () => {
+                    // Feature: Exit Focus Mode when leaving step
+                    if (typeof window.exitFocusMode === 'function') {
+                         window.exitFocusMode();
+                    }
+
                     // Ensure visibility of the settings button
                     const settingsBtn = document.getElementById('btn-open-settings');
                     if (settingsBtn) {
@@ -81,9 +101,6 @@ class TutorialManager {
                                     modal.dataset.tutorialTempZ = modal.style.zIndex || getComputedStyle(modal).zIndex;
                                 }
                                 modal.style.zIndex = '9002'; // Above overlay
-                                
-                                // Also ensure modal content is visible if it has internal z-indexing
-                                // But usually checking modal wrapper is enough
                             }
                         }, 50);
                     }
@@ -146,6 +163,11 @@ class TutorialManager {
     stop(skipped = true) {
         this.isActive = false;
         this.destroyOverlay();
+        
+        // Ensure Focus Mode is exited if user quits midway
+        if (typeof window.exitFocusMode === 'function') {
+             window.exitFocusMode();
+        }
         
         // If user skipped before reaching quickStart step, show the Quick Start Guide
         const quickStartStepIndex = this.steps.findIndex(s => s.id === 'quickStart');

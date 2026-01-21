@@ -16,11 +16,16 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('[Loader] data.js loaded successfully');
             return loadScript('app.js');
         })
+        .catch(err => {
+            console.warn('[Loader] Failed to load data.js (This is expected in Mini Mode or First Run). Proceeding to load app.js...', err);
+            // Proceed to load app.js even if data.js fails
+            return loadScript('app.js');
+        })
         .then(() => {
             console.log('[Loader] app.js loaded successfully');
         })
         .catch(err => {
-            console.error('[Loader] Failed to load essential scripts:', err);
+            console.error('[Loader] Failed to load app.js (Critical Error):', err);
         });
 
     const folderSelect = document.getElementById('folder-select');

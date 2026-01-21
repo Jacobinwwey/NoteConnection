@@ -7,16 +7,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // However, if data.js was generated with 0 nodes, we should show the welcome screen.
     
     // Safety check for graphData existence
-    if (typeof graphData === 'undefined' || !graphData || !graphData.nodes || graphData.nodes.length === 0) {
-        showWelcomeModal();
-    }
+    const hasNodes = typeof graphData !== 'undefined' && graphData && graphData.nodes && graphData.nodes.length > 0;
+    
+    // Always show welcome modal on first visit (unless disabled), adapting content based on state
+    // But specific requirement: "fails to properly detect... if graph is present... ask user"
+    // So we run showWelcomeModal() regardless, but change content.
+    showWelcomeModal(hasNodes);
 });
 
-function showWelcomeModal() {
-    // Check if modal already exists (to prevent duplicates)
+function showWelcomeModal(hasNodes = false) {
+    // Check if modal already exists
     if (document.getElementById('welcome-modal')) return;
 
-    // Wait for i18n to initialize
+    // Check if user has explicitly disabled welcome screen (if we implemented that feature)
+    // For now, we follow the requirement to always ask.
+
     const showModal = () => {
         const t = window.i18n.t.bind(window.i18n);
 
@@ -24,45 +29,62 @@ function showWelcomeModal() {
         const modalOverlay = document.createElement('div');
         modalOverlay.id = 'welcome-modal';
         modalOverlay.className = 'modal-overlay';
-        modalOverlay.style.display = 'flex'; // Force show
-        modalOverlay.style.zIndex = '2000'; // Top level
+        modalOverlay.style.display = 'flex';
+        modalOverlay.style.zIndex = '2000';
+
+        // Content logic based on State
+        let title = t('welcome.title');
+        let subtitle = t('welcome.subtitle');
+        let exploreBtnFn = '';
+
+        if (hasNodes) {
+            title = window.i18n.locale === 'zh' ? '图谱已加载' : 'Graph Loaded';
+            subtitle = window.i18n.locale === 'zh' 
+                ? '我们检测到已加载的知识库。您想参加互动教程，还是直接开始探索？'
+                : 'We detected a loaded Knowledge Base. Would you like to take the interactive tutorial or start exploring?';
+            
+            exploreBtnFn = `
+                <button id="btn-explore" style="
+                    width: 100%;
+                    padding: 15px 25px;
+                    margin-bottom: 20px;
+                    background: transparent;
+                    border: 2px solid #555;
+                    border-radius: 10px;
+                    color: #ccc;
+                    font-size: 1.1rem;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                ">
+                    ${window.i18n.locale === 'zh' ? '直接探索 (跳过教程)' : 'Start Exploring (Skip Tutorial)'}
+                </button>
+            `;
+        }
 
         modalOverlay.innerHTML = `
             <div class="modal-content" style="max-width: 600px; text-align: center;">
                 <div class="modal-header" style="justify-content: center;">
-                    <h2 data-i18n="welcome.title">${t('welcome.title')}</h2>
+                    <h2 data-i18n="welcome.title">${title}</h2>
                 </div>
                 <div class="modal-body">
-                    <p style="font-size: 1.1rem; color: #ccc; margin-bottom: 5px;" data-i18n="welcome.subtitle">
-                        ${t('welcome.subtitle')}
-                    </p>
-                    <p style="font-size: 1.1rem; color: #ccc; margin-bottom: 25px;" data-i18n="welcome.subtitle2">
-                        ${t('welcome.subtitle2')}
+                    <p style="font-size: 1.1rem; color: #ccc; margin-bottom: 25px;">
+                        ${subtitle}
                     </p>
                     
+                    ${!hasNodes ? `
                     <div style="background: #333; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
                         <h3 style="margin-top: 0; color: #61dafb;" data-i18n="welcome.step1.title">${t('welcome.step1.title')}</h3>
                         <p style="font-size: 0.9rem; color: #aaa;" data-i18n="welcome.step1.description">
                             ${t('welcome.step1.description')}
                         </p>
                     </div>
-
-                    <div style="background: #333; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                        <h3 style="margin-top: 0; color: #61dafb;" data-i18n="welcome.step2.title">${t('welcome.step2.title')}</h3>
-                        <p style="font-size: 0.9rem; color: #aaa;" data-i18n="welcome.step2.description">
-                            ${t('welcome.step2.description')}
-                        </p>
-                    </div>
-
-                    <p style="font-size: 0.9rem; color: #888; margin-bottom: 20px;" data-i18n="welcome.tip">
-                        ${t('welcome.tip')}
-                    </p>
+                    ` : ''}
 
                     <!-- Prominent Tutorial Button -->
                     <button id="btn-start-tutorial" style="
                         width: 100%;
                         padding: 15px 25px;
-                        margin-bottom: 20px;
+                        margin-bottom: 10px;
                         background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%);
                         border: 2px solid #61dafb;
                         border-radius: 10px;
@@ -75,6 +97,8 @@ function showWelcomeModal() {
                     " data-i18n="welcome.startTutorial">
                         ${t('welcome.startTutorial')}
                     </button>
+                    
+                    ${exploreBtnFn}
 
                     <!-- Expandable Help Section -->
                     <div id="welcome-help-section" style="
@@ -111,21 +135,6 @@ function showWelcomeModal() {
                             <div style="padding: 15px 0; text-align: left; color: #ccc; font-size: 0.9rem; line-height: 1.8;">
                                 <p style="margin-bottom: 15px;" data-i18n="welcome.helpContent.intro">
                                     ${t('welcome.helpContent.intro')}
-                                </p>
-                                <p style="margin-bottom: 10px;" data-i18n="welcome.helpContent.step1">
-                                    ${t('welcome.helpContent.step1')}
-                                </p>
-                                <p style="margin-bottom: 10px;" data-i18n="welcome.helpContent.step2">
-                                    ${t('welcome.helpContent.step2')}
-                                </p>
-                                <p style="margin-bottom: 10px;" data-i18n="welcome.helpContent.step3">
-                                    ${t('welcome.helpContent.step3')}
-                                </p>
-                                <p style="margin-bottom: 10px;" data-i18n="welcome.helpContent.step4">
-                                    ${t('welcome.helpContent.step4')}
-                                </p>
-                                <p style="margin-bottom: 15px;" data-i18n="welcome.helpContent.step5">
-                                    ${t('welcome.helpContent.step5')}
                                 </p>
                                 <p style="
                                     padding: 12px;
@@ -237,6 +246,37 @@ function showWelcomeModal() {
                         window.tutorialManager.start();
                     }, 300);
                 }
+            });
+        }
+        
+        // Setup direct explore button
+        const exploreBtn = document.getElementById('btn-explore');
+        if (exploreBtn) {
+            exploreBtn.addEventListener('click', () => {
+                 // Close welcome modal
+                 const modal = document.getElementById('welcome-modal');
+                 if (modal) modal.remove();
+                 
+                 // Remove highlight
+                 if (sourceControl) {
+                     sourceControl.style.boxShadow = '';
+                     sourceControl.style.zIndex = '';
+                 }
+                 
+                 // Mark as "seen" or just let them explore?
+                 // Maybe we shouldn't mark tutorial as completed, as they skipped it.
+                 // But we should stop auto-prompting for this session?
+                 // Current logic relies on modal existence check, so removal is enough.
+            });
+            
+            // Hover
+            exploreBtn.addEventListener('mouseenter', () => {
+                exploreBtn.style.color = '#fff';
+                exploreBtn.style.borderColor = '#ccc';
+            });
+            exploreBtn.addEventListener('mouseleave', () => {
+                exploreBtn.style.color = '#ccc';
+                exploreBtn.style.borderColor = '#555';
             });
         }
     };

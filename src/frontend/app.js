@@ -240,6 +240,11 @@ const simulation = {
     },
     alpha: (a) => {
         if (a !== undefined) {
+             const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
+             if (isFrozen) {
+                 console.log("[Simulation] Alpha update blocked by Freeze Layout.");
+                 return simulation;
+             }
              simulationWorker.postMessage({ type: 'updateParams', payload: { alpha: a, restart: true } });
              return simulation;
         }
@@ -251,6 +256,11 @@ const simulation = {
          return simulation; 
     },
     restart: () => {
+        const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
+        if (isFrozen) {
+            console.log("[Simulation] Restart blocked by Freeze Layout.");
+            return simulation;
+        }
         simulationWorker.postMessage({ type: 'restart', payload: {} });
         return simulation; 
     },
@@ -260,6 +270,7 @@ const simulation = {
     },
     velocityDecay: (d) => {
         if (d !== undefined) {
+            // Decay updates are fine, but don't auto-restart if frozen
             simulationWorker.postMessage({ type: 'updateParams', payload: { velocityDecay: d } });
             return simulation;
         }
@@ -513,6 +524,8 @@ function updateSize() {
     const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
     if (!isFrozen) {
         simulation.alpha(0.3).restart();
+    } else {
+        console.log("[Simulation] Restart blocked by Freeze Layout.");
     }
 }
 
@@ -2771,6 +2784,10 @@ function enterFocusMode(focusD) {
         simulation.alpha(1).restart();
     }
 }
+
+// Expose Focus Mode functions for Tutorial and External Modules
+window.enterFocusMode = enterFocusMode;
+window.exitFocusMode = exitFocusMode;
 
 // Max Workers (Performance)
 const workersSlider = document.getElementById('set-workers-slider');
