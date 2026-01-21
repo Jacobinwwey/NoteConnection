@@ -59,7 +59,12 @@
       "step5": "<strong>Step 5:</strong> Once loaded, explore the graph! Double-click any node to enter <strong>Focus Mode</strong> for detailed exploration.",
       "tutorialLink": "Want a guided tour? <a href=\"#\" id=\"launch-tutorial-link\">Launch the interactive tutorial</a>"
     },
-    "startTutorial": "🎓 Start Interactive Tutorial"
+    "startTutorial": "🎓 Start Interactive Tutorial",
+    "graphLoaded": {
+      "title": "Graph Loaded",
+      "subtitle": "We detected a loaded Knowledge Base. Would you like to take the interactive tutorial or start exploring?",
+      "explore": "Start Exploring (Skip Tutorial)"
+    }
   },
   "source": {
     "label": "Knowledge Base",
@@ -294,5 +299,9 @@
   "manual_step3_title": "3. Focus Mode",
   "manual_step3_desc": "<strong>Double Click</strong> a node to enter Focus Mode. This isolates the concept and arranges its dependencies hierarchically.",
   "manual_step4_title": "4. Controls",
-  "manual_step4_desc": "• <strong>Freeze (❄️)</strong>: Stop movement to easily click/read nodes.<br />• <strong>Layout</strong>: Switch between \"Force\" (Cluster) and \"DAG\" (Tree) layouts in the side panel."
+  "manual_step4_desc": "• <strong>Freeze (❄️)</strong>: Stop movement to easily click/read nodes.<br />• <strong>Layout</strong>: Switch between \"Force\" (Cluster) and \"DAG\" (Tree) layouts in the side panel.",
+  "view_mode": "View Mode:",
+  "view_nodes": "Nodes",
+  "view_clusters": "Clusters (Overview)",
+  "auto_arrange": "Auto Arrange"
 }

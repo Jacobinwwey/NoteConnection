@@ -1,21 +1,15 @@
 // welcome.js - Handles the "Empty State" or "Welcome" experience for new users.
 // Now with i18n support and expandable help section
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Check if graphData is empty or missing
-    // graphData is defined in data.js which is loaded before this.
-    // However, if data.js was generated with 0 nodes, we should show the welcome screen.
-    
-    // Safety check for graphData existence
-    const hasNodes = typeof graphData !== 'undefined' && graphData && graphData.nodes && graphData.nodes.length > 0;
-    
-    // Always show welcome modal on first visit (unless disabled), adapting content based on state
-    // But specific requirement: "fails to properly detect... if graph is present... ask user"
-    // So we run showWelcomeModal() regardless, but change content.
-    showWelcomeModal(hasNodes);
-});
+// Exposed entry point for SourceManager to call after data load
+window.showWelcomeModal = showWelcomeModal;
 
+/* 
+ * Main function to trigger welcome modal
+ * @param {boolean} hasNodes - Whether the graph has data (true) or is empty (false)
+ */
 function showWelcomeModal(hasNodes = false) {
+    console.log('[Welcome] Initializing with hasNodes:', hasNodes);
     // Check if modal already exists
     if (document.getElementById('welcome-modal')) return;
 
@@ -38,10 +32,8 @@ function showWelcomeModal(hasNodes = false) {
         let exploreBtnFn = '';
 
         if (hasNodes) {
-            title = window.i18n.locale === 'zh' ? '图谱已加载' : 'Graph Loaded';
-            subtitle = window.i18n.locale === 'zh' 
-                ? '我们检测到已加载的知识库。您想参加互动教程，还是直接开始探索？'
-                : 'We detected a loaded Knowledge Base. Would you like to take the interactive tutorial or start exploring?';
+            title = t('welcome.graphLoaded.title');
+            subtitle = t('welcome.graphLoaded.subtitle');
             
             exploreBtnFn = `
                 <button id="btn-explore" style="
@@ -55,8 +47,8 @@ function showWelcomeModal(hasNodes = false) {
                     font-size: 1.1rem;
                     cursor: pointer;
                     transition: all 0.3s ease;
-                ">
-                    ${window.i18n.locale === 'zh' ? '直接探索 (跳过教程)' : 'Start Exploring (Skip Tutorial)'}
+                " data-i18n="welcome.graphLoaded.explore">
+                    ${t('welcome.graphLoaded.explore')}
                 </button>
             `;
         }

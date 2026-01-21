@@ -14,10 +14,24 @@ document.addEventListener('DOMContentLoaded', () => {
     loadScript('data.js')
         .then(() => {
             console.log('[Loader] data.js loaded successfully');
+            
+            // Check data state and trigger Welcome Modal
+            // We do this BEFORE loading app.js so the user sees the modal while the app initializes
+            const hasNodes = typeof graphData !== 'undefined' && graphData && graphData.nodes && graphData.nodes.length > 0;
+            if (typeof window.showWelcomeModal === 'function') {
+                window.showWelcomeModal(hasNodes);
+            }
+            
             return loadScript('app.js');
         })
         .catch(err => {
             console.warn('[Loader] Failed to load data.js (This is expected in Mini Mode or First Run). Proceeding to load app.js...', err);
+            
+            // Trigger Welcome Modal (Empty State)
+            if (typeof window.showWelcomeModal === 'function') {
+                window.showWelcomeModal(false);
+            }
+
             // Proceed to load app.js even if data.js fails
             return loadScript('app.js');
         })

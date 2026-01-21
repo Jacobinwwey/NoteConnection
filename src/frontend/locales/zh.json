@@ -59,7 +59,12 @@
       "step5": "<strong>步骤 5：</strong> 加载完成后，探索图谱！双击任意节点进入 <strong>专注模式</strong> 进行详细探索。",
       "tutorialLink": "想要guided tour吗？ <a href=\"#\" id=\"launch-tutorial-link\">启动交互式教程</a>"
     },
-    "startTutorial": "🎓 启动交互式教程"
+    "startTutorial": "🎓 启动交互式教程",
+    "graphLoaded": {
+      "title": "图谱已加载",
+      "subtitle": "我们检测到已加载的知识库。您想参加互动教程，还是直接开始探索？",
+      "explore": "直接探索 (跳过教程)"
+    }
   },
   "source": {
     "label": "知识库",
@@ -294,5 +299,9 @@
   "manual_step3_title": "3. 专注模式",
   "manual_step3_desc": "<strong>双击</strong>任意节点进入专注模式。这将隔离该概念并按层级排列其依赖项。",
   "manual_step4_title": "4. 控制",
-  "manual_step4_desc": "• <strong>冻结 (❄️)</strong>：停止移动以便轻松点击/阅读节点。<br />• <strong>布局</strong>：在侧面板中切换“力导向”（聚类）和“DAG”（树状）布局。"
+  "manual_step4_desc": "• <strong>冻结 (❄️)</strong>：停止移动以便轻松点击/阅读节点。<br />• <strong>布局</strong>：在侧面板中切换“力导向”（聚类）和“DAG”（树状）布局。",
+  "view_mode": "视图模式:",
+  "view_nodes": "节点",
+  "view_clusters": "聚类 (概览)",
+  "auto_arrange": "自动排列"
 }
