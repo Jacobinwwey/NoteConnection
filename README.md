@@ -98,7 +98,13 @@ NoteConnection is built on a modular architecture designed for performance and e
 
 ## 📦 Quick Start
 
-### Option 1: Run with npx (Recommended)
+### Option 1: Windows Installer (Recommended)
+
+1. Download `NoteConnection.Setup.exe` from the [Latest Releases](https://github.com/Jacobinwwey/NoteConnection/releases).
+2. Run the installer.
+3. Launch NoteConnection from your desktop or start menu.
+
+### Option 2: Run with npx
 
 No installation required.
 
@@ -106,17 +112,17 @@ No installation required.
 npx noteconnection
 ```
 
-### Option 2: Global Installation
+### Option 3: Global Installation
 
 ```bash
 npm install -g noteconnection
 noteconnection
 ```
 
-### Option 3: Local Development
+### Option 4: Local Development
 
 ```bash
-git clone https://github.com/your-repo/NoteConnection.git
+git clone https://github.com/Jacobinwwey/NoteConnection.git
 cd NoteConnection
 npm install
 npm start
@@ -124,7 +130,7 @@ npm start
 
 - Server runs at: `http://localhost:3000`
 
-### Option 4: Mobile Support (Android)
+### Option 5: Mobile Support (Android)
 
 NoteConnection uses **Capacitor** to build native mobile apps.
 
@@ -721,7 +727,13 @@ NoteConnection 基于模块化架构构建，旨在实现高性能和可扩展�
 
 ## 📦 快速开始
 
-### 选项 1: 使用 npx 运行 (推荐)
+### 选项 1: Windows 安装程序 (推荐)
+
+1. 从 [最新发布页面](https://github.com/Jacobinwwey/NoteConnection/releases) 下载 `NoteConnection.Setup.exe`。
+2. 运行安装程序。
+3. 从桌面或开始菜单启动 NoteConnection。
+
+### 选项 2: 使用 npx 运行
 
 无需安装。
 
@@ -729,17 +741,17 @@ NoteConnection 基于模块化架构构建，旨在实现高性能和可扩展�
 npx noteconnection
 ```
 
-### 选项 2: 全局安装
+### 选项 3: 全局安装
 
 ```bash
 npm install -g noteconnection
 noteconnection
 ```
 
-### 选项 3: 本地开发
+### 选项 4: 本地开发
 
 ```bash
-git clone https://github.com/your-repo/NoteConnection.git
+git clone https://github.com/Jacobinwwey/NoteConnection.git
 cd NoteConnection
 npm install
 npm start
@@ -747,7 +759,7 @@ npm start
 
 - 服务器运行于: `http://localhost:3000`
 
-### 选项 4: 移动端支持 (Android)
+### 选项 5: 移动端支持 (Android)
 
 NoteConnection 使用 **Capacitor** 构建原生移动应用。
 
