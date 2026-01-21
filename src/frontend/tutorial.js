@@ -41,8 +41,16 @@ class TutorialManager {
                     // Highlight the Analysis button, and open panel if NOT already open
                     const btn = document.getElementById('analysis-btn');
                     const panel = document.getElementById('analysis-panel');
-                    if (btn && panel && !panel.classList.contains('open')) {
-                         btn.click();
+                    
+                    if (btn && panel) {
+                         if (!panel.classList.contains('open')) {
+                             btn.click();
+                         }
+                         // Elevate panel so it's visible above the overlay
+                         if (panel.dataset.tutorialTempZ === undefined) {
+                             panel.dataset.tutorialTempZ = panel.style.zIndex || getComputedStyle(panel).zIndex;
+                         }
+                         panel.style.zIndex = '9002'; // Above highlighted elements (9000)
                     }
                 }
             },
@@ -61,6 +69,23 @@ class TutorialManager {
                     const settingsBtn = document.getElementById('btn-open-settings');
                     if (settingsBtn) {
                         settingsBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // Click to open settings
+                        settingsBtn.click();
+                        
+                        // Elevate modal
+                        // We use a timeout because click might take a ms to toggle class/display
+                        setTimeout(() => {
+                            const modal = document.getElementById('settings-modal');
+                            if (modal) {
+                                if (modal.dataset.tutorialTempZ === undefined) {
+                                    modal.dataset.tutorialTempZ = modal.style.zIndex || getComputedStyle(modal).zIndex;
+                                }
+                                modal.style.zIndex = '9002'; // Above overlay
+                                
+                                // Also ensure modal content is visible if it has internal z-indexing
+                                // But usually checking modal wrapper is enough
+                            }
+                        }, 50);
                     }
                 }
             },
@@ -69,8 +94,32 @@ class TutorialManager {
                 target: null, // No specific target, centered dialog
                 position: 'center',
                 beforeShow: () => {
-                    // This step triggers the Quick Start Guide display
-                    // The guide will show after this step is acknowledged
+                    // Close Settings Modal
+                    const settingsModal = document.getElementById('settings-modal');
+                    if (settingsModal) {
+                        settingsModal.style.display = 'none'; 
+                        settingsModal.classList.remove('open'); 
+                        
+                        // Restore Z if needed, though clearSpotlights handles it eventually
+                        if (settingsModal.dataset.tutorialTempZ !== undefined) {
+                            settingsModal.style.zIndex = settingsModal.dataset.tutorialTempZ;
+                            delete settingsModal.dataset.tutorialTempZ;
+                        }
+                    }
+
+                    // Close Analysis Panel
+                    const analysisPanel = document.getElementById('analysis-panel');
+                    const closeBtn = document.querySelector('#analysis-panel .close-panel');
+                    if (analysisPanel && analysisPanel.classList.contains('open')) {
+                        if (closeBtn) closeBtn.click();
+                        else analysisPanel.classList.remove('open'); // Fallback
+                    }
+                    
+                    // Reset Analysis Panel Z
+                    if (analysisPanel && analysisPanel.dataset.tutorialTempZ !== undefined) {
+                        analysisPanel.style.zIndex = analysisPanel.dataset.tutorialTempZ;
+                        delete analysisPanel.dataset.tutorialTempZ;
+                    }
                 }
             }
         ];
@@ -249,12 +298,23 @@ class TutorialManager {
      * Helper to remove spotlight classes and restore original styles
      */
     clearSpotlights() {
-        // Restore parent elevation if any
-        const controls = document.getElementById('controls');
-        if (controls && controls.dataset.tutorialTempZ !== undefined) {
-             controls.style.zIndex = controls.dataset.tutorialTempZ;
-             delete controls.dataset.tutorialTempZ;
-        }
+        // Helper to restore Z-Index
+        const restoreZ = (id) => {
+            const el = document.getElementById(id);
+            if (el && el.dataset.tutorialTempZ !== undefined) {
+                el.style.zIndex = el.dataset.tutorialTempZ;
+                delete el.dataset.tutorialTempZ;
+            } else if (el) {
+                // If no tempZ, ensure it's not stuck at 9001
+                el.style.zIndex = '';
+            }
+        };
+
+        restoreZ('controls');
+        restoreZ('source-control');
+        restoreZ('quick-actions');
+        restoreZ('analysis-panel');
+        restoreZ('settings-modal');
 
         document.querySelectorAll('.tutorial-spotlight').forEach(el => {
             el.classList.remove('tutorial-spotlight');
@@ -281,8 +341,9 @@ class TutorialManager {
         // Also ensure #source-control (dropdown area) is explicitly reset
         const sourceControl = document.getElementById('source-control');
         if (sourceControl) {
-            sourceControl.style.position = '';
-            sourceControl.style.zIndex = '';
+            // DO NOT reset position here, it breaks 'absolute' from CSS/HTML
+            // sourceControl.style.position = ''; 
+            // sourceControl.style.zIndex = ''; // Handled by restoreZ above
             sourceControl.style.pointerEvents = 'auto'; // Force auto
         }
         
@@ -297,6 +358,10 @@ class TutorialManager {
         if (loadBtn) {
              loadBtn.style.pointerEvents = 'auto';
         }
+
+        // Paranoid: Ensure overlay is gone
+        const overlay = document.getElementById('tutorial-overlay');
+        if (overlay) overlay.remove();
     }
 
     /**
@@ -335,16 +400,21 @@ class TutorialManager {
             // Let's set it anyway to be sure.
             targetEl.style.zIndex = '9000';
 
-            // Check if target is inside #controls and elevate parent logic
-            const controls = document.getElementById('controls');
-            if (controls && (controls === targetEl || controls.contains(targetEl))) {
-                // Save original
-                if (controls.dataset.tutorialTempZ === undefined) {
-                    controls.dataset.tutorialTempZ = controls.style.zIndex || getComputedStyle(controls).zIndex;
+            // Check for Parent Containers and Elevate them
+            // This fixes Stacking Context issues where parent z-index (1000) traps child z-index (9000) below overlay (8000)
+            const elevateParent = (parentId) => {
+                const parent = document.getElementById(parentId);
+                if (parent && (parent === targetEl || parent.contains(targetEl))) {
+                    if (parent.dataset.tutorialTempZ === undefined) {
+                        parent.dataset.tutorialTempZ = parent.style.zIndex || getComputedStyle(parent).zIndex;
+                    }
+                    parent.style.zIndex = '9001'; // Elevate parent above overlay
                 }
-                // Elevate parent above overlay (8000)
-                controls.style.zIndex = '9001';
-            }
+            };
+
+            elevateParent('controls');
+            elevateParent('source-control');
+            elevateParent('quick-actions');
         }
 
         // Create or update dialog
