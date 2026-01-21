@@ -1,4 +1,4 @@
-# 2026-01-14 v1.0.0
+# 2026-01-21 v1.0.1
 
 # NoteConnection Knowledge Graph
 
@@ -222,6 +222,19 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
     - If you encounter `gl` errors, ensure Python and C++ compilers are available.
 
 ## 📅 Changelog
+
+### v1.0.1 - Maintenance & UX Refinement (2026-01-21)
+
+- **Multilingual Consolidation**:
+  - Removed redundant hardcoded translation logic in `app.js`.
+  - Centralized all UI strings into `I18nManager` for consistent language switching.
+  - Fixed "Mixed Language" issue in Welcome Modal where some labels remained in English.
+- **Onboarding UX Fixes**:
+  - **Tutorial Stability**: Fixed a crash in Focus Mode tutorial by exposing `enterFocusMode` correctly.
+  - **Welcome Modal Timing**: Resolved race conditions in `source_manager.js` to ensure the modal displays accurately after data is loaded.
+- **Protocol & Caching**:
+  - **Cache-Busting Handler**: Implemented a dynamic script loader in `source_manager.js` using timestamps to prevent browsers from serving stale `data.js` or `app.js`.
+  - **Refined Protocol Handler**: Optimized `app://` protocol in `main.ts` using `net.fetch` for more robust local file serving in production.
 
 ### v1.0.0 - Production Release (2026-01-14)
 
@@ -819,6 +832,19 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 ---
 
 ## 📅 更新日志 (Changelog)
+
+### v1.0.1 - 维护与体验优化 (2026-01-21)
+
+- **多语言体系整合**:
+  - 移除了 `app.js` 中冗余的硬编码翻译逻辑。
+  - 将所有 UI 字符串集成至 `I18nManager`，确保全应用语言切换的一致性。
+  - 修复了欢迎弹窗中部分标签显示为英文的“语种混合”问题。
+- **新人引导体验修复**:
+  - **教程稳定性**: 通过正确暴露 `enterFocusMode` 接口，修复了专注模式教程引发的崩溃。
+  - **欢迎弹窗逻辑**: 优化了 `source_manager.js` 中的加载时序，确保在数据状态确认后准确触发弹窗。
+- **协议与缓存优化**:
+  - **缓存刷新机制**: 在 `source_manager.js` 中实现了带时间戳的动态脚本加载器，防止浏览器加载旧版的 `data.js` 或 `app.js`。
+  - **协议处理器精简**: 优化了 `main.ts` 中的 `app://` 协议处理器，采用 `net.fetch` 提供更稳健的本地文件访问支持。
 
 ### v1.0.0 - 正式发布 (Production Release) (2026-01-14)
 

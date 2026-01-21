@@ -1,6 +1,6 @@
-# 2026-01-14 v1.0.0
+# 2026-01-21 v1.0.1
 
-# Interface Document
+# Interface Document (v1.0.1)
 
 This document defines the core interfaces for the NoteConnection system, separating backend processing from frontend visualization.
 
@@ -104,7 +104,6 @@ Core data structure for managing notes and dependencies.
   - `matchingStrategy`: 'exact-phrase' (Regex `\bterm\b`) or 'fuzzy' (`includes`). Default: 'exact-phrase'.
   - `exclusionList`: Array of strings to ignore.
 - **Logic**:
-
   - Iterates through all file pairs (Source, Target).
   - Checks if `Target.id` is in `exclusionList`.
   - Checks if `Source.content` matches `Target.id` using the selected strategy.
@@ -293,7 +292,6 @@ Renders the JSON data into an interactive DAG.
     - `setNodes`: Updates the active subset of nodes (e.g., for Focus Mode).
     - `drag`: Syncs manual node movement.
 - **Features**:
-
   - **Layout Modes (v0.4.0)**:
     - **Force Directed**: Standard physics-based layout.
     - **DAG (Hierarchical)**: Sugiyama-style layered layout using `rank` for Y-coordinates and curved Bezier lines for edges.
@@ -404,7 +402,6 @@ Renders the JSON data into an interactive DAG.
     - **Click-to-Freeze**: Clicking a node pauses the physics simulation (`simulation.stop()`) to allow stable inspection of connections.
     - **Resume**: Clicking the background resumes the simulation (`simulation.restart()`) unless "Freeze Layout" is globally enabled.
   - **Node Statistics Popup (v0.9.12)**:
-
     - **Type**: Independent Floating Window (`#node-stats-popup`).
     - **Trigger**: Single Click on a node (Disabled in Focus Mode v0.9.13).
     - **Content**: Displays In-degree (Red) and Out-degree (Blue) counts, plus separate scrollable lists of incoming and outgoing neighbors.
@@ -416,13 +413,11 @@ Renders the JSON data into an interactive DAG.
     - **Resizable (v0.9.19)**: CSS `resize: both` enables manual resize using browser's native resize handle.
 
   - **Focus Mode Re-entry (v0.9.19)**:
-
     - **Behavior**: Double-clicking a related node while already in focus mode now properly refreshes the view to show the new node's context.
     - **Fix**: Removes restriction that prevented switching focus between related nodes, enabling seamless exploration of connected concepts.
     - **State Reset**: All node visibility flags are reset before entering new focus mode to prevent accumulation issues.
 
   - **Selection State Auto-Clear (v0.9.20)**:
-
     - **Behavior**: When double-clicking a node to enter Focus Mode, any existing selection/highlight state is automatically cleared before entering the focused view.
     - **Implementation**:
       - Calls `highlightManager.unhighlight({ force: true })` to clear highlight state.
@@ -430,19 +425,16 @@ Renders the JSON data into an interactive DAG.
     - **User Experience**: Provides a clean transition into Focus Mode without residual visual artifacts from previous selections, ensuring the focused view is always clear and uncluttered.
 
   - **Strict Edge Visibility (v0.9.21)**:
-
     - **Behavior**: Edges are now strictly hidden (Opacity 0) by default in both SVG and Canvas modes to reduce visual clutter and improve rendering performance.
     - **Interaction**: Edges become visible only when a connected node is highlighted (Hover/Click) or focused.
     - **Optimization**: Ensures consistent "clean slate" initial view for large graphs (10k+ nodes).
 
   - **Mobile Statistics Popup (v0.9.22)**:
-
     - **Touch Drag**: Mobile users can hold and drag the popup header (`touchstart`/`touchmove`) to reposition it.
     - **Pinch-to-Zoom**: Two-finger pinch gesture on the popup body scales the content size (`fontSize`) from 0.5x to 2.0x.
     - **Event Handling**: Uses `passive: false` to prevent default page scrolling while interacting with the popup.
 
   - **Focus Mode Restoration (v0.9.24)**:
-
     - **Restoration**: Upon exiting Focus Mode, all background nodes are restored to the simulation in their original positions.
     - **Conditional Restart (v0.9.27)**:
       - **Logic**: If "Freeze Layout" is enabled when exiting Focus Mode, the simulation remains stopped (`simulation.stop()`) to maintain the visual state.
@@ -450,17 +442,14 @@ Renders the JSON data into an interactive DAG.
       - **Restoration**: Reverts nodes to these exact coordinates upon exit, discarding any layout changes made within Focus Mode.
       - **Goal**: Ensures main interface layout remains absolutely consistent before and after Focus Mode sessions.
     - **Strict Isolation (v0.9.75)**:
-
       - **Static Layout**: Focus Mode now strictly enforces a static layout using `fx`/`fy` locks and explicitly stops the physics simulation (`restart: false`), complying with "cease simulating" requirements.
       - **Dimension Independence**: Node sizes and typography in the main interface are protected. Upon exiting Focus Mode, dimensions (radius and font-size) are explicitly restored from pre-focus backups before calling the central `updateSize()` logic, ensuring absolute visual consistency with custom configurations (e.g., Size by Centrality).
       - **Event Protection**: `ResizeObserver` is now aware of Focus Mode and ignores window resize events that would otherwise trigger a simulation restart.
 
     - **Correct Restoration Order (v0.9.76)**:
-
       - **Fix**: Resolved a race condition where the worker was re-initialized with Focus Mode positions effectively overwriting the backup. Now, positions are restored locally _before_ syncing with the worker.
 
     - **Query History (v0.9.77)**:
-
       - **UI**: Added a "History ▼" dropdown in the Focus Mode toolbar.
       - **Functionality**: Tracks the last 10 visited central nodes. Clicking an item effectively "backtracks" or jumps to that node's Focus View.
 
@@ -469,13 +458,11 @@ Renders the JSON data into an interactive DAG.
       - **Scrolling**: Enhanced valid CSS flexbox structures to guarantee the "Filtered Nodes" table scrolls vertically without overflowing the panel.
 
   - **Focus Mode Specific Content (v0.9.28)**:
-
     - **UI**: "Specific Content" button added to the Focus Mode control panel.
     - **Function**: Opens the reading window for the currently focused node (`window.reader.open(focusNode)`).
     - **UX**: Provides a clear, discoverable alternative to double-clicking for accessing node content.
 
   - **Quick Actions (v0.9.26)**:
-
     - **Freeze Layout Button**:
       - **UI**: Dedicated button (❄️) in the top-right toolbar.
       - **Function**: Toggles the global "Freeze Layout" state. Synced with the main control panel checkbox.
@@ -486,13 +473,11 @@ Renders the JSON data into an interactive DAG.
       - **Persistence**: "Don't show again" checkbox writes `nc_manual_seen = true` to localStorage.
 
   - **Freeze Layout Quick Button (v0.9.26)**:
-
     - **UI**: Dedicated button (❄️) in the top-right toolbar for quick access.
     - **Function**: Toggles the global "Freeze Layout" state (synced with the checkbox in controls).
     - **Visual Feedback**: Button turns Red when active (Frozen).
 
   - **Quick Start Manual (v0.9.26)**:
-
     - **UI**: Modal window displaying a 4-step guide.
     - **Trigger**: Automatically on first visit (localStorage check) or via the "Help" (❓) button.
     - **Persistence**: "Don't show again" checkbox sets a flag in localStorage to suppress auto-opening.
@@ -543,7 +528,6 @@ Combines statistical and vector methods to infer directed edges.
 Utilizes Node.js `worker_threads` to parallelize computationally expensive tasks (Keyword Matching, Term Extraction).
 
 - **Optimization (v0.9.57)**:
-
   - **Strategy**: Instead of passing the full `RawFile[]` (containing file content) to workers, the system now passes `filePaths: string[]`.
   - **Implementation**: Workers use `fs` to read file content on demand from the disk.
   - **Benefit**: Drastically reduces memory consumption by avoiding the structural cloning of massive file content strings when spawning workers, resolving Heap OOM issues on large datasets (10k+ files).
@@ -686,7 +670,6 @@ GPU-accelerated physics engine for frontend layout, implementing D3-compatible f
 Enhances the node statistics popup with user-friendly positioning and scaling controls.
 
 - **Drag Interface**:
-
   - **Trigger**: `mousedown` on `#popup-drag-handle` (header element).
   - **Behavior**:
     - Tracks mouse movement and updates popup `left` and `top` CSS properties.
@@ -709,7 +692,6 @@ Enhances the node statistics popup with user-friendly positioning and scaling co
   ```
 
 - **Zoom Interface**:
-
   - **Controls**:
     - `#popup-zoom-in`: Increases scale by 0.1 (max 2.0).
     - `#popup-zoom-out`: Decreases scale by 0.1 (min 0.5).
@@ -718,7 +700,6 @@ Enhances the node statistics popup with user-friendly positioning and scaling co
   - **Formula**: `fontSize = ${scale}rem`
 
 - **Reset Behavior**:
-
   - On popup close (`#popup-close-btn`), position is reset to default:
     - `left: auto`
     - `right: 20px`
@@ -754,9 +735,7 @@ Manages node highlighting interactions for both PC and mobile interfaces.
   ```
 
 - **Public Methods**:
-
   - `highlight(node: NoteNode, options: HighlightOptions): void`
-
     - **Description**: Highlights a node and its connections.
     - **Input**:
       - `node`: The node to highlight.
@@ -776,7 +755,6 @@ Manages node highlighting interactions for both PC and mobile interfaces.
       - Incoming edges: Red (#ff6b6b), 2.5px width
 
   - `unhighlight(options: UnhighlightOptions): void`
-
     - **Description**: Removes highlighting from current node.
     - **Input**:
       ```typescript
@@ -786,7 +764,6 @@ Manages node highlighting interactions for both PC and mobile interfaces.
       ```
 
   - `setFocusMode(focusState: FocusState): void`
-
     - **Description**: Updates focus mode reference.
     - **Input**:
       ```typescript
@@ -797,7 +774,6 @@ Manages node highlighting interactions for both PC and mobile interfaces.
       ```
 
   - `getState(): HighlightState`
-
     - **Description**: Returns current highlight state.
     - **Output**:
       ```typescript
@@ -809,7 +785,6 @@ Manages node highlighting interactions for both PC and mobile interfaces.
       ```
 
   - `isHighlighted(nodeId: string): boolean`
-
     - **Description**: Checks if a node is currently highlighted.
 
   - `getCurrentConnections(): ConnectionData | null`
@@ -825,14 +800,12 @@ Manages node highlighting interactions for both PC and mobile interfaces.
       ```
 
 - **Integration Pattern**:
-
   1.  Initialize after graph elements are created.
   2.  Attach event handlers (hover, click).
   3.  Update focus mode state when entering/exiting focus mode.
   4.  Use in canvas renderer for visual consistency.
 
 - **Mobile Optimization**:
-
   - **Single Click**: Highlights node and freezes simulation for stable inspection.
   - **Double Click**: Enters focus mode.
   - **Hover (PC)**: Highlights without freezing.
@@ -858,6 +831,13 @@ Manages node highlighting interactions for both PC and mobile interfaces.
 
 - `src/frontend/data_cli_{kb}_{time}.js`: Lite data for frontend (CLI run specific).
 - `src/frontend/graph_data_cli_{kb}_{time}.json`: Full data (CLI run specific).
+
+### 9.1 Protocol Handler (v1.0.1)
+
+- **Scheme**: `app://`
+- **Implementation**: Uses `protocol.handle` and `net.fetch` for high-performance local file serving.
+- **Root Mapping**: `app://./` maps to `src/frontend/`.
+- **Precedence**: Correctly handles relative asset paths for KaTeX, Mermaid, and local fonts.
 
 ## 10. Frontend Settings Interfaces (v0.9.71)
 
@@ -965,7 +945,6 @@ The `SharedGPU` instance provides enhanced logging:
 NoteConnection supports dual build configurations to optimize installer size.
 
 - **FULL Mode** (Default):
-
   - **Command**: `npm run build` / `npm run electron:build`
   - **Inclusions**: Bundles `data.js` (~170MB) and `graph_data.json` (~470MB) for instant demo capability.
   - **Use Case**: Demos, Pre-packaged knowledge bases.
@@ -1002,16 +981,16 @@ NoteConnection supports dual build configurations to optimize installer size.
   - **Change Knowledge Base...**: Triggers `dialog.showOpenDialog` -> Updates config -> Reloads.
   - **Reset to Default**: Reverts to bundled `./Knowledge_Base` -> Updates config -> Reloads.
 
-## 17. Physics Algorithm Defaults (v1.0.0)
+## 17. Physics Algorithm Defaults (v1.0.1)
 
-To provide a clearer initial layout, v1.0.0 adjusts the default values and adjustable ranges for physics parameters:
+To provide a clearer initial layout, v1.0.1 adjusts the default values and adjustable ranges for physics parameters:
 
 - **Link Distance**: Default increased to **250** (from 100). Max range expanded to **600**.
 - **Collision Radius**: Default increased to **25** (from 20). Max range expanded to **100**.
 
 ---
 
-# 接口文档
+# 接口文档 (v1.0.1)
 
 本文档定义了 NoteConnection 系统核心接口，分离了后端处理与前端可视化。
 
@@ -1115,7 +1094,6 @@ To provide a clearer initial layout, v1.0.0 adjusts the default values and adjus
   - `matchingStrategy`: 'exact-phrase' (正则 `\bterm\b`) 或 'fuzzy' (`includes`)。默认: 'exact-phrase'。
   - `exclusionList`: 要忽略的字符串数组。
 - **逻辑**:
-
   - 遍历所有文件对 (Source, Target)。
   - 检查 `Target.id` 是否在 `exclusionList` 中。
   - 使用选定的策略检查 `Source.content` 是否匹配 `Target.id`。
@@ -1291,9 +1269,7 @@ To provide a clearer initial layout, v1.0.0 adjusts the default values and adjus
 
 - **输入**: `graph.json` (结构匹配 `DirectedGraph`)
 - **功能**:
-
   - **Web Worker 卸载 (v0.9.72 & v0.9.83)**:
-
     - **模块**: `src/frontend/simulationWorker.js`
     - **目的**: 在后台线程运行 D3 力导向模拟，防止重计算期间主线程阻塞（UI 冻结）。
     - **接口**: 通过 `postMessage` 进行消息传递。
@@ -1310,7 +1286,9 @@ To provide a clearer initial layout, v1.0.0 adjusts the default values and adjus
   - **Zoom/Pan**: D3 缩放行为。
   - **Tooltip**: 悬停时显示节点详情。
   - **专注模式 (Focus Mode - v0.6.2)**:
-    - **函数**: `enterFocusMode(node)` / `exitFocusMode()`
+    - **接口 (Global API v1.0.1)**:
+      - `window.enterFocusMode(node)`: 进入特定节点的专注模式。
+      - `window.exitFocusMode()`: 退出专注模式，恢复全局视图。
     - **UI 行为 (v0.9.46)**: 主控件（源选择、设置）被隐藏 (`display: none`) 以提供专注视图。
     - **Canvas 渲染 (v0.9.46)**: Canvas 专注模式下隐藏边以保持清晰。
     - **描述**: 隔离一个节点及其直接上下文。
@@ -1320,6 +1298,9 @@ To provide a clearer initial layout, v1.0.0 adjusts the default values and adjus
       - **下级**: 入度邻居，置于下层。相对高度基于分数。
     - **排序**: 层内节点按专注分数（边权重 + 度数比）排序。
     - **标签**: 基于垂直偏移交错（上方/下方）以防止重叠。
+  - **欢迎界面 (v1.0.1)**:
+    - **函数**: `window.showWelcomeModal(hasNodes: boolean)`
+    - **触发**: 由 `source_manager.js` 在加载 `data.js` 并确认数据状态后调用。
   - **设置 (Settings - v0.7.0)**:
     - **接口**: `SettingsManager` (前端)
     - **持久化**: `localStorage('nc_settings')`
@@ -1401,7 +1382,6 @@ To provide a clearer initial layout, v1.0.0 adjusts the default values and adjus
     - **点击冻结**: 点击节点会暂停物理模拟 (`simulation.stop()`)，以便稳定地检查连接。
     - **恢复**: 点击背景会恢复模拟 (`simulation.restart()`)，除非全局启用了“冻结布局”。
   - **节点统计弹窗 (Node Statistics Popup - v0.9.12)**:
-
     - **类型**: 独立浮动窗口 (`#node-stats-popup`)。
     - **触发**: 单击节点 (专注模式下禁用 v0.9.13)。
     - **内容**: 显示入度 (红色) 和出度 (蓝色) 计数，以及单独的可滚动入度和出度邻居列表。
@@ -1413,13 +1393,11 @@ To provide a clearer initial layout, v1.0.0 adjusts the default values and adjus
     - **可调整大小 (v0.9.19)**: CSS `resize: both` 启用使用浏览器原生调整大小手柄进行手动调整大小。
 
   - **专注模式重新进入 (Focus Mode Re-entry - v0.9.19)**:
-
     - **行为**: 在已处于专注模式时双击相关节点现在会正确刷新视图以显示新节点的上下文。
     - **修复**: 移除了阻止在相关节点之间切换专注的限制，使连接概念的无缝探索成为可能。
     - **状态重置**: 在进入新的专注模式之前重置所有节点可见性标志，以防止累积问题。
 
   - **专注进入时自动清除选择状态 (Selection State Auto-Clear - v0.9.20)**:
-
     - **行为**: 当双击节点进入专注模式时，任何现有的选择/高亮状态都会在进入专注视图之前自动清除。
     - **实现**:
       - 调用 `highlightManager.unhighlight({ force: true })` 以清除高亮状态。
@@ -1427,38 +1405,32 @@ To provide a clearer initial layout, v1.0.0 adjusts the default values and adjus
     - **用户体验**: 提供了进入专注模式的干净过渡，没有先前选择残留的视觉伪影，确保专注视图始终清晰且整洁。
 
   - **严格的边可见性 (Strict Edge Visibility - v0.9.21)**:
-
     - **行为**: 为了减少视觉混乱并提高渲染性能，在 SVG 和 Canvas 模式下，边现在默认严格隐藏（不透明度 0）。
     - **交互**: 仅当连接的节点被高亮显示（悬停/点击）或处于专注模式时，边才变得可见。
     - **优化**: 确保大图（10k+ 节点）具有一致的“干净”初始视图。
 
   - **移动端统计弹窗 (Mobile Statistics Popup - v0.9.22)**:
-
     - **触摸拖动**: 移动用户可以按住并拖动弹窗头部 (`touchstart`/`touchmove`) 进行重新定位。
     - **捏合缩放**: 弹窗主体上的双指捏合手势可将内容大小 (`fontSize`) 从 0.5x 缩放到 2.0x。
     - **事件处理**: 使用 `passive: false` 防止在与弹窗交互时默认页面滚动。
 
   - **专注模式恢复 (Focus Mode Restoration - v0.9.24)**:
-
     - **恢复**: 退出专注模式时，所有背景节点将恢复到模拟中的原始位置。
     - **条件重启 (Conditional Restart - v0.9.27)**:
       - **逻辑**: 如果在退出专注模式时启用了“冻结布局”，模拟将保持停止状态 (`simulation.stop()`) 以维持视觉状态。
       - **行为**: 如果用户期望图表保持冻结，则防止图表“爆炸”或移动。
 
   - **专注模式具体内容 (v0.9.28)**:
-
     - **UI**: 专注模式控制面板中添加了“打开具体内容”按钮。
     - **功能**: 为当前聚焦的节点打开阅读窗口 (`window.reader.open(focusNode)`)。
     - **UX**: 提供了一个清晰、易于发现的替代方案，用于通过双击访问节点内容。
 
   - **冻结布局快速按钮 (v0.9.26)**:
-
     - **UI**: 右上角工具栏中的专用按钮 (❄️)，用于快速访问。
     - **功能**: 切换全局“冻结布局”状态（与控件中的复选框同步）。
     - **视觉反馈**: 激活（冻结）时按钮变红。
 
   - **快速开始指南 (v0.9.26)**:
-
     - **UI**: 显示 4 步指南的模态窗口。
     - **触发**: 首次访问时自动触发（localStorage 检查）或通过“帮助” (❓) 按钮触发。
     - **持久化**: “不再显示”复选框在 localStorage 中设置标志以抑制自动打开。
@@ -1599,13 +1571,23 @@ To provide a clearer initial layout, v1.0.0 adjusts the default values and adjus
 
 利用 Node.js `worker_threads` 并行化计算密集型任务（关键词匹配、术语提取）。
 
-- **优化 (v0.9.57)**:
+---
 
+### 3.5 缓存刷新机制 (Cache-Busting Strategy - v1.0.1)
+
+为了防止 Electron 渲染进程加载过期的 `data.js` 或 `app.js`（尤其是执行恢复快照后），`source_manager.js` 现强制使用动态依赖加载：
+
+- **实现**: `loadScript(src)`
+- **逻辑**: 在 URL 后追加 `?v=${Date.now()}` 查询参数。
+- **顺序**: 严格保证 `data.js` -> `I18nManager` -> `app.js` 的执行顺序。
+- **稳定性**: 即使脚本加载失败，也会优雅降级并触发欢迎弹窗。
+- **优化 (v0.9.57)**:
   - **策略**: 系统不再向 Worker 传递包含文件内容的完整 `RawFile[]`，而是传递 `filePaths: string[]`。
   - **实现**: Worker 使用 `fs` 按需从磁盘读取文件内容。
   - **优势**: 大幅减少了在生成 Worker 时克隆大量文件内容字符串的结构性内存开销，解决了大数据集（10k+ 文件）上的堆内存溢出 (Heap OOM) 问题。
 
 - **Worker 接口**:
+
   ```typescript
   interface WorkerData {
     filePaths: string[]; // 更新自 filesChunk: RawFile[]
@@ -1614,6 +1596,7 @@ To provide a clearer initial layout, v1.0.0 adjusts the default values and adjus
     exclusionList: string[];
   }
   ```
+
   - `destroy()`: 释放 GPU 资源 (WebGL 上下文)。
 
 #### `Layout Forces (v0.9.74)`
@@ -1706,9 +1689,7 @@ interface CooccurrenceMetrics {
   ```
 
 - **公共方法**:
-
   - `highlight(node: NoteNode, options: HighlightOptions): void`
-
     - **描述**: 高亮显示节点及其连接。
     - **输入**:
       - `node`: 要高亮的节点。
@@ -1728,7 +1709,6 @@ interface CooccurrenceMetrics {
       - 入度边: 红色 (#ff6b6b), 2.5px 宽度
 
   - `unhighlight(options: UnhighlightOptions): void`
-
     - **描述**: 移除当前节点的高亮。
     - **输入**:
       ```typescript
@@ -1738,7 +1718,6 @@ interface CooccurrenceMetrics {
       ```
 
   - `setFocusMode(focusState: FocusState): void`
-
     - **描述**: 更新专注模式引用。
     - **输入**:
       ```typescript
@@ -1749,7 +1728,6 @@ interface CooccurrenceMetrics {
       ```
 
   - `getState(): HighlightState`
-
     - **描述**: 返回当前高亮状态。
     - **输出**:
       ```typescript
@@ -1761,7 +1739,6 @@ interface CooccurrenceMetrics {
       ```
 
   - `isHighlighted(nodeId: string): boolean`
-
     - **描述**: 检查节点当前是否被高亮。
 
   - `getCurrentConnections(): ConnectionData | null`
@@ -1777,14 +1754,12 @@ interface CooccurrenceMetrics {
       ```
 
 - **集成模式**:
-
   1.  在创建图元素后初始化。
   2.  附加事件处理程序（悬停、点击）。
   3.  进入/退出专注模式时更新专注模式状态。
   4.  在 Canvas 渲染器中使用以保持视觉一致性。
 
 - **移动端优化**:
-
   - **单击**: 高亮节点并冻结模拟以便稳定检查。
   - **双击**: 进入专注模式。
   - **悬停 (PC)**: 高亮但不冻结。
@@ -1818,7 +1793,6 @@ interface CooccurrenceMetrics {
 增强节点统计弹窗，提供用户友好的定位和缩放控制。
 
 - **拖动接口**:
-
   - **触发**: `#popup-drag-handle` (头部元素) 上的 `mousedown`。
   - **行为**:
     - 跟踪鼠标移动并更新弹窗的 `left` 和 `top` CSS 属性。
@@ -1837,7 +1811,6 @@ interface CooccurrenceMetrics {
     ```
 
 - **缩放接口**:
-
   - **控制**:
     - `#popup-zoom-in`: 增加比例 0.1 (最大 2.0)。
     - `#popup-zoom-out`: 减少比例 0.1 (最小 0.5)。
@@ -1846,7 +1819,6 @@ interface CooccurrenceMetrics {
   - **公式**: `fontSize = ${scale}rem`
 
 - **重置行为**:
-
   - 关闭弹窗 (`#popup-close-btn`) 时，位置重置为默认值：
     - `left: auto`
     - `right: 20px`
@@ -1976,7 +1948,6 @@ interface CooccurrenceMetrics {
 NoteConnection 支持双重构建配置以优化安装包大小。
 
 - **完整模式 (FULL Mode)** (默认):
-
   - **命令**: `npm run build` / `npm run electron:build`
   - **包含内容**: 捆绑 `data.js` (~170MB) 和 `graph_data.json` (~470MB) 以具备即时演示能力。
   - **用例**: 演示、预打包知识库。

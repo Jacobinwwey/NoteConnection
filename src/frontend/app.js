@@ -2087,7 +2087,21 @@ function initFocusHistoryUI() {
 // Ensure init happens
 initFocusHistoryUI();
 
-function enterFocusMode(focusD) {
+function enterFocusMode(focusDInput) {
+    // v1.0.1 Fix: Resolve to live node instance (Defensive)
+    // Ensures we don't accidentally use a stale object (e.g. from graphData) 
+    // while the renderer iterates over the live 'nodes' array.
+    let focusD = focusDInput;
+    if (nodes && nodes.length > 0) {
+        const id = focusDInput.id || focusDInput; // Handle ID string or Node object
+        const liveNode = nodes.find(n => n.id === id);
+        if (liveNode) {
+            focusD = liveNode;
+        } else {
+            console.warn('[Focus] Node not found in active simulation:', id);
+            return;
+        }
+    }
     // Backup original positions AND visual properties to ensure complete restoration upon exit (v1.0.0)
     // 备份原始位置和视觉属性以确保退出时完全恢复
     nodes.forEach((n, idx) => {

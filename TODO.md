@@ -1,3 +1,19 @@
+# 2026-01-21 v1.0.1 - Maintenance & UX Refinement
+
+**Goal**: Improve system robustness through protocol handler fixes, i18n consolidation, and onboarding UI refinement.
+
+- [x] **Multilingual Consolidation**
+  - [x] **Centralized I18n**: Removed redundant hardcoded translation logic from `app.js` and integrated with `I18nManager`.
+  - [x] **UI Consistency**: Fixed "Mixed Language" issues in the Welcome Modal and Loading screen.
+- [x] **Onboarding UI Refinement**
+  - [x] **Tutorial Stability**: Fixed Focus Mode activation in tutorials by exposing `enterFocusMode` and `exitFocusMode` as global APIs.
+  - [x] **Welcome Modal UX**: Optimized trigger timing in `source_manager.js` to ensure accurate display based on data state.
+- [x] **Protocol Handler & Caching**
+  - [x] **Cache-Busting**: Implemented dynamic script loading in `source_manager.js` using timestamps to prevent browser caching of `data.js`.
+  - [x] **Protocol Optimization**: Refined `app://` protocol handler in `main.ts` using `net.fetch` for better reliability.
+
+---
+
 # 2026-01-14 v1.0.0 - Production Release
 
 **Goal**: Official production release with optimized Focus Mode, GPU diagnostics, and enhanced security.
@@ -63,13 +79,11 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Implement GPU-accelerated Link Force and finalize stable layout switching with state preservation and WebGL resource management.
 
 - [x] **GPU Link Force Acceleration**
-
   - [x] **GPULinkForce Class**: Implemented high-performance spring force in `layout_gpu.js`.
   - [x] **Gather Algorithm**: Optimized neighbor processing using flattened adjacency structures.
   - [x] **D3 Integration**: Added API shims (`links`, `strength`, `distance`) for seamless `app.js` integration.
 
 - [x] **Physics Robustness & Stability**
-
   - [x] **Velocity Clamping**: Prevents node "explosions" by capping velocity at 100.
   - [x] **NaN Safety**: Implemented math guards in GPU kernels and `isFinite` checks in JS.
   - [x] **Shadowing Fix**: Renamed internal `links` to `_links` in `GPULinkForce` to prevent property-method collision.
@@ -103,7 +117,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Fulfill the "Geek" requirement to leverage AMDGPU (RX 7900XT) for smoother frontend rendering and parallel backend processing.
 
 - [x] **Frontend GPU Rendering**
-
   - [x] **GPU Force Engine**: Implemented `GPUManyBodyForce` in `layout_gpu.js` using `gpu.js`.
   - [x] **Integration**: Added `libs/gpu-browser.min.js` and integrated into `app.js`.
   - [x] **UI Control**: Verified "GPU Optimised Rendering" checkbox in Settings. Default: Enabled.
@@ -120,14 +133,12 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Optimize performance for massive graphs (50k+ nodes) by offloading layout calculations to backend workers and implementing a static rendering mode.
 
 - [x] **Backend Parallel Layout**
-
   - [x] **Layout Engine**: Created `LayoutEngine.ts` and `layoutWorker.ts` to run `d3-force` simulation on backend threads.
   - [x] **Integration**: `GraphBuilder` now automatically triggers backend layout calculation for graphs > 100 nodes.
   - [x] **GPU Acceleration**: Implemented `LayoutGPU.ts` using `gpu.js` to accelerate layout on AMDGPU.
   - [x] **Performance**: Reduces frontend initialization time by providing pre-calculated coordinates.
 
 - [x] **Frontend Optimizations**
-
   - [x] **Static Mode**: Introduced a "Static Mode" toggle.
     - [x] **Auto-Enable**: Automatically enabled for >5000 nodes or >200,000 edges.
     - [x] **Behavior**: Simulation runs for 2 seconds (warm-up) then stops to save CPU.
@@ -166,7 +177,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Definitively solve the "Nodes: 0" display issue for 10k+ nodes caused by massive `data.js` file size (~500MB) crashing the browser.
 
 - [x] **Architecture Refactor**
-
   - [x] **Data Splitting**: Separated graph structure (`data.js`) from content (`graph_data.json`).
   - [x] **Optimization**: `data.js` now excludes node content, reducing file size by ~95% (e.g., 500MB -> 35MB for 13k nodes).
   - [x] **Backend**: Updated `src/index.ts` to generate "Lite" `data.js`.
@@ -192,13 +202,11 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Solve the "stuck" rendering issue for 10k+ nodes/1.2M edges and implement configurable memory strategies for backend processing.
 
 - [x] **Frontend Optimization**
-
   - [x] **Physics Culling**: Implemented edge limit (20k) for the D3 Force Simulation. If total edges exceed this, only a subset drives the physics to prevent Main Thread freeze, while all edges remain available for rendering/traversal.
   - [x] **Link Resolution**: Pre-resolved link source/target to objects to support robust rendering even when physics uses a subset.
   - [x] **UI Unblocking**: Fixed "Quick Start Guide" not appearing by freeing up the main thread.
 
 - [x] **Backend Memory Strategy**
-
   - [x] **Configuration**: Added `memorySavingMode` and `deepDebug` to `AppConfig`.
   - [x] **Worker Optimization**: Refactored `keywordMatchWorker` and `statisticalWorker` to support both `filePaths` (Low Memory) and `filesChunk` (High Performance/Precision) modes.
   - [x] **Graph Metrics**: Added check to force Single-Core execution for `Betweenness Centrality` when `memorySavingMode` is active.
@@ -277,7 +285,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Resolve "Heap out of memory" crash on Windows 10/11 by optimizing memory usage during graph construction and refactoring recursion to iteration.
 
 - [x] **Memory Optimization**
-
   - [x] **Scope Management**: Explicitly clear `fileMap` (holding file contents) before entering the memory-intensive `Algorithmic Core` phase in `GraphBuilder`.
   - [x] **Granular Logging**: Split `Algorithmic Core` logging into `Cycle Detection` and `Topological Sort` for precise error tracking.
 
@@ -369,7 +376,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Improve Focus Mode usability by preventing accidental zooming and fixing label overlap in Vertical layouts.
 
 - [x] **Interaction Logic**
-
   - [x] **Double Click Zoom Prevention**: Added `stopPropagation` to the node double-click handler to prevent `d3.zoom` from triggering a zoom-in event when entering Focus Mode.
 
 - [x] **Focus Mode Layout**
@@ -383,7 +389,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Clean up the UI during Focus Mode to reduce clutter and fix visual rendering in Canvas mode.
 
 - [x] **UI Hiding**
-
   - [x] **Main Controls**: "Select Knowledge Base", "Load", and the main "NoteConnection" dropdown are now completely hidden (`display: none`) when entering Focus Mode.
   - [x] **Restoration**: Elements are restored to their default state (`display: ''`) upon exiting Focus Mode, respecting CSS rules (e.g., mobile visibility).
 
@@ -397,13 +402,11 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Enable full interactivity (Hover, Click, Focus) in Canvas mode and remove the deprecated "View Mode" (Clusters) feature.
 
 - [x] **Canvas Interactivity**
-
   - [x] **Hit Testing**: Implemented `findNodeAt(x, y)` to detect nodes under the mouse cursor in Canvas mode, accounting for zoom/pan transforms.
   - [x] **Event Listeners**: Added `mousemove` (highlighting) and `click` (inspection/focus) handlers to the canvas element.
   - [x] **Consistency**: Canvas interaction now matches SVG behavior (Single click -> Stats, Double click -> Focus).
 
 - [x] **Visual Fixes**
-
   - [x] **Node Sizing**: Updated `renderCanvas` to respect the "Size By" setting (Degree/Centrality/Uniform), fixing the issue where nodes were rendered too large.
 
 - [x] **Cleanup**
@@ -549,7 +552,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Further reduce memory/CPU consumption by increasing simulation friction and skipping DOM updates for frozen off-screen nodes.
 
 - [x] **Damping Adjustment**
-
   - [x] **Default**: Increased `velocityDecay` to **0.92**.
   - [x] **Effect**: Graph settles much faster; movement is "heavier" and less jittery.
 
@@ -601,7 +603,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Optimize user experience by providing a direct way to open specific node content within Focus Mode, avoiding the need for double-clicking.
 
 - [x] **Specific Content Button**
-
   - [x] **UI**: Added a "Specific Content" button (`#btn-open-content`) to the Focus Mode control panel (`#focus-exit-btn`).
   - [x] **Logic**: Clicking the button triggers `window.reader.open(focusNode)`, mimicking the double-click behavior on a focused node.
   - [x] **Localization**: Added support for English ("Open Specific Content") and Chinese ("打开具体内容").
@@ -627,13 +628,11 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Improve mobile usability and onboard new users effectively.
 
 - [x] **Freeze Layout Button**
-
   - [x] **UI**: Add a dedicated "Freeze Layout" button to the main interface (top-right or near controls) for quick access, especially on mobile.
   - [x] **Logic**: Link button to the existing simulation freeze functionality. Sync state with the checkbox in controls.
   - [x] **Visual**: Use an icon (e.g., Lock/Unlock) to indicate state.
 
 - [x] **Quick Start Manual**
-
   - [x] **Content**: Create a concise "How to Use" guide covering:
     - Loading Data
     - Navigation (Pan/Zoom)
@@ -655,7 +654,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Minimize resource usage by strictly freezing the main graph when requested, preventing user interactions that would wake the simulation.
 
 - [x] **Freeze Layout Enhancement**
-
   - [x] **Behavior**: Checking "Freeze Layout" now disables node dragging in the main interface (SVG Mode).
   - [x] **Constraint**: This restriction does _not_ apply to Focus Mode, where manual adjustment is still permitted.
   - [x] **Performance**: Prevents `simulation.restart()` triggers from drag events, ensuring the simulation stays effectively stopped (0% CPU usage).
@@ -672,7 +670,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Reduce memory/CPU expenditure in SVG mode by freezing background nodes during Focus Mode.
 
 - [x] **Simulation Optimization**
-
   - [x] **Subsetting**: Modified `enterFocusMode` to filter `simulation.nodes()` and `simulation.force("link").links()` to only include the focused subset.
   - [x] **Freezing**: Background nodes are effectively frozen as they are no longer processed by D3 forces.
   - [x] **Restoration**: Modified `exitFocusMode` to restore the full set of nodes and links to the simulation.
@@ -689,7 +686,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Adjust default settings for Reading Window font size and Simulation Damping based on user feedback.
 
 - [x] **Reading Window Font Size**
-
   - [x] **Implementation**: Modified `Reader` class in `reader.js` to set `currentZoom` to 0.5 by default.
   - [x] **Logic**: Affects initialization and reset on open.
 
@@ -704,13 +700,11 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Adapt the node statistics popup for mobile devices with touch-based drag and pinch-to-zoom capabilities.
 
 - [x] **Touch Drag Support**
-
   - [x] **Implementation**: Added `touchstart`, `touchmove`, `touchend` listeners to `popupDragHandle`.
   - [x] **Logic**: Mirrors mouse drag logic using `touches[0]` coordinates.
   - [x] **Constraint**: Requires single-finger touch on the header.
 
 - [x] **Pinch-to-Zoom Support**
-
   - [x] **Implementation**: Added `touchstart`, `touchmove`, `touchend` listeners to `statsPopup`.
   - [x] **Logic**: Calculates distance between two fingers (`Math.hypot`) to determine scale ratio.
   - [x] **Scaling**: Updates `popupDragState.currentScale` and applies to `fontSize`.
@@ -728,7 +722,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Enforce strict edge visibility rules (hidden by default) and optimize rendering for large graphs.
 
 - [x] **Strict Edge Visibility**
-
   - [x] **SVG Mode**: Modified `updateVisibility` in `app.js` to set default edge opacity to 0 (was 0.15).
   - [x] **Consistency**: Ensured SVG behavior matches Canvas mode (hidden by default).
   - [x] **Performance**: Reduced visual clutter and rendering cost for initial view.
@@ -745,13 +738,11 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Automatically clear any existing selection or highlight state when entering Focus Mode via double-click for a clean transition.
 
 - [x] **Auto-Clear Implementation**
-
   - [x] **Highlight Clearing**: Modified `handleDoubleClick()` to call `highlightManager.unhighlight({ force: true })` before entering focus mode.
   - [x] **Popup Hiding**: Automatically hide the statistics popup (`#node-stats-popup`) when entering focus mode.
   - [x] **State Management**: Ensures clean state transition without residual visual artifacts.
 
 - [x] **User Experience Enhancement**
-
   - [x] **Clean Transition**: Users always start with a pristine focused context.
   - [x] **Visual Clarity**: Prevents confusion from overlapping highlights between normal and focus modes.
   - [x] **Consistent Behavior**: Standardized focus mode entry behavior across all scenarios.
@@ -769,7 +760,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Fix focus mode refresh issues and add drag/zoom functionality to the statistics popup for better user experience.
 
 - [x] **Focus Mode Re-entry Fix**
-
   - [x] **Double-Click Behavior**: Modified `handleDoubleClick()` to allow re-entering focus mode on related nodes while already in focus mode.
   - [x] **State Reset**: Ensured all node visibility flags (`isFocusVisible`, `fx`, `fy`, `_labelDy`) are properly reset before entering new focus context.
   - [x] **Prevention**: Removed the restriction that blocked switching focus between related nodes in `enterFocusMode()`.
@@ -800,25 +790,21 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Reconstruct node highlighting logic with modular architecture for better maintainability and robustness.
 
 - [x] **Modular Architecture**
-
   - [x] **NodeHighlightManager Class**: Created dedicated module (`nodeHighlight.js`) with complete state management.
   - [x] **API Design**: Implemented clean public API with `highlight()`, `unhighlight()`, `getState()`, and helper methods.
   - [x] **Integration**: Fully integrated into app.js replacing old highlighting functions.
 
 - [x] **Unified Interaction Model**
-
   - [x] **PC Support**: Hover-based highlighting without freezing simulation.
   - [x] **Mobile Support**: Click-based highlighting with simulation freeze for stable inspection.
   - [x] **State Consistency**: Proper tracking of frozen vs temporary highlight states.
 
 - [x] **Rendering Enhancements**
-
   - [x] **SVG Mode**: Directional edge coloring (Blue=#4488ff outgoing, Red=#ff6b6b incoming) with matching arrow markers.
   - [x] **Canvas Mode**: Updated to use highlightManager state for consistent visual behavior.
   - [x] **Dimming Effect**: Unconnected nodes dim to 0.05 opacity during highlight for clearer focus.
 
 - [x] **Focus Mode Integration**
-
   - [x] **State Awareness**: highlightManager respects focus mode and doesn't interfere.
   - [x] **Coordination**: Focus mode entry/exit properly updates highlightManager state.
 
@@ -835,7 +821,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Establish the standalone project environment and core data structures for a Directed Graph, independent of specific note-taking app APIs initially.
 
 - [x] **Project Initialization**
-
   - [x] Initialize a new TypeScript/Node.js project in `NoteConnection`.
   - [x] Configure ESLint, Prettier, and Jest for testing.
 
@@ -848,7 +833,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Ingest data from Markdown files, specifically parsing frontmatter for directional dependencies.
 
 - [x] **Markdown Parser Service**
-
   - [x] Implement a file system reader to scan directories recursively.
   - [x] Create a regex or AST-based parser to extract YAML frontmatter.
 
@@ -861,7 +845,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Ensure the graph is a valid DAG and calculate hierarchical layout positions.
 
 - [x] **Cycle Detection & Resolution**
-
   - [x] Implement DFS-based cycle detection.
   - [x] Strategy: Report cycles to the user (Console Warning).
 
@@ -875,12 +858,10 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Render the processed graph in a web view using a layered layout engine (Sugiyama-style).
 
 - [x] **Layout Engine Integration**
-
   - [x] Implement "Layout Mode" switch in UI (Force vs DAG).
   - [x] Map `rank` to Y-coordinates in the visualization.
 
 - [x] **Canvas/SVG Rendering**
-
   - [x] Optimize rendering for hierarchical structures.
   - [x] Draw curved bezier lines for dependencies to indicate flow direction clearly.
 
@@ -899,7 +880,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Handle 10,000+ nodes by grouping them into high-level clusters based on File Structure or Semantic Tags.
 
 - [x] **Clustering Logic**
-
   - [x] Implement **Folder-based Clustering**: Parse directory structure (e.g., `Physics/Mechanics` -> Cluster `Mechanics`).
   - [x] Add Configuration Strategy: Switch between `Label Propagation` (current) and `Folder Path` for `clusterId` assignment.
 
@@ -912,17 +892,14 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Combine statistical and vectorized methods to infer dependencies and associations where explicit metadata is missing.
 
 - [x] **Vector-based Association (Similarity)**
-
   - [x] Implement embedding generation (using local TF-IDF VectorSpace).
   - [x] Use Cosine Similarity to determine the strength of **association** (undirected relationship) between concepts.
 
 - [x] **Statistical Dependency Inference**
-
   - [x] Calculate **Co-occurrence Frequency** and **Conditional Probability** ($P(B|A)$) across the note corpus.
   - [x] Hypothesis: If A frequently appears before B or in the context of defining B, A might be a dependency.
 
 - [x] **Hybrid Judgment Engine (v0.6.5)**
-
   - [x] Combine Vector Similarity (for relevance) + Statistical Probability (for direction).
   - [x] Rule: If `Similarity(A, B) > Threshold` AND `P(B|A) >> P(A|B)`, suggest edge `A -> B`.
 
@@ -1156,7 +1133,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **Goal**: Complete integration with Joplin/Obsidian plugins and polish UX.
 
 - [x] **Plugin Wrapper**
-
   - Wrap the `NoteConnection` core logic into a Joplin Plugin and an Obsidian Plugin. (API Ready in v0.9.53)
 
 - [x] **User Settings & Documentation (v0.7.0)**
@@ -1170,6 +1146,22 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
   - [x] **Finalize Documentation**: Complete User Manual and Developer Guide.
   - [x] **Final Polish & Demo Packaging**: Ensure zero-config startup (`npm start`) works seamlessly for promotion.
   - [x] **Release**: Package for v1.0.0.
+
+---
+
+# 2026-01-21 v1.0.1 - 维护与体验优化
+
+**目标**: 通过协议处理器修复、多语言整合及新人引导 UI 的精细化，提升系统稳健性。
+
+- [x] **多语言体系整合**
+  - [x] **集中式 I18n**: 移除了 `app.js` 中的冗余硬编码翻译逻辑，统一由 `I18nManager` 接管。
+  - [x] **UI 一致性**: 修复了欢迎弹窗及加载界面中的“中英混合”显示问题。
+- [x] **新人引导 UI 精细化**
+  - [x] **教程稳定性**: 通过将 `enterFocusMode` 和 `exitFocusMode` 暴露为全局接口，修复了教程中的专注模式激活错误。
+  - [x] **欢迎弹窗逻辑**: 优化了 `source_manager.js` 中的触发时序，确保根据数据状态准确显示。
+- [x] **协议处理器与缓存**
+  - [x] **缓存刷新**: 在 `source_manager.js` 中实现了基于时间戳的脚本动态加载，彻底解决浏览器缓存 `data.js` 的问题。
+  - [x] **协议优化**: 优化了 `main.ts` 中的 `app://` 协议处理器，采用 `net.fetch` 提升了加载可靠性。
 
 ---
 
@@ -1216,7 +1208,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 完成稳定的布局切换状态保存，并解决 GPU 资源管理问题（WebGL 上下文泄漏）。
 
 - [x] **布局切换修复**
-
   - [x] **状态保存**: 实现了 `layoutCache`，独立存储和恢复 'Force' 和 'DAG' 布局的节点位置 (`x, y, fx, fy`)。
   - [x] **崩溃解决**: 通过重构 `applyPhysics` 的使用，修复了 `updateLayout` 中在初始化前访问 `simulation.force` 导致的关键崩溃。
   - [x] **逻辑**: 布局切换现在可以平滑过渡，没有视觉上的“瞬移”闪烁或模拟重置。
@@ -1238,7 +1229,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 满足“极客”需求，利用 AMDGPU (RX 7900XT) 实现更流畅的前端渲染和并行后端处理。
 
 - [x] **前端 GPU 渲染**
-
   - [x] **GPU 力引擎**: 使用 `gpu.js` 在 `layout_gpu.js` 中实现了 `GPUManyBodyForce`。
   - [x] **集成**: 添加了 `libs/gpu-browser.min.js` 并集成到 `app.js`。
   - [x] **UI 控制**: 验证了设置中的“GPU 优化渲染”复选框。默认值：启用。
@@ -1253,14 +1243,12 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 通过将布局计算卸载到后端 Worker 线程并实施静态渲染模式，优化大规模图谱 (50k+ 节点) 的性能。
 
 - [x] **后端并行布局**
-
   - [x] **布局引擎**: 创建了 `LayoutEngine.ts` 和 `layoutWorker.ts` 以在后端线程运行 `d3-force` 模拟。
   - [x] **集成**: `GraphBuilder` 现在自动为超过 100 个节点的图谱触发后端布局计算。
   - [x] **GPU 加速**: 使用 `gpu.js` 实现了 `LayoutGPU.ts` 以在 AMDGPU 上加速布局。
   - [x] **性能**: 通过提供预计算的坐标减少前端初始化时间。
 
 - [x] **前端优化**
-
   - [x] **静态模式**: 引入了“静态模式”切换。
     - [x] **自动启用**: 节点数 >5000 或 边数 >200,000 时自动启用。
     - [x] **行为**: 模拟运行 2 秒 (预热) 后停止以节省 CPU。
@@ -1297,7 +1285,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 彻底解决由于巨大的 `data.js` 文件大小 (~500MB) 导致浏览器崩溃而造成的 10k+ 节点“节点：0”显示问题。
 
 - [x] **架构重构**
-
   - [x] **数据拆分**: 将图结构 (`data.js`) 与内容 (`graph_data.json`) 分离开来。
   - [x] **优化**: `data.js` 现在不包含节点内容，文件大小减少了 ~95% (例如，13k 节点的 500MB 降至 35MB)。
   - [x] **后端**: 更新了 `src/index.ts` 以生成“轻量版” `data.js`。
@@ -1325,7 +1312,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 建立独立的项目环境和有向图的核心数据结构，初期独立于特定的笔记应用 API。
 
 - [x] **项目初始化**
-
   - [x] 在 `NoteConnection` 中初始化一个新的 TypeScript/Node.js 项目。
   - [x] 配置 ESLint, Prettier 和 Jest 用于测试。
 
@@ -1338,7 +1324,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 从 Markdown 文件中摄取数据，专门解析 Frontmatter 中的定向依赖关系。
 
 - [x] **Markdown 解析服务**
-
   - [x] 实现文件系统读取器以递归扫描目录。
   - [x] 创建基于正则或 AST 的解析器以提取 YAML Frontmatter。
 
@@ -1351,7 +1336,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 确保图是有效的 DAG 并计算层级布局位置。
 
 - [x] **循环检测与解决**
-
   - [x] 实现基于 DFS 的循环检测。
   - [x] 策略：向用户报告循环或自动打破循环（控制台警告）。
 
@@ -1365,12 +1349,10 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 使用分层布局引擎（Sugiyama 风格）在 Web 视图中渲染处理后的图。
 
 - [x] **布局引擎集成**
-
   - [x] 在 UI 中实现“布局模式”切换（力导向 vs DAG 分层）。
   - [x] 将 `rank` 映射到可视化中的 Y 坐标。
 
 - [x] **Canvas/SVG 渲染**
-
   - [x] 优化层级结构的渲染。
   - [x] 为依赖关系绘制弯曲的贝塞尔线，以清晰指示流向。
 
@@ -1389,7 +1371,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 通过基于文件结构或语义标签将节点分组为高级聚类，以处理 10,000+ 节点。
 
 - [x] **聚类逻辑**
-
   - [x] 实现**基于文件夹的聚类**: 解析目录结构（例如 `Physics/Mechanics` -> 聚类 `Mechanics`）。
   - [x] 添加配置策略: 在 `clusterId` 分配的 `标签传播` (当前) 和 `文件夹路径` 之间切换。
 
@@ -1402,17 +1383,14 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 结合统计和向量化方法，在缺乏显式元数据的情况下推断依赖关系和关联。
 
 - [x] **基于向量的关联 (Similarity)**
-
   - [x] 实现嵌入生成（使用本地 TF-IDF VectorSpace）。
   - [x] 使用余弦相似度确定概念之间**关联**（无向关系）的强度。
 
 - [x] **统计依赖推断**
-
   - [x] 计算笔记语料库中的**共现频率**和**条件概率** ($P(B|A)$)。
   - [x] 假设：如果 A 经常出现在 B 之前或在定义 B 的上下文中，则 A 可能是依赖项。
 
 - [x] **混合判断引擎 (Hybrid Judgment Engine - v0.6.5)**
-
   - [x] 结合向量相似度（用于相关性）+ 统计概率（用于方向）。
   - [x] 规则：如果 `Similarity(A, B) > Threshold` 且 `P(B|A) >> P(A|B)`，则建议边 `A -> B`。
 
@@ -1646,25 +1624,21 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 以模块化架构重构节点高亮逻辑，以提高可维护性和稳健性。
 
 - [x] **模块化架构**
-
   - [x] **NodeHighlightManager 类**: 创建了具有完整状态管理的专用模块 (`nodeHighlight.js`)。
   - [x] **API 设计**: 实现了清晰的公共 API，包括 `highlight()`, `unhighlight()`, `getState()` 和辅助方法。
   - [x] **集成**: 完全集成到 app.js 中，替换旧的高亮功能。
 
 - [x] **统一交互模型**
-
   - [x] **PC 支持**: 基于悬停的高亮显示，无需冻结模拟。
   - [x] **移动端支持**: 基于点击的高亮显示，具有模拟冻结功能，以便进行稳定检查。
   - [x] **状态一致性**: 正确跟踪冻结与临时高亮状态。
 
 - [x] **渲染增强**
-
   - [x] **SVG 模式**: 定向边着色（蓝色=#4488ff 出度，红色=#ff6b6b 入度）与匹配的箭头标记。
   - [x] **Canvas 模式**: 更新为使用 highlightManager 状态以获得一致的视觉行为。
   - [x] **变暗效果**: 未连接的节点在高亮期间变暗至 0.05 不透明度，以获得更清晰的焦点。
 
 - [x] **专注模式集成**
-
   - [x] **状态感知**: highlightManager 尊重专注模式并且不干扰。
   - [x] **协调**: 专注模式进入/退出正确更新 highlightManager 状态。
 
@@ -1679,7 +1653,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 修复专注模式刷新问题，并为统计弹窗添加拖动/缩放功能，以获得更好的用户体验。
 
 - [x] **专注模式重新进入修复**
-
   - [x] **双击行为**: 修改了 `handleDoubleClick()`，允许在已处于专注模式时重新进入相关节点的专注模式。
   - [x] **状态重置**: 确保在进入新的专注上下文之前正确重置所有节点可见性标志 (`isFocusVisible`, `fx`, `fy`, `_labelDy`)。
   - [x] **预防**: 移除了阻止在 `enterFocusMode()` 中切换相关节点专注的限制。
@@ -1708,13 +1681,11 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 通过双击进入专注模式时自动清除任何现有的选择或高亮状态，以实现干净的过渡。
 
 - [x] **自动清除实现**
-
   - [x] **高亮清除**: 修改 `handleDoubleClick()`，在进入专注模式之前调用 `highlightManager.unhighlight({ force: true })`。
   - [x] **弹窗隐藏**: 进入专注模式时自动隐藏统计弹窗 (`#node-stats-popup`)。
   - [x] **状态管理**: 确保干净的状态转换，没有残留的视觉伪影。
 
 - [x] **用户体验增强**
-
   - [x] **干净过渡**: 用户始终以原始的专注上下文开始。
   - [x] **视觉清晰度**: 防止正常模式和专注模式之间重叠高亮引起的混淆。
   - [x] **一致行为**: 标准化所有场景下的专注模式进入行为。
@@ -1730,7 +1701,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 执行严格的边可见性规则（默认隐藏）并优化大图渲染。
 
 - [x] **严格的边可见性**
-
   - [x] **SVG 模式**: 修改 `app.js` 中的 `updateVisibility`，将默认边不透明度设置为 0（原为 0.15）。
   - [x] **一致性**: 确保 SVG 行为与 Canvas 模式匹配（默认隐藏）。
   - [x] **性能**: 减少初始视图的视觉混乱和渲染成本。
@@ -1745,13 +1715,11 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 适配节点统计弹窗以支持移动设备的触摸拖动和捏合缩放功能。
 
 - [x] **触摸拖动支持**
-
   - [x] **实现**: 向 `popupDragHandle` 添加了 `touchstart`, `touchmove`, `touchend` 监听器。
   - [x] **逻辑**: 使用 `touches[0]` 坐标镜像鼠标拖动逻辑。
   - [x] **约束**: 需要单指触摸头部。
 
 - [x] **捏合缩放支持**
-
   - [x] **实现**: 向 `statsPopup` 添加了 `touchstart`, `touchmove`, `touchend` 监听器。
   - [x] **逻辑**: 计算双指之间的距离 (`Math.hypot`) 以确定缩放比例。
   - [x] **缩放**: 更新 `popupDragState.currentScale` 并应用于 `fontSize`。
@@ -1767,7 +1735,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 根据用户反馈调整阅读窗口字体大小和模拟阻尼的默认设置。
 
 - [x] **阅读窗口字体大小**
-
   - [x] **实现**: 修改 `reader.js` 中的 `Reader` 类，默认将 `currentZoom` 设置为 0.5。
   - [x] **逻辑**: 影响打开时的初始化和重置。
 
@@ -1780,7 +1747,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 通过在专注模式期间冻结背景节点来减少 SVG 模式下的内存/CPU 开销。
 
 - [x] **模拟优化**
-
   - [x] **子集化**: 修改 `enterFocusMode` 以过滤 `simulation.nodes()` 和 `simulation.force("link").links()`，仅包含专注子集。
   - [x] **冻结**: 背景节点实际上被冻结，因为它们不再由 D3 力处理。
   - [x] **恢复**: 修改 `exitFocusMode` 以将完整的节点和链接集恢复到模拟中。
@@ -1795,7 +1761,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 通过在请求时严格冻结主图，防止唤醒模拟的用户交互，从而最小化资源使用。
 
 - [x] **冻结布局增强**
-
   - [x] **行为**: 选中“冻结布局”现在会禁用主界面（SVG 模式）中的节点拖动。
   - [x] **约束**: 此限制*不*适用于专注模式，在该模式下仍允许手动调整。
   - [x] **性能**: 防止拖动事件触发 `simulation.restart()`，确保模拟保持有效停止（0% CPU 使用率）。
@@ -1810,13 +1775,11 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 提高移动端可用性并有效引导新用户。
 
 - [x] **冻结布局按钮**
-
   - [x] **UI**: 在主界面（右上角或控件附近）添加专用的“冻结布局”按钮，以便快速访问，尤其是在移动设备上。
   - [x] **逻辑**: 将按钮链接到现有的模拟冻结功能。与控件中的复选框同步状态。
   - [x] **视觉**: 使用图标（例如 锁定/解锁）指示状态。
 
 - [x] **快速开始手册**
-
   - [x] **内容**: 创建简明的“如何使用”指南，涵盖：
     - 加载数据
     - 导航（平移/缩放）
@@ -1845,7 +1808,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 优化用户体验，提供在专注模式下打开特定节点内容的直接方式，避免需要双击。
 
 - [x] **特定内容按钮**
-
   - [x] **UI**: 在专注模式控制面板 (`#focus-exit-btn`) 中添加了 "打开具体内容" 按钮。
   - [x] **逻辑**: 点击按钮触发 `window.reader.open(focusNode)`，模仿双击专注节点的行为。
   - [x] **本地化**: 添加了英语 ("Open Specific Content") 和中文 ("打开具体内容") 支持。
@@ -1890,7 +1852,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 **目标**: 通过增加模拟摩擦力和跳过冻结的屏幕外节点的 DOM 更新，进一步减少内存/CPU 消耗。
 
 - [x] **阻尼调整**
-
   - [x] **默认值**: 将 `velocityDecay` 增加到 **0.92**。
   - [x] **效果**: 图表稳定得更快；移动更“重”，抖动更少。
 
