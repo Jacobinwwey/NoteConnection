@@ -18,6 +18,17 @@ export async function buildGraph(options: BuildOptions | string, maxWorkers?: nu
   } else {
       // New object signature
       buildOptions = { ...options, projectRoot };
+      
+      // Map frontend 'target' to backend 'targetPath'
+      // Frontend uses 'target', BuildOptions interface expects 'targetPath'
+      if ((options as any).target && !buildOptions.targetPath) {
+          const target = (options as any).target;
+          // Handle 'ALL_FOLDERS' special case
+          if (target !== 'ALL_FOLDERS') {
+              buildOptions.targetPath = target;
+          }
+          // If 'ALL_FOLDERS', targetPath remains undefined, which means load entire kbRoot
+      }
   }
   
   const result = await NoteConnection.build(buildOptions);

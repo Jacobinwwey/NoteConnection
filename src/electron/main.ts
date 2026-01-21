@@ -374,10 +374,20 @@ app.whenReady().then(async () => {
     });
 
     ipcMain.handle('buildGraph', async (event, options) => {
-        // Merge with current KB root
+        // Determine correct target path based on user selection
+        // options.target comes from frontend (folder name or 'ALL_FOLDERS')
+        let targetToBuild = currentKbRoot;
+        
+        if (options.target && options.target !== 'ALL_FOLDERS') {
+            targetToBuild = path.join(currentKbRoot, options.target);
+        }
+
+        // Merge with current KB root context
         const buildOpts = { 
             ...options, 
-            targetPath: currentKbRoot,
+            targetPath: targetToBuild,
+            // Override projectRoot to ensure backend resolves relative paths correctly if needed
+            // But NoteConnection uses targetPath as absolute if provided.
             onLog: (msg: string) => {
                 event.sender.send('build-log', msg);
             }
