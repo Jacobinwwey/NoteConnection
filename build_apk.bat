@@ -3,7 +3,7 @@ setlocal EnableDelayedExpansion
 
 REM ========================================================
 REM   NoteConnection APK Build Script
-REM   Version: 1.1.0
+REM   Version: 1.1.1
 REM   Description: Automated build pipeline from Web to Android APK
 REM   Author: Jacob
 REM ========================================================

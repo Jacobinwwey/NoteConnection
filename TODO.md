@@ -1,3 +1,12 @@
+# 2026-01-22 v1.1.1 - Mobile Build Automation
+
+**Goal**: Automate the Android APK build process to lower the barrier for mobile deployment.
+
+- [x] **Mobile DevOps**
+  - [x] **Build Script**: Created `build_apk.bat` for zero-config build orchestration on Windows.
+  - [x] **Environment Checks**: Automated verification of Node.js, Java JDK, and Android SDK.
+  - [x] **Documentation**: Updated all manuals with the new one-click build method.
+
 # 2026-01-22 v1.1.0 - CI/CD Automation
 
 **Goal**: Improve system robustness through protocol handler fixes, i18n consolidation, and onboarding UI refinement.
@@ -1151,6 +1160,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
   - [x] **Release**: Package for v1.0.0.
 
 ---
+
+# 2026-01-22 v1.1.1 - 移动端构建自动化 (Mobile Build Automation)
+
+**目标**: 自动化 Android APK 构建流程，降低移动端部署门槛。
+
+- [x] **移动端运维**
+  - [x] **构建脚本**: 创建了 `build_apk.bat`，用于 Windows 上的零配置构建编排。
+  - [x] **环境检查**: 自动验证 Node.js、Java JDK 和 Android SDK。
+  - [x] **文档**: 更新了所有手册，包含新的一键构建方法。
 
 # 2026-01-22 v1.1.0 - CI/CD 自动化
 

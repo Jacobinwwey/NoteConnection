@@ -1,4 +1,4 @@
-# 2026-01-22 v1.1.0
+# 2026-01-22 v1.1.1
 
 # NoteConnection Knowledge Graph
 
@@ -264,6 +264,13 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 <a id="changelog-en"></a>
 
 ## 📅 Changelog
+
+### v1.1.1 - Mobile Build Automation (2026-01-22)
+
+- **Mobile DevOps**:
+  - Introduced `build_apk.bat` for one-click Android APK generation on Windows.
+  - Automated environment checks (Node, JDK, Android SDK) and project scaffolding.
+- **Documentation**: Added comprehensive guides for mobile building in README and User Manual.
 
 ### v1.1.0 - CI/CD Automation (2026-01-22)
 
@@ -915,6 +922,13 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 <a id="changelog-zh"></a>
 
 ## 📅 更新日志 (Changelog)
+
+### v1.1.1 - 移动端构建自动化 (2026-01-22)
+
+- **移动端运维**:
+  - 引入了 `build_apk.bat`，用于在 Windows 上一键生成 Android APK。
+  - 自动化环境检查（Node, JDK, Android SDK）和项目脚手架搭建。
+- **文档**: 在 README 和用户手册中添加了移动端构建的详细指南。
 
 ### v1.1.0 - CI/CD 自动化 (2026-01-22)
 
