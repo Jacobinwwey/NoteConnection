@@ -1,6 +1,6 @@
 # NoteConnection User Manual
 
-**Version:** v1.0.1 | **Last Updated:** 2026-01-14
+**Version:** v1.1.0 | **Last Updated:** 2026-01-22
 
 ---
 
@@ -42,12 +42,10 @@
 When you first open NoteConnection:
 
 1. **Language Selection** will appear automatically
-
    - Choose **English** or **中文 (Chinese)**
    - Your choice is saved and can be changed later in Settings
 
 2. **Knowledge Base Setup**
-
    - Click **File** → **Change Knowledge Base**
    - Select the folder containing your Markdown files
    - This becomes your active knowledge base
@@ -510,19 +508,16 @@ For developers: Modify `styles.css` to adjust:
 **Troubleshooting GPU Issues:**
 
 1. **"GPU.js not found" error:**
-
    - Check that `libs/gpu-browser.min.js` exists
    - Ensure Content Security Policy allows script execution
    - Reload the application
 
 2. **"WebGL not supported" error:**
-
    - Update GPU drivers to latest version
    - Enable hardware acceleration in browser flags
    - Check `chrome://gpu` for driver blocklist issues
 
 3. **Build slower with GPU enabled:**
-
    - Your GPU may be older/slower than CPU
    - Try with a larger dataset (>5000 nodes)
    - Check GPU memory usage (may be hitting limits)
@@ -547,4 +542,4 @@ For developers: Modify `styles.css` to adjust:
 - **Documentation**: This file (offline) + README.md
 - **Tutorial**: Help → Launch Tutorial
 
-**Last Updated:** 2026-01-14 | **Version:** v1.0.1
+**Last Updated:** 2026-01-22 | **Version:** v1.1.0

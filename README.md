@@ -1,4 +1,4 @@
-# 2026-01-21 v1.0.1
+# 2026-01-22 v1.1.0
 
 # NoteConnection Knowledge Graph
 
@@ -248,6 +248,13 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 <a id="changelog-en"></a>
 
 ## 📅 Changelog
+
+### v1.1.0 - CI/CD Automation (2026-01-22)
+
+- **GitHub Actions Integration**:
+  - Added automated npm publishing workflow triggered on releases and version tags.
+  - Added version consistency check to prevent mismatched releases.
+- **DevOps**: Streamlined release process with `git tag v1.1.0 && git push --tags`.
 
 ### v1.0.1 - Maintenance & UX Refinement (2026-01-21)
 
@@ -876,6 +883,13 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 <a id="changelog-zh"></a>
 
 ## 📅 更新日志 (Changelog)
+
+### v1.1.0 - CI/CD 自动化 (2026-01-22)
+
+- **GitHub Actions 集成**:
+  - 新增自动 npm 发布工作流，支持发布事件和版本标签触发。
+  - 新增版本一致性检查，防止版本号不匹配的发布。
+- **DevOps**: 简化发布流程，使用 `git tag v1.1.0 && git push --tags` 即可发布。
 
 ### v1.0.1 - 维护与体验优化 (2026-01-21)
 

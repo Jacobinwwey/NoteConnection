@@ -1,4 +1,4 @@
-# 2026-01-21 v1.0.1 - Maintenance & UX Refinement
+# 2026-01-22 v1.1.0 - CI/CD Automation
 
 **Goal**: Improve system robustness through protocol handler fixes, i18n consolidation, and onboarding UI refinement.
 
@@ -1149,7 +1149,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ---
 
-# 2026-01-21 v1.0.1 - 维护与体验优化
+# 2026-01-22 v1.1.0 - CI/CD 自动化
 
 **目标**: 通过协议处理器修复、多语言整合及新人引导 UI 的精细化，提升系统稳健性。
 
