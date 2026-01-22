@@ -597,7 +597,7 @@ Triggers a graph build for the specified target.
 
 ### 5. Mobile Build (v0.9.1)
 
-#### `Capacitor Pipeline`
+#### 5.1 Capacitor Pipeline
 
 Transforms the web project into a standalone Android APK.
 
@@ -611,6 +611,22 @@ Transforms the web project into a standalone Android APK.
   2.  **Asset Compilation**: `npm run build` -> Populates `dist/frontend`.
   3.  **Sync**: `npx cap sync android` -> Copies `dist/frontend` to `android/app/src/main/assets/public`.
   4.  **Native Build**: `gradlew assembleDebug` -> Compiles the APK.
+
+#### 5.2 Automated Build Script (v1.1.0)
+
+A batch script (`build_apk.bat`) to orchestrate the entire mobile build pipeline on Windows.
+
+- **Location**: Project Root.
+- **Logic**:
+  1.  **Environment Check**: Verifies `node`, `javac` (JDK 17+), and `ANDROID_HOME`.
+  2.  **Dependency Check**: Runs `npm install` if `node_modules` is missing.
+  3.  **Web Build**: Executes `npm run build`.
+  4.  **Path Correction**: Standardizes output path (`dist/src/frontend` -> `dist/frontend`).
+  5.  **Capacitor Init**: Initializes project if `capacitor.config.ts` is missing.
+  6.  **Platform Add**: Adds `android` platform if missing.
+  7.  **Sync**: Runs `npx cap sync`.
+  8.  **Gradle Build**: Invokes `gradlew.bat assembleDebug`.
+- **Error Handling**: Checks `%errorlevel%` after each step and provides actionable error messages.
 
 ### 6. Architecture: Content-on-Demand (v0.9.68)
 
@@ -1649,7 +1665,7 @@ interface CooccurrenceMetrics {
 
 ### 5. 移动端构建 (Mobile Build - v0.9.1)
 
-#### `Capacitor Pipeline`
+#### 5.1 Capacitor 流水线 (Capacitor Pipeline)
 
 将 Web 项目转换为独立的 Android APK。
 
@@ -1663,6 +1679,22 @@ interface CooccurrenceMetrics {
   2.  **资源编译**: `npm run build` -> 填充 `dist/frontend`。
   3.  **同步**: `npx cap sync android` -> 将 `dist/frontend` 复制到 `android/app/src/main/assets/public`。
   4.  **原生构建**: `gradlew assembleDebug` -> 编译 APK。
+
+#### 5.2 自动化构建脚本 (Automated Build Script - v1.1.0)
+
+一个批处理脚本 (`build_apk.bat`)，用于在 Windows 上编排整个移动端构建流水线。
+
+- **位置**: 项目根目录。
+- **逻辑**:
+  1.  **环境检查**: 验证 `node`、`javac` (JDK 17+) 和 `ANDROID_HOME`。
+  2.  **依赖检查**: 如果 `node_modules` 缺失，则运行 `npm install`。
+  3.  **Web 构建**: 执行 `npm run build`。
+  4.  **路径修正**: 标准化输出路径 (`dist/src/frontend` -> `dist/frontend`)。
+  5.  **Capacitor 初始化**: 如果 `capacitor.config.ts` 缺失，则初始化项目。
+  6.  **平台添加**: 如果缺失，则添加 `android` 平台。
+  7.  **同步**: 运行 `npx cap sync`。
+  8.  **Gradle 构建**: 调用 `gradlew.bat assembleDebug`。
+- **错误处理**: 在每一步后检查 `%errorlevel%` 并提供可操作的错误消息。
 
 ### 6. 节点高亮系统 (Node Highlighting System - v0.9.18)
 

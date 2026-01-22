@@ -1,4 +1,4 @@
-# 2026-01-08 v0.9.63
+# 2026-01-22 v1.1.0
 
 # User Manual
 
@@ -60,6 +60,19 @@ NoteConnection is a visualization tool that transforms your Markdown notes into 
 *   **Canvas Auto-Switch**: If your graph contains more than 3000 nodes, NoteConnection automatically switches to the **Canvas Renderer** to ensure smooth performance. You can manually switch back to SVG in the controls if needed.
 *   **Physics Culling**: For extremely dense graphs (>20,000 edges), the physics simulation will only calculate forces for a subset of edges to prevent freezing the interface, while still rendering all connections.
 
+### 7. Mobile App Build
+NoteConnection includes a one-click script to build a native Android APK (v1.1.0+).
+
+*   **Prerequisites**:
+    *   Node.js (LTS)
+    *   Java JDK (17 or higher)
+    *   Android SDK (configured in environment)
+*   **How to Build**:
+    1.  Open the project folder in a terminal.
+    2.  Run `build_apk.bat`.
+    3.  Follow the on-screen instructions. The script will check your environment, install dependencies, build the web app, and compile the APK.
+*   **Output**: The APK will be generated at `android/app/build/outputs/apk/debug/app-debug.apk`.
+
 ---
 
 ## Chinese Document
@@ -119,3 +132,16 @@ NoteConnection 是一个可视化工具，可将您的 Markdown 笔记转换为�
 ### 6. 性能特性 (自动优化)
 *   **Canvas 自动切换**: 如果您的图谱包含超过 3000 个节点，NoteConnection 会自动切换到 **Canvas 渲染器**以确保流畅的性能。如有需要，您可以在控件中手动切回 SVG。
 *   **物理剔除**: 对于极其密集的图谱（>20,000 条边），物理模拟将仅计算边的一个子集的力，以防止界面冻结，同时仍渲染所有连接。
+
+### 7. 移动应用构建 (Mobile App Build)
+NoteConnection 包含一个一键式脚本，用于构建原生 Android APK (v1.1.0+)。
+
+*   **先决条件**:
+    *   Node.js (LTS)
+    *   Java JDK (17 或更高版本)
+    *   Android SDK (已在环境中配置)
+*   **如何构建**:
+    1.  在终端中打开项目文件夹。
+    2.  运行 `build_apk.bat`。
+    3.  按照屏幕上的指示操作。脚本将检查您的环境，安装依赖项，构建 Web 应用程序，并编译 APK。
+*   **输出**: APK 将生成于 `android/app/build/outputs/apk/debug/app-debug.apk`。

@@ -152,10 +152,26 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 
 #### Prerequisites
 
-- Android Studio (latest version)
-- Android SDK (configured in `ANDROID_HOME` or `local.properties`)
+- **Node.js** (LTS)
+- **Java JDK** (17 or higher)
+- **Android SDK** (Configured in `ANDROID_HOME` or via Android Studio)
 
-#### Build Steps
+#### Method A: One-Click Build (Recommended)
+
+Simply run the included batch script on Windows:
+
+```cmd
+build_apk.bat
+```
+
+This script automatically:
+1. Checks your environment (Node, Java, Android SDK).
+2. Installs dependencies.
+3. Builds web assets.
+4. Syncs with Capacitor.
+5. Compiles the APK using Gradle.
+
+#### Method B: Manual Build Steps
 
 1.  **Build Web Assets**:
     ```bash
@@ -800,10 +816,26 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 
 #### 先决条件
 
-- Android Studio (最新版)
-- Android SDK (配置在 `ANDROID_HOME` 或 `local.properties` 中)
+- **Node.js** (LTS)
+- **Java JDK** (17 或更高版本)
+- **Android SDK** (配置在 `ANDROID_HOME` 或通过 Android Studio 安装)
 
-#### 构建步骤
+#### 方法 A: 一键构建 (推荐)
+
+在 Windows 上直接运行包含的批处理脚本：
+
+```cmd
+build_apk.bat
+```
+
+该脚本会自动：
+1. 检查您的环境 (Node, Java, Android SDK)。
+2. 安装依赖项。
+3. 构建 Web 资源。
+4. 同步 Capacitor。
+5. 使用 Gradle 编译 APK。
+
+#### 方法 B: 手动构建步骤
 
 1.  **构建 Web 资源**:
     ```bash

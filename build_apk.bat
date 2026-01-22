@@ -1,0 +1,227 @@
+@echo off
+setlocal EnableDelayedExpansion
+
+REM ========================================================
+REM   NoteConnection APK Build Script
+REM   Version: 1.1.0
+REM   Description: Automated build pipeline from Web to Android APK
+REM   Author: Jacob
+REM ========================================================
+
+echo.
+echo ===============================================================================
+echo   NoteConnection Mobile Build Pipeline
+echo ===============================================================================
+echo.
+
+REM --------------------------------------------------------
+REM 1. Environment Detection & Pre-checks
+REM --------------------------------------------------------
+echo [1/8] Inspecting Environment...
+
+REM Check Node.js
+where node >nul 2>&1
+if %errorlevel% neq 0 (
+    echo.
+    echo [ERROR] Node.js is NOT installed or NOT in your PATH.
+    echo         Core build tools (npm) are required.
+    echo         [ACTION] Please install Node.js (LTS) from: https://nodejs.org/
+    echo.
+    pause
+    exit /b 1
+)
+for /f "delims=" %%v in ('node -v') do set NODE_VERSION=%%v
+echo   [OK] Node.js Found: !NODE_VERSION!
+
+REM Check Java (JDK)
+where javac >nul 2>&1
+if %errorlevel% neq 0 (
+    echo.
+    echo [ERROR] Java JDK is NOT installed or NOT in your PATH.
+    echo         Android Gradle build requires JDK 17 or higher.
+    echo         [ACTION] Please install OpenJDK 17+.
+    echo.
+    pause
+    exit /b 1
+)
+for /f "tokens=2 delims= " %%v in ('javac -version 2^>^&1') do set JAVA_VERSION=%%v
+echo   [OK] Java JDK Found: !JAVA_VERSION!
+
+REM Check JAVA_HOME
+if "%JAVA_HOME%"=="" (
+    echo   [WARN] JAVA_HOME is not set. Gradle might assume a default JDK.
+    echo          If build fails, set JAVA_HOME to your JDK installation path.
+) else (
+    echo   [OK] JAVA_HOME: %JAVA_HOME%
+)
+
+REM Check Android SDK
+if "%ANDROID_HOME%"=="" (
+    echo.
+    echo [WARN] ANDROID_HOME environment variable is NOT set.
+    echo        Gradle may fail if it cannot locate the Android SDK.
+    echo        [ACTION] Set ANDROID_HOME to your SDK location (e.g., %%LOCALAPPDATA%%\Android\Sdk).
+) else (
+    if exist "%ANDROID_HOME%" (
+        echo   [OK] Android SDK: %ANDROID_HOME%
+    ) else (
+        echo   [WARN] ANDROID_HOME is set but the directory does not exist:
+        echo          %ANDROID_HOME%
+    )
+)
+
+REM --------------------------------------------------------
+REM 2. Dependency Verification
+REM --------------------------------------------------------
+echo.
+echo [2/8] Verifying Dependencies...
+if not exist "node_modules" (
+    echo   [INFO] 'node_modules' missing. Installing project dependencies...
+    call npm install
+    if !errorlevel! neq 0 (
+        echo.
+        echo [ERROR] 'npm install' failed.
+        echo         Please check your internet connection or npm configuration.
+        pause
+        exit /b 1
+    )
+    echo   [OK] Dependencies installed.
+) else (
+    echo   [OK] 'node_modules' exists. Skipping install.
+)
+
+REM --------------------------------------------------------
+REM 3. Web Assets Build
+REM --------------------------------------------------------
+echo.
+echo [3/8] Building Web Frontend...
+echo       (This may take a moment...)
+call npm run build
+if %errorlevel% neq 0 (
+    echo.
+    echo [ERROR] Web build failed (npm run build).
+    echo         Check the output above for compilation errors.
+    pause
+    exit /b 1
+)
+echo   [OK] Web assets compiled successfully.
+
+REM --------------------------------------------------------
+REM 4. Directory Standardization
+REM --------------------------------------------------------
+echo.
+echo [4/8] Standardizing Output Directory...
+REM Capacitor often expects 'dist' or specific structure.
+REM We map 'dist/src/frontend' -> 'dist/frontend' based on project config.
+
+if exist "dist\src\frontend" (
+    if not exist "dist\frontend" mkdir "dist\frontend"
+    echo   [INFO] Moving assets from dist/src/frontend to dist/frontend...
+    xcopy "dist\src\frontend" "dist\frontend" /E /I /Y /Q >nul
+    echo   [OK] Directory structure fixed.
+) else (
+    if exist "dist\frontend" (
+         echo   [OK] 'dist\frontend' already exists.
+    ) else (
+         echo [ERROR] Expected build output 'dist\src\frontend' NOT found.
+         echo         Build might have produced a different structure.
+         pause
+         exit /b 1
+    )
+)
+
+REM --------------------------------------------------------
+REM 5. Capacitor Initialization
+REM --------------------------------------------------------
+echo.
+echo [5/8] Configuring Capacitor Bridge...
+if not exist "capacitor.config.ts" (
+    echo   [INFO] Initializing Capacitor project...
+    call npx cap init "Knowledge Planet" "com.jacob.noteconnection" --web-dir "dist/frontend"
+) else (
+    echo   [OK] Capacitor config found.
+)
+
+REM --------------------------------------------------------
+REM 6. Android Platform Setup
+REM --------------------------------------------------------
+echo.
+echo [6/8] Configuring Android Platform...
+if not exist "android" (
+    echo   [INFO] Adding Android platform support...
+    call npx cap add android
+    if !errorlevel! neq 0 (
+        echo.
+        echo [ERROR] Failed to add Android platform.
+        pause
+        exit /b 1
+    )
+) else (
+    echo   [OK] Android platform directory exists.
+)
+
+REM --------------------------------------------------------
+REM 7. Native Asset Sync
+REM --------------------------------------------------------
+echo.
+echo [7/8] Syncing Web Assets to Native...
+call npx cap sync
+if %errorlevel% neq 0 (
+    echo.
+    echo [ERROR] 'npx cap sync' failed.
+    echo         Ensure you have a valid internet connection for Gradle dependencies.
+    pause
+    exit /b 1
+)
+echo   [OK] Assets synced to android/app/src/main/assets/public.
+
+REM --------------------------------------------------------
+REM 8. Gradle Build
+REM --------------------------------------------------------
+echo.
+echo [8/8] compiling APK with Gradle...
+echo       (This is the heavy lifting. Please wait...)
+cd android
+
+if not exist "gradlew.bat" (
+    echo.
+    echo [ERROR] 'gradlew.bat' not found in 'android' directory.
+    echo         The Android platform might be corrupted.
+    echo         Try deleting the 'android' folder and re-running this script.
+    cd ..
+    pause
+    exit /b 1
+)
+
+call gradlew.bat assembleDebug
+if %errorlevel% neq 0 (
+    echo.
+    echo [ERROR] Gradle build failed.
+    echo.
+    echo [TROUBLESHOOTING]
+    echo   1. Check JAVA_HOME matches JDK 17+.
+    echo   2. Ensure Android SDK is installed.
+    echo   3. Try running 'cd android && gradlew clean' manually.
+    cd ..
+    pause
+    exit /b 1
+)
+cd ..
+
+REM --------------------------------------------------------
+REM Success Summary
+REM --------------------------------------------------------
+echo.
+echo ===============================================================================
+echo   BUILD SUCCESSFUL
+echo ===============================================================================
+echo.
+echo   APK Path:
+echo   %~dp0android\app\build\outputs\apk\debug\app-debug.apk
+echo.
+echo   [NEXT STEPS]
+echo   1. Transfer the APK to your Android device.
+echo   2. Enable "Install from Unknown Sources" if prompted.
+echo   3. Enjoy NoteConnection Mobile!
+echo.
+pause

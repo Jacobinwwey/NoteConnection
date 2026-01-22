@@ -11,6 +11,7 @@ result.txt
 .vscode
 .idea
 .agent
+.gemini
 *.suo
 *.ntvs
 *.njsproj

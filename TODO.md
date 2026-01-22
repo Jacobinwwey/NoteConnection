@@ -11,6 +11,9 @@
 - [x] **Protocol Handler & Caching**
   - [x] **Cache-Busting**: Implemented dynamic script loading in `source_manager.js` using timestamps to prevent browser caching of `data.js`.
   - [x] **Protocol Optimization**: Refined `app://` protocol handler in `main.ts` using `net.fetch` for better reliability.
+- [x] **Mobile Build Automation**
+  - [x] **Build Script**: Implemented `build_apk.bat` for one-click Android APK generation (Zero-Config).
+  - [x] **Documentation**: Updated User Manual and README with build instructions.
 
 ---
 
@@ -1162,6 +1165,9 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] **协议处理器与缓存**
   - [x] **缓存刷新**: 在 `source_manager.js` 中实现了基于时间戳的脚本动态加载，彻底解决浏览器缓存 `data.js` 的问题。
   - [x] **协议优化**: 优化了 `main.ts` 中的 `app://` 协议处理器，采用 `net.fetch` 提升了加载可靠性。
+- [x] **移动构建自动化**
+  - [x] **构建脚本**: 实现了 `build_apk.bat` 用于一键生成 Android APK (零配置)。
+  - [x] **文档**: 更新了用户手册和 README，包含构建说明。
 
 ---
 
