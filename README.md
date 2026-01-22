@@ -4,6 +4,14 @@
 
 <img width="606" height="309" alt="banner" src="https://github.com/user-attachments/assets/92e90de5-2b1a-4398-8e8b-6e142c92b6a2" />
 
+<div align="center">
+
+| **English** | [Key Features](#key-features-en) | [Hardware](#hardware-en) | [Architecture](#architecture-en) | [Quick Start](#quick-start-en) | [CLI](#cli-en) | [Changelog](#changelog-en) |
+| :---------: | :------------------------------: | :----------------------: | :------------------------------: | :----------------------------: | :------------: | :------------------------: |
+|  **中文**   |   [核心特性](#key-features-zh)   | [硬件配置](#hardware-zh) |   [系统架构](#architecture-zh)   |  [快速开始](#quick-start-zh)   | [CLI](#cli-zh) | [更新日志](#changelog-zh)  |
+
+</div>
+
 # NoteConnection: Hierarchical Knowledge Graph Visualization System
 
 > **Unlock the Structure of Your Knowledge.**
@@ -17,6 +25,8 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 <img width="2010" height="2011" alt="image" src="https://github.com/user-attachments/assets/fa55676d-f58d-414e-943c-7a10567f88a5" />
 
 ---
+
+<a id="key-features-en"></a>
 
 ## 🚀 Key Features
 
@@ -44,6 +54,8 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 <img width="2012" height="2024" alt="image" src="https://github.com/user-attachments/assets/e5e4c42d-54a7-463c-bc43-0feb42469a12" />
 
 ---
+
+<a id="hardware-en"></a>
 
 ## 💻 Hardware & Driver Requirements
 
@@ -73,6 +85,8 @@ NoteConnection utilizes `gpu.js` for WebGL-based acceleration and plans to suppo
 
 ---
 
+<a id="architecture-en"></a>
+
 ## 🏢 System Architecture
 
 NoteConnection is built on a modular architecture designed for performance and extensibility.
@@ -95,6 +109,8 @@ NoteConnection is built on a modular architecture designed for performance and e
 - **Layout Logic**: Custom algorithms for Sugiyama-style layering and Force-directed physics.
 
 ---
+
+<a id="quick-start-en"></a>
 
 ## 📦 Quick Start
 
@@ -167,6 +183,8 @@ NoteConnection uses **Capacitor** to build native mobile apps.
     - **Focus**: Click a node to enter Focus Mode. Use the sliders to adjust spacing.
     - **Control**: Use the **Simulation** panel to freeze the layout or adjust speed.
 
+<a id="cli-en"></a>
+
 ## 🖥️ CLI Usage (v0.9.71)
 
 You can load a knowledge base and build the graph directly from the command line without using the UI. This is useful for automated builds or headless environments.
@@ -226,6 +244,8 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 2.  **Node.js**: The project uses `gpu.js` which relies on `headless-gl` for Node.js context.
     - On Windows, this usually works out of the box with standard build tools (`windows-build-tools`).
     - If you encounter `gl` errors, ensure Python and C++ compilers are available.
+
+<a id="changelog-en"></a>
 
 ## 📅 Changelog
 
@@ -646,6 +666,8 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ---
 
+<a id="key-features-zh"></a>
+
 ## 🚀 核心特性
 
 ### 1. 可视化与布局
@@ -673,6 +695,8 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 <img width="2012" height="2024" alt="image" src="https://github.com/user-attachments/assets/bf6e7508-7e42-46cb-9a3e-b92be063ad3d" />
 
 ---
+
+<a id="hardware-zh"></a>
 
 ## 💻 硬件与驱动要求 (Hardware & Driver Requirements)
 
@@ -702,6 +726,8 @@ NoteConnection 利用 `gpu.js` 进行基于 WebGL 的加速，并计划通过 RO
 
 ---
 
+<a id="architecture-zh"></a>
+
 ## 🏗️ 系统架构
 
 NoteConnection 基于模块化架构构建，旨在实现高性能和可扩展性。
@@ -724,6 +750,8 @@ NoteConnection 基于模块化架构构建，旨在实现高性能和可扩展�
 - **布局逻辑**: 自定义的 Sugiyama 风格分层算法和力导向物理算法。
 
 ---
+
+<a id="quick-start-zh"></a>
 
 ## 📦 快速开始
 
@@ -788,6 +816,8 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 
 ---
 
+<a id="cli-zh"></a>
+
 ## 🖥️ CLI 命令行使用 (v0.9.71)
 
 您可以直接从命令行加载知识库并构建图谱，而无需使用 UI。这对于自动构建或无头环境非常有用。
@@ -842,6 +872,8 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 - **精简模式 (Mini Mode)** (`npm run electron:build:mini`): 排除大型预生成文件 (~70MB 安装包)。最适合分发。
 
 ---
+
+<a id="changelog-zh"></a>
 
 ## 📅 更新日志 (Changelog)
 
