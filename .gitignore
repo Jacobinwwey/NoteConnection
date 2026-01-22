@@ -12,6 +12,7 @@ result.txt
 .idea
 .agent
 .gemini
+skills
 *.suo
 *.ntvs
 *.njsproj
