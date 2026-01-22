@@ -1,0 +1,37 @@
+name: Version Consistency Check
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract tag version
+        id: tag
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Extract package.json version
+        id: package
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Compare versions
+        run: |
+          TAG_VERSION="${{ steps.tag.outputs.version }}"
+          PKG_VERSION="${{ steps.package.outputs.version }}"
+
+          echo "Tag version: $TAG_VERSION"
+          echo "Package.json version: $PKG_VERSION"
+
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Version mismatch! Tag v$TAG_VERSION does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
+
+          echo "✅ Versions match: $PKG_VERSION"
