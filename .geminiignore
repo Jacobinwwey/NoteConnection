@@ -11,9 +11,12 @@ result.txt
 .vscode
 .idea
 .agent
-.gemini
-skills
-ref
+!.gemini
+!.gemini/skills
+!.gemini/skills/**
+!skills
+!skills/**
+!ref
 *.suo
 *.ntvs
 *.njsproj
