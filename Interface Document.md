@@ -1,6 +1,6 @@
-# 2026-01-22 v1.1.1
+# 2026-01-23 v1.1.2
 
-# Interface Document (v1.1.1)
+# Interface Document (v1.1.2)
 
 This document defines the core interfaces for the NoteConnection system, separating backend processing from frontend visualization.
 
@@ -1006,7 +1006,9 @@ To provide a clearer initial layout, v1.0.1 adjusts the default values and adjus
 
 ---
 
-# 接口文档 (v1.0.1)
+# 2026-01-23 v1.1.2
+
+# 接口文档 (v1.1.2)
 
 本文档定义了 NoteConnection 系统核心接口，分离了后端处理与前端可视化。
 

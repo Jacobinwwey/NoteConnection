@@ -1,3 +1,12 @@
+# 2026-01-23 v1.1.2 - Path Resolution & UI Stability
+
+**Goal**: Resolve static file serving issues on Windows and fix UI unresponsiveness in the Welcome Modal.
+
+- [x] **Backend Fixes**
+  - [x] **URL Parsing**: Improved `server.ts` to ignore query strings when mapping static files, enabling cache-busting `data.js?v=...` to work correctly.
+- [x] **UI Stability**
+  - [x] **Z-Index Management**: Fixed `welcome.js` to explicitly restore `z-index: 1000` to the folder menu after skipping the tutorial.
+
 # 2026-01-22 v1.1.1 - Mobile Build Automation
 
 **Goal**: Automate the Android APK build process to lower the barrier for mobile deployment.
@@ -1160,6 +1169,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
   - [x] **Release**: Package for v1.0.0.
 
 ---
+
+# 2026-01-23 v1.1.2 - 路径解析与 UI 稳定性
+
+**目标**: 解决 Windows 上的静态文件服务问题并修复欢迎模态框中的 UI 无响应。
+
+- [x] **后端修复**
+  - [x] **URL 解析**: 改进了 `server.ts` 以在映射静态文件时忽略查询字符串，使缓存刷新 `data.js?v=...` 能够正常工作。
+- [x] **UI 稳定性**
+  - [x] **Z-Index 管理**: 修复了 `welcome.js` 以在跳过教程后显式恢复文件夹菜单的 `z-index: 1000`。
 
 # 2026-01-22 v1.1.1 - 移动端构建自动化 (Mobile Build Automation)
 

@@ -273,7 +273,9 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             }
     
             // Serve Static Files
-            let urlPath = req.url === '/' ? 'index.html' : req.url!;
+            // v0.9.83 Fix: Strip query parameters (e.g. ?v=123) to verify file existence on disk
+            const urlObj = new URL(req.url!, `http://${req.headers.host}`);
+            let urlPath = urlObj.pathname === '/' ? 'index.html' : urlObj.pathname;
             
             // CLI Mode: Serve the specific CLI data file instead of the default data.js
             // This ensures the frontend loads the data calculated from the CLI parameters

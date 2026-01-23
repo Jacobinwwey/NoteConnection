@@ -252,7 +252,7 @@ function showWelcomeModal(hasNodes = false) {
                  // Remove highlight
                  if (sourceControl) {
                      sourceControl.style.boxShadow = '';
-                     sourceControl.style.zIndex = '';
+                     sourceControl.style.zIndex = '1000';
                  }
                  
                  // Mark as "seen" or just let them explore?

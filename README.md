@@ -1,4 +1,4 @@
-# 2026-01-22 v1.1.1
+# 2026-01-23 v1.1.2
 
 # NoteConnection Knowledge Graph
 
@@ -165,6 +165,7 @@ build_apk.bat
 ```
 
 This script automatically:
+
 1. Checks your environment (Node, Java, Android SDK).
 2. Installs dependencies.
 3. Builds web assets.
@@ -264,6 +265,15 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 <a id="changelog-en"></a>
 
 ## 📅 Changelog
+
+### v1.1.2 - Path Resolution & UI Stability (2026-01-23)
+
+- **Backend Protocol Fix**:
+  - Improved `src/server.ts` to correctly handle URL query parameters (e.g., `?v=timestamp`) for static files.
+  - Resolves issues where cache-busting URLs would return 404 on Windows.
+- **UI Interaction Fix**:
+  - **Welcome Modal**: Fixed a bug in `welcome.js` where skipping the tutorial would cause the folder selection menu to become unresponsive due to `z-index` clobbering.
+  - Guaranteed `z-index: 1000` preservation for `#source-control` across all modal dismissal paths.
 
 ### v1.1.1 - Mobile Build Automation (2026-01-22)
 
@@ -836,6 +846,7 @@ build_apk.bat
 ```
 
 该脚本会自动：
+
 1. 检查您的环境 (Node, Java, Android SDK)。
 2. 安装依赖项。
 3. 构建 Web 资源。
@@ -922,6 +933,15 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 <a id="changelog-zh"></a>
 
 ## 📅 更新日志 (Changelog)
+
+### v1.1.2 - 路径解析与 UI 稳定性 (2026-01-23)
+
+- **后端协议修复**:
+  - 改进了 `src/server.ts`，使其能够正确处理静态文件的 URL 查询参数（如 `?v=timestamp`）。
+  - 解决了 Windows 环境下带缓存刷新参数的 URL 返回 404 的问题。
+- **UI 交互修复**:
+  - **欢迎弹窗**: 修复了 `welcome.js` 中的一个错误，即跳过教程会导致文件夹选择菜单因 `z-index` 被清除而无法响应的问题。
+  - 确保 `#source-control` 在所有弹窗关闭路径下都能保持 `z-index: 1000`。
 
 ### v1.1.1 - 移动端构建自动化 (2026-01-22)
 
