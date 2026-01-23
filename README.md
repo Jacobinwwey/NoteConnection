@@ -1,4 +1,4 @@
-# 2026-01-23 v1.1.2
+# 2026-01-23 v1.2.0
 
 # NoteConnection Knowledge Graph
 
@@ -45,7 +45,15 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 <img width="3723" height="1992" alt="image" src="https://github.com/user-attachments/assets/9e56e567-1742-48cf-b720-cf65a47fd317" />
 
-### 3. Performance & Control
+### 3. Path Mode: Structured Learning (v1.2.0)
+
+- **Curriculum Generation**: Instantly transforms your graph into linear learning paths.
+  - **Domain Learning**: Master an entire concept cluster (Topological Sort).
+  - **Diffusion Learning**: Find the most efficient path to a specific goal (Shortest Path + Prerequisites).
+- **Hybrid Architecture**: Connects to a high-fidelity **Godot 4.3 Desktop Renderer** via WebSocket (`ws://localhost:9876`) for AAA-quality visualization, while maintaining full web compatibility.
+- **Smart Strategies**: Choose "Foundational" (Base-first) or "Core" (Importance-first) sorting to suit your learning style.
+
+### 4. Performance & Control
 
 - **High-Capacity Parallel Processing**: Utilizes Node.js `worker_threads` (up to 12 cores) to distribute computationally intensive keyword matching.
 - **Simulation Controls (v0.9.0)**: Fine-tune the physics with a **Speed/Damping Slider** or use the **Freeze Layout** switch to stop the simulation for stable manual arrangement.
@@ -107,6 +115,10 @@ NoteConnection is built on a modular architecture designed for performance and e
   - **HTML5 Canvas**: Optimized for rendering massive datasets where DOM manipulation overhead is too high.
 - **State Management**: `SettingsManager` persists user preferences (Physics, Visuals) to `localStorage`.
 - **Layout Logic**: Custom algorithms for Sugiyama-style layering and Force-directed physics.
+
+### Desktop Bridge (`src/core`)
+
+- **PathBridge**: standard WebSocket server (Port 9876) that exposes the internal graph state to external applications (e.g., Godot Engine), enabling hybrid web/native visualization pipelines.
 
 ---
 
@@ -265,6 +277,19 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 <a id="changelog-en"></a>
 
 ## 📅 Changelog
+
+### v1.2.0 - Path Mode & Desktop Renderer (2026-01-23)
+
+- **Path Mode**: Introduced a major new feature set for converting graphs into linear learning paths.
+  - **Learning Modes**: 'Domain Learning' (Topological) and 'Diffusion Learning' (Goal-oriented).
+  - **Visualization**: New Radial and Tree layouts powered by D3/Canvas.
+  - **Strategies**: 'Foundational' and 'Core' sorting algorithms.
+- **Hybrid Architecture**:
+  - **Godot Bridge**: Implemented `PathBridge.ts` to sync graph state with external renderers via WebSocket (Port 9876).
+  - **Native Rendering**: Added support for Godot 4.3 to render the graph with high-fidelity Vulkan graphics (Source in `path_mode/`).
+- **DevOps**:
+  - **NPM Scripts**: Added `pathmode:dev` and `pathmode:test` workflows.
+  - **UI Stability**: Fixed critical bugs in Radial Layout visibility (`centerView`) and Exit Mode logic.
 
 ### v1.1.2 - Path Resolution & UI Stability (2026-01-23)
 
@@ -726,7 +751,15 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 <img width="3723" height="2007" alt="image" src="https://github.com/user-attachments/assets/10978984-3e2d-4ab6-8b44-342d4f3c3800" />
 
-### 3. 性能与控制
+### 3. Path Mode (路径模式): 结构化学习 (v1.2.0)
+
+- **课程生成**: 将复杂的网状图瞬间转化为线性的学习路径。
+  - **领域学习 (Domain Learning)**: 掌握整个概念集群（拓扑排序）。
+  - **扩散学习 (Diffusion Learning)**: 寻找通往特定目标的最优路径（最短路径 + 前置依赖）。
+- **混合架构**: 通过 WebSocket (`ws://localhost:9876`) 连接到高保真 **Godot 4.3 桌面渲染器**，实现 3A 级的可视化效果，同时保持完全的 Web 兼容性。
+- **智能策略**: 支持 "基础优先" (Foundational) 或 "核心优先" (Core) 排序，适应不同的学习风格。
+
+### 4. 性能与控制 (Performance & Control)
 
 - **高容量并行处理**: 利用 Node.js `worker_threads` (最多 12 核) 分发计算密集的关键词匹配任务。
 - **模拟控制 (v0.9.0)**: 通过 **速度/阻尼滑块** 微调物理效果，或使用 **冻结布局** 开关停止模拟以进行稳定的手动排列。

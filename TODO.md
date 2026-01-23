@@ -1,3 +1,20 @@
+# 2026-01-23 v1.2.0 - Path Mode & Desktop Renderer
+
+**Goal**: Transform the graph into a structured learning curriculum and enable high-fidelity desktop rendering.
+
+- [x] **Path Mode (Learning Paths)**
+  - [x] **strategies**: Implemented "Foundational" (Base-first) and "Core" (Centrality-first) sorting algorithms.
+  - [x] **Modes**:
+    - **Domain Learning**: Topological sort of a concept cluster to map a full subject area.
+    - **Diffusion Learning**: Shortest-path extraction from a target node backwards to its prerequisites.
+  - [x] **Visualization**:
+    - **Radial / Tree Layouts**: specialized D3 layouts for linearizing graphs.
+    - **Progress Tracking**: Visual states for "Learned", "Next", and "Locked" nodes.
+- [x] **Hybrid Architecture**
+  - [x] **Godot Bridge**: Established WebSocket communication (`Start port: 9876`) between Electron and Godot 4.3.
+  - [x] **Native Renderer**: Low-latency Vulkan/OpenGL renderer for the "Path Mode" visualization on Desktop.
+  - [x] **Web Fallback**: Full feature parity in Web/Canvas mode for Android and browser users.
+
 # 2026-01-23 v1.1.2 - Path Resolution & UI Stability
 
 **Goal**: Resolve static file serving issues on Windows and fix UI unresponsiveness in the Welcome Modal.

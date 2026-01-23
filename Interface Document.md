@@ -570,6 +570,56 @@ interface CooccurrenceMetrics {
 }
 ```
 
+### 3.6 Path Engine (v1.2.0)
+
+#### `PathEngine` Class
+
+Algorithms for generating linear learning paths from the complex graph structure.
+
+- **Location**: `src/core/PathEngine.ts`
+- **Strategies**:
+  - `foundational`: Prioritizes nodes with low in-degree (easy) and high out-degree (unlocks many). Use case: Beginners.
+  - `core`: Prioritizes nodes with high Centrality. Use case: Reviewers/Experts.
+- **Methods**:
+  - `domainLearning(nodeIds: string[], strategy): PathResult`
+    - **Logic**: Topological Sort on the subgraph defined by `nodeIds` + their ancestors.
+    - **Cycle Handling**: Implements "Cycle Breaking" (picks lowest in-degree node) to handle circular dependencies without crashing.
+  - `diffusionLearning(targetId: string, strategy): PathResult`
+    - **Logic**: Extracts the shortest path (and all prerequisites) to reach a specific goal node.
+- **Output**:
+  ```typescript
+  interface PathResult {
+    nodes: LearningNode[]; // Ordered sequence
+    edges: NoteEdge[]; // Dependencies
+    strategy: "foundational" | "core";
+    coverage: number; // % of domain covered
+  }
+  ```
+
+#### `PathBridge` (Desktop Integration)
+
+Manages WebSocket communication between Electron (Main Process) and external renderers (Godot).
+
+- **Location**: `src/core/PathBridge.ts`
+- **Protocol**: WebSocket (Port 9876)
+- **Role**:
+  - Relays graph data from frontend/backend to Godot.
+  - Receives interactive events (Node Click) from Godot.
+- **Architecture**:
+  - **Hybrid**: Users can view the graph in the Web Canvas while simultaneously running the high-fidelity Godot renderer.
+
+### 3.7 Path Worker (v1.2.0)
+
+Dedicated Web Worker for Path Mode layout and logic.
+
+- **Location**: `src/frontend/path_worker.js`
+- **Functions**:
+  - `computePath`: Runs `PathEngine` algorithms off-main-thread.
+  - `runLayout`: specialized D3 layouts (Radial, Vertical Tree, Horizontal Tree) for path visualization.
+- **Robustness**:
+  - Fallback logic: If `diffusionLearning` target is invalid, auto-switches to `domain` mode.
+  - Auto-centering: Calculates bounding box for perfect camera framing.
+
 ## 4. Server API (v0.8.5)
 
 ### 4.1 Endpoints
