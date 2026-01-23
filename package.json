@@ -16,7 +16,7 @@
     "build": "tsc && node scripts/copy-assets.js && node scripts/bundle_path_core.js",
     "build:mini": "tsc && node scripts/copy-assets.js --mini",
     "pathmode:dev": "node -r ts-node/register src/server.ts --pathmode",
-    "pathmode:test": "jest --testPathPattern=Path",
+    "pathmode:test": "jest --testPathPatterns=Path",
     "prepublishOnly": "npm run build",
     "test": "jest"
   },
