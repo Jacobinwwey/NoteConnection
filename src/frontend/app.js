@@ -2969,3 +2969,42 @@ if (controlsPanelToggleTarget) {
         }
     });
 }
+
+// Path Mode Integration (v1.1.0)
+const btnPathMode = document.getElementById('btn-path-mode');
+if (btnPathMode) {
+    btnPathMode.addEventListener('click', () => {
+        // Check for active selection for Diffusion Learning
+        const highlightState = window.highlightManager ? window.highlightManager.getState() : null;
+        const selectedNode = (highlightState && highlightState.currentNode) ? highlightState.currentNode : null;
+        
+        console.log('[Path Mode] Entering...', selectedNode ? `Target: ${selectedNode.id}` : 'Domain Mode');
+        
+        // UI Switch
+        document.getElementById('graph-wrapper').style.display = 'none';
+        document.getElementById('path-container').style.display = 'block';
+        
+        // Initialize Path App
+        if (window.pathApp) {
+            if (selectedNode) {
+                // Diffusion Learning
+                const modeSelect = document.getElementById('learning-mode');
+                if(modeSelect) modeSelect.value = 'diffusion';
+                
+                // Hide main graph controls panel potentially?
+                // For now, path-container consumes full screen and has its own toolbar.
+                
+                window.pathApp.init(selectedNode.id);
+            } else {
+                // Domain Learning
+                const modeSelect = document.getElementById('learning-mode');
+                if(modeSelect) modeSelect.value = 'domain';
+                
+                window.pathApp.init(null);
+            }
+        } else {
+            console.error('PathApp not loaded! Ensure libs/path_core.js and path_app.js are included.');
+        }
+    });
+}
+

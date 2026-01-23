@@ -13,6 +13,7 @@
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔗</text></svg>"
     />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="path_styles.css" />
     <!-- Local Dependencies (Fully Offline) -->
     <script src="libs/d3.v7.min.js"></script>
 
@@ -69,7 +70,20 @@
             cursor: pointer;
           "
         >
-          Load
+        </button>
+        <button
+          id="btn-path-mode"
+          style="
+            background: #2c5282;
+            color: white;
+            border: 1px solid #555;
+            padding: 2px 8px;
+            cursor: pointer;
+            margin-left: 5px;
+          "
+          title="Path Learning Mode"
+        >
+          Path Mode
         </button>
       </div>
 
@@ -1159,5 +1173,57 @@
     <script src="loading.js"></script>
     <script src="source_manager.js"></script>
     <script src="welcome.js"></script>
+    <!-- Path Mode Container (Hidden by default) -->
+    <div id="path-container" class="path-container">
+        <!-- Toolbar -->
+        <div id="path-toolbar" class="path-toolbar">
+            <div class="toolbar-group">
+                <label for="learning-mode">Mode:</label>
+                <select id="learning-mode">
+                    <option value="domain">Domain Learning</option>
+                    <option value="diffusion">Diffusion Learning</option>
+                </select>
+            </div>
+
+            <div class="toolbar-group">
+                <label for="strategy">Strategy:</label>
+                <select id="strategy">
+                    <option value="foundational" title="Start with fundamental concepts (Low In-Degree)">Foundational</option>
+                    <option value="core" title="Start with key concepts (High Centrality)">Core</option>
+                </select>
+            </div>
+
+            <div class="toolbar-group">
+                <label for="layout-style">Layout:</label>
+                <select id="layout-style">
+                    <option value="vertical">Vertical Tree</option>
+                    <option value="horizontal">Horizontal Tree</option>
+                    <option value="radial">Radial</option>
+                </select>
+            </div>
+
+            <div class="toolbar-group right">
+                <button id="btn-exit-path" class="icon-btn" title="Exit Path Mode">
+                    <i class="fas fa-times"></i> Exit
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas Layer -->
+        <canvas id="path-canvas"></canvas>
+
+        <!-- Overlay Layer for Interaction -->
+        <div id="path-overlay"></div>
+
+        <!-- Progress / Status -->
+        <div id="path-status">
+            Learning Path: <span id="path-count">0</span> nodes
+        </div>
+    </div>
+
+    <!-- Path Mode Scripts -->
+    <script src="libs/path_core.js"></script>
+    <script src="path_app.js"></script>
+
   </body>
 </html>

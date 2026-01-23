@@ -13,8 +13,10 @@
     "electron:dev:mini": "npm run build:mini && electron .",
     "electron:build": "npm run build && electron-builder",
     "electron:build:mini": "npm run build:mini && electron-builder",
-    "build": "tsc && node scripts/copy-assets.js",
+    "build": "tsc && node scripts/copy-assets.js && node scripts/bundle_path_core.js",
     "build:mini": "tsc && node scripts/copy-assets.js --mini",
+    "pathmode:dev": "node -r ts-node/register src/server.ts --pathmode",
+    "pathmode:test": "jest --testPathPattern=Path",
     "prepublishOnly": "npm run build",
     "test": "jest"
   },
@@ -60,8 +62,10 @@
     "@capacitor/cli": "^8.0.0",
     "@capacitor/core": "^8.0.0",
     "@types/d3-force": "^3.0.10",
+    "@types/ws": "^8.18.1",
     "d3-force": "^3.0.0",
     "electron-squirrel-startup": "^1.0.1",
-    "tslib": "^2.8.1"
+    "tslib": "^2.8.1",
+    "ws": "^8.19.0"
   }
 }

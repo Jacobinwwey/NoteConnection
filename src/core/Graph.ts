@@ -142,4 +142,97 @@ export class Graph {
       edges: Array.from(this.adjacencyList.values()).flat()
     };
   }
+
+  /**
+   * Gets all predecessor nodes (transitive closure of incoming edges).
+   * 获取所有前驱节点（入边的传递闭包）。
+   * @param id Target node ID
+   */
+  getPredecessors(id: string): Set<string> {
+    const predecessors = new Set<string>();
+    const queue = [id];
+    const visited = new Set<string>();
+    visited.add(id);
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const incoming = this.getIncomingEdges(current);
+      
+      for (const edge of incoming) {
+        if (!visited.has(edge.source)) {
+          visited.add(edge.source);
+          predecessors.add(edge.source);
+          queue.push(edge.source);
+        }
+      }
+    }
+    return predecessors;
+  }
+
+  /**
+   * Gets all successor nodes (transitive closure of outgoing edges).
+   * 获取所有后继节点（出边的传递闭包）。
+   * @param id Source node ID
+   */
+  getSuccessors(id: string): Set<string> {
+    const successors = new Set<string>();
+    const queue = [id];
+    const visited = new Set<string>();
+    visited.add(id);
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const outgoing = this.getOutgoingEdges(current);
+      
+      for (const edge of outgoing) {
+        if (!visited.has(edge.target)) {
+          visited.add(edge.target);
+          successors.add(edge.target);
+          queue.push(edge.target);
+        }
+      }
+    }
+    return successors;
+  }
+
+  /**
+   * Calculates the shortest path between two nodes (unweighted BFS).
+   * 计算两个节点之间的最短路径 (无权 BFS)。
+   * @param source Source node ID
+   * @param target Target node ID
+   * @returns Array of node IDs representing the path, or empty if no path found
+   */
+  getShortestPath(source: string, target: string): string[] {
+    if (source === target) return [source];
+    
+    const queue = [source];
+    const visited = new Set<string>();
+    const parent = new Map<string, string>();
+    visited.add(source);
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (current === target) break;
+
+      const neighbors = this.getNeighbors(current);
+      for (const neighbor of neighbors) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          parent.set(neighbor, current);
+          queue.push(neighbor);
+        }
+      }
+    }
+
+    if (!visited.has(target)) return [];
+
+    // Reconstruct path
+    const path = [target];
+    let curr = target;
+    while (curr !== source) {
+      curr = parent.get(curr)!;
+      path.unshift(curr);
+    }
+    return path;
+  }
 }

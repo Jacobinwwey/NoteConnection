@@ -1,0 +1,131 @@
+/* Path Mode Styles */
+
+.path-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #1e1e1e; /* Dark theme default */
+    z-index: 2000; /* Above main graph */
+    display: none; /* Hidden by default */
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.path-toolbar {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(30, 30, 30, 0.9);
+    backdrop-filter: blur(10px);
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    z-index: 2005;
+}
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #e0e0e0;
+    font-size: 0.9rem;
+}
+
+.toolbar-group select {
+    background: #333;
+    color: white;
+    border: 1px solid #555;
+    padding: 4px 8px;
+    border-radius: 4px;
+    outline: none;
+}
+
+.toolbar-group select:hover {
+    border-color: #777;
+}
+
+.toolbar-group.right {
+    margin-left: 20px;
+    border-left: 1px solid #555;
+    padding-left: 20px;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    color: #ff6b6b;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.icon-btn:hover {
+    background: rgba(255, 107, 107, 0.1);
+}
+
+#path-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+#path-status {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    color: #888;
+    font-size: 0.9rem;
+    pointer-events: none;
+}
+
+/* Node Cards (if we use DOM overlays) */
+.path-node-card {
+    position: absolute;
+    background: #2d2d2d;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 10px;
+    width: 200px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    pointer-events: auto;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.path-node-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.6);
+    border-color: #666;
+}
+
+.path-node-title {
+    color: #fff;
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 1rem;
+}
+
+.path-node-meta {
+    color: #aaa;
+    font-size: 0.8rem;
+}
+
+.step-badge {
+    display: inline-block;
+    background: #4a9eff;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    margin-right: 5px;
+}

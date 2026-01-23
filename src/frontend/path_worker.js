@@ -1,0 +1,154 @@
+/**
+ * Path Mode Worker
+ * Bundles Core Algorithms and Layout Logic
+ */
+
+importScripts("libs/d3.v7.min.js");
+// We will rely on a bundled version of the core being importable
+// The build script will generate 'libs/path_core.js' which defines 'Graph' and 'PathEngine' classes globally or via a shim
+importScripts("libs/path_core.js");
+
+let graph = null;
+let engine = null;
+let rawNodes = [];
+let rawLinks = [];
+
+onmessage = function(e) {
+    const { type, payload } = e.data;
+
+    try {
+        switch (type) {
+            case 'initData':
+                initData(payload);
+                break;
+            case 'computePath':
+                computePath(payload);
+                break;
+        }
+    } catch (err) {
+        console.error('Worker Error:', err);
+    }
+};
+
+function initData(data) {
+    // Reconstruct Graph object
+    // Assuming Graph class is globally available from path_core.js
+    graph = new Graph();
+    data.nodes.forEach(n => graph.addNode(n));
+    data.links.forEach(l => graph.addEdge(l.source, l.target, l.type, l.weight));
+    
+    engine = new PathEngine(graph);
+    postMessage({ type: 'log', payload: `Graph Initialized: ${data.nodes.length} nodes` });
+}
+
+function computePath(config) {
+    if (!engine) return;
+
+    const { mode, strategy, layout, targetId } = config;
+    let result;
+
+    if (mode === 'domain') {
+        result = engine.domainLearning(null, strategy);
+    } else {
+        // Validation for Diffusion Mode
+        if (!targetId || targetId === 'null' || !graph.hasNode(targetId)) {
+            console.warn(`[PathWorker] Invalid target '${targetId}' for Diffusion. Fallback to Domain.`);
+            result = engine.domainLearning(null, 'foundational'); // Fallback
+        } else {
+            result = engine.diffusionLearning(targetId, strategy);
+        }
+    }
+    
+    // Layout Calculation
+    // We need to assign x,y coordinates to the result nodes
+    // Structure: result.nodes is a linear sequence or a set.
+    // For Tree layout, we need to reconstruct the hierarchy passed in result.edges (which are relevant dependencies)
+    
+    const layoutData = runLayout(result.nodes, result.edges, layout);
+    
+    postMessage({ 
+        type: 'pathResult', 
+        payload: {
+            nodes: layoutData.nodes,
+            edges: layoutData.edges
+        }
+    });
+}
+
+function runLayout(nodes, edges, type) {
+    // Convert to D3 Stratify structure if possible, or use d3-dag
+    // Simple approach: Build a hierarchy from stepOrder or dependencies
+    
+    // Create a hierarchy object for D3
+    // Root is a virtual node connecting to all step 1 nodes?
+    // Or finds roots (in-degree 0) in the subgraph
+    
+    // 1. Map nodes for quick access
+    const nodeMap = new Map();
+    nodes.forEach(n => {
+        // Clone to avoid mutating original logic objects if needed
+        nodeMap.set(n.id, { ...n, children: [] });
+    });
+    
+    // 2. Build Tree Structure
+    // Note: Graph might be DAG, D3 Tree requires strict Tree.
+    // We break cycles/multi-parents by just taking the first parent found in this path?
+    // Or use graph layout. For MVP, we use a simple Level-based layout based on 'stepOrder'.
+    
+    if (type === 'horizontal' || type === 'vertical') {
+        const levelHeight = 100;
+        const levelWidth = 80;
+        
+        // Group by stepOrder
+        const levels = [];
+        nodes.forEach(node => {
+            if (!levels[node.stepOrder]) levels[node.stepOrder] = [];
+            levels[node.stepOrder].push(nodeMap.get(node.id));
+        });
+        
+        // Assign coordinates
+        levels.forEach((level, i) => {
+            const y = i * levelHeight;
+            const xStart = -(level.length * levelWidth) / 2;
+            level.forEach((node, j) => {
+                if (type === 'vertical') {
+                    node.x = xStart + j * levelWidth;
+                    node.y = y;
+                } else {
+                    node.x = y; 
+                    node.y = xStart + j * levelWidth;
+                }
+            });
+        });
+    } else if (type === 'radial') {
+         // Radial: Angle based on index, Radius based on step
+         const radiusStep = 120;
+         
+         // Group by step for better radial distribution
+         const levels = [];
+         nodes.forEach(node => {
+            const step = node.stepOrder || 1;
+            if (!levels[step]) levels[step] = [];
+            levels[step].push(nodeMap.get(node.id));
+         });
+
+         levels.forEach((level, stepIndex) => {
+             if (!level) return;
+             const r = stepIndex * radiusStep;
+             level.forEach((node, i) => {
+                 // Distribute nodes in this level around the circle
+                 const angle = (i / level.length) * 2 * Math.PI; 
+                 // Rotate slightly per level to avoid overlap
+                 const offset = stepIndex * 0.2; 
+                 
+                 node.x = r * Math.cos(angle + offset);
+                 node.y = r * Math.sin(angle + offset);
+             });
+         });
+    }
+    
+    return {
+        nodes: Array.from(nodeMap.values()),
+        edges: edges 
+    };
+}

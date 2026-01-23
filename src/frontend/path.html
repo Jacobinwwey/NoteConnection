@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoteConnection - Path Mode</title>
+    <link rel="stylesheet" href="styles.css"> <!-- Reuse main styles -->
+    <link rel="stylesheet" href="path_styles.css">
+    
+    <!-- Local Assets -->
+    <script src="libs/d3.v7.min.js"></script>
+    <script src="libs/gpu-browser.min.js"></script>
+</head>
+<body>
+    <div id="path-container" class="path-container">
+        <!-- Toolbar -->
+        <div id="path-toolbar" class="path-toolbar">
+            <div class="toolbar-group">
+                <label for="learning-mode">Mode:</label>
+                <select id="learning-mode">
+                    <option value="domain">Domain Learning</option>
+                    <option value="diffusion">Diffusion Learning</option>
+                </select>
+            </div>
+
+            <div class="toolbar-group">
+                <label for="strategy">Strategy:</label>
+                <select id="strategy">
+                    <option value="foundational" title="Start with fundamental concepts (Low In-Degree)">Foundational</option>
+                    <option value="core" title="Start with key concepts (High Centrality)">Core</option>
+                </select>
+            </div>
+
+            <div class="toolbar-group">
+                <label for="layout-style">Layout:</label>
+                <select id="layout-style">
+                    <option value="vertical">Vertical Tree</option>
+                    <option value="horizontal">Horizontal Tree</option>
+                    <option value="radial">Radial</option>
+                </select>
+            </div>
+
+            <div class="toolbar-group right">
+                <button id="btn-exit-path" class="icon-btn" title="Exit Path Mode">
+                    ❌ Exit
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas Layer -->
+        <canvas id="path-canvas"></canvas>
+
+        <!-- Overlay Layer for Interaction -->
+        <div id="path-overlay"></div>
+
+        <!-- Progress / Status -->
+        <div id="path-status">
+            Learning Path: <span id="path-count">0</span> nodes
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="i18n.js"></script>
+    <script src="path_app.js"></script>
+</body>
+</html>

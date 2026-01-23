@@ -2,8 +2,10 @@ import { app, BrowserWindow, Menu, dialog, shell, ipcMain, protocol, net } from 
 import * as path from 'path';
 import * as url from 'url';
 import { NoteController } from '../backend/controller';
+import { PathBridge } from '../core/PathBridge';
 
 let mainWindow: BrowserWindow | null = null;
+let pathBridge: PathBridge | null = null;
 
 // Knowledge Base Path Management
 const DEFAULT_KB_PATH = path.join(process.cwd(), 'Knowledge_Base');
@@ -319,6 +321,18 @@ const createWindow = async () => {
 
 app.whenReady().then(async () => {
     log('App Ready');
+    
+    // Initialize Path Bridge (WebSocket)
+    try {
+        pathBridge = new PathBridge(9876);
+        log('PathBridge initialized on port 9876');
+    } catch (e) {
+        log(`Failed to initialize PathBridge: ${e}`);
+    }
+
+    app.on('before-quit', () => {
+        if (pathBridge) pathBridge.close();
+    });
     
     // Suppress security warnings in dev mode (unsafe-eval is required for GPU.js)
     process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
