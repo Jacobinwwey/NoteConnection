@@ -822,6 +822,10 @@ NoteConnection 基于模块化架构构建，旨在实现高性能和可扩展�
 - **状态管理**: `SettingsManager` 将用户偏好（物理、视觉）持久化到 `localStorage`。
 - **布局逻辑**: 自定义的 Sugiyama 风格分层算法和力导向物理算法。
 
+### 桌面桥接 (Desktop Bridge) (`src/core`)
+
+- **PathBridge**: 标准 WebSocket 服务器 (端口 9876)，将内部图谱状态暴露给外部应用程序（例如 Godot 引擎），实现混合 Web/原生可视化管线。
+
 ---
 
 <a id="quick-start-zh"></a>
@@ -966,6 +970,19 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 <a id="changelog-zh"></a>
 
 ## 📅 更新日志 (Changelog)
+
+### v1.2.0 - 路径模式与桌面渲染器 (2026-01-23)
+
+- **路径模式 (Path Mode)**: 引入了一套主要的新功能，用于将图谱转化为线性的学习路径。
+  - **学习模式**: '领域学习' (拓扑排序) 和 '扩散学习' (目标导向)。
+  - **可视化**: 由 D3/Canvas 驱动的全新径向和树状布局。
+  - **策略**: '基础优先' 和 '核心优先' 排序算法。
+- **混合架构**:
+  - **Godot 桥接**: 实现了 `PathBridge.ts`，通过 WebSocket (端口 9876) 与外部渲染器同步图谱状态。
+  - **原生渲染**: 添加了对 Godot 4.3 的支持，以渲染高保真的 Vulkan 图形 (源码位于 `path_mode/`).
+- **运维 (DevOps)**:
+  - **NPM 脚本**: 添加了 `pathmode:dev` 和 `pathmode:test` 工作流。
+  - **UI 稳定性**: 修复了径向布局可见性 (`centerView`) 和退出模式逻辑中的关键 Bug。
 
 ### v1.1.2 - 路径解析与 UI 稳定性 (2026-01-23)
 

@@ -1715,6 +1715,56 @@ interface CooccurrenceMetrics {
 }
 ```
 
+### 3.6 路径引擎 (Path Engine - v1.2.0)
+
+#### `PathEngine` 类
+
+用于从复杂的图结构的生成线性学习路径的算法。
+
+- **位置**: `src/core/PathEngine.ts`
+- **策略**:
+  - `foundational`: 优先考虑入度低（容易）且出度高（解锁多）的节点。适用场景：初学者。
+  - `core`: 优先考虑中心性高的节点。适用场景：复习者/专家。
+- **方法**:
+  - `domainLearning(nodeIds: string[], strategy): PathResult`
+    - **逻辑**: 对由 `nodeIds` 及其祖先定义的子图进行拓扑排序。
+    - **循环处理**: 实现“循环打破 (Cycle Breaking)”（选取入度最低的节点）以处理循环依赖，防止崩溃。
+  - `diffusionLearning(targetId: string, strategy): PathResult`
+    - **逻辑**: 提取到达特定目标节点所需的最短路径（及其所有先决条件）。
+- **输出**:
+  ```typescript
+  interface PathResult {
+    nodes: LearningNode[]; // 有序序列
+    edges: NoteEdge[]; // 依赖关系
+    strategy: "foundational" | "core";
+    coverage: number; // 领域覆盖率 %
+  }
+  ```
+
+#### `PathBridge` (桌面集成)
+
+管理 Electron (主进程) 与外部渲染器 (Godot) 之间的 WebSocket 通信。
+
+- **位置**: `src/core/PathBridge.ts`
+- **协议**: WebSocket (端口 9876)
+- **角色**:
+  - 将图谱数据从前端/后端转发到 Godot。
+  - 接收来自 Godot 的交互事件 (节点点击)。
+- **架构**:
+  - **混合**: 用户可以在 Web Canvas 中查看图谱，同时运行高保真的 Godot 渲染器。
+
+### 3.7 路径工作线程 (Path Worker - v1.2.0)
+
+用于路径模式布局和逻辑的专用 Web Worker。
+
+- **位置**: `src/frontend/path_worker.js`
+- **功能**:
+  - `computePath`: 在主线程之外运行 `PathEngine` 算法。
+  - `runLayout`: 用于路径可视化的专用 D3 布局（径向、垂直树、水平树）。
+- **稳健性**:
+  - 回退逻辑: 如果 `diffusionLearning` 目标无效，自动切换到 `domain` 模式。
+  - 自动居中: 计算包围盒以实现完美的相机取景。
+
 ### 5. 移动端构建 (Mobile Build - v0.9.1)
 
 #### 5.1 Capacitor 流水线 (Capacitor Pipeline)
