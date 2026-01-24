@@ -3,9 +3,11 @@
 **Goal**: Transform Path Mode into an immersive, game-like learning experience with progress tracking.
 
 - [ ] **Orbital Bubble Layout**
-  - [ ] Central bubble = current priority node (large, bright)
-  - [ ] Peripheral bubbles = directly connected nodes (smaller, semi-transparent)
-  - [ ] Smooth animation on central node switch
+  - [x] Central bubble = current priority node (large, bright)
+
+  - [x] Peripheral bubbles = directly connected nodes (smaller, semi-transparent)
+
+  - [x] Smooth animation on central node switch
 
 - [ ] **Learning Progress Tracking**
   - [ ] "Mark Complete" button shrinks central to gold mini-bubble
@@ -20,12 +22,15 @@
   - [ ] Integrate with `SettingsManager`
 
 - [ ] **Focus-like Interactions**
-  - [ ] Double-click central → Opens reader with node content
-  - [ ] Double-click peripheral → Switches central node
-  - [ ] Canvas hit-testing for click detection
+  - [x] Double-click central → Opens reader with node content
+
+  - [x] Double-click peripheral → Switches central node
+
+  - [x] Canvas hit-testing for click detection
 
 - [ ] **Diffusion Target Selection**
-  - [ ] Node selector modal (search + autocomplete)
+  - [x] Node selector modal (search + autocomplete)
+
   - [ ] Triggered when Diffusion mode selected without target
   - [ ] Updates `currentTargetId` and recomputes path
 

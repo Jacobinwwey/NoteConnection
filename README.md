@@ -278,6 +278,20 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ## 📅 Changelog
 
+### v1.3.0 - Path Mode Polish & UI Refinements (2026-01-24)
+
+- **Reader Integration**:
+  - **Seamless Access**: Double-clicking the central node in "Orbital Layout" now instantly opens the `Reader`, displaying full node content.
+  - **Data Fetching**: Fixed a critical issue where the reader would open empty; now correctly retrieves full metadata from the global graph state.
+- **Visual Polish**:
+  - **Orbital Layout**: Significantly improved node dispersion (Radius 350-950px) to reduce label overlap.
+  - **Edge Clarity**: In Orbital mode, strictly hides edges not connected to the central node, reducing visual clutter by 90%.
+  - **Label Visibility**: Peripheral nodes now always display labels, sized proportionally to their distance (max 16px).
+  - **Depth of Field**: Adjusted opacity falloff to ensure distant nodes remain visible (min 0.4 opacity).
+- **UX Improvements**:
+  - **Target Selection**: Increased the "Target Node" search limit from 20 to 300, ensuring users can find any node in the graph.
+  - **Interactive Layers**: Fixed `z-index` layering issues where the Reader window was previously hidden behind the Path visualization.
+
 ### v1.2.0 - Path Mode & Desktop Renderer (2026-01-23)
 
 - **Path Mode**: Introduced a major new feature set for converting graphs into linear learning paths.
@@ -970,6 +984,20 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 <a id="changelog-zh"></a>
 
 ## 📅 更新日志 (Changelog)
+
+### v1.3.0 - 路径模式打磨与 UI 优化 (Path Mode Polish & UI Refinements) (2026-01-24)
+
+- **阅读器集成 (Reader Integration)**:
+  - **无缝访问**: 在“轨道布局”中双击中心节点现在会立即打开`阅读器`，显示完整的节点内容。
+  - **数据获取**: 修复了阅读器打开为空的关键问题；现在可以正确地从全局图状态检索完整的元数据。
+- **视觉打磨 (Visual Polish)**:
+  - **轨道布局**: 显著改进了节点分散度（半径 350-950px），减少了标签重叠。
+  - **边缘清晰度**: 在轨道模式下，严格隐藏未连接到中心节点的边，将视觉混乱减少了 90%。
+  - **标签可见性**: 周围节点现在总是显示标签，并根据距离按比例缩放（最大 16px）。
+  - **景深 (DoF)**: 调整了不透明度衰减，以确保远处的节点保持可见（最小 0.4 不透明度）。
+- **用户体验改进 (UX Improvements)**:
+  - **目标选择**: 将“目标节点”搜索限制从 20 增加到 300，确保用户可以找到图中的任何节点。
+  - **交互层级**: 修复了 `z-index` 层级问题，之前的阅读器窗口被隐藏在路径可视化后面。
 
 ### v1.2.0 - 路径模式与桌面渲染器 (2026-01-23)
 

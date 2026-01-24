@@ -620,6 +620,30 @@ Dedicated Web Worker for Path Mode layout and logic.
   - Fallback logic: If `diffusionLearning` target is invalid, auto-switches to `domain` mode.
   - Auto-centering: Calculates bounding box for perfect camera framing.
 
+### 3.8 Path Mode Interactions (v1.3.0)
+
+#### Orbital Layout Visualization
+
+- **Structure**:
+  - **Central Node**: The current focus of the learning path. Rendered large (radius ~40-50px) and fully opaque.
+  - **Peripheral Nodes**: Direct neighbors or next steps. Rendered orbiting the center at varying radii (350px - 950px).
+- **Visual Rules**:
+  - **Edge Visibility**: Only edges connecting the Central Node to Peripheral Nodes are drawn. All extraneous edges are suppressed.
+  - **Depth of Field**: Nodes further from the center fade slightly (min opacity 0.4) and scale down to simulate 3D depth.
+  - **Labels**: Peripheral labels are always visible, scaled by distance (Max 16px, Min 8px) to prevent clutter.
+
+#### Reader Integration
+
+- **Trigger**: Double-click on the **Central Node**.
+- **Behavior**: Opens the `Reader` overlay (`#reading-window`) loaded with the node's full markdown content.
+- **Layering**: The Reader (`z-index: 2500`) sits above the Path Mode canvas (`z-index: 2000`) but below the highest system notifications.
+
+#### Target Selection
+
+- **Component**: `#node-select-modal`
+- **Capacity**: Search results capped at 300 items (increased from 20) to ensure full graph discoverability.
+- **Action**: Selecting a node sets it as the new `diffusionTarget` and triggers a path recalculation.
+
 ## 4. Server API (v0.8.5)
 
 ### 4.1 Endpoints
@@ -1764,6 +1788,30 @@ interface CooccurrenceMetrics {
 - **稳健性**:
   - 回退逻辑: 如果 `diffusionLearning` 目标无效，自动切换到 `domain` 模式。
   - 自动居中: 计算包围盒以实现完美的相机取景。
+
+### 3.8 路径模式交互 (Path Mode Interactions - v1.3.0)
+
+#### 轨道布局可视化 (Orbital Layout Visualization)
+
+- **结构**:
+  - **中心节点**: 当前学习路径的焦点。渲染为大尺寸（半径 ~40-50px）且完全不透明。
+  - **周边节点**: 直接邻居或后续步骤。渲染为围绕中心运行，半径各异 (350px - 950px)。
+- **视觉规则**:
+  - **边可见性**: 仅绘制连接中心节点到周边节点的边。所有无关的边均被隐藏。
+  - **景深 (Depth of Field)**: 远离中心的节点会轻微褪色（最小不透明度 0.4）并缩小，以此模拟 3D 深度感。
+  - **标签**: 周边节点的标签始终可见，并根据距离缩放（最大 16px，最小 8px）以防止混乱。
+
+#### 阅读器集成 (Reader Integration)
+
+- **触发**: 双击 **中心节点**。
+- **行为**: 打开加载了该节点完整 Markdown 内容的 `阅读器` 覆盖层 (`#reading-window`)。
+- **层级**: 阅读器 (`z-index: 2500`) 位于路径模式画布 (`z-index: 2000`) 之上，但在最高系统通知之下。
+
+#### 目标选择 (Target Selection)
+
+- **组件**: `#node-select-modal`
+- **容量**: 搜索结果上限增加到 300 项（原为 20），以确保完整的图谱可发现性。
+- **动作**: 选择一个节点将其设为新的 `diffusionTarget` 并触发路径重新计算。
 
 ### 5. 移动端构建 (Mobile Build - v0.9.1)
 
