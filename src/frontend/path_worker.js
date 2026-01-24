@@ -145,6 +145,28 @@ function runLayout(nodes, edges, type) {
                  node.y = r * Math.sin(angle + offset);
              });
          });
+    } else if (type === 'orbital') {
+        // Orbital: Central node at 0,0. Neighbors in orbit.
+        // We need to identify the "Central" node. 
+        // Strategy: First node in the list is assumed central/focus for now, 
+        // OR the app should pass a 'focusId'.
+        // For Path Mode, usually the first node (step 1) or the "current" node is central.
+        // Let's assume nodes[0] is the center if not specified.
+        
+        const centerNode = nodes[0];
+        if (centerNode) {
+            nodeMap.get(centerNode.id).x = 0;
+            nodeMap.get(centerNode.id).y = 0;
+            
+            const radius = 200;
+            const peripherals = nodes.slice(1);
+            peripherals.forEach((n, i) => {
+                const node = nodeMap.get(n.id);
+                const angle = (i / peripherals.length) * 2 * Math.PI;
+                node.x = radius * Math.cos(angle);
+                node.y = radius * Math.sin(angle);
+            });
+        }
     }
     
     return {

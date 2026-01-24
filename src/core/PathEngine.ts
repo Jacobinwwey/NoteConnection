@@ -123,8 +123,11 @@ export class PathEngine {
             if (!visited.has(neighborId)) {
                 const newDegree = (localInDegree.get(neighborId) || 0) - 1;
                 localInDegree.set(neighborId, newDegree);
-                if (newDegree === 0) {
-                    available.push(neighborId);
+                if (newDegree <= 0) { // Changed to <= 0 to be robust against negative logic errors
+                    // Check if already in available to prevent duplicates
+                    if (!available.includes(neighborId)) {
+                        available.push(neighborId);
+                    }
                 }
             }
         });
@@ -135,10 +138,15 @@ export class PathEngine {
             // Normal Topological Sort Step
             available.sort((a, b) => this.compareNodes(a, b, strategy));
             const currentId = available.shift()!;
-            processNode(currentId);
+            if (!visited.has(currentId)) {
+                processNode(currentId);
+            }
         } else {
-            // Cycle Detected: No 0-in-degree nodes available
-            // Strategy: Break cycle by picking the "best" remaining node (lowest in-degree, then strategy score)
+            // Cycle Detected or Disconnected Components with strict dependencies
+            // Strategy: Break cycle by picking the "best" remaining node 
+            // Prioritize nodes with HIGHEST Out-Degree (unlocks the most)
+            // or lowest remaining in-degree?
+            // "Lowest In-Degree" is usually the best heuristic for Feedback Arc Set.
             
             // Find remaining nodes
             const remainingIds: string[] = [];
@@ -146,9 +154,9 @@ export class PathEngine {
                 if (!visited.has(n.id)) remainingIds.push(n.id);
             });
             
-            if (remainingIds.length === 0) break; // Should not happen given outer loop condition
+            if (remainingIds.length === 0) break; // Done
             
-            // Sort by In-Degree (Ascending) -> Strategy (Desc)
+            // Sort by In-Degree (Ascending) -> Strategy Score (Desc)
             remainingIds.sort((a, b) => {
                 const degA = localInDegree.get(a) || 0;
                 const degB = localInDegree.get(b) || 0;
@@ -157,7 +165,8 @@ export class PathEngine {
             });
             
             const forceId = remainingIds[0];
-            // console.warn(`PathEngine: Breaking cycle at ${forceId} (In-Degree: ${localInDegree.get(forceId)})`);
+            // Force process strict dependency validation
+            localInDegree.set(forceId, 0); // Pretend it's free
             processNode(forceId);
         }
     }

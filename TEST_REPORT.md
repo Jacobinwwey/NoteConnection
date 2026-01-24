@@ -2804,3 +2804,29 @@
 - **测试**: 点击面板中的“返回”按钮。
 - **结果**: 面板恢复为“度数分析”（全局视图）。
 - **状态**: **通过**
+
+# Reference: Project Framework Architecture & Objectives
+
+## 1. Hybrid Visualization Architecture
+
+- **Desktop (Godot)**: Utilizes Godot 4.3 + Vulkan for high-fidelity, AAA-quality graph rendering (particles, bloom, physics). Communicates via WebSocket (Port 9876).
+- **Web (Canvas/WebGL)**: High-performance HTML5 Canvas fallback for Android, Browser, and non-GPU environments.
+- **Fallback Strategy**:
+  1. Try Connect WebSocket (Godot).
+  2. If failed, fallback to WebGL/Canvas (Path Mode / Large Graph).
+  3. Fallback to SVG (Small Graph / Interactivity).
+
+## 2. Path Mode UX Design
+
+- **Metaphor**: "Orbital Learning".
+- **Central Node**: The current focus/learning objective. Rendered as a large, bright bubble.
+- **Peripheral Nodes**: Contextual dependencies. Rendered as smaller, orbiting satellites.
+- **Progress Tracking**: Completed nodes shrink to "Gold Stars" and are logged in history.
+- **Interaction**:
+  - **Double-Click Center**: Open specific content (Reader).
+  - **Double-Click Peripheral**: Orbit switch (new center).
+
+## 3. UI Layout & Mode Switching
+
+- **Seamless Transition**: Switching between "Graph Mode" (Force/DAG) and "Path Mode" (Orbital) preserves data context but completely swaps the rendering engine/worker.
+- **State Preservation**: Learning history and "Completed" buffer persist across sessions via `localStorage`.

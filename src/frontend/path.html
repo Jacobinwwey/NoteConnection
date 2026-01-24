@@ -59,6 +59,40 @@
         </div>
     </div>
 
+    <!-- Reading Mode Dependencies -->
+    <script src="libs/marked.min.js"></script>
+    <link rel="stylesheet" href="libs/katex/katex.min.css" />
+    <script src="libs/katex/katex.min.js"></script>
+    <script src="libs/katex/contrib/auto-render.min.js"></script>
+    <script src="libs/mermaid.min.js"></script>
+    <script src="reader.js"></script>
+
+    <!-- Reading Window -->
+    <div id="reading-window" class="reading-overlay" style="display: none">
+      <div id="reading-content-box" class="reading-box window-mode">
+        <div class="reading-header">
+          <span id="reading-title">Title</span>
+          <div class="reading-controls">
+            <button
+              id="btn-reader-lock"
+              class="reader-btn"
+              title="Lock/Unlock Sizing"
+            >
+              🔒
+            </button>
+            <button id="btn-reader-zoom-out" class="reader-btn">A-</button>
+            <button id="btn-reader-zoom-in" class="reader-btn">A+</button>
+            <button id="btn-reader-close" class="reader-btn close">
+              &times;
+            </button>
+          </div>
+        </div>
+        <div id="reading-body" class="reading-body locked">
+          <!-- Content injected here -->
+        </div>
+      </div>
+    </div>
+
     <!-- Scripts -->
     <script src="i18n.js"></script>
     <script src="path_app.js"></script>

@@ -1,3 +1,42 @@
+# 2026-01-23 v1.3.0 - Path Mode v2: Orbital Learning (WIP)
+
+**Goal**: Transform Path Mode into an immersive, game-like learning experience with progress tracking.
+
+- [ ] **Orbital Bubble Layout**
+  - [ ] Central bubble = current priority node (large, bright)
+  - [ ] Peripheral bubbles = directly connected nodes (smaller, semi-transparent)
+  - [ ] Smooth animation on central node switch
+
+- [ ] **Learning Progress Tracking**
+  - [ ] "Mark Complete" button shrinks central to gold mini-bubble
+  - [ ] Completed nodes in toggleable sidebar (button to show/hide)
+  - [ ] Click sidebar item → Opens reader
+  - [ ] localStorage persistence by default
+  - [ ] Auto-advance to next highest priority node
+
+- [ ] **Settings: Path Mode Section**
+  - [ ] Add "Path Mode" section to settings modal
+  - [ ] "Retain Learning History" checkbox (default ON)
+  - [ ] Integrate with `SettingsManager`
+
+- [ ] **Focus-like Interactions**
+  - [ ] Double-click central → Opens reader with node content
+  - [ ] Double-click peripheral → Switches central node
+  - [ ] Canvas hit-testing for click detection
+
+- [ ] **Diffusion Target Selection**
+  - [ ] Node selector modal (search + autocomplete)
+  - [ ] Triggered when Diffusion mode selected without target
+  - [ ] Updates `currentTargetId` and recomputes path
+
+- [ ] **Godot Desktop Renderer**
+  - [ ] Complete `path_renderer.gd` edge drawing
+  - [ ] Central/Peripheral bubble differentiation
+  - [ ] Bidirectional interaction via WebSocket
+  - [ ] `node_clicked` signal → PathBridge → Frontend
+
+---
+
 # 2026-01-23 v1.2.0 - Path Mode & Desktop Renderer
 
 **Goal**: Transform the graph into a structured learning curriculum and enable high-fidelity desktop rendering.
@@ -2269,3 +2308,29 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] **随机专注**: 在搜索栏旁添加骰子图标，支持即时随机聚焦。
 - [x] **GPU 诊断增强**: 增加详细的 GPU 上下文报告（供应商/渲染器）。
 - [x] **安全与 CSP**: 更新 CSP 以实现严密的离线环境安全。
+
+# Framework Architecture & Design Objectives
+
+## 1. Hybrid Visualization Architecture
+
+- **Desktop (Godot)**: Utilizes Godot 4.3 + Vulkan for high-fidelity, AAA-quality graph rendering (particles, bloom, physics). Communicates via WebSocket (Port 9876).
+- **Web (Canvas/WebGL)**: High-performance HTML5 Canvas fallback for Android, Browser, and non-GPU environments.
+- **Fallback Strategy**:
+  1. Try Connect WebSocket (Godot).
+  2. If failed, fallback to WebGL/Canvas (Path Mode / Large Graph).
+  3. Fallback to SVG (Small Graph / Interactivity).
+
+## 2. Path Mode UX Design
+
+- **Metaphor**: "Orbital Learning".
+- **Central Node**: The current focus/learning objective. Rendered as a large, bright bubble.
+- **Peripheral Nodes**: Contextual dependencies. Rendered as smaller, orbiting satellites.
+- **Progress Tracking**: Completed nodes shrink to "Gold Stars" and are logged in history.
+- **Interaction**:
+  - **Double-Click Center**: Open specific content (Reader).
+  - **Double-Click Peripheral**: Orbit switch (new center).
+
+## 3. UI Layout & Mode Switching
+
+- **Seamless Transition**: Switching between "Graph Mode" (Force/DAG) and "Path Mode" (Orbital) preserves data context but completely swaps the rendering engine/worker.
+- **State Preservation**: Learning history and "Completed" buffer persist across sessions via `localStorage`.

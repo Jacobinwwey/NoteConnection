@@ -33,10 +33,10 @@ export class PathBridge {
 
     private handleMessage(data: any, sender: WebSocket) {
         // Handle messages from Godot (e.g., node clicks)
-        // For now, mostly log
-        if (data.type === 'node_click') {
-            console.log(`[PathBridge] Godot clicked node: ${data.nodeId}`);
-            // Can pipe this back to Electron main -> Renderer if needed
+        if (data.type === 'nodeClick') {
+            console.log(`[PathBridge] Godot clicked node: ${data.payload}`);
+            // Broadcast to all clients (including Frontend)
+            this.broadcast('nodeClick', data.payload);
         }
     }
 

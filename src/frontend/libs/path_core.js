@@ -272,6 +272,7 @@ class PathEngine {
     generateLearningPath(nodesOfInterest, strategy) {
         const nodes = Array.from(nodesOfInterest).map(id => this.graph.getNode(id));
         const nodeMap = new Map(nodes.map(n => [n.id, n]));
+        
         // Build local in-degrees for the subgraph
         const localInDegree = new Map();
         const localAdjacency = new Map();
@@ -279,6 +280,7 @@ class PathEngine {
             localInDegree.set(node.id, 0);
             localAdjacency.set(node.id, []);
         });
+
         // Populate edges restricted to the subgraph
         const relevantEdges = [];
         nodes.forEach(node => {
@@ -291,6 +293,7 @@ class PathEngine {
                 }
             });
         });
+
         // Initialize queue with nodes having 0 in-degree (within subgraph)
         let available = [];
         nodes.forEach(node => {
@@ -298,14 +301,16 @@ class PathEngine {
                 available.push(node.id);
             }
         });
+
         const learnedPath = [];
+        const visited = new Set();
         let step = 1;
-        while (available.length > 0) {
-            // Sort available nodes based on strategy
-            available.sort((a, b) => this.compareNodes(a, b, strategy));
-            // Pick the best candidate
-            const currentId = available.shift();
+
+        // Helper to process a node and unlock neighbors
+        const processNode = (currentId) => {
+            visited.add(currentId);
             const currentNode = nodeMap.get(currentId);
+
             // Add to path
             learnedPath.push({
                 ...currentNode,
@@ -313,26 +318,54 @@ class PathEngine {
                 isCompleted: false,
                 unlocks: localAdjacency.get(currentId)
             });
+
             // "Unlock" neighbors
             const neighbors = localAdjacency.get(currentId);
             neighbors.forEach(neighborId => {
-                const newDegree = (localInDegree.get(neighborId) || 0) - 1;
-                localInDegree.set(neighborId, newDegree);
-                if (newDegree === 0) {
-                    available.push(neighborId);
+                // Only decrement if neighbor not visited
+                if (!visited.has(neighborId)) {
+                    const newDegree = (localInDegree.get(neighborId) || 0) - 1;
+                    localInDegree.set(neighborId, newDegree);
+                    if (newDegree <= 0) {
+                        if (!available.includes(neighborId)) {
+                            available.push(neighborId);
+                        }
+                    }
                 }
             });
+        };
+
+        while (learnedPath.length < nodes.length) {
+            if (available.length > 0) {
+                // Normal Topological Sort Step
+                available.sort((a, b) => this.compareNodes(a, b, strategy));
+                const currentId = available.shift();
+                if (!visited.has(currentId)) {
+                    processNode(currentId);
+                }
+            } else {
+                // Cycle Detected: Find best remaining node to break cycle
+                const remainingIds = [];
+                nodes.forEach(n => {
+                    if (!visited.has(n.id)) remainingIds.push(n.id);
+                });
+                
+                if (remainingIds.length === 0) break; 
+                
+                // Sort by In-Degree (Ascending) -> Strategy (Desc)
+                remainingIds.sort((a, b) => {
+                    const degA = localInDegree.get(a) || 0;
+                    const degB = localInDegree.get(b) || 0;
+                    if (degA !== degB) return degA - degB;
+                    return this.compareNodes(a, b, strategy);
+                });
+                
+                const forceId = remainingIds[0];
+                localInDegree.set(forceId, 0); // Force unlock
+                processNode(forceId);
+            }
         }
-        // Check for cycles (if path length < distinct nodes count)
-        // cycles will remain in localInDegree > 0
-        if (learnedPath.length < nodes.length) {
-            // Cycle detected or disconnected components handled? 
-            // Disconnected components are handled by 0-in-degree check (they would be added).
-            // Cycles prevent nodes from reaching 0.
-            // Fallback: Pick a node with lowest in-degree to break cycle?
-            // For now, simple topological sort omits cyclic nodes.
-            console.warn(`PathEngine: Cycle detected or incomplete path. Learned ${learnedPath.length}/${nodes.length} nodes.`);
-        }
+
         return {
             nodes: learnedPath,
             edges: relevantEdges,

@@ -126,7 +126,9 @@
       "general": "常规",
       "physics": "物理引擎",
       "performance": "性能优化",
-      "visuals": "视觉效果"
+      "visuals": "视觉效果",
+      "reading": "阅读",
+      "path_mode": "路径模式"
     },
     "labels": {
       "language": "语言",
@@ -139,7 +141,10 @@
       "compactMode": "紧凑模式 (隐藏边)",
       "staticMode": "静态模式",
       "gpuRendering": "GPU 布局优化 (Beta)",
-      "deepDebug": "深度调试模式"
+      "deepDebug": "深度调试模式",
+      "opacity": "边透明度",
+      "reading_mode": "打开模式",
+      "retain_history": "保留学习记录"
     },
     "descriptions": {
       "workers": "如果 Node.js 内存不足，请降低此值。",
@@ -148,7 +153,8 @@
       "compactMode": "默认不加载/渲染边以提高 >5k 节点的性能。",
       "staticMode": "构建后立即停止模拟。图谱不会移动。",
       "gpuRendering": "将布局计算卸载到 GPU（AMD Radeon 7900XT 或兼容GPU，低于 2k 节点可能更慢）。",
-      "deepDebug": "在构建期间启用详细日志。"
+      "deepDebug": "在构建期间启用详细日志。",
+      "retain_history": "在会话之间保存已学习节点的状态。"
     },
     "save": "保存",
     "cancel": "取消",
@@ -257,6 +263,7 @@
   "grp_performance": "性能优化",
   "grp_visuals": "视觉效果",
   "grp_reading": "阅读",
+  "grp_path_mode": "路径模式",
   "lbl_language": "语言",
   "lbl_repulsion": "排斥力强度",
   "lbl_distance": "链接距离",
@@ -270,13 +277,15 @@
   "lbl_deep_debug": "深度调试模式",
   "lbl_opacity": "边透明度",
   "lbl_reading_mode": "打开模式",
+  "lbl_retain_history": "保留学习记录",
   "desc_workers": "如果 Node.js 内存不足，请降低此值。",
   "desc_gpu": "使用 GPU 进行相似度计算（需要重新加载页面）。",
   "desc_memory_saving": "使用低精度策略防止大文件 OOM。",
   "desc_compact_mode": "默认不加载/渲染边以提高 >5k 节点的性能。",
-  "desc_static_mode": "2秒后停止模拟。推荐用于大图谱。",
-  "desc_gpu_rendering": "启用 AMD GPU 加速用于加载和定位。",
-  "desc_deep_debug": "启用调试的详细日志。",
+  "desc_static_mode": "构建后立即停止模拟。图谱不会移动。",
+  "desc_gpu_rendering": "将布局计算卸载到 GPU（AMD Radeon 7900XT 或兼容GPU，低于 2k 节点可能更慢）。",
+  "desc_deep_debug": "在构建期间启用详细日志。",
+  "desc_retain_history": "在会话之间保存已学习节点的状态。",
   "opt_window": "窗口",
   "opt_fullscreen": "全屏",
   "btn_reset": "重置",
@@ -303,5 +312,19 @@
   "view_mode": "视图模式:",
   "view_nodes": "节点",
   "view_clusters": "聚类 (概览)",
-  "auto_arrange": "自动排列"
+  "auto_arrange": "自动排列",
+  "lbl_mode": "模式:",
+  "opt_domain": "领域学习",
+  "opt_diffusion": "扩散学习",
+  "lbl_strategy": "策略:",
+  "opt_strat_foundational": "基础 (低入度)",
+  "opt_strat_core": "核心 (高中心性)",
+  "lbl_layout": "布局:",
+  "opt_layout_vertical": "垂直树状",
+  "opt_layout_horizontal": "水平树状",
+  "opt_layout_radial": "径向",
+  "opt_layout_orbital": "轨道 (专注)",
+  "btn_complete": "完成",
+  "btn_history": "历史",
+  "btn_exit": "退出"
 }
