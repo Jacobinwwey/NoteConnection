@@ -1,6 +1,6 @@
-# 2026-01-23 v1.1.2
+# 2026-01-24 v1.3.0
 
-# Interface Document (v1.1.2)
+# Interface Document (v1.3.0)
 
 This document defines the core interfaces for the NoteConnection system, separating backend processing from frontend visualization.
 

@@ -1,4 +1,4 @@
-# 2026-01-23 v1.2.0
+# 2026-01-24 v1.3.0
 
 # NoteConnection Knowledge Graph
 
