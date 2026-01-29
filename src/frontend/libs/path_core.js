@@ -272,7 +272,6 @@ class PathEngine {
     generateLearningPath(nodesOfInterest, strategy) {
         const nodes = Array.from(nodesOfInterest).map(id => this.graph.getNode(id));
         const nodeMap = new Map(nodes.map(n => [n.id, n]));
-        
         // Build local in-degrees for the subgraph
         const localInDegree = new Map();
         const localAdjacency = new Map();
@@ -280,7 +279,6 @@ class PathEngine {
             localInDegree.set(node.id, 0);
             localAdjacency.set(node.id, []);
         });
-
         // Populate edges restricted to the subgraph
         const relevantEdges = [];
         nodes.forEach(node => {
@@ -293,7 +291,6 @@ class PathEngine {
                 }
             });
         });
-
         // Initialize queue with nodes having 0 in-degree (within subgraph)
         let available = [];
         nodes.forEach(node => {
@@ -301,16 +298,13 @@ class PathEngine {
                 available.push(node.id);
             }
         });
-
         const learnedPath = [];
         const visited = new Set();
         let step = 1;
-
         // Helper to process a node and unlock neighbors
         const processNode = (currentId) => {
             visited.add(currentId);
             const currentNode = nodeMap.get(currentId);
-
             // Add to path
             learnedPath.push({
                 ...currentNode,
@@ -318,15 +312,15 @@ class PathEngine {
                 isCompleted: false,
                 unlocks: localAdjacency.get(currentId)
             });
-
             // "Unlock" neighbors
             const neighbors = localAdjacency.get(currentId);
             neighbors.forEach(neighborId => {
-                // Only decrement if neighbor not visited
+                // Only decrement if neighbor not visited (avoid double counting in cycles)
                 if (!visited.has(neighborId)) {
                     const newDegree = (localInDegree.get(neighborId) || 0) - 1;
                     localInDegree.set(neighborId, newDegree);
-                    if (newDegree <= 0) {
+                    if (newDegree <= 0) { // Changed to <= 0 to be robust against negative logic errors
+                        // Check if already in available to prevent duplicates
                         if (!available.includes(neighborId)) {
                             available.push(neighborId);
                         }
@@ -334,7 +328,6 @@ class PathEngine {
                 }
             });
         };
-
         while (learnedPath.length < nodes.length) {
             if (available.length > 0) {
                 // Normal Topological Sort Step
@@ -343,29 +336,35 @@ class PathEngine {
                 if (!visited.has(currentId)) {
                     processNode(currentId);
                 }
-            } else {
-                // Cycle Detected: Find best remaining node to break cycle
+            }
+            else {
+                // Cycle Detected or Disconnected Components with strict dependencies
+                // Strategy: Break cycle by picking the "best" remaining node 
+                // Prioritize nodes with HIGHEST Out-Degree (unlocks the most)
+                // or lowest remaining in-degree?
+                // "Lowest In-Degree" is usually the best heuristic for Feedback Arc Set.
+                // Find remaining nodes
                 const remainingIds = [];
                 nodes.forEach(n => {
-                    if (!visited.has(n.id)) remainingIds.push(n.id);
+                    if (!visited.has(n.id))
+                        remainingIds.push(n.id);
                 });
-                
-                if (remainingIds.length === 0) break; 
-                
-                // Sort by In-Degree (Ascending) -> Strategy (Desc)
+                if (remainingIds.length === 0)
+                    break; // Done
+                // Sort by In-Degree (Ascending) -> Strategy Score (Desc)
                 remainingIds.sort((a, b) => {
                     const degA = localInDegree.get(a) || 0;
                     const degB = localInDegree.get(b) || 0;
-                    if (degA !== degB) return degA - degB;
+                    if (degA !== degB)
+                        return degA - degB;
                     return this.compareNodes(a, b, strategy);
                 });
-                
                 const forceId = remainingIds[0];
-                localInDegree.set(forceId, 0); // Force unlock
+                // Force process strict dependency validation
+                localInDegree.set(forceId, 0); // Pretend it's free
                 processNode(forceId);
             }
         }
-
         return {
             nodes: learnedPath,
             edges: relevantEdges,
@@ -421,10 +420,266 @@ class PathEngine {
             return (node.centrality || 0) * 10 - node.inDegree;
         }
     }
+
+    /**
+     * Get peripheral nodes for orbital view (1-4 nodes).
+     * 获取轨道视图的周边节点（1-4个节点）。
+     * @param centralId Current central node ID
+     * @param mode 'domain' or 'diffusion'
+     * @param ultimateTargetId Target node for diffusion mode (optional)
+     * @param maxCount Maximum peripheral count (default 4)
+     * @returns Array of peripheral node objects
+     */
+    getPeripheralNodes(centralId, mode = 'domain', ultimateTargetId = null, maxCount = 4) {
+        const centralNode = this.graph.getNode(centralId);
+        if (!centralNode) return [];
+
+        const peripherals = [];
+        const addedIds = new Set([centralId]);
+
+        // Step 1: Collect in-degree nodes (prerequisites)
+        const incomingEdges = this.graph.getIncomingEdges(centralId);
+        for (const edge of incomingEdges) {
+            if (peripherals.length >= maxCount) break;
+            if (!addedIds.has(edge.source)) {
+                const node = this.graph.getNode(edge.source);
+                if (node) {
+                    peripherals.push({ ...node, relation: 'prerequisite' });
+                    addedIds.add(edge.source);
+                }
+            }
+        }
+
+        // Step 2: Fill remaining with high-association nodes
+        if (peripherals.length < maxCount) {
+            const outgoingEdges = this.graph.getOutgoingEdges(centralId);
+            const candidates = [];
+
+            for (const edge of outgoingEdges) {
+                if (addedIds.has(edge.target)) continue;
+                
+                // Diffusion mode: exclude out-degree of ultimate target
+                if (mode === 'diffusion' && ultimateTargetId) {
+                    const targetOutgoing = this.graph.getOutgoingEdges(ultimateTargetId);
+                    const isOutDegreeOfTarget = targetOutgoing.some(e => e.target === edge.target);
+                    if (isOutDegreeOfTarget) continue;
+                }
+
+                const node = this.graph.getNode(edge.target);
+                if (node) {
+                    candidates.push({ 
+                        ...node, 
+                        relation: 'association',
+                        weight: edge.weight || 1
+                    });
+                }
+            }
+
+            // Sort by weight (association strength)
+            candidates.sort((a, b) => b.weight - a.weight);
+
+            for (const candidate of candidates) {
+                if (peripherals.length >= maxCount) break;
+                if (!addedIds.has(candidate.id)) {
+                    peripherals.push(candidate);
+                    addedIds.add(candidate.id);
+                }
+            }
+        }
+
+        // Step 3: Zero in-degree fallback - use highest relevance
+        if (peripherals.length === 0) {
+            const allNodes = this.graph.getNodes();
+            const candidates = allNodes
+                .filter(n => n.id !== centralId)
+                .map(n => ({
+                    ...n,
+                    relation: 'relevance',
+                    score: (n.centrality || 0) + (n.outDegree || 0) * 0.1
+                }))
+                .sort((a, b) => b.score - a.score);
+
+            for (const candidate of candidates) {
+                if (peripherals.length >= maxCount) break;
+                peripherals.push(candidate);
+            }
+        }
+
+        return peripherals;
+    }
+
+    /**
+     * Get tree path structure for future path visualization.
+     * 获取未来路径的树形结构。
+     * @param currentId Current node in path
+     * @param learningPath Full learning path from generateLearningPath
+     * @returns Tree structure with parent-child relationships
+     */
+    getTreePath(currentId, learningPath) {
+        if (!learningPath || !learningPath.nodes) return null;
+
+        const nodes = learningPath.nodes;
+        const currentIndex = nodes.findIndex(n => n.id === currentId);
+        
+        // Build tree from current position forward
+        const treeNodes = nodes.slice(currentIndex).map((node, idx) => ({
+            id: node.id,
+            label: node.label,
+            stepOrder: node.stepOrder,
+            depth: idx,
+            isCurrent: idx === 0,
+            isCompleted: node.isCompleted || false,
+            children: []
+        }));
+
+        // Simple linear tree (can be enhanced for branching later)
+        for (let i = 0; i < treeNodes.length - 1; i++) {
+            treeNodes[i].children = [treeNodes[i + 1].id];
+        }
+
+        return {
+            root: treeNodes[0]?.id || null,
+            nodes: treeNodes,
+            totalRemaining: treeNodes.length
+        };
+    }
 }
 PathEngine = PathEngine;
 
     // Explicitly expose
     self.PathEngine = PathEngine;
+
+/**
+ * OrbitalState - Progress tracking for Orbital Learning.
+ * 轨道状态 - 轨道学习的进度追踪。
+ */
+class OrbitalState {
+    constructor(storageKey = 'noteconnection_orbital_progress') {
+        this.storageKey = storageKey;
+        this.completedIds = new Set();
+        this.currentCentralId = null;
+        this.learningPath = null;
+        this.mode = 'domain'; // 'domain' or 'diffusion'
+        this._load();
+    }
+
+    _load() {
+        try {
+            const saved = localStorage.getItem(this.storageKey);
+            if (saved) {
+                const data = JSON.parse(saved);
+                this.completedIds = new Set(data.completedIds || []);
+                this.currentCentralId = data.currentCentralId || null;
+                this.mode = data.mode || 'domain';
+            }
+        } catch (e) {
+            console.warn('OrbitalState: Failed to load progress', e);
+        }
+    }
+
+    _save() {
+        try {
+            const data = {
+                completedIds: Array.from(this.completedIds),
+                currentCentralId: this.currentCentralId,
+                mode: this.mode
+            };
+            localStorage.setItem(this.storageKey, JSON.stringify(data));
+        } catch (e) {
+            console.warn('OrbitalState: Failed to save progress', e);
+        }
+    }
+
+    /**
+     * Mark a node as completed and advance to next.
+     * @param nodeId Node to mark complete
+     * @returns Next central node ID or null if path complete
+     */
+    markComplete(nodeId) {
+        this.completedIds.add(nodeId);
+        
+        // Find next uncompleted node in path
+        if (this.learningPath && this.learningPath.nodes) {
+            const currentIdx = this.learningPath.nodes.findIndex(n => n.id === nodeId);
+            for (let i = currentIdx + 1; i < this.learningPath.nodes.length; i++) {
+                const next = this.learningPath.nodes[i];
+                if (!this.completedIds.has(next.id)) {
+                    this.currentCentralId = next.id;
+                    this._save();
+                    return next.id;
+                }
+            }
+        }
+
+        this._save();
+        return null; // Path complete
+    }
+
+    /**
+     * Set the current learning path.
+     * @param path Learning path from PathEngine
+     */
+    setLearningPath(path) {
+        this.learningPath = path;
+        if (path && path.nodes && path.nodes.length > 0) {
+            // Find first uncompleted node
+            const first = path.nodes.find(n => !this.completedIds.has(n.id));
+            this.currentCentralId = first ? first.id : path.nodes[0].id;
+        }
+        this._save();
+    }
+
+    /**
+     * Switch central node manually.
+     * @param nodeId New central node
+     * @param autoReconstruct If true, caller should reconstruct path
+     */
+    switchCentral(nodeId, autoReconstruct = false) {
+        this.currentCentralId = nodeId;
+        this._save();
+        return autoReconstruct;
+    }
+
+    /**
+     * Get completion count for display.
+     * @returns {completed, total}
+     */
+    getProgress() {
+        const total = this.learningPath?.nodes?.length || 0;
+        const completed = this.completedIds.size;
+        return { completed, total };
+    }
+
+    /**
+     * Get completed node IDs as array.
+     */
+    getCompletedIds() {
+        return Array.from(this.completedIds);
+    }
+
+    /**
+     * Reset all progress.
+     */
+    reset() {
+        this.completedIds.clear();
+        this.currentCentralId = null;
+        this.learningPath = null;
+        localStorage.removeItem(this.storageKey);
+    }
+
+    /**
+     * Truncate label for peripheral display (max 15 chars).
+     * @param label Original label
+     * @returns Truncated label
+     */
+    static truncateLabel(label, maxLen = 15) {
+        if (!label || label.length <= maxLen) return label || '';
+        return label.substring(0, maxLen) + '...';
+    }
+}
+OrbitalState = OrbitalState;
+
+    // Explicitly expose
+    self.OrbitalState = OrbitalState;
     
 })();

@@ -1,17 +1,59 @@
-# 2026-01-23 v1.3.0 - Path Mode v2: Orbital Learning (WIP)
+# 2026-01-29 v1.4.0 - Path Mode v2: Orbital Learning Architecture
 
-**Goal**: Transform Path Mode into an immersive, game-like learning experience with progress tracking.
+**Goal**: Transform Path Mode into an immersive, game-like learning experience with 3D bubble visualization and progress tracking.
+
+## Architecture Overview
+
+### Hybrid Visualization Strategy
+
+1. **Godot Desktop** (Port 9876): Vulkan/OpenGL + 3D iridescent bubbles
+2. **Web Fallback**: Canvas/WebGL for Android/Browser
+3. **SVG Fallback**: For graphs ≤500 nodes
+
+### Learning Modes
+
+- **Domain Learning**: Topological sort of concept cluster (learn entire subject area)
+- **Diffusion Learning**: Shortest path from target backwards to prerequisites
+
+---
+
+## Finalized Design Decisions
+
+| Decision             | Final Choice                       | Rationale                      |
+| -------------------- | ---------------------------------- | ------------------------------ |
+| Display Limit        | 1 Central + 1-4 Peripheral         | Adapts to connectivity         |
+| Zero In-Degree       | Use highest relevance score        | Ensures meaningful peripherals |
+| Peripheral Selection | In-degree first + association fill | Balances order with discovery  |
+| Central Content      | Title + Progress indicator         | Core UX requirement            |
+| Peripheral Labels    | 15 chars + ellipsis                | Clean yet informative          |
+| Transition           | Orbital rotation (~500ms)          | Matches metaphor               |
+| Gold Star Sidebar    | Collapsible `★ × {N}` format       | Reduces clutter                |
+
+---
+
+## Implementation Checklist
 
 - [ ] **Orbital Bubble Layout**
   - [x] Central bubble = current priority node (large, bright)
-
-  - [x] Peripheral bubbles = directly connected nodes (smaller, semi-transparent)
-
+  - [x] Peripheral bubbles = connected nodes (smaller, semi-transparent)
   - [x] Smooth animation on central node switch
+  - [ ] **Orbital rotation animation** (~500ms arc transition)
+  - [ ] Layer separation (peripheral cannot overlap central text)
+  - [ ] 3D iridescent bubble shader (fresnel + thin-film interference)
+
+- [ ] **Peripheral Node Selection Algorithm**
+  - [ ] Domain Mode: In-degree nodes first, fill with highest-association
+  - [ ] Diffusion Mode: High-association to current (exclude target out-degree)
+  - [ ] Zero in-degree fallback: Select by relevance score
+
+- [ ] **Central Bubble Content**
+  - [ ] Node title (max 24 chars)
+  - [ ] Progress indicator: "X of Y prerequisites learned"
+  - [ ] Peripheral labels: Title only (max 15 chars + ellipsis)
 
 - [ ] **Learning Progress Tracking**
   - [ ] "Mark Complete" button shrinks central to gold mini-bubble
-  - [ ] Completed nodes in toggleable sidebar (button to show/hide)
+  - [ ] Collapsible sidebar: `★ × {count}` header format
   - [ ] Click sidebar item → Opens reader
   - [ ] localStorage persistence by default
   - [ ] Auto-advance to next highest priority node
@@ -19,26 +61,54 @@
 - [ ] **Settings: Path Mode Section**
   - [ ] Add "Path Mode" section to settings modal
   - [ ] "Retain Learning History" checkbox (default ON)
+  - [ ] "Auto-reconstruct path on start change" toggle
   - [ ] Integrate with `SettingsManager`
 
 - [ ] **Focus-like Interactions**
   - [x] Double-click central → Opens reader with node content
-
-  - [x] Double-click peripheral → Switches central node
-
+  - [x] Double-click peripheral → Orbital rotation to center
   - [x] Canvas hit-testing for click detection
 
-- [ ] **Diffusion Target Selection**
-  - [x] Node selector modal (search + autocomplete)
-
-  - [ ] Triggered when Diffusion mode selected without target
-  - [ ] Updates `currentTargetId` and recomputes path
+- [ ] **Future Path Tree View**
+  - [ ] D3-based tree layout for future learning path
+  - [ ] Click tree node → Switch central view
+  - [ ] Visual states: ★ Completed, ● Current, ○ Pending
 
 - [ ] **Godot Desktop Renderer**
-  - [ ] Complete `path_renderer.gd` edge drawing
+  - [ ] Upgrade `path_renderer.gd` to 3D MeshInstance3D
+  - [ ] Implement `bubble_material.gdshader` (fresnel + iridescence)
+  - [ ] Create `learning_state_machine.gd` for flow control
   - [ ] Central/Peripheral bubble differentiation
   - [ ] Bidirectional interaction via WebSocket
   - [ ] `node_clicked` signal → PathBridge → Frontend
+
+- [ ] **Frontend Web Fallback**
+  - [ ] Create `path_orbital.js` (Canvas orbital renderer)
+  - [ ] Create `path_tree.js` (D3 tree layout)
+  - [ ] Orbital rotation animation in Canvas
+
+---
+
+## File Changes Required
+
+### Backend
+
+- **[MODIFY]** `src/frontend/libs/path_core.js`
+  - Add `getPeripheralNodes(centralId, mode)` method
+  - Add `getTreePath(currentId, learningPath)` for tree view
+  - Add progress tracking state management
+
+### Godot
+
+- **[MODIFY]** `path_mode/scripts/path_renderer.gd` → 3D rendering
+- **[NEW]** `path_mode/scripts/learning_state_machine.gd`
+- **[NEW]** `path_mode/shaders/bubble_material.gdshader`
+- **[MODIFY]** `path_mode/scripts/ws_client.gd` → New message handlers
+
+### Frontend
+
+- **[NEW]** `src/frontend/libs/path_orbital.js`
+- **[NEW]** `src/frontend/libs/path_tree.js`
 
 ---
 

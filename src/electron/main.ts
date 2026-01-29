@@ -488,6 +488,11 @@ app.whenReady().then(async () => {
     });
 
     createWindow();
+    
+    // Connect PathBridge to mainWindow for IPC communication
+    if (pathBridge && mainWindow) {
+        pathBridge.setMainWindow(mainWindow);
+    }
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {

@@ -8,6 +8,7 @@ coverage
 Knowledge_Base
 result.txt
 # Editor
+.godot
 .vscode
 .idea
 .agent
@@ -19,3 +20,4 @@ ref
 *.njsproj
 *.sln
 *.swp
+*.uid

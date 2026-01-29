@@ -21,7 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     
     on: (channel: string, func: (...args: any[]) => void) => {
-        const validChannels = ['build-log', 'build-complete', 'kb-path-changed']; // Whitelist channels
+        const validChannels = ['build-log', 'build-complete', 'kb-path-changed', 'path-open-reader'];
         if (validChannels.includes(channel)) {
             // Deliberately strip event as it includes `sender` 
             ipcRenderer.on(channel, (event, ...args) => func(...args));

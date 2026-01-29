@@ -40,6 +40,36 @@ window.pathApp = {
 
         this.loadHistory(); // Load from localStorage
         
+        // Listen for IPC from PathBridge (Godot openReader)
+        if (window.electronAPI && window.electronAPI.on) {
+            window.electronAPI.on('path-open-reader', (data) => {
+                console.log('[PathApp] Received path-open-reader IPC:', data);
+                const nodeId = data.nodeId || data;
+                if (nodeId && window.reader) {
+                    // Always try to find full node data from source (graphData) first to ensure metadata exists
+                    const sourceData = (typeof graphData !== 'undefined') ? graphData : window.graphData;
+                    let fullNode = null;
+                    
+                    if (sourceData && sourceData.nodes) {
+                        fullNode = sourceData.nodes.find(n => n.id === nodeId);
+                    }
+                    
+                    // Fallback to local nodes if not found (unlikely but safe)
+                    if (!fullNode) {
+                        fullNode = this.nodes.find(n => n.id === nodeId);
+                    }
+
+                    if (fullNode) {
+                        window.reader.open(fullNode);
+                    } else {
+                        // Fallback: try to open by ID
+                        window.reader.open(nodeId);
+                    }
+                }
+            });
+            console.log('[PathApp] Registered path-open-reader IPC listener');
+        }
+        
         // Start Loop
         this.animate();
         
@@ -59,14 +89,103 @@ window.pathApp = {
         this.ws.onmessage = (e) => {
             try {
                 const msg = JSON.parse(e.data);
+                console.log('[PathApp] WS Received:', msg.type);
+                
                 if (msg.type === 'nodeClick') {
-                    console.log('[PathApp] Received remote click:', msg.payload);
-                    this.switchCentral(msg.payload);
+                    console.log('[PathApp] Remote node click:', msg.payload?.nodeId);
+                    this.switchCentral(msg.payload?.nodeId || msg.payload);
+                } else if (msg.type === 'switchCenter') {
+                    console.log('[PathApp] Remote switch center:', msg.payload?.newCenterId);
+                    this.switchCentral(msg.payload?.newCenterId);
+                } else if (msg.type === 'requestPath') {
+                     console.log('[PathApp] Remote requested path data');
+                     // Trigger update to resend current path
+                     if (this.nodes.length > 0) {
+                         // Re-package current state and send
+                         const result = {
+                             nodes: this.nodes,
+                             edges: this.links
+                         };
+                         this.sendPathToBridge(result);
+                     } else {
+                         this.triggerUpdate(); // Will eventually send result
+                     }
                 }
             } catch(err) {
                 console.error('WS Error', err);
             }
         };
+    },
+
+    sendPathToBridge: function(result) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+             // Convert to simplified format expected by Godot
+             const centralId = this.centralNodeId;
+             const centralNode = result.nodes.find(n => n.id === centralId);
+             
+             if (!centralNode) return;
+
+             // --- Peripheral Selection Logic (Max 4) ---
+             // Requirement: 1 Central + 1-4 Peripherals
+             // Strategy: Prerequisites (Incoming) First, then Associations (Outgoing/Undirected)
+             
+             const candidates = result.nodes.filter(n => n.id !== centralId);
+             const edges = result.edges || [];
+             
+             const peripherals = candidates.map(node => {
+                 // Determine relationship
+                 const isIncoming = edges.some(e => e.source === node.id && e.target === centralId);
+                 const isOutgoing = edges.some(e => e.source === centralId && e.target === node.id);
+                 
+                 // Score for sorting:
+                 // Incoming (Prereq) = Priority 2
+                 // Outgoing (Association) = Priority 1
+                 // Tie-breaker: Centrality or Degree (use inDegree + outDegree)
+                 let priority = 0;
+                 if (isIncoming) priority = 2;
+                 else if (isOutgoing) priority = 1;
+                 
+                 return {
+                     ...node,
+                     priority: priority,
+                     totalDegree: (node.inDegree || 0) + (node.outDegree || 0)
+                 };
+             });
+
+             // Sort: High Priority > High Degree
+             peripherals.sort((a, b) => {
+                 if (b.priority !== a.priority) return b.priority - a.priority;
+                 return b.totalDegree - a.totalDegree;
+             });
+
+             // Take top 4
+             const selectedPeripherals = peripherals.slice(0, 4).map(n => ({
+                 id: n.id,
+                 label: n.label,
+                 relation: n.priority === 2 ? 'prerequisite' : 'association'
+             }));
+
+             const payload = {
+                 central: {
+                     id: centralNode.id,
+                     label: centralNode.label,
+                     inDegree: centralNode.inDegree || 0,
+                     outDegree: centralNode.outDegree || 0
+                 },
+                 peripherals: selectedPeripherals,
+                 progress: {
+                     completed: this.completedNodes.size,
+                     total: this.nodes.length + this.completedNodes.size // Rough estimate
+                 },
+                 mode: 'orbital'
+             };
+
+             this.ws.send(JSON.stringify({
+                 type: 'pathResult',
+                 payload: payload
+             }));
+             console.log('[PathApp] Sent pathResult to Bridge (Filtered to 4 peripherals)');
+        }
     },
 
     setupCanvas: function() {
@@ -294,6 +413,9 @@ window.pathApp = {
         }
 
         this.centerView();
+        
+        // Sync with Godot
+        this.sendPathToBridge(result);
     },
 
     // --- Animation & Rendering ---
