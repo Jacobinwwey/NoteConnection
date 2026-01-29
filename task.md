@@ -8,6 +8,33 @@ Document and expand the Path Mode architecture for the NoteConnection project, e
 
 ## Phase 1-3: Complete (Architecture & Basic Godot)
 
+## Phase 1: Research & Context Gathering
+
+- [x] Review existing [path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js) (Graph, PathEngine classes)
+- [x] Review existing [ws_client.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/ws_client.gd) WebSocket client
+- [x] Review existing [path_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/path_renderer.gd) renderer
+- [x] Review brainstorming and godot-gdscript-patterns skills
+- [x] Analyze TODO.md for Path Mode v2 requirements
+
+## Phase 2: Architecture Documentation
+
+- [x] Create comprehensive Path Mode Architecture Document
+- [x] Document Hybrid Visualization Architecture
+- [x] Document Domain Learning & Diffusion Learning algorithms
+- [x] Document Godot 3D/Pseudo-3D visualization requirements
+- [x] Document WebSocket protocol specification
+
+## Phase 3: Godot Implementation (Complete)
+
+- [x] Enhance [path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js) with [getPeripheralNodes()](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js#424-510) and [OrbitalState](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js#556-680)
+- [x] Create [bubble_material.gdshader](file:///e:/Knowledge_project/NoteConnection_app/path_mode/shaders/bubble_material.gdshader) (iridescent bubble effect)
+- [x] Create [learning_state_machine.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/learning_state_machine.gd) (state machine)
+- [x] Create [path_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/path_renderer.gd) (3D orbital renderer)
+- [x] Create [main.tscn](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scenes/main.tscn) (Godot main scene)
+- [x] Update [ws_client.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/ws_client.gd) (new message handlers)
+- [x] Fix dark background and floor
+- [x] Add collision detection for bubble interactivity
+
 ## Phase 3.5: Godot Interactivity Fixes (In Progress)
 
 - [x] Add camera zoom/pan/rotate controls (`orbital_camera.gd`)
