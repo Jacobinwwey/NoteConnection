@@ -251,13 +251,33 @@ func mark_complete(node_id: String) -> void:
 
 ### 5.2 Enhanced Graphical Tree View (v2)
 
+> **Status**: Understanding Lock achieved. Ready for implementation.
+
 **Architecture**: SubViewport overlay panel with bezier curve rendering
+
+```mermaid
+graph TD
+    A[TreeViewPanel] --> B[SubViewportContainer]
+    B --> C[SubViewport 2D Canvas]
+    C --> D[TreeRenderer]
+    D --> E[Node2D: Tree Nodes]
+    D --> F[Line2D: Bezier Curves]
+
+    A --> G[Header: Tabs + Style Dropdown]
+    A --> H[Context Menu Popup]
+
+    I[PathRenderer] --> |data| D
+    D --> |signals| I
+```
+
+**Scene Structure**:
 
 ```
 PanelContainer (tree_view_panel.tscn)
 ├── VBoxContainer
 │   ├── HBoxContainer (Header)
 │   │   ├── TabBar: [Subtree] [Full Path]
+│   │   ├── HSeparator
 │   │   └── OptionButton (Style selector)
 │   └── SubViewportContainer
 │       └── SubViewport
@@ -265,7 +285,83 @@ PanelContainer (tree_view_panel.tscn)
 └── PopupMenu (Context menu)
 ```
 
-**Visual Themes** (4 selectable, colorful as default):
+---
+
+#### 5.2.1 tree_view_panel.gd
+
+Main controller for the tree view panel.
+
+**Signals:**
+
+- `node_navigate_requested(node_id: String)`
+- `node_mark_complete_requested(node_id: String)`
+
+**Key Methods:**
+
+- `set_tree_data(nodes: Array, completed_ids: Array, current_id: String)`
+- `set_view_mode(mode: String)` - "subtree" or "full"
+- `set_style(style: String)` - "dark", "glass", "minimal", "colorful"
+
+---
+
+#### 5.2.2 tree_renderer.gd
+
+Renders the bezier tree in 2D canvas.
+
+```gdscript
+func _draw_node(node: Dictionary, pos: Vector2) -> void:
+    # Draw rounded rectangle / gradient based on style
+
+func _draw_bezier_connection(from: Vector2, to: Vector2, color: Color) -> void:
+    var curve = Curve2D.new()
+    var cp1 = Vector2(from.x, (from.y + to.y) / 2)
+    var cp2 = Vector2(to.x, (from.y + to.y) / 2)
+    curve.add_point(from, Vector2.ZERO, cp1 - from)
+    curve.add_point(to, cp2 - to, Vector2.ZERO)
+    draw_polyline(curve.tessellate(), color, 2.0, true)
+```
+
+---
+
+#### 5.2.3 tree_styles.gd
+
+Style configurations as resource:
+
+```gdscript
+const STYLES := {
+    "colorful": {  # DEFAULT
+        "bg": Color(0.1, 0.1, 0.15, 0.9),
+        "node_completed": Color(1.0, 0.84, 0.0),   # Gold
+        "node_current": Color(0.0, 0.8, 0.9),      # Cyan
+        "node_pending": Color(0.5, 0.5, 0.6),      # Gray
+        "curve_inherit_parent": true,
+        "node_radius": 8.0,
+        "label_color": Color.WHITE
+    },
+    "dark": {
+        "bg": Color(0.1, 0.1, 0.18, 0.95),
+        "node_completed": Color(0.4, 0.3, 0.6),
+        "node_current": Color(0.3, 0.4, 0.7),
+        "node_pending": Color(0.25, 0.25, 0.3),
+        "curve_color": Color(0.4, 0.4, 0.6, 0.6),
+        "node_radius": 10.0
+    },
+    "glass": {
+        "bg": Color(0.15, 0.15, 0.2, 0.5),
+        "blur_enabled": true,
+        "glow_curves": true,
+        "node_transparency": 0.7
+    },
+    "minimal": {
+        "bg": Color(0.12, 0.12, 0.15, 0.95),
+        "node_color": Color.WHITE,
+        "curve_color": Color(0.5, 0.5, 0.5, 0.4),
+        "node_radius": 4.0
+    }
+}
+```
+
+**Visual Themes Summary**:
 
 | Theme                  | Background       | Nodes                   | Curves               |
 | ---------------------- | ---------------- | ----------------------- | -------------------- |
@@ -274,7 +370,34 @@ PanelContainer (tree_view_panel.tscn)
 | **Glass**              | Transparent blur | Semi-transparent        | Glowing              |
 | **Minimal**            | #1e1e24          | White/gray              | Thin gray            |
 
-**Node Interactions**:
+---
+
+#### 5.2.4 Node Interactions
+
+**Single Click:**
+
+1. Expand/collapse node children
+2. Show context menu with options:
+   - Navigate (make central node)
+   - Mark Complete / Unmark
+
+**Double Click:**
+
+1. Navigate directly to node
+
+**Context Menu Implementation:**
+
+```gdscript
+func _show_context_menu(node_id: String, screen_pos: Vector2) -> void:
+    _context_menu.clear()
+    _context_menu.add_item("Navigate", MENU_NAVIGATE)
+    if _is_completed(node_id):
+        _context_menu.add_item("Unmark Complete", MENU_UNMARK)
+    else:
+        _context_menu.add_item("Mark Complete", MENU_MARK)
+    _context_menu.position = screen_pos
+    _context_menu.popup()
+```
 
 | Action       | Result                              |
 | ------------ | ----------------------------------- |
@@ -282,11 +405,39 @@ PanelContainer (tree_view_panel.tscn)
 | Double-click | Navigate (make central node)        |
 | Context menu | Navigate / Mark Complete / Unmark   |
 
+---
+
+#### 5.2.5 Execution Order
+
+| Phase | Task                                          | Effort |
+| ----- | --------------------------------------------- | ------ |
+| 1     | Create `tree_styles.gd` with 4 themes         | 15 min |
+| 2     | Create `tree_renderer.gd` with bezier drawing | 45 min |
+| 3     | Create `tree_view_panel.tscn` + `.gd`         | 30 min |
+| 4     | Integrate with `path_renderer.gd`             | 20 min |
+| 5     | Add context menu + interactions               | 30 min |
+| 6     | Replace old Tree control in UI                | 15 min |
+
+**Total estimated time**: ~2.5 hours
+
+---
+
+#### 5.2.6 Decision Log
+
+| Decision             | Why                                            |
+| -------------------- | ---------------------------------------------- |
+| SubViewport for tree | Allows independent 2D rendering in 3D scene    |
+| Bezier curves        | More visually appealing than straight lines    |
+| Colorful as default  | Matches 3D bubble colors for consistency       |
+| Context menu         | Provides clear options without cluttering tree |
+
+---
+
 **Files**:
 
-- `tree_view_panel.tscn` + `tree_view_panel.gd` - Main panel scene
-- `tree_renderer.gd` - Bezier curve drawing
-- `tree_styles.gd` - 4 visual themes
+- [NEW] `tree_view_panel.tscn` + `tree_view_panel.gd` - Main panel scene
+- [NEW] `tree_renderer.gd` - Bezier curve drawing
+- [NEW] `tree_styles.gd` - 4 visual themes
 
 ### 5.3 Tree Interaction
 
