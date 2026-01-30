@@ -251,21 +251,201 @@ class PathEngine {
         return this.generateLearningPath(relevantNodes, strategy);
     }
     /**
-     * Diffusion Learning: Extracts shortest learning path to a specific target node.
-     * 扩散学习：提取通往特定目标节点的最短学习路径。
-     * @param targetId Target node ID
-     * @param strategy prioritization strategy for tie-breaking
+     * Adaptive Diffusion Learning: Shortest Path from Frontier to Target
+     * 自适应扩散学习：从前沿到目标的最短路径
+     * @param targetId Final goal node
+     * @param strategy 'foundational' or 'core'
+     * @param completedSet Set of completed node IDs
+     * @param forcedExpansionSet Set of node IDs to expand prerequisites for
      */
-    diffusionLearning(targetId, strategy) {
-        if (!this.graph.hasNode(targetId)) {
-            throw new Error(`Node ${targetId} not found in graph`);
+    diffusionLearning(targetId, strategy, completedSet = new Set(), forcedExpansionSet = new Set()) {
+        const targetNode = this.graph.getNode(targetId);
+        if (!targetNode) return { nodes: [], edges: [], coverage: 0 };
+
+        // 1. Backward Traversal: Get true ancestors (dependencies)
+        // 1. 反向遍历：获取真正的祖先（依赖项）
+        const ancestors = this.getAncestors(targetId);
+        
+        // 2. Identify Unlearned Subgraph
+        // 2. 识别未学习子图
+        // Note: Target itself is part of unlearned if not complete
+        const unlearned = ancestors.filter(id => !completedSet.has(id));
+        if (!completedSet.has(targetId) && !unlearned.includes(targetId)) {
+            unlearned.push(targetId);
         }
-        // 1. Identify all ancestors (prerequisites)
-        const ancestors = this.graph.getPredecessors(targetId);
-        ancestors.add(targetId);
-        // 2. Generate path for this subset
-        return this.generateLearningPath(ancestors, strategy);
+
+        if (unlearned.length === 0) {
+            // Already mastered everything! Return empty or just target
+            return { nodes: [targetNode], edges: [], coverage: 1.0 };
+        }
+
+        // 3. Identify Frontier Nodes (Roots of unlearned subgraph)
+        // 3. 识别前沿节点（未学习子图的根）
+        // Frontier = nodes in unlearned set where ALL prerequisites are either completed or non-existent
+        const frontier = unlearned.filter(id => {
+            const incoming = this.graph.getIncomingEdges(id);
+            // Check if all prerequisites are satisfied (completed)
+            return incoming.every(edge => completedSet.has(edge.source));
+        });
+
+        // 4. Shortest Path Calculation (BFS)
+        // 4. 最短路径计算 (BFS)
+        // Find shortest path from ANY frontier node to the target
+        let bestPath = null;
+
+        // Optimization: Run one BFS from Target BACKWARDS to find nearest frontier?
+        // Actually BFS from filtered graph (unlearned only) is safer.
+        
+        // Build adjacency for unlearned subgraph (reverse edges for backward search from target)
+        const reverseAdj = new Map();
+        unlearned.forEach(id => reverseAdj.set(id, []));
+        
+        unlearned.forEach(id => {
+            const incoming = this.graph.getIncomingEdges(id);
+            incoming.forEach(edge => {
+                if (unlearned.includes(edge.source)) {
+                    // Edge source -> id. In reverse: id -> source
+                    if (!reverseAdj.has(id)) reverseAdj.set(id, []);
+                    reverseAdj.get(id).push(edge.source);
+                }
+            });
+        });
+
+        // BFS from Target to find nearest Frontier
+        const queue = [[targetId]];
+        const visited = new Set([targetId]);
+        
+        while (queue.length > 0) {
+            const currentPath = queue.shift();
+            const head = currentPath[currentPath.length - 1];
+            
+            if (frontier.includes(head)) {
+                // Found a path to a frontier!
+                // Reverse it to get Frontier -> Target
+                bestPath = currentPath.reverse();
+                break;
+            }
+            
+            const neighbors = reverseAdj.get(head) || [];
+            neighbors.sort((a, b) => this.compareNodes(a, b, strategy));
+
+            for (const next of neighbors) {
+                if (!visited.has(next)) {
+                    visited.add(next);
+                    queue.push([...currentPath, next]);
+                }
+            }
+        }
+
+        // Fallback: If disconnected (shouldn't happen in valid DAG), just show unlearned
+        let finalPathNodes = bestPath ? bestPath.map(id => this.graph.getNode(id)) : unlearned.map(id => this.graph.getNode(id));
+
+        // --- Forced Expansion Logic ---
+        // If a node in the path is in forcedExpansionSet, we must include its IMMEDIATE unlearned prerequisites
+        // and link them up to the frontier if possible? 
+        // Or simply just add them to the view.
+        // Let's iterate and add immediate unlearned predecessors.
+        
+        const nodesToAdd = new Set();
+        const currentPathIds = new Set(finalPathNodes.map(n => n.id));
+        
+        currentPathIds.forEach(id => {
+            if (forcedExpansionSet.has(id)) {
+                // Get all unlearned prerequisites
+                const incoming = this.graph.getIncomingEdges(id);
+                incoming.forEach(edge => {
+                    const prereqId = edge.source;
+                    if (!completedSet.has(prereqId) && !currentPathIds.has(prereqId)) {
+                        nodesToAdd.add(prereqId);
+                    }
+                });
+            }
+        });
+
+        // Add the forced nodes to the result
+        if (nodesToAdd.size > 0) {
+            nodesToAdd.forEach(id => {
+                const node = this.graph.getNode(id);
+                if (node) finalPathNodes.push(node);
+            });
+        }
+        
+        // Update PathSet for Hidden Prereq Check
+        const pathSet = new Set(finalPathNodes.map(n => n.id));
+
+        // Mark critical path (original shortest path) and check for hidden prerequisites
+        finalPathNodes = finalPathNodes.map(n => {
+            const isOriginalPath = bestPath ? bestPath.includes(n.id) : true;
+            const newNode = { ...n, isCritical: isOriginalPath };
+            
+            // Check for hidden unlearned prerequisites
+            const incoming = this.graph.getIncomingEdges(n.id);
+            const hasHidden = incoming.some(edge => 
+                !completedSet.has(edge.source) && // It is unlearned
+                !pathSet.has(edge.source)         // It is NOT in our current visible path
+            );
+            
+            if (hasHidden) {
+                newNode.hasHiddenPrereqs = true;
+            }
+            // If it was forced expanded, maybe mark as expanded?
+            if (forcedExpansionSet.has(n.id)) {
+                newNode.isExpanded = true;
+            }
+            
+            return newNode;
+        });
+
+        return {
+            nodes: finalPathNodes,
+            edges: this.getRelevantEdges(finalPathNodes),
+            strategy: strategy,
+            coverage: finalPathNodes.length / unlearned.length
+        };
     }
+
+    /**
+     * Get all ancestors (transitive prerequisites) of a node
+     */
+    getAncestors(startId, visited = new Set()) {
+        if (visited.has(startId)) return [];
+        visited.add(startId);
+        
+        const ancestors = [];
+        const queue = [startId];
+        const result = new Set();
+        
+        while (queue.length > 0) {
+            const current = queue.shift();
+            const incoming = this.graph.getIncomingEdges(current);
+            incoming.forEach(edge => {
+                if (!result.has(edge.source)) {
+                    result.add(edge.source);
+                    ancestors.push(edge.source);
+                    queue.push(edge.source);
+                }
+            });
+        }
+        return ancestors;
+    }
+
+    /**
+     * Get edges strictly between nodes in the set
+     */
+    getRelevantEdges(nodes) {
+        const nodeSet = new Set(nodes.map(n => n.id));
+        const edges = [];
+        nodes.forEach(n => {
+            const outgoing = this.graph.getOutgoingEdges(n.id);
+            outgoing.forEach(e => {
+                if (nodeSet.has(e.target)) {
+                    edges.push(e);
+                }
+            });
+        });
+        return edges;
+    }
+
     /**
      * Core generation logic using Priority-Queue Topological Sort.
      */
@@ -509,39 +689,164 @@ class PathEngine {
     }
 
     /**
-     * Get tree path structure for future path visualization.
-     * 获取未来路径的树形结构。
-     * @param currentId Current node in path
-     * @param learningPath Full learning path from generateLearningPath
-     * @returns Tree structure with parent-child relationships
+     * Get tree layout Structure (Layered DAG) for visualization.
+     * 获取用于可视化的树形布局结构（分层 DAG）。
+     * @param centralId Current center node ID
+     * @param learningPath The active learning path object
      */
-    getTreePath(currentId, learningPath) {
-        if (!learningPath || !learningPath.nodes) return null;
+    /**
+     * Get tree layout Structure (Horizontal Mind Map) for visualization.
+     * @param centralId Current center node ID
+     * @param learningPath The active learning path object
+     * @param collapsedSet Optional Set of collapsed node IDs
+     */
+    getTreeLayout(centralId, learningPath, collapsedSet = new Set()) {
+        if (!learningPath || !learningPath.nodes || learningPath.nodes.length === 0) return null;
 
         const nodes = learningPath.nodes;
-        const currentIndex = nodes.findIndex(n => n.id === currentId);
+        const nodeMap = new Map(nodes.map(n => [n.id, n]));
         
-        // Build tree from current position forward
-        const treeNodes = nodes.slice(currentIndex).map((node, idx) => ({
-            id: node.id,
-            label: node.label,
-            stepOrder: node.stepOrder,
-            depth: idx,
-            isCurrent: idx === 0,
-            isCompleted: node.isCompleted || false,
-            children: []
-        }));
+        // --- 1. Build Adjacency & Compute Local In-Degrees ---
+        const adj = new Map();
+        const inDegree = new Map(); // Local in-degree for sorting
+        nodes.forEach(n => {
+            adj.set(n.id, []);
+            inDegree.set(n.id, 0);
+        });
 
-        // Simple linear tree (can be enhanced for branching later)
-        for (let i = 0; i < treeNodes.length - 1; i++) {
-            treeNodes[i].children = [treeNodes[i + 1].id];
-        }
+        nodes.forEach(source => {
+            const outgoing = this.graph.getOutgoingEdges(source.id);
+            outgoing.forEach(edge => {
+                if (nodeMap.has(edge.target)) {
+                    adj.get(source.id).push(edge.target);
+                    inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
+                }
+            });
+        });
+
+        // --- 2. Sort Children by In-Degree (Descending) ---
+        // Prioritize nodes with higher dependency count (likely more foundational or central) based on user request
+        nodes.forEach(n => {
+            const children = adj.get(n.id);
+            children.sort((a, b) => {
+                const degA = inDegree.get(a) || 0;
+                const degB = inDegree.get(b) || 0;
+                if (degA !== degB) return degB - degA; // Descending In-Degree
+                return a.localeCompare(b); // Stable tie-break
+            });
+        });
+
+        // --- 3. Build Layout Levels (BFS) & Filter Collapsed ---
+        // Determine Roots (In-Degree 0 or Cycle Breaker)
+        const roots = nodes.filter(n => (inDegree.get(n.id) || 0) === 0).map(n => n.id);
+        if (roots.length === 0 && nodes.length > 0) roots.push(nodes[0].id);
+
+        const nodeLevels = new Map();
+        const layoutNodes = [];
+        const layoutEdges = [];
+        const visited = new Set();
+        
+        // Helper: Recursive Traversal for Layout
+        // Assigns X based on depth
+        // Returns Y-range or similar for positioning
+        
+        const X_SPACING = 250; // Horizontal spacing
+        const Y_SPACING = 60;  // Vertical spacing
+        let nextY = 0;
+
+        const layoutRecursive = (nodeId, level) => {
+            if (visited.has(nodeId)) return null;
+            visited.add(nodeId);
+
+            const node = nodeMap.get(nodeId);
+            const isCollapsed = collapsedSet.has(nodeId);
+            const children = adj.get(nodeId) || [];
+            
+            const layoutNode = {
+                id: node.id,
+                label: node.label,
+                status: this._getNodeStatus(node, centralId),
+                inDegree: (node.inDegree || 0), // Global InDegree
+                x: level * X_SPACING,
+                y: 0, // Placeholder
+                collapsed: isCollapsed,
+                hasChildren: children.length > 0
+            };
+
+            let childrenYSum = 0;
+            let childrenCount = 0;
+            let minChildY = Infinity;
+            let maxChildY = -Infinity;
+
+            if (!isCollapsed && children.length > 0) {
+                // Traverse children
+                children.forEach(childId => {
+                    // Prevent cycles in tree traversal (if DAG has separate paths to same node, only first visits)
+                    // For tree layout, we want full tree? DAG usually means we should link to existing.
+                    // Implementation choice: Treat as Tree (replicate or just link?). 
+                    // Let's assume DAG Layout: if child visited, we define edge but not position (it's already placed).
+                    // BUT for horizontal alignment, we usually want specific tree branch.
+                    // For now: Only recurse if not visited. If visited, draw edge but don't move it.
+                    
+                    if (!visited.has(childId)) {
+                        layoutEdges.push({ from: nodeId, to: childId });
+                        const childResult = layoutRecursive(childId, level + 1);
+                        if (childResult) {
+                            childrenYSum += childResult.y;
+                            childrenCount++;
+                            minChildY = Math.min(minChildY, childResult.y);
+                            maxChildY = Math.max(maxChildY, childResult.y);
+                        }
+                    } else {
+                        // Already placed, just add edge
+                         layoutEdges.push({ from: nodeId, to: childId });
+                    }
+                });
+            }
+
+            // Calculate Y
+            if (childrenCount > 0) {
+                // Center parent relative to children
+                layoutNode.y = (minChildY + maxChildY) / 2;
+            } else {
+                // Leaf (or collapsed) -> take next Y slot
+                layoutNode.y = nextY;
+                nextY += Y_SPACING;
+            }
+            
+            layoutNodes.push(layoutNode);
+            return layoutNode;
+        };
+
+        // Run Layout for each root
+        // Reset valid roots order
+        roots.sort((a, b) => b.localeCompare(a)); // Consistent order
+        let rootYOffset = 0;
+
+        roots.forEach(rootId => {
+             const rootNode = layoutRecursive(rootId, 0);
+             // If we have disconnected forests, stack them vertically?
+             // Since nextY increments globaly, they stack automatically.
+        });
+
+        // Add nodes that weren't visited (disconnected components not reachable from detected roots)
+        // Usually shouldn't happen in well-formed Domain Learning, but purely defensive
+        nodes.forEach(n => {
+            if (!visited.has(n.id)) {
+                layoutRecursive(n.id, 0);
+            }
+        });
 
         return {
-            root: treeNodes[0]?.id || null,
-            nodes: treeNodes,
-            totalRemaining: treeNodes.length
+            nodes: layoutNodes,
+            edges: layoutEdges
         };
+    }
+
+    _getNodeStatus(node, centralId) {
+        if (node.isCompleted) return 'completed';
+        if (node.id === centralId) return 'current';
+        return 'pending';
     }
 }
 PathEngine = PathEngine;
@@ -560,6 +865,7 @@ class OrbitalState {
         this.currentCentralId = null;
         this.learningPath = null;
         this.mode = 'domain'; // 'domain' or 'diffusion'
+        this.retainHistory = true; // Default to true
         this._load();
     }
 
@@ -568,9 +874,14 @@ class OrbitalState {
             const saved = localStorage.getItem(this.storageKey);
             if (saved) {
                 const data = JSON.parse(saved);
-                this.completedIds = new Set(data.completedIds || []);
-                this.currentCentralId = data.currentCentralId || null;
-                this.mode = data.mode || 'domain';
+                // Respect retainHistory from saved state if present, or default
+                if (data.retainHistory !== undefined) this.retainHistory = data.retainHistory;
+                
+                if (this.retainHistory) {
+                    this.completedIds = new Set(data.completedIds || []);
+                    this.currentCentralId = data.currentCentralId || null;
+                    this.mode = data.mode || 'domain';
+                }
             }
         } catch (e) {
             console.warn('OrbitalState: Failed to load progress', e);
@@ -578,15 +889,35 @@ class OrbitalState {
     }
 
     _save() {
+        if (!this.retainHistory) {
+            localStorage.removeItem(this.storageKey);
+            return;
+        }
         try {
             const data = {
                 completedIds: Array.from(this.completedIds),
                 currentCentralId: this.currentCentralId,
-                mode: this.mode
+                mode: this.mode,
+                retainHistory: this.retainHistory
             };
             localStorage.setItem(this.storageKey, JSON.stringify(data));
         } catch (e) {
             console.warn('OrbitalState: Failed to save progress', e);
+        }
+    }
+
+    /**
+     * Update settings.
+     * @param config { retainHistory: boolean }
+     */
+    updateSettings(config) {
+        if (config && typeof config.retainHistory === 'boolean') {
+            this.retainHistory = config.retainHistory;
+            if (this.retainHistory) {
+                this._save(); // Persist current state immediately
+            } else {
+                localStorage.removeItem(this.storageKey); // Clear immediately
+            }
         }
     }
 
@@ -624,7 +955,9 @@ class OrbitalState {
         if (path && path.nodes && path.nodes.length > 0) {
             // Find first uncompleted node
             const first = path.nodes.find(n => !this.completedIds.has(n.id));
-            this.currentCentralId = first ? first.id : path.nodes[0].id;
+            if (!this.currentCentralId) {
+                 this.currentCentralId = first ? first.id : path.nodes[0].id;
+            }
         }
         this._save();
     }
@@ -676,7 +1009,74 @@ class OrbitalState {
         if (!label || label.length <= maxLen) return label || '';
         return label.substring(0, maxLen) + '...';
     }
+
+    /**
+     * Toggle collapsed state of a node.
+     * @returns {boolean} New collapsed state
+     */
+    toggleCollapse(nodeId) {
+        if (this.collapsedIds.has(nodeId)) {
+            this.collapsedIds.delete(nodeId);
+            this._save();
+            return false;
+        } else {
+            this.collapsedIds.add(nodeId);
+            this._save();
+            return true;
+        }
+    }
+
+    isCollapsed(nodeId) {
+        return this.collapsedIds.has(nodeId);
+    }
 }
+
+// Update constructor and _load/_save methods
+const _originalCons = OrbitalState.prototype.constructor;
+OrbitalState.prototype.constructor = function(storageKey = 'noteconnection_orbital_progress') {
+    this.storageKey = storageKey;
+    this.completedIds = new Set();
+    this.collapsedIds = new Set(); // New
+    this.currentCentralId = null;
+    this.learningPath = null;
+    this.mode = 'domain';
+    this.retainHistory = true;
+    this._load();
+};
+
+OrbitalState.prototype._load = function() {
+    try {
+        const saved = localStorage.getItem(this.storageKey);
+        if (saved) {
+            const data = JSON.parse(saved);
+            if (data.retainHistory !== undefined) this.retainHistory = data.retainHistory;
+            
+            if (this.retainHistory) {
+                this.completedIds = new Set(data.completedIds || []);
+                this.collapsedIds = new Set(data.collapsedIds || []); // New
+                this.currentCentralId = data.currentCentralId || null;
+                this.mode = data.mode || 'domain';
+            }
+        }
+    } catch (e) { console.warn('OrbitalState Load Error', e); }
+};
+
+OrbitalState.prototype._save = function() {
+    if (!this.retainHistory) {
+        localStorage.removeItem(this.storageKey);
+        return;
+    }
+    try {
+        const data = {
+            completedIds: Array.from(this.completedIds),
+            collapsedIds: Array.from(this.collapsedIds), // New
+            currentCentralId: this.currentCentralId,
+            mode: this.mode,
+            retainHistory: this.retainHistory
+        };
+        localStorage.setItem(this.storageKey, JSON.stringify(data));
+    } catch (e) { console.warn('OrbitalState Save Error', e); }
+};
 OrbitalState = OrbitalState;
 
     // Explicitly expose

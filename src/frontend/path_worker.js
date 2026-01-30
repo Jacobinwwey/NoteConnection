@@ -45,6 +45,8 @@ function computePath(config) {
     if (!engine) return;
 
     const { mode, strategy, layout, targetId } = config;
+    const completedSet = new Set(config.completedIds || []);
+    const forcedExpansionSet = new Set(config.forcedExpansionIds || []);
     let result;
 
     if (mode === 'domain') {
@@ -55,7 +57,7 @@ function computePath(config) {
             console.warn(`[PathWorker] Invalid target '${targetId}' for Diffusion. Fallback to Domain.`);
             result = engine.domainLearning(null, 'foundational'); // Fallback
         } else {
-            result = engine.diffusionLearning(targetId, strategy);
+            result = engine.diffusionLearning(targetId, strategy, completedSet, forcedExpansionSet);
         }
     }
     
@@ -66,11 +68,27 @@ function computePath(config) {
     
     const layoutData = runLayout(result.nodes, result.edges, layout);
     
+    // Compute Tree Layout for Godot (2D Layered DAG)
+    let treeLayout = null;
+    const centralId = config.centralId || (result.nodes.length > 0 ? result.nodes[0].id : null);
+    const collapsedSet = new Set(config.collapsedIds || []); // New
+
+    console.log('[PathWorker] Computing treeLayout. centralId:', centralId, 'result.nodes.length:', result.nodes?.length);
+
+    if (engine && engine.getTreeLayout) {
+        // Pass the raw result from domainLearning/diffusionLearning and collapsed state
+        treeLayout = engine.getTreeLayout(centralId, result, collapsedSet);
+        console.log('[PathWorker] treeLayout result:', treeLayout ? `${treeLayout.nodes?.length} nodes` : 'NULL');
+    } else {
+        console.warn('[PathWorker] engine.getTreeLayout not available!');
+    }
+
     postMessage({ 
         type: 'pathResult', 
         payload: {
             nodes: layoutData.nodes,
-            edges: layoutData.edges
+            edges: layoutData.edges,
+            treeLayout: treeLayout
         }
     });
 }

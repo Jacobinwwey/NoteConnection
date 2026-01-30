@@ -81,22 +81,33 @@ func _on_enter_reading(_data: Dictionary) -> void:
 	pass
 
 
-## Mark current central node as complete
-func mark_complete() -> void:
-	if current_central_id.is_empty():
+## Mark a node as complete (defaults to current central node)
+func mark_complete(target_id: String = "") -> void:
+	var node_id := target_id
+	if node_id.is_empty():
+		node_id = current_central_id
+		
+	if node_id.is_empty():
 		return
 	
-	if current_central_id not in completed_ids:
-		completed_ids.append(current_central_id)
+	if node_id not in completed_ids:
+		completed_ids.append(node_id)
 	
-	var next_id := _find_next_uncompleted()
-	node_completed.emit(current_central_id, next_id)
+	## Logic for next node depends on whether we completed the current central node
+	var next_id := ""
+	if node_id == current_central_id:
+		next_id = _find_next_uncompleted()
+	
+	node_completed.emit(node_id, next_id)
 	
 	if next_id.is_empty():
-		path_complete.emit()
-		_save_progress()
+		## Check if truly all done
+		if _find_next_uncompleted() == "":
+			path_complete.emit()
+			_save_progress()
 	else:
-		switch_central(next_id, true)
+		if node_id == current_central_id:
+			switch_central(next_id, true)
 
 
 ## Find next uncompleted node in learning path

@@ -13,6 +13,13 @@ signal return_pressed
 signal return_to_node(node_id: String)
 signal tree_node_clicked(node_id: String)
 signal unmark_requested(node_id: String)
+signal mark_node_requested(node_id: String)
+signal node_toggle_requested(node_id: String) # New
+signal node_expand_prereqs_requested(node_id: String) # New
+signal settings_updated(settings: Dictionary)
+
+const TREE_VIEW_SCENE = preload("res://scenes/tree_view_panel.tscn")
+const SETTINGS_SCENE = preload("res://scenes/settings_panel.tscn")
 
 @onready var mode_label: Label = $MarginContainer/VBoxContainer/ModeLabel
 @onready var progress_label: Label = $MarginContainer/VBoxContainer/ProgressLabel
@@ -34,7 +41,13 @@ var _edit_mode: bool = false
 var _return_button: MenuButton = null
 var _edit_button: Button = null
 var _tree_panel: VBoxContainer = null
-var _tree_control: Tree = null
+var _tree_view = null # TreeViewPanel instance
+var _settings_panel = null # SettingsPanel instance
+var _settings_button: Button = null
+
+## Tree panel fullscreen state
+var _is_tree_fullscreen: bool = false
+var _tree_panel_default_offsets: Dictionary = {}
 
 
 func _ready() -> void:
@@ -68,6 +81,17 @@ func _create_dynamic_ui() -> void:
 		sidebar.move_child(header_row, 1) # After HeaderButton
 		header_row.add_child(_edit_button)
 		_edit_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+		
+		# Add Settings Button to the same row
+		_settings_button = Button.new()
+		_settings_button.text = "⚙"
+		_settings_button.tooltip_text = "Settings"
+		header_row.add_child(_settings_button)
+		
+	## Create Settings Panel
+	if SETTINGS_SCENE:
+		_settings_panel = SETTINGS_SCENE.instantiate()
+		add_child(_settings_panel)
 	
 	## Create Tree Panel (left sidebar) with proper sizing
 	_tree_panel = VBoxContainer.new()
@@ -89,18 +113,12 @@ func _create_dynamic_ui() -> void:
 	tree_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_tree_panel.add_child(tree_header)
 	
-	## Wrap tree in a ScrollContainer for scrollability
-	var scroll_container := ScrollContainer.new()
-	scroll_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll_container.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_tree_panel.add_child(scroll_container)
-	
-	_tree_control = Tree.new()
-	_tree_control.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_tree_control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_tree_control.hide_root = true
-	_tree_control.custom_minimum_size = Vector2(200, 400)
-	scroll_container.add_child(_tree_control)
+	## Instantiate new Tree View Panel
+	if TREE_VIEW_SCENE:
+		_tree_view = TREE_VIEW_SCENE.instantiate()
+		_tree_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_tree_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_tree_panel.add_child(_tree_view)
 
 
 func _connect_signals() -> void:
@@ -124,10 +142,23 @@ func _connect_signals() -> void:
 	## Edit button toggle
 	if _edit_button:
 		_edit_button.toggled.connect(_on_edit_toggled)
+		
+	## Settings button
+	if _settings_button and _settings_panel:
+		_settings_button.pressed.connect(func(): _settings_panel.popup_centered())
+		_settings_panel.settings_changed.connect(_on_settings_panel_changed)
 	
-	## Tree item selected
-	if _tree_control:
-		_tree_control.item_selected.connect(_on_tree_item_selected)
+	## Tree View signals
+	if _tree_view:
+		_tree_view.node_navigate_requested.connect(func(id): tree_node_clicked.emit(id))
+		_tree_view.node_mark_complete_requested.connect(func(id): mark_node_requested.emit(id))
+		_tree_view.node_unmark_requested.connect(func(id): unmark_requested.emit(id))
+		_tree_view.node_toggle_requested.connect(func(id): node_toggle_requested.emit(id))
+		_tree_view.node_expand_prereqs_requested.connect(func(id): node_expand_prereqs_requested.emit(id)) # New
+		_tree_view.fullscreen_requested.connect(_on_tree_fullscreen_requested)
+
+func _on_settings_panel_changed(settings: Dictionary) -> void:
+	settings_updated.emit(settings)
 
 
 func _setup_initial_state() -> void:
@@ -255,91 +286,67 @@ func _refresh_completed_list() -> void:
 ## Build tree from path nodes
 ## nodes: Array of {id, label, parentId}
 func build_tree(nodes: Array, completed_ids: Array, current_id: String) -> void:
-	if not _tree_control:
-		return
-	
-	_tree_control.clear()
-	var root := _tree_control.create_item()
-	
-	## Build node lookup
-	var node_map: Dictionary = {} # id -> TreeItem
-	var node_data: Dictionary = {} # id -> {label, parentId}
-	
-	for node in nodes:
-		var n: Dictionary = node if node is Dictionary else {}
-		var id: String = n.get("id", "")
-		if not id.is_empty():
-			node_data[id] = n
-	
-	## Track visited nodes to prevent cycles
-	var visiting: Dictionary = {} # Currently being visited (cycle detection)
-	
-	## Create tree items (roots first, then children)
-	for id in node_data:
-		_create_tree_item(id, node_data, node_map, visiting, root, completed_ids, current_id)
+	if _tree_view:
+		_tree_view.set_tree_data(nodes, completed_ids, current_id)
 
+## Update tree using pre-calculated layout
+func update_tree_layout(layout_data: Dictionary, completed_ids: Array, current_id: String) -> void:
+	if _tree_view:
+		_tree_view.set_tree_layout(layout_data, completed_ids, current_id)
 
-func _create_tree_item(id: String, node_data: Dictionary, node_map: Dictionary,
-		visiting: Dictionary, root: TreeItem, completed_ids: Array, current_id: String) -> TreeItem:
-	## Already created
-	if node_map.has(id):
-		return node_map[id]
-	
-	## Cycle detection: if we're already visiting this node, it's circular
-	if visiting.has(id):
-		push_warning("[PathModeUI] Circular parent reference detected for: ", id)
-		return root # Fallback to root to break cycle
-	
-	visiting[id] = true # Mark as being visited
-	
-	var data: Dictionary = node_data.get(id, {})
-	var parent_id: String = data.get("parentId", "")
-	var label: String = data.get("label", id)
-	
-	## Find or create parent
-	var parent_item: TreeItem
-	if parent_id.is_empty() or not node_data.has(parent_id) or parent_id == id:
-		parent_item = root
+# Legacy functions removed (_create_tree_item, _on_tree_item_selected)
+
+## === Tree Panel Fullscreen ===
+
+func _on_tree_fullscreen_requested(expand: bool) -> void:
+	if expand:
+		_expand_tree_panel()
 	else:
-		parent_item = _create_tree_item(parent_id, node_data, node_map, visiting, root, completed_ids, current_id)
-	
-	## Remove from visiting (done processing this branch)
-	visiting.erase(id)
-	
-	## Create this item
-	var item := _tree_control.create_item(parent_item)
-	
-	## Set icon based on state
-	var icon: String
-	if id in completed_ids:
-		icon = "★" # Completed
-	elif id == current_id:
-		icon = "●" # Current
-	else:
-		icon = "○" # Pending
-	
-	item.set_text(0, "%s %s" % [icon, LearningStateMachine.truncate_label(label)])
-	item.set_metadata(0, id)
-	
-	## Color coding
-	if id in completed_ids:
-		item.set_custom_color(0, Color.GOLD)
-	elif id == current_id:
-		item.set_custom_color(0, Color.CYAN)
-	else:
-		item.set_custom_color(0, Color.GRAY)
-	
-	node_map[id] = item
-	return item
+		_shrink_tree_panel()
 
+func _expand_tree_panel() -> void:
+	if _is_tree_fullscreen or not _tree_panel: return
+	
+	# Save current offsets for restoration
+	_tree_panel_default_offsets = {
+		"left": _tree_panel.offset_left,
+		"top": _tree_panel.offset_top,
+		"right": _tree_panel.offset_right,
+		"bottom": _tree_panel.offset_bottom
+	}
+	
+	# Expand to near-fullscreen (80% of viewport)
+	_tree_panel.anchor_left = 0.1
+	_tree_panel.anchor_right = 0.9
+	_tree_panel.anchor_top = 0.05
+	_tree_panel.anchor_bottom = 0.95
+	_tree_panel.offset_left = 0
+	_tree_panel.offset_right = 0
+	_tree_panel.offset_top = 0
+	_tree_panel.offset_bottom = 0
+	
+	_is_tree_fullscreen = true
+	if _tree_view:
+		_tree_view.set_fullscreen_mode(true)
 
-func _on_tree_item_selected() -> void:
-	var selected := _tree_control.get_selected()
-	if selected:
-		var node_id: String = selected.get_metadata(0)
-		if not node_id.is_empty():
-			print("[PathModeUI] Tree node clicked:", node_id)
-			tree_node_clicked.emit(node_id)
+func _shrink_tree_panel() -> void:
+	if not _is_tree_fullscreen or not _tree_panel: return
+	
+	# Restore default anchors (left-side panel)
+	_tree_panel.anchor_left = 0.0
+	_tree_panel.anchor_right = 0.0
+	_tree_panel.anchor_top = 0.0
+	_tree_panel.anchor_bottom = 1.0
+	
+	# Restore offsets
+	_tree_panel.offset_left = _tree_panel_default_offsets.get("left", 20)
+	_tree_panel.offset_top = _tree_panel_default_offsets.get("top", 120)
+	_tree_panel.offset_right = _tree_panel_default_offsets.get("right", 250)
+	_tree_panel.offset_bottom = _tree_panel_default_offsets.get("bottom", -20)
+	
+	_is_tree_fullscreen = false
+	if _tree_view:
+		_tree_view.set_fullscreen_mode(false)
 
 
 ## === Public API ===
@@ -402,3 +409,9 @@ func get_completed_ids() -> Array[String]:
 	for id in _completed_nodes.keys():
 		ids.append(id)
 	return ids
+	
+## Get auto-reconstruct setting
+func get_auto_reconstruct_setting() -> bool:
+	if _settings_panel:
+		return _settings_panel.get_setting("auto_reconstruct", true)
+	return true

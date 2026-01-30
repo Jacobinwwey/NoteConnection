@@ -21,6 +21,7 @@ var _reconnect_timer: Timer
 
 func _ready() -> void:
 	_setup_reconnect_timer()
+	_socket.inbound_buffer_size = 1048576 * 8 # Increase buffer to 8MB
 	connect_to_server()
 
 
@@ -159,6 +160,24 @@ func send_switch_center(node_id: String) -> void:
 	send_message({
 		"type": "switchCenter",
 		"payload": {"newCenterId": node_id}
+	})
+
+func send_configure(config: Dictionary) -> void:
+	send_message({
+		"type": "configure",
+		"payload": config
+	})
+
+func send_toggle_collapse(node_id: String) -> void:
+	send_message({
+		"type": "toggleCollapse",
+		"payload": {"nodeId": node_id}
+	})
+
+func send_expand_prereqs(node_id: String) -> void:
+	send_message({
+		"type": "expandPrereqs",
+		"payload": {"nodeId": node_id}
 	})
 
 ## Check if WebSocket is connected

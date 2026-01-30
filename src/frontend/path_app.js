@@ -17,7 +17,10 @@ window.pathApp = {
     centralNodeId: null,
     learningHistory: [],
     completedNodes: new Set(),
+    collapsedNodes: new Set(), 
+    forcedExpansionNodes: new Set(), // New: nodes with forced expansion of prereqs
     currentTargetId: null,
+    lastTreeLayout: null, // Store tree layout for requestPath
     
     // Animation State
     animationId: null,
@@ -39,9 +42,12 @@ window.pathApp = {
         }
 
         this.loadHistory(); // Load from localStorage
+        this._loadCompletedNodes();
+        this._loadCollapsedNodes(); // New
         
         // Listen for IPC from PathBridge (Godot openReader)
         if (window.electronAPI && window.electronAPI.on) {
+            // ... existing IPC code ...
             window.electronAPI.on('path-open-reader', (data) => {
                 console.log('[PathApp] Received path-open-reader IPC:', data);
                 const nodeId = data.nodeId || data;
@@ -97,20 +103,29 @@ window.pathApp = {
                 } else if (msg.type === 'switchCenter') {
                     console.log('[PathApp] Remote switch center:', msg.payload?.newCenterId);
                     this.switchCentral(msg.payload?.newCenterId);
+                } else if (msg.type === 'toggleCollapse') { // New
+                    console.log('[PathApp] Remote toggle collapse:', msg.payload?.nodeId);
+                    this.toggleNodeCollapse(msg.payload?.nodeId);
+                } else if (msg.type === 'expandPrereqs') { // New
+                     console.log('[PathApp] Remote expand prereqs:', msg.payload?.nodeId);
+                     this.expandPrereqs(msg.payload?.nodeId);
                 } else if (msg.type === 'requestPath') {
+                     // ... existing code ...
                      console.log('[PathApp] Remote requested path data');
                      // Trigger update to resend current path
                      if (this.nodes.length > 0) {
-                         // Re-package current state and send
+                         // Re-package current state and send (including stored treeLayout)
                          const result = {
                              nodes: this.nodes,
-                             edges: this.links
+                             edges: this.links,
+                             treeLayout: this.lastTreeLayout
                          };
                          this.sendPathToBridge(result);
                      } else {
                          this.triggerUpdate(); // Will eventually send result
                      }
                 } else if (msg.type === 'completionSync') {
+                    // ... existing code ...
                     // Bidirectional sync from Godot
                     console.log('[PathApp] Completion sync from Godot:', msg.payload);
                     const completedIds = msg.payload?.completedIds || [];
@@ -119,6 +134,7 @@ window.pathApp = {
                     this._saveCompletedNodes();
                     console.log('[PathApp] Synced', completedIds.length, 'completed nodes from Godot');
                 } else if (msg.type === 'markComplete') {
+                    // ... existing code ...
                     // Single node marked complete from Godot
                     const nodeId = msg.payload?.nodeId;
                     if (nodeId) {
@@ -138,8 +154,17 @@ window.pathApp = {
                         }
                         
                         console.log('[PathApp] Marked complete from Godot:', nodeId);
+                        
+                        // Auto-Reconstruct Path if setting enabled (default true)
+                        // This triggers path Recalculation based on new completion status
+                        const autoReconstruct = true; // Use setting if available
+                        if (autoReconstruct && this.currentTargetId) {
+                            console.log('[PathApp] Auto-reconstructing path because', nodeId, 'was completed');
+                            this.triggerUpdate();
+                        }
                     }
                 } else if (msg.type === 'unmarkComplete') {
+                    // ... existing code ...
                     // Node unmarked from Godot
                     const nodeId = msg.payload?.nodeId;
                     if (nodeId) {
@@ -184,6 +209,43 @@ window.pathApp = {
             }
         } catch (e) {
             console.warn('[PathApp] Failed to load completed nodes:', e);
+        }
+    },
+
+    // New Collapse Logic
+    _saveCollapsedNodes: function() {
+        try {
+            const ids = Array.from(this.collapsedNodes);
+            localStorage.setItem('pathMode_collapsedNodes', JSON.stringify(ids));
+        } catch (e) { console.warn('Failed save collapsed', e); }
+    },
+
+    _loadCollapsedNodes: function() {
+        try {
+            const stored = localStorage.getItem('pathMode_collapsedNodes');
+            if (stored) {
+                const ids = JSON.parse(stored);
+                this.collapsedNodes = new Set(ids);
+            }
+        } catch (e) { console.warn('Failed load collapsed', e); }
+    },
+
+    toggleNodeCollapse: function(nodeId) {
+        if (!nodeId) return;
+        if (this.collapsedNodes.has(nodeId)) {
+            this.collapsedNodes.delete(nodeId);
+        } else {
+            this.collapsedNodes.add(nodeId);
+        }
+        this._saveCollapsedNodes();
+        this.triggerUpdate(); // Recalculate layout
+    },
+
+    expandPrereqs: function(nodeId) {
+        if (!nodeId) return;
+        if (!this.forcedExpansionNodes.has(nodeId)) {
+            this.forcedExpansionNodes.add(nodeId);
+            this.triggerUpdate();
         }
     },
 
@@ -277,10 +339,13 @@ window.pathApp = {
                 label: n.label || n.id,
                 parentId: this._findParentId(n.id, result.edges) // For tree structure
             })),
+            // Pre-calculated tree layout from backend (PathEngine)
+            treeLayout: result.treeLayout || null,
             completedIds: Array.from(this.completedNodes),
             mode: 'orbital'
         };
 
+        console.log('[PathApp] treeLayout in result:', result.treeLayout ? `${result.treeLayout.nodes?.length} nodes` : 'NULL/UNDEFINED');
         console.log('[PathApp] Sending pathResult with central:', payload.central.label, 'peripherals:', selectedPeripherals.length, 'totalNodes:', payload.totalNodes);
         this.ws.send(JSON.stringify({
             type: 'pathResult',
@@ -474,7 +539,16 @@ window.pathApp = {
 
         this.worker.postMessage({
             type: 'computePath',
-            payload: { mode, strategy, layout, targetId: this.currentTargetId }
+            payload: { 
+                mode, 
+                strategy, 
+                layout, 
+                targetId: this.currentTargetId, 
+                centralId: this.centralNodeId,
+                collapsedIds: Array.from(this.collapsedNodes),
+                completedIds: Array.from(this.completedNodes),
+                forcedExpansionIds: Array.from(this.forcedExpansionNodes) // New
+            }
         });
         
         this.updateTargetDisplay();
@@ -482,6 +556,7 @@ window.pathApp = {
 
     startProcessing: function(targetId) {
         this.currentTargetId = targetId;
+        this.forcedExpansionNodes.clear(); // Reset expansion on new target
         const sourceData = (typeof graphData !== 'undefined') ? graphData : window.graphData;
         const nodes = sourceData.nodes.map(n => ({
             id: n.id, label: n.label, inDegree: n.inDegree, outDegree: n.outDegree, centrality: n.centrality
@@ -501,6 +576,10 @@ window.pathApp = {
     handlePathResult: function(result) {
         this.nodes = result.nodes;
         this.links = result.edges;
+        // Store treeLayout for later requestPath responses
+        if (result.treeLayout) {
+            this.lastTreeLayout = result.treeLayout;
+        }
         
         document.getElementById('path-count').innerText = this.nodes.length;
         

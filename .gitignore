@@ -8,6 +8,7 @@ coverage
 Knowledge_Base
 result.txt
 # Editor
+.obsidian
 .godot
 .vscode
 .idea

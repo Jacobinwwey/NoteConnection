@@ -1,0 +1,67 @@
+[gd_scene load_steps=3 format=3 uid="uid://b6x8q2j4y5z1a"]
+
+[ext_resource type="Script" path="res://scripts/tree_view_panel.gd" id="1_controller"]
+[ext_resource type="Script" path="res://scripts/tree_renderer.gd" id="2_renderer"]
+
+[node name="TreeViewPanel" type="PanelContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_controller")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="Header" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/Header"]
+layout_mode = 2
+text = "Future Path"
+
+[node name="VSeparator" type="VSeparator" parent="VBoxContainer/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="StyleOption" type="OptionButton" parent="VBoxContainer/Header"]
+layout_mode = 2
+item_count = 4
+selected = 0
+popup/item_0/text = "Colorful"
+popup/item_0/id = 0
+popup/item_1/text = "Dark"
+popup/item_1/id = 1
+popup/item_2/text = "Glass"
+popup/item_2/id = 2
+popup/item_3/text = "Minimal"
+popup/item_3/id = 3
+
+[node name="ExpandButton" type="Button" parent="VBoxContainer/Header"]
+layout_mode = 2
+tooltip_text = "Expand to Fullscreen"
+text = "⬜"
+
+[node name="ShrinkButton" type="Button" parent="VBoxContainer/Header"]
+layout_mode = 2
+visible = false
+tooltip_text = "Shrink to Default"
+text = "⬛"
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="VBoxContainer/SubViewportContainer"]
+handle_input_locally = false
+size = Vector2i(1152, 613)
+render_target_update_mode = 4
+
+[node name="TreeRenderer" type="Node2D" parent="VBoxContainer/SubViewportContainer/SubViewport"]
+script = ExtResource("2_renderer")
+
+[node name="ContextMenu" type="PopupMenu" parent="."]

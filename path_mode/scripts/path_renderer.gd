@@ -62,6 +62,20 @@ func _ready() -> void:
 		ui.return_to_node.connect(_on_return_to_node)
 		ui.tree_node_clicked.connect(_on_tree_node_clicked)
 		ui.unmark_requested.connect(_on_unmark_requested)
+		ui.mark_node_requested.connect(_on_mark_node_requested)
+		ui.node_toggle_requested.connect(_on_node_toggle_requested) # New
+		ui.node_expand_prereqs_requested.connect(_on_node_expand_prereqs_requested) # New
+		ui.settings_updated.connect(_on_settings_updated)
+
+
+func _on_node_toggle_requested(node_id: String) -> void:
+	if ws_client:
+		ws_client.send_toggle_collapse(node_id)
+
+
+func _on_node_expand_prereqs_requested(node_id: String) -> void:
+	if ws_client:
+		ws_client.send_expand_prereqs(node_id)
 
 
 func _load_shader() -> void:
@@ -525,37 +539,58 @@ func _handle_double_click(node_id: String) -> void:
 func _on_mark_complete_pressed() -> void:
 	## Mark the current central node as complete
 	var central_id: String = _central_node.get("id", "")
-	if central_id.is_empty():
-		return
-	
-	print("[PathRenderer] Marking complete:", central_id)
+	if not central_id.is_empty():
+		_on_mark_node_requested(central_id)
+
+
+func _on_mark_node_requested(node_id: String) -> void:
+	print("[PathRenderer] Marking complete:", node_id)
 	
 	## Update state machine
 	if state_machine:
-		state_machine.mark_complete()
+		state_machine.mark_complete(node_id)
 	
 	## Notify backend that node was completed
 	if ws_client and ws_client.has_method("send_message"):
 		ws_client.send_message({
 			"type": "markComplete",
-			"payload": {"nodeId": central_id}
+			"payload": {"nodeId": node_id}
 		})
 	
-	## Update bubble material to gold
-	var is_completed := true
-	var new_material := _create_bubble_material(true, is_completed)
-	_central_bubble.material_override = null
-	_central_bubble.material_override = new_material
+	## Visual Update: Central Bubble
+	var central_id: String = _central_node.get("id", "")
+	if node_id == central_id and _central_bubble:
+		var new_material := _create_bubble_material(true, true)
+		_central_bubble.material_override = null
+		_central_bubble.material_override = new_material
 	
-	## Add to UI sidebar
-	var central_label: String = _central_node.get("label", central_id)
+	## Visual Update: Peripheral Bubble
+	for bubble in _peripheral_bubbles:
+		if bubble.get_meta("node_id", "") == node_id:
+			var new_material := _create_bubble_material(false, true)
+			bubble.material_override = null
+			bubble.material_override = new_material
+			break
+			
+	## Update UI Sidebar and Progress
+	## Find label
+	var label: String = node_id
+	if node_id == central_id:
+		label = _central_node.get("label", node_id)
+	else:
+		for p in _peripheral_nodes:
+			var p_dict: Dictionary = p if p is Dictionary else {}
+			if p_dict.get("id", "") == node_id:
+				label = p_dict.get("label", node_id)
+				break
+				
 	if ui:
-		ui.add_completed_node(central_id, central_label)
+		ui.add_completed_node(node_id, label)
 		_update_ui_progress()
+		_update_tree_panel()
 	
-	## Request switch to next uncompleted node
-	## The state machine already calculated the next node, get it and request switch
-	if state_machine:
+	## Auto-switch if central
+	if node_id == central_id and state_machine:
 		var next_id := state_machine.current_central_id
 		if not next_id.is_empty() and next_id != central_id:
 			print("[PathRenderer] Auto-switching to next node:", next_id)
@@ -578,9 +613,16 @@ func _on_completed_node_clicked(node_id: String) -> void:
 ## Request backend to switch center (for browsing or tree navigation)
 func _request_switch_center(target_id: String) -> void:
 	if ws_client and ws_client.has_method("send_message"):
+		var auto_reconstruct := true
+		if ui and ui.has_method("get_auto_reconstruct_setting"):
+			auto_reconstruct = ui.get_auto_reconstruct_setting()
+			
 		ws_client.send_message({
 			"type": "switchCenter",
-			"payload": {"newCenterId": target_id}
+			"payload": {
+				"newCenterId": target_id,
+				"autoReconstruct": auto_reconstruct
+			}
 		})
 
 
@@ -603,6 +645,12 @@ func _on_tree_node_clicked(node_id: String) -> void:
 	## User clicked a node in the tree panel
 	print("[PathRenderer] Tree node clicked:", node_id)
 	_request_switch_center(node_id)
+
+
+func _on_settings_updated(settings: Dictionary) -> void:
+	print("[PathRenderer] Settings updated: ", settings)
+	if ws_client and ws_client.has_method("send_configure"):
+		ws_client.send_configure(settings)
 
 
 func _on_unmark_requested(node_id: String) -> void:
@@ -698,7 +746,20 @@ func _update_tree_panel() -> void:
 		return
 	
 	var path_nodes: Array = _current_path.get("pathNodes", [])
+	var layout_raw = _current_path.get("treeLayout")
+	var tree_layout: Dictionary = layout_raw if layout_raw is Dictionary else {}
 	var completed_ids := state_machine.get_completed_ids()
 	var current_id: String = _central_node.get("id", "")
 	
-	ui.build_tree(path_nodes, completed_ids, current_id)
+	# Debug: Check if treeLayout is received
+	print("[PathRenderer] treeLayout raw type: ", typeof(layout_raw), " is_dict: ", layout_raw is Dictionary)
+	if tree_layout.is_empty():
+		print("[PathRenderer] treeLayout is EMPTY - using legacy linear mode")
+	else:
+		print("[PathRenderer] treeLayout has ", tree_layout.get("nodes", []).size(), " nodes, ", tree_layout.get("edges", []).size(), " edges")
+	
+	if not tree_layout.is_empty():
+		ui.update_tree_layout(tree_layout, completed_ids, current_id)
+	else:
+		# Fallback to old list method if no layout
+		ui.build_tree(path_nodes, completed_ids, current_id)

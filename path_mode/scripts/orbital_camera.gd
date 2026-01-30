@@ -21,7 +21,7 @@ func _ready() -> void:
 	_update_camera_transform()
 
 
-func _input(event: InputEvent) -> void:
+func _unhandled_input(event: InputEvent) -> void:
 	## Scroll wheel zoom
 	if event is InputEventMouseButton:
 		var btn_event: InputEventMouseButton = event as InputEventMouseButton
