@@ -118,74 +118,97 @@ window.pathApp = {
     },
 
     sendPathToBridge: function(result) {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-             // Convert to simplified format expected by Godot
-             const centralId = this.centralNodeId;
-             const centralNode = result.nodes.find(n => n.id === centralId);
-             
-             if (!centralNode) return;
-
-             // --- Peripheral Selection Logic (Max 4) ---
-             // Requirement: 1 Central + 1-4 Peripherals
-             // Strategy: Prerequisites (Incoming) First, then Associations (Outgoing/Undirected)
-             
-             const candidates = result.nodes.filter(n => n.id !== centralId);
-             const edges = result.edges || [];
-             
-             const peripherals = candidates.map(node => {
-                 // Determine relationship
-                 const isIncoming = edges.some(e => e.source === node.id && e.target === centralId);
-                 const isOutgoing = edges.some(e => e.source === centralId && e.target === node.id);
-                 
-                 // Score for sorting:
-                 // Incoming (Prereq) = Priority 2
-                 // Outgoing (Association) = Priority 1
-                 // Tie-breaker: Centrality or Degree (use inDegree + outDegree)
-                 let priority = 0;
-                 if (isIncoming) priority = 2;
-                 else if (isOutgoing) priority = 1;
-                 
-                 return {
-                     ...node,
-                     priority: priority,
-                     totalDegree: (node.inDegree || 0) + (node.outDegree || 0)
-                 };
-             });
-
-             // Sort: High Priority > High Degree
-             peripherals.sort((a, b) => {
-                 if (b.priority !== a.priority) return b.priority - a.priority;
-                 return b.totalDegree - a.totalDegree;
-             });
-
-             // Take top 4
-             const selectedPeripherals = peripherals.slice(0, 4).map(n => ({
-                 id: n.id,
-                 label: n.label,
-                 relation: n.priority === 2 ? 'prerequisite' : 'association'
-             }));
-
-             const payload = {
-                 central: {
-                     id: centralNode.id,
-                     label: centralNode.label,
-                     inDegree: centralNode.inDegree || 0,
-                     outDegree: centralNode.outDegree || 0
-                 },
-                 peripherals: selectedPeripherals,
-                 progress: {
-                     completed: this.completedNodes.size,
-                     total: this.nodes.length + this.completedNodes.size // Rough estimate
-                 },
-                 mode: 'orbital'
-             };
-
-             this.ws.send(JSON.stringify({
-                 type: 'pathResult',
-                 payload: payload
-             }));
-             console.log('[PathApp] Sent pathResult to Bridge (Filtered to 4 peripherals)');
+        console.log('[PathApp] sendPathToBridge called. WS state:', this.ws?.readyState, 'Nodes:', result?.nodes?.length);
+        
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            console.warn('[PathApp] WebSocket not open, cannot send pathResult');
+            return;
         }
+        
+        // Convert to simplified format expected by Godot
+        const centralId = this.centralNodeId;
+        console.log('[PathApp] Looking for centralId:', centralId);
+        
+        let centralNode = result.nodes.find(n => n.id === centralId);
+        
+        // Fallback: If central not in current path nodes, fetch from global graphData
+        if (!centralNode) {
+            console.warn('[PathApp] Central node not in path nodes, checking graphData...');
+            const sourceData = (typeof graphData !== 'undefined') ? graphData : window.graphData;
+            if (sourceData && sourceData.nodes) {
+                centralNode = sourceData.nodes.find(n => n.id === centralId);
+                if (centralNode) {
+                    console.log('[PathApp] Found central in graphData:', centralNode.label);
+                    // Add to our local nodes for future reference
+                    result.nodes.push(centralNode);
+                }
+            }
+        }
+        
+        if (!centralNode) {
+            console.error('[PathApp] Central node not found anywhere! ID:', centralId);
+            return;
+        }
+
+        // --- Peripheral Selection Logic (Max 4) ---
+        const candidates = result.nodes.filter(n => n.id !== centralId);
+        const edges = result.edges || [];
+        
+        const peripherals = candidates.map(node => {
+            const isIncoming = edges.some(e => {
+                const sourceId = typeof e.source === 'object' ? e.source.id : e.source;
+                const targetId = typeof e.target === 'object' ? e.target.id : e.target;
+                return sourceId === node.id && targetId === centralId;
+            });
+            const isOutgoing = edges.some(e => {
+                const sourceId = typeof e.source === 'object' ? e.source.id : e.source;
+                const targetId = typeof e.target === 'object' ? e.target.id : e.target;
+                return sourceId === centralId && targetId === node.id;
+            });
+            
+            let priority = 0;
+            if (isIncoming) priority = 2;
+            else if (isOutgoing) priority = 1;
+            
+            return {
+                ...node,
+                priority: priority,
+                totalDegree: (node.inDegree || 0) + (node.outDegree || 0)
+            };
+        });
+
+        peripherals.sort((a, b) => {
+            if (b.priority !== a.priority) return b.priority - a.priority;
+            return b.totalDegree - a.totalDegree;
+        });
+
+        const selectedPeripherals = peripherals.slice(0, 4).map(n => ({
+            id: n.id,
+            label: n.label,
+            relation: n.priority === 2 ? 'prerequisite' : 'association'
+        }));
+
+        const payload = {
+            central: {
+                id: centralNode.id,
+                label: centralNode.label,
+                inDegree: centralNode.inDegree || 0,
+                outDegree: centralNode.outDegree || 0
+            },
+            peripherals: selectedPeripherals,
+            progress: {
+                completed: this.completedNodes.size,
+                total: this.nodes.length + this.completedNodes.size
+            },
+            mode: 'orbital'
+        };
+
+        console.log('[PathApp] Sending pathResult with central:', payload.central.label, 'peripherals:', selectedPeripherals.length);
+        this.ws.send(JSON.stringify({
+            type: 'pathResult',
+            payload: payload
+        }));
+        console.log('[PathApp] pathResult SENT to Bridge');
     },
 
     setupCanvas: function() {
@@ -674,10 +697,21 @@ window.pathApp = {
     },
 
     switchCentral: function(id) {
+        console.log('[PathApp] switchCentral called with:', id);
         this.centralNodeId = id;
         this.runLocalCloudLayout(); 
         this.render();
         this.centerView();
+        
+        // === CRITICAL: Send updated path to Godot ===
+        // This closes the loop: Godot sends switchCenter -> JS updates state -> JS sends pathResult back -> Godot rebuilds scene
+        if (this.nodes.length > 0) {
+            const result = {
+                nodes: this.nodes,
+                edges: this.links
+            };
+            this.sendPathToBridge(result);
+        }
     },
 
     runLocalCloudLayout: function() {
@@ -803,5 +837,145 @@ window.pathApp = {
             div.appendChild(removeBtn);
             list.appendChild(div);
         });
+    },
+    
+    /**
+     * Standalone WebSocket mode: Respond to Godot even when Path Mode UI is not active.
+     * Uses graphData directly instead of worker-computed paths.
+     */
+    sendPathToBridgeStandalone: function(centralId) {
+        console.log('[PathApp] sendPathToBridgeStandalone for:', centralId);
+        
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            console.warn('[PathApp] WS not open for standalone response');
+            return;
+        }
+        
+        const sourceData = (typeof graphData !== 'undefined') ? graphData : window.graphData;
+        if (!sourceData || !sourceData.nodes) {
+            console.error('[PathApp] No graphData available for standalone mode');
+            return;
+        }
+        
+        const centralNode = sourceData.nodes.find(n => n.id === centralId);
+        if (!centralNode) {
+            console.error('[PathApp] Central node not found in graphData:', centralId);
+            return;
+        }
+        
+        // Find connected nodes as peripherals
+        const edges = sourceData.edges || [];
+        const connectedIds = new Set();
+        
+        edges.forEach(e => {
+            const sourceId = typeof e.source === 'object' ? e.source.id : e.source;
+            const targetId = typeof e.target === 'object' ? e.target.id : e.target;
+            if (sourceId === centralId) connectedIds.add(targetId);
+            if (targetId === centralId) connectedIds.add(sourceId);
+        });
+        
+        const peripherals = Array.from(connectedIds)
+            .map(id => sourceData.nodes.find(n => n.id === id))
+            .filter(n => n)
+            .slice(0, 4)
+            .map(n => ({
+                id: n.id,
+                label: n.label,
+                relation: 'association'
+            }));
+        
+        const payload = {
+            central: {
+                id: centralNode.id,
+                label: centralNode.label,
+                inDegree: centralNode.inDegree || 0,
+                outDegree: centralNode.outDegree || 0
+            },
+            peripherals: peripherals,
+            progress: {
+                completed: this.completedNodes ? this.completedNodes.size : 0,
+                total: sourceData.nodes.length
+            },
+            mode: 'orbital'
+        };
+        
+        console.log('[PathApp] Sending standalone pathResult:', payload.central.label);
+        this.ws.send(JSON.stringify({
+            type: 'pathResult',
+            payload: payload
+        }));
+    },
+    
+    /**
+     * Early WebSocket connection for Godot standalone testing.
+     * Called immediately when script loads.
+     */
+    setupEarlyWebSocket: function() {
+        if (this.ws) return; // Already connected
+        
+        console.log('[PathApp] Setting up early WebSocket connection...');
+        this.ws = new WebSocket('ws://localhost:9876');
+        
+        this.ws.onopen = () => {
+            console.log('[PathApp] Early WS Connected to Bridge');
+        };
+        
+        this.ws.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+                console.log('[PathApp] Early WS Received:', msg.type);
+                
+                if (msg.type === 'switchCenter') {
+                    const newCentralId = msg.payload?.newCenterId;
+                    console.log('[PathApp] Early switch center request:', newCentralId);
+                    
+                    // If full init was called, use the full pipeline
+                    if (this.nodes && this.nodes.length > 0) {
+                        this.centralNodeId = newCentralId;
+                        this.runLocalCloudLayout();
+                        this.render();
+                        this.centerView();
+                        
+                        const result = {
+                            nodes: this.nodes,
+                            edges: this.links
+                        };
+                        this.sendPathToBridge(result);
+                    } else {
+                        // Standalone mode: Use graphData directly
+                        this.centralNodeId = newCentralId;
+                        this.sendPathToBridgeStandalone(newCentralId);
+                    }
+                } else if (msg.type === 'requestPath') {
+                    console.log('[PathApp] Early requestPath received');
+                    // Respond with current state if available
+                    if (this.nodes && this.nodes.length > 0 && this.centralNodeId) {
+                        const result = {
+                            nodes: this.nodes,
+                            edges: this.links
+                        };
+                        this.sendPathToBridge(result);
+                    }
+                }
+            } catch(err) {
+                console.error('[PathApp] Early WS Error:', err);
+            }
+        };
+        
+        this.ws.onerror = (err) => {
+            console.warn('[PathApp] Early WS Error (PathBridge may not be running):', err);
+        };
     }
 };
+
+// === AUTO-CONNECT: Establish WebSocket immediately for Godot standalone support ===
+// This runs as soon as path_app.js is loaded, before init() is called.
+(function() {
+    // Small delay to ensure graphData might be available
+    setTimeout(() => {
+        if (window.pathApp && !window.pathApp.ws) {
+            window.pathApp.setupEarlyWebSocket();
+        }
+    }, 500);
+})();
+

@@ -47,6 +47,7 @@ Document and expand the Path Mode architecture for the NoteConnection project, e
 - [x] Fix "Below Base Plate" camera issue (Pitch constraints)
 - [x] Fix Central Node Overlap (Strict state reset)
 - [x] Fix Color Update on Switch (Force material refresh)
+- [x] Refactor Node Switch to "Clear-then-Rebuild" architecture (prevents overlap/color bugs)
 - [ ] Add tree-view learning path panel
 - [ ] Add settings button and panel
 

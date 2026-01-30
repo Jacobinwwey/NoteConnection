@@ -267,66 +267,55 @@ func _draw_edges() -> void:
 	_edge_drawer.surface_end()
 
 
-## Orbital rotation animation when switching central
+## Clears all peripheral bubbles and labels from the scene
+func _clear_all_peripherals() -> void:
+	for bubble in _peripheral_bubbles:
+		if is_instance_valid(bubble):
+			bubble.queue_free()
+	_peripheral_bubbles.clear()
+	_labels.clear()
+
+
+## Central node switch: "Clear-then-Rebuild" architecture
+## Instead of morphing objects (which causes overlap/color bugs), we:
+## 1. Clear all existing visuals
+## 2. Request new data from backend
+## 3. Let render_path rebuild everything correctly
 func animate_orbital_rotation(target_id: String) -> void:
-	## Find which peripheral was clicked
-	var target_index := -1
-	for i in range(_peripheral_nodes.size()):
-		var node_data: Dictionary = _peripheral_nodes[i] if _peripheral_nodes[i] is Dictionary else {}
-		if node_data.get("id", "") == target_id:
-			target_index = i
-			break
-	
-	if target_index < 0:
-		## Node not in peripherals, instant switch
-		state_machine.transition_to(LearningStateMachine.State.VIEWING, {"central_id": target_id})
-		return
-	
 	## Kill any existing tween
 	if _transition_tween and _transition_tween.is_valid():
 		_transition_tween.kill()
 	
-	_transition_tween = create_tween()
-	_transition_tween.set_ease(Tween.EASE_IN_OUT)
-	_transition_tween.set_trans(Tween.TRANS_CUBIC)
+	## === PHASE 1: DESTRUCTIVE CLEAR ===
+	## Clear all peripheral bubbles immediately
+	_clear_all_peripherals()
 	
-	var target_bubble := _peripheral_bubbles[target_index]
-	var _old_central_pos := _central_bubble.position if _central_bubble else Vector3.ZERO
-	var target_pos := target_bubble.position
+	## Reset central bubble to default state (hidden during transition)
+	if _central_bubble:
+		_central_bubble.visible = false
+		_central_bubble.position = Vector3.ZERO
+		_central_bubble.scale = Vector3.ONE
 	
-	## Animate target peripheral to center
-	_transition_tween.tween_property(target_bubble, "position", Vector3.ZERO, TRANSITION_DURATION)
-	_transition_tween.parallel().tween_property(target_bubble, "scale", Vector3.ONE * (central_radius / peripheral_radius), TRANSITION_DURATION)
+	## Clear local state
+	_peripheral_nodes.clear()
 	
-	## Animate old central to vacated slot
-	_transition_tween.parallel().tween_property(_central_bubble, "position", target_pos, TRANSITION_DURATION)
-	_transition_tween.parallel().tween_property(_central_bubble, "scale", Vector3.ONE * (peripheral_radius / central_radius), TRANSITION_DURATION)
+	## === PHASE 2: UPDATE STATE MACHINE ===
+	## Notify state machine of the transition (this tracks the new central ID)
+	if state_machine:
+		state_machine.transition_to(LearningStateMachine.State.TRANSITIONING, {"central_id": target_id})
 	
-	## Redistribute other peripherals
-	var remaining_indices: Array[int] = []
-	for i in range(_peripheral_nodes.size()):
-		if i != target_index:
-			remaining_indices.append(i)
-	
-	for i in range(remaining_indices.size()):
-		var bubble := _peripheral_bubbles[remaining_indices[i]]
-		var new_angle := (float(i + 1) / (remaining_indices.size() + 1)) * TAU
-		var new_pos := _get_orbital_position(new_angle)
-		_transition_tween.parallel().tween_property(bubble, "position", new_pos, TRANSITION_DURATION)
-	
-	## Callback when complete
-	_transition_tween.tween_callback(_on_transition_complete.bind(target_id))
-
-
-func _on_transition_complete(new_central_id: String) -> void:
-	transition_complete.emit()
-	
-	## Request new peripheral data from frontend
+	## === PHASE 3: REQUEST NEW DATA FROM BACKEND ===
+	## The backend will respond with `pathUpdate` containing:
+	## - new central node
+	## - new peripheral nodes (computed for the new central)
+	## This triggers render_path(), which rebuilds everything correctly.
 	if ws_client and ws_client.has_method("send_message"):
 		ws_client.send_message({
 			"type": "switchCenter",
-			"payload": {"newCenterId": new_central_id}
+			"payload": {"newCenterId": target_id}
 		})
+	
+	transition_complete.emit()
 
 
 func _on_state_changed(_from_state: StringName, to_state: StringName) -> void:

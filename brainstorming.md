@@ -6,7 +6,7 @@
 
 ## Visual Reference
 
-![Reference Bubble Style](C:/Users/jacob/.gemini/antigravity/brain/d1cf6b8d-481a-4278-9a30-de1cfdc75527/uploaded_media_1769652710516.png)
+![Reference Bubble Style](3c4755ca040447b516d3864b2ff9e8b.png)
 
 **Key Visual Properties to Replicate:**
 
