@@ -249,7 +249,46 @@ func mark_complete(node_id: String) -> void:
 └────────────────────────────────────────────────┘
 ```
 
-### 5.2 Tree Interaction
+### 5.2 Enhanced Graphical Tree View (v2)
+
+**Architecture**: SubViewport overlay panel with bezier curve rendering
+
+```
+PanelContainer (tree_view_panel.tscn)
+├── VBoxContainer
+│   ├── HBoxContainer (Header)
+│   │   ├── TabBar: [Subtree] [Full Path]
+│   │   └── OptionButton (Style selector)
+│   └── SubViewportContainer
+│       └── SubViewport
+│           └── Node2D (TreeRenderer)
+└── PopupMenu (Context menu)
+```
+
+**Visual Themes** (4 selectable, colorful as default):
+
+| Theme                  | Background       | Nodes                   | Curves               |
+| ---------------------- | ---------------- | ----------------------- | -------------------- |
+| **Colorful** (default) | #1a1a26          | Gold/Cyan/Gray by state | Inherit parent color |
+| **Dark**               | #1a1a2e          | Gradient rounded rect   | Soft blue/purple     |
+| **Glass**              | Transparent blur | Semi-transparent        | Glowing              |
+| **Minimal**            | #1e1e24          | White/gray              | Thin gray            |
+
+**Node Interactions**:
+
+| Action       | Result                              |
+| ------------ | ----------------------------------- |
+| Single-click | Expand/collapse + show context menu |
+| Double-click | Navigate (make central node)        |
+| Context menu | Navigate / Mark Complete / Unmark   |
+
+**Files**:
+
+- `tree_view_panel.tscn` + `tree_view_panel.gd` - Main panel scene
+- `tree_renderer.gd` - Bezier curve drawing
+- `tree_styles.gd` - 4 visual themes
+
+### 5.3 Tree Interaction
 
 - **Click on Tree Node**: Switch central view to that node
 - **Settings Toggle**: "Automatically reconstruct learning path when switching starting point"

@@ -1,6 +1,6 @@
-# 2026-01-24 v1.3.0
+# 2026-01-30 v1.4.0
 
-# Interface Document (v1.3.0)
+# Interface Document (v1.4.0)
 
 This document defines the core interfaces for the NoteConnection system, separating backend processing from frontend visualization.
 
@@ -620,7 +620,7 @@ Dedicated Web Worker for Path Mode layout and logic.
   - Fallback logic: If `diffusionLearning` target is invalid, auto-switches to `domain` mode.
   - Auto-centering: Calculates bounding box for perfect camera framing.
 
-### 3.8 Path Mode Interactions (v1.3.0)
+### 3.8 Path Mode Interactions (v1.4.0)
 
 #### Orbital Layout Visualization
 
@@ -643,6 +643,113 @@ Dedicated Web Worker for Path Mode layout and logic.
 - **Component**: `#node-select-modal`
 - **Capacity**: Search results capped at 300 items (increased from 20) to ensure full graph discoverability.
 - **Action**: Selecting a node sets it as the new `diffusionTarget` and triggers a path recalculation.
+
+### 3.9 PathBridge WebSocket Protocol (v1.4.0)
+
+WebSocket server connecting Electron, Godot, and Frontend via port 9876.
+
+- **Location**: `src/core/PathBridge.ts`
+- **Class**: `PathBridge`
+
+#### Message Types
+
+| Type             | Direction        | Payload                                  | Description                    |
+| ---------------- | ---------------- | ---------------------------------------- | ------------------------------ |
+| `nodeClick`      | Godot → Frontend | `{ nodeId: string }`                     | Node clicked in Godot          |
+| `requestPath`    | Godot → Frontend | `{}`                                     | Request current path data      |
+| `pathResult`     | Frontend → All   | `{ nodes, edges, central, peripherals }` | Learning path data             |
+| `markComplete`   | Godot → Frontend | `{ nodeId: string }`                     | Mark node complete             |
+| `unmarkComplete` | Godot → Frontend | `{ nodeId: string }`                     | Unmark node (v1.4.0)           |
+| `completionSync` | Any → All        | `{ completedIds: string[] }`             | Sync completion state (v1.4.0) |
+| `switchCenter`   | Godot → Frontend | `{ newCenterId: string }`                | Request center change          |
+| `openReader`     | Godot → Electron | `{ nodeId: string }`                     | Open content reader            |
+
+#### IPC Bridge
+
+- **IPC Channel**: `path-open-reader`
+- **Direction**: Main → Renderer
+- **Behavior**: Triggers reader overlay + window focus
+
+### 3.10 LearningStateMachine (Godot - v1.4.0)
+
+State machine managing learning flow and progress persistence.
+
+- **Location**: `path_mode/scripts/learning_state_machine.gd`
+- **Class**: `LearningStateMachine`
+
+#### States
+
+```gdscript
+enum State { IDLE, VIEWING, TRANSITIONING, READING }
+```
+
+#### Signals
+
+| Signal            | Parameters             | Description               |
+| ----------------- | ---------------------- | ------------------------- |
+| `state_changed`   | `from_state, to_state` | State transition occurred |
+| `central_changed` | `old_id, new_id`       | Central node changed      |
+| `node_completed`  | `node_id, next_id`     | Node marked complete      |
+| `node_unmarked`   | `node_id`              | Node unmarked (v1.4.0)    |
+| `path_complete`   | -                      | All nodes completed       |
+
+#### Persistence
+
+- **Save Path**: `user://orbital_progress.json`
+- **Data**: `{ completed_ids, current_central_id, mode, ultimate_target_id }`
+
+### 3.11 PathModeUI (Godot - v1.4.0)
+
+UI controller for Path Mode learning interface.
+
+- **Location**: `path_mode/scripts/path_mode_ui.gd`
+- **Class**: `PathModeUI`
+
+#### Signals
+
+| Signal                      | Description                       |
+| --------------------------- | --------------------------------- |
+| `mark_complete_pressed`     | Mark Complete button clicked      |
+| `return_pressed`            | Return to main learning position  |
+| `unmark_requested(node_id)` | Request to unmark a node (v1.4.0) |
+| `sidebar_toggled(visible)`  | Sidebar visibility changed        |
+
+#### Tree Panel (v1.4.0)
+
+- **Component**: `_tree_panel` (VBoxContainer) + `_tree_control` (Tree)
+- **Visual States**: `★` (Gold = completed), `●` (Cyan = current), `○` (Gray = pending)
+- **Method**: `build_tree(nodes, completed_ids, current_id)`
+
+#### Navigation History (v1.4.0)
+
+- **Component**: `_return_button` (MenuButton with PopupMenu)
+- **Features**: Dropdown menu showing browsing history, return to learning position
+
+#### Edit Mode (v1.4.0)
+
+- **Component**: `_edit_button` (Button toggle)
+- **State**: `_edit_mode: bool`
+- **Behavior**: When enabled, right-click on completed nodes triggers `unmark_requested`
+
+### 3.12 PathRenderer (Godot - v1.4.0)
+
+3D orbital renderer for Path Mode visualization.
+
+- **Location**: `path_mode/scripts/path_renderer.gd`
+- **Class**: `PathRenderer`
+
+#### Signals
+
+| Signal                | Parameters        | Description                    |
+| --------------------- | ----------------- | ------------------------------ |
+| `node_clicked`        | `node_id: String` | Single click on node           |
+| `node_double_clicked` | `node_id: String` | Double click (triggers reader) |
+
+#### Key Methods
+
+- `render_path(path_data: Dictionary)`: Update display with new path data
+- `_create_bubble_material(is_central, is_completed)`: Iridescent shader material
+- `_update_tree_panel()`: Rebuild tree from current path data
 
 ## 4. Server API (v0.8.5)
 
@@ -1080,9 +1187,9 @@ To provide a clearer initial layout, v1.0.1 adjusts the default values and adjus
 
 ---
 
-# 2026-01-23 v1.1.2
+# 2026-01-30 v1.4.0
 
-# 接口文档 (v1.1.2)
+# 接口文档 (v1.4.0)
 
 本文档定义了 NoteConnection 系统核心接口，分离了后端处理与前端可视化。
 
@@ -1789,7 +1896,7 @@ interface CooccurrenceMetrics {
   - 回退逻辑: 如果 `diffusionLearning` 目标无效，自动切换到 `domain` 模式。
   - 自动居中: 计算包围盒以实现完美的相机取景。
 
-### 3.8 路径模式交互 (Path Mode Interactions - v1.3.0)
+### 3.8 路径模式交互 (Path Mode Interactions - v1.4.0)
 
 #### 轨道布局可视化 (Orbital Layout Visualization)
 
@@ -1798,20 +1905,67 @@ interface CooccurrenceMetrics {
   - **周边节点**: 直接邻居或后续步骤。渲染为围绕中心运行，半径各异 (350px - 950px)。
 - **视觉规则**:
   - **边可见性**: 仅绘制连接中心节点到周边节点的边。所有无关的边均被隐藏。
-  - **景深 (Depth of Field)**: 远离中心的节点会轻微褪色（最小不透明度 0.4）并缩小，以此模拟 3D 深度感。
-  - **标签**: 周边节点的标签始终可见，并根据距离缩放（最大 16px，最小 8px）以防止混乱。
+  - **景深 (DoF)**: 远离中心的节点会轻微褪色（最小不透明度 0.4）并缩小，模拟 3D 深度感。
+  - **标签**: 周边节点的标签始终可见，并根据距离缩放（最大 16px，最小 8px）。
 
 #### 阅读器集成 (Reader Integration)
 
 - **触发**: 双击 **中心节点**。
-- **行为**: 打开加载了该节点完整 Markdown 内容的 `阅读器` 覆盖层 (`#reading-window`)。
-- **层级**: 阅读器 (`z-index: 2500`) 位于路径模式画布 (`z-index: 2000`) 之上，但在最高系统通知之下。
+- **行为**: 打开加载了节点完整 Markdown 内容的 `阅读器` 覆盖层。
+- **层级**: 阅读器 (`z-index: 2500`) 位于路径模式画布之上。
 
 #### 目标选择 (Target Selection)
 
 - **组件**: `#node-select-modal`
-- **容量**: 搜索结果上限增加到 300 项（原为 20），以确保完整的图谱可发现性。
-- **动作**: 选择一个节点将其设为新的 `diffusionTarget` 并触发路径重新计算。
+- **容量**: 搜索结果上限 300 项。
+- **动作**: 选择节点设为新的 `diffusionTarget` 并触发路径重算。
+
+### 3.9 PathBridge WebSocket 协议 (v1.4.0)
+
+通过端口 9876 连接 Electron、Godot 和前端的 WebSocket 服务器。
+
+- **位置**: `src/core/PathBridge.ts`
+- **类**: `PathBridge`
+
+#### 消息类型
+
+| 类型             | 方向             | 负载                                     | 描述                  |
+| ---------------- | ---------------- | ---------------------------------------- | --------------------- |
+| `nodeClick`      | Godot → 前端     | `{ nodeId }`                             | Godot 中点击节点      |
+| `requestPath`    | Godot → 前端     | `{}`                                     | 请求当前路径数据      |
+| `pathResult`     | 前端 → 全部      | `{ nodes, edges, central, peripherals }` | 学习路径数据          |
+| `markComplete`   | Godot → 前端     | `{ nodeId }`                             | 标记节点完成          |
+| `unmarkComplete` | Godot → 前端     | `{ nodeId }`                             | 取消标记 (v1.4.0)     |
+| `completionSync` | 任意 → 全部      | `{ completedIds }`                       | 同步完成状态 (v1.4.0) |
+| `switchCenter`   | Godot → 前端     | `{ newCenterId }`                        | 请求切换中心          |
+| `openReader`     | Godot → Electron | `{ nodeId }`                             | 打开内容阅读器        |
+
+### 3.10 LearningStateMachine (Godot - v1.4.0)
+
+管理学习流程和进度持久化的状态机。
+
+- **位置**: `path_mode/scripts/learning_state_machine.gd`
+- **状态**: `IDLE | VIEWING | TRANSITIONING | READING`
+- **信号**: `state_changed`, `central_changed`, `node_completed`, `node_unmarked`, `path_complete`
+- **持久化**: `user://orbital_progress.json`
+
+### 3.11 PathModeUI (Godot - v1.4.0)
+
+路径模式学习界面 UI 控制器。
+
+- **位置**: `path_mode/scripts/path_mode_ui.gd`
+- **信号**: `mark_complete_pressed`, `return_pressed`, `unmark_requested`, `sidebar_toggled`
+- **树面板**: 带 ★●○ 视觉状态的依赖树
+- **导航历史**: 带下拉菜单的返回按钮
+- **编辑模式**: 右键点击完成节点触发取消标记
+
+### 3.12 PathRenderer (Godot - v1.4.0)
+
+路径模式的 3D 轨道渲染器。
+
+- **位置**: `path_mode/scripts/path_renderer.gd`
+- **信号**: `node_clicked`, `node_double_clicked`
+- **方法**: `render_path()`, `_create_bubble_material()`, `_update_tree_panel()`
 
 ### 5. 移动端构建 (Mobile Build - v0.9.1)
 

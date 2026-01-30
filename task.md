@@ -58,7 +58,36 @@ Document and expand the Path Mode architecture for the NoteConnection project, e
 - [x] Add tree-view learning path panel (dependency tree with ★●○ states)
 - [ ] Add settings button and panel
 
-## Phase 4: HTML5 Embed Integration (Pending)
+## Phase 4: Enhanced Graphical Tree View (Planned)
+
+- [ ] **Tree View Architecture**
+  - [ ] Create `tree_view_panel.tscn` (SubViewport overlay panel)
+  - [ ] Create `tree_renderer.gd` (bezier curve drawing in 2D canvas)
+  - [ ] Create `tree_styles.gd` (4 selectable visual themes)
+  - [ ] Integrate with `path_renderer.gd`
+
+- [ ] **Visual Themes** (4 selectable, colorful as default)
+  - [ ] **Colorful Status** (default): Gold=complete, Cyan=current, Gray=pending
+  - [ ] **Dark**: Dark background, gradient fills, soft blue/purple curves
+  - [ ] **Glass/Frosted**: Semi-transparent nodes, glowing bezier curves
+  - [ ] **Minimal Monochrome**: White/gray nodes, thin gray curves
+
+- [ ] **Tree View Modes**
+  - [ ] Tab buttons: `[Subtree] [Full Path]`
+  - [ ] Dropdown style selector in header
+  - [ ] Collapsible drawer panel
+
+- [ ] **Node Interactions**
+  - [ ] Single-click: Expand/collapse + show context menu
+  - [ ] Double-click: Navigate to node (make central)
+  - [ ] Context menu: Navigate / Mark Complete / Unmark
+
+- [ ] **Bezier Curve Rendering**
+  - [ ] Draw parent-child connections with bezier curves
+  - [ ] Curves inherit parent color (colorful mode)
+  - [ ] Anti-aliased polyline rendering
+
+## Phase 5: HTML5 Embed Integration (Pending)
 
 - [ ] Configure Godot HTML5 export with GPU support
 - [ ] Create embed container in Electron frontend

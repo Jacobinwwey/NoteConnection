@@ -1,4 +1,4 @@
-# 2026-01-24 v1.3.0
+# 2026-01-30 v1.4.0
 
 # NoteConnection Knowledge Graph
 
@@ -277,6 +277,21 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 <a id="changelog-en"></a>
 
 ## 📅 Changelog
+
+### v1.4.0 - Path Mode Learning UX & Tree View (2026-01-30)
+
+- **Path Mode Bug Fixes**:
+  - **Unmark Sync Fix**: Added `unmarkComplete` and `completionSync` handlers to `PathBridge.ts`.
+  - **UI Sync on Unmark**: Tree panel refresh + central bubble progress update after unmarking.
+  - **Shader Syntax Fix**: Corrected `depth_draw_alpha_prepass` to `depth_prepass_alpha`.
+- **Path Mode Learning UI**:
+  - **Navigation History**: Return button with dropdown for learning history.
+  - **Edit Mode**: Toggle to enable/disable unmarking nodes on PC.
+  - **Tree Panel**: Collapsible dependency tree with visual states.
+  - **Progress Display**: "X of N" progress indicator on central bubble.
+- **Planned: Enhanced Graphical Tree View**:
+  - SubViewport overlay with bezier curves (mind-map style).
+  - 4 visual themes: Colorful (default), Dark, Glass, Minimal.
 
 ### v1.3.0 - Path Mode Polish & UI Refinements (2026-01-24)
 
@@ -983,7 +998,22 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 
 <a id="changelog-zh"></a>
 
-## 📅 更新日志 (Changelog)
+## 更新日志 (Changelog)
+
+### v1.4.0 - 路径模式学习体验与树视图 (2026-01-30)
+
+- **路径模式 Bug 修复**:
+  - **取消标记同步修复**: 在 `PathBridge.ts` 中添加了 `unmarkComplete` 和 `completionSync` 处理程序。
+  - **取消标记后 UI 同步**: 树面板刷新 + 中心气泡进度更新。
+  - **着色器语法修复**: 将 `depth_draw_alpha_prepass` 修正为 `depth_prepass_alpha`。
+- **路径模式学习 UI**:
+  - **导航历史**: 带下拉菜单的返回按钮，用于浏览学习历史。
+  - **编辑模式**: 切换开关，用于启用/禁用取消节点标记。
+  - **树面板**: 可折叠的依赖树，带视觉状态。
+  - **进度显示**: 中心气泡上的"X of N"进度指示器。
+- **计划中: 增强图形化树视图**:
+  - SubViewport 叠加面板 + 贝塞尔曲线（思维导图风格）。
+  - 4 种可选视觉主题: 彩色、深色、玻璃、极简。
 
 ### v1.3.0 - 路径模式打磨与 UI 优化 (Path Mode Polish & UI Refinements) (2026-01-24)
 

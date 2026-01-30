@@ -107,3 +107,32 @@ path_core.js: Loaded successfully ✅
    - Click "Mark Complete" button
    - Verify gold star appears in sidebar
    - Verify auto-advance to next node
+
+---
+
+## Recent Bug Fixes (2026-01-30)
+
+1. **Unmark Sync Issue**
+   - Added `unmarkComplete` and `completionSync` handlers to `PathBridge.ts`
+   - Previously these messages fell through to "Unknown message type"
+   - Now correctly relays to Electron frontend
+
+2. **UI Sync on Unmark**
+   - Added tree panel refresh after unmark
+   - Added central bubble label update with new progress
+   - Ensured localStorage correctly updates
+
+3. **Shader Fix**
+   - Fixed `depth_draw_alpha_prepass` → `depth_prepass_alpha` syntax
+
+---
+
+## Planned: Enhanced Graphical Tree View
+
+| Feature               | Description                                       |
+| --------------------- | ------------------------------------------------- |
+| **SubViewport Panel** | Collapsible drawer overlay                        |
+| **Bezier Curves**     | Mind-map style connections                        |
+| **4 Themes**          | Colorful (default), Dark, Glass, Minimal          |
+| **Interactions**      | Single-click expand + menu, double-click navigate |
+| **Context Menu**      | Navigate / Mark Complete / Unmark                 |

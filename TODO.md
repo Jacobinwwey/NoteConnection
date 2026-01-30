@@ -74,6 +74,25 @@
   - [ ] Click tree node → Switch central view
   - [ ] Visual states: ★ Completed, ● Current, ○ Pending
 
+- [ ] **Enhanced Graphical Tree View (v2)**
+  - [ ] SubViewport overlay panel with collapsible drawer
+  - [ ] Bezier curve rendering (parent-child connections)
+  - [ ] 4 selectable visual themes:
+    - [ ] **Colorful Status** (default): Gold/Cyan/Gray by state
+    - [ ] **Dark**: Dark bg, gradient nodes, soft blue/purple curves
+    - [ ] **Glass/Frosted**: Semi-transparent, glowing curves
+    - [ ] **Minimal Monochrome**: White/gray, thin curves
+  - [ ] Tab buttons: `[Subtree] [Full Path]`
+  - [ ] Dropdown style selector in header
+  - [ ] Node interactions:
+    - [ ] Single-click: Expand/collapse + context menu
+    - [ ] Double-click: Navigate (make central)
+    - [ ] Context menu: Navigate / Mark Complete / Unmark
+  - [ ] **New Files**:
+    - [ ] `tree_view_panel.tscn` + `tree_view_panel.gd`
+    - [ ] `tree_renderer.gd` (bezier curve drawing)
+    - [ ] `tree_styles.gd` (4 visual themes)
+
 - [ ] **Godot Desktop Renderer**
   - [ ] Upgrade `path_renderer.gd` to 3D MeshInstance3D
   - [ ] Implement `bubble_material.gdshader` (fresnel + iridescence)
