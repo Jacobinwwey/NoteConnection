@@ -48,7 +48,14 @@ Document and expand the Path Mode architecture for the NoteConnection project, e
 - [x] Fix Central Node Overlap (Strict state reset)
 - [x] Fix Color Update on Switch (Force material refresh)
 - [x] Refactor Node Switch to "Clear-then-Rebuild" architecture (prevents overlap/color bugs)
-- [ ] Add tree-view learning path panel
+- [x] Implement realistic iridescent bubble shader (thin-film interference, Fresnel, specular highlights)
+- [x] Connect UI buttons (Mark Complete, Sidebar toggle, completed nodes list)
+- [x] Fix ambient lighting (reduced wash-out, iridescent colors visible)
+- [x] Fix "X of 0" progress display (send totalNodes from frontend)
+- [x] Add navigation history + Return button (single return + dropdown)
+- [x] Add Edit mode for unmark completion
+- [x] Add bidirectional Electron sync (completionSync WebSocket)
+- [x] Add tree-view learning path panel (dependency tree with ★●○ states)
 - [ ] Add settings button and panel
 
 ## Phase 4: HTML5 Embed Integration (Pending)

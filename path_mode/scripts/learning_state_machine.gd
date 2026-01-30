@@ -7,6 +7,7 @@ class_name LearningStateMachine
 signal state_changed(from_state: StringName, to_state: StringName)
 signal central_changed(old_id: String, new_id: String)
 signal node_completed(node_id: String, next_id: String)
+signal node_unmarked(node_id: String)
 signal path_complete()
 
 enum State {
@@ -156,9 +157,11 @@ func set_learning_path(path: Dictionary) -> void:
 ## Get progress for display (X of Y)
 func get_progress() -> Dictionary:
 	var nodes: Array = learning_path.get("nodes", [])
+	# Use explicit total if provided, otherwise count nodes
+	var total: int = learning_path.get("total", nodes.size())
 	return {
 		"completed": completed_ids.size(),
-		"total": nodes.size()
+		"total": total
 	}
 
 
@@ -179,6 +182,15 @@ func reset_progress() -> void:
 	learning_path = {}
 	_delete_save()
 	transition_to(State.IDLE)
+
+
+## Unmark a node as complete
+func unmark_complete(node_id: String) -> void:
+	var idx := completed_ids.find(node_id)
+	if idx >= 0:
+		completed_ids.remove_at(idx)
+		node_unmarked.emit(node_id)
+		_save_progress()
 
 
 ## Save progress to user filesystem

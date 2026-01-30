@@ -81,6 +81,16 @@ export class PathBridge {
                 this.triggerOpenReader(nodeId);
                 break;
 
+            case 'unmarkComplete':
+                console.log(`[PathBridge] Node unmarked: ${data.payload?.nodeId}`);
+                this.broadcast('unmarkComplete', data.payload);
+                break;
+
+            case 'completionSync':
+                console.log(`[PathBridge] Completion sync, ${data.payload?.completedIds?.length || 0} nodes`);
+                this.broadcast('completionSync', data.payload);
+                break;
+
             default:
                 console.log(`[PathBridge] Unknown message type: ${data.type}`);
         }

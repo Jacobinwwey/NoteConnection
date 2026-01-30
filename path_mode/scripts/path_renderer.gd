@@ -34,6 +34,8 @@ var _click_timer: float = 0.0
 var _last_clicked_id: String = ""
 const DOUBLE_CLICK_THRESHOLD := 0.5
 
+@onready var ui: PathModeUI = $"../UI"
+
 
 func _ready() -> void:
 	_load_shader()
@@ -44,10 +46,22 @@ func _ready() -> void:
 	if state_machine:
 		state_machine.state_changed.connect(_on_state_changed)
 		state_machine.central_changed.connect(_on_central_changed)
+		state_machine.node_completed.connect(_on_node_completed)
+		state_machine.node_unmarked.connect(_on_node_unmarked)
 	
 	## Connect to WebSocket client
 	if ws_client:
 		ws_client.data_received.connect(_on_ws_data_received)
+		ws_client.completion_sync.connect(_on_completion_sync)
+	
+	## Connect to UI signals
+	if ui:
+		ui.mark_complete_pressed.connect(_on_mark_complete_pressed)
+		ui.completed_node_clicked.connect(_on_completed_node_clicked)
+		ui.return_pressed.connect(_on_return_pressed)
+		ui.return_to_node.connect(_on_return_to_node)
+		ui.tree_node_clicked.connect(_on_tree_node_clicked)
+		ui.unmark_requested.connect(_on_unmark_requested)
 
 
 func _load_shader() -> void:
@@ -103,29 +117,62 @@ func _setup_edge_drawer() -> void:
 	add_child(mesh_instance)
 
 
-## Creates bubble material - returns ShaderMaterial or fallback StandardMaterial3D
+## Creates iridescent bubble material using the enhanced shader
 func _create_bubble_material(is_central: bool, is_completed: bool) -> Material:
-	## Force fallback to solid opaque material for reliability
+	## Use the iridescent bubble shader
+	if _bubble_shader:
+		var shader_mat := ShaderMaterial.new()
+		shader_mat.shader = _bubble_shader
+		
+		## Set shader parameters
+		shader_mat.set_shader_parameter("is_central", is_central)
+		shader_mat.set_shader_parameter("is_completed", is_completed)
+		
+		## State-dependent tints (subtle tints, iridescence provides main color)
+		if is_completed:
+			shader_mat.set_shader_parameter("completed_color", Color(1.0, 0.84, 0.0, 0.85))
+		elif is_central:
+			shader_mat.set_shader_parameter("central_tint", Color(0.3, 0.7, 0.95, 1.0))
+		else:
+			shader_mat.set_shader_parameter("peripheral_tint", Color(0.65, 0.4, 0.85, 1.0))
+		
+		## Enhanced iridescence for visible rainbow effect
+		shader_mat.set_shader_parameter("iridescence_strength", 1.2)
+		shader_mat.set_shader_parameter("rainbow_saturation", 0.85)
+		shader_mat.set_shader_parameter("iridescence_scale", 6.0)
+		
+		## Fresnel: more transparency in center, subtle rim
+		shader_mat.set_shader_parameter("fresnel_power", 3.5)
+		shader_mat.set_shader_parameter("rim_opacity", 0.35)
+		shader_mat.set_shader_parameter("center_opacity", 0.02)
+		
+		## Bright specular highlights
+		shader_mat.set_shader_parameter("specular_intensity", 2.0)
+		shader_mat.set_shader_parameter("highlight_sharpness", 64.0)
+		
+		return shader_mat
+	
+	## Fallback to StandardMaterial3D if shader fails to load
+	push_warning("PathRenderer: Using fallback material (shader not loaded)")
 	var std := StandardMaterial3D.new()
-	std.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
-	std.metallic = 0.1
-	std.roughness = 0.1
+	std.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	std.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	std.metallic = 0.0
+	std.roughness = 0.05
 	std.emission_enabled = true
-	std.use_point_size = true
-	std.point_size = 5.0
 	
 	if is_completed:
-		std.albedo_color = Color.GOLD
+		std.albedo_color = Color(1.0, 0.84, 0.0, 0.9)
 		std.emission = Color.GOLD
 		std.emission_energy_multiplier = 0.5
 	elif is_central:
-		std.albedo_color = Color(0.2, 0.6, 1.0)
-		std.emission = Color(0.2, 0.6, 1.0)
-		std.emission_energy_multiplier = 0.5
+		std.albedo_color = Color(0.4, 0.8, 1.0, 0.4)
+		std.emission = Color(0.4, 0.8, 1.0)
+		std.emission_energy_multiplier = 0.3
 	else:
-		std.albedo_color = Color(0.5, 0.3, 0.8)
-		std.emission = Color(0.5, 0.3, 0.8)
-		std.emission_energy_multiplier = 0.3 # Added emission for peripherals
+		std.albedo_color = Color(0.7, 0.5, 0.9, 0.35)
+		std.emission = Color(0.7, 0.5, 0.9)
+		std.emission_energy_multiplier = 0.2
 		
 	return std
 
@@ -196,6 +243,35 @@ func render_path(path_data: Dictionary) -> void:
 	_central_node = path_data.get("central", {})
 	_peripheral_nodes = path_data.get("peripherals", [])
 	
+	## Extract full path data for state machine
+	var total_nodes: int = path_data.get("totalNodes", 0)
+	var path_nodes: Array = path_data.get("pathNodes", [])
+	var completed_ids: Array = path_data.get("completedIds", [])
+	
+	## Update state machine with full learning path
+	if state_machine and path_nodes.size() > 0:
+		state_machine.set_learning_path({
+			"nodes": path_nodes,
+			"total": total_nodes
+		})
+		## Frontend is source of truth for completed IDs - replace, don't merge
+		state_machine.completed_ids.clear()
+		for node_id in completed_ids:
+			state_machine.completed_ids.append(node_id)
+	
+	## Sync UI sidebar with completed_ids from frontend
+	if ui:
+		ui.clear_completed_nodes()
+		for node_id in completed_ids:
+			## Find label for this node
+			var node_label: String = node_id
+			for pn in path_nodes:
+				var pn_dict: Dictionary = pn if pn is Dictionary else {}
+				if pn_dict.get("id", "") == node_id:
+					node_label = pn_dict.get("label", node_id)
+					break
+			ui.add_completed_node(node_id, node_label)
+	
 	## Strict Reset of Central Bubble State
 	if _central_bubble:
 		_central_bubble.position = Vector3.ZERO
@@ -205,6 +281,8 @@ func render_path(path_data: Dictionary) -> void:
 	_update_central_bubble()
 	_rebuild_peripheral_bubbles()
 	_draw_edges()
+	_update_ui_progress()
+	_update_tree_panel()
 
 
 func _update_central_bubble() -> void:
@@ -339,6 +417,37 @@ func _on_ws_data_received(data: Dictionary) -> void:
 			render_path(payload)
 
 
+## Handle bidirectional completion sync from Electron
+func _on_completion_sync(completed_ids: Array, _timestamp: int) -> void:
+	print("[PathRenderer] Received completion sync from Electron:", completed_ids.size(), "items")
+	
+	if not state_machine:
+		return
+	
+	## Sync the completed IDs
+	## Clear and rebuild to ensure consistency
+	state_machine.completed_ids.clear()
+	for node_id in completed_ids:
+		if node_id is String and not node_id.is_empty():
+			state_machine.completed_ids.append(node_id)
+	
+	## Update UI
+	if ui:
+		ui.clear_completed_nodes()
+		for node_id in state_machine.completed_ids:
+			# Try to get label from path data
+			var label: String = node_id
+			var path_nodes: Array = _current_path.get("pathNodes", [])
+			for node in path_nodes:
+				var n: Dictionary = node if node is Dictionary else {}
+				if n.get("id", "") == node_id:
+					label = n.get("label", node_id)
+					break
+			ui.add_completed_node(node_id, label)
+		_update_ui_progress()
+		_update_tree_panel()
+
+
 var _is_pressed: bool = false
 var _press_pos: Vector2 = Vector2.ZERO
 const CLICK_DRAG_THRESHOLD := 5.0 ## Pixels movement allowed for a click
@@ -409,3 +518,187 @@ func _handle_double_click(node_id: String) -> void:
 	else:
 		## Peripheral - orbital rotation
 		animate_orbital_rotation(node_id)
+
+
+## === UI Signal Handlers ===
+
+func _on_mark_complete_pressed() -> void:
+	## Mark the current central node as complete
+	var central_id: String = _central_node.get("id", "")
+	if central_id.is_empty():
+		return
+	
+	print("[PathRenderer] Marking complete:", central_id)
+	
+	## Update state machine
+	if state_machine:
+		state_machine.mark_complete()
+	
+	## Notify backend that node was completed
+	if ws_client and ws_client.has_method("send_message"):
+		ws_client.send_message({
+			"type": "markComplete",
+			"payload": {"nodeId": central_id}
+		})
+	
+	## Update bubble material to gold
+	var is_completed := true
+	var new_material := _create_bubble_material(true, is_completed)
+	_central_bubble.material_override = null
+	_central_bubble.material_override = new_material
+	
+	## Add to UI sidebar
+	var central_label: String = _central_node.get("label", central_id)
+	if ui:
+		ui.add_completed_node(central_id, central_label)
+		_update_ui_progress()
+	
+	## Request switch to next uncompleted node
+	## The state machine already calculated the next node, get it and request switch
+	if state_machine:
+		var next_id := state_machine.current_central_id
+		if not next_id.is_empty() and next_id != central_id:
+			print("[PathRenderer] Auto-switching to next node:", next_id)
+			_request_switch_center(next_id)
+
+
+func _on_completed_node_clicked(node_id: String) -> void:
+	## When user clicks a completed node in sidebar, switch to view it
+	print("[PathRenderer] Completed node clicked:", node_id)
+	
+	## Start browsing mode and save current position
+	var current_id: String = _central_node.get("id", "")
+	if ui:
+		ui.start_browsing(current_id)
+	
+	## Switch central to the clicked node
+	_request_switch_center(node_id)
+
+
+## Request backend to switch center (for browsing or tree navigation)
+func _request_switch_center(target_id: String) -> void:
+	if ws_client and ws_client.has_method("send_message"):
+		ws_client.send_message({
+			"type": "switchCenter",
+			"payload": {"newCenterId": target_id}
+		})
+
+
+func _on_return_pressed() -> void:
+	## Return to learning position
+	if ui:
+		var learning_pos := ui.get_learning_position()
+		if not learning_pos.is_empty():
+			print("[PathRenderer] Returning to learning position:", learning_pos)
+			_request_switch_center(learning_pos)
+
+
+func _on_return_to_node(node_id: String) -> void:
+	## Return to specific node from history dropdown
+	print("[PathRenderer] Returning to node:", node_id)
+	_request_switch_center(node_id)
+
+
+func _on_tree_node_clicked(node_id: String) -> void:
+	## User clicked a node in the tree panel
+	print("[PathRenderer] Tree node clicked:", node_id)
+	_request_switch_center(node_id)
+
+
+func _on_unmark_requested(node_id: String) -> void:
+	## User requested to unmark a node as complete
+	print("[PathRenderer] Unmark requested:", node_id)
+	
+	## Update state machine
+	if state_machine:
+		state_machine.unmark_complete(node_id)
+	
+	## Notify Electron to update history
+	if ws_client and ws_client.has_method("send_message"):
+		ws_client.send_message({
+			"type": "unmarkComplete",
+			"payload": {"nodeId": node_id}
+		})
+	
+	## UI will be updated via _on_node_unmarked signal
+
+
+func _on_node_completed(node_id: String, next_id: String) -> void:
+	## State machine says a node was completed
+	print("[PathRenderer] Node completed:", node_id, "Next:", next_id)
+	
+	## Sync to Electron
+	_sync_completion_to_electron()
+
+
+func _on_node_unmarked(node_id: String) -> void:
+	## State machine says a node was unmarked
+	print("[PathRenderer] Node unmarked:", node_id)
+	
+	## Update UI sidebar
+	if ui:
+		ui.remove_completed_node(node_id)
+		_update_ui_progress()
+	
+	## If this is the current central node, refresh its material AND label
+	var central_id: String = _central_node.get("id", "")
+	if node_id == central_id and _central_bubble:
+		var is_completed := false
+		var new_material := _create_bubble_material(true, is_completed)
+		_central_bubble.material_override = null
+		_central_bubble.material_override = new_material
+		
+		## Also update the label with new progress
+		var label := _central_bubble.get_child(1) as Label3D
+		if label:
+			var progress := state_machine.get_progress() if state_machine else {"completed": 0, "total": 0}
+			var central_label: String = _central_node.get("label", central_id)
+			label.text = "%s\n%d of %d" % [
+				central_label,
+				progress.get("completed", 0),
+				progress.get("total", 0)
+			]
+	
+	## Update tree panel to remove star icon
+	_update_tree_panel()
+	
+	## Sync to Electron
+	_sync_completion_to_electron()
+
+
+## Sync completion state to Electron via WebSocket
+func _sync_completion_to_electron() -> void:
+	if not ws_client or not ws_client.has_method("send_message"):
+		return
+	
+	if not state_machine:
+		return
+	
+	var completed_ids := state_machine.get_completed_ids()
+	ws_client.send_message({
+		"type": "completionSync",
+		"payload": {
+			"action": "fullSync",
+			"completedIds": completed_ids,
+			"timestamp": Time.get_unix_time_from_system() * 1000
+		}
+	})
+
+
+func _update_ui_progress() -> void:
+	## Update UI with current progress
+	if ui and state_machine:
+		var progress := state_machine.get_progress()
+		ui.update_progress(progress.get("completed", 0), progress.get("total", 0))
+
+
+## Update tree panel with current path data
+func _update_tree_panel() -> void:
+	if not ui or not state_machine:
+		return
+	
+	var path_nodes: Array = _current_path.get("pathNodes", [])
+	var completed_ids := state_machine.get_completed_ids()
+	var current_id: String = _central_node.get("id", "")
+	
+	ui.build_tree(path_nodes, completed_ids, current_id)

@@ -110,11 +110,81 @@ window.pathApp = {
                      } else {
                          this.triggerUpdate(); // Will eventually send result
                      }
+                } else if (msg.type === 'completionSync') {
+                    // Bidirectional sync from Godot
+                    console.log('[PathApp] Completion sync from Godot:', msg.payload);
+                    const completedIds = msg.payload?.completedIds || [];
+                    this.completedNodes = new Set(completedIds);
+                    // Persist to localStorage
+                    this._saveCompletedNodes();
+                    console.log('[PathApp] Synced', completedIds.length, 'completed nodes from Godot');
+                } else if (msg.type === 'markComplete') {
+                    // Single node marked complete from Godot
+                    const nodeId = msg.payload?.nodeId;
+                    if (nodeId) {
+                        this.completedNodes.add(nodeId);
+                        this._saveCompletedNodes();
+                        
+                        // Also add to learningHistory for sidebar display
+                        const sourceData = (typeof graphData !== 'undefined') ? graphData : window.graphData;
+                        const node = sourceData?.nodes?.find(n => n.id === nodeId);
+                        const label = node?.label || nodeId;
+                        
+                        // Avoid duplicates
+                        if (!this.learningHistory.some(h => h.id === nodeId)) {
+                            this.learningHistory.push({ id: nodeId, label: label });
+                            this.saveHistory();
+                            this.updateHistorySidebar();
+                        }
+                        
+                        console.log('[PathApp] Marked complete from Godot:', nodeId);
+                    }
+                } else if (msg.type === 'unmarkComplete') {
+                    // Node unmarked from Godot
+                    const nodeId = msg.payload?.nodeId;
+                    if (nodeId) {
+                        this.completedNodes.delete(nodeId);
+                        this._saveCompletedNodes();
+                        
+                        // Remove from learningHistory
+                        const idx = this.learningHistory.findIndex(h => h.id === nodeId);
+                        if (idx !== -1) {
+                            this.learningHistory.splice(idx, 1);
+                            this.saveHistory();
+                            this.updateHistorySidebar();
+                        }
+                        
+                        console.log('[PathApp] Unmarked from Godot:', nodeId);
+                    }
                 }
             } catch(err) {
                 console.error('WS Error', err);
             }
         };
+    },
+    
+    // Save completed nodes to localStorage
+    _saveCompletedNodes: function() {
+        try {
+            const ids = Array.from(this.completedNodes);
+            localStorage.setItem('pathMode_completedNodes', JSON.stringify(ids));
+        } catch (e) {
+            console.warn('[PathApp] Failed to save completed nodes:', e);
+        }
+    },
+    
+    // Load completed nodes from localStorage
+    _loadCompletedNodes: function() {
+        try {
+            const stored = localStorage.getItem('pathMode_completedNodes');
+            if (stored) {
+                const ids = JSON.parse(stored);
+                this.completedNodes = new Set(ids);
+                console.log('[PathApp] Loaded', ids.length, 'completed nodes from storage');
+            }
+        } catch (e) {
+            console.warn('[PathApp] Failed to load completed nodes:', e);
+        }
     },
 
     sendPathToBridge: function(result) {
@@ -198,17 +268,38 @@ window.pathApp = {
             peripherals: selectedPeripherals,
             progress: {
                 completed: this.completedNodes.size,
-                total: this.nodes.length + this.completedNodes.size
+                total: result.nodes.length
             },
+            // Full path data for tree-view and progress tracking
+            totalNodes: result.nodes.length,
+            pathNodes: result.nodes.map(n => ({
+                id: n.id,
+                label: n.label || n.id,
+                parentId: this._findParentId(n.id, result.edges) // For tree structure
+            })),
+            completedIds: Array.from(this.completedNodes),
             mode: 'orbital'
         };
 
-        console.log('[PathApp] Sending pathResult with central:', payload.central.label, 'peripherals:', selectedPeripherals.length);
+        console.log('[PathApp] Sending pathResult with central:', payload.central.label, 'peripherals:', selectedPeripherals.length, 'totalNodes:', payload.totalNodes);
         this.ws.send(JSON.stringify({
             type: 'pathResult',
             payload: payload
         }));
         console.log('[PathApp] pathResult SENT to Bridge');
+    },
+    
+    // Helper to find parent node ID for tree structure
+    _findParentId: function(nodeId, edges) {
+        // Parent = node that has an edge pointing TO this node (prerequisite)
+        const incomingEdge = edges.find(e => {
+            const targetId = typeof e.target === 'object' ? e.target.id : e.target;
+            return targetId === nodeId;
+        });
+        if (incomingEdge) {
+            return typeof incomingEdge.source === 'object' ? incomingEdge.source.id : incomingEdge.source;
+        }
+        return null; // Root node
     },
 
     setupCanvas: function() {

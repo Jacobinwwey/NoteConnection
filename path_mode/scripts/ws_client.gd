@@ -9,6 +9,7 @@ signal disconnected
 signal path_result(data: Dictionary)
 signal path_update(data: Dictionary)
 signal switch_center(new_center_id: String)
+signal completion_sync(completed_ids: Array, timestamp: int)
 
 const WS_URL := "ws://127.0.0.1:9876"
 const RECONNECT_DELAY := 3.0
@@ -114,6 +115,11 @@ func _parse_message(text: String) -> void:
 			var new_id: String = payload.get("newCenterId", "")
 			if not new_id.is_empty():
 				switch_center.emit(new_id)
+		"completionSync":
+			# Bidirectional sync from Electron
+			var ids: Array = payload.get("completedIds", [])
+			var timestamp: int = payload.get("timestamp", 0)
+			completion_sync.emit(ids, timestamp)
 
 
 ## Send a message to the frontend

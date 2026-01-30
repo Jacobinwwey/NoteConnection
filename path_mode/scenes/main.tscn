@@ -1,20 +1,25 @@
-[gd_scene load_steps=8 format=3 uid="uid://b8m7y4lx2k5qc"]
+[gd_scene load_steps=9 format=3 uid="uid://b8m7y4lx2k5qc"]
 
 [ext_resource type="Script" path="res://scripts/ws_client.gd" id="1_ws"]
 [ext_resource type="Script" path="res://scripts/learning_state_machine.gd" id="2_lsm"]
 [ext_resource type="Script" path="res://scripts/path_renderer.gd" id="3_pr"]
 [ext_resource type="Script" path="res://scripts/orbital_camera.gd" id="4_cam"]
+[ext_resource type="Script" path="res://scripts/path_mode_ui.gd" id="5_ui"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
-background_color = Color(0.1, 0.12, 0.18, 1)
+background_color = Color(0.08, 0.1, 0.15, 1)
 ambient_light_source = 2
-ambient_light_color = Color(0.4, 0.45, 0.6, 1)
-ambient_light_energy = 1.2
+ambient_light_color = Color(0.5, 0.55, 0.7, 1)
+ambient_light_energy = 0.5
+reflected_light_source = 1
 tonemap_mode = 2
+tonemap_exposure = 1.1
 glow_enabled = true
-glow_intensity = 0.8
-glow_bloom = 0.4
+glow_intensity = 1.2
+glow_strength = 1.1
+glow_bloom = 0.6
+glow_blend_mode = 0
 
 [sub_resource type="BoxMesh" id="floor_mesh"]
 size = Vector3(10, 0.5, 10)
@@ -45,13 +50,13 @@ environment = SubResource("Environment_main")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.866025, 0.25, -0.433013, 0, 0.866025, 0.5, 0.5, -0.433013, 0.75, 3, 5, 2)
-light_energy = 1.2
+light_energy = 0.7
 shadow_enabled = true
 
 [node name="DirectionalLight3D2" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, -3, 4, -2)
 light_color = Color(0.95, 0.9, 1.0, 1)
-light_energy = 0.6
+light_energy = 0.4
 
 [node name="Floor" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2, 0)
@@ -59,6 +64,7 @@ mesh = SubResource("floor_mesh")
 surface_material_override/0 = SubResource("floor_mat")
 
 [node name="UI" type="CanvasLayer" parent="."]
+script = ExtResource("5_ui")
 
 [node name="MarginContainer" type="MarginContainer" parent="UI"]
 anchors_preset = 15
