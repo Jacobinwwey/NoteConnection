@@ -338,7 +338,22 @@ class PathEngine {
         }
 
         // Fallback: If disconnected (shouldn't happen in valid DAG), just show unlearned
-        let finalPathNodes = bestPath ? bestPath.map(id => this.graph.getNode(id)) : unlearned.map(id => this.graph.getNode(id));
+        // If unlearned is too large, fallback to just immediate unlearned parents of target to avoid graph explosion
+        let finalPathNodes;
+        if (bestPath) {
+             finalPathNodes = bestPath.map(id => this.graph.getNode(id));
+        } else {
+             // Heuristic: If unlearned is small (< 50), show all. Else show target + immediate unlearned parents.
+             if (unlearned.length < 50) {
+                 finalPathNodes = unlearned.map(id => this.graph.getNode(id));
+             } else {
+                 const immediate = this.graph.getIncomingEdges(targetId)
+                    .map(e => e.source)
+                    .filter(id => !completedSet.has(id));
+                 finalPathNodes = [targetId, ...immediate].map(id => this.graph.getNode(id)).filter(n => n);
+                 // console.warn('Pathfinding failed and unlearned set is large. Showing immediate parents only.');
+             }
+        }
 
         // --- Forced Expansion Logic ---
         // If a node in the path is in forcedExpansionSet, we must include its IMMEDIATE unlearned prerequisites
@@ -714,15 +729,33 @@ class PathEngine {
             inDegree.set(n.id, 0);
         });
 
-        nodes.forEach(source => {
-            const outgoing = this.graph.getOutgoingEdges(source.id);
-            outgoing.forEach(edge => {
-                if (nodeMap.has(edge.target)) {
-                    adj.get(source.id).push(edge.target);
+        nodes.forEach(n => {
+            adj.set(n.id, []);
+            inDegree.set(n.id, 0);
+        });
+
+        // Use provided edges if available to respect the specific subgraph structure
+        // Otherwise fallback to global graph queries
+        if (learningPath.edges && learningPath.edges.length > 0) {
+            learningPath.edges.forEach(edge => {
+                // Ensure both nodes are in the display set
+                if (nodeMap.has(edge.source) && nodeMap.has(edge.target)) {
+                    adj.get(edge.source).push(edge.target);
                     inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
                 }
             });
-        });
+        } else {
+            // Fallback: Query all edges from graph (Legacy behavior)
+            nodes.forEach(source => {
+                const outgoing = this.graph.getOutgoingEdges(source.id);
+                outgoing.forEach(edge => {
+                    if (nodeMap.has(edge.target)) {
+                        adj.get(source.id).push(edge.target);
+                        inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
+                    }
+                });
+            });
+        }
 
         // --- 2. Sort Children by In-Degree (Descending) ---
         // Prioritize nodes with higher dependency count (likely more foundational or central) based on user request

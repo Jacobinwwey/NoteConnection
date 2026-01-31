@@ -91,6 +91,16 @@ export class PathBridge {
                 this.broadcast('completionSync', data.payload);
                 break;
 
+            case 'toggleCollapse':
+                console.log(`[PathBridge] Toggle collapse: ${data.payload?.nodeId}`);
+                this.broadcast('toggleCollapse', data.payload);
+                break;
+
+            case 'expandPrereqs':
+                console.log(`[PathBridge] Expand prereqs: ${data.payload?.nodeId}`);
+                this.broadcast('expandPrereqs', data.payload);
+                break;
+
             default:
                 console.log(`[PathBridge] Unknown message type: ${data.type}`);
         }

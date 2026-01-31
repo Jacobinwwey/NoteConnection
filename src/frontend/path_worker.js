@@ -53,11 +53,16 @@ function computePath(config) {
         result = engine.domainLearning(null, strategy);
     } else {
         // Validation for Diffusion Mode
-        if (!targetId || targetId === 'null' || !graph.hasNode(targetId)) {
-            console.warn(`[PathWorker] Invalid target '${targetId}' for Diffusion. Fallback to Domain.`);
-            result = engine.domainLearning(null, 'foundational'); // Fallback
+        if (!targetId || targetId === 'null') {
+            // console.warn(`[PathWorker] No target for Diffusion. Returning empty.`);
+            result = { nodes: [], edges: [], coverage: 0 };
+        } else if (!graph.hasNode(targetId)) {
+            console.warn(`[PathWorker] Invalid target '${targetId}'. Returning empty.`);
+            result = { nodes: [], edges: [], coverage: 0 };
         } else {
+            console.log(`[PathWorker] Running Diffusion for target: ${targetId}, Algo: ${strategy}`);
             result = engine.diffusionLearning(targetId, strategy, completedSet, forcedExpansionSet);
+            console.log(`[PathWorker] Diffusion result: ${result?.nodes?.length} nodes`);
         }
     }
     
