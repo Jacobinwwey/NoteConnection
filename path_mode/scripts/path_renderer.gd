@@ -65,6 +65,8 @@ func _ready() -> void:
 		ui.mark_node_requested.connect(_on_mark_node_requested)
 		ui.node_toggle_requested.connect(_on_node_toggle_requested) # New
 		ui.node_expand_prereqs_requested.connect(_on_node_expand_prereqs_requested) # New
+		ui.node_collapse_prereqs_requested.connect(_on_node_collapse_prereqs_requested) # New
+		ui.collapse_all_requested.connect(_on_collapse_all_requested) # New
 		ui.settings_updated.connect(_on_settings_updated)
 
 
@@ -76,6 +78,16 @@ func _on_node_toggle_requested(node_id: String) -> void:
 func _on_node_expand_prereqs_requested(node_id: String) -> void:
 	if ws_client:
 		ws_client.send_expand_prereqs(node_id)
+
+
+func _on_node_collapse_prereqs_requested(node_id: String) -> void:
+	if ws_client:
+		ws_client.send_collapse_prereqs(node_id)
+
+
+func _on_collapse_all_requested() -> void:
+	if ws_client:
+		ws_client.send_collapse_all()
 
 
 func _load_shader() -> void:

@@ -278,6 +278,14 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ## 📅 Changelog
 
+### v1.4.1 - Tree View Interaction Fixes (2026-02-01)
+
+- **Interaction Polish**:
+  - **Long Press Navigation**: Fixed an issue where Long Press (0.6s) on a node would trigger the Context Menu instead of navigating to the node. Now correctly switches the Central Node.
+  - **Collapse All**: Added a dedicated `[-]` button to the Learning Path header and enabled Middle Click to instantly collapse all expanded nodes.
+  - **Right-Click Toggle**: Fixed a regression where Right-Click would not correctly toggle node expansion states.
+  - **Lazy Loading UI**: Replaced separate `(+)/(-)` buttons with a unified, state-aware `[Count]` indicator that toggles visibility of prerequisite chains.
+
 ### v1.4.0 - Path Mode Learning UX & Tree View (2026-01-30)
 
 - **Path Mode Bug Fixes**:
@@ -999,6 +1007,14 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 <a id="changelog-zh"></a>
 
 ## 更新日志 (Changelog)
+
+### v1.4.1 - 树状视图交互修复 (2026-02-01)
+
+- **交互优化**:
+  - **长按导航**: 修复了节点长按 (0.6秒) 会触发右键菜单而不是导航的问题。现在长按可正确切换为中心节点。
+  - **全部折叠**: 在学习路径头部添加了 `[-]` 按钮，并支持中键点击以立即折叠所有已展开的节点。
+  - **右键切换**: 修复了右键点击无法正确切换节点展开/折叠状态的回归问题。
+  - **懒加载 UI**: 将分离的 `(+)/(-)` 按钮替换为统一的状态感知 `[计数]` 指示器，用于切换前置依赖链的可见性。
 
 ### v1.4.0 - 路径模式学习体验与树视图 (2026-01-30)
 

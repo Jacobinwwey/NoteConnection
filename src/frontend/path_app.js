@@ -109,21 +109,16 @@ window.pathApp = {
                 } else if (msg.type === 'expandPrereqs') { // New
                      console.log('[PathApp] Remote expand prereqs:', msg.payload?.nodeId);
                      this.expandPrereqs(msg.payload?.nodeId);
+                } else if (msg.type === 'collapsePrereqs') { // New
+                     console.log('[PathApp] Remote collapse prereqs:', msg.payload?.nodeId);
+                     this.collapsePrereqs(msg.payload?.nodeId);
+                } else if (msg.type === 'collapseAll') { // New
+                     console.log('[PathApp] Remote collapse ALL');
+                     this.collapseAll();
                 } else if (msg.type === 'requestPath') {
-                     // ... existing code ...
-                     console.log('[PathApp] Remote requested path data');
-                     // Trigger update to resend current path
-                     if (this.nodes.length > 0) {
-                         // Re-package current state and send (including stored treeLayout)
-                         const result = {
-                             nodes: this.nodes,
-                             edges: this.links,
-                             treeLayout: this.lastTreeLayout
-                         };
-                         this.sendPathToBridge(result);
-                     } else {
-                         this.triggerUpdate(); // Will eventually send result
-                     }
+                     // always trigger fresh update to ensure treeLayout is computed via Worker
+                     console.log('[PathApp] Remote requested path data. Triggering fresh update.');
+                     this.triggerUpdate();
                 } else if (msg.type === 'completionSync') {
                     // ... existing code ...
                     // Bidirectional sync from Godot
@@ -245,6 +240,21 @@ window.pathApp = {
         if (!nodeId) return;
         if (!this.forcedExpansionNodes.has(nodeId)) {
             this.forcedExpansionNodes.add(nodeId);
+            this.triggerUpdate();
+        }
+    },
+
+    collapsePrereqs: function(nodeId) {
+        if (!nodeId) return;
+        if (this.forcedExpansionNodes.has(nodeId)) {
+            this.forcedExpansionNodes.delete(nodeId);
+            this.triggerUpdate();
+        }
+    },
+
+    collapseAll: function() {
+        if (this.forcedExpansionNodes.size > 0) {
+            this.forcedExpansionNodes.clear();
             this.triggerUpdate();
         }
     },
@@ -558,17 +568,31 @@ window.pathApp = {
         this.currentTargetId = targetId;
         this.forcedExpansionNodes.clear(); // Reset expansion on new target
         const sourceData = (typeof graphData !== 'undefined') ? graphData : window.graphData;
+        
+        if (!sourceData) {
+            console.error('[PathApp] No graph data found to process!');
+            return;
+        }
+
         const nodes = sourceData.nodes.map(n => ({
             id: n.id, label: n.label, inDegree: n.inDegree, outDegree: n.outDegree, centrality: n.centrality
         }));
+        
+        // Debug: Log source edges type
+        console.log('[PathApp] Processing links. Source edges count:', sourceData.edges?.length, 'First raw:', sourceData.edges?.[0]);
+
         // D3 mutates links to objects, we need IDs for the worker
-        const links = sourceData.edges.map(l => ({
-            source: typeof l.source === 'object' ? l.source.id : l.source,
-            target: typeof l.target === 'object' ? l.target.id : l.target,
+        // Safety check: ensure edges exists, fallback to links check
+        const rawEdges = sourceData.edges || sourceData.links || [];
+        
+        const links = rawEdges.map(l => ({
+            source: (typeof l.source === 'object') ? l.source.id : l.source,
+            target: (typeof l.target === 'object') ? l.target.id : l.target,
             type: l.type,
             weight: l.weight
         }));
 
+        console.log('[PathApp] Sending initData to worker. Nodes:', nodes.length, 'Links:', links.length, 'Sample Link:', links[0]);
         this.worker.postMessage({ type: 'initData', payload: { nodes, links } });
         this.triggerUpdate();
     },
@@ -869,19 +893,9 @@ window.pathApp = {
     switchCentral: function(id) {
         console.log('[PathApp] switchCentral called with:', id);
         this.centralNodeId = id;
-        this.runLocalCloudLayout(); 
-        this.render();
-        this.centerView();
         
-        // === CRITICAL: Send updated path to Godot ===
-        // This closes the loop: Godot sends switchCenter -> JS updates state -> JS sends pathResult back -> Godot rebuilds scene
-        if (this.nodes.length > 0) {
-            const result = {
-                nodes: this.nodes,
-                edges: this.links
-            };
-            this.sendPathToBridge(result);
-        }
+        // Use triggerUpdate to ensure Worker re-calculates Tree Layout with new Central ID
+        this.triggerUpdate();
     },
 
     runLocalCloudLayout: function() {

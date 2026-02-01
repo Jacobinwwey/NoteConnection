@@ -1,6 +1,6 @@
-# 2026-01-30 v1.4.0
+# 2026-02-01 v1.4.1
 
-# Interface Document (v1.4.0)
+# Interface Document (v1.4.1)
 
 This document defines the core interfaces for the NoteConnection system, separating backend processing from frontend visualization.
 
@@ -653,16 +653,19 @@ WebSocket server connecting Electron, Godot, and Frontend via port 9876.
 
 #### Message Types
 
-| Type             | Direction        | Payload                                  | Description                    |
-| ---------------- | ---------------- | ---------------------------------------- | ------------------------------ |
-| `nodeClick`      | Godot → Frontend | `{ nodeId: string }`                     | Node clicked in Godot          |
-| `requestPath`    | Godot → Frontend | `{}`                                     | Request current path data      |
-| `pathResult`     | Frontend → All   | `{ nodes, edges, central, peripherals }` | Learning path data             |
-| `markComplete`   | Godot → Frontend | `{ nodeId: string }`                     | Mark node complete             |
-| `unmarkComplete` | Godot → Frontend | `{ nodeId: string }`                     | Unmark node (v1.4.0)           |
-| `completionSync` | Any → All        | `{ completedIds: string[] }`             | Sync completion state (v1.4.0) |
-| `switchCenter`   | Godot → Frontend | `{ newCenterId: string }`                | Request center change          |
-| `openReader`     | Godot → Electron | `{ nodeId: string }`                     | Open content reader            |
+| Type              | Direction        | Payload                                  | Description                    |
+| ----------------- | ---------------- | ---------------------------------------- | ------------------------------ |
+| `nodeClick`       | Godot → Frontend | `{ nodeId: string }`                     | Node clicked in Godot          |
+| `requestPath`     | Godot → Frontend | `{}`                                     | Request current path data      |
+| `pathResult`      | Frontend → All   | `{ nodes, edges, central, peripherals }` | Learning path data             |
+| `markComplete`    | Godot → Frontend | `{ nodeId: string }`                     | Mark node complete             |
+| `unmarkComplete`  | Godot → Frontend | `{ nodeId: string }`                     | Unmark node (v1.4.0)           |
+| `completionSync`  | Any → All        | `{ completedIds: string[] }`             | Sync completion state (v1.4.0) |
+| `switchCenter`    | Godot → Frontend | `{ newCenterId: string }`                | Request center change          |
+| `openReader`      | Godot → Electron | `{ nodeId: string }`                     | Open content reader            |
+| `collapseAll`     | Godot → Frontend | `{}`                                     | Collapse all PR nodes (v1.4.1) |
+| `expandPrereqs`   | Godot → Frontend | `{ nodeId: string }`                     | Expand node prereqs (v1.4.1)   |
+| `collapsePrereqs` | Godot → Frontend | `{ nodeId: string }`                     | Collapse node prereqs (v1.4.1) |
 
 #### IPC Bridge
 
@@ -1189,7 +1192,7 @@ To provide a clearer initial layout, v1.0.1 adjusts the default values and adjus
 
 # 2026-01-30 v1.4.0
 
-# 接口文档 (v1.4.0)
+# 接口文档 (v1.4.1)
 
 本文档定义了 NoteConnection 系统核心接口，分离了后端处理与前端可视化。
 
@@ -1929,16 +1932,19 @@ interface CooccurrenceMetrics {
 
 #### 消息类型
 
-| 类型             | 方向             | 负载                                     | 描述                  |
-| ---------------- | ---------------- | ---------------------------------------- | --------------------- |
-| `nodeClick`      | Godot → 前端     | `{ nodeId }`                             | Godot 中点击节点      |
-| `requestPath`    | Godot → 前端     | `{}`                                     | 请求当前路径数据      |
-| `pathResult`     | 前端 → 全部      | `{ nodes, edges, central, peripherals }` | 学习路径数据          |
-| `markComplete`   | Godot → 前端     | `{ nodeId }`                             | 标记节点完成          |
-| `unmarkComplete` | Godot → 前端     | `{ nodeId }`                             | 取消标记 (v1.4.0)     |
-| `completionSync` | 任意 → 全部      | `{ completedIds }`                       | 同步完成状态 (v1.4.0) |
-| `switchCenter`   | Godot → 前端     | `{ newCenterId }`                        | 请求切换中心          |
-| `openReader`     | Godot → Electron | `{ nodeId }`                             | 打开内容阅读器        |
+| 类型              | 方向             | 负载                                     | 描述                      |
+| ----------------- | ---------------- | ---------------------------------------- | ------------------------- |
+| `nodeClick`       | Godot → 前端     | `{ nodeId }`                             | Godot 中点击节点          |
+| `requestPath`     | Godot → 前端     | `{}`                                     | 请求当前路径数据          |
+| `pathResult`      | 前端 → 全部      | `{ nodes, edges, central, peripherals }` | 学习路径数据              |
+| `markComplete`    | Godot → 前端     | `{ nodeId }`                             | 标记节点完成              |
+| `unmarkComplete`  | Godot → 前端     | `{ nodeId }`                             | 取消标记 (v1.4.0)         |
+| `completionSync`  | 任意 → 全部      | `{ completedIds }`                       | 同步完成状态 (v1.4.0)     |
+| `switchCenter`    | Godot → 前端     | `{ newCenterId }`                        | 请求切换中心              |
+| `openReader`      | Godot → Electron | `{ nodeId }`                             | 打开内容阅读器            |
+| `collapseAll`     | Godot → 前端     | `{}`                                     | 折叠所有前置节点 (v1.4.1) |
+| `expandPrereqs`   | Godot → 前端     | `{ nodeId }`                             | 展开节点前置 (v1.4.1)     |
+| `collapsePrereqs` | Godot → 前端     | `{ nodeId }`                             | 折叠节点前置 (v1.4.1)     |
 
 ### 3.10 LearningStateMachine (Godot - v1.4.0)
 

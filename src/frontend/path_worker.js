@@ -38,7 +38,11 @@ function initData(data) {
     data.links.forEach(l => graph.addEdge(l.source, l.target, l.type, l.weight));
     
     engine = new PathEngine(graph);
-    postMessage({ type: 'log', payload: `Graph Initialized: ${data.nodes.length} nodes` });
+    postMessage({ type: 'log', payload: `Graph Initialized: ${data.nodes.length} nodes, ${graph.getEdges().length} edges` });
+    if (graph.getEdges().length > 0) {
+        const firstEdge = graph.getEdges()[0];
+        postMessage({ type: 'log', payload: `Sample Edge: ${firstEdge.source} -> ${firstEdge.target} (${typeof firstEdge.source})` });
+    }
 }
 
 function computePath(config) {
@@ -82,8 +86,12 @@ function computePath(config) {
 
     if (engine && engine.getTreeLayout) {
         // Pass the raw result from domainLearning/diffusionLearning and collapsed state
-        treeLayout = engine.getTreeLayout(centralId, result, collapsedSet);
-        console.log('[PathWorker] treeLayout result:', treeLayout ? `${treeLayout.nodes?.length} nodes` : 'NULL');
+        try {
+            treeLayout = engine.getTreeLayout(centralId, result, collapsedSet);
+            console.log('[PathWorker] treeLayout generated. Nodes:', treeLayout?.nodes?.length);
+        } catch (err) {
+            console.error('[PathWorker] getTreeLayout Error:', err);
+        }
     } else {
         console.warn('[PathWorker] engine.getTreeLayout not available!');
     }

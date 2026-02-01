@@ -1,4 +1,4 @@
-# 2026-01-29 v1.4.0 - Path Mode v2: Orbital Learning Architecture
+# 2026-02-01 v1.4.1 - Path Mode v2: Orbital Learning Architecture
 
 **Goal**: Transform Path Mode into an immersive, game-like learning experience with 3D bubble visualization and progress tracking.
 

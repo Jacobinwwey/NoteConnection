@@ -7,6 +7,9 @@ signal node_double_clicked(node_id)
 signal background_clicked
 signal node_toggle_requested(node_id) # New
 signal node_expand_prereqs_requested(node_id) # New: For hidden prerequisites
+signal node_collapse_prereqs_requested(node_id) # New: For hiding prerequisites
+signal collapse_all_requested() # New: Middle click to collapse all
+signal node_navigate_requested(node_id) # New: Explicit navigation signal
 
 # State
 var _nodes: Array = []
@@ -14,6 +17,7 @@ var _current_id: String = ""
 var _completed_ids: Array = []
 var _current_style: String = "colorful"
 var _style_config: Dictionary = {}
+var _focus_mode_enabled: bool = true # New: Focus Highlighting
 
 # Layout Data Support
 var _use_layout_coords: bool = false
@@ -26,6 +30,15 @@ var _view_offset: Vector2 = Vector2.ZERO
 var _is_dragging: bool = false
 var _drag_start: Vector2 = Vector2.ZERO
 var _view_start: Vector2 = Vector2.ZERO
+
+# Interaction State (Long Press)
+var _pressed_node_id: String = ""
+var _press_start_time: float = 0.0
+var _is_long_pressing: bool = false
+var _is_pressed: bool = false
+var _press_pos: Vector2 = Vector2.ZERO
+const CLICK_DRAG_THRESHOLD := 5.0
+const LONG_PRESS_DURATION := 0.6 # Seconds
 
 # Layout params
 const LEVEL_HEIGHT = 60.0 # Vertical distance between levels
@@ -40,6 +53,26 @@ var _click_areas: Array = [] # {rect, id}
 
 func _ready() -> void:
 	_update_style_config()
+	set_process(true)
+
+func _process(delta: float) -> void:
+	if _is_long_pressing and not _pressed_node_id.is_empty():
+		var elapsed = (Time.get_ticks_msec() / 1000.0) - _press_start_time
+		
+		# Feedback: Queue redraw to animate progress ring
+		queue_redraw()
+		
+		if elapsed >= LONG_PRESS_DURATION:
+			# Long Press Triggered: SWITCH CENTRAL (Navigate)
+			# Send explicit Navigate signal instead of Click (which opens context menu)
+			print("[TreeRenderer] Long Press Triggered on:", _pressed_node_id)
+			node_navigate_requested.emit(_pressed_node_id)
+			
+			# Reset state to prevent multiple triggers
+			_is_long_pressing = false
+			_pressed_node_id = ""
+			queue_redraw()
+
 
 func set_data(nodes: Array, current_id: String, completed_ids: Array) -> void:
 	_nodes = nodes
@@ -69,6 +102,11 @@ func set_style(style_name: String) -> void:
 		_update_style_config()
 		queue_redraw()
 
+func set_focus_mode(enabled: bool) -> void:
+	if _focus_mode_enabled != enabled:
+		_focus_mode_enabled = enabled
+		queue_redraw()
+
 func _update_style_config() -> void:
 	_style_config = TreeStyles.get_style(_current_style)
 
@@ -80,6 +118,21 @@ func _draw() -> void:
 		_draw_layout_mode()
 	else:
 		_draw_legacy_mode()
+	
+	# Draw Long Press Progress Ring (Overlay)
+	if _is_long_pressing and not _pressed_node_id.is_empty():
+		var pos = _node_positions.get(_pressed_node_id)
+		if pos != null:
+			var elapsed = (Time.get_ticks_msec() / 1000.0) - _press_start_time
+			var progress = clampf(elapsed / LONG_PRESS_DURATION, 0.0, 1.0)
+			
+			if progress > 0.0:
+				var radius = 25.0 # Fixed or responsive?
+				# Draw background ring (faint)
+				draw_arc(pos, radius, 0, TAU, 32, Color(1, 1, 1, 0.3), 3.0)
+				# Draw progress arc (active)
+				var end_angle = - PI / 2 + (progress * TAU)
+				draw_arc(pos, radius, -PI / 2, end_angle, 32, Color(0.2, 0.8, 1.0, 0.9), 3.0)
 		
 func _draw_layout_mode() -> void:
 	if _layout_nodes.is_empty(): return
@@ -88,6 +141,14 @@ func _draw_layout_mode() -> void:
 	_node_positions.clear()
 	
 	var base_radius = _style_config.get("node_radius", 8.0)
+	
+	# Determine Highlight Set (Central Node + Incoming Prerequisites)
+	var highlight_ids = {}
+	if _focus_mode_enabled and not _current_id.is_empty():
+		highlight_ids[_current_id] = true
+		for edge in _layout_edges:
+			if edge.get("to") == _current_id:
+				highlight_ids[edge.get("from")] = true
 	
 	# Draw Edges (Horizontal Bezier)
 	for edge in _layout_edges:
@@ -107,13 +168,35 @@ func _draw_layout_mode() -> void:
 				color = _style_config.get("node_completed")
 				color.a = 0.8
 				
+			# Focus Mode Dimming (Edges)
+			if _focus_mode_enabled and not _current_id.is_empty():
+				# Highlight only edges connected to Central Node (Incoming OR Outgoing? User said "in-degree nodes")
+				# Let's highlight Incoming edges to Central to match "Illuminate in-degree nodes"
+				if to_id == _current_id:
+					color.a = 1.0 # Bright
+					color = color.lightened(0.2) # Make it pop
+				else:
+					color.a = 0.1 # Dim
+					
 			# Horizontal S-Curve
 			var dist_x = (end.x - start.x) * 0.5
+			
+			# Edge Filtering (Skip-Level Check)
+			# Standard spacing is 250 in path_core.js. If distance > 300, it's a skip-level.
+			if abs(end.x - start.x) > 300.0:
+				continue # Skip drawing direct connection across levels
+				
 			var cp1 = start + Vector2(dist_x, 0)
 			var cp2 = end - Vector2(dist_x, 0)
 			
 			_draw_bezier_curve(start, cp1, cp2, end, color, 2.0)
 			
+	# Pre-calculate Visible In-Degree
+	var visible_in_counts = {}
+	for edge in _layout_edges:
+		var to_id = edge.get("to", "")
+		visible_in_counts[to_id] = visible_in_counts.get(to_id, 0) + 1
+
 	# Draw Nodes with size based on in-degree
 	for node in _layout_nodes:
 		var pos = Vector2(node.x, node.y)
@@ -125,6 +208,16 @@ func _draw_layout_mode() -> void:
 		elif node.id in _completed_ids:
 			color = _style_config.get("node_completed")
 		
+		# Focus Mode Dimming (Nodes)
+		var label_alpha = 1.0
+		if _focus_mode_enabled and not _current_id.is_empty():
+			if not highlight_ids.has(node.id):
+				color.a = 0.2 # Dim
+				label_alpha = 0.3 # Dim text
+			else:
+				color.a = 1.0
+				# Boost color if needed
+		
 		# Calculate node radius based on in-degree (higher = larger = more foundational)
 		var in_deg = node.get("inDegree", 0)
 		var degree_factor = clampf(1.0 + float(in_deg) / 5.0, 1.0, 2.0)
@@ -134,7 +227,13 @@ func _draw_layout_mode() -> void:
 		
 		# Draw label
 		var label_color = _style_config.get("label_color", Color.WHITE)
+		label_color.a = label_alpha
 		draw_string(ThemeDB.fallback_font, pos + LABEL_OFFSET, node.label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, label_color)
+		
+		# Draw In-Degree Badge (REMOVED - Integrated into Expansion Button)
+		# var in_val = str(node.get("inDegree", 0))
+		# var badge_pos = pos + Vector2(-node_radius - 8, -node_radius - 8)
+		# draw_string(ThemeDB.fallback_font, badge_pos, in_val, HORIZONTAL_ALIGNMENT_CENTER, -1, 10, Color(0.7, 0.7, 0.7))
 		
 		# Register Node Click Area (using dynamic radius)
 		_click_areas.append({
@@ -143,50 +242,6 @@ func _draw_layout_mode() -> void:
 			"type": "node",
 			"radius": node_radius
 		})
-
-		# Draw Toggle Button (if has children)
-		if node.get("hasChildren", false):
-			var toggle_pos = pos + Vector2(node_radius + TOGGLE_OFFSET_X, 0)
-			var is_collapsed = node.get("collapsed", false)
-			
-			# draw button circle
-			var btn_color = Color(0.2, 0.2, 0.2, 1.0)
-			draw_circle(toggle_pos, TOGGLE_RADIUS, btn_color)
-			draw_arc(toggle_pos, TOGGLE_RADIUS, 0, TAU, 16, Color.WHITE, 1.0)
-			
-			# draw sign (+ or -)
-			var sign_color = Color.WHITE
-			draw_line(toggle_pos - Vector2(3, 0), toggle_pos + Vector2(3, 0), sign_color, 1.0)
-			if is_collapsed:
-				draw_line(toggle_pos - Vector2(0, 3), toggle_pos + Vector2(0, 3), sign_color, 1.0)
-			
-			# Register Toggle Click Area
-			_click_areas.append({
-				"rect": Rect2(toggle_pos - Vector2(TOGGLE_RADIUS, TOGGLE_RADIUS), Vector2(TOGGLE_RADIUS * 2, TOGGLE_RADIUS * 2)),
-				"id": node.id,
-				"type": "toggle"
-			})
-
-		# Draw Hidden Prereqs Indicator (Left side)
-		if node.get("hasHiddenPrereqs", false):
-			var indicator_pos = pos - Vector2(node_radius + TOGGLE_OFFSET_X, 0)
-			
-			# draw button circle (Different color for distinction?)
-			var btn_color = Color(0.3, 0.2, 0.2, 1.0) # Reddish tint?
-			draw_circle(indicator_pos, TOGGLE_RADIUS, btn_color)
-			draw_arc(indicator_pos, TOGGLE_RADIUS, 0, TAU, 16, Color.WHITE, 1.0)
-			
-			# draw sign (+)
-			var sign_color = Color.WHITE
-			draw_line(indicator_pos - Vector2(3, 0), indicator_pos + Vector2(3, 0), sign_color, 1.0)
-			draw_line(indicator_pos - Vector2(0, 3), indicator_pos + Vector2(0, 3), sign_color, 1.0)
-			
-			# Register Click Area
-			_click_areas.append({
-				"rect": Rect2(indicator_pos - Vector2(TOGGLE_RADIUS, TOGGLE_RADIUS), Vector2(TOGGLE_RADIUS * 2, TOGGLE_RADIUS * 2)),
-				"id": node.id,
-				"type": "expand_prereqs"
-			})
 
 # Helper for bezier drawing
 func _draw_bezier_curve(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, color: Color, width: float) -> void:
@@ -280,33 +335,75 @@ func handle_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mb = event
 		
-		# Pan (Middle, Right, or Left on empty background)
-		var is_pan_button = mb.button_index == MOUSE_BUTTON_MIDDLE or mb.button_index == MOUSE_BUTTON_RIGHT
-		var is_left_on_bg = mb.button_index == MOUSE_BUTTON_LEFT and not _is_click_on_node(mb.position)
-		
-		if is_pan_button or is_left_on_bg:
+		# --- Long Press & Click Logic (Left Button) ---
+		if mb.button_index == MOUSE_BUTTON_LEFT:
 			if mb.pressed:
-				_is_dragging = true
-				_drag_start = mb.position
-				_view_start = _view_offset
-			else:
-				_is_dragging = false
+				_is_pressed = true
+				_press_pos = mb.position
 				
+				# Check for node hit to start Long Press
+				var world_pos = (mb.position - _view_offset) / _zoom_level
+				for area in _click_areas:
+					if area.rect.has_point(world_pos) and area.get("type") == "node":
+						_pressed_node_id = area.id
+						_press_start_time = Time.get_ticks_msec() / 1000.0
+						_is_long_pressing = true
+						queue_redraw() # Start progress animation
+						break
+			else:
+				# Released
+				var was_long_press = _is_long_pressing and ((Time.get_ticks_msec() / 1000.0) - _press_start_time) >= LONG_PRESS_DURATION
+				
+				_is_pressed = false
+				_is_long_pressing = false
+				_pressed_node_id = ""
+				queue_redraw() # Clear progress animation
+				
+				if not was_long_press:
+					# Only register click if movement was minimal (not dragging)
+					if mb.position.distance_to(_press_pos) < CLICK_DRAG_THRESHOLD:
+						_handle_click(mb)
+
+		# --- Pan (Middle or Right - logic says Middle implies Collapse All now) ---
+		elif mb.button_index == MOUSE_BUTTON_RIGHT:
+			if mb.pressed:
+				# Right Click -> Toggle Expansion
+				_handle_right_click(mb)
+			# (Optional) Allow panning with right click drag if needed? 
+			# User didn't specify, but often right-drag is pan. 
+			# Let's keep existing pan (which was Middle/Right?)
+			# Existing code used MOUSE_BUTTON_RIGHT/MIDDLE for pan.
+			# If Middle is now "Collapse All", we should probably restrict Pan to Right-Drag or just Space+Left?
+			# User request: "middle-clicking to collapse all nodes".
+			# So Middle Click is Action. Middle Drag could still be Pan?
+			# Let's check Middle Click on release or press? Usually Click actions are on Release or quick Press.
+			pass
+
+		elif mb.button_index == MOUSE_BUTTON_MIDDLE:
+			if mb.pressed:
+				collapse_all_requested.emit()
+			else:
+				# Stop any potential drag (if Middle was used for pan)
+				_is_dragging = false
+
 		# Zoom
 		if mb.button_index == MOUSE_BUTTON_WHEEL_UP:
 			_apply_zoom(1.1, mb.position)
 		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			_apply_zoom(0.9, mb.position)
-			
-		# Click Handling (Left)
-		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-			_handle_click(mb)
-			
+
 	elif event is InputEventMouseMotion:
-		if _is_dragging:
-			var diff = event.position - _drag_start
-			_view_offset = _view_start + diff
-			queue_redraw()
+		if _is_pressed and (event.button_mask & MOUSE_BUTTON_MASK_RIGHT):
+			# Allow Right-Mouse Pan if dragged?
+			_handle_pan_drag(event)
+		elif _is_pressed and (event.button_mask & MOUSE_BUTTON_MASK_LEFT) and _pressed_node_id == "":
+			# Left-Mouse Pan if NOT on a node
+			_handle_pan_drag(event)
+
+func _handle_pan_drag(event: InputEventMouseMotion) -> void:
+	var diff = event.relative
+	_view_offset += diff
+	queue_redraw()
 
 func _apply_zoom(factor: float, center: Vector2) -> void:
 	var old_zoom = _zoom_level
@@ -323,29 +420,40 @@ func _apply_zoom(factor: float, center: Vector2) -> void:
 	queue_redraw()
 
 func _handle_click(event: InputEventMouseButton) -> void:
-	# Event position from Container is already local to the Viewport (0,0 at top-left)
-	var local_mouse = event.position
-	
-	# Reverse draw_set_transform: (local - offset) / zoom
-	var world_pos = (local_mouse - _view_offset) / _zoom_level
-	
+	var world_pos = (event.position - _view_offset) / _zoom_level
 	var hit = false
+	
 	for area in _click_areas:
 		if area.rect.has_point(world_pos):
-			var type = area.get("type", "node")
-			if type == "toggle":
-				node_toggle_requested.emit(area.id)
-				return
-			elif type == "expand_prereqs":
-				node_expand_prereqs_requested.emit(area.id)
-				return
-			else: # type == "node"
-				if event.double_click:
-					node_double_clicked.emit(area.id)
-				else:
-					node_clicked.emit(area.id, get_global_mouse_position())
 			hit = true
+			var type = area.get("type", "node")
+			if type == "node":
+				var node_id = area.id
+				# Logic Update:
+				# Double Click -> Toggle Expansion
+				# Single Click -> Select (Node Clicked)
+				if event.double_click:
+					# Check current state to decide expand/collapse
+					var node = _find_layout_node(node_id)
+					if node.get("isExpanded", false):
+						node_collapse_prereqs_requested.emit(node_id)
+					else:
+						node_expand_prereqs_requested.emit(node_id)
+				else:
+					node_clicked.emit(node_id, get_global_mouse_position())
 			break
-	
+			
 	if not hit:
 		background_clicked.emit()
+
+func _handle_right_click(event: InputEventMouseButton) -> void:
+	var world_pos = (event.position - _view_offset) / _zoom_level
+	for area in _click_areas:
+		if area.rect.has_point(world_pos) and area.get("type") == "node":
+			var node_id = area.id
+			var node = _find_layout_node(node_id)
+			if node.get("isExpanded", false):
+				node_collapse_prereqs_requested.emit(node_id)
+			else:
+				node_expand_prereqs_requested.emit(node_id)
+			return

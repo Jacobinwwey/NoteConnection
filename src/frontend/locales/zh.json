@@ -326,5 +326,10 @@
   "opt_layout_orbital": "轨道 (专注)",
   "btn_complete": "完成",
   "btn_history": "历史",
-  "btn_exit": "退出"
+  "btn_exit": "退出",
+  "focus_inbound": "入站连接",
+  "focus_outbound": "出站连接",
+  "lbl_inbound_count": "入度统计:",
+  "opt_visible": "可见节点 (默认)",
+  "opt_total": "统计总数"
 }

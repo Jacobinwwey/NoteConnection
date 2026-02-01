@@ -117,8 +117,17 @@ h3 {
 
 .link {
   stroke: #555;
-  stroke-opacity: 0.6;
+  stroke-opacity: 0; /* Default hidden */
   fill: none;
+}
+
+/* ... (existing styles) ... */
+
+.stat-lists {
+  display: flex;
+  gap: 10px;
+  flex: 1; /* Allow expansion */
+  min-height: 150px; /* Minimum height */
 }
 
 .link.highlight-in {
@@ -487,7 +496,8 @@ div.tooltip {
 .stat-lists {
   display: flex;
   gap: 10px;
-  height: 150px; /* Fixed height for scrollable lists */
+  flex: 1; /* Allow expansion */
+  min-height: 150px; /* Minimum height */
 }
 
 .stat-list-col {
@@ -1058,22 +1068,22 @@ div.tooltip {
 
 /* Collapsed Controls State - Small Circle */
 #controls.collapsed {
-    width: 45px;
-    height: 45px;
-    padding: 0;
-    border-radius: 50%;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer; /* Ensure pointer cursor on the whole circle */
-    background: #2c5282; /* Distinct color when collapsed */
-    border: 2px solid #61dafb;
-    box-shadow: 0 0 15px rgba(97, 218, 251, 0.3);
+  width: 45px;
+  height: 45px;
+  padding: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer; /* Ensure pointer cursor on the whole circle */
+  background: #2c5282; /* Distinct color when collapsed */
+  border: 2px solid #61dafb;
+  box-shadow: 0 0 15px rgba(97, 218, 251, 0.3);
 }
 
 #controls.collapsed h3 {
-    display: none; /* Hide title text */
+  display: none; /* Hide title text */
 }
 
 /* Hide everything else */
@@ -1089,25 +1099,25 @@ div.tooltip {
 #controls.collapsed .opacity-controls,
 #controls.collapsed #quick-actions,
 #controls.collapsed .search-box {
-    display: none !important;
+  display: none !important;
 }
 
 #controls.collapsed #btn-toggle-controls {
-    display: none !important; /* Hide the original arrow, we'll use a pseudo-element for the pattern */
+  display: none !important; /* Hide the original arrow, we'll use a pseudo-element for the pattern */
 }
 
 /* Add a pattern/icon for the collapsed state */
 #controls.collapsed::after {
-    content: "☰"; /* Hamburger menu or specific icon */
-    font-size: 1.5rem;
-    color: white;
-    font-weight: bold;
+  content: "☰"; /* Hamburger menu or specific icon */
+  font-size: 1.5rem;
+  color: white;
+  font-weight: bold;
 }
 
 #btn-toggle-controls {
-    transition: transform 0.3s;
+  transition: transform 0.3s;
 }
 
 #controls.collapsed #btn-toggle-controls {
-    transform: rotate(180deg);
+  transform: rotate(180deg);
 }

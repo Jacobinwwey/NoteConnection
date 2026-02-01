@@ -370,7 +370,8 @@ class PathEngine {
                 const incoming = this.graph.getIncomingEdges(id);
                 incoming.forEach(edge => {
                     const prereqId = edge.source;
-                    if (!completedSet.has(prereqId) && !currentPathIds.has(prereqId)) {
+                    // Allow showing ALL prerequisites (even completed ones) if expanded
+                    if (!currentPathIds.has(prereqId)) {
                         nodesToAdd.add(prereqId);
                     }
                 });
@@ -716,7 +717,11 @@ class PathEngine {
      * @param collapsedSet Optional Set of collapsed node IDs
      */
     getTreeLayout(centralId, learningPath, collapsedSet = new Set()) {
-        if (!learningPath || !learningPath.nodes || learningPath.nodes.length === 0) return null;
+        console.log('[PathCore] getTreeLayout called. Nodes:', learningPath?.nodes?.length, 'Edges:', learningPath?.edges?.length);
+        if (!learningPath || !learningPath.nodes || learningPath.nodes.length === 0) {
+            console.warn('[PathCore] getTreeLayout: No nodes in learningPath');
+            return null;
+        }
 
         const nodes = learningPath.nodes;
         const nodeMap = new Map(nodes.map(n => [n.id, n]));
@@ -803,6 +808,7 @@ class PathEngine {
                 x: level * X_SPACING,
                 y: 0, // Placeholder
                 collapsed: isCollapsed,
+                isExpanded: node.isExpanded, // Pass thru expansion state
                 hasChildren: children.length > 0
             };
 

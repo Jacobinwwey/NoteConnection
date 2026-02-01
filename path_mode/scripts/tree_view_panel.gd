@@ -6,6 +6,8 @@ signal node_mark_complete_requested(node_id)
 signal node_unmark_requested(node_id)
 signal node_toggle_requested(node_id)
 signal node_expand_prereqs_requested(node_id) # New
+signal node_collapse_prereqs_requested(node_id) # New
+signal collapse_all_requested() # New
 signal fullscreen_requested(expand: bool)
 
 const MENU_NAVIGATE = 0
@@ -46,6 +48,10 @@ func set_tree_layout(layout_data: Dictionary, completed_ids: Array, current_id: 
 		
 	_tree_renderer.set_layout_data(layout_data, current_id, completed_ids)
 
+func update_settings(settings: Dictionary) -> void:
+	if _tree_renderer:
+		_tree_renderer.set_focus_mode(settings.get("focus_mode", true))
+
 func _setup_ui() -> void:
 	if _style_option:
 		_style_option.clear()
@@ -84,6 +90,9 @@ func _connect_signals() -> void:
 		_tree_renderer.node_double_clicked.connect(_on_node_double_clicked)
 		_tree_renderer.node_toggle_requested.connect(_on_node_toggle_requested)
 		_tree_renderer.node_expand_prereqs_requested.connect(_on_node_expand_prereqs_requested)
+		_tree_renderer.node_collapse_prereqs_requested.connect(_on_node_collapse_prereqs_requested)
+		_tree_renderer.collapse_all_requested.connect(func(): collapse_all_requested.emit())
+		_tree_renderer.node_navigate_requested.connect(func(id): node_navigate_requested.emit(id)) # Wire up manual navigate signal
 		# Apply any pending data
 		if not _pending_nodes.is_empty():
 			_tree_renderer.set_data(_pending_nodes, _pending_current, _pending_completed)
@@ -106,6 +115,9 @@ func _on_node_expand_prereqs_requested(node_id: String) -> void:
 	# Directly send to backend via WsClient singleton?
 	# Or emit up to UI? UI has WsClient reference.
 	node_expand_prereqs_requested.emit(node_id)
+
+func _on_node_collapse_prereqs_requested(node_id: String) -> void:
+	node_collapse_prereqs_requested.emit(node_id)
 
 func _show_context_menu(node_id: String, screen_pos: Vector2) -> void:
 	_context_menu.clear()

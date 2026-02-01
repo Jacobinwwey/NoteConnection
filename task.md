@@ -1,251 +1,157 @@
-# Path Mode Architecture & Development Documentation
+# Task: Refining Path Mode Visualization
 
-## Task Overview
+- [x] **Critical Bug Fix** <!-- id: 100 -->
+  - [x] **Fix Navigation Failure**: Tree View defaulting to linear mode on switch center. Ensure `treeLayout` is generated during `switchCenter`. <!-- id: 101 -->
+- [ ] **Data Consistency (Frontend)** <!-- id: 0 -->
+  - [x] Ensure `inDegree` is correctly calculated and passed in payload. <!-- id: 1 -->
+    - [x] Ensure `inDegree` is correctly calculated and passed in payload. <!-- id: 1 -->
+    - [x] **Godot: Implement Lazy Loading Visualization** <!-- id: 2 -->
+    - [x] **Backend**: Update [path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js) to allow unrestricted context expansion for `forcedExpansionSet`. <!-- id: 3 -->
+    - [x] **Frontend Bridge**: Update [path_app.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js) to handle `forcedExpansionNodes` and pass to worker. <!-- id: 4 -->
+    - [x] **Simplify Lazy Loading UI (Godot)**
+    - [x] Update [tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd):
+      - [x] Remove separate [(+)](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53)/[(-)](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53) buttons.
+      - [x] Implement unified `[ Count ]` button (circle with number).
+      - [x] Button toggles `forcedExpansion` state.
+      - [x] Default state is collapsed.
+    - [x] Ensure [path_app.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js) handles the toggle correctly (reusing existing logic).
+    - [x] **Godot Renderer**: Update [tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd) to calculate visible In-Degree and show [(+)](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53)/[(-)](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53) buttons. <!-- id: 5 -->
+    - [x] **Godot Signals**: Wire up [expand](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#239-246)/[collapse](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#255-261) signals through `tree_view_panel`, `path_mode_ui` to `ws_client`. <!-- id: 6 -->
+      - [ ] (**Godot**) Implement logic to verify `Visible < Global In-Degree` to show [(+)](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53). <!-- id: 105 -->
+- [x] **Tree View Visual & Interaction Overhaul**
+  - [x] **Visual Cleanup (Godot)**
+    - [x] Remove [(+)](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53)/[(-)](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53) and `[Count]` buttons from [tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd).
+    - [x] Remove separate click areas for these buttons.
+  - [x] **Interaction Update (Godot)**
+    - [x] **Double Click**: Change to Toggle Expansion (Emit [expand](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#239-246)/[collapse](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#255-261)).
+    - [x] **Right Click**: Toggle Expansion (Same as Dbl Click).
+    - [x] **Middle Click**: Collapse All (Emit new signal `collapse_all_requested`).
+    - [x] **Long Press**: Implement Navigation (Switch Central).
+      - [x] Add `_process` check for hold duration.
+      - [x] Draw Progress Ring during hold.
+      - [x] Trigger navigation on completion.
+  - [x] **Focus Mode (Godot)**
+    - [x] Add "Focus on this node" checkbox to [settings_panel.tscn](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scenes/settings_panel.tscn).
+    - [x] Implement `focus_node_id` state in [tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd) (visual only for now).
+    - [x] Update `_draw` to dim nodes/edges not connected to `focus_node_id` when enabled.
+  - [x] **Backend Updates**
+    - [x] Add [collapseAll](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#255-261) handler in [path_app.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js).
+- [x] **Tree Renderer Update (Godot)** <!-- id: 4 -->
+  - [x] **In-Degree Display**: Add visualization for in-degree (e.g., small badge/number). <!-- id: 5 -->
+  - [x] **Last Node Button**: Hide expand button for the last node in the chain (target node). <!-- id: 6 -->
+  - [x] **Bezier Aesthetics**: <!-- id: 7 -->
+    - [x] Implement edge filtering to avoid skip-level connections. <!-- id: 8 -->
+- [ ] **Frontend UI Fixes (Electron)** <!-- id: 106 -->
+  - [x] **Fix In-Degree Mismatch**: Investigate and correct the data source for In-Degree numbers in the details panel. <!-- id: 107 -->
+  - [x] **Fix Resizing Layout**: Ensure Incoming/Outgoing columns resize proportionally with the window. <!-- id: 108 -->
+  - [x] **Edge Visibility**: Modify renderer to hide edges by default and only show on hover/click. <!-- id: 109 -->
+  - [x] **In-Degree Display Setting**: Add setting to toggle between Visible/Total count (Default: Visible). <!-- id: 110 -->
+- [x] **Data Validation**
+  - [x] **Disable Path Mode if No Data**: Prevent clicking "Path Mode" button if `graphData` is empty/undefined.
+  - [x] **Fix False Negative**: Ensure `graphData` check correctly detects dynamically loaded data in Mini Build mode.
+  - [x] **Inline Feedback**: Replace `alert()` with a text message next to the button.
+- [x] **Fix Godot Script Errors**
+  - [x] **TreeRenderer Parse Error**: Add `class_name TreeRenderer` to [tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd) or fix syntax error causing parse failure.
+- [x] **Fix Tree View Interactions**
+  - [x] **Fix Right-Click Toggle**: Ensure right-click (and double-click) correctly toggles between Expand and Collapse based on current state.
+  - [x] **Fix Collapse All**:
+    - [x] Debug Middle Click binding.
+    - [x] Add visible "Collapse All" button to UI.
+- [x] **Fix Regression Errors**:
+  - [x] Restore `_is_pressed` and `collapse_all_requested` in [tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd).
+- [ ] **Verification** <!-- id: 10 -->
+  - [x] Verify "Expand" button appears for nodes with hidden parents. <!-- id: 16 -->
+  - [x] Verify clicking "Expand" reveals "Fair Value" or similar missing nodes. <!-- id: 17 -->
 
-Document and expand the Path Mode architecture for the NoteConnection project, enabling hybrid visualization with Godot desktop rendering and web fallback.
+## v1.4.2 - Spine & Tributaries Layout
 
----
-
-## Phase 1-3: Complete (Architecture & Basic Godot)
-
-## Phase 1: Research & Context Gathering
-
-- [x] Review existing [path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js) (Graph, PathEngine classes)
-- [x] Review existing [ws_client.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/ws_client.gd) WebSocket client
-- [x] Review existing [path_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/path_renderer.gd) renderer
-- [x] Review brainstorming and godot-gdscript-patterns skills
-- [x] Analyze TODO.md for Path Mode v2 requirements
-
-## Phase 2: Architecture Documentation
-
-- [x] Create comprehensive Path Mode Architecture Document
-- [x] Document Hybrid Visualization Architecture
-- [x] Document Domain Learning & Diffusion Learning algorithms
-- [x] Document Godot 3D/Pseudo-3D visualization requirements
-- [x] Document WebSocket protocol specification
-
-## Phase 3: Godot Implementation (Complete)
-
-- [x] Enhance [path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js) with [getPeripheralNodes()](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js#424-510) and [OrbitalState](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js#556-680)
-- [x] Create [bubble_material.gdshader](file:///e:/Knowledge_project/NoteConnection_app/path_mode/shaders/bubble_material.gdshader) (iridescent bubble effect)
-- [x] Create [learning_state_machine.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/learning_state_machine.gd) (state machine)
-- [x] Create [path_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/path_renderer.gd) (3D orbital renderer)
-- [x] Create [main.tscn](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scenes/main.tscn) (Godot main scene)
-- [x] Update [ws_client.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/ws_client.gd) (new message handlers)
-- [x] Fix dark background and floor
-- [x] Add collision detection for bubble interactivity
-
-## Phase 3.5: Godot Interactivity Fixes (In Progress)
-
-- [x] Add camera zoom/pan/rotate controls (`orbital_camera.gd`)
-- [x] Fix orbital transition animation (central bubble position reset)
-- [x] Implement openReader IPC (PathBridge → Electron renderer)
-- [x] Enforce node limit (1 Central + Max 4 Peripherals)
-- [x] Fix double-click open editor (Threshold + Window Focus)
-- [x] Fix Reader content loading (Metadata lookup)
-- [x] Improve Camera controls (Left-Drag Orbit + Initial Zoom)
-- [x] Fix "Below Base Plate" camera issue (Pitch constraints)
-- [x] Fix Central Node Overlap (Strict state reset)
-- [x] Fix Color Update on Switch (Force material refresh)
-- [x] Refactor Node Switch to "Clear-then-Rebuild" architecture (prevents overlap/color bugs)
-- [x] Implement realistic iridescent bubble shader (thin-film interference, Fresnel, specular highlights)
-- [x] Connect UI buttons (Mark Complete, Sidebar toggle, completed nodes list)
-- [x] Fix ambient lighting (reduced wash-out, iridescent colors visible)
-- [x] Fix "X of 0" progress display (send totalNodes from frontend)
-- [x] Add navigation history + Return button (single return + dropdown)
-- [x] Add Edit mode for unmark completion
-- [x] Add bidirectional Electron sync (completionSync WebSocket)
-- [x] Add tree-view learning path panel (dependency tree with ★●○ states)
-- [x] Add settings button and panel
-
-## Phase 4: Enhanced Graphical Tree View (Planned)
-
-- [x] **Tree View Architecture**
-  - [x] Architecture: Refactor `tree_view_panel` to support Pan/Zoom (SubViewport + Camera2D).
-  - [x] Rendering: Update `tree_renderer.gd` to use coordinates from backend.
-  - [x] Integration: Pass `treeLayout` data from `path_renderer` to `tree_view`.
-  - [x] Interaction: Implement Click/Double-click handling in new renderer.gd`
-
-- [x] **Visual Themes** (4 selectable, colorful as default)
-  - [x] **Colorful Status** (default): Gold=complete, Cyan=current, Gray=pending
-  - [x] **Dark**: Dark background, gradient fills, soft blue/purple curves
-  - [x] **Glass/Frosted**: Semi-transparent nodes, glowing bezier curves
-  - [x] **Minimal Monochrome**: White/gray nodes, thin gray curves
-
-- [/] **Tree View Modes**
-  - [ ] Tab buttons: `[Subtree] [Full Path]` (Future)
-  - [x] Dropdown style selector in header
-  - [x] Collapsible drawer panel (Existing Sidebar)
-
-- [x] **Node Interactions**
-  - [x] Single-click: Expand/collapse + show context menu
-  - [x] Double-click: Navigate to node (make central)
-  - [x] Context menu: Navigate / Mark Complete / Unmark
-
-- [x] **Bezier Curve Rendering**
-  - [x] Draw parent-child connections with bezier curves
-  - [x] Curves inherit parent color (colorful mode)
-  - [x] Anti-aliased polyline rendering
-
-- [x] **Settings Panel (Phase 3.5 Carryover)**
-  - [x] Create `settings_panel.tscn` (PopupPanel)
-  - [x] Implement `settings.cfg` persistence (Godot)
-  - [x] Settings: "Auto-reconstruct Path" (Toggle), "Tree Theme" (Dropdown)
-  - [x] Connect Settings to `OrbitalState` logic
-
-## Phase 4.1: Tree View 2.0 & Settings Refinement
-
-### 4.1.1 Settings & History
-
-- [x] Backend: Implement `retainHistory` flag in `OrbitalState` (path_core.js).
-- [x] Backend: Implement `getTreeLayout` (Layered DAG method) in `PathEngine`.
-- [x] Godot: Add "Retain Learning History" checkbox to `settings_panel.tscn`.
-- [x] Integration: Pipe `retainHistory` setting from UI -> WebSocket -> JS.
-
-### 4.1.2 Tree Data & Layout (Backend)
-
-- [x] **Algorithm**: Implement `getTreeLayout` in `path_core.js` (Layered Graph Layout).
-  - [ ] Group nodes by dependency depth (Levels).
-  - [ ] Calculate X,Y coordinates to minimize crossing.
-  - [ ] Include In-Degree metadata.
-
-### 4.1.3 Tree View 2.0 (Godot)
-
-- [x] **Architecture**: Refactor `tree_view_panel` to support Pan/Zoom.
-  - [x] Add `Camera2D` to `SubViewport`.
-
-###- [x] **Tree View Enhancements (v2.1)** <!-- id: 7 --> - [x] **Independent Interactions** <!-- id: 8 --> - [x] Refactor existing global input handling locally to `TreeRenderer`. <!-- id: 9 --> - [x] Implement `_gui_input` in `SubViewportContainer` to capture mouse events. <!-- id: 10 --> - [x] Configure `mouse_filter` to Stop propagation. <!-- id: 11 --> - [x] **Collapsible Nodes** <!-- id: 12 --> - [x] Add `collapsed` state in `OrbitalState` / `PathEngine`. <!-- id: 13 --> - [x] Pass collapse state to `getTreeLayout`. <!-- id: 14 --> - [x] Implement recursive layout logic to hide children of collapsed nodes. <!-- id: 15 --> - [x] Add visual indicator `[+/-]` in `TreeRenderer`. <!-- id: 16 --> - [x] **Mind Map Layout (Horizontal)** <!-- id: 17 --> - [x] Modify `getTreeLayout` to swap X/Y logic (Levels on X, Spread on Y). <!-- id: 18 --> - [x] Sort sibling nodes by In-Degree (Descending). <!-- id: 19 --> - [x] Update `TreeRenderer` to draw Horizontal Bezier curves. <!-- id: 20 -->and Wheel (Zoom).
-
-- [ ] **Rendering**: Update `tree_renderer.gd`.
-  - [ ] Use coordinate data from backend.
-  - [ ] Draw directional edges (arrows) for dependencies.
-  - [ ] Visualize "In-Degree" (maybe node size or label).
-- [ ] **Windowing**: Ensure Panel is resizable/detachable (or simulates it).
+- [ ] **Core Algorithm Implementation ([path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js))**
+  - [ ] **Data Structure**: Implement `Spine` identification (Main Path).
+  - [ ] **Slot Manager**: Create `Y-Axis Allocator` to manage vertical slots per X-column.
+  - [ ] **Layout Logic**:
+    - [ ] Place Spine nodes at `Y=0`.
+    - [ ] Place Tributaries (Prerequisites) laterally using "Preceding Parent" priority.
+    - [ ] Ensure `Stationary Expansion` (Expanding a node does not shift the Spine).
+- [ ] **Frontend Integration**
+  - [ ] Verify `switchCenter` triggers correct layout recalculation.
+  - [ ] Test with complex graphs to ensure no overlapping nodes.
 
 ---
 
-# 路径模式架构与开发文档 (中文版)
+# 任务：完善路径模式可视化 (Task: Refining Path Mode Visualization)
 
-## 任务概览
+- [x] **关键 Bug 修复 (Critical Bug Fix)** <!-- id: 100 -->
+  - [x] **修复导航失败**: 树状视图在切换中心时默认为线性模式。确保在 `switchCenter` 期间生成 `treeLayout`。 <!-- id: 101 -->
+- [ ] **数据一致性 (前端)** <!-- id: 0 -->
+  - [x] 确保在有效负载中正确计算并传递 `inDegree`。 <!-- id: 1 -->
+    - [x] 确保在有效负载中正确计算并传递 `inDegree`。 <!-- id: 1 -->
+    - [x] **Godot: 实现懒加载可视化** <!-- id: 2 -->
+    - [x] **后端**: 更新 [path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js) 以允许 `forcedExpansionSet` 的无限制上下文扩展。 <!-- id: 3 -->
+    - [x] **前端桥接**: 更新 [path_app.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js) 以处理 `forcedExpansionNodes` 并传递给 Worker。 <!-- id: 4 -->
+    - [x] **简化懒加载 UI (Godot)**
+    - [x] 更新 [tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd):
+      - [x] 移除单独的 [(+)](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53)/[(-)](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53) 按钮。
+      - [x] 实现统一的 `[ 计数 ]` 按钮（带数字的圆圈）。
+      - [x] 按钮切换 `forcedExpansion` 状态。
+      - [x] 默认状态为折叠。
+    - [x] 确保 [path_app.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js) 正确处理切换（重用现有逻辑）。
+    - [x] **Godot 渲染器**: 更新 [tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd) 以计算可见入度并显示 [(+)](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53)/[(-)](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53) 按钮。 <!-- id: 5 -->
+    - [x] **Godot 信号**: 通过 `tree_view_panel`、`path_mode_ui` 将 [expand](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#239-246)/[collapse](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#255-261) 信号连接到 `ws_client`。 <!-- id: 6 -->
+      - [ ] (**Godot**) 实现逻辑以验证 `可见 < 全局入度` 以显示 [(+)](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53)。 <!-- id: 105 -->
+- [x] **树状视图视觉与交互重修**
+  - [x] **视觉清理 (Godot)**
+    - [x] 从 [tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd) 中移除 [(+)](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53)/[(-)](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53) 和 `[Count]` 按钮。
+    - [x] 移除这些按钮的单独点击区域。
+  - [x] **交互更新 (Godot)**
+    - [x] **双击**: 更改为切换扩展（发射 [expand](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#239-246)/[collapse](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#255-261)）。
+    - [x] **右键单击**: 切换扩展（与双击相同）。
+    - [x] **中键单击**: 全部折叠（发射新信号 `collapse_all_requested`）。
+    - [x] **长按**: 实现导航（切换中心）。
+      - [x] 添加 `_process` 检查保持持续时间。
+      - [x] 在保持期间绘制进度环。
+      - [x] 完成时触发导航。
+  - [x] **专注模式 (Godot)**
+    - [x] 向 [settings_panel.tscn](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scenes/settings_panel.tscn) 添加“聚焦于此节点”复选框。
+    - [x] 在 [tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd) 中实现 `focus_node_id` 状态（目前仅视觉）。
+    - [x] 更新 `_draw` 以在启用时调暗未连接到 `focus_node_id` 的节点/边缘。
+  - [x] **后端更新**
+    - [x] 在 [path_app.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js) 中添加 [collapseAll](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#255-261) 处理程序。
+- [x] **树渲染器更新 (Godot)** <!-- id: 4 -->
+  - [x] **入度显示**: 添加入度可视化（例如，小徽章/数字）。 <!-- id: 5 -->
+  - [x] **最后一个节点按钮**: 隐藏链中最后一个节点（目标节点）的展开按钮。 <!-- id: 6 -->
+  - [x] **贝塞尔美学**: <!-- id: 7 -->
+    - [x] 实现边缘过滤以避免跳级连接。 <!-- id: 8 -->
+- [ ] **前端 UI 修复 (Electron)** <!-- id: 106 -->
+  - [x] **修复入度不匹配**: 调查并更正详细信息面板中入度数字的数据源。 <!-- id: 107 -->
+  - [x] **修复布局调整大小**: 确保传入/传出列随窗口按比例调整大小。 <!-- id: 108 -->
+  - [x] **边缘可见性**: 修改渲染器以默认隐藏边缘，仅在悬停/点击时显示。 <!-- id: 109 -->
+  - [x] **入度显示设置**: 添加设置以在可见/总数之间切换（默认：可见）。 <!-- id: 110 -->
+- [x] **数据验证**
+  - [x] **这也是如果无数据则禁用路径模式**: 如果 `graphData` 为空/未定义，防止点击“路径模式”按钮。
+  - [x] **修复误报**: 确保 `graphData` 检查正确检测 Mini Build 模式下的动态加载数据。
+  - [x] **内联反馈**: 用按钮旁边的文本消息替换 `alert()`。
+- [x] **修复 Godot 脚本错误**
+  - [x] **TreeRenderer 解析错误**: 向 [tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd) 添加 `class_name TreeRenderer` 或修复导致解析失败的语法错误。
+- [x] **修复树状视图交互**
+  - [x] **修复右键切换**: 确保右键单击（和双击）根据当前状态正确在展开和折叠之间切换。
+  - [x] **修复全部折叠**:
+    - [x] 调试中键绑定。
+    - [x] 向 UI 添加可见的“全部折叠”按钮。
+- [x] **修复回归错误**:
+  - [x] 恢复 [tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd) 中的 `_is_pressed` 和 `collapse_all_requested`。
+- [ ] **验证** <!-- id: 10 -->
+  - [x] 验证“展开”按钮是否出现在具有隐藏父节点的节点上。 <!-- id: 16 -->
+  - [x] 验证点击“展开”是否显示“公允价值”或类似的缺失节点。 <!-- id: 17 -->
 
-文档化并扩展 NoteConnection 项目的路径模式架构，实现带有 Godot 桌面渲染和 Web 回退机制的混合可视化。
+## v1.4.2 - 主干与支流布局 (Spine & Tributaries Layout)
 
----
-
-## 阶段 1-3: 已完成 (架构与基础 Godot)
-
-## 阶段 1: 研究与背景收集
-
-- [x] 审查现有的 [path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js) (Graph, PathEngine 类)
-- [x] 审查现有的 [ws_client.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/ws_client.gd) WebSocket 客户端
-- [x] 审查现有的 [path_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/path_renderer.gd) 渲染器
-- [x] 审查头脑风暴和 godot-gdscript-patterns 技能
-- [x] 分析 TODO.md 中路径模式 v2 的需求
-
-## 阶段 2: 架构文档
-
-- [x] 创建综合路径模式架构文档
-- [x] 文档化混合可视化架构
-- [x] 文档化领域学习与扩散学习算法
-- [x] 文档化 Godot 3D/伪3D 可视化需求
-- [x] 文档化 WebSocket 协议规范
-
-## 阶段 3: Godot 实现 (完成)
-
-- [x] 增强 [path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js) 包含 [getPeripheralNodes()](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js#424-510) 和 [OrbitalState](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js#556-680)
-- [x] 创建 [bubble_material.gdshader](file:///e:/Knowledge_project/NoteConnection_app/path_mode/shaders/bubble_material.gdshader) (彩虹气泡效果)
-- [x] 创建 [learning_state_machine.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/learning_state_machine.gd) (状态机)
-- [x] 创建 [path_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/path_renderer.gd) (3D 轨道渲染器)
-- [x] 创建 [main.tscn](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scenes/main.tscn) (Godot 主场景)
-- [x] 更新 [ws_client.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/ws_client.gd) (新消息处理器)
-- [x] 修复暗色背景和地面
-- [x] 添加气泡交互的碰撞检测
-
-## 阶段 3.5: Godot 交互性修复 (进行中)
-
-- [x] 添加相机 缩放/平移/旋转 控制 (`orbital_camera.gd`)
-- [x] 修复轨道过渡动画 (中心气泡位置重置)
-- [x] 实现 openReader IPC (PathBridge → Electron 渲染器)
-- [x] 强制节点限制 (1 中心 + 最多 4 周边)
-- [x] 修复双击打开编辑器 (阈值 + 窗口焦点)
-- [x] 修复阅读器内容加载 (元数据查找)
-- [x] 改进相机控制 (左键拖动轨道 + 初始缩放)
-- [x] 修复 "低于底板" 相机问题 (俯仰限制)
-- [x] 修复中心节点重叠 (严格状态重置)
-- [x] 修复切换时的颜色更新 (强制材质刷新)
-- [x] 重构节点切换为 "清除后重建" 架构 (防止重叠/颜色 bug)
-- [x] 实现逼真的彩虹气泡 shader (薄膜干涉, 菲涅尔, 高光)
-- [x] 连接 UI 按钮 (标记完成, 侧边栏切换, 已完成节点列表)
-- [x] 修复环境光照 (减少过曝, 彩虹色可见)
-- [x] 修复 "X / 0" 进度显示 (从前端发送 totalNodes)
-- [x] 添加导航历史 + 返回按钮 (单次返回 + 下拉菜单)
-- [x] 添加编辑模式用于取消标记完成
-- [x] 添加双向 Electron 同步 (completionSync WebSocket)
-- [x] 添加树形视图学习路径面板 (依赖树，带有 ★●○ 状态)
-- [ ] 添加设置按钮和面板
-
-## 阶段 4: 增强型图形树视图 (计划中)
-
-- [x] **树视图架构**
-  - [x] 创建 `tree_view_panel.tscn` (SubViewport 覆盖面板)
-  - [x] 创建 `tree_renderer.gd` (2D 画布中的贝塞尔曲线绘制)
-  - [x] 创建 `tree_styles.gd` (4 种可选视觉主题)
-  - [x] 集成 `path_renderer.gd`
-
-- [x] **视觉主题** (4 种可选, 默认为多彩)
-  - [x] **多彩状态** (默认): 金色=已完成, 青色=当前, 灰色=待定
-  - [x] **深色**: 深色背景, 渐变填充, 柔和蓝/紫曲线
-  - [x] **玻璃/磨砂**: 半透明节点, 发光贝塞尔曲线
-  - [x] **极简单色**: 白/灰节点, 细灰曲线
-
-- [/] **树视图模式**
-  - [ ] 标签按钮: `[子树] [完整路径]` (未来)
-  - [x] 头部下拉样式选择器
-  - [x] 可折叠抽屉面板 (现有侧边栏)
-
-- [x] **节点交互**
-  - [x] 单击: 展开/折叠 + 显示上下文菜单
-  - [x] 双击: 导航至节点 (设为中心)
-  - [x] 上下文菜单: 导航 / 标记完成 / 取消标记
-
-- [x] **贝塞尔曲线渲染**
-  - [x] 用贝塞尔曲线绘制父子连接
-  - [x] 曲线继承父级颜色 (多彩模式)
-  - [x] 抗锯齿折线渲染
-
-- [x] **设置面板 (阶段 3.5 遗留)**
-  - [x] 创建 `settings_panel.tscn` (PopupPanel)
-  - [x] 实现 `settings.cfg` 持久化 (Godot)
-  - [x] 设置: "自动重构路径" (开关), "树主题" (下拉)
-  - [x] 连接设置到 `OrbitalState` 逻辑
-
-## 阶段 4.1: 树视图 2.0 与设置优化
-
-### 4.1.1 设置与历史
-
-- [ ] **后端**: 更新 `OrbitalState` 以支持 `retainHistory` 标志 (条件保存/清除)。
-- [ ] **Godot**: 向 `settings_panel.tscn` 添加 "保留学习历史" 复选框。
-- [ ] **集成**: 将 `retainHistory` 设置从 UI -> WebSocket -> JS 传输。
-
-### 4.1.2 树数据与布局 (后端)
-
-- [ ] **算法**: 在 `path_core.js` 中实现 `getTreeLayout` (分层图布局)。
-  - [ ] 按依赖深度 (Levels) 分组节点。
-  - [ ] 计算 X,Y 坐标以最小化交叉。
-  - [ ] 包含入度 (In-Degree) 元数据。
-
-### 4.1.3 树视图 2.0 (Godot)
-
-- [ ] **架构**: 重构 `tree_view_panel` 以支持平移/缩放。
-  - [ ] `SubViewport` 中加入 `Camera2D`。
-  - [ ] 实现鼠标拖动 (平移) 和滚轮 (缩放) 的 `_unhandled_input`。
-- [ ] **渲染**: 更新 `tree_renderer.gd`。
-  - [ ] 使用来自后端的坐标数据。
-  - [ ] 绘制表示依赖关系的定向边 (箭头)。
-  - [ ] 可视化 "入度" (可能是节点大小或标签)。
-- [ ] **窗口化**: 确保面板可调整大小/可分离 (或模拟此效果)。
-
-- [ ] 配置支持 GPU 的 Godot HTML5 导出
-- [ ] 在 Electron 前端创建嵌入容器
-- [ ] 在 Electron 内部集成 WebSocket 通信
-- [ ] 测试单窗口工作流
+- [ ] **核心算法实施 ([path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js))**
+  - [ ] **数据结构**: 实现 `Spine` 识别（主路径）。
+  - [ ] **插槽管理器**: 创建 `Y轴分配器` 以管理每个 X 列的垂直插槽。
+  - [ ] **布局逻辑**:
+    - [ ] 将主干节点放置在 `Y=0`。
+    - [ ] 使用“先前父节点”优先级横向放置支流（前置节点）。
+    - [ ] 确保 `静态展开` (展开节点不移动主干)。
+- [ ] **前端集成**
+  - [ ] 验证 `switchCenter` 触发正确的重新布局计算。
+  - [ ] 使用复杂图表测试以确保没有节点重叠。

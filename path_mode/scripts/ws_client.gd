@@ -180,6 +180,17 @@ func send_expand_prereqs(node_id: String) -> void:
 		"payload": {"nodeId": node_id}
 	})
 
+func send_collapse_prereqs(node_id: String) -> void:
+	send_message({
+		"type": "collapsePrereqs",
+		"payload": {"nodeId": node_id}
+	})
+
+func send_collapse_all() -> void:
+	send_message({
+		"type": "collapseAll",
+		"payload": {}
+	})
 ## Check if WebSocket is connected
 func is_ws_connected() -> bool:
 	return _connected

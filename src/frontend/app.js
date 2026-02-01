@@ -444,6 +444,7 @@ function updateFocusModeState(active, node = null) {
 // Initial State
 updateColor();
 updateSize();
+updateVisibility(); // v1.0.2: Enforce initial visibility state (edges hidden)
 
 // Version Info
 const APP_VERSION = "1.0.0";
@@ -1083,19 +1084,54 @@ function showNodePopup(nodeId) {
     const node = nodes.find(n => n.id === nodeId);
     if (!node || !statsPopup) return;
 
+    // Find Edges (Visible in Frontend)
+    // 查找前端可见的边
+    const inNeighbors = [...new Set(links.filter(l => l.target.id === nodeId).map(l => l.source))];
+    const outNeighbors = [...new Set(links.filter(l => l.source.id === nodeId).map(l => l.target))];
+
     // Populate Data
     document.getElementById('popup-node-name').innerText = node.label;
-    document.getElementById('popup-in-count').innerText = node.inDegree;
-    document.getElementById('popup-out-count').innerText = node.outDegree;
+    
+    // In-Degree Logic based on Setting
+    const degreeMode = settingsManager.get('visuals', 'degreeMode') || 'visible';
+    const totalIn = node.inDegree || 0;
+    const visibleIn = inNeighbors.length;
+    
+    const inTextEl = document.getElementById('popup-in-count');
+    
+    if (degreeMode === 'total') {
+        inTextEl.innerText = totalIn;
+        if (totalIn !== visibleIn) {
+             inTextEl.title = `Total: ${totalIn}, Visible: ${visibleIn}`;
+        }
+    } else {
+        // Default: Visible
+        inTextEl.innerText = visibleIn;
+        if (totalIn !== visibleIn) {
+             inTextEl.innerHTML = `${visibleIn} <span style="font-size:0.8em; color:#aaa">/ ${totalIn}</span>`;
+             inTextEl.title = "Visible Nodes / Total Statistical Count";
+        }
+    }
 
-    // Find Edges
+    // Out-Degree Logic (Matches In-Degree setting for consistency?)
+    // Or just visible default? Let's apply same logic.
+    const totalOut = node.outDegree || 0;
+    const visibleOut = outNeighbors.length;
+    const outTextEl = document.getElementById('popup-out-count');
+    
+    if (degreeMode === 'total') {
+        outTextEl.innerText = totalOut;
+    } else {
+        outTextEl.innerText = visibleOut;
+        if (totalOut !== visibleOut) {
+             outTextEl.innerHTML = `${visibleOut} <span style="font-size:0.8em; color:#aaa">/ ${totalOut}</span>`;
+        }
+    }
+
     const inList = document.getElementById('popup-in-list');
     const outList = document.getElementById('popup-out-list');
     inList.innerHTML = '';
     outList.innerHTML = '';
-
-    const inNeighbors = [...new Set(links.filter(l => l.target.id === nodeId).map(l => l.source))];
-    const outNeighbors = [...new Set(links.filter(l => l.source.id === nodeId).map(l => l.target))];
 
     const createItem = (n) => {
         const li = document.createElement('li');
@@ -2773,6 +2809,19 @@ function initSettingsUI() {
         });
     }
     
+    // Inbound Count (Degree Mode)
+    const inputDegreeMode = document.getElementById('set-degree-mode');
+    if (inputDegreeMode) {
+        // Init value
+        const currentMode = settingsManager.get('visuals', 'degreeMode') || 'visible';
+        inputDegreeMode.value = currentMode;
+        
+        // Listener
+        inputDegreeMode.addEventListener('change', (e) => {
+            settingsManager.set('visuals', 'degreeMode', e.target.value);
+        });
+    }
+    
     inputReadingMode.addEventListener('change', (e) => {
         settingsManager.set('reading', 'mode', e.target.value);
     });
@@ -2974,6 +3023,37 @@ if (controlsPanelToggleTarget) {
 const btnPathMode = document.getElementById('btn-path-mode');
 if (btnPathMode) {
     btnPathMode.addEventListener('click', () => {
+        // v1.1.3: Robust Data Check
+        // In Mini Build (Electron), `window.graphData` might be undefined, but `nodes` array in app.js is populated.
+        // We check `nodes` length. Since `nodes` is local scope here, we use it directly.
+        const hasData = (typeof nodes !== 'undefined' && nodes.length > 0);
+        
+        if (!hasData) {
+            const msg = (window.i18n && window.i18n.currentLanguage === 'zh') ? "请先加载知识库。" : "Please load a Knowledge Base first.";
+            
+            // Inline Feedback
+            let feedbackEl = document.getElementById('path-mode-feedback');
+            if (!feedbackEl) {
+                feedbackEl = document.createElement('span');
+                feedbackEl.id = 'path-mode-feedback';
+                feedbackEl.style.color = '#ff6b6b';
+                feedbackEl.style.fontSize = '0.8rem';
+                feedbackEl.style.marginLeft = '10px';
+                feedbackEl.style.transition = 'opacity 0.5s';
+                btnPathMode.parentNode.appendChild(feedbackEl);
+            }
+            
+            feedbackEl.innerText = msg;
+            feedbackEl.style.opacity = '1';
+            
+            // Fade out after 3 seconds
+            setTimeout(() => {
+                feedbackEl.style.opacity = '0';
+            }, 3000);
+            
+            return;
+        }
+
         // Check for active selection for Diffusion Learning
         const highlightState = window.highlightManager ? window.highlightManager.getState() : null;
         const selectedNode = (highlightState && highlightState.currentNode) ? highlightState.currentNode : null;

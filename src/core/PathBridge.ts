@@ -101,6 +101,21 @@ export class PathBridge {
                 this.broadcast('expandPrereqs', data.payload);
                 break;
 
+            case 'collapsePrereqs':
+                console.log(`[PathBridge] Collapse prereqs: ${data.payload?.nodeId}`);
+                this.broadcast('collapsePrereqs', data.payload);
+                break;
+
+            case 'collapseAll':
+                console.log(`[PathBridge] Collapse ALL requested`);
+                this.broadcast('collapseAll', data.payload);
+                break;
+
+            case 'configure':
+                 console.log(`[PathBridge] Configuration update`);
+                 this.broadcast('configure', data.payload);
+                 break;
+
             default:
                 console.log(`[PathBridge] Unknown message type: ${data.type}`);
         }

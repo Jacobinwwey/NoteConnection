@@ -16,6 +16,8 @@ signal unmark_requested(node_id: String)
 signal mark_node_requested(node_id: String)
 signal node_toggle_requested(node_id: String) # New
 signal node_expand_prereqs_requested(node_id: String) # New
+signal node_collapse_prereqs_requested(node_id: String) # New
+signal collapse_all_requested() # New
 signal settings_updated(settings: Dictionary)
 
 const TREE_VIEW_SCENE = preload("res://scenes/tree_view_panel.tscn")
@@ -108,10 +110,21 @@ func _create_dynamic_ui() -> void:
 	_tree_panel.custom_minimum_size = Vector2(200, 200)
 	add_child(_tree_panel)
 	
+	var header_hbox := HBoxContainer.new()
+	_tree_panel.add_child(header_hbox)
+	
 	var tree_header := Label.new()
 	tree_header.text = "Learning Path"
+	tree_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tree_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_tree_panel.add_child(tree_header)
+	header_hbox.add_child(tree_header)
+	
+	var collapse_btn := Button.new()
+	collapse_btn.text = "[-]"
+	collapse_btn.tooltip_text = "Collapse All Nodes"
+	collapse_btn.focus_mode = Control.FOCUS_NONE
+	collapse_btn.pressed.connect(func(): collapse_all_requested.emit())
+	header_hbox.add_child(collapse_btn)
 	
 	## Instantiate new Tree View Panel
 	if TREE_VIEW_SCENE:
@@ -155,10 +168,14 @@ func _connect_signals() -> void:
 		_tree_view.node_unmark_requested.connect(func(id): unmark_requested.emit(id))
 		_tree_view.node_toggle_requested.connect(func(id): node_toggle_requested.emit(id))
 		_tree_view.node_expand_prereqs_requested.connect(func(id): node_expand_prereqs_requested.emit(id)) # New
+		_tree_view.node_collapse_prereqs_requested.connect(func(id): node_collapse_prereqs_requested.emit(id)) # New
+		_tree_view.collapse_all_requested.connect(func(): collapse_all_requested.emit()) # New
 		_tree_view.fullscreen_requested.connect(_on_tree_fullscreen_requested)
 
 func _on_settings_panel_changed(settings: Dictionary) -> void:
 	settings_updated.emit(settings)
+	if _tree_view and _tree_view.has_method("update_settings"):
+		_tree_view.update_settings(settings)
 
 
 func _setup_initial_state() -> void:

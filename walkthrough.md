@@ -1,281 +1,93 @@
-# Path Mode v2: Orbital Learning Implementation Walkthrough
+# Path Mode Improvements Walkthrough
 
-> Completed: 2026-01-29
+## 1. Critical Fix: Navigation Failure
 
----
+**Issue**: When double-clicking a node or switching the center, the Tree View would crash and revert to a linear list because the `treeLayout` data was missing from the update payload.
+**Fix**: Updated [path_app.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js)'s [switchCentral](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js#1004-1014) function to explicitly call [triggerUpdate()](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#539-566). This forces the Web Worker to re-calculate the full `treeLayout` (including correct levels and connections) for the new central node before sending it to Godot.
 
-## Implementation Summary
+## 2. Visual Enhancements (Godot)
 
-Successfully implemented the core architecture for Path Mode v2 "Orbital Learning" feature with hybrid Godot/Web visualization.
+- [x] **In-Degree Display Setting**: Added option to toggle between "Visible" (default) and "Total" In-Degree counts in Node Popup.
+- [x] **Godot Lazy Loading**: Implemented "Expand (+)" and "Collapse (-)" buttons in Godot Tree View to manage prerequisite visibility.
+- [x] **i18n Fixes**: Added missing keys `focus_inbound`/`focus_outbound` to English and Chinese locales.
 
----
+### Godot Tree View Features
 
-## Files Created
+- **Visuals ("Zen Mode")**: Simplified view removing all extra buttons. Only nodes and connections are visible.
+- **Interactions**:
+  - **Double Click / Right Click**: Toggle Context (Expand/Collapse prerequisites).
+  - **Long Press (Left)**: Navigate to Node (Switch Central). Visualized by a progress ring overlay.
+  - **Middle Click**: Collapse All nodes (Reset view).
+- **Focus Mode**:
+  - Toggle via Settings ("Focus on this node").
+  - Highlights the Central Node and its direct incoming prerequisites.
+  - Dims all other nodes to reduce clutter and focus on immediate dependencies.
+- This creates a cleaner, less cluttered tree where lines only connect direct neighbors (Level 1 → Level 2), as requested.
 
-### JavaScript (Frontend)
+**Last Node Cleanup**:
 
-| File                                                                                           | Changes                                                             |
-| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| [path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js) | Added `getPeripheralNodes()`, `getTreePath()`, `OrbitalState` class |
+- The "Expand" button logic relies on data validation. With the `treeLayout` now correctly re-computing, the "Target" node (which corresponds to the end of the chain) correctly reports `0` children in the layout, so the expand button will automatically be hidden.
 
-render_diffs(file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js)
+## Verification
 
----
+- **Navigation**: Double-clicking nodes in Tree View now correctly keeps the Tree View active and re-centers the graph.
+- **Aesthetics**: Long, confusing Bezier curves skipping levels are gone.
+- **Data**: In-degree numbers are visible.
 
-### Godot (Desktop Renderer)
+## 3. Bug Fixes (Interaction & Data)
 
-| File                                                                                                                     | Purpose                                                      |
-| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
-| [bubble_material.gdshader](file:///e:/Knowledge_project/NoteConnection_app/path_mode/shaders/bubble_material.gdshader)   | Iridescent soap bubble with fresnel + thin-film interference |
-| [learning_state_machine.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/learning_state_machine.gd) | State machine (IDLE/VIEWING/TRANSITIONING/READING)           |
-| [path_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/path_renderer.gd)                   | 3D orbital bubble renderer with ~500ms rotation animation    |
-| [main.tscn](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scenes/main.tscn)                                  | Main scene with camera, lighting, UI                         |
-| [ws_client.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/ws_client.gd)                           | Enhanced WebSocket with new message handlers                 |
-
----
-
-## Architecture Implemented
-
-```mermaid
-flowchart LR
-    subgraph Frontend
-        PC[path_core.js] --> OS[OrbitalState]
-        PC --> GPN[getPeripheralNodes]
-    end
-
-    subgraph Godot
-        WS[ws_client.gd] <--> PR[path_renderer.gd]
-        PR --> LSM[learning_state_machine.gd]
-        PR --> BUB[bubble_material.gdshader]
-    end
-
-    Frontend <-->|WebSocket:9876| Godot
-```
+- **Missing Edges**: Fixed `treeLayout` having 0 edges by sanitizing data in [path_app.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js) (converting Object references back to ID strings for the worker).
+- **Right-Click Toggle**: Fixed "Cannot Collapse" bug by:
+  - Patching [path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js) to correctly pass `isExpanded` state.
+  - Updating [PathBridge.ts](file:///e:/Knowledge_project/NoteConnection_app/src/core/PathBridge.ts) to relay [collapsePrereqs](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#247-254) messages (which were previously dropped).
+- **Collapse All**:
+  - Added a visible `[-]` button to the Godot UI.
+  - Updated [PathBridge.ts](file:///e:/Knowledge_project/NoteConnection_app/src/core/PathBridge.ts) to relay the [collapseAll](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#255-261) message.
 
 ---
 
-## Key Features Implemented
+# 路径模式改进演练 (Path Mode Improvements Walkthrough)
 
-1. **Peripheral Selection Algorithm**
-   - In-degree nodes (prerequisites) first
-   - Fill remaining with highest-association nodes
-   - Zero in-degree fallback: use relevance score
+## 1. 关键修复：导航失败 (Critical Fix: Navigation Failure)
 
-2. **Orbital Rotation Animation** (~500ms)
-   - Clicked peripheral arcs to center
-   - Old central moves to vacated slot
-   - Other peripherals redistribute
+**问题 (Issue)**: 双击节点或切换中心时，由于更新负载中缺少 `treeLayout` 数据，树状视图会崩溃并恢复为线性列表。
+**修复 (Fix)**: 更新了 [path_app.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js) 的 [switchCentral](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js#1004-1014) 函数，显式调用 [triggerUpdate()](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#539-566)。这强制 Web Worker 在将新的中心节点发送到 Godot 之前重新计算完整的 `treeLayout`（包括正确的层级和连接）。
 
-3. **Progress Tracking**
-   - `OrbitalState` class with localStorage persistence
-   - Gold star sidebar with `★ × {N}` format
-   - Auto-advance on mark complete
+## 2. 视觉增强 (Visual Enhancements) (Godot)
 
-4. **Iridescent Bubble Shader**
-   - Fresnel rim glow
-   - Thin-film interference (rainbow)
-   - State-based appearance (central/peripheral/gold)
+- [x] **入度显示设置**: 在节点弹窗中添加了选项，用于在“可见” (默认) 和“总计”入度计数之间切换。
+- [x] **Godot 懒加载**: 在 Godot 树状视图中实现了“展开 (+)”和“折叠 (-)”按钮，以管理前置节点的可见性。
+- [x] **国际化修复**: 为英语和中文语言环境添加了缺失的键 `focus_inbound`/`focus_outbound`。
 
----
+### Godot 树状视图功能 (Godot Tree View Features)
 
-## Verification Results
+- **视觉效果 ("禅模式")**: 简化视图，移除所有额外按钮。仅节点和连接可见。
+- **交互**:
+  - **双击 / 右键单击**: 切换上下文（展开/折叠前置节点）。
+  - **长按 (左键)**: 导航到节点（切换中心）。通过进度环叠加层可视化。
+  - **中键单击**: 折叠所有节点（重置视图）。
+- **专注模式**:
+  - 通过设置切换（“聚焦于此节点”）。
+  - 高亮显示中心节点及其直接传入的前置节点。
+  - 调暗所有其他节点以减少混乱并专注于直接依赖关系。
+- 这创造了一个更清晰、更少混乱的树，其中线条仅连接直接邻居（Level 1 → Level 2），按要求。
 
-```
-Build: npm run build:mini ✅
-Launch: npm run electron:dev:mini ✅
-PathBridge: Client connected ✅
-path_core.js: Loaded successfully ✅
-```
+**末端节点清理**:
 
----
+- “展开”按钮逻辑依赖于数据验证。由于 `treeLayout` 现在可以正确重新计算，对应于链末端的“目标”节点正确报告布局中的 `0` 个子节点，因此展开按钮将自动隐藏。
 
-## Next Steps for Full Testing
+## 验证 (Verification)
 
-1. **Open Godot Editor**
+- **导航**: 树状视图中的双击节点现在可以正确保持树状视图处于活动状态并重新居中图表。
+- **美学**: 移除了跳层级的长而混乱的贝塞尔曲线。
+- **数据**: 入度数字可见。
 
-   ```
-   godot --path e:\Knowledge_project\NoteConnection_app\path_mode
-   ```
+## 3. Bug 修复 (Bug Fixes) (交互与数据)
 
-2. **Run Path Mode scene** (F5 in Godot)
-
-3. **Test orbital rotation**
-   - Double-click peripheral bubble
-   - Verify ~500ms animation
-
-4. **Test mark complete flow**
-   - Click "Mark Complete" button
-   - Verify gold star appears in sidebar
-   - Verify auto-advance to next node
-
----
-
-## Recent Bug Fixes (2026-01-30)
-
-1. **Unmark Sync Issue**
-   - Added `unmarkComplete` and `completionSync` handlers to `PathBridge.ts`
-   - Previously these messages fell through to "Unknown message type"
-   - Now correctly relays to Electron frontend
-
-2. **UI Sync on Unmark**
-   - Added tree panel refresh after unmark
-   - Added central bubble label update with new progress
-   - Ensured localStorage correctly updates
-
-3. **Shader Fix**
-   - Fixed `depth_draw_alpha_prepass` → `depth_prepass_alpha` syntax
-
----
-
-## Implemented: Enhanced Graphical Tree View (v2.0)
-
-| Feature               | Description                                       | Status |
-| --------------------- | ------------------------------------------------- | ------ |
-| **SubViewport Panel** | Collapsible drawer overlay                        | ✅     |
-| **Bezier Curves**     | Mind-map style connections (S-curves)             | ✅     |
-| **4 Themes**          | Colorful (default), Dark, Glass, Minimal          | ✅     |
-| **Interactions**      | Pan/Zoom, Click (Select), Double-click (Navigate) | ✅     |
-| **Backend Layout**    | Layered DAG layout calculated in `path_core.js`   | ✅     |
-| **History Retention** | `retainHistory` setting with localStorage         | ✅     |
-
----
-
-# 路径模式 v2: 轨道学习实施演示 (中文版)
-
-> 完成时间: 2026-01-29
-
----
-
-## 实施总结
-
-成功实现了路径模式 v2 "轨道学习" 特性的核心架构，采用了混合 Godot/Web 可视化方案。
-
----
-
-## 创建的文件
-
-### JavaScript (前端)
-
-| 文件                                                                                           | 变更                                                              |
-| :--------------------------------------------------------------------------------------------- | :---------------------------------------------------------------- |
-| [path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js) | 添加了 `getPeripheralNodes()`, `getTreePath()`, `OrbitalState` 类 |
-
-render_diffs(file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js)
-
----
-
-### Godot (桌面渲染器)
-
-| 文件                                                                                                                     | 用途                                        |
-| :----------------------------------------------------------------------------------------------------------------------- | :------------------------------------------ |
-| [bubble_material.gdshader](file:///e:/Knowledge_project/NoteConnection_app/path_mode/shaders/bubble_material.gdshader)   | 带有菲涅尔+薄膜干涉的彩虹肥皂泡             |
-| [learning_state_machine.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/learning_state_machine.gd) | 状态机 (IDLE/VIEWING/TRANSITIONING/READING) |
-| [path_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/path_renderer.gd)                   | 带有 ~500ms 旋转动画的 3D 轨道气泡渲染器    |
-| [main.tscn](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scenes/main.tscn)                                  | 带有相机、灯光、UI 的主场景                 |
-| [ws_client.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/ws_client.gd)                           | 带有新消息处理器的增强 WebSocket            |
-
----
-
-## 实现的架构
-
-```mermaid
-flowchart LR
-    subgraph Frontend
-        PC[path_core.js] --> OS[OrbitalState]
-        PC --> GPN[getPeripheralNodes]
-    end
-
-    subgraph Godot
-        WS[ws_client.gd] <--> PR[path_renderer.gd]
-        PR --> LSM[learning_state_machine.gd]
-        PR --> BUB[bubble_material.gdshader]
-    end
-
-    Frontend <-->|WebSocket:9876| Godot
-```
-
----
-
-## 实现的关键特性
-
-1. **周边选择算法**
-   - 入度节点 (先决条件) 优先
-   - 用最高关联度的节点填充剩余部分
-   - 零入度回退: 使用相关性分数
-
-2. **轨道旋转动画** (~500ms)
-   - 被点击的周边节点沿弧线移动到中心
-   - 旧中心移动到腾出的槽位
-   - 其他周边节点重新分布
-
-3. **进度追踪**
-   - 带有 localStorage 持久化的 `OrbitalState` 类
-   - `★ × {N}` 格式的金星侧边栏
-   - 标记完成后自动推进
-
-4. **彩虹气泡 Shader**
-   - 菲涅尔边缘辉光
-   - 薄膜干涉 (彩虹)
-   - 基于状态的外观 (中心/周边/金色)
-
----
-
-## 验证结果
-
-```
-构建: npm run build:mini ✅
-启动: npm run electron:dev:mini ✅
-PathBridge: 客户端已连接 ✅
-path_core.js: 加载成功 ✅
-```
-
----
-
-## 全面测试的下一步
-
-1. **打开 Godot 编辑器**
-
-   ```
-   godot --path e:\Knowledge_project\NoteConnection_app\path_mode
-   ```
-
-2. **运行路径模式场景** (在 Godot 中按 F5)
-
-3. **测试轨道旋转**
-   - 双击周边气泡
-   - 验证 ~500ms 动画
-
-4. **测试标记完成流程**
-   - 点击 "标记完成" 按钮
-   - 验证侧边栏出现金星
-   - 验证自动推进到下一个节点
-
----
-
-## 近期 Bug 修复 (2026-01-30)
-
-1. **取消标记同步问题**
-   - 向 `PathBridge.ts` 添加了 `unmarkComplete` 和 `completionSync` 处理器
-   - 之前这些消息会落入 "未知消息类型"
-   - 现在正确转发到 Electron 前端
-
-2. **取消标记时的 UI 同步**
-   - 添加了取消标记后的树面板刷新
-   - 添加了带有新进度的中心气泡标签更新
-   - 确保 localStorage 正确更新
-
-3. **Shader 修复**
-   - 修复了 `depth_draw_alpha_prepass` → `depth_prepass_alpha` 语法
-
----
-
-## 已实现: 增强型图形树视图 (v2.0)
-
-| 特性                 | 描述                                      | 状态 |
-| :------------------- | :---------------------------------------- | :--- |
-| **SubViewport 面板** | 可折叠抽屉覆盖层                          | ✅   |
-| **贝塞尔曲线**       | 思维导图风格的连接 (S 形曲线)             | ✅   |
-| **4 种主题**         | 多彩 (默认), 深色, 玻璃, 极简             | ✅   |
-| **交互**             | 平移/缩放, 单击 (选择), 双击 (导航)       | ✅   |
-| **后端布局**         | `path_core.js` 中的分层 DAG 布局          | ✅   |
-| **历史保留**         | 带有 localStorage 的 `retainHistory` 设置 | ✅   |
+- **缺失边**: 通过在 [path_app.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js) 中清理数据（将对象引用转回 Workers 的 ID 字符串），修复了 `treeLayout` 只有 0 条边的问题。
+- **右键切换**: 修复了“无法折叠”的 Bug：
+  - 修补 [path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js) 以正确传递 `isExpanded` 状态。
+  - 更新 [PathBridge.ts](file:///e:/Knowledge_project/NoteConnection_app/src/core/PathBridge.ts) 以转发 [collapsePrereqs](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#247-254) 消息（以前被丢弃）。
+- **全部折叠**:
+  - 在 Godot UI 中添加了一个可见的 `[-]` 按钮。
+  - 更新 [PathBridge.ts](file:///e:/Knowledge_project/NoteConnection_app/src/core/PathBridge.ts) 以转发 [collapseAll](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#255-261) 消息。
