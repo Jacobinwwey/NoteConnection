@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree-Path Layout Mockup v2</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1e1e1e; color: #eee; margin: 0; padding: 20px; }
+        svg { border: 1px solid #444; background: #252526; width: 100%; height: 800px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .node circle { stroke: #fff; stroke-width: 2px; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        .node circle:hover { stroke: #ffd700; stroke-width: 4px; }
+        .node text { font-size: 12px; fill: #eee; text-shadow: 0 1px 4px #000; pointer-events: none; font-weight: 600; }
+        .link { stroke: #555; stroke-width: 2px; opacity: 0.6; fill: none; transition: d 0.5s; }
+        .spine-link { stroke: #4caf50; stroke-width: 5px; opacity: 1; filter: drop-shadow(0 0 2px rgba(76,175,80,0.5)); }
+        .tributary-link { stroke: #2196f3; }
+        .controls { margin-bottom: 20px; display: flex; gap: 10px; align-items: center; }
+        button { padding: 8px 16px; background: #333; color: white; border: 1px solid #555; cursor: pointer; border-radius: 4px; }
+        button:hover { background: #444; border-color: #888; }
+        button.primary { background: #007acc; border-color: #007acc; }
+        button.primary:hover { background: #006bbed1; }
+        .legend { font-size: 14px; margin-left: 20px; color: #aaa; display: flex; gap: 15px; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <h3>Tree-Path v2</h3>
+        <button class="primary" onclick="resetGraph()">Reset View</button>
+        <button onclick="expandAll()">Expand All</button>
+        <div class="legend">
+            <div class="legend-item"><div class="dot" style="background: #4caf50;"></div> Main Path (Spine)</div>
+            <div class="legend-item"><div class="dot" style="background: #2196f3;"></div> Tributaries (Tree)</div>
+        </div>
+    </div>
+
+    <svg id="viz"></svg>
+
+    <script>
+        // --- 1. Data Structure (Deep Hierarchy) ---
+        const width = window.innerWidth - 60;
+        const height = 800;
+        const svg = d3.select("#viz");
+        const g = svg.append("g").attr("transform", `translate(100, ${height / 2})`);
+
+        svg.call(d3.zoom().on("zoom", (e) => g.attr("transform", e.transform)));
+
+        // Complex Data: "Machine Learning" path
+        const rawEdges = [
+            // Main Path (Stationary Spine)
+            { s: "Math", t: "Calculus" }, 
+            { s: "Calculus", t: "Optimization" }, 
+            { s: "Optimization", t: "ML Basics" }, 
+            { s: "ML Basics", t: "Deep Learning" },
+            
+            // Tributaries for 'Optimization' (Spine Index 2 -> Even -> Down?)
+            { s: "Derivatives", t: "Optimization" },
+            { s: "Convexity", t: "Optimization" },
+            
+            // Sub-tree for 'Derivatives'
+            { s: "Limits", t: "Derivatives" },
+            { s: "Slope", t: "Derivatives" },
+
+            // Tributaries for 'ML Basics' (Spine Index 3 -> Odd -> Up?)
+            { s: "Statistics", t: "ML Basics" },
+            { s: "Probability", t: "ML Basics" },
+            
+            // Sub-tree for 'Statistics'
+            { s: "Mean", t: "Statistics" },
+            { s: "Variance", t: "Statistics" },
+            // Deep sub-tree
+            { s: "Summation", t: "Mean" }, 
+
+            // Sub-tree for 'Probability'
+            { s: "Events", t: "Probability" },
+            { s: "Random Variables", t: "Probability" },
+
+             // Tributaries for 'Calculus'
+            { s: "Algebra", t: "Calculus" },
+            { s: "Trig", t: "Calculus" },
+            { s: "Functions", t: "Algebra" }
+        ];
+
+        let nodes = Array.from(new Set(rawEdges.flatMap(e => [e.s, e.t])))
+            .map(id => ({ id, expanded: false, x: 0, y: 0 }));
+            
+        // Initial Expand of some nodes to show the tree immediately
+        ['ML Basics', 'Optimization', 'Statistics', 'Probability', 'Derivatives'].forEach(id => {
+            const n = nodes.find(x => x.id === id);
+            if(n) n.expanded = true;
+        });
+
+        // Identify Spine (Hardcoded for prototype simplicity)
+        const mainPathIds = ["Math", "Calculus", "Optimization", "ML Basics", "Deep Learning"];
+
+        // --- 2. Tree Layout Algorithm ---
+
+        // Config
+        const SPACING_X = 200; // Distance between Spine nodes
+        const LEVEL_HEIGHT = 100; // Vertical distance between tree levels
+        const SIBLING_GAP = 80;  // Horizontal gap between tree siblings
+
+        function updateLayout() {
+            // 2.1 Spine Layout
+            // Fix Spine nodes to Y=0
+            const spineMap = new Map();
+            mainPathIds.forEach((id, index) => {
+                const node = nodes.find(n => n.id === id);
+                node.x = index * SPACING_X;
+                node.y = 0;
+                node.isSpine = true;
+                node.spineIndex = index;
+                node.depth = 0;
+                spineMap.set(id, node);
+            });
+
+            // 2.2 Tributary Layout (Recursive Tree)
+            mainPathIds.forEach((spineId) => {
+                const spineNode = spineMap.get(spineId);
+                // Direction: Even = Down (+1), Odd = Up (-1)
+                const direction = (spineNode.spineIndex % 2 === 0) ? 1 : -1;
+                
+                if (spineNode.expanded) {
+                    layoutTributaryTree(spineNode, direction, 1);
+                }
+            });
+
+            render();
+        }
+
+        // Recursive function to layout a subtree
+        // node: Current root (already placed)
+        // dir: 1 (down) or -1 (up)
+        // level: Depth level (1, 2, 3...)
+        function layoutTributaryTree(parentNode, dir, level) {
+            // Find children (prerequisites) that are NOT spine
+            const childrenPairs = rawEdges.filter(e => e.t === parentNode.id);
+            const childrenIds = childrenPairs.map(e => e.s).filter(id => !mainPathIds.includes(id));
+            
+            if (childrenIds.length === 0) return { width: 0, left: parentNode.x, right: parentNode.x };
+
+            // Retrieve node objects
+            const childrenNodes = childrenIds.map(id => nodes.find(n => n.id === id));
+
+            // Recursively layout *their* subtrees first to determine widths
+            const subTreeDimensions = childrenNodes.map(child => {
+                if (child.expanded) {
+                     return layoutTributaryTree(child, dir, level + 1);
+                } else {
+                     return { width: 0, left: 0, right: 0 }; // Leaf (collapsed)
+                }
+            });
+
+            // Calculate total width using SIBLING_GAP or subtree width
+            let totalWidth = 0;
+            const widths = subTreeDimensions.map((dim, i) => {
+                // Determine width of this child slot
+                // If it has a subtree, use that width. Else, minimal node width.
+                // We actually need to place the CHILDREN of this node. 
+                // Wait, this function places childrenNodes? 
+                // No, recursion usually goes bottom-up for width, top-down for position.
+                // Let's do a simpler "Width Assignment" approach.
+                // Leaf width = SIBLING_GAP.
+                // Node width = Sum(children widths).
+                return Math.max(dim.width, SIBLING_GAP);
+            });
+            
+            totalWidth = widths.reduce((sum, w) => sum + w, 0);
+
+            // Positioning
+            // Start X = ParentX - TotalWidth / 2
+            let currentX = parentNode.x - (totalWidth / 2);
+            
+            childrenNodes.forEach((child, i) => {
+                const slotWidth = widths[i];
+                // Center the child in its slot
+                child.x = currentX + (slotWidth / 2);
+                child.y = parentNode.y + (dir * LEVEL_HEIGHT); // Perpendicular step
+                child.isSpine = false;
+                
+                currentX += slotWidth;
+                
+                // If this child is expanded, its subtree has already been calculated?
+                // Actually my recursion above returned dimensions but didn't PLACE them relative to *this* calculated X.
+                // We need to re-run or pass offset.
+                // Standard approach: 2 Passes.
+                // Pass 1: Calculate Widths.
+                // Pass 2: Assign Positions.
+                
+                // Let's just fix it by recursively calling placement if expanded *after* setting X
+                if (child.expanded) {
+                   layoutTributaryTreePlacement(child, dir); 
+                }
+            });
+
+            return { width: totalWidth };
+        }
+        
+        // Simplified Logic: Just need to place children under a parent. 
+        // We need 2 functions: 1 to get subtree width, 1 to place.
+        
+        function getSubtreeWidth(nodeId) {
+             const node = nodes.find(n => n.id === nodeId);
+             if (!node.expanded) return SIBLING_GAP;
+             
+             const children = rawEdges.filter(e => e.t === nodeId).map(e => e.s).filter(id => !mainPathIds.includes(id));
+             if (children.length === 0) return SIBLING_GAP;
+             
+             let width = 0;
+             children.forEach(cid => {
+                 width += getSubtreeWidth(cid);
+             });
+             return width;
+        }
+        
+        function layoutTributaryTreePlacement(parentNode, dir) {
+             const children = rawEdges.filter(e => e.t === parentNode.id).map(e => e.s).filter(id => !mainPathIds.includes(id));
+             if (children.length === 0) return;
+             
+             // Calculate local widths
+             const childWidths = children.map(cid => getSubtreeWidth(cid));
+             const totalW = childWidths.reduce((a,b) => a+b, 0);
+             
+             let startX = parentNode.x - (totalW / 2);
+             
+             children.forEach((cid, i) => {
+                 const childNode = nodes.find(n => n.id === cid);
+                 const w = childWidths[i];
+                 
+                 childNode.x = startX + (w/2);
+                 childNode.y = parentNode.y + (dir * LEVEL_HEIGHT);
+                 childNode.isSpine = false;
+                 
+                 startX += w;
+                 
+                 if (childNode.expanded) {
+                     layoutTributaryTreePlacement(childNode, dir);
+                 }
+             });
+        }
+        
+        /* Overwriting the previous flawed function with the 2-pass approach */
+        // Redefine the main loop to use correct logic
+        function updateLayout() {
+             const spineMap = new Map();
+             mainPathIds.forEach((id, index) => {
+                const node = nodes.find(n => n.id === id);
+                node.x = index * SPACING_X;
+                node.y = 0;
+                node.isSpine = true;
+                node.spineIndex = index;
+                spineMap.set(spineMap, node);
+            });
+            
+            mainPathIds.forEach((spineId) => {
+                const spineNode = nodes.find(n => n.id === spineId);
+                 const direction = (spineNode.spineIndex % 2 === 0) ? 1 : -1;
+                 
+                 if (spineNode.expanded) {
+                     layoutTributaryTreePlacement(spineNode, direction);
+                 }
+            });
+            
+            render();
+        }
+
+
+        function render() {
+            // Edges
+            // Only draw edges if both source and target have coordinates (are part of layout?)
+            // Or just draw all active ones.
+            // We need to filter links to only those where nodes are "visible" (placed).
+            // A node is visible if it is spine, OR if its parent is expanded.
+            
+            const visibleLinks = [];
+            rawEdges.forEach(e => {
+                const s = nodes.find(n => n.id === e.s);
+                const t = nodes.find(n => n.id === e.t);
+                
+                // Hack: check if x/y are 0 (unplaced) for non-spine
+                // Better: check ancestry.
+                // For Mockup: Just check if we placed them (coords != 0 or id='Math' which is 0,0)
+                // Let's use a Set of placed IDs
+                // Actually, just rely on D3 update.
+                if (mainPathIds.includes(e.s) && mainPathIds.includes(e.t)) {
+                     visibleLinks.push({ s, t, type: 'spine' });
+                } else if (t.expanded || mainPathIds.includes(e.t)) { 
+                    // If target is expanded, we see its children.
+                    // Wait, Edge goes Child -> Parent (Source -> Target).
+                    // So if Target is expanded, Source is visible.
+                    // Check if Target is effectively placed?
+                    // Let's just filter by "Is Source Placed AND Is Target Placed"
+                    // How to detect if placed? 
+                    // Let's flag them during layout.
+                }
+            });
+            
+            // Re-calc explicit placed links
+            const linksToDraw = [];
+            rawEdges.forEach(e => {
+                 const sNode = nodes.find(n => n.id === e.s);
+                 const tNode = nodes.find(n => n.id === e.t);
+                 // Heuristic: If we touched their X/Y in updateLayout (except 0,0 default?)
+                 // Let's add a 'placed' flag
+            });
+            
+            // Clean Re-render
+            const links = [];
+            // Recalculate which nodes are actually placed
+            const placedNodes = nodes.filter(n => n.isSpine || 
+               // Check if parent is placed and expanded? No, simpler:
+               // Just iterate the structure we built.
+               // We need valid Links. 
+               // A link exists if TARGET is expanded (revealing SOURCE).
+               // OR if both are Spine.
+               // (Except if Source is Spine? No, edges go Prerequisites -> Target)
+               (nodes.find(p => p.id === rawEdges.find(edge => edge.s === n.id)?.t)?.expanded)
+            );
+            
+            // This is getting complex for a mockup.
+            // Let's just draw ALL links where both nodes have been touched by layout.
+            // We reset all nodes to {placed: false} at start of updateLayout
+            // Then set true.
+            
+            // Refined UpdateLayout
+             nodes.forEach(n => n.placed = false);
+             mainPathIds.forEach((id, index) => {
+                const node = nodes.find(n => n.id === id);
+                node.x = index * SPACING_X;
+                node.y = 0;
+                node.isSpine = true;
+                node.spineIndex = index;
+                node.placed = true;
+            });
+             mainPathIds.forEach((spineId) => {
+                const spineNode = nodes.find(n => n.id === spineId);
+                 const direction = (spineNode.spineIndex % 2 === 0) ? 1 : -1;
+                 if (spineNode.expanded) layoutTributaryTreePlacement2(spineNode, direction);
+            });
+            
+            const finalLinks = rawEdges.map(e => ({
+                source: nodes.find(n => n.id === e.s),
+                target: nodes.find(n => n.id === e.t),
+                isSpine: mainPathIds.includes(e.s) && mainPathIds.includes(e.t)
+            })).filter(l => l.source.placed && l.target.placed);
+
+            const linkSel = g.selectAll(".link").data(finalLinks, d => `${d.source.id}-${d.target.id}`);
+            linkSel.enter().append("path")
+                .attr("class", d => d.isSpine ? "link spine-link" : "link tributary-link")
+                .merge(linkSel)
+                .attr("d", d => {
+                     // Curved path for tree
+                     if (d.isSpine) return `M${d.source.x},${d.source.y} L${d.target.x},${d.target.y}`;
+                     
+                     // Elbow or Curve? "Tree-Like"
+                     // Cubic Bezier: M start C c1 c2 end
+                     const dy = d.target.y - d.source.y;
+                     return `M${d.source.x},${d.source.y} 
+                             C${d.source.x},${d.target.y - (dy/2)} 
+                              ${d.target.x},${d.target.y - (dy/2)} 
+                              ${d.target.x},${d.target.y}`;
+                });
+            linkSel.exit().remove();
+
+            const nodeSel = g.selectAll(".node").data(nodes.filter(n => n.placed), d => d.id);
+            const nEnter = nodeSel.enter().append("g").attr("class", "node")
+                .on("click", (e, d) => { d.expanded = !d.expanded; updateLayout(); });
+            nEnter.append("circle").attr("r", 25)
+                  .attr("fill", d => d.isSpine ? "#4caf50" : "#2196f3");
+            nEnter.append("text").attr("dy", 5).attr("text-anchor", "middle").text(d => d.id);
+            
+            nodeSel.merge(nEnter).transition().attr("transform", d => `translate(${d.x},${d.y})`);
+            nodeSel.exit().remove();
+        }
+
+        function layoutTributaryTreePlacement2(parentNode, dir) {
+             const children = rawEdges.filter(e => e.t === parentNode.id).map(e => e.s).filter(id => !mainPathIds.includes(id));
+             if (children.length === 0) return;
+             
+             const childWidths = children.map(cid => getSubtreeWidth(cid));
+             const totalW = childWidths.reduce((a,b) => a+b, 0);
+             let startX = parentNode.x - (totalW / 2);
+             
+             children.forEach((cid, i) => {
+                 const childNode = nodes.find(n => n.id === cid);
+                 const w = childWidths[i];
+                 childNode.x = startX + (w/2);
+                 childNode.y = parentNode.y + (dir * LEVEL_HEIGHT);
+                 childNode.isSpine = false;
+                 childNode.placed = true;
+                 startX += w;
+                 
+                 if (childNode.expanded) layoutTributaryTreePlacement2(childNode, dir);
+             });
+        }
+        
+        function resetGraph() { nodes.forEach(n => n.expanded = false); updateLayout(); }
+        function expandAll() { nodes.forEach(n => n.expanded = true); updateLayout(); }
+
+        updateLayout();
+    </script>
+</body>
+</html>
