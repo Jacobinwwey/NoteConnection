@@ -355,6 +355,12 @@ class PathEngine {
              }
         }
 
+        // Capture original path nodes for Critical Path identification
+        // If bestPath exists, it's the critical path.
+        // If bestPath is null, we used a fallback (all unlearned or immediate).
+        // The fallback set (before forced expansion) is our "Spine".
+        const spineSet = new Set(finalPathNodes.map(n => n.id));
+
         // --- Forced Expansion Logic ---
         // If a node in the path is in forcedExpansionSet, we must include its IMMEDIATE unlearned prerequisites
         // and link them up to the frontier if possible? 
@@ -389,9 +395,19 @@ class PathEngine {
         // Update PathSet for Hidden Prereq Check
         const pathSet = new Set(finalPathNodes.map(n => n.id));
 
-        // Mark critical path (original shortest path) and check for hidden prerequisites
+        // Mark critical path (original shortest path or fallback) and check for hidden prerequisites
         finalPathNodes = finalPathNodes.map(n => {
-            const isOriginalPath = bestPath ? bestPath.includes(n.id) : true;
+            // Updated Logic: Use spineSet or bestPath
+            let isOriginalPath = false;
+            
+            if (bestPath) {
+                isOriginalPath = bestPath.includes(n.id);
+            } else {
+                // Determine if it was in the original set before forced expansion
+                // Fallback scenario: Initial nodes are critical/spine
+                isOriginalPath = spineSet.has(n.id);
+            }
+
             const newNode = { ...n, isCritical: isOriginalPath };
             
             // Check for hidden unlearned prerequisites
@@ -716,8 +732,15 @@ class PathEngine {
      * @param learningPath The active learning path object
      * @param collapsedSet Optional Set of collapsed node IDs
      */
+    /**
+     * Get tree layout Structure (Spine & Tributaries) for visualization.
+     * 获取用于可视化的树形布局结构（主干与支流）。
+     * @param centralId Current center node ID
+     * @param learningPath The active learning path object
+     * @param collapsedSet Optional Set of collapsed node IDs
+     */
     getTreeLayout(centralId, learningPath, collapsedSet = new Set()) {
-        console.log('[PathCore] getTreeLayout called. Nodes:', learningPath?.nodes?.length, 'Edges:', learningPath?.edges?.length);
+        // console.log('[PathCore] getTreeLayout called. Nodes:', learningPath?.nodes?.length);
         if (!learningPath || !learningPath.nodes || learningPath.nodes.length === 0) {
             console.warn('[PathCore] getTreeLayout: No nodes in learningPath');
             return null;
@@ -725,156 +748,195 @@ class PathEngine {
 
         const nodes = learningPath.nodes;
         const nodeMap = new Map(nodes.map(n => [n.id, n]));
+        const layoutNodes = [];
+        const placedNodeIds = new Set();
         
-        // --- 1. Build Adjacency & Compute Local In-Degrees ---
-        const adj = new Map();
-        const inDegree = new Map(); // Local in-degree for sorting
-        nodes.forEach(n => {
-            adj.set(n.id, []);
-            inDegree.set(n.id, 0);
-        });
+        // Check for specific edges provided in learningPath to restrict traversal (Constraint Subgraph)
+        // If not provided, fallback to global graph
+        const usePathEdges = learningPath.edges && learningPath.edges.length > 0;
+        const pathEdgesMap = new Map(); // Source -> [Targets] (Forward) 
+        // We need Reverse map for dependencies (Target -> Sources)
+        const pathReverseAdj = new Map();
 
-        nodes.forEach(n => {
-            adj.set(n.id, []);
-            inDegree.set(n.id, 0);
-        });
-
-        // Use provided edges if available to respect the specific subgraph structure
-        // Otherwise fallback to global graph queries
-        if (learningPath.edges && learningPath.edges.length > 0) {
-            learningPath.edges.forEach(edge => {
-                // Ensure both nodes are in the display set
-                if (nodeMap.has(edge.source) && nodeMap.has(edge.target)) {
-                    adj.get(edge.source).push(edge.target);
-                    inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
-                }
-            });
-        } else {
-            // Fallback: Query all edges from graph (Legacy behavior)
-            nodes.forEach(source => {
-                const outgoing = this.graph.getOutgoingEdges(source.id);
-                outgoing.forEach(edge => {
-                    if (nodeMap.has(edge.target)) {
-                        adj.get(source.id).push(edge.target);
-                        inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
-                    }
-                });
+        if (usePathEdges) {
+            learningPath.edges.forEach(e => {
+                if (!pathReverseAdj.has(e.target)) pathReverseAdj.set(e.target, []);
+                pathReverseAdj.get(e.target).push(e.source);
             });
         }
 
-        // --- 2. Sort Children by In-Degree (Descending) ---
-        // Prioritize nodes with higher dependency count (likely more foundational or central) based on user request
-        nodes.forEach(n => {
-            const children = adj.get(n.id);
-            children.sort((a, b) => {
-                const degA = inDegree.get(a) || 0;
-                const degB = inDegree.get(b) || 0;
-                if (degA !== degB) return degB - degA; // Descending In-Degree
-                return a.localeCompare(b); // Stable tie-break
-            });
-        });
+        // Helper: Get Prerequisites (Incoming Edges) for a node
+        // Respects the constrained subgraph if 'learningPath.edges' exists
+        const getPrerequisites = (nodeId) => {
+            if (usePathEdges) {
+                return (pathReverseAdj.get(nodeId) || []).filter(src => nodeMap.has(src));
+            } else {
+                return this.graph.getIncomingEdges(nodeId)
+                    .map(e => e.source)
+                    .filter(src => nodeMap.has(src));
+            }
+        };
 
-        // --- 3. Build Layout Levels (BFS) & Filter Collapsed ---
-        // Determine Roots (In-Degree 0 or Cycle Breaker)
-        const roots = nodes.filter(n => (inDegree.get(n.id) || 0) === 0).map(n => n.id);
-        if (roots.length === 0 && nodes.length > 0) roots.push(nodes[0].id);
+        // --- 1. Identify and Place Spine (Main Learning Path) ---
+        // Spine = Logic Critical Path. In diffusionLearning, nodes have 'isCritical' flag.
+        // Fallback: If no isCritical, use the sequential order of nodes as they appear (assuming sorted).
+        let spineCandidates = nodes.filter(n => n.isCritical);
+        if (spineCandidates.length === 0) {
+            // Fallback: Try to trace from central/start? Or just take all nodes?
+            // Assuming the list is topologically sorted or step-ordered.
+            spineCandidates = [...nodes]; 
+            // Attempt to sort by stepOrder if available
+            spineCandidates.sort((a,b) => (a.stepOrder || 0) - (b.stepOrder || 0));
+        } else {
+             spineCandidates.sort((a,b) => (a.stepOrder || 0) - (b.stepOrder || 0));
+        }
 
-        const nodeLevels = new Map();
-        const layoutNodes = [];
-        const layoutEdges = [];
-        const visited = new Set();
+        const SPACING_X = 250;
+        const LEVEL_HEIGHT = 180; // Vertical stride
+        const SIBLING_GAP = 100;
+
+        // Place Spine
+        const spineMap = new Map(); // Id -> LayoutNode
         
-        // Helper: Recursive Traversal for Layout
-        // Assigns X based on depth
-        // Returns Y-range or similar for positioning
-        
-        const X_SPACING = 250; // Horizontal spacing
-        const Y_SPACING = 60;  // Vertical spacing
-        let nextY = 0;
-
-        const layoutRecursive = (nodeId, level) => {
-            if (visited.has(nodeId)) return null;
-            visited.add(nodeId);
-
-            const node = nodeMap.get(nodeId);
-            const isCollapsed = collapsedSet.has(nodeId);
-            const children = adj.get(nodeId) || [];
-            
-            const layoutNode = {
+        spineCandidates.forEach((node, index) => {
+            const lNode = {
                 id: node.id,
                 label: node.label,
                 status: this._getNodeStatus(node, centralId),
-                inDegree: (node.inDegree || 0), // Global InDegree
-                x: level * X_SPACING,
-                y: 0, // Placeholder
-                collapsed: isCollapsed,
-                isExpanded: node.isExpanded, // Pass thru expansion state
-                hasChildren: children.length > 0
+                inDegree: (node.inDegree || 0),
+                x: index * SPACING_X,
+                y: 0,
+                collapsed: collapsedSet.has(node.id),
+                isExpanded: node.isExpanded,
+                hasChildren: false, // Will calculate later
+                isSpine: true,
+                spineIndex: index
             };
-
-            let childrenYSum = 0;
-            let childrenCount = 0;
-            let minChildY = Infinity;
-            let maxChildY = -Infinity;
-
-            if (!isCollapsed && children.length > 0) {
-                // Traverse children
-                children.forEach(childId => {
-                    // Prevent cycles in tree traversal (if DAG has separate paths to same node, only first visits)
-                    // For tree layout, we want full tree? DAG usually means we should link to existing.
-                    // Implementation choice: Treat as Tree (replicate or just link?). 
-                    // Let's assume DAG Layout: if child visited, we define edge but not position (it's already placed).
-                    // BUT for horizontal alignment, we usually want specific tree branch.
-                    // For now: Only recurse if not visited. If visited, draw edge but don't move it.
-                    
-                    if (!visited.has(childId)) {
-                        layoutEdges.push({ from: nodeId, to: childId });
-                        const childResult = layoutRecursive(childId, level + 1);
-                        if (childResult) {
-                            childrenYSum += childResult.y;
-                            childrenCount++;
-                            minChildY = Math.min(minChildY, childResult.y);
-                            maxChildY = Math.max(maxChildY, childResult.y);
-                        }
-                    } else {
-                        // Already placed, just add edge
-                         layoutEdges.push({ from: nodeId, to: childId });
-                    }
-                });
-            }
-
-            // Calculate Y
-            if (childrenCount > 0) {
-                // Center parent relative to children
-                layoutNode.y = (minChildY + maxChildY) / 2;
-            } else {
-                // Leaf (or collapsed) -> take next Y slot
-                layoutNode.y = nextY;
-                nextY += Y_SPACING;
-            }
             
-            layoutNodes.push(layoutNode);
-            return layoutNode;
+            // If strictly enforced that "Any node may appear only once",
+            // and "Priority given to node appearing before"...
+            // Since we iterate spine first, spine takes precedence.
+            if (!placedNodeIds.has(node.id)) {
+                layoutNodes.push(lNode);
+                placedNodeIds.add(node.id);
+                spineMap.set(node.id, lNode);
+            }
+        });
+
+        // --- 2. Recursively Place Tributaries ---
+        
+        // Helper: Calculate Subtree Width (BFS/DFS) to center children
+        // Returns total width required for the subtree
+        // visited: Set of nodes already counted in this measurement session to avoid double-counting shared descendants
+        const measureSubtree = (rootId, visited = new Set()) => {
+            if (visited.has(rootId)) return 0;
+            visited.add(rootId);
+
+            const children = getPrerequisites(rootId).filter(id => !placedNodeIds.has(id));
+            if (children.length === 0) return SIBLING_GAP;
+            
+            const childNode = nodeMap.get(rootId);
+            const isExpanded = childNode?.isExpanded;
+            
+            if (!isExpanded) return SIBLING_GAP;
+
+            let totalWidth = 0;
+            children.forEach(childId => {
+                totalWidth += measureSubtree(childId, visited);
+            });
+            return totalWidth;
         };
 
-        // Run Layout for each root
-        // Reset valid roots order
-        roots.sort((a, b) => b.localeCompare(a)); // Consistent order
-        let rootYOffset = 0;
+        // Recursive Placement Function
+        const placeTributaries = (parentId, originX, originY, direction) => {
+             const parentNode = nodeMap.get(parentId);
+             // Check expansion state (from backend flag)
+             if (!parentNode.isExpanded) return;
 
-        roots.forEach(rootId => {
-             const rootNode = layoutRecursive(rootId, 0);
-             // If we have disconnected forests, stack them vertically?
-             // Since nextY increments globaly, they stack automatically.
-        });
+             // Find unplaced prerequisites (Tributaries)
+             let tributaries = getPrerequisites(parentId).filter(id => !placedNodeIds.has(id));
+             
+             if (tributaries.length === 0) return;
 
-        // Add nodes that weren't visited (disconnected components not reachable from detected roots)
-        // Usually shouldn't happen in well-formed Domain Learning, but purely defensive
-        nodes.forEach(n => {
-            if (!visited.has(n.id)) {
-                layoutRecursive(n.id, 0);
+             // Sort tributaries (?) - maybe alphabetical or by in-degree
+             tributaries.sort((a,b) => a.localeCompare(b));
+
+             // Update parent's hasChildren status in layout
+             const layoutParent = layoutNodes.find(n => n.id === parentId);
+             if (layoutParent) layoutParent.hasChildren = true;
+
+             // Measure widths with a shared visited set for this group of siblings
+             // This ensures shared dependencies (diamonds) don't blow up width
+             const measurementVisited = new Set();
+             const widths = tributaries.map(id => measureSubtree(id, measurementVisited));
+             const totalW = widths.reduce((sum, w) => sum + w, 0);
+
+             // Start X: Center around parent
+             let currentX = originX - (totalW / 2);
+             const childY = originY + (direction * LEVEL_HEIGHT);
+
+             tributaries.forEach((childId, idx) => {
+                 const w = widths[idx];
+                 const childNode = nodeMap.get(childId);
+                 const centerX = currentX + (w / 2);
+
+                 const lNode = {
+                    id: childNode.id,
+                    label: childNode.label,
+                    status: this._getNodeStatus(childNode, centralId),
+                    inDegree: (childNode.inDegree || 0),
+                    x: centerX, // Still uses X-axis spread
+                    y: childY,   // Lateral expansion (Vertical per requirement)
+                    collapsed: collapsedSet.has(childId),
+                    isExpanded: childNode.isExpanded,
+                    hasChildren: false, // Will update if recursed
+                    isSpine: false
+                };
+
+                layoutNodes.push(lNode);
+                placedNodeIds.add(childId);
+
+                // Recurse (Expand further out in same direction)
+                placeTributaries(childId, centerX, childY, direction);
+
+                currentX += w;
+             });
+        };
+
+        // Iterate Spine nodes in order (Precedence Rule)
+        spineCandidates.forEach((node) => {
+            const lNode = spineMap.get(node.id);
+            if (lNode) {
+                // Determine direction: Odd/Even logic
+                // Even -> Down (+1), Odd -> Up (-1)
+                const dir = (lNode.spineIndex % 2 === 0) ? 1 : -1;
+                placeTributaries(node.id, lNode.x, lNode.y, dir);
             }
         });
+
+        // --- 3. Build Edges ---
+        // Construct edges only between placed nodes
+        const layoutEdges = [];
+        const placedSet = new Set(layoutNodes.map(n => n.id));
+        
+        // Iterate all potential edges
+        if (usePathEdges) {
+            learningPath.edges.forEach(e => {
+                if (placedSet.has(e.source) && placedSet.has(e.target)) {
+                    layoutEdges.push({ from: e.source, to: e.target });
+                }
+            });
+        } else {
+             // Fallback global edges
+             layoutNodes.forEach(node => {
+                 const outgoing = this.graph.getOutgoingEdges(node.id);
+                 outgoing.forEach(e => {
+                     if (placedSet.has(e.target)) {
+                         layoutEdges.push({ from: node.id, to: e.target });
+                     }
+                 });
+             });
+        }
 
         return {
             nodes: layoutNodes,
