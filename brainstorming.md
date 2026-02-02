@@ -282,3 +282,233 @@ Instead of naive BFS, we iterate strictly:
   - 实现“基于主干的插槽布局”。
   - `SpineNodes`: `y = 0`。
   - `Other nodes`: `y` 动态分配以最小化平时距离并避免重叠。
+
+## Session 3: Fixing Layout Density and Duplication (current)
+
+**Date**: 2026-02-02
+
+### 1. The Duplication Bug
+
+- **Observation**: Users see multiple identical nodes (e.g. "S&P 500") appearing as siblings.
+- **Root Cause**: The underlying graph may have multiple edges between two nodes (e.g. "prerequisite" and "related"). The `getPrerequisites` helper in `getTreeLayout` maps edges to source IDs without deduplication.
+- **Mechanism**:
+  ```javascript
+  // Current Logic
+  const prereqs = incomingEdges.map((e) => e.source); // Returns ['A', 'A']
+  const unplaced = prereqs.filter((id) => !placed.has(id)); // Returns ['A', 'A'] (both pass)
+  unplaced.forEach((id) => {
+    place(id); // Places A (1st time)
+    place(id); // Places A (2nd time) - Duplicate!
+  });
+  ```
+- **Solution**: Enforce uniqueness on the prerequisite list _before_ processing.
+  ```javascript
+  const uniquePrereqs = [...new Set(incomingEdges.map((e) => e.source))];
+  ```
+
+### 2. Overlap and Density
+
+- **Observation**: Nodes are too close leads to overlap given the new Rounded Rectangle shape (180px width).
+- **Current Settings**: `SIBLING_GAP = 220`. Node Width = 180. Gap = 40px. This is tight.
+- **Proposal**:
+  - **Node Width**: 200px (to fit text better)
+  - **Node Height**: 60px
+  - **Sibling Gap**: 250px (Space between centers). Gap = 50px.
+  - **Spine Spacing (X)**: 400px.
+  - **Level Height (Y)**: 150px.
+
+### 3. Implementation Plan
+
+1.  **Deduplicate Prereqs**: Modify `getTreeLayout` in `path_core.js`.
+2.  **Adjust Constants**: Update `SPACING_X`, `LEVEL_HEIGHT`, `SIBLING_GAP`.
+3.  **Refine Renderer**: Update `tree_renderer.gd` node size constants to match (200x60).
+
+## Session 4: Auto-Avoidance & Visual Bubbles
+
+**Date**: 2026-02-02
+
+### 1. Collision Avoidance (Dynamic Spine)
+
+- **Problem**: Fixed spacing (`500px`) fails if node 1 (Down) and node 3 (Down) both have huge subtrees that collide.
+- **Concept**: Dynamic Spine Placement.
+- **Algorithm**:
+  1.  Calculate `SubtreeWidth` and `SubtreeBounds` (min*x, max_x relative to root) for \_every* spine node bottom-up.
+  2.  Place Spine Nodes Left-to-Right.
+  3.  `Spine[i].x = Spine[i-1].x + SPACING_X + Constraint`.
+  4.  **Constraint**:
+      - Find previous node on _same side_ (e.g., if i is Down/Even, check i-2).
+      - Ensure `Spine[i].min_x > Spine[i-2].max_x + GAP`.
+      - Also ensure logic for immediate neighbor (i-1) is reasonable (often connection line is long).
+- **Refinement**: Since layout is tree-based, "shifting" the root shifts the whole tree. We just need to find the safe X for the root.
+
+### 2. Group Highlighting (Visual Bubble)
+
+- **Requirement**: "Faint curved border" around in-degree nodes of a central node.
+- **Scenario**: When Central Node is expanded.
+- **Implementation**:
+  - **Data**: Identify the set of nodes belonging to the "In-Degree Tree" of the Central Node.
+  - **Geometry**: Calculate the Convex Hull or simply a Bounding Box + Padding of these nodes.
+  - **Render**: Draw a `StyleBoxFlat` or `draw_rect/draw_polygon` behind the nodes with low alpha.
+- **Collapsed State**: "All existing in-degree nodes should illuminate".
+  - This is already partially handled by the "Focus Mode" dimming logic. We just need to ensure _all_ descendants (not just immediate) are highlighted? No, just "in-degree nodes". Usually means immediate parents. Or all recursive? "In-degree nodes" implies the stream. I will highlight recursively.
+
+### 3. Plan
+
+1.  **Mockup**: Implement Dynamic Spine Spacing in `tree_path_mockup.html`.
+2.  **Mockup**: Implement "Group Bubble" in `tree_path_mockup.html`.
+3.  **Verify**: Show user.
+
+## Session 5: Contour-Based Layout & Deep Interaction
+
+**Date**: 2026-02-02
+
+### 1. The Overlap Problem (Deep Analysis)
+
+- **User Insight**: "Not just relationship between main learning path and in-degree, but _between all nodes_... collisions are not permitted."
+- **Failure of previous approach**: Simple Dynamic Spine only checked spine node overlap. It didn't account for deep tributaries of Node A colliding with deep tributaries of Node B.
+- **Requirement**: **Contour-Based Collision Avoidance**.
+- **Algorithm**:
+  - We must calculate the "Silhouette" (or Skyline) of every subtree.
+  - **Silhouette**: A list of `(min_x, max_x)` ranges for every depth level relative to the root.
+  - **Merging**: When placing a node next to existing placed nodes, we check for intersection between their Skylines at corresponding Y-levels.
+  - **Spine Placement**:
+    - Maintain a `GlobalRightContour` for the "Down" side and "Up" side.
+    - When placing Spine Node `i` (going Down):
+      - Shift `i.x` until `i`'s _Left Contour_ clears the `GlobalRightContour (Down)` + Padding.
+      - Update `GlobalRightContour (Down)` by merging `i`'s Right Contour.
+      - Same for Up.
+
+### 2. Interaction & Visuals
+
+- **Problem**: Not all nodes collapsible.
+- **Fix**: The default click handler in mockup only applied to `.node` groups entered via D3. If nodes are dynamically added/removed, merge selection properly or use event delegation. Or simply ensuring `click` always toggles `d.expanded`.
+- **Requirement**: "Faint curved border" for in-degree nodes.
+- **Refinement**: Convex Hull or Bubble Set around _all_ upstream nodes of the active central node.
+
+### 3. Implementation Steps for Mockup V3
+
+1.  **Data Structure**: Enhance `Node` with `polygons` or `contours`.
+2.  **Recursive Contour Calculation**: Function `getContour(node)` returns `{ [level]: {min, max} }`.
+3.  **Contour Merge**: Function `mergeContours(c1, c2, offset_x, offset_y)`.
+4.  **Layout Loop**:
+    - Iterate Spine.
+    - `x = max(prev_spine_x + MIN_SPACING, findSafeX(node_contour, accum_contour))`.
+    - Update Accumulators.
+
+---
+
+## 会话 5: 基于轮廓的布局与深度交互
+
+**日期**: 2026-02-02
+
+### 1. 重叠问题 (深度分析)
+
+- **用户见解**: “不仅是主学习路径与其入度节点之间的关系，而是 _所有节点之间_... 不允许碰撞。”
+- **先前方法的失败**: 简单的动态主干仅检查了主干节点的重叠。它没有考虑到节点 A 的深度支流与节点 B 的深度支流发生的碰撞。
+- **需求**: **基于轮廓的碰撞避让**。
+- **算法**:
+  - 我们必须计算每个子树的“剪影” (Silhouette/Skyline)。
+  - **剪影**: 相对于根节点的每一层深度的 `(min_x, max_x)` 范围列表。
+  - **合并**: 当在现有放置节点旁放置新节点时，检查它们在对应 Y 层级上的剪影是否相交。
+  - **主干放置**:
+    - 维护“下”侧和“上”侧的 `GlobalRightContour` (全局右轮廓)。
+    - 当放置主干节点 `i` (向下) 时:
+      - 移动 `i.x` 直到 `i` 的 _左轮廓_ 清除 `GlobalRightContour (Down)` + 间距。
+      - 通过合并 `i` 的右轮廓来更新 `GlobalRightContour (Down)`。
+      - 上方同理。
+
+### 2. 交互与视觉
+
+- **问题**: 并非所有节点都可折叠。
+- **修复**: Mockup 中的默认点击处理程序仅应用于通过 D3 进入的 `.node` 组。如果节点是动态添加/删除的，需正确合并选择或使用事件委托。或者简单地确保 `click` 始终切换 `d.expanded`。
+- **需求**: 入度节点的“微弱弯曲边框”。
+- **优化**: 在活动中心节点的所有上游节点周围绘制凸包或气泡集。
+
+### 3. Mockup V3 实施步骤
+
+1.  **数据结构**: 增强 `Node`，增加 `polygons` 或 `contours`。
+2.  **递归轮廓计算**: 函数 `getContour(node)` 返回 `{ [level]: {min, max} }`.
+3.  **轮廓合并**: 函数 `mergeContours(c1, c2, offset_x, offset_y)`.
+4.  **布局循环**:
+    - 遍历主干。
+    - `x = max(prev_spine_x + MIN_SPACING, findSafeX(node_contour, accum_contour))`.
+    - 更新累加器。
+
+---
+
+## 会话 4: 自动避让与视觉气泡
+
+**日期**: 2026-02-02
+
+### 1. 碰撞避让 (动态主干)
+
+- **问题**: 如果节点 1（下）和节点 3（下）都具有巨大的子树导致碰撞，固定间距（`500px`）将失效。
+- **概念**: 动态主干放置。
+- **算法**:
+  1.  自底向上计算每个主干节点的 `SubtreeWidth` 和 `SubtreeBounds`（相对于根的 min_x, max_x）。
+  2.  从左到右放置主干节点。
+  3.  `Spine[i].x = Spine[i-1].x + SPACING_X + Constraint`。
+  4.  **约束**:
+      - 查找 _同侧_ 的前一个节点（例如，如果 i 是下/偶数，检查 i-2）。
+      - 确保 `Spine[i].min_x > Spine[i-2].max_x + GAP`。
+      - 同时确保与直接邻居 (i-1) 的逻辑合理（通常连接线会变长）。
+- **优化**: 由于布局是基于树的，“移动”根节点会移动整个树。我们只需要找到根节点的安全 X 坐标。
+
+### 2. 分组高亮 (视觉气泡)
+
+- **需求**: 在中心节点的入度节点周围显示“微弱的弯曲边框”。
+- **场景**: 当中心节点展开时。
+- **实现**:
+  1.  **数据**: 识别属于中心节点“入度树”的节点集合。
+  2.  **几何**: 计算这些节点的凸包 (Convex Hull) 或简单的边界框 (Bounding Box) + 填充。
+  3.  **渲染**: 在节点后方使用低透明度的 `StyleBoxFlat` 或 `draw_rect/draw_polygon` 绘制。
+- **折叠状态**: “所有现有的入度节点都应点亮”。
+  - 这已由“焦点模式”的变暗逻辑部分处理。我们需要确保 _所有_ 后代（不仅是直接后代）都被高亮？或者只是“入度节点”。通常指流。我将递归高亮。
+
+### 3. 计划
+
+1.  **Mockup**: 在 `tree_path_mockup.html` 中实现动态主干间距。
+2.  **Mockup**: 在 `tree_path_mockup.html` 中实现“分组气泡”。
+3.  **验证**: 向用户展示。
+
+---
+
+## 会话 3: 修复布局密度与重复问题 (当前)
+
+**日期**: 2026-02-02
+
+### 1. 重复节点 Bug
+
+- **观察**: 用户看到多个相同的节点（例如 "S&P 500"）作为兄弟节点出现。
+- **根本原因**: 底层图数据可能在两个节点之间包含多条边（例如同时存在 "前提" 和 "相关" 关系）。`getTreeLayout` 中的 `getPrerequisites` 辅助函数直接将边映射为源 ID，未进行去重。
+- **机制**:
+  ```javascript
+  // 当前逻辑
+  const prereqs = incomingEdges.map((e) => e.source); // 返回 ['A', 'A']
+  const unplaced = prereqs.filter((id) => !placed.has(id)); // 返回 ['A', 'A'] (都通过检查)
+  unplaced.forEach((id) => {
+    place(id); // 放置 A (第1次)
+    place(id); // 放置 A (第2次) - 重复！
+  });
+  ```
+- **解决方案**: 在处理之前强制对前提节点列表去重。
+  ```javascript
+  const uniquePrereqs = [...new Set(incomingEdges.map((e) => e.source))];
+  ```
+
+### 2. 重叠与密度
+
+- **观察**: 考虑到新的圆角矩形形状（180px 宽），节点过于紧凑导致重叠。
+- **当前设置**: `SIBLING_GAP = 220`。节点宽 = 180。间隙 = 40px。太紧了。
+- **建议**:
+  - **节点宽度**: 200px (更好容纳文本)
+  - **节点高度**: 60px
+  - **兄弟间距 (Sibling Gap)**: 250px (中心间距)。净间隙 = 50px。
+  - **主干间距 (Spine Spacing X)**: 400px。
+  - **层级高度 (Level Height Y)**: 150px。
+
+### 3. 实施计划
+
+1.  **去重前提节点**: 修改 `path_core.js` 中的 `getTreeLayout`。
+2.  **调整常量**: 更新 `SPACING_X`, `LEVEL_HEIGHT`, `SIBLING_GAP`。
+3.  **优化渲染器**: 更新 `tree_renderer.gd` 的节点尺寸常量以匹配 (200x60)。
