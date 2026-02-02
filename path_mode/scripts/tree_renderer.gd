@@ -55,7 +55,7 @@ func _ready() -> void:
 	_update_style_config()
 	set_process(true)
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	if _is_long_pressing and not _pressed_node_id.is_empty():
 		var elapsed = (Time.get_ticks_msec() / 1000.0) - _press_start_time
 		
@@ -191,56 +191,87 @@ func _draw_layout_mode() -> void:
 			
 			_draw_bezier_curve(start, cp1, cp2, end, color, 2.0)
 			
-	# Pre-calculate Visible In-Degree
-	var visible_in_counts = {}
-	for edge in _layout_edges:
-		var to_id = edge.get("to", "")
-		visible_in_counts[to_id] = visible_in_counts.get(to_id, 0) + 1
-
-	# Draw Nodes with size based on in-degree
+	# Draw Nodes
+	var node_size = Vector2(180.0, 50.0)
+	var corner_radius = 25.0 # Fully rounded ends
+	
+	var sb = StyleBoxFlat.new()
+	sb.set_corner_radius_all(corner_radius)
+	
 	for node in _layout_nodes:
 		var pos = Vector2(node.x, node.y)
 		_node_positions[node.id] = pos
 		
 		var color = _style_config.get("node_pending")
+		var text_color = _style_config.get("label_color", Color.WHITE)
+		
 		if node.id == _current_id:
 			color = _style_config.get("node_current")
 		elif node.id in _completed_ids:
 			color = _style_config.get("node_completed")
+			text_color = Color.BLACK # Contrast for yellow/gold
 		
-		# Focus Mode Dimming (Nodes)
-		var label_alpha = 1.0
+		# Focus Mode Dimming
 		if _focus_mode_enabled and not _current_id.is_empty():
 			if not highlight_ids.has(node.id):
-				color.a = 0.2 # Dim
-				label_alpha = 0.3 # Dim text
+				color.a = 0.2
+				text_color.a = 0.3
 			else:
 				color.a = 1.0
-				# Boost color if needed
+				text_color.a = 1.0
+
+		# Draw Rounded Rectangle
+		var rect_pos = pos - (node_size * 0.5)
+		var rect = Rect2(rect_pos, node_size)
 		
-		# Calculate node radius based on in-degree (higher = larger = more foundational)
-		var in_deg = node.get("inDegree", 0)
-		var degree_factor = clampf(1.0 + float(in_deg) / 5.0, 1.0, 2.0)
-		var node_radius = base_radius * degree_factor
+		# Reuse stylebox to avoid allocation spam (though cheap)
+		sb.bg_color = color
+		draw_style_box(sb, rect)
 		
-		draw_circle(pos, node_radius, color)
+		# Draw Text (Centered & Wrapped)
+		var font = ThemeDB.fallback_font
+		var font_size = 14
 		
-		# Draw label
-		var label_color = _style_config.get("label_color", Color.WHITE)
-		label_color.a = label_alpha
-		draw_string(ThemeDB.fallback_font, pos + LABEL_OFFSET, node.label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, label_color)
+		# Simple wrapping hack:
+		var text = node.label
+		var lines = []
+		var current_line = ""
 		
-		# Draw In-Degree Badge (REMOVED - Integrated into Expansion Button)
-		# var in_val = str(node.get("inDegree", 0))
-		# var badge_pos = pos + Vector2(-node_radius - 8, -node_radius - 8)
-		# draw_string(ThemeDB.fallback_font, badge_pos, in_val, HORIZONTAL_ALIGNMENT_CENTER, -1, 10, Color(0.7, 0.7, 0.7))
+		# Approximation: Avg char width ~8px at size 14?
+		# Or better: split by space and measure
+		# Max width = node_size.x - 20 (padding)
+		var max_line_width = node_size.x - 20.0
 		
-		# Register Node Click Area (using dynamic radius)
+		var words = text.split(" ")
+		for word in words:
+			var test_line = current_line
+			if not test_line.is_empty(): test_line += " "
+			test_line += word
+			
+			var width = font.get_string_size(test_line, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size).x
+			
+			if width > max_line_width and not current_line.is_empty():
+				lines.append(current_line)
+				current_line = word
+			else:
+				current_line = test_line
+		lines.append(current_line)
+		
+		var line_height = font_size + 4.0
+		var total_text_height = lines.size() * line_height
+		var start_y = pos.y - (total_text_height / 2.0) + (font_size * 0.7) # Ascent approx
+		
+		for i in range(lines.size()):
+			var line = lines[i]
+			var line_width = font.get_string_size(line, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size).x
+			draw_string(font, Vector2(pos.x - line_width / 2.0, start_y + i * line_height), line, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, text_color)
+		
+		# Register Node Click Area
 		_click_areas.append({
-			"rect": Rect2(pos - Vector2(node_radius, node_radius), Vector2(node_radius * 2, node_radius * 2)),
+			"rect": rect,
 			"id": node.id,
 			"type": "node",
-			"radius": node_radius
+			"radius": max(node_size.x, node_size.y)
 		})
 
 # Helper for bezier drawing

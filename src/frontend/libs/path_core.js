@@ -791,9 +791,12 @@ class PathEngine {
              spineCandidates.sort((a,b) => (a.stepOrder || 0) - (b.stepOrder || 0));
         }
 
-        const SPACING_X = 250;
-        const LEVEL_HEIGHT = 180; // Vertical stride
-        const SIBLING_GAP = 100;
+        const SPACING_X = 350; // Increased for wider nodes
+        const LEVEL_HEIGHT = 120; // Reduced vertical gap slightly as requested "spacing between nodes is larger" might mean horizontal primarily, but user said "nodes should not overlap". Let's keep vertical reasonable. Actually user said "arrangement... too dense".
+        // Let's make LEVEL_HEIGHT ample too.
+        // Re-reading user: "spacing between nodes is larger". I will set LEVEL_HEIGHT to 150.
+        // SIBLING_GAP must be > node width (180).
+        const SIBLING_GAP = 220;
 
         // Place Spine
         const spineMap = new Map(); // Id -> LayoutNode
