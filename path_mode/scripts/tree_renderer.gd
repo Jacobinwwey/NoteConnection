@@ -50,6 +50,12 @@ var _hover_in_expanded: bool = false # Whether the in-degree list is expanded
 var _hover_out_expanded: bool = false # Whether the out-degree list is expanded
 const HOVER_DELAY := 0.8 # 800ms hover delay for info box
 
+# Hover Box Interaction State / 悬停框交互状态
+var _hover_info_rect: Rect2 = Rect2()
+var _hover_in_rect: Rect2 = Rect2()
+var _hover_out_rect: Rect2 = Rect2()
+var _hover_pin_time: float = 0.0 # 5-second auto-close timer
+
 # Layout params
 const LEVEL_HEIGHT = 60.0 # Vertical distance between levels
 const SIBLING_SPACING = 40.0 # Horizontal distance between nodes
@@ -78,11 +84,36 @@ func _process(_delta: float) -> void:
 			queue_redraw()
 
 	# Hover timer logic (Light Exploration) / 悬停计时器（轻度探索）
-	if not _hovered_node_id.is_empty() and not _hover_info_visible:
-		var hover_elapsed = (Time.get_ticks_msec() / 1000.0) - _hover_start_time
-		if hover_elapsed >= HOVER_DELAY:
-			_hover_info_visible = true
-			queue_redraw()
+	if not _hovered_node_id.is_empty():
+		var current_time = Time.get_ticks_msec() / 1000.0
+		if not _hover_info_visible:
+			var hover_elapsed = current_time - _hover_start_time
+			if hover_elapsed >= HOVER_DELAY:
+				_hover_info_visible = true
+				_hover_pin_time = 0.0
+				queue_redraw()
+		else:
+			# Check if we need to start or enforce the 5-second leave timer
+			var mouse_pos = get_local_mouse_position()
+			var world_pos = (mouse_pos - _view_offset) / _zoom_level
+			var is_in_box = _hover_info_rect.has_point(mouse_pos)
+			var is_on_node = false
+			for area in _click_areas:
+				if area.rect.has_point(world_pos) and area.get("type") == "node" and area.id == _hovered_node_id:
+					is_on_node = true
+					break
+			
+			if is_in_box or is_on_node:
+				_hover_pin_time = 0.0 # Mouse active, keep open
+			else:
+				if _hover_pin_time == 0.0:
+					_hover_pin_time = current_time # Start 5-second countdown
+				elif current_time - _hover_pin_time >= 5.0:
+					# 5 seconds elapsed while away, close it
+					_hover_info_visible = false
+					_hovered_node_id = ""
+					_hover_pin_time = 0.0
+					queue_redraw()
 
 
 func set_data(nodes: Array, current_id: String, completed_ids: Array) -> void:
@@ -537,10 +568,21 @@ func _handle_click(event: InputEventMouseButton) -> void:
 	var world_pos = (event.position - _view_offset) / _zoom_level
 	var hit = false
 
-	# Dismiss hover info box on any click / 点击时关闭信息框
+	# Intercept click if on hover info box / 如果点击在悬停信息框上，拦截点击
+	if _hover_info_visible and _hover_info_rect.has_point(event.position):
+		if _hover_in_rect.has_point(event.position):
+			_hover_in_expanded = true
+			queue_redraw()
+		elif _hover_out_rect.has_point(event.position):
+			_hover_out_expanded = true
+			queue_redraw()
+		return # Consume click
+
+	# Dismiss hover info box on any OTHER click / 点击其他地方时关闭信息框
 	if _hover_info_visible:
 		_hover_info_visible = false
 		_hovered_node_id = ""
+		_hover_pin_time = 0.0
 		queue_redraw()
 
 	for area in _click_areas:
@@ -589,28 +631,42 @@ func _handle_hover(event: InputEventMouseMotion) -> void:
 			found_node_id = area.id
 			break
 
-	if found_node_id.is_empty():
-		# Mouse left all nodes — reset hover
-		if _hover_info_visible or not _hovered_node_id.is_empty():
-			_hovered_node_id = ""
+	if _hover_info_visible:
+		# If visible, check if mouse is over suspended window OR original node
+		var is_in_box = _hover_info_rect.has_point(event.position)
+		if is_in_box or found_node_id == _hovered_node_id:
+			_hover_pin_time = 0.0 # Reset 5-second timer
+			return
+		# If mouse entered a DIFFERENT node completely, switch hover immediately
+		if not found_node_id.is_empty() and found_node_id != _hovered_node_id:
+			_hovered_node_id = found_node_id
+			_hover_start_time = Time.get_ticks_msec() / 1000.0
 			_hover_info_visible = false
+			_hover_pin_time = 0.0
 			_hover_in_expanded = false
 			_hover_out_expanded = false
+			_hover_screen_pos = event.position
+			queue_redraw()
+		return
+
+	# Logic when NOT visible yet
+	if found_node_id.is_empty():
+		# Mouse left all nodes — reset hover
+		if not _hovered_node_id.is_empty():
+			_hovered_node_id = ""
+			_hover_start_time = 0.0
 			queue_redraw()
 	elif found_node_id != _hovered_node_id:
 		# Mouse entered a new node — restart timer
 		_hovered_node_id = found_node_id
 		_hover_start_time = Time.get_ticks_msec() / 1000.0
-		_hover_info_visible = false
 		_hover_in_expanded = false
 		_hover_out_expanded = false
 		_hover_screen_pos = event.position
 		queue_redraw()
 	else:
-		# Same node — update position for info box anchor
+		# Same node, not visible yet — update position for info box anchor
 		_hover_screen_pos = event.position
-		if _hover_info_visible:
-			queue_redraw()
 
 ## Draw the Light Exploration hover info box / 绘制轻度探索悬停信息框
 func _draw_hover_info_box() -> void:
@@ -676,16 +732,30 @@ func _draw_hover_info_box() -> void:
 	sb.set_border_width_all(1)
 	draw_style_box(sb, bg_rect)
 
-	# Draw text lines / 绘制文本
+	# Draw text lines (and set hit rects) / 绘制文本并设置点击区域
 	var text_x = box_pos.x + pad.x
 	var text_y = box_pos.y + pad.y + font_size
+	
+	_hover_info_rect = bg_rect
+	_hover_in_rect = Rect2()
+	_hover_out_rect = Rect2()
+	
 	for i in range(lines.size()):
 		var line = lines[i]
 		var col = Color.WHITE
+		
+		# Define clickable rect for this line
+		var line_rect = Rect2(text_x, text_y + i * line_h - font_size, box_w - pad.x * 2, line_h + 2)
+		
 		if i == 0:
 			col = Color(0.4, 0.8, 1.0) # Title color
-		elif line.begins_with("In") or line.begins_with("Out"):
+		elif line.begins_with("In"):
 			col = Color(0.9, 0.9, 0.5) # Section header
+			_hover_in_rect = line_rect
+		elif line.begins_with("Out"):
+			col = Color(0.9, 0.9, 0.5) # Section header
+			_hover_out_rect = line_rect
 		elif line.begins_with("  "):
 			col = Color(0.75, 0.75, 0.75) # Name items
+			
 		draw_string(font, Vector2(text_x, text_y + i * line_h), line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
