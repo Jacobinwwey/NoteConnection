@@ -957,57 +957,81 @@ class PathEngine {
         });
 
         // --- 3. Place Nodes (Stationary Spine & Lateral Tributaries) ---
-        let spineX = 0;
-        const visibleSpineNodes = nodes.filter(n => n._isOnSpine).sort((a,b) => a.spineIndex - b.spineIndex);
-        
-        visibleSpineNodes.forEach(n => {
-            n.x = spineX;
-            n.y = 0;
-            spineX += SPINE_SPACING;
-        });
+        const calculateContourWidth = (node, _visited = new Set()) => {
+            if (_visited.has(node.id)) return 0;
+            _visited.add(node.id);
+            
+            if (!expandedSet.has(node.id)) return VISUAL_WIDTH + H_GAP;
+            
+            const tribs = node._tributaries.filter(t => t.visible && !t._isOnSpine);
+            if (tribs.length === 0) return VISUAL_WIDTH + H_GAP;
+            
+            let total = 0;
+            tribs.forEach(t => {
+                total += calculateContourWidth(t, _visited);
+            });
+            return Math.max(VISUAL_WIDTH + H_GAP, total);
+        };
 
-        const placedNodes = new Set(); // Global guard for placement recursion / 全局放置递归保护
-        const placeSubTributaries = (parent, dir) => {
-            if (placedNodes.has(parent.id)) return; // Cycle guard
-            placedNodes.add(parent.id);
+        const renderPlaced = new Set();
+        const placeSubTributaries = (parent, dir, parentWidth) => {
+            if (renderPlaced.has(parent.id)) return;
+            renderPlaced.add(parent.id);
 
             const tribs = parent._tributaries.filter(t => t.visible && !t._isOnSpine);
             if (tribs.length === 0) return;
             
-            const totalWidth = tribs.length * (VISUAL_WIDTH + H_GAP);
-            let startX = parent.x - totalWidth / 2 + VISUAL_WIDTH / 2;
+            const widths = tribs.map(t => calculateContourWidth(t));
+            const totalWidth = widths.reduce((a, b) => a + b, 0);
+            
+            let startX = parent.x - totalWidth / 2;
             
             tribs.forEach((t, i) => {
-                t.x = startX + i * (VISUAL_WIDTH + H_GAP);
+                const w = widths[i];
+                t.x = startX + w / 2;
                 t.y = parent.y + dir * V_GAP;
+                startX += w;
             });
             
             tribs.forEach(t => {
-                if (expandedSet.has(t.id)) placeSubTributaries(t, dir);
+                if (expandedSet.has(t.id)) placeSubTributaries(t, dir, widths[tribs.indexOf(t)]);
             });
         };
 
-        expansionOrder.forEach(expanderId => {
-            const expander = getNode(expanderId);
-            if (!expander || !expandedSet.has(expanderId)) return;
+        const visibleSpineNodes = nodes.filter(n => n._isOnSpine).sort((a,b) => a.spineIndex - b.spineIndex);
+        
+        let lastUpSpine = null;
+        let lastDownSpine = null;
+
+        visibleSpineNodes.forEach((n, idx) => {
+            const effectiveIdx = getEffectiveSpineIndex(n);
+            const dir = ((effectiveIdx === -1 ? n.spineIndex : effectiveIdx) % 2 === 0) ? 1 : -1;
             
-            const tribs = expander._tributaries.filter(t => t.visible && !t._isOnSpine);
-            if (tribs.length === 0) return;
+            // Calculate total width this spine node's tributaries will take
+            const tribWidth = calculateContourWidth(n);
+            n._tribWidth = tribWidth;
+            n._dir = dir;
+
+            let minX = idx === 0 ? 0 : visibleSpineNodes[idx - 1].x + SPINE_SPACING;
             
-            const effectiveIdx = getEffectiveSpineIndex(expander);
-            const dir = ((effectiveIdx === -1 ? 0 : effectiveIdx) % 2 === 0) ? 1 : -1;
-            
-            const totalWidth = tribs.length * (VISUAL_WIDTH + H_GAP);
-            let startX = expander.x - totalWidth / 2 + VISUAL_WIDTH / 2;
-            
-            tribs.forEach((t, i) => {
-                t.x = startX + i * (VISUAL_WIDTH + H_GAP);
-                t.y = expander.y + dir * V_GAP;
-            });
-            
-            tribs.forEach(t => {
-                if (expandedSet.has(t.id)) placeSubTributaries(t, dir);
-            });
+            const prevSameSide = (dir === 1) ? lastDownSpine : lastUpSpine;
+            if (prevSameSide) {
+                const safeX = prevSameSide.x + prevSameSide._tribWidth / 2 + tribWidth / 2 + H_GAP * 2;
+                minX = Math.max(minX, safeX);
+            }
+
+            n.x = minX;
+            n.y = 0;
+
+            if (dir === 1) lastDownSpine = n;
+            else lastUpSpine = n;
+        });
+
+        // Now place all tributaries from the roots (spine nodes)
+        visibleSpineNodes.forEach(n => {
+            if (expandedSet.has(n.id)) {
+                placeSubTributaries(n, n._dir, n._tribWidth);
+            }
         });
 
         // --- 4. Generate Edges & Hulls ---
