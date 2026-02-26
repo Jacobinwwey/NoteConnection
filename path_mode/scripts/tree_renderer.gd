@@ -41,6 +41,15 @@ var _press_pos: Vector2 = Vector2.ZERO
 const CLICK_DRAG_THRESHOLD := 5.0
 const LONG_PRESS_DURATION := 0.6 # Seconds
 
+# Hover State (Light Exploration Info Box) / 悬停状态（轻度探索信息框）
+var _hovered_node_id: String = ""
+var _hover_start_time: float = 0.0
+var _hover_info_visible: bool = false
+var _hover_screen_pos: Vector2 = Vector2.ZERO
+var _hover_in_expanded: bool = false # Whether the in-degree list is expanded
+var _hover_out_expanded: bool = false # Whether the out-degree list is expanded
+const HOVER_DELAY := 0.8 # 800ms hover delay for info box
+
 # Layout params
 const LEVEL_HEIGHT = 60.0 # Vertical distance between levels
 const SIBLING_SPACING = 40.0 # Horizontal distance between nodes
@@ -57,21 +66,22 @@ func _ready() -> void:
 	set_process(true)
 
 func _process(_delta: float) -> void:
+	# Long Press logic
 	if _is_long_pressing and not _pressed_node_id.is_empty():
 		var elapsed = (Time.get_ticks_msec() / 1000.0) - _press_start_time
-		
-		# Feedback: Queue redraw to animate progress ring
 		queue_redraw()
-		
 		if elapsed >= LONG_PRESS_DURATION:
-			# Long Press Triggered: SWITCH CENTRAL (Navigate)
-			# Send explicit Navigate signal instead of Click (which opens context menu)
 			print("[TreeRenderer] Long Press Triggered on:", _pressed_node_id)
 			node_navigate_requested.emit(_pressed_node_id)
-			
-			# Reset state to prevent multiple triggers
 			_is_long_pressing = false
 			_pressed_node_id = ""
+			queue_redraw()
+
+	# Hover timer logic (Light Exploration) / 悬停计时器（轻度探索）
+	if not _hovered_node_id.is_empty() and not _hover_info_visible:
+		var hover_elapsed = (Time.get_ticks_msec() / 1000.0) - _hover_start_time
+		if hover_elapsed >= HOVER_DELAY:
+			_hover_info_visible = true
 			queue_redraw()
 
 
@@ -129,12 +139,14 @@ func _draw() -> void:
 			var progress = clampf(elapsed / LONG_PRESS_DURATION, 0.0, 1.0)
 			
 			if progress > 0.0:
-				var radius = 25.0 # Fixed or responsive?
-				# Draw background ring (faint)
+				var radius = 25.0
 				draw_arc(pos, radius, 0, TAU, 32, Color(1, 1, 1, 0.3), 3.0)
-				# Draw progress arc (active)
 				var end_angle = - PI / 2 + (progress * TAU)
 				draw_arc(pos, radius, -PI / 2, end_angle, 32, Color(0.2, 0.8, 1.0, 0.9), 3.0)
+
+	# Draw Light Exploration hover info box in SCREEN SPACE / 在屏幕空间绘制悬停信息框
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	_draw_hover_info_box()
 		
 func _draw_layout_mode() -> void:
 	if _layout_nodes.is_empty(): return
@@ -284,8 +296,9 @@ func _draw_layout_mode() -> void:
 			sb_spine.set_border_width_all(2)
 			draw_style_box(sb_spine, rect)
 
-		# Draw Expansion Indicator (Badge)
-		if node.get("hasPrereqs", false):
+		# Draw Expansion Indicator (Badge) — SPINE NODES ONLY (Deep Exploration)
+		# 展开指示标记 — 仅主干节点（深度探索）
+		if node.get("hasPrereqs", false) and node.get("isSpine", false):
 			var badge_radius = 10.0
 			var badge_pos = pos + Vector2(0, node_size.y * 0.5) # Bottom edge center
 			var is_expanded = node.get("isExpanded", true)
@@ -494,11 +507,12 @@ func handle_input(event: InputEvent) -> void:
 
 	elif event is InputEventMouseMotion:
 		if _is_pressed and (event.button_mask & MOUSE_BUTTON_MASK_RIGHT):
-			# Allow Right-Mouse Pan if dragged?
 			_handle_pan_drag(event)
 		elif _is_pressed and (event.button_mask & MOUSE_BUTTON_MASK_LEFT) and _pressed_node_id == "":
-			# Left-Mouse Pan if NOT on a node
 			_handle_pan_drag(event)
+		else:
+			# Hover detection for Light Exploration / 轻度探索悬停检测
+			_handle_hover(event)
 
 func _handle_pan_drag(event: InputEventMouseMotion) -> void:
 	var diff = event.relative
@@ -522,27 +536,31 @@ func _apply_zoom(factor: float, center: Vector2) -> void:
 func _handle_click(event: InputEventMouseButton) -> void:
 	var world_pos = (event.position - _view_offset) / _zoom_level
 	var hit = false
-	
+
+	# Dismiss hover info box on any click / 点击时关闭信息框
+	if _hover_info_visible:
+		_hover_info_visible = false
+		_hovered_node_id = ""
+		queue_redraw()
+
 	for area in _click_areas:
 		if area.rect.has_point(world_pos):
 			hit = true
 			var type = area.get("type", "node")
 			if type == "node":
 				var node_id = area.id
-				# Logic Update:
-				# Double Click -> Toggle Expansion
-				# Single Click -> Select (Node Clicked)
+				var node = _find_layout_node(node_id)
 				if event.double_click:
-					# Check current state to decide expand/collapse
-					var node = _find_layout_node(node_id)
-					if node.get("isExpanded", false):
-						node_collapse_prereqs_requested.emit(node_id)
-					else:
-						node_expand_prereqs_requested.emit(node_id)
+					# Deep Exploration: SPINE NODES ONLY / 深度探索：仅主干节点
+					if node.get("isSpine", false):
+						if node.get("isExpanded", false):
+							node_collapse_prereqs_requested.emit(node_id)
+						else:
+							node_expand_prereqs_requested.emit(node_id)
 				else:
 					node_clicked.emit(node_id, get_global_mouse_position())
 			break
-			
+
 	if not hit:
 		background_clicked.emit()
 
@@ -552,8 +570,122 @@ func _handle_right_click(event: InputEventMouseButton) -> void:
 		if area.rect.has_point(world_pos) and area.get("type") == "node":
 			var node_id = area.id
 			var node = _find_layout_node(node_id)
+			# Deep Exploration: SPINE NODES ONLY / 深度探索：仅主干节点
+			if not node.get("isSpine", false):
+				return # Non-spine node: ignore expand action
 			if node.get("isExpanded", false):
 				node_collapse_prereqs_requested.emit(node_id)
 			else:
 				node_expand_prereqs_requested.emit(node_id)
 			return
+
+## Handle hover for Light Exploration info box / 处理悬停以显示轻度探索信息框
+func _handle_hover(event: InputEventMouseMotion) -> void:
+	var world_pos = (event.position - _view_offset) / _zoom_level
+	var found_node_id := ""
+
+	for area in _click_areas:
+		if area.rect.has_point(world_pos) and area.get("type") == "node":
+			found_node_id = area.id
+			break
+
+	if found_node_id.is_empty():
+		# Mouse left all nodes — reset hover
+		if _hover_info_visible or not _hovered_node_id.is_empty():
+			_hovered_node_id = ""
+			_hover_info_visible = false
+			_hover_in_expanded = false
+			_hover_out_expanded = false
+			queue_redraw()
+	elif found_node_id != _hovered_node_id:
+		# Mouse entered a new node — restart timer
+		_hovered_node_id = found_node_id
+		_hover_start_time = Time.get_ticks_msec() / 1000.0
+		_hover_info_visible = false
+		_hover_in_expanded = false
+		_hover_out_expanded = false
+		_hover_screen_pos = event.position
+		queue_redraw()
+	else:
+		# Same node — update position for info box anchor
+		_hover_screen_pos = event.position
+		if _hover_info_visible:
+			queue_redraw()
+
+## Draw the Light Exploration hover info box / 绘制轻度探索悬停信息框
+func _draw_hover_info_box() -> void:
+	if not _hover_info_visible or _hovered_node_id.is_empty():
+		return
+
+	var node = _find_layout_node(_hovered_node_id)
+	if not node:
+		return
+
+	var in_deg = node.get("inDegree", 0)
+	var out_deg = node.get("outDegree", 0)
+	var in_names: Array = node.get("inDegreeNames", [])
+	var out_names: Array = node.get("outDegreeNames", [])
+	var label = node.get("label", node.get("id", "?"))
+
+	var font = ThemeDB.fallback_font
+	var font_size = 12
+	var line_h = 18.0
+	var pad = Vector2(12, 10)
+
+	# Build text lines / 组装文本行
+	var lines: Array[String] = []
+	lines.append(label)
+	lines.append("")
+
+	# In-Degree section
+	if in_deg < 10 or _hover_in_expanded:
+		lines.append("In (%d):" % in_deg)
+		for n in in_names:
+			lines.append("  ← " + str(n))
+	else:
+		lines.append("In: %d  [click ▶]" % in_deg)
+
+	lines.append("")
+
+	# Out-Degree section
+	if out_deg < 10 or _hover_out_expanded:
+		lines.append("Out (%d):" % out_deg)
+		for n in out_names:
+			lines.append("  → " + str(n))
+	else:
+		lines.append("Out: %d  [click ▶]" % out_deg)
+
+	# Calculate box dimensions / 计算框尺寸
+	var max_w = 0.0
+	for line in lines:
+		var lw = font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+		max_w = max(max_w, lw)
+
+	var box_w = max_w + pad.x * 2
+	var box_h = lines.size() * line_h + pad.y * 2
+
+	# Position: offset from mouse, clamped to viewport / 位置：从鼠标偏移
+	var box_pos = _hover_screen_pos + Vector2(16, -box_h / 2)
+
+	# Draw background panel / 绘制背景面板
+	var bg_rect = Rect2(box_pos, Vector2(box_w, box_h))
+	var sb = StyleBoxFlat.new()
+	sb.set_corner_radius_all(8)
+	sb.bg_color = Color(0.1, 0.1, 0.15, 0.92)
+	sb.border_color = Color(0.4, 0.6, 0.9, 0.6)
+	sb.set_border_width_all(1)
+	draw_style_box(sb, bg_rect)
+
+	# Draw text lines / 绘制文本
+	var text_x = box_pos.x + pad.x
+	var text_y = box_pos.y + pad.y + font_size
+	for i in range(lines.size()):
+		var line = lines[i]
+		var col = Color.WHITE
+		if i == 0:
+			col = Color(0.4, 0.8, 1.0) # Title color
+		elif line.begins_with("In") or line.begins_with("Out"):
+			col = Color(0.9, 0.9, 0.5) # Section header
+		elif line.begins_with("  "):
+			col = Color(0.75, 0.75, 0.75) # Name items
+		draw_string(font, Vector2(text_x, text_y + i * line_h), line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)

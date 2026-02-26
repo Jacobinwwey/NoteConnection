@@ -1070,21 +1070,46 @@ class PathEngine {
 
         // Strip internal engine state to produce JSON-safe output
         // 剥离内部引擎状态以产生 JSON 安全的输出（_tributaries 包含循环对象引用）
-        const cleanNodes = visibleNodes.map(n => ({
-            id: n.id,
-            label: n.label,
-            status: n.status,
-            x: n.x,
-            y: n.y,
-            isSpine: n.isSpine,
-            spineIndex: n.spineIndex,
-            isExpanded: n.isExpanded,
-            collapsed: n.collapsed,
-            hasPrereqs: n.hasPrereqs,
-            currentOwner: n.currentOwner,
-            visible: n.visible,
-            inDegree: n.inDegree
-        }));
+
+        // Build outgoing adjacency for degree name resolution / 构建出度邻接用于名称解析
+        const outAdj = new Map();
+        const allEdgesForDegree = usePathEdges ? learningPath.edges : this.graph.getEdges();
+        allEdgesForDegree.forEach(e => {
+            const srcId = typeof e.source === 'object' ? e.source.id : e.source;
+            const tgtId = typeof e.target === 'object' ? e.target.id : e.target;
+            if (!outAdj.has(srcId)) outAdj.set(srcId, new Set());
+            outAdj.get(srcId).add(tgtId);
+        });
+
+        const cleanNodes = visibleNodes.map(n => {
+            // Resolve in-degree names (prerequisites) / 解析入度名称
+            const inSources = getPrereqs(n.id);
+            const inDegreeNames = inSources.map(s => s.label || s.id);
+
+            // Resolve out-degree names (successors) / 解析出度名称
+            const outTargets = outAdj.get(n.id) || new Set();
+            const outDegreeNames = [...outTargets]
+                .map(tid => { const t = getNode(tid); return t ? (t.label || t.id) : tid; });
+
+            return {
+                id: n.id,
+                label: n.label,
+                status: n.status,
+                x: n.x,
+                y: n.y,
+                isSpine: n.isSpine,
+                spineIndex: n.spineIndex,
+                isExpanded: n.isExpanded,
+                collapsed: n.collapsed,
+                hasPrereqs: n.hasPrereqs,
+                currentOwner: n.currentOwner,
+                visible: n.visible,
+                inDegree: n.inDegree,
+                outDegree: outTargets.size,
+                inDegreeNames: inDegreeNames,
+                outDegreeNames: outDegreeNames
+            };
+        });
 
         return {
             nodes: cleanNodes,

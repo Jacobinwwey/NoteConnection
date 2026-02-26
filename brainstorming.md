@@ -607,3 +607,65 @@ The `tree_path_mockup.html` introduces a fundamentally different paradigm:
 
 1. **性能**: 对大图（10000+ 节点）的多次迭代是否可接受？答：是，展开/认领阶段是 O(E × P)，通常亚毫秒
 2. **Godot 集成**: 9 规则仅在 `path_core.js` 中计算，发送富布局数据到 Godot，Godot 仅渲染
+
+---
+
+## Session 7: Deep vs Light Exploration Modes
+
+**Date**: 2026-02-26
+
+### 1. The Interaction Problem
+
+- **Observation**: The current interaction treats all nodes equally. Any node can be double-clicked or right-clicked to expand its prerequisite subtree.
+- **Problem**: Allowing arbitrary non-spine nodes to expand creates visual chaos and breaks the strictly defined "Spine & Tributaries" hierarchy. It also lacks a quick way to just "peek" at a node's connectivity without altering the layout.
+- **Solution**: Split exploration into two explicit modes: **Deep Exploration** (layout-altering, restricted) and **Light Exploration** (informational, unrestricted).
+
+### 2. Deep Exploration Mode
+
+- **Rules**: Only **Spine Nodes** can deeply explore (expand/collapse subtrees).
+- **Triggers**: Right-click or Double-click on PC.
+- **Visuals**: The `+/-` expansion indicator badge is now drawn _only_ on spine nodes.
+
+### 3. Light Exploration Mode
+
+- **Rules**: **All Nodes** support this. It displays an ephemeral info box showing the node's In-Degree and Out-Degree.
+- **Triggers**: Hover for 800ms (PC). Tap (Mobile).
+- **Content Logic**:
+  - If degree < 10: Show inline list of connected node names.
+  - If degree ≥ 10: Show the numerical count. Clicking the count expands the full name list.
+
+### 4. Center Node Switching (Context Change)
+
+- **Rule**: If a user wants to deeply explore a non-spine node, they must make it the new center node (Long-press to navigate).
+- **Preservation**: When switching centers, the original tree's expanded state is preserved. Nodes that were expanded remain expanded, even if the new layout makes them non-spine.
+
+---
+
+## 会话 7: 深度与轻度探索模式
+
+**日期**: 2026-02-26
+
+### 1. 交互问题
+
+- **观察**: 当前的交互对所有节点一视同仁。双击或右键单击任何节点都会展开其前置子树。
+- **问题**: 允许任意非主干节点展开会造成视觉混乱，破坏严格定义的“主干与支流”层级。同时也缺乏一种在不改变布局的情况下快速“偷看”节点连通性的方法。
+- **解决方案**: 将探索明确划分为两种模式：**深度探索**（改变布局，受限）和**轻度探索**（纯信息显示，不受限）。
+
+### 2. 深度探索模式
+
+- **规则**: 仅**主干节点 (Spine Nodes)** 可以深度探索（展开/折叠子树）。
+- **触发**: PC 端右键单击或双击。
+- **视觉**: `+/-` 展开指示标记现在*仅*在主干节点上绘制。
+
+### 3. 轻度探索模式
+
+- **规则**: **所有节点**都支持。显示一个临时的信息框，展示节点的入度 (In-Degree) 和出度 (Out-Degree)。
+- **触发**: PC 端悬停 800ms。移动端点击 (Tap)。
+- **内容逻辑**:
+  - 如果度数 < 10: 以内联列表显示相连节点名称。
+  - 如果度数 ≥ 10: 仅显示数字统计。点击该数字可触发展开完整名称列表。
+
+### 4. 中心节点切换 (上下文变更)
+
+- **规则**: 如果用户想要深入探索某个非主干节点，必须将其设为新的中心节点（长按导航）。
+- **状态保留**: 切换中心时，保留原始树的展开状态。之前已展开的节点保持展开，即使新布局使其成为非主干节点。
