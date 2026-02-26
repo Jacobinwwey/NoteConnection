@@ -3,379 +3,699 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tree-Path Layout Mockup v2</title>
+    <title>Tree-Path Layout v4 - Complete Rules</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #1e1e1e; color: #eee; margin: 0; padding: 20px; }
-        svg { border: 1px solid #444; background: #252526; width: 100%; height: 800px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .node rect { cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
-        .node rect:hover { stroke: #ffd700; stroke-width: 3px; }
-        .node text { font-size: 12px; fill: #eee; text-shadow: 0 1px 4px #000; pointer-events: none; font-weight: 600; }
-        .link { stroke: #555; stroke-width: 2px; opacity: 0.6; fill: none; transition: d 0.5s; pointer-events: none; }
-        .spine-link { stroke: #4caf50; stroke-width: 5px; opacity: 1; filter: drop-shadow(0 0 2px rgba(76,175,80,0.5)); }
-        .tributary-link { stroke: #2196f3; }
-        .hull { pointer-events: none; } /* Fix Interaction Blocking */
-        .controls { margin-bottom: 20px; display: flex; gap: 10px; align-items: center; }
-        button { padding: 8px 16px; background: #333; color: white; border: 1px solid #555; cursor: pointer; border-radius: 4px; }
-        button:hover { background: #444; border-color: #888; }
-        button.primary { background: #007acc; border-color: #007acc; }
-        button.primary:hover { background: #006bbed1; }
-        .legend { font-size: 14px; margin-left: 20px; color: #aaa; display: flex; gap: 15px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #1a1a2e; 
+            color: #eee;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        header {
+            padding: 10px 20px;
+            background: #16213e;
+            border-bottom: 1px solid #0f3460;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-shrink: 0;
+        }
+        h1 { font-size: 1rem; color: #e94560; }
+        .legend { display: flex; gap: 15px; font-size: 0.75rem; }
         .legend-item { display: flex; align-items: center; gap: 5px; }
-        .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; }
+        .legend-color { width: 12px; height: 12px; border-radius: 3px; }
+        
+        #canvas-container { flex: 1; position: relative; overflow: hidden; }
+        svg { width: 100%; height: 100%; }
+        
+        .hull { fill-opacity: 0.1; stroke-width: 2; stroke-dasharray: 5,3; pointer-events: none; }
+        
+        .link { fill: none; stroke-width: 2; }
+        .spine-link { stroke: #4caf50; stroke-width: 4; }
+        .tributary-link { stroke: #2196f3; stroke-dasharray: 4,2; }
+        .skip-link { stroke: #ff9800; stroke-width: 1.5; stroke-dasharray: 8,4; opacity: 0.6; }
+        
+        .node rect { stroke-width: 2; cursor: pointer; transition: all 0.2s; }
+        .node rect:hover { stroke: #ffd700; stroke-width: 3; filter: brightness(1.2); }
+        .node text { fill: white; font-size: 11px; pointer-events: none; text-anchor: middle; dominant-baseline: middle; }
+        .node.spine rect { fill: #4caf50; stroke: #81c784; }
+        .node.tributary rect { fill: #2196f3; stroke: #64b5f6; }
+        .node.shared rect { fill: #9c27b0; stroke: #ce93d8; }
+        .node.migrated rect { fill: #ff5722; stroke: #ff8a65; }
+        
+        #controls {
+            position: absolute;
+            top: 10px; right: 10px;
+            background: rgba(22, 33, 62, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #0f3460;
+            width: 340px;
+            max-height: calc(100vh - 80px);
+            overflow-y: auto;
+            font-size: 0.8rem;
+        }
+        #controls h3 { margin-bottom: 8px; color: #e94560; font-size: 0.9rem; }
+        .control-group { margin-bottom: 8px; }
+        .control-group label { display: block; margin-bottom: 3px; color: #aaa; }
+        .control-group button {
+            padding: 5px 10px; margin: 2px;
+            background: #0f3460; color: #eee;
+            border: 1px solid #4a4a6a; border-radius: 4px;
+            cursor: pointer; font-size: 0.75rem;
+        }
+        .control-group button:hover { background: #1a4a7a; }
+        .control-group button.active { background: #e94560; border-color: #e94560; }
+        
+        .toggle-switch {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px; background: #0a0a18; border-radius: 4px;
+        }
+        .toggle-switch input { width: 18px; height: 18px; }
+        .toggle-switch span { color: #aaa; font-size: 0.75rem; }
+        
+        .rules-list { font-size: 0.65rem; color: #888; line-height: 1.3; }
+        .rules-list b { color: #e94560; }
+        
+        #log {
+            position: absolute;
+            bottom: 10px; left: 10px; right: 360px;
+            background: rgba(0,0,0,0.85);
+            padding: 10px; border-radius: 5px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.65rem;
+            max-height: 150px;
+            overflow-y: auto;
+            color: #0f0;
+        }
+        #log .warn { color: #ff0; }
+        #log .info { color: #0ff; }
+        #log .rule { color: #f0f; }
+        
+        #expansion-history {
+            font-size: 0.7rem;
+            background: #0a0a18;
+            padding: 6px;
+            border-radius: 4px;
+            margin-top: 5px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        #expansion-history .item { padding: 2px 0; border-bottom: 1px solid #222; }
+        hr { border-color: #333; margin: 8px 0; }
     </style>
 </head>
 <body>
-
-    <div class="controls">
-        <h3>Tree-Path v2</h3>
-        <button class="primary" onclick="resetGraph()">Reset View</button>
-        <button onclick="expandAll()">Expand All</button>
+    <header>
+        <h1>Tree-Path Layout v4: Complete 8 Rules</h1>
         <div class="legend">
-            <div class="legend-item"><div class="dot" style="background: #4caf50;"></div> Main Path (Spine)</div>
-            <div class="legend-item"><div class="dot" style="background: #2196f3;"></div> Tributaries (Tree)</div>
+            <div class="legend-item"><div class="legend-color" style="background:#4caf50"></div>Spine</div>
+            <div class="legend-item"><div class="legend-color" style="background:#2196f3"></div>Tributary</div>
+            <div class="legend-item"><div class="legend-color" style="background:#9c27b0"></div>Shared</div>
+            <div class="legend-item"><div class="legend-color" style="background:#ff5722"></div>Migrated</div>
         </div>
+    </header>
+    
+    <div id="canvas-container">
+        <svg id="svg"></svg>
     </div>
-
-    <svg id="viz"></svg>
-
-    <script>
-        // --- 1. Data Structure (Deep Hierarchy) ---
-        const width = window.innerWidth - 60;
-        const height = 800;
-        const svg = d3.select("#viz");
-        svg.selectAll("*").remove(); 
+    
+    <div id="controls">
+        <h3>🎮 Controls</h3>
+        <div class="control-group">
+            <button onclick="collapseAll()">Collapse All</button>
+            <button onclick="expandAll()">Expand All</button>
+            <button onclick="resetView()">Reset View</button>
+        </div>
+        <hr>
         
-        // Layers for Z-Index Management (Hulls at bottom)
-        const g = svg.append("g").attr("transform", `translate(100, ${height / 2})`);
-        const layerHulls = g.append("g").attr("class", "layer-hulls");
-        const layerLinks = g.append("g").attr("class", "layer-links");
-        const layerNodes = g.append("g").attr("class", "layer-nodes");
-
-        svg.call(d3.zoom().on("zoom", (e) => g.attr("transform", e.transform)));
-
-        // Data: "Machine Learning" path with Collision Scenario
-        const rawEdges = [
-            // Main Path (Stationary Spine)
-            { s: "Math", t: "Calculus" }, 
-            { s: "Calculus", t: "Optimization" }, 
-            { s: "Optimization", t: "ML Basics" }, 
-            { s: "ML Basics", t: "Deep Learning" },
-            
-            // Scenario: Optimization (Even/Down) has wide tree
-            { s: "Derivatives", t: "Optimization" }, // 1
-            { s: "Convexity", t: "Optimization" }, // 2
-            { s: "Gradient", t: "Optimization" }, // 3
-            { s: "Hessian", t: "Optimization" }, // 4
-            { s: "Chain Rule", t: "Derivatives" }, // 1.1
-            { s: "Limits", t: "Derivatives" }, // 1.2
-            // Collision Candidates
-            { s: "Partial Diff", t: "Gradient" },
-            { s: "Directional", t: "Gradient" },
-            
-            // Scenario: ML Basics (Odd/Up) - Small
-            { s: "Statistics", t: "ML Basics" },
-
-            // Scenario: Deep Learning (Even/Down) - Collision with Optimization's tail
-            { s: "Neural Nets", t: "Deep Learning" },
-            { s: "Backprop", t: "Deep Learning" }, 
-            { s: "Data", t: "Deep Learning" },
-            // Deep tree for Neural Nets expanding LEFT towards Optimization
-            { s: "Weights", t: "Neural Nets" }, 
-            { s: "Biases", t: "Neural Nets" },
-            { s: "Activation", t: "Neural Nets" },
-            { s: "Dropout", t: "Neural Nets" },
-            { s: "Normalization", t: "Neural Nets" }
-        ];
-
-        let nodes = Array.from(new Set(rawEdges.flatMap(e => [e.s, e.t])))
-            .map(id => ({ id, expanded: true, x: 0, y: 0, placed: false }));
-            
-        const mainPathIds = ["Math", "Calculus", "Optimization", "ML Basics", "Deep Learning"];
-
-        // Config - Visual & Logical Sync
-        const VISUAL_WIDTH = 140;
-        const VISUAL_HEIGHT = 40;
-        const H_GAP = 50; // Horizontal gap between siblings
-        const V_GAP = 120; // Vertical gap (levels)
+        <h3>⚙️ Settings</h3>
+        <div class="toggle-switch">
+            <input type="checkbox" id="stickyClaimToggle" onchange="onSettingChange()">
+            <span><b>Sticky Claim (Rule 7)</b>: When OFF, non-spine nodes revert on collapse</span>
+        </div>
+        <hr>
         
-        const SIBLING_STRIDE = VISUAL_WIDTH + H_GAP; // Minimum center-to-center distance
-        const NODE_HALF_W = VISUAL_WIDTH / 2;
-        const SPINE_PADDNG = 100;
-        const MIN_SPINE_INTERVAL = VISUAL_WIDTH + 150;
+        <h3>📋 9 Rules</h3>
+        <div class="rules-list">
+            <p><b>1.</b> Expansion Order: First claims shared</p>
+            <p><b>2.</b> Preceding Immunity: Before expander = cannot claim</p>
+            <p><b>3.</b> Following Migration: After = migrate together</p>
+            <p><b>4.</b> Single Appearance: Once only</p>
+            <p><b>5.</b> Cross-Tributary Isolation: Different owner = no edge</p>
+            <p><b>6.</b> Spine Always Visible: Returns to spine on collapse</p>
+            <p><b>7.</b> Sticky Claim: Toggle permanent claim</p>
+            <p><b>8.</b> Unit Migration: Spine+tributaries move together</p>
+            <p><b>9.</b> Tributary Hierarchy: Cannot claim spine ≤ root</p>
+        </div>
+        <hr>
+        
+        <h3>📜 Expansion Order</h3>
+        <div id="expansion-history"><em>None yet</em></div>
+    </div>
+    
+    <div id="log"></div>
 
-        function updateLayout() {
-            // Reset
-            nodes.forEach(n => { n.placed = false; n._contour = null; });
+<script>
+// ============================================
+// DATA
+// ============================================
+const rawNodes = [
+    { id: 'A', label: 'Algebra', isSpine: true, spineIndex: 0 },
+    { id: 'B', label: 'Calculus', isSpine: true, spineIndex: 1 },
+    { id: 'C', label: 'Diff Eq', isSpine: true, spineIndex: 2 },
+    { id: 'D', label: 'Optimization', isSpine: true, spineIndex: 3 },
+    { id: 'E', label: 'ML', isSpine: true, spineIndex: 4 },
+    
+    { id: 'T1', label: 'Trigonometry', isSpine: false },
+    { id: 'T2', label: 'Limits', isSpine: false },
+    { id: 'T3', label: 'Set Theory', isSpine: false, isShared: true },
+    { id: 'T4', label: 'Logic', isSpine: false },
+    { id: 'T5', label: 'Proofs', isSpine: false },
+    { id: 'M1', label: 'Statistics', isSpine: false },
+    { id: 'M2', label: 'Probability', isSpine: false },
+];
 
-            // 1. Identify Spines
-            const spineMap = new Map();
-            mainPathIds.forEach((id, index) => {
-                const node = nodes.find(n => n.id === id);
-                node.isSpine = true;
-                node.spineIndex = index;
-                node.placed = true;
-                node.y = 0;
-                spineMap.set(index, node);
-            });
+const rawEdges = [
+    { s: 'A', t: 'B' }, { s: 'B', t: 'C' }, { s: 'C', t: 'D' }, { s: 'D', t: 'E' },
+    { s: 'T1', t: 'B' }, { s: 'T2', t: 'B' },
+    { s: 'D', t: 'B' },    // D is prereq for B (spine after B)
+    { s: 'A', t: 'C' },    // A is prereq for C (spine before C)
+    { s: 'T3', t: 'B' }, { s: 'T3', t: 'D' },  // Shared
+    { s: 'T4', t: 'T1' }, { s: 'T5', t: 'T3' },
+    { s: 'M1', t: 'B' }, { s: 'M2', t: 'D' }, { s: 'M1', t: 'M2' },  // Cross-tributary
+];
 
-            // 2. Global Accumulator Contours
-            const globalContours = {
-                1: {},   // Down
-                [-1]: {} // Up
-            };
+// ============================================
+// STATE
+// ============================================
+let nodes = [];
+let expansionOrder = [];
+let expandedSet = new Set();
+let stickyClaimEnabled = false;
 
-            let lastSpineX = 0;
+const VISUAL_WIDTH = 120, VISUAL_HEIGHT = 36, H_GAP = 50, V_GAP = 90, SPINE_SPACING = 180;
 
-            mainPathIds.forEach((id, index) => {
-                const node = nodes.find(n => n.id === id);
-                const dir = (index % 2 === 0) ? 1 : -1;
-                
-                // 2.1 Calculate Local Contour
-                const contour = calculateContour(node, dir);
-                node._contour = contour;
+// ============================================
+// INIT
+// ============================================
+function initNodes() {
+    nodes = rawNodes.map(n => ({
+        ...n,
+        expanded: false,
+        visible: true,
+        x: 0, y: 0,
+        currentOwner: null,
+        ownerPriority: -1,
+        _tributaries: [],
+        _isOnSpine: n.isSpine  // Current spine status (can change)
+    }));
+}
+initNodes();
 
-                // 2.2 Determine X placement
-                let minSafeX = (index === 0) ? 0 : (lastSpineX + MIN_SPINE_INTERVAL);
-                
-                // Collision Check
-                for (const [lvlStr, minVal] of Object.entries(contour.left)) {
-                    const lvl = parseInt(lvlStr);
-                    const relevantSide = (lvl > 0) ? 1 : (lvl < 0) ? -1 : 0;
-                    if (relevantSide === 0) continue; 
-                    if (relevantSide !== dir) continue; 
-                    
-                    const globalMax = globalContours[relevantSide][lvl];
-                    if (globalMax !== undefined) {
-                        const requiredX = globalMax + SPINE_PADDNG - minVal;
-                        if (requiredX > minSafeX) {
-                            console.log(`[Collision] Shifting ${id} at Level ${lvl}: requires ${requiredX}`);
-                            minSafeX = requiredX;
-                        }
-                    }
-                }
-                
-                node.x = minSafeX;
-                lastSpineX = minSafeX;
+const svg = d3.select('#svg');
+const g = svg.append('g');
+const gHulls = g.append('g'), gEdges = g.append('g'), gNodes = g.append('g');
+svg.call(d3.zoom().scaleExtent([0.3, 2.5]).on('zoom', e => g.attr('transform', e.transform)));
+resetView();
 
-                // 2.3 Update Global Accumulator
-                for (const [lvlStr, maxVal] of Object.entries(contour.right)) {
-                    const lvl = parseInt(lvlStr);
-                    const relevantSide = (lvl > 0) ? 1 : (lvl < 0) ? -1 : 0;
-                    if (relevantSide === 0) continue; 
-                    
-                    const absRight = node.x + maxVal;
-                    const currentGlobal = globalContours[relevantSide][lvl];
-                    if (currentGlobal === undefined || absRight > currentGlobal) {
-                        globalContours[relevantSide][lvl] = absRight;
-                    }
-                }
-            });
+// ============================================
+// HELPERS
+// ============================================
+function log(msg, type = '') {
+    const div = document.getElementById('log');
+    const line = document.createElement('div');
+    line.className = type;
+    line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    div.appendChild(line);
+    div.scrollTop = div.scrollHeight;
+    if (div.children.length > 80) div.removeChild(div.firstChild);
+}
 
-            // 3. Place Tributaries
-            mainPathIds.forEach(id => {
-                const node = nodes.find(n => n.id === id);
-                const dir = (node.spineIndex % 2 === 0) ? 1 : -1;
-                if (node.expanded) {
-                    placeTributaries(node, dir);
-                }
-            });
+function getNode(id) { return nodes.find(n => n.id === id); }
+function getInDegree(id) {
+    return [...new Set(rawEdges.filter(e => e.t === id).map(e => e.s))].map(getNode).filter(n => n);
+}
 
-            render();
+function updateHistoryUI() {
+    const div = document.getElementById('expansion-history');
+    div.innerHTML = expansionOrder.length === 0 ? '<em>None yet</em>' :
+        expansionOrder.map((id, i) => `<div class="item">${i+1}. <b>${getNode(id)?.label || id}</b></div>`).join('');
+}
+
+function onSettingChange() {
+    stickyClaimEnabled = document.getElementById('stickyClaimToggle').checked;
+    log(`Sticky Claim: ${stickyClaimEnabled ? 'ON' : 'OFF'}`, 'rule');
+    updateLayout();
+}
+
+// ============================================
+// CORE ALGORITHM
+// ============================================
+function updateLayout() {
+    log('=== Layout Update ===', 'info');
+    
+    // Reset state
+    nodes.forEach(n => {
+        n.visible = true;
+        n.currentOwner = null;
+        n.ownerPriority = -1;
+        n._tributaries = [];
+        n._isOnSpine = n.isSpine;  // Reset to original spine status
+    });
+    
+    // 1. Process expansions in order
+    processExpansions();
+    
+    // 2. Determine visibility (Rule 6, 8)
+    determineVisibility();
+    
+    // 3. Place nodes
+    placeNodes();
+    
+    render();
+}
+
+function processExpansions() {
+    expansionOrder.forEach((expanderId, priority) => {
+        const expander = getNode(expanderId);
+        if (!expander || !expandedSet.has(expanderId)) return;
+        
+        log(`Processing: ${expander.label} (priority ${priority})`, 'rule');
+        
+        const prereqs = getInDegree(expanderId);
+        prereqs.forEach(prereq => {
+            const result = tryClaim(expander, prereq, priority);
+            log(`  ${prereq.label}: ${result.success ? '✓ Claimed' : '✗ ' + result.reason}`, result.success ? 'info' : 'warn');
+        });
+    });
+}
+
+function tryClaim(expander, target, priority) {
+    // Rule 4: Already claimed by earlier expansion
+    if (target.currentOwner !== null && target.ownerPriority < priority) {
+        return { success: false, reason: `Claimed by ${target.currentOwner}` };
+    }
+    
+    // Get EFFECTIVE spine index (inherits from owner when claimed as tributary)
+    const expanderEffectiveIdx = getEffectiveSpineIndex(expander);
+    const targetEffectiveIdx = target.spineIndex ?? -1;  // Target uses original since not yet claimed
+    
+    // RULE 2: A spine node cannot claim a spine node that precedes its EFFECTIVE position
+    if (target.isSpine && expander.isSpine) {
+        log(`    Rule 2 check: ${target.label} (idx ${targetEffectiveIdx}) vs ${expander.label} (effective idx ${expanderEffectiveIdx})`, 'warn');
+        
+        if (targetEffectiveIdx !== -1 && expanderEffectiveIdx !== -1 && targetEffectiveIdx <= expanderEffectiveIdx) {
+            return { success: false, reason: `Rule 2: ${target.label} (idx ${targetEffectiveIdx}) ≤ ${expander.label} (effective idx ${expanderEffectiveIdx})` };
         }
+    }
+    
+    // Rule 9: Tributary Hierarchy Immunity (for non-spine expanders)
+    if (target.isSpine && !expander.isSpine) {
+        const rootSpineIndex = getTributaryRootSpineIndex(expander);
+        if (rootSpineIndex !== -1 && targetEffectiveIdx <= rootSpineIndex) {
+            return { success: false, reason: `Rule 9: ${target.label} (idx ${target.spineIndex}) ≤ tributary root (idx ${rootSpineIndex})` };
+        }
+    }
+    
+    // Rule 3 + 8: Following Migration (only for spine nodes on spine claiming later spine)
+    if (target.isSpine && expander.isSpine && expander._isOnSpine) {
+        log(`  Rule 3+8: Migrating ${target.label} + followers as unit`, 'rule');
+        claimSpineChain(target, expander, priority);
+        return { success: true };
+    }
+    
+    // Regular claim
+    claim(target, expander, priority);
+    return { success: true };
+}
 
-        // Returns { left: {lvl: min}, right: {lvl: max}, fullWidth: w }
-        function calculateContour(node, dir, level = 1) {
-            // Base Case
-            if (!node.expanded) {
-                // Return half-width bounds
-                return { left: {}, right: {}, fullWidth: VISUAL_WIDTH }; 
+// Get effective spine index: If claimed as tributary, use owner's effective index
+function getEffectiveSpineIndex(node) {
+    if (!node.isSpine) return -1;
+    
+    // If on spine (unclaimed or owner collapsed), use original index
+    if (node._isOnSpine || node.currentOwner === null) {
+        return node.spineIndex ?? -1;
+    }
+    
+    // If claimed as tributary, use owner's effective index
+    const owner = getNode(node.currentOwner);
+    if (owner && owner.isSpine) {
+        return getEffectiveSpineIndex(owner);  // Recursive - follow chain
+    }
+    
+    // Owner is not spine, find the spine root
+    return getTributaryRootSpineIndex(node);
+}
+
+// Helper: Find the spine index of the root of the tributary tree this node belongs to
+function getTributaryRootSpineIndex(node) {
+    // If node is on spine, return its own index
+    if (node._isOnSpine && node.isSpine) {
+        return node.spineIndex;
+    }
+    
+    // Find owner chain until we reach a spine node
+    let current = node;
+    let visited = new Set();
+    
+    while (current && !visited.has(current.id)) {
+        visited.add(current.id);
+        
+        // If current is a spine node (on spine or migrated), return its original index
+        if (current.isSpine) {
+            return current.spineIndex;
+        }
+        
+        // Go to owner
+        if (current.currentOwner) {
+            current = getNode(current.currentOwner);
+        } else {
+            break;
+        }
+    }
+    
+    return -1;  // No spine root found
+}
+
+function claim(target, owner, priority) {
+    target.currentOwner = owner.id;
+    target.ownerPriority = priority;
+    target._isOnSpine = false;
+    
+    if (!owner._tributaries.includes(target)) {
+        owner._tributaries.push(target);
+    }
+    
+    // Rule 8: If target is expanded, bring its tributaries too
+    // BUT: Respect Rule 2 - use EFFECTIVE index, not original
+    if (expandedSet.has(target.id)) {
+        const targetEffectiveIdx = getEffectiveSpineIndex(target);
+        const targetTribs = getInDegree(target.id).filter(t => 
+            t.currentOwner === null
+        );
+        targetTribs.forEach(t => {
+            // RULE 2 CHECK: If t is a spine node, check against target's EFFECTIVE index
+            if (t.isSpine && target.isSpine) {
+                const tIdx = t.spineIndex ?? -1;
+                if (tIdx !== -1 && targetEffectiveIdx !== -1 && tIdx <= targetEffectiveIdx) {
+                    log(`  Rule 2 (recursive): ${t.label} (idx ${tIdx}) ≤ ${target.label} (effective idx ${targetEffectiveIdx}), skipping`, 'warn');
+                    return;  // Skip - cannot claim preceding spine node
+                }
             }
-            
-            const children = rawEdges.filter(e => e.t === node.id).map(e => e.s).filter(id => !mainPathIds.includes(id));
-            if (children.length === 0) {
-                 return { left: {}, right: {}, fullWidth: VISUAL_WIDTH };
+            claim(t, target, priority);
+        });
+    }
+}
+
+function claimSpineChain(startNode, owner, priority) {
+    // Get all spine nodes from startNode onwards
+    const chain = nodes
+        .filter(n => n.isSpine && n.spineIndex >= startNode.spineIndex)
+        .sort((a, b) => a.spineIndex - b.spineIndex);
+    
+    chain.forEach(node => {
+        claim(node, owner, priority);
+    });
+}
+
+function determineVisibility() {
+    // Visibility rules:
+    // - Spine nodes: ALWAYS visible (Rule 6)
+    // - Non-spine nodes: visible only if owner is visible AND expanded
+    // - Visibility chains follow owner relationship recursively
+    
+    // First pass: handle spine nodes
+    nodes.forEach(n => {
+        if (n.isSpine) {
+            n.visible = true;
+            // If owner collapsed, spine returns to spine (Rule 6)
+            if (n.currentOwner && !expandedSet.has(n.currentOwner)) {
+                n._isOnSpine = true;
+                n.currentOwner = null;
+                log(`Rule 6: ${n.label} returns to spine`, 'rule');
             }
-
-            // Recursive Step
-            const childContours = children.map(cid => calculateContour(nodes.find(n => n.id === cid), dir, level + 1));
-            
-            // Layout Logic:
-            // Calculate total width of children block.
-            // If child width > Stride, use child width. Else Stride.
-            const spacings = childContours.map(c => Math.max(c.fullWidth, SIBLING_STRIDE));
-            const totalW = spacings.reduce((a,b) => a+b, 0);
-            
-            const mergedLeft = {}; 
-            const mergedRight = {};
-            
-            let currentX = -(totalW / 2);
-            
-            childContours.forEach((cc, i) => {
-                const spacing = spacings[i];
-                const childCenterX = currentX + (spacing / 2);
-                
-                // 1. Add Child's own width at Relative Level 1
-                const targetLvl = 1 * dir; 
-                updateMinMax(mergedLeft, mergedRight, targetLvl, childCenterX - NODE_HALF_W, childCenterX + NODE_HALF_W);
-
-                // 2. Merge Child's internal contour
-                for (const [lvlRelStr, minVal] of Object.entries(cc.left)) {
-                    const lvlRel = parseInt(lvlRelStr); 
-                    const finalLvl = (1 * dir) + lvlRel; 
-                    updateMinMax(mergedLeft, mergedRight, finalLvl, childCenterX + minVal, childCenterX + cc.right[lvlRelStr]);
-                }
-                
-                currentX += spacing;
-            });
-            
-            // Ensure fullWidth is at least MY width
-            return { left: mergedLeft, right: mergedRight, fullWidth: Math.max(totalW, VISUAL_WIDTH) };
         }
-        
-        function updateMinMax(lMap, rMap, lvl, min, max) {
-            if (lMap[lvl] === undefined || min < lMap[lvl]) lMap[lvl] = min;
-            if (rMap[lvl] === undefined || max > rMap[lvl]) rMap[lvl] = max;
-        }
-
-        function placeTributaries(parentNode, dir) {
-             const children = rawEdges.filter(e => e.t === parentNode.id).map(e => e.s).filter(id => !mainPathIds.includes(id));
-             if (children.length === 0) return;
-             
-             const childWidths = children.map(cid => {
-                  const node = nodes.find(n => n.id === cid);
-                  const c = calculateContour(node, dir); 
-                  return Math.max(c.fullWidth, SIBLING_STRIDE);
-             });
-             
-             const totalW = childWidths.reduce((a,b) => a+b, 0);
-             let startX = parentNode.x - (totalW / 2);
-             
-             children.forEach((cid, i) => {
-                 const childNode = nodes.find(n => n.id === cid);
-                 const w = childWidths[i];
-                 
-                 childNode.x = startX + (w/2);
-                 childNode.y = parentNode.y + (dir * V_GAP);
-                 childNode.isSpine = false;
-                 childNode.placed = true;
-                 
-                 startX += w;
-                 
-                 if (childNode.expanded) {
-                     placeTributaries(childNode, dir);
-                 }
-             });
-        }
-        
-        function collectInDegreeNodes(root) {
-            let list = [root];
-            const children = rawEdges.filter(e => e.t === root.id).map(e => e.s).filter(id => !mainPathIds.includes(id));
-            children.forEach(cid => {
-                const child = nodes.find(n => n.id === cid);
-                if (child.placed) {
-                    list = list.concat(collectInDegreeNodes(child));
-                }
-            });
-            return list;
-        }
-
-        function render() {
-            // Draw Group Hulls for Expanded Central Node
-            const centralId = "Optimization";
-            const centralNode = nodes.find(n => n.id === centralId);
+    });
+    
+    // Second pass: handle non-spine nodes with recursive owner check
+    nodes.forEach(n => {
+        if (!n.isSpine) {
+            n.visible = isOwnerChainVisible(n);
             
-            const hulls = [];
-            if (centralNode && centralNode.expanded) {
-                const groupNodes = collectInDegreeNodes(centralNode);
-                
-                // Exclude Spine
-                const tributariesOnly = groupNodes.filter(n => n.id !== centralId);
-                
-                if (tributariesOnly.length > 0) {
-                     hulls.push({ nodes: tributariesOnly });
-                }
+            // Rule 7: Sticky claim handling
+            if (!n.visible && !stickyClaimEnabled) {
+                n.currentOwner = null;  // Revert to unclaimed
             }
+        }
+    });
+}
 
-            // Draw Hulls (Convex Hull)
-            layerHulls.selectAll(".hull").remove();
-            
-            hulls.forEach(h => {
-                // Collect all corners of all nodes in the group
-                const points = [];
-                const pad = 15; // Tight padding for precision
-                h.nodes.forEach(n => {
-                    const w = VISUAL_WIDTH/2 + pad;
-                    const h = VISUAL_HEIGHT/2; // No vertical padding needed on corners usually, but safe to add
-                    // Use exact corners + padding
-                    points.push([n.x - w, n.y - (VISUAL_HEIGHT/2 + pad)]);
-                    points.push([n.x + w, n.y - (VISUAL_HEIGHT/2 + pad)]);
-                    points.push([n.x + w, n.y + (VISUAL_HEIGHT/2 + pad)]);
-                    points.push([n.x - w, n.y + (VISUAL_HEIGHT/2 + pad)]);
-                });
+function isOwnerChainVisible(node) {
+    // Unclaimed node = not visible
+    if (node.currentOwner === null) {
+        return false;
+    }
+    
+    // Owner must be expanded
+    if (!expandedSet.has(node.currentOwner)) {
+        return false;
+    }
+    
+    // Check if owner itself is visible (recursive)
+    const owner = getNode(node.currentOwner);
+    if (!owner) return false;
+    
+    // Owner is spine = always visible = this node is visible
+    if (owner.isSpine && owner._isOnSpine) {
+        return true;
+    }
+    
+    // Owner is spine but migrated = check owner's visibility
+    if (owner.isSpine && !owner._isOnSpine) {
+        return owner.visible;
+    }
+    
+    // Owner is non-spine = recursively check owner's visibility
+    return isOwnerChainVisible(owner);
+}
 
-                // Compute Convex Hull
-                const hullPoints = d3.polygonHull(points);
-                
-                if (hullPoints) {
-                    const line = d3.line()
-                        .curve(d3.curveLinearClosed); // Strict straight lines - No Overshoot
+function placeNodes() {
+    // Place spine first
+    let spineX = 0;
+    const spineNodes = nodes
+        .filter(n => n._isOnSpine)
+        .sort((a, b) => a.spineIndex - b.spineIndex);
+    
+    spineNodes.forEach(n => {
+        n.x = spineX;
+        n.y = 0;
+        spineX += SPINE_SPACING;
+    });
+    
+    // Place tributaries for expanded nodes
+    expansionOrder.forEach(expanderId => {
+        const expander = getNode(expanderId);
+        if (!expander || !expandedSet.has(expanderId)) return;
+        
+        const tribs = expander._tributaries.filter(t => t.visible && !t._isOnSpine);
+        if (tribs.length === 0) return;
+        
+        const dir = (expander.spineIndex % 2 === 0) ? 1 : -1;
+        const totalW = tribs.length * (VISUAL_WIDTH + H_GAP);
+        let startX = expander.x - totalW / 2 + VISUAL_WIDTH / 2;
+        
+        tribs.forEach((t, i) => {
+            t.x = startX + i * (VISUAL_WIDTH + H_GAP);
+            t.y = expander.y + dir * V_GAP;
+        });
+        
+        // Recursively place sub-tributaries
+        tribs.forEach(t => {
+            if (expandedSet.has(t.id)) {
+                placeSubTributaries(t, dir);
+            }
+        });
+    });
+}
 
-                    layerHulls.append("path")
-                        .attr("class", "hull")
-                        .attr("d", line(hullPoints))
-                        .attr("fill", "rgba(76, 175, 80, 0.08)")
-                        .attr("stroke", "rgba(76, 175, 80, 0.4)")
-                        .attr("stroke-width", 2)
-                        .attr("stroke-linejoin", "round") // Rounded corners visual only
-                        .attr("stroke-dasharray", "8,4");
-                }
-            });
+function placeSubTributaries(parent, dir) {
+    const tribs = parent._tributaries.filter(t => t.visible && !t._isOnSpine);
+    if (tribs.length === 0) return;
+    
+    const totalW = tribs.length * (VISUAL_WIDTH + H_GAP);
+    let startX = parent.x - totalW / 2 + VISUAL_WIDTH / 2;
+    
+    tribs.forEach((t, i) => {
+        t.x = startX + i * (VISUAL_WIDTH + H_GAP);
+        t.y = parent.y + dir * V_GAP;
+    });
+}
 
-            // Links
-            const placedNodes = nodes.filter(n => n.placed);
-            const finalLinks = rawEdges.map(e => ({
-                source: nodes.find(n => n.id === e.s),
-                target: nodes.find(n => n.id === e.t),
-                isSpine: mainPathIds.includes(e.s) && mainPathIds.includes(e.t)
-            })).filter(l => l.source.placed && l.target.placed);
+// ============================================
+// RENDERING
+// ============================================
+function render() {
+    gHulls.selectAll('*').remove();
+    gEdges.selectAll('*').remove();
+    gNodes.selectAll('*').remove();
+    
+    const visibleNodes = nodes.filter(n => n.visible);
+    
+    drawHulls();
+    drawEdges(visibleNodes);
+    drawNodes(visibleNodes);
+}
 
-            const linkSel = layerLinks.selectAll(".link").data(finalLinks);
-            linkSel.enter().append("path")
-                .attr("class", d => d.isSpine ? "link spine-link" : "link tributary-link")
-                .merge(linkSel)
-                .attr("d", d => {
-                     if (d.isSpine) return `M${d.source.x},${d.source.y} L${d.target.x},${d.target.y}`;
-                     const dy = d.target.y - d.source.y;
-                     return `M${d.source.x},${d.source.y} C${d.source.x},${d.target.y - (dy/2)} ${d.target.x},${d.target.y - (dy/2)} ${d.target.x},${d.target.y}`;
-                });
-            linkSel.exit().remove();
+function drawHulls() {
+    const colors = ['rgba(76,175,80,0.12)', 'rgba(33,150,243,0.12)', 'rgba(255,152,0,0.12)', 'rgba(156,39,176,0.12)'];
+    
+    expansionOrder.forEach((id, i) => {
+        const expander = getNode(id);
+        if (!expander || !expandedSet.has(id)) return;
+        
+        const tribs = expander._tributaries.filter(t => t.visible);
+        if (tribs.length === 0) return;
+        
+        const padding = 20;
+        const points = [];
+        tribs.forEach(t => {
+            const hw = VISUAL_WIDTH / 2 + padding, hh = VISUAL_HEIGHT / 2 + padding;
+            points.push([t.x - hw, t.y - hh], [t.x + hw, t.y - hh], [t.x + hw, t.y + hh], [t.x - hw, t.y + hh]);
+        });
+        
+        if (points.length < 3) return;
+        const hull = d3.polygonHull(points);
+        if (!hull) return;
+        
+        gHulls.append('path')
+            .attr('class', 'hull')
+            .attr('d', d3.line().curve(d3.curveLinearClosed)(hull))
+            .attr('fill', colors[i % colors.length])
+            .attr('stroke', colors[i % colors.length].replace('0.12', '0.5'));
+    });
+}
 
-            // Nodes
-            const nodeSel = layerNodes.selectAll(".node").data(placedNodes, d => d.id);
-            const nEnter = nodeSel.enter().append("g").attr("class", "node")
-                .on("click", (e, d) => { 
-                    d.expanded = !d.expanded; 
-                    updateLayout(); 
-                });
-            
-            nEnter.append("rect")
-                  .attr("width", VISUAL_WIDTH).attr("height", VISUAL_HEIGHT)
-                  .attr("x", -(VISUAL_WIDTH/2)).attr("y", -(VISUAL_HEIGHT/2))
-                  .attr("rx", 20).attr("ry", 20)
-                  .attr("fill", d => d.isSpine ? "#4caf50" : "#2196f3")
-                  .attr("stroke", "#fff").attr("stroke-width", 2);
-                  
-            nEnter.append("text").attr("dy", 5).attr("text-anchor", "middle").text(d => d.id);
-            
-            nodeSel.merge(nEnter).transition().duration(500).attr("transform", d => `translate(${d.x},${d.y})`);
-            nodeSel.exit().remove();
+function drawEdges(visibleNodes) {
+    const visibleIds = new Set(visibleNodes.map(n => n.id));
+    
+    rawEdges.forEach(e => {
+        const src = getNode(e.s), tgt = getNode(e.t);
+        if (!src || !tgt || !visibleIds.has(src.id) || !visibleIds.has(tgt.id)) return;
+        
+        // Rule 5: Cross-tributary isolation
+        if (src.currentOwner && tgt.currentOwner && src.currentOwner !== tgt.currentOwner) {
+            return;  // Don't draw edge between different tributaries
         }
         
-        function resetGraph() { nodes.forEach(n => n.expanded = false); updateLayout(); }
-        function expandAll() { nodes.forEach(n => n.expanded = true); updateLayout(); }
+        let cls = 'tributary-link';
+        if (src._isOnSpine && tgt._isOnSpine) cls = 'spine-link';
+        else if (src._isOnSpine || tgt._isOnSpine) cls = 'skip-link';
+        
+        const dy = tgt.y - src.y;
+        const path = Math.abs(dy) > 30 
+            ? `M${src.x},${src.y} C${src.x},${src.y + dy/2} ${tgt.x},${tgt.y - dy/2} ${tgt.x},${tgt.y}`
+            : `M${src.x},${src.y} L${tgt.x},${tgt.y}`;
+        
+        gEdges.append('path').attr('class', `link ${cls}`).attr('d', path);
+    });
+}
 
-        updateLayout();
-    </script>
+function drawNodes(visibleNodes) {
+    const nodeG = gNodes.selectAll('.node')
+        .data(visibleNodes, d => d.id)
+        .enter()
+        .append('g')
+        .attr('class', d => {
+            let c = 'node';
+            if (d._isOnSpine) c += ' spine';
+            else if (d.isSpine) c += ' migrated';
+            else if (d.isShared) c += ' shared';
+            else c += ' tributary';
+            return c;
+        })
+        .attr('transform', d => `translate(${d.x},${d.y})`)
+        .on('click', (e, d) => toggleExpansion(d.id))
+        .on('contextmenu', (e, d) => { e.preventDefault(); alert(`${d.label}\nOwner: ${d.currentOwner || 'None'}\nOnSpine: ${d._isOnSpine}`); });
+    
+    nodeG.append('rect')
+        .attr('width', VISUAL_WIDTH).attr('height', VISUAL_HEIGHT)
+        .attr('x', -VISUAL_WIDTH/2).attr('y', -VISUAL_HEIGHT/2)
+        .attr('rx', 8);
+    
+    nodeG.append('text').text(d => d.label);
+    
+    // Expansion indicator
+    nodeG.filter(d => getInDegree(d.id).length > 0)
+        .append('circle')
+        .attr('cx', VISUAL_WIDTH/2 - 10).attr('cy', 0).attr('r', 7)
+        .attr('fill', d => expandedSet.has(d.id) ? '#e94560' : '#333')
+        .attr('stroke', '#fff').attr('stroke-width', 1.5);
+    
+    nodeG.filter(d => getInDegree(d.id).length > 0)
+        .append('text')
+        .attr('x', VISUAL_WIDTH/2 - 10).attr('y', 1)
+        .attr('font-size', '8px').attr('fill', '#fff')
+        .text(d => getInDegree(d.id).length);
+}
+
+// ============================================
+// INTERACTION
+// ============================================
+function toggleExpansion(id) {
+    const node = getNode(id);
+    if (!node || getInDegree(id).length === 0) {
+        log(`${node?.label || id} has no prereqs`, 'warn');
+        return;
+    }
+    
+    if (expandedSet.has(id)) {
+        expandedSet.delete(id);
+        expansionOrder = expansionOrder.filter(x => x !== id);
+        log(`Collapsed: ${node.label}`, 'info');
+    } else {
+        expandedSet.add(id);
+        expansionOrder.push(id);
+        log(`Expanded: ${node.label} (#${expansionOrder.length})`, 'info');
+    }
+    
+    updateHistoryUI();
+    updateLayout();
+}
+
+function collapseAll() {
+    expandedSet.clear();
+    expansionOrder = [];
+    updateHistoryUI();
+    updateLayout();
+}
+
+function expandAll() {
+    nodes.forEach(n => {
+        if (getInDegree(n.id).length > 0 && !expandedSet.has(n.id)) {
+            expandedSet.add(n.id);
+            expansionOrder.push(n.id);
+        }
+    });
+    updateHistoryUI();
+    updateLayout();
+}
+
+function resetView() {
+    svg.call(d3.zoom().transform, d3.zoomIdentity.translate(150, 300).scale(1));
+}
+
+// ============================================
+// START
+// ============================================
+updateLayout();
+log('v4 Ready. Click to expand. Toggle Sticky Claim setting.', 'info');
+</script>
 </body>
 </html>

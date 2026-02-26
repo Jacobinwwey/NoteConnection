@@ -23,6 +23,7 @@ var _focus_mode_enabled: bool = true # New: Focus Highlighting
 var _use_layout_coords: bool = false
 var _layout_nodes: Array = []
 var _layout_edges: Array = []
+var _layout_hulls: Array = []
 
 # View State (Pan/Zoom)
 var _zoom_level: float = 1.0
@@ -89,6 +90,7 @@ func set_data(nodes: Array, current_id: String, completed_ids: Array) -> void:
 func set_layout_data(layout: Dictionary, current_id: String, completed_ids: Array) -> void:
 	_layout_nodes = layout.get("nodes", [])
 	_layout_edges = layout.get("edges", [])
+	_layout_hulls = layout.get("hulls", [])
 	_use_layout_coords = true
 	_current_id = current_id
 	_completed_ids = completed_ids
@@ -142,6 +144,9 @@ func _draw_layout_mode() -> void:
 	
 	var base_radius = _style_config.get("node_radius", 8.0)
 	
+	# Draw Hulls (Background)
+	_draw_hulls()
+	
 	# Determine Highlight Set (Central Node + Incoming Prerequisites)
 	var highlight_ids = {}
 	if _focus_mode_enabled and not _current_id.is_empty():
@@ -192,7 +197,7 @@ func _draw_layout_mode() -> void:
 			_draw_bezier_curve(start, cp1, cp2, end, color, 2.0)
 			
 	# Draw Nodes
-	var node_size = Vector2(180.0, 50.0)
+	var node_size = Vector2(140.0, 50.0) # Synced with Mockup
 	var corner_radius = 25.0 # Fully rounded ends
 	
 	var sb = StyleBoxFlat.new()
@@ -273,6 +278,41 @@ func _draw_layout_mode() -> void:
 			"type": "node",
 			"radius": max(node_size.x, node_size.y)
 		})
+
+func _draw_hulls() -> void:
+	if _layout_hulls.is_empty(): return
+	
+	for hull in _layout_hulls:
+		var member_ids = hull.get("memberIds", [])
+		if member_ids.is_empty(): continue
+		
+		var points = PackedVector2Array()
+		var node_size_half = Vector2(140.0, 50.0) * 0.5
+		var padding = 15.0
+		
+		for id in member_ids:
+			var node = _find_layout_node(id)
+			if node.is_empty(): continue
+			var pos = Vector2(node.x, node.y)
+			
+			var w = node_size_half.x + padding
+			var h = node_size_half.y + padding
+			
+			points.append(pos + Vector2(-w, -h))
+			points.append(pos + Vector2(w, -h))
+			points.append(pos + Vector2(w, h))
+			points.append(pos + Vector2(-w, h))
+
+		if points.size() >= 3:
+			var hull_points = Geometry2D.convex_hull(points)
+			var color = Color(0.298, 0.686, 0.314, 0.08) # rgba(76, 175, 80, 0.08)
+			var stroke_color = Color(0.298, 0.686, 0.314, 0.4)
+			
+			draw_colored_polygon(hull_points, color)
+			
+			# Draw Outline 
+			hull_points.append(hull_points[0])
+			draw_polyline(hull_points, stroke_color, 2.0, true)
 
 # Helper for bezier drawing
 func _draw_bezier_curve(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, color: Color, width: float) -> void:
