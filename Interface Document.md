@@ -586,6 +586,9 @@ Algorithms for generating linear learning paths from the complex graph structure
     - **Cycle Handling**: Implements "Cycle Breaking" (picks lowest in-degree node) to handle circular dependencies without crashing.
   - `diffusionLearning(targetId: string, strategy): PathResult`
     - **Logic**: Extracts the shortest path (and all prerequisites) to reach a specific goal node.
+  - `getTreeLayout(centralId: string, learningPath: PathResult, collapsedSet: Set<string>, expansionOrder: string[], stickyClaimEnabled: boolean): TreeLayoutResult`
+    - **Logic**: Applies the 9-Rule Engine (Expansion Order, Preceding Immunity, Following Migration, Single Appearance, Cross-Tributary Isolation, Spine Always Visible, Sticky Claim, Unit Migration, Tributary Hierarchy Immunity) to generate a stable, interactive Layered DAG structure with strict node ownership constraints.
+    - **Output**: `{ nodes: LayoutNode[], edges: LayoutEdge[], hulls: LayoutHull[] }`
 - **Output**:
   ```typescript
   interface PathResult {

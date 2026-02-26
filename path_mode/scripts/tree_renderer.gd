@@ -271,6 +271,35 @@ func _draw_layout_mode() -> void:
 			var line_width = font.get_string_size(line, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size).x
 			draw_string(font, Vector2(pos.x - line_width / 2.0, start_y + i * line_height), line, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, text_color)
 		
+		# Draw Spine glow/outline
+		if node.get("isSpine", false):
+			var spine_color = Color(1.0, 0.84, 0.0, 0.6)
+			if node.id == _current_id: spine_color = Color(0.0, 0.8, 1.0, 0.8)
+			draw_rect(rect, Color.TRANSPARENT, false, 2.0)
+			
+			var sb_spine = StyleBoxFlat.new()
+			sb_spine.set_corner_radius_all(corner_radius)
+			sb_spine.bg_color = Color.TRANSPARENT
+			sb_spine.border_color = spine_color
+			sb_spine.set_border_width_all(2)
+			draw_style_box(sb_spine, rect)
+
+		# Draw Expansion Indicator (Badge)
+		if node.get("hasPrereqs", false):
+			var badge_radius = 10.0
+			var badge_pos = pos + Vector2(0, node_size.y * 0.5) # Bottom edge center
+			var is_expanded = node.get("isExpanded", true)
+			
+			# Draw background circle
+			draw_circle(badge_pos, badge_radius, Color(0.15, 0.15, 0.15, 1.0))
+			# Draw outline
+			draw_arc(badge_pos, badge_radius, 0, TAU, 16, Color(0.8, 0.8, 0.8, 0.8), 1.5)
+			
+			# Draw symbol (+ or -)
+			var symbol = "-" if is_expanded else "+"
+			var symbol_size = font.get_string_size(symbol, HORIZONTAL_ALIGNMENT_CENTER, -1, 14)
+			draw_string(font, badge_pos + Vector2(-symbol_size.x / 2.0, symbol_size.y * 0.3), symbol, HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color.WHITE)
+
 		# Register Node Click Area
 		_click_areas.append({
 			"rect": rect,

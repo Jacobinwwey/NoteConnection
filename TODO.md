@@ -6,39 +6,39 @@
 
 | #   | Rule (EN)                                 | 规则 (ZH)                  | Status |
 | --- | ----------------------------------------- | -------------------------- | ------ |
-| 1   | Expansion Order (FIFO claiming)           | 展开顺序（FIFO 认领）      | [ ]    |
-| 2   | Preceding Immunity (effective index)      | 前置免疫（有效索引）       | [ ]    |
-| 3   | Following Migration (spine+followers)     | 后续迁移（脊柱+后续）      | [ ]    |
-| 4   | Single Appearance (owner-based)           | 单次出现（基于所有者）     | [ ]    |
-| 5   | Cross-Tributary Isolation (edge filter)   | 跨支流隔离（边过滤）       | [ ]    |
-| 6   | Spine Always Visible (return on collapse) | 脊柱始终可见（折叠时返回） | [ ]    |
-| 7   | Sticky Claim (configurable toggle)        | 粘性认领（可配置开关）     | [ ]    |
-| 8   | Unit Migration (recursive claim)          | 单元迁移（递归认领）       | [ ]    |
-| 9   | Tributary Hierarchy Immunity              | 支流层级免疫               | [ ]    |
+| 1   | Expansion Order (FIFO claiming)           | 展开顺序（FIFO 认领）      | [x]    |
+| 2   | Preceding Immunity (effective index)      | 前置免疫（有效索引）       | [x]    |
+| 3   | Following Migration (spine+followers)     | 后续迁移（脊柱+后续）      | [x]    |
+| 4   | Single Appearance (owner-based)           | 单次出现（基于所有者）     | [x]    |
+| 5   | Cross-Tributary Isolation (edge filter)   | 跨支流隔离（边过滤）       | [x]    |
+| 6   | Spine Always Visible (return on collapse) | 脊柱始终可见（折叠时返回） | [x]    |
+| 7   | Sticky Claim (configurable toggle)        | 粘性认领（可配置开关）     | [x]    |
+| 8   | Unit Migration (recursive claim)          | 单元迁移（递归认领）       | [x]    |
+| 9   | Tributary Hierarchy Immunity              | 支流层级免疫               | [x]    |
 
 ## Implementation Checklist / 实施清单
 
-- [ ] **Core Algorithm / 核心算法** ([path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js))
-  - [ ] Add `expansionOrder` parameter / 添加 `expansionOrder` 参数
-  - [ ] Implement ownership system (`currentOwner`, `ownerPriority`) / 实现所有权系统
-  - [ ] Implement `tryClaim()` with 9 rules / 实现包含 9 条规则的 `tryClaim()`
-  - [ ] Implement `getEffectiveSpineIndex()` / 实现有效脊柱索引
-  - [ ] Implement `determineVisibility()` / 实现可见性判定
-  - [ ] Filter edges by ownership (Rule 5) / 按所有权过滤边
-  - [ ] Group hulls by ownership / 按所有权分组 hull
+- [x] **Core Algorithm / 核心算法** ([path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js))
+  - [x] Add `expansionOrder` parameter / 添加 `expansionOrder` 参数
+  - [x] Implement ownership system (`currentOwner`, `ownerPriority`) / 实现所有权系统
+  - [x] Implement `tryClaim()` with 9 rules / 实现包含 9 条规则的 `tryClaim()`
+  - [x] Implement `getEffectiveSpineIndex()` / 实现有效脊柱索引
+  - [x] Implement `determineVisibility()` / 实现可见性判定
+  - [x] Filter edges by ownership (Rule 5) / 按所有权过滤边
+  - [x] Group hulls by ownership / 按所有权分组 hull
 
-- [ ] **Frontend Bridge / 前端桥接** ([path_app.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js))
-  - [ ] Convert `forcedExpansionNodes` Set → `expansionOrder` Array / 转换为有序数组
-  - [ ] Add `stickyClaimEnabled` setting / 添加粘性认领设置
+- [x] **Frontend Bridge / 前端桥接** ([path_app.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js))
+  - [x] Convert `forcedExpansionNodes` Set → `expansionOrder` Array / 转换为有序数组
+  - [x] Add `stickyClaimEnabled` setting / 添加粘性认领设置
 
-- [ ] **Godot Renderer / Godot 渲染器** ([tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd))
-  - [ ] Edge filtering by `currentOwner` / 按所有者过滤边
-  - [ ] Hull collision avoidance / Hull 碰撞避让
-  - [ ] Node type coloring (spine/tributary/shared/migrated) / 节点类型着色
-  - [ ] Expansion indicator badge / 展开指示器徽章
+- [x] **Godot Renderer / Godot 渲染器** ([tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd))
+  - [x] Edge filtering by `currentOwner` / 按所有者过滤边
+  - [x] Hull collision avoidance / Hull 碰撞避让
+  - [x] Node type coloring (spine/tributary/shared/migrated) / 节点类型着色
+  - [x] Expansion indicator badge / 展开指示器徽章
 
-- [ ] **Worker** ([path_worker.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_worker.js))
-  - [ ] Pass `expansionOrder` + `stickyClaimEnabled` / 传递展开顺序和粘性认领
+- [x] **Worker** ([path_worker.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_worker.js))
+  - [x] Pass `expansionOrder` + `stickyClaimEnabled` / 传递展开顺序和粘性认领
 
 ## Files Changed / 修改文件
 

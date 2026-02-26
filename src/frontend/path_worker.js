@@ -81,13 +81,15 @@ function computePath(config) {
     let treeLayout = null;
     const centralId = config.centralId || (result.nodes.length > 0 ? result.nodes[0].id : null);
     const collapsedSet = new Set(config.collapsedIds || []); // New
+    const expansionOrder = config.expansionOrder || [];
+    const stickyClaimEnabled = config.stickyClaimEnabled !== false;
 
     console.log('[PathWorker] Computing treeLayout. centralId:', centralId, 'result.nodes.length:', result.nodes?.length);
 
     if (engine && engine.getTreeLayout) {
         // Pass the raw result from domainLearning/diffusionLearning and collapsed state
         try {
-            treeLayout = engine.getTreeLayout(centralId, result, collapsedSet);
+            treeLayout = engine.getTreeLayout(centralId, result, collapsedSet, expansionOrder, stickyClaimEnabled);
             console.log('[PathWorker] treeLayout generated. Nodes:', treeLayout?.nodes?.length);
         } catch (err) {
             console.error('[PathWorker] getTreeLayout Error:', err);

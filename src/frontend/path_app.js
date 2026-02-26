@@ -19,6 +19,8 @@ window.pathApp = {
     completedNodes: new Set(),
     collapsedNodes: new Set(), 
     forcedExpansionNodes: new Set(), // New: nodes with forced expansion of prereqs
+    expansionOrder: [],
+    stickyClaimEnabled: true,
     currentTargetId: null,
     lastTreeLayout: null, // Store tree layout for requestPath
     
@@ -212,6 +214,7 @@ window.pathApp = {
         try {
             const ids = Array.from(this.collapsedNodes);
             localStorage.setItem('pathMode_collapsedNodes', JSON.stringify(ids));
+            localStorage.setItem('pathMode_expansionOrder', JSON.stringify(this.expansionOrder));
         } catch (e) { console.warn('Failed save collapsed', e); }
     },
 
@@ -222,15 +225,25 @@ window.pathApp = {
                 const ids = JSON.parse(stored);
                 this.collapsedNodes = new Set(ids);
             }
+            const storedExp = localStorage.getItem('pathMode_expansionOrder');
+            if (storedExp) {
+                this.expansionOrder = JSON.parse(storedExp);
+            }
         } catch (e) { console.warn('Failed load collapsed', e); }
     },
 
     toggleNodeCollapse: function(nodeId) {
         if (!nodeId) return;
         if (this.collapsedNodes.has(nodeId)) {
+            // Un-collapse (Expand)
             this.collapsedNodes.delete(nodeId);
+            if (!this.expansionOrder.includes(nodeId)) {
+                this.expansionOrder.push(nodeId);
+            }
         } else {
+            // Collapse
             this.collapsedNodes.add(nodeId);
+            this.expansionOrder = this.expansionOrder.filter(id => id !== nodeId);
         }
         this._saveCollapsedNodes();
         this.triggerUpdate(); // Recalculate layout
@@ -238,25 +251,34 @@ window.pathApp = {
 
     expandPrereqs: function(nodeId) {
         if (!nodeId) return;
+        this.collapsedNodes.delete(nodeId);
+        if (!this.expansionOrder.includes(nodeId)) {
+            this.expansionOrder.push(nodeId);
+        }
         if (!this.forcedExpansionNodes.has(nodeId)) {
             this.forcedExpansionNodes.add(nodeId);
-            this.triggerUpdate();
         }
+        this._saveCollapsedNodes();
+        this.triggerUpdate();
     },
 
     collapsePrereqs: function(nodeId) {
         if (!nodeId) return;
+        this.collapsedNodes.add(nodeId);
+        this.expansionOrder = this.expansionOrder.filter(id => id !== nodeId);
         if (this.forcedExpansionNodes.has(nodeId)) {
             this.forcedExpansionNodes.delete(nodeId);
-            this.triggerUpdate();
         }
+        this._saveCollapsedNodes();
+        this.triggerUpdate();
     },
 
     collapseAll: function() {
-        if (this.forcedExpansionNodes.size > 0) {
-            this.forcedExpansionNodes.clear();
-            this.triggerUpdate();
-        }
+        this.expansionOrder.forEach(id => this.collapsedNodes.add(id));
+        this.expansionOrder = [];
+        this.forcedExpansionNodes.clear();
+        this._saveCollapsedNodes();
+        this.triggerUpdate();
     },
 
     sendPathToBridge: function(result) {
@@ -557,7 +579,9 @@ window.pathApp = {
                 centralId: this.centralNodeId,
                 collapsedIds: Array.from(this.collapsedNodes),
                 completedIds: Array.from(this.completedNodes),
-                forcedExpansionIds: Array.from(this.forcedExpansionNodes) // New
+                forcedExpansionIds: Array.from(this.forcedExpansionNodes),
+                expansionOrder: this.expansionOrder,
+                stickyClaimEnabled: this.stickyClaimEnabled
             }
         });
         

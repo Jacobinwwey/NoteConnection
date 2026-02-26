@@ -278,6 +278,18 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ## 📅 Changelog
 
+### v1.4.3 - 9-Rule Tree Layout Engine (2026-02-26)
+
+- **Layout Engine Upgrade**:
+  - **Spine & Tributaries Logic**: Replaced basic geometric node placement with a robust 9-Rule Topological Layout engine (Expansion Order, Preceding Immunity, Following Migration, Single Appearance, Cross-Tributary Isolation, Spine Always Visible, Sticky Claim, Unit Migration, Tributary Hierarchy Immunity).
+  - **Node Ownership**: Implemented a recursive claiming system where expanding nodes naturally claim their prerequisites (tributaries), arranging them in a visually structured hierarchy.
+- **Frontend Enhancements**:
+  - **Expansion Tracking**: The system now seamlessly tracks node expansion orders, ensuring precise deterministic rendering as complex prerequisite chains are unspooled.
+  - **Sticky Claims (Configurable)**: Node ownership persists across view updates, avoiding jarring layout reorganizations during consecutive clicks.
+- **Godot Renderer Adaptations**:
+  - **Expansion Badges**: Added intuitive `[+]`/`[-]` badges in the Godot desktop renderer to indicate combinable prerequisite branches visually.
+  - **Spine Highlighting**: Core critical-path nodes ("Spine") receive an elegant glowing border to distinguish the primary learning flow from peripheral branches.
+
 ### v1.4.1 - Tree View Interaction Fixes (2026-02-01)
 
 - **Interaction Polish**:

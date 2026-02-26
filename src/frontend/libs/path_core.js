@@ -739,394 +739,300 @@ class PathEngine {
      * @param learningPath The active learning path object
      * @param collapsedSet Optional Set of collapsed node IDs
      */
-    getTreeLayout(centralId, learningPath, collapsedSet = new Set()) {
-        const nodes = learningPath.nodes;
-        if (!nodes || nodes.length === 0) return null;
+    getTreeLayout(centralId, learningPath, collapsedSet = new Set(), expansionOrder = [], stickyClaimEnabled = true) {
+        const rawNodesRaw = learningPath.nodes;
+        if (!rawNodesRaw || rawNodesRaw.length === 0) return null;
+
+        // --- Rule 4: Single Appearance ---
+        // Deduplicate by ID. The FIRST occurrence wins (preserves original ordering/priority).
+        // 规则4：单次出现 —— 按 ID 去重，保留首次出现的节点。
+        const seenIds = new Set();
+        const rawNodes = [];
+        for (const n of rawNodesRaw) {
+            if (!seenIds.has(n.id)) {
+                seenIds.add(n.id);
+                rawNodes.push(n);
+            }
+        }
+
+        const layoutNodes = [];
+        
+        // --- 1. Identify Spine (Critical Path) ---
+        let spineCandidates = rawNodes.filter(n => n.isCritical);
+        if (spineCandidates.length === 0) {
+            spineCandidates = [...rawNodes];
+            spineCandidates.sort((a,b) => (a.stepOrder || 0) - (b.stepOrder || 0));
+        } else {
+            spineCandidates.sort((a,b) => (a.stepOrder || 0) - (b.stepOrder || 0));
+        }
+
+        const spineIndexMap = new Map();
+        spineCandidates.forEach((n, i) => spineIndexMap.set(n.id, i));
+
+        // --- Config using Visual Dimensions ---
+        const VISUAL_WIDTH = 140; 
+        const VISUAL_HEIGHT = 50; 
+        const H_GAP = 50;
+        const V_GAP = 120; 
+        const SPINE_SPACING = 290;
+
+        // Initialize Internal Nodes
+        const nodes = rawNodes.map(n => {
+            const isSpine = spineIndexMap.has(n.id);
+            const spineIdx = isSpine ? spineIndexMap.get(n.id) : -1;
+            
+            return {
+                id: n.id,
+                label: n.label,
+                status: this._getNodeStatus(n, centralId),
+                inDegree: (n.inDegree || 0),
+                collapsed: collapsedSet.has(n.id),
+                isExpanded: !collapsedSet.has(n.id), // True if not explicitly collapsed by user
+                isSpine: isSpine,
+                spineIndex: spineIdx,
+                // -- 9-Rule Engine State --
+                visible: true,
+                x: 0,
+                y: 0,
+                currentOwner: null,
+                ownerPriority: -1,
+                _tributaries: [],
+                _isOnSpine: isSpine
+            };
+        });
 
         const nodeMap = new Map(nodes.map(n => [n.id, n]));
-        const layoutNodes = [];
-        const placedNodeIds = new Set();
-
-        // --- Config using Visual Dimensions (Synced with Mockup v3) ---
-        const VISUAL_WIDTH = 140; 
-        const VISUAL_HEIGHT = 50; // Reference only
-        const H_GAP = 50;
-        const V_GAP = 120; // Level Height
-        
-        const SIBLING_STRIDE = VISUAL_WIDTH + H_GAP; // 190
-        const NODE_HALF_W = VISUAL_WIDTH / 2;
-        const SPINE_PADDING = 100;
-        const MIN_SPINE_INTERVAL = VISUAL_WIDTH + 150; // 290
+        const expandedSet = new Set(expansionOrder);
 
         // --- Helpers ---
-
-        // 1. Dependency Accessor
-        // Check for specific edges provided in learningPath to restrict traversal (Constraint Subgraph)
+        // Constraint Subgraph edges
         const usePathEdges = learningPath.edges && learningPath.edges.length > 0;
         const pathReverseAdj = new Map();
         if (usePathEdges) {
             learningPath.edges.forEach(e => {
-                if (!pathReverseAdj.has(e.target)) pathReverseAdj.set(e.target, []);
-                pathReverseAdj.get(e.target).push(e.source);
+                const targetId = typeof e.target === 'object' ? e.target.id : e.target;
+                const sourceId = typeof e.source === 'object' ? e.source.id : e.source;
+                if (!pathReverseAdj.has(targetId)) pathReverseAdj.set(targetId, []);
+                pathReverseAdj.get(targetId).push(sourceId);
             });
         }
 
-        const getPrerequisites = (nodeId) => {
+        const getNode = id => nodeMap.get(id);
+        const getPrereqs = (id) => {
+            let sources = [];
             if (usePathEdges) {
-                return (pathReverseAdj.get(nodeId) || []).filter(src => nodeMap.has(src));
+                sources = pathReverseAdj.get(id) || [];
             } else {
-                return this.graph.getIncomingEdges(nodeId)
-                    .map(e => e.source)
-                    .filter(src => nodeMap.has(src));
+                sources = this.graph.getIncomingEdges(id).map(e => e.source);
             }
+            // Deduplicate prereq sources to prevent duplicate claiming
+            // 去重前置条件来源，防止重复认领
+            const uniqueSources = [...new Set(sources)];
+            return uniqueSources.filter(src => nodeMap.has(src)).map(getNode);
         };
 
-        // 2. Contour Calculation (Recursive)
-        // Returns { left: {lvl: min}, right: {lvl: max}, fullWidth: w }
-        const calculateContour = (node, dir, visited = new Set()) => {
-            if (visited.has(node.id)) {
-                 // Cycle detected, treat as leaf
-                 return { left: {}, right: {}, fullWidth: VISUAL_WIDTH };
+        // Populate hasPrereqs
+        nodes.forEach(n => {
+            n.hasPrereqs = getPrereqs(n.id).length > 0;
+        });
+
+
+
+        const getTributaryRootSpineIndex = (node) => {
+            if (node._isOnSpine && node.isSpine) return node.spineIndex;
+            let current = node;
+            let visited = new Set();
+            while (current && !visited.has(current.id)) {
+                visited.add(current.id);
+                if (current.isSpine) return current.spineIndex;
+                if (current.currentOwner) current = getNode(current.currentOwner);
+                else break;
             }
-            visited.add(node.id);
+            return -1;
+        };
 
-            const isCollapsed = collapsedSet.has(node.id);
-            // Treat explicit expansion flag from backend? Usually backend flag overrides.
-            // But collapsedSet is UI state. 
-            // In Mockup: "if (!node.expanded)". In Prod: "if (collapsedSet.has(id))".
-            // WAIT! The worker receives `collapsedSet`.
-            // Also need to handle "Forced Expansion" flag which might imply expanded by default.
-            // Let's assume `collapsedSet` is the authority. 
-            // If node.isExpanded is true (from diffusion algo) it might still be collapsed by user?
-            // Usually, 'isExpanded' logic means "Data is available", 'collapsedSet' means "User hid it".
+        const getEffectiveSpineIndex = (node) => {
+            if (!node.isSpine) return -1;
+            if (node._isOnSpine || node.currentOwner === null) return node.spineIndex ?? -1;
+            const owner = getNode(node.currentOwner);
+            if (owner && owner.isSpine) return getEffectiveSpineIndex(owner);
+            return getTributaryRootSpineIndex(node);
+        };
+
+        const claim = (target, owner, priority) => {
+            target.currentOwner = owner.id;
+            target.ownerPriority = priority;
+            target._isOnSpine = false;
             
-            // Logic: If collapsed, it's a leaf.
-            if (isCollapsed) {
-                return { left: {}, right: {}, fullWidth: VISUAL_WIDTH };
+            if (!owner._tributaries.includes(target)) {
+                owner._tributaries.push(target);
             }
-
-            const childrenIds = getPrerequisites(node.id).filter(id => !placedNodeIds.has(id)); 
-            // Note: placedNodeIds check here is tricky. 
-            // Contours are calculated *before* placement for Spines, but *during* for Tributaries?
-            // Actually, for Spines, we calculate contour of the tributary tree.
-            // The tributary tree nodes are NOT placed yet.
-            // BUT: We must exclude *other* Spines from being counted as children (if cyclic/diamond).
-            // Mockup: `filter(id => !mainPathIds.includes(id))`
-            // We need to identify Main Path (Spine) first.
-            const spineIds = spineCandidates.map(n => n.id);
-            const validChildren = childrenIds.filter(id => !spineIds.includes(id));
-
-            if (validChildren.length === 0) {
-                 return { left: {}, right: {}, fullWidth: VISUAL_WIDTH };
-            }
-
-            // Create a new branch visited set to allow shared nodes in parallel branches? 
-            // No, contour is absolute width. If shared, we count it twice?
-            // If node A has children B and C, and B->D, C->D.
-            // D contributes to B's contour AND C's contour?
-            // Yes, visual duplication or just width reservation.
-            // If we share `visited` across siblings, the second sibling sees D as visited and returns leaf.
-            // This effectively "hides" D from the second sibling's contour.
-            // This is probably DESIRED to avoid double counting width if they will overlap visually?
-            // BUT if they are placed separately, we need width for both!
-            // In `placeTributaries`, we place duplicates or skip?
-            // We decided "Assign to first parent".
-            // So logic: Count D for B. When C comes, D is "handled".
-            // So sharing `visited` across the sibling mapping is correct?
-            // `childContours.map` runs sequentially.
-            // We should pass the SAME `visited` set to all children?
-            // BUT `calculateContour` signature `(node, dir, visited = new Set())` creates new set if not passed.
-            // Here we want to fork visited for independent branches? Or shared?
-            // If we want accurate "Subtree Width", we should avoid double counting.
-            // So we should pass a shared visited set.
-            // But `calculateContour` is called on `node` which is the root of sub-calculation.
-            // Let's create a local visited set for this contour calculation instance if we want strict tree?
-            // Actually, simply protecting against LOOPS is key.
-            // The recursion `calculateContour(nodeMap.get(cid), dir, new Set(visited))` would protect looping path.
-            // Using `new Set(visited)` (Branch Copy) protects against A->B->A, but allows A->B->D, A->C->D.
-            // This seems safer for width calculation (count D twice = more space reserved = safer).
             
-            const branchVisited = new Set(visited);
-            const childContours = validChildren.map(cid => calculateContour(nodeMap.get(cid), dir, branchVisited));
-            
-            const spacings = childContours.map(c => Math.max(c.fullWidth, SIBLING_STRIDE));
-            const totalWidth = spacings.reduce((a,b) => a+b, 0);
-            
-            const mergedLeft = {};
-            const mergedRight = {};
-            
-            let currentX = -(totalWidth / 2);
-            
-            childContours.forEach((cc, i) => {
-                const spacing = spacings[i];
-                const childCenterX = currentX + (spacing / 2);
+            if (expandedSet.has(target.id)) {
+                const targetEffectiveIdx = getEffectiveSpineIndex(target);
+                const targetTribs = getPrereqs(target.id).filter(t => t.currentOwner === null);
                 
-                // 1. Add Child's own width at Relative Level 1
-                const targetLvl = 1 * dir; 
-                updateMinMax(mergedLeft, mergedRight, targetLvl, childCenterX - NODE_HALF_W, childCenterX + NODE_HALF_W);
-
-                // 2. Merge Child's internal contour
-                for (const [lvlRelStr, minVal] of Object.entries(cc.left)) {
-                    const lvlRel = parseInt(lvlRelStr); 
-                    const finalLvl = (1 * dir) + lvlRel; 
-                    updateMinMax(mergedLeft, mergedRight, finalLvl, childCenterX + minVal, childCenterX + cc.right[lvlRelStr]);
-                }
-                
-                currentX += spacing;
-            });
-            
-            return { left: mergedLeft, right: mergedRight, fullWidth: Math.max(totalWidth, VISUAL_WIDTH) };
-        };
-
-        const updateMinMax = (lMap, rMap, lvl, min, max) => {
-            if (lMap[lvl] === undefined || min < lMap[lvl]) lMap[lvl] = min;
-            if (rMap[lvl] === undefined || max > rMap[lvl]) rMap[lvl] = max;
-        };
-
-        // --- 1. Identify Spine ---
-        let spineCandidates = nodes.filter(n => n.isCritical);
-        if (spineCandidates.length === 0) {
-            spineCandidates = [...nodes];
-            spineCandidates.sort((a,b) => (a.stepOrder || 0) - (b.stepOrder || 0));
-        } else {
-             spineCandidates.sort((a,b) => (a.stepOrder || 0) - (b.stepOrder || 0));
-        }
-        
-        // --- 2. Calculate Layout (Spine Position & Contours) ---
-        const spineMap = new Map();
-        
-        // Global Accumulators
-        const globalContours = { 1: {}, [-1]: {} };
-        let lastSpineX = 0;
-
-        spineCandidates.forEach((node, index) => {
-             placedNodeIds.add(node.id);
-             
-             const lNode = {
-                id: node.id,
-                label: node.label,
-                status: this._getNodeStatus(node, centralId),
-                inDegree: (node.inDegree || 0),
-                y: 0,
-                collapsed: collapsedSet.has(node.id),
-                isExpanded: node.isExpanded, // Data flag
-                isSpine: true,
-                spineIndex: index,
-                _contour: null
-            };
-            
-            // Calculate Contour for Tributaries
-            // Direction: Even -> 1 (Down), Odd -> -1 (Up)
-            const dir = (index % 2 === 0) ? 1 : -1;
-            const contour = calculateContour(node, dir);
-            lNode._contour = contour;
-
-            // Determine X
-            let minSafeX = (index === 0) ? 0 : (lastSpineX + MIN_SPINE_INTERVAL);
-
-            // Collision Check against Global
-            for (const [lvlStr, minVal] of Object.entries(contour.left)) {
-                const lvl = parseInt(lvlStr);
-                const relevantSide = (lvl > 0) ? 1 : (lvl < 0) ? -1 : 0;
-                if (relevantSide === 0 || relevantSide !== dir) continue;
-
-                const globalMax = globalContours[relevantSide][lvl];
-                if (globalMax !== undefined) {
-                    const requiredX = globalMax + SPINE_PADDING - minVal;
-                    if (requiredX > minSafeX) {
-                        minSafeX = requiredX;
+                targetTribs.forEach(t => {
+                    if (t.isSpine && target.isSpine) {
+                        const tIdx = t.spineIndex ?? -1;
+                        if (tIdx !== -1 && targetEffectiveIdx !== -1 && tIdx <= targetEffectiveIdx) return;
                     }
-                }
+                    claim(t, target, priority);
+                });
             }
-
-            lNode.x = minSafeX;
-            lastSpineX = minSafeX;
-            
-            // Update Global Accumulator
-            for (const [lvlStr, maxVal] of Object.entries(contour.right)) {
-                const lvl = parseInt(lvlStr);
-                const relevantSide = (lvl > 0) ? 1 : (lvl < 0) ? -1 : 0;
-                if (relevantSide === 0) continue;
-
-                const absRight = lNode.x + maxVal;
-                const currentGlobal = globalContours[relevantSide][lvl];
-                if (currentGlobal === undefined || absRight > currentGlobal) {
-                    globalContours[relevantSide][lvl] = absRight;
-                }
-            }
-
-            layoutNodes.push(lNode);
-            spineMap.set(node.id, lNode);
-        });
-
-        // --- 3. recursive Place Tributaries ---
-        const placeTributaries = (parentNode, currentContour, originX, originY, dir) => {
-             // Re-finding children to place them exactly as counted
-             // Note: We used `calculateContour` which filters by !placedNodeIds.
-             // But placedNodeIds only contains Spine at start. 
-             // We need to fetch valid children again.
-             // IMPORTANT: `calculateContour` used RECURSION. Here we recursively place.
-             
-             const childrenIds = getPrerequisites(parentNode.id).filter(id => !spineMap.has(id)); 
-             // Wait, `placedNodeIds` is updated as we go? 
-             // The contour calc assumed "Valid Children".
-             // We should filter against Spine AND ensure we process them in same order.
-             // To ensure distinctness in graph (if DAG has multi-parents), we need to track placed.
-             
-             // Problem: `calculateContour` is stateless regarding placement.
-             // If a node is shared by multiple parents, `calculateContour` counts it for BOTH.
-             // But in `placeTributaries`, we only place it once?
-             // If we place it once, the second parent will have an "empty hole" in its contour?
-             // Actually, `Tree Layout` often duplicates nodes or we assume Strict Tree.
-             // The visualizer usually duplicates shared nodes in Tree View to avoid crossing lines.
-             // "NoteConnection" usually treats graph as DAG.
-             // IF we want Strict Tree Layout, we duplicate. 
-             // IF we want DAG, we place once.
-             // Logic in Mockup: `children = ... filter(id => !mainPathIds.includes(id))`
-             // Mockup implies simple tree.
-             // Let's implement strict Tree (Visual Duplication) OR check `placedNodeIds`.
-             // If we check `placedNodeIds`, the second parent finds no children, so width is small.
-             // But `calculateContour` might have predicted large width. Mismatch!
-             // FIX: `calculateContour` also needs to filter by `placedNodeIds`? 
-             // But `calculateContour` runs AHEAD of placement.
-             // SOLUTION: For "Tree Layout" mode, we allow VISUAL DUPLICATES (or Phantom Nodes) 
-             // OR we strictly assign a node to its FIRST valid parent (Topological).
-             // Given the complexity, let's stick to: "Assign to first parent".
-             // But then `calculateContour` must simulate this assignment.
-             // Given `path_core.js` structure, `layoutNodes` is a flat list. 
-             // Using `placedNodeIds` during `calculateContour`? No, because parallel branches might race.
-             // Let's rely on `placedNodeIds` during PLACEMENT.
-             // And accepts that if a child is already placed, the parent just has an empty branch there.
-             // This might look weird if the space was reserved.
-             // However, `getPrerequisites` returns incoming edges.
-             // Layout logic usually implies strict hierarchy.
-             
-             const unplacedChildren = childrenIds.filter(id => !placedNodeIds.has(id));
-             if (unplacedChildren.length === 0) return;
-
-             // Re-calculate contour locally to determine spacing? 
-             // We can just call `calculateContour` again? It's cheap enough for typical graphs (hundreds of nodes).
-             // But we need consistency.
-             // Let's recalculate child widths on the fly.
-             const childWidths = unplacedChildren.map(cid => {
-                  const node = nodeMap.get(cid);
-                  const c = calculateContour(node, dir); 
-                  return Math.max(c.fullWidth, SIBLING_STRIDE);
-             });
-             
-             const totalW = childWidths.reduce((a,b) => a+b, 0);
-             let startX = originX - (totalW / 2);
-             
-             unplacedChildren.forEach((cid, i) => {
-                 const node = nodeMap.get(cid);
-                 const w = childWidths[i];
-                 const centerX = startX + (w/2);
-                 const childY = originY + (dir * V_GAP);
-                 
-                 const lNode = {
-                    id: node.id,
-                    label: node.label,
-                    status: this._getNodeStatus(node, centralId),
-                    inDegree: (node.inDegree || 0),
-                    x: centerX,
-                    y: childY,
-                    collapsed: collapsedSet.has(node.id),
-                    isExpanded: node.isExpanded,
-                    isSpine: false,
-                    hasChildren: false 
-                };
-                
-                layoutNodes.push(lNode);
-                placedNodeIds.add(node.id); // Mark placed
-                
-                // Recurse
-                // Only if Expanded
-                 if (!collapsedSet.has(node.id)) {
-                     placeTributaries(lNode, null, centerX, childY, dir);
-                 }
-                 
-                 startX += w;
-             });
         };
 
-        // Execute Placement
-        spineCandidates.forEach(node => {
-            const lNode = spineMap.get(node.id);
-            const dir = (lNode.spineIndex % 2 === 0) ? 1 : -1;
-            // Only place if expanded (spine usually expanded, but check collapsedSet)
-             if (!collapsedSet.has(node.id)) {
-                 placeTributaries(lNode, lNode._contour, lNode.x, lNode.y, dir);
-             }
+        const claimSpineChain = (startNode, owner, priority) => {
+            const chain = nodes.filter(n => n.isSpine && n.spineIndex >= startNode.spineIndex)
+                               .sort((a, b) => a.spineIndex - b.spineIndex);
+            chain.forEach(n => claim(n, owner, priority));
+        };
+
+        const tryClaim = (expander, target, priority) => {
+            if (target.currentOwner !== null && target.ownerPriority < priority) return { success: false };
+            const expanderEffectiveIdx = getEffectiveSpineIndex(expander);
+            const targetEffectiveIdx = target.spineIndex ?? -1;
+            
+            if (target.isSpine && expander.isSpine) {
+                if (targetEffectiveIdx !== -1 && expanderEffectiveIdx !== -1 && targetEffectiveIdx <= expanderEffectiveIdx) return { success: false };
+            }
+            
+            if (target.isSpine && !expander.isSpine) {
+                const rootSpineIndex = getTributaryRootSpineIndex(expander);
+                if (rootSpineIndex !== -1 && targetEffectiveIdx <= rootSpineIndex) return { success: false };
+            }
+            
+            if (target.isSpine && expander.isSpine && expander._isOnSpine) {
+                claimSpineChain(target, expander, priority);
+                return { success: true };
+            }
+            
+            claim(target, expander, priority);
+            return { success: true };
+        };
+
+        const isOwnerChainVisible = (node) => {
+            if (node.currentOwner === null) return false;
+            if (!expandedSet.has(node.currentOwner)) return false;
+            const owner = getNode(node.currentOwner);
+            if (!owner) return false;
+            if (owner.isSpine && owner._isOnSpine) return true;
+            if (owner.isSpine && !owner._isOnSpine) return owner.visible;
+            return isOwnerChainVisible(owner);
+        };
+
+        // --- 1. Process Expansions in Priority Order ---
+        expansionOrder.forEach((expanderId, priority) => {
+            const expander = getNode(expanderId);
+            if (!expander || !expandedSet.has(expanderId)) return;
+            const prereqs = getPrereqs(expanderId);
+            prereqs.forEach(prereq => tryClaim(expander, prereq, priority));
         });
 
-        // --- 4. Edges & Hulls ---
+        // --- 2. Determine Visibility ---
+        nodes.forEach(n => {
+            if (n.isSpine) {
+                n.visible = true;
+                if (n.currentOwner && !expandedSet.has(n.currentOwner)) {
+                    n._isOnSpine = true;
+                    n.currentOwner = null;
+                }
+            }
+        });
+
+        nodes.forEach(n => {
+            if (!n.isSpine) {
+                n.visible = isOwnerChainVisible(n);
+                if (!n.visible && !stickyClaimEnabled) n.currentOwner = null;
+            }
+        });
+
+        // --- 3. Place Nodes (Stationary Spine & Lateral Tributaries) ---
+        let spineX = 0;
+        const visibleSpineNodes = nodes.filter(n => n._isOnSpine).sort((a,b) => a.spineIndex - b.spineIndex);
+        
+        visibleSpineNodes.forEach(n => {
+            n.x = spineX;
+            n.y = 0;
+            spineX += SPINE_SPACING;
+        });
+
+        const placeSubTributaries = (parent, dir) => {
+            const tribs = parent._tributaries.filter(t => t.visible && !t._isOnSpine);
+            if (tribs.length === 0) return;
+            
+            const totalWidth = tribs.length * (VISUAL_WIDTH + H_GAP);
+            let startX = parent.x - totalWidth / 2 + VISUAL_WIDTH / 2;
+            
+            tribs.forEach((t, i) => {
+                t.x = startX + i * (VISUAL_WIDTH + H_GAP);
+                t.y = parent.y + dir * V_GAP;
+            });
+            
+            tribs.forEach(t => {
+                if (expandedSet.has(t.id)) placeSubTributaries(t, dir);
+            });
+        };
+
+        expansionOrder.forEach(expanderId => {
+            const expander = getNode(expanderId);
+            if (!expander || !expandedSet.has(expanderId)) return;
+            
+            const tribs = expander._tributaries.filter(t => t.visible && !t._isOnSpine);
+            if (tribs.length === 0) return;
+            
+            const effectiveIdx = getEffectiveSpineIndex(expander);
+            const dir = ((effectiveIdx === -1 ? 0 : effectiveIdx) % 2 === 0) ? 1 : -1;
+            
+            const totalWidth = tribs.length * (VISUAL_WIDTH + H_GAP);
+            let startX = expander.x - totalWidth / 2 + VISUAL_WIDTH / 2;
+            
+            tribs.forEach((t, i) => {
+                t.x = startX + i * (VISUAL_WIDTH + H_GAP);
+                t.y = expander.y + dir * V_GAP;
+            });
+            
+            tribs.forEach(t => {
+                if (expandedSet.has(t.id)) placeSubTributaries(t, dir);
+            });
+        });
+
+        // --- 4. Generate Edges & Hulls ---
         const layoutEdges = [];
-        const placedSet = new Set(layoutNodes.map(n => n.id));
-        
-        if (usePathEdges) {
-            learningPath.edges.forEach(e => {
-                if (placedSet.has(e.source) && placedSet.has(e.target)) {
-                    layoutEdges.push({ from: e.source, to: e.target });
-                }
-            });
-        } else {
-             layoutNodes.forEach(node => {
-                 const outgoing = this.graph.getOutgoingEdges(node.id);
-                 outgoing.forEach(e => {
-                     if (placedSet.has(e.target)) {
-                         layoutEdges.push({ from: node.id, to: e.target });
-                     }
-                 });
-             });
-        }
-        
-        // --- 5. Hulls (Visual Bubbles) ---
-        // "Optimization" node hull logic (Generalize to: Any Expanded on Spine)
-        const hulls = [];
-        
-        // Helper to collect subtree (in-degree group)
-        const collectSubtree = (rootId, list = [], visited = new Set()) => {
-            if (visited.has(rootId)) return list;
-            visited.add(rootId);
-            list.push(rootId);
-            
-            const children = getPrerequisites(rootId).filter(id => placedSet.has(id) && !spineMap.has(id)); 
-            // Only follow placed non-spine nodes to avoid jumping back to main path
-            children.forEach(cid => {
-                // Determine if we should follow? 
-                // Only if the link exists in the visual graph.
-                collectSubtree(cid, list, visited);
-            });
-            return list;
-        };
+        const visibleNodes = nodes.filter(n => n.visible);
+        const visibleIds = new Set(visibleNodes.map(n => n.id));
 
-        spineCandidates.forEach(node => {
-            // If expanded and has children, draw hull?
-            // Mockup only did it for "Optimization".
-            // Let's do it for any Spine node that is expanded and has offspring.
-            // Requirement from User: "boundary of the in-degree node range".
-            if (!collapsedSet.has(node.id)) {
-                 // Collect descendants (Tributaries only)
-                const descendants = [];
-                const firstGen = getPrerequisites(node.id).filter(id => placedSet.has(id) && !spineMap.has(id));
-                
-                if (firstGen.length > 0) {
-                     firstGen.forEach(cid => collectSubtree(cid, descendants));
-                     // Make unique
-                     const uniqueGroup = Array.from(new Set(descendants));
-                     
-                     if (uniqueGroup.length > 0) {
-                         hulls.push({
-                             groupNodeId: node.id,
-                             memberIds: uniqueGroup
-                         });
-                     }
-                }
-            }
+        const allEdges = usePathEdges ? learningPath.edges : this.graph.getEdges();
+        allEdges.forEach(e => {
+            const srcId = typeof e.source === 'object' ? e.source.id : e.source;
+            const tgtId = typeof e.target === 'object' ? e.target.id : e.target;
+            const src = getNode(srcId);
+            const tgt = getNode(tgtId);
+            
+            if (!src || !tgt || !visibleIds.has(src.id) || !visibleIds.has(tgt.id)) return;
+            
+            // Rule 5: Cross-Tributary Isolation
+            if (src.currentOwner && tgt.currentOwner && src.currentOwner !== tgt.currentOwner) return;
+            
+            layoutEdges.push({ from: srcId, to: tgtId });
+        });
+
+        const hulls = [];
+        expansionOrder.forEach((id) => {
+            const expander = getNode(id);
+            if (!expander || !expandedSet.has(id)) return;
+            
+            const tribs = expander._tributaries.filter(t => t.visible);
+            if (tribs.length === 0) return;
+            
+            hulls.push({
+                groupNodeId: id,
+                memberIds: tribs.map(t => t.id)
+            });
         });
 
         return {
-            nodes: layoutNodes,
+            nodes: visibleNodes,
             edges: layoutEdges,
             hulls: hulls
         };
@@ -1325,7 +1231,9 @@ const _originalCons = OrbitalState.prototype.constructor;
 OrbitalState.prototype.constructor = function(storageKey = 'noteconnection_orbital_progress') {
     this.storageKey = storageKey;
     this.completedIds = new Set();
-    this.collapsedIds = new Set(); // New
+    this.collapsedIds = new Set(); 
+    this.expansionOrder = [];
+    this.stickyClaimEnabled = true;
     this.currentCentralId = null;
     this.learningPath = null;
     this.mode = 'domain';
@@ -1342,7 +1250,9 @@ OrbitalState.prototype._load = function() {
             
             if (this.retainHistory) {
                 this.completedIds = new Set(data.completedIds || []);
-                this.collapsedIds = new Set(data.collapsedIds || []); // New
+                this.collapsedIds = new Set(data.collapsedIds || []);
+                this.expansionOrder = data.expansionOrder || [];
+                if (data.stickyClaimEnabled !== undefined) this.stickyClaimEnabled = data.stickyClaimEnabled;
                 this.currentCentralId = data.currentCentralId || null;
                 this.mode = data.mode || 'domain';
             }
@@ -1358,7 +1268,9 @@ OrbitalState.prototype._save = function() {
     try {
         const data = {
             completedIds: Array.from(this.completedIds),
-            collapsedIds: Array.from(this.collapsedIds), // New
+            collapsedIds: Array.from(this.collapsedIds),
+            expansionOrder: this.expansionOrder,
+            stickyClaimEnabled: this.stickyClaimEnabled,
             currentCentralId: this.currentCentralId,
             mode: this.mode,
             retainHistory: this.retainHistory
@@ -1366,6 +1278,48 @@ OrbitalState.prototype._save = function() {
         localStorage.setItem(this.storageKey, JSON.stringify(data));
     } catch (e) { console.warn('OrbitalState Save Error', e); }
 };
+
+OrbitalState.prototype.toggleCollapse = function(nodeId) {
+    if (this.collapsedIds.has(nodeId)) {
+        this.collapsedIds.delete(nodeId);
+        // User explicitly expanding it
+        if (!this.expansionOrder.includes(nodeId)) {
+            this.expansionOrder.push(nodeId);
+        }
+        this._save();
+        return false;
+    } else {
+        this.collapsedIds.add(nodeId);
+        // User explicitly collapsing it
+        this.expansionOrder = this.expansionOrder.filter(id => id !== nodeId);
+        this._save();
+        return true;
+    }
+};
+
+OrbitalState.prototype.collapseAll = function() {
+    // We add all nodes in expansionOrder to collapsedIds to collapse them
+    this.expansionOrder.forEach(id => this.collapsedIds.add(id));
+    this.expansionOrder = [];
+    this.collapsedIds.clear(); // We can also just maintain collapsedIds loosely, but clearing expansionOrder is sufficient for the rules
+    // Wait, if collapsedIds handles "isExplicitlyCollapsed", we should probably populate it. 
+    // In our rules, nodes drop their Tributaries when collapsed.
+    // For simplicity, collapseAll clears expansionOrder. But what about collapsedIds?
+    // Let's clear expansionOrder and set a flag or just clear it.
+    // Given the worker logic relies on `collapsedSet` and `expansionOrder`, 
+    // actually, in `getTreeLayout`, `isExpanded = !collapsedSet.has(n.id)`.
+    // And `expandedSet = new Set(expansionOrder)`.
+    // It's a bit duplicate, but `getTreeLayout` prefers `expandedSet.has()` over `!collapsedSet.has()` for expansions!
+    // Let's clear expansion order and put everything in collapsedIds? No, just clearing expansion order means nothing is manually expanded.
+    this.expansionOrder = [];
+    this._save();
+};
+
+OrbitalState.prototype.setStickyClaim = function(enabled) {
+    this.stickyClaimEnabled = enabled;
+    this._save();
+};
+
 OrbitalState = OrbitalState;
 
     // Explicitly expose

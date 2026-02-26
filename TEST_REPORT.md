@@ -1,3 +1,59 @@
+# Test Report - v1.4.3
+
+**Date**: 2026-02-26
+**Version**: v1.4.3
+**Environment**: Windows 10, Production Build
+
+## 2026-02-26 v1.4.3 - 9-Rule Tree Layout Engine
+
+### English Document
+
+#### 1. Spine & Tributaries Layout Calculation
+
+- **Test**: Code Logic Validation in `path_core.js`.
+- **Scenario**: Generating layout for a learning path with complex prereqs.
+- **Previous Behavior**: Used generic geometric contour placement independent of strict ownership rules.
+- **Fixed Behavior**:
+  - Engine accurately applies 9-Rule logic (FIFO claiming, Preceding Immunity, Single Appearance, etc.).
+  - Nodes calculate correct `x`, `y` based on ownership hierarchy and effective spine indices.
+  - Generates strict `{ nodes, edges, hulls }` structure reflecting valid claimed routes.
+- **Status**: **Pass**
+
+#### 2. Godot Frontend Visuals
+
+- **Test**: Code Logic Validation in `tree_renderer.gd`
+- **Scenario**: Rendering Spine highlighting and Expansion Indicators.
+- **Result**:
+  - `hasPrereqs` triggers `[+]`/`[-]` badges rendered natively on nodes.
+  - Spine nodes render with a dedicated glowing border `StyleBoxFlat`.
+  - Double-click toggles accurately emit `node_expand_prereqs_requested` and `node_collapse_prereqs_requested` to the WebSocket bridge.
+- **Status**: **Pass**
+
+### Chinese Document
+
+#### 1. 主干与支流布局计算
+
+- **测试**: `path_core.js` 中的代码逻辑验证。
+- **场景**: 为具有复杂前置条件的学习路径生成布局。
+- **先前行为**: 使用通用几何轮廓放置，独立于严格的所有权规则。
+- **修复行为**:
+  - 引擎准确应用 9 规则逻辑（FIFO 认领、前置免疫、单次出现等）。
+  - 节点根据所有权层级和有效主干索引计算正确的 `x`、`y` 坐标。
+  - 生成反映有效认领路线的严格 `{ nodes, edges, hulls }` 结构。
+- **状态**: **通过**
+
+#### 2. Godot 前端视觉效果
+
+- **测试**: `tree_renderer.gd` 中的代码逻辑验证。
+- **场景**: 渲染主干高亮和展开指示器。
+- **结果**:
+  - `hasPrereqs` 触发在节点上原生渲染的 `[+]`/`[-]` 徽章。
+  - 主干节点使用专用的发光边框 `StyleBoxFlat` 渲染。
+  - 双击切换准确地向 WebSocket 桥接器发出 `node_expand_prereqs_requested` 和 `node_collapse_prereqs_requested` 信号。
+- **状态**: **通过**
+
+---
+
 # Test Report - v1.0.0
 
 **Date**: 2026-01-14
