@@ -851,15 +851,22 @@ class PathEngine {
             return -1;
         };
 
-        const getEffectiveSpineIndex = (node) => {
+        const getEffectiveSpineIndex = (node, _visited = new Set()) => {
             if (!node.isSpine) return -1;
             if (node._isOnSpine || node.currentOwner === null) return node.spineIndex ?? -1;
+            if (_visited.has(node.id)) return node.spineIndex ?? -1; // Cycle guard
+            _visited.add(node.id);
             const owner = getNode(node.currentOwner);
-            if (owner && owner.isSpine) return getEffectiveSpineIndex(owner);
+            if (owner && owner.isSpine) return getEffectiveSpineIndex(owner, _visited);
             return getTributaryRootSpineIndex(node);
         };
 
-        const claim = (target, owner, priority) => {
+        const claim = (target, owner, priority, _claimVisited = new Set()) => {
+            // Cycle guard: prevent infinite recursion in ownership chains
+            // 循环保护：防止所有权链中的无限递归
+            if (_claimVisited.has(target.id)) return;
+            _claimVisited.add(target.id);
+
             target.currentOwner = owner.id;
             target.ownerPriority = priority;
             target._isOnSpine = false;
@@ -877,7 +884,7 @@ class PathEngine {
                         const tIdx = t.spineIndex ?? -1;
                         if (tIdx !== -1 && targetEffectiveIdx !== -1 && tIdx <= targetEffectiveIdx) return;
                     }
-                    claim(t, target, priority);
+                    claim(t, target, priority, _claimVisited);
                 });
             }
         };
@@ -911,14 +918,16 @@ class PathEngine {
             return { success: true };
         };
 
-        const isOwnerChainVisible = (node) => {
+        const isOwnerChainVisible = (node, _visited = new Set()) => {
             if (node.currentOwner === null) return false;
+            if (_visited.has(node.id)) return false; // Cycle guard
+            _visited.add(node.id);
             if (!expandedSet.has(node.currentOwner)) return false;
             const owner = getNode(node.currentOwner);
             if (!owner) return false;
             if (owner.isSpine && owner._isOnSpine) return true;
             if (owner.isSpine && !owner._isOnSpine) return owner.visible;
-            return isOwnerChainVisible(owner);
+            return isOwnerChainVisible(owner, _visited);
         };
 
         // --- 1. Process Expansions in Priority Order ---
@@ -957,7 +966,11 @@ class PathEngine {
             spineX += SPINE_SPACING;
         });
 
+        const placedNodes = new Set(); // Global guard for placement recursion / 全局放置递归保护
         const placeSubTributaries = (parent, dir) => {
+            if (placedNodes.has(parent.id)) return; // Cycle guard
+            placedNodes.add(parent.id);
+
             const tribs = parent._tributaries.filter(t => t.visible && !t._isOnSpine);
             if (tribs.length === 0) return;
             

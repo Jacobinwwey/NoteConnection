@@ -87,7 +87,6 @@ func _connect_signals() -> void:
 	if _tree_renderer:
 		_tree_renderer.node_clicked.connect(_on_node_clicked)
 		_tree_renderer.node_double_clicked.connect(_on_node_double_clicked)
-		_tree_renderer.node_double_clicked.connect(_on_node_double_clicked)
 		_tree_renderer.node_toggle_requested.connect(_on_node_toggle_requested)
 		_tree_renderer.node_expand_prereqs_requested.connect(_on_node_expand_prereqs_requested)
 		_tree_renderer.node_collapse_prereqs_requested.connect(_on_node_collapse_prereqs_requested)

@@ -142,7 +142,7 @@ func _draw_layout_mode() -> void:
 	_click_areas.clear()
 	_node_positions.clear()
 	
-	var base_radius = _style_config.get("node_radius", 8.0)
+	var _base_radius = _style_config.get("node_radius", 8.0)
 	
 	# Draw Hulls (Background)
 	_draw_hulls()
