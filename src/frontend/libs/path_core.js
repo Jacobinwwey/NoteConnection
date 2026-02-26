@@ -1044,8 +1044,26 @@ class PathEngine {
             });
         });
 
+        // Strip internal engine state to produce JSON-safe output
+        // 剥离内部引擎状态以产生 JSON 安全的输出（_tributaries 包含循环对象引用）
+        const cleanNodes = visibleNodes.map(n => ({
+            id: n.id,
+            label: n.label,
+            status: n.status,
+            x: n.x,
+            y: n.y,
+            isSpine: n.isSpine,
+            spineIndex: n.spineIndex,
+            isExpanded: n.isExpanded,
+            collapsed: n.collapsed,
+            hasPrereqs: n.hasPrereqs,
+            currentOwner: n.currentOwner,
+            visible: n.visible,
+            inDegree: n.inDegree
+        }));
+
         return {
-            nodes: visibleNodes,
+            nodes: cleanNodes,
             edges: layoutEdges,
             hulls: hulls
         };
