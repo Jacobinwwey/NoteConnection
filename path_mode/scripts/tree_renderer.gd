@@ -677,10 +677,13 @@ func _draw_hover_info_box() -> void:
 	if not node:
 		return
 
-	var in_deg = node.get("inDegree", 0)
-	var out_deg = node.get("outDegree", 0)
 	var in_names: Array = node.get("inDegreeNames", [])
 	var out_names: Array = node.get("outDegreeNames", [])
+	
+	# User Request: Numbers should strictly match the number of nodes in the list
+	var in_deg = in_names.size()
+	var out_deg = out_names.size()
+	
 	var label = node.get("label", node.get("id", "?"))
 
 	var font = ThemeDB.fallback_font
