@@ -91,3 +91,75 @@
 - **全部折叠**:
   - 在 Godot UI 中添加了一个可见的 `[-]` 按钮。
   - 更新 [PathBridge.ts](file:///e:/Knowledge_project/NoteConnection_app/src/core/PathBridge.ts) 以转发 [collapseAll](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#255-261) 消息。
+
+---
+
+# v1.4.3 - 9-Rule Tree Layout Engine Walkthrough (2026-02-26)
+
+## Analysis Summary
+
+Performed comprehensive gap analysis between `tree_path_mockup.html` (702 lines, 9 rules) and production code.
+
+### Files Analyzed
+
+| File                    | Lines | Purpose                                                 |
+| ----------------------- | ----- | ------------------------------------------------------- |
+| `tree_path_mockup.html` | 702   | Reference implementation with all 9 rules               |
+| `path_core.js`          | 1375  | Production core algorithm (`getTreeLayout()` L742-1133) |
+| `tree_renderer.gd`      | 531   | Godot tree visualization                                |
+| `tree_view_panel.gd`    | 159   | Godot panel controller                                  |
+| `path_app.js`           | 1166  | Frontend bridge and interaction handler                 |
+
+### Key Findings
+
+- **8 of 9 rules** are completely missing from production
+- **5 core concepts** absent: ownership, expansion order, effective index, visibility chain, hull collision avoidance
+- **7 existing features** preserved: spine ID, contour collision, tributary placement, hull drawing, collapse state, WebSocket bridge, tree renderer
+- **Production code is geometrically correct** but lacks the semantic claiming/ownership layer
+
+### Documents Updated
+
+- [implementation_plan.md](file:///e:/Knowledge_project/NoteConnection_app/implementation_plan.md) — Phase 3 with 13 steps
+- [brainstorming.md](file:///e:/Knowledge_project/NoteConnection_app/brainstorming.md) — Session 6: Ownership Engine design
+- [task.md](file:///e:/Knowledge_project/NoteConnection_app/task.md) — v1.4.3 checklist (EN + ZH)
+- [TODO.md](file:///e:/Knowledge_project/NoteConnection_app/TODO.md) — v1.4.3 implementation checklist
+
+### Next Steps
+
+Implementation of 13 steps across 4 components (Core Algorithm, Frontend Bridge, Godot Renderer, Worker Communication).
+
+---
+
+# v1.4.3 - 9 规则树形布局引擎演练 (2026-02-26)
+
+## 分析摘要
+
+对 `tree_path_mockup.html`（702 行，9 条规则）和生产代码进行了全面的差距分析。
+
+### 分析的文件
+
+| 文件                    | 行数 | 用途                        |
+| ----------------------- | ---- | --------------------------- |
+| `tree_path_mockup.html` | 702  | 包含所有 9 条规则的参考实现 |
+| `path_core.js`          | 1375 | 生产核心算法                |
+| `tree_renderer.gd`      | 531  | Godot 树可视化              |
+| `tree_view_panel.gd`    | 159  | Godot 面板控制器            |
+| `path_app.js`           | 1166 | 前端桥接和交互处理          |
+
+### 关键发现
+
+- **9 条规则中有 8 条**在生产代码中完全缺失
+- **5 个核心概念**缺失：所有权、展开顺序、有效索引、可见性链、hull 碰撞避让
+- **7 个现有特性**保留：脊柱识别、轮廓碰撞、支流放置、hull 绘制、折叠状态、WebSocket 桥、树渲染器
+- 生产代码**几何上正确**但缺乏语义认领/所有权层
+
+### 更新的文档
+
+- `implementation_plan.md` — 第三阶段，13 个步骤
+- `brainstorming.md` — 会话 6：所有权引擎设计
+- `task.md` — v1.4.3 清单（中英双语）
+- `TODO.md` — v1.4.3 实施清单
+
+### 后续步骤
+
+跨 4 个组件（核心算法、前端桥接、Godot 渲染器、Worker 通信）实施 13 个步骤。

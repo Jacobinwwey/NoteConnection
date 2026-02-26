@@ -155,3 +155,57 @@
 - [ ] **前端集成**
   - [ ] 验证 `switchCenter` 触发正确的重新布局计算。
   - [ ] 使用复杂图表测试以确保没有节点重叠。
+
+## v1.4.3 - 9-Rule Tree Layout Engine (2026-02-26)
+
+- [ ] **Core Algorithm: Ownership System ([path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js))**
+  - [ ] Step 1: Add `expansionOrder` parameter to `getTreeLayout()`
+  - [ ] Step 2: Add `currentOwner`, `ownerPriority`, `_isOnSpine` to layout nodes
+  - [ ] Step 3: Implement `tryClaim()` with 9 rules
+  - [ ] Step 4: Implement `determineVisibility()` + `isOwnerChainVisible()`
+  - [ ] Step 5: Filter edges by ownership (Rule 5)
+  - [ ] Step 6: Group hulls by ownership
+- [ ] **Frontend Bridge ([path_app.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js))**
+  - [ ] Step 7: Convert `forcedExpansionNodes` Set → `expansionOrder` Array
+  - [ ] Step 8: Add `stickyClaimEnabled` setting
+- [ ] **Godot Renderer ([tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd))**
+  - [ ] Step 9: Edge filtering by `currentOwner`
+  - [ ] Step 10: Hull collision avoidance
+  - [ ] Step 11: Node type coloring (spine/tributary/shared/migrated)
+  - [ ] Step 12: Expansion indicator badge
+- [ ] **Worker ([path_worker.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_worker.js))**
+  - [ ] Step 13: Pass `expansionOrder` + `stickyClaimEnabled` to `getTreeLayout()`
+- [ ] **Verification**
+  - [ ] Test Rule 2 (Preceding Immunity)
+  - [ ] Test Rule 3 (Following Migration)
+  - [ ] Test Rule 6 (Spine Always Visible)
+  - [ ] Test Rule 7 (Sticky Claim toggle)
+  - [ ] Test hull-node collision avoidance
+
+---
+
+## v1.4.3 - 9 规则树形布局引擎 (2026-02-26)
+
+- [ ] **核心算法：所有权系统 ([path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js))**
+  - [ ] 步骤 1: 向 `getTreeLayout()` 添加 `expansionOrder` 参数
+  - [ ] 步骤 2: 向布局节点添加 `currentOwner`, `ownerPriority`, `_isOnSpine`
+  - [ ] 步骤 3: 实现包含 9 条规则的 `tryClaim()`
+  - [ ] 步骤 4: 实现 `determineVisibility()` + `isOwnerChainVisible()`
+  - [ ] 步骤 5: 按所有权过滤边（规则 5）
+  - [ ] 步骤 6: 按所有权分组 hull
+- [ ] **前端桥接 ([path_app.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js))**
+  - [ ] 步骤 7: 将 `forcedExpansionNodes` Set 转为 `expansionOrder` Array
+  - [ ] 步骤 8: 添加 `stickyClaimEnabled` 设置
+- [ ] **Godot 渲染器 ([tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd))**
+  - [ ] 步骤 9: 按 `currentOwner` 过滤边
+  - [ ] 步骤 10: Hull 碰撞避让
+  - [ ] 步骤 11: 节点类型着色（脊柱/支流/共享/迁移）
+  - [ ] 步骤 12: 展开指示器徽章
+- [ ] **Worker ([path_worker.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_worker.js))**
+  - [ ] 步骤 13: 传递 `expansionOrder` + `stickyClaimEnabled`
+- [ ] **验证**
+  - [ ] 测试规则 2（前置免疫）
+  - [ ] 测试规则 3（后续迁移）
+  - [ ] 测试规则 6（脊柱始终可见）
+  - [ ] 测试规则 7（粘性认领开关）
+  - [ ] 测试 hull-节点碰撞避让

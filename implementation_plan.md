@@ -289,3 +289,193 @@ Implement a stable, tree-like layout where the "Main Learning Path" (Spine) rema
 1. **主干稳定性**: 加载路径，居中主干节点，展开前置节点。验证主干节点 **不移动**。
 2. **横向展开**: 验证前置节点出现在主干的上方/下方，而不是内联。
 3. **复杂链**: 展开前置的前置，验证其向后（左）流动并找到清晰的插槽。
+
+---
+
+# Phase 3: 9-Rule Tree Layout Engine (v1.4.3)
+
+**Date**: 2026-02-26
+
+## Goal
+
+Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html` into production code (`path_core.js`, `tree_renderer.gd`, `path_app.js`). This replaces the simple contour-based layout with a full ownership/claiming system for intelligent node management.
+
+## Gap Analysis: Mockup vs Production
+
+### Missing Rules
+
+| #   | Rule                                          | Mockup Function                            | Production Status            |
+| --- | --------------------------------------------- | ------------------------------------------ | ---------------------------- |
+| 1   | **Expansion Order** (FIFO claiming)           | `processExpansions()` + `expansionOrder[]` | ❌ Missing                   |
+| 2   | **Preceding Immunity** (effective index)      | `tryClaim()` + `getEffectiveSpineIndex()`  | ❌ Missing                   |
+| 3   | **Following Migration** (spine+followers)     | `claimSpineChain()`                        | ❌ Missing                   |
+| 4   | **Single Appearance** (owner-based)           | `currentOwner` priority check              | ⚠️ Partial (`placedNodeIds`) |
+| 5   | **Cross-Tributary Isolation** (edge filter)   | `drawEdges()` owner check                  | ❌ Missing                   |
+| 6   | **Spine Always Visible** (return on collapse) | `determineVisibility()` spine pass         | ❌ Missing                   |
+| 7   | **Sticky Claim** (configurable)               | `stickyClaimEnabled` toggle                | ❌ Missing                   |
+| 8   | **Unit Migration** (recursive claim)          | `claim()` recursive tributaries            | ❌ Missing                   |
+| 9   | **Tributary Hierarchy Immunity**              | `getTributaryRootSpineIndex()`             | ❌ Missing                   |
+
+### Missing Concepts
+
+| Concept                   | Mockup                            | Production                             |
+| ------------------------- | --------------------------------- | -------------------------------------- |
+| **Node Ownership**        | `currentOwner`, `ownerPriority`   | None                                   |
+| **Expansion Order**       | `expansionOrder[]` (ordered)      | `forcedExpansionNodes` (unordered Set) |
+| **Effective Spine Index** | `getEffectiveSpineIndex()`        | Fixed `spineIndex` only                |
+| **Visibility Chain**      | `isOwnerChainVisible()` recursive | Binary collapsed/expanded              |
+| **Hull-Node Avoidance**   | Convex hull with padding          | Basic hull, no collision check         |
+
+### Existing Features to Preserve
+
+- ✅ Spine identification via `isCritical` flag
+- ✅ Contour-based collision avoidance for spine spacing
+- ✅ Recursive tributary placement
+- ✅ Hull/bubble drawing around tributary groups
+- ✅ Collapsed/expanded state per node
+- ✅ Godot WebSocket bridge communication
+- ✅ Tree renderer with bezier edges, styled nodes, pan/zoom
+
+## Proposed Changes (13 Steps)
+
+### Component 1: Core Algorithm
+
+#### [MODIFY] [path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js)
+
+**Step 1**: Add expansion order tracking to `getTreeLayout()` (L742-1133)
+
+- Add `expansionOrder` parameter (ordered array of expanded node IDs)
+- Replace unordered `collapsedSet` with ordered `expansionOrder` for FIFO claiming
+
+**Step 2**: Implement node ownership system
+
+- Add `currentOwner`, `ownerPriority`, `_isOnSpine` to each layout node
+- Track claims during `processExpansions()` matching mockup logic
+
+**Step 3**: Implement `tryClaim()` with all 9 rules
+
+- Rule 1: Owner priority check
+- Rule 2: `getEffectiveSpineIndex()` comparison (inherits owner index)
+- Rule 3+8: `claimSpineChain()` for following migration
+- Rule 4: Single appearance via owner check
+- Rule 5: Cross-tributary edge filtering
+- Rule 6: Spine always visible on collapse
+- Rule 7: Sticky claim toggle
+- Rule 9: `getTributaryRootSpineIndex()` for hierarchy immunity
+
+**Step 4**: Implement `determineVisibility()` + `isOwnerChainVisible()`
+
+- Two-pass: spine always visible, non-spine follows recursive owner chain
+
+**Step 5**: Update edge generation — filter edges between different owners (Rule 5)
+
+**Step 6**: Update hull generation to group by owner
+
+### Component 2: Frontend Bridge
+
+#### [MODIFY] [path_app.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js)
+
+**Step 7**: Track expansion ORDER (not just Set)
+
+- `forcedExpansionNodes: new Set()` → `expansionOrder: []`
+- Update `expandPrereqs()`, `collapsePrereqs()`, `collapseAll()`
+- Pass `expansionOrder` to worker
+
+**Step 8**: Add sticky claim setting + pass to worker
+
+### Component 3: Godot Tree Renderer
+
+#### [MODIFY] [tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd)
+
+**Step 9**: Edge rendering — skip edges where `src.currentOwner != tgt.currentOwner`
+
+**Step 10**: Hull collision avoidance with rounded padding
+
+**Step 11**: Node type coloring (spine=green, tributary=blue, shared=purple, migrated=orange)
+
+**Step 12**: Expansion indicator badge (in-degree count circle)
+
+### Component 4: Worker Communication
+
+#### [MODIFY] [path_worker.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_worker.js)
+
+**Step 13**: Pass `expansionOrder` and `stickyClaimEnabled` to `getTreeLayout()`
+
+## Verification Plan
+
+1. Expand Calculus → verify Optimization migrates (Rule 3)
+2. Expand Optimization → verify Diff Eq cannot claim Calculus (Rule 2+9)
+3. Collapse Calculus → verify spine nodes return (Rule 6)
+4. Toggle sticky claim → verify non-spine revert/persist (Rule 7)
+5. Check hull boundaries don't overlap nodes
+
+---
+
+# 第三阶段：9 规则树形布局引擎 (v1.4.3)
+
+**日期**: 2026-02-26
+
+## 目标
+
+将 `tree_path_mockup.html` 中的 9 规则展开/认领/可见性引擎移植到生产代码（`path_core.js`、`tree_renderer.gd`、`path_app.js`）中。用完整的所有权/认领系统替换简单的基于轮廓的布局。
+
+## 差距分析：原型 vs 生产代码
+
+### 缺失规则
+
+| #   | 规则                           | 原型函数                                  | 生产代码状态 |
+| --- | ------------------------------ | ----------------------------------------- | ------------ |
+| 1   | **展开顺序**（FIFO 认领）      | `processExpansions()`                     | ❌ 缺失      |
+| 2   | **前置免疫**（有效索引）       | `tryClaim()` + `getEffectiveSpineIndex()` | ❌ 缺失      |
+| 3   | **后续迁移**（脊柱+后续）      | `claimSpineChain()`                       | ❌ 缺失      |
+| 4   | **单次出现**（基于所有者）     | `currentOwner` 优先级检查                 | ⚠️ 部分存在  |
+| 5   | **跨支流隔离**（边过滤）       | `drawEdges()` 所有者检查                  | ❌ 缺失      |
+| 6   | **脊柱始终可见**（折叠时返回） | `determineVisibility()`                   | ❌ 缺失      |
+| 7   | **粘性认领**（可配置）         | `stickyClaimEnabled` 开关                 | ❌ 缺失      |
+| 8   | **单元迁移**（递归认领）       | `claim()` 递归支流                        | ❌ 缺失      |
+| 9   | **支流层级免疫**               | `getTributaryRootSpineIndex()`            | ❌ 缺失      |
+
+### 缺失概念
+
+| 概念              | 原型                            | 生产代码                           |
+| ----------------- | ------------------------------- | ---------------------------------- |
+| **节点所有权**    | `currentOwner`, `ownerPriority` | 无                                 |
+| **展开顺序**      | `expansionOrder[]`（有序）      | `forcedExpansionNodes`（无序 Set） |
+| **有效脊柱索引**  | `getEffectiveSpineIndex()`      | 固定 `spineIndex`                  |
+| **可见性链**      | `isOwnerChainVisible()` 递归    | 二元折叠/展开                      |
+| **Hull-节点避让** | 凸包 + 填充                     | 基础 hull，无碰撞检查              |
+
+## 建议更改（13 个步骤）
+
+### 组件 1: 核心算法 — `path_core.js`（步骤 1-6）
+
+- **步骤 1**: 添加展开顺序追踪
+- **步骤 2**: 实现节点所有权系统
+- **步骤 3**: 实现 `tryClaim()` 包含所有 9 条规则
+- **步骤 4**: 实现 `determineVisibility()` + `isOwnerChainVisible()`
+- **步骤 5**: 更新边生成 — 基于所有者过滤
+- **步骤 6**: 更新 hull 生成 — 按所有者分组
+
+### 组件 2: 前端桥接 — `path_app.js`（步骤 7-8）
+
+- **步骤 7**: 有序展开追踪
+- **步骤 8**: 添加粘性认领设置
+
+### 组件 3: Godot 树渲染器 — `tree_renderer.gd`（步骤 9-12）
+
+- **步骤 9**: 跨所有者边过滤
+- **步骤 10**: Hull 碰撞避让
+- **步骤 11**: 节点类型着色
+- **步骤 12**: 展开指示器徽章
+
+### 组件 4: Worker 通信 — `path_worker.js`（步骤 13）
+
+- **步骤 13**: 传递 `expansionOrder` 和 `stickyClaimEnabled`
+
+## 验证计划
+
+1. 展开"微积分" → 验证"优化"迁移（规则3）
+2. 展开"优化" → 验证"微分方程"不能认领"微积分"（规则2+9）
+3. 折叠"微积分" → 验证脊柱节点返回（规则6）
+4. 切换粘性认领 → 验证非脊柱节点还原/保持（规则7）
+5. 检查 Hull 边界不与节点重叠

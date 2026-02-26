@@ -512,3 +512,98 @@ Instead of naive BFS, we iterate strictly:
 1.  **去重前提节点**: 修改 `path_core.js` 中的 `getTreeLayout`。
 2.  **调整常量**: 更新 `SPACING_X`, `LEVEL_HEIGHT`, `SIBLING_GAP`。
 3.  **优化渲染器**: 更新 `tree_renderer.gd` 的节点尺寸常量以匹配 (200x60)。
+
+---
+
+## Session 6: 9-Rule Ownership Engine
+
+**Date**: 2026-02-26
+
+### 1. The Ownership Problem (Core Insight)
+
+- **Observation**: The current production layout in [path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js) `getTreeLayout()` treats node placement as a purely geometric problem. It uses:
+  - `placedNodeIds` Set → "has this node been positioned?"
+  - `collapsedSet` → "is this node collapsed?"
+  - Contour-based spacing → "do subtrees overlap?"
+- **Missing**: There is no concept of **who expanded a node** (ownership), **when** they expanded it (priority), or **what rules govern claiming** (immunity/migration).
+- **Consequence**: Shared prerequisites are arbitrarily assigned to the first parent encountered during BFS traversal, with no regard for spine precedence, expansion order, or visibility chains.
+
+### 2. The Mockup Solution: Ownership-Based Layout
+
+The `tree_path_mockup.html` introduces a fundamentally different paradigm:
+
+- **Every non-spine node has an owner** (`currentOwner`): The spine node that "expanded" to reveal it.
+- **Ownership has priority** (`ownerPriority`): Based on FIFO expansion order.
+- **Ownership governs visibility**: If owner is collapsed → node becomes invisible (non-spine) or returns to spine (spine).
+- **Ownership governs edges**: Edges are NOT drawn between nodes with different owners (Rule 5).
+
+### 3. The 9 Rules — Design Rationale
+
+| Rule                         | Why It Exists           | Without It                                         |
+| ---------------------------- | ----------------------- | -------------------------------------------------- |
+| 1. Expansion Order           | Deterministic behavior  | Random claiming based on iteration order           |
+| 2. Preceding Immunity        | Spine coherence         | Later nodes could steal earlier spine nodes        |
+| 3. Following Migration       | Unit coherence          | Spine nodes after expander left orphaned           |
+| 4. Single Appearance         | No visual duplicates    | Same node rendered multiple times                  |
+| 5. Cross-Tributary Isolation | Clean separation        | Spaghetti edges crossing ownership boundaries      |
+| 6. Spine Always Visible      | Navigation anchor       | Spine nodes disappear when owner collapses         |
+| 7. Sticky Claim              | User preference         | Always revert or always keep — no middle ground    |
+| 8. Unit Migration            | Hierarchical movement   | Spine node moves but its tributaries stay behind   |
+| 9. Tributary Immunity        | Prevents infinite loops | Tributary claims spine nodes above it in hierarchy |
+
+### 4. Dynamic Effective Index — Key Innovation
+
+- **Problem**: When Optimization (idx 3) is claimed by Calculus (idx 1), Optimization now "belongs" to Calculus's territory. But Optimization's original `spineIndex = 3` means it can't claim Diff Eq (idx 2) because `2 ≤ 3`.
+- **Solution**: `getEffectiveSpineIndex()` — When claimed, a spine node inherits its owner's index for Rule 2 comparisons.
+- **Effect**: Optimization operating at idx 1 can now claim Diff Eq (idx 2) since `2 > 1`.
+- **Revert**: When owner collapses, effective index reverts to original.
+
+### 5. Implementation Strategy
+
+- **Do NOT rewrite `getTreeLayout()` from scratch**. Instead:
+  1. Insert a `processExpansions()` phase BEFORE the existing contour/placement code.
+  2. This phase assigns `currentOwner`, `ownerPriority`, `_isOnSpine` to each node.
+  3. The existing contour system then operates on the FILTERED visible node set.
+  4. Hulls and edges reference ownership data for filtering.
+
+### 6. Open Questions
+
+1. **Performance**: The mockup iterates all nodes multiple times (process + visibility + placement). For large graphs (10000+ nodes), is this acceptable?
+   - **Hypothesis**: Yes. The expansion/claiming phase is O(E × P) where E = expanded count, P = average prerequisites. For typical learning paths (20-100 spine nodes), this is sub-millisecond.
+2. **Godot Integration**: Should the 9 rules be computed in `path_core.js` (JavaScript worker) or duplicated in `tree_renderer.gd` (GDScript)?
+   - **Decision**: Compute in `path_core.js` only. Send enriched layout data (with `currentOwner`, `_isOnSpine`, node type) to Godot. Godot only renders.
+
+---
+
+## 会话 6：9 规则所有权引擎
+
+**日期**: 2026-02-26
+
+### 1. 所有权问题（核心洞察）
+
+- **观察**: `path_core.js` 的 `getTreeLayout()` 将节点放置视为纯粹的几何问题。使用 `placedNodeIds`、`collapsedSet` 和轮廓间距。
+- **缺失**: 没有"谁展开了节点"（所有权）、"何时展开"（优先级）或"认领规则"（免疫/迁移）的概念。
+- **后果**: 共享前置节点在 BFS 遍历中被任意分配给第一个遇到的父节点，不考虑脊柱优先、展开顺序或可见性链。
+
+### 2. 原型解决方案：基于所有权的布局
+
+- 每个非脊柱节点都有所有者（`currentOwner`）
+- 所有权有优先级（`ownerPriority`）：基于 FIFO 展开顺序
+- 所有权决定可见性和边的绘制
+
+### 3. 动态有效索引 — 关键创新
+
+- **问题**: 优化(idx 3)被微积分(idx 1)认领后，原始索引阻止认领微分方程(idx 2)
+- **解决方案**: `getEffectiveSpineIndex()` — 被认领时继承所有者的索引
+- **还原**: 所有者折叠时恢复原始索引
+
+### 4. 实施策略
+
+- 不从头重写 `getTreeLayout()`，而是在现有轮廓/放置代码之前插入 `processExpansions()` 阶段
+- 该阶段为每个节点分配 `currentOwner`、`ownerPriority`、`_isOnSpine`
+- 现有轮廓系统在过滤后的可见节点集上运行
+
+### 5. 开放问题
+
+1. **性能**: 对大图（10000+ 节点）的多次迭代是否可接受？答：是，展开/认领阶段是 O(E × P)，通常亚毫秒
+2. **Godot 集成**: 9 规则仅在 `path_core.js` 中计算，发送富布局数据到 Godot，Godot 仅渲染

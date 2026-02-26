@@ -1,3 +1,62 @@
+# 2026-02-26 v1.4.3 - 9-Rule Tree Layout Engine
+
+**Goal**: Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html` into production code. Replace simple contour-based layout with full ownership/claiming system.
+
+## 9 Rules Reference
+
+| #   | Rule (EN)                                 | 规则 (ZH)                  | Status |
+| --- | ----------------------------------------- | -------------------------- | ------ |
+| 1   | Expansion Order (FIFO claiming)           | 展开顺序（FIFO 认领）      | [ ]    |
+| 2   | Preceding Immunity (effective index)      | 前置免疫（有效索引）       | [ ]    |
+| 3   | Following Migration (spine+followers)     | 后续迁移（脊柱+后续）      | [ ]    |
+| 4   | Single Appearance (owner-based)           | 单次出现（基于所有者）     | [ ]    |
+| 5   | Cross-Tributary Isolation (edge filter)   | 跨支流隔离（边过滤）       | [ ]    |
+| 6   | Spine Always Visible (return on collapse) | 脊柱始终可见（折叠时返回） | [ ]    |
+| 7   | Sticky Claim (configurable toggle)        | 粘性认领（可配置开关）     | [ ]    |
+| 8   | Unit Migration (recursive claim)          | 单元迁移（递归认领）       | [ ]    |
+| 9   | Tributary Hierarchy Immunity              | 支流层级免疫               | [ ]    |
+
+## Implementation Checklist / 实施清单
+
+- [ ] **Core Algorithm / 核心算法** ([path_core.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js))
+  - [ ] Add `expansionOrder` parameter / 添加 `expansionOrder` 参数
+  - [ ] Implement ownership system (`currentOwner`, `ownerPriority`) / 实现所有权系统
+  - [ ] Implement `tryClaim()` with 9 rules / 实现包含 9 条规则的 `tryClaim()`
+  - [ ] Implement `getEffectiveSpineIndex()` / 实现有效脊柱索引
+  - [ ] Implement `determineVisibility()` / 实现可见性判定
+  - [ ] Filter edges by ownership (Rule 5) / 按所有权过滤边
+  - [ ] Group hulls by ownership / 按所有权分组 hull
+
+- [ ] **Frontend Bridge / 前端桥接** ([path_app.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js))
+  - [ ] Convert `forcedExpansionNodes` Set → `expansionOrder` Array / 转换为有序数组
+  - [ ] Add `stickyClaimEnabled` setting / 添加粘性认领设置
+
+- [ ] **Godot Renderer / Godot 渲染器** ([tree_renderer.gd](file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd))
+  - [ ] Edge filtering by `currentOwner` / 按所有者过滤边
+  - [ ] Hull collision avoidance / Hull 碰撞避让
+  - [ ] Node type coloring (spine/tributary/shared/migrated) / 节点类型着色
+  - [ ] Expansion indicator badge / 展开指示器徽章
+
+- [ ] **Worker** ([path_worker.js](file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_worker.js))
+  - [ ] Pass `expansionOrder` + `stickyClaimEnabled` / 传递展开顺序和粘性认领
+
+## Files Changed / 修改文件
+
+| File                                 | Change                                 | 变更                                 |
+| ------------------------------------ | -------------------------------------- | ------------------------------------ |
+| `src/frontend/libs/path_core.js`     | Add 9-rule engine to `getTreeLayout()` | 向 `getTreeLayout()` 添加 9 规则引擎 |
+| `src/frontend/path_app.js`           | Ordered expansion tracking             | 有序展开追踪                         |
+| `path_mode/scripts/tree_renderer.gd` | Edge/hull/color updates                | 边/hull/颜色更新                     |
+| `src/frontend/path_worker.js`        | Pass new parameters                    | 传递新参数                           |
+
+## Reference / 参考
+
+- Mockup: [tree_path_mockup.html](file:///e:/Knowledge_project/NoteConnection_app/tree_path_mockup.html)
+- Previous plan: [implementation_plan.md](file:///e:/Knowledge_project/NoteConnection_app/implementation_plan.md) Phase 3
+- Design notes: [brainstorming.md](file:///e:/Knowledge_project/NoteConnection_app/brainstorming.md) Session 6
+
+---
+
 # 2026-02-01 v1.4.1 - Path Mode v2: Orbital Learning Architecture
 
 **Goal**: Transform Path Mode into an immersive, game-like learning experience with 3D bubble visualization and progress tracking.
