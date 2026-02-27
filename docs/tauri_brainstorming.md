@@ -1,182 +1,175 @@
-# Tauri Architecture Unification: Brainstorming & Decision Log
+# Tauri Architecture Unification: Comprehensive Blueprint
 
-## Part 1: Initial Analysis & Problem Space
+**Date:** 2026-02-27
+**Status:** APPROVED & ACTIVE
 
-Here is my analysis as a design facilitator using the brainstorming skill. Before I present the full architectural solutions, we must first establish an absolute baseline of your requirements to ensure we don't build the wrong thing.
+## 1. Problem Statement & Core Objectives
 
-Please review the following understanding of your problem space:
+The NoteConnection project is currently experiencing severe extension and developer experience (DX) bottlenecks:
 
-**1️⃣ Understanding Summary**
+1.  **Dual-Window Fragmentation:** Running the backend in Electron and the frontend via Godot GUI simultaneously results in two disparate windows, degrading the end-user experience.
+2.  **Fragmented Debugging:** F12 debugging and error logs are split between the Godot engine console and the Node.js/Electron terminal, making crash analysis incredibly tedious.
+3.  **Cross-Platform Packaging Hurdles:** The initial decision to use Godot was driven by the need for native Vulkan support to render 10K-50K nodes. However, the current architecture lacks a clear path to generating lightweight Windows EXEs, Android APKs (via Capacitor/Godot), and future Web deployments from a single codebase.
 
-- **What is being solved:** Redesigning the NoteConnection architecture to unify the developer and user experience into a seamless single-window application.
-- **Why it exists:** Running Godot and Electron simultaneously causes fragmented debugging (split F12 consoles) and a poor multi-window user experience.
-- **Who it is for:** Developers (for centralized debugging and unified UI) and End Users (for a polished, single-app feel).
-- **Key Constraints:**
-  - Must retain Godot for its native Vulkan rendering capabilities (critical for large node graphs).
-  - Must support multiple target builds without rewriting the core app (Windows EXE, Android APK, Web Browser).
-  - All system logs, Godot errors, and Web UI outputs must pipe into a single backend console.
-- **Explicit Non-goals:** We will not abandon the Web Frontend (HTML/JS) for a pure Godot UI, nor will we abandon Godot's 3D engine for pure WebGL (Three.js), as that defeats the engine advantages you've already established.
+**The Ultimate Goal:**
 
-**2️⃣ Assumptions**
-
-- **Web Fallback:** For the "Web page in the future" target, you accept that Godot will compile to WebAssembly (WASM) and run via WebGL, as native Vulkan is not available in standard browsers yet.
-- **Node.js Backend Abstraction:** Since Android APKs and Web pages cannot natively run a Node.js backend server (like Electron does), your backend logic (file reading, NLP) will eventually need to be abstracted so it can run via Godot's native filesystem, Capacitor plugins, or a remote cloud server.
-
-**3️⃣ Open Question (Please answer this)**
-Are you strictly tied to Electron for the Desktop packaging, or are you open to using alternative native shells (like Tauri, Capacitor, or even Godot itself as the master shell) if it solves the window-embedding and extension issues more gracefully?
-
-_Understanding Lock:_ Does this accurately reflect your intent and constraints? Please answer the Open Question and confirm or correct anything before I generate the full cross-platform architectural blueprints.
+- **One unified shell** that looks and feels like a single native application.
+- **One centralized debugging console** where Godot logs, Node.js backend logs, and Web UI errors are piped together.
+- **Streamlined cross-platform compilation** to EXE, APK, and Web without massive OS-level window hacking.
 
 ---
 
-### [中文版本]
+## 2. The Solution: Tauri 2.0 Native Shell Architecture
 
-作为设计协调员，我将使用头脑风暴 (brainstorming) 技能来分析这个问题。在我提出完整的架构解决方案之前，我们必须首先确立你需求的绝对基准，以确保我们没有走错方向。
+Based on the explicit rejection of fragile Electron Win32 native window embedding and the acceptance of a minimal Rust integration layer, **Tauri 2.0** is the chosen framework to supersede Electron.
 
-请审查以下对你问题空间的理解：
+Tauri 2.0 solves the core constraints by utilizing the OS's built-in web engine (WebView2 on Windows, WebKit on macOS/iOS, WebView on Android) and a highly performant Rust backend, offering native packaging for both Desktop and Mobile.
 
-**1️⃣ 理解总结 (Understanding Summary)**
+### Architecture Topology
 
-- **要解决的问题：** 重新设计 NoteConnection 架构，将开发者和用户体验统一为无缝的单窗口应用程序。
-- **为什么存在这个问题：** 同时运行 Godot 和 Electron 会导致调试碎片化（分离的 F12 控制台）和糟糕的多窗口用户体验。
-- **面向对象：** 开发者（为了集中调试和统一的 UI）和终端用户（为了获得精致的、单应用的体验）。
-- **关键约束：**
-  - 必须保留 Godot 及其原生 Vulkan 渲染能力（这对于大型节点图至关重要）。
-  - 必须支持多种目标构建方式而无需重写核心应用（Windows EXE、Android APK、Web 浏览器）。
-  - 所有系统日志、Godot 错误和 Web UI 输出必须汇集到一个单一的后端控制台。
-- **明确的非目标：** 我们不会为了纯 Godot UI 而放弃 Web 前端（HTML/JS），也不会为了纯 WebGL（Three.js）而放弃 Godot 的 3D 引擎，因为这违背了你已经确立的引擎优势。
+| Platform                  | Master Shell | Rendering Engine (Nodes)             | Web UI (Tools/Reader)                | Backend Logic                                 |
+| :------------------------ | :----------- | :----------------------------------- | :----------------------------------- | :-------------------------------------------- |
+| **Desktop (Windows EXE)** | Tauri (Rust) | Godot (Vulkan, Native Child Process) | Tauri WebView (Overlay/Side-by-side) | Node.js (Child Process)                       |
+| **Mobile (Android APK)**  | Tauri (Rust) | Godot (Android Vulkan SurfaceView)   | Tauri Android WebView Plugin         | Node.js (V8 Isolate / Deno / Native Rust API) |
+| **Web Browser**           | Browser      | HTML5 Canvas / WebGL                 | Standard DOM                         | Remote Server / WASI                          |
 
-**2️⃣ 假设 (Assumptions)**
+### Key Advantages of this Pivot
 
-- **Web 后备方案：** 对于“未来的网页”目标，你接受 Godot 将编译为 WebAssembly (WASM) 并通过 WebGL 运行，因为标准浏览器中尚不原生支持 Vulkan。
-- **Node.js 后端抽象：** 由于 Android APK 和 Web 页面无法原生运行 Node.js 后端服务器（像 Electron 那样），你的后端逻辑（文件读取、NLP 数据处理）最终需要被抽象化，以便它可以通过 Godot 的原生文件系统、Capacitor 插件或远程云服务器运行。
-
-**3️⃣ 待解答的问题 (Open Question)**
-在桌面端打包时，你是严格绑定在 Electron 上的吗？如果使用其他原生外壳（例如 Tauri、Capacitor，甚至以 Godot 本身 作为主外壳）能更优雅地解决窗口嵌入和扩展问题，你是否持开放态度？
-
-_理解确认 (Understanding Lock):_ 这是否准确反映了你的意图和约束？在进入完整跨平台架构蓝图设计之前，请回答上述“待解答的问题”，并确认或纠正任何理解偏差。
+1.  **Zero Window Hacks (The F12 Unification):** Tauri's Rust backend acts as the absolute master coordinator. It spawns the Node.js backend. It can inject the Web UI over the Godot viewport natively. Rust intercepts `stdout`/`stderr` from Godot and Node.js, printing a single, unified log stream to the developer terminal.
+2.  **Radical Size Reduction:** The final Windows EXE will shrink from Electron's ~150MB to approximately 10MB-15MB.
+3.  **Native Mobile Support:** Tauri 2.0 supports `npm run tauri android build`, generating the required Gradle projects and cross-compiling the Rust backend natively, sidestepping Capacitor's heavy DOM overhead.
 
 ---
 
-## Part 2: Architectural Alternatives
+## 3. Implementation Plan (The Full Roadmap)
 
-Here is the evaluation based on your confirmation. You are absolutely right to reject the fragile Win32 SetParent hack in Electron. If we are aiming for true cross-platform stability (Desktop, Android, Web) with a unified debugging experience, we must look beyond Electron.
+This is the step-by-step roadmap to transition the NoteConnection codebase from Electron to Tauri 2.0.
 
-Based on your constraints (Retain Vulkan, Retain HTML/JS, Single Window UI, Unified Logs, Android/Web packaging), I propose three distinct architectural approaches.
+### Phase 1: Tauri Initialization & Environment Setup
 
-### 💡 Alternative Approaches
+- **Objective:** Install Tauri 2.0 and configure the build pipeline to consume the existing Frontend dist files.
+- **Tasks:**
+  1.  Initialize Tauri (`npm create tauri-app@latest`) in the `src-tauri` directory.
+  2.  Configure `tauri.conf.json` to map `build.devUrl` to the local development server (e.g., `http://localhost:3000`).
+  3.  Configure `build.frontendDist` to point to the `dist/src/frontend` build output.
+  4.  Verify that `npm run tauri:dev:mini` successfully opens the Tauri Webview displaying the existing HTML/JS UI. _(Completed)_
 
-#### Approach A: The Tauri 2.0 Native Shell (Recommended)
+### Phase 2: Node.js Backend Sidecar Integration (Unified Logs)
 
-Tauri has effectively superseded Electron. It uses the OS's built-in, lightweight web engine instead of bundling Chromium, and its backend is written in Rust. Crucially, Tauri 2.0 natively supports Android and iOS packaging.
+- **Objective:** Abstract the Node.js backend (`server.ts`, Graph Builders) out of the Electron main process and run it as a standalone localized server, managed by Tauri.
+- **Tasks:**
+  1.  Declare the compiled Node.js backend as a "Sidecar" binary in `tauri.conf.json`.
+  2.  Update `src-tauri/src/lib.rs` (Rust) to automatically spawn the Node.js sidecar when the Tauri app launches.
+  3.  **Critical DX Step:** Write Rust code using `tauri::process::Command` to intercept all `stdout` and `stderr` from the Node.js sidecar and print it directly to the Rust terminal. This achieves the unified backend debugging goal.
+  4.  Ensure graceful shutdown: Rust must kill the Node.js child process when the Tauri window is closed to prevent zombie processes blocking port 3000.
 
-- **Desktop (Windows/Mac/Linux):** Tauri acts as the master app. It runs your HTML/JS frontend. Tauri's Rust backend spawns Godot as a child process. Rust has rock-solid, crash-proof native libraries to lock the Godot window handle seamlessly inside the Tauri window frame.
-- **Android:** Tauri compiles to an APK. You write a small Tauri Android Plugin that loads the Godot engine as a native Vulkan SurfaceView side-by-side with the Android WebView.
-- **Debugging:** The Tauri Rust backend intercepts all stdout/stderr from Godot, and all console.log from the Web UI, dumping them into one beautiful, unified terminal output.
-- **Pros:** Solves everything gracefully. Incredibly lightweight compared to Electron. Unified build system for Desktop + Mobile.
-- **Cons:** Requires writing a tiny amount of Rust code to act as the "glue" for the windows and logs.
+### Phase 3: Godot Native Embedding (The Single Window)
 
-#### Approach B: The Godot "Texture-Mapped" WebView (Godot as Master)
+- **Objective:** Integrate the Godot rendering engine into the Tauri shell without fragile Win32 hacks.
+- **Tasks:**
+  1.  Export the Godot project as a standalone headless/borderless executable.
+  2.  Declare the Godot executable as a second "Sidecar" in Tauri.
+  3.  In Rust, spawn Godot and capture its logs, merging them into the same terminal stream as Node.js.
+  4.  **UI/UX:** Define the layout communication. The Web UI (Tauri) will establish a WebSocket connection (`PathBridge`) to the local Godot instance to synchronize graph data and interactive states.
+  5.  _(Optional but Recommended)_: Explore Tauri window transparency or embedding APIs to physically dock the Godot Vulkan surface beneath the Tauri WebView layout.
 
-The reason godot-wry failed is because it creates a native OS window and tries to float it over Godot, which fights with Godot's UI containers. We can instead use an off-screen renderer like Ultralight or gdCEF (Chromium Embedded Framework for Godot).
+### Phase 4: Production Packaging (EXE & APK)
 
-- **Desktop:** Godot is the single executable. The Web UI (HTML/JS) is rendered directly into a Godot TextureRect (it becomes a 2D image playing inside your 3D Godot scene). It perfectly respects Godot's UI splits and layouts.
-- **Android:** We use a Godot Android Plugin to overlay the native Android OS WebView on top of the game.
-- **Debugging:** Godot is the master. We spawn the Node.js backend as a hidden child. Godot's console captures the Node.js logs and the Web UI console output.
-- **Pros:** Native Godot experience. Truly zero OS-window hacks.
-- **Cons:** Compiling gdCEF or integrating Ultralight is technically complex and adds significant file size to the Godot binary.
-
-#### Approach C: The "Decoupled Coordinator" (The Pragmatic Setup)
-
-Abandon the idea of forcing one app to be the "shell" for the other. Instead, we write a Lightweight Node.js CLI Coordinator.
-
-- **Architecture:** The user runs NoteConnection.exe (which is just a bundled Node CLI). The CLI launches Godot (borderless) and a lightweight web window (via Neutralino.js or Tauri) (transparent background).
-- **The Trick:** The CLI actively synchronizes their window positions. To the user, it looks like one app, but the OS manages them as two layered transparent windows.
-- **Debugging:** The Node CLI is the ultimate master. Both Godot and the Web UI connect to it via WebSocket. They stream all their errors and logs to the Node CLI, which prints a clean, unified log stream to the terminal and can even output a single .log file.
-- **Pros:** Pure JS/TS implementation. No native C++/Rust hacks. Very robust decoupling.
-- **Cons:** Moving the window rapidly across the screen might show a 1-millisecond lag between the UI overlay and the 3D background.
-
-### Design Check / 设计确认环节:
-
-I strongly lean toward Approach A (Tauri 2.0) as it modernizes your stack, slashes memory usage compared to Electron, formally supports APK builds, and provides the exact "unified hub" debugging you want. Approach B is also very solid if you want Godot to be the absolute master of the rendering pipeline.
-
-Which approach aligns most closely with your long-term vision for the project's maintenance and expansion?
-
----
-
-### [中文版本]
-
-基于您的确认，我完全同意拒绝在 Electron 中使用脆弱的 Win32 SetParent 黑客手段。如果我们的目标是真正的跨平台稳定性（桌面、Android、Web）以及统一的调试体验，我们必须将目光放眼于 Electron 之外。
-
-基于您的约束条件（保留 Vulkan、保留 HTML/JS、单窗口 UI、统一日志、Android/Web 打包），我提出三种截然不同的架构方案。
-
-#### 💡 备选方案 (Alternative Approaches)
-
-**方案 A：Tauri 2.0 原生外壳（推荐）**
-Tauri 实际上已经超越了 Electron。它使用操作系统内置的轻量级 Web 引擎而不是打包整个 Chromium，并且其后端使用 Rust 编写。最关键的是，Tauri 2.0 原生支持 Android 和 iOS 打包。
-
-- **桌面端 (Windows/Mac/Linux):** Tauri 作为主应用程序。它运行您的 HTML/JS 前端。Tauri 的 Rust 后端将 Godot 作为子进程启动。Rust 拥有极其稳固的、防崩溃的原生库，可以无缝地将 Godot 窗口句柄锁定在 Tauri 窗口框架内。
-- **Android:** Tauri 编译输出 APK。您编写一个微小的 Tauri Android 插件，将 Godot 引擎作为原生的 Vulkan SurfaceView 加载，与 Android WebView 并排显示。
-- **调试:** Tauri Rust 后端拦截来自 Godot 的所有 stdout/stderr，以及来自 Web UI 的所有 console.log，并将它们转储到一个漂亮、统一的终端输出中。
-- **优点:** 优雅地解决所有问题。与 Electron 相比极其轻量。拥有统一的桌面+移动端构建系统。
-- **缺点:** 需要编写少量的 Rust 代码作为窗口和日志的“粘合剂”。
-
-**方案 B：Godot “纹理映射” WebView（Godot 为主）**
-godot-wry 失败的原因是它创建了一个原生 OS 窗口并试图将其浮动在 Godot 上方，这与 Godot 的 UI 容器产生了冲突。相反，我们可以使用离屏渲染器，例如 Ultralight 或 gdCEF（Godot 的 Chromium 嵌入式框架）。
-
-- **桌面端:** Godot 是唯一的独立可执行文件。Web UI (HTML/JS) 直接渲染到 Godot 的 TextureRect 中（它本质上变成了在您的 3D Godot 场景中播放的 2D 图像）。它完美地遵循 Godot 的 UI 分割和布局。
-- **Android:** 我们使用 Godot Android 插件将原生 Android OS WebView 叠加在游戏之上。
-- **调试:** Godot 是主控者。我们将 Node.js 后端作为隐藏的子进程启动。Godot 的控制台捕获 Node.js 日志和 Web UI 控制台输出。
-- **优点:** 纯正的 Godot 体验。真正的零 OS 窗口黑客。
-- **缺点:** 编译 gdCEF 或集成 Ultralight 在技术上比较复杂，并且会显著增加 Godot 二进制文件的体积。
-
-**方案 C：“解耦协调器”（务实方案）**
-放弃强迫一个应用成为另一个应用“外壳”的想法。相反，我们编写一个轻量级的 Node.js CLI 协调器。
-
-- **架构:** 用户运行 NoteConnection.exe（实际上只是一个打包的 Node CLI）。CLI 启动 Godot（无边框）和一个轻量级的 Web 窗口（通过 Neutralino.js 或 Tauri）（透明背景）。
-- **核心技巧:** Node.js CLI 主动同步它们的窗口位置。对用户来说，它看起来像是一个应用程序，但操作系统将它们管理为两个分层的透明窗口。
-- **调试:** Node CLI 是最终的绝对主控。Godot 和 Web UI 都通过 WebSocket 连接到它。它们将所有的错误和日志流式传输到 Node CLI，Node CLI 将清晰、统一的日志流打印到终端，甚至可以输出一个单一的 .log 文件。
-- **优点:** 纯 JS/TS 实现。没有原生 C++/Rust 黑客手段。非常稳健的解耦。
-- **缺点:** 在屏幕上快速拖动窗口时，UI 叠加层和 3D 背景之间可能会出现 1 毫秒的延迟。
-
-**Design Check / 设计确认环节:**
-我个人强烈倾向于 方案 A (Tauri 2.0)，因为它使您的技术栈现代化，与 Electron 相比大幅削减了内存占用，正式支持 APK 构建，并提供了您所期望的精确的“统一集线器”调试功能。如果您希望 Godot 成为渲染管线的绝对主宰，方案 B 也是非常可靠的。
-
-哪种方案最符合您对项目长期维护和扩展的愿景？
+- **Objective:** Generate the final deployment artifacts cleanly.
+- **Tasks (Desktop):**
+  1.  Execute `npm run tauri build`.
+  2.  Verify the resulting `.exe` correctly bundles the Node sidecar, launches cleanly, and connects to the Godot renderer.
+- **Tasks (Mobile/Android):**
+  1.  Set up Android NDK/SDK paths in the environment variables.
+  2.  Abstract `server.ts` file system operations (`fs.readFileSync`) behind Tauri's Rust-based `fs` API or Deno isolates, since Android APKs cannot run standard Node.js native modules directly.
+  3.  Execute `npm run tauri android build` to generate the signed APK.
 
 ---
 
-## Part 3: Tauri Evaluation & Next Steps
+## _(Bilingual support provided below / 以下提供双语支持)_
 
-Yes and No. It is very easy if your development environment is fully prepared, but getting it set up the first time requires downloading some heavy tools. I just checked your system, and you already have the Rust Compiler (cargo) installed, which is excellent news because that's usually the biggest hurdle!
+# Tauri 架构统一：综合架构蓝图
 
-Here is the honest breakdown of how "easy" it is to generate those files using Tauri 2.0:
+**日期：** 2026-02-27
+**状态：** 已批准 & 执行中
 
-**1. Generating the .exe (Windows Desktop)**
-_Extremely Easy._
+## 1. 问题陈述与核心目标
 
-- Command: `npm run tauri build`
-- What happens: Tauri processes your HTML/JS/CSS, compiles a tiny Rust backend, and produces a highly optimized, installer-ready .exe.
-- Bonus: The resulting .exe will be about 5MB to 15MB, compared to Electron's 150MB+. It uses Windows' built-in Edge WebView2 instead of bundling its own massive copy of Chromium.
+NoteConnection 项目目前正面临严重的扩展性和开发者体验 (DX) 瓶颈：
 
-**2. Generating the .apk (Android Mobile)**
-_Medium (Requires Setup)._
+1.  **双窗口体验碎裂：** 分别在 Electron 中运行后端和在 Godot GUI 中运行前端，导致出现两个完全独立的窗口，极大降低了终端用户体验。
+2.  **碎片化的调试：** F12 调试信息和错误日志分布在 Godot 引擎控制台和 Node.js/Electron 终端之间，使得崩溃分析变得极其繁琐。
+3.  **跨平台打包障碍：** 最初选择 Godot 是因为需要原生 Vulkan 支持来渲染 1-5 万个节点。然而，目前的架构缺乏清晰的路径来通过单一代码库生成轻巧的 Windows EXE、Android APK (借助 Capacitor/Godot) 以及未来的 Web 部署。
 
-- Prerequisites: You must have Android Studio and the Android NDK perfectly configured on your Windows machine.
-- Command: `npm run tauri android build`
-- What happens: Tauri automatically generates a native Gradle project, cross-compiles your Rust backend, embeds your Web UI, and outputs a signed .apk.
-- The Catch: Compiling Rust for Android requires installing cross-compilation targets (e.g., `aarch64-linux-android`), which can sometimes throw mysterious build errors if your Java/NDK environment variables aren't strictly aligned with what Tauri expects.
+**最终目标：**
 
-**The Verdict on Tauri**
-If your goal is to have one web frontend that cleanly intercepts logs and natively outputs .exe and .apk without hacking OS windows in C++, Tauri 2.0 is currently the best framework available. You trade the "bloat" of Electron for the "strictness" of the Rust compiler.
-
-However, based on your previous messages, I need to ask one more critical question before we lock in a design:
-
-Are you open to having a small amount of Rust code in your project? (Tauri requires a tiny `main.rs` file to handle window creation and OS-level operations, completely replacing Electron's `main.ts`). Or do you strictly want to stay 100% within JavaScript/TypeScript and Godot GDScript?
+- **一个统一的外壳 (Shell)**，在外观和体验上如同一个原生的单窗口应用程序。
+- **一个中央调试控制台**，将 Godot 日志、Node.js 后端日志和 Web UI 错误统一汇集并输出。
+- **流线型的跨平台编译**，能够无需针对操作系统进行大规模的“窗口黑客”就能打包为 EXE、APK 和 Web。
 
 ---
 
-## Part 4: Roadmap Delivery
+## 2. 解决方案：Tauri 2.0 原生外壳架构
 
-**Designing the Tauri 2.0 Architectural Roadmap**
-I completed writing the Tauri 2.0 (Plan A - Revised) architecture implementation plan and task checklist. This outlines removing Electron entirely, adding Tauri, setting up Godot and Node.js as "Sidecars", and configuring Rust to capture all terminal logs for debugging unification.
+基于您明确拒绝在 Electron 中使用脆弱的 Win32 本地窗口嵌入，并接受使用少量的 Rust 集成层，**Tauri 2.0** 被选为取代 Electron 的框架。
+
+Tauri 2.0 通过利用操作系统的内置 Web 引擎 (Windows 的 WebView2，macOS/iOS 的 WebKit，Android 的 WebView) 和极其高性能的 Rust 后端解决了核心瓶颈，为桌面和移动端提供了原生打包能力。
+
+### 架构拓扑
+
+| 平台                     | 主外壳 (Master Shell) | 渲染引擎 (节点)                 | Web UI (工具/阅读器)       | 后端逻辑                                |
+| :----------------------- | :-------------------- | :------------------------------ | :------------------------- | :-------------------------------------- |
+| **桌面端 (Windows EXE)** | Tauri (Rust)          | Godot (Vulkan, 原生子进程)      | Tauri WebView (覆盖/并排)  | Node.js (子进程)                        |
+| **移动端 (Android APK)** | Tauri (Rust)          | Godot (Android Vulkan 表面视图) | Tauri Android WebView 插件 | Node.js (V8 隔离区 / 系统原生 Rust API) |
+| **Web 浏览器**           | 浏览器                | HTML5 Canvas / WebGL            | 标准 DOM                   | 远程服务器 / WASI                       |
+
+### 这一转变的核心优势
+
+1.  **零窗口黑客 (F12 统一)：** Tauri 的 Rust 后端作为绝对的主协调器。它启动 Node.js 后端。它可以原生将 Web UI 注入到 Godot 视口上方。Rust 拦截来自 Godot 和 Node.js 的 `stdout`/`stderr`，将单一的、统一的日志流打印在开发者的终端上。
+2.  **极端的体积缩减：** 最终的 Windows EXE 将从 Electron 的 ~150MB 缩减到约 10MB-15MB。
+3.  **原生移动端支持：** Tauri 2.0 支持 `npm run tauri android build`，自动生成所需的 Gradle 项目并原生交叉编译 Rust 后端，避开了 Capacitor 沉重的 DOM 开销。
+
+---
+
+## 3. 实施计划 (完整路线图)
+
+以下是将 NoteConnection 代码库从 Electron 过渡到 Tauri 2.0 的步骤式路线图。
+
+### 阶段 1：Tauri 初始化与环境设置
+
+- **目标：** 安装 Tauri 2.0 并配置构建管道以使用现有的前端 dist 编译文件。
+- **任务：**
+  1.  在 `src-tauri` 目录初始化 Tauri (`npm create tauri-app@latest`)。
+  2.  配置 `tauri.conf.json` 将 `build.devUrl` 映射到本地开发服务器 (如 `http://localhost:3000`)。
+  3.  配置 `build.frontendDist` 指向 `dist/src/frontend` 的构建输出。
+  4.  验证 `npm run tauri:dev:mini` 能否成功打开 Tauri Webview 并显示现有的 HTML/JS 用户界面。 _(已完成)_
+
+### 阶段 2：Node.js 后端 Sidecar 集成 (统一日志)
+
+- **目标：** 将 Node.js 后端 (`server.ts`, 图谱构建器) 从 Electron 主进程中剥离，使其作为由 Tauri 管理的独立本地服务器运行。
+- **任务：**
+  1.  在 `tauri.conf.json` 中将编译后的 Node.js 后端声明为 "Sidecar" 附属二进制文件。
+  2.  更新 `src-tauri/src/lib.rs` (Rust)，以便在 Tauri 应用启动时自动拉起 Node.js sidecar。
+  3.  **极其关键的体验升级步骤：** 编写 Rust 代码，使用 `tauri::process::Command` 拦截来自 Node.js sidecar 的所有 `stdout` 和 `stderr`，并将其直接打印到 Rust 终端。这实现了后端日志的终极统一。
+  4.  确保优雅退出：当 Tauri 窗口关闭时，Rust 必须杀死 Node.js 子进程，以防止僵尸进程继续霸占 3000 端口。
+
+### 阶段 3：Godot 原生嵌入 (真正的单窗口)
+
+- **目标：** 在不使用脆弱的 Win32 黑客代码的情况下，将 Godot 渲染引擎集成到 Tauri 外壳中。
+- **任务：**
+  1.  将 Godot 项目导出为独立的 无头(headless)/无边框(borderless) 可执行文件。
+  2.  将 Godot 可执行文件配置为 Tauri 的第二个 "Sidecar"。
+  3.  在 Rust 中启动 Godot 并捕获其日志，将它们合并到与 Node.js 相同的终端流中。
+  4.  **UI/UX:** 定义布局通信协议。Web UI (Tauri) 将建立一个到本地 Godot 实例的 WebSocket 连接 (`PathBridge`)，以同步图谱数据和交互状态。
+  5.  _(可选但推荐)_：探索 Tauri 窗口透明度或嵌入式 API，以物理方式将 Godot Vulkan 表面贴合在 Tauri WebView 布局的底层。
+
+### 阶段 4：生产环境打包 (EXE & APK)
+
+- **目标：** 干净利落地生成最终部署构件。
+- **任务 (桌面端)：**
+  1.  执行 `npm run tauri build`。
+  2.  验证生成的 `.exe` 能否正确打包 Node sidecar，干净启动并成功连接至 Godot 渲染器。
+- **任务 (移动端/Android)：**
+  1.  在环境变量中设置 Android NDK/SDK 路径。
+  2.  将 `server.ts` 的文件系统操作 (`fs.readFileSync`) 抽象到 Tauri 的基于 Rust 的 `fs` API 或 Deno 隔离区之后，因为 Android APK 无法直接运行标准 Node.js 原生模块。
+  3.  执行 `npm run tauri android build` 以生成签名的 APK。
