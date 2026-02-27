@@ -3,7 +3,9 @@ extends Node2D
 
 # Signals
 signal node_clicked(node_id, local_pos)
+signal node_double_clicked(node_id)
 signal background_clicked
+signal node_toggle_requested(node_id) # New
 signal node_expand_prereqs_requested(node_id) # New: For hidden prerequisites
 signal node_collapse_prereqs_requested(node_id) # New: For hiding prerequisites
 signal collapse_all_requested() # New: Middle click to collapse all
@@ -27,6 +29,8 @@ var _layout_hulls: Array = []
 var _zoom_level: float = 1.0
 var _view_offset: Vector2 = Vector2.ZERO
 var _is_dragging: bool = false
+var _drag_start: Vector2 = Vector2.ZERO
+var _view_start: Vector2 = Vector2.ZERO
 
 # Interaction State (Long Press)
 var _pressed_node_id: String = ""
@@ -147,8 +151,7 @@ func set_focus_mode(enabled: bool) -> void:
 		queue_redraw()
 
 func _update_style_config() -> void:
-	var TreeStylesScript = preload("res://path_mode/scripts/tree_styles.gd")
-	_style_config = TreeStylesScript.get_style(_current_style)
+	_style_config = TreeStyles.get_style(_current_style)
 
 func _draw() -> void:
 	# Apply Transform
