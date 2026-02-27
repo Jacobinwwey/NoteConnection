@@ -66,14 +66,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentPathEl.title = kbPath;
                 }
                 
-                // Get folder listing vie IPC
+                // Get folder listing via IPC
                 const folderData = await window.electronAPI.getFolders();
                 folders = folderData || [];
                 
                 console.log('[SourceManager] Electron mode, KB path:', kbPath);
                 console.log('[SourceManager] Found folders:', folders);
             } else {
-                // Web Mode Fallback (if server running)
+                // HTTP Mode (Tauri/Web): Use REST API
+                // 获取知识库路径和文件夹列表
+                try {
+                    const kbRes = await fetch('/api/kb-path');
+                    const kbData = await kbRes.json();
+                    if (currentPathEl && kbData.kbPath) {
+                        currentPathEl.textContent = t('source.currentPath', { path: kbData.kbPath });
+                        currentPathEl.title = kbData.kbPath;
+                    }
+                } catch (e) {
+                    console.warn('[SourceManager] Could not fetch KB path:', e);
+                }
+                
                 const res = await fetch('/api/folders');
                 const data = await res.json();
                 folders = data.folders || [];
@@ -151,9 +163,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Feature: Check for cached graph (Multi-Session Optimization)
-        if (target !== 'ALL_FOLDERS' && window.electronAPI && window.electronAPI.checkCache) {
+        // Works in both Electron (IPC) and Tauri/Web (HTTP API) modes
+        // 多会话优化：检查缓存图谱，同时支持 Electron IPC 和 HTTP API 模式
+        if (target !== 'ALL_FOLDERS') {
             try {
-                const cached = await window.electronAPI.checkCache(target);
+                let cached = null;
+                
+                if (window.electronAPI && window.electronAPI.checkCache) {
+                    // Electron Mode: Use IPC
+                    cached = await window.electronAPI.checkCache(target);
+                } else {
+                    // HTTP Mode (Tauri/Web): Use REST API
+                    const cacheRes = await fetch(`/api/check-cache?target=${encodeURIComponent(target)}`);
+                    cached = await cacheRes.json();
+                }
+                
                 if (cached) {
                     // Simple bilingual fallback since we haven't updated json files yet
                     const isZh = window.i18n && window.i18n.locale === 'zh';
@@ -164,7 +188,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (confirm(msg)) {
                         loadBtn.disabled = true;
                         loadBtn.textContent = 'Loading Cache...';
-                        const success = await window.electronAPI.restoreCache(target);
+                        
+                        let success = false;
+                        if (window.electronAPI && window.electronAPI.restoreCache) {
+                            success = await window.electronAPI.restoreCache(target);
+                        } else {
+                            const restoreRes = await fetch(`/api/restore-cache?target=${encodeURIComponent(target)}`);
+                            const restoreData = await restoreRes.json();
+                            success = restoreData.success;
+                        }
+                        
                         if (success) {
                             // Reload with cache busting handled by dynamic loader
                             window.location.reload();

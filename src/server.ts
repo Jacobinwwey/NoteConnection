@@ -271,6 +271,95 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 }
                 return;
             }
+
+            // GET /api/kb-path — Return current Knowledge Base root path
+            // Mirrors Electron IPC: ipcMain.handle('getKbPath')
+            // 返回当前知识库根路径，与 Electron IPC 的 getKbPath 保持一致
+            if (req.url === '/api/kb-path') {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ kbPath: KB_ROOT }));
+                return;
+            }
+
+            // GET /api/check-cache?target=financial — Check if cached graph exists
+            // Mirrors Electron IPC: ipcMain.handle('checkCache') in main.ts lines 443-461
+            // 检查指定文件夹的图谱缓存是否存在
+            if (req.url?.startsWith('/api/check-cache')) {
+                try {
+                    const urlObj = new URL(req.url, `http://${req.headers.host}`);
+                    const target = urlObj.searchParams.get('target');
+                    
+                    if (!target || target === 'ALL_FOLDERS') {
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify(null));
+                        return;
+                    }
+                    
+                    const targetName = target.replace(/[^a-z0-9_\-]/gi, '_');
+                    const cachePath = path.join(FRONTEND_DIR, `data_${targetName}.js`);
+                    
+                    if (fs.existsSync(cachePath)) {
+                        const stats = fs.statSync(cachePath);
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({
+                            date: stats.mtime.toLocaleString(),
+                            size: stats.size
+                        }));
+                    } else {
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify(null));
+                    }
+                } catch (error) {
+                    console.error(error);
+                    CrashLogger.log(error, 'API:GET /api/check-cache');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: String(error) }));
+                }
+                return;
+            }
+
+            // GET /api/restore-cache?target=financial — Restore cached graph as active data
+            // Mirrors Electron IPC: ipcMain.handle('restoreCache') in main.ts lines 463-488
+            // Copies data_{target}.js → data.js and graph_data_{target}.json → graph_data.json
+            // 从缓存恢复图谱数据，与 Electron IPC 的 restoreCache 保持一致
+            if (req.url?.startsWith('/api/restore-cache')) {
+                try {
+                    const urlObj = new URL(req.url, `http://${req.headers.host}`);
+                    const target = urlObj.searchParams.get('target');
+                    
+                    if (!target) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: 'Missing target' }));
+                        return;
+                    }
+                    
+                    const targetName = target.replace(/[^a-z0-9_\-]/gi, '_');
+                    
+                    const cacheJs = path.join(FRONTEND_DIR, `data_${targetName}.js`);
+                    const targetJs = path.join(FRONTEND_DIR, 'data.js');
+                    const cacheJson = path.join(FRONTEND_DIR, `graph_data_${targetName}.json`);
+                    const targetJson = path.join(FRONTEND_DIR, 'graph_data.json');
+                    
+                    if (fs.existsSync(cacheJs)) {
+                        fs.copyFileSync(cacheJs, targetJs);
+                        if (fs.existsSync(cacheJson)) {
+                            fs.copyFileSync(cacheJson, targetJson);
+                        }
+                        console.log(`[Cache] Restored cache for ${target} -> data.js`);
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: true }));
+                    } else {
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: 'Cache not found' }));
+                    }
+                } catch (error) {
+                    console.error(error);
+                    CrashLogger.log(error, 'API:GET /api/restore-cache');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
     
             // Serve Static Files
             // v0.9.83 Fix: Strip query parameters (e.g. ?v=123) to verify file existence on disk
@@ -332,8 +421,20 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         
                         const buildTarget = target === 'ALL_FOLDERS' ? '' : target;
                         
+                        // Resolve to ABSOLUTE path, mirroring Electron main.ts behavior (lines 411-415).
+                        // NoteConnection.ts uses targetPath directly if absolute, skipping kbRoot fallback.
+                        // Without this, the relative path "financial" would be resolved against
+                        // dist/Knowledge_Base/ (via __dirname) which does not exist.
+                        // 将相对路径解析为绝对路径，与 Electron main.ts 的行为保持一致。
+                        let targetToBuild: string | undefined;
+                        if (buildTarget) {
+                            targetToBuild = path.join(KB_ROOT, buildTarget);
+                        } else {
+                            targetToBuild = KB_ROOT;
+                        }
+                        
                         await buildGraph({
-                            targetPath: buildTarget,
+                            targetPath: targetToBuild,
                             maxWorkers,
                             enableGPU,
                             enableGPULayout,
