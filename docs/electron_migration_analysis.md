@@ -1,0 +1,99 @@
+# In-Depth Analysis of Electron Codebase for Tauri Migration
+
+**Date**: 2026-02-27
+**Target**: `src/electron/main.ts`, `src/electron/preload.ts`, `src/server.ts`, and Frontend IPC Usage.
+
+## 1. Current Electron Architecture (`main.ts`)
+
+The existing Electron main process serves several critical roles beyond just rendering the web view:
+
+- **Configuration Management:** Reads/writes `kb_config.json` in the user's data directory for the Knowledge Base path and language preferences.
+- **Menu Localization:** Dynamically builds the native window menu in English or Chinese based on user preferences.
+- **First-Run Setup:** Spawns a native directory selection dialog (`dialog.showOpenDialog`) if no config exists.
+- **Node.js Backend Execution:** Directly imports and runs `NoteController.triggerBuild()` in the same process, managing file I/O and spawning worker threads.
+- **IPC Handlers:** Bridges the isolated frontend environment to native Node.js and system APIs.
+
+## 2. IPC Channel Mapping (The `window.electronAPI` interface)
+
+An analysis of `preload.ts` and frontend usages reveals the following IPC channels that must be migrated:
+
+| Electron IPC Hook    | Current Backend Implementation (`main.ts`) | Tauri Migration Strategy                                                                                 |
+| :------------------- | :----------------------------------------- | :------------------------------------------------------------------------------------------------------- |
+| `getKbPath()`        | Reads from `kb_config.json`.               | Implement in Rust via `fs` or `tauri-plugin-store`.                                                      |
+| `getFolders()`       | Calls `NoteController.getFolders()`.       | Migrate to HTTP fetch against Node Sidecar (`GET /api/folders`).                                         |
+| `getContent(path)`   | Calls `NoteController.getContent()`.       | Migrate to HTTP fetch against Node Sidecar (`GET /api/content?path=...`).                                |
+| `buildGraph(opts)`   | Calls `NoteController.triggerBuild()`.     | Migrate to HTTP POST against Node Sidecar (`POST /api/build`), OR Rust invoke that triggers the sidecar. |
+| `checkCache(target)` | Checks `fs.stat` on `data_[target].js`.    | Implement as a Rust `#[tauri::command]`.                                                                 |
+| `restoreCache(t)`    | Copies `data_[target].js` to `data.js`.    | Implement as a Rust `#[tauri::command]`.                                                                 |
+| `getUserLanguage()`  | Reads from `kb_config.json`.               | Implement in Rust or migrate to Web `localStorage`.                                                      |
+| `setUserLanguage()`  | Writes to config & updates OS Menu.        | Implement in Rust `#[tauri::command]` to update Tauri native menu.                                       |
+| `on('build-log')`    | Receives live stdout from build.           | Rust intercepts Sidecar stdout and uses `app_handle.emit()`.                                             |
+
+## 3. The Node.js Server (`server.ts`) API Gap
+
+While `server.ts` exposes `/api/folders` and `/api/content`, it does **not** expose endpoints for:
+
+- Cache management (`checkCache` / `restoreCache`).
+- Knowledge base path selection.
+
+This confirms the hybrid architecture plan:
+
+1. **Rust (Tauri Backend):** Will handle OS-level dialogues, configuration persistence, native application menus, and cache file copying.
+2. **Node.js (Sidecar):** Will exclusively handle the heavy-lifting logic (Markdown parsing, NLP graph building) exposed via HTTP.
+
+## 4. Key Implementation Risks
+
+1. **Path Resolving:** Currently, `__dirname` is heavily used in `main.ts` to locate `../frontend/data.js`. In Tauri with a sidecar binary, the frontend assets are injected into the Tauri bundle, not physically sitting next to the Node executable. The caching mechanism in Rust must point to the Tauri AppData directory, not a relative `frontend` folder.
+2. **Sidecar Lifecycle:** Rust must ensure the Node sidecar (`server.exe`) is forcefully killed when the Tauri window is closed, otherwise it will zombie and lock port 3000.
+3. **Menu Rebuilding:** Tauri's menu system (`tauri::menu::Menu`) must be dynamically rebuildable from Rust when the user calls `setUserLanguage`.
+
+---
+
+## 针对向 Tauri 迁移的 Electron 代码库深度分析
+
+**日期**: 2026-02-27
+**目标代码**: `src/electron/main.ts`, `src/electron/preload.ts`, `src/server.ts`, 以及前端 IPC 使用情况。
+
+## 1. 当前 Electron 架构概述 (`main.ts`)
+
+现有的 Electron 主进程承担了渲染 Web 视图之外的几个关键角色：
+
+- **配置管理：** 在用户数据目录中读取/写入 `kb_config.json`，用于知识库路径和语言偏好。
+- **菜单本地化：** 根据用户偏好动态构建英文或中文的原生窗口菜单。
+- **首次启动设置：** 如果不存在配置，则生成原生目录选择对话框 (`dialog.showOpenDialog`)。
+- **Node.js 后端执行：** 在同一进程中直接导入并运行 `NoteController.triggerBuild()`，管理文件 I/O 并生成工作线程。
+- **IPC 桥接：** 将隔离的前端环境连接到原生的 Node.js 和系统 API。
+
+## 2. IPC 通道映射分析 (`window.electronAPI` 接口)
+
+对 `preload.ts` 和前端使用的分析揭示了必须迁移的以下 IPC 通道：
+
+| Electron IPC 钩子    | 当前后端实现 (`main.ts`)                 | Tauri 迁移策略                                                        |
+| :------------------- | :--------------------------------------- | :-------------------------------------------------------------------- |
+| `getKbPath()`        | 从 `kb_config.json` 读取。               | 使用 Rust 通过 `fs` 或 `tauri-plugin-store` 实现。                    |
+| `getFolders()`       | 调用 `NoteController.getFolders()`。     | 迁移至针对 Node Sidecar 的 HTTP fetch (`GET /api/folders`)。          |
+| `getContent(path)`   | 调用 `NoteController.getContent()`。     | 迁移至针对 Node Sidecar 的 HTTP fetch (`GET /api/content?path=...`)。 |
+| `buildGraph(opts)`   | 调用 `NoteController.triggerBuild()`。   | 迁移至针对 Node Sidecar 的 HTTP POST，或触发 sidecar 的 Rust 命令。   |
+| `checkCache(target)` | 检查 `data_[target].js` 的 `fs.stat`。   | 作为 Rust `#[tauri::command]` 实现。                                  |
+| `restoreCache(t)`    | 将 `data_[target].js` 复制到 `data.js`。 | 作为 Rust `#[tauri::command]` 实现。                                  |
+| `getUserLanguage()`  | 从 `kb_config.json` 读取。               | 在 Rust 中实现或迁移至前端 `localStorage`。                           |
+| `setUserLanguage()`  | 写入配置并更新系统菜单。                 | 在 Rust 中实现 `#[tauri::command]` 以动态更新 Tauri 菜单。            |
+| `on('build-log')`    | 接收来自构建过程的实时输出。             | Rust 拦截 Sidecar stdout 并使用 `app_handle.emit()` 推送至前端。      |
+
+## 3. Node.js 服务器 (`server.ts`) 的 API 缺口
+
+虽然 `server.ts` 暴露了 `/api/folders` 和 `/api/content`，但它**没有**暴露以下端点：
+
+- 缓存管理 (`checkCache` / `restoreCache`)。
+- 知识库路径选择。
+
+这印证了混合架构计划的正确性：
+
+1. **Rust (Tauri 后端):** 将处理操作系统级别的对话框、配置持久化、本地应用菜单和缓存文件复制。
+2. **Node.js (Sidecar 进程):** 将专门处理重负荷逻辑 (Markdown 解析、NLP 图谱构建)，通过 HTTP 暴露。
+
+## 4. 关键实施风险预警
+
+1. **路径解析：** 目前，`main.ts` 中大量使用 `__dirname` 来定位 `../frontend/data.js`。在带有 sidecar 二进制文件的 Tauri 中，前端资源被注入到 Tauri bundle 中，而不是物理上位于 Node 可执行文件旁边。Rust 中的缓存机制必须指向 Tauri AppData 目录，而不是相对的 `frontend` 文件夹。
+2. **Sidecar 生命周期：** Rust 必须确保在 Tauri 窗口关闭时强制终止 Node sidecar (`server.exe`)，否则它将变成僵尸进程并锁定 3000 端口。
+3. **菜单重建：** 当用户调用 `setUserLanguage` 时，Tauri 的菜单系统必须能够从 Rust 侧被动态重建。

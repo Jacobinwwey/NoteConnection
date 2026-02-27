@@ -115,9 +115,10 @@ window.loadingManager = {
     }
 };
 
-// Listen for Electron logs if available
-if (window.electronAPI && window.electronAPI.on) {
-    window.electronAPI.on('build-log', (msg) => {
+// Listen for Tauri logs if available
+if (window.__TAURI__ && window.__TAURI__.event) {
+    window.__TAURI__.event.listen('build-log', (event) => {
+        const msg = event.payload;
         if (window.loadingManager && document.getElementById('loading-overlay') && document.getElementById('loading-overlay').style.display !== 'none') {
             window.loadingManager.log(msg);
         }

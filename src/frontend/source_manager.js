@@ -56,22 +56,23 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             let folders = [];
             
-            if (window.electronAPI) {
-                // Electron Mode: Get KB path and enumerate folders
-                const kbPath = await window.electronAPI.getKbPath();
-                
-                // Display current path
-                if (currentPathEl) {
-                    currentPathEl.textContent = t('source.currentPath', { path: kbPath });
-                    currentPathEl.title = kbPath;
-                }
-                
-                // Get folder listing via IPC
-                const folderData = await window.electronAPI.getFolders();
-                folders = folderData || [];
-                
-                console.log('[SourceManager] Electron mode, KB path:', kbPath);
-                console.log('[SourceManager] Found folders:', folders);
+                if (window.__TAURI__) {
+                    // Tauri Mode: Get KB path and enumerate folders via API
+                    const kbPath = await window.__TAURI__.core.invoke('get_kb_path');
+                    
+                    // Display current path
+                    if (currentPathEl) {
+                        currentPathEl.textContent = t('source.currentPath', { path: kbPath });
+                        currentPathEl.title = kbPath;
+                    }
+                    
+                    // Get folder listing via HTTP from Sidecar
+                    const folderRes = await fetch('http://localhost:3000/api/folders');
+                    const folderData = await folderRes.json();
+                    folders = folderData.folders || [];
+                    
+                    console.log('[SourceManager] Tauri mode, KB path:', kbPath);
+                    console.log('[SourceManager] Found folders:', folders);
             } else {
                 // HTTP Mode (Tauri/Web): Use REST API
                 // 获取知识库路径和文件夹列表
@@ -147,9 +148,22 @@ document.addEventListener('DOMContentLoaded', () => {
     init();
 
     // Add refresh functionality (will be triggered by IPC event from main process)
-    if (window.electronAPI && window.electronAPI.onKbPathChanged) {
-        window.electronAPI.onKbPathChanged(() => {
+    if (window.__TAURI__) {
+        window.__TAURI__.event.listen('kb-path-changed', async (event) => {
             console.log('[SourceManager] KB path changed, refreshing folders');
+            const newPath = event.payload;
+            
+            // Inform Sidecar of the new path
+            try {
+                await fetch('http://localhost:3000/api/kb-path', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ kbPath: newPath })
+                });
+            } catch (err) {
+                console.error('[SourceManager] Failed to update Sidecar KB path:', err);
+            }
+            
             fetchFolders();
         });
     }
@@ -169,12 +183,12 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 let cached = null;
                 
-                if (window.electronAPI && window.electronAPI.checkCache) {
-                    // Electron Mode: Use IPC
-                    cached = await window.electronAPI.checkCache(target);
+                if (window.__TAURI__) {
+                    // Tauri Mode: Use Rust IPC
+                    cached = await window.__TAURI__.core.invoke('check_cache', { target: target });
                 } else {
-                    // HTTP Mode (Tauri/Web): Use REST API
-                    const cacheRes = await fetch(`/api/check-cache?target=${encodeURIComponent(target)}`);
+                    // Web Mode: Use REST API (or fallback if backend supports it natively without sidecar)
+                    const cacheRes = await fetch(`http://localhost:3000/api/check-cache?target=${encodeURIComponent(target)}`);
                     cached = await cacheRes.json();
                 }
                 
@@ -190,10 +204,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         loadBtn.textContent = 'Loading Cache...';
                         
                         let success = false;
-                        if (window.electronAPI && window.electronAPI.restoreCache) {
-                            success = await window.electronAPI.restoreCache(target);
+                        if (window.__TAURI__) {
+                            success = await window.__TAURI__.core.invoke('restore_cache', { target: target });
                         } else {
-                            const restoreRes = await fetch(`/api/restore-cache?target=${encodeURIComponent(target)}`);
+                            const restoreRes = await fetch(`http://localhost:3000/api/restore-cache?target=${encodeURIComponent(target)}`);
                             const restoreData = await restoreRes.json();
                             success = restoreData.success;
                         }
@@ -232,24 +246,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 let success = false;
                 let error = '';
 
-                if (window.electronAPI) {
-                    const res = await window.electronAPI.buildGraph(buildPayload);
-                    // Standardize result. Controller returns 'data' on success, or throws.
-                    // Actually buildGraph returns data directly. If it throws, we catch it.
-                    success = true; 
+                // Use fetch for both Tauri sidecar and standard HTTP usage
+                const res = await fetch('http://localhost:3000/api/build', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(buildPayload)
+                });
+                
+                if (res.ok) {
+                    success = true;
                     if (window.loadingManager) window.loadingManager.log(t('notifications.buildSuccess'));
                 } else {
-                    const res = await fetch('/api/build', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(buildPayload)
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        success = true;
-                        if (window.loadingManager) window.loadingManager.log(t('notifications.buildSuccess'));
-                    } else {
-                        error = data.error;
+                    try {
+                        const data = await res.json();
+                        error = data.error || `HTTP ${res.status}`;
+                    } catch(e) {
+                         error = `HTTP ${res.status}: ${res.statusText}`;
                     }
                 }
 

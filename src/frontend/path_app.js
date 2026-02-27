@@ -48,9 +48,9 @@ window.pathApp = {
         this._loadCollapsedNodes(); // New
         
         // Listen for IPC from PathBridge (Godot openReader)
-        if (window.electronAPI && window.electronAPI.on) {
-            // ... existing IPC code ...
-            window.electronAPI.on('path-open-reader', (data) => {
+        if (window.__TAURI__ && window.__TAURI__.event) {
+            window.__TAURI__.event.listen('path-open-reader', (event) => {
+                const data = event.payload;
                 console.log('[PathApp] Received path-open-reader IPC:', data);
                 const nodeId = data.nodeId || data;
                 if (nodeId && window.reader) {
@@ -75,7 +75,7 @@ window.pathApp = {
                     }
                 }
             });
-            console.log('[PathApp] Registered path-open-reader IPC listener');
+            console.log('[PathApp] Registered Tauri path-open-reader event listener');
         }
         
         // Start Loop

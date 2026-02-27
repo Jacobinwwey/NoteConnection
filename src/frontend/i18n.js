@@ -76,9 +76,9 @@ class I18nManager {
             // Notify listeners
             this.notifyListeners(lang);
             
-            // Sync with Backend (Electron) to update Menu
-            if (window.electronAPI && window.electronAPI.setUserLanguage) {
-                window.electronAPI.setUserLanguage(lang);
+            // Sync with Backend (Tauri) to update Menu
+            if (window.__TAURI__) {
+                window.__TAURI__.core.invoke('set_user_language', { lang: lang });
             }
             
             console.log(`[i18n] Language set to: ${lang}`);

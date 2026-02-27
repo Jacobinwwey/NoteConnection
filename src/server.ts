@@ -11,7 +11,7 @@ CrashLogger.initGlobalHandlers();
 
 const PORT = 3000;
 const FRONTEND_DIR = path.join(__dirname, 'frontend');
-const KB_ROOT = path.join(process.cwd(), 'Knowledge_Base');
+let KB_ROOT = path.join(process.cwd(), 'Knowledge_Base');
 
 // CLI Argument Parsing (v0.9.71 Fix)
 const args = process.argv.slice(2);
@@ -447,6 +447,27 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     } catch (error) {
                         console.error(error);
                         CrashLogger.log(error, 'API:POST /api/build');
+                        res.writeHead(500, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: String(error) }));
+                    }
+                });
+            } else if (req.url === '/api/kb-path') {
+                let body = '';
+                req.on('data', chunk => { body += chunk.toString(); });
+                req.on('end', () => {
+                    try {
+                        const { kbPath } = JSON.parse(body);
+                        if (kbPath) {
+                            KB_ROOT = kbPath;
+                            console.log(`[API] Knowledge Base Root updated to: ${KB_ROOT}`);
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ success: true, kbPath: KB_ROOT }));
+                        } else {
+                            res.writeHead(400, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ success: false, error: 'Missing kbPath' }));
+                        }
+                    } catch (error) {
+                        console.error(error);
                         res.writeHead(500, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ success: false, error: String(error) }));
                     }
