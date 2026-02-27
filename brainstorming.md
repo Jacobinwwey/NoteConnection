@@ -669,3 +669,92 @@ The `tree_path_mockup.html` introduces a fundamentally different paradigm:
 
 - **规则**: 如果用户想要深入探索某个非主干节点，必须将其设为新的中心节点（长按导航）。
 - **状态保留**: 切换中心时，保留原始树的展开状态。之前已展开的节点保持展开，即使新布局使其成为非主干节点。
+
+---
+
+## Session 8: Architecture Unification — Single Window Design
+
+**Date**: 2026-02-27
+
+### 1. The Problem
+
+The current architecture runs **two separate processes** (Electron + Godot) with two separate windows. This creates:
+
+- Split debugging (Godot console vs Electron DevTools)
+- Two windows to manage simultaneously
+- WebSocket bridge latency/complexity
+- Packaging complexity (Electron-builder + Capacitor + Godot binary)
+
+### 2. Feasibility Analysis (Approaches Evaluated)
+
+| Approach                                               | Verdict | Blocker                                  |
+| ------------------------------------------------------ | ------- | ---------------------------------------- |
+| Plan A: Godot shell + single WebView for all platforms | ❌      | No single WebView covers Win+Android+Web |
+| B1: Godot WASM in Electron                             | ❌      | Loses Vulkan (WebGL2 only in WASM)       |
+| B2: Win32 HWND embedding                               | ❌      | Windows-only, fragile with Chromium      |
+| B3+: Electron shell + Godot child process              | ⚠️      | Still dual window                        |
+| **Revised A: Godot shell + platform-specific WebView** | **✅**  | **None — all platforms covered**         |
+
+**Key Breakthrough**: The Web target doesn't need Godot at all. Using **different WebView plugins per platform** enables true single window.
+
+### 3. Confirmed Design: Revised Plan A — Godot as Single Window
+
+| Platform          | Shell | Vulkan          | Web Frontend                           |
+| ----------------- | ----- | --------------- | -------------------------------------- |
+| **Desktop (Win)** | Godot | ✅ Native       | `godot-webview` (Chromium GDExtension) |
+| **Android**       | Godot | ✅ Mobile       | Android WebView plugin                 |
+| **Web**           | None  | ❌ Canvas/WebGL | Pure HTML/JS                           |
+
+**Architecture**:
+
+- Godot is the single window on all native platforms
+- Vulkan viewport renders Path/Tree Mode (10K-50K nodes)
+- WebView panel displays Graph Mode, Reader, Analysis (existing HTML/CSS/JS)
+- Node.js backend runs as child process spawned by Godot
+- All logs (Godot + Node.js stdout) unified in single console
+
+### 4. Decision Log
+
+| #   | Decision                     | Why                                                                |
+| --- | ---------------------------- | ------------------------------------------------------------------ |
+| 1   | Vulkan non-negotiable        | 10K-50K nodes require native GPU                                   |
+| 2   | Platform-specific WebView OK | Web target separate; Desktop + Android each have working plugins   |
+| 3   | Godot as primary shell       | Achieves single window, handles EXE + APK export natively          |
+| 4   | Node.js as child process     | Preserves existing backend code                                    |
+| 5   | Gradual GDScript migration   | WebView runs existing frontend now, migrate to native UI over time |
+
+### 5. Implementation Phases
+
+| Phase   | What                                                                        | Effort    |
+| ------- | --------------------------------------------------------------------------- | --------- |
+| Phase 1 | Godot shell + `godot-webview` integration + Node.js child process (Desktop) | 🟡 Medium |
+| Phase 2 | Unified logging (`debug_bridge.gd` + Node.js stdout capture)                | 🟢 Small  |
+| Phase 3 | Packaging (Godot export for Windows EXE)                                    | 🟡 Medium |
+| Phase 4 | Android APK (Godot export + Android WebView plugin)                         | 🔴 Large  |
+| Phase 5 | Web static deployment (pure HTML/JS)                                        | 🟡 Medium |
+
+---
+
+## 会话 8：架构统一 — 单窗口设计
+
+**日期**: 2026-02-27
+
+### 1. 问题
+
+当前架构运行两个独立进程（Electron + Godot），产生两个窗口：调试分离、双窗口管理、WebSocket 桥接延迟、打包复杂。
+
+### 2. 确认方案：修订版 Plan A — Godot 作为单一窗口
+
+| 平台        | 壳    | Vulkan | Web 前端                   |
+| ----------- | ----- | ------ | -------------------------- |
+| **桌面**    | Godot | ✅     | `godot-webview` (Chromium) |
+| **Android** | Godot | ✅     | Android WebView 插件       |
+| **Web**     | 无    | ❌     | 纯 HTML/JS                 |
+
+### 3. 决策记录
+
+1. Vulkan 不可协商（10K-50K 节点）
+2. 平台特定 WebView 可接受
+3. Godot 作为主壳实现单窗口
+4. Node.js 作为子进程保留后端代码
+5. 逐步迁移到 GDScript 原生 UI
