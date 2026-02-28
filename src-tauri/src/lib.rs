@@ -184,35 +184,20 @@ pub fn run() {
                 }
             });
             
-            // Spawn Godot sidecar
-            if let Ok(godot_command) = app.shell().sidecar("godot") {
-                tauri::async_runtime::spawn(async move {
-                    match godot_command.spawn() {
-                        Ok((mut rx, _child)) => {
-                            println!("[Rust] Successfully spawned Godot Sidecar.");
-                            while let Some(event) = rx.recv().await {
-                                match event {
-                                    CommandEvent::Stdout(line) => {
-                                        println!("[Godot Sidecar]: {}", String::from_utf8_lossy(&line));
-                                    },
-                                    CommandEvent::Stderr(line) => {
-                                        eprintln!("[Godot Sidecar Error]: {}", String::from_utf8_lossy(&line));
-                                    },
-                                    CommandEvent::Terminated(payload) => {
-                                        println!("[Godot Sidecar Terminated]: {:?}", payload);
-                                    },
-                                    _ => {}
-                                }
-                            }
-                        },
-                        Err(e) => {
-                            eprintln!("[Rust] Godot sidecar failed to spawn: {}. (Expected if unbuilt/missing)", e);
-                        }
+            // Spawn Godot process (User's local executable)
+            tauri::async_runtime::spawn(async move {
+                let godot_exe = "E:\\网页下载\\Godot_v4.6-stable_win64_console.exe";
+                let project_path = "E:\\Knowledge_project\\NoteConnection_app\\path_mode";
+                
+                match std::process::Command::new(godot_exe).args(["--path", project_path]).spawn() {
+                    Ok(_) => {
+                        println!("[Rust] Successfully spawned local Godot Application.");
+                    },
+                    Err(e) => {
+                        eprintln!("[Rust] Failed to spawn Godot application at {}: {}", godot_exe, e);
                     }
-                });
-            } else {
-                 eprintln!("[Rust] Could not find 'godot' sidecar configuration.");
-            }
+                }
+            });
             
             Ok(())
         })
