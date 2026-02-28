@@ -186,10 +186,22 @@ pub fn run() {
             
             // Spawn Godot process (User's local executable)
             tauri::async_runtime::spawn(async move {
-                let godot_exe = "E:\\网页下载\\Godot_v4.6-stable_win64_console.exe";
+                let godot_exe = "E:\\网页下载\\Godot_v4.6-stable_win64.exe";
                 let project_path = "E:\\Knowledge_project\\NoteConnection_app\\path_mode";
                 
-                match std::process::Command::new(godot_exe).args(["--path", project_path]).spawn() {
+                #[cfg(windows)]
+                use std::os::windows::process::CommandExt;
+                
+                let mut cmd = std::process::Command::new(godot_exe);
+                cmd.args(["--path", project_path]);
+                
+                #[cfg(windows)]
+                {
+                    const CREATE_NO_WINDOW: u32 = 0x08000000;
+                    cmd.creation_flags(CREATE_NO_WINDOW);
+                }
+                
+                match cmd.spawn() {
                     Ok(_) => {
                         println!("[Rust] Successfully spawned local Godot Application.");
                     },
