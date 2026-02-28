@@ -189,17 +189,17 @@ pub fn run() {
                 let godot_exe = "E:\\网页下载\\Godot_v4.6-stable_win64.exe";
                 let project_path = "E:\\Knowledge_project\\NoteConnection_app\\path_mode";
                 
-                #[cfg(windows)]
-                use std::os::windows::process::CommandExt;
+                #[cfg(target_os = "windows")]
+                let mut cmd = std::process::Command::new("cmd");
                 
+                #[cfg(target_os = "windows")]
+                cmd.args(["/c", "start", "\"\"", godot_exe, "--path", project_path]);
+                
+                #[cfg(not(target_os = "windows"))]
                 let mut cmd = std::process::Command::new(godot_exe);
-                cmd.args(["--path", project_path]);
                 
-                #[cfg(windows)]
-                {
-                    const DETACHED_PROCESS: u32 = 0x00000008;
-                    cmd.creation_flags(DETACHED_PROCESS);
-                }
+                #[cfg(not(target_os = "windows"))]
+                cmd.args(["--path", project_path]);
                 
                 match cmd.spawn() {
                     Ok(_) => {
