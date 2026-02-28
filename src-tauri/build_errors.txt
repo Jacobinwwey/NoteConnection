@@ -1,0 +1,387 @@
+    Checking npm v0.1.0 (E:\Knowledge_project\NoteConnection_app\src-tauri)
+warning: unused import: `Manager`
+ --> src\lib.rs:5:24
+  |
+5 | use tauri::{AppHandle, Manager};
+  |                        ^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error[E0277]: the trait bound `AppHandle: tauri_runtime::Runtime<EventLoopMessage>` is not satisfied
+    --> src\lib.rs:45:61
+     |
+  45 | fn build_menu(app: &AppHandle, lang: &str) -> tauri::Result<tauri::menu::Menu<AppHandle>> {
+     |                                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `tauri_runtime::Runtime<EventLoopMessage>` is not implemented for `AppHandle`
+     |
+help: the trait `tauri_runtime::Runtime<T>` is implemented for `tauri_runtime_wry::Wry<T>`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-runtime-wry-2.10.0\src\lib.rs:2827:1
+     |
+2827 | impl<T: UserEvent> Runtime<T> for Wry<T> {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = note: required for `AppHandle` to implement `tauri::Runtime`
+note: required by a bound in `tauri::menu::Menu`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.10.2\src\menu\mod.rs:144:1
+     |
+ 144 | / gen_wrappers!(
+ 145 | |   /// A type that is either a menu bar on the window
+ 146 | |   /// on Windows and Linux or as a global menu in the menubar on macOS.
+ 147 | |   ///
+...    |
+ 151 | |   Menu(MenuInner),
+     | |   ---- required by a bound in this struct
+...    |
+ 164 | |   IconMenuItem(IconMenuItemInner, Icon)
+ 165 | | );
+     | |_^ required by this bound in `Menu`
+     = note: this error originates in the macro `gen_wrappers` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `AppHandle: tauri_runtime::Runtime<EventLoopMessage>` is not satisfied
+    --> src\lib.rs:52:21
+     |
+  52 |     let quit_item = PredefinedMenuItem::quit(app, Some(if lang == "zh" { "閫€鍑? } else { "Quit" }))?;
+     |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `tauri_runtime::Runtime<EventLoopMessage>` is not implemented for `AppHandle`
+     |
+help: the trait `tauri_runtime::Runtime<T>` is implemented for `tauri_runtime_wry::Wry<T>`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-runtime-wry-2.10.0\src\lib.rs:2827:1
+     |
+2827 | impl<T: UserEvent> Runtime<T> for Wry<T> {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = note: required for `AppHandle` to implement `tauri::Runtime`
+note: required by a bound in `tauri::menu::Menu`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.10.2\src\menu\mod.rs:144:1
+     |
+ 144 | / gen_wrappers!(
+ 145 | |   /// A type that is either a menu bar on the window
+ 146 | |   /// on Windows and Linux or as a global menu in the menubar on macOS.
+ 147 | |   ///
+...    |
+ 151 | |   Menu(MenuInner),
+     | |   ---- required by a bound in this struct
+...    |
+ 164 | |   IconMenuItem(IconMenuItemInner, Icon)
+ 165 | | );
+     | |_^ required by this bound in `Menu`
+     = note: this error originates in the macro `gen_wrappers` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `AppHandle: tauri_runtime::Runtime<EventLoopMessage>` is not satisfied
+    --> src\lib.rs:53:21
+     |
+  53 | ... = MenuItemBuilder::with_id("change_kb", if lang == "zh" { "鏇存敼鐭ヨ瘑搴?.." } else { "Change KB..." }).accelerator("CmdOrCtrl+O").build(app)?;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `tauri_runtime::Runtime<EventLoopMessage>` is not implemented for `AppHandle`
+     |
+help: the trait `tauri_runtime::Runtime<T>` is implemented for `tauri_runtime_wry::Wry<T>`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-runtime-wry-2.10.0\src\lib.rs:2827:1
+     |
+2827 | impl<T: UserEvent> Runtime<T> for Wry<T> {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = note: required for `AppHandle` to implement `tauri::Runtime`
+note: required by a bound in `tauri::menu::Menu`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.10.2\src\menu\mod.rs:144:1
+     |
+ 144 | / gen_wrappers!(
+ 145 | |   /// A type that is either a menu bar on the window
+ 146 | |   /// on Windows and Linux or as a global menu in the menubar on macOS.
+ 147 | |   ///
+...    |
+ 151 | |   Menu(MenuInner),
+     | |   ---- required by a bound in this struct
+...    |
+ 164 | |   IconMenuItem(IconMenuItemInner, Icon)
+ 165 | | );
+     | |_^ required by this bound in `Menu`
+     = note: this error originates in the macro `gen_wrappers` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `AppHandle: tauri_runtime::Runtime<EventLoopMessage>` is not satisfied
+    --> src\lib.rs:54:20
+     |
+  54 | ...t_kb = MenuItemBuilder::with_id("reset_kb", if lang == "zh" { "閲嶇疆涓洪粯璁や綅缃? } else { "Reset to Default Location" }).build(app)?;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `tauri_runtime::Runtime<EventLoopMessage>` is not implemented for `AppHandle`
+     |
+help: the trait `tauri_runtime::Runtime<T>` is implemented for `tauri_runtime_wry::Wry<T>`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-runtime-wry-2.10.0\src\lib.rs:2827:1
+     |
+2827 | impl<T: UserEvent> Runtime<T> for Wry<T> {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = note: required for `AppHandle` to implement `tauri::Runtime`
+note: required by a bound in `tauri::menu::Menu`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.10.2\src\menu\mod.rs:144:1
+     |
+ 144 | / gen_wrappers!(
+ 145 | |   /// A type that is either a menu bar on the window
+ 146 | |   /// on Windows and Linux or as a global menu in the menubar on macOS.
+ 147 | |   ///
+...    |
+ 151 | |   Menu(MenuInner),
+     | |   ---- required by a bound in this struct
+...    |
+ 164 | |   IconMenuItem(IconMenuItemInner, Icon)
+ 165 | | );
+     | |_^ required by this bound in `Menu`
+     = note: this error originates in the macro `gen_wrappers` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `AppHandle: tauri_runtime::Runtime<EventLoopMessage>` is not satisfied
+    --> src\lib.rs:56:24
+     |
+  56 |       let file_submenu = SubmenuBuilder::new(app, file)
+     |  ________________________^
+  57 | |         .item(&change_kb)
+  58 | |         .item(&reset_kb)
+  59 | |         .separator()
+  60 | |         .item(&quit_item)
+  61 | |         .build()?;
+     | |_________________^ the trait `tauri_runtime::Runtime<EventLoopMessage>` is not implemented for `AppHandle`
+     |
+help: the trait `tauri_runtime::Runtime<T>` is implemented for `tauri_runtime_wry::Wry<T>`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-runtime-wry-2.10.0\src\lib.rs:2827:1
+     |
+2827 | impl<T: UserEvent> Runtime<T> for Wry<T> {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = note: required for `AppHandle` to implement `tauri::Runtime`
+note: required by a bound in `tauri::menu::Menu`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.10.2\src\menu\mod.rs:144:1
+     |
+ 144 | / gen_wrappers!(
+ 145 | |   /// A type that is either a menu bar on the window
+ 146 | |   /// on Windows and Linux or as a global menu in the menubar on macOS.
+ 147 | |   ///
+...    |
+ 151 | |   Menu(MenuInner),
+     | |   ---- required by a bound in this struct
+...    |
+ 164 | |   IconMenuItem(IconMenuItemInner, Icon)
+ 165 | | );
+     | |_^ required by this bound in `Menu`
+     = note: this error originates in the macro `gen_wrappers` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `AppHandle: tauri_runtime::Runtime<EventLoopMessage>` is not satisfied
+    --> src\lib.rs:63:20
+     |
+  63 |     let doc_item = MenuItemBuilder::with_id("docs", if lang == "zh" { "鏂囨。" } else { "Documentation" }).build(app)?;
+     |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `tauri_runtime::Runtime<EventLoopMessage>` is not implemented for `AppHandle`
+     |
+help: the trait `tauri_runtime::Runtime<T>` is implemented for `tauri_runtime_wry::Wry<T>`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-runtime-wry-2.10.0\src\lib.rs:2827:1
+     |
+2827 | impl<T: UserEvent> Runtime<T> for Wry<T> {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = note: required for `AppHandle` to implement `tauri::Runtime`
+note: required by a bound in `tauri::menu::Menu`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.10.2\src\menu\mod.rs:144:1
+     |
+ 144 | / gen_wrappers!(
+ 145 | |   /// A type that is either a menu bar on the window
+ 146 | |   /// on Windows and Linux or as a global menu in the menubar on macOS.
+ 147 | |   ///
+...    |
+ 151 | |   Menu(MenuInner),
+     | |   ---- required by a bound in this struct
+...    |
+ 164 | |   IconMenuItem(IconMenuItemInner, Icon)
+ 165 | | );
+     | |_^ required by this bound in `Menu`
+     = note: this error originates in the macro `gen_wrappers` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `AppHandle: tauri_runtime::Runtime<EventLoopMessage>` is not satisfied
+    --> src\lib.rs:64:22
+     |
+  64 |     let about_item = MenuItemBuilder::with_id("about", if lang == "zh" { "鍏充簬" } else { "About" }).build(app)?;
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `tauri_runtime::Runtime<EventLoopMessage>` is not implemented for `AppHandle`
+     |
+help: the trait `tauri_runtime::Runtime<T>` is implemented for `tauri_runtime_wry::Wry<T>`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-runtime-wry-2.10.0\src\lib.rs:2827:1
+     |
+2827 | impl<T: UserEvent> Runtime<T> for Wry<T> {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = note: required for `AppHandle` to implement `tauri::Runtime`
+note: required by a bound in `tauri::menu::Menu`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.10.2\src\menu\mod.rs:144:1
+     |
+ 144 | / gen_wrappers!(
+ 145 | |   /// A type that is either a menu bar on the window
+ 146 | |   /// on Windows and Linux or as a global menu in the menubar on macOS.
+ 147 | |   ///
+...    |
+ 151 | |   Menu(MenuInner),
+     | |   ---- required by a bound in this struct
+...    |
+ 164 | |   IconMenuItem(IconMenuItemInner, Icon)
+ 165 | | );
+     | |_^ required by this bound in `Menu`
+     = note: this error originates in the macro `gen_wrappers` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `AppHandle: tauri_runtime::Runtime<EventLoopMessage>` is not satisfied
+    --> src\lib.rs:66:24
+     |
+  66 |       let help_submenu = SubmenuBuilder::new(app, help)
+     |  ________________________^
+  67 | |         .item(&doc_item)
+  68 | |         .separator()
+  69 | |         .item(&about_item)
+  70 | |         .build()?;
+     | |_________________^ the trait `tauri_runtime::Runtime<EventLoopMessage>` is not implemented for `AppHandle`
+     |
+help: the trait `tauri_runtime::Runtime<T>` is implemented for `tauri_runtime_wry::Wry<T>`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-runtime-wry-2.10.0\src\lib.rs:2827:1
+     |
+2827 | impl<T: UserEvent> Runtime<T> for Wry<T> {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = note: required for `AppHandle` to implement `tauri::Runtime`
+note: required by a bound in `tauri::menu::Menu`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.10.2\src\menu\mod.rs:144:1
+     |
+ 144 | / gen_wrappers!(
+ 145 | |   /// A type that is either a menu bar on the window
+ 146 | |   /// on Windows and Linux or as a global menu in the menubar on macOS.
+ 147 | |   ///
+...    |
+ 151 | |   Menu(MenuInner),
+     | |   ---- required by a bound in this struct
+...    |
+ 164 | |   IconMenuItem(IconMenuItemInner, Icon)
+ 165 | | );
+     | |_^ required by this bound in `Menu`
+     = note: this error originates in the macro `gen_wrappers` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0308]: mismatched types
+  --> src\lib.rs:72:5
+   |
+45 |   fn build_menu(app: &AppHandle, lang: &str) -> tauri::Result<tauri::menu::Menu<AppHandle>> {
+   |                                                 ------------------------------------------- expected `Result<tauri::menu::Menu<AppHandle>, tauri::Error>` because of return type
+...
+72 | /     MenuBuilder::new(app)
+73 | |         .item(&file_submenu)
+74 | |         .item(&help_submenu)
+75 | |         .build()
+   | |________________^ expected `Result<Menu<AppHandle>, Error>`, found `Result<Menu<Wry<EventLoopMessage>>, ...>`
+   |
+   = note: expected enum `Result<tauri::menu::Menu<AppHandle>, _>`
+              found enum `Result<tauri::menu::Menu<tauri_runtime_wry::Wry<EventLoopMessage>>, _>`
+
+error[E0277]: the trait bound `AppHandle: tauri_runtime::Runtime<EventLoopMessage>` is not satisfied
+    --> src\lib.rs:81:23
+     |
+  81 |     if let Ok(menu) = build_menu(&app, &lang) {
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^ the trait `tauri_runtime::Runtime<EventLoopMessage>` is not implemented for `AppHandle`
+     |
+help: the trait `tauri_runtime::Runtime<T>` is implemented for `tauri_runtime_wry::Wry<T>`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-runtime-wry-2.10.0\src\lib.rs:2827:1
+     |
+2827 | impl<T: UserEvent> Runtime<T> for Wry<T> {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = note: required for `AppHandle` to implement `tauri::Runtime`
+note: required by a bound in `tauri::menu::Menu`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.10.2\src\menu\mod.rs:144:1
+     |
+ 144 | / gen_wrappers!(
+ 145 | |   /// A type that is either a menu bar on the window
+ 146 | |   /// on Windows and Linux or as a global menu in the menubar on macOS.
+ 147 | |   ///
+...    |
+ 151 | |   Menu(MenuInner),
+     | |   ---- required by a bound in this struct
+...    |
+ 164 | |   IconMenuItem(IconMenuItemInner, Icon)
+ 165 | | );
+     | |_^ required by this bound in `Menu`
+     = note: this error originates in the macro `gen_wrappers` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0308]: mismatched types
+    --> src\lib.rs:82:30
+     |
+  82 |         let _ = app.set_menu(menu);
+     |                     -------- ^^^^ expected `Menu<Wry<EventLoopMessage>>`, found `Menu<AppHandle>`
+     |                     |
+     |                     arguments to this method are incorrect
+     |
+     = note: expected struct `tauri::menu::Menu<tauri_runtime_wry::Wry<EventLoopMessage>>`
+                found struct `tauri::menu::Menu<AppHandle>`
+note: method defined here
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.10.2\src\app.rs:1115:1
+     |
+1115 | shared_app_impl!(AppHandle<R>);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = note: this error originates in the macro `shared_app_impl` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `AppHandle: tauri_runtime::Runtime<EventLoopMessage>` is not satisfied
+    --> src\lib.rs:124:31
+     |
+ 124 |             if let Ok(menu) = build_menu(app.handle(), "en") {
+     |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `tauri_runtime::Runtime<EventLoopMessage>` is not implemented for `AppHandle`
+     |
+help: the trait `tauri_runtime::Runtime<T>` is implemented for `tauri_runtime_wry::Wry<T>`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-runtime-wry-2.10.0\src\lib.rs:2827:1
+     |
+2827 | impl<T: UserEvent> Runtime<T> for Wry<T> {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = note: required for `AppHandle` to implement `tauri::Runtime`
+note: required by a bound in `tauri::menu::Menu`
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.10.2\src\menu\mod.rs:144:1
+     |
+ 144 | / gen_wrappers!(
+ 145 | |   /// A type that is either a menu bar on the window
+ 146 | |   /// on Windows and Linux or as a global menu in the menubar on macOS.
+ 147 | |   ///
+...    |
+ 151 | |   Menu(MenuInner),
+     | |   ---- required by a bound in this struct
+...    |
+ 164 | |   IconMenuItem(IconMenuItemInner, Icon)
+ 165 | | );
+     | |_^ required by this bound in `Menu`
+     = note: this error originates in the macro `gen_wrappers` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0308]: mismatched types
+    --> src\lib.rs:125:38
+     |
+ 125 |                 let _ = app.set_menu(menu);
+     |                             -------- ^^^^ expected `Menu<Wry<EventLoopMessage>>`, found `Menu<AppHandle>`
+     |                             |
+     |                             arguments to this method are incorrect
+     |
+     = note: expected struct `tauri::menu::Menu<tauri_runtime_wry::Wry<EventLoopMessage>>`
+                found struct `tauri::menu::Menu<AppHandle>`
+note: method defined here
+    --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.10.2\src\app.rs:1114:1
+     |
+1114 | shared_app_impl!(App<R>);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^
+     = note: this error originates in the macro `shared_app_impl` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0599]: no method named `emit` found for reference `&AppHandle` in the current scope
+   --> src\lib.rs:138:48
+    |
+138 | ...                   let _ = app_handle.emit("kb-path-changed", path_str);
+    |                                          ^^^^
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `exit` with a similar name, but with different arguments
+   --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.10.2\src\app.rs:532:3
+    |
+532 |   pub fn exit(&self, exit_code: i32) {
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: trait `Emitter` which provides `emit` is implemented but not in scope; perhaps you want to import it
+    |
+  1 + use tauri::Emitter;
+    |
+
+error[E0599]: no method named `emit` found for reference `&AppHandle` in the current scope
+   --> src\lib.rs:145:44
+    |
+145 |                         let _ = app_handle.emit("kb-path-changed", default_path);
+    |                                            ^^^^
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `exit` with a similar name, but with different arguments
+   --> C:\Users\jacob\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.10.2\src\app.rs:532:3
+    |
+532 |   pub fn exit(&self, exit_code: i32) {
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: trait `Emitter` which provides `emit` is implemented but not in scope; perhaps you want to import it
+    |
+  1 + use tauri::Emitter;
+    |
+
+Some errors have detailed explanations: E0277, E0308, E0599.
+For more information about an error, try `rustc --explain E0277`.
+warning: `npm` (lib) generated 1 warning
+error: could not compile `npm` (lib) due to 15 previous errors; 1 warning emitted

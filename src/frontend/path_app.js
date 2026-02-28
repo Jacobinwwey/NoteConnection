@@ -47,37 +47,7 @@ window.pathApp = {
         this._loadCompletedNodes();
         this._loadCollapsedNodes(); // New
         
-        // Listen for IPC from PathBridge (Godot openReader)
-        if (window.__TAURI__ && window.__TAURI__.event) {
-            window.__TAURI__.event.listen('path-open-reader', (event) => {
-                const data = event.payload;
-                console.log('[PathApp] Received path-open-reader IPC:', data);
-                const nodeId = data.nodeId || data;
-                if (nodeId && window.reader) {
-                    // Always try to find full node data from source (graphData) first to ensure metadata exists
-                    const sourceData = (typeof graphData !== 'undefined') ? graphData : window.graphData;
-                    let fullNode = null;
-                    
-                    if (sourceData && sourceData.nodes) {
-                        fullNode = sourceData.nodes.find(n => n.id === nodeId);
-                    }
-                    
-                    // Fallback to local nodes if not found (unlikely but safe)
-                    if (!fullNode) {
-                        fullNode = this.nodes.find(n => n.id === nodeId);
-                    }
 
-                    if (fullNode) {
-                        window.reader.open(fullNode);
-                    } else {
-                        // Fallback: try to open by ID
-                        window.reader.open(nodeId);
-                    }
-                }
-            });
-            console.log('[PathApp] Registered Tauri path-open-reader event listener');
-        }
-        
         // Start Loop
         this.animate();
         
@@ -102,6 +72,31 @@ window.pathApp = {
                 if (msg.type === 'nodeClick') {
                     console.log('[PathApp] Remote node click:', msg.payload?.nodeId);
                     this.switchCentral(msg.payload?.nodeId || msg.payload);
+                } else if (msg.type === 'openReader') {
+                    const data = msg.payload || msg;
+                    console.log('[PathApp] Remote open reader:', data);
+                    const nodeId = data.nodeId || data;
+                    if (nodeId && window.reader) {
+                        // Always try to find full node data from source (graphData) first to ensure metadata exists
+                        const sourceData = (typeof graphData !== 'undefined') ? graphData : window.graphData;
+                        let fullNode = null;
+                        
+                        if (sourceData && sourceData.nodes) {
+                            fullNode = sourceData.nodes.find(n => n.id === nodeId);
+                        }
+                        
+                        // Fallback to local nodes if not found (unlikely but safe)
+                        if (!fullNode) {
+                            fullNode = this.nodes.find(n => n.id === nodeId);
+                        }
+
+                        if (fullNode) {
+                            window.reader.open(fullNode);
+                        } else {
+                            // Fallback: try to open by ID
+                            window.reader.open(nodeId);
+                        }
+                    }
                 } else if (msg.type === 'switchCenter') {
                     console.log('[PathApp] Remote switch center:', msg.payload?.newCenterId);
                     this.switchCentral(msg.payload?.newCenterId);

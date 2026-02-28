@@ -1,12 +1,10 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import { BrowserWindow } from 'electron';
 
 export class PathBridge {
     private wss: WebSocketServer;
     private clients: Set<WebSocket> = new Set();
     private port: number;
     private currentPath: any = null;
-    private mainWindow: BrowserWindow | null = null;
 
     constructor(port: number = 9876) {
         this.port = port;
@@ -34,12 +32,7 @@ export class PathBridge {
         });
     }
 
-    /**
-     * Set the main BrowserWindow for IPC communication
-     */
-    public setMainWindow(win: BrowserWindow | null) {
-        this.mainWindow = win;
-    }
+
 
     private handleMessage(data: any, sender: WebSocket) {
         console.log(`[PathBridge] Received: ${data.type}`);
@@ -77,8 +70,6 @@ export class PathBridge {
                 const nodeId = data.payload?.nodeId || data.payload;
                 console.log(`[PathBridge] Open reader for: ${nodeId}`);
                 this.broadcast('openReader', data.payload);
-                // Send IPC to Electron renderer to open content panel
-                this.triggerOpenReader(nodeId);
                 break;
 
             case 'unmarkComplete':
@@ -121,18 +112,7 @@ export class PathBridge {
         }
     }
 
-    /**
-     * Trigger Electron renderer to open the content reader
-     */
-    private triggerOpenReader(nodeId: string) {
-        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-            this.mainWindow.webContents.send('path-open-reader', { nodeId });
-            // Ensure window comes to front
-            if (this.mainWindow.isMinimized()) this.mainWindow.restore();
-            this.mainWindow.focus();
-            console.log(`[PathBridge] Sent IPC path-open-reader for: ${nodeId} (Focused Window)`);
-        }
-    }
+
 
     /**
      * Broadcast message to all connected clients

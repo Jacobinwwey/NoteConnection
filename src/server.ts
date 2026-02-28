@@ -5,6 +5,7 @@ import * as path from 'path';
 import * as readline from 'readline';
 import { buildGraph } from './index';
 import { CrashLogger } from './backend/utils/CrashLogger';
+import { PathBridge } from './core/PathBridge';
 
 // Initialize Global Crash Handlers
 CrashLogger.initGlobalHandlers();
@@ -480,6 +481,14 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         server.listen(finalPort, async () => {
             console.log(`Server running at http://localhost:${finalPort}/`);
             console.log(`Knowledge Base Root: ${KB_ROOT}`);
+            
+            // Initialize PathBridge
+            try {
+                new PathBridge(9876);
+                console.log('[Sidecar] PathBridge initialized on port 9876');
+            } catch (e) {
+                console.error(`[Sidecar] Failed to initialize PathBridge:`, e);
+            }
             
             if (hasCliBuild) {
                  console.log('[CLI] Ready.');

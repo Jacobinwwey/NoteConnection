@@ -2,7 +2,7 @@ use tauri_plugin_shell::{ShellExt, process::CommandEvent};
 
 use std::fs;
 use serde_json::Value;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, Emitter};
 use tauri::menu::{MenuBuilder, SubmenuBuilder, MenuItemBuilder, PredefinedMenuItem};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -42,7 +42,7 @@ fn get_user_language() -> Result<String, String> {
      Ok("en".to_string())
 }
 
-fn build_menu(app: &AppHandle, lang: &str) -> tauri::Result<tauri::menu::Menu<AppHandle>> {
+fn build_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>, lang: &str) -> tauri::Result<tauri::menu::Menu<R>> {
     let file = if lang == "zh" { "文件" } else { "File" };
     let edit = if lang == "zh" { "编辑" } else { "Edit" };
     let view = if lang == "zh" { "视图" } else { "View" };
@@ -183,6 +183,36 @@ pub fn run() {
                     }
                 }
             });
+            
+            // Spawn Godot sidecar
+            if let Ok(godot_command) = app.shell().sidecar("godot") {
+                tauri::async_runtime::spawn(async move {
+                    match godot_command.spawn() {
+                        Ok((mut rx, _child)) => {
+                            println!("[Rust] Successfully spawned Godot Sidecar.");
+                            while let Some(event) = rx.recv().await {
+                                match event {
+                                    CommandEvent::Stdout(line) => {
+                                        println!("[Godot Sidecar]: {}", String::from_utf8_lossy(&line));
+                                    },
+                                    CommandEvent::Stderr(line) => {
+                                        eprintln!("[Godot Sidecar Error]: {}", String::from_utf8_lossy(&line));
+                                    },
+                                    CommandEvent::Terminated(payload) => {
+                                        println!("[Godot Sidecar Terminated]: {:?}", payload);
+                                    },
+                                    _ => {}
+                                }
+                            }
+                        },
+                        Err(e) => {
+                            eprintln!("[Rust] Godot sidecar failed to spawn: {}. (Expected if unbuilt/missing)", e);
+                        }
+                    }
+                });
+            } else {
+                 eprintln!("[Rust] Could not find 'godot' sidecar configuration.");
+            }
             
             Ok(())
         })
