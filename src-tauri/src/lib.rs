@@ -197,8 +197,8 @@ pub fn run() {
                 
                 #[cfg(windows)]
                 {
-                    const CREATE_NO_WINDOW: u32 = 0x08000000;
-                    cmd.creation_flags(CREATE_NO_WINDOW);
+                    const DETACHED_PROCESS: u32 = 0x00000008;
+                    cmd.creation_flags(DETACHED_PROCESS);
                 }
                 
                 match cmd.spawn() {
