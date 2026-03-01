@@ -49,9 +49,13 @@ const tooltip = d3.select("body").append("div")
 // Data
 // Handle Mini Build: graphData may be undefined if data.js is excluded
 // Use typeof to avoid ReferenceError
-const graphDataExists = typeof graphData !== 'undefined' && graphData !== null;
-const nodes = (graphDataExists && graphData.nodes) ? graphData.nodes.map(d => Object.create(d)) : [];
-let links = (graphDataExists && graphData.edges) ? graphData.edges.map(d => Object.create(d)) : [];
+const runtimeGraphData =
+    (typeof graphData !== 'undefined' && graphData !== null)
+        ? graphData
+        : ((typeof window !== 'undefined' && window.graphData) ? window.graphData : null);
+const graphDataExists = runtimeGraphData !== null;
+const nodes = (graphDataExists && runtimeGraphData.nodes) ? runtimeGraphData.nodes.map(d => Object.create(d)) : [];
+let links = (graphDataExists && runtimeGraphData.edges) ? runtimeGraphData.edges.map(d => Object.create(d)) : [];
 
 // Log startup mode for diagnostics
 if (!graphDataExists) {

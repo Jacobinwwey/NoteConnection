@@ -6,13 +6,15 @@ import * as readline from 'readline';
 import { buildGraph } from './index';
 import { CrashLogger } from './backend/utils/CrashLogger';
 import { PathBridge } from './core/PathBridge';
+import { resolveRuntimePaths } from './utils/RuntimePaths';
 
 // Initialize Global Crash Handlers
 CrashLogger.initGlobalHandlers();
 
 const PORT = 3000;
-const FRONTEND_DIR = path.join(__dirname, 'frontend');
-let KB_ROOT = path.join(process.cwd(), 'Knowledge_Base');
+const runtimePaths = resolveRuntimePaths(__dirname);
+const FRONTEND_DIR = runtimePaths.frontendDir;
+let KB_ROOT = runtimePaths.kbRoot;
 
 // CLI Argument Parsing (v0.9.71 Fix)
 const args = process.argv.slice(2);
@@ -26,6 +28,10 @@ if (process.env.npm_config_path) {
     hasCliBuild = true;
 }
 if (process.env.npm_config_gpu === 'true' || process.env.npm_config_gpu === '') {
+    cliOptions.enableGPU = true;
+    cliOptions.enableGPULayout = true;
+}
+if (process.env.NOTE_CONNECTION_GPU === 'true' || process.env.NOTE_CONNECTION_GPU === '1') {
     cliOptions.enableGPU = true;
     cliOptions.enableGPULayout = true;
 }
@@ -213,13 +219,16 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     // But /api/folders lists "Knowledge_Base" by default.
                     
                     if (!fs.existsSync(KB_ROOT)) {
-                        fs.mkdirSync(KB_ROOT, { recursive: true });
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ folders: [] }));
+                        return;
                     }
                     const entries = fs.readdirSync(KB_ROOT, { withFileTypes: true });
                     // Filter directories
                     const folders = entries
                         .filter(dirent => dirent.isDirectory())
-                        .map(dirent => dirent.name);
+                        .map(dirent => dirent.name)
+                        .sort((a, b) => a.localeCompare(b));
                     
                     // Also enable "All" option effectively by logic, but here we just list folders.
                     // The frontend can add an "All" option.
@@ -271,6 +280,30 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     res.end(JSON.stringify({ error: String(error) }));
                 }
                 return;
+            }
+
+            // GET any generated graph assets (e.g. data_cli.js, data.js, graph_data.json)
+            if (req.url && (req.url.endsWith('.js') || req.url.endsWith('.json')) && !req.url.startsWith('/api/')) {
+                const urlObj = new URL(req.url, `http://${req.headers.host}`);
+                const filename = path.basename(decodeURIComponent(urlObj.pathname));
+                const filePath = path.join(FRONTEND_DIR, filename);
+                
+                if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+                    const ext = path.extname(filename);
+                    const contentType = ext === '.json' ? 'application/json' : 'application/javascript';
+                    
+                    try {
+                        const content = fs.readFileSync(filePath);
+                        res.writeHead(200, { 'Content-Type': contentType });
+                        res.end(content);
+                        return;
+                    } catch (err) {
+                        res.writeHead(500, { 'Content-Type': contentType });
+                        res.end(`console.error('Failed to load asset: ${String(err)}');`);
+                        return;
+                    }
+                }
+                // Let it fall through to 404 if not found
             }
 
             // GET /api/kb-path — Return current Knowledge Base root path
@@ -459,7 +492,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     try {
                         const { kbPath } = JSON.parse(body);
                         if (kbPath) {
-                            KB_ROOT = kbPath;
+                            KB_ROOT = path.resolve(kbPath);
                             console.log(`[API] Knowledge Base Root updated to: ${KB_ROOT}`);
                             res.writeHead(200, { 'Content-Type': 'application/json' });
                             res.end(JSON.stringify({ success: true, kbPath: KB_ROOT }));
@@ -481,6 +514,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         server.listen(finalPort, async () => {
             console.log(`Server running at http://localhost:${finalPort}/`);
             console.log(`Knowledge Base Root: ${KB_ROOT}`);
+            console.log(`Frontend Root: ${FRONTEND_DIR}`);
             
             // Initialize PathBridge
             try {

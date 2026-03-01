@@ -1,8 +1,8 @@
 import { RawFile } from '../FileLoader';
-import * as path from 'path';
 import * as os from 'os';
 import { Worker } from 'worker_threads';
 import { config } from '../config';
+import { resolveWorkerRuntimePath } from '../utils/WorkerRuntime';
 
 export interface CooccurrenceMetrics {
     count: number;
@@ -53,16 +53,14 @@ export class StatisticalAnalyzer {
         const chunkSize = Math.ceil(files.length / workerCount);
         
         const workerPromises: Promise<Record<string, string[]>>[] = [];
-        // Worker path resolution (handling ts-node vs dist)
-        const isTsNode = path.extname(__filename) === '.ts' || process.argv.some(arg => arg.includes('ts-node'));
-        
-        let actualWorkerPath: string;
-        if (isTsNode) {
-            // Running via ts-node: src/backend/algorithms -> src/backend/workers
-            actualWorkerPath = path.join(__dirname, '..', 'workers', 'statisticalWorker.ts');
-        } else {
-            // Running from compiled dist: dist/src/backend/algorithms -> dist/src/backend/workers
-            actualWorkerPath = path.join(__dirname, '..', 'workers', 'statisticalWorker.js');
+        const workerRuntime = resolveWorkerRuntimePath(__dirname, '../workers/statisticalWorker.ts');
+        const actualWorkerPath = workerRuntime.workerPath;
+        const isTsNode = workerRuntime.isTsNode;
+
+        if (!actualWorkerPath) {
+            console.warn('[StatisticalAnalyzer] Worker script not found. Falling back to sequential extraction.');
+            console.warn('[StatisticalAnalyzer] Checked paths:', workerRuntime.candidates);
+            return this.runSequentialTermExtraction(files, terms);
         }
 
         for (let i = 0; i < workerCount; i++) {
@@ -100,7 +98,13 @@ export class StatisticalAnalyzer {
             workerPromises.push(p);
         }
 
-        const results = await Promise.all(workerPromises);
+        let results: Record<string, string[]>[];
+        try {
+            results = await Promise.all(workerPromises);
+        } catch (error) {
+            console.warn('[StatisticalAnalyzer] Parallel extraction failed. Falling back to sequential extraction.', error);
+            return this.runSequentialTermExtraction(files, terms);
+        }
         
         // Merge results efficiently
         const finalMap: Record<string, string[]> = {};
@@ -108,6 +112,26 @@ export class StatisticalAnalyzer {
             Object.assign(finalMap, chunkResult);
         }
         return finalMap;
+    }
+
+    private static runSequentialTermExtraction(files: RawFile[], terms: string[]): Record<string, string[]> {
+        const normalizedTerms = terms.map(term => ({ raw: term, lower: term.toLowerCase() }));
+        const result: Record<string, string[]> = {};
+
+        files.forEach(file => {
+            const content = file.content.toLowerCase();
+            const matchedTerms: string[] = [];
+
+            normalizedTerms.forEach(term => {
+                if (content.includes(term.lower)) {
+                    matchedTerms.push(term.raw);
+                }
+            });
+
+            result[file.filename] = matchedTerms;
+        });
+
+        return result;
     }
 
     /**

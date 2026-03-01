@@ -10,8 +10,10 @@
     "start": "node --max-old-space-size=12288 -r ts-node/register src/server.ts",
     "start:prod": "node dist/src/server.js",
     "tauri": "tauri",
-    "tauri:dev": "npm run build && npm run build:sidecar && npx kill-port 3000 & node dist/src/server.js & npx tauri dev",
-    "tauri:dev:mini": "npm run build:mini && npm run build:sidecar && npx kill-port 3000 & node dist/src/server.js & npx tauri dev",
+    "tauri:dev": "npm run build && npm run build:sidecar && npx kill-port 3000 && npx tauri dev",
+    "tauri:dev:mini": "npm run build:mini && npm run build:sidecar && npx kill-port 3000 && npx tauri dev",
+    "tauri:dev:gpu": "set NOTE_CONNECTION_GPU=1&& npm run tauri:dev",
+    "tauri:dev:mini:gpu": "set NOTE_CONNECTION_GPU=1&& npm run tauri:dev:mini",
     "tauri:build": "npm run build && npm run build:sidecar && npx tauri build",
     "electron:dev": "npm run build && electron .",
     "electron:dev:mini": "npm run build:mini && electron .",
@@ -26,6 +28,9 @@
     "test": "jest"
   },
   "pkg": {
+    "scripts": [
+      "dist/src/backend/workers/**/*.js"
+    ],
     "assets": [
       "dist/src/**/*",
       "data.js",

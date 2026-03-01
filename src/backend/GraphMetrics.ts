@@ -1,9 +1,9 @@
 import { Graph } from '../core/Graph';
 import { NoteNode } from '../core/types';
 import { Worker } from 'worker_threads';
-import * as path from 'path';
 import * as os from 'os';
 import { config } from './config';
+import { resolveWorkerRuntimePath } from './utils/WorkerRuntime';
 
 export class GraphMetrics {
     /**
@@ -40,12 +40,15 @@ export class GraphMetrics {
         const chunkSize = Math.ceil(nodeCount / workerCount);
         const workerPromises: Promise<Record<string, number>>[] = [];
         
-        // Resolve worker path
-        const workerPath = path.join(__dirname, 'workers', 'betweennessWorker.ts');
-        const isTsNode = path.extname(__filename) === '.ts';
-        const actualWorkerPath = isTsNode 
-            ? workerPath 
-            : workerPath.replace('.ts', '.js');
+        const workerRuntime = resolveWorkerRuntimePath(__dirname, 'workers/betweennessWorker.ts');
+        const actualWorkerPath = workerRuntime.workerPath;
+        const isTsNode = workerRuntime.isTsNode;
+
+        if (!actualWorkerPath) {
+            console.warn('[GraphMetrics] Worker script not found. Falling back to sequential calculation.');
+            console.warn('[GraphMetrics] Checked paths:', workerRuntime.candidates);
+            return this.calculateBetweenness(graph);
+        }
 
         for (let i = 0; i < workerCount; i++) {
             const start = i * chunkSize;

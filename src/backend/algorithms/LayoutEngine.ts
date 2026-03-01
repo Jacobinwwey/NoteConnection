@@ -1,7 +1,7 @@
 import { Graph } from '../../core/Graph';
 import { Worker } from 'worker_threads';
-import * as path from 'path';
 import { PerformanceLogger } from '../utils/PerformanceLogger';
+import { resolveWorkerRuntimePath } from '../utils/WorkerRuntime';
 
 export class LayoutEngine {
     static async computeLayout(graph: Graph, config?: any): Promise<void> {
@@ -12,11 +12,16 @@ export class LayoutEngine {
 
         // If graph is too small, maybe skip? But consistency is good.
         
-        const workerPath = path.join(__dirname, '..', 'workers', 'layoutWorker.ts');
-        const isTsNode = path.extname(__filename) === '.ts';
-        const actualWorkerPath = isTsNode 
-            ? workerPath 
-            : workerPath.replace('.ts', '.js');
+        const workerRuntime = resolveWorkerRuntimePath(__dirname, '../workers/layoutWorker.ts');
+        const actualWorkerPath = workerRuntime.workerPath;
+        const isTsNode = workerRuntime.isTsNode;
+
+        if (!actualWorkerPath) {
+            console.warn('[LayoutEngine] Layout worker not found. Skipping backend layout calculation.');
+            console.warn('[LayoutEngine] Checked paths:', workerRuntime.candidates);
+            PerformanceLogger.end('Backend Layout Calculation');
+            return Promise.resolve();
+        }
         
         console.log(`[LayoutEngine] Spawning layout worker: ${actualWorkerPath}`);
 
@@ -50,6 +55,14 @@ export class LayoutEngine {
             } catch (e) {
                 console.warn('[LayoutEngine] GPU Layout failed or not found. Falling back to Worker.', e);
             }
+        }
+
+        // pkg runtime + d3-force ESM can fail inside worker_threads.
+        // Skip backend layout instead of surfacing a hard runtime error.
+        if ((process as any).pkg) {
+            console.warn('[LayoutEngine] Skipping layout worker in pkg runtime (ESM worker limitation).');
+            PerformanceLogger.end('Backend Layout Calculation');
+            return Promise.resolve();
         }
 
         return new Promise((resolve, reject) => {

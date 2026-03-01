@@ -1,6 +1,53 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Dynamic Script Loader (Cache Busting & Order Guarantee)
-    const loadScript = (src) => {
+    const loadGraphDataFromSidecar = async (src) => {
+        const url = 'http://localhost:3000/' + src + '?v=' + Date.now();
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok) {
+            throw new Error(`Failed to fetch ${src}: HTTP ${response.status}`);
+        }
+
+        const text = await response.text();
+        const trimmed = text.trim();
+        let parsed = null;
+
+        // Expected format: const graphData = {...};
+        if (
+            trimmed.startsWith('const graphData') ||
+            trimmed.startsWith('let graphData') ||
+            trimmed.startsWith('var graphData')
+        ) {
+            const eqPos = trimmed.indexOf('=');
+            if (eqPos > -1) {
+                let jsonText = trimmed.slice(eqPos + 1).trim();
+                if (jsonText.endsWith(';')) {
+                    jsonText = jsonText.slice(0, -1);
+                }
+                parsed = JSON.parse(jsonText);
+            }
+        } else if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+            // Support direct JSON payload if endpoint format changes later.
+            parsed = JSON.parse(trimmed);
+        } else {
+            // Fallback for unexpected payload shape.
+            parsed = new Function(
+                `${text}\n; return typeof graphData !== 'undefined' ? graphData : (typeof window !== 'undefined' ? window.graphData : undefined);`
+            )();
+        }
+
+        if (!parsed || !Array.isArray(parsed.nodes)) {
+            throw new Error('Invalid graph data payload from sidecar.');
+        }
+
+        window.graphData = parsed;
+    };
+
+    const loadScript = async (src) => {
+        if (window.__TAURI__ && src.startsWith('data')) {
+            await loadGraphDataFromSidecar(src);
+            return;
+        }
+
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = src + '?v=' + Date.now();
@@ -17,7 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Check data state and trigger Welcome Modal
             // We do this BEFORE loading app.js so the user sees the modal while the app initializes
-            const hasNodes = typeof graphData !== 'undefined' && graphData && graphData.nodes && graphData.nodes.length > 0;
+            const loadedGraphData = typeof graphData !== 'undefined' ? graphData : window.graphData;
+            const hasNodes = loadedGraphData && loadedGraphData.nodes && loadedGraphData.nodes.length > 0;
             if (typeof window.showWelcomeModal === 'function') {
                 window.showWelcomeModal(hasNodes);
             }
@@ -44,52 +92,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const folderSelect = document.getElementById('folder-select');
     const loadBtn = document.getElementById('btn-load-source');
-    const currentPathEl = document.getElementById('kb-current-path'); // Will add to HTML
+    const currentPathEl = document.getElementById('kb-current-path');
 
     if (!folderSelect || !loadBtn) return;
 
     // Translation helper
     const t = (key, params) => window.i18n ? window.i18n.t(key, params) : key;
 
+    const fetchFoldersViaSidecar = async () => {
+        const kbRes = await fetch('http://localhost:3000/api/kb-path');
+        const kbData = await kbRes.json();
+        const kbPath = kbData && kbData.kbPath ? kbData.kbPath : '';
+
+        const foldersRes = await fetch('http://localhost:3000/api/folders');
+        const foldersData = await foldersRes.json();
+        const folders = foldersData && Array.isArray(foldersData.folders) ? foldersData.folders : [];
+
+        return { kbPath, folders };
+    };
+
+    const fetchFoldersViaRustFallback = async () => {
+        if (!window.__TAURI__) {
+            return { kbPath: '', folders: [] };
+        }
+
+        const kbPath = await window.__TAURI__.core.invoke('get_kb_path');
+        const folders = (await window.__TAURI__.core.invoke('get_folders')) || [];
+        return { kbPath, folders };
+    };
+
     // Fetch folders from backend
     const fetchFolders = async () => {
         try {
+            let kbPath = '';
             let folders = [];
-            
+
+            try {
+                const sidecarData = await fetchFoldersViaSidecar();
+                kbPath = sidecarData.kbPath;
+                folders = sidecarData.folders;
+                console.log('[SourceManager] Loaded folders from Node sidecar API:', folders.length);
+            } catch (sidecarError) {
                 if (window.__TAURI__) {
-                    // Tauri Mode: Get KB path and enumerate folders via API
-                    const kbPath = await window.__TAURI__.core.invoke('get_kb_path');
-                    
-                    // Display current path
-                    if (currentPathEl) {
-                        currentPathEl.textContent = t('source.currentPath', { path: kbPath });
-                        currentPathEl.title = kbPath;
-                    }
-                    
-                    // Get folder listing via HTTP from Sidecar
-                    const folderRes = await fetch('http://localhost:3000/api/folders');
-                    const folderData = await folderRes.json();
-                    folders = folderData.folders || [];
-                    
-                    console.log('[SourceManager] Tauri mode, KB path:', kbPath);
-                    console.log('[SourceManager] Found folders:', folders);
-            } else {
-                // HTTP Mode (Tauri/Web): Use REST API
-                // 获取知识库路径和文件夹列表
-                try {
-                    const kbRes = await fetch('/api/kb-path');
-                    const kbData = await kbRes.json();
-                    if (currentPathEl && kbData.kbPath) {
-                        currentPathEl.textContent = t('source.currentPath', { path: kbData.kbPath });
-                        currentPathEl.title = kbData.kbPath;
-                    }
-                } catch (e) {
-                    console.warn('[SourceManager] Could not fetch KB path:', e);
+                    console.warn('[SourceManager] Sidecar API unavailable, falling back to Rust IPC.', sidecarError);
+                    const rustData = await fetchFoldersViaRustFallback();
+                    kbPath = rustData.kbPath;
+                    folders = rustData.folders;
+                } else {
+                    throw sidecarError;
                 }
-                
-                const res = await fetch('/api/folders');
-                const data = await res.json();
-                folders = data.folders || [];
+            }
+
+            if (currentPathEl && kbPath) {
+                currentPathEl.textContent = t('source.currentPath', { path: kbPath });
+                currentPathEl.title = kbPath;
             }
 
             // Clear existing options
@@ -125,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
             folderSelect.innerHTML = '';
             const errorOption = document.createElement('option');
             errorOption.value = '';
-            errorOption.textContent = t('source.error.loadFailed', { error: err.message });
+            errorOption.textContent = t('source.error.loadFailed', { error: err && err.message ? err.message : String(err) });
             errorOption.disabled = true;
             folderSelect.appendChild(errorOption);
         }

@@ -17,6 +17,7 @@ import { VectorSpaceGPU } from '../../amdgpu/VectorSpaceGPU';
 import { HybridEngine } from './algorithms/HybridEngine';
 import { PerformanceLogger } from './utils/PerformanceLogger';
 import { LayoutEngine } from './algorithms/LayoutEngine';
+import { resolveWorkerRuntimePath } from './utils/WorkerRuntime';
 
 /**
  * Service to build the graph from raw files.
@@ -363,14 +364,16 @@ export class GraphBuilder {
       const targetIds = files.map(f => f.filename);
 
       const workerPromises: Promise<void>[] = [];
-      const workerPath = path.join(__dirname, 'workers', 'keywordMatchWorker.ts');
-      
-      // Check if we are in TS execution (ts-node) or JS (dist)
-      // If extension is .ts, we assume ts-node.
-      const isTsNode = path.extname(__filename) === '.ts';
-      const actualWorkerPath = isTsNode 
-        ? workerPath 
-        : workerPath.replace('.ts', '.js');
+      const workerRuntime = resolveWorkerRuntimePath(__dirname, 'workers/keywordMatchWorker.ts');
+      const actualWorkerPath = workerRuntime.workerPath;
+      const isTsNode = workerRuntime.isTsNode;
+
+      if (!actualWorkerPath) {
+          console.warn('[GraphBuilder] Worker script not found. Falling back to sequential matching.');
+          console.warn('[GraphBuilder] Checked paths:', workerRuntime.candidates);
+          this.runSequentialMatching(files, graph);
+          return;
+      }
 
       console.log(`[GraphBuilder] Worker Path: ${actualWorkerPath}`);
       console.log(`[GraphBuilder] isTsNode: ${isTsNode}`);

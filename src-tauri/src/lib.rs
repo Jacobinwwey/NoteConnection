@@ -1,39 +1,33 @@
 use tauri_plugin_shell::{ShellExt, process::CommandEvent};
 
 use std::fs;
+use std::path::PathBuf;
 use serde_json::Value;
-use tauri::{AppHandle, Manager, Emitter};
+use tauri::{AppHandle, Emitter};
 use tauri::menu::{MenuBuilder, SubmenuBuilder, MenuItemBuilder, PredefinedMenuItem};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
+fn resolve_project_root() -> PathBuf {
+    std::env::current_dir()
+        .map(|mut p| {
+            if p.ends_with("src-tauri") {
+                p.pop();
+            }
+            p
+        })
+        .unwrap_or_else(|_| PathBuf::from("."))
+}
+
+fn resolve_default_kb_path() -> String {
+    let mut root = resolve_project_root();
+    root.push("Knowledge_Base");
+    root.to_string_lossy().to_string()
+}
+
 #[tauri::command]
 fn get_kb_path() -> Result<String, String> {
-    // For now, return the default path or read from a config file.
-    // In Electron it was DEFAULT_KB_PATH or from config.json
-    // We'll read from Godot/NoteConnection config or return a default.
-    let default_path = if cfg!(windows) {
-        "D:\\NoteConnection_KB".to_string()
-    } else {
-        "~/NoteConnection_KB".to_string()
-    };
-    
-    // Attempt to read config if it exists
-    let config_path = dirs::config_dir()
-        .map(|mut p| { p.push("NoteConnection"); p.push("config.json"); p })
-        .unwrap_or_default();
-        
-    if config_path.exists() {
-        if let Ok(content) = fs::read_to_string(config_path) {
-            if let Ok(json) = serde_json::from_str::<Value>(&content) {
-                if let Some(path) = json.get("kbPath").and_then(|v| v.as_str()) {
-                    return Ok(path.to_string());
-                }
-            }
-        }
-    }
-    
-    Ok(default_path)
+    Ok(resolve_default_kb_path())
 }
 
 #[tauri::command]
@@ -42,11 +36,33 @@ fn get_user_language() -> Result<String, String> {
      Ok("en".to_string())
 }
 
+#[tauri::command]
+fn get_folders() -> Result<Vec<String>, String> {
+    let kb_path = get_kb_path()?;
+    let mut folders = Vec::new();
+    
+    if let Ok(entries) = fs::read_dir(kb_path) {
+        for entry in entries.flatten() {
+            if let Ok(file_type) = entry.file_type() {
+                if file_type.is_dir() {
+                    if let Ok(name) = entry.file_name().into_string() {
+                        folders.push(name);
+                    }
+                }
+            }
+        }
+    }
+
+    folders.sort();
+    
+    Ok(folders)
+}
+
 fn build_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>, lang: &str) -> tauri::Result<tauri::menu::Menu<R>> {
     let file = if lang == "zh" { "文件" } else { "File" };
-    let edit = if lang == "zh" { "编辑" } else { "Edit" };
-    let view = if lang == "zh" { "视图" } else { "View" };
-    let window = if lang == "zh" { "窗口" } else { "Window" };
+    let _edit = if lang == "zh" { "编辑" } else { "Edit" };
+    let _view = if lang == "zh" { "视图" } else { "View" };
+    let _window = if lang == "zh" { "窗口" } else { "Window" };
     let help = if lang == "zh" { "帮助" } else { "Help" };
 
     let quit_item = PredefinedMenuItem::quit(app, Some(if lang == "zh" { "退出" } else { "Quit" }))?;
@@ -115,6 +131,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             get_kb_path,
+            get_folders,
             set_user_language,
             get_user_language,
             check_cache,
@@ -141,7 +158,8 @@ pub fn run() {
                     "reset_kb" => {
                         println!("Action: Reset KB");
                         // Emit reset event
-                        let default_path = if cfg!(windows) { "D:\\NoteConnection_KB" } else { "~/NoteConnection_KB" };
+                        let default_path = resolve_default_kb_path();
+                            
                         let _ = app_handle.emit("kb-path-changed", default_path);
                     },
                     "docs" => {
@@ -159,7 +177,19 @@ pub fn run() {
                 }
             });
 
-            let sidecar_command = app.shell().sidecar("server").unwrap();
+            let project_root = resolve_project_root();
+            let kb_root = project_root.join("Knowledge_Base");
+            let frontend_dir = project_root.join("dist").join("src").join("frontend");
+
+            println!("[Rust] Sidecar Project Root: {}", project_root.to_string_lossy());
+            println!("[Rust] Sidecar Knowledge Base Root: {}", kb_root.to_string_lossy());
+            println!("[Rust] Sidecar Frontend Root: {}", frontend_dir.to_string_lossy());
+
+            let mut sidecar_command = app.shell().sidecar("server").unwrap();
+            sidecar_command = sidecar_command
+                .env("NOTE_CONNECTION_PROJECT_ROOT", project_root.to_string_lossy().to_string())
+                .env("NOTE_CONNECTION_KB_ROOT", kb_root.to_string_lossy().to_string())
+                .env("NOTE_CONNECTION_FRONTEND_DIR", frontend_dir.to_string_lossy().to_string());
             
             tauri::async_runtime::spawn(async move {
                 let (mut rx, _child) = sidecar_command
@@ -186,22 +216,10 @@ pub fn run() {
             
             // Spawn Godot process (User's local executable)
             tauri::async_runtime::spawn(async move {
-                let godot_exe = "E:\\网页下载\\Godot_v4.6-stable_win64.exe";
+                let godot_exe = "E:\\网页下载\\Godot_v4.6-stable_win64_console.exe";
                 let project_path = "E:\\Knowledge_project\\NoteConnection_app\\path_mode";
                 
-                #[cfg(target_os = "windows")]
-                let mut cmd = std::process::Command::new("cmd");
-                
-                #[cfg(target_os = "windows")]
-                cmd.args(["/c", "start", "\"\"", godot_exe, "--path", project_path]);
-                
-                #[cfg(not(target_os = "windows"))]
-                let mut cmd = std::process::Command::new(godot_exe);
-                
-                #[cfg(not(target_os = "windows"))]
-                cmd.args(["--path", project_path]);
-                
-                match cmd.spawn() {
+                match std::process::Command::new(godot_exe).args(["--path", project_path]).spawn() {
                     Ok(_) => {
                         println!("[Rust] Successfully spawned local Godot Application.");
                     },
