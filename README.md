@@ -278,6 +278,30 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ## 📅 Changelog
 
+### v1.4.5 - Physically-Based Bubbles & Interactive Physics (2026-03-01)
+
+- **Godot Renderer Upgrade**:
+  - **Spectral Bubble Shader**: Introduced an advanced 81-wavelength Thin-Film Interference shader (`sp_spectral_filter`) combined with 3D noise for hyper-realistic iridescent soap bubbles.
+  - **Interactive Physics**: Converted all static bubbles into physically simulated `RigidBody3D` entities. Bubbles now gently float, bump into each other, and orbit their targets naturally.
+  - **Environment Cleared**: Removed the floor to allow 360-degree floating visualization without ground clipping.
+- **UI Enhancements**:
+  - **Cancel Completion**: The "Mark Complete" button dynamically turns into "Cancel Completion" for already learned nodes, making curriculum management much more forgiving and interactive.
+
+### v1.4.4 - Tauri Bridge Stabilization & Cache Workflow Hardening (2026-03-01)
+
+- **Electron -> Tauri Runtime Alignment**:
+  - **Path Consistency**: Unified runtime path resolution so sidecar graph artifacts are consistently read/written under `dist/src/frontend` during Tauri development.
+  - **Knowledge Base Discovery**: Standardized folder listing and loading flow for `Knowledge_Base` source roots in Bridge-first mode.
+- **Build/Load Safety**:
+  - **Cache Decision Flow**: Restored pre-build decision behavior (`Load Existing` vs `Regenerate`) when target cache already exists.
+  - **Duplicate Request Suppression**: Added frontend + backend de-dup guards to prevent repeated restore/build execution on a single load action.
+- **PathBridge / WebSocket Stability**:
+  - **Client Diagnostics**: Added tagged client connect/close logging (id, tag, code, reason) for precise bridge RCA.
+  - **Godot URL Compatibility**: Fixed Godot websocket URL parsing by switching to `ws://127.0.0.1:9876/?client=godot`.
+  - **Idle Reconnect Elimination (Tauri)**: Disabled `frontend-early` auto-connect in Tauri mode to stop background `1001` reconnect churn.
+- **Language/Menu Sync Robustness**:
+  - **Idempotent Sync**: Added language sync guards in both frontend i18n and Tauri Rust command handlers to avoid repeated no-op menu updates.
+
 ### v1.4.3 - 9-Rule Tree Layout Engine (2026-02-26)
 
 - **Layout Engine Upgrade**:
@@ -1019,6 +1043,21 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 <a id="changelog-zh"></a>
 
 ## 更新日志 (Changelog)
+
+### v1.4.4 - Tauri 桥接稳定化与缓存流程加固 (2026-03-01)
+
+- **Electron -> Tauri 运行时对齐**:
+  - **路径一致性**: 统一运行时路径解析，确保 Tauri 开发模式下 sidecar 图谱产物稳定读写于 `dist/src/frontend`。
+  - **知识库目录发现**: 在 Bridge-first 模式下标准化 `Knowledge_Base` 源根目录的文件夹枚举与加载流程。
+- **构建/加载安全性**:
+  - **缓存决策流程恢复**: 当目标缓存已存在时，恢复“直接加载缓存 / 重新生成”分流逻辑。
+  - **重复请求抑制**: 在前端与后端双层增加去重保护，避免单次加载触发重复 restore/build。
+- **PathBridge / WebSocket 稳定性**:
+  - **客户端诊断增强**: 增加带标签的连接/断开日志（id、tag、code、reason），用于精准定位桥接问题。
+  - **Godot URL 兼容修复**: 将 Godot WebSocket 地址修正为 `ws://127.0.0.1:9876/?client=godot`，解决 URL 解析错误。
+  - **Tauri 空闲重连消除**: 在 Tauri 模式禁用 `frontend-early` 自动连接，消除后台 `1001` 循环重连。
+- **语言/菜单同步稳健性**:
+  - **幂等同步**: 在前端 i18n 与 Tauri Rust 命令两端增加幂等保护，避免重复无效菜单刷新。
 
 ### v1.4.1 - 树状视图交互修复 (2026-02-01)
 

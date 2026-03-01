@@ -21,14 +21,6 @@ glow_strength = 1.1
 glow_bloom = 0.6
 glow_blend_mode = 0
 
-[sub_resource type="BoxMesh" id="floor_mesh"]
-size = Vector3(10, 0.5, 10)
-
-[sub_resource type="StandardMaterial3D" id="floor_mat"]
-albedo_color = Color(0.12, 0.14, 0.2, 1)
-roughness = 0.95
-metallic = 0.0
-
 [node name="Main" type="Node3D"]
 
 [node name="WsClient" type="Node" parent="."]
@@ -58,10 +50,7 @@ transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.43
 light_color = Color(0.95, 0.9, 1.0, 1)
 light_energy = 0.4
 
-[node name="Floor" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2, 0)
-mesh = SubResource("floor_mesh")
-surface_material_override/0 = SubResource("floor_mat")
+
 
 [node name="UI" type="CanvasLayer" parent="."]
 script = ExtResource("5_ui")

@@ -1,12 +1,13 @@
-use tauri_plugin_shell::{ShellExt, process::CommandEvent};
+use tauri_plugin_shell::{process::CommandEvent, ShellExt};
 
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use std::time::UNIX_EPOCH;
-use serde_json::{Value, json};
-use tauri::{AppHandle, Emitter};
-use tauri::menu::{MenuBuilder, SubmenuBuilder, MenuItemBuilder, PredefinedMenuItem};
+use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
+use tauri::{AppHandle, Emitter, Manager};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
@@ -27,7 +28,241 @@ fn resolve_default_kb_path() -> String {
     root.to_string_lossy().to_string()
 }
 
+fn ensure_directory(path: &Path) {
+    if let Err(err) = fs::create_dir_all(path) {
+        eprintln!("[Rust] Failed to create directory '{}': {}", path.to_string_lossy(), err);
+    }
+}
+
+fn app_config_path() -> PathBuf {
+    if let Ok(custom_file) = std::env::var("NOTE_CONNECTION_CONFIG_PATH") {
+        let path = PathBuf::from(custom_file);
+        if let Some(parent) = path.parent() {
+            ensure_directory(parent);
+        }
+        return path;
+    }
+
+    if let Ok(custom_dir) = std::env::var("NOTE_CONNECTION_CONFIG_DIR") {
+        let mut base = PathBuf::from(custom_dir);
+        ensure_directory(&base);
+        base.push("kb_config.json");
+        return base;
+    }
+
+    let mut base = dirs::data_local_dir().unwrap_or_else(resolve_project_root);
+    base.push("NoteConnection");
+    ensure_directory(&base);
+    base.push("kb_config.json");
+    base
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct StoredConfig {
+    #[serde(rename = "knowledgeBasePath")]
+    knowledge_base_path: Option<String>,
+    #[serde(rename = "userLanguage")]
+    user_language: Option<String>,
+}
+
+fn load_stored_config() -> StoredConfig {
+    let config_path = app_config_path();
+    if !config_path.exists() {
+        return StoredConfig::default();
+    }
+
+    match fs::read_to_string(&config_path) {
+        Ok(content) => serde_json::from_str::<StoredConfig>(&content).unwrap_or_else(|err| {
+            eprintln!(
+                "[Rust] Failed to parse config '{}': {}",
+                config_path.to_string_lossy(),
+                err
+            );
+            StoredConfig::default()
+        }),
+        Err(err) => {
+            eprintln!(
+                "[Rust] Failed to read config '{}': {}",
+                config_path.to_string_lossy(),
+                err
+            );
+            StoredConfig::default()
+        }
+    }
+}
+
+fn save_stored_config(config: &StoredConfig) -> Result<(), String> {
+    let config_path = app_config_path();
+    if let Some(parent) = config_path.parent() {
+        ensure_directory(parent);
+    }
+
+    let content = serde_json::to_string_pretty(config).map_err(|err| err.to_string())?;
+    fs::write(&config_path, content).map_err(|err| err.to_string())
+}
+
+fn file_has_content(path: &Path) -> bool {
+    fs::metadata(path)
+        .map(|meta| meta.is_file() && meta.len() > 0)
+        .unwrap_or(false)
+}
+
+fn normalize_existing_dir(raw_path: &str) -> Option<String> {
+    let resolved = PathBuf::from(raw_path);
+    if resolved.exists() && resolved.is_dir() {
+        return Some(resolved.to_string_lossy().to_string());
+    }
+    None
+}
+
+fn ensure_default_kb_root_exists() -> String {
+    let default_path = resolve_default_kb_path();
+    ensure_directory(Path::new(&default_path));
+    default_path
+}
+
+fn resolve_kb_path_from_config() -> String {
+    let config = load_stored_config();
+    if let Some(saved) = config.knowledge_base_path {
+        if let Some(valid) = normalize_existing_dir(&saved) {
+            return valid;
+        }
+    }
+    ensure_default_kb_root_exists()
+}
+
+fn persist_kb_path(kb_path: &str) -> Result<String, String> {
+    let resolved = PathBuf::from(kb_path);
+    if !resolved.exists() || !resolved.is_dir() {
+        return Err(format!("Invalid knowledge base path: {}", kb_path));
+    }
+
+    let mut config = load_stored_config();
+    config.knowledge_base_path = Some(resolved.to_string_lossy().to_string());
+    if config.user_language.is_none() {
+        config.user_language = Some("en".to_string());
+    }
+    save_stored_config(&config)?;
+    Ok(resolved.to_string_lossy().to_string())
+}
+
+fn normalize_menu_lang(lang: &str) -> &'static str {
+    if lang == "zh" {
+        "zh"
+    } else {
+        "en"
+    }
+}
+
+fn resolve_user_language_from_config() -> String {
+    let config = load_stored_config();
+    let lang = config.user_language.unwrap_or_else(|| "en".to_string());
+    normalize_menu_lang(&lang).to_string()
+}
+
+fn persist_user_language(lang: &str) -> Result<String, String> {
+    let normalized = normalize_menu_lang(lang).to_string();
+    let mut config = load_stored_config();
+    config.user_language = Some(normalized.clone());
+    save_stored_config(&config)?;
+    Ok(normalized)
+}
+
+fn ensure_startup_kb_path() -> String {
+    let config_path = app_config_path();
+    let has_existing_config = config_path.exists();
+    let mut config = load_stored_config();
+
+    if let Some(saved) = config.knowledge_base_path.clone() {
+        if let Some(valid) = normalize_existing_dir(&saved) {
+            return valid;
+        }
+    }
+
+    let default_path = ensure_default_kb_root_exists();
+
+    // First run flow: ask user to select KB folder. If cancelled, fallback to default.
+    if !has_existing_config {
+        let chosen = rfd::FileDialog::new()
+            .set_title("Select Knowledge Base Folder")
+            .set_directory(&default_path)
+            .pick_folder();
+
+        if let Some(folder) = chosen {
+            let selected = folder.to_string_lossy().to_string();
+            config.knowledge_base_path = Some(selected.clone());
+            if config.user_language.is_none() {
+                config.user_language = Some("en".to_string());
+            }
+            if let Err(err) = save_stored_config(&config) {
+                eprintln!("[Rust] Failed to persist first-run config: {}", err);
+            }
+            return selected;
+        }
+    }
+
+    config.knowledge_base_path = Some(default_path.clone());
+    if config.user_language.is_none() {
+        config.user_language = Some("en".to_string());
+    }
+    if let Err(err) = save_stored_config(&config) {
+        eprintln!("[Rust] Failed to persist fallback config: {}", err);
+    }
+
+    default_path
+}
+
+fn resolve_godot_project_path(project_root: &Path) -> PathBuf {
+    if let Ok(custom) = std::env::var("NOTE_CONNECTION_GODOT_PROJECT") {
+        let candidate = PathBuf::from(custom);
+        if candidate.exists() && candidate.is_dir() {
+            return candidate;
+        }
+    }
+    project_root.join("path_mode")
+}
+
+fn resolve_godot_executable(project_root: &Path) -> Option<PathBuf> {
+    let exec_dir = std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|p| p.to_path_buf()));
+
+    let mut candidates: Vec<PathBuf> = Vec::new();
+
+    if let Ok(env_path) = std::env::var("NOTE_CONNECTION_GODOT_EXE") {
+        candidates.push(PathBuf::from(env_path));
+    }
+
+    candidates.push(
+        project_root
+            .join("src-tauri")
+            .join("bin")
+            .join("godot-x86_64-pc-windows-msvc.exe"),
+    );
+    candidates.push(project_root.join("src-tauri").join("bin").join("godot.exe"));
+    candidates.push(PathBuf::from(
+        r"E:\网页下载\Godot_v4.6-stable_win64_console.exe",
+    ));
+    candidates.push(PathBuf::from(r"E:\网页下载\Godot_v4.6-stable_win64.exe"));
+
+    if let Some(dir) = exec_dir {
+        candidates.push(dir.join("godot-x86_64-pc-windows-msvc.exe"));
+        candidates.push(dir.join("godot.exe"));
+        candidates.push(dir.join("bin").join("godot-x86_64-pc-windows-msvc.exe"));
+        candidates.push(dir.join("bin").join("godot.exe"));
+    }
+
+    candidates.into_iter().find(|candidate| file_has_content(candidate))
+}
+
 fn resolve_frontend_dist_path() -> PathBuf {
+    if let Ok(custom_dir) = std::env::var("NOTE_CONNECTION_FRONTEND_DIR") {
+        let candidate = PathBuf::from(custom_dir);
+        if candidate.exists() && candidate.is_dir() {
+            return candidate;
+        }
+    }
+
     let mut root = resolve_project_root();
     root.push("dist");
     root.push("src");
@@ -68,20 +303,68 @@ fn cache_info_from_file(file_path: &PathBuf, source: &str) -> Option<Value> {
     }))
 }
 
+fn check_cache_for_target(frontend_dir: &Path, target: &str) -> Option<Value> {
+    if target.is_empty() {
+        return None;
+    }
+
+    if target == "ALL_FOLDERS" {
+        let active_path = frontend_dir.join("data.js");
+        return cache_info_from_file(&active_path, "active");
+    }
+
+    let target_name = sanitize_target_name(target);
+    let cache_path = frontend_dir.join(format!("data_{}.js", target_name));
+    cache_info_from_file(&cache_path, "target")
+}
+
+fn restore_cache_for_target(frontend_dir: &Path, target: &str) -> Result<bool, String> {
+    if target.is_empty() {
+        return Ok(false);
+    }
+
+    if target == "ALL_FOLDERS" {
+        return Ok(frontend_dir.join("data.js").exists());
+    }
+
+    let target_name = sanitize_target_name(target);
+    let cache_js = frontend_dir.join(format!("data_{}.js", target_name));
+    let target_js = frontend_dir.join("data.js");
+    let cache_json = frontend_dir.join(format!("graph_data_{}.json", target_name));
+    let target_json = frontend_dir.join("graph_data.json");
+
+    if !cache_js.exists() {
+        return Ok(false);
+    }
+
+    fs::copy(&cache_js, &target_js).map_err(|e| format!("Failed to copy cache js: {}", e))?;
+
+    if cache_json.exists() {
+        fs::copy(&cache_json, &target_json)
+            .map_err(|e| format!("Failed to copy cache json: {}", e))?;
+    }
+
+    Ok(true)
+}
+
 #[tauri::command]
 fn get_kb_path() -> Result<String, String> {
-    Ok(resolve_default_kb_path())
+    Ok(resolve_kb_path_from_config())
+}
+
+#[tauri::command]
+fn set_kb_path(kb_path: String) -> Result<String, String> {
+    persist_kb_path(&kb_path)
 }
 
 #[tauri::command]
 fn get_user_language() -> Result<String, String> {
-     // Read from config, default "en", in actual app we read this from user_language localStorage or similar if needed.
-     Ok("en".to_string())
+    Ok(resolve_user_language_from_config())
 }
 
 #[tauri::command]
 fn get_folders() -> Result<Vec<String>, String> {
-    let kb_path = get_kb_path()?;
+    let kb_path = resolve_kb_path_from_config();
     let mut folders = Vec::new();
     
     if let Ok(entries) = fs::read_dir(kb_path) {
@@ -135,31 +418,60 @@ fn build_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>, lang: &str) -> tauri
 }
 
 static MENU_LANG_STATE: OnceLock<Mutex<String>> = OnceLock::new();
+struct ChildProcessState {
+    sidecar: Mutex<Option<tauri_plugin_shell::process::CommandChild>>,
+    godot: Mutex<Option<std::process::Child>>,
+}
+
+impl Default for ChildProcessState {
+    fn default() -> Self {
+        Self {
+            sidecar: Mutex::new(None),
+            godot: Mutex::new(None),
+        }
+    }
+}
 
 fn menu_lang_state() -> &'static Mutex<String> {
     MENU_LANG_STATE.get_or_init(|| Mutex::new("en".to_string()))
 }
 
-fn normalize_menu_lang(lang: &str) -> &'static str {
-    if lang == "zh" { "zh" } else { "en" }
+fn shutdown_child_processes<R: tauri::Runtime>(app: &AppHandle<R>) {
+    if let Ok(mut sidecar_slot) = app.state::<ChildProcessState>().sidecar.lock() {
+        if let Some(child) = sidecar_slot.take() {
+            match child.kill() {
+                Ok(_) => println!("[Rust] Sidecar process terminated on shutdown."),
+                Err(err) => eprintln!("[Rust] Failed to terminate sidecar process: {}", err),
+            }
+        }
+    }
+
+    if let Ok(mut godot_slot) = app.state::<ChildProcessState>().godot.lock() {
+        if let Some(mut child) = godot_slot.take() {
+            match child.kill() {
+                Ok(_) => println!("[Rust] Godot process terminated on shutdown."),
+                Err(err) => eprintln!("[Rust] Failed to terminate Godot process: {}", err),
+            }
+        }
+    }
 }
 
 #[tauri::command]
 fn set_user_language(app: AppHandle, lang: String) -> Result<(), String> {
-    let normalized_lang = normalize_menu_lang(&lang).to_string();
+    let normalized_lang = persist_user_language(&lang)?;
 
     // Idempotent guard: avoid reapplying the same menu language repeatedly.
     {
         let state = menu_lang_state()
             .lock()
             .map_err(|_| "Failed to lock menu language state".to_string())?;
-        if state.as_str() == normalized_lang.as_str() {
+        if state.as_str() == normalized_lang {
             return Ok(());
         }
     }
 
     println!("[Rust] Setting user language to: {}", normalized_lang);
-    if let Ok(menu) = build_menu(&app, &normalized_lang) {
+    if let Ok(menu) = build_menu(&app, normalized_lang.as_str()) {
         let _ = app.set_menu(menu);
         if let Ok(mut state) = menu_lang_state().lock() {
             *state = normalized_lang;
@@ -169,54 +481,15 @@ fn set_user_language(app: AppHandle, lang: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn check_cache(_app: AppHandle, target: String) -> Result<Option<Value>, String> {
-    if target.is_empty() {
-        return Ok(None);
-    }
-
+fn check_cache(target: String) -> Result<Option<Value>, String> {
     let frontend_dir = resolve_frontend_dist_path();
-
-    if target == "ALL_FOLDERS" {
-        let active_path = frontend_dir.join("data.js");
-        return Ok(cache_info_from_file(&active_path, "active"));
-    }
-
-    let target_name = sanitize_target_name(&target);
-    let cache_path = frontend_dir.join(format!("data_{}.js", target_name));
-    Ok(cache_info_from_file(&cache_path, "target"))
+    Ok(check_cache_for_target(&frontend_dir, &target))
 }
 
 #[tauri::command]
-fn restore_cache(_app: AppHandle, target: String) -> Result<bool, String> {
-    if target.is_empty() {
-        return Ok(false);
-    }
-
+fn restore_cache(target: String) -> Result<bool, String> {
     let frontend_dir = resolve_frontend_dist_path();
-
-    if target == "ALL_FOLDERS" {
-        return Ok(frontend_dir.join("data.js").exists());
-    }
-
-    let target_name = sanitize_target_name(&target);
-    let cache_js = frontend_dir.join(format!("data_{}.js", target_name));
-    let target_js = frontend_dir.join("data.js");
-    let cache_json = frontend_dir.join(format!("graph_data_{}.json", target_name));
-    let target_json = frontend_dir.join("graph_data.json");
-
-    if !cache_js.exists() {
-        return Ok(false);
-    }
-
-    fs::copy(&cache_js, &target_js)
-        .map_err(|e| format!("Failed to copy cache js: {}", e))?;
-
-    if cache_json.exists() {
-        fs::copy(&cache_json, &target_json)
-            .map_err(|e| format!("Failed to copy cache json: {}", e))?;
-    }
-
-    Ok(true)
+    restore_cache_for_target(&frontend_dir, &target)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -225,8 +498,15 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
+        .manage(ChildProcessState::default())
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                shutdown_child_processes(&window.app_handle());
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             get_kb_path,
+            set_kb_path,
             get_folders,
             set_user_language,
             get_user_language,
@@ -234,10 +514,13 @@ pub fn run() {
             restore_cache
         ])
         .setup(|app| {
-            if let Ok(menu) = build_menu(app.handle(), "en") {
+            let startup_kb_path = ensure_startup_kb_path();
+            let startup_lang = resolve_user_language_from_config();
+
+            if let Ok(menu) = build_menu(app.handle(), startup_lang.as_str()) {
                 let _ = app.set_menu(menu);
                 if let Ok(mut state) = menu_lang_state().lock() {
-                    *state = "en".to_string();
+                    *state = startup_lang.clone();
                 }
             }
             
@@ -245,20 +528,24 @@ pub fn run() {
                 match event.id().as_ref() {
                     "change_kb" => {
                         println!("Action: Change KB");
-                        // 1. Open Dialog using rfd
-                        if let Some(folder) = rfd::FileDialog::new().pick_folder() {
+                        let current_kb = resolve_kb_path_from_config();
+                        if let Some(folder) = rfd::FileDialog::new().set_directory(current_kb).pick_folder() {
                             let path_str = folder.to_string_lossy().to_string();
                             println!("Selected KB Path: {}", path_str);
-                            
-                            // 2. Emit event to frontend
+                            if let Err(err) = persist_kb_path(&path_str) {
+                                eprintln!("[Rust] Failed to persist KB path: {}", err);
+                            }
+
                             let _ = app_handle.emit("kb-path-changed", path_str);
                         }
                     },
                     "reset_kb" => {
                         println!("Action: Reset KB");
-                        // Emit reset event
-                        let default_path = resolve_default_kb_path();
-                            
+                        let default_path = ensure_default_kb_root_exists();
+                        if let Err(err) = persist_kb_path(&default_path) {
+                            eprintln!("[Rust] Failed to persist reset KB path: {}", err);
+                        }
+
                         let _ = app_handle.emit("kb-path-changed", default_path);
                     },
                     "docs" => {
@@ -277,7 +564,7 @@ pub fn run() {
             });
 
             let project_root = resolve_project_root();
-            let kb_root = project_root.join("Knowledge_Base");
+            let kb_root = PathBuf::from(startup_kb_path.clone());
             let frontend_dir = project_root.join("dist").join("src").join("frontend");
 
             println!("[Rust] Sidecar Project Root: {}", project_root.to_string_lossy());
@@ -290,10 +577,19 @@ pub fn run() {
                 .env("NOTE_CONNECTION_KB_ROOT", kb_root.to_string_lossy().to_string())
                 .env("NOTE_CONNECTION_FRONTEND_DIR", frontend_dir.to_string_lossy().to_string());
             
+            let sidecar_state_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                let (mut rx, _child) = sidecar_command
+                let (mut rx, child) = sidecar_command
                     .spawn()
                     .expect("Failed to spawn Node.js sidecar");
+
+                if let Ok(mut sidecar_slot) = sidecar_state_handle
+                    .state::<ChildProcessState>()
+                    .sidecar
+                    .lock()
+                {
+                    *sidecar_slot = Some(child);
+                }
 
                 while let Some(event) = rx.recv().await {
                     match event {
@@ -313,17 +609,51 @@ pub fn run() {
                 }
             });
             
-            // Spawn Godot process (User's local executable)
+            // Spawn Godot process using robust candidate resolution.
+            let godot_state_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                let godot_exe = "E:\\网页下载\\Godot_v4.6-stable_win64_console.exe";
-                let project_path = "E:\\Knowledge_project\\NoteConnection_app\\path_mode";
-                
-                match std::process::Command::new(godot_exe).args(["--path", project_path]).spawn() {
-                    Ok(_) => {
-                        println!("[Rust] Successfully spawned local Godot Application.");
-                    },
-                    Err(e) => {
-                        eprintln!("[Rust] Failed to spawn Godot application at {}: {}", godot_exe, e);
+                let godot_project = resolve_godot_project_path(&project_root);
+                if !godot_project.exists() {
+                    eprintln!(
+                        "[Rust] Godot project path does not exist: {}",
+                        godot_project.to_string_lossy()
+                    );
+                    return;
+                }
+
+                match resolve_godot_executable(&project_root) {
+                    Some(godot_exe) => {
+                        println!(
+                            "[Rust] Launching Godot executable: {}",
+                            godot_exe.to_string_lossy()
+                        );
+                        match std::process::Command::new(&godot_exe)
+                            .args(["--path", godot_project.to_string_lossy().as_ref()])
+                            .spawn()
+                        {
+                            Ok(child) => {
+                                if let Ok(mut godot_slot) = godot_state_handle
+                                    .state::<ChildProcessState>()
+                                    .godot
+                                    .lock()
+                                {
+                                    *godot_slot = Some(child);
+                                }
+                                println!("[Rust] Successfully spawned local Godot application.");
+                            }
+                            Err(e) => {
+                                eprintln!(
+                                    "[Rust] Failed to spawn Godot at '{}': {}",
+                                    godot_exe.to_string_lossy(),
+                                    e
+                                );
+                            }
+                        }
+                    }
+                    None => {
+                        eprintln!(
+                            "[Rust] Godot executable not found. Set NOTE_CONNECTION_GODOT_EXE or place binary under src-tauri/bin."
+                        );
                     }
                 }
             });

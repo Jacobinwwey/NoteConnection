@@ -1,8 +1,234 @@
+# 2026-03-01 v1.4.6 - Electron to Tauri Migration Readiness Audit
+
+## English Document
+
+### Objective
+
+Determine whether the Electron -> Tauri migration is currently complete enough to safely remove Electron, including non-core workflows such as export and Android APK packaging via Capacitor.
+
+### Audit Scope
+
+- Desktop runtime architecture (`src/electron`, `src-tauri`, `src/server.ts`, `src/frontend`).
+- Input/output flow parity (folder load, build, cache restore, reader/content fetch).
+- Export/output paths (`data.js`, `graph_data.json`, JSON/ZIP/SVG exports, APK output).
+- Build and packaging surface (`package.json`, `electron-builder.yml`, `build_apk.bat`, `capacitor.config.ts`).
+- Migration intent comparison against `docs/tauri_brainstorming.md`.
+
+### Method
+
+- Static code audit with file-level evidence.
+- Cross-check against current scripts and config.
+- No fresh clean-machine installer validation was executed in this audit section.
+
+### Parity Matrix (Electron Baseline vs Current State)
+
+| Area | Electron Baseline | Current Tauri/Project State | Status |
+| --- | --- | --- | --- |
+| Desktop shell startup | `src/electron/main.ts` owns shell, menus, IPC | `src-tauri/src/lib.rs` starts Tauri shell and Node sidecar | **Migrated (Dev)** |
+| Folder listing under KB root | IPC `getFolders` | Sidecar API `GET /api/folders` plus Tauri fallback `get_folders` | **Migrated** |
+| Build trigger and graph generation | IPC `buildGraph` | Sidecar `POST /api/build` with dedupe and runtime path resolution | **Migrated** |
+| Cache decision and restore flow | IPC `checkCache` + `restoreCache` | Sidecar APIs + Tauri commands + modal prompt in `source_manager.js` | **Migrated** |
+| Tutorial choice behavior | Welcome + tutorial choice | `welcome.js` + `tutorial.js` include skip/session guards | **Migrated** |
+| Menu language switch | Electron dynamic menu rebuild | Tauri menu rebuild in `set_user_language` | **Partially Migrated** |
+| Persistent KB path + language config | `kb_config.json` in Electron userData | Tauri currently defaults path, no equivalent persistent config file | **Not Fully Migrated** |
+| Godot process integration | N/A in Electron mainline release path | Tauri currently spawns Godot via hardcoded absolute path, not robust sidecar usage | **Not Fully Migrated** |
+| Sidecar/Godot lifecycle shutdown guarantees | Electron app lifecycle owns process lifetime | Tauri code does not implement explicit shutdown management verification for spawned children | **Partially Migrated** |
+| Release-ready path model | Electron used app-local protocol and known layout | Tauri sidecar paths are tuned for repo/dev layout (`dist/src/frontend`, `Knowledge_Base`) | **Partially Migrated** |
+| Electron package surface removal | Electron scripts/deps removed | Electron remains in `package.json` (`main`, scripts, deps) and `electron-builder.yml` remains active | **Not Migrated** |
+| Web export (SVG/JSON/ZIP/layout) | Frontend download-based exports | Same download-based implementation in web frontend (`app.js`, `analysis.js`) | **Migrated** |
+| Capacitor APK pipeline | N/A (Electron desktop only) | `build_apk.bat` + `capacitor.config.ts` generate APK using `dist/frontend` | **Migrated (Web Assets)** |
+| Mobile parity with desktop build/load from folders | Desktop local filesystem + backend build | Capacitor app has no Node sidecar in-app; APIs like `http://localhost:3000/api/*` are unavailable on-device | **Not Fully Migrated** |
+| Tauri Android target from brainstorm plan | Planned (`npm run tauri android build`) | No active Tauri Android scripts/workflow in `package.json` | **Not Migrated** |
+
+### Detailed Findings
+
+#### 1) Migration Successes
+
+- Bridge-first Tauri desktop dev flow is functional: Tauri shell + Node sidecar + Godot bridge + cache/build workflows are implemented.
+- Worker path issues that previously broke sidecar `pkg` runtime are addressed through runtime worker path resolution.
+- Folder discovery and load/build/cache behavior are available through HTTP sidecar APIs, with Tauri command fallback for selected operations.
+- Existing frontend export capabilities (SVG image, layout JSON, analysis JSON/ZIP) are runtime-agnostic and remain available.
+
+#### 2) High-Risk Gaps Before Removing Electron
+
+- **Persistent user configuration parity is incomplete**:
+  - Electron persisted KB path and language in `kb_config.json`.
+  - Tauri currently returns default KB path and does not persist selected KB root across restarts in equivalent form.
+- **Godot launch path is environment-coupled**:
+  - `src-tauri/src/lib.rs` uses hardcoded absolute Windows paths for Godot executable/project.
+  - This is not portable across machines or release packaging.
+- **Process lifecycle hardening is incomplete**:
+  - Sidecar/Godot child process shutdown behavior is not explicitly enforced in code-level teardown logic.
+  - This can lead to orphan process or port lock risks.
+- **Release-path assumptions remain dev-centric**:
+  - Graph artifacts are read/written under `dist/src/frontend`; this is fine in repo dev mode but needs explicit writable-path strategy for packaged installs.
+
+#### 3) Capacitor/Android Specific Risk
+
+- APK build pipeline is present and produces artifact output, but it is a **web-asset packaging path**, not Tauri mobile runtime.
+- Core desktop behaviors that depend on local sidecar APIs (`/api/build`, `/api/folders`, `/api/content`) are not inherently available inside a standalone Capacitor app on device.
+- Without a mobile-specific backend/file access strategy, folder-based build/load workflows cannot be considered fully migrated for mobile parity.
+
+### Removal Decision (As of 2026-03-01)
+
+- **Can Electron be safely removed now?**: **No (not yet)**.
+- **Desktop dev migration status**: **Substantially successful**.
+- **Cross-target migration status (Desktop release + Capacitor parity)**: **Incomplete**.
+
+### Risk If Electron Is Removed Immediately
+
+| Risk | Severity | Impact |
+| --- | --- | --- |
+| Loss of persistent KB path/language parity | High | Users reconfigure repeatedly; startup behavior regression |
+| Godot hardcoded path failure on non-dev machines | High | Path Mode desktop renderer fails outside author machine |
+| Unverified sidecar teardown | High | Zombie processes, port conflicts, unstable relaunch |
+| Packaged runtime path mismatch | High | Graph build/cache I/O may fail in packaged Tauri installs |
+| Mobile feature gap (Capacitor without backend parity) | High | Folder build/load/content fetch unavailable on device |
+| Mixed build surface (Electron + Tauri in parallel) | Medium | Release confusion, maintenance burden, accidental wrong pipeline |
+
+### Final Assessment
+
+Electron -> Tauri migration is **functionally successful in current desktop development mode**, but **not yet de-risked for full Electron removal** when considering production packaging and mobile parity requirements stated in `docs/tauri_brainstorming.md`.
+
+---
+
+## 中文文档
+
+### 目标
+
+判断当前 Electron -> Tauri 迁移是否已经完整到可以安全移除 Electron，范围不仅包含主功能，还包含导出链路与 Capacitor APK 打包链路。
+
+### 审计范围
+
+- 桌面运行时架构（`src/electron`、`src-tauri`、`src/server.ts`、`src/frontend`）。
+- 输入/输出链路一致性（目录加载、图谱构建、缓存恢复、Reader 内容读取）。
+- 导出与产物路径（`data.js`、`graph_data.json`、JSON/ZIP/SVG 导出、APK 输出）。
+- 构建与打包面（`package.json`、`electron-builder.yml`、`build_apk.bat`、`capacitor.config.ts`）。
+- 与迁移目标文档 `docs/tauri_brainstorming.md` 对照。
+
+### 方法
+
+- 基于代码与配置的静态审计。
+- 对脚本、路径与接口进行逐项交叉核对。
+- 本节未执行全新环境下的安装包实机验证。
+
+### 迁移对照矩阵（Electron 基线 vs 当前状态）
+
+| 领域 | Electron 基线 | 当前 Tauri/项目状态 | 状态 |
+| --- | --- | --- | --- |
+| 桌面壳启动 | `src/electron/main.ts` 管理壳与 IPC | `src-tauri/src/lib.rs` 启动 Tauri 壳与 Node sidecar | **已迁移（开发态）** |
+| KB 根目录子目录列出 | IPC `getFolders` | sidecar `GET /api/folders` + Tauri `get_folders` 回退 | **已迁移** |
+| 构建触发与图谱生成 | IPC `buildGraph` | sidecar `POST /api/build`（含去重） | **已迁移** |
+| 缓存提示与恢复 | IPC `checkCache`/`restoreCache` | sidecar API + Tauri 命令 + `source_manager.js` 弹窗 | **已迁移** |
+| 教程选择逻辑 | Welcome + Tutorial | `welcome.js` + `tutorial.js` 会话跳过保护 | **已迁移** |
+| 菜单语言切换 | Electron 动态重建菜单 | Tauri `set_user_language` 动态重建菜单 | **部分迁移** |
+| KB 路径/语言持久化 | Electron `kb_config.json` | Tauri 尚无等价持久化配置文件闭环 | **未完全迁移** |
+| Godot 进程集成 | Electron 期未形成统一方案 | Tauri 仍使用硬编码绝对路径拉起 Godot | **未完全迁移** |
+| 子进程生命周期收敛 | Electron 生命周期统一管理 | Tauri 未完成显式关闭与回收验证 | **部分迁移** |
+| 发布态路径模型 | Electron `app://` + 明确资源关系 | Tauri 仍偏向仓库开发目录路径假设 | **部分迁移** |
+| Electron 代码面清退 | 目标应移除 Electron 入口与依赖 | `package.json` 仍保留 Electron 主入口、脚本与依赖，`electron-builder.yml` 仍存在 | **未迁移** |
+| Web 导出能力（SVG/JSON/ZIP/布局） | 前端下载导出 | `app.js` / `analysis.js` 仍可正常工作 | **已迁移** |
+| Capacitor APK 打包链路 | Electron 无此链路 | `build_apk.bat` + `capacitor.config.ts` 可打包 web 资产 | **已迁移（Web 资产层）** |
+| 移动端与桌面“本地构建/加载目录”能力一致性 | 桌面可通过本地后端构建 | Capacitor 端缺少内置 sidecar，本地 `http://localhost:3000/api/*` 不可直接成立 | **未完全迁移** |
+| tauri_brainstorming 提出的 Tauri Android 目标 | 规划存在 | `package.json` 无有效 Tauri Android 构建工作流 | **未迁移** |
+
+### 详细结论
+
+#### 1) 已取得的迁移成果
+
+- Bridge-first 的 Tauri 桌面开发链路已经成型，包含 Tauri 壳、Node sidecar、Godot 桥接与缓存/构建流程。
+- sidecar 在 `pkg` 运行时的 worker 路径问题已有针对性修复。
+- 目录发现、构建、缓存恢复等关键操作在 API 路由上已具备替代 Electron IPC 的能力。
+- 现有导出功能（SVG、布局 JSON、分析 JSON/ZIP）属于前端下载逻辑，未受 Electron 约束。
+
+#### 2) 立即删除 Electron 前的高风险缺口
+
+- **用户配置持久化对等性不足**：
+  - Electron 有 `kb_config.json` 持久化。
+  - Tauri 尚未形成等价的 KB 路径与语言持久化闭环。
+- **Godot 启动路径耦合开发机**：
+  - `src-tauri/src/lib.rs` 使用硬编码绝对路径。
+  - 换机或发布环境极易失效。
+- **子进程生命周期收敛不足**：
+  - sidecar/Godot 关闭时机未完成显式治理与验证。
+  - 存在端口占用/僵尸进程风险。
+- **发布态路径策略未固化**：
+  - 当前产物读写主要落在 `dist/src/frontend`，开发态可用，但发布态需要明确可写路径策略。
+
+#### 3) Capacitor/Android 侧风险
+
+- APK 链路目前是**Web 资产打包**，不是 Tauri Mobile 运行时闭环。
+- 桌面端依赖的本地 API（`/api/build`、`/api/folders`、`/api/content`）在纯 Capacitor 设备端并不天然可用。
+- 若无移动端专用后端/文件访问方案，移动端无法宣称已完成与桌面等价的“目录加载与实时构建”迁移。
+
+### 当前决策（截至 2026-03-01）
+
+- **现在是否可以安全移除 Electron**：**不建议，暂不可**。
+- **桌面开发态迁移状态**：**大体成功**。
+- **跨目标（桌面发布 + 移动端）迁移状态**：**尚未完成闭环**。
+
+### 立即移除 Electron 的风险
+
+| 风险 | 严重性 | 影响 |
+| --- | --- | --- |
+| KB 路径/语言持久化丢失 | 高 | 启动体验退化，用户需重复配置 |
+| Godot 硬编码路径失效 | 高 | 非开发机下 Path Mode 失效 |
+| sidecar 关闭行为未验证 | 高 | 端口冲突、重复启动异常 |
+| 发布态路径不匹配 | 高 | 构建/缓存读写在安装版中失败 |
+| Capacitor 与桌面功能不对等 | 高 | 设备端无法完成目录加载/构建流程 |
+| Electron 与 Tauri 双流水并存 | 中 | 发布流程混乱、维护成本上升 |
+
+### 最终评估
+
+Electron -> Tauri 在**桌面开发态**已达到可用水平，但按 `docs/tauri_brainstorming.md` 的跨平台目标衡量，仍未达到“可安全清退 Electron”的稳定门槛。
+
+---
+
 # Test Report - v1.4.3
 
 **Date**: 2026-02-26
 **Version**: v1.4.3
 **Environment**: Windows 10, Production Build
+
+# 2026-03-01 v1.4.5 - Physically-Based Bubbles & Cancel Completion
+
+### English Document
+
+#### 1. Shader Iridescence & Depth
+
+- **Test**: Code Logic Validation in `bubble_material.gdshader`.
+- **Scenario**: Applying Glassner 81-wavelength Thin-Film Interference filtering with noise variation.
+- **Previous Behavior**: Uses simple HSV phase-shifted sines which create a plastic, flat rainbow lacking depth.
+- **Fixed Behavior**: Implements correct polarization-based physical dispersion, mapping `warpnoise3` to film width (150-700nm), dramatically increasing realism.
+- **Status**: **Pass**
+
+#### 2. Cancel Completion UI
+
+- **Test**: Manual usage interaction through bridge protocol.
+- **Scenario**: Selecting an already-completed node from the Path Mode.
+- **Previous Behavior**: "Mark Complete" remains static; cannot be undone without backend config edits.
+- **Fixed Behavior**: "Mark Complete" changes visually to "Cancel Completion". Emits `unmarkComplete` properly and syncs progress UI.
+- **Status**: **Pass**
+
+### Chinese Document
+
+#### 1. 着色器虹彩与深度
+
+- **测试**: `bubble_material.gdshader` 中的代码逻辑验证。
+- **场景**: 应用 Glassner 81波长薄膜干涉滤波和噪声变化。
+- **先前行为**: 使用简单的 HSV 相位偏移正弦波，产生缺乏深度的塑料扁平彩虹。
+- **修复行为**: 实现了正确的基于偏振的物理色散，将 `warpnoise3` 映射到薄膜宽度 (150-700nm)，极大地增加了真实感。
+- **状态**: **通过**
+
+#### 2. 取消完成 UI
+
+- **测试**: 通过桥接协议的手动交互使用。
+- **场景**: 从路径模式中选择一个已完成的节点。
+- **先前行为**: “标记完成”保持静态；如果不修改后端配置则无法撤消。
+- **修复行为**: “标记完成”在视觉上变为“取消完成”。正确触发 `unmarkComplete` 并同步进度 UI。
+- **状态**: **通过**
+
+---
 
 ## 2026-02-26 v1.4.3 - 9-Rule Tree Layout Engine
 

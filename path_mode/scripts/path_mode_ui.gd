@@ -472,6 +472,17 @@ func _on_mark_complete_pressed() -> void:
 	mark_complete_pressed.emit()
 
 
+func update_complete_button(is_completed: bool) -> void:
+	if not mark_complete_btn:
+		return
+	if is_completed:
+		mark_complete_btn.text = "Cancel Completion"
+		_apply_button_style(mark_complete_btn, Color(0.7, 0.3, 0.3, 1.0), Color(0.8, 0.4, 0.4, 1.0), Color(0.6, 0.2, 0.2, 1.0), Color(0.8, 0.5, 0.5, 1.0), Color(1.0, 0.9, 0.9, 1.0))
+	else:
+		mark_complete_btn.text = "Complete"
+		_apply_button_style(mark_complete_btn, Color(0.9, 0.55, 0.15, 1.0), Color(1.0, 0.66, 0.22, 1.0), Color(0.78, 0.42, 0.08, 1.0), Color(0.25, 0.18, 0.1, 1.0), Color(0.09, 0.08, 0.07, 1.0))
+
+
 func _on_mode_selected(index: int) -> void:
 	_current_mode = "domain" if index == 0 else "diffusion"
 	var mode_name := "Domain Learning" if _current_mode == "domain" else "Diffusion Learning"

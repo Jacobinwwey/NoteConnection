@@ -20,8 +20,8 @@ const TRANSITION_DURATION := 0.5 ## 500ms orbital rotation
 @onready var ws_client: Node = $"../WsClient"
 
 var _bubble_shader: Shader
-var _central_bubble: MeshInstance3D
-var _peripheral_bubbles: Array[MeshInstance3D] = []
+var _central_bubble: RigidBody3D
+var _peripheral_bubbles: Array[RigidBody3D] = []
 var _edge_drawer: ImmediateMesh
 var _labels: Array[Label3D] = []
 
@@ -41,6 +41,7 @@ func _ready() -> void:
 	_load_shader()
 	_setup_central_bubble()
 	_setup_edge_drawer()
+	set_physics_process(true)
 	
 	## Connect to state machine
 	if state_machine:
@@ -98,26 +99,31 @@ func _load_shader() -> void:
 
 
 func _setup_central_bubble() -> void:
-	_central_bubble = MeshInstance3D.new()
-	_central_bubble.mesh = SphereMesh.new()
-	(_central_bubble.mesh as SphereMesh).radius = central_radius
-	(_central_bubble.mesh as SphereMesh).height = central_radius * 2
-	(_central_bubble.mesh as SphereMesh).radial_segments = 32
-	(_central_bubble.mesh as SphereMesh).rings = 16
-	
-	var material := _create_bubble_material(true, false)
-	_central_bubble.material_override = material
+	_central_bubble = RigidBody3D.new()
+	_central_bubble.gravity_scale = 0.0
+	_central_bubble.linear_damp = 3.0
+	_central_bubble.angular_damp = 3.0
+	var phys_mat := PhysicsMaterial.new()
+	phys_mat.friction = 0.0
+	phys_mat.bounce = 0.6
+	_central_bubble.physics_material_override = phys_mat
 	_central_bubble.set_meta("node_id", "")
+	_central_bubble.set_meta("target_pos", Vector3.ZERO)
 	
-	## Add collision for click detection
-	var body := StaticBody3D.new()
+	var mesh_inst := MeshInstance3D.new()
+	mesh_inst.mesh = SphereMesh.new()
+	(mesh_inst.mesh as SphereMesh).radius = central_radius
+	(mesh_inst.mesh as SphereMesh).height = central_radius * 2
+	(mesh_inst.mesh as SphereMesh).radial_segments = 32
+	(mesh_inst.mesh as SphereMesh).rings = 16
+	mesh_inst.material_override = _create_bubble_material(true, false)
+	_central_bubble.add_child(mesh_inst)
+	
 	var shape := CollisionShape3D.new()
 	var sphere_shape := SphereShape3D.new()
 	sphere_shape.radius = central_radius
 	shape.shape = sphere_shape
-	body.add_child(shape)
-	body.set_meta("node_id", "") ## Will be updated with actual ID
-	_central_bubble.add_child(body)
+	_central_bubble.add_child(shape)
 	
 	add_child(_central_bubble)
 	
@@ -204,33 +210,39 @@ func _create_bubble_material(is_central: bool, is_completed: bool) -> Material:
 	return std
 
 
-func _create_peripheral_bubble(index: int, node: Dictionary) -> MeshInstance3D:
-	var bubble := MeshInstance3D.new()
-	bubble.mesh = SphereMesh.new()
-	(bubble.mesh as SphereMesh).radius = peripheral_radius
-	(bubble.mesh as SphereMesh).height = peripheral_radius * 2
-	(bubble.mesh as SphereMesh).radial_segments = 24
-	(bubble.mesh as SphereMesh).rings = 12
+func _create_peripheral_bubble(index: int, node: Dictionary) -> RigidBody3D:
+	var bubble := RigidBody3D.new()
+	bubble.gravity_scale = 0.0
+	bubble.linear_damp = 3.0
+	bubble.angular_damp = 3.0
+	var phys_mat := PhysicsMaterial.new()
+	phys_mat.friction = 0.0
+	phys_mat.bounce = 0.6
+	bubble.physics_material_override = phys_mat
 	
 	var node_id: String = node.get("id", "")
-	var is_completed := state_machine.is_completed(node_id) if state_machine else false
-	var material := _create_bubble_material(false, is_completed)
-	bubble.material_override = material
 	bubble.set_meta("node_id", node_id)
 	
-	## Add collision for click detection
-	var body := StaticBody3D.new()
+	var mesh_inst := MeshInstance3D.new()
+	mesh_inst.mesh = SphereMesh.new()
+	(mesh_inst.mesh as SphereMesh).radius = peripheral_radius
+	(mesh_inst.mesh as SphereMesh).height = peripheral_radius * 2
+	(mesh_inst.mesh as SphereMesh).radial_segments = 24
+	(mesh_inst.mesh as SphereMesh).rings = 12
+	var is_completed := state_machine.is_completed(node_id) if state_machine else false
+	mesh_inst.material_override = _create_bubble_material(false, is_completed)
+	bubble.add_child(mesh_inst)
+	
 	var shape := CollisionShape3D.new()
 	var sphere_shape := SphereShape3D.new()
 	sphere_shape.radius = peripheral_radius
 	shape.shape = sphere_shape
-	body.add_child(shape)
-	body.set_meta("node_id", node_id)
-	bubble.add_child(body)
+	bubble.add_child(shape)
 	
-	## Position on orbital ring
 	var angle: float = (float(index) / max(_peripheral_nodes.size(), 1)) * TAU
-	bubble.position = _get_orbital_position(angle)
+	var target_pos := _get_orbital_position(angle)
+	bubble.set_meta("target_pos", target_pos)
+	bubble.position = target_pos
 	
 	add_child(bubble)
 	
@@ -321,29 +333,30 @@ func _update_central_bubble() -> void:
 	var central_id: String = _central_node.get("id", "")
 	_central_bubble.set_meta("node_id", central_id)
 	
-	## Update collision body meta
-	var body := _central_bubble.get_child(0) as StaticBody3D
-	if body:
-		body.set_meta("node_id", central_id)
-	
 	## Update material for completed state - FORCE NEW MATERIAL
 	var is_completed := state_machine.is_completed(central_id) if state_machine else false
 	var new_material := _create_bubble_material(true, is_completed)
 	
-	## Clear override first to ensure update
-	_central_bubble.material_override = null
-	_central_bubble.material_override = new_material
+	if ui and ui.has_method("update_complete_button"):
+		ui.update_complete_button(is_completed)
 	
-	## Update label (now second child after collision body)
-	var label := _central_bubble.get_child(1) as Label3D
-	if label:
-		var progress := state_machine.get_progress() if state_machine else {"completed": 0, "total": 0}
-		var central_label: String = _central_node.get("label", central_id)
-		label.text = "%s\n%d of %d" % [
-			central_label,
-			progress.get("completed", 0),
-			progress.get("total", 0)
-		]
+	## Clear override first to ensure update
+	var mesh_inst := _central_bubble.get_child(0) as MeshInstance3D
+	if mesh_inst:
+		mesh_inst.material_override = null
+		mesh_inst.material_override = new_material
+	
+	## Update label (now child 2)
+	if _central_bubble.get_child_count() > 2:
+		var label := _central_bubble.get_child(2) as Label3D
+		if label:
+			var progress := state_machine.get_progress() if state_machine else {"completed": 0, "total": 0}
+			var central_label: String = _central_node.get("label", central_id)
+			label.text = "%s\n%d of %d" % [
+				central_label,
+				progress.get("completed", 0),
+				progress.get("total", 0)
+			]
 
 
 func _rebuild_peripheral_bubbles() -> void:
@@ -556,10 +569,14 @@ func _handle_double_click(node_id: String) -> void:
 ## === UI Signal Handlers ===
 
 func _on_mark_complete_pressed() -> void:
-	## Mark the current central node as complete
+	## Toggle the completion state of the current central node
 	var central_id: String = _central_node.get("id", "")
 	if not central_id.is_empty():
-		_on_mark_node_requested(central_id)
+		var is_completed := state_machine.is_completed(central_id) if state_machine else false
+		if is_completed:
+			_on_unmark_requested(central_id)
+		else:
+			_on_mark_node_requested(central_id)
 
 
 func _on_mark_node_requested(node_id: String) -> void:
@@ -580,15 +597,21 @@ func _on_mark_node_requested(node_id: String) -> void:
 	var central_id: String = _central_node.get("id", "")
 	if node_id == central_id and _central_bubble:
 		var new_material := _create_bubble_material(true, true)
-		_central_bubble.material_override = null
-		_central_bubble.material_override = new_material
+		var mesh_inst := _central_bubble.get_child(0) as MeshInstance3D
+		if mesh_inst:
+			mesh_inst.material_override = null
+			mesh_inst.material_override = new_material
+		if ui and ui.has_method("update_complete_button"):
+			ui.update_complete_button(true)
 	
 	## Visual Update: Peripheral Bubble
 	for bubble in _peripheral_bubbles:
 		if bubble.get_meta("node_id", "") == node_id:
 			var new_material := _create_bubble_material(false, true)
-			bubble.material_override = null
-			bubble.material_override = new_material
+			var mesh_inst := bubble.get_child(0) as MeshInstance3D
+			if mesh_inst:
+				mesh_inst.material_override = null
+				mesh_inst.material_override = new_material
 			break
 			
 	## Update UI Sidebar and Progress
@@ -721,11 +744,15 @@ func _on_node_unmarked(node_id: String) -> void:
 	if node_id == central_id and _central_bubble:
 		var is_completed := false
 		var new_material := _create_bubble_material(true, is_completed)
-		_central_bubble.material_override = null
-		_central_bubble.material_override = new_material
+		var mesh_inst := _central_bubble.get_child(0) as MeshInstance3D
+		if mesh_inst:
+			mesh_inst.material_override = null
+			mesh_inst.material_override = new_material
+		if ui and ui.has_method("update_complete_button"):
+			ui.update_complete_button(false)
 		
 		## Also update the label with new progress
-		var label := _central_bubble.get_child(1) as Label3D
+		var label := _central_bubble.get_child(2) as Label3D
 		if label:
 			var progress := state_machine.get_progress() if state_machine else {"completed": 0, "total": 0}
 			var central_label: String = _central_node.get("label", central_id)
@@ -791,3 +818,16 @@ func _update_tree_panel() -> void:
 	else:
 		# Fallback to old list method if no layout
 		ui.build_tree(path_nodes, completed_ids, current_id)
+
+
+func _physics_process(delta: float) -> void:
+	if is_instance_valid(_central_bubble):
+		var target: Vector3 = _central_bubble.get_meta("target_pos", Vector3.ZERO)
+		var diff := target - _central_bubble.global_position
+		_central_bubble.apply_central_force(diff * 50.0)
+		
+	for bubble in _peripheral_bubbles:
+		if is_instance_valid(bubble):
+			var target: Vector3 = bubble.get_meta("target_pos", bubble.global_position)
+			var diff := target - bubble.global_position
+			bubble.apply_central_force(diff * 40.0)

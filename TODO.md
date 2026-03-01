@@ -1,3 +1,297 @@
+# 2026-03-01 v1.4.6 - Electron Removal Readiness Action Plan
+
+## English Document
+
+**Goal**: Close all remaining Electron -> Tauri migration gaps so Electron can be removed without regression across desktop release and mobile export strategy.
+
+### Phase P0 - Must Complete Before Electron Removal
+
+- [ ] **Implement Tauri persistent config parity (`kb_config` equivalent)**
+  - [ ] Persist selected KB path in Tauri app data.
+  - [ ] Persist user language in Tauri app data.
+  - [ ] Load both values on startup before frontend initialization.
+  - [ ] Acceptance: Restart keeps same KB root and menu language without manual re-selection.
+
+- [ ] **Harden Godot process launch for non-dev machines**
+  - [ ] Remove hardcoded absolute paths in `src-tauri/src/lib.rs`.
+  - [ ] Use packaged/bundled sidecar strategy for Godot executable resolution.
+  - [ ] Validate Godot binary presence in build artifacts (non-zero file, correct target naming).
+  - [ ] Acceptance: `npm run tauri build` artifact launches Godot on a clean machine without manual path edits.
+
+- [ ] **Add explicit child-process lifecycle management**
+  - [ ] Keep handles for Node sidecar and Godot child processes.
+  - [ ] Implement app shutdown hooks to terminate child processes deterministically.
+  - [ ] Add relaunch test to ensure no lingering `3000` port lock.
+  - [ ] Acceptance: Close app -> no orphan sidecar/Godot processes remain.
+
+- [ ] **Fix release-grade writable data/cache paths**
+  - [ ] Stop assuming write access to `dist/src/frontend` in packaged environments.
+  - [ ] Define a writable runtime directory (app data/cache) for generated `data.js` and `graph_data.json`.
+  - [ ] Update sidecar runtime env (`NOTE_CONNECTION_FRONTEND_DIR`) and restore/cache logic accordingly.
+  - [ ] Acceptance: Build + cache restore works in packaged Tauri install (not just repo dev mode).
+
+- [ ] **Complete first-run parity with Electron UX**
+  - [ ] Add first-run KB selection flow in Tauri when no saved config exists.
+  - [ ] Preserve current menu-based "Change KB / Reset" behavior with persistence.
+  - [ ] Acceptance: New install follows first-run setup and stores user choice permanently.
+
+### Phase P1 - Stabilization and Verification
+
+- [ ] **Unify backend build logs to frontend loading overlay**
+  - [ ] Emit structured `build-log` events from Rust/sidecar bridge to frontend.
+  - [ ] Ensure long builds show progress in Tauri as in prior Electron UX.
+  - [ ] Acceptance: Loading overlay receives incremental backend logs during `/api/build`.
+
+- [ ] **Run release smoke tests and document evidence**
+  - [ ] Windows clean-machine install test (`tauri build` output).
+  - [ ] Cache decision modal behavior test (`Load Existing` vs `Regenerate`).
+  - [ ] Single-click build dedupe test (no duplicate build/restore execution).
+  - [ ] Acceptance: Add reproducible pass evidence in `TEST_REPORT.md`.
+
+- [ ] **Clarify GPU startup command usage**
+  - [ ] Keep recommending `npm run tauri:dev:mini:gpu`.
+  - [ ] Avoid `npm run tauri:dev:mini --gpu` in docs/examples to prevent npm config warnings.
+  - [ ] Acceptance: README/manual examples contain only the supported command form.
+
+### Phase P1.5 - Mobile Strategy Closure (Capacitor vs Tauri Android)
+
+- [ ] **Decide a single authoritative mobile architecture**
+  - [ ] Option A: Keep Capacitor as web-asset runtime with scoped feature set.
+  - [ ] Option B: Move to Tauri Android workflow per `docs/tauri_brainstorming.md`.
+  - [ ] Acceptance: One path selected and documented as official.
+
+- [ ] **If keeping Capacitor (Option A), define feature boundaries explicitly**
+  - [ ] Mark folder-based local build/load as unsupported on-device unless backend is embedded.
+  - [ ] Provide mobile-safe fallback UX for source loading and reader content.
+  - [ ] Acceptance: APK behavior matches documented constraints, no broken controls.
+
+- [ ] **If migrating to Tauri Android (Option B), implement missing pipeline**
+  - [ ] Add Android build scripts and prerequisites for Tauri mobile.
+  - [ ] Replace Node-sidecar assumptions with mobile-compatible backend/file APIs.
+  - [ ] Acceptance: End-to-end Android build with equivalent core workflows.
+
+### Phase P2 - Electron Decommission
+
+- [ ] **Remove Electron entry surface only after P0/P1 gates are green**
+  - [ ] Remove Electron scripts from `package.json`.
+  - [ ] Remove `main: dist/src/electron/main.js`.
+  - [ ] Remove Electron dependencies (`electron`, `electron-builder`, `electron-squirrel-startup`) after migration freeze.
+  - [ ] Archive/remove `src/electron/*` and `electron-builder.yml`.
+  - [ ] Acceptance: CI/build/release pass with Tauri-only desktop pipeline.
+
+- [ ] **Documentation cleanup**
+  - [ ] Update README build/deploy sections from Electron-first to Tauri-first.
+  - [ ] Keep historical changelog entries, but mark Electron path as deprecated/removed with date.
+  - [ ] Acceptance: No active docs instruct users to use Electron commands for current releases.
+
+### Electron Removal Gate Checklist (Go/No-Go)
+
+- [ ] Persistent KB + language parity verified in Tauri.
+- [ ] Godot launch works without hardcoded local path.
+- [ ] No orphan child process after app exit.
+- [ ] Packaged Tauri build supports build/cache/reader workflows.
+- [ ] Mobile strategy finalized and documented.
+- [ ] README and scripts fully aligned to Tauri.
+
+---
+
+## 中文文档
+
+**目标**：补齐 Electron -> Tauri 的剩余迁移缺口，使移除 Electron 后不会在桌面发布与移动导出链路产生功能回退。
+
+### 阶段 P0 - 移除 Electron 前必须完成
+
+- [ ] **实现 Tauri 持久化配置对等能力（等价 `kb_config`）**
+  - [ ] 在 Tauri 应用数据目录持久化 KB 路径。
+  - [ ] 在 Tauri 应用数据目录持久化语言设置。
+  - [ ] 启动时在前端初始化前读取并应用。
+  - [ ] 验收：重启后无需手动重选 KB 与语言，菜单语言保持一致。
+
+- [ ] **加固 Godot 非开发机启动能力**
+  - [ ] 删除 `src-tauri/src/lib.rs` 中硬编码绝对路径。
+  - [ ] 采用可打包的 sidecar/bundle 路径解析方案。
+  - [ ] 校验构建产物中的 Godot 可执行文件存在且非空。
+  - [ ] 验收：`npm run tauri build` 产物在干净机器可直接启动 Godot。
+
+- [ ] **补齐子进程生命周期治理**
+  - [ ] 保留 Node sidecar 与 Godot 子进程句柄。
+  - [ ] 在应用退出钩子中显式回收子进程。
+  - [ ] 增加重启验证，确保不会遗留 `3000` 端口占用。
+  - [ ] 验收：关闭应用后不存在孤儿 sidecar/Godot 进程。
+
+- [ ] **修复发布态可写路径策略**
+  - [ ] 不再假设安装版可写 `dist/src/frontend`。
+  - [ ] 为生成文件（`data.js`、`graph_data.json`）指定可写运行目录（AppData/Cache）。
+  - [ ] 同步更新 sidecar 环境变量与缓存恢复逻辑。
+  - [ ] 验收：安装版 Tauri 下构建与缓存恢复可用（非仅仓库开发态）。
+
+- [ ] **补齐与 Electron 首次启动体验对等**
+  - [ ] 无配置时新增 Tauri 首次运行 KB 选择流程。
+  - [ ] 保留并持久化菜单“更改 KB / 重置”行为。
+  - [ ] 验收：新安装首次引导后永久记住用户选择。
+
+### 阶段 P1 - 稳定化与验证
+
+- [ ] **将后端构建日志统一桥接到前端 Loading 面板**
+  - [ ] 通过 Rust/sidecar 桥发出结构化 `build-log` 事件。
+  - [ ] 确保长时间构建在 Tauri 下可见进度日志。
+  - [ ] 验收：`/api/build` 期间 Loading 面板持续收到增量日志。
+
+- [ ] **执行发布态冒烟测试并固化证据**
+  - [ ] Windows 干净机安装包验证（`tauri build` 产物）。
+  - [ ] 缓存分流弹窗验证（`Load Existing` / `Regenerate`）。
+  - [ ] 单次点击去重验证（无重复 restore/build）。
+  - [ ] 验收：将可复现实验结果写入 `TEST_REPORT.md`。
+
+- [ ] **明确 GPU 启动命令规范**
+  - [ ] 文档统一使用 `npm run tauri:dev:mini:gpu`。
+  - [ ] 不再示例 `npm run tauri:dev:mini --gpu`（避免 npm 警告）。
+  - [ ] 验收：README/手册中仅保留受支持命令格式。
+
+### 阶段 P1.5 - 移动端路线收敛（Capacitor vs Tauri Android）
+
+- [ ] **确定唯一官方移动架构**
+  - [ ] 方案 A：保留 Capacitor（Web 资产运行时，功能范围受限）。
+  - [ ] 方案 B：按 `docs/tauri_brainstorming.md` 迁移到 Tauri Android。
+  - [ ] 验收：官方路线唯一且文档明确。
+
+- [ ] **若保留 Capacitor（方案 A），明确能力边界**
+  - [ ] 未嵌入后端前，设备端目录构建/加载能力标注为不支持。
+  - [ ] 为移动端 source loading/reader 提供安全降级体验。
+  - [ ] 验收：APK 行为与文档约束一致，不出现失效控件。
+
+- [ ] **若迁移 Tauri Android（方案 B），补齐缺失流水线**
+  - [ ] 增加 Tauri mobile Android 脚本与环境配置。
+  - [ ] 替换 Node sidecar 假设，改用移动可行后端/文件 API。
+  - [ ] 验收：Android 端端到端构建并具备核心流程能力。
+
+### 阶段 P2 - Electron 清退
+
+- [ ] **仅在 P0/P1 门槛全部通过后执行清退**
+  - [ ] 删除 `package.json` 中 Electron 脚本。
+  - [ ] 删除 `main: dist/src/electron/main.js`。
+  - [ ] 删除 Electron 依赖（`electron`、`electron-builder`、`electron-squirrel-startup`）。
+  - [ ] 归档/删除 `src/electron/*` 与 `electron-builder.yml`。
+  - [ ] 验收：CI/构建/发布全部通过，桌面仅保留 Tauri 流水线。
+
+- [ ] **文档清理**
+  - [ ] README 构建/发布章节从 Electron-first 改为 Tauri-first。
+  - [ ] 历史变更可保留，但需标注 Electron 路线停用日期。
+  - [ ] 验收：当前发布文档不再要求使用 Electron 命令。
+
+### Electron 移除闸门（Go/No-Go）
+
+- [ ] Tauri 下 KB 与语言持久化对等已验证。
+- [ ] Godot 启动不再依赖本机硬编码路径。
+- [ ] 应用退出后无孤儿子进程。
+- [ ] Tauri 安装版下构建/缓存/Reader 链路可用。
+- [ ] 移动端路线已定案并文档化。
+- [ ] 脚本与 README 全面对齐 Tauri。
+
+---
+
+# 2026-03-01 v1.4.5 - Physically-Based Bubbles & Cancel Completion
+
+## English Document
+
+**Goal**: Upgrade the Godot visualizer with realistic physically-based soap bubbles, remove environmental obstructions, and add flexible task completion UI logic.
+
+### Completed Checklist
+
+- [x] **Physically-Based Shader**
+  - [x] Ported 81-wavelength Thin-Film Interference Glassner logic to `bubble_material.gdshader`.
+  - [x] Added `warpnoise3` and `sp_spectral_filter` for realistic thickness variations across the sphere.
+- [x] **Physics Interactions**
+  - [x] Converted central and peripheral bubbles from `MeshInstance3D` to `RigidBody3D`.
+  - [x] Added `_physics_process` orbital magnetism so bubbles float and collide realistically without overlapping permanently.
+  - [x] Removed `Floor` node obstruction from the `main.tscn` environment.
+- [x] **Cancel Completion UI**
+  - [x] "Mark Complete" button now dynamically toggles to "Cancel Completion".
+  - [x] Connected dynamic states in `path_mode_ui.gd` and `path_renderer.gd` to appropriately mark/unmark nodes.
+
+## 中文文档
+
+**目标**: 使用逼真的物理皂泡升级 Godot 渲染器，移除环境遮挡，并添加灵活的任务完成 UI 逻辑。
+
+### 已完成清单
+
+- [x] **基于物理的着色器**
+  - [x] 将 81 波长薄膜干涉 Glassner 逻辑移植到 `bubble_material.gdshader`。
+  - [x] 添加了 `warpnoise3` 和 `sp_spectral_filter` 以实现逼真的球面厚度变化。
+- [x] **物理交互**
+  - [x] 将中心气泡和周围气泡从 `MeshInstance3D` 转换为 `RigidBody3D`。
+  - [x] 添加了 `_physics_process` 轨道磁力吸引，让气泡可以逼真地漂浮和碰撞而不会永久重叠。
+  - [x] 移除了 `main.tscn` 环境中的 `Floor`（地板）节点障碍物。
+- [x] **取消完成 UI**
+  - [x] “标记完成”按钮现在动态切换为“取消完成”。
+  - [x] 在 `path_mode_ui.gd` 和 `path_renderer.gd` 中连接动态状态以适当地标记/取消标记节点。
+
+---
+
+# 2026-03-01 v1.4.4 - Tauri Bridge Stabilization & Duplicate-Cycle Elimination
+
+## English Document
+
+**Goal**: Finalize Bridge-first migration hardening for Tauri runtime by resolving cache/load duplication, websocket reconnect churn, and runtime path consistency issues.
+
+### Completed Checklist
+
+- [x] **Cache Decision Recovery**
+  - [x] Restored explicit cache decision flow (`Load Existing` / `Regenerate`) before build when target cache exists.
+- [x] **Duplicate Execution Protection**
+  - [x] Added frontend single-flight guard for source loading.
+  - [x] Added backend dedupe protections for `/api/build` and `/api/restore-cache`.
+- [x] **PathBridge Diagnostics**
+  - [x] Added tagged connection logging (client id/tag/address + close code/reason) to distinguish benign reconnects from real cycles.
+- [x] **Godot WS Compatibility**
+  - [x] Fixed Godot URL format to `ws://127.0.0.1:9876/?client=godot` to avoid invalid URL reconnect loops.
+- [x] **Tauri Idle Reconnect Removal**
+  - [x] Disabled `frontend-early` auto websocket bootstrap in Tauri mode.
+- [x] **Language/Menu Idempotency**
+  - [x] Added frontend and Rust-side no-op guards for repeated same-language sync calls.
+
+### Files Updated
+
+- `src/frontend/source_manager.js`
+- `src/server.ts`
+- `src/core/PathBridge.ts`
+- `src/frontend/path_app.js`
+- `path_mode/scripts/ws_client.gd`
+- `src/frontend/i18n.js`
+- `src-tauri/src/lib.rs`
+
+## 中文文档
+
+**目标**: 完成 Bridge-first 的 Tauri 迁移稳态化，重点解决缓存/加载重复执行、WebSocket 空闲重连抖动与运行时路径一致性问题。
+
+### 已完成清单
+
+- [x] **缓存分流恢复**
+  - [x] 当目标缓存存在时，恢复“直接加载缓存 / 重新生成”的显式用户决策流程。
+- [x] **重复执行保护**
+  - [x] 前端增加加载单飞保护，避免重复点击触发双执行。
+  - [x] 后端为 `/api/build` 与 `/api/restore-cache` 增加去重保护。
+- [x] **PathBridge 诊断增强**
+  - [x] 增加带标签连接日志（client id/tag/address + close code/reason），可区分正常重连与真实循环。
+- [x] **Godot WS 兼容性修复**
+  - [x] 将 Godot URL 修正为 `ws://127.0.0.1:9876/?client=godot`，消除 URL 非法导致的重连报错。
+- [x] **Tauri 空闲重连清理**
+  - [x] 在 Tauri 模式禁用 `frontend-early` 自动 WebSocket 启动。
+- [x] **语言/菜单幂等保护**
+  - [x] 在前端与 Rust 命令侧加入“同语言无操作”保护，避免重复同步造成噪声。
+
+### 更新文件
+
+- `src/frontend/source_manager.js`
+- `src/server.ts`
+- `src/core/PathBridge.ts`
+- `src/frontend/path_app.js`
+- `path_mode/scripts/ws_client.gd`
+- `src/frontend/i18n.js`
+- `src-tauri/src/lib.rs`
+
+---
+
 # 2026-02-26 v1.4.3 - 9-Rule Tree Layout Engine
 
 **Goal**: Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html` into production code. Replace simple contour-based layout with full ownership/claiming system.

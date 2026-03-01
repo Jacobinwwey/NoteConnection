@@ -28,9 +28,18 @@ class I18nManager {
     async init() {
         // Load saved language preference
         const savedLang = localStorage.getItem('user_language');
+        let tauriLang = null;
+
+        if (window.__TAURI__) {
+            try {
+                tauriLang = await window.__TAURI__.core.invoke('get_user_language');
+            } catch (error) {
+                console.warn('[i18n] Failed to read language from Tauri backend:', error);
+            }
+        }
         
-        // Detect language priority: 1) Saved, 2) Browser, 3) Default
-        let detectedLang = savedLang || this.detectBrowserLanguage() || 'en';
+        // Detect language priority: 1) Saved(local), 2) Tauri backend, 3) Browser, 4) Default
+        let detectedLang = savedLang || tauriLang || this.detectBrowserLanguage() || 'en';
         
         // Validate against supported languages
         if (!this.supportedLanguages.includes(detectedLang)) {

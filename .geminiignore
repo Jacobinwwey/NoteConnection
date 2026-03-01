@@ -16,6 +16,7 @@ result.txt
 !.gemini/skills/**
 !skills
 !skills/**
+!.exr
 !ref
 *.suo
 *.ntvs
