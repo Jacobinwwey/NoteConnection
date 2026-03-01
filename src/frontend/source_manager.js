@@ -143,6 +143,94 @@ document.addEventListener('DOMContentLoaded', () => {
         return Boolean(restoreData && restoreData.success);
     };
 
+    const LAST_TARGET_KEY = 'nc_last_target';
+
+    const askCacheAction = async (targetLabel, cachedDate, isZh) => {
+        const existing = document.getElementById('cache-choice-modal');
+        if (existing) existing.remove();
+
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.id = 'cache-choice-modal';
+            overlay.style.position = 'fixed';
+            overlay.style.left = '0';
+            overlay.style.top = '0';
+            overlay.style.width = '100vw';
+            overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(0, 0, 0, 0.6)';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.zIndex = '9999';
+
+            const panel = document.createElement('div');
+            panel.style.width = 'min(560px, 90vw)';
+            panel.style.background = '#1f2329';
+            panel.style.border = '1px solid #3c4654';
+            panel.style.borderRadius = '10px';
+            panel.style.padding = '18px';
+            panel.style.color = '#e8edf3';
+            panel.style.boxShadow = '0 16px 42px rgba(0,0,0,0.45)';
+
+            const title = document.createElement('div');
+            title.textContent = isZh ? '检测到已有图谱数据' : 'Existing Graph Cache Found';
+            title.style.fontSize = '1.05rem';
+            title.style.fontWeight = '700';
+            title.style.marginBottom = '10px';
+            panel.appendChild(title);
+
+            const desc = document.createElement('div');
+            desc.textContent = isZh
+                ? `目标: ${targetLabel}\n构建时间: ${cachedDate}\n\n请选择直接加载缓存，或重新生成。`
+                : `Target: ${targetLabel}\nBuilt: ${cachedDate}\n\nChoose to load existing cache or regenerate.`;
+            desc.style.whiteSpace = 'pre-line';
+            desc.style.color = '#c4cdd8';
+            desc.style.lineHeight = '1.45';
+            desc.style.marginBottom = '16px';
+            panel.appendChild(desc);
+
+            const actions = document.createElement('div');
+            actions.style.display = 'flex';
+            actions.style.justifyContent = 'flex-end';
+            actions.style.gap = '10px';
+
+            const regenerateBtn = document.createElement('button');
+            regenerateBtn.textContent = isZh ? '重新生成' : 'Regenerate';
+            regenerateBtn.style.padding = '8px 12px';
+            regenerateBtn.style.borderRadius = '7px';
+            regenerateBtn.style.border = '1px solid #576274';
+            regenerateBtn.style.background = '#2e3642';
+            regenerateBtn.style.color = '#e8edf3';
+            regenerateBtn.style.cursor = 'pointer';
+
+            const loadCacheBtn = document.createElement('button');
+            loadCacheBtn.textContent = isZh ? '直接加载缓存' : 'Load Existing';
+            loadCacheBtn.style.padding = '8px 12px';
+            loadCacheBtn.style.borderRadius = '7px';
+            loadCacheBtn.style.border = '1px solid #2f69a8';
+            loadCacheBtn.style.background = '#2b5f99';
+            loadCacheBtn.style.color = '#ffffff';
+            loadCacheBtn.style.cursor = 'pointer';
+
+            const cleanup = (result) => {
+                overlay.remove();
+                resolve(result);
+            };
+
+            regenerateBtn.addEventListener('click', () => cleanup('regenerate'));
+            loadCacheBtn.addEventListener('click', () => cleanup('load'));
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) cleanup('regenerate');
+            });
+
+            actions.appendChild(regenerateBtn);
+            actions.appendChild(loadCacheBtn);
+            panel.appendChild(actions);
+            overlay.appendChild(panel);
+            document.body.appendChild(overlay);
+        });
+    };
+
     // Prevent duplicate load/build requests caused by rapid clicks or overlapping async flows.
     let isLoadInProgress = false;
 
@@ -194,9 +282,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
             }
-            
-            // Auto-select first option (All Folders)
-            folderSelect.value = 'ALL_FOLDERS';
+
+            // Restore last selected target when possible, else default to ALL_FOLDERS.
+            const rememberedTarget = localStorage.getItem(LAST_TARGET_KEY);
+            const hasRemembered =
+                rememberedTarget &&
+                Array.from(folderSelect.options).some((opt) => opt.value === rememberedTarget);
+            folderSelect.value = hasRemembered ? rememberedTarget : 'ALL_FOLDERS';
             console.log('[SourceManager] Folder dropdown populated with', folderSelect.options.length, 'options');
             
         } catch (err) {
@@ -227,6 +319,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     init();
+
+    folderSelect.addEventListener('change', () => {
+        if (folderSelect.value) {
+            localStorage.setItem(LAST_TARGET_KEY, folderSelect.value);
+        }
+    });
 
     // Add refresh functionality (will be triggered by IPC event from main process)
     if (window.__TAURI__) {
@@ -266,6 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert(t('source.error.noFolder'));
                 return;
             }
+            localStorage.setItem(LAST_TARGET_KEY, target);
 
             // Feature: Check for cached graph (Multi-Session Optimization)
             // Works in both Electron (IPC) and Tauri/Web (HTTP API) modes
@@ -288,11 +387,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (cached) {
                     const isZh = window.i18n && window.i18n.locale === 'zh';
                     const targetLabel = target === 'ALL_FOLDERS' ? (isZh ? '全部目录' : 'All Folders') : target;
-                    const msg = isZh
-                        ? `发现 '${targetLabel}' 的现有图谱 (构建于: ${cached.date})。\n\n点击"确定"直接加载 (速度快)。\n点击"取消"重新生成 (如果文件有变动)。`
-                        : `Found existing graph for '${targetLabel}' (Built: ${cached.date}).\n\nClick OK to load directly (Fast).\nClick Cancel to regenerate (If files changed).`;
+                    let choice = 'regenerate';
+                    try {
+                        choice = await askCacheAction(targetLabel, cached.date, Boolean(isZh));
+                    } catch (_dialogErr) {
+                        const msg = isZh
+                            ? `发现 '${targetLabel}' 的现有图谱 (构建于: ${cached.date})。\n\n点击"确定"直接加载 (速度快)。\n点击"取消"重新生成 (如果文件有变动)。`
+                            : `Found existing graph for '${targetLabel}' (Built: ${cached.date}).\n\nClick OK to load directly (Fast).\nClick Cancel to regenerate (If files changed).`;
+                        choice = confirm(msg) ? 'load' : 'regenerate';
+                    }
 
-                    if (confirm(msg)) {
+                    if (choice === 'load') {
                         loadBtn.textContent = isZh ? '加载缓存中...' : 'Loading Cache...';
 
                         let restoreSuccess = false;

@@ -15,6 +15,8 @@ const PORT = 3000;
 const runtimePaths = resolveRuntimePaths(__dirname);
 const FRONTEND_DIR = runtimePaths.frontendDir;
 let KB_ROOT = runtimePaths.kbRoot;
+let activeBuildKey: string | null = null;
+let activeBuildPromise: Promise<void> | null = null;
 
 // CLI Argument Parsing (v0.9.71 Fix)
 const args = process.argv.slice(2);
@@ -481,6 +483,29 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     try {
                         const { target, maxWorkers, enableGPU, enableGPULayout, memorySavingMode, deepDebug } = JSON.parse(body);
                         console.log('Received build request for:', target, 'maxWorkers:', maxWorkers, 'enableGPU:', enableGPU, 'enableGPULayout:', enableGPULayout, 'memorySavingMode:', memorySavingMode, 'deepDebug:', deepDebug);
+                        const buildKey = JSON.stringify({
+                            target,
+                            maxWorkers,
+                            enableGPU,
+                            enableGPULayout,
+                            memorySavingMode,
+                            deepDebug
+                        });
+
+                        // De-duplicate accidental double-submit from frontend.
+                        if (activeBuildPromise) {
+                            if (activeBuildKey === buildKey) {
+                                console.log('[Build] Duplicate request detected. Waiting for in-flight build.');
+                                await activeBuildPromise;
+                                res.writeHead(200, { 'Content-Type': 'application/json' });
+                                res.end(JSON.stringify({ success: true, deduped: true }));
+                                return;
+                            }
+
+                            res.writeHead(409, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ success: false, error: 'Another build is in progress' }));
+                            return;
+                        }
                         
                         const buildTarget = target === 'ALL_FOLDERS' ? '' : target;
                         
@@ -496,14 +521,25 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                             targetToBuild = KB_ROOT;
                         }
                         
-                        await buildGraph({
+                        const buildPromise = buildGraph({
                             targetPath: targetToBuild,
                             maxWorkers,
                             enableGPU,
                             enableGPULayout,
                             memorySavingMode,
                             deepDebug
-                        });
+                        }).then(() => undefined);
+                        activeBuildKey = buildKey;
+                        activeBuildPromise = buildPromise;
+
+                        try {
+                            await buildPromise;
+                        } finally {
+                            if (activeBuildPromise === buildPromise) {
+                                activeBuildPromise = null;
+                                activeBuildKey = null;
+                            }
+                        }
                         
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ success: true }));
