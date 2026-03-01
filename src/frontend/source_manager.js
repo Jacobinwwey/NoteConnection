@@ -144,6 +144,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const LAST_TARGET_KEY = 'nc_last_target';
+    const RELOAD_GUARD_KEY = 'nc_reload_guard';
+    const RELOAD_GUARD_WINDOW_MS = 4000;
 
     const askCacheAction = async (targetLabel, cachedDate, isZh) => {
         const existing = document.getElementById('cache-choice-modal');
@@ -230,6 +232,40 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.appendChild(overlay);
         });
     };
+
+    // Prevent accidental double-reload loops when multiple handlers/events fire.
+    const requestSafeReload = (reason) => {
+        const now = Date.now();
+        const raw = sessionStorage.getItem(RELOAD_GUARD_KEY);
+        let guard = null;
+        try {
+            guard = raw ? JSON.parse(raw) : null;
+        } catch (_e) {
+            guard = null;
+        }
+
+        if (guard && typeof guard.ts === 'number' && (now - guard.ts) < RELOAD_GUARD_WINDOW_MS) {
+            console.warn('[SourceManager] Reload suppressed by guard. Previous reason:', guard.reason, 'Current reason:', reason);
+            return false;
+        }
+
+        sessionStorage.setItem(RELOAD_GUARD_KEY, JSON.stringify({ ts: now, reason }));
+        window.location.reload();
+        return true;
+    };
+
+    // Clear stale guard after successful page load.
+    try {
+        const raw = sessionStorage.getItem(RELOAD_GUARD_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed.ts !== 'number' || (Date.now() - parsed.ts) > RELOAD_GUARD_WINDOW_MS) {
+                sessionStorage.removeItem(RELOAD_GUARD_KEY);
+            }
+        }
+    } catch (_e) {
+        sessionStorage.removeItem(RELOAD_GUARD_KEY);
+    }
 
     // Prevent duplicate load/build requests caused by rapid clicks or overlapping async flows.
     let isLoadInProgress = false;
@@ -412,8 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
 
                         if (restoreSuccess) {
-                            keepLockedForReload = true;
-                            window.location.reload();
+                            keepLockedForReload = requestSafeReload('cache-restore');
                             return;
                         }
 
@@ -460,7 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (success) {
                 keepLockedForReload = true;
                 setTimeout(() => {
-                    window.location.reload();
+                    requestSafeReload('build-success');
                 }, 1000);
                 return;
             }

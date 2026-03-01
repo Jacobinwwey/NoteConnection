@@ -17,6 +17,8 @@ const FRONTEND_DIR = runtimePaths.frontendDir;
 let KB_ROOT = runtimePaths.kbRoot;
 let activeBuildKey: string | null = null;
 let activeBuildPromise: Promise<void> | null = null;
+let lastRestoreKey: string | null = null;
+let lastRestoreTs = 0;
 
 // CLI Argument Parsing (v0.9.71 Fix)
 const args = process.argv.slice(2);
@@ -385,6 +387,17 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         res.end(JSON.stringify({ success: false, error: 'Missing target' }));
                         return;
                     }
+
+                    const restoreKey = `restore:${target}`;
+                    const now = Date.now();
+                    if (lastRestoreKey === restoreKey && (now - lastRestoreTs) < 3000) {
+                        console.log(`[Cache] Duplicate restore suppressed for ${target}`);
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: true, deduped: true }));
+                        return;
+                    }
+                    lastRestoreKey = restoreKey;
+                    lastRestoreTs = now;
 
                     if (target === 'ALL_FOLDERS') {
                         const activeJsPath = path.join(FRONTEND_DIR, 'data.js');
