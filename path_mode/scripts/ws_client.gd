@@ -191,6 +191,13 @@ func send_collapse_all() -> void:
 		"type": "collapseAll",
 		"payload": {}
 	})
+
+func send_exit_path_mode() -> void:
+	send_message({
+		"type": "exitPathMode",
+		"payload": {}
+	})
+
 ## Check if WebSocket is connected
 func is_ws_connected() -> bool:
 	return _connected

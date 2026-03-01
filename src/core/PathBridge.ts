@@ -107,6 +107,11 @@ export class PathBridge {
                  this.broadcast('configure', data.payload);
                  break;
 
+            case 'exitPathMode':
+                console.log('[PathBridge] Exit Path Mode requested');
+                this.broadcast('exitPathMode', data.payload || {});
+                break;
+
             default:
                 console.log(`[PathBridge] Unknown message type: ${data.type}`);
         }

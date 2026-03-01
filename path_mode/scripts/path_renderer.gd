@@ -68,6 +68,7 @@ func _ready() -> void:
 		ui.node_collapse_prereqs_requested.connect(_on_node_collapse_prereqs_requested) # New
 		ui.collapse_all_requested.connect(_on_collapse_all_requested) # New
 		ui.settings_updated.connect(_on_settings_updated)
+		ui.exit_requested.connect(_on_exit_requested)
 
 
 func _on_node_toggle_requested(node_id: String) -> void:
@@ -297,6 +298,8 @@ func render_path(path_data: Dictionary) -> void:
 					node_label = pn_dict.get("label", node_id)
 					break
 			ui.add_completed_node(node_id, node_label)
+		if ui.has_method("set_available_targets"):
+			ui.set_available_targets(path_nodes, _central_node.get("id", ""))
 	
 	## Strict Reset of Central Bubble State
 	if _central_bubble:
@@ -359,6 +362,8 @@ func _rebuild_peripheral_bubbles() -> void:
 
 func _draw_edges() -> void:
 	_edge_drawer.clear_surfaces()
+	if _peripheral_bubbles.is_empty():
+		return
 	_edge_drawer.surface_begin(Mesh.PRIMITIVE_LINES)
 	
 	for bubble in _peripheral_bubbles:
@@ -543,6 +548,8 @@ func _handle_double_click(node_id: String) -> void:
 			})
 	else:
 		## Peripheral - orbital rotation
+		if ui and not central_id.is_empty():
+			ui.start_browsing(central_id)
 		animate_orbital_rotation(node_id)
 
 
@@ -615,7 +622,7 @@ func _on_completed_node_clicked(node_id: String) -> void:
 	
 	## Start browsing mode and save current position
 	var current_id: String = _central_node.get("id", "")
-	if ui:
+	if ui and current_id != node_id:
 		ui.start_browsing(current_id)
 	
 	## Switch central to the clicked node
@@ -656,6 +663,9 @@ func _on_return_to_node(node_id: String) -> void:
 func _on_tree_node_clicked(node_id: String) -> void:
 	## User clicked a node in the tree panel
 	print("[PathRenderer] Tree node clicked:", node_id)
+	var current_id: String = _central_node.get("id", "")
+	if ui and current_id != node_id and not current_id.is_empty():
+		ui.start_browsing(current_id)
 	_request_switch_center(node_id)
 
 
@@ -663,6 +673,12 @@ func _on_settings_updated(settings: Dictionary) -> void:
 	print("[PathRenderer] Settings updated: ", settings)
 	if ws_client and ws_client.has_method("send_configure"):
 		ws_client.send_configure(settings)
+
+
+func _on_exit_requested() -> void:
+	print("[PathRenderer] Exit Path Mode requested from Godot UI")
+	if ws_client and ws_client.has_method("send_exit_path_mode"):
+		ws_client.send_exit_path_mode()
 
 
 func _on_unmark_requested(node_id: String) -> void:

@@ -323,9 +323,26 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     const urlObj = new URL(req.url, `http://${req.headers.host}`);
                     const target = urlObj.searchParams.get('target');
                     
-                    if (!target || target === 'ALL_FOLDERS') {
+                    if (!target) {
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify(null));
+                        return;
+                    }
+
+                    if (target === 'ALL_FOLDERS') {
+                        const activeJsPath = path.join(FRONTEND_DIR, 'data.js');
+                        if (fs.existsSync(activeJsPath)) {
+                            const stats = fs.statSync(activeJsPath);
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({
+                                date: stats.mtime.toLocaleString(),
+                                size: stats.size,
+                                source: 'active'
+                            }));
+                        } else {
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify(null));
+                        }
                         return;
                     }
                     
@@ -364,6 +381,18 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     if (!target) {
                         res.writeHead(400, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ success: false, error: 'Missing target' }));
+                        return;
+                    }
+
+                    if (target === 'ALL_FOLDERS') {
+                        const activeJsPath = path.join(FRONTEND_DIR, 'data.js');
+                        if (fs.existsSync(activeJsPath)) {
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ success: true }));
+                        } else {
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ success: false, error: 'No active cache found' }));
+                        }
                         return;
                     }
                     

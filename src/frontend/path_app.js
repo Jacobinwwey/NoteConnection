@@ -23,6 +23,15 @@ window.pathApp = {
     stickyClaimEnabled: true,
     currentTargetId: null,
     lastTreeLayout: null, // Store tree layout for requestPath
+    uiInitialized: false,
+    runtimeConfig: {
+        mode: 'domain',
+        strategy: 'foundational',
+        layout: 'orbital', // Track(Focus) default in Tauri flow
+        targetId: null,
+        autoReconstruct: true,
+        retainHistory: true
+    },
     
     // Animation State
     animationId: null,
@@ -62,7 +71,15 @@ window.pathApp = {
     },
 
     setupWebSocket: function() {
-        this.ws = new WebSocket('ws://localhost:9876');
+        const hasActiveSocket = this.ws && (
+            this.ws.readyState === WebSocket.OPEN ||
+            this.ws.readyState === WebSocket.CONNECTING
+        );
+
+        if (!hasActiveSocket) {
+            this.ws = new WebSocket('ws://localhost:9876');
+        }
+
         this.ws.onopen = () => console.log('[PathApp] Connected to Bridge');
         this.ws.onmessage = (e) => {
             try {
@@ -116,6 +133,12 @@ window.pathApp = {
                      // always trigger fresh update to ensure treeLayout is computed via Worker
                      console.log('[PathApp] Remote requested path data. Triggering fresh update.');
                      this.triggerUpdate();
+                } else if (msg.type === 'configure') {
+                    console.log('[PathApp] Remote configure:', msg.payload);
+                    this.applyRemoteConfigure(msg.payload || {});
+                } else if (msg.type === 'exitPathMode') {
+                    console.log('[PathApp] Remote exit Path Mode');
+                    this.exitPathMode();
                 } else if (msg.type === 'completionSync') {
                     // ... existing code ...
                     // Bidirectional sync from Godot
@@ -149,7 +172,7 @@ window.pathApp = {
                         
                         // Auto-Reconstruct Path if setting enabled (default true)
                         // This triggers path Recalculation based on new completion status
-                        const autoReconstruct = true; // Use setting if available
+                        const autoReconstruct = this.runtimeConfig.autoReconstruct !== false;
                         if (autoReconstruct && this.currentTargetId) {
                             console.log('[PathApp] Auto-reconstructing path because', nodeId, 'was completed');
                             this.triggerUpdate();
@@ -178,6 +201,119 @@ window.pathApp = {
                 console.error('WS Error', err);
             }
         };
+
+        if (hasActiveSocket && this.ws.readyState === WebSocket.OPEN) {
+            console.log('[PathApp] Reusing existing Bridge socket');
+        }
+    },
+
+    _isTauriMode: function() {
+        return typeof window !== 'undefined' && !!window.__TAURI__;
+    },
+
+    _getModeValue: function() {
+        if (this._isTauriMode()) {
+            return this.runtimeConfig.mode || (this.currentTargetId ? 'diffusion' : 'domain');
+        }
+        return document.getElementById('learning-mode')?.value || 'domain';
+    },
+
+    _getStrategyValue: function() {
+        if (this._isTauriMode()) {
+            return this.runtimeConfig.strategy || 'foundational';
+        }
+        return document.getElementById('strategy')?.value || 'foundational';
+    },
+
+    _getLayoutValue: function() {
+        if (this._isTauriMode()) {
+            // Layout is backend-defaulted to Track(Focus) in Tauri flow.
+            return 'orbital';
+        }
+        return document.getElementById('layout-style')?.value || 'orbital';
+    },
+
+    _getRetainHistoryEnabled: function() {
+        if (this._isTauriMode()) {
+            return this.runtimeConfig.retainHistory !== false;
+        }
+        return document.getElementById('set-retain-history')?.checked ?? true;
+    },
+
+    _toggleHistorySidebar: function() {
+        const sidebar = document.getElementById('learning-history-sidebar');
+        if (!sidebar) return;
+        sidebar.style.zIndex = '3000';
+        if (sidebar.style.display === 'none' || sidebar.style.display === '') {
+            sidebar.style.display = 'flex';
+            sidebar.offsetHeight;
+            setTimeout(() => {
+                sidebar.style.transform = 'translateX(0)';
+            }, 10);
+        } else {
+            sidebar.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                sidebar.style.display = 'none';
+            }, 300);
+        }
+    },
+
+    exitPathMode: function() {
+        const pathContainer = document.getElementById('path-container');
+        const graphWrapper = document.getElementById('graph-wrapper');
+        const sidebar = document.getElementById('learning-history-sidebar');
+
+        if (pathContainer) pathContainer.style.display = 'none';
+        if (graphWrapper) graphWrapper.style.display = 'block';
+        if (sidebar) {
+            sidebar.style.transform = 'translateX(100%)';
+            sidebar.style.display = 'none';
+        }
+        window.dispatchEvent(new Event('resize'));
+    },
+
+    applyRemoteConfigure: function(config) {
+        if (!config || typeof config !== 'object') return;
+
+        const incomingTargetId = typeof config.targetId === 'string'
+            ? config.targetId
+            : (typeof config.target_id === 'string' ? config.target_id : null);
+
+        if (typeof config.mode === 'string') {
+            this.runtimeConfig.mode = config.mode === 'diffusion' ? 'diffusion' : 'domain';
+        }
+        if (typeof config.strategy === 'string') {
+            this.runtimeConfig.strategy = config.strategy === 'core' ? 'core' : 'foundational';
+        }
+        if (incomingTargetId !== null) {
+            this.runtimeConfig.targetId = incomingTargetId || null;
+            this.currentTargetId = incomingTargetId || null;
+        }
+        if (typeof config.auto_reconstruct === 'boolean') {
+            this.runtimeConfig.autoReconstruct = config.auto_reconstruct;
+        }
+        if (typeof config.retain_history === 'boolean') {
+            this.runtimeConfig.retainHistory = config.retain_history;
+        }
+
+        if (this._isTauriMode()) {
+            this.runtimeConfig.layout = 'orbital';
+        } else if (typeof config.layout === 'string') {
+            this.runtimeConfig.layout = config.layout;
+        }
+
+        // Keep DOM controls in sync for browser mode compatibility/debugging.
+        const modeEl = document.getElementById('learning-mode');
+        const strategyEl = document.getElementById('strategy');
+        const layoutEl = document.getElementById('layout-style');
+        if (modeEl) modeEl.value = this.runtimeConfig.mode;
+        if (strategyEl) strategyEl.value = this.runtimeConfig.strategy;
+        if (layoutEl) layoutEl.value = this._getLayoutValue();
+
+        // Trigger recompute only when worker is ready.
+        if (this.worker) {
+            this.triggerUpdate();
+        }
     },
     
     // Save completed nodes to localStorage
@@ -440,50 +576,70 @@ window.pathApp = {
     },
 
     setupUI: function() {
-        document.getElementById('btn-exit-path').addEventListener('click', () => {
-             document.getElementById('path-container').style.display = 'none';
-             document.getElementById('graph-wrapper').style.display = 'block';
-             window.dispatchEvent(new Event('resize'));
-        });
+        const tauriMode = this._isTauriMode();
+        const toolbar = document.getElementById('path-toolbar');
 
-        document.getElementById('learning-mode').addEventListener('change', (e) => {
-            const mode = e.target.value;
-            if (mode === 'diffusion') {
-                this.showNodeSelector();
-            } else {
-                this.currentTargetId = null; // Clear target for Domain Mode
-                this.updateTargetDisplay();
-                this.triggerUpdate();
+        if (tauriMode && toolbar) {
+            // In Tauri, controls are migrated to Godot. Keep canvas view only.
+            toolbar.style.display = 'none';
+        }
+        if (tauriMode) {
+            const pathSettingsHeader = document.querySelector('h3[data-i18n="grp_path_mode"]');
+            const pathSettingsGroup = pathSettingsHeader ? pathSettingsHeader.closest('.settings-group') : null;
+            if (pathSettingsGroup) {
+                pathSettingsGroup.style.display = 'none';
             }
-        });
-        document.getElementById('strategy').addEventListener('change', () => this.triggerUpdate());
-        document.getElementById('layout-style').addEventListener('change', () => this.triggerUpdate());
+        }
 
-        document.getElementById('btn-mark-complete').addEventListener('click', () => this.markComplete());
-        
-        document.getElementById('btn-toggle-history').addEventListener('click', () => {
-            const sidebar = document.getElementById('learning-history-sidebar');
-            sidebar.style.zIndex = '3000'; // Correct Z-Index
-            if (sidebar.style.display === 'none' || sidebar.style.display === '') {
-                sidebar.style.display = 'flex';
-                // Trigger reflow
-                sidebar.offsetHeight; 
-                setTimeout(() => sidebar.style.transform = 'translateX(0)', 10);
-            } else {
+        if (this.uiInitialized) {
+            return;
+        }
+        this.uiInitialized = true;
+
+        const exitBtn = document.getElementById('btn-exit-path');
+        if (exitBtn) {
+            exitBtn.addEventListener('click', () => this.exitPathMode());
+        }
+
+        const learningModeEl = document.getElementById('learning-mode');
+        const strategyEl = document.getElementById('strategy');
+        const layoutEl = document.getElementById('layout-style');
+        const markBtn = document.getElementById('btn-mark-complete');
+        const historyBtn = document.getElementById('btn-toggle-history');
+        const closeHistoryBtn = document.getElementById('btn-close-history');
+
+        if (!tauriMode) {
+            if (learningModeEl) {
+                learningModeEl.addEventListener('change', (e) => {
+                    const mode = e.target.value;
+                    if (mode === 'diffusion') {
+                        this.showNodeSelector();
+                    } else {
+                        this.currentTargetId = null; // Clear target for Domain Mode
+                        this.updateTargetDisplay();
+                        this.triggerUpdate();
+                    }
+                });
+            }
+            if (strategyEl) strategyEl.addEventListener('change', () => this.triggerUpdate());
+            if (layoutEl) layoutEl.addEventListener('change', () => this.triggerUpdate());
+            if (markBtn) markBtn.addEventListener('click', () => this.markComplete());
+            if (historyBtn) historyBtn.addEventListener('click', () => this._toggleHistorySidebar());
+        }
+
+        if (closeHistoryBtn) {
+            closeHistoryBtn.addEventListener('click', () => {
+                const sidebar = document.getElementById('learning-history-sidebar');
+                if (!sidebar) return;
                 sidebar.style.transform = 'translateX(100%)';
-                setTimeout(() => sidebar.style.display = 'none', 300);
-            }
-        });
-
-        document.getElementById('btn-close-history').addEventListener('click', () => {
-            const sidebar = document.getElementById('learning-history-sidebar');
-            sidebar.style.transform = 'translateX(100%)';
-            setTimeout(() => sidebar.style.display = 'none', 300);
-        });
+                setTimeout(() => {
+                    sidebar.style.display = 'none';
+                }, 300);
+            });
+        }
 
         // Add Target Display UI if missing
-        if (!document.getElementById('target-display')) {
-            const toolbar = document.getElementById('path-toolbar');
+        if (!tauriMode && !document.getElementById('target-display') && toolbar && learningModeEl) {
             const targetDiv = document.createElement('div');
             targetDiv.id = 'target-display';
             targetDiv.className = 'toolbar-group';
@@ -493,26 +649,35 @@ window.pathApp = {
                 <button id="btn-change-target" class="btn-small">Change</button>
             `;
             // Insert after strategy
-            toolbar.insertBefore(targetDiv, document.getElementById('learning-mode').parentNode.nextSibling);
+            toolbar.insertBefore(targetDiv, learningModeEl.parentNode.nextSibling);
             
             document.getElementById('btn-change-target').addEventListener('click', () => {
                 this.showNodeSelector();
             });
         }
 
-        document.getElementById('node-select-input').addEventListener('input', (e) => this.filterNodeList(e.target.value));
-        document.getElementById('btn-close-node-select').addEventListener('click', () => {
-            document.getElementById('node-select-modal').style.display = 'none';
-            // Revert if no target selected?
-            if (!this.currentTargetId && document.getElementById('learning-mode').value === 'diffusion') {
-                 // Keep as is or switch back?
-            }
-        });
+        const nodeSelectInput = document.getElementById('node-select-input');
+        const closeNodeSelectBtn = document.getElementById('btn-close-node-select');
+        if (nodeSelectInput) {
+            nodeSelectInput.addEventListener('input', (e) => this.filterNodeList(e.target.value));
+        }
+        if (closeNodeSelectBtn) {
+            closeNodeSelectBtn.addEventListener('click', () => {
+                const modal = document.getElementById('node-select-modal');
+                if (modal) modal.style.display = 'none';
+                if (!this.currentTargetId && this._getModeValue() === 'diffusion') {
+                    // Keep current mode; Godot/browser can update target later.
+                }
+            });
+        }
     },
 
     updateTargetDisplay: function() {
+        if (this._isTauriMode()) {
+            return;
+        }
         const div = document.getElementById('target-display');
-        const mode = document.getElementById('learning-mode').value;
+        const mode = this._getModeValue();
         
         if (mode === 'diffusion' && this.currentTargetId) {
             const sourceData = (typeof graphData !== 'undefined') ? graphData : window.graphData;
@@ -528,7 +693,7 @@ window.pathApp = {
     },
 
     loadHistory: function() {
-        const retain = document.getElementById('set-retain-history')?.checked ?? true;
+        const retain = this._getRetainHistoryEnabled();
         if (!retain) return;
         const stored = localStorage.getItem('nc_path_history');
         if (stored) {
@@ -548,15 +713,31 @@ window.pathApp = {
         }
     },
     saveHistory: function() {
-        if (document.getElementById('set-retain-history')?.checked ?? true) {
+        if (this._getRetainHistoryEnabled()) {
             localStorage.setItem('nc_path_history', JSON.stringify(this.learningHistory));
         }
     },
 
     triggerUpdate: function() {
-        const mode = document.getElementById('learning-mode').value;
-        const strategy = document.getElementById('strategy').value;
-        const layout = document.getElementById('layout-style').value;
+        const mode = this._getModeValue();
+        const strategy = this._getStrategyValue();
+        const layout = this._getLayoutValue();
+        let targetId = this.currentTargetId;
+        if (mode === 'diffusion' && this.runtimeConfig.targetId) {
+            targetId = this.runtimeConfig.targetId;
+        }
+        if (mode === 'diffusion' && !targetId) {
+            const fallbackTarget = this.centralNodeId || (this.nodes.length > 0 ? this.nodes[0].id : null);
+            if (fallbackTarget) {
+                targetId = fallbackTarget;
+                this.currentTargetId = fallbackTarget;
+                this.runtimeConfig.targetId = fallbackTarget;
+            }
+        }
+        if (mode === 'diffusion' && !targetId) {
+            console.warn('[PathApp] Diffusion mode requested without target; skipping update.');
+            return;
+        }
         
         // Preserve central focus if we already have one
         if (layout === 'orbital' && !this.centralNodeId && this.nodes.length > 0) {
@@ -570,7 +751,7 @@ window.pathApp = {
                 mode, 
                 strategy, 
                 layout, 
-                targetId: this.currentTargetId, 
+                targetId: targetId, 
                 centralId: this.centralNodeId,
                 collapsedIds: Array.from(this.collapsedNodes),
                 completedIds: Array.from(this.completedNodes),
@@ -585,6 +766,15 @@ window.pathApp = {
 
     startProcessing: function(targetId) {
         this.currentTargetId = targetId;
+        if (this._isTauriMode()) {
+            this.runtimeConfig.layout = 'orbital';
+            if (targetId) {
+                this.runtimeConfig.mode = 'diffusion';
+                this.runtimeConfig.targetId = targetId;
+            } else if (!this.runtimeConfig.targetId) {
+                this.runtimeConfig.mode = 'domain';
+            }
+        }
         this.forcedExpansionNodes.clear(); // Reset expansion on new target
         const sourceData = (typeof graphData !== 'undefined') ? graphData : window.graphData;
         
@@ -644,7 +834,7 @@ window.pathApp = {
             if (!n.orbitalRadiusOffset || n.orbitalRadiusOffset < 100) n.orbitalRadiusOffset = Math.random() * 600; 
         });
 
-        if (document.getElementById('layout-style').value === 'orbital') {
+        if (this._getLayoutValue() === 'orbital') {
             this.runLocalCloudLayout();
         }
 
@@ -657,7 +847,7 @@ window.pathApp = {
     // --- Animation & Rendering ---
 
     animate: function() {
-        const layout = document.getElementById('layout-style').value;
+        const layout = this._getLayoutValue();
         if (layout === 'orbital') {
             this.updateOrbitalPositions();
             this.render(); 
@@ -694,7 +884,7 @@ window.pathApp = {
         if (!this.ctx) return;
         const ctx = this.ctx;
         const t = this.transform;
-        const layout = document.getElementById('layout-style').value;
+        const layout = this._getLayoutValue();
 
         ctx.save();
         ctx.fillStyle = '#1e1e1e';
@@ -840,7 +1030,7 @@ window.pathApp = {
 
     handleDoubleClick: function(e) {
         const { x, y } = this.getCanvasCoordinates(e.clientX, e.clientY);
-        const layout = document.getElementById('layout-style').value;
+        const layout = this._getLayoutValue();
         const node = this.findNodeAt(x, y);
 
         if (node) {
@@ -918,7 +1108,7 @@ window.pathApp = {
     },
 
     runLocalCloudLayout: function() {
-        if (document.getElementById('layout-style').value !== 'orbital') return;
+        if (this._getLayoutValue() !== 'orbital') return;
         
         const center = this.nodes.find(n => n.id === this.centralNodeId);
         if (!center) return;
@@ -952,7 +1142,7 @@ window.pathApp = {
     },
 
     findNodeAt: function(x, y) {
-        const layout = document.getElementById('layout-style').value;
+        const layout = this._getLayoutValue();
         if (layout === 'orbital' && this.centralNodeId) {
             const center = this.nodes.find(n => n.id === this.centralNodeId);
             const dist = Math.hypot(center.x - x, center.y - y);
@@ -1159,6 +1349,11 @@ window.pathApp = {
                         };
                         this.sendPathToBridge(result);
                     }
+                } else if (msg.type === 'configure') {
+                    console.log('[PathApp] Early configure received');
+                    this.applyRemoteConfigure(msg.payload || {});
+                } else if (msg.type === 'exitPathMode') {
+                    this.exitPathMode();
                 }
             } catch(err) {
                 console.error('[PathApp] Early WS Error:', err);

@@ -95,6 +95,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentPathEl = document.getElementById('kb-current-path');
 
     if (!folderSelect || !loadBtn) return;
+    if (loadBtn.dataset.sourceManagerBound === '1') {
+        console.warn('[SourceManager] Already initialized, skipping duplicate binding.');
+        return;
+    }
+    loadBtn.dataset.sourceManagerBound = '1';
 
     // Translation helper
     const t = (key, params) => window.i18n ? window.i18n.t(key, params) : key;
@@ -137,6 +142,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const restoreData = await restoreRes.json();
         return Boolean(restoreData && restoreData.success);
     };
+
+    // Prevent duplicate load/build requests caused by rapid clicks or overlapping async flows.
+    let isLoadInProgress = false;
 
     // Fetch folders from backend
     const fetchFolders = async () => {
@@ -243,16 +251,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Handle Load
     loadBtn.addEventListener('click', async () => {
-        const target = folderSelect.value;
-        if (!target) {
-            alert(t('source.error.noFolder'));
+        if (isLoadInProgress) {
+            console.warn('[SourceManager] Load already in progress; ignoring duplicate click.');
             return;
         }
 
-        // Feature: Check for cached graph (Multi-Session Optimization)
-        // Works in both Electron (IPC) and Tauri/Web (HTTP API) modes
-        // 多会话优化：检查缓存图谱，同时支持 Electron IPC 和 HTTP API 模式
-        if (target !== 'ALL_FOLDERS') {
+        isLoadInProgress = true;
+        let keepLockedForReload = false;
+        loadBtn.disabled = true;
+
+        try {
+            const target = folderSelect.value;
+            if (!target) {
+                alert(t('source.error.noFolder'));
+                return;
+            }
+
+            // Feature: Check for cached graph (Multi-Session Optimization)
+            // Works in both Electron (IPC) and Tauri/Web (HTTP API) modes
+            // 多会话优化：检查缓存图谱，同时支持 Electron IPC 和 HTTP API 模式
             try {
                 let cached = null;
 
@@ -267,104 +284,95 @@ document.addEventListener('DOMContentLoaded', () => {
                         throw sidecarErr;
                     }
                 }
-                
-                if (cached) {
-                    // Simple bilingual fallback since we haven't updated json files yet
-                    const isZh = window.i18n && window.i18n.locale === 'zh';
-                    const msg = isZh 
-                        ? `发现 '${target}' 的现有图谱 (构建于: ${cached.date})。\n\n点击"确定"直接加载 (速度快)。\n点击"取消"重新生成 (如果文件有变动)。`
-                        : `Found existing graph for '${target}' (Built: ${cached.date}).\n\nClick OK to load directly (Fast).\nClick Cancel to regenerate (If files changed).`;
-                    
-                    if (confirm(msg)) {
-                        loadBtn.disabled = true;
-                        loadBtn.textContent = 'Loading Cache...';
-                        
-                        let success = false;
 
+                if (cached) {
+                    const isZh = window.i18n && window.i18n.locale === 'zh';
+                    const targetLabel = target === 'ALL_FOLDERS' ? (isZh ? '全部目录' : 'All Folders') : target;
+                    const msg = isZh
+                        ? `发现 '${targetLabel}' 的现有图谱 (构建于: ${cached.date})。\n\n点击"确定"直接加载 (速度快)。\n点击"取消"重新生成 (如果文件有变动)。`
+                        : `Found existing graph for '${targetLabel}' (Built: ${cached.date}).\n\nClick OK to load directly (Fast).\nClick Cancel to regenerate (If files changed).`;
+
+                    if (confirm(msg)) {
+                        loadBtn.textContent = isZh ? '加载缓存中...' : 'Loading Cache...';
+
+                        let restoreSuccess = false;
                         try {
-                            success = await restoreCacheViaSidecar(target);
+                            restoreSuccess = await restoreCacheViaSidecar(target);
                         } catch (sidecarErr) {
                             if (window.__TAURI__) {
-                                success = await window.__TAURI__.core.invoke('restore_cache', { target: target });
+                                restoreSuccess = await window.__TAURI__.core.invoke('restore_cache', { target: target });
                             } else {
                                 throw sidecarErr;
                             }
                         }
-                        
-                        if (success) {
-                            // Reload with cache busting handled by dynamic loader
+
+                        if (restoreSuccess) {
+                            keepLockedForReload = true;
                             window.location.reload();
                             return;
-                        } else {
-                            console.warn('[SourceManager] Cache restore failed, falling back to build.');
                         }
+
+                        console.warn('[SourceManager] Cache restore failed, falling back to build.');
                     }
                 }
-            } catch (e) {
-                console.error('[SourceManager] Cache check failed', e);
+            } catch (cacheErr) {
+                console.error('[SourceManager] Cache check failed', cacheErr);
             }
-        }
 
-        loadBtn.disabled = true;
-        loadBtn.textContent = t('source.loading');
+            loadBtn.textContent = t('source.loading');
 
-        const maxWorkers = window.settingsManager ? window.settingsManager.get('performance', 'maxWorkers') : undefined;
-        const enableGPU = window.settingsManager ? window.settingsManager.get('performance', 'enableGPU') : undefined;
-        // Map frontend 'gpuRendering' to backend 'enableGPULayout'
-        const enableGPULayout = window.settingsManager ? window.settingsManager.get('performance', 'gpuRendering') : undefined;
-        const memorySavingMode = window.settingsManager ? window.settingsManager.get('performance', 'memorySavingMode') : undefined;
-        const deepDebug = window.settingsManager ? window.settingsManager.get('performance', 'deepDebug') : undefined;
+            const maxWorkers = window.settingsManager ? window.settingsManager.get('performance', 'maxWorkers') : undefined;
+            const enableGPU = window.settingsManager ? window.settingsManager.get('performance', 'enableGPU') : undefined;
+            // Map frontend 'gpuRendering' to backend 'enableGPULayout'
+            const enableGPULayout = window.settingsManager ? window.settingsManager.get('performance', 'gpuRendering') : undefined;
+            const memorySavingMode = window.settingsManager ? window.settingsManager.get('performance', 'memorySavingMode') : undefined;
+            const deepDebug = window.settingsManager ? window.settingsManager.get('performance', 'deepDebug') : undefined;
 
-        const buildPayload = { target, maxWorkers, enableGPU, enableGPULayout, memorySavingMode, deepDebug };
+            const buildPayload = { target, maxWorkers, enableGPU, enableGPULayout, memorySavingMode, deepDebug };
 
-        const runBuild = async () => {
-            // Show Loading Screen
             if (window.loadingManager) window.loadingManager.show();
 
-            try {
-                let success = false;
-                let error = '';
+            let success = false;
+            let error = '';
+            const res = await fetch('http://localhost:3000/api/build', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(buildPayload)
+            });
 
-                // Use fetch for both Tauri sidecar and standard HTTP usage
-                const res = await fetch('http://localhost:3000/api/build', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(buildPayload)
-                });
-                
-                if (res.ok) {
-                    success = true;
-                    if (window.loadingManager) window.loadingManager.log(t('notifications.buildSuccess'));
-                } else {
-                    try {
-                        const data = await res.json();
-                        error = data.error || `HTTP ${res.status}`;
-                    } catch(e) {
-                         error = `HTTP ${res.status}: ${res.statusText}`;
-                    }
+            if (res.ok) {
+                success = true;
+                if (window.loadingManager) window.loadingManager.log(t('notifications.buildSuccess'));
+            } else {
+                try {
+                    const data = await res.json();
+                    error = data.error || `HTTP ${res.status}`;
+                } catch (_e) {
+                    error = `HTTP ${res.status}: ${res.statusText}`;
                 }
-
-                if (success) {
-                    // Delay reload slightly to show success
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                } else {
-                    if (window.loadingManager) window.loadingManager.hide();
-                    alert(t('source.error.loadFailed', { error: error || 'Unknown error' }));
-                }
-            } catch (err) {
-                if (window.loadingManager) window.loadingManager.hide();
-                alert(t('source.error.loadFailed', { error: err.message }));
             }
-        };
 
-        runBuild().finally(() => {
-             loadBtn.disabled = false;
-             loadBtn.textContent = t('source.loadButton');
-             // Note: If success, page reloads anyway. If failure, we hid it above.
-        });
+            if (success) {
+                keepLockedForReload = true;
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+                return;
+            }
 
+            if (window.loadingManager) window.loadingManager.hide();
+            alert(t('source.error.loadFailed', { error: error || 'Unknown error' }));
+        } catch (err) {
+            if (window.loadingManager) window.loadingManager.hide();
+            const message = err && err.message ? err.message : String(err);
+            alert(t('source.error.loadFailed', { error: message }));
+        } finally {
+            if (!keepLockedForReload) {
+                isLoadInProgress = false;
+                loadBtn.disabled = false;
+                loadBtn.textContent = t('source.loadButton');
+            }
+        }
     });
 
     // Listen for language changes and update labels

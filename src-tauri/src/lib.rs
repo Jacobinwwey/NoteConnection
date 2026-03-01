@@ -2,7 +2,8 @@ use tauri_plugin_shell::{ShellExt, process::CommandEvent};
 
 use std::fs;
 use std::path::PathBuf;
-use serde_json::Value;
+use std::time::UNIX_EPOCH;
+use serde_json::{Value, json};
 use tauri::{AppHandle, Emitter};
 use tauri::menu::{MenuBuilder, SubmenuBuilder, MenuItemBuilder, PredefinedMenuItem};
 
@@ -23,6 +24,47 @@ fn resolve_default_kb_path() -> String {
     let mut root = resolve_project_root();
     root.push("Knowledge_Base");
     root.to_string_lossy().to_string()
+}
+
+fn resolve_frontend_dist_path() -> PathBuf {
+    let mut root = resolve_project_root();
+    root.push("dist");
+    root.push("src");
+    root.push("frontend");
+    root
+}
+
+fn sanitize_target_name(target: &str) -> String {
+    target
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' || c == '-' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
+fn cache_info_from_file(file_path: &PathBuf, source: &str) -> Option<Value> {
+    if !file_path.exists() {
+        return None;
+    }
+
+    let metadata = fs::metadata(file_path).ok()?;
+    let modified_secs = metadata
+        .modified()
+        .ok()
+        .and_then(|ts| ts.duration_since(UNIX_EPOCH).ok())
+        .map(|dur| dur.as_secs())
+        .unwrap_or(0);
+
+    Some(json!({
+        "date": modified_secs.to_string(),
+        "size": metadata.len(),
+        "source": source
+    }))
 }
 
 #[tauri::command]
@@ -102,25 +144,53 @@ fn set_user_language(app: AppHandle, lang: String) -> Result<(), String> {
 
 #[tauri::command]
 fn check_cache(_app: AppHandle, target: String) -> Result<Option<Value>, String> {
-    if target == "ALL_FOLDERS" || target.is_empty() {
+    if target.is_empty() {
         return Ok(None);
     }
-    
-    let _target_name = target.replace(|c: char| !c.is_ascii_alphanumeric() && c != '_' && c != '-', "_");
-    
-    // Cache files are currently in the frontend dist dir in Electron.
-    // In Tauri, they should probably be in app_data_dir, but for now we follow the existing pattern
-    // or just return None to force a rebuild if we can't easily find the frontend dir.
-    // Let's look in the current executable dir / frontends for now, or just return None
-    // to keep it safe during migration until caching is fully redesigned.
-    
-    Ok(None)
+
+    let frontend_dir = resolve_frontend_dist_path();
+
+    if target == "ALL_FOLDERS" {
+        let active_path = frontend_dir.join("data.js");
+        return Ok(cache_info_from_file(&active_path, "active"));
+    }
+
+    let target_name = sanitize_target_name(&target);
+    let cache_path = frontend_dir.join(format!("data_{}.js", target_name));
+    Ok(cache_info_from_file(&cache_path, "target"))
 }
 
 #[tauri::command]
-fn restore_cache(_app: AppHandle, _target: String) -> Result<bool, String> {
-    // See check_cache
-    Ok(false)
+fn restore_cache(_app: AppHandle, target: String) -> Result<bool, String> {
+    if target.is_empty() {
+        return Ok(false);
+    }
+
+    let frontend_dir = resolve_frontend_dist_path();
+
+    if target == "ALL_FOLDERS" {
+        return Ok(frontend_dir.join("data.js").exists());
+    }
+
+    let target_name = sanitize_target_name(&target);
+    let cache_js = frontend_dir.join(format!("data_{}.js", target_name));
+    let target_js = frontend_dir.join("data.js");
+    let cache_json = frontend_dir.join(format!("graph_data_{}.json", target_name));
+    let target_json = frontend_dir.join("graph_data.json");
+
+    if !cache_js.exists() {
+        return Ok(false);
+    }
+
+    fs::copy(&cache_js, &target_js)
+        .map_err(|e| format!("Failed to copy cache js: {}", e))?;
+
+    if cache_json.exists() {
+        fs::copy(&cache_json, &target_json)
+            .map_err(|e| format!("Failed to copy cache json: {}", e))?;
+    }
+
+    Ok(true)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
