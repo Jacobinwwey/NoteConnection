@@ -12,6 +12,7 @@ function showWelcomeModal(hasNodes = false) {
     console.log('[Welcome] Initializing with hasNodes:', hasNodes);
     // Check if modal already exists
     if (document.getElementById('welcome-modal')) return;
+    window.__welcomeModalVisible = true;
 
     // Check if user has explicitly disabled welcome screen (if we implemented that feature)
     // For now, we follow the requirement to always ask.
@@ -145,6 +146,17 @@ function showWelcomeModal(hasNodes = false) {
         `;
 
         document.body.appendChild(modalOverlay);
+
+        const closeWelcomeModal = () => {
+            const modal = document.getElementById('welcome-modal');
+            if (modal) modal.remove();
+            window.__welcomeModalVisible = false;
+
+            if (sourceControl) {
+                sourceControl.style.boxShadow = '';
+                sourceControl.style.zIndex = '1000';
+            }
+        };
         
         // Highlight the Source Control area
         const sourceControl = document.getElementById('source-control');
@@ -198,15 +210,9 @@ function showWelcomeModal(hasNodes = false) {
             
             // Click handler
             tutorialBtn.addEventListener('click', () => {
-                // Close welcome modal
-                const modal = document.getElementById('welcome-modal');
-                if (modal) modal.remove();
-                
-                // Remove highlight
-                if (sourceControl) {
-                    sourceControl.style.boxShadow = '';
-                    sourceControl.style.zIndex = '';
-                }
+                sessionStorage.removeItem('tutorial_skip_once');
+                sessionStorage.setItem('tutorial_last_choice', 'tutorial');
+                closeWelcomeModal();
 
                 // Launch tutorial
                 if (window.tutorialManager) {
@@ -222,15 +228,9 @@ function showWelcomeModal(hasNodes = false) {
         if (tutorialLink) {
             tutorialLink.addEventListener('click', (e) => {
                 e.preventDefault();
-                // Close welcome modal
-                const modal = document.getElementById('welcome-modal');
-                if (modal) modal.remove();
-                
-                // Remove highlight
-                if (sourceControl) {
-                    sourceControl.style.boxShadow = '';
-                    sourceControl.style.zIndex = '';
-                }
+                sessionStorage.removeItem('tutorial_skip_once');
+                sessionStorage.setItem('tutorial_last_choice', 'tutorial');
+                closeWelcomeModal();
 
                 // Launch tutorial
                 if (window.tutorialManager) {
@@ -245,20 +245,10 @@ function showWelcomeModal(hasNodes = false) {
         const exploreBtn = document.getElementById('btn-explore');
         if (exploreBtn) {
             exploreBtn.addEventListener('click', () => {
-                 // Close welcome modal
-                 const modal = document.getElementById('welcome-modal');
-                 if (modal) modal.remove();
-                 
-                 // Remove highlight
-                 if (sourceControl) {
-                     sourceControl.style.boxShadow = '';
-                     sourceControl.style.zIndex = '1000';
-                 }
-                 
-                 // Mark as "seen" or just let them explore?
-                 // Maybe we shouldn't mark tutorial as completed, as they skipped it.
-                 // But we should stop auto-prompting for this session?
-                 // Current logic relies on modal existence check, so removal is enough.
+                 // Explicit user choice: explore directly, do not auto-start tutorial this session.
+                 sessionStorage.setItem('tutorial_skip_once', 'true');
+                 sessionStorage.setItem('tutorial_last_choice', 'explore');
+                 closeWelcomeModal();
             });
             
             // Hover

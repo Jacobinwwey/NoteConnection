@@ -61,8 +61,13 @@ class TutorialManager {
                 beforeShow: () => {
                     // Feature: Auto-demo Focus Mode
                     // Step 8: Randomly focus a node if graph exists
-                    if (window.highlightManager && typeof graphData !== 'undefined' && graphData.nodes && graphData.nodes.length > 0) {
-                         const nodes = graphData.nodes;
+                    const runtimeGraphData =
+                        (typeof graphData !== 'undefined' && graphData)
+                            ? graphData
+                            : (window.graphData || null);
+
+                    if (window.highlightManager && runtimeGraphData && runtimeGraphData.nodes && runtimeGraphData.nodes.length > 0) {
+                         const nodes = runtimeGraphData.nodes;
                          const randomNode = nodes[Math.floor(Math.random() * nodes.length)];
                          
                          // We can trigger it via global exposed function
@@ -622,6 +627,12 @@ class TutorialManager {
      * @returns {boolean}
      */
     shouldAutoStart() {
+        if (sessionStorage.getItem('tutorial_skip_once') === 'true') {
+            return false;
+        }
+        if (window.__welcomeModalVisible) {
+            return false;
+        }
         return !this.completed && localStorage.getItem('user_language');
     }
 }
@@ -634,8 +645,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Wait a bit for the app to load
     setTimeout(() => {
         if (window.tutorialManager.shouldAutoStart()) {
+            if (document.getElementById('welcome-modal')) {
+                return;
+            }
+
             // Check if graph is empty (from welcome.js detection)
-            const isEmpty = typeof graphData === 'undefined' || !graphData || !graphData.nodes || graphData.nodes.length === 0;
+            const runtimeGraphData =
+                (typeof graphData !== 'undefined' && graphData)
+                    ? graphData
+                    : (window.graphData || null);
+            const isEmpty = !runtimeGraphData || !runtimeGraphData.nodes || runtimeGraphData.nodes.length === 0;
             
             if (!isEmpty) {
                 // Only auto-start if there's data to show

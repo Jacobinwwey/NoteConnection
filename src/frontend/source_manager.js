@@ -121,6 +121,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return { kbPath, folders };
     };
 
+    const checkCacheViaSidecar = async (target) => {
+        const cacheRes = await fetch(`http://localhost:3000/api/check-cache?target=${encodeURIComponent(target)}`);
+        if (!cacheRes.ok) {
+            throw new Error(`Cache API error: HTTP ${cacheRes.status}`);
+        }
+        return await cacheRes.json();
+    };
+
+    const restoreCacheViaSidecar = async (target) => {
+        const restoreRes = await fetch(`http://localhost:3000/api/restore-cache?target=${encodeURIComponent(target)}`);
+        if (!restoreRes.ok) {
+            throw new Error(`Restore API error: HTTP ${restoreRes.status}`);
+        }
+        const restoreData = await restoreRes.json();
+        return Boolean(restoreData && restoreData.success);
+    };
+
     // Fetch folders from backend
     const fetchFolders = async () => {
         try {
@@ -238,14 +255,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (target !== 'ALL_FOLDERS') {
             try {
                 let cached = null;
-                
-                if (window.__TAURI__) {
-                    // Tauri Mode: Use Rust IPC
-                    cached = await window.__TAURI__.core.invoke('check_cache', { target: target });
-                } else {
-                    // Web Mode: Use REST API (or fallback if backend supports it natively without sidecar)
-                    const cacheRes = await fetch(`http://localhost:3000/api/check-cache?target=${encodeURIComponent(target)}`);
-                    cached = await cacheRes.json();
+
+                try {
+                    // Preferred path in Tauri/Electron/Web: query sidecar cache API.
+                    cached = await checkCacheViaSidecar(target);
+                } catch (sidecarErr) {
+                    if (window.__TAURI__) {
+                        // Fallback path only when sidecar API is unreachable.
+                        cached = await window.__TAURI__.core.invoke('check_cache', { target: target });
+                    } else {
+                        throw sidecarErr;
+                    }
                 }
                 
                 if (cached) {
@@ -260,12 +280,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         loadBtn.textContent = 'Loading Cache...';
                         
                         let success = false;
-                        if (window.__TAURI__) {
-                            success = await window.__TAURI__.core.invoke('restore_cache', { target: target });
-                        } else {
-                            const restoreRes = await fetch(`http://localhost:3000/api/restore-cache?target=${encodeURIComponent(target)}`);
-                            const restoreData = await restoreRes.json();
-                            success = restoreData.success;
+
+                        try {
+                            success = await restoreCacheViaSidecar(target);
+                        } catch (sidecarErr) {
+                            if (window.__TAURI__) {
+                                success = await window.__TAURI__.core.invoke('restore_cache', { target: target });
+                            } else {
+                                throw sidecarErr;
+                            }
                         }
                         
                         if (success) {
