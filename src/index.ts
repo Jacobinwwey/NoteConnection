@@ -6,7 +6,7 @@ import { resolveRuntimePaths } from './utils/RuntimePaths';
 export async function buildGraph(options: BuildOptions | string, maxWorkers?: number, enableGPU?: boolean, enableGPULayout?: boolean, memorySavingMode?: boolean, deepDebug?: boolean) {
   const runtimePaths = resolveRuntimePaths(__dirname);
   const projectRoot = runtimePaths.projectRoot;
-  const frontendDir = runtimePaths.frontendDir;
+  const runtimeDataDir = runtimePaths.runtimeDataDir;
   
   let buildOptions: BuildOptions = { projectRoot };
 
@@ -39,7 +39,7 @@ export async function buildGraph(options: BuildOptions | string, maxWorkers?: nu
   const data = result.data;
 
   // File Output Logic (CLI/Server Specific)
-  const outputPath = path.join(frontendDir, 'graph_data.json');
+  const outputPath = path.join(runtimeDataDir, 'graph_data.json');
   
   // Ensure frontend directory exists
   const outputDir = path.dirname(outputPath);
@@ -65,11 +65,11 @@ export async function buildGraph(options: BuildOptions | string, maxWorkers?: nu
   
   if (buildOptions.outputPrefix) {
       // CLI Mode
-      const timestampedPath = path.join(frontendDir, `graph_data_cli_${buildOptions.outputPrefix}.json`);
+      const timestampedPath = path.join(runtimeDataDir, `graph_data_cli_${buildOptions.outputPrefix}.json`);
       fs.writeFileSync(timestampedPath, JSON.stringify(data, null, 2));
       console.log(`CLI graph data saved to: ${timestampedPath}`);
 
-      const timestampedJsPath = path.join(frontendDir, `data_cli_${buildOptions.outputPrefix}.js`);
+      const timestampedJsPath = path.join(runtimeDataDir, `data_cli_${buildOptions.outputPrefix}.js`);
       const tsJsContent = `const graphData = ${JSON.stringify(liteData, null, 2)};`;
       fs.writeFileSync(timestampedJsPath, tsJsContent);
       console.log(`CLI JS data saved to: ${timestampedJsPath}`);
@@ -79,7 +79,7 @@ export async function buildGraph(options: BuildOptions | string, maxWorkers?: nu
       fs.writeFileSync(outputPath, JSON.stringify(data, null, 2));
       console.log(`Graph data saved to: ${outputPath}`);
 
-      const jsOutputPath = path.join(frontendDir, 'data.js');
+      const jsOutputPath = path.join(runtimeDataDir, 'data.js');
       const jsContent = `const graphData = ${JSON.stringify(liteData, null, 2)};`;
       fs.writeFileSync(jsOutputPath, jsContent);
       console.log(`Graph data JS saved to: ${jsOutputPath}`);
@@ -93,8 +93,8 @@ export async function buildGraph(options: BuildOptions | string, maxWorkers?: nu
               // In our logic: targetPath is undefined for "All Folders". So if it exists, it's a subfolder.
               
               if (targetName && targetName.toLowerCase() !== 'knowledge_base') {
-                  const cacheJsPath = path.join(frontendDir, `data_${targetName}.js`);
-                  const cacheJsonPath = path.join(frontendDir, `graph_data_${targetName}.json`);
+                  const cacheJsPath = path.join(runtimeDataDir, `data_${targetName}.js`);
+                  const cacheJsonPath = path.join(runtimeDataDir, `graph_data_${targetName}.json`);
                   
                   fs.writeFileSync(cacheJsPath, jsContent);
                   fs.writeFileSync(cacheJsonPath, JSON.stringify(data, null, 2));

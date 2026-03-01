@@ -1,3 +1,275 @@
+# 2026-03-01 v1.4.8 - Migration Closure Validation (P1.5 Dual Android)
+
+## English Document
+
+### Objective
+
+Confirm that the migration list is operationally closed with automated checks, including both Android generation paths:
+
+1. Capacitor pipeline.
+2. Tauri Android pipeline.
+
+### Validation Results
+
+#### 1) Mini build integrity
+
+- **Command**: `npm run build:mini`
+- **Expectation**: TypeScript compile + mini asset copy succeeds.
+- **Result**: **Pass**
+
+#### 2) Migration regression suite
+
+- **Command**: `npm run test:migration`
+- **Expectation**: Runtime-path, cache/build dedupe, and dual mobile script contracts all pass.
+- **Result**: **Pass** (`29` tests, `7` suites)
+- **Notes**:
+  - Includes new test file `src/mobile.pipeline.test.ts`.
+  - Verifies:
+    - Capacitor and Tauri Android scripts both exist.
+    - `capacitor.config.ts` and `build_apk.bat` are aligned to `dist/src/frontend`.
+    - Tauri bundle sidecar entries retain `bin/server` and `bin/godot`.
+
+#### 3) Rust/Tauri runtime tests
+
+- **Command**: `npm run test:tauri`
+- **Expectation**: Core Tauri migration safety tests pass.
+- **Result**: **Pass** (`9` tests)
+
+#### 4) Sidecar relaunch smoke
+
+- **Command**: `npm run smoke:sidecar:relaunch`
+- **Expectation**: No orphan process or port lock after shutdown.
+- **Result**: **Pass** (port `3000` free after exit)
+
+### Conclusion
+
+- Migration checklist status: **Closed for current scope**.
+- `P1.5` dual Android strategy is now:
+  - Implemented in scripts/config.
+  - Covered by automated regression tests.
+
+---
+
+## 中文文档
+
+### 目标
+
+确认迁移清单已完成可执行层面的收口验证，且 Android 双路径同时可用：
+
+1. Capacitor 路径。
+2. Tauri Android 路径。
+
+### 验证结果
+
+#### 1) MINI 构建完整性
+
+- **命令**：`npm run build:mini`
+- **预期**：TypeScript 编译与 MINI 资源拷贝成功。
+- **结果**：**通过**
+
+#### 2) 迁移回归测试集
+
+- **命令**：`npm run test:migration`
+- **预期**：运行时路径、缓存/构建去重、双移动端脚本契约全部通过。
+- **结果**：**通过**（`29` 项测试，`7` 个套件）
+- **说明**：
+  - 已纳入新测试文件 `src/mobile.pipeline.test.ts`。
+  - 已验证：
+    - Capacitor 与 Tauri Android 脚本同时存在。
+    - `capacitor.config.ts` 与 `build_apk.bat` 对 `dist/src/frontend` 一致。
+    - Tauri 打包 sidecar 配置保留 `bin/server` 与 `bin/godot`。
+
+#### 3) Rust/Tauri 运行时测试
+
+- **命令**：`npm run test:tauri`
+- **预期**：Tauri 迁移核心安全测试通过。
+- **结果**：**通过**（`9` 项测试）
+
+#### 4) Sidecar 重启冒烟测试
+
+- **命令**：`npm run smoke:sidecar:relaunch`
+- **预期**：退出后无僵尸进程与端口占用。
+- **结果**：**通过**（退出后端口 `3000` 可用）
+
+### 结论
+
+- 迁移清单状态：**在当前范围内已收口**。
+- `P1.5` 双 Android 策略现已：
+  - 在脚本与配置层完成；
+  - 在自动化回归测试层受保护。
+
+---
+
+# 2026-03-01 v1.4.7 - Electron Decommission & Dual Mobile Pipeline Verification
+
+## English Document
+
+### Objective
+
+Validate completion status of the migration checklist after implementing:
+
+- Tauri runtime-data path hardening.
+- Godot sidecar launch hardening (without hardcoded absolute path in Rust runtime).
+- Electron surface decommission.
+- Dual Android generation paths (Capacitor + Tauri Android scripts).
+
+### Evidence Summary
+
+#### 1) Runtime Path & Cache Hardening
+
+- **Result**: Pass
+- **Implemented**:
+  - Generated graph artifacts now write to writable runtime data directory.
+  - Sidecar read path supports runtime-data-first with bundled frontend fallback.
+  - Rust + Node cache restore/check logic aligned with runtime data strategy.
+- **Verification**:
+  - `npm run test:migration` -> pass (`25` tests, includes runtime path + dedupe routes).
+  - `npm run test:tauri` -> pass (`9` Rust unit tests, including runtime bootstrap/cache restore tests).
+
+#### 2) Child Lifecycle & Relaunch Stability
+
+- **Result**: Pass
+- **Implemented**:
+  - Explicit sidecar/Godot process handles and shutdown hooks retained in Tauri runtime.
+  - Added relaunch smoke check script for port lock regression.
+- **Verification**:
+  - `npm run smoke:sidecar:relaunch` -> pass (port `3000` is free after shutdown).
+
+#### 3) Godot Sidecar Launch Hardening
+
+- **Result**: Pass (pipeline-level)
+- **Implemented**:
+  - Removed hardcoded absolute Godot path fallback from `src-tauri/src/lib.rs`.
+  - Added sidecar preparation/validation scripts:
+    - `npm run prepare:godot:bin`
+    - `npm run verify:tauri:bin`
+- **Verification**:
+  - Validation passes when `NOTE_CONNECTION_GODOT_EXE` is provided or sidecar binary exists.
+
+#### 4) Packaging Smoke Evidence (Tauri)
+
+- **Result**: Pass (local packaging environment)
+- **Verification**:
+  - Ran `npm run tauri:build` (with `NOTE_CONNECTION_GODOT_EXE` set).
+  - Bundle artifacts generated under:
+    - `src-tauri/target/release/bundle/msi/NoteConnection_1.3.0_x64_en-US.msi`
+    - `src-tauri/target/release/bundle/nsis/NoteConnection_1.3.0_x64-setup.exe`
+
+#### 5) Electron Decommission
+
+- **Result**: Pass
+- **Implemented**:
+  - Removed Electron scripts/dependencies from `package.json`.
+  - Updated `main` entry to `dist/src/server.js`.
+  - Removed `src/electron/main.ts`, `src/electron/preload.ts`, and `electron-builder.yml`.
+
+#### 6) Mobile Delivery Strategy (Both Paths)
+
+- **Result**: Pass
+- **Implemented**:
+  - **Capacitor path** retained:
+    - `npm run mobile:build:capacitor`
+    - `build_apk.bat`
+  - **Tauri Android path** added:
+    - `npm run tauri:android:init`
+    - `npm run tauri:android:dev`
+    - `npm run tauri:android:build`
+    - `npm run mobile:build:tauri-android`
+    - `npm run mobile:build:both`
+  - Updated mobile docs with explicit capability boundaries.
+
+### Final Status
+
+- Electron removal checklist: **Completed in repository configuration and runtime architecture**.
+- Desktop pipeline: **Tauri-first**.
+- Mobile pipeline: **Dual-path enabled (Capacitor + Tauri Android scripts)**.
+
+---
+
+## 中文文档
+
+### 目标
+
+验证本轮迁移收口后的清单完成状态，重点覆盖：
+
+- Tauri 运行时可写路径改造。
+- Godot sidecar 启动加固（Rust 运行时移除硬编码绝对路径）。
+- Electron 清退。
+- Android 双路径产出（Capacitor + Tauri Android 脚本）。
+
+### 证据汇总
+
+#### 1) 运行时路径与缓存策略加固
+
+- **结果**：通过
+- **已实现**：
+  - 图谱产物写入可写运行时数据目录。
+  - sidecar 读取策略为“运行时目录优先 + 打包前端回退”。
+  - Rust 与 Node 侧缓存检查/恢复逻辑已与运行时目录对齐。
+- **验证**：
+  - `npm run test:migration` -> 通过（`25` 项测试，覆盖运行时路径与去重路由）。
+  - `npm run test:tauri` -> 通过（`9` 项 Rust 单测，含 runtime bootstrap/cache restore）。
+
+#### 2) 子进程生命周期与重启稳定性
+
+- **结果**：通过
+- **已实现**：
+  - Tauri 运行时保留 sidecar/Godot 句柄并在退出时显式回收。
+  - 新增端口占用回归冒烟脚本。
+- **验证**：
+  - `npm run smoke:sidecar:relaunch` -> 通过（退出后 `3000` 端口可重新绑定）。
+
+#### 3) Godot Sidecar 启动加固
+
+- **结果**：通过（流水线层）
+- **已实现**：
+  - 已从 `src-tauri/src/lib.rs` 移除硬编码绝对路径回退。
+  - 新增 sidecar 准备/校验脚本：
+    - `npm run prepare:godot:bin`
+    - `npm run verify:tauri:bin`
+- **验证**：
+  - 提供 `NOTE_CONNECTION_GODOT_EXE` 或已有 sidecar 文件时，校验可通过。
+
+#### 4) Tauri 打包冒烟证据
+
+- **结果**：通过（本地打包环境）
+- **验证**：
+  - 执行 `npm run tauri:build`（设置 `NOTE_CONNECTION_GODOT_EXE`）。
+  - 产物生成于：
+    - `src-tauri/target/release/bundle/msi/NoteConnection_1.3.0_x64_en-US.msi`
+    - `src-tauri/target/release/bundle/nsis/NoteConnection_1.3.0_x64-setup.exe`
+
+#### 5) Electron 清退
+
+- **结果**：通过
+- **已实现**：
+  - 从 `package.json` 移除 Electron 脚本与依赖。
+  - `main` 已切换为 `dist/src/server.js`。
+  - 删除 `src/electron/main.ts`、`src/electron/preload.ts` 与 `electron-builder.yml`。
+
+#### 6) 移动端策略（双路径并行）
+
+- **结果**：通过
+- **已实现**：
+  - **保留 Capacitor 路径**：
+    - `npm run mobile:build:capacitor`
+    - `build_apk.bat`
+  - **新增 Tauri Android 路径**：
+    - `npm run tauri:android:init`
+    - `npm run tauri:android:dev`
+    - `npm run tauri:android:build`
+    - `npm run mobile:build:tauri-android`
+    - `npm run mobile:build:both`
+  - 文档已明确移动端能力边界。
+
+### 最终结论
+
+- Electron 清退清单：**在仓库配置与运行时架构层面已完成**。
+- 桌面端流水线：**Tauri-first**。
+- 移动端流水线：**Capacitor + Tauri Android 双路径并行可用**。
+
+---
+
 # 2026-03-01 v1.4.6 - Electron to Tauri Migration Readiness Audit
 
 ## English Document

@@ -4,6 +4,7 @@ import * as path from 'path';
 export interface RuntimePaths {
     projectRoot: string;
     frontendDir: string;
+    runtimeDataDir: string;
     kbRoot: string;
 }
 
@@ -39,12 +40,39 @@ function pickExisting(candidates: string[]): string | null {
     return null;
 }
 
+function resolveAppDataRoot(cwd: string): string {
+    const localAppData = process.env.LOCALAPPDATA || process.env.APPDATA;
+    if (localAppData) {
+        return path.join(localAppData, 'NoteConnection');
+    }
+
+    const home = process.env.HOME || process.env.USERPROFILE;
+    if (home) {
+        return path.join(home, '.noteconnection');
+    }
+
+    return path.join(cwd, '.noteconnection');
+}
+
+function ensureWritableDirectory(targetPath: string): boolean {
+    try {
+        fs.mkdirSync(targetPath, { recursive: true });
+        const probe = path.join(targetPath, '.nc_write_probe');
+        fs.writeFileSync(probe, 'ok');
+        fs.unlinkSync(probe);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 export function resolveRuntimePaths(moduleDir: string): RuntimePaths {
     const cwd = process.cwd();
     const execDir = path.dirname(process.execPath);
 
     const envProjectRoot = process.env.NOTE_CONNECTION_PROJECT_ROOT;
     const envFrontendDir = process.env.NOTE_CONNECTION_FRONTEND_DIR;
+    const envRuntimeDataDir = process.env.NOTE_CONNECTION_RUNTIME_DATA_DIR;
     const envKbRoot = process.env.NOTE_CONNECTION_KB_ROOT;
 
     const projectCandidates = uniqPaths(
@@ -82,6 +110,18 @@ export function resolveRuntimePaths(moduleDir: string): RuntimePaths {
     const frontendDir =
         pickExisting(frontendCandidates) || path.join(projectRoot, 'dist', 'src', 'frontend');
 
+    const runtimeDataCandidates = uniqPaths(
+        [
+            envRuntimeDataDir,
+            path.join(resolveAppDataRoot(cwd), 'runtime_data'),
+            path.join(projectRoot, 'runtime_data'),
+            frontendDir
+        ].filter((v): v is string => Boolean(v))
+    );
+
+    const runtimeDataDir =
+        runtimeDataCandidates.find((candidate) => ensureWritableDirectory(candidate)) || frontendDir;
+
     const kbCandidates = uniqPaths(
         [
             envKbRoot,
@@ -96,6 +136,7 @@ export function resolveRuntimePaths(moduleDir: string): RuntimePaths {
     return {
         projectRoot,
         frontendDir,
+        runtimeDataDir,
         kbRoot
     };
 }

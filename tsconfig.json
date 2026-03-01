@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*", "amdgpu/**/*", "electron/**/*"]
+  "include": ["src/**/*", "amdgpu/**/*"]
 }

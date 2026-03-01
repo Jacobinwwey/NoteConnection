@@ -14,11 +14,48 @@ CrashLogger.initGlobalHandlers();
 const PORT = 3000;
 const runtimePaths = resolveRuntimePaths(__dirname);
 const FRONTEND_DIR = runtimePaths.frontendDir;
+const RUNTIME_DATA_DIR = runtimePaths.runtimeDataDir;
 let KB_ROOT = runtimePaths.kbRoot;
 let activeBuildKey: string | null = null;
 let activeBuildPromise: Promise<void> | null = null;
 let lastRestoreKey: string | null = null;
 let lastRestoreTs = 0;
+
+function isGeneratedGraphAsset(filename: string): boolean {
+    return (
+        filename === 'data.js' ||
+        filename === 'graph_data.json' ||
+        (/^data_[a-z0-9_\-]+\.js$/i).test(filename) ||
+        (/^graph_data_[a-z0-9_\-]+\.json$/i).test(filename) ||
+        (/^data_cli_[a-z0-9_\-]+\.js$/i).test(filename) ||
+        (/^graph_data_cli_[a-z0-9_\-]+\.json$/i).test(filename)
+    );
+}
+
+function ensureRuntimeDataDir(): void {
+    if (!fs.existsSync(RUNTIME_DATA_DIR)) {
+        fs.mkdirSync(RUNTIME_DATA_DIR, { recursive: true });
+    }
+}
+
+function resolveGeneratedAssetForRead(filename: string): string | null {
+    const runtimeFile = path.join(RUNTIME_DATA_DIR, filename);
+    if (fs.existsSync(runtimeFile) && fs.statSync(runtimeFile).isFile()) {
+        return runtimeFile;
+    }
+
+    const bundledFile = path.join(FRONTEND_DIR, filename);
+    if (fs.existsSync(bundledFile) && fs.statSync(bundledFile).isFile()) {
+        return bundledFile;
+    }
+
+    return null;
+}
+
+function generatedAssetWritePath(filename: string): string {
+    ensureRuntimeDataDir();
+    return path.join(RUNTIME_DATA_DIR, filename);
+}
 
 // CLI Argument Parsing (v0.9.71 Fix)
 const args = process.argv.slice(2);
@@ -103,8 +140,8 @@ if (hasCliBuild) {
     
     // Check for existing CLI builds for this KB
     let existingFile: string | null = null;
-    if (fs.existsSync(FRONTEND_DIR)) {
-        const files = fs.readdirSync(FRONTEND_DIR);
+    if (fs.existsSync(RUNTIME_DATA_DIR)) {
+        const files = fs.readdirSync(RUNTIME_DATA_DIR);
         // Look for data_cli_{kbName}_{time}.js
         // Pattern: data_cli_KB_TIME.js
         const prefix = `data_cli_${kbName}_`;
@@ -142,8 +179,8 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         // CHECK: If options.targetPath is passed, do we skip the prompt? 
         // If we are required to not block, we should probably default to "Load" if exists, or "Gen" if not.
         
-        if (fs.existsSync(FRONTEND_DIR)) {
-            const files = fs.readdirSync(FRONTEND_DIR);
+        if (fs.existsSync(RUNTIME_DATA_DIR)) {
+            const files = fs.readdirSync(RUNTIME_DATA_DIR);
             const prefix = `data_cli_${kbName}_`;
             const matches = files
                 .filter(f => f.startsWith(prefix) && f.endsWith('.js'))
@@ -289,10 +326,23 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             // GET any generated graph assets (e.g. data_cli.js, data.js, graph_data.json)
             if (req.url && (req.url.endsWith('.js') || req.url.endsWith('.json')) && !req.url.startsWith('/api/')) {
                 const urlObj = new URL(req.url, `http://${req.headers.host}`);
-                const filename = path.basename(decodeURIComponent(urlObj.pathname));
-                const filePath = path.join(FRONTEND_DIR, filename);
-                
-                if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+                let filename = path.basename(decodeURIComponent(urlObj.pathname));
+
+                if (hasCliBuild && cliOptions.outputPrefix) {
+                    if (filename === 'data.js') {
+                        filename = `data_cli_${cliOptions.outputPrefix}.js`;
+                    } else if (filename === 'graph_data.json') {
+                        filename = `graph_data_cli_${cliOptions.outputPrefix}.json`;
+                    }
+                }
+
+                const generatedPath = isGeneratedGraphAsset(filename)
+                    ? resolveGeneratedAssetForRead(filename)
+                    : null;
+                const bundledPath = path.join(FRONTEND_DIR, filename);
+                const filePath = generatedPath || (fs.existsSync(bundledPath) ? bundledPath : null);
+
+                if (filePath && fs.statSync(filePath).isFile()) {
                     const ext = path.extname(filename);
                     const contentType = ext === '.json' ? 'application/json' : 'application/javascript';
                     
@@ -334,8 +384,8 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     }
 
                     if (target === 'ALL_FOLDERS') {
-                        const activeJsPath = path.join(FRONTEND_DIR, 'data.js');
-                        if (fs.existsSync(activeJsPath)) {
+                        const activeJsPath = resolveGeneratedAssetForRead('data.js');
+                        if (activeJsPath) {
                             const stats = fs.statSync(activeJsPath);
                             res.writeHead(200, { 'Content-Type': 'application/json' });
                             res.end(JSON.stringify({
@@ -351,9 +401,9 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     }
                     
                     const targetName = target.replace(/[^a-z0-9_\-]/gi, '_');
-                    const cachePath = path.join(FRONTEND_DIR, `data_${targetName}.js`);
+                    const cachePath = resolveGeneratedAssetForRead(`data_${targetName}.js`);
                     
-                    if (fs.existsSync(cachePath)) {
+                    if (cachePath) {
                         const stats = fs.statSync(cachePath);
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({
@@ -400,8 +450,8 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     lastRestoreTs = now;
 
                     if (target === 'ALL_FOLDERS') {
-                        const activeJsPath = path.join(FRONTEND_DIR, 'data.js');
-                        if (fs.existsSync(activeJsPath)) {
+                        const activeJsPath = resolveGeneratedAssetForRead('data.js');
+                        if (activeJsPath) {
                             res.writeHead(200, { 'Content-Type': 'application/json' });
                             res.end(JSON.stringify({ success: true }));
                         } else {
@@ -413,14 +463,14 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     
                     const targetName = target.replace(/[^a-z0-9_\-]/gi, '_');
                     
-                    const cacheJs = path.join(FRONTEND_DIR, `data_${targetName}.js`);
-                    const targetJs = path.join(FRONTEND_DIR, 'data.js');
-                    const cacheJson = path.join(FRONTEND_DIR, `graph_data_${targetName}.json`);
-                    const targetJson = path.join(FRONTEND_DIR, 'graph_data.json');
+                    const cacheJs = resolveGeneratedAssetForRead(`data_${targetName}.js`);
+                    const targetJs = generatedAssetWritePath('data.js');
+                    const cacheJson = resolveGeneratedAssetForRead(`graph_data_${targetName}.json`);
+                    const targetJson = generatedAssetWritePath('graph_data.json');
                     
-                    if (fs.existsSync(cacheJs)) {
+                    if (cacheJs) {
                         fs.copyFileSync(cacheJs, targetJs);
-                        if (fs.existsSync(cacheJson)) {
+                        if (cacheJson) {
                             fs.copyFileSync(cacheJson, targetJson);
                         }
                         console.log(`[Cache] Restored cache for ${target} -> data.js`);
@@ -443,18 +493,6 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             // v0.9.83 Fix: Strip query parameters (e.g. ?v=123) to verify file existence on disk
             const urlObj = new URL(req.url!, `http://${req.headers.host}`);
             let urlPath = urlObj.pathname === '/' ? 'index.html' : urlObj.pathname;
-            
-            // CLI Mode: Serve the specific CLI data file instead of the default data.js
-            // This ensures the frontend loads the data calculated from the CLI parameters
-            // without modifying the original data.js file.
-            if (urlPath === '/data.js' && hasCliBuild && cliOptions.outputPrefix) {
-                urlPath = `/data_cli_${cliOptions.outputPrefix}.js`;
-                console.log(`[Server] CLI Mode: Serving ${urlPath} instead of /data.js`);
-            }
-            if (urlPath === '/graph_data.json' && hasCliBuild && cliOptions.outputPrefix) {
-                urlPath = `/graph_data_cli_${cliOptions.outputPrefix}.json`;
-                console.log(`[Server] CLI Mode: Serving ${urlPath} instead of /graph_data.json`);
-            }
     
             // Security check: prevent traversing up
             const safeSuffix = path.normalize(urlPath).replace(/^(\.\.[/\\])+/, '');
@@ -590,9 +628,11 @@ export const startServer = async (options: { port?: number, targetPath?: string 
     
     return new Promise<http.Server>((resolve) => {
         server.listen(finalPort, async () => {
+            ensureRuntimeDataDir();
             console.log(`Server running at http://localhost:${finalPort}/`);
             console.log(`Knowledge Base Root: ${KB_ROOT}`);
             console.log(`Frontend Root: ${FRONTEND_DIR}`);
+            console.log(`Runtime Data Root: ${RUNTIME_DATA_DIR}`);
             
             // Initialize PathBridge
             try {

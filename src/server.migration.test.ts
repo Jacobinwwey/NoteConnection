@@ -141,6 +141,7 @@ describe('server migration settings routes', () => {
   let server: Server;
   let port: number;
   let frontendDir: string;
+  let runtimeDataDir: string;
   let kbRoot: string;
   let buildGraphMock: jest.Mock;
   let originalArgv: string[];
@@ -149,6 +150,7 @@ describe('server migration settings routes', () => {
     temp = new TempDir('noteconnection-server');
     const projectRoot = temp.mkdir('project');
     frontendDir = temp.mkdir(path.join('project', 'dist', 'src', 'frontend'));
+    runtimeDataDir = temp.mkdir(path.join('project', 'runtime_data'));
     kbRoot = temp.mkdir(path.join('project', 'Knowledge_Base'));
     temp.mkdir(path.join('project', 'Knowledge_Base', 'financial'));
     temp.mkdir(path.join('project', 'Knowledge_Base', 'legal'));
@@ -159,6 +161,7 @@ describe('server migration settings routes', () => {
     envRestorers = [];
     envRestorers.push(setEnv('NOTE_CONNECTION_PROJECT_ROOT', projectRoot));
     envRestorers.push(setEnv('NOTE_CONNECTION_FRONTEND_DIR', frontendDir));
+    envRestorers.push(setEnv('NOTE_CONNECTION_RUNTIME_DATA_DIR', runtimeDataDir));
     envRestorers.push(setEnv('NOTE_CONNECTION_KB_ROOT', kbRoot));
     envRestorers.push(setEnv('npm_config_path', undefined));
     envRestorers.push(setEnv('npm_config_gpu', undefined));
@@ -226,8 +229,8 @@ describe('server migration settings routes', () => {
     const restoreResponse = await requestJson(port, 'GET', '/api/restore-cache?target=financial');
     expect(restoreResponse.status).toBe(200);
     expect(restoreResponse.body).toEqual(expect.objectContaining({ success: true }));
-    expect(fs.existsSync(path.join(frontendDir, 'data.js'))).toBe(true);
-    expect(fs.existsSync(path.join(frontendDir, 'graph_data.json'))).toBe(true);
+    expect(fs.existsSync(path.join(runtimeDataDir, 'data.js'))).toBe(true);
+    expect(fs.existsSync(path.join(runtimeDataDir, 'graph_data.json'))).toBe(true);
 
     const duplicateRestoreResponse = await requestJson(port, 'GET', '/api/restore-cache?target=financial');
     expect(duplicateRestoreResponse.status).toBe(200);

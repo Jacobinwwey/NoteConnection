@@ -160,7 +160,10 @@ npm start
 
 ### Option 5: Mobile Support (Android)
 
-NoteConnection uses **Capacitor** to build native mobile apps.
+NoteConnection now supports **two Android generation paths**:
+
+1. **Capacitor APK path** (web-asset runtime, stable for reader/visualization workflows).
+2. **Tauri Android path** (native shell pipeline aligned with `docs/tauri_brainstorming.md`).
 
 #### Prerequisites
 
@@ -168,7 +171,7 @@ NoteConnection uses **Capacitor** to build native mobile apps.
 - **Java JDK** (17 or higher)
 - **Android SDK** (Configured in `ANDROID_HOME` or via Android Studio)
 
-#### Method A: One-Click Build (Recommended)
+#### Method A: Capacitor Build (Stable)
 
 Simply run the included batch script on Windows:
 
@@ -184,7 +187,23 @@ This script automatically:
 4. Syncs with Capacitor.
 5. Compiles the APK using Gradle.
 
-#### Method B: Manual Build Steps
+You can also trigger the same pipeline through npm:
+
+```bash
+npm run mobile:build:capacitor
+```
+
+#### Method B: Tauri Android Build (Native Shell)
+
+```bash
+# First-time setup on the machine
+npm run tauri:android:init
+
+# Build APK/AAB through Tauri Android pipeline
+npm run tauri:android:build
+```
+
+#### Method C: Capacitor Manual Build Steps
 
 1.  **Build Web Assets**:
     ```bash
@@ -201,6 +220,11 @@ This script automatically:
     ./gradlew assembleDebug
     ```
     APK will be located at: `android/app/build/outputs/apk/debug/app-debug.apk`
+
+#### Mobile Capability Boundary
+
+- Capacitor path currently packages web assets and does not embed the local Node sidecar workflow (`/api/build`, `/api/folders`, `/api/content`).
+- Tauri Android path is provided as the native-shell migration route and should be used when mobile-side parity with the Tauri architecture is required.
 
 ### 3. Usage Guide
 
@@ -262,8 +286,12 @@ Managing your knowledge base source is now easier than ever.
 
 For developers building from source, NoteConnection offers two build modes:
 
-- **Full Mode (`npm run electron:build`)**: Includes demo data (~600MB). Best for testing/demos.
-- **Mini Mode (`npm run electron:build:mini`)**: Excludes large pre-generated files (~70MB installer). Best for distribution.
+- **Electron desktop pipeline was removed on 2026-03-01 (deprecated and decommissioned).**
+
+- **Tauri Full Build (`npm run tauri:build`)**: Builds desktop package with full frontend assets.
+- **Tauri Mini Build (`npm run tauri:build:mini`)**: Builds desktop package excluding large pre-generated graph data files.
+- **GPU Dev Start (`npm run tauri:dev:mini:gpu`)**: Recommended GPU-enabled Tauri development command.
+- **Do not use** `npm run tauri:dev:mini --gpu` because npm treats `--gpu` as config and prints warnings.
 
 ## 🛠️ Hardware & Driver Requirements (AMDGPU)
 
@@ -290,7 +318,7 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 ### v1.4.4 - Tauri Bridge Stabilization & Cache Workflow Hardening (2026-03-01)
 
 - **Electron -> Tauri Runtime Alignment**:
-  - **Path Consistency**: Unified runtime path resolution so sidecar graph artifacts are consistently read/written under `dist/src/frontend` during Tauri development.
+  - **Path Consistency**: Unified runtime path resolution so sidecar graph artifacts are read from bundled frontend assets and written to a writable runtime data directory.
   - **Knowledge Base Discovery**: Standardized folder listing and loading flow for `Knowledge_Base` source roots in Bridge-first mode.
 - **Build/Load Safety**:
   - **Cache Decision Flow**: Restored pre-build decision behavior (`Load Existing` vs `Regenerate`) when target cache already exists.
@@ -939,7 +967,10 @@ npm start
 
 ### 选项 5: 移动端支持 (Android)
 
-NoteConnection 使用 **Capacitor** 构建原生移动应用。
+NoteConnection 现支持 **两条 Android 生成路径**：
+
+1. **Capacitor APK 路径**（Web 资产运行时，适合阅读与可视化流程）。
+2. **Tauri Android 路径**（原生壳流程，对齐 `docs/tauri_brainstorming.md`）。
 
 #### 先决条件
 
@@ -947,7 +978,7 @@ NoteConnection 使用 **Capacitor** 构建原生移动应用。
 - **Java JDK** (17 或更高版本)
 - **Android SDK** (配置在 `ANDROID_HOME` 或通过 Android Studio 安装)
 
-#### 方法 A: 一键构建 (推荐)
+#### 方法 A: Capacitor 构建（稳定）
 
 在 Windows 上直接运行包含的批处理脚本：
 
@@ -963,7 +994,23 @@ build_apk.bat
 4. 同步 Capacitor。
 5. 使用 Gradle 编译 APK。
 
-#### 方法 B: 手动构建步骤
+也可以通过 npm 脚本触发同一路径：
+
+```bash
+npm run mobile:build:capacitor
+```
+
+#### 方法 B: Tauri Android 构建（原生壳）
+
+```bash
+# 机器首次初始化
+npm run tauri:android:init
+
+# 通过 Tauri Android 流水线构建
+npm run tauri:android:build
+```
+
+#### 方法 C: Capacitor 手动构建步骤
 
 1.  **构建 Web 资源**:
     ```bash
@@ -980,6 +1027,11 @@ build_apk.bat
     ./gradlew assembleDebug
     ```
     APK 将位于: `android/app/build/outputs/apk/debug/app-debug.apk`
+
+#### 移动端能力边界
+
+- Capacitor 路径当前是 Web 资产打包，不内置桌面端本地 Node sidecar 流程（`/api/build`、`/api/folders`、`/api/content`）。
+- 若需要与 Tauri 架构一致的移动端原生壳路线，请使用 Tauri Android 路径。
 
 ---
 
@@ -1035,8 +1087,12 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 
 对于从源码构建的开发者，NoteConnection 提供两种构建模式：
 
-- **完整模式 (Full Mode)** (`npm run electron:build`): 包含演示数据 (~600MB)。最适合测试/演示。
-- **精简模式 (Mini Mode)** (`npm run electron:build:mini`): 排除大型预生成文件 (~70MB 安装包)。最适合分发。
+- **Electron 桌面构建链路已于 2026-03-01 下线（弃用并完成清退）。**
+
+- **Tauri 完整构建** (`npm run tauri:build`): 构建带完整前端资源的桌面安装包。
+- **Tauri 精简构建** (`npm run tauri:build:mini`): 构建排除大型预生成图谱数据的桌面安装包。
+- **GPU 开发启动（推荐）** (`npm run tauri:dev:mini:gpu`)。
+- **不要使用** `npm run tauri:dev:mini --gpu`，该写法会被 npm 当作配置参数并触发告警。
 
 ---
 
@@ -1047,7 +1103,7 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 ### v1.4.4 - Tauri 桥接稳定化与缓存流程加固 (2026-03-01)
 
 - **Electron -> Tauri 运行时对齐**:
-  - **路径一致性**: 统一运行时路径解析，确保 Tauri 开发模式下 sidecar 图谱产物稳定读写于 `dist/src/frontend`。
+  - **路径一致性**: 统一运行时路径解析，sidecar 图谱产物从打包前端资源读取，并写入可写运行时数据目录。
   - **知识库目录发现**: 在 Bridge-first 模式下标准化 `Knowledge_Base` 源根目录的文件夹枚举与加载流程。
 - **构建/加载安全性**:
   - **缓存决策流程恢复**: 当目标缓存已存在时，恢复“直接加载缓存 / 重新生成”分流逻辑。

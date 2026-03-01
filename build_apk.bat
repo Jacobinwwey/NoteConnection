@@ -111,23 +111,14 @@ REM 4. Directory Standardization
 REM --------------------------------------------------------
 echo.
 echo [4/8] Standardizing Output Directory...
-REM Capacitor often expects 'dist' or specific structure.
-REM We map 'dist/src/frontend' -> 'dist/frontend' based on project config.
-
+REM Capacitor webDir is configured as dist/src/frontend in capacitor.config.ts.
 if exist "dist\src\frontend" (
-    if not exist "dist\frontend" mkdir "dist\frontend"
-    echo   [INFO] Moving assets from dist/src/frontend to dist/frontend...
-    xcopy "dist\src\frontend" "dist\frontend" /E /I /Y /Q >nul
-    echo   [OK] Directory structure fixed.
+    echo   [OK] 'dist\src\frontend' exists.
 ) else (
-    if exist "dist\frontend" (
-         echo   [OK] 'dist\frontend' already exists.
-    ) else (
-         echo [ERROR] Expected build output 'dist\src\frontend' NOT found.
-         echo         Build might have produced a different structure.
-         pause
-         exit /b 1
-    )
+    echo [ERROR] Expected build output 'dist\src\frontend' NOT found.
+    echo         Build might have produced a different structure.
+    pause
+    exit /b 1
 )
 
 REM --------------------------------------------------------
@@ -137,7 +128,7 @@ echo.
 echo [5/8] Configuring Capacitor Bridge...
 if not exist "capacitor.config.ts" (
     echo   [INFO] Initializing Capacitor project...
-    call npx cap init "Knowledge Planet" "com.jacob.noteconnection" --web-dir "dist/frontend"
+    call npx cap init "Knowledge Planet" "com.jacob.noteconnection" --web-dir "dist/src/frontend"
 ) else (
     echo   [OK] Capacitor config found.
 )

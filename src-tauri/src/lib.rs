@@ -240,10 +240,6 @@ fn resolve_godot_executable(project_root: &Path) -> Option<PathBuf> {
             .join("godot-x86_64-pc-windows-msvc.exe"),
     );
     candidates.push(project_root.join("src-tauri").join("bin").join("godot.exe"));
-    candidates.push(PathBuf::from(
-        r"E:\网页下载\Godot_v4.6-stable_win64_console.exe",
-    ));
-    candidates.push(PathBuf::from(r"E:\网页下载\Godot_v4.6-stable_win64.exe"));
 
     if let Some(dir) = exec_dir {
         candidates.push(dir.join("godot-x86_64-pc-windows-msvc.exe"));
@@ -268,6 +264,20 @@ fn resolve_frontend_dist_path() -> PathBuf {
     root.push("src");
     root.push("frontend");
     root
+}
+
+fn resolve_runtime_data_path() -> PathBuf {
+    if let Ok(custom_dir) = std::env::var("NOTE_CONNECTION_RUNTIME_DATA_DIR") {
+        let candidate = PathBuf::from(custom_dir);
+        ensure_directory(&candidate);
+        return candidate;
+    }
+
+    let mut base = dirs::data_local_dir().unwrap_or_else(resolve_project_root);
+    base.push("NoteConnection");
+    base.push("runtime_data");
+    ensure_directory(&base);
+    base
 }
 
 fn sanitize_target_name(target: &str) -> String {
@@ -303,48 +313,116 @@ fn cache_info_from_file(file_path: &PathBuf, source: &str) -> Option<Value> {
     }))
 }
 
-fn check_cache_for_target(frontend_dir: &Path, target: &str) -> Option<Value> {
+fn generated_asset_for_read(runtime_data_dir: &Path, frontend_dir: &Path, filename: &str) -> Option<PathBuf> {
+    let runtime_file = runtime_data_dir.join(filename);
+    if runtime_file.exists() {
+        return Some(runtime_file);
+    }
+
+    let bundled_file = frontend_dir.join(filename);
+    if bundled_file.exists() {
+        return Some(bundled_file);
+    }
+
+    None
+}
+
+fn check_cache_for_target(runtime_data_dir: &Path, frontend_dir: &Path, target: &str) -> Option<Value> {
     if target.is_empty() {
         return None;
     }
 
     if target == "ALL_FOLDERS" {
-        let active_path = frontend_dir.join("data.js");
+        let active_path = generated_asset_for_read(runtime_data_dir, frontend_dir, "data.js")?;
         return cache_info_from_file(&active_path, "active");
     }
 
     let target_name = sanitize_target_name(target);
-    let cache_path = frontend_dir.join(format!("data_{}.js", target_name));
+    let cache_path = generated_asset_for_read(
+        runtime_data_dir,
+        frontend_dir,
+        format!("data_{}.js", target_name).as_str(),
+    )?;
     cache_info_from_file(&cache_path, "target")
 }
 
-fn restore_cache_for_target(frontend_dir: &Path, target: &str) -> Result<bool, String> {
+fn restore_cache_for_target(runtime_data_dir: &Path, frontend_dir: &Path, target: &str) -> Result<bool, String> {
     if target.is_empty() {
         return Ok(false);
     }
 
     if target == "ALL_FOLDERS" {
-        return Ok(frontend_dir.join("data.js").exists());
+        return Ok(generated_asset_for_read(runtime_data_dir, frontend_dir, "data.js").is_some());
     }
 
     let target_name = sanitize_target_name(target);
-    let cache_js = frontend_dir.join(format!("data_{}.js", target_name));
-    let target_js = frontend_dir.join("data.js");
-    let cache_json = frontend_dir.join(format!("graph_data_{}.json", target_name));
-    let target_json = frontend_dir.join("graph_data.json");
+    let cache_js = generated_asset_for_read(
+        runtime_data_dir,
+        frontend_dir,
+        format!("data_{}.js", target_name).as_str(),
+    );
+    let target_js = runtime_data_dir.join("data.js");
+    let cache_json = generated_asset_for_read(
+        runtime_data_dir,
+        frontend_dir,
+        format!("graph_data_{}.json", target_name).as_str(),
+    );
+    let target_json = runtime_data_dir.join("graph_data.json");
 
-    if !cache_js.exists() {
+    ensure_directory(runtime_data_dir);
+
+    let Some(cache_js) = cache_js else {
         return Ok(false);
-    }
+    };
 
     fs::copy(&cache_js, &target_js).map_err(|e| format!("Failed to copy cache js: {}", e))?;
 
-    if cache_json.exists() {
+    if let Some(cache_json) = cache_json {
         fs::copy(&cache_json, &target_json)
             .map_err(|e| format!("Failed to copy cache json: {}", e))?;
     }
 
     Ok(true)
+}
+
+fn is_generated_graph_asset(file_name: &str) -> bool {
+    file_name == "data.js"
+        || file_name == "graph_data.json"
+        || (file_name.starts_with("data_") && file_name.ends_with(".js"))
+        || (file_name.starts_with("graph_data_") && file_name.ends_with(".json"))
+        || (file_name.starts_with("data_cli_") && file_name.ends_with(".js"))
+        || (file_name.starts_with("graph_data_cli_") && file_name.ends_with(".json"))
+}
+
+fn bootstrap_runtime_data(frontend_dir: &Path, runtime_data_dir: &Path) {
+    ensure_directory(runtime_data_dir);
+
+    if let Ok(entries) = fs::read_dir(frontend_dir) {
+        for entry in entries.flatten() {
+            let source_path = entry.path();
+            let Some(file_name_os) = source_path.file_name() else {
+                continue;
+            };
+            let file_name = file_name_os.to_string_lossy();
+            if !is_generated_graph_asset(&file_name) {
+                continue;
+            }
+
+            let target_path = runtime_data_dir.join(file_name.as_ref());
+            if target_path.exists() {
+                continue;
+            }
+
+            if let Err(err) = fs::copy(&source_path, &target_path) {
+                eprintln!(
+                    "[Rust] Failed to seed runtime data '{}' -> '{}': {}",
+                    source_path.to_string_lossy(),
+                    target_path.to_string_lossy(),
+                    err
+                );
+            }
+        }
+    }
 }
 
 #[tauri::command]
@@ -483,13 +561,15 @@ fn set_user_language(app: AppHandle, lang: String) -> Result<(), String> {
 #[tauri::command]
 fn check_cache(target: String) -> Result<Option<Value>, String> {
     let frontend_dir = resolve_frontend_dist_path();
-    Ok(check_cache_for_target(&frontend_dir, &target))
+    let runtime_data_dir = resolve_runtime_data_path();
+    Ok(check_cache_for_target(&runtime_data_dir, &frontend_dir, &target))
 }
 
 #[tauri::command]
 fn restore_cache(target: String) -> Result<bool, String> {
     let frontend_dir = resolve_frontend_dist_path();
-    restore_cache_for_target(&frontend_dir, &target)
+    let runtime_data_dir = resolve_runtime_data_path();
+    restore_cache_for_target(&runtime_data_dir, &frontend_dir, &target)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -565,17 +645,27 @@ pub fn run() {
 
             let project_root = resolve_project_root();
             let kb_root = PathBuf::from(startup_kb_path.clone());
-            let frontend_dir = project_root.join("dist").join("src").join("frontend");
+            let frontend_dir = resolve_frontend_dist_path();
+            let runtime_data_dir = resolve_runtime_data_path();
+            bootstrap_runtime_data(&frontend_dir, &runtime_data_dir);
 
             println!("[Rust] Sidecar Project Root: {}", project_root.to_string_lossy());
             println!("[Rust] Sidecar Knowledge Base Root: {}", kb_root.to_string_lossy());
             println!("[Rust] Sidecar Frontend Root: {}", frontend_dir.to_string_lossy());
+            println!(
+                "[Rust] Sidecar Runtime Data Root: {}",
+                runtime_data_dir.to_string_lossy()
+            );
 
             let mut sidecar_command = app.shell().sidecar("server").unwrap();
             sidecar_command = sidecar_command
                 .env("NOTE_CONNECTION_PROJECT_ROOT", project_root.to_string_lossy().to_string())
                 .env("NOTE_CONNECTION_KB_ROOT", kb_root.to_string_lossy().to_string())
-                .env("NOTE_CONNECTION_FRONTEND_DIR", frontend_dir.to_string_lossy().to_string());
+                .env("NOTE_CONNECTION_FRONTEND_DIR", frontend_dir.to_string_lossy().to_string())
+                .env(
+                    "NOTE_CONNECTION_RUNTIME_DATA_DIR",
+                    runtime_data_dir.to_string_lossy().to_string(),
+                );
             
             let sidecar_state_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
@@ -596,10 +686,18 @@ pub fn run() {
                         CommandEvent::Stdout(line) => {
                             let text = String::from_utf8_lossy(&line);
                             println!("[Node Sidecar]: {}", text);
+                            let message = text.trim();
+                            if !message.is_empty() {
+                                let _ = sidecar_state_handle.emit("build-log", message.to_string());
+                            }
                         },
                         CommandEvent::Stderr(line) => {
                             let text = String::from_utf8_lossy(&line);
                             eprintln!("[Node Sidecar Error]: {}", text);
+                            let message = text.trim();
+                            if !message.is_empty() {
+                                let _ = sidecar_state_handle.emit("build-log", format!("ERROR: {}", message));
+                            }
                         },
                         CommandEvent::Terminated(payload) => {
                             println!("[Node Sidecar Terminated]: {:?}", payload);
@@ -801,62 +899,96 @@ mod tests {
 
     #[test]
     fn check_cache_for_target_detects_active_and_named_cache_files() {
-        let temp = TempDir::new("cache_check");
-        fs::write(temp.child("data.js"), b"const graphData = {\"nodes\":[]};")
+        let runtime_temp = TempDir::new("cache_check_runtime");
+        let frontend_temp = TempDir::new("cache_check_frontend");
+        fs::write(runtime_temp.child("data.js"), b"const graphData = {\"nodes\":[]};")
             .expect("failed to create data.js");
         fs::write(
-            temp.child("data_financial.js"),
+            runtime_temp.child("data_financial.js"),
             b"const graphData = {\"nodes\":[{\"id\":\"A\"}]};",
         )
         .expect("failed to create data_financial.js");
 
-        let active = check_cache_for_target(&temp.path, "ALL_FOLDERS").expect("active cache expected");
+        let active = check_cache_for_target(&runtime_temp.path, &frontend_temp.path, "ALL_FOLDERS")
+            .expect("active cache expected");
         assert_eq!(active.get("source").and_then(Value::as_str), Some("active"));
 
-        let target = check_cache_for_target(&temp.path, "financial").expect("target cache expected");
+        let target = check_cache_for_target(&runtime_temp.path, &frontend_temp.path, "financial")
+            .expect("target cache expected");
         assert_eq!(target.get("source").and_then(Value::as_str), Some("target"));
 
-        assert!(check_cache_for_target(&temp.path, "missing").is_none());
-        assert!(check_cache_for_target(&temp.path, "").is_none());
+        assert!(check_cache_for_target(&runtime_temp.path, &frontend_temp.path, "missing").is_none());
+        assert!(check_cache_for_target(&runtime_temp.path, &frontend_temp.path, "").is_none());
     }
 
     #[test]
     fn restore_cache_for_target_copies_js_and_json_artifacts() {
-        let temp = TempDir::new("cache_restore");
+        let runtime_temp = TempDir::new("cache_restore_runtime");
+        let frontend_temp = TempDir::new("cache_restore_frontend");
         fs::write(
-            temp.child("data_financial.js"),
+            runtime_temp.child("data_financial.js"),
             b"const graphData = {\"nodes\":[{\"id\":\"T\"}]};",
         )
         .expect("failed to create cached js");
         fs::write(
-            temp.child("graph_data_financial.json"),
+            runtime_temp.child("graph_data_financial.json"),
             br#"{"nodes":[{"id":"T"}],"links":[]}"#,
         )
         .expect("failed to create cached json");
 
-        let restored = restore_cache_for_target(&temp.path, "financial")
+        let restored = restore_cache_for_target(&runtime_temp.path, &frontend_temp.path, "financial")
             .expect("restore should not error");
         assert!(restored);
-        assert!(temp.child("data.js").exists());
-        assert!(temp.child("graph_data.json").exists());
+        assert!(runtime_temp.child("data.js").exists());
+        assert!(runtime_temp.child("graph_data.json").exists());
 
-        let js = fs::read_to_string(temp.child("data.js")).expect("failed to read restored js");
+        let js =
+            fs::read_to_string(runtime_temp.child("data.js")).expect("failed to read restored js");
         assert!(js.contains("\"id\":\"T\""));
 
-        let json =
-            fs::read_to_string(temp.child("graph_data.json")).expect("failed to read restored json");
+        let json = fs::read_to_string(runtime_temp.child("graph_data.json"))
+            .expect("failed to read restored json");
         assert!(json.contains("\"id\":\"T\""));
     }
 
     #[test]
     fn restore_cache_for_target_handles_all_folders_and_missing_targets() {
-        let temp = TempDir::new("cache_restore_all");
+        let runtime_temp = TempDir::new("cache_restore_all_runtime");
+        let frontend_temp = TempDir::new("cache_restore_all_frontend");
 
-        assert!(!restore_cache_for_target(&temp.path, "ALL_FOLDERS").expect("should return bool"));
-        assert!(!restore_cache_for_target(&temp.path, "financial").expect("should return bool"));
+        assert!(
+            !restore_cache_for_target(&runtime_temp.path, &frontend_temp.path, "ALL_FOLDERS")
+                .expect("should return bool")
+        );
+        assert!(
+            !restore_cache_for_target(&runtime_temp.path, &frontend_temp.path, "financial")
+                .expect("should return bool")
+        );
 
-        fs::write(temp.child("data.js"), b"const graphData = {\"nodes\":[]};")
+        fs::write(runtime_temp.child("data.js"), b"const graphData = {\"nodes\":[]};")
             .expect("failed to create data.js");
-        assert!(restore_cache_for_target(&temp.path, "ALL_FOLDERS").expect("should return bool"));
+        assert!(
+            restore_cache_for_target(&runtime_temp.path, &frontend_temp.path, "ALL_FOLDERS")
+                .expect("should return bool")
+        );
+    }
+
+    #[test]
+    fn bootstrap_runtime_data_copies_generated_assets_only() {
+        let runtime_temp = TempDir::new("bootstrap_runtime");
+        let frontend_temp = TempDir::new("bootstrap_frontend");
+
+        fs::write(frontend_temp.child("data.js"), b"const graphData = {\"nodes\":[]};")
+            .expect("failed to write data.js");
+        fs::write(frontend_temp.child("graph_data.json"), br#"{"nodes":[],"edges":[]}"#)
+            .expect("failed to write graph_data.json");
+        fs::write(frontend_temp.child("app.js"), b"console.log('static app');")
+            .expect("failed to write app.js");
+
+        bootstrap_runtime_data(&frontend_temp.path, &runtime_temp.path);
+
+        assert!(runtime_temp.child("data.js").exists());
+        assert!(runtime_temp.child("graph_data.json").exists());
+        assert!(!runtime_temp.child("app.js").exists());
     }
 }

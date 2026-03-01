@@ -60,16 +60,19 @@ describe('resolveRuntimePaths', () => {
     const projectRoot = temp.mkdir('project');
     temp.mkdir(path.join('project', 'Knowledge_Base'));
     const frontendDir = temp.mkdir('custom_frontend');
+    const runtimeDataDir = temp.mkdir('custom_runtime_data');
     const kbRoot = temp.mkdir('custom_kb');
 
     restoreEnv.push(setEnv('NOTE_CONNECTION_PROJECT_ROOT', projectRoot));
     restoreEnv.push(setEnv('NOTE_CONNECTION_FRONTEND_DIR', frontendDir));
+    restoreEnv.push(setEnv('NOTE_CONNECTION_RUNTIME_DATA_DIR', runtimeDataDir));
     restoreEnv.push(setEnv('NOTE_CONNECTION_KB_ROOT', kbRoot));
 
     const resolved = resolveRuntimePaths(temp.child('module'));
 
     expect(resolved.projectRoot).toBe(path.resolve(projectRoot));
     expect(resolved.frontendDir).toBe(path.resolve(frontendDir));
+    expect(resolved.runtimeDataDir).toBe(path.resolve(runtimeDataDir));
     expect(resolved.kbRoot).toBe(path.resolve(kbRoot));
   });
 
@@ -80,12 +83,14 @@ describe('resolveRuntimePaths', () => {
 
     restoreEnv.push(setEnv('NOTE_CONNECTION_PROJECT_ROOT', projectRoot));
     restoreEnv.push(setEnv('NOTE_CONNECTION_FRONTEND_DIR', temp.child('missing_frontend')));
+    restoreEnv.push(setEnv('NOTE_CONNECTION_RUNTIME_DATA_DIR', undefined));
     restoreEnv.push(setEnv('NOTE_CONNECTION_KB_ROOT', undefined));
 
     const resolved = resolveRuntimePaths(temp.child('module'));
 
     expect(resolved.projectRoot).toBe(path.resolve(projectRoot));
     expect(resolved.frontendDir).toBe(path.resolve(distFrontend));
+    expect(fs.existsSync(resolved.runtimeDataDir)).toBe(true);
     expect(resolved.kbRoot).toBe(path.resolve(kbRoot));
   });
 
@@ -96,11 +101,13 @@ describe('resolveRuntimePaths', () => {
 
     restoreEnv.push(setEnv('NOTE_CONNECTION_PROJECT_ROOT', projectRoot));
     restoreEnv.push(setEnv('NOTE_CONNECTION_FRONTEND_DIR', undefined));
+    restoreEnv.push(setEnv('NOTE_CONNECTION_RUNTIME_DATA_DIR', undefined));
     restoreEnv.push(setEnv('NOTE_CONNECTION_KB_ROOT', undefined));
 
     const resolved = resolveRuntimePaths(temp.child('module'));
 
     expect(resolved.frontendDir).toBe(path.resolve(srcFrontend));
+    expect(fs.existsSync(resolved.runtimeDataDir)).toBe(true);
     expect(resolved.kbRoot).toBe(path.resolve(kbRoot));
   });
 
@@ -110,6 +117,7 @@ describe('resolveRuntimePaths', () => {
     temp.mkdir(path.join('project', 'dist', 'src', 'frontend'));
 
     restoreEnv.push(setEnv('NOTE_CONNECTION_PROJECT_ROOT', projectRoot));
+    restoreEnv.push(setEnv('NOTE_CONNECTION_RUNTIME_DATA_DIR', undefined));
     restoreEnv.push(setEnv('NOTE_CONNECTION_KB_ROOT', temp.child('invalid_kb')));
 
     const resolved = resolveRuntimePaths(temp.child('module'));
