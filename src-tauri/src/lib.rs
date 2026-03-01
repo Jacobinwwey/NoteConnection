@@ -663,3 +663,200 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn test_env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    struct EnvVarGuard {
+        key: &'static str,
+        old_value: Option<String>,
+    }
+
+    impl EnvVarGuard {
+        fn set(key: &'static str, value: &str) -> Self {
+            let old_value = std::env::var(key).ok();
+            std::env::set_var(key, value);
+            Self { key, old_value }
+        }
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            match &self.old_value {
+                Some(value) => std::env::set_var(self.key, value),
+                None => std::env::remove_var(self.key),
+            }
+        }
+    }
+
+    struct TempDir {
+        path: PathBuf,
+    }
+
+    impl TempDir {
+        fn new(prefix: &str) -> Self {
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("system time is before unix epoch")
+                .as_nanos();
+
+            let mut path = std::env::temp_dir();
+            path.push(format!(
+                "noteconnection_{}_{}_{}",
+                prefix,
+                std::process::id(),
+                now
+            ));
+            fs::create_dir_all(&path).expect("failed to create temp directory");
+            Self { path }
+        }
+
+        fn child(&self, relative: &str) -> PathBuf {
+            self.path.join(relative)
+        }
+    }
+
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+        }
+    }
+
+    #[test]
+    fn sanitize_target_name_replaces_unsafe_characters() {
+        let sanitized = sanitize_target_name("fi*n@ncial/2026");
+        assert_eq!(sanitized, "fi_n_ncial_2026");
+    }
+
+    #[test]
+    fn normalize_menu_lang_supports_zh_and_defaults_to_en() {
+        assert_eq!(normalize_menu_lang("zh"), "zh");
+        assert_eq!(normalize_menu_lang("en"), "en");
+        assert_eq!(normalize_menu_lang("zh-CN"), "en");
+        assert_eq!(normalize_menu_lang("anything-else"), "en");
+    }
+
+    #[test]
+    fn kb_path_and_language_persist_and_resolve() {
+        let _lock = test_env_lock().lock().expect("failed to lock test env");
+        let temp = TempDir::new("config_roundtrip");
+        let config_file = temp.child("kb_config.json");
+        let kb_dir = temp.child("Knowledge_Base");
+        fs::create_dir_all(&kb_dir).expect("failed to create kb directory");
+
+        let _config_guard = EnvVarGuard::set(
+            "NOTE_CONNECTION_CONFIG_PATH",
+            config_file.to_string_lossy().as_ref(),
+        );
+
+        let persisted_kb = persist_kb_path(kb_dir.to_string_lossy().as_ref())
+            .expect("persist_kb_path should succeed");
+        assert_eq!(persisted_kb, kb_dir.to_string_lossy().to_string());
+
+        assert_eq!(resolve_kb_path_from_config(), kb_dir.to_string_lossy().to_string());
+        assert_eq!(resolve_user_language_from_config(), "en");
+
+        let persisted_lang = persist_user_language("zh").expect("persist_user_language should work");
+        assert_eq!(persisted_lang, "zh");
+        assert_eq!(resolve_user_language_from_config(), "zh");
+    }
+
+    #[test]
+    fn persist_kb_path_rejects_non_existing_directory() {
+        let _lock = test_env_lock().lock().expect("failed to lock test env");
+        let temp = TempDir::new("invalid_kb");
+        let config_file = temp.child("kb_config.json");
+        let missing_dir = temp.child("missing_folder");
+        let _config_guard = EnvVarGuard::set(
+            "NOTE_CONNECTION_CONFIG_PATH",
+            config_file.to_string_lossy().as_ref(),
+        );
+
+        let result = persist_kb_path(missing_dir.to_string_lossy().as_ref());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn resolve_godot_executable_prefers_env_override_with_real_file() {
+        let _lock = test_env_lock().lock().expect("failed to lock test env");
+        let temp = TempDir::new("godot_exec");
+        let executable = temp.child("godot-custom.exe");
+        fs::write(&executable, b"godot").expect("failed to write executable stub");
+
+        let _exe_guard = EnvVarGuard::set(
+            "NOTE_CONNECTION_GODOT_EXE",
+            executable.to_string_lossy().as_ref(),
+        );
+
+        let resolved = resolve_godot_executable(&temp.path).expect("expected executable path");
+        assert_eq!(resolved, executable);
+    }
+
+    #[test]
+    fn check_cache_for_target_detects_active_and_named_cache_files() {
+        let temp = TempDir::new("cache_check");
+        fs::write(temp.child("data.js"), b"const graphData = {\"nodes\":[]};")
+            .expect("failed to create data.js");
+        fs::write(
+            temp.child("data_financial.js"),
+            b"const graphData = {\"nodes\":[{\"id\":\"A\"}]};",
+        )
+        .expect("failed to create data_financial.js");
+
+        let active = check_cache_for_target(&temp.path, "ALL_FOLDERS").expect("active cache expected");
+        assert_eq!(active.get("source").and_then(Value::as_str), Some("active"));
+
+        let target = check_cache_for_target(&temp.path, "financial").expect("target cache expected");
+        assert_eq!(target.get("source").and_then(Value::as_str), Some("target"));
+
+        assert!(check_cache_for_target(&temp.path, "missing").is_none());
+        assert!(check_cache_for_target(&temp.path, "").is_none());
+    }
+
+    #[test]
+    fn restore_cache_for_target_copies_js_and_json_artifacts() {
+        let temp = TempDir::new("cache_restore");
+        fs::write(
+            temp.child("data_financial.js"),
+            b"const graphData = {\"nodes\":[{\"id\":\"T\"}]};",
+        )
+        .expect("failed to create cached js");
+        fs::write(
+            temp.child("graph_data_financial.json"),
+            br#"{"nodes":[{"id":"T"}],"links":[]}"#,
+        )
+        .expect("failed to create cached json");
+
+        let restored = restore_cache_for_target(&temp.path, "financial")
+            .expect("restore should not error");
+        assert!(restored);
+        assert!(temp.child("data.js").exists());
+        assert!(temp.child("graph_data.json").exists());
+
+        let js = fs::read_to_string(temp.child("data.js")).expect("failed to read restored js");
+        assert!(js.contains("\"id\":\"T\""));
+
+        let json =
+            fs::read_to_string(temp.child("graph_data.json")).expect("failed to read restored json");
+        assert!(json.contains("\"id\":\"T\""));
+    }
+
+    #[test]
+    fn restore_cache_for_target_handles_all_folders_and_missing_targets() {
+        let temp = TempDir::new("cache_restore_all");
+
+        assert!(!restore_cache_for_target(&temp.path, "ALL_FOLDERS").expect("should return bool"));
+        assert!(!restore_cache_for_target(&temp.path, "financial").expect("should return bool"));
+
+        fs::write(temp.child("data.js"), b"const graphData = {\"nodes\":[]};")
+            .expect("failed to create data.js");
+        assert!(restore_cache_for_target(&temp.path, "ALL_FOLDERS").expect("should return bool"));
+    }
+}

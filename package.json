@@ -24,6 +24,8 @@
     "build:sidecar": "pkg dist/src/server.js --target node18-win-x64 --output src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
     "pathmode:dev": "node -r ts-node/register src/server.ts --pathmode",
     "pathmode:test": "jest --testPathPatterns=Path",
+    "test:migration": "jest src/core/Graph.test.ts src/core/PathEngine.test.ts src/core/TreeLayout.test.ts src/backend/algorithms/CycleDetection.test.ts src/utils/RuntimePaths.test.ts src/server.migration.test.ts --runInBand",
+    "test:tauri": "cargo test --manifest-path src-tauri/Cargo.toml",
     "prepublishOnly": "npm run build",
     "test": "jest"
   },
