@@ -11,7 +11,7 @@ signal path_update(data: Dictionary)
 signal switch_center(new_center_id: String)
 signal completion_sync(completed_ids: Array, timestamp: int)
 
-const WS_URL := "ws://127.0.0.1:9876"
+const WS_URL := "ws://127.0.0.1:9876/?client=godot"
 const RECONNECT_DELAY := 3.0
 
 var _socket := WebSocketPeer.new()

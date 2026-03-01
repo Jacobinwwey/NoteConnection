@@ -77,7 +77,7 @@ window.pathApp = {
         );
 
         if (!hasActiveSocket) {
-            this.ws = new WebSocket('ws://localhost:9876');
+            this.ws = new WebSocket(this._getBridgeWsUrl('frontend'));
         }
 
         this.ws.onopen = () => console.log('[PathApp] Connected to Bridge');
@@ -201,10 +201,20 @@ window.pathApp = {
                 console.error('WS Error', err);
             }
         };
+        this.ws.onclose = (e) => {
+            console.log('[PathApp] Bridge socket closed. code=', e.code, 'reason=', e.reason || '<empty>');
+        };
+        this.ws.onerror = (err) => {
+            console.warn('[PathApp] Bridge socket error:', err);
+        };
 
         if (hasActiveSocket && this.ws.readyState === WebSocket.OPEN) {
             console.log('[PathApp] Reusing existing Bridge socket');
         }
+    },
+
+    _getBridgeWsUrl: function(clientTag = 'frontend') {
+        return `ws://localhost:9876?client=${encodeURIComponent(clientTag)}`;
     },
 
     _isTauriMode: function() {
@@ -1304,10 +1314,15 @@ window.pathApp = {
      * Called immediately when script loads.
      */
     setupEarlyWebSocket: function() {
+        if (this._isTauriMode()) {
+            // In Tauri flow, avoid idle early bridge sockets that can reconnect on webview lifecycle changes.
+            return;
+        }
+
         if (this.ws) return; // Already connected
         
         console.log('[PathApp] Setting up early WebSocket connection...');
-        this.ws = new WebSocket('ws://localhost:9876');
+        this.ws = new WebSocket(this._getBridgeWsUrl('frontend-early'));
         
         this.ws.onopen = () => {
             console.log('[PathApp] Early WS Connected to Bridge');
@@ -1363,12 +1378,21 @@ window.pathApp = {
         this.ws.onerror = (err) => {
             console.warn('[PathApp] Early WS Error (PathBridge may not be running):', err);
         };
+        this.ws.onclose = (e) => {
+            console.log('[PathApp] Early WS Closed. code=', e.code, 'reason=', e.reason || '<empty>');
+        };
     }
 };
 
 // === AUTO-CONNECT: Establish WebSocket immediately for Godot standalone support ===
 // This runs as soon as path_app.js is loaded, before init() is called.
 (function() {
+    const isTauri = typeof window !== 'undefined' && !!window.__TAURI__;
+    if (isTauri) {
+        // Bridge-first Tauri: only connect when Path Mode is explicitly initialized.
+        return;
+    }
+
     // Small delay to ensure graphData might be available
     setTimeout(() => {
         if (window.pathApp && !window.pathApp.ws) {

@@ -3,6 +3,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 export class PathBridge {
     private wss: WebSocketServer;
     private clients: Set<WebSocket> = new Set();
+    private clientMeta: Map<WebSocket, { id: number; tag: string; address: string }> = new Map();
+    private nextClientId = 1;
     private port: number;
     private currentPath: any = null;
 
@@ -12,9 +14,16 @@ export class PathBridge {
         
         console.log(`[PathBridge] WebSocket Server started on port ${port}`);
 
-        this.wss.on('connection', (ws) => {
-            console.log('[PathBridge] Client connected');
+        this.wss.on('connection', (ws, request) => {
+            const clientId = this.nextClientId++;
+            const clientTag = this.resolveClientTag(request.url || '');
+            const clientAddress = request.socket.remoteAddress || 'unknown';
+
+            this.clientMeta.set(ws, { id: clientId, tag: clientTag, address: clientAddress });
             this.clients.add(ws);
+            console.log(
+                `[PathBridge] Client connected #${clientId} (${clientTag}) from ${clientAddress}. Total clients: ${this.clients.size}`
+            );
 
             ws.on('message', (message) => {
                 try {
@@ -25,11 +34,35 @@ export class PathBridge {
                 }
             });
 
-            ws.on('close', () => {
-                console.log('[PathBridge] Client disconnected');
+            ws.on('close', (code, reasonBuffer) => {
+                const meta = this.clientMeta.get(ws);
+                const reason = reasonBuffer?.toString() || '';
                 this.clients.delete(ws);
+                this.clientMeta.delete(ws);
+                console.log(
+                    `[PathBridge] Client disconnected #${meta?.id ?? '?'} (${meta?.tag ?? 'unknown'}) code=${code} reason='${reason}'. Total clients: ${this.clients.size}`
+                );
+            });
+
+            ws.on('error', (error) => {
+                const meta = this.clientMeta.get(ws);
+                console.error(
+                    `[PathBridge] Client error #${meta?.id ?? '?'} (${meta?.tag ?? 'unknown'}):`,
+                    error
+                );
             });
         });
+    }
+
+    private resolveClientTag(rawUrl: string): string {
+        if (!rawUrl) return 'unknown';
+        try {
+            const parsed = new URL(rawUrl, `ws://127.0.0.1:${this.port}`);
+            const client = (parsed.searchParams.get('client') || '').trim();
+            return client || 'unknown';
+        } catch (_e) {
+            return 'unknown';
+        }
     }
 
 
@@ -126,7 +159,15 @@ export class PathBridge {
         const msg = JSON.stringify({ type, payload });
         this.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
-                client.send(msg);
+                try {
+                    client.send(msg);
+                } catch (e) {
+                    const meta = this.clientMeta.get(client);
+                    console.error(
+                        `[PathBridge] Broadcast error to #${meta?.id ?? '?'} (${meta?.tag ?? 'unknown'}):`,
+                        e
+                    );
+                }
             }
         });
     }
@@ -138,6 +179,8 @@ export class PathBridge {
 
     public close() {
         this.wss.close();
+        this.clients.clear();
+        this.clientMeta.clear();
     }
 }
 

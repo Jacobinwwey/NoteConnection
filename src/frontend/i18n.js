@@ -5,12 +5,20 @@
 
 class I18nManager {
     constructor() {
+        this.tauriSyncStorageKey = 'nc_tauri_lang_synced';
         this.currentLanguage = 'en';
         this.translations = {};
         this.fallbackLanguage = 'en';
         this.supportedLanguages = ['en', 'zh'];
         this.listeners = [];
         this.isInitialized = false;
+        this.lastSyncedLanguage = null;
+
+        try {
+            this.lastSyncedLanguage = sessionStorage.getItem(this.tauriSyncStorageKey);
+        } catch (_e) {
+            this.lastSyncedLanguage = null;
+        }
     }
 
     /**
@@ -58,6 +66,11 @@ class I18nManager {
             lang = this.fallbackLanguage;
         }
 
+        if (this.isInitialized && this.currentLanguage === lang) {
+            // Idempotent guard to avoid duplicate side effects (e.g. Tauri menu sync).
+            return;
+        }
+
         try {
             // Load translation file
             const response = await fetch(`locales/${lang}.json`);
@@ -78,7 +91,24 @@ class I18nManager {
             
             // Sync with Backend (Tauri) to update Menu
             if (window.__TAURI__) {
-                window.__TAURI__.core.invoke('set_user_language', { lang: lang });
+                let syncedInSession = null;
+                try {
+                    syncedInSession = sessionStorage.getItem(this.tauriSyncStorageKey);
+                } catch (_e) {
+                    syncedInSession = null;
+                }
+
+                if (this.lastSyncedLanguage !== lang && syncedInSession !== lang) {
+                    await window.__TAURI__.core.invoke('set_user_language', { lang: lang });
+                    this.lastSyncedLanguage = lang;
+                    try {
+                        sessionStorage.setItem(this.tauriSyncStorageKey, lang);
+                    } catch (_e) {
+                        // Ignore storage write failures; sync already applied.
+                    }
+                } else {
+                    this.lastSyncedLanguage = lang;
+                }
             }
             
             console.log(`[i18n] Language set to: ${lang}`);

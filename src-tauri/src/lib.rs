@@ -2,6 +2,7 @@ use tauri_plugin_shell::{ShellExt, process::CommandEvent};
 
 use std::fs;
 use std::path::PathBuf;
+use std::sync::{Mutex, OnceLock};
 use std::time::UNIX_EPOCH;
 use serde_json::{Value, json};
 use tauri::{AppHandle, Emitter};
@@ -133,11 +134,36 @@ fn build_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>, lang: &str) -> tauri
         .build()
 }
 
+static MENU_LANG_STATE: OnceLock<Mutex<String>> = OnceLock::new();
+
+fn menu_lang_state() -> &'static Mutex<String> {
+    MENU_LANG_STATE.get_or_init(|| Mutex::new("en".to_string()))
+}
+
+fn normalize_menu_lang(lang: &str) -> &'static str {
+    if lang == "zh" { "zh" } else { "en" }
+}
+
 #[tauri::command]
 fn set_user_language(app: AppHandle, lang: String) -> Result<(), String> {
-    println!("[Rust] Setting user language to: {}", lang);
-    if let Ok(menu) = build_menu(&app, &lang) {
+    let normalized_lang = normalize_menu_lang(&lang).to_string();
+
+    // Idempotent guard: avoid reapplying the same menu language repeatedly.
+    {
+        let state = menu_lang_state()
+            .lock()
+            .map_err(|_| "Failed to lock menu language state".to_string())?;
+        if state.as_str() == normalized_lang.as_str() {
+            return Ok(());
+        }
+    }
+
+    println!("[Rust] Setting user language to: {}", normalized_lang);
+    if let Ok(menu) = build_menu(&app, &normalized_lang) {
         let _ = app.set_menu(menu);
+        if let Ok(mut state) = menu_lang_state().lock() {
+            *state = normalized_lang;
+        }
     }
     Ok(())
 }
@@ -210,6 +236,9 @@ pub fn run() {
         .setup(|app| {
             if let Ok(menu) = build_menu(app.handle(), "en") {
                 let _ = app.set_menu(menu);
+                if let Ok(mut state) = menu_lang_state().lock() {
+                    *state = "en".to_string();
+                }
             }
             
             app.on_menu_event(move |app_handle, event| {
