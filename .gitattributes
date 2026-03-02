@@ -1,4 +1,52 @@
+* text=auto
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.sh text eol=lf
+*.md text eol=lf
+*.ts text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.rs text eol=lf
+*.gd text eol=lf
+*.tscn text eol=lf
+*.tres text eol=lf
+*.gdshader text eol=lf
+*.gradle text eol=lf
+*.java text eol=lf
+*.kt text eol=lf
+*.xml text eol=lf
+*.gitignore text eol=lf
+*.gitattributes text eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.icns binary
+*.exr binary
+*.zip binary
+*.7z binary
+*.jar binary
+*.aar binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.apk binary
+*.aab binary
+*.keystore binary
+*.jks binary
+
 src/frontend/graph_data.json filter=lfs diff=lfs merge=lfs -text
 src/frontend/data.js filter=lfs diff=lfs merge=lfs -text
 src-tauri/bin/node-x86_64-pc-windows-msvc.exe filter=lfs diff=lfs merge=lfs -text
 src-tauri/bin/server-x86_64-pc-windows-msvc.exe filter=lfs diff=lfs merge=lfs -text
+src-tauri/bin/godot-x86_64-pc-windows-msvc.exe filter=lfs diff=lfs merge=lfs -text

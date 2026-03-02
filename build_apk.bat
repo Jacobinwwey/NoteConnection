@@ -1,5 +1,8 @@
 @echo off
 setlocal EnableDelayedExpansion
+set "SHOULD_PAUSE=1"
+if defined NOTE_CONNECTION_NO_PAUSE set "SHOULD_PAUSE=0"
+if /I "%CI%"=="true" set "SHOULD_PAUSE=0"
 
 REM ========================================================
 REM   NoteConnection APK Build Script
@@ -24,10 +27,10 @@ where node >nul 2>&1
 if %errorlevel% neq 0 (
     echo.
     echo [ERROR] Node.js is NOT installed or NOT in your PATH.
-    echo         Core build tools (npm) are required.
-    echo         [ACTION] Please install Node.js (LTS) from: https://nodejs.org/
+    echo         Core build tools ^(npm^) are required.
+    echo         [ACTION] Please install Node.js ^(LTS^) from: https://nodejs.org/
     echo.
-    pause
+    if "%SHOULD_PAUSE%"=="1" pause
     exit /b 1
 )
 for /f "delims=" %%v in ('node -v') do set NODE_VERSION=%%v
@@ -41,7 +44,7 @@ if %errorlevel% neq 0 (
     echo         Android Gradle build requires JDK 17 or higher.
     echo         [ACTION] Please install OpenJDK 17+.
     echo.
-    pause
+    if "%SHOULD_PAUSE%"=="1" pause
     exit /b 1
 )
 for /f "tokens=2 delims= " %%v in ('javac -version 2^>^&1') do set JAVA_VERSION=%%v
@@ -60,7 +63,7 @@ if "%ANDROID_HOME%"=="" (
     echo.
     echo [WARN] ANDROID_HOME environment variable is NOT set.
     echo        Gradle may fail if it cannot locate the Android SDK.
-    echo        [ACTION] Set ANDROID_HOME to your SDK location (e.g., %%LOCALAPPDATA%%\Android\Sdk).
+    echo        [ACTION] Set ANDROID_HOME to your SDK location ^(e.g., %%LOCALAPPDATA%%\Android\Sdk^).
 ) else (
     if exist "%ANDROID_HOME%" (
         echo   [OK] Android SDK: %ANDROID_HOME%
@@ -82,7 +85,7 @@ if not exist "node_modules" (
         echo.
         echo [ERROR] 'npm install' failed.
         echo         Please check your internet connection or npm configuration.
-        pause
+        if "%SHOULD_PAUSE%"=="1" pause
         exit /b 1
     )
     echo   [OK] Dependencies installed.
@@ -99,9 +102,9 @@ echo       (This may take a moment...)
 call npm run build
 if %errorlevel% neq 0 (
     echo.
-    echo [ERROR] Web build failed (npm run build).
+    echo [ERROR] Web build failed ^(npm run build^).
     echo         Check the output above for compilation errors.
-    pause
+    if "%SHOULD_PAUSE%"=="1" pause
     exit /b 1
 )
 echo   [OK] Web assets compiled successfully.
@@ -117,7 +120,7 @@ if exist "dist\src\frontend" (
 ) else (
     echo [ERROR] Expected build output 'dist\src\frontend' NOT found.
     echo         Build might have produced a different structure.
-    pause
+    if "%SHOULD_PAUSE%"=="1" pause
     exit /b 1
 )
 
@@ -144,7 +147,7 @@ if not exist "android" (
     if !errorlevel! neq 0 (
         echo.
         echo [ERROR] Failed to add Android platform.
-        pause
+        if "%SHOULD_PAUSE%"=="1" pause
         exit /b 1
     )
 ) else (
@@ -161,7 +164,7 @@ if %errorlevel% neq 0 (
     echo.
     echo [ERROR] 'npx cap sync' failed.
     echo         Ensure you have a valid internet connection for Gradle dependencies.
-    pause
+    if "%SHOULD_PAUSE%"=="1" pause
     exit /b 1
 )
 echo   [OK] Assets synced to android/app/src/main/assets/public.
@@ -180,7 +183,7 @@ if not exist "gradlew.bat" (
     echo         The Android platform might be corrupted.
     echo         Try deleting the 'android' folder and re-running this script.
     cd ..
-    pause
+    if "%SHOULD_PAUSE%"=="1" pause
     exit /b 1
 )
 
@@ -194,7 +197,7 @@ if %errorlevel% neq 0 (
     echo   2. Ensure Android SDK is installed.
     echo   3. Try running 'cd android && gradlew clean' manually.
     cd ..
-    pause
+    if "%SHOULD_PAUSE%"=="1" pause
     exit /b 1
 )
 cd ..
@@ -215,4 +218,4 @@ echo   1. Transfer the APK to your Android device.
 echo   2. Enable "Install from Unknown Sources" if prompted.
 echo   3. Enjoy NoteConnection Mobile!
 echo.
-pause
+if "%SHOULD_PAUSE%"=="1" pause

@@ -101,19 +101,31 @@ class Reader {
         let rawContent = node.content;
         
         if (!rawContent && node.metadata && node.metadata.filepath) {
-            try {
-                // Fetch from Node sidecar (Tauri/Web/Electron universally)
-                const res = await fetch(`http://localhost:3000/api/content?path=${encodeURIComponent(node.metadata.filepath)}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    rawContent = data.content;
-                } else {
-                    console.error("Failed to load content:", res.status, res.statusText);
-                    rawContent = `*Error loading content: ${res.statusText}*`;
+            const runtimeCaps = (typeof window !== 'undefined' && window.__NC_RUNTIME_CAPS)
+                ? window.__NC_RUNTIME_CAPS
+                : null;
+            const runtimeSupportsContentApi = !runtimeCaps || runtimeCaps.supports_content_api !== false;
+
+            if (!runtimeSupportsContentApi) {
+                const msg = window.i18n
+                    ? window.i18n.t('source.error.contentUnavailableMobile')
+                    : 'Content loading from local files is not available on this runtime.';
+                rawContent = `*${msg}*`;
+            } else {
+                try {
+                    // Fetch from Node sidecar (desktop/web runtime)
+                    const res = await fetch(`http://localhost:3000/api/content?path=${encodeURIComponent(node.metadata.filepath)}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        rawContent = data.content;
+                    } else {
+                        console.error("Failed to load content:", res.status, res.statusText);
+                        rawContent = `*Error loading content: ${res.statusText}*`;
+                    }
+                } catch (e) {
+                    console.error("Content load error:", e);
+                    rawContent = `*Error loading content: ${e.message}*`;
                 }
-            } catch (e) {
-                console.error("Content load error:", e);
-                rawContent = `*Error loading content: ${e.message}*`;
             }
         }
         

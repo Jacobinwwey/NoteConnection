@@ -76,7 +76,9 @@
     "refresh": "Refresh",
     "error": {
       "noFolder": "Please select a folder first.",
-      "loadFailed": "Build Failed: {error}"
+      "loadFailed": "Build Failed: {error}",
+      "buildUnsupportedMobile": "Build is not available in this mobile runtime yet. Please generate data on desktop first and then load existing cache.",
+      "contentUnavailableMobile": "Content loading from local files is not available in this mobile runtime yet."
     }
   },
   "tutorial": {

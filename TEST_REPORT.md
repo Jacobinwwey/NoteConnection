@@ -1,3 +1,305 @@
+# 2026-03-02 v1.5.0 - Tauri Android Build Recovery Validation (Arm64)
+
+## English Document
+
+### Scope
+
+Validate that Tauri Android can complete real build output on this machine after fixing dependency/target/runtime blockers discovered in prior migration rounds.
+
+### Verification Results
+
+#### 1) Android environment preflight
+
+- **Command**: `npm run verify:android:env`
+- **Result**: **Pass**
+- **Evidence**:
+  - SDK root resolved: `C:\Users\jacob\AppData\Local\Android\Sdk`
+  - `sdkmanager` detected under `cmdline-tools/latest/bin`
+  - NDK detected: `C:\Users\jacob\AppData\Local\Android\Sdk\ndk\27.2.12479018`
+
+#### 2) Rust Android compile blockers (rfd/menu/desktop APIs)
+
+- **Initial status**: **Fail** (historical blockers)
+  - `rfd` not supported on Android target.
+  - `tauri::menu` desktop-only APIs unavailable on Android.
+  - Desktop sidecar/Godot launch code coupled into mobile runtime path.
+- **Fixes validated**:
+  - `rfd` moved to desktop-only target dependency.
+  - Android-safe folder-picker fallback added.
+  - Menu APIs guarded by `cfg(not(target_os = "android"))`.
+  - Android startup path skips desktop sidecar/Godot launch.
+  - Android config override added: `src-tauri/tauri.android.conf.json` (`externalBin: []`).
+- **Post-fix status**: **Pass** for compilation and packaging path.
+
+#### 3) Wrapper stability on Windows
+
+- **Issue found**: `spawnSync npx.cmd EINVAL`
+- **Fix**: invoke through `cmd.exe /d /s /c npx ...` in `scripts/run-tauri-android.js`.
+- **Additional hardening**:
+  - Spawn error/signal logging.
+  - Default target policy: `aarch64` for `build/dev`.
+  - Override support: `NOTE_CONNECTION_TAURI_ANDROID_TARGET`.
+- **Validation command**: `node scripts/run-tauri-android.js init`
+- **Result**: **Pass**
+
+#### 4) Android build execution
+
+- **Command**: `node scripts/run-tauri-android.js build`
+- **Result**: **Pass**
+- **Output evidence**:
+  - APK:
+    - `src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk`
+  - AAB:
+    - `src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab`
+
+#### 5) npm pipeline validation
+
+- **Command**: `npm run tauri:android:build`
+- **Result**: **Pass**
+- **Notes**:
+  - Includes `build:mini`, Android env preflight, sidecar binary validation, and Android arm64 Tauri build.
+
+#### 6) Migration regression suite
+
+- **Command**: `npm run test:migration`
+- **Result**: **Pass** (`30` tests)
+- **Notes**:
+  - Includes updated assertions in `src/mobile.pipeline.test.ts` for arm64 default and override contract.
+
+### Current Risk / Non-Parity Items
+
+- Android build pipeline is now executable and artifact-producing, but desktop-only runtime capabilities remain intentionally disabled on Android:
+  - Desktop Node sidecar runtime launch is skipped on Android.
+  - Desktop Godot bridge launch is skipped on Android.
+- Functional parity for on-device folder build/load and full path-mode behavior still requires Android-native runtime design.
+
+---
+
+## 中文文档
+
+### 范围
+
+验证在修复前序迁移阻塞项后，Tauri Android 是否可在当前机器完成真实构建并产出可交付文件。
+
+### 验证结果
+
+#### 1) Android 环境前置检查
+
+- **命令**：`npm run verify:android:env`
+- **结果**：**通过**
+- **证据**：
+  - SDK 路径识别：`C:\Users\jacob\AppData\Local\Android\Sdk`
+  - `sdkmanager` 已在 `cmdline-tools/latest/bin` 被识别
+  - NDK 识别：`C:\Users\jacob\AppData\Local\Android\Sdk\ndk\27.2.12479018`
+
+#### 2) Rust Android 编译阻塞项（rfd/menu/桌面 API）
+
+- **初始状态**：**失败**（历史阻塞）
+  - `rfd` 在 Android 目标不可用。
+  - `tauri::menu` 为桌面专属 API，Android 不可用。
+  - 桌面 sidecar/Godot 启动逻辑耦合在移动运行时路径中。
+- **已验证修复**：
+  - `rfd` 改为桌面目标专属依赖。
+  - 增加 Android 安全目录选择回退。
+  - `cfg(not(target_os = "android"))` 隔离菜单 API。
+  - Android 启动流程跳过桌面 sidecar/Godot 启动。
+  - 新增 Android 配置覆盖：`src-tauri/tauri.android.conf.json`（`externalBin: []`）。
+- **修复后状态**：编译与打包链路 **通过**。
+
+#### 3) Windows 包装脚本稳定性
+
+- **发现问题**：`spawnSync npx.cmd EINVAL`
+- **修复**：`scripts/run-tauri-android.js` 改为 `cmd.exe /d /s /c npx ...` 调用。
+- **附加加固**：
+  - 增加 spawn error/signal 日志。
+  - `build/dev` 默认目标改为 `aarch64`。
+  - 支持 `NOTE_CONNECTION_TAURI_ANDROID_TARGET` 覆盖目标。
+- **验证命令**：`node scripts/run-tauri-android.js init`
+- **结果**：**通过**
+
+#### 4) Android 构建执行
+
+- **命令**：`node scripts/run-tauri-android.js build`
+- **结果**：**通过**
+- **产物证据**：
+  - APK：
+    - `src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk`
+  - AAB：
+    - `src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab`
+
+#### 5) npm 流水线验证
+
+- **命令**：`npm run tauri:android:build`
+- **结果**：**通过**
+- **说明**：
+  - 该流程已串联 `build:mini`、Android 环境前置检查、sidecar 二进制校验与 arm64 Tauri Android 构建。
+
+#### 6) 迁移回归测试
+
+- **命令**：`npm run test:migration`
+- **结果**：**通过**（`30` 项测试）
+- **说明**：
+  - 已覆盖 `src/mobile.pipeline.test.ts` 中 arm64 默认策略与覆盖能力断言。
+
+### 当前风险 / 未对等项
+
+- Android 构建链路已可执行并产出 APK/AAB，但桌面专属运行时能力在 Android 仍是有意禁用：
+  - Android 端不会启动桌面 Node sidecar。
+  - Android 端不会启动桌面 Godot bridge。
+- 若要实现设备端目录构建/加载与完整 path-mode 行为对等，仍需 Android 原生运行时方案。
+
+---
+
+# 2026-03-01 v1.4.9 - Live Pipeline Verification (Desktop + Dual Mobile)
+
+## English Document
+
+### Scope
+
+Execute real build pipelines after `v1.4.8`, not only unit/regression tests.
+
+### Results
+
+#### 1) Tauri desktop package (mini path)
+
+- **Command**: `npm run tauri:build:mini` (with `NOTE_CONNECTION_GODOT_EXE=E:\网页下载\Godot_v4.6-stable_win64_console.exe`)
+- **Result**: **Pass**
+- **Evidence**:
+  - `build:sidecar` succeeded.
+  - `prepare:godot:bin` succeeded.
+  - `verify:tauri:bin` succeeded.
+  - Bundles produced:
+    - `src-tauri/target/release/bundle/msi/NoteConnection_1.3.0_x64_en-US.msi`
+    - `src-tauri/target/release/bundle/nsis/NoteConnection_1.3.0_x64-setup.exe`
+
+#### 2) Capacitor Android APK pipeline
+
+- **Command**: `build_apk.bat` (non-interactive with `NOTE_CONNECTION_NO_PAUSE=1`)
+- **Result**: **Pass**
+- **Fix applied before pass**:
+  - Escaped parentheses in `echo` lines inside `if (...)` blocks to fix:
+  - `are was unexpected at this time.`
+  - `from: was unexpected at this time.`
+  - Added non-interactive pause guard for CI/automation.
+- **Artifact**:
+  - `android/app/build/outputs/apk/debug/app-debug.apk`
+
+#### 3) Tauri Android path
+
+- **Commands**:
+  - `npm run tauri:android:init`
+  - `npm run verify:android:env`
+- **Result**: **Blocked by environment prerequisite**
+- **Detected blocker**:
+  - Missing Android SDK command-line tools:
+  - `<ANDROID_SDK_ROOT>/cmdline-tools/latest/bin/sdkmanager(.bat)`
+- **Hardening added**:
+  - New script `scripts/verify-tauri-android-prereqs.js`
+  - New command `npm run verify:android:env`
+  - Wired as mandatory preflight for:
+    - `tauri:android:init`
+    - `tauri:android:dev`
+    - `tauri:android:build`
+
+#### 4) Regression checks after fixes
+
+- **Command**: `npm run test:migration`
+- **Result**: **Pass** (`29` tests)
+- **Notes**:
+  - Includes updated dual-mobile test assertions.
+
+#### 5) Unified dual-path command behavior
+
+- **Command**: `npm run mobile:build:both`
+- **Result**: **Expected Mixed Outcome**
+- **Observed**:
+  - Capacitor branch completed and produced APK.
+  - Tauri Android branch stopped at `verify:android:env` with explicit missing `cmdline-tools` message.
+- **Assessment**:
+  - Combined command now behaves deterministically and surfaces the exact prerequisite gap.
+
+### Current State
+
+- Desktop Tauri packaging: **Verified Pass**
+- Capacitor Android pipeline: **Verified Pass**
+- Tauri Android pipeline: **Ready at script level, blocked by missing local SDK cmdline-tools**
+
+---
+
+## 中文文档
+
+### 范围
+
+在 `v1.4.8` 基础上执行真实构建流水线验证，而不仅是单元/回归测试。
+
+### 结果
+
+#### 1) Tauri 桌面打包（mini 路径）
+
+- **命令**：`npm run tauri:build:mini`（设置 `NOTE_CONNECTION_GODOT_EXE=E:\网页下载\Godot_v4.6-stable_win64_console.exe`）
+- **结果**：**通过**
+- **证据**：
+  - `build:sidecar` 通过。
+  - `prepare:godot:bin` 通过。
+  - `verify:tauri:bin` 通过。
+  - 成功产出：
+    - `src-tauri/target/release/bundle/msi/NoteConnection_1.3.0_x64_en-US.msi`
+    - `src-tauri/target/release/bundle/nsis/NoteConnection_1.3.0_x64-setup.exe`
+
+#### 2) Capacitor Android APK 流水线
+
+- **命令**：`build_apk.bat`（使用 `NOTE_CONNECTION_NO_PAUSE=1` 非交互执行）
+- **结果**：**通过**
+- **通过前修复**：
+  - 修复 `if (...)` 代码块中 `echo` 未转义括号引发的解析错误：
+  - `are was unexpected at this time.`
+  - `from: was unexpected at this time.`
+  - 增加 CI/自动化场景下的 `pause` 抑制。
+- **产物**：
+  - `android/app/build/outputs/apk/debug/app-debug.apk`
+
+#### 3) Tauri Android 路径
+
+- **命令**：
+  - `npm run tauri:android:init`
+  - `npm run verify:android:env`
+- **结果**：**被环境前置条件阻塞**
+- **定位到的阻塞项**：
+  - 缺少 Android SDK command-line tools：
+  - `<ANDROID_SDK_ROOT>/cmdline-tools/latest/bin/sdkmanager(.bat)`
+- **已增加的加固措施**：
+  - 新增 `scripts/verify-tauri-android-prereqs.js`
+  - 新增 `npm run verify:android:env`
+  - 并将其作为以下命令的强制前置：
+    - `tauri:android:init`
+    - `tauri:android:dev`
+    - `tauri:android:build`
+
+#### 4) 修复后的回归验证
+
+- **命令**：`npm run test:migration`
+- **结果**：**通过**（`29` 项测试）
+- **说明**：
+  - 已包含最新双移动端断言。
+
+#### 5) 双路径统一命令行为
+
+- **命令**：`npm run mobile:build:both`
+- **结果**：**符合预期的混合结果**
+- **现象**：
+  - Capacitor 分支执行完成并产出 APK。
+  - Tauri Android 分支在 `verify:android:env` 处被明确拦截并提示缺失 `cmdline-tools`。
+- **评估**：
+  - 双路径统一命令行为已可预测，且可直接定位前置依赖缺口。
+
+### 当前结论
+
+- Tauri 桌面打包：**实测通过**
+- Capacitor Android 流水线：**实测通过**
+- Tauri Android 流水线：**脚本层已就绪，但受本机 SDK cmdline-tools 缺失阻塞**
+
+---
+
 # 2026-03-01 v1.4.8 - Migration Closure Validation (P1.5 Dual Android)
 
 ## English Document

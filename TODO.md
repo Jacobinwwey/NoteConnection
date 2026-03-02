@@ -1,3 +1,205 @@
+# 2026-03-02 v1.5.0 - Tauri Android Build Unblock (Arm64 Deterministic Path)
+
+## English Document
+
+**Goal**: Unblock Tauri Android from environment/setup failures to a reproducible build path, while keeping Capacitor and Tauri Android dual generation available.
+
+### Completed This Round
+
+- [x] **Android SDK toolchain detection and enforcement**
+  - [x] Confirmed Android SDK Command-line Tools (`cmdline-tools/latest`) detection.
+  - [x] Confirmed NDK detection (`ndk;27.2.12479018`) through preflight script.
+  - [x] `npm run verify:android:env` now passes on the current machine.
+
+- [x] **Desktop-only Rust dependencies isolated from Android target**
+  - [x] Moved `rfd` dependency to desktop-only target section in `src-tauri/Cargo.toml`.
+  - [x] Added Android-safe folder-picker fallback path in `src-tauri/src/lib.rs`.
+
+- [x] **Android-specific Tauri runtime configuration**
+  - [x] Added `src-tauri/tauri.android.conf.json` to clear `bundle.externalBin` for Android.
+  - [x] Guarded desktop-only menu APIs and desktop process launch logic with `cfg(not(target_os = "android"))`.
+  - [x] Android startup now intentionally skips desktop Node sidecar and Godot process launch.
+
+- [x] **Tauri Android wrapper hardening**
+  - [x] Added default Android target strategy: `aarch64` for `dev/build` to avoid armv7 LLVM OOM on Windows hosts.
+  - [x] Added override support via `NOTE_CONNECTION_TAURI_ANDROID_TARGET`.
+  - [x] Fixed Windows process launch issue (`spawnSync npx.cmd EINVAL`) by invoking through `cmd.exe /d /s /c`.
+  - [x] Added explicit spawn error/signal logging in `scripts/run-tauri-android.js`.
+
+- [x] **Regression coverage updated**
+  - [x] Updated `src/mobile.pipeline.test.ts` to assert arm64 default + override contract.
+  - [x] Verified `npm run test:migration` pass (`30` tests).
+
+- [x] **Build verification**
+  - [x] Verified `node scripts/run-tauri-android.js build` pass.
+  - [x] Verified `npm run tauri:android:build` pass.
+  - [x] Generated artifacts:
+    - `src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk`
+    - `src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab`
+
+### Remaining Migration Items (P1.5 Follow-up)
+
+- [ ] **Android runtime feature parity for desktop-only capabilities**
+  - [ ] Replace or redesign Node sidecar-dependent APIs (`/api/build`, `/api/content`, folder scan/build pipeline) for Android runtime.
+  - [ ] Define Android-native storage/input strategy (SAF/File APIs) for knowledge base selection and loading.
+
+- [ ] **Path Mode/Godot on Android roadmap decision**
+  - [ ] Keep Godot bridge desktop-only (current behavior), or introduce an Android-compatible rendering/runtime path.
+  - [ ] Document expected UX/capability differences explicitly for Android users.
+
+- [ ] **Optional multi-ABI strategy**
+  - [ ] Keep `aarch64` as default stable target.
+  - [ ] Add opt-in universal ABI build path only when host memory/toolchain is sufficient.
+
+---
+
+## 中文文档
+
+**目标**：将 Tauri Android 从环境/配置阻塞状态推进到可复现的构建路径，同时保持 Capacitor 与 Tauri Android 双路径并存。
+
+### 本轮已完成
+
+- [x] **Android SDK 工具链检测与强校验**
+  - [x] 已确认 Android SDK Command-line Tools（`cmdline-tools/latest`）可被检测。
+  - [x] 已确认 NDK（`ndk;27.2.12479018`）可被前置脚本检测。
+  - [x] 当前机器 `npm run verify:android:env` 已通过。
+
+- [x] **将桌面专属 Rust 依赖与 Android 目标隔离**
+  - [x] `src-tauri/Cargo.toml` 中将 `rfd` 改为仅桌面目标依赖。
+  - [x] 在 `src-tauri/src/lib.rs` 增加 Android 安全的目录选择回退逻辑。
+
+- [x] **Android 专属 Tauri 运行时配置**
+  - [x] 新增 `src-tauri/tauri.android.conf.json`，在 Android 构建中清空 `bundle.externalBin`。
+  - [x] 使用 `cfg(not(target_os = "android"))` 隔离桌面专属菜单 API 与桌面进程启动逻辑。
+  - [x] Android 启动流程已明确跳过桌面 Node sidecar 与 Godot 启动。
+
+- [x] **Tauri Android 包装脚本加固**
+  - [x] 为 `dev/build` 默认采用 `aarch64` 目标，规避 Windows 主机上 armv7 LLVM OOM。
+  - [x] 支持通过 `NOTE_CONNECTION_TAURI_ANDROID_TARGET` 覆盖目标。
+  - [x] 通过 `cmd.exe /d /s /c` 修复 Windows `spawnSync npx.cmd EINVAL`。
+  - [x] 在 `scripts/run-tauri-android.js` 增加 spawn error/signal 明确日志。
+
+- [x] **回归覆盖同步更新**
+  - [x] 更新 `src/mobile.pipeline.test.ts`，新增 arm64 默认与覆盖能力断言。
+  - [x] 已验证 `npm run test:migration` 通过（`30` 项测试）。
+
+- [x] **构建验证**
+  - [x] 已验证 `node scripts/run-tauri-android.js build` 通过。
+  - [x] 已验证 `npm run tauri:android:build` 通过。
+  - [x] 已产出：
+    - `src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk`
+    - `src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab`
+
+### 迁移剩余项（P1.5 后续）
+
+- [ ] **Android 端桌面专属能力对等**
+  - [ ] 将依赖 Node sidecar 的 API（`/api/build`、`/api/content`、目录扫描/构建链路）替换为 Android 可运行方案。
+  - [ ] 定义 Android 原生文件访问策略（SAF/File API）以完成知识库选择与加载。
+
+- [ ] **Path Mode/Godot 的 Android 路线决策**
+  - [ ] 维持 Godot Bridge 仅桌面可用（当前行为），或提供 Android 兼容渲染路径。
+  - [ ] 在文档中明确 Android 端能力边界与 UX 预期。
+
+- [ ] **可选多 ABI 策略**
+  - [ ] 保持 `aarch64` 作为默认稳定目标。
+  - [ ] 仅在主机内存/工具链满足时提供可选 universal ABI 构建路径。
+
+---
+
+# 2026-03-01 v1.4.9 - Runtime Verification Update (Desktop + Mobile)
+
+## English Document
+
+**Goal**: Continue execution after `v1.4.8` with real pipeline runs, and convert remaining Tauri Android uncertainty into an explicit, actionable prerequisite gate.
+
+### Completed This Round
+
+- [x] **Desktop packaging re-verified**
+  - [x] Ran `npm run tauri:build:mini` with `NOTE_CONNECTION_GODOT_EXE` set.
+  - [x] Sidecar validation passed (`server` + `godot` binaries non-empty).
+  - [x] MSI + NSIS artifacts generated successfully.
+
+- [x] **Capacitor Android pipeline fully executed**
+  - [x] Fixed `build_apk.bat` parse failures caused by unescaped parentheses inside `if (...)` blocks.
+  - [x] Added non-interactive support (`NOTE_CONNECTION_NO_PAUSE` / `CI=true`) for automation.
+  - [x] Ran `build_apk.bat` end-to-end and produced debug APK.
+
+- [x] **Tauri Android preflight hardening**
+  - [x] Added `scripts/verify-tauri-android-prereqs.js`.
+  - [x] Added `npm run verify:android:env`.
+  - [x] Wired preflight into:
+  - [x] `tauri:android:init`
+  - [x] `tauri:android:dev`
+  - [x] `tauri:android:build`
+  - [x] Result: clear deterministic error when `cmdline-tools/latest/bin/sdkmanager` is missing.
+
+- [x] **Regression coverage updated**
+  - [x] Expanded `src/mobile.pipeline.test.ts` to assert:
+  - [x] Android preflight script wiring in npm commands.
+  - [x] `build_apk.bat` automation flag support.
+  - [x] `npm run test:migration` remains green.
+
+- [x] **Dual-path aggregate command validated**
+  - [x] Ran `npm run mobile:build:both`.
+  - [x] Capacitor branch completed with APK output.
+  - [x] Tauri Android branch stopped at explicit preflight check (expected until cmdline-tools are installed).
+
+### Remaining External Prerequisite (Environment)
+
+- [ ] **Install Android SDK Command-line Tools for Tauri Android runtime**
+  - [ ] Required path: `<ANDROID_SDK_ROOT>/cmdline-tools/latest/bin/sdkmanager(.bat)`.
+  - [ ] Once installed, run:
+  - [ ] `npm run tauri:android:init`
+  - [ ] `npm run tauri:android:build`
+
+---
+
+## 中文文档
+
+**目标**：在 `v1.4.8` 基础上继续实跑验证，并将 Tauri Android 的不确定性收敛为可执行的前置条件检查。
+
+### 本轮已完成
+
+- [x] **桌面打包再次实测通过**
+  - [x] 在设置 `NOTE_CONNECTION_GODOT_EXE` 后执行 `npm run tauri:build:mini`。
+  - [x] sidecar 二进制校验通过（`server` + `godot` 非空）。
+  - [x] MSI + NSIS 安装包成功生成。
+
+- [x] **Capacitor Android 流水线端到端执行**
+  - [x] 修复 `build_apk.bat` 中 `if (...)` 代码块内未转义括号导致的解析报错。
+  - [x] 增加非交互支持（`NOTE_CONNECTION_NO_PAUSE` / `CI=true`）。
+  - [x] 已完成 `build_apk.bat` 全流程并产出 debug APK。
+
+- [x] **Tauri Android 前置检查加固**
+  - [x] 新增 `scripts/verify-tauri-android-prereqs.js`。
+  - [x] 新增 `npm run verify:android:env`。
+  - [x] 已接入以下命令前置：
+  - [x] `tauri:android:init`
+  - [x] `tauri:android:dev`
+  - [x] `tauri:android:build`
+  - [x] 效果：当缺失 `cmdline-tools/latest/bin/sdkmanager` 时，返回明确错误而非模糊 Tauri 报错。
+
+- [x] **回归测试覆盖同步更新**
+  - [x] 扩展 `src/mobile.pipeline.test.ts`，校验：
+  - [x] Android 前置检查脚本是否接入 npm 命令。
+  - [x] `build_apk.bat` 自动化标志是否保留。
+  - [x] `npm run test:migration` 继续保持通过。
+
+- [x] **双路径聚合命令已验证**
+  - [x] 已执行 `npm run mobile:build:both`。
+  - [x] Capacitor 分支可完成并产出 APK。
+  - [x] Tauri Android 分支在前置检查处被明确拦截（在安装 cmdline-tools 前符合预期）。
+
+### 剩余外部前置条件（环境项）
+
+- [ ] **安装 Tauri Android 所需的 Android SDK Command-line Tools**
+  - [ ] 必需路径：`<ANDROID_SDK_ROOT>/cmdline-tools/latest/bin/sdkmanager(.bat)`。
+  - [ ] 安装完成后执行：
+  - [ ] `npm run tauri:android:init`
+  - [ ] `npm run tauri:android:build`
+
+---
+
 # 2026-03-01 v1.4.8 - Migration Closure & Dual Android Verification
 
 ## English Document

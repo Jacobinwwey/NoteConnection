@@ -1,13 +1,20 @@
+#[cfg(not(target_os = "android"))]
 use tauri_plugin_shell::{process::CommandEvent, ShellExt};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, OnceLock};
+use std::sync::Mutex;
+#[cfg(not(target_os = "android"))]
+use std::sync::OnceLock;
 use std::time::UNIX_EPOCH;
+use tauri::{AppHandle, Manager};
+#[cfg(not(target_os = "android"))]
+use tauri::Emitter;
+#[cfg(not(target_os = "android"))]
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
-use tauri::{AppHandle, Emitter, Manager};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
@@ -101,6 +108,7 @@ fn save_stored_config(config: &StoredConfig) -> Result<(), String> {
     fs::write(&config_path, content).map_err(|err| err.to_string())
 }
 
+#[cfg(not(target_os = "android"))]
 fn file_has_content(path: &Path) -> bool {
     fs::metadata(path)
         .map(|meta| meta.is_file() && meta.len() > 0)
@@ -168,6 +176,22 @@ fn persist_user_language(lang: &str) -> Result<String, String> {
     Ok(normalized)
 }
 
+#[cfg(not(target_os = "android"))]
+fn pick_knowledge_base_folder(default_dir: &str, title: &str) -> Option<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title(title)
+        .set_directory(default_dir)
+        .pick_folder()
+}
+
+#[cfg(target_os = "android")]
+fn pick_knowledge_base_folder(_default_dir: &str, _title: &str) -> Option<PathBuf> {
+    eprintln!(
+        "[Rust] Folder picker is not available on Android. Falling back to configured/default KB path."
+    );
+    None
+}
+
 fn ensure_startup_kb_path() -> String {
     let config_path = app_config_path();
     let has_existing_config = config_path.exists();
@@ -183,10 +207,7 @@ fn ensure_startup_kb_path() -> String {
 
     // First run flow: ask user to select KB folder. If cancelled, fallback to default.
     if !has_existing_config {
-        let chosen = rfd::FileDialog::new()
-            .set_title("Select Knowledge Base Folder")
-            .set_directory(&default_path)
-            .pick_folder();
+        let chosen = pick_knowledge_base_folder(&default_path, "Select Knowledge Base Folder");
 
         if let Some(folder) = chosen {
             let selected = folder.to_string_lossy().to_string();
@@ -212,6 +233,7 @@ fn ensure_startup_kb_path() -> String {
     default_path
 }
 
+#[cfg(not(target_os = "android"))]
 fn resolve_godot_project_path(project_root: &Path) -> PathBuf {
     if let Ok(custom) = std::env::var("NOTE_CONNECTION_GODOT_PROJECT") {
         let candidate = PathBuf::from(custom);
@@ -222,6 +244,7 @@ fn resolve_godot_project_path(project_root: &Path) -> PathBuf {
     project_root.join("path_mode")
 }
 
+#[cfg(not(target_os = "android"))]
 fn resolve_godot_executable(project_root: &Path) -> Option<PathBuf> {
     let exec_dir = std::env::current_exe()
         .ok()
@@ -458,11 +481,97 @@ fn get_folders() -> Result<Vec<String>, String> {
     }
 
     folders.sort();
-    
+
     Ok(folders)
 }
 
-fn build_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>, lang: &str) -> tauri::Result<tauri::menu::Menu<R>> {
+fn parse_cached_target_from_file_name(file_name: &str) -> Option<String> {
+    if file_name.starts_with("data_cli_") || file_name.starts_with("graph_data_cli_") {
+        return None;
+    }
+
+    if let Some(raw) = file_name
+        .strip_prefix("data_")
+        .and_then(|name| name.strip_suffix(".js"))
+    {
+        if !raw.is_empty() {
+            return Some(raw.to_string());
+        }
+    }
+
+    if let Some(raw) = file_name
+        .strip_prefix("graph_data_")
+        .and_then(|name| name.strip_suffix(".json"))
+    {
+        if !raw.is_empty() {
+            return Some(raw.to_string());
+        }
+    }
+
+    None
+}
+
+fn collect_cached_targets_from_dir(dir: &Path, targets: &mut BTreeSet<String>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+
+    for entry in entries.flatten() {
+        let Ok(file_type) = entry.file_type() else {
+            continue;
+        };
+        if !file_type.is_file() {
+            continue;
+        }
+
+        let Ok(file_name) = entry.file_name().into_string() else {
+            continue;
+        };
+
+        if let Some(target) = parse_cached_target_from_file_name(file_name.as_str()) {
+            targets.insert(target);
+        }
+    }
+}
+
+fn collect_available_targets(kb_path: &Path, runtime_data_dir: &Path, frontend_dir: &Path) -> Vec<String> {
+    let mut targets = BTreeSet::new();
+
+    if let Ok(entries) = fs::read_dir(kb_path) {
+        for entry in entries.flatten() {
+            if let Ok(file_type) = entry.file_type() {
+                if file_type.is_dir() {
+                    if let Ok(name) = entry.file_name().into_string() {
+                        targets.insert(name);
+                    }
+                }
+            }
+        }
+    }
+
+    collect_cached_targets_from_dir(runtime_data_dir, &mut targets);
+    collect_cached_targets_from_dir(frontend_dir, &mut targets);
+
+    targets.into_iter().collect()
+}
+
+#[tauri::command]
+fn get_available_targets() -> Result<Vec<String>, String> {
+    let kb_path = PathBuf::from(resolve_kb_path_from_config());
+    let runtime_data_dir = resolve_runtime_data_path();
+    let frontend_dir = resolve_frontend_dist_path();
+    Ok(collect_available_targets(
+        &kb_path,
+        &runtime_data_dir,
+        &frontend_dir,
+    ))
+}
+
+#[cfg(not(target_os = "android"))]
+fn build_menu<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    lang: &str,
+) -> tauri::Result<tauri::menu::Menu<R>> {
     let file = if lang == "zh" { "文件" } else { "File" };
     let _edit = if lang == "zh" { "编辑" } else { "Edit" };
     let _view = if lang == "zh" { "视图" } else { "View" };
@@ -495,10 +604,45 @@ fn build_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>, lang: &str) -> tauri
         .build()
 }
 
+#[cfg(not(target_os = "android"))]
 static MENU_LANG_STATE: OnceLock<Mutex<String>> = OnceLock::new();
 struct ChildProcessState {
     sidecar: Mutex<Option<tauri_plugin_shell::process::CommandChild>>,
     godot: Mutex<Option<std::process::Child>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct RuntimeCapabilities {
+    platform: String,
+    supports_sidecar: bool,
+    supports_build: bool,
+    supports_content_api: bool,
+    supports_kb_runtime_change: bool,
+}
+
+#[tauri::command]
+fn get_runtime_capabilities() -> RuntimeCapabilities {
+    #[cfg(target_os = "android")]
+    {
+        return RuntimeCapabilities {
+            platform: "android".to_string(),
+            supports_sidecar: false,
+            supports_build: false,
+            supports_content_api: false,
+            supports_kb_runtime_change: false,
+        };
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
+        RuntimeCapabilities {
+            platform: std::env::consts::OS.to_string(),
+            supports_sidecar: true,
+            supports_build: true,
+            supports_content_api: true,
+            supports_kb_runtime_change: true,
+        }
+    }
 }
 
 impl Default for ChildProcessState {
@@ -510,6 +654,7 @@ impl Default for ChildProcessState {
     }
 }
 
+#[cfg(not(target_os = "android"))]
 fn menu_lang_state() -> &'static Mutex<String> {
     MENU_LANG_STATE.get_or_init(|| Mutex::new("en".to_string()))
 }
@@ -538,23 +683,33 @@ fn shutdown_child_processes<R: tauri::Runtime>(app: &AppHandle<R>) {
 fn set_user_language(app: AppHandle, lang: String) -> Result<(), String> {
     let normalized_lang = persist_user_language(&lang)?;
 
-    // Idempotent guard: avoid reapplying the same menu language repeatedly.
+    #[cfg(not(target_os = "android"))]
     {
-        let state = menu_lang_state()
-            .lock()
-            .map_err(|_| "Failed to lock menu language state".to_string())?;
-        if state.as_str() == normalized_lang {
-            return Ok(());
+        // Idempotent guard: avoid reapplying the same menu language repeatedly.
+        {
+            let state = menu_lang_state()
+                .lock()
+                .map_err(|_| "Failed to lock menu language state".to_string())?;
+            if state.as_str() == normalized_lang {
+                return Ok(());
+            }
+        }
+
+        println!("[Rust] Setting user language to: {}", normalized_lang);
+        if let Ok(menu) = build_menu(&app, normalized_lang.as_str()) {
+            let _ = app.set_menu(menu);
+            if let Ok(mut state) = menu_lang_state().lock() {
+                *state = normalized_lang;
+            }
         }
     }
 
-    println!("[Rust] Setting user language to: {}", normalized_lang);
-    if let Ok(menu) = build_menu(&app, normalized_lang.as_str()) {
-        let _ = app.set_menu(menu);
-        if let Ok(mut state) = menu_lang_state().lock() {
-            *state = normalized_lang;
-        }
+    #[cfg(target_os = "android")]
+    {
+        let _ = app;
+        println!("[Rust] Setting user language to: {} (Android)", normalized_lang);
     }
+
     Ok(())
 }
 
@@ -588,6 +743,8 @@ pub fn run() {
             get_kb_path,
             set_kb_path,
             get_folders,
+            get_available_targets,
+            get_runtime_capabilities,
             set_user_language,
             get_user_language,
             check_cache,
@@ -595,167 +752,199 @@ pub fn run() {
         ])
         .setup(|app| {
             let startup_kb_path = ensure_startup_kb_path();
+            #[cfg(not(target_os = "android"))]
             let startup_lang = resolve_user_language_from_config();
+            #[cfg(target_os = "android")]
+            let _ = app;
 
-            if let Ok(menu) = build_menu(app.handle(), startup_lang.as_str()) {
-                let _ = app.set_menu(menu);
-                if let Ok(mut state) = menu_lang_state().lock() {
-                    *state = startup_lang.clone();
+            #[cfg(not(target_os = "android"))]
+            {
+                if let Ok(menu) = build_menu(app.handle(), startup_lang.as_str()) {
+                    let _ = app.set_menu(menu);
+                    if let Ok(mut state) = menu_lang_state().lock() {
+                        *state = startup_lang.clone();
+                    }
                 }
-            }
-            
-            app.on_menu_event(move |app_handle, event| {
-                match event.id().as_ref() {
-                    "change_kb" => {
-                        println!("Action: Change KB");
-                        let current_kb = resolve_kb_path_from_config();
-                        if let Some(folder) = rfd::FileDialog::new().set_directory(current_kb).pick_folder() {
-                            let path_str = folder.to_string_lossy().to_string();
-                            println!("Selected KB Path: {}", path_str);
-                            if let Err(err) = persist_kb_path(&path_str) {
-                                eprintln!("[Rust] Failed to persist KB path: {}", err);
+
+                app.on_menu_event(move |app_handle, event| {
+                    match event.id().as_ref() {
+                        "change_kb" => {
+                            println!("Action: Change KB");
+                            let current_kb = resolve_kb_path_from_config();
+                            if let Some(folder) =
+                                pick_knowledge_base_folder(&current_kb, "Select Knowledge Base Folder")
+                            {
+                                let path_str = folder.to_string_lossy().to_string();
+                                println!("Selected KB Path: {}", path_str);
+                                if let Err(err) = persist_kb_path(&path_str) {
+                                    eprintln!("[Rust] Failed to persist KB path: {}", err);
+                                }
+
+                                let _ = app_handle.emit("kb-path-changed", path_str);
+                            }
+                        }
+                        "reset_kb" => {
+                            println!("Action: Reset KB");
+                            let default_path = ensure_default_kb_root_exists();
+                            if let Err(err) = persist_kb_path(&default_path) {
+                                eprintln!("[Rust] Failed to persist reset KB path: {}", err);
                             }
 
-                            let _ = app_handle.emit("kb-path-changed", path_str);
+                            let _ = app_handle.emit("kb-path-changed", default_path);
                         }
-                    },
-                    "reset_kb" => {
-                        println!("Action: Reset KB");
-                        let default_path = ensure_default_kb_root_exists();
-                        if let Err(err) = persist_kb_path(&default_path) {
-                            eprintln!("[Rust] Failed to persist reset KB path: {}", err);
+                        "docs" => {
+                            println!("Action: Documentation");
+                            // Open manual.html in browser or new Tauri window
                         }
+                        "about" => {
+                            println!("Action: About");
+                            let _ = tauri_plugin_dialog::DialogExt::dialog(app_handle)
+                                .message("NoteConnection v1.3.0\n\nDeveloped by Jacob\nGitHub: https://github.com/Jacobinwwey")
+                                .title("About NoteConnection")
+                                .show(|_| {});
+                        }
+                        _ => {}
+                    }
+                });
+            }
 
-                        let _ = app_handle.emit("kb-path-changed", default_path);
-                    },
-                    "docs" => {
-                        println!("Action: Documentation");
-                        // Open manual.html in browser or new Tauri window
-                    },
-                    "about" => {
-                        println!("Action: About");
-                        let _ = tauri_plugin_dialog::DialogExt::dialog(app_handle)
-                            .message("NoteConnection v1.3.0\n\nDeveloped by Jacob\nGitHub: https://github.com/Jacobinwwey")
-                            .title("About NoteConnection")
-                            .show(|_| {});
-                    },
-                    _ => {}
-                }
-            });
-
-            let project_root = resolve_project_root();
             let kb_root = PathBuf::from(startup_kb_path.clone());
             let frontend_dir = resolve_frontend_dist_path();
             let runtime_data_dir = resolve_runtime_data_path();
             bootstrap_runtime_data(&frontend_dir, &runtime_data_dir);
 
-            println!("[Rust] Sidecar Project Root: {}", project_root.to_string_lossy());
-            println!("[Rust] Sidecar Knowledge Base Root: {}", kb_root.to_string_lossy());
-            println!("[Rust] Sidecar Frontend Root: {}", frontend_dir.to_string_lossy());
-            println!(
-                "[Rust] Sidecar Runtime Data Root: {}",
-                runtime_data_dir.to_string_lossy()
-            );
-
-            let mut sidecar_command = app.shell().sidecar("server").unwrap();
-            sidecar_command = sidecar_command
-                .env("NOTE_CONNECTION_PROJECT_ROOT", project_root.to_string_lossy().to_string())
-                .env("NOTE_CONNECTION_KB_ROOT", kb_root.to_string_lossy().to_string())
-                .env("NOTE_CONNECTION_FRONTEND_DIR", frontend_dir.to_string_lossy().to_string())
-                .env(
-                    "NOTE_CONNECTION_RUNTIME_DATA_DIR",
-                    runtime_data_dir.to_string_lossy().to_string(),
+            #[cfg(not(target_os = "android"))]
+            {
+                let project_root = resolve_project_root();
+                println!("[Rust] Sidecar Project Root: {}", project_root.to_string_lossy());
+                println!("[Rust] Sidecar Knowledge Base Root: {}", kb_root.to_string_lossy());
+                println!("[Rust] Sidecar Frontend Root: {}", frontend_dir.to_string_lossy());
+                println!(
+                    "[Rust] Sidecar Runtime Data Root: {}",
+                    runtime_data_dir.to_string_lossy()
                 );
-            
-            let sidecar_state_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                let (mut rx, child) = sidecar_command
-                    .spawn()
-                    .expect("Failed to spawn Node.js sidecar");
 
-                if let Ok(mut sidecar_slot) = sidecar_state_handle
-                    .state::<ChildProcessState>()
-                    .sidecar
-                    .lock()
-                {
-                    *sidecar_slot = Some(child);
-                }
-
-                while let Some(event) = rx.recv().await {
-                    match event {
-                        CommandEvent::Stdout(line) => {
-                            let text = String::from_utf8_lossy(&line);
-                            println!("[Node Sidecar]: {}", text);
-                            let message = text.trim();
-                            if !message.is_empty() {
-                                let _ = sidecar_state_handle.emit("build-log", message.to_string());
-                            }
-                        },
-                        CommandEvent::Stderr(line) => {
-                            let text = String::from_utf8_lossy(&line);
-                            eprintln!("[Node Sidecar Error]: {}", text);
-                            let message = text.trim();
-                            if !message.is_empty() {
-                                let _ = sidecar_state_handle.emit("build-log", format!("ERROR: {}", message));
-                            }
-                        },
-                        CommandEvent::Terminated(payload) => {
-                            println!("[Node Sidecar Terminated]: {:?}", payload);
-                        },
-                        _ => {}
-                    }
-                }
-            });
-            
-            // Spawn Godot process using robust candidate resolution.
-            let godot_state_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                let godot_project = resolve_godot_project_path(&project_root);
-                if !godot_project.exists() {
-                    eprintln!(
-                        "[Rust] Godot project path does not exist: {}",
-                        godot_project.to_string_lossy()
+                let mut sidecar_command = app.shell().sidecar("server").unwrap();
+                sidecar_command = sidecar_command
+                    .env(
+                        "NOTE_CONNECTION_PROJECT_ROOT",
+                        project_root.to_string_lossy().to_string(),
+                    )
+                    .env("NOTE_CONNECTION_KB_ROOT", kb_root.to_string_lossy().to_string())
+                    .env(
+                        "NOTE_CONNECTION_FRONTEND_DIR",
+                        frontend_dir.to_string_lossy().to_string(),
+                    )
+                    .env(
+                        "NOTE_CONNECTION_RUNTIME_DATA_DIR",
+                        runtime_data_dir.to_string_lossy().to_string(),
                     );
-                    return;
-                }
 
-                match resolve_godot_executable(&project_root) {
-                    Some(godot_exe) => {
-                        println!(
-                            "[Rust] Launching Godot executable: {}",
-                            godot_exe.to_string_lossy()
-                        );
-                        match std::process::Command::new(&godot_exe)
-                            .args(["--path", godot_project.to_string_lossy().as_ref()])
-                            .spawn()
-                        {
-                            Ok(child) => {
-                                if let Ok(mut godot_slot) = godot_state_handle
-                                    .state::<ChildProcessState>()
-                                    .godot
-                                    .lock()
-                                {
-                                    *godot_slot = Some(child);
+                let sidecar_state_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    let (mut rx, child) = sidecar_command
+                        .spawn()
+                        .expect("Failed to spawn Node.js sidecar");
+
+                    if let Ok(mut sidecar_slot) = sidecar_state_handle
+                        .state::<ChildProcessState>()
+                        .sidecar
+                        .lock()
+                    {
+                        *sidecar_slot = Some(child);
+                    }
+
+                    while let Some(event) = rx.recv().await {
+                        match event {
+                            CommandEvent::Stdout(line) => {
+                                let text = String::from_utf8_lossy(&line);
+                                println!("[Node Sidecar]: {}", text);
+                                let message = text.trim();
+                                if !message.is_empty() {
+                                    let _ =
+                                        sidecar_state_handle.emit("build-log", message.to_string());
                                 }
-                                println!("[Rust] Successfully spawned local Godot application.");
                             }
-                            Err(e) => {
-                                eprintln!(
-                                    "[Rust] Failed to spawn Godot at '{}': {}",
-                                    godot_exe.to_string_lossy(),
-                                    e
-                                );
+                            CommandEvent::Stderr(line) => {
+                                let text = String::from_utf8_lossy(&line);
+                                eprintln!("[Node Sidecar Error]: {}", text);
+                                let message = text.trim();
+                                if !message.is_empty() {
+                                    let _ = sidecar_state_handle
+                                        .emit("build-log", format!("ERROR: {}", message));
+                                }
                             }
+                            CommandEvent::Terminated(payload) => {
+                                println!("[Node Sidecar Terminated]: {:?}", payload);
+                            }
+                            _ => {}
                         }
                     }
-                    None => {
+                });
+
+                // Spawn Godot process using robust candidate resolution.
+                let godot_state_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    let godot_project = resolve_godot_project_path(&project_root);
+                    if !godot_project.exists() {
                         eprintln!(
-                            "[Rust] Godot executable not found. Set NOTE_CONNECTION_GODOT_EXE or place binary under src-tauri/bin."
+                            "[Rust] Godot project path does not exist: {}",
+                            godot_project.to_string_lossy()
                         );
+                        return;
                     }
-                }
-            });
-            
+
+                    match resolve_godot_executable(&project_root) {
+                        Some(godot_exe) => {
+                            println!(
+                                "[Rust] Launching Godot executable: {}",
+                                godot_exe.to_string_lossy()
+                            );
+                            match std::process::Command::new(&godot_exe)
+                                .args(["--path", godot_project.to_string_lossy().as_ref()])
+                                .spawn()
+                            {
+                                Ok(child) => {
+                                    if let Ok(mut godot_slot) = godot_state_handle
+                                        .state::<ChildProcessState>()
+                                        .godot
+                                        .lock()
+                                    {
+                                        *godot_slot = Some(child);
+                                    }
+                                    println!("[Rust] Successfully spawned local Godot application.");
+                                }
+                                Err(e) => {
+                                    eprintln!(
+                                        "[Rust] Failed to spawn Godot at '{}': {}",
+                                        godot_exe.to_string_lossy(),
+                                        e
+                                    );
+                                }
+                            }
+                        }
+                        None => {
+                            eprintln!(
+                                "[Rust] Godot executable not found. Set NOTE_CONNECTION_GODOT_EXE or place binary under src-tauri/bin."
+                            );
+                        }
+                    }
+                });
+            }
+
+            #[cfg(target_os = "android")]
+            {
+                println!("[Rust] Android Knowledge Base Root: {}", kb_root.to_string_lossy());
+                println!("[Rust] Android Frontend Root: {}", frontend_dir.to_string_lossy());
+                println!(
+                    "[Rust] Android Runtime Data Root: {}",
+                    runtime_data_dir.to_string_lossy()
+                );
+                println!(
+                    "[Rust] Android startup: desktop sidecar and Godot launch are intentionally disabled."
+                );
+            }
+             
             Ok(())
         })
         .run(tauri::generate_context!())
@@ -839,6 +1028,95 @@ mod tests {
         assert_eq!(normalize_menu_lang("en"), "en");
         assert_eq!(normalize_menu_lang("zh-CN"), "en");
         assert_eq!(normalize_menu_lang("anything-else"), "en");
+    }
+
+    #[test]
+    fn parse_cached_target_from_file_name_handles_supported_patterns() {
+        assert_eq!(
+            parse_cached_target_from_file_name("data_financial.js"),
+            Some("financial".to_string())
+        );
+        assert_eq!(
+            parse_cached_target_from_file_name("graph_data_robotics.json"),
+            Some("robotics".to_string())
+        );
+
+        assert_eq!(parse_cached_target_from_file_name("data.js"), None);
+        assert_eq!(parse_cached_target_from_file_name("graph_data.json"), None);
+        assert_eq!(
+            parse_cached_target_from_file_name("data_cli_financial_20260302.js"),
+            None
+        );
+        assert_eq!(
+            parse_cached_target_from_file_name("graph_data_cli_financial_20260302.json"),
+            None
+        );
+    }
+
+    #[test]
+    fn collect_available_targets_merges_kb_folders_and_cached_targets() {
+        let kb_temp = TempDir::new("available_targets_kb");
+        let runtime_temp = TempDir::new("available_targets_runtime");
+        let frontend_temp = TempDir::new("available_targets_frontend");
+
+        fs::create_dir_all(kb_temp.child("financial")).expect("failed to create kb financial folder");
+        fs::create_dir_all(kb_temp.child("legal")).expect("failed to create kb legal folder");
+
+        fs::write(
+            runtime_temp.child("data_financial.js"),
+            b"const graphData = {\"nodes\":[]};",
+        )
+        .expect("failed to write runtime data_financial.js");
+        fs::write(
+            runtime_temp.child("graph_data_research.json"),
+            br#"{"nodes":[]}"#,
+        )
+        .expect("failed to write runtime graph_data_research.json");
+        fs::write(
+            runtime_temp.child("data_cli_financial_20260302.js"),
+            b"const graphData = {\"nodes\":[]};",
+        )
+        .expect("failed to write runtime data_cli file");
+
+        fs::write(
+            frontend_temp.child("data_financial.js"),
+            b"const graphData = {\"nodes\":[]};",
+        )
+        .expect("failed to write frontend duplicate cache file");
+        fs::write(
+            frontend_temp.child("data_biology.js"),
+            b"const graphData = {\"nodes\":[]};",
+        )
+        .expect("failed to write frontend data_biology.js");
+
+        let targets = collect_available_targets(&kb_temp.path, &runtime_temp.path, &frontend_temp.path);
+        assert_eq!(
+            targets,
+            vec![
+                "biology".to_string(),
+                "financial".to_string(),
+                "legal".to_string(),
+                "research".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn runtime_capabilities_match_target_profile() {
+        let caps = get_runtime_capabilities();
+
+        if cfg!(target_os = "android") {
+            assert_eq!(caps.platform, "android");
+            assert!(!caps.supports_sidecar);
+            assert!(!caps.supports_build);
+            assert!(!caps.supports_content_api);
+            assert!(!caps.supports_kb_runtime_change);
+        } else {
+            assert!(caps.supports_sidecar);
+            assert!(caps.supports_build);
+            assert!(caps.supports_content_api);
+            assert!(caps.supports_kb_runtime_change);
+        }
     }
 
     #[test]

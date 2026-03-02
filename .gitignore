@@ -24,3 +24,36 @@ ref
 *.uid
 *.png
 *.exr
+
+# Tauri / Rust build outputs
+src-tauri/target/
+src-tauri/gen/
+runtime_data/
+
+# Android generated and local build outputs
+android/.gradle/
+android/.kotlin/
+android/app/build/
+android/app/.cxx/
+src-tauri/gen/android/.gradle/
+src-tauri/gen/android/.kotlin/
+src-tauri/gen/android/build/
+src-tauri/gen/android/app/build/
+src-tauri/gen/android/app/src/main/jniLibs/
+src-tauri/gen/android/local.properties
+local.properties
+
+# Mobile signing material
+*.keystore
+*.jks
+
+# Packaged mobile artifacts
+*.apk
+*.aab
+
+# Temporary run artifacts
+.tmp_*.log
+.tmp_*
+src-tauri/crash.log
+npm-debug.log*
+yarn-error.log*

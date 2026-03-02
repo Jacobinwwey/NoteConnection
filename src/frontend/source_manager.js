@@ -1,4 +1,40 @@
 document.addEventListener('DOMContentLoaded', () => {
+    let runtimeCaps = {
+        platform: 'web',
+        supports_sidecar: true,
+        supports_build: true,
+        supports_content_api: true,
+        supports_kb_runtime_change: true
+    };
+
+    const exposeRuntimeCaps = () => {
+        if (typeof window !== 'undefined') {
+            window.__NC_RUNTIME_CAPS = runtimeCaps;
+        }
+    };
+
+    const resolveRuntimeCapabilities = async () => {
+        if (!window.__TAURI__) {
+            exposeRuntimeCaps();
+            return;
+        }
+
+        try {
+            const caps = await window.__TAURI__.core.invoke('get_runtime_capabilities');
+            if (caps && typeof caps === 'object') {
+                runtimeCaps = {
+                    ...runtimeCaps,
+                    ...caps
+                };
+            }
+            console.log('[SourceManager] Runtime capabilities resolved:', runtimeCaps);
+        } catch (err) {
+            console.warn('[SourceManager] Failed to resolve runtime capabilities, using desktop-safe defaults.', err);
+        }
+
+        exposeRuntimeCaps();
+    };
+
     // Dynamic Script Loader (Cache Busting & Order Guarantee)
     const loadGraphDataFromSidecar = async (src) => {
         const url = 'http://localhost:3000/' + src + '?v=' + Date.now();
@@ -43,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const loadScript = async (src) => {
-        if (window.__TAURI__ && src.startsWith('data')) {
+        if (window.__TAURI__ && runtimeCaps.supports_sidecar && src.startsWith('data')) {
             await loadGraphDataFromSidecar(src);
             return;
         }
@@ -57,38 +93,40 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // Load data.js first (Critical Data), then app.js (Application Logic)
-    loadScript('data.js')
-        .then(() => {
-            console.log('[Loader] data.js loaded successfully');
-            
-            // Check data state and trigger Welcome Modal
-            // We do this BEFORE loading app.js so the user sees the modal while the app initializes
-            const loadedGraphData = typeof graphData !== 'undefined' ? graphData : window.graphData;
-            const hasNodes = loadedGraphData && loadedGraphData.nodes && loadedGraphData.nodes.length > 0;
-            if (typeof window.showWelcomeModal === 'function') {
-                window.showWelcomeModal(hasNodes);
-            }
-            
-            return loadScript('app.js');
-        })
-        .catch(err => {
-            console.warn('[Loader] Failed to load data.js (This is expected in Mini Mode or First Run). Proceeding to load app.js...', err);
-            
-            // Trigger Welcome Modal (Empty State)
-            if (typeof window.showWelcomeModal === 'function') {
-                window.showWelcomeModal(false);
-            }
+    const bootstrapScriptLoad = () => {
+        // Load data.js first (Critical Data), then app.js (Application Logic)
+        loadScript('data.js')
+            .then(() => {
+                console.log('[Loader] data.js loaded successfully');
+                
+                // Check data state and trigger Welcome Modal
+                // We do this BEFORE loading app.js so the user sees the modal while the app initializes
+                const loadedGraphData = typeof graphData !== 'undefined' ? graphData : window.graphData;
+                const hasNodes = loadedGraphData && loadedGraphData.nodes && loadedGraphData.nodes.length > 0;
+                if (typeof window.showWelcomeModal === 'function') {
+                    window.showWelcomeModal(hasNodes);
+                }
+                
+                return loadScript('app.js');
+            })
+            .catch(err => {
+                console.warn('[Loader] Failed to load data.js (This is expected in Mini Mode or First Run). Proceeding to load app.js...', err);
+                
+                // Trigger Welcome Modal (Empty State)
+                if (typeof window.showWelcomeModal === 'function') {
+                    window.showWelcomeModal(false);
+                }
 
-            // Proceed to load app.js even if data.js fails
-            return loadScript('app.js');
-        })
-        .then(() => {
-            console.log('[Loader] app.js loaded successfully');
-        })
-        .catch(err => {
-            console.error('[Loader] Failed to load app.js (Critical Error):', err);
-        });
+                // Proceed to load app.js even if data.js fails
+                return loadScript('app.js');
+            })
+            .then(() => {
+                console.log('[Loader] app.js loaded successfully');
+            })
+            .catch(err => {
+                console.error('[Loader] Failed to load app.js (Critical Error):', err);
+            });
+    };
 
     const folderSelect = document.getElementById('folder-select');
     const loadBtn = document.getElementById('btn-load-source');
@@ -122,7 +160,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const kbPath = await window.__TAURI__.core.invoke('get_kb_path');
-        const folders = (await window.__TAURI__.core.invoke('get_folders')) || [];
+        let folders = [];
+        try {
+            folders = (await window.__TAURI__.core.invoke('get_available_targets')) || [];
+        } catch (err) {
+            console.warn('[SourceManager] get_available_targets unavailable, fallback to get_folders.', err);
+            folders = (await window.__TAURI__.core.invoke('get_folders')) || [];
+        }
         return { kbPath, folders };
     };
 
@@ -276,20 +320,30 @@ document.addEventListener('DOMContentLoaded', () => {
             let kbPath = '';
             let folders = [];
 
-            try {
+            if (runtimeCaps.supports_sidecar) {
+                try {
+                    const sidecarData = await fetchFoldersViaSidecar();
+                    kbPath = sidecarData.kbPath;
+                    folders = sidecarData.folders;
+                    console.log('[SourceManager] Loaded folders from Node sidecar API:', folders.length);
+                } catch (sidecarError) {
+                    if (window.__TAURI__) {
+                        console.warn('[SourceManager] Sidecar API unavailable, falling back to Rust IPC.', sidecarError);
+                        const rustData = await fetchFoldersViaRustFallback();
+                        kbPath = rustData.kbPath;
+                        folders = rustData.folders;
+                    } else {
+                        throw sidecarError;
+                    }
+                }
+            } else if (window.__TAURI__) {
+                const rustData = await fetchFoldersViaRustFallback();
+                kbPath = rustData.kbPath;
+                folders = rustData.folders;
+            } else {
                 const sidecarData = await fetchFoldersViaSidecar();
                 kbPath = sidecarData.kbPath;
                 folders = sidecarData.folders;
-                console.log('[SourceManager] Loaded folders from Node sidecar API:', folders.length);
-            } catch (sidecarError) {
-                if (window.__TAURI__) {
-                    console.warn('[SourceManager] Sidecar API unavailable, falling back to Rust IPC.', sidecarError);
-                    const rustData = await fetchFoldersViaRustFallback();
-                    kbPath = rustData.kbPath;
-                    folders = rustData.folders;
-                } else {
-                    throw sidecarError;
-                }
             }
 
             if (currentPathEl && kbPath) {
@@ -341,9 +395,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Initial fetch - wait for i18n
-    const init = () => {
+    const init = async () => {
+        await resolveRuntimeCapabilities();
+        bootstrapScriptLoad();
+
         if (window.i18n && window.i18n.isInitialized) {
-            fetchFolders();
+            await fetchFolders();
         } else if (window.i18n) {
             window.i18n.onLanguageChange(() => {
                 fetchFolders();
@@ -354,7 +411,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    init();
+    init().catch((err) => {
+        console.error('[SourceManager] Initialization failed:', err);
+    });
 
     folderSelect.addEventListener('change', () => {
         if (folderSelect.value) {
@@ -369,14 +428,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const newPath = event.payload;
             
             // Inform Sidecar of the new path
-            try {
-                await fetch('http://localhost:3000/api/kb-path', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ kbPath: newPath })
-                });
-            } catch (err) {
-                console.error('[SourceManager] Failed to update Sidecar KB path:', err);
+            if (runtimeCaps.supports_sidecar) {
+                try {
+                    await fetch('http://localhost:3000/api/kb-path', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ kbPath: newPath })
+                    });
+                } catch (err) {
+                    console.error('[SourceManager] Failed to update Sidecar KB path:', err);
+                }
             }
             
             fetchFolders();
@@ -408,16 +469,20 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 let cached = null;
 
-                try {
-                    // Preferred path in Tauri/Electron/Web: query sidecar cache API.
-                    cached = await checkCacheViaSidecar(target);
-                } catch (sidecarErr) {
-                    if (window.__TAURI__) {
-                        // Fallback path only when sidecar API is unreachable.
-                        cached = await window.__TAURI__.core.invoke('check_cache', { target: target });
-                    } else {
-                        throw sidecarErr;
+                if (runtimeCaps.supports_sidecar) {
+                    try {
+                        // Preferred path in desktop runtime: query sidecar cache API.
+                        cached = await checkCacheViaSidecar(target);
+                    } catch (sidecarErr) {
+                        if (window.__TAURI__) {
+                            // Fallback path only when sidecar API is unreachable.
+                            cached = await window.__TAURI__.core.invoke('check_cache', { target: target });
+                        } else {
+                            throw sidecarErr;
+                        }
                     }
+                } else if (window.__TAURI__) {
+                    cached = await window.__TAURI__.core.invoke('check_cache', { target: target });
                 }
 
                 if (cached) {
@@ -437,14 +502,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         loadBtn.textContent = isZh ? '加载缓存中...' : 'Loading Cache...';
 
                         let restoreSuccess = false;
-                        try {
-                            restoreSuccess = await restoreCacheViaSidecar(target);
-                        } catch (sidecarErr) {
-                            if (window.__TAURI__) {
-                                restoreSuccess = await window.__TAURI__.core.invoke('restore_cache', { target: target });
-                            } else {
-                                throw sidecarErr;
+                        if (runtimeCaps.supports_sidecar) {
+                            try {
+                                restoreSuccess = await restoreCacheViaSidecar(target);
+                            } catch (sidecarErr) {
+                                if (window.__TAURI__) {
+                                    restoreSuccess = await window.__TAURI__.core.invoke('restore_cache', { target: target });
+                                } else {
+                                    throw sidecarErr;
+                                }
                             }
+                        } else if (window.__TAURI__) {
+                            restoreSuccess = await window.__TAURI__.core.invoke('restore_cache', { target: target });
                         }
 
                         if (restoreSuccess) {
@@ -457,6 +526,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (cacheErr) {
                 console.error('[SourceManager] Cache check failed', cacheErr);
+            }
+
+            if (!runtimeCaps.supports_build) {
+                alert(t('source.error.buildUnsupportedMobile'));
+                return;
             }
 
             loadBtn.textContent = t('source.loading');
