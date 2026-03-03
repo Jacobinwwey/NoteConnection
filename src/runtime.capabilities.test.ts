@@ -15,6 +15,7 @@ describe('runtime capability gating contract', () => {
     expect(sourceManager).toContain('window.__NC_RUNTIME_CAPS');
     expect(sourceManager).toContain('supports_sidecar');
     expect(sourceManager).toContain('supports_build');
+    expect(sourceManager).toContain('supports_kb_runtime_change');
     expect(sourceManager).toContain('supports_native_pathmode');
   });
 
@@ -42,6 +43,8 @@ describe('runtime capability gating contract', () => {
     const tauriLib = fs.readFileSync(tauriLibPath, 'utf8');
     expect(tauriLib).toContain('fn get_runtime_capabilities()');
     expect(tauriLib).toContain('get_runtime_capabilities,');
+    expect(tauriLib).toContain('choose_kb_path,');
+    expect(tauriLib).toContain('reset_kb_path,');
     expect(tauriLib).toContain('open_native_pathmode,');
     expect(tauriLib).toContain('build_graph_runtime,');
     expect(tauriLib).toContain('supports_sidecar: false');

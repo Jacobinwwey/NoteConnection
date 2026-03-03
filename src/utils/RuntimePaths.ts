@@ -66,6 +66,33 @@ function ensureWritableDirectory(targetPath: string): boolean {
     }
 }
 
+function normalizeKnowledgeBaseRoot(targetPath: string): string {
+    const resolved = path.resolve(targetPath);
+    if (!isDirectory(resolved)) {
+        return resolved;
+    }
+
+    let cursor = resolved;
+    while (true) {
+        if (path.basename(cursor).toLowerCase() === 'knowledge_base') {
+            return cursor;
+        }
+
+        const parent = path.dirname(cursor);
+        if (parent === cursor) {
+            break;
+        }
+        cursor = parent;
+    }
+
+    const nestedKnowledgeBase = path.join(resolved, 'Knowledge_Base');
+    if (isDirectory(nestedKnowledgeBase)) {
+        return path.resolve(nestedKnowledgeBase);
+    }
+
+    return resolved;
+}
+
 export function resolveRuntimePaths(moduleDir: string): RuntimePaths {
     const cwd = process.cwd();
     const execDir = path.dirname(process.execPath);
@@ -131,7 +158,9 @@ export function resolveRuntimePaths(moduleDir: string): RuntimePaths {
         ].filter((v): v is string => Boolean(v))
     );
 
-    const kbRoot = pickExisting(kbCandidates) || kbCandidates[0];
+    const kbRootCandidate =
+        pickExisting(kbCandidates) || kbCandidates[0] || path.join(projectRoot, 'Knowledge_Base');
+    const kbRoot = normalizeKnowledgeBaseRoot(kbRootCandidate);
 
     return {
         projectRoot,

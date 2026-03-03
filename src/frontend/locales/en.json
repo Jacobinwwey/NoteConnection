@@ -78,7 +78,9 @@
       "noFolder": "Please select a folder first.",
       "loadFailed": "Build Failed: {error}",
       "buildUnsupportedMobile": "Build is not available in this mobile runtime yet. Please generate data on desktop first and then load existing cache.",
-      "contentUnavailableMobile": "Content loading from local files is not available in this mobile runtime yet."
+      "contentUnavailableMobile": "Content loading from local files is not available in this mobile runtime yet.",
+      "kbPathChangeFailed": "Failed to change Knowledge Base path: {error}",
+      "kbPathResetFailed": "Failed to reset Knowledge Base path: {error}"
     }
   },
   "tutorial": {

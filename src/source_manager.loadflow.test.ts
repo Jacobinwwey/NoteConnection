@@ -43,4 +43,21 @@ describe('source manager load-flow guards', () => {
     expect(source).toContain('} else if (window.__TAURI__) {');
     expect(source).toContain('const result = await buildGraphViaRust(buildPayload);');
   });
+
+  test('waits for sidecar readiness and retries data.js fetch during tauri startup race', () => {
+    const source = fs.readFileSync(sourceManagerPath, 'utf8');
+    expect(source).toContain('const waitForSidecarReady = async () => {');
+    expect(source).toContain('await waitForSidecarReady();');
+    expect(source).toContain("data.js fetch raced sidecar startup, retrying");
+    expect(source).toContain('const maxAttempts = (window.__TAURI__ && runtimeCaps.supports_sidecar) ? 20 : 1;');
+  });
+
+  test('exposes desktop KB path controls with tauri choose/reset commands', () => {
+    const source = fs.readFileSync(sourceManagerPath, 'utf8');
+    expect(source).toContain("document.getElementById('btn-change-kb-path')");
+    expect(source).toContain("document.getElementById('btn-reset-kb-path')");
+    expect(source).toContain("invoke('choose_kb_path')");
+    expect(source).toContain("invoke('reset_kb_path')");
+    expect(source).toContain('runtimeCaps.supports_kb_runtime_change');
+  });
 });

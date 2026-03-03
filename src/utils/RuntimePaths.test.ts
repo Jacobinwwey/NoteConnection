@@ -76,6 +76,22 @@ describe('resolveRuntimePaths', () => {
     expect(resolved.kbRoot).toBe(path.resolve(kbRoot));
   });
 
+  test('normalizes env kb path that points to a folder inside Knowledge_Base', () => {
+    const projectRoot = temp.mkdir('project');
+    const kbRoot = temp.mkdir(path.join('project', 'Knowledge_Base'));
+    const financialFolder = temp.mkdir(path.join('project', 'Knowledge_Base', 'financial'));
+    const frontendDir = temp.mkdir(path.join('project', 'dist', 'src', 'frontend'));
+
+    restoreEnv.push(setEnv('NOTE_CONNECTION_PROJECT_ROOT', projectRoot));
+    restoreEnv.push(setEnv('NOTE_CONNECTION_FRONTEND_DIR', frontendDir));
+    restoreEnv.push(setEnv('NOTE_CONNECTION_RUNTIME_DATA_DIR', undefined));
+    restoreEnv.push(setEnv('NOTE_CONNECTION_KB_ROOT', financialFolder));
+
+    const resolved = resolveRuntimePaths(temp.child('module'));
+
+    expect(resolved.kbRoot).toBe(path.resolve(kbRoot));
+  });
+
   test('falls back to project dist frontend when env frontend path is invalid', () => {
     const projectRoot = temp.mkdir('project');
     const distFrontend = temp.mkdir(path.join('project', 'dist', 'src', 'frontend'));

@@ -45,6 +45,18 @@ fn ensure_directory(path: &Path) {
     }
 }
 
+fn normalize_display_path(path: PathBuf) -> PathBuf {
+    #[cfg(windows)]
+    {
+        let text = path.to_string_lossy();
+        if let Some(stripped) = text.strip_prefix(r"\\?\") {
+            return PathBuf::from(stripped);
+        }
+    }
+
+    path
+}
+
 fn app_config_path() -> PathBuf {
     if let Ok(custom_file) = std::env::var("NOTE_CONNECTION_CONFIG_PATH") {
         let path = PathBuf::from(custom_file);
@@ -119,12 +131,34 @@ fn file_has_content(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
-fn normalize_existing_dir(raw_path: &str) -> Option<String> {
-    let resolved = PathBuf::from(raw_path);
-    if resolved.exists() && resolved.is_dir() {
-        return Some(resolved.to_string_lossy().to_string());
+fn normalize_kb_root_path(raw_path: &str) -> Option<PathBuf> {
+    let raw = PathBuf::from(raw_path);
+    if !raw.exists() || !raw.is_dir() {
+        return None;
     }
-    None
+
+    let resolved = normalize_display_path(fs::canonicalize(&raw).unwrap_or(raw));
+
+    for ancestor in resolved.ancestors() {
+        let Some(name) = ancestor.file_name().and_then(|value| value.to_str()) else {
+            continue;
+        };
+
+        if name.eq_ignore_ascii_case("Knowledge_Base") {
+            return Some(ancestor.to_path_buf());
+        }
+    }
+
+    let nested = resolved.join("Knowledge_Base");
+    if nested.exists() && nested.is_dir() {
+        return Some(nested);
+    }
+
+    Some(resolved)
+}
+
+fn normalize_existing_dir(raw_path: &str) -> Option<String> {
+    normalize_kb_root_path(raw_path).map(|resolved| resolved.to_string_lossy().to_string())
 }
 
 fn ensure_default_kb_root_exists() -> String {
@@ -137,6 +171,11 @@ fn resolve_kb_path_from_config() -> String {
     let config = load_stored_config();
     if let Some(saved) = config.knowledge_base_path {
         if let Some(valid) = normalize_existing_dir(&saved) {
+            if valid != saved {
+                if let Err(err) = persist_kb_path(valid.as_str()) {
+                    eprintln!("[Rust] Failed to normalize persisted KB path '{}': {}", saved, err);
+                }
+            }
             return valid;
         }
     }
@@ -144,18 +183,18 @@ fn resolve_kb_path_from_config() -> String {
 }
 
 fn persist_kb_path(kb_path: &str) -> Result<String, String> {
-    let resolved = PathBuf::from(kb_path);
-    if !resolved.exists() || !resolved.is_dir() {
+    let Some(normalized_path) = normalize_kb_root_path(kb_path) else {
         return Err(format!("Invalid knowledge base path: {}", kb_path));
-    }
+    };
+    let normalized = normalized_path.to_string_lossy().to_string();
 
     let mut config = load_stored_config();
-    config.knowledge_base_path = Some(resolved.to_string_lossy().to_string());
+    config.knowledge_base_path = Some(normalized.clone());
     if config.user_language.is_none() {
         config.user_language = Some("en".to_string());
     }
     save_stored_config(&config)?;
-    Ok(resolved.to_string_lossy().to_string())
+    Ok(normalized)
 }
 
 fn normalize_menu_lang(lang: &str) -> &'static str {
@@ -203,6 +242,15 @@ fn ensure_startup_kb_path() -> String {
 
     if let Some(saved) = config.knowledge_base_path.clone() {
         if let Some(valid) = normalize_existing_dir(&saved) {
+            if valid != saved {
+                config.knowledge_base_path = Some(valid.clone());
+                if config.user_language.is_none() {
+                    config.user_language = Some("en".to_string());
+                }
+                if let Err(err) = save_stored_config(&config) {
+                    eprintln!("[Rust] Failed to persist normalized startup config: {}", err);
+                }
+            }
             return valid;
         }
     }
@@ -888,6 +936,23 @@ fn set_kb_path(kb_path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn choose_kb_path() -> Result<Option<String>, String> {
+    let current_kb = resolve_kb_path_from_config();
+    if let Some(folder) = pick_knowledge_base_folder(&current_kb, "Select Knowledge Base Folder") {
+        let selected = folder.to_string_lossy().to_string();
+        return persist_kb_path(selected.as_str()).map(Some);
+    }
+
+    Ok(None)
+}
+
+#[tauri::command]
+fn reset_kb_path() -> Result<String, String> {
+    let default_path = ensure_default_kb_root_exists();
+    persist_kb_path(default_path.as_str())
+}
+
+#[tauri::command]
 fn get_user_language() -> Result<String, String> {
     Ok(resolve_user_language_from_config())
 }
@@ -1361,6 +1426,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_kb_path,
             set_kb_path,
+            choose_kb_path,
+            reset_kb_path,
             get_folders,
             get_available_targets,
             get_runtime_capabilities,
@@ -1398,21 +1465,27 @@ pub fn run() {
                             {
                                 let path_str = folder.to_string_lossy().to_string();
                                 println!("Selected KB Path: {}", path_str);
-                                if let Err(err) = persist_kb_path(&path_str) {
-                                    eprintln!("[Rust] Failed to persist KB path: {}", err);
+                                match persist_kb_path(&path_str) {
+                                    Ok(normalized_path) => {
+                                        let _ = app_handle.emit("kb-path-changed", normalized_path);
+                                    }
+                                    Err(err) => {
+                                        eprintln!("[Rust] Failed to persist KB path: {}", err);
+                                    }
                                 }
-
-                                let _ = app_handle.emit("kb-path-changed", path_str);
                             }
                         }
                         "reset_kb" => {
                             println!("Action: Reset KB");
                             let default_path = ensure_default_kb_root_exists();
-                            if let Err(err) = persist_kb_path(&default_path) {
-                                eprintln!("[Rust] Failed to persist reset KB path: {}", err);
+                            match persist_kb_path(&default_path) {
+                                Ok(normalized_path) => {
+                                    let _ = app_handle.emit("kb-path-changed", normalized_path);
+                                }
+                                Err(err) => {
+                                    eprintln!("[Rust] Failed to persist reset KB path: {}", err);
+                                }
                             }
-
-                            let _ = app_handle.emit("kb-path-changed", default_path);
                         }
                         "docs" => {
                             println!("Action: Documentation");
@@ -1766,6 +1839,58 @@ mod tests {
         let persisted_lang = persist_user_language("zh").expect("persist_user_language should work");
         assert_eq!(persisted_lang, "zh");
         assert_eq!(resolve_user_language_from_config(), "zh");
+    }
+
+    #[test]
+    fn persist_kb_path_normalizes_path_inside_knowledge_base() {
+        let _lock = test_env_lock().lock().expect("failed to lock test env");
+        let temp = TempDir::new("kb_normalize_persist");
+        let config_file = temp.child("kb_config.json");
+        let kb_dir = temp.child("Knowledge_Base");
+        let nested_dir = kb_dir.join("financial");
+
+        fs::create_dir_all(&nested_dir).expect("failed to create nested kb directory");
+        let _config_guard = EnvVarGuard::set(
+            "NOTE_CONNECTION_CONFIG_PATH",
+            config_file.to_string_lossy().as_ref(),
+        );
+
+        let persisted = persist_kb_path(nested_dir.to_string_lossy().as_ref())
+            .expect("persist_kb_path should normalize to Knowledge_Base root");
+        assert_eq!(persisted, kb_dir.to_string_lossy().to_string());
+    }
+
+    #[test]
+    fn resolve_kb_path_from_config_normalizes_stale_nested_kb_path() {
+        let _lock = test_env_lock().lock().expect("failed to lock test env");
+        let temp = TempDir::new("kb_normalize_resolve");
+        let config_file = temp.child("kb_config.json");
+        let kb_dir = temp.child("Knowledge_Base");
+        let nested_dir = kb_dir.join("financial");
+
+        fs::create_dir_all(&nested_dir).expect("failed to create nested kb directory");
+        let _config_guard = EnvVarGuard::set(
+            "NOTE_CONNECTION_CONFIG_PATH",
+            config_file.to_string_lossy().as_ref(),
+        );
+
+        fs::write(
+            &config_file,
+            format!(
+                "{{\"knowledgeBasePath\":\"{}\",\"userLanguage\":\"zh\"}}",
+                nested_dir.to_string_lossy().replace('\\', "\\\\")
+            ),
+        )
+        .expect("failed to write stale config");
+
+        let resolved = resolve_kb_path_from_config();
+        assert_eq!(resolved, kb_dir.to_string_lossy().to_string());
+
+        let refreshed = load_stored_config();
+        assert_eq!(
+            refreshed.knowledge_base_path,
+            Some(kb_dir.to_string_lossy().to_string())
+        );
     }
 
     #[test]

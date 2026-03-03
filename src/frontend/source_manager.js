@@ -36,47 +36,96 @@ document.addEventListener('DOMContentLoaded', () => {
         exposeRuntimeCaps();
     };
 
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    const waitForSidecarReady = async () => {
+        if (!(window.__TAURI__ && runtimeCaps.supports_sidecar)) {
+            return;
+        }
+
+        const maxAttempts = 30;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                const pingRes = await fetch(`http://localhost:3000/api/kb-path?v=${Date.now()}`, { cache: 'no-store' });
+                if (pingRes.ok) {
+                    return;
+                }
+            } catch (_err) {
+                // Sidecar is still starting; retry.
+            }
+
+            await sleep(Math.min(1200, 80 * attempt));
+        }
+
+        console.warn('[Loader] Sidecar readiness check timed out. Proceeding with startup fallback.');
+    };
+
     // Dynamic Script Loader (Cache Busting & Order Guarantee)
     const loadGraphDataFromSidecar = async (src) => {
-        const url = 'http://localhost:3000/' + src + '?v=' + Date.now();
-        const response = await fetch(url, { cache: 'no-store' });
-        if (!response.ok) {
-            throw new Error(`Failed to fetch ${src}: HTTP ${response.status}`);
-        }
+        const parseGraphDataPayload = (text) => {
+            const trimmed = text.trim();
+            let parsed = null;
 
-        const text = await response.text();
-        const trimmed = text.trim();
-        let parsed = null;
-
-        // Expected format: const graphData = {...};
-        if (
-            trimmed.startsWith('const graphData') ||
-            trimmed.startsWith('let graphData') ||
-            trimmed.startsWith('var graphData')
-        ) {
-            const eqPos = trimmed.indexOf('=');
-            if (eqPos > -1) {
-                let jsonText = trimmed.slice(eqPos + 1).trim();
-                if (jsonText.endsWith(';')) {
-                    jsonText = jsonText.slice(0, -1);
+            // Expected format: const graphData = {...};
+            if (
+                trimmed.startsWith('const graphData') ||
+                trimmed.startsWith('let graphData') ||
+                trimmed.startsWith('var graphData')
+            ) {
+                const eqPos = trimmed.indexOf('=');
+                if (eqPos > -1) {
+                    let jsonText = trimmed.slice(eqPos + 1).trim();
+                    if (jsonText.endsWith(';')) {
+                        jsonText = jsonText.slice(0, -1);
+                    }
+                    parsed = JSON.parse(jsonText);
                 }
-                parsed = JSON.parse(jsonText);
+            } else if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                // Support direct JSON payload if endpoint format changes later.
+                parsed = JSON.parse(trimmed);
+            } else {
+                // Fallback for unexpected payload shape.
+                parsed = new Function(
+                    `${text}\n; return typeof graphData !== 'undefined' ? graphData : (typeof window !== 'undefined' ? window.graphData : undefined);`
+                )();
             }
-        } else if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-            // Support direct JSON payload if endpoint format changes later.
-            parsed = JSON.parse(trimmed);
-        } else {
-            // Fallback for unexpected payload shape.
-            parsed = new Function(
-                `${text}\n; return typeof graphData !== 'undefined' ? graphData : (typeof window !== 'undefined' ? window.graphData : undefined);`
-            )();
+
+            if (!parsed || !Array.isArray(parsed.nodes)) {
+                throw new Error('Invalid graph data payload from sidecar.');
+            }
+
+            return parsed;
+        };
+
+        const maxAttempts = (window.__TAURI__ && runtimeCaps.supports_sidecar) ? 20 : 1;
+        let lastError = null;
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                const url = 'http://localhost:3000/' + src + '?v=' + Date.now();
+                const response = await fetch(url, { cache: 'no-store' });
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch ${src}: HTTP ${response.status}`);
+                }
+
+                const text = await response.text();
+                const parsed = parseGraphDataPayload(text);
+                window.graphData = parsed;
+                return;
+            } catch (err) {
+                lastError = err;
+                if (attempt >= maxAttempts || !(window.__TAURI__ && runtimeCaps.supports_sidecar)) {
+                    break;
+                }
+
+                if (attempt === 1) {
+                    console.warn('[Loader] data.js fetch raced sidecar startup, retrying...');
+                }
+                await sleep(Math.min(1000, 100 * attempt));
+            }
         }
 
-        if (!parsed || !Array.isArray(parsed.nodes)) {
-            throw new Error('Invalid graph data payload from sidecar.');
-        }
-
-        window.graphData = parsed;
+        throw lastError || new Error(`Failed to fetch ${src}`);
     };
 
     const loadScript = async (src) => {
@@ -131,6 +180,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const folderSelect = document.getElementById('folder-select');
     const loadBtn = document.getElementById('btn-load-source');
+    const changeKbPathBtn = document.getElementById('btn-change-kb-path');
+    const resetKbPathBtn = document.getElementById('btn-reset-kb-path');
     const currentPathEl = document.getElementById('kb-current-path');
 
     if (!folderSelect || !loadBtn) return;
@@ -192,6 +243,15 @@ document.addEventListener('DOMContentLoaded', () => {
             : 'Mobile runtime is cache/read mode (local build is unavailable).';
     };
 
+    const updateKbPathControls = () => {
+        const canRuntimeChangeKb = Boolean(window.__TAURI__ && runtimeCaps.supports_kb_runtime_change);
+        [changeKbPathBtn, resetKbPathBtn].forEach((btn) => {
+            if (!btn) return;
+            btn.style.display = canRuntimeChangeKb ? 'inline-flex' : 'none';
+            btn.disabled = !canRuntimeChangeKb;
+        });
+    };
+
     const fetchFoldersViaSidecar = async () => {
         const kbRes = await fetch('http://localhost:3000/api/kb-path');
         const kbData = await kbRes.json();
@@ -250,6 +310,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const restoreData = await restoreRes.json();
         return Boolean(restoreData && restoreData.success);
+    };
+
+    const syncSidecarKbPath = async (kbPath) => {
+        if (!runtimeCaps.supports_sidecar || !kbPath) {
+            return;
+        }
+
+        const response = await fetch('http://localhost:3000/api/kb-path', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kbPath })
+        });
+        if (!response.ok) {
+            throw new Error(`KB path sync failed: HTTP ${response.status}`);
+        }
     };
 
     const buildGraphViaRust = async (payload) => {
@@ -517,6 +592,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const init = async () => {
         await resolveRuntimeCapabilities();
         updateRuntimeCapabilityNotice();
+        updateKbPathControls();
+        await waitForSidecarReady();
         bootstrapScriptLoad();
 
         if (window.i18n && window.i18n.isInitialized) {
@@ -550,17 +627,75 @@ document.addEventListener('DOMContentLoaded', () => {
             // Inform Sidecar of the new path
             if (runtimeCaps.supports_sidecar) {
                 try {
-                    await fetch('http://localhost:3000/api/kb-path', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ kbPath: newPath })
-                    });
+                    await syncSidecarKbPath(newPath);
                 } catch (err) {
                     console.error('[SourceManager] Failed to update Sidecar KB path:', err);
                 }
             }
             
             fetchFolders();
+        });
+    }
+
+    if (changeKbPathBtn && window.__TAURI__) {
+        changeKbPathBtn.addEventListener('click', async () => {
+            if (!runtimeCaps.supports_kb_runtime_change) {
+                return;
+            }
+
+            const originalText = changeKbPathBtn.textContent;
+            changeKbPathBtn.disabled = true;
+            if (resetKbPathBtn) resetKbPathBtn.disabled = true;
+
+            try {
+                const selectedPath = await window.__TAURI__.core.invoke('choose_kb_path');
+                if (!selectedPath) {
+                    return;
+                }
+
+                await syncSidecarKbPath(selectedPath);
+                await fetchFolders();
+            } catch (err) {
+                const message = err && err.message ? err.message : String(err);
+                alert(t('source.error.kbPathChangeFailed', { error: message }));
+            } finally {
+                changeKbPathBtn.disabled = false;
+                if (resetKbPathBtn) resetKbPathBtn.disabled = false;
+                if (typeof originalText === 'string') {
+                    changeKbPathBtn.textContent = originalText;
+                }
+            }
+        });
+    }
+
+    if (resetKbPathBtn && window.__TAURI__) {
+        resetKbPathBtn.addEventListener('click', async () => {
+            if (!runtimeCaps.supports_kb_runtime_change) {
+                return;
+            }
+
+            const confirmReset = confirm(
+                isZhLocale()
+                    ? '确定要重置知识库路径到默认位置吗？'
+                    : 'Reset Knowledge Base path to default location?'
+            );
+            if (!confirmReset) {
+                return;
+            }
+
+            resetKbPathBtn.disabled = true;
+            if (changeKbPathBtn) changeKbPathBtn.disabled = true;
+            try {
+                const resetPath = await window.__TAURI__.core.invoke('reset_kb_path');
+                await syncSidecarKbPath(resetPath);
+                await fetchFolders();
+            } catch (err) {
+                const message = err && err.message ? err.message : String(err);
+                alert(t('source.error.kbPathResetFailed', { error: message }));
+            } finally {
+                resetKbPathBtn.disabled = false;
+                if (changeKbPathBtn) changeKbPathBtn.disabled = false;
+            }
         });
     }
 
@@ -738,6 +873,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.i18n.onLanguageChange(() => {
             loadBtn.textContent = t('source.loadButton');
             updateRuntimeCapabilityNotice();
+            updateKbPathControls();
             // Re-fetch to update folder labels if needed
             // (Currently folder names are file system names, so no translation needed)
         });
