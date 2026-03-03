@@ -3,10 +3,14 @@ use tauri_plugin_shell::{process::CommandEvent, ShellExt};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+#[cfg(target_os = "android")]
+use jni::objects::{JObject, JValue};
+#[cfg(target_os = "android")]
+use jni::JavaVM;
 #[cfg(not(target_os = "android"))]
 use std::sync::OnceLock;
 use std::time::UNIX_EPOCH;
@@ -448,6 +452,431 @@ fn bootstrap_runtime_data(frontend_dir: &Path, runtime_data_dir: &Path) {
     }
 }
 
+#[derive(Debug, Clone)]
+struct RuntimeNodeDraft {
+    id: String,
+    label: String,
+    relative_no_ext: String,
+    cluster_id: String,
+    content: String,
+    filepath: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct RuntimeBuildRequest {
+    target: Option<String>,
+    max_workers: Option<u32>,
+    enable_gpu: Option<bool>,
+    enable_gpu_layout: Option<bool>,
+    memory_saving_mode: Option<bool>,
+    deep_debug: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RuntimeBuildResult {
+    success: bool,
+    target: String,
+    nodes: usize,
+    edges: usize,
+    data_js_path: String,
+    graph_json_path: String,
+}
+
+fn normalize_path_key(raw: &str) -> String {
+    raw.replace('\\', "/")
+        .trim()
+        .trim_matches('/')
+        .to_ascii_lowercase()
+}
+
+fn normalize_relative_like_path(raw: &str) -> String {
+    let replaced = raw.replace('\\', "/");
+    let mut parts: Vec<&str> = Vec::new();
+    for part in replaced.split('/') {
+        match part {
+            "" | "." => {}
+            ".." => {
+                if !parts.is_empty() {
+                    parts.pop();
+                }
+            }
+            _ => parts.push(part),
+        }
+    }
+    parts.join("/")
+}
+
+fn strip_markdown_extension(raw: &str) -> String {
+    let trimmed = raw.trim();
+    let lowered = trimmed.to_ascii_lowercase();
+    if lowered.ends_with(".markdown") {
+        return trimmed[..trimmed.len() - ".markdown".len()].to_string();
+    }
+    if lowered.ends_with(".md") {
+        return trimmed[..trimmed.len() - ".md".len()].to_string();
+    }
+    trimmed.to_string()
+}
+
+fn is_markdown_file(path: &Path) -> bool {
+    let Some(ext) = path.extension().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(ext.to_ascii_lowercase().as_str(), "md" | "markdown")
+}
+
+fn collect_markdown_files(root: &Path) -> Result<Vec<PathBuf>, String> {
+    let mut files: Vec<PathBuf> = Vec::new();
+    let mut stack: Vec<PathBuf> = vec![root.to_path_buf()];
+
+    while let Some(dir) = stack.pop() {
+        let entries = fs::read_dir(&dir)
+            .map_err(|err| format!("Failed to scan directory '{}': {}", dir.to_string_lossy(), err))?;
+
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let file_type = entry
+                .file_type()
+                .map_err(|err| format!("Failed to inspect '{}': {}", path.to_string_lossy(), err))?;
+
+            if file_type.is_dir() {
+                stack.push(path);
+            } else if file_type.is_file() && is_markdown_file(&path) {
+                files.push(path);
+            }
+        }
+    }
+
+    files.sort();
+    Ok(files)
+}
+
+fn extract_wiki_link_targets(content: &str) -> Vec<String> {
+    let mut targets = Vec::new();
+    let mut cursor = 0usize;
+    while let Some(start_rel) = content[cursor..].find("[[") {
+        let start = cursor + start_rel + 2;
+        let Some(end_rel) = content[start..].find("]]") else {
+            break;
+        };
+        let end = start + end_rel;
+        targets.push(content[start..end].to_string());
+        cursor = end + 2;
+    }
+    targets
+}
+
+fn extract_markdown_link_targets(content: &str) -> Vec<String> {
+    let mut targets = Vec::new();
+    let mut cursor = 0usize;
+    while let Some(open_rel) = content[cursor..].find("](") {
+        let open = cursor + open_rel + 2;
+        let Some(close_rel) = content[open..].find(')') else {
+            break;
+        };
+        let close = open + close_rel;
+        targets.push(content[open..close].to_string());
+        cursor = close + 1;
+    }
+    targets
+}
+
+fn sanitize_reference_target(raw: &str) -> Option<String> {
+    let mut target = raw.trim();
+    if target.is_empty() {
+        return None;
+    }
+
+    if let Some(idx) = target.find('|') {
+        target = &target[..idx];
+    }
+    if let Some(idx) = target.find('#') {
+        target = &target[..idx];
+    }
+
+    let lowered = target.to_ascii_lowercase();
+    if lowered.starts_with("http://")
+        || lowered.starts_with("https://")
+        || lowered.starts_with("mailto:")
+        || lowered.starts_with("file://")
+        || lowered.starts_with('#')
+    {
+        return None;
+    }
+
+    let no_ext = strip_markdown_extension(target);
+    let normalized = normalize_relative_like_path(no_ext.as_str());
+    if normalized.is_empty() {
+        None
+    } else {
+        Some(normalized)
+    }
+}
+
+fn resolve_target_id_for_reference(
+    source_relative_no_ext: &str,
+    reference: &str,
+    id_by_relative_key: &HashMap<String, String>,
+    id_by_unique_stem: &HashMap<String, String>,
+) -> Option<String> {
+    let direct_key = normalize_path_key(reference);
+    if let Some(id) = id_by_relative_key.get(&direct_key) {
+        return Some(id.clone());
+    }
+
+    let source_parent = Path::new(source_relative_no_ext)
+        .parent()
+        .and_then(|p| p.to_str())
+        .unwrap_or("");
+    if !source_parent.is_empty() {
+        let combined = normalize_relative_like_path(&format!(
+            "{}/{}",
+            source_parent.replace('\\', "/"),
+            reference
+        ));
+        let combined_key = normalize_path_key(&combined);
+        if let Some(id) = id_by_relative_key.get(&combined_key) {
+            return Some(id.clone());
+        }
+    }
+
+    let stem = Path::new(reference)
+        .file_name()
+        .and_then(|v| v.to_str())
+        .unwrap_or(reference)
+        .to_ascii_lowercase();
+    id_by_unique_stem.get(&stem).cloned()
+}
+
+fn build_graph_runtime_for_target(
+    kb_root: &Path,
+    runtime_data_dir: &Path,
+    target: &str,
+) -> Result<RuntimeBuildResult, String> {
+    let target_trimmed = target.trim();
+    let is_all_targets = target_trimmed.is_empty() || target_trimmed.eq_ignore_ascii_case("ALL_FOLDERS");
+
+    let source_root = if is_all_targets {
+        kb_root.to_path_buf()
+    } else {
+        kb_root.join(target_trimmed)
+    };
+
+    if !source_root.exists() || !source_root.is_dir() {
+        return Err(format!(
+            "Target directory does not exist: {}",
+            source_root.to_string_lossy()
+        ));
+    }
+
+    let markdown_files = collect_markdown_files(&source_root)?;
+    let mut node_drafts: Vec<RuntimeNodeDraft> = Vec::with_capacity(markdown_files.len());
+    let mut id_by_relative_key: HashMap<String, String> = HashMap::new();
+    let mut stem_to_ids: HashMap<String, Vec<String>> = HashMap::new();
+
+    for file_path in markdown_files {
+        let content = fs::read_to_string(&file_path)
+            .map_err(|err| format!("Failed to read '{}': {}", file_path.to_string_lossy(), err))?;
+        let relative_from_kb = file_path
+            .strip_prefix(kb_root)
+            .map_err(|err| format!("Failed to normalize file path '{}': {}", file_path.to_string_lossy(), err))?
+            .to_path_buf();
+
+        let relative_without_ext = strip_markdown_extension(
+            relative_from_kb
+                .to_string_lossy()
+                .replace('\\', "/")
+                .as_str(),
+        );
+        let relative_key = normalize_path_key(&relative_without_ext);
+        let id = relative_without_ext.clone();
+        let label = file_path
+            .file_stem()
+            .and_then(|v| v.to_str())
+            .unwrap_or("untitled")
+            .to_string();
+        let stem_key = label.to_ascii_lowercase();
+        let cluster_id = relative_from_kb
+            .components()
+            .next()
+            .and_then(|c| c.as_os_str().to_str())
+            .unwrap_or("default")
+            .to_string();
+        let filepath = file_path.to_string_lossy().to_string();
+
+        id_by_relative_key.insert(relative_key, id.clone());
+        stem_to_ids
+            .entry(stem_key.clone())
+            .or_default()
+            .push(id.clone());
+
+        node_drafts.push(RuntimeNodeDraft {
+            id,
+            label,
+            relative_no_ext: relative_without_ext,
+            cluster_id,
+            content,
+            filepath,
+        });
+    }
+
+    let mut id_by_unique_stem: HashMap<String, String> = HashMap::new();
+    for (stem, ids) in stem_to_ids {
+        if ids.len() == 1 {
+            id_by_unique_stem.insert(stem, ids[0].clone());
+        }
+    }
+
+    let mut unique_edges: BTreeSet<(String, String)> = BTreeSet::new();
+    for node in &node_drafts {
+        let mut link_candidates = extract_wiki_link_targets(&node.content);
+        link_candidates.extend(extract_markdown_link_targets(&node.content));
+
+        for raw_ref in link_candidates {
+            let Some(reference) = sanitize_reference_target(&raw_ref) else {
+                continue;
+            };
+
+            let Some(target_id) = resolve_target_id_for_reference(
+                &node.relative_no_ext,
+                &reference,
+                &id_by_relative_key,
+                &id_by_unique_stem,
+            ) else {
+                continue;
+            };
+
+            if target_id != node.id {
+                unique_edges.insert((node.id.clone(), target_id));
+            }
+        }
+    }
+
+    let mut in_degree: HashMap<String, usize> = HashMap::new();
+    let mut out_degree: HashMap<String, usize> = HashMap::new();
+    for (source, target) in &unique_edges {
+        *out_degree.entry(source.clone()).or_insert(0) += 1;
+        *in_degree.entry(target.clone()).or_insert(0) += 1;
+    }
+
+    let full_nodes: Vec<Value> = node_drafts
+        .iter()
+        .map(|node| {
+            let in_count = *in_degree.get(&node.id).unwrap_or(&0);
+            let out_count = *out_degree.get(&node.id).unwrap_or(&0);
+            json!({
+                "id": node.id.clone(),
+                "label": node.label.clone(),
+                "clusterId": node.cluster_id.clone(),
+                "inDegree": in_count,
+                "outDegree": out_count,
+                "centrality": (in_count + out_count) as f64,
+                "metadata": {
+                    "filepath": node.filepath.clone()
+                },
+                "content": node.content.clone()
+            })
+        })
+        .collect();
+
+    let lite_nodes: Vec<Value> = node_drafts
+        .iter()
+        .map(|node| {
+            let in_count = *in_degree.get(&node.id).unwrap_or(&0);
+            let out_count = *out_degree.get(&node.id).unwrap_or(&0);
+            json!({
+                "id": node.id.clone(),
+                "label": node.label.clone(),
+                "clusterId": node.cluster_id.clone(),
+                "inDegree": in_count,
+                "outDegree": out_count,
+                "centrality": (in_count + out_count) as f64,
+                "metadata": {
+                    "filepath": node.filepath.clone()
+                }
+            })
+        })
+        .collect();
+
+    let edges: Vec<Value> = unique_edges
+        .iter()
+        .map(|(source, target)| {
+            json!({
+                "source": source,
+                "target": target,
+                "weight": 1.0
+            })
+        })
+        .collect();
+
+    let full_graph = json!({
+        "nodes": full_nodes,
+        "edges": edges.clone()
+    });
+    let lite_graph = json!({
+        "nodes": lite_nodes,
+        "edges": edges
+    });
+
+    ensure_directory(runtime_data_dir);
+    let graph_json_path = runtime_data_dir.join("graph_data.json");
+    let data_js_path = runtime_data_dir.join("data.js");
+
+    fs::write(
+        &graph_json_path,
+        serde_json::to_string_pretty(&full_graph)
+            .map_err(|err| format!("Failed to serialize graph_data.json: {}", err))?,
+    )
+    .map_err(|err| format!("Failed to write '{}': {}", graph_json_path.to_string_lossy(), err))?;
+    fs::write(
+        &data_js_path,
+        format!(
+            "const graphData = {};",
+            serde_json::to_string(&lite_graph)
+                .map_err(|err| format!("Failed to serialize data.js payload: {}", err))?
+        ),
+    )
+    .map_err(|err| format!("Failed to write '{}': {}", data_js_path.to_string_lossy(), err))?;
+
+    if !is_all_targets {
+        let sanitized = sanitize_target_name(target_trimmed);
+        let cache_js_path = runtime_data_dir.join(format!("data_{}.js", sanitized));
+        let cache_json_path = runtime_data_dir.join(format!("graph_data_{}.json", sanitized));
+
+        fs::write(
+            &cache_js_path,
+            format!(
+                "const graphData = {};",
+                serde_json::to_string(&lite_graph)
+                    .map_err(|err| format!("Failed to serialize cache data payload: {}", err))?
+            ),
+        )
+        .map_err(|err| format!("Failed to write '{}': {}", cache_js_path.to_string_lossy(), err))?;
+        fs::write(
+            &cache_json_path,
+            serde_json::to_string_pretty(&full_graph)
+                .map_err(|err| format!("Failed to serialize cache graph payload: {}", err))?,
+        )
+        .map_err(|err| format!("Failed to write '{}': {}", cache_json_path.to_string_lossy(), err))?;
+    }
+
+    Ok(RuntimeBuildResult {
+        success: true,
+        target: if is_all_targets {
+            "ALL_FOLDERS".to_string()
+        } else {
+            target_trimmed.to_string()
+        },
+        nodes: node_drafts.len(),
+        edges: unique_edges.len(),
+        data_js_path: data_js_path.to_string_lossy().to_string(),
+        graph_json_path: graph_json_path.to_string_lossy().to_string(),
+    })
+}
+
 #[tauri::command]
 fn get_kb_path() -> Result<String, String> {
     Ok(resolve_kb_path_from_config())
@@ -618,6 +1047,22 @@ struct RuntimeCapabilities {
     supports_build: bool,
     supports_content_api: bool,
     supports_kb_runtime_change: bool,
+    supports_native_pathmode: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct NativePathmodeLaunchRequest {
+    mode: Option<String>,
+    strategy: Option<String>,
+    target_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct NativePathmodeLaunchResult {
+    launched: bool,
+    reason: Option<String>,
 }
 
 #[tauri::command]
@@ -627,9 +1072,10 @@ fn get_runtime_capabilities() -> RuntimeCapabilities {
         return RuntimeCapabilities {
             platform: "android".to_string(),
             supports_sidecar: false,
-            supports_build: false,
+            supports_build: true,
             supports_content_api: true,
             supports_kb_runtime_change: false,
+            supports_native_pathmode: true,
         };
     }
 
@@ -641,7 +1087,87 @@ fn get_runtime_capabilities() -> RuntimeCapabilities {
             supports_build: true,
             supports_content_api: true,
             supports_kb_runtime_change: true,
+            supports_native_pathmode: false,
         }
+    }
+}
+
+#[cfg(target_os = "android")]
+fn launch_native_pathmode_activity(payload_json: &str) -> Result<bool, String> {
+    let android_context = ndk_context::android_context();
+    let vm_ptr = android_context.vm();
+    let context_ptr = android_context.context();
+
+    if vm_ptr.is_null() || context_ptr.is_null() {
+        return Err("Android context is unavailable".to_string());
+    }
+
+    let vm = unsafe { JavaVM::from_raw(vm_ptr as *mut jni::sys::JavaVM) }
+        .map_err(|err| format!("Failed to access Android JavaVM: {}", err))?;
+    let mut env = vm
+        .attach_current_thread()
+        .map_err(|err| format!("Failed to attach JNI thread: {}", err))?;
+
+    let bridge_class = env
+        .find_class("com/jacobinwwey/noteconnection/PathmodeBridge")
+        .map_err(|err| {
+            format!(
+                "PathmodeBridge class is not available in Android app build. Did patch step run? {}",
+                err
+            )
+        })?;
+
+    let context_obj = unsafe { JObject::from_raw(context_ptr as jni::sys::jobject) };
+    let payload_str = env
+        .new_string(payload_json)
+        .map_err(|err| format!("Failed to create JNI payload string: {}", err))?;
+    let payload_obj: JObject = payload_str.into();
+
+    let launch_result = env
+        .call_static_method(
+            bridge_class,
+            "openPathmode",
+            "(Landroid/content/Context;Ljava/lang/String;)Z",
+            &[
+                JValue::Object(&context_obj),
+                JValue::Object(&payload_obj),
+            ],
+        )
+        .map_err(|err| format!("Failed to call PathmodeBridge.openPathmode: {}", err))?;
+
+    launch_result
+        .z()
+        .map_err(|err| format!("Failed to decode Pathmode launch result: {}", err))
+}
+
+#[tauri::command]
+fn open_native_pathmode(request: NativePathmodeLaunchRequest) -> Result<NativePathmodeLaunchResult, String> {
+    #[cfg(target_os = "android")]
+    {
+        let payload_json = serde_json::to_string(&request)
+            .map_err(|err| format!("Failed to serialize native Pathmode payload: {}", err))?;
+
+        let launched = launch_native_pathmode_activity(payload_json.as_str())?;
+        if launched {
+            Ok(NativePathmodeLaunchResult {
+                launched: true,
+                reason: None,
+            })
+        } else {
+            Ok(NativePathmodeLaunchResult {
+                launched: false,
+                reason: Some("Android bridge returned false".to_string()),
+            })
+        }
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = request;
+        Ok(NativePathmodeLaunchResult {
+            launched: false,
+            reason: Some("Native Android Pathmode is unsupported on this platform".to_string()),
+        })
     }
 }
 
@@ -725,6 +1251,28 @@ fn restore_cache(target: String) -> Result<bool, String> {
     let frontend_dir = resolve_frontend_dist_path();
     let runtime_data_dir = resolve_runtime_data_path();
     restore_cache_for_target(&runtime_data_dir, &frontend_dir, &target)
+}
+
+#[tauri::command]
+fn build_graph_runtime(request: RuntimeBuildRequest) -> Result<RuntimeBuildResult, String> {
+    let kb_root = PathBuf::from(resolve_kb_path_from_config());
+    let runtime_data_dir = resolve_runtime_data_path();
+    let target = request
+        .target
+        .clone()
+        .unwrap_or_else(|| "ALL_FOLDERS".to_string());
+
+    // These options are currently accepted for API parity with desktop build payload.
+    // Native mobile runtime does not yet use worker/GPU tuning knobs.
+    let _ = (
+        request.max_workers,
+        request.enable_gpu,
+        request.enable_gpu_layout,
+        request.memory_saving_mode,
+        request.deep_debug,
+    );
+
+    build_graph_runtime_for_target(&kb_root, &runtime_data_dir, target.as_str())
 }
 
 fn extract_relative_path_from_kb_marker(raw_file_path: &str) -> Option<PathBuf> {
@@ -816,10 +1364,12 @@ pub fn run() {
             get_folders,
             get_available_targets,
             get_runtime_capabilities,
+            open_native_pathmode,
             set_user_language,
             get_user_language,
             check_cache,
             restore_cache,
+            build_graph_runtime,
             read_node_content
         ])
         .setup(|app| {
@@ -1180,14 +1730,16 @@ mod tests {
         if cfg!(target_os = "android") {
             assert_eq!(caps.platform, "android");
             assert!(!caps.supports_sidecar);
-            assert!(!caps.supports_build);
+            assert!(caps.supports_build);
             assert!(caps.supports_content_api);
             assert!(!caps.supports_kb_runtime_change);
+            assert!(caps.supports_native_pathmode);
         } else {
             assert!(caps.supports_sidecar);
             assert!(caps.supports_build);
             assert!(caps.supports_content_api);
             assert!(caps.supports_kb_runtime_change);
+            assert!(!caps.supports_native_pathmode);
         }
     }
 
@@ -1396,5 +1948,64 @@ mod tests {
         assert!(runtime_temp.child("data.js").exists());
         assert!(runtime_temp.child("graph_data.json").exists());
         assert!(!runtime_temp.child("app.js").exists());
+    }
+
+    #[test]
+    fn build_graph_runtime_for_target_writes_active_and_target_cache_assets() {
+        let kb_temp = TempDir::new("runtime_build_kb");
+        let runtime_temp = TempDir::new("runtime_build_output");
+
+        let kb_root = kb_temp.child("Knowledge_Base");
+        let target_dir = kb_root.join("financial");
+        fs::create_dir_all(&target_dir).expect("failed to create target directory");
+        fs::write(target_dir.join("intro.md"), "# Intro\n[[advanced]]")
+            .expect("failed to write intro.md");
+        fs::write(target_dir.join("advanced.md"), "# Advanced")
+            .expect("failed to write advanced.md");
+
+        let result = build_graph_runtime_for_target(&kb_root, &runtime_temp.path, "financial")
+            .expect("build_graph_runtime_for_target should succeed");
+        assert!(result.success);
+        assert_eq!(result.target, "financial");
+        assert_eq!(result.nodes, 2);
+        assert_eq!(result.edges, 1);
+
+        let data_js = runtime_temp.child("data.js");
+        let graph_json = runtime_temp.child("graph_data.json");
+        let cache_js = runtime_temp.child("data_financial.js");
+        let cache_json = runtime_temp.child("graph_data_financial.json");
+        assert!(data_js.exists());
+        assert!(graph_json.exists());
+        assert!(cache_js.exists());
+        assert!(cache_json.exists());
+
+        let data_js_content = fs::read_to_string(&data_js).expect("failed to read data.js");
+        let payload = data_js_content
+            .strip_prefix("const graphData = ")
+            .expect("data.js should start with graphData assignment")
+            .trim_end_matches(';');
+        let lite_graph: Value =
+            serde_json::from_str(payload).expect("failed to parse data.js payload JSON");
+        assert!(lite_graph["nodes"][0].get("content").is_none());
+
+        let full_graph: Value = serde_json::from_str(
+            fs::read_to_string(&graph_json)
+                .expect("failed to read graph_data.json")
+                .as_str(),
+        )
+        .expect("failed to parse graph_data.json");
+        assert!(full_graph["nodes"][0].get("content").is_some());
+    }
+
+    #[test]
+    fn build_graph_runtime_for_target_rejects_missing_directory() {
+        let kb_temp = TempDir::new("runtime_build_missing_kb");
+        let runtime_temp = TempDir::new("runtime_build_missing_output");
+        let kb_root = kb_temp.child("Knowledge_Base");
+        fs::create_dir_all(&kb_root).expect("failed to create kb root");
+
+        let err = build_graph_runtime_for_target(&kb_root, &runtime_temp.path, "does_not_exist")
+            .expect_err("missing target should fail");
+        assert!(err.contains("Target directory does not exist"));
     }
 }

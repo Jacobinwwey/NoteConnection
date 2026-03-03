@@ -4,6 +4,7 @@ import * as path from 'path';
 describe('runtime capability gating contract', () => {
   const repoRoot = path.resolve(__dirname, '..');
   const sourceManagerPath = path.join(repoRoot, 'src', 'frontend', 'source_manager.js');
+  const appPath = path.join(repoRoot, 'src', 'frontend', 'app.js');
   const readerPath = path.join(repoRoot, 'src', 'frontend', 'reader.js');
   const tauriLibPath = path.join(repoRoot, 'src-tauri', 'src', 'lib.rs');
 
@@ -14,12 +15,20 @@ describe('runtime capability gating contract', () => {
     expect(sourceManager).toContain('window.__NC_RUNTIME_CAPS');
     expect(sourceManager).toContain('supports_sidecar');
     expect(sourceManager).toContain('supports_build');
+    expect(sourceManager).toContain('supports_native_pathmode');
   });
 
   test('source manager blocks build path when runtime does not support build', () => {
     const sourceManager = fs.readFileSync(sourceManagerPath, 'utf8');
     expect(sourceManager).toContain('if (!runtimeCaps.supports_build)');
     expect(sourceManager).toContain("alert(t('source.error.buildUnsupportedMobile'))");
+  });
+
+  test('source manager uses tauri native build command when sidecar is unavailable', () => {
+    const sourceManager = fs.readFileSync(sourceManagerPath, 'utf8');
+    expect(sourceManager).toContain("invoke('build_graph_runtime'");
+    expect(sourceManager).toContain('if (runtimeCaps.supports_sidecar)');
+    expect(sourceManager).toContain('Using mobile native build engine');
   });
 
   test('reader supports tauri content command fallback and runtime fallback messaging', () => {
@@ -33,9 +42,19 @@ describe('runtime capability gating contract', () => {
     const tauriLib = fs.readFileSync(tauriLibPath, 'utf8');
     expect(tauriLib).toContain('fn get_runtime_capabilities()');
     expect(tauriLib).toContain('get_runtime_capabilities,');
+    expect(tauriLib).toContain('open_native_pathmode,');
+    expect(tauriLib).toContain('build_graph_runtime,');
     expect(tauriLib).toContain('supports_sidecar: false');
-    expect(tauriLib).toContain('supports_build: false');
+    expect(tauriLib).toContain('supports_build: true');
     expect(tauriLib).toContain('supports_content_api: true');
+    expect(tauriLib).toContain('supports_native_pathmode: true');
     expect(tauriLib).toContain('read_node_content');
+  });
+
+  test('path mode entry prefers native android activity when capability is enabled', () => {
+    const appJs = fs.readFileSync(appPath, 'utf8');
+    expect(appJs).toContain("invoke('open_native_pathmode'");
+    expect(appJs).toContain("caps.platform === 'android'");
+    expect(appJs).toContain('caps.supports_native_pathmode === true');
   });
 });

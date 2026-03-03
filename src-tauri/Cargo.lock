@@ -2113,6 +2113,8 @@ name = "npm"
 version = "0.1.0"
 dependencies = [
  "dirs",
+ "jni",
+ "ndk-context",
  "rfd 0.17.2",
  "serde",
  "serde_json",

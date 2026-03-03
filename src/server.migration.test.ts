@@ -143,6 +143,8 @@ describe('server migration settings routes', () => {
   let frontendDir: string;
   let runtimeDataDir: string;
   let kbRoot: string;
+  let kbFilePath: string;
+  let outsideFilePath: string;
   let buildGraphMock: jest.Mock;
   let originalArgv: string[];
 
@@ -154,6 +156,8 @@ describe('server migration settings routes', () => {
     kbRoot = temp.mkdir(path.join('project', 'Knowledge_Base'));
     temp.mkdir(path.join('project', 'Knowledge_Base', 'financial'));
     temp.mkdir(path.join('project', 'Knowledge_Base', 'legal'));
+    kbFilePath = temp.file(path.join('project', 'Knowledge_Base', 'financial', 'overview.md'), '# Financial Overview\nInside KB root');
+    outsideFilePath = temp.file(path.join('outside', 'sensitive.md'), '# Sensitive\nOutside KB root');
 
     temp.file(path.join('project', 'dist', 'src', 'frontend', 'data_financial.js'), 'const graphData = {"nodes":[{"id":"F"}]};');
     temp.file(path.join('project', 'dist', 'src', 'frontend', 'graph_data_financial.json'), '{"nodes":[{"id":"F"}],"links":[]}');
@@ -222,6 +226,44 @@ describe('server migration settings routes', () => {
     const response = await requestJson(port, 'GET', '/api/available-targets');
     expect(response.status).toBe(200);
     expect(response.body.targets).toEqual(['financial', 'legal', 'robotics']);
+  });
+
+  test('serves /api/content for files inside KB root via absolute path', async () => {
+    const response = await requestJson(
+      port,
+      'GET',
+      `/api/content?path=${encodeURIComponent(kbFilePath)}`
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.content).toContain('Inside KB root');
+  });
+
+  test('serves /api/content for legacy Knowledge_Base-style paths', async () => {
+    const legacyPath = 'C:\\snapshot\\NoteConnection_app\\Knowledge_Base\\financial\\overview.md';
+    const response = await requestJson(
+      port,
+      'GET',
+      `/api/content?path=${encodeURIComponent(legacyPath)}`
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.content).toContain('Financial Overview');
+  });
+
+  test('rejects /api/content requests outside configured KB root', async () => {
+    const response = await requestJson(
+      port,
+      'GET',
+      `/api/content?path=${encodeURIComponent(outsideFilePath)}`
+    );
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: expect.stringContaining('outside configured knowledge base')
+      })
+    );
   });
 
   test('check-cache and restore-cache endpoints work for named targets', async () => {

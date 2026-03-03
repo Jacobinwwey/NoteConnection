@@ -54,15 +54,42 @@ export class PathBridge {
         });
     }
 
+    private sanitizeClientTag(rawTag: unknown): string {
+        if (typeof rawTag !== 'string') {
+            return 'unknown';
+        }
+
+        const cleaned = rawTag.trim().replace(/[^a-zA-Z0-9_-]/g, '');
+        return cleaned.length > 0 ? cleaned : 'unknown';
+    }
+
     private resolveClientTag(rawUrl: string): string {
         if (!rawUrl) return 'unknown';
         try {
             const parsed = new URL(rawUrl, `ws://127.0.0.1:${this.port}`);
-            const client = (parsed.searchParams.get('client') || '').trim();
-            return client || 'unknown';
+            const client = parsed.searchParams.get('client');
+            return this.sanitizeClientTag(client);
         } catch (_e) {
             return 'unknown';
         }
+    }
+
+    private setClientTag(ws: WebSocket, tag: string): void {
+        const meta = this.clientMeta.get(ws);
+        if (!meta) {
+            return;
+        }
+
+        const nextTag = this.sanitizeClientTag(tag);
+        if (nextTag === 'unknown' || meta.tag === nextTag) {
+            return;
+        }
+
+        meta.tag = nextTag;
+        this.clientMeta.set(ws, meta);
+        console.log(
+            `[PathBridge] Client #${meta.id} tagged as '${nextTag}'. Total clients: ${this.clients.size}`
+        );
     }
 
 
@@ -71,6 +98,16 @@ export class PathBridge {
         console.log(`[PathBridge] Received: ${data.type}`);
         
         switch (data.type) {
+            case 'identify': {
+                const requestedTag =
+                    data?.payload?.client ??
+                    data?.payload?.tag ??
+                    data?.client ??
+                    'unknown';
+                this.setClientTag(sender, requestedTag);
+                break;
+            }
+
             case 'nodeClick':
                 console.log(`[PathBridge] Godot clicked node: ${data.payload?.nodeId}`);
                 this.broadcast('nodeClick', data.payload);

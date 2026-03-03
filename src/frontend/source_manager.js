@@ -4,7 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
         supports_sidecar: true,
         supports_build: true,
         supports_content_api: true,
-        supports_kb_runtime_change: true
+        supports_kb_runtime_change: true,
+        supports_native_pathmode: false
     };
 
     const exposeRuntimeCaps = () => {
@@ -141,6 +142,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Translation helper
     const t = (key, params) => window.i18n ? window.i18n.t(key, params) : key;
+    const isZhLocale = () => Boolean(window.i18n && window.i18n.locale === 'zh');
+
+    const ensureRuntimeCapabilityNotice = () => {
+        let note = document.getElementById('runtime-capability-note');
+        if (note) {
+            return note;
+        }
+
+        note = document.createElement('span');
+        note.id = 'runtime-capability-note';
+        note.style.color = '#f7d089';
+        note.style.fontSize = '0.76rem';
+        note.style.background = 'rgba(20, 20, 20, 0.82)';
+        note.style.border = '1px solid #5e4e22';
+        note.style.borderRadius = '4px';
+        note.style.padding = '2px 6px';
+        note.style.display = 'none';
+        note.style.maxWidth = '620px';
+        note.style.whiteSpace = 'nowrap';
+        note.style.overflow = 'hidden';
+        note.style.textOverflow = 'ellipsis';
+
+        const sourceControl = document.getElementById('source-control');
+        if (sourceControl) {
+            sourceControl.appendChild(note);
+        } else if (currentPathEl && currentPathEl.parentElement) {
+            currentPathEl.parentElement.appendChild(note);
+        }
+
+        return note;
+    };
+
+    const updateRuntimeCapabilityNotice = () => {
+        const note = ensureRuntimeCapabilityNotice();
+        if (!note) return;
+
+        const showCacheOnly = Boolean(window.__TAURI__ && runtimeCaps.supports_build === false);
+        if (!showCacheOnly) {
+            note.style.display = 'none';
+            note.textContent = '';
+            return;
+        }
+
+        note.style.display = 'inline-flex';
+        note.title = 'Mobile runtime capability boundary';
+        note.textContent = isZhLocale()
+            ? '移动端当前为缓存/阅读模式（不支持本地构建）。'
+            : 'Mobile runtime is cache/read mode (local build is unavailable).';
+    };
 
     const fetchFoldersViaSidecar = async () => {
         const kbRes = await fetch('http://localhost:3000/api/kb-path');
@@ -200,6 +250,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const restoreData = await restoreRes.json();
         return Boolean(restoreData && restoreData.success);
+    };
+
+    const buildGraphViaRust = async (payload) => {
+        if (!window.__TAURI__ || !window.__TAURI__.core || typeof window.__TAURI__.core.invoke !== 'function') {
+            throw new Error('Tauri runtime build command is unavailable.');
+        }
+
+        return await window.__TAURI__.core.invoke('build_graph_runtime', { request: payload });
     };
 
     const filterTargetsForRuntimeMode = async (targets) => {
@@ -458,6 +516,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial fetch - wait for i18n
     const init = async () => {
         await resolveRuntimeCapabilities();
+        updateRuntimeCapabilityNotice();
         bootstrapScriptLoad();
 
         if (window.i18n && window.i18n.isInitialized) {
@@ -609,22 +668,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let success = false;
             let error = '';
-            const res = await fetch('http://localhost:3000/api/build', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(buildPayload)
-            });
+            if (runtimeCaps.supports_sidecar) {
+                const res = await fetch('http://localhost:3000/api/build', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(buildPayload)
+                });
 
-            if (res.ok) {
-                success = true;
-                if (window.loadingManager) window.loadingManager.log(t('notifications.buildSuccess'));
-            } else {
-                try {
-                    const data = await res.json();
-                    error = data.error || `HTTP ${res.status}`;
-                } catch (_e) {
-                    error = `HTTP ${res.status}: ${res.statusText}`;
+                if (res.ok) {
+                    success = true;
+                    if (window.loadingManager) window.loadingManager.log(t('notifications.buildSuccess'));
+                } else {
+                    try {
+                        const data = await res.json();
+                        error = data.error || `HTTP ${res.status}`;
+                    } catch (_e) {
+                        error = `HTTP ${res.status}: ${res.statusText}`;
+                    }
                 }
+            } else if (window.__TAURI__) {
+                if (window.loadingManager) {
+                    window.loadingManager.log(
+                        isZhLocale()
+                            ? '使用移动端原生构建引擎...'
+                            : 'Using mobile native build engine...'
+                    );
+                }
+
+                try {
+                    const result = await buildGraphViaRust(buildPayload);
+                    success = Boolean(result && result.success !== false);
+                    if (!success) {
+                        error = (result && result.error) || 'Native runtime build returned unsuccessful result.';
+                    } else if (window.loadingManager) {
+                        window.loadingManager.log(t('notifications.buildSuccess'));
+                    }
+                } catch (nativeBuildErr) {
+                    error = nativeBuildErr && nativeBuildErr.message ? nativeBuildErr.message : String(nativeBuildErr);
+                }
+            } else {
+                error = 'Build backend is unavailable in this runtime.';
             }
 
             if (success) {
@@ -654,6 +737,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.i18n) {
         window.i18n.onLanguageChange(() => {
             loadBtn.textContent = t('source.loadButton');
+            updateRuntimeCapabilityNotice();
             // Re-fetch to update folder labels if needed
             // (Currently folder names are file system names, so no translation needed)
         });

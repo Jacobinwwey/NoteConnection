@@ -719,6 +719,17 @@ func start_browsing(current_central_id: String) -> void:
 	_refresh_history_popup()
 
 
+## Record the newly focused center while browsing so History reflects switch flow.
+func record_navigation_node(node_id: String) -> void:
+	if node_id.is_empty():
+		return
+	if not _is_browsing:
+		return
+	if _nav_history.is_empty() or _nav_history[_nav_history.size() - 1] != node_id:
+		_nav_history.append(node_id)
+	_refresh_history_popup()
+
+
 func _update_return_button() -> void:
 	if _return_button:
 		_return_button.visible = _is_browsing

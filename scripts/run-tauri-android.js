@@ -64,6 +64,21 @@ function resolveAndroidTarget(mode, cliTarget) {
   return '';
 }
 
+function runPathmodePatch({ allowMissing }) {
+  const patchScript = path.join(__dirname, 'apply-tauri-android-pathmode.js');
+  const args = [patchScript];
+  if (allowMissing) {
+    args.push('--allow-missing');
+  }
+
+  const patchResult = spawnSync(process.execPath, args, {
+    stdio: 'inherit',
+    env: process.env
+  });
+
+  return patchResult.status === 0;
+}
+
 function main() {
   const mode = process.argv[2];
   const cliTarget = process.argv[3];
@@ -93,8 +108,26 @@ function main() {
   const isWindows = process.platform === 'win32';
   const execCommand = isWindows ? 'cmd.exe' : 'npx';
   const execArgs = isWindows ? ['/d', '/s', '/c', 'npx', ...tauriArgs] : tauriArgs;
+  const cargoBuildJobs = process.env.CARGO_BUILD_JOBS || '1';
+  const cargoReleaseOptLevel = process.env.CARGO_PROFILE_RELEASE_OPT_LEVEL || '1';
+  const cargoReleaseCodegenUnits = process.env.CARGO_PROFILE_RELEASE_CODEGEN_UNITS || '64';
+
+  // For dev/build, Android project should already exist and must be patched before compile.
+  if (mode === 'dev' || mode === 'build') {
+    if (!runPathmodePatch({ allowMissing: false })) {
+      console.error('[Tauri Android Runner] Failed to apply Android Pathmode patch before build/dev.');
+      process.exit(1);
+    }
+  } else {
+    // init may run before the Android project exists; pre-patch is best-effort.
+    runPathmodePatch({ allowMissing: true });
+  }
+
   console.log(`[Tauri Android Runner] SDK: ${sdkRoot}`);
   console.log(`[Tauri Android Runner] NDK: ${ndkHome}`);
+  console.log(`[Tauri Android Runner] Cargo jobs: ${cargoBuildJobs}`);
+  console.log(`[Tauri Android Runner] Cargo release opt-level: ${cargoReleaseOptLevel}`);
+  console.log(`[Tauri Android Runner] Cargo release codegen-units: ${cargoReleaseCodegenUnits}`);
   if (target) {
     console.log(`[Tauri Android Runner] Target: ${target}`);
   } else {
@@ -109,7 +142,10 @@ function main() {
       ANDROID_HOME: sdkRoot,
       ANDROID_SDK_ROOT: sdkRoot,
       NDK_HOME: ndkHome,
-      ANDROID_NDK_HOME: ndkHome
+      ANDROID_NDK_HOME: ndkHome,
+      CARGO_BUILD_JOBS: cargoBuildJobs,
+      CARGO_PROFILE_RELEASE_OPT_LEVEL: cargoReleaseOptLevel,
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: cargoReleaseCodegenUnits
     }
   });
 
@@ -120,7 +156,18 @@ function main() {
     console.error(`[Tauri Android Runner] Command terminated by signal: ${result.signal}`);
   }
 
-  process.exit(result.status === null ? 1 : result.status);
+  const statusCode = result.status === null ? 1 : result.status;
+  if (statusCode !== 0) {
+    process.exit(statusCode);
+  }
+
+  // Keep project patched after successful init/dev/build.
+  if (!runPathmodePatch({ allowMissing: false })) {
+    console.error('[Tauri Android Runner] Android command succeeded, but post-patch failed.');
+    process.exit(1);
+  }
+
+  process.exit(0);
 }
 
 main();

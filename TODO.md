@@ -1,6 +1,583 @@
+# 2026-03-03 v1.5.10 - Option A P0 Closure (Tauri Android Native Folder/Build/Content Flow)
+
+## English Document
+
+### Decision Snapshot
+
+- [x] Option A P0 is implemented for Tauri Android runtime.
+- [x] Android runtime now supports local graph build without Node sidecar.
+- [x] Desktop and web behavior remain unchanged.
+- [ ] Capacitor runtime parity is still a separate scope (build backend parity not yet native-equivalent).
+
+### Delivered in Code
+
+- [x] Added native runtime build command in Rust:
+  - [x] `build_graph_runtime(request)` in `src-tauri/src/lib.rs`
+  - [x] builds from `Knowledge_Base/<target>` (or `ALL_FOLDERS`)
+  - [x] writes runtime artifacts to `runtime_data/`:
+    - [x] `data.js`
+    - [x] `graph_data.json`
+    - [x] `data_<target>.js`
+    - [x] `graph_data_<target>.json`
+- [x] Updated Android runtime capabilities:
+  - [x] `supports_sidecar=false`
+  - [x] `supports_build=true`
+  - [x] `supports_content_api=true`
+- [x] Routed source loading/build flow in `src/frontend/source_manager.js`:
+  - [x] sidecar path stays primary when available (`/api/build`)
+  - [x] Tauri native fallback uses `invoke('build_graph_runtime', { request })`
+
+### Verification Evidence (Executed on 2026-03-03)
+
+- [x] `npm run test:migration` -> PASS (`55` tests)
+- [x] `npm run test:tauri` -> PASS (`16` tests)
+- [x] `npm run verify:android:env` -> PASS (SDK + cmdline-tools + NDK detected)
+
+### P0 Status Update
+
+- [x] `Option A: Implement mobile-native equivalent for folder/build/content flow` (Tauri Android path).
+- [ ] Capacitor-specific build/content runtime parity remains open and tracked under follow-up mobile scope.
+
+---
+
+## 中文文档
+
+### 结论快照
+
+- [x] 方案 A 的 P0 已在 Tauri Android 运行时落地。
+- [x] Android 端现已支持无 Node sidecar 的本地构图能力。
+- [x] 桌面端与 Web 端行为保持不变。
+- [ ] Capacitor 运行时能力对等仍是独立范围（构建后端尚未原生等价）。
+
+### 已交付实现
+
+- [x] 在 Rust 中新增原生运行时构建命令：
+  - [x] `src-tauri/src/lib.rs` 中 `build_graph_runtime(request)`
+  - [x] 从 `Knowledge_Base/<target>`（或 `ALL_FOLDERS`）扫描构图
+  - [x] 将运行时产物写入 `runtime_data/`：
+    - [x] `data.js`
+    - [x] `graph_data.json`
+    - [x] `data_<target>.js`
+    - [x] `graph_data_<target>.json`
+- [x] 更新 Android 运行时能力：
+  - [x] `supports_sidecar=false`
+  - [x] `supports_build=true`
+  - [x] `supports_content_api=true`
+- [x] 在 `src/frontend/source_manager.js` 完成构建链路分流：
+  - [x] 有 sidecar 时仍优先走 `/api/build`
+  - [x] 无 sidecar 的 Tauri 路径改为 `invoke('build_graph_runtime', { request })`
+
+### 验证证据（2026-03-03 实测）
+
+- [x] `npm run test:migration` -> 通过（`55` 项）
+- [x] `npm run test:tauri` -> 通过（`16` 项）
+- [x] `npm run verify:android:env` -> 通过（SDK + cmdline-tools + NDK 已识别）
+
+### P0 状态更新
+
+- [x] `方案 A：实现移动端目录/构建/内容能力原生等价链路`（Tauri Android 路径）已完成。
+- [ ] Capacitor 独立运行时的构建/内容完全对等仍待后续收口。
+
+---
+
+> Superseded Note (2026-03-03 v1.5.10): The section below is historical context. Current Option A P0 status is recorded above.
+> 覆盖说明（2026-03-03 v1.5.10）：下方内容为历史上下文，当前 Option A P0 状态以上方为准。
+
+# 2026-03-03 v1.5.9 - Electron Removal Final Gate (Audit-Driven Action Plan)
+
+## English Document
+
+### Decision Snapshot
+
+- [x] Desktop runtime migration from Electron to Tauri is technically ready.
+- [x] Tauri desktop build/runtime path is active and test-verified.
+- [x] Capacitor and Tauri Android build pipelines both exist.
+- [ ] Full cross-platform runtime parity is not complete yet.
+
+### Scope Clarification (From Audit)
+
+- Desktop:
+  - [x] Electron IPC-equivalent flows are migrated to sidecar HTTP + Tauri commands.
+  - [x] Electron scripts/dependencies are absent from active package/runtime surface.
+- Mobile:
+  - [ ] Capacitor runtime is not equivalent to desktop sidecar runtime for folder/build/content APIs.
+  - [ ] Android runtime intentionally capability-gated (`supports_sidecar=false`, `supports_build=false`).
+
+### P0 - Required Before Claiming “Full Migration Complete”
+
+- [ ] **Productize mobile capability boundary decision (must choose and freeze release policy)**
+  - [ ] Option A: Implement mobile-native equivalent for folder/build/content flow.
+  - [ ] Option B: Officially define mobile as cache/read-focused scope and remove parity ambiguity in UI/docs.
+
+- [ ] **Capacitor runtime behavior hardening**
+  - [ ] Detect Capacitor runtime explicitly and avoid desktop-sidecar assumptions in source loading.
+  - [ ] Provide deterministic fallback UX when `/api/folders`, `/api/build`, `/api/content` are unavailable.
+  - [ ] Define content strategy for reader in Capacitor mode (embed content, packaged index, or clear unsupported notice).
+
+- [ ] **Mobile acceptance gate**
+  - [ ] Add explicit integration test coverage for Capacitor runtime boundary behavior.
+  - [ ] Add manual verification checklist for Capacitor APK:
+    - [ ] startup behavior
+    - [ ] source panel behavior
+    - [ ] reader behavior
+    - [ ] path mode entry/exit behavior
+
+### P1 - Migration Hygiene and Decommission Clean-up
+
+- [ ] **Archive/remove residual Electron artifacts**
+  - [ ] Remove empty `src/electron` directory or add explicit archive marker.
+  - [ ] Replace misleading names/comments containing “electron” where runtime is already bridge-based (for maintainability clarity).
+
+- [ ] **Documentation alignment**
+  - [ ] Mark `docs/tauri_tasks.md` as historical where it still lists pre-migration TODOs.
+  - [ ] Keep active docs Tauri-first and clearly separate desktop vs Android vs Capacitor capability boundaries.
+
+### P2 - Reliability and Release Guardrails
+
+- [ ] Keep release gate mandatory:
+  - [ ] `npm run test:migration`
+  - [ ] `npm run test:tauri`
+- [ ] Keep Android environment gate mandatory:
+  - [ ] `npm run verify:android:env`
+- [ ] Add CI job matrix to prevent silent regressions:
+  - [ ] desktop migration suite
+  - [ ] tauri rust suite
+  - [ ] mobile pipeline contract suite
+
+### Go/No-Go Policy (Current)
+
+- [x] **GO**: Desktop Electron decommissioning.
+- [ ] **NO-GO**: “All-platform parity complete” statement before P0 closure.
+
+---
+
+## 中文文档
+
+### 结论快照
+
+- [x] 桌面端 Electron -> Tauri 迁移已达到可下线技术状态。
+- [x] Tauri 桌面构建与运行主链路已启用并通过测试验证。
+- [x] Capacitor 与 Tauri Android 构建链路均已存在。
+- [ ] 全平台运行时能力对等尚未完全收口。
+
+### 范围澄清（基于审计）
+
+- 桌面端：
+  - [x] Electron IPC 等价能力已迁移到 sidecar HTTP + Tauri 命令。
+  - [x] 活跃包管理与运行路径中已无 Electron 脚本/依赖。
+- 移动端：
+  - [ ] Capacitor 运行时在目录/构建/内容 API 上不等价于桌面 sidecar 运行时。
+  - [ ] Android 运行时按设计能力门控（`supports_sidecar=false`, `supports_build=false`）。
+
+### P0 - 宣告“迁移完全完成”前必须收口
+
+- [ ] **移动端能力边界产品化决策（必须二选一并固化）**
+  - [ ] 方案 A：实现移动端目录/构建/内容能力的原生等价链路。
+  - [ ] 方案 B：正式将移动端定义为缓存/阅读优先能力，并在 UI/文档中消除“对等”歧义。
+
+- [ ] **Capacitor 运行时行为加固**
+  - [ ] 显式识别 Capacitor 运行时，避免沿用桌面 sidecar 假设。
+  - [ ] 当 `/api/folders`、`/api/build`、`/api/content` 不可用时提供确定性的降级交互。
+  - [ ] 明确 Capacitor Reader 内容策略（嵌入内容、打包索引，或显式不支持提示）。
+
+- [ ] **移动端验收闸门**
+  - [ ] 增加 Capacitor 运行时边界行为的集成测试覆盖。
+  - [ ] 增加 Capacitor APK 手工验收清单：
+    - [ ] 启动行为
+    - [ ] 数据源面板行为
+    - [ ] Reader 行为
+    - [ ] Pathmode 进入/退出行为
+
+### P1 - 迁移治理与下线清理
+
+- [ ] **归档/移除残余 Electron 痕迹**
+  - [ ] 删除空目录 `src/electron` 或增加明确归档标记。
+  - [ ] 清理代码中仍含 “electron” 的误导性命名/注释（运行时已为 bridge 架构）。
+
+- [ ] **文档对齐**
+  - [ ] 对 `docs/tauri_tasks.md` 中已过期迁移待办添加历史标记。
+  - [ ] 保持有效文档为 Tauri-first，并清晰区分 desktop/Android/Capacitor 能力边界。
+
+### P2 - 稳定性与发布护栏
+
+- [ ] 将以下发布闸门保持为必跑：
+  - [ ] `npm run test:migration`
+  - [ ] `npm run test:tauri`
+- [ ] 将 Android 环境闸门保持为必跑：
+  - [ ] `npm run verify:android:env`
+- [ ] 增加 CI 矩阵避免静默回归：
+  - [ ] 桌面迁移测试集
+  - [ ] Tauri Rust 测试集
+  - [ ] 移动端流水线契约测试集
+
+### 当前 Go/No-Go 政策
+
+- [x] **GO**：桌面端 Electron 下线。
+- [ ] **NO-GO**：在 P0 未收口前，不宣告“全平台能力对等完成”。
+
+---
+
+# 2026-03-03 v1.5.8 - PathBridge Handshake + Tauri Early-Socket Stability
+
+## English Document
+
+### Added in This Round
+
+- [x] Removed Godot-incompatible WebSocket query URL in `path_mode/scripts/ws_client.gd`:
+  - [x] `ws://127.0.0.1:9876/?client=godot` -> `ws://127.0.0.1:9876`
+  - [x] Added explicit `identify` handshake payload after connect.
+  - [x] Added pre-connect message queue flush to avoid early configure-drop warnings.
+
+- [x] Added explicit client-identification protocol in `src/core/PathBridge.ts`:
+  - [x] Added `identify` message handling.
+  - [x] Added runtime client tag update (`setClientTag`) with sanitization.
+  - [x] Kept URL-tag fallback compatible for browser legacy callers.
+
+- [x] Hardened frontend Bridge behavior in `src/frontend/path_app.js`:
+  - [x] Removed query-tag URL usage and switched to base `ws://localhost:9876`.
+  - [x] Sent `identify` payloads for both `frontend` and `frontend-early`.
+  - [x] Added Tauri-runtime guard using `window.__TAURI__` OR `navigator.userAgent.includes('Tauri')` to prevent accidental `frontend-early` socket startup in Tauri.
+
+- [x] Added regression coverage:
+  - [x] New contract file: `src/pathbridge.handshake.contract.test.ts`.
+  - [x] Included in `test:migration` suite.
+
+### Verification
+
+- [x] `npm run test:migration` -> PASS (`53` tests).
+- [x] `npm run test:tauri` -> PASS (`14` tests).
+
+### Scope Safety
+
+- [x] Desktop behavior unchanged except bridge handshake logging/tagging stability.
+- [x] Web browser mode still supports early bridge mode.
+- [x] Android Pathmode flow remains unchanged.
+
+---
+
+## 中文文档
+
+### 本轮新增
+
+- [x] 在 `path_mode/scripts/ws_client.gd` 移除 Godot 不兼容的 WebSocket 查询参数 URL：
+  - [x] `ws://127.0.0.1:9876/?client=godot` -> `ws://127.0.0.1:9876`
+  - [x] 连接后新增显式 `identify` 握手消息。
+  - [x] 增加连接前消息队列与重连后冲刷，避免初始化配置消息丢失/警告。
+
+- [x] 在 `src/core/PathBridge.ts` 增加显式客户端身份协议：
+  - [x] 新增 `identify` 消息处理分支。
+  - [x] 新增 `setClientTag` 与标签清洗逻辑。
+  - [x] 保留 URL 查询参数识别作为浏览器旧路径兼容兜底。
+
+- [x] 在 `src/frontend/path_app.js` 强化 Bridge 行为：
+  - [x] 移除 query-tag URL，统一使用 `ws://localhost:9876`。
+  - [x] 为 `frontend` 与 `frontend-early` 两类连接发送 `identify` 负载。
+  - [x] 新增 Tauri 运行时双重判定（`window.__TAURI__` 或 `navigator.userAgent.includes('Tauri')`），避免在 Tauri 中误启动 `frontend-early` 连接。
+
+- [x] 新增回归契约覆盖：
+  - [x] 新增测试文件 `src/pathbridge.handshake.contract.test.ts`。
+  - [x] 已纳入 `test:migration`。
+
+### 验证结果
+
+- [x] `npm run test:migration` -> 通过（`53` 项）。
+- [x] `npm run test:tauri` -> 通过（`14` 项）。
+
+### 范围安全性
+
+- [x] 桌面端功能不变，仅提升 Bridge 握手与标签稳定性。
+- [x] 浏览器模式保留 early bridge 支持。
+- [x] Android Pathmode 流程不受影响。
+
+---
+
+# 2026-03-03 v1.5.7 - Android Native Pathmode Smoke Lifecycle Automation
+
+## English Document
+
+### Added in This Round
+
+- [x] Added Android runtime smoke lifecycle script:
+  - [x] `scripts/smoke-android-pathmode.js`
+  - [x] checks `MainActivity -> PathmodeGodotActivity -> MainActivity` through `adb` + `dumpsys activity`.
+  - [x] sends back event (`KEYCODE_BACK`) to verify activity return path.
+  - [x] supports optional strict mode:
+    - [x] `NOTE_CONNECTION_ANDROID_SMOKE_REQUIRE_DEVICE=1` makes no-device state fail
+    - [x] default mode skips gracefully when no device/emulator is attached.
+
+- [x] Added npm entrypoint:
+  - [x] `smoke:android:pathmode` in `package.json`.
+
+- [x] Added regression contracts for smoke integration:
+  - [x] `src/android.pathmode.smoke.contract.test.ts`.
+  - [x] Updated `src/mobile.pipeline.test.ts` to assert smoke script registration.
+  - [x] Updated `test:migration` suite list to include smoke contract test.
+
+### Verification
+
+- [x] `npm run test:migration` -> PASS (`50` tests).
+- [x] `npm run test:tauri` -> PASS (`14` tests).
+- [x] `npm run smoke:android:pathmode` -> PASS (graceful skip without connected device).
+
+### Scope Safety
+
+- [x] No desktop behavior changes.
+- [x] No web behavior changes.
+- [x] Android smoke flow is standalone and only invoked explicitly.
+
+---
+
+## 中文文档
+
+### 本轮新增
+
+- [x] 新增 Android 运行时烟雾生命周期脚本：
+  - [x] `scripts/smoke-android-pathmode.js`
+  - [x] 使用 `adb` + `dumpsys activity` 检查 `MainActivity -> PathmodeGodotActivity -> MainActivity`。
+  - [x] 通过发送返回键（`KEYCODE_BACK`）验证 Activity 返回路径。
+  - [x] 支持可选严格模式：
+    - [x] `NOTE_CONNECTION_ANDROID_SMOKE_REQUIRE_DEVICE=1` 时，无设备将判定失败
+    - [x] 默认模式下，无设备/模拟器时会安全跳过。
+
+- [x] 新增 npm 命令入口：
+  - [x] 在 `package.json` 中新增 `smoke:android:pathmode`。
+
+- [x] 新增烟雾集成回归契约：
+  - [x] `src/android.pathmode.smoke.contract.test.ts`。
+  - [x] 更新 `src/mobile.pipeline.test.ts` 断言烟雾脚本注册。
+  - [x] 更新 `test:migration` 用例列表，纳入该契约测试。
+
+### 验证结果
+
+- [x] `npm run test:migration` -> 通过（`50` 项）。
+- [x] `npm run test:tauri` -> 通过（`14` 项）。
+- [x] `npm run smoke:android:pathmode` -> 通过（无连接设备时按设计跳过）。
+
+### 范围安全性
+
+- [x] 不影响桌面端行为。
+- [x] 不影响 Web 端行为。
+- [x] Android 烟雾流程仅在显式执行命令时触发。
+
+---
+
+# 2026-03-03 v1.5.6 - Option A Android Native Pathmode (Godot Full-Screen) Execution
+
+## English Document
+
+### Implemented in This Round
+
+- [x] **Option A launch path implemented for Android**
+  - [x] Added Android-native Pathmode launch command: `open_native_pathmode` in `src-tauri/src/lib.rs`.
+  - [x] Added runtime capability flag: `supports_native_pathmode` (Android=true, desktop/web=false).
+  - [x] Updated frontend Path Mode entry (`src/frontend/app.js`) to:
+    - [x] prefer native Android launch when capability is enabled
+    - [x] keep desktop/web flow unchanged (fallback to existing web Path Mode container)
+
+- [x] **Android full-screen Godot activity bridge landed**
+  - [x] Added tracked Android templates:
+    - [x] `src-tauri/mobile/android/PathmodeBridge.kt`
+    - [x] `src-tauri/mobile/android/PathmodeGodotActivity.kt`
+  - [x] Added generated-project patch pipeline:
+    - [x] `scripts/apply-tauri-android-pathmode.js`
+    - [x] `scripts/run-tauri-android.js` now auto-applies patch before/after Android commands.
+  - [x] Added Android asset sync for `path_mode` into `src-tauri/gen/android/app/src/main/assets/path_mode`.
+
+- [x] **Exit back behavior implemented**
+  - [x] Godot `Exit` now quits Android Pathmode activity and returns to main Tauri window (`path_mode/scripts/path_renderer.gd`).
+
+- [x] **Android build path hardened**
+  - [x] Added Android-only cargo memory controls in runner (`CARGO_BUILD_JOBS`, release opt/codegen tuning).
+  - [x] Added patch logic for:
+    - [x] Godot Maven dependency and manifest merge rules
+    - [x] Kotlin plugin version alignment required by Godot Android artifact
+
+### Verification
+
+- [x] `npm run test:migration` -> PASS (`48` tests).
+- [x] `npm run test:tauri` -> PASS (`14` tests).
+- [x] `node scripts/run-tauri-android.js build` -> PASS.
+  - [x] APK: `src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk`
+  - [x] AAB: `src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab`
+
+### Scope Safety
+
+- [x] Desktop behavior unchanged.
+- [x] Web behavior unchanged.
+- [x] Android-only logic is capability-gated and build-script-gated.
+
+---
+
+## 中文文档
+
+### 本轮已实现
+
+- [x] **Android 方案 A 启动链路已落地**
+  - [x] 在 `src-tauri/src/lib.rs` 新增 Android 原生 Pathmode 启动命令：`open_native_pathmode`。
+  - [x] 新增运行时能力标记：`supports_native_pathmode`（Android=true，桌面/web=false）。
+  - [x] 更新前端 Path Mode 入口（`src/frontend/app.js`）：
+    - [x] Android 且能力开启时优先走原生启动
+    - [x] 桌面/web 维持原有网页 Path Mode 容器流程不变
+
+- [x] **Android 全屏 Godot Activity 桥接已落地**
+  - [x] 新增可追踪 Android 模板文件：
+    - [x] `src-tauri/mobile/android/PathmodeBridge.kt`
+    - [x] `src-tauri/mobile/android/PathmodeGodotActivity.kt`
+  - [x] 新增生成工程补丁流水线：
+    - [x] `scripts/apply-tauri-android-pathmode.js`
+    - [x] `scripts/run-tauri-android.js` 在 Android 命令前后自动补丁
+  - [x] 增加 `path_mode` 资源同步到 `src-tauri/gen/android/app/src/main/assets/path_mode`
+
+- [x] **Exit 返回行为已实现**
+  - [x] Godot 内点击 `Exit` 会退出 Android Pathmode Activity 并返回主 Tauri 窗口（`path_mode/scripts/path_renderer.gd`）。
+
+- [x] **Android 构建链路已加固**
+  - [x] 在 Android runner 增加 Cargo 内存控制（`CARGO_BUILD_JOBS`、release 优化/代码生成参数）。
+  - [x] 补丁脚本已处理：
+    - [x] Godot Maven 依赖与 Manifest 合并规则
+    - [x] 与 Godot Android 产物匹配所需的 Kotlin 插件版本对齐
+
+### 验证结果
+
+- [x] `npm run test:migration` -> 通过（`48` 项）。
+- [x] `npm run test:tauri` -> 通过（`14` 项）。
+- [x] `node scripts/run-tauri-android.js build` -> 通过。
+  - [x] APK：`src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk`
+  - [x] AAB：`src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab`
+
+### 影响范围安全性
+
+- [x] 桌面端行为不变。
+- [x] Web 端行为不变。
+- [x] Android 逻辑通过运行时能力门控与构建脚本门控隔离。
+
+---
+
+# 2026-03-03 v1.5.5 - Status Normalization Update (Proceeding)
+
+## English Document
+
+### Revalidated in This Round
+
+- [x] Re-ran migration gate suites:
+  - [x] `npm run test:migration` -> PASS (`44` tests).
+  - [x] `npm run test:tauri` -> PASS (`14` tests).
+- [x] Confirmed `v1.5.3` and `v1.5.4` closure items remain valid (P0 engineering + P1 runtime-boundary UI).
+- [x] Confirmed sidecar content-boundary checks and load/history contract tests remain green.
+
+### Backlog Hygiene
+
+- [x] Marked `v1.5.2` checklist as historical/superseded context to avoid execution ambiguity.
+- [x] Kept historical checklist body intact for traceability (no destructive edits).
+
+### Remaining Actionable Scope
+
+- [ ] Final mobile parity decision remains open at product level:
+  - [ ] Option A: implement Android-native build/content pipeline parity with desktop sidecar flow.
+  - [x] Option B (active policy): keep Android capability-gated cache/read runtime and document boundary explicitly.
+
+---
+
+## 中文文档
+
+### 本轮复验结果
+
+- [x] 已重新执行迁移闸门测试：
+  - [x] `npm run test:migration` -> 通过（`44` 项）。
+  - [x] `npm run test:tauri` -> 通过（`14` 项）。
+- [x] 已确认 `v1.5.3` 与 `v1.5.4` 收口项持续有效（P0 工程收口 + P1 运行时边界 UI）。
+- [x] 已确认 sidecar 内容边界校验与加载/历史契约测试持续通过。
+
+### 待办治理
+
+- [x] 已将 `v1.5.2` 清单标记为历史/已被后续版本覆盖，避免执行口径歧义。
+- [x] 保留历史清单正文用于追溯（不做破坏性删除）。
+
+### 当前仍可执行的剩余范围
+
+- [ ] 移动端最终对等策略仍为产品层待决项：
+  - [ ] 方案 A：实现与桌面 sidecar 等价的 Android 原生构建/内容链路。
+  - [x] 方案 B（当前执行策略）：维持 Android 能力门控的缓存/阅读运行时，并显式说明边界。
+
+---
+
+# 2026-03-03 v1.5.3 - Execution Progress Update (P0 Completed)
+
+## English Document
+
+### Completed in This Execution Round
+
+- [x] **Secure sidecar content API to match Rust boundary guarantees**
+  - [x] Enforced KB-root boundary checks for `/api/content` in `src/server.ts`.
+  - [x] Added regression tests for:
+    - [x] allowed inside-root absolute path
+    - [x] allowed legacy `Knowledge_Base` marker path
+    - [x] blocked outside-root path (`403`)
+
+- [x] **Lock cache prompt + single-load execution behavior (contract coverage)**
+  - [x] Added source-manager load-flow guard contract tests:
+    - [x] duplicate event-binding guard
+    - [x] in-progress click guard
+    - [x] single cache-choice prompt branch contract
+  - [x] Existing server-side restore/build dedupe tests remain passing.
+
+- [x] **Finalize Godot History consistency contract**
+  - [x] Added `record_navigation_node(node_id)` in `path_mode_ui.gd`.
+  - [x] Wired `path_renderer.gd` to record center-switch history on `render_path`.
+  - [x] Added regression contract test for history hook presence.
+
+- [x] **Final Go/No-Go technical gate (engineering portion)**
+  - [x] `npm run test:migration` -> PASS (`43` tests).
+  - [x] `npm run test:tauri` -> PASS (`14` tests).
+
+### Remaining Product Decision (Non-blocking to Desktop Stability)
+
+- [ ] Choose final mobile parity product scope:
+  - [ ] Option A: Android-native equivalent build runtime.
+  - [x] Option B (current active policy): cache/read-focused mobile runtime with explicit capability boundaries.
+
+---
+
+## 中文文档
+
+### 本轮执行已完成
+
+- [x] **将 sidecar 内容 API 安全边界提升至 Rust 同等级**
+  - [x] 在 `src/server.ts` 为 `/api/content` 增加 KB 根路径边界校验。
+  - [x] 新增回归测试覆盖：
+    - [x] 根目录内绝对路径可读取
+    - [x] 旧式 `Knowledge_Base` 标记路径可读取
+    - [x] 根目录外路径被拦截（`403`）
+
+- [x] **锁定缓存提示/单次加载语义（契约覆盖）**
+  - [x] 新增 source manager 加载流程契约测试：
+    - [x] 重复事件绑定防护
+    - [x] 加载进行中点击防重入
+    - [x] 单一缓存提示分支契约
+  - [x] 现有服务端 restore/build 去重测试持续通过。
+
+- [x] **完成 Godot History 一致性契约**
+  - [x] 在 `path_mode_ui.gd` 新增 `record_navigation_node(node_id)`。
+  - [x] 在 `path_renderer.gd` 的 `render_path` 中接入中心切换历史记录。
+  - [x] 新增历史记录钩子契约测试。
+
+- [x] **最终 Go/No-Go 技术闸门（工程部分）**
+  - [x] `npm run test:migration` -> 通过（`43` 项）。
+  - [x] `npm run test:tauri` -> 通过（`14` 项）。
+
+### 剩余产品决策（不阻塞桌面稳定性）
+
+- [ ] 确认移动端最终对等能力范围：
+  - [ ] 方案 A：实现 Android 原生等价构建运行时。
+  - [x] 方案 B（当前执行策略）：移动端聚焦缓存/阅读能力，并显式声明能力边界。
+
+---
+
 # 2026-03-03 v1.5.2 - Electron Removal Final Gate (Post-Audit Action Plan)
 
 ## English Document
+
+> Superseded Note (2026-03-03 v1.5.5): This section is preserved as historical plan context. P0/P1 closure evidence is recorded in `v1.5.3` and `v1.5.4` above. Unchecked boxes below are not current execution blockers unless explicitly reopened.
 
 **Audit Decision Snapshot**
 
@@ -53,6 +630,8 @@
 ---
 
 ## 中文文档
+
+> 覆盖说明（2026-03-03 v1.5.5）：本节作为历史计划上下文保留。P0/P1 收口证据已记录在上方 `v1.5.3` 与 `v1.5.4`。以下未勾选项默认不再作为当前执行阻塞，除非后续明确重开。
 
 **审计结论快照**
 

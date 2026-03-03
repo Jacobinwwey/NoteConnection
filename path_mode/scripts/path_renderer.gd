@@ -281,6 +281,9 @@ func render_path(path_data: Dictionary) -> void:
 	
 	_central_node = path_data.get("central", {})
 	_peripheral_nodes = path_data.get("peripherals", [])
+	var central_id: String = _central_node.get("id", "")
+	if ui and ui.has_method("record_navigation_node"):
+		ui.record_navigation_node(central_id)
 	
 	## Extract full path data for state machine
 	var total_nodes: int = path_data.get("totalNodes", 0)
@@ -702,6 +705,9 @@ func _on_exit_requested() -> void:
 	print("[PathRenderer] Exit Path Mode requested from Godot UI")
 	if ws_client and ws_client.has_method("send_exit_path_mode"):
 		ws_client.send_exit_path_mode()
+	if OS.get_name() == "Android":
+		# Android native Pathmode activity should return to Tauri window on Exit.
+		get_tree().quit()
 
 
 func _on_unmark_requested(node_id: String) -> void:

@@ -11,12 +11,14 @@ signal path_update(data: Dictionary)
 signal switch_center(new_center_id: String)
 signal completion_sync(completed_ids: Array, timestamp: int)
 
-const WS_URL := "ws://127.0.0.1:9876/?client=godot"
+const WS_URL := "ws://127.0.0.1:9876"
+const CLIENT_TAG := "godot"
 const RECONNECT_DELAY := 3.0
 
 var _socket := WebSocketPeer.new()
 var _connected := false
 var _reconnect_timer: Timer
+var _pending_messages: Array[Dictionary] = []
 
 
 func _ready() -> void:
@@ -61,6 +63,8 @@ func _handle_open_state() -> void:
 		_connected = true
 		connected.emit()
 		print("WsClient: Connected!")
+		_send_identify()
+		_flush_pending_messages()
 		
 		## Request initial path data
 		send_message({"type": "requestPath", "payload": {}})
@@ -90,6 +94,22 @@ func _schedule_reconnect() -> void:
 
 func _on_reconnect_timeout() -> void:
 	connect_to_server()
+
+
+func _send_identify() -> void:
+	send_message({
+		"type": "identify",
+		"payload": {"client": CLIENT_TAG}
+	})
+
+
+func _flush_pending_messages() -> void:
+	if _pending_messages.is_empty():
+		return
+	var queued: Array[Dictionary] = _pending_messages.duplicate(true)
+	_pending_messages.clear()
+	for message in queued:
+		send_message(message)
 
 
 func _parse_message(text: String) -> void:
@@ -126,7 +146,7 @@ func _parse_message(text: String) -> void:
 ## Send a message to the frontend
 func send_message(data: Dictionary) -> void:
 	if not _connected:
-		push_warning("WsClient: Cannot send, not connected")
+		_pending_messages.append(data.duplicate(true))
 		return
 	
 	var text := JSON.stringify(data)

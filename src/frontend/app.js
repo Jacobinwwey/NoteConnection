@@ -3026,7 +3026,37 @@ if (controlsPanelToggleTarget) {
 // Path Mode Integration (v1.1.0)
 const btnPathMode = document.getElementById('btn-path-mode');
 if (btnPathMode) {
-    btnPathMode.addEventListener('click', () => {
+    const tryOpenAndroidNativePathMode = async (selectedNode) => {
+        if (!window.__TAURI__ || !window.__TAURI__.core || typeof window.__TAURI__.core.invoke !== 'function') {
+            return false;
+        }
+
+        const caps = window.__NC_RUNTIME_CAPS || {};
+        if (!(caps.platform === 'android' && caps.supports_native_pathmode === true)) {
+            return false;
+        }
+
+        const request = {
+            mode: selectedNode ? 'diffusion' : 'domain',
+            strategy: 'foundational',
+            targetId: selectedNode ? selectedNode.id : null
+        };
+
+        try {
+            const launchResult = await window.__TAURI__.core.invoke('open_native_pathmode', { request });
+            if (launchResult && launchResult.launched === true) {
+                console.log('[Path Mode] Opened native Android Godot Pathmode activity.');
+                return true;
+            }
+            console.warn('[Path Mode] Native Android Pathmode launch was rejected:', launchResult);
+        } catch (err) {
+            console.error('[Path Mode] Failed to launch native Android Pathmode activity:', err);
+        }
+
+        return false;
+    };
+
+    btnPathMode.addEventListener('click', async () => {
         // v1.1.3: Robust Data Check
         // In Mini Build (Electron), `window.graphData` might be undefined, but `nodes` array in app.js is populated.
         // We check `nodes` length. Since `nodes` is local scope here, we use it directly.
@@ -3063,6 +3093,12 @@ if (btnPathMode) {
         const selectedNode = (highlightState && highlightState.currentNode) ? highlightState.currentNode : null;
         
         console.log('[Path Mode] Entering...', selectedNode ? `Target: ${selectedNode.id}` : 'Domain Mode');
+
+        // Android Option A: prefer native full-screen Godot activity without touching desktop/web flows.
+        const openedNativePathmode = await tryOpenAndroidNativePathMode(selectedNode);
+        if (openedNativePathmode) {
+            return;
+        }
         
         // UI Switch
         document.getElementById('graph-wrapper').style.display = 'none';

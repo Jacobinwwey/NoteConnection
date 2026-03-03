@@ -24,6 +24,8 @@ describe('dual mobile pipeline configuration', () => {
     const scripts = pkg.scripts || {};
 
     expect(scripts['verify:android:env']).toContain('verify-tauri-android-prereqs.js');
+    expect(scripts['tauri:android:patch:pathmode']).toContain('apply-tauri-android-pathmode.js');
+    expect(scripts['smoke:android:pathmode']).toContain('smoke-android-pathmode.js');
     expect(scripts['mobile:build:capacitor']).toBe('build_apk.bat');
     expect(scripts['tauri:android:init']).toContain('verify:android:env');
     expect(scripts['tauri:android:dev']).toContain('verify:android:env');
@@ -43,6 +45,7 @@ describe('dual mobile pipeline configuration', () => {
     expect(runnerScript).toContain("NOTE_CONNECTION_TAURI_ANDROID_TARGET");
     expect(runnerScript).toContain("return 'aarch64'");
     expect(runnerScript).toContain("['default', 'universal', 'all'].includes");
+    expect(runnerScript).toContain('apply-tauri-android-pathmode.js');
   });
 
   test('uses dist/src/frontend as the authoritative mobile web asset directory', () => {

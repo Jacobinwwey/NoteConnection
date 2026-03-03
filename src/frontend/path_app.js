@@ -77,10 +77,16 @@ window.pathApp = {
         );
 
         if (!hasActiveSocket) {
-            this.ws = new WebSocket(this._getBridgeWsUrl('frontend'));
+            this.ws = new WebSocket(this._getBridgeWsUrl());
         }
 
-        this.ws.onopen = () => console.log('[PathApp] Connected to Bridge');
+        this.ws.onopen = () => {
+            console.log('[PathApp] Connected to Bridge');
+            this.ws.send(JSON.stringify({
+                type: 'identify',
+                payload: { client: 'frontend' }
+            }));
+        };
         this.ws.onmessage = (e) => {
             try {
                 const msg = JSON.parse(e.data);
@@ -210,15 +216,21 @@ window.pathApp = {
 
         if (hasActiveSocket && this.ws.readyState === WebSocket.OPEN) {
             console.log('[PathApp] Reusing existing Bridge socket');
+            this.ws.send(JSON.stringify({
+                type: 'identify',
+                payload: { client: 'frontend' }
+            }));
         }
     },
 
-    _getBridgeWsUrl: function(clientTag = 'frontend') {
-        return `ws://localhost:9876?client=${encodeURIComponent(clientTag)}`;
+    _getBridgeWsUrl: function() {
+        return 'ws://localhost:9876';
     },
 
     _isTauriMode: function() {
-        return typeof window !== 'undefined' && !!window.__TAURI__;
+        const hasTauriGlobal = typeof window !== 'undefined' && !!window.__TAURI__;
+        const userAgent = typeof navigator !== 'undefined' ? String(navigator.userAgent || '') : '';
+        return hasTauriGlobal || userAgent.includes('Tauri');
     },
 
     _getModeValue: function() {
@@ -1322,10 +1334,14 @@ window.pathApp = {
         if (this.ws) return; // Already connected
         
         console.log('[PathApp] Setting up early WebSocket connection...');
-        this.ws = new WebSocket(this._getBridgeWsUrl('frontend-early'));
+        this.ws = new WebSocket(this._getBridgeWsUrl());
         
         this.ws.onopen = () => {
             console.log('[PathApp] Early WS Connected to Bridge');
+            this.ws.send(JSON.stringify({
+                type: 'identify',
+                payload: { client: 'frontend-early' }
+            }));
         };
         
         this.ws.onmessage = (e) => {
@@ -1387,7 +1403,7 @@ window.pathApp = {
 // === AUTO-CONNECT: Establish WebSocket immediately for Godot standalone support ===
 // This runs as soon as path_app.js is loaded, before init() is called.
 (function() {
-    const isTauri = typeof window !== 'undefined' && !!window.__TAURI__;
+    const isTauri = !!(window.pathApp && typeof window.pathApp._isTauriMode === 'function' && window.pathApp._isTauriMode());
     if (isTauri) {
         // Bridge-first Tauri: only connect when Path Mode is explicitly initialized.
         return;

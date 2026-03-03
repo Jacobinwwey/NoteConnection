@@ -1,3 +1,171 @@
+# 2026-03-03 v1.5.10
+
+## English Document
+
+### Option A P0 Status Update (Tauri Android Native Folder/Build/Content Flow)
+
+- Tauri Android runtime now supports native build flow without Node sidecar:
+  - Added Rust command `build_graph_runtime(request)` in `src-tauri/src/lib.rs`.
+  - Runtime graph artifacts are written into `runtime_data/`:
+    - `data.js`
+    - `graph_data.json`
+    - `data_<target>.js`
+    - `graph_data_<target>.json`
+- Android runtime capability profile is now:
+  - `supports_sidecar=false`
+  - `supports_build=true`
+  - `supports_content_api=true`
+- Frontend build routing in `src/frontend/source_manager.js`:
+  - sidecar available -> `POST /api/build`
+  - no sidecar + Tauri runtime -> `invoke('build_graph_runtime', { request })`
+- Verification:
+  - `npm run test:migration` -> passed (`55` tests)
+  - `npm run test:tauri` -> passed (`16` tests)
+  - `npm run verify:android:env` -> passed (SDK + cmdline-tools + NDK detected)
+
+### Scope Clarification
+
+- This closure applies to **Tauri Android runtime path**.
+- Capacitor packaging path is preserved, but runtime parity with desktop build backend is still tracked separately.
+- Historical sections below that mention `supports_build=false` are archived changelog context and are superseded by this update.
+
+---
+
+## 中文文档
+
+### 方案 A P0 状态更新（Tauri Android 原生目录/构建/内容链路）
+
+- Tauri Android 运行时现已支持无 Node sidecar 的原生构建：
+  - 在 `src-tauri/src/lib.rs` 新增 Rust 命令 `build_graph_runtime(request)`。
+  - 运行时图谱产物写入 `runtime_data/`：
+    - `data.js`
+    - `graph_data.json`
+    - `data_<target>.js`
+    - `graph_data_<target>.json`
+- Android 运行时能力画像已更新为：
+  - `supports_sidecar=false`
+  - `supports_build=true`
+  - `supports_content_api=true`
+- `src/frontend/source_manager.js` 中构建链路分流：
+  - 有 sidecar -> `POST /api/build`
+  - 无 sidecar 且为 Tauri 运行时 -> `invoke('build_graph_runtime', { request })`
+- 验证结果：
+  - `npm run test:migration` -> 通过（`55` 项）
+  - `npm run test:tauri` -> 通过（`16` 项）
+  - `npm run verify:android:env` -> 通过（SDK + cmdline-tools + NDK 已识别）
+
+### 范围说明
+
+- 本次收口适用于 **Tauri Android 运行时路径**。
+- Capacitor 打包路径继续保留，但其与桌面构建后端的运行时对等仍单独跟踪。
+- 下方历史版本中出现的 `supports_build=false` 为归档上下文，已由本节更新覆盖。
+
+---
+
+# 2026-03-03 v1.5.5
+
+## English Document
+
+### Migration Status Revalidation
+
+- Re-ran closure suites:
+  - `npm run test:migration` -> passed (`44` tests)
+  - `npm run test:tauri` -> passed (`14` tests)
+- P0/P1 closures from `v1.5.3` and `v1.5.4` remain valid.
+- `v1.5.2` checklist should be treated as historical/superseded plan context.
+
+### Active Scope
+
+- Desktop Tauri path is stable and remains the primary runtime.
+- Android runtime remains capability-gated by design:
+  - `supports_sidecar=false`
+  - `supports_build=false`
+  - cache/content-oriented flow only.
+- Remaining product decision:
+  - Option A: Android-native build/content parity with desktop sidecar flow.
+  - Option B (active): keep cache/read-focused mobile runtime boundary.
+
+---
+
+## 中文文档
+
+### 迁移状态复验
+
+- 已重新执行收口测试：
+  - `npm run test:migration` -> 通过（`44` 项）
+  - `npm run test:tauri` -> 通过（`14` 项）
+- `v1.5.3` 与 `v1.5.4` 的 P0/P1 收口结果持续有效。
+- `v1.5.2` 清单应视为历史/已被后续版本覆盖的计划上下文。
+
+### 当前有效范围
+
+- 桌面端 Tauri 路径稳定，继续作为主运行时。
+- Android 端按设计维持能力门控：
+  - `supports_sidecar=false`
+  - `supports_build=false`
+  - 以缓存/内容读取流程为主。
+- 剩余产品决策：
+  - 方案 A：实现与桌面 sidecar 等价的 Android 原生构建/内容链路。
+  - 方案 B（当前执行策略）：维持移动端缓存/阅读边界。
+
+---
+
+# 2026-03-03 v1.5.3
+
+## English Document
+
+### Migration Gate Closure Update
+
+- P0 engineering closure has been completed in this round:
+  - Sidecar `/api/content` now enforces KB-root boundary checks.
+  - Regression tests were added for inside-root, legacy `Knowledge_Base` marker, and outside-root rejection paths.
+  - Godot center-switch history recording contract was hardened and covered by tests.
+  - Source-manager single-load/cache-guard contracts were added to migration tests.
+- Latest verification:
+  - `npm run test:migration` -> passed (`43` tests)
+  - `npm run test:tauri` -> passed (`14` tests)
+
+### Runtime Policy (Current)
+
+- Desktop runtime is Tauri-first and stable.
+- Android runtime remains capability-gated by design:
+  - `supports_sidecar=false`
+  - `supports_build=false`
+  - cache/content-oriented flow only.
+
+### Archive Notice
+
+- Any Electron references in historical changelog sections below are **archived context only** and are not active release instructions.
+
+---
+
+## 中文文档
+
+### 迁移闸门收口更新
+
+- 本轮已完成 P0 工程收口：
+  - Sidecar `/api/content` 已增加 KB 根路径边界校验。
+  - 新增回归测试覆盖：根目录内路径、旧式 `Knowledge_Base` 标记路径、根目录外拒绝路径。
+  - Godot 中心切换历史记录契约已加固并纳入测试。
+  - Source Manager 单次加载/缓存防重入契约已纳入迁移测试。
+- 最新验证：
+  - `npm run test:migration` -> 通过（`43` 项）
+  - `npm run test:tauri` -> 通过（`14` 项）
+
+### 当前运行时策略
+
+- 桌面端运行时为 Tauri-first，且已稳定。
+- Android 端按设计维持能力门控：
+  - `supports_sidecar=false`
+  - `supports_build=false`
+  - 以缓存/内容读取流程为主。
+
+### 归档说明
+
+- 下方历史变更中的 Electron 内容均为**归档上下文**，不再作为当前发布执行指令。
+
+---
+
 # 2026-03-02 v1.5.1
 
 ## English Document

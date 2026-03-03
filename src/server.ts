@@ -105,6 +105,53 @@ function collectAvailableTargetsFromPath(kbRoot: string): string[] {
     return Array.from(targets).sort((a, b) => a.localeCompare(b));
 }
 
+function extractRelativePathFromKbMarker(rawFilePath: string): string | null {
+    const normalized = rawFilePath.replace(/\\/g, '/');
+    const lowered = normalized.toLowerCase();
+    const marker = '/knowledge_base/';
+    const markerNoPrefix = 'knowledge_base/';
+
+    const markerIndex = lowered.indexOf(marker);
+    if (markerIndex >= 0) {
+        const relative = normalized.slice(markerIndex + marker.length);
+        return relative.length > 0 ? relative : null;
+    }
+
+    if (lowered.startsWith(markerNoPrefix)) {
+        const relative = normalized.slice(markerNoPrefix.length);
+        return relative.length > 0 ? relative : null;
+    }
+
+    return null;
+}
+
+function resolveContentCandidatePath(kbRoot: string, rawFilePath: string): string {
+    const normalized = rawFilePath.replace(/\\/g, '/');
+    const normalizedCandidate = path.normalize(normalized);
+
+    if (path.isAbsolute(normalizedCandidate) && fs.existsSync(normalizedCandidate)) {
+        return normalizedCandidate;
+    }
+
+    const relativeFromKb = extractRelativePathFromKbMarker(rawFilePath);
+    if (relativeFromKb) {
+        return path.join(kbRoot, path.normalize(relativeFromKb));
+    }
+
+    if (path.isAbsolute(normalizedCandidate)) {
+        return normalizedCandidate;
+    }
+
+    return path.join(kbRoot, normalizedCandidate);
+}
+
+function isPathInsideRoot(candidatePath: string, rootPath: string): boolean {
+    const rootResolved = path.resolve(rootPath);
+    const candidateResolved = path.resolve(candidatePath);
+    const relative = path.relative(rootResolved, candidateResolved);
+    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
 // CLI Argument Parsing (v0.9.71 Fix)
 const args = process.argv.slice(2);
 let cliOptions: any = {};
@@ -357,22 +404,31 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         res.end(JSON.stringify({ error: 'Missing path parameter' }));
                         return;
                     }
-    
-                    // Security: Ensure path is within allowed directories
-                    
-                    const filePath = path.resolve(decodeURIComponent(requestedPath));
-                    
-                    // Allow if it exists and is a file
-                    // In Electron/Desktop mode, user trusts the local app, so stricter strict sandbox is less critical than web,
-                    // but we still check existence to avoid crashes.
-                    
-                    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+
+                    const decodedPath = decodeURIComponent(requestedPath);
+                    const kbRootCanonical = fs.realpathSync(KB_ROOT);
+                    const candidatePath = resolveContentCandidatePath(kbRootCanonical, decodedPath);
+
+                    if (!fs.existsSync(candidatePath)) {
                         res.writeHead(404, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ error: 'File not found' }));
                         return;
                     }
-    
-                    const content = fs.readFileSync(filePath, 'utf-8');
+
+                    const filePathCanonical = fs.realpathSync(candidatePath);
+                    if (!isPathInsideRoot(filePathCanonical, kbRootCanonical)) {
+                        res.writeHead(403, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'Requested file is outside configured knowledge base' }));
+                        return;
+                    }
+
+                    if (!fs.statSync(filePathCanonical).isFile()) {
+                        res.writeHead(404, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'File not found' }));
+                        return;
+                    }
+
+                    const content = fs.readFileSync(filePathCanonical, 'utf-8');
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ content }));
     
