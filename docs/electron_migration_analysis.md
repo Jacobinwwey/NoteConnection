@@ -1,3 +1,63 @@
+# 2026-03-02 v1.5.1 - Electron Decommission Readiness Addendum
+
+## English Document
+
+### Current Readiness Position
+
+The migration has reached functional parity on core runtime paths for Tauri desktop, but Electron cannot be removed immediately without controlled gating.
+
+### Ready Areas
+
+- Tauri sidecar startup and graph build pipeline are running in active development workflow.
+- Core folder/content/build flows have Tauri-capable backend pathways.
+- Godot Path Mode integration via PathBridge is active in the Tauri runtime.
+
+### Remaining Risk Before Full Electron Removal
+
+1. Cache reuse vs rebuild prompt parity must be fully deterministic in Tauri load flow.
+2. Duplicate load/build triggers under startup timing races must be fully eliminated.
+3. Godot history recording behavior for center-node transitions needs complete regression coverage.
+4. IPC surface audit must verify no production-critical path still relies on `window.electronAPI`.
+5. Export/release workflows must confirm both desktop and Android outputs remain reproducible.
+
+### Removal Gate Recommendation
+
+Electron removal should be executed only after a formal pass/fail gate:
+
+- All migration regression tests pass.
+- Manual scenario checklist (cache prompt, single load execution, history updates) passes.
+- Documentation and operator runbooks are updated for Tauri-only + dual Android output strategy.
+
+## 中文文档
+
+### 当前就绪结论
+
+迁移在 Tauri 桌面核心运行链路上已达到可用一致性，但在未完成闸门验收前，不建议立即移除 Electron。
+
+### 已就绪区域
+
+- Tauri Sidecar 启动与图构建流水线已可用于当前开发流程。
+- 核心文件夹/内容/构建流程已具备 Tauri 可用后端通路。
+- Godot Path Mode 已通过 PathBridge 接入 Tauri 运行时。
+
+### 完全移除 Electron 前的残余风险
+
+1. Tauri 加载流程中“缓存复用/重建提示”需达到完全确定性。
+2. 启动时序竞态导致的重复加载/构建触发需彻底消除。
+3. Godot 中心节点切换的 History 记录行为需完成回归覆盖。
+4. IPC 面需审计确认无生产关键路径仍依赖 `window.electronAPI`。
+5. 导出与发布流程需确认桌面与 Android 双产物可复现。
+
+### 下线闸门建议
+
+仅在正式闸门通过后执行 Electron 下线：
+
+- 迁移回归测试全部通过。
+- 手工关键场景（缓存提示、单次加载、历史记录）全部通过。
+- Tauri-only 与 Android 双产物策略的文档和运维流程已更新。
+
+---
+
 # In-Depth Analysis of Electron Codebase for Tauri Migration
 
 **Date**: 2026-02-27

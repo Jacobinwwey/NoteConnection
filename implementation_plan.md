@@ -1,3 +1,71 @@
+# 2026-03-02 v1.5.1 - Tauri Bridge-First Implementation Plan Update
+
+## English Document
+
+### Scope Alignment
+
+This update aligns the implementation plan with the current Electron-to-Tauri migration strategy:
+
+- Tauri as the primary desktop shell.
+- Godot as the Path Mode interactive surface.
+- Node sidecar as the graph build and runtime service.
+- Bridge-first message flow (`Godot <-> PathBridge <-> Backend`) as the default path.
+
+### Completed in Current Migration Cycle
+
+- Runtime path unification for sidecar execution and frontend asset resolution has been integrated across desktop runtime paths.
+- Worker path resolution has been stabilized for packaged sidecar execution to avoid `MODULE_NOT_FOUND` in worker threads.
+- Knowledge Base folder loading is now anchored to the configured project root path and no longer depends on Electron-only assumptions.
+- The `Path Mode` configuration migration has moved core controls into Godot-side UI while preserving browser toolbar behavior for browser mode.
+
+### Open Gaps and Risk Items
+
+- Cache-exists decision flow still requires strict regression verification in Tauri mini GPU runs to ensure users are prompted to reuse or rebuild.
+- Duplicate load cycles must remain guarded to prevent repeated build/restore actions after a single user click.
+- WebSocket client lifecycle still needs hardening to avoid redundant early connect/disconnect churn under startup timing races.
+- History tracking for center-node switches in Godot requires final behavioral verification.
+
+### Next Execution Steps
+
+1. Lock cache prompt + single-execution semantics with dedicated regression tests.
+2. Finalize websocket lifecycle guard rails and startup sequencing.
+3. Complete task-level parity checks for Electron IPC replacements and remove remaining implicit Electron dependencies.
+4. Keep dual-output mobile strategy: maintain Capacitor output while also enabling Tauri Android build path.
+
+## 中文文档
+
+### 范围对齐
+
+本次更新将实施计划与当前 Electron 到 Tauri 的迁移策略对齐：
+
+- 以 Tauri 作为桌面主壳层。
+- 以 Godot 作为 Path Mode 交互界面。
+- 以 Node Sidecar 作为图构建与运行时服务。
+- 默认采用 Bridge-first 消息链路（`Godot <-> PathBridge <-> Backend`）。
+
+### 当前迁移周期已完成项
+
+- 已完成 Sidecar 运行路径与前端资源路径的统一，提升桌面运行一致性。
+- 已稳定 Worker 路径解析，避免打包 Sidecar 下线程出现 `MODULE_NOT_FOUND`。
+- Knowledge Base 文件夹加载已锚定到配置的项目根路径，不再依赖 Electron 专属假设。
+- `Path Mode` 关键配置已迁移到 Godot 侧 UI，同时保留浏览器模式下 Web 工具栏行为。
+
+### 仍需收敛的缺口与风险
+
+- 在 Tauri mini GPU 运行中，缓存存在时“复用或重建”提示流程仍需严格回归验证。
+- 需要持续防止单次点击触发重复加载（重复 build/restore）。
+- WebSocket 客户端生命周期仍需加固，避免启动阶段时序竞争导致早期重复连接/断开。
+- Godot 中心节点切换的 History 记录仍需最终行为验收。
+
+### 下一步执行
+
+1. 通过专用回归测试锁定缓存提示与单次执行语义。
+2. 完成 websocket 生命周期防护与启动时序收敛。
+3. 完成 Electron IPC 替代项的逐任务一致性核验，并移除残余隐式 Electron 依赖。
+4. 保持移动端双输出策略：继续保留 Capacitor，同时并行支持 Tauri Android 产物链路。
+
+---
+
 # Implementation Plan - Implementing Lazy Loading for Prerequisites
 
 The goal is to allow users to investigate incomplete In-Degree information by explicitly expanding the context of a specific node, without overloading the view with the entire graph.

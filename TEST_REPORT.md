@@ -1,3 +1,289 @@
+# 2026-03-03 v1.5.2 - Electron to Tauri Migration Audit (Full Surface: Desktop + Capacitor + Tauri Android)
+
+## English Document
+
+### Objective
+
+Determine whether Electron-to-Tauri migration is successful at this stage, including:
+
+- Electron section replacement completeness (runtime + IPC + config behavior).
+- Input/output behavior parity (KB path, folder list, content read, build, cache, language, logs).
+- Export/build surface parity (desktop package, Capacitor APK, Tauri Android).
+- Risk impact if Electron is removed immediately.
+
+### Evidence Reviewed
+
+- Runtime/orchestration:
+  - `src/server.ts`
+  - `src/utils/RuntimePaths.ts`
+  - `src/core/PathBridge.ts`
+  - `src/frontend/source_manager.js`
+  - `src/frontend/reader.js`
+  - `src/frontend/i18n.js`
+  - `src-tauri/src/lib.rs`
+  - `src-tauri/tauri.conf.json`
+  - `src-tauri/tauri.android.conf.json`
+- Export/mobile pipelines:
+  - `package.json`
+  - `build_apk.bat`
+  - `capacitor.config.ts`
+  - `scripts/run-tauri-android.js`
+  - `scripts/verify-tauri-android-prereqs.js`
+- Regression status:
+  - `npm run test:migration` -> **PASS** (`35` tests)
+  - `npm run test:tauri` -> **PASS** (`14` tests)
+
+### Electron Surface Audit Result
+
+| Electron Baseline Surface | Current Tauri/Runtime Replacement | Status | Evidence |
+| --- | --- | --- | --- |
+| Main process shell (`main.ts`), preload bridge | Tauri Rust host + invoke commands + sidecar process orchestration | Replaced | `src-tauri/src/lib.rs` |
+| `getKbPath` / `setKbPath` | `get_kb_path` / `set_kb_path` commands + persisted config | Replaced | `lib.rs` commands + config read/write |
+| `getFolders` | sidecar `/api/folders` + Rust fallback `get_folders` | Replaced | `server.ts`, `lib.rs`, `source_manager.js` |
+| `getContent(path)` | sidecar `/api/content` + Rust fallback `read_node_content` | Replaced (with security gap on sidecar path) | `server.ts`, `reader.js`, `lib.rs` |
+| `buildGraph(opts)` | sidecar `POST /api/build` | Replaced (desktop) | `server.ts`, `source_manager.js` |
+| `checkCache` / `restoreCache` | sidecar API + Rust commands | Replaced | `server.ts`, `lib.rs`, `source_manager.js` |
+| `getUserLanguage` / `setUserLanguage` | Rust commands + i18n sync | Replaced | `lib.rs`, `i18n.js` |
+| Live build logs | Rust emits `build-log` from sidecar stdout/stderr | Replaced | `lib.rs`, `loading.js` |
+| Process lifecycle shutdown | `shutdown_child_processes` on window close | Replaced | `lib.rs` |
+
+### Export / Packaging Audit
+
+| Export Path | Current State | Parity vs Electron-era expectation |
+| --- | --- | --- |
+| Desktop packaging | Tauri desktop build path exists and is test-covered | Good for desktop migration |
+| Capacitor Android (`build_apk.bat`) | Build path maintained and still operational | Build/export available, but runtime feature parity is web-asset-level only |
+| Tauri Android (`tauri android build`) | Build path operational; Android config excludes desktop sidecars | Packaging works, full runtime parity intentionally not complete |
+
+### Migration Verdict
+
+#### 1) Desktop Tauri migration
+
+- **Status**: **Successful overall**.
+- Core Electron responsibilities have active Tauri replacements.
+- Automated regression evidence is strong (`35 + 14` tests passing).
+
+#### 2) Full-scope migration (including Capacitor/Tauri Android runtime behavior)
+
+- **Status**: **Not fully complete**.
+- Mobile parity is intentionally constrained:
+  - Android runtime capabilities disable sidecar/build (`supports_sidecar: false`, `supports_build: false`).
+  - Capacitor export route packages frontend assets but does not deliver desktop-equivalent local sidecar workflow.
+
+### Risks If Electron Is Removed Immediately
+
+| Risk | Severity | Impact | Current Trigger |
+| --- | --- | --- | --- |
+| Mobile runtime parity gap (`/api/build` equivalent absent) | High | Users may assume full desktop-like build features on mobile and fail at runtime | Android capability profile intentionally disables build |
+| Sidecar `/api/content` path boundary is weaker than Rust content command | High | Possible file-read exposure risk on desktop sidecar HTTP surface | `server.ts` content API resolves absolute path without KB-root boundary enforcement |
+| Cache prompt/single-load UX regressions are not fully E2E-covered | Medium | Duplicate prompt/load or user confusion under startup timing races | User-reported scenarios are only partially covered by unit/regression tests |
+| Godot history update behavior not fully contract-tested | Medium | Learning history panel may miss center-switch transitions | No dedicated automated scenario assertion for this interaction path |
+| Documentation drift in historical Electron sections | Low | Team confusion about current authoritative runtime | Legacy historical sections still exist by design |
+
+### Removal Decision
+
+- **Desktop-only decision**: Electron removal is technically acceptable with current architecture.
+- **Whole-project decision (desktop + mobile parity)**: Do **not** declare migration fully complete yet; keep a final parity closure phase focused on Android/runtime UX and sidecar security hardening.
+
+---
+
+## 中文文档
+
+### 目标
+
+判断当前 Electron -> Tauri 迁移是否成功，覆盖以下范围：
+
+- Electron 模块替换完整性（运行时 + IPC + 配置行为）。
+- 输入/输出能力对齐（KB 路径、目录列表、内容读取、构建、缓存、语言、日志）。
+- 导出/打包能力对齐（桌面包、Capacitor APK、Tauri Android）。
+- 立即移除 Electron 的风险影响。
+
+### 审计证据
+
+- 运行时/编排层：
+  - `src/server.ts`
+  - `src/utils/RuntimePaths.ts`
+  - `src/core/PathBridge.ts`
+  - `src/frontend/source_manager.js`
+  - `src/frontend/reader.js`
+  - `src/frontend/i18n.js`
+  - `src-tauri/src/lib.rs`
+  - `src-tauri/tauri.conf.json`
+  - `src-tauri/tauri.android.conf.json`
+- 导出/移动端链路：
+  - `package.json`
+  - `build_apk.bat`
+  - `capacitor.config.ts`
+  - `scripts/run-tauri-android.js`
+  - `scripts/verify-tauri-android-prereqs.js`
+- 回归结果：
+  - `npm run test:migration` -> **通过**（`35` 项）
+  - `npm run test:tauri` -> **通过**（`14` 项）
+
+### Electron 能力面审计结论
+
+| Electron 基线能力 | 当前 Tauri/运行时替代 | 状态 | 证据 |
+| --- | --- | --- | --- |
+| 主进程外壳（`main.ts`）与 preload 桥 | Tauri Rust 宿主 + invoke 命令 + sidecar 进程编排 | 已替代 | `src-tauri/src/lib.rs` |
+| `getKbPath` / `setKbPath` | `get_kb_path` / `set_kb_path` 命令 + 配置持久化 | 已替代 | `lib.rs` 配置读写 |
+| `getFolders` | sidecar `/api/folders` + Rust 回退 `get_folders` | 已替代 | `server.ts`、`lib.rs`、`source_manager.js` |
+| `getContent(path)` | sidecar `/api/content` + Rust 回退 `read_node_content` | 已替代（但 sidecar 路径有安全缺口） | `server.ts`、`reader.js`、`lib.rs` |
+| `buildGraph(opts)` | sidecar `POST /api/build` | 已替代（桌面） | `server.ts`、`source_manager.js` |
+| `checkCache` / `restoreCache` | sidecar API + Rust 命令双路径 | 已替代 | `server.ts`、`lib.rs`、`source_manager.js` |
+| `getUserLanguage` / `setUserLanguage` | Rust 命令 + i18n 同步 | 已替代 | `lib.rs`、`i18n.js` |
+| 构建日志流 | Rust 转发 sidecar stdout/stderr 为 `build-log` | 已替代 | `lib.rs`、`loading.js` |
+| 子进程退出收敛 | 关闭窗口时执行 `shutdown_child_processes` | 已替代 | `lib.rs` |
+
+### 导出/打包审计
+
+| 导出路径 | 当前状态 | 与 Electron 时代预期对齐程度 |
+| --- | --- | --- |
+| 桌面打包 | Tauri 桌面构建链路存在且有测试覆盖 | 桌面迁移良好 |
+| Capacitor Android（`build_apk.bat`） | 构建链路保留且可运行 | 可导出，但运行时能力仅为 Web 资产层 |
+| Tauri Android（`tauri android build`） | 构建链路可用；Android 配置排除桌面 sidecar | 可打包，但完整运行时对等尚未完成 |
+
+### 迁移判定
+
+#### 1) 桌面 Tauri 迁移
+
+- **状态**：**总体成功**。
+- Electron 的核心职责已有可运行 Tauri 替代。
+- 自动化证据较强（`35 + 14` 回归通过）。
+
+#### 2) 全范围迁移（含 Capacitor/Tauri Android 运行时）
+
+- **状态**：**尚未完全完成**。
+- 移动端对等能力目前是有意收敛状态：
+  - Android 能力配置禁用 sidecar/build（`supports_sidecar: false`，`supports_build: false`）。
+  - Capacitor 导出链路可打包前端，但不等价于桌面 sidecar 本地构建工作流。
+
+### 立即移除 Electron 的风险
+
+| 风险项 | 严重度 | 影响 | 触发点 |
+| --- | --- | --- | --- |
+| 移动端缺少 `/api/build` 等价能力 | 高 | 用户在移动端可能误判为可执行完整桌面构建，导致运行失败 | Android 能力配置中明确禁用 build |
+| sidecar `/api/content` 边界弱于 Rust 内容命令 | 高 | 桌面 sidecar HTTP 面存在文件读取暴露风险 | `server.ts` 内容 API 未强制 KB 根路径边界 |
+| 缓存提示/单次加载 UX 尚未完整 E2E 覆盖 | 中 | 启动竞态下可能出现重复提示或重复加载 | 用户场景仅部分被单元/回归测试覆盖 |
+| Godot History 更新行为缺少完整契约测试 | 中 | 中心节点切换后历史面板可能漏记 | 尚无该交互的专门自动化断言 |
+| 历史 Electron 文档段落仍较多 | 低 | 团队对“当前权威路径”理解可能产生偏差 | 为保留历史而存在的旧段落 |
+
+### 移除决策
+
+- **仅桌面维度**：按当前架构可执行 Electron 清退。
+- **全项目维度（含移动端对等）**：当前不应宣称“迁移完全完成”；应保留最后一轮对等收口，重点在 Android 运行时与 sidecar 安全加固。
+
+---
+
+# 2026-03-02 v1.5.1 - Runtime Parity Verification Update (Desktop + Android)
+
+## English Document
+
+### Scope
+
+Validate newly introduced runtime parity contracts after Electron-to-Tauri migration hardening:
+
+- sidecar + Rust target discovery parity
+- Rust content-read fallback for non-sidecar runtime
+- cache-only UX behavior in `supports_build=false` runtime
+- Android build pipeline stability (default + universal path)
+
+### Verification Results
+
+#### 1) Migration regression suite
+
+- Command: `npm run test:migration`
+- Result: **PASS**
+- Evidence: `35` tests passed.
+
+#### 2) Rust/Tauri regression suite
+
+- Command: `npm run test:tauri`
+- Result: **PASS**
+- Evidence: `14` tests passed.
+
+#### 3) Android build (arm64 default path)
+
+- Command: `npm run tauri:android:build`
+- Result: **PASS**
+- Artifacts:
+  - `src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk`
+  - `src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab`
+
+#### 4) Android build (universal opt-in path)
+
+- Command: `npm run tauri:android:build:universal`
+- Result: **PASS**
+- Notes:
+  - Confirms opt-in multi-ABI command path remains functional.
+
+### New Interface Contracts Covered
+
+- Sidecar endpoint: `GET /api/available-targets`
+- Rust command: `get_available_targets`
+- Rust command: `read_node_content(file_path)`
+- Reader fallback order: sidecar content API -> Rust content command -> localized error text
+
+### Residual Risk
+
+- Android runtime still lacks in-app build parity (`/api/build` equivalent).
+- Path Mode / Godot Android runtime strategy remains open.
+
+---
+
+## 中文文档
+
+### 范围
+
+验证 Electron -> Tauri 迁移加固后新增的运行时对齐契约：
+
+- sidecar 与 Rust 的目标发现能力对齐
+- 无 sidecar 运行时的 Rust 内容读取回退
+- `supports_build=false` 场景下仅缓存 UX
+- Android 构建流水线稳定性（默认 + universal）
+
+### 验证结果
+
+#### 1) 迁移回归测试集
+
+- 命令：`npm run test:migration`
+- 结果：**通过**
+- 证据：共 `35` 项测试通过。
+
+#### 2) Rust/Tauri 回归测试集
+
+- 命令：`npm run test:tauri`
+- 结果：**通过**
+- 证据：共 `14` 项测试通过。
+
+#### 3) Android 构建（arm64 默认路径）
+
+- 命令：`npm run tauri:android:build`
+- 结果：**通过**
+- 产物：
+  - `src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk`
+  - `src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab`
+
+#### 4) Android 构建（universal 可选路径）
+
+- 命令：`npm run tauri:android:build:universal`
+- 结果：**通过**
+- 说明：
+  - 证明可选多 ABI 命令路径可正常工作。
+
+### 本轮覆盖的新接口契约
+
+- sidecar 端点：`GET /api/available-targets`
+- Rust 命令：`get_available_targets`
+- Rust 命令：`read_node_content(file_path)`
+- Reader 回退顺序：sidecar 内容 API -> Rust 内容命令 -> 本地化错误提示
+
+### 剩余风险
+
+- Android 端仍缺少应用内构建对等能力（`/api/build` 等价实现未完成）。
+- Path Mode / Godot 的 Android 运行时策略仍待定。
+
+---
+
 # 2026-03-02 v1.5.0 - Tauri Android Build Recovery Validation (Arm64)
 
 ## English Document

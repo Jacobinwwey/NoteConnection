@@ -157,6 +157,7 @@ describe('server migration settings routes', () => {
 
     temp.file(path.join('project', 'dist', 'src', 'frontend', 'data_financial.js'), 'const graphData = {"nodes":[{"id":"F"}]};');
     temp.file(path.join('project', 'dist', 'src', 'frontend', 'graph_data_financial.json'), '{"nodes":[{"id":"F"}],"links":[]}');
+    temp.file(path.join('project', 'runtime_data', 'data_robotics.js'), 'const graphData = {"nodes":[{"id":"R"}]};');
 
     envRestorers = [];
     envRestorers.push(setEnv('NOTE_CONNECTION_PROJECT_ROOT', projectRoot));
@@ -215,6 +216,12 @@ describe('server migration settings routes', () => {
     const response = await requestJson(port, 'GET', '/api/folders');
     expect(response.status).toBe(200);
     expect(response.body.folders).toEqual(['financial', 'legal']);
+  });
+
+  test('merges available targets from folders and cached graph artifacts', async () => {
+    const response = await requestJson(port, 'GET', '/api/available-targets');
+    expect(response.status).toBe(200);
+    expect(response.body.targets).toEqual(['financial', 'legal', 'robotics']);
   });
 
   test('check-cache and restore-cache endpoints work for named targets', async () => {

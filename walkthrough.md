@@ -1,3 +1,73 @@
+# 2026-03-02 v1.5.1 - Tauri/Godot Migration Walkthrough Addendum
+
+## English Document
+
+### Runtime Walkthrough (Current)
+
+This addendum documents the current Bridge-first runtime flow after migration progress:
+
+1. Tauri launches the Rust host process.
+2. Rust spawns the Node sidecar and Godot executable.
+3. Godot connects to PathBridge (`ws://127.0.0.1:9876`).
+4. Backend receives configuration/path actions through bridge messages.
+5. Graph data is restored from cache or rebuilt and then synchronized to frontend/Godot consumers.
+
+### What Is Working
+
+- Sidecar startup and graph build pipeline execute successfully in Tauri mini GPU runs.
+- Worker-thread graph stages (keyword/statistical/layout workers) resolve from runtime paths correctly in sidecar execution.
+- Path Mode control migration is operational with Godot-driven settings and actions.
+
+### What Still Needs Verification
+
+- Existing-data prompt behavior must consistently ask users to reuse cache or rebuild before load.
+- Startup should avoid duplicate load execution after a single load action.
+- WebSocket startup sequencing should avoid redundant early disconnect/reconnect cycles.
+- History recording should capture center-node switching triggered by double-click navigation in Godot.
+
+### Validation Checklist
+
+1. Run `npm run tauri:dev:mini:gpu`.
+2. Select a source that already has cached data.
+3. Confirm exactly one prompt appears and exactly one load path executes.
+4. Confirm no duplicate build/restore in sidecar logs.
+5. Confirm History list updates when switching central nodes in Godot.
+
+## 中文文档
+
+### 当前运行链路说明
+
+本补充说明记录了迁移后 Bridge-first 的当前运行流程：
+
+1. Tauri 启动 Rust 宿主进程。
+2. Rust 拉起 Node Sidecar 与 Godot 可执行文件。
+3. Godot 连接 PathBridge（`ws://127.0.0.1:9876`）。
+4. 后端通过桥接消息接收配置与路径动作。
+5. 图数据从缓存恢复或重新构建后，同步给前端/Godot 使用方。
+
+### 已可用能力
+
+- 在 Tauri mini GPU 运行下，Sidecar 启动与图构建流水线可正常执行。
+- 图构建的 worker 阶段（关键词/统计/布局）在 Sidecar 运行时路径解析正确。
+- Path Mode 控制迁移已可用，由 Godot 侧设置与动作驱动。
+
+### 仍需验证项
+
+- 缓存已存在时，应稳定提示用户选择复用缓存或重建。
+- 单次加载动作不应触发重复执行。
+- WebSocket 启动时序应避免早期重复断开/重连。
+- Godot 双击切换中心节点时，History 记录应同步更新。
+
+### 验证清单
+
+1. 运行 `npm run tauri:dev:mini:gpu`。
+2. 选择一个已有缓存数据的源。
+3. 确认只出现一次提示，且只执行一次加载路径。
+4. 确认 Sidecar 日志中无重复 build/restore。
+5. 确认 Godot 切换中心节点后 History 列表有记录。
+
+---
+
 # Path Mode Improvements Walkthrough
 
 ## 1. Critical Fix: Navigation Failure

@@ -57,6 +57,54 @@ function generatedAssetWritePath(filename: string): string {
     return path.join(RUNTIME_DATA_DIR, filename);
 }
 
+function parseCachedTargetFromFileName(filename: string): string | null {
+    if (filename.startsWith('data_cli_') || filename.startsWith('graph_data_cli_')) {
+        return null;
+    }
+
+    const dataMatch = /^data_([a-z0-9_\-]+)\.js$/i.exec(filename);
+    if (dataMatch && dataMatch[1]) {
+        return dataMatch[1];
+    }
+
+    const graphMatch = /^graph_data_([a-z0-9_\-]+)\.json$/i.exec(filename);
+    if (graphMatch && graphMatch[1]) {
+        return graphMatch[1];
+    }
+
+    return null;
+}
+
+function collectAvailableTargetsFromPath(kbRoot: string): string[] {
+    const targets = new Set<string>();
+
+    if (fs.existsSync(kbRoot)) {
+        const entries = fs.readdirSync(kbRoot, { withFileTypes: true });
+        entries
+            .filter((entry) => entry.isDirectory())
+            .forEach((entry) => targets.add(entry.name));
+    }
+
+    [RUNTIME_DATA_DIR, FRONTEND_DIR].forEach((dir) => {
+        if (!fs.existsSync(dir)) {
+            return;
+        }
+
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        entries.forEach((entry) => {
+            if (!entry.isFile()) {
+                return;
+            }
+            const parsed = parseCachedTargetFromFileName(entry.name);
+            if (parsed) {
+                targets.add(parsed);
+            }
+        });
+    });
+
+    return Array.from(targets).sort((a, b) => a.localeCompare(b));
+}
+
 // CLI Argument Parsing (v0.9.71 Fix)
 const args = process.argv.slice(2);
 let cliOptions: any = {};
@@ -279,6 +327,20 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 } catch (error) {
                     console.error(error);
                     CrashLogger.log(error, 'API:GET /api/folders');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: String(error) }));
+                }
+                return;
+            }
+
+            if (req.url === '/api/available-targets') {
+                try {
+                    const targets = collectAvailableTargetsFromPath(KB_ROOT);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ targets }));
+                } catch (error) {
+                    console.error(error);
+                    CrashLogger.log(error, 'API:GET /api/available-targets');
                     res.writeHead(500, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ error: String(error) }));
                 }

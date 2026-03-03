@@ -1,3 +1,61 @@
+# 2026-03-02 v1.5.1 - Tauri Taskboard Refresh (Desktop + Android + Godot Bridge)
+
+## English Document
+
+### Updated Objective
+
+Complete migration from Electron-primary runtime to Tauri-primary runtime while preserving compatibility for:
+
+- Desktop (Windows) with Godot Path Mode integration.
+- Android dual output strategy (Capacitor retained + Tauri Android enabled).
+- Existing build and cache workflows required by NoteConnection graph generation.
+
+### Execution Status (v1.5.1)
+
+- [x] Tauri desktop sidecar architecture is operational.
+- [x] PathBridge communication between backend and Godot is operational.
+- [x] Runtime path handling has been aligned for sidecar execution.
+- [x] Worker module resolution issues in sidecar runtime have been addressed.
+- [ ] Cache decision UX parity (reuse vs rebuild prompt) still needs locked regression validation.
+- [ ] Duplicate execution prevention for load flow still needs final startup-race hardening.
+- [ ] Godot history synchronization on center-switch interactions still needs final verification.
+- [ ] Final Electron removal gate review remains pending.
+
+### Remaining P1.5 Deliverables
+
+1. Keep Capacitor build route healthy (`build_apk.bat`) as a maintained output.
+2. Keep Tauri Android route functional and documented for reproducible builds.
+3. Keep runtime behavior parity across Electron baseline and Tauri runtime for all critical data paths.
+
+## 中文文档
+
+### 更新目标
+
+在保持兼容性的前提下，完成从 Electron 主运行时到 Tauri 主运行时的迁移：
+
+- 桌面端（Windows）并集成 Godot Path Mode。
+- Android 双产物策略（保留 Capacitor，同步支持 Tauri Android）。
+- 保持 NoteConnection 图构建所需的现有构建与缓存流程。
+
+### 执行状态（v1.5.1）
+
+- [x] Tauri 桌面 Sidecar 架构可运行。
+- [x] 后端与 Godot 的 PathBridge 通信可运行。
+- [x] Sidecar 运行时路径处理已对齐。
+- [x] Sidecar 运行时 Worker 模块路径问题已处理。
+- [ ] 缓存选择交互（复用/重建提示）一致性仍需锁定回归验证。
+- [ ] 加载流程防重复执行仍需完成启动竞态加固。
+- [ ] Godot 中心切换交互下的 History 同步仍需最终验证。
+- [ ] Electron 下线闸门审查仍待完成。
+
+### P1.5 余下交付
+
+1. 保持 Capacitor 构建链路可用（`build_apk.bat`）并持续维护。
+2. 保持 Tauri Android 构建链路可用，并补齐可复现构建文档。
+3. 在所有关键数据路径上，确保 Tauri 运行时与 Electron 基线行为一致。
+
+---
+
 # Phase 1: Tauri 2.0 Architecture Unification (Single Window & Unified Logs)
 
 This checklist tracks the implementation of migrating the primary project shell from Electron to Tauri 2.0 to solve cross-platform (Windows/Android) packaging, debugging unification, and dual-window layout issues.

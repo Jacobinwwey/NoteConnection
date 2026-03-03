@@ -1,3 +1,83 @@
+# 2026-03-02 v1.5.1 - Tauri Architecture Unification (Runtime Parity Update)
+
+## English Document
+
+### Why This Brainstorming Addendum
+
+The original migration blueprint focused on replacing Electron shell behavior with Tauri and proving cross-platform packaging feasibility. After recent implementation rounds, the architecture has moved from "build-chain readiness" to "runtime parity hardening."
+
+### Newly Validated Decisions
+
+1. Keep **desktop-first sidecar + Godot** architecture intact for performance-intensive rendering.
+2. Keep **Tauri Android** as an officially supported mobile build path alongside Capacitor.
+3. Apply **capability gating** at runtime rather than forcing desktop assumptions onto Android:
+   - sidecar availability
+   - build capability
+   - content API capability
+4. Introduce parity APIs that work in both sidecar and Rust IPC paths:
+   - Available target discovery (`available-targets` model)
+   - Node content retrieval (`read_node_content` model)
+
+### Architecture Implication (Current State)
+
+- Desktop:
+  - Sidecar APIs + Godot bridge remain primary.
+  - Full build path supported.
+- Android:
+  - Build artifacts pipeline is stable (`tauri android build` pass).
+  - Runtime now supports cache loading + content read fallback through Rust IPC.
+  - In-app graph build remains intentionally disabled pending Android-native storage/import flow.
+
+### Open Strategic Decisions
+
+1. **Android in-app build parity**:
+   - whether to implement SAF-driven local folder ingest + incremental build service, or
+   - keep Android as cache-consumption runtime in current release line.
+2. **Path Mode/Godot on Android**:
+   - keep desktop-only with explicit UX messaging, or
+   - define an Android-native renderer alternative (WebGL/Canvas or Godot Android strategy).
+
+---
+
+## 中文文档
+
+### 本次补充脑暴的原因
+
+原始迁移蓝图主要解决 Electron 外壳替换、跨平台打包可行性与统一调试问题。经过最近几轮落地后，当前重点已经从“能构建”推进到“运行时能力对等”。
+
+### 已验证的新决策
+
+1. 保持 **桌面端 sidecar + Godot** 主架构不变，以保障高负载渲染性能。
+2. 保持 **Tauri Android** 与 Capacitor 并行，作为正式移动端构建路径。
+3. 对 Android 采用 **运行时能力门控**，不强行套用桌面前提：
+   - sidecar 可用性
+   - 本地构建能力
+   - 内容读取能力
+4. 新增可在 sidecar 与 Rust IPC 双路径复用的对齐接口：
+   - 可用目标发现（`available-targets` 语义）
+   - 节点内容读取（`read_node_content` 语义）
+
+### 架构含义（当前状态）
+
+- 桌面端：
+  - 继续以 Sidecar API + Godot Bridge 为主路径。
+  - 支持完整本地构建。
+- Android 端：
+  - 构建链路已稳定（`tauri android build` 已实测通过）。
+  - 运行时已支持缓存加载 + Rust IPC 内容读取回退。
+  - 应用内图谱构建仍暂未开放，等待 Android 原生存储/导入方案。
+
+### 仍需决策的战略问题
+
+1. **Android 应用内构建对等**：
+   - 是实现基于 SAF 的本地目录导入 + 增量构建服务，还是
+   - 在当前发布阶段继续定位为“缓存消费型”运行时。
+2. **Path Mode/Godot 的 Android 路线**：
+   - 保持仅桌面可用并明确提示，还是
+   - 定义 Android 原生渲染替代方案（WebGL/Canvas 或 Godot Android 路线）。
+
+---
+
 # Tauri Architecture Unification: Comprehensive Blueprint
 
 **Date:** 2026-02-27

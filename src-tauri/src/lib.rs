@@ -628,7 +628,7 @@ fn get_runtime_capabilities() -> RuntimeCapabilities {
             platform: "android".to_string(),
             supports_sidecar: false,
             supports_build: false,
-            supports_content_api: false,
+            supports_content_api: true,
             supports_kb_runtime_change: false,
         };
     }
@@ -727,6 +727,77 @@ fn restore_cache(target: String) -> Result<bool, String> {
     restore_cache_for_target(&runtime_data_dir, &frontend_dir, &target)
 }
 
+fn extract_relative_path_from_kb_marker(raw_file_path: &str) -> Option<PathBuf> {
+    let normalized = raw_file_path.replace('\\', "/");
+    let lowered = normalized.to_ascii_lowercase();
+    let marker = "/knowledge_base/";
+
+    if let Some(idx) = lowered.find(marker) {
+        let start = idx + marker.len();
+        let relative = &normalized[start..];
+        if !relative.is_empty() {
+            return Some(PathBuf::from(relative));
+        }
+    }
+
+    let marker_no_prefix = "knowledge_base/";
+    if lowered.starts_with(marker_no_prefix) {
+        let relative = &normalized[marker_no_prefix.len()..];
+        if !relative.is_empty() {
+            return Some(PathBuf::from(relative));
+        }
+    }
+
+    None
+}
+
+fn resolve_content_candidate_path(kb_root: &Path, raw_file_path: &str) -> PathBuf {
+    let normalized = raw_file_path.replace('\\', "/");
+    let normalized_candidate = PathBuf::from(normalized);
+
+    if normalized_candidate.is_absolute() && normalized_candidate.exists() {
+        return normalized_candidate;
+    }
+
+    if let Some(relative_from_kb) = extract_relative_path_from_kb_marker(raw_file_path) {
+        return kb_root.join(relative_from_kb);
+    }
+
+    if normalized_candidate.is_absolute() {
+        normalized_candidate
+    } else {
+        kb_root.join(normalized_candidate)
+    }
+}
+
+#[tauri::command]
+fn read_node_content(file_path: String) -> Result<String, String> {
+    if file_path.trim().is_empty() {
+        return Err("Missing file path".to_string());
+    }
+
+    let kb_root = PathBuf::from(resolve_kb_path_from_config());
+    let kb_root_canonical = fs::canonicalize(&kb_root)
+        .map_err(|err| format!("Failed to resolve knowledge base root: {}", err))?;
+
+    let candidate_path = resolve_content_candidate_path(&kb_root_canonical, &file_path);
+    let canonical_path = fs::canonicalize(&candidate_path)
+        .map_err(|err| format!("Failed to resolve content file path: {}", err))?;
+
+    if !canonical_path.starts_with(&kb_root_canonical) {
+        return Err("Requested file is outside configured knowledge base".to_string());
+    }
+
+    let metadata = fs::metadata(&canonical_path)
+        .map_err(|err| format!("Failed to read file metadata: {}", err))?;
+    if !metadata.is_file() {
+        return Err("Requested path is not a file".to_string());
+    }
+
+    fs::read_to_string(&canonical_path)
+        .map_err(|err| format!("Failed to read file content: {}", err))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -748,7 +819,8 @@ pub fn run() {
             set_user_language,
             get_user_language,
             check_cache,
-            restore_cache
+            restore_cache,
+            read_node_content
         ])
         .setup(|app| {
             let startup_kb_path = ensure_startup_kb_path();
@@ -1109,7 +1181,7 @@ mod tests {
             assert_eq!(caps.platform, "android");
             assert!(!caps.supports_sidecar);
             assert!(!caps.supports_build);
-            assert!(!caps.supports_content_api);
+            assert!(caps.supports_content_api);
             assert!(!caps.supports_kb_runtime_change);
         } else {
             assert!(caps.supports_sidecar);
@@ -1157,6 +1229,62 @@ mod tests {
 
         let result = persist_kb_path(missing_dir.to_string_lossy().as_ref());
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn read_node_content_supports_absolute_and_relative_paths_within_kb_root() {
+        let _lock = test_env_lock().lock().expect("failed to lock test env");
+        let temp = TempDir::new("read_node_content_ok");
+        let config_file = temp.child("kb_config.json");
+        let kb_dir = temp.child("Knowledge_Base");
+        let note_dir = kb_dir.join("financial");
+        let note_file = note_dir.join("overview.md");
+
+        fs::create_dir_all(&note_dir).expect("failed to create note directory");
+        fs::write(&note_file, "# Financial Overview").expect("failed to write note file");
+
+        let _config_guard = EnvVarGuard::set(
+            "NOTE_CONNECTION_CONFIG_PATH",
+            config_file.to_string_lossy().as_ref(),
+        );
+        persist_kb_path(kb_dir.to_string_lossy().as_ref())
+            .expect("persist_kb_path should succeed");
+
+        let absolute_result =
+            read_node_content(note_file.to_string_lossy().to_string()).expect("absolute read failed");
+        assert!(absolute_result.contains("Financial Overview"));
+
+        let relative_result =
+            read_node_content("financial/overview.md".to_string()).expect("relative read failed");
+        assert!(relative_result.contains("Financial Overview"));
+
+        let windows_style_path = "E:\\legacy\\Knowledge_Base\\financial\\overview.md".to_string();
+        let legacy_result =
+            read_node_content(windows_style_path).expect("legacy windows-style path read failed");
+        assert!(legacy_result.contains("Financial Overview"));
+    }
+
+    #[test]
+    fn read_node_content_rejects_file_outside_kb_root() {
+        let _lock = test_env_lock().lock().expect("failed to lock test env");
+        let temp = TempDir::new("read_node_content_outside");
+        let config_file = temp.child("kb_config.json");
+        let kb_dir = temp.child("Knowledge_Base");
+        let outside_file = temp.child("outside.md");
+
+        fs::create_dir_all(&kb_dir).expect("failed to create kb directory");
+        fs::write(&outside_file, "# Outside").expect("failed to write outside file");
+
+        let _config_guard = EnvVarGuard::set(
+            "NOTE_CONNECTION_CONFIG_PATH",
+            config_file.to_string_lossy().as_ref(),
+        );
+        persist_kb_path(kb_dir.to_string_lossy().as_ref())
+            .expect("persist_kb_path should succeed");
+
+        let err = read_node_content(outside_file.to_string_lossy().to_string())
+            .expect_err("expected outside file to be rejected");
+        assert!(err.contains("outside configured knowledge base"));
     }
 
     #[test]

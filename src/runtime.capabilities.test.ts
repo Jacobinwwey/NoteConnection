@@ -22,8 +22,9 @@ describe('runtime capability gating contract', () => {
     expect(sourceManager).toContain("alert(t('source.error.buildUnsupportedMobile'))");
   });
 
-  test('reader uses content fallback when runtime content API is unavailable', () => {
+  test('reader supports tauri content command fallback and runtime fallback messaging', () => {
     const reader = fs.readFileSync(readerPath, 'utf8');
+    expect(reader).toContain("invoke('read_node_content'");
     expect(reader).toContain('supports_content_api');
     expect(reader).toContain("window.i18n.t('source.error.contentUnavailableMobile')");
   });
@@ -34,6 +35,7 @@ describe('runtime capability gating contract', () => {
     expect(tauriLib).toContain('get_runtime_capabilities,');
     expect(tauriLib).toContain('supports_sidecar: false');
     expect(tauriLib).toContain('supports_build: false');
-    expect(tauriLib).toContain('supports_content_api: false');
+    expect(tauriLib).toContain('supports_content_api: true');
+    expect(tauriLib).toContain('read_node_content');
   });
 });

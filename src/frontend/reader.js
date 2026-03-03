@@ -105,6 +105,11 @@ class Reader {
                 ? window.__NC_RUNTIME_CAPS
                 : null;
             const runtimeSupportsContentApi = !runtimeCaps || runtimeCaps.supports_content_api !== false;
+            const canUseTauriContentCommand = Boolean(
+                window.__TAURI__ &&
+                window.__TAURI__.core &&
+                typeof window.__TAURI__.core.invoke === 'function'
+            );
 
             if (!runtimeSupportsContentApi) {
                 const msg = window.i18n
@@ -112,19 +117,50 @@ class Reader {
                     : 'Content loading from local files is not available on this runtime.';
                 rawContent = `*${msg}*`;
             } else {
+                const readViaTauriCommand = async () => {
+                    if (!canUseTauriContentCommand) {
+                        return null;
+                    }
+
+                    try {
+                        const content = await window.__TAURI__.core.invoke('read_node_content', {
+                            filePath: node.metadata.filepath
+                        });
+                        return typeof content === 'string' ? content : null;
+                    } catch (err) {
+                        console.warn('read_node_content failed:', err);
+                        return null;
+                    }
+                };
+
                 try {
-                    // Fetch from Node sidecar (desktop/web runtime)
-                    const res = await fetch(`http://localhost:3000/api/content?path=${encodeURIComponent(node.metadata.filepath)}`);
-                    if (res.ok) {
-                        const data = await res.json();
-                        rawContent = data.content;
+                    // Prefer Rust command when sidecar is unavailable (e.g. Android runtime).
+                    if (runtimeCaps && runtimeCaps.supports_sidecar === false) {
+                        const tauriContent = await readViaTauriCommand();
+                        if (tauriContent) {
+                            rawContent = tauriContent;
+                        } else {
+                            const msg = window.i18n
+                                ? window.i18n.t('source.error.contentUnavailableMobile')
+                                : 'Content loading from local files is not available on this runtime.';
+                            rawContent = `*${msg}*`;
+                        }
                     } else {
-                        console.error("Failed to load content:", res.status, res.statusText);
-                        rawContent = `*Error loading content: ${res.statusText}*`;
+                        // Fetch from Node sidecar (desktop/web runtime)
+                        const res = await fetch(`http://localhost:3000/api/content?path=${encodeURIComponent(node.metadata.filepath)}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            rawContent = data.content;
+                        } else {
+                            console.error("Failed to load content:", res.status, res.statusText);
+                            const fallback = await readViaTauriCommand();
+                            rawContent = fallback || `*Error loading content: ${res.statusText}*`;
+                        }
                     }
                 } catch (e) {
                     console.error("Content load error:", e);
-                    rawContent = `*Error loading content: ${e.message}*`;
+                    const fallback = await readViaTauriCommand();
+                    rawContent = fallback || `*Error loading content: ${e.message}*`;
                 }
             }
         }

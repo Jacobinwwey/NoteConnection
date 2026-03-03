@@ -1,3 +1,83 @@
+# 2026-03-02 v1.5.1
+
+## English Document
+
+### Tauri Migration Progress Update (Desktop + Android)
+
+This release note records the latest migration parity work completed after the Android SDK Command-line Tools setup was validated.
+
+#### Completed in this round
+
+- Added **target discovery parity** across sidecar and Tauri runtime:
+  - Sidecar API: `GET /api/available-targets` (merges `Knowledge_Base` folders + cached graph targets).
+  - Tauri command: `get_available_targets` (same merged behavior).
+- Added **content-read parity path** for non-sidecar runtimes:
+  - Tauri command: `read_node_content(file_path)`.
+  - Reader fallback now supports `read_node_content` when sidecar is unavailable (Android-safe path).
+- Added **cache-only source filtering** for mobile runtime:
+  - When `supports_build=false`, source dropdown is filtered to cached targets only.
+  - `ALL_FOLDERS` option appears only if active cache exists.
+  - Load button is disabled when no cache is available.
+- Added **Android multi-ABI opt-in command path** while keeping `aarch64` as default stable target:
+  - `npm run tauri:android:dev:universal`
+  - `npm run tauri:android:build:universal`
+
+#### Verification evidence
+
+- `npm run test:migration` passed (35 tests).
+- `npm run test:tauri` passed (14 Rust tests).
+- `npm run tauri:android:build` passed.
+- `npm run tauri:android:build:universal` passed.
+
+#### Current capability boundary
+
+- Android runtime currently supports:
+  - Loading and restoring existing graph cache.
+  - Reading node content through Tauri command path.
+- Android runtime currently does **not** support local in-app graph build (`/api/build` equivalent) yet.
+- Godot Path Mode remains desktop-oriented in the current architecture.
+
+---
+
+## 中文文档
+
+### Tauri 迁移进度更新（桌面 + Android）
+
+本次更新记录了在 Android SDK Command-line Tools 验证通过后，最新完成的迁移对齐工作。
+
+#### 本轮已完成
+
+- 新增 **目标发现能力对齐**（sidecar 与 Tauri 运行时一致）：
+  - sidecar API：`GET /api/available-targets`（合并 `Knowledge_Base` 目录与缓存目标）。
+  - Tauri 命令：`get_available_targets`（同样的合并逻辑）。
+- 新增 **无 sidecar 运行时的内容读取路径**：
+  - Tauri 命令：`read_node_content(file_path)`。
+  - 阅读器在 sidecar 不可用时可回退到 `read_node_content`（适配 Android）。
+- 新增 **移动端仅缓存模式的源过滤**：
+  - 当 `supports_build=false` 时，下拉列表仅展示有缓存的数据目标。
+  - `ALL_FOLDERS` 仅在存在活动缓存时显示。
+  - 无缓存可用时，加载按钮自动禁用。
+- 新增 **Android 多 ABI 可选命令路径**，同时保持 `aarch64` 默认稳定目标：
+  - `npm run tauri:android:dev:universal`
+  - `npm run tauri:android:build:universal`
+
+#### 验证证据
+
+- `npm run test:migration` 通过（35 项测试）。
+- `npm run test:tauri` 通过（14 项 Rust 测试）。
+- `npm run tauri:android:build` 通过。
+- `npm run tauri:android:build:universal` 通过。
+
+#### 当前能力边界
+
+- Android 端当前已支持：
+  - 加载与恢复已有图谱缓存。
+  - 通过 Tauri 命令路径读取节点内容。
+- Android 端当前仍 **不支持** 本地应用内图谱构建（尚未提供 `/api/build` 等价路径）。
+- Godot Path Mode 仍以桌面端为主。
+
+---
+
 # 2026-01-30 v1.4.0
 
 # NoteConnection Knowledge Graph

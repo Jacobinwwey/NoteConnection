@@ -147,9 +147,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const kbData = await kbRes.json();
         const kbPath = kbData && kbData.kbPath ? kbData.kbPath : '';
 
-        const foldersRes = await fetch('http://localhost:3000/api/folders');
-        const foldersData = await foldersRes.json();
-        const folders = foldersData && Array.isArray(foldersData.folders) ? foldersData.folders : [];
+        let folders = [];
+        try {
+            const targetsRes = await fetch('http://localhost:3000/api/available-targets');
+            const targetsData = await targetsRes.json();
+            folders = targetsData && Array.isArray(targetsData.targets) ? targetsData.targets : [];
+        } catch (err) {
+            console.warn('[SourceManager] /api/available-targets unavailable, fallback to /api/folders.', err);
+            const foldersRes = await fetch('http://localhost:3000/api/folders');
+            const foldersData = await foldersRes.json();
+            folders = foldersData && Array.isArray(foldersData.folders) ? foldersData.folders : [];
+        }
 
         return { kbPath, folders };
     };
@@ -178,6 +186,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return await cacheRes.json();
     };
 
+    const checkCacheViaRust = async (target) => {
+        if (!window.__TAURI__) {
+            return null;
+        }
+        return await window.__TAURI__.core.invoke('check_cache', { target });
+    };
+
     const restoreCacheViaSidecar = async (target) => {
         const restoreRes = await fetch(`http://localhost:3000/api/restore-cache?target=${encodeURIComponent(target)}`);
         if (!restoreRes.ok) {
@@ -185,6 +200,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const restoreData = await restoreRes.json();
         return Boolean(restoreData && restoreData.success);
+    };
+
+    const filterTargetsForRuntimeMode = async (targets) => {
+        if (runtimeCaps.supports_build || !window.__TAURI__) {
+            return targets;
+        }
+
+        const uniqueTargets = Array.from(new Set((targets || []).filter((target) => target && target !== 'ALL_FOLDERS')));
+        const cachedTargets = [];
+        for (const target of uniqueTargets) {
+            try {
+                const cached = await checkCacheViaRust(target);
+                if (cached) {
+                    cachedTargets.push(target);
+                }
+            } catch (err) {
+                console.warn('[SourceManager] Failed to check cached target for mobile runtime:', target, err);
+            }
+        }
+
+        return cachedTargets.sort((a, b) => a.localeCompare(b));
     };
 
     const LAST_TARGET_KEY = 'nc_last_target';
@@ -351,14 +387,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentPathEl.title = kbPath;
             }
 
+            folders = await filterTargetsForRuntimeMode(folders);
+
             // Clear existing options
             folderSelect.innerHTML = '';
 
-            // Always add "All Folders" option first
-            const allOption = document.createElement('option');
-            allOption.value = 'ALL_FOLDERS';
-            allOption.textContent = t('source.allFolders');
-            folderSelect.appendChild(allOption);
+            let includeAllFoldersOption = true;
+            if (!runtimeCaps.supports_build && window.__TAURI__) {
+                try {
+                    includeAllFoldersOption = Boolean(await checkCacheViaRust('ALL_FOLDERS'));
+                } catch (err) {
+                    includeAllFoldersOption = false;
+                    console.warn('[SourceManager] Failed to check ALL_FOLDERS cache in mobile runtime.', err);
+                }
+            }
+
+            if (includeAllFoldersOption) {
+                const allOption = document.createElement('option');
+                allOption.value = 'ALL_FOLDERS';
+                allOption.textContent = t('source.allFolders');
+                folderSelect.appendChild(allOption);
+            }
 
             // Add individual folders
             if (folders && folders.length > 0) {
@@ -372,6 +421,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
             }
+
+            if (folderSelect.options.length === 0) {
+                const emptyOption = document.createElement('option');
+                emptyOption.value = '';
+                emptyOption.disabled = true;
+                emptyOption.textContent = t('source.error.buildUnsupportedMobile');
+                folderSelect.appendChild(emptyOption);
+                loadBtn.disabled = true;
+                return;
+            }
+
+            loadBtn.disabled = false;
 
             // Restore last selected target when possible, else default to ALL_FOLDERS.
             const rememberedTarget = localStorage.getItem(LAST_TARGET_KEY);

@@ -1,3 +1,47 @@
+# 2026-03-02 v1.5.1 - Tauri Migration Task Consolidation
+
+## English Document
+
+### Priority Task Snapshot
+
+- [x] Bridge-first migration baseline is active (`Tauri + Node sidecar + Godot Path Mode`).
+- [x] Runtime path adaptation has been integrated for sidecar and frontend data roots.
+- [x] Worker runtime resolution has been stabilized for packaged sidecar scenarios.
+- [ ] Existing-cache prompt parity in Tauri load flow needs final strict regression confirmation.
+- [ ] Duplicate load execution guard needs final verification across startup/reconnect scenarios.
+- [ ] Godot history tracking for center-switch actions needs final acceptance checks.
+- [ ] Final Electron decommission readiness checklist remains pending.
+
+### Current Acceptance Targets
+
+1. Exactly one prompt for cache decision when cache exists.
+2. Exactly one load/build/restore execution per user-triggered load.
+3. Stable websocket lifecycle without startup churn side effects.
+4. History panel records central-node switches from Godot interactions.
+5. Tauri desktop + Android path documented with Capacitor coexistence strategy.
+
+## 中文文档
+
+### 当前任务快照
+
+- [x] Bridge-first 迁移基线已启用（`Tauri + Node sidecar + Godot Path Mode`）。
+- [x] Sidecar 与前端数据根路径的运行时适配已集成。
+- [x] 打包 Sidecar 场景下的 Worker 路径解析已稳定。
+- [ ] Tauri 加载流程中“缓存已存在提示”一致性仍需最终严格回归确认。
+- [ ] 重复加载执行防护仍需在启动/重连场景下完成最终验证。
+- [ ] Godot 中心切换动作的 History 记录仍需最终验收。
+- [ ] Electron 下线前最终就绪清单仍待完成。
+
+### 当前验收目标
+
+1. 缓存存在时只出现一次选择提示。
+2. 每次用户触发加载仅执行一次 load/build/restore。
+3. WebSocket 生命周期稳定，无启动抖动副作用。
+4. Godot 交互触发的中心节点切换可写入 History 面板。
+5. Tauri 桌面与 Android 路径具备文档化说明，并与 Capacitor 共存策略一致。
+
+---
+
 # Task: Refining Path Mode Visualization
 
 - [x] **Critical Bug Fix** <!-- id: 100 -->

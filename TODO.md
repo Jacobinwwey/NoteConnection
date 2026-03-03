@@ -1,3 +1,193 @@
+# 2026-03-03 v1.5.2 - Electron Removal Final Gate (Post-Audit Action Plan)
+
+## English Document
+
+**Audit Decision Snapshot**
+
+- [x] Desktop Electron -> Tauri migration is functionally successful.
+- [x] Capacitor export pipeline remains available and buildable.
+- [x] Tauri Android export pipeline is buildable.
+- [ ] Full runtime parity across desktop/mobile is not complete yet.
+
+### P0 - Must Complete Before Declaring Full Migration Closure
+
+- [ ] **Secure sidecar content API to match Rust boundary guarantees**
+  - [ ] Enforce KB-root boundary checks for `/api/content` in `src/server.ts`, equivalent to `read_node_content`.
+  - [ ] Add regression tests covering allowed path, blocked outside path, and Windows/relative path variants.
+
+- [ ] **Lock cache prompt + single-load execution behavior under Tauri startup races**
+  - [ ] Add integration-level tests for:
+    - [ ] "cache exists -> prompt appears exactly once"
+    - [ ] "single click -> one restore/build path only"
+  - [ ] Validate against sidecar dedupe + frontend reload guard interactions.
+
+- [ ] **Finalize Godot History consistency contract**
+  - [ ] Ensure center-switch events (double-click/manual switch) always append to History timeline.
+  - [ ] Add deterministic tests for History updates after switch-center actions.
+
+### P1 - Mobile/Export Parity Clarification and Hardening
+
+- [ ] **Clarify Android runtime capability boundaries in product docs/UI**
+  - [ ] Explicitly document that Android currently runs with `supports_sidecar=false` and `supports_build=false`.
+  - [ ] Provide user-facing fallback guidance for cache-only mode.
+
+- [ ] **Decide and implement mobile build parity strategy**
+  - [ ] Option A: implement Android-native build/content pipeline equivalent to desktop sidecar flow.
+  - [ ] Option B: keep cache/read-only scope and make it explicit as a product constraint.
+
+### P2 - Documentation Hygiene (without deleting history)
+
+- [ ] Tag historical Electron sections as archived context to reduce operator confusion.
+- [ ] Keep active release/runbook sections Tauri-first and dual-mobile-path accurate.
+
+### Final Go/No-Go Gate (Full-Scope)
+
+- [ ] `npm run test:migration` passes with new parity tests.
+- [ ] `npm run test:tauri` passes with new security and behavior tests.
+- [ ] Manual verification passes for:
+  - [ ] cache prompt appears once
+  - [ ] load action executes once
+  - [ ] History records center switches
+- [ ] Security validation passes for sidecar content path boundaries.
+
+---
+
+## 中文文档
+
+**审计结论快照**
+
+- [x] 桌面端 Electron -> Tauri 迁移在功能层面已成功。
+- [x] Capacitor 导出链路仍可用且可构建。
+- [x] Tauri Android 导出链路可构建。
+- [ ] 桌面与移动端的完整运行时对等尚未收口。
+
+### P0 - 在宣告“迁移完全收口”前必须完成
+
+- [ ] **将 sidecar 内容 API 的安全边界提升到 Rust 同等级**
+  - [ ] 在 `src/server.ts` 为 `/api/content` 增加 KB 根路径边界校验，对齐 `read_node_content`。
+  - [ ] 新增回归测试覆盖：合法路径、越界路径、Windows/相对路径变体。
+
+- [ ] **在 Tauri 启动竞态下锁定缓存提示与单次加载语义**
+  - [ ] 增加集成层测试覆盖：
+    - [ ] “存在缓存 -> 只出现一次提示”
+    - [ ] “单次点击 -> 只执行一次 restore/build”
+  - [ ] 与 sidecar 去重和前端 reload guard 的联动行为一并验证。
+
+- [ ] **完成 Godot History 一致性契约**
+  - [ ] 确保中心切换事件（双击/手动切换）都能写入 History 时间线。
+  - [ ] 增加中心切换后的 History 自动化断言测试。
+
+### P1 - 移动端/导出能力边界澄清与加固
+
+- [ ] **在文档与 UI 中明确 Android 运行时能力边界**
+  - [ ] 明确当前 Android 运行时为 `supports_sidecar=false`、`supports_build=false`。
+  - [ ] 提供 cache-only 模式下的用户可操作说明。
+
+- [ ] **完成移动端构建能力策略决策并落地**
+  - [ ] 方案 A：实现 Android 原生构建/内容链路，对齐桌面 sidecar 流程。
+  - [ ] 方案 B：保持缓存/只读能力，并明确为产品约束。
+
+### P2 - 文档治理（保留历史，不删除）
+
+- [ ] 将历史 Electron 段落标记为归档上下文，降低执行层误读。
+- [ ] 保持当前有效发布/运维文档为 Tauri-first 与双移动端路径一致。
+
+### 最终 Go/No-Go 闸门（全范围）
+
+- [ ] 新增对等测试后 `npm run test:migration` 通过。
+- [ ] 新增安全与行为测试后 `npm run test:tauri` 通过。
+- [ ] 手工验收通过：
+  - [ ] 缓存提示仅出现一次
+  - [ ] 加载动作仅执行一次
+  - [ ] History 正确记录中心切换
+- [ ] sidecar 内容路径边界安全验证通过。
+
+---
+
+# 2026-03-02 v1.5.1 - Android Runtime Parity Expansion (Targets + Content + Cache-Only UX)
+
+## English Document
+
+**Goal**: Convert desktop-sidecar-only target/content flows into runtime-safe contracts for Tauri Android, while preserving desktop behavior.
+
+### Completed This Round
+
+- [x] **Target discovery parity landed**
+  - [x] Added sidecar API `GET /api/available-targets` (folders + cached targets merged).
+  - [x] Added Tauri command `get_available_targets` with equivalent behavior.
+  - [x] Updated frontend source loading to prefer available-target APIs and fallback safely.
+
+- [x] **Mobile-safe content read path landed**
+  - [x] Added Tauri command `read_node_content(file_path)`.
+  - [x] Enforced KB root boundary checks for content reads (reject outside-root access).
+  - [x] Added legacy path rebasing for desktop-style `.../Knowledge_Base/...` file references.
+  - [x] Updated reader fallback to use Rust command when sidecar is unavailable.
+
+- [x] **Cache-only UX hardening for `supports_build=false` runtimes**
+  - [x] Mobile source list now filters to cache-available targets.
+  - [x] `ALL_FOLDERS` option shown only when active cache exists.
+  - [x] Load button disabled when no cache candidate exists.
+
+- [x] **Regression coverage and build evidence refreshed**
+  - [x] Added/updated migration tests for new available-target and runtime-content contracts.
+  - [x] `npm run test:migration` passed (`35` tests).
+  - [x] `npm run test:tauri` passed (`14` tests).
+  - [x] `npm run tauri:android:build` passed.
+  - [x] `npm run tauri:android:build:universal` passed.
+
+### Remaining Work (Current Scope)
+
+- [ ] **In-app Android graph build pipeline parity**
+  - [ ] Provide Android-native equivalent for desktop `/api/build` workflow.
+  - [ ] Define SAF/File API based import and persistent permission strategy for KB sources.
+
+- [ ] **Path Mode/Godot Android strategy finalization**
+  - [ ] Keep desktop-only intentionally with explicit UX messaging, or
+  - [ ] design and implement Android-capable rendering/runtime alternative.
+
+---
+
+## 中文文档
+
+**目标**：将原本依赖桌面 sidecar 的目标/内容能力，扩展为 Tauri Android 可用的运行时安全契约，同时保持桌面行为不回退。
+
+### 本轮已完成
+
+- [x] **目标发现能力对齐已落地**
+  - [x] 新增 sidecar API `GET /api/available-targets`（目录 + 缓存目标合并）。
+  - [x] 新增 Tauri 命令 `get_available_targets`（语义一致）。
+  - [x] 前端源加载优先使用 available-target 接口，并保留安全回退。
+
+- [x] **移动端可用内容读取路径已落地**
+  - [x] 新增 Tauri 命令 `read_node_content(file_path)`。
+  - [x] 内容读取增加 KB 根路径边界校验（禁止越界访问）。
+  - [x] 增加旧桌面路径 `.../Knowledge_Base/...` 的重定位兼容。
+  - [x] 阅读器在 sidecar 不可用时回退到 Rust 命令读取。
+
+- [x] **`supports_build=false` 运行时的仅缓存 UX 加固**
+  - [x] 移动端源列表仅显示可用缓存目标。
+  - [x] `ALL_FOLDERS` 仅在存在活动缓存时显示。
+  - [x] 无缓存候选时自动禁用加载按钮。
+
+- [x] **回归覆盖与构建证据更新**
+  - [x] 新增/更新迁移测试覆盖 available-target 与 runtime-content 契约。
+  - [x] `npm run test:migration` 通过（`35` 项）。
+  - [x] `npm run test:tauri` 通过（`14` 项）。
+  - [x] `npm run tauri:android:build` 通过。
+  - [x] `npm run tauri:android:build:universal` 通过。
+
+### 当前范围剩余工作
+
+- [ ] **Android 端应用内图谱构建链路对等**
+  - [ ] 提供桌面 `/api/build` 的 Android 原生等价实现。
+  - [ ] 定义基于 SAF/File API 的知识库导入与持久授权策略。
+
+- [ ] **Path Mode/Godot 的 Android 路线收口**
+  - [ ] 明确保持仅桌面可用并补齐 UX 提示，或
+  - [ ] 设计并实现 Android 可用渲染/运行时替代路径。
+
+---
+
 # 2026-03-02 v1.5.0 - Tauri Android Build Unblock (Arm64 Deterministic Path)
 
 ## English Document
@@ -47,9 +237,9 @@
   - [ ] Keep Godot bridge desktop-only (current behavior), or introduce an Android-compatible rendering/runtime path.
   - [ ] Document expected UX/capability differences explicitly for Android users.
 
-- [ ] **Optional multi-ABI strategy**
-  - [ ] Keep `aarch64` as default stable target.
-  - [ ] Add opt-in universal ABI build path only when host memory/toolchain is sufficient.
+- [x] **Optional multi-ABI strategy**
+  - [x] Keep `aarch64` as default stable target.
+  - [x] Add opt-in universal ABI build path only when host memory/toolchain is sufficient.
 
 ---
 
@@ -100,9 +290,9 @@
   - [ ] 维持 Godot Bridge 仅桌面可用（当前行为），或提供 Android 兼容渲染路径。
   - [ ] 在文档中明确 Android 端能力边界与 UX 预期。
 
-- [ ] **可选多 ABI 策略**
-  - [ ] 保持 `aarch64` 作为默认稳定目标。
-  - [ ] 仅在主机内存/工具链满足时提供可选 universal ABI 构建路径。
+- [x] **可选多 ABI 策略**
+  - [x] 保持 `aarch64` 作为默认稳定目标。
+  - [x] 仅在主机内存/工具链满足时提供可选 universal ABI 构建路径。
 
 ---
 
@@ -146,11 +336,11 @@
 
 ### Remaining External Prerequisite (Environment)
 
-- [ ] **Install Android SDK Command-line Tools for Tauri Android runtime**
-  - [ ] Required path: `<ANDROID_SDK_ROOT>/cmdline-tools/latest/bin/sdkmanager(.bat)`.
-  - [ ] Once installed, run:
-  - [ ] `npm run tauri:android:init`
-  - [ ] `npm run tauri:android:build`
+- [x] **Install Android SDK Command-line Tools for Tauri Android runtime**
+  - [x] Required path: `<ANDROID_SDK_ROOT>/cmdline-tools/latest/bin/sdkmanager(.bat)`.
+  - [x] Verified with:
+  - [x] `npm run verify:android:env`
+  - [x] `npm run tauri:android:build`
 
 ---
 
@@ -192,11 +382,11 @@
 
 ### 剩余外部前置条件（环境项）
 
-- [ ] **安装 Tauri Android 所需的 Android SDK Command-line Tools**
-  - [ ] 必需路径：`<ANDROID_SDK_ROOT>/cmdline-tools/latest/bin/sdkmanager(.bat)`。
-  - [ ] 安装完成后执行：
-  - [ ] `npm run tauri:android:init`
-  - [ ] `npm run tauri:android:build`
+- [x] **安装 Tauri Android 所需的 Android SDK Command-line Tools**
+  - [x] 必需路径：`<ANDROID_SDK_ROOT>/cmdline-tools/latest/bin/sdkmanager(.bat)`。
+  - [x] 已通过以下命令验证：
+  - [x] `npm run verify:android:env`
+  - [x] `npm run tauri:android:build`
 
 ---
 

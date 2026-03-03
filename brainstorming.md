@@ -1,3 +1,55 @@
+# 2026-03-02 v1.5.1 - Bridge-First Brainstorming Addendum (Tauri Migration)
+
+## English Document
+
+### Migration Brainstorming Focus
+
+The design direction is now explicitly Bridge-first:
+
+- Keep backend graph intelligence in Node sidecar.
+- Move Path Mode controls and interaction orchestration into Godot UI.
+- Use PathBridge as the contract layer between Godot and backend runtime.
+- Keep browser toolbar behavior for browser mode, but run Godot-only controls in Tauri Path Mode.
+
+### Architecture Principles for Ongoing Changes
+
+1. Keep runtime contracts stable before visual refactors.
+2. Prefer deterministic startup sequencing over optimistic reconnect loops.
+3. Separate data authority (backend graph/cache state) from presentation authority (Godot rendering state).
+4. Preserve dual-platform output strategy (desktop + Android) with parity verification.
+
+### Open Design Questions
+
+- How strict should startup debounce be for websocket reconnection under heavy cold starts?
+- Should cache prompt state be controlled entirely backend-side to avoid frontend race windows?
+- Should history snapshots include source event metadata (`dblclick`, `manual switch`, `collapse all`) for debugging?
+
+## 中文文档
+
+### 迁移脑暴焦点
+
+当前设计方向明确为 Bridge-first：
+
+- 后端图谱与算法能力继续保留在 Node Sidecar。
+- Path Mode 控制与交互编排迁移到 Godot UI。
+- 由 PathBridge 作为 Godot 与后端运行时之间的契约层。
+- 浏览器模式继续保留 Web 工具栏；Tauri Path Mode 采用 Godot-only 控制。
+
+### 后续演进的架构原则
+
+1. 先稳定运行时契约，再做视觉层重构。
+2. 启动链路优先确定性时序，不依赖乐观重连循环。
+3. 分离数据权威（后端图与缓存状态）与展示权威（Godot 渲染状态）。
+4. 保持桌面与 Android 双平台产物策略，并以一致性回归验证兜底。
+
+### 待定设计问题
+
+- 在重冷启动场景下，WebSocket 重连节流应严格到什么程度？
+- 缓存提示状态是否应完全后端化，以规避前端竞态窗口？
+- History 快照是否要包含来源事件元数据（`dblclick`、`manual switch`、`collapse all`）以便排查？
+
+---
+
 # Brainstorming: Stable Spine Tree Layout
 
 ## User Request Analysis
