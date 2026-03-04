@@ -73,12 +73,17 @@
     "loadButton": "加载",
     "loading": "加载中...",
     "currentPath": "当前路径: {path}",
+    "capacitor": {
+      "packagedGraph": "内置图谱（只读）",
+      "bundlePath": "Capacitor 资源包"
+    },
     "refresh": "刷新",
     "error": {
       "noFolder": "请先选择一个文件夹。",
       "loadFailed": "构建失败: {error}",
       "buildUnsupportedMobile": "当前移动端运行时暂不支持本地构建。请先在桌面端生成数据后再加载缓存。",
       "contentUnavailableMobile": "当前移动端运行时暂不支持从本地文件读取内容。",
+      "capacitorReadOnly": "Capacitor 运行时为只读模式，应用内不提供目录扫描/构建 API。",
       "kbPathChangeFailed": "更改知识库路径失败: {error}",
       "kbPathResetFailed": "重置知识库路径失败: {error}"
     }

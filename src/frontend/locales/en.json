@@ -73,12 +73,17 @@
     "loadButton": "Load",
     "loading": "Loading...",
     "currentPath": "Current Path: {path}",
+    "capacitor": {
+      "packagedGraph": "Packaged Graph (Read-Only)",
+      "bundlePath": "Capacitor Asset Bundle"
+    },
     "refresh": "Refresh",
     "error": {
       "noFolder": "Please select a folder first.",
       "loadFailed": "Build Failed: {error}",
       "buildUnsupportedMobile": "Build is not available in this mobile runtime yet. Please generate data on desktop first and then load existing cache.",
       "contentUnavailableMobile": "Content loading from local files is not available in this mobile runtime yet.",
+      "capacitorReadOnly": "Capacitor runtime is read-only. Folder scan/build APIs are unavailable in-app.",
       "kbPathChangeFailed": "Failed to change Knowledge Base path: {error}",
       "kbPathResetFailed": "Failed to reset Knowledge Base path: {error}"
     }

@@ -8,6 +8,34 @@ document.addEventListener('DOMContentLoaded', () => {
         supports_native_pathmode: false
     };
 
+    const resolveCapacitorPlatform = () => {
+        if (typeof window === 'undefined') {
+            return null;
+        }
+
+        const cap = window.Capacitor;
+        if (!cap) {
+            return null;
+        }
+
+        try {
+            if (typeof cap.getPlatform === 'function') {
+                const platform = cap.getPlatform();
+                if (platform && platform !== 'web') {
+                    return platform;
+                }
+            }
+
+            if (typeof cap.isNativePlatform === 'function' && cap.isNativePlatform()) {
+                return 'native';
+            }
+        } catch (err) {
+            console.warn('[SourceManager] Failed to detect Capacitor runtime platform.', err);
+        }
+
+        return null;
+    };
+
     const exposeRuntimeCaps = () => {
         if (typeof window !== 'undefined') {
             window.__NC_RUNTIME_CAPS = runtimeCaps;
@@ -16,6 +44,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const resolveRuntimeCapabilities = async () => {
         if (!window.__TAURI__) {
+            const capacitorPlatform = resolveCapacitorPlatform();
+            if (capacitorPlatform) {
+                runtimeCaps = {
+                    ...runtimeCaps,
+                    platform: `capacitor-${capacitorPlatform}`,
+                    supports_sidecar: false,
+                    supports_build: false,
+                    supports_content_api: false,
+                    supports_kb_runtime_change: false,
+                    supports_native_pathmode: false
+                };
+                console.log('[SourceManager] Capacitor native runtime detected:', runtimeCaps.platform);
+            }
             exposeRuntimeCaps();
             return;
         }
@@ -152,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const loadScript = async (src) => {
-        if (window.__TAURI__ && runtimeCaps.supports_sidecar && src.startsWith('data')) {
+        if (window.__TAURI__ && src.startsWith('data')) {
             await loadGraphDataFromSidecar(src);
             return;
         }
@@ -240,6 +281,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Translation helper
     const t = (key, params) => window.i18n ? window.i18n.t(key, params) : key;
     const isZhLocale = () => Boolean(window.i18n && window.i18n.locale === 'zh');
+    const isCapacitorNativeRuntime = () =>
+        Boolean(!window.__TAURI__ && typeof runtimeCaps.platform === 'string' && runtimeCaps.platform.startsWith('capacitor-'));
 
     const ensureRuntimeCapabilityNotice = () => {
         let note = document.getElementById('runtime-capability-note');
@@ -275,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const note = ensureRuntimeCapabilityNotice();
         if (!note) return;
 
-        const showCacheOnly = Boolean(window.__TAURI__ && runtimeCaps.supports_build === false);
+        const showCacheOnly = Boolean((window.__TAURI__ && runtimeCaps.supports_build === false) || isCapacitorNativeRuntime());
         if (!showCacheOnly) {
             note.style.display = 'none';
             note.textContent = '';
@@ -284,9 +327,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         note.style.display = 'inline-flex';
         note.title = 'Mobile runtime capability boundary';
-        note.textContent = isZhLocale()
-            ? '移动端当前为缓存/阅读模式（不支持本地构建）。'
-            : 'Mobile runtime is cache/read mode (local build is unavailable).';
+        note.textContent = isCapacitorNativeRuntime()
+            ? t('source.error.capacitorReadOnly')
+            : (isZhLocale()
+                ? '移动端当前为缓存/阅读模式（不支持本地构建）。'
+                : 'Mobile runtime is cache/read mode (local build is unavailable).');
     };
 
     const updateKbPathControls = () => {
@@ -541,8 +586,13 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             let kbPath = '';
             let folders = [];
+            const inCapacitorRuntime = isCapacitorNativeRuntime();
 
-            if (runtimeCaps.supports_sidecar) {
+            if (inCapacitorRuntime) {
+                kbPath = t('source.capacitor.bundlePath');
+                folders = [];
+                console.log('[SourceManager] Using Capacitor read-only source mode.');
+            } else if (runtimeCaps.supports_sidecar) {
                 try {
                     const sidecarData = await fetchFoldersViaSidecar();
                     kbPath = sidecarData.kbPath;
@@ -577,6 +627,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Clear existing options
             folderSelect.innerHTML = '';
+
+            if (inCapacitorRuntime) {
+                const packagedOption = document.createElement('option');
+                packagedOption.value = 'PACKAGED_GRAPH';
+                packagedOption.textContent = t('source.capacitor.packagedGraph');
+                folderSelect.appendChild(packagedOption);
+                folderSelect.value = 'PACKAGED_GRAPH';
+                loadBtn.disabled = true;
+                return;
+            }
 
             let includeAllFoldersOption = true;
             if (!runtimeCaps.supports_build && window.__TAURI__) {
@@ -765,6 +825,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const target = folderSelect.value;
+            if (isCapacitorNativeRuntime()) {
+                alert(t('source.error.capacitorReadOnly'));
+                return;
+            }
             if (!target) {
                 alert(t('source.error.noFolder'));
                 return;

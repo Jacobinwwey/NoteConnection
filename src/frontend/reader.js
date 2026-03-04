@@ -104,7 +104,26 @@ class Reader {
             const runtimeCaps = (typeof window !== 'undefined' && window.__NC_RUNTIME_CAPS)
                 ? window.__NC_RUNTIME_CAPS
                 : null;
-            const runtimeSupportsContentApi = !runtimeCaps || runtimeCaps.supports_content_api !== false;
+            const isCapacitorNativeRuntime = (() => {
+                if (typeof window === 'undefined' || !window.Capacitor) {
+                    return false;
+                }
+                try {
+                    if (typeof window.Capacitor.getPlatform === 'function') {
+                        const p = window.Capacitor.getPlatform();
+                        return Boolean(p && p !== 'web');
+                    }
+                    if (typeof window.Capacitor.isNativePlatform === 'function') {
+                        return Boolean(window.Capacitor.isNativePlatform());
+                    }
+                } catch (_err) {
+                    return false;
+                }
+                return false;
+            })();
+            const runtimeSupportsContentApi = runtimeCaps
+                ? runtimeCaps.supports_content_api !== false
+                : !isCapacitorNativeRuntime;
             const canUseTauriContentCommand = Boolean(
                 window.__TAURI__ &&
                 window.__TAURI__.core &&
