@@ -1383,6 +1383,45 @@ fn resolve_content_candidate_path(kb_root: &Path, raw_file_path: &str) -> PathBu
     }
 }
 
+/// Read a generated graph asset (e.g. data.js, graph_data.json) directly from
+/// runtime_data_dir via IPC, bypassing the HTTP sidecar.  This provides a
+/// reliable fallback when the Tauri WebView cannot reach http://localhost:3000
+/// due to mixed-content or CSP restrictions.
+///
+/// 通过 IPC 直接从 runtime_data_dir 读取已生成的图谱资源文件（如 data.js、
+/// graph_data.json），绕过 HTTP sidecar。当 Tauri WebView 由于混合内容或
+/// CSP 限制无法访问 http://localhost:3000 时，此命令提供可靠的回退方案。
+#[tauri::command]
+fn read_generated_asset(filename: String) -> Result<String, String> {
+    let sanitized = filename
+        .replace('/', "")
+        .replace('\\', "")
+        .replace("..", "");
+    if sanitized.is_empty() {
+        return Err("Missing or invalid filename".to_string());
+    }
+
+    if !is_generated_graph_asset(&sanitized) {
+        return Err(format!(
+            "Requested file '{}' is not a recognised generated graph asset",
+            sanitized
+        ));
+    }
+
+    let runtime_data_dir = resolve_runtime_data_path();
+    let file_path = runtime_data_dir.join(&sanitized);
+
+    if !file_path.exists() || !file_path.is_file() {
+        return Err(format!(
+            "Generated asset '{}' not found in runtime data directory",
+            sanitized
+        ));
+    }
+
+    fs::read_to_string(&file_path)
+        .map_err(|err| format!("Failed to read generated asset '{}': {}", sanitized, err))
+}
+
 #[tauri::command]
 fn read_node_content(file_path: String) -> Result<String, String> {
     if file_path.trim().is_empty() {
@@ -1437,6 +1476,7 @@ pub fn run() {
             check_cache,
             restore_cache,
             build_graph_runtime,
+            read_generated_asset,
             read_node_content
         ])
         .setup(|app| {

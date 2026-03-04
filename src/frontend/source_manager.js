@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Dynamic Script Loader (Cache Busting & Order Guarantee)
+    // 动态脚本加载器（缓存破坏与顺序保证）
     const loadGraphDataFromSidecar = async (src) => {
         const parseGraphDataPayload = (text) => {
             const trimmed = text.trim();
@@ -97,19 +98,24 @@ document.addEventListener('DOMContentLoaded', () => {
             return parsed;
         };
 
+        // ─── Strategy 1: HTTP fetch from sidecar (works in browser, may fail in Tauri WebView) ───
+        // 策略1：通过 HTTP 从 sidecar 获取（浏览器中有效，Tauri WebView 中可能因混合内容限制而失败）
         const maxAttempts = (window.__TAURI__ && runtimeCaps.supports_sidecar) ? 20 : 1;
         let lastError = null;
 
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 const url = 'http://localhost:3000/' + src + '?v=' + Date.now();
+                console.log(`[Loader] Fetching ${src} via HTTP (attempt ${attempt}/${maxAttempts}): ${url}`);
                 const response = await fetch(url, { cache: 'no-store' });
                 if (!response.ok) {
                     throw new Error(`Failed to fetch ${src}: HTTP ${response.status}`);
                 }
 
                 const text = await response.text();
+                console.log(`[Loader] HTTP fetch succeeded for ${src}: ${text.length} bytes`);
                 const parsed = parseGraphDataPayload(text);
+                console.log(`[Loader] Parsed ${src}: ${parsed.nodes.length} nodes, ${(parsed.edges || []).length} edges`);
                 window.graphData = parsed;
                 return;
             } catch (err) {
@@ -122,6 +128,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.warn('[Loader] data.js fetch raced sidecar startup, retrying...');
                 }
                 await sleep(Math.min(1000, 100 * attempt));
+            }
+        }
+
+        // ─── Strategy 2: Tauri IPC fallback (bypasses HTTP entirely) ───
+        // 策略2：Tauri IPC 回退（完全绕过 HTTP，直接通过 IPC 读取文件）
+        if (window.__TAURI__ && window.__TAURI__.core) {
+            console.warn(`[Loader] HTTP fetch failed for ${src}. Trying Tauri IPC fallback (read_generated_asset)...`, lastError);
+            try {
+                const text = await window.__TAURI__.core.invoke('read_generated_asset', { filename: src });
+                console.log(`[Loader] Tauri IPC read succeeded for ${src}: ${text.length} bytes`);
+                const parsed = parseGraphDataPayload(text);
+                console.log(`[Loader] Parsed via IPC ${src}: ${parsed.nodes.length} nodes, ${(parsed.edges || []).length} edges`);
+                window.graphData = parsed;
+                return;
+            } catch (ipcErr) {
+                console.error(`[Loader] Tauri IPC fallback also failed for ${src}:`, ipcErr);
+                // Fall through to throw the original HTTP error for consistency.
             }
         }
 
@@ -877,6 +900,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (success) {
                 keepLockedForReload = true;
+
+                // v1.0.1: Pre-verify data.js is accessible before triggering reload.
+                // In Tauri, the graph data might not be fetchable via HTTP due to
+                // mixed-content restrictions.  Pre-read via IPC ensures data.js exists
+                // and the runtime_data directory is populated before the page reloads.
+                // v1.0.1: 在触发页面重载前预先验证 data.js 可访问。
+                // 在 Tauri 中，由于混合内容限制，可能无法通过 HTTP 获取图谱数据。
+                // 通过 IPC 预读可确保 data.js 存在，并在页面重载前已填充 runtime_data 目录。
+                if (window.__TAURI__ && window.__TAURI__.core) {
+                    try {
+                        const preText = await window.__TAURI__.core.invoke('read_generated_asset', { filename: 'data.js' });
+                        console.log(`[Build] Pre-verified data.js via IPC: ${preText.length} bytes`);
+                    } catch (preErr) {
+                        console.warn('[Build] Pre-verify via IPC failed (build output may be missing):', preErr);
+                    }
+                }
+
                 setTimeout(() => {
                     requestSafeReload('build-success', { force: true });
                 }, 1000);
