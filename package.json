@@ -35,7 +35,7 @@
     "pathmode:test": "jest --testPathPatterns=Path",
     "smoke:sidecar:relaunch": "node scripts/smoke-sidecar-relaunch.js",
     "smoke:android:pathmode": "node scripts/smoke-android-pathmode.js",
-    "test:migration": "jest src/core/Graph.test.ts src/core/PathEngine.test.ts src/core/TreeLayout.test.ts src/backend/algorithms/CycleDetection.test.ts src/utils/RuntimePaths.test.ts src/server.migration.test.ts src/mobile.pipeline.test.ts src/runtime.capabilities.test.ts src/source_manager.loadflow.test.ts src/pathmode.history.contract.test.ts src/android.pathmode.contract.test.ts src/android.pathmode.smoke.contract.test.ts src/pathbridge.handshake.contract.test.ts --runInBand",
+    "test:migration": "jest src/core/Graph.test.ts src/core/PathEngine.test.ts src/core/TreeLayout.test.ts src/backend/algorithms/CycleDetection.test.ts src/utils/RuntimePaths.test.ts src/server.migration.test.ts src/mobile.pipeline.test.ts src/runtime.capabilities.test.ts src/source_manager.loadflow.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts src/android.pathmode.contract.test.ts src/android.pathmode.smoke.contract.test.ts src/pathbridge.handshake.contract.test.ts --runInBand",
     "test:tauri": "cargo test --manifest-path src-tauri/Cargo.toml",
     "prepublishOnly": "npm run build",
     "test": "jest"

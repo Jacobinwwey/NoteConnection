@@ -16,7 +16,7 @@ describe('source manager load-flow guards', () => {
     expect(source).toContain('let isLoadInProgress = false;');
     expect(source).toContain('if (isLoadInProgress)');
     expect(source).toContain("isLoadInProgress = true;");
-    expect(source).toContain('const requestSafeReload = (reason) => {');
+    expect(source).toContain('const requestSafeReload = (reason, options = {}) => {');
     expect(source).toContain("sessionStorage.setItem(RELOAD_GUARD_KEY");
   });
 
@@ -25,7 +25,8 @@ describe('source manager load-flow guards', () => {
     const promptMatches = source.match(/choice\s*=\s*await\s*askCacheAction\s*\(/g) || [];
     expect(promptMatches.length).toBe(1);
     expect(source).toContain("if (choice === 'load')");
-    expect(source).toContain("keepLockedForReload = requestSafeReload('cache-restore');");
+    expect(source).toContain("keepLockedForReload = requestSafeReload('cache-restore', { force: true });");
+    expect(source).toContain("requestSafeReload('build-success', { force: true });");
     expect(source).toContain("invoke('build_graph_runtime'");
   });
 
@@ -50,6 +51,12 @@ describe('source manager load-flow guards', () => {
     expect(source).toContain('await waitForSidecarReady();');
     expect(source).toContain("data.js fetch raced sidecar startup, retrying");
     expect(source).toContain('const maxAttempts = (window.__TAURI__ && runtimeCaps.supports_sidecar) ? 20 : 1;');
+  });
+
+  test('uses /api/folders as the canonical source list for KB folder names', () => {
+    const source = fs.readFileSync(sourceManagerPath, 'utf8');
+    expect(source).toContain("fetch('http://localhost:3000/api/folders')");
+    expect(source).toContain('Desktop/Tauri-sidecar primary requirement: list real subfolders under KB root.');
   });
 
   test('exposes desktop KB path controls with tauri choose/reset commands', () => {

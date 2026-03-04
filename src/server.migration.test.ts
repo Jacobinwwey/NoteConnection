@@ -162,6 +162,7 @@ describe('server migration settings routes', () => {
     temp.file(path.join('project', 'dist', 'src', 'frontend', 'data_financial.js'), 'const graphData = {"nodes":[{"id":"F"}]};');
     temp.file(path.join('project', 'dist', 'src', 'frontend', 'graph_data_financial.json'), '{"nodes":[{"id":"F"}],"links":[]}');
     temp.file(path.join('project', 'runtime_data', 'data_robotics.js'), 'const graphData = {"nodes":[{"id":"R"}]};');
+    temp.file(path.join('project', 'runtime_data', 'data.js'), 'const graphData = {"nodes":[{"id":"ACTIVE"}],"edges":[]}');
 
     envRestorers = [];
     envRestorers.push(setEnv('NOTE_CONNECTION_PROJECT_ROOT', projectRoot));
@@ -284,6 +285,13 @@ describe('server migration settings routes', () => {
     const duplicateRestoreResponse = await requestJson(port, 'GET', '/api/restore-cache?target=financial');
     expect(duplicateRestoreResponse.status).toBe(200);
     expect(duplicateRestoreResponse.body).toEqual(expect.objectContaining({ success: true, deduped: true }));
+  });
+
+  test('serves generated data.js when cache-busting query string is present', async () => {
+    const response = await requestJson(port, 'GET', '/data.js?v=12345');
+    expect(response.status).toBe(200);
+    expect(typeof response.body).toBe('string');
+    expect(response.body).toContain('const graphData');
   });
 
   test('deduplicates same build request while first build is in-flight', async () => {

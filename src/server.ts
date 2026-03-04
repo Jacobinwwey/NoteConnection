@@ -442,40 +442,44 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             }
 
             // GET any generated graph assets (e.g. data_cli.js, data.js, graph_data.json)
-            if (req.url && (req.url.endsWith('.js') || req.url.endsWith('.json')) && !req.url.startsWith('/api/')) {
-                const urlObj = new URL(req.url, `http://${req.headers.host}`);
-                let filename = path.basename(decodeURIComponent(urlObj.pathname));
+            // Must parse pathname so cache-busting query strings (`?v=...`) still route correctly.
+            if (req.url && !req.url.startsWith('/api/')) {
+                const assetUrlObj = new URL(req.url, `http://${req.headers.host}`);
+                const assetPathname = decodeURIComponent(assetUrlObj.pathname);
+                if (assetPathname.endsWith('.js') || assetPathname.endsWith('.json')) {
+                    let filename = path.basename(assetPathname);
 
-                if (hasCliBuild && cliOptions.outputPrefix) {
-                    if (filename === 'data.js') {
-                        filename = `data_cli_${cliOptions.outputPrefix}.js`;
-                    } else if (filename === 'graph_data.json') {
-                        filename = `graph_data_cli_${cliOptions.outputPrefix}.json`;
+                    if (hasCliBuild && cliOptions.outputPrefix) {
+                        if (filename === 'data.js') {
+                            filename = `data_cli_${cliOptions.outputPrefix}.js`;
+                        } else if (filename === 'graph_data.json') {
+                            filename = `graph_data_cli_${cliOptions.outputPrefix}.json`;
+                        }
+                    }
+
+                    const generatedPath = isGeneratedGraphAsset(filename)
+                        ? resolveGeneratedAssetForRead(filename)
+                        : null;
+                    const bundledPath = path.join(FRONTEND_DIR, filename);
+                    const filePath = generatedPath || (fs.existsSync(bundledPath) ? bundledPath : null);
+
+                    if (filePath && fs.statSync(filePath).isFile()) {
+                        const ext = path.extname(filename);
+                        const contentType = ext === '.json' ? 'application/json' : 'application/javascript';
+                        
+                        try {
+                            const content = fs.readFileSync(filePath);
+                            res.writeHead(200, { 'Content-Type': contentType });
+                            res.end(content);
+                            return;
+                        } catch (err) {
+                            res.writeHead(500, { 'Content-Type': contentType });
+                            res.end(`console.error('Failed to load asset: ${String(err)}');`);
+                            return;
+                        }
                     }
                 }
-
-                const generatedPath = isGeneratedGraphAsset(filename)
-                    ? resolveGeneratedAssetForRead(filename)
-                    : null;
-                const bundledPath = path.join(FRONTEND_DIR, filename);
-                const filePath = generatedPath || (fs.existsSync(bundledPath) ? bundledPath : null);
-
-                if (filePath && fs.statSync(filePath).isFile()) {
-                    const ext = path.extname(filename);
-                    const contentType = ext === '.json' ? 'application/json' : 'application/javascript';
-                    
-                    try {
-                        const content = fs.readFileSync(filePath);
-                        res.writeHead(200, { 'Content-Type': contentType });
-                        res.end(content);
-                        return;
-                    } catch (err) {
-                        res.writeHead(500, { 'Content-Type': contentType });
-                        res.end(`console.error('Failed to load asset: ${String(err)}');`);
-                        return;
-                    }
-                }
-                // Let it fall through to 404 if not found
+                // Let it fall through to static serving/404 if not found.
             }
 
             // GET /api/kb-path — Return current Knowledge Base root path

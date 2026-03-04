@@ -143,6 +143,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    const triggerWelcomeModal = (hasNodes) => {
+        if (typeof window.showWelcomeModal === 'function') {
+            window.showWelcomeModal(Boolean(hasNodes));
+            return;
+        }
+
+        window.__NC_PENDING_WELCOME_STATE = Boolean(hasNodes);
+
+        let attempts = 0;
+        const maxAttempts = 30;
+        const retry = () => {
+            if (typeof window.showWelcomeModal === 'function') {
+                const pending = Boolean(window.__NC_PENDING_WELCOME_STATE);
+                delete window.__NC_PENDING_WELCOME_STATE;
+                window.showWelcomeModal(pending);
+                return;
+            }
+
+            attempts += 1;
+            if (attempts < maxAttempts) {
+                setTimeout(retry, 80);
+            }
+        };
+
+        setTimeout(retry, 0);
+    };
+
     const bootstrapScriptLoad = () => {
         // Load data.js first (Critical Data), then app.js (Application Logic)
         loadScript('data.js')
@@ -153,9 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // We do this BEFORE loading app.js so the user sees the modal while the app initializes
                 const loadedGraphData = typeof graphData !== 'undefined' ? graphData : window.graphData;
                 const hasNodes = loadedGraphData && loadedGraphData.nodes && loadedGraphData.nodes.length > 0;
-                if (typeof window.showWelcomeModal === 'function') {
-                    window.showWelcomeModal(hasNodes);
-                }
+                triggerWelcomeModal(Boolean(hasNodes));
                 
                 return loadScript('app.js');
             })
@@ -163,9 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.warn('[Loader] Failed to load data.js (This is expected in Mini Mode or First Run). Proceeding to load app.js...', err);
                 
                 // Trigger Welcome Modal (Empty State)
-                if (typeof window.showWelcomeModal === 'function') {
-                    window.showWelcomeModal(false);
-                }
+                triggerWelcomeModal(false);
 
                 // Proceed to load app.js even if data.js fails
                 return loadScript('app.js');
@@ -257,16 +280,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const kbData = await kbRes.json();
         const kbPath = kbData && kbData.kbPath ? kbData.kbPath : '';
 
-        let folders = [];
-        try {
-            const targetsRes = await fetch('http://localhost:3000/api/available-targets');
-            const targetsData = await targetsRes.json();
-            folders = targetsData && Array.isArray(targetsData.targets) ? targetsData.targets : [];
-        } catch (err) {
-            console.warn('[SourceManager] /api/available-targets unavailable, fallback to /api/folders.', err);
-            const foldersRes = await fetch('http://localhost:3000/api/folders');
-            const foldersData = await foldersRes.json();
-            folders = foldersData && Array.isArray(foldersData.folders) ? foldersData.folders : [];
+        // Desktop/Tauri-sidecar primary requirement: list real subfolders under KB root.
+        const foldersRes = await fetch('http://localhost:3000/api/folders');
+        const foldersData = await foldersRes.json();
+        let folders = foldersData && Array.isArray(foldersData.folders) ? foldersData.folders : [];
+
+        // Mobile cache/read mode may expose cached-only targets not present as directories.
+        const shouldIncludeCachedTargets = Boolean(window.__TAURI__ && runtimeCaps.supports_build === false);
+        if (shouldIncludeCachedTargets) {
+            try {
+                const targetsRes = await fetch('http://localhost:3000/api/available-targets');
+                const targetsData = await targetsRes.json();
+                const cachedTargets = targetsData && Array.isArray(targetsData.targets) ? targetsData.targets : [];
+                folders = Array.from(new Set([...(folders || []), ...cachedTargets]));
+            } catch (err) {
+                console.warn('[SourceManager] /api/available-targets unavailable in cache/read mode.', err);
+            }
         }
 
         return { kbPath, folders };
@@ -447,7 +476,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Prevent accidental double-reload loops when multiple handlers/events fire.
-    const requestSafeReload = (reason) => {
+    const requestSafeReload = (reason, options = {}) => {
+        const force = Boolean(options && options.force);
         const now = Date.now();
         const raw = sessionStorage.getItem(RELOAD_GUARD_KEY);
         let guard = null;
@@ -457,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
             guard = null;
         }
 
-        if (guard && typeof guard.ts === 'number' && (now - guard.ts) < RELOAD_GUARD_WINDOW_MS) {
+        if (!force && guard && typeof guard.ts === 'number' && (now - guard.ts) < RELOAD_GUARD_WINDOW_MS) {
             console.warn('[SourceManager] Reload suppressed by guard. Previous reason:', guard.reason, 'Current reason:', reason);
             return false;
         }
@@ -772,7 +802,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
 
                         if (restoreSuccess) {
-                            keepLockedForReload = requestSafeReload('cache-restore');
+                            keepLockedForReload = requestSafeReload('cache-restore', { force: true });
                             return;
                         }
 
@@ -848,7 +878,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (success) {
                 keepLockedForReload = true;
                 setTimeout(() => {
-                    requestSafeReload('build-success');
+                    requestSafeReload('build-success', { force: true });
                 }, 1000);
                 return;
             }

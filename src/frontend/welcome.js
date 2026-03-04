@@ -4,6 +4,16 @@
 // Exposed entry point for SourceManager to call after data load
 window.showWelcomeModal = showWelcomeModal;
 
+const consumePendingWelcomeState = () => {
+    if (!Object.prototype.hasOwnProperty.call(window, '__NC_PENDING_WELCOME_STATE')) {
+        return null;
+    }
+
+    const pending = Boolean(window.__NC_PENDING_WELCOME_STATE);
+    delete window.__NC_PENDING_WELCOME_STATE;
+    return pending;
+};
+
 /* 
  * Main function to trigger welcome modal
  * @param {boolean} hasNodes - Whether the graph has data (true) or is empty (false)
@@ -18,7 +28,9 @@ function showWelcomeModal(hasNodes = false) {
     // For now, we follow the requirement to always ask.
 
     const showModal = () => {
-        const t = window.i18n.t.bind(window.i18n);
+        const t = (window.i18n && typeof window.i18n.t === 'function')
+            ? window.i18n.t.bind(window.i18n)
+            : ((key) => key);
 
         // Create Modal HTML
         const modalOverlay = document.createElement('div');
@@ -264,16 +276,26 @@ function showWelcomeModal(hasNodes = false) {
     };
 
     // Wait for i18n to be completely ready
-    const checkAndShow = () => {
-         if (window.i18n && window.i18n.isInitialized && Object.keys(window.i18n.translations).length > 0) {
+    const checkAndShow = (attempt = 0) => {
+         const i18nReady =
+             window.i18n &&
+             window.i18n.isInitialized &&
+             window.i18n.translations &&
+             Object.keys(window.i18n.translations).length > 0;
+
+         if (i18nReady) {
               showModal();
-         } else {
-              // If not ready, listen for the next change
-              window.i18n.onLanguageChange(() => {
-                   // This ensures we have translations
-                   showModal();
-              });
+              return;
          }
+
+         // Fallback path: do not block modal forever if language init is delayed or unavailable.
+         if (attempt >= 50) {
+             console.warn('[Welcome] i18n readiness timeout, rendering with fallback strings.');
+             showModal();
+             return;
+         }
+
+         setTimeout(() => checkAndShow(attempt + 1), 80);
     };
 
     // Initial Check
@@ -285,4 +307,11 @@ function showWelcomeModal(hasNodes = false) {
          // Actually i18n.js runs before us usually, but init is async.
          setTimeout(checkAndShow, 100);
     }
+}
+
+const pendingWelcomeState = consumePendingWelcomeState();
+if (pendingWelcomeState !== null) {
+    setTimeout(() => {
+        showWelcomeModal(pendingWelcomeState);
+    }, 0);
 }
