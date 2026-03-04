@@ -1,4 +1,4 @@
-# 2026-01-23 v1.2.0
+# 2026-03-04 v1.5.13
 
 # User Manual
 
@@ -93,7 +93,7 @@ NoteConnection includes a one-click script to build a native Android APK (v1.1.0
   - **Strategy**: Choose between "Foundational" (Base concepts first) or "Core" (Key concepts first).
   - **Layout**: Switch between Radial, Vertical Tree, and Horizontal Tree views.
   - **Exit**: Click "Exit" to return to the main graph.
-- **Desktop Mode**: If running the Godot Helper, the view syncs automatically via WebSocket.
+- **Desktop Mode**: In the desktop application (Tauri), Path Mode opens in a high-performance native 3D window (Godot) for rendering up to 50,000 nodes smoothly, automatically syncing via WebSocket.
 
 ---
 
@@ -188,4 +188,4 @@ NoteConnection 包含一个一键式脚本，用于构建原生 Android APK (v1.
   - **策略**: 选择“基础优先”(Foundational) 或“核心优先”(Core)。
   - **布局**: 在径向 (Radial)、垂直树 (Vertical Tree) 和水平树 (Horizontal Tree) 视图之间切换。
   - **退出**: 点击“Exit”返回主图谱。
-- **桌面模式**: 如果运行 Godot 助手，视图将通过 WebSocket 自动同步。
+- **桌面模式**: 在桌面端应用程序 (Tauri) 中，路径模式会在高性能原生 3D 窗口 (Godot) 中打开，可流畅渲染多达 50,000 个节点，并通过 WebSocket 自动同步。

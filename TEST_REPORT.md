@@ -1,3 +1,143 @@
+# 2026-03-04 v1.5.13 - Capacitor Physical-Device Acceptance Readiness Report
+
+## English Document
+
+### Test Objective
+
+Establish and verify a deterministic preflight gate for the final pending `v1.5.9` physical-device acceptance item.
+
+### Added Verification Surface
+
+- [x] Device acceptance probe script:
+  - [x] `scripts/verify-capacitor-device-acceptance.js`
+  - [x] checks:
+    - [x] debug APK artifact exists
+    - [x] `adb` is available
+    - [x] at least one online device is connected
+- [x] npm command:
+  - [x] `npm run verify:capacitor:device`
+
+### Executed Verification (2026-03-04)
+
+- [x] `npm run mobile:build:capacitor` -> PASS
+- [ ] `npm run verify:capacitor:device` -> FAIL (no online device connected)
+  - observed:
+    - `[Capacitor Device Probe] No online Android device detected.`
+    - `[Capacitor Device Probe] Connect a device (USB debugging enabled) and run again.`
+
+### Conclusion
+
+- Build/export pipeline is healthy and reproducible.
+- Final release sign-off remains blocked only by missing real-device execution evidence, not by automation/tooling readiness.
+
+---
+
+## 中文文档
+
+### 测试目标
+
+为 `v1.5.9` 最后待闭环项（真机验收）建立并验证确定性的前置闸门。
+
+### 新增验证面
+
+- [x] 真机验收探测脚本：
+  - [x] `scripts/verify-capacitor-device-acceptance.js`
+  - [x] 校验项：
+    - [x] Debug APK 产物是否存在
+    - [x] `adb` 是否可用
+    - [x] 是否存在至少一台在线设备
+- [x] npm 命令：
+  - [x] `npm run verify:capacitor:device`
+
+### 实际验证（2026-03-04）
+
+- [x] `npm run mobile:build:capacitor` -> 通过
+- [ ] `npm run verify:capacitor:device` -> 失败（未检测到在线设备）
+  - 观测输出：
+    - `[Capacitor Device Probe] No online Android device detected.`
+    - `[Capacitor Device Probe] Connect a device (USB debugging enabled) and run again.`
+
+### 结论
+
+- 构建/导出链路健康且可复现。
+- 最终发版签核当前仅被“缺少真机执行证据”阻塞，不是自动化或工具链问题。
+
+---
+
+# 2026-03-04 v1.5.12 - v1.5.9 Final Gate Closure Verification (Desktop GO + Mobile Boundary)
+
+## English Document
+
+### Verification Objective
+
+Close the remaining actionable items in `2026-03-03 v1.5.9 - Electron Removal Final Gate (Audit-Driven Action Plan)` and re-verify release gates after closure updates.
+
+### Closure Actions Completed
+
+- [x] Migration hygiene closure:
+  - [x] Removed empty `src/electron` directory.
+  - [x] Reworded remaining misleading legacy “Electron” comments in active bridge-based runtime files.
+- [x] Documentation alignment:
+  - [x] Marked `docs/tauri_tasks.md` as historical context and pointed active tracking to `TODO.md` + `TEST_REPORT.md`.
+  - [x] Updated `TODO.md` `v1.5.9` EN/ZH checklist statuses to match current runtime facts.
+- [x] Reliability guardrails:
+  - [x] Added `test:mobile:contracts` script in `package.json`.
+  - [x] Added CI matrix workflow `.github/workflows/migration-gates.yml`:
+    - [x] desktop migration suite
+    - [x] tauri rust suite
+    - [x] mobile pipeline contract suite
+
+### Fresh Verification Evidence (Executed on 2026-03-04)
+
+- [x] `npm run test:migration` -> PASS (`66` tests)
+- [x] `npm run test:tauri` -> PASS (`18` tests)
+- [x] `npm run test:mobile:contracts` -> PASS (`28` tests)
+- [x] `npm run verify:android:env` -> PASS
+
+### Current Risk Boundary
+
+- Desktop Electron decommission remains **GO**.
+- Full all-platform runtime parity statement remains **NO-GO** while Capacitor is intentionally read-only for folder/build/content behavior.
+- Capacitor APK physical-device checklist execution evidence is still required for final release sign-off.
+
+---
+
+## 中文文档
+
+### 验证目标
+
+完成 `2026-03-03 v1.5.9 - Electron Removal Final Gate` 中剩余可执行项，并在收口后重新验证发布闸门。
+
+### 已完成收口动作
+
+- [x] 迁移治理收口：
+  - [x] 删除空目录 `src/electron`。
+  - [x] 清理活跃桥接运行时文件中残余误导性 “Electron” 注释表述。
+- [x] 文档对齐：
+  - [x] 将 `docs/tauri_tasks.md` 标记为历史上下文，并将有效跟踪指向 `TODO.md` + `TEST_REPORT.md`。
+  - [x] 更新 `TODO.md` 中 `v1.5.9` 英文/中文清单状态，使其与当前运行时事实一致。
+- [x] 稳定性护栏：
+  - [x] 在 `package.json` 新增 `test:mobile:contracts` 脚本。
+  - [x] 新增 CI 矩阵工作流 `.github/workflows/migration-gates.yml`：
+    - [x] 桌面迁移测试集
+    - [x] Tauri Rust 测试集
+    - [x] 移动端流水线契约测试集
+
+### 最新验证证据（2026-03-04 实测）
+
+- [x] `npm run test:migration` -> 通过（`66` 项）
+- [x] `npm run test:tauri` -> 通过（`18` 项）
+- [x] `npm run test:mobile:contracts` -> 通过（`28` 项）
+- [x] `npm run verify:android:env` -> 通过
+
+### 当前风险边界
+
+- 桌面端 Electron 下线结论仍为 **GO**。
+- 在 Capacitor 仍按只读策略运行目录/构建/内容能力期间，**NO-GO**：不宣告“全平台运行时能力完全对等”。
+- 最终发版签核仍需补充 Capacitor APK 真机清单执行证据。
+
+---
+
 # 2026-03-03 v1.5.10 - Option A P0 Verification (Tauri Android Native Folder/Build/Content Flow)
 
 ## English Document

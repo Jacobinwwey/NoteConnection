@@ -1,4 +1,4 @@
-# 2026-03-02 v1.5.1 - Bridge-First Brainstorming Addendum (Tauri Migration)
+# 2026-03-04 v1.5.13 - Bridge-First Brainstorming Addendum (Tauri Migration)
 
 ## English Document
 

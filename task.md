@@ -1,4 +1,4 @@
-# 2026-03-02 v1.5.1 - Tauri Migration Task Consolidation
+# 2026-03-04 v1.5.13 - Tauri Migration Task Consolidation
 
 ## English Document
 

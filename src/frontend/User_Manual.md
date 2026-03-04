@@ -1,6 +1,6 @@
 # NoteConnection User Manual
 
-**Version:** v1.1.0 | **Last Updated:** 2026-01-22
+**Version:** v1.5.13 | **Last Updated:** 2026-03-04
 
 ---
 
@@ -542,4 +542,4 @@ For developers: Modify `styles.css` to adjust:
 - **Documentation**: This file (offline) + README.md
 - **Tutorial**: Help → Launch Tutorial
 
-**Last Updated:** 2026-01-22 | **Version:** v1.1.0
+**Last Updated:** 2026-03-04 | **Version:** v1.5.13

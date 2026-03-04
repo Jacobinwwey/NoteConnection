@@ -836,8 +836,8 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem(LAST_TARGET_KEY, target);
 
             // Feature: Check for cached graph (Multi-Session Optimization)
-            // Works in both Electron (IPC) and Tauri/Web (HTTP API) modes
-            // 多会话优化：检查缓存图谱，同时支持 Electron IPC 和 HTTP API 模式
+            // Bridge-first runtime: sidecar HTTP path with Tauri IPC fallback.
+            // 多会话优化：采用桥接优先链路（sidecar HTTP）并保留 Tauri IPC 回退。
             try {
                 let cached = null;
 

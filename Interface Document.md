@@ -1,128 +1,6 @@
-# 2026-03-02 v1.5.1
+# 2026-03-04 v1.5.13
 
-## English Document
-
-### Interface Delta: Tauri Runtime Parity Update
-
-This section records interface changes added after `v1.4.5`, keeping all previous handover content unchanged below.
-
-#### A. Sidecar HTTP API (Node)
-
-1. `GET /api/available-targets`
-   - Purpose: return selectable learning/build targets merged from:
-     - physical subfolders under `Knowledge_Base`
-     - cached artifacts like `data_<target>.js`, `graph_data_<target>.json`
-   - Response:
-
-```json
-{
-  "targets": ["financial", "legal", "robotics"]
-}
-```
-
-#### B. Tauri Commands (Rust IPC)
-
-1. `get_available_targets() -> string[]`
-   - Contract: same merged target semantics as `/api/available-targets`.
-
-2. `read_node_content(file_path: string) -> Result<string, string>`
-   - Contract:
-     - Accepts relative paths and absolute paths.
-     - Enforces KB-root boundary (rejects files outside configured `Knowledge_Base`).
-     - Supports legacy desktop-style paths containing `.../Knowledge_Base/...` by rebasing to current configured KB root.
-
-#### C. Runtime Capability Contract Update
-
-- `get_runtime_capabilities()` now returns `supports_content_api: true` on Android.
-- Rationale: content reads are now available through Rust `read_node_content` command even when sidecar is disabled.
-
-#### D. Frontend Behavior Contract Changes
-
-1. `source_manager.js`
-   - Sidecar path prefers `/api/available-targets` and falls back to `/api/folders`.
-   - Rust path prefers `get_available_targets` and falls back to `get_folders`.
-   - In `supports_build=false` runtime (mobile):
-     - Source list is filtered to cached targets only.
-     - `ALL_FOLDERS` is shown only if active cache exists.
-     - Load button is disabled if no cache is available.
-
-2. `reader.js`
-   - Content loading fallback order:
-     - sidecar `/api/content` (desktop/web path)
-     - Rust command `read_node_content` (Tauri fallback/mobile-safe)
-     - localized unavailable/error messaging
-
-#### E. Verification Interface Baseline
-
-- `npm run test:migration` passed (35 tests).
-- `npm run test:tauri` passed (14 tests).
-- `npm run tauri:android:build` passed.
-
----
-
-## 中文文档
-
-### 接口增量：Tauri 运行时能力对齐更新
-
-本节记录 `v1.4.5` 之后新增的接口变化，下方历史交接内容保持不变。
-
-#### A. Sidecar HTTP API（Node）
-
-1. `GET /api/available-targets`
-   - 用途：返回可选择的学习/构建目标，来源合并：
-     - `Knowledge_Base` 下实际子目录
-     - 缓存产物（如 `data_<target>.js`、`graph_data_<target>.json`）
-   - 响应示例：
-
-```json
-{
-  "targets": ["financial", "legal", "robotics"]
-}
-```
-
-#### B. Tauri 命令（Rust IPC）
-
-1. `get_available_targets() -> string[]`
-   - 契约：与 `/api/available-targets` 保持同样的目标合并语义。
-
-2. `read_node_content(file_path: string) -> Result<string, string>`
-   - 契约：
-     - 支持相对路径与绝对路径输入。
-     - 严格限制在配置的 `Knowledge_Base` 根目录内（越界文件直接拒绝）。
-     - 对包含 `.../Knowledge_Base/...` 的旧桌面路径可自动重定位到当前 KB 根目录。
-
-#### C. 运行时能力契约更新
-
-- `get_runtime_capabilities()` 在 Android 端现在返回 `supports_content_api: true`。
-- 原因：即使 sidecar 关闭，也可通过 Rust `read_node_content` 完成内容读取。
-
-#### D. 前端行为契约更新
-
-1. `source_manager.js`
-   - sidecar 路径优先调用 `/api/available-targets`，失败时回退到 `/api/folders`。
-   - Rust 路径优先调用 `get_available_targets`，失败时回退到 `get_folders`。
-   - 在 `supports_build=false`（移动端）场景：
-     - 下拉列表仅保留有缓存的目标。
-     - `ALL_FOLDERS` 仅在存在活动缓存时显示。
-     - 无可用缓存时，加载按钮禁用。
-
-2. `reader.js`
-   - 内容加载回退顺序：
-     - sidecar `/api/content`（桌面/网页路径）
-     - Rust `read_node_content`（Tauri 回退/移动端可用）
-     - 本地化错误或不可用提示
-
-#### E. 验证基线
-
-- `npm run test:migration` 通过（35 项）。
-- `npm run test:tauri` 通过（14 项）。
-- `npm run tauri:android:build` 通过。
-
----
-
-# 2026-03-01 v1.4.5
-
-# Interface Document (v1.4.5)
+# Interface Document (v1.5.13)
 
 This document is the canonical interface handover for the current codebase.
 It was rebuilt from source verification, not appended to legacy sections.
@@ -173,6 +51,7 @@ Audit flow:
 interface RuntimePaths {
   projectRoot: string;
   frontendDir: string;
+  runtimeDataDir: string;
   kbRoot: string;
 }
 ```
@@ -778,7 +657,82 @@ This is the current Bridge-first migration contract.
 
 ---
 
-# 接口文档 (v1.4.5)
+---
+
+---
+
+## 13. Interface Update Log Placement
+
+- Canonical bilingual update logs are centrally archived in [`export.md`](export.md).
+- This document focuses on interface contracts; historical migration logs are no longer placed at file beginning.
+- Related interface delta versions:
+- `2026-03-02 v1.5.1`: Interface Delta: Tauri Runtime Parity Update
+
+### Archived Interface Delta Block (traceability)
+# 2026-03-02 v1.5.1
+
+### Interface Delta: Tauri Runtime Parity Update
+
+This section records interface changes added after `v1.4.5`, keeping all previous handover content unchanged below.
+
+#### A. Sidecar HTTP API (Node)
+
+1. `GET /api/available-targets`
+   - Purpose: return selectable learning/build targets merged from:
+     - physical subfolders under `Knowledge_Base`
+     - cached artifacts like `data_<target>.js`, `graph_data_<target>.json`
+   - Response:
+
+```json
+{
+  "targets": ["financial", "legal", "robotics"]
+}
+```
+
+#### B. Tauri Commands (Rust IPC)
+
+1. `get_available_targets() -> string[]`
+   - Contract: same merged target semantics as `/api/available-targets`.
+
+2. `read_node_content(file_path: string) -> Result<string, string>`
+   - Contract:
+     - Accepts relative paths and absolute paths.
+     - Enforces KB-root boundary (rejects files outside configured `Knowledge_Base`).
+     - Supports legacy desktop-style paths containing `.../Knowledge_Base/...` by rebasing to current configured KB root.
+
+#### C. Runtime Capability Contract Update
+
+- `get_runtime_capabilities()` now returns `supports_content_api: true` on Android.
+- Rationale: content reads are now available through Rust `read_node_content` command even when sidecar is disabled.
+
+#### D. Frontend Behavior Contract Changes
+
+1. `source_manager.js`
+   - Sidecar path prefers `/api/available-targets` and falls back to `/api/folders`.
+   - Rust path prefers `get_available_targets` and falls back to `get_folders`.
+   - In `supports_build=false` runtime (mobile):
+     - Source list is filtered to cached targets only.
+     - `ALL_FOLDERS` is shown only if active cache exists.
+     - Load button is disabled if no cache is available.
+
+2. `reader.js`
+   - Content loading fallback order:
+     - sidecar `/api/content` (desktop/web path)
+     - Rust command `read_node_content` (Tauri fallback/mobile-safe)
+     - localized unavailable/error messaging
+
+#### E. Verification Interface Baseline
+
+- `npm run test:migration` passed (35 tests).
+- `npm run test:tauri` passed (14 tests).
+- `npm run tauri:android:build` passed.
+
+---
+
+## 中文文档
+
+# 2026-03-04 v1.5.13
+# 接口文档 (v1.5.13)
 
 本文件是当前代码状态下的权威接口交接文档。
 本版不是在旧文档上追加，而是按源码核对后重建。
@@ -829,6 +783,7 @@ This is the current Bridge-first migration contract.
 interface RuntimePaths {
   projectRoot: string;
   frontendDir: string;
+  runtimeDataDir: string;
   kbRoot: string;
 }
 ```
@@ -1433,3 +1388,71 @@ Signals：
 7. Tauri 模式隐藏 Web path toolbar；浏览器模式保留。
 
 ---
+
+---
+
+## 13. 接口更新日志归位说明
+
+- 规范的双语更新日志统一归档在 [`export.md`](export.md)。
+- 本文档聚焦接口契约，历史迁移日志不再前置于文件开头。
+- 相关接口增量版本：
+- `2026-03-02 v1.5.1`：接口增量：Tauri 运行时能力对齐更新
+
+### 已归档接口增量日志块（可追溯）
+# 2026-03-02 v1.5.1
+
+### 接口增量：Tauri 运行时能力对齐更新
+
+本节记录 `v1.4.5` 之后新增的接口变化，下方历史交接内容保持不变。
+
+#### A. Sidecar HTTP API（Node）
+
+1. `GET /api/available-targets`
+   - 用途：返回可选择的学习/构建目标，来源合并：
+     - `Knowledge_Base` 下实际子目录
+     - 缓存产物（如 `data_<target>.js`、`graph_data_<target>.json`）
+   - 响应示例：
+
+```json
+{
+  "targets": ["financial", "legal", "robotics"]
+}
+```
+
+#### B. Tauri 命令（Rust IPC）
+
+1. `get_available_targets() -> string[]`
+   - 契约：与 `/api/available-targets` 保持同样的目标合并语义。
+
+2. `read_node_content(file_path: string) -> Result<string, string>`
+   - 契约：
+     - 支持相对路径与绝对路径输入。
+     - 严格限制在配置的 `Knowledge_Base` 根目录内（越界文件直接拒绝）。
+     - 对包含 `.../Knowledge_Base/...` 的旧桌面路径可自动重定位到当前 KB 根目录。
+
+#### C. 运行时能力契约更新
+
+- `get_runtime_capabilities()` 在 Android 端现在返回 `supports_content_api: true`。
+- 原因：即使 sidecar 关闭，也可通过 Rust `read_node_content` 完成内容读取。
+
+#### D. 前端行为契约更新
+
+1. `source_manager.js`
+   - sidecar 路径优先调用 `/api/available-targets`，失败时回退到 `/api/folders`。
+   - Rust 路径优先调用 `get_available_targets`，失败时回退到 `get_folders`。
+   - 在 `supports_build=false`（移动端）场景：
+     - 下拉列表仅保留有缓存的目标。
+     - `ALL_FOLDERS` 仅在存在活动缓存时显示。
+     - 无可用缓存时，加载按钮禁用。
+
+2. `reader.js`
+   - 内容加载回退顺序：
+     - sidecar `/api/content`（桌面/网页路径）
+     - Rust `read_node_content`（Tauri 回退/移动端可用）
+     - 本地化错误或不可用提示
+
+#### E. 验证基线
+
+- `npm run test:migration` 通过（35 项）。
+- `npm run test:tauri` 通过（14 项）。
+- `npm run tauri:android:build` 通过。

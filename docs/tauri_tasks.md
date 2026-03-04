@@ -1,4 +1,24 @@
-# 2026-03-02 v1.5.1 - Tauri Taskboard Refresh (Desktop + Android + Godot Bridge)
+# Historical Note (2026-03-04 v1.5.11)
+
+## English Document
+
+This file is kept as historical taskboard context from the early Electron -> Tauri migration phase.
+Current active migration decision/status tracking is maintained in:
+
+- `TODO.md` (release gate decisions and action checklist)
+- `TEST_REPORT.md` (verification evidence and risk status)
+
+## 中文文档
+
+本文件作为 Electron -> Tauri 迁移早期阶段的任务看板历史记录保留。
+当前有效的迁移决策/状态以以下文档为准：
+
+- `TODO.md`（发布闸门决策与行动清单）
+- `TEST_REPORT.md`（验证证据与风险状态）
+
+---
+
+# 2026-03-04 v1.5.13 - Tauri Taskboard Refresh (Desktop + Android + Godot Bridge)
 
 ## English Document
 

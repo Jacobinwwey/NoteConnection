@@ -1,4 +1,4 @@
-# 2026-03-02 v1.5.1 - Tauri Bridge-First Implementation Plan Update
+# 2026-03-04 v1.5.13 - Tauri Bridge-First Implementation Plan Update
 
 ## English Document
 

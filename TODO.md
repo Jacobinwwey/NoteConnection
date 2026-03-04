@@ -1,6 +1,99 @@
+# 2026-03-04 v1.5.13
+
+# 2026-03-04 v1.5.13 - Capacitor Physical-Device Acceptance Runbook Closure
+
+
+### Objective
+
+Convert the last open `v1.5.9` sign-off item (Capacitor physical-device checklist evidence) into an executable and repeatable workflow.
+
+### Delivered
+
+- [x] Added device-acceptance probe script:
+  - [x] `scripts/verify-capacitor-device-acceptance.js`
+  - [x] validates:
+    - [x] APK exists (`android/app/build/outputs/apk/debug/app-debug.apk`)
+    - [x] `adb` is available
+    - [x] at least one online Android device is attached
+- [x] Added npm command:
+  - [x] `npm run verify:capacitor:device`
+- [x] Revalidated current APK build pipeline:
+  - [x] `npm run mobile:build:capacitor` -> PASS on 2026-03-04
+
+### Physical-Device Acceptance Checklist (Release Sign-Off)
+
+- [ ] Device connection gate passes:
+  - [ ] `npm run verify:capacitor:device`
+- [ ] App startup behavior validated on real device.
+- [ ] Source panel behavior validated on real device.
+- [ ] Reader behavior validated on real device.
+- [ ] Path mode entry/exit behavior validated on real device.
+- [ ] Evidence artifacts attached:
+  - [ ] device serial (masked if needed)
+  - [ ] test date/time
+  - [ ] screenshots or short screen recording
+  - [ ] observed result notes (pass/fail + issue IDs)
+
+### Current Status
+
+- [x] Build + environment side of acceptance is ready.
+- [ ] Real-device execution evidence is still required to close the final sign-off checkbox in `v1.5.9`.
+
+---
+
+# 2026-03-04 v1.5.11 - Capacitor Runtime Boundary Closure (Option B Execution)
+
+
+### Decision Snapshot
+
+- [x] Capacitor runtime boundary hardening is now implemented under Option B (read-only mobile policy).
+- [x] Source/Reader runtime behavior no longer assumes desktop sidecar APIs in native Capacitor.
+- [x] Regression contract coverage for Capacitor runtime boundary is added and wired into migration gate.
+- [ ] Capacitor in-app folder/build/content parity with desktop remains intentionally out of scope for current release policy.
+
+### Delivered in Code
+
+- [x] `src/frontend/source_manager.js`
+  - [x] Added native Capacitor runtime detection (`window.Capacitor.getPlatform` / `isNativePlatform`).
+  - [x] Applied explicit capability profile in native Capacitor:
+    - [x] `supports_sidecar=false`
+    - [x] `supports_build=false`
+    - [x] `supports_content_api=false`
+    - [x] `supports_kb_runtime_change=false`
+  - [x] Added deterministic source-panel fallback for read-only mode:
+    - [x] path label -> `source.capacitor.bundlePath`
+    - [x] single packaged option -> `PACKAGED_GRAPH`
+    - [x] load button disabled + guarded alert (`source.error.capacitorReadOnly`)
+- [x] `src/frontend/reader.js`
+  - [x] Added Capacitor-native detection fallback to enforce read-only content strategy when runtime caps are unavailable early.
+- [x] i18n updates:
+  - [x] `src/frontend/locales/en.json`
+  - [x] `src/frontend/locales/zh.json`
+  - [x] added `source.capacitor.packagedGraph`
+  - [x] added `source.capacitor.bundlePath`
+  - [x] added `source.error.capacitorReadOnly`
+- [x] Added Capacitor boundary contract tests:
+  - [x] `src/capacitor.runtime.contract.test.ts`
+  - [x] included in `package.json` -> `test:migration`
+
+### Verification Evidence (Executed on 2026-03-04)
+
+- [x] `npm run test:migration` -> PASS (`66` tests)
+- [x] `npm run test:tauri` -> PASS (`18` tests)
+- [x] `npm run mobile:build:capacitor` -> PASS
+  - [x] APK output: `android/app/build/outputs/apk/debug/app-debug.apk`
+
+### Status Update for Previously Open Items
+
+- [x] `v1.5.9` item: **Capacitor runtime behavior hardening** -> closed at code + test level.
+- [x] `v1.5.9` item: **integration test coverage for Capacitor runtime boundary** -> closed (`src/capacitor.runtime.contract.test.ts`).
+- [ ] `v1.5.9` item: **manual Capacitor APK checklist on physical device** remains pending explicit on-device execution evidence.
+- [ ] **NO-GO remains** for claiming “all-platform parity complete”.
+
+---
+
 # 2026-03-03 v1.5.10 - Option A P0 Closure (Tauri Android Native Folder/Build/Content Flow)
 
-## English Document
 
 ### Decision Snapshot
 
@@ -40,52 +133,8 @@
 
 ---
 
-## 中文文档
-
-### 结论快照
-
-- [x] 方案 A 的 P0 已在 Tauri Android 运行时落地。
-- [x] Android 端现已支持无 Node sidecar 的本地构图能力。
-- [x] 桌面端与 Web 端行为保持不变。
-- [ ] Capacitor 运行时能力对等仍是独立范围（构建后端尚未原生等价）。
-
-### 已交付实现
-
-- [x] 在 Rust 中新增原生运行时构建命令：
-  - [x] `src-tauri/src/lib.rs` 中 `build_graph_runtime(request)`
-  - [x] 从 `Knowledge_Base/<target>`（或 `ALL_FOLDERS`）扫描构图
-  - [x] 将运行时产物写入 `runtime_data/`：
-    - [x] `data.js`
-    - [x] `graph_data.json`
-    - [x] `data_<target>.js`
-    - [x] `graph_data_<target>.json`
-- [x] 更新 Android 运行时能力：
-  - [x] `supports_sidecar=false`
-  - [x] `supports_build=true`
-  - [x] `supports_content_api=true`
-- [x] 在 `src/frontend/source_manager.js` 完成构建链路分流：
-  - [x] 有 sidecar 时仍优先走 `/api/build`
-  - [x] 无 sidecar 的 Tauri 路径改为 `invoke('build_graph_runtime', { request })`
-
-### 验证证据（2026-03-03 实测）
-
-- [x] `npm run test:migration` -> 通过（`55` 项）
-- [x] `npm run test:tauri` -> 通过（`16` 项）
-- [x] `npm run verify:android:env` -> 通过（SDK + cmdline-tools + NDK 已识别）
-
-### P0 状态更新
-
-- [x] `方案 A：实现移动端目录/构建/内容能力原生等价链路`（Tauri Android 路径）已完成。
-- [ ] Capacitor 独立运行时的构建/内容完全对等仍待后续收口。
-
----
-
-> Superseded Note (2026-03-03 v1.5.10): The section below is historical context. Current Option A P0 status is recorded above.
-> 覆盖说明（2026-03-03 v1.5.10）：下方内容为历史上下文，当前 Option A P0 状态以上方为准。
-
 # 2026-03-03 v1.5.9 - Electron Removal Final Gate (Audit-Driven Action Plan)
 
-## English Document
 
 ### Decision Snapshot
 
@@ -100,126 +149,62 @@
   - [x] Electron IPC-equivalent flows are migrated to sidecar HTTP + Tauri commands.
   - [x] Electron scripts/dependencies are absent from active package/runtime surface.
 - Mobile:
-  - [ ] Capacitor runtime is not equivalent to desktop sidecar runtime for folder/build/content APIs.
-  - [ ] Android runtime intentionally capability-gated (`supports_sidecar=false`, `supports_build=false`).
+  - [x] Capacitor runtime is intentionally read-only and not equivalent to desktop sidecar runtime for folder/build/content APIs.
+  - [x] Tauri Android runtime is no-sidecar but build/content-enabled (`supports_sidecar=false`, `supports_build=true`), while Capacitor remains `supports_build=false`.
 
 ### P0 - Required Before Claiming “Full Migration Complete”
 
-- [ ] **Productize mobile capability boundary decision (must choose and freeze release policy)**
-  - [ ] Option A: Implement mobile-native equivalent for folder/build/content flow.
-  - [ ] Option B: Officially define mobile as cache/read-focused scope and remove parity ambiguity in UI/docs.
+- [x] **Productize mobile capability boundary decision (must choose and freeze release policy)**
+  - [x] Option A: Implement mobile-native equivalent for folder/build/content flow (Tauri Android native runtime path).
+  - [x] Option B: Officially define Capacitor mobile as cache/read-focused scope and remove parity ambiguity in UI/docs.
 
-- [ ] **Capacitor runtime behavior hardening**
-  - [ ] Detect Capacitor runtime explicitly and avoid desktop-sidecar assumptions in source loading.
-  - [ ] Provide deterministic fallback UX when `/api/folders`, `/api/build`, `/api/content` are unavailable.
-  - [ ] Define content strategy for reader in Capacitor mode (embed content, packaged index, or clear unsupported notice).
+- [x] **Capacitor runtime behavior hardening**
+  - [x] Detect Capacitor runtime explicitly and avoid desktop-sidecar assumptions in source loading.
+  - [x] Provide deterministic fallback UX when `/api/folders`, `/api/build`, `/api/content` are unavailable.
+  - [x] Define content strategy for reader in Capacitor mode (read-only packaged graph policy + explicit unsupported notice for unavailable content APIs).
 
-- [ ] **Mobile acceptance gate**
-  - [ ] Add explicit integration test coverage for Capacitor runtime boundary behavior.
-  - [ ] Add manual verification checklist for Capacitor APK:
-    - [ ] startup behavior
-    - [ ] source panel behavior
-    - [ ] reader behavior
-    - [ ] path mode entry/exit behavior
+- [x] **Mobile acceptance gate**
+  - [x] Add explicit integration test coverage for Capacitor runtime boundary behavior.
+  - [x] Add manual verification checklist for Capacitor APK:
+    - [x] startup behavior
+    - [x] source panel behavior
+    - [x] reader behavior
+    - [x] path mode entry/exit behavior
+  - [ ] Collect physical-device execution evidence against the checklist for final release sign-off.
+    - [x] preflight command available: `npm run verify:capacitor:device`
+    - [ ] latest probe result still shows no online Android device connected (2026-03-04).
 
 ### P1 - Migration Hygiene and Decommission Clean-up
 
-- [ ] **Archive/remove residual Electron artifacts**
-  - [ ] Remove empty `src/electron` directory or add explicit archive marker.
-  - [ ] Replace misleading names/comments containing “electron” where runtime is already bridge-based (for maintainability clarity).
+- [x] **Archive/remove residual Electron artifacts**
+  - [x] Remove empty `src/electron` directory or add explicit archive marker.
+  - [x] Replace misleading names/comments containing “electron” where runtime is already bridge-based (for maintainability clarity).
 
-- [ ] **Documentation alignment**
-  - [ ] Mark `docs/tauri_tasks.md` as historical where it still lists pre-migration TODOs.
-  - [ ] Keep active docs Tauri-first and clearly separate desktop vs Android vs Capacitor capability boundaries.
+- [x] **Documentation alignment**
+  - [x] Mark `docs/tauri_tasks.md` as historical where it still lists pre-migration TODOs.
+  - [x] Keep active docs Tauri-first and clearly separate desktop vs Android vs Capacitor capability boundaries.
 
 ### P2 - Reliability and Release Guardrails
 
-- [ ] Keep release gate mandatory:
-  - [ ] `npm run test:migration`
-  - [ ] `npm run test:tauri`
-- [ ] Keep Android environment gate mandatory:
-  - [ ] `npm run verify:android:env`
-- [ ] Add CI job matrix to prevent silent regressions:
-  - [ ] desktop migration suite
-  - [ ] tauri rust suite
-  - [ ] mobile pipeline contract suite
+- [x] Keep release gate mandatory:
+  - [x] `npm run test:migration`
+  - [x] `npm run test:tauri`
+- [x] Keep Android environment gate mandatory:
+  - [x] `npm run verify:android:env`
+- [x] Add CI job matrix to prevent silent regressions:
+  - [x] desktop migration suite
+  - [x] tauri rust suite
+  - [x] mobile pipeline contract suite
 
 ### Go/No-Go Policy (Current)
 
 - [x] **GO**: Desktop Electron decommissioning.
-- [ ] **NO-GO**: “All-platform parity complete” statement before P0 closure.
-
----
-
-## 中文文档
-
-### 结论快照
-
-- [x] 桌面端 Electron -> Tauri 迁移已达到可下线技术状态。
-- [x] Tauri 桌面构建与运行主链路已启用并通过测试验证。
-- [x] Capacitor 与 Tauri Android 构建链路均已存在。
-- [ ] 全平台运行时能力对等尚未完全收口。
-
-### 范围澄清（基于审计）
-
-- 桌面端：
-  - [x] Electron IPC 等价能力已迁移到 sidecar HTTP + Tauri 命令。
-  - [x] 活跃包管理与运行路径中已无 Electron 脚本/依赖。
-- 移动端：
-  - [ ] Capacitor 运行时在目录/构建/内容 API 上不等价于桌面 sidecar 运行时。
-  - [ ] Android 运行时按设计能力门控（`supports_sidecar=false`, `supports_build=false`）。
-
-### P0 - 宣告“迁移完全完成”前必须收口
-
-- [ ] **移动端能力边界产品化决策（必须二选一并固化）**
-  - [ ] 方案 A：实现移动端目录/构建/内容能力的原生等价链路。
-  - [ ] 方案 B：正式将移动端定义为缓存/阅读优先能力，并在 UI/文档中消除“对等”歧义。
-
-- [ ] **Capacitor 运行时行为加固**
-  - [ ] 显式识别 Capacitor 运行时，避免沿用桌面 sidecar 假设。
-  - [ ] 当 `/api/folders`、`/api/build`、`/api/content` 不可用时提供确定性的降级交互。
-  - [ ] 明确 Capacitor Reader 内容策略（嵌入内容、打包索引，或显式不支持提示）。
-
-- [ ] **移动端验收闸门**
-  - [ ] 增加 Capacitor 运行时边界行为的集成测试覆盖。
-  - [ ] 增加 Capacitor APK 手工验收清单：
-    - [ ] 启动行为
-    - [ ] 数据源面板行为
-    - [ ] Reader 行为
-    - [ ] Pathmode 进入/退出行为
-
-### P1 - 迁移治理与下线清理
-
-- [ ] **归档/移除残余 Electron 痕迹**
-  - [ ] 删除空目录 `src/electron` 或增加明确归档标记。
-  - [ ] 清理代码中仍含 “electron” 的误导性命名/注释（运行时已为 bridge 架构）。
-
-- [ ] **文档对齐**
-  - [ ] 对 `docs/tauri_tasks.md` 中已过期迁移待办添加历史标记。
-  - [ ] 保持有效文档为 Tauri-first，并清晰区分 desktop/Android/Capacitor 能力边界。
-
-### P2 - 稳定性与发布护栏
-
-- [ ] 将以下发布闸门保持为必跑：
-  - [ ] `npm run test:migration`
-  - [ ] `npm run test:tauri`
-- [ ] 将 Android 环境闸门保持为必跑：
-  - [ ] `npm run verify:android:env`
-- [ ] 增加 CI 矩阵避免静默回归：
-  - [ ] 桌面迁移测试集
-  - [ ] Tauri Rust 测试集
-  - [ ] 移动端流水线契约测试集
-
-### 当前 Go/No-Go 政策
-
-- [x] **GO**：桌面端 Electron 下线。
-- [ ] **NO-GO**：在 P0 未收口前，不宣告“全平台能力对等完成”。
+- [x] **NO-GO policy active**: Do not claim “all-platform runtime parity complete” while Capacitor remains in read-only scope.
 
 ---
 
 # 2026-03-03 v1.5.8 - PathBridge Handshake + Tauri Early-Socket Stability
 
-## English Document
 
 ### Added in This Round
 
@@ -255,45 +240,8 @@
 
 ---
 
-## 中文文档
-
-### 本轮新增
-
-- [x] 在 `path_mode/scripts/ws_client.gd` 移除 Godot 不兼容的 WebSocket 查询参数 URL：
-  - [x] `ws://127.0.0.1:9876/?client=godot` -> `ws://127.0.0.1:9876`
-  - [x] 连接后新增显式 `identify` 握手消息。
-  - [x] 增加连接前消息队列与重连后冲刷，避免初始化配置消息丢失/警告。
-
-- [x] 在 `src/core/PathBridge.ts` 增加显式客户端身份协议：
-  - [x] 新增 `identify` 消息处理分支。
-  - [x] 新增 `setClientTag` 与标签清洗逻辑。
-  - [x] 保留 URL 查询参数识别作为浏览器旧路径兼容兜底。
-
-- [x] 在 `src/frontend/path_app.js` 强化 Bridge 行为：
-  - [x] 移除 query-tag URL，统一使用 `ws://localhost:9876`。
-  - [x] 为 `frontend` 与 `frontend-early` 两类连接发送 `identify` 负载。
-  - [x] 新增 Tauri 运行时双重判定（`window.__TAURI__` 或 `navigator.userAgent.includes('Tauri')`），避免在 Tauri 中误启动 `frontend-early` 连接。
-
-- [x] 新增回归契约覆盖：
-  - [x] 新增测试文件 `src/pathbridge.handshake.contract.test.ts`。
-  - [x] 已纳入 `test:migration`。
-
-### 验证结果
-
-- [x] `npm run test:migration` -> 通过（`53` 项）。
-- [x] `npm run test:tauri` -> 通过（`14` 项）。
-
-### 范围安全性
-
-- [x] 桌面端功能不变，仅提升 Bridge 握手与标签稳定性。
-- [x] 浏览器模式保留 early bridge 支持。
-- [x] Android Pathmode 流程不受影响。
-
----
-
 # 2026-03-03 v1.5.7 - Android Native Pathmode Smoke Lifecycle Automation
 
-## English Document
 
 ### Added in This Round
 
@@ -327,43 +275,8 @@
 
 ---
 
-## 中文文档
-
-### 本轮新增
-
-- [x] 新增 Android 运行时烟雾生命周期脚本：
-  - [x] `scripts/smoke-android-pathmode.js`
-  - [x] 使用 `adb` + `dumpsys activity` 检查 `MainActivity -> PathmodeGodotActivity -> MainActivity`。
-  - [x] 通过发送返回键（`KEYCODE_BACK`）验证 Activity 返回路径。
-  - [x] 支持可选严格模式：
-    - [x] `NOTE_CONNECTION_ANDROID_SMOKE_REQUIRE_DEVICE=1` 时，无设备将判定失败
-    - [x] 默认模式下，无设备/模拟器时会安全跳过。
-
-- [x] 新增 npm 命令入口：
-  - [x] 在 `package.json` 中新增 `smoke:android:pathmode`。
-
-- [x] 新增烟雾集成回归契约：
-  - [x] `src/android.pathmode.smoke.contract.test.ts`。
-  - [x] 更新 `src/mobile.pipeline.test.ts` 断言烟雾脚本注册。
-  - [x] 更新 `test:migration` 用例列表，纳入该契约测试。
-
-### 验证结果
-
-- [x] `npm run test:migration` -> 通过（`50` 项）。
-- [x] `npm run test:tauri` -> 通过（`14` 项）。
-- [x] `npm run smoke:android:pathmode` -> 通过（无连接设备时按设计跳过）。
-
-### 范围安全性
-
-- [x] 不影响桌面端行为。
-- [x] 不影响 Web 端行为。
-- [x] Android 烟雾流程仅在显式执行命令时触发。
-
----
-
 # 2026-03-03 v1.5.6 - Option A Android Native Pathmode (Godot Full-Screen) Execution
 
-## English Document
 
 ### Implemented in This Round
 
@@ -408,54 +321,8 @@
 
 ---
 
-## 中文文档
-
-### 本轮已实现
-
-- [x] **Android 方案 A 启动链路已落地**
-  - [x] 在 `src-tauri/src/lib.rs` 新增 Android 原生 Pathmode 启动命令：`open_native_pathmode`。
-  - [x] 新增运行时能力标记：`supports_native_pathmode`（Android=true，桌面/web=false）。
-  - [x] 更新前端 Path Mode 入口（`src/frontend/app.js`）：
-    - [x] Android 且能力开启时优先走原生启动
-    - [x] 桌面/web 维持原有网页 Path Mode 容器流程不变
-
-- [x] **Android 全屏 Godot Activity 桥接已落地**
-  - [x] 新增可追踪 Android 模板文件：
-    - [x] `src-tauri/mobile/android/PathmodeBridge.kt`
-    - [x] `src-tauri/mobile/android/PathmodeGodotActivity.kt`
-  - [x] 新增生成工程补丁流水线：
-    - [x] `scripts/apply-tauri-android-pathmode.js`
-    - [x] `scripts/run-tauri-android.js` 在 Android 命令前后自动补丁
-  - [x] 增加 `path_mode` 资源同步到 `src-tauri/gen/android/app/src/main/assets/path_mode`
-
-- [x] **Exit 返回行为已实现**
-  - [x] Godot 内点击 `Exit` 会退出 Android Pathmode Activity 并返回主 Tauri 窗口（`path_mode/scripts/path_renderer.gd`）。
-
-- [x] **Android 构建链路已加固**
-  - [x] 在 Android runner 增加 Cargo 内存控制（`CARGO_BUILD_JOBS`、release 优化/代码生成参数）。
-  - [x] 补丁脚本已处理：
-    - [x] Godot Maven 依赖与 Manifest 合并规则
-    - [x] 与 Godot Android 产物匹配所需的 Kotlin 插件版本对齐
-
-### 验证结果
-
-- [x] `npm run test:migration` -> 通过（`48` 项）。
-- [x] `npm run test:tauri` -> 通过（`14` 项）。
-- [x] `node scripts/run-tauri-android.js build` -> 通过。
-  - [x] APK：`src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk`
-  - [x] AAB：`src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab`
-
-### 影响范围安全性
-
-- [x] 桌面端行为不变。
-- [x] Web 端行为不变。
-- [x] Android 逻辑通过运行时能力门控与构建脚本门控隔离。
-
----
-
 # 2026-03-03 v1.5.5 - Status Normalization Update (Proceeding)
 
-## English Document
 
 ### Revalidated in This Round
 
@@ -478,32 +345,8 @@
 
 ---
 
-## 中文文档
-
-### 本轮复验结果
-
-- [x] 已重新执行迁移闸门测试：
-  - [x] `npm run test:migration` -> 通过（`44` 项）。
-  - [x] `npm run test:tauri` -> 通过（`14` 项）。
-- [x] 已确认 `v1.5.3` 与 `v1.5.4` 收口项持续有效（P0 工程收口 + P1 运行时边界 UI）。
-- [x] 已确认 sidecar 内容边界校验与加载/历史契约测试持续通过。
-
-### 待办治理
-
-- [x] 已将 `v1.5.2` 清单标记为历史/已被后续版本覆盖，避免执行口径歧义。
-- [x] 保留历史清单正文用于追溯（不做破坏性删除）。
-
-### 当前仍可执行的剩余范围
-
-- [ ] 移动端最终对等策略仍为产品层待决项：
-  - [ ] 方案 A：实现与桌面 sidecar 等价的 Android 原生构建/内容链路。
-  - [x] 方案 B（当前执行策略）：维持 Android 能力门控的缓存/阅读运行时，并显式说明边界。
-
----
-
 # 2026-03-03 v1.5.3 - Execution Progress Update (P0 Completed)
 
-## English Document
 
 ### Completed in This Execution Round
 
@@ -538,44 +381,8 @@
 
 ---
 
-## 中文文档
-
-### 本轮执行已完成
-
-- [x] **将 sidecar 内容 API 安全边界提升至 Rust 同等级**
-  - [x] 在 `src/server.ts` 为 `/api/content` 增加 KB 根路径边界校验。
-  - [x] 新增回归测试覆盖：
-    - [x] 根目录内绝对路径可读取
-    - [x] 旧式 `Knowledge_Base` 标记路径可读取
-    - [x] 根目录外路径被拦截（`403`）
-
-- [x] **锁定缓存提示/单次加载语义（契约覆盖）**
-  - [x] 新增 source manager 加载流程契约测试：
-    - [x] 重复事件绑定防护
-    - [x] 加载进行中点击防重入
-    - [x] 单一缓存提示分支契约
-  - [x] 现有服务端 restore/build 去重测试持续通过。
-
-- [x] **完成 Godot History 一致性契约**
-  - [x] 在 `path_mode_ui.gd` 新增 `record_navigation_node(node_id)`。
-  - [x] 在 `path_renderer.gd` 的 `render_path` 中接入中心切换历史记录。
-  - [x] 新增历史记录钩子契约测试。
-
-- [x] **最终 Go/No-Go 技术闸门（工程部分）**
-  - [x] `npm run test:migration` -> 通过（`43` 项）。
-  - [x] `npm run test:tauri` -> 通过（`14` 项）。
-
-### 剩余产品决策（不阻塞桌面稳定性）
-
-- [ ] 确认移动端最终对等能力范围：
-  - [ ] 方案 A：实现 Android 原生等价构建运行时。
-  - [x] 方案 B（当前执行策略）：移动端聚焦缓存/阅读能力，并显式声明能力边界。
-
----
-
 # 2026-03-03 v1.5.2 - Electron Removal Final Gate (Post-Audit Action Plan)
 
-## English Document
 
 > Superseded Note (2026-03-03 v1.5.5): This section is preserved as historical plan context. P0/P1 closure evidence is recorded in `v1.5.3` and `v1.5.4` above. Unchecked boxes below are not current execution blockers unless explicitly reopened.
 
@@ -629,63 +436,8 @@
 
 ---
 
-## 中文文档
-
-> 覆盖说明（2026-03-03 v1.5.5）：本节作为历史计划上下文保留。P0/P1 收口证据已记录在上方 `v1.5.3` 与 `v1.5.4`。以下未勾选项默认不再作为当前执行阻塞，除非后续明确重开。
-
-**审计结论快照**
-
-- [x] 桌面端 Electron -> Tauri 迁移在功能层面已成功。
-- [x] Capacitor 导出链路仍可用且可构建。
-- [x] Tauri Android 导出链路可构建。
-- [ ] 桌面与移动端的完整运行时对等尚未收口。
-
-### P0 - 在宣告“迁移完全收口”前必须完成
-
-- [ ] **将 sidecar 内容 API 的安全边界提升到 Rust 同等级**
-  - [ ] 在 `src/server.ts` 为 `/api/content` 增加 KB 根路径边界校验，对齐 `read_node_content`。
-  - [ ] 新增回归测试覆盖：合法路径、越界路径、Windows/相对路径变体。
-
-- [ ] **在 Tauri 启动竞态下锁定缓存提示与单次加载语义**
-  - [ ] 增加集成层测试覆盖：
-    - [ ] “存在缓存 -> 只出现一次提示”
-    - [ ] “单次点击 -> 只执行一次 restore/build”
-  - [ ] 与 sidecar 去重和前端 reload guard 的联动行为一并验证。
-
-- [ ] **完成 Godot History 一致性契约**
-  - [ ] 确保中心切换事件（双击/手动切换）都能写入 History 时间线。
-  - [ ] 增加中心切换后的 History 自动化断言测试。
-
-### P1 - 移动端/导出能力边界澄清与加固
-
-- [ ] **在文档与 UI 中明确 Android 运行时能力边界**
-  - [ ] 明确当前 Android 运行时为 `supports_sidecar=false`、`supports_build=false`。
-  - [ ] 提供 cache-only 模式下的用户可操作说明。
-
-- [ ] **完成移动端构建能力策略决策并落地**
-  - [ ] 方案 A：实现 Android 原生构建/内容链路，对齐桌面 sidecar 流程。
-  - [ ] 方案 B：保持缓存/只读能力，并明确为产品约束。
-
-### P2 - 文档治理（保留历史，不删除）
-
-- [ ] 将历史 Electron 段落标记为归档上下文，降低执行层误读。
-- [ ] 保持当前有效发布/运维文档为 Tauri-first 与双移动端路径一致。
-
-### 最终 Go/No-Go 闸门（全范围）
-
-- [ ] 新增对等测试后 `npm run test:migration` 通过。
-- [ ] 新增安全与行为测试后 `npm run test:tauri` 通过。
-- [ ] 手工验收通过：
-  - [ ] 缓存提示仅出现一次
-  - [ ] 加载动作仅执行一次
-  - [ ] History 正确记录中心切换
-- [ ] sidecar 内容路径边界安全验证通过。
-
----
-
 # 2026-03-02 v1.5.1 - Android Runtime Parity Expansion (Targets + Content + Cache-Only UX)
 
-## English Document
 
 **Goal**: Convert desktop-sidecar-only target/content flows into runtime-safe contracts for Tauri Android, while preserving desktop behavior.
 
@@ -726,50 +478,8 @@
 
 ---
 
-## 中文文档
-
-**目标**：将原本依赖桌面 sidecar 的目标/内容能力，扩展为 Tauri Android 可用的运行时安全契约，同时保持桌面行为不回退。
-
-### 本轮已完成
-
-- [x] **目标发现能力对齐已落地**
-  - [x] 新增 sidecar API `GET /api/available-targets`（目录 + 缓存目标合并）。
-  - [x] 新增 Tauri 命令 `get_available_targets`（语义一致）。
-  - [x] 前端源加载优先使用 available-target 接口，并保留安全回退。
-
-- [x] **移动端可用内容读取路径已落地**
-  - [x] 新增 Tauri 命令 `read_node_content(file_path)`。
-  - [x] 内容读取增加 KB 根路径边界校验（禁止越界访问）。
-  - [x] 增加旧桌面路径 `.../Knowledge_Base/...` 的重定位兼容。
-  - [x] 阅读器在 sidecar 不可用时回退到 Rust 命令读取。
-
-- [x] **`supports_build=false` 运行时的仅缓存 UX 加固**
-  - [x] 移动端源列表仅显示可用缓存目标。
-  - [x] `ALL_FOLDERS` 仅在存在活动缓存时显示。
-  - [x] 无缓存候选时自动禁用加载按钮。
-
-- [x] **回归覆盖与构建证据更新**
-  - [x] 新增/更新迁移测试覆盖 available-target 与 runtime-content 契约。
-  - [x] `npm run test:migration` 通过（`35` 项）。
-  - [x] `npm run test:tauri` 通过（`14` 项）。
-  - [x] `npm run tauri:android:build` 通过。
-  - [x] `npm run tauri:android:build:universal` 通过。
-
-### 当前范围剩余工作
-
-- [ ] **Android 端应用内图谱构建链路对等**
-  - [ ] 提供桌面 `/api/build` 的 Android 原生等价实现。
-  - [ ] 定义基于 SAF/File API 的知识库导入与持久授权策略。
-
-- [ ] **Path Mode/Godot 的 Android 路线收口**
-  - [ ] 明确保持仅桌面可用并补齐 UX 提示，或
-  - [ ] 设计并实现 Android 可用渲染/运行时替代路径。
-
----
-
 # 2026-03-02 v1.5.0 - Tauri Android Build Unblock (Arm64 Deterministic Path)
 
-## English Document
 
 **Goal**: Unblock Tauri Android from environment/setup failures to a reproducible build path, while keeping Capacitor and Tauri Android dual generation available.
 
@@ -822,62 +532,8 @@
 
 ---
 
-## 中文文档
-
-**目标**：将 Tauri Android 从环境/配置阻塞状态推进到可复现的构建路径，同时保持 Capacitor 与 Tauri Android 双路径并存。
-
-### 本轮已完成
-
-- [x] **Android SDK 工具链检测与强校验**
-  - [x] 已确认 Android SDK Command-line Tools（`cmdline-tools/latest`）可被检测。
-  - [x] 已确认 NDK（`ndk;27.2.12479018`）可被前置脚本检测。
-  - [x] 当前机器 `npm run verify:android:env` 已通过。
-
-- [x] **将桌面专属 Rust 依赖与 Android 目标隔离**
-  - [x] `src-tauri/Cargo.toml` 中将 `rfd` 改为仅桌面目标依赖。
-  - [x] 在 `src-tauri/src/lib.rs` 增加 Android 安全的目录选择回退逻辑。
-
-- [x] **Android 专属 Tauri 运行时配置**
-  - [x] 新增 `src-tauri/tauri.android.conf.json`，在 Android 构建中清空 `bundle.externalBin`。
-  - [x] 使用 `cfg(not(target_os = "android"))` 隔离桌面专属菜单 API 与桌面进程启动逻辑。
-  - [x] Android 启动流程已明确跳过桌面 Node sidecar 与 Godot 启动。
-
-- [x] **Tauri Android 包装脚本加固**
-  - [x] 为 `dev/build` 默认采用 `aarch64` 目标，规避 Windows 主机上 armv7 LLVM OOM。
-  - [x] 支持通过 `NOTE_CONNECTION_TAURI_ANDROID_TARGET` 覆盖目标。
-  - [x] 通过 `cmd.exe /d /s /c` 修复 Windows `spawnSync npx.cmd EINVAL`。
-  - [x] 在 `scripts/run-tauri-android.js` 增加 spawn error/signal 明确日志。
-
-- [x] **回归覆盖同步更新**
-  - [x] 更新 `src/mobile.pipeline.test.ts`，新增 arm64 默认与覆盖能力断言。
-  - [x] 已验证 `npm run test:migration` 通过（`30` 项测试）。
-
-- [x] **构建验证**
-  - [x] 已验证 `node scripts/run-tauri-android.js build` 通过。
-  - [x] 已验证 `npm run tauri:android:build` 通过。
-  - [x] 已产出：
-    - `src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk`
-    - `src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab`
-
-### 迁移剩余项（P1.5 后续）
-
-- [ ] **Android 端桌面专属能力对等**
-  - [ ] 将依赖 Node sidecar 的 API（`/api/build`、`/api/content`、目录扫描/构建链路）替换为 Android 可运行方案。
-  - [ ] 定义 Android 原生文件访问策略（SAF/File API）以完成知识库选择与加载。
-
-- [ ] **Path Mode/Godot 的 Android 路线决策**
-  - [ ] 维持 Godot Bridge 仅桌面可用（当前行为），或提供 Android 兼容渲染路径。
-  - [ ] 在文档中明确 Android 端能力边界与 UX 预期。
-
-- [x] **可选多 ABI 策略**
-  - [x] 保持 `aarch64` 作为默认稳定目标。
-  - [x] 仅在主机内存/工具链满足时提供可选 universal ABI 构建路径。
-
----
-
 # 2026-03-01 v1.4.9 - Runtime Verification Update (Desktop + Mobile)
 
-## English Document
 
 **Goal**: Continue execution after `v1.4.8` with real pipeline runs, and convert remaining Tauri Android uncertainty into an explicit, actionable prerequisite gate.
 
@@ -923,55 +579,8 @@
 
 ---
 
-## 中文文档
-
-**目标**：在 `v1.4.8` 基础上继续实跑验证，并将 Tauri Android 的不确定性收敛为可执行的前置条件检查。
-
-### 本轮已完成
-
-- [x] **桌面打包再次实测通过**
-  - [x] 在设置 `NOTE_CONNECTION_GODOT_EXE` 后执行 `npm run tauri:build:mini`。
-  - [x] sidecar 二进制校验通过（`server` + `godot` 非空）。
-  - [x] MSI + NSIS 安装包成功生成。
-
-- [x] **Capacitor Android 流水线端到端执行**
-  - [x] 修复 `build_apk.bat` 中 `if (...)` 代码块内未转义括号导致的解析报错。
-  - [x] 增加非交互支持（`NOTE_CONNECTION_NO_PAUSE` / `CI=true`）。
-  - [x] 已完成 `build_apk.bat` 全流程并产出 debug APK。
-
-- [x] **Tauri Android 前置检查加固**
-  - [x] 新增 `scripts/verify-tauri-android-prereqs.js`。
-  - [x] 新增 `npm run verify:android:env`。
-  - [x] 已接入以下命令前置：
-  - [x] `tauri:android:init`
-  - [x] `tauri:android:dev`
-  - [x] `tauri:android:build`
-  - [x] 效果：当缺失 `cmdline-tools/latest/bin/sdkmanager` 时，返回明确错误而非模糊 Tauri 报错。
-
-- [x] **回归测试覆盖同步更新**
-  - [x] 扩展 `src/mobile.pipeline.test.ts`，校验：
-  - [x] Android 前置检查脚本是否接入 npm 命令。
-  - [x] `build_apk.bat` 自动化标志是否保留。
-  - [x] `npm run test:migration` 继续保持通过。
-
-- [x] **双路径聚合命令已验证**
-  - [x] 已执行 `npm run mobile:build:both`。
-  - [x] Capacitor 分支可完成并产出 APK。
-  - [x] Tauri Android 分支在前置检查处被明确拦截（在安装 cmdline-tools 前符合预期）。
-
-### 剩余外部前置条件（环境项）
-
-- [x] **安装 Tauri Android 所需的 Android SDK Command-line Tools**
-  - [x] 必需路径：`<ANDROID_SDK_ROOT>/cmdline-tools/latest/bin/sdkmanager(.bat)`。
-  - [x] 已通过以下命令验证：
-  - [x] `npm run verify:android:env`
-  - [x] `npm run tauri:android:build`
-
----
-
 # 2026-03-01 v1.4.8 - Migration Closure & Dual Android Verification
 
-## English Document
 
 **Goal**: Close the migration action list with executable verification evidence, especially for `P1.5` (Capacitor + Tauri Android dual generation paths).
 
@@ -1001,39 +610,8 @@
 
 ---
 
-## 中文文档
-
-**目标**：以可执行验证证据收口迁移清单，重点完成 `P1.5`（Capacitor + Tauri Android 双路径产出）的稳定性证明。
-
-### 已完成清单
-
-- [x] **新增双 Android 路径防回归测试**
-  - [x] 新增 `src/mobile.pipeline.test.ts`，约束以下关键项：
-  - [x] `package.json` 中 Capacitor 与 Tauri Android 脚本必须同时存在。
-  - [x] `capacitor.config.ts` 的 `webDir` 必须与 `dist/src/frontend` 对齐。
-  - [x] `build_apk.bat` 必须保留同步与 APK 构建关键步骤。
-  - [x] `src-tauri/tauri.conf.json` 必须保留 `bin/server` 与 `bin/godot` sidecar 配置。
-
-- [x] **迁移回归测试集扩展**
-  - [x] 已更新 `package.json` 中 `test:migration`，纳入 `src/mobile.pipeline.test.ts`。
-  - [x] 当前迁移测试覆盖运行时路径、缓存/构建去重、双移动端流水线契约校验。
-
-- [x] **本轮执行证据更新**
-  - [x] `npm run build:mini` -> 通过。
-  - [x] `npm run test:migration` -> 通过（`29` 项测试）。
-  - [x] `npm run test:tauri` -> 通过（`9` 项 Rust 测试）。
-  - [x] `npm run smoke:sidecar:relaunch` -> 通过。
-
-### 结论
-
-- [x] `P1.5` 不仅完成文档化，而且已纳入自动化回归保护。
-- [x] 在当前仓库范围内（桌面 Tauri-first + 双移动端构建入口），Electron -> Tauri 迁移清单可视为已收口。
-
----
-
 # 2026-03-01 v1.4.6 - Electron Removal Readiness Action Plan
 
-## English Document
 
 **Goal**: Close all remaining Electron -> Tauri migration gaps so Electron can be removed without regression across desktop release and mobile export strategy.
 
@@ -1128,104 +706,8 @@
 
 ---
 
-## 中文文档
-
-**目标**：补齐 Electron -> Tauri 的剩余迁移缺口，使移除 Electron 后不会在桌面发布与移动导出链路产生功能回退。
-
-### 阶段 P0 - 移除 Electron 前必须完成
-
-- [x] **实现 Tauri 持久化配置对等能力（等价 `kb_config`）**
-  - [x] 在 Tauri 应用数据目录持久化 KB 路径。
-  - [x] 在 Tauri 应用数据目录持久化语言设置。
-  - [x] 启动时在前端初始化前读取并应用。
-  - [x] 验收：重启后无需手动重选 KB 与语言，菜单语言保持一致。
-
-- [x] **加固 Godot 非开发机启动能力**
-  - [x] 删除 `src-tauri/src/lib.rs` 中硬编码绝对路径。
-  - [x] 采用可打包的 sidecar/bundle 路径解析方案。
-  - [x] 校验构建产物中的 Godot 可执行文件存在且非空。
-  - [x] 验收：`npm run tauri build` 已输出打包产物并接入二进制校验流水线。
-
-- [x] **补齐子进程生命周期治理**
-  - [x] 保留 Node sidecar 与 Godot 子进程句柄。
-  - [x] 在应用退出钩子中显式回收子进程。
-  - [x] 增加重启验证，确保不会遗留 `3000` 端口占用。
-  - [x] 验收：关闭应用后不存在孤儿 sidecar/Godot 进程。
-
-- [x] **修复发布态可写路径策略**
-  - [x] 不再假设安装版可写 `dist/src/frontend`。
-  - [x] 为生成文件（`data.js`、`graph_data.json`）指定可写运行目录（AppData/Cache）。
-  - [x] 同步更新 sidecar 环境变量（`NOTE_CONNECTION_FRONTEND_DIR` + `NOTE_CONNECTION_RUNTIME_DATA_DIR`）与缓存恢复逻辑。
-  - [x] 验收：安装版路径模型下构建与缓存恢复链路可用。
-
-- [x] **补齐与 Electron 首次启动体验对等**
-  - [x] 无配置时新增 Tauri 首次运行 KB 选择流程。
-  - [x] 保留并持久化菜单“更改 KB / 重置”行为。
-  - [x] 验收：新安装首次引导后永久记住用户选择。
-
-### 阶段 P1 - 稳定化与验证
-
-- [x] **将后端构建日志统一桥接到前端 Loading 面板**
-  - [x] 通过 Rust/sidecar 桥发出结构化 `build-log` 事件。
-  - [x] 确保长时间构建在 Tauri 下可见进度日志。
-  - [x] 验收：`/api/build` 期间 Loading 面板持续收到增量日志。
-
-- [x] **执行发布态冒烟测试并固化证据**
-  - [x] Windows 打包验证（`tauri build` 已生成 msi/nsis 产物）。
-  - [x] 缓存分流弹窗验证（`Load Existing` / `Regenerate`）。
-  - [x] 单次点击去重验证（无重复 restore/build）。
-  - [x] 验收：可复现实验结果已写入 `TEST_REPORT.md`。
-
-- [x] **明确 GPU 启动命令规范**
-  - [x] 文档统一使用 `npm run tauri:dev:mini:gpu`。
-  - [x] 不再示例 `npm run tauri:dev:mini --gpu`（避免 npm 警告）。
-  - [x] 验收：README/手册中仅保留受支持命令格式。
-
-### 阶段 P1.5 - 双移动端交付（Capacitor + Tauri Android）
-
-- [x] **同时保留两条官方 Android 生成路径**
-  - [x] 路径 A：保留 Capacitor（Web 资产运行时，功能范围受限）。
-  - [x] 路径 B：按 `docs/tauri_brainstorming.md` 提供 Tauri Android 流水线。
-  - [x] 验收：两条路径均已文档化并提供构建脚本。
-
-- [x] **Capacitor 路径边界明确化**
-  - [x] 明确未嵌入后端前，设备端目录构建/加载 sidecar API 不可用。
-  - [x] 明确移动端 source loading/reader 的降级预期。
-  - [x] 验收：APK 行为约束已写入文档。
-
-- [x] **Tauri Android 流水线补齐（脚本层）**
-  - [x] 增加 Tauri Android 构建脚本与初始化命令。
-  - [x] 保留并文档化 Node sidecar 在移动端的兼容性替换事项。
-  - [x] 验收：Android 端 Tauri 构建命令已就绪。
-
-### 阶段 P2 - Electron 清退
-
-- [x] **仅在 P0/P1 门槛全部通过后执行清退**
-  - [x] 删除 `package.json` 中 Electron 脚本。
-  - [x] 删除 `main: dist/src/electron/main.js`。
-  - [x] 删除 Electron 依赖（`electron`、`electron-builder`、`electron-squirrel-startup`）。
-  - [x] 归档/删除 `src/electron/*` 与 `electron-builder.yml`。
-  - [x] 验收：桌面构建链路已切换为 Tauri-first。
-
-- [x] **文档清理**
-  - [x] README 构建/发布章节从 Electron-first 改为 Tauri-first。
-  - [x] 历史变更保留并标注 Electron 路线停用日期。
-  - [x] 验收：当前发布文档不再要求使用 Electron 命令。
-
-### Electron 移除闸门（Go/No-Go）
-
-- [x] Tauri 下 KB 与语言持久化对等已验证。
-- [x] Godot 启动不再依赖本机硬编码路径。
-- [x] 应用退出后无孤儿子进程。
-- [x] Tauri 安装版下构建/缓存/Reader 链路可用。
-- [x] 双移动端路线（Capacitor + Tauri Android）已文档化。
-- [x] 脚本与 README 全面对齐 Tauri。
-
----
-
 # 2026-03-01 v1.4.5 - Physically-Based Bubbles & Cancel Completion
 
-## English Document
 
 **Goal**: Upgrade the Godot visualizer with realistic physically-based soap bubbles, remove environmental obstructions, and add flexible task completion UI logic.
 
@@ -1242,28 +724,8 @@
   - [x] "Mark Complete" button now dynamically toggles to "Cancel Completion".
   - [x] Connected dynamic states in `path_mode_ui.gd` and `path_renderer.gd` to appropriately mark/unmark nodes.
 
-## 中文文档
-
-**目标**: 使用逼真的物理皂泡升级 Godot 渲染器，移除环境遮挡，并添加灵活的任务完成 UI 逻辑。
-
-### 已完成清单
-
-- [x] **基于物理的着色器**
-  - [x] 将 81 波长薄膜干涉 Glassner 逻辑移植到 `bubble_material.gdshader`。
-  - [x] 添加了 `warpnoise3` 和 `sp_spectral_filter` 以实现逼真的球面厚度变化。
-- [x] **物理交互**
-  - [x] 将中心气泡和周围气泡从 `MeshInstance3D` 转换为 `RigidBody3D`。
-  - [x] 添加了 `_physics_process` 轨道磁力吸引，让气泡可以逼真地漂浮和碰撞而不会永久重叠。
-  - [x] 移除了 `main.tscn` 环境中的 `Floor`（地板）节点障碍物。
-- [x] **取消完成 UI**
-  - [x] “标记完成”按钮现在动态切换为“取消完成”。
-  - [x] 在 `path_mode_ui.gd` 和 `path_renderer.gd` 中连接动态状态以适当地标记/取消标记节点。
-
----
-
 # 2026-03-01 v1.4.4 - Tauri Bridge Stabilization & Duplicate-Cycle Elimination
 
-## English Document
 
 **Goal**: Finalize Bridge-first migration hardening for Tauri runtime by resolving cache/load duplication, websocket reconnect churn, and runtime path consistency issues.
 
@@ -1292,38 +754,6 @@
 - `path_mode/scripts/ws_client.gd`
 - `src/frontend/i18n.js`
 - `src-tauri/src/lib.rs`
-
-## 中文文档
-
-**目标**: 完成 Bridge-first 的 Tauri 迁移稳态化，重点解决缓存/加载重复执行、WebSocket 空闲重连抖动与运行时路径一致性问题。
-
-### 已完成清单
-
-- [x] **缓存分流恢复**
-  - [x] 当目标缓存存在时，恢复“直接加载缓存 / 重新生成”的显式用户决策流程。
-- [x] **重复执行保护**
-  - [x] 前端增加加载单飞保护，避免重复点击触发双执行。
-  - [x] 后端为 `/api/build` 与 `/api/restore-cache` 增加去重保护。
-- [x] **PathBridge 诊断增强**
-  - [x] 增加带标签连接日志（client id/tag/address + close code/reason），可区分正常重连与真实循环。
-- [x] **Godot WS 兼容性修复**
-  - [x] 将 Godot URL 修正为 `ws://127.0.0.1:9876/?client=godot`，消除 URL 非法导致的重连报错。
-- [x] **Tauri 空闲重连清理**
-  - [x] 在 Tauri 模式禁用 `frontend-early` 自动 WebSocket 启动。
-- [x] **语言/菜单幂等保护**
-  - [x] 在前端与 Rust 命令侧加入“同语言无操作”保护，避免重复同步造成噪声。
-
-### 更新文件
-
-- `src/frontend/source_manager.js`
-- `src/server.ts`
-- `src/core/PathBridge.ts`
-- `src/frontend/path_app.js`
-- `path_mode/scripts/ws_client.gd`
-- `src/frontend/i18n.js`
-- `src-tauri/src/lib.rs`
-
----
 
 # 2026-02-26 v1.4.3 - 9-Rule Tree Layout Engine
 
@@ -3814,3 +3244,834 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 - **Seamless Transition**: Switching between "Graph Mode" (Force/DAG) and "Path Mode" (Orbital) preserves data context but completely swaps the rendering engine/worker.
 - **State Preservation**: Learning history and "Completed" buffer persist across sessions via `localStorage`.
+
+
+---
+
+## 中文文档
+
+# 2026-03-04 v1.5.13
+
+# 2026-03-04 v1.5.13 - Capacitor Physical-Device Acceptance Runbook Closure
+
+### 目标
+
+将 `v1.5.9` 最后未闭环项（Capacitor 真机验收证据）转化为可执行、可复现的验收流程。
+
+### 已交付
+
+- [x] 新增真机验收探测脚本：
+  - [x] `scripts/verify-capacitor-device-acceptance.js`
+  - [x] 校验项：
+    - [x] APK 是否存在（`android/app/build/outputs/apk/debug/app-debug.apk`）
+    - [x] `adb` 是否可用
+    - [x] 是否至少有一台在线 Android 设备
+- [x] 新增 npm 命令：
+  - [x] `npm run verify:capacitor:device`
+- [x] 重新验证当前 APK 构建链路：
+  - [x] `npm run mobile:build:capacitor` -> 2026-03-04 实测通过
+
+### 真机验收清单（发版签核）
+
+- [ ] 设备连接闸门通过：
+  - [ ] `npm run verify:capacitor:device`
+- [ ] 真机启动行为验证通过。
+- [ ] 真机数据源面板行为验证通过。
+- [ ] 真机 Reader 行为验证通过。
+- [ ] 真机 Path mode 进入/退出行为验证通过。
+- [ ] 验收证据已归档：
+  - [ ] 设备序列号（可脱敏）
+  - [ ] 测试日期/时间
+  - [ ] 截图或短视频
+  - [ ] 观测结果说明（通过/失败 + 问题单号）
+
+### 当前状态
+
+- [x] 构建与环境侧验收前置条件已具备。
+- [ ] 仍需补充真机执行证据，才能关闭 `v1.5.9` 中最后的发版签核项。
+
+---
+
+# 2026-03-04 v1.5.11 - Capacitor Runtime Boundary Closure (Option B Execution)
+
+### 结论快照
+
+- [x] 在 Option B（移动端只读策略）下，Capacitor 运行时边界加固已完成。
+- [x] Source/Reader 在原生 Capacitor 中已不再假设桌面 sidecar API 可用。
+- [x] 已新增 Capacitor 运行时边界回归契约，并接入迁移闸门。
+- [ ] Capacitor 端“目录/构建/内容”与桌面完全对等仍属于当前策略外范围（本版本不做完全对等承诺）。
+
+### 已交付实现
+
+- [x] `src/frontend/source_manager.js`
+  - [x] 新增原生 Capacitor 运行时识别（`window.Capacitor.getPlatform` / `isNativePlatform`）。
+  - [x] 在 Capacitor 原生运行时显式下发能力画像：
+    - [x] `supports_sidecar=false`
+    - [x] `supports_build=false`
+    - [x] `supports_content_api=false`
+    - [x] `supports_kb_runtime_change=false`
+  - [x] 新增只读模式下确定性的来源面板降级：
+    - [x] 路径文案 -> `source.capacitor.bundlePath`
+    - [x] 单一内置选项 -> `PACKAGED_GRAPH`
+    - [x] 加载按钮禁用 + 防护提示（`source.error.capacitorReadOnly`）
+- [x] `src/frontend/reader.js`
+  - [x] 新增 Capacitor 原生检测兜底：当运行时能力对象尚未就绪时，仍强制执行只读内容策略。
+- [x] i18n 更新：
+  - [x] `src/frontend/locales/en.json`
+  - [x] `src/frontend/locales/zh.json`
+  - [x] 新增 `source.capacitor.packagedGraph`
+  - [x] 新增 `source.capacitor.bundlePath`
+  - [x] 新增 `source.error.capacitorReadOnly`
+- [x] 新增 Capacitor 运行时边界契约测试：
+  - [x] `src/capacitor.runtime.contract.test.ts`
+  - [x] 已接入 `package.json` 的 `test:migration`
+
+### 验证证据（2026-03-04 实测）
+
+- [x] `npm run test:migration` -> 通过（`66` 项）
+- [x] `npm run test:tauri` -> 通过（`18` 项）
+- [x] `npm run mobile:build:capacitor` -> 通过
+  - [x] APK 产物：`android/app/build/outputs/apk/debug/app-debug.apk`
+
+### 既有未闭环项状态更新
+
+- [x] `v1.5.9` 中 **Capacitor 运行时行为加固** 项已在代码与测试层闭环。
+- [x] `v1.5.9` 中 **Capacitor 运行时边界集成测试覆盖** 已闭环（`src/capacitor.runtime.contract.test.ts`）。
+- [ ] `v1.5.9` 中 **Capacitor APK 手工验收清单（真机）** 仍待补充实机执行证据。
+- [ ] **仍维持 NO-GO**：当前不宣告“全平台能力完全对等”。
+
+---
+
+# 2026-03-03 v1.5.10 - Option A P0 Closure (Tauri Android Native Folder/Build/Content Flow)
+
+### 结论快照
+
+- [x] 方案 A 的 P0 已在 Tauri Android 运行时落地。
+- [x] Android 端现已支持无 Node sidecar 的本地构图能力。
+- [x] 桌面端与 Web 端行为保持不变。
+- [ ] Capacitor 运行时能力对等仍是独立范围（构建后端尚未原生等价）。
+
+### 已交付实现
+
+- [x] 在 Rust 中新增原生运行时构建命令：
+  - [x] `src-tauri/src/lib.rs` 中 `build_graph_runtime(request)`
+  - [x] 从 `Knowledge_Base/<target>`（或 `ALL_FOLDERS`）扫描构图
+  - [x] 将运行时产物写入 `runtime_data/`：
+    - [x] `data.js`
+    - [x] `graph_data.json`
+    - [x] `data_<target>.js`
+    - [x] `graph_data_<target>.json`
+- [x] 更新 Android 运行时能力：
+  - [x] `supports_sidecar=false`
+  - [x] `supports_build=true`
+  - [x] `supports_content_api=true`
+- [x] 在 `src/frontend/source_manager.js` 完成构建链路分流：
+  - [x] 有 sidecar 时仍优先走 `/api/build`
+  - [x] 无 sidecar 的 Tauri 路径改为 `invoke('build_graph_runtime', { request })`
+
+### 验证证据（2026-03-03 实测）
+
+- [x] `npm run test:migration` -> 通过（`55` 项）
+- [x] `npm run test:tauri` -> 通过（`16` 项）
+- [x] `npm run verify:android:env` -> 通过（SDK + cmdline-tools + NDK 已识别）
+
+### P0 状态更新
+
+- [x] `方案 A：实现移动端目录/构建/内容能力原生等价链路`（Tauri Android 路径）已完成。
+- [ ] Capacitor 独立运行时的构建/内容完全对等仍待后续收口。
+
+---
+
+> Superseded Note (2026-03-03 v1.5.10): The section below is historical context. Current Option A P0 status is recorded above.
+> 覆盖说明（2026-03-03 v1.5.10）：下方内容为历史上下文，当前 Option A P0 状态以上方为准。
+
+# 2026-03-03 v1.5.9 - Electron Removal Final Gate (Audit-Driven Action Plan)
+
+### 结论快照
+
+- [x] 桌面端 Electron -> Tauri 迁移已达到可下线技术状态。
+- [x] Tauri 桌面构建与运行主链路已启用并通过测试验证。
+- [x] Capacitor 与 Tauri Android 构建链路均已存在。
+- [ ] 全平台运行时能力对等尚未完全收口。
+
+### 范围澄清（基于审计）
+
+- 桌面端：
+  - [x] Electron IPC 等价能力已迁移到 sidecar HTTP + Tauri 命令。
+  - [x] 活跃包管理与运行路径中已无 Electron 脚本/依赖。
+- 移动端：
+  - [x] Capacitor 运行时按产品策略为只读能力，在目录/构建/内容 API 上不等价于桌面 sidecar 运行时。
+  - [x] Tauri Android 运行时为无 sidecar 但可构建/读内容（`supports_sidecar=false`, `supports_build=true`），Capacitor 仍为 `supports_build=false`。
+
+### P0 - 宣告“迁移完全完成”前必须收口
+
+- [x] **移动端能力边界产品化决策（必须二选一并固化）**
+  - [x] 方案 A：实现移动端目录/构建/内容能力的原生等价链路（Tauri Android 原生运行时路径）。
+  - [x] 方案 B：正式将 Capacitor 定义为缓存/阅读优先能力，并在 UI/文档中消除“对等”歧义。
+
+- [x] **Capacitor 运行时行为加固**
+  - [x] 显式识别 Capacitor 运行时，避免沿用桌面 sidecar 假设。
+  - [x] 当 `/api/folders`、`/api/build`、`/api/content` 不可用时提供确定性的降级交互。
+  - [x] 明确 Capacitor Reader 内容策略（只读内置图谱 + 不可用能力的显式提示）。
+
+- [x] **移动端验收闸门**
+  - [x] 增加 Capacitor 运行时边界行为的集成测试覆盖。
+  - [x] 增加 Capacitor APK 手工验收清单：
+    - [x] 启动行为
+    - [x] 数据源面板行为
+    - [x] Reader 行为
+    - [x] Pathmode 进入/退出行为
+  - [ ] 仍需补充真机执行证据以完成最终发版签核。
+    - [x] 已提供前置探测命令：`npm run verify:capacitor:device`
+    - [ ] 最新探测结果仍为无在线 Android 设备（2026-03-04）。
+
+### P1 - 迁移治理与下线清理
+
+- [x] **归档/移除残余 Electron 痕迹**
+  - [x] 删除空目录 `src/electron` 或增加明确归档标记。
+  - [x] 清理代码中仍含 “electron” 的误导性命名/注释（运行时已为 bridge 架构）。
+
+- [x] **文档对齐**
+  - [x] 对 `docs/tauri_tasks.md` 中已过期迁移待办添加历史标记。
+  - [x] 保持有效文档为 Tauri-first，并清晰区分 desktop/Android/Capacitor 能力边界。
+
+### P2 - 稳定性与发布护栏
+
+- [x] 将以下发布闸门保持为必跑：
+  - [x] `npm run test:migration`
+  - [x] `npm run test:tauri`
+- [x] 将 Android 环境闸门保持为必跑：
+  - [x] `npm run verify:android:env`
+- [x] 增加 CI 矩阵避免静默回归：
+  - [x] 桌面迁移测试集
+  - [x] Tauri Rust 测试集
+  - [x] 移动端流水线契约测试集
+
+### 当前 Go/No-Go 政策
+
+- [x] **GO**：桌面端 Electron 下线。
+- [x] **NO-GO 策略生效**：在 Capacitor 仍为只读策略期间，不宣告“全平台运行时能力完全对等”。
+
+---
+
+# 2026-03-03 v1.5.8 - PathBridge Handshake + Tauri Early-Socket Stability
+
+### 本轮新增
+
+- [x] 在 `path_mode/scripts/ws_client.gd` 移除 Godot 不兼容的 WebSocket 查询参数 URL：
+  - [x] `ws://127.0.0.1:9876/?client=godot` -> `ws://127.0.0.1:9876`
+  - [x] 连接后新增显式 `identify` 握手消息。
+  - [x] 增加连接前消息队列与重连后冲刷，避免初始化配置消息丢失/警告。
+
+- [x] 在 `src/core/PathBridge.ts` 增加显式客户端身份协议：
+  - [x] 新增 `identify` 消息处理分支。
+  - [x] 新增 `setClientTag` 与标签清洗逻辑。
+  - [x] 保留 URL 查询参数识别作为浏览器旧路径兼容兜底。
+
+- [x] 在 `src/frontend/path_app.js` 强化 Bridge 行为：
+  - [x] 移除 query-tag URL，统一使用 `ws://localhost:9876`。
+  - [x] 为 `frontend` 与 `frontend-early` 两类连接发送 `identify` 负载。
+  - [x] 新增 Tauri 运行时双重判定（`window.__TAURI__` 或 `navigator.userAgent.includes('Tauri')`），避免在 Tauri 中误启动 `frontend-early` 连接。
+
+- [x] 新增回归契约覆盖：
+  - [x] 新增测试文件 `src/pathbridge.handshake.contract.test.ts`。
+  - [x] 已纳入 `test:migration`。
+
+### 验证结果
+
+- [x] `npm run test:migration` -> 通过（`53` 项）。
+- [x] `npm run test:tauri` -> 通过（`14` 项）。
+
+### 范围安全性
+
+- [x] 桌面端功能不变，仅提升 Bridge 握手与标签稳定性。
+- [x] 浏览器模式保留 early bridge 支持。
+- [x] Android Pathmode 流程不受影响。
+
+---
+
+# 2026-03-03 v1.5.7 - Android Native Pathmode Smoke Lifecycle Automation
+
+### 本轮新增
+
+- [x] 新增 Android 运行时烟雾生命周期脚本：
+  - [x] `scripts/smoke-android-pathmode.js`
+  - [x] 使用 `adb` + `dumpsys activity` 检查 `MainActivity -> PathmodeGodotActivity -> MainActivity`。
+  - [x] 通过发送返回键（`KEYCODE_BACK`）验证 Activity 返回路径。
+  - [x] 支持可选严格模式：
+    - [x] `NOTE_CONNECTION_ANDROID_SMOKE_REQUIRE_DEVICE=1` 时，无设备将判定失败
+    - [x] 默认模式下，无设备/模拟器时会安全跳过。
+
+- [x] 新增 npm 命令入口：
+  - [x] 在 `package.json` 中新增 `smoke:android:pathmode`。
+
+- [x] 新增烟雾集成回归契约：
+  - [x] `src/android.pathmode.smoke.contract.test.ts`。
+  - [x] 更新 `src/mobile.pipeline.test.ts` 断言烟雾脚本注册。
+  - [x] 更新 `test:migration` 用例列表，纳入该契约测试。
+
+### 验证结果
+
+- [x] `npm run test:migration` -> 通过（`50` 项）。
+- [x] `npm run test:tauri` -> 通过（`14` 项）。
+- [x] `npm run smoke:android:pathmode` -> 通过（无连接设备时按设计跳过）。
+
+### 范围安全性
+
+- [x] 不影响桌面端行为。
+- [x] 不影响 Web 端行为。
+- [x] Android 烟雾流程仅在显式执行命令时触发。
+
+---
+
+# 2026-03-03 v1.5.6 - Option A Android Native Pathmode (Godot Full-Screen) Execution
+
+### 本轮已实现
+
+- [x] **Android 方案 A 启动链路已落地**
+  - [x] 在 `src-tauri/src/lib.rs` 新增 Android 原生 Pathmode 启动命令：`open_native_pathmode`。
+  - [x] 新增运行时能力标记：`supports_native_pathmode`（Android=true，桌面/web=false）。
+  - [x] 更新前端 Path Mode 入口（`src/frontend/app.js`）：
+    - [x] Android 且能力开启时优先走原生启动
+    - [x] 桌面/web 维持原有网页 Path Mode 容器流程不变
+
+- [x] **Android 全屏 Godot Activity 桥接已落地**
+  - [x] 新增可追踪 Android 模板文件：
+    - [x] `src-tauri/mobile/android/PathmodeBridge.kt`
+    - [x] `src-tauri/mobile/android/PathmodeGodotActivity.kt`
+  - [x] 新增生成工程补丁流水线：
+    - [x] `scripts/apply-tauri-android-pathmode.js`
+    - [x] `scripts/run-tauri-android.js` 在 Android 命令前后自动补丁
+  - [x] 增加 `path_mode` 资源同步到 `src-tauri/gen/android/app/src/main/assets/path_mode`
+
+- [x] **Exit 返回行为已实现**
+  - [x] Godot 内点击 `Exit` 会退出 Android Pathmode Activity 并返回主 Tauri 窗口（`path_mode/scripts/path_renderer.gd`）。
+
+- [x] **Android 构建链路已加固**
+  - [x] 在 Android runner 增加 Cargo 内存控制（`CARGO_BUILD_JOBS`、release 优化/代码生成参数）。
+  - [x] 补丁脚本已处理：
+    - [x] Godot Maven 依赖与 Manifest 合并规则
+    - [x] 与 Godot Android 产物匹配所需的 Kotlin 插件版本对齐
+
+### 验证结果
+
+- [x] `npm run test:migration` -> 通过（`48` 项）。
+- [x] `npm run test:tauri` -> 通过（`14` 项）。
+- [x] `node scripts/run-tauri-android.js build` -> 通过。
+  - [x] APK：`src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk`
+  - [x] AAB：`src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab`
+
+### 影响范围安全性
+
+- [x] 桌面端行为不变。
+- [x] Web 端行为不变。
+- [x] Android 逻辑通过运行时能力门控与构建脚本门控隔离。
+
+---
+
+# 2026-03-03 v1.5.5 - Status Normalization Update (Proceeding)
+
+### 本轮复验结果
+
+- [x] 已重新执行迁移闸门测试：
+  - [x] `npm run test:migration` -> 通过（`44` 项）。
+  - [x] `npm run test:tauri` -> 通过（`14` 项）。
+- [x] 已确认 `v1.5.3` 与 `v1.5.4` 收口项持续有效（P0 工程收口 + P1 运行时边界 UI）。
+- [x] 已确认 sidecar 内容边界校验与加载/历史契约测试持续通过。
+
+### 待办治理
+
+- [x] 已将 `v1.5.2` 清单标记为历史/已被后续版本覆盖，避免执行口径歧义。
+- [x] 保留历史清单正文用于追溯（不做破坏性删除）。
+
+### 当前仍可执行的剩余范围
+
+- [ ] 移动端最终对等策略仍为产品层待决项：
+  - [ ] 方案 A：实现与桌面 sidecar 等价的 Android 原生构建/内容链路。
+  - [x] 方案 B（当前执行策略）：维持 Android 能力门控的缓存/阅读运行时，并显式说明边界。
+
+---
+
+# 2026-03-03 v1.5.3 - Execution Progress Update (P0 Completed)
+
+### 本轮执行已完成
+
+- [x] **将 sidecar 内容 API 安全边界提升至 Rust 同等级**
+  - [x] 在 `src/server.ts` 为 `/api/content` 增加 KB 根路径边界校验。
+  - [x] 新增回归测试覆盖：
+    - [x] 根目录内绝对路径可读取
+    - [x] 旧式 `Knowledge_Base` 标记路径可读取
+    - [x] 根目录外路径被拦截（`403`）
+
+- [x] **锁定缓存提示/单次加载语义（契约覆盖）**
+  - [x] 新增 source manager 加载流程契约测试：
+    - [x] 重复事件绑定防护
+    - [x] 加载进行中点击防重入
+    - [x] 单一缓存提示分支契约
+  - [x] 现有服务端 restore/build 去重测试持续通过。
+
+- [x] **完成 Godot History 一致性契约**
+  - [x] 在 `path_mode_ui.gd` 新增 `record_navigation_node(node_id)`。
+  - [x] 在 `path_renderer.gd` 的 `render_path` 中接入中心切换历史记录。
+  - [x] 新增历史记录钩子契约测试。
+
+- [x] **最终 Go/No-Go 技术闸门（工程部分）**
+  - [x] `npm run test:migration` -> 通过（`43` 项）。
+  - [x] `npm run test:tauri` -> 通过（`14` 项）。
+
+### 剩余产品决策（不阻塞桌面稳定性）
+
+- [ ] 确认移动端最终对等能力范围：
+  - [ ] 方案 A：实现 Android 原生等价构建运行时。
+  - [x] 方案 B（当前执行策略）：移动端聚焦缓存/阅读能力，并显式声明能力边界。
+
+---
+
+# 2026-03-03 v1.5.2 - Electron Removal Final Gate (Post-Audit Action Plan)
+
+> 覆盖说明（2026-03-03 v1.5.5）：本节作为历史计划上下文保留。P0/P1 收口证据已记录在上方 `v1.5.3` 与 `v1.5.4`。以下未勾选项默认不再作为当前执行阻塞，除非后续明确重开。
+
+**审计结论快照**
+
+- [x] 桌面端 Electron -> Tauri 迁移在功能层面已成功。
+- [x] Capacitor 导出链路仍可用且可构建。
+- [x] Tauri Android 导出链路可构建。
+- [ ] 桌面与移动端的完整运行时对等尚未收口。
+
+### P0 - 在宣告“迁移完全收口”前必须完成
+
+- [ ] **将 sidecar 内容 API 的安全边界提升到 Rust 同等级**
+  - [ ] 在 `src/server.ts` 为 `/api/content` 增加 KB 根路径边界校验，对齐 `read_node_content`。
+  - [ ] 新增回归测试覆盖：合法路径、越界路径、Windows/相对路径变体。
+
+- [ ] **在 Tauri 启动竞态下锁定缓存提示与单次加载语义**
+  - [ ] 增加集成层测试覆盖：
+    - [ ] “存在缓存 -> 只出现一次提示”
+    - [ ] “单次点击 -> 只执行一次 restore/build”
+  - [ ] 与 sidecar 去重和前端 reload guard 的联动行为一并验证。
+
+- [ ] **完成 Godot History 一致性契约**
+  - [ ] 确保中心切换事件（双击/手动切换）都能写入 History 时间线。
+  - [ ] 增加中心切换后的 History 自动化断言测试。
+
+### P1 - 移动端/导出能力边界澄清与加固
+
+- [ ] **在文档与 UI 中明确 Android 运行时能力边界**
+  - [ ] 明确当前 Android 运行时为 `supports_sidecar=false`、`supports_build=false`。
+  - [ ] 提供 cache-only 模式下的用户可操作说明。
+
+- [ ] **完成移动端构建能力策略决策并落地**
+  - [ ] 方案 A：实现 Android 原生构建/内容链路，对齐桌面 sidecar 流程。
+  - [ ] 方案 B：保持缓存/只读能力，并明确为产品约束。
+
+### P2 - 文档治理（保留历史，不删除）
+
+- [ ] 将历史 Electron 段落标记为归档上下文，降低执行层误读。
+- [ ] 保持当前有效发布/运维文档为 Tauri-first 与双移动端路径一致。
+
+### 最终 Go/No-Go 闸门（全范围）
+
+- [ ] 新增对等测试后 `npm run test:migration` 通过。
+- [ ] 新增安全与行为测试后 `npm run test:tauri` 通过。
+- [ ] 手工验收通过：
+  - [ ] 缓存提示仅出现一次
+  - [ ] 加载动作仅执行一次
+  - [ ] History 正确记录中心切换
+- [ ] sidecar 内容路径边界安全验证通过。
+
+---
+
+# 2026-03-02 v1.5.1 - Android Runtime Parity Expansion (Targets + Content + Cache-Only UX)
+
+**目标**：将原本依赖桌面 sidecar 的目标/内容能力，扩展为 Tauri Android 可用的运行时安全契约，同时保持桌面行为不回退。
+
+### 本轮已完成
+
+- [x] **目标发现能力对齐已落地**
+  - [x] 新增 sidecar API `GET /api/available-targets`（目录 + 缓存目标合并）。
+  - [x] 新增 Tauri 命令 `get_available_targets`（语义一致）。
+  - [x] 前端源加载优先使用 available-target 接口，并保留安全回退。
+
+- [x] **移动端可用内容读取路径已落地**
+  - [x] 新增 Tauri 命令 `read_node_content(file_path)`。
+  - [x] 内容读取增加 KB 根路径边界校验（禁止越界访问）。
+  - [x] 增加旧桌面路径 `.../Knowledge_Base/...` 的重定位兼容。
+  - [x] 阅读器在 sidecar 不可用时回退到 Rust 命令读取。
+
+- [x] **`supports_build=false` 运行时的仅缓存 UX 加固**
+  - [x] 移动端源列表仅显示可用缓存目标。
+  - [x] `ALL_FOLDERS` 仅在存在活动缓存时显示。
+  - [x] 无缓存候选时自动禁用加载按钮。
+
+- [x] **回归覆盖与构建证据更新**
+  - [x] 新增/更新迁移测试覆盖 available-target 与 runtime-content 契约。
+  - [x] `npm run test:migration` 通过（`35` 项）。
+  - [x] `npm run test:tauri` 通过（`14` 项）。
+  - [x] `npm run tauri:android:build` 通过。
+  - [x] `npm run tauri:android:build:universal` 通过。
+
+### 当前范围剩余工作
+
+- [ ] **Android 端应用内图谱构建链路对等**
+  - [ ] 提供桌面 `/api/build` 的 Android 原生等价实现。
+  - [ ] 定义基于 SAF/File API 的知识库导入与持久授权策略。
+
+- [ ] **Path Mode/Godot 的 Android 路线收口**
+  - [ ] 明确保持仅桌面可用并补齐 UX 提示，或
+  - [ ] 设计并实现 Android 可用渲染/运行时替代路径。
+
+---
+
+# 2026-03-02 v1.5.0 - Tauri Android Build Unblock (Arm64 Deterministic Path)
+
+**目标**：将 Tauri Android 从环境/配置阻塞状态推进到可复现的构建路径，同时保持 Capacitor 与 Tauri Android 双路径并存。
+
+### 本轮已完成
+
+- [x] **Android SDK 工具链检测与强校验**
+  - [x] 已确认 Android SDK Command-line Tools（`cmdline-tools/latest`）可被检测。
+  - [x] 已确认 NDK（`ndk;27.2.12479018`）可被前置脚本检测。
+  - [x] 当前机器 `npm run verify:android:env` 已通过。
+
+- [x] **将桌面专属 Rust 依赖与 Android 目标隔离**
+  - [x] `src-tauri/Cargo.toml` 中将 `rfd` 改为仅桌面目标依赖。
+  - [x] 在 `src-tauri/src/lib.rs` 增加 Android 安全的目录选择回退逻辑。
+
+- [x] **Android 专属 Tauri 运行时配置**
+  - [x] 新增 `src-tauri/tauri.android.conf.json`，在 Android 构建中清空 `bundle.externalBin`。
+  - [x] 使用 `cfg(not(target_os = "android"))` 隔离桌面专属菜单 API 与桌面进程启动逻辑。
+  - [x] Android 启动流程已明确跳过桌面 Node sidecar 与 Godot 启动。
+
+- [x] **Tauri Android 包装脚本加固**
+  - [x] 为 `dev/build` 默认采用 `aarch64` 目标，规避 Windows 主机上 armv7 LLVM OOM。
+  - [x] 支持通过 `NOTE_CONNECTION_TAURI_ANDROID_TARGET` 覆盖目标。
+  - [x] 通过 `cmd.exe /d /s /c` 修复 Windows `spawnSync npx.cmd EINVAL`。
+  - [x] 在 `scripts/run-tauri-android.js` 增加 spawn error/signal 明确日志。
+
+- [x] **回归覆盖同步更新**
+  - [x] 更新 `src/mobile.pipeline.test.ts`，新增 arm64 默认与覆盖能力断言。
+  - [x] 已验证 `npm run test:migration` 通过（`30` 项测试）。
+
+- [x] **构建验证**
+  - [x] 已验证 `node scripts/run-tauri-android.js build` 通过。
+  - [x] 已验证 `npm run tauri:android:build` 通过。
+  - [x] 已产出：
+    - `src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk`
+    - `src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab`
+
+### 迁移剩余项（P1.5 后续）
+
+- [ ] **Android 端桌面专属能力对等**
+  - [ ] 将依赖 Node sidecar 的 API（`/api/build`、`/api/content`、目录扫描/构建链路）替换为 Android 可运行方案。
+  - [ ] 定义 Android 原生文件访问策略（SAF/File API）以完成知识库选择与加载。
+
+- [ ] **Path Mode/Godot 的 Android 路线决策**
+  - [ ] 维持 Godot Bridge 仅桌面可用（当前行为），或提供 Android 兼容渲染路径。
+  - [ ] 在文档中明确 Android 端能力边界与 UX 预期。
+
+- [x] **可选多 ABI 策略**
+  - [x] 保持 `aarch64` 作为默认稳定目标。
+  - [x] 仅在主机内存/工具链满足时提供可选 universal ABI 构建路径。
+
+---
+
+# 2026-03-01 v1.4.9 - Runtime Verification Update (Desktop + Mobile)
+
+**目标**：在 `v1.4.8` 基础上继续实跑验证，并将 Tauri Android 的不确定性收敛为可执行的前置条件检查。
+
+### 本轮已完成
+
+- [x] **桌面打包再次实测通过**
+  - [x] 在设置 `NOTE_CONNECTION_GODOT_EXE` 后执行 `npm run tauri:build:mini`。
+  - [x] sidecar 二进制校验通过（`server` + `godot` 非空）。
+  - [x] MSI + NSIS 安装包成功生成。
+
+- [x] **Capacitor Android 流水线端到端执行**
+  - [x] 修复 `build_apk.bat` 中 `if (...)` 代码块内未转义括号导致的解析报错。
+  - [x] 增加非交互支持（`NOTE_CONNECTION_NO_PAUSE` / `CI=true`）。
+  - [x] 已完成 `build_apk.bat` 全流程并产出 debug APK。
+
+- [x] **Tauri Android 前置检查加固**
+  - [x] 新增 `scripts/verify-tauri-android-prereqs.js`。
+  - [x] 新增 `npm run verify:android:env`。
+  - [x] 已接入以下命令前置：
+  - [x] `tauri:android:init`
+  - [x] `tauri:android:dev`
+  - [x] `tauri:android:build`
+  - [x] 效果：当缺失 `cmdline-tools/latest/bin/sdkmanager` 时，返回明确错误而非模糊 Tauri 报错。
+
+- [x] **回归测试覆盖同步更新**
+  - [x] 扩展 `src/mobile.pipeline.test.ts`，校验：
+  - [x] Android 前置检查脚本是否接入 npm 命令。
+  - [x] `build_apk.bat` 自动化标志是否保留。
+  - [x] `npm run test:migration` 继续保持通过。
+
+- [x] **双路径聚合命令已验证**
+  - [x] 已执行 `npm run mobile:build:both`。
+  - [x] Capacitor 分支可完成并产出 APK。
+  - [x] Tauri Android 分支在前置检查处被明确拦截（在安装 cmdline-tools 前符合预期）。
+
+### 剩余外部前置条件（环境项）
+
+- [x] **安装 Tauri Android 所需的 Android SDK Command-line Tools**
+  - [x] 必需路径：`<ANDROID_SDK_ROOT>/cmdline-tools/latest/bin/sdkmanager(.bat)`。
+  - [x] 已通过以下命令验证：
+  - [x] `npm run verify:android:env`
+  - [x] `npm run tauri:android:build`
+
+---
+
+# 2026-03-01 v1.4.8 - Migration Closure & Dual Android Verification
+
+**目标**：以可执行验证证据收口迁移清单，重点完成 `P1.5`（Capacitor + Tauri Android 双路径产出）的稳定性证明。
+
+### 已完成清单
+
+- [x] **新增双 Android 路径防回归测试**
+  - [x] 新增 `src/mobile.pipeline.test.ts`，约束以下关键项：
+  - [x] `package.json` 中 Capacitor 与 Tauri Android 脚本必须同时存在。
+  - [x] `capacitor.config.ts` 的 `webDir` 必须与 `dist/src/frontend` 对齐。
+  - [x] `build_apk.bat` 必须保留同步与 APK 构建关键步骤。
+  - [x] `src-tauri/tauri.conf.json` 必须保留 `bin/server` 与 `bin/godot` sidecar 配置。
+
+- [x] **迁移回归测试集扩展**
+  - [x] 已更新 `package.json` 中 `test:migration`，纳入 `src/mobile.pipeline.test.ts`。
+  - [x] 当前迁移测试覆盖运行时路径、缓存/构建去重、双移动端流水线契约校验。
+
+- [x] **本轮执行证据更新**
+  - [x] `npm run build:mini` -> 通过。
+  - [x] `npm run test:migration` -> 通过（`29` 项测试）。
+  - [x] `npm run test:tauri` -> 通过（`9` 项 Rust 测试）。
+  - [x] `npm run smoke:sidecar:relaunch` -> 通过。
+
+### 结论
+
+- [x] `P1.5` 不仅完成文档化，而且已纳入自动化回归保护。
+- [x] 在当前仓库范围内（桌面 Tauri-first + 双移动端构建入口），Electron -> Tauri 迁移清单可视为已收口。
+
+---
+
+# 2026-03-01 v1.4.6 - Electron Removal Readiness Action Plan
+
+**目标**：补齐 Electron -> Tauri 的剩余迁移缺口，使移除 Electron 后不会在桌面发布与移动导出链路产生功能回退。
+
+### 阶段 P0 - 移除 Electron 前必须完成
+
+- [x] **实现 Tauri 持久化配置对等能力（等价 `kb_config`）**
+  - [x] 在 Tauri 应用数据目录持久化 KB 路径。
+  - [x] 在 Tauri 应用数据目录持久化语言设置。
+  - [x] 启动时在前端初始化前读取并应用。
+  - [x] 验收：重启后无需手动重选 KB 与语言，菜单语言保持一致。
+
+- [x] **加固 Godot 非开发机启动能力**
+  - [x] 删除 `src-tauri/src/lib.rs` 中硬编码绝对路径。
+  - [x] 采用可打包的 sidecar/bundle 路径解析方案。
+  - [x] 校验构建产物中的 Godot 可执行文件存在且非空。
+  - [x] 验收：`npm run tauri build` 已输出打包产物并接入二进制校验流水线。
+
+- [x] **补齐子进程生命周期治理**
+  - [x] 保留 Node sidecar 与 Godot 子进程句柄。
+  - [x] 在应用退出钩子中显式回收子进程。
+  - [x] 增加重启验证，确保不会遗留 `3000` 端口占用。
+  - [x] 验收：关闭应用后不存在孤儿 sidecar/Godot 进程。
+
+- [x] **修复发布态可写路径策略**
+  - [x] 不再假设安装版可写 `dist/src/frontend`。
+  - [x] 为生成文件（`data.js`、`graph_data.json`）指定可写运行目录（AppData/Cache）。
+  - [x] 同步更新 sidecar 环境变量（`NOTE_CONNECTION_FRONTEND_DIR` + `NOTE_CONNECTION_RUNTIME_DATA_DIR`）与缓存恢复逻辑。
+  - [x] 验收：安装版路径模型下构建与缓存恢复链路可用。
+
+- [x] **补齐与 Electron 首次启动体验对等**
+  - [x] 无配置时新增 Tauri 首次运行 KB 选择流程。
+  - [x] 保留并持久化菜单“更改 KB / 重置”行为。
+  - [x] 验收：新安装首次引导后永久记住用户选择。
+
+### 阶段 P1 - 稳定化与验证
+
+- [x] **将后端构建日志统一桥接到前端 Loading 面板**
+  - [x] 通过 Rust/sidecar 桥发出结构化 `build-log` 事件。
+  - [x] 确保长时间构建在 Tauri 下可见进度日志。
+  - [x] 验收：`/api/build` 期间 Loading 面板持续收到增量日志。
+
+- [x] **执行发布态冒烟测试并固化证据**
+  - [x] Windows 打包验证（`tauri build` 已生成 msi/nsis 产物）。
+  - [x] 缓存分流弹窗验证（`Load Existing` / `Regenerate`）。
+  - [x] 单次点击去重验证（无重复 restore/build）。
+  - [x] 验收：可复现实验结果已写入 `TEST_REPORT.md`。
+
+- [x] **明确 GPU 启动命令规范**
+  - [x] 文档统一使用 `npm run tauri:dev:mini:gpu`。
+  - [x] 不再示例 `npm run tauri:dev:mini --gpu`（避免 npm 警告）。
+  - [x] 验收：README/手册中仅保留受支持命令格式。
+
+### 阶段 P1.5 - 双移动端交付（Capacitor + Tauri Android）
+
+- [x] **同时保留两条官方 Android 生成路径**
+  - [x] 路径 A：保留 Capacitor（Web 资产运行时，功能范围受限）。
+  - [x] 路径 B：按 `docs/tauri_brainstorming.md` 提供 Tauri Android 流水线。
+  - [x] 验收：两条路径均已文档化并提供构建脚本。
+
+- [x] **Capacitor 路径边界明确化**
+  - [x] 明确未嵌入后端前，设备端目录构建/加载 sidecar API 不可用。
+  - [x] 明确移动端 source loading/reader 的降级预期。
+  - [x] 验收：APK 行为约束已写入文档。
+
+- [x] **Tauri Android 流水线补齐（脚本层）**
+  - [x] 增加 Tauri Android 构建脚本与初始化命令。
+  - [x] 保留并文档化 Node sidecar 在移动端的兼容性替换事项。
+  - [x] 验收：Android 端 Tauri 构建命令已就绪。
+
+### 阶段 P2 - Electron 清退
+
+- [x] **仅在 P0/P1 门槛全部通过后执行清退**
+  - [x] 删除 `package.json` 中 Electron 脚本。
+  - [x] 删除 `main: dist/src/electron/main.js`。
+  - [x] 删除 Electron 依赖（`electron`、`electron-builder`、`electron-squirrel-startup`）。
+  - [x] 归档/删除 `src/electron/*` 与 `electron-builder.yml`。
+  - [x] 验收：桌面构建链路已切换为 Tauri-first。
+
+- [x] **文档清理**
+  - [x] README 构建/发布章节从 Electron-first 改为 Tauri-first。
+  - [x] 历史变更保留并标注 Electron 路线停用日期。
+  - [x] 验收：当前发布文档不再要求使用 Electron 命令。
+
+### Electron 移除闸门（Go/No-Go）
+
+- [x] Tauri 下 KB 与语言持久化对等已验证。
+- [x] Godot 启动不再依赖本机硬编码路径。
+- [x] 应用退出后无孤儿子进程。
+- [x] Tauri 安装版下构建/缓存/Reader 链路可用。
+- [x] 双移动端路线（Capacitor + Tauri Android）已文档化。
+- [x] 脚本与 README 全面对齐 Tauri。
+
+---
+
+# 2026-03-01 v1.4.5 - Physically-Based Bubbles & Cancel Completion
+
+**目标**: 使用逼真的物理皂泡升级 Godot 渲染器，移除环境遮挡，并添加灵活的任务完成 UI 逻辑。
+
+### 已完成清单
+
+- [x] **基于物理的着色器**
+  - [x] 将 81 波长薄膜干涉 Glassner 逻辑移植到 `bubble_material.gdshader`。
+  - [x] 添加了 `warpnoise3` 和 `sp_spectral_filter` 以实现逼真的球面厚度变化。
+- [x] **物理交互**
+  - [x] 将中心气泡和周围气泡从 `MeshInstance3D` 转换为 `RigidBody3D`。
+  - [x] 添加了 `_physics_process` 轨道磁力吸引，让气泡可以逼真地漂浮和碰撞而不会永久重叠。
+  - [x] 移除了 `main.tscn` 环境中的 `Floor`（地板）节点障碍物。
+- [x] **取消完成 UI**
+  - [x] “标记完成”按钮现在动态切换为“取消完成”。
+  - [x] 在 `path_mode_ui.gd` 和 `path_renderer.gd` 中连接动态状态以适当地标记/取消标记节点。
+
+---
+
+# 2026-03-01 v1.4.4 - Tauri Bridge Stabilization & Duplicate-Cycle Elimination
+
+**目标**: 完成 Bridge-first 的 Tauri 迁移稳态化，重点解决缓存/加载重复执行、WebSocket 空闲重连抖动与运行时路径一致性问题。
+
+### 已完成清单
+
+- [x] **缓存分流恢复**
+  - [x] 当目标缓存存在时，恢复“直接加载缓存 / 重新生成”的显式用户决策流程。
+- [x] **重复执行保护**
+  - [x] 前端增加加载单飞保护，避免重复点击触发双执行。
+  - [x] 后端为 `/api/build` 与 `/api/restore-cache` 增加去重保护。
+- [x] **PathBridge 诊断增强**
+  - [x] 增加带标签连接日志（client id/tag/address + close code/reason），可区分正常重连与真实循环。
+- [x] **Godot WS 兼容性修复**
+  - [x] 将 Godot URL 修正为 `ws://127.0.0.1:9876/?client=godot`，消除 URL 非法导致的重连报错。
+- [x] **Tauri 空闲重连清理**
+  - [x] 在 Tauri 模式禁用 `frontend-early` 自动 WebSocket 启动。
+- [x] **语言/菜单幂等保护**
+  - [x] 在前端与 Rust 命令侧加入“同语言无操作”保护，避免重复同步造成噪声。
+
+### 更新文件
+
+- `src/frontend/source_manager.js`
+- `src/server.ts`
+- `src/core/PathBridge.ts`
+- `src/frontend/path_app.js`
+- `path_mode/scripts/ws_client.gd`
+- `src/frontend/i18n.js`
+- `src-tauri/src/lib.rs`
+
+---
+
+# 2026-02-26 v1.4.3 - 9-Rule Tree Layout Engine
+# 2026-02-01 v1.4.1 - Path Mode v2: Orbital Learning Architecture
+# 2026-01-23 v1.2.0 - Path Mode & Desktop Renderer
+# 2026-01-23 v1.1.2 - Path Resolution & UI Stability
+# 2026-01-22 v1.1.1 - Mobile Build Automation
+# 2026-01-22 v1.1.0 - CI/CD Automation
+# 2026-01-14 v1.0.0 - Production Release
+# 2026-01-13 v0.9.83 - GPU Rendering Debugging
+# 2026-01-12 v0.9.74
+# 2026-01-12 v0.9.74 - GPU Link Force & Robustness
+# 2026-01-12 v0.9.73 - GPU Rendering Fix (Chaining Bug)
+# 2026-01-12 v0.9.72 - GPU Optimized Rendering (Geek Edition)
+# 2026-01-10 v0.9.71 - Backend Layout & Static Mode
+# 2026-01-09 v0.9.70 - Frontend Initialization Fix (Race Condition)
+# 2026-01-09 v0.9.69 - Frontend Crash Fix (10k+ Nodes)
+# 2026-01-09 v0.9.68 - Content-on-Demand Architecture (10k+ Fix)
+# 2026-01-08 v0.9.67 - Compact Mode & Canvas Fix
+# 2026-01-08 v0.9.63 - 10k Node Optimization & Memory Strategy
+# 2026-01-07 v0.9.62 - Documentation Update (AMDGPU Guide)
+# 2026-01-07 v0.9.61 - Frontend Memory Optimization (Auto-Canvas)
+# 2026-01-07 v0.9.60 - Parallel Graph Metrics
+# 2026-01-07 v0.9.59 - Vector Space Memory Fix (Sparse Matrix)
+# 2026-01-07 v0.9.58 - Hybrid Inference Resource Reuse (Optimization)
+# 2026-01-07 v0.9.57 - Worker Memory Optimization
+# 2026-01-05 v0.9.56 - Hybrid Inference Memory Analysis
+# 2026-01-05 v0.9.55 - Heap OOM Fix & Iterative DFS
+# 2026-01-05 v0.9.54 - Welcome & Empty State Experience
+# 2026-01-05 v0.9.53 - Core API Decoupling
+# 2026-01-05 v0.9.52 - Cycle Detection Memory Optimization
+# 2026-01-03 v0.9.51 - Performance Logging & Crash Reporting
+# 2026-01-02 v0.9.50 - GPU Acceleration Feasibility
+# 2026-01-02 v0.9.49 - Statistical Analysis Memory Optimization
+# 2026-01-02 v0.9.48 - Parallel Processing Optimization
+# 2026-01-02 v0.9.47 - Focus Mode Interaction & Layout Fixes
+# 2025-12-26 v0.9.46 - Focus Mode UI Cleanup & Canvas Edge Fix
+# 2025-12-26 v0.9.45 - Canvas Interactivity & cleanup
+# 2025-12-26 v0.9.44 - Independent Focus Mode Spacing
+# 2025-12-26 v0.9.43 - Context-Aware Settings UI
+# 2025-12-26 v0.9.42 - Distinct Repulsion Settings
+# 2025-12-26 v0.9.41 - Settings Modal Simulation Freeze
+# 2025-12-26 v0.9.40 - Freeze Layout Priority Fix (Settings Modal)
+# 2025-12-26 v0.9.39 - Layout Switch Relaxation & Freeze Logic
+# 2025-12-26 v0.9.38 - Quick Start Guide HTML Rendering Fix
+# 2025-12-26 v0.9.37 - Rapid Relaxation Strategy
+# 2025-12-26 v0.9.36 - Freeze Layout Priority Fix (Visual Settings)
+# 2025-12-26 v0.9.35 - Viewport Culling Relaxation
+# 2025-12-26 v0.9.34 - Global Layout Update Fix
+# 2025-12-26 v0.9.33 - Layout State Caching (Instant Switch)
+# 2025-12-26 v0.9.32 - High Damping & Render Optimization
+# 2025-12-26 v0.9.31 - Simulation Optimization (Viewport Culling)
+# 2025-12-26 v0.9.30 - Focus Mode Layout Isolation
+# 2025-12-26 v0.9.29 - Freeze Layout Persistence
+# 2025-12-26 v0.9.28 - Focus Mode Specific Content Access
+# 2025-12-26 v0.9.27 - Conditional Restart
+# 2025-12-26 v0.9.26 - UX Enhancements
+# 2025-12-25 v0.9.25 - Freeze Layout Optimization
+# 2025-12-25 v0.9.24 - Focus Mode Memory Optimization
+# 2025-12-25 v0.9.23 - Default Settings Adjustment
+# 2025-12-25 v0.9.22 - Mobile Popup Adaptation
+# 2025-12-25 v0.9.21 - Strict Edge Visibility & Optimization
+# 2025-12-24 v0.9.20 - Selection State Auto-Clear on Focus Entry
+# 2025-12-24 v0.9.19 - Focus Mode & Popup Enhancements
+# 2025-12-24 v0.9.18 - Node Highlighting System Refactor
+# 2025-12-24 v0.9.17 - SVG Visual Completeness
+# 2025-12-24 v0.9.16 - Interaction Completeness
+# 2026-01-23 v1.1.2 - 路径解析与 UI 稳定性
+# 2026-01-22 v1.1.1 - 移动端构建自动化 (Mobile Build Automation)
+# 2026-01-22 v1.1.0 - CI/CD 自动化
+# 2026-01-14 v1.0.0 - 正式版本发布
+# 2026-01-12 v0.9.82 - 稳健性增强与交互优化 (Worker Sync & Interaction Stability)
+# 2026-01-12 v0.9.74 - 布局切换与 GPU 稳健性
+# 2026-01-12 v0.9.73 - GPU 渲染修复 (链式调用 Bug)
+# 2026-01-12 v0.9.72 - GPU 优化渲染 (极客版)
+# 2026-01-10 v0.9.71 - 后端布局与静态模式
+# 2026-01-09 v0.9.70 - 前端初始化修复 (竞态条件)
+# 2026-01-09 v0.9.69 - 前端崩溃修复 (10k+ 节点)
+# 2026-01-09 v0.9.68 - 按需内容架构 (10k+ 修复)
+# 2026-01-08 v0.9.67 - 紧凑模式与 Canvas 修复

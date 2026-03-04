@@ -483,8 +483,8 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             }
 
             // GET /api/kb-path — Return current Knowledge Base root path
-            // Mirrors Electron IPC: ipcMain.handle('getKbPath')
-            // 返回当前知识库根路径，与 Electron IPC 的 getKbPath 保持一致
+            // Legacy parity mapping: replaced historical desktop IPC getter.
+            // 返回当前知识库根路径（历史 IPC getter 的桥接替代实现）。
             if (req.url === '/api/kb-path') {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ kbPath: KB_ROOT }));
@@ -492,8 +492,8 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             }
 
             // GET /api/check-cache?target=financial — Check if cached graph exists
-            // Mirrors Electron IPC: ipcMain.handle('checkCache') in main.ts lines 443-461
-            // 检查指定文件夹的图谱缓存是否存在
+            // Legacy parity mapping for previous desktop cache-check flow.
+            // 检查指定目标的图谱缓存是否存在（历史桌面缓存检查链路的桥接实现）。
             if (req.url?.startsWith('/api/check-cache')) {
                 try {
                     const urlObj = new URL(req.url, `http://${req.headers.host}`);
@@ -546,9 +546,9 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             }
 
             // GET /api/restore-cache?target=financial — Restore cached graph as active data
-            // Mirrors Electron IPC: ipcMain.handle('restoreCache') in main.ts lines 463-488
+            // Legacy parity mapping for previous desktop cache-restore flow.
             // Copies data_{target}.js → data.js and graph_data_{target}.json → graph_data.json
-            // 从缓存恢复图谱数据，与 Electron IPC 的 restoreCache 保持一致
+            // 从缓存恢复图谱数据（历史桌面 restoreCache 链路的桥接实现）。
             if (req.url?.startsWith('/api/restore-cache')) {
                 try {
                     const urlObj = new URL(req.url, `http://${req.headers.host}`);
@@ -682,11 +682,11 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         
                         const buildTarget = target === 'ALL_FOLDERS' ? '' : target;
                         
-                        // Resolve to ABSOLUTE path, mirroring Electron main.ts behavior (lines 411-415).
+                        // Resolve to ABSOLUTE path, matching legacy desktop runtime behavior.
                         // NoteConnection.ts uses targetPath directly if absolute, skipping kbRoot fallback.
                         // Without this, the relative path "financial" would be resolved against
                         // dist/Knowledge_Base/ (via __dirname) which does not exist.
-                        // 将相对路径解析为绝对路径，与 Electron main.ts 的行为保持一致。
+                        // 将相对路径解析为绝对路径，对齐历史桌面运行时语义。
                         let targetToBuild: string | undefined;
                         if (buildTarget) {
                             targetToBuild = path.join(KB_ROOT, buildTarget);

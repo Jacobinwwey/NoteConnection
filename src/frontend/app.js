@@ -3058,8 +3058,8 @@ if (btnPathMode) {
 
     btnPathMode.addEventListener('click', async () => {
         // v1.1.3: Robust Data Check
-        // In Mini Build (Electron), `window.graphData` might be undefined, but `nodes` array in app.js is populated.
-        // We check `nodes` length. Since `nodes` is local scope here, we use it directly.
+        // In mini/first-run scenarios `window.graphData` can be unavailable while local `nodes` is populated.
+        // We check `nodes` length directly because it is the effective runtime source here.
         const hasData = (typeof nodes !== 'undefined' && nodes.length > 0);
         
         if (!hasData) {

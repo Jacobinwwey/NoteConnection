@@ -1,0 +1,43 @@
+name: Migration Gates
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  migration-gates:
+    name: ${{ matrix.suite }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: desktop-migration-suite
+            command: npm run test:migration
+          - suite: tauri-rust-suite
+            command: npm run test:tauri
+          - suite: mobile-pipeline-contract-suite
+            command: npm run test:mobile:contracts
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Rust toolchain
+        if: matrix.suite == 'tauri-rust-suite'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run gate
+        run: ${{ matrix.command }}
