@@ -101,11 +101,13 @@ func _load_shader() -> void:
 func _setup_central_bubble() -> void:
 	_central_bubble = RigidBody3D.new()
 	_central_bubble.gravity_scale = 0.0
-	_central_bubble.linear_damp = 3.0
-	_central_bubble.angular_damp = 3.0
+	_central_bubble.linear_damp = 5.0
+	_central_bubble.angular_damp = 5.0
+	_central_bubble.mass = 5.0
+	_central_bubble.continuous_cd = true
 	var phys_mat := PhysicsMaterial.new()
 	phys_mat.friction = 0.0
-	phys_mat.bounce = 0.6
+	phys_mat.bounce = 0.4
 	_central_bubble.physics_material_override = phys_mat
 	_central_bubble.set_meta("node_id", "")
 	_central_bubble.set_meta("target_pos", Vector3.ZERO)
@@ -213,11 +215,13 @@ func _create_bubble_material(is_central: bool, is_completed: bool) -> Material:
 func _create_peripheral_bubble(index: int, node: Dictionary) -> RigidBody3D:
 	var bubble := RigidBody3D.new()
 	bubble.gravity_scale = 0.0
-	bubble.linear_damp = 3.0
-	bubble.angular_damp = 3.0
+	bubble.linear_damp = 4.0
+	bubble.angular_damp = 4.0
+	bubble.mass = 1.0
+	bubble.continuous_cd = true
 	var phys_mat := PhysicsMaterial.new()
 	phys_mat.friction = 0.0
-	phys_mat.bounce = 0.6
+	phys_mat.bounce = 0.4
 	bubble.physics_material_override = phys_mat
 	
 	var node_id: String = node.get("id", "")
