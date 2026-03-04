@@ -131,6 +131,16 @@ fn file_has_content(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+#[cfg(not(target_os = "android"))]
+const GODOT_MIN_BINARY_BYTES: u64 = 1 * 1024 * 1024;
+
+#[cfg(not(target_os = "android"))]
+fn is_valid_godot_binary(path: &Path) -> bool {
+    fs::metadata(path)
+        .map(|meta| meta.is_file() && meta.len() >= GODOT_MIN_BINARY_BYTES)
+        .unwrap_or(false)
+}
+
 fn normalize_kb_root_path(raw_path: &str) -> Option<PathBuf> {
     let raw = PathBuf::from(raw_path);
     if !raw.exists() || !raw.is_dir() {
@@ -302,28 +312,35 @@ fn resolve_godot_executable(project_root: &Path) -> Option<PathBuf> {
         .ok()
         .and_then(|exe| exe.parent().map(|p| p.to_path_buf()));
 
-    let mut candidates: Vec<PathBuf> = Vec::new();
-
     if let Ok(env_path) = std::env::var("NOTE_CONNECTION_GODOT_EXE") {
-        candidates.push(PathBuf::from(env_path));
+        let env_candidate = PathBuf::from(env_path);
+        if file_has_content(&env_candidate) {
+            return Some(env_candidate);
+        }
     }
 
+    let mut candidates: Vec<PathBuf> = Vec::new();
+
+    // Prefer a direct `godot.exe` copy because small wrapper binaries can fail
+    // after being renamed to the sidecar target name.
+    candidates.push(project_root.join("src-tauri").join("bin").join("godot.exe"));
     candidates.push(
         project_root
             .join("src-tauri")
             .join("bin")
             .join("godot-x86_64-pc-windows-msvc.exe"),
     );
-    candidates.push(project_root.join("src-tauri").join("bin").join("godot.exe"));
 
     if let Some(dir) = exec_dir {
-        candidates.push(dir.join("godot-x86_64-pc-windows-msvc.exe"));
         candidates.push(dir.join("godot.exe"));
-        candidates.push(dir.join("bin").join("godot-x86_64-pc-windows-msvc.exe"));
+        candidates.push(dir.join("godot-x86_64-pc-windows-msvc.exe"));
         candidates.push(dir.join("bin").join("godot.exe"));
+        candidates.push(dir.join("bin").join("godot-x86_64-pc-windows-msvc.exe"));
     }
 
-    candidates.into_iter().find(|candidate| file_has_content(candidate))
+    candidates
+        .into_iter()
+        .find(|candidate| is_valid_godot_binary(candidate))
 }
 
 fn resolve_frontend_dist_path() -> PathBuf {
@@ -2018,6 +2035,26 @@ mod tests {
 
         let resolved = resolve_godot_executable(&temp.path).expect("expected executable path");
         assert_eq!(resolved, executable);
+    }
+
+    #[test]
+    fn resolve_godot_executable_ignores_wrapper_sized_sidecar_binary() {
+        let _lock = test_env_lock().lock().expect("failed to lock test env");
+        let temp = TempDir::new("godot_wrapper_filter");
+        let sidecar_dir = temp.child("src-tauri/bin");
+        fs::create_dir_all(&sidecar_dir).expect("failed to create sidecar directory");
+
+        let wrapper_like = sidecar_dir.join("godot-x86_64-pc-windows-msvc.exe");
+        fs::write(&wrapper_like, b"wrapper").expect("failed to create wrapper-like executable");
+
+        let real_like = sidecar_dir.join("godot.exe");
+        fs::write(&real_like, vec![0_u8; (GODOT_MIN_BINARY_BYTES + 1) as usize])
+            .expect("failed to create real-like executable");
+
+        let _exe_guard = EnvVarGuard::set("NOTE_CONNECTION_GODOT_EXE", "");
+        let resolved =
+            resolve_godot_executable(&temp.path).expect("expected resolved godot executable");
+        assert_eq!(resolved, real_like);
     }
 
     #[test]

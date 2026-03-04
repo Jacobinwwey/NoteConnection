@@ -457,41 +457,6 @@ func _on_settings_panel_changed(settings: Dictionary) -> void:
 	_emit_runtime_config(settings)
 	if _tree_view and _tree_view.has_method("update_settings"):
 		_tree_view.update_settings(settings)
-	
-	_apply_background_setting(settings)
-
-func _apply_background_setting(settings: Dictionary) -> void:
-	if not settings.has("background_file"):
-		return
-		
-	var we = get_node_or_null("../WorldEnvironment") as WorldEnvironment
-	if not we or not we.environment:
-		return
-		
-	var bg_file = settings["background_file"]
-	if bg_file == "Default (Dark Color)" or bg_file == "":
-		we.environment.background_mode = Environment.BG_COLOR
-		we.environment.sky = null
-		return
-		
-	var bg_path = "E:/Knowledge_project/NoteConnection_app/path_mode/assets/backgrounds/" + bg_file
-	var img = Image.new()
-	var err = img.load(bg_path)
-	if err == OK:
-		var raw_texture = ImageTexture.create_from_image(img)
-		var panorama_mat = PanoramaSkyMaterial.new()
-		panorama_mat.panorama = raw_texture
-		
-		# Set filter to linear to prevent issues with environment maps at lower resolutions
-		# PanoramaSkyMaterial doesn't have a direct filter property on the texture property anymore
-		# The filter is determined by the texture itself or global project settings in simple setups.
-		
-		var sky = Sky.new()
-		sky.sky_material = panorama_mat
-		we.environment.background_mode = Environment.BG_SKY
-		we.environment.sky = sky
-	else:
-		push_error("Failed to load background picture: %s, Error: %d" % [bg_path, err])
 
 
 func _setup_initial_state() -> void:
@@ -499,10 +464,6 @@ func _setup_initial_state() -> void:
 	_update_sidebar_header()
 	_update_target_button_state()
 	_emit_runtime_config()
-	if _settings_panel:
-		# Extract raw dictionary
-		var settings = _settings_panel._settings
-		_apply_background_setting(settings)
 
 
 ## Called when Mark Complete button is pressed
