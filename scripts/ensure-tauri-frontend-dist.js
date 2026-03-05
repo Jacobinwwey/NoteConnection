@@ -13,23 +13,66 @@ function isDirectory(targetPath) {
     }
 }
 
-function runNpmBuildMini() {
-    const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-    const result = spawnSync(npmCommand, ['run', 'build:mini'], {
+function runAttempt(command, args, opts = {}) {
+    return spawnSync(command, args, {
         cwd: projectRoot,
         stdio: 'inherit',
         env: process.env,
+        ...opts,
     });
+}
 
-    if (result.error) {
-        console.error('[test:tauri] Failed to execute npm run build:mini');
-        console.error(result.error.message);
-        process.exit(1);
+function runNpmBuildMini() {
+    const attempts = [];
+    const npmExecPath = process.env.npm_execpath;
+
+    // Most reliable path inside npm-runner contexts (GitHub Actions included).
+    if (npmExecPath) {
+        attempts.push({
+            label: `node ${npmExecPath} run build:mini`,
+            command: process.execPath,
+            args: [npmExecPath, 'run', 'build:mini'],
+        });
     }
 
-    if (typeof result.status === 'number' && result.status !== 0) {
-        process.exit(result.status);
+    // Platform fallback in case npm_execpath is unavailable.
+    attempts.push(
+        process.platform === 'win32'
+            ? {
+                  label: 'npm.cmd run build:mini',
+                  command: 'npm.cmd',
+                  args: ['run', 'build:mini'],
+                  opts: { shell: true },
+              }
+            : {
+                  label: 'npm run build:mini',
+                  command: 'npm',
+                  args: ['run', 'build:mini'],
+              },
+    );
+
+    const errors = [];
+    for (const attempt of attempts) {
+        console.log(`[test:tauri] Executing: ${attempt.label}`);
+        const result = runAttempt(attempt.command, attempt.args, attempt.opts);
+
+        if (result.error) {
+            errors.push(`${attempt.label}: ${result.error.message}`);
+            continue;
+        }
+
+        if (typeof result.status === 'number' && result.status === 0) {
+            return;
+        }
+
+        process.exit(typeof result.status === 'number' ? result.status : 1);
     }
+
+    console.error('[test:tauri] Failed to execute npm run build:mini');
+    for (const error of errors) {
+        console.error(`[test:tauri] ${error}`);
+    }
+    process.exit(1);
 }
 
 if (isDirectory(frontendDist)) {
