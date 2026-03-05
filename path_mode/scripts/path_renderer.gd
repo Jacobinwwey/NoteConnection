@@ -809,6 +809,14 @@ func _on_background_lock_toggled(is_locked: bool) -> void:
 	var camera := $"../Camera3D"
 	if camera and camera.has_method("set_background_locked"):
 		camera.set_background_locked(is_locked)
+	
+	## Freeze/unfreeze physics on all bubbles to prevent force superposition during rotation
+	## 冻结/解冻所有气泡的物理，防止旋转时力的叠加
+	if _central_bubble and is_instance_valid(_central_bubble):
+		_central_bubble.freeze = is_locked
+	for bubble in _peripheral_bubbles:
+		if is_instance_valid(bubble):
+			bubble.freeze = is_locked
 
 
 func _on_unmark_requested(node_id: String) -> void:
