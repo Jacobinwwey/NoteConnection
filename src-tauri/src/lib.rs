@@ -1706,11 +1706,38 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::MutexGuard;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn test_env_lock() -> &'static Mutex<()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
         LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    fn lock_test_env() -> MutexGuard<'static, ()> {
+        test_env_lock()
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    fn canonical_path_for_compare(path: &Path) -> String {
+        let normalized =
+            normalize_display_path(fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf()));
+        let mut key = normalized.to_string_lossy().replace('\\', "/");
+        while key.ends_with('/') {
+            key.pop();
+        }
+        #[cfg(windows)]
+        {
+            key = key.to_ascii_lowercase();
+        }
+        key
+    }
+
+    fn assert_paths_equivalent(actual: &str, expected: &Path) {
+        let actual_key = canonical_path_for_compare(Path::new(actual));
+        let expected_key = canonical_path_for_compare(expected);
+        assert_eq!(actual_key, expected_key);
     }
 
     struct EnvVarGuard {
@@ -1754,7 +1781,10 @@ mod tests {
                 now
             ));
             fs::create_dir_all(&path).expect("failed to create temp directory");
-            Self { path }
+            let canonical = normalize_display_path(
+                fs::canonicalize(&path).unwrap_or_else(|_| path.clone()),
+            );
+            Self { path: canonical }
         }
 
         fn child(&self, relative: &str) -> PathBuf {
@@ -1875,7 +1905,7 @@ mod tests {
 
     #[test]
     fn kb_path_and_language_persist_and_resolve() {
-        let _lock = test_env_lock().lock().expect("failed to lock test env");
+        let _lock = lock_test_env();
         let temp = TempDir::new("config_roundtrip");
         let config_file = temp.child("kb_config.json");
         let kb_dir = temp.child("Knowledge_Base");
@@ -1888,9 +1918,9 @@ mod tests {
 
         let persisted_kb = persist_kb_path(kb_dir.to_string_lossy().as_ref())
             .expect("persist_kb_path should succeed");
-        assert_eq!(persisted_kb, kb_dir.to_string_lossy().to_string());
+        assert_paths_equivalent(&persisted_kb, &kb_dir);
 
-        assert_eq!(resolve_kb_path_from_config(), kb_dir.to_string_lossy().to_string());
+        assert_paths_equivalent(&resolve_kb_path_from_config(), &kb_dir);
         assert_eq!(resolve_user_language_from_config(), "en");
 
         let persisted_lang = persist_user_language("zh").expect("persist_user_language should work");
@@ -1900,7 +1930,7 @@ mod tests {
 
     #[test]
     fn persist_kb_path_normalizes_path_inside_knowledge_base() {
-        let _lock = test_env_lock().lock().expect("failed to lock test env");
+        let _lock = lock_test_env();
         let temp = TempDir::new("kb_normalize_persist");
         let config_file = temp.child("kb_config.json");
         let kb_dir = temp.child("Knowledge_Base");
@@ -1914,12 +1944,12 @@ mod tests {
 
         let persisted = persist_kb_path(nested_dir.to_string_lossy().as_ref())
             .expect("persist_kb_path should normalize to Knowledge_Base root");
-        assert_eq!(persisted, kb_dir.to_string_lossy().to_string());
+        assert_paths_equivalent(&persisted, &kb_dir);
     }
 
     #[test]
     fn resolve_kb_path_from_config_normalizes_stale_nested_kb_path() {
-        let _lock = test_env_lock().lock().expect("failed to lock test env");
+        let _lock = lock_test_env();
         let temp = TempDir::new("kb_normalize_resolve");
         let config_file = temp.child("kb_config.json");
         let kb_dir = temp.child("Knowledge_Base");
@@ -1941,18 +1971,18 @@ mod tests {
         .expect("failed to write stale config");
 
         let resolved = resolve_kb_path_from_config();
-        assert_eq!(resolved, kb_dir.to_string_lossy().to_string());
+        assert_paths_equivalent(&resolved, &kb_dir);
 
         let refreshed = load_stored_config();
-        assert_eq!(
-            refreshed.knowledge_base_path,
-            Some(kb_dir.to_string_lossy().to_string())
-        );
+        let refreshed_path = refreshed
+            .knowledge_base_path
+            .expect("knowledge_base_path should be persisted");
+        assert_paths_equivalent(&refreshed_path, &kb_dir);
     }
 
     #[test]
     fn persist_kb_path_rejects_non_existing_directory() {
-        let _lock = test_env_lock().lock().expect("failed to lock test env");
+        let _lock = lock_test_env();
         let temp = TempDir::new("invalid_kb");
         let config_file = temp.child("kb_config.json");
         let missing_dir = temp.child("missing_folder");
@@ -1967,7 +1997,7 @@ mod tests {
 
     #[test]
     fn read_node_content_supports_absolute_and_relative_paths_within_kb_root() {
-        let _lock = test_env_lock().lock().expect("failed to lock test env");
+        let _lock = lock_test_env();
         let temp = TempDir::new("read_node_content_ok");
         let config_file = temp.child("kb_config.json");
         let kb_dir = temp.child("Knowledge_Base");
@@ -2000,7 +2030,7 @@ mod tests {
 
     #[test]
     fn read_node_content_rejects_file_outside_kb_root() {
-        let _lock = test_env_lock().lock().expect("failed to lock test env");
+        let _lock = lock_test_env();
         let temp = TempDir::new("read_node_content_outside");
         let config_file = temp.child("kb_config.json");
         let kb_dir = temp.child("Knowledge_Base");
@@ -2023,7 +2053,7 @@ mod tests {
 
     #[test]
     fn resolve_godot_executable_prefers_env_override_with_real_file() {
-        let _lock = test_env_lock().lock().expect("failed to lock test env");
+        let _lock = lock_test_env();
         let temp = TempDir::new("godot_exec");
         let executable = temp.child("godot-custom.exe");
         fs::write(&executable, b"godot").expect("failed to write executable stub");
@@ -2039,7 +2069,7 @@ mod tests {
 
     #[test]
     fn resolve_godot_executable_ignores_wrapper_sized_sidecar_binary() {
-        let _lock = test_env_lock().lock().expect("failed to lock test env");
+        let _lock = lock_test_env();
         let temp = TempDir::new("godot_wrapper_filter");
         let sidecar_dir = temp.child("src-tauri/bin");
         fs::create_dir_all(&sidecar_dir).expect("failed to create sidecar directory");
