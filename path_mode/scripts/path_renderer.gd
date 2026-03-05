@@ -802,21 +802,39 @@ func _on_exit_requested() -> void:
 		get_tree().quit()
 
 
+var _is_bg_locked: bool = false
+var _is_camera_rotating: bool = false
+
 func _on_background_lock_toggled(is_locked: bool) -> void:
 	## Forward background lock to orbital camera
 	## 将背景锁定状态转发到轨道相机
+	_is_bg_locked = is_locked
 	print("[PathRenderer] Background lock toggled: ", is_locked)
 	var camera := $"../Camera3D"
 	if camera and camera.has_method("set_background_locked"):
 		camera.set_background_locked(is_locked)
 	
-	## Freeze/unfreeze physics on all bubbles to prevent force superposition during rotation
-	## 冻结/解冻所有气泡的物理，防止旋转时力的叠加
+	_update_bubbles_physics_state()
+
+
+func set_camera_rotating(is_rotating: bool) -> void:
+	## Called by OrbitalCamera to notify when the user is actively dragging the view
+	## 由轨道相机调用以通知用户正处于拖拽视图状态
+	_is_camera_rotating = is_rotating
+	_update_bubbles_physics_state()
+
+
+func _update_bubbles_physics_state() -> void:
+	## Freeze physics on all bubbles if background is locked or user is actively rotating
+	## this prevents force superposition and node instability during rotation
+	## 如果背景被锁定或用户正在主动旋转，则冻结所有气泡的物理，以防力叠加和节点不稳定
+	var should_freeze: bool = _is_bg_locked or _is_camera_rotating
+	
 	if _central_bubble and is_instance_valid(_central_bubble):
-		_central_bubble.freeze = is_locked
+		_central_bubble.freeze = should_freeze
 	for bubble in _peripheral_bubbles:
 		if is_instance_valid(bubble):
-			bubble.freeze = is_locked
+			bubble.freeze = should_freeze
 
 
 func _on_unmark_requested(node_id: String) -> void:

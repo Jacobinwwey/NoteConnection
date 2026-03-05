@@ -47,7 +47,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		
 		## Right mouse OR Left mouse for rotate (Orbit)
 		elif btn_event.button_index == MOUSE_BUTTON_RIGHT or btn_event.button_index == MOUSE_BUTTON_LEFT:
+			var was_rotating: bool = _is_rotating
 			_is_rotating = btn_event.pressed
+			
+			if _is_rotating != was_rotating:
+				var scene_root := get_node_or_null("../PathRenderer")
+				if scene_root and scene_root.has_method("set_camera_rotating"):
+					scene_root.set_camera_rotating(_is_rotating)
+					
 			if btn_event.pressed:
 				_last_mouse_pos = btn_event.position
 	
