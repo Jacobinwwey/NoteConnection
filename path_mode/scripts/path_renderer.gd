@@ -70,7 +70,61 @@ func _ready() -> void:
 		ui.collapse_all_requested.connect(_on_collapse_all_requested) # New
 		ui.settings_updated.connect(_on_settings_updated)
 		ui.exit_requested.connect(_on_exit_requested)
+		ui.background_lock_toggled.connect(_on_background_lock_toggled)
+		
+	## Initial background setup
+	if ui and ui.has_method("get_setting"):
+		var bg_file = ui.get_setting("background", "")
+		if bg_file != "":
+			var path = "res://assets/backgrounds/" + bg_file
+			_apply_background_texture(path)
+		var brightness = ui.get_setting("bg_brightness", 1.0)
+		var world_env := $"../WorldEnvironment" as WorldEnvironment
+		if world_env and world_env.environment:
+			world_env.environment.background_energy_multiplier = brightness
 
+func _physics_process(delta: float) -> void:
+	if not state_machine or _peripheral_bubbles.is_empty():
+		return
+		
+	var central_pos := Vector3.ZERO
+	if _central_bubble:
+		central_pos = _central_bubble.position
+	
+	## Spring-Force Orbital Model:
+	## Pull bubbles towards their rotating target slot, but they bounce off each other.
+	var time_offset := Time.get_ticks_msec() / 1000.0 * 0.2 ## Rotate slowly
+	for i in range(_peripheral_bubbles.size()):
+		var bubble := _peripheral_bubbles[i]
+		if not is_instance_valid(bubble):
+			continue
+			
+		var expected_angle: float = (float(i) / max(_peripheral_bubbles.size(), 1)) * TAU + time_offset
+		var target_pos := _get_orbital_position(expected_angle)
+		bubble.set_meta("target_pos", target_pos)
+		
+		var to_target := target_pos - bubble.position
+		
+		## Gently pull toward target (Spring Force)
+		var spring_force := to_target * 5.0
+		bubble.apply_central_force(spring_force)
+		
+		## Mild repulsion from center so they don't clip the central bubble
+		var to_center := bubble.position - central_pos
+		var dist_to_center := to_center.length()
+		var safe_dist := central_radius + peripheral_radius + 0.1
+		if dist_to_center < safe_dist and dist_to_center > 0.01:
+			var push_away := to_center.normalized() * (safe_dist - dist_to_center) * 20.0
+			bubble.apply_central_force(push_away)
+		
+		## BOUNDS CLAMPING: Prevent nodes from flying too far away
+		## 位置钳制：防止节点飞得太远
+		var max_allowed_dist: float = ORBITAL_RADIUS * 3.0 # Half-window range
+		if dist_to_center > max_allowed_dist:
+			# Teleport back to target and kill velocity
+			bubble.linear_velocity = Vector3.ZERO
+			bubble.angular_velocity = Vector3.ZERO
+			bubble.global_position = global_position + target_pos
 
 func _on_node_toggle_requested(node_id: String) -> void:
 	if ws_client:
@@ -213,8 +267,9 @@ func _create_bubble_material(is_central: bool, is_completed: bool) -> Material:
 func _create_peripheral_bubble(index: int, node: Dictionary) -> RigidBody3D:
 	var bubble := RigidBody3D.new()
 	bubble.gravity_scale = 0.0
-	bubble.linear_damp = 4.0
+	bubble.linear_damp = 5.0
 	bubble.angular_damp = 4.0
+	bubble.continuous_cd = true # Prevent tunneling on collision
 	var phys_mat := PhysicsMaterial.new()
 	phys_mat.friction = 0.0
 	phys_mat.bounce = 0.4
@@ -699,6 +754,43 @@ func _on_settings_updated(settings: Dictionary) -> void:
 	print("[PathRenderer] Settings updated: ", settings)
 	if ws_client and ws_client.has_method("send_configure"):
 		ws_client.send_configure(settings)
+		
+	if settings.has("background"):
+		var bg_file = settings["background"]
+		if bg_file == "":
+			_apply_background_texture("")
+		else:
+			var path = "res://assets/backgrounds/" + bg_file
+			_apply_background_texture(path)
+			
+	if settings.has("bg_brightness"):
+		var world_env := $"../WorldEnvironment" as WorldEnvironment
+		if world_env and world_env.environment:
+			world_env.environment.background_energy_multiplier = settings["bg_brightness"]
+
+func _apply_background_texture(path: String) -> void:
+	var world_env := $"../WorldEnvironment" as WorldEnvironment
+	if not world_env or not world_env.environment or not world_env.environment.sky or not world_env.environment.sky.sky_material:
+		return
+		
+	var sky_mat := world_env.environment.sky.sky_material as PanoramaSkyMaterial
+	if not sky_mat:
+		return
+		
+	if path == "":
+		sky_mat.panorama = null
+		world_env.environment.background_mode = Environment.BG_COLOR
+		world_env.environment.background_color = Color(0.08, 0.1, 0.15, 1.0)
+		return
+		
+	world_env.environment.background_mode = Environment.BG_SKY
+	# EXR/HDR files natively import as CompressedTexture2D/Image in Godot 4 via ResourceLoader
+	if ResourceLoader.exists(path):
+		var tex = ResourceLoader.load(path)
+		sky_mat.panorama = tex
+		print("[PathRenderer] Applied background texture: ", path)
+	else:
+		push_error("[PathRenderer] Background file not found: ", path)
 
 
 func _on_exit_requested() -> void:
@@ -708,6 +800,15 @@ func _on_exit_requested() -> void:
 	if OS.get_name() == "Android":
 		# Android native Pathmode activity should return to Tauri window on Exit.
 		get_tree().quit()
+
+
+func _on_background_lock_toggled(is_locked: bool) -> void:
+	## Forward background lock to orbital camera
+	## 将背景锁定状态转发到轨道相机
+	print("[PathRenderer] Background lock toggled: ", is_locked)
+	var camera := $"../Camera3D"
+	if camera and camera.has_method("set_background_locked"):
+		camera.set_background_locked(is_locked)
 
 
 func _on_unmark_requested(node_id: String) -> void:
@@ -824,16 +925,3 @@ func _update_tree_panel() -> void:
 	else:
 		# Fallback to old list method if no layout
 		ui.build_tree(path_nodes, completed_ids, current_id)
-
-
-func _physics_process(delta: float) -> void:
-	if is_instance_valid(_central_bubble):
-		var target: Vector3 = _central_bubble.get_meta("target_pos", Vector3.ZERO)
-		var diff := target - _central_bubble.global_position
-		_central_bubble.apply_central_force(diff * 50.0)
-		
-	for bubble in _peripheral_bubbles:
-		if is_instance_valid(bubble):
-			var target: Vector3 = bubble.get_meta("target_pos", bubble.global_position)
-			var diff := target - bubble.global_position
-			bubble.apply_central_force(diff * 40.0)

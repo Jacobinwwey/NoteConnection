@@ -20,6 +20,7 @@ signal node_collapse_prereqs_requested(node_id: String) # New
 signal collapse_all_requested() # New
 signal settings_updated(settings: Dictionary)
 signal exit_requested
+signal background_lock_toggled(is_locked: bool)
 
 const TREE_VIEW_SCENE = preload("res://scenes/tree_view_panel.tscn")
 const SETTINGS_SCENE = preload("res://scenes/settings_panel.tscn")
@@ -57,6 +58,7 @@ var _history_list: ItemList = null
 var _target_popup: PopupPanel = null
 var _target_filter_input: LineEdit = null
 var _target_list: ItemList = null
+var _bg_lock_button: Button = null
 
 var _current_mode: String = "domain"
 var _current_strategy: String = "foundational"
@@ -142,6 +144,14 @@ func _create_dynamic_ui() -> void:
 		_exit_button.text = "Exit"
 		_exit_button.custom_minimum_size = Vector2(72, 34)
 		control_row.add_child(_exit_button)
+		
+		# Background Lock button (🔓/🔒 toggle)
+		_bg_lock_button = Button.new()
+		_bg_lock_button.text = "🔓"
+		_bg_lock_button.tooltip_text = "Lock Background (camera won't rotate sky)"
+		_bg_lock_button.toggle_mode = true
+		_bg_lock_button.custom_minimum_size = Vector2(44, 34)
+		control_row.add_child(_bg_lock_button)
 
 	## Lightweight visual polish for key actions
 	if mark_complete_btn:
@@ -155,20 +165,57 @@ func _create_dynamic_ui() -> void:
 	_edit_button.toggle_mode = true
 	var sidebar := $GoldStarSidebar as VBoxContainer
 	if sidebar:
-		var header_row := HBoxContainer.new()
-		header_row.name = "EditRow"
-		sidebar.add_child(header_row)
-		sidebar.move_child(header_row, 1) # After HeaderButton
-		header_row.add_child(_edit_button)
+		# Convert sidebar to use DraggablePanel
+		sidebar.set_script(preload("res://scripts/draggable_panel.gd"))
+		
+		var sidebar_header_row := HBoxContainer.new()
+		sidebar_header_row.name = "SidebarHeaderRow"
+		sidebar_header_row.mouse_filter = Control.MOUSE_FILTER_PASS
+		sidebar.add_child(sidebar_header_row)
+		sidebar.move_child(sidebar_header_row, 0) # Before HeaderButton
+		
+		# Move existing HeaderButton into the new row
+		if sidebar_header:
+			sidebar_header.get_parent().remove_child(sidebar_header)
+			sidebar_header_row.add_child(sidebar_header)
+			sidebar_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		
+		# Add collapse button to the sidebar
+		var sidebar_collapse_btn := Button.new()
+		sidebar_collapse_btn.text = "[-]"
+		sidebar_collapse_btn.tooltip_text = "Collapse Panel"
+		sidebar_collapse_btn.focus_mode = Control.FOCUS_NONE
+		sidebar_collapse_btn.pressed.connect(func(): sidebar.collapse("[<]", HORIZONTAL_ALIGNMENT_RIGHT))
+		sidebar_header_row.add_child(sidebar_collapse_btn)
+		
+		# Connect drag handle using new API (fixes timing bug)
+		sidebar.setup_drag_handle(sidebar_header_row)
+		
+		var edit_row := HBoxContainer.new()
+		edit_row.name = "EditRow"
+		sidebar.add_child(edit_row)
+		sidebar.move_child(edit_row, 1) # After SidebarHeaderRow
+		edit_row.add_child(_edit_button)
 		_edit_button.size_flags_horizontal = Control.SIZE_SHRINK_END
 		
-		# Add Settings Button to the same row
-		_settings_button = Button.new()
-		_settings_button.text = "⚙"
-		_settings_button.tooltip_text = "Settings"
-		header_row.add_child(_settings_button)
 		_apply_button_style(_edit_button, Color(0.2, 0.24, 0.3, 1.0), Color(0.27, 0.31, 0.4, 1.0), Color(0.14, 0.18, 0.24, 1.0), Color(0.42, 0.46, 0.58, 1.0), Color(0.92, 0.95, 1.0, 1.0))
-		_apply_button_style(_settings_button, Color(0.18, 0.22, 0.28, 1.0), Color(0.24, 0.3, 0.38, 1.0), Color(0.14, 0.18, 0.24, 1.0), Color(0.35, 0.44, 0.56, 1.0), Color(0.88, 0.94, 1.0, 1.0))
+		
+	## Create Settings Button as independent floating button in upper-right corner
+	## 将设置按钮作为独立浮动按钮放在右上角
+	_settings_button = Button.new()
+	_settings_button.text = "⚙"
+	_settings_button.tooltip_text = "Settings"
+	_settings_button.custom_minimum_size = Vector2(44, 44)
+	_settings_button.anchor_left = 1.0
+	_settings_button.anchor_right = 1.0
+	_settings_button.anchor_top = 0.0
+	_settings_button.anchor_bottom = 0.0
+	_settings_button.offset_left = -60
+	_settings_button.offset_top = 58 # Below the top control row
+	_settings_button.offset_right = -16
+	_settings_button.offset_bottom = 102
+	add_child(_settings_button)
+	_apply_button_style(_settings_button, Color(0.12, 0.15, 0.2, 0.88), Color(0.18, 0.24, 0.32, 0.95), Color(0.08, 0.1, 0.14, 0.95), Color(0.4, 0.5, 0.7, 0.9), Color(0.92, 0.96, 1.0, 1.0))
 		
 	## Create Settings Panel
 	if SETTINGS_SCENE:
@@ -277,21 +324,27 @@ func _create_dynamic_ui() -> void:
 	## Create Tree Panel (left sidebar) with proper sizing
 	_tree_panel = VBoxContainer.new()
 	_tree_panel.name = "TreePanel"
+	_tree_panel.set_script(preload("res://scripts/draggable_panel.gd"))
+	
 	## Use anchors for left side positioning
 	_tree_panel.anchor_left = 0.0
 	_tree_panel.anchor_top = 0.0
 	_tree_panel.anchor_right = 0.0
-	_tree_panel.anchor_bottom = 1.0
+	_tree_panel.anchor_bottom = 0.0
 	_tree_panel.offset_left = 20
 	_tree_panel.offset_top = 220 # Keep clear from top control row
 	_tree_panel.offset_right = 250 # 230px wide
-	_tree_panel.offset_bottom = -20
+	_tree_panel.offset_bottom = get_viewport().size.y - 20
 	_tree_panel.custom_minimum_size = Vector2(200, 200)
 	_tree_panel.z_index = -1
 	add_child(_tree_panel)
 	
 	var header_hbox := HBoxContainer.new()
+	header_hbox.mouse_filter = Control.MOUSE_FILTER_PASS
 	_tree_panel.add_child(header_hbox)
+	
+	# Connect drag handle using new API (fixes timing bug)
+	_tree_panel.setup_drag_handle(header_hbox)
 	
 	var tree_header := Label.new()
 	tree_header.text = "Learning Path"
@@ -301,9 +354,9 @@ func _create_dynamic_ui() -> void:
 	
 	var collapse_btn := Button.new()
 	collapse_btn.text = "[-]"
-	collapse_btn.tooltip_text = "Collapse All Nodes"
+	collapse_btn.tooltip_text = "Collapse Panel"
 	collapse_btn.focus_mode = Control.FOCUS_NONE
-	collapse_btn.pressed.connect(func(): collapse_all_requested.emit())
+	collapse_btn.pressed.connect(func(): _tree_panel.collapse("[>]", HORIZONTAL_ALIGNMENT_LEFT))
 	header_hbox.add_child(collapse_btn)
 	
 	## Instantiate new Tree View Panel
@@ -429,6 +482,9 @@ func _connect_signals() -> void:
 		_history_button.pressed.connect(_on_history_pressed)
 	if _exit_button:
 		_exit_button.pressed.connect(_on_exit_pressed)
+	if _bg_lock_button:
+		_bg_lock_button.toggled.connect(_on_bg_lock_toggled)
+		_apply_button_style(_bg_lock_button, Color(0.15, 0.2, 0.28, 1.0), Color(0.2, 0.28, 0.38, 1.0), Color(0.1, 0.15, 0.22, 1.0), Color(0.4, 0.5, 0.7, 1.0), Color(0.95, 0.97, 1.0, 1.0))
 	if _history_list:
 		_history_list.item_activated.connect(_on_history_item_activated)
 		_history_list.item_clicked.connect(func(index: int, _at: Vector2, _mouse_button: int):
@@ -605,6 +661,15 @@ func _on_exit_pressed() -> void:
 	exit_requested.emit()
 
 
+func _on_bg_lock_toggled(pressed: bool) -> void:
+	## Toggle background lock icon and emit signal
+	## 切换背景锁定图标并发出信号
+	if _bg_lock_button:
+		_bg_lock_button.text = "🔒" if pressed else "🔓"
+		_bg_lock_button.tooltip_text = "Unlock Background" if pressed else "Lock Background (camera won't rotate sky)"
+	background_lock_toggled.emit(pressed)
+
+
 func _on_history_pressed() -> void:
 	if not _history_popup:
 		return
@@ -672,18 +737,14 @@ func _emit_runtime_config(extra: Dictionary = {}) -> void:
 
 ## Toggle sidebar visibility
 func _on_sidebar_header_pressed() -> void:
-	_sidebar_visible = not _sidebar_visible
-	
-	if completed_list:
-		completed_list.visible = _sidebar_visible
-	
-	_update_sidebar_header()
-	sidebar_toggled.emit(_sidebar_visible)
-
+	# Trigger the full draggable panel collapse instead of just hiding local nodes
+	var sidebar := $GoldStarSidebar
+	if sidebar and sidebar.has_method("collapse"):
+		sidebar.collapse("[<]", HORIZONTAL_ALIGNMENT_RIGHT)
 
 func _update_sidebar_header() -> void:
 	if sidebar_header:
-		var icon := "[v]" if _sidebar_visible else "[>]"
+		var icon := "[v]"
 		sidebar_header.text = "%s Completed Nodes: %d" % [icon, _completed_nodes.size()]
 
 

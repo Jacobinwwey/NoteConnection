@@ -6,9 +6,14 @@
 [ext_resource type="Script" path="res://scripts/orbital_camera.gd" id="4_cam"]
 [ext_resource type="Script" path="res://scripts/path_mode_ui.gd" id="5_ui"]
 
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_bg"]
+
+[sub_resource type="Sky" id="Sky_main"]
+sky_material = SubResource("PanoramaSkyMaterial_bg")
+
 [sub_resource type="Environment" id="Environment_main"]
-background_mode = 1
-background_color = Color(0.08, 0.1, 0.15, 1)
+background_mode = 2
+sky = SubResource("Sky_main")
 ambient_light_source = 2
 ambient_light_color = Color(0.5, 0.55, 0.7, 1)
 ambient_light_energy = 0.5

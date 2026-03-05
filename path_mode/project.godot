@@ -24,8 +24,8 @@ boot_splash/use_filter=false
 
 [display]
 
-window/size/viewport_width=1280
-window/size/viewport_height=720
+window/size/viewport_width=1350
+window/size/viewport_height=1350
 
 [rendering]
 
