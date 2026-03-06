@@ -29,6 +29,13 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# Treat the reader and image viewer as modal UI layers.
+	if _is_modal_ui_active():
+		_cancel_pointer_interaction()
+		if event is InputEventMouseMotion:
+			_last_mouse_pos = event.position
+		return
+
 	## Scroll wheel zoom (always allowed, even when locked)
 	if event is InputEventMouseButton:
 		var btn_event: InputEventMouseButton = event as InputEventMouseButton
@@ -51,9 +58,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			_is_rotating = btn_event.pressed
 			
 			if _is_rotating != was_rotating:
-				var scene_root := get_node_or_null("../PathRenderer")
-				if scene_root and scene_root.has_method("set_camera_rotating"):
-					scene_root.set_camera_rotating(_is_rotating)
+				_set_scene_rotation_state(_is_rotating)
 					
 			if btn_event.pressed:
 				_last_mouse_pos = btn_event.position
@@ -86,6 +91,31 @@ func _unhandled_input(event: InputEvent) -> void:
 				_update_camera_transform()
 
 
+func _is_modal_ui_active() -> bool:
+	var ui := get_node_or_null("../UI")
+	if ui == null:
+		return false
+	if ui.has_method("is_image_viewer_open") and bool(ui.call("is_image_viewer_open")):
+		return true
+	if ui.has_method("is_reader_open") and bool(ui.call("is_reader_open")):
+		return true
+	return false
+
+
+func _cancel_pointer_interaction() -> void:
+	var was_rotating: bool = _is_rotating
+	_is_panning = false
+	_is_rotating = false
+	if was_rotating:
+		_set_scene_rotation_state(false)
+
+
+func _set_scene_rotation_state(is_rotating: bool) -> void:
+	var scene_root := get_node_or_null("../PathRenderer")
+	if scene_root and scene_root.has_method("set_camera_rotating"):
+		scene_root.set_camera_rotating(is_rotating)
+
+
 func _rotate_scene(delta: Vector2) -> void:
 	## Rotate the PathRenderer node around the orbit center
 	## so nodes and tracks move while the sky stays fixed.
@@ -95,8 +125,8 @@ func _rotate_scene(delta: Vector2) -> void:
 		return
 	
 	# Use camera-relative axes for intuitive rotation
-	# Horizontal drag → rotate around world Y axis (yaw)
-	# Vertical drag → rotate around camera's X axis (pitch)
+	# Horizontal drag -> rotate around world Y axis (yaw)
+	# Vertical drag -> rotate around camera's X axis (pitch)
 	var yaw_amount: float = - delta.x * rotate_speed
 	var pitch_amount: float = delta.y * rotate_speed
 	

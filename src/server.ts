@@ -7,11 +7,13 @@ import { buildGraph } from './index';
 import { CrashLogger } from './backend/utils/CrashLogger';
 import { PathBridge } from './core/PathBridge';
 import { resolveRuntimePaths } from './utils/RuntimePaths';
+import { renderMathSvg, renderMermaidSvg } from './reader_renderer';
+import { copyPngToClipboard } from './native_clipboard';
 
 // Initialize Global Crash Handlers
 CrashLogger.initGlobalHandlers();
 
-const PORT = 3000;
+const PORT = Number(process.env.NOTE_CONNECTION_PORT || process.env.PORT || 3000);
 const runtimePaths = resolveRuntimePaths(__dirname);
 const FRONTEND_DIR = runtimePaths.frontendDir;
 const RUNTIME_DATA_DIR = runtimePaths.runtimeDataDir;
@@ -55,6 +57,38 @@ function resolveGeneratedAssetForRead(filename: string): string | null {
 function generatedAssetWritePath(filename: string): string {
     ensureRuntimeDataDir();
     return path.join(RUNTIME_DATA_DIR, filename);
+}
+
+async function readJsonBody(req: http.IncomingMessage, maxBytes = 512 * 1024): Promise<any> {
+    return new Promise((resolve, reject) => {
+        let body = '';
+        let size = 0;
+
+        req.on('data', chunk => {
+            const chunkString = chunk.toString();
+            size += Buffer.byteLength(chunkString);
+            if (size > maxBytes) {
+                reject(new Error('Request body is too large.'));
+                req.destroy();
+                return;
+            }
+            body += chunkString;
+        });
+
+        req.on('end', () => {
+            if (!body.trim()) {
+                resolve({});
+                return;
+            }
+            try {
+                resolve(JSON.parse(body));
+            } catch (error) {
+                reject(error);
+            }
+        });
+
+        req.on('error', reject);
+    });
 }
 
 function parseCachedTargetFromFileName(filename: string): string | null {
@@ -649,7 +683,77 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 }
             });
         } else if (req.method === 'POST') {
-            if (req.url === '/api/build') {
+            if (req.url === '/api/render/math') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const source = typeof payload.source === 'string' ? payload.source : '';
+                    const displayMode = payload.displayMode !== false;
+
+                    if (!source.trim()) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'Missing source' }));
+                        return;
+                    }
+
+                    const svg = await renderMathSvg(source, { displayMode });
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ svg }));
+                } catch (error) {
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/render/math');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: String(error) }));
+                }
+                return;
+            } else if (req.url === '/api/render/mermaid') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const source = typeof payload.source === 'string' ? payload.source : '';
+
+                    if (!source.trim()) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'Missing source' }));
+                        return;
+                    }
+
+                    const svg = await renderMermaidSvg(source, { theme: 'dark' });
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ svg }));
+                } catch (error) {
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/render/mermaid');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: String(error) }));
+                }
+                return;
+            } else if (req.url === '/api/clipboard/image') {
+                try {
+                    const payload = await readJsonBody(req, 12 * 1024 * 1024);
+                    const pngBase64 = typeof payload.pngBase64 === 'string' ? payload.pngBase64.trim() : '';
+                    if (!pngBase64) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'Missing pngBase64' }));
+                        return;
+                    }
+
+                    const pngBuffer = Buffer.from(pngBase64, 'base64');
+                    if (!pngBuffer.length) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'Invalid PNG payload' }));
+                        return;
+                    }
+
+                    await copyPngToClipboard(pngBuffer);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ ok: true }));
+                } catch (error) {
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/clipboard/image');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: String(error) }));
+                }
+                return;
+            } else if (req.url === '/api/build') {
                 let body = '';
                 req.on('data', chunk => { body += chunk.toString(); });
                 req.on('end', async () => {
@@ -755,17 +859,18 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             console.log(`Knowledge Base Root: ${KB_ROOT}`);
             console.log(`Frontend Root: ${FRONTEND_DIR}`);
             console.log(`Runtime Data Root: ${RUNTIME_DATA_DIR}`);
-            
+
             // Initialize PathBridge
             try {
-                new PathBridge(9876);
-                console.log('[Sidecar] PathBridge initialized on port 9876');
+                const pathBridgePort = Number(process.env.NOTE_CONNECTION_BRIDGE_PORT || 9876);
+                new PathBridge(pathBridgePort);
+                console.log(`[Sidecar] PathBridge initialized on port ${pathBridgePort}`);
             } catch (e) {
                 console.error(`[Sidecar] Failed to initialize PathBridge:`, e);
             }
-            
+
             if (hasCliBuild) {
-                 console.log('[CLI] Ready.');
+                console.log('[CLI] Ready.');
             }
             resolve(server);
         });

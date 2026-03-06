@@ -1,4 +1,4 @@
-extends Node3D
+﻿extends Node3D
 
 ## 3D Orbital Path Renderer for Path Mode
 ## Renders central + peripheral bubbles with orbital rotation animation
@@ -112,7 +112,7 @@ func _physics_process(delta: float) -> void:
 			bubble.apply_central_force(push_away)
 		
 		## BOUNDS CLAMPING: Prevent nodes from flying too far away
-		## 位置钳制：防止节点飞得太远
+		## ä½ç½®é’³åˆ¶ï¼šé˜²æ­¢èŠ‚ç‚¹é£žå¾—å¤ªè¿œ
 		var max_allowed_dist: float = ORBITAL_RADIUS * 3.0 # Half-window range
 		if dist_to_center > max_allowed_dist:
 			# Teleport back to target and kill velocity
@@ -723,7 +723,7 @@ func _request_switch_center(target_id: String) -> void:
 func _on_return_pressed() -> void:
 	## Return to learning position
 	if ui:
-		var learning_pos := ui.get_learning_position()
+		var learning_pos: String = ui.get_learning_position()
 		if not learning_pos.is_empty():
 			print("[PathRenderer] Returning to learning position:", learning_pos)
 			_request_switch_center(learning_pos)
@@ -843,7 +843,7 @@ var _is_camera_rotating: bool = false
 
 func _on_background_lock_toggled(is_locked: bool) -> void:
 	## Forward background lock to orbital camera
-	## 将背景锁定状态转发到轨道相机
+	## å°†èƒŒæ™¯é”å®šçŠ¶æ€è½¬å‘åˆ°è½¨é“ç›¸æœº
 	_is_bg_locked = is_locked
 	print("[PathRenderer] Background lock toggled: ", is_locked)
 	var camera := $"../Camera3D"
@@ -855,7 +855,7 @@ func _on_background_lock_toggled(is_locked: bool) -> void:
 
 func set_camera_rotating(is_rotating: bool) -> void:
 	## Called by OrbitalCamera to notify when the user is actively dragging the view
-	## 由轨道相机调用以通知用户正处于拖拽视图状态
+	## ç”±è½¨é“ç›¸æœºè°ƒç”¨ä»¥é€šçŸ¥ç”¨æˆ·æ­£å¤„äºŽæ‹–æ‹½è§†å›¾çŠ¶æ€
 	_is_camera_rotating = is_rotating
 	_update_bubbles_physics_state()
 
@@ -863,7 +863,7 @@ func set_camera_rotating(is_rotating: bool) -> void:
 func _update_bubbles_physics_state() -> void:
 	## Freeze physics on all bubbles if background is locked or user is actively rotating
 	## this prevents force superposition and node instability during rotation
-	## 如果背景被锁定或用户正在主动旋转，则冻结所有气泡的物理，以防力叠加和节点不稳定
+	## å¦‚æžœèƒŒæ™¯è¢«é”å®šæˆ–ç”¨æˆ·æ­£åœ¨ä¸»åŠ¨æ—‹è½¬ï¼Œåˆ™å†»ç»“æ‰€æœ‰æ°”æ³¡çš„ç‰©ç†ï¼Œä»¥é˜²åŠ›å åŠ å’ŒèŠ‚ç‚¹ä¸ç¨³å®š
 	var should_freeze: bool = _is_bg_locked or _is_camera_rotating
 	
 	if _central_bubble and is_instance_valid(_central_bubble):
@@ -987,4 +987,5 @@ func _update_tree_panel() -> void:
 	else:
 		# Fallback to old list method if no layout
 		ui.build_tree(path_nodes, completed_ids, current_id)
+
 

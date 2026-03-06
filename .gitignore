@@ -58,3 +58,4 @@ local.properties
 src-tauri/crash.log
 npm-debug.log*
 yarn-error.log*
+tmp

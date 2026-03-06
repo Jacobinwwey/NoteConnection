@@ -1,10 +1,14 @@
-﻿class_name SettingsPanel
+class_name SettingsPanel
 extends PopupPanel
 
 signal settings_changed(settings: Dictionary)
 
 const SETTINGS_FILE := "user://settings.cfg"
 const BACKGROUNDS_DIR := "res://assets/backgrounds"
+const DEFAULT_READER_TOGGLE_SHORTCUT := "Ctrl+M"
+const READER_MEDIA_SCALE_MIN := 0.45
+const READER_MEDIA_SCALE_MAX := 2.25
+const READER_MEDIA_SCALE_STEP := 0.05
 
 @onready var _auto_reconstruct_check: CheckBox = $MarginContainer/VBoxContainer/AutoReconstructCheck
 
@@ -12,6 +16,10 @@ var _retain_history_check: CheckBox
 var _focus_mode_check: CheckBox
 var _background_option: OptionButton
 var _reading_mode_option: OptionButton
+var _reader_render_mode_option: OptionButton
+var _reader_shortcut_input: LineEdit
+var _reader_media_scale_slider: HSlider
+var _reader_media_scale_label: Label
 
 var _background_files: Array[String] = []
 
@@ -21,11 +29,14 @@ var _settings: Dictionary = {
 	"focus_mode": true,
 	"background": "belfast_sunset_puresky_4k.exr",
 	"bg_brightness": 1.0,
-	"reading_mode": "window"
+	"reading_mode": "window",
+	"reader_render_mode": "render",
+	"reader_toggle_source_shortcut": DEFAULT_READER_TOGGLE_SHORTCUT,
+	"reader_media_scale": 1.0
 }
 
 func _ready() -> void:
-	size = Vector2i(420, 360)
+	size = Vector2i(460, 520)
 	_scan_backgrounds()
 	_load_settings()
 
@@ -75,7 +86,7 @@ func _ready() -> void:
 		brightness_slider.min_value = 0.01
 		brightness_slider.max_value = 10.0
 		brightness_slider.step = 0.05
-		brightness_slider.value = _settings.get("bg_brightness", 1.0)
+		brightness_slider.value = float(_settings.get("bg_brightness", 1.0))
 		bright_hbox.add_child(brightness_slider)
 
 		var bright_val_label := Label.new()
@@ -104,6 +115,64 @@ func _ready() -> void:
 		_reading_mode_option.add_item("Fullscreen", 1)
 		reading_mode_hbox.add_child(_reading_mode_option)
 		_reading_mode_option.item_selected.connect(_on_reading_mode_selected)
+
+		var render_mode_hbox := HBoxContainer.new()
+		render_mode_hbox.add_theme_constant_override("separation", 10)
+		vbox.add_child(render_mode_hbox)
+
+		var render_mode_label := Label.new()
+		render_mode_label.text = "Block View"
+		render_mode_label.custom_minimum_size = Vector2(105, 0)
+		render_mode_hbox.add_child(render_mode_label)
+
+		_reader_render_mode_option = OptionButton.new()
+		_reader_render_mode_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_reader_render_mode_option.add_item("Render", 0)
+		_reader_render_mode_option.add_item("Source", 1)
+		render_mode_hbox.add_child(_reader_render_mode_option)
+		_reader_render_mode_option.item_selected.connect(_on_reader_render_mode_selected)
+
+		var shortcut_hbox := HBoxContainer.new()
+		shortcut_hbox.add_theme_constant_override("separation", 10)
+		vbox.add_child(shortcut_hbox)
+
+		var shortcut_label := Label.new()
+		shortcut_label.text = "Toggle Shortcut"
+		shortcut_label.custom_minimum_size = Vector2(105, 0)
+		shortcut_hbox.add_child(shortcut_label)
+
+		_reader_shortcut_input = LineEdit.new()
+		_reader_shortcut_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_reader_shortcut_input.placeholder_text = DEFAULT_READER_TOGGLE_SHORTCUT
+		_reader_shortcut_input.tooltip_text = "Example: Ctrl+M or Ctrl+Shift+M"
+		shortcut_hbox.add_child(_reader_shortcut_input)
+		_reader_shortcut_input.text_submitted.connect(_on_reader_shortcut_submitted)
+		_reader_shortcut_input.focus_exited.connect(func():
+			_on_reader_shortcut_submitted(_reader_shortcut_input.text)
+		)
+
+		var media_scale_hbox := HBoxContainer.new()
+		media_scale_hbox.add_theme_constant_override("separation", 10)
+		vbox.add_child(media_scale_hbox)
+
+		var media_scale_label := Label.new()
+		media_scale_label.text = "Media Scale"
+		media_scale_label.custom_minimum_size = Vector2(105, 0)
+		media_scale_hbox.add_child(media_scale_label)
+
+		_reader_media_scale_slider = HSlider.new()
+		_reader_media_scale_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_reader_media_scale_slider.min_value = READER_MEDIA_SCALE_MIN
+		_reader_media_scale_slider.max_value = READER_MEDIA_SCALE_MAX
+		_reader_media_scale_slider.step = READER_MEDIA_SCALE_STEP
+		_reader_media_scale_slider.value = float(_settings.get("reader_media_scale", 1.0))
+		media_scale_hbox.add_child(_reader_media_scale_slider)
+		_reader_media_scale_slider.value_changed.connect(_on_reader_media_scale_changed)
+
+		_reader_media_scale_label = Label.new()
+		_reader_media_scale_label.custom_minimum_size = Vector2(48, 0)
+		_reader_media_scale_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		media_scale_hbox.add_child(_reader_media_scale_label)
 
 	_update_ui()
 
@@ -145,50 +214,116 @@ func _populate_background_options() -> void:
 
 func _update_ui() -> void:
 	if _auto_reconstruct_check:
-		_auto_reconstruct_check.button_pressed = _settings.get("auto_reconstruct", true)
+		_auto_reconstruct_check.button_pressed = bool(_settings.get("auto_reconstruct", true))
 	if _retain_history_check:
-		_retain_history_check.button_pressed = _settings.get("retain_history", true)
+		_retain_history_check.button_pressed = bool(_settings.get("retain_history", true))
 	if _focus_mode_check:
-		_focus_mode_check.button_pressed = _settings.get("focus_mode", true)
+		_focus_mode_check.button_pressed = bool(_settings.get("focus_mode", true))
 	if _background_option:
 		_populate_background_options()
 	if _reading_mode_option:
 		var reading_mode_value: String = String(_settings.get("reading_mode", "window"))
 		_reading_mode_option.select(1 if reading_mode_value == "fullscreen" else 0)
+	if _reader_render_mode_option:
+		var render_mode_value: String = String(_settings.get("reader_render_mode", "render"))
+		_reader_render_mode_option.select(1 if render_mode_value == "source" else 0)
+	if _reader_shortcut_input:
+		_reader_shortcut_input.text = String(_settings.get("reader_toggle_source_shortcut", DEFAULT_READER_TOGGLE_SHORTCUT))
+	if _reader_media_scale_slider:
+		_reader_media_scale_slider.value = clampf(float(_settings.get("reader_media_scale", 1.0)), READER_MEDIA_SCALE_MIN, READER_MEDIA_SCALE_MAX)
+	if _reader_media_scale_label and _reader_media_scale_slider:
+		_reader_media_scale_label.text = "%.2fx" % _reader_media_scale_slider.value
 
 func _on_auto_reconstruct_toggled(pressed: bool) -> void:
 	_settings["auto_reconstruct"] = pressed
-	_save_settings()
-	settings_changed.emit(_settings)
+	_save_and_emit()
 
 func _on_retain_history_toggled(pressed: bool) -> void:
 	_settings["retain_history"] = pressed
-	_save_settings()
-	settings_changed.emit(_settings)
+	_save_and_emit()
 
 func _on_focus_mode_toggled(pressed: bool) -> void:
 	_settings["focus_mode"] = pressed
-	_save_settings()
-	settings_changed.emit(_settings)
+	_save_and_emit()
 
 func _on_background_selected(index: int) -> void:
 	var bg_filename := ""
 	if index > 0 and index - 1 < _background_files.size():
 		bg_filename = _background_files[index - 1]
-
 	_settings["background"] = bg_filename
-	_save_settings()
-	settings_changed.emit(_settings)
+	_save_and_emit()
 
 func _on_brightness_changed(value: float) -> void:
 	_settings["bg_brightness"] = value
-	_save_settings()
-	settings_changed.emit(_settings)
+	_save_and_emit()
 
 func _on_reading_mode_selected(index: int) -> void:
 	_settings["reading_mode"] = "fullscreen" if index == 1 else "window"
+	_save_and_emit()
+
+func _on_reader_render_mode_selected(index: int) -> void:
+	_settings["reader_render_mode"] = "source" if index == 1 else "render"
+	_save_and_emit()
+
+func _on_reader_shortcut_submitted(raw_value: String) -> void:
+	var normalized := _normalize_shortcut_value(raw_value)
+	if _reader_shortcut_input:
+		_reader_shortcut_input.text = normalized
+	_settings["reader_toggle_source_shortcut"] = normalized
+	_save_and_emit(false)
+
+func _on_reader_media_scale_changed(value: float) -> void:
+	var normalized_value := clampf(value, READER_MEDIA_SCALE_MIN, READER_MEDIA_SCALE_MAX)
+	if _reader_media_scale_label:
+		_reader_media_scale_label.text = "%.2fx" % normalized_value
+	_settings["reader_media_scale"] = normalized_value
+	_save_and_emit(false)
+
+func _normalize_shortcut_value(raw_value: String) -> String:
+	var trimmed := raw_value.strip_edges()
+	if trimmed.is_empty():
+		return DEFAULT_READER_TOGGLE_SHORTCUT
+
+	var has_ctrl := false
+	var has_alt := false
+	var has_shift := false
+	var has_meta := false
+	var key_token := ""
+	for token in trimmed.split("+", false):
+		var cleaned := token.strip_edges()
+		if cleaned.is_empty():
+			continue
+		match cleaned.to_lower():
+			"ctrl", "control", "ctl":
+				has_ctrl = true
+			"alt", "option":
+				has_alt = true
+			"shift":
+				has_shift = true
+			"cmd", "meta", "super", "win", "windows":
+				has_meta = true
+			_:
+				key_token = cleaned.to_upper()
+
+	if key_token.is_empty():
+		key_token = "M"
+
+	var parts: PackedStringArray = PackedStringArray()
+	if has_ctrl:
+		parts.append("Ctrl")
+	if has_alt:
+		parts.append("Alt")
+	if has_shift:
+		parts.append("Shift")
+	if has_meta:
+		parts.append("Meta")
+	parts.append(key_token)
+	return "+".join(parts)
+
+func _save_and_emit(refresh_ui: bool = true) -> void:
 	_save_settings()
-	settings_changed.emit(_settings)
+	if refresh_ui:
+		_update_ui()
 
 func _save_settings() -> void:
 	var config := ConfigFile.new()
@@ -202,6 +337,8 @@ func _load_settings() -> void:
 	if err == OK:
 		for key in _settings.keys():
 			_settings[key] = config.get_value("path_mode", key, _settings[key])
+		_settings["reader_toggle_source_shortcut"] = _normalize_shortcut_value(String(_settings.get("reader_toggle_source_shortcut", DEFAULT_READER_TOGGLE_SHORTCUT)))
+		_settings["reader_media_scale"] = clampf(float(_settings.get("reader_media_scale", 1.0)), READER_MEDIA_SCALE_MIN, READER_MEDIA_SCALE_MAX)
 	else:
 		_save_settings()
 
@@ -210,3 +347,13 @@ func get_all_settings() -> Dictionary:
 
 func get_setting(key: String, default = null):
 	return _settings.get(key, default)
+
+func set_setting(key: String, value) -> void:
+	_settings[key] = value
+	if key == "reader_toggle_source_shortcut":
+		_settings[key] = _normalize_shortcut_value(String(value))
+	elif key == "reader_media_scale":
+		_settings[key] = clampf(float(value), READER_MEDIA_SCALE_MIN, READER_MEDIA_SCALE_MAX)
+	_update_ui()
+	_save_settings()
+	settings_changed.emit(_settings)
