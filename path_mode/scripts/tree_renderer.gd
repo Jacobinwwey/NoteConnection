@@ -1,6 +1,8 @@
 class_name TreeRenderer
 extends Node2D
 
+const TREE_STYLES = preload("res://scripts/tree_styles.gd")
+
 # Signals
 signal node_clicked(node_id, local_pos)
 signal node_double_clicked(node_id)
@@ -151,7 +153,7 @@ func set_focus_mode(enabled: bool) -> void:
 		queue_redraw()
 
 func _update_style_config() -> void:
-	_style_config = TreeStyles.get_style(_current_style)
+	_style_config = TREE_STYLES.get_style(_current_style)
 
 func _draw() -> void:
 	# Apply Transform

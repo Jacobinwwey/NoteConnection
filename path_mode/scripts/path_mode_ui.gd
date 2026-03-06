@@ -59,6 +59,36 @@ var _target_popup: PopupPanel = null
 var _target_filter_input: LineEdit = null
 var _target_list: ItemList = null
 var _bg_lock_button: Button = null
+var _reader_overlay: ColorRect = null
+var _reader_panel: PanelContainer = null
+var _reader_panel_style: StyleBoxFlat = null
+var _reader_title_label: Label = null
+var _reader_meta_label: Label = null
+var _reader_mode_badge: Label = null
+var _reader_lock_button: Button = null
+var _reader_zoom_out_button: Button = null
+var _reader_zoom_in_button: Button = null
+var _reader_zoom_label: Label = null
+var _reader_scroll: ScrollContainer = null
+var _reader_blocks: VBoxContainer = null
+var _reader_current_node: Dictionary = {}
+var _reader_current_zoom: float = 1.0
+var _reader_is_locked: bool = true
+var _reader_image_overlay: ColorRect = null
+var _reader_image_viewport: Control = null
+var _reader_image_texture_rect: TextureRect = null
+var _reader_image_title_label: Label = null
+var _reader_image_zoom_label: Label = null
+var _reader_image_current_texture: Texture2D = null
+var _reader_image_zoom: float = 1.0
+var _reader_image_pan: Vector2 = Vector2.ZERO
+var _reader_image_dragging: bool = false
+var _reader_image_drag_origin: Vector2 = Vector2.ZERO
+var _reader_image_pan_origin: Vector2 = Vector2.ZERO
+var _reader_image_base_size: Vector2 = Vector2.ZERO
+var _reader_image_touch_points: Dictionary = {}
+var _reader_image_last_pinch_distance: float = 0.0
+var _reader_image_last_pinch_center: Vector2 = Vector2.ZERO
 
 var _current_mode: String = "domain"
 var _current_strategy: String = "foundational"
@@ -69,8 +99,21 @@ var _target_nodes: Array[Dictionary] = []
 
 ## Tree panel fullscreen state
 var _is_tree_fullscreen: bool = false
-var _tree_panel_default_offsets: Dictionary = {}
+var _tree_panel_default_offsets: Dictionary = {} # Stores anchor + offset layout
 
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		if is_image_viewer_open():
+			close_image_viewer()
+			get_viewport().set_input_as_handled()
+			return
+		if is_reader_open():
+			close_reader()
+			get_viewport().set_input_as_handled()
+			return
+
+	if _handle_reader_unhandled_input(event):
+		get_viewport().set_input_as_handled()
 
 func _ready() -> void:
 	_create_dynamic_ui()
@@ -167,16 +210,34 @@ func _create_dynamic_ui() -> void:
 	if sidebar:
 		# Convert sidebar to use DraggablePanel
 		sidebar.set_script(preload("res://scripts/draggable_panel.gd"))
+		sidebar.set("min_size", Vector2(220, 180))
+		sidebar.set("resize_margin", 14)
+		sidebar.set("dynamic_resize_margin_max", 28)
+		
+		var sidebar_header_shell := MarginContainer.new()
+		sidebar_header_shell.name = "SidebarHeaderShell"
+		sidebar_header_shell.add_theme_constant_override("margin_left", 14)
+		sidebar_header_shell.add_theme_constant_override("margin_top", 12)
+		sidebar_header_shell.add_theme_constant_override("margin_right", 14)
+		sidebar_header_shell.add_theme_constant_override("margin_bottom", 6)
+		sidebar.add_child(sidebar_header_shell)
+		sidebar.move_child(sidebar_header_shell, 0) # Before HeaderButton
 		
 		var sidebar_header_row := HBoxContainer.new()
 		sidebar_header_row.name = "SidebarHeaderRow"
 		sidebar_header_row.mouse_filter = Control.MOUSE_FILTER_PASS
-		sidebar.add_child(sidebar_header_row)
-		sidebar.move_child(sidebar_header_row, 0) # Before HeaderButton
+		sidebar_header_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		sidebar_header_row.add_theme_constant_override("separation", 8)
+		sidebar_header_shell.add_child(sidebar_header_row)
+		
+		var sidebar_drag_grip := _create_panel_drag_grip("Move completed panel")
+		sidebar_header_row.add_child(sidebar_drag_grip)
 		
 		# Move existing HeaderButton into the new row
 		if sidebar_header:
-			sidebar_header.get_parent().remove_child(sidebar_header)
+			var header_parent := sidebar_header.get_parent()
+			if header_parent:
+				header_parent.remove_child(sidebar_header)
 			sidebar_header_row.add_child(sidebar_header)
 			sidebar_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		
@@ -185,11 +246,26 @@ func _create_dynamic_ui() -> void:
 		sidebar_collapse_btn.text = "[-]"
 		sidebar_collapse_btn.tooltip_text = "Collapse Panel"
 		sidebar_collapse_btn.focus_mode = Control.FOCUS_NONE
-		sidebar_collapse_btn.pressed.connect(func(): sidebar.collapse("[<]", HORIZONTAL_ALIGNMENT_RIGHT))
+		sidebar_collapse_btn.pressed.connect(func():
+			if sidebar.has_method("collapse"):
+				sidebar.call("collapse", "[<]", HORIZONTAL_ALIGNMENT_RIGHT)
+		)
 		sidebar_header_row.add_child(sidebar_collapse_btn)
 		
-		# Connect drag handle using new API (fixes timing bug)
-		sidebar.setup_drag_handle(sidebar_header_row)
+		# Keep sidebar resizing away from actionable header controls.
+		if sidebar.has_method("setup_drag_handle"):
+			sidebar.call("setup_drag_handle", sidebar_drag_grip)
+		else:
+			push_warning("[PathModeUI] GoldStarSidebar is missing DraggablePanel behavior; drag support disabled.")
+		if sidebar.has_method("register_interaction_exclusion"):
+			sidebar.call("register_interaction_exclusion", sidebar_header)
+			sidebar.call("register_interaction_exclusion", sidebar_collapse_btn)
+		if sidebar.has_signal("collapsed_state_changed"):
+			sidebar.collapsed_state_changed.connect(func(is_collapsed: bool):
+				_sidebar_visible = not is_collapsed
+				sidebar_toggled.emit(_sidebar_visible)
+				_update_sidebar_header()
+			)
 		
 		var edit_row := HBoxContainer.new()
 		edit_row.name = "EditRow"
@@ -219,8 +295,15 @@ func _create_dynamic_ui() -> void:
 		
 	## Create Settings Panel
 	if SETTINGS_SCENE:
-		_settings_panel = SETTINGS_SCENE.instantiate()
-		add_child(_settings_panel)
+		var settings_instance = SETTINGS_SCENE.instantiate()
+		if settings_instance:
+			_settings_panel = settings_instance
+			add_child(_settings_panel)
+		else:
+			push_error("[PathModeUI] Failed to instantiate SettingsPanel scene.")
+	if _settings_button and _settings_panel == null:
+		_settings_button.disabled = true
+		_settings_button.tooltip_text = "Settings unavailable"
 
 	## Create Diffusion Target Picker
 	_target_popup = PopupPanel.new()
@@ -325,6 +408,9 @@ func _create_dynamic_ui() -> void:
 	_tree_panel = VBoxContainer.new()
 	_tree_panel.name = "TreePanel"
 	_tree_panel.set_script(preload("res://scripts/draggable_panel.gd"))
+	_tree_panel.set("min_size", Vector2(260, 220))
+	_tree_panel.set("resize_margin", 18)
+	_tree_panel.set("dynamic_resize_margin_max", 40)
 	
 	## Use anchors for left side positioning
 	_tree_panel.anchor_left = 0.0
@@ -339,15 +425,29 @@ func _create_dynamic_ui() -> void:
 	_tree_panel.z_index = -1
 	add_child(_tree_panel)
 	
+	var tree_header_shell := MarginContainer.new()
+	tree_header_shell.name = "TreeHeaderShell"
+	tree_header_shell.add_theme_constant_override("margin_left", 18)
+	tree_header_shell.add_theme_constant_override("margin_top", 14)
+	tree_header_shell.add_theme_constant_override("margin_right", 18)
+	tree_header_shell.add_theme_constant_override("margin_bottom", 8)
+	_tree_panel.add_child(tree_header_shell)
+	
 	var header_hbox := HBoxContainer.new()
 	header_hbox.mouse_filter = Control.MOUSE_FILTER_PASS
-	_tree_panel.add_child(header_hbox)
+	header_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_hbox.add_theme_constant_override("separation", 10)
+	tree_header_shell.add_child(header_hbox)
 	
-	# Connect drag handle using new API (fixes timing bug)
-	_tree_panel.setup_drag_handle(header_hbox)
+	header_hbox.mouse_filter = Control.MOUSE_FILTER_STOP
+	if _tree_panel.has_method("setup_drag_handle"):
+		_tree_panel.call("setup_drag_handle", header_hbox)
+	else:
+		push_warning("[PathModeUI] TreePanel is missing DraggablePanel behavior; drag support disabled.")
 	
 	var tree_header := Label.new()
 	tree_header.text = "Learning Path"
+	tree_header.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tree_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tree_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	header_hbox.add_child(tree_header)
@@ -356,15 +456,36 @@ func _create_dynamic_ui() -> void:
 	collapse_btn.text = "[-]"
 	collapse_btn.tooltip_text = "Collapse Panel"
 	collapse_btn.focus_mode = Control.FOCUS_NONE
-	collapse_btn.pressed.connect(func(): _tree_panel.collapse("[>]", HORIZONTAL_ALIGNMENT_LEFT))
+	collapse_btn.pressed.connect(func():
+		if _tree_panel and _tree_panel.has_method("collapse"):
+			_tree_panel.call("collapse", "[>]", HORIZONTAL_ALIGNMENT_LEFT)
+	)
 	header_hbox.add_child(collapse_btn)
+	if _tree_panel.has_method("register_interaction_exclusion"):
+		_tree_panel.call("register_interaction_exclusion", collapse_btn)
 	
 	## Instantiate new Tree View Panel
 	if TREE_VIEW_SCENE:
-		_tree_view = TREE_VIEW_SCENE.instantiate()
-		_tree_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		_tree_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_tree_panel.add_child(_tree_view)
+		var tree_view_instance = TREE_VIEW_SCENE.instantiate()
+		if tree_view_instance is Control:
+			_tree_view = tree_view_instance
+			_tree_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			_tree_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			_tree_panel.add_child(_tree_view)
+			if _tree_panel.has_method("register_interaction_exclusion"):
+				for node_path in [
+					NodePath("VBoxContainer/Header/ExpandButton"),
+					NodePath("VBoxContainer/Header/ShrinkButton"),
+					NodePath("VBoxContainer/Header/StyleOption")
+				]:
+					var header_control := _tree_view.get_node_or_null(node_path) as Control
+					if header_control:
+						_tree_panel.call("register_interaction_exclusion", header_control)
+		else:
+			push_error("[PathModeUI] Failed to instantiate TreeViewPanel scene.")
+			_tree_panel.add_child(_create_panel_unavailable_notice("Learning path panel is unavailable. Check tree_view_panel.tscn and its scripts."))
+	
+	_create_reader_overlay()
 	
 	if _history_button:
 		_apply_button_style(_history_button, Color(0.15, 0.21, 0.3, 1.0), Color(0.21, 0.29, 0.4, 1.0), Color(0.11, 0.17, 0.24, 1.0), Color(0.33, 0.47, 0.63, 1.0), Color(0.9, 0.96, 1.0, 1.0))
@@ -377,6 +498,1423 @@ func _create_dynamic_ui() -> void:
 		progress_label.add_theme_color_override("font_color", Color(0.9, 0.95, 1.0, 1.0))
 		progress_label.add_theme_font_size_override("font_size", 16)
 
+
+func _create_panel_drag_grip(tooltip_text: String) -> Button:
+	var grip := Button.new()
+	grip.text = "Move"
+	grip.tooltip_text = tooltip_text
+	grip.focus_mode = Control.FOCUS_NONE
+	grip.custom_minimum_size = Vector2(62, 28)
+	grip.add_theme_font_size_override("font_size", 12)
+	_apply_button_style(grip, Color(0.1, 0.13, 0.18, 0.92), Color(0.17, 0.22, 0.3, 0.98), Color(0.07, 0.1, 0.14, 0.98), Color(0.45, 0.6, 0.82, 0.95), Color(0.9, 0.96, 1.0, 1.0))
+	return grip
+
+
+func _create_panel_unavailable_notice(message: String) -> Control:
+	var panel := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.09, 0.12, 0.18, 0.98)
+	style.border_color = Color(0.42, 0.55, 0.78, 0.96)
+	style.border_width_left = 1
+	style.border_width_top = 1
+	style.border_width_right = 1
+	style.border_width_bottom = 1
+	style.corner_radius_top_left = 12
+	style.corner_radius_top_right = 12
+	style.corner_radius_bottom_left = 12
+	style.corner_radius_bottom_right = 12
+	panel.add_theme_stylebox_override("panel", style)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	panel.add_child(margin)
+	var label := Label.new()
+	label.text = message
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_color_override("font_color", Color(0.88, 0.93, 1.0, 0.98))
+	label.add_theme_font_size_override("font_size", 14)
+	margin.add_child(label)
+	return panel
+
+
+func _create_reader_overlay() -> void:
+	if _reader_overlay:
+		return
+
+	_reader_overlay = ColorRect.new()
+	_reader_overlay.name = "ReaderOverlay"
+	_reader_overlay.anchor_right = 1.0
+	_reader_overlay.anchor_bottom = 1.0
+	_reader_overlay.color = Color(0.02, 0.03, 0.05, 0.82)
+	_reader_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_reader_overlay.visible = false
+	add_child(_reader_overlay)
+
+	_reader_panel = PanelContainer.new()
+	_reader_panel.name = "ReaderPanel"
+	_reader_panel.anchor_left = 0.12
+	_reader_panel.anchor_top = 0.08
+	_reader_panel.anchor_right = 0.88
+	_reader_panel.anchor_bottom = 0.92
+	_reader_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_reader_overlay.add_child(_reader_panel)
+
+	_reader_panel_style = StyleBoxFlat.new()
+	_reader_panel_style.bg_color = Color(0.06, 0.08, 0.12, 0.98)
+	_reader_panel_style.border_color = Color(0.36, 0.48, 0.68, 0.94)
+	_reader_panel_style.border_width_left = 2
+	_reader_panel_style.border_width_top = 2
+	_reader_panel_style.border_width_right = 2
+	_reader_panel_style.border_width_bottom = 2
+	_reader_panel_style.corner_radius_top_left = 20
+	_reader_panel_style.corner_radius_top_right = 20
+	_reader_panel_style.corner_radius_bottom_left = 20
+	_reader_panel_style.corner_radius_bottom_right = 20
+	_reader_panel_style.shadow_color = Color(0.0, 0.0, 0.0, 0.45)
+	_reader_panel_style.shadow_size = 18
+	_reader_panel.add_theme_stylebox_override("panel", _reader_panel_style)
+
+	var panel_margin := MarginContainer.new()
+	panel_margin.anchor_right = 1.0
+	panel_margin.anchor_bottom = 1.0
+	panel_margin.add_theme_constant_override("margin_left", 20)
+	panel_margin.add_theme_constant_override("margin_top", 18)
+	panel_margin.add_theme_constant_override("margin_right", 20)
+	panel_margin.add_theme_constant_override("margin_bottom", 20)
+	_reader_panel.add_child(panel_margin)
+
+	var panel_vbox := VBoxContainer.new()
+	panel_vbox.anchor_right = 1.0
+	panel_vbox.anchor_bottom = 1.0
+	panel_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel_vbox.add_theme_constant_override("separation", 14)
+	panel_margin.add_child(panel_vbox)
+
+	var header_row := HBoxContainer.new()
+	header_row.add_theme_constant_override("separation", 10)
+	panel_vbox.add_child(header_row)
+
+	_reader_title_label = Label.new()
+	_reader_title_label.text = "Reader"
+	_reader_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_reader_title_label.add_theme_font_size_override("font_size", 24)
+	_reader_title_label.add_theme_color_override("font_color", Color(0.95, 0.97, 1.0, 1.0))
+	header_row.add_child(_reader_title_label)
+
+	_reader_mode_badge = Label.new()
+	_reader_mode_badge.text = "Window"
+	_reader_mode_badge.custom_minimum_size = Vector2(92, 30)
+	_reader_mode_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_reader_mode_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_reader_mode_badge.add_theme_font_size_override("font_size", 12)
+	_reader_mode_badge.add_theme_color_override("font_color", Color(0.85, 0.91, 1.0, 0.95))
+	header_row.add_child(_reader_mode_badge)
+
+	_reader_lock_button = Button.new()
+	_reader_lock_button.focus_mode = Control.FOCUS_NONE
+	_reader_lock_button.text = "Locked"
+	_reader_lock_button.tooltip_text = "Unlock to enable reader scaling."
+	_reader_lock_button.pressed.connect(_toggle_reader_lock)
+	header_row.add_child(_reader_lock_button)
+	_apply_button_style(_reader_lock_button, Color(0.13, 0.18, 0.25, 1.0), Color(0.19, 0.25, 0.35, 1.0), Color(0.09, 0.13, 0.2, 1.0), Color(0.38, 0.5, 0.72, 1.0), Color(0.95, 0.97, 1.0, 1.0))
+
+	_reader_zoom_out_button = Button.new()
+	_reader_zoom_out_button.focus_mode = Control.FOCUS_NONE
+	_reader_zoom_out_button.text = "A-"
+	_reader_zoom_out_button.tooltip_text = "Reduce reader zoom"
+	_reader_zoom_out_button.pressed.connect(func(): _zoom_reader(-0.1))
+	header_row.add_child(_reader_zoom_out_button)
+	_apply_button_style(_reader_zoom_out_button, Color(0.13, 0.18, 0.25, 1.0), Color(0.19, 0.25, 0.35, 1.0), Color(0.09, 0.13, 0.2, 1.0), Color(0.38, 0.5, 0.72, 1.0), Color(0.95, 0.97, 1.0, 1.0))
+
+	_reader_zoom_label = Label.new()
+	_reader_zoom_label.text = "100%"
+	_reader_zoom_label.custom_minimum_size = Vector2(58, 0)
+	_reader_zoom_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_reader_zoom_label.add_theme_color_override("font_color", Color(0.78, 0.85, 0.96, 0.95))
+	header_row.add_child(_reader_zoom_label)
+
+	_reader_zoom_in_button = Button.new()
+	_reader_zoom_in_button.focus_mode = Control.FOCUS_NONE
+	_reader_zoom_in_button.text = "A+"
+	_reader_zoom_in_button.tooltip_text = "Increase reader zoom"
+	_reader_zoom_in_button.pressed.connect(func(): _zoom_reader(0.1))
+	header_row.add_child(_reader_zoom_in_button)
+	_apply_button_style(_reader_zoom_in_button, Color(0.13, 0.18, 0.25, 1.0), Color(0.19, 0.25, 0.35, 1.0), Color(0.09, 0.13, 0.2, 1.0), Color(0.38, 0.5, 0.72, 1.0), Color(0.95, 0.97, 1.0, 1.0))
+
+	var close_btn := Button.new()
+	close_btn.text = "Close"
+	close_btn.focus_mode = Control.FOCUS_NONE
+	close_btn.pressed.connect(close_reader)
+	header_row.add_child(close_btn)
+	_apply_button_style(close_btn, Color(0.2, 0.14, 0.16, 1.0), Color(0.28, 0.18, 0.2, 1.0), Color(0.16, 0.1, 0.12, 1.0), Color(0.58, 0.28, 0.32, 1.0), Color(1.0, 0.93, 0.93, 1.0))
+
+	_reader_meta_label = Label.new()
+	_reader_meta_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_reader_meta_label.add_theme_font_size_override("font_size", 12)
+	_reader_meta_label.add_theme_color_override("font_color", Color(0.68, 0.76, 0.87, 0.95))
+	panel_vbox.add_child(_reader_meta_label)
+
+	_reader_scroll = ScrollContainer.new()
+	_reader_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_reader_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_reader_scroll.follow_focus = true
+	_reader_scroll.gui_input.connect(_on_reader_scroll_input)
+	panel_vbox.add_child(_reader_scroll)
+
+	var scroll_margin := MarginContainer.new()
+	scroll_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll_margin.add_theme_constant_override("margin_left", 6)
+	scroll_margin.add_theme_constant_override("margin_right", 10)
+	scroll_margin.add_theme_constant_override("margin_bottom", 4)
+	_reader_scroll.add_child(scroll_margin)
+
+	_reader_blocks = VBoxContainer.new()
+	_reader_blocks.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_reader_blocks.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_reader_blocks.add_theme_constant_override("separation", 14)
+	scroll_margin.add_child(_reader_blocks)
+
+	_reader_overlay.gui_input.connect(_on_reader_overlay_input)
+	_create_reader_image_overlay()
+	_apply_reader_mode_setting()
+	_set_reader_lock(true)
+	move_child(_reader_overlay, get_child_count() - 1)
+
+
+func _create_reader_image_overlay() -> void:
+	if _reader_image_overlay:
+		return
+
+	_reader_image_overlay = ColorRect.new()
+	_reader_image_overlay.name = "ReaderImageOverlay"
+	_reader_image_overlay.anchor_right = 1.0
+	_reader_image_overlay.anchor_bottom = 1.0
+	_reader_image_overlay.color = Color(0.01, 0.02, 0.04, 0.94)
+	_reader_image_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_reader_image_overlay.visible = false
+	add_child(_reader_image_overlay)
+
+	var header_row := HBoxContainer.new()
+	header_row.anchor_right = 1.0
+	header_row.offset_left = 22
+	header_row.offset_top = 18
+	header_row.offset_right = -22
+	header_row.offset_bottom = 58
+	header_row.add_theme_constant_override("separation", 10)
+	_reader_image_overlay.add_child(header_row)
+
+	_reader_image_title_label = Label.new()
+	_reader_image_title_label.text = "Image Preview"
+	_reader_image_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_reader_image_title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_reader_image_title_label.add_theme_font_size_override("font_size", 18)
+	_reader_image_title_label.add_theme_color_override("font_color", Color(0.95, 0.97, 1.0, 1.0))
+	header_row.add_child(_reader_image_title_label)
+
+	var zoom_out_btn := Button.new()
+	zoom_out_btn.focus_mode = Control.FOCUS_NONE
+	zoom_out_btn.text = "-"
+	zoom_out_btn.tooltip_text = "Zoom out"
+	zoom_out_btn.pressed.connect(func(): _adjust_reader_image_zoom(-0.15))
+	header_row.add_child(zoom_out_btn)
+	_apply_button_style(zoom_out_btn, Color(0.13, 0.18, 0.25, 1.0), Color(0.19, 0.25, 0.35, 1.0), Color(0.09, 0.13, 0.2, 1.0), Color(0.38, 0.5, 0.72, 1.0), Color(0.95, 0.97, 1.0, 1.0))
+
+	_reader_image_zoom_label = Label.new()
+	_reader_image_zoom_label.text = "100%"
+	_reader_image_zoom_label.custom_minimum_size = Vector2(60, 0)
+	_reader_image_zoom_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_reader_image_zoom_label.add_theme_color_override("font_color", Color(0.8, 0.86, 0.96, 0.95))
+	header_row.add_child(_reader_image_zoom_label)
+
+	var zoom_in_btn := Button.new()
+	zoom_in_btn.focus_mode = Control.FOCUS_NONE
+	zoom_in_btn.text = "+"
+	zoom_in_btn.tooltip_text = "Zoom in"
+	zoom_in_btn.pressed.connect(func(): _adjust_reader_image_zoom(0.15))
+	header_row.add_child(zoom_in_btn)
+	_apply_button_style(zoom_in_btn, Color(0.13, 0.18, 0.25, 1.0), Color(0.19, 0.25, 0.35, 1.0), Color(0.09, 0.13, 0.2, 1.0), Color(0.38, 0.5, 0.72, 1.0), Color(0.95, 0.97, 1.0, 1.0))
+
+	var close_btn := Button.new()
+	close_btn.focus_mode = Control.FOCUS_NONE
+	close_btn.text = "Close"
+	close_btn.pressed.connect(close_image_viewer)
+	header_row.add_child(close_btn)
+	_apply_button_style(close_btn, Color(0.2, 0.14, 0.16, 1.0), Color(0.28, 0.18, 0.2, 1.0), Color(0.16, 0.1, 0.12, 1.0), Color(0.58, 0.28, 0.32, 1.0), Color(1.0, 0.93, 0.93, 1.0))
+
+	_reader_image_viewport = Control.new()
+	_reader_image_viewport.name = "ImageViewport"
+	_reader_image_viewport.anchor_right = 1.0
+	_reader_image_viewport.anchor_bottom = 1.0
+	_reader_image_viewport.offset_top = 72
+	_reader_image_viewport.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_reader_image_overlay.add_child(_reader_image_viewport)
+	_reader_image_viewport.resized.connect(_on_reader_image_viewport_resized)
+
+	_reader_image_texture_rect = TextureRect.new()
+	_reader_image_texture_rect.name = "ImageTexture"
+	_reader_image_texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_reader_image_texture_rect.stretch_mode = TextureRect.STRETCH_SCALE
+	_reader_image_viewport.add_child(_reader_image_texture_rect)
+
+	_reader_image_overlay.gui_input.connect(_on_reader_image_overlay_input)
+	move_child(_reader_image_overlay, get_child_count() - 1)
+
+func _on_reader_overlay_input(event: InputEvent) -> void:
+	if not is_reader_open():
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		if _reader_panel and not _reader_panel.get_global_rect().has_point(event.global_position):
+			close_reader()
+			_reader_overlay.accept_event()
+
+
+func _on_reader_scroll_input(event: InputEvent) -> void:
+	if _reader_is_locked:
+		return
+	if event is InputEventMouseButton and event.pressed and event.ctrl_pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_zoom_reader(0.1)
+			_reader_scroll.accept_event()
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_zoom_reader(-0.1)
+			_reader_scroll.accept_event()
+
+
+func _handle_reader_unhandled_input(event: InputEvent) -> bool:
+	if is_image_viewer_open() and event is InputEventMagnifyGesture:
+		_zoom_reader_image_by_factor(event.factor)
+		return true
+
+	if is_reader_open() and not _reader_is_locked and event is InputEventMagnifyGesture:
+		_reader_current_zoom = clamp(_reader_current_zoom * event.factor, 0.75, 2.6)
+		_apply_reader_zoom()
+		return true
+
+	return false
+
+func open_reader(node: Dictionary) -> void:
+	if not _reader_overlay:
+		_create_reader_overlay()
+	if not _reader_overlay or node.is_empty():
+		return
+
+	_reader_current_node = node.duplicate(true)
+	var title := String(node.get("label", node.get("id", "Untitled")))
+	var metadata_variant = node.get("metadata", {})
+	var metadata: Dictionary = metadata_variant if metadata_variant is Dictionary else {}
+	var filepath := String(metadata.get("filepath", node.get("filepath", "")))
+	var content := _resolve_reader_content(node)
+
+	_reader_title_label.text = title
+	_reader_meta_label.text = filepath if not filepath.is_empty() else "Godot Reader"
+	_reader_current_zoom = 1.0
+	_apply_reader_mode_setting()
+	_set_reader_lock(true)
+	_render_reader_document(content, filepath)
+	_reader_overlay.show()
+	move_child(_reader_overlay, get_child_count() - 1)
+
+
+func close_reader() -> void:
+	close_image_viewer()
+	if _reader_overlay:
+		_reader_overlay.hide()
+
+
+func is_reader_open() -> bool:
+	return _reader_overlay != null and _reader_overlay.visible
+
+
+func open_image_viewer(texture: Texture2D, title: String = "") -> void:
+	if not texture:
+		return
+	if not _reader_image_overlay:
+		_create_reader_image_overlay()
+
+	_reader_image_current_texture = texture
+	_reader_image_texture_rect.texture = texture
+	_reader_image_title_label.text = title if not title.is_empty() else "Image Preview"
+	_reader_image_zoom = 1.0
+	_reader_image_pan = Vector2.ZERO
+	_reader_image_dragging = false
+	_reader_image_touch_points.clear()
+	_reader_image_last_pinch_distance = 0.0
+	_reader_image_last_pinch_center = Vector2.ZERO
+	_reader_image_overlay.show()
+	move_child(_reader_image_overlay, get_child_count() - 1)
+	_apply_reader_image_transform()
+
+func close_image_viewer() -> void:
+	_reader_image_dragging = false
+	_reader_image_touch_points.clear()
+	_reader_image_last_pinch_distance = 0.0
+	_reader_image_last_pinch_center = Vector2.ZERO
+	if _reader_image_overlay:
+		_reader_image_overlay.hide()
+
+func is_image_viewer_open() -> bool:
+	return _reader_image_overlay != null and _reader_image_overlay.visible
+
+
+func _toggle_reader_lock() -> void:
+	_set_reader_lock(not _reader_is_locked)
+
+
+func _set_reader_lock(locked: bool) -> void:
+	_reader_is_locked = locked
+	if _reader_lock_button:
+		_reader_lock_button.text = "Locked" if locked else "Unlocked"
+		_reader_lock_button.tooltip_text = "Unlock to enable reader scaling." if locked else "Lock to freeze the current reader scale."
+	if _reader_zoom_out_button:
+		_reader_zoom_out_button.disabled = locked
+	if _reader_zoom_in_button:
+		_reader_zoom_in_button.disabled = locked
+
+
+func _zoom_reader(delta: float) -> void:
+	if _reader_is_locked:
+		return
+	_reader_current_zoom = clamp(_reader_current_zoom + delta, 0.75, 2.6)
+	_apply_reader_zoom()
+
+
+func _apply_reader_zoom() -> void:
+	if _reader_zoom_label:
+		_reader_zoom_label.text = "%d%%" % int(round(_reader_current_zoom * 100.0))
+	if _reader_blocks:
+		_apply_reader_zoom_recursive(_reader_blocks)
+
+
+func _apply_reader_zoom_recursive(control: Control) -> void:
+	if control.has_meta("reader_base_font_size"):
+		var base_font_size := float(control.get_meta("reader_base_font_size"))
+		var scaled_font_size: int = int(maxf(11.0, round(base_font_size * _reader_current_zoom)))
+		if control is Label:
+			(control as Label).add_theme_font_size_override("font_size", scaled_font_size)
+		elif control is RichTextLabel:
+			var rich_label := control as RichTextLabel
+			rich_label.add_theme_font_size_override("normal_font_size", scaled_font_size)
+			rich_label.add_theme_font_size_override("bold_font_size", scaled_font_size)
+			rich_label.add_theme_font_size_override("italics_font_size", scaled_font_size)
+			rich_label.add_theme_font_size_override("mono_font_size", maxi(10, scaled_font_size - 1))
+
+	if control.has_meta("reader_base_size"):
+		var base_size = control.get_meta("reader_base_size")
+		if base_size is Vector2 and control is TextureRect:
+			(control as TextureRect).custom_minimum_size = (base_size as Vector2) * _reader_current_zoom
+
+	for child in control.get_children():
+		if child is Control:
+			_apply_reader_zoom_recursive(child)
+
+
+func _apply_reader_mode_setting(mode_override: String = "") -> void:
+	if not _reader_panel:
+		return
+
+	var reader_mode := mode_override
+	if reader_mode.is_empty():
+		reader_mode = String(get_setting("reading_mode", "window"))
+
+	if reader_mode == "fullscreen":
+		_reader_panel.anchor_left = 0.02
+		_reader_panel.anchor_top = 0.02
+		_reader_panel.anchor_right = 0.98
+		_reader_panel.anchor_bottom = 0.98
+		if _reader_panel_style:
+			_reader_panel_style.corner_radius_top_left = 12
+			_reader_panel_style.corner_radius_top_right = 12
+			_reader_panel_style.corner_radius_bottom_left = 12
+			_reader_panel_style.corner_radius_bottom_right = 12
+	else:
+		_reader_panel.anchor_left = 0.12
+		_reader_panel.anchor_top = 0.08
+		_reader_panel.anchor_right = 0.88
+		_reader_panel.anchor_bottom = 0.92
+		if _reader_panel_style:
+			_reader_panel_style.corner_radius_top_left = 20
+			_reader_panel_style.corner_radius_top_right = 20
+			_reader_panel_style.corner_radius_bottom_left = 20
+			_reader_panel_style.corner_radius_bottom_right = 20
+
+	if _reader_mode_badge:
+		_reader_mode_badge.text = "Fullscreen" if reader_mode == "fullscreen" else "Window"
+
+func _render_reader_document(raw_content: String, note_filepath: String) -> void:
+	if not _reader_blocks:
+		return
+
+	for child in _reader_blocks.get_children():
+		child.queue_free()
+
+	var blocks := _parse_markdown_blocks(raw_content)
+	if blocks.is_empty():
+		_reader_blocks.add_child(_make_reader_notice_block("No note content is available for this node yet."))
+	else:
+		for block_variant in blocks:
+			var block: Dictionary = block_variant if block_variant is Dictionary else {}
+			var control := _build_reader_block(block, note_filepath)
+			if control:
+				_reader_blocks.add_child(control)
+
+	_apply_reader_zoom()
+	call_deferred("_reset_reader_scroll")
+
+
+func _reset_reader_scroll() -> void:
+	if _reader_scroll:
+		_reader_scroll.scroll_vertical = 0
+		_reader_scroll.scroll_horizontal = 0
+
+
+func _resolve_reader_content(node: Dictionary) -> String:
+	var content := String(node.get("content", "")).strip_edges()
+	if not content.is_empty():
+		return content
+
+	var metadata_variant = node.get("metadata", {})
+	var metadata: Dictionary = metadata_variant if metadata_variant is Dictionary else {}
+	var filepath := String(metadata.get("filepath", node.get("filepath", ""))).strip_edges()
+	if filepath.is_empty():
+		return "No note content is available for this node yet."
+
+	var file := FileAccess.open(filepath, FileAccess.READ)
+	if file == null:
+		return "Unable to load the source note.\n\n%s" % filepath
+
+	var loaded_content := file.get_as_text()
+	file.close()
+	if loaded_content.strip_edges().is_empty():
+		return "The source note is empty.\n\n%s" % filepath
+
+	return loaded_content
+
+
+func _build_reader_block(block: Dictionary, note_filepath: String) -> Control:
+	var block_type := String(block.get("type", "paragraph"))
+	match block_type:
+		"heading":
+			var heading := Label.new()
+			heading.text = String(block.get("text", ""))
+			heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var level: int = clampi(int(block.get("level", 1)), 1, 6)
+			var font_sizes := {1: 32, 2: 28, 3: 24, 4: 21, 5: 18, 6: 16}
+			var heading_size := int(font_sizes.get(level, 18))
+			heading.add_theme_font_size_override("font_size", heading_size)
+			heading.add_theme_color_override("font_color", Color(0.94, 0.97, 1.0, 1.0))
+			heading.set_meta("reader_base_font_size", heading_size)
+			return heading
+		"blockquote":
+			var quote_panel := PanelContainer.new()
+			var quote_style := StyleBoxFlat.new()
+			quote_style.bg_color = Color(0.09, 0.13, 0.18, 0.96)
+			quote_style.border_color = Color(0.43, 0.59, 0.82, 0.95)
+			quote_style.border_width_left = 4
+			quote_style.corner_radius_top_left = 10
+			quote_style.corner_radius_top_right = 10
+			quote_style.corner_radius_bottom_left = 10
+			quote_style.corner_radius_bottom_right = 10
+			quote_panel.add_theme_stylebox_override("panel", quote_style)
+			var quote_margin := MarginContainer.new()
+			quote_margin.add_theme_constant_override("margin_left", 14)
+			quote_margin.add_theme_constant_override("margin_top", 12)
+			quote_margin.add_theme_constant_override("margin_right", 14)
+			quote_margin.add_theme_constant_override("margin_bottom", 12)
+			quote_panel.add_child(quote_margin)
+			var quote_label := _make_reader_rich_text("[i]%s[/i]" % _markdown_to_bbcode(String(block.get("text", ""))), 16, Color(0.86, 0.91, 0.98, 1.0), true)
+			quote_margin.add_child(quote_label)
+			return quote_panel
+		"list":
+			var list_box := VBoxContainer.new()
+			list_box.add_theme_constant_override("separation", 8)
+			var items_variant = block.get("items", [])
+			var items: Array = items_variant if items_variant is Array else []
+			var ordered := bool(block.get("ordered", false))
+			for item_index in range(items.size()):
+				var row := HBoxContainer.new()
+				row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				row.add_theme_constant_override("separation", 8)
+				var item_data: Dictionary = items[item_index] if items[item_index] is Dictionary else {"text": String(items[item_index])}
+				var task_state := String(item_data.get("task_state", ""))
+				var marker := Label.new()
+				marker.text = "%d." % (item_index + 1) if ordered else ("[x]" if task_state == "done" else ("[ ]" if task_state == "todo" else "-"))
+				marker.custom_minimum_size = Vector2(34, 0)
+				marker.add_theme_font_size_override("font_size", 16)
+				marker.add_theme_color_override("font_color", Color(0.78, 0.86, 0.98, 0.95) if task_state != "done" else Color(0.58, 0.68, 0.8, 0.95))
+				marker.set_meta("reader_base_font_size", 16)
+				row.add_child(marker)
+				var item_bbcode := _markdown_to_bbcode(String(item_data.get("text", "")))
+				if task_state == "done":
+					item_bbcode = "[color=#8da1b8]%s[/color]" % item_bbcode
+				var item_label := _make_reader_rich_text(item_bbcode, 16, Color(0.86, 0.9, 0.97, 1.0), true)
+				item_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				row.add_child(item_label)
+				list_box.add_child(row)
+			return list_box
+		"table":
+			return _build_reader_table(block)
+		"math":
+			return _build_reader_math_block(String(block.get("text", "")))
+		"code":
+			var code_panel := PanelContainer.new()
+			var code_style := StyleBoxFlat.new()
+			code_style.bg_color = Color(0.04, 0.06, 0.09, 0.98)
+			code_style.border_color = Color(0.19, 0.28, 0.4, 1.0)
+			code_style.border_width_left = 1
+			code_style.border_width_top = 1
+			code_style.border_width_right = 1
+			code_style.border_width_bottom = 1
+			code_style.corner_radius_top_left = 12
+			code_style.corner_radius_top_right = 12
+			code_style.corner_radius_bottom_left = 12
+			code_style.corner_radius_bottom_right = 12
+			code_panel.add_theme_stylebox_override("panel", code_style)
+			var code_margin := MarginContainer.new()
+			code_margin.add_theme_constant_override("margin_left", 14)
+			code_margin.add_theme_constant_override("margin_top", 12)
+			code_margin.add_theme_constant_override("margin_right", 14)
+			code_margin.add_theme_constant_override("margin_bottom", 12)
+			code_panel.add_child(code_margin)
+			var code_box := VBoxContainer.new()
+			code_box.add_theme_constant_override("separation", 8)
+			code_margin.add_child(code_box)
+			var language := String(block.get("language", "")).strip_edges()
+			if not language.is_empty():
+				var language_label := Label.new()
+				language_label.text = language.to_upper()
+				language_label.add_theme_font_size_override("font_size", 11)
+				language_label.add_theme_color_override("font_color", Color(0.55, 0.72, 1.0, 0.92))
+				language_label.set_meta("reader_base_font_size", 11)
+				code_box.add_child(language_label)
+				if language == "mermaid":
+					code_box.add_child(_build_mermaid_fallback_block(String(block.get("text", ""))))
+				elif language == "math" or language == "latex":
+					code_box.add_child(_build_reader_math_block(String(block.get("text", ""))))
+			var code_label := _make_reader_rich_text(String(block.get("text", "")), 14, Color(0.88, 0.92, 0.98, 1.0), false)
+			code_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+			code_box.add_child(code_label)
+			return code_panel
+		"image":
+			var image_source := String(block.get("path", "")).strip_edges()
+			var alt_text := String(block.get("alt", "")).strip_edges()
+			var resolved_path := _resolve_reader_asset_path(image_source, note_filepath)
+			if resolved_path.begins_with("http://") or resolved_path.begins_with("https://"):
+				return _make_reader_notice_block("Remote image preview is not supported in the native Godot reader yet.\n\n%s" % resolved_path)
+			var texture := _load_reader_texture(resolved_path)
+			if texture == null:
+				return _make_reader_notice_block("Image preview unavailable.\n\n%s" % image_source)
+			var image_panel := PanelContainer.new()
+			image_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+			image_panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			var image_style := StyleBoxFlat.new()
+			image_style.bg_color = Color(0.08, 0.1, 0.14, 0.98)
+			image_style.border_color = Color(0.18, 0.26, 0.38, 1.0)
+			image_style.border_width_left = 1
+			image_style.border_width_top = 1
+			image_style.border_width_right = 1
+			image_style.border_width_bottom = 1
+			image_style.corner_radius_top_left = 12
+			image_style.corner_radius_top_right = 12
+			image_style.corner_radius_bottom_left = 12
+			image_style.corner_radius_bottom_right = 12
+			image_panel.add_theme_stylebox_override("panel", image_style)
+			var image_margin := MarginContainer.new()
+			image_margin.add_theme_constant_override("margin_left", 10)
+			image_margin.add_theme_constant_override("margin_top", 10)
+			image_margin.add_theme_constant_override("margin_right", 10)
+			image_margin.add_theme_constant_override("margin_bottom", 10)
+			image_panel.add_child(image_margin)
+			var image_box := VBoxContainer.new()
+			image_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			image_box.add_theme_constant_override("separation", 8)
+			image_margin.add_child(image_box)
+			var texture_rect := TextureRect.new()
+			texture_rect.texture = texture
+			texture_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			var preview_size := _fit_size_within(Vector2(texture.get_width(), texture.get_height()), Vector2(760.0, 360.0))
+			texture_rect.custom_minimum_size = preview_size
+			texture_rect.set_meta("reader_base_size", preview_size)
+			texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			image_box.add_child(texture_rect)
+			if not alt_text.is_empty():
+				var caption := Label.new()
+				caption.text = alt_text
+				caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				caption.add_theme_font_size_override("font_size", 13)
+				caption.add_theme_color_override("font_color", Color(0.72, 0.79, 0.9, 0.95))
+				caption.set_meta("reader_base_font_size", 13)
+				image_box.add_child(caption)
+			image_panel.gui_input.connect(func(event: InputEvent):
+				if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+					open_image_viewer(texture, alt_text if not alt_text.is_empty() else image_source)
+					image_panel.accept_event()
+			)
+			return image_panel
+		"rule":
+			return HSeparator.new()
+		_:
+			return _make_reader_rich_text(_markdown_to_bbcode(String(block.get("text", ""))), 16, Color(0.86, 0.9, 0.97, 1.0), true)
+
+func _build_reader_table(block: Dictionary) -> Control:
+	var wrapper := PanelContainer.new()
+	var wrapper_style := StyleBoxFlat.new()
+	wrapper_style.bg_color = Color(0.07, 0.09, 0.13, 0.97)
+	wrapper_style.border_color = Color(0.2, 0.31, 0.45, 1.0)
+	wrapper_style.border_width_left = 1
+	wrapper_style.border_width_top = 1
+	wrapper_style.border_width_right = 1
+	wrapper_style.border_width_bottom = 1
+	wrapper_style.corner_radius_top_left = 12
+	wrapper_style.corner_radius_top_right = 12
+	wrapper_style.corner_radius_bottom_left = 12
+	wrapper_style.corner_radius_bottom_right = 12
+	wrapper.add_theme_stylebox_override("panel", wrapper_style)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	wrapper.add_child(margin)
+	var rows_box := VBoxContainer.new()
+	rows_box.add_theme_constant_override("separation", 4)
+	margin.add_child(rows_box)
+	var headers_variant = block.get("headers", [])
+	var headers: Array = headers_variant if headers_variant is Array else []
+	if not headers.is_empty():
+		rows_box.add_child(_create_reader_table_row(headers, true))
+	var rows_variant = block.get("rows", [])
+	var rows: Array = rows_variant if rows_variant is Array else []
+	for row_variant in rows:
+		var row_values: Array = row_variant if row_variant is Array else []
+		rows_box.add_child(_create_reader_table_row(row_values, false))
+	return wrapper
+
+
+func _create_reader_table_row(values: Array, is_header: bool) -> Control:
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 4)
+	for value in values:
+		row.add_child(_create_reader_table_cell(String(value), is_header))
+	return row
+
+
+func _create_reader_table_cell(cell_text: String, is_header: bool) -> Control:
+	var cell := PanelContainer.new()
+	cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cell.custom_minimum_size = Vector2(110, 0)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.14, 0.18, 0.24, 0.98) if is_header else Color(0.09, 0.12, 0.17, 0.96)
+	style.border_color = Color(0.3, 0.42, 0.58, 1.0) if is_header else Color(0.18, 0.28, 0.4, 1.0)
+	style.border_width_left = 1
+	style.border_width_top = 1
+	style.border_width_right = 1
+	style.border_width_bottom = 1
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
+	cell.add_theme_stylebox_override("panel", style)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_right", 8)
+	margin.add_theme_constant_override("margin_bottom", 8)
+	cell.add_child(margin)
+	var bbcode_text := _markdown_to_bbcode(cell_text)
+	if is_header:
+		bbcode_text = "[b]%s[/b]" % bbcode_text
+	margin.add_child(_make_reader_rich_text(bbcode_text, 14 if not is_header else 15, Color(0.9, 0.95, 1.0, 1.0), true))
+	return cell
+
+
+func _build_reader_math_block(math_text: String) -> Control:
+	var panel := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.1, 0.16, 0.98)
+	style.border_color = Color(0.37, 0.49, 0.76, 0.96)
+	style.border_width_left = 1
+	style.border_width_top = 1
+	style.border_width_right = 1
+	style.border_width_bottom = 1
+	style.corner_radius_top_left = 12
+	style.corner_radius_top_right = 12
+	style.corner_radius_bottom_left = 12
+	style.corner_radius_bottom_right = 12
+	panel.add_theme_stylebox_override("panel", style)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	panel.add_child(margin)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	margin.add_child(box)
+	var badge := Label.new()
+	badge.text = "Math"
+	badge.add_theme_font_size_override("font_size", 11)
+	badge.add_theme_color_override("font_color", Color(0.65, 0.78, 1.0, 0.95))
+	badge.set_meta("reader_base_font_size", 11)
+	box.add_child(badge)
+	box.add_child(_make_reader_rich_text(math_text, 16, Color(0.92, 0.95, 1.0, 1.0), false))
+	return panel
+
+
+func _build_mermaid_fallback_block(source_text: String) -> Control:
+	var lines := source_text.split("\n")
+	var relations: Array[String] = []
+	for raw_line in lines:
+		var trimmed := String(raw_line).strip_edges()
+		if trimmed.is_empty() or trimmed.begins_with("graph") or trimmed.begins_with("flowchart") or trimmed.begins_with("subgraph") or trimmed == "end":
+			continue
+		var relation := trimmed
+		for arrow in ["-.->", "-->", "==>", "---", "-->|"]:
+			if trimmed.contains(arrow):
+				var parts := trimmed.split(arrow)
+				if parts.size() >= 2:
+					relation = "%s -> %s" % [String(parts[0]).strip_edges(), String(parts[1]).strip_edges()]
+					break
+		relations.append(relation)
+		if relations.size() >= 6:
+			break
+	if relations.is_empty():
+		return _make_reader_notice_block("Mermaid diagram rendering is not available natively yet. The source block is shown below.")
+	return _make_reader_notice_block("Mermaid semantic preview:\n%s" % _join_strings(relations, "\n"))
+
+func _make_reader_notice_block(text: String) -> Control:
+	var panel := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.11, 0.16, 0.95)
+	style.border_color = Color(0.25, 0.35, 0.52, 0.96)
+	style.border_width_left = 1
+	style.border_width_top = 1
+	style.border_width_right = 1
+	style.border_width_bottom = 1
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_left = 10
+	style.corner_radius_bottom_right = 10
+	panel.add_theme_stylebox_override("panel", style)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	panel.add_child(margin)
+	margin.add_child(_make_reader_rich_text(text, 14, Color(0.8, 0.86, 0.96, 0.98), false))
+	return panel
+
+
+func _make_reader_rich_text(text: String, base_font_size: int, font_color: Color, use_bbcode: bool) -> RichTextLabel:
+	var label := RichTextLabel.new()
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.fit_content = true
+	label.scroll_active = false
+	label.selection_enabled = true
+	label.bbcode_enabled = use_bbcode
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_color_override("default_color", font_color)
+	label.add_theme_font_size_override("normal_font_size", base_font_size)
+	label.add_theme_font_size_override("bold_font_size", base_font_size)
+	label.add_theme_font_size_override("italics_font_size", base_font_size)
+	label.add_theme_font_size_override("mono_font_size", maxi(10, base_font_size - 1))
+	label.set_meta("reader_base_font_size", base_font_size)
+	label.meta_clicked.connect(_on_reader_meta_clicked)
+	label.text = text
+	return label
+
+
+func _on_reader_meta_clicked(meta: Variant) -> void:
+	var value := String(meta).strip_edges()
+	if value.is_empty():
+		return
+	if value.begins_with("wiki:"):
+		var target := value.substr(5).strip_edges()
+		if not target.is_empty():
+			close_reader()
+			tree_node_clicked.emit(target)
+		return
+	if value.begins_with("http://") or value.begins_with("https://"):
+		OS.shell_open(value)
+		return
+	if value.ends_with(".md") or value.ends_with(".markdown"):
+		var note_id := value.get_file().get_basename()
+		if not note_id.is_empty():
+			close_reader()
+			tree_node_clicked.emit(note_id)
+			return
+	var metadata_variant = _reader_current_node.get("metadata", {})
+	var metadata: Dictionary = metadata_variant if metadata_variant is Dictionary else {}
+	var filepath := String(metadata.get("filepath", _reader_current_node.get("filepath", "")))
+	var resolved := _resolve_reader_asset_path(value, filepath)
+	if not resolved.is_empty() and (resolved.contains("://") or resolved.contains(":") or resolved.begins_with("/")):
+		OS.shell_open(resolved)
+
+func _parse_markdown_blocks(markdown: String) -> Array:
+	var normalized := _normalize_reader_markdown(markdown)
+	var lines := normalized.split("\n")
+	var blocks: Array = []
+	var index := 0
+
+	while index < lines.size():
+		var line := String(lines[index])
+		var trimmed := line.strip_edges()
+		if trimmed.is_empty():
+			index += 1
+			continue
+
+		if trimmed == "$$":
+			index += 1
+			var math_lines: Array = []
+			while index < lines.size() and String(lines[index]).strip_edges() != "$$":
+				math_lines.append(String(lines[index]))
+				index += 1
+			if index < lines.size():
+				index += 1
+			blocks.append({"type": "math", "text": _join_strings(math_lines, "\n").strip_edges()})
+			continue
+		if trimmed.begins_with("$$") and trimmed.ends_with("$$") and trimmed.length() > 4:
+			blocks.append({"type": "math", "text": trimmed.substr(2, trimmed.length() - 4).strip_edges()})
+			index += 1
+			continue
+
+		var code_fence := _parse_code_fence(trimmed)
+		if not code_fence.is_empty():
+			var fence_marker := String(code_fence.get("fence", "```"))
+			var language := String(code_fence.get("language", ""))
+			index += 1
+			var code_lines: Array = []
+			while index < lines.size():
+				var code_line := String(lines[index])
+				if code_line.strip_edges().begins_with(fence_marker):
+					break
+				code_lines.append(code_line)
+				index += 1
+			if index < lines.size():
+				index += 1
+			blocks.append({"type": "code", "language": language, "text": _join_strings(code_lines, "\n")})
+			continue
+
+		var heading := _parse_heading(trimmed)
+		if not heading.is_empty():
+			blocks.append(heading)
+			index += 1
+			continue
+
+		if _is_horizontal_rule(trimmed):
+			blocks.append({"type": "rule"})
+			index += 1
+			continue
+
+		var table_block := _parse_table_block(lines, index)
+		if not table_block.is_empty():
+			blocks.append(table_block.get("block", {}))
+			index = int(table_block.get("next_index", index + 1))
+			continue
+
+		var image_block := _parse_image_definition(trimmed)
+		if not image_block.is_empty():
+			blocks.append(image_block)
+			index += 1
+			continue
+
+		if trimmed.begins_with(">"):
+			var quote_lines: Array = []
+			while index < lines.size() and String(lines[index]).strip_edges().begins_with(">"):
+				quote_lines.append(_strip_blockquote_prefix(String(lines[index])))
+				index += 1
+			blocks.append({"type": "blockquote", "text": _join_strings(quote_lines, "\n").strip_edges()})
+			continue
+
+		var list_block := _parse_list_block(lines, index)
+		if not list_block.is_empty():
+			blocks.append(list_block.get("block", {}))
+			index = int(list_block.get("next_index", index + 1))
+			continue
+
+		var paragraph_lines: Array = []
+		while index < lines.size():
+			var paragraph_line := String(lines[index])
+			var paragraph_trimmed := paragraph_line.strip_edges()
+			if paragraph_trimmed.is_empty() or _starts_special_markdown_block(paragraph_trimmed, lines, index):
+				break
+			paragraph_lines.append(paragraph_trimmed)
+			index += 1
+		blocks.append({"type": "paragraph", "text": _join_strings(paragraph_lines, " ").strip_edges()})
+
+	return blocks
+
+func _starts_special_markdown_block(trimmed: String, lines: Array = [], index: int = -1) -> bool:
+	if trimmed == "$$":
+		return true
+	if trimmed.begins_with("$$") and trimmed.ends_with("$$") and trimmed.length() > 4:
+		return true
+	if not _parse_code_fence(trimmed).is_empty():
+		return true
+	if not _parse_heading(trimmed).is_empty():
+		return true
+	if _is_horizontal_rule(trimmed):
+		return true
+	if trimmed.begins_with(">"):
+		return true
+	if not _parse_list_item(trimmed).is_empty():
+		return true
+	if not _parse_image_definition(trimmed).is_empty():
+		return true
+	if index >= 0 and not lines.is_empty() and not _parse_table_block(lines, index).is_empty():
+		return true
+	return false
+
+
+func _normalize_reader_markdown(markdown: String) -> String:
+	var normalized := markdown.replace("\r\n", "\n").replace("\r", "\n")
+	var lines := normalized.split("\n")
+	if not lines.is_empty() and String(lines[0]).strip_edges() == "---":
+		for line_index in range(1, lines.size()):
+			var candidate := String(lines[line_index]).strip_edges()
+			if candidate == "---" or candidate == "...":
+				var remaining := lines.slice(line_index + 1)
+				normalized = _join_strings(remaining, "\n")
+				break
+	return normalized.strip_edges()
+
+func _parse_code_fence(trimmed: String) -> Dictionary:
+	if trimmed.begins_with("```"):
+		return {"fence": "```", "language": trimmed.substr(3).strip_edges()}
+	if trimmed.begins_with("~~~"):
+		return {"fence": "~~~", "language": trimmed.substr(3).strip_edges()}
+	return {}
+
+
+func _parse_heading(trimmed: String) -> Dictionary:
+	var level := 0
+	while level < trimmed.length() and trimmed.substr(level, 1) == "#":
+		level += 1
+	if level == 0 or level > 6:
+		return {}
+	if level >= trimmed.length() or trimmed.substr(level, 1) != " ":
+		return {}
+	return {
+		"type": "heading",
+		"level": level,
+		"text": trimmed.substr(level + 1).strip_edges()
+	}
+
+
+func _is_horizontal_rule(trimmed: String) -> bool:
+	var compact := trimmed.replace(" ", "")
+	if compact.length() < 3:
+		return false
+	var first := compact.substr(0, 1)
+	if first != "-" and first != "*" and first != "_":
+		return false
+	for idx in range(compact.length()):
+		if compact.substr(idx, 1) != first:
+			return false
+	return true
+
+
+func _parse_list_block(lines: Array, start_index: int) -> Dictionary:
+	var first_item := _parse_list_item(String(lines[start_index]).strip_edges())
+	if first_item.is_empty():
+		return {}
+
+	var ordered := bool(first_item.get("ordered", false))
+	var items: Array = [first_item]
+	var index := start_index + 1
+
+	while index < lines.size():
+		var trimmed := String(lines[index]).strip_edges()
+		if trimmed.is_empty():
+			index += 1
+			break
+		var parsed := _parse_list_item(trimmed)
+		if parsed.is_empty() or bool(parsed.get("ordered", false)) != ordered:
+			break
+		items.append(parsed)
+		index += 1
+
+	return {"block": {"type": "list", "ordered": ordered, "items": items}, "next_index": index}
+
+
+func _parse_list_item(trimmed: String) -> Dictionary:
+	var body := ""
+	var ordered := false
+	if trimmed.length() >= 2:
+		var marker := trimmed.substr(0, 1)
+		if (marker == "-" or marker == "+" or marker == "*") and trimmed.substr(1, 1) == " ":
+			body = trimmed.substr(2).strip_edges()
+	if body.is_empty():
+		var digit_count := 0
+		while digit_count < trimmed.length() and _is_ascii_digit(trimmed.substr(digit_count, 1)):
+			digit_count += 1
+		if digit_count == 0 or digit_count + 1 >= trimmed.length():
+			return {}
+		var marker_pair := trimmed.substr(digit_count, 2)
+		if marker_pair != ". " and marker_pair != ") ":
+			return {}
+		ordered = true
+		body = trimmed.substr(digit_count + 2).strip_edges()
+	var task_state := ""
+	if body.length() >= 4 and body.begins_with("[") and body.substr(2, 1) == "]":
+		var task_marker := body.substr(1, 1).to_lower()
+		if task_marker == "x":
+			task_state = "done"
+			body = body.substr(4).strip_edges()
+		elif task_marker == " ":
+			task_state = "todo"
+			body = body.substr(4).strip_edges()
+	return {"ordered": ordered, "text": body, "task_state": task_state}
+
+
+func _parse_table_block(lines: Array, start_index: int) -> Dictionary:
+	if start_index + 1 >= lines.size():
+		return {}
+	var header_line := String(lines[start_index]).strip_edges()
+	var divider_line := String(lines[start_index + 1]).strip_edges()
+	if not header_line.contains("|") or not _is_table_alignment_row(divider_line):
+		return {}
+	var headers := _split_table_row(header_line)
+	if headers.is_empty():
+		return {}
+	var rows: Array = []
+	var index := start_index + 2
+	while index < lines.size():
+		var row_line := String(lines[index]).strip_edges()
+		if row_line.is_empty() or not row_line.contains("|"):
+			break
+		var row := _split_table_row(row_line)
+		row.resize(headers.size())
+		rows.append(row)
+		index += 1
+	return {"block": {"type": "table", "headers": headers, "rows": rows}, "next_index": index}
+
+
+func _is_table_alignment_row(line: String) -> bool:
+	var cells := _split_table_row(line)
+	if cells.is_empty():
+		return false
+	for cell in cells:
+		var compact := String(cell).strip_edges()
+		if compact.length() < 3:
+			return false
+		var dash_count := 0
+		for char_index in range(compact.length()):
+			var character := compact.substr(char_index, 1)
+			if character == "-":
+				dash_count += 1
+			elif character != ":":
+				return false
+		if dash_count < 3:
+			return false
+	return true
+
+
+func _split_table_row(line: String) -> Array[String]:
+	var trimmed := line.strip_edges()
+	if trimmed.begins_with("|"):
+		trimmed = trimmed.substr(1)
+	if trimmed.ends_with("|"):
+		trimmed = trimmed.substr(0, trimmed.length() - 1)
+	var raw_cells := trimmed.split("|", false)
+	var cells: Array[String] = []
+	for cell in raw_cells:
+		cells.append(String(cell).strip_edges())
+	return cells
+
+
+func _parse_image_definition(trimmed: String) -> Dictionary:
+	if not trimmed.begins_with("!["):
+		return {}
+	var alt_end := trimmed.find("](")
+	var closing := trimmed.rfind(")")
+	if alt_end == -1 or closing == -1 or closing <= alt_end + 2:
+		return {}
+	var alt_text := trimmed.substr(2, alt_end - 2)
+	var raw_path := trimmed.substr(alt_end + 2, closing - alt_end - 2).strip_edges()
+	var title_break := raw_path.find(" \"")
+	if title_break == -1:
+		title_break = raw_path.find(" '")
+	if title_break != -1:
+		raw_path = raw_path.substr(0, title_break).strip_edges()
+	return {
+		"type": "image",
+		"alt": alt_text,
+		"path": raw_path
+	}
+
+
+func _strip_blockquote_prefix(line: String) -> String:
+	var trimmed := line.strip_edges()
+	if trimmed.begins_with(">"):
+		trimmed = trimmed.substr(1).strip_edges()
+	return trimmed
+
+
+func _is_ascii_digit(character: String) -> bool:
+	return character >= "0" and character <= "9"
+
+
+func _join_strings(values: Array, separator: String) -> String:
+	var result := ""
+	for idx in range(values.size()):
+		if idx > 0:
+			result += separator
+		result += String(values[idx])
+	return result
+
+func _markdown_to_bbcode(raw_text: String) -> String:
+	var result := ""
+	var index := 0
+
+	while index < raw_text.length():
+		if raw_text.substr(index, 2) == "[[":
+			var wiki_close := raw_text.find("]]", index + 2)
+			if wiki_close != -1:
+				var wiki_inner := raw_text.substr(index + 2, wiki_close - index - 2).strip_edges()
+				if not wiki_inner.is_empty():
+					var wiki_target := wiki_inner
+					var wiki_label := wiki_inner
+					var pipe_index := wiki_inner.find("|")
+					if pipe_index != -1:
+						wiki_target = wiki_inner.substr(0, pipe_index).strip_edges()
+						wiki_label = wiki_inner.substr(pipe_index + 1).strip_edges()
+					result += "[url=wiki:%s][color=#8fc8ff]%s[/color][/url]" % [_escape_bbcode(wiki_target), _escape_bbcode(wiki_label)]
+					index = wiki_close + 2
+					continue
+
+		if raw_text.substr(index, 1) == "[":
+			var label_end := raw_text.find("]", index + 1)
+			if label_end != -1 and label_end + 1 < raw_text.length() and raw_text.substr(label_end + 1, 1) == "(":
+				var link_end := raw_text.find(")", label_end + 2)
+				if link_end != -1:
+					var link_label := raw_text.substr(index + 1, label_end - index - 1)
+					var link_target := raw_text.substr(label_end + 2, link_end - label_end - 2).strip_edges()
+					result += "[url=%s][color=#8fc8ff]%s[/color][/url]" % [_escape_bbcode(link_target), _escape_bbcode(link_label)]
+					index = link_end + 1
+					continue
+
+		if raw_text.substr(index, 2) == "$$":
+			var block_math_end := raw_text.find("$$", index + 2)
+			if block_math_end != -1:
+				result += "[bgcolor=#162033][color=#c5d9ff]%s[/color][/bgcolor]" % _escape_bbcode(raw_text.substr(index + 2, block_math_end - index - 2))
+				index = block_math_end + 2
+				continue
+
+		if raw_text.substr(index, 2) == "**":
+			var bold_end := raw_text.find("**", index + 2)
+			if bold_end != -1:
+				result += "[b]%s[/b]" % _escape_bbcode(raw_text.substr(index + 2, bold_end - index - 2))
+				index = bold_end + 2
+				continue
+
+		if raw_text.substr(index, 2) == "~~":
+			var strike_end := raw_text.find("~~", index + 2)
+			if strike_end != -1:
+				result += "[color=#7f8ea3]%s[/color]" % _escape_bbcode(raw_text.substr(index + 2, strike_end - index - 2))
+				index = strike_end + 2
+				continue
+
+		if raw_text.substr(index, 1) == "*":
+			var italic_end := raw_text.find("*", index + 1)
+			if italic_end != -1:
+				result += "[i]%s[/i]" % _escape_bbcode(raw_text.substr(index + 1, italic_end - index - 1))
+				index = italic_end + 1
+				continue
+
+		if raw_text.substr(index, 1) == "$":
+			var inline_math_end := raw_text.find("$", index + 1)
+			if inline_math_end != -1:
+				result += "[bgcolor=#162033][color=#c5d9ff]%s[/color][/bgcolor]" % _escape_bbcode(raw_text.substr(index + 1, inline_math_end - index - 1))
+				index = inline_math_end + 1
+				continue
+
+		if raw_text.substr(index, 1) == "`":
+			var code_end := raw_text.find("`", index + 1)
+			if code_end != -1:
+				result += "[bgcolor=#101722][color=#ffd58a]%s[/color][/bgcolor]" % _escape_bbcode(raw_text.substr(index + 1, code_end - index - 1))
+				index = code_end + 1
+				continue
+
+		result += _escape_bbcode(raw_text.substr(index, 1))
+		index += 1
+
+	return result
+
+func _escape_bbcode(text: String) -> String:
+	return text.replace("[", "[lb]").replace("]", "[rb]")
+
+
+func _resolve_reader_asset_path(raw_path: String, note_filepath: String) -> String:
+	var cleaned := raw_path.strip_edges().replace("\\", "/")
+	if cleaned.begins_with("<") and cleaned.ends_with(">"):
+		cleaned = cleaned.substr(1, cleaned.length() - 2).strip_edges()
+	if cleaned.begins_with("res://") or cleaned.begins_with("user://"):
+		return cleaned
+	if cleaned.begins_with("http://") or cleaned.begins_with("https://"):
+		return cleaned
+	if cleaned.length() >= 2 and cleaned.substr(1, 1) == ":":
+		return cleaned
+	if cleaned.begins_with("/"):
+		return cleaned
+	if note_filepath.is_empty():
+		return cleaned
+	var base_dir := note_filepath.replace("\\", "/").get_base_dir()
+	return base_dir.path_join(cleaned).simplify_path()
+
+
+func _load_reader_texture(resolved_path: String) -> Texture2D:
+	if resolved_path.is_empty():
+		return null
+	if ResourceLoader.exists(resolved_path):
+		var resource = ResourceLoader.load(resolved_path)
+		if resource is Texture2D:
+			return resource as Texture2D
+
+	var image := Image.load_from_file(resolved_path)
+	if image == null or image.is_empty():
+		return null
+	return ImageTexture.create_from_image(image)
+
+
+func _fit_size_within(content_size: Vector2, max_size: Vector2) -> Vector2:
+	if content_size.x <= 0.0 or content_size.y <= 0.0:
+		return Vector2(maxf(120.0, max_size.x), maxf(80.0, max_size.y))
+	var scale_factor: float = minf(max_size.x / content_size.x, max_size.y / content_size.y)
+	if scale_factor <= 0.0:
+		scale_factor = 1.0
+	return content_size * scale_factor
+
+
+func _on_reader_image_viewport_resized() -> void:
+	if is_image_viewer_open():
+		_apply_reader_image_transform()
+
+
+func _on_reader_image_overlay_input(event: InputEvent) -> void:
+	if not is_image_viewer_open():
+		return
+
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			if _reader_image_touch_points.is_empty() and _reader_image_texture_rect and not _reader_image_texture_rect.get_global_rect().has_point(event.position):
+				close_image_viewer()
+				_reader_image_overlay.accept_event()
+				return
+			_reader_image_touch_points[event.index] = event.position
+			if _reader_image_touch_points.size() >= 2:
+				var pinch_data := _get_reader_touch_pinch_data()
+				_reader_image_last_pinch_distance = float(pinch_data.get("distance", 0.0))
+				_reader_image_last_pinch_center = pinch_data.get("center", event.position)
+		else:
+			_reader_image_touch_points.erase(event.index)
+			if _reader_image_touch_points.size() < 2:
+				_reader_image_last_pinch_distance = 0.0
+		_reader_image_overlay.accept_event()
+		return
+
+	if event is InputEventScreenDrag:
+		_reader_image_touch_points[event.index] = event.position
+		if _reader_image_touch_points.size() >= 2:
+			var pinch_data := _get_reader_touch_pinch_data()
+			var pinch_distance := float(pinch_data.get("distance", 0.0))
+			var pinch_center: Vector2 = pinch_data.get("center", event.position)
+			if _reader_image_last_pinch_distance > 0.0 and pinch_distance > 0.0:
+				_zoom_reader_image_by_factor(pinch_distance / _reader_image_last_pinch_distance, pinch_center)
+				_reader_image_pan += pinch_center - _reader_image_last_pinch_center
+				_apply_reader_image_transform()
+			_reader_image_last_pinch_distance = pinch_distance
+			_reader_image_last_pinch_center = pinch_center
+		else:
+			_reader_image_pan += event.relative
+			_apply_reader_image_transform()
+		_reader_image_overlay.accept_event()
+		return
+
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				if _reader_image_texture_rect and _reader_image_texture_rect.get_global_rect().has_point(event.global_position):
+					_reader_image_dragging = true
+					_reader_image_drag_origin = event.global_position
+					_reader_image_pan_origin = _reader_image_pan
+				else:
+					close_image_viewer()
+				_reader_image_overlay.accept_event()
+			else:
+				_reader_image_dragging = false
+				_reader_image_overlay.accept_event()
+			return
+
+		if event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_adjust_reader_image_zoom(0.15, event.global_position)
+			_reader_image_overlay.accept_event()
+			return
+		if event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_adjust_reader_image_zoom(-0.15, event.global_position)
+			_reader_image_overlay.accept_event()
+			return
+
+	if event is InputEventMouseMotion and _reader_image_dragging:
+		_reader_image_pan = _reader_image_pan_origin + (event.global_position - _reader_image_drag_origin)
+		_apply_reader_image_transform()
+		_reader_image_overlay.accept_event()
+
+func _get_reader_touch_pinch_data() -> Dictionary:
+	if _reader_image_touch_points.size() < 2:
+		return {"distance": 0.0, "center": Vector2.ZERO}
+	var keys := _reader_image_touch_points.keys()
+	var first: Vector2 = _reader_image_touch_points[keys[0]]
+	var second: Vector2 = _reader_image_touch_points[keys[1]]
+	return {"distance": first.distance_to(second), "center": (first + second) * 0.5}
+
+
+func _adjust_reader_image_zoom(delta: float, pivot_global: Vector2 = Vector2.ZERO) -> void:
+	_zoom_reader_image_by_factor(1.0 + delta, pivot_global)
+
+
+func _zoom_reader_image_by_factor(factor: float, pivot_global: Vector2 = Vector2.ZERO) -> void:
+	if factor <= 0.0 or _reader_image_current_texture == null:
+		return
+
+	var previous_zoom := _reader_image_zoom
+	var next_zoom: float = clampf(previous_zoom * factor, 0.2, 8.0)
+	if is_equal_approx(previous_zoom, next_zoom):
+		return
+
+	if pivot_global != Vector2.ZERO and _reader_image_texture_rect:
+		var current_center := _reader_image_texture_rect.get_global_rect().position + (_reader_image_texture_rect.size * 0.5)
+		var pointer_offset := pivot_global - current_center
+		_reader_image_pan -= pointer_offset * ((next_zoom / previous_zoom) - 1.0)
+
+	_reader_image_zoom = next_zoom
+	_apply_reader_image_transform()
+
+
+func _apply_reader_image_transform() -> void:
+	if _reader_image_current_texture == null or _reader_image_viewport == null or _reader_image_texture_rect == null:
+		return
+
+	var viewport_size := _reader_image_viewport.size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return
+
+	var safe_bounds: Vector2 = Vector2(maxf(160.0, viewport_size.x - 80.0), maxf(120.0, viewport_size.y - 60.0))
+	_reader_image_base_size = _fit_size_within(Vector2(_reader_image_current_texture.get_width(), _reader_image_current_texture.get_height()), safe_bounds)
+	var drawn_size := _reader_image_base_size * _reader_image_zoom
+	_reader_image_texture_rect.size = drawn_size
+	_reader_image_texture_rect.position = (viewport_size * 0.5) + _reader_image_pan - (drawn_size * 0.5)
+	if _reader_image_zoom_label:
+		_reader_image_zoom_label.text = "%d%%" % int(round(_reader_image_zoom * 100.0))
 
 func _apply_button_style(button: Button, normal_color: Color, hover_color: Color, pressed_color: Color, border_color: Color, font_color: Color) -> void:
 	if not button:
@@ -513,6 +2051,8 @@ func _on_settings_panel_changed(settings: Dictionary) -> void:
 	_emit_runtime_config(settings)
 	if _tree_view and _tree_view.has_method("update_settings"):
 		_tree_view.update_settings(settings)
+	if settings.has("reading_mode"):
+		_apply_reader_mode_setting(String(settings.get("reading_mode", "window")))
 
 
 func _setup_initial_state() -> void:
@@ -726,6 +2266,10 @@ func _emit_runtime_config(extra: Dictionary = {}) -> void:
 		"strategy": _current_strategy,
 		"layout": "orbital"
 	}
+	if _settings_panel and _settings_panel.has_method("get_all_settings"):
+		var stored_settings: Dictionary = _settings_panel.get_all_settings()
+		for key in stored_settings.keys():
+			config[key] = stored_settings[key]
 	if _current_mode == "diffusion":
 		_ensure_valid_diffusion_target()
 		if not _current_target_id.is_empty():
@@ -733,6 +2277,18 @@ func _emit_runtime_config(extra: Dictionary = {}) -> void:
 	for key in extra.keys():
 		config[key] = extra[key]
 	settings_updated.emit(config)
+
+
+func get_setting(key: String, default = null):
+	if _settings_panel and _settings_panel.has_method("get_setting"):
+		return _settings_panel.get_setting(key, default)
+	return default
+
+
+func get_runtime_settings() -> Dictionary:
+	if _settings_panel and _settings_panel.has_method("get_all_settings"):
+		return _settings_panel.get_all_settings()
+	return {}
 
 
 ## Toggle sidebar visibility
@@ -744,7 +2300,7 @@ func _on_sidebar_header_pressed() -> void:
 
 func _update_sidebar_header() -> void:
 	if sidebar_header:
-		var icon := "[v]"
+		var icon := "[v]" if _sidebar_visible else "[>]"
 		sidebar_header.text = "%s Completed Nodes: %d" % [icon, _completed_nodes.size()]
 
 
@@ -882,23 +2438,38 @@ func _on_tree_fullscreen_requested(expand: bool) -> void:
 func _expand_tree_panel() -> void:
 	if _is_tree_fullscreen or not _tree_panel: return
 	
-	# Save current offsets for restoration
+	# Save current layout for restoration
 	_tree_panel_default_offsets = {
+		"anchor_left": _tree_panel.anchor_left,
+		"anchor_top": _tree_panel.anchor_top,
+		"anchor_right": _tree_panel.anchor_right,
+		"anchor_bottom": _tree_panel.anchor_bottom,
 		"left": _tree_panel.offset_left,
 		"top": _tree_panel.offset_top,
 		"right": _tree_panel.offset_right,
 		"bottom": _tree_panel.offset_bottom
 	}
 	
-	# Expand to near-fullscreen (80% of viewport)
-	_tree_panel.anchor_left = 0.1
-	_tree_panel.anchor_right = 0.9
-	_tree_panel.anchor_top = 0.05
-	_tree_panel.anchor_bottom = 0.95
-	_tree_panel.offset_left = 0
-	_tree_panel.offset_right = 0
-	_tree_panel.offset_top = 0
-	_tree_panel.offset_bottom = 0
+	# Expand to near-fullscreen using fixed pixel layout so drag/resize stays predictable.
+	var vp_size := get_viewport().get_visible_rect().size
+	var target_size := Vector2(vp_size.x * 0.8, vp_size.y * 0.9)
+	target_size.x = max(target_size.x, 360.0)
+	target_size.y = max(target_size.y, 260.0)
+	target_size.x = min(target_size.x, vp_size.x - 20.0)
+	target_size.y = min(target_size.y, vp_size.y - 20.0)
+	var target_pos := Vector2(
+		(vp_size.x - target_size.x) * 0.5,
+		(vp_size.y - target_size.y) * 0.5
+	)
+	
+	_tree_panel.anchor_left = 0.0
+	_tree_panel.anchor_right = 0.0
+	_tree_panel.anchor_top = 0.0
+	_tree_panel.anchor_bottom = 0.0
+	_tree_panel.offset_left = target_pos.x
+	_tree_panel.offset_top = target_pos.y
+	_tree_panel.offset_right = target_pos.x + target_size.x
+	_tree_panel.offset_bottom = target_pos.y + target_size.y
 	
 	_is_tree_fullscreen = true
 	if _tree_view:
@@ -908,16 +2479,16 @@ func _shrink_tree_panel() -> void:
 	if not _is_tree_fullscreen or not _tree_panel: return
 	
 	# Restore default anchors (left-side panel)
-	_tree_panel.anchor_left = 0.0
-	_tree_panel.anchor_right = 0.0
-	_tree_panel.anchor_top = 0.0
-	_tree_panel.anchor_bottom = 1.0
+	_tree_panel.anchor_left = _tree_panel_default_offsets.get("anchor_left", 0.0)
+	_tree_panel.anchor_right = _tree_panel_default_offsets.get("anchor_right", 0.0)
+	_tree_panel.anchor_top = _tree_panel_default_offsets.get("anchor_top", 0.0)
+	_tree_panel.anchor_bottom = _tree_panel_default_offsets.get("anchor_bottom", 0.0)
 	
 	# Restore offsets
 	_tree_panel.offset_left = _tree_panel_default_offsets.get("left", 20)
 	_tree_panel.offset_top = _tree_panel_default_offsets.get("top", 220)
 	_tree_panel.offset_right = _tree_panel_default_offsets.get("right", 250)
-	_tree_panel.offset_bottom = _tree_panel_default_offsets.get("bottom", -20)
+	_tree_panel.offset_bottom = _tree_panel_default_offsets.get("bottom", get_viewport().size.y - 20)
 	
 	_is_tree_fullscreen = false
 	if _tree_view:
@@ -1026,3 +2597,4 @@ func get_auto_reconstruct_setting() -> bool:
 	if _settings_panel:
 		return _settings_panel.get_setting("auto_reconstruct", true)
 	return true
+

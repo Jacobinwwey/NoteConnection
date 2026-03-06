@@ -442,32 +442,16 @@ window.pathApp = {
             return;
         }
         
-        // Convert to simplified format expected by Godot
         const centralId = this.centralNodeId;
         console.log('[PathApp] Looking for centralId:', centralId);
         
-        let centralNode = result.nodes.find(n => n.id === centralId);
-        
-        // Fallback: If central not in current path nodes, fetch from global graphData
-        if (!centralNode) {
-            console.warn('[PathApp] Central node not in path nodes, checking graphData...');
-            const sourceData = (typeof graphData !== 'undefined') ? graphData : window.graphData;
-            if (sourceData && sourceData.nodes) {
-                centralNode = sourceData.nodes.find(n => n.id === centralId);
-                if (centralNode) {
-                    console.log('[PathApp] Found central in graphData:', centralNode.label);
-                    // Add to our local nodes for future reference
-                    result.nodes.push(centralNode);
-                }
-            }
-        }
-        
+        const centralPathNode = result.nodes.find(n => n.id === centralId) || null;
+        const centralNode = this._getFullNodeById(centralId, centralPathNode);
         if (!centralNode) {
             console.error('[PathApp] Central node not found anywhere! ID:', centralId);
             return;
         }
 
-        // --- Peripheral Selection Logic (Max 4) ---
         const candidates = result.nodes.filter(n => n.id !== centralId);
         const edges = result.edges || [];
         
@@ -506,32 +490,25 @@ window.pathApp = {
         }));
 
         const payload = {
-            central: {
-                id: centralNode.id,
-                label: centralNode.label,
-                inDegree: centralNode.inDegree || 0,
-                outDegree: centralNode.outDegree || 0
-            },
+            central: this._serializeBridgeNode(centralNode, centralPathNode?.label || centralId),
             peripherals: selectedPeripherals,
             progress: {
                 completed: this.completedNodes.size,
                 total: result.nodes.length
             },
-            // Full path data for tree-view and progress tracking
             totalNodes: result.nodes.length,
             pathNodes: result.nodes.map(n => ({
                 id: n.id,
                 label: n.label || n.id,
-                parentId: this._findParentId(n.id, result.edges) // For tree structure
+                parentId: this._findParentId(n.id, result.edges)
             })),
-            // Pre-calculated tree layout from backend (PathEngine)
             treeLayout: result.treeLayout || null,
             completedIds: Array.from(this.completedNodes),
             mode: 'orbital'
         };
 
-        console.log('[PathApp] treeLayout in result:', result.treeLayout ? `${result.treeLayout.nodes?.length} nodes` : 'NULL/UNDEFINED');
-        console.log('[PathApp] Sending pathResult with central:', payload.central.label, 'peripherals:', selectedPeripherals.length, 'totalNodes:', payload.totalNodes);
+        console.log('[PathApp] treeLayout in result:', result.treeLayout ? ((result.treeLayout.nodes?.length || 0) + ' nodes') : 'NULL/UNDEFINED');
+        console.log('[PathApp] Sending pathResult with central:', payload.central.label, 'peripherals:', selectedPeripherals.length, 'totalNodes:', payload.totalNodes, 'filepath:', payload.central.metadata?.filepath || 'missing');
         this.ws.send(JSON.stringify({
             type: 'pathResult',
             payload: payload
@@ -539,17 +516,67 @@ window.pathApp = {
         console.log('[PathApp] pathResult SENT to Bridge');
     },
     
+    _getSourceGraphData: function() {
+        if (typeof graphData !== 'undefined' && graphData && Array.isArray(graphData.nodes)) {
+            return graphData;
+        }
+        if (window.graphData && Array.isArray(window.graphData.nodes)) {
+            return window.graphData;
+        }
+        return null;
+    },
+
+    _getFullNodeById: function(nodeId, fallbackNode = null) {
+        if (!nodeId) {
+            return fallbackNode || null;
+        }
+
+        const sourceData = this._getSourceGraphData();
+        if (sourceData) {
+            const sourceNode = sourceData.nodes.find(n => n.id === nodeId);
+            if (sourceNode) {
+                return fallbackNode ? { ...fallbackNode, ...sourceNode } : sourceNode;
+            }
+        }
+
+        const localNode = this.nodes.find(n => n.id === nodeId);
+        if (localNode) {
+            return fallbackNode ? { ...fallbackNode, ...localNode } : localNode;
+        }
+
+        return fallbackNode || null;
+    },
+
+    _serializeBridgeNode: function(node, fallbackLabel = '') {
+        if (!node) {
+            return null;
+        }
+
+        const metadata = node.metadata && typeof node.metadata === 'object' ? { ...node.metadata } : {};
+        return {
+            id: node.id,
+            label: node.label || fallbackLabel || node.id,
+            content: typeof node.content === 'string' ? node.content : '',
+            metadata: metadata,
+            inDegree: node.inDegree || 0,
+            outDegree: node.outDegree || 0
+        };
+    },
+    
     // Helper to find parent node ID for tree structure
-    _findParentId: function(nodeId, edges) {
-        // Parent = node that has an edge pointing TO this node (prerequisite)
+    _findParentId: function(nodeId, edges, allowedIds = null) {
         const incomingEdge = edges.find(e => {
+            const sourceId = typeof e.source === 'object' ? e.source.id : e.source;
             const targetId = typeof e.target === 'object' ? e.target.id : e.target;
-            return targetId === nodeId;
+            if (targetId !== nodeId) {
+                return false;
+            }
+            return !allowedIds || allowedIds.has(sourceId);
         });
         if (incomingEdge) {
             return typeof incomingEdge.source === 'object' ? incomingEdge.source.id : incomingEdge.source;
         }
-        return null; // Root node
+        return null;
     },
 
     setupCanvas: function() {
@@ -1266,19 +1293,18 @@ window.pathApp = {
             return;
         }
         
-        const sourceData = (typeof graphData !== 'undefined') ? graphData : window.graphData;
+        const sourceData = this._getSourceGraphData();
         if (!sourceData || !sourceData.nodes) {
             console.error('[PathApp] No graphData available for standalone mode');
             return;
         }
         
-        const centralNode = sourceData.nodes.find(n => n.id === centralId);
+        const centralNode = this._getFullNodeById(centralId);
         if (!centralNode) {
             console.error('[PathApp] Central node not found in graphData:', centralId);
             return;
         }
         
-        // Find connected nodes as peripherals
         const edges = sourceData.edges || [];
         const connectedIds = new Set();
         
@@ -1288,33 +1314,68 @@ window.pathApp = {
             if (sourceId === centralId) connectedIds.add(targetId);
             if (targetId === centralId) connectedIds.add(sourceId);
         });
-        
-        const peripherals = Array.from(connectedIds)
-            .map(id => sourceData.nodes.find(n => n.id === id))
-            .filter(n => n)
-            .slice(0, 4)
-            .map(n => ({
-                id: n.id,
-                label: n.label,
-                relation: 'association'
-            }));
-        
+
+        const peripheralCandidates = Array.from(connectedIds)
+            .map(id => this._getFullNodeById(id))
+            .filter(Boolean)
+            .map(node => {
+                const isIncoming = edges.some(e => {
+                    const sourceId = typeof e.source === 'object' ? e.source.id : e.source;
+                    const targetId = typeof e.target === 'object' ? e.target.id : e.target;
+                    return sourceId === node.id && targetId === centralId;
+                });
+                const isOutgoing = edges.some(e => {
+                    const sourceId = typeof e.source === 'object' ? e.source.id : e.source;
+                    const targetId = typeof e.target === 'object' ? e.target.id : e.target;
+                    return sourceId === centralId && targetId === node.id;
+                });
+
+                let priority = 0;
+                if (isIncoming) priority = 2;
+                else if (isOutgoing) priority = 1;
+
+                return {
+                    ...node,
+                    priority,
+                    totalDegree: (node.inDegree || 0) + (node.outDegree || 0)
+                };
+            });
+
+        peripheralCandidates.sort((a, b) => {
+            if (b.priority !== a.priority) return b.priority - a.priority;
+            return b.totalDegree - a.totalDegree;
+        });
+
+        const selectedPeripheralNodes = peripheralCandidates.slice(0, 4);
+        const selectedNodeIds = [centralId, ...selectedPeripheralNodes.map(node => node.id)];
+        const allowedIds = new Set(selectedNodeIds);
+
         const payload = {
-            central: {
-                id: centralNode.id,
-                label: centralNode.label,
-                inDegree: centralNode.inDegree || 0,
-                outDegree: centralNode.outDegree || 0
-            },
-            peripherals: peripherals,
+            central: this._serializeBridgeNode(centralNode, centralId),
+            peripherals: selectedPeripheralNodes.map(node => ({
+                id: node.id,
+                label: node.label || node.id,
+                relation: node.priority === 2 ? 'prerequisite' : 'association'
+            })),
             progress: {
                 completed: this.completedNodes ? this.completedNodes.size : 0,
-                total: sourceData.nodes.length
+                total: selectedNodeIds.length
             },
+            totalNodes: selectedNodeIds.length,
+            pathNodes: selectedNodeIds.map(nodeId => {
+                const node = this._getFullNodeById(nodeId);
+                return {
+                    id: nodeId,
+                    label: node?.label || nodeId,
+                    parentId: this._findParentId(nodeId, edges, allowedIds)
+                };
+            }),
+            treeLayout: null,
+            completedIds: Array.from(this.completedNodes || []),
             mode: 'orbital'
         };
         
-        console.log('[PathApp] Sending standalone pathResult:', payload.central.label);
+        console.log('[PathApp] Sending standalone pathResult:', payload.central.label, 'filepath:', payload.central.metadata?.filepath || 'missing');
         this.ws.send(JSON.stringify({
             type: 'pathResult',
             payload: payload

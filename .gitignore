@@ -52,6 +52,7 @@ local.properties
 *.aab
 
 # Temporary run artifacts
+.cargo-home
 .tmp_*.log
 .tmp_*
 src-tauri/crash.log

@@ -1,5 +1,33 @@
-# 2026-03-04 v1.5.13
 
+# Future Architecture & Security Hardening (Post v1.5.13)
+
+### Goal
+Implement the architectural, security, and performance enhancements outlined in the "Architecture, Security, and Performance Analysis Report" to elevate the project to a production-grade, highly robust state, especially concerning massive graph support and multi-platform consistency.
+
+### Phase 1: Establish a "Zero-Trust" Security Sandbox (High Priority)
+- [ ] **Strict Localhost Binding**: Limit HTTP and WebSocket listening to `127.0.0.1` in `server.ts` (remove `0.0.0.0`).
+- [ ] **Dynamic Ports & Token Handshakes**:
+  - [ ] Rust/Tauri allocates random port and generates `AUTH_TOKEN`.
+  - [ ] Inject Port/Token into Node.js sidecar and Frontend WebView.
+- [ ] **Strict CORS & Authentication Interceptors**:
+  - [ ] Replace `Access-Control-Allow-Origin: *` with strict whitelist (`tauri://localhost`, `http://localhost`).
+  - [ ] Validate Token in all API headers and WebSocket handshakes.
+
+### Phase 2: Transport Layer Modernization (Mid-Term Infrastructure)
+- [ ] **IPC Communication Refactoring**: Abstract `fetch` calls in frontend into an environment-aware adapter (Tauri IPC, Capacitor Native, HTTP fallback).
+- [ ] **Stdio JSON-RPC (Desktop)**: Replace HTTP server with `stdin/stdout` JSON-RPC communication between Tauri Rust and Node Sidecar.
+
+### Phase 3: Structured Data Storage (Core Performance Overhaul)
+- [ ] **Lightweight SQLite Backend**: Replace `graph_data.json` generation with a local SQLite DB (e.g., `better-sqlite3`) for partial graph queries.
+- [ ] **Frontend IndexedDB Caching Layer**: Cache graph structures in `localForage` or `Dexie.js` for instant startups.
+- [ ] **Binary Protocol Transmission**: Migrate from JSON to `MessagePack` for dense array transmission to eliminate V8 parsing bottlenecks.
+
+### Phase 4: Fragmented Asset Reconstruction (Mobile/Web)
+- [ ] **Build-Time Chunking**: Modify `build_apk.bat`/`npm run build` to slice the monolithic graph into `topology.msgpack`, `metadata.db`, and individual content hash files.
+- [ ] **Capacitor Native File Reader**: Implement on-demand lazy loading via `@capacitor/filesystem` instead of loading the entire JS payload into Android WebViews.
+
+
+---
 # 2026-03-04 v1.5.13 - Capacitor Physical-Device Acceptance Runbook Closure
 
 
@@ -1052,8 +1080,6 @@ Convert the last open `v1.5.9` sign-off item (Capacitor physical-device checklis
   - [x] **Environment Fix**: Refactored `layout_gpu.js` to be compatible with Web Worker `self` context via `globalScope`.
   - [x] **Persistence Fix**: Optimized `updateParams` in Worker to update existing forces using `.strength()` instead of replacing them, preventing accidental CPU-fallback.
   - [x] **Settings Sync**: Verified `gpuRendering` flag is correctly passed to the Worker during initialization.
-
-# 2026-01-12 v0.9.74
 
 # Project Build Plan: Progressive Hierarchical Knowledge Graph
 
@@ -2138,7 +2164,36 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ## 中文文档
 
-# 2026-03-04 v1.5.13
+---
+
+# 未来架构与安全加固计划 (v1.5.13 之后)
+
+### 目标
+执行《架构、安全与性能分析报告》中规划的架构、安全与性能提升方案，将项目提升至生产级的高鲁棒性状态，特别是在支撑海量图谱和多端一致性方面。
+
+### 阶段一：建立“零信任”安全沙盒（高优）
+- [ ] **强制本地回环绑定**：在 `server.ts` 中，将 HTTP 与 WebSocket 的监听严格限制在 `127.0.0.1`（移除 `0.0.0.0`）。
+- [ ] **动态端口与 Token 握手**：
+  - [ ] Rust/Tauri 端分配随机端口并生成 `AUTH_TOKEN`。
+  - [ ] 将 Port/Token 注入 Node.js Sidecar 和 Frontend WebView。
+- [ ] **严格 CORS 与鉴权拦截器**：
+  - [ ] 移除 `Access-Control-Allow-Origin: *`，替换为严格白名单 (`tauri://localhost`, `http://localhost`)。
+  - [ ] 在所有 API Header 和 WebSocket 握手中校验 Token。
+
+### 阶段二：传输层现代化（中期基建）
+- [ ] **IPC 通信重构**：将前端的 `fetch` 调用抽象为感知环境的适配器（Tauri IPC、Capacitor Native、HTTP 回退）。
+- [ ] **Stdio JSON-RPC (桌面端)**：废弃 HTTP server，在 Tauri Rust 与 Node Sidecar 之间使用 `stdin/stdout` 进行 JSON-RPC 通信。
+
+### 阶段三：数据存储结构化（核心性能改造）
+- [ ] **轻量级 SQLite 后端**：使用本地 SQLite DB (如 `better-sqlite3`) 替代 `graph_data.json` 的生成，以支持图谱局部查询。
+- [ ] **前端 IndexedDB 缓存层**：在 `localForage` 或 `Dexie.js` 中缓存图谱结构，实现秒级启动。
+- [ ] **二进制协议传输**：将高密度数组的传输格式从 JSON 迁移至 `MessagePack`，消除 V8 引擎解析瓶颈。
+
+### 阶段四：碎片化资产重构（移动端/Web）
+- [ ] **构建时碎片化 (Chunking)**：修改 `build_apk.bat`/`npm run build`，将单体图谱切分为 `topology.msgpack`、`metadata.db` 以及独立的 content hash 文件。
+- [ ] **Capacitor 原生文件读取**：通过 `@capacitor/filesystem` 实现按需懒加载，而不是将整个 JS payload 一次性塞入 Android WebView。
+
+---
 
 # 2026-03-04 v1.5.13 - Capacitor Physical-Device Acceptance Runbook Closure
 
@@ -3017,8 +3072,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
   - [x] **手动驱动**: 专注模式节点不再向 Worker 发送拖动消息，坐标直接在主线程计算。
   - [x] **显示刷新**: 修复了由于延迟消息覆盖手动设置坐标导致的竞态条件。
 
-# 2026-01-12 v0.9.74
-
 # 项目构建计划：渐进式层级知识图谱
 
 本文档概述了构建 `NoteConnection` 的路线图，该系统能够将数万个知识点可视化为有向无环图 (DAG)，重点突出层级关系和学习路径。
@@ -3116,18 +3169,6 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
   - [x] **前端**: 更新了 `reader.js` 中的 `Reader`，使其在打开节点时异步获取内容。
   - [x] **UX**: 在阅读器窗口添加了加载状态指示器。
 
-# 2026-01-08 v0.9.67 - 紧凑模式与 Canvas 修复
-
-**目标**: 解决 10k+ 节点的显示问题，并实现默认隐藏边的性能模式。
-
-- [x] **紧凑模式**
-  - [x] **自动启用**: 对于 >5000 节点或 >100,000 边自动激活。
-  - [x] **边剔除**: 渲染循环在紧凑模式下完全跳过边迭代，除非高亮处于活动状态。
-  - [x] **设置 UI**: 向性能设置添加了“紧凑模式 (隐藏边)”复选框。
-- [x] **Canvas 修复**
-  - [x] **初始渲染**: 初始化后强制显式调用 `resizeCanvas()` 和 `ticked()` 以防止白屏。
-
----
 
 ### 2026-01-08 v0.9.67 - 紧凑模式与 Canvas 修复 (Compact Mode & Canvas Fix)
 

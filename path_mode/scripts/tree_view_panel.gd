@@ -1,6 +1,8 @@
 class_name TreeViewPanel
 extends PanelContainer
 
+const TREE_STYLES = preload("res://scripts/tree_styles.gd")
+
 signal node_navigate_requested(node_id)
 signal node_mark_complete_requested(node_id)
 signal node_unmark_requested(node_id)
@@ -14,7 +16,7 @@ const MENU_NAVIGATE = 0
 const MENU_MARK = 1
 const MENU_UNMARK = 2
 
-@onready var _tree_renderer: TreeRenderer = $VBoxContainer/SubViewportContainer/SubViewport/TreeRenderer
+@onready var _tree_renderer = $VBoxContainer/SubViewportContainer/SubViewport/TreeRenderer
 @onready var _style_option: OptionButton = $VBoxContainer/Header/StyleOption
 @onready var _context_menu: PopupMenu = $ContextMenu
 @onready var _expand_button: Button = $VBoxContainer/Header/ExpandButton
@@ -55,7 +57,7 @@ func update_settings(settings: Dictionary) -> void:
 func _setup_ui() -> void:
 	if _style_option:
 		_style_option.clear()
-		for style in TreeStyles.STYLES:
+		for style in TREE_STYLES.STYLES:
 			_style_option.add_item(style)
 		_style_option.selected = 0 # Set default selection
 		# Connect to defined handler which properly extracts text
@@ -76,12 +78,54 @@ func _setup_ui() -> void:
 		_shrink_button.pressed.connect(func(): fullscreen_requested.emit(false))
 
 func _on_container_gui_input(event: InputEvent) -> void:
-	if _tree_renderer:
-		_tree_renderer.handle_input(event)
-		
-		# Consume event if it's mouse interaction to prevent propagation
-		if event is InputEventMouseButton or event is InputEventMouseMotion:
-			accept_event()
+	if not _tree_renderer:
+		return
+
+	# Let outer DraggablePanel capture edge drag for resize when mouse is on borders.
+	var container := $VBoxContainer/SubViewportContainer as Control
+	var edge_margin := _effective_parent_edge_margin()
+	var parent_panel := get_parent() as Control
+	var mouse_global := get_viewport().get_mouse_position()
+	if parent_panel and _is_near_resize_edge(mouse_global, parent_panel.get_global_rect().size, edge_margin, parent_panel.global_position):
+		return
+
+	if container:
+		var local_pos = container.get_local_mouse_position()
+		if _is_near_resize_edge(local_pos, container.size, edge_margin):
+			return
+
+	_tree_renderer.handle_input(event)
+
+	# Consume regular canvas interactions to isolate pan/zoom from outer UI.
+	if event is InputEventMouseButton or event is InputEventMouseMotion:
+		accept_event()
+
+
+func _is_near_resize_edge(local_pos: Vector2, panel_size: Vector2, margin: float, origin: Vector2 = Vector2.ZERO) -> bool:
+	var p = local_pos - origin
+	return (
+		p.x <= margin
+		or p.x >= panel_size.x - margin
+		or p.y <= margin
+		or p.y >= panel_size.y - margin
+	)
+
+
+func _effective_parent_edge_margin() -> float:
+	var parent_panel := get_parent() as Control
+	if not parent_panel:
+		return 18.0
+
+	var base_margin = 12.0
+	if parent_panel.has_method("_effective_resize_margin"):
+		base_margin = max(base_margin, float(parent_panel.call("_effective_resize_margin")))
+	else:
+		var configured = parent_panel.get("resize_margin")
+		if configured != null:
+			base_margin = max(base_margin, float(configured))
+
+	var dynamic_bonus = min(parent_panel.size.x, parent_panel.size.y) * 0.01
+	return clampf(base_margin + dynamic_bonus, 14.0, 34.0)
 
 func _connect_signals() -> void:
 	if _tree_renderer:

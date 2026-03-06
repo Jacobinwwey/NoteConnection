@@ -32,7 +32,10 @@ var _peripheral_nodes: Array = []
 var _transition_tween: Tween = null
 var _click_timer: float = 0.0
 var _last_clicked_id: String = ""
+var _initial_ui_settings_retries: int = 0
 const DOUBLE_CLICK_THRESHOLD := 0.5
+const MAX_INITIAL_UI_SETTINGS_RETRIES := 8
+const INITIAL_UI_SETTINGS_RETRY_DELAY := 0.15
 
 @onready var ui: PathModeUI = $"../UI"
 
@@ -71,17 +74,8 @@ func _ready() -> void:
 		ui.settings_updated.connect(_on_settings_updated)
 		ui.exit_requested.connect(_on_exit_requested)
 		ui.background_lock_toggled.connect(_on_background_lock_toggled)
-		
-	## Initial background setup
-	if ui and ui.has_method("get_setting"):
-		var bg_file = ui.get_setting("background", "")
-		if bg_file != "":
-			var path = "res://assets/backgrounds/" + bg_file
-			_apply_background_texture(path)
-		var brightness = ui.get_setting("bg_brightness", 1.0)
-		var world_env := $"../WorldEnvironment" as WorldEnvironment
-		if world_env and world_env.environment:
-			world_env.environment.background_energy_multiplier = brightness
+
+	call_deferred("_apply_initial_ui_settings")
 
 func _physics_process(delta: float) -> void:
 	if not state_machine or _peripheral_bubbles.is_empty():
@@ -556,6 +550,9 @@ const CLICK_DRAG_THRESHOLD := 5.0 ## Pixels movement allowed for a click
 
 
 func _input(event: InputEvent) -> void:
+	if ui and ui.has_method("is_reader_open") and ui.is_reader_open():
+		return
+	
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
@@ -611,17 +608,14 @@ func _handle_double_click(node_id: String) -> void:
 	## Check if central or peripheral
 	var central_id: String = _central_node.get("id", "")
 	if node_id == central_id:
-		## Open reader
-		if ws_client and ws_client.has_method("send_message"):
-			ws_client.send_message({
-				"type": "openReader",
-				"payload": {"nodeId": node_id}
-			})
-	else:
-		## Peripheral - orbital rotation
-		if ui and not central_id.is_empty():
-			ui.start_browsing(central_id)
-		animate_orbital_rotation(node_id)
+		if ui and ui.has_method("open_reader"):
+			ui.open_reader(_central_node)
+		return
+	
+	## Peripheral - orbital rotation
+	if ui and not central_id.is_empty():
+		ui.start_browsing(central_id)
+	animate_orbital_rotation(node_id)
 
 
 ## === UI Signal Handlers ===
@@ -768,6 +762,12 @@ func _on_settings_updated(settings: Dictionary) -> void:
 		if world_env and world_env.environment:
 			world_env.environment.background_energy_multiplier = settings["bg_brightness"]
 
+func _apply_default_background(world_env: WorldEnvironment, sky_mat: PanoramaSkyMaterial) -> void:
+	sky_mat.panorama = null
+	world_env.environment.background_mode = Environment.BG_COLOR
+	world_env.environment.background_color = Color(0.08, 0.1, 0.15, 1.0)
+
+
 func _apply_background_texture(path: String) -> void:
 	var world_env := $"../WorldEnvironment" as WorldEnvironment
 	if not world_env or not world_env.environment or not world_env.environment.sky or not world_env.environment.sky.sky_material:
@@ -778,19 +778,55 @@ func _apply_background_texture(path: String) -> void:
 		return
 		
 	if path == "":
-		sky_mat.panorama = null
-		world_env.environment.background_mode = Environment.BG_COLOR
-		world_env.environment.background_color = Color(0.08, 0.1, 0.15, 1.0)
+		_apply_default_background(world_env, sky_mat)
 		return
 		
-	world_env.environment.background_mode = Environment.BG_SKY
 	# EXR/HDR files natively import as CompressedTexture2D/Image in Godot 4 via ResourceLoader
 	if ResourceLoader.exists(path):
 		var tex = ResourceLoader.load(path)
-		sky_mat.panorama = tex
-		print("[PathRenderer] Applied background texture: ", path)
+		if tex is Texture2D:
+			world_env.environment.background_mode = Environment.BG_SKY
+			sky_mat.panorama = tex
+			print("[PathRenderer] Applied background texture: ", path)
+			return
+		push_warning("[PathRenderer] Background resource is not a Texture2D: %s" % path)
 	else:
-		push_error("[PathRenderer] Background file not found: ", path)
+		push_warning("[PathRenderer] Background file not found: %s" % path)
+
+	_apply_default_background(world_env, sky_mat)
+
+
+func _schedule_initial_ui_settings_retry() -> void:
+	if _initial_ui_settings_retries >= MAX_INITIAL_UI_SETTINGS_RETRIES:
+		return
+	_initial_ui_settings_retries += 1
+	var timer := get_tree().create_timer(INITIAL_UI_SETTINGS_RETRY_DELAY)
+	timer.timeout.connect(_apply_initial_ui_settings, CONNECT_ONE_SHOT)
+
+
+func _apply_initial_ui_settings() -> void:
+	if not ui:
+		return
+
+	if ui.has_method("get_runtime_settings"):
+		var settings: Dictionary = ui.get_runtime_settings()
+		if not settings.is_empty():
+			_initial_ui_settings_retries = 0
+			_on_settings_updated(settings)
+			return
+
+	if ui.has_method("get_setting"):
+		var background = ui.get_setting("background", null)
+		var brightness = ui.get_setting("bg_brightness", null)
+		if background != null or brightness != null:
+			_initial_ui_settings_retries = 0
+			_on_settings_updated({
+				"background": background if background != null else "",
+				"bg_brightness": brightness if brightness != null else 1.0
+			})
+			return
+
+	_schedule_initial_ui_settings_retry()
 
 
 func _on_exit_requested() -> void:
@@ -951,3 +987,4 @@ func _update_tree_panel() -> void:
 	else:
 		# Fallback to old list method if no layout
 		ui.build_tree(path_nodes, completed_ids, current_id)
+
