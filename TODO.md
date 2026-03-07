@@ -1,33 +1,57 @@
+﻿# 2026-03-07 v1.5.14 - Architecture & Security Hardening Review Refresh
 
-# Future Architecture & Security Hardening (Post v1.5.13)
+## Future Architecture & Security Hardening (Post v1.5.13)
 
 ### Goal
-Implement the architectural, security, and performance enhancements outlined in the "Architecture, Security, and Performance Analysis Report" to elevate the project to a production-grade, highly robust state, especially concerning massive graph support and multi-platform consistency.
+Refresh the post-v1.5.13 hardening backlog against the current codebase so the TODO reflects what is already implemented and what still blocks production-grade robustness, large-graph scalability, and honest multi-platform delivery.
 
-### Phase 1: Establish a "Zero-Trust" Security Sandbox (High Priority)
-- [ ] **Strict Localhost Binding**: Limit HTTP and WebSocket listening to `127.0.0.1` in `server.ts` (remove `0.0.0.0`).
-- [ ] **Dynamic Ports & Token Handshakes**:
-  - [ ] Rust/Tauri allocates random port and generates `AUTH_TOKEN`.
-  - [ ] Inject Port/Token into Node.js sidecar and Frontend WebView.
-- [ ] **Strict CORS & Authentication Interceptors**:
-  - [ ] Replace `Access-Control-Allow-Origin: *` with strict whitelist (`tauri://localhost`, `http://localhost`).
-  - [ ] Validate Token in all API headers and WebSocket handshakes.
+### Completed Since The Original Hardening Plan
+- [x] HTTP and WebSocket listeners are now loopback-only on desktop (`127.0.0.1`).
+- [x] Tauri now allocates dynamic sidecar and bridge ports and injects runtime metadata into the sidecar, frontend, and Godot process.
+- [x] Protected sidecar routes and bridge identification now support token-based authentication.
+- [x] Strict CORS allowlisting replaced wildcard desktop exposure for the sidecar runtime.
+- [x] A shared frontend runtime bridge now synchronizes sidecar base URL, bridge URL, and auth headers in Tauri desktop flows.
+- [x] Native Capacitor runtime is now explicitly treated as a read-only packaged mode instead of assuming desktop sidecar APIs.
+- [x] Clipboard PNG buffers are explicitly zeroized after use in the Node sidecar.
+- [x] Godot reader SVG sanitization and dimension clamping now prevent oversized raster failures for Math/Mermaid rendering.
 
-### Phase 2: Transport Layer Modernization (Mid-Term Infrastructure)
-- [ ] **IPC Communication Refactoring**: Abstract `fetch` calls in frontend into an environment-aware adapter (Tauri IPC, Capacitor Native, HTTP fallback).
-- [ ] **Stdio JSON-RPC (Desktop)**: Replace HTTP server with `stdin/stdout` JSON-RPC communication between Tauri Rust and Node Sidecar.
+### Remaining High-Priority Work
 
-### Phase 3: Structured Data Storage (Core Performance Overhaul)
-- [ ] **Lightweight SQLite Backend**: Replace `graph_data.json` generation with a local SQLite DB (e.g., `better-sqlite3`) for partial graph queries.
-- [ ] **Frontend IndexedDB Caching Layer**: Cache graph structures in `localForage` or `Dexie.js` for instant startups.
-- [ ] **Binary Protocol Transmission**: Migrate from JSON to `MessagePack` for dense array transmission to eliminate V8 parsing bottlenecks.
+#### Phase 1: Desktop Runtime Hardening Closure
+- [x] Bind HTTP and WebSocket listeners to `127.0.0.1` only.
+- [x] Allocate dynamic ports and auth tokens from the Tauri runtime.
+- [x] Apply strict CORS allowlisting and token validation to protected sidecar routes.
+- [ ] Remove synchronous filesystem reads from `/api/content` and generated asset serving in `src/server.ts`.
+- [ ] Replace full-buffer JSON body parsing with streaming or temp-file handling for large clipboard and render payloads.
 
-### Phase 4: Fragmented Asset Reconstruction (Mobile/Web)
-- [ ] **Build-Time Chunking**: Modify `build_apk.bat`/`npm run build` to slice the monolithic graph into `topology.msgpack`, `metadata.db`, and individual content hash files.
-- [ ] **Capacitor Native File Reader**: Implement on-demand lazy loading via `@capacitor/filesystem` instead of loading the entire JS payload into Android WebViews.
+#### Phase 2: Transport Modernization
+- [x] Introduce an environment-aware runtime bridge for Tauri desktop URL and auth propagation.
+- [ ] Replace remaining raw desktop HTTP and WebSocket request paths with Tauri-native IPC or a formal JSON-RPC transport.
+- [ ] Consolidate all frontend transport fallbacks behind one adapter so no feature depends on hardcoded loopback defaults when runtime metadata is unavailable.
 
+#### Phase 3: Storage and Query Scalability
+- [ ] Introduce a storage-provider abstraction that can target desktop sidecar, Tauri commands, Capacitor filesystem, and future SQLite or Wasm runtimes.
+- [ ] Replace monolithic `graph_data.json` as the primary runtime storage with SQLite-backed partial queries.
+- [ ] Add persistent frontend cache layers (IndexedDB via `localForage` or `Dexie`) for cold-start reduction.
+- [ ] Evaluate MessagePack or an equivalent binary transport for dense graph payload delivery.
 
----
+#### Phase 4: Packaging and Multi-Platform Delivery
+- [ ] Replace the Windows-only `build:sidecar` target (`node18-win-x64`) with multi-target Node 22 packaging.
+- [ ] Add compressed sidecar build flows (`--compress Brotli`, `--no-bytecode`) and verify packaged runtime assets.
+- [ ] Add packaged-sidecar validation for macOS and Linux, not only Windows desktop.
+- [ ] Finalize iOS privacy-manifest work for filesystem access declarations.
+- [ ] Keep the mobile release policy explicit: current Capacitor delivery is packaged read-only content, not desktop-equivalent build or sidecar parity.
+
+### Verification Snapshot (Reviewed on 2026-03-07)
+- [x] `npx tsc --pretty false`
+- [x] `npx jest src/reader_renderer.test.ts src/source_manager.loadflow.test.ts src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts --runInBand`
+- [x] `cargo test --manifest-path src-tauri/Cargo.toml`
+- [x] `./src-tauri/bin/godot-x86_64-pc-windows-msvc.exe --headless --path ./path_mode --quit` on Windows PowerShell
+
+### Release Position
+- [ ] Do not claim full all-platform feature parity until storage abstraction and transport migration are completed.
+- [ ] Treat Capacitor native delivery as a bounded read-only runtime until native content and graph-loading parity is implemented.
+
 # 2026-03-04 v1.5.13 - Capacitor Physical-Device Acceptance Runbook Closure
 
 
@@ -2163,6 +2187,64 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 ---
 
 ## 中文文档
+
+---
+
+# 2026-03-07 v1.5.14 - 架构、安全与性能加固复核更新
+
+## v1.5.13 之后的后续架构与安全加固
+
+### 目标
+根据当前代码基线刷新 v1.5.13 之后的加固待办，使文档准确反映哪些能力已经落地，哪些问题仍然阻碍生产级稳健性、大规模图谱性能以及真实的多平台交付。
+
+### 自原始加固计划以来已完成的事项
+- [x] 桌面端 HTTP 与 WebSocket 监听已收敛到仅绑定 `127.0.0.1`。
+- [x] Tauri 已能够为 sidecar 与 bridge 动态分配端口，并将运行时元数据注入 Node sidecar、前端与 Godot 进程。
+- [x] 受保护的 sidecar 路由与 bridge 标识握手已支持基于令牌的认证。
+- [x] 桌面 sidecar 已使用严格的 CORS 白名单替代通配符暴露方式。
+- [x] 已新增共享的前端 runtime bridge，在 Tauri 桌面链路中同步 sidecar 基础 URL、bridge URL 与认证头。
+- [x] 原生 Capacitor 运行时已明确切换为“只读打包内容模式”，不再假设桌面 sidecar API 可用。
+- [x] Node sidecar 在处理剪贴板 PNG 后会显式执行缓冲区清零。
+- [x] Godot Reader 已加入 SVG 清洗与尺寸钳制，避免 Math/Mermaid 渲染出现超大位图失败。
+
+### 仍需优先推进的工作
+
+#### 阶段 1：桌面运行时加固收口
+- [x] 将 HTTP 与 WebSocket 监听限制为仅绑定 `127.0.0.1`。
+- [x] 由 Tauri 运行时动态分配端口与认证令牌。
+- [x] 为受保护的 sidecar 路由应用严格的 CORS 白名单与令牌校验。
+- [ ] 移除 `src/server.ts` 中 `/api/content` 与生成资源读取路径上的同步文件系统读取。
+- [ ] 将大体积剪贴板与渲染负载的 JSON 全量缓冲解析改为流式或临时文件处理。
+
+#### 阶段 2：传输层现代化
+- [x] 已为 Tauri 桌面链路引入环境感知的 runtime bridge，用于 URL 与认证信息传递。
+- [ ] 将剩余桌面 HTTP/WebSocket 请求路径迁移到 Tauri 原生 IPC 或正式的 JSON-RPC 传输层。
+- [ ] 将所有前端传输回退路径统一收口到单一适配层，避免在缺少运行时元数据时仍依赖硬编码 loopback 默认值。
+
+#### 阶段 3：存储与查询扩展性
+- [ ] 引入 storage provider 抽象，以支持桌面 sidecar、Tauri command、Capacitor filesystem 以及未来的 SQLite/Wasm 运行时。
+- [ ] 将单体 `graph_data.json` 从主运行时存储迁移为基于 SQLite 的局部查询模型。
+- [ ] 增加持久化前端缓存层（IndexedDB，经由 `localForage` 或 `Dexie`）以缩短冷启动时间。
+- [ ] 评估 MessagePack 或等价二进制传输方案，用于高密度图谱负载传输。
+
+#### 阶段 4：打包与多平台交付
+- [ ] 将当前仅支持 Windows 的 `build:sidecar` 目标（`node18-win-x64`）升级为 Node 22 多目标打包。
+- [ ] 增加压缩型 sidecar 构建流程（`--compress Brotli`、`--no-bytecode`），并验证打包后的运行时资源完整性。
+- [ ] 为 macOS 与 Linux 增加 packaged sidecar 验证，而不仅限于 Windows 桌面。
+- [ ] 完成 iOS 文件系统访问相关的 Privacy Manifest 声明工作。
+- [ ] 持续明确移动端发布策略：当前 Capacitor 交付形态是“打包只读内容”，并非桌面等价的构建/sidecar 功能对等。
+
+### 验证快照（复核时间：2026-03-07）
+- [x] `npx tsc --pretty false`
+- [x] `npx jest src/reader_renderer.test.ts src/source_manager.loadflow.test.ts src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts --runInBand`
+- [x] `cargo test --manifest-path src-tauri/Cargo.toml`
+- [x] Windows PowerShell 下执行 `./src-tauri/bin/godot-x86_64-pc-windows-msvc.exe --headless --path ./path_mode --quit`
+
+### 发布结论
+- [ ] 在完成存储抽象与传输层迁移之前，不应宣称“全平台功能完全对等”。
+- [ ] 在原生内容读取与图谱加载能力真正补齐之前，应继续将 Capacitor 原生交付视为边界清晰的只读运行时。
+
+---
 
 ---
 

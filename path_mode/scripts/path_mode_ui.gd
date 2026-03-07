@@ -1,4 +1,4 @@
-﻿extends CanvasLayer
+extends CanvasLayer
 
 ## Path Mode UI Controller
 ## Handles button interactions, progress display, completed nodes sidebar,
@@ -25,7 +25,13 @@ signal background_lock_toggled(is_locked: bool)
 const TREE_VIEW_SCENE = preload("res://scenes/tree_view_panel.tscn")
 const SETTINGS_SCENE = preload("res://scenes/settings_panel.tscn")
 const READER_RENDER_CLIENT_SCRIPT = preload("res://scripts/reader_render_client.gd")
-const READER_DISPLAY_MATH_PREVIEW_MAX_SIZE := Vector2(256.0, 88.0)
+const READER_DISPLAY_MATH_PREVIEW_MAX_SIZE := Vector2(920.0, 240.0)
+const READER_DISPLAY_MERMAID_PREVIEW_MAX_SIZE := Vector2(1100.0, 620.0)
+const READER_MEDIA_PAGE_MARGIN := 72.0
+const READER_MEDIA_PAGE_MIN_WIDTH := 320.0
+const READER_MEDIA_PAGE_MAX_WIDTH := 1180.0
+const READER_MEDIA_PAGE_MIN_HEIGHT := 180.0
+const READER_MEDIA_PAGE_MAX_HEIGHT := 860.0
 const READER_DISPLAY_MATH_RENDER_SCALE := 2.4
 const READER_INLINE_MATH_RENDER_SCALE := 2.1
 const READER_INLINE_MATH_MAX_HEIGHT_MULTIPLIER := 1.08
@@ -86,6 +92,9 @@ var _reader_view_mode_button: Button = null
 var _reader_media_scale_slider: HSlider = null
 var _reader_media_scale_value_label: Label = null
 var _reader_status_label: Label = null
+var _reader_toast_panel: PanelContainer = null
+var _reader_toast_label: Label = null
+var _reader_toast_tween: Tween = null
 var _reader_scroll: ScrollContainer = null
 var _reader_blocks: VBoxContainer = null
 var _reader_current_node: Dictionary = {}
@@ -157,7 +166,7 @@ func _ensure_reader_render_client() -> void:
 func _create_dynamic_ui() -> void:
 	## Create Return button (hidden by default)
 	_return_button = MenuButton.new()
-	_return_button.text = "â† Return"
+	_return_button.text = "← Return"
 	_return_button.visible = false
 	_return_button.flat = false
 	
@@ -310,7 +319,7 @@ func _create_dynamic_ui() -> void:
 		_apply_button_style(_edit_button, Color(0.2, 0.24, 0.3, 1.0), Color(0.27, 0.31, 0.4, 1.0), Color(0.14, 0.18, 0.24, 1.0), Color(0.42, 0.46, 0.58, 1.0), Color(0.92, 0.95, 1.0, 1.0))
 		
 	## Create Settings Button as independent floating button in upper-right corner
-	## å°†è®¾ç½®æŒ‰é’®ä½œä¸ºç‹¬ç«‹æµ®åŠ¨æŒ‰é’®æ”¾åœ¨å³ä¸Šè§’
+	## 将设置按钮作为独立浮动按钮放在右上角
 	_settings_button = Button.new()
 	_settings_button.text = "SET"
 	_settings_button.tooltip_text = "Settings"
@@ -731,6 +740,46 @@ func _create_reader_overlay() -> void:
 	_reader_status_label.add_theme_color_override("font_color", Color(0.64, 0.74, 0.87, 0.94))
 	panel_vbox.add_child(_reader_status_label)
 
+	_reader_toast_panel = PanelContainer.new()
+	_reader_toast_panel.name = "ReaderToast"
+	_reader_toast_panel.anchor_left = 1.0
+	_reader_toast_panel.anchor_top = 0.0
+	_reader_toast_panel.anchor_right = 1.0
+	_reader_toast_panel.anchor_bottom = 0.0
+	_reader_toast_panel.offset_left = -356
+	_reader_toast_panel.offset_top = 24
+	_reader_toast_panel.offset_right = -24
+	_reader_toast_panel.offset_bottom = 78
+	_reader_toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_reader_toast_panel.visible = false
+	_reader_toast_panel.z_index = 8
+	var reader_toast_style := StyleBoxFlat.new()
+	reader_toast_style.bg_color = Color(0.1, 0.15, 0.23, 0.98)
+	reader_toast_style.border_color = Color(0.45, 0.62, 0.88, 1.0)
+	reader_toast_style.border_width_left = 1
+	reader_toast_style.border_width_top = 1
+	reader_toast_style.border_width_right = 1
+	reader_toast_style.border_width_bottom = 1
+	reader_toast_style.corner_radius_top_left = 14
+	reader_toast_style.corner_radius_top_right = 14
+	reader_toast_style.corner_radius_bottom_left = 14
+	reader_toast_style.corner_radius_bottom_right = 14
+	reader_toast_style.shadow_color = Color(0.0, 0.0, 0.0, 0.32)
+	reader_toast_style.shadow_size = 10
+	_reader_toast_panel.add_theme_stylebox_override("panel", reader_toast_style)
+	var reader_toast_margin := MarginContainer.new()
+	reader_toast_margin.add_theme_constant_override("margin_left", 12)
+	reader_toast_margin.add_theme_constant_override("margin_top", 8)
+	reader_toast_margin.add_theme_constant_override("margin_right", 12)
+	reader_toast_margin.add_theme_constant_override("margin_bottom", 8)
+	_reader_toast_panel.add_child(reader_toast_margin)
+	_reader_toast_label = Label.new()
+	_reader_toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_reader_toast_label.add_theme_font_size_override("font_size", 11)
+	_reader_toast_label.add_theme_color_override("font_color", Color(0.96, 0.98, 1.0, 1.0))
+	reader_toast_margin.add_child(_reader_toast_label)
+	_reader_overlay.add_child(_reader_toast_panel)
+
 	_reader_scroll = ScrollContainer.new()
 	_reader_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_reader_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -768,8 +817,9 @@ func _create_reader_image_overlay() -> void:
 	_reader_image_overlay.name = "ReaderImageOverlay"
 	_reader_image_overlay.anchor_right = 1.0
 	_reader_image_overlay.anchor_bottom = 1.0
-	_reader_image_overlay.color = Color(0.01, 0.02, 0.04, 0.94)
+	_reader_image_overlay.color = Color(0.0, 0.0, 0.0, 0.48)
 	_reader_image_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_reader_image_overlay.focus_mode = Control.FOCUS_NONE
 	_reader_image_overlay.visible = false
 	_reader_image_overlay.resized.connect(_on_reader_image_overlay_resized)
 	add_child(_reader_image_overlay)
@@ -777,9 +827,10 @@ func _create_reader_image_overlay() -> void:
 	_reader_image_frame = PanelContainer.new()
 	_reader_image_frame.name = "ImageFrame"
 	_reader_image_frame.mouse_filter = Control.MOUSE_FILTER_STOP
+	_reader_image_frame.focus_mode = Control.FOCUS_NONE
 	var frame_style := StyleBoxFlat.new()
-	frame_style.bg_color = Color(0.05, 0.07, 0.11, 0.985)
-	frame_style.border_color = Color(0.34, 0.48, 0.7, 0.96)
+	frame_style.bg_color = Color(0.045, 0.05, 0.06, 0.992)
+	frame_style.border_color = Color(0.54, 0.62, 0.74, 0.96)
 	frame_style.border_width_left = 1
 	frame_style.border_width_top = 1
 	frame_style.border_width_right = 1
@@ -851,6 +902,7 @@ func _create_reader_image_overlay() -> void:
 
 	_reader_image_viewport = Control.new()
 	_reader_image_viewport.name = "ImageViewport"
+	_reader_image_viewport.focus_mode = Control.FOCUS_NONE
 	_reader_image_viewport.anchor_right = 1.0
 	_reader_image_viewport.anchor_bottom = 1.0
 	_reader_image_viewport.offset_left = 16
@@ -870,6 +922,7 @@ func _create_reader_image_overlay() -> void:
 
 	_reader_image_resize_handle = ColorRect.new()
 	_reader_image_resize_handle.name = "ResizeHandle"
+	_reader_image_resize_handle.focus_mode = Control.FOCUS_NONE
 	_reader_image_resize_handle.anchor_left = 1.0
 	_reader_image_resize_handle.anchor_top = 1.0
 	_reader_image_resize_handle.anchor_right = 1.0
@@ -908,9 +961,12 @@ func _on_reader_scroll_input(event: InputEvent) -> void:
 
 
 func _handle_reader_unhandled_input(event: InputEvent) -> bool:
-	if is_reader_open() and event is InputEventKey and event.pressed and not event.echo and _matches_reader_toggle_shortcut(event):
-		_toggle_reader_render_mode()
-		return true
+	if is_reader_open() and event is InputEventKey and event.pressed and not event.echo:
+		if _matches_reader_toggle_shortcut(event):
+			_toggle_reader_render_mode()
+			return true
+		if _handle_reader_zoom_shortcut(event):
+			return true
 
 	if is_image_viewer_open() and event is InputEventMagnifyGesture:
 		_zoom_reader_image_by_factor(event.factor)
@@ -944,6 +1000,8 @@ func open_reader(node: Dictionary) -> void:
 	_sync_reader_controls_from_settings()
 	_set_reader_lock(true)
 	_start_reader_document_render(content, filepath)
+	if _reader_toast_panel:
+		_reader_toast_panel.hide()
 	_reader_overlay.show()
 	move_child(_reader_overlay, get_child_count() - 1)
 
@@ -953,6 +1011,8 @@ func close_reader() -> void:
 	close_image_viewer()
 	if _reader_overlay:
 		_reader_overlay.hide()
+	if _reader_toast_panel:
+		_reader_toast_panel.hide()
 
 
 func is_reader_open() -> bool:
@@ -1039,11 +1099,12 @@ func _apply_reader_zoom_recursive(control: Control) -> void:
 			(control as TextEdit).add_theme_font_size_override("font_size", scaled_font_size)
 
 	if control.has_meta("reader_base_size"):
-		var base_size = control.get_meta("reader_base_size")
-		if base_size is Vector2 and control is TextureRect:
-			var scaled_size: Vector2 = (base_size as Vector2) * _reader_current_zoom
+		var base_size_variant: Variant = control.get_meta("reader_base_size")
+		if base_size_variant is Vector2 and control is TextureRect:
+			var scaled_size: Vector2 = (base_size_variant as Vector2) * _reader_current_zoom
 			if bool(control.get_meta("reader_media_scalable", false)):
 				scaled_size *= _get_reader_media_scale_setting()
+			scaled_size = _fit_size_within(scaled_size, _resolve_reader_control_media_limit(control), false)
 			(control as TextureRect).custom_minimum_size = scaled_size
 
 	for child in control.get_children():
@@ -1096,8 +1157,7 @@ func _sync_reader_controls_from_settings() -> void:
 		_reader_media_scale_slider.set_block_signals(false)
 	if _reader_media_scale_value_label:
 		_reader_media_scale_value_label.text = "%.2fx" % media_scale
-	if _reader_status_label:
-		_reader_status_label.text = _build_reader_status_hint()
+	_set_reader_status(_build_reader_status_hint())
 	for renderable_block in _reader_renderable_blocks:
 		_apply_reader_renderable_block_mode(renderable_block, render_mode)
 	if _reader_blocks:
@@ -1105,7 +1165,48 @@ func _sync_reader_controls_from_settings() -> void:
 
 
 func _build_reader_status_hint() -> String:
-	return "Toggle formula and Mermaid blocks with %s. Ctrl + mouse wheel zooms reader text when unlocked." % _get_reader_toggle_shortcut_string()
+	return "Toggle formula and Mermaid blocks with %s. Ctrl/Cmd + mouse wheel or Ctrl/Cmd +/-/0 adjusts reader zoom when unlocked. Esc closes the reader." % _get_reader_toggle_shortcut_string()
+
+
+func _set_reader_status(message: String) -> void:
+	if _reader_status_label:
+		_reader_status_label.text = message
+
+
+func _show_reader_toast(message: String, tone: String = "info") -> void:
+	_set_reader_status(message)
+	if _reader_toast_panel == null or _reader_toast_label == null:
+		return
+
+	var toast_style := _reader_toast_panel.get_theme_stylebox("panel") as StyleBoxFlat
+	if toast_style:
+		match tone:
+			"success":
+				toast_style.bg_color = Color(0.08, 0.2, 0.16, 0.98)
+				toast_style.border_color = Color(0.28, 0.82, 0.62, 1.0)
+			"warning":
+				toast_style.bg_color = Color(0.24, 0.16, 0.08, 0.98)
+				toast_style.border_color = Color(0.95, 0.73, 0.28, 1.0)
+			_:
+				toast_style.bg_color = Color(0.1, 0.15, 0.23, 0.98)
+				toast_style.border_color = Color(0.45, 0.62, 0.88, 1.0)
+
+	_reader_toast_label.text = message
+	_reader_toast_panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	_reader_toast_panel.show()
+	if _reader_toast_tween and _reader_toast_tween.is_running():
+		_reader_toast_tween.kill()
+	_reader_toast_tween = create_tween()
+	_reader_toast_tween.tween_property(_reader_toast_panel, "modulate:a", 1.0, 0.14)
+	_reader_toast_tween.tween_interval(1.8)
+	_reader_toast_tween.tween_property(_reader_toast_panel, "modulate:a", 0.0, 0.24)
+	_reader_toast_tween.finished.connect(func():
+		if _reader_toast_panel:
+			_reader_toast_panel.hide()
+			_reader_toast_panel.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		if is_reader_open():
+			_set_reader_status(_build_reader_status_hint())
+	)
 
 
 func _get_reader_render_mode_setting() -> String:
@@ -1130,6 +1231,7 @@ func _toggle_reader_render_mode() -> void:
 	var next_mode := "source" if _get_reader_render_mode_setting() == "render" else "render"
 	_persist_reader_setting("reader_render_mode", next_mode)
 	_sync_reader_controls_from_settings()
+	_show_reader_toast("Reader blocks switched to %s mode." % ("source" if next_mode == "source" else "render"))
 
 
 func _on_reader_media_scale_slider_changed(value: float) -> void:
@@ -1202,6 +1304,40 @@ func _event_to_shortcut_string(event: InputEventKey) -> String:
 func _matches_reader_toggle_shortcut(event: InputEventKey) -> bool:
 	return _event_to_shortcut_string(event) == _get_reader_toggle_shortcut_string()
 
+
+func _handle_reader_zoom_shortcut(event: InputEventKey) -> bool:
+	if not _is_reader_zoom_shortcut(event):
+		return false
+	if _reader_is_locked:
+		_show_reader_toast("Unlock the reader to adjust zoom with the keyboard.", "warning")
+		return true
+
+	match event.keycode:
+		KEY_EQUAL, KEY_PLUS, KEY_KP_ADD:
+			_zoom_reader(0.1)
+			_show_reader_toast("Reader zoom set to %s." % _reader_zoom_label.text)
+		KEY_MINUS, KEY_KP_SUBTRACT:
+			_zoom_reader(-0.1)
+			_show_reader_toast("Reader zoom set to %s." % _reader_zoom_label.text)
+		KEY_0, KEY_KP_0:
+			_reader_current_zoom = 1.0
+			_apply_reader_zoom()
+			_show_reader_toast("Reader zoom reset to 100%.")
+		_:
+			return false
+	return true
+
+
+func _is_reader_zoom_shortcut(event: InputEventKey) -> bool:
+	var has_zoom_modifier := event.ctrl_pressed or event.meta_pressed
+	if not has_zoom_modifier or event.alt_pressed:
+		return false
+	match event.keycode:
+		KEY_EQUAL, KEY_PLUS, KEY_KP_ADD, KEY_MINUS, KEY_KP_SUBTRACT, KEY_0, KEY_KP_0:
+			return true
+		_:
+			return false
+
 func _start_reader_document_render(raw_content: String, note_filepath: String) -> void:
 	_reader_render_revision += 1
 	var render_revision := _reader_render_revision
@@ -1240,8 +1376,7 @@ func _render_reader_document_async(raw_content: String, note_filepath: String, r
 
 func _clear_reader_blocks() -> void:
 	_reader_renderable_blocks.clear()
-	if _reader_status_label:
-		_reader_status_label.text = _build_reader_status_hint()
+	_set_reader_status(_build_reader_status_hint())
 	if not _reader_blocks:
 		return
 	for child in _reader_blocks.get_children():
@@ -1498,13 +1633,14 @@ func _build_reader_math_block_async(source_text: String, render_revision: int) -
 	if _reader_render_client == null:
 		return _build_reader_renderable_block("Math", source_text, _build_reader_math_block(source_text), null, accent_color)
 
-	var result: Dictionary = await _reader_render_client.render_math_texture(source_text, true, READER_DISPLAY_MATH_RENDER_SCALE)
+	var max_size: Vector2 = _get_reader_math_display_max_size()
+	var result: Dictionary = await _reader_render_client.render_math_texture(source_text, true, READER_DISPLAY_MATH_RENDER_SCALE, max_size)
 	if render_revision != _reader_render_revision:
 		return null
 	if bool(result.get("ok", false)):
 		var texture := result.get("texture", null) as Texture2D
 		if texture:
-			var render_panel := _build_reader_svg_panel(texture, "", "Formula", READER_DISPLAY_MATH_PREVIEW_MAX_SIZE, accent_color)
+			var render_panel := _build_reader_svg_panel(texture, "", "Formula", max_size, accent_color)
 			return _build_reader_renderable_block("Math", source_text, render_panel, texture, accent_color)
 	return _build_reader_renderable_block(
 		"Math",
@@ -1525,13 +1661,14 @@ func _build_reader_mermaid_block_async(source_text: String, render_revision: int
 	if _reader_render_client == null:
 		return _build_reader_renderable_block("Mermaid", source_text, _build_mermaid_fallback_block(source_text), null, accent_color)
 
-	var result: Dictionary = await _reader_render_client.render_mermaid_texture(source_text, 3.0)
+	var max_size: Vector2 = _get_reader_mermaid_display_max_size()
+	var result: Dictionary = await _reader_render_client.render_mermaid_texture(source_text, 3.0, max_size)
 	if render_revision != _reader_render_revision:
 		return null
 	if bool(result.get("ok", false)):
 		var texture := result.get("texture", null) as Texture2D
 		if texture:
-			var render_panel := _build_reader_svg_panel(texture, "", "Mermaid Diagram", Vector2(860.0, 520.0), accent_color)
+			var render_panel := _build_reader_svg_panel(texture, "", "Mermaid Diagram", max_size, accent_color)
 			return _build_reader_renderable_block("Mermaid", source_text, render_panel, texture, accent_color)
 	return _build_reader_renderable_block(
 		"Mermaid",
@@ -1550,6 +1687,7 @@ func _build_reader_mermaid_block_async(source_text: String, render_revision: int
 func _build_reader_svg_panel(texture: Texture2D, badge_text: String, viewer_title: String, max_size: Vector2, accent_color: Color) -> Control:
 	var panel := PanelContainer.new()
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.focus_mode = Control.FOCUS_NONE
 	panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.06, 0.09, 0.14, 0.98)
@@ -1585,9 +1723,11 @@ func _build_reader_svg_panel(texture: Texture2D, badge_text: String, viewer_titl
 	texture_rect.texture = texture
 	texture_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	var preview_size := _fit_size_within(Vector2(texture.get_width(), texture.get_height()), max_size)
+	var resolved_max_size: Vector2 = _resolve_reader_requested_media_limit(max_size)
+	var preview_size: Vector2 = _fit_size_within(Vector2(texture.get_width(), texture.get_height()), resolved_max_size, false)
 	texture_rect.custom_minimum_size = preview_size
 	texture_rect.set_meta("reader_base_size", preview_size)
+	texture_rect.set_meta("reader_max_size", max_size)
 	texture_rect.set_meta("reader_media_scalable", true)
 	texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(texture_rect)
@@ -1599,7 +1739,7 @@ func _build_reader_svg_panel(texture: Texture2D, badge_text: String, viewer_titl
 	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(hint)
 	panel.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
 			open_image_viewer(texture, viewer_title)
 			panel.accept_event()
 	)
@@ -1646,6 +1786,31 @@ func _build_reader_renderable_block(kind: String, source_text: String, render_co
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header_row.add_child(spacer)
+
+	var mode_badge_panel := PanelContainer.new()
+	var mode_badge_style := StyleBoxFlat.new()
+	mode_badge_style.bg_color = Color(0.12, 0.18, 0.28, 0.98)
+	mode_badge_style.border_color = accent_color
+	mode_badge_style.border_width_left = 1
+	mode_badge_style.border_width_top = 1
+	mode_badge_style.border_width_right = 1
+	mode_badge_style.border_width_bottom = 1
+	mode_badge_style.corner_radius_top_left = 11
+	mode_badge_style.corner_radius_top_right = 11
+	mode_badge_style.corner_radius_bottom_left = 11
+	mode_badge_style.corner_radius_bottom_right = 11
+	mode_badge_panel.add_theme_stylebox_override("panel", mode_badge_style)
+	var mode_badge_margin := MarginContainer.new()
+	mode_badge_margin.add_theme_constant_override("margin_left", 8)
+	mode_badge_margin.add_theme_constant_override("margin_top", 4)
+	mode_badge_margin.add_theme_constant_override("margin_right", 8)
+	mode_badge_margin.add_theme_constant_override("margin_bottom", 4)
+	mode_badge_panel.add_child(mode_badge_margin)
+	var mode_badge_label := Label.new()
+	mode_badge_label.add_theme_font_size_override("font_size", 10)
+	mode_badge_label.add_theme_color_override("font_color", Color(0.9, 0.95, 1.0, 1.0))
+	mode_badge_margin.add_child(mode_badge_label)
+	header_row.add_child(mode_badge_panel)
 
 	var mode_button := Button.new()
 	mode_button.focus_mode = Control.FOCUS_NONE
@@ -1698,7 +1863,9 @@ func _build_reader_renderable_block(kind: String, source_text: String, render_co
 		"render_holder": render_holder,
 		"source_holder": source_panel,
 		"mode_button": mode_button,
-		"copy_button": copy_button,
+        "mode_badge": mode_badge_label,
+        "mode_badge_style": mode_badge_style,
+        "copy_button": copy_button,
 		"source_text": source_text,
 		"texture": texture,
 		"kind": kind
@@ -1717,20 +1884,33 @@ func _build_reader_renderable_block(kind: String, source_text: String, render_co
 func _apply_reader_renderable_block_mode(record: Dictionary, mode: String) -> void:
 	var render_holder := record.get("render_holder", null) as Control
 	var source_holder := record.get("source_holder", null) as Control
+	var is_source_mode := mode == "source"
 	if render_holder:
-		render_holder.visible = mode != "source"
+		render_holder.visible = not is_source_mode
 	if source_holder:
-		source_holder.visible = mode == "source"
+		source_holder.visible = is_source_mode
 	var mode_button := record.get("mode_button", null) as Button
 	if mode_button:
-		mode_button.text = "Mode: %s" % ("Source" if mode == "source" else "Render")
+		mode_button.text = "Mode: %s" % ("Source" if is_source_mode else "Render")
+		mode_button.tooltip_text = "Switch %s blocks to %s mode." % [String(record.get("kind", "renderable block")).to_lower(), ("render" if is_source_mode else "source")]
+	var mode_badge := record.get("mode_badge", null) as Label
+	if mode_badge:
+		mode_badge.text = "SOURCE" if is_source_mode else "RENDER"
+		mode_badge.add_theme_color_override("font_color", Color(1.0, 0.96, 0.9, 1.0) if is_source_mode else Color(0.9, 0.95, 1.0, 1.0))
+	var mode_badge_style := record.get("mode_badge_style", null) as StyleBoxFlat
+	if mode_badge_style:
+		if is_source_mode:
+			mode_badge_style.bg_color = Color(0.28, 0.18, 0.08, 0.98)
+			mode_badge_style.border_color = Color(0.96, 0.72, 0.26, 1.0)
+		else:
+			mode_badge_style.bg_color = Color(0.12, 0.18, 0.28, 0.98)
+			mode_badge_style.border_color = Color(0.4, 0.65, 0.96, 1.0)
 	var copy_button := record.get("copy_button", null) as Button
 	if copy_button:
 		var texture := record.get("texture", null) as Texture2D
-		var use_image_copy := mode != "source" and texture != null
+		var use_image_copy := not is_source_mode and texture != null
 		copy_button.text = "Copy PNG" if use_image_copy else "Copy Code"
 		copy_button.tooltip_text = "Copy the rendered image." if use_image_copy else "Copy the source text."
-
 
 func _copy_reader_renderable_block(record: Dictionary) -> void:
 	var kind := String(record.get("kind", "Block"))
@@ -1739,20 +1919,16 @@ func _copy_reader_renderable_block(record: Dictionary) -> void:
 	var texture := record.get("texture", null) as Texture2D
 	if mode == "source" or texture == null or _reader_render_client == null:
 		DisplayServer.clipboard_set(source_text)
-		if _reader_status_label:
-			_reader_status_label.text = "%s source copied to the clipboard." % kind
+		_show_reader_toast("%s source copied to the clipboard." % kind, "success")
 		return
 
 	var result: Dictionary = await _reader_render_client.copy_texture_to_clipboard(texture)
 	if bool(result.get("ok", false)):
-		if _reader_status_label:
-			_reader_status_label.text = "%s image copied to the clipboard." % kind
+		_show_reader_toast("%s image copied to the clipboard." % kind, "success")
 		return
 
 	DisplayServer.clipboard_set(source_text)
-	if _reader_status_label:
-		_reader_status_label.text = "Image copy failed for %s. The source text was copied instead." % kind
-
+	_show_reader_toast("Image copy failed for %s. The source text was copied instead." % kind, "warning")
 
 func _build_reader_render_failure_block(title: String, source_text: String, error_message: String, use_math_fallback: bool) -> Control:
 	var wrapper := VBoxContainer.new()
@@ -1911,6 +2087,7 @@ func _build_reader_block(block: Dictionary, note_filepath: String) -> Control:
 				return _make_reader_notice_block("Image preview unavailable.\n\n%s" % image_source)
 			var image_panel := PanelContainer.new()
 			image_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+			image_panel.focus_mode = Control.FOCUS_NONE
 			image_panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 			var image_style := StyleBoxFlat.new()
 			image_style.bg_color = Color(0.08, 0.1, 0.14, 0.98)
@@ -1938,9 +2115,11 @@ func _build_reader_block(block: Dictionary, note_filepath: String) -> Control:
 			texture_rect.texture = texture
 			texture_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			var preview_size := _fit_size_within(Vector2(texture.get_width(), texture.get_height()), Vector2(760.0, 360.0))
+			var image_max_size: Vector2 = Vector2(760.0, 360.0)
+			var preview_size: Vector2 = _fit_size_within(Vector2(texture.get_width(), texture.get_height()), _resolve_reader_requested_media_limit(image_max_size), false)
 			texture_rect.custom_minimum_size = preview_size
 			texture_rect.set_meta("reader_base_size", preview_size)
+			texture_rect.set_meta("reader_max_size", image_max_size)
 			texture_rect.set_meta("reader_media_scalable", true)
 			texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			image_box.add_child(texture_rect)
@@ -1953,7 +2132,7 @@ func _build_reader_block(block: Dictionary, note_filepath: String) -> Control:
 				caption.set_meta("reader_base_font_size", 13)
 				image_box.add_child(caption)
 			image_panel.gui_input.connect(func(event: InputEvent):
-				if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+				if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
 					open_image_viewer(texture, alt_text if not alt_text.is_empty() else image_source)
 					image_panel.accept_event()
 			)
@@ -2167,7 +2346,8 @@ func _append_reader_inline_segments_async(label: RichTextLabel, segments: Array,
 			var display_mode := bool(segment.get("display_mode", false))
 			if display_mode:
 				label.add_text("\n")
-			var result: Dictionary = await _reader_render_client.render_math_texture(segment_text, display_mode, READER_DISPLAY_MATH_RENDER_SCALE if display_mode else READER_INLINE_MATH_RENDER_SCALE)
+			var render_max_size: Vector2 = _get_reader_math_display_max_size() if display_mode else Vector2.ZERO
+			var result: Dictionary = await _reader_render_client.render_math_texture(segment_text, display_mode, READER_DISPLAY_MATH_RENDER_SCALE if display_mode else READER_INLINE_MATH_RENDER_SCALE, render_max_size)
 			if render_revision != _reader_render_revision:
 				return false
 			if bool(result.get("ok", false)):
@@ -2245,8 +2425,10 @@ func _calculate_reader_inline_math_size(texture: Texture2D, base_font_size: int,
 	if raw_size.x <= 0.0 or raw_size.y <= 0.0:
 		var fallback_size := maxf(16.0, float(base_font_size) * 0.95)
 		return Vector2(fallback_size, fallback_size)
-	var max_height: float = maxf(18.0, float(base_font_size) * (READER_DISPLAY_INLINE_MATH_MAX_HEIGHT_MULTIPLIER if display_mode else READER_INLINE_MATH_MAX_HEIGHT_MULTIPLIER))
-	var max_width: float = READER_DISPLAY_INLINE_MATH_MAX_WIDTH if display_mode else maxf(96.0, float(base_font_size) * READER_INLINE_MATH_MAX_WIDTH_MULTIPLIER)
+	if display_mode:
+		return _fit_size_within(raw_size, _get_reader_math_display_max_size(), false)
+	var max_height: float = maxf(18.0, float(base_font_size) * READER_INLINE_MATH_MAX_HEIGHT_MULTIPLIER)
+	var max_width: float = maxf(96.0, float(base_font_size) * READER_INLINE_MATH_MAX_WIDTH_MULTIPLIER)
 	var width_scale: float = max_width / raw_size.x
 	var height_scale: float = max_height / raw_size.y
 	var scale_factor: float = minf(1.0, minf(width_scale, height_scale))
@@ -2967,7 +3149,7 @@ func _load_reader_texture(resolved_path: String) -> Texture2D:
 	if resolved_path.is_empty():
 		return null
 	if ResourceLoader.exists(resolved_path):
-		var resource = ResourceLoader.load(resolved_path)
+		var resource: Resource = ResourceLoader.load(resolved_path)
 		if resource is Texture2D:
 			return resource as Texture2D
 
@@ -2977,10 +3159,71 @@ func _load_reader_texture(resolved_path: String) -> Texture2D:
 	return ImageTexture.create_from_image(image)
 
 
-func _fit_size_within(content_size: Vector2, max_size: Vector2) -> Vector2:
+func _get_reader_media_page_limit() -> Vector2:
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var available_width: float = 0.0
+	if _reader_scroll:
+		available_width = _reader_scroll.size.x
+	if available_width <= 0.0 and _reader_panel:
+		available_width = _reader_panel.size.x - 88.0
+	if available_width <= 0.0:
+		available_width = viewport_size.x * 0.68
+
+	var available_height: float = 0.0
+	if _reader_scroll:
+		available_height = _reader_scroll.size.y
+	if available_height <= 0.0 and _reader_panel:
+		available_height = _reader_panel.size.y - 180.0
+	if available_height <= 0.0:
+		available_height = viewport_size.y * 0.58
+
+	return Vector2(
+		clampf(available_width - READER_MEDIA_PAGE_MARGIN, READER_MEDIA_PAGE_MIN_WIDTH, READER_MEDIA_PAGE_MAX_WIDTH),
+		clampf(available_height - 32.0, READER_MEDIA_PAGE_MIN_HEIGHT, READER_MEDIA_PAGE_MAX_HEIGHT)
+	)
+
+
+func _resolve_reader_requested_media_limit(requested_size: Vector2) -> Vector2:
+	var page_limit: Vector2 = _get_reader_media_page_limit()
+	var resolved_limit: Vector2 = page_limit
+	if requested_size.x > 0.0:
+		resolved_limit.x = minf(resolved_limit.x, requested_size.x)
+	if requested_size.y > 0.0:
+		resolved_limit.y = minf(resolved_limit.y, requested_size.y)
+	return resolved_limit
+
+
+func _resolve_reader_control_media_limit(control: Control) -> Vector2:
+	var requested_size: Vector2 = Vector2.ZERO
+	if control.has_meta("reader_max_size"):
+		var requested_variant: Variant = control.get_meta("reader_max_size")
+		if requested_variant is Vector2:
+			requested_size = requested_variant as Vector2
+	return _resolve_reader_requested_media_limit(requested_size)
+
+
+func _get_reader_math_display_max_size() -> Vector2:
+	var page_limit: Vector2 = _get_reader_media_page_limit()
+	return Vector2(
+		minf(page_limit.x, READER_DISPLAY_MATH_PREVIEW_MAX_SIZE.x),
+		clampf(page_limit.y * 0.42, 96.0, READER_DISPLAY_MATH_PREVIEW_MAX_SIZE.y)
+	)
+
+
+func _get_reader_mermaid_display_max_size() -> Vector2:
+	var page_limit: Vector2 = _get_reader_media_page_limit()
+	return Vector2(
+		minf(page_limit.x, READER_DISPLAY_MERMAID_PREVIEW_MAX_SIZE.x),
+		minf(page_limit.y, READER_DISPLAY_MERMAID_PREVIEW_MAX_SIZE.y)
+	)
+
+
+func _fit_size_within(content_size: Vector2, max_size: Vector2, allow_upscale: bool = false) -> Vector2:
 	if content_size.x <= 0.0 or content_size.y <= 0.0:
 		return Vector2(maxf(120.0, max_size.x), maxf(80.0, max_size.y))
 	var scale_factor: float = minf(max_size.x / content_size.x, max_size.y / content_size.y)
+	if not allow_upscale:
+		scale_factor = minf(scale_factor, 1.0)
 	if scale_factor <= 0.0:
 		scale_factor = 1.0
 	return content_size * scale_factor
@@ -3151,7 +3394,7 @@ func _apply_reader_image_transform() -> void:
 		return
 
 	var safe_bounds: Vector2 = Vector2(maxf(160.0, viewport_size.x - 80.0), maxf(120.0, viewport_size.y - 60.0))
-	_reader_image_base_size = _fit_size_within(Vector2(_reader_image_current_texture.get_width(), _reader_image_current_texture.get_height()), safe_bounds)
+	_reader_image_base_size = _fit_size_within(Vector2(_reader_image_current_texture.get_width(), _reader_image_current_texture.get_height()), safe_bounds, true)
 	var drawn_size := _reader_image_base_size * _reader_image_zoom
 	_reader_image_texture_rect.size = drawn_size
 	_reader_image_texture_rect.position = (viewport_size * 0.5) + _reader_image_pan - (drawn_size * 0.5)
@@ -3445,7 +3688,7 @@ func _on_exit_pressed() -> void:
 
 func _on_bg_lock_toggled(pressed: bool) -> void:
 	## Toggle background lock icon and emit signal
-	## åˆ‡æ¢èƒŒæ™¯é”å®šå›¾æ ‡å¹¶å‘å‡ºä¿¡å·
+	## 切换背景锁定图标并发出信号
 	if _bg_lock_button:
 		_bg_lock_button.text = "BGL" if pressed else "BG"
 		_bg_lock_button.tooltip_text = "Background locked" if pressed else "Lock Background (camera won't rotate sky)"
@@ -3467,7 +3710,7 @@ func _refresh_history_popup() -> void:
 
 	if _learning_position != "":
 		var learning_label: String = String(_completed_nodes.get(_learning_position, _learning_position))
-		var learn_idx := _history_list.add_item("â†© Return to learning: %s" % learning_label)
+		var learn_idx := _history_list.add_item("↩ Return to learning: %s" % learning_label)
 		_history_list.set_item_metadata(learn_idx, "__RETURN_TO_LEARNING__")
 
 	if _nav_history.is_empty():
@@ -3599,7 +3842,7 @@ func _on_return_about_to_popup() -> void:
 	popup.clear()
 	
 	## Add "Return to learning" as first option
-	popup.add_item("â†© Return to learning", 0)
+	popup.add_item("↩ Return to learning", 0)
 	popup.add_separator()
 	
 	## Add history items
@@ -3649,7 +3892,7 @@ func _refresh_completed_list() -> void:
 	completed_list.clear()
 	for node_id in _completed_nodes:
 		var label: String = _completed_nodes[node_id]
-		var display := "â˜… %s" % label if not _edit_mode else "âœ• %s" % label
+		var display := "★ %s" % label if not _edit_mode else "✕ %s" % label
 		var idx := completed_list.add_item(display)
 		completed_list.set_item_metadata(idx, node_id)
 
@@ -3775,9 +4018,30 @@ func set_available_targets(nodes: Array, current_id: String) -> void:
 	_populate_target_list(_target_filter_input.text if _target_filter_input else "")
 
 
+func clear_runtime_status() -> void:
+	if progress_label:
+		progress_label.add_theme_color_override("font_color", Color(0.9, 0.95, 1.0, 1.0))
+
+
+func set_runtime_status(message: String, tone: String = "info") -> void:
+	if not progress_label:
+		return
+	progress_label.text = message
+	match tone:
+		"error":
+			progress_label.add_theme_color_override("font_color", Color(1.0, 0.68, 0.68, 1.0))
+		"warning":
+			progress_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.62, 1.0))
+		"success":
+			progress_label.add_theme_color_override("font_color", Color(0.72, 0.96, 0.82, 1.0))
+		_:
+			progress_label.add_theme_color_override("font_color", Color(0.82, 0.92, 1.0, 1.0))
+
+
 ## Update the progress display
 func update_progress(completed: int, total: int) -> void:
 	if progress_label:
+		clear_runtime_status()
 		progress_label.text = "Progress: %d of %d" % [completed, total]
 
 
@@ -3795,7 +4059,7 @@ func add_completed_node(node_id: String, label: String) -> void:
 	_completed_nodes[node_id] = label
 	
 	if completed_list:
-		var display := "â˜… %s" % label if not _edit_mode else "âœ• %s" % label
+		var display := "★ %s" % label if not _edit_mode else "✕ %s" % label
 		var idx := completed_list.add_item(display)
 		completed_list.set_item_metadata(idx, node_id)
 	
@@ -3839,6 +4103,15 @@ func get_auto_reconstruct_setting() -> bool:
 	if _settings_panel:
 		return _settings_panel.get_setting("auto_reconstruct", true)
 	return true
+
+
+
+
+
+
+
+
+
 
 
 

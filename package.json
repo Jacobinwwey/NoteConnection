@@ -10,12 +10,12 @@
     "start": "node --max-old-space-size=12288 -r ts-node/register src/server.ts",
     "start:prod": "node dist/src/server.js",
     "tauri": "tauri",
-    "tauri:dev": "npm run build && npm run build:sidecar && npx kill-port 3000 && npx tauri dev",
-    "tauri:dev:mini": "npm run build:mini && npm run build:sidecar && npx kill-port 3000 && npx tauri dev",
+    "tauri:dev": "npm run build && npm run build:sidecar && npm run cleanup:tauri:sidecars && npx kill-port 3000 && npx tauri dev",
+    "tauri:dev:mini": "npm run build:mini && npm run build:sidecar && npm run cleanup:tauri:sidecars && npx kill-port 3000 && npx tauri dev",
     "tauri:dev:gpu": "set NOTE_CONNECTION_GPU=1&& npm run tauri:dev",
     "tauri:dev:mini:gpu": "set NOTE_CONNECTION_GPU=1&& npm run tauri:dev:mini",
-    "tauri:build": "npm run build && npm run build:sidecar && npx tauri build",
-    "tauri:build:mini": "npm run build:mini && npm run build:sidecar && npx tauri build",
+    "tauri:build": "npm run build && npm run build:sidecar && npm run cleanup:tauri:sidecars && npx tauri build",
+    "tauri:build:mini": "npm run build:mini && npm run build:sidecar && npm run cleanup:tauri:sidecars && npx tauri build",
     "verify:android:env": "node scripts/verify-tauri-android-prereqs.js",
     "verify:capacitor:device": "node scripts/verify-capacitor-device-acceptance.js",
     "tauri:android:patch:pathmode": "node scripts/apply-tauri-android-pathmode.js",
@@ -38,10 +38,11 @@
     "smoke:android:pathmode": "node scripts/smoke-android-pathmode.js",
     "test:mobile:contracts": "jest src/mobile.pipeline.test.ts src/runtime.capabilities.test.ts src/source_manager.loadflow.test.ts src/capacitor.runtime.contract.test.ts src/android.pathmode.contract.test.ts src/android.pathmode.smoke.contract.test.ts --runInBand",
     "test:migration": "jest src/core/Graph.test.ts src/core/PathEngine.test.ts src/core/TreeLayout.test.ts src/backend/algorithms/CycleDetection.test.ts src/utils/RuntimePaths.test.ts src/server.migration.test.ts src/mobile.pipeline.test.ts src/runtime.capabilities.test.ts src/source_manager.loadflow.test.ts src/capacitor.runtime.contract.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts src/android.pathmode.contract.test.ts src/android.pathmode.smoke.contract.test.ts src/pathbridge.handshake.contract.test.ts --runInBand",
-    "test:tauri": "node scripts/ensure-tauri-frontend-dist.js && cargo test --manifest-path src-tauri/Cargo.toml",
+    "test:tauri": "node scripts/cleanup-tauri-sidecars.js && node scripts/ensure-tauri-frontend-dist.js && cargo test --manifest-path src-tauri/Cargo.toml",
     "test:gates": "npm run test:migration && npm run test:tauri && npm run verify:android:env",
     "prepublishOnly": "npm run build",
-    "test": "jest"
+    "test": "jest",
+    "cleanup:tauri:sidecars": "node scripts/cleanup-tauri-sidecars.js"
   },
   "pkg": {
     "scripts": [
@@ -97,6 +98,7 @@
     "@capacitor/android": "^8.0.0",
     "@capacitor/cli": "^8.0.0",
     "@capacitor/core": "^8.0.0",
+    "@resvg/resvg-wasm": "^2.6.2",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-opener": "^2.5.3",
     "@types/d3-force": "^3.0.10",

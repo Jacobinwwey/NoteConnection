@@ -7,13 +7,23 @@ import { buildGraph } from './index';
 import { CrashLogger } from './backend/utils/CrashLogger';
 import { PathBridge } from './core/PathBridge';
 import { resolveRuntimePaths } from './utils/RuntimePaths';
-import { renderMathSvg, renderMermaidSvg } from './reader_renderer';
+import { renderMathPng, renderMermaidPng } from './reader_renderer';
 import { copyPngToClipboard } from './native_clipboard';
 
 // Initialize Global Crash Handlers
 CrashLogger.initGlobalHandlers();
 
+const LOOPBACK_HOST = '127.0.0.1';
 const PORT = Number(process.env.NOTE_CONNECTION_PORT || process.env.PORT || 3000);
+const PATH_BRIDGE_PORT = Number(process.env.NOTE_CONNECTION_BRIDGE_PORT || 9876);
+const AUTH_TOKEN = String(process.env.NOTE_CONNECTION_AUTH_TOKEN || '').trim();
+let pathBridge: PathBridge | null = null;
+const REQUEST_BODY_LIMIT_BYTES = 512 * 1024;
+const CLIPBOARD_BODY_LIMIT_BYTES = 8 * 1024 * 1024;
+const ALLOWED_ORIGIN_PATTERNS = parseAllowedOrigins(
+    process.env.NOTE_CONNECTION_ALLOWED_ORIGINS ||
+    'tauri://localhost,http://tauri.localhost,http://localhost,http://127.0.0.1,capacitor://localhost'
+);
 const runtimePaths = resolveRuntimePaths(__dirname);
 const FRONTEND_DIR = runtimePaths.frontendDir;
 const RUNTIME_DATA_DIR = runtimePaths.runtimeDataDir;
@@ -22,6 +32,103 @@ let activeBuildKey: string | null = null;
 let activeBuildPromise: Promise<void> | null = null;
 let lastRestoreKey: string | null = null;
 let lastRestoreTs = 0;
+
+function parseAllowedOrigins(rawValue: string): string[] {
+    return rawValue
+        .split(',')
+        .map((part) => part.trim())
+        .filter((part) => part.length > 0);
+}
+
+function matchesAllowedOrigin(origin: URL, pattern: string): boolean {
+    try {
+        const allowed = new URL(pattern);
+        if (allowed.protocol !== origin.protocol || allowed.hostname !== origin.hostname) {
+            return false;
+        }
+        if (allowed.port && allowed.port !== origin.port) {
+            return false;
+        }
+        return true;
+    } catch (_error) {
+        return false;
+    }
+}
+
+function isAllowedOrigin(originHeader: string | undefined): boolean {
+    if (!originHeader || !originHeader.trim()) {
+        return true;
+    }
+
+    try {
+        const origin = new URL(originHeader);
+        return ALLOWED_ORIGIN_PATTERNS.some((pattern) => matchesAllowedOrigin(origin, pattern));
+    } catch (_error) {
+        return false;
+    }
+}
+
+function applyCorsHeaders(req: http.IncomingMessage, res: http.ServerResponse): boolean {
+    const originHeader = typeof req.headers.origin === 'string' ? req.headers.origin.trim() : '';
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-NoteConnection-Token');
+    res.setHeader('Access-Control-Max-Age', '86400');
+
+    if (!originHeader) {
+        return true;
+    }
+
+    if (!isAllowedOrigin(originHeader)) {
+        return false;
+    }
+
+    res.setHeader('Access-Control-Allow-Origin', originHeader);
+    return true;
+}
+
+function getRequestPathname(req: http.IncomingMessage): string {
+    try {
+        const parsed = new URL(req.url || '/', `http://${LOOPBACK_HOST}:${PORT}`);
+        return parsed.pathname || '/';
+    } catch (_error) {
+        return '/';
+    }
+}
+
+function extractRequestToken(req: http.IncomingMessage): string {
+    const headerToken = typeof req.headers['x-noteconnection-token'] === 'string'
+        ? req.headers['x-noteconnection-token'].trim()
+        : '';
+    if (headerToken) {
+        return headerToken;
+    }
+
+    const authHeader = typeof req.headers.authorization === 'string' ? req.headers.authorization.trim() : '';
+    if (authHeader.toLowerCase().startsWith('bearer ')) {
+        return authHeader.slice(7).trim();
+    }
+
+    return '';
+}
+
+function isProtectedRequest(req: http.IncomingMessage): boolean {
+    const pathname = getRequestPathname(req);
+    if (pathname.startsWith('/api/')) {
+        return true;
+    }
+
+    const filename = path.basename(pathname);
+    return isGeneratedGraphAsset(filename);
+}
+
+function isAuthorizedRequest(req: http.IncomingMessage): boolean {
+    if (!AUTH_TOKEN || !isProtectedRequest(req)) {
+        return true;
+    }
+
+    return extractRequestToken(req) === AUTH_TOKEN;
+}
 
 function isGeneratedGraphAsset(filename: string): boolean {
     return (
@@ -59,20 +166,26 @@ function generatedAssetWritePath(filename: string): string {
     return path.join(RUNTIME_DATA_DIR, filename);
 }
 
-async function readJsonBody(req: http.IncomingMessage, maxBytes = 512 * 1024): Promise<any> {
+async function readJsonBody(req: http.IncomingMessage, maxBytes = REQUEST_BODY_LIMIT_BYTES): Promise<any> {
     return new Promise((resolve, reject) => {
+        const declaredLength = Number(req.headers['content-length'] || 0);
+        if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+            reject(new Error('Request body is too large.'));
+            req.destroy();
+            return;
+        }
+
         let body = '';
         let size = 0;
 
-        req.on('data', chunk => {
-            const chunkString = chunk.toString();
-            size += Buffer.byteLength(chunkString);
+        req.on('data', (chunk: Buffer) => {
+            size += chunk.length;
             if (size > maxBytes) {
                 reject(new Error('Request body is too large.'));
                 req.destroy();
                 return;
             }
-            body += chunkString;
+            body += chunk.toString('utf8');
         });
 
         req.on('end', () => {
@@ -89,6 +202,22 @@ async function readJsonBody(req: http.IncomingMessage, maxBytes = 512 * 1024): P
 
         req.on('error', reject);
     });
+}
+
+function parseOptionalPositiveDimension(value: unknown): number | undefined {
+    const numericValue = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numericValue) || numericValue <= 0) {
+        return undefined;
+    }
+    return Math.floor(numericValue);
+}
+
+function parseOptionalPositiveScale(value: unknown): number | undefined {
+    const numericValue = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numericValue) || numericValue <= 0) {
+        return undefined;
+    }
+    return Math.min(4, numericValue);
 }
 
 function parseCachedTargetFromFileName(filename: string): string | null {
@@ -369,17 +498,24 @@ export const startServer = async (options: { port?: number, targetPath?: string 
     }
 
     const server = http.createServer(async (req, res) => {
-        // CORS headers
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-        
+        if (!applyCorsHeaders(req, res)) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Origin is not allowed.' }));
+            return;
+        }
+
         if (req.method === 'OPTIONS') {
             res.writeHead(204);
             res.end();
             return;
         }
-    
+
+        if (!isAuthorizedRequest(req)) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Unauthorized sidecar request.' }));
+            return;
+        }
+
         if (req.method === 'GET') {
             if (req.url === '/api/folders') {
                 try {
@@ -688,6 +824,9 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     const payload = await readJsonBody(req);
                     const source = typeof payload.source === 'string' ? payload.source : '';
                     const displayMode = payload.displayMode !== false;
+                    const maxWidth = parseOptionalPositiveDimension(payload.maxWidth);
+                    const maxHeight = parseOptionalPositiveDimension(payload.maxHeight);
+                    const renderScale = parseOptionalPositiveScale(payload.renderScale);
 
                     if (!source.trim()) {
                         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -695,9 +834,9 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         return;
                     }
 
-                    const svg = await renderMathSvg(source, { displayMode });
+                    const rendered = await renderMathPng(source, { displayMode, maxWidth, maxHeight, renderScale });
                     res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ svg }));
+                    res.end(JSON.stringify(rendered));
                 } catch (error) {
                     console.error(error);
                     CrashLogger.log(error, 'API:POST /api/render/math');
@@ -709,6 +848,9 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 try {
                     const payload = await readJsonBody(req);
                     const source = typeof payload.source === 'string' ? payload.source : '';
+                    const maxWidth = parseOptionalPositiveDimension(payload.maxWidth);
+                    const maxHeight = parseOptionalPositiveDimension(payload.maxHeight);
+                    const renderScale = parseOptionalPositiveScale(payload.renderScale);
 
                     if (!source.trim()) {
                         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -716,9 +858,11 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         return;
                     }
 
-                    const svg = await renderMermaidSvg(source, { theme: 'dark' });
+                    const rendered = pathBridge
+                        ? await pathBridge.requestFrontendMermaidRender({ source, theme: 'dark', maxWidth, maxHeight, renderScale })
+                        : await renderMermaidPng(source, { theme: 'dark', maxWidth, maxHeight, renderScale });
                     res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ svg }));
+                    res.end(JSON.stringify(rendered));
                 } catch (error) {
                     console.error(error);
                     CrashLogger.log(error, 'API:POST /api/render/mermaid');
@@ -728,7 +872,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 return;
             } else if (req.url === '/api/clipboard/image') {
                 try {
-                    const payload = await readJsonBody(req, 12 * 1024 * 1024);
+                    const payload = await readJsonBody(req, CLIPBOARD_BODY_LIMIT_BYTES);
                     const pngBase64 = typeof payload.pngBase64 === 'string' ? payload.pngBase64.trim() : '';
                     if (!pngBase64) {
                         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -743,7 +887,11 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         return;
                     }
 
-                    await copyPngToClipboard(pngBuffer);
+                    try {
+                        await copyPngToClipboard(pngBuffer);
+                    } finally {
+                        pngBuffer.fill(0);
+                    }
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ ok: true }));
                 } catch (error) {
@@ -853,18 +1001,21 @@ export const startServer = async (options: { port?: number, targetPath?: string 
     });
     
     return new Promise<http.Server>((resolve) => {
-        server.listen(finalPort, async () => {
+        server.listen(finalPort, LOOPBACK_HOST, async () => {
             ensureRuntimeDataDir();
-            console.log(`Server running at http://localhost:${finalPort}/`);
+            console.log(`Server running at http://${LOOPBACK_HOST}:${finalPort}/`);
             console.log(`Knowledge Base Root: ${KB_ROOT}`);
             console.log(`Frontend Root: ${FRONTEND_DIR}`);
             console.log(`Runtime Data Root: ${RUNTIME_DATA_DIR}`);
 
             // Initialize PathBridge
             try {
-                const pathBridgePort = Number(process.env.NOTE_CONNECTION_BRIDGE_PORT || 9876);
-                new PathBridge(pathBridgePort);
-                console.log(`[Sidecar] PathBridge initialized on port ${pathBridgePort}`);
+                pathBridge = new PathBridge({
+                    port: PATH_BRIDGE_PORT,
+                    host: LOOPBACK_HOST,
+                    authToken: AUTH_TOKEN,
+                });
+                console.log(`[Sidecar] PathBridge initialized on ws://${LOOPBACK_HOST}:${PATH_BRIDGE_PORT}`);
             } catch (e) {
                 console.error(`[Sidecar] Failed to initialize PathBridge:`, e);
             }
@@ -881,3 +1032,4 @@ export const startServer = async (options: { port?: number, targetPath?: string 
 if (require.main === module) {
     startServer();
 }
+

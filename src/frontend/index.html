@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' ws: localhost:9876 http://localhost:3000; worker-src 'self' blob:;"
+      content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* tauri://localhost http://tauri.localhost https://tauri.localhost; worker-src 'self' blob:;"
     />
     <title>NoteConnection Knowledge Graph</title>
     <link
@@ -1250,6 +1250,7 @@
     <script src="tutorial.js"></script>
 
     <!-- Application Scripts -->
+    <script src="runtime_bridge.js"></script>
     <script src="settings.js"></script>
     <script src="reader.js"></script>
     <!-- app.js removed for dynamic loading after data.js -->
@@ -1402,3 +1403,4 @@
     <script src="path_app.js"></script>
   </body>
 </html>
+

@@ -1,5 +1,6 @@
 import { JSDOM } from 'jsdom';
 import { MERMAID_BROWSER_BUNDLE_BASE64 } from './generated/mermaid_runtime';
+import { RESVG_WASM_BASE64 } from './generated/resvg_runtime';
 const MATHJAX_PACKAGE_VERSION = '3.2.1';
 (globalThis as { PACKAGE_VERSION?: string }).PACKAGE_VERSION ??= MATHJAX_PACKAGE_VERSION;
 
@@ -9,18 +10,33 @@ const { SVG } = require('mathjax-full/js/output/svg.js');
 const { liteAdaptor } = require('mathjax-full/js/adaptors/liteAdaptor.js');
 const { HandlerList } = require('mathjax-full/js/core/HandlerList.js');
 const { HTMLHandler } = require('mathjax-full/js/handlers/html/HTMLHandler.js');
+const { initWasm, Resvg } = require('@resvg/resvg-wasm');
 
 const dynamicImport = new Function('specifier', 'return import(specifier);') as (specifier: string) => Promise<any>;
 const MATH_TEXT_COLOR = '#eef4ff';
 const MERMAID_BACKGROUND = 'transparent';
 const MERMAID_PADDING = 28;
 const MERMAID_FONT_FAMILY = 'Segoe UI, sans-serif';
+const MERMAID_FONT_WEIGHT = '500';
 const MERMAID_TEXT_COLOR = '#f0f0f0';
 const MERMAID_EDGE_COLOR = '#a0a0a0';
 const MERMAID_NODE_BACKGROUND = '#2d2d2d';
 const MERMAID_NODE_BORDER = '#61dafb';
 const MERMAID_SURFACE_BACKGROUND = '#1e1e1e';
 const MERMAID_SECONDARY_BACKGROUND = '#333333';
+const MERMAID_NODE_SPACING = 42;
+const MERMAID_RANK_SPACING = 58;
+const MERMAID_LABEL_PADDING = 18;
+const MERMAID_WRAPPING_WIDTH = 220;
+const MAX_GODOT_SVG_DIMENSION = 4096;
+const MAX_GODOT_RASTER_DIMENSION = 4096;
+const DEFAULT_MATH_MAX_WIDTH = 1040;
+const DEFAULT_MATH_MAX_HEIGHT = 260;
+const DEFAULT_MERMAID_MAX_WIDTH = 1180;
+const DEFAULT_MERMAID_MAX_HEIGHT = 860;
+const RESVG_DEFAULT_FONT_FAMILY = 'Segoe UI';
+const RESVG_DEFAULT_SERIF_FAMILY = 'Times New Roman';
+const RESVG_DEFAULT_MONOSPACE_FAMILY = 'Consolas';
 const MERMAID_DARK_THEME_VARIABLES = {
     darkMode: true,
     background: MERMAID_SURFACE_BACKGROUND,
@@ -33,6 +49,8 @@ const MERMAID_DARK_THEME_VARIABLES = {
     tertiaryColor: MERMAID_NODE_BACKGROUND,
     textColor: '#ffffff',
     fontSize: '16px',
+    fontFamily: MERMAID_FONT_FAMILY,
+    fontWeight: MERMAID_FONT_WEIGHT,
 
 };
 
@@ -50,12 +68,18 @@ type Transform = {
     sy: number;
 };
 
-type MathRenderOptions = {
+type SvgRenderBoundsOptions = {
+    maxWidth?: number;
+    maxHeight?: number;
+    renderScale?: number;
+};
+
+type MathRenderOptions = SvgRenderBoundsOptions & {
     displayMode?: boolean;
     textColor?: string;
 };
 
-type MermaidRenderOptions = {
+type MermaidRenderOptions = SvgRenderBoundsOptions & {
     theme?: 'dark' | 'default';
 };
 
@@ -78,6 +102,7 @@ let mermaidEnvironmentPromise: Promise<MermaidEnvironment> | null = null;
 let mermaidModulePromise: Promise<any> | null = null;
 let mermaidRenderQueue: Promise<unknown> = Promise.resolve();
 let mermaidRenderCounter = 0;
+let resvgInitPromise: Promise<void> | null = null;
 
 interface MermaidEnvironment {
     dom: JSDOM;
@@ -85,6 +110,15 @@ interface MermaidEnvironment {
     host: HTMLElement;
     mermaid: any;
 }
+
+export type RasterizedRender = {
+    svg: string;
+    pngBase64: string;
+    width: number;
+    height: number;
+};
+
+export type RasterizedMermaidRender = RasterizedRender;
 
 export async function renderMathSvg(source: string, options: MathRenderOptions = {}): Promise<string> {
     const trimmedSource = source.trim();
@@ -96,7 +130,7 @@ export async function renderMathSvg(source: string, options: MathRenderOptions =
     const textColor = (options.textColor || MATH_TEXT_COLOR).trim() || MATH_TEXT_COLOR;
     const convertedNode = mathDocument.convert(trimmedSource, { display: displayMode }) as any;
     const containerMarkup = adaptor.outerHTML(convertedNode);
-    const svgMarkup = extractSvgMarkup(containerMarkup);
+    const svgMarkup = sanitizeSvgMarkup(extractSvgMarkup(containerMarkup));
     const svgDom = new JSDOM(svgMarkup, { contentType: 'image/svg+xml' });
     const svg = svgDom.window.document.querySelector('svg');
     if (!svg) {
@@ -112,8 +146,12 @@ export async function renderMathSvg(source: string, options: MathRenderOptions =
     const viewBox = parseViewBox(svg.getAttribute('viewBox'));
     const widthPx = convertSvgLengthToPixels(svg.getAttribute('width'), viewBox.width);
     const heightPx = convertSvgLengthToPixels(svg.getAttribute('height'), viewBox.height);
-    svg.setAttribute('width', `${Math.max(1, Math.ceil(widthPx))}`);
-    svg.setAttribute('height', `${Math.max(1, Math.ceil(heightPx))}`);
+    const normalizedMathSize = clampSvgDimensions(widthPx, heightPx, {
+        maxWidth: options.maxWidth ?? DEFAULT_MATH_MAX_WIDTH,
+        maxHeight: options.maxHeight ?? DEFAULT_MATH_MAX_HEIGHT,
+    });
+    svg.setAttribute('width', `${normalizedMathSize.width}`);
+    svg.setAttribute('height', `${normalizedMathSize.height}`);
 
     const styleValue = svg.getAttribute('style') || '';
     const sanitizedStyle = styleValue
@@ -140,7 +178,8 @@ export async function renderMermaidSvg(source: string, options: MermaidRenderOpt
         host.innerHTML = '';
 
         const result = await environment.mermaid.render(renderId, trimmedSource, host);
-        const svgDom = new JSDOM(result.svg, { contentType: 'image/svg+xml' });
+        const svgMarkup = sanitizeSvgMarkup(result.svg);
+        const svgDom = new JSDOM(svgMarkup, { contentType: 'image/svg+xml' });
         const svg = svgDom.window.document.querySelector('svg');
         if (!svg) {
             throw new Error('Mermaid did not produce an SVG root element.');
@@ -159,19 +198,79 @@ export async function renderMermaidSvg(source: string, options: MermaidRenderOpt
         const minX = Math.floor(computedBounds.minX - MERMAID_PADDING);
         const minY = Math.floor(computedBounds.minY - MERMAID_PADDING);
         svg.setAttribute('viewBox', `${minX} ${minY} ${width} ${height}`);
-        svg.setAttribute('width', `${width}`);
-        svg.setAttribute('height', `${height}`);
-        svg.style.maxWidth = `${width}px`;
+        const normalizedMermaidSize = clampSvgDimensions(width, height, {
+            maxWidth: options.maxWidth ?? DEFAULT_MERMAID_MAX_WIDTH,
+            maxHeight: options.maxHeight ?? DEFAULT_MERMAID_MAX_HEIGHT,
+        });
+        svg.setAttribute('width', `${normalizedMermaidSize.width}`);
+        svg.setAttribute('height', `${normalizedMermaidSize.height}`);
+        svg.style.maxWidth = `${normalizedMermaidSize.width}px`;
         applyMermaidVisualStyles(svg);
 
         return svg.outerHTML;
     });
 }
 
+export async function renderMathPng(source: string, options: MathRenderOptions = {}): Promise<RasterizedRender> {
+    const svg = await renderMathSvg(source, options);
+    return rasterizeSvgToPng(svg, options.renderScale, 16);
+}
+
+export async function renderMermaidPng(source: string, options: MermaidRenderOptions = {}): Promise<RasterizedMermaidRender> {
+    const svg = await renderMermaidSvg(source, options);
+    return rasterizeSvgToPng(svg, options.renderScale, 16);
+}
+
 async function enqueueMermaidRender<T>(work: () => Promise<T>): Promise<T> {
     const nextWork = mermaidRenderQueue.then(work);
     mermaidRenderQueue = nextWork.then(() => undefined, () => undefined);
     return nextWork;
+}
+
+async function ensureResvgReady(): Promise<void> {
+    if (!resvgInitPromise) {
+        const wasmBinary = Buffer.from(RESVG_WASM_BASE64, 'base64');
+        resvgInitPromise = initWasm(wasmBinary);
+    }
+    return resvgInitPromise!;
+}
+
+async function rasterizeSvgToPng(svg: string, requestedRenderScale: number | undefined, defaultFontSize: number): Promise<RasterizedRender> {
+    await ensureResvgReady();
+
+    const safeRenderScale = resolveSafeRasterScale(svg, requestedRenderScale);
+    const fitTo = safeRenderScale > 1
+        ? { mode: 'zoom' as const, value: safeRenderScale }
+        : { mode: 'original' as const };
+
+    const resvg = new Resvg(svg, {
+        fitTo,
+        background: 'rgba(0, 0, 0, 0)',
+        languages: ['zh-CN', 'zh', 'en-US', 'en'],
+        textRendering: 2,
+        shapeRendering: 2,
+        font: {
+            loadSystemFonts: true,
+            defaultFontFamily: RESVG_DEFAULT_FONT_FAMILY,
+            sansSerifFamily: RESVG_DEFAULT_FONT_FAMILY,
+            serifFamily: RESVG_DEFAULT_SERIF_FAMILY,
+            monospaceFamily: RESVG_DEFAULT_MONOSPACE_FAMILY,
+            defaultFontSize,
+        },
+    });
+    const renderedImage = resvg.render();
+
+    try {
+        return {
+            svg,
+            pngBase64: Buffer.from(renderedImage.asPng()).toString('base64'),
+            width: renderedImage.width,
+            height: renderedImage.height,
+        };
+    } finally {
+        renderedImage.free();
+        resvg.free();
+    }
 }
 
 async function ensureMermaidEnvironment(theme: 'dark' | 'default'): Promise<MermaidEnvironment> {
@@ -253,14 +352,20 @@ function getMermaidConfig(theme: 'dark' | 'default') {
         startOnLoad: false,
         securityLevel: 'loose',
         theme,
+        fontFamily: MERMAID_FONT_FAMILY,
         // Keep Mermaid output in pure SVG text so Godot's SVG loader can render it reliably.
         htmlLabels: false,
+        markdownAutoWrap: true,
         maxTextSize: 200000,
         maxEdges: 5000,
 
         flowchart: {
             useMaxWidth: false,
             htmlLabels: false,
+            nodeSpacing: MERMAID_NODE_SPACING,
+            rankSpacing: MERMAID_RANK_SPACING,
+            padding: MERMAID_LABEL_PADDING,
+            wrappingWidth: MERMAID_WRAPPING_WIDTH,
         },
         themeVariables: theme === 'dark' ? MERMAID_DARK_THEME_VARIABLES : undefined,
     };
@@ -275,7 +380,8 @@ function applyMermaidVisualStyles(svg: SVGSVGElement): void {
         {
             fill: MERMAID_TEXT_COLOR,
             'font-family': MERMAID_FONT_FAMILY,
-            'font-weight': '600',
+            'font-weight': MERMAID_FONT_WEIGHT,
+            'text-rendering': 'geometricPrecision',
         },
     );
 
@@ -335,11 +441,12 @@ function installSvgMeasurementPolyfills(window: JSDOM["window"]): void {
 }
 
 function extractSvgMarkup(containerMarkup: string): string {
-    const svgMatch = containerMarkup.match(/<svg[\s\S]*?<\/svg>/i);
-    if (!svgMatch) {
+    const htmlDom = new JSDOM(`<!doctype html><html><body>${containerMarkup}</body></html>`);
+    const svg = htmlDom.window.document.querySelector('svg');
+    if (!svg) {
         throw new Error('Expected MathJax to return SVG markup.');
     }
-    return svgMatch[0];
+    return svg.outerHTML;
 }
 
 function convertSvgLengthToPixels(lengthValue: string | null, fallback: number): number {
@@ -384,6 +491,59 @@ function parseViewBox(viewBoxValue: string | null): { x: number; y: number; widt
     };
 }
 
+function resolveSafeRasterScale(svgMarkup: string, requestedRenderScale: number | undefined): number {
+    const numericScale = Number.isFinite(requestedRenderScale) ? Number(requestedRenderScale) : 1;
+    const desiredScale = Math.max(1, numericScale);
+    if (desiredScale <= 1) {
+        return 1;
+    }
+
+    const svgDom = new JSDOM(svgMarkup, { contentType: 'image/svg+xml' });
+    const svg = svgDom.window.document.querySelector('svg');
+    if (!svg) {
+        return 1;
+    }
+
+    const viewBox = parseViewBox(svg.getAttribute('viewBox'));
+    const width = convertSvgLengthToPixels(svg.getAttribute('width'), viewBox.width);
+    const height = convertSvgLengthToPixels(svg.getAttribute('height'), viewBox.height);
+    if (width <= 0 || height <= 0) {
+        return 1;
+    }
+
+    const safeScale = Math.min(
+        desiredScale,
+        MAX_GODOT_RASTER_DIMENSION / width,
+        MAX_GODOT_RASTER_DIMENSION / height,
+    );
+    return Math.max(1, safeScale);
+}
+
+function clampSvgDimensions(width: number, height: number, options: SvgRenderBoundsOptions = {}): { width: number; height: number } {
+    const safeWidth = Math.max(1, Math.ceil(width));
+    const safeHeight = Math.max(1, Math.ceil(height));
+    const requestedMaxWidth = Number.isFinite(options.maxWidth) ? Number(options.maxWidth) : MAX_GODOT_SVG_DIMENSION;
+    const requestedMaxHeight = Number.isFinite(options.maxHeight) ? Number(options.maxHeight) : MAX_GODOT_SVG_DIMENSION;
+    const maxWidth = Math.max(1, Math.min(MAX_GODOT_SVG_DIMENSION, Math.floor(requestedMaxWidth)));
+    const maxHeight = Math.max(1, Math.min(MAX_GODOT_SVG_DIMENSION, Math.floor(requestedMaxHeight)));
+    const scale = Math.min(1, maxWidth / safeWidth, maxHeight / safeHeight, MAX_GODOT_SVG_DIMENSION / safeWidth, MAX_GODOT_SVG_DIMENSION / safeHeight);
+
+    if (!Number.isFinite(scale) || scale >= 1) {
+        return { width: safeWidth, height: safeHeight };
+    }
+
+    return {
+        width: Math.max(1, Math.floor(safeWidth * scale)),
+        height: Math.max(1, Math.floor(safeHeight * scale)),
+    };
+}
+
+function sanitizeSvgMarkup(svgMarkup: string): string {
+    return svgMarkup
+        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+        .replace(/&(?!#\d+;|#x[\dA-Fa-f]+;|[A-Za-z][\w.-]*;)/g, '&amp;');
+}
+
 function computeSvgBounds(svg: Element): Bounds {
     const bounds = computeElementBounds(svg, { tx: 0, ty: 0, sx: 1, sy: 1 });
     if (!Number.isFinite(bounds.minX) || !Number.isFinite(bounds.minY) || !Number.isFinite(bounds.maxX) || !Number.isFinite(bounds.maxY)) {
@@ -404,6 +564,16 @@ function computeElementBounds(element: Element, parentTransform: Transform): Bou
         case 'g':
         case 'a':
             return unionBounds(Array.from(element.children).map(child => computeElementBounds(child, currentTransform)));
+        case 'style':
+        case 'defs':
+        case 'title':
+        case 'desc':
+        case 'metadata':
+        case 'script':
+        case 'clipPath':
+        case 'mask':
+        case 'pattern':
+            return emptyBounds();
         case 'rect':
         case 'image': {
             const x = currentTransform.tx + parseNumericAttribute(element, 'x') * currentTransform.sx;

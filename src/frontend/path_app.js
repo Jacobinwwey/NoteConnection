@@ -32,6 +32,7 @@ window.pathApp = {
         autoReconstruct: true,
         retainHistory: true
     },
+    bridgeMermaidRenderQueue: Promise.resolve(),
     
     // Animation State
     animationId: null,
@@ -70,7 +71,7 @@ window.pathApp = {
         }
     },
 
-    setupWebSocket: function() {
+    _connectBridgeSocket: function() {
         const hasActiveSocket = this.ws && (
             this.ws.readyState === WebSocket.OPEN ||
             this.ws.readyState === WebSocket.CONNECTING
@@ -84,7 +85,7 @@ window.pathApp = {
             console.log('[PathApp] Connected to Bridge');
             this.ws.send(JSON.stringify({
                 type: 'identify',
-                payload: { client: 'frontend' }
+                payload: this._getBridgeIdentifyPayload('frontend')
             }));
         };
         this.ws.onmessage = (e) => {
@@ -114,9 +115,10 @@ window.pathApp = {
                         }
 
                         if (fullNode) {
+                            // Merge payload overrides if present (e.g., content)
+                            fullNode = { ...fullNode, ...data };
                             window.reader.open(fullNode);
                         } else {
-                            // Fallback: try to open by ID
                             window.reader.open(nodeId);
                         }
                     }
@@ -135,10 +137,11 @@ window.pathApp = {
                 } else if (msg.type === 'collapseAll') { // New
                      console.log('[PathApp] Remote collapse ALL');
                      this.collapseAll();
+                } else if (msg.type === 'renderMermaidRequest') {
+                    this._handleBridgeMermaidRenderRequest(msg.payload || {});
                 } else if (msg.type === 'requestPath') {
-                     // always trigger fresh update to ensure treeLayout is computed via Worker
-                     console.log('[PathApp] Remote requested path data. Triggering fresh update.');
-                     this.triggerUpdate();
+                    console.log('[PathApp] requestPath received from Bridge');
+                    this._respondToBridgePathRequest('main');
                 } else if (msg.type === 'configure') {
                     console.log('[PathApp] Remote configure:', msg.payload);
                     this.applyRemoteConfigure(msg.payload || {});
@@ -218,19 +221,363 @@ window.pathApp = {
             console.log('[PathApp] Reusing existing Bridge socket');
             this.ws.send(JSON.stringify({
                 type: 'identify',
-                payload: { client: 'frontend' }
+                payload: this._getBridgeIdentifyPayload('frontend')
             }));
         }
     },
 
+    setupWebSocket: function() {
+        const bridge = (typeof window !== 'undefined') ? window.NoteConnectionRuntime : null;
+        const waitForRuntime = this._isTauriMode() && bridge && typeof bridge.whenReady === 'function';
+
+        if (!waitForRuntime) {
+            this._connectBridgeSocket();
+            return;
+        }
+
+        bridge.whenReady()
+            .catch((err) => {
+                console.warn('[PathApp] Runtime bridge readiness failed, using current WebSocket config.', err);
+            })
+            .finally(() => {
+                this._connectBridgeSocket();
+            });
+    },
+
     _getBridgeWsUrl: function() {
-        return 'ws://localhost:9876';
+        if (typeof window !== 'undefined' && window.NoteConnectionRuntime && typeof window.NoteConnectionRuntime.getBridgeWsUrl === 'function') {
+            return window.NoteConnectionRuntime.getBridgeWsUrl('frontend');
+        }
+        return 'ws://127.0.0.1:9876';
+    },
+
+    _getBridgeAuthToken: function() {
+        if (typeof window !== 'undefined' && window.NoteConnectionRuntime && typeof window.NoteConnectionRuntime.getAuthToken === 'function') {
+            return window.NoteConnectionRuntime.getAuthToken() || '';
+        }
+        return '';
+    },
+
+    _getBridgeIdentifyPayload: function(clientTag) {
+        const payload = { client: clientTag };
+        const authToken = this._getBridgeAuthToken();
+        if (authToken) {
+            payload.token = authToken;
+        }
+        return payload;
+    },
+
+    _sendBridgeMessage: function(type, payload) {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            console.warn('[PathApp] WebSocket not open, cannot send', type);
+            return false;
+        }
+        this.ws.send(JSON.stringify({ type, payload }));
+        return true;
+    },
+
+    _getBridgeMermaidConfig: function(theme = 'dark') {
+        return {
+            startOnLoad: false,
+            theme,
+            securityLevel: 'loose',
+            fontFamily: 'Segoe UI, sans-serif',
+            htmlLabels: false,
+            markdownAutoWrap: true,
+            maxTextSize: 200000,
+            maxEdges: 5000,
+            flowchart: {
+                useMaxWidth: false,
+                htmlLabels: false,
+                nodeSpacing: 42,
+                rankSpacing: 58,
+                padding: 18,
+                wrappingWidth: 220
+            },
+            themeVariables: theme === 'dark' ? {
+                darkMode: true,
+                background: '#1e1e1e',
+                mainBkg: '#1e1e1e',
+                primaryColor: '#2d2d2d',
+                primaryTextColor: '#ffffff',
+                primaryBorderColor: '#61dafb',
+                lineColor: '#a0a0a0',
+                secondaryColor: '#333333',
+                tertiaryColor: '#2d2d2d',
+                textColor: '#ffffff',
+                fontSize: '16px',
+                fontFamily: 'Segoe UI, sans-serif',
+                fontWeight: '500'
+            } : undefined
+        };
+    },
+
+    _applyBridgeSvgAttributes: function(nodes, attributes) {
+        Array.from(nodes || []).forEach((node) => {
+            Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+        });
+    },
+
+    _normalizeBridgeMermaidSvg: function(svgElement) {
+        if (!svgElement) {
+            return;
+        }
+        svgElement.style.background = 'transparent';
+        Array.from(svgElement.querySelectorAll('foreignObject')).forEach((node) => node.remove());
+        this._applyBridgeSvgAttributes(svgElement.querySelectorAll('text, tspan, .nodeLabel, .edgeLabel, .messageText, .loopText, .noteText'), {
+            fill: '#f0f0f0',
+            'font-family': 'Segoe UI, sans-serif',
+            'font-weight': '500',
+            'text-rendering': 'geometricPrecision'
+        });
+        this._applyBridgeSvgAttributes(svgElement.querySelectorAll('.node rect, .node circle, .node ellipse, .node polygon, .node path, .cluster rect, .cluster polygon'), {
+            fill: '#2d2d2d',
+            stroke: '#61dafb'
+        });
+        this._applyBridgeSvgAttributes(svgElement.querySelectorAll('.labelBkg, .edgeLabel rect, .edgeLabel polygon, .cluster-label rect, .cluster-label polygon, .note rect'), {
+            fill: '#1e1e1e',
+            stroke: '#1e1e1e'
+        });
+        this._applyBridgeSvgAttributes(svgElement.querySelectorAll('.edgePaths path, .flowchart-link, .relationshipLine, .messageLine0, .messageLine1, marker path, .marker'), {
+            stroke: '#a0a0a0',
+            fill: '#a0a0a0'
+        });
+    },
+
+    _clampBridgeMermaidSize: function(width, height, maxWidth, maxHeight) {
+        const safeWidth = Math.max(1, Math.ceil(Number(width) || 1));
+        const safeHeight = Math.max(1, Math.ceil(Number(height) || 1));
+        const requestedMaxWidth = Number.isFinite(Number(maxWidth)) && Number(maxWidth) > 0 ? Math.floor(Number(maxWidth)) : safeWidth;
+        const requestedMaxHeight = Number.isFinite(Number(maxHeight)) && Number(maxHeight) > 0 ? Math.floor(Number(maxHeight)) : safeHeight;
+        const scale = Math.min(1, requestedMaxWidth / safeWidth, requestedMaxHeight / safeHeight);
+        if (!Number.isFinite(scale) || scale >= 1) {
+            return { width: safeWidth, height: safeHeight };
+        }
+        return {
+            width: Math.max(1, Math.floor(safeWidth * scale)),
+            height: Math.max(1, Math.floor(safeHeight * scale))
+        };
+    },
+
+    _extractBridgeMermaidSvgSize: function(svgElement) {
+        const viewBox = String(svgElement.getAttribute('viewBox') || '').trim().split(/\s+/).map((value) => Number.parseFloat(value)).filter((value) => Number.isFinite(value));
+        const widthAttr = Number.parseFloat(String(svgElement.getAttribute('width') || ''));
+        const heightAttr = Number.parseFloat(String(svgElement.getAttribute('height') || ''));
+        return {
+            width: Number.isFinite(widthAttr) && widthAttr > 0 ? widthAttr : (viewBox.length === 4 ? viewBox[2] : 1),
+            height: Number.isFinite(heightAttr) && heightAttr > 0 ? heightAttr : (viewBox.length === 4 ? viewBox[3] : 1)
+        };
+    },
+
+    _renderMermaidForBridge: async function(payload) {
+        if (!window.mermaid) {
+            throw new Error('Mermaid runtime is unavailable in the frontend renderer.');
+        }
+
+        const requestId = String(payload?.requestId || '').trim();
+        const source = String(payload?.source || '').trim();
+        if (!requestId || !source) {
+            throw new Error('Mermaid render request is missing a request id or source.');
+        }
+
+        const theme = String(payload?.theme || 'dark') === 'default' ? 'default' : 'dark';
+        window.mermaid.initialize(this._getBridgeMermaidConfig(theme));
+
+        const requestedWidth = Number.isFinite(Number(payload?.maxWidth)) && Number(payload.maxWidth) > 0 ? Math.floor(Number(payload.maxWidth)) : 1600;
+        const hostWidth = Math.max(480, requestedWidth);
+        const host = document.createElement('div');
+        host.style.position = 'fixed';
+        host.style.left = '-20000px';
+        host.style.top = '0';
+        host.style.width = String(hostWidth) + 'px';
+        host.style.minWidth = String(hostWidth) + 'px';
+        host.style.height = 'auto';
+        host.style.overflow = 'visible';
+        host.style.visibility = 'hidden';
+        host.style.pointerEvents = 'none';
+        host.style.background = 'transparent';
+        host.style.fontFamily = 'Segoe UI, sans-serif';
+        document.body.appendChild(host);
+
+        let objectUrl = null;
+        try {
+            const renderId = 'bridge-mermaid-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+            const result = await window.mermaid.render(renderId, source, host);
+            const parser = new DOMParser();
+            const documentSvg = parser.parseFromString(result.svg, 'image/svg+xml');
+            const svgElement = documentSvg.querySelector('svg');
+            if (!svgElement) {
+                throw new Error('Frontend Mermaid renderer did not produce an SVG root.');
+            }
+
+            svgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            svgElement.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+            this._normalizeBridgeMermaidSvg(svgElement);
+            const naturalSize = this._extractBridgeMermaidSvgSize(svgElement);
+            const clampedSize = this._clampBridgeMermaidSize(naturalSize.width, naturalSize.height, payload?.maxWidth, payload?.maxHeight);
+            const requestedRenderScale = Number.isFinite(Number(payload?.renderScale)) && Number(payload.renderScale) > 0 ? Number(payload.renderScale) : 1;
+            const rasterScale = Math.min(4, Math.max(1, requestedRenderScale));
+            const rasterWidth = Math.max(1, Math.round(clampedSize.width * rasterScale));
+            const rasterHeight = Math.max(1, Math.round(clampedSize.height * rasterScale));
+            svgElement.setAttribute('width', String(rasterWidth));
+            svgElement.setAttribute('height', String(rasterHeight));
+            svgElement.style.maxWidth = String(rasterWidth) + 'px';
+            svgElement.style.background = 'transparent';
+
+            const serializedSvg = new XMLSerializer().serializeToString(svgElement);
+            const blob = new Blob([serializedSvg], { type: 'image/svg+xml;charset=utf-8' });
+            objectUrl = URL.createObjectURL(blob);
+
+            const image = await new Promise((resolve, reject) => {
+                const nextImage = new Image();
+                nextImage.onload = () => resolve(nextImage);
+                nextImage.onerror = () => reject(new Error('Browser rasterization failed to load the Mermaid SVG.'));
+                nextImage.src = objectUrl;
+            });
+
+            const canvas = document.createElement('canvas');
+            canvas.width = rasterWidth;
+            canvas.height = rasterHeight;
+            const context = canvas.getContext('2d', { alpha: true });
+            if (!context) {
+                throw new Error('Unable to create a browser canvas for Mermaid rasterization.');
+            }
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+            return {
+                requestId,
+                ok: true,
+                svg: serializedSvg,
+                pngBase64: canvas.toDataURL('image/png').split(',')[1],
+                width: canvas.width,
+                height: canvas.height
+            };
+        } finally {
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+            }
+            host.remove();
+        }
+    },
+
+    _handleBridgeMermaidRenderRequest: function(payload) {
+        const requestId = String(payload?.requestId || '').trim();
+        if (!requestId) {
+            return;
+        }
+
+        const work = async () => {
+            try {
+                console.log('[PathApp] Mermaid bridge render request:', requestId);
+                const rendered = await this._renderMermaidForBridge(payload || {});
+                this._sendBridgeMessage('renderMermaidResult', rendered);
+            } catch (error) {
+                console.error('[PathApp] Mermaid bridge render failed:', error);
+                this._sendBridgeMessage('renderMermaidResult', {
+                    requestId,
+                    ok: false,
+                    error: error && error.message ? error.message : String(error)
+                });
+            }
+        };
+
+        this.bridgeMermaidRenderQueue = Promise.resolve(this.bridgeMermaidRenderQueue).then(work, work);
+    },
+
+    _normalizeBridgeStringList: function(values) {
+        if (!Array.isArray(values)) {
+            return [];
+        }
+        return values
+            .map((item) => {
+                if (typeof item === 'string') {
+                    return item.trim();
+                }
+                if (item && typeof item === 'object' && typeof item.id === 'string') {
+                    return item.id.trim();
+                }
+                return String(item ?? '').trim();
+            })
+            .filter((item) => item.length > 0);
+    },
+
+    _stableBridgeStringify: function(value) {
+        if (Array.isArray(value)) {
+            return '[' + value.map((entry) => this._stableBridgeStringify(entry)).join(',') + ']';
+        }
+        if (value && typeof value === 'object') {
+            return '{' + Object.keys(value)
+                .sort((left, right) => left.localeCompare(right))
+                .map((key) => JSON.stringify(key) + ':' + this._stableBridgeStringify(value[key]))
+                .join(',') + '}';
+        }
+        return JSON.stringify(value ?? null);
+    },
+
+    _buildBridgeTransportSummary: function(payload) {
+        const safePayload = payload && typeof payload === 'object' ? payload : {};
+        const central = safePayload.central && typeof safePayload.central === 'object' ? safePayload.central : {};
+        const metadata = central.metadata && typeof central.metadata === 'object' ? central.metadata : {};
+        const progress = safePayload.progress && typeof safePayload.progress === 'object' ? safePayload.progress : {};
+        const pathNodes = Array.isArray(safePayload.pathNodes) ? safePayload.pathNodes : [];
+        const peripherals = Array.isArray(safePayload.peripherals) ? safePayload.peripherals : [];
+        const completedIds = Array.isArray(safePayload.completedIds) ? safePayload.completedIds : [];
+        const treeLayout = safePayload.treeLayout && typeof safePayload.treeLayout === 'object' ? safePayload.treeLayout : null;
+        const treeNodes = treeLayout && Array.isArray(treeLayout.nodes) ? treeLayout.nodes : [];
+        return {
+            centralId: typeof central.id === 'string' ? central.id : '',
+            totalNodes: Number.isFinite(Number(safePayload.totalNodes)) ? Math.max(0, Math.trunc(Number(safePayload.totalNodes))) : pathNodes.length,
+            pathNodeCount: pathNodes.length,
+            pathNodeIds: this._normalizeBridgeStringList(pathNodes.map((node) => node && typeof node === 'object' ? node.id : node)),
+            peripheralIds: this._normalizeBridgeStringList(peripherals.map((node) => node && typeof node === 'object' ? node.id : node)),
+            completedIds: this._normalizeBridgeStringList(completedIds).sort((left, right) => left.localeCompare(right)),
+            treeNodeIds: this._normalizeBridgeStringList(treeNodes.map((node) => node && typeof node === 'object' ? node.id : node)),
+            progressCompleted: Number.isFinite(Number(progress.completed)) ? Math.max(0, Math.trunc(Number(progress.completed))) : 0,
+            progressTotal: Number.isFinite(Number(progress.total)) ? Math.max(0, Math.trunc(Number(progress.total))) : pathNodes.length,
+            mode: typeof safePayload.mode === 'string' ? safePayload.mode : '',
+            filepath: typeof metadata.filepath === 'string' ? metadata.filepath : ''
+        };
+    },
+
+    _computeBridgeTransportFingerprint: function(summary) {
+        const normalized = this._stableBridgeStringify(summary);
+        let hash = 2166136261;
+        for (let index = 0; index < normalized.length; index += 1) {
+            hash ^= normalized.charCodeAt(index);
+            hash = Math.imul(hash, 16777619);
+        }
+        return (hash >>> 0).toString(16).padStart(8, '0');
+    },
+
+    _createBridgeTransportMeta: function(payload, sourceTag = 'frontend') {
+        const summary = this._buildBridgeTransportSummary(payload);
+        return {
+            schemaVersion: 1,
+            source: sourceTag,
+            generatedAt: Date.now(),
+            summary,
+            fingerprint: this._computeBridgeTransportFingerprint(summary)
+        };
+    },
+
+    _sendBridgeStatus: function(level, code, message, details = {}, terminal = false) {
+        return this._sendBridgeMessage('pathStatus', {
+            level,
+            code,
+            message,
+            details,
+            terminal,
+            timestamp: Date.now()
+        });
     },
 
     _isTauriMode: function() {
         const hasTauriGlobal = typeof window !== 'undefined' && !!window.__TAURI__;
+        const runtimeCaps = (typeof window !== 'undefined' && window.__NC_RUNTIME_CAPS) ? window.__NC_RUNTIME_CAPS : null;
+        const hasDesktopRuntimeCaps = !!(runtimeCaps && runtimeCaps.supports_sidecar === true);
         const userAgent = typeof navigator !== 'undefined' ? String(navigator.userAgent || '') : '';
-        return hasTauriGlobal || userAgent.includes('Tauri');
+        return hasTauriGlobal || hasDesktopRuntimeCaps || userAgent.includes('Tauri');
     },
 
     _getModeValue: function() {
@@ -337,7 +684,61 @@ window.pathApp = {
             this.triggerUpdate();
         }
     },
-    
+
+    _respondToBridgePathRequest: function(source = 'main') {
+        const hasLivePath = Array.isArray(this.nodes) && this.nodes.length > 0 && !!this.centralNodeId;
+        if (hasLivePath) {
+            this._sendBridgeStatus(
+                'info',
+                'path_request_received',
+                'Frontend received a path request and is recomputing the latest path.',
+                {
+                    source,
+                    centralId: this.centralNodeId,
+                    nodeCount: this.nodes.length,
+                    hasTreeLayout: !!this.lastTreeLayout
+                },
+                false
+            );
+            this.triggerUpdate();
+            return;
+        }
+
+        const sourceData = this._getSourceGraphData();
+        const fallbackCentralId = this._getPreferredStandaloneCentralId();
+        if (sourceData && Array.isArray(sourceData.nodes) && sourceData.nodes.length > 0 && fallbackCentralId) {
+            this.centralNodeId = fallbackCentralId;
+            this._sendBridgeStatus(
+                'info',
+                'path_request_standalone',
+                'Frontend is serving the request from local graph data.',
+                {
+                    source,
+                    centralId: fallbackCentralId,
+                    graphNodeCount: sourceData.nodes.length
+                },
+                false
+            );
+            this.sendPathToBridgeStandalone(fallbackCentralId);
+            return;
+        }
+
+        this._sendBridgeStatus(
+            'warning',
+            'path_not_ready',
+            'Frontend path data is not ready yet.',
+            {
+                source,
+                hasGraphData: !!(sourceData && Array.isArray(sourceData.nodes) && sourceData.nodes.length > 0),
+                hasNodes: Array.isArray(this.nodes) && this.nodes.length > 0,
+                centralNodeId: this.centralNodeId || null,
+                currentTargetId: this.currentTargetId || null,
+                runtimeTargetId: this.runtimeConfig.targetId || null
+            },
+            false
+        );
+    },
+
     // Save completed nodes to localStorage
     _saveCompletedNodes: function() {
         try {
@@ -436,25 +837,35 @@ window.pathApp = {
 
     sendPathToBridge: function(result) {
         console.log('[PathApp] sendPathToBridge called. WS state:', this.ws?.readyState, 'Nodes:', result?.nodes?.length);
-        
+
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
             console.warn('[PathApp] WebSocket not open, cannot send pathResult');
             return;
         }
-        
+
         const centralId = this.centralNodeId;
         console.log('[PathApp] Looking for centralId:', centralId);
-        
+
         const centralPathNode = result.nodes.find(n => n.id === centralId) || null;
         const centralNode = this._getFullNodeById(centralId, centralPathNode);
         if (!centralNode) {
             console.error('[PathApp] Central node not found anywhere! ID:', centralId);
+            this._sendBridgeStatus(
+                'error',
+                'path_central_missing',
+                'Central node is missing while preparing path data for the bridge.',
+                {
+                    centralId: centralId || null,
+                    nodeCount: Array.isArray(result?.nodes) ? result.nodes.length : 0
+                },
+                true
+            );
             return;
         }
 
         const candidates = result.nodes.filter(n => n.id !== centralId);
         const edges = result.edges || [];
-        
+
         const peripherals = candidates.map(node => {
             const isIncoming = edges.some(e => {
                 const sourceId = typeof e.source === 'object' ? e.source.id : e.source;
@@ -466,11 +877,11 @@ window.pathApp = {
                 const targetId = typeof e.target === 'object' ? e.target.id : e.target;
                 return sourceId === centralId && targetId === node.id;
             });
-            
+
             let priority = 0;
             if (isIncoming) priority = 2;
             else if (isOutgoing) priority = 1;
-            
+
             return {
                 ...node,
                 priority: priority,
@@ -506,22 +917,47 @@ window.pathApp = {
             completedIds: Array.from(this.completedNodes),
             mode: 'orbital'
         };
+        payload._bridgeTransport = this._createBridgeTransportMeta(payload, 'frontend');
 
         console.log('[PathApp] treeLayout in result:', result.treeLayout ? ((result.treeLayout.nodes?.length || 0) + ' nodes') : 'NULL/UNDEFINED');
-        console.log('[PathApp] Sending pathResult with central:', payload.central.label, 'peripherals:', selectedPeripherals.length, 'totalNodes:', payload.totalNodes, 'filepath:', payload.central.metadata?.filepath || 'missing');
-        this.ws.send(JSON.stringify({
-            type: 'pathResult',
-            payload: payload
-        }));
+        console.log('[PathApp] Sending pathResult with central:', payload.central.label, 'peripherals:', selectedPeripherals.length, 'totalNodes:', payload.totalNodes, 'filepath:', payload.central.metadata?.filepath || 'missing', 'fingerprint:', payload._bridgeTransport.fingerprint);
+        this._sendBridgeMessage('pathResult', payload);
         console.log('[PathApp] pathResult SENT to Bridge');
     },
-    
+
     _getSourceGraphData: function() {
         if (typeof graphData !== 'undefined' && graphData && Array.isArray(graphData.nodes)) {
             return graphData;
         }
         if (window.graphData && Array.isArray(window.graphData.nodes)) {
             return window.graphData;
+        }
+        return null;
+    },
+
+    _getPreferredStandaloneCentralId: function(preferredNodeId = null) {
+        const sourceData = this._getSourceGraphData();
+        let highlightedNodeId = null;
+        if (typeof window !== 'undefined' && window.highlightManager && typeof window.highlightManager.getState === 'function') {
+            highlightedNodeId = window.highlightManager.getState()?.currentNode?.id || null;
+        }
+        if (preferredNodeId) {
+            return preferredNodeId;
+        }
+        if (highlightedNodeId) {
+            return highlightedNodeId;
+        }
+        if (this.centralNodeId) {
+            return this.centralNodeId;
+        }
+        if (this.currentTargetId) {
+            return this.currentTargetId;
+        }
+        if (this.runtimeConfig && this.runtimeConfig.targetId) {
+            return this.runtimeConfig.targetId;
+        }
+        if (sourceData && Array.isArray(sourceData.nodes) && sourceData.nodes.length > 0) {
+            return sourceData.nodes[0].id || null;
         }
         return null;
     },
@@ -785,6 +1221,20 @@ window.pathApp = {
         }
         if (mode === 'diffusion' && !targetId) {
             console.warn('[PathApp] Diffusion mode requested without target; skipping update.');
+            this._sendBridgeStatus(
+                'warning',
+                'path_target_missing',
+                'Diffusion mode requested without a target node. Unable to compute path.',
+                {
+                    mode,
+                    strategy,
+                    layout,
+                    centralId: this.centralNodeId || null,
+                    currentTargetId: this.currentTargetId || null,
+                    runtimeTargetId: this.runtimeConfig.targetId || null
+                },
+                true
+            );
             return;
         }
         
@@ -1287,27 +1737,45 @@ window.pathApp = {
      */
     sendPathToBridgeStandalone: function(centralId) {
         console.log('[PathApp] sendPathToBridgeStandalone for:', centralId);
-        
+
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
             console.warn('[PathApp] WS not open for standalone response');
             return;
         }
-        
+
         const sourceData = this._getSourceGraphData();
         if (!sourceData || !sourceData.nodes) {
             console.error('[PathApp] No graphData available for standalone mode');
+            this._sendBridgeStatus(
+                'error',
+                'standalone_graph_missing',
+                'No graph data is available for a standalone bridge response.',
+                {
+                    centralId: centralId || null
+                },
+                true
+            );
             return;
         }
-        
+
         const centralNode = this._getFullNodeById(centralId);
         if (!centralNode) {
             console.error('[PathApp] Central node not found in graphData:', centralId);
+            this._sendBridgeStatus(
+                'error',
+                'standalone_central_missing',
+                'Standalone bridge response could not find the requested central node.',
+                {
+                    centralId: centralId || null
+                },
+                true
+            );
             return;
         }
-        
+
         const edges = sourceData.edges || [];
         const connectedIds = new Set();
-        
+
         edges.forEach(e => {
             const sourceId = typeof e.source === 'object' ? e.source.id : e.source;
             const targetId = typeof e.target === 'object' ? e.target.id : e.target;
@@ -1374,90 +1842,126 @@ window.pathApp = {
             completedIds: Array.from(this.completedNodes || []),
             mode: 'orbital'
         };
-        
-        console.log('[PathApp] Sending standalone pathResult:', payload.central.label, 'filepath:', payload.central.metadata?.filepath || 'missing');
-        this.ws.send(JSON.stringify({
-            type: 'pathResult',
-            payload: payload
-        }));
+        payload._bridgeTransport = this._createBridgeTransportMeta(payload, 'frontend-standalone');
+
+        console.log('[PathApp] Sending standalone pathResult:', payload.central.label, 'filepath:', payload.central.metadata?.filepath || 'missing', 'fingerprint:', payload._bridgeTransport.fingerprint);
+        this._sendBridgeMessage('pathResult', payload);
     },
-    
+
     /**
      * Early WebSocket connection for Godot standalone testing.
      * Called immediately when script loads.
      */
-    setupEarlyWebSocket: function() {
-        if (this._isTauriMode()) {
-            // In Tauri flow, avoid idle early bridge sockets that can reconnect on webview lifecycle changes.
+    setupEarlyWebSocket: function(options = {}) {
+        const forceDesktop = options.forceDesktop === true;
+        const preferredCentralId = this._getPreferredStandaloneCentralId(options.preferredCentralId || null);
+        const bridge = (typeof window !== 'undefined') ? window.NoteConnectionRuntime : null;
+        const waitForRuntime = this._isTauriMode() && bridge && typeof bridge.whenReady === 'function';
+
+        if (this._isTauriMode() && !forceDesktop) {
+            // In normal Tauri flow, avoid idle early bridge sockets unless the desktop shell explicitly asks for one.
             return;
         }
 
-        if (this.ws) return; // Already connected
-        
-        console.log('[PathApp] Setting up early WebSocket connection...');
-        this.ws = new WebSocket(this._getBridgeWsUrl());
-        
-        this.ws.onopen = () => {
-            console.log('[PathApp] Early WS Connected to Bridge');
-            this.ws.send(JSON.stringify({
-                type: 'identify',
-                payload: { client: 'frontend-early' }
-            }));
-        };
-        
-        this.ws.onmessage = (e) => {
-            try {
-                const msg = JSON.parse(e.data);
-                console.log('[PathApp] Early WS Received:', msg.type);
-                
-                if (msg.type === 'switchCenter') {
-                    const newCentralId = msg.payload?.newCenterId;
-                    console.log('[PathApp] Early switch center request:', newCentralId);
-                    
-                    // If full init was called, use the full pipeline
-                    if (this.nodes && this.nodes.length > 0) {
-                        this.centralNodeId = newCentralId;
-                        this.runLocalCloudLayout();
-                        this.render();
-                        this.centerView();
-                        
-                        const result = {
-                            nodes: this.nodes,
-                            edges: this.links
-                        };
-                        this.sendPathToBridge(result);
-                    } else {
-                        // Standalone mode: Use graphData directly
-                        this.centralNodeId = newCentralId;
-                        this.sendPathToBridgeStandalone(newCentralId);
-                    }
-                } else if (msg.type === 'requestPath') {
-                    console.log('[PathApp] Early requestPath received');
-                    // Respond with current state if available
-                    if (this.nodes && this.nodes.length > 0 && this.centralNodeId) {
-                        const result = {
-                            nodes: this.nodes,
-                            edges: this.links
-                        };
-                        this.sendPathToBridge(result);
-                    }
-                } else if (msg.type === 'configure') {
-                    console.log('[PathApp] Early configure received');
-                    this.applyRemoteConfigure(msg.payload || {});
-                } else if (msg.type === 'exitPathMode') {
-                    this.exitPathMode();
+        const openEarlySocket = () => {
+            if (this.ws) {
+                if (this.ws.readyState === WebSocket.OPEN && preferredCentralId) {
+                    this.centralNodeId = preferredCentralId;
+                    this.sendPathToBridgeStandalone(preferredCentralId);
                 }
-            } catch(err) {
-                console.error('[PathApp] Early WS Error:', err);
+                return;
             }
+
+            console.log('[PathApp] Setting up early WebSocket connection...');
+            this.ws = new WebSocket(this._getBridgeWsUrl());
+
+            this.ws.onopen = () => {
+                console.log('[PathApp] Early WS Connected to Bridge');
+                this.ws.send(JSON.stringify({
+                    type: 'identify',
+                    payload: this._getBridgeIdentifyPayload('frontend-early')
+                }));
+
+                const initialCentralId = this._getPreferredStandaloneCentralId(preferredCentralId);
+                if (initialCentralId) {
+                    this.centralNodeId = initialCentralId;
+                    this.sendPathToBridgeStandalone(initialCentralId);
+                } else {
+                    this._sendBridgeStatus(
+                        'warning',
+                        'early_bridge_no_central',
+                        'Frontend early bridge connected before a central node could be resolved.',
+                        {
+                            hasGraphData: !!this._getSourceGraphData(),
+                            graphNodeCount: this._getSourceGraphData()?.nodes?.length || 0
+                        },
+                        false
+                    );
+                }
+            };
+
+            this.ws.onmessage = (e) => {
+                try {
+                    const msg = JSON.parse(e.data);
+                    console.log('[PathApp] Early WS Received:', msg.type);
+
+                    if (msg.type === 'switchCenter') {
+                        const newCentralId = msg.payload?.newCenterId;
+                        console.log('[PathApp] Early switch center request:', newCentralId);
+
+                        // If full init was called, use the full pipeline
+                        if (this.nodes && this.nodes.length > 0) {
+                            this.centralNodeId = newCentralId;
+                            this.runLocalCloudLayout();
+                            this.render();
+                            this.centerView();
+
+                            const result = {
+                                nodes: this.nodes,
+                                edges: this.links
+                            };
+                            this.sendPathToBridge(result);
+                        } else {
+                            // Standalone mode: Use graphData directly
+                            this.centralNodeId = newCentralId;
+                            this.sendPathToBridgeStandalone(newCentralId);
+                        }
+                    } else if (msg.type === 'renderMermaidRequest') {
+                        this._handleBridgeMermaidRenderRequest(msg.payload || {});
+                    } else if (msg.type === 'requestPath') {
+                        console.log('[PathApp] Early requestPath received');
+                        this._respondToBridgePathRequest('early');
+                    } else if (msg.type === 'configure') {
+                        console.log('[PathApp] Early configure received');
+                        this.applyRemoteConfigure(msg.payload || {});
+                    } else if (msg.type === 'exitPathMode') {
+                        this.exitPathMode();
+                    }
+                } catch(err) {
+                    console.error('[PathApp] Early WS Error:', err);
+                }
+            };
+
+            this.ws.onerror = (err) => {
+                console.warn('[PathApp] Early WS Error (PathBridge may not be running):', err);
+            };
+            this.ws.onclose = (e) => {
+                console.log('[PathApp] Early WS Closed. code=', e.code, 'reason=', e.reason || '<empty>');
+            };
         };
-        
-        this.ws.onerror = (err) => {
-            console.warn('[PathApp] Early WS Error (PathBridge may not be running):', err);
-        };
-        this.ws.onclose = (e) => {
-            console.log('[PathApp] Early WS Closed. code=', e.code, 'reason=', e.reason || '<empty>');
-        };
+
+        if (!waitForRuntime) {
+            openEarlySocket();
+            return;
+        }
+
+        bridge.whenReady()
+            .catch((err) => {
+                console.warn('[PathApp] Runtime bridge readiness failed for early socket, using current WebSocket config.', err);
+            })
+            .finally(() => {
+                openEarlySocket();
+            });
     }
 };
 
@@ -1477,4 +1981,7 @@ window.pathApp = {
         }
     }, 500);
 })();
+
+
+
 

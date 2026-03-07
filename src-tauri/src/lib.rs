@@ -12,8 +12,10 @@ use jni::objects::{JObject, JValue};
 #[cfg(target_os = "android")]
 use jni::JavaVM;
 #[cfg(not(target_os = "android"))]
+use std::net::TcpListener;
+#[cfg(not(target_os = "android"))]
 use std::sync::OnceLock;
-use std::time::UNIX_EPOCH;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager};
 #[cfg(not(target_os = "android"))]
 use tauri::Emitter;
@@ -1123,6 +1125,92 @@ struct ChildProcessState {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SidecarRuntimeConfig {
+    host: String,
+    port: u16,
+    bridge_port: u16,
+    base_url: String,
+    bridge_ws_url: String,
+    auth_token: String,
+}
+
+fn default_sidecar_runtime_config() -> SidecarRuntimeConfig {
+    let host = "127.0.0.1".to_string();
+    let port = 3000;
+    let bridge_port = 9876;
+    SidecarRuntimeConfig {
+        host: host.clone(),
+        port,
+        bridge_port,
+        base_url: format!("http://{}:{}", host, port),
+        bridge_ws_url: format!("ws://{}:{}", host, bridge_port),
+        auth_token: String::new(),
+    }
+}
+
+#[cfg(not(target_os = "android"))]
+fn reserve_loopback_port() -> u16 {
+    TcpListener::bind("127.0.0.1:0")
+        .and_then(|listener| listener.local_addr())
+        .map(|address| address.port())
+        .unwrap_or(0)
+}
+
+#[cfg(not(target_os = "android"))]
+fn build_sidecar_runtime_config() -> SidecarRuntimeConfig {
+    let host = "127.0.0.1".to_string();
+    let port = reserve_loopback_port();
+    let bridge_port = reserve_loopback_port();
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let auth_token = format!("nc-{}-{}-{}", std::process::id(), port, timestamp);
+
+    SidecarRuntimeConfig {
+        host: host.clone(),
+        port,
+        bridge_port,
+        base_url: format!("http://{}:{}", host, port),
+        bridge_ws_url: format!("ws://{}:{}", host, bridge_port),
+        auth_token,
+    }
+}
+
+struct SidecarRuntimeState {
+    config: Mutex<SidecarRuntimeConfig>,
+}
+
+impl Default for SidecarRuntimeState {
+    fn default() -> Self {
+        #[cfg(not(target_os = "android"))]
+        {
+            return Self {
+                config: Mutex::new(build_sidecar_runtime_config()),
+            };
+        }
+
+        #[cfg(target_os = "android")]
+        {
+            Self {
+                config: Mutex::new(default_sidecar_runtime_config()),
+            }
+        }
+    }
+}
+
+#[allow(dead_code)]
+#[tauri::command]
+fn get_sidecar_runtime_config(state: tauri::State<'_, SidecarRuntimeState>) -> SidecarRuntimeConfig {
+    state
+        .config
+        .lock()
+        .map(|config| config.clone())
+        .unwrap_or_else(|_| default_sidecar_runtime_config())
+}
+
+#[derive(Debug, Clone, Serialize)]
 struct RuntimeCapabilities {
     platform: String,
     supports_sidecar: bool,
@@ -1474,6 +1562,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .manage(ChildProcessState::default())
+        .manage(SidecarRuntimeState::default())
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
                 shutdown_child_processes(&window.app_handle());
@@ -1487,6 +1576,7 @@ pub fn run() {
             get_folders,
             get_available_targets,
             get_runtime_capabilities,
+            get_sidecar_runtime_config,
             open_native_pathmode,
             set_user_language,
             get_user_language,
@@ -1568,12 +1658,25 @@ pub fn run() {
             #[cfg(not(target_os = "android"))]
             {
                 let project_root = resolve_project_root();
+                let sidecar_runtime = app
+                    .state::<SidecarRuntimeState>()
+                    .config
+                    .lock()
+                    .map(|config| config.clone())
+                    .unwrap_or_else(|_| default_sidecar_runtime_config());
+                let sidecar_allowed_origins =
+                    "tauri://localhost,http://tauri.localhost,http://localhost,http://127.0.0.1,capacitor://localhost";
                 println!("[Rust] Sidecar Project Root: {}", project_root.to_string_lossy());
                 println!("[Rust] Sidecar Knowledge Base Root: {}", kb_root.to_string_lossy());
                 println!("[Rust] Sidecar Frontend Root: {}", frontend_dir.to_string_lossy());
                 println!(
                     "[Rust] Sidecar Runtime Data Root: {}",
                     runtime_data_dir.to_string_lossy()
+                );
+                println!(
+                    "[Rust] Sidecar Runtime Endpoint: {} (bridge {})",
+                    sidecar_runtime.base_url,
+                    sidecar_runtime.bridge_ws_url
                 );
 
                 let mut sidecar_command = app.shell().sidecar("server").unwrap();
@@ -1590,9 +1693,23 @@ pub fn run() {
                     .env(
                         "NOTE_CONNECTION_RUNTIME_DATA_DIR",
                         runtime_data_dir.to_string_lossy().to_string(),
+                    )
+                    .env("NOTE_CONNECTION_PORT", sidecar_runtime.port.to_string())
+                    .env(
+                        "NOTE_CONNECTION_BRIDGE_PORT",
+                        sidecar_runtime.bridge_port.to_string(),
+                    )
+                    .env(
+                        "NOTE_CONNECTION_AUTH_TOKEN",
+                        sidecar_runtime.auth_token.clone(),
+                    )
+                    .env(
+                        "NOTE_CONNECTION_ALLOWED_ORIGINS",
+                        sidecar_allowed_origins.to_string(),
                     );
 
                 let sidecar_state_handle = app.handle().clone();
+                let godot_runtime = sidecar_runtime.clone();
                 tauri::async_runtime::spawn(async move {
                     let (mut rx, child) = sidecar_command
                         .spawn()
@@ -1653,6 +1770,15 @@ pub fn run() {
                                 godot_exe.to_string_lossy()
                             );
                             match std::process::Command::new(&godot_exe)
+                                .env("NOTE_CONNECTION_PORT", godot_runtime.port.to_string())
+                                .env(
+                                    "NOTE_CONNECTION_BRIDGE_PORT",
+                                    godot_runtime.bridge_port.to_string(),
+                                )
+                                .env(
+                                    "NOTE_CONNECTION_AUTH_TOKEN",
+                                    godot_runtime.auth_token.clone(),
+                                )
                                 .args(["--path", godot_project.to_string_lossy().as_ref()])
                                 .spawn()
                             {
@@ -2241,3 +2367,11 @@ mod tests {
         assert!(err.contains("Target directory does not exist"));
     }
 }
+
+
+
+
+
+
+
+

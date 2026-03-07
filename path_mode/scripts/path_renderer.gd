@@ -318,16 +318,17 @@ func _get_orbital_position(angle: float) -> Vector3:
 
 ## Update display with new path data
 func render_path(path_data: Dictionary) -> void:
-	_current_path = path_data
-	
 	## Stop any running transition tween immediately
 	if _transition_tween and _transition_tween.is_valid():
 		_transition_tween.kill()
 	
 	if not path_data.has("central") or not path_data.has("peripherals"):
 		push_warning("PathRenderer: Invalid path data")
+		if ui and ui.has_method("set_runtime_status"):
+			ui.set_runtime_status("Path data is invalid or incomplete.", "error")
 		return
 	
+	_current_path = path_data
 	_central_node = path_data.get("central", {})
 	_peripheral_nodes = path_data.get("peripherals", [])
 	var central_id: String = _central_node.get("id", "")
@@ -511,6 +512,17 @@ func _on_ws_data_received(data: Dictionary) -> void:
 			render_path(payload)
 		"pathUpdate":
 			render_path(payload)
+		"pathStatus":
+			_handle_path_status(payload)
+
+
+func _handle_path_status(payload: Dictionary) -> void:
+	var level: String = String(payload.get("level", "info"))
+	var code: String = String(payload.get("code", "path_status"))
+	var message: String = String(payload.get("message", "Path status update received."))
+	print("[PathRenderer] Bridge status (%s/%s): %s" % [level, code, message])
+	if ui and ui.has_method("set_runtime_status"):
+		ui.set_runtime_status(message, level)
 
 
 ## Handle bidirectional completion sync from Electron

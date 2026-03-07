@@ -129,6 +129,31 @@ class Reader {
                 window.__TAURI__.core &&
                 typeof window.__TAURI__.core.invoke === 'function'
             );
+            const noteConnectionRuntime = (typeof window !== 'undefined' && window.NoteConnectionRuntime)
+                ? window.NoteConnectionRuntime
+                : null;
+            const buildSidecarUrl = (resourcePath, query = null) => {
+                if (noteConnectionRuntime && typeof noteConnectionRuntime.buildUrl === 'function') {
+                    return noteConnectionRuntime.buildUrl(resourcePath, query || undefined);
+                }
+                const normalizedPath = String(resourcePath || '').replace(/^\/+/, '');
+                const url = new URL(`http://127.0.0.1:3000/${normalizedPath}`);
+                if (query && typeof query === 'object') {
+                    Object.entries(query).forEach(([key, value]) => {
+                        if (value === undefined || value === null || value === '') {
+                            return;
+                        }
+                        url.searchParams.set(key, String(value));
+                    });
+                }
+                return url.toString();
+            };
+            const buildSidecarFetchOptions = (init = {}) => {
+                if (noteConnectionRuntime && typeof noteConnectionRuntime.buildFetchOptions === 'function') {
+                    return noteConnectionRuntime.buildFetchOptions(init);
+                }
+                return init;
+            };
 
             if (!runtimeSupportsContentApi) {
                 const msg = window.i18n
@@ -166,7 +191,7 @@ class Reader {
                         }
                     } else {
                         // Fetch from Node sidecar (desktop/web runtime)
-                        const res = await fetch(`http://localhost:3000/api/content?path=${encodeURIComponent(node.metadata.filepath)}`);
+                        const res = await fetch(buildSidecarUrl('api/content', { path: node.metadata.filepath }), buildSidecarFetchOptions());
                         if (res.ok) {
                             const data = await res.json();
                             rawContent = data.content;
@@ -456,3 +481,5 @@ class Reader {
 
 const reader = new Reader();
 window.reader = reader;
+
+

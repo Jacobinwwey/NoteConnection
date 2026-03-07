@@ -1,3 +1,127 @@
+# 2026-03-07 v1.0.1
+
+# END-TO-END HYBRID ARCHITECTURE & PACKAGING AUDIT REFRESH
+**Date**: March 7, 2026
+**Target**: NoteConnection (Tauri-first desktop + bounded Capacitor mobile runtime)
+**Auditor**: Lead Systems Architect & Cross-Platform Packaging Specialist
+
+---
+
+## EXECUTIVE REFRESH
+
+**Updated Risk Posture**
+- **Desktop Tauri-first runtime**: 4.5/10 (Moderate)
+- **Cross-platform parity and mobile architecture**: 8.0/10 (High)
+- **Overall project architecture**: 6.5/10 (High, but materially improved from the March 6, 2026 baseline)
+
+This refresh supersedes parts of the 2026-03-06 baseline audit. The original audit is retained below for traceability, but several desktop-critical findings are no longer current.
+
+## WHAT IS NOW CLOSED OR REDUCED
+
+| Area | March 6, 2026 Baseline | March 7, 2026 Status | Evidence |
+| :--- | :--- | :--- | :--- |
+| Loopback binding | Open | Resolved on desktop | `src/server.ts`, `src/core/PathBridge.ts`, `src-tauri/src/lib.rs` |
+| Dynamic sidecar and bridge ports | Open | Resolved for Tauri desktop | `src-tauri/src/lib.rs`, `src/frontend/runtime_bridge.js`, `path_mode/scripts/ws_client.gd` |
+| Token auth on protected APIs and bridge handshake | Open | Resolved for desktop sidecar flows | `src/server.ts`, `src/core/PathBridge.ts`, `src/frontend/path_app.js`, `path_mode/scripts/ws_client.gd` |
+| Wildcard desktop exposure | Open | Reduced via strict CORS allowlist | `src/server.ts` |
+| Port-collision risk from static Tauri sidecar launch | Open | Reduced because Tauri now injects dynamic ports | `src-tauri/src/lib.rs` |
+| Clipboard buffer zeroization | Open | Resolved | `src/server.ts` |
+| Godot SVG oversize and malformed-entity failures | Open runtime defect | Resolved | `src/reader_renderer.ts`, `path_mode/scripts/reader_render_client.gd` |
+| Capacitor calling unavailable sidecar APIs | Critical | Partially resolved by capability gating and read-only mobile policy | `src/frontend/source_manager.js`, `src/frontend/reader.js`, `src-tauri/src/lib.rs` |
+
+## REMAINING HIGH-PRIORITY DEFECTS
+
+| ID | Severity | Current Location | Remaining Issue | Why It Still Matters |
+| :--- | :--- | :--- | :--- | :--- |
+| **R-01** | **HIGH** | `src/server.ts` | `/api/content` and generated asset responses still use synchronous filesystem reads. | Blocks the Node event loop under concurrent content or asset access. |
+| **R-02** | **HIGH** | `src/server.ts` | `readJsonBody()` still accumulates JSON payloads fully in memory before parsing. | Request limits exist, but large render or clipboard payloads still avoid true streaming discipline. |
+| **R-03** | **HIGH** | `package.json` | `build:sidecar` is still Windows-only (`node18-win-x64`) and not aligned with multi-target Node 22 packaging. | Desktop packaging remains incomplete for macOS/Linux and lags the documented 2026 toolchain target. |
+| **R-04** | **HIGH** | Architecture | Desktop still relies on raw local HTTP/WebSocket sidecar transport instead of Tauri-native IPC for core file/content/build operations. | Security posture is improved, but process-boundary complexity and surface area remain higher than necessary. |
+| **R-05** | **HIGH** | Data layer | Runtime graph storage is still centered on generated JS/JSON artifacts rather than indexed local storage. | Cold-start cost, partial-query performance, and large-graph scalability remain constrained. |
+| **R-06** | **HIGH** | Mobile runtime policy | Capacitor native delivery is intentionally read-only and not feature-parity with desktop build workflows. | This is acceptable only if product messaging and release policy stay explicit. |
+| **R-07** | **MEDIUM** | Apple/Android packaging | iOS privacy-manifest work and other mobile packaging compliance tasks are not fully closed. | Store readiness is still incomplete even with the current bounded mobile policy. |
+| **R-08** | **MEDIUM** | Desktop release validation | Packaged-sidecar verification across macOS/Linux has not been completed. | Current desktop confidence is strongest on Windows, not on the full release matrix. |
+
+## UPDATED RECOMMENDED PLAN
+
+### Phase A: Immediate Hardening Follow-Through (0-2 weeks)
+- Convert synchronous content and generated-asset reads in `src/server.ts` to async or stream-based handlers.
+- Replace `readJsonBody()` for large payload routes with streamed or temp-file-backed handling.
+- Upgrade `build:sidecar` into a multi-target Node 22 packaging flow with explicit compressed release targets.
+- Add packaged smoke verification for Windows, macOS, and Linux sidecar startup.
+
+### Phase B: Runtime Abstraction (2-4 weeks)
+- Introduce a storage-provider abstraction covering Tauri commands, sidecar HTTP, and Capacitor-native filesystem access.
+- Move the highest-risk desktop content APIs from raw HTTP into Tauri commands or a formal JSON-RPC bridge.
+- Normalize all frontend transport fallbacks behind one runtime adapter.
+
+### Phase C: Data-Layer Overhaul (4-8 weeks)
+- Prototype SQLite-backed graph storage and partial content queries.
+- Add persistent frontend cache (IndexedDB) for graph metadata and reader artifacts.
+- Evaluate MessagePack or another binary transport for large graph payloads.
+- Plan Wasm-compatible graph and parsing modules for real desktop/mobile parity.
+
+## INTERPRETATION UPDATE
+
+The project is no longer in the same desktop-critical state described by the March 6 baseline audit. Desktop Tauri-sidecar security and runtime synchronization are materially stronger now. The main unresolved risks have shifted upward into three areas:
+- event-loop blocking I/O in the Node sidecar,
+- incomplete packaging and release automation outside Windows,
+- missing storage and transport abstractions required for true multi-platform parity.
+
+**Current conclusion:** Desktop Tauri-first delivery is materially safer and more coherent than the previous baseline, but the project should still avoid claiming full cross-platform functional equivalence until storage abstraction, transport modernization, and mobile-native content paths are finished.
+
+## 中文文档
+
+# 2026-03-07 v1.0.1
+
+# 端到端混合架构与打包审计复核更新
+**日期**: 2026年3月7日
+**目标**: NoteConnection（Tauri-first 桌面端 + 有边界的 Capacitor 移动端运行时）
+**审计人**: 首席系统架构师与跨平台打包专家
+
+---
+
+## 执行复核摘要
+
+**更新后的风险态势**
+- **Tauri-first 桌面运行时**: 4.5/10（中等风险）
+- **跨平台对等性与移动端架构**: 8.0/10（高风险）
+- **项目总体架构**: 6.5/10（高风险，但相较 2026年3月6日 的基线已有明显改善）
+
+本次复核覆盖并更新了 2026-03-06 基线审计中的部分结论。原始审计报告仍保留在下方用于追溯，但其中若干桌面端“关键级”问题已不再适用当前代码状态。
+
+## 已关闭或风险已下降的事项
+
+| 领域 | 2026年3月6日基线状态 | 2026年3月7日当前状态 | 证据 |
+| :--- | :--- | :--- | :--- |
+| Loopback 绑定 | 未完成 | 已在桌面端关闭风险 | `src/server.ts`, `src/core/PathBridge.ts`, `src-tauri/src/lib.rs` |
+| Sidecar 与 bridge 动态端口 | 未完成 | 已在 Tauri 桌面端实现 | `src-tauri/src/lib.rs`, `src/frontend/runtime_bridge.js`, `path_mode/scripts/ws_client.gd` |
+| 受保护 API 与 bridge 握手令牌认证 | 未完成 | 已在桌面 sidecar 流程中落地 | `src/server.ts`, `src/core/PathBridge.ts`, `src/frontend/path_app.js`, `path_mode/scripts/ws_client.gd` |
+| 桌面通配符暴露 | 未完成 | 已通过严格 CORS 白名单降低风险 | `src/server.ts` |
+| 静态端口导致的 Tauri sidecar 启动冲突 | 未完成 | 因 Tauri 注入动态端口而明显降低 | `src-tauri/src/lib.rs` |
+| 剪贴板缓冲区清零 | 未完成 | 已完成 | `src/server.ts` |
+| Godot SVG 超大尺寸与非法实体导致的渲染失败 | 运行时缺陷 | 已完成修复 | `src/reader_renderer.ts`, `path_mode/scripts/reader_render_client.gd` |
+| Capacitor 调用不可用 sidecar API | 严重问题 | 已通过能力门控与移动端只读策略部分收口 | `src/frontend/source_manager.js`, `src/frontend/reader.js`, `src-tauri/src/lib.rs` |
+
+## 当前仍然高优先级的缺陷
+
+| ID | 严重级别 | 当前位置 | 剩余问题 | 持续影响 |
+| :--- | :--- | :--- | :--- | :--- |
+| **R-01** | **HIGH** | `src/server.ts` | `/api/content` 与生成资源响应仍使用同步文件系统读取。 | 在并发内容/资源访问下会阻塞 Node 事件循环。 |
+| **R-02** | **HIGH** | `src/server.ts` | `readJsonBody()` 仍会先把 JSON 负载完整缓冲到内存再解析。 | 虽然已有限流，但大体积渲染或剪贴板负载仍未实现真正的流式处理。 |
+| **R-03** | **HIGH** | `package.json` | `build:sidecar` 仍然只支持 Windows（`node18-win-x64`），未对齐 Node 22 多目标打包。 | macOS/Linux 桌面打包链路仍不完整，也落后于文档中的 2026 工具链目标。 |
+| **R-04** | **HIGH** | 架构层 | 桌面端核心文件/内容/构建操作仍依赖本地 HTTP/WebSocket sidecar，而不是 Tauri 原生 IPC。 | 安全面已有改善，但跨进程复杂度与攻击面依然偏高。 |
+| **R-05** | **HIGH** | 数据层 | 运行时图谱存储仍以生成的 JS/JSON 产物为中心，而非可索引的本地存储层。 | 冷启动成本、局部查询性能与大图谱扩展性仍受限制。 |
+| **R-06** | **HIGH** | 移动端运行时策略 | Capacitor 原生交付当前是“只读模式”，并未达到桌面构建工作流的功能对等。 | 只有在产品宣传与发布策略明确限定的前提下，这个状态才是可接受的。 |
+| **R-07** | **MEDIUM** | Apple/Android 打包合规 | iOS Privacy Manifest 与其他移动端打包合规工作尚未完全收口。 | 即便当前移动端策略已收紧，商店发布准备仍未完成。 |
+| **R-08** | **MEDIUM** | 桌面发布验证 | 尚未完成 macOS/Linux 的 packaged sidecar 验证。 | 当前桌面发布信心主要集中在 Windows，而非完整发布矩阵。 |
+
+## 更新后的建议执行计划
+
+### 阶段 A：立即完成的加固收口（0-2 周）
+
+## Historical Baseline (Retained Below)
+
 # 2026-03-06 v1.0.0
 
 # END-TO-END HYBRID ARCHITECTURE & PACKAGING AUDIT

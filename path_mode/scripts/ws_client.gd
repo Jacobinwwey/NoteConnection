@@ -1,17 +1,15 @@
 extends Node
 
-## WebSocket Client for Path Mode communication
-## Handles bidirectional messaging with frontend
-
-signal data_received(data: Dictionary)
 signal connected
 signal disconnected
-signal path_result(data: Dictionary)
-signal path_update(data: Dictionary)
-signal switch_center(new_center_id: String)
-signal completion_sync(completed_ids: Array, timestamp: int)
+signal data_received(data)
+signal path_result(data)
+signal path_update(data)
+signal switch_center(new_center_id)
+signal completion_sync(completed_ids, timestamp)
 
-const WS_URL := "ws://127.0.0.1:9876"
+const DEFAULT_HOST := "127.0.0.1"
+const DEFAULT_BRIDGE_PORT := 9876
 const CLIENT_TAG := "godot"
 const RECONNECT_DELAY := 3.0
 
@@ -19,11 +17,13 @@ var _socket := WebSocketPeer.new()
 var _connected := false
 var _reconnect_timer: Timer
 var _pending_messages: Array[Dictionary] = []
+var _ws_url: String = ""
 
 
 func _ready() -> void:
 	_setup_reconnect_timer()
 	_socket.inbound_buffer_size = 1048576 * 8 # Increase buffer to 8MB
+	_ws_url = _resolve_ws_url()
 	connect_to_server()
 
 
@@ -35,12 +35,14 @@ func _setup_reconnect_timer() -> void:
 
 
 func connect_to_server() -> void:
-	var err := _socket.connect_to_url(WS_URL)
+	if _ws_url.is_empty():
+		_ws_url = _resolve_ws_url()
+	var err := _socket.connect_to_url(_ws_url)
 	if err != OK:
-		push_warning("WsClient: Unable to connect to %s" % WS_URL)
+		push_warning("WsClient: Unable to connect to %s" % _ws_url)
 		_schedule_reconnect()
 	else:
-		print("WsClient: Connecting to %s" % WS_URL)
+		print("WsClient: Connecting to %s" % _ws_url)
 
 
 func _process(_delta: float) -> void:
@@ -93,13 +95,18 @@ func _schedule_reconnect() -> void:
 
 
 func _on_reconnect_timeout() -> void:
+	_ws_url = _resolve_ws_url()
 	connect_to_server()
 
 
 func _send_identify() -> void:
+	var payload: Dictionary = {"client": CLIENT_TAG}
+	var auth_token := OS.get_environment("NOTE_CONNECTION_AUTH_TOKEN").strip_edges()
+	if not auth_token.is_empty():
+		payload["token"] = auth_token
 	send_message({
 		"type": "identify",
-		"payload": {"client": CLIENT_TAG}
+		"payload": payload
 	})
 
 
@@ -221,3 +228,18 @@ func send_exit_path_mode() -> void:
 ## Check if WebSocket is connected
 func is_ws_connected() -> bool:
 	return _connected
+
+
+func _resolve_ws_url() -> String:
+	var port := _resolve_bridge_port()
+	return "ws://%s:%d" % [DEFAULT_HOST, port]
+
+
+func _resolve_bridge_port() -> int:
+	var port_text := OS.get_environment("NOTE_CONNECTION_BRIDGE_PORT").strip_edges()
+	if port_text.is_valid_int():
+		var resolved_port := int(port_text)
+		if resolved_port > 0:
+			return resolved_port
+	return DEFAULT_BRIDGE_PORT
+

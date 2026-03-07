@@ -42,6 +42,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const getRuntimeBridge = () => (typeof window !== 'undefined' ? window.NoteConnectionRuntime : null);
+
+    const applySidecarRuntimeConfig = (config) => {
+        const bridge = getRuntimeBridge();
+        if (!bridge || typeof bridge.setRuntimeConfig !== 'function' || !config || typeof config !== 'object') {
+            return;
+        }
+        bridge.setRuntimeConfig(config);
+    };
+
+    const buildSidecarUrl = (resourcePath, query = null) => {
+        const bridge = getRuntimeBridge();
+        if (bridge && typeof bridge.buildUrl === 'function') {
+            return bridge.buildUrl(resourcePath, query || undefined);
+        }
+
+        const normalizedPath = String(resourcePath || '').replace(/^\/+/, '');
+        const url = new URL(`http://127.0.0.1:3000/${normalizedPath}`);
+        if (query && typeof query === 'object') {
+            Object.entries(query).forEach(([key, value]) => {
+                if (value === undefined || value === null || value === '') {
+                    return;
+                }
+                url.searchParams.set(key, String(value));
+            });
+        }
+        return url.toString();
+    };
+
+    const buildSidecarFetchOptions = (init = {}) => {
+        const bridge = getRuntimeBridge();
+        if (bridge && typeof bridge.buildFetchOptions === 'function') {
+            return bridge.buildFetchOptions(init);
+        }
+        return init;
+    };
+
     const resolveRuntimeCapabilities = async () => {
         if (!window.__TAURI__) {
             const capacitorPlatform = resolveCapacitorPlatform();
@@ -69,6 +106,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     ...caps
                 };
             }
+            if (runtimeCaps.supports_sidecar) {
+                try {
+                    const sidecarRuntime = await window.__TAURI__.core.invoke('get_sidecar_runtime_config');
+                    applySidecarRuntimeConfig(sidecarRuntime);
+                } catch (runtimeErr) {
+                    console.warn('[SourceManager] Failed to resolve sidecar runtime config, using loopback defaults.', runtimeErr);
+                }
+            }
             console.log('[SourceManager] Runtime capabilities resolved:', runtimeCaps);
         } catch (err) {
             console.warn('[SourceManager] Failed to resolve runtime capabilities, using desktop-safe defaults.', err);
@@ -87,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const maxAttempts = 30;
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
-                const pingRes = await fetch(`http://localhost:3000/api/kb-path?v=${Date.now()}`, { cache: 'no-store' });
+                const pingRes = await fetch(buildSidecarUrl('api/kb-path', { v: Date.now() }), buildSidecarFetchOptions({ cache: 'no-store' }));
                 if (pingRes.ok) {
                     return;
                 }
@@ -146,9 +191,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
-                const url = 'http://localhost:3000/' + src + '?v=' + Date.now();
+                const url = buildSidecarUrl(src, { v: Date.now() });
                 console.log(`[Loader] Fetching ${src} via HTTP (attempt ${attempt}/${maxAttempts}): ${url}`);
-                const response = await fetch(url, { cache: 'no-store' });
+                const response = await fetch(url, buildSidecarFetchOptions({ cache: 'no-store' }));
                 if (!response.ok) {
                     throw new Error(`Failed to fetch ${src}: HTTP ${response.status}`);
                 }
@@ -234,6 +279,33 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(retry, 0);
     };
 
+    const bootstrapDesktopPathProducer = () => {
+        if (!(window.__TAURI__ && runtimeCaps.supports_sidecar)) {
+            return;
+        }
+
+        const loadedGraphData = typeof graphData !== 'undefined' ? graphData : window.graphData;
+        if (!(loadedGraphData && Array.isArray(loadedGraphData.nodes) && loadedGraphData.nodes.length > 0)) {
+            console.warn('[SourceManager] Desktop early bridge producer skipped: graph data is not ready.');
+            return;
+        }
+
+        if (!window.pathApp || typeof window.pathApp.setupEarlyWebSocket !== 'function') {
+            console.warn('[SourceManager] Desktop early bridge producer skipped: pathApp is unavailable.');
+            return;
+        }
+
+        const preferredCentralId = loadedGraphData.nodes[0]?.id || null;
+        window.pathApp.setupEarlyWebSocket({
+            forceDesktop: true,
+            preferredCentralId
+        });
+        console.log('[SourceManager] Desktop early bridge producer primed for Godot sync.', {
+            preferredCentralId,
+            nodeCount: loadedGraphData.nodes.length
+        });
+    };
+
     const bootstrapScriptLoad = () => {
         // Load data.js first (Critical Data), then app.js (Application Logic)
         loadScript('data.js')
@@ -245,6 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const loadedGraphData = typeof graphData !== 'undefined' ? graphData : window.graphData;
                 const hasNodes = loadedGraphData && loadedGraphData.nodes && loadedGraphData.nodes.length > 0;
                 triggerWelcomeModal(Boolean(hasNodes));
+                bootstrapDesktopPathProducer();
                 
                 return loadScript('app.js');
             })
@@ -259,6 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .then(() => {
                 console.log('[Loader] app.js loaded successfully');
+                bootstrapDesktopPathProducer();
             })
             .catch(err => {
                 console.error('[Loader] Failed to load app.js (Critical Error):', err);
@@ -344,12 +418,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const fetchFoldersViaSidecar = async () => {
-        const kbRes = await fetch('http://localhost:3000/api/kb-path');
+        const kbRes = await fetch(buildSidecarUrl('api/kb-path'), buildSidecarFetchOptions());
         const kbData = await kbRes.json();
         const kbPath = kbData && kbData.kbPath ? kbData.kbPath : '';
 
         // Desktop/Tauri-sidecar primary requirement: list real subfolders under KB root.
-        const foldersRes = await fetch('http://localhost:3000/api/folders');
+        const foldersRes = await fetch(buildSidecarUrl('api/folders'), buildSidecarFetchOptions());
         const foldersData = await foldersRes.json();
         let folders = foldersData && Array.isArray(foldersData.folders) ? foldersData.folders : [];
 
@@ -357,7 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const shouldIncludeCachedTargets = Boolean(window.__TAURI__ && runtimeCaps.supports_build === false);
         if (shouldIncludeCachedTargets) {
             try {
-                const targetsRes = await fetch('http://localhost:3000/api/available-targets');
+                const targetsRes = await fetch(buildSidecarUrl('api/available-targets'), buildSidecarFetchOptions());
                 const targetsData = await targetsRes.json();
                 const cachedTargets = targetsData && Array.isArray(targetsData.targets) ? targetsData.targets : [];
                 folders = Array.from(new Set([...(folders || []), ...cachedTargets]));
@@ -386,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const checkCacheViaSidecar = async (target) => {
-        const cacheRes = await fetch(`http://localhost:3000/api/check-cache?target=${encodeURIComponent(target)}`);
+        const cacheRes = await fetch(buildSidecarUrl('api/check-cache', { target }), buildSidecarFetchOptions());
         if (!cacheRes.ok) {
             throw new Error(`Cache API error: HTTP ${cacheRes.status}`);
         }
@@ -401,7 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const restoreCacheViaSidecar = async (target) => {
-        const restoreRes = await fetch(`http://localhost:3000/api/restore-cache?target=${encodeURIComponent(target)}`);
+        const restoreRes = await fetch(buildSidecarUrl('api/restore-cache', { target }), buildSidecarFetchOptions());
         if (!restoreRes.ok) {
             throw new Error(`Restore API error: HTTP ${restoreRes.status}`);
         }
@@ -414,11 +488,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const response = await fetch('http://localhost:3000/api/kb-path', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ kbPath })
-        });
+        const response = await fetch(
+            buildSidecarUrl('api/kb-path'),
+            buildSidecarFetchOptions({
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ kbPath })
+            })
+        );
         if (!response.ok) {
             throw new Error(`KB path sync failed: HTTP ${response.status}`);
         }
@@ -921,11 +998,14 @@ document.addEventListener('DOMContentLoaded', () => {
             let success = false;
             let error = '';
             if (runtimeCaps.supports_sidecar) {
-                const res = await fetch('http://localhost:3000/api/build', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(buildPayload)
-                });
+                const res = await fetch(
+                    buildSidecarUrl('api/build'),
+                    buildSidecarFetchOptions({
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(buildPayload)
+                    })
+                );
 
                 if (res.ok) {
                     success = true;
@@ -1013,3 +1093,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+
+
