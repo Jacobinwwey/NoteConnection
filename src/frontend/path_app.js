@@ -323,10 +323,22 @@ window.pathApp = {
         styleNode.textContent = [
             'text, tspan, .nodeLabel, .edgeLabel, .messageText, .loopText, .noteText { fill: #f0f0f0 !important; text-rendering: geometricPrecision !important; }',
             '.node rect, .node circle, .node ellipse, .node polygon, .node path, .basic.label-container, .label-container { fill: #2d2d2d !important; stroke: #61dafb !important; }',
-            '.cluster rect, .cluster polygon { fill: rgba(12, 18, 27, 0.14) !important; stroke: #61dafb !important; }',
+            '.cluster rect, .cluster polygon { fill: none !important; stroke: #61dafb !important; }',
             '.labelBkg, .edgeLabel rect, .edgeLabel polygon, .cluster-label rect, .cluster-label polygon, .note rect { fill: #1e1e1e !important; stroke: #1e1e1e !important; }',
             '.edgePaths path, .flowchart-link, .relationshipLine, .messageLine0, .messageLine1, marker path, .marker { stroke: #a0a0a0 !important; fill: #a0a0a0 !important; }'
         ].join('\n');
+    },
+
+    _sanitizeBridgeMermaidGeneratedStyles: function(svgElement) {
+        Array.from(svgElement.querySelectorAll('style')).forEach((styleNode) => {
+            if (styleNode.id === 'noteconnection-mermaid-overrides') {
+                return;
+            }
+            const cssText = String(styleNode.textContent || '');
+            styleNode.textContent = cssText.replace(/(\.cluster\s+(?:rect|polygon)\s*\{)[^}]*(\})/g, (match, start, end) => {
+                return start + 'fill:none;stroke:#61dafb;stroke-width:1px;' + end;
+            });
+        });
     },
 
     _applyBridgeSvgAttributes: function(nodes, attributes) {
@@ -471,6 +483,7 @@ window.pathApp = {
             return;
         }
         svgElement.style.background = 'transparent';
+        this._sanitizeBridgeMermaidGeneratedStyles(svgElement);
         Array.from(svgElement.querySelectorAll('foreignObject')).forEach((node) => node.remove());
         this._applyBridgeSvgAttributes(svgElement.querySelectorAll('text, tspan, .nodeLabel, .edgeLabel, .messageText, .loopText, .noteText'), {
             fill: '#f0f0f0',
@@ -481,7 +494,7 @@ window.pathApp = {
             stroke: '#61dafb'
         });
         this._applyBridgeSvgAttributes(svgElement.querySelectorAll('.cluster rect, .cluster polygon'), {
-            fill: 'rgba(12, 18, 27, 0.14)',
+            fill: 'none',
             stroke: '#61dafb'
         });
         this._applyBridgeSvgAttributes(svgElement.querySelectorAll('.labelBkg, .edgeLabel rect, .edgeLabel polygon, .cluster-label rect, .cluster-label polygon, .note rect'), {

@@ -23,7 +23,7 @@ const MERMAID_EDGE_COLOR = '#a0a0a0';
 const MERMAID_NODE_BACKGROUND = '#2d2d2d';
 const MERMAID_NODE_BORDER = '#61dafb';
 const MERMAID_SURFACE_BACKGROUND = '#1e1e1e';
-const MERMAID_CLUSTER_BACKGROUND = 'rgba(12, 18, 27, 0.14)';
+const MERMAID_CLUSTER_BACKGROUND = 'none';
 const MERMAID_SECONDARY_BACKGROUND = '#333333';
 const MERMAID_NODE_SPACING = 42;
 const MERMAID_RANK_SPACING = 58;
@@ -192,6 +192,7 @@ export async function renderMermaidSvg(source: string, options: MermaidRenderOpt
         svg.setAttribute('focusable', 'false');
         svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
         svg.style.background = MERMAID_BACKGROUND;
+        sanitizeMermaidGeneratedStyles(svg);
         applyMermaidVisualStyles(svg);
         fitMermaidLabelShapes(svg);
 
@@ -373,6 +374,21 @@ function getMermaidConfig(theme: 'dark' | 'default') {
     };
 }
 
+function sanitizeMermaidGeneratedStyles(svg: SVGSVGElement): void {
+    for (const styleNode of Array.from(svg.querySelectorAll('style'))) {
+        if (styleNode.id === 'noteconnection-mermaid-overrides') {
+            continue;
+        }
+        const cssText = styleNode.textContent || '';
+        styleNode.textContent = rewriteMermaidClusterRules(cssText);
+    }
+}
+
+function rewriteMermaidClusterRules(cssText: string): string {
+    return cssText.replace(/(\.cluster\s+(?:rect|polygon)\s*\{)[^}]*(\})/g, (_match, start, end) => {
+        return `${start}fill:${MERMAID_CLUSTER_BACKGROUND};stroke:${MERMAID_NODE_BORDER};stroke-width:1px;${end}`;
+    });
+}
 function applyMermaidVisualStyles(svg: SVGSVGElement): void {
     svg.style.background = MERMAID_BACKGROUND;
     svg.querySelectorAll('foreignObject').forEach((node) => node.remove());

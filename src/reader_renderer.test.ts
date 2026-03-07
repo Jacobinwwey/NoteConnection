@@ -218,7 +218,8 @@ describe('reader_renderer', () => {
         );
 
         expect(svg).toContain('noteconnection-mermaid-overrides');
-        expect(svg).toContain('.cluster rect, .cluster polygon { fill: rgba(12, 18, 27, 0.14) !important; stroke: #61dafb !important; }');
+        expect(svg).toContain('.cluster rect, .cluster polygon { fill: none !important; stroke: #61dafb !important; }');
+        expect(svg).not.toContain('.cluster rect{fill:hsl(');
         expect(svg).toContain('.basic.label-container, .label-container { fill: #2d2d2d !important; stroke: #61dafb !important; }');
     });
 
