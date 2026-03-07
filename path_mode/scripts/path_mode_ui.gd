@@ -1,4 +1,4 @@
-extends CanvasLayer
+﻿extends CanvasLayer
 
 ## Path Mode UI Controller
 ## Handles button interactions, progress display, completed nodes sidebar,
@@ -39,6 +39,7 @@ const READER_DISPLAY_INLINE_MATH_MAX_HEIGHT_MULTIPLIER := 1.26
 const READER_INLINE_MATH_MAX_WIDTH_MULTIPLIER := 5.6
 const READER_DISPLAY_INLINE_MATH_MAX_WIDTH := 240.0
 const READER_IMAGE_FRAME_MIN_SIZE := Vector2(360.0, 260.0)
+const READER_IMAGE_VIEWER_BACKGROUND := Color(0.012, 0.014, 0.018, 1.0)
 const READER_MEDIA_SCALE_MIN := 0.45
 const READER_MEDIA_SCALE_MAX := 2.25
 const READER_MEDIA_SCALE_STEP := 0.05
@@ -168,7 +169,7 @@ func _ensure_reader_render_client() -> void:
 func _create_dynamic_ui() -> void:
 	## Create Return button (hidden by default)
 	_return_button = MenuButton.new()
-	_return_button.text = "← Return"
+	_return_button.text = "â† Return"
 	_return_button.visible = false
 	_return_button.flat = false
 	
@@ -321,7 +322,7 @@ func _create_dynamic_ui() -> void:
 		_apply_button_style(_edit_button, Color(0.2, 0.24, 0.3, 1.0), Color(0.27, 0.31, 0.4, 1.0), Color(0.14, 0.18, 0.24, 1.0), Color(0.42, 0.46, 0.58, 1.0), Color(0.92, 0.95, 1.0, 1.0))
 		
 	## Create Settings Button as independent floating button in upper-right corner
-	## 将设置按钮作为独立浮动按钮放在右上角
+	## å°†è®¾ç½®æŒ‰é’®ä½œä¸ºç‹¬ç«‹æµ®åŠ¨æŒ‰é’®æ”¾åœ¨å³ä¸Šè§’
 	_settings_button = Button.new()
 	_settings_button.text = "SET"
 	_settings_button.tooltip_text = "Settings"
@@ -916,6 +917,18 @@ func _create_reader_image_overlay() -> void:
 	_reader_image_viewport.clip_contents = true
 	_reader_image_viewport.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_reader_image_frame.add_child(_reader_image_viewport)
+	_reader_image_viewport.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	_reader_image_viewport.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	var viewport_style := StyleBoxFlat.new()
+	viewport_style.bg_color = READER_IMAGE_VIEWER_BACKGROUND
+	viewport_style.corner_radius_top_left = 14
+	viewport_style.corner_radius_top_right = 14
+	viewport_style.corner_radius_bottom_left = 14
+	viewport_style.corner_radius_bottom_right = 14
+	_reader_image_viewport.add_theme_stylebox_override("panel", viewport_style)
+	_reader_image_viewport.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	_style_reader_image_scrollbar(_reader_image_viewport.get_h_scroll_bar())
+	_style_reader_image_scrollbar(_reader_image_viewport.get_v_scroll_bar())
 	_reader_image_viewport.resized.connect(_on_reader_image_viewport_resized)
 
 	_reader_image_surface = Control.new()
@@ -953,6 +966,34 @@ func _create_reader_image_overlay() -> void:
 
 	_reader_image_overlay.gui_input.connect(_on_reader_image_overlay_input)
 	move_child(_reader_image_overlay, get_child_count() - 1)
+
+
+func _style_reader_image_scrollbar(scrollbar: ScrollBar) -> void:
+	if scrollbar == null:
+		return
+	scrollbar.focus_mode = Control.FOCUS_NONE
+	var track := StyleBoxFlat.new()
+	track.bg_color = Color(0.05, 0.065, 0.09, 0.86)
+	track.corner_radius_top_left = 8
+	track.corner_radius_top_right = 8
+	track.corner_radius_bottom_left = 8
+	track.corner_radius_bottom_right = 8
+	var grabber := StyleBoxFlat.new()
+	grabber.bg_color = Color(0.34, 0.44, 0.58, 0.9)
+	grabber.corner_radius_top_left = 8
+	grabber.corner_radius_top_right = 8
+	grabber.corner_radius_bottom_left = 8
+	grabber.corner_radius_bottom_right = 8
+	var grabber_hover: StyleBoxFlat = grabber.duplicate() as StyleBoxFlat
+	grabber_hover.bg_color = Color(0.42, 0.55, 0.72, 0.94)
+	var grabber_pressed: StyleBoxFlat = grabber.duplicate() as StyleBoxFlat
+	grabber_pressed.bg_color = Color(0.5, 0.64, 0.84, 0.98)
+	scrollbar.add_theme_stylebox_override("scroll", track)
+	scrollbar.add_theme_stylebox_override("scroll_focus", track)
+	scrollbar.add_theme_stylebox_override("grabber", grabber)
+	scrollbar.add_theme_stylebox_override("grabber_highlight", grabber_hover)
+	scrollbar.add_theme_stylebox_override("grabber_pressed", grabber_pressed)
+
 
 func _on_reader_overlay_input(event: InputEvent) -> void:
 	if not is_reader_open():
@@ -1034,14 +1075,30 @@ func is_reader_open() -> bool:
 	return _reader_overlay != null and _reader_overlay.visible
 
 
+func _prepare_texture_for_reader_image_viewer(texture: Texture2D) -> Texture2D:
+	if texture == null:
+		return null
+	# Rebuilding reader images from GPU readback can introduce a blue wash on some drivers.
+	# Keep the original texture and let the viewer backdrop handle transparent margins.
+	return texture
+
+
+
+
 func open_image_viewer(texture: Texture2D, title: String = "") -> void:
 	if not texture:
 		return
 	if not _reader_image_overlay:
 		_create_reader_image_overlay()
 
-	_reader_image_current_texture = texture
-	_reader_image_texture_rect.texture = texture
+	var viewer_texture: Texture2D = _prepare_texture_for_reader_image_viewer(texture)
+	_reader_image_current_texture = viewer_texture if viewer_texture != null else texture
+	_reader_image_texture_rect.texture = _reader_image_current_texture
+	_reader_image_texture_rect.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_reader_image_overlay.color = Color(0.0, 0.0, 0.0, 0.48)
+	_reader_image_overlay.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_reader_image_frame.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_reader_image_backdrop.color = READER_IMAGE_VIEWER_BACKGROUND
 	_reader_image_title_label.text = title if not title.is_empty() else "Image Preview"
 	_reader_image_zoom = 1.0
 	_reader_image_pan = Vector2.ZERO
@@ -3789,7 +3846,7 @@ func _on_exit_pressed() -> void:
 
 func _on_bg_lock_toggled(pressed: bool) -> void:
 	## Toggle background lock icon and emit signal
-	## åˆ‡æ¢èƒŒæ™¯é”å®šå›¾æ ‡å¹¶å‘å‡ºä¿¡å·
+	## Ã¥Ë†â€¡Ã¦ÂÂ¢Ã¨Æ’Å’Ã¦â„¢Â¯Ã©â€ÂÃ¥Â®Å¡Ã¥â€ºÂ¾Ã¦Â â€¡Ã¥Â¹Â¶Ã¥Ââ€˜Ã¥â€¡ÂºÃ¤Â¿Â¡Ã¥ÂÂ·
 	if _bg_lock_button:
 		_bg_lock_button.text = "BGL" if pressed else "BG"
 		_bg_lock_button.tooltip_text = "Background locked" if pressed else "Lock Background (camera won't rotate sky)"
@@ -3811,7 +3868,7 @@ func _refresh_history_popup() -> void:
 
 	if _learning_position != "":
 		var learning_label: String = String(_completed_nodes.get(_learning_position, _learning_position))
-		var learn_idx := _history_list.add_item("↩ Return to learning: %s" % learning_label)
+		var learn_idx := _history_list.add_item("â†© Return to learning: %s" % learning_label)
 		_history_list.set_item_metadata(learn_idx, "__RETURN_TO_LEARNING__")
 
 	if _nav_history.is_empty():
@@ -3943,7 +4000,7 @@ func _on_return_about_to_popup() -> void:
 	popup.clear()
 	
 	## Add "Return to learning" as first option
-	popup.add_item("↩ Return to learning", 0)
+	popup.add_item("â†© Return to learning", 0)
 	popup.add_separator()
 	
 	## Add history items
@@ -3993,7 +4050,7 @@ func _refresh_completed_list() -> void:
 	completed_list.clear()
 	for node_id in _completed_nodes:
 		var label: String = _completed_nodes[node_id]
-		var display := "★ %s" % label if not _edit_mode else "✕ %s" % label
+		var display := "â˜… %s" % label if not _edit_mode else "âœ• %s" % label
 		var idx := completed_list.add_item(display)
 		completed_list.set_item_metadata(idx, node_id)
 
@@ -4160,7 +4217,7 @@ func add_completed_node(node_id: String, label: String) -> void:
 	_completed_nodes[node_id] = label
 	
 	if completed_list:
-		var display := "★ %s" % label if not _edit_mode else "✕ %s" % label
+		var display := "â˜… %s" % label if not _edit_mode else "âœ• %s" % label
 		var idx := completed_list.add_item(display)
 		completed_list.set_item_metadata(idx, node_id)
 	

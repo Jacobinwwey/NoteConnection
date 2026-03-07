@@ -37,6 +37,14 @@ type MermaidRenderRequestPayload = {
     maxHeight?: number;
     renderScale?: number;
     theme?: 'dark' | 'default';
+    includeStages?: boolean;
+};
+
+type MermaidRenderStagePayload = {
+    stage: string;
+    svg: string;
+    width?: number;
+    height?: number;
 };
 
 type MermaidRenderResultPayload = {
@@ -46,6 +54,8 @@ type MermaidRenderResultPayload = {
     svg?: string;
     width?: number;
     height?: number;
+    renderer?: string;
+    stages?: MermaidRenderStagePayload[];
     error?: string;
 };
 
@@ -827,6 +837,24 @@ export class PathBridge {
             pendingRequest.reject(new Error(errorMessage));
             return;
         }
+        const stages = Array.isArray(payloadLike.stages)
+            ? (payloadLike.stages
+                .filter((stagePayload): stagePayload is Record<string, unknown> => isRecord(stagePayload))
+                .map((stagePayload): MermaidRenderStagePayload | null => {
+                    const stageName = typeof stagePayload.stage === 'string' ? stagePayload.stage.trim() : '';
+                    const stageSvg = typeof stagePayload.svg === 'string' ? stagePayload.svg : '';
+                    if (!stageName || !stageSvg) {
+                        return null;
+                    }
+                    return {
+                        stage: stageName,
+                        svg: stageSvg,
+                        width: toInteger(stagePayload.width),
+                        height: toInteger(stagePayload.height),
+                    };
+                })
+                .filter((stage) => stage !== null) as MermaidRenderStagePayload[])
+            : undefined;
 
         pendingRequest.resolve({
             requestId,
@@ -835,6 +863,8 @@ export class PathBridge {
             svg: typeof payloadLike.svg === 'string' ? payloadLike.svg : undefined,
             width: toInteger(payloadLike.width),
             height: toInteger(payloadLike.height),
+            renderer: typeof payloadLike.renderer === 'string' ? payloadLike.renderer : undefined,
+            stages: stages && stages.length > 0 ? stages : undefined,
         });
     }
 
@@ -998,6 +1028,7 @@ export class PathBridge {
             maxHeight: payload.maxHeight,
             renderScale: payload.renderScale,
             theme: payload.theme || 'dark',
+            includeStages: payload.includeStages === true,
         };
 
         return new Promise<MermaidRenderResultPayload>((resolve, reject) => {
@@ -1031,4 +1062,6 @@ export class PathBridge {
         this.clientMeta.clear();
     }
 }
+
+
 

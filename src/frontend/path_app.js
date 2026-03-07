@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Path Mode Application Controller
  * Handles interaction, rendering, and worker communication.
  */
@@ -325,7 +325,8 @@ window.pathApp = {
             '.node rect, .node circle, .node ellipse, .node polygon, .node path, .basic.label-container, .label-container { fill: #2d2d2d !important; stroke: #61dafb !important; }',
             '.cluster rect, .cluster polygon { fill: none !important; stroke: #61dafb !important; }',
             '.labelBkg, .edgeLabel rect, .edgeLabel polygon, .cluster-label rect, .cluster-label polygon, .note rect { fill: #1e1e1e !important; stroke: #1e1e1e !important; }',
-            '.edgePaths path, .flowchart-link, .relationshipLine, .messageLine0, .messageLine1, marker path, .marker { stroke: #a0a0a0 !important; fill: #a0a0a0 !important; }'
+            '.edgePaths path, .flowchart-link, .relationshipLine, .messageLine0, .messageLine1 { stroke: #a0a0a0 !important; fill: none !important; }',
+            'marker path, .marker, .arrowheadPath { stroke: #a0a0a0 !important; fill: #a0a0a0 !important; }'
         ].join('\n');
     },
 
@@ -501,7 +502,11 @@ window.pathApp = {
             fill: '#1e1e1e',
             stroke: '#1e1e1e'
         });
-        this._applyBridgeSvgAttributes(svgElement.querySelectorAll('.edgePaths path, .flowchart-link, .relationshipLine, .messageLine0, .messageLine1, marker path, .marker'), {
+        this._applyBridgeSvgAttributes(svgElement.querySelectorAll('.edgePaths path, .flowchart-link, .relationshipLine, .messageLine0, .messageLine1'), {
+            stroke: '#a0a0a0',
+            fill: 'none'
+        });
+        this._applyBridgeSvgAttributes(svgElement.querySelectorAll('marker path, .marker, .arrowheadPath'), {
             stroke: '#a0a0a0',
             fill: '#a0a0a0'
         });
@@ -530,6 +535,20 @@ window.pathApp = {
         return {
             width: Number.isFinite(widthAttr) && widthAttr > 0 ? widthAttr : (viewBox.length === 4 ? viewBox[2] : 1),
             height: Number.isFinite(heightAttr) && heightAttr > 0 ? heightAttr : (viewBox.length === 4 ? viewBox[3] : 1)
+        };
+    },
+
+    _serializeBridgeMermaidSvg: function(svgElement) {
+        return new XMLSerializer().serializeToString(svgElement);
+    },
+
+    _captureBridgeMermaidStage: function(stageName, svgElement) {
+        const size = this._extractBridgeMermaidSvgSize(svgElement);
+        return {
+            stage: stageName,
+            svg: this._serializeBridgeMermaidSvg(svgElement),
+            width: Math.max(1, Math.round(size.width || 1)),
+            height: Math.max(1, Math.round(size.height || 1))
         };
     },
 
@@ -581,6 +600,8 @@ window.pathApp = {
             throw new Error('Mermaid render request is missing a request id or source.');
         }
 
+        const includeStages = payload?.includeStages === true;
+        const stageSnapshots = [];
         const theme = String(payload?.theme || 'dark') === 'default' ? 'default' : 'dark';
         window.mermaid.initialize(this._getBridgeMermaidConfig(theme));
 
@@ -621,8 +642,20 @@ window.pathApp = {
 
             svgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
             svgElement.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+            if (includeStages) {
+                stageSnapshots.push(this._captureBridgeMermaidStage('raw', svgElement));
+            }
+
             this._normalizeBridgeMermaidSvg(svgElement);
+            if (includeStages) {
+                stageSnapshots.push(this._captureBridgeMermaidStage('visual_normalized', svgElement));
+            }
+
             this._fitBridgeMermaidLabelShapes(svgElement);
+            if (includeStages) {
+                stageSnapshots.push(this._captureBridgeMermaidStage('labels_fitted', svgElement));
+            }
+
             const naturalSize = this._tightenBridgeMermaidSvgBounds(svgElement);
             const clampedSize = this._clampBridgeMermaidSize(naturalSize.width, naturalSize.height, payload?.maxWidth, payload?.maxHeight);
             const requestedRenderScale = Number.isFinite(Number(payload?.renderScale)) && Number(payload.renderScale) > 0 ? Number(payload.renderScale) : 1;
@@ -634,7 +667,16 @@ window.pathApp = {
             svgElement.style.maxWidth = String(rasterWidth) + 'px';
             svgElement.style.background = 'transparent';
 
-            const serializedSvg = new XMLSerializer().serializeToString(svgElement);
+            const serializedSvg = this._serializeBridgeMermaidSvg(svgElement);
+            if (includeStages) {
+                stageSnapshots.push({
+                    stage: 'final',
+                    svg: serializedSvg,
+                    width: rasterWidth,
+                    height: rasterHeight
+                });
+            }
+
             const blob = new Blob([serializedSvg], { type: 'image/svg+xml;charset=utf-8' });
             objectUrl = URL.createObjectURL(blob);
 
@@ -652,16 +694,19 @@ window.pathApp = {
             if (!context) {
                 throw new Error('Unable to create a browser canvas for Mermaid rasterization.');
             }
-            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.fillStyle = '#05070b';
+            context.fillRect(0, 0, canvas.width, canvas.height);
             context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
             return {
                 requestId,
                 ok: true,
+                renderer: 'frontend-bridge',
                 svg: serializedSvg,
                 pngBase64: canvas.toDataURL('image/png').split(',')[1],
                 width: canvas.width,
-                height: canvas.height
+                height: canvas.height,
+                stages: includeStages ? stageSnapshots : undefined
             };
         } finally {
             if (objectUrl) {

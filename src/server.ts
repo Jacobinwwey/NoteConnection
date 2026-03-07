@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -24,6 +24,7 @@ const ALLOWED_ORIGIN_PATTERNS = parseAllowedOrigins(
     process.env.NOTE_CONNECTION_ALLOWED_ORIGINS ||
     'tauri://localhost,http://tauri.localhost,http://localhost,http://127.0.0.1,capacitor://localhost'
 );
+const FORCE_FRONTEND_MERMAID_RENDER = String(process.env.NOTE_CONNECTION_READER_FRONTEND_MERMAID || '').trim() === '1';
 const runtimePaths = resolveRuntimePaths(__dirname);
 const FRONTEND_DIR = runtimePaths.frontendDir;
 const RUNTIME_DATA_DIR = runtimePaths.runtimeDataDir;
@@ -32,6 +33,9 @@ let activeBuildKey: string | null = null;
 let activeBuildPromise: Promise<void> | null = null;
 let lastRestoreKey: string | null = null;
 let lastRestoreTs = 0;
+const SIDECAR_RUNTIME_MANIFEST = path.join(runtimePaths.projectRoot, 'tmp', 'active-sidecar-runtime.json');
+
+type MermaidRendererPreference = 'auto' | 'local' | 'frontend';
 
 function parseAllowedOrigins(rawValue: string): string[] {
     return rawValue
@@ -220,6 +224,107 @@ function parseOptionalPositiveScale(value: unknown): number | undefined {
     return Math.min(4, numericValue);
 }
 
+
+function parseOptionalBoolean(value: unknown): boolean | undefined {
+    if (typeof value === 'boolean') {
+        return value;
+    }
+    if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        if (normalized === 'true' || normalized === '1' || normalized === 'yes') {
+            return true;
+        }
+        if (normalized === 'false' || normalized === '0' || normalized === 'no') {
+            return false;
+        }
+    }
+    return undefined;
+}
+
+function normalizeMermaidRendererPreference(value: unknown): MermaidRendererPreference {
+    const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+    if (normalized === 'local') {
+        return 'local';
+    }
+    if (normalized === 'frontend' || normalized === 'bridge') {
+        return 'frontend';
+    }
+    return FORCE_FRONTEND_MERMAID_RENDER ? 'frontend' : 'auto';
+}
+
+function writeSidecarRuntimeManifest(finalPort: number): void {
+    try {
+        const manifestDir = path.dirname(SIDECAR_RUNTIME_MANIFEST);
+        fs.mkdirSync(manifestDir, { recursive: true });
+        fs.writeFileSync(
+            SIDECAR_RUNTIME_MANIFEST,
+            JSON.stringify({
+                host: LOOPBACK_HOST,
+                port: finalPort,
+                baseUrl: `http://${LOOPBACK_HOST}:${finalPort}`,
+                bridgePort: PATH_BRIDGE_PORT,
+                bridgeWsUrl: `ws://${LOOPBACK_HOST}:${PATH_BRIDGE_PORT}`,
+                authToken: AUTH_TOKEN,
+                projectRoot: runtimePaths.projectRoot,
+                runtimeDataDir: RUNTIME_DATA_DIR,
+                generatedAt: new Date().toISOString(),
+                pid: process.pid,
+            }, null, 2),
+            'utf8'
+        );
+    } catch (error) {
+        console.warn('[Sidecar] Failed to write runtime manifest:', error);
+    }
+}
+async function renderMermaidWithPreference(
+    source: string,
+    options: {
+        maxWidth?: number;
+        maxHeight?: number;
+        renderScale?: number;
+        includeStages?: boolean;
+        rendererPreference: MermaidRendererPreference;
+    }
+): Promise<Record<string, unknown>> {
+    const frontendPayload = {
+        source,
+        theme: 'dark' as const,
+        maxWidth: options.maxWidth,
+        maxHeight: options.maxHeight,
+        renderScale: options.renderScale,
+        includeStages: options.includeStages === true,
+    };
+
+    if (options.rendererPreference !== 'local' && pathBridge) {
+        try {
+            const frontendRendered = await pathBridge.requestFrontendMermaidRender(frontendPayload);
+            return {
+                pngBase64: frontendRendered.pngBase64,
+                svg: frontendRendered.svg,
+                width: frontendRendered.width,
+                height: frontendRendered.height,
+                renderer: frontendRendered.renderer || 'frontend-bridge',
+                stages: frontendRendered.stages,
+            };
+        } catch (error) {
+            if (options.rendererPreference === 'frontend') {
+                throw error;
+            }
+            console.warn('[Reader] Frontend Mermaid render unavailable, falling back to local resvg:', error);
+        }
+    }
+
+    const localRendered = await renderMermaidPng(source, {
+        theme: 'dark',
+        maxWidth: options.maxWidth,
+        maxHeight: options.maxHeight,
+        renderScale: options.renderScale,
+    });
+    return {
+        ...localRendered,
+        renderer: 'local-resvg',
+    };
+}
 function parseCachedTargetFromFileName(filename: string): string | null {
     if (filename.startsWith('data_cli_') || filename.startsWith('graph_data_cli_')) {
         return null;
@@ -652,18 +757,18 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 // Let it fall through to static serving/404 if not found.
             }
 
-            // GET /api/kb-path — Return current Knowledge Base root path
+            // GET /api/kb-path â€” Return current Knowledge Base root path
             // Legacy parity mapping: replaced historical desktop IPC getter.
-            // 返回当前知识库根路径（历史 IPC getter 的桥接替代实现）。
+            // è¿”å›žå½“å‰çŸ¥è¯†åº“æ ¹è·¯å¾„ï¼ˆåŽ†å² IPC getter çš„æ¡¥æŽ¥æ›¿ä»£å®žçŽ°ï¼‰ã€‚
             if (req.url === '/api/kb-path') {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ kbPath: KB_ROOT }));
                 return;
             }
 
-            // GET /api/check-cache?target=financial — Check if cached graph exists
+            // GET /api/check-cache?target=financial â€” Check if cached graph exists
             // Legacy parity mapping for previous desktop cache-check flow.
-            // 检查指定目标的图谱缓存是否存在（历史桌面缓存检查链路的桥接实现）。
+            // æ£€æŸ¥æŒ‡å®šç›®æ ‡çš„å›¾è°±ç¼“å­˜æ˜¯å¦å­˜åœ¨ï¼ˆåŽ†å²æ¡Œé¢ç¼“å­˜æ£€æŸ¥é“¾è·¯çš„æ¡¥æŽ¥å®žçŽ°ï¼‰ã€‚
             if (req.url?.startsWith('/api/check-cache')) {
                 try {
                     const urlObj = new URL(req.url, `http://${req.headers.host}`);
@@ -715,10 +820,10 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 return;
             }
 
-            // GET /api/restore-cache?target=financial — Restore cached graph as active data
+            // GET /api/restore-cache?target=financial â€” Restore cached graph as active data
             // Legacy parity mapping for previous desktop cache-restore flow.
-            // Copies data_{target}.js → data.js and graph_data_{target}.json → graph_data.json
-            // 从缓存恢复图谱数据（历史桌面 restoreCache 链路的桥接实现）。
+            // Copies data_{target}.js â†’ data.js and graph_data_{target}.json â†’ graph_data.json
+            // ä»Žç¼“å­˜æ¢å¤å›¾è°±æ•°æ®ï¼ˆåŽ†å²æ¡Œé¢ restoreCache é“¾è·¯çš„æ¡¥æŽ¥å®žçŽ°ï¼‰ã€‚
             if (req.url?.startsWith('/api/restore-cache')) {
                 try {
                     const urlObj = new URL(req.url, `http://${req.headers.host}`);
@@ -765,7 +870,6 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         if (cacheJson) {
                             fs.copyFileSync(cacheJson, targetJson);
                         }
-                        console.log(`[Cache] Restored cache for ${target} -> data.js`);
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ success: true }));
                     } else {
@@ -780,19 +884,19 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 }
                 return;
             }
-    
+
             // Serve Static Files
             // v0.9.83 Fix: Strip query parameters (e.g. ?v=123) to verify file existence on disk
             const urlObj = new URL(req.url!, `http://${req.headers.host}`);
             let urlPath = urlObj.pathname === '/' ? 'index.html' : urlObj.pathname;
-    
+
             // Security check: prevent traversing up
             const safeSuffix = path.normalize(urlPath).replace(/^(\.\.[/\\])+/, '');
             let filePath = path.join(FRONTEND_DIR, safeSuffix);
-            
+
             const extname = path.extname(filePath);
             let contentType = 'text/html';
-            
+
             switch (extname) {
                 case '.js': contentType = 'text/javascript'; break;
                 case '.css': contentType = 'text/css'; break;
@@ -802,7 +906,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 case '.svg': contentType = 'image/svg+xml'; break;
                 case '.ico': contentType = 'image/x-icon'; break;
             }
-    
+
             fs.readFile(filePath, (error, content) => {
                 if (error) {
                     if(error.code == 'ENOENT') {
@@ -851,6 +955,8 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     const maxWidth = parseOptionalPositiveDimension(payload.maxWidth);
                     const maxHeight = parseOptionalPositiveDimension(payload.maxHeight);
                     const renderScale = parseOptionalPositiveScale(payload.renderScale);
+                    const includeStages = parseOptionalBoolean(payload.includeStages) === true;
+                    const rendererPreference = normalizeMermaidRendererPreference(payload.renderer);
 
                     if (!source.trim()) {
                         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -858,9 +964,13 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         return;
                     }
 
-                    const rendered = pathBridge
-                        ? await pathBridge.requestFrontendMermaidRender({ source, theme: 'dark', maxWidth, maxHeight, renderScale })
-                        : await renderMermaidPng(source, { theme: 'dark', maxWidth, maxHeight, renderScale });
+                    const rendered = await renderMermaidWithPreference(source, {
+                        maxWidth,
+                        maxHeight,
+                        renderScale,
+                        includeStages,
+                        rendererPreference,
+                    });
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify(rendered));
                 } catch (error) {
@@ -938,7 +1048,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         // NoteConnection.ts uses targetPath directly if absolute, skipping kbRoot fallback.
                         // Without this, the relative path "financial" would be resolved against
                         // dist/Knowledge_Base/ (via __dirname) which does not exist.
-                        // 将相对路径解析为绝对路径，对齐历史桌面运行时语义。
+                        // å°†ç›¸å¯¹è·¯å¾„è§£æžä¸ºç»å¯¹è·¯å¾„ï¼Œå¯¹é½åŽ†å²æ¡Œé¢è¿è¡Œæ—¶è¯­ä¹‰ã€‚
                         let targetToBuild: string | undefined;
                         if (buildTarget) {
                             targetToBuild = path.join(KB_ROOT, buildTarget);
@@ -1003,6 +1113,8 @@ export const startServer = async (options: { port?: number, targetPath?: string 
     return new Promise<http.Server>((resolve) => {
         server.listen(finalPort, LOOPBACK_HOST, async () => {
             ensureRuntimeDataDir();
+            writeSidecarRuntimeManifest(finalPort);
+            console.log(`[Sidecar] Runtime Manifest: ${SIDECAR_RUNTIME_MANIFEST}`);
             console.log(`Server running at http://${LOOPBACK_HOST}:${finalPort}/`);
             console.log(`Knowledge Base Root: ${KB_ROOT}`);
             console.log(`Frontend Root: ${FRONTEND_DIR}`);
@@ -1032,4 +1144,5 @@ export const startServer = async (options: { port?: number, targetPath?: string 
 if (require.main === module) {
     startServer();
 }
+
 

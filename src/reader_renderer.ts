@@ -24,6 +24,7 @@ const MERMAID_NODE_BACKGROUND = '#2d2d2d';
 const MERMAID_NODE_BORDER = '#61dafb';
 const MERMAID_SURFACE_BACKGROUND = '#1e1e1e';
 const MERMAID_CLUSTER_BACKGROUND = 'none';
+const GODOT_RASTER_BACKGROUND = '#05070b';
 const MERMAID_SECONDARY_BACKGROUND = '#333333';
 const MERMAID_NODE_SPACING = 42;
 const MERMAID_RANK_SPACING = 58;
@@ -121,6 +122,10 @@ export type RasterizedRender = {
 
 export type RasterizedMermaidRender = RasterizedRender;
 
+export type MermaidRenderStageSnapshot = RasterizedRender & {
+    stage: 'raw' | 'styles_sanitized' | 'visual_normalized' | 'labels_fitted' | 'final';
+};
+
 export async function renderMathSvg(source: string, options: MathRenderOptions = {}): Promise<string> {
     const trimmedSource = source.trim();
     if (!trimmedSource) {
@@ -166,6 +171,72 @@ export async function renderMathSvg(source: string, options: MathRenderOptions =
     return svg.outerHTML;
 }
 
+type MermaidRenderArtifacts = {
+    rawSvg: string;
+    sanitizedStylesSvg: string;
+    visualNormalizedSvg: string;
+    labelsFittedSvg: string;
+    finalSvg: string;
+};
+
+function prepareMermaidSvgRoot(svg: SVGSVGElement): void {
+    svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    svg.setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:xlink', 'http://www.w3.org/1999/xlink');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('focusable', 'false');
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    svg.style.background = MERMAID_BACKGROUND;
+}
+
+async function buildMermaidRenderArtifacts(trimmedSource: string, options: MermaidRenderOptions): Promise<MermaidRenderArtifacts> {
+    const environment = await ensureMermaidEnvironment(options.theme || 'dark');
+    const renderId = `godot-mermaid-${++mermaidRenderCounter}`;
+    const host = environment.host;
+    host.innerHTML = '';
+
+    const result = await environment.mermaid.render(renderId, trimmedSource, host);
+    const svgMarkup = sanitizeSvgMarkup(result.svg);
+    const svgDom = new JSDOM(svgMarkup, { contentType: 'image/svg+xml' });
+    const svg = svgDom.window.document.querySelector('svg');
+    if (!svg) {
+        throw new Error('Mermaid did not produce an SVG root element.');
+    }
+
+    prepareMermaidSvgRoot(svg);
+    const rawSvg = svg.outerHTML;
+
+    sanitizeMermaidGeneratedStyles(svg);
+    const sanitizedStylesSvg = svg.outerHTML;
+
+    applyMermaidVisualStyles(svg);
+    const visualNormalizedSvg = svg.outerHTML;
+
+    fitMermaidLabelShapes(svg);
+    const labelsFittedSvg = svg.outerHTML;
+
+    const computedBounds = computeSvgBounds(svg);
+    const width = Math.max(48, Math.ceil(computedBounds.maxX - computedBounds.minX + MERMAID_PADDING * 2));
+    const height = Math.max(48, Math.ceil(computedBounds.maxY - computedBounds.minY + MERMAID_PADDING * 2));
+    const minX = Math.floor(computedBounds.minX - MERMAID_PADDING);
+    const minY = Math.floor(computedBounds.minY - MERMAID_PADDING);
+    svg.setAttribute('viewBox', `${minX} ${minY} ${width} ${height}`);
+    const normalizedMermaidSize = clampSvgDimensions(width, height, {
+        maxWidth: options.maxWidth ?? DEFAULT_MERMAID_MAX_WIDTH,
+        maxHeight: options.maxHeight ?? DEFAULT_MERMAID_MAX_HEIGHT,
+    });
+    svg.setAttribute('width', `${normalizedMermaidSize.width}`);
+    svg.setAttribute('height', `${normalizedMermaidSize.height}`);
+    svg.style.maxWidth = `${normalizedMermaidSize.width}px`;
+
+    return {
+        rawSvg,
+        sanitizedStylesSvg,
+        visualNormalizedSvg,
+        labelsFittedSvg,
+        finalSvg: svg.outerHTML,
+    };
+}
+
 export async function renderMermaidSvg(source: string, options: MermaidRenderOptions = {}): Promise<string> {
     const trimmedSource = source.trim();
     if (!trimmedSource) {
@@ -173,44 +244,38 @@ export async function renderMermaidSvg(source: string, options: MermaidRenderOpt
     }
 
     return enqueueMermaidRender(async () => {
-        const environment = await ensureMermaidEnvironment(options.theme || 'dark');
-        const renderId = `godot-mermaid-${++mermaidRenderCounter}`;
-        const host = environment.host;
-        host.innerHTML = '';
+        const artifacts = await buildMermaidRenderArtifacts(trimmedSource, options);
+        return artifacts.finalSvg;
+    });
+}
 
-        const result = await environment.mermaid.render(renderId, trimmedSource, host);
-        const svgMarkup = sanitizeSvgMarkup(result.svg);
-        const svgDom = new JSDOM(svgMarkup, { contentType: 'image/svg+xml' });
-        const svg = svgDom.window.document.querySelector('svg');
-        if (!svg) {
-            throw new Error('Mermaid did not produce an SVG root element.');
+export async function collectMermaidRenderStageSnapshots(source: string, options: MermaidRenderOptions = {}): Promise<MermaidRenderStageSnapshot[]> {
+    const trimmedSource = source.trim();
+    if (!trimmedSource) {
+        throw new Error('Cannot render an empty Mermaid definition.');
+    }
+
+    return enqueueMermaidRender(async () => {
+        const artifacts = await buildMermaidRenderArtifacts(trimmedSource, options);
+        const stages: Array<{ stage: MermaidRenderStageSnapshot['stage']; svg: string }> = [
+            { stage: 'raw', svg: artifacts.rawSvg },
+            { stage: 'styles_sanitized', svg: artifacts.sanitizedStylesSvg },
+            { stage: 'visual_normalized', svg: artifacts.visualNormalizedSvg },
+            { stage: 'labels_fitted', svg: artifacts.labelsFittedSvg },
+            { stage: 'final', svg: artifacts.finalSvg },
+        ];
+        const snapshots: MermaidRenderStageSnapshot[] = [];
+        for (const stage of stages) {
+            const rasterized = await rasterizeSvgToPng(stage.svg, options.renderScale, 16);
+            snapshots.push({
+                stage: stage.stage,
+                svg: stage.svg,
+                pngBase64: rasterized.pngBase64,
+                width: rasterized.width,
+                height: rasterized.height,
+            });
         }
-
-        svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-        svg.setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:xlink', 'http://www.w3.org/1999/xlink');
-        svg.setAttribute('role', 'img');
-        svg.setAttribute('focusable', 'false');
-        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-        svg.style.background = MERMAID_BACKGROUND;
-        sanitizeMermaidGeneratedStyles(svg);
-        applyMermaidVisualStyles(svg);
-        fitMermaidLabelShapes(svg);
-
-        const computedBounds = computeSvgBounds(svg);
-        const width = Math.max(48, Math.ceil(computedBounds.maxX - computedBounds.minX + MERMAID_PADDING * 2));
-        const height = Math.max(48, Math.ceil(computedBounds.maxY - computedBounds.minY + MERMAID_PADDING * 2));
-        const minX = Math.floor(computedBounds.minX - MERMAID_PADDING);
-        const minY = Math.floor(computedBounds.minY - MERMAID_PADDING);
-        svg.setAttribute('viewBox', `${minX} ${minY} ${width} ${height}`);
-        const normalizedMermaidSize = clampSvgDimensions(width, height, {
-            maxWidth: options.maxWidth ?? DEFAULT_MERMAID_MAX_WIDTH,
-            maxHeight: options.maxHeight ?? DEFAULT_MERMAID_MAX_HEIGHT,
-        });
-        svg.setAttribute('width', `${normalizedMermaidSize.width}`);
-        svg.setAttribute('height', `${normalizedMermaidSize.height}`);
-        svg.style.maxWidth = `${normalizedMermaidSize.width}px`;
-
-        return svg.outerHTML;
+        return snapshots;
     });
 }
 
@@ -248,7 +313,7 @@ async function rasterizeSvgToPng(svg: string, requestedRenderScale: number | und
 
     const resvg = new Resvg(svg, {
         fitTo,
-        background: 'rgba(0, 0, 0, 0)',
+        background: GODOT_RASTER_BACKGROUND,
         languages: ['zh-CN', 'zh', 'en-US', 'en'],
         textRendering: 2,
         shapeRendering: 2,
@@ -426,7 +491,15 @@ function applyMermaidVisualStyles(svg: SVGSVGElement): void {
     );
 
     applySvgAttributes(
-        svg.querySelectorAll('.edgePaths path, .flowchart-link, .relationshipLine, .messageLine0, .messageLine1, marker path, .marker'),
+        svg.querySelectorAll('.edgePaths path, .flowchart-link, .relationshipLine, .messageLine0, .messageLine1'),
+        {
+            stroke: MERMAID_EDGE_COLOR,
+            fill: 'none',
+        },
+    );
+
+    applySvgAttributes(
+        svg.querySelectorAll('marker path, .marker, .arrowheadPath'),
         {
             stroke: MERMAID_EDGE_COLOR,
             fill: MERMAID_EDGE_COLOR,
@@ -601,7 +674,8 @@ function upsertMermaidOverrideStyle(svg: SVGSVGElement): void {
         '.node rect, .node circle, .node ellipse, .node polygon, .node path, .basic.label-container, .label-container { fill: ' + MERMAID_NODE_BACKGROUND + ' !important; stroke: ' + MERMAID_NODE_BORDER + ' !important; }',
         '.cluster rect, .cluster polygon { fill: ' + MERMAID_CLUSTER_BACKGROUND + ' !important; stroke: ' + MERMAID_NODE_BORDER + ' !important; }',
         '.labelBkg, .edgeLabel rect, .edgeLabel polygon, .cluster-label rect, .cluster-label polygon, .note rect { fill: ' + MERMAID_SURFACE_BACKGROUND + ' !important; stroke: ' + MERMAID_SURFACE_BACKGROUND + ' !important; }',
-        '.edgePaths path, .flowchart-link, .relationshipLine, .messageLine0, .messageLine1, marker path, .marker { stroke: ' + MERMAID_EDGE_COLOR + ' !important; fill: ' + MERMAID_EDGE_COLOR + ' !important; }',
+        '.edgePaths path, .flowchart-link, .relationshipLine, .messageLine0, .messageLine1 { stroke: ' + MERMAID_EDGE_COLOR + ' !important; fill: none !important; }',
+        'marker path, .marker, .arrowheadPath { stroke: ' + MERMAID_EDGE_COLOR + ' !important; fill: ' + MERMAID_EDGE_COLOR + ' !important; }',
     ].join('\n');
 }
 

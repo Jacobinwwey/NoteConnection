@@ -220,6 +220,8 @@ describe('reader_renderer', () => {
         expect(svg).toContain('noteconnection-mermaid-overrides');
         expect(svg).toContain('.cluster rect, .cluster polygon { fill: none !important; stroke: #61dafb !important; }');
         expect(svg).not.toContain('.cluster rect{fill:hsl(');
+        expect(svg).toContain('.edgePaths path, .flowchart-link, .relationshipLine, .messageLine0, .messageLine1 { stroke: #a0a0a0 !important; fill: none !important; }');
+        expect(svg).toContain('marker path, .marker, .arrowheadPath { stroke: #a0a0a0 !important; fill: #a0a0a0 !important; }');
         expect(svg).toContain('.basic.label-container, .label-container { fill: #2d2d2d !important; stroke: #61dafb !important; }');
     });
 
