@@ -1,4 +1,4 @@
-﻿extends CanvasLayer
+extends CanvasLayer
 
 ## Path Mode UI Controller
 ## Handles button interactions, progress display, completed nodes sidebar,
@@ -124,6 +124,7 @@ var _reader_image_frame_size_origin: Vector2 = Vector2.ZERO
 var _reader_image_touch_points: Dictionary = {}
 var _reader_image_last_pinch_distance: float = 0.0
 var _reader_image_last_pinch_center: Vector2 = Vector2.ZERO
+var _reader_image_debug_capture_id: int = 0
 var _reader_render_client = null
 var _reader_render_revision: int = 0
 var _reader_renderable_blocks: Array[Dictionary] = []
@@ -169,7 +170,7 @@ func _ensure_reader_render_client() -> void:
 func _create_dynamic_ui() -> void:
 	## Create Return button (hidden by default)
 	_return_button = MenuButton.new()
-	_return_button.text = "â† Return"
+	_return_button.text = "<- Return"
 	_return_button.visible = false
 	_return_button.flat = false
 	
@@ -321,8 +322,8 @@ func _create_dynamic_ui() -> void:
 		
 		_apply_button_style(_edit_button, Color(0.2, 0.24, 0.3, 1.0), Color(0.27, 0.31, 0.4, 1.0), Color(0.14, 0.18, 0.24, 1.0), Color(0.42, 0.46, 0.58, 1.0), Color(0.92, 0.95, 1.0, 1.0))
 		
-	## Create Settings Button as independent floating button in upper-right corner
-	## å°†è®¾ç½®æŒ‰é’®ä½œä¸ºç‹¬ç«‹æµ®åŠ¨æŒ‰é’®æ”¾åœ¨å³ä¸Šè§’
+	## Create Settings button as an independent floating control in the top-right corner
+	## ASCII comment retained here to avoid source-encoding issues.
 	_settings_button = Button.new()
 	_settings_button.text = "SET"
 	_settings_button.tooltip_text = "Settings"
@@ -916,6 +917,8 @@ func _create_reader_image_overlay() -> void:
 	_reader_image_viewport.offset_bottom = -16
 	_reader_image_viewport.clip_contents = true
 	_reader_image_viewport.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_reader_image_viewport.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_reader_image_viewport.material = null
 	_reader_image_frame.add_child(_reader_image_viewport)
 	_reader_image_viewport.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	_reader_image_viewport.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
@@ -934,18 +937,25 @@ func _create_reader_image_overlay() -> void:
 	_reader_image_surface = Control.new()
 	_reader_image_surface.name = "ImageSurface"
 	_reader_image_surface.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_reader_image_surface.clip_contents = false
+	_reader_image_surface.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_reader_image_surface.material = null
 	_reader_image_viewport.add_child(_reader_image_surface)
 
 	_reader_image_backdrop = ColorRect.new()
 	_reader_image_backdrop.name = "ImageBackdrop"
 	_reader_image_backdrop.color = Color(0.012, 0.014, 0.018, 0.98)
 	_reader_image_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_reader_image_backdrop.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_reader_image_backdrop.material = null
 	_reader_image_surface.add_child(_reader_image_backdrop)
 
 	_reader_image_texture_rect = TextureRect.new()
 	_reader_image_texture_rect.name = "ImageTexture"
 	_reader_image_texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_reader_image_texture_rect.stretch_mode = TextureRect.STRETCH_SCALE
+	_reader_image_texture_rect.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_reader_image_texture_rect.material = null
 	_reader_image_surface.add_child(_reader_image_texture_rect)
 
 	_reader_image_resize_handle = ColorRect.new()
@@ -1078,11 +1088,114 @@ func is_reader_open() -> bool:
 func _prepare_texture_for_reader_image_viewer(texture: Texture2D) -> Texture2D:
 	if texture == null:
 		return null
-	# Rebuilding reader images from GPU readback can introduce a blue wash on some drivers.
-	# Keep the original texture and let the viewer backdrop handle transparent margins.
-	return texture
+	var source_image: Image = texture.get_image()
+	if source_image == null or source_image.is_empty():
+		return texture
+	var working_image: Image = source_image.duplicate()
+	if working_image == null or working_image.is_empty():
+		return texture
+	working_image.convert(Image.FORMAT_RGBA8)
+	working_image.fix_alpha_edges()
+	var flattened_image: Image = Image.create(working_image.get_width(), working_image.get_height(), false, Image.FORMAT_RGBA8)
+	if flattened_image == null or flattened_image.is_empty():
+		return texture
+	flattened_image.fill(READER_IMAGE_VIEWER_BACKGROUND)
+	flattened_image.blend_rect(working_image, Rect2i(0, 0, working_image.get_width(), working_image.get_height()), Vector2i.ZERO)
+	var flattened_texture: ImageTexture = ImageTexture.create_from_image(flattened_image)
+	return flattened_texture if flattened_texture != null else texture
 
 
+func _resolve_reader_image_debug_dir() -> String:
+	var dir_path := ProjectSettings.globalize_path("res://../tmp/godot-reader-debug")
+	var dir_error := DirAccess.make_dir_recursive_absolute(dir_path)
+	if dir_error != OK and dir_error != ERR_ALREADY_EXISTS:
+		push_warning("PathModeUI: Unable to create reader debug directory (%s)." % error_string(dir_error))
+		return ""
+	return dir_path
+
+
+func _sanitize_reader_debug_slug(value: String) -> String:
+	var slug := value.strip_edges().to_lower().replace(" ", "-")
+	var invalid_chars := RegEx.new()
+	if invalid_chars.compile("[^a-z0-9._-]+") == OK:
+		slug = invalid_chars.sub(slug, "-", true)
+	while slug.contains("--"):
+		slug = slug.replace("--", "-")
+	while slug.begins_with("-"):
+		slug = slug.substr(1)
+	while slug.ends_with("-"):
+		slug = slug.left(slug.length() - 1)
+	return slug if not slug.is_empty() else "image"
+
+
+func _save_reader_debug_image(image: Image, file_name: String) -> void:
+	if image == null or image.is_empty():
+		return
+	var debug_dir := _resolve_reader_image_debug_dir()
+	if debug_dir.is_empty():
+		return
+	var export_image: Image = image.duplicate()
+	if export_image == null or export_image.is_empty():
+		return
+	var save_error := export_image.save_png("%s/%s" % [debug_dir, file_name])
+	if save_error != OK:
+		push_warning("PathModeUI: Failed to save reader debug image (%s)." % error_string(save_error))
+
+
+func _save_reader_debug_texture(texture: Texture2D, file_name: String) -> void:
+	if texture == null:
+		return
+	var image: Image = texture.get_image()
+	if image == null or image.is_empty():
+		return
+	_save_reader_debug_image(image, file_name)
+
+
+func _crop_reader_debug_image(image: Image, rect: Rect2) -> Image:
+	if image == null or image.is_empty():
+		return null
+	var left := maxi(0, int(floor(rect.position.x)))
+	var top := maxi(0, int(floor(rect.position.y)))
+	var right := mini(image.get_width(), int(ceil(rect.position.x + rect.size.x)))
+	var bottom := mini(image.get_height(), int(ceil(rect.position.y + rect.size.y)))
+	if right <= left or bottom <= top:
+		return null
+	return image.get_region(Rect2i(left, top, right - left, bottom - top))
+
+
+func _capture_reader_image_debug_frame(capture_id: int, prefix: String) -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if capture_id != _reader_image_debug_capture_id or not is_image_viewer_open() or _reader_image_frame == null:
+		return
+	var viewport_texture: Texture2D = get_viewport().get_texture()
+	if viewport_texture == null:
+		return
+	var frame_image: Image = viewport_texture.get_image()
+	if frame_image == null or frame_image.is_empty():
+		return
+	frame_image.flip_y()
+	_save_reader_debug_image(frame_image, "%s-screen-full.png" % prefix)
+	var frame_crop: Image = _crop_reader_debug_image(frame_image, _reader_image_frame.get_global_rect())
+	if frame_crop != null and not frame_crop.is_empty():
+		_save_reader_debug_image(frame_crop, "%s-screen-frame.png" % prefix)
+	if _reader_image_texture_rect != null:
+		var texture_crop: Image = _crop_reader_debug_image(frame_image, _reader_image_texture_rect.get_global_rect())
+		if texture_crop != null and not texture_crop.is_empty():
+			_save_reader_debug_image(texture_crop, "%s-screen-texture.png" % prefix)
+	var debug_dir := _resolve_reader_image_debug_dir()
+	if not debug_dir.is_empty():
+		print("[ReaderDebug] Saved image viewer debug capture: %s/%s" % [debug_dir, prefix])
+
+
+func _export_reader_image_debug_artifacts(source_texture: Texture2D, viewer_texture: Texture2D, title: String) -> void:
+	if not OS.is_debug_build():
+		return
+	_reader_image_debug_capture_id += 1
+	var prefix := "%04d-%s" % [_reader_image_debug_capture_id, _sanitize_reader_debug_slug(title)]
+	_save_reader_debug_texture(source_texture, "%s-source.png" % prefix)
+	_save_reader_debug_texture(viewer_texture, "%s-viewer.png" % prefix)
+	call_deferred("_capture_reader_image_debug_frame", _reader_image_debug_capture_id, prefix)
 
 
 func open_image_viewer(texture: Texture2D, title: String = "") -> void:
@@ -1095,11 +1208,22 @@ func open_image_viewer(texture: Texture2D, title: String = "") -> void:
 	_reader_image_current_texture = viewer_texture if viewer_texture != null else texture
 	_reader_image_texture_rect.texture = _reader_image_current_texture
 	_reader_image_texture_rect.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_reader_image_texture_rect.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_reader_image_texture_rect.material = null
 	_reader_image_overlay.color = Color(0.0, 0.0, 0.0, 0.48)
 	_reader_image_overlay.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	_reader_image_frame.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_reader_image_frame.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_reader_image_frame.material = null
+	_reader_image_viewport.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_reader_image_viewport.material = null
+	_reader_image_surface.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_reader_image_surface.material = null
 	_reader_image_backdrop.color = READER_IMAGE_VIEWER_BACKGROUND
+	_reader_image_backdrop.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_reader_image_backdrop.material = null
 	_reader_image_title_label.text = title if not title.is_empty() else "Image Preview"
+	_export_reader_image_debug_artifacts(texture, _reader_image_current_texture, _reader_image_title_label.text)
 	_reader_image_zoom = 1.0
 	_reader_image_pan = Vector2.ZERO
 	_reader_image_dragging = false
@@ -3846,7 +3970,7 @@ func _on_exit_pressed() -> void:
 
 func _on_bg_lock_toggled(pressed: bool) -> void:
 	## Toggle background lock icon and emit signal
-	## Ã¥Ë†â€¡Ã¦ÂÂ¢Ã¨Æ’Å’Ã¦â„¢Â¯Ã©â€ÂÃ¥Â®Å¡Ã¥â€ºÂ¾Ã¦Â â€¡Ã¥Â¹Â¶Ã¥Ââ€˜Ã¥â€¡ÂºÃ¤Â¿Â¡Ã¥ÂÂ·
+	## Keep the background-lock label synchronized with the emitted state.
 	if _bg_lock_button:
 		_bg_lock_button.text = "BGL" if pressed else "BG"
 		_bg_lock_button.tooltip_text = "Background locked" if pressed else "Lock Background (camera won't rotate sky)"
@@ -3868,7 +3992,7 @@ func _refresh_history_popup() -> void:
 
 	if _learning_position != "":
 		var learning_label: String = String(_completed_nodes.get(_learning_position, _learning_position))
-		var learn_idx := _history_list.add_item("â†© Return to learning: %s" % learning_label)
+		var learn_idx := _history_list.add_item("<- Return to learning: %s" % learning_label)
 		_history_list.set_item_metadata(learn_idx, "__RETURN_TO_LEARNING__")
 
 	if _nav_history.is_empty():
@@ -4000,7 +4124,7 @@ func _on_return_about_to_popup() -> void:
 	popup.clear()
 	
 	## Add "Return to learning" as first option
-	popup.add_item("â†© Return to learning", 0)
+	popup.add_item("<- Return to learning", 0)
 	popup.add_separator()
 	
 	## Add history items
@@ -4050,7 +4174,7 @@ func _refresh_completed_list() -> void:
 	completed_list.clear()
 	for node_id in _completed_nodes:
 		var label: String = _completed_nodes[node_id]
-		var display := "â˜… %s" % label if not _edit_mode else "âœ• %s" % label
+		var display := "* %s" % label if not _edit_mode else "x %s" % label
 		var idx := completed_list.add_item(display)
 		completed_list.set_item_metadata(idx, node_id)
 
@@ -4217,7 +4341,7 @@ func add_completed_node(node_id: String, label: String) -> void:
 	_completed_nodes[node_id] = label
 	
 	if completed_list:
-		var display := "â˜… %s" % label if not _edit_mode else "âœ• %s" % label
+		var display := "* %s" % label if not _edit_mode else "x %s" % label
 		var idx := completed_list.add_item(display)
 		completed_list.set_item_metadata(idx, node_id)
 	
