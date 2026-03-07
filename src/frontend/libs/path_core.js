@@ -5,9 +5,9 @@
 var exports = {};
 var module = { exports: exports };
 // Global scope exposure
-// var Graph, PathEngine; // Removed to avoid syntax error with class declaration
+// var Graph, PathEngine;
 
-    
+
     /* Graph.js */
     "use strict";
 
@@ -222,9 +222,8 @@ class Graph {
 }
 Graph = Graph;
 
-    // Explicitly expose
     self.Graph = Graph;
-    
+
     /* PathEngine.js */
     "use strict";
 
@@ -233,102 +232,58 @@ class PathEngine {
     constructor(graph) {
         this.graph = graph;
     }
-    /**
-     * Domain Learning: Extracts an efficient learning path for a set of nodes (or all nodes).
-     * 领域学习：为一组节点（或所有节点）提取高效的学习路径。
-     * @param nodeIds Specific nodes to learn (optional, defaults to all)
-     * @param strategy prioritization strategy
-     */
     domainLearning(nodeIds, strategy) {
-        const targetNodes = nodeIds ? new Set(nodeIds) : new Set(this.graph.getNodes().map(n => n.id));
-        // For Domain Learning, we want to learn *everything* in the set.
-        // We strictly respect dependencies within the graph.
-        // If a node in the set depends on a node OUTSIDE the set, we assume the outside node is already known 
-        // OR we must add it. Requirement implies "user-defined domain", so usually we strictly stay inside or include prereqs.
-        // Let's assume we need to be strictly self-contained or include necessary prerequisites.
-        // Safe bet: Extract subgraph of targetNodes + all their ancestors to ensure validity.
+        const targetNodes = nodeIds ? new Set(nodeIds) : new Set(this.graph.getNodes().map((node) => node.id));
         const relevantNodes = this.expandToIncludePrerequisites(targetNodes);
         return this.generateLearningPath(relevantNodes, strategy);
     }
-    /**
-     * Adaptive Diffusion Learning: Shortest Path from Frontier to Target
-     * 自适应扩散学习：从前沿到目标的最短路径
-     * @param targetId Final goal node
-     * @param strategy 'foundational' or 'core'
-     * @param completedSet Set of completed node IDs
-     * @param forcedExpansionSet Set of node IDs to expand prerequisites for
-     */
     diffusionLearning(targetId, strategy, completedSet = new Set(), forcedExpansionSet = new Set()) {
+        if (!this.graph.hasNode(targetId)) {
+            throw new Error(`Node ${targetId} not found in graph`);
+        }
         const targetNode = this.graph.getNode(targetId);
-        if (!targetNode) return { nodes: [], edges: [], coverage: 0 };
-
-        // 1. Backward Traversal: Get true ancestors (dependencies)
-        // 1. 反向遍历：获取真正的祖先（依赖项）
         const ancestors = this.getAncestors(targetId);
-        
-        // 2. Identify Unlearned Subgraph
-        // 2. 识别未学习子图
-        // Note: Target itself is part of unlearned if not complete
-        const unlearned = ancestors.filter(id => !completedSet.has(id));
+        const unlearned = ancestors.filter((id) => !completedSet.has(id));
         if (!completedSet.has(targetId) && !unlearned.includes(targetId)) {
             unlearned.push(targetId);
         }
-
         if (unlearned.length === 0) {
-            // Already mastered everything! Return empty or just target
-            return { nodes: [targetNode], edges: [], coverage: 1.0 };
+            return {
+                nodes: [targetNode],
+                edges: [],
+                strategy,
+                coverage: 1,
+            };
         }
-
-        // 3. Identify Frontier Nodes (Roots of unlearned subgraph)
-        // 3. 识别前沿节点（未学习子图的根）
-        // Frontier = nodes in unlearned set where ALL prerequisites are either completed or non-existent
-        const frontier = unlearned.filter(id => {
+        const frontier = unlearned.filter((id) => {
             const incoming = this.graph.getIncomingEdges(id);
-            // Check if all prerequisites are satisfied (completed)
-            return incoming.every(edge => completedSet.has(edge.source));
+            return incoming.every((edge) => completedSet.has(edge.source));
         });
-
-        // 4. Shortest Path Calculation (BFS)
-        // 4. 最短路径计算 (BFS)
-        // Find shortest path from ANY frontier node to the target
         let bestPath = null;
-
-        // Optimization: Run one BFS from Target BACKWARDS to find nearest frontier?
-        // Actually BFS from filtered graph (unlearned only) is safer.
-        
-        // Build adjacency for unlearned subgraph (reverse edges for backward search from target)
         const reverseAdj = new Map();
-        unlearned.forEach(id => reverseAdj.set(id, []));
-        
-        unlearned.forEach(id => {
+        unlearned.forEach((id) => reverseAdj.set(id, []));
+        unlearned.forEach((id) => {
             const incoming = this.graph.getIncomingEdges(id);
-            incoming.forEach(edge => {
+            incoming.forEach((edge) => {
                 if (unlearned.includes(edge.source)) {
-                    // Edge source -> id. In reverse: id -> source
-                    if (!reverseAdj.has(id)) reverseAdj.set(id, []);
+                    if (!reverseAdj.has(id)) {
+                        reverseAdj.set(id, []);
+                    }
                     reverseAdj.get(id).push(edge.source);
                 }
             });
         });
-
-        // BFS from Target to find nearest Frontier
         const queue = [[targetId]];
         const visited = new Set([targetId]);
-        
         while (queue.length > 0) {
             const currentPath = queue.shift();
             const head = currentPath[currentPath.length - 1];
-            
             if (frontier.includes(head)) {
-                // Found a path to a frontier!
-                // Reverse it to get Frontier -> Target
-                bestPath = currentPath.reverse();
+                bestPath = [...currentPath].reverse();
                 break;
             }
-            
             const neighbors = reverseAdj.get(head) || [];
-            neighbors.sort((a, b) => this.compareNodes(a, b, strategy));
-
+            neighbors.sort((left, right) => this.compareNodes(left, right, strategy));
             for (const next of neighbors) {
                 if (!visited.has(next)) {
                     visited.add(next);
@@ -336,323 +291,78 @@ class PathEngine {
                 }
             }
         }
-
-        // Fallback: If disconnected (shouldn't happen in valid DAG), just show unlearned
-        // If unlearned is too large, fallback to just immediate unlearned parents of target to avoid graph explosion
         let finalPathNodes;
         if (bestPath) {
-             finalPathNodes = bestPath.map(id => this.graph.getNode(id));
-        } else {
-             // Heuristic: If unlearned is small (< 50), show all. Else show target + immediate unlearned parents.
-             if (unlearned.length < 50) {
-                 finalPathNodes = unlearned.map(id => this.graph.getNode(id));
-             } else {
-                 const immediate = this.graph.getIncomingEdges(targetId)
-                    .map(e => e.source)
-                    .filter(id => !completedSet.has(id));
-                 finalPathNodes = [targetId, ...immediate].map(id => this.graph.getNode(id)).filter(n => n);
-                 // console.warn('Pathfinding failed and unlearned set is large. Showing immediate parents only.');
-             }
+            finalPathNodes = bestPath.map((id) => this.graph.getNode(id)).filter((node) => Boolean(node));
         }
-
-        // Capture original path nodes for Critical Path identification
-        // If bestPath exists, it's the critical path.
-        // If bestPath is null, we used a fallback (all unlearned or immediate).
-        // The fallback set (before forced expansion) is our "Spine".
-        const spineSet = new Set(finalPathNodes.map(n => n.id));
-
-        // --- Forced Expansion Logic ---
-        // If a node in the path is in forcedExpansionSet, we must include its IMMEDIATE unlearned prerequisites
-        // and link them up to the frontier if possible? 
-        // Or simply just add them to the view.
-        // Let's iterate and add immediate unlearned predecessors.
-        
-        const nodesToAdd = new Set();
-        const currentPathIds = new Set(finalPathNodes.map(n => n.id));
-        
-        currentPathIds.forEach(id => {
-            if (forcedExpansionSet.has(id)) {
-                // Get all unlearned prerequisites
-                const incoming = this.graph.getIncomingEdges(id);
-                incoming.forEach(edge => {
-                    const prereqId = edge.source;
-                    // Allow showing ALL prerequisites (even completed ones) if expanded
-                    if (!currentPathIds.has(prereqId)) {
-                        nodesToAdd.add(prereqId);
-                    }
-                });
-            }
-        });
-
-        // Add the forced nodes to the result
-        if (nodesToAdd.size > 0) {
-            nodesToAdd.forEach(id => {
-                const node = this.graph.getNode(id);
-                if (node) finalPathNodes.push(node);
-            });
-        }
-        
-        // Update PathSet for Hidden Prereq Check
-        const pathSet = new Set(finalPathNodes.map(n => n.id));
-
-        // Mark critical path (original shortest path or fallback) and check for hidden prerequisites
-        finalPathNodes = finalPathNodes.map(n => {
-            // Updated Logic: Use spineSet or bestPath
-            let isOriginalPath = false;
-            
-            if (bestPath) {
-                isOriginalPath = bestPath.includes(n.id);
-            } else {
-                // Determine if it was in the original set before forced expansion
-                // Fallback scenario: Initial nodes are critical/spine
-                isOriginalPath = spineSet.has(n.id);
-            }
-
-            const newNode = { ...n, isCritical: isOriginalPath };
-            
-            // Check for hidden unlearned prerequisites
-            const incoming = this.graph.getIncomingEdges(n.id);
-            const hasHidden = incoming.some(edge => 
-                !completedSet.has(edge.source) && // It is unlearned
-                !pathSet.has(edge.source)         // It is NOT in our current visible path
-            );
-            
-            if (hasHidden) {
-                newNode.hasHiddenPrereqs = true;
-            }
-            // If it was forced expanded, maybe mark as expanded?
-            if (forcedExpansionSet.has(n.id)) {
-                newNode.isExpanded = true;
-            }
-            
-            return newNode;
-        });
-
-        return {
-            nodes: finalPathNodes,
-            edges: this.getRelevantEdges(finalPathNodes),
-            strategy: strategy,
-            coverage: finalPathNodes.length / unlearned.length
-        };
-    }
-
-    /**
-     * Get all ancestors (transitive prerequisites) of a node
-     */
-    getAncestors(startId, visited = new Set()) {
-        if (visited.has(startId)) return [];
-        visited.add(startId);
-        
-        const ancestors = [];
-        const queue = [startId];
-        const result = new Set();
-        
-        while (queue.length > 0) {
-            const current = queue.shift();
-            const incoming = this.graph.getIncomingEdges(current);
-            incoming.forEach(edge => {
-                if (!result.has(edge.source)) {
-                    result.add(edge.source);
-                    ancestors.push(edge.source);
-                    queue.push(edge.source);
-                }
-            });
-        }
-        return ancestors;
-    }
-
-    /**
-     * Get edges strictly between nodes in the set
-     */
-    getRelevantEdges(nodes) {
-        const nodeSet = new Set(nodes.map(n => n.id));
-        const edges = [];
-        nodes.forEach(n => {
-            const outgoing = this.graph.getOutgoingEdges(n.id);
-            outgoing.forEach(e => {
-                if (nodeSet.has(e.target)) {
-                    edges.push(e);
-                }
-            });
-        });
-        return edges;
-    }
-
-    /**
-     * Core generation logic using Priority-Queue Topological Sort.
-     */
-    generateLearningPath(nodesOfInterest, strategy) {
-        const nodes = Array.from(nodesOfInterest).map(id => this.graph.getNode(id));
-        const nodeMap = new Map(nodes.map(n => [n.id, n]));
-        // Build local in-degrees for the subgraph
-        const localInDegree = new Map();
-        const localAdjacency = new Map();
-        nodes.forEach(node => {
-            localInDegree.set(node.id, 0);
-            localAdjacency.set(node.id, []);
-        });
-        // Populate edges restricted to the subgraph
-        const relevantEdges = [];
-        nodes.forEach(node => {
-            const outgoing = this.graph.getOutgoingEdges(node.id);
-            outgoing.forEach(edge => {
-                if (nodesOfInterest.has(edge.target)) {
-                    localAdjacency.get(node.id).push(edge.target);
-                    localInDegree.set(edge.target, (localInDegree.get(edge.target) || 0) + 1);
-                    relevantEdges.push(edge);
-                }
-            });
-        });
-        // Initialize queue with nodes having 0 in-degree (within subgraph)
-        let available = [];
-        nodes.forEach(node => {
-            if (localInDegree.get(node.id) === 0) {
-                available.push(node.id);
-            }
-        });
-        const learnedPath = [];
-        const visited = new Set();
-        let step = 1;
-        // Helper to process a node and unlock neighbors
-        const processNode = (currentId) => {
-            visited.add(currentId);
-            const currentNode = nodeMap.get(currentId);
-            // Add to path
-            learnedPath.push({
-                ...currentNode,
-                stepOrder: step++,
-                isCompleted: false,
-                unlocks: localAdjacency.get(currentId)
-            });
-            // "Unlock" neighbors
-            const neighbors = localAdjacency.get(currentId);
-            neighbors.forEach(neighborId => {
-                // Only decrement if neighbor not visited (avoid double counting in cycles)
-                if (!visited.has(neighborId)) {
-                    const newDegree = (localInDegree.get(neighborId) || 0) - 1;
-                    localInDegree.set(neighborId, newDegree);
-                    if (newDegree <= 0) { // Changed to <= 0 to be robust against negative logic errors
-                        // Check if already in available to prevent duplicates
-                        if (!available.includes(neighborId)) {
-                            available.push(neighborId);
-                        }
-                    }
-                }
-            });
-        };
-        while (learnedPath.length < nodes.length) {
-            if (available.length > 0) {
-                // Normal Topological Sort Step
-                available.sort((a, b) => this.compareNodes(a, b, strategy));
-                const currentId = available.shift();
-                if (!visited.has(currentId)) {
-                    processNode(currentId);
-                }
-            }
-            else {
-                // Cycle Detected or Disconnected Components with strict dependencies
-                // Strategy: Break cycle by picking the "best" remaining node 
-                // Prioritize nodes with HIGHEST Out-Degree (unlocks the most)
-                // or lowest remaining in-degree?
-                // "Lowest In-Degree" is usually the best heuristic for Feedback Arc Set.
-                // Find remaining nodes
-                const remainingIds = [];
-                nodes.forEach(n => {
-                    if (!visited.has(n.id))
-                        remainingIds.push(n.id);
-                });
-                if (remainingIds.length === 0)
-                    break; // Done
-                // Sort by In-Degree (Ascending) -> Strategy Score (Desc)
-                remainingIds.sort((a, b) => {
-                    const degA = localInDegree.get(a) || 0;
-                    const degB = localInDegree.get(b) || 0;
-                    if (degA !== degB)
-                        return degA - degB;
-                    return this.compareNodes(a, b, strategy);
-                });
-                const forceId = remainingIds[0];
-                // Force process strict dependency validation
-                localInDegree.set(forceId, 0); // Pretend it's free
-                processNode(forceId);
-            }
-        }
-        return {
-            nodes: learnedPath,
-            edges: relevantEdges,
-            strategy,
-            coverage: learnedPath.length / nodes.length
-        };
-    }
-    /**
-     * Helper to ensure valid learning set (closure of predecessors).
-     */
-    expandToIncludePrerequisites(initialNodes) {
-        const result = new Set(initialNodes);
-        let changed = true;
-        // Iteratively add parents until stable
-        // Optimally we just merge getPredecessors for all nodes
-        // But getPredecessors returns full closure, so we only need to do it once per node.
-        for (const nodeId of initialNodes) {
-            const preds = this.graph.getPredecessors(nodeId);
-            preds.forEach(p => result.add(p));
-        }
-        return result;
-    }
-    /**
-     * Strategy Comparator
-     * Returns negative if A is better than B (for sorting A before B).
-     */
-    compareNodes(idA, idB, strategy) {
-        const nodeA = this.graph.getNode(idA);
-        const nodeB = this.graph.getNode(idB);
-        // Primary Metric: Strategy Score
-        const scoreA = this.calculateScore(nodeA, strategy);
-        const scoreB = this.calculateScore(nodeB, strategy);
-        if (scoreA !== scoreB) {
-            return scoreB - scoreA; // Higher score first
-        }
-        // Tie-breaker: ID (stable sort)
-        return idA.localeCompare(idB);
-    }
-    calculateScore(node, strategy) {
-        // Avoid division by zero
-        const safeInDegree = node.inDegree + 1;
-        if (strategy === 'foundational') {
-            // Foundational: Low In-Degree (Global), High Out-Degree (Global)
-            // "Low in-degree yet highly correlated with other required nodes (out-degree)"
-            // Score = OutDegree / InDegree
-            return (node.outDegree + 0.1) / safeInDegree;
+        else if (unlearned.length < 50) {
+            finalPathNodes = unlearned.map((id) => this.graph.getNode(id)).filter((node) => Boolean(node));
         }
         else {
-            // Core: High Centrality, Low In-Degree (in learning set context)
-            // Note: In-degree in context is already 0 (since they are in 'available' list).
-            // So we use Global Centrality as the main differentiator.
-            // "Highly correlated (Centrality) ... low in-degree (Global)"
-            return (node.centrality || 0) * 10 - node.inDegree;
+            const immediate = this.graph.getIncomingEdges(targetId)
+                .map((edge) => edge.source)
+                .filter((id) => !completedSet.has(id));
+            finalPathNodes = [targetId, ...immediate]
+                .map((id) => this.graph.getNode(id))
+                .filter((node) => Boolean(node));
         }
+        const spineSet = new Set(finalPathNodes.map((node) => node.id));
+        const nodesToAdd = new Set();
+        const currentPathIds = new Set(finalPathNodes.map((node) => node.id));
+        currentPathIds.forEach((id) => {
+            if (!forcedExpansionSet.has(id)) {
+                return;
+            }
+            const incoming = this.graph.getIncomingEdges(id);
+            incoming.forEach((edge) => {
+                const prereqId = edge.source;
+                if (!currentPathIds.has(prereqId)) {
+                    nodesToAdd.add(prereqId);
+                }
+            });
+        });
+        nodesToAdd.forEach((id) => {
+            const node = this.graph.getNode(id);
+            if (node) {
+                finalPathNodes.push(node);
+            }
+        });
+        const pathSet = new Set(finalPathNodes.map((node) => node.id));
+        const enrichedNodes = finalPathNodes.map((node) => {
+            const isOriginalPath = bestPath ? bestPath.includes(node.id) : spineSet.has(node.id);
+            const nextNode = {
+                ...node,
+                isCritical: isOriginalPath,
+            };
+            const incoming = this.graph.getIncomingEdges(node.id);
+            const hasHidden = incoming.some((edge) => !completedSet.has(edge.source) && !pathSet.has(edge.source));
+            if (hasHidden) {
+                nextNode.hasHiddenPrereqs = true;
+            }
+            if (forcedExpansionSet.has(node.id)) {
+                nextNode.isExpanded = true;
+            }
+            return nextNode;
+        });
+        return {
+            nodes: enrichedNodes,
+            edges: this.getRelevantEdges(enrichedNodes),
+            strategy,
+            coverage: unlearned.length > 0 ? enrichedNodes.length / unlearned.length : 1,
+        };
     }
-
-    /**
-     * Get peripheral nodes for orbital view (1-4 nodes).
-     * 获取轨道视图的周边节点（1-4个节点）。
-     * @param centralId Current central node ID
-     * @param mode 'domain' or 'diffusion'
-     * @param ultimateTargetId Target node for diffusion mode (optional)
-     * @param maxCount Maximum peripheral count (default 4)
-     * @returns Array of peripheral node objects
-     */
     getPeripheralNodes(centralId, mode = 'domain', ultimateTargetId = null, maxCount = 4) {
         const centralNode = this.graph.getNode(centralId);
-        if (!centralNode) return [];
-
+        if (!centralNode) {
+            return [];
+        }
         const peripherals = [];
         const addedIds = new Set([centralId]);
-
-        // Step 1: Collect in-degree nodes (prerequisites)
         const incomingEdges = this.graph.getIncomingEdges(centralId);
         for (const edge of incomingEdges) {
-            if (peripherals.length >= maxCount) break;
+            if (peripherals.length >= maxCount) {
+                break;
+            }
             if (!addedIds.has(edge.source)) {
                 const node = this.graph.getNode(edge.source);
                 if (node) {
@@ -661,509 +371,656 @@ class PathEngine {
                 }
             }
         }
-
-        // Step 2: Fill remaining with high-association nodes
         if (peripherals.length < maxCount) {
             const outgoingEdges = this.graph.getOutgoingEdges(centralId);
             const candidates = [];
-
             for (const edge of outgoingEdges) {
-                if (addedIds.has(edge.target)) continue;
-                
-                // Diffusion mode: exclude out-degree of ultimate target
+                if (addedIds.has(edge.target)) {
+                    continue;
+                }
                 if (mode === 'diffusion' && ultimateTargetId) {
                     const targetOutgoing = this.graph.getOutgoingEdges(ultimateTargetId);
-                    const isOutDegreeOfTarget = targetOutgoing.some(e => e.target === edge.target);
-                    if (isOutDegreeOfTarget) continue;
+                    const isOutDegreeOfTarget = targetOutgoing.some((candidateEdge) => candidateEdge.target === edge.target);
+                    if (isOutDegreeOfTarget) {
+                        continue;
+                    }
                 }
-
                 const node = this.graph.getNode(edge.target);
                 if (node) {
-                    candidates.push({ 
-                        ...node, 
+                    candidates.push({
+                        ...node,
                         relation: 'association',
-                        weight: edge.weight || 1
+                        weight: edge.weight || 1,
                     });
                 }
             }
-
-            // Sort by weight (association strength)
-            candidates.sort((a, b) => b.weight - a.weight);
-
+            candidates.sort((left, right) => (right.weight || 0) - (left.weight || 0));
             for (const candidate of candidates) {
-                if (peripherals.length >= maxCount) break;
+                if (peripherals.length >= maxCount) {
+                    break;
+                }
                 if (!addedIds.has(candidate.id)) {
                     peripherals.push(candidate);
                     addedIds.add(candidate.id);
                 }
             }
         }
-
-        // Step 3: Zero in-degree fallback - use highest relevance
         if (peripherals.length === 0) {
-            const allNodes = this.graph.getNodes();
-            const candidates = allNodes
-                .filter(n => n.id !== centralId)
-                .map(n => ({
-                    ...n,
-                    relation: 'relevance',
-                    score: (n.centrality || 0) + (n.outDegree || 0) * 0.1
-                }))
-                .sort((a, b) => b.score - a.score);
-
+            const candidates = this.graph.getNodes()
+                .filter((node) => node.id !== centralId)
+                .map((node) => ({
+                ...node,
+                relation: 'relevance',
+                score: (node.centrality || 0) + (node.outDegree || 0) * 0.1,
+            }))
+                .sort((left, right) => (right.score || 0) - (left.score || 0));
             for (const candidate of candidates) {
-                if (peripherals.length >= maxCount) break;
+                if (peripherals.length >= maxCount) {
+                    break;
+                }
                 peripherals.push(candidate);
             }
         }
-
         return peripherals;
     }
-
-    /**
-     * Get tree layout Structure (Layered DAG) for visualization.
-     * 获取用于可视化的树形布局结构（分层 DAG）。
-     * @param centralId Current center node ID
-     * @param learningPath The active learning path object
-     */
-    /**
-     * Get tree layout Structure (Horizontal Mind Map) for visualization.
-     * @param centralId Current center node ID
-     * @param learningPath The active learning path object
-     * @param collapsedSet Optional Set of collapsed node IDs
-     */
-    /**
-     * Get tree layout Structure (Spine & Tributaries) for visualization.
-     * 获取用于可视化的树形布局结构（主干与支流）。
-     * @param centralId Current center node ID
-     * @param learningPath The active learning path object
-     * @param collapsedSet Optional Set of collapsed node IDs
-     */
     getTreeLayout(centralId, learningPath, collapsedSet = new Set(), expansionOrder = [], stickyClaimEnabled = true) {
-        const rawNodesRaw = learningPath.nodes;
-        if (!rawNodesRaw || rawNodesRaw.length === 0) return null;
-
-        // --- Rule 4: Single Appearance ---
-        // Deduplicate by ID. The FIRST occurrence wins (preserves original ordering/priority).
-        // 规则4：单次出现 —— 按 ID 去重，保留首次出现的节点。
+        const rawNodesRaw = Array.isArray(learningPath.nodes) ? learningPath.nodes : [];
+        if (rawNodesRaw.length === 0) {
+            return null;
+        }
         const seenIds = new Set();
         const rawNodes = [];
-        for (const n of rawNodesRaw) {
-            if (!seenIds.has(n.id)) {
-                seenIds.add(n.id);
-                rawNodes.push(n);
+        for (const node of rawNodesRaw) {
+            if (!node || !node.id || seenIds.has(node.id)) {
+                continue;
             }
+            seenIds.add(node.id);
+            rawNodes.push(node);
         }
-
-        const layoutNodes = [];
-        
-        // --- 1. Identify Spine (Critical Path) ---
-        let spineCandidates = rawNodes.filter(n => n.isCritical);
+        if (rawNodes.length === 0) {
+            return null;
+        }
+        let spineCandidates = rawNodes.filter((node) => Boolean(node.isCritical));
         if (spineCandidates.length === 0) {
             spineCandidates = [...rawNodes];
-            spineCandidates.sort((a,b) => (a.stepOrder || 0) - (b.stepOrder || 0));
-        } else {
-            spineCandidates.sort((a,b) => (a.stepOrder || 0) - (b.stepOrder || 0));
         }
-
+        spineCandidates.sort((left, right) => (left.stepOrder || 0) - (right.stepOrder || 0));
         const spineIndexMap = new Map();
-        spineCandidates.forEach((n, i) => spineIndexMap.set(n.id, i));
-
-        // --- Config using Visual Dimensions ---
-        const VISUAL_WIDTH = 140; 
-        const VISUAL_HEIGHT = 50; 
-        const H_GAP = 50;
-        const V_GAP = 120; 
-        const SPINE_SPACING = 290;
-
-        // Initialize Internal Nodes
-        const nodes = rawNodes.map(n => {
-            const isSpine = spineIndexMap.has(n.id);
-            const spineIdx = isSpine ? spineIndexMap.get(n.id) : -1;
-            
+        spineCandidates.forEach((node, index) => spineIndexMap.set(node.id, index));
+        const visualWidth = 140;
+        const horizontalGap = 50;
+        const verticalGap = 120;
+        const spineSpacing = 290;
+        const nodes = rawNodes.map((node) => {
+            const isSpine = spineIndexMap.has(node.id);
             return {
-                id: n.id,
-                label: n.label,
-                status: this._getNodeStatus(n, centralId),
-                inDegree: (n.inDegree || 0),
-                collapsed: collapsedSet.has(n.id),
-                isExpanded: !collapsedSet.has(n.id), // True if not explicitly collapsed by user
-                isSpine: isSpine,
-                spineIndex: spineIdx,
-                // -- 9-Rule Engine State --
+                id: node.id,
+                label: node.label,
+                status: this.getNodeStatus(node, centralId),
+                inDegree: node.inDegree || 0,
+                collapsed: collapsedSet.has(node.id),
+                isExpanded: !collapsedSet.has(node.id),
+                isSpine,
+                spineIndex: isSpine ? spineIndexMap.get(node.id) : -1,
                 visible: true,
                 x: 0,
                 y: 0,
                 currentOwner: null,
                 ownerPriority: -1,
+                hasPrereqs: false,
                 _tributaries: [],
-                _isOnSpine: isSpine
+                _isOnSpine: isSpine,
             };
         });
-
-        const nodeMap = new Map(nodes.map(n => [n.id, n]));
-        const expandedSet = new Set(expansionOrder);
-
-        // --- Helpers ---
-        // Constraint Subgraph edges
-        const usePathEdges = learningPath.edges && learningPath.edges.length > 0;
+        const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+        const expandedOrder = expansionOrder.filter((nodeId) => nodeMap.has(nodeId) && !collapsedSet.has(nodeId));
+        const expandedSet = new Set(expandedOrder);
+        const usePathEdges = Array.isArray(learningPath.edges) && learningPath.edges.length > 0;
         const pathReverseAdj = new Map();
         if (usePathEdges) {
-            learningPath.edges.forEach(e => {
-                const targetId = typeof e.target === 'object' ? e.target.id : e.target;
-                const sourceId = typeof e.source === 'object' ? e.source.id : e.source;
-                if (!pathReverseAdj.has(targetId)) pathReverseAdj.set(targetId, []);
+            learningPath.edges.forEach((edge) => {
+                const targetId = this.resolveEdgeNodeId(edge.target);
+                const sourceId = this.resolveEdgeNodeId(edge.source);
+                if (!targetId || !sourceId) {
+                    return;
+                }
+                if (!pathReverseAdj.has(targetId)) {
+                    pathReverseAdj.set(targetId, []);
+                }
                 pathReverseAdj.get(targetId).push(sourceId);
             });
         }
-
-        const getNode = id => nodeMap.get(id);
-        const getPrereqs = (id) => {
-            let sources = [];
-            if (usePathEdges) {
-                sources = pathReverseAdj.get(id) || [];
-            } else {
-                sources = this.graph.getIncomingEdges(id).map(e => e.source);
+        const getNode = (nodeId) => {
+            if (!nodeId) {
+                return undefined;
             }
-            // Deduplicate prereq sources to prevent duplicate claiming
-            // 去重前置条件来源，防止重复认领
-            const uniqueSources = [...new Set(sources)];
-            return uniqueSources.filter(src => nodeMap.has(src)).map(getNode);
+            return nodeMap.get(nodeId);
         };
-
-        // Populate hasPrereqs
-        nodes.forEach(n => {
-            n.hasPrereqs = getPrereqs(n.id).length > 0;
+        const getPrereqs = (nodeId) => {
+            const sources = usePathEdges
+                ? (pathReverseAdj.get(nodeId) || [])
+                : this.graph.getIncomingEdges(nodeId).map((edge) => edge.source);
+            return [...new Set(sources)]
+                .filter((sourceId) => nodeMap.has(sourceId))
+                .map((sourceId) => getNode(sourceId))
+                .filter((node) => Boolean(node));
+        };
+        nodes.forEach((node) => {
+            node.hasPrereqs = getPrereqs(node.id).length > 0;
         });
-
-
-
         const getTributaryRootSpineIndex = (node) => {
-            if (node._isOnSpine && node.isSpine) return node.spineIndex;
+            if (node._isOnSpine && node.isSpine) {
+                return node.spineIndex;
+            }
             let current = node;
-            let visited = new Set();
+            const visited = new Set();
             while (current && !visited.has(current.id)) {
                 visited.add(current.id);
-                if (current.isSpine) return current.spineIndex;
-                if (current.currentOwner) current = getNode(current.currentOwner);
-                else break;
+                if (current.isSpine) {
+                    return current.spineIndex;
+                }
+                current = current.currentOwner ? getNode(current.currentOwner) : undefined;
             }
             return -1;
         };
-
-        const getEffectiveSpineIndex = (node, _visited = new Set()) => {
-            if (!node.isSpine) return -1;
-            if (node._isOnSpine || node.currentOwner === null) return node.spineIndex ?? -1;
-            if (_visited.has(node.id)) return node.spineIndex ?? -1; // Cycle guard
-            _visited.add(node.id);
-            const owner = getNode(node.currentOwner);
-            if (owner && owner.isSpine) return getEffectiveSpineIndex(owner, _visited);
+        const getEffectiveSpineIndex = (node, visited = new Set()) => {
+            if (!node.isSpine) {
+                return -1;
+            }
+            if (node._isOnSpine || node.currentOwner === null) {
+                return node.spineIndex ?? -1;
+            }
+            if (visited.has(node.id)) {
+                return node.spineIndex ?? -1;
+            }
+            visited.add(node.id);
+            const owner = node.currentOwner ? getNode(node.currentOwner) : undefined;
+            if (owner && owner.isSpine) {
+                return getEffectiveSpineIndex(owner, visited);
+            }
             return getTributaryRootSpineIndex(node);
         };
-
-        const claim = (target, owner, priority, _claimVisited = new Set()) => {
-            // Cycle guard: prevent infinite recursion in ownership chains
-            // 循环保护：防止所有权链中的无限递归
-            if (_claimVisited.has(target.id)) return;
-            _claimVisited.add(target.id);
-
+        const claim = (target, owner, priority, claimVisited = new Set()) => {
+            if (claimVisited.has(target.id)) {
+                return;
+            }
+            claimVisited.add(target.id);
             target.currentOwner = owner.id;
             target.ownerPriority = priority;
             target._isOnSpine = false;
-            
             if (!owner._tributaries.includes(target)) {
                 owner._tributaries.push(target);
             }
-            
             if (expandedSet.has(target.id)) {
                 const targetEffectiveIdx = getEffectiveSpineIndex(target);
-                const targetTribs = getPrereqs(target.id).filter(t => t.currentOwner === null);
-                
-                targetTribs.forEach(t => {
-                    if (t.isSpine && target.isSpine) {
-                        const tIdx = t.spineIndex ?? -1;
-                        if (tIdx !== -1 && targetEffectiveIdx !== -1 && tIdx <= targetEffectiveIdx) return;
+                const targetTributaries = getPrereqs(target.id).filter((node) => node.currentOwner === null);
+                targetTributaries.forEach((node) => {
+                    if (node.isSpine && target.isSpine) {
+                        const nodeIndex = node.spineIndex ?? -1;
+                        if (nodeIndex !== -1 && targetEffectiveIdx !== -1 && nodeIndex <= targetEffectiveIdx) {
+                            return;
+                        }
                     }
-                    claim(t, target, priority, _claimVisited);
+                    claim(node, target, priority, claimVisited);
                 });
             }
         };
-
         const claimSpineChain = (startNode, owner, priority) => {
-            const chain = nodes.filter(n => n.isSpine && n.spineIndex >= startNode.spineIndex)
-                               .sort((a, b) => a.spineIndex - b.spineIndex);
-            chain.forEach(n => claim(n, owner, priority));
+            const chain = nodes
+                .filter((node) => node.isSpine && node.spineIndex >= startNode.spineIndex)
+                .sort((left, right) => left.spineIndex - right.spineIndex);
+            chain.forEach((node) => claim(node, owner, priority));
         };
-
         const tryClaim = (expander, target, priority) => {
-            if (target.currentOwner !== null && target.ownerPriority < priority) return { success: false };
+            if (target.currentOwner !== null && target.ownerPriority < priority) {
+                return { success: false };
+            }
             const expanderEffectiveIdx = getEffectiveSpineIndex(expander);
             const targetEffectiveIdx = target.spineIndex ?? -1;
-            
             if (target.isSpine && expander.isSpine) {
-                if (targetEffectiveIdx !== -1 && expanderEffectiveIdx !== -1 && targetEffectiveIdx <= expanderEffectiveIdx) return { success: false };
+                if (targetEffectiveIdx !== -1 && expanderEffectiveIdx !== -1 && targetEffectiveIdx <= expanderEffectiveIdx) {
+                    return { success: false };
+                }
             }
-            
             if (target.isSpine && !expander.isSpine) {
                 const rootSpineIndex = getTributaryRootSpineIndex(expander);
-                if (rootSpineIndex !== -1 && targetEffectiveIdx <= rootSpineIndex) return { success: false };
+                if (rootSpineIndex !== -1 && targetEffectiveIdx <= rootSpineIndex) {
+                    return { success: false };
+                }
             }
-            
             if (target.isSpine && expander.isSpine && expander._isOnSpine) {
                 claimSpineChain(target, expander, priority);
                 return { success: true };
             }
-            
             claim(target, expander, priority);
             return { success: true };
         };
-
-        const isOwnerChainVisible = (node, _visited = new Set()) => {
-            if (node.currentOwner === null) return false;
-            if (_visited.has(node.id)) return false; // Cycle guard
-            _visited.add(node.id);
-            if (!expandedSet.has(node.currentOwner)) return false;
+        const isOwnerChainVisible = (node, visited = new Set()) => {
+            if (node.currentOwner === null) {
+                return false;
+            }
+            if (visited.has(node.id)) {
+                return false;
+            }
+            visited.add(node.id);
+            if (!expandedSet.has(node.currentOwner)) {
+                return false;
+            }
             const owner = getNode(node.currentOwner);
-            if (!owner) return false;
-            if (owner.isSpine && owner._isOnSpine) return true;
-            if (owner.isSpine && !owner._isOnSpine) return owner.visible;
-            return isOwnerChainVisible(owner, _visited);
+            if (!owner) {
+                return false;
+            }
+            if (owner.isSpine && owner._isOnSpine) {
+                return true;
+            }
+            if (owner.isSpine && !owner._isOnSpine) {
+                return owner.visible;
+            }
+            return isOwnerChainVisible(owner, visited);
         };
-
-        // --- 1. Process Expansions in Priority Order ---
-        expansionOrder.forEach((expanderId, priority) => {
+        expandedOrder.forEach((expanderId, priority) => {
             const expander = getNode(expanderId);
-            if (!expander || !expandedSet.has(expanderId)) return;
+            if (!expander || !expandedSet.has(expanderId)) {
+                return;
+            }
             const prereqs = getPrereqs(expanderId);
-            prereqs.forEach(prereq => tryClaim(expander, prereq, priority));
+            prereqs.forEach((prereq) => tryClaim(expander, prereq, priority));
         });
-
-        // --- 2. Determine Visibility ---
-        nodes.forEach(n => {
-            if (n.isSpine) {
-                n.visible = true;
-                if (n.currentOwner && !expandedSet.has(n.currentOwner)) {
-                    n._isOnSpine = true;
-                    n.currentOwner = null;
+        nodes.forEach((node) => {
+            if (node.isSpine) {
+                node.visible = true;
+                if (node.currentOwner && !expandedSet.has(node.currentOwner)) {
+                    node._isOnSpine = true;
+                    node.currentOwner = null;
                 }
             }
         });
-
-        nodes.forEach(n => {
-            if (!n.isSpine) {
-                n.visible = isOwnerChainVisible(n);
-                if (!n.visible && !stickyClaimEnabled) n.currentOwner = null;
+        nodes.forEach((node) => {
+            if (!node.isSpine) {
+                node.visible = isOwnerChainVisible(node);
+                if (!node.visible && !stickyClaimEnabled) {
+                    node.currentOwner = null;
+                }
             }
         });
-
-        // --- 3. Place Nodes (Stationary Spine & Lateral Tributaries) ---
-        const calculateContourWidth = (node, _visited = new Set()) => {
-            if (_visited.has(node.id)) return 0;
-            _visited.add(node.id);
-            
-            if (!expandedSet.has(node.id)) return VISUAL_WIDTH + H_GAP;
-            
-            const tribs = node._tributaries.filter(t => t.visible && !t._isOnSpine);
-            if (tribs.length === 0) return VISUAL_WIDTH + H_GAP;
-            
+        const calculateContourWidth = (node, visited = new Set()) => {
+            if (visited.has(node.id)) {
+                return 0;
+            }
+            visited.add(node.id);
+            if (!expandedSet.has(node.id)) {
+                return visualWidth + horizontalGap;
+            }
+            const tributaries = node._tributaries.filter((candidate) => candidate.visible && !candidate._isOnSpine);
+            if (tributaries.length === 0) {
+                return visualWidth + horizontalGap;
+            }
             let total = 0;
-            tribs.forEach(t => {
-                total += calculateContourWidth(t, _visited);
+            tributaries.forEach((candidate) => {
+                total += calculateContourWidth(candidate, visited);
             });
-            return Math.max(VISUAL_WIDTH + H_GAP, total);
+            return Math.max(visualWidth + horizontalGap, total);
         };
-
         const renderPlaced = new Set();
-        const placeSubTributaries = (parent, dir, parentWidth) => {
-            if (renderPlaced.has(parent.id)) return;
+        const placeSubTributaries = (parent, direction) => {
+            if (renderPlaced.has(parent.id)) {
+                return;
+            }
             renderPlaced.add(parent.id);
-
-            const tribs = parent._tributaries.filter(t => t.visible && !t._isOnSpine);
-            if (tribs.length === 0) return;
-            
-            const widths = tribs.map(t => calculateContourWidth(t));
-            const totalWidth = widths.reduce((a, b) => a + b, 0);
-            
+            const tributaries = parent._tributaries.filter((node) => node.visible && !node._isOnSpine);
+            if (tributaries.length === 0) {
+                return;
+            }
+            const widths = tributaries.map((node) => calculateContourWidth(node));
+            const totalWidth = widths.reduce((sum, width) => sum + width, 0);
             let startX = parent.x - totalWidth / 2;
-            
-            tribs.forEach((t, i) => {
-                const w = widths[i];
-                t.x = startX + w / 2;
-                t.y = parent.y + dir * V_GAP;
-                startX += w;
+            tributaries.forEach((node, index) => {
+                const width = widths[index];
+                node.x = startX + width / 2;
+                node.y = parent.y + direction * verticalGap;
+                startX += width;
             });
-            
-            tribs.forEach(t => {
-                if (expandedSet.has(t.id)) placeSubTributaries(t, dir, widths[tribs.indexOf(t)]);
+            tributaries.forEach((node) => {
+                if (expandedSet.has(node.id)) {
+                    placeSubTributaries(node, direction);
+                }
             });
         };
-
-        const visibleSpineNodes = nodes.filter(n => n._isOnSpine).sort((a,b) => a.spineIndex - b.spineIndex);
-        
+        const visibleSpineNodes = nodes.filter((node) => node._isOnSpine).sort((left, right) => left.spineIndex - right.spineIndex);
         let lastUpSpine = null;
         let lastDownSpine = null;
-
-        visibleSpineNodes.forEach((n, idx) => {
-            const effectiveIdx = getEffectiveSpineIndex(n);
-            const dir = ((effectiveIdx === -1 ? n.spineIndex : effectiveIdx) % 2 === 0) ? 1 : -1;
-            
-            // Calculate total width this spine node's tributaries will take
-            const tribWidth = calculateContourWidth(n);
-            n._tribWidth = tribWidth;
-            n._dir = dir;
-
-            let minX = idx === 0 ? 0 : visibleSpineNodes[idx - 1].x + SPINE_SPACING;
-            
-            const prevSameSide = (dir === 1) ? lastDownSpine : lastUpSpine;
-            if (prevSameSide) {
-                const safeX = prevSameSide.x + prevSameSide._tribWidth / 2 + tribWidth / 2 + H_GAP * 2;
+        visibleSpineNodes.forEach((node, index) => {
+            const effectiveIdx = getEffectiveSpineIndex(node);
+            const direction = ((effectiveIdx === -1 ? node.spineIndex : effectiveIdx) % 2 === 0) ? 1 : -1;
+            const tributaryWidth = calculateContourWidth(node);
+            node._tribWidth = tributaryWidth;
+            node._dir = direction;
+            let minX = index === 0 ? 0 : visibleSpineNodes[index - 1].x + spineSpacing;
+            const previousSameSide = direction === 1 ? lastDownSpine : lastUpSpine;
+            if (previousSameSide) {
+                const safeX = previousSameSide.x + (previousSameSide._tribWidth || 0) / 2 + tributaryWidth / 2 + horizontalGap * 2;
                 minX = Math.max(minX, safeX);
             }
-
-            n.x = minX;
-            n.y = 0;
-
-            if (dir === 1) lastDownSpine = n;
-            else lastUpSpine = n;
-        });
-
-        // Now place all tributaries from the roots (spine nodes)
-        visibleSpineNodes.forEach(n => {
-            if (expandedSet.has(n.id)) {
-                placeSubTributaries(n, n._dir, n._tribWidth);
+            node.x = minX;
+            node.y = 0;
+            if (direction === 1) {
+                lastDownSpine = node;
+            }
+            else {
+                lastUpSpine = node;
             }
         });
-
-        // --- 4. Generate Edges & Hulls ---
-        const layoutEdges = [];
-        const visibleNodes = nodes.filter(n => n.visible);
-        const visibleIds = new Set(visibleNodes.map(n => n.id));
-
-        const allEdges = usePathEdges ? learningPath.edges : this.graph.getEdges();
-        allEdges.forEach(e => {
-            const srcId = typeof e.source === 'object' ? e.source.id : e.source;
-            const tgtId = typeof e.target === 'object' ? e.target.id : e.target;
-            const src = getNode(srcId);
-            const tgt = getNode(tgtId);
-            
-            if (!src || !tgt || !visibleIds.has(src.id) || !visibleIds.has(tgt.id)) return;
-            
-            // Rule 5: Cross-Tributary Isolation
-            if (src.currentOwner && tgt.currentOwner && src.currentOwner !== tgt.currentOwner) return;
-            
-            layoutEdges.push({ from: srcId, to: tgtId });
+        visibleSpineNodes.forEach((node) => {
+            if (expandedSet.has(node.id)) {
+                placeSubTributaries(node, node._dir || 1);
+            }
         });
-
+        const visibleNodes = nodes.filter((node) => node.visible);
+        const visibleIds = new Set(visibleNodes.map((node) => node.id));
+        const edgeSet = new Set();
+        const layoutEdges = [];
+        const allEdges = usePathEdges ? learningPath.edges : this.graph.getEdges();
+        allEdges.forEach((edge) => {
+            const sourceId = this.resolveEdgeNodeId(edge.source);
+            const targetId = this.resolveEdgeNodeId(edge.target);
+            if (!sourceId || !targetId) {
+                return;
+            }
+            const source = getNode(sourceId);
+            const target = getNode(targetId);
+            if (!source || !target || !visibleIds.has(source.id) || !visibleIds.has(target.id)) {
+                return;
+            }
+            if (source.currentOwner && target.currentOwner && source.currentOwner !== target.currentOwner) {
+                return;
+            }
+            const edgeKey = `${sourceId}->${targetId}`;
+            if (edgeSet.has(edgeKey)) {
+                return;
+            }
+            edgeSet.add(edgeKey);
+            layoutEdges.push({ from: sourceId, to: targetId });
+        });
         const hulls = [];
-        expansionOrder.forEach((id) => {
-            const expander = getNode(id);
-            if (!expander || !expandedSet.has(id)) return;
-            
-            const tribs = expander._tributaries.filter(t => t.visible);
-            if (tribs.length === 0) return;
-            
+        expandedOrder.forEach((nodeId) => {
+            const expander = getNode(nodeId);
+            if (!expander || !expandedSet.has(nodeId)) {
+                return;
+            }
+            const tributaries = expander._tributaries.filter((node) => node.visible);
+            if (tributaries.length === 0) {
+                return;
+            }
             hulls.push({
-                groupNodeId: id,
-                memberIds: tribs.map(t => t.id)
+                groupNodeId: nodeId,
+                memberIds: tributaries.map((node) => node.id),
             });
         });
-
-        // Strip internal engine state to produce JSON-safe output
-        // 剥离内部引擎状态以产生 JSON 安全的输出（_tributaries 包含循环对象引用）
-
-        // Build outgoing adjacency for degree name resolution / 构建出度邻接用于名称解析
         const outAdj = new Map();
         const allEdgesForDegree = usePathEdges ? learningPath.edges : this.graph.getEdges();
-        allEdgesForDegree.forEach(e => {
-            const srcId = typeof e.source === 'object' ? e.source.id : e.source;
-            const tgtId = typeof e.target === 'object' ? e.target.id : e.target;
-            if (!outAdj.has(srcId)) outAdj.set(srcId, new Set());
-            outAdj.get(srcId).add(tgtId);
+        allEdgesForDegree.forEach((edge) => {
+            const sourceId = this.resolveEdgeNodeId(edge.source);
+            const targetId = this.resolveEdgeNodeId(edge.target);
+            if (!sourceId || !targetId) {
+                return;
+            }
+            if (!outAdj.has(sourceId)) {
+                outAdj.set(sourceId, new Set());
+            }
+            outAdj.get(sourceId).add(targetId);
         });
-
-        const cleanNodes = visibleNodes.map(n => {
-            // Resolve in-degree names (prerequisites) / 解析入度名称
-            const inSources = getPrereqs(n.id);
-            const inDegreeNames = inSources.map(s => s.label || s.id);
-
-            // Resolve out-degree names (successors) / 解析出度名称
-            const outTargets = outAdj.get(n.id) || new Set();
-            const outDegreeNames = [...outTargets]
-                .map(tid => { const t = getNode(tid); return t ? (t.label || t.id) : tid; });
-
+        const cleanNodes = visibleNodes.map((node) => {
+            const inSources = getPrereqs(node.id);
+            const inDegreeNames = inSources.map((source) => source.label || source.id);
+            const outTargets = outAdj.get(node.id) || new Set();
+            const outDegreeNames = [...outTargets].map((targetId) => {
+                const target = getNode(targetId);
+                return target ? (target.label || target.id) : targetId;
+            });
             return {
-                id: n.id,
-                label: n.label,
-                status: n.status,
-                x: n.x,
-                y: n.y,
-                isSpine: n.isSpine,
-                spineIndex: n.spineIndex,
-                isExpanded: n.isExpanded,
-                collapsed: n.collapsed,
-                hasPrereqs: n.hasPrereqs,
-                currentOwner: n.currentOwner,
-                visible: n.visible,
-                inDegree: n.inDegree,
+                id: node.id,
+                label: node.label,
+                status: node.status,
+                x: node.x,
+                y: node.y,
+                isSpine: node.isSpine,
+                spineIndex: node.spineIndex,
+                isExpanded: node.isExpanded,
+                collapsed: node.collapsed,
+                hasPrereqs: node.hasPrereqs,
+                currentOwner: node.currentOwner,
+                visible: node.visible,
+                inDegree: node.inDegree,
                 outDegree: outTargets.size,
-                inDegreeNames: inDegreeNames,
-                outDegreeNames: outDegreeNames
+                inDegreeNames,
+                outDegreeNames,
             };
         });
-
         return {
             nodes: cleanNodes,
             edges: layoutEdges,
-            hulls: hulls
+            hulls,
         };
     }
-
-    _getNodeStatus(node, centralId) {
-        if (node.isCompleted) return 'completed';
-        if (node.id === centralId) return 'current';
+    getAncestors(startId) {
+        const queue = [startId];
+        const ancestors = [];
+        const visited = new Set();
+        while (queue.length > 0) {
+            const current = queue.shift();
+            const incoming = this.graph.getIncomingEdges(current);
+            incoming.forEach((edge) => {
+                if (!visited.has(edge.source)) {
+                    visited.add(edge.source);
+                    ancestors.push(edge.source);
+                    queue.push(edge.source);
+                }
+            });
+        }
+        return ancestors;
+    }
+    getRelevantEdges(nodes) {
+        const nodeSet = new Set(nodes.map((node) => node.id));
+        const edges = [];
+        const edgeSet = new Set();
+        nodes.forEach((node) => {
+            const outgoing = this.graph.getOutgoingEdges(node.id);
+            outgoing.forEach((edge) => {
+                if (!nodeSet.has(edge.target)) {
+                    return;
+                }
+                const edgeKey = `${edge.source}->${edge.target}:${edge.type || 'dependency'}`;
+                if (edgeSet.has(edgeKey)) {
+                    return;
+                }
+                edgeSet.add(edgeKey);
+                edges.push(edge);
+            });
+        });
+        return edges;
+    }
+    generateLearningPath(nodesOfInterest, strategy) {
+        const nodes = Array.from(nodesOfInterest)
+            .map((id) => this.graph.getNode(id))
+            .filter((node) => Boolean(node));
+        const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+        const localInDegree = new Map();
+        const localAdjacency = new Map();
+        nodes.forEach((node) => {
+            localInDegree.set(node.id, 0);
+            localAdjacency.set(node.id, []);
+        });
+        const relevantEdges = [];
+        nodes.forEach((node) => {
+            const outgoing = this.graph.getOutgoingEdges(node.id);
+            outgoing.forEach((edge) => {
+                if (nodesOfInterest.has(edge.target)) {
+                    localAdjacency.get(node.id).push(edge.target);
+                    localInDegree.set(edge.target, (localInDegree.get(edge.target) || 0) + 1);
+                    relevantEdges.push(edge);
+                }
+            });
+        });
+        const available = [];
+        nodes.forEach((node) => {
+            if (localInDegree.get(node.id) === 0) {
+                available.push(node.id);
+            }
+        });
+        const learnedPath = [];
+        const visited = new Set();
+        let step = 1;
+        const processNode = (currentId) => {
+            visited.add(currentId);
+            const currentNode = nodeMap.get(currentId);
+            learnedPath.push({
+                ...currentNode,
+                stepOrder: step++,
+                isCompleted: false,
+                unlocks: localAdjacency.get(currentId),
+            });
+            const neighbors = localAdjacency.get(currentId);
+            neighbors.forEach((neighborId) => {
+                if (!visited.has(neighborId)) {
+                    const newDegree = (localInDegree.get(neighborId) || 0) - 1;
+                    localInDegree.set(neighborId, newDegree);
+                    if (newDegree <= 0 && !available.includes(neighborId)) {
+                        available.push(neighborId);
+                    }
+                }
+            });
+        };
+        while (learnedPath.length < nodes.length) {
+            if (available.length > 0) {
+                available.sort((left, right) => this.compareNodes(left, right, strategy));
+                const currentId = available.shift();
+                if (!visited.has(currentId)) {
+                    processNode(currentId);
+                }
+                continue;
+            }
+            const remainingIds = nodes.filter((node) => !visited.has(node.id)).map((node) => node.id);
+            if (remainingIds.length === 0) {
+                break;
+            }
+            remainingIds.sort((left, right) => {
+                const leftDegree = localInDegree.get(left) || 0;
+                const rightDegree = localInDegree.get(right) || 0;
+                if (leftDegree !== rightDegree) {
+                    return leftDegree - rightDegree;
+                }
+                return this.compareNodes(left, right, strategy);
+            });
+            const forcedId = remainingIds[0];
+            localInDegree.set(forcedId, 0);
+            processNode(forcedId);
+        }
+        return {
+            nodes: learnedPath,
+            edges: relevantEdges,
+            strategy,
+            coverage: nodes.length > 0 ? learnedPath.length / nodes.length : 0,
+        };
+    }
+    expandToIncludePrerequisites(initialNodes) {
+        const result = new Set(initialNodes);
+        for (const nodeId of initialNodes) {
+            const predecessors = this.graph.getPredecessors(nodeId);
+            predecessors.forEach((predecessorId) => result.add(predecessorId));
+        }
+        return result;
+    }
+    compareNodes(idA, idB, strategy) {
+        const nodeA = this.graph.getNode(idA);
+        const nodeB = this.graph.getNode(idB);
+        const scoreA = this.calculateScore(nodeA, strategy);
+        const scoreB = this.calculateScore(nodeB, strategy);
+        if (scoreA !== scoreB) {
+            return scoreB - scoreA;
+        }
+        return idA.localeCompare(idB);
+    }
+    calculateScore(node, strategy) {
+        const safeInDegree = node.inDegree + 1;
+        if (strategy === 'foundational') {
+            return (node.outDegree + 0.1) / safeInDegree;
+        }
+        return (node.centrality || 0) * 10 - node.inDegree;
+    }
+    getNodeStatus(node, centralId) {
+        if (node.isCompleted) {
+            return 'completed';
+        }
+        if (centralId && node.id === centralId) {
+            return 'current';
+        }
         return 'pending';
+    }
+    resolveEdgeNodeId(endpoint) {
+        if (typeof endpoint === 'string') {
+            return endpoint;
+        }
+        if (endpoint && typeof endpoint === 'object' && 'id' in endpoint) {
+            const candidate = endpoint.id;
+            return typeof candidate === 'string' ? candidate : '';
+        }
+        return '';
     }
 }
 PathEngine = PathEngine;
 
-    // Explicitly expose
     self.PathEngine = PathEngine;
 
-/**
- * OrbitalState - Progress tracking for Orbital Learning.
- * 轨道状态 - 轨道学习的进度追踪。
- */
+    /* OrbitalState.js */
+    "use strict";
+
+
 class OrbitalState {
     constructor(storageKey = 'noteconnection_orbital_progress') {
         this.storageKey = storageKey;
         this.completedIds = new Set();
+        this.collapsedIds = new Set();
+        this.expansionOrder = [];
+        this.stickyClaimEnabled = true;
         this.currentCentralId = null;
         this.learningPath = null;
-        this.mode = 'domain'; // 'domain' or 'diffusion'
-        this.retainHistory = true; // Default to true
-        this._load();
+        this.mode = 'domain';
+        this.retainHistory = true;
+        this.load();
     }
-
-    _load() {
+    load() {
+        if (typeof localStorage === 'undefined') {
+            return;
+        }
         try {
             const saved = localStorage.getItem(this.storageKey);
-            if (saved) {
-                const data = JSON.parse(saved);
-                // Respect retainHistory from saved state if present, or default
-                if (data.retainHistory !== undefined) this.retainHistory = data.retainHistory;
-                
-                if (this.retainHistory) {
-                    this.completedIds = new Set(data.completedIds || []);
-                    this.currentCentralId = data.currentCentralId || null;
-                    this.mode = data.mode || 'domain';
-                }
+            if (!saved) {
+                return;
             }
-        } catch (e) {
-            console.warn('OrbitalState: Failed to load progress', e);
+            const data = JSON.parse(saved);
+            if (data.retainHistory !== undefined) {
+                this.retainHistory = data.retainHistory;
+            }
+            if (!this.retainHistory) {
+                return;
+            }
+            this.completedIds = new Set(data.completedIds || []);
+            this.collapsedIds = new Set(data.collapsedIds || []);
+            this.expansionOrder = data.expansionOrder || [];
+            if (data.stickyClaimEnabled !== undefined) {
+                this.stickyClaimEnabled = data.stickyClaimEnabled;
+            }
+            this.currentCentralId = data.currentCentralId || null;
+            this.mode = data.mode || 'domain';
+        }
+        catch (error) {
+            console.warn('OrbitalState Load Error', error);
         }
     }
-
-    _save() {
+    save() {
+        if (typeof localStorage === 'undefined') {
+            return;
+        }
         if (!this.retainHistory) {
             localStorage.removeItem(this.storageKey);
             return;
@@ -1171,238 +1028,111 @@ class OrbitalState {
         try {
             const data = {
                 completedIds: Array.from(this.completedIds),
+                collapsedIds: Array.from(this.collapsedIds),
+                expansionOrder: this.expansionOrder,
+                stickyClaimEnabled: this.stickyClaimEnabled,
                 currentCentralId: this.currentCentralId,
                 mode: this.mode,
-                retainHistory: this.retainHistory
+                retainHistory: this.retainHistory,
             };
             localStorage.setItem(this.storageKey, JSON.stringify(data));
-        } catch (e) {
-            console.warn('OrbitalState: Failed to save progress', e);
+        }
+        catch (error) {
+            console.warn('OrbitalState Save Error', error);
         }
     }
-
-    /**
-     * Update settings.
-     * @param config { retainHistory: boolean }
-     */
     updateSettings(config) {
-        if (config && typeof config.retainHistory === 'boolean') {
-            this.retainHistory = config.retainHistory;
-            if (this.retainHistory) {
-                this._save(); // Persist current state immediately
-            } else {
-                localStorage.removeItem(this.storageKey); // Clear immediately
-            }
+        if (!config || typeof config.retainHistory !== 'boolean') {
+            return;
         }
+        this.retainHistory = config.retainHistory;
+        if (!this.retainHistory) {
+            if (typeof localStorage !== 'undefined') {
+                localStorage.removeItem(this.storageKey);
+            }
+            return;
+        }
+        this.save();
     }
-
-    /**
-     * Mark a node as completed and advance to next.
-     * @param nodeId Node to mark complete
-     * @returns Next central node ID or null if path complete
-     */
     markComplete(nodeId) {
         this.completedIds.add(nodeId);
-        
-        // Find next uncompleted node in path
-        if (this.learningPath && this.learningPath.nodes) {
-            const currentIdx = this.learningPath.nodes.findIndex(n => n.id === nodeId);
-            for (let i = currentIdx + 1; i < this.learningPath.nodes.length; i++) {
-                const next = this.learningPath.nodes[i];
+        if (this.learningPath && Array.isArray(this.learningPath.nodes)) {
+            const currentIndex = this.learningPath.nodes.findIndex((node) => node.id === nodeId);
+            for (let index = currentIndex + 1; index < this.learningPath.nodes.length; index += 1) {
+                const next = this.learningPath.nodes[index];
                 if (!this.completedIds.has(next.id)) {
                     this.currentCentralId = next.id;
-                    this._save();
+                    this.save();
                     return next.id;
                 }
             }
         }
-
-        this._save();
-        return null; // Path complete
+        this.save();
+        return null;
     }
-
-    /**
-     * Set the current learning path.
-     * @param path Learning path from PathEngine
-     */
     setLearningPath(path) {
         this.learningPath = path;
-        if (path && path.nodes && path.nodes.length > 0) {
-            // Find first uncompleted node
-            const first = path.nodes.find(n => !this.completedIds.has(n.id));
-            if (!this.currentCentralId) {
-                 this.currentCentralId = first ? first.id : path.nodes[0].id;
-            }
+        if (path && Array.isArray(path.nodes) && path.nodes.length > 0 && !this.currentCentralId) {
+            const first = path.nodes.find((node) => !this.completedIds.has(node.id));
+            this.currentCentralId = first ? first.id : path.nodes[0].id;
         }
-        this._save();
+        this.save();
     }
-
-    /**
-     * Switch central node manually.
-     * @param nodeId New central node
-     * @param autoReconstruct If true, caller should reconstruct path
-     */
     switchCentral(nodeId, autoReconstruct = false) {
         this.currentCentralId = nodeId;
-        this._save();
+        this.save();
         return autoReconstruct;
     }
-
-    /**
-     * Get completion count for display.
-     * @returns {completed, total}
-     */
     getProgress() {
-        const total = this.learningPath?.nodes?.length || 0;
-        const completed = this.completedIds.size;
-        return { completed, total };
+        const total = this.learningPath && Array.isArray(this.learningPath.nodes) ? this.learningPath.nodes.length : 0;
+        return { completed: this.completedIds.size, total };
     }
-
-    /**
-     * Get completed node IDs as array.
-     */
     getCompletedIds() {
         return Array.from(this.completedIds);
     }
-
-    /**
-     * Reset all progress.
-     */
     reset() {
         this.completedIds.clear();
+        this.collapsedIds.clear();
+        this.expansionOrder = [];
         this.currentCentralId = null;
         this.learningPath = null;
-        localStorage.removeItem(this.storageKey);
+        if (typeof localStorage !== 'undefined') {
+            localStorage.removeItem(this.storageKey);
+        }
     }
-
-    /**
-     * Truncate label for peripheral display (max 15 chars).
-     * @param label Original label
-     * @returns Truncated label
-     */
     static truncateLabel(label, maxLen = 15) {
-        if (!label || label.length <= maxLen) return label || '';
+        if (!label || label.length <= maxLen) {
+            return label || '';
+        }
         return label.substring(0, maxLen) + '...';
     }
-
-    /**
-     * Toggle collapsed state of a node.
-     * @returns {boolean} New collapsed state
-     */
     toggleCollapse(nodeId) {
         if (this.collapsedIds.has(nodeId)) {
             this.collapsedIds.delete(nodeId);
-            this._save();
+            if (!this.expansionOrder.includes(nodeId)) {
+                this.expansionOrder.push(nodeId);
+            }
+            this.save();
             return false;
-        } else {
-            this.collapsedIds.add(nodeId);
-            this._save();
-            return true;
         }
+        this.collapsedIds.add(nodeId);
+        this.expansionOrder = this.expansionOrder.filter((id) => id !== nodeId);
+        this.save();
+        return true;
     }
-
     isCollapsed(nodeId) {
         return this.collapsedIds.has(nodeId);
     }
+    collapseAll() {
+        this.expansionOrder = [];
+        this.save();
+    }
+    setStickyClaim(enabled) {
+        this.stickyClaimEnabled = enabled;
+        this.save();
+    }
 }
-
-// Update constructor and _load/_save methods
-const _originalCons = OrbitalState.prototype.constructor;
-OrbitalState.prototype.constructor = function(storageKey = 'noteconnection_orbital_progress') {
-    this.storageKey = storageKey;
-    this.completedIds = new Set();
-    this.collapsedIds = new Set(); 
-    this.expansionOrder = [];
-    this.stickyClaimEnabled = true;
-    this.currentCentralId = null;
-    this.learningPath = null;
-    this.mode = 'domain';
-    this.retainHistory = true;
-    this._load();
-};
-
-OrbitalState.prototype._load = function() {
-    try {
-        const saved = localStorage.getItem(this.storageKey);
-        if (saved) {
-            const data = JSON.parse(saved);
-            if (data.retainHistory !== undefined) this.retainHistory = data.retainHistory;
-            
-            if (this.retainHistory) {
-                this.completedIds = new Set(data.completedIds || []);
-                this.collapsedIds = new Set(data.collapsedIds || []);
-                this.expansionOrder = data.expansionOrder || [];
-                if (data.stickyClaimEnabled !== undefined) this.stickyClaimEnabled = data.stickyClaimEnabled;
-                this.currentCentralId = data.currentCentralId || null;
-                this.mode = data.mode || 'domain';
-            }
-        }
-    } catch (e) { console.warn('OrbitalState Load Error', e); }
-};
-
-OrbitalState.prototype._save = function() {
-    if (!this.retainHistory) {
-        localStorage.removeItem(this.storageKey);
-        return;
-    }
-    try {
-        const data = {
-            completedIds: Array.from(this.completedIds),
-            collapsedIds: Array.from(this.collapsedIds),
-            expansionOrder: this.expansionOrder,
-            stickyClaimEnabled: this.stickyClaimEnabled,
-            currentCentralId: this.currentCentralId,
-            mode: this.mode,
-            retainHistory: this.retainHistory
-        };
-        localStorage.setItem(this.storageKey, JSON.stringify(data));
-    } catch (e) { console.warn('OrbitalState Save Error', e); }
-};
-
-OrbitalState.prototype.toggleCollapse = function(nodeId) {
-    if (this.collapsedIds.has(nodeId)) {
-        this.collapsedIds.delete(nodeId);
-        // User explicitly expanding it
-        if (!this.expansionOrder.includes(nodeId)) {
-            this.expansionOrder.push(nodeId);
-        }
-        this._save();
-        return false;
-    } else {
-        this.collapsedIds.add(nodeId);
-        // User explicitly collapsing it
-        this.expansionOrder = this.expansionOrder.filter(id => id !== nodeId);
-        this._save();
-        return true;
-    }
-};
-
-OrbitalState.prototype.collapseAll = function() {
-    // We add all nodes in expansionOrder to collapsedIds to collapse them
-    this.expansionOrder.forEach(id => this.collapsedIds.add(id));
-    this.expansionOrder = [];
-    this.collapsedIds.clear(); // We can also just maintain collapsedIds loosely, but clearing expansionOrder is sufficient for the rules
-    // Wait, if collapsedIds handles "isExplicitlyCollapsed", we should probably populate it. 
-    // In our rules, nodes drop their Tributaries when collapsed.
-    // For simplicity, collapseAll clears expansionOrder. But what about collapsedIds?
-    // Let's clear expansionOrder and set a flag or just clear it.
-    // Given the worker logic relies on `collapsedSet` and `expansionOrder`, 
-    // actually, in `getTreeLayout`, `isExpanded = !collapsedSet.has(n.id)`.
-    // And `expandedSet = new Set(expansionOrder)`.
-    // It's a bit duplicate, but `getTreeLayout` prefers `expandedSet.has()` over `!collapsedSet.has()` for expansions!
-    // Let's clear expansion order and put everything in collapsedIds? No, just clearing expansion order means nothing is manually expanded.
-    this.expansionOrder = [];
-    this._save();
-};
-
-OrbitalState.prototype.setStickyClaim = function(enabled) {
-    this.stickyClaimEnabled = enabled;
-    this._save();
-};
-
 OrbitalState = OrbitalState;
 
-    // Explicitly expose
     self.OrbitalState = OrbitalState;
-    
 })();

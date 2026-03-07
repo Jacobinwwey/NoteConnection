@@ -100,4 +100,24 @@ describe('PathEngine', () => {
       expect(order.includes('B')).toBeTruthy();
       expect(order.includes('C')).toBeTruthy();
   });
+
+  test('Diffusion Learning respects frontier path and forced expansion', () => {
+    graph.addNode(createNode('A'));
+    graph.addNode(createNode('B'));
+    graph.addNode(createNode('C'));
+    graph.addNode(createNode('D'));
+
+    graph.addEdge('A', 'B');
+    graph.addEdge('A', 'C');
+    graph.addEdge('B', 'D');
+    graph.addEdge('C', 'D');
+
+    const withoutExpansion = engine.diffusionLearning('D', 'foundational', new Set(['A']), new Set());
+    expect(withoutExpansion.nodes.map(n => n.id)).toEqual(['B', 'D']);
+    expect(withoutExpansion.nodes.find(n => n.id === 'D')?.hasHiddenPrereqs).toBe(true);
+
+    const withExpansion = engine.diffusionLearning('D', 'foundational', new Set(['A']), new Set(['D']));
+    expect(withExpansion.nodes.map(n => n.id)).toEqual(expect.arrayContaining(['B', 'C', 'D']));
+    expect(withExpansion.nodes.find(n => n.id === 'D')?.hasHiddenPrereqs).not.toBe(true);
+  });
 });

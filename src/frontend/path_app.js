@@ -281,7 +281,7 @@ window.pathApp = {
             startOnLoad: false,
             theme,
             securityLevel: 'loose',
-            fontFamily: 'Segoe UI, sans-serif',
+            fontFamily: '"Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Segoe UI", sans-serif',
             htmlLabels: false,
             markdownAutoWrap: true,
             maxTextSize: 200000,
@@ -291,8 +291,8 @@ window.pathApp = {
                 htmlLabels: false,
                 nodeSpacing: 42,
                 rankSpacing: 58,
-                padding: 18,
-                wrappingWidth: 220
+                padding: 22,
+                wrappingWidth: 240
             },
             themeVariables: theme === 'dark' ? {
                 darkMode: true,
@@ -306,15 +306,163 @@ window.pathApp = {
                 tertiaryColor: '#2d2d2d',
                 textColor: '#ffffff',
                 fontSize: '16px',
-                fontFamily: 'Segoe UI, sans-serif',
+                fontFamily: '"Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Segoe UI", sans-serif',
                 fontWeight: '500'
             } : undefined
         };
     },
 
+    _upsertBridgeMermaidOverrideStyle: function(svgElement) {
+        const styleId = 'noteconnection-mermaid-overrides';
+        let styleNode = svgElement.querySelector('#' + styleId);
+        if (!styleNode) {
+            styleNode = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+            styleNode.setAttribute('id', styleId);
+            svgElement.appendChild(styleNode);
+        }
+        styleNode.textContent = [
+            'text, tspan, .nodeLabel, .edgeLabel, .messageText, .loopText, .noteText { fill: #f0f0f0 !important; text-rendering: geometricPrecision !important; }',
+            '.node rect, .node circle, .node ellipse, .node polygon, .node path, .basic.label-container, .label-container { fill: #2d2d2d !important; stroke: #61dafb !important; }',
+            '.cluster rect, .cluster polygon { fill: rgba(12, 18, 27, 0.14) !important; stroke: #61dafb !important; }',
+            '.labelBkg, .edgeLabel rect, .edgeLabel polygon, .cluster-label rect, .cluster-label polygon, .note rect { fill: #1e1e1e !important; stroke: #1e1e1e !important; }',
+            '.edgePaths path, .flowchart-link, .relationshipLine, .messageLine0, .messageLine1, marker path, .marker { stroke: #a0a0a0 !important; fill: #a0a0a0 !important; }'
+        ].join('\n');
+    },
+
     _applyBridgeSvgAttributes: function(nodes, attributes) {
         Array.from(nodes || []).forEach((node) => {
             Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+        });
+    },
+
+    _unionBridgeSvgBounds: function(currentBounds, nextBounds) {
+        if (!nextBounds || !Number.isFinite(nextBounds.x) || !Number.isFinite(nextBounds.y) || !Number.isFinite(nextBounds.width) || !Number.isFinite(nextBounds.height) || nextBounds.width <= 0 || nextBounds.height <= 0) {
+            return currentBounds;
+        }
+        if (!currentBounds) {
+            return { x: nextBounds.x, y: nextBounds.y, width: nextBounds.width, height: nextBounds.height };
+        }
+        const minX = Math.min(currentBounds.x, nextBounds.x);
+        const minY = Math.min(currentBounds.y, nextBounds.y);
+        const maxX = Math.max(currentBounds.x + currentBounds.width, nextBounds.x + nextBounds.width);
+        const maxY = Math.max(currentBounds.y + currentBounds.height, nextBounds.y + nextBounds.height);
+        return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    },
+
+    _collectBridgeMermaidLabelBounds: function(group, includePlainTextNodes = false) {
+        let combinedBounds = null;
+        const labelCandidates = [];
+        const primaryLabel = group.querySelector('.nodeLabel, .edgeLabel, .label, .label text');
+        if (primaryLabel) {
+            labelCandidates.push(primaryLabel);
+        }
+        if (labelCandidates.length === 0 || includePlainTextNodes) {
+            labelCandidates.push(...Array.from(group.querySelectorAll(includePlainTextNodes ? 'text, tspan' : '.nodeLabel, .label, text')));
+        }
+        labelCandidates.forEach((node) => {
+            if (!String((node && node.textContent) || '').trim() || typeof node.getBBox !== 'function') {
+                return;
+            }
+            try {
+                combinedBounds = this._unionBridgeSvgBounds(combinedBounds, node.getBBox());
+            } catch (error) {
+                console.warn('[PathApp] Failed to measure Mermaid label bounds', error);
+            }
+        });
+        return combinedBounds;
+    },
+
+    _findBridgeMermaidShapeNode: function(group) {
+        const directShape = Array.from(group.children || []).find((child) => {
+            const tagName = String(child.tagName || '').toLowerCase();
+            return tagName === 'rect' || tagName === 'polygon' || tagName === 'ellipse' || tagName === 'circle';
+        });
+        return directShape || group.querySelector('rect, polygon, ellipse, circle');
+    },
+
+    _scaleBridgePolygonPoints: function(pointsValue, centerX, centerY, scaleX, scaleY) {
+        if (!pointsValue) {
+            return null;
+        }
+        const scaledPoints = [];
+        for (const pair of String(pointsValue).trim().split(/\s+/)) {
+            const [rawX, rawY] = pair.split(',');
+            const pointX = Number.parseFloat(rawX || '');
+            const pointY = Number.parseFloat(rawY || '');
+            if (!Number.isFinite(pointX) || !Number.isFinite(pointY)) {
+                return null;
+            }
+            const nextX = centerX + ((pointX - centerX) * scaleX);
+            const nextY = centerY + ((pointY - centerY) * scaleY);
+            scaledPoints.push(nextX + ',' + nextY);
+        }
+        return scaledPoints.join(' ');
+    },
+
+    _fitBridgeMermaidShapeToBounds: function(shapeNode, shapeBounds, targetWidth, targetHeight) {
+        const centerX = shapeBounds.x + (shapeBounds.width / 2);
+        const centerY = shapeBounds.y + (shapeBounds.height / 2);
+        const tagName = String(shapeNode.tagName || '').toLowerCase();
+        if (tagName === 'rect') {
+            shapeNode.setAttribute('x', String(centerX - (targetWidth / 2)));
+            shapeNode.setAttribute('y', String(centerY - (targetHeight / 2)));
+            shapeNode.setAttribute('width', String(targetWidth));
+            shapeNode.setAttribute('height', String(targetHeight));
+            return;
+        }
+        if (tagName === 'ellipse') {
+            shapeNode.setAttribute('cx', String(centerX));
+            shapeNode.setAttribute('cy', String(centerY));
+            shapeNode.setAttribute('rx', String(targetWidth / 2));
+            shapeNode.setAttribute('ry', String(targetHeight / 2));
+            return;
+        }
+        if (tagName === 'circle') {
+            shapeNode.setAttribute('cx', String(centerX));
+            shapeNode.setAttribute('cy', String(centerY));
+            shapeNode.setAttribute('r', String(Math.max(targetWidth, targetHeight) / 2));
+            return;
+        }
+        if (tagName === 'polygon') {
+            const scaleX = shapeBounds.width > 0 ? targetWidth / shapeBounds.width : 1;
+            const scaleY = shapeBounds.height > 0 ? targetHeight / shapeBounds.height : 1;
+            if (!Number.isFinite(scaleX) || !Number.isFinite(scaleY) || scaleX <= 0 || scaleY <= 0) {
+                return;
+            }
+            const scaledPoints = this._scaleBridgePolygonPoints(shapeNode.getAttribute('points'), centerX, centerY, scaleX, scaleY);
+            if (scaledPoints) {
+                shapeNode.setAttribute('points', scaledPoints);
+            }
+        }
+    },
+
+    _fitBridgeMermaidLabelShapes: function(svgElement) {
+        ['.node', '.edgeLabel'].forEach((selector) => {
+            const paddingX = selector === '.edgeLabel' ? 12 : 18;
+            const paddingY = selector === '.edgeLabel' ? 10 : 14;
+            Array.from(svgElement.querySelectorAll(selector)).forEach((group) => {
+                const labelBounds = this._collectBridgeMermaidLabelBounds(group, selector === '.edgeLabel');
+                const shapeNode = this._findBridgeMermaidShapeNode(group);
+                if (!labelBounds || !shapeNode || typeof shapeNode.getBBox !== 'function') {
+                    return;
+                }
+                let shapeBounds = null;
+                try {
+                    shapeBounds = shapeNode.getBBox();
+                } catch (error) {
+                    console.warn('[PathApp] Failed to measure Mermaid node shape bounds', error);
+                    return;
+                }
+                if (!shapeBounds || !Number.isFinite(shapeBounds.width) || !Number.isFinite(shapeBounds.height) || shapeBounds.width <= 0 || shapeBounds.height <= 0) {
+                    return;
+                }
+                const targetWidth = Math.max(shapeBounds.width, labelBounds.width + paddingX * 2);
+                const targetHeight = Math.max(shapeBounds.height, labelBounds.height + paddingY * 2);
+                if (targetWidth <= shapeBounds.width + 1 && targetHeight <= shapeBounds.height + 1) {
+                    return;
+                }
+                this._fitBridgeMermaidShapeToBounds(shapeNode, shapeBounds, targetWidth, targetHeight);
+            });
         });
     },
 
@@ -326,12 +474,14 @@ window.pathApp = {
         Array.from(svgElement.querySelectorAll('foreignObject')).forEach((node) => node.remove());
         this._applyBridgeSvgAttributes(svgElement.querySelectorAll('text, tspan, .nodeLabel, .edgeLabel, .messageText, .loopText, .noteText'), {
             fill: '#f0f0f0',
-            'font-family': 'Segoe UI, sans-serif',
-            'font-weight': '500',
             'text-rendering': 'geometricPrecision'
         });
-        this._applyBridgeSvgAttributes(svgElement.querySelectorAll('.node rect, .node circle, .node ellipse, .node polygon, .node path, .cluster rect, .cluster polygon'), {
+        this._applyBridgeSvgAttributes(svgElement.querySelectorAll('.node rect, .node circle, .node ellipse, .node polygon, .node path'), {
             fill: '#2d2d2d',
+            stroke: '#61dafb'
+        });
+        this._applyBridgeSvgAttributes(svgElement.querySelectorAll('.cluster rect, .cluster polygon'), {
+            fill: 'rgba(12, 18, 27, 0.14)',
             stroke: '#61dafb'
         });
         this._applyBridgeSvgAttributes(svgElement.querySelectorAll('.labelBkg, .edgeLabel rect, .edgeLabel polygon, .cluster-label rect, .cluster-label polygon, .note rect'), {
@@ -342,6 +492,7 @@ window.pathApp = {
             stroke: '#a0a0a0',
             fill: '#a0a0a0'
         });
+        this._upsertBridgeMermaidOverrideStyle(svgElement);
     },
 
     _clampBridgeMermaidSize: function(width, height, maxWidth, maxHeight) {
@@ -369,6 +520,43 @@ window.pathApp = {
         };
     },
 
+    _tightenBridgeMermaidSvgBounds: function(svgElement) {
+        const fallbackSize = this._extractBridgeMermaidSvgSize(svgElement);
+        const measurementCandidates = [
+            svgElement.querySelector('g.output'),
+            svgElement.querySelector('g.root'),
+            svgElement.querySelector('g'),
+            svgElement
+        ];
+        const padding = 24;
+        for (const candidate of measurementCandidates) {
+            if (!candidate || typeof candidate.getBBox !== 'function') {
+                continue;
+            }
+            try {
+                const bounds = candidate.getBBox();
+                if (!bounds || !Number.isFinite(bounds.width) || !Number.isFinite(bounds.height) || bounds.width <= 1 || bounds.height <= 1) {
+                    continue;
+                }
+                const width = Math.max(48, Math.ceil(bounds.width + (padding * 2)));
+                const height = Math.max(48, Math.ceil(bounds.height + (padding * 2)));
+                const minX = Math.floor(bounds.x - padding);
+                const minY = Math.floor(bounds.y - padding);
+                svgElement.setAttribute('viewBox', `${minX} ${minY} ${width} ${height}`);
+                svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                return { width, height };
+            } catch (error) {
+                console.warn('[PathApp] Failed to tighten Mermaid bounds', error);
+            }
+        }
+
+        const width = Math.max(1, Math.ceil(fallbackSize.width));
+        const height = Math.max(1, Math.ceil(fallbackSize.height));
+        svgElement.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        return { width, height };
+    },
+
     _renderMermaidForBridge: async function(payload) {
         if (!window.mermaid) {
             throw new Error('Mermaid runtime is unavailable in the frontend renderer.');
@@ -393,19 +581,27 @@ window.pathApp = {
         host.style.minWidth = String(hostWidth) + 'px';
         host.style.height = 'auto';
         host.style.overflow = 'visible';
-        host.style.visibility = 'hidden';
+        host.style.opacity = '0';
         host.style.pointerEvents = 'none';
         host.style.background = 'transparent';
-        host.style.fontFamily = 'Segoe UI, sans-serif';
+        host.style.fontFamily = '"Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Segoe UI", sans-serif';
         document.body.appendChild(host);
 
         let objectUrl = null;
         try {
             const renderId = 'bridge-mermaid-' + Date.now() + '-' + Math.random().toString(16).slice(2);
             const result = await window.mermaid.render(renderId, source, host);
-            const parser = new DOMParser();
-            const documentSvg = parser.parseFromString(result.svg, 'image/svg+xml');
-            const svgElement = documentSvg.querySelector('svg');
+            let svgElement = host.querySelector('svg');
+            if (!svgElement) {
+                const parser = new DOMParser();
+                const documentSvg = parser.parseFromString(result.svg, 'image/svg+xml');
+                const parsedSvg = documentSvg.querySelector('svg');
+                if (!parsedSvg) {
+                    throw new Error('Frontend Mermaid renderer did not produce an SVG root.');
+                }
+                host.replaceChildren(parsedSvg);
+                svgElement = host.querySelector('svg');
+            }
             if (!svgElement) {
                 throw new Error('Frontend Mermaid renderer did not produce an SVG root.');
             }
@@ -413,7 +609,8 @@ window.pathApp = {
             svgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
             svgElement.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
             this._normalizeBridgeMermaidSvg(svgElement);
-            const naturalSize = this._extractBridgeMermaidSvgSize(svgElement);
+            this._fitBridgeMermaidLabelShapes(svgElement);
+            const naturalSize = this._tightenBridgeMermaidSvgBounds(svgElement);
             const clampedSize = this._clampBridgeMermaidSize(naturalSize.width, naturalSize.height, payload?.maxWidth, payload?.maxHeight);
             const requestedRenderScale = Number.isFinite(Number(payload?.renderScale)) && Number(payload.renderScale) > 0 ? Number(payload.renderScale) : 1;
             const rasterScale = Math.min(4, Math.max(1, requestedRenderScale));

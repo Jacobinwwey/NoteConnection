@@ -16,18 +16,19 @@ const dynamicImport = new Function('specifier', 'return import(specifier);') as 
 const MATH_TEXT_COLOR = '#eef4ff';
 const MERMAID_BACKGROUND = 'transparent';
 const MERMAID_PADDING = 28;
-const MERMAID_FONT_FAMILY = 'Segoe UI, sans-serif';
+const MERMAID_FONT_FAMILY = '"Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Segoe UI", sans-serif';
 const MERMAID_FONT_WEIGHT = '500';
 const MERMAID_TEXT_COLOR = '#f0f0f0';
 const MERMAID_EDGE_COLOR = '#a0a0a0';
 const MERMAID_NODE_BACKGROUND = '#2d2d2d';
 const MERMAID_NODE_BORDER = '#61dafb';
 const MERMAID_SURFACE_BACKGROUND = '#1e1e1e';
+const MERMAID_CLUSTER_BACKGROUND = 'rgba(12, 18, 27, 0.14)';
 const MERMAID_SECONDARY_BACKGROUND = '#333333';
 const MERMAID_NODE_SPACING = 42;
 const MERMAID_RANK_SPACING = 58;
-const MERMAID_LABEL_PADDING = 18;
-const MERMAID_WRAPPING_WIDTH = 220;
+const MERMAID_LABEL_PADDING = 22;
+const MERMAID_WRAPPING_WIDTH = 240;
 const MAX_GODOT_SVG_DIMENSION = 4096;
 const MAX_GODOT_RASTER_DIMENSION = 4096;
 const DEFAULT_MATH_MAX_WIDTH = 1040;
@@ -191,6 +192,8 @@ export async function renderMermaidSvg(source: string, options: MermaidRenderOpt
         svg.setAttribute('focusable', 'false');
         svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
         svg.style.background = MERMAID_BACKGROUND;
+        applyMermaidVisualStyles(svg);
+        fitMermaidLabelShapes(svg);
 
         const computedBounds = computeSvgBounds(svg);
         const width = Math.max(48, Math.ceil(computedBounds.maxX - computedBounds.minX + MERMAID_PADDING * 2));
@@ -205,7 +208,6 @@ export async function renderMermaidSvg(source: string, options: MermaidRenderOpt
         svg.setAttribute('width', `${normalizedMermaidSize.width}`);
         svg.setAttribute('height', `${normalizedMermaidSize.height}`);
         svg.style.maxWidth = `${normalizedMermaidSize.width}px`;
-        applyMermaidVisualStyles(svg);
 
         return svg.outerHTML;
     });
@@ -379,16 +381,22 @@ function applyMermaidVisualStyles(svg: SVGSVGElement): void {
         svg.querySelectorAll('text, tspan, .nodeLabel, .edgeLabel, .messageText, .loopText, .noteText'),
         {
             fill: MERMAID_TEXT_COLOR,
-            'font-family': MERMAID_FONT_FAMILY,
-            'font-weight': MERMAID_FONT_WEIGHT,
             'text-rendering': 'geometricPrecision',
         },
     );
 
     applySvgAttributes(
-        svg.querySelectorAll('.node rect, .node circle, .node ellipse, .node polygon, .node path, .cluster rect, .cluster polygon'),
+        svg.querySelectorAll('.node rect, .node circle, .node ellipse, .node polygon, .node path'),
         {
             fill: MERMAID_NODE_BACKGROUND,
+            stroke: MERMAID_NODE_BORDER,
+        },
+    );
+
+    applySvgAttributes(
+        svg.querySelectorAll('.cluster rect, .cluster polygon'),
+        {
+            fill: MERMAID_CLUSTER_BACKGROUND,
             stroke: MERMAID_NODE_BORDER,
         },
     );
@@ -408,6 +416,177 @@ function applyMermaidVisualStyles(svg: SVGSVGElement): void {
             fill: MERMAID_EDGE_COLOR,
         },
     );
+
+    upsertMermaidOverrideStyle(svg);
+}
+
+type SvgBoxBounds = { x: number; y: number; width: number; height: number };
+
+function fitMermaidLabelShapes(svg: SVGSVGElement): void {
+    const groupSelectors = ['.node', '.edgeLabel'];
+    for (const selector of groupSelectors) {
+        const paddingX = selector === '.edgeLabel' ? 12 : 18;
+        const paddingY = selector === '.edgeLabel' ? 10 : 14;
+        for (const group of Array.from(svg.querySelectorAll(selector))) {
+            const labelBounds = collectMermaidLabelBounds(group, selector === '.edgeLabel');
+            if (!labelBounds) {
+                continue;
+            }
+            const shape = findMermaidShapeNode(group);
+            if (!shape) {
+                continue;
+            }
+            let shapeBounds: SvgBoxBounds | null = null;
+            try {
+                const rawShapeBounds = (shape as any).getBBox();
+                if (!isFiniteSvgBoxBounds(rawShapeBounds)) {
+                    continue;
+                }
+                shapeBounds = rawShapeBounds;
+            } catch {
+                continue;
+            }
+            const targetWidth = Math.max(shapeBounds.width, labelBounds.width + paddingX * 2);
+            const targetHeight = Math.max(shapeBounds.height, labelBounds.height + paddingY * 2);
+            if (targetWidth <= shapeBounds.width + 1 && targetHeight <= shapeBounds.height + 1) {
+                continue;
+            }
+            fitMermaidShapeToBounds(shape, shapeBounds, targetWidth, targetHeight);
+        }
+    }
+}
+
+function collectMermaidLabelBounds(group: Element, includePlainTextNodes = false): SvgBoxBounds | null {
+    let combinedBounds: SvgBoxBounds | null = null;
+    const labelCandidates: Element[] = [];
+    const primaryLabel = group.querySelector('.nodeLabel, .edgeLabel, .label, .label text');
+    if (primaryLabel) {
+        labelCandidates.push(primaryLabel);
+    }
+    if (labelCandidates.length === 0 || includePlainTextNodes) {
+        labelCandidates.push(...Array.from(group.querySelectorAll(includePlainTextNodes ? 'text, tspan' : '.nodeLabel, .label, text')));
+    }
+    for (const node of labelCandidates) {
+        if (!(node.textContent || '').trim()) {
+            continue;
+        }
+        try {
+            const nextBounds = (node as any).getBBox();
+            if (!isFiniteSvgBoxBounds(nextBounds)) {
+                continue;
+            }
+            combinedBounds = unionSvgBoxBounds(combinedBounds, nextBounds);
+        } catch {
+            continue;
+        }
+    }
+    return combinedBounds;
+}
+
+function unionSvgBoxBounds(currentBounds: SvgBoxBounds | null, nextBounds: SvgBoxBounds): SvgBoxBounds {
+    if (!currentBounds) {
+        return { x: nextBounds.x, y: nextBounds.y, width: nextBounds.width, height: nextBounds.height };
+    }
+    const minX = Math.min(currentBounds.x, nextBounds.x);
+    const minY = Math.min(currentBounds.y, nextBounds.y);
+    const maxX = Math.max(currentBounds.x + currentBounds.width, nextBounds.x + nextBounds.width);
+    const maxY = Math.max(currentBounds.y + currentBounds.height, nextBounds.y + nextBounds.height);
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+function isFiniteSvgBoxBounds(bounds: Partial<SvgBoxBounds> | null | undefined): bounds is SvgBoxBounds {
+    const width = Number(bounds?.width);
+    const height = Number(bounds?.height);
+    return !!bounds
+        && Number.isFinite(bounds.x)
+        && Number.isFinite(bounds.y)
+        && Number.isFinite(width)
+        && Number.isFinite(height)
+        && width > 0
+        && height > 0;
+}
+
+function findMermaidShapeNode(group: Element): Element | null {
+    for (const child of Array.from(group.children)) {
+        const tagName = child.tagName.toLowerCase();
+        if (tagName === 'rect' || tagName === 'polygon' || tagName === 'ellipse' || tagName === 'circle') {
+            return child;
+        }
+    }
+    return group.querySelector('rect, polygon, ellipse, circle');
+}
+
+function fitMermaidShapeToBounds(shape: Element, shapeBounds: SvgBoxBounds, targetWidth: number, targetHeight: number): void {
+    const centerX = shapeBounds.x + shapeBounds.width / 2;
+    const centerY = shapeBounds.y + shapeBounds.height / 2;
+    const tagName = shape.tagName.toLowerCase();
+    if (tagName === 'rect') {
+        shape.setAttribute('x', `${centerX - targetWidth / 2}`);
+        shape.setAttribute('y', `${centerY - targetHeight / 2}`);
+        shape.setAttribute('width', `${targetWidth}`);
+        shape.setAttribute('height', `${targetHeight}`);
+        return;
+    }
+    if (tagName === 'ellipse') {
+        shape.setAttribute('cx', `${centerX}`);
+        shape.setAttribute('cy', `${centerY}`);
+        shape.setAttribute('rx', `${targetWidth / 2}`);
+        shape.setAttribute('ry', `${targetHeight / 2}`);
+        return;
+    }
+    if (tagName === 'circle') {
+        shape.setAttribute('cx', `${centerX}`);
+        shape.setAttribute('cy', `${centerY}`);
+        shape.setAttribute('r', `${Math.max(targetWidth, targetHeight) / 2}`);
+        return;
+    }
+    if (tagName === 'polygon') {
+        const scaleX = shapeBounds.width > 0 ? targetWidth / shapeBounds.width : 1;
+        const scaleY = shapeBounds.height > 0 ? targetHeight / shapeBounds.height : 1;
+        if (!Number.isFinite(scaleX) || !Number.isFinite(scaleY) || scaleX <= 0 || scaleY <= 0) {
+            return;
+        }
+        const scaledPoints = scaleSvgPolygonPoints(shape.getAttribute('points'), centerX, centerY, scaleX, scaleY);
+        if (scaledPoints) {
+            shape.setAttribute('points', scaledPoints);
+        }
+    }
+}
+
+function scaleSvgPolygonPoints(pointsValue: string | null, centerX: number, centerY: number, scaleX: number, scaleY: number): string | null {
+    if (!pointsValue) {
+        return null;
+    }
+    const scaledPoints: string[] = [];
+    for (const pair of pointsValue.trim().split(/\s+/)) {
+        const [rawX, rawY] = pair.split(',');
+        const pointX = Number.parseFloat(rawX || '');
+        const pointY = Number.parseFloat(rawY || '');
+        if (!Number.isFinite(pointX) || !Number.isFinite(pointY)) {
+            return null;
+        }
+        const nextX = centerX + (pointX - centerX) * scaleX;
+        const nextY = centerY + (pointY - centerY) * scaleY;
+        scaledPoints.push(`${nextX},${nextY}`);
+    }
+    return scaledPoints.join(' ');
+}
+
+function upsertMermaidOverrideStyle(svg: SVGSVGElement): void {
+    const styleId = 'noteconnection-mermaid-overrides';
+    let styleNode = svg.querySelector('#' + styleId) as SVGStyleElement | null;
+    if (!styleNode) {
+        styleNode = svg.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'style') as SVGStyleElement;
+        styleNode.setAttribute('id', styleId);
+        svg.appendChild(styleNode);
+    }
+    styleNode.textContent = [
+        'text, tspan, .nodeLabel, .edgeLabel, .messageText, .loopText, .noteText { fill: ' + MERMAID_TEXT_COLOR + ' !important; text-rendering: geometricPrecision !important; }',
+        '.node rect, .node circle, .node ellipse, .node polygon, .node path, .basic.label-container, .label-container { fill: ' + MERMAID_NODE_BACKGROUND + ' !important; stroke: ' + MERMAID_NODE_BORDER + ' !important; }',
+        '.cluster rect, .cluster polygon { fill: ' + MERMAID_CLUSTER_BACKGROUND + ' !important; stroke: ' + MERMAID_NODE_BORDER + ' !important; }',
+        '.labelBkg, .edgeLabel rect, .edgeLabel polygon, .cluster-label rect, .cluster-label polygon, .note rect { fill: ' + MERMAID_SURFACE_BACKGROUND + ' !important; stroke: ' + MERMAID_SURFACE_BACKGROUND + ' !important; }',
+        '.edgePaths path, .flowchart-link, .relationshipLine, .messageLine0, .messageLine1, marker path, .marker { stroke: ' + MERMAID_EDGE_COLOR + ' !important; fill: ' + MERMAID_EDGE_COLOR + ' !important; }',
+    ].join('\n');
 }
 
 function applySvgAttributes(nodes: Iterable<Element>, attributes: Record<string, string>): void {
@@ -434,8 +613,7 @@ function installSvgMeasurementPolyfills(window: JSDOM["window"]): void {
 
     if (typeof prototype.getComputedTextLength !== 'function') {
         prototype.getComputedTextLength = function getComputedTextLengthShim(): number {
-            const text = String((this as Element).textContent || '').trim();
-            return estimateTextBounds(text).width;
+            return estimateTextBoundsForElement(this as Element).width;
         };
     }
 }
@@ -616,7 +794,7 @@ function computeElementBounds(element: Element, parentTransform: Transform): Bou
             })));
         }
         case 'text': {
-            const textBounds = estimateTextBounds(element.textContent || '');
+            const textBounds = estimateTextBoundsForElement(element);
             const x = currentTransform.tx + parseNumericAttribute(element, 'x') * currentTransform.sx;
             const y = currentTransform.ty + parseNumericAttribute(element, 'y') * currentTransform.sy;
             const anchor = (element.getAttribute('text-anchor') || '').trim().toLowerCase();
@@ -634,7 +812,7 @@ function computeElementBounds(element: Element, parentTransform: Transform): Bou
                 return unionBounds(Array.from(element.children).map(child => computeElementBounds(child, currentTransform)));
             }
             if ((element.textContent || '').trim().length > 0) {
-                const textBounds = estimateTextBounds(element.textContent || '');
+                const textBounds = estimateTextBoundsForElement(element);
                 return boundsFromBox(currentTransform.tx, currentTransform.ty, textBounds.width, textBounds.height);
             }
             return emptyBounds();
@@ -795,18 +973,161 @@ function parsePathPoints(pathValue: string | null): Array<{ x: number; y: number
     return points;
 }
 
-function estimateTextBounds(text: string): { width: number; height: number } {
-    const lines = String(text)
-        .replace(/\s+/g, ' ')
-        .split(/\n/)
-        .map(line => line.trim())
-        .filter(line => line.length > 0);
-    const longestLine = lines.reduce((max, line) => Math.max(max, line.length), 0);
-    const lineCount = Math.max(1, lines.length || 1);
+function estimateTextBounds(text: string, fontSize = 16, lineHeight = 0): { width: number; height: number } {
+    const resolvedFontSize = Math.max(10, fontSize || 16);
+    const resolvedLineHeight = Math.max(resolvedFontSize * 1.18, lineHeight || resolvedFontSize + 4);
+    const lines = normalizeMeasurementLines(text);
+    const longestLineWidth = lines.reduce((max, line) => Math.max(max, estimateTextLineWidth(line, resolvedFontSize)), 0);
     return {
-        width: Math.max(18, longestLine * 8.2 + 18),
-        height: Math.max(18, lineCount * 18 + 6),
+        width: Math.max(resolvedFontSize * 0.75, longestLineWidth),
+        height: Math.max(resolvedLineHeight, lines.length * resolvedLineHeight),
     };
+}
+
+function estimateTextBoundsForElement(element: Element): { width: number; height: number } {
+    const fontSize = resolveSvgFontSize(element);
+    const lineHeight = resolveSvgLineHeight(element, fontSize);
+    const lines = extractElementMeasurementLines(element);
+    const longestLineWidth = lines.reduce((max, line) => Math.max(max, estimateTextLineWidth(line, fontSize)), 0);
+    return {
+        width: Math.max(fontSize * 0.75, longestLineWidth),
+        height: Math.max(lineHeight, lines.length * lineHeight),
+    };
+}
+
+function extractElementMeasurementLines(element: Element): string[] {
+    const directTextChildren = Array.from(element.children)
+        .filter((child) => child.tagName.toLowerCase() === 'tspan')
+        .map((child) => normalizeInlineMeasurementText(child.textContent || ''))
+        .filter((line) => line.length > 0);
+    if (directTextChildren.length > 0) {
+        return directTextChildren;
+    }
+    return normalizeMeasurementLines(element.textContent || '');
+}
+
+function normalizeMeasurementLines(text: string): string[] {
+    const normalized = String(text)
+        .split(/\r?\n/)
+        .map((line) => normalizeInlineMeasurementText(line))
+        .filter((line) => line.length > 0);
+    return normalized.length > 0 ? normalized : [''];
+}
+
+function normalizeInlineMeasurementText(text: string): string {
+    return String(text)
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function estimateTextLineWidth(text: string, fontSize: number): number {
+    let units = 0;
+    for (const char of Array.from(text)) {
+        units += estimateGlyphWidthUnits(char);
+    }
+    return Math.max(fontSize * 0.75, units * fontSize + Math.max(2, fontSize * 0.12));
+}
+
+function estimateGlyphWidthUnits(char: string): number {
+    if (!char) {
+        return 0;
+    }
+    if (/\s/.test(char)) {
+        return 0.35;
+    }
+    if (isWideGlyph(char)) {
+        return 1.02;
+    }
+    if (/[.,;:!'`|]/.test(char)) {
+        return 0.32;
+    }
+    if (/[(){}\[\]<>]/.test(char)) {
+        return 0.46;
+    }
+    if (/[\\/_-]/.test(char)) {
+        return 0.5;
+    }
+    if (/[0-9]/.test(char)) {
+        return 0.62;
+    }
+    if (/[A-Z]/.test(char)) {
+        return 0.72;
+    }
+    if (/[a-z]/.test(char)) {
+        return 0.64;
+    }
+    return 0.7;
+}
+
+function isWideGlyph(char: string): boolean {
+    return /[\u1100-\u115F\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE6F\uFF01-\uFF60\uFFE0-\uFFE6\u{1F300}-\u{1FAFF}]/u.test(char);
+}
+
+function resolveSvgFontSize(element: Element): number {
+    const resolvedValue = resolveSvgTextProperty(element, 'font-size');
+    const parsed = parseSvgCssLength(resolvedValue, 16);
+    return parsed > 0 ? parsed : 16;
+}
+
+function resolveSvgLineHeight(element: Element, fontSize: number): number {
+    const resolvedValue = resolveSvgTextProperty(element, 'line-height');
+    const parsed = parseSvgCssLength(resolvedValue, fontSize);
+    return parsed > 0 ? parsed : Math.max(fontSize * 1.18, fontSize + 4);
+}
+
+function resolveSvgTextProperty(element: Element, propertyName: string): string | null {
+    let current: Element | null = element;
+    while (current) {
+        const attributeValue = current.getAttribute(propertyName);
+        if (attributeValue && attributeValue.trim().length > 0) {
+            return attributeValue.trim();
+        }
+        const styleValue = extractInlineStyleValue(current.getAttribute('style'), propertyName);
+        if (styleValue) {
+            return styleValue;
+        }
+        current = current.parentElement;
+    }
+
+    const ownerWindow = element.ownerDocument?.defaultView;
+    if (ownerWindow && typeof ownerWindow.getComputedStyle === 'function') {
+        const computedValue = ownerWindow.getComputedStyle(element as any).getPropertyValue(propertyName);
+        if (computedValue && computedValue.trim().length > 0) {
+            return computedValue.trim();
+        }
+    }
+
+    return null;
+}
+
+function extractInlineStyleValue(styleValue: string | null, propertyName: string): string | null {
+    if (!styleValue) {
+        return null;
+    }
+    const pattern = new RegExp(`(?:^|;)\\s*${propertyName}\\s*:\\s*([^;]+)`, 'i');
+    const match = styleValue.match(pattern);
+    return match?.[1]?.trim() || null;
+}
+
+function parseSvgCssLength(lengthValue: string | null, baseFontSize: number): number {
+    if (!lengthValue) {
+        return 0;
+    }
+    const normalized = lengthValue.trim().toLowerCase();
+    if (!normalized || normalized === 'normal') {
+        return 0;
+    }
+    const numeric = Number.parseFloat(normalized);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+        return 0;
+    }
+    if (normalized.endsWith('em') || normalized.endsWith('rem')) {
+        return numeric * Math.max(10, baseFontSize || 16);
+    }
+    if (normalized.endsWith('%')) {
+        return (numeric / 100) * Math.max(10, baseFontSize || 16);
+    }
+    return numeric;
 }
 
 function unionBounds(boundsList: Bounds[]): Bounds {

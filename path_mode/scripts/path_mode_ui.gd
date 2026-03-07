@@ -102,7 +102,9 @@ var _reader_current_zoom: float = 1.0
 var _reader_is_locked: bool = true
 var _reader_image_overlay: ColorRect = null
 var _reader_image_frame: PanelContainer = null
-var _reader_image_viewport: Control = null
+var _reader_image_viewport: ScrollContainer = null
+var _reader_image_surface: Control = null
+var _reader_image_backdrop: ColorRect = null
 var _reader_image_texture_rect: TextureRect = null
 var _reader_image_resize_handle: ColorRect = null
 var _reader_image_title_label: Label = null
@@ -603,6 +605,7 @@ func _create_reader_overlay() -> void:
 	_reader_panel.anchor_right = 0.88
 	_reader_panel.anchor_bottom = 0.92
 	_reader_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_reader_panel.resized.connect(_on_reader_container_resized)
 	_reader_overlay.add_child(_reader_panel)
 
 	_reader_panel_style = StyleBoxFlat.new()
@@ -784,6 +787,7 @@ func _create_reader_overlay() -> void:
 	_reader_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_reader_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_reader_scroll.follow_focus = true
+	_reader_scroll.resized.connect(_on_reader_container_resized)
 	_reader_scroll.gui_input.connect(_on_reader_scroll_input)
 	panel_vbox.add_child(_reader_scroll)
 
@@ -900,7 +904,7 @@ func _create_reader_image_overlay() -> void:
 	header_row.add_child(close_btn)
 	_apply_button_style(close_btn, Color(0.2, 0.14, 0.16, 1.0), Color(0.28, 0.18, 0.2, 1.0), Color(0.16, 0.1, 0.12, 1.0), Color(0.58, 0.28, 0.32, 1.0), Color(1.0, 0.93, 0.93, 1.0))
 
-	_reader_image_viewport = Control.new()
+	_reader_image_viewport = ScrollContainer.new()
 	_reader_image_viewport.name = "ImageViewport"
 	_reader_image_viewport.focus_mode = Control.FOCUS_NONE
 	_reader_image_viewport.anchor_right = 1.0
@@ -914,11 +918,22 @@ func _create_reader_image_overlay() -> void:
 	_reader_image_frame.add_child(_reader_image_viewport)
 	_reader_image_viewport.resized.connect(_on_reader_image_viewport_resized)
 
+	_reader_image_surface = Control.new()
+	_reader_image_surface.name = "ImageSurface"
+	_reader_image_surface.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_reader_image_viewport.add_child(_reader_image_surface)
+
+	_reader_image_backdrop = ColorRect.new()
+	_reader_image_backdrop.name = "ImageBackdrop"
+	_reader_image_backdrop.color = Color(0.012, 0.014, 0.018, 0.98)
+	_reader_image_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_reader_image_surface.add_child(_reader_image_backdrop)
+
 	_reader_image_texture_rect = TextureRect.new()
 	_reader_image_texture_rect.name = "ImageTexture"
 	_reader_image_texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_reader_image_texture_rect.stretch_mode = TextureRect.STRETCH_SCALE
-	_reader_image_viewport.add_child(_reader_image_texture_rect)
+	_reader_image_surface.add_child(_reader_image_texture_rect)
 
 	_reader_image_resize_handle = ColorRect.new()
 	_reader_image_resize_handle.name = "ResizeHandle"
@@ -1040,6 +1055,7 @@ func open_image_viewer(texture: Texture2D, title: String = "") -> void:
 	move_child(_reader_image_overlay, get_child_count() - 1)
 	_apply_reader_image_frame_layout()
 	_apply_reader_image_transform()
+	call_deferred("_center_reader_image_view")
 
 func close_image_viewer() -> void:
 	_reader_image_dragging = false
@@ -1369,6 +1385,8 @@ func _render_reader_document_async(raw_content: String, note_filepath: String, r
 			var control := control_variant as Control
 			if control:
 				_reader_blocks.add_child(control)
+				_apply_reader_zoom_recursive(control)
+				control.update_minimum_size()
 
 	_apply_reader_zoom()
 	call_deferred("_reset_reader_scroll")
@@ -1690,7 +1708,7 @@ func _build_reader_svg_panel(texture: Texture2D, badge_text: String, viewer_titl
 	panel.focus_mode = Control.FOCUS_NONE
 	panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.06, 0.09, 0.14, 0.98)
+	style.bg_color = Color(0.038, 0.042, 0.052, 0.985)
 	style.border_color = accent_color
 	style.border_width_left = 1
 	style.border_width_top = 1
@@ -1726,7 +1744,7 @@ func _build_reader_svg_panel(texture: Texture2D, badge_text: String, viewer_titl
 	var resolved_max_size: Vector2 = _resolve_reader_requested_media_limit(max_size)
 	var preview_size: Vector2 = _fit_size_within(Vector2(texture.get_width(), texture.get_height()), resolved_max_size, false)
 	texture_rect.custom_minimum_size = preview_size
-	texture_rect.set_meta("reader_base_size", preview_size)
+	texture_rect.set_meta("reader_base_size", Vector2(texture.get_width(), texture.get_height()))
 	texture_rect.set_meta("reader_max_size", max_size)
 	texture_rect.set_meta("reader_media_scalable", true)
 	texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1739,9 +1757,10 @@ func _build_reader_svg_panel(texture: Texture2D, badge_text: String, viewer_titl
 	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(hint)
 	panel.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
-			open_image_viewer(texture, viewer_title)
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 			panel.accept_event()
+			if not event.pressed:
+				open_image_viewer(texture, viewer_title)
 	)
 	return panel
 
@@ -2090,7 +2109,7 @@ func _build_reader_block(block: Dictionary, note_filepath: String) -> Control:
 			image_panel.focus_mode = Control.FOCUS_NONE
 			image_panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 			var image_style := StyleBoxFlat.new()
-			image_style.bg_color = Color(0.08, 0.1, 0.14, 0.98)
+			image_style.bg_color = Color(0.038, 0.042, 0.052, 0.985)
 			image_style.border_color = Color(0.18, 0.26, 0.38, 1.0)
 			image_style.border_width_left = 1
 			image_style.border_width_top = 1
@@ -2115,10 +2134,10 @@ func _build_reader_block(block: Dictionary, note_filepath: String) -> Control:
 			texture_rect.texture = texture
 			texture_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			var image_max_size: Vector2 = Vector2(760.0, 360.0)
+			var image_max_size: Vector2 = Vector2.ZERO
 			var preview_size: Vector2 = _fit_size_within(Vector2(texture.get_width(), texture.get_height()), _resolve_reader_requested_media_limit(image_max_size), false)
 			texture_rect.custom_minimum_size = preview_size
-			texture_rect.set_meta("reader_base_size", preview_size)
+			texture_rect.set_meta("reader_base_size", Vector2(texture.get_width(), texture.get_height()))
 			texture_rect.set_meta("reader_max_size", image_max_size)
 			texture_rect.set_meta("reader_media_scalable", true)
 			texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2132,9 +2151,10 @@ func _build_reader_block(block: Dictionary, note_filepath: String) -> Control:
 				caption.set_meta("reader_base_font_size", 13)
 				image_box.add_child(caption)
 			image_panel.gui_input.connect(func(event: InputEvent):
-				if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
-					open_image_viewer(texture, alt_text if not alt_text.is_empty() else image_source)
+				if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 					image_panel.accept_event()
+					if not event.pressed:
+						open_image_viewer(texture, alt_text if not alt_text.is_empty() else image_source)
 			)
 			return image_panel
 		"rule":
@@ -3161,27 +3181,30 @@ func _load_reader_texture(resolved_path: String) -> Texture2D:
 
 func _get_reader_media_page_limit() -> Vector2:
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var horizontal_padding: float = minf(READER_MEDIA_PAGE_MARGIN, 24.0)
+	var vertical_padding: float = 24.0
 	var available_width: float = 0.0
-	if _reader_scroll:
-		available_width = _reader_scroll.size.x
+	if _reader_blocks and _reader_blocks.size.x > 0.0:
+		available_width = _reader_blocks.size.x
+	if available_width <= 0.0 and _reader_scroll:
+		available_width = maxf(0.0, _reader_scroll.size.x - 16.0)
 	if available_width <= 0.0 and _reader_panel:
-		available_width = _reader_panel.size.x - 88.0
+		available_width = _reader_panel.size.x - 52.0
 	if available_width <= 0.0:
-		available_width = viewport_size.x * 0.68
+		available_width = viewport_size.x * 0.72
 
 	var available_height: float = 0.0
-	if _reader_scroll:
+	if _reader_scroll and _reader_scroll.size.y > 0.0:
 		available_height = _reader_scroll.size.y
 	if available_height <= 0.0 and _reader_panel:
-		available_height = _reader_panel.size.y - 180.0
+		available_height = _reader_panel.size.y - 156.0
 	if available_height <= 0.0:
-		available_height = viewport_size.y * 0.58
+		available_height = viewport_size.y * 0.6
 
 	return Vector2(
-		clampf(available_width - READER_MEDIA_PAGE_MARGIN, READER_MEDIA_PAGE_MIN_WIDTH, READER_MEDIA_PAGE_MAX_WIDTH),
-		clampf(available_height - 32.0, READER_MEDIA_PAGE_MIN_HEIGHT, READER_MEDIA_PAGE_MAX_HEIGHT)
+		clampf(available_width - horizontal_padding, READER_MEDIA_PAGE_MIN_WIDTH, READER_MEDIA_PAGE_MAX_WIDTH),
+		clampf(available_height - vertical_padding, READER_MEDIA_PAGE_MIN_HEIGHT, READER_MEDIA_PAGE_MAX_HEIGHT)
 	)
-
 
 func _resolve_reader_requested_media_limit(requested_size: Vector2) -> Vector2:
 	var page_limit: Vector2 = _get_reader_media_page_limit()
@@ -3229,6 +3252,11 @@ func _fit_size_within(content_size: Vector2, max_size: Vector2, allow_upscale: b
 	return content_size * scale_factor
 
 
+func _on_reader_container_resized() -> void:
+	if is_reader_open():
+		call_deferred("_apply_reader_zoom")
+
+
 func _on_reader_image_overlay_resized() -> void:
 	_apply_reader_image_frame_layout()
 	if is_image_viewer_open():
@@ -3257,6 +3285,7 @@ func _apply_reader_image_frame_layout() -> void:
 	_reader_image_frame_size.y = clampf(_reader_image_frame_size.y, READER_IMAGE_FRAME_MIN_SIZE.y, max_size.y)
 	_reader_image_frame.size = _reader_image_frame_size
 	_reader_image_frame.position = (overlay_size - _reader_image_frame_size) * 0.5
+	call_deferred("_clamp_reader_image_scroll_position")
 
 
 func _point_hits_reader_image_resize_handle(global_point: Vector2) -> bool:
@@ -3265,7 +3294,9 @@ func _point_hits_reader_image_resize_handle(global_point: Vector2) -> bool:
 
 func _on_reader_image_viewport_resized() -> void:
 	if is_image_viewer_open():
+		var focus := _capture_reader_image_focus()
 		_apply_reader_image_transform()
+		call_deferred("_restore_reader_image_focus", focus)
 
 
 func _on_reader_image_overlay_input(event: InputEvent) -> void:
@@ -3279,6 +3310,7 @@ func _on_reader_image_overlay_input(event: InputEvent) -> void:
 				_reader_image_overlay.accept_event()
 				return
 			_reader_image_touch_points[event.index] = event.position
+			_reader_image_pan_origin = _get_reader_image_scroll_position()
 			if _reader_image_touch_points.size() >= 2:
 				var pinch_data := _get_reader_touch_pinch_data()
 				_reader_image_last_pinch_distance = float(pinch_data.get("distance", 0.0))
@@ -3298,13 +3330,10 @@ func _on_reader_image_overlay_input(event: InputEvent) -> void:
 			var pinch_center: Vector2 = pinch_data.get("center", event.position)
 			if _reader_image_last_pinch_distance > 0.0 and pinch_distance > 0.0:
 				_zoom_reader_image_by_factor(pinch_distance / _reader_image_last_pinch_distance, pinch_center)
-				_reader_image_pan += pinch_center - _reader_image_last_pinch_center
-				_apply_reader_image_transform()
 			_reader_image_last_pinch_distance = pinch_distance
 			_reader_image_last_pinch_center = pinch_center
 		else:
-			_reader_image_pan += event.relative
-			_apply_reader_image_transform()
+			_set_reader_image_scroll_position(_get_reader_image_scroll_position() - event.relative)
 		_reader_image_overlay.accept_event()
 		return
 
@@ -3324,7 +3353,7 @@ func _on_reader_image_overlay_input(event: InputEvent) -> void:
 				if _reader_image_texture_rect and _reader_image_texture_rect.get_global_rect().has_point(event.global_position):
 					_reader_image_dragging = true
 					_reader_image_drag_origin = event.global_position
-					_reader_image_pan_origin = _reader_image_pan
+					_reader_image_pan_origin = _get_reader_image_scroll_position()
 				_reader_image_overlay.accept_event()
 			else:
 				_reader_image_dragging = false
@@ -3350,8 +3379,7 @@ func _on_reader_image_overlay_input(event: InputEvent) -> void:
 			_reader_image_overlay.accept_event()
 			return
 		if _reader_image_dragging:
-			_reader_image_pan = _reader_image_pan_origin + (event.global_position - _reader_image_drag_origin)
-			_apply_reader_image_transform()
+			_set_reader_image_scroll_position(_reader_image_pan_origin - (event.global_position - _reader_image_drag_origin))
 			_reader_image_overlay.accept_event()
 
 func _get_reader_touch_pinch_data() -> Dictionary:
@@ -3376,17 +3404,14 @@ func _zoom_reader_image_by_factor(factor: float, pivot_global: Vector2 = Vector2
 	if is_equal_approx(previous_zoom, next_zoom):
 		return
 
-	if pivot_global != Vector2.ZERO and _reader_image_texture_rect:
-		var current_center := _reader_image_texture_rect.get_global_rect().position + (_reader_image_texture_rect.size * 0.5)
-		var pointer_offset := pivot_global - current_center
-		_reader_image_pan -= pointer_offset * ((next_zoom / previous_zoom) - 1.0)
-
+	var focus := _capture_reader_image_focus(pivot_global)
 	_reader_image_zoom = next_zoom
 	_apply_reader_image_transform()
+	call_deferred("_restore_reader_image_focus", focus)
 
 
 func _apply_reader_image_transform() -> void:
-	if _reader_image_current_texture == null or _reader_image_viewport == null or _reader_image_texture_rect == null:
+	if _reader_image_current_texture == null or _reader_image_viewport == null or _reader_image_surface == null or _reader_image_texture_rect == null:
 		return
 
 	var viewport_size := _reader_image_viewport.size
@@ -3394,12 +3419,88 @@ func _apply_reader_image_transform() -> void:
 		return
 
 	var safe_bounds: Vector2 = Vector2(maxf(160.0, viewport_size.x - 80.0), maxf(120.0, viewport_size.y - 60.0))
-	_reader_image_base_size = _fit_size_within(Vector2(_reader_image_current_texture.get_width(), _reader_image_current_texture.get_height()), safe_bounds, true)
+	_reader_image_base_size = _fit_size_within(Vector2(_reader_image_current_texture.get_width(), _reader_image_current_texture.get_height()), safe_bounds, false)
 	var drawn_size := _reader_image_base_size * _reader_image_zoom
+	var surface_size := Vector2(maxf(viewport_size.x, drawn_size.x), maxf(viewport_size.y, drawn_size.y))
+	_reader_image_surface.custom_minimum_size = surface_size
+	_reader_image_surface.size = surface_size
 	_reader_image_texture_rect.size = drawn_size
-	_reader_image_texture_rect.position = (viewport_size * 0.5) + _reader_image_pan - (drawn_size * 0.5)
+	_reader_image_texture_rect.position = (surface_size - drawn_size) * 0.5
+	if _reader_image_backdrop:
+		_reader_image_backdrop.size = drawn_size
+		_reader_image_backdrop.position = _reader_image_texture_rect.position
 	if _reader_image_zoom_label:
 		_reader_image_zoom_label.text = "%d%%" % int(round(_reader_image_zoom * 100.0))
+	call_deferred("_clamp_reader_image_scroll_position")
+
+
+func _get_reader_image_scroll_position() -> Vector2:
+	if _reader_image_viewport == null:
+		return Vector2.ZERO
+	return Vector2(_reader_image_viewport.scroll_horizontal, _reader_image_viewport.scroll_vertical)
+
+
+func _set_reader_image_scroll_position(scroll_position: Vector2) -> void:
+	if _reader_image_viewport == null:
+		return
+	var horizontal_limit := _get_reader_image_scroll_limit(true)
+	var vertical_limit := _get_reader_image_scroll_limit(false)
+	_reader_image_viewport.scroll_horizontal = int(round(clampf(scroll_position.x, 0.0, horizontal_limit)))
+	_reader_image_viewport.scroll_vertical = int(round(clampf(scroll_position.y, 0.0, vertical_limit)))
+
+
+func _get_reader_image_scroll_limit(is_horizontal: bool) -> float:
+	if _reader_image_viewport == null:
+		return 0.0
+	var scrollbar: ScrollBar = null
+	if is_horizontal:
+		scrollbar = _reader_image_viewport.get_h_scroll_bar()
+	else:
+		scrollbar = _reader_image_viewport.get_v_scroll_bar()
+	if scrollbar == null:
+		return 0.0
+	return maxf(0.0, float(scrollbar.max_value - scrollbar.page))
+
+
+func _clamp_reader_image_scroll_position() -> void:
+	_set_reader_image_scroll_position(_get_reader_image_scroll_position())
+
+
+func _center_reader_image_view() -> void:
+	_set_reader_image_scroll_position(Vector2(_get_reader_image_scroll_limit(true) * 0.5, _get_reader_image_scroll_limit(false) * 0.5))
+
+
+func _capture_reader_image_focus(pivot_global: Vector2 = Vector2.ZERO) -> Dictionary:
+	if _reader_image_viewport == null or _reader_image_texture_rect == null:
+		return {}
+	var viewport_size := _reader_image_viewport.size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return {}
+	var pivot_local := viewport_size * 0.5
+	if pivot_global != Vector2.ZERO:
+		pivot_local = pivot_global - _reader_image_viewport.get_global_rect().position
+		pivot_local.x = clampf(pivot_local.x, 0.0, viewport_size.x)
+		pivot_local.y = clampf(pivot_local.y, 0.0, viewport_size.y)
+	var texture_size := _reader_image_texture_rect.size
+	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
+		return {"pivot_local": pivot_local, "ratio": Vector2(0.5, 0.5)}
+	var focus_local := _get_reader_image_scroll_position() + pivot_local - _reader_image_texture_rect.position
+	return {
+		"pivot_local": pivot_local,
+		"ratio": Vector2(
+			clampf(focus_local.x / texture_size.x, 0.0, 1.0),
+			clampf(focus_local.y / texture_size.y, 0.0, 1.0)
+		)
+	}
+
+
+func _restore_reader_image_focus(focus: Dictionary) -> void:
+	if focus.is_empty() or _reader_image_viewport == null or _reader_image_texture_rect == null:
+		return
+	var pivot_local: Vector2 = focus.get("pivot_local", _reader_image_viewport.size * 0.5)
+	var ratio: Vector2 = focus.get("ratio", Vector2(0.5, 0.5))
+	var target_point := _reader_image_texture_rect.position + Vector2(_reader_image_texture_rect.size.x * ratio.x, _reader_image_texture_rect.size.y * ratio.y)
+	_set_reader_image_scroll_position(target_point - pivot_local)
 
 func _apply_button_style(button: Button, normal_color: Color, hover_color: Color, pressed_color: Color, border_color: Color, font_color: Color) -> void:
 	if not button:
@@ -3688,7 +3789,7 @@ func _on_exit_pressed() -> void:
 
 func _on_bg_lock_toggled(pressed: bool) -> void:
 	## Toggle background lock icon and emit signal
-	## 切换背景锁定图标并发出信号
+	## åˆ‡æ¢èƒŒæ™¯é”å®šå›¾æ ‡å¹¶å‘å‡ºä¿¡å·
 	if _bg_lock_button:
 		_bg_lock_button.text = "BGL" if pressed else "BG"
 		_bg_lock_button.tooltip_text = "Background locked" if pressed else "Lock Background (camera won't rotate sky)"
@@ -4103,6 +4204,7 @@ func get_auto_reconstruct_setting() -> bool:
 	if _settings_panel:
 		return _settings_panel.get_setting("auto_reconstruct", true)
 	return true
+
 
 
 

@@ -162,6 +162,25 @@ describe('reader_renderer', () => {
         expect(Number(heightMatch && heightMatch[1])).toBeLessThanOrEqual(420);
     });
 
+    it('allocates more Mermaid width for mixed CJK labels than for the English-only equivalent', () => {
+        const englishSvg = runRenderer(
+            'renderMermaidSvg',
+            ['flowchart TD', 'A["Asset Allocation"] --> B["Done"]'].join('\n'),
+            { theme: 'dark', maxWidth: 2000, maxHeight: 800 },
+        );
+        const mixedSvg = runRenderer(
+            'renderMermaidSvg',
+            ['flowchart TD', 'A["Asset Allocation 资产配置久期匹配"] --> B["Done"]'].join('\n'),
+            { theme: 'dark', maxWidth: 2000, maxHeight: 800 },
+        );
+
+        const englishWidthMatch = englishSvg.match(/width="(\d+)"/);
+        const mixedWidthMatch = mixedSvg.match(/width="(\d+)"/);
+        expect(englishWidthMatch).not.toBeNull();
+        expect(mixedWidthMatch).not.toBeNull();
+        expect(Number(mixedWidthMatch && mixedWidthMatch[1])).toBeGreaterThan(Number(englishWidthMatch && englishWidthMatch[1]) + 30);
+    });
+
     it('keeps mermaid output Godot-safe for html-like labels', () => {
         const svg = runRenderer(
             'renderMermaidSvg',
@@ -184,6 +203,23 @@ describe('reader_renderer', () => {
         expect(svg.startsWith('<svg')).toBe(true);
         expect(svg).toContain('Research');
         expect(svg).toContain('&amp;');
+    });
+
+    it('injects strong Mermaid style overrides so cluster backgrounds do not wash out the reader', () => {
+        const svg = runRenderer(
+            'renderMermaidSvg',
+            [
+                'flowchart TD',
+                'subgraph OUTER[Outer Framework]',
+                '  A[Alpha ?????] --> B[Beta ?????????]',
+                'end',
+            ].join('\n'),
+            { theme: 'dark', maxWidth: 1200, maxHeight: 900 },
+        );
+
+        expect(svg).toContain('noteconnection-mermaid-overrides');
+        expect(svg).toContain('.cluster rect, .cluster polygon { fill: rgba(12, 18, 27, 0.14) !important; stroke: #61dafb !important; }');
+        expect(svg).toContain('.basic.label-container, .label-container { fill: #2d2d2d !important; stroke: #61dafb !important; }');
     });
 
     it('caps oversized mermaid svg dimensions for Godot rasterization safety', () => {

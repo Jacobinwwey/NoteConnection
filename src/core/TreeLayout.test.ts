@@ -132,6 +132,69 @@ describe('TreeLayout - Rule 4: Single Appearance', () => {
     expect(ids.length).toBe(4);
   });
 
+  test('PathEngine getTreeLayout returns a non-null layout for a valid learning path', () => {
+    graph.addNode(createNode('A', 0, 2));
+    graph.addNode(createNode('B', 1, 1));
+    graph.addNode(createNode('C', 1, 1));
+    graph.addNode(createNode('D', 2, 0));
+
+    graph.addEdge('A', 'B');
+    graph.addEdge('A', 'C');
+    graph.addEdge('B', 'D');
+    graph.addEdge('C', 'D');
+
+    const result = engine.domainLearning(null, 'foundational');
+    const layout = engine.getTreeLayout('A', result);
+
+    expect(layout).not.toBeNull();
+    expect(layout!.nodes.length).toBeGreaterThan(0);
+    expect(layout!.edges.length).toBeGreaterThan(0);
+    expect(layout!.nodes.every(node => Number.isFinite(node.x) && Number.isFinite(node.y))).toBe(true);
+  });
+
+  test('getTreeLayout deduplicates duplicate learning path nodes by id', () => {
+    const layout = engine.getTreeLayout('Preferred Stock', {
+      nodes: [
+        { id: 'Preferred Stock', label: 'Preferred Stock', stepOrder: 1, isCompleted: false, unlocks: [], inDegree: 0, outDegree: 1, isCritical: true },
+        { id: 'Risk Management', label: 'Risk Management', stepOrder: 2, isCompleted: false, unlocks: [], inDegree: 1, outDegree: 1, isCritical: true },
+        { id: 'Risk Management', label: 'Risk Management', stepOrder: 3, isCompleted: false, unlocks: [], inDegree: 1, outDegree: 1, isCritical: true },
+        { id: 'SEC', label: 'SEC', stepOrder: 4, isCompleted: false, unlocks: [], inDegree: 1, outDegree: 0, isCritical: true }
+      ] as any,
+      edges: [
+        { source: 'Preferred Stock', target: 'Risk Management' },
+        { source: 'Risk Management', target: 'SEC' }
+      ],
+      strategy: 'foundational',
+      coverage: 1
+    });
+
+    expect(layout).not.toBeNull();
+    const ids = layout!.nodes.map(node => node.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.filter(id => id === 'Risk Management')).toHaveLength(1);
+  });
+
+  test('getTreeLayout returns JSON-safe nodes without internal tributary state', () => {
+    graph.addNode(createNode('A', 0, 2));
+    graph.addNode(createNode('B', 1, 1));
+    graph.addNode(createNode('C', 1, 1));
+    graph.addNode(createNode('D', 2, 0));
+
+    graph.addEdge('A', 'B');
+    graph.addEdge('A', 'C');
+    graph.addEdge('B', 'D');
+    graph.addEdge('C', 'D');
+
+    const result = engine.diffusionLearning('D', 'foundational', new Set(['A']), new Set(['D']));
+    const layout = engine.getTreeLayout('D', result, new Set(), ['D']);
+
+    expect(layout).not.toBeNull();
+    const target = layout!.nodes.find(node => node.id === 'D') as any;
+    expect(target.inDegreeNames).toEqual(expect.arrayContaining(['B', 'C']));
+    expect(target._tributaries).toBeUndefined();
+    expect(() => JSON.stringify(layout)).not.toThrow();
+  });
+
   test('Empty input returns empty', () => {
     const deduped = deduplicateNodes([]);
     expect(deduped.length).toBe(0);

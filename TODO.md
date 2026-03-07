@@ -1,4 +1,4 @@
-﻿# 2026-03-07 v1.5.14 - Architecture & Security Hardening Review Refresh
+# 2026-03-07 v1.5.14 - Architecture & Security Hardening Review Refresh
 
 ## Future Architecture & Security Hardening (Post v1.5.13)
 
