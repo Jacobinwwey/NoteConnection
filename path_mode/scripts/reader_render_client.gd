@@ -4,7 +4,7 @@ extends Node
 const DEFAULT_HOST := "127.0.0.1"
 const DEFAULT_PORT := 3000
 const JSON_HEADERS := ["Content-Type: application/json"]
-const CACHE_VERSION := "reader-v6"
+const CACHE_VERSION := "reader-v7"
 const SVG_MAX_DIMENSION := 16384.0
 const SVG_MIN_SCALE := 0.1
 
@@ -27,8 +27,10 @@ func render_math_texture(source: String, display_mode: bool = true, scale: float
 
 
 func render_mermaid_texture(source: String, scale: float = 3.0, max_size: Vector2 = Vector2.ZERO) -> Dictionary:
-	var cache_key := "%s|mermaid|%s|%.2f|%d|%d" % [
+	var renderer_preference := "frontend"
+	var cache_key := "%s|mermaid|%s|%s|%.2f|%d|%d" % [
 		CACHE_VERSION,
+		renderer_preference,
 		source,
 		scale,
 		int(round(max_size.x)),
@@ -36,7 +38,12 @@ func render_mermaid_texture(source: String, scale: float = 3.0, max_size: Vector
 	]
 	if _texture_cache.has(cache_key):
 		return {"ok": true, "texture": _texture_cache[cache_key]}
-	var payload: Dictionary = {"source": source}
+	var payload: Dictionary = {
+		"source": source,
+		# Mermaid text is currently reliable in the frontend bridge renderer.
+		# Keep this explicit to avoid textless local-resvg outputs.
+		"renderer": renderer_preference
+	}
 	_append_render_request_payload(payload, max_size, scale)
 	return await _render_texture(cache_key, "/api/render/mermaid", payload)
 
@@ -69,6 +76,10 @@ func _render_texture(cache_key: String, endpoint: String, payload: Dictionary) -
 	var response: Dictionary = await _post_json(endpoint, payload)
 	if not bool(response.get("ok", false)):
 		return response
+	if endpoint == "/api/render/mermaid":
+		var renderer_name := String(response.get("renderer", ""))
+		if not renderer_name.is_empty() and renderer_name != "frontend-bridge":
+			push_warning("ReaderRenderClient: Mermaid rendered by unexpected pipeline '%s'." % renderer_name)
 
 	var texture := _texture_from_render_response(response)
 	if texture == null:

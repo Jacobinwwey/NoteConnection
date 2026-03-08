@@ -6,9 +6,11 @@ signal settings_changed(settings: Dictionary)
 const SETTINGS_FILE := "user://settings.cfg"
 const BACKGROUNDS_DIR := "res://assets/backgrounds"
 const DEFAULT_READER_TOGGLE_SHORTCUT := "Ctrl+M"
-const READER_MEDIA_SCALE_MIN := 0.45
-const READER_MEDIA_SCALE_MAX := 2.25
-const READER_MEDIA_SCALE_STEP := 0.05
+const READER_MEDIA_SCALE_MIN := 0.10
+const READER_MEDIA_SCALE_MAX := 3.00
+const READER_MEDIA_SCALE_STEP := 0.01
+const READER_MEDIA_SCALE_DEFAULT := 1.50
+const READER_MEDIA_SCALE_MIGRATION_KEY := "reader_media_scale_migrated_20260308"
 
 @onready var _auto_reconstruct_check: CheckBox = $MarginContainer/VBoxContainer/AutoReconstructCheck
 
@@ -20,6 +22,7 @@ var _reader_render_mode_option: OptionButton
 var _reader_shortcut_input: LineEdit
 var _reader_media_scale_slider: HSlider
 var _reader_media_scale_label: Label
+var _reader_debug_check: CheckBox
 
 var _background_files: Array[String] = []
 
@@ -32,7 +35,8 @@ var _settings: Dictionary = {
 	"reading_mode": "window",
 	"reader_render_mode": "render",
 	"reader_toggle_source_shortcut": DEFAULT_READER_TOGGLE_SHORTCUT,
-	"reader_media_scale": 1.0
+	"reader_media_scale": READER_MEDIA_SCALE_DEFAULT,
+	"reader_debug": false
 }
 
 func _ready() -> void:
@@ -165,7 +169,7 @@ func _ready() -> void:
 		_reader_media_scale_slider.min_value = READER_MEDIA_SCALE_MIN
 		_reader_media_scale_slider.max_value = READER_MEDIA_SCALE_MAX
 		_reader_media_scale_slider.step = READER_MEDIA_SCALE_STEP
-		_reader_media_scale_slider.value = float(_settings.get("reader_media_scale", 1.0))
+		_reader_media_scale_slider.value = float(_settings.get("reader_media_scale", READER_MEDIA_SCALE_DEFAULT))
 		media_scale_hbox.add_child(_reader_media_scale_slider)
 		_reader_media_scale_slider.value_changed.connect(_on_reader_media_scale_changed)
 
@@ -173,6 +177,12 @@ func _ready() -> void:
 		_reader_media_scale_label.custom_minimum_size = Vector2(48, 0)
 		_reader_media_scale_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		media_scale_hbox.add_child(_reader_media_scale_label)
+
+		_reader_debug_check = CheckBox.new()
+		_reader_debug_check.text = "Enable Reader Debug Capture"
+		_reader_debug_check.tooltip_text = "Export source/viewer/screen PNG diagnostics for the image viewer."
+		vbox.add_child(_reader_debug_check)
+		_reader_debug_check.toggled.connect(_on_reader_debug_toggled)
 
 	_update_ui()
 
@@ -230,9 +240,11 @@ func _update_ui() -> void:
 	if _reader_shortcut_input:
 		_reader_shortcut_input.text = String(_settings.get("reader_toggle_source_shortcut", DEFAULT_READER_TOGGLE_SHORTCUT))
 	if _reader_media_scale_slider:
-		_reader_media_scale_slider.value = clampf(float(_settings.get("reader_media_scale", 1.0)), READER_MEDIA_SCALE_MIN, READER_MEDIA_SCALE_MAX)
+		_reader_media_scale_slider.value = clampf(float(_settings.get("reader_media_scale", READER_MEDIA_SCALE_DEFAULT)), READER_MEDIA_SCALE_MIN, READER_MEDIA_SCALE_MAX)
 	if _reader_media_scale_label and _reader_media_scale_slider:
 		_reader_media_scale_label.text = "%.2fx" % _reader_media_scale_slider.value
+	if _reader_debug_check:
+		_reader_debug_check.button_pressed = bool(_settings.get("reader_debug", false))
 
 func _on_auto_reconstruct_toggled(pressed: bool) -> void:
 	_settings["auto_reconstruct"] = pressed
@@ -277,6 +289,11 @@ func _on_reader_media_scale_changed(value: float) -> void:
 	if _reader_media_scale_label:
 		_reader_media_scale_label.text = "%.2fx" % normalized_value
 	_settings["reader_media_scale"] = normalized_value
+	_save_and_emit(false)
+
+
+func _on_reader_debug_toggled(pressed: bool) -> void:
+	_settings["reader_debug"] = pressed
 	_save_and_emit(false)
 
 func _normalize_shortcut_value(raw_value: String) -> String:
@@ -329,6 +346,7 @@ func _save_settings() -> void:
 	var config := ConfigFile.new()
 	for key in _settings:
 		config.set_value("path_mode", key, _settings[key])
+	config.set_value("path_mode_meta", READER_MEDIA_SCALE_MIGRATION_KEY, true)
 	config.save(SETTINGS_FILE)
 
 func _load_settings() -> void:
@@ -337,8 +355,17 @@ func _load_settings() -> void:
 	if err == OK:
 		for key in _settings.keys():
 			_settings[key] = config.get_value("path_mode", key, _settings[key])
+		var migrated_media_scale := bool(config.get_value("path_mode_meta", READER_MEDIA_SCALE_MIGRATION_KEY, false))
+		if not migrated_media_scale:
+			var legacy_scale: float = float(_settings.get("reader_media_scale", READER_MEDIA_SCALE_DEFAULT))
+			_settings["reader_media_scale"] = clampf(legacy_scale / 3.0, READER_MEDIA_SCALE_MIN, READER_MEDIA_SCALE_MAX)
+			config.set_value("path_mode_meta", READER_MEDIA_SCALE_MIGRATION_KEY, true)
+			for key in _settings.keys():
+				config.set_value("path_mode", key, _settings[key])
+			config.save(SETTINGS_FILE)
 		_settings["reader_toggle_source_shortcut"] = _normalize_shortcut_value(String(_settings.get("reader_toggle_source_shortcut", DEFAULT_READER_TOGGLE_SHORTCUT)))
-		_settings["reader_media_scale"] = clampf(float(_settings.get("reader_media_scale", 1.0)), READER_MEDIA_SCALE_MIN, READER_MEDIA_SCALE_MAX)
+		_settings["reader_media_scale"] = clampf(float(_settings.get("reader_media_scale", READER_MEDIA_SCALE_DEFAULT)), READER_MEDIA_SCALE_MIN, READER_MEDIA_SCALE_MAX)
+		_settings["reader_debug"] = bool(_settings.get("reader_debug", false))
 	else:
 		_save_settings()
 

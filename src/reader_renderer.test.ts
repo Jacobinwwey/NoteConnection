@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
+import { JSDOM } from 'jsdom';
 
 const projectRoot = path.resolve(__dirname, '..');
 const distRendererPath = path.join(projectRoot, 'dist', 'src', 'reader_renderer.js');
@@ -160,6 +161,53 @@ describe('reader_renderer', () => {
         expect(heightMatch).not.toBeNull();
         expect(Number(widthMatch && widthMatch[1])).toBeLessThanOrEqual(640);
         expect(Number(heightMatch && heightMatch[1])).toBeLessThanOrEqual(420);
+    });
+
+    it('wraps oversized Mermaid labels into multiple lines so text stays within node borders', () => {
+        const longUnbrokenLabel = '跨境资产负债管理与流动性压力测试'.repeat(8);
+        const svg = runRenderer(
+            'renderMermaidSvg',
+            ['flowchart TD', `A["${longUnbrokenLabel}"] --> B["Done"]`].join('\n'),
+            { theme: 'dark', maxWidth: 640, maxHeight: 480 },
+        );
+
+        const widthMatch = svg.match(/width="(\d+)"/);
+        const dom = new JSDOM(svg, { contentType: 'image/svg+xml' });
+        const textNodes = Array.from(dom.window.document.querySelectorAll('.node text'));
+        const wrappedNode = textNodes.find((node) => (node.textContent || '').includes('跨境资产'));
+        const wrappedLineCount = wrappedNode ? wrappedNode.querySelectorAll('tspan').length : 0;
+
+        expect(widthMatch).not.toBeNull();
+        expect(Number(widthMatch && widthMatch[1])).toBeLessThanOrEqual(640);
+        expect(wrappedLineCount).toBeGreaterThan(1);
+    });
+
+    it('removes Mermaid aggregate tspans so node bounds follow wrapped text instead of stale full-line labels', () => {
+        const longEnglishLabel = 'This is a very very very very very very very long English label that should wrap instead of overflowing outside the node border';
+        const svg = runRenderer(
+            'renderMermaidSvg',
+            ['flowchart TD', `A["${longEnglishLabel}"] --> B["Done"]`].join('\n'),
+            { theme: 'dark', maxWidth: 640, maxHeight: 480 },
+        );
+
+        const dom = new JSDOM(svg, { contentType: 'image/svg+xml' });
+        const allNodeRects = Array.from(dom.window.document.querySelectorAll('.node rect'))
+            .map((rect) => Number(rect.getAttribute('width') || '0'))
+            .filter((value) => Number.isFinite(value) && value > 0);
+        const wrappedText = Array.from(dom.window.document.querySelectorAll('.node text'))
+            .find((textNode) => (textNode.textContent || '').includes('very very'));
+        const wrappedLines = wrappedText
+            ? Array.from(wrappedText.querySelectorAll('tspan'))
+                .map((line) => (line.textContent || '').replace(/\s+/g, ' ').trim())
+                .filter((line) => line.length > 0)
+            : [];
+        const mergedTail = wrappedLines.slice(1).join(' ');
+        const maxNodeWidth = allNodeRects.length > 0 ? Math.max(...allNodeRects) : 0;
+
+        expect(maxNodeWidth).toBeGreaterThan(0);
+        expect(maxNodeWidth).toBeLessThanOrEqual(460);
+        expect(wrappedLines.length).toBeGreaterThan(1);
+        expect(wrappedLines[0]).not.toEqual(mergedTail);
     });
 
     it('allocates more Mermaid width for mixed CJK labels than for the English-only equivalent', () => {

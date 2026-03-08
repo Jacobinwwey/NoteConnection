@@ -364,13 +364,9 @@ window.pathApp = {
 
     _collectBridgeMermaidLabelBounds: function(group, includePlainTextNodes = false) {
         let combinedBounds = null;
-        const labelCandidates = [];
-        const primaryLabel = group.querySelector('.nodeLabel, .edgeLabel, .label, .label text');
-        if (primaryLabel) {
-            labelCandidates.push(primaryLabel);
-        }
-        if (labelCandidates.length === 0 || includePlainTextNodes) {
-            labelCandidates.push(...Array.from(group.querySelectorAll(includePlainTextNodes ? 'text, tspan' : '.nodeLabel, .label, text')));
+        const labelCandidates = Array.from(group.querySelectorAll('text'));
+        if (labelCandidates.length === 0 && includePlainTextNodes) {
+            return null;
         }
         labelCandidates.forEach((node) => {
             if (!String((node && node.textContent) || '').trim() || typeof node.getBBox !== 'function') {
@@ -385,12 +381,423 @@ window.pathApp = {
         return combinedBounds;
     },
 
-    _findBridgeMermaidShapeNode: function(group) {
-        const directShape = Array.from(group.children || []).find((child) => {
-            const tagName = String(child.tagName || '').toLowerCase();
-            return tagName === 'rect' || tagName === 'polygon' || tagName === 'ellipse' || tagName === 'circle';
+    _estimateBridgeTextAnchorBounds: function(textElement) {
+        const extraction = this._extractBridgeTextLinesDetailed(textElement);
+        const lines = extraction.lines
+            .map((line) => this._normalizeBridgeInlineText(line))
+            .filter(Boolean);
+        if (lines.length === 0) {
+            return null;
+        }
+
+        const fontSize = this._resolveBridgeSvgFontSize(textElement);
+        const lineHeight = Math.max(this._resolveBridgeSvgLineHeight(textElement, fontSize), fontSize * 1.18);
+        const estimatedWidth = lines.reduce((max, line) => Math.max(max, this._estimateBridgeTextLineWidth(line, fontSize)), 0);
+        const estimatedHeight = Math.max(fontSize, (lineHeight * Math.max(0, lines.length - 1)) + fontSize);
+        if (!Number.isFinite(estimatedWidth) || !Number.isFinite(estimatedHeight) || estimatedWidth <= 0 || estimatedHeight <= 0) {
+            return null;
+        }
+
+        const x = this._parseBridgeNumericAttribute(textElement, 'x', 0);
+        const y = this._parseBridgeNumericAttribute(textElement, 'y', 0);
+        const rawAnchor = String(this._resolveBridgeTextProperty(textElement, 'text-anchor') || '').trim().toLowerCase();
+        const anchor = rawAnchor === 'start' || rawAnchor === 'left'
+            ? 'start'
+            : (rawAnchor === 'end' || rawAnchor === 'right' ? 'end' : 'middle');
+
+        const widthWithSafety = estimatedWidth * 1.08;
+        const heightWithSafety = estimatedHeight + Math.max(2, fontSize * 0.2);
+        let left = x - (widthWithSafety / 2);
+        if (anchor === 'start') {
+            left = x;
+        } else if (anchor === 'end') {
+            left = x - widthWithSafety;
+        }
+        const top = y - Math.max(fontSize * 0.84, fontSize - 2);
+        return {
+            x: left,
+            y: top,
+            width: widthWithSafety,
+            height: heightWithSafety
+        };
+    },
+
+    _collectBridgeEstimatedLabelBounds: function(group, includePlainTextNodes = false) {
+        let combinedBounds = null;
+        const labelCandidates = Array.from(group.querySelectorAll('text'));
+        if (labelCandidates.length === 0 && includePlainTextNodes) {
+            return null;
+        }
+        labelCandidates.forEach((textNode) => {
+            const estimatedBounds = this._estimateBridgeTextAnchorBounds(textNode);
+            if (!estimatedBounds) {
+                return;
+            }
+            combinedBounds = this._unionBridgeSvgBounds(combinedBounds, estimatedBounds);
         });
-        return directShape || group.querySelector('rect, polygon, ellipse, circle');
+        return combinedBounds;
+    },
+
+    _normalizeBridgeInlineText: function(text) {
+        return String(text || '').replace(/\s+/g, ' ').trim();
+    },
+
+    _parseBridgeNumericAttribute: function(element, name, fallback = 0) {
+        const numeric = Number.parseFloat(String(element?.getAttribute?.(name) || ''));
+        return Number.isFinite(numeric) ? numeric : fallback;
+    },
+
+    _extractBridgeInlineStyleValue: function(styleValue, propertyName) {
+        if (!styleValue) {
+            return null;
+        }
+        const pattern = new RegExp('(?:^|;)\\s*' + propertyName + '\\s*:\\s*([^;]+)', 'i');
+        const match = String(styleValue).match(pattern);
+        return match && match[1] ? String(match[1]).trim() : null;
+    },
+
+    _resolveBridgeTextProperty: function(element, propertyName) {
+        let current = element;
+        while (current) {
+            const attributeValue = current.getAttribute && current.getAttribute(propertyName);
+            if (attributeValue && String(attributeValue).trim()) {
+                return String(attributeValue).trim();
+            }
+            const styleValue = this._extractBridgeInlineStyleValue(current.getAttribute && current.getAttribute('style'), propertyName);
+            if (styleValue) {
+                return styleValue;
+            }
+            current = current.parentElement || null;
+        }
+        return null;
+    },
+
+    _parseBridgeCssLength: function(lengthValue, baseFontSize) {
+        if (!lengthValue) {
+            return 0;
+        }
+        const normalized = String(lengthValue).trim().toLowerCase();
+        if (!normalized || normalized === 'normal') {
+            return 0;
+        }
+        const numeric = Number.parseFloat(normalized);
+        if (!Number.isFinite(numeric) || numeric <= 0) {
+            return 0;
+        }
+        if (normalized.endsWith('em') || normalized.endsWith('rem')) {
+            return numeric * Math.max(10, baseFontSize || 16);
+        }
+        if (normalized.endsWith('%')) {
+            return (numeric / 100) * Math.max(10, baseFontSize || 16);
+        }
+        return numeric;
+    },
+
+    _resolveBridgeSvgFontSize: function(element) {
+        const resolvedValue = this._resolveBridgeTextProperty(element, 'font-size');
+        const parsed = this._parseBridgeCssLength(resolvedValue, 16);
+        return parsed > 0 ? parsed : 16;
+    },
+
+    _resolveBridgeSvgLineHeight: function(element, fontSize) {
+        const resolvedValue = this._resolveBridgeTextProperty(element, 'line-height');
+        const parsed = this._parseBridgeCssLength(resolvedValue, fontSize);
+        return parsed > 0 ? parsed : Math.max(fontSize * 1.18, fontSize + 4);
+    },
+
+    _isBridgeWideGlyph: function(char) {
+        return /[\u1100-\u115F\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE6F\uFF01-\uFF60\uFFE0-\uFFE6\u{1F300}-\u{1FAFF}]/u.test(char);
+    },
+
+    _estimateBridgeGlyphWidthUnits: function(char) {
+        if (!char) {
+            return 0;
+        }
+        if (/\s/.test(char)) {
+            return 0.35;
+        }
+        if (this._isBridgeWideGlyph(char)) {
+            return 1.02;
+        }
+        if (/[.,;:!'`|]/.test(char)) {
+            return 0.32;
+        }
+        if (/[(){}\[\]<>]/.test(char)) {
+            return 0.46;
+        }
+        if (/[\\/_-]/.test(char)) {
+            return 0.5;
+        }
+        if (/[0-9]/.test(char)) {
+            return 0.62;
+        }
+        if (/[A-Z]/.test(char)) {
+            return 0.72;
+        }
+        if (/[a-z]/.test(char)) {
+            return 0.64;
+        }
+        return 0.7;
+    },
+
+    _estimateBridgeTextLineWidth: function(text, fontSize) {
+        let units = 0;
+        for (const char of Array.from(String(text || ''))) {
+            units += this._estimateBridgeGlyphWidthUnits(char);
+        }
+        return Math.max(fontSize * 0.75, (units * fontSize) + Math.max(2, fontSize * 0.12));
+    },
+
+    _splitBridgeTokenForWrap: function(token, fontSize, maxLineWidth) {
+        const wrapped = [];
+        let segment = '';
+        for (const char of Array.from(token)) {
+            const candidate = segment + char;
+            if (!segment || this._estimateBridgeTextLineWidth(candidate, fontSize) <= maxLineWidth) {
+                segment = candidate;
+                continue;
+            }
+            wrapped.push(segment);
+            segment = char;
+        }
+        if (segment) {
+            wrapped.push(segment);
+        }
+        return wrapped;
+    },
+
+    _wrapBridgeMeasurementLine: function(line, fontSize, maxLineWidth) {
+        const normalizedLine = this._normalizeBridgeInlineText(line);
+        if (!normalizedLine) {
+            return [];
+        }
+        if (this._estimateBridgeTextLineWidth(normalizedLine, fontSize) <= maxLineWidth) {
+            return [normalizedLine];
+        }
+
+        const maxLines = 12;
+        const useSpaceJoin = /\s/.test(normalizedLine);
+        const tokens = useSpaceJoin
+            ? normalizedLine.split(/\s+/).filter(Boolean)
+            : Array.from(normalizedLine);
+        const wrappedLines = [];
+        let currentLine = '';
+
+        for (const token of tokens) {
+            const candidate = !currentLine
+                ? token
+                : (useSpaceJoin ? `${currentLine} ${token}` : `${currentLine}${token}`);
+
+            if (this._estimateBridgeTextLineWidth(candidate, fontSize) <= maxLineWidth) {
+                currentLine = candidate;
+                continue;
+            }
+
+            if (currentLine) {
+                wrappedLines.push(currentLine);
+                if (wrappedLines.length >= maxLines) {
+                    return wrappedLines.slice(0, maxLines);
+                }
+                currentLine = '';
+            }
+
+            if (this._estimateBridgeTextLineWidth(token, fontSize) <= maxLineWidth) {
+                currentLine = token;
+                continue;
+            }
+
+            const splitTokens = this._splitBridgeTokenForWrap(token, fontSize, maxLineWidth);
+            if (splitTokens.length === 0) {
+                continue;
+            }
+            for (let index = 0; index < splitTokens.length - 1; index += 1) {
+                wrappedLines.push(splitTokens[index]);
+                if (wrappedLines.length >= maxLines) {
+                    return wrappedLines.slice(0, maxLines);
+                }
+            }
+            currentLine = splitTokens[splitTokens.length - 1];
+        }
+
+        if (currentLine && wrappedLines.length < maxLines) {
+            wrappedLines.push(currentLine);
+        }
+        return wrappedLines.length > 0 ? wrappedLines : [normalizedLine];
+    },
+
+    _extractBridgeTextLinesDetailed: function(textElement) {
+        const directTextChildren = Array.from(textElement.children || [])
+            .filter((child) => String(child.tagName || '').toLowerCase() === 'tspan')
+            .map((child) => this._normalizeBridgeInlineText(child.textContent || ''))
+            .filter(Boolean);
+
+        const leafDescendantTspans = Array.from(textElement.querySelectorAll('tspan'))
+            .filter((child) => !child.querySelector('tspan'))
+            .map((child) => this._normalizeBridgeInlineText(child.textContent || ''))
+            .filter(Boolean);
+
+        if (directTextChildren.length === 1 && leafDescendantTspans.length > 1) {
+            const firstLine = directTextChildren[0];
+            const mergedLeafLines = this._normalizeBridgeInlineText(leafDescendantTspans.join(' '));
+            const maxLeafLineLength = leafDescendantTspans.reduce((maxLength, line) => Math.max(maxLength, line.length), 0);
+            const looksLikeNestedAggregateLine = firstLine.length >= 24 && firstLine.length > maxLeafLineLength * 2;
+            if (
+                mergedLeafLines
+                && (firstLine === mergedLeafLines || firstLine.startsWith(mergedLeafLines) || mergedLeafLines.startsWith(firstLine) || looksLikeNestedAggregateLine)
+            ) {
+                const canonicalLine = firstLine.length >= mergedLeafLines.length ? firstLine : mergedLeafLines;
+                return { lines: [canonicalLine], needsNormalization: true };
+            }
+        }
+
+        if (directTextChildren.length > 1) {
+            const firstLine = directTextChildren[0];
+            const remainingLines = directTextChildren.slice(1);
+            const mergedRemaining = this._normalizeBridgeInlineText(remainingLines.join(' '));
+            const maxRemainingLength = remainingLines.reduce((maxLength, line) => Math.max(maxLength, line.length), 0);
+            const looksLikeAggregateLine = firstLine.length >= 32 && remainingLines.length >= 3 && firstLine.length > maxRemainingLength * 2;
+            if (
+                mergedRemaining
+                && (firstLine === mergedRemaining || firstLine.startsWith(mergedRemaining) || mergedRemaining.startsWith(firstLine) || looksLikeAggregateLine)
+            ) {
+                const canonicalLine = firstLine.length >= mergedRemaining.length ? firstLine : mergedRemaining;
+                return { lines: [canonicalLine], needsNormalization: true };
+            }
+        }
+
+        if (directTextChildren.length > 0) {
+            return { lines: directTextChildren, needsNormalization: false };
+        }
+
+        const fallbackLines = String(textElement.textContent || '')
+            .split(/\r?\n/)
+            .map((line) => this._normalizeBridgeInlineText(line))
+            .filter(Boolean);
+        return {
+            lines: fallbackLines.length > 0 ? fallbackLines : [''],
+            needsNormalization: false
+        };
+    },
+
+    _wrapBridgeSvgTextElement: function(textElement, maxLineWidth) {
+        const extraction = this._extractBridgeTextLinesDetailed(textElement);
+        const baseLines = extraction.lines
+            .map((line) => this._normalizeBridgeInlineText(line))
+            .filter(Boolean);
+        if (baseLines.length === 0) {
+            return;
+        }
+
+        const fontSize = this._resolveBridgeSvgFontSize(textElement);
+        const lineHeight = Math.max(this._resolveBridgeSvgLineHeight(textElement, fontSize), fontSize * 1.18);
+        const existingMaxWidth = baseLines.reduce((max, line) => Math.max(max, this._estimateBridgeTextLineWidth(line, fontSize)), 0);
+        const exceedsWrapWidth = existingMaxWidth > maxLineWidth + 1;
+        if (!exceedsWrapWidth && !extraction.needsNormalization) {
+            return;
+        }
+
+        const nextLines = [];
+        if (exceedsWrapWidth) {
+            for (const line of baseLines) {
+                const wrappedFromLine = this._wrapBridgeMeasurementLine(line, fontSize, maxLineWidth);
+                for (const wrappedLine of wrappedFromLine) {
+                    if (nextLines.length >= 12) {
+                        break;
+                    }
+                    nextLines.push(wrappedLine);
+                }
+                if (nextLines.length >= 12) {
+                    break;
+                }
+            }
+        } else {
+            nextLines.push(...baseLines);
+        }
+
+        if (nextLines.length === 0) {
+            return;
+        }
+
+        const wrappedMaxWidth = nextLines.reduce((max, line) => Math.max(max, this._estimateBridgeTextLineWidth(line, fontSize)), 0);
+        if (
+            exceedsWrapWidth
+            && !extraction.needsNormalization
+            && nextLines.length <= baseLines.length
+            && wrappedMaxWidth >= existingMaxWidth - 1
+        ) {
+            return;
+        }
+
+        const ownerDocument = textElement.ownerDocument;
+        if (!ownerDocument) {
+            return;
+        }
+
+        const baseX = this._parseBridgeNumericAttribute(textElement, 'x', 0);
+        const baseY = this._parseBridgeNumericAttribute(textElement, 'y', 0);
+        const textAnchor = String(textElement.getAttribute('text-anchor') || '').trim();
+        const dominantBaseline = String(textElement.getAttribute('dominant-baseline') || '').trim();
+
+        while (textElement.firstChild) {
+            textElement.removeChild(textElement.firstChild);
+        }
+        textElement.setAttribute('x', String(baseX));
+        textElement.setAttribute('y', String(baseY));
+
+        nextLines.forEach((line, index) => {
+            const tspan = ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+            tspan.textContent = line;
+            tspan.setAttribute('x', String(baseX));
+            if (index === 0) {
+                tspan.setAttribute('y', String(baseY));
+            } else {
+                tspan.setAttribute('dy', String(lineHeight));
+            }
+            if (textAnchor) {
+                tspan.setAttribute('text-anchor', textAnchor);
+            }
+            if (dominantBaseline) {
+                tspan.setAttribute('dominant-baseline', dominantBaseline);
+            }
+            textElement.appendChild(tspan);
+        });
+    },
+
+    _wrapBridgeMermaidTextLabels: function(group, maxLineWidth) {
+        if (!Number.isFinite(maxLineWidth) || maxLineWidth < 84) {
+            return;
+        }
+        Array.from(group.querySelectorAll('text')).forEach((textNode) => {
+            this._wrapBridgeSvgTextElement(textNode, maxLineWidth);
+        });
+    },
+
+    _findBridgeMermaidShapeNode: function(group) {
+        const candidates = Array.from(group.querySelectorAll('rect, polygon, ellipse, circle'));
+        if (candidates.length === 0) {
+            return null;
+        }
+        let selected = null;
+        let selectedArea = -1;
+        candidates.forEach((candidate) => {
+            if (typeof candidate.getBBox !== 'function') {
+                return;
+            }
+            try {
+                const bbox = candidate.getBBox();
+                if (!bbox || !Number.isFinite(bbox.width) || !Number.isFinite(bbox.height) || bbox.width <= 0 || bbox.height <= 0) {
+                    return;
+                }
+                const area = bbox.width * bbox.height;
+                if (area > selectedArea) {
+                    selected = candidate;
+                    selectedArea = area;
+                }
+            } catch (error) {
+                console.warn('[PathApp] Failed to inspect Mermaid shape candidate bounds', error);
+            }
+        });
+        return selected || candidates[0];
     },
 
     _scaleBridgePolygonPoints: function(pointsValue, centerX, centerY, scaleX, scaleY) {
@@ -453,10 +860,12 @@ window.pathApp = {
         ['.node', '.edgeLabel'].forEach((selector) => {
             const paddingX = selector === '.edgeLabel' ? 12 : 18;
             const paddingY = selector === '.edgeLabel' ? 10 : 14;
+            const minShapeWidth = selector === '.edgeLabel' ? 56 : 108;
+            const minShapeHeight = selector === '.edgeLabel' ? 26 : 42;
+            const preferredWrapWidth = selector === '.edgeLabel' ? 160 : 200;
             Array.from(svgElement.querySelectorAll(selector)).forEach((group) => {
-                const labelBounds = this._collectBridgeMermaidLabelBounds(group, selector === '.edgeLabel');
                 const shapeNode = this._findBridgeMermaidShapeNode(group);
-                if (!labelBounds || !shapeNode || typeof shapeNode.getBBox !== 'function') {
+                if (!shapeNode || typeof shapeNode.getBBox !== 'function') {
                     return;
                 }
                 let shapeBounds = null;
@@ -469,9 +878,32 @@ window.pathApp = {
                 if (!shapeBounds || !Number.isFinite(shapeBounds.width) || !Number.isFinite(shapeBounds.height) || shapeBounds.width <= 0 || shapeBounds.height <= 0) {
                     return;
                 }
-                const targetWidth = Math.max(shapeBounds.width, labelBounds.width + paddingX * 2);
-                const targetHeight = Math.max(shapeBounds.height, labelBounds.height + paddingY * 2);
-                if (targetWidth <= shapeBounds.width + 1 && targetHeight <= shapeBounds.height + 1) {
+                const wrapWidth = Math.max(84, Math.min(preferredWrapWidth, shapeBounds.width - (paddingX * 2)));
+                this._wrapBridgeMermaidTextLabels(group, wrapWidth);
+
+                const labelBounds = this._collectBridgeMermaidLabelBounds(group, selector === '.edgeLabel');
+                const estimatedLabelBounds = this._collectBridgeEstimatedLabelBounds(group, selector === '.edgeLabel');
+                if (!labelBounds && !estimatedLabelBounds) {
+                    return;
+                }
+                const measuredWidth = labelBounds ? labelBounds.width : 0;
+                const measuredHeight = labelBounds ? labelBounds.height : 0;
+                const estimatedWidth = estimatedLabelBounds ? estimatedLabelBounds.width : 0;
+                const estimatedHeight = estimatedLabelBounds ? estimatedLabelBounds.height : 0;
+                const effectiveLabelWidth = Math.max(measuredWidth, estimatedWidth);
+                const effectiveLabelHeight = Math.max(measuredHeight, estimatedHeight);
+
+                const desiredWidth = Math.max(minShapeWidth, effectiveLabelWidth + (paddingX * 2));
+                const desiredHeight = Math.max(minShapeHeight, effectiveLabelHeight + (paddingY * 2));
+                const targetWidth = shapeBounds.width > desiredWidth + 8
+                    ? desiredWidth
+                    : Math.max(shapeBounds.width, desiredWidth);
+                const targetHeight = shapeBounds.height > desiredHeight + 6
+                    ? desiredHeight
+                    : Math.max(shapeBounds.height, desiredHeight);
+                const widthChanged = Math.abs(targetWidth - shapeBounds.width) > 1;
+                const heightChanged = Math.abs(targetHeight - shapeBounds.height) > 1;
+                if (!widthChanged && !heightChanged) {
                     return;
                 }
                 this._fitBridgeMermaidShapeToBounds(shapeNode, shapeBounds, targetWidth, targetHeight);

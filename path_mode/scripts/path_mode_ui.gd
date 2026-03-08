@@ -26,13 +26,15 @@ const TREE_VIEW_SCENE = preload("res://scenes/tree_view_panel.tscn")
 const SETTINGS_SCENE = preload("res://scenes/settings_panel.tscn")
 const READER_RENDER_CLIENT_SCRIPT = preload("res://scripts/reader_render_client.gd")
 const READER_IMAGE_CANVAS_SCRIPT = preload("res://scripts/reader_image_canvas.gd")
-const READER_DISPLAY_MATH_PREVIEW_MAX_SIZE := Vector2(920.0, 240.0)
-const READER_DISPLAY_MERMAID_PREVIEW_MAX_SIZE := Vector2(1100.0, 620.0)
+const READER_DISPLAY_MATH_PREVIEW_MAX_SIZE := Vector2(560.0, 180.0)
+const READER_DISPLAY_MERMAID_PREVIEW_MAX_SIZE := Vector2(620.0, 420.0)
 const READER_MEDIA_PAGE_MARGIN := 72.0
-const READER_MEDIA_PAGE_MIN_WIDTH := 320.0
-const READER_MEDIA_PAGE_MAX_WIDTH := 1180.0
-const READER_MEDIA_PAGE_MIN_HEIGHT := 180.0
-const READER_MEDIA_PAGE_MAX_HEIGHT := 860.0
+const READER_MEDIA_PAGE_MIN_WIDTH := 120.0
+const READER_MEDIA_PAGE_MAX_WIDTH := 760.0
+const READER_MEDIA_PAGE_MIN_HEIGHT := 96.0
+const READER_MEDIA_PAGE_MAX_HEIGHT := 620.0
+const READER_MEDIA_PAGE_FIT_RATIO := 0.92
+const READER_MEDIA_DEFAULT_PREVIEW_MAX_SIZE := Vector2(560.0, 460.0)
 const READER_DISPLAY_MATH_RENDER_SCALE := 2.4
 const READER_INLINE_MATH_RENDER_SCALE := 2.1
 const READER_INLINE_MATH_MAX_HEIGHT_MULTIPLIER := 1.08
@@ -41,9 +43,10 @@ const READER_INLINE_MATH_MAX_WIDTH_MULTIPLIER := 5.6
 const READER_DISPLAY_INLINE_MATH_MAX_WIDTH := 240.0
 const READER_IMAGE_FRAME_MIN_SIZE := Vector2(360.0, 260.0)
 const READER_IMAGE_VIEWER_BACKGROUND := Color(0.012, 0.014, 0.018, 1.0)
-const READER_MEDIA_SCALE_MIN := 0.45
-const READER_MEDIA_SCALE_MAX := 2.25
-const READER_MEDIA_SCALE_STEP := 0.05
+const READER_MEDIA_SCALE_MIN := 0.10
+const READER_MEDIA_SCALE_MAX := 3.00
+const READER_MEDIA_SCALE_STEP := 0.01
+const READER_MEDIA_SCALE_DEFAULT := 1.50
 const DEFAULT_READER_TOGGLE_SHORTCUT := "Ctrl+M"
 
 @onready var mode_label: Label = $MarginContainer/VBoxContainer/ModeLabel
@@ -94,6 +97,11 @@ var _reader_view_mode_button: Button = null
 var _reader_media_scale_slider: HSlider = null
 var _reader_media_scale_value_label: Label = null
 var _reader_status_label: Label = null
+var _reader_media_debug_panel: PanelContainer = null
+var _reader_media_debug_label: Label = null
+var _reader_media_debug_entries: Array[String] = []
+var _reader_media_debug_block_counter: int = 0
+var _reader_media_layout_dirty: bool = false
 var _reader_toast_panel: PanelContainer = null
 var _reader_toast_label: Label = null
 var _reader_toast_tween: Tween = null
@@ -747,6 +755,35 @@ func _create_reader_overlay() -> void:
 	_reader_status_label.add_theme_color_override("font_color", Color(0.64, 0.74, 0.87, 0.94))
 	panel_vbox.add_child(_reader_status_label)
 
+	_reader_media_debug_panel = PanelContainer.new()
+	_reader_media_debug_panel.visible = false
+	_reader_media_debug_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var reader_media_debug_style := StyleBoxFlat.new()
+	reader_media_debug_style.bg_color = Color(0.05, 0.08, 0.12, 0.96)
+	reader_media_debug_style.border_color = Color(0.42, 0.61, 0.85, 0.92)
+	reader_media_debug_style.border_width_left = 1
+	reader_media_debug_style.border_width_top = 1
+	reader_media_debug_style.border_width_right = 1
+	reader_media_debug_style.border_width_bottom = 1
+	reader_media_debug_style.corner_radius_top_left = 10
+	reader_media_debug_style.corner_radius_top_right = 10
+	reader_media_debug_style.corner_radius_bottom_left = 10
+	reader_media_debug_style.corner_radius_bottom_right = 10
+	_reader_media_debug_panel.add_theme_stylebox_override("panel", reader_media_debug_style)
+	var reader_media_debug_margin := MarginContainer.new()
+	reader_media_debug_margin.add_theme_constant_override("margin_left", 10)
+	reader_media_debug_margin.add_theme_constant_override("margin_top", 8)
+	reader_media_debug_margin.add_theme_constant_override("margin_right", 10)
+	reader_media_debug_margin.add_theme_constant_override("margin_bottom", 8)
+	_reader_media_debug_panel.add_child(reader_media_debug_margin)
+	_reader_media_debug_label = Label.new()
+	_reader_media_debug_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_reader_media_debug_label.add_theme_font_size_override("font_size", 10)
+	_reader_media_debug_label.add_theme_color_override("font_color", Color(0.82, 0.9, 1.0, 0.96))
+	_reader_media_debug_label.custom_minimum_size = Vector2(0, 56)
+	reader_media_debug_margin.add_child(_reader_media_debug_label)
+	panel_vbox.add_child(_reader_media_debug_panel)
+
 	_reader_toast_panel = PanelContainer.new()
 	_reader_toast_panel.name = "ReaderToast"
 	_reader_toast_panel.anchor_left = 1.0
@@ -1066,6 +1103,7 @@ func open_reader(node: Dictionary) -> void:
 		_reader_toast_panel.hide()
 	_reader_overlay.show()
 	move_child(_reader_overlay, get_child_count() - 1)
+	_update_reader_media_debug_overlay()
 
 
 func close_reader() -> void:
@@ -1075,6 +1113,7 @@ func close_reader() -> void:
 		_reader_overlay.hide()
 	if _reader_toast_panel:
 		_reader_toast_panel.hide()
+	_update_reader_media_debug_overlay()
 
 
 func is_reader_open() -> bool:
@@ -1194,7 +1233,7 @@ func _capture_reader_image_debug_frame(capture_id: int, prefix: String) -> void:
 
 
 func _export_reader_image_debug_artifacts(source_texture: Texture2D, viewer_texture: Texture2D, title: String) -> void:
-	if not OS.is_debug_build():
+	if not OS.is_debug_build() or not _is_reader_debug_enabled():
 		return
 	_reader_image_debug_capture_id += 1
 	var prefix := "%04d-%s" % [_reader_image_debug_capture_id, _sanitize_reader_debug_slug(title)]
@@ -1281,8 +1320,14 @@ func _zoom_reader(delta: float) -> void:
 func _apply_reader_zoom() -> void:
 	if _reader_zoom_label:
 		_reader_zoom_label.text = "%d%%" % int(round(_reader_current_zoom * 100.0))
+	_reader_media_debug_entries.clear()
+	_reader_media_debug_block_counter = 0
+	_reader_media_layout_dirty = false
 	if _reader_blocks:
 		_apply_reader_zoom_recursive(_reader_blocks)
+		if _reader_media_layout_dirty:
+			_refresh_reader_layout_after_media_resize()
+	_update_reader_media_debug_overlay()
 
 
 func _apply_reader_zoom_recursive(control: Control) -> void:
@@ -1303,15 +1348,73 @@ func _apply_reader_zoom_recursive(control: Control) -> void:
 	if control.has_meta("reader_base_size"):
 		var base_size_variant: Variant = control.get_meta("reader_base_size")
 		if base_size_variant is Vector2 and control is TextureRect:
+			var texture_rect := control as TextureRect
+			var base_size := base_size_variant as Vector2
 			var scaled_size: Vector2 = (base_size_variant as Vector2) * _reader_current_zoom
-			if bool(control.get_meta("reader_media_scalable", false)):
-				scaled_size *= _get_reader_media_scale_setting()
-			scaled_size = _fit_size_within(scaled_size, _resolve_reader_control_media_limit(control), false)
-			(control as TextureRect).custom_minimum_size = scaled_size
+			var media_scalable := bool(control.get_meta("reader_media_scalable", false))
+			var media_scale := _get_reader_media_scale_setting()
+			if media_scalable:
+				scaled_size *= media_scale
+			var limit_size := _resolve_reader_control_media_limit(control)
+			scaled_size = _fit_size_within(scaled_size, limit_size, false)
+			var previous_size := texture_rect.custom_minimum_size
+			texture_rect.custom_minimum_size = scaled_size
+			texture_rect.size = scaled_size
+			texture_rect.update_minimum_size()
+			if previous_size.distance_to(scaled_size) > 0.5:
+				_reader_media_layout_dirty = true
+			if _is_reader_debug_enabled():
+				var combined_min := texture_rect.get_combined_minimum_size()
+				var actual_size := texture_rect.size
+				_reader_media_debug_block_counter += 1
+				var control_name := String(texture_rect.name).strip_edges()
+				if control_name.is_empty():
+					control_name = "TextureRect"
+				var debug_line := "#%02d %s base=%0.1fx%0.1f min=%0.1fx%0.1f combined=%0.1fx%0.1f size=%0.1fx%0.1f limit=%0.1fx%0.1f media=%0.2f zoom=%0.2f scalable=%s" % [
+					_reader_media_debug_block_counter,
+					control_name,
+					base_size.x,
+					base_size.y,
+					scaled_size.x,
+					scaled_size.y,
+					combined_min.x,
+					combined_min.y,
+					actual_size.x,
+					actual_size.y,
+					limit_size.x,
+					limit_size.y,
+					media_scale,
+					_reader_current_zoom,
+					str(media_scalable)
+				]
+				_reader_media_debug_entries.append(debug_line)
 
 	for child in control.get_children():
 		if child is Control:
 			_apply_reader_zoom_recursive(child)
+
+
+func _refresh_reader_layout_after_media_resize() -> void:
+	if _reader_blocks == null:
+		return
+	_reader_blocks.update_minimum_size()
+	if _reader_blocks is Container:
+		(_reader_blocks as Container).queue_sort()
+	var ancestor: Node = _reader_blocks.get_parent()
+	while ancestor:
+		if ancestor is Control:
+			(ancestor as Control).update_minimum_size()
+		if ancestor is Container:
+			(ancestor as Container).queue_sort()
+		ancestor = ancestor.get_parent()
+	call_deferred("_enforce_reader_render_horizontal_fit")
+
+
+func _enforce_reader_render_horizontal_fit() -> void:
+	if _reader_scroll == null:
+		return
+	if _get_reader_render_mode_setting() == "render":
+		_reader_scroll.scroll_horizontal = 0
 
 
 func _apply_reader_mode_setting(mode_override: String = "") -> void:
@@ -1364,15 +1467,62 @@ func _sync_reader_controls_from_settings() -> void:
 		_apply_reader_renderable_block_mode(renderable_block, render_mode)
 	if _reader_blocks:
 		_apply_reader_zoom()
+	else:
+		_update_reader_media_debug_overlay()
 
 
 func _build_reader_status_hint() -> String:
-	return "Toggle formula and Mermaid blocks with %s. Ctrl/Cmd + mouse wheel or Ctrl/Cmd +/-/0 adjusts reader zoom when unlocked. Esc closes the reader." % _get_reader_toggle_shortcut_string()
+	var base_hint := "Toggle formula and Mermaid blocks with %s. Ctrl/Cmd + mouse wheel or Ctrl/Cmd +/-/0 adjusts reader zoom when unlocked. Esc closes the reader." % _get_reader_toggle_shortcut_string()
+	if _is_reader_debug_enabled():
+		return "%s Reader debug capture is enabled." % base_hint
+	return base_hint
 
 
 func _set_reader_status(message: String) -> void:
 	if _reader_status_label:
 		_reader_status_label.text = message
+
+
+func _update_reader_media_debug_overlay() -> void:
+	if _reader_media_debug_panel == null or _reader_media_debug_label == null:
+		return
+	var debug_visible := _is_reader_debug_enabled() and is_reader_open()
+	_reader_media_debug_panel.visible = debug_visible
+	if not debug_visible:
+		_reader_media_debug_label.text = ""
+		return
+	var page_limit := _get_reader_media_page_limit()
+	var scroll_size := _reader_scroll.size if _reader_scroll else Vector2.ZERO
+	var panel_size := _reader_panel.size if _reader_panel else Vector2.ZERO
+	if _reader_media_debug_entries.is_empty():
+		_reader_media_debug_label.text = "Media Debug: no TextureRect blocks tracked.\npage_limit=%0.1fx%0.1f scroll=%0.1fx%0.1f panel=%0.1fx%0.1f media=%0.2f zoom=%0.2f" % [
+			page_limit.x,
+			page_limit.y,
+			scroll_size.x,
+			scroll_size.y,
+			panel_size.x,
+			panel_size.y,
+			_get_reader_media_scale_setting(),
+			_reader_current_zoom
+		]
+		return
+	var max_lines := mini(_reader_media_debug_entries.size(), 16)
+	var lines := PackedStringArray()
+	lines.append("page_limit=%0.1fx%0.1f scroll=%0.1fx%0.1f panel=%0.1fx%0.1f media=%0.2f zoom=%0.2f" % [
+		page_limit.x,
+		page_limit.y,
+		scroll_size.x,
+		scroll_size.y,
+		panel_size.x,
+		panel_size.y,
+		_get_reader_media_scale_setting(),
+		_reader_current_zoom
+	])
+	for line_index in range(max_lines):
+		lines.append(_reader_media_debug_entries[line_index])
+	if _reader_media_debug_entries.size() > max_lines:
+		lines.append("... (%d more blocks)" % (_reader_media_debug_entries.size() - max_lines))
+	_reader_media_debug_label.text = "Media Debug (%d blocks)\n%s" % [_reader_media_debug_entries.size(), "\n".join(lines)]
 
 
 func _show_reader_toast(message: String, tone: String = "info") -> void:
@@ -1417,7 +1567,11 @@ func _get_reader_render_mode_setting() -> String:
 
 
 func _get_reader_media_scale_setting() -> float:
-	return clampf(float(get_setting("reader_media_scale", 1.0)), READER_MEDIA_SCALE_MIN, READER_MEDIA_SCALE_MAX)
+	return clampf(float(get_setting("reader_media_scale", READER_MEDIA_SCALE_DEFAULT)), READER_MEDIA_SCALE_MIN, READER_MEDIA_SCALE_MAX)
+
+
+func _is_reader_debug_enabled() -> bool:
+	return bool(get_setting("reader_debug", false))
 
 
 func _get_reader_toggle_shortcut_string() -> String:
@@ -1890,6 +2044,7 @@ func _build_reader_mermaid_block_async(source_text: String, render_revision: int
 
 func _build_reader_svg_panel(texture: Texture2D, badge_text: String, viewer_title: String, max_size: Vector2, accent_color: Color) -> Control:
 	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	panel.focus_mode = Control.FOCUS_NONE
 	panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -1912,7 +2067,7 @@ func _build_reader_svg_panel(texture: Texture2D, badge_text: String, viewer_titl
 	margin.add_theme_constant_override("margin_bottom", 12)
 	panel.add_child(margin)
 	var box := VBoxContainer.new()
-	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	box.add_theme_constant_override("separation", 10)
 	margin.add_child(box)
 	if not badge_text.is_empty():
@@ -1925,12 +2080,17 @@ func _build_reader_svg_panel(texture: Texture2D, badge_text: String, viewer_titl
 		box.add_child(badge)
 	var texture_rect := TextureRect.new()
 	texture_rect.texture = texture
-	texture_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	texture_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	texture_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	# Allow custom_minimum_size-driven downscaling instead of clamping to source texture dimensions.
+	texture_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	var resolved_max_size: Vector2 = _resolve_reader_requested_media_limit(max_size)
 	var preview_size: Vector2 = _fit_size_within(Vector2(texture.get_width(), texture.get_height()), resolved_max_size, false)
 	texture_rect.custom_minimum_size = preview_size
-	texture_rect.set_meta("reader_base_size", Vector2(texture.get_width(), texture.get_height()))
+	# Scale from the already page-fitted preview size so the media slider
+	# actually changes visible size instead of being absorbed by max-size clamping.
+	texture_rect.set_meta("reader_base_size", preview_size)
 	texture_rect.set_meta("reader_max_size", max_size)
 	texture_rect.set_meta("reader_media_scalable", true)
 	texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1953,7 +2113,7 @@ func _build_reader_svg_panel(texture: Texture2D, badge_text: String, viewer_titl
 
 func _build_reader_renderable_block(kind: String, source_text: String, render_content: Control, texture: Texture2D, accent_color: Color) -> Control:
 	var wrapper := PanelContainer.new()
-	wrapper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wrapper.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	var wrapper_style := StyleBoxFlat.new()
 	wrapper_style.bg_color = Color(0.04, 0.07, 0.11, 0.97)
 	wrapper_style.border_color = accent_color
@@ -1973,7 +2133,7 @@ func _build_reader_renderable_block(kind: String, source_text: String, render_co
 	margin.add_theme_constant_override("margin_bottom", 12)
 	wrapper.add_child(margin)
 	var box := VBoxContainer.new()
-	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	box.add_theme_constant_override("separation", 10)
 	margin.add_child(box)
 
@@ -2029,7 +2189,7 @@ func _build_reader_renderable_block(kind: String, source_text: String, render_co
 	_apply_button_style(copy_button, Color(0.18, 0.15, 0.11, 1.0), Color(0.26, 0.21, 0.15, 1.0), Color(0.13, 0.1, 0.07, 1.0), Color(0.92, 0.71, 0.3, 1.0), Color(1.0, 0.97, 0.9, 1.0))
 
 	var render_holder := VBoxContainer.new()
-	render_holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	render_holder.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	render_holder.add_child(render_content)
 	box.add_child(render_holder)
 
@@ -2083,17 +2243,26 @@ func _build_reader_renderable_block(kind: String, source_text: String, render_co
 		_apply_reader_renderable_block_mode(record, _get_reader_render_mode_setting())
 	)
 	_apply_reader_renderable_block_mode(record, _get_reader_render_mode_setting())
-	return wrapper
+	return _wrap_reader_centered_block(wrapper)
 
 
 func _apply_reader_renderable_block_mode(record: Dictionary, mode: String) -> void:
 	var render_holder := record.get("render_holder", null) as Control
 	var source_holder := record.get("source_holder", null) as Control
+	var wrapper := record.get("wrapper", null) as Control
 	var is_source_mode := mode == "source"
 	if render_holder:
 		render_holder.visible = not is_source_mode
 	if source_holder:
 		source_holder.visible = is_source_mode
+		source_holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL if is_source_mode else Control.SIZE_SHRINK_CENTER
+		source_holder.custom_minimum_size = Vector2.ZERO
+	if render_holder:
+		render_holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL if is_source_mode else Control.SIZE_SHRINK_CENTER
+	if wrapper:
+		# Source mode benefits from full-width code readability;
+		# render mode should shrink with media scaling.
+		wrapper.size_flags_horizontal = Control.SIZE_EXPAND_FILL if is_source_mode else Control.SIZE_SHRINK_CENTER
 	var mode_button := record.get("mode_button", null) as Button
 	if mode_button:
 		mode_button.text = "Mode: %s" % ("Source" if is_source_mode else "Render")
@@ -2291,6 +2460,7 @@ func _build_reader_block(block: Dictionary, note_filepath: String) -> Control:
 			if texture == null:
 				return _make_reader_notice_block("Image preview unavailable.\n\n%s" % image_source)
 			var image_panel := PanelContainer.new()
+			image_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 			image_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 			image_panel.focus_mode = Control.FOCUS_NONE
 			image_panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -2313,17 +2483,21 @@ func _build_reader_block(block: Dictionary, note_filepath: String) -> Control:
 			image_margin.add_theme_constant_override("margin_bottom", 10)
 			image_panel.add_child(image_margin)
 			var image_box := VBoxContainer.new()
-			image_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			image_box.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 			image_box.add_theme_constant_override("separation", 8)
 			image_margin.add_child(image_box)
 			var texture_rect := TextureRect.new()
 			texture_rect.texture = texture
-			texture_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			texture_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			texture_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			# Allow custom_minimum_size-driven downscaling instead of clamping to source texture dimensions.
+			texture_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			var image_max_size: Vector2 = Vector2.ZERO
 			var preview_size: Vector2 = _fit_size_within(Vector2(texture.get_width(), texture.get_height()), _resolve_reader_requested_media_limit(image_max_size), false)
 			texture_rect.custom_minimum_size = preview_size
-			texture_rect.set_meta("reader_base_size", Vector2(texture.get_width(), texture.get_height()))
+			# Use preview size as scaling baseline so slider adjustments are visible.
+			texture_rect.set_meta("reader_base_size", preview_size)
 			texture_rect.set_meta("reader_max_size", image_max_size)
 			texture_rect.set_meta("reader_media_scalable", true)
 			texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2342,7 +2516,7 @@ func _build_reader_block(block: Dictionary, note_filepath: String) -> Control:
 					if not event.pressed:
 						open_image_viewer(texture, alt_text if not alt_text.is_empty() else image_source)
 			)
-			return image_panel
+			return _wrap_reader_centered_block(image_panel)
 		"rule":
 			return HSeparator.new()
 		_:
@@ -3370,14 +3544,14 @@ func _get_reader_media_page_limit() -> Vector2:
 	var horizontal_padding: float = minf(READER_MEDIA_PAGE_MARGIN, 24.0)
 	var vertical_padding: float = 24.0
 	var available_width: float = 0.0
-	if _reader_blocks and _reader_blocks.size.x > 0.0:
-		available_width = _reader_blocks.size.x
-	if available_width <= 0.0 and _reader_scroll:
-		available_width = maxf(0.0, _reader_scroll.size.x - 16.0)
+	# Use viewport/page width rather than _reader_blocks width.
+	# _reader_blocks can shrink to content width and would under-estimate page size.
+	if _reader_scroll and _reader_scroll.size.x > 0.0:
+		available_width = maxf(1.0, _reader_scroll.size.x - 16.0)
 	if available_width <= 0.0 and _reader_panel:
-		available_width = _reader_panel.size.x - 52.0
+		available_width = maxf(1.0, _reader_panel.size.x - 52.0)
 	if available_width <= 0.0:
-		available_width = viewport_size.x * 0.72
+		available_width = maxf(1.0, viewport_size.x * 0.72)
 
 	var available_height: float = 0.0
 	if _reader_scroll and _reader_scroll.size.y > 0.0:
@@ -3387,18 +3561,27 @@ func _get_reader_media_page_limit() -> Vector2:
 	if available_height <= 0.0:
 		available_height = viewport_size.y * 0.6
 
+	var effective_width: float = maxf(1.0, available_width - 6.0)
+	var effective_height: float = maxf(1.0, available_height - 6.0)
+	var width_budget: float = maxf(READER_MEDIA_PAGE_MIN_WIDTH, available_width - horizontal_padding)
+	var height_budget: float = maxf(READER_MEDIA_PAGE_MIN_HEIGHT, available_height - vertical_padding)
 	return Vector2(
-		clampf(available_width - horizontal_padding, READER_MEDIA_PAGE_MIN_WIDTH, READER_MEDIA_PAGE_MAX_WIDTH),
-		clampf(available_height - vertical_padding, READER_MEDIA_PAGE_MIN_HEIGHT, READER_MEDIA_PAGE_MAX_HEIGHT)
+		minf(clampf(width_budget, READER_MEDIA_PAGE_MIN_WIDTH, READER_MEDIA_PAGE_MAX_WIDTH), effective_width),
+		minf(clampf(height_budget, READER_MEDIA_PAGE_MIN_HEIGHT, READER_MEDIA_PAGE_MAX_HEIGHT), effective_height)
 	)
 
 func _resolve_reader_requested_media_limit(requested_size: Vector2) -> Vector2:
 	var page_limit: Vector2 = _get_reader_media_page_limit()
+	page_limit.x = maxf(1.0, floor(page_limit.x * READER_MEDIA_PAGE_FIT_RATIO))
 	var resolved_limit: Vector2 = page_limit
 	if requested_size.x > 0.0:
 		resolved_limit.x = minf(resolved_limit.x, requested_size.x)
 	if requested_size.y > 0.0:
 		resolved_limit.y = minf(resolved_limit.y, requested_size.y)
+	resolved_limit.x = minf(resolved_limit.x, READER_MEDIA_DEFAULT_PREVIEW_MAX_SIZE.x)
+	resolved_limit.y = minf(resolved_limit.y, READER_MEDIA_DEFAULT_PREVIEW_MAX_SIZE.y)
+	resolved_limit.x = maxf(1.0, resolved_limit.x)
+	resolved_limit.y = maxf(1.0, resolved_limit.y)
 	return resolved_limit
 
 
@@ -3428,14 +3611,24 @@ func _get_reader_mermaid_display_max_size() -> Vector2:
 
 
 func _fit_size_within(content_size: Vector2, max_size: Vector2, allow_upscale: bool = false) -> Vector2:
+	var safe_max_size := Vector2(maxf(1.0, max_size.x), maxf(1.0, max_size.y))
 	if content_size.x <= 0.0 or content_size.y <= 0.0:
-		return Vector2(maxf(120.0, max_size.x), maxf(80.0, max_size.y))
-	var scale_factor: float = minf(max_size.x / content_size.x, max_size.y / content_size.y)
+		return safe_max_size
+	var scale_factor: float = minf(safe_max_size.x / content_size.x, safe_max_size.y / content_size.y)
 	if not allow_upscale:
 		scale_factor = minf(scale_factor, 1.0)
 	if scale_factor <= 0.0:
 		scale_factor = 1.0
 	return content_size * scale_factor
+
+
+func _wrap_reader_centered_block(content: Control) -> Control:
+	var center := CenterContainer.new()
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(content)
+	return center
 
 
 func _on_reader_container_resized() -> void:
@@ -3829,6 +4022,8 @@ func _on_settings_panel_changed(settings: Dictionary) -> void:
 		_tree_view.update_settings(settings)
 	if settings.has("reading_mode"):
 		_apply_reader_mode_setting(String(settings.get("reading_mode", "window")))
+	if settings.has("reader_media_scale") or settings.has("reader_render_mode") or settings.has("reader_toggle_source_shortcut") or settings.has("reader_debug"):
+		_sync_reader_controls_from_settings()
 
 
 func _setup_initial_state() -> void:
@@ -4394,19 +4589,3 @@ func get_auto_reconstruct_setting() -> bool:
 	if _settings_panel:
 		return _settings_panel.get_setting("auto_reconstruct", true)
 	return true
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

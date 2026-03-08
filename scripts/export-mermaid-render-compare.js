@@ -1,5 +1,6 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const path = require('path');
+const { JSDOM } = require('jsdom');
 
 function extractMermaidBlocks(markdown) {
   const blocks = [];
@@ -19,6 +20,154 @@ function slugify(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'note';
+}
+
+function normalizeInlineText(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim();
+}
+
+function estimateGlyphWidthUnits(char) {
+  if (!char) {
+    return 0;
+  }
+  if (/\s/.test(char)) {
+    return 0.35;
+  }
+  if (/[\u1100-\u115F\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE6F\uFF01-\uFF60\uFFE0-\uFFE6\u{1F300}-\u{1FAFF}]/u.test(char)) {
+    return 1.02;
+  }
+  if (/[.,;:!'`|]/.test(char)) {
+    return 0.32;
+  }
+  if (/[(){}\[\]<>]/.test(char)) {
+    return 0.46;
+  }
+  if (/[\\/_-]/.test(char)) {
+    return 0.5;
+  }
+  if (/[0-9]/.test(char)) {
+    return 0.62;
+  }
+  if (/[A-Z]/.test(char)) {
+    return 0.72;
+  }
+  if (/[a-z]/.test(char)) {
+    return 0.64;
+  }
+  return 0.7;
+}
+
+function estimateTextLineWidth(text, fontSize) {
+  let units = 0;
+  for (const char of Array.from(String(text || ''))) {
+    units += estimateGlyphWidthUnits(char);
+  }
+  return Math.max(fontSize * 0.75, units * fontSize + Math.max(2, fontSize * 0.12));
+}
+
+function resolveFontSize(textNode) {
+  const attrSize = Number.parseFloat(String(textNode.getAttribute('font-size') || ''));
+  if (Number.isFinite(attrSize) && attrSize > 0) {
+    return attrSize;
+  }
+  const styleValue = String(textNode.getAttribute('style') || '');
+  const match = styleValue.match(/font-size\s*:\s*([0-9.]+)px/i);
+  if (match) {
+    const parsed = Number.parseFloat(match[1]);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return 16;
+}
+
+function extractTextLines(textNode) {
+  const directLines = Array.from(textNode.children)
+    .filter((child) => String(child.tagName || '').toLowerCase() === 'tspan')
+    .map((lineNode) => normalizeInlineText(lineNode.textContent || ''))
+    .filter(Boolean);
+  if (directLines.length > 0) {
+    return directLines;
+  }
+
+  const leafLines = Array.from(textNode.querySelectorAll('tspan'))
+    .filter((lineNode) => !lineNode.querySelector('tspan'))
+    .map((lineNode) => normalizeInlineText(lineNode.textContent || ''))
+    .filter(Boolean);
+  if (leafLines.length > 0) {
+    return leafLines;
+  }
+
+  const fallback = normalizeInlineText(textNode.textContent || '');
+  return fallback ? [fallback] : [];
+}
+
+function resolveNodeRectWidth(nodeElement) {
+  const preferred = nodeElement.querySelector('rect.basic.label-container, rect.label-container');
+  if (preferred) {
+    const width = Number.parseFloat(String(preferred.getAttribute('width') || '0'));
+    if (Number.isFinite(width) && width > 0) {
+      return width;
+    }
+  }
+
+  let bestWidth = 0;
+  let bestArea = 0;
+  Array.from(nodeElement.querySelectorAll('rect')).forEach((rectNode) => {
+    const width = Number.parseFloat(String(rectNode.getAttribute('width') || '0'));
+    const height = Number.parseFloat(String(rectNode.getAttribute('height') || '0'));
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+      return;
+    }
+    const area = width * height;
+    if (area > bestArea) {
+      bestArea = area;
+      bestWidth = width;
+    }
+  });
+  return bestWidth;
+}
+
+function collectSvgMetrics(svgMarkup) {
+  if (!svgMarkup || typeof svgMarkup !== 'string') {
+    return null;
+  }
+
+  const doc = new JSDOM(svgMarkup, { contentType: 'image/svg+xml' }).window.document;
+  const nodeRectWidths = Array.from(doc.querySelectorAll('.node rect'))
+    .map((rect) => Number(rect.getAttribute('width') || '0'))
+    .filter((value) => Number.isFinite(value) && value > 0);
+  const maxNodeRectWidth = nodeRectWidths.length > 0 ? Math.max(...nodeRectWidths) : 0;
+
+  const nodes = Array.from(doc.querySelectorAll('.node'));
+  let overflowNodeCount = 0;
+  for (const node of nodes) {
+    const textNode = node.querySelector('text');
+    if (!textNode) {
+      continue;
+    }
+    const rectWidth = resolveNodeRectWidth(node);
+    if (!Number.isFinite(rectWidth) || rectWidth <= 0) {
+      continue;
+    }
+    const fontSize = resolveFontSize(textNode);
+    const lines = extractTextLines(textNode);
+    const estimatedLineWidth = lines.reduce((maxWidth, line) => Math.max(maxWidth, estimateTextLineWidth(line, fontSize)), 0);
+    const availableWidth = Math.max(1, rectWidth - 30);
+    if (estimatedLineWidth > availableWidth + 2) {
+      overflowNodeCount += 1;
+    }
+  }
+
+  const widthMatch = svgMarkup.match(/\bwidth="([0-9.]+)"/);
+  const heightMatch = svgMarkup.match(/\bheight="([0-9.]+)"/);
+  return {
+    finalSvgWidth: widthMatch ? Number(widthMatch[1]) : undefined,
+    finalSvgHeight: heightMatch ? Number(heightMatch[1]) : undefined,
+    maxNodeRectWidth,
+    overflowNodeCount,
+    nodeCount: nodes.length,
+  };
 }
 
 function loadRuntimeManifest() {
@@ -154,6 +303,8 @@ async function main() {
       renderScale: 2,
     });
     const localStages = writeStageSnapshots(localDir, localSnapshots);
+    const localFinalSnapshot = localSnapshots.find((snapshot) => snapshot.stage === 'final');
+    const localFinalMetrics = localFinalSnapshot ? collectSvgMetrics(localFinalSnapshot.svg) : null;
 
     const frontendResponse = await postJson(`${endpoint.replace(/\/$/, '')}/api/render/mermaid`, {
       source: blockSource,
@@ -194,6 +345,7 @@ async function main() {
       height: Number(frontendResponse.height) || undefined,
       stageCount: frontendStages.length,
     };
+    const frontendFinalMetrics = collectSvgMetrics(typeof frontendResponse.svg === 'string' ? frontendResponse.svg : '');
     fs.writeFileSync(path.join(frontendDir, 'response.summary.json'), JSON.stringify(frontendSummary, null, 2), 'utf8');
 
     manifest.blocks.push({
@@ -203,6 +355,7 @@ async function main() {
       local: {
         stageCount: localStages.length,
         stages: localStages,
+        finalMetrics: localFinalMetrics,
       },
       frontendBridge: {
         renderer: frontendSummary.renderer,
@@ -212,8 +365,15 @@ async function main() {
         stages: frontendStages,
         finalSvgPath: path.join(frontendDir, 'final.svg'),
         finalPngPath: path.join(frontendDir, 'final.png'),
+        finalMetrics: frontendFinalMetrics,
       },
     });
+
+    const localOverflow = localFinalMetrics ? `${localFinalMetrics.overflowNodeCount}/${localFinalMetrics.nodeCount}` : '?/?';
+    const frontendOverflow = frontendFinalMetrics ? `${frontendFinalMetrics.overflowNodeCount}/${frontendFinalMetrics.nodeCount}` : '?/?';
+    const localRect = localFinalMetrics ? localFinalMetrics.maxNodeRectWidth.toFixed(2) : '?';
+    const frontendRect = frontendFinalMetrics ? frontendFinalMetrics.maxNodeRectWidth.toFixed(2) : '?';
+    console.log(`[mermaid-compare] Block ${index + 1}: local overflow=${localOverflow} maxRect=${localRect} | frontend overflow=${frontendOverflow} maxRect=${frontendRect}`);
   }
 
   const manifestPath = path.join(outputDir, 'manifest.json');

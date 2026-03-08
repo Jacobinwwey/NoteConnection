@@ -30,6 +30,9 @@ const MERMAID_NODE_SPACING = 42;
 const MERMAID_RANK_SPACING = 58;
 const MERMAID_LABEL_PADDING = 22;
 const MERMAID_WRAPPING_WIDTH = 240;
+const MERMAID_EDGE_WRAPPING_WIDTH = 180;
+const MERMAID_MIN_WRAP_WIDTH = 84;
+const MERMAID_MAX_WRAP_LINES = 12;
 const MAX_GODOT_SVG_DIMENSION = 4096;
 const MAX_GODOT_RASTER_DIMENSION = 4096;
 const DEFAULT_MATH_MAX_WIDTH = 1040;
@@ -197,6 +200,7 @@ async function buildMermaidRenderArtifacts(trimmedSource: string, options: Merma
     const result = await environment.mermaid.render(renderId, trimmedSource, host);
     const svgMarkup = sanitizeSvgMarkup(result.svg);
     const svgDom = new JSDOM(svgMarkup, { contentType: 'image/svg+xml' });
+    installSvgMeasurementPolyfills(svgDom.window);
     const svg = svgDom.window.document.querySelector('svg');
     if (!svg) {
         throw new Error('Mermaid did not produce an SVG root element.');
@@ -514,17 +518,17 @@ type SvgBoxBounds = { x: number; y: number; width: number; height: number };
 function fitMermaidLabelShapes(svg: SVGSVGElement): void {
     const groupSelectors = ['.node', '.edgeLabel'];
     for (const selector of groupSelectors) {
+        const preferredWrapWidth = selector === '.edgeLabel' ? MERMAID_EDGE_WRAPPING_WIDTH : MERMAID_WRAPPING_WIDTH;
         const paddingX = selector === '.edgeLabel' ? 12 : 18;
         const paddingY = selector === '.edgeLabel' ? 10 : 14;
+        const minShapeWidth = selector === '.edgeLabel' ? 56 : 108;
+        const minShapeHeight = selector === '.edgeLabel' ? 26 : 42;
         for (const group of Array.from(svg.querySelectorAll(selector))) {
-            const labelBounds = collectMermaidLabelBounds(group, selector === '.edgeLabel');
-            if (!labelBounds) {
-                continue;
-            }
             const shape = findMermaidShapeNode(group);
             if (!shape) {
                 continue;
             }
+
             let shapeBounds: SvgBoxBounds | null = null;
             try {
                 const rawShapeBounds = (shape as any).getBBox();
@@ -535,9 +539,29 @@ function fitMermaidLabelShapes(svg: SVGSVGElement): void {
             } catch {
                 continue;
             }
-            const targetWidth = Math.max(shapeBounds.width, labelBounds.width + paddingX * 2);
-            const targetHeight = Math.max(shapeBounds.height, labelBounds.height + paddingY * 2);
-            if (targetWidth <= shapeBounds.width + 1 && targetHeight <= shapeBounds.height + 1) {
+
+            const wrapWidth = Math.max(
+                MERMAID_MIN_WRAP_WIDTH,
+                Math.min(preferredWrapWidth, shapeBounds.width - paddingX * 2),
+            );
+            wrapMermaidTextLabels(group, wrapWidth);
+
+            const labelBounds = collectMermaidLabelBounds(group, selector === '.edgeLabel');
+            if (!labelBounds) {
+                continue;
+            }
+
+            const desiredWidth = Math.max(minShapeWidth, labelBounds.width + paddingX * 2);
+            const desiredHeight = Math.max(minShapeHeight, labelBounds.height + paddingY * 2);
+            const targetWidth = shapeBounds.width > desiredWidth + 8
+                ? desiredWidth
+                : Math.max(shapeBounds.width, desiredWidth);
+            const targetHeight = shapeBounds.height > desiredHeight + 6
+                ? desiredHeight
+                : Math.max(shapeBounds.height, desiredHeight);
+            const widthChanged = Math.abs(targetWidth - shapeBounds.width) > 1;
+            const heightChanged = Math.abs(targetHeight - shapeBounds.height) > 1;
+            if (!widthChanged && !heightChanged) {
                 continue;
             }
             fitMermaidShapeToBounds(shape, shapeBounds, targetWidth, targetHeight);
@@ -547,13 +571,9 @@ function fitMermaidLabelShapes(svg: SVGSVGElement): void {
 
 function collectMermaidLabelBounds(group: Element, includePlainTextNodes = false): SvgBoxBounds | null {
     let combinedBounds: SvgBoxBounds | null = null;
-    const labelCandidates: Element[] = [];
-    const primaryLabel = group.querySelector('.nodeLabel, .edgeLabel, .label, .label text');
-    if (primaryLabel) {
-        labelCandidates.push(primaryLabel);
-    }
-    if (labelCandidates.length === 0 || includePlainTextNodes) {
-        labelCandidates.push(...Array.from(group.querySelectorAll(includePlainTextNodes ? 'text, tspan' : '.nodeLabel, .label, text')));
+    const labelCandidates: Element[] = Array.from(group.querySelectorAll('text'));
+    if (labelCandidates.length === 0 && includePlainTextNodes) {
+        return null;
     }
     for (const node of labelCandidates) {
         if (!(node.textContent || '').trim()) {
@@ -570,6 +590,176 @@ function collectMermaidLabelBounds(group: Element, includePlainTextNodes = false
         }
     }
     return combinedBounds;
+}
+
+function wrapMermaidTextLabels(group: Element, maxLineWidth: number): void {
+    if (!Number.isFinite(maxLineWidth) || maxLineWidth < MERMAID_MIN_WRAP_WIDTH) {
+        return;
+    }
+    const textNodes = Array.from(group.querySelectorAll('text'));
+    for (const textNode of textNodes) {
+        wrapSvgTextElement(textNode, maxLineWidth);
+    }
+}
+
+type TextMeasurementExtraction = {
+    lines: string[];
+    needsNormalization: boolean;
+};
+
+function wrapSvgTextElement(textElement: Element, maxLineWidth: number): void {
+    const extraction = extractElementMeasurementLinesDetailed(textElement);
+    const baseLines = extraction.lines
+        .map((line) => normalizeInlineMeasurementText(line))
+        .filter((line) => line.length > 0);
+    if (baseLines.length === 0) {
+        return;
+    }
+
+    const fontSize = resolveSvgFontSize(textElement);
+    const lineHeight = Math.max(resolveSvgLineHeight(textElement, fontSize), fontSize * 1.18);
+    const existingMaxWidth = baseLines.reduce((max, line) => Math.max(max, estimateTextLineWidth(line, fontSize)), 0);
+    const exceedsWrapWidth = existingMaxWidth > maxLineWidth + 1;
+    if (!exceedsWrapWidth && !extraction.needsNormalization) {
+        return;
+    }
+
+    const nextLines: string[] = [];
+    if (exceedsWrapWidth) {
+        for (const line of baseLines) {
+            const wrappedFromLine = wrapMeasurementLine(line, fontSize, maxLineWidth);
+            for (const wrappedLine of wrappedFromLine) {
+                if (nextLines.length >= MERMAID_MAX_WRAP_LINES) {
+                    break;
+                }
+                nextLines.push(wrappedLine);
+            }
+            if (nextLines.length >= MERMAID_MAX_WRAP_LINES) {
+                break;
+            }
+        }
+    } else {
+        nextLines.push(...baseLines);
+    }
+    if (nextLines.length === 0) {
+        return;
+    }
+
+    const wrappedMaxWidth = nextLines.reduce((max, line) => Math.max(max, estimateTextLineWidth(line, fontSize)), 0);
+    if (
+        exceedsWrapWidth
+        && !extraction.needsNormalization
+        && nextLines.length <= baseLines.length
+        && wrappedMaxWidth >= existingMaxWidth - 1
+    ) {
+        return;
+    }
+
+    const ownerDocument = textElement.ownerDocument;
+    if (!ownerDocument) {
+        return;
+    }
+    const baseX = parseNumericAttribute(textElement, 'x', 0);
+    const baseY = parseNumericAttribute(textElement, 'y', 0);
+    const textAnchor = (textElement.getAttribute('text-anchor') || '').trim();
+    const dominantBaseline = (textElement.getAttribute('dominant-baseline') || '').trim();
+
+    while (textElement.firstChild) {
+        textElement.removeChild(textElement.firstChild);
+    }
+    textElement.setAttribute('x', `${baseX}`);
+    textElement.setAttribute('y', `${baseY}`);
+    for (let index = 0; index < nextLines.length; index += 1) {
+        const tspan = ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+        tspan.textContent = nextLines[index];
+        tspan.setAttribute('x', `${baseX}`);
+        if (index === 0) {
+            tspan.setAttribute('y', `${baseY}`);
+        } else {
+            tspan.setAttribute('dy', `${lineHeight}`);
+        }
+        if (textAnchor) {
+            tspan.setAttribute('text-anchor', textAnchor);
+        }
+        if (dominantBaseline) {
+            tspan.setAttribute('dominant-baseline', dominantBaseline);
+        }
+        textElement.appendChild(tspan);
+    }
+}
+
+function wrapMeasurementLine(line: string, fontSize: number, maxLineWidth: number): string[] {
+    const normalizedLine = normalizeInlineMeasurementText(line);
+    if (!normalizedLine) {
+        return [];
+    }
+    if (estimateTextLineWidth(normalizedLine, fontSize) <= maxLineWidth) {
+        return [normalizedLine];
+    }
+
+    const useSpaceJoin = /\s/.test(normalizedLine);
+    const tokens = useSpaceJoin ? normalizedLine.split(/\s+/).filter(Boolean) : Array.from(normalizedLine);
+    const wrappedLines: string[] = [];
+    let currentLine = '';
+
+    for (const token of tokens) {
+        const candidate = currentLine.length === 0
+            ? token
+            : (useSpaceJoin ? `${currentLine} ${token}` : `${currentLine}${token}`);
+
+        if (estimateTextLineWidth(candidate, fontSize) <= maxLineWidth) {
+            currentLine = candidate;
+            continue;
+        }
+
+        if (currentLine.length > 0) {
+            wrappedLines.push(currentLine);
+            if (wrappedLines.length >= MERMAID_MAX_WRAP_LINES) {
+                return wrappedLines.slice(0, MERMAID_MAX_WRAP_LINES);
+            }
+            currentLine = '';
+        }
+
+        if (estimateTextLineWidth(token, fontSize) <= maxLineWidth) {
+            currentLine = token;
+            continue;
+        }
+
+        const splitTokens = splitTokenForWrap(token, fontSize, maxLineWidth);
+        if (splitTokens.length === 0) {
+            continue;
+        }
+        for (let index = 0; index < splitTokens.length - 1; index += 1) {
+            wrappedLines.push(splitTokens[index]);
+            if (wrappedLines.length >= MERMAID_MAX_WRAP_LINES) {
+                return wrappedLines.slice(0, MERMAID_MAX_WRAP_LINES);
+            }
+        }
+        currentLine = splitTokens[splitTokens.length - 1];
+    }
+
+    if (currentLine.length > 0 && wrappedLines.length < MERMAID_MAX_WRAP_LINES) {
+        wrappedLines.push(currentLine);
+    }
+    return wrappedLines.length > 0 ? wrappedLines : [normalizedLine];
+}
+
+function splitTokenForWrap(token: string, fontSize: number, maxLineWidth: number): string[] {
+    const wrapped: string[] = [];
+    let segment = '';
+    for (const char of Array.from(token)) {
+        const candidate = `${segment}${char}`;
+        if (segment.length === 0 || estimateTextLineWidth(candidate, fontSize) <= maxLineWidth) {
+            segment = candidate;
+            continue;
+        }
+        wrapped.push(segment);
+        segment = char;
+    }
+    if (segment.length > 0) {
+        wrapped.push(segment);
+    }
+    return wrapped;
 }
 
 function unionSvgBoxBounds(currentBounds: SvgBoxBounds | null, nextBounds: SvgBoxBounds): SvgBoxBounds {
@@ -596,13 +786,28 @@ function isFiniteSvgBoxBounds(bounds: Partial<SvgBoxBounds> | null | undefined):
 }
 
 function findMermaidShapeNode(group: Element): Element | null {
-    for (const child of Array.from(group.children)) {
-        const tagName = child.tagName.toLowerCase();
-        if (tagName === 'rect' || tagName === 'polygon' || tagName === 'ellipse' || tagName === 'circle') {
-            return child;
+    const candidates = Array.from(group.querySelectorAll('rect, polygon, ellipse, circle'));
+    if (candidates.length === 0) {
+        return null;
+    }
+    let selected: Element | null = null;
+    let selectedArea = -1;
+    for (const candidate of candidates) {
+        try {
+            const bbox = (candidate as any).getBBox();
+            if (!isFiniteSvgBoxBounds(bbox)) {
+                continue;
+            }
+            const area = bbox.width * bbox.height;
+            if (area > selectedArea) {
+                selected = candidate;
+                selectedArea = area;
+            }
+        } catch {
+            continue;
         }
     }
-    return group.querySelector('rect, polygon, ellipse, circle');
+    return selected || candidates[0];
 }
 
 function fitMermaidShapeToBounds(shape: Element, shapeBounds: SvgBoxBounds, targetWidth: number, targetHeight: number): void {
@@ -1077,7 +1282,7 @@ function estimateTextBounds(text: string, fontSize = 16, lineHeight = 0): { widt
 function estimateTextBoundsForElement(element: Element): { width: number; height: number } {
     const fontSize = resolveSvgFontSize(element);
     const lineHeight = resolveSvgLineHeight(element, fontSize);
-    const lines = extractElementMeasurementLines(element);
+    const lines = extractElementMeasurementLinesDetailed(element).lines;
     const longestLineWidth = lines.reduce((max, line) => Math.max(max, estimateTextLineWidth(line, fontSize)), 0);
     return {
         width: Math.max(fontSize * 0.75, longestLineWidth),
@@ -1085,15 +1290,70 @@ function estimateTextBoundsForElement(element: Element): { width: number; height
     };
 }
 
-function extractElementMeasurementLines(element: Element): string[] {
+function extractElementMeasurementLinesDetailed(element: Element): TextMeasurementExtraction {
     const directTextChildren = Array.from(element.children)
         .filter((child) => child.tagName.toLowerCase() === 'tspan')
         .map((child) => normalizeInlineMeasurementText(child.textContent || ''))
         .filter((line) => line.length > 0);
-    if (directTextChildren.length > 0) {
-        return directTextChildren;
+
+    const leafDescendantTspans = Array.from(element.querySelectorAll('tspan'))
+        .filter((child) => child.querySelector('tspan') === null)
+        .map((child) => normalizeInlineMeasurementText(child.textContent || ''))
+        .filter((line) => line.length > 0);
+    if (directTextChildren.length === 1 && leafDescendantTspans.length > 1) {
+        const firstLine = directTextChildren[0];
+        const mergedLeafLines = normalizeInlineMeasurementText(leafDescendantTspans.join(' '));
+        const maxLeafLineLength = leafDescendantTspans.reduce((maxLength, line) => Math.max(maxLength, line.length), 0);
+        const looksLikeNestedAggregateLine = firstLine.length >= 24
+            && firstLine.length > maxLeafLineLength * 2;
+        if (
+            mergedLeafLines.length > 0
+            && (firstLine === mergedLeafLines || firstLine.startsWith(mergedLeafLines) || mergedLeafLines.startsWith(firstLine) || looksLikeNestedAggregateLine)
+        ) {
+            const canonicalLine = firstLine.length >= mergedLeafLines.length ? firstLine : mergedLeafLines;
+            return {
+                lines: [canonicalLine],
+                needsNormalization: true,
+            };
+        }
     }
-    return normalizeMeasurementLines(element.textContent || '');
+
+    if (directTextChildren.length > 1) {
+        const firstLine = directTextChildren[0];
+        const remainingLines = directTextChildren.slice(1);
+        const mergedRemaining = normalizeInlineMeasurementText(remainingLines.join(' '));
+        const maxRemainingLength = remainingLines.reduce((maxLength, line) => Math.max(maxLength, line.length), 0);
+        const looksLikeAggregateLine = firstLine.length >= 32
+            && remainingLines.length >= 3
+            && firstLine.length > maxRemainingLength * 2;
+        if (
+            firstLine.length > 0
+            && mergedRemaining.length > 0
+            && (firstLine === mergedRemaining || firstLine.startsWith(mergedRemaining) || mergedRemaining.startsWith(firstLine) || looksLikeAggregateLine)
+        ) {
+            const canonicalLine = firstLine.length >= mergedRemaining.length ? firstLine : mergedRemaining;
+            return {
+                lines: [canonicalLine],
+                needsNormalization: true,
+            };
+        }
+    }
+
+    if (directTextChildren.length > 0) {
+        return {
+            lines: directTextChildren,
+            needsNormalization: false,
+        };
+    }
+
+    return {
+        lines: normalizeMeasurementLines(element.textContent || ''),
+        needsNormalization: false,
+    };
+}
+
+function extractElementMeasurementLines(element: Element): string[] {
+    return extractElementMeasurementLinesDetailed(element).lines;
 }
 
 function normalizeMeasurementLines(text: string): string[] {
