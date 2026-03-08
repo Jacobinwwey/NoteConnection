@@ -25,6 +25,7 @@ signal background_lock_toggled(is_locked: bool)
 const TREE_VIEW_SCENE = preload("res://scenes/tree_view_panel.tscn")
 const SETTINGS_SCENE = preload("res://scenes/settings_panel.tscn")
 const READER_RENDER_CLIENT_SCRIPT = preload("res://scripts/reader_render_client.gd")
+const READER_IMAGE_CANVAS_SCRIPT = preload("res://scripts/reader_image_canvas.gd")
 const READER_DISPLAY_MATH_PREVIEW_MAX_SIZE := Vector2(920.0, 240.0)
 const READER_DISPLAY_MERMAID_PREVIEW_MAX_SIZE := Vector2(1100.0, 620.0)
 const READER_MEDIA_PAGE_MARGIN := 72.0
@@ -102,11 +103,11 @@ var _reader_current_node: Dictionary = {}
 var _reader_current_zoom: float = 1.0
 var _reader_is_locked: bool = true
 var _reader_image_overlay: ColorRect = null
-var _reader_image_frame: PanelContainer = null
-var _reader_image_viewport: ScrollContainer = null
+var _reader_image_frame: Panel = null
+var _reader_image_viewport: Control = null
 var _reader_image_surface: Control = null
-var _reader_image_backdrop: ColorRect = null
-var _reader_image_texture_rect: TextureRect = null
+var _reader_image_canvas: Node2D = null
+var _reader_image_content_rect: Rect2 = Rect2()
 var _reader_image_resize_handle: ColorRect = null
 var _reader_image_title_label: Label = null
 var _reader_image_zoom_label: Label = null
@@ -117,6 +118,7 @@ var _reader_image_dragging: bool = false
 var _reader_image_drag_origin: Vector2 = Vector2.ZERO
 var _reader_image_pan_origin: Vector2 = Vector2.ZERO
 var _reader_image_base_size: Vector2 = Vector2.ZERO
+var _reader_image_drawn_size: Vector2 = Vector2.ZERO
 var _reader_image_frame_size: Vector2 = Vector2.ZERO
 var _reader_image_frame_resizing: bool = false
 var _reader_image_frame_resize_origin: Vector2 = Vector2.ZERO
@@ -830,7 +832,7 @@ func _create_reader_image_overlay() -> void:
 	_reader_image_overlay.resized.connect(_on_reader_image_overlay_resized)
 	add_child(_reader_image_overlay)
 
-	_reader_image_frame = PanelContainer.new()
+	_reader_image_frame = Panel.new()
 	_reader_image_frame.name = "ImageFrame"
 	_reader_image_frame.mouse_filter = Control.MOUSE_FILTER_STOP
 	_reader_image_frame.focus_mode = Control.FOCUS_NONE
@@ -906,7 +908,7 @@ func _create_reader_image_overlay() -> void:
 	header_row.add_child(close_btn)
 	_apply_button_style(close_btn, Color(0.2, 0.14, 0.16, 1.0), Color(0.28, 0.18, 0.2, 1.0), Color(0.16, 0.1, 0.12, 1.0), Color(0.58, 0.28, 0.32, 1.0), Color(1.0, 0.93, 0.93, 1.0))
 
-	_reader_image_viewport = ScrollContainer.new()
+	_reader_image_viewport = Control.new()
 	_reader_image_viewport.name = "ImageViewport"
 	_reader_image_viewport.focus_mode = Control.FOCUS_NONE
 	_reader_image_viewport.anchor_right = 1.0
@@ -917,46 +919,40 @@ func _create_reader_image_overlay() -> void:
 	_reader_image_viewport.offset_bottom = -16
 	_reader_image_viewport.clip_contents = true
 	_reader_image_viewport.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_reader_image_viewport.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	_reader_image_viewport.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
 	_reader_image_viewport.material = null
 	_reader_image_frame.add_child(_reader_image_viewport)
-	_reader_image_viewport.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	_reader_image_viewport.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	var viewport_style := StyleBoxFlat.new()
-	viewport_style.bg_color = READER_IMAGE_VIEWER_BACKGROUND
-	viewport_style.corner_radius_top_left = 14
-	viewport_style.corner_radius_top_right = 14
-	viewport_style.corner_radius_bottom_left = 14
-	viewport_style.corner_radius_bottom_right = 14
-	_reader_image_viewport.add_theme_stylebox_override("panel", viewport_style)
-	_reader_image_viewport.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	_style_reader_image_scrollbar(_reader_image_viewport.get_h_scroll_bar())
-	_style_reader_image_scrollbar(_reader_image_viewport.get_v_scroll_bar())
 	_reader_image_viewport.resized.connect(_on_reader_image_viewport_resized)
 
+	var viewport_background := ColorRect.new()
+	viewport_background.name = "ImageViewportBackground"
+	viewport_background.anchor_right = 1.0
+	viewport_background.anchor_bottom = 1.0
+	viewport_background.color = READER_IMAGE_VIEWER_BACKGROUND
+	viewport_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	viewport_background.focus_mode = Control.FOCUS_NONE
+	viewport_background.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	viewport_background.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
+	viewport_background.material = null
+	_reader_image_viewport.add_child(viewport_background)
+
 	_reader_image_surface = Control.new()
-	_reader_image_surface.name = "ImageSurface"
+	_reader_image_surface.name = "ImageSurfaceHost"
 	_reader_image_surface.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_reader_image_surface.focus_mode = Control.FOCUS_NONE
 	_reader_image_surface.clip_contents = false
+	_reader_image_surface.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	_reader_image_surface.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
 	_reader_image_surface.material = null
 	_reader_image_viewport.add_child(_reader_image_surface)
 
-	_reader_image_backdrop = ColorRect.new()
-	_reader_image_backdrop.name = "ImageBackdrop"
-	_reader_image_backdrop.color = Color(0.012, 0.014, 0.018, 0.98)
-	_reader_image_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_reader_image_backdrop.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
-	_reader_image_backdrop.material = null
-	_reader_image_surface.add_child(_reader_image_backdrop)
+	_reader_image_canvas = READER_IMAGE_CANVAS_SCRIPT.new()
+	_reader_image_canvas.name = "ImageCanvas"
+	_reader_image_canvas.position = Vector2.ZERO
+	_reader_image_surface.add_child(_reader_image_canvas)
 
-	_reader_image_texture_rect = TextureRect.new()
-	_reader_image_texture_rect.name = "ImageTexture"
-	_reader_image_texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_reader_image_texture_rect.stretch_mode = TextureRect.STRETCH_SCALE
-	_reader_image_texture_rect.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
-	_reader_image_texture_rect.material = null
-	_reader_image_surface.add_child(_reader_image_texture_rect)
+
 
 	_reader_image_resize_handle = ColorRect.new()
 	_reader_image_resize_handle.name = "ResizeHandle"
@@ -1163,6 +1159,14 @@ func _crop_reader_debug_image(image: Image, rect: Rect2) -> Image:
 	return image.get_region(Rect2i(left, top, right - left, bottom - top))
 
 
+func _get_reader_image_content_global_rect() -> Rect2:
+	if _reader_image_viewport == null or _reader_image_content_rect.size.x <= 0.0 or _reader_image_content_rect.size.y <= 0.0:
+		return Rect2()
+	var viewport_global_rect: Rect2 = _reader_image_viewport.get_global_rect()
+	var global_position: Vector2 = viewport_global_rect.position - _reader_image_pan + _reader_image_content_rect.position
+	return Rect2(global_position, _reader_image_content_rect.size)
+
+
 func _capture_reader_image_debug_frame(capture_id: int, prefix: String) -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -1179,8 +1183,9 @@ func _capture_reader_image_debug_frame(capture_id: int, prefix: String) -> void:
 	var frame_crop: Image = _crop_reader_debug_image(frame_image, _reader_image_frame.get_global_rect())
 	if frame_crop != null and not frame_crop.is_empty():
 		_save_reader_debug_image(frame_crop, "%s-screen-frame.png" % prefix)
-	if _reader_image_texture_rect != null:
-		var texture_crop: Image = _crop_reader_debug_image(frame_image, _reader_image_texture_rect.get_global_rect())
+	var texture_global_rect: Rect2 = _get_reader_image_content_global_rect()
+	if texture_global_rect.size.x > 0.0 and texture_global_rect.size.y > 0.0:
+		var texture_crop: Image = _crop_reader_debug_image(frame_image, texture_global_rect)
 		if texture_crop != null and not texture_crop.is_empty():
 			_save_reader_debug_image(texture_crop, "%s-screen-texture.png" % prefix)
 	var debug_dir := _resolve_reader_image_debug_dir()
@@ -1206,22 +1211,22 @@ func open_image_viewer(texture: Texture2D, title: String = "") -> void:
 
 	var viewer_texture: Texture2D = _prepare_texture_for_reader_image_viewer(texture)
 	_reader_image_current_texture = viewer_texture if viewer_texture != null else texture
-	_reader_image_texture_rect.texture = _reader_image_current_texture
-	_reader_image_texture_rect.modulate = Color(1.0, 1.0, 1.0, 1.0)
-	_reader_image_texture_rect.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
-	_reader_image_texture_rect.material = null
+	_reader_image_content_rect = Rect2()
 	_reader_image_overlay.color = Color(0.0, 0.0, 0.0, 0.48)
 	_reader_image_overlay.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	_reader_image_frame.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	_reader_image_frame.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
 	_reader_image_frame.material = null
+	_reader_image_viewport.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	_reader_image_viewport.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
 	_reader_image_viewport.material = null
+	_reader_image_surface.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	_reader_image_surface.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
 	_reader_image_surface.material = null
-	_reader_image_backdrop.color = READER_IMAGE_VIEWER_BACKGROUND
-	_reader_image_backdrop.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
-	_reader_image_backdrop.material = null
+	if _reader_image_canvas and _reader_image_canvas.has_method("set_render_texture"):
+		_reader_image_canvas.call("set_render_texture", _reader_image_current_texture)
+	if _reader_image_canvas and _reader_image_canvas.has_method("set_background"):
+		_reader_image_canvas.call("set_background", READER_IMAGE_VIEWER_BACKGROUND)
 	_reader_image_title_label.text = title if not title.is_empty() else "Image Preview"
 	_export_reader_image_debug_artifacts(texture, _reader_image_current_texture, _reader_image_title_label.text)
 	_reader_image_zoom = 1.0
@@ -3473,7 +3478,12 @@ func _point_hits_reader_image_resize_handle(global_point: Vector2) -> bool:
 	return _reader_image_resize_handle != null and _reader_image_resize_handle.get_global_rect().has_point(global_point)
 
 
+func _sync_reader_image_render_viewport_size() -> void:
+	return
+
+
 func _on_reader_image_viewport_resized() -> void:
+	_sync_reader_image_render_viewport_size()
 	if is_image_viewer_open():
 		var focus := _capture_reader_image_focus()
 		_apply_reader_image_transform()
@@ -3531,7 +3541,8 @@ func _on_reader_image_overlay_input(event: InputEvent) -> void:
 					_reader_image_frame_size_origin = _reader_image_frame_size
 					_reader_image_overlay.accept_event()
 					return
-				if _reader_image_texture_rect and _reader_image_texture_rect.get_global_rect().has_point(event.global_position):
+				var content_global_rect: Rect2 = _get_reader_image_content_global_rect()
+				if content_global_rect.size.x > 0.0 and content_global_rect.size.y > 0.0 and content_global_rect.has_point(event.global_position):
 					_reader_image_dragging = true
 					_reader_image_drag_origin = event.global_position
 					_reader_image_pan_origin = _get_reader_image_scroll_position()
@@ -3592,55 +3603,53 @@ func _zoom_reader_image_by_factor(factor: float, pivot_global: Vector2 = Vector2
 
 
 func _apply_reader_image_transform() -> void:
-	if _reader_image_current_texture == null or _reader_image_viewport == null or _reader_image_surface == null or _reader_image_texture_rect == null:
+	if _reader_image_current_texture == null or _reader_image_viewport == null or _reader_image_surface == null:
 		return
 
 	var viewport_size := _reader_image_viewport.size
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		return
 
+	_sync_reader_image_render_viewport_size()
 	var safe_bounds: Vector2 = Vector2(maxf(160.0, viewport_size.x - 80.0), maxf(120.0, viewport_size.y - 60.0))
 	_reader_image_base_size = _fit_size_within(Vector2(_reader_image_current_texture.get_width(), _reader_image_current_texture.get_height()), safe_bounds, false)
-	var drawn_size := _reader_image_base_size * _reader_image_zoom
-	var surface_size := Vector2(maxf(viewport_size.x, drawn_size.x), maxf(viewport_size.y, drawn_size.y))
+	_reader_image_drawn_size = _reader_image_base_size * _reader_image_zoom
+	var surface_size := Vector2(maxf(viewport_size.x, _reader_image_drawn_size.x), maxf(viewport_size.y, _reader_image_drawn_size.y))
 	_reader_image_surface.custom_minimum_size = surface_size
 	_reader_image_surface.size = surface_size
-	_reader_image_texture_rect.size = drawn_size
-	_reader_image_texture_rect.position = (surface_size - drawn_size) * 0.5
-	if _reader_image_backdrop:
-		_reader_image_backdrop.size = drawn_size
-		_reader_image_backdrop.position = _reader_image_texture_rect.position
+	_reader_image_content_rect = Rect2((surface_size - _reader_image_drawn_size) * 0.5, _reader_image_drawn_size)
+	var horizontal_limit := maxf(0.0, surface_size.x - viewport_size.x)
+	var vertical_limit := maxf(0.0, surface_size.y - viewport_size.y)
+	_reader_image_pan = Vector2(clampf(_reader_image_pan.x, 0.0, horizontal_limit), clampf(_reader_image_pan.y, 0.0, vertical_limit))
+	_reader_image_surface.position = -_reader_image_pan
+	if _reader_image_canvas and _reader_image_canvas.has_method("set_render_texture"):
+		_reader_image_canvas.call("set_render_texture", _reader_image_current_texture)
+	if _reader_image_canvas and _reader_image_canvas.has_method("set_render_transform"):
+		_reader_image_canvas.call("set_render_transform", _reader_image_content_rect.position, _reader_image_content_rect.size)
+	if _reader_image_canvas and _reader_image_canvas.has_method("set_background"):
+		_reader_image_canvas.call("set_background", READER_IMAGE_VIEWER_BACKGROUND)
 	if _reader_image_zoom_label:
 		_reader_image_zoom_label.text = "%d%%" % int(round(_reader_image_zoom * 100.0))
-	call_deferred("_clamp_reader_image_scroll_position")
 
 
 func _get_reader_image_scroll_position() -> Vector2:
-	if _reader_image_viewport == null:
-		return Vector2.ZERO
-	return Vector2(_reader_image_viewport.scroll_horizontal, _reader_image_viewport.scroll_vertical)
+	return _reader_image_pan
 
 
 func _set_reader_image_scroll_position(scroll_position: Vector2) -> void:
-	if _reader_image_viewport == null:
-		return
 	var horizontal_limit := _get_reader_image_scroll_limit(true)
 	var vertical_limit := _get_reader_image_scroll_limit(false)
-	_reader_image_viewport.scroll_horizontal = int(round(clampf(scroll_position.x, 0.0, horizontal_limit)))
-	_reader_image_viewport.scroll_vertical = int(round(clampf(scroll_position.y, 0.0, vertical_limit)))
+	_reader_image_pan = Vector2(clampf(scroll_position.x, 0.0, horizontal_limit), clampf(scroll_position.y, 0.0, vertical_limit))
+	if _reader_image_surface:
+		_reader_image_surface.position = -_reader_image_pan
 
 
 func _get_reader_image_scroll_limit(is_horizontal: bool) -> float:
-	if _reader_image_viewport == null:
+	if _reader_image_viewport == null or _reader_image_surface == null:
 		return 0.0
-	var scrollbar: ScrollBar = null
-	if is_horizontal:
-		scrollbar = _reader_image_viewport.get_h_scroll_bar()
-	else:
-		scrollbar = _reader_image_viewport.get_v_scroll_bar()
-	if scrollbar == null:
-		return 0.0
-	return maxf(0.0, float(scrollbar.max_value - scrollbar.page))
+	var surface_size := _reader_image_surface.size
+	var viewport_size := _reader_image_viewport.size
+	return maxf(0.0, (surface_size.x - viewport_size.x) if is_horizontal else (surface_size.y - viewport_size.y))
 
 
 func _clamp_reader_image_scroll_position() -> void:
@@ -3652,7 +3661,7 @@ func _center_reader_image_view() -> void:
 
 
 func _capture_reader_image_focus(pivot_global: Vector2 = Vector2.ZERO) -> Dictionary:
-	if _reader_image_viewport == null or _reader_image_texture_rect == null:
+	if _reader_image_viewport == null:
 		return {}
 	var viewport_size := _reader_image_viewport.size
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
@@ -3662,10 +3671,10 @@ func _capture_reader_image_focus(pivot_global: Vector2 = Vector2.ZERO) -> Dictio
 		pivot_local = pivot_global - _reader_image_viewport.get_global_rect().position
 		pivot_local.x = clampf(pivot_local.x, 0.0, viewport_size.x)
 		pivot_local.y = clampf(pivot_local.y, 0.0, viewport_size.y)
-	var texture_size := _reader_image_texture_rect.size
+	var texture_size := _reader_image_content_rect.size
 	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
 		return {"pivot_local": pivot_local, "ratio": Vector2(0.5, 0.5)}
-	var focus_local := _get_reader_image_scroll_position() + pivot_local - _reader_image_texture_rect.position
+	var focus_local := _get_reader_image_scroll_position() + pivot_local - _reader_image_content_rect.position
 	return {
 		"pivot_local": pivot_local,
 		"ratio": Vector2(
@@ -3676,11 +3685,11 @@ func _capture_reader_image_focus(pivot_global: Vector2 = Vector2.ZERO) -> Dictio
 
 
 func _restore_reader_image_focus(focus: Dictionary) -> void:
-	if focus.is_empty() or _reader_image_viewport == null or _reader_image_texture_rect == null:
+	if focus.is_empty() or _reader_image_viewport == null:
 		return
 	var pivot_local: Vector2 = focus.get("pivot_local", _reader_image_viewport.size * 0.5)
 	var ratio: Vector2 = focus.get("ratio", Vector2(0.5, 0.5))
-	var target_point := _reader_image_texture_rect.position + Vector2(_reader_image_texture_rect.size.x * ratio.x, _reader_image_texture_rect.size.y * ratio.y)
+	var target_point := _reader_image_content_rect.position + Vector2(_reader_image_content_rect.size.x * ratio.x, _reader_image_content_rect.size.y * ratio.y)
 	_set_reader_image_scroll_position(target_point - pivot_local)
 
 func _apply_button_style(button: Button, normal_color: Color, hover_color: Color, pressed_color: Color, border_color: Color, font_color: Color) -> void:
