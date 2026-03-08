@@ -1,3 +1,87 @@
+# 2026-03-08 v1.5.15 - Fixrisk Phase-1 Hardening Execution (Completed)
+
+## English Document
+
+### Objective
+Execute the highest-risk actionable items from `docs/fixrisk_TODO.md` without destabilizing existing desktop and mobile runtime contracts.
+
+### Implemented in This Iteration
+- [x] `src/server.ts`: removed synchronous file reads from `/api/content` and generated JS/JSON asset responses.
+- [x] `src/server.ts`: replaced in-memory-only JSON body parsing with bounded streaming + temp-file spooling (`tmp/request-bodies`) for large payloads.
+- [x] `src/server.ts`: normalized request-body failure handling with explicit HTTP status mapping:
+  - [x] `413` for oversized payloads
+  - [x] `400` for invalid JSON
+  - [x] `415` for unsupported content type
+- [x] `src/server.ts`: migrated `/api/build` and `/api/kb-path` to the same hardened JSON parser path (removed duplicated manual body buffering).
+- [x] `src/server.ts`: added startup resilience for default dev port conflicts. If no explicit port is configured and `3000` is busy, server now falls back to an ephemeral loopback port instead of crashing with `EADDRINUSE`.
+- [x] `src/server.ts`: completed async conversion for cache and target APIs (`/api/check-cache`, `/api/restore-cache`, `/api/available-targets`) to remove remaining sync hot-path filesystem calls.
+- [x] Frontend transport consolidation: `source_manager.js`, `reader.js`, and `path_app.js` now rely on `runtime_bridge.js` as the single runtime transport adapter instead of standalone hardcoded loopback URL fallbacks.
+- [x] Packaging modernization:
+  - [x] Added `scripts/build-sidecar.js` with Node 22 targets, Brotli compression, and `--no-bytecode`.
+  - [x] Updated `build:sidecar` to host-aware Node 22 build.
+  - [x] Added `build:sidecar:all` for Windows/Linux/macOS-arm64 outputs with Tauri-compatible naming.
+  - [x] Updated sidecar validation script to support host/all-target checks.
+  - [x] Updated Godot sidecar preparation script to skip Windows-only copy logic on non-Windows hosts.
+
+### Remaining High-Priority Work
+- [ ] Complete transport modernization (replace remaining raw desktop HTTP/WS flows with Tauri-native IPC or JSON-RPC adapter).
+- [ ] Implement storage-provider abstraction across desktop sidecar, Tauri commands, and Capacitor native filesystem.
+- [ ] Add explicit macOS/Linux Godot sidecar artifact strategy (currently Windows binary workflow is strongest).
+- [ ] Keep release policy explicit: Capacitor native remains read-only packaged mode until parity work is delivered.
+
+### Verification Gate (This Iteration)
+- [x] `npx tsc --pretty false`
+- [x] `npx jest src/server.migration.test.ts src/source_manager.loadflow.test.ts src/pathbridge.handshake.contract.test.ts src/reader_renderer.test.ts --runInBand`
+- [x] `npx jest src/runtime.transport.adapter.contract.test.ts src/source_manager.loadflow.test.ts src/runtime.capabilities.test.ts src/pathbridge.handshake.contract.test.ts --runInBand`
+- [x] `npm run test:migration`
+- [x] `npm run test:tauri`
+- [x] `./src-tauri/bin/godot-x86_64-pc-windows-msvc.exe --headless --path ./path_mode --quit`
+- [x] `npm run build:sidecar`
+- [x] `npm run build:sidecar:all` (artifact validation only; cross-platform runtime execution remains platform-dependent)
+
+---
+
+## 中文文档
+
+### 目标
+在不破坏现有桌面端与移动端运行时契约的前提下，执行 `docs/fixrisk_TODO.md` 中最高风险、可落地的改造项。
+
+### 本轮已完成
+- [x] `src/server.ts`：移除 `/api/content` 与生成资产（JS/JSON）响应路径中的同步文件读取。
+- [x] `src/server.ts`：将纯内存 JSON 解析改为“有界流式读取 + 临时文件落盘”（`tmp/request-bodies`）以处理大请求体。
+- [x] `src/server.ts`：统一请求体错误映射，显式返回：
+  - [x] 过大请求体返回 `413`
+  - [x] 非法 JSON 返回 `400`
+  - [x] 不支持的内容类型返回 `415`
+- [x] `src/server.ts`：`/api/build` 与 `/api/kb-path` 迁移到同一套加固后的 JSON 解析流程（移除重复的手动缓冲逻辑）。
+- [x] `src/server.ts`：增强默认端口启动鲁棒性。当未显式配置端口且 `3000` 被占用时，服务端自动回退到 loopback 临时端口，避免 `EADDRINUSE` 崩溃。
+- [x] `src/server.ts`：完成缓存与目标接口（`/api/check-cache`、`/api/restore-cache`、`/api/available-targets`）的异步化，移除剩余热路径同步文件系统调用。
+- [x] 前端传输层收敛：`source_manager.js`、`reader.js` 与 `path_app.js` 统一依赖 `runtime_bridge.js` 作为唯一运行时传输适配器，不再各自维护硬编码 loopback 回退地址。
+- [x] 打包链路现代化：
+  - [x] 新增 `scripts/build-sidecar.js`，采用 Node 22 目标、Brotli 压缩、`--no-bytecode`。
+  - [x] `build:sidecar` 升级为主机平台自适应的 Node 22 构建。
+  - [x] 新增 `build:sidecar:all`，输出 Windows/Linux/macOS-arm64 且命名与 Tauri sidecar 规范一致。
+  - [x] 更新 sidecar 校验脚本，支持主机模式与全目标模式。
+  - [x] 更新 Godot sidecar 准备脚本，在非 Windows 平台跳过 Windows 专属复制逻辑。
+
+### 剩余高优先级工作
+- [ ] 完成传输层现代化（将剩余桌面端原始 HTTP/WS 调用迁移到 Tauri 原生命令或 JSON-RPC 适配层）。
+- [ ] 实现跨运行时存储抽象（桌面 sidecar / Tauri commands / Capacitor 文件系统）。
+- [ ] 制定并落地 macOS/Linux 的 Godot sidecar 制品策略（当前 Windows 二进制链路最完整）。
+- [ ] 继续保持发布边界清晰：在能力对齐完成前，Capacitor 原生仍为只读打包模式。
+
+### 本轮验证门禁
+- [x] `npx tsc --pretty false`
+- [x] `npx jest src/server.migration.test.ts src/source_manager.loadflow.test.ts src/pathbridge.handshake.contract.test.ts src/reader_renderer.test.ts --runInBand`
+- [x] `npx jest src/runtime.transport.adapter.contract.test.ts src/source_manager.loadflow.test.ts src/runtime.capabilities.test.ts src/pathbridge.handshake.contract.test.ts --runInBand`
+- [x] `npm run test:migration`
+- [x] `npm run test:tauri`
+- [x] `./src-tauri/bin/godot-x86_64-pc-windows-msvc.exe --headless --path ./path_mode --quit`
+- [x] `npm run build:sidecar`
+- [x] `npm run build:sidecar:all`（仅制品校验；跨平台实际运行验证依赖对应平台环境）
+
+---
+
 # 2026-03-07 v1.5.14 - Architecture & Security Hardening Review Refresh
 
 ## Future Architecture & Security Hardening (Post v1.5.13)
@@ -21,13 +105,13 @@ Refresh the post-v1.5.13 hardening backlog against the current codebase so the T
 - [x] Bind HTTP and WebSocket listeners to `127.0.0.1` only.
 - [x] Allocate dynamic ports and auth tokens from the Tauri runtime.
 - [x] Apply strict CORS allowlisting and token validation to protected sidecar routes.
-- [ ] Remove synchronous filesystem reads from `/api/content` and generated asset serving in `src/server.ts`.
-- [ ] Replace full-buffer JSON body parsing with streaming or temp-file handling for large clipboard and render payloads.
+- [x] Remove synchronous filesystem reads from `/api/content` and generated asset serving in `src/server.ts`.
+- [x] Replace full-buffer JSON body parsing with streaming or temp-file handling for large clipboard and render payloads.
 
 #### Phase 2: Transport Modernization
 - [x] Introduce an environment-aware runtime bridge for Tauri desktop URL and auth propagation.
 - [ ] Replace remaining raw desktop HTTP and WebSocket request paths with Tauri-native IPC or a formal JSON-RPC transport.
-- [ ] Consolidate all frontend transport fallbacks behind one adapter so no feature depends on hardcoded loopback defaults when runtime metadata is unavailable.
+- [x] Consolidate all frontend transport fallbacks behind one adapter so no feature depends on hardcoded loopback defaults when runtime metadata is unavailable.
 
 #### Phase 3: Storage and Query Scalability
 - [ ] Introduce a storage-provider abstraction that can target desktop sidecar, Tauri commands, Capacitor filesystem, and future SQLite or Wasm runtimes.
@@ -36,9 +120,9 @@ Refresh the post-v1.5.13 hardening backlog against the current codebase so the T
 - [ ] Evaluate MessagePack or an equivalent binary transport for dense graph payload delivery.
 
 #### Phase 4: Packaging and Multi-Platform Delivery
-- [ ] Replace the Windows-only `build:sidecar` target (`node18-win-x64`) with multi-target Node 22 packaging.
-- [ ] Add compressed sidecar build flows (`--compress Brotli`, `--no-bytecode`) and verify packaged runtime assets.
-- [ ] Add packaged-sidecar validation for macOS and Linux, not only Windows desktop.
+- [x] Replace the Windows-only `build:sidecar` target (`node18-win-x64`) with multi-target Node 22 packaging.
+- [x] Add compressed sidecar build flows (`--compress Brotli`, `--no-bytecode`) and verify packaged runtime assets.
+- [x] Add packaged-sidecar validation for macOS and Linux, not only Windows desktop.
 - [ ] Finalize iOS privacy-manifest work for filesystem access declarations.
 - [ ] Keep the mobile release policy explicit: current Capacitor delivery is packaged read-only content, not desktop-equivalent build or sidecar parity.
 
@@ -4167,4 +4251,3 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 - **无缝切换**: 在“图谱模式 (Force/DAG)”与“Path Mode (Orbital)”之间切换时保留数据上下文，同时切换渲染引擎/Worker。
 - **状态持久化**: 学习历史与已完成状态通过 `localStorage` 跨会话保存。
-

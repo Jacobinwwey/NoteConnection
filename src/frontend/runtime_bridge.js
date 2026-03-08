@@ -155,7 +155,7 @@
                     setRuntimeConfig(runtimeConfig);
                 }
             } catch (error) {
-                console.warn('[RuntimeBridge] Failed to hydrate sidecar runtime config from Tauri. Using loopback defaults.', error);
+                console.warn('[RuntimeBridge] Failed to hydrate sidecar runtime config from Tauri. Using runtime bridge defaults.', error);
             }
 
             if (typeof window.dispatchEvent === 'function' && typeof window.CustomEvent === 'function') {

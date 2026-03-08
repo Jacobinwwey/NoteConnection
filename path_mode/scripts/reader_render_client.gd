@@ -7,8 +7,12 @@ const JSON_HEADERS := ["Content-Type: application/json"]
 const CACHE_VERSION := "reader-v7"
 const SVG_MAX_DIMENSION := 16384.0
 const SVG_MIN_SCALE := 0.1
+const DEFAULT_RUNTIME_MANIFEST_PATH := "res://../tmp/active-sidecar-runtime.json"
+const RUNTIME_MANIFEST_ENV_KEY := "NOTE_CONNECTION_RUNTIME_MANIFEST"
 
 var _texture_cache: Dictionary = {}
+var _runtime_manifest_cache: Dictionary = {}
+var _runtime_manifest_loaded: bool = false
 
 func render_math_texture(source: String, display_mode: bool = true, scale: float = 2.6, max_size: Vector2 = Vector2.ZERO) -> Dictionary:
 	var cache_key := "%s|math|%s|%s|%.2f|%d|%d" % [
@@ -151,6 +155,10 @@ func _post_json(endpoint: String, payload: Dictionary) -> Dictionary:
 
 
 func _resolve_base_url() -> String:
+	var runtime_manifest := _read_runtime_manifest()
+	var runtime_base_url := _trim_trailing_slashes(String(runtime_manifest.get("baseUrl", "")).strip_edges())
+	if not runtime_base_url.is_empty():
+		return runtime_base_url
 	return "http://%s:%d" % [DEFAULT_HOST, _resolve_sidecar_port()]
 
 
@@ -160,11 +168,62 @@ func _resolve_sidecar_port() -> int:
 		var resolved_port := int(port_text)
 		if resolved_port > 0:
 			return resolved_port
+	var runtime_manifest := _read_runtime_manifest()
+	var manifest_port := int(runtime_manifest.get("port", 0))
+	if manifest_port > 0:
+		return manifest_port
 	return DEFAULT_PORT
 
 
 func _resolve_auth_token() -> String:
-	return OS.get_environment("NOTE_CONNECTION_AUTH_TOKEN").strip_edges()
+	var auth_token := OS.get_environment("NOTE_CONNECTION_AUTH_TOKEN").strip_edges()
+	if not auth_token.is_empty():
+		return auth_token
+	var runtime_manifest := _read_runtime_manifest()
+	return String(runtime_manifest.get("authToken", "")).strip_edges()
+
+
+func _trim_trailing_slashes(raw_value: String) -> String:
+	var value := String(raw_value)
+	while value.ends_with("/"):
+		value = value.left(value.length() - 1)
+	return value
+
+
+func _resolve_runtime_manifest_path() -> String:
+	var env_path := OS.get_environment(RUNTIME_MANIFEST_ENV_KEY).strip_edges()
+	if not env_path.is_empty():
+		return env_path
+	return ProjectSettings.globalize_path(DEFAULT_RUNTIME_MANIFEST_PATH)
+
+
+func _read_runtime_manifest() -> Dictionary:
+	if _runtime_manifest_loaded:
+		return _runtime_manifest_cache
+
+	_runtime_manifest_loaded = true
+	var manifest_path := _resolve_runtime_manifest_path()
+	if manifest_path.is_empty():
+		return {}
+	if not FileAccess.file_exists(manifest_path):
+		return {}
+
+	var file: FileAccess = FileAccess.open(manifest_path, FileAccess.READ)
+	if file == null:
+		return {}
+	var raw_text: String = file.get_as_text()
+	file.close()
+	if raw_text.strip_edges().is_empty():
+		return {}
+
+	var parsed: Variant = JSON.parse_string(raw_text)
+	if parsed is Dictionary:
+		var parsed_dict: Dictionary = parsed
+		_runtime_manifest_cache = parsed_dict
+		return _runtime_manifest_cache
+
+	push_warning("ReaderRenderClient: Runtime manifest is not a JSON object: %s" % manifest_path)
+	return {}
 
 
 func _build_json_headers() -> PackedStringArray:

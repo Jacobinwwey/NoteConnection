@@ -135,6 +135,62 @@ function requestJson(port: number, method: 'GET' | 'POST', requestPath: string, 
   });
 }
 
+function requestRaw(
+  port: number,
+  method: 'GET' | 'POST',
+  requestPath: string,
+  payload?: string,
+  extraHeaders?: Record<string, string>
+): Promise<JsonResponse> {
+  return new Promise((resolve, reject) => {
+    const hasPayload = typeof payload === 'string';
+    const headers: Record<string, string> = {
+      ...(extraHeaders || {})
+    };
+
+    if (hasPayload) {
+      headers['Content-Length'] = String(Buffer.byteLength(payload as string));
+    }
+
+    const req = http.request(
+      {
+        host: '127.0.0.1',
+        port,
+        path: requestPath,
+        method,
+        headers: Object.keys(headers).length > 0 ? headers : undefined
+      },
+      (res) => {
+        let text = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+          text += chunk;
+        });
+        res.on('end', () => {
+          let parsed: any = text;
+          if (text.length > 0) {
+            try {
+              parsed = JSON.parse(text);
+            } catch {
+              parsed = text;
+            }
+          }
+          resolve({
+            status: res.statusCode || 0,
+            body: parsed
+          });
+        });
+      }
+    );
+
+    req.on('error', reject);
+    if (hasPayload) {
+      req.write(payload as string);
+    }
+    req.end();
+  });
+}
+
 describe('server migration settings routes', () => {
   let temp: TempDir;
   let envRestorers: Array<() => void>;
@@ -348,5 +404,58 @@ describe('server migration settings routes', () => {
     hold.resolve();
     const firstResponse = await firstRequest;
     expect(firstResponse.status).toBe(200);
+  });
+
+  test('returns 413 when /api/build request body exceeds size limit', async () => {
+    const oversizedPayload = {
+      target: 'financial',
+      pad: 'x'.repeat(700 * 1024)
+    };
+    const response = await requestJson(port, 'POST', '/api/build', oversizedPayload);
+
+    expect(response.status).toBe(413);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: expect.stringContaining('too large')
+      })
+    );
+  });
+
+  test('returns 400 when /api/build request body contains invalid json', async () => {
+    const response = await requestRaw(
+      port,
+      'POST',
+      '/api/build',
+      '{"target":',
+      {
+        'Content-Type': 'application/json'
+      }
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: expect.stringContaining('Invalid JSON')
+      })
+    );
+  });
+
+  test('returns 415 when /api/kb-path request content type is not json', async () => {
+    const response = await requestRaw(
+      port,
+      'POST',
+      '/api/kb-path',
+      'kbPath=/tmp',
+      {
+        'Content-Type': 'text/plain'
+      }
+    );
+
+    expect(response.status).toBe(415);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: expect.stringContaining('Unsupported Content-Type')
+      })
+    );
   });
 });

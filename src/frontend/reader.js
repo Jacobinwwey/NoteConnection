@@ -132,27 +132,25 @@ class Reader {
             const noteConnectionRuntime = (typeof window !== 'undefined' && window.NoteConnectionRuntime)
                 ? window.NoteConnectionRuntime
                 : null;
+            const requireRuntimeBridge = () => {
+                if (!noteConnectionRuntime || typeof noteConnectionRuntime !== 'object') {
+                    throw new Error('Runtime bridge is unavailable. Ensure runtime_bridge.js is loaded before reader.js.');
+                }
+                return noteConnectionRuntime;
+            };
             const buildSidecarUrl = (resourcePath, query = null) => {
-                if (noteConnectionRuntime && typeof noteConnectionRuntime.buildUrl === 'function') {
-                    return noteConnectionRuntime.buildUrl(resourcePath, query || undefined);
+                const bridge = requireRuntimeBridge();
+                if (typeof bridge.buildUrl !== 'function') {
+                    throw new Error('Runtime bridge does not expose buildUrl().');
                 }
-                const normalizedPath = String(resourcePath || '').replace(/^\/+/, '');
-                const url = new URL(`http://127.0.0.1:3000/${normalizedPath}`);
-                if (query && typeof query === 'object') {
-                    Object.entries(query).forEach(([key, value]) => {
-                        if (value === undefined || value === null || value === '') {
-                            return;
-                        }
-                        url.searchParams.set(key, String(value));
-                    });
-                }
-                return url.toString();
+                return bridge.buildUrl(resourcePath, query || undefined);
             };
             const buildSidecarFetchOptions = (init = {}) => {
-                if (noteConnectionRuntime && typeof noteConnectionRuntime.buildFetchOptions === 'function') {
-                    return noteConnectionRuntime.buildFetchOptions(init);
+                const bridge = requireRuntimeBridge();
+                if (typeof bridge.buildFetchOptions !== 'function') {
+                    throw new Error('Runtime bridge does not expose buildFetchOptions().');
                 }
-                return init;
+                return bridge.buildFetchOptions(init);
             };
 
             if (!runtimeSupportsContentApi) {

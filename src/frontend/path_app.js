@@ -78,7 +78,12 @@ window.pathApp = {
         );
 
         if (!hasActiveSocket) {
-            this.ws = new WebSocket(this._getBridgeWsUrl());
+            const bridgeWsUrl = this._getBridgeWsUrl();
+            if (!bridgeWsUrl) {
+                console.warn('[PathApp] Bridge socket URL is unavailable; skipping WebSocket connect attempt.');
+                return;
+            }
+            this.ws = new WebSocket(bridgeWsUrl);
         }
 
         this.ws.onopen = () => {
@@ -248,7 +253,13 @@ window.pathApp = {
         if (typeof window !== 'undefined' && window.NoteConnectionRuntime && typeof window.NoteConnectionRuntime.getBridgeWsUrl === 'function') {
             return window.NoteConnectionRuntime.getBridgeWsUrl('frontend');
         }
-        return 'ws://127.0.0.1:9876';
+        const runtimeState = (typeof window !== 'undefined' && window.__NC_SIDECAR_RUNTIME)
+            ? window.__NC_SIDECAR_RUNTIME
+            : null;
+        if (runtimeState && typeof runtimeState.bridgeWsUrl === 'string' && runtimeState.bridgeWsUrl.trim()) {
+            return runtimeState.bridgeWsUrl.trim();
+        }
+        return '';
     },
 
     _getBridgeAuthToken: function() {

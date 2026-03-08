@@ -1,8 +1,9 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as readline from 'readline';
+import { once } from 'events';
 import { buildGraph } from './index';
 import { CrashLogger } from './backend/utils/CrashLogger';
 import { PathBridge } from './core/PathBridge';
@@ -14,12 +15,14 @@ import { copyPngToClipboard } from './native_clipboard';
 CrashLogger.initGlobalHandlers();
 
 const LOOPBACK_HOST = '127.0.0.1';
-const PORT = Number(process.env.NOTE_CONNECTION_PORT || process.env.PORT || 3000);
+const DEFAULT_PORT = 3000;
+const PORT = Number(process.env.NOTE_CONNECTION_PORT || process.env.PORT || DEFAULT_PORT);
 const PATH_BRIDGE_PORT = Number(process.env.NOTE_CONNECTION_BRIDGE_PORT || 9876);
 const AUTH_TOKEN = String(process.env.NOTE_CONNECTION_AUTH_TOKEN || '').trim();
 let pathBridge: PathBridge | null = null;
 const REQUEST_BODY_LIMIT_BYTES = 512 * 1024;
 const CLIPBOARD_BODY_LIMIT_BYTES = 8 * 1024 * 1024;
+const REQUEST_BODY_SPOOL_THRESHOLD_BYTES = 256 * 1024;
 const ALLOWED_ORIGIN_PATTERNS = parseAllowedOrigins(
     process.env.NOTE_CONNECTION_ALLOWED_ORIGINS ||
     'tauri://localhost,http://tauri.localhost,http://localhost,http://127.0.0.1,capacitor://localhost'
@@ -28,6 +31,7 @@ const FORCE_FRONTEND_MERMAID_RENDER = String(process.env.NOTE_CONNECTION_READER_
 const runtimePaths = resolveRuntimePaths(__dirname);
 const FRONTEND_DIR = runtimePaths.frontendDir;
 const RUNTIME_DATA_DIR = runtimePaths.runtimeDataDir;
+const REQUEST_BODY_SPOOL_DIR = path.join(runtimePaths.projectRoot, 'tmp', 'request-bodies');
 let KB_ROOT = runtimePaths.kbRoot;
 let activeBuildKey: string | null = null;
 let activeBuildPromise: Promise<void> | null = null;
@@ -36,6 +40,11 @@ let lastRestoreTs = 0;
 const SIDECAR_RUNTIME_MANIFEST = path.join(runtimePaths.projectRoot, 'tmp', 'active-sidecar-runtime.json');
 
 type MermaidRendererPreference = 'auto' | 'local' | 'frontend';
+
+type ReadJsonBodyOptions = {
+    maxBytes?: number;
+    spoolThresholdBytes?: number;
+};
 
 function parseAllowedOrigins(rawValue: string): string[] {
     return rawValue
@@ -151,18 +160,23 @@ function ensureRuntimeDataDir(): void {
     }
 }
 
-function resolveGeneratedAssetForRead(filename: string): string | null {
-    const runtimeFile = path.join(RUNTIME_DATA_DIR, filename);
-    if (fs.existsSync(runtimeFile) && fs.statSync(runtimeFile).isFile()) {
-        return runtimeFile;
+function ensureRequestBodySpoolDir(): void {
+    if (!fs.existsSync(REQUEST_BODY_SPOOL_DIR)) {
+        fs.mkdirSync(REQUEST_BODY_SPOOL_DIR, { recursive: true });
     }
+}
 
-    const bundledFile = path.join(FRONTEND_DIR, filename);
-    if (fs.existsSync(bundledFile) && fs.statSync(bundledFile).isFile()) {
-        return bundledFile;
-    }
+function isFsNotFoundError(error: unknown): boolean {
+    const code = (error as NodeJS.ErrnoException | undefined)?.code;
+    return code === 'ENOENT' || code === 'ENOTDIR';
+}
 
-    return null;
+function isRequestBodyTooLargeError(error: unknown): boolean {
+    return error instanceof Error && error.message === 'Request body is too large.';
+}
+
+function makeRequestBodyTooLargeError(): Error {
+    return new Error('Request body is too large.');
 }
 
 function generatedAssetWritePath(filename: string): string {
@@ -170,42 +184,154 @@ function generatedAssetWritePath(filename: string): string {
     return path.join(RUNTIME_DATA_DIR, filename);
 }
 
-async function readJsonBody(req: http.IncomingMessage, maxBytes = REQUEST_BODY_LIMIT_BYTES): Promise<any> {
-    return new Promise((resolve, reject) => {
-        const declaredLength = Number(req.headers['content-length'] || 0);
-        if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
-            reject(new Error('Request body is too large.'));
-            req.destroy();
-            return;
+async function isRegularFile(candidate: string): Promise<boolean> {
+    try {
+        const stat = await fs.promises.stat(candidate);
+        return stat.isFile();
+    } catch (error) {
+        if (isFsNotFoundError(error)) {
+            return false;
+        }
+        throw error;
+    }
+}
+
+async function resolveGeneratedAssetForReadAsync(filename: string): Promise<string | null> {
+    const runtimeFile = path.join(RUNTIME_DATA_DIR, filename);
+    if (await isRegularFile(runtimeFile)) {
+        return runtimeFile;
+    }
+
+    const bundledFile = path.join(FRONTEND_DIR, filename);
+    if (await isRegularFile(bundledFile)) {
+        return bundledFile;
+    }
+
+    return null;
+}
+
+async function safeUnlink(filePath: string): Promise<void> {
+    try {
+        await fs.promises.unlink(filePath);
+    } catch (error) {
+        if (!isFsNotFoundError(error)) {
+            console.warn('[Sidecar] Failed to clean up temporary request body file:', error);
+        }
+    }
+}
+
+function isJsonLikeContentType(req: http.IncomingMessage): boolean {
+    const contentType = typeof req.headers['content-type'] === 'string'
+        ? req.headers['content-type'].split(';', 1)[0].trim().toLowerCase()
+        : '';
+    return !contentType || contentType === 'application/json' || contentType.endsWith('+json');
+}
+
+async function readJsonBody(req: http.IncomingMessage, options: ReadJsonBodyOptions = {}): Promise<any> {
+    const maxBytes = options.maxBytes ?? REQUEST_BODY_LIMIT_BYTES;
+    const spoolThresholdBytes = Math.max(
+        64 * 1024,
+        Math.min(options.spoolThresholdBytes ?? REQUEST_BODY_SPOOL_THRESHOLD_BYTES, maxBytes)
+    );
+
+    if (!isJsonLikeContentType(req)) {
+        throw new Error('Unsupported Content-Type. Expected application/json.');
+    }
+
+    const declaredLength = Number(req.headers['content-length'] || 0);
+    if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+        throw makeRequestBodyTooLargeError();
+    }
+
+    let totalBytes = 0;
+    const chunks: Buffer[] = [];
+    let spoolPath: string | null = null;
+    let spoolStream: fs.WriteStream | null = null;
+
+    try {
+        for await (const rawChunk of req) {
+            const chunk = Buffer.isBuffer(rawChunk) ? rawChunk : Buffer.from(rawChunk);
+            totalBytes += chunk.length;
+            if (totalBytes > maxBytes) {
+                const tooLargeError = makeRequestBodyTooLargeError();
+                req.destroy(tooLargeError);
+                throw tooLargeError;
+            }
+
+            if (!spoolStream && totalBytes > spoolThresholdBytes) {
+                ensureRequestBodySpoolDir();
+                spoolPath = path.join(
+                    REQUEST_BODY_SPOOL_DIR,
+                    `body-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.json`
+                );
+                spoolStream = fs.createWriteStream(spoolPath, { flags: 'wx' });
+                for (const buffered of chunks) {
+                    if (!spoolStream.write(buffered)) {
+                        await once(spoolStream, 'drain');
+                    }
+                }
+                chunks.length = 0;
+            }
+
+            if (spoolStream) {
+                if (!spoolStream.write(chunk)) {
+                    await once(spoolStream, 'drain');
+                }
+            } else {
+                chunks.push(chunk);
+            }
         }
 
-        let body = '';
-        let size = 0;
+        if (spoolStream) {
+            await new Promise<void>((resolve, reject) => {
+                if (!spoolStream) {
+                    resolve();
+                    return;
+                }
+                spoolStream.once('error', reject);
+                spoolStream.end(() => resolve());
+            });
+        }
 
-        req.on('data', (chunk: Buffer) => {
-            size += chunk.length;
-            if (size > maxBytes) {
-                reject(new Error('Request body is too large.'));
-                req.destroy();
-                return;
-            }
-            body += chunk.toString('utf8');
-        });
+        const body = spoolPath
+            ? await fs.promises.readFile(spoolPath, 'utf8')
+            : Buffer.concat(chunks).toString('utf8');
 
-        req.on('end', () => {
-            if (!body.trim()) {
-                resolve({});
-                return;
-            }
-            try {
-                resolve(JSON.parse(body));
-            } catch (error) {
-                reject(error);
-            }
-        });
+        if (!body.trim()) {
+            return {};
+        }
 
-        req.on('error', reject);
-    });
+        return JSON.parse(body);
+    } finally {
+        if (spoolStream && !spoolStream.closed) {
+            spoolStream.destroy();
+        }
+        if (spoolPath) {
+            await safeUnlink(spoolPath);
+        }
+    }
+}
+
+function writeBodyParseErrorResponse(res: http.ServerResponse, error: unknown): boolean {
+    if (isRequestBodyTooLargeError(error)) {
+        res.writeHead(413, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Request body is too large.' }));
+        return true;
+    }
+
+    if (error instanceof SyntaxError) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid JSON body.' }));
+        return true;
+    }
+
+    if (error instanceof Error && error.message.startsWith('Unsupported Content-Type')) {
+        res.writeHead(415, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+        return true;
+    }
+
+    return false;
 }
 
 function parseOptionalPositiveDimension(value: unknown): number | undefined {
@@ -343,22 +469,27 @@ function parseCachedTargetFromFileName(filename: string): string | null {
     return null;
 }
 
-function collectAvailableTargetsFromPath(kbRoot: string): string[] {
+async function readDirEntriesSafe(dirPath: string): Promise<fs.Dirent[]> {
+    try {
+        return await fs.promises.readdir(dirPath, { withFileTypes: true });
+    } catch (error) {
+        if (isFsNotFoundError(error)) {
+            return [];
+        }
+        throw error;
+    }
+}
+
+async function collectAvailableTargetsFromPath(kbRoot: string): Promise<string[]> {
     const targets = new Set<string>();
 
-    if (fs.existsSync(kbRoot)) {
-        const entries = fs.readdirSync(kbRoot, { withFileTypes: true });
-        entries
-            .filter((entry) => entry.isDirectory())
-            .forEach((entry) => targets.add(entry.name));
-    }
+    const kbEntries = await readDirEntriesSafe(kbRoot);
+    kbEntries
+        .filter((entry) => entry.isDirectory())
+        .forEach((entry) => targets.add(entry.name));
 
-    [RUNTIME_DATA_DIR, FRONTEND_DIR].forEach((dir) => {
-        if (!fs.existsSync(dir)) {
-            return;
-        }
-
-        const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const dir of [RUNTIME_DATA_DIR, FRONTEND_DIR]) {
+        const entries = await readDirEntriesSafe(dir);
         entries.forEach((entry) => {
             if (!entry.isFile()) {
                 return;
@@ -368,7 +499,7 @@ function collectAvailableTargetsFromPath(kbRoot: string): string[] {
                 targets.add(parsed);
             }
         });
-    });
+    }
 
     return Array.from(targets).sort((a, b) => a.localeCompare(b));
 }
@@ -396,10 +527,6 @@ function extractRelativePathFromKbMarker(rawFilePath: string): string | null {
 function resolveContentCandidatePath(kbRoot: string, rawFilePath: string): string {
     const normalized = rawFilePath.replace(/\\/g, '/');
     const normalizedCandidate = path.normalize(normalized);
-
-    if (path.isAbsolute(normalizedCandidate) && fs.existsSync(normalizedCandidate)) {
-        return normalizedCandidate;
-    }
 
     const relativeFromKb = extractRelativePathFromKbMarker(rawFilePath);
     if (relativeFromKb) {
@@ -628,13 +755,24 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     // Note: KB_ROOT is currently module-level constant. We should probably make it dynamic?
                     // For now, if we pass targetPath, we might be focusing on THAT path.
                     // But /api/folders lists "Knowledge_Base" by default.
-                    
-                    if (!fs.existsSync(KB_ROOT)) {
+                    let entries: fs.Dirent[] = [];
+                    try {
+                        entries = await fs.promises.readdir(KB_ROOT, { withFileTypes: true });
+                    } catch (error) {
+                        if (isFsNotFoundError(error)) {
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ folders: [] }));
+                            return;
+                        }
+                        throw error;
+                    }
+
+                    if (!entries.length) {
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ folders: [] }));
                         return;
                     }
-                    const entries = fs.readdirSync(KB_ROOT, { withFileTypes: true });
+
                     // Filter directories
                     const folders = entries
                         .filter(dirent => dirent.isDirectory())
@@ -657,7 +795,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
 
             if (req.url === '/api/available-targets') {
                 try {
-                    const targets = collectAvailableTargetsFromPath(KB_ROOT);
+                    const targets = await collectAvailableTargetsFromPath(KB_ROOT);
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ targets }));
                 } catch (error) {
@@ -671,7 +809,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
     
             if (req.url?.startsWith('/api/content')) {
                 try {
-                    const urlObj = new URL(req.url, `http://${req.headers.host}`);
+                    const urlObj = new URL(req.url, `http://${LOOPBACK_HOST}:${finalPort}`);
                     const requestedPath = urlObj.searchParams.get('path');
                     
                     if (!requestedPath) {
@@ -681,33 +819,32 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     }
 
                     const decodedPath = decodeURIComponent(requestedPath);
-                    const kbRootCanonical = fs.realpathSync(KB_ROOT);
+                    const kbRootCanonical = await fs.promises.realpath(KB_ROOT);
                     const candidatePath = resolveContentCandidatePath(kbRootCanonical, decodedPath);
-
-                    if (!fs.existsSync(candidatePath)) {
-                        res.writeHead(404, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ error: 'File not found' }));
-                        return;
-                    }
-
-                    const filePathCanonical = fs.realpathSync(candidatePath);
+                    const filePathCanonical = await fs.promises.realpath(candidatePath);
                     if (!isPathInsideRoot(filePathCanonical, kbRootCanonical)) {
                         res.writeHead(403, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ error: 'Requested file is outside configured knowledge base' }));
                         return;
                     }
 
-                    if (!fs.statSync(filePathCanonical).isFile()) {
+                    const fileStat = await fs.promises.stat(filePathCanonical);
+                    if (!fileStat.isFile()) {
                         res.writeHead(404, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ error: 'File not found' }));
                         return;
                     }
 
-                    const content = fs.readFileSync(filePathCanonical, 'utf-8');
+                    const content = await fs.promises.readFile(filePathCanonical, 'utf-8');
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ content }));
     
                 } catch (error) {
+                    if (isFsNotFoundError(error)) {
+                        res.writeHead(404, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'File not found' }));
+                        return;
+                    }
                     console.error(error);
                     CrashLogger.log(error, 'API:GET /api/content');
                     res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -719,7 +856,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             // GET any generated graph assets (e.g. data_cli.js, data.js, graph_data.json)
             // Must parse pathname so cache-busting query strings (`?v=...`) still route correctly.
             if (req.url && !req.url.startsWith('/api/')) {
-                const assetUrlObj = new URL(req.url, `http://${req.headers.host}`);
+                const assetUrlObj = new URL(req.url, `http://${LOOPBACK_HOST}:${finalPort}`);
                 const assetPathname = decodeURIComponent(assetUrlObj.pathname);
                 if (assetPathname.endsWith('.js') || assetPathname.endsWith('.json')) {
                     let filename = path.basename(assetPathname);
@@ -733,23 +870,24 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     }
 
                     const generatedPath = isGeneratedGraphAsset(filename)
-                        ? resolveGeneratedAssetForRead(filename)
+                        ? await resolveGeneratedAssetForReadAsync(filename)
                         : null;
                     const bundledPath = path.join(FRONTEND_DIR, filename);
-                    const filePath = generatedPath || (fs.existsSync(bundledPath) ? bundledPath : null);
+                    const filePath = generatedPath || (await isRegularFile(bundledPath) ? bundledPath : null);
 
-                    if (filePath && fs.statSync(filePath).isFile()) {
+                    if (filePath) {
                         const ext = path.extname(filename);
                         const contentType = ext === '.json' ? 'application/json' : 'application/javascript';
                         
                         try {
-                            const content = fs.readFileSync(filePath);
+                            const content = await fs.promises.readFile(filePath);
                             res.writeHead(200, { 'Content-Type': contentType });
                             res.end(content);
                             return;
                         } catch (err) {
-                            res.writeHead(500, { 'Content-Type': contentType });
-                            res.end(`console.error('Failed to load asset: ${String(err)}');`);
+                            CrashLogger.log(err, `AssetRead:${filename}`);
+                            res.writeHead(500, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ error: `Failed to load asset: ${String(err)}` }));
                             return;
                         }
                     }
@@ -771,7 +909,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             // æ£€æŸ¥æŒ‡å®šç›®æ ‡çš„å›¾è°±ç¼“å­˜æ˜¯å¦å­˜åœ¨ï¼ˆåŽ†å²æ¡Œé¢ç¼“å­˜æ£€æŸ¥é“¾è·¯çš„æ¡¥æŽ¥å®žçŽ°ï¼‰ã€‚
             if (req.url?.startsWith('/api/check-cache')) {
                 try {
-                    const urlObj = new URL(req.url, `http://${req.headers.host}`);
+                    const urlObj = new URL(req.url, `http://${LOOPBACK_HOST}:${finalPort}`);
                     const target = urlObj.searchParams.get('target');
                     
                     if (!target) {
@@ -781,9 +919,9 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     }
 
                     if (target === 'ALL_FOLDERS') {
-                        const activeJsPath = resolveGeneratedAssetForRead('data.js');
+                        const activeJsPath = await resolveGeneratedAssetForReadAsync('data.js');
                         if (activeJsPath) {
-                            const stats = fs.statSync(activeJsPath);
+                            const stats = await fs.promises.stat(activeJsPath);
                             res.writeHead(200, { 'Content-Type': 'application/json' });
                             res.end(JSON.stringify({
                                 date: stats.mtime.toLocaleString(),
@@ -798,10 +936,10 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     }
                     
                     const targetName = target.replace(/[^a-z0-9_\-]/gi, '_');
-                    const cachePath = resolveGeneratedAssetForRead(`data_${targetName}.js`);
+                    const cachePath = await resolveGeneratedAssetForReadAsync(`data_${targetName}.js`);
                     
                     if (cachePath) {
-                        const stats = fs.statSync(cachePath);
+                        const stats = await fs.promises.stat(cachePath);
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({
                             date: stats.mtime.toLocaleString(),
@@ -826,7 +964,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             // ä»Žç¼“å­˜æ¢å¤å›¾è°±æ•°æ®ï¼ˆåŽ†å²æ¡Œé¢ restoreCache é“¾è·¯çš„æ¡¥æŽ¥å®žçŽ°ï¼‰ã€‚
             if (req.url?.startsWith('/api/restore-cache')) {
                 try {
-                    const urlObj = new URL(req.url, `http://${req.headers.host}`);
+                    const urlObj = new URL(req.url, `http://${LOOPBACK_HOST}:${finalPort}`);
                     const target = urlObj.searchParams.get('target');
                     
                     if (!target) {
@@ -847,7 +985,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     lastRestoreTs = now;
 
                     if (target === 'ALL_FOLDERS') {
-                        const activeJsPath = resolveGeneratedAssetForRead('data.js');
+                        const activeJsPath = await resolveGeneratedAssetForReadAsync('data.js');
                         if (activeJsPath) {
                             res.writeHead(200, { 'Content-Type': 'application/json' });
                             res.end(JSON.stringify({ success: true }));
@@ -860,15 +998,15 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     
                     const targetName = target.replace(/[^a-z0-9_\-]/gi, '_');
                     
-                    const cacheJs = resolveGeneratedAssetForRead(`data_${targetName}.js`);
+                    const cacheJs = await resolveGeneratedAssetForReadAsync(`data_${targetName}.js`);
                     const targetJs = generatedAssetWritePath('data.js');
-                    const cacheJson = resolveGeneratedAssetForRead(`graph_data_${targetName}.json`);
+                    const cacheJson = await resolveGeneratedAssetForReadAsync(`graph_data_${targetName}.json`);
                     const targetJson = generatedAssetWritePath('graph_data.json');
                     
                     if (cacheJs) {
-                        fs.copyFileSync(cacheJs, targetJs);
+                        await fs.promises.copyFile(cacheJs, targetJs);
                         if (cacheJson) {
-                            fs.copyFileSync(cacheJson, targetJson);
+                            await fs.promises.copyFile(cacheJson, targetJson);
                         }
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ success: true }));
@@ -887,7 +1025,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
 
             // Serve Static Files
             // v0.9.83 Fix: Strip query parameters (e.g. ?v=123) to verify file existence on disk
-            const urlObj = new URL(req.url!, `http://${req.headers.host}`);
+            const urlObj = new URL(req.url!, `http://${LOOPBACK_HOST}:${finalPort}`);
             let urlPath = urlObj.pathname === '/' ? 'index.html' : urlObj.pathname;
 
             // Security check: prevent traversing up
@@ -942,6 +1080,9 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify(rendered));
                 } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
                     console.error(error);
                     CrashLogger.log(error, 'API:POST /api/render/math');
                     res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -974,6 +1115,9 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify(rendered));
                 } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
                     console.error(error);
                     CrashLogger.log(error, 'API:POST /api/render/mermaid');
                     res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -982,7 +1126,10 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 return;
             } else if (req.url === '/api/clipboard/image') {
                 try {
-                    const payload = await readJsonBody(req, CLIPBOARD_BODY_LIMIT_BYTES);
+                    const payload = await readJsonBody(req, {
+                        maxBytes: CLIPBOARD_BODY_LIMIT_BYTES,
+                        spoolThresholdBytes: 128 * 1024,
+                    });
                     const pngBase64 = typeof payload.pngBase64 === 'string' ? payload.pngBase64.trim() : '';
                     if (!pngBase64) {
                         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -1005,6 +1152,9 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ ok: true }));
                 } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
                     console.error(error);
                     CrashLogger.log(error, 'API:POST /api/clipboard/image');
                     res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -1012,110 +1162,118 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 }
                 return;
             } else if (req.url === '/api/build') {
-                let body = '';
-                req.on('data', chunk => { body += chunk.toString(); });
-                req.on('end', async () => {
-                    try {
-                        const { target, maxWorkers, enableGPU, enableGPULayout, memorySavingMode, deepDebug } = JSON.parse(body);
-                        console.log('Received build request for:', target, 'maxWorkers:', maxWorkers, 'enableGPU:', enableGPU, 'enableGPULayout:', enableGPULayout, 'memorySavingMode:', memorySavingMode, 'deepDebug:', deepDebug);
-                        const buildKey = JSON.stringify({
-                            target,
-                            maxWorkers,
-                            enableGPU,
-                            enableGPULayout,
-                            memorySavingMode,
-                            deepDebug
-                        });
+                try {
+                    const payload = await readJsonBody(req);
+                    const { target, maxWorkers, enableGPU, enableGPULayout, memorySavingMode, deepDebug } = payload;
+                    console.log('Received build request for:', target, 'maxWorkers:', maxWorkers, 'enableGPU:', enableGPU, 'enableGPULayout:', enableGPULayout, 'memorySavingMode:', memorySavingMode, 'deepDebug:', deepDebug);
+                    const buildKey = JSON.stringify({
+                        target,
+                        maxWorkers,
+                        enableGPU,
+                        enableGPULayout,
+                        memorySavingMode,
+                        deepDebug
+                    });
 
-                        // De-duplicate accidental double-submit from frontend.
-                        if (activeBuildPromise) {
-                            if (activeBuildKey === buildKey) {
-                                console.log('[Build] Duplicate request detected. Waiting for in-flight build.');
-                                await activeBuildPromise;
-                                res.writeHead(200, { 'Content-Type': 'application/json' });
-                                res.end(JSON.stringify({ success: true, deduped: true }));
-                                return;
-                            }
-
-                            res.writeHead(409, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify({ success: false, error: 'Another build is in progress' }));
+                    // De-duplicate accidental double-submit from frontend.
+                    if (activeBuildPromise) {
+                        if (activeBuildKey === buildKey) {
+                            console.log('[Build] Duplicate request detected. Waiting for in-flight build.');
+                            await activeBuildPromise;
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ success: true, deduped: true }));
                             return;
                         }
-                        
-                        const buildTarget = target === 'ALL_FOLDERS' ? '' : target;
-                        
-                        // Resolve to ABSOLUTE path, matching legacy desktop runtime behavior.
-                        // NoteConnection.ts uses targetPath directly if absolute, skipping kbRoot fallback.
-                        // Without this, the relative path "financial" would be resolved against
-                        // dist/Knowledge_Base/ (via __dirname) which does not exist.
-                        // å°†ç›¸å¯¹è·¯å¾„è§£æžä¸ºç»å¯¹è·¯å¾„ï¼Œå¯¹é½åŽ†å²æ¡Œé¢è¿è¡Œæ—¶è¯­ä¹‰ã€‚
-                        let targetToBuild: string | undefined;
-                        if (buildTarget) {
-                            targetToBuild = path.join(KB_ROOT, buildTarget);
-                        } else {
-                            targetToBuild = KB_ROOT;
-                        }
-                        
-                        const buildPromise = buildGraph({
-                            targetPath: targetToBuild,
-                            maxWorkers,
-                            enableGPU,
-                            enableGPULayout,
-                            memorySavingMode,
-                            deepDebug
-                        }).then(() => undefined);
-                        activeBuildKey = buildKey;
-                        activeBuildPromise = buildPromise;
 
-                        try {
-                            await buildPromise;
-                        } finally {
-                            if (activeBuildPromise === buildPromise) {
-                                activeBuildPromise = null;
-                                activeBuildKey = null;
-                            }
-                        }
-                        
-                        res.writeHead(200, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: true }));
-                    } catch (error) {
-                        console.error(error);
-                        CrashLogger.log(error, 'API:POST /api/build');
-                        res.writeHead(500, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: String(error) }));
+                        res.writeHead(409, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: 'Another build is in progress' }));
+                        return;
                     }
-                });
-            } else if (req.url === '/api/kb-path') {
-                let body = '';
-                req.on('data', chunk => { body += chunk.toString(); });
-                req.on('end', () => {
+                    
+                    const buildTarget = target === 'ALL_FOLDERS' ? '' : target;
+                    
+                    // Resolve to ABSOLUTE path, matching legacy desktop runtime behavior.
+                    // NoteConnection.ts uses targetPath directly if absolute, skipping kbRoot fallback.
+                    // Without this, the relative path "financial" would be resolved against
+                    // dist/Knowledge_Base/ (via __dirname) which does not exist.
+                    // å°†ç›¸å¯¹è·¯å¾„è§£æžä¸ºç»å¯¹è·¯å¾„ï¼Œå¯¹é½åŽ†å²æ¡Œé¢è¿è¡Œæ—¶è¯­ä¹‰ã€‚
+                    let targetToBuild: string | undefined;
+                    if (buildTarget) {
+                        targetToBuild = path.join(KB_ROOT, buildTarget);
+                    } else {
+                        targetToBuild = KB_ROOT;
+                    }
+                    
+                    const buildPromise = buildGraph({
+                        targetPath: targetToBuild,
+                        maxWorkers,
+                        enableGPU,
+                        enableGPULayout,
+                        memorySavingMode,
+                        deepDebug
+                    }).then(() => undefined);
+                    activeBuildKey = buildKey;
+                    activeBuildPromise = buildPromise;
+
                     try {
-                        const { kbPath } = JSON.parse(body);
-                        if (kbPath) {
-                            KB_ROOT = path.resolve(kbPath);
-                            console.log(`[API] Knowledge Base Root updated to: ${KB_ROOT}`);
-                            res.writeHead(200, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify({ success: true, kbPath: KB_ROOT }));
-                        } else {
-                            res.writeHead(400, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify({ success: false, error: 'Missing kbPath' }));
+                        await buildPromise;
+                    } finally {
+                        if (activeBuildPromise === buildPromise) {
+                            activeBuildPromise = null;
+                            activeBuildKey = null;
                         }
-                    } catch (error) {
-                        console.error(error);
-                        res.writeHead(500, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: String(error) }));
                     }
-                });
+                    
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/build');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            } else if (req.url === '/api/kb-path') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const kbPath = typeof payload.kbPath === 'string' ? payload.kbPath.trim() : '';
+                    if (kbPath) {
+                        KB_ROOT = path.resolve(kbPath);
+                        console.log(`[API] Knowledge Base Root updated to: ${KB_ROOT}`);
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: true, kbPath: KB_ROOT }));
+                    } else {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: 'Missing kbPath' }));
+                    }
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
             }
         }
     });
     
-    return new Promise<http.Server>((resolve) => {
-        server.listen(finalPort, LOOPBACK_HOST, async () => {
+    return new Promise<http.Server>((resolve, reject) => {
+        const hasExplicitPortSetting =
+            typeof options.port === 'number' ||
+            String(process.env.NOTE_CONNECTION_PORT || '').trim().length > 0 ||
+            String(process.env.PORT || '').trim().length > 0;
+        const allowEphemeralFallback = !hasExplicitPortSetting;
+
+        const initializeRuntime = (resolvedPort: number): void => {
             ensureRuntimeDataDir();
-            writeSidecarRuntimeManifest(finalPort);
+            writeSidecarRuntimeManifest(resolvedPort);
             console.log(`[Sidecar] Runtime Manifest: ${SIDECAR_RUNTIME_MANIFEST}`);
-            console.log(`Server running at http://${LOOPBACK_HOST}:${finalPort}/`);
+            console.log(`Server running at http://${LOOPBACK_HOST}:${resolvedPort}/`);
             console.log(`Knowledge Base Root: ${KB_ROOT}`);
             console.log(`Frontend Root: ${FRONTEND_DIR}`);
             console.log(`Runtime Data Root: ${RUNTIME_DATA_DIR}`);
@@ -1135,8 +1293,39 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             if (hasCliBuild) {
                 console.log('[CLI] Ready.');
             }
-            resolve(server);
-        });
+        };
+
+        const attachListenHandlers = (targetPort: number): void => {
+            const onError = (error: NodeJS.ErrnoException): void => {
+                server.off('listening', onListening);
+                if (error?.code === 'EADDRINUSE' && allowEphemeralFallback && targetPort === finalPort) {
+                    console.warn(
+                        `[Sidecar] Port ${finalPort} is already in use. Retrying with an ephemeral loopback port.`
+                    );
+                    attachListenHandlers(0);
+                    return;
+                }
+                reject(error);
+            };
+
+            const onListening = (): void => {
+                server.off('error', onError);
+                const address = server.address();
+                const resolvedPort = (address && typeof address === 'object') ? address.port : targetPort;
+                try {
+                    initializeRuntime(resolvedPort);
+                    resolve(server);
+                } catch (error) {
+                    reject(error as Error);
+                }
+            };
+
+            server.once('error', onError);
+            server.once('listening', onListening);
+            server.listen(targetPort, LOOPBACK_HOST);
+        };
+
+        attachListenHandlers(finalPort);
     });
 };
 

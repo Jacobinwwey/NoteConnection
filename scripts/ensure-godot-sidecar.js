@@ -91,6 +91,11 @@ const targetGodot = path.join(sidecarDir, 'godot-x86_64-pc-windows-msvc.exe');
 const localGodot = path.join(sidecarDir, 'godot.exe');
 const envGodot = process.env.NOTE_CONNECTION_GODOT_EXE;
 
+if (process.platform !== 'win32') {
+  console.log('[Godot] Skipping Windows-specific Godot sidecar preparation on non-Windows host.');
+  process.exit(0);
+}
+
 if (looksLikeGodotBinary(targetGodot)) {
   console.log(`[Godot] Sidecar binary ready: ${targetGodot}`);
   process.exit(0);

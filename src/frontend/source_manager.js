@@ -43,6 +43,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const getRuntimeBridge = () => (typeof window !== 'undefined' ? window.NoteConnectionRuntime : null);
+    const requireRuntimeBridge = () => {
+        const bridge = getRuntimeBridge();
+        if (!bridge || typeof bridge !== 'object') {
+            throw new Error('Runtime bridge is unavailable. Ensure runtime_bridge.js is loaded before source_manager.js.');
+        }
+        return bridge;
+    };
 
     const applySidecarRuntimeConfig = (config) => {
         const bridge = getRuntimeBridge();
@@ -53,30 +60,19 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const buildSidecarUrl = (resourcePath, query = null) => {
-        const bridge = getRuntimeBridge();
-        if (bridge && typeof bridge.buildUrl === 'function') {
-            return bridge.buildUrl(resourcePath, query || undefined);
+        const bridge = requireRuntimeBridge();
+        if (typeof bridge.buildUrl !== 'function') {
+            throw new Error('Runtime bridge does not expose buildUrl().');
         }
-
-        const normalizedPath = String(resourcePath || '').replace(/^\/+/, '');
-        const url = new URL(`http://127.0.0.1:3000/${normalizedPath}`);
-        if (query && typeof query === 'object') {
-            Object.entries(query).forEach(([key, value]) => {
-                if (value === undefined || value === null || value === '') {
-                    return;
-                }
-                url.searchParams.set(key, String(value));
-            });
-        }
-        return url.toString();
+        return bridge.buildUrl(resourcePath, query || undefined);
     };
 
     const buildSidecarFetchOptions = (init = {}) => {
-        const bridge = getRuntimeBridge();
-        if (bridge && typeof bridge.buildFetchOptions === 'function') {
-            return bridge.buildFetchOptions(init);
+        const bridge = requireRuntimeBridge();
+        if (typeof bridge.buildFetchOptions !== 'function') {
+            throw new Error('Runtime bridge does not expose buildFetchOptions().');
         }
-        return init;
+        return bridge.buildFetchOptions(init);
     };
 
     const resolveRuntimeCapabilities = async () => {
@@ -111,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const sidecarRuntime = await window.__TAURI__.core.invoke('get_sidecar_runtime_config');
                     applySidecarRuntimeConfig(sidecarRuntime);
                 } catch (runtimeErr) {
-                    console.warn('[SourceManager] Failed to resolve sidecar runtime config, using loopback defaults.', runtimeErr);
+                    console.warn('[SourceManager] Failed to resolve sidecar runtime config, using runtime bridge defaults.', runtimeErr);
                 }
             }
             console.log('[SourceManager] Runtime capabilities resolved:', runtimeCaps);
