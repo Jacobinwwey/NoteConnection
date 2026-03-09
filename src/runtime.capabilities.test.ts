@@ -4,14 +4,17 @@ import * as path from 'path';
 describe('runtime capability gating contract', () => {
   const repoRoot = path.resolve(__dirname, '..');
   const sourceManagerPath = path.join(repoRoot, 'src', 'frontend', 'source_manager.js');
+  const storageProviderPath = path.join(repoRoot, 'src', 'frontend', 'storage_provider.js');
   const appPath = path.join(repoRoot, 'src', 'frontend', 'app.js');
   const readerPath = path.join(repoRoot, 'src', 'frontend', 'reader.js');
   const tauriLibPath = path.join(repoRoot, 'src-tauri', 'src', 'lib.rs');
 
   test('source manager resolves capabilities via tauri command and exposes them globally', () => {
     const sourceManager = fs.readFileSync(sourceManagerPath, 'utf8');
+    const storageProvider = fs.readFileSync(storageProviderPath, 'utf8');
     expect(sourceManager).toContain("invoke('get_runtime_capabilities')");
-    expect(sourceManager).toContain("invoke('get_available_targets')");
+    expect(storageProvider).toContain("this._invoke('get_available_targets')");
+    expect(sourceManager).toContain('provider.listAvailableTargets()');
     expect(sourceManager).toContain('window.__NC_RUNTIME_CAPS');
     expect(sourceManager).toContain('supports_sidecar');
     expect(sourceManager).toContain('supports_build');
@@ -27,8 +30,10 @@ describe('runtime capability gating contract', () => {
 
   test('source manager uses tauri native build command when sidecar is unavailable', () => {
     const sourceManager = fs.readFileSync(sourceManagerPath, 'utf8');
-    expect(sourceManager).toContain("invoke('build_graph_runtime'");
-    expect(sourceManager).toContain('if (runtimeCaps.supports_sidecar)');
+    const storageProvider = fs.readFileSync(storageProviderPath, 'utf8');
+    expect(sourceManager).toContain('window.NoteConnectionStorage.createProvider({ runtimeCaps })');
+    expect(storageProvider).toContain("invoke('build_graph_runtime'");
+    expect(storageProvider).toContain('if (this._supportsSidecar()) {');
     expect(sourceManager).toContain('Using mobile native build engine');
   });
 

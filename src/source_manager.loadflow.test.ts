@@ -5,6 +5,7 @@ describe('source manager load-flow guards', () => {
   const indexHtmlOrder = (html: string, needle: string): number => html.indexOf(needle);
   const repoRoot = path.resolve(__dirname, '..');
   const sourceManagerPath = path.join(repoRoot, 'src', 'frontend', 'source_manager.js');
+  const storageProviderPath = path.join(repoRoot, 'src', 'frontend', 'storage_provider.js');
 
   test('prevents duplicate event binding for load button', () => {
     const source = fs.readFileSync(sourceManagerPath, 'utf8');
@@ -23,12 +24,13 @@ describe('source manager load-flow guards', () => {
 
   test('uses a single cache-choice prompt path before restore/build branch', () => {
     const source = fs.readFileSync(sourceManagerPath, 'utf8');
+    const storageProvider = fs.readFileSync(storageProviderPath, 'utf8');
     const promptMatches = source.match(/choice\s*=\s*await\s*askCacheAction\s*\(/g) || [];
     expect(promptMatches.length).toBe(1);
     expect(source).toContain("if (choice === 'load')");
     expect(source).toContain("keepLockedForReload = requestSafeReload('cache-restore', { force: true });");
     expect(source).toContain("requestSafeReload('build-success', { force: true });");
-    expect(source).toContain("invoke('build_graph_runtime'");
+    expect(storageProvider).toContain("this._invoke('build_graph_runtime'");
   });
 
   test('shows explicit runtime capability boundary note for cache/read-only mobile mode', () => {
@@ -40,10 +42,10 @@ describe('source manager load-flow guards', () => {
 
   test('keeps explicit sidecar-first build route with tauri-native fallback route', () => {
     const source = fs.readFileSync(sourceManagerPath, 'utf8');
-    expect(source).toContain('if (runtimeCaps.supports_sidecar) {');
-    expect(source).toContain("buildSidecarUrl('api/build')");
-    expect(source).toContain('} else if (window.__TAURI__) {');
-    expect(source).toContain('const result = await buildGraphViaRust(buildPayload);');
+    expect(source).toContain('const getStorageProvider = () => {');
+    expect(source).toContain('window.NoteConnectionStorage.createProvider({ runtimeCaps })');
+    expect(source).toContain('const result = await storageProvider.buildGraph(buildPayload);');
+    expect(source).toContain('Build request returned unsuccessful result.');
   });
 
   test('waits for sidecar readiness and retries data.js fetch during tauri startup race', () => {
@@ -57,9 +59,10 @@ describe('source manager load-flow guards', () => {
     expect(source).toContain("setupEarlyWebSocket({");
   });
 
-  test('uses /api/folders as the canonical source list for KB folder names', () => {
+  test('uses storage provider folder listing as the canonical source list for KB folder names', () => {
     const source = fs.readFileSync(sourceManagerPath, 'utf8');
-    expect(source).toContain("buildSidecarUrl('api/folders')");
+    expect(source).toContain('let folders = await provider.listFolders();');
+    expect(source).toContain('const sidecarData = await fetchFoldersViaSidecar();');
     expect(source).toContain('Desktop/Tauri-sidecar primary requirement: list real subfolders under KB root.');
   });
 
@@ -76,14 +79,18 @@ describe('source manager load-flow guards', () => {
     const indexPath = path.join(repoRoot, 'src', 'frontend', 'index.html');
     const indexHtml = fs.readFileSync(indexPath, 'utf8');
     expect(indexHtml).toContain('<script src="runtime_bridge.js"></script>');
+    expect(indexHtml).toContain('<script src="storage_provider.js"></script>');
     expect(indexHtml.indexOf('<script src="runtime_bridge.js"></script>')).toBeLessThan(indexHtml.indexOf('<script src="source_manager.js"></script>'));
+    expect(indexHtml.indexOf('<script src="storage_provider.js"></script>')).toBeLessThan(indexHtml.indexOf('<script src="source_manager.js"></script>'));
   });
 
   test('loads runtime bridge before path_app on the dedicated path mode page', () => {
     const pathHtmlPath = path.join(repoRoot, 'src', 'frontend', 'path.html');
     const pathHtml = fs.readFileSync(pathHtmlPath, 'utf8');
     expect(pathHtml).toContain('<script src="runtime_bridge.js"></script>');
+    expect(pathHtml).toContain('<script src="storage_provider.js"></script>');
     expect(pathHtml.indexOf('<script src="runtime_bridge.js"></script>')).toBeLessThan(indexHtmlOrder(pathHtml, '<script src="path_app.js"></script>'));
+    expect(pathHtml.indexOf('<script src="storage_provider.js"></script>')).toBeLessThan(indexHtmlOrder(pathHtml, '<script src="path_app.js"></script>'));
   });
 
   test('exposes sidecar runtime config command and keeps path_app syntax valid', () => {

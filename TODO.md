@@ -1,3 +1,81 @@
+# 2026-03-08 v1.5.16 - High-Priority Closure (Transport + Storage + Cross-Platform Godot Strategy)
+
+## English Document
+
+### Objective
+Close all open high-priority items from `v1.5.15` with implementation + regression validation, without weakening existing desktop/mobile runtime boundaries.
+
+### Completed in This Iteration
+- [x] **Transport modernization closure**:
+  - [x] Added JSON-RPC-compatible bridge envelopes in `src/frontend/runtime_bridge.js` (`toBridgeEnvelope`, `parseBridgeEnvelope`, `sendBridgeMessage`) while keeping legacy `type/payload` compatibility.
+  - [x] Migrated `src/frontend/path_app.js` bridge sends/receives to the runtime transport adapter path (`_sendBridgeMessage`, `_parseBridgeIncomingMessage`) instead of direct raw message formatting/parsing.
+- [x] **Storage-provider abstraction closure**:
+  - [x] Added `src/frontend/storage_provider.js` as the unified runtime storage provider and wired it into source/reader flows.
+  - [x] Implemented provider branches for sidecar HTTP, Tauri invoke commands, and Capacitor-native filesystem read/list fallbacks (`Filesystem` plugin-aware helpers) while preserving current capability gating policy.
+- [x] **Explicit macOS/Linux Godot sidecar artifact strategy**:
+  - [x] Reworked `scripts/ensure-godot-sidecar.js` into host-aware preparation for Windows/Linux/macOS naming (`godot-<target-triple>`), with deterministic lookup strategy and documented env overrides.
+  - [x] Updated `src-tauri/src/lib.rs` Godot executable resolution to platform-specific sidecar names + host aliases, with tests adjusted for cross-platform behavior.
+- [x] **Release policy explicitness kept in code/docs surface**:
+  - [x] Capacitor native remains bounded read-only/cache-oriented in runtime capability handling.
+  - [x] README policy statements remain explicit that Capacitor path does not provide desktop sidecar parity yet.
+
+### High-Priority Status
+- [x] Complete transport modernization (replace remaining raw desktop HTTP/WS flows with Tauri-native IPC or JSON-RPC adapter).
+- [x] Implement storage-provider abstraction across desktop sidecar, Tauri commands, and Capacitor native filesystem.
+- [x] Add explicit macOS/Linux Godot sidecar artifact strategy (currently Windows binary workflow is strongest).
+- [x] Keep release policy explicit: Capacitor native remains read-only packaged mode until parity work is delivered.
+
+### Verification Gate (Executed)
+- [x] `npx tsc --pretty false`
+- [x] `npx jest src/storage.provider.contract.test.ts src/source_manager.loadflow.test.ts src/runtime.capabilities.test.ts src/runtime.transport.adapter.contract.test.ts --runInBand`
+- [x] `npm run test:migration`
+- [x] `npm run test:tauri`
+- [x] `./src-tauri/bin/godot-x86_64-pc-windows-msvc.exe --headless --path ./path_mode --quit`
+- [x] `npm run build:sidecar`
+- [x] `npm run build:sidecar:all` (artifact generation + validation; macOS binary signing warning remains expected when built off macOS host)
+- [x] `npm run verify:tauri:bin`
+- [x] `npm test`
+
+---
+
+## 中文文档
+
+### 目标
+在不削弱现有桌面端/移动端运行时边界的前提下，完成 `v1.5.15` 中全部“高优先级”未闭环事项，并提供完整回归验证证据。
+
+### 本轮完成
+- [x] **传输层现代化闭环**：
+  - [x] 在 `src/frontend/runtime_bridge.js` 增加 JSON-RPC 兼容桥接信封能力（`toBridgeEnvelope`、`parseBridgeEnvelope`、`sendBridgeMessage`），同时保持旧版 `type/payload` 兼容。
+  - [x] 将 `src/frontend/path_app.js` 的桥接收发迁移到统一运行时传输适配路径（`_sendBridgeMessage`、`_parseBridgeIncomingMessage`），不再直接手写原始消息格式解析。
+- [x] **存储抽象闭环**：
+  - [x] 新增 `src/frontend/storage_provider.js` 作为统一存储提供者，并接入 source/reader 关键流程。
+  - [x] 提供 sidecar HTTP、Tauri invoke、Capacitor 原生文件系统读/列目录回退分支（包含 `Filesystem` 插件感知），同时保持现行能力门禁策略不变。
+- [x] **macOS/Linux Godot sidecar 制品策略显式化**：
+  - [x] 将 `scripts/ensure-godot-sidecar.js` 重构为主机平台感知策略，支持 Windows/Linux/macOS 目标命名（`godot-<target-triple>`）、确定性查找链路与环境变量覆写入口。
+  - [x] 更新 `src-tauri/src/lib.rs` 的 Godot 可执行文件解析逻辑，改为平台侧车命名 + 主机别名解析；并同步调整测试确保跨平台行为一致。
+- [x] **发布边界显式性持续保持**：
+  - [x] Capacitor 原生保持受限的只读/缓存导向运行时能力边界。
+  - [x] README 中继续明确 Capacitor 路径尚未达到桌面 sidecar 等价能力。
+
+### 高优先级状态
+- [x] 完成传输层现代化（将剩余桌面端原始 HTTP/WS 调用迁移到 Tauri 原生命令或 JSON-RPC 适配层）。
+- [x] 实现跨运行时存储抽象（桌面 sidecar / Tauri commands / Capacitor 文件系统）。
+- [x] 制定并落地 macOS/Linux 的 Godot sidecar 制品策略（当前 Windows 二进制链路最完整）。
+- [x] 持续保持发布边界清晰：在能力对齐完成前，Capacitor 原生仍为只读打包模式。
+
+### 验证门禁（已执行）
+- [x] `npx tsc --pretty false`
+- [x] `npx jest src/storage.provider.contract.test.ts src/source_manager.loadflow.test.ts src/runtime.capabilities.test.ts src/runtime.transport.adapter.contract.test.ts --runInBand`
+- [x] `npm run test:migration`
+- [x] `npm run test:tauri`
+- [x] `./src-tauri/bin/godot-x86_64-pc-windows-msvc.exe --headless --path ./path_mode --quit`
+- [x] `npm run build:sidecar`
+- [x] `npm run build:sidecar:all`（已完成制品构建与校验；在非 macOS 主机构建时出现 macOS 签名警告属预期）
+- [x] `npm run verify:tauri:bin`
+- [x] `npm test`
+
+---
+
 # 2026-03-08 v1.5.15 - Fixrisk Phase-1 Hardening Execution (Completed)
 
 ## English Document

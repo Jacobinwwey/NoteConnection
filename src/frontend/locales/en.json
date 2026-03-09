@@ -336,8 +336,8 @@
   "btn_complete": "Complete",
   "btn_history": "History",
   "btn_exit": "Exit",
-  "focus_inbound": "Inbound Connections",
-  "focus_outbound": "Outbound Connections",
+  "focus_inbound": "Help Understand",
+  "focus_outbound": "Continue Exploring",
   "lbl_inbound_count": "Inbound Count:",
   "opt_visible": "Visible Nodes (Default)",
   "opt_total": "Total Statistical"

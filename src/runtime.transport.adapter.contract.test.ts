@@ -21,16 +21,16 @@ describe('runtime transport adapter consolidation contract', () => {
     expect(pathApp).not.toContain('ws://127.0.0.1:9876');
   });
 
-  test('source manager and reader require runtime bridge transport helpers', () => {
+  test('source manager and reader use shared runtime adapters (bridge + storage provider)', () => {
     const sourceManager = fs.readFileSync(sourceManagerPath, 'utf8');
     const reader = fs.readFileSync(readerPath, 'utf8');
 
     expect(sourceManager).toContain('const requireRuntimeBridge = () => {');
     expect(sourceManager).toContain('Runtime bridge is unavailable. Ensure runtime_bridge.js is loaded before source_manager.js.');
     expect(sourceManager).toContain("Runtime bridge does not expose buildUrl().");
-    expect(reader).toContain('const requireRuntimeBridge = () => {');
-    expect(reader).toContain('Runtime bridge is unavailable. Ensure runtime_bridge.js is loaded before reader.js.');
-    expect(reader).toContain("Runtime bridge does not expose buildFetchOptions().");
+    expect(sourceManager).toContain("window.NoteConnectionStorage.createProvider({ runtimeCaps })");
+    expect(reader).toContain("window.NoteConnectionStorage.createProvider({ runtimeCaps })");
+    expect(reader).toContain('Storage provider is unavailable. Ensure storage_provider.js is loaded before reader.js.');
   });
 
   test('path app guards websocket startup when runtime bridge url is unavailable', () => {
@@ -38,6 +38,7 @@ describe('runtime transport adapter consolidation contract', () => {
     expect(pathApp).toContain('Bridge socket URL is unavailable; skipping WebSocket connect attempt.');
     expect(pathApp).toContain('window.__NC_SIDECAR_RUNTIME');
     expect(pathApp).toContain("return '';");
+    expect(pathApp).toContain('bridge.parseBridgeEnvelope');
+    expect(pathApp).toContain('bridge.sendBridgeMessage');
   });
 });
-

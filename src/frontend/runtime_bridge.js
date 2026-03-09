@@ -1,6 +1,85 @@
 ﻿(function () {
     const DEFAULT_BASE_URL = 'http://127.0.0.1:3000';
     const DEFAULT_BRIDGE_WS_URL = 'ws://127.0.0.1:9876';
+    const BRIDGE_RPC_VERSION = '2.0';
+    const BRIDGE_RPC_METHOD_PREFIX = 'noteconnection.';
+
+    function isPlainObject(value) {
+        return value !== null && typeof value === 'object' && !Array.isArray(value);
+    }
+
+    function normalizeBridgeMessageType(rawType) {
+        const normalized = String(rawType || '').trim();
+        return normalized.replace(/^[/.]+/, '');
+    }
+
+    function toBridgeEnvelope(type, payload, meta) {
+        const normalizedType = normalizeBridgeMessageType(type);
+        if (!normalizedType) {
+            throw new Error('Bridge message type is required.');
+        }
+
+        const envelope = {
+            type: normalizedType,
+            payload: payload === undefined ? null : payload,
+            jsonrpc: BRIDGE_RPC_VERSION,
+            method: `${BRIDGE_RPC_METHOD_PREFIX}${normalizedType}`,
+            params: payload === undefined ? null : payload
+        };
+
+        if (meta && Object.prototype.hasOwnProperty.call(meta, 'id')) {
+            envelope.id = meta.id;
+        }
+
+        return envelope;
+    }
+
+    function parseBridgeEnvelope(rawMessage) {
+        let decoded = rawMessage;
+        if (typeof decoded === 'string') {
+            decoded = JSON.parse(decoded);
+        }
+
+        if (!isPlainObject(decoded)) {
+            return null;
+        }
+
+        let type = normalizeBridgeMessageType(decoded.type);
+        let payload = Object.prototype.hasOwnProperty.call(decoded, 'payload')
+            ? decoded.payload
+            : undefined;
+
+        if (!type && typeof decoded.method === 'string' && decoded.method.startsWith(BRIDGE_RPC_METHOD_PREFIX)) {
+            type = normalizeBridgeMessageType(decoded.method.slice(BRIDGE_RPC_METHOD_PREFIX.length));
+            if (payload === undefined) {
+                payload = decoded.params;
+            }
+        }
+
+        if (!type) {
+            return null;
+        }
+
+        if (payload === undefined && Object.prototype.hasOwnProperty.call(decoded, 'params')) {
+            payload = decoded.params;
+        }
+
+        return {
+            type,
+            payload: payload === undefined ? null : payload,
+            id: Object.prototype.hasOwnProperty.call(decoded, 'id') ? decoded.id : null,
+            jsonrpc: decoded.jsonrpc === BRIDGE_RPC_VERSION,
+            raw: decoded
+        };
+    }
+
+    function sendBridgeMessage(socket, type, payload, meta) {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            return false;
+        }
+        socket.send(JSON.stringify(toBridgeEnvelope(type, payload, meta)));
+        return true;
+    }
 
     function normalizeBaseUrl(rawUrl) {
         const value = String(rawUrl || '').trim();
@@ -122,6 +201,17 @@
         return state.bridgeWsUrl;
     }
 
+    function openBridgeSocket(clientTag, protocols) {
+        const wsUrl = getBridgeWsUrl(clientTag);
+        if (!wsUrl) {
+            return null;
+        }
+        if (typeof protocols !== 'undefined') {
+            return new WebSocket(wsUrl, protocols);
+        }
+        return new WebSocket(wsUrl);
+    }
+
     function getTauriInvoke() {
         if (!window.__TAURI__ || !window.__TAURI__.core || typeof window.__TAURI__.core.invoke !== 'function') {
             return null;
@@ -187,6 +277,10 @@
         buildFetchOptions,
         createAuthHeaders,
         getBridgeWsUrl,
+        openBridgeSocket,
+        toBridgeEnvelope,
+        parseBridgeEnvelope,
+        sendBridgeMessage,
         whenReady,
         refreshFromTauri: hydrateRuntimeFromTauri,
         getBaseUrl: function () {

@@ -225,6 +225,8 @@ describe('server migration settings routes', () => {
     envRestorers.push(setEnv('NOTE_CONNECTION_FRONTEND_DIR', frontendDir));
     envRestorers.push(setEnv('NOTE_CONNECTION_RUNTIME_DATA_DIR', runtimeDataDir));
     envRestorers.push(setEnv('NOTE_CONNECTION_KB_ROOT', kbRoot));
+    // Keep migration route tests hermetic even when CI injects auth env vars.
+    envRestorers.push(setEnv('NOTE_CONNECTION_AUTH_TOKEN', undefined));
     envRestorers.push(setEnv('npm_config_path', undefined));
     envRestorers.push(setEnv('npm_config_gpu', undefined));
     envRestorers.push(setEnv('npm_config_workers', undefined));

@@ -75,6 +75,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return bridge.buildFetchOptions(init);
     };
 
+    const getStorageProvider = () => {
+        if (typeof window === 'undefined' || !window.NoteConnectionStorage || typeof window.NoteConnectionStorage.createProvider !== 'function') {
+            throw new Error('Storage provider is unavailable. Ensure storage_provider.js is loaded before source_manager.js.');
+        }
+        return window.NoteConnectionStorage.createProvider({ runtimeCaps });
+    };
+
     const resolveRuntimeCapabilities = async () => {
         if (!window.__TAURI__) {
             const capacitorPlatform = resolveCapacitorPlatform();
@@ -179,6 +186,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             return parsed;
         };
+
+        if (window.__TAURI__) {
+            try {
+                const storageProvider = getStorageProvider();
+                const text = await storageProvider.readGeneratedAsset(src);
+                const parsed = parseGraphDataPayload(text);
+                window.graphData = parsed;
+                console.log(`[Loader] Loaded ${src} via storage provider bridge: ${parsed.nodes.length} nodes`);
+                return;
+            } catch (providerErr) {
+                console.warn(`[Loader] Storage provider read failed for ${src}, falling back to HTTP/Tauri dual strategy.`, providerErr);
+            }
+        }
 
         // ─── Strategy 1: HTTP fetch from sidecar (works in browser, may fail in Tauri WebView) ───
         // 策略1：通过 HTTP 从 sidecar 获取（浏览器中有效，Tauri WebView 中可能因混合内容限制而失败）
@@ -414,22 +434,16 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const fetchFoldersViaSidecar = async () => {
-        const kbRes = await fetch(buildSidecarUrl('api/kb-path'), buildSidecarFetchOptions());
-        const kbData = await kbRes.json();
-        const kbPath = kbData && kbData.kbPath ? kbData.kbPath : '';
-
+        const provider = getStorageProvider();
+        const kbPath = await provider.getKbPath();
         // Desktop/Tauri-sidecar primary requirement: list real subfolders under KB root.
-        const foldersRes = await fetch(buildSidecarUrl('api/folders'), buildSidecarFetchOptions());
-        const foldersData = await foldersRes.json();
-        let folders = foldersData && Array.isArray(foldersData.folders) ? foldersData.folders : [];
+        let folders = await provider.listFolders();
 
         // Mobile cache/read mode may expose cached-only targets not present as directories.
         const shouldIncludeCachedTargets = Boolean(window.__TAURI__ && runtimeCaps.supports_build === false);
         if (shouldIncludeCachedTargets) {
             try {
-                const targetsRes = await fetch(buildSidecarUrl('api/available-targets'), buildSidecarFetchOptions());
-                const targetsData = await targetsRes.json();
-                const cachedTargets = targetsData && Array.isArray(targetsData.targets) ? targetsData.targets : [];
+                const cachedTargets = await provider.listAvailableTargets();
                 folders = Array.from(new Set([...(folders || []), ...cachedTargets]));
             } catch (err) {
                 console.warn('[SourceManager] /api/available-targets unavailable in cache/read mode.', err);
@@ -444,65 +458,33 @@ document.addEventListener('DOMContentLoaded', () => {
             return { kbPath: '', folders: [] };
         }
 
-        const kbPath = await window.__TAURI__.core.invoke('get_kb_path');
+        const provider = getStorageProvider();
+        const kbPath = await provider.getKbPath();
         let folders = [];
         try {
-            folders = (await window.__TAURI__.core.invoke('get_available_targets')) || [];
+            folders = (await provider.listAvailableTargets()) || [];
         } catch (err) {
             console.warn('[SourceManager] get_available_targets unavailable, fallback to get_folders.', err);
-            folders = (await window.__TAURI__.core.invoke('get_folders')) || [];
+            folders = (await provider.listFolders()) || [];
         }
         return { kbPath, folders };
-    };
-
-    const checkCacheViaSidecar = async (target) => {
-        const cacheRes = await fetch(buildSidecarUrl('api/check-cache', { target }), buildSidecarFetchOptions());
-        if (!cacheRes.ok) {
-            throw new Error(`Cache API error: HTTP ${cacheRes.status}`);
-        }
-        return await cacheRes.json();
     };
 
     const checkCacheViaRust = async (target) => {
         if (!window.__TAURI__) {
             return null;
         }
-        return await window.__TAURI__.core.invoke('check_cache', { target });
-    };
-
-    const restoreCacheViaSidecar = async (target) => {
-        const restoreRes = await fetch(buildSidecarUrl('api/restore-cache', { target }), buildSidecarFetchOptions());
-        if (!restoreRes.ok) {
-            throw new Error(`Restore API error: HTTP ${restoreRes.status}`);
-        }
-        const restoreData = await restoreRes.json();
-        return Boolean(restoreData && restoreData.success);
+        const provider = getStorageProvider();
+        return await provider.checkCache(target);
     };
 
     const syncSidecarKbPath = async (kbPath) => {
-        if (!runtimeCaps.supports_sidecar || !kbPath) {
+        if (!kbPath) {
             return;
         }
 
-        const response = await fetch(
-            buildSidecarUrl('api/kb-path'),
-            buildSidecarFetchOptions({
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ kbPath })
-            })
-        );
-        if (!response.ok) {
-            throw new Error(`KB path sync failed: HTTP ${response.status}`);
-        }
-    };
-
-    const buildGraphViaRust = async (payload) => {
-        if (!window.__TAURI__ || !window.__TAURI__.core || typeof window.__TAURI__.core.invoke !== 'function') {
-            throw new Error('Tauri runtime build command is unavailable.');
-        }
-
-        return await window.__TAURI__.core.invoke('build_graph_runtime', { request: payload });
+        const provider = getStorageProvider();
+        await provider.setKbPath(kbPath);
     };
 
     const filterTargetsForRuntimeMode = async (targets) => {
@@ -912,23 +894,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Bridge-first runtime: sidecar HTTP path with Tauri IPC fallback.
             // 多会话优化：采用桥接优先链路（sidecar HTTP）并保留 Tauri IPC 回退。
             try {
+                const storageProvider = getStorageProvider();
                 let cached = null;
-
-                if (runtimeCaps.supports_sidecar) {
-                    try {
-                        // Preferred path in desktop runtime: query sidecar cache API.
-                        cached = await checkCacheViaSidecar(target);
-                    } catch (sidecarErr) {
-                        if (window.__TAURI__) {
-                            // Fallback path only when sidecar API is unreachable.
-                            cached = await window.__TAURI__.core.invoke('check_cache', { target: target });
-                        } else {
-                            throw sidecarErr;
-                        }
-                    }
-                } else if (window.__TAURI__) {
-                    cached = await window.__TAURI__.core.invoke('check_cache', { target: target });
-                }
+                cached = await storageProvider.checkCache(target);
 
                 if (cached) {
                     const isZh = window.i18n && window.i18n.locale === 'zh';
@@ -946,20 +914,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (choice === 'load') {
                         loadBtn.textContent = isZh ? '加载缓存中...' : 'Loading Cache...';
 
-                        let restoreSuccess = false;
-                        if (runtimeCaps.supports_sidecar) {
-                            try {
-                                restoreSuccess = await restoreCacheViaSidecar(target);
-                            } catch (sidecarErr) {
-                                if (window.__TAURI__) {
-                                    restoreSuccess = await window.__TAURI__.core.invoke('restore_cache', { target: target });
-                                } else {
-                                    throw sidecarErr;
-                                }
-                            }
-                        } else if (window.__TAURI__) {
-                            restoreSuccess = await window.__TAURI__.core.invoke('restore_cache', { target: target });
-                        }
+                        const restoreSuccess = await storageProvider.restoreCache(target);
 
                         if (restoreSuccess) {
                             keepLockedForReload = requestSafeReload('cache-restore', { force: true });
@@ -993,49 +948,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let success = false;
             let error = '';
-            if (runtimeCaps.supports_sidecar) {
-                const res = await fetch(
-                    buildSidecarUrl('api/build'),
-                    buildSidecarFetchOptions({
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(buildPayload)
-                    })
+            if (window.__TAURI__ && runtimeCaps.supports_sidecar === false && window.loadingManager) {
+                window.loadingManager.log(
+                    isZhLocale()
+                        ? '使用移动端原生构建引擎...'
+                        : 'Using mobile native build engine...'
                 );
+            }
 
-                if (res.ok) {
-                    success = true;
-                    if (window.loadingManager) window.loadingManager.log(t('notifications.buildSuccess'));
-                } else {
-                    try {
-                        const data = await res.json();
-                        error = data.error || `HTTP ${res.status}`;
-                    } catch (_e) {
-                        error = `HTTP ${res.status}: ${res.statusText}`;
-                    }
+            try {
+                const storageProvider = getStorageProvider();
+                const result = await storageProvider.buildGraph(buildPayload);
+                success = Boolean(result && result.success);
+                if (!success) {
+                    error = (result && result.error) || 'Build request returned unsuccessful result.';
+                } else if (window.loadingManager) {
+                    window.loadingManager.log(t('notifications.buildSuccess'));
                 }
-            } else if (window.__TAURI__) {
-                if (window.loadingManager) {
-                    window.loadingManager.log(
-                        isZhLocale()
-                            ? '使用移动端原生构建引擎...'
-                            : 'Using mobile native build engine...'
-                    );
-                }
-
-                try {
-                    const result = await buildGraphViaRust(buildPayload);
-                    success = Boolean(result && result.success !== false);
-                    if (!success) {
-                        error = (result && result.error) || 'Native runtime build returned unsuccessful result.';
-                    } else if (window.loadingManager) {
-                        window.loadingManager.log(t('notifications.buildSuccess'));
-                    }
-                } catch (nativeBuildErr) {
-                    error = nativeBuildErr && nativeBuildErr.message ? nativeBuildErr.message : String(nativeBuildErr);
-                }
-            } else {
-                error = 'Build backend is unavailable in this runtime.';
+            } catch (buildErr) {
+                error = buildErr && buildErr.message ? buildErr.message : String(buildErr);
             }
 
             if (success) {
@@ -1050,7 +981,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 通过 IPC 预读可确保 data.js 存在，并在页面重载前已填充 runtime_data 目录。
                 if (window.__TAURI__ && window.__TAURI__.core) {
                     try {
-                        const preText = await window.__TAURI__.core.invoke('read_generated_asset', { filename: 'data.js' });
+                        const storageProvider = getStorageProvider();
+                        const preText = await storageProvider.readGeneratedAsset('data.js');
                         console.log(`[Build] Pre-verified data.js via IPC: ${preText.length} bytes`);
                     } catch (preErr) {
                         console.warn('[Build] Pre-verify via IPC failed (build output may be missing):', preErr);

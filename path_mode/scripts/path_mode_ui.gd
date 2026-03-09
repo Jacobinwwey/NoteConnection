@@ -26,6 +26,9 @@ const TREE_VIEW_SCENE = preload("res://scenes/tree_view_panel.tscn")
 const SETTINGS_SCENE = preload("res://scenes/settings_panel.tscn")
 const READER_RENDER_CLIENT_SCRIPT = preload("res://scripts/reader_render_client.gd")
 const READER_IMAGE_CANVAS_SCRIPT = preload("res://scripts/reader_image_canvas.gd")
+const SETTINGS_ICON := "⚙"
+const BG_UNLOCKED_ICON := "🔓"
+const BG_LOCKED_ICON := "🔒"
 const READER_DISPLAY_MATH_PREVIEW_MAX_SIZE := Vector2(560.0, 180.0)
 const READER_DISPLAY_MERMAID_PREVIEW_MAX_SIZE := Vector2(620.0, 420.0)
 const READER_MEDIA_PAGE_MARGIN := 72.0
@@ -246,7 +249,7 @@ func _create_dynamic_ui() -> void:
 		
 		# Background lock button
 		_bg_lock_button = Button.new()
-		_bg_lock_button.text = "BG"
+		_bg_lock_button.text = BG_UNLOCKED_ICON
 		_bg_lock_button.tooltip_text = "Lock Background (camera won't rotate sky)"
 		_bg_lock_button.toggle_mode = true
 		_bg_lock_button.custom_minimum_size = Vector2(44, 34)
@@ -332,10 +335,9 @@ func _create_dynamic_ui() -> void:
 		
 		_apply_button_style(_edit_button, Color(0.2, 0.24, 0.3, 1.0), Color(0.27, 0.31, 0.4, 1.0), Color(0.14, 0.18, 0.24, 1.0), Color(0.42, 0.46, 0.58, 1.0), Color(0.92, 0.95, 1.0, 1.0))
 		
-	## Create Settings button as an independent floating control in the top-right corner
-	## ASCII comment retained here to avoid source-encoding issues.
+	## Create Settings button as an independent floating control in the top-right corner.
 	_settings_button = Button.new()
-	_settings_button.text = "SET"
+	_settings_button.text = SETTINGS_ICON
 	_settings_button.tooltip_text = "Settings"
 	_settings_button.custom_minimum_size = Vector2(44, 44)
 	_settings_button.anchor_left = 1.0
@@ -4176,7 +4178,7 @@ func _on_bg_lock_toggled(pressed: bool) -> void:
 	## Toggle background lock icon and emit signal
 	## Keep the background-lock label synchronized with the emitted state.
 	if _bg_lock_button:
-		_bg_lock_button.text = "BGL" if pressed else "BG"
+		_bg_lock_button.text = BG_LOCKED_ICON if pressed else BG_UNLOCKED_ICON
 		_bg_lock_button.tooltip_text = "Background locked" if pressed else "Lock Background (camera won't rotate sky)"
 	background_lock_toggled.emit(pressed)
 

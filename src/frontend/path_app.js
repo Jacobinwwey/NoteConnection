@@ -78,24 +78,24 @@ window.pathApp = {
         );
 
         if (!hasActiveSocket) {
-            const bridgeWsUrl = this._getBridgeWsUrl();
-            if (!bridgeWsUrl) {
+            const socket = this._openBridgeSocket();
+            if (!socket) {
                 console.warn('[PathApp] Bridge socket URL is unavailable; skipping WebSocket connect attempt.');
                 return;
             }
-            this.ws = new WebSocket(bridgeWsUrl);
+            this.ws = socket;
         }
 
         this.ws.onopen = () => {
             console.log('[PathApp] Connected to Bridge');
-            this.ws.send(JSON.stringify({
-                type: 'identify',
-                payload: this._getBridgeIdentifyPayload('frontend')
-            }));
+            this._sendBridgeMessage('identify', this._getBridgeIdentifyPayload('frontend'));
         };
         this.ws.onmessage = (e) => {
             try {
-                const msg = JSON.parse(e.data);
+                const msg = this._parseBridgeIncomingMessage(e.data);
+                if (!msg || !msg.type) {
+                    return;
+                }
                 console.log('[PathApp] WS Received:', msg.type);
                 
                 if (msg.type === 'nodeClick') {
@@ -224,10 +224,7 @@ window.pathApp = {
 
         if (hasActiveSocket && this.ws.readyState === WebSocket.OPEN) {
             console.log('[PathApp] Reusing existing Bridge socket');
-            this.ws.send(JSON.stringify({
-                type: 'identify',
-                payload: this._getBridgeIdentifyPayload('frontend')
-            }));
+            this._sendBridgeMessage('identify', this._getBridgeIdentifyPayload('frontend'));
         }
     },
 
@@ -262,6 +259,17 @@ window.pathApp = {
         return '';
     },
 
+    _openBridgeSocket: function() {
+        if (typeof window !== 'undefined' && window.NoteConnectionRuntime && typeof window.NoteConnectionRuntime.openBridgeSocket === 'function') {
+            return window.NoteConnectionRuntime.openBridgeSocket('frontend');
+        }
+        const bridgeWsUrl = this._getBridgeWsUrl();
+        if (!bridgeWsUrl) {
+            return null;
+        }
+        return new WebSocket(bridgeWsUrl);
+    },
+
     _getBridgeAuthToken: function() {
         if (typeof window !== 'undefined' && window.NoteConnectionRuntime && typeof window.NoteConnectionRuntime.getAuthToken === 'function') {
             return window.NoteConnectionRuntime.getAuthToken() || '';
@@ -278,10 +286,42 @@ window.pathApp = {
         return payload;
     },
 
+    _getRuntimeBridgeAdapter: function() {
+        if (
+            typeof window === 'undefined' ||
+            !window.NoteConnectionRuntime ||
+            typeof window.NoteConnectionRuntime !== 'object'
+        ) {
+            return null;
+        }
+        return window.NoteConnectionRuntime;
+    },
+
+    _parseBridgeIncomingMessage: function(rawData) {
+        const bridge = this._getRuntimeBridgeAdapter();
+        if (bridge && typeof bridge.parseBridgeEnvelope === 'function') {
+            return bridge.parseBridgeEnvelope(rawData);
+        }
+
+        const parsed = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+        if (!parsed || typeof parsed !== 'object') {
+            return null;
+        }
+        return {
+            type: parsed.type || '',
+            payload: Object.prototype.hasOwnProperty.call(parsed, 'payload') ? parsed.payload : null,
+            raw: parsed
+        };
+    },
+
     _sendBridgeMessage: function(type, payload) {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
             console.warn('[PathApp] WebSocket not open, cannot send', type);
             return false;
+        }
+        const bridge = this._getRuntimeBridgeAdapter();
+        if (bridge && typeof bridge.sendBridgeMessage === 'function') {
+            return bridge.sendBridgeMessage(this.ws, type, payload);
         }
         this.ws.send(JSON.stringify({ type, payload }));
         return true;
@@ -2571,14 +2611,15 @@ window.pathApp = {
             }
 
             console.log('[PathApp] Setting up early WebSocket connection...');
-            this.ws = new WebSocket(this._getBridgeWsUrl());
+            this.ws = this._openBridgeSocket();
+            if (!this.ws) {
+                console.warn('[PathApp] Early bridge socket URL is unavailable; skipping early WebSocket connect.');
+                return;
+            }
 
             this.ws.onopen = () => {
                 console.log('[PathApp] Early WS Connected to Bridge');
-                this.ws.send(JSON.stringify({
-                    type: 'identify',
-                    payload: this._getBridgeIdentifyPayload('frontend-early')
-                }));
+                this._sendBridgeMessage('identify', this._getBridgeIdentifyPayload('frontend-early'));
 
                 const initialCentralId = this._getPreferredStandaloneCentralId(preferredCentralId);
                 if (initialCentralId) {
@@ -2600,7 +2641,10 @@ window.pathApp = {
 
             this.ws.onmessage = (e) => {
                 try {
-                    const msg = JSON.parse(e.data);
+                    const msg = this._parseBridgeIncomingMessage(e.data);
+                    if (!msg || !msg.type) {
+                        return;
+                    }
                     console.log('[PathApp] Early WS Received:', msg.type);
 
                     if (msg.type === 'switchCenter') {

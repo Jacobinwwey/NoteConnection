@@ -129,28 +129,11 @@ class Reader {
                 window.__TAURI__.core &&
                 typeof window.__TAURI__.core.invoke === 'function'
             );
-            const noteConnectionRuntime = (typeof window !== 'undefined' && window.NoteConnectionRuntime)
-                ? window.NoteConnectionRuntime
-                : null;
-            const requireRuntimeBridge = () => {
-                if (!noteConnectionRuntime || typeof noteConnectionRuntime !== 'object') {
-                    throw new Error('Runtime bridge is unavailable. Ensure runtime_bridge.js is loaded before reader.js.');
+            const getStorageProvider = () => {
+                if (typeof window === 'undefined' || !window.NoteConnectionStorage || typeof window.NoteConnectionStorage.createProvider !== 'function') {
+                    throw new Error('Storage provider is unavailable. Ensure storage_provider.js is loaded before reader.js.');
                 }
-                return noteConnectionRuntime;
-            };
-            const buildSidecarUrl = (resourcePath, query = null) => {
-                const bridge = requireRuntimeBridge();
-                if (typeof bridge.buildUrl !== 'function') {
-                    throw new Error('Runtime bridge does not expose buildUrl().');
-                }
-                return bridge.buildUrl(resourcePath, query || undefined);
-            };
-            const buildSidecarFetchOptions = (init = {}) => {
-                const bridge = requireRuntimeBridge();
-                if (typeof bridge.buildFetchOptions !== 'function') {
-                    throw new Error('Runtime bridge does not expose buildFetchOptions().');
-                }
-                return bridge.buildFetchOptions(init);
+                return window.NoteConnectionStorage.createProvider({ runtimeCaps });
             };
 
             if (!runtimeSupportsContentApi) {
@@ -159,50 +142,30 @@ class Reader {
                     : 'Content loading from local files is not available on this runtime.';
                 rawContent = `*${msg}*`;
             } else {
-                const readViaTauriCommand = async () => {
-                    if (!canUseTauriContentCommand) {
-                        return null;
-                    }
-
-                    try {
-                        const content = await window.__TAURI__.core.invoke('read_node_content', {
+                try {
+                    const storageProvider = getStorageProvider();
+                    const content = await storageProvider.readContent(node.metadata.filepath);
+                    if (typeof content === 'string' && content.length > 0) {
+                        rawContent = content;
+                    } else if (canUseTauriContentCommand) {
+                        const fallback = await window.__TAURI__.core.invoke('read_node_content', {
                             filePath: node.metadata.filepath
                         });
-                        return typeof content === 'string' ? content : null;
-                    } catch (err) {
-                        console.warn('read_node_content failed:', err);
-                        return null;
-                    }
-                };
-
-                try {
-                    // Prefer Rust command when sidecar is unavailable (e.g. Android runtime).
-                    if (runtimeCaps && runtimeCaps.supports_sidecar === false) {
-                        const tauriContent = await readViaTauriCommand();
-                        if (tauriContent) {
-                            rawContent = tauriContent;
-                        } else {
-                            const msg = window.i18n
-                                ? window.i18n.t('source.error.contentUnavailableMobile')
-                                : 'Content loading from local files is not available on this runtime.';
-                            rawContent = `*${msg}*`;
-                        }
-                    } else {
-                        // Fetch from Node sidecar (desktop/web runtime)
-                        const res = await fetch(buildSidecarUrl('api/content', { path: node.metadata.filepath }), buildSidecarFetchOptions());
-                        if (res.ok) {
-                            const data = await res.json();
-                            rawContent = data.content;
-                        } else {
-                            console.error("Failed to load content:", res.status, res.statusText);
-                            const fallback = await readViaTauriCommand();
-                            rawContent = fallback || `*Error loading content: ${res.statusText}*`;
-                        }
+                        rawContent = typeof fallback === 'string' ? fallback : '';
                     }
                 } catch (e) {
                     console.error("Content load error:", e);
-                    const fallback = await readViaTauriCommand();
-                    rawContent = fallback || `*Error loading content: ${e.message}*`;
+                    let fallback = null;
+                    if (canUseTauriContentCommand) {
+                        try {
+                            fallback = await window.__TAURI__.core.invoke('read_node_content', {
+                                filePath: node.metadata.filepath
+                            });
+                        } catch (_tauriErr) {
+                            fallback = null;
+                        }
+                    }
+                    rawContent = (typeof fallback === 'string' && fallback.length > 0) ? fallback : `*Error loading content: ${e.message}*`;
                 }
             }
         }

@@ -44,8 +44,10 @@ describe('path bridge handshake and transport verification contracts', () => {
     const pathApp = fs.readFileSync(pathAppPath, 'utf8');
     expect(pathApp).toContain("_getBridgeWsUrl: function() {");
     expect(pathApp).toContain("window.NoteConnectionRuntime.getBridgeWsUrl('frontend')");
-    expect(pathApp).toContain("payload: this._getBridgeIdentifyPayload('frontend')");
-    expect(pathApp).toContain("payload: this._getBridgeIdentifyPayload('frontend-early')");
+    expect(pathApp).toContain("this._sendBridgeMessage('identify', this._getBridgeIdentifyPayload('frontend'))");
+    expect(pathApp).toContain("this._sendBridgeMessage('identify', this._getBridgeIdentifyPayload('frontend-early'))");
+    expect(pathApp).toContain('bridge.parseBridgeEnvelope');
+    expect(pathApp).toContain('bridge.sendBridgeMessage');
     expect(pathApp).toContain("_getPreferredStandaloneCentralId: function(");
     expect(pathApp).toContain("setupEarlyWebSocket: function(options = {}) {");
     expect(pathApp).toContain("sendPathToBridgeStandalone(initialCentralId)");

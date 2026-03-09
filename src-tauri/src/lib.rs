@@ -308,6 +308,62 @@ fn resolve_godot_project_path(project_root: &Path) -> PathBuf {
     project_root.join("path_mode")
 }
 
+#[cfg(all(not(target_os = "android"), target_os = "windows", target_arch = "x86_64"))]
+fn host_godot_sidecar_name() -> &'static str {
+    "godot-x86_64-pc-windows-msvc.exe"
+}
+
+#[cfg(all(not(target_os = "android"), target_os = "linux", target_arch = "x86_64"))]
+fn host_godot_sidecar_name() -> &'static str {
+    "godot-x86_64-unknown-linux-gnu"
+}
+
+#[cfg(all(not(target_os = "android"), target_os = "macos", target_arch = "aarch64"))]
+fn host_godot_sidecar_name() -> &'static str {
+    "godot-aarch64-apple-darwin"
+}
+
+#[cfg(all(not(target_os = "android"), target_os = "macos", target_arch = "x86_64"))]
+fn host_godot_sidecar_name() -> &'static str {
+    "godot-x86_64-apple-darwin"
+}
+
+#[cfg(all(
+    not(target_os = "android"),
+    not(any(
+        all(target_os = "windows", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "macos", target_arch = "aarch64"),
+        all(target_os = "macos", target_arch = "x86_64")
+    ))
+))]
+fn host_godot_sidecar_name() -> &'static str {
+    "godot"
+}
+
+#[cfg(all(not(target_os = "android"), target_os = "windows"))]
+fn host_godot_binary_aliases() -> Vec<&'static str> {
+    vec!["godot.exe", "godot4.exe"]
+}
+
+#[cfg(all(not(target_os = "android"), target_os = "macos"))]
+fn host_godot_binary_aliases() -> Vec<&'static str> {
+    vec!["godot", "godot4", "Godot"]
+}
+
+#[cfg(all(not(target_os = "android"), target_os = "linux"))]
+fn host_godot_binary_aliases() -> Vec<&'static str> {
+    vec!["godot", "godot4"]
+}
+
+#[cfg(all(
+    not(target_os = "android"),
+    not(any(target_os = "windows", target_os = "macos", target_os = "linux"))
+))]
+fn host_godot_binary_aliases() -> Vec<&'static str> {
+    vec!["godot"]
+}
+
 #[cfg(not(target_os = "android"))]
 fn resolve_godot_executable(project_root: &Path) -> Option<PathBuf> {
     let exec_dir = std::env::current_exe()
@@ -323,21 +379,19 @@ fn resolve_godot_executable(project_root: &Path) -> Option<PathBuf> {
 
     let mut candidates: Vec<PathBuf> = Vec::new();
 
-    // Prefer a direct `godot.exe` copy because small wrapper binaries can fail
-    // after being renamed to the sidecar target name.
-    candidates.push(project_root.join("src-tauri").join("bin").join("godot.exe"));
-    candidates.push(
-        project_root
-            .join("src-tauri")
-            .join("bin")
-            .join("godot-x86_64-pc-windows-msvc.exe"),
-    );
+    let sidecar_dir = project_root.join("src-tauri").join("bin");
+    candidates.push(sidecar_dir.join(host_godot_sidecar_name()));
+    for alias in host_godot_binary_aliases() {
+        candidates.push(sidecar_dir.join(alias));
+    }
 
     if let Some(dir) = exec_dir {
-        candidates.push(dir.join("godot.exe"));
-        candidates.push(dir.join("godot-x86_64-pc-windows-msvc.exe"));
-        candidates.push(dir.join("bin").join("godot.exe"));
-        candidates.push(dir.join("bin").join("godot-x86_64-pc-windows-msvc.exe"));
+        candidates.push(dir.join(host_godot_sidecar_name()));
+        for alias in host_godot_binary_aliases() {
+            candidates.push(dir.join(alias));
+            candidates.push(dir.join("bin").join(alias));
+        }
+        candidates.push(dir.join("bin").join(host_godot_sidecar_name()));
     }
 
     candidates
@@ -2181,7 +2235,7 @@ mod tests {
     fn resolve_godot_executable_prefers_env_override_with_real_file() {
         let _lock = lock_test_env();
         let temp = TempDir::new("godot_exec");
-        let executable = temp.child("godot-custom.exe");
+        let executable = temp.child("godot-custom");
         fs::write(&executable, b"godot").expect("failed to write executable stub");
 
         let _exe_guard = EnvVarGuard::set(
@@ -2200,10 +2254,14 @@ mod tests {
         let sidecar_dir = temp.child("src-tauri/bin");
         fs::create_dir_all(&sidecar_dir).expect("failed to create sidecar directory");
 
-        let wrapper_like = sidecar_dir.join("godot-x86_64-pc-windows-msvc.exe");
+        let wrapper_like = sidecar_dir.join(host_godot_sidecar_name());
         fs::write(&wrapper_like, b"wrapper").expect("failed to create wrapper-like executable");
 
-        let real_like = sidecar_dir.join("godot.exe");
+        let preferred_alias = host_godot_binary_aliases()
+            .first()
+            .copied()
+            .unwrap_or("godot");
+        let real_like = sidecar_dir.join(preferred_alias);
         fs::write(&real_like, vec![0_u8; (GODOT_MIN_BINARY_BYTES + 1) as usize])
             .expect("failed to create real-like executable");
 
