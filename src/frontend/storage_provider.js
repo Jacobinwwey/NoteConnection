@@ -37,7 +37,159 @@
             return null;
         }
         const plugins = window.Capacitor.Plugins || {};
-        return plugins.Filesystem || null;
+        return plugins.Filesystem || window.CapacitorFilesystem || null;
+    }
+
+    let capacitorFsPermissionGranted = false;
+    let capacitorFsPermissionPromise = null;
+
+    function normalizeCapacitorPath(pathValue, options) {
+        const allowCurrentDir = Boolean(options && options.allowCurrentDir);
+        const normalized = String(pathValue || '').replace(/\\/g, '/').replace(/^\/+/, '');
+        if (!normalized) {
+            if (allowCurrentDir) {
+                return '.';
+            }
+            throw new Error('Missing Capacitor read path.');
+        }
+
+        if (normalized === '.') {
+            if (allowCurrentDir) {
+                return normalized;
+            }
+            throw new Error('Invalid Capacitor read path.');
+        }
+
+        const segments = normalized.split('/').filter((segment) => segment.length > 0);
+        if (!segments.length) {
+            if (allowCurrentDir) {
+                return '.';
+            }
+            throw new Error('Invalid Capacitor read path.');
+        }
+        if (segments.some((segment) => segment === '.' || segment === '..')) {
+            throw new Error(`Unsafe Capacitor path is not allowed: ${normalized}`);
+        }
+
+        return segments.join('/');
+    }
+
+    function extractRelativePathFromKbMarker(rawFilePath) {
+        const normalized = String(rawFilePath || '').replace(/\\/g, '/');
+        const lowered = normalized.toLowerCase();
+        const marker = '/knowledge_base/';
+        const markerNoPrefix = 'knowledge_base/';
+        const markerIndex = lowered.indexOf(marker);
+
+        if (markerIndex >= 0) {
+            const relative = normalized.slice(markerIndex + marker.length);
+            return relative.length > 0 ? relative : null;
+        }
+
+        if (lowered.startsWith(markerNoPrefix)) {
+            const relative = normalized.slice(markerNoPrefix.length);
+            return relative.length > 0 ? relative : null;
+        }
+
+        return null;
+    }
+
+    function resolveCapacitorContentCandidatePath(rawFilePath) {
+        const raw = String(rawFilePath || '').trim();
+        if (!raw) {
+            throw new Error('Missing content path for Capacitor runtime.');
+        }
+
+        const normalized = raw.replace(/\\/g, '/');
+        const relativeFromKb = extractRelativePathFromKbMarker(raw);
+        if (relativeFromKb) {
+            return normalizeCapacitorPath(`Knowledge_Base/${relativeFromKb}`);
+        }
+
+        if (/^[A-Za-z]:\//.test(normalized) || normalized.startsWith('/')) {
+            throw new Error('Cannot map absolute desktop path on Capacitor without Knowledge_Base marker.');
+        }
+
+        if (/^knowledge_base\//i.test(normalized)) {
+            return normalizeCapacitorPath(normalized);
+        }
+        return normalizeCapacitorPath(`Knowledge_Base/${normalized}`);
+    }
+
+    function isGrantedPermissionValue(value) {
+        const normalized = String(value || '').trim().toLowerCase();
+        return normalized === 'granted' || normalized === 'limited';
+    }
+
+    function resolveFilesystemPermissionValue(permissionResult) {
+        if (!permissionResult || typeof permissionResult !== 'object') {
+            return '';
+        }
+
+        const result = permissionResult;
+        const candidates = [
+            result.publicStorage,
+            result.filesystem,
+            result.storage,
+            result.readExternalStorage,
+            result.read
+        ];
+        for (const candidate of candidates) {
+            if (typeof candidate === 'string' && candidate.trim().length > 0) {
+                return candidate.trim();
+            }
+        }
+        return '';
+    }
+
+    async function ensureCapacitorFilesystemPermission(filesystem) {
+        if (capacitorFsPermissionGranted) {
+            return;
+        }
+        if (!filesystem) {
+            return;
+        }
+
+        const supportsCheck = typeof filesystem.checkPermissions === 'function';
+        const supportsRequest = typeof filesystem.requestPermissions === 'function';
+        if (!supportsCheck && !supportsRequest) {
+            // Some runtimes do not expose storage permission APIs. Proceed with best effort.
+            capacitorFsPermissionGranted = true;
+            return;
+        }
+
+        if (capacitorFsPermissionPromise) {
+            await capacitorFsPermissionPromise;
+            return;
+        }
+
+        capacitorFsPermissionPromise = (async () => {
+            let currentPermission = '';
+            if (supportsCheck) {
+                const status = await filesystem.checkPermissions();
+                currentPermission = resolveFilesystemPermissionValue(status);
+            }
+
+            if (!isGrantedPermissionValue(currentPermission) && supportsRequest) {
+                const requested = await filesystem.requestPermissions();
+                currentPermission = resolveFilesystemPermissionValue(requested);
+            }
+
+            if (!currentPermission) {
+                // Some platforms expose APIs but no explicit storage state; use best effort.
+                capacitorFsPermissionGranted = true;
+                return;
+            }
+            if (!isGrantedPermissionValue(currentPermission)) {
+                throw new Error('Filesystem permission is not granted on this device.');
+            }
+
+            capacitorFsPermissionGranted = true;
+        })().finally(() => {
+            capacitorFsPermissionPromise = null;
+        });
+
+        await capacitorFsPermissionPromise;
     }
 
     function decodeCapacitorTextPayload(rawData) {
@@ -56,10 +208,8 @@
             throw new Error('Capacitor Filesystem plugin is unavailable.');
         }
 
-        const normalizedPath = String(pathValue || '').replace(/\\/g, '/').replace(/^\/+/, '');
-        if (!normalizedPath) {
-            throw new Error('Missing Capacitor read path.');
-        }
+        await ensureCapacitorFilesystemPermission(filesystem);
+        const normalizedPath = normalizeCapacitorPath(pathValue);
 
         const directoryHints = [];
         const directories = filesystem.Directory || {};
@@ -97,7 +247,8 @@
             return [];
         }
 
-        const normalizedPath = String(pathValue || '').replace(/\\/g, '/').replace(/^\/+/, '') || '.';
+        await ensureCapacitorFilesystemPermission(filesystem);
+        const normalizedPath = normalizeCapacitorPath(pathValue, { allowCurrentDir: true });
 
         const directories = filesystem.Directory || {};
         const directoryHints = [];
@@ -357,6 +508,11 @@
         async readContent(filePath) {
             if (!this._supportsContentApi()) {
                 throw unsupportedOperationError('readContent');
+            }
+
+            if (isCapacitorNativeRuntime()) {
+                const capacitorPath = resolveCapacitorContentCandidatePath(filePath);
+                return await capacitorReadText(capacitorPath);
             }
 
             if (this._supportsSidecar()) {

@@ -36,6 +36,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     };
 
+    const supportsCapacitorContentApi = () => {
+        if (typeof window === 'undefined') {
+            return false;
+        }
+        const cap = window.Capacitor;
+        if (!cap) {
+            return false;
+        }
+
+        const plugins = cap.Plugins || {};
+        const fsPlugin = plugins.Filesystem || window.CapacitorFilesystem || null;
+        return Boolean(fsPlugin && typeof fsPlugin.readFile === 'function');
+    };
+
     const exposeRuntimeCaps = () => {
         if (typeof window !== 'undefined') {
             window.__NC_RUNTIME_CAPS = runtimeCaps;
@@ -86,16 +100,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!window.__TAURI__) {
             const capacitorPlatform = resolveCapacitorPlatform();
             if (capacitorPlatform) {
+                const canReadContent = supportsCapacitorContentApi();
                 runtimeCaps = {
                     ...runtimeCaps,
                     platform: `capacitor-${capacitorPlatform}`,
                     supports_sidecar: false,
                     supports_build: false,
-                    supports_content_api: false,
+                    supports_content_api: canReadContent,
                     supports_kb_runtime_change: false,
                     supports_native_pathmode: false
                 };
-                console.log('[SourceManager] Capacitor native runtime detected:', runtimeCaps.platform);
+                console.log('[SourceManager] Capacitor native runtime detected:', runtimeCaps.platform, {
+                    supports_content_api: runtimeCaps.supports_content_api
+                });
             }
             exposeRuntimeCaps();
             return;

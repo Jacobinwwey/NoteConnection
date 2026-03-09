@@ -18,6 +18,7 @@ describe('dual mobile pipeline configuration', () => {
   const buildApkScriptPath = path.join(repoRoot, 'build_apk.bat');
   const tauriAndroidRunnerPath = path.join(repoRoot, 'scripts', 'run-tauri-android.js');
   const tauriConfigPath = path.join(repoRoot, 'src-tauri', 'tauri.conf.json');
+  const androidManifestPath = path.join(repoRoot, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
 
   test('keeps Capacitor and Tauri Android npm scripts together', () => {
     const pkg = readJson<PackageJson>(packageJsonPath);
@@ -27,6 +28,7 @@ describe('dual mobile pipeline configuration', () => {
     expect(scripts['tauri:android:patch:pathmode']).toContain('apply-tauri-android-pathmode.js');
     expect(scripts['smoke:android:pathmode']).toContain('smoke-android-pathmode.js');
     expect(scripts['mobile:build:capacitor']).toBe('build_apk.bat');
+    expect(scripts['capture:capacitor:evidence']).toContain('capture-capacitor-device-evidence.js');
     expect(scripts['tauri:android:init']).toContain('verify:android:env');
     expect(scripts['tauri:android:dev']).toContain('verify:android:env');
     expect(scripts['tauri:android:build']).toContain('verify:android:env');
@@ -67,7 +69,18 @@ describe('dual mobile pipeline configuration', () => {
     expect(deps['@capacitor/core']).toBeDefined();
     expect(deps['@capacitor/android']).toBeDefined();
     expect(deps['@capacitor/cli']).toBeDefined();
+    expect(deps['@capacitor/filesystem']).toBeDefined();
     expect(devDeps['@tauri-apps/cli']).toBeDefined();
+  });
+
+  test('declares Android storage permissions required by filesystem runtime paths', () => {
+    const manifest = fs.readFileSync(androidManifestPath, 'utf8');
+    expect(manifest).toContain('android.permission.INTERNET');
+    expect(manifest).toContain('android.permission.READ_EXTERNAL_STORAGE');
+    expect(manifest).toContain('android.permission.WRITE_EXTERNAL_STORAGE');
+    expect(manifest).toContain('android.permission.READ_MEDIA_IMAGES');
+    expect(manifest).toContain('android.permission.READ_MEDIA_VIDEO');
+    expect(manifest).toContain('android.permission.READ_MEDIA_AUDIO');
   });
 
   test('keeps both server and godot sidecars registered for tauri bundles', () => {

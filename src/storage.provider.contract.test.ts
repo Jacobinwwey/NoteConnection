@@ -19,6 +19,10 @@ describe('storage provider abstraction contract', () => {
     expect(source).toContain("this._invoke('build_graph_runtime'");
     expect(source).toContain('isCapacitorNativeRuntime()');
     expect(source).toContain('getCapacitorFilesystemPlugin()');
+    expect(source).toContain('ensureCapacitorFilesystemPermission');
+    expect(source).toContain('normalizeCapacitorPath');
+    expect(source).toContain('extractRelativePathFromKbMarker');
+    expect(source).toContain('resolveCapacitorContentCandidatePath');
     expect(source).toContain('async function capacitorReadText(pathValue)');
     expect(source).toContain("unsupportedOperationError('buildGraph')");
   });
@@ -32,6 +36,8 @@ describe('storage provider abstraction contract', () => {
     expect(source).toContain('async restoreCache(target)');
     expect(source).toContain('async buildGraph(requestPayload)');
     expect(source).toContain('async readContent(filePath)');
+    expect(source).toContain('const capacitorPath = resolveCapacitorContentCandidatePath(filePath);');
+    expect(source).toContain('return await capacitorReadText(capacitorPath);');
     expect(source).toContain('async setKbPath(kbPath)');
     expect(source).toContain('async readGeneratedAsset(filename)');
   });

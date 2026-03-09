@@ -8,13 +8,14 @@ describe('capacitor runtime parity closure contract', () => {
   const enLocalePath = path.join(repoRoot, 'src', 'frontend', 'locales', 'en.json');
   const zhLocalePath = path.join(repoRoot, 'src', 'frontend', 'locales', 'zh.json');
 
-  test('detects native Capacitor runtime and applies read-only capability profile', () => {
+  test('detects native Capacitor runtime and applies build-disabled capability profile', () => {
     const source = fs.readFileSync(sourceManagerPath, 'utf8');
     expect(source).toContain('resolveCapacitorPlatform');
+    expect(source).toContain('supportsCapacitorContentApi');
     expect(source).toContain("platform: `capacitor-${capacitorPlatform}`");
     expect(source).toContain('supports_sidecar: false');
     expect(source).toContain('supports_build: false');
-    expect(source).toContain('supports_content_api: false');
+    expect(source).toContain('supports_content_api: canReadContent');
     expect(source).toContain('supports_kb_runtime_change: false');
   });
 
@@ -26,7 +27,7 @@ describe('capacitor runtime parity closure contract', () => {
     expect(source).toContain("alert(t('source.error.capacitorReadOnly'))");
   });
 
-  test('reader enforces capacitor read-only content strategy without sidecar APIs', () => {
+  test('reader keeps runtime capability fallback messaging when content API is unavailable', () => {
     const source = fs.readFileSync(readerPath, 'utf8');
     expect(source).toContain('window.Capacitor.getPlatform');
     expect(source).toContain('runtimeSupportsContentApi');
