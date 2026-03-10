@@ -120,7 +120,30 @@ const PATH_REQUEST_TIMEOUT_MS = 3000;
 const PATH_PRODUCER_GRACE_MS = 30000;
 const MERMAID_RENDER_TIMEOUT_MS = 12000;
 const UNAUTHORIZED_CLIENT_TIMEOUT_MS = 5000;
-const MAX_INBOUND_MESSAGE_BYTES = 1024 * 1024;
+const BYTES_PER_MIB = 1024 * 1024;
+const DEFAULT_INBOUND_MESSAGE_LIMIT_MIB = 128;
+const MIN_INBOUND_MESSAGE_LIMIT_MIB = 1;
+const MAX_INBOUND_MESSAGE_LIMIT_MIB = 1024;
+
+function resolveInboundMessageLimitBytes(): number {
+    const rawConfiguredLimit = process.env.NOTE_CONNECTION_BRIDGE_MAX_INBOUND_MB;
+    if (!rawConfiguredLimit) {
+        return DEFAULT_INBOUND_MESSAGE_LIMIT_MIB * BYTES_PER_MIB;
+    }
+
+    const parsedLimitMb = Number(rawConfiguredLimit);
+    if (!Number.isFinite(parsedLimitMb) || parsedLimitMb <= 0) {
+        return DEFAULT_INBOUND_MESSAGE_LIMIT_MIB * BYTES_PER_MIB;
+    }
+
+    const boundedLimitMb = Math.min(
+        MAX_INBOUND_MESSAGE_LIMIT_MIB,
+        Math.max(MIN_INBOUND_MESSAGE_LIMIT_MIB, Math.floor(parsedLimitMb))
+    );
+    return boundedLimitMb * BYTES_PER_MIB;
+}
+
+const MAX_INBOUND_MESSAGE_BYTES = resolveInboundMessageLimitBytes();
 const PATH_MUTATION_TYPES = new Set([
     'nodeClick',
     'markComplete',
@@ -163,6 +186,13 @@ export const BRIDGE_BACKPRESSURE_LIMITS = {
     maxQueueMessages: BRIDGE_OUTBOUND_MAX_QUEUE_MESSAGES,
     maxBufferedAmountBytes: BRIDGE_OUTBOUND_MAX_BUFFERED_BYTES,
     flushIntervalMs: BRIDGE_OUTBOUND_FLUSH_INTERVAL_MS,
+};
+
+export const BRIDGE_INBOUND_LIMITS = {
+    defaultMessageBytes: DEFAULT_INBOUND_MESSAGE_LIMIT_MIB * BYTES_PER_MIB,
+    minMessageBytes: MIN_INBOUND_MESSAGE_LIMIT_MIB * BYTES_PER_MIB,
+    maxMessageBytes: MAX_INBOUND_MESSAGE_BYTES,
+    hardCapBytes: MAX_INBOUND_MESSAGE_LIMIT_MIB * BYTES_PER_MIB,
 };
 
 function validateKnownEnvelopePayload(type: string, payload: unknown): string | null {
@@ -518,7 +548,11 @@ export class PathBridge {
         this.port = resolvedOptions.port || 9876;
         this.host = resolvedOptions.host || '127.0.0.1';
         this.authToken = typeof resolvedOptions.authToken === 'string' ? resolvedOptions.authToken.trim() : '';
-        this.wss = new WebSocketServer({ port: this.port, host: this.host });
+        this.wss = new WebSocketServer({
+            port: this.port,
+            host: this.host,
+            maxPayload: MAX_INBOUND_MESSAGE_BYTES,
+        });
 
         console.log(`[PathBridge] WebSocket Server started on ws://${this.host}:${this.port}`);
 
@@ -638,7 +672,7 @@ export class PathBridge {
         if (buffer.length > MAX_INBOUND_MESSAGE_BYTES) {
             return {
                 ok: false,
-                reason: `Inbound frame exceeded limit (${buffer.length} bytes).`,
+                reason: `Inbound frame exceeded limit (${buffer.length} bytes > ${MAX_INBOUND_MESSAGE_BYTES} bytes).`,
             };
         }
 

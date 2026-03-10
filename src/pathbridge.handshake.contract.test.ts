@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
   BRIDGE_BACKPRESSURE_LIMITS,
+  BRIDGE_INBOUND_LIMITS,
   buildBridgePathTransportSummary,
   computeBridgePathFingerprint,
   parseBridgeInboundEnvelope,
@@ -88,6 +89,14 @@ describe('path bridge handshake and transport verification contracts', () => {
     expect(BRIDGE_BACKPRESSURE_LIMITS.maxBufferedAmountBytes).toBeLessThanOrEqual(8 * 1024 * 1024);
     expect(BRIDGE_BACKPRESSURE_LIMITS.flushIntervalMs).toBeGreaterThanOrEqual(10);
     expect(BRIDGE_BACKPRESSURE_LIMITS.flushIntervalMs).toBeLessThanOrEqual(100);
+  });
+
+  test('inbound frame limit is provisioned for high-volume graph payloads', () => {
+    expect(BRIDGE_INBOUND_LIMITS.defaultMessageBytes).toBe(128 * 1024 * 1024);
+    expect(BRIDGE_INBOUND_LIMITS.minMessageBytes).toBe(1 * 1024 * 1024);
+    expect(BRIDGE_INBOUND_LIMITS.hardCapBytes).toBe(1024 * 1024 * 1024);
+    expect(BRIDGE_INBOUND_LIMITS.maxMessageBytes).toBeGreaterThanOrEqual(BRIDGE_INBOUND_LIMITS.minMessageBytes);
+    expect(BRIDGE_INBOUND_LIMITS.maxMessageBytes).toBeLessThanOrEqual(BRIDGE_INBOUND_LIMITS.hardCapBytes);
   });
 
   test('path app identifies websocket role and emits verification metadata/status', () => {
