@@ -1,3 +1,36 @@
+# 2026-03-10 v1.0.19
+
+# MERMAID PAYLOAD + MOBILE COMPLIANCE CLOSURE UPDATE
+
+## EXECUTION STATUS (THIS SLICE)
+
+- [x] Closed base64-heavy Mermaid transfer risk on the default API/bridge path:
+  - [x] Added `includeSvg` control in `src/server.ts`, `src/core/PathBridge.ts`, and `src/frontend/path_app.js`.
+  - [x] `/api/render/mermaid` now omits SVG by default and stays PNG-focused unless explicitly requested.
+  - [x] `includeStages=true` auto-enables SVG for diagnostics compatibility.
+  - [x] Godot runtime contract is unchanged and explicit: PNG-only (`pngBase64` required); SVG remains diagnostics-only because direct SVG handling in Godot is unstable.
+- [x] Closed mobile app-id compliance gap:
+  - [x] `capacitor.config.ts` app id -> `com.jacob.noteconnection.pro`.
+  - [x] `android/app/build.gradle` `namespace` + `applicationId` aligned.
+  - [x] `android/app/src/main/res/values/strings.xml` package/scheme aligned.
+  - [x] `MainActivity` moved to `android/app/src/main/java/com/jacob/noteconnection/pro/MainActivity.java`.
+- [x] Added regression coverage:
+  - [x] `src/server.migration.test.ts`: Mermaid response shape default/opt-in behavior.
+  - [x] `src/pathbridge.handshake.contract.test.ts`: includeSvg contract propagation.
+  - [x] `src/mobile.pipeline.test.ts`: non-example app-id consistency + legacy package path removal.
+- [ ] Remaining baseline follow-up: mobile semantic DOM accessibility parity for graph/canvas surfaces.
+
+## VERIFICATION SNAPSHOT (2026-03-10)
+
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts src/mobile.pipeline.test.ts --runInBand`
+- [x] `npm run test:migration` passed (**28 suites, 141 tests**).
+- [x] `npm run test:wasm:parity:gates` passed.
+- [x] `npm test` passed (**31 suites, 159 tests**).
+- [x] `npm run build` passed.
+- [x] `npm run build:sidecar` passed.
+
+---
+
 # 2026-03-10 v1.0.18
 
 # SCALE + STABILITY HARDENING UPDATE (BRIDGE INBOUND LIMIT / RUNTIME WRITABILITY / MERMAID GLOBAL ISOLATION)

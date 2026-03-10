@@ -1,3 +1,36 @@
+# 2026-03-10 v1.0.19
+
+# Mermaid 负载与移动端合规收口更新
+
+## 本轮执行状态
+
+- [x] 已收口 Mermaid Base64 重负载默认链路风险：
+  - [x] 在 `src/server.ts`、`src/core/PathBridge.ts`、`src/frontend/path_app.js` 新增 `includeSvg` 控制。
+  - [x] `/api/render/mermaid` 默认不返回 SVG，保持 PNG 主链路优先。
+  - [x] `includeStages=true` 时自动返回 SVG，保留诊断兼容能力。
+  - [x] Godot 运行时契约保持不变：PNG-only（`pngBase64` 必填）；SVG 仅用于诊断，因为 Godot 直接处理 SVG 仍不稳定。
+- [x] 已收口移动端 app-id 合规缺口：
+  - [x] `capacitor.config.ts` app id 更新为 `com.jacob.noteconnection.pro`。
+  - [x] `android/app/build.gradle` 的 `namespace` 与 `applicationId` 完整对齐。
+  - [x] `android/app/src/main/res/values/strings.xml` 包名与 URL scheme 对齐。
+  - [x] `MainActivity` 已迁移到 `android/app/src/main/java/com/jacob/noteconnection/pro/MainActivity.java`。
+- [x] 已补齐回归覆盖：
+  - [x] `src/server.migration.test.ts` 覆盖 Mermaid 回包默认/显式 SVG 行为。
+  - [x] `src/pathbridge.handshake.contract.test.ts` 覆盖 includeSvg 透传契约。
+  - [x] `src/mobile.pipeline.test.ts` 覆盖非示例 app-id 一致性与旧包路径移除。
+- [ ] 基线剩余跟进项：移动端图谱/画布语义 DOM 可访问性等价链路。
+
+## 验证快照（2026-03-10）
+
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts src/mobile.pipeline.test.ts --runInBand`
+- [x] `npm run test:migration` 通过（**28 suites, 141 tests**）。
+- [x] `npm run test:wasm:parity:gates` 通过。
+- [x] `npm test` 通过（**31 suites, 159 tests**）。
+- [x] `npm run build` 通过。
+- [x] `npm run build:sidecar` 通过。
+
+---
+
 # 2026-03-10 v1.0.18
 
 # 规模与稳健性加固更新（桥接入站上限 / 运行时可写路径 / Mermaid 全局隔离）

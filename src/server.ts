@@ -428,9 +428,11 @@ async function renderMermaidWithPreference(
         maxHeight?: number;
         renderScale?: number;
         includeStages?: boolean;
+        includeSvg?: boolean;
         rendererPreference: MermaidRendererPreference;
     }
 ): Promise<Record<string, unknown>> {
+    const includeSvg = options.includeStages === true || options.includeSvg === true;
     const frontendPayload = {
         source,
         theme: 'dark' as const,
@@ -438,19 +440,23 @@ async function renderMermaidWithPreference(
         maxHeight: options.maxHeight,
         renderScale: options.renderScale,
         includeStages: options.includeStages === true,
+        includeSvg,
     };
 
     if (options.rendererPreference !== 'local' && pathBridge) {
         try {
             const frontendRendered = await pathBridge.requestFrontendMermaidRender(frontendPayload);
-            return {
+            const frontendResult: Record<string, unknown> = {
                 pngBase64: frontendRendered.pngBase64,
-                svg: frontendRendered.svg,
                 width: frontendRendered.width,
                 height: frontendRendered.height,
                 renderer: frontendRendered.renderer || 'frontend-bridge',
                 stages: frontendRendered.stages,
             };
+            if (includeSvg && typeof frontendRendered.svg === 'string' && frontendRendered.svg.trim()) {
+                frontendResult.svg = frontendRendered.svg;
+            }
+            return frontendResult;
         } catch (error) {
             if (options.rendererPreference === 'frontend') {
                 throw error;
@@ -465,10 +471,16 @@ async function renderMermaidWithPreference(
         maxHeight: options.maxHeight,
         renderScale: options.renderScale,
     });
-    return {
-        ...localRendered,
+    const localResult: Record<string, unknown> = {
+        pngBase64: localRendered.pngBase64,
+        width: localRendered.width,
+        height: localRendered.height,
         renderer: 'local-resvg',
     };
+    if (includeSvg && typeof localRendered.svg === 'string' && localRendered.svg.trim()) {
+        localResult.svg = localRendered.svg;
+    }
+    return localResult;
 }
 function parseCachedTargetFromFileName(filename: string): string | null {
     if (filename.startsWith('data_cli_') || filename.startsWith('graph_data_cli_')) {
@@ -1200,6 +1212,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     const maxHeight = parseOptionalPositiveDimension(payload.maxHeight);
                     const renderScale = parseOptionalPositiveScale(payload.renderScale);
                     const includeStages = parseOptionalBoolean(payload.includeStages) === true;
+                    const includeSvg = parseOptionalBoolean(payload.includeSvg) === true;
                     const rendererPreference = normalizeMermaidRendererPreference(payload.renderer);
 
                     if (!source.trim()) {
@@ -1213,6 +1226,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         maxHeight,
                         renderScale,
                         includeStages,
+                        includeSvg,
                         rendererPreference,
                     });
                     res.writeHead(200, { 'Content-Type': 'application/json' });

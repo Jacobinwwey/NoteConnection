@@ -131,13 +131,19 @@ describe('path bridge handshake and transport verification contracts', () => {
   test('mermaid render pipeline keeps Godot runtime on PNG-only decode contract', () => {
     const bridge = fs.readFileSync(bridgePath, 'utf8');
     const server = fs.readFileSync(serverPath, 'utf8');
+    const pathApp = fs.readFileSync(pathAppPath, 'utf8');
     const readerRenderClient = fs.readFileSync(readerRenderClientPath, 'utf8');
 
     expect(bridge).toContain("const ok = payloadLike.ok === true && pngBase64.length > 0;");
     expect(bridge).toContain("svg: typeof payloadLike.svg === 'string' ? payloadLike.svg : undefined,");
+    expect(bridge).toContain('includeSvg: payload.includeSvg === true || payload.includeStages === true,');
+    expect(server).toContain('const includeSvg = options.includeStages === true || options.includeSvg === true;');
+    expect(server).toContain('const includeSvg = parseOptionalBoolean(payload.includeSvg) === true;');
     expect(server).toContain('pngBase64: frontendRendered.pngBase64,');
     expect(server).not.toContain('transportReason');
     expect(server).not.toContain('pngBase64Bytes');
+    expect(pathApp).toContain('const includeSvg = includeStages || payload?.includeSvg === true;');
+    expect(pathApp).toContain('svg: includeSvg ? serializedSvg : undefined,');
     expect(readerRenderClient).toContain('var png_base64 := String(response.get("pngBase64", "")).strip_edges()');
     expect(readerRenderClient).toContain('return _decode_png_texture(png_base64)');
     expect(readerRenderClient).toContain('Renderer response did not include a PNG payload.');

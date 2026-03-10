@@ -38,6 +38,7 @@ type MermaidRenderRequestPayload = {
     renderScale?: number;
     theme?: 'dark' | 'default';
     includeStages?: boolean;
+    includeSvg?: boolean;
 };
 
 type MermaidRenderStagePayload = {
@@ -1470,6 +1471,7 @@ export class PathBridge {
             renderScale: payload.renderScale,
             theme: payload.theme || 'dark',
             includeStages: payload.includeStages === true,
+            includeSvg: payload.includeSvg === true || payload.includeStages === true,
         };
 
         return new Promise<MermaidRenderResultPayload>((resolve, reject) => {

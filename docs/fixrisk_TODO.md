@@ -1,3 +1,63 @@
+# 2026-03-10 v1.0.19
+
+# MERMAID PAYLOAD + MOBILE COMPLIANCE CLOSURE UPDATE
+
+## ENGLISH DOCUMENT
+
+### Remediation Status (This Slice)
+- [x] Closed base64-heavy Mermaid transfer risk on default API/bridge path:
+  - [x] Added `includeSvg` control across server (`src/server.ts`), bridge (`src/core/PathBridge.ts`), and frontend bridge renderer (`src/frontend/path_app.js`).
+  - [x] `/api/render/mermaid` is now PNG-focused by default; SVG is omitted unless `includeSvg=true`.
+  - [x] Diagnostic compatibility retained: `includeStages=true` auto-enables SVG output.
+  - [x] Godot runtime remains PNG-only (`pngBase64` required); SVG is diagnostics-only because Godot SVG handling is unstable.
+- [x] Closed mobile app-id compliance gap:
+  - [x] `capacitor.config.ts` uses `com.jacob.noteconnection.pro`.
+  - [x] Android namespace/applicationId/strings aligned to `com.jacob.noteconnection.pro`.
+  - [x] `MainActivity` package moved to `com.jacob.noteconnection.pro`.
+- [x] Added regression contracts:
+  - [x] `src/server.migration.test.ts` for Mermaid response shape defaults/opt-ins.
+  - [x] `src/pathbridge.handshake.contract.test.ts` for includeSvg propagation contract.
+  - [x] `src/mobile.pipeline.test.ts` for app-id consistency and legacy package removal.
+- [ ] Remaining imported-baseline follow-up: mobile semantic DOM accessibility parity path.
+
+### Verification Snapshot (2026-03-10)
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts src/mobile.pipeline.test.ts --runInBand`
+- [x] `npm run test:migration` (**28 suites, 141 tests passed**)
+- [x] `npm run test:wasm:parity:gates`
+- [x] `npm test` (**31 suites, 159 tests passed**)
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+
+---
+
+## 中文文档
+
+### 本轮整改状态
+- [x] 已收口 Mermaid Base64 重负载默认链路风险：
+  - [x] 在 `src/server.ts`、`src/core/PathBridge.ts`、`src/frontend/path_app.js` 引入 `includeSvg` 控制。
+  - [x] `/api/render/mermaid` 默认回包以 PNG 主链路为主（未显式请求时不返回 SVG）。
+  - [x] 保持诊断兼容：`includeStages=true` 时自动携带 SVG。
+  - [x] Godot 运行时继续保持 PNG-only（`pngBase64` 必填）；SVG 仅作诊断使用，因 Godot 直接处理 SVG 仍不稳定。
+- [x] 已收口移动端 app-id 合规缺口：
+  - [x] `capacitor.config.ts` 统一为 `com.jacob.noteconnection.pro`。
+  - [x] Android `namespace` / `applicationId` / `strings.xml` 全部对齐。
+  - [x] `MainActivity` 已迁移至 `com.jacob.noteconnection.pro` 包路径。
+- [x] 已补齐回归契约：
+  - [x] `src/server.migration.test.ts` 覆盖 Mermaid 回包默认与显式开启行为。
+  - [x] `src/pathbridge.handshake.contract.test.ts` 覆盖 includeSvg 透传契约。
+  - [x] `src/mobile.pipeline.test.ts` 覆盖 app-id 一致性与旧包路径移除。
+- [ ] 导入基线剩余跟进项：移动端语义 DOM 可访问性等价链路。
+
+### 验证快照（2026-03-10）
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts src/mobile.pipeline.test.ts --runInBand`
+- [x] `npm run test:migration`（**28 suites, 141 tests passed**）
+- [x] `npm run test:wasm:parity:gates`
+- [x] `npm test`（**31 suites, 159 tests passed**）
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+
+---
+
 # 2026-03-10 v1.0.18
 
 # SCALE + STABILITY HARDENING UPDATE (BRIDGE INBOUND LIMIT / RUNTIME WRITABILITY / MERMAID GLOBAL ISOLATION)

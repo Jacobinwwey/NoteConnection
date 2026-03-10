@@ -1,3 +1,37 @@
+# 2026-03-10 v1.5.41 - High-Priority Closure (Mermaid Transport Payload Thinning + Mobile App-ID Compliance)
+
+## English Document
+
+### Objective
+Close the remaining high-priority fixrisk follow-ups around Mermaid payload overhead and mobile app identifier compliance while preserving Godot runtime stability.
+
+### Completed in This Iteration
+- [x] Mermaid transport is now PNG-first by default:
+  - [x] Added `includeSvg` control across `src/server.ts`, `src/core/PathBridge.ts`, and `src/frontend/path_app.js`.
+  - [x] `/api/render/mermaid` omits SVG unless explicitly requested (`includeSvg=true`) or diagnostics mode is enabled (`includeStages=true`).
+  - [x] Reduced default bridge/API payload volume while keeping diagnostic compatibility.
+- [x] Godot runtime contract remains robust under SVG instability:
+  - [x] Runtime path remains PNG-only (`pngBase64` required).
+  - [x] SVG stays diagnostics-only and is never required by the Godot runtime path.
+- [x] Mobile app-id compliance closure landed:
+  - [x] `capacitor.config.ts` appId set to `com.jacob.noteconnection.pro`.
+  - [x] Android `namespace` + `applicationId` + string resources aligned to `com.jacob.noteconnection.pro`.
+  - [x] `MainActivity` moved to the matching Java package path.
+- [x] Regression coverage updated:
+  - [x] `src/server.migration.test.ts` validates Mermaid response shape defaults and SVG opt-in.
+  - [x] `src/pathbridge.handshake.contract.test.ts` validates includeSvg propagation contract.
+  - [x] `src/mobile.pipeline.test.ts` validates non-example app-id alignment and legacy package removal.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts src/mobile.pipeline.test.ts --runInBand`
+- [x] `npm run test:migration` (**28 suites, 141 tests passed**)
+- [x] `npm run test:wasm:parity:gates` (strict verify + strict perf guards passed)
+- [x] `npm test` (**31 suites, 159 tests passed**)
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+
+---
+
 # 2026-03-10 v1.5.40 - TODO Consistency Repair (Godot PNG Contract + Closed Security Drift Items)
 
 ## English Document

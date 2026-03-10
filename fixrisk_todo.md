@@ -1,3 +1,65 @@
+# 2026-03-10 v1.0.19
+
+# RISK-CORRECTION EXECUTION UPDATE (MERMAID PAYLOAD THINNING + MOBILE APP-ID COMPLIANCE)
+
+## ENGLISH DOCUMENT
+
+### Remediation Status (This Slice)
+- [x] Closed the base64-heavy Mermaid transfer risk on the default bridge/API path:
+  - [x] Added `includeSvg` request control across server -> bridge -> frontend Mermaid render flow.
+  - [x] `/api/render/mermaid` now returns PNG-focused payloads by default (SVG omitted unless explicitly requested).
+  - [x] Compatibility is preserved for diagnostics: SVG is auto-included when `includeStages=true`.
+  - [x] Godot runtime contract remains PNG-only (`pngBase64` required); SVG remains diagnostics-only because Godot SVG handling is not reliable.
+- [x] Closed mobile app-identifier compliance risk:
+  - [x] `capacitor.config.ts` app id updated to `com.jacob.noteconnection.pro`.
+  - [x] `android/app/build.gradle` `namespace` and `applicationId` aligned to `com.jacob.noteconnection.pro`.
+  - [x] `android/app/src/main/res/values/strings.xml` package + URL scheme aligned.
+  - [x] `MainActivity.java` moved to `android/app/src/main/java/com/jacob/noteconnection/pro/` with matching package declaration.
+- [x] Added regression coverage for both closures:
+  - [x] `src/server.migration.test.ts`: Mermaid SVG default-off behavior + explicit/diagnostic opt-in behavior.
+  - [x] `src/pathbridge.handshake.contract.test.ts`: includeSvg contract across server/bridge/frontend.
+  - [x] `src/mobile.pipeline.test.ts`: non-example app-id consistency + legacy package path removal.
+- [ ] Remaining baseline follow-up: mobile semantic DOM accessibility parity for graph/canvas surfaces.
+
+### Verification Snapshot (2026-03-10)
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts src/mobile.pipeline.test.ts --runInBand`
+- [x] `npm run test:migration` (**28 suites, 141 tests passed**)
+- [x] `npm run test:wasm:parity:gates` (strict verify + strict perf guards passed)
+- [x] `npm test` (**31 suites, 159 tests passed**)
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+
+---
+
+## 中文文档
+
+### 本轮整改状态
+- [x] 已收口 Mermaid Base64 重负载传输风险（默认链路）：
+  - [x] 在 server -> bridge -> frontend Mermaid 渲染链路新增 `includeSvg` 显式控制。
+  - [x] `/api/render/mermaid` 默认仅返回 PNG 主链路负载（未显式请求时不返回 SVG）。
+  - [x] 诊断兼容保持：`includeStages=true` 时会自动带回 SVG。
+  - [x] Godot 运行时契约继续保持 PNG-only（`pngBase64` 必填）；SVG 仅用于诊断，因为 Godot 对 SVG 的直接处理存在稳定性问题。
+- [x] 已收口移动端 app identifier 合规风险：
+  - [x] `capacitor.config.ts` app id 更新为 `com.jacob.noteconnection.pro`。
+  - [x] `android/app/build.gradle` 的 `namespace` 与 `applicationId` 同步为 `com.jacob.noteconnection.pro`。
+  - [x] `android/app/src/main/res/values/strings.xml` 中包名与 URL scheme 已对齐。
+  - [x] `MainActivity.java` 已迁移到 `android/app/src/main/java/com/jacob/noteconnection/pro/` 并更新包声明。
+- [x] 已补齐回归验证：
+  - [x] `src/server.migration.test.ts`：覆盖 Mermaid SVG 默认关闭与显式/诊断开启行为。
+  - [x] `src/pathbridge.handshake.contract.test.ts`：覆盖 includeSvg 跨 server/bridge/frontend 契约。
+  - [x] `src/mobile.pipeline.test.ts`：覆盖非示例 app-id 一致性与旧包路径移除。
+- [ ] 基线剩余跟进项：移动端图谱/画布语义 DOM 可访问性等价。
+
+### 验证快照（2026-03-10）
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts src/mobile.pipeline.test.ts --runInBand`
+- [x] `npm run test:migration`（**28 suites, 141 tests passed**）
+- [x] `npm run test:wasm:parity:gates`（严格校验 + 严格性能门禁通过）
+- [x] `npm test`（**31 suites, 159 tests passed**）
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+
+---
+
 # 2026-03-10 v1.0.18
 
 # RISK-CORRECTION EXECUTION UPDATE (HIGH-SCALE BRIDGE LIMIT + WRITABLE RUNTIME PATHS + MERMAID GLOBAL ISOLATION)

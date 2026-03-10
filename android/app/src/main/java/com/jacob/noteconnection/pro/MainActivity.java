@@ -1,4 +1,4 @@
-package com.example.noteconnection;
+package com.jacob.noteconnection.pro;
 
 import com.getcapacitor.BridgeActivity;
 

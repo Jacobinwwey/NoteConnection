@@ -19,6 +19,33 @@ describe('dual mobile pipeline configuration', () => {
   const tauriAndroidRunnerPath = path.join(repoRoot, 'scripts', 'run-tauri-android.js');
   const tauriConfigPath = path.join(repoRoot, 'src-tauri', 'tauri.conf.json');
   const androidManifestPath = path.join(repoRoot, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
+  const androidBuildGradlePath = path.join(repoRoot, 'android', 'app', 'build.gradle');
+  const androidStringsPath = path.join(repoRoot, 'android', 'app', 'src', 'main', 'res', 'values', 'strings.xml');
+  const androidMainActivityPath = path.join(
+    repoRoot,
+    'android',
+    'app',
+    'src',
+    'main',
+    'java',
+    'com',
+    'jacob',
+    'noteconnection',
+    'pro',
+    'MainActivity.java'
+  );
+  const androidLegacyMainActivityPath = path.join(
+    repoRoot,
+    'android',
+    'app',
+    'src',
+    'main',
+    'java',
+    'com',
+    'example',
+    'noteconnection',
+    'MainActivity.java'
+  );
   const verifyCapacitorDeviceScriptPath = path.join(repoRoot, 'scripts', 'verify-capacitor-device-acceptance.js');
   const captureCapacitorEvidenceScriptPath = path.join(repoRoot, 'scripts', 'capture-capacitor-device-evidence.js');
 
@@ -61,6 +88,23 @@ describe('dual mobile pipeline configuration', () => {
     expect(buildApkScript).toContain("dist\\src\\frontend");
     expect(buildApkScript).toContain('npx cap sync');
     expect(buildApkScript).toContain('gradlew.bat assembleDebug');
+  });
+
+  test('uses a non-example Android app id consistently across Capacitor and native Android config', () => {
+    const appId = 'com.jacob.noteconnection.pro';
+    const capacitorConfig = fs.readFileSync(capacitorConfigPath, 'utf8');
+    const androidBuildGradle = fs.readFileSync(androidBuildGradlePath, 'utf8');
+    const androidStrings = fs.readFileSync(androidStringsPath, 'utf8');
+    const mainActivity = fs.readFileSync(androidMainActivityPath, 'utf8');
+
+    expect(capacitorConfig).toContain(`appId: '${appId}'`);
+    expect(capacitorConfig).not.toContain('com.example.noteconnection');
+    expect(androidBuildGradle).toContain(`namespace = "${appId}"`);
+    expect(androidBuildGradle).toContain(`applicationId "${appId}"`);
+    expect(androidStrings).toContain(`<string name="package_name">${appId}</string>`);
+    expect(androidStrings).toContain(`<string name="custom_url_scheme">${appId}</string>`);
+    expect(mainActivity).toContain(`package ${appId};`);
+    expect(fs.existsSync(androidLegacyMainActivityPath)).toBe(false);
   });
 
   test('retains required dependencies for both mobile pipelines', () => {

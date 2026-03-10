@@ -1137,6 +1137,7 @@ window.pathApp = {
         }
 
         const includeStages = payload?.includeStages === true;
+        const includeSvg = includeStages || payload?.includeSvg === true;
         const stageSnapshots = [];
         const theme = String(payload?.theme || 'dark') === 'default' ? 'default' : 'dark';
         window.mermaid.initialize(this._getBridgeMermaidConfig(theme));
@@ -1238,7 +1239,7 @@ window.pathApp = {
                 requestId,
                 ok: true,
                 renderer: 'frontend-bridge',
-                svg: serializedSvg,
+                svg: includeSvg ? serializedSvg : undefined,
                 pngBase64: canvas.toDataURL('image/png').split(',')[1],
                 width: canvas.width,
                 height: canvas.height,

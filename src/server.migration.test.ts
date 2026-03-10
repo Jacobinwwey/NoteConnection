@@ -202,6 +202,8 @@ describe('server migration settings routes', () => {
   let kbFilePath: string;
   let outsideFilePath: string;
   let buildGraphMock: jest.Mock;
+  let renderMathPngMock: jest.Mock;
+  let renderMermaidPngMock: jest.Mock;
   let originalArgv: string[];
 
   beforeAll(async () => {
@@ -235,6 +237,17 @@ describe('server migration settings routes', () => {
     port = await getFreePort();
 
     buildGraphMock = jest.fn().mockResolvedValue(undefined);
+    renderMathPngMock = jest.fn().mockResolvedValue({
+      pngBase64: 'math-png-base64',
+      width: 320,
+      height: 120
+    });
+    renderMermaidPngMock = jest.fn().mockResolvedValue({
+      pngBase64: 'mermaid-png-base64',
+      svg: '<svg xmlns="http://www.w3.org/2000/svg"></svg>',
+      width: 640,
+      height: 360
+    });
     jest.resetModules();
     originalArgv = [...process.argv];
     process.argv = process.argv.slice(0, 2);
@@ -243,6 +256,10 @@ describe('server migration settings routes', () => {
     }));
     jest.doMock('./core/PathBridge', () => ({
       PathBridge: jest.fn().mockImplementation(() => ({}))
+    }));
+    jest.doMock('./reader_renderer', () => ({
+      renderMathPng: renderMathPngMock,
+      renderMermaidPng: renderMermaidPngMock
     }));
 
     const serverModule = require('./server') as {
@@ -271,6 +288,7 @@ describe('server migration settings routes', () => {
     envRestorers.reverse().forEach((restore) => restore());
     jest.dontMock('./index');
     jest.dontMock('./core/PathBridge');
+    jest.dontMock('./reader_renderer');
     process.argv = originalArgv;
     temp.cleanup();
   });
@@ -521,6 +539,47 @@ describe('server migration settings routes', () => {
         error: expect.stringContaining('Invalid JSON')
       })
     );
+  });
+
+  test('omits svg from /api/render/mermaid by default to keep payloads PNG-focused', async () => {
+    const response = await requestJson(port, 'POST', '/api/render/mermaid', {
+      source: 'graph TD; A-->B',
+      renderer: 'local'
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        pngBase64: 'mermaid-png-base64',
+        width: 640,
+        height: 360,
+        renderer: 'local-resvg'
+      })
+    );
+    expect(response.body.svg).toBeUndefined();
+    expect(renderMermaidPngMock).toHaveBeenCalled();
+  });
+
+  test('returns svg from /api/render/mermaid when includeSvg is explicitly enabled', async () => {
+    const response = await requestJson(port, 'POST', '/api/render/mermaid', {
+      source: 'graph TD; A-->B',
+      renderer: 'local',
+      includeSvg: true
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.svg).toContain('<svg');
+  });
+
+  test('auto-includes svg when includeStages is enabled for diagnostics compatibility', async () => {
+    const response = await requestJson(port, 'POST', '/api/render/mermaid', {
+      source: 'graph TD; A-->B',
+      renderer: 'local',
+      includeStages: true
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.svg).toContain('<svg');
   });
 
   test('returns 415 when /api/kb-path request content type is not json', async () => {
