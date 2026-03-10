@@ -6,8 +6,10 @@
 
 <div align="center">
 
+### Legacy Navigation Row (from shared bilingual table)
 | **English** | [Key Features](#key-features-en) | [Hardware](#hardware-en) | [Architecture](#architecture-en) | [Quick Start](#quick-start-en) | [CLI](#cli-en) | [Changelog](#changelog-en) |
 | :---------: | :------------------------------: | :----------------------: | :------------------------------: | :----------------------------: | :------------: | :------------------------: |
+|  **中文**   |   [核心特性](#key-features-zh)   | [硬件配置](#hardware-zh) |   [系统架构](#architecture-zh)   |  [快速开始](#quick-start-zh)   | [CLI](#cli-zh) | [更新日志](#changelog-zh)  |
 
 </div>
 
@@ -827,8 +829,6 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ## 中文文档
 
-### Legacy Navigation Row (from shared bilingual table)
-|  **中文**   |   [核心特性](#key-features-zh)   | [硬件配置](#hardware-zh) |   [系统架构](#architecture-zh)   |  [快速开始](#quick-start-zh)   | [CLI](#cli-zh) | [更新日志](#changelog-zh)  |
 
 # 2026-03-04 v1.5.13
 # NoteConnection: 层级知识图谱可视化系统
