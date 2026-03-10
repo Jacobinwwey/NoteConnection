@@ -1,3 +1,73 @@
+# 2026-03-10 v1.0.18
+
+# SCALE + STABILITY HARDENING UPDATE (BRIDGE INBOUND LIMIT / RUNTIME WRITABILITY / MERMAID GLOBAL ISOLATION)
+
+## ENGLISH DOCUMENT
+
+### Remediation Status (This Slice)
+- [x] PathBridge inbound limit is now high-scale and tunable:
+  - [x] Default inbound frame budget raised from 1 MiB to `128 MiB`.
+  - [x] Added `NOTE_CONNECTION_BRIDGE_MAX_INBOUND_MB` override with bounded hard cap (`1024 MiB`).
+  - [x] Aligned WebSocket `maxPayload` with `MAX_INBOUND_MESSAGE_BYTES`.
+- [x] Added explicit inbound-limit contract coverage:
+  - [x] Exported `BRIDGE_INBOUND_LIMITS`.
+  - [x] Added `inbound frame limit is provisioned for high-volume graph payloads` contract in `src/pathbridge.handshake.contract.test.ts`.
+- [x] Hardened runtime data directory resolution in `src/utils/RuntimePaths.ts`:
+  - [x] Removed `frontendDir` fallback from runtime-data write path selection.
+  - [x] Added app-data / project / cwd / temp writable candidates.
+  - [x] Added explicit failure when no writable runtime-data directory can be provisioned.
+- [x] Fixed Mermaid/JSDOM global-scope pollution in `src/reader_renderer.ts`:
+  - [x] Added scoped DOM-global install/restore (`withMermaidDomGlobals(...)`).
+  - [x] Wrapped Mermaid `initialize` and `render` in scoped global context.
+  - [x] Added regression proof in `src/reader_renderer.test.ts` that render no longer leaks global `window/document`.
+- [ ] Remaining baseline items: base64-heavy transfer optimization and mobile compliance/app-identifier closure remain open.
+
+### Verification Snapshot (2026-03-10)
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts --runInBand`
+- [x] `npx jest src/utils/RuntimePaths.test.ts --runInBand`
+- [x] `npx jest src/reader_renderer.test.ts --runInBand`
+- [x] `npm run test:migration` (**28 suites, 137 tests passed**)
+- [x] `npm run test:wasm:parity:gates`
+- [x] `npm test` (**31 suites, 155 tests passed**)
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+
+> Timeline note: older slices below are preserved as historical records and may include superseded values (for example, the prior 1 MiB inbound limit).
+
+---
+
+## 中文文档
+
+### 本轮整改状态
+- [x] PathBridge 入站上限已支持大规模数据：
+  - [x] 默认入站帧预算由 1 MiB 提升至 `128 MiB`。
+  - [x] 新增 `NOTE_CONNECTION_BRIDGE_MAX_INBOUND_MB` 可配置项，硬上限约束为 `1024 MiB`。
+  - [x] WebSocket `maxPayload` 已与 `MAX_INBOUND_MESSAGE_BYTES` 对齐。
+- [x] 已补齐入站上限契约覆盖：
+  - [x] 导出 `BRIDGE_INBOUND_LIMITS`。
+  - [x] 在 `src/pathbridge.handshake.contract.test.ts` 增加入站上限回归断言。
+- [x] 已强化 `src/utils/RuntimePaths.ts` 运行时写目录策略：
+  - [x] 运行时数据目录不再回退到 `frontendDir`。
+  - [x] 新增 app-data / project / cwd / temp 可写候选链路。
+  - [x] 无法创建可写目录时显式失败，避免写入只读路径。
+- [x] 已修复 `src/reader_renderer.ts` 中 Mermaid/JSDOM 全局污染：
+  - [x] 新增作用域化全局绑定安装/恢复（`withMermaidDomGlobals(...)`）。
+  - [x] Mermaid `initialize` / `render` 均在作用域化全局上下文执行。
+  - [x] 在 `src/reader_renderer.test.ts` 增加“渲染后不泄漏 `window/document`”回归证明。
+- [ ] 剩余基线项：Base64 重负载链路优化、移动端上架合规 / app identifier 收口仍待完成。
+
+### 验证快照（2026-03-10）
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts --runInBand`
+- [x] `npx jest src/utils/RuntimePaths.test.ts --runInBand`
+- [x] `npx jest src/reader_renderer.test.ts --runInBand`
+- [x] `npm run test:migration`（**28 suites, 137 tests passed**）
+- [x] `npm run test:wasm:parity:gates`
+- [x] `npm test`（**31 suites, 155 tests passed**）
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+
+---
+
 # 2026-03-10 v1.0.17
 
 # BRIDGE HARDENING EXECUTION UPDATE (STRICT ENVELOPE + BACKPRESSURE + CSP/PKG CONTRACTS)

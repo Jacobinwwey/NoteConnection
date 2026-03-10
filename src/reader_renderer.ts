@@ -116,6 +116,32 @@ interface MermaidEnvironment {
     mermaid: any;
 }
 
+type MermaidGlobalBindingKey =
+    | 'window'
+    | 'document'
+    | 'navigator'
+    | 'Element'
+    | 'HTMLElement'
+    | 'SVGElement'
+    | 'Node'
+    | 'getComputedStyle';
+
+type MermaidGlobalBindingSnapshot = {
+    existed: boolean;
+    descriptor?: PropertyDescriptor;
+};
+
+const MERMAID_GLOBAL_BINDING_KEYS: MermaidGlobalBindingKey[] = [
+    'window',
+    'document',
+    'navigator',
+    'Element',
+    'HTMLElement',
+    'SVGElement',
+    'Node',
+    'getComputedStyle',
+];
+
 export type RasterizedRender = {
     svg: string;
     pngBase64: string;
@@ -197,7 +223,9 @@ async function buildMermaidRenderArtifacts(trimmedSource: string, options: Merma
     const host = environment.host;
     host.innerHTML = '';
 
-    const result = await environment.mermaid.render(renderId, trimmedSource, host);
+    const result = await withMermaidDomGlobals(environment.window, async () =>
+        environment.mermaid.render(renderId, trimmedSource, host)
+    );
     const svgMarkup = sanitizeSvgMarkup(result.svg);
     const svgDom = new JSDOM(svgMarkup, { contentType: 'image/svg+xml' });
     installSvgMeasurementPolyfills(svgDom.window);
@@ -345,6 +373,57 @@ async function rasterizeSvgToPng(svg: string, requestedRenderScale: number | und
     }
 }
 
+function installMermaidDomGlobals(window: JSDOM['window']): () => void {
+    const globalScope = globalThis as Record<string, unknown>;
+    const snapshots = new Map<MermaidGlobalBindingKey, MermaidGlobalBindingSnapshot>();
+
+    for (const key of MERMAID_GLOBAL_BINDING_KEYS) {
+        snapshots.set(key, {
+            existed: Object.prototype.hasOwnProperty.call(globalScope, key),
+            descriptor: Object.getOwnPropertyDescriptor(globalScope, key),
+        });
+    }
+
+    globalScope.window = window;
+    globalScope.document = window.document;
+    Object.defineProperty(globalScope, 'navigator', {
+        value: window.navigator,
+        configurable: true,
+        writable: true,
+    });
+    globalScope.Element = window.Element;
+    globalScope.HTMLElement = window.HTMLElement;
+    globalScope.SVGElement = window.SVGElement;
+    globalScope.Node = window.Node;
+    globalScope.getComputedStyle = window.getComputedStyle.bind(window);
+
+    return () => {
+        for (const key of MERMAID_GLOBAL_BINDING_KEYS) {
+            const snapshot = snapshots.get(key);
+            if (!snapshot) {
+                continue;
+            }
+            if (snapshot.existed && snapshot.descriptor) {
+                Object.defineProperty(globalScope, key, snapshot.descriptor);
+                continue;
+            }
+            delete (globalScope as Record<string, unknown>)[key];
+        }
+    };
+}
+
+async function withMermaidDomGlobals<T>(
+    window: JSDOM['window'],
+    work: () => Promise<T> | T
+): Promise<T> {
+    const restore = installMermaidDomGlobals(window);
+    try {
+        return await work();
+    } finally {
+        restore();
+    }
+}
+
 async function ensureMermaidEnvironment(theme: 'dark' | 'default'): Promise<MermaidEnvironment> {
     if (!mermaidEnvironmentPromise) {
         mermaidEnvironmentPromise = createMermaidEnvironment(theme);
@@ -354,7 +433,9 @@ async function ensureMermaidEnvironment(theme: 'dark' | 'default'): Promise<Merm
     environment.host.style.background = MERMAID_BACKGROUND;
     environment.host.style.color = MERMAID_TEXT_COLOR;
     environment.host.style.fontFamily = MERMAID_FONT_FAMILY;
-    environment.mermaid.initialize(getMermaidConfig(theme));
+    await withMermaidDomGlobals(environment.window, async () => {
+        environment.mermaid.initialize(getMermaidConfig(theme));
+    });
     return environment;
 }
 
@@ -371,24 +452,12 @@ async function createMermaidEnvironment(theme: 'dark' | 'default'): Promise<Merm
         throw new Error('Unable to create a Mermaid render host.');
     }
 
-    const globalScope = globalThis as any;
-    globalScope.window = window;
-    globalScope.document = window.document;
-    Object.defineProperty(globalScope, 'navigator', {
-        value: window.navigator,
-        configurable: true,
-        writable: true,
-    });
-    globalScope.Element = window.Element;
-    globalScope.HTMLElement = window.HTMLElement;
-    globalScope.SVGElement = window.SVGElement;
-    globalScope.Node = window.Node;
-    globalScope.getComputedStyle = window.getComputedStyle.bind(window);
-
     installSvgMeasurementPolyfills(window);
-
-    const mermaid = await loadMermaidModule(window);
-    mermaid.initialize(getMermaidConfig(theme));
+    const mermaid = await withMermaidDomGlobals(window, async () => {
+        const loaded = await loadMermaidModule(window);
+        loaded.initialize(getMermaidConfig(theme));
+        return loaded;
+    });
 
     return {
         dom,

@@ -1,3 +1,75 @@
+# 2026-03-10 v1.0.18
+
+# RISK-CORRECTION EXECUTION UPDATE (HIGH-SCALE BRIDGE LIMIT + WRITABLE RUNTIME PATHS + MERMAID GLOBAL ISOLATION)
+
+## ENGLISH DOCUMENT
+
+### Remediation Status (This Slice)
+- [x] PathBridge inbound-frame ceiling is now high-throughput and tunable:
+  - [x] Default inbound frame limit raised to `128 MiB`.
+  - [x] Environment override added: `NOTE_CONNECTION_BRIDGE_MAX_INBOUND_MB`.
+  - [x] Effective inbound hard cap bounded at `1024 MiB`.
+  - [x] WebSocket `maxPayload` is now aligned with `MAX_INBOUND_MESSAGE_BYTES` to avoid lower-layer mismatch rejects.
+- [x] Bridge inbound-limit contracts were added:
+  - [x] Exported `BRIDGE_INBOUND_LIMITS` in `src/core/PathBridge.ts`.
+  - [x] Added contract coverage in `src/pathbridge.handshake.contract.test.ts`.
+- [x] Runtime writability was hardened in `src/utils/RuntimePaths.ts`:
+  - [x] Runtime data resolution no longer falls back to `frontendDir`.
+  - [x] Added writable candidate chain across app-data, project, cwd, and temp runtime-data roots.
+  - [x] Added explicit provisioning failure when no writable runtime directory can be created.
+- [x] Mermaid renderer global pollution was corrected in `src/reader_renderer.ts`:
+  - [x] Added scoped DOM-global install/restore wrappers (`withMermaidDomGlobals(...)`).
+  - [x] Mermaid `initialize` and `render` now execute within scoped global bindings and restore previous process globals afterward.
+  - [x] Added non-leak regression test in `src/reader_renderer.test.ts`.
+- [ ] Remaining risk from historical baseline: Base64-heavy transfer optimization path and iOS/Android app identifier/compliance hardening remain open follow-up items.
+
+### Verification Snapshot (2026-03-10)
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts --runInBand`
+- [x] `npx jest src/utils/RuntimePaths.test.ts --runInBand`
+- [x] `npx jest src/reader_renderer.test.ts --runInBand`
+- [x] `npm run test:migration` (**28 suites, 137 tests passed**)
+- [x] `npm run test:wasm:parity:gates` (strict verify + strict perf guards passed)
+- [x] `npm test` (**31 suites, 155 tests passed**)
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+
+---
+
+## 中文文档
+
+### 本轮整改状态
+- [x] PathBridge 入站帧上限已升级为高吞吐可配置方案：
+  - [x] 默认入站帧上限提升至 `128 MiB`。
+  - [x] 新增环境变量覆盖：`NOTE_CONNECTION_BRIDGE_MAX_INBOUND_MB`。
+  - [x] 有效入站上限硬阈值约束为 `1024 MiB`。
+  - [x] WebSocket `maxPayload` 与 `MAX_INBOUND_MESSAGE_BYTES` 对齐，避免传输栈上下层阈值不一致导致的提前拒绝。
+- [x] 已补齐入站上限契约测试：
+  - [x] 在 `src/core/PathBridge.ts` 导出 `BRIDGE_INBOUND_LIMITS`。
+  - [x] 在 `src/pathbridge.handshake.contract.test.ts` 增加入站上限契约断言。
+- [x] 已强化运行时写路径稳健性（`src/utils/RuntimePaths.ts`）：
+  - [x] 运行时数据目录不再回退到 `frontendDir`。
+  - [x] 新增 app-data / project / cwd / temp 的可写候选链路。
+  - [x] 无可写目录时显式抛错，避免静默落入只读路径。
+- [x] 已修复 Mermaid 渲染全局污染问题（`src/reader_renderer.ts`）：
+  - [x] 新增作用域化全局绑定安装/恢复包装（`withMermaidDomGlobals(...)`）。
+  - [x] Mermaid 的 `initialize` / `render` 均在作用域化绑定中执行，结束后恢复原全局状态。
+  - [x] 在 `src/reader_renderer.test.ts` 新增“渲染后不泄漏全局 window/document”回归测试。
+- [ ] 历史基线中的剩余风险：Base64 重负载传输优化、iOS/Android app identifier 与上架合规加固仍需后续收口。
+
+### 验证快照（2026-03-10）
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts --runInBand`
+- [x] `npx jest src/utils/RuntimePaths.test.ts --runInBand`
+- [x] `npx jest src/reader_renderer.test.ts --runInBand`
+- [x] `npm run test:migration`（**28 suites, 137 tests passed**）
+- [x] `npm run test:wasm:parity:gates`（严格校验 + 严格性能门禁通过）
+- [x] `npm test`（**31 suites, 155 tests passed**）
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+
+> Historical note: the older section below is kept as imported baseline context and does not represent the current remediated state.
+
+---
+
 # 🛡️ HYBRID ARCHITECTURE AUDIT & PRODUCTION READINESS REPORT (2026-03-10)
 
 **Target System:** Node.js (v22 LTS) + Capacitor (v8.2.0) + @yao-pkg/pkg (v6.14.1)

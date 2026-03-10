@@ -107,6 +107,7 @@ describe('resolveRuntimePaths', () => {
     expect(resolved.projectRoot).toBe(path.resolve(projectRoot));
     expect(resolved.frontendDir).toBe(path.resolve(distFrontend));
     expect(fs.existsSync(resolved.runtimeDataDir)).toBe(true);
+    expect(resolved.runtimeDataDir).not.toBe(path.resolve(distFrontend));
     expect(resolved.kbRoot).toBe(path.resolve(kbRoot));
   });
 
@@ -124,6 +125,7 @@ describe('resolveRuntimePaths', () => {
 
     expect(resolved.frontendDir).toBe(path.resolve(srcFrontend));
     expect(fs.existsSync(resolved.runtimeDataDir)).toBe(true);
+    expect(resolved.runtimeDataDir).not.toBe(path.resolve(srcFrontend));
     expect(resolved.kbRoot).toBe(path.resolve(kbRoot));
   });
 

@@ -52,6 +52,42 @@ function runRendererJson<T>(functionName: 'renderMathPng' | 'renderMermaidPng', 
     })) as T;
 }
 
+function runRendererScopeProbe(source: string, options: Record<string, unknown> = {}): {
+    beforeWindow: boolean;
+    beforeDocument: boolean;
+    afterWindow: boolean;
+    afterDocument: boolean;
+} {
+    const script = [
+        "const { renderMermaidSvg } = require(%PATH%);",
+        "(async () => {",
+        "  const beforeWindow = Object.prototype.hasOwnProperty.call(globalThis, 'window');",
+        "  const beforeDocument = Object.prototype.hasOwnProperty.call(globalThis, 'document');",
+        "  await renderMermaidSvg(%SOURCE%, %OPTIONS%);",
+        "  const afterWindow = Object.prototype.hasOwnProperty.call(globalThis, 'window');",
+        "  const afterDocument = Object.prototype.hasOwnProperty.call(globalThis, 'document');",
+        "  process.stdout.write(JSON.stringify({ beforeWindow, beforeDocument, afterWindow, afterDocument }));",
+        "})().catch((error) => {",
+        "  console.error(error && error.stack ? error.stack : error);",
+        "  process.exit(1);",
+        "});",
+    ]
+        .join('\n')
+        .replace('%PATH%', JSON.stringify(distRendererPath))
+        .replace('%SOURCE%', JSON.stringify(source))
+        .replace('%OPTIONS%', JSON.stringify(options));
+
+    return JSON.parse(execFileSync(process.execPath, ['-e', script], {
+        cwd: projectRoot,
+        encoding: 'utf8',
+    })) as {
+        beforeWindow: boolean;
+        beforeDocument: boolean;
+        afterWindow: boolean;
+        afterDocument: boolean;
+    };
+}
+
 describe('reader_renderer', () => {
     beforeAll(() => {
         execFileSync(process.execPath, [tscScriptPath, '--pretty', 'false'], {
@@ -118,6 +154,16 @@ describe('reader_renderer', () => {
         expect(svg).toContain('viewBox');
         expect(svg).toContain('Start');
         expect(svg).toContain('Segoe UI');
+    });
+
+    it('does not leak JSDOM globals onto Node global scope after Mermaid rendering', () => {
+        const scopeProbe = runRendererScopeProbe(
+            ['flowchart TD', 'A[Start] --> B{Check}', 'B -->|Yes| C[Done]', 'B -->|No| D[Retry]'].join('\n'),
+            { theme: 'dark' },
+        );
+
+        expect(scopeProbe.afterWindow).toBe(scopeProbe.beforeWindow);
+        expect(scopeProbe.afterDocument).toBe(scopeProbe.beforeDocument);
     });
 
     it('keeps normal mermaid diagrams close to their content width instead of inflating to the hard cap', () => {

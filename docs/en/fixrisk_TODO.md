@@ -1,3 +1,41 @@
+# 2026-03-10 v1.0.18
+
+# SCALE + STABILITY HARDENING UPDATE (BRIDGE INBOUND LIMIT / RUNTIME WRITABILITY / MERMAID GLOBAL ISOLATION)
+
+## EXECUTION STATUS (THIS SLICE)
+
+- [x] PathBridge inbound limit is now high-scale and tunable:
+  - [x] Default inbound frame budget raised from 1 MiB to `128 MiB`.
+  - [x] Added `NOTE_CONNECTION_BRIDGE_MAX_INBOUND_MB` override with bounded hard cap (`1024 MiB`).
+  - [x] Aligned WebSocket `maxPayload` with `MAX_INBOUND_MESSAGE_BYTES`.
+- [x] Added explicit inbound-limit contract coverage:
+  - [x] Exported `BRIDGE_INBOUND_LIMITS`.
+  - [x] Added `inbound frame limit is provisioned for high-volume graph payloads` contract in `src/pathbridge.handshake.contract.test.ts`.
+- [x] Hardened runtime data directory resolution in `src/utils/RuntimePaths.ts`:
+  - [x] Removed `frontendDir` fallback from runtime-data write path selection.
+  - [x] Added app-data / project / cwd / temp writable candidates.
+  - [x] Added explicit failure when no writable runtime-data directory can be provisioned.
+- [x] Fixed Mermaid/JSDOM global-scope pollution in `src/reader_renderer.ts`:
+  - [x] Added scoped DOM-global install/restore (`withMermaidDomGlobals(...)`).
+  - [x] Wrapped Mermaid `initialize` and `render` in scoped global context.
+  - [x] Added regression proof in `src/reader_renderer.test.ts` that render no longer leaks global `window/document`.
+- [ ] Remaining baseline items: base64-heavy transfer optimization and mobile compliance/app-identifier closure remain open.
+
+## VERIFICATION SNAPSHOT (2026-03-10)
+
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts --runInBand`
+- [x] `npx jest src/utils/RuntimePaths.test.ts --runInBand`
+- [x] `npx jest src/reader_renderer.test.ts --runInBand`
+- [x] `npm run test:migration` passed (**28 suites, 137 tests**).
+- [x] `npm run test:wasm:parity:gates` passed.
+- [x] `npm test` passed (**31 suites, 155 tests**).
+- [x] `npm run build` passed.
+- [x] `npm run build:sidecar` passed.
+
+> Timeline note: older slices below are preserved for history and may include superseded values (for example, the prior 1 MiB inbound limit).
+
+---
+
 # 2026-03-10 v1.0.17
 
 # BRIDGE HARDENING EXECUTION UPDATE (STRICT ENVELOPE + BACKPRESSURE + CSP/PKG CONTRACTS)

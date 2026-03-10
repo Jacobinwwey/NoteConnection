@@ -1,3 +1,41 @@
+# 2026-03-10 v1.0.18
+
+# 规模与稳健性加固更新（桥接入站上限 / 运行时可写路径 / Mermaid 全局隔离）
+
+## 本轮执行状态
+
+- [x] PathBridge 入站上限已支持大规模数据：
+  - [x] 默认入站帧预算由 1 MiB 提升至 `128 MiB`。
+  - [x] 新增 `NOTE_CONNECTION_BRIDGE_MAX_INBOUND_MB` 可配置项，硬上限约束为 `1024 MiB`。
+  - [x] WebSocket `maxPayload` 已与 `MAX_INBOUND_MESSAGE_BYTES` 对齐，避免上下层阈值不一致导致的提前拒绝。
+- [x] 已补齐入站上限契约覆盖：
+  - [x] 导出 `BRIDGE_INBOUND_LIMITS`。
+  - [x] 在 `src/pathbridge.handshake.contract.test.ts` 增加入站上限回归断言。
+- [x] 已强化 `src/utils/RuntimePaths.ts` 运行时写目录策略：
+  - [x] 运行时数据目录不再回退到 `frontendDir`。
+  - [x] 新增 app-data / project / cwd / temp 可写候选链路。
+  - [x] 无法创建可写目录时显式失败，避免静默落入只读目录。
+- [x] 已修复 `src/reader_renderer.ts` 中 Mermaid/JSDOM 全局污染：
+  - [x] 新增作用域化全局绑定安装/恢复（`withMermaidDomGlobals(...)`）。
+  - [x] Mermaid `initialize` / `render` 均在作用域化全局上下文执行。
+  - [x] 在 `src/reader_renderer.test.ts` 增加“渲染后不泄漏 `window/document`”回归证明。
+- [ ] 基线剩余项：Base64 重负载链路优化、移动端上架合规 / app identifier 收口仍待完成。
+
+## 验证快照（2026-03-10）
+
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts --runInBand`
+- [x] `npx jest src/utils/RuntimePaths.test.ts --runInBand`
+- [x] `npx jest src/reader_renderer.test.ts --runInBand`
+- [x] `npm run test:migration` 通过（**28 suites, 137 tests**）。
+- [x] `npm run test:wasm:parity:gates` 通过。
+- [x] `npm test` 通过（**31 suites, 155 tests**）。
+- [x] `npm run build` 通过。
+- [x] `npm run build:sidecar` 通过。
+
+> 时间线说明：下方旧切片为历史留存，可能包含已被替代的参数值（例如此前的 1 MiB 入站上限）。
+
+---
+
 ## 中文文档
 
 # 2026-03-10 v1.0.17

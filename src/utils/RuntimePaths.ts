@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 
 export interface RuntimePaths {
@@ -142,12 +143,17 @@ export function resolveRuntimePaths(moduleDir: string): RuntimePaths {
             envRuntimeDataDir,
             path.join(resolveAppDataRoot(cwd), 'runtime_data'),
             path.join(projectRoot, 'runtime_data'),
-            frontendDir
+            path.join(cwd, 'runtime_data'),
+            path.join(os.tmpdir(), 'noteconnection', 'runtime_data')
         ].filter((v): v is string => Boolean(v))
     );
 
-    const runtimeDataDir =
-        runtimeDataCandidates.find((candidate) => ensureWritableDirectory(candidate)) || frontendDir;
+    const runtimeDataDirCandidate = runtimeDataCandidates.find((candidate) => ensureWritableDirectory(candidate))
+        || path.join(resolveAppDataRoot(cwd), 'runtime_data');
+    if (!ensureWritableDirectory(runtimeDataDirCandidate)) {
+        throw new Error(`Unable to provision writable runtime data directory: ${runtimeDataDirCandidate}`);
+    }
+    const runtimeDataDir = path.resolve(runtimeDataDirCandidate);
 
     const kbCandidates = uniqPaths(
         [
