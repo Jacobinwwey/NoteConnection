@@ -3,6 +3,8 @@ import { WasmParityRuntime } from './backend/algorithms/WasmParityRuntime';
 type JsonAbiFixtureOptions = {
     layoutResponse?: string;
     betweennessResponse?: string;
+    cyclesResponse?: string;
+    ranksResponse?: string;
     includeMemory?: boolean;
     includeAlloc?: boolean;
 };
@@ -71,6 +73,28 @@ function createJsonAbiFixture(options: JsonAbiFixtureOptions): WebAssembly.Insta
             expect(Array.isArray(payload.nodeIds)).toBe(true);
             expect(payload.adjacency && typeof payload.adjacency === 'object').toBe(true);
             return writeResult(options.betweennessResponse as string);
+        });
+    }
+
+    if (typeof options.cyclesResponse === 'string') {
+        exports.compute_cycles_json = jest.fn((inputPtr: number, inputLen: number) => {
+            const input = decoder.decode(new Uint8Array(memory.buffer, inputPtr, inputLen));
+            const payload = JSON.parse(input) as { nodeIds?: unknown[]; adjacency?: unknown; limit?: unknown };
+            expect(Array.isArray(payload.nodeIds)).toBe(true);
+            expect(payload.adjacency && typeof payload.adjacency === 'object').toBe(true);
+            expect(typeof payload.limit).toBe('number');
+            return writeResult(options.cyclesResponse as string);
+        });
+    }
+
+    if (typeof options.ranksResponse === 'string') {
+        exports.compute_ranks_json = jest.fn((inputPtr: number, inputLen: number) => {
+            const input = decoder.decode(new Uint8Array(memory.buffer, inputPtr, inputLen));
+            const payload = JSON.parse(input) as { nodeIds?: unknown[]; adjacency?: unknown; inDegrees?: unknown };
+            expect(Array.isArray(payload.nodeIds)).toBe(true);
+            expect(payload.adjacency && typeof payload.adjacency === 'object').toBe(true);
+            expect(payload.inDegrees && typeof payload.inDegrees === 'object').toBe(true);
+            return writeResult(options.ranksResponse as string);
         });
     }
 
@@ -148,6 +172,67 @@ describe('wasm parity runtime functional JSON ABI', () => {
         expect(result?.get('C')).toBe(1);
     });
 
+    test('computeCycles returns cycle list when JSON ABI exports are available', async () => {
+        const fixture = createJsonAbiFixture({
+            cyclesResponse: JSON.stringify({
+                cycles: [
+                    ['A', 'B', 'C', 'A'],
+                    ['D', 'E', 'D']
+                ]
+            })
+        });
+
+        setRuntimeInstance(fixture);
+        const result = await WasmParityRuntime.computeCycles(
+            ['A', 'B', 'C', 'D', 'E'],
+            {
+                A: ['B'],
+                B: ['C'],
+                C: ['A'],
+                D: ['E'],
+                E: ['D']
+            },
+            10
+        );
+
+        expect(result).toEqual([
+            ['A', 'B', 'C', 'A'],
+            ['D', 'E', 'D']
+        ]);
+    });
+
+    test('computeRanks returns topological ranks when JSON ABI exports are available', async () => {
+        const fixture = createJsonAbiFixture({
+            ranksResponse: JSON.stringify({
+                ranks: {
+                    A: 0,
+                    B: 1,
+                    C: 2
+                }
+            })
+        });
+
+        setRuntimeInstance(fixture);
+        const result = await WasmParityRuntime.computeRanks(
+            ['A', 'B', 'C'],
+            {
+                A: ['B'],
+                B: ['C'],
+                C: []
+            },
+            {
+                A: 0,
+                B: 1,
+                C: 1
+            }
+        );
+
+        expect(result).not.toBeNull();
+        expect(result?.get('A')).toBe(0);
+        expect(result?.get('B')).toBe(1);
+        expect(result?.get('C')).toBe(2);
+    });
+
     test('returns null when JSON ABI exports are incomplete', async () => {
         const fixture = createJsonAbiFixture({
             layoutResponse: JSON.stringify({
@@ -175,6 +260,49 @@ describe('wasm parity runtime functional JSON ABI', () => {
         const result = await WasmParityRuntime.computeBetweenness(
             ['A'],
             { A: [] }
+        );
+
+        expect(result).toBeNull();
+    });
+
+    test('returns null when cycles JSON ABI output shape is invalid', async () => {
+        const fixture = createJsonAbiFixture({
+            cyclesResponse: JSON.stringify({
+                cycles: ['A->B->A']
+            })
+        });
+
+        setRuntimeInstance(fixture);
+        const result = await WasmParityRuntime.computeCycles(
+            ['A', 'B'],
+            {
+                A: ['B'],
+                B: ['A']
+            },
+            1
+        );
+
+        expect(result).toBeNull();
+    });
+
+    test('returns null when ranks JSON ABI output shape is invalid', async () => {
+        const fixture = createJsonAbiFixture({
+            ranksResponse: JSON.stringify({
+                ranks: ['A:0', 'B:1']
+            })
+        });
+
+        setRuntimeInstance(fixture);
+        const result = await WasmParityRuntime.computeRanks(
+            ['A', 'B'],
+            {
+                A: ['B'],
+                B: []
+            },
+            {
+                A: 0,
+                B: 1
+            }
         );
 
         expect(result).toBeNull();

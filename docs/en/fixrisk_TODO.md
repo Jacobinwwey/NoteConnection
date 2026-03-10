@@ -1,3 +1,131 @@
+# 2026-03-10 v1.0.23
+
+# RISK-CORRECTION EXECUTION UPDATE (WASM TOPOLOGICAL RANK PARITY SLICE + STRICT EXPORT GATE ALIGNMENT)
+
+## ENGLISH DOCUMENT
+
+### Remediation Status (This Slice)
+- [x] Added real topological-rank JSON ABI in Rust parity module (`src/backend/wasm/src/lib.rs`):
+  - [x] Exported `compute_ranks_json`.
+  - [x] Implemented deterministic Kahn-style rank payload aligned with existing TypeScript rank semantics.
+- [x] Extended runtime adapter (`src/backend/algorithms/WasmParityRuntime.ts`):
+  - [x] Added `computeRanks(...)` with strict decode guards and `json-ranks` execution mode tracking.
+- [x] Extended backend heavy-compute orchestration:
+  - [x] Added `TopologicalSort.assignRanksAsync(...)` with wasm-first, sequential fallback semantics.
+  - [x] Updated `GraphBuilder` topological-rank stage to async path (`await TopologicalSort.assignRanksAsync(...)`).
+- [x] Raised strict artifact readiness requirement:
+  - [x] Added `compute_ranks_json` into `REQUIRED_WASM_PARITY_EXPORTS`.
+- [x] Regression coverage updated:
+  - [x] Added `src/backend/algorithms/TopologicalSort.test.ts`.
+  - [x] Updated `src/wasm.parity.runtime.functional.test.ts`.
+  - [x] Updated `src/wasm.parity.runtime.contract.test.ts`.
+  - [x] Updated `src/wasm.parity.artifact.probe.contract.test.ts`.
+  - [x] Added `TopologicalSort` suite into `npm run test:migration`.
+
+### Verification Snapshot (2026-03-10)
+- [x] `npm run build:wasm:parity`
+- [x] `npx jest src/backend/algorithms/TopologicalSort.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts --runInBand` (**5 suites, 22 tests passed**)
+- [x] `npm run test:migration` (**29 suites, 153 tests passed**)
+- [x] `npm run test:wasm:parity:gates` (strict verify + strict p95/p99 perf guards passed; strict probe confirms `compute_ranks_json` export)
+- [x] `npx jest --runInBand` (**33 suites, 174 tests passed**)
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+
+---
+
+# 2026-03-10 v1.0.22
+
+# WASM CYCLE PARITY SLICE UPDATE (STRICT EXPORT GATE + ASYNC ORCHESTRATION)
+
+## EXECUTION STATUS (THIS SLICE)
+
+- [x] Added real cycle-detection JSON ABI in Rust parity module (`src/backend/wasm/src/lib.rs`):
+  - [x] Exported `compute_cycles_json`.
+  - [x] Implemented deterministic iterative-DFS cycle payload with `limit` support.
+- [x] Extended runtime adapter (`src/backend/algorithms/WasmParityRuntime.ts`):
+  - [x] Added `computeCycles(...)` with strict decode guards and `json-cycles` execution mode tracking.
+- [x] Extended backend heavy-compute orchestration:
+  - [x] Added `CycleDetector.detectCyclesAsync(...)` with wasm-first, sequential fallback semantics.
+  - [x] Updated `GraphBuilder` cycle stage to async path (`await CycleDetector.detectCyclesAsync(...)`).
+- [x] Raised strict artifact readiness requirement:
+  - [x] Added `compute_cycles_json` into `REQUIRED_WASM_PARITY_EXPORTS`.
+- [x] CI snapshot policy aligned with strict perf script:
+  - [x] `.github/workflows/wasm-parity-benchmark-snapshots.yml` now reuses `benchmark:wasm:parity:strict:perf` to enforce p95+p99 policy consistently.
+- [x] Regression coverage updated:
+  - [x] `src/backend/algorithms/CycleDetection.test.ts`
+  - [x] `src/wasm.parity.runtime.functional.test.ts`
+  - [x] `src/wasm.parity.runtime.contract.test.ts`
+  - [x] `src/wasm.parity.artifact.probe.contract.test.ts`
+
+## VERIFICATION SNAPSHOT (2026-03-10)
+
+- [x] `npm run build:wasm:parity`
+- [x] `npx jest src/backend/algorithms/CycleDetection.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts --runInBand` (**5 suites, 22 tests passed**)
+- [x] `npm run test:migration` (**28 suites, 147 tests passed**)
+- [x] `npm run test:wasm:parity:gates` passed.
+- [x] `npx jest --runInBand` (**32 suites, 168 tests passed**)
+- [x] `npm run build` passed.
+- [x] `npm run build:sidecar` passed.
+- [!] `npm test` (parallel mode) can still hit host-memory OOM risk in this environment; sequential suite is green.
+
+---
+
+# 2026-03-10 v1.0.21
+
+# WASM BENCHMARK TAIL-GUARD HARDENING UPDATE (P95 + P99 STRICT GATES)
+
+## EXECUTION STATUS (THIS SLICE)
+
+- [x] Strengthened strict WASM benchmark guard policy from p95-only to p95+p99 tail-latency enforcement:
+  - [x] Extended guard model in `src/backend/algorithms/WasmParityBenchmarkGuards.ts` with p99 ratio/absolute thresholds.
+  - [x] Added p99 guard failure codes:
+    - [x] `candidate-to-baseline-p99-ratio-exceeded`
+    - [x] `candidate-p99-exceeded-absolute-threshold`
+  - [x] Preserved backward compatibility when legacy callers do not pass p99 values/config.
+- [x] Extended benchmark script guard wiring in `scripts/benchmark-wasm-parity.js`:
+  - [x] Added p99 CLI thresholds and report/log output paths.
+  - [x] Guard diagnostics now print both p95 and p99 baseline/candidate metrics and ratios.
+- [x] Strengthened strict perf gate command in `package.json`:
+  - [x] `benchmark:wasm:parity:strict:perf` now enforces both p95 and p99 ratio thresholds.
+- [x] Added p99 regression contract coverage in `src/wasm.parity.benchmark.guards.contract.test.ts`.
+
+## VERIFICATION SNAPSHOT (2026-03-10)
+
+- [x] `npx jest src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.benchmark.contract.test.ts --runInBand`
+- [x] `npm run test:wasm:parity:gates` passed.
+- [x] `npm run test:migration` passed (**28 suites, 143 tests**).
+- [x] `npm test` passed (**32 suites, 164 tests**).
+- [x] `npm run build` passed.
+- [x] `npm run build:sidecar` passed.
+
+---
+
+# 2026-03-10 v1.0.20
+
+# MOBILE ACCESSIBILITY PARITY CLOSURE UPDATE (MAIN GRAPH CANVAS/SVG SEMANTIC SHADOW)
+
+## EXECUTION STATUS (THIS SLICE)
+
+- [x] Closed the remaining baseline follow-up: mobile semantic DOM accessibility parity for graph/canvas surfaces.
+  - [x] Added semantic shadow/live-region provisioning in `src/frontend/app.js` (`graph-semantic-shadow`, `graph-semantic-summary`, `graph-semantic-live`).
+  - [x] Added semantic summary generation for renderer mode, visible node/edge counts, focus/selection state, and active filters.
+  - [x] Added throttled semantic refresh scheduling to avoid high-frequency accessibility announcement churn on large graphs.
+  - [x] Wired refresh triggers to renderer toggle, visibility/filter updates, node selection, focus-mode enter/exit, and language changes.
+- [x] Added regression contract coverage:
+  - [x] New `src/graph.accessibility.contract.test.ts` verifies semantic region provisioning and update wiring.
+  - [x] Existing runtime capability contracts remain green (`src/runtime.capabilities.test.ts`).
+
+## VERIFICATION SNAPSHOT (2026-03-10)
+
+- [x] `npx jest src/graph.accessibility.contract.test.ts src/runtime.capabilities.test.ts --runInBand`
+- [x] `npm run test:migration` passed (**28 suites, 141 tests**).
+- [x] `npm run test:wasm:parity:gates` passed.
+- [x] `npm test` passed (**32 suites, 162 tests**).
+- [x] `npm run build` passed.
+- [x] `npm run build:sidecar` passed.
+
+---
+
 # 2026-03-10 v1.0.19
 
 # MERMAID PAYLOAD + MOBILE COMPLIANCE CLOSURE UPDATE
@@ -18,7 +146,7 @@
   - [x] `src/server.migration.test.ts`: Mermaid response shape default/opt-in behavior.
   - [x] `src/pathbridge.handshake.contract.test.ts`: includeSvg contract propagation.
   - [x] `src/mobile.pipeline.test.ts`: non-example app-id consistency + legacy package path removal.
-- [ ] Remaining baseline follow-up: mobile semantic DOM accessibility parity for graph/canvas surfaces.
+- [x] Remaining baseline follow-up (historical) is now closed in `v1.0.20`: mobile semantic DOM accessibility parity for graph/canvas surfaces.
 
 ## VERIFICATION SNAPSHOT (2026-03-10)
 
@@ -52,7 +180,7 @@
   - [x] Added scoped DOM-global install/restore (`withMermaidDomGlobals(...)`).
   - [x] Wrapped Mermaid `initialize` and `render` in scoped global context.
   - [x] Added regression proof in `src/reader_renderer.test.ts` that render no longer leaks global `window/document`.
-- [ ] Remaining baseline items: base64-heavy transfer optimization and mobile compliance/app-identifier closure remain open.
+- [x] Remaining baseline items in this historical slice were closed in later slices (`v1.0.19` + `v1.0.20`).
 
 ## VERIFICATION SNAPSHOT (2026-03-10)
 
@@ -92,7 +220,7 @@
   - [x] Added `frame-ancestors 'none'`.
   - [x] Added `form-action 'self'`.
 - [x] Godot Mermaid runtime constraint is explicit: render success is accepted only when `pngBase64` is present; SVG remains diagnostics-only and is not a runtime fallback path.
-- [ ] Remaining imported-baseline work still open: base64 heavy-transfer optimization and mobile semantic DOM accessibility path.
+- [x] Remaining imported-baseline work listed here was closed in later slices (`v1.0.19` + `v1.0.20`).
 
 ## VERIFICATION SNAPSHOT (2026-03-10)
 

@@ -1,10 +1,117 @@
 import { Graph } from '../../core/Graph';
+import { WasmParityRuntime } from './WasmParityRuntime';
+
+export type CycleDetectionComputeMode = 'none' | 'wasm-adapter' | 'sequential';
+
+export interface CycleDetectionComputeDiagnostics {
+    mode: CycleDetectionComputeMode;
+    nodeCount: number;
+    edgeCount: number;
+    limit: number;
+    durationMs: number;
+    reason: string | null;
+    updatedAtMs: number;
+}
+
+function createDefaultComputeDiagnostics(): CycleDetectionComputeDiagnostics {
+    return {
+        mode: 'none',
+        nodeCount: 0,
+        edgeCount: 0,
+        limit: 0,
+        durationMs: 0,
+        reason: null,
+        updatedAtMs: 0
+    };
+}
 
 /**
  * Service to detect cycles in the graph.
  * 用于检测图中循环的服务。
  */
 export class CycleDetector {
+    private static lastComputeDiagnostics: CycleDetectionComputeDiagnostics = createDefaultComputeDiagnostics();
+
+    private static markComputeMode(
+        mode: CycleDetectionComputeMode,
+        nodeCount: number,
+        edgeCount: number,
+        limit: number,
+        startedAtMs: number,
+        reason: string | null = null
+    ): void {
+        const updatedAtMs = Date.now();
+        this.lastComputeDiagnostics = {
+            mode,
+            nodeCount,
+            edgeCount,
+            limit,
+            durationMs: Math.max(0, updatedAtMs - startedAtMs),
+            reason,
+            updatedAtMs
+        };
+    }
+
+    static getLastComputeDiagnostics(): CycleDetectionComputeDiagnostics {
+        return { ...this.lastComputeDiagnostics };
+    }
+
+    static __resetComputeDiagnosticsForTests(): void {
+        this.lastComputeDiagnostics = createDefaultComputeDiagnostics();
+    }
+
+    static async detectCyclesAsync(graph: Graph, limit: number = 0): Promise<string[][]> {
+        const startedAtMs = Date.now();
+        const nodes = graph.getNodes();
+        const nodeCount = nodes.length;
+        const edgeCount = graph.getEdges().length;
+        const normalizedLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 0;
+
+        const nodeIds = nodes.map((node) => node.id);
+        const adjacency: Record<string, string[]> = {};
+        nodeIds.forEach((nodeId) => {
+            adjacency[nodeId] = graph.getNeighbors(nodeId);
+        });
+
+        try {
+            const wasmCycles = await WasmParityRuntime.computeCycles(nodeIds, adjacency, normalizedLimit);
+            if (wasmCycles !== null) {
+                this.markComputeMode(
+                    'wasm-adapter',
+                    nodeCount,
+                    edgeCount,
+                    normalizedLimit,
+                    startedAtMs,
+                    'wasm-result-applied'
+                );
+                return wasmCycles;
+            }
+        } catch (wasmErr) {
+            console.warn('[CycleDetector] WASM parity cycle detection failed. Falling back to sequential.', wasmErr);
+            const fallbackCycles = this.detectCycles(graph, normalizedLimit);
+            this.markComputeMode(
+                'sequential',
+                nodeCount,
+                edgeCount,
+                normalizedLimit,
+                startedAtMs,
+                'wasm-error-fallback'
+            );
+            return fallbackCycles;
+        }
+
+        const fallbackCycles = this.detectCycles(graph, normalizedLimit);
+        this.markComputeMode(
+            'sequential',
+            nodeCount,
+            edgeCount,
+            normalizedLimit,
+            startedAtMs,
+            'wasm-null-fallback'
+        );
+        return fallbackCycles;
+    }
+
     /**
      * Detects all simple cycles in the graph using Iterative DFS.
      * 使用迭代 DFS 检测图中的所有简单循环。

@@ -1,6 +1,12 @@
 // Initialize Graph
 const container = document.getElementById('graph-container');
 let focusNode = null;
+const graphSemanticA11yState = {
+    lastSummaryKey: '',
+    lastAnnouncementAt: 0,
+    pendingReason: '',
+    pendingTimer: null
+};
 
 // State for Cluster Filtering
 let activeClusterFilter = localStorage.getItem('activeClusterFilter') || 'all';
@@ -445,10 +451,254 @@ function updateFocusModeState(active, node = null) {
     highlightManager.setFocusMode(focusModeState);
 }
 
+function isGraphA11yZhMode() {
+    if (!window.i18n || !window.i18n.currentLanguage) {
+        return false;
+    }
+    return String(window.i18n.currentLanguage).toLowerCase().startsWith('zh');
+}
+
+function getGraphRendererMode() {
+    const checked = document.querySelector('input[name="rendererMode"]:checked');
+    if (!checked || (checked.value !== 'svg' && checked.value !== 'canvas')) {
+        return 'svg';
+    }
+    return checked.value;
+}
+
+function resolveGraphEndpointId(endpoint) {
+    if (!endpoint) {
+        return '';
+    }
+    if (typeof endpoint === 'object' && endpoint.id) {
+        return String(endpoint.id);
+    }
+    if (typeof endpoint === 'string') {
+        return endpoint;
+    }
+    return '';
+}
+
+function resolveGraphNodeLabel(nodeRef) {
+    if (!nodeRef) {
+        return '';
+    }
+    const label = nodeRef.label || nodeRef.id || '';
+    return String(label).trim();
+}
+
+function ensureGraphSemanticA11y() {
+    const zh = isGraphA11yZhMode();
+    const hostId = 'graph-semantic-shadow';
+    let host = document.getElementById(hostId);
+    const graphContainer = document.getElementById('graph-container');
+    if (!graphContainer) {
+        return null;
+    }
+
+    const regionLabel = zh ? '图谱语义摘要' : 'Graph semantic summary';
+    graphContainer.setAttribute('role', 'group');
+    graphContainer.setAttribute('aria-label', regionLabel);
+
+    const graphCanvas = document.getElementById('graph-canvas');
+    if (graphCanvas) {
+        graphCanvas.setAttribute('aria-label', zh ? '图谱画布渲染视图' : 'Graph canvas renderer view');
+    }
+
+    const graphSvg = graphContainer.querySelector('svg');
+    if (graphSvg) {
+        graphSvg.setAttribute('aria-label', zh ? '图谱矢量渲染视图' : 'Graph SVG renderer view');
+    }
+
+    if (host) {
+        host.setAttribute('aria-label', regionLabel);
+        return host;
+    }
+
+    host = document.createElement('section');
+    host.id = hostId;
+    host.setAttribute('role', 'region');
+    host.setAttribute('aria-label', regionLabel);
+    host.style.position = 'absolute';
+    host.style.width = '1px';
+    host.style.height = '1px';
+    host.style.padding = '0';
+    host.style.margin = '-1px';
+    host.style.overflow = 'hidden';
+    host.style.clip = 'rect(0 0 0 0)';
+    host.style.clipPath = 'inset(50%)';
+    host.style.whiteSpace = 'nowrap';
+    host.style.border = '0';
+
+    const summary = document.createElement('p');
+    summary.id = 'graph-semantic-summary';
+    summary.textContent = '';
+
+    const live = document.createElement('div');
+    live.id = 'graph-semantic-live';
+    live.setAttribute('aria-live', 'polite');
+    live.setAttribute('aria-atomic', 'true');
+
+    host.appendChild(summary);
+    host.appendChild(live);
+    graphContainer.appendChild(host);
+    return host;
+}
+
+function buildGraphSemanticSummary() {
+    const zh = isGraphA11yZhMode();
+    const rendererMode = getGraphRendererMode();
+    const rendererLabel = rendererMode === 'canvas'
+        ? (zh ? '画布' : 'canvas')
+        : (zh ? '矢量' : 'svg');
+
+    const totalNodes = Array.isArray(nodes) ? nodes.length : 0;
+    const visibleNodeIds = new Set();
+    let visibleNodeCount = 0;
+
+    nodes.forEach((nodeRef) => {
+        if (isNodeVisible(nodeRef)) {
+            visibleNodeCount += 1;
+            if (nodeRef && nodeRef.id) {
+                visibleNodeIds.add(nodeRef.id);
+            }
+        }
+    });
+
+    const highlightState = window.highlightManager && typeof window.highlightManager.getState === 'function'
+        ? window.highlightManager.getState()
+        : null;
+    const selectedNode = highlightState && highlightState.currentNode ? highlightState.currentNode : null;
+    const focusLabel = focusNode ? resolveGraphNodeLabel(focusNode) : '';
+    const selectedLabel = selectedNode ? resolveGraphNodeLabel(selectedNode) : '';
+    const focusId = focusNode ? String(focusNode.id || '') : '';
+    const selectedId = selectedNode ? String(selectedNode.id || '') : '';
+
+    let visibleEdgeCount = 0;
+    if (focusNode && rendererMode === 'svg') {
+        links.forEach((edge) => {
+            const sourceId = resolveGraphEndpointId(edge ? edge.source : null);
+            const targetId = resolveGraphEndpointId(edge ? edge.target : null);
+            if (!sourceId || !targetId) {
+                return;
+            }
+            if (visibleNodeIds.has(sourceId) && visibleNodeIds.has(targetId)) {
+                visibleEdgeCount += 1;
+            }
+        });
+    } else if (!focusNode && selectedNode && window.highlightManager && typeof window.highlightManager.getCurrentConnections === 'function') {
+        const connections = window.highlightManager.getCurrentConnections();
+        if (connections && Array.isArray(connections.links)) {
+            visibleEdgeCount = connections.links.length;
+        }
+    }
+
+    const minDegree = controls && controls.minDegree
+        ? (Number.parseInt(controls.minDegree.value, 10) || 0)
+        : 0;
+    const showOrphans = !!(controls && controls.showOrphans && controls.showOrphans.checked);
+    const searchTerm = controls && controls.search
+        ? String(controls.search.value || '').trim()
+        : '';
+    const clusterFilter = activeClusterFilter || 'all';
+
+    const parts = [];
+    if (zh) {
+        parts.push(`渲染模式 ${rendererLabel}`);
+        parts.push(`可见节点 ${visibleNodeCount}/${totalNodes}`);
+        parts.push(`可见连接 ${visibleEdgeCount}`);
+        parts.push(focusLabel ? `专注节点 ${focusLabel}` : '专注模式 未启用');
+        parts.push(selectedLabel ? `已选节点 ${selectedLabel}` : '已选节点 无');
+        parts.push(`筛选 最小度 ${minDegree}`);
+        parts.push(showOrphans ? '孤立节点 显示' : '孤立节点 隐藏');
+        parts.push(clusterFilter === 'all' ? '簇过滤 全部' : `簇过滤 ${clusterFilter}`);
+        if (searchTerm) {
+            parts.push(`搜索 ${searchTerm}`);
+        }
+    } else {
+        parts.push(`Renderer ${rendererLabel}`);
+        parts.push(`Visible nodes ${visibleNodeCount} of ${totalNodes}`);
+        parts.push(`Visible edges ${visibleEdgeCount}`);
+        parts.push(focusLabel ? `Focus node ${focusLabel}` : 'Focus mode inactive');
+        parts.push(selectedLabel ? `Selected node ${selectedLabel}` : 'Selected node none');
+        parts.push(`Filters min degree ${minDegree}`);
+        parts.push(showOrphans ? 'Orphan nodes shown' : 'Orphan nodes hidden');
+        parts.push(clusterFilter === 'all' ? 'Cluster filter all' : `Cluster filter ${clusterFilter}`);
+        if (searchTerm) {
+            parts.push(`Search ${searchTerm}`);
+        }
+    }
+
+    return {
+        key: [
+            zh ? 'zh' : 'en',
+            rendererMode,
+            visibleNodeCount,
+            totalNodes,
+            visibleEdgeCount,
+            focusId,
+            selectedId,
+            minDegree,
+            showOrphans ? '1' : '0',
+            clusterFilter,
+            searchTerm
+        ].join('|'),
+        text: parts.join('. ') + '.'
+    };
+}
+
+function refreshGraphSemanticA11y(reason = '') {
+    const host = ensureGraphSemanticA11y();
+    if (!host) {
+        return;
+    }
+
+    const summaryEl = document.getElementById('graph-semantic-summary');
+    const liveEl = document.getElementById('graph-semantic-live');
+    if (!summaryEl || !liveEl) {
+        return;
+    }
+
+    const snapshot = buildGraphSemanticSummary();
+    summaryEl.textContent = snapshot.text;
+    if (snapshot.key === graphSemanticA11yState.lastSummaryKey) {
+        return;
+    }
+
+    const now = Date.now();
+    if ((now - graphSemanticA11yState.lastAnnouncementAt) < 250) {
+        return;
+    }
+
+    const reasonText = typeof reason === 'string' ? reason.trim() : '';
+    liveEl.textContent = reasonText ? `${reasonText}: ${snapshot.text}` : snapshot.text;
+    graphSemanticA11yState.lastSummaryKey = snapshot.key;
+    graphSemanticA11yState.lastAnnouncementAt = now;
+}
+
+function scheduleGraphSemanticA11yRefresh(reason = '') {
+    const reasonText = typeof reason === 'string' ? reason.trim() : '';
+    if (reasonText) {
+        graphSemanticA11yState.pendingReason = reasonText;
+    }
+
+    if (graphSemanticA11yState.pendingTimer !== null) {
+        return;
+    }
+
+    graphSemanticA11yState.pendingTimer = window.setTimeout(() => {
+        graphSemanticA11yState.pendingTimer = null;
+        const pendingReason = graphSemanticA11yState.pendingReason;
+        graphSemanticA11yState.pendingReason = '';
+        refreshGraphSemanticA11y(pendingReason);
+    }, 120);
+}
+
 // Initial State
 updateColor();
 updateSize();
-updateVisibility(); // v1.0.2: Enforce initial visibility state (edges hidden)
+ensureGraphSemanticA11y();
+updateVisibility('Graph initialized'); // v1.0.2: Enforce initial visibility state (edges hidden)
 
 // Version Info
 const APP_VERSION = "1.0.0";
@@ -721,6 +971,7 @@ if (window.i18n) {
         if (typeof window.updateAnalysisUI === 'function') {
             window.updateAnalysisUI();
         }
+        scheduleGraphSemanticA11yRefresh('Language changed');
     });
 }
 
@@ -839,6 +1090,7 @@ function handleSingleClick(event, d) {
     // Show Statistics Panel (Floating Popup)
     // 显示统计弹窗
     showNodePopup(d.id);
+    scheduleGraphSemanticA11yRefresh('Node selected');
 }
 
 function handleDoubleClick(event, d) {
@@ -1622,6 +1874,7 @@ document.querySelectorAll('input[name="rendererMode"]').forEach(radio => {
             g.attr("transform", currentTransform);
             ticked();
         }
+        scheduleGraphSemanticA11yRefresh('Renderer changed');
     });
 });
 
@@ -1718,7 +1971,7 @@ function isNodeVisible(d) {
     return matchesDegree && allowedOrphan && matchesSearch && matchesCluster;
 }
 
-function updateVisibility() {
+function updateVisibility(reason = 'Filter visibility updated') {
     const minVal = controls.minDegree.value;
     document.getElementById('min-degree-val').innerText = minVal;
 
@@ -1747,6 +2000,8 @@ function updateVisibility() {
             return 0; 
         });
     }
+
+    scheduleGraphSemanticA11yRefresh(reason);
 }
 
 function exportSVG() {
@@ -2507,6 +2762,7 @@ function enterFocusMode(focusDInput) {
     // v0.9.75: Removed simulation.alpha(0.1).restart() to comply with "cease simulating" requirement.
     // simulation.alpha(0.1).restart();
     ticked(); // Force render update (Canvas)
+    scheduleGraphSemanticA11yRefresh('Focus mode entered');
 }
       
       
@@ -2615,6 +2871,7 @@ function enterFocusMode(focusDInput) {
     } else {
         simulation.alpha(1).restart();
     }
+    scheduleGraphSemanticA11yRefresh('Focus mode exited');
 }
 
 // Expose Focus Mode functions for Tutorial and External Modules

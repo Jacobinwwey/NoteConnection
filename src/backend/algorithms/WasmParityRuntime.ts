@@ -17,6 +17,8 @@ export type WasmParityExecutionMode =
     | 'none'
     | 'json-layout'
     | 'json-betweenness'
+    | 'json-cycles'
+    | 'json-ranks'
     | 'legacy-layout'
     | 'legacy-betweenness'
     | 'fallback';
@@ -36,6 +38,8 @@ type WasmParityExports = Record<string, unknown> & {
     compute_betweenness?: (...args: number[]) => number;
     compute_layout_json?: (inputPtr: number, inputLen: number) => number;
     compute_betweenness_json?: (inputPtr: number, inputLen: number) => number;
+    compute_cycles_json?: (inputPtr: number, inputLen: number) => number;
+    compute_ranks_json?: (inputPtr: number, inputLen: number) => number;
     get_last_result_len?: () => number;
     alloc?: (size: number) => number;
     dealloc?: (ptr: number, size: number) => void;
@@ -174,6 +178,58 @@ export class WasmParityRuntime {
         return null;
     }
 
+    static async computeCycles(
+        nodeIds: string[],
+        adjacency: Record<string, string[]>,
+        limit: number = 0
+    ): Promise<string[][] | null> {
+        this.lastExecutionMode = 'fallback';
+        const instance = await this.getInstance();
+        if (!instance) {
+            return null;
+        }
+
+        const exports = instance.exports as WasmParityExports;
+        const jsonResult = this.computeCyclesViaJsonAbi(
+            exports,
+            nodeIds,
+            adjacency,
+            limit
+        );
+        if (jsonResult !== null) {
+            this.lastExecutionMode = 'json-cycles';
+            return jsonResult;
+        }
+
+        return null;
+    }
+
+    static async computeRanks(
+        nodeIds: string[],
+        adjacency: Record<string, string[]>,
+        inDegrees: Record<string, number>
+    ): Promise<Map<string, number> | null> {
+        this.lastExecutionMode = 'fallback';
+        const instance = await this.getInstance();
+        if (!instance) {
+            return null;
+        }
+
+        const exports = instance.exports as WasmParityExports;
+        const jsonResult = this.computeRanksViaJsonAbi(
+            exports,
+            nodeIds,
+            adjacency,
+            inDegrees
+        );
+        if (jsonResult !== null) {
+            this.lastExecutionMode = 'json-ranks';
+            return jsonResult;
+        }
+
+        return null;
+    }
+
     private static computeLayoutViaJsonAbi(
         exports: WasmParityExports,
         nodes: WasmLayoutNodeInput[],
@@ -245,6 +301,87 @@ export class WasmParityRuntime {
         }
 
         return this.toBetweennessResult(decoded);
+    }
+
+    private static computeCyclesViaJsonAbi(
+        exports: WasmParityExports,
+        nodeIds: string[],
+        adjacency: Record<string, string[]>,
+        limit: number
+    ): string[][] | null {
+        if (
+            typeof exports.compute_cycles_json !== 'function' ||
+            typeof exports.get_last_result_len !== 'function' ||
+            typeof exports.alloc !== 'function' ||
+            !exports.memory
+        ) {
+            return null;
+        }
+
+        const normalizedLimit = Number.isFinite(limit) && limit > 0
+            ? Math.floor(limit)
+            : 0;
+        const payload = JSON.stringify({
+            nodeIds,
+            adjacency,
+            limit: normalizedLimit
+        });
+
+        const resultText = this.invokeJsonAbiCall(exports, payload, exports.compute_cycles_json);
+        if (!resultText) {
+            return null;
+        }
+
+        let decoded: unknown;
+        try {
+            decoded = JSON.parse(resultText);
+        } catch (_parseErr) {
+            return null;
+        }
+
+        return this.toCycleResult(decoded);
+    }
+
+    private static computeRanksViaJsonAbi(
+        exports: WasmParityExports,
+        nodeIds: string[],
+        adjacency: Record<string, string[]>,
+        inDegrees: Record<string, number>
+    ): Map<string, number> | null {
+        if (
+            typeof exports.compute_ranks_json !== 'function' ||
+            typeof exports.get_last_result_len !== 'function' ||
+            typeof exports.alloc !== 'function' ||
+            !exports.memory
+        ) {
+            return null;
+        }
+
+        const normalizedInDegrees: Record<string, number> = {};
+        Object.entries(inDegrees || {}).forEach(([nodeId, rawDegree]) => {
+            const degree = Number(rawDegree);
+            normalizedInDegrees[nodeId] = Number.isFinite(degree) ? Math.floor(degree) : 0;
+        });
+
+        const payload = JSON.stringify({
+            nodeIds,
+            adjacency,
+            inDegrees: normalizedInDegrees
+        });
+
+        const resultText = this.invokeJsonAbiCall(exports, payload, exports.compute_ranks_json);
+        if (!resultText) {
+            return null;
+        }
+
+        let decoded: unknown;
+        try {
+            decoded = JSON.parse(resultText);
+        } catch (_parseErr) {
+            return null;
+        }
+
+        return this.toRankResult(decoded);
     }
 
     private static invokeJsonAbiCall(
@@ -356,6 +493,56 @@ export class WasmParityRuntime {
         });
 
         return result.size > 0 ? result : null;
+    }
+
+    private static toCycleResult(decoded: unknown): string[][] | null {
+        if (!decoded || typeof decoded !== 'object') {
+            return null;
+        }
+
+        const cycles = (decoded as { cycles?: unknown }).cycles;
+        if (!Array.isArray(cycles)) {
+            return null;
+        }
+
+        const parsed: string[][] = [];
+        for (const rawCycle of cycles) {
+            if (!Array.isArray(rawCycle)) {
+                return null;
+            }
+            const cycle: string[] = [];
+            for (const rawNodeId of rawCycle) {
+                if (typeof rawNodeId !== 'string') {
+                    return null;
+                }
+                cycle.push(rawNodeId);
+            }
+            parsed.push(cycle);
+        }
+
+        return parsed;
+    }
+
+    private static toRankResult(decoded: unknown): Map<string, number> | null {
+        if (!decoded || typeof decoded !== 'object') {
+            return null;
+        }
+
+        const ranks = (decoded as { ranks?: unknown }).ranks;
+        if (!ranks || typeof ranks !== 'object') {
+            return null;
+        }
+
+        const parsed = new Map<string, number>();
+        Object.entries(ranks as Record<string, unknown>).forEach(([nodeId, rawRank]) => {
+            const rank = Number(rawRank);
+            if (!Number.isFinite(rank)) {
+                return;
+            }
+            parsed.set(nodeId, Math.max(0, Math.floor(rank)));
+        });
+
+        return parsed.size > 0 ? parsed : null;
     }
 
     private static async getInstance(): Promise<WebAssembly.Instance | null> {

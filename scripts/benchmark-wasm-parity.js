@@ -216,6 +216,10 @@ async function main() {
     const maxCandidateToBaselineLayoutP95Ratio = parseOptionalPositiveNumber(args['max-candidate-to-baseline-layout-p95-ratio']);
     const maxCandidateGraphP95Ms = parseOptionalPositiveNumber(args['max-candidate-graph-p95-ms']);
     const maxCandidateLayoutP95Ms = parseOptionalPositiveNumber(args['max-candidate-layout-p95-ms']);
+    const maxCandidateToBaselineGraphP99Ratio = parseOptionalPositiveNumber(args['max-candidate-to-baseline-graph-p99-ratio']);
+    const maxCandidateToBaselineLayoutP99Ratio = parseOptionalPositiveNumber(args['max-candidate-to-baseline-layout-p99-ratio']);
+    const maxCandidateGraphP99Ms = parseOptionalPositiveNumber(args['max-candidate-graph-p99-ms']);
+    const maxCandidateLayoutP99Ms = parseOptionalPositiveNumber(args['max-candidate-layout-p99-ms']);
 
     const originalMemorySavingMode = config.memorySavingMode;
     const originalMaxWorkers = config.maxWorkers;
@@ -254,18 +258,26 @@ async function main() {
                 metric: 'graphMetrics',
                 baselineP95Ms: baseline.graphMetrics.durationStatsMs.p95Ms,
                 candidateP95Ms: candidate.graphMetrics.durationStatsMs.p95Ms,
+                baselineP99Ms: baseline.graphMetrics.durationStatsMs.p99Ms,
+                candidateP99Ms: candidate.graphMetrics.durationStatsMs.p99Ms,
                 config: {
                     maxCandidateToBaselineP95Ratio: maxCandidateToBaselineGraphP95Ratio,
-                    maxCandidateP95Ms: maxCandidateGraphP95Ms
+                    maxCandidateP95Ms: maxCandidateGraphP95Ms,
+                    maxCandidateToBaselineP99Ratio: maxCandidateToBaselineGraphP99Ratio,
+                    maxCandidateP99Ms: maxCandidateGraphP99Ms
                 }
             },
             layoutEngine: {
                 metric: 'layoutEngine',
                 baselineP95Ms: baseline.layoutEngine.durationStatsMs.p95Ms,
                 candidateP95Ms: candidate.layoutEngine.durationStatsMs.p95Ms,
+                baselineP99Ms: baseline.layoutEngine.durationStatsMs.p99Ms,
+                candidateP99Ms: candidate.layoutEngine.durationStatsMs.p99Ms,
                 config: {
                     maxCandidateToBaselineP95Ratio: maxCandidateToBaselineLayoutP95Ratio,
-                    maxCandidateP95Ms: maxCandidateLayoutP95Ms
+                    maxCandidateP95Ms: maxCandidateLayoutP95Ms,
+                    maxCandidateToBaselineP99Ratio: maxCandidateToBaselineLayoutP99Ratio,
+                    maxCandidateP99Ms: maxCandidateLayoutP99Ms
                 }
             }
         });
@@ -289,7 +301,11 @@ async function main() {
                     maxCandidateToBaselineGraphP95Ratio,
                     maxCandidateToBaselineLayoutP95Ratio,
                     maxCandidateGraphP95Ms,
-                    maxCandidateLayoutP95Ms
+                    maxCandidateLayoutP95Ms,
+                    maxCandidateToBaselineGraphP99Ratio,
+                    maxCandidateToBaselineLayoutP99Ratio,
+                    maxCandidateGraphP99Ms,
+                    maxCandidateLayoutP99Ms
                 }
             },
             scenarios: [
@@ -349,8 +365,14 @@ async function main() {
                     metric.baselineP95Ms,
                     'candidateP95Ms:',
                     metric.candidateP95Ms,
-                    'ratio:',
+                    'p95Ratio:',
                     metric.candidateToBaselineP95Ratio,
+                    'baselineP99Ms:',
+                    metric.baselineP99Ms,
+                    'candidateP99Ms:',
+                    metric.candidateP99Ms,
+                    'p99Ratio:',
+                    metric.candidateToBaselineP99Ratio,
                     'failures:',
                     metric.failures
                 );

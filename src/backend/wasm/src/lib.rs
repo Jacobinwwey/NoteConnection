@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::f64::consts::PI;
 
 thread_local! {
@@ -54,6 +54,41 @@ struct BetweennessInput {
 #[serde(rename_all = "camelCase")]
 struct BetweennessOutput {
     values: HashMap<String, f64>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CyclesInput {
+    node_ids: Vec<String>,
+    adjacency: HashMap<String, Vec<String>>,
+    limit: Option<usize>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CyclesOutput {
+    cycles: Vec<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RanksInput {
+    node_ids: Vec<String>,
+    adjacency: HashMap<String, Vec<String>>,
+    in_degrees: HashMap<String, i64>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RanksOutput {
+    ranks: HashMap<String, u32>,
+}
+
+#[derive(Debug)]
+struct DfsFrame {
+    id: String,
+    neighbors: Vec<String>,
+    index: usize,
 }
 
 fn with_input_bytes(input_ptr: *const u8, input_len: usize) -> Option<Vec<u8>> {
@@ -195,6 +230,131 @@ fn compute_betweenness_values(input: BetweennessInput) -> HashMap<String, f64> {
     cb
 }
 
+fn compute_cycles_values(input: CyclesInput) -> Vec<Vec<String>> {
+    let CyclesInput {
+        node_ids,
+        adjacency,
+        limit,
+    } = input;
+    let normalized_limit = limit.unwrap_or(0);
+
+    let mut visited: HashSet<String> = HashSet::new();
+    let mut on_path: HashSet<String> = HashSet::new();
+    let mut path: Vec<String> = Vec::new();
+    let mut cycles: Vec<Vec<String>> = Vec::new();
+
+    for node_id in node_ids {
+        if normalized_limit > 0 && cycles.len() >= normalized_limit {
+            break;
+        }
+        if visited.contains(&node_id) {
+            continue;
+        }
+
+        let mut stack: Vec<DfsFrame> = Vec::new();
+        visited.insert(node_id.clone());
+        on_path.insert(node_id.clone());
+        path.push(node_id.clone());
+        stack.push(DfsFrame {
+            id: node_id.clone(),
+            neighbors: adjacency.get(&node_id).cloned().unwrap_or_default(),
+            index: 0,
+        });
+
+        while !stack.is_empty() {
+            let should_pop = match stack.last() {
+                Some(frame) => frame.index >= frame.neighbors.len(),
+                None => false,
+            };
+
+            if should_pop {
+                if let Some(frame) = stack.pop() {
+                    on_path.remove(&frame.id);
+                }
+                path.pop();
+                continue;
+            }
+
+            let Some(frame) = stack.last_mut() else {
+                continue;
+            };
+            let Some(neighbor_id) = frame.neighbors.get(frame.index).cloned() else {
+                frame.index += 1;
+                continue;
+            };
+            frame.index += 1;
+
+            if on_path.contains(&neighbor_id) {
+                if let Some(cycle_start_index) = path.iter().position(|id| id == &neighbor_id) {
+                    let mut cycle = path[cycle_start_index..].to_vec();
+                    cycle.push(neighbor_id.clone());
+                    cycles.push(cycle);
+                    if normalized_limit > 0 && cycles.len() >= normalized_limit {
+                        return cycles;
+                    }
+                }
+            } else if !visited.contains(&neighbor_id) {
+                visited.insert(neighbor_id.clone());
+                on_path.insert(neighbor_id.clone());
+                path.push(neighbor_id.clone());
+                stack.push(DfsFrame {
+                    id: neighbor_id.clone(),
+                    neighbors: adjacency.get(&neighbor_id).cloned().unwrap_or_default(),
+                    index: 0,
+                });
+            }
+        }
+    }
+
+    cycles
+}
+
+fn compute_ranks_values(input: RanksInput) -> HashMap<String, u32> {
+    let RanksInput {
+        node_ids,
+        adjacency,
+        in_degrees,
+    } = input;
+
+    let mut ranks: HashMap<String, u32> = HashMap::new();
+    let mut current_in_degrees: HashMap<String, i64> = HashMap::new();
+    let mut queue: VecDeque<String> = VecDeque::new();
+
+    for node_id in &node_ids {
+        ranks.insert(node_id.clone(), 0);
+        let normalized_in_degree = in_degrees.get(node_id).copied().unwrap_or(0);
+        current_in_degrees.insert(node_id.clone(), normalized_in_degree);
+        if normalized_in_degree == 0 {
+            queue.push_back(node_id.clone());
+        }
+    }
+
+    while let Some(u_id) = queue.pop_front() {
+        let u_rank = ranks.get(&u_id).copied().unwrap_or(0);
+        if let Some(neighbors) = adjacency.get(&u_id) {
+            for v_id in neighbors {
+                let Some(current_in_degree) = current_in_degrees.get(v_id).copied() else {
+                    continue;
+                };
+
+                let current_v_rank = ranks.get(v_id).copied().unwrap_or(0);
+                let candidate_rank = u_rank.saturating_add(1);
+                if candidate_rank > current_v_rank {
+                    ranks.insert(v_id.clone(), candidate_rank);
+                }
+
+                let next_in_degree = current_in_degree - 1;
+                current_in_degrees.insert(v_id.clone(), next_in_degree);
+                if next_in_degree == 0 {
+                    queue.push_back(v_id.clone());
+                }
+            }
+        }
+    }
+
+    ranks
+}
+
 #[no_mangle]
 pub extern "C" fn wasm_parity_version() -> u32 {
     1
@@ -256,6 +416,40 @@ pub extern "C" fn compute_betweenness_json(input_ptr: *const u8, input_len: usiz
 
     let values = compute_betweenness_values(input);
     let output = BetweennessOutput { values };
+    set_last_result_json(&output)
+}
+
+#[no_mangle]
+pub extern "C" fn compute_cycles_json(input_ptr: *const u8, input_len: usize) -> usize {
+    let Some(bytes) = with_input_bytes(input_ptr, input_len) else {
+        return set_empty_result();
+    };
+    let Ok(raw) = String::from_utf8(bytes) else {
+        return set_empty_result();
+    };
+    let Ok(input) = serde_json::from_str::<CyclesInput>(&raw) else {
+        return set_empty_result();
+    };
+
+    let cycles = compute_cycles_values(input);
+    let output = CyclesOutput { cycles };
+    set_last_result_json(&output)
+}
+
+#[no_mangle]
+pub extern "C" fn compute_ranks_json(input_ptr: *const u8, input_len: usize) -> usize {
+    let Some(bytes) = with_input_bytes(input_ptr, input_len) else {
+        return set_empty_result();
+    };
+    let Ok(raw) = String::from_utf8(bytes) else {
+        return set_empty_result();
+    };
+    let Ok(input) = serde_json::from_str::<RanksInput>(&raw) else {
+        return set_empty_result();
+    };
+
+    let ranks = compute_ranks_values(input);
+    let output = RanksOutput { ranks };
     set_last_result_json(&output)
 }
 

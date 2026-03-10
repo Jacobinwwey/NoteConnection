@@ -1,11 +1,17 @@
 import { Graph } from '../../core/Graph';
 import { CycleDetector } from './CycleDetection';
+import { WasmParityRuntime } from './WasmParityRuntime';
 
 describe('CycleDetector', () => {
     let graph: Graph;
 
     beforeEach(() => {
         graph = new Graph();
+        CycleDetector.__resetComputeDiagnosticsForTests();
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
     });
 
     test('should detect a simple cycle', () => {
@@ -55,5 +61,45 @@ describe('CycleDetector', () => {
          graph.addEdge('A', 'B');
          graph.addEdge('B', 'C');
          expect(CycleDetector.hasCycle(graph)).toBe(false);
+    });
+
+    test('detectCyclesAsync uses wasm adapter results when available', async () => {
+        graph.addEdge('A', 'B');
+        graph.addEdge('B', 'C');
+        graph.addEdge('C', 'A');
+
+        const wasmCycles = [['A', 'B', 'C', 'A']];
+        const wasmSpy = jest
+            .spyOn(WasmParityRuntime, 'computeCycles')
+            .mockResolvedValue(wasmCycles);
+
+        const cycles = await CycleDetector.detectCyclesAsync(graph, 10);
+        expect(wasmSpy).toHaveBeenCalledTimes(1);
+        expect(cycles).toEqual(wasmCycles);
+
+        const diagnostics = CycleDetector.getLastComputeDiagnostics();
+        expect(diagnostics.mode).toBe('wasm-adapter');
+        expect(diagnostics.reason).toBe('wasm-result-applied');
+        expect(diagnostics.nodeCount).toBe(3);
+        expect(diagnostics.edgeCount).toBe(3);
+        expect(diagnostics.limit).toBe(10);
+    });
+
+    test('detectCyclesAsync falls back to sequential when wasm returns null', async () => {
+        graph.addEdge('A', 'B');
+        graph.addEdge('B', 'A');
+
+        const wasmSpy = jest
+            .spyOn(WasmParityRuntime, 'computeCycles')
+            .mockResolvedValue(null);
+
+        const cycles = await CycleDetector.detectCyclesAsync(graph, 1);
+        expect(wasmSpy).toHaveBeenCalledTimes(1);
+        expect(cycles.length).toBe(1);
+
+        const diagnostics = CycleDetector.getLastComputeDiagnostics();
+        expect(diagnostics.mode).toBe('sequential');
+        expect(diagnostics.reason).toBe('wasm-null-fallback');
+        expect(diagnostics.limit).toBe(1);
     });
 });

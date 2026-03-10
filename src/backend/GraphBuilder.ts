@@ -315,7 +315,7 @@ export class GraphBuilder {
     const cycleLimit = config.memorySavingMode ? 100 : 10000;
     
     // Limit to 100 cycles to prevent OOM on large graphs with many cycles (if optimization on)
-    const cycles = CycleDetector.detectCycles(graph, cycleLimit);
+    const cycles = await CycleDetector.detectCyclesAsync(graph, cycleLimit);
     if (cycles.length > 0) {
         const countStr = cycles.length >= cycleLimit ? `${cycleLimit}+` : cycles.length.toString();
         console.warn(`[GraphBuilder] Detected ${countStr} cycles. Topological Sort may be partial.`);
@@ -326,7 +326,7 @@ export class GraphBuilder {
     // Topological Sort & Ranking
     PerformanceLogger.start('Topological Sort');
     console.log('[GraphBuilder] Running Topological Sort...');
-    const ranks = TopologicalSort.assignRanks(graph);
+    const ranks = await TopologicalSort.assignRanksAsync(graph);
     ranks.forEach((rank, nodeId) => {
         const node = graph.getNode(nodeId);
         if (node) {

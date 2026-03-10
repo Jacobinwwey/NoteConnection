@@ -32,7 +32,7 @@ jobs:
         run: npm run verify:wasm:parity:strict
 
       - name: Run strict parity benchmark snapshot
-        run: node scripts/benchmark-wasm-parity.js --iterations 4 --nodes 500 --require-wasm-adapter 1 --max-candidate-to-baseline-graph-p95-ratio 1 --max-candidate-to-baseline-layout-p95-ratio 1 --out tmp/wasm-parity-benchmark/snapshots
+        run: npm run benchmark:wasm:parity:strict:perf -- --iterations 4 --nodes 500 --out tmp/wasm-parity-benchmark/snapshots
 
       - name: Run GraphMetrics tiering calibration snapshot
         run: node scripts/calibrate-graphmetrics-tiering.js --iterations 2 --max-workers 4 --out tmp/graphmetrics-tiering-calibration/snapshots

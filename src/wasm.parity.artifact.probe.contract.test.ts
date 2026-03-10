@@ -14,6 +14,8 @@ describe('wasm parity artifact probe contract', () => {
         expect(missing).toEqual([
             'compute_layout_json',
             'compute_betweenness_json',
+            'compute_cycles_json',
+            'compute_ranks_json',
             'get_last_result_len',
             'dealloc'
         ]);

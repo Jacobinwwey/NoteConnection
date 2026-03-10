@@ -1,3 +1,131 @@
+# 2026-03-10 v1.0.23
+
+# WASM 拓扑等级等价切片更新（严格导出门禁 + 异步编排）
+
+## 本轮执行状态
+
+- [x] 在 Rust parity 模块（`src/backend/wasm/src/lib.rs`）新增真实拓扑等级 JSON ABI：
+  - [x] 导出 `compute_ranks_json`。
+  - [x] 实现与现有 TypeScript 拓扑等级语义对齐的确定性 Kahn 风格结果。
+- [x] 扩展运行时适配层（`src/backend/algorithms/WasmParityRuntime.ts`）：
+  - [x] 新增 `computeRanks(...)`，并加入严格解码防护与 `json-ranks` 执行模式追踪。
+- [x] 扩展后端重计算编排：
+  - [x] 新增 `TopologicalSort.assignRanksAsync(...)`，采用 wasm-first + sequential fallback 语义。
+  - [x] `GraphBuilder` 拓扑等级阶段切换为异步路径（`await TopologicalSort.assignRanksAsync(...)`）。
+- [x] 提升严格工件门禁要求：
+  - [x] 在 `REQUIRED_WASM_PARITY_EXPORTS` 中加入 `compute_ranks_json`。
+- [x] 回归覆盖已同步更新：
+  - [x] 新增 `src/backend/algorithms/TopologicalSort.test.ts`。
+  - [x] 更新 `src/wasm.parity.runtime.functional.test.ts`。
+  - [x] 更新 `src/wasm.parity.runtime.contract.test.ts`。
+  - [x] 更新 `src/wasm.parity.artifact.probe.contract.test.ts`。
+  - [x] 将 `TopologicalSort` 套件纳入 `npm run test:migration`。
+
+## 验证快照（2026-03-10）
+
+- [x] `npm run build:wasm:parity`
+- [x] `npx jest src/backend/algorithms/TopologicalSort.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts --runInBand`（**5 suites, 22 tests passed**）
+- [x] `npm run test:migration`（**29 suites, 153 tests passed**）
+- [x] `npm run test:wasm:parity:gates`（严格校验 + 严格 p95/p99 性能门禁通过，严格探针确认 `compute_ranks_json` 导出存在）
+- [x] `npx jest --runInBand`（**33 suites, 174 tests passed**）
+- [x] `npm run build` 通过。
+- [x] `npm run build:sidecar` 通过。
+
+---
+
+# 2026-03-10 v1.0.22
+
+# WASM 循环等价切片更新（严格导出门禁 + 异步编排）
+
+## 本轮执行状态
+
+- [x] 在 Rust parity 模块（`src/backend/wasm/src/lib.rs`）新增真实循环检测 JSON ABI：
+  - [x] 导出 `compute_cycles_json`。
+  - [x] 实现与现有迭代 DFS 对齐、支持 `limit` 的确定性循环检测负载。
+- [x] 扩展运行时适配层（`src/backend/algorithms/WasmParityRuntime.ts`）：
+  - [x] 新增 `computeCycles(...)`，并加入严格解码防护与 `json-cycles` 执行模式追踪。
+- [x] 扩展后端重计算编排：
+  - [x] 新增 `CycleDetector.detectCyclesAsync(...)`，采用 wasm-first + sequential fallback 语义。
+  - [x] `GraphBuilder` 循环阶段切换为异步路径（`await CycleDetector.detectCyclesAsync(...)`）。
+- [x] 提升严格工件门禁要求：
+  - [x] 在 `REQUIRED_WASM_PARITY_EXPORTS` 中加入 `compute_cycles_json`。
+- [x] CI 快照策略与严格性能脚本完成对齐：
+  - [x] `.github/workflows/wasm-parity-benchmark-snapshots.yml` 统一复用 `benchmark:wasm:parity:strict:perf`，保持 p95+p99 一致门禁。
+- [x] 回归覆盖已同步更新：
+  - [x] `src/backend/algorithms/CycleDetection.test.ts`
+  - [x] `src/wasm.parity.runtime.functional.test.ts`
+  - [x] `src/wasm.parity.runtime.contract.test.ts`
+  - [x] `src/wasm.parity.artifact.probe.contract.test.ts`
+
+## 验证快照（2026-03-10）
+
+- [x] `npm run build:wasm:parity`
+- [x] `npx jest src/backend/algorithms/CycleDetection.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts --runInBand`（**5 suites, 22 tests passed**）
+- [x] `npm run test:migration`（**28 suites, 147 tests passed**）
+- [x] `npm run test:wasm:parity:gates`（严格校验 + 严格 p95/p99 性能门禁通过）
+- [x] `npx jest --runInBand`（**32 suites, 168 tests passed**）
+- [x] `npm run build` 通过。
+- [x] `npm run build:sidecar` 通过。
+- [!] 当前环境下 `npm test`（并行模式）仍存在主机内存 OOM 风险；顺序全量门禁为绿色。
+
+---
+
+# 2026-03-10 v1.0.21
+
+# WASM 基准尾延迟门禁加固更新（P95 + P99 严格门禁）
+
+## 本轮执行状态
+
+- [x] 严格 WASM 基准门禁已从 p95-only 升级为 p95+p99 双尾延迟约束：
+  - [x] 在 `src/backend/algorithms/WasmParityBenchmarkGuards.ts` 增加 p99 比例/绝对阈值能力。
+  - [x] 新增 p99 门禁失败代码：
+    - [x] `candidate-to-baseline-p99-ratio-exceeded`
+    - [x] `candidate-p99-exceeded-absolute-threshold`
+  - [x] 保持向后兼容：旧调用未传 p99 配置时仍可安全运行。
+- [x] 在 `scripts/benchmark-wasm-parity.js` 完成 p99 门禁链路扩展：
+  - [x] 增加 p99 CLI 阈值参数与报告/日志输出路径。
+  - [x] 门禁诊断日志同时输出 p95 与 p99 的 baseline/candidate 与 ratio。
+- [x] 在 `package.json` 强化严格性能门禁命令：
+  - [x] `benchmark:wasm:parity:strict:perf` 现同时约束 p95 与 p99 比例阈值。
+- [x] 在 `src/wasm.parity.benchmark.guards.contract.test.ts` 新增 p99 回归契约覆盖。
+
+## 验证快照（2026-03-10）
+
+- [x] `npx jest src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.benchmark.contract.test.ts --runInBand`
+- [x] `npm run test:wasm:parity:gates` 通过。
+- [x] `npm run test:migration` 通过（**28 suites, 143 tests**）。
+- [x] `npm test` 通过（**32 suites, 164 tests**）。
+- [x] `npm run build` 通过。
+- [x] `npm run build:sidecar` 通过。
+
+---
+
+# 2026-03-10 v1.0.20
+
+# 移动端可访问性等价收口更新（主图谱 Canvas/SVG 语义影子层）
+
+## 本轮执行状态
+
+- [x] 已收口剩余基线跟进项：主图谱/画布移动端语义 DOM 可访问性等价链路。
+  - [x] 在 `src/frontend/app.js` 新增语义影子层与实时播报区域（`graph-semantic-shadow`、`graph-semantic-summary`、`graph-semantic-live`）。
+  - [x] 新增语义摘要生成，覆盖渲染模式、可见节点/连接数量、专注/选择状态与当前筛选条件。
+  - [x] 新增节流刷新调度，避免大规模图谱下高频可访问性播报抖动与额外负担。
+  - [x] 已将刷新触发接入渲染器切换、可见性筛选更新、节点选择、专注模式进入/退出、语言切换。
+- [x] 已补齐回归契约覆盖：
+  - [x] 新增 `src/graph.accessibility.contract.test.ts`，验证语义区域落地与触发链路。
+  - [x] 既有运行时能力契约继续通过（`src/runtime.capabilities.test.ts`）。
+
+## 验证快照（2026-03-10）
+
+- [x] `npx jest src/graph.accessibility.contract.test.ts src/runtime.capabilities.test.ts --runInBand`
+- [x] `npm run test:migration` 通过（**28 suites, 141 tests**）。
+- [x] `npm run test:wasm:parity:gates` 通过。
+- [x] `npm test` 通过（**32 suites, 162 tests**）。
+- [x] `npm run build` 通过。
+- [x] `npm run build:sidecar` 通过。
+
+---
+
 # 2026-03-10 v1.0.19
 
 # Mermaid 负载与移动端合规收口更新
@@ -18,7 +146,7 @@
   - [x] `src/server.migration.test.ts` 覆盖 Mermaid 回包默认/显式 SVG 行为。
   - [x] `src/pathbridge.handshake.contract.test.ts` 覆盖 includeSvg 透传契约。
   - [x] `src/mobile.pipeline.test.ts` 覆盖非示例 app-id 一致性与旧包路径移除。
-- [ ] 基线剩余跟进项：移动端图谱/画布语义 DOM 可访问性等价链路。
+- [x] 基线剩余跟进项（历史记录）已在 `v1.0.20` 收口：移动端图谱/画布语义 DOM 可访问性等价链路。
 
 ## 验证快照（2026-03-10）
 
@@ -52,7 +180,7 @@
   - [x] 新增作用域化全局绑定安装/恢复（`withMermaidDomGlobals(...)`）。
   - [x] Mermaid `initialize` / `render` 均在作用域化全局上下文执行。
   - [x] 在 `src/reader_renderer.test.ts` 增加“渲染后不泄漏 `window/document`”回归证明。
-- [ ] 基线剩余项：Base64 重负载链路优化、移动端上架合规 / app identifier 收口仍待完成。
+- [x] 该历史切片中的基线剩余项已在后续切片收口（`v1.0.19` + `v1.0.20`）。
 
 ## 验证快照（2026-03-10）
 
@@ -94,7 +222,7 @@
   - [x] 新增 `frame-ancestors 'none'`。
   - [x] 新增 `form-action 'self'`。
 - [x] Godot Mermaid 运行时约束已显式化：仅在 `pngBase64` 存在时判定成功，SVG 仅用于诊断，不作为运行时回退链路。
-- [ ] 导入基线中的剩余未完成项：Base64 重负载传输优化与移动端语义 DOM 可访问性路径。
+- [x] 此处导入基线中的剩余项已在后续切片收口（`v1.0.19` + `v1.0.20`）。
 
 ## 验证快照（2026-03-10）
 
@@ -896,4 +1024,3 @@ flowchart TD
 1.  **WASM 核心:** 将繁重的图谱算法（介数中心性、布局）迁移到 Rust 并编译为 WASM。这允许相同的二进制逻辑在 Node Sidecar（快速）和移动 WebView（便携）中运行。
 2.  **Node.js SEA:** 准备从 `@yao-pkg/pkg` 迁移到 **Node.js 单可执行应用 (SEA)**，因为 `pkg` 的维护是社区驱动的，可能会滞后于 Node 版本。
 3.  **Capacitor 8 迁移:** 确保所有插件都更新到 v8 等效版本，以支持 Android 15 的边到边强制执行。
-

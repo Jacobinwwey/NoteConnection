@@ -4,6 +4,8 @@ import { WasmParityRuntime } from './WasmParityRuntime';
 export const REQUIRED_WASM_PARITY_EXPORTS = [
     'compute_layout_json',
     'compute_betweenness_json',
+    'compute_cycles_json',
+    'compute_ranks_json',
     'get_last_result_len',
     'alloc',
     'dealloc',

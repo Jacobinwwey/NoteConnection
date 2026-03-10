@@ -1,3 +1,255 @@
+# 2026-03-10 v1.5.44 - High-Priority WASM Heavy-Compute Expansion (Topological Rank JSON ABI + Async Orchestration)
+
+## English Document
+
+### Objective
+Continue high-priority WASM parity closure by moving topological rank assignment onto a real WASM JSON ABI path, while preserving deterministic fallback behavior in GraphBuilder orchestration.
+
+### Completed in This Iteration
+- [x] Added rank JSON ABI export in `src/backend/wasm/src/lib.rs`:
+  - [x] Added `compute_ranks_json` with Kahn-style topological rank semantics aligned to existing TypeScript behavior.
+  - [x] Added `RanksInput`/`RanksOutput` payload contracts.
+- [x] Extended WASM runtime adapter in `src/backend/algorithms/WasmParityRuntime.ts`:
+  - [x] Added `computeRanks(nodeIds, adjacency, inDegrees)` with strict JSON ABI parsing.
+  - [x] Added execution-mode tracking (`json-ranks`) and null fallback on malformed outputs.
+- [x] Extended backend orchestration:
+  - [x] Added `TopologicalSort.assignRanksAsync(...)` in `src/backend/algorithms/TopologicalSort.ts` (`wasm-adapter -> sequential` fallback).
+  - [x] Added topological rank diagnostics (`mode/nodeCount/edgeCount/duration/reason`).
+  - [x] Updated `src/backend/GraphBuilder.ts` to use async rank assignment in algorithmic core.
+- [x] Strengthened strict artifact readiness:
+  - [x] Added `compute_ranks_json` to required exports in `src/backend/algorithms/WasmParityArtifactProbe.ts`.
+- [x] Added regression coverage:
+  - [x] New `src/backend/algorithms/TopologicalSort.test.ts` (wasm-success + null/incomplete fallback coverage).
+  - [x] Updated `src/wasm.parity.runtime.functional.test.ts` with rank JSON ABI success/invalid-shape coverage.
+  - [x] Updated `src/wasm.parity.runtime.contract.test.ts` with topological wiring assertions.
+  - [x] Updated `src/wasm.parity.artifact.probe.contract.test.ts` expected required-export set.
+  - [x] Added `TopologicalSort` suite to `npm run test:migration`.
+
+### High-Priority Work Status (Current)
+- [x] Heavy-compute WASM coverage now includes layout + betweenness + cycle detection + topological ranking parity entrypoints.
+- [x] Strict artifact gate now requires `compute_ranks_json` in addition to existing JSON ABI exports.
+- [ ] Remaining high-priority work: continue mobile physical-device parity evidence and broaden wasm kernel coverage where worker cost remains dominant.
+
+### Verification Gate (Executed)
+- [x] `npm run build:wasm:parity`
+- [x] `npx jest src/backend/algorithms/TopologicalSort.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts --runInBand` (**5 suites, 22 tests passed**)
+- [x] `npm run test:migration` (**29 suites, 153 tests passed**)
+- [x] `npm run test:wasm:parity:gates` (strict verify + strict p95/p99 perf guards passed; `compute_ranks_json` present in strict export probe)
+- [x] `npx jest --runInBand` (**33 suites, 174 tests passed**)
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+
+---
+
+## 中文文档
+
+### 目标
+继续推进高优先级 WASM 等价收口：将拓扑等级分配迁移到真实 WASM JSON ABI 路径，并保持 GraphBuilder 编排中的确定性回退行为。
+
+### 本轮完成
+- [x] 在 `src/backend/wasm/src/lib.rs` 新增拓扑等级 JSON ABI 导出：
+  - [x] 新增 `compute_ranks_json`，语义与现有 TypeScript Kahn 风格拓扑等级分配对齐。
+  - [x] 新增 `RanksInput` / `RanksOutput` 载荷契约。
+- [x] 在 `src/backend/algorithms/WasmParityRuntime.ts` 扩展 WASM 运行时适配：
+  - [x] 新增 `computeRanks(nodeIds, adjacency, inDegrees)`，并执行严格 JSON ABI 解析。
+  - [x] 新增执行模式追踪（`json-ranks`），输出异常时安全回退为 `null`。
+- [x] 扩展后端编排链路：
+  - [x] 在 `src/backend/algorithms/TopologicalSort.ts` 新增 `TopologicalSort.assignRanksAsync(...)`（`wasm-adapter -> sequential` 回退）。
+  - [x] 新增拓扑计算诊断（`mode/nodeCount/edgeCount/duration/reason`）。
+  - [x] 在 `src/backend/GraphBuilder.ts` 算法核心阶段切换为异步拓扑等级分配。
+- [x] 强化严格工件就绪门禁：
+  - [x] 在 `src/backend/algorithms/WasmParityArtifactProbe.ts` 将 `compute_ranks_json` 纳入必需导出。
+- [x] 新增回归覆盖：
+  - [x] 新增 `src/backend/algorithms/TopologicalSort.test.ts`（覆盖 wasm 成功路径 + null/不完整回退）。
+  - [x] 更新 `src/wasm.parity.runtime.functional.test.ts`（覆盖 rank JSON ABI 成功/非法输出）。
+  - [x] 更新 `src/wasm.parity.runtime.contract.test.ts`（覆盖拓扑链路接线断言）。
+  - [x] 更新 `src/wasm.parity.artifact.probe.contract.test.ts`（覆盖必需导出集合变化）。
+  - [x] 将 `TopologicalSort` 测试纳入 `npm run test:migration`。
+
+### 当前高优先级状态
+- [x] WASM 重计算覆盖已扩展到 layout + betweenness + cycle detection + topological ranking 四条入口。
+- [x] 严格工件门禁除既有 JSON ABI 外，现已强制要求 `compute_ranks_json`。
+- [ ] 剩余高优先级工作：继续补齐移动端真机等价证据，并扩展仍以 worker 为瓶颈的 wasm 内核覆盖。
+
+### 验证门禁（已执行）
+- [x] `npm run build:wasm:parity`
+- [x] `npx jest src/backend/algorithms/TopologicalSort.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts --runInBand`（**5 suites, 22 tests passed**）
+- [x] `npm run test:migration`（**29 suites, 153 tests passed**）
+- [x] `npm run test:wasm:parity:gates`（严格校验 + 严格 p95/p99 性能门禁通过，且严格导出探针包含 `compute_ranks_json`）
+- [x] `npx jest --runInBand`（**33 suites, 174 tests passed**）
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+
+---
+
+# 2026-03-10 v1.5.43 - High-Priority WASM Heavy-Compute Expansion (Cycle Detection JSON ABI + Async Orchestration)
+
+## English Document
+
+### Objective
+Continue high-priority WASM parity closure by moving cycle detection onto the real WASM JSON ABI path with deterministic fallback and CI guard alignment.
+
+### Completed in This Iteration
+- [x] Added cycle JSON ABI export in `src/backend/wasm/src/lib.rs`:
+  - [x] Added `compute_cycles_json` with iterative DFS cycle detection semantics and optional `limit`.
+  - [x] Added `CyclesInput`/`CyclesOutput` payload contract.
+- [x] Extended WASM runtime adapter in `src/backend/algorithms/WasmParityRuntime.ts`:
+  - [x] Added `computeCycles(nodeIds, adjacency, limit)` with strict JSON ABI parsing.
+  - [x] Added execution-mode tracking (`json-cycles`) and safe null fallback on malformed ABI output.
+- [x] Extended backend orchestration:
+  - [x] Added `CycleDetector.detectCyclesAsync(...)` in `src/backend/algorithms/CycleDetection.ts` (`wasm-adapter -> sequential` fallback).
+  - [x] Added cycle compute diagnostics (`mode/nodeCount/edgeCount/limit/duration/reason`).
+  - [x] Updated `src/backend/GraphBuilder.ts` to use async cycle detection in algorithmic core.
+- [x] Strengthened strict artifact readiness and CI alignment:
+  - [x] Added `compute_cycles_json` to required exports in `src/backend/algorithms/WasmParityArtifactProbe.ts`.
+  - [x] Updated snapshot workflow `.github/workflows/wasm-parity-benchmark-snapshots.yml` to call `benchmark:wasm:parity:strict:perf` (p95+p99 policy).
+- [x] Added regression coverage:
+  - [x] `src/backend/algorithms/CycleDetection.test.ts` async wasm/fallback diagnostics coverage.
+  - [x] `src/wasm.parity.runtime.functional.test.ts` cycle JSON ABI success/invalid-shape coverage.
+  - [x] `src/wasm.parity.runtime.contract.test.ts` cycle + GraphBuilder wiring assertions.
+  - [x] `src/wasm.parity.artifact.probe.contract.test.ts` required-export list updated.
+
+### High-Priority Work Status (Current)
+- [x] Heavy-compute WASM coverage now includes layout + betweenness + cycle detection parity entrypoints.
+- [x] Strict artifact gate now requires `compute_cycles_json`.
+- [ ] Remaining high-priority work: continue mobile physical-device parity evidence and broaden WASM kernel coverage where worker cost remains dominant.
+
+### Verification Gate (Executed)
+- [x] `npm run build:wasm:parity`
+- [x] `npx jest src/backend/algorithms/CycleDetection.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts --runInBand` (**5 suites, 22 tests passed**)
+- [x] `npm run test:migration` (**28 suites, 147 tests passed**)
+- [x] `npm run test:wasm:parity:gates` (strict verify + strict p95/p99 perf gates passed)
+- [x] `npx jest --runInBand` (**32 suites, 168 tests passed**)
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+- [!] `npm test` (parallel mode) can still hit host memory pressure (`Fatal process out of memory: Zone`) in this environment; sequential gate remains green.
+
+---
+
+## 中文文档
+
+### 目标
+继续推进高优先级 WASM 等价收口：将循环检测纳入真实 WASM JSON ABI 路径，并保持确定性回退与 CI 门禁一致性。
+
+### 本轮完成
+- [x] 在 `src/backend/wasm/src/lib.rs` 新增循环检测 JSON ABI 导出：
+  - [x] 新增 `compute_cycles_json`，实现与现有迭代 DFS 语义对齐的循环检测，并支持 `limit`。
+  - [x] 新增 `CyclesInput` / `CyclesOutput` 负载契约。
+- [x] 在 `src/backend/algorithms/WasmParityRuntime.ts` 扩展 WASM 运行时适配：
+  - [x] 新增 `computeCycles(nodeIds, adjacency, limit)`，并执行严格 JSON ABI 解析。
+  - [x] 新增执行模式追踪（`json-cycles`），ABI 输出异常时安全回退为 `null`。
+- [x] 扩展后端编排链路：
+  - [x] 在 `src/backend/algorithms/CycleDetection.ts` 新增 `CycleDetector.detectCyclesAsync(...)`（`wasm-adapter -> sequential` 回退）。
+  - [x] 新增循环计算诊断信息（`mode/nodeCount/edgeCount/limit/duration/reason`）。
+  - [x] 在 `src/backend/GraphBuilder.ts` 算法核心阶段切换为异步循环检测。
+- [x] 强化严格工件门禁与 CI 对齐：
+  - [x] 在 `src/backend/algorithms/WasmParityArtifactProbe.ts` 将 `compute_cycles_json` 纳入必需导出。
+  - [x] 更新 `.github/workflows/wasm-parity-benchmark-snapshots.yml`，改为调用 `benchmark:wasm:parity:strict:perf`（统一 p95+p99 策略）。
+- [x] 新增回归覆盖：
+  - [x] `src/backend/algorithms/CycleDetection.test.ts` 覆盖异步 wasm/回退与诊断。
+  - [x] `src/wasm.parity.runtime.functional.test.ts` 覆盖循环 JSON ABI 成功/非法输出场景。
+  - [x] `src/wasm.parity.runtime.contract.test.ts` 覆盖循环链路 + GraphBuilder 接线断言。
+  - [x] `src/wasm.parity.artifact.probe.contract.test.ts` 更新必需导出清单断言。
+
+### 当前高优先级状态
+- [x] WASM 重计算覆盖已扩展到 layout + betweenness + cycle detection 三条入口。
+- [x] 严格工件门禁已要求 `compute_cycles_json`。
+- [ ] 剩余高优先级工作：继续补齐移动端真机等价证据，并扩展仍以 worker 为瓶颈的 WASM 内核覆盖。
+
+### 验证门禁（已执行）
+- [x] `npm run build:wasm:parity`
+- [x] `npx jest src/backend/algorithms/CycleDetection.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts --runInBand`（**5 suites, 22 tests passed**）
+- [x] `npm run test:migration`（**28 suites, 147 tests passed**）
+- [x] `npm run test:wasm:parity:gates`（严格校验 + 严格 p95/p99 性能门禁通过）
+- [x] `npx jest --runInBand`（**32 suites, 168 tests passed**）
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+- [!] 当前环境下 `npm test`（并行模式）仍可能出现主机内存压力（`Fatal process out of memory: Zone`）；顺序门禁为绿色。
+
+---
+
+# 2026-03-10 v1.5.42 - High-Priority WASM Tail-Latency Guard Hardening (p95 + p99 Strict Gates)
+
+## English Document
+
+### Objective
+Continue the high-priority WASM parity closure by upgrading strict performance gating from p95-only evidence to p95+p99 tail-latency enforcement, so benchmark acceptance better reflects production-scale jitter risk.
+
+### Completed in This Iteration
+- [x] Extended benchmark guard model to include p99 thresholds in `src/backend/algorithms/WasmParityBenchmarkGuards.ts`:
+  - [x] Added ratio/absolute threshold fields for p99.
+  - [x] Added p99 failure reasons (`candidate-to-baseline-p99-ratio-exceeded`, `candidate-p99-exceeded-absolute-threshold`).
+  - [x] Preserved backward compatibility by allowing missing p99 inputs/config and defaulting p99 values safely.
+- [x] Extended benchmark script guard plumbing in `scripts/benchmark-wasm-parity.js`:
+  - [x] Added p99 CLI args:
+    - [x] `--max-candidate-to-baseline-graph-p99-ratio`
+    - [x] `--max-candidate-to-baseline-layout-p99-ratio`
+    - [x] `--max-candidate-graph-p99-ms`
+    - [x] `--max-candidate-layout-p99-ms`
+  - [x] Added p99 metrics to guard evaluation/report output and console guard diagnostics.
+- [x] Strengthened strict perf gate command in `package.json`:
+  - [x] `benchmark:wasm:parity:strict:perf` now enforces both p95 and p99 ratio thresholds.
+- [x] Added/extended guard contracts in `src/wasm.parity.benchmark.guards.contract.test.ts`:
+  - [x] p99 ratio-threshold regression test.
+  - [x] p99 absolute-threshold regression test.
+  - [x] Updated aggregate guard contract to include p99 config paths.
+- [x] Preserved runtime compatibility constraints:
+  - [x] Godot Mermaid runtime contract remains PNG-only (`pngBase64` required); this slice does not change Godot rendering assumptions.
+
+### High-Priority Work Status (Current)
+- [x] Strict CI/local benchmark gates now enforce both p95 and p99 tail-latency regression barriers.
+- [ ] Remaining high-priority work: expand real mobile heavy-compute kernel coverage on wasm path and accumulate physical-device p95/p99 evidence.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.benchmark.contract.test.ts --runInBand`
+- [x] `npm run test:wasm:parity:gates`
+- [x] `npm run test:migration` (**28 suites, 143 tests passed**)
+- [x] `npm test` (**32 suites, 164 tests passed**)
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+
+---
+
+## 中文文档
+
+### 目标
+继续推进高优先级 WASM 等价收口：将严格性能门禁从仅 p95 升级为 p95+p99 尾延迟双门禁，使基准验收更贴近生产规模抖动风险。
+
+### 本轮完成
+- [x] 在 `src/backend/algorithms/WasmParityBenchmarkGuards.ts` 扩展基准门禁模型，新增 p99 阈值能力：
+  - [x] 新增 p99 比例/绝对阈值配置字段。
+  - [x] 新增 p99 失败原因（`candidate-to-baseline-p99-ratio-exceeded`、`candidate-p99-exceeded-absolute-threshold`）。
+  - [x] 保持向后兼容：当旧调用未提供 p99 入参/阈值时，可安全回退默认行为。
+- [x] 在 `scripts/benchmark-wasm-parity.js` 扩展 p99 门禁链路：
+  - [x] 新增 p99 CLI 参数：
+    - [x] `--max-candidate-to-baseline-graph-p99-ratio`
+    - [x] `--max-candidate-to-baseline-layout-p99-ratio`
+    - [x] `--max-candidate-graph-p99-ms`
+    - [x] `--max-candidate-layout-p99-ms`
+  - [x] 报告与控制台诊断已包含 p99 门禁指标输出。
+- [x] 在 `package.json` 强化严格性能门禁命令：
+  - [x] `benchmark:wasm:parity:strict:perf` 现同时执行 p95 与 p99 比例阈值约束。
+- [x] 在 `src/wasm.parity.benchmark.guards.contract.test.ts` 补齐/增强门禁契约：
+  - [x] 新增 p99 比例阈值回归用例。
+  - [x] 新增 p99 绝对阈值回归用例。
+  - [x] 聚合门禁契约已覆盖 p99 配置路径。
+- [x] 保持运行时兼容性约束不变：
+  - [x] Godot Mermaid 运行时继续保持 PNG-only（`pngBase64` 必填）；本轮不改变 Godot 渲染假设。
+
+### 当前高优先级状态
+- [x] 严格基准门禁已从 p95 升级为 p95+p99 双尾延迟回归屏障。
+- [ ] 剩余高优先级工作：继续扩展移动端真实 wasm 重计算内核覆盖，并补齐真机 p95/p99 证据。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.benchmark.contract.test.ts --runInBand`
+- [x] `npm run test:wasm:parity:gates`
+- [x] `npm run test:migration`（**28 suites, 143 tests passed**）
+- [x] `npm test`（**32 suites, 164 tests passed**）
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+
+---
+
 # 2026-03-10 v1.5.41 - High-Priority Closure (Mermaid Transport Payload Thinning + Mobile App-ID Compliance)
 
 ## English Document
