@@ -28,6 +28,7 @@ ref
 # Tauri / Rust build outputs
 src-tauri/target/
 src-tauri/gen/
+src/backend/wasm/target/
 runtime_data/
 
 # Android generated and local build outputs

@@ -4,27 +4,62 @@ import * as path from 'path';
 describe('capacitor runtime parity closure contract', () => {
   const repoRoot = path.resolve(__dirname, '..');
   const sourceManagerPath = path.join(repoRoot, 'src', 'frontend', 'source_manager.js');
+  const storageProviderPath = path.join(repoRoot, 'src', 'frontend', 'storage_provider.js');
   const readerPath = path.join(repoRoot, 'src', 'frontend', 'reader.js');
   const enLocalePath = path.join(repoRoot, 'src', 'frontend', 'locales', 'en.json');
   const zhLocalePath = path.join(repoRoot, 'src', 'frontend', 'locales', 'zh.json');
 
-  test('detects native Capacitor runtime and applies build-disabled capability profile', () => {
+  test('detects native Capacitor runtime and applies capability profile from filesystem APIs', () => {
     const source = fs.readFileSync(sourceManagerPath, 'utf8');
     expect(source).toContain('resolveCapacitorPlatform');
     expect(source).toContain('supportsCapacitorContentApi');
+    expect(source).toContain('supportsCapacitorBuildApi');
+    expect(source).toContain('detectMobileWasmCapability');
     expect(source).toContain("platform: `capacitor-${capacitorPlatform}`");
     expect(source).toContain('supports_sidecar: false');
-    expect(source).toContain('supports_build: false');
+    expect(source).toContain('supports_build: canBuildGraph');
     expect(source).toContain('supports_content_api: canReadContent');
     expect(source).toContain('supports_kb_runtime_change: false');
+    expect(source).toContain('supports_mobile_wasm_compute: mobileWasm.supported');
+    expect(source).toContain('mobile_wasm_reason: mobileWasm.reason');
+    expect(source).toContain('mobile_wasm_features: mobileWasm.features');
   });
 
-  test('uses deterministic source panel fallback for capacitor read-only mode', () => {
+  test('uses storage-provider-backed source mode for capacitor runtime', () => {
     const source = fs.readFileSync(sourceManagerPath, 'utf8');
-    expect(source).toContain("kbPath = t('source.capacitor.bundlePath')");
-    expect(source).toContain("packagedOption.value = 'PACKAGED_GRAPH'");
+    expect(source).toContain("const provider = getStorageProvider();");
+    expect(source).toContain("listedFolders = (await provider.listFolders()) || [];");
+    expect(source).toContain("cachedTargets = (await provider.listAvailableTargets()) || [];");
+    expect(source).toContain('Using Capacitor mobile source mode.');
+    expect(source).not.toContain("packagedOption.value = 'PACKAGED_GRAPH'");
+    expect(source).toContain("packagedOption.value = 'ALL_FOLDERS'");
     expect(source).toContain("packagedOption.textContent = t('source.capacitor.packagedGraph')");
-    expect(source).toContain("alert(t('source.error.capacitorReadOnly'))");
+  });
+
+  test('storage provider keeps capacitor local build fallback path', () => {
+    const source = fs.readFileSync(storageProviderPath, 'utf8');
+    expect(source).toContain('CAPACITOR_GRAPH_BUILD_MAX_FILES');
+    expect(source).toContain('collectCapacitorMarkdownFiles');
+    expect(source).toContain('buildCapacitorGraphData');
+    expect(source).toContain('buildCapacitorGraphDataWithWorkerFallback');
+    expect(source).toContain('resolveCapacitorBuildModeDetail');
+    expect(source).toContain('runCapacitorGraphBuildWorker');
+    expect(source).toContain('supportsCapacitorGraphBuildWorker');
+    expect(source).toContain("buildMode: 'worker'");
+    expect(source).toContain("buildMode: 'single-thread-fallback'");
+    expect(source).toContain('buildModeDetail: resolveCapacitorBuildModeDetail(buildResult.buildMode, runtimeCaps || {})');
+    expect(source).toContain('supportsMobileWasmCompute');
+    expect(source).toContain('mobileWasmReason');
+    expect(source).toContain('capacitorBuildGraph');
+    expect(source).toContain("return await capacitorReadText(normalized);");
+  });
+
+  test('source panel no longer hard-blocks capacitor load action before cache/build flow', () => {
+    const source = fs.readFileSync(sourceManagerPath, 'utf8');
+    expect(source).not.toContain("alert(t('source.error.capacitorReadOnly'))");
+    expect(source).toContain("kbPath = t('source.capacitor.bundlePath')");
+    expect(source).toContain("if (!runtimeCaps.supports_build) {");
+    expect(source).toContain("alert(t('source.error.buildUnsupportedMobile'))");
   });
 
   test('reader keeps runtime capability fallback messaging when content API is unavailable', () => {

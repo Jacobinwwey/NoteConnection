@@ -23,7 +23,19 @@ describe('storage provider abstraction contract', () => {
     expect(source).toContain('normalizeCapacitorPath');
     expect(source).toContain('extractRelativePathFromKbMarker');
     expect(source).toContain('resolveCapacitorContentCandidatePath');
-    expect(source).toContain('async function capacitorReadText(pathValue)');
+    expect(source).toContain('async function capacitorReadText(pathValue, options)');
+    expect(source).toContain('async function capacitorBuildGraph(requestPayload, runtimeCaps)');
+    expect(source).toContain('function resolveCapacitorBuildModeDetail(buildMode, runtimeCaps)');
+    expect(source).toContain('supportsCapacitorGraphBuildWorker');
+    expect(source).toContain('runCapacitorGraphBuildWorker');
+    expect(source).toContain('buildCapacitorGraphDataWithWorkerFallback');
+    expect(source).toContain('CAPACITOR_GRAPH_BUILD_WORKER_TIMEOUT_MS');
+    expect(source).toContain("buildMode: 'single-thread-fallback'");
+    expect(source).toContain("buildMode: 'worker'");
+    expect(source).toContain("const result = await capacitorBuildGraph(requestPayload || {}, this.runtimeCaps || {});");
+    expect(source).toContain('buildModeDetail: resolveCapacitorBuildModeDetail(buildResult.buildMode, runtimeCaps || {})');
+    expect(source).toContain('supportsMobileWasmCompute');
+    expect(source).toContain('mobileWasmReason');
     expect(source).toContain("unsupportedOperationError('buildGraph')");
   });
 

@@ -21,6 +21,13 @@ describe('runtime transport adapter consolidation contract', () => {
     expect(pathApp).not.toContain('ws://127.0.0.1:9876');
   });
 
+  test('runtime bridge websocket URL propagation includes client and token query metadata', () => {
+    const runtimeBridge = fs.readFileSync(runtimeBridgePath, 'utf8');
+    expect(runtimeBridge).toContain("url.searchParams.set('client', normalizedClientTag)");
+    expect(runtimeBridge).toContain("url.searchParams.set('token', state.authToken)");
+    expect(runtimeBridge).toContain('function getBridgeWsUrl(clientTag)');
+  });
+
   test('source manager and reader use shared runtime adapters (bridge + storage provider)', () => {
     const sourceManager = fs.readFileSync(sourceManagerPath, 'utf8');
     const reader = fs.readFileSync(readerPath, 'utf8');
@@ -36,6 +43,10 @@ describe('runtime transport adapter consolidation contract', () => {
   test('path app guards websocket startup when runtime bridge url is unavailable', () => {
     const pathApp = fs.readFileSync(pathAppPath, 'utf8');
     expect(pathApp).toContain('Bridge socket URL is unavailable; skipping WebSocket connect attempt.');
+    expect(pathApp).toContain('Sidecar bridge is disabled for this runtime; skipping setupWebSocket.');
+    expect(pathApp).toContain('Sidecar bridge is disabled for this runtime; skipping WebSocket connect attempt.');
+    expect(pathApp).toContain('_supportsSidecarBridge');
+    expect(pathApp).toContain('_isCapacitorNativeRuntime');
     expect(pathApp).toContain('window.__NC_SIDECAR_RUNTIME');
     expect(pathApp).toContain("return '';");
     expect(pathApp).toContain('bridge.parseBridgeEnvelope');

@@ -1,3 +1,327 @@
+# 2026-03-10 v1.5.38 - 多终端 WASM 就绪切片验证（移动端能力探测 + 构建模式遥测）
+
+### 测试目标
+
+验证多终端 WASM 延续切片已可用且无回归风险：
+
+1. 移动端运行时可显式输出 WASM 就绪状态与原因。
+2. Capacitor 本机构建链路可输出能力感知的模式细节，且不破坏既有回退行为。
+3. 运行时契约扩展后，迁移门禁套件保持全绿。
+
+### 本次验证覆盖实现面
+
+- 运行时能力探测：
+  - `src/frontend/source_manager.js`
+  - 新增 `detectMobileWasmCapability()`
+  - 新增能力字段：
+    - `supports_mobile_wasm_compute`
+    - `mobile_wasm_reason`
+- 构建遥测扩展：
+  - `src/frontend/storage_provider.js`
+  - 新增 `resolveCapacitorBuildModeDetail(...)`
+  - 新增构建统计字段：
+    - `buildModeDetail`
+    - `supportsMobileWasmCompute`
+    - `mobileWasmReason`
+  - SourceManager 现已输出移动构建告警与统计细节日志。
+- 契约更新：
+  - `src/runtime.capabilities.test.ts`
+  - `src/capacitor.runtime.contract.test.ts`
+  - `src/storage.provider.contract.test.ts`
+  - `src/storage.provider.capacitor.worker.contract.test.ts`
+
+### 已执行验证（2026-03-10）
+
+- [x] `npx jest src/runtime.capabilities.test.ts src/capacitor.runtime.contract.test.ts src/storage.provider.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/source_manager.loadflow.test.ts --runInBand`
+  - 通过（`5` 套件、`28` 项测试）
+- [x] `npm run test:migration`
+  - 通过（`27` 套件、`131` 项测试）
+
+### 发现
+
+1. 移动端 WASM 能力边界已显式化：
+   - 移动端计算路径选择不再依赖隐式假设。
+2. Capacitor 构建链路保持确定性：
+   - worker/single-thread 回退语义保持不变；
+   - 新增模式细分遥测可解释当前运行时状态。
+3. 未发现迁移回归：
+   - 能力与遥测扩展后，全量迁移门禁继续通过。
+
+### 结论
+
+- 多终端 WASM 就绪切片已完成实现并通过验证。
+- 本轮主要提升移动端可诊断性与治理能力；尚未宣称所有重计算场景都达到“移动端全量 WASM 内核等价”。
+
+---
+
+
+# 2026-03-10 v1.5.37 - 阈值校准延续验证（GraphMetrics 可配置分层 + 校准工具 + 快照 CI）
+
+### 测试目标
+
+验证阈值校准跟进切片已完整可用：
+
+1. GraphMetrics 分层阈值可在运行时配置，无需改代码。
+2. 校准工具可产出可复现证据与阈值建议载荷。
+3. CI 快照流程可同时采集 wasm parity 与 GraphMetrics 校准工件。
+
+### 本次验证覆盖实现面
+
+- 策略可配置能力：
+  - `src/backend/GraphMetrics.ts`
+  - 环境变量覆盖：
+    - `NOTE_CONNECTION_GRAPHMETRICS_ASYNC_NODE_THRESHOLD`
+    - `NOTE_CONNECTION_GRAPHMETRICS_ASYNC_WORKLOAD_RATIO_THRESHOLD`
+  - `GraphMetrics.getExecutionPolicy()`
+- 校准工具：
+  - `scripts/calibrate-graphmetrics-tiering.js`
+  - `npm run calibrate:graphmetrics:tiering`
+- CI 集成：
+  - `.github/workflows/wasm-parity-benchmark-snapshots.yml` 现已纳入校准快照执行与工件上传路径
+
+### 已执行验证（2026-03-10）
+
+- [x] `npx jest src/wasm.parity.output.equivalence.contract.test.ts --runInBand`
+  - 通过（`7` 项）
+  - 新增校验覆盖：
+    - 稀疏大图默认保持顺序路径（`sparse-workload-threshold`）
+    - 通过环境变量可把稀疏大图强制进入 async->wasm 路径
+    - 无效环境变量会回退到安全默认策略
+- [x] `node scripts/calibrate-graphmetrics-tiering.js --iterations 1 --max-workers 4 --out tmp/graphmetrics-tiering-calibration/smoke`
+  - 通过
+  - 输出：
+    - `tmp/graphmetrics-tiering-calibration/smoke/latest.json`
+  - 当前主机单轮 smoke 建议快照：
+    - `asyncNodeCountThreshold=500`
+    - `asyncWorkloadBenefitRatioThreshold=115.4385`
+- [x] `npm run test:wasm:parity:gates`
+  - 通过
+  - GraphMetrics p95 比值（`candidate / baseline`）：`0.07505480404213227`
+  - LayoutEngine p95 比值（`candidate / baseline`）：`0.0022160486888378587`
+- [x] `npm run test:migration`
+  - 通过（`27` 套件，`131` 测试）
+
+### 发现
+
+1. 分层策略治理能力提升：
+   - 阈值调优可由环境策略驱动，不再依赖源码改动。
+2. 校准证据闭环已建立：
+   - 多画像基准输出可用于后续阈值收敛决策。
+3. CI 漂移证据增强：
+   - 周期快照已同时采集 parity 基准与分层校准工件。
+
+### 结论
+
+- 阈值校准延续切片已完成实现并通过验证。
+- 策略扩展后未观察到严格 wasm 门禁或迁移契约回归。
+- 下一步仍需多轮次、多主机校准以提升统计置信度，再评估是否更新生产默认阈值。
+
+---
+
+# 2026-03-10 v1.5.36 - 方法策略延续验证（GraphMetrics 稀疏度分层 + 发布门禁强制 + 周期快照 CI）
+
+### 测试目标
+
+验证建议跟进切片已完整落地且可工作：
+
+1. GraphMetrics 不再仅依赖节点数分流；大图但稀疏的负载应保持顺序计算。
+2. 严格 wasm parity 门禁已在发布工作流（`npm-publish`）中强制执行。
+3. 周期性基准快照工作流已存在并可在 CI 执行。
+
+### 本次验证覆盖实现面
+
+- 运行时策略代码：
+  - `src/backend/GraphMetrics.ts`
+    - `ASYNC_NODE_COUNT_THRESHOLD = 500`
+    - `ASYNC_WORKLOAD_BENEFIT_RATIO_THRESHOLD = 24`
+    - `resolveExecutionDecision(...)`（带原因的模式决策）
+- 契约覆盖：
+  - `src/wasm.parity.output.equivalence.contract.test.ts`
+    - 保留稠密大图的 wasm 路径契约
+    - 新增稀疏大图顺序路径契约
+- CI 工作流加固：
+  - `.github/workflows/npm-publish.yml`（新增严格 wasm parity 门禁步骤）
+  - `.github/workflows/wasm-parity-benchmark-snapshots.yml`（每周 + 手动快照工作流）
+
+### 已执行验证（2026-03-10）
+
+- [x] `npx jest src/wasm.parity.output.equivalence.contract.test.ts --runInBand`
+  - 通过（`5` 项）
+  - 证明：
+    - 稠密大图路径仍进入 `wasm-adapter`
+    - 稀疏大图路径保持 `sequential`，原因为 `sparse-workload-threshold`
+- [x] `npm run test:wasm:parity:gates`
+  - 通过
+  - 严格校验：工件/导出就绪通过
+  - 严格性能门禁基准通过
+    - GraphMetrics p95 比值（`candidate / baseline`）：`0.08408535438992293`
+    - LayoutEngine p95 比值（`candidate / baseline`）：`0.0011282580842560189`
+- [x] `npm run test:migration`
+  - 通过（`27` 套件，`129` 测试）
+
+### 发现
+
+1. GraphMetrics 计算策略已具备工作负载感知：
+   - 小图或大图稀疏负载可保持顺序计算，减少异步开销。
+   - 负载足够重时仍走异步链路（`wasm-adapter` 优先，worker 回退）。
+2. 严格 wasm parity 强制门禁已覆盖发布链路：
+   - 发布流程中若严格门禁失败将快速失败。
+3. 长周期漂移证据链路已具备：
+   - 周期快照工作流可持续产出基准工件用于纵向评估。
+
+### 结论
+
+- 建议跟进项已完成实现并通过验证。
+- 策略变更后未观察到严格 parity 门禁与迁移契约回归。
+- 后续优化重点为更广负载分布下的阈值持续校准。
+
+---
+
+# 2026-03-10 v1.5.35 - 计算方法详细对比（Sequential vs Worker vs WASM）
+
+### 测试目标
+
+基于真实证据，对当前代码库中的重计算方法进行全面对比，覆盖：
+
+1. `GraphMetrics` 介数中心性计算路径：
+   - 顺序路径（`calculateBetweenness`）
+   - Worker 并行路径（禁用 wasm 的 `calculateBetweennessAsync`）
+   - WASM 适配器路径（启用 wasm 且已提供制品的 `calculateBetweennessAsync`）
+2. `LayoutEngine` 布局计算路径：
+   - Worker 路径
+   - WASM 适配器路径
+
+### 范围与方法
+
+- 主机/运行时：
+  - Node.js `v22.14.0`
+  - `win32` / `x64`
+  - `cpuCount=16`
+- 核心基准图配置：
+  - 数据集 A（小图/阈值行为检查）：`nodeCount=300`, `iterations=4`
+  - 数据集 B（重负载路径检查）：`nodeCount=500`, `iterations=4`
+  - 布局参数：`repulsion=-550`, `distance=100`
+  - 最大 worker 数：`4`
+- 证据来源：
+  - `tmp/wasm-parity-benchmark/latest.json`（500 节点严格性能闸门）
+  - `tmp/wasm-parity-benchmark/report-method-300/latest.json`（300 节点场景）
+  - `tmp/calculation-method-comparison/latest.json`（同图直接方法对比）
+
+### 执行命令
+
+- [x] `npm run verify:wasm:parity:strict`
+- [x] `npm run benchmark:wasm:parity:strict:perf 4 500`
+- [x] `node scripts/benchmark-wasm-parity.js --iterations 4 --nodes 300 --out tmp/wasm-parity-benchmark/report-method-300`
+- [x] 同图自定义对比运行（sequential vs worker vs wasm）-> `tmp/calculation-method-comparison/latest.json`
+
+---
+
+### 对比结果
+
+#### 1) 重负载图（500 节点）- 同图直接方法对比
+
+来源：`tmp/calculation-method-comparison/latest.json`
+
+| 组件 | 方法 | p50 (ms) | p95 (ms) | p99 (ms) | mean (ms) | 说明 |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| GraphMetrics | Sequential | 82.845 | 120.737 | 124.105 | 95.262 | 单线程 Brandes 直接计算 |
+| GraphMetrics | Worker | 3118.745 | 3273.758 | 3287.536 | 3154.348 | 异步 worker 扇出路径 |
+| GraphMetrics | WASM Adapter | 231.818 | 267.106 | 270.242 | 243.717 | JSON ABI wasm 路径 |
+| LayoutEngine | Worker | 2596.062 | 2644.059 | 2648.326 | 2600.750 | Worker 布局仿真路径 |
+| LayoutEngine | WASM Adapter | 2.588 | 2.601 | 2.603 | 2.427 | wasm 布局应用路径 |
+
+关键比值（p95）：
+- GraphMetrics wasm vs worker：`0.0816`（p95 约降低 91.84%）
+- GraphMetrics sequential vs worker：`0.0369`（p95 约降低 96.31%）
+- GraphMetrics wasm vs sequential：`2.2123`（该测试形状下约慢 2.21x）
+- Layout wasm vs worker：`0.0010`（p95 约降低 99.90%）
+
+#### 2) 重负载图（500 节点）- 严格闸门场景（运行时路径 + 护栏）
+
+来源：`tmp/wasm-parity-benchmark/latest.json`
+
+| 组件 | 基线（WASM 关闭） | 候选（WASM 开启） | 基线 p95 (ms) | 候选 p95 (ms) | 候选/基线 p95 |
+| --- | --- | --- | ---: | ---: | ---: |
+| GraphMetrics | worker | wasm-adapter | 3393.2 | 247.65 | 0.0730 |
+| LayoutEngine | worker | wasm-adapter | 2547.6 | 4.7 | 0.0018 |
+
+护栏状态：
+- 严格适配器要求：**PASS**（观察到 `wasm-adapter`）
+- 严格性能比值护栏（<=1.0）：**PASS**
+
+#### 3) 小图（300 节点）- 阈值行为对比
+
+来源：`tmp/wasm-parity-benchmark/report-method-300/latest.json`
+
+| 组件 | 基线（WASM 关闭） | 候选（WASM 开启） | 基线 p95 (ms) | 候选 p95 (ms) | 候选/基线 p95 |
+| --- | --- | --- | ---: | ---: | ---: |
+| GraphMetrics | sequential | sequential | 62.45 | 38.0 | 0.6085 |
+| LayoutEngine | worker | wasm-adapter | 2254.5 | 7.95 | 0.0035 |
+
+行为确认：
+- `GraphMetrics` 在 300 节点下按设计保持顺序路径（`nodeCount < 500` 阈值）。
+- `LayoutEngine` 在小图场景下依旧从 wasm 路径获得显著收益。
+
+---
+
+### 输出正确性 / 等价性
+
+来源：`tmp/calculation-method-comparison/latest.json`
+
+使用容差：`1e-9`
+
+| 对比项 | comparedNodes | 缺失节点 | maxAbsDelta | meanAbsDelta | withinTolerance |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Sequential vs Worker | 500 | 0 | `9.458744898438454e-11` | `7.1121490918812926e-12` | true |
+| Sequential vs WASM | 500 | 0 | `0` | `0` | true |
+| Worker vs WASM | 500 | 0 | `9.458744898438454e-11` | `7.1121490918812926e-12` | true |
+
+结论：在当前容差与数据形状下，所有对比方法结果数值等价。
+
+---
+
+### 详细分析
+
+1. `LayoutEngine`：
+   - 在当前环境中，wasm-adapter 相比 worker 具有决定性优势（p95 降幅为数量级级别）。
+   - 该优势在 300 与 500 节点测试中均稳定出现。
+   - 在制品可用前提下，wasm 应保持为首选路径。
+
+2. `GraphMetrics`：
+   - worker 路径在该场景下存在较高开销（线程启动与同步成本占主导）。
+   - 在重图场景下，wasm-adapter 相比 worker 明显更快（500 节点闸门场景 p95 约快 12x）。
+   - 对于当前图规模与稀疏度，顺序计算仍具有竞争力。
+
+3. 实际解释：
+   - 在已提供 wasm 制品条件下，当前实测优先级为：
+     - `LayoutEngine`：wasm > worker
+     - `GraphMetrics`：sequential（当前测得形状）< wasm << worker
+   - 现有阈值逻辑（`>=500` 走 async）在功能上正确，但性能策略仍可继续优化。
+
+4. 鲁棒性：
+   - 严格 parity 闸门现在同时检查：
+     - 适配器激活
+     - 性能回归阈值
+   - 该机制显著降低了 CI 中 wasm 性能退化被静默放过的风险。
+
+---
+
+### 建议
+
+1. 在 CI 中持续强制执行当前严格 wasm 闸门（`verify + benchmark:strict:perf`）。
+2. 为 `GraphMetrics` 引入分层工作负载阈值（考虑稀疏度），而不仅依赖节点数阈值。
+3. 增加周期性基准快照（nightly/weekly），用于漂移跟踪与护栏阈值校准。
+4. 在 wasm 制品不可用时保留 worker 兜底，但在 wasm 健康时不作为生产首选。
+
+---
+
+### 结论
+
+- **计算方法对比已完成且可复现。**
+- **WASM 路径在正确性已验证的前提下，相比 worker 提供了显著运行时收益。**
+- **严格回归护栏有效，当前全部通过。**
+
+---
 
 # 2026-03-04 v1.5.13 - Capacitor Physical-Device Acceptance Readiness Report
 

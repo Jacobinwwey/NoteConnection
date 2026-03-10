@@ -28,6 +28,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Enforce strict wasm parity gates
+        run: npm run test:wasm:parity:gates
+
       - name: Run tests
         run: npm test
 

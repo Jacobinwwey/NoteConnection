@@ -1,0 +1,47 @@
+name: WASM Parity Benchmark Snapshots
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark-snapshot:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project (includes wasm artifact sync)
+        run: npm run build
+
+      - name: Verify wasm artifact in strict mode
+        run: npm run verify:wasm:parity:strict
+
+      - name: Run strict parity benchmark snapshot
+        run: node scripts/benchmark-wasm-parity.js --iterations 4 --nodes 500 --require-wasm-adapter 1 --max-candidate-to-baseline-graph-p95-ratio 1 --max-candidate-to-baseline-layout-p95-ratio 1 --out tmp/wasm-parity-benchmark/snapshots
+
+      - name: Run GraphMetrics tiering calibration snapshot
+        run: node scripts/calibrate-graphmetrics-tiering.js --iterations 2 --max-workers 4 --out tmp/graphmetrics-tiering-calibration/snapshots
+
+      - name: Upload benchmark snapshot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-parity-benchmark-snapshot-${{ github.run_id }}
+          path: |
+            tmp/wasm-parity-benchmark/snapshots
+            tmp/graphmetrics-tiering-calibration/snapshots
+          retention-days: 30

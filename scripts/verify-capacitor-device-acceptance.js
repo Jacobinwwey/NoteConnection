@@ -1,15 +1,14 @@
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
+const {
+  runCommand,
+  resolveAdbCommand,
+  listAdbDevices,
+  getOnlineDevices,
+  formatDeviceStateSummary,
+} = require('./capacitor-device-utils');
 
 const apkPath = path.resolve(__dirname, '..', 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
-
-function run(command, args) {
-  return spawnSync(command, args, {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-}
 
 function fail(lines) {
   lines.forEach((line) => console.error(line));
@@ -24,42 +23,57 @@ if (!fs.existsSync(apkPath)) {
   ]);
 }
 
-const adbVersion = run('adb', ['version']);
-if (adbVersion.error || adbVersion.status !== 0) {
+const adbCommand = resolveAdbCommand();
+if (!adbCommand) {
   fail([
-    '[Capacitor Device Probe] `adb` is not available in PATH.',
-    '[Capacitor Device Probe] Install Android Platform Tools and ensure `adb` is resolvable.'
+    '[Capacitor Device Probe] Unable to locate a working `adb` executable.',
+    '[Capacitor Device Probe] Configure ADB_PATH or install Android Platform Tools (PATH / ANDROID_SDK_ROOT).'
   ]);
 }
 
-const adbDevices = run('adb', ['devices']);
-if (adbDevices.error || adbDevices.status !== 0) {
+const adbVersion = runCommand(adbCommand, ['version']);
+if (adbVersion.error || adbVersion.status !== 0) {
   fail([
-    '[Capacitor Device Probe] Failed to run `adb devices`.',
-    adbDevices.stderr ? `[Capacitor Device Probe] stderr: ${adbDevices.stderr.trim()}` : ''
+    '[Capacitor Device Probe] Failed to run `adb version`.',
+    adbVersion.stderr ? `[Capacitor Device Probe] stderr: ${adbVersion.stderr.trim()}` : ''
   ].filter(Boolean));
 }
 
-const lines = adbDevices.stdout
-  .split(/\r?\n/)
-  .map((line) => line.trim())
-  .filter((line) => line.length > 0);
-
-const deviceLines = lines
-  .slice(1)
-  .filter((line) => /\tdevice$/.test(line));
-
-if (deviceLines.length === 0) {
+let devices = [];
+try {
+  devices = listAdbDevices(adbCommand);
+} catch (error) {
   fail([
-    '[Capacitor Device Probe] No online Android device detected.',
-    '[Capacitor Device Probe] Connect a device (USB debugging enabled) and run again.'
+    '[Capacitor Device Probe] Failed to run `adb devices`.',
+    error && error.stderr ? `[Capacitor Device Probe] stderr: ${String(error.stderr).trim()}` : ''
+  ].filter(Boolean));
+}
+
+const onlineDevices = getOnlineDevices(devices);
+const requestedSerial = String(process.env.NOTE_CONNECTION_ANDROID_SERIAL || '').trim();
+if (requestedSerial && !onlineDevices.some((device) => device.serial === requestedSerial)) {
+  fail([
+    `[Capacitor Device Probe] Requested serial is not online: ${requestedSerial}`,
+    `[Capacitor Device Probe] Device states: ${formatDeviceStateSummary(devices)}`,
+    '[Capacitor Device Probe] Use `adb devices` to inspect unauthorized/offline states.'
   ]);
 }
 
+if (onlineDevices.length === 0) {
+  fail([
+    '[Capacitor Device Probe] No online Android device detected.',
+    `[Capacitor Device Probe] Device states: ${formatDeviceStateSummary(devices)}`,
+    '[Capacitor Device Probe] Connect a device (USB debugging enabled), accept authorization prompts, and run again.'
+  ]);
+}
+
+const selectedDevices = requestedSerial
+  ? onlineDevices.filter((device) => device.serial === requestedSerial)
+  : onlineDevices;
+
 console.log(`[Capacitor Device Probe] APK ready: ${apkPath}`);
-console.log(`[Capacitor Device Probe] Connected devices: ${deviceLines.length}`);
-deviceLines.forEach((line, index) => {
-  const serial = line.split('\t')[0];
-  console.log(`  ${index + 1}. ${serial}`);
+console.log(`[Capacitor Device Probe] Connected devices: ${selectedDevices.length}`);
+selectedDevices.forEach((device, index) => {
+  console.log(`  ${index + 1}. ${device.serial}`);
 });
 console.log('[Capacitor Device Probe] Probe passed. Physical-device acceptance can proceed.');

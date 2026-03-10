@@ -42,6 +42,144 @@
 
     let capacitorFsPermissionGranted = false;
     let capacitorFsPermissionPromise = null;
+    const CAPACITOR_GRAPH_BUILD_MAX_FILES = 2000;
+    const CAPACITOR_GRAPH_BUILD_MAX_BYTES = 16 * 1024 * 1024;
+    const CAPACITOR_GRAPH_BUILD_WORKER_TIMEOUT_MS = 20000;
+
+    function getCapacitorDirectoryHints(filesystem) {
+        const directoryHints = [];
+        const directories = (filesystem && filesystem.Directory) ? filesystem.Directory : {};
+        if (directories.Data) {
+            directoryHints.push(directories.Data);
+        }
+        if (directories.Documents) {
+            directoryHints.push(directories.Documents);
+        }
+        if (directories.ExternalStorage) {
+            directoryHints.push(directories.ExternalStorage);
+        }
+        directoryHints.push(null);
+        return directoryHints;
+    }
+
+    function sanitizeTargetName(target) {
+        return String(target || '').replace(/[^a-z0-9_\-]/gi, '_');
+    }
+
+    function parseCapacitorFrontmatter(content) {
+        const metadata = {
+            tags: [],
+            prerequisites: [],
+            next: []
+        };
+        const match = String(content || '').match(/^---\r?\n([\s\S]*?)\r?\n---/);
+        if (!match) {
+            return metadata;
+        }
+        const yaml = match[1];
+
+        const cleanLink = (raw) => {
+            let text = String(raw || '').trim();
+            const linkMatch = text.match(/^\[\[(.*?)(?:\|.*?)?\]\]$/);
+            if (linkMatch) {
+                return String(linkMatch[1] || '').trim();
+            }
+            text = text.replace(/^["']|["']$/g, '').trim();
+            return text;
+        };
+
+        const extractField = (fieldName) => {
+            const results = [];
+            const listBlockRegex = new RegExp(`${fieldName}:\\s*\\r?\\n((?:\\s*-\\s*.*\\r?\\n?)*)`, 'i');
+            const listMatch = yaml.match(listBlockRegex);
+            if (listMatch) {
+                listMatch[1]
+                    .split(/\r?\n/)
+                    .forEach((line) => {
+                        const itemMatch = line.match(/\s*-\s*(.*)/);
+                        if (!itemMatch) {
+                            return;
+                        }
+                        const cleaned = cleanLink(itemMatch[1]);
+                        if (cleaned) {
+                            results.push(cleaned);
+                        }
+                    });
+                if (results.length > 0) {
+                    return results;
+                }
+            }
+
+            const inlineRegex = new RegExp(`${fieldName}:\\s*(.*)`, 'i');
+            const inlineMatch = yaml.match(inlineRegex);
+            if (!inlineMatch) {
+                return results;
+            }
+
+            const inlineValue = String(inlineMatch[1] || '').trim();
+            if (!inlineValue || inlineValue.startsWith('#')) {
+                return results;
+            }
+
+            if (inlineValue.startsWith('[[')) {
+                const cleaned = cleanLink(inlineValue);
+                if (cleaned) {
+                    results.push(cleaned);
+                }
+                return results;
+            }
+
+            if (inlineValue.startsWith('[')) {
+                inlineValue
+                    .replace(/^\[|\]$/g, '')
+                    .split(',')
+                    .forEach((item) => {
+                        const cleaned = cleanLink(item);
+                        if (cleaned) {
+                            results.push(cleaned);
+                        }
+                    });
+                return results;
+            }
+
+            if (!inlineValue.startsWith('-')) {
+                const cleaned = cleanLink(inlineValue);
+                if (cleaned) {
+                    results.push(cleaned);
+                }
+            }
+            return results;
+        };
+
+        metadata.tags = extractField('tags');
+        metadata.prerequisites = extractField('prerequisites');
+        metadata.next = extractField('next');
+        return metadata;
+    }
+
+    function stripMarkdownExtension(value) {
+        return String(value || '')
+            .trim()
+            .replace(/\.md$/i, '')
+            .replace(/\\/g, '/')
+            .split('/')
+            .filter(Boolean)
+            .pop() || '';
+    }
+
+    function extractWikiLinks(content) {
+        const links = new Set();
+        const regex = /\[\[(.*?)(?:\|.*?)?\]\]/g;
+        const text = String(content || '');
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            const linked = stripMarkdownExtension(match[1]);
+            if (linked) {
+                links.add(linked);
+            }
+        }
+        return Array.from(links);
+    }
 
     function normalizeCapacitorPath(pathValue, options) {
         const allowCurrentDir = Boolean(options && options.allowCurrentDir);
@@ -202,7 +340,63 @@
         return '';
     }
 
-    async function capacitorReadText(pathValue) {
+    function normalizeCapacitorEntryType(rawType) {
+        const normalized = String(rawType || '').trim().toLowerCase();
+        if (!normalized) {
+            return '';
+        }
+        if (
+            normalized === 'directory' ||
+            normalized === 'dir' ||
+            normalized === 'folder'
+        ) {
+            return 'directory';
+        }
+        if (
+            normalized === 'file' ||
+            normalized === 'regular' ||
+            normalized === 'regular_file'
+        ) {
+            return 'file';
+        }
+        return '';
+    }
+
+    async function capacitorStat(pathValue, options) {
+        const filesystem = getCapacitorFilesystemPlugin();
+        if (!filesystem || typeof filesystem.stat !== 'function') {
+            return null;
+        }
+
+        await ensureCapacitorFilesystemPermission(filesystem);
+        const normalizedPath = normalizeCapacitorPath(pathValue, { allowCurrentDir: true });
+        const explicitDirectory = options && Object.prototype.hasOwnProperty.call(options, 'directory')
+            ? options.directory
+            : undefined;
+        const hints = explicitDirectory === undefined
+            ? getCapacitorDirectoryHints(filesystem)
+            : [explicitDirectory];
+
+        for (const directory of hints) {
+            try {
+                const args = { path: normalizedPath };
+                if (directory) {
+                    args.directory = directory;
+                }
+                const statResult = await filesystem.stat(args);
+                return {
+                    stat: statResult || {},
+                    directory
+                };
+            } catch (_err) {
+                // Try next directory hint.
+            }
+        }
+
+        return null;
+    }
+
+    async function capacitorReadText(pathValue, options) {
         const filesystem = getCapacitorFilesystemPlugin();
         if (!filesystem || typeof filesystem.readFile !== 'function') {
             throw new Error('Capacitor Filesystem plugin is unavailable.');
@@ -210,19 +404,12 @@
 
         await ensureCapacitorFilesystemPermission(filesystem);
         const normalizedPath = normalizeCapacitorPath(pathValue);
-
-        const directoryHints = [];
-        const directories = filesystem.Directory || {};
-        if (directories.Documents) {
-            directoryHints.push(directories.Documents);
-        }
-        if (directories.Data) {
-            directoryHints.push(directories.Data);
-        }
-        if (directories.ExternalStorage) {
-            directoryHints.push(directories.ExternalStorage);
-        }
-        directoryHints.push(null);
+        const explicitDirectory = options && Object.prototype.hasOwnProperty.call(options, 'directory')
+            ? options.directory
+            : undefined;
+        const directoryHints = explicitDirectory === undefined
+            ? getCapacitorDirectoryHints(filesystem)
+            : [explicitDirectory];
 
         let lastError = null;
         for (const directory of directoryHints) {
@@ -241,7 +428,46 @@
         throw lastError || new Error(`Failed to read Capacitor file: ${normalizedPath}`);
     }
 
-    async function capacitorReadDirectory(pathValue) {
+    async function capacitorWriteText(pathValue, textPayload, options) {
+        const filesystem = getCapacitorFilesystemPlugin();
+        if (!filesystem || typeof filesystem.writeFile !== 'function') {
+            throw new Error('Capacitor Filesystem write API is unavailable.');
+        }
+
+        await ensureCapacitorFilesystemPermission(filesystem);
+        const normalizedPath = normalizeCapacitorPath(pathValue);
+        const payload = String(textPayload || '');
+
+        const explicitDirectory = options && Object.prototype.hasOwnProperty.call(options, 'directory')
+            ? options.directory
+            : undefined;
+        const directoryHints = explicitDirectory === undefined
+            ? getCapacitorDirectoryHints(filesystem)
+            : [explicitDirectory];
+
+        let lastError = null;
+        for (const directory of directoryHints) {
+            try {
+                const args = {
+                    path: normalizedPath,
+                    data: payload,
+                    encoding: 'utf8',
+                    recursive: true
+                };
+                if (directory) {
+                    args.directory = directory;
+                }
+                await filesystem.writeFile(args);
+                return true;
+            } catch (err) {
+                lastError = err;
+            }
+        }
+
+        throw lastError || new Error(`Failed to write Capacitor file: ${normalizedPath}`);
+    }
+
+    async function capacitorReadDirectoryEntries(pathValue) {
         const filesystem = getCapacitorFilesystemPlugin();
         if (!filesystem || typeof filesystem.readdir !== 'function') {
             return [];
@@ -249,19 +475,7 @@
 
         await ensureCapacitorFilesystemPermission(filesystem);
         const normalizedPath = normalizeCapacitorPath(pathValue, { allowCurrentDir: true });
-
-        const directories = filesystem.Directory || {};
-        const directoryHints = [];
-        if (directories.Documents) {
-            directoryHints.push(directories.Documents);
-        }
-        if (directories.Data) {
-            directoryHints.push(directories.Data);
-        }
-        if (directories.ExternalStorage) {
-            directoryHints.push(directories.ExternalStorage);
-        }
-        directoryHints.push(null);
+        const directoryHints = getCapacitorDirectoryHints(filesystem);
 
         for (const directory of directoryHints) {
             try {
@@ -271,23 +485,569 @@
                 }
                 const result = await filesystem.readdir(args);
                 const files = Array.isArray(result && result.files) ? result.files : [];
-                return files
-                    .map((entry) => {
-                        if (typeof entry === 'string') {
-                            return entry;
+                const entries = [];
+
+                for (const entry of files) {
+                    const name = typeof entry === 'string'
+                        ? entry
+                        : (entry && typeof entry.name === 'string' ? entry.name : '');
+                    if (!name) {
+                        continue;
+                    }
+
+                    const explicitType = normalizeCapacitorEntryType(
+                        entry && typeof entry === 'object'
+                            ? (entry.type || entry.kind || entry.fileType || '')
+                            : ''
+                    );
+                    let isDirectory = null;
+                    if (explicitType === 'directory') {
+                        isDirectory = true;
+                    } else if (explicitType === 'file') {
+                        isDirectory = false;
+                    } else if (typeof filesystem.stat === 'function') {
+                        const childPath = normalizedPath === '.'
+                            ? normalizeCapacitorPath(name)
+                            : normalizeCapacitorPath(`${normalizedPath}/${name}`);
+                        const statResult = await capacitorStat(childPath, { directory });
+                        if (statResult && statResult.stat) {
+                            const statType = normalizeCapacitorEntryType(
+                                statResult.stat.type || statResult.stat.kind || statResult.stat.fileType || ''
+                            );
+                            if (statType === 'directory') {
+                                isDirectory = true;
+                            } else if (statType === 'file') {
+                                isDirectory = false;
+                            }
                         }
-                        if (entry && typeof entry.name === 'string') {
-                            return entry.name;
-                        }
-                        return '';
-                    })
-                    .filter(Boolean);
+                    }
+
+                    entries.push({
+                        name,
+                        path: normalizedPath === '.'
+                            ? normalizeCapacitorPath(name)
+                            : normalizeCapacitorPath(`${normalizedPath}/${name}`),
+                        isDirectory,
+                        directory
+                    });
+                }
+
+                return entries;
             } catch (_err) {
                 // Try next directory hint.
             }
         }
 
         return [];
+    }
+
+    async function capacitorReadDirectory(pathValue) {
+        const entries = await capacitorReadDirectoryEntries(pathValue);
+        return entries.map((entry) => entry.name).filter(Boolean);
+    }
+
+    async function capacitorReadTextIfExists(pathValue) {
+        try {
+            const text = await capacitorReadText(pathValue);
+            return text;
+        } catch (_err) {
+            return null;
+        }
+    }
+
+    async function collectCapacitorMarkdownFiles(targetPath) {
+        const queue = [normalizeCapacitorPath(targetPath, { allowCurrentDir: true })];
+        const visited = new Set();
+        const files = [];
+        let totalBytes = 0;
+
+        while (queue.length > 0) {
+            const current = queue.shift();
+            if (!current || visited.has(current)) {
+                continue;
+            }
+            visited.add(current);
+
+            const entries = await capacitorReadDirectoryEntries(current);
+            for (const entry of entries) {
+                if (!entry || !entry.name || entry.name.startsWith('.')) {
+                    continue;
+                }
+
+                const looksLikeMarkdown = /\.md$/i.test(entry.name);
+                if (entry.isDirectory === true) {
+                    queue.push(entry.path);
+                    continue;
+                }
+                if (entry.isDirectory === null && !looksLikeMarkdown) {
+                    queue.push(entry.path);
+                    continue;
+                }
+                if (!looksLikeMarkdown) {
+                    continue;
+                }
+
+                const rawText = await capacitorReadText(entry.path, { directory: entry.directory });
+                totalBytes += rawText.length;
+                if (totalBytes > CAPACITOR_GRAPH_BUILD_MAX_BYTES) {
+                    throw new Error(
+                        `Capacitor local build payload exceeds ${CAPACITOR_GRAPH_BUILD_MAX_BYTES} bytes. ` +
+                        'Please build on desktop for large datasets.'
+                    );
+                }
+
+                const filename = stripMarkdownExtension(entry.name);
+                if (!filename) {
+                    continue;
+                }
+
+                const metadata = parseCapacitorFrontmatter(rawText);
+                const relativePath = entry.path;
+                const segments = relativePath.split('/').filter(Boolean);
+                const clusterId = segments.length > 1 ? segments[segments.length - 2] : 'root';
+
+                files.push({
+                    id: filename,
+                    label: filename,
+                    path: relativePath,
+                    content: rawText,
+                    metadata,
+                    clusterId
+                });
+
+                if (files.length > CAPACITOR_GRAPH_BUILD_MAX_FILES) {
+                    throw new Error(
+                        `Capacitor local build file count exceeds ${CAPACITOR_GRAPH_BUILD_MAX_FILES}. ` +
+                        'Please build on desktop for large datasets.'
+                    );
+                }
+            }
+        }
+
+        return files;
+    }
+
+    function buildCapacitorGraphData(files) {
+        const nodeMap = new Map();
+        const edgeMap = new Map();
+
+        const addEdge = (source, target, type) => {
+            if (!source || !target || source === target) {
+                return;
+            }
+            if (!nodeMap.has(source) || !nodeMap.has(target)) {
+                return;
+            }
+            const key = `${source}->${target}`;
+            if (edgeMap.has(key)) {
+                return;
+            }
+            edgeMap.set(key, {
+                source,
+                target,
+                type: type || 'association',
+                weight: 1
+            });
+        };
+
+        files.forEach((file) => {
+            if (!file || !file.id || nodeMap.has(file.id)) {
+                return;
+            }
+            nodeMap.set(file.id, {
+                id: file.id,
+                label: file.label || file.id,
+                inDegree: 0,
+                outDegree: 0,
+                metadata: {
+                    filepath: file.path,
+                    tags: Array.isArray(file.metadata && file.metadata.tags) ? file.metadata.tags : [],
+                    prerequisites: Array.isArray(file.metadata && file.metadata.prerequisites) ? file.metadata.prerequisites : [],
+                    next: Array.isArray(file.metadata && file.metadata.next) ? file.metadata.next : []
+                },
+                clusterId: file.clusterId || 'root',
+                centrality: 0,
+                rank: 0
+            });
+        });
+
+        files.forEach((file) => {
+            const sourceId = file.id;
+            if (!nodeMap.has(sourceId)) {
+                return;
+            }
+
+            const prerequisites = Array.isArray(file.metadata && file.metadata.prerequisites)
+                ? file.metadata.prerequisites
+                : [];
+            prerequisites.forEach((rawPrereq) => {
+                const prereqId = stripMarkdownExtension(rawPrereq);
+                addEdge(prereqId, sourceId, 'explicit-prerequisite');
+            });
+
+            const nextItems = Array.isArray(file.metadata && file.metadata.next)
+                ? file.metadata.next
+                : [];
+            nextItems.forEach((rawNext) => {
+                const nextId = stripMarkdownExtension(rawNext);
+                addEdge(sourceId, nextId, 'explicit-next');
+            });
+
+            extractWikiLinks(file.content).forEach((linkedId) => {
+                addEdge(linkedId, sourceId, 'wiki-link');
+            });
+        });
+
+        const edges = Array.from(edgeMap.values());
+        edges.forEach((edge) => {
+            const sourceNode = nodeMap.get(edge.source);
+            const targetNode = nodeMap.get(edge.target);
+            if (sourceNode) {
+                sourceNode.outDegree = (sourceNode.outDegree || 0) + 1;
+            }
+            if (targetNode) {
+                targetNode.inDegree = (targetNode.inDegree || 0) + 1;
+            }
+        });
+
+        return {
+            nodes: Array.from(nodeMap.values()),
+            edges
+        };
+    }
+
+    function getRuntimeUrlApi() {
+        if (typeof window === 'undefined') {
+            return null;
+        }
+        return window.URL || window.webkitURL || null;
+    }
+
+    function supportsCapacitorGraphBuildWorker() {
+        const urlApi = getRuntimeUrlApi();
+        return Boolean(
+            typeof window !== 'undefined' &&
+            typeof window.Worker === 'function' &&
+            typeof window.Blob === 'function' &&
+            urlApi &&
+            typeof urlApi.createObjectURL === 'function' &&
+            typeof urlApi.revokeObjectURL === 'function'
+        );
+    }
+
+    function getCapacitorGraphBuildWorkerSource() {
+        return [
+            'self.onmessage = function(event) {',
+            '  try {',
+            '    var files = Array.isArray(event.data && event.data.files) ? event.data.files : [];',
+            '    function stripMarkdownExtension(value) {',
+            "      return String(value || '')",
+            '        .trim()',
+            "        .replace(/\\.md$/i, '')",
+            "        .replace(/\\\\/g, '/')",
+            "        .split('/')",
+            '        .filter(Boolean)',
+            '        .pop() || "";',
+            '    }',
+            '',
+            '    function extractWikiLinks(content) {',
+            '      var links = new Set();',
+            '      var regex = /\\[\\[(.*?)(?:\\|.*?)?\\]\\]/g;',
+            "      var text = String(content || '');",
+            '      var match;',
+            '      while ((match = regex.exec(text)) !== null) {',
+            '        var linked = stripMarkdownExtension(match[1]);',
+            '        if (linked) {',
+            '          links.add(linked);',
+            '        }',
+            '      }',
+            '      return Array.from(links);',
+            '    }',
+            '',
+            '    var nodeMap = new Map();',
+            '    var edgeMap = new Map();',
+            '',
+            '    function addEdge(source, target, type) {',
+            '      if (!source || !target || source === target) {',
+            '        return;',
+            '      }',
+            '      if (!nodeMap.has(source) || !nodeMap.has(target)) {',
+            '        return;',
+            '      }',
+            '      var key = source + "->" + target;',
+            '      if (edgeMap.has(key)) {',
+            '        return;',
+            '      }',
+            '      edgeMap.set(key, { source: source, target: target, type: type || "association", weight: 1 });',
+            '    }',
+            '',
+            '    files.forEach(function(file) {',
+            '      if (!file || !file.id || nodeMap.has(file.id)) {',
+            '        return;',
+            '      }',
+            '      var metadata = file.metadata || {};',
+            '      nodeMap.set(file.id, {',
+            '        id: file.id,',
+            '        label: file.label || file.id,',
+            '        inDegree: 0,',
+            '        outDegree: 0,',
+            '        metadata: {',
+            '          filepath: file.path,',
+            '          tags: Array.isArray(metadata.tags) ? metadata.tags : [],',
+            '          prerequisites: Array.isArray(metadata.prerequisites) ? metadata.prerequisites : [],',
+            '          next: Array.isArray(metadata.next) ? metadata.next : []',
+            '        },',
+            "        clusterId: file.clusterId || 'root',",
+            '        centrality: 0,',
+            '        rank: 0',
+            '      });',
+            '    });',
+            '',
+            '    files.forEach(function(file) {',
+            '      var sourceId = file && file.id;',
+            '      if (!sourceId || !nodeMap.has(sourceId)) {',
+            '        return;',
+            '      }',
+            '      var metadata = file.metadata || {};',
+            '      var prerequisites = Array.isArray(metadata.prerequisites) ? metadata.prerequisites : [];',
+            '      prerequisites.forEach(function(rawPrereq) {',
+            '        var prereqId = stripMarkdownExtension(rawPrereq);',
+            '        addEdge(prereqId, sourceId, "explicit-prerequisite");',
+            '      });',
+            '',
+            '      var nextItems = Array.isArray(metadata.next) ? metadata.next : [];',
+            '      nextItems.forEach(function(rawNext) {',
+            '        var nextId = stripMarkdownExtension(rawNext);',
+            '        addEdge(sourceId, nextId, "explicit-next");',
+            '      });',
+            '',
+            '      extractWikiLinks(file.content).forEach(function(linkedId) {',
+            '        addEdge(linkedId, sourceId, "wiki-link");',
+            '      });',
+            '    });',
+            '',
+            '    var edges = Array.from(edgeMap.values());',
+            '    edges.forEach(function(edge) {',
+            '      var sourceNode = nodeMap.get(edge.source);',
+            '      var targetNode = nodeMap.get(edge.target);',
+            '      if (sourceNode) {',
+            '        sourceNode.outDegree = (sourceNode.outDegree || 0) + 1;',
+            '      }',
+            '      if (targetNode) {',
+            '        targetNode.inDegree = (targetNode.inDegree || 0) + 1;',
+            '      }',
+            '    });',
+            '',
+            '    self.postMessage({',
+            '      ok: true,',
+            '      graphData: {',
+            '        nodes: Array.from(nodeMap.values()),',
+            '        edges: edges',
+            '      }',
+            '    });',
+            '  } catch (err) {',
+            '    self.postMessage({',
+            '      ok: false,',
+            '      error: err && err.message ? String(err.message) : String(err)',
+            '    });',
+            '  }',
+            '};'
+        ].join('\n');
+    }
+
+    function validateCapacitorGraphDataPayload(graphData) {
+        return Boolean(
+            graphData &&
+            typeof graphData === 'object' &&
+            Array.isArray(graphData.nodes) &&
+            Array.isArray(graphData.edges)
+        );
+    }
+
+    async function runCapacitorGraphBuildWorker(files) {
+        if (!supportsCapacitorGraphBuildWorker()) {
+            throw new Error('Capacitor graph build worker is unavailable in this runtime.');
+        }
+
+        const urlApi = getRuntimeUrlApi();
+        if (!urlApi) {
+            throw new Error('URL API is unavailable for Capacitor graph build worker.');
+        }
+
+        return await new Promise((resolve, reject) => {
+            let worker = null;
+            let workerUrl = '';
+            let timeoutId = null;
+            let settled = false;
+
+            const cleanup = () => {
+                if (timeoutId !== null) {
+                    clearTimeout(timeoutId);
+                    timeoutId = null;
+                }
+                if (worker) {
+                    try {
+                        worker.terminate();
+                    } catch (_terminateErr) {
+                        // Ignore cleanup errors.
+                    }
+                    worker = null;
+                }
+                if (workerUrl) {
+                    try {
+                        urlApi.revokeObjectURL(workerUrl);
+                    } catch (_revokeErr) {
+                        // Ignore cleanup errors.
+                    }
+                    workerUrl = '';
+                }
+            };
+
+            const settle = (handler, value) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                cleanup();
+                handler(value);
+            };
+
+            try {
+                const source = getCapacitorGraphBuildWorkerSource();
+                const blob = new window.Blob([source], { type: 'application/javascript' });
+                workerUrl = urlApi.createObjectURL(blob);
+                worker = new window.Worker(workerUrl);
+            } catch (createErr) {
+                settle(reject, createErr);
+                return;
+            }
+
+            timeoutId = setTimeout(() => {
+                settle(reject, new Error(
+                    `Capacitor worker build timed out after ${CAPACITOR_GRAPH_BUILD_WORKER_TIMEOUT_MS}ms.`
+                ));
+            }, CAPACITOR_GRAPH_BUILD_WORKER_TIMEOUT_MS);
+
+            worker.onmessage = (event) => {
+                const payload = event && event.data ? event.data : {};
+                if (!payload || payload.ok !== true) {
+                    const reason = payload && payload.error ? String(payload.error) : 'Unknown worker failure.';
+                    settle(reject, new Error(reason));
+                    return;
+                }
+                settle(resolve, payload.graphData);
+            };
+
+            worker.onerror = (event) => {
+                const reason = event && event.message ? event.message : 'Unknown worker runtime error.';
+                settle(reject, new Error(reason));
+            };
+
+            try {
+                worker.postMessage({ files: Array.isArray(files) ? files : [] });
+            } catch (postErr) {
+                settle(reject, postErr);
+            }
+        });
+    }
+
+    async function buildCapacitorGraphDataWithWorkerFallback(files) {
+        if (!supportsCapacitorGraphBuildWorker()) {
+            return {
+                graphData: buildCapacitorGraphData(files),
+                buildMode: 'single-thread'
+            };
+        }
+
+        try {
+            const workerGraph = await runCapacitorGraphBuildWorker(files);
+            if (!validateCapacitorGraphDataPayload(workerGraph)) {
+                throw new Error('Capacitor worker returned invalid graph payload.');
+            }
+            return {
+                graphData: workerGraph,
+                buildMode: 'worker'
+            };
+        } catch (workerErr) {
+            const warning = workerErr && workerErr.message ? String(workerErr.message) : String(workerErr);
+            console.warn(
+                '[StorageProvider] Worker-based Capacitor graph build failed. Falling back to single-thread mode.',
+                workerErr
+            );
+            return {
+                graphData: buildCapacitorGraphData(files),
+                buildMode: 'single-thread-fallback',
+                warning
+            };
+        }
+    }
+
+    function resolveCapacitorBuildModeDetail(buildMode, runtimeCaps) {
+        const supportsMobileWasmCompute = Boolean(
+            runtimeCaps &&
+            runtimeCaps.supports_mobile_wasm_compute === true
+        );
+        const mobileWasmReason = runtimeCaps && typeof runtimeCaps.mobile_wasm_reason === 'string'
+            ? runtimeCaps.mobile_wasm_reason
+            : 'runtime-unreported';
+
+        if (buildMode === 'worker') {
+            return supportsMobileWasmCompute
+                ? 'worker-wasm-ready'
+                : `worker-wasm-not-ready:${mobileWasmReason}`;
+        }
+
+        if (buildMode === 'single-thread') {
+            return `single-thread-worker-unavailable:${mobileWasmReason}`;
+        }
+
+        if (buildMode === 'single-thread-fallback') {
+            return `single-thread-worker-fallback:${mobileWasmReason}`;
+        }
+
+        return `unknown-mode:${mobileWasmReason}`;
+    }
+
+    async function capacitorBuildGraph(requestPayload, runtimeCaps) {
+        const payload = requestPayload || {};
+        const rawTarget = String(payload.target || 'ALL_FOLDERS').trim() || 'ALL_FOLDERS';
+        const targetPath = rawTarget === 'ALL_FOLDERS'
+            ? 'Knowledge_Base'
+            : normalizeCapacitorPath(`Knowledge_Base/${rawTarget}`);
+
+        const files = await collectCapacitorMarkdownFiles(targetPath);
+        const buildResult = await buildCapacitorGraphDataWithWorkerFallback(files);
+        const graphData = buildResult.graphData;
+        const jsPayload = `const graphData = ${JSON.stringify(graphData, null, 2)};`;
+        const jsonPayload = JSON.stringify(graphData, null, 2);
+
+        await capacitorWriteText('data.js', jsPayload);
+        await capacitorWriteText('graph_data.json', jsonPayload);
+
+        if (rawTarget !== 'ALL_FOLDERS') {
+            const targetName = sanitizeTargetName(rawTarget);
+            if (targetName) {
+                await capacitorWriteText(`data_${targetName}.js`, jsPayload);
+                await capacitorWriteText(`graph_data_${targetName}.json`, jsonPayload);
+            }
+        }
+
+        return {
+            success: true,
+            stats: {
+                target: rawTarget,
+                fileCount: files.length,
+                nodeCount: graphData.nodes.length,
+                edgeCount: graphData.edges.length,
+                buildMode: buildResult.buildMode,
+                buildModeDetail: resolveCapacitorBuildModeDetail(buildResult.buildMode, runtimeCaps || {}),
+                supportsMobileWasmCompute: Boolean(runtimeCaps && runtimeCaps.supports_mobile_wasm_compute === true),
+                mobileWasmReason: runtimeCaps && typeof runtimeCaps.mobile_wasm_reason === 'string'
+                    ? runtimeCaps.mobile_wasm_reason
+                    : 'runtime-unreported'
+            },
+            warning: buildResult.warning || ''
+        };
     }
 
     function ensureRuntimeBridge() {
@@ -331,6 +1091,28 @@
         return new Error(`Storage provider operation is unsupported in this runtime: ${operation}`);
     }
 
+    function formatCapacitorMtime(statObject) {
+        if (!statObject || typeof statObject !== 'object') {
+            return '';
+        }
+        const raw = statObject.mtime || statObject.modificationTime || statObject.modifiedAt || '';
+        if (!raw) {
+            return '';
+        }
+        try {
+            return new Date(raw).toLocaleString();
+        } catch (_err) {
+            return String(raw);
+        }
+    }
+
+    function resolveCapacitorSize(statObject, fallbackText) {
+        if (statObject && typeof statObject.size === 'number' && Number.isFinite(statObject.size)) {
+            return statObject.size;
+        }
+        return String(fallbackText || '').length;
+    }
+
     class RuntimeStorageProvider {
         constructor(runtimeCaps) {
             this.runtimeCaps = runtimeCaps || {};
@@ -341,6 +1123,15 @@
         }
 
         _supportsBuild() {
+            if (isCapacitorNativeRuntime()) {
+                const filesystem = getCapacitorFilesystemPlugin();
+                return Boolean(
+                    filesystem &&
+                    typeof filesystem.readdir === 'function' &&
+                    typeof filesystem.readFile === 'function' &&
+                    typeof filesystem.writeFile === 'function'
+                );
+            }
             return this.runtimeCaps.supports_build !== false;
         }
 
@@ -442,7 +1233,35 @@
                 return await this._invoke('check_cache', { target });
             }
             if (isCapacitorNativeRuntime()) {
-                return null;
+                if (target === 'ALL_FOLDERS') {
+                    const activeText = await capacitorReadTextIfExists('data.js');
+                    if (!activeText) {
+                        return null;
+                    }
+                    const activeStat = await capacitorStat('data.js');
+                    const statObject = activeStat && activeStat.stat ? activeStat.stat : null;
+                    return {
+                        date: formatCapacitorMtime(statObject),
+                        size: resolveCapacitorSize(statObject, activeText),
+                        source: 'active'
+                    };
+                }
+
+                const targetName = sanitizeTargetName(target);
+                if (!targetName) {
+                    return null;
+                }
+                const cacheAssetName = `data_${targetName}.js`;
+                const cacheText = await capacitorReadTextIfExists(cacheAssetName);
+                if (!cacheText) {
+                    return null;
+                }
+                const cacheStat = await capacitorStat(cacheAssetName);
+                const statObject = cacheStat && cacheStat.stat ? cacheStat.stat : null;
+                return {
+                    date: formatCapacitorMtime(statObject),
+                    size: resolveCapacitorSize(statObject, cacheText)
+                };
             }
             return await sidecarFetchJson('api/check-cache', null, { target });
         }
@@ -465,7 +1284,27 @@
                 return Boolean(await this._invoke('restore_cache', { target }));
             }
             if (isCapacitorNativeRuntime()) {
-                return false;
+                if (target === 'ALL_FOLDERS') {
+                    return Boolean(await capacitorReadTextIfExists('data.js'));
+                }
+
+                const targetName = sanitizeTargetName(target);
+                if (!targetName) {
+                    return false;
+                }
+
+                const cacheJs = await capacitorReadTextIfExists(`data_${targetName}.js`);
+                if (!cacheJs) {
+                    return false;
+                }
+
+                await capacitorWriteText('data.js', cacheJs);
+
+                const cacheJson = await capacitorReadTextIfExists(`graph_data_${targetName}.json`);
+                if (cacheJson) {
+                    await capacitorWriteText('graph_data.json', cacheJson);
+                }
+                return true;
             }
             const payload = await sidecarFetchJson('api/restore-cache', null, { target });
             return Boolean(payload && payload.success);
@@ -499,6 +1338,16 @@
                 return {
                     success: Boolean(result && result.success !== false),
                     error: result && result.error ? String(result.error) : ''
+                };
+            }
+
+            if (isCapacitorNativeRuntime()) {
+                const result = await capacitorBuildGraph(requestPayload || {}, this.runtimeCaps || {});
+                return {
+                    success: Boolean(result && result.success),
+                    error: result && result.error ? String(result.error) : '',
+                    stats: result && result.stats ? result.stats : null,
+                    warning: result && result.warning ? String(result.warning) : ''
                 };
             }
 
@@ -575,17 +1424,20 @@
 
             if (isCapacitorNativeRuntime()) {
                 try {
+                    // Prefer local runtime-generated assets first so on-device builds
+                    // are picked up without requiring an app rebundle.
+                    return await capacitorReadText(normalized);
+                } catch (_fsErr) {
+                    // Fall through to bundled asset fetch.
+                }
+
+                try {
                     const response = await fetch(`${normalized}?v=${Date.now()}`);
                     if (response.ok) {
                         return await response.text();
                     }
+                    throw unsupportedOperationError(`readGeneratedAsset:${normalized}`);
                 } catch (_fetchErr) {
-                    // Fall through to filesystem fallback.
-                }
-
-                try {
-                    return await capacitorReadText(normalized);
-                } catch (_fsErr) {
                     throw unsupportedOperationError(`readGeneratedAsset:${normalized}`);
                 }
             }

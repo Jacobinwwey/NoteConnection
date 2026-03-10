@@ -2,19 +2,17 @@
 
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
+const {
+  runCommand,
+  resolveAdbCommand,
+  listAdbDevices,
+  getOnlineDevices,
+  formatDeviceStateSummary,
+} = require('./capacitor-device-utils');
 
 const repoRoot = path.resolve(__dirname, '..');
 const apkPath = path.join(repoRoot, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
 const evidenceRoot = path.join(repoRoot, 'docs', 'mobile-evidence');
-
-function run(command, args, options = {}) {
-  return spawnSync(command, args, {
-    encoding: options.encoding || 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-    ...options,
-  });
-}
 
 function fail(lines) {
   const normalized = Array.isArray(lines) ? lines : [String(lines)];
@@ -26,35 +24,18 @@ function fail(lines) {
   process.exit(1);
 }
 
-function assertAdbAvailable() {
-  const version = run('adb', ['version']);
+function assertAdbAvailable(adbCommand) {
+  const version = runCommand(adbCommand, ['version']);
   if (version.error || version.status !== 0) {
     fail([
-      '`adb` is not available in PATH.',
-      'Install Android Platform Tools and ensure `adb` is resolvable.',
+      'Failed to run `adb version`.',
+      'Configure ADB_PATH or install Android Platform Tools (PATH / ANDROID_SDK_ROOT).',
     ]);
   }
 }
 
-function listOnlineDevices() {
-  const result = run('adb', ['devices']);
-  if (result.error || result.status !== 0) {
-    fail([
-      'Failed to run `adb devices`.',
-      result.stderr ? `stderr: ${result.stderr.trim()}` : '',
-    ]);
-  }
-
-  return result.stdout
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .slice(1)
-    .filter((line) => /\tdevice$/.test(line))
-    .map((line) => line.split('\t')[0]);
-}
-
-function getDeviceProperty(serial, propertyName) {
-  const result = run('adb', ['-s', serial, 'shell', 'getprop', propertyName]);
+function getDeviceProperty(adbCommand, serial, propertyName) {
+  const result = runCommand(adbCommand, ['-s', serial, 'shell', 'getprop', propertyName]);
   if (result.error || result.status !== 0) {
     return '';
   }
@@ -86,8 +67,8 @@ function timestampKey(now = new Date()) {
   return `${yyyy}${mm}${dd}-${hh}${min}${ss}`;
 }
 
-function captureScreenshot(serial, screenshotPath) {
-  const capture = run('adb', ['-s', serial, 'exec-out', 'screencap', '-p'], { encoding: 'buffer' });
+function captureScreenshot(adbCommand, serial, screenshotPath) {
+  const capture = runCommand(adbCommand, ['-s', serial, 'exec-out', 'screencap', '-p'], { encoding: 'buffer' });
   if (capture.error || capture.status !== 0 || !capture.stdout || capture.stdout.length === 0) {
     fail([
       'Failed to capture screenshot from device.',
@@ -98,8 +79,8 @@ function captureScreenshot(serial, screenshotPath) {
   fs.writeFileSync(screenshotPath, capture.stdout);
 }
 
-function captureLogcat(serial, logcatPath) {
-  const logcat = run('adb', ['-s', serial, 'logcat', '-d', '-v', 'time']);
+function captureLogcat(adbCommand, serial, logcatPath) {
+  const logcat = runCommand(adbCommand, ['-s', serial, 'logcat', '-d', '-v', 'time']);
   if (logcat.error || logcat.status !== 0) {
     fail([
       'Failed to capture logcat snapshot.',
@@ -174,12 +155,31 @@ function main() {
     ]);
   }
 
-  assertAdbAvailable();
-  const onlineDevices = listOnlineDevices();
+  const adbCommand = resolveAdbCommand();
+  if (!adbCommand) {
+    fail([
+      'Unable to locate a working `adb` executable.',
+      'Configure ADB_PATH or install Android Platform Tools (PATH / ANDROID_SDK_ROOT).',
+    ]);
+  }
+
+  assertAdbAvailable(adbCommand);
+  let devices = [];
+  try {
+    devices = listAdbDevices(adbCommand);
+  } catch (error) {
+    fail([
+      'Failed to run `adb devices`.',
+      error && error.stderr ? String(error.stderr).trim() : '',
+    ]);
+  }
+
+  const onlineDevices = getOnlineDevices(devices).map((device) => device.serial);
   if (onlineDevices.length === 0) {
     fail([
       'No online Android device detected.',
-      'Connect a device (USB debugging enabled) and run this command again.',
+      `Device states: ${formatDeviceStateSummary(devices)}`,
+      'Connect a device (USB debugging enabled), accept authorization prompts, and run this command again.',
     ]);
   }
 
@@ -188,12 +188,13 @@ function main() {
   if (!onlineDevices.includes(serial)) {
     fail([
       `Requested serial is not online: ${serial}`,
+      `Device states: ${formatDeviceStateSummary(devices)}`,
       `Online devices: ${onlineDevices.join(', ')}`,
     ]);
   }
 
-  const model = getDeviceProperty(serial, 'ro.product.model');
-  const androidVersion = getDeviceProperty(serial, 'ro.build.version.release');
+  const model = getDeviceProperty(adbCommand, serial, 'ro.product.model');
+  const androidVersion = getDeviceProperty(adbCommand, serial, 'ro.build.version.release');
   const now = new Date();
   const runId = `${timestampKey(now)}-${sanitizeSegment(maskSerial(serial) || serial || 'device')}`;
   const runDir = path.join(evidenceRoot, runId);
@@ -203,8 +204,8 @@ function main() {
   const logcatPath = path.join(runDir, 'logcat-tail.txt');
   const reportPath = path.join(runDir, 'acceptance_evidence.md');
 
-  captureScreenshot(serial, screenshotPath);
-  captureLogcat(serial, logcatPath);
+  captureScreenshot(adbCommand, serial, screenshotPath);
+  captureLogcat(adbCommand, serial, logcatPath);
 
   writeEvidenceReport(reportPath, {
     dateLabel: now.toISOString().slice(0, 10),

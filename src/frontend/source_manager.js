@@ -5,7 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
         supports_build: true,
         supports_content_api: true,
         supports_kb_runtime_change: true,
-        supports_native_pathmode: false
+        supports_native_pathmode: false,
+        supports_mobile_wasm_compute: false,
+        mobile_wasm_reason: 'non-mobile-runtime'
     };
 
     const resolveCapacitorPlatform = () => {
@@ -48,6 +50,73 @@ document.addEventListener('DOMContentLoaded', () => {
         const plugins = cap.Plugins || {};
         const fsPlugin = plugins.Filesystem || window.CapacitorFilesystem || null;
         return Boolean(fsPlugin && typeof fsPlugin.readFile === 'function');
+    };
+
+    const supportsCapacitorBuildApi = () => {
+        if (typeof window === 'undefined') {
+            return false;
+        }
+        const cap = window.Capacitor;
+        if (!cap) {
+            return false;
+        }
+
+        const plugins = cap.Plugins || {};
+        const fsPlugin = plugins.Filesystem || window.CapacitorFilesystem || null;
+        return Boolean(
+            fsPlugin &&
+            typeof fsPlugin.readFile === 'function' &&
+            typeof fsPlugin.readdir === 'function' &&
+            typeof fsPlugin.writeFile === 'function'
+        );
+    };
+
+    const detectMobileWasmCapability = () => {
+        const features = {
+            webAssembly: false,
+            worker: false,
+            blob: false,
+            blobUrl: false,
+            typedArrays: false,
+            sharedArrayBuffer: false,
+            crossOriginIsolated: false
+        };
+
+        if (typeof window === 'undefined') {
+            return { supported: false, reason: 'runtime-unavailable', features };
+        }
+
+        const urlApi = window.URL || window.webkitURL || null;
+        features.webAssembly = typeof window.WebAssembly === 'object';
+        features.worker = typeof window.Worker === 'function';
+        features.blob = typeof window.Blob === 'function';
+        features.blobUrl = Boolean(
+            urlApi &&
+            typeof urlApi.createObjectURL === 'function' &&
+            typeof urlApi.revokeObjectURL === 'function'
+        );
+        features.typedArrays = typeof window.Uint8Array === 'function' && typeof window.ArrayBuffer === 'function';
+        features.sharedArrayBuffer = typeof window.SharedArrayBuffer === 'function';
+        features.crossOriginIsolated = Boolean(window.crossOriginIsolated);
+
+        if (!features.webAssembly) {
+            return { supported: false, reason: 'webassembly-unavailable', features };
+        }
+        if (!features.worker) {
+            return { supported: false, reason: 'worker-unavailable', features };
+        }
+        if (!features.blob || !features.blobUrl) {
+            return { supported: false, reason: 'worker-bootstrap-unavailable', features };
+        }
+        if (!features.typedArrays) {
+            return { supported: false, reason: 'typedarray-unavailable', features };
+        }
+
+        return {
+            supported: true,
+            reason: features.sharedArrayBuffer ? 'ready-with-sab' : 'ready-no-sab',
+            features
+        };
     };
 
     const exposeRuntimeCaps = () => {
@@ -101,17 +170,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const capacitorPlatform = resolveCapacitorPlatform();
             if (capacitorPlatform) {
                 const canReadContent = supportsCapacitorContentApi();
+                const canBuildGraph = supportsCapacitorBuildApi();
+                const mobileWasm = detectMobileWasmCapability();
                 runtimeCaps = {
                     ...runtimeCaps,
                     platform: `capacitor-${capacitorPlatform}`,
                     supports_sidecar: false,
-                    supports_build: false,
+                    supports_build: canBuildGraph,
                     supports_content_api: canReadContent,
                     supports_kb_runtime_change: false,
-                    supports_native_pathmode: false
+                    supports_native_pathmode: false,
+                    supports_mobile_wasm_compute: mobileWasm.supported,
+                    mobile_wasm_reason: mobileWasm.reason,
+                    mobile_wasm_features: mobileWasm.features
                 };
                 console.log('[SourceManager] Capacitor native runtime detected:', runtimeCaps.platform, {
-                    supports_content_api: runtimeCaps.supports_content_api
+                    supports_content_api: runtimeCaps.supports_content_api,
+                    supports_build: runtimeCaps.supports_build,
+                    supports_mobile_wasm_compute: runtimeCaps.supports_mobile_wasm_compute,
+                    mobile_wasm_reason: runtimeCaps.mobile_wasm_reason
                 });
             }
             exposeRuntimeCaps();
@@ -204,7 +281,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return parsed;
         };
 
-        if (window.__TAURI__) {
+        const useRuntimeProvider = Boolean(
+            window.__TAURI__ ||
+            (typeof runtimeCaps.platform === 'string' && runtimeCaps.platform.startsWith('capacitor-'))
+        );
+        if (useRuntimeProvider) {
             try {
                 const storageProvider = getStorageProvider();
                 const text = await storageProvider.readGeneratedAsset(src);
@@ -213,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log(`[Loader] Loaded ${src} via storage provider bridge: ${parsed.nodes.length} nodes`);
                 return;
             } catch (providerErr) {
-                console.warn(`[Loader] Storage provider read failed for ${src}, falling back to HTTP/Tauri dual strategy.`, providerErr);
+                console.warn(`[Loader] Storage provider read failed for ${src}, falling back to runtime fetch strategy.`, providerErr);
             }
         }
 
@@ -271,7 +352,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const loadScript = async (src) => {
-        if (window.__TAURI__ && src.startsWith('data')) {
+        const isRuntimeGeneratedDataAsset = src.startsWith('data');
+        const useRuntimeGeneratedAssetFlow = Boolean(
+            isRuntimeGeneratedDataAsset &&
+            (window.__TAURI__ || (typeof runtimeCaps.platform === 'string' && runtimeCaps.platform.startsWith('capacitor-')))
+        );
+        if (useRuntimeGeneratedAssetFlow) {
             await loadGraphDataFromSidecar(src);
             return;
         }
@@ -425,7 +511,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const note = ensureRuntimeCapabilityNotice();
         if (!note) return;
 
-        const showCacheOnly = Boolean((window.__TAURI__ && runtimeCaps.supports_build === false) || isCapacitorNativeRuntime());
+        const showCacheOnly = Boolean(
+            runtimeCaps.supports_build === false &&
+            ((window.__TAURI__ && runtimeCaps.supports_sidecar === false) || isCapacitorNativeRuntime())
+        );
         if (!showCacheOnly) {
             note.style.display = 'none';
             note.textContent = '';
@@ -662,8 +751,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (inCapacitorRuntime) {
                 kbPath = t('source.capacitor.bundlePath');
-                folders = [];
-                console.log('[SourceManager] Using Capacitor read-only source mode.');
+                const provider = getStorageProvider();
+                let listedFolders = [];
+                let cachedTargets = [];
+                try {
+                    listedFolders = (await provider.listFolders()) || [];
+                } catch (folderErr) {
+                    console.warn('[SourceManager] Capacitor folder listing failed.', folderErr);
+                }
+                try {
+                    cachedTargets = (await provider.listAvailableTargets()) || [];
+                } catch (targetErr) {
+                    console.warn('[SourceManager] Capacitor available-target listing failed.', targetErr);
+                }
+                folders = Array.from(new Set([...(listedFolders || []), ...(cachedTargets || [])]));
+                console.log('[SourceManager] Using Capacitor mobile source mode.', {
+                    supportsBuild: runtimeCaps.supports_build,
+                    folderCount: folders.length
+                });
             } else if (runtimeCaps.supports_sidecar) {
                 try {
                     const sidecarData = await fetchFoldersViaSidecar();
@@ -700,16 +805,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Clear existing options
             folderSelect.innerHTML = '';
 
-            if (inCapacitorRuntime) {
-                const packagedOption = document.createElement('option');
-                packagedOption.value = 'PACKAGED_GRAPH';
-                packagedOption.textContent = t('source.capacitor.packagedGraph');
-                folderSelect.appendChild(packagedOption);
-                folderSelect.value = 'PACKAGED_GRAPH';
-                loadBtn.disabled = true;
-                return;
-            }
-
             let includeAllFoldersOption = true;
             if (!runtimeCaps.supports_build && window.__TAURI__) {
                 try {
@@ -740,6 +835,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
+            if (folderSelect.options.length === 0 && inCapacitorRuntime) {
+                const packagedOption = document.createElement('option');
+                packagedOption.value = 'ALL_FOLDERS';
+                packagedOption.textContent = t('source.capacitor.packagedGraph');
+                folderSelect.appendChild(packagedOption);
+            }
+
             if (folderSelect.options.length === 0) {
                 const emptyOption = document.createElement('option');
                 emptyOption.value = '';
@@ -757,7 +859,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const hasRemembered =
                 rememberedTarget &&
                 Array.from(folderSelect.options).some((opt) => opt.value === rememberedTarget);
-            folderSelect.value = hasRemembered ? rememberedTarget : 'ALL_FOLDERS';
+            if (hasRemembered) {
+                folderSelect.value = rememberedTarget;
+            } else if (Array.from(folderSelect.options).some((opt) => opt.value === 'ALL_FOLDERS')) {
+                folderSelect.value = 'ALL_FOLDERS';
+            } else {
+                folderSelect.value = folderSelect.options[0].value;
+            }
             console.log('[SourceManager] Folder dropdown populated with', folderSelect.options.length, 'options');
             
         } catch (err) {
@@ -897,10 +1005,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const target = folderSelect.value;
-            if (isCapacitorNativeRuntime()) {
-                alert(t('source.error.capacitorReadOnly'));
-                return;
-            }
             if (!target) {
                 alert(t('source.error.noFolder'));
                 return;
@@ -965,7 +1069,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let success = false;
             let error = '';
-            if (window.__TAURI__ && runtimeCaps.supports_sidecar === false && window.loadingManager) {
+            const inCapacitorRuntime = isCapacitorNativeRuntime();
+            if ((window.__TAURI__ && runtimeCaps.supports_sidecar === false && window.loadingManager) || (inCapacitorRuntime && window.loadingManager)) {
                 window.loadingManager.log(
                     isZhLocale()
                         ? '使用移动端原生构建引擎...'
@@ -982,6 +1087,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (window.loadingManager) {
                     window.loadingManager.log(t('notifications.buildSuccess'));
                 }
+                if (result && result.warning) {
+                    console.warn('[SourceManager] Build warning:', result.warning);
+                }
+                if (result && result.stats) {
+                    console.log('[SourceManager] Build stats:', result.stats);
+                    if (window.loadingManager && typeof result.stats.buildModeDetail === 'string') {
+                        window.loadingManager.log(
+                            isZhLocale()
+                                ? `移动构建模式: ${result.stats.buildModeDetail}`
+                                : `Mobile build mode: ${result.stats.buildModeDetail}`
+                        );
+                    }
+                }
             } catch (buildErr) {
                 error = buildErr && buildErr.message ? buildErr.message : String(buildErr);
             }
@@ -996,13 +1114,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 // v1.0.1: 在触发页面重载前预先验证 data.js 可访问。
                 // 在 Tauri 中，由于混合内容限制，可能无法通过 HTTP 获取图谱数据。
                 // 通过 IPC 预读可确保 data.js 存在，并在页面重载前已填充 runtime_data 目录。
-                if (window.__TAURI__ && window.__TAURI__.core) {
+                if ((window.__TAURI__ && window.__TAURI__.core) || inCapacitorRuntime) {
                     try {
                         const storageProvider = getStorageProvider();
                         const preText = await storageProvider.readGeneratedAsset('data.js');
-                        console.log(`[Build] Pre-verified data.js via IPC: ${preText.length} bytes`);
+                        console.log(`[Build] Pre-verified data.js via runtime storage provider: ${preText.length} bytes`);
                     } catch (preErr) {
-                        console.warn('[Build] Pre-verify via IPC failed (build output may be missing):', preErr);
+                        console.warn('[Build] Pre-verify failed (build output may be missing):', preErr);
                     }
                 }
 

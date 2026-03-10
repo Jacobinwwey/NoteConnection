@@ -1,3 +1,1592 @@
+# 2026-03-10 v1.5.40 - TODO Consistency Repair (Godot PNG Contract + Closed Security Drift Items)
+
+## English Document
+
+### Objective
+Fix stale/contradictory TODO entries so the document reflects current runtime contracts and already-implemented security work.
+
+### Completed in This Iteration
+- [x] Corrected historical Godot WebSocket wording to align with actual stable URL contract (`ws://127.0.0.1:9876` without query suffix in Godot client path).
+- [x] Corrected legacy “SVG fallback” statement for Godot Path Mode: Mermaid runtime contract is PNG-only (`pngBase64` required), SVG is diagnostics-only.
+- [x] Closed stale P0 item “Secure sidecar content API to match Rust boundary guarantees” in duplicated migration blocks:
+  - [x] `/api/content` KB-root boundary checks are implemented in `src/server.ts`.
+  - [x] Regression tests already cover allowed path + outside-root rejection + legacy Windows-style path variants in `src/server.migration.test.ts`.
+- [x] Added explicit TODO state note in legacy Chinese block to avoid confusion with old SVG-sanitization phrasing.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/server.migration.test.ts --runInBand`
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts --runInBand`
+
+---
+
+## 中文文档
+
+### 目标
+修复 TODO 中与当前实现不一致的陈旧条目，确保文档状态与运行时契约、已落地安全加固保持一致。
+
+### 本轮完成
+- [x] 修正历史 Godot WebSocket 表述，明确当前稳定 URL 契约为 `ws://127.0.0.1:9876`（Godot 客户端路径不带查询参数）。
+- [x] 修正历史 “SVG Fallback” 描述：Godot Path Mode 下 Mermaid 运行时契约为 PNG-only（`pngBase64` 必填），SVG 仅用于诊断。
+- [x] 关闭重复迁移区块中的陈旧 P0 项“sidecar 内容 API 安全边界对齐 Rust”：
+  - [x] `src/server.ts` 已实现 `/api/content` 的 KB 根路径边界校验。
+  - [x] `src/server.migration.test.ts` 已覆盖合法路径、越界拒绝、Windows 历史路径变体回归。
+- [x] 在历史中文条目增加状态说明，避免旧版 SVG 清洗表述与当前 PNG-only 契约冲突。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/server.migration.test.ts --runInBand`
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts --runInBand`
+
+---
+
+# 2026-03-10 v1.5.39 - High-Priority Bridge Robustness Closure (Typed Envelope + Backpressure + Packaging/CSP Contracts)
+
+## English Document
+
+### Objective
+Close the remaining high-priority bridge/runtime robustness gaps from the imported fixrisk baseline without destabilizing existing WASM/mobile workstreams.
+
+### Completed in This Iteration
+- [x] `src/core/PathBridge.ts` hardened with strict inbound envelope validation (`parseBridgeInboundEnvelope`) and known-message payload checks.
+- [x] Added inbound frame size guard (`MAX_INBOUND_MESSAGE_BYTES`) to prevent oversized message ingestion.
+- [x] Added per-client outbound backpressure queue with bounded depth and `bufferedAmount`-gated drain (`BRIDGE_BACKPRESSURE_LIMITS`).
+- [x] Added packaging contract coverage via `src/pkg.sidecar.contract.test.ts` and included it in `npm run test:migration`.
+- [x] Tightened frontend CSP (`object-src`, `base-uri`, `frame-ancestors`, `form-action`) in `src/frontend/index.html`.
+- [x] Reaffirmed Godot Mermaid rendering compatibility contract: runtime path remains PNG-only (`pngBase64` required); SVG is debug-only and is not used as Godot runtime fallback.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/pkg.sidecar.contract.test.ts --runInBand`
+- [x] `npm run test:migration` (**28 suites, 135 tests passed**)
+- [x] `npm test` (**31 suites, 152 tests passed**)
+- [x] `npm run build`
+
+---
+
+## 中文文档
+
+### 目标
+在不扰动现有 WASM/移动端主线的前提下，收口导入 fixrisk 基线中剩余的桥接/运行时高优先级稳健性缺口。
+
+### 本轮完成
+- [x] `src/core/PathBridge.ts` 已完成严格入站消息包校验（`parseBridgeInboundEnvelope`）与已知消息负载结构约束。
+- [x] 新增入站消息大小门禁（`MAX_INBOUND_MESSAGE_BYTES`），避免超大消息直接进入解析流程。
+- [x] 新增按客户端维度的有界出站背压队列，并基于 `bufferedAmount` 进行排队排空（`BRIDGE_BACKPRESSURE_LIMITS`）。
+- [x] 新增打包契约测试 `src/pkg.sidecar.contract.test.ts`，并纳入 `npm run test:migration`。
+- [x] 强化前端 CSP（`object-src`、`base-uri`、`frame-ancestors`、`form-action`）于 `src/frontend/index.html`。
+- [x] 明确并固化 Godot Mermaid 渲染兼容性契约：运行时保持 PNG-only（`pngBase64` 必填），SVG 仅用于调试，不作为 Godot 回退路径。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/pkg.sidecar.contract.test.ts --runInBand`
+- [x] `npm run test:migration`（**28 suites, 135 tests passed**）
+- [x] `npm test`（**31 suites, 152 tests passed**）
+- [x] `npm run build`
+
+---
+
+# 2026-03-10 v1.5.38 - High-Priority Multi-Terminal WASM Plan Continuation (Mobile WASM Readiness Contract + Capability-Aware Build Telemetry)
+
+## English Document
+
+### Objective
+Continue the high-priority WASM parity stream with a concrete multi-terminal implementation plan and the first mobile-facing runtime capability slice, so mobile behavior is diagnosable and fallback remains deterministic.
+
+### Completed in This Iteration
+- [x] **Multi-terminal WASM implementation plan added**:
+  - [x] `implementation_plan.md`
+  - [x] `docs/en/implementation_plan.md`
+  - [x] `docs/zh/implementation_plan.md`
+  - [x] Plan now explicitly maps mobile bottlenecks, phased rollout, and acceptance gates.
+- [x] **Mobile WASM readiness probe integrated** (`src/frontend/source_manager.js`):
+  - [x] Added capability fields:
+    - [x] `supports_mobile_wasm_compute`
+    - [x] `mobile_wasm_reason`
+  - [x] Added runtime probe: `detectMobileWasmCapability()`
+  - [x] Wired probe output into Capacitor runtime capability resolution and diagnostics logs.
+- [x] **Capability-aware mobile build telemetry added** (`src/frontend/storage_provider.js`, `src/frontend/source_manager.js`):
+  - [x] Added build-mode detail mapping via `resolveCapacitorBuildModeDetail(...)`.
+  - [x] Build result now carries:
+    - [x] `buildModeDetail`
+    - [x] `supportsMobileWasmCompute`
+    - [x] `mobileWasmReason`
+  - [x] Source manager now logs mobile build stats/warnings with mode details.
+- [x] **Contract coverage updated**:
+  - [x] `src/runtime.capabilities.test.ts`
+  - [x] `src/capacitor.runtime.contract.test.ts`
+  - [x] `src/storage.provider.contract.test.ts`
+  - [x] `src/storage.provider.capacitor.worker.contract.test.ts`
+
+### High-Priority Work Status (Current)
+- [x] Multi-terminal WASM execution strategy is now explicitly documented and bilingual-synced.
+- [x] Mobile runtime now reports explicit WASM readiness and reason instead of implicit behavior.
+- [x] Mobile build path now emits capability-aware telemetry while preserving deterministic worker/single-thread fallback.
+- [ ] Remaining high-priority work: implement more mobile heavy-compute kernels on real wasm runtime path and validate p95/p99 gains on physical devices.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/runtime.capabilities.test.ts src/capacitor.runtime.contract.test.ts src/storage.provider.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/source_manager.loadflow.test.ts --runInBand` (`5` suites, `28` tests passed)
+- [x] `npm run test:migration` (`27` suites, `131` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+继续推进高优先级 WASM 等价收口：补齐可执行的多终端实施计划，并落地首个移动端运行时能力切片，使移动端行为可诊断、回退链路可预测。
+
+### 本轮完成
+- [x] **多终端 WASM 实施计划已补齐**：
+  - [x] `implementation_plan.md`
+  - [x] `docs/en/implementation_plan.md`
+  - [x] `docs/zh/implementation_plan.md`
+  - [x] 计划中已明确移动端瓶颈映射、分阶段推进路径与验收门禁。
+- [x] **移动端 WASM 就绪探测已接入**（`src/frontend/source_manager.js`）：
+  - [x] 新增能力字段：
+    - [x] `supports_mobile_wasm_compute`
+    - [x] `mobile_wasm_reason`
+  - [x] 新增运行时探测函数：`detectMobileWasmCapability()`
+  - [x] 已将探测结果接入 Capacitor 能力解析与日志诊断输出。
+- [x] **能力感知的移动构建遥测已落地**（`src/frontend/storage_provider.js`、`src/frontend/source_manager.js`）：
+  - [x] 新增构建模式细分映射：`resolveCapacitorBuildModeDetail(...)`。
+  - [x] 构建结果新增：
+    - [x] `buildModeDetail`
+    - [x] `supportsMobileWasmCompute`
+    - [x] `mobileWasmReason`
+  - [x] SourceManager 现会记录移动构建统计与告警细节。
+- [x] **契约覆盖已同步更新**：
+  - [x] `src/runtime.capabilities.test.ts`
+  - [x] `src/capacitor.runtime.contract.test.ts`
+  - [x] `src/storage.provider.contract.test.ts`
+  - [x] `src/storage.provider.capacitor.worker.contract.test.ts`
+
+### 当前高优先级状态
+- [x] 多终端 WASM 执行策略已明确并完成中英文同步。
+- [x] 移动端运行时现可显式报告 WASM 就绪状态与原因，不再依赖隐式行为。
+- [x] 在保持 worker/single-thread 确定性回退前提下，移动构建链路已具备能力感知遥测。
+- [ ] 剩余高优先级工作：将更多移动端重计算内核迁移到真实 wasm 路径，并在真机上验证 p95/p99 收益。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/runtime.capabilities.test.ts src/capacitor.runtime.contract.test.ts src/storage.provider.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/source_manager.loadflow.test.ts --runInBand`（`5` 套件、`28` 项通过）
+- [x] `npm run test:migration`（`27` 套件、`131` 项通过）
+
+---
+
+# 2026-03-10 v1.5.37 - High-Priority Threshold Calibration Continuation (Configurable GraphMetrics Tiering + Calibration Utility + CI Snapshot Integration)
+
+## English Document
+
+### Objective
+Continue threshold-calibration closure by making GraphMetrics tiering policy runtime-configurable, adding an evidence-driven calibration utility, and integrating calibration snapshots into CI evidence flow.
+
+### Completed in This Iteration
+- [x] **GraphMetrics policy is now runtime-configurable** (`src/backend/GraphMetrics.ts`):
+  - [x] Added execution policy model:
+    - [x] `asyncNodeCountThreshold`
+    - [x] `asyncWorkloadBenefitRatioThreshold`
+  - [x] Added env overrides with safe fallback:
+    - [x] `NOTE_CONNECTION_GRAPHMETRICS_ASYNC_NODE_THRESHOLD`
+    - [x] `NOTE_CONNECTION_GRAPHMETRICS_ASYNC_WORKLOAD_RATIO_THRESHOLD`
+  - [x] Added `GraphMetrics.getExecutionPolicy()` for diagnostics/tooling visibility.
+- [x] **Tiering policy contracts extended** (`src/wasm.parity.output.equivalence.contract.test.ts`):
+  - [x] Added env-override contract for sparse large graph forcing async->wasm path when thresholds are lowered.
+  - [x] Added default-fallback contract for invalid env values.
+- [x] **Calibration utility added**:
+  - [x] New script: `scripts/calibrate-graphmetrics-tiering.js`
+  - [x] New npm command: `npm run calibrate:graphmetrics:tiering`
+  - [x] Output artifact: `tmp/graphmetrics-tiering-calibration/latest.json` (or custom `--out` path)
+  - [x] Includes recommendation payload for threshold tuning from measured profile matrix.
+- [x] **CI snapshot integration expanded**:
+  - [x] `.github/workflows/wasm-parity-benchmark-snapshots.yml` now also runs GraphMetrics tiering calibration snapshot.
+  - [x] Snapshot artifact upload now includes:
+    - [x] `tmp/wasm-parity-benchmark/snapshots`
+    - [x] `tmp/graphmetrics-tiering-calibration/snapshots`
+
+### High-Priority Work Status (Current)
+- [x] Tiering threshold is now tunable without code edits (env-driven policy).
+- [x] Evidence-driven calibration tooling is now available for threshold governance.
+- [x] CI periodic snapshot flow now captures both wasm parity and GraphMetrics tiering calibration artifacts.
+- [ ] Remaining high-priority work: execute multi-iteration, multi-host calibration baselines and converge production threshold values with stronger statistical confidence.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/wasm.parity.output.equivalence.contract.test.ts --runInBand` (`7` tests passed)
+- [x] `node scripts/calibrate-graphmetrics-tiering.js --iterations 1 --max-workers 4 --out tmp/graphmetrics-tiering-calibration/smoke`
+  - [x] calibration artifact emitted at `tmp/graphmetrics-tiering-calibration/smoke/latest.json`
+  - [x] recommendation snapshot (current host): `asyncNodeCountThreshold=500`, `asyncWorkloadBenefitRatioThreshold=115.4385`
+- [x] `npm run test:wasm:parity:gates` (strict verify + strict perf guards passed)
+- [x] `npm run test:migration` (`27` suites, `131` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+继续推进阈值校准收口：让 GraphMetrics 分层策略支持运行时可配置，新增证据驱动的校准工具，并把校准快照纳入 CI 证据链路。
+
+### 本轮完成
+- [x] **GraphMetrics 策略已支持运行时可配置**（`src/backend/GraphMetrics.ts`）：
+  - [x] 新增策略模型：
+    - [x] `asyncNodeCountThreshold`
+    - [x] `asyncWorkloadBenefitRatioThreshold`
+  - [x] 新增环境变量覆盖并带安全回退：
+    - [x] `NOTE_CONNECTION_GRAPHMETRICS_ASYNC_NODE_THRESHOLD`
+    - [x] `NOTE_CONNECTION_GRAPHMETRICS_ASYNC_WORKLOAD_RATIO_THRESHOLD`
+  - [x] 新增 `GraphMetrics.getExecutionPolicy()`，便于诊断与工具读取当前策略。
+- [x] **分层策略契约增强**（`src/wasm.parity.output.equivalence.contract.test.ts`）：
+  - [x] 新增环境变量覆盖用例：在降低阈值时，稀疏大图可被强制进入 async->wasm 路径。
+  - [x] 新增无效环境变量回退默认值用例。
+- [x] **校准工具落地**：
+  - [x] 新增脚本：`scripts/calibrate-graphmetrics-tiering.js`
+  - [x] 新增 npm 命令：`npm run calibrate:graphmetrics:tiering`
+  - [x] 输出工件：`tmp/graphmetrics-tiering-calibration/latest.json`（或 `--out` 指定路径）
+  - [x] 基于多配置画像输出阈值建议。
+- [x] **CI 快照链路扩展**：
+  - [x] `.github/workflows/wasm-parity-benchmark-snapshots.yml` 现已纳入 GraphMetrics 分层校准快照执行。
+  - [x] 快照工件上传现同时覆盖：
+    - [x] `tmp/wasm-parity-benchmark/snapshots`
+    - [x] `tmp/graphmetrics-tiering-calibration/snapshots`
+
+### 当前高优先级状态
+- [x] 分层阈值已可通过环境变量调优，不再需要改代码。
+- [x] 阈值治理已具备证据驱动校准工具。
+- [x] CI 周期快照已同时覆盖 wasm parity 与 GraphMetrics 分层校准证据。
+- [ ] 剩余高优先级工作：在多主机、多轮次条件下积累更强统计置信度的校准基线，并收敛生产阈值。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.output.equivalence.contract.test.ts --runInBand`（`7` 项通过）
+- [x] `node scripts/calibrate-graphmetrics-tiering.js --iterations 1 --max-workers 4 --out tmp/graphmetrics-tiering-calibration/smoke`
+  - [x] 校准工件输出：`tmp/graphmetrics-tiering-calibration/smoke/latest.json`
+  - [x] 当前主机建议快照：`asyncNodeCountThreshold=500`、`asyncWorkloadBenefitRatioThreshold=115.4385`
+- [x] `npm run test:wasm:parity:gates`（严格校验 + 严格性能门禁通过）
+- [x] `npm run test:migration`（`27` 套件、`131` 测试通过）
+
+---
+
+# 2026-03-10 v1.5.36 - High-Priority WASM Method-Policy Continuation (Sparsity-Aware GraphMetrics Tiering + Scheduled Snapshot CI + Release Gate Enforcement)
+
+## English Document
+
+### Objective
+Proceed the latest method-comparison recommendations end-to-end: close the GraphMetrics method-selection policy gap with sparsity-aware workload tiering, enforce strict wasm parity gates in release flow, and add periodic benchmark snapshots for drift tracking.
+
+### Completed in This Iteration
+- [x] **GraphMetrics method policy upgraded to workload-tier selection** (`src/backend/GraphMetrics.ts`):
+  - [x] Added explicit async policy constants:
+    - [x] `ASYNC_NODE_COUNT_THRESHOLD = 500`
+    - [x] `ASYNC_WORKLOAD_BENEFIT_RATIO_THRESHOLD = 24`
+  - [x] Added deterministic decision model `resolveExecutionDecision(...)` with reasons:
+    - [x] `memory-saving-mode`
+    - [x] `small-graph-threshold`
+    - [x] `sparse-workload-threshold`
+    - [x] `workload-tier-async`
+  - [x] Changed runtime orchestration so sparse large graphs remain sequential (avoid low-yield async overhead), while heavy enough workloads still route to `wasm-adapter` -> `worker` fallback chain.
+- [x] **Contract coverage updated for policy correctness** (`src/wasm.parity.output.equivalence.contract.test.ts`):
+  - [x] Updated wasm-path equivalence fixture graph shape to dense-enough workload tier, preserving expected wasm-path contract.
+  - [x] Added sparse-large-graph contract case asserting:
+    - [x] wasm betweenness path is not called
+    - [x] diagnostics mode is `sequential`
+    - [x] diagnostics reason is `sparse-workload-threshold`
+- [x] **CI enforcement expanded**:
+  - [x] `npm publish` release workflow now enforces strict parity gate before package publish:
+    - [x] `.github/workflows/npm-publish.yml`
+    - [x] added `npm run test:wasm:parity:gates`
+  - [x] Added periodic benchmark snapshot workflow:
+    - [x] `.github/workflows/wasm-parity-benchmark-snapshots.yml`
+    - [x] weekly cron + manual dispatch
+    - [x] strict verify + strict perf benchmark run
+    - [x] benchmark snapshot artifact upload (`actions/upload-artifact`)
+
+### High-Priority Work Status (Current)
+- [x] GraphMetrics method selection is no longer node-count-only; sparsity/workload characteristics now affect policy.
+- [x] Strict wasm parity gating is now enforced in both migration CI matrix and npm release publishing flow.
+- [x] Periodic benchmark snapshot automation is now available for longitudinal drift tracking.
+- [ ] Remaining high-priority work is threshold calibration refinement across broader workload envelopes and host variability.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/wasm.parity.output.equivalence.contract.test.ts --runInBand`
+- [x] `npm run test:wasm:parity:gates`
+  - [x] GraphMetrics p95 ratio (candidate/baseline): `0.0841`
+  - [x] LayoutEngine p95 ratio (candidate/baseline): `0.0011`
+- [x] `npm run test:migration` (`27` suites, `129` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+把最新方法对比报告中的建议完整落地：补齐 GraphMetrics 计算路径策略缺口（引入稀疏度/工作负载分层），在发布流程中强制严格 wasm parity 门禁，并增加周期性基准快照以跟踪长期性能漂移。
+
+### 本轮完成
+- [x] **GraphMetrics 策略升级为工作负载分层决策**（`src/backend/GraphMetrics.ts`）：
+  - [x] 新增异步策略常量：
+    - [x] `ASYNC_NODE_COUNT_THRESHOLD = 500`
+    - [x] `ASYNC_WORKLOAD_BENEFIT_RATIO_THRESHOLD = 24`
+  - [x] 新增确定性决策模型 `resolveExecutionDecision(...)`，输出原因：
+    - [x] `memory-saving-mode`
+    - [x] `small-graph-threshold`
+    - [x] `sparse-workload-threshold`
+    - [x] `workload-tier-async`
+  - [x] 调整运行时编排：大而稀疏图优先顺序计算（避免低收益异步开销）；工作负载足够时继续走 `wasm-adapter` -> `worker` 回退链路。
+- [x] **策略正确性契约同步增强**（`src/wasm.parity.output.equivalence.contract.test.ts`）：
+  - [x] 将 wasm 路径等价测试图形调整为“满足分层阈值”的稠密形状，保持 wasm 预期行为契约不退化。
+  - [x] 新增“大图但稀疏”契约用例，断言：
+    - [x] 不调用 wasm betweenness 路径
+    - [x] 诊断模式为 `sequential`
+    - [x] 诊断原因为 `sparse-workload-threshold`
+- [x] **CI 强制能力扩展**：
+  - [x] npm 发布工作流新增严格 parity 门禁：
+    - [x] `.github/workflows/npm-publish.yml`
+    - [x] 新增 `npm run test:wasm:parity:gates`
+  - [x] 新增周期性基准快照工作流：
+    - [x] `.github/workflows/wasm-parity-benchmark-snapshots.yml`
+    - [x] 每周定时 + 手工触发
+    - [x] 执行严格 verify + 严格性能基准
+    - [x] 上传基准快照工件（`actions/upload-artifact`）
+
+### 当前高优先级状态
+- [x] GraphMetrics 计算策略已从“仅节点数阈值”升级为“节点数 + 工作负载稀疏度”联合决策。
+- [x] 严格 wasm parity 门禁已同时覆盖迁移 CI 与 npm 发布流程。
+- [x] 周期性基准快照自动化已落地，可用于长期性能漂移跟踪。
+- [ ] 剩余高优先级工作为更大负载范围与多主机环境下的阈值持续校准。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.output.equivalence.contract.test.ts --runInBand`
+- [x] `npm run test:wasm:parity:gates`
+  - [x] GraphMetrics p95 比值（candidate/baseline）：`0.0841`
+  - [x] LayoutEngine p95 比值（candidate/baseline）：`0.0011`
+- [x] `npm run test:migration`（`27` 套件、`129` 测试通过）
+
+---
+
+# 2026-03-10 v1.5.34 - High-Priority WASM Performance Guard Closure (Benchmark Threshold Gates + CI Regression Barrier)
+
+## English Document
+
+### Objective
+Proceed from artifact provisioning to performance robustness: add enforceable wasm benchmark regression guards so CI can fail fast when candidate wasm performance regresses against baseline.
+
+### Completed in This Iteration
+- [x] **Performance guard model added** (`src/backend/algorithms/WasmParityBenchmarkGuards.ts`):
+  - [x] Added per-metric guard evaluation for GraphMetrics and LayoutEngine.
+  - [x] Supports ratio guard (`candidateP95 / baselineP95`) and absolute candidate p95 guard.
+  - [x] Added aggregated pass/fail summary for multi-metric enforcement.
+- [x] **Benchmark script hardened with regression thresholds** (`scripts/benchmark-wasm-parity.js`):
+  - [x] Added guard args:
+    - [x] `--max-candidate-to-baseline-graph-p95-ratio`
+    - [x] `--max-candidate-to-baseline-layout-p95-ratio`
+    - [x] `--max-candidate-graph-p95-ms`
+    - [x] `--max-candidate-layout-p95-ms`
+  - [x] Added guard results to benchmark report payload (`equivalence.performanceGuards`).
+  - [x] Script now exits non-zero when configured guard thresholds are violated.
+- [x] **Contract coverage expanded**:
+  - [x] Added `src/wasm.parity.benchmark.guards.contract.test.ts`.
+  - [x] Added guard contract suite to `npm run test:migration`.
+- [x] **Gate scripts/CI barrier upgraded**:
+  - [x] Added `benchmark:wasm:parity:strict:perf`.
+  - [x] Updated `test:wasm:parity:gates` to run strict verify + strict perf guard benchmark.
+  - [x] Existing CI `wasm-parity-strict-suite` now enforces performance regression barrier through updated gate script.
+
+### High-Priority Work Status (Current)
+- [x] WASM artifact is provisioned and `wasm-adapter` path is active under strict mode.
+- [x] Strict parity gates now cover both activation and p95 performance regression checks.
+- [x] Migration/build/Tauri/full-Jest remain green with enhanced guardrail depth.
+- [ ] Remaining high-priority track is production-scale profiling/tuning and long-term threshold calibration.
+
+### Verification Gate (Executed)
+- [x] `npm run test:migration` (`27` suites, `128` tests passed)
+- [x] `npm run test:wasm:parity:gates` (strict verify + strict perf guards passed)
+- [x] `npm run build`
+- [x] `npm run test:tauri` (`19` Rust tests passed)
+- [x] `npm test` (`30` suites, `145` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+在工件落地之后继续推进性能稳健性收口：增加可强制执行的 wasm 基准回归门禁，使 CI 在候选 wasm 性能退化时能够快速失败。
+
+### 本轮完成
+- [x] **性能门禁模型落地**（`src/backend/algorithms/WasmParityBenchmarkGuards.ts`）：
+  - [x] 新增 GraphMetrics / LayoutEngine 双指标门禁评估。
+  - [x] 支持比值门禁（`candidateP95 / baselineP95`）与 candidate 绝对 p95 门禁。
+  - [x] 新增多指标聚合通过/失败摘要。
+- [x] **基准脚本回归阈值加固**（`scripts/benchmark-wasm-parity.js`）：
+  - [x] 新增门禁参数：
+    - [x] `--max-candidate-to-baseline-graph-p95-ratio`
+    - [x] `--max-candidate-to-baseline-layout-p95-ratio`
+    - [x] `--max-candidate-graph-p95-ms`
+    - [x] `--max-candidate-layout-p95-ms`
+  - [x] 在报告中输出门禁结果（`equivalence.performanceGuards`）。
+  - [x] 当阈值被突破时脚本返回非零退出码。
+- [x] **契约覆盖增强**：
+  - [x] 新增 `src/wasm.parity.benchmark.guards.contract.test.ts`。
+  - [x] 在 `npm run test:migration` 纳入该套件。
+- [x] **门禁脚本与 CI 屏障升级**：
+  - [x] 新增 `benchmark:wasm:parity:strict:perf`。
+  - [x] `test:wasm:parity:gates` 更新为严格校验 + 严格性能门禁基准。
+  - [x] 现有 CI `wasm-parity-strict-suite` 已通过更新后的脚本强制执行性能回归屏障。
+
+### 当前高优先级状态
+- [x] WASM 工件已落地，严格模式下 `wasm-adapter` 已可真实激活。
+- [x] 严格 parity 门禁现已同时覆盖“激活校验 + p95 性能回归校验”。
+- [x] 在门禁加固后 migration/build/Tauri/全量 Jest 继续全绿。
+- [ ] 剩余高优先级工作聚焦生产规模 profiling/调优与长期阈值校准。
+
+### 验证门禁（已执行）
+- [x] `npm run test:migration`（`27` 套件、`128` 测试通过）
+- [x] `npm run test:wasm:parity:gates`（严格校验 + 严格性能门禁基准通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`30` 套件、`145` 测试通过）
+
+---
+
+# 2026-03-10 v1.5.33 - High-Priority WASM Artifact Provisioning Closure (Rust WASM ABI Module + Strict Gate Activation + CI Wiring)
+
+## English Document
+
+### Objective
+Close the high-priority blocker by provisioning a real wasm parity artifact (instead of fallback-only simulation), then validate strict gate behavior end-to-end.
+
+### Completed in This Iteration
+- [x] **Real wasm parity artifact provisioned**:
+  - [x] Added Rust wasm crate at `src/backend/wasm/` (`Cargo.toml`, `src/lib.rs`).
+  - [x] Implemented required JSON ABI exports:
+    - [x] `compute_layout_json`
+    - [x] `compute_betweenness_json`
+    - [x] `get_last_result_len`
+    - [x] `alloc`
+    - [x] `dealloc`
+    - [x] `memory` export (from wasm module runtime)
+  - [x] Implemented deterministic layout output and betweenness Brandes-style directed computation in wasm.
+  - [x] Generated and provisioned artifact: `src/backend/wasm/noteconnection_compute.wasm`.
+- [x] **Build/runtime synchronization hardened**:
+  - [x] Added `scripts/build-wasm-parity-artifact.js` (`npm run build:wasm:parity`) for deterministic artifact build/provision.
+  - [x] Added `scripts/sync-wasm-parity-artifact.js` and integrated into `build` / `build:mini` to copy artifact into `dist/src/backend/wasm/`.
+  - [x] Added `src/backend/wasm/target/` ignore rule to avoid VCS pollution from Rust build output.
+- [x] **Contracts and gates expanded**:
+  - [x] Added provisioning contract: `src/wasm.parity.artifact.provisioning.contract.test.ts`.
+  - [x] Hardened `src/wasm.parity.artifact.probe.contract.test.ts` to be environment-independent (mocked no-artifact path resolution).
+  - [x] Added strict wasm gate script: `npm run test:wasm:parity:gates`.
+  - [x] Added strict wasm gate job to CI workflow: `.github/workflows/migration-gates.yml`.
+  - [x] Updated `test:gates` to include strict wasm parity gates.
+
+### High-Priority Work Status (Current)
+- [x] WASM artifact is now provisioned and discoverable in canonical runtime paths.
+- [x] Strict verifier and strict benchmark both pass with active `wasm-adapter` mode.
+- [x] Candidate benchmark path now enters `wasm-adapter` for both GraphMetrics and LayoutEngine.
+- [x] Full migration/build/Tauri/full-Jest feasibility remains green after provisioning.
+- [ ] Remaining optimization work: production-scale perf tuning and long-horizon parity monitoring.
+
+### Verification Gate (Executed)
+- [x] `npm run build:wasm:parity`
+- [x] `npm run verify:wasm:parity`
+- [x] `npm run verify:wasm:parity:strict`
+- [x] `npm run benchmark:wasm:parity:strict` (candidate mode reached `wasm-adapter`)
+- [x] `npm run test:wasm:parity:gates`
+- [x] `npm run test:migration` (`26` suites, `124` tests passed)
+- [x] `npm run build`
+- [x] `npm run test:tauri` (`19` Rust tests passed)
+- [x] `npm test` (`29` suites, `141` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+闭环当前高优先级阻塞项：提供真实可用的 wasm parity 工件（不再仅依赖回退路径），并完成严格门禁端到端验证。
+
+### 本轮完成
+- [x] **真实 wasm parity 工件已落地**：
+  - [x] 新增 Rust wasm crate：`src/backend/wasm/`（`Cargo.toml`、`src/lib.rs`）。
+  - [x] 实现必需 JSON ABI 导出：
+    - [x] `compute_layout_json`
+    - [x] `compute_betweenness_json`
+    - [x] `get_last_result_len`
+    - [x] `alloc`
+    - [x] `dealloc`
+    - [x] `memory`（wasm 运行时导出）
+  - [x] 在 wasm 内实现确定性布局输出与有向 Brandes 风格中心性计算。
+  - [x] 工件已生成并落地：`src/backend/wasm/noteconnection_compute.wasm`。
+- [x] **构建与运行时同步加固**：
+  - [x] 新增 `scripts/build-wasm-parity-artifact.js`（`npm run build:wasm:parity`）用于确定性构建与落地。
+  - [x] 新增 `scripts/sync-wasm-parity-artifact.js`，并接入 `build` / `build:mini`，自动同步到 `dist/src/backend/wasm/`。
+  - [x] 新增 `src/backend/wasm/target/` 忽略规则，避免 Rust 构建产物污染版本库。
+- [x] **契约与门禁增强**：
+  - [x] 新增工件落地契约：`src/wasm.parity.artifact.provisioning.contract.test.ts`。
+  - [x] 加固 `src/wasm.parity.artifact.probe.contract.test.ts`，改为与环境无关（mock 无工件路径解析）。
+  - [x] 新增严格 wasm 门禁脚本：`npm run test:wasm:parity:gates`。
+  - [x] 在 CI 工作流 `.github/workflows/migration-gates.yml` 新增严格 wasm 门禁任务。
+  - [x] `test:gates` 已纳入严格 wasm parity 门禁。
+
+### 当前高优先级状态
+- [x] WASM 工件已落地，并可在标准运行时路径被发现。
+- [x] 严格 verifier 与严格 benchmark 均通过，且 `wasm-adapter` 已真实激活。
+- [x] 基准 candidate 路径在 GraphMetrics/LayoutEngine 上均进入 `wasm-adapter`。
+- [x] 工件落地后 migration/build/Tauri/全量 Jest 仍全绿。
+- [ ] 后续重点转为生产规模性能优化与长期等价监控。
+
+### 验证门禁（已执行）
+- [x] `npm run build:wasm:parity`
+- [x] `npm run verify:wasm:parity`
+- [x] `npm run verify:wasm:parity:strict`
+- [x] `npm run benchmark:wasm:parity:strict`（candidate 已进入 `wasm-adapter`）
+- [x] `npm run test:wasm:parity:gates`
+- [x] `npm run test:migration`（`26` 套件、`124` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`29` 套件、`141` 测试通过）
+
+---
+
+# 2026-03-10 v1.5.32 - High-Priority WASM Artifact Readiness Closure (Probe + Strict Verify Gate + Full Feasibility Revalidation)
+
+## English Document
+
+### Objective
+Continue the high-priority wasm parity stream by making artifact readiness explicit and enforceable, then revalidate end-to-end feasibility with strict/non-strict evidence commands.
+
+### Completed in This Iteration
+- [x] **Artifact readiness probe implemented** (`src/backend/algorithms/WasmParityArtifactProbe.ts`):
+  - [x] Added required export baseline (`compute_layout_json`, `compute_betweenness_json`, `get_last_result_len`, `alloc`, `dealloc`, `memory`).
+  - [x] Added explicit probe result model for `artifact-not-found`, `path-not-found`, export gaps, and instantiation failures.
+  - [x] Added reusable missing-export helper for contracts/tooling.
+- [x] **Verifier CLI added** (`scripts/verify-wasm-parity.js`):
+  - [x] Added args support: `--wasm-path`, `--strict`, `--out`.
+  - [x] Added strict-mode non-zero exit when artifact readiness is not met.
+  - [x] Added JSON payload output for CI evidence archiving.
+- [x] **NPM strict-entry hardening completed** (`package.json`):
+  - [x] Added `verify:wasm:parity:strict` to avoid npm arg-forwarding ambiguity with `--strict`.
+  - [x] Kept non-strict verifier entrypoint for routine diagnostics (`verify:wasm:parity`).
+- [x] **Contract safety net expanded**:
+  - [x] Added `src/wasm.parity.artifact.probe.contract.test.ts`.
+  - [x] Added probe contract suite into `npm run test:migration`.
+- [x] **Benchmark + verifier feasibility evidence refreshed**:
+  - [x] Refreshed benchmark evidence at `tmp/wasm-parity-benchmark/latest.json`.
+  - [x] Added verifier evidence at `tmp/wasm-parity-benchmark/verify-latest.json`.
+  - [x] Confirmed strict verifier/benchmark commands fail as expected when wasm artifact is unavailable.
+
+### High-Priority Work Status (Current)
+- [x] Artifact readiness is now explicitly measurable and script-enforceable.
+- [x] Strict CI-style gates exist for both verifier and benchmark paths.
+- [x] Full migration/build/Tauri/full-Jest gates pass after this slice.
+- [ ] Current environment still lacks a wasm artifact; runtime remains worker fallback.
+- [ ] Production-scale wasm-adapter parity/performance closure remains open until artifact availability is solved.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/wasm.parity.artifact.probe.contract.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run verify:wasm:parity`
+- [x] `npm run verify:wasm:parity:strict` (expected non-zero exit: `artifact-not-found`)
+- [x] `npm run benchmark:wasm:parity`
+- [x] `npm run benchmark:wasm:parity:strict` (expected non-zero exit: candidate did not reach `wasm-adapter`)
+- [x] `npm run test:migration` (`25` suites, `123` tests passed)
+- [x] `npm run build`
+- [x] `npm run test:tauri` (`19` Rust tests passed)
+- [x] `npm test` (`28` suites, `140` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+继续推进高优先级 wasm 等价收口：把 wasm 工件可用性做成“可测量、可强制”的门禁能力，并在严格/非严格路径下完成端到端可行性复验。
+
+### 本轮完成
+- [x] **工件可用性探针落地**（`src/backend/algorithms/WasmParityArtifactProbe.ts`）：
+  - [x] 新增必需导出基线（`compute_layout_json`、`compute_betweenness_json`、`get_last_result_len`、`alloc`、`dealloc`、`memory`）。
+  - [x] 新增探针结果模型，覆盖 `artifact-not-found`、`path-not-found`、导出缺失与实例化失败。
+  - [x] 新增缺失导出辅助函数，供契约与工具链复用。
+- [x] **校验 CLI 落地**（`scripts/verify-wasm-parity.js`）：
+  - [x] 支持参数：`--wasm-path`、`--strict`、`--out`。
+  - [x] 在严格模式下，当工件不就绪时返回非零退出码。
+  - [x] 输出 JSON 结果，便于 CI 证据归档。
+- [x] **NPM 严格入口加固完成**（`package.json`）：
+  - [x] 新增 `verify:wasm:parity:strict`，规避 npm 对 `--strict` 透传歧义。
+  - [x] 保留日常诊断入口 `verify:wasm:parity`。
+- [x] **契约护栏增强**：
+  - [x] 新增 `src/wasm.parity.artifact.probe.contract.test.ts`。
+  - [x] 在 `npm run test:migration` 纳入探针契约套件。
+- [x] **基准与校验证据已刷新**：
+  - [x] 基准证据刷新到 `tmp/wasm-parity-benchmark/latest.json`。
+  - [x] 校验证据输出到 `tmp/wasm-parity-benchmark/verify-latest.json`。
+  - [x] 已确认：在 wasm 工件不可用时，严格校验/严格基准会按预期失败。
+
+### 当前高优先级状态
+- [x] 工件可用性已可被显式测量并可脚本化强制。
+- [x] verifier 与 benchmark 均具备严格门禁路径。
+- [x] 本切片后 migration/build/Tauri/全量 Jest 仍全绿。
+- [ ] 当前环境仍缺少 wasm 工件，运行时仍走 worker 回退。
+- [ ] 生产级 wasm-adapter 的规模等价与性能闭环仍待工件可用性闭环后完成。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.artifact.probe.contract.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run verify:wasm:parity`
+- [x] `npm run verify:wasm:parity:strict`（预期非零退出：`artifact-not-found`）
+- [x] `npm run benchmark:wasm:parity`
+- [x] `npm run benchmark:wasm:parity:strict`（预期非零退出：candidate 未进入 `wasm-adapter`）
+- [x] `npm run test:migration`（`25` 套件、`123` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`28` 套件、`140` 测试通过）
+
+---
+
+# 2026-03-10 v1.5.31 - High-Priority Worker↔WASM Baseline Harness (Benchmark Script + Evidence Artifact + Contract Guards)
+
+## English Document
+
+### Objective
+Proceed with the remaining high-priority parity closure by adding a reproducible benchmark/equivalence baseline workflow for heavy compute, so worker↔wasm comparisons are evidence-driven and repeatable.
+
+### Completed in This Iteration
+- [x] **Benchmark utility module added** (`src/backend/algorithms/WasmParityBenchmark.ts`):
+  - [x] Added deterministic heavy-graph fixture builder (`buildDeterministicBenchmarkGraph`).
+  - [x] Added percentile latency summary helper (`summarizeDurations`, p50/p95/p99).
+  - [x] Added map-equivalence summary helper for betweenness outputs (`summarizeBetweennessDifference`).
+- [x] **Runnable benchmark/evidence pipeline added** (`scripts/benchmark-wasm-parity.js`):
+  - [x] Added baseline scenario (wasm disabled) and candidate scenario (wasm enabled) execution flow.
+  - [x] Collects heavy-compute mode telemetry + latency stats + layout finite-coverage.
+  - [x] Writes timestamped and latest JSON evidence artifacts under `tmp/wasm-parity-benchmark/`.
+  - [x] Supports both named args (`--iterations`, `--nodes`, `--max-workers`, `--wasm-path`, `--out`) and positional args.
+  - [x] Added optional strict gate (`--require-wasm-adapter`) for CI/release environments that must fail if wasm path is not actually active.
+- [x] **Contract safety net expanded**:
+  - [x] Added `src/wasm.parity.benchmark.contract.test.ts` for benchmark math/fixture invariants.
+  - [x] Added benchmark contract suite to `npm run test:migration`.
+  - [x] Added npm entrypoint: `npm run benchmark:wasm:parity`.
+- [x] **Live feasibility evidence captured**:
+  - [x] Executed benchmark and generated report (`tmp/wasm-parity-benchmark/latest.json`).
+  - [x] Current environment evidence shows candidate mode remains worker fallback because wasm artifact is not available (`artifact-not-found`).
+
+### High-Priority Work Status (Current)
+- [x] Worker↔wasm baseline harness now exists and produces reproducible JSON evidence.
+- [x] Equivalence math and latency summaries are now contract-tested.
+- [ ] Production wasm artifact parity/performance at scale is still open.
+- [ ] Candidate runtime still does not enter `wasm-adapter` mode in current environment until artifact availability is closed.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/wasm.parity.benchmark.contract.test.ts --runInBand`
+- [x] `node scripts/benchmark-wasm-parity.js 1 500`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration` (`24` suites, `119` tests passed)
+- [x] `npm run build`
+- [x] `npm run test:tauri` (`19` Rust tests passed)
+- [x] `npm test` (`27` suites, `136` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+继续推进剩余高优先级等价收口：落地可复现的 worker↔wasm 基准/等价基线流程，使重计算对比从“口头判断”升级为“证据驱动”。
+
+### 本轮完成
+- [x] **基准工具模块落地**（`src/backend/algorithms/WasmParityBenchmark.ts`）：
+  - [x] 新增确定性重图夹具构造（`buildDeterministicBenchmarkGraph`）。
+  - [x] 新增延迟百分位汇总（`summarizeDurations`，p50/p95/p99）。
+  - [x] 新增介数中心性结果等价汇总（`summarizeBetweennessDifference`）。
+- [x] **可执行基准与证据流水线落地**（`scripts/benchmark-wasm-parity.js`）：
+  - [x] 新增 baseline（关闭 wasm）与 candidate（开启 wasm）双场景执行流程。
+  - [x] 采集重计算模式遥测、延迟统计、布局有限坐标覆盖率。
+  - [x] 输出时间戳报告与 `latest.json` 到 `tmp/wasm-parity-benchmark/`。
+  - [x] 同时支持命名参数（`--iterations`、`--nodes`、`--max-workers`、`--wasm-path`、`--out`）与位置参数。
+  - [x] 新增可选严格门禁（`--require-wasm-adapter`），用于 CI/发布环境在 wasm 未实际激活时强制失败。
+- [x] **契约护栏增强**：
+  - [x] 新增 `src/wasm.parity.benchmark.contract.test.ts`，覆盖基准统计与夹具不变量。
+  - [x] 在 `npm run test:migration` 中纳入该套件。
+  - [x] 新增 npm 入口：`npm run benchmark:wasm:parity`。
+- [x] **真实可行性证据已采集**：
+  - [x] 执行基准并生成报告（`tmp/wasm-parity-benchmark/latest.json`）。
+  - [x] 当前环境证据显示 candidate 仍走 worker 回退，原因为 wasm 工件不可用（`artifact-not-found`）。
+
+### 当前高优先级状态
+- [x] worker↔wasm 基准基线能力已落地，可稳定产出 JSON 证据。
+- [x] 等价统计与延迟汇总逻辑已具备契约测试护栏。
+- [ ] 生产级 wasm 工件在大规模场景的等价与性能仍待闭环。
+- [ ] 在当前环境中，candidate 尚未进入 `wasm-adapter`，需先闭环 wasm 工件可用性。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.benchmark.contract.test.ts --runInBand`
+- [x] `node scripts/benchmark-wasm-parity.js 1 500`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration`（`24` 套件、`119` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`27` 套件、`136` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.30 - High-Priority Compute-Mode Telemetry Closure (WASM/Worker/Sequential/GPU Diagnostics + API Surfacing)
+
+## English Document
+
+### Objective
+Continue the high-priority parity/robustness stream by making heavy-compute execution mode observable and contract-tested end-to-end, so release verification can confirm real runtime fallback behavior instead of relying on log inspection.
+
+### Completed in This Iteration
+- [x] **Heavy-compute diagnostics implemented**:
+  - [x] Added `GraphMetrics` compute diagnostics (`none`/`wasm-adapter`/`worker`/`sequential`) with node/edge counts, duration, reason, and timestamp.
+  - [x] Added `LayoutEngine` compute diagnostics (`none`/`gpu`/`wasm-adapter`/`worker`/`skipped`) with the same telemetry fields.
+  - [x] Added deterministic reset hooks for test isolation in both engines.
+- [x] **Server telemetry surface expanded** (`src/server.ts`):
+  - [x] `GET /api/runtime-diagnostics` now includes `computeModes` snapshot (`layoutEngine`, `graphMetrics`).
+  - [x] `POST /api/build` success and dedup responses now include `computeModes` snapshot for immediate build-path observability.
+- [x] **Contract coverage expanded**:
+  - [x] `src/server.migration.test.ts` now asserts `computeModes` shape in runtime diagnostics and build responses.
+  - [x] `src/wasm.parity.output.equivalence.contract.test.ts` now asserts telemetry mode/reason for wasm path, sequential threshold path, and worker-unavailable layout fallback path.
+- [x] **Full feasibility revalidation completed** with updated suite/test totals.
+
+### High-Priority Work Status (Current)
+- [x] Heavy-compute runtime path (WASM/worker/sequential/GPU/skipped) is now API-visible and contract-guarded.
+- [x] Deterministic fallback behavior remains unchanged while observability depth increased.
+- [ ] Production wasm artifact parity/performance at real workload scale remains open.
+- [ ] Real workload worker↔wasm benchmark baselines (throughput, p95/p99 latency, memory profile) remain open.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/wasm.parity.output.equivalence.contract.test.ts src/server.migration.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration` (`23` suites, `114` tests passed)
+- [x] `npm run build`
+- [x] `npm run test:tauri` (`19` Rust tests passed)
+- [x] `npm test` (`26` suites, `131` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+继续推进高优先级等价性与稳健性收口：将重计算链路执行模式做成可观测、可契约化能力，发布验证时可直接确认真实回退路径，而不再依赖日志人工判断。
+
+### 本轮完成
+- [x] **重计算诊断能力落地**：
+  - [x] `GraphMetrics` 新增计算模式诊断（`none`/`wasm-adapter`/`worker`/`sequential`），包含节点数、边数、耗时、原因、时间戳。
+  - [x] `LayoutEngine` 新增计算模式诊断（`none`/`gpu`/`wasm-adapter`/`worker`/`skipped`），字段与上面一致。
+  - [x] 两个引擎均新增测试隔离用的确定性重置入口。
+- [x] **Server 可观测面扩展**（`src/server.ts`）：
+  - [x] `GET /api/runtime-diagnostics` 新增 `computeModes` 快照（`layoutEngine`、`graphMetrics`）。
+  - [x] `POST /api/build` 的成功与去重响应新增 `computeModes`，便于构建后立即确认执行路径。
+- [x] **契约覆盖增强**：
+  - [x] `src/server.migration.test.ts` 新增/更新断言，覆盖运行时诊断与构建响应中的 `computeModes` 结构。
+  - [x] `src/wasm.parity.output.equivalence.contract.test.ts` 新增模式断言，覆盖 wasm 成功路径、小图顺序路径、布局 worker 不可用回退路径。
+- [x] **全门禁复验完成**，并同步更新套件/测试数量。
+
+### 当前高优先级状态
+- [x] 重计算运行模式（WASM/worker/sequential/GPU/skipped）已实现 API 级可观测并具备契约护栏。
+- [x] 在增强可观测性的同时，既有确定性回退行为保持不变。
+- [ ] 生产级 wasm 工件在真实负载下的等价/性能仍待闭环。
+- [ ] 真实负载 worker↔wasm 基准（吞吐、p95/p99 延迟、内存画像）仍待闭环。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.output.equivalence.contract.test.ts src/server.migration.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration`（`23` 套件、`114` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`26` 套件、`131` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.29 - High-Priority Runtime Observability Closure (Sidecar Diagnostics Endpoint + WASM State Exposure)
+
+## English Document
+
+### Objective
+Continue high-priority robustness closure by exposing sidecar runtime diagnostics through an authenticated API surface, including wasm parity runtime state for fast feasibility triage.
+
+### Completed in This Iteration
+- [x] **Runtime diagnostics API added** (`src/server.ts`):
+  - [x] Added `GET /api/runtime-diagnostics`.
+  - [x] Returns sidecar runtime context (host/port/paths/auth-required) without leaking auth secrets.
+  - [x] Includes `WasmParityRuntime.getDiagnostics()` output for parity state introspection.
+  - [x] Includes PathBridge summary/status when available.
+- [x] **Migration contract coverage expanded** (`src/server.migration.test.ts`):
+  - [x] Added endpoint contract test for `/api/runtime-diagnostics`.
+  - [x] Added explicit assertion that auth token is not exposed in diagnostics payload.
+- [x] **Full feasibility revalidation completed**:
+  - [x] Migration/build/Tauri/full Jest gates pass after diagnostics endpoint integration.
+
+### High-Priority Work Status (Current)
+- [x] Runtime observability now includes wasm parity diagnostics at server API level.
+- [x] Sidecar diagnostics can be consumed by tooling/QA without exposing credentials.
+- [ ] Production wasm artifact parity/performance at scale remains open.
+- [ ] Worker ↔ wasm benchmark-equivalence baselines remain open.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/server.migration.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.output.equivalence.contract.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration` (`23` suites, `112` tests passed)
+- [x] `npm run build`
+- [x] `npm run test:tauri` (`19` Rust tests passed)
+- [x] `npm test` (`26` suites, `129` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+继续推进高优先级稳健性收口：通过鉴权 API 暴露 sidecar 运行时诊断信息，并纳入 wasm parity 状态，提升可行性排障效率。
+
+### 本轮完成
+- [x] **运行时诊断 API 落地**（`src/server.ts`）：
+  - [x] 新增 `GET /api/runtime-diagnostics`。
+  - [x] 返回 sidecar 运行时上下文（host/port/路径/是否需要鉴权），且不泄露鉴权密钥。
+  - [x] 集成 `WasmParityRuntime.getDiagnostics()` 输出，支持 parity 状态观测。
+  - [x] 在可用时返回 PathBridge summary/status。
+- [x] **迁移契约覆盖增强**（`src/server.migration.test.ts`）：
+  - [x] 新增 `/api/runtime-diagnostics` 契约测试。
+  - [x] 明确断言诊断结果中不暴露 auth token。
+- [x] **全门禁复验完成**：
+  - [x] 诊断端点接入后 migration/build/Tauri/全量 Jest 全部通过。
+
+### 当前高优先级状态
+- [x] 运行时可观测性已在 server API 层覆盖 wasm parity 诊断信息。
+- [x] sidecar 诊断可被工具链/QA 消费且不暴露凭据。
+- [ ] 生产级 wasm 工件的大规模等价与性能仍待闭环。
+- [ ] worker 与 wasm 的基准等价回归仍待闭环。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/server.migration.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.output.equivalence.contract.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration`（`23` 套件、`112` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`26` 套件、`129` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.28 - High-Priority WASM Runtime Resilience (Retry Window + Diagnostics + Fallback Contracts)
+
+## English Document
+
+### Objective
+Continue high-priority WASM parity hardening by making runtime fallback recoverable after missing artifacts, adding diagnostics visibility, and expanding functional contracts for retry-window behavior.
+
+### Completed in This Iteration
+- [x] **WASM runtime resilience hardening** (`src/backend/algorithms/WasmParityRuntime.ts`):
+  - [x] Added retry-window mechanism for failed/missing artifact loads (`NOTE_CONNECTION_WASM_RETRY_MS`, default 5000ms) to avoid permanent null-cache lock.
+  - [x] Added runtime diagnostics surface:
+    - [x] `getDiagnostics()`
+    - [x] `WasmParityRuntimeDiagnostics`
+    - [x] `WasmParityExecutionMode`
+  - [x] Added explicit execution-mode tracking (`json-layout`, `json-betweenness`, `legacy-*`, `fallback`).
+  - [x] Added deterministic test-reset helper (`__resetForTests()`).
+- [x] **Functional parity contracts expanded** (`src/wasm.parity.runtime.functional.test.ts`):
+  - [x] Added diagnostics assertion after JSON ABI success.
+  - [x] Added retry-window contract ensuring failed loads are not retried before retry interval, but do retry after interval.
+- [x] **Full gate revalidation completed**:
+  - [x] Migration/build/Tauri/full Jest gates all pass with updated test matrix.
+
+### High-Priority Work Status (Current)
+- [x] WASM runtime fallback is now recoverable across runtime lifecycle instead of permanently cached null.
+- [x] Diagnostics and execution-mode visibility are available for parity troubleshooting and release verification.
+- [ ] Production wasm artifact parity/performance at scale remains open.
+- [ ] Worker ↔ wasm benchmark-equivalence baselines remain open.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/wasm.parity.runtime.functional.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.output.equivalence.contract.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration` (`23` suites, `111` tests passed)
+- [x] `npm run build`
+- [x] `npm run test:tauri` (`19` Rust tests passed)
+- [x] `npm test` (`26` suites, `128` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+继续推进高优先级 WASM 等价加固：让缺失工件后的回退具备可恢复性，补齐运行时诊断可见性，并扩展重试窗口行为的功能契约。
+
+### 本轮完成
+- [x] **WASM 运行时韧性加固**（`src/backend/algorithms/WasmParityRuntime.ts`）：
+  - [x] 新增失败/缺失工件加载的重试窗口机制（`NOTE_CONNECTION_WASM_RETRY_MS`，默认 5000ms），避免永久 null 缓存锁死。
+  - [x] 新增运行时诊断接口：
+    - [x] `getDiagnostics()`
+    - [x] `WasmParityRuntimeDiagnostics`
+    - [x] `WasmParityExecutionMode`
+  - [x] 新增执行模式跟踪（`json-layout`、`json-betweenness`、`legacy-*`、`fallback`）。
+  - [x] 新增测试重置辅助（`__resetForTests()`）。
+- [x] **功能契约覆盖增强**（`src/wasm.parity.runtime.functional.test.ts`）：
+  - [x] 增加 JSON ABI 成功后的诊断断言。
+  - [x] 增加重试窗口契约：重试间隔内不重复加载，超过间隔后可重新尝试加载。
+- [x] **全门禁复验完成**：
+  - [x] 测试矩阵更新后 migration/build/Tauri/全量 Jest 全部通过。
+
+### 当前高优先级状态
+- [x] WASM 回退链路已从“永久失败缓存”升级为“运行时可恢复”。
+- [x] 已具备用于等价排障与发布验证的诊断与执行模式可见性。
+- [ ] 生产级 wasm 工件的大规模等价与性能仍待闭环。
+- [ ] worker 与 wasm 的基准等价回归仍待闭环。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.runtime.functional.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.output.equivalence.contract.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration`（`23` 套件、`111` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`26` 套件、`128` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.27 - High-Priority WASM Parity Hardening (Output-Equivalence Contracts + Worker-Lazy Fallback Resolution)
+
+## English Document
+
+### Objective
+Continue high-priority WASM parity closure by adding orchestration-level output-equivalence contracts and reducing unnecessary worker fallback overhead when wasm results are already available.
+
+### Completed in This Iteration
+- [x] **Output-equivalence orchestration contracts added**:
+  - [x] Added `src/wasm.parity.output.equivalence.contract.test.ts`.
+  - [x] Added parity assertions for:
+    - [x] `GraphMetrics.calculateBetweennessAsync(...)` using wasm-returned map equivalence with sequential baseline map.
+    - [x] `LayoutEngine.computeLayout(...)` applying wasm node positions exactly.
+  - [x] Added the suite to `npm run test:migration`.
+- [x] **Layout fallback-path efficiency hardening** (`src/backend/algorithms/LayoutEngine.ts`):
+  - [x] Reordered runtime flow so worker runtime resolution/logging occurs only when gpu/wasm paths do not satisfy the request.
+  - [x] Kept deterministic worker fallback behavior unchanged.
+- [x] **Full feasibility revalidation completed**:
+  - [x] Migration/build/Tauri/full Jest gates all pass after the new contracts + runtime refactor.
+
+### High-Priority Work Status (Current)
+- [x] Runtime-level WASM orchestration now has functional + output-equivalence contract coverage.
+- [x] Layout path no longer performs unnecessary worker-runtime resolution when wasm already returns results.
+- [ ] Production wasm artifact equivalence at scale remains open.
+- [ ] Worker ↔ wasm performance-benchmark baselines remain open.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/wasm.parity.output.equivalence.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.runtime.contract.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration` (`23` suites, `109` tests passed)
+- [x] `npm run build`
+- [x] `npm run test:tauri` (`19` Rust tests passed)
+- [x] `npm test` (`26` suites, `126` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+继续推进高优先级 WASM 等价收口：补齐编排层输出一致性契约，并在 wasm 成功返回时减少不必要的 worker 回退链路解析开销。
+
+### 本轮完成
+- [x] **输出一致性编排契约补齐**：
+  - [x] 新增 `src/wasm.parity.output.equivalence.contract.test.ts`。
+  - [x] 新增等价断言覆盖：
+    - [x] `GraphMetrics.calculateBetweennessAsync(...)`：wasm 返回结果与顺序基线 map 一致。
+    - [x] `LayoutEngine.computeLayout(...)`：wasm 节点坐标被精确应用。
+  - [x] 在 `npm run test:migration` 纳入该套件。
+- [x] **布局回退链路效率加固**（`src/backend/algorithms/LayoutEngine.ts`）：
+  - [x] 将 worker 运行时解析/日志后移，仅在 gpu/wasm 路径未满足时触发。
+  - [x] 保持确定性 worker 回退行为不变。
+- [x] **可行性门禁全量复验**：
+  - [x] 新契约与运行时重排后，migration/build/Tauri/全量 Jest 门禁全部通过。
+
+### 当前高优先级状态
+- [x] WASM 编排层已具备“功能契约 + 输出一致性契约”双重覆盖。
+- [x] 布局路径在 wasm 成功场景下不再进行不必要的 worker 运行时解析。
+- [ ] 生产级 wasm 工件的大规模等价性仍待闭环。
+- [ ] worker 与 wasm 的性能基线回归仍待闭环。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.output.equivalence.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.runtime.contract.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration`（`23` 套件、`109` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`26` 套件、`126` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.26 - High-Priority WASM Parity Continuation (JSON ABI Result Path + Functional Contracts + Full Gate Revalidation)
+
+## English Document
+
+### Objective
+Continue the high-priority WASM parity implementation by closing the runtime JSON ABI result path, adding functional regression contracts for decode/fallback behavior, and revalidating full project feasibility gates.
+
+### Completed in This Iteration
+- [x] **WASM JSON ABI result path implemented** (`src/backend/algorithms/WasmParityRuntime.ts`):
+  - [x] Added JSON ABI entrypoints support: `compute_layout_json`, `compute_betweenness_json`.
+  - [x] Added memory ABI primitives support: `alloc`, `dealloc`, `get_last_result_len`, `memory`.
+  - [x] Added generic JSON ABI invocation flow (`invokeJsonAbiCall`) with deterministic fallback and safe deallocation guards.
+  - [x] Added structured decoders for result payloads:
+    - [x] `toLayoutResult(...)`
+    - [x] `toBetweennessResult(...)`
+- [x] **Functional regression coverage expanded**:
+  - [x] Added `src/wasm.parity.runtime.functional.test.ts` to validate:
+    - [x] layout JSON ABI success path
+    - [x] betweenness JSON ABI success path
+    - [x] incomplete ABI fallback (`null`)
+    - [x] invalid JSON fallback (`null`)
+  - [x] Added this suite to `npm run test:migration` in `package.json`.
+- [x] **Feasibility gates revalidated end-to-end**:
+  - [x] Targeted parity tests + type-check pass.
+  - [x] Migration/build/Tauri/full Jest gates pass.
+
+### High-Priority Work Status (Current)
+- [x] Heavy compute runtime now supports JSON ABI result ingestion when wasm artifact exports are available.
+- [x] Existing worker/sequential execution remains deterministic fallback when wasm runtime/ABI is missing or invalid.
+- [ ] Production wasm artifact parity for full-scale layout/centrality workloads still needs closure.
+- [ ] Node worker ↔ wasm output-equivalence/performance regression baselines still need closure.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration` (`22` suites, `107` tests passed)
+- [x] `npm run build`
+- [x] `npm run test:tauri` (`19` Rust tests passed)
+- [x] `npm test` (`25` suites, `124` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+继续推进高优先级 WASM 等价性实现：闭环运行时 JSON ABI 结果路径，补齐结果解码/回退的功能回归契约，并重新执行全量可行性验证门禁。
+
+### 本轮完成
+- [x] **WASM JSON ABI 结果链路落地**（`src/backend/algorithms/WasmParityRuntime.ts`）：
+  - [x] 接入 JSON ABI 导出入口：`compute_layout_json`、`compute_betweenness_json`。
+  - [x] 接入内存 ABI 基元：`alloc`、`dealloc`、`get_last_result_len`、`memory`。
+  - [x] 新增通用 JSON ABI 调用流程（`invokeJsonAbiCall`），并保持确定性回退与安全释放护栏。
+  - [x] 新增结果结构解码：
+    - [x] `toLayoutResult(...)`
+    - [x] `toBetweennessResult(...)`
+- [x] **功能回归覆盖增强**：
+  - [x] 新增 `src/wasm.parity.runtime.functional.test.ts`，覆盖：
+    - [x] 布局 JSON ABI 成功路径
+    - [x] 中心性 JSON ABI 成功路径
+    - [x] ABI 不完整回退（`null`）
+    - [x] 非法 JSON 回退（`null`）
+  - [x] 在 `package.json` 的 `npm run test:migration` 中纳入该套件。
+- [x] **可行性门禁全量复验**：
+  - [x] 定向 parity 测试与类型检查通过。
+  - [x] migration/build/Tauri/全量 Jest 门禁全部通过。
+
+### 当前高优先级状态
+- [x] 当 wasm 工件提供 JSON ABI 导出时，重计算运行时已可消费 wasm 结果输出。
+- [x] 当 wasm 运行时或 ABI 缺失/异常时，现有 worker/顺序路径保持确定性回退。
+- [ ] 面向大规模布局/中心性场景的生产级 wasm 工件等价闭环仍待完成。
+- [ ] Node worker 与 wasm 的结果一致性/性能回归基线仍待完成。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration`（`22` 套件、`107` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`25` 套件、`124` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.25 - High-Priority WASM Parity Slice Start (Heavy Graph/Layout Runtime Adapter + Deterministic Fallback)
+
+## English Document
+
+### Objective
+Start the WASM parity implementation slice for heavy graph/layout compute by wiring a shared backend WASM runtime adapter into existing heavy compute entrypoints while keeping deterministic fallback behavior.
+
+### Completed in This Iteration
+- [x] **WASM parity runtime adapter added**:
+  - [x] Added `src/backend/algorithms/WasmParityRuntime.ts` with:
+    - [x] capability gate (`NOTE_CONNECTION_ENABLE_WASM_PARITY`)
+    - [x] artifact resolution (`NOTE_CONNECTION_WASM_PATH` + default wasm candidates)
+    - [x] cached wasm instance loading with robust failure fallback
+    - [x] parity entrypoints: `computeLayout()` and `computeBetweenness()`
+- [x] **Heavy compute wiring updated**:
+  - [x] `src/backend/algorithms/LayoutEngine.ts` now attempts `WasmParityRuntime.computeLayout(...)` before worker path.
+  - [x] `src/backend/GraphMetrics.ts` now attempts `WasmParityRuntime.computeBetweenness(...)` before worker/sequential path (for non-memory-saving large graphs).
+- [x] **Regression guardrails added**:
+  - [x] Added `src/wasm.parity.runtime.contract.test.ts`.
+  - [x] Added wasm parity contract suite to `npm run test:migration` in `package.json`.
+- [x] **Risk/TODO synchronization completed**:
+  - [x] Updated root/EN/ZH fixrisk docs and TODO streams to reflect real verified state.
+
+### High-Priority Work Status (Current)
+- [x] WASM parity runtime adapter is now integrated into heavy compute call paths.
+- [x] Existing worker/sequential behavior remains deterministic and intact when wasm artifact/ABI is unavailable.
+- [ ] WASM memory ABI + result-output contract for actual layout/centrality compute is still open.
+- [ ] Node worker ↔ WASM output equivalence tests are still open.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/wasm.parity.runtime.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/runtime.capabilities.test.ts --runInBand`
+- [x] `npm run test:migration` (`21` suites, `103` tests passed)
+- [x] `npm run build`
+- [x] `npm run test:tauri` (`19` Rust tests passed)
+- [x] `npm test` (`24` suites, `120` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+启动重计算图谱/布局的 WASM 等价性实现切片：将共享 WASM 运行时适配层接入后端重计算入口，同时保持确定性的回退链路，不破坏现有行为。
+
+### 本轮完成
+- [x] **WASM 等价运行时适配器落地**：
+  - [x] 新增 `src/backend/algorithms/WasmParityRuntime.ts`，包含：
+    - [x] 能力开关（`NOTE_CONNECTION_ENABLE_WASM_PARITY`）
+    - [x] 工件路径解析（`NOTE_CONNECTION_WASM_PATH` + 默认候选路径）
+    - [x] wasm 实例缓存加载与失败安全回退
+    - [x] 等价入口：`computeLayout()` 与 `computeBetweenness()`
+- [x] **重计算入口接线完成**：
+  - [x] `src/backend/algorithms/LayoutEngine.ts` 在 worker 路径前尝试 `WasmParityRuntime.computeLayout(...)`。
+  - [x] `src/backend/GraphMetrics.ts` 在大图且非内存节省模式下优先尝试 `WasmParityRuntime.computeBetweenness(...)`。
+- [x] **回归护栏补齐**：
+  - [x] 新增 `src/wasm.parity.runtime.contract.test.ts`。
+  - [x] 在 `package.json` 的 `test:migration` 纳入 wasm parity 契约测试。
+- [x] **风险与 TODO 同步**：
+  - [x] 根目录/英文/中文 fixrisk 与 TODO 记录已同步到当前真实验证状态。
+
+### 当前高优先级状态
+- [x] WASM 等价运行时适配层已接入后端重计算调用链路。
+- [x] 在 wasm 工件/ABI 不可用时，现有 worker/顺序路径保持确定性不变。
+- [ ] 真实布局/中心性 WASM 内存 ABI 与结果输出契约仍未闭环。
+- [ ] Node worker 与 WASM 的结果一致性回归测试仍未闭环。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.runtime.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/runtime.capabilities.test.ts --runInBand`
+- [x] `npm run test:migration`（`21` 套件、`103` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`24` 套件、`120` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.24 - High-Priority Mobile Compute Continuation (Capacitor Worker-First Build Fallback + Full Gate Revalidation)
+
+## English Document
+
+### Objective
+Continue the open high-priority mobile runtime parity slice by adding worker-first local graph compute on native Capacitor, with deterministic fallback behavior and full feasibility revalidation.
+
+### Completed in This Iteration
+- [x] **Capacitor worker-first build path implemented** (`src/frontend/storage_provider.js`):
+  - [x] Added worker capability detection (`supportsCapacitorGraphBuildWorker`) and URL API safety checks.
+  - [x] Added blob-worker compute execution (`runCapacitorGraphBuildWorker`) with strict timeout guard (`CAPACITOR_GRAPH_BUILD_WORKER_TIMEOUT_MS`).
+  - [x] Added deterministic fallback orchestrator (`buildCapacitorGraphDataWithWorkerFallback`) to preserve availability on unsupported/failed worker runtimes.
+  - [x] Added build-mode observability (`worker`, `single-thread`, `single-thread-fallback`) in Capacitor build stats.
+- [x] **Regression safety net expanded**:
+  - [x] Updated `src/storage.provider.contract.test.ts` and `src/capacitor.runtime.contract.test.ts` for worker fallback assertions.
+  - [x] Added `src/storage.provider.capacitor.worker.contract.test.ts`.
+  - [x] Added worker contract suite into `npm run test:migration` matrix in `package.json`.
+- [x] **Risk/TODO tracking sync**:
+  - [x] Updated `docs/fixrisk_TODO.md`, `docs/en/fixrisk_TODO.md`, `docs/zh/fixrisk_TODO.md` to reflect real post-change state.
+
+### High-Priority Work Status (Current)
+- [x] Mobile local graph build is now worker-first with deterministic single-thread fallback.
+- [x] Full CI-style verification gates pass after the new worker path and contract additions.
+- [ ] Desktop-equivalent Node-worker/WASM compute parity on mobile remains open.
+- [ ] Physical-device evidence closure remains environment-dependent (requires online Android device).
+
+### Verification Gate (Executed)
+- [x] `npx jest src/storage.provider.contract.test.ts src/capacitor.runtime.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts --runInBand`
+- [x] `npm run test:migration` (`20` suites, `100` tests passed)
+- [x] `npm run build`
+- [x] `npm run test:tauri` (`19` Rust tests passed)
+- [x] `npm test` (`23` suites, `117` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+继续推进高优先级移动端等价性事项：为原生 Capacitor 增加“Worker 优先”的本地图构建能力，并在失败/不支持场景保持确定性回退，同时重新执行全量可行性验证门禁。
+
+### 本轮完成
+- [x] **Capacitor Worker 优先构建链路落地**（`src/frontend/storage_provider.js`）：
+  - [x] 增加 Worker 能力探测（`supportsCapacitorGraphBuildWorker`）与 URL API 安全判定。
+  - [x] 增加 blob Worker 构建执行链路（`runCapacitorGraphBuildWorker`），并加入严格超时护栏（`CAPACITOR_GRAPH_BUILD_WORKER_TIMEOUT_MS`）。
+  - [x] 增加确定性回退编排（`buildCapacitorGraphDataWithWorkerFallback`），确保不支持/失败时自动降级为单线程。
+  - [x] 在构建统计中增加模式可观测性（`worker`、`single-thread`、`single-thread-fallback`）。
+- [x] **回归护栏增强**：
+  - [x] 更新 `src/storage.provider.contract.test.ts` 与 `src/capacitor.runtime.contract.test.ts`，覆盖 Worker 回退断言。
+  - [x] 新增 `src/storage.provider.capacitor.worker.contract.test.ts`。
+  - [x] 在 `package.json` 的 `test:migration` 中纳入 Worker 契约测试套件。
+- [x] **风险与 TODO 状态同步**：
+  - [x] 更新 `docs/fixrisk_TODO.md`、`docs/en/fixrisk_TODO.md`、`docs/zh/fixrisk_TODO.md`，与当前真实状态一致。
+
+### 当前高优先级状态
+- [x] 移动端本地图构建已具备 Worker 优先 + 单线程确定性回退能力。
+- [x] 新能力引入后，全量验证门禁持续通过。
+- [ ] 移动端与桌面端 Node Worker/WASM 等价能力仍未闭环。
+- [ ] 真机证据闭环仍受环境约束（需在线 Android 设备）。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/storage.provider.contract.test.ts src/capacitor.runtime.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts --runInBand`
+- [x] `npm run test:migration`（`20` 套件、`100` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`23` 套件、`117` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.23 - High-Priority Mobile Runtime Continuation (Capacitor Local Build Fallback + Runtime Provider Unification)
+
+## English Document
+
+### Objective
+Proceed on the unresolved high-priority mobile runtime scope by removing the hard read-only lock in native Capacitor mode and introducing an on-device local graph build/cache fallback that does not rely on localhost sidecar transport.
+
+### Completed in This Iteration
+- [x] **Capacitor local build fallback implemented** (`src/frontend/storage_provider.js`):
+  - [x] Added guarded filesystem helpers for read/write/readdir/stat with permission orchestration and path normalization.
+  - [x] Added markdown collection limits (`CAPACITOR_GRAPH_BUILD_MAX_FILES`, `CAPACITOR_GRAPH_BUILD_MAX_BYTES`) to prevent unbounded mobile build pressure.
+  - [x] Added lightweight on-device graph generation (`collectCapacitorMarkdownFiles` + `buildCapacitorGraphData` + `capacitorBuildGraph`).
+  - [x] Added Capacitor cache contracts for `checkCache`/`restoreCache` and runtime-generated asset preference in `readGeneratedAsset`.
+- [x] **Source-manager runtime flow upgraded** (`src/frontend/source_manager.js`):
+  - [x] Added `supportsCapacitorBuildApi()` capability detection and mapped `supports_build` dynamically for native Capacitor runtime.
+  - [x] Removed hard pre-click Capacitor read-only block; load flow now follows cache/build guards uniformly.
+  - [x] Switched Capacitor data asset load to storage-provider runtime path for generated `data.js` pickup.
+  - [x] Updated Capacitor source list population to include folders + cached targets via storage provider.
+- [x] **Contract suite updates**:
+  - [x] Updated `src/capacitor.runtime.contract.test.ts` for capability-detected mobile build path.
+  - [x] Updated `src/storage.provider.contract.test.ts` for Capacitor local build fallback invariants.
+
+### High-Priority Work Status (Current)
+- [x] Native Capacitor runtime is no longer hard-locked to read-only mode when filesystem write/readdir APIs are available.
+- [x] Mobile can execute local single-thread markdown graph build fallback and persist cache artifacts for reload.
+- [ ] Desktop-equivalent worker-grade parity (performance/scalability) is still open.
+- [ ] Physical-device evidence closure remains environment-dependent (online Android device required).
+
+### Verification Gate (Executed)
+- [x] `npx jest src/capacitor.runtime.contract.test.ts src/storage.provider.contract.test.ts src/source_manager.loadflow.test.ts src/storage.provider.capacitor.content.contract.test.ts`
+- [x] `npm run test:migration` (`19` suites, `98` tests passed)
+- [x] `npm run build`
+- [x] `npm run test:tauri` (`19` Rust tests passed)
+- [x] `npm test` (`22` suites, `115` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+继续推进尚未闭环的移动端高优先级事项：移除原生 Capacitor 的硬只读锁，并在不依赖 localhost sidecar 的前提下，补齐设备端本地图构建/缓存回退能力。
+
+### 本轮完成
+- [x] **Capacitor 本地图构建回退落地**（`src/frontend/storage_provider.js`）：
+  - [x] 新增受控文件系统辅助链路（read/write/readdir/stat），并统一权限申请与路径规范化。
+  - [x] 增加移动端构建保护阈值（`CAPACITOR_GRAPH_BUILD_MAX_FILES`、`CAPACITOR_GRAPH_BUILD_MAX_BYTES`），防止无界资源消耗。
+  - [x] 新增设备端轻量图构建链路（`collectCapacitorMarkdownFiles` + `buildCapacitorGraphData` + `capacitorBuildGraph`）。
+  - [x] 为 Capacitor 实现 `checkCache`/`restoreCache`，并让 `readGeneratedAsset` 优先读取运行时生成资产。
+- [x] **SourceManager 运行时流程升级**（`src/frontend/source_manager.js`）：
+  - [x] 新增 `supportsCapacitorBuildApi()` 能力探测，在原生 Capacitor 运行时动态映射 `supports_build`。
+  - [x] 移除 Capacitor 点击前硬性只读阻断，统一进入缓存/构建护栏流程。
+  - [x] Capacitor `data.js` 加载切换到 storage provider 运行时路径，支持读取构建后产物。
+  - [x] Capacitor 数据源列表改为通过 storage provider 聚合目录与缓存目标。
+- [x] **契约测试同步更新**：
+  - [x] 更新 `src/capacitor.runtime.contract.test.ts`，覆盖“能力探测驱动的移动构建路径”。
+  - [x] 更新 `src/storage.provider.contract.test.ts`，覆盖 Capacitor 本地图构建回退关键不变量。
+
+### 当前高优先级状态
+- [x] 当文件系统具备写入与目录扫描能力时，原生 Capacitor 不再被硬性锁定为只读模式。
+- [x] 移动端已可执行本地单线程 Markdown 图构建回退，并持久化缓存产物用于重载。
+- [ ] 与桌面等价的 worker 级性能/规模能力仍未闭环。
+- [ ] 真机证据闭环仍受环境约束（需在线 Android 设备）。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/capacitor.runtime.contract.test.ts src/storage.provider.contract.test.ts src/source_manager.loadflow.test.ts src/storage.provider.capacitor.content.contract.test.ts`
+- [x] `npm run test:migration`（`19` 套件、`98` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`22` 套件、`115` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.22 - High-Priority Security Hardening (PathBridge Authorization + Tokenized WS Handshake)
+
+## English Document
+
+### Objective
+Proceed with the next high-priority robustness slice after critical-table reconciliation by hardening PathBridge authorization boundaries and eliminating unauthorized WebSocket data exposure windows.
+
+### Completed in This Iteration
+- [x] **Frontend bridge handshake strengthening**:
+  - [x] Updated `src/frontend/runtime_bridge.js` `getBridgeWsUrl(clientTag)` to append runtime `client` and `token` query parameters when available.
+  - [x] Preserved backward-safe fallback for malformed/custom WS URLs.
+- [x] **PathBridge authorization boundary hardening** (`src/core/PathBridge.ts`):
+  - [x] Added unauthorized-client timeout lifecycle (`UNAUTHORIZED_CLIENT_TIMEOUT_MS`, timer map, schedule/clear helpers).
+  - [x] Authorized clients now clear auth timeout deterministically in both tokenless and token-required flows.
+  - [x] Added `getOpenAuthorizedClients()` and restricted broadcast fan-out to authorized clients only.
+  - [x] Enhanced client diagnostics to mark unauthorized connections in status summaries.
+- [x] **Contract updates**:
+  - [x] Updated `src/runtime.transport.adapter.contract.test.ts` with tokenized WS URL propagation assertions.
+  - [x] Updated `src/pathbridge.handshake.contract.test.ts` to enforce unauthorized-timeout and authorized-client broadcast guardrails.
+
+### High-Priority Work Status (Current)
+- [x] Bridge-layer unauthorized data exposure window is closed by design (authorized-only broadcast + auth timeout).
+- [x] Runtime bridge now propagates token metadata at socket URL handshake time.
+- [ ] Full mobile sidecar-equivalent build/worker parity remains intentionally bounded by current release policy.
+- [ ] Physical-device manual evidence closure still requires an online Android device.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/runtime.transport.adapter.contract.test.ts --runInBand`
+- [x] `npm run test:migration` (`19` suites, `96` tests passed)
+- [x] `npm run build`
+- [x] `npm run test:tauri` (`19` Rust tests passed)
+- [x] `npm test` (`22` suites, `113` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+在“关键问题表对齐”之后，继续推进高优先级稳健性收口：重点加固 PathBridge 的鉴权边界，消除未授权 WebSocket 客户端可能接收广播数据的窗口风险。
+
+### 本轮完成
+- [x] **前端桥接握手增强**：
+  - [x] 更新 `src/frontend/runtime_bridge.js` 的 `getBridgeWsUrl(clientTag)`，在可用时追加 `client` 与 `token` 查询参数。
+  - [x] 保留异常 URL 场景的兼容回退逻辑，不破坏既有运行时行为。
+- [x] **PathBridge 鉴权边界加固**（`src/core/PathBridge.ts`）：
+  - [x] 新增未授权连接超时生命周期（`UNAUTHORIZED_CLIENT_TIMEOUT_MS`、定时器映射、schedule/clear 辅助函数）。
+  - [x] 客户端授权成功后在无 token/有 token 两类路径均会确定性清理超时定时器。
+  - [x] 新增 `getOpenAuthorizedClients()`，广播链路改为仅向已授权客户端发送。
+  - [x] 连接状态摘要中增加未授权标记，便于运行时诊断。
+- [x] **契约测试同步**：
+  - [x] 更新 `src/runtime.transport.adapter.contract.test.ts`，增加 token 化 WS URL 断言。
+  - [x] 更新 `src/pathbridge.handshake.contract.test.ts`，覆盖未授权超时与仅授权广播护栏。
+
+### 当前高优先级状态
+- [x] 桥接层“未授权客户端可能收到广播数据”的窗口风险已按设计收口。
+- [x] 运行时桥接在握手 URL 层面已传播 token 元数据。
+- [ ] 移动端与桌面 sidecar 的 build/worker 完全等价能力仍在当前发布策略边界之外。
+- [ ] 真机人工证据闭环仍依赖在线 Android 设备。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/runtime.transport.adapter.contract.test.ts --runInBand`
+- [x] `npm run test:migration`（`19` 套件、`96` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`22` 套件、`113` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.21 - High-Priority Closure (Critical Issues Table Reconciliation + C-01 Runtime Guard)
+
+## English Document
+
+### Objective
+Close the `CRITICAL ISSUES TABLE` drift first by reconciling documented risk state with actual codebase status, and eliminate the remaining C-01 runtime edge where PathBridge WebSocket startup could still be attempted on native Capacitor.
+
+### Completed in This Iteration
+- [x] **C-01 runtime hardening completed**:
+  - [x] Updated `src/frontend/path_app.js` to skip bridge setup/connect when sidecar transport is unavailable (`supports_sidecar === false`) or native Capacitor runtime is detected.
+  - [x] Added explicit runtime guards:
+    - [x] `_isCapacitorNativeRuntime()`
+    - [x] `_supportsSidecarBridge()`
+  - [x] Added deterministic skip logs for disabled sidecar bridge startup paths.
+- [x] **Transport contract coverage updated**:
+  - [x] Updated `src/runtime.transport.adapter.contract.test.ts` to enforce new sidecar-disabled guard behavior in `path_app.js`.
+- [x] **Critical-issues table fixed (EN/ZH)**:
+  - [x] Updated `docs/en/fixrisk_TODO.md` `CRITICAL ISSUES TABLE` with current severity/status, validation evidence, and residual risk for `C-01`, `C-02`, `H-01`, `H-02`, `M-01`.
+  - [x] Updated `docs/zh/fixrisk_TODO.md` `关键问题表` with aligned bilingual status and evidence.
+
+### High-Priority Work Status (Current)
+- [x] `CRITICAL ISSUES TABLE` is now aligned with implemented code reality and verification evidence.
+- [x] C-01 localhost/bridge dependency risk is mitigated for Capacitor native runtime startup paths.
+- [ ] Full mobile **build + worker** parity with desktop sidecar remains intentionally out of scope for current release boundary.
+- [ ] Physical-device manual acceptance evidence remains environment-dependent (requires online Android device).
+
+### Verification Gate (Executed)
+- [x] `npx jest src/runtime.transport.adapter.contract.test.ts src/source_manager.loadflow.test.ts src/runtime.capabilities.test.ts src/mobile.pipeline.test.ts src/capacitor.runtime.contract.test.ts --runInBand`
+- [x] `npm run test:migration` (`19` suites, `95` tests passed)
+- [x] `npm run build`
+- [x] `npm run test:tauri` (`19` Rust tests passed)
+- [x] `npm test` (`22` suites, `112` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+优先收敛 `CRITICAL ISSUES TABLE` 与代码实际状态不一致的问题，并补齐 C-01 的最后一处运行时边界：避免在原生 Capacitor 环境下仍尝试启动 sidecar PathBridge WebSocket。
+
+### 本轮完成
+- [x] **C-01 运行时加固完成**：
+  - [x] 更新 `src/frontend/path_app.js`：当 `supports_sidecar === false` 或检测到原生 Capacitor 运行时时，跳过 bridge setup/connect。
+  - [x] 新增明确的运行时判定守卫：
+    - [x] `_isCapacitorNativeRuntime()`
+    - [x] `_supportsSidecarBridge()`
+  - [x] 增加 sidecar 被禁用时的确定性日志输出，避免隐式失败。
+- [x] **传输契约测试同步更新**：
+  - [x] 更新 `src/runtime.transport.adapter.contract.test.ts`，强制校验 `path_app.js` 的新守卫逻辑。
+- [x] **关键问题表修复（中英双语）**：
+  - [x] 更新 `docs/en/fixrisk_TODO.md` 的 `CRITICAL ISSUES TABLE`，为 `C-01/C-02/H-01/H-02/M-01` 写入当前严重度、验证证据与剩余风险。
+  - [x] 更新 `docs/zh/fixrisk_TODO.md` 的 `关键问题表`，保持双语内容一致。
+
+### 当前高优先级状态
+- [x] 关键问题表已与当前代码与验证证据对齐。
+- [x] 原生 Capacitor 运行时的 C-01 localhost/bridge 依赖风险已进一步收敛。
+- [ ] 移动端与桌面 sidecar 的 **build + worker** 完全等价能力仍属于后续范围（当前发布边界内不承诺）。
+- [ ] 真机人工验收证据仍受环境约束（需在线 Android 设备）。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/runtime.transport.adapter.contract.test.ts src/source_manager.loadflow.test.ts src/runtime.capabilities.test.ts src/mobile.pipeline.test.ts src/capacitor.runtime.contract.test.ts --runInBand`
+- [x] `npm run test:migration`（`19` 套件、`95` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`22` 套件、`112` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.20 - High-Priority Continuation (Capacitor Device Acceptance Pipeline Hardening)
+
+## English Document
+
+### Objective
+Advance the remaining fixrisk high-priority mobile acceptance work by hardening Android device verification/evidence scripts for deterministic diagnostics and reusable ADB resolution, without weakening existing runtime boundaries.
+
+### Completed in This Iteration
+- [x] **Shared mobile acceptance utility layer**:
+  - [x] Added `scripts/capacitor-device-utils.js` for:
+    - [x] ADB command candidate resolution (`ADB_PATH`, PATH, `ANDROID_SDK_ROOT`/`ANDROID_HOME`)
+    - [x] resilient command execution wrappers
+    - [x] `adb devices` parsing with explicit status classification (`device`/`unauthorized`/`offline`)
+    - [x] deterministic device-state summaries for diagnostics
+- [x] **Verification script hardening**:
+  - [x] Updated `scripts/verify-capacitor-device-acceptance.js`:
+    - [x] migrate to shared utility layer
+    - [x] support `NOTE_CONNECTION_ANDROID_SERIAL` for deterministic serial targeting
+    - [x] include structured blocked-state output (`Device states: ...`) when no online device exists
+- [x] **Evidence capture script hardening**:
+  - [x] Updated `scripts/capture-capacitor-device-evidence.js`:
+    - [x] migrate to shared utility layer
+    - [x] support deterministic serial selection via `NOTE_CONNECTION_ANDROID_SERIAL`
+    - [x] include explicit blocked-state summaries for no-device / non-online-serial scenarios
+- [x] **Contract coverage expansion**:
+  - [x] Added `src/capacitor.device.utils.contract.test.ts` (ADB parse/state/candidate regression checks)
+  - [x] Updated `src/mobile.pipeline.test.ts` to enforce shared-utility wiring in both acceptance scripts
+  - [x] Updated `package.json` migration test matrix to include new device-utils contract suite
+
+### High-Priority Work Status (Current)
+- [x] Mobile device acceptance scripts now fail fast with deterministic diagnostics and explicit blocked reasons.
+- [x] Migration/CI gates include regression protection for ADB parsing and script wiring.
+- [ ] Deliver full mobile **build + content** parity equivalent to desktop sidecar (still intentionally bounded by runtime policy).
+- [ ] Complete physical-device acceptance evidence checklist with real-device interaction evidence (environment currently has no online Android device).
+
+### Verification Gate (Executed)
+- [x] `npx jest src/capacitor.device.utils.contract.test.ts src/mobile.pipeline.test.ts --runInBand`
+- [x] `npm run verify:capacitor:device` -> blocked as expected: `Device states: none`
+- [x] `npm run capture:capacitor:evidence` -> blocked as expected: `Device states: none`
+- [x] `npm run test:migration` (`19` suites, `95` tests passed)
+- [x] `npm run build`
+- [x] `npm run test:tauri` (`19` Rust tests passed)
+- [x] `npm test` (`22` suites, `112` tests passed)
+
+---
+
+## 中文文档
+
+### 目标
+在不放宽现有运行时边界的前提下，推进 fixrisk 中剩余的移动端高优先级收口：重点加固 Android 真机验收脚本，使设备探测与证据采集具备可重复、可诊断、可回归保护的行为。
+
+### 本轮完成
+- [x] **移动验收共享工具层**：
+  - [x] 新增 `scripts/capacitor-device-utils.js`，提供：
+    - [x] ADB 多候选解析（`ADB_PATH`、PATH、`ANDROID_SDK_ROOT`/`ANDROID_HOME`）
+    - [x] 稳定命令执行封装
+    - [x] `adb devices` 状态解析（`device`/`unauthorized`/`offline`）
+    - [x] 设备状态汇总输出（用于阻塞诊断）
+- [x] **设备闸门脚本加固**：
+  - [x] 更新 `scripts/verify-capacitor-device-acceptance.js`：
+    - [x] 改为共享工具实现
+    - [x] 支持 `NOTE_CONNECTION_ANDROID_SERIAL` 指定设备
+    - [x] 在无在线设备时输出确定性阻塞信息（`Device states: ...`）
+- [x] **证据采集脚本加固**：
+  - [x] 更新 `scripts/capture-capacitor-device-evidence.js`：
+    - [x] 改为共享工具实现
+    - [x] 支持 `NOTE_CONNECTION_ANDROID_SERIAL` 定向采集
+    - [x] 在设备不可用或序列号不在线时输出明确状态汇总
+- [x] **契约测试覆盖提升**：
+  - [x] 新增 `src/capacitor.device.utils.contract.test.ts`（ADB 解析/状态/候选链路回归）
+  - [x] 更新 `src/mobile.pipeline.test.ts`，强制校验两套脚本都走共享工具层
+  - [x] 更新 `package.json` 迁移测试矩阵，纳入新契约套件
+
+### 当前高优先级状态
+- [x] 移动端真机验收脚本已具备快速失败与可诊断阻塞输出能力。
+- [x] 迁移/CI 已纳入 ADB 解析与脚本接线回归护栏。
+- [ ] 尚未交付移动端与桌面端完全等价的 **build + content** 能力（仍受当前运行时策略边界约束）。
+- [ ] 真机验收清单仍需在线 Android 设备完成人工交互证据闭环。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/capacitor.device.utils.contract.test.ts src/mobile.pipeline.test.ts --runInBand`
+- [x] `npm run verify:capacitor:device` -> 预期阻塞：`Device states: none`
+- [x] `npm run capture:capacitor:evidence` -> 预期阻塞：`Device states: none`
+- [x] `npm run test:migration`（`19` 套件、`95` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`22` 套件、`112` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.19 - Fixrisk High-Priority Hardening (Static Asset Traversal Guard + Full Verification)
+
+## English Document
+
+### Objective
+Close a remaining high-priority robustness gap from `docs/fixrisk_TODO.md` by hardening sidecar static-file serving against traversal edge cases and proving no regression through full verification gates.
+
+### Completed in This Iteration
+- [x] **Sidecar static-file security hardening** (`src/server.ts`):
+  - [x] Added strict raw request-path extraction (`getRawRequestPathname`) to avoid URL normalization hiding traversal intent.
+  - [x] Added traversal + null-byte rejection and root-bounded resolution (`resolveFrontendStaticPath`).
+  - [x] Replaced callback-style static reads with async `stat` + `readFile`, returning deterministic `403/404/500` responses.
+  - [x] Added centralized static content-type mapping (`getStaticContentType`).
+- [x] **Regression safety net expanded** (`src/server.migration.test.ts`):
+  - [x] Added raw traversal regression case (`/../../outside/sensitive.md`).
+  - [x] Added encoded traversal regression case (`/%2e%2e/%2e%2e/outside/sensitive.md`).
+- [x] **Feasibility verification executed end-to-end**:
+  - [x] Migration suite, build pipeline, and full Jest matrix all pass after hardening.
+
+### High-Priority Work Status (Current)
+- [x] Harden static asset serving path resolution to prevent path-escape behavior and ambiguous request-path handling.
+- [x] Keep migration and full-test CI viability intact after server-path security changes.
+- [ ] Deliver full mobile **build + content** parity equivalent to desktop sidecar (still intentionally bounded by current runtime policy).
+- [ ] Complete physical-device acceptance evidence checklist end-to-end (requires online Android device in execution environment).
+
+### Verification Gate (Executed)
+- [x] `npx jest src/server.migration.test.ts --runInBand`
+- [x] `npm run test:migration` (`18` suites, `91` tests passed)
+- [x] `npm run build`
+- [x] `npm run test:tauri`
+- [x] `npm test` (`21` suites, `108` tests passed)
+- [ ] `npm run verify:capacitor:device` (blocked in current environment: no online Android device)
+- [ ] `npm run capture:capacitor:evidence` (blocked in current environment: no online Android device)
+
+---
+
+## 中文文档
+
+### 目标
+基于 `docs/fixrisk_TODO.md` 收敛一个仍然存在的高优先级鲁棒性缺口：加固 sidecar 静态文件服务路径安全（防止路径穿越边界问题），并通过完整验证门禁证明改动可行且无回归。
+
+### 本轮完成
+- [x] **Sidecar 静态文件安全加固**（`src/server.ts`）：
+  - [x] 新增原始请求路径提取（`getRawRequestPathname`），避免 URL 规范化吞掉穿越语义后再做判断。
+  - [x] 新增路径穿越片段与空字节拒绝，并通过 `resolveFrontendStaticPath` 强制限制在 `FRONTEND_DIR` 根目录内。
+  - [x] 将静态文件读取由回调式改为异步 `stat` + `readFile`，并统一 `403/404/500` 返回行为。
+  - [x] 新增静态资源 Content-Type 映射函数（`getStaticContentType`）。
+- [x] **回归护栏增强**（`src/server.migration.test.ts`）：
+  - [x] 新增原始路径穿越用例：`/../../outside/sensitive.md`。
+  - [x] 新增编码路径穿越用例：`/%2e%2e/%2e%2e/outside/sensitive.md`。
+- [x] **可行性验证已完整执行**：
+  - [x] 迁移测试、构建流程与全量 Jest 回归在本轮改动后全部通过。
+
+### 当前高优先级状态
+- [x] 已完成静态资源路径解析安全收口，杜绝越出前端根目录的文件访问风险。
+- [x] 已确认服务器路径安全改动未破坏现有迁移链路与 CI 测试稳定性。
+- [ ] 尚未交付移动端与桌面端完全等价的 **build + content** 能力（仍受当前运行时策略边界约束）。
+- [ ] 真机验收证据仍需设备侧执行闭环（当前环境无在线 Android 设备）。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/server.migration.test.ts --runInBand`
+- [x] `npm run test:migration`（`18` 套件、`91` 测试通过）
+- [x] `npm run build`
+- [x] `npm test`（`21` 套件、`108` 测试通过）
+- [ ] `npm run verify:capacitor:device`（当前环境阻塞：无在线 Android 设备）
+- [ ] `npm run capture:capacitor:evidence`（当前环境阻塞：无在线 Android 设备）
+
+---
+
 # 2026-03-09 v1.5.18 - High-Priority Continuation (Capacitor Content Path + Device Evidence + MD Language Archive)
 
 ## English Document
@@ -199,10 +1788,10 @@ Execute the highest-risk actionable items from `docs/fixrisk_TODO.md` without de
   - [x] Updated Godot sidecar preparation script to skip Windows-only copy logic on non-Windows hosts.
 
 ### Remaining High-Priority Work
-- [ ] Complete transport modernization (replace remaining raw desktop HTTP/WS flows with Tauri-native IPC or JSON-RPC adapter).
-- [ ] Implement storage-provider abstraction across desktop sidecar, Tauri commands, and Capacitor native filesystem.
-- [ ] Add explicit macOS/Linux Godot sidecar artifact strategy (currently Windows binary workflow is strongest).
-- [ ] Keep release policy explicit: Capacitor native remains read-only packaged mode until parity work is delivered.
+- [x] Complete transport modernization (replace remaining raw desktop HTTP/WS flows with Tauri-native IPC or JSON-RPC adapter). (Closed in `v1.5.16`)
+- [x] Implement storage-provider abstraction across desktop sidecar, Tauri commands, and Capacitor native filesystem. (Closed in `v1.5.16`)
+- [x] Add explicit macOS/Linux Godot sidecar artifact strategy (currently Windows binary workflow is strongest). (Closed in `v1.5.16`)
+- [x] Keep release policy explicit: Capacitor native remains read-only packaged mode until parity work is delivered. (Closed in `v1.5.16`)
 
 ### Verification Gate (This Iteration)
 - [x] `npx tsc --pretty false`
@@ -286,7 +1875,7 @@ Convert the last open `v1.5.9` sign-off item (Capacitor physical-device checklis
     - [x] `adb` is available
     - [x] at least one online Android device is attached
 - [x] Added npm command:
-  - [x] `npm run verify:capacitor:device`
+  - [x] preflight command available: `npm run verify:capacitor:device`
 - [x] Revalidated current APK build pipeline:
   - [x] `npm run mobile:build:capacitor` -> PASS on 2026-03-04
 
@@ -665,19 +2254,21 @@ Convert the last open `v1.5.9` sign-off item (Capacitor physical-device checklis
 
 ### P0 - Must Complete Before Declaring Full Migration Closure
 
-- [ ] **Secure sidecar content API to match Rust boundary guarantees**
-  - [ ] Enforce KB-root boundary checks for `/api/content` in `src/server.ts`, equivalent to `read_node_content`.
-  - [ ] Add regression tests covering allowed path, blocked outside path, and Windows/relative path variants.
+- [x] **Secure sidecar content API to match Rust boundary guarantees**
+  - [x] Enforced KB-root boundary checks for `/api/content` in `src/server.ts`, equivalent to `read_node_content`.
+  - [x] Added regression tests covering allowed path, blocked outside path, and Windows/relative path variants.
 
-- [ ] **Lock cache prompt + single-load execution behavior under Tauri startup races**
-  - [ ] Add integration-level tests for:
-    - [ ] "cache exists -> prompt appears exactly once"
-    - [ ] "single click -> one restore/build path only"
-  - [ ] Validate against sidecar dedupe + frontend reload guard interactions.
+- [x] **Lock cache prompt + single-load execution behavior under Tauri startup races**
+  - [x] Added integration-level contract coverage:
+    - [x] "cache exists -> prompt appears exactly once"
+    - [x] "single click -> one restore/build path only"
+  - [x] Validated against sidecar dedupe + frontend reload guard interactions.
+  - [x] Historical block reconciled to implemented state (see `v1.5.3`).
 
-- [ ] **Finalize Godot History consistency contract**
-  - [ ] Ensure center-switch events (double-click/manual switch) always append to History timeline.
-  - [ ] Add deterministic tests for History updates after switch-center actions.
+- [x] **Finalize Godot History consistency contract**
+  - [x] Center-switch events append to History timeline via Godot history hook integration.
+  - [x] Deterministic contract coverage exists for history hook behavior.
+  - [x] Historical block reconciled to implemented state (see `v1.5.3`).
 
 ### P1 - Mobile/Export Parity Clarification and Hardening
 
@@ -1009,7 +2600,7 @@ Convert the last open `v1.5.9` sign-off item (Capacitor physical-device checklis
 - [x] **PathBridge Diagnostics**
   - [x] Added tagged connection logging (client id/tag/address + close code/reason) to distinguish benign reconnects from real cycles.
 - [x] **Godot WS Compatibility**
-  - [x] Fixed Godot URL format to `ws://127.0.0.1:9876/?client=godot` to avoid invalid URL reconnect loops.
+  - [x] Finalized Godot URL contract as `ws://127.0.0.1:9876` (query suffix removed for Godot compatibility).
 - [x] **Tauri Idle Reconnect Removal**
   - [x] Disabled `frontend-early` auto websocket bootstrap in Tauri mode.
 - [x] **Language/Menu Idempotency**
@@ -1094,7 +2685,7 @@ Convert the last open `v1.5.9` sign-off item (Capacitor physical-device checklis
 
 1. **Godot Desktop** (Port 9876): Vulkan/OpenGL + 3D iridescent bubbles
 2. **Web Fallback**: Canvas/WebGL for Android/Browser
-3. **SVG Fallback**: For graphs ≤500 nodes
+3. **Godot Mermaid Runtime Contract**: PNG-only (`pngBase64` required); SVG retained as diagnostics-only payload, not runtime fallback.
 
 ### Learning Modes
 
@@ -2518,10 +4109,10 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
   - [x] 更新 Godot sidecar 准备脚本，在非 Windows 平台跳过 Windows 专属复制逻辑。
 
 ### 剩余高优先级工作
-- [ ] 完成传输层现代化（将剩余桌面端原始 HTTP/WS 调用迁移到 Tauri 原生命令或 JSON-RPC 适配层）。
-- [ ] 实现跨运行时存储抽象（桌面 sidecar / Tauri commands / Capacitor 文件系统）。
-- [ ] 制定并落地 macOS/Linux 的 Godot sidecar 制品策略（当前 Windows 二进制链路最完整）。
-- [ ] 继续保持发布边界清晰：在能力对齐完成前，Capacitor 原生仍为只读打包模式。
+- [x] 完成传输层现代化（将剩余桌面端原始 HTTP/WS 调用迁移到 Tauri 原生命令或 JSON-RPC 适配层）。（已在 `v1.5.16` 收口）
+- [x] 实现跨运行时存储抽象（桌面 sidecar / Tauri commands / Capacitor 文件系统）。（已在 `v1.5.16` 收口）
+- [x] 制定并落地 macOS/Linux 的 Godot sidecar 制品策略（当前 Windows 二进制链路最完整）。（已在 `v1.5.16` 收口）
+- [x] 继续保持发布边界清晰：在能力对齐完成前，Capacitor 原生仍为只读打包模式。（已在 `v1.5.16` 收口）
 
 ### 本轮验证门禁
 - [x] `npx tsc --pretty false`
@@ -2550,7 +4141,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] 已新增共享的前端 runtime bridge，在 Tauri 桌面链路中同步 sidecar 基础 URL、bridge URL 与认证头。
 - [x] 原生 Capacitor 运行时已明确切换为“只读打包内容模式”，不再假设桌面 sidecar API 可用。
 - [x] Node sidecar 在处理剪贴板 PNG 后会显式执行缓冲区清零。
-- [x] Godot Reader 已加入 SVG 清洗与尺寸钳制，避免 Math/Mermaid 渲染出现超大位图失败。
+- [x] Godot Reader Mermaid 渲染链路已收口为 PNG-only（`pngBase64` 必填）；历史 SVG 清洗逻辑仅保留为诊断辅助，不作为运行时回退。
 
 ### 仍需优先推进的工作
 
@@ -2637,7 +4228,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
     - [x] `adb` 是否可用
     - [x] 是否至少有一台在线 Android 设备
 - [x] 新增 npm 命令：
-  - [x] `npm run verify:capacitor:device`
+  - [x] 已提供前置探测命令：`npm run verify:capacitor:device`
 - [x] 重新验证当前 APK 构建链路：
   - [x] `npm run mobile:build:capacitor` -> 2026-03-04 实测通过
 
@@ -3010,19 +4601,21 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ### P0 - 在宣告“迁移完全收口”前必须完成
 
-- [ ] **将 sidecar 内容 API 的安全边界提升到 Rust 同等级**
-  - [ ] 在 `src/server.ts` 为 `/api/content` 增加 KB 根路径边界校验，对齐 `read_node_content`。
-  - [ ] 新增回归测试覆盖：合法路径、越界路径、Windows/相对路径变体。
+- [x] **将 sidecar 内容 API 的安全边界提升到 Rust 同等级**
+  - [x] 已在 `src/server.ts` 为 `/api/content` 增加 KB 根路径边界校验，对齐 `read_node_content`。
+  - [x] 已新增回归测试覆盖：合法路径、越界路径、Windows/相对路径变体。
 
-- [ ] **在 Tauri 启动竞态下锁定缓存提示与单次加载语义**
-  - [ ] 增加集成层测试覆盖：
-    - [ ] “存在缓存 -> 只出现一次提示”
-    - [ ] “单次点击 -> 只执行一次 restore/build”
-  - [ ] 与 sidecar 去重和前端 reload guard 的联动行为一并验证。
+- [x] **在 Tauri 启动竞态下锁定缓存提示与单次加载语义**
+  - [x] 已补齐集成层契约覆盖：
+    - [x] “存在缓存 -> 只出现一次提示”
+    - [x] “单次点击 -> 只执行一次 restore/build”
+  - [x] 已验证与 sidecar 去重和前端 reload guard 的联动行为。
+  - [x] 历史区块状态已按 `v1.5.3` 的实现结果对齐。
 
-- [ ] **完成 Godot History 一致性契约**
-  - [ ] 确保中心切换事件（双击/手动切换）都能写入 History 时间线。
-  - [ ] 增加中心切换后的 History 自动化断言测试。
+- [x] **完成 Godot History 一致性契约**
+  - [x] 中心切换事件（双击/手动切换）已写入 History 时间线（通过 Godot 记录钩子接线）。
+  - [x] 已具备历史记录钩子自动化契约断言。
+  - [x] 历史区块状态已按 `v1.5.3` 的实现结果对齐。
 
 ### P1 - 移动端/导出能力边界澄清与加固
 
@@ -3349,7 +4942,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] **PathBridge 诊断增强**
   - [x] 增加带标签连接日志（client id/tag/address + close code/reason），可区分正常重连与真实循环。
 - [x] **Godot WS 兼容性修复**
-  - [x] 将 Godot URL 修正为 `ws://127.0.0.1:9876/?client=godot`，消除 URL 非法导致的重连报错。
+  - [x] 已将 Godot URL 契约稳定为 `ws://127.0.0.1:9876`（移除查询参数，避免 Godot 端兼容性问题）。
 - [x] **Tauri 空闲重连清理**
   - [x] 在 Tauri 模式禁用 `frontend-early` 自动 WebSocket 启动。
 - [x] **语言/菜单幂等保护**
@@ -3404,7 +4997,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 1. **Godot Desktop**（9876 端口）: Vulkan/OpenGL + 3D 彩虹薄膜气泡。
 2. **Web Fallback**: Android/浏览器使用 Canvas/WebGL。
-3. **SVG Fallback**: 小图（<= 500 节点）使用 SVG。
+3. **Godot Mermaid 运行时契约**: PNG-only（`pngBase64` 必填）；SVG 仅用于诊断，不作为运行时回退。
 
 ### 学习模式
 

@@ -20,6 +20,9 @@ describe('runtime capability gating contract', () => {
     expect(sourceManager).toContain('supports_build');
     expect(sourceManager).toContain('supports_kb_runtime_change');
     expect(sourceManager).toContain('supports_native_pathmode');
+    expect(sourceManager).toContain('supports_mobile_wasm_compute');
+    expect(sourceManager).toContain('mobile_wasm_reason');
+    expect(sourceManager).toContain('detectMobileWasmCapability');
   });
 
   test('source manager blocks build path when runtime does not support build', () => {

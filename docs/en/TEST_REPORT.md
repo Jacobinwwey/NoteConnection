@@ -1,3 +1,327 @@
+# 2026-03-10 v1.5.38 - Multi-Terminal WASM Readiness Slice Verification (Mobile Capability Probe + Build-Mode Telemetry)
+
+### Test Objective
+
+Verify that the multi-terminal WASM continuation slice is workable and regression-safe:
+
+1. Mobile runtime exposes explicit WASM readiness state and reason.
+2. Capacitor on-device build path emits capability-aware mode detail without breaking existing fallback behavior.
+3. Migration gate suite remains green after the runtime contract extension.
+
+### Implemented Scope Under Verification
+
+- Runtime capability probe:
+  - `src/frontend/source_manager.js`
+  - added `detectMobileWasmCapability()`
+  - added capability fields:
+    - `supports_mobile_wasm_compute`
+    - `mobile_wasm_reason`
+- Build telemetry extension:
+  - `src/frontend/storage_provider.js`
+  - added `resolveCapacitorBuildModeDetail(...)`
+  - added build stats fields:
+    - `buildModeDetail`
+    - `supportsMobileWasmCompute`
+    - `mobileWasmReason`
+  - Source manager now logs build warnings/stats for mobile runtime builds.
+- Contract updates:
+  - `src/runtime.capabilities.test.ts`
+  - `src/capacitor.runtime.contract.test.ts`
+  - `src/storage.provider.contract.test.ts`
+  - `src/storage.provider.capacitor.worker.contract.test.ts`
+
+### Executed Verification (2026-03-10)
+
+- [x] `npx jest src/runtime.capabilities.test.ts src/capacitor.runtime.contract.test.ts src/storage.provider.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/source_manager.loadflow.test.ts --runInBand`
+  - PASS (`5` suites, `28` tests)
+- [x] `npm run test:migration`
+  - PASS (`27` suites, `131` tests)
+
+### Findings
+
+1. Mobile runtime capability boundary is now explicit for WASM readiness:
+   - runtime no longer depends on implicit assumptions for mobile compute path selection.
+2. Capacitor build path remains deterministic:
+   - worker/single-thread fallback behavior is preserved;
+   - additional mode-detail telemetry now explains current runtime state.
+3. No migration regressions were detected:
+   - full migration suite remained green after capability and telemetry extensions.
+
+### Conclusion
+
+- Multi-terminal WASM readiness slice is implemented and verified.
+- This slice improves mobile diagnosability and governance, but does not yet claim full mobile WASM kernel parity for all heavy-compute workloads.
+
+---
+
+# 2026-03-10 v1.5.37 - Threshold Calibration Continuation Verification (Configurable GraphMetrics Tiering + Calibration Utility + Snapshot CI)
+
+### Test Objective
+
+Verify that threshold-calibration follow-up is fully workable:
+
+1. GraphMetrics tiering thresholds are configurable at runtime without code edits.
+2. Calibration utility produces reproducible evidence and recommendation payload.
+3. CI snapshot flow captures both wasm parity and GraphMetrics calibration artifacts.
+
+### Implemented Scope Under Verification
+
+- Policy configurability:
+  - `src/backend/GraphMetrics.ts`
+  - env overrides:
+    - `NOTE_CONNECTION_GRAPHMETRICS_ASYNC_NODE_THRESHOLD`
+    - `NOTE_CONNECTION_GRAPHMETRICS_ASYNC_WORKLOAD_RATIO_THRESHOLD`
+  - `GraphMetrics.getExecutionPolicy()`
+- Calibration utility:
+  - `scripts/calibrate-graphmetrics-tiering.js`
+  - `npm run calibrate:graphmetrics:tiering`
+- CI integration:
+  - `.github/workflows/wasm-parity-benchmark-snapshots.yml` now includes calibration snapshot run + artifact upload path
+
+### Executed Verification (2026-03-10)
+
+- [x] `npx jest src/wasm.parity.output.equivalence.contract.test.ts --runInBand`
+  - PASS (`7` tests)
+  - includes new checks:
+    - sparse large graph remains sequential by default (`sparse-workload-threshold`)
+    - env override can force sparse large graph into async->wasm path
+    - invalid env values fall back to safe default policy values
+- [x] `node scripts/calibrate-graphmetrics-tiering.js --iterations 1 --max-workers 4 --out tmp/graphmetrics-tiering-calibration/smoke`
+  - PASS
+  - output:
+    - `tmp/graphmetrics-tiering-calibration/smoke/latest.json`
+  - recommendation snapshot (single-iteration smoke run on current host):
+    - `asyncNodeCountThreshold=500`
+    - `asyncWorkloadBenefitRatioThreshold=115.4385`
+- [x] `npm run test:wasm:parity:gates`
+  - PASS
+  - GraphMetrics p95 ratio (`candidate / baseline`): `0.07505480404213227`
+  - LayoutEngine p95 ratio (`candidate / baseline`): `0.0022160486888378587`
+- [x] `npm run test:migration`
+  - PASS (`27` suites, `131` tests)
+
+### Findings
+
+1. Tiering policy governance is improved:
+   - threshold tuning can now be done by environment policy instead of source edits.
+2. Calibration evidence loop now exists:
+   - profile-matrix benchmark output can drive future threshold convergence.
+3. CI drift evidence improved:
+   - scheduled snapshots now include both parity benchmark and tiering calibration artifacts.
+
+### Conclusion
+
+- Threshold-calibration continuation slice is implemented and verified.
+- No regression observed in strict wasm gates or migration contracts.
+- Next step remains multi-iteration/multi-host calibration to increase statistical confidence before updating production default thresholds.
+
+---
+
+# 2026-03-10 v1.5.35 - Detailed Calculation Method Comparison (Sequential vs Worker vs WASM)
+
+### Test Objective
+
+Perform a thorough, evidence-based comparison of available heavy-compute calculation methods in the current codebase, covering:
+
+1. `GraphMetrics` betweenness calculation paths:
+   - sequential (`calculateBetweenness`)
+   - worker-thread parallel path (`calculateBetweennessAsync` with wasm disabled)
+   - wasm-adapter path (`calculateBetweennessAsync` with wasm enabled + provisioned artifact)
+2. `LayoutEngine` layout calculation paths:
+   - worker path
+   - wasm-adapter path
+
+### Scope and Methodology
+
+- Host/runtime:
+  - Node.js `v22.14.0`
+  - `win32` / `x64`
+  - `cpuCount=16`
+- Core benchmark graph configs:
+  - Dataset A (small/threshold check): `nodeCount=300`, `iterations=4`
+  - Dataset B (heavy path check): `nodeCount=500`, `iterations=4`
+  - Layout params: `repulsion=-550`, `distance=100`
+  - Max workers: `4`
+- Evidence sources:
+  - `tmp/wasm-parity-benchmark/latest.json` (strict perf gate run, 500 nodes)
+  - `tmp/wasm-parity-benchmark/report-method-300/latest.json` (300 nodes)
+  - `tmp/calculation-method-comparison/latest.json` (direct same-graph method comparison)
+
+### Executed Commands
+
+- [x] `npm run verify:wasm:parity:strict`
+- [x] `npm run benchmark:wasm:parity:strict:perf 4 500`
+- [x] `node scripts/benchmark-wasm-parity.js --iterations 4 --nodes 300 --out tmp/wasm-parity-benchmark/report-method-300`
+- [x] Custom same-graph comparison run (sequential vs worker vs wasm) -> `tmp/calculation-method-comparison/latest.json`
+
+---
+
+### Comparison Results
+
+#### 1) Heavy Graph (500 nodes) - Same-Graph Direct Method Comparison
+
+Source: `tmp/calculation-method-comparison/latest.json`
+
+| Component | Method | p50 (ms) | p95 (ms) | p99 (ms) | mean (ms) | Notes |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| GraphMetrics | Sequential | 82.845 | 120.737 | 124.105 | 95.262 | Direct single-thread Brandes call |
+| GraphMetrics | Worker | 3118.745 | 3273.758 | 3287.536 | 3154.348 | Async worker fan-out path |
+| GraphMetrics | WASM Adapter | 231.818 | 267.106 | 270.242 | 243.717 | JSON ABI wasm path |
+| LayoutEngine | Worker | 2596.062 | 2644.059 | 2648.326 | 2600.750 | Worker layout simulation |
+| LayoutEngine | WASM Adapter | 2.588 | 2.601 | 2.603 | 2.427 | wasm layout apply path |
+
+Key ratios (p95):
+- GraphMetrics wasm vs worker: `0.0816` (~91.84% lower p95)
+- GraphMetrics sequential vs worker: `0.0369` (~96.31% lower p95)
+- GraphMetrics wasm vs sequential: `2.2123` (~2.21x slower than direct sequential in this test shape)
+- Layout wasm vs worker: `0.0010` (~99.90% lower p95)
+
+#### 2) Heavy Graph (500 nodes) - Strict Gate Scenario (Runtime Path + Guard)
+
+Source: `tmp/wasm-parity-benchmark/latest.json`
+
+| Component | Baseline (WASM Off) | Candidate (WASM On) | p95 Baseline (ms) | p95 Candidate (ms) | Candidate/Baseline p95 |
+| --- | --- | --- | ---: | ---: | ---: |
+| GraphMetrics | worker | wasm-adapter | 3393.2 | 247.65 | 0.0730 |
+| LayoutEngine | worker | wasm-adapter | 2547.6 | 4.7 | 0.0018 |
+
+Guard status:
+- Strict adapter requirement: **PASS** (`wasm-adapter` observed)
+- Strict performance ratio guards (<=1.0): **PASS**
+
+#### 3) Small Graph (300 nodes) - Threshold Behavior Comparison
+
+Source: `tmp/wasm-parity-benchmark/report-method-300/latest.json`
+
+| Component | Baseline (WASM Off) | Candidate (WASM On) | p95 Baseline (ms) | p95 Candidate (ms) | Candidate/Baseline p95 |
+| --- | --- | --- | ---: | ---: | ---: |
+| GraphMetrics | sequential | sequential | 62.45 | 38.0 | 0.6085 |
+| LayoutEngine | worker | wasm-adapter | 2254.5 | 7.95 | 0.0035 |
+
+Behavior confirmation:
+- `GraphMetrics` at 300 nodes remains on sequential path by design (`nodeCount < 500` threshold).
+- `LayoutEngine` candidate still benefits from wasm path even at smaller graph size.
+
+---
+
+### Output Correctness / Equivalence
+
+Source: `tmp/calculation-method-comparison/latest.json`
+
+Tolerance used: `1e-9`
+
+| Comparison | comparedNodes | missing nodes | maxAbsDelta | meanAbsDelta | withinTolerance |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Sequential vs Worker | 500 | 0 | `9.458744898438454e-11` | `7.1121490918812926e-12` | true |
+| Sequential vs WASM | 500 | 0 | `0` | `0` | true |
+| Worker vs WASM | 500 | 0 | `9.458744898438454e-11` | `7.1121490918812926e-12` | true |
+
+Conclusion: all compared methods are numerically equivalent under current tolerance and dataset shape.
+
+---
+
+### Detailed Analysis
+
+1. `LayoutEngine`:
+   - wasm-adapter is decisively superior to worker in this environment (multi-order-of-magnitude p95 reduction).
+   - This is consistent at both 300 and 500 node tests.
+   - For current runtime shape, wasm should remain the primary path when artifact is available.
+
+2. `GraphMetrics`:
+   - worker path has substantial overhead in this scenario (thread startup/synchronization dominates).
+   - wasm-adapter is much faster than worker on heavy graphs (about 12x faster at p95 in 500-node gate run).
+   - direct sequential computation is still very competitive for this graph size and sparsity profile.
+
+3. Practical interpretation:
+   - Best current practical hierarchy (given artifact provisioned):
+     - `LayoutEngine`: wasm > worker
+     - `GraphMetrics`: sequential (for this measured shape) < wasm << worker
+   - Existing threshold logic (`>=500` promotes async path) is functionally correct but can be further tuned for performance policy.
+
+4. Robustness:
+   - strict parity gate now checks both:
+     - adapter activation
+     - performance regression thresholds
+   - This materially reduces risk of silent wasm performance regression in CI.
+
+---
+
+### Recommendations
+
+1. Keep current strict wasm gate (`verify + benchmark:strict:perf`) mandatory in CI.
+2. Introduce workload-tiered thresholds for `GraphMetrics` method selection (sparsity-aware), not only node-count based threshold.
+3. Add periodic benchmark snapshots (nightly/weekly) to track drift and recalibrate guard thresholds.
+4. Keep worker path as fallback for artifact-unavailable scenarios, but treat it as non-preferred in production when wasm is healthy.
+
+---
+
+### Verdict
+
+- **Calculation method comparison is complete and reproducible.**
+- **WASM path is validated for correctness and offers major runtime wins over worker path.**
+- **Strict regression barriers are effective and currently passing.**
+
+---
+
+# 2026-03-10 v1.5.36 - Method-Policy Continuation Verification (Sparsity-Aware GraphMetrics + Release Gate Enforcement + Snapshot CI)
+
+### Test Objective
+
+Validate that the recommendation follow-up slice is fully landed and workable:
+
+1. GraphMetrics no longer relies on node-count-only routing; sparse heavy graphs should remain sequential.
+2. Strict wasm parity gates are enforced in release workflow (`npm-publish`).
+3. Periodic benchmark snapshot workflow exists and is executable in CI.
+
+### Implemented Scope Under Verification
+
+- Runtime policy code:
+  - `src/backend/GraphMetrics.ts`
+    - `ASYNC_NODE_COUNT_THRESHOLD = 500`
+    - `ASYNC_WORKLOAD_BENEFIT_RATIO_THRESHOLD = 24`
+    - `resolveExecutionDecision(...)` with reasoned mode selection
+- Contract coverage:
+  - `src/wasm.parity.output.equivalence.contract.test.ts`
+    - wasm-path dense fixture retained
+    - sparse-large-graph sequential contract added
+- CI workflow hardening:
+  - `.github/workflows/npm-publish.yml` (strict wasm parity gate step added)
+  - `.github/workflows/wasm-parity-benchmark-snapshots.yml` (weekly + manual snapshot workflow)
+
+### Executed Verification (2026-03-10)
+
+- [x] `npx jest src/wasm.parity.output.equivalence.contract.test.ts --runInBand`
+  - PASS (`5` tests)
+  - confirms:
+    - dense large graph path still reaches `wasm-adapter`
+    - sparse large graph path remains `sequential` with reason `sparse-workload-threshold`
+- [x] `npm run test:wasm:parity:gates`
+  - PASS
+  - strict verify: artifact/export readiness PASS
+  - strict perf guard benchmark PASS
+    - GraphMetrics p95 ratio (`candidate / baseline`): `0.08408535438992293`
+    - LayoutEngine p95 ratio (`candidate / baseline`): `0.0011282580842560189`
+- [x] `npm run test:migration`
+  - PASS (`27` suites, `129` tests)
+
+### Findings
+
+1. GraphMetrics method policy is now workload-aware:
+   - small or sparse-heavy workloads can stay sequential to avoid async overhead.
+   - heavier workloads still take async chain (`wasm-adapter` first, worker fallback).
+2. Strict wasm parity enforcement now reaches release path:
+   - publish workflow now fails fast if strict parity gate fails.
+3. Periodic drift evidence path is implemented:
+   - scheduled snapshot workflow captures benchmark artifacts for longitudinal review.
+
+### Conclusion
+
+- Recommendation follow-up is implemented and verified.
+- No regression observed in strict parity gates or migration contract suite after policy change.
+- Remaining optimization track is threshold calibration across broader workload distributions.
+
+---
+
 # 2026-03-04 v1.5.13 - Capacitor Physical-Device Acceptance Readiness Report
 
 ### Test Objective
@@ -2469,4 +2793,3 @@ Electron -> Tauri migration is **functionally successful in current desktop deve
 - **Status**: **Pass**
 
 ---
-

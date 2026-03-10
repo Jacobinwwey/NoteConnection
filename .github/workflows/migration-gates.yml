@@ -17,6 +17,8 @@ jobs:
         include:
           - suite: desktop-migration-suite
             command: npm run test:migration
+          - suite: wasm-parity-strict-suite
+            command: npm run test:wasm:parity:gates
           - suite: tauri-rust-suite
             command: npm run test:tauri
           - suite: mobile-pipeline-contract-suite

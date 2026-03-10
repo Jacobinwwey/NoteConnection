@@ -7,6 +7,9 @@ import { once } from 'events';
 import { buildGraph } from './index';
 import { CrashLogger } from './backend/utils/CrashLogger';
 import { PathBridge } from './core/PathBridge';
+import { GraphMetrics } from './backend/GraphMetrics';
+import { LayoutEngine } from './backend/algorithms/LayoutEngine';
+import { WasmParityRuntime } from './backend/algorithms/WasmParityRuntime';
 import { resolveRuntimePaths } from './utils/RuntimePaths';
 import { renderMathPng, renderMermaidPng } from './reader_renderer';
 import { copyPngToClipboard } from './native_clipboard';
@@ -45,6 +48,13 @@ type ReadJsonBodyOptions = {
     maxBytes?: number;
     spoolThresholdBytes?: number;
 };
+
+function collectComputeModeSnapshot() {
+    return {
+        layoutEngine: LayoutEngine.getLastComputeDiagnostics(),
+        graphMetrics: GraphMetrics.getLastComputeDiagnostics()
+    };
+}
 
 function parseAllowedOrigins(rawValue: string): string[] {
     return rawValue
@@ -107,6 +117,15 @@ function getRequestPathname(req: http.IncomingMessage): string {
     } catch (_error) {
         return '/';
     }
+}
+
+function getRawRequestPathname(rawUrl: string | undefined): string {
+    const requestTarget = String(rawUrl || '/');
+    const queryStart = requestTarget.indexOf('?');
+    if (queryStart >= 0) {
+        return requestTarget.slice(0, queryStart) || '/';
+    }
+    return requestTarget || '/';
 }
 
 function extractRequestToken(req: http.IncomingMessage): string {
@@ -547,6 +566,62 @@ function isPathInsideRoot(candidatePath: string, rootPath: string): boolean {
     return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
+function hasPathTraversalSegment(rawPathname: string): boolean {
+    const normalized = String(rawPathname || '').replace(/\\/g, '/');
+    return normalized.split('/').some((segment) => segment === '..');
+}
+
+function resolveFrontendStaticPath(rawPathname: string): string | null {
+    let decodedPathname = '/';
+    try {
+        decodedPathname = decodeURIComponent(rawPathname || '/');
+    } catch (_error) {
+        return null;
+    }
+
+    if (decodedPathname.includes('\0')) {
+        return null;
+    }
+    if (hasPathTraversalSegment(decodedPathname)) {
+        return null;
+    }
+
+    const normalizedPathname = path.posix.normalize(
+        decodedPathname === '/' ? '/index.html' : decodedPathname.replace(/\\/g, '/')
+    );
+    const prefixedPathname = normalizedPathname.startsWith('/') ? normalizedPathname : `/${normalizedPathname}`;
+    const resolved = path.resolve(FRONTEND_DIR, `.${prefixedPathname}`);
+    if (!isPathInsideRoot(resolved, FRONTEND_DIR)) {
+        return null;
+    }
+
+    return resolved;
+}
+
+function getStaticContentType(filePath: string): string {
+    switch (path.extname(filePath).toLowerCase()) {
+        case '.html':
+            return 'text/html';
+        case '.js':
+            return 'text/javascript';
+        case '.css':
+            return 'text/css';
+        case '.json':
+            return 'application/json';
+        case '.png':
+            return 'image/png';
+        case '.jpg':
+        case '.jpeg':
+            return 'image/jpeg';
+        case '.svg':
+            return 'image/svg+xml';
+        case '.ico':
+            return 'image/x-icon';
+        default:
+            return 'application/octet-stream';
+    }
+}
+
 // CLI Argument Parsing (v0.9.71 Fix)
 const args = process.argv.slice(2);
 let cliOptions: any = {};
@@ -749,6 +824,42 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         }
 
         if (req.method === 'GET') {
+            if (req.url === '/api/runtime-diagnostics') {
+                try {
+                    const bridgeSummary = pathBridge && typeof (pathBridge as any).getClientSummary === 'function'
+                        ? (pathBridge as any).getClientSummary()
+                        : null;
+                    const bridgeStatus = pathBridge && typeof (pathBridge as any).getStatus === 'function'
+                        ? (pathBridge as any).getStatus()
+                        : null;
+
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        runtime: {
+                            host: LOOPBACK_HOST,
+                            port: finalPort,
+                            bridgePort: PATH_BRIDGE_PORT,
+                            kbRoot: KB_ROOT,
+                            frontendDir: FRONTEND_DIR,
+                            runtimeDataDir: RUNTIME_DATA_DIR,
+                            authRequired: AUTH_TOKEN.length > 0
+                        },
+                        wasmParity: WasmParityRuntime.getDiagnostics(),
+                        computeModes: collectComputeModeSnapshot(),
+                        pathBridge: {
+                            summary: bridgeSummary,
+                            status: bridgeStatus
+                        }
+                    }));
+                } catch (error) {
+                    console.error(error);
+                    CrashLogger.log(error, 'API:GET /api/runtime-diagnostics');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: String(error) }));
+                }
+                return;
+            }
+
             if (req.url === '/api/folders') {
                 try {
                     // Use configured path or default
@@ -1023,43 +1134,35 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 return;
             }
 
-            // Serve Static Files
-            // v0.9.83 Fix: Strip query parameters (e.g. ?v=123) to verify file existence on disk
-            const urlObj = new URL(req.url!, `http://${LOOPBACK_HOST}:${finalPort}`);
-            let urlPath = urlObj.pathname === '/' ? 'index.html' : urlObj.pathname;
-
-            // Security check: prevent traversing up
-            const safeSuffix = path.normalize(urlPath).replace(/^(\.\.[/\\])+/, '');
-            let filePath = path.join(FRONTEND_DIR, safeSuffix);
-
-            const extname = path.extname(filePath);
-            let contentType = 'text/html';
-
-            switch (extname) {
-                case '.js': contentType = 'text/javascript'; break;
-                case '.css': contentType = 'text/css'; break;
-                case '.json': contentType = 'application/json'; break;
-                case '.png': contentType = 'image/png'; break;
-                case '.jpg': contentType = 'image/jpeg'; break;
-                case '.svg': contentType = 'image/svg+xml'; break;
-                case '.ico': contentType = 'image/x-icon'; break;
+            // Serve static frontend files (query-string safe + traversal-safe).
+            const staticFilePath = resolveFrontendStaticPath(getRawRequestPathname(req.url));
+            if (!staticFilePath) {
+                res.writeHead(403, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Invalid static file path' }));
+                return;
             }
 
-            fs.readFile(filePath, (error, content) => {
-                if (error) {
-                    if(error.code == 'ENOENT') {
-                        res.writeHead(404);
-                        res.end('File not found');
-                    } else {
-                        CrashLogger.log(error, `StaticFile: ${safeSuffix}`);
-                        res.writeHead(500);
-                        res.end('Server Error: '+error.code);
-                    }
-                } else {
-                    res.writeHead(200, { 'Content-Type': contentType });
-                    res.end(content, 'utf-8');
+            try {
+                const fileStat = await fs.promises.stat(staticFilePath);
+                if (!fileStat.isFile()) {
+                    res.writeHead(404);
+                    res.end('File not found');
+                    return;
                 }
-            });
+
+                const content = await fs.promises.readFile(staticFilePath);
+                res.writeHead(200, { 'Content-Type': getStaticContentType(staticFilePath) });
+                res.end(content);
+            } catch (error) {
+                if (isFsNotFoundError(error)) {
+                    res.writeHead(404);
+                    res.end('File not found');
+                    return;
+                }
+                CrashLogger.log(error, `StaticFile:${staticFilePath}`);
+                res.writeHead(500);
+                res.end(`Server Error: ${(error as NodeJS.ErrnoException | undefined)?.code || 'UNKNOWN'}`);
+            }
         } else if (req.method === 'POST') {
             if (req.url === '/api/render/math') {
                 try {
@@ -1181,7 +1284,11 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                             console.log('[Build] Duplicate request detected. Waiting for in-flight build.');
                             await activeBuildPromise;
                             res.writeHead(200, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify({ success: true, deduped: true }));
+                            res.end(JSON.stringify({
+                                success: true,
+                                deduped: true,
+                                computeModes: collectComputeModeSnapshot()
+                            }));
                             return;
                         }
 
@@ -1225,7 +1332,10 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     }
                     
                     res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: true }));
+                    res.end(JSON.stringify({
+                        success: true,
+                        computeModes: collectComputeModeSnapshot()
+                    }));
                 } catch (error) {
                     if (writeBodyParseErrorResponse(res, error)) {
                         return;

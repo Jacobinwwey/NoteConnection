@@ -1,3 +1,819 @@
+# 2026-03-10 v1.5.40 - TODO 一致性修复（Godot PNG 契约 + 安全陈旧项收口）
+
+## 中文文档
+
+### 目标
+修复 TODO 中与当前实现不一致的陈旧条目，确保文档状态与运行时契约、已落地安全加固保持一致。
+
+### 本轮完成
+- [x] 修正历史 Godot WebSocket 表述，明确当前稳定 URL 契约为 `ws://127.0.0.1:9876`（Godot 客户端路径不带查询参数）。
+- [x] 修正历史 “SVG Fallback” 描述：Godot Path Mode 下 Mermaid 运行时契约为 PNG-only（`pngBase64` 必填），SVG 仅用于诊断。
+- [x] 关闭重复迁移区块中的陈旧 P0 项“sidecar 内容 API 安全边界对齐 Rust”：
+  - [x] `src/server.ts` 已实现 `/api/content` 的 KB 根路径边界校验。
+  - [x] `src/server.migration.test.ts` 已覆盖合法路径、越界拒绝、Windows 历史路径变体回归。
+- [x] 增加状态说明，避免旧版 SVG 清洗表述与当前 PNG-only 契约冲突。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/server.migration.test.ts --runInBand`
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts --runInBand`
+
+---
+
+# 2026-03-10 v1.5.39 - 高优先级桥接稳健性收口（严格消息包 + 背压 + 打包/CSP 契约）
+
+## 中文文档
+
+### 目标
+在不扰动现有 WASM/移动端主线的前提下，收口导入 fixrisk 基线中剩余的桥接/运行时高优先级稳健性缺口。
+
+### 本轮完成
+- [x] `src/core/PathBridge.ts` 已完成严格入站消息包校验（`parseBridgeInboundEnvelope`）与已知消息负载结构约束。
+- [x] 新增入站消息大小门禁（`MAX_INBOUND_MESSAGE_BYTES`），避免超大消息直接进入解析流程。
+- [x] 新增按客户端维度的有界出站背压队列，并基于 `bufferedAmount` 进行排队排空（`BRIDGE_BACKPRESSURE_LIMITS`）。
+- [x] 新增打包契约测试 `src/pkg.sidecar.contract.test.ts`，并纳入 `npm run test:migration`。
+- [x] 强化前端 CSP（`object-src`、`base-uri`、`frame-ancestors`、`form-action`）于 `src/frontend/index.html`。
+- [x] 明确并固化 Godot Mermaid 渲染兼容性契约：运行时保持 PNG-only（`pngBase64` 必填），SVG 仅用于调试，不作为 Godot 回退路径。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/pkg.sidecar.contract.test.ts --runInBand`
+- [x] `npm run test:migration`（**28 suites, 135 tests passed**）
+- [x] `npm test`（**31 suites, 152 tests passed**）
+- [x] `npm run build`
+
+---
+
+# 2026-03-10 v1.5.38 - 高优先级多终端 WASM 计划延续收口（移动端 WASM 就绪契约 + 能力感知构建遥测）
+
+## 中文文档
+
+### 目标
+继续推进高优先级 WASM 等价收口：补齐可执行的多终端实施计划，并落地首个移动端运行时能力切片，使移动端行为可诊断、回退链路可预测。
+
+### 本轮完成
+- [x] **多终端 WASM 实施计划已补齐**：
+  - [x] `implementation_plan.md`
+  - [x] `docs/en/implementation_plan.md`
+  - [x] `docs/zh/implementation_plan.md`
+  - [x] 计划中已明确移动端瓶颈映射、分阶段推进路径与验收门禁。
+- [x] **移动端 WASM 就绪探测已接入**（`src/frontend/source_manager.js`）：
+  - [x] 新增能力字段：
+    - [x] `supports_mobile_wasm_compute`
+    - [x] `mobile_wasm_reason`
+  - [x] 新增运行时探测函数：`detectMobileWasmCapability()`
+  - [x] 已将探测结果接入 Capacitor 能力解析与日志诊断输出。
+- [x] **能力感知的移动构建遥测已落地**（`src/frontend/storage_provider.js`、`src/frontend/source_manager.js`）：
+  - [x] 新增构建模式细分映射：`resolveCapacitorBuildModeDetail(...)`。
+  - [x] 构建结果新增：
+    - [x] `buildModeDetail`
+    - [x] `supportsMobileWasmCompute`
+    - [x] `mobileWasmReason`
+  - [x] SourceManager 现会记录移动构建统计与告警细节。
+- [x] **契约覆盖已同步更新**：
+  - [x] `src/runtime.capabilities.test.ts`
+  - [x] `src/capacitor.runtime.contract.test.ts`
+  - [x] `src/storage.provider.contract.test.ts`
+  - [x] `src/storage.provider.capacitor.worker.contract.test.ts`
+
+### 当前高优先级状态
+- [x] 多终端 WASM 执行策略已明确并完成中英文同步。
+- [x] 移动端运行时现可显式报告 WASM 就绪状态与原因，不再依赖隐式行为。
+- [x] 在保持 worker/single-thread 确定性回退前提下，移动构建链路已具备能力感知遥测。
+- [ ] 剩余高优先级工作：将更多移动端重计算内核迁移到真实 wasm 路径，并在真机上验证 p95/p99 收益。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/runtime.capabilities.test.ts src/capacitor.runtime.contract.test.ts src/storage.provider.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/source_manager.loadflow.test.ts --runInBand`（`5` 套件、`28` 项通过）
+- [x] `npm run test:migration`（`27` 套件、`131` 项通过）
+
+---
+
+# 2026-03-10 v1.5.37 - 高优先级阈值校准延续收口（GraphMetrics 可配置分层 + 校准工具 + CI 快照集成）
+
+## 中文文档
+
+### 目标
+继续推进阈值校准收口：让 GraphMetrics 分层策略支持运行时可配置，新增证据驱动的校准工具，并把校准快照纳入 CI 证据链路。
+
+### 本轮完成
+- [x] **GraphMetrics 策略已支持运行时可配置**（`src/backend/GraphMetrics.ts`）：
+  - [x] 新增策略模型：
+    - [x] `asyncNodeCountThreshold`
+    - [x] `asyncWorkloadBenefitRatioThreshold`
+  - [x] 新增环境变量覆盖并带安全回退：
+    - [x] `NOTE_CONNECTION_GRAPHMETRICS_ASYNC_NODE_THRESHOLD`
+    - [x] `NOTE_CONNECTION_GRAPHMETRICS_ASYNC_WORKLOAD_RATIO_THRESHOLD`
+  - [x] 新增 `GraphMetrics.getExecutionPolicy()`，便于诊断与工具读取当前策略。
+- [x] **分层策略契约增强**（`src/wasm.parity.output.equivalence.contract.test.ts`）：
+  - [x] 新增环境变量覆盖用例：在降低阈值时，稀疏大图可被强制进入 async->wasm 路径。
+  - [x] 新增无效环境变量回退默认值用例。
+- [x] **校准工具落地**：
+  - [x] 新增脚本：`scripts/calibrate-graphmetrics-tiering.js`
+  - [x] 新增 npm 命令：`npm run calibrate:graphmetrics:tiering`
+  - [x] 输出工件：`tmp/graphmetrics-tiering-calibration/latest.json`（或 `--out` 指定路径）
+  - [x] 基于多配置画像输出阈值建议。
+- [x] **CI 快照链路扩展**：
+  - [x] `.github/workflows/wasm-parity-benchmark-snapshots.yml` 现已纳入 GraphMetrics 分层校准快照执行。
+  - [x] 快照工件上传现同时覆盖：
+    - [x] `tmp/wasm-parity-benchmark/snapshots`
+    - [x] `tmp/graphmetrics-tiering-calibration/snapshots`
+
+### 当前高优先级状态
+- [x] 分层阈值已可通过环境变量调优，不再需要改代码。
+- [x] 阈值治理已具备证据驱动校准工具。
+- [x] CI 周期快照已同时覆盖 wasm parity 与 GraphMetrics 分层校准证据。
+- [ ] 剩余高优先级工作：在多主机、多轮次条件下积累更强统计置信度的校准基线，并收敛生产阈值。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.output.equivalence.contract.test.ts --runInBand`（`7` 项通过）
+- [x] `node scripts/calibrate-graphmetrics-tiering.js --iterations 1 --max-workers 4 --out tmp/graphmetrics-tiering-calibration/smoke`
+  - [x] 校准工件输出：`tmp/graphmetrics-tiering-calibration/smoke/latest.json`
+  - [x] 当前主机建议快照：`asyncNodeCountThreshold=500`、`asyncWorkloadBenefitRatioThreshold=115.4385`
+- [x] `npm run test:wasm:parity:gates`（严格校验 + 严格性能门禁通过）
+- [x] `npm run test:migration`（`27` 套件、`131` 测试通过）
+
+---
+
+# 2026-03-10 v1.5.36 - 高优先级 WASM 方法策略延续收口（GraphMetrics 稀疏度分层 + 周期快照 CI + 发布门禁强制）
+
+## 中文文档
+
+### 目标
+把最新方法对比报告中的建议完整落地：补齐 GraphMetrics 计算路径策略缺口（引入稀疏度/工作负载分层），在发布流程中强制严格 wasm parity 门禁，并增加周期性基准快照以跟踪长期性能漂移。
+
+### 本轮完成
+- [x] **GraphMetrics 策略升级为工作负载分层决策**（`src/backend/GraphMetrics.ts`）：
+  - [x] 新增异步策略常量：
+    - [x] `ASYNC_NODE_COUNT_THRESHOLD = 500`
+    - [x] `ASYNC_WORKLOAD_BENEFIT_RATIO_THRESHOLD = 24`
+  - [x] 新增确定性决策模型 `resolveExecutionDecision(...)`，输出原因：
+    - [x] `memory-saving-mode`
+    - [x] `small-graph-threshold`
+    - [x] `sparse-workload-threshold`
+    - [x] `workload-tier-async`
+  - [x] 调整运行时编排：大而稀疏图优先顺序计算（避免低收益异步开销）；工作负载足够时继续走 `wasm-adapter` -> `worker` 回退链路。
+- [x] **策略正确性契约同步增强**（`src/wasm.parity.output.equivalence.contract.test.ts`）：
+  - [x] 将 wasm 路径等价测试图形调整为“满足分层阈值”的稠密形状，保持 wasm 预期行为契约不退化。
+  - [x] 新增“大图但稀疏”契约用例，断言：
+    - [x] 不调用 wasm betweenness 路径
+    - [x] 诊断模式为 `sequential`
+    - [x] 诊断原因为 `sparse-workload-threshold`
+- [x] **CI 强制能力扩展**：
+  - [x] npm 发布工作流新增严格 parity 门禁：
+    - [x] `.github/workflows/npm-publish.yml`
+    - [x] 新增 `npm run test:wasm:parity:gates`
+  - [x] 新增周期性基准快照工作流：
+    - [x] `.github/workflows/wasm-parity-benchmark-snapshots.yml`
+    - [x] 每周定时 + 手工触发
+    - [x] 执行严格 verify + 严格性能基准
+    - [x] 上传基准快照工件（`actions/upload-artifact`）
+
+### 当前高优先级状态
+- [x] GraphMetrics 计算策略已从“仅节点数阈值”升级为“节点数 + 工作负载稀疏度”联合决策。
+- [x] 严格 wasm parity 门禁已同时覆盖迁移 CI 与 npm 发布流程。
+- [x] 周期性基准快照自动化已落地，可用于长期性能漂移跟踪。
+- [ ] 剩余高优先级工作为更大负载范围与多主机环境下的阈值持续校准。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.output.equivalence.contract.test.ts --runInBand`
+- [x] `npm run test:wasm:parity:gates`
+  - [x] GraphMetrics p95 比值（candidate/baseline）：`0.0841`
+  - [x] LayoutEngine p95 比值（candidate/baseline）：`0.0011`
+- [x] `npm run test:migration`（`27` 套件、`129` 测试通过）
+
+---
+
+# 2026-03-10 v1.5.34 - 高优先级 WASM 性能门禁收口（基准阈值门禁 + CI 回归屏障）
+
+## 中文文档
+
+### 目标
+在工件落地之后继续推进性能稳健性收口：增加可强制执行的 wasm 基准回归门禁，使 CI 在候选 wasm 性能退化时能够快速失败。
+
+### 本轮完成
+- [x] **性能门禁模型落地**（`src/backend/algorithms/WasmParityBenchmarkGuards.ts`）：
+  - [x] 新增 GraphMetrics / LayoutEngine 双指标门禁评估。
+  - [x] 支持比值门禁（`candidateP95 / baselineP95`）与 candidate 绝对 p95 门禁。
+  - [x] 新增多指标聚合通过/失败摘要。
+- [x] **基准脚本回归阈值加固**（`scripts/benchmark-wasm-parity.js`）：
+  - [x] 新增门禁参数：
+    - [x] `--max-candidate-to-baseline-graph-p95-ratio`
+    - [x] `--max-candidate-to-baseline-layout-p95-ratio`
+    - [x] `--max-candidate-graph-p95-ms`
+    - [x] `--max-candidate-layout-p95-ms`
+  - [x] 在报告中输出门禁结果（`equivalence.performanceGuards`）。
+  - [x] 当阈值被突破时脚本返回非零退出码。
+- [x] **契约覆盖增强**：
+  - [x] 新增 `src/wasm.parity.benchmark.guards.contract.test.ts`。
+  - [x] 在 `npm run test:migration` 纳入该套件。
+- [x] **门禁脚本与 CI 屏障升级**：
+  - [x] 新增 `benchmark:wasm:parity:strict:perf`。
+  - [x] `test:wasm:parity:gates` 更新为严格校验 + 严格性能门禁基准。
+  - [x] 现有 CI `wasm-parity-strict-suite` 已通过更新后的脚本强制执行性能回归屏障。
+
+### 当前高优先级状态
+- [x] WASM 工件已落地，严格模式下 `wasm-adapter` 已可真实激活。
+- [x] 严格 parity 门禁现已同时覆盖“激活校验 + p95 性能回归校验”。
+- [x] 在门禁加固后 migration/build/Tauri/全量 Jest 继续全绿。
+- [ ] 剩余高优先级工作聚焦生产规模 profiling/调优与长期阈值校准。
+
+### 验证门禁（已执行）
+- [x] `npm run test:migration`（`27` 套件、`128` 测试通过）
+- [x] `npm run test:wasm:parity:gates`（严格校验 + 严格性能门禁基准通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`30` 套件、`145` 测试通过）
+
+---
+
+# 2026-03-10 v1.5.33 - 高优先级 WASM 工件落地收口（Rust WASM ABI 模块 + 严格门禁激活 + CI 接线）
+
+## 中文文档
+
+### 目标
+闭环当前高优先级阻塞项：提供真实可用的 wasm parity 工件（不再仅依赖回退路径），并完成严格门禁端到端验证。
+
+### 本轮完成
+- [x] **真实 wasm parity 工件已落地**：
+  - [x] 新增 Rust wasm crate：`src/backend/wasm/`（`Cargo.toml`、`src/lib.rs`）。
+  - [x] 实现必需 JSON ABI 导出：
+    - [x] `compute_layout_json`
+    - [x] `compute_betweenness_json`
+    - [x] `get_last_result_len`
+    - [x] `alloc`
+    - [x] `dealloc`
+    - [x] `memory`（wasm 运行时导出）
+  - [x] 在 wasm 内实现确定性布局输出与有向 Brandes 风格中心性计算。
+  - [x] 工件已生成并落地：`src/backend/wasm/noteconnection_compute.wasm`。
+- [x] **构建与运行时同步加固**：
+  - [x] 新增 `scripts/build-wasm-parity-artifact.js`（`npm run build:wasm:parity`）用于确定性构建与落地。
+  - [x] 新增 `scripts/sync-wasm-parity-artifact.js`，并接入 `build` / `build:mini`，自动同步到 `dist/src/backend/wasm/`。
+  - [x] 新增 `src/backend/wasm/target/` 忽略规则，避免 Rust 构建产物污染版本库。
+- [x] **契约与门禁增强**：
+  - [x] 新增工件落地契约：`src/wasm.parity.artifact.provisioning.contract.test.ts`。
+  - [x] 加固 `src/wasm.parity.artifact.probe.contract.test.ts`，改为与环境无关（mock 无工件路径解析）。
+  - [x] 新增严格 wasm 门禁脚本：`npm run test:wasm:parity:gates`。
+  - [x] 在 CI 工作流 `.github/workflows/migration-gates.yml` 新增严格 wasm 门禁任务。
+  - [x] `test:gates` 已纳入严格 wasm parity 门禁。
+
+### 当前高优先级状态
+- [x] WASM 工件已落地，并可在标准运行时路径被发现。
+- [x] 严格 verifier 与严格 benchmark 均通过，且 `wasm-adapter` 已真实激活。
+- [x] 基准 candidate 路径在 GraphMetrics/LayoutEngine 上均进入 `wasm-adapter`。
+- [x] 工件落地后 migration/build/Tauri/全量 Jest 仍全绿。
+- [ ] 后续重点转为生产规模性能优化与长期等价监控。
+
+### 验证门禁（已执行）
+- [x] `npm run build:wasm:parity`
+- [x] `npm run verify:wasm:parity`
+- [x] `npm run verify:wasm:parity:strict`
+- [x] `npm run benchmark:wasm:parity:strict`（candidate 已进入 `wasm-adapter`）
+- [x] `npm run test:wasm:parity:gates`
+- [x] `npm run test:migration`（`26` 套件、`124` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`29` 套件、`141` 测试通过）
+
+---
+
+# 2026-03-10 v1.5.32 - 高优先级 WASM 工件可用性收口（探针 + 严格校验门禁 + 全量可行性复验）
+
+## 中文文档
+
+### 目标
+继续推进高优先级 wasm 等价收口：把 wasm 工件可用性做成“可测量、可强制”的门禁能力，并在严格/非严格路径下完成端到端可行性复验。
+
+### 本轮完成
+- [x] **工件可用性探针落地**（`src/backend/algorithms/WasmParityArtifactProbe.ts`）：
+  - [x] 新增必需导出基线（`compute_layout_json`、`compute_betweenness_json`、`get_last_result_len`、`alloc`、`dealloc`、`memory`）。
+  - [x] 新增探针结果模型，覆盖 `artifact-not-found`、`path-not-found`、导出缺失与实例化失败。
+  - [x] 新增缺失导出辅助函数，供契约与工具链复用。
+- [x] **校验 CLI 落地**（`scripts/verify-wasm-parity.js`）：
+  - [x] 支持参数：`--wasm-path`、`--strict`、`--out`。
+  - [x] 在严格模式下，当工件不就绪时返回非零退出码。
+  - [x] 输出 JSON 结果，便于 CI 证据归档。
+- [x] **NPM 严格入口加固完成**（`package.json`）：
+  - [x] 新增 `verify:wasm:parity:strict`，规避 npm 对 `--strict` 透传歧义。
+  - [x] 保留日常诊断入口 `verify:wasm:parity`。
+- [x] **契约护栏增强**：
+  - [x] 新增 `src/wasm.parity.artifact.probe.contract.test.ts`。
+  - [x] 在 `npm run test:migration` 纳入探针契约套件。
+- [x] **基准与校验证据已刷新**：
+  - [x] 基准证据刷新到 `tmp/wasm-parity-benchmark/latest.json`。
+  - [x] 校验证据输出到 `tmp/wasm-parity-benchmark/verify-latest.json`。
+  - [x] 已确认：在 wasm 工件不可用时，严格校验/严格基准会按预期失败。
+
+### 当前高优先级状态
+- [x] 工件可用性已可被显式测量并可脚本化强制。
+- [x] verifier 与 benchmark 均具备严格门禁路径。
+- [x] 本切片后 migration/build/Tauri/全量 Jest 仍全绿。
+- [ ] 当前环境仍缺少 wasm 工件，运行时仍走 worker 回退。
+- [ ] 生产级 wasm-adapter 的规模等价与性能闭环仍待工件可用性闭环后完成。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.artifact.probe.contract.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run verify:wasm:parity`
+- [x] `npm run verify:wasm:parity:strict`（预期非零退出：`artifact-not-found`）
+- [x] `npm run benchmark:wasm:parity`
+- [x] `npm run benchmark:wasm:parity:strict`（预期非零退出：candidate 未进入 `wasm-adapter`）
+- [x] `npm run test:migration`（`25` 套件、`123` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`28` 套件、`140` 测试通过）
+
+---
+
+# 2026-03-10 v1.5.31 - 高优先级 Worker↔WASM 基准基线收口（基准脚本 + 证据工件 + 契约护栏）
+
+## 中文文档
+
+### 目标
+继续推进剩余高优先级等价收口：落地可复现的 worker↔wasm 基准/等价基线流程，使重计算对比从“口头判断”升级为“证据驱动”。
+
+### 本轮完成
+- [x] **基准工具模块落地**（`src/backend/algorithms/WasmParityBenchmark.ts`）：
+  - [x] 新增确定性重图夹具构造（`buildDeterministicBenchmarkGraph`）。
+  - [x] 新增延迟百分位汇总（`summarizeDurations`，p50/p95/p99）。
+  - [x] 新增介数中心性结果等价汇总（`summarizeBetweennessDifference`）。
+- [x] **可执行基准与证据流水线落地**（`scripts/benchmark-wasm-parity.js`）：
+  - [x] 新增 baseline（关闭 wasm）与 candidate（开启 wasm）双场景执行流程。
+  - [x] 采集重计算模式遥测、延迟统计、布局有限坐标覆盖率。
+  - [x] 输出时间戳报告与 `latest.json` 到 `tmp/wasm-parity-benchmark/`。
+  - [x] 同时支持命名参数（`--iterations`、`--nodes`、`--max-workers`、`--wasm-path`、`--out`）与位置参数。
+  - [x] 新增可选严格门禁（`--require-wasm-adapter`），用于 CI/发布环境在 wasm 未实际激活时强制失败。
+- [x] **契约护栏增强**：
+  - [x] 新增 `src/wasm.parity.benchmark.contract.test.ts`，覆盖基准统计与夹具不变量。
+  - [x] 在 `npm run test:migration` 中纳入该套件。
+  - [x] 新增 npm 入口：`npm run benchmark:wasm:parity`。
+- [x] **真实可行性证据已采集**：
+  - [x] 执行基准并生成报告（`tmp/wasm-parity-benchmark/latest.json`）。
+  - [x] 当前环境证据显示 candidate 仍走 worker 回退，原因为 wasm 工件不可用（`artifact-not-found`）。
+
+### 当前高优先级状态
+- [x] worker↔wasm 基准基线能力已落地，可稳定产出 JSON 证据。
+- [x] 等价统计与延迟汇总逻辑已具备契约测试护栏。
+- [ ] 生产级 wasm 工件在大规模场景的等价与性能仍待闭环。
+- [ ] 在当前环境中，candidate 尚未进入 `wasm-adapter`，需先闭环 wasm 工件可用性。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.benchmark.contract.test.ts --runInBand`
+- [x] `node scripts/benchmark-wasm-parity.js 1 500`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration`（`24` 套件、`119` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`27` 套件、`136` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.30 - 高优先级重计算模式可观测性收口（WASM/Worker/Sequential/GPU 诊断 + API 暴露）
+
+## 中文文档
+
+### 目标
+继续推进高优先级等价性与稳健性收口：将重计算链路执行模式做成可观测、可契约化能力，发布验证时可直接确认真实回退路径，而不再依赖日志人工判断。
+
+### 本轮完成
+- [x] **重计算诊断能力落地**：
+  - [x] `GraphMetrics` 新增计算模式诊断（`none`/`wasm-adapter`/`worker`/`sequential`），包含节点数、边数、耗时、原因、时间戳。
+  - [x] `LayoutEngine` 新增计算模式诊断（`none`/`gpu`/`wasm-adapter`/`worker`/`skipped`），字段与上面一致。
+  - [x] 两个引擎均新增测试隔离用的确定性重置入口。
+- [x] **Server 可观测面扩展**（`src/server.ts`）：
+  - [x] `GET /api/runtime-diagnostics` 新增 `computeModes` 快照（`layoutEngine`、`graphMetrics`）。
+  - [x] `POST /api/build` 的成功与去重响应新增 `computeModes`，便于构建后立即确认执行路径。
+- [x] **契约覆盖增强**：
+  - [x] `src/server.migration.test.ts` 新增/更新断言，覆盖运行时诊断与构建响应中的 `computeModes` 结构。
+  - [x] `src/wasm.parity.output.equivalence.contract.test.ts` 新增模式断言，覆盖 wasm 成功路径、小图顺序路径、布局 worker 不可用回退路径。
+- [x] **全门禁复验完成**，并同步更新套件/测试数量。
+
+### 当前高优先级状态
+- [x] 重计算运行模式（WASM/worker/sequential/GPU/skipped）已实现 API 级可观测并具备契约护栏。
+- [x] 在增强可观测性的同时，既有确定性回退行为保持不变。
+- [ ] 生产级 wasm 工件在真实负载下的等价/性能仍待闭环。
+- [ ] 真实负载 worker↔wasm 基准（吞吐、p95/p99 延迟、内存画像）仍待闭环。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.output.equivalence.contract.test.ts src/server.migration.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration`（`23` 套件、`114` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`26` 套件、`131` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.29 - 高优先级运行时可观测性收口（Sidecar 诊断端点 + WASM 状态暴露）
+
+## 中文文档
+
+### 目标
+继续推进高优先级稳健性收口：通过鉴权 API 暴露 sidecar 运行时诊断信息，并纳入 wasm parity 状态，提升可行性排障效率。
+
+### 本轮完成
+- [x] **运行时诊断 API 落地**（`src/server.ts`）：
+  - [x] 新增 `GET /api/runtime-diagnostics`。
+  - [x] 返回 sidecar 运行时上下文（host/port/路径/是否需要鉴权），且不泄露鉴权密钥。
+  - [x] 集成 `WasmParityRuntime.getDiagnostics()` 输出，支持 parity 状态观测。
+  - [x] 在可用时返回 PathBridge summary/status。
+- [x] **迁移契约覆盖增强**（`src/server.migration.test.ts`）：
+  - [x] 新增 `/api/runtime-diagnostics` 契约测试。
+  - [x] 明确断言诊断结果中不暴露 auth token。
+- [x] **全门禁复验完成**：
+  - [x] 诊断端点接入后 migration/build/Tauri/全量 Jest 全部通过。
+
+### 当前高优先级状态
+- [x] 运行时可观测性已在 server API 层覆盖 wasm parity 诊断信息。
+- [x] sidecar 诊断可被工具链/QA 消费且不暴露凭据。
+- [ ] 生产级 wasm 工件的大规模等价与性能仍待闭环。
+- [ ] worker 与 wasm 的基准等价回归仍待闭环。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/server.migration.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.output.equivalence.contract.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration`（`23` 套件、`112` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`26` 套件、`129` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.28 - 高优先级 WASM 运行时韧性加固（重试窗口 + 诊断可见性 + 回退契约）
+
+## 中文文档
+
+### 目标
+继续推进高优先级 WASM 等价加固：让缺失工件后的回退具备可恢复性，补齐运行时诊断可见性，并扩展重试窗口行为的功能契约。
+
+### 本轮完成
+- [x] **WASM 运行时韧性加固**（`src/backend/algorithms/WasmParityRuntime.ts`）：
+  - [x] 新增失败/缺失工件加载的重试窗口机制（`NOTE_CONNECTION_WASM_RETRY_MS`，默认 5000ms），避免永久 null 缓存锁死。
+  - [x] 新增运行时诊断接口：
+    - [x] `getDiagnostics()`
+    - [x] `WasmParityRuntimeDiagnostics`
+    - [x] `WasmParityExecutionMode`
+  - [x] 新增执行模式跟踪（`json-layout`、`json-betweenness`、`legacy-*`、`fallback`）。
+  - [x] 新增测试重置辅助（`__resetForTests()`）。
+- [x] **功能契约覆盖增强**（`src/wasm.parity.runtime.functional.test.ts`）：
+  - [x] 增加 JSON ABI 成功后的诊断断言。
+  - [x] 增加重试窗口契约：重试间隔内不重复加载，超过间隔后可重新尝试加载。
+- [x] **全门禁复验完成**：
+  - [x] 测试矩阵更新后 migration/build/Tauri/全量 Jest 全部通过。
+
+### 当前高优先级状态
+- [x] WASM 回退链路已从“永久失败缓存”升级为“运行时可恢复”。
+- [x] 已具备用于等价排障与发布验证的诊断与执行模式可见性。
+- [ ] 生产级 wasm 工件的大规模等价与性能仍待闭环。
+- [ ] worker 与 wasm 的基准等价回归仍待闭环。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.runtime.functional.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.output.equivalence.contract.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration`（`23` 套件、`111` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`26` 套件、`128` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.27 - 高优先级 WASM 等价加固（输出一致性契约 + Worker 惰性回退解析）
+
+## 中文文档
+
+### 目标
+继续推进高优先级 WASM 等价收口：补齐编排层输出一致性契约，并在 wasm 成功返回时减少不必要的 worker 回退链路解析开销。
+
+### 本轮完成
+- [x] **输出一致性编排契约补齐**：
+  - [x] 新增 `src/wasm.parity.output.equivalence.contract.test.ts`。
+  - [x] 新增等价断言覆盖：
+    - [x] `GraphMetrics.calculateBetweennessAsync(...)`：wasm 返回结果与顺序基线 map 一致。
+    - [x] `LayoutEngine.computeLayout(...)`：wasm 节点坐标被精确应用。
+  - [x] 在 `npm run test:migration` 纳入该套件。
+- [x] **布局回退链路效率加固**（`src/backend/algorithms/LayoutEngine.ts`）：
+  - [x] 将 worker 运行时解析/日志后移，仅在 gpu/wasm 路径未满足时触发。
+  - [x] 保持确定性 worker 回退行为不变。
+- [x] **可行性门禁全量复验**：
+  - [x] 新契约与运行时重排后，migration/build/Tauri/全量 Jest 门禁全部通过。
+
+### 当前高优先级状态
+- [x] WASM 编排层已具备“功能契约 + 输出一致性契约”双重覆盖。
+- [x] 布局路径在 wasm 成功场景下不再进行不必要的 worker 运行时解析。
+- [ ] 生产级 wasm 工件的大规模等价性仍待闭环。
+- [ ] worker 与 wasm 的性能基线回归仍待闭环。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.output.equivalence.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.runtime.contract.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration`（`23` 套件、`109` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`26` 套件、`126` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.26 - 高优先级 WASM 等价切片延续（JSON ABI 结果链路 + 功能契约 + 全门禁复验）
+
+## 中文文档
+
+### 目标
+继续推进高优先级 WASM 等价性实现：闭环运行时 JSON ABI 结果路径，补齐结果解码/回退的功能回归契约，并重新执行全量可行性验证门禁。
+
+### 本轮完成
+- [x] **WASM JSON ABI 结果链路落地**（`src/backend/algorithms/WasmParityRuntime.ts`）：
+  - [x] 接入 JSON ABI 导出入口：`compute_layout_json`、`compute_betweenness_json`。
+  - [x] 接入内存 ABI 基元：`alloc`、`dealloc`、`get_last_result_len`、`memory`。
+  - [x] 新增通用 JSON ABI 调用流程（`invokeJsonAbiCall`），并保持确定性回退与安全释放护栏。
+  - [x] 新增结果结构解码：
+    - [x] `toLayoutResult(...)`
+    - [x] `toBetweennessResult(...)`
+- [x] **功能回归覆盖增强**：
+  - [x] 新增 `src/wasm.parity.runtime.functional.test.ts`，覆盖：
+    - [x] 布局 JSON ABI 成功路径
+    - [x] 中心性 JSON ABI 成功路径
+    - [x] ABI 不完整回退（`null`）
+    - [x] 非法 JSON 回退（`null`）
+  - [x] 在 `package.json` 的 `npm run test:migration` 中纳入该套件。
+- [x] **可行性门禁全量复验**：
+  - [x] 定向 parity 测试与类型检查通过。
+  - [x] migration/build/Tauri/全量 Jest 门禁全部通过。
+
+### 当前高优先级状态
+- [x] 当 wasm 工件提供 JSON ABI 导出时，重计算运行时已可消费 wasm 结果输出。
+- [x] 当 wasm 运行时或 ABI 缺失/异常时，现有 worker/顺序路径保持确定性回退。
+- [ ] 面向大规模布局/中心性场景的生产级 wasm 工件等价闭环仍待完成。
+- [ ] Node worker 与 wasm 的结果一致性/性能回归基线仍待完成。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts --runInBand`
+- [x] `npx tsc --pretty false`
+- [x] `npm run test:migration`（`22` 套件、`107` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`25` 套件、`124` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.25 - 高优先级 WASM 等价切片启动（重计算图谱/布局运行时适配 + 确定性回退）
+
+## 中文文档
+
+### 目标
+启动重计算图谱/布局的 WASM 等价性实现切片：将共享 WASM 运行时适配层接入后端重计算入口，同时保持确定性的回退链路，不破坏现有行为。
+
+### 本轮完成
+- [x] **WASM 等价运行时适配器落地**：
+  - [x] 新增 `src/backend/algorithms/WasmParityRuntime.ts`，包含：
+    - [x] 能力开关（`NOTE_CONNECTION_ENABLE_WASM_PARITY`）
+    - [x] 工件路径解析（`NOTE_CONNECTION_WASM_PATH` + 默认候选路径）
+    - [x] wasm 实例缓存加载与失败安全回退
+    - [x] 等价入口：`computeLayout()` 与 `computeBetweenness()`
+- [x] **重计算入口接线完成**：
+  - [x] `src/backend/algorithms/LayoutEngine.ts` 在 worker 路径前尝试 `WasmParityRuntime.computeLayout(...)`。
+  - [x] `src/backend/GraphMetrics.ts` 在大图且非内存节省模式下优先尝试 `WasmParityRuntime.computeBetweenness(...)`。
+- [x] **回归护栏补齐**：
+  - [x] 新增 `src/wasm.parity.runtime.contract.test.ts`。
+  - [x] 在 `package.json` 的 `test:migration` 纳入 wasm parity 契约测试。
+- [x] **风险与 TODO 同步**：
+  - [x] 根目录/英文/中文 fixrisk 与 TODO 记录已同步到当前真实验证状态。
+
+### 当前高优先级状态
+- [x] WASM 等价运行时适配层已接入后端重计算调用链路。
+- [x] 在 wasm 工件/ABI 不可用时，现有 worker/顺序路径保持确定性不变。
+- [ ] 真实布局/中心性 WASM 内存 ABI 与结果输出契约仍未闭环。
+- [ ] Node worker 与 WASM 的结果一致性回归测试仍未闭环。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/wasm.parity.runtime.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/runtime.capabilities.test.ts --runInBand`
+- [x] `npm run test:migration`（`21` 套件、`103` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`24` 套件、`120` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.24 - 高优先级移动端计算延续收口（Capacitor Worker 优先构建回退 + 全门禁复验）
+
+## 中文文档
+
+### 目标
+继续推进高优先级移动端等价性事项：为原生 Capacitor 增加“Worker 优先”的本地图构建能力，并在失败/不支持场景保持确定性回退，同时重新执行全量可行性验证门禁。
+
+### 本轮完成
+- [x] **Capacitor Worker 优先构建链路落地**（`src/frontend/storage_provider.js`）：
+  - [x] 增加 Worker 能力探测（`supportsCapacitorGraphBuildWorker`）与 URL API 安全判定。
+  - [x] 增加 blob Worker 构建执行链路（`runCapacitorGraphBuildWorker`），并加入严格超时护栏（`CAPACITOR_GRAPH_BUILD_WORKER_TIMEOUT_MS`）。
+  - [x] 增加确定性回退编排（`buildCapacitorGraphDataWithWorkerFallback`），确保不支持/失败时自动降级为单线程。
+  - [x] 在构建统计中增加模式可观测性（`worker`、`single-thread`、`single-thread-fallback`）。
+- [x] **回归护栏增强**：
+  - [x] 更新 `src/storage.provider.contract.test.ts` 与 `src/capacitor.runtime.contract.test.ts`，覆盖 Worker 回退断言。
+  - [x] 新增 `src/storage.provider.capacitor.worker.contract.test.ts`。
+  - [x] 在 `package.json` 的 `test:migration` 中纳入 Worker 契约测试套件。
+- [x] **风险与 TODO 状态同步**：
+  - [x] 更新 `docs/fixrisk_TODO.md`、`docs/en/fixrisk_TODO.md`、`docs/zh/fixrisk_TODO.md`，与当前真实状态一致。
+
+### 当前高优先级状态
+- [x] 移动端本地图构建已具备 Worker 优先 + 单线程确定性回退能力。
+- [x] 新能力引入后，全量验证门禁持续通过。
+- [ ] 移动端与桌面端 Node Worker/WASM 等价能力仍未闭环。
+- [ ] 真机证据闭环仍受环境约束（需在线 Android 设备）。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/storage.provider.contract.test.ts src/capacitor.runtime.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts --runInBand`
+- [x] `npm run test:migration`（`20` 套件、`100` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`23` 套件、`117` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.23 - 高优先级移动端延续收口（Capacitor 本地图构建回退 + 运行时 Provider 统一）
+
+## 中文文档
+
+### 目标
+继续推进尚未闭环的移动端高优先级事项：移除原生 Capacitor 的硬只读锁，并在不依赖 localhost sidecar 的前提下，补齐设备端本地图构建/缓存回退能力。
+
+### 本轮完成
+- [x] **Capacitor 本地图构建回退落地**（`src/frontend/storage_provider.js`）：
+  - [x] 新增受控文件系统辅助链路（read/write/readdir/stat），并统一权限申请与路径规范化。
+  - [x] 增加移动端构建保护阈值（`CAPACITOR_GRAPH_BUILD_MAX_FILES`、`CAPACITOR_GRAPH_BUILD_MAX_BYTES`），防止无界资源消耗。
+  - [x] 新增设备端轻量图构建链路（`collectCapacitorMarkdownFiles` + `buildCapacitorGraphData` + `capacitorBuildGraph`）。
+  - [x] 为 Capacitor 实现 `checkCache`/`restoreCache`，并让 `readGeneratedAsset` 优先读取运行时生成资产。
+- [x] **SourceManager 运行时流程升级**（`src/frontend/source_manager.js`）：
+  - [x] 新增 `supportsCapacitorBuildApi()` 能力探测，在原生 Capacitor 运行时动态映射 `supports_build`。
+  - [x] 移除 Capacitor 点击前硬性只读阻断，统一进入缓存/构建护栏流程。
+  - [x] Capacitor `data.js` 加载切换到 storage provider 运行时路径，支持读取构建后产物。
+  - [x] Capacitor 数据源列表改为通过 storage provider 聚合目录与缓存目标。
+- [x] **契约测试同步更新**：
+  - [x] 更新 `src/capacitor.runtime.contract.test.ts`，覆盖“能力探测驱动的移动构建路径”。
+  - [x] 更新 `src/storage.provider.contract.test.ts`，覆盖 Capacitor 本地图构建回退关键不变量。
+
+### 当前高优先级状态
+- [x] 当文件系统具备写入与目录扫描能力时，原生 Capacitor 不再被硬性锁定为只读模式。
+- [x] 移动端已可执行本地单线程 Markdown 图构建回退，并持久化缓存产物用于重载。
+- [ ] 与桌面等价的 worker 级性能/规模能力仍未闭环。
+- [ ] 真机证据闭环仍受环境约束（需在线 Android 设备）。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/capacitor.runtime.contract.test.ts src/storage.provider.contract.test.ts src/source_manager.loadflow.test.ts src/storage.provider.capacitor.content.contract.test.ts`
+- [x] `npm run test:migration`（`19` 套件、`98` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`22` 套件、`115` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.22 - 高优先级安全加固（PathBridge 鉴权 + WS Token 握手）
+
+## 中文文档
+
+### 目标
+在“关键问题表对齐”之后，继续推进高优先级稳健性收口：重点加固 PathBridge 的鉴权边界，消除未授权 WebSocket 客户端可能接收广播数据的窗口风险。
+
+### 本轮完成
+- [x] **前端桥接握手增强**：
+  - [x] 更新 `src/frontend/runtime_bridge.js` 的 `getBridgeWsUrl(clientTag)`，在可用时追加 `client` 与 `token` 查询参数。
+  - [x] 保留异常 URL 场景的兼容回退逻辑，不破坏既有运行时行为。
+- [x] **PathBridge 鉴权边界加固**（`src/core/PathBridge.ts`）：
+  - [x] 新增未授权连接超时生命周期（`UNAUTHORIZED_CLIENT_TIMEOUT_MS`、定时器映射、schedule/clear 辅助函数）。
+  - [x] 客户端授权成功后在无 token/有 token 两类路径均会确定性清理超时定时器。
+  - [x] 新增 `getOpenAuthorizedClients()`，广播链路改为仅向已授权客户端发送。
+  - [x] 连接状态摘要中增加未授权标记，便于运行时诊断。
+- [x] **契约测试同步**：
+  - [x] 更新 `src/runtime.transport.adapter.contract.test.ts`，增加 token 化 WS URL 断言。
+  - [x] 更新 `src/pathbridge.handshake.contract.test.ts`，覆盖未授权超时与仅授权广播护栏。
+
+### 当前高优先级状态
+- [x] 桥接层“未授权客户端可能收到广播数据”的窗口风险已按设计收口。
+- [x] 运行时桥接在握手 URL 层面已传播 token 元数据。
+- [ ] 移动端与桌面 sidecar 的 build/worker 完全等价能力仍在当前发布策略边界之外。
+- [ ] 真机人工证据闭环仍依赖在线 Android 设备。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/runtime.transport.adapter.contract.test.ts --runInBand`
+- [x] `npm run test:migration`（`19` 套件、`96` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`22` 套件、`113` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.21 - 高优先级收口（关键问题表对齐 + C-01 运行时守卫）
+
+## 中文文档
+
+### 目标
+优先收敛 `CRITICAL ISSUES TABLE` 与代码实际状态不一致的问题，并补齐 C-01 的最后一处运行时边界：避免在原生 Capacitor 环境下仍尝试启动 sidecar PathBridge WebSocket。
+
+### 本轮完成
+- [x] **C-01 运行时加固完成**：
+  - [x] 更新 `src/frontend/path_app.js`：当 `supports_sidecar === false` 或检测到原生 Capacitor 运行时时，跳过 bridge setup/connect。
+  - [x] 新增明确的运行时判定守卫：
+    - [x] `_isCapacitorNativeRuntime()`
+    - [x] `_supportsSidecarBridge()`
+  - [x] 增加 sidecar 被禁用时的确定性日志输出，避免隐式失败。
+- [x] **传输契约测试同步更新**：
+  - [x] 更新 `src/runtime.transport.adapter.contract.test.ts`，强制校验 `path_app.js` 的新守卫逻辑。
+- [x] **关键问题表修复（中英双语）**：
+  - [x] 更新 `docs/en/fixrisk_TODO.md` 的 `CRITICAL ISSUES TABLE`，为 `C-01/C-02/H-01/H-02/M-01` 写入当前严重度、验证证据与剩余风险。
+  - [x] 更新 `docs/zh/fixrisk_TODO.md` 的 `关键问题表`，保持双语内容一致。
+
+### 当前高优先级状态
+- [x] 关键问题表已与当前代码与验证证据对齐。
+- [x] 原生 Capacitor 运行时的 C-01 localhost/bridge 依赖风险已进一步收敛。
+- [ ] 移动端与桌面 sidecar 的 **build + worker** 完全等价能力仍属于后续范围（当前发布边界内不承诺）。
+- [ ] 真机人工验收证据仍受环境约束（需在线 Android 设备）。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/runtime.transport.adapter.contract.test.ts src/source_manager.loadflow.test.ts src/runtime.capabilities.test.ts src/mobile.pipeline.test.ts src/capacitor.runtime.contract.test.ts --runInBand`
+- [x] `npm run test:migration`（`19` 套件、`95` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`22` 套件、`112` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.20 - 高优先级推进（Capacitor 真机验收链路加固）
+
+## 中文文档
+
+### 目标
+在不放宽现有运行时边界的前提下，推进 fixrisk 中剩余的移动端高优先级收口：重点加固 Android 真机验收脚本，使设备探测与证据采集具备可重复、可诊断、可回归保护的行为。
+
+### 本轮完成
+- [x] **移动验收共享工具层**：
+  - [x] 新增 `scripts/capacitor-device-utils.js`，提供：
+    - [x] ADB 多候选解析（`ADB_PATH`、PATH、`ANDROID_SDK_ROOT`/`ANDROID_HOME`）
+    - [x] 稳定命令执行封装
+    - [x] `adb devices` 状态解析（`device`/`unauthorized`/`offline`）
+    - [x] 设备状态汇总输出（用于阻塞诊断）
+- [x] **设备闸门脚本加固**：
+  - [x] 更新 `scripts/verify-capacitor-device-acceptance.js`：
+    - [x] 改为共享工具实现
+    - [x] 支持 `NOTE_CONNECTION_ANDROID_SERIAL` 指定设备
+    - [x] 在无在线设备时输出确定性阻塞信息（`Device states: ...`）
+- [x] **证据采集脚本加固**：
+  - [x] 更新 `scripts/capture-capacitor-device-evidence.js`：
+    - [x] 改为共享工具实现
+    - [x] 支持 `NOTE_CONNECTION_ANDROID_SERIAL` 定向采集
+    - [x] 在设备不可用或序列号不在线时输出明确状态汇总
+- [x] **契约测试覆盖提升**：
+  - [x] 新增 `src/capacitor.device.utils.contract.test.ts`（ADB 解析/状态/候选链路回归）
+  - [x] 更新 `src/mobile.pipeline.test.ts`，强制校验两套脚本都走共享工具层
+  - [x] 更新 `package.json` 迁移测试矩阵，纳入新契约套件
+
+### 当前高优先级状态
+- [x] 移动端真机验收脚本已具备快速失败与可诊断阻塞输出能力。
+- [x] 迁移/CI 已纳入 ADB 解析与脚本接线回归护栏。
+- [ ] 尚未交付移动端与桌面端完全等价的 **build + content** 能力（仍受当前运行时策略边界约束）。
+- [ ] 真机验收清单仍需在线 Android 设备完成人工交互证据闭环。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/capacitor.device.utils.contract.test.ts src/mobile.pipeline.test.ts --runInBand`
+- [x] `npm run verify:capacitor:device` -> 预期阻塞：`Device states: none`
+- [x] `npm run capture:capacitor:evidence` -> 预期阻塞：`Device states: none`
+- [x] `npm run test:migration`（`19` 套件、`95` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`（`19` 项 Rust 测试通过）
+- [x] `npm test`（`22` 套件、`112` 测试通过）
+
+---
+
+# 2026-03-09 v1.5.19 - Fixrisk 高优先级加固（静态资源路径穿越防护 + 全量验证）
+
+## 中文文档
+
+### 目标
+基于 `docs/fixrisk_TODO.md` 收敛一个仍然存在的高优先级鲁棒性缺口：加固 sidecar 静态文件服务路径安全（防止路径穿越边界问题），并通过完整验证门禁证明改动可行且无回归。
+
+### 本轮完成
+- [x] **Sidecar 静态文件安全加固**（`src/server.ts`）：
+  - [x] 新增原始请求路径提取（`getRawRequestPathname`），避免 URL 规范化吞掉穿越语义后再做判断。
+  - [x] 新增路径穿越片段与空字节拒绝，并通过 `resolveFrontendStaticPath` 强制限制在 `FRONTEND_DIR` 根目录内。
+  - [x] 将静态文件读取由回调式改为异步 `stat` + `readFile`，并统一 `403/404/500` 返回行为。
+  - [x] 新增静态资源 Content-Type 映射函数（`getStaticContentType`）。
+- [x] **回归护栏增强**（`src/server.migration.test.ts`）：
+  - [x] 新增原始路径穿越用例：`/../../outside/sensitive.md`。
+  - [x] 新增编码路径穿越用例：`/%2e%2e/%2e%2e/outside/sensitive.md`。
+- [x] **可行性验证已完整执行**：
+  - [x] 迁移测试、构建流程与全量 Jest 回归在本轮改动后全部通过。
+
+### 当前高优先级状态
+- [x] 已完成静态资源路径解析安全收口，杜绝越出前端根目录的文件访问风险。
+- [x] 已确认服务器路径安全改动未破坏现有迁移链路与 CI 测试稳定性。
+- [ ] 尚未交付移动端与桌面端完全等价的 **build + content** 能力（仍受当前运行时策略边界约束）。
+- [ ] 真机验收证据仍需设备侧执行闭环（当前环境无在线 Android 设备）。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/server.migration.test.ts --runInBand`
+- [x] `npm run test:migration`（`18` 套件、`91` 测试通过）
+- [x] `npm run build`
+- [x] `npm run test:tauri`
+- [x] `npm test`（`21` 套件、`108` 测试通过）
+- [ ] `npm run verify:capacitor:device`（当前环境阻塞：无在线 Android 设备）
+- [ ] `npm run capture:capacitor:evidence`（当前环境阻塞：无在线 Android 设备）
+
+---
+
 ## 中文文档
 
 ### 目标
@@ -148,10 +964,10 @@
   - [x] 更新 Godot sidecar 准备脚本，在非 Windows 平台跳过 Windows 专属复制逻辑。
 
 ### 剩余高优先级工作
-- [ ] 完成传输层现代化（将剩余桌面端原始 HTTP/WS 调用迁移到 Tauri 原生命令或 JSON-RPC 适配层）。
-- [ ] 实现跨运行时存储抽象（桌面 sidecar / Tauri commands / Capacitor 文件系统）。
-- [ ] 制定并落地 macOS/Linux 的 Godot sidecar 制品策略（当前 Windows 二进制链路最完整）。
-- [ ] 继续保持发布边界清晰：在能力对齐完成前，Capacitor 原生仍为只读打包模式。
+- [x] 完成传输层现代化（将剩余桌面端原始 HTTP/WS 调用迁移到 Tauri 原生命令或 JSON-RPC 适配层）。（已在 `v1.5.16` 收口）
+- [x] 实现跨运行时存储抽象（桌面 sidecar / Tauri commands / Capacitor 文件系统）。（已在 `v1.5.16` 收口）
+- [x] 制定并落地 macOS/Linux 的 Godot sidecar 制品策略（当前 Windows 二进制链路最完整）。（已在 `v1.5.16` 收口）
+- [x] 继续保持发布边界清晰：在能力对齐完成前，Capacitor 原生仍为只读打包模式。（已在 `v1.5.16` 收口）
 
 ### 本轮验证门禁
 - [x] `npx tsc --pretty false`
@@ -180,7 +996,7 @@
 - [x] 已新增共享的前端 runtime bridge，在 Tauri 桌面链路中同步 sidecar 基础 URL、bridge URL 与认证头。
 - [x] 原生 Capacitor 运行时已明确切换为“只读打包内容模式”，不再假设桌面 sidecar API 可用。
 - [x] Node sidecar 在处理剪贴板 PNG 后会显式执行缓冲区清零。
-- [x] Godot Reader 已加入 SVG 清洗与尺寸钳制，避免 Math/Mermaid 渲染出现超大位图失败。
+- [x] Godot Reader Mermaid 渲染链路已收口为 PNG-only（`pngBase64` 必填）；历史 SVG 清洗逻辑仅保留为诊断辅助，不作为运行时回退。
 
 ### 仍需优先推进的工作
 
@@ -267,7 +1083,7 @@
     - [x] `adb` 是否可用
     - [x] 是否至少有一台在线 Android 设备
 - [x] 新增 npm 命令：
-  - [x] `npm run verify:capacitor:device`
+  - [x] 已提供前置探测命令：`npm run verify:capacitor:device`
 - [x] 重新验证当前 APK 构建链路：
   - [x] `npm run mobile:build:capacitor` -> 2026-03-04 实测通过
 
@@ -640,19 +1456,21 @@
 
 ### P0 - 在宣告“迁移完全收口”前必须完成
 
-- [ ] **将 sidecar 内容 API 的安全边界提升到 Rust 同等级**
-  - [ ] 在 `src/server.ts` 为 `/api/content` 增加 KB 根路径边界校验，对齐 `read_node_content`。
-  - [ ] 新增回归测试覆盖：合法路径、越界路径、Windows/相对路径变体。
+- [x] **将 sidecar 内容 API 的安全边界提升到 Rust 同等级**
+  - [x] 已在 `src/server.ts` 为 `/api/content` 增加 KB 根路径边界校验，对齐 `read_node_content`。
+  - [x] 已新增回归测试覆盖：合法路径、越界路径、Windows/相对路径变体。
 
-- [ ] **在 Tauri 启动竞态下锁定缓存提示与单次加载语义**
-  - [ ] 增加集成层测试覆盖：
-    - [ ] “存在缓存 -> 只出现一次提示”
-    - [ ] “单次点击 -> 只执行一次 restore/build”
-  - [ ] 与 sidecar 去重和前端 reload guard 的联动行为一并验证。
+- [x] **在 Tauri 启动竞态下锁定缓存提示与单次加载语义**
+  - [x] 已补齐集成层契约覆盖：
+    - [x] “存在缓存 -> 只出现一次提示”
+    - [x] “单次点击 -> 只执行一次 restore/build”
+  - [x] 已验证与 sidecar 去重和前端 reload guard 的联动行为。
+  - [x] 历史区块状态已按 `v1.5.3` 的实现结果对齐。
 
-- [ ] **完成 Godot History 一致性契约**
-  - [ ] 确保中心切换事件（双击/手动切换）都能写入 History 时间线。
-  - [ ] 增加中心切换后的 History 自动化断言测试。
+- [x] **完成 Godot History 一致性契约**
+  - [x] 中心切换事件（双击/手动切换）已写入 History 时间线（通过 Godot 记录钩子接线）。
+  - [x] 已具备历史记录钩子自动化契约断言。
+  - [x] 历史区块状态已按 `v1.5.3` 的实现结果对齐。
 
 ### P1 - 移动端/导出能力边界澄清与加固
 
@@ -979,7 +1797,7 @@
 - [x] **PathBridge 诊断增强**
   - [x] 增加带标签连接日志（client id/tag/address + close code/reason），可区分正常重连与真实循环。
 - [x] **Godot WS 兼容性修复**
-  - [x] 将 Godot URL 修正为 `ws://127.0.0.1:9876/?client=godot`，消除 URL 非法导致的重连报错。
+  - [x] 已将 Godot URL 契约稳定为 `ws://127.0.0.1:9876`（移除查询参数，避免 Godot 端兼容性问题）。
 - [x] **Tauri 空闲重连清理**
   - [x] 在 Tauri 模式禁用 `frontend-early` 自动 WebSocket 启动。
 - [x] **语言/菜单幂等保护**
@@ -1034,7 +1852,7 @@
 
 1. **Godot Desktop**（9876 端口）: Vulkan/OpenGL + 3D 彩虹薄膜气泡。
 2. **Web Fallback**: Android/浏览器使用 Canvas/WebGL。
-3. **SVG Fallback**: 小图（<= 500 节点）使用 SVG。
+3. **Godot Mermaid 运行时契约**: PNG-only（`pngBase64` 必填）；SVG 仅用于诊断，不作为运行时回退。
 
 ### 学习模式
 

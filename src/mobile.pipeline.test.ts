@@ -19,6 +19,8 @@ describe('dual mobile pipeline configuration', () => {
   const tauriAndroidRunnerPath = path.join(repoRoot, 'scripts', 'run-tauri-android.js');
   const tauriConfigPath = path.join(repoRoot, 'src-tauri', 'tauri.conf.json');
   const androidManifestPath = path.join(repoRoot, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
+  const verifyCapacitorDeviceScriptPath = path.join(repoRoot, 'scripts', 'verify-capacitor-device-acceptance.js');
+  const captureCapacitorEvidenceScriptPath = path.join(repoRoot, 'scripts', 'capture-capacitor-device-evidence.js');
 
   test('keeps Capacitor and Tauri Android npm scripts together', () => {
     const pkg = readJson<PackageJson>(packageJsonPath);
@@ -71,6 +73,19 @@ describe('dual mobile pipeline configuration', () => {
     expect(deps['@capacitor/cli']).toBeDefined();
     expect(deps['@capacitor/filesystem']).toBeDefined();
     expect(devDeps['@tauri-apps/cli']).toBeDefined();
+  });
+
+  test('keeps capacitor device acceptance scripts aligned with shared ADB diagnostics', () => {
+    const verifyScript = fs.readFileSync(verifyCapacitorDeviceScriptPath, 'utf8');
+    const captureScript = fs.readFileSync(captureCapacitorEvidenceScriptPath, 'utf8');
+
+    expect(verifyScript).toContain("require('./capacitor-device-utils')");
+    expect(verifyScript).toContain('NOTE_CONNECTION_ANDROID_SERIAL');
+    expect(verifyScript).toContain('Device states:');
+
+    expect(captureScript).toContain("require('./capacitor-device-utils')");
+    expect(captureScript).toContain('NOTE_CONNECTION_ANDROID_SERIAL');
+    expect(captureScript).toContain('Device states:');
   });
 
   test('declares Android storage permissions required by filesystem runtime paths', () => {

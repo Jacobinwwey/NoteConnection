@@ -281,6 +281,50 @@ describe('server migration settings routes', () => {
     expect(response.body.folders).toEqual(['financial', 'legal']);
   });
 
+  test('returns runtime diagnostics with wasm parity state and no auth token exposure', async () => {
+    const response = await requestJson(port, 'GET', '/api/runtime-diagnostics');
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        runtime: expect.objectContaining({
+          host: '127.0.0.1',
+          port,
+          bridgePort: expect.any(Number),
+          kbRoot: expect.any(String),
+          frontendDir: expect.any(String),
+          runtimeDataDir: expect.any(String),
+          authRequired: false
+        }),
+        wasmParity: expect.objectContaining({
+          enabled: expect.any(Boolean),
+          hasCachedInstancePromise: expect.any(Boolean),
+          nextRetryAtMs: expect.any(Number),
+          lastExecutionMode: expect.any(String)
+        }),
+        computeModes: expect.objectContaining({
+          layoutEngine: expect.objectContaining({
+            mode: expect.any(String),
+            nodeCount: expect.any(Number),
+            edgeCount: expect.any(Number),
+            durationMs: expect.any(Number),
+            updatedAtMs: expect.any(Number)
+          }),
+          graphMetrics: expect.objectContaining({
+            mode: expect.any(String),
+            nodeCount: expect.any(Number),
+            edgeCount: expect.any(Number),
+            durationMs: expect.any(Number),
+            updatedAtMs: expect.any(Number)
+          })
+        }),
+        pathBridge: expect.any(Object)
+      })
+    );
+    expect(response.body.wasmParity).toHaveProperty('artifactPath');
+    expect(response.body.wasmParity).toHaveProperty('lastLoadError');
+    expect(response.body.runtime.authToken).toBeUndefined();
+  });
+
   test('merges available targets from folders and cached graph artifacts', async () => {
     const response = await requestJson(port, 'GET', '/api/available-targets');
     expect(response.status).toBe(200);
@@ -352,6 +396,26 @@ describe('server migration settings routes', () => {
     expect(response.body).toContain('const graphData');
   });
 
+  test('rejects static traversal attempts with raw parent-segment path', async () => {
+    const response = await requestJson(port, 'GET', '/../../outside/sensitive.md');
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: expect.stringContaining('Invalid static file path')
+      })
+    );
+  });
+
+  test('rejects static traversal attempts with encoded parent-segment path', async () => {
+    const response = await requestJson(port, 'GET', '/%2e%2e/%2e%2e/outside/sensitive.md');
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: expect.stringContaining('Invalid static file path')
+      })
+    );
+  });
+
   test('deduplicates same build request while first build is in-flight', async () => {
     const hold = deferred();
     buildGraphMock.mockImplementationOnce(() => hold.promise);
@@ -376,9 +440,26 @@ describe('server migration settings routes', () => {
     const [firstResponse, secondResponse] = await Promise.all([firstRequest, secondRequest]);
 
     expect(firstResponse.status).toBe(200);
-    expect(firstResponse.body).toEqual(expect.objectContaining({ success: true }));
+    expect(firstResponse.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        computeModes: expect.objectContaining({
+          layoutEngine: expect.any(Object),
+          graphMetrics: expect.any(Object)
+        })
+      })
+    );
     expect(secondResponse.status).toBe(200);
-    expect(secondResponse.body).toEqual(expect.objectContaining({ success: true, deduped: true }));
+    expect(secondResponse.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        deduped: true,
+        computeModes: expect.objectContaining({
+          layoutEngine: expect.any(Object),
+          graphMetrics: expect.any(Object)
+        })
+      })
+    );
   });
 
   test('returns 409 when a different build request arrives during active build', async () => {

@@ -41,6 +41,13 @@ Audit flow:
 3. Remove obsolete items and correct mismatches.
 4. Rebuild as complete English section followed by complete Chinese section.
 
+## 0.1 Rendering Compatibility Constraint (Godot + Mermaid)
+
+- Godot runtime Mermaid consumption is PNG-only for authoritative rendering output.
+- SVG payload is retained only for diagnostics/debug snapshots and must not be used as runtime fallback in Godot.
+- Reason: current Godot SVG handling can fail non-deterministically (text/layout/raster instability across devices).
+- Change-control rule: any future Godot renderer optimization must preserve PNG decode as the primary path (`pngBase64` required); missing PNG is a hard failure.
+
 ---
 
 ## 1. Runtime and Path Contracts
@@ -728,4 +735,3 @@ This section records interface changes added after `v1.4.5`, keeping all previou
 - `npm run tauri:android:build` passed.
 
 ---
-

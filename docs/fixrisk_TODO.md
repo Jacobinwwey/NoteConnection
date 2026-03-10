@@ -1,357 +1,1424 @@
-# 2026-03-09 v1.0.2
+# 2026-03-10 v1.0.17
 
-# END-TO-END HYBRID ARCHITECTURE & PACKAGING AUDIT
-**Date**: March 9, 2026
-**Target**: NoteConnection (Hybrid Node.js + Capacitor + Tauri/pkg Architecture)
-**Auditor**: Lead Systems Architect & Cross-Platform Packaging Specialist
+# BRIDGE HARDENING EXECUTION UPDATE (STRICT ENVELOPE + BACKPRESSURE + CSP/PKG CONTRACTS)
 
----
+## ENGLISH DOCUMENT
 
-## EXECUTIVE SUMMARY
+### Remediation Status (This Slice)
+- [x] Untyped IPC ingress hardened in `src/core/PathBridge.ts` with strict envelope parsing and known-message payload validation.
+- [x] Added inbound frame size gate (`MAX_INBOUND_MESSAGE_BYTES`) and malformed-envelope rejection path.
+- [x] Added bounded outbound backpressure queue with `bufferedAmount` gate and overflow drop logging.
+- [x] Added packaging safety contract `src/pkg.sidecar.contract.test.ts` and migrated it into `npm run test:migration`.
+- [x] Hardened CSP in `src/frontend/index.html` (`object-src`, `base-uri`, `frame-ancestors`, `form-action`).
+- [x] Godot Mermaid runtime constraint is explicit: render success is accepted only when `pngBase64` is present; SVG remains diagnostics-only and is not a runtime fallback path.
+- [ ] Remaining from imported baseline: Base64-heavy transfer optimization and mobile semantic DOM accessibility parity.
 
-**Hybrid Architecture Risk Score: 9.5/10 (CRITICAL FRACTURE DETECTED)**
-The current architecture relies on a **"Phantom Backend"** model for mobile. While the Tauri desktop application successfully spawns a Node.js sidecar (via `pkg`), the Capacitor mobile application (Android/iOS) has **zero access to this runtime**. The frontend code explicitly `fetch()`-es from `http://127.0.0.1:3000` and `ws://127.0.0.1:9876`, which on a mobile device refers to the phone's own loopback interface where *no server is listening*. This guarantees 100% functionality failure for all graph loading, file reading, and heavy computation features on mobile devices. Immediate decoupling of the "Data Layer" from the "Transport Layer" is required.
-
----
-
-## SECTION 1: HYBRID DATA TRANSMISSION CHAIN ANALYSIS
-
-### 1.1 End-to-End Data Flow Map (The "Phantom Sidecar" Problem)
-
-```mermaid
-flowchart TD
-    subgraph Mobile_Device [Mobile Device Android/iOS]
-        App[Capacitor App\nWebView]
-        FS_Native[Native Filesystem]
-        
-        App -- "1. fetch'/api/content'" --> LocalNet[Loopback Interface\n127.0.0.1]
-        LocalNet -.->|Connection Refused| Void[❌ NO SERVER]
-        
-        App -- "2. Native Bridge" --> Plugin[Capacitor Filesystem Plugin]
-        Plugin --> FS_Native
-    end
-    
-    subgraph Desktop_PC [Desktop PC Windows/macOS]
-        Tauri[Tauri App]
-        Sidecar[Pkg Node.js Binary]
-        
-        Tauri -- "spawn" --> Sidecar
-        Tauri -- "fetch'http://localhost:3000'" --> Sidecar
-        Sidecar -- "fs.readFile" --> Disk
-    end
-    
-    style Void fill:#ff0000,stroke:#fff,stroke-width:2px
-    style App fill:#1e1e1e,stroke:#4caf50
-    style Sidecar fill:#003366,stroke:#2196f3
-```
-
-### 1.2 Entry Vectors & Internal Propagation
--   **Ingestion (Desktop):** Works via `src/server.ts` listening on `PORT` (default 3000). Data enters via HTTP requests from the Tauri WebView.
--   **Ingestion (Mobile):** **BROKEN**. The frontend code (`src/frontend/storage_provider.js`) blindly attempts `fetch(url, ...)` regardless of the platform. On mobile, this request hits the device's internal network stack and dies.
--   **Internal Propagation:**
-    -   **PathBridge (WebSocket):** Used for Mermaid rendering and complex path algorithms. Mobile clients cannot access this.
-    -   **Workers:** `src/backend/workers` are spawned by the Node.js process. Since the Node process doesn't exist on mobile, **no graph calculation, layout, or statistical analysis can occur on mobile.**
-
-### 1.3 Packaged Filesystem & Bridge Reality Check
--   **Desktop (Pkg):** The `pkg` configuration includes `dist/src/backend/workers/**/*.js` as scripts. This allows them to be snapshotted. However, `server.ts` (implied `fs.promises.readdir(KB_ROOT)`) accesses the *host* filesystem. This is correct for a desktop tool but incompatible with mobile sandboxes.
--   **Mobile (Capacitor):** `capacitor.config.ts` sets `webDir: 'dist/src/frontend'`. Only these static assets are bundled. The `KB_ROOT` (user's notes) is NOT bundled. The mobile app has no way to access the user's notes unless it requests permissions (missing in AndroidManifest) and uses the Capacitor Filesystem plugin (missing in code logic).
-
-### 1.4 Security & Privacy Deep Dive (STRIDE)
--   **Spoofing:** The `PathBridge` WebSocket (port 9876) accepts connections from any local client. On desktop, a malicious local process could connect and execute commands or steal graph data.
--   **Denial of Service:** The `readJsonBody` function in `server.ts` buffers entire request bodies into RAM (`chunks.push(chunk)`). A 500MB upload will crash the process (OOM), taking down the entire sidecar.
-
----
-
-## SECTION 2: MULTI-PLATFORM DISTRIBUTION & PACKAGING STRATEGY — PKG LAYER
-
-### 2.1 Pkg Configuration Fidelity
-**Current Config:**
-```json
-"pkg": {
-  "scripts": ["dist/src/backend/workers/**/*.js"],
-  "assets": ["dist/src/**/*", "data.js", "graph_data.json"]
-}
-```
-**Audit Findings:**
-1.  **Target Mismatch:** `package.json` script uses `node18-win-x64`. `migration-gates.yml` uses Node 20. The binary is being built with an End-of-Life Node version (Node 18 EOL: April 2025). **Action:** Must upgrade to Node 22 (LTS).
-2.  **Compression:** Missing `--compress Brotli`. Binaries are ~40% larger than necessary.
-3.  **Cross-Platform:** The build script `npm run build:sidecar` in `package.json` **only builds for Windows** (`build-sidecar.js` likely defaults to `.exe`). There is no provision for macOS (`-macos-x64`, `-macos-arm64`) or Linux targets in the main build pipeline.
-
-### 2.2 Static Analysis Compliance
--   **Dynamic Workers:** `src/server.ts` likely spawns workers using paths relative to `__dirname`. Inside a `pkg` binary, `__dirname` is `/snapshot/NoteConnection/dist/src`. `Worker` threads in Node often fail to resolve snapshot paths unless specific `pkg` patches are applied or the worker code is externalized.
-
----
-
-## SECTION 3: CAPACITOR LAYER + HYBRID INTEGRATION AUDIT
-
-### 3.1 Capacitor Configuration Fidelity
--   **WebDir:** `dist/src/frontend`. This is correct for the UI.
--   **Plugins:** Uses `@capacitor/android`, `@capacitor/core`. **MISSING:** `@capacitor/filesystem` is NOT in `dependencies`, only implied by the architecture needs.
--   **Android Manifest:** `android.permission.INTERNET` is present. **CRITICAL MISSING:** `READ_EXTERNAL_STORAGE` / `MANAGE_EXTERNAL_STORAGE` (for Android 11+). The app cannot read any Markdown files even if the code was fixed.
-
-### 3.2 Platform-Specific Compatibility Matrix
-
-| Feature | Windows (Tauri) | macOS (Tauri) | iOS (Capacitor) | Android (Capacitor) |
-| :--- | :--- | :--- | :--- | :--- |
-| **UI Rendering** | ✅ Webview2 | ⚠️ Untested | ✅ WKWebView | ✅ WebView |
-| **API Access** | ✅ Localhost:3000 | ❌ Binary Missing | ❌ **FAIL** | ❌ **FAIL** |
-| **Graph Calc** | ✅ Worker Threads | ❌ Binary Missing | ❌ **FAIL** | ❌ **FAIL** |
-| **File Access** | ✅ Node `fs` | ❌ Binary Missing | ❌ **FAIL** | ❌ **FAIL** |
-| **Mermaid** | ✅ PathBridge | ❌ Binary Missing | ❌ **FAIL** | ❌ **FAIL** |
-
----
-
-## CRITICAL ISSUES TABLE
-
-| ID | Severity | Location | Issue Description | Reproduction CLI | Impact |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **C-01** | **CRITICAL** | `src/frontend/*.js` | **Phantom Backend:** Frontend hardcodes `fetch` to localhost ports. Mobile apps cannot reach these. | `npx cap run android` -> Open App -> Inspect Logs | **Total App Failure on Mobile** |
-| **C-02** | **CRITICAL** | `AndroidManifest.xml` | **Missing Permissions:** No storage permissions declared. App cannot read notes. | `npx cap run android` -> Attempt to load folder | **Crash / Permission Denied** |
-| **H-01** | **HIGH** | `package.json` | **EOL Node Target:** Building with Node 18 (EOL). | `npm run build:sidecar` | Security vulnerabilities, Perf loss |
-| **H-02** | **HIGH** | `package.json` | **Single Platform Build:** `build:sidecar` only builds Windows `.exe`. | Build on macOS | Sidecar fails to launch |
-| **M-01** | **MEDIUM** | `src/server.ts` | **Memory Unsafe:** `readJsonBody` buffers unbounded data to RAM. | Upload large file | OOM Crash |
-
----
-
-## RECOMMENDED REFACTORING PLAN
-
-### Phase 1: The "Dual-Mode" Data Adapter (IMMEDIATE)
-You must abstract the API layer. The frontend cannot just `fetch()`. It must call an Adapter.
-
-**`src/frontend/adapter/DataAdapter.ts`:**
-```typescript
-import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory } from '@capacitor/filesystem';
-
-export const DataAdapter = {
-  async getContent(path: string) {
-    if (Capacitor.isNativePlatform()) {
-      // Mobile: Use Native Bridge
-      const file = await Filesystem.readFile({
-        path: path,
-        directory: Directory.Documents,
-        encoding: 'utf8'
-      });
-      return file.data;
-    } else {
-      // Desktop: Use Node Sidecar
-      const res = await fetch(`/api/content?path=${encodeURIComponent(path)}`);
-      return res.json();
-    }
-  }
-  // Mobile graph calculation must use WebAssembly or JS fallback
-}
-```
-
-### Phase 2: Mobile Calculation Strategy
-Since mobile cannot spawn Node workers:
-1.  **Option A (Hard):** Port `src/backend/workers` logic to run in a Web Worker (browser thread) inside the WebView.
-2.  **Option B (Easy):** Disable graph calculation on mobile and only allow "viewing" pre-computed graphs generated on desktop.
-
-### Phase 3: Build Pipeline Fixes
-**Command:** `npm run build:modern-sidecar`
-```bash
-pkg dist/src/server.js --target node22-win-x64,node22-macos-arm64,node22-linux-x64 --compress Brotli --no-bytecode --out-path src-tauri/bin/
-```
-
----
-
-## BEST PRACTICES COMPLIANCE CHECKLIST
-
-| Standard | Status | Remediation Command |
-| :--- | :--- | :--- |
-| **Data Layer Abstraction** | ❌ | Implement `DataAdapter` to switch between `fetch` and `Capacitor.Plugins`. |
-| **Mobile Runtime** | ❌ | Port backend logic to Web Workers or WASM for mobile support. |
-| **Node Version** | ❌ | Update `pkg` targets to `node22`. |
-| **Storage Permissions** | ❌ | Add `<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>` |
-| **Brotli Compression** | ❌ | Add `--compress Brotli` to `pkg` args. |
-| **IPC Security** | ⚠️ | Add shared secret token verification to `PathBridge` WebSocket. |
-
----
-
-## FUTURE-PROOFING RECOMMENDATIONS
-
-1.  **WASM Core:** Move the heavy graph algorithms (Betweenness Centrality, Layout) into Rust and compile to WASM. This allows the exact same binary logic to run in the Node Sidecar (fast) and the Mobile WebView (portable).
-2.  **Node.js SEA:** Prepare to migrate from `@yao-pkg/pkg` to **Node.js Single Executable Applications (SEA)** as `pkg` maintenance is community-driven and may lag behind Node versions.
-3.  **Capacitor 8 Migration:** Ensure all plugins are updated to v8 equivalents to support Android 15's edge-to-edge enforcement.
+### Verification Snapshot (2026-03-10)
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/pkg.sidecar.contract.test.ts --runInBand`
+- [x] `npm run test:migration` (**28 suites, 135 tests passed**)
+- [x] `npm test` (**31 suites, 152 tests passed**)
+- [x] `npm run build`
 
 ---
 
 ## 中文文档
 
-# 2026-03-09 v1.0.2
+### 本轮整改状态
+- [x] `src/core/PathBridge.ts` 已完成 IPC 入站消息包强约束校验（严格消息包解析 + 已知消息负载结构校验）。
+- [x] 已新增入站消息大小门禁（`MAX_INBOUND_MESSAGE_BYTES`）与异常消息拒绝路径。
+- [x] 已新增有界出站背压队列，包含 `bufferedAmount` 门控与溢出丢弃日志。
+- [x] 已新增打包稳健性契约 `src/pkg.sidecar.contract.test.ts`，并纳入 `npm run test:migration`。
+- [x] 已强化 `src/frontend/index.html` 的 CSP（`object-src`、`base-uri`、`frame-ancestors`、`form-action`）。
+- [x] Godot Mermaid 运行时约束已显式化：仅在 `pngBase64` 存在时判定成功，SVG 仅用于诊断，不作为运行时回退链路。
+- [ ] 导入基线中的剩余未完成项：Base64 重负载传输优化与移动端语义 DOM 可访问性等价。
 
-# 端到端混合架构与打包审计
-**审计日期**: 2026年3月9日
-**审计目标**: NoteConnection (Node.js + Capacitor + Tauri/pkg 混合架构)
-**审计人**: 首席系统架构师与跨平台打包专家
-
----
-
-## 执行摘要
-
-**混合架构风险评分：9.5/10（检测到严重断层）**
-当前的架构在移动端依赖于**“幽灵后端”**模式。虽然 Tauri 桌面应用成功启动了 Node.js sidecar（通过 `pkg`），但 Capacitor 移动应用（Android/iOS）**完全无法访问此运行时**。前端代码明确地向 `http://127.0.0.1:3000` 和 `ws://127.0.0.1:9876` 发起 `fetch()` 请求，这在移动设备上指向的是手机自身的回环接口，而那里**没有任何服务器在监听**。这确保了移动设备上的所有图谱加载、文件读取和繁重计算功能 100% 会失败。必须立即将“数据层”与“传输层”解耦。
-
----
-
-## 第一部分：混合数据传输链路微观审查
-
-### 1.1 端到端数据流图（“幽灵 Sidecar”问题）
-
-```mermaid
-flowchart TD
-    subgraph Mobile_Device [移动设备 Android/iOS]
-        App[Capacitor 应用\nWebView]
-        FS_Native[原生文件系统]
-        
-        App -- "1. fetch'/api/content'" --> LocalNet[回环接口\n127.0.0.1]
-        LocalNet -.->|连接被拒绝| Void[❌ 无服务器]
-        
-        App -- "2. 原生桥接" --> Plugin[Capacitor Filesystem 插件]
-        Plugin --> FS_Native
-    end
-    
-    subgraph Desktop_PC [桌面 PC Windows/macOS]
-        Tauri[Tauri 应用]
-        Sidecar[Pkg Node.js 二进制文件]
-        
-        Tauri -- "spawn" --> Sidecar
-        Tauri -- "fetch'http://localhost:3000'" --> Sidecar
-        Sidecar -- "fs.readFile" --> Disk
-    end
-    
-    style Void fill:#ff0000,stroke:#fff,stroke-width:2px
-    style App fill:#1e1e1e,stroke:#4caf50
-    style Sidecar fill:#003366,stroke:#2196f3
-```
-
-### 1.2 入口向量与内部传播
--   **摄入 (桌面端):** 通过 `src/server.ts` 监听 `PORT` (默认 3000) 工作。数据通过 Tauri WebView 的 HTTP 请求进入。
--   **摄入 (移动端):** **已损坏**。前端代码 (`src/frontend/storage_provider.js`) 不分平台地盲目尝试 `fetch(url, ...)`。在移动端，此请求会撞上设备的内部网络栈并消亡。
--   **内部传播:**
-    -   **PathBridge (WebSocket):** 用于 Mermaid 渲染和复杂路径算法。移动客户端无法访问此服务。
-    -   **Workers:** `src/backend/workers` 由 Node.js 进程生成。由于移动端不存在 Node 进程，**移动端无法进行任何图谱计算、布局或统计分析。**
-
-### 1.3 打包文件系统与桥接现实检查
--   **桌面端 (Pkg):** `pkg` 配置包含 `dist/src/backend/workers/**/*.js` 作为脚本。这允许它们被快照。然而，`server.ts` 中的 `fs.promises.readdir(KB_ROOT)` 访问的是 *宿主* 文件系统。这对于桌面工具是正确的，但与移动沙箱不兼容。
--   **移动端 (Capacitor):** `capacitor.config.ts` 设置 `webDir: 'dist/src/frontend'`。仅打包了这些静态资源。`KB_ROOT`（用户的笔记）**未被打包**。移动应用无法访问用户的笔记，除非它请求权限（AndroidManifest 中缺失）并使用 Capacitor Filesystem 插件（代码逻辑中缺失）。
-
-### 1.4 安全与隐私深度剖析（STRIDE）
--   **欺骗 (Spoofing):** `PathBridge` WebSocket (端口 9876) 接受来自任何本地客户端的连接。在桌面上，恶意本地进程可以连接并执行命令或窃取图谱数据。
--   **拒绝服务 (DoS):** `server.ts` 中的 `readJsonBody` 函数将整个请求体缓冲到 RAM (`chunks.push(chunk)`)。500MB 的上传将导致进程崩溃 (OOM)，从而拖垮整个 sidecar。
+### 验证快照（2026-03-10）
+- [x] `npx jest src/pathbridge.handshake.contract.test.ts src/pkg.sidecar.contract.test.ts --runInBand`
+- [x] `npm run test:migration`（**28 suites, 135 tests passed**）
+- [x] `npm test`（**31 suites, 152 tests passed**）
+- [x] `npm run build`
 
 ---
 
-## 第二部分：多平台分发与打包策略 — PKG 层
+# 2026-03-10 v1.0.16
 
-### 2.1 Pkg 配置保真度
-**当前配置:**
-```json
-"pkg": {
-  "scripts": ["dist/src/backend/workers/**/*.js"],
-  "assets": ["dist/src/**/*", "data.js", "graph_data.json"]
-}
-```
-**审计发现:**
-1.  **目标不匹配:** `package.json` 脚本使用 `node18-win-x64`。`migration-gates.yml` 使用 Node 20。二进制文件正在使用已终止生命周期的 Node 版本构建（Node 18 EOL：2025年4月）。**行动：** 必须升级到 Node 22 (LTS)。
-2.  **压缩:** 缺失 `--compress Brotli`。二进制文件比必要的大约 40%。
-3.  **跨平台:** `package.json` 中的构建脚本 `npm run build:sidecar` **仅构建 Windows 版本**（`build-sidecar.js` 可能默认为 `.exe`）。主构建流程中没有为 macOS (`-macos-x64`, `-macos-arm64`) 或 Linux 目标提供预案。
+# HYBRID ARCHITECTURE AUDIT BASELINE IMPORT (MERGED FROM `fixrisk_todo.md`)
+**Imported Date**: March 10, 2026
+**Source Snapshot Date**: March 9, 2026
+**Scope**: Node.js (v22 LTS) + Capacitor (v8.2.0) + `@yao-pkg/pkg` (v6.14.1)
 
-### 2.2 静态分析合规性
--   **动态 Workers:** `src/server.ts` 可能使用相对于 `__dirname` 的路径生成 worker。在 `pkg` 二进制文件中，`__dirname` 是 `/snapshot/NoteConnection/dist/src`。Node 中的 `Worker` 线程通常无法解析快照路径，除非应用特定的 `pkg` 补丁或将 worker 代码外部化。
+> Historical note: This section is an imported baseline snapshot from a stricter pre-remediation audit. Current real project status is tracked in newer sections below.
 
 ---
 
-## 第三部分：Capacitor 层与混合集成审计
+## ENGLISH DOCUMENT
 
-### 3.1 Capacitor 配置保真度
--   **WebDir:** `dist/src/frontend`。这对 UI 是正确的。
--   **插件:** 使用 `@capacitor/android`, `@capacitor/core`。**缺失:** `@capacitor/filesystem` 不在 `dependencies` 中，仅由架构需求暗示。
--   **Android 清单:** 存在 `android.permission.INTERNET`。**严重缺失:** `READ_EXTERNAL_STORAGE` / `MANAGE_EXTERNAL_STORAGE`（针对 Android 11+）。即使代码已修复，应用也无法读取任何 Markdown 文件。
+### Executive Summary (Imported Baseline)
 
-### 3.2 平台特定兼容性矩阵
+- Baseline verdict: **Architecturally fragile** (historical snapshot).
+- Imported risk score: **8.5 / 10** (at snapshot time).
+- Core concern: split-brain risk between packaged Node runtime and native/mobile bridge boundaries.
 
-| 功能          | Windows (Tauri)  | macOS (Tauri) | iOS (Capacitor) | Android (Capacitor) |
-| :---------- | :--------------- | :------------ | :-------------- | :------------------ |
-| **UI 渲染**   | ✅ Webview2       | ⚠️ 未测试        | ✅ WKWebView     | ✅ WebView           |
-| **API 访问**  | ✅ Localhost:3000 | ❌ 二进制缺失       | ❌ **失败**        | ❌ **失败**            |
-| **图谱计算**    | ✅ Worker 线程      | ❌ 二进制缺失       | ❌ **失败**        | ❌ **失败**            |
-| **文件访问**    | ✅ Node `fs`      | ❌ 二进制缺失       | ❌ **失败**        | ❌ **失败**            |
-| **Mermaid** | ✅ PathBridge     | ❌ 二进制缺失       | ❌ **失败**        | ❌ **失败**            |
+### Baseline Risk Matrix (Historical)
 
----
+| Dimension | Risk (1-10) | Primary Concern |
+| :--- | :---: | :--- |
+| Data Transmission | 8 | Untyped JSON payloads and missing schema validation across bridge boundaries |
+| Pkg Distribution | 7 | Snapshot filesystem path/asset mapping failures |
+| Capacitor Integration | 6 | Default WebView hardening and native scheme handling gaps |
+| Code Quality | 9 | Loose IPC typing and magic-string dependencies |
+| Performance | 7 | Main-thread blocking and WebView memory pressure |
+| Testing | 10 | Missing packaged-binary + bridge E2E coverage |
+| Accessibility | 5 | Limited non-canvas semantic accessibility path |
+| Security | 8 | CSP/supply-chain/signing hardening gaps |
 
-## 关键问题表
+### Critical Findings Imported Into Fix TODO
 
-| ID       | 严重程度   | 位置                    | 问题描述                                                 | 复现 CLI                                | 影响            |
-| :------- | :----- | :-------------------- | :--------------------------------------------------- | :------------------------------------ | :------------ |
-| **C-01** | **严重** | `src/frontend/*.js`   | **幽灵后端:** 前端硬编码 `fetch` 到 localhost 端口。移动应用无法访问这些端口。 | `npx cap run android` -> 打开应用 -> 检查日志 | **移动端应用完全失效** |
-| **C-02** | **严重** | `AndroidManifest.xml` | **权限缺失:** 未声明存储权限。应用无法读取笔记。                          | `npx cap run android` -> 尝试加载文件夹      | **崩溃 / 权限拒绝** |
-| **H-01** | **高**  | `package.json`        | **EOL Node 目标:** 使用 Node 18 (EOL) 构建。                | `npm run build:sidecar`               | 安全漏洞，性能损失     |
-| **H-02** | **高**  | `package.json`        | **单平台构建:** `build:sidecar` 仅构建 Windows `.exe`。       | 在 macOS 上构建                           | Sidecar 启动失败  |
-| **M-01** | **中**  | `src/server.ts`       | **内存不安全:** `readJsonBody` 将无限制的数据缓冲到 RAM。            | 上传大文件                                 | OOM 崩溃        |
+| Severity | Finding | Impact | Required Action |
+| :--- | :--- | :--- | :--- |
+| CRITICAL | Untyped IPC payload contracts | Runtime crashes when bridge schema drifts | Enforce typed schemas (`zod` or equivalent) on all bridge messages |
+| HIGH | Base64-heavy transfer path | Memory overhead and jank for large payloads | Prefer stream/file transfer for large assets |
+| HIGH | Missing bridge backpressure | UI freeze risk under high-rate sidecar events | Introduce ACK/NACK queue with bounded inflight messages |
+| HIGH | pkg dynamic asset/path assumptions | Runtime file failures in `/snapshot` context | Enforce explicit pkg asset map + runtime path resolver |
+| HIGH | Packaged E2E test gap | No confidence in binary+bridge behavior | Add CI matrix for packaged runtime integration tests |
+| MEDIUM | Mobile accessibility path | Screen-reader parity incomplete | Add semantic DOM shadow for canvas/graph state |
+| HIGH | Security hardening gaps | Increased tampering/exposure risk | Add CSP, dependency audit gate, and signing verification |
 
----
+### Imported Remediation Phases
 
-## 推荐重构计划
+1. Stabilization: strict bridge typing + pkg asset hardening.
+2. Performance: serialization optimization + memory profiling.
+3. Security: CSP/audit/signing + sidecar threat-model closure.
 
-### 阶段 1：“双模”数据适配器（立即执行）
-您必须抽象 API 层。前端不能直接 `fetch()`。它必须调用适配器。
+### Imported Evidence Commands
 
-**`src/frontend/adapter/DataAdapter.ts`:**
-```typescript
-import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory } from '@capacitor/filesystem';
+```powershell
+# Dependency & security baseline
+npm audit --audit-level=high --json > audit_report.json
 
-export const DataAdapter = {
-  async getContent(path: string) {
-    if (Capacitor.isNativePlatform()) {
-      // 移动端：使用原生桥接
-      const file = await Filesystem.readFile({
-        path: path,
-        directory: Directory.Documents,
-        encoding: 'utf8'
-      });
-      return file.data;
-    } else {
-      // 桌面端：使用 Node Sidecar
-      const res = await fetch(`/api/content?path=${encodeURIComponent(path)}`);
-      return res.json();
-    }
-  }
-  // 移动端图谱计算需使用 WebAssembly 或 JS 回退实现
-}
-```
+# Capacitor consistency
+npx cap doctor
 
-### 阶段 2：移动端计算策略
-由于移动端无法生成 Node worker：
-1.  **选项 A (困难):** 将 `src/backend/workers` 逻辑移植到 WebView 内的 Web Worker（浏览器线程）中运行。
-2.  **选项 B (简单):** 在移动端禁用图谱计算，仅允许“查看”在桌面上预先计算好的图谱。
+# Pkg debug build
+npx @yao-pkg/pkg . --debug --targets node22-win-x64 --output dist/debug-cli
 
-### 阶段 3：构建流水线修复
-**命令:** `npm run build:modern-sidecar`
-```bash
-pkg dist/src/server.js --target node22-win-x64,node22-macos-arm64,node22-linux-x64 --compress Brotli --no-bytecode --out-path src-tauri/bin/
+# Lint strict
+npx eslint src --max-warnings=0
+
+# Quick secret-string scan example
+Get-Content dist/debug-cli.exe | Select-String "SECRET_KEY"
 ```
 
 ---
 
-## 最佳实践合规检查表
+## 中文文档
 
-| 标准            | 状态  | 修复命令                                                                            |
-| :------------ | :-- | :------------------------------------------------------------------------------ |
-| **数据层抽象**     | ❌   | 实现 `DataAdapter` 以在 `fetch` 和 `Capacitor.Plugins` 之间切换。                         |
-| **移动端运行时**    | ❌   | 将后端逻辑移植到 Web Workers 或 WASM 以支持移动端。                                             |
-| **Node 版本**   | ❌   | 更新 `pkg` 目标为 `node22`。                                                          |
-| **存储权限**      | ❌   | 添加 `<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>` |
-| **Brotli 压缩** | ❌   | 向 `pkg` 参数添加 `--compress Brotli`。                                               |
-| **IPC 安全**    | ⚠️  | 向 `PathBridge` WebSocket 添加共享密钥令牌验证。                                            |
+### 执行摘要（导入基线）
+
+- 基线结论：**架构脆弱**（历史快照）。
+- 导入风险分：**8.5 / 10**（快照时）。
+- 核心问题：打包后的 Node 运行时与原生/移动桥接边界存在“分裂”风险。
+
+### 基线风险矩阵（历史）
+
+| 维度 | 风险分 (1-10) | 主要问题 |
+| :--- | :---: | :--- |
+| 数据传输 | 8 | 桥接链路 JSON 负载缺少强类型与模式校验 |
+| pkg 分发 | 7 | snapshot 文件系统路径/资产映射失败风险 |
+| Capacitor 集成 | 6 | WebView 默认安全配置与 scheme 处理不足 |
+| 代码质量 | 9 | IPC 弱类型与魔法字符串依赖 |
+| 性能 | 7 | 主线程阻塞与 WebView 内存压力 |
+| 测试 | 10 | 缺少“打包二进制 + 桥接”E2E 覆盖 |
+| 可访问性 | 5 | 画布渲染缺少语义替代路径 |
+| 安全 | 8 | CSP/供应链/签名加固不足 |
+
+### 已并入 Fix TODO 的关键问题
+
+| 严重度 | 问题 | 影响 | 必要动作 |
+| :--- | :--- | :--- | :--- |
+| 严重 | IPC 负载契约无强类型 | 桥接协议漂移时易崩溃 | 对全部桥接消息引入强类型 schema（如 `zod`） |
+| 高 | Base64 大负载传输 | 大文件传输时内存放大与卡顿 | 大文件优先流式/文件通道传输 |
+| 高 | 缺少消息背压机制 | sidecar 高频推送导致 UI 冻结 | 引入 ACK/NACK 队列并限制并发消息 |
+| 高 | pkg 动态路径假设 | `/snapshot` 环境下运行时读文件失败 | 强制显式 pkg 资产映射 + 运行时路径解析器 |
+| 高 | 打包态 E2E 缺口 | 无法验证真实发布形态稳定性 | 在 CI 增加打包态跨平台集成测试 |
+| 中 | 移动端可访问性不足 | 屏幕阅读器体验不完整 | 为画布/图谱补充语义 DOM 映射 |
+| 高 | 安全加固缺口 | 篡改与泄露风险升高 | 补齐 CSP、依赖审计门禁与签名校验 |
+
+### 导入整改阶段
+
+1. 稳定性阶段：桥接强类型化 + pkg 资产加固。
+2. 性能阶段：序列化优化 + 内存剖析。
+3. 安全阶段：CSP/审计/签名 + sidecar 威胁模型闭环。
+
+### 导入证据命令
+
+```powershell
+# 依赖与安全基线
+npm audit --audit-level=high --json > audit_report.json
+
+# Capacitor 一致性检查
+npx cap doctor
+
+# pkg 调试构建
+npx @yao-pkg/pkg . --debug --targets node22-win-x64 --output dist/debug-cli
+
+# 严格 Lint
+npx eslint src --max-warnings=0
+
+# 二进制敏感串快速扫描示例
+Get-Content dist/debug-cli.exe | Select-String "SECRET_KEY"
+```
+
+---
+# 2026-03-10 v1.0.15
+
+# END-TO-END HYBRID ARCHITECTURE & PACKAGING AUDIT (WASM PERFORMANCE REGRESSION GUARDS ENFORCED)
+**Date**: March 10, 2026
+**Target**: NoteConnection (Hybrid Node.js + Capacitor + Tauri/pkg Architecture)
 
 ---
 
-## 未来演进建议
+## ENGLISH DOCUMENT
 
-1.  **WASM 核心:** 将繁重的图谱算法（介数中心性、布局）迁移到 Rust 并编译为 WASM。这允许相同的二进制逻辑在 Node Sidecar（快速）和移动 WebView（便携）中运行。
-2.  **Node.js SEA:** 准备从 `@yao-pkg/pkg` 迁移到 **Node.js 单可执行应用 (SEA)**，因为 `pkg` 的维护是社区驱动的，可能会滞后于 Node 版本。
-3.  **Capacitor 8 迁移:** 确保所有插件都更新到 v8 等效版本，以支持 Android 15 的边到边强制执行。
+### Executive Summary
+
+**Hybrid Architecture Risk Score: 1.6/10 (CRITICAL BREAKPOINTS CLOSED, STRICT PERF REGRESSION BARRIER ADDED)**
+
+As of **2026-03-10**, wasm parity gating now enforces both activation and performance quality:
+- Added a benchmark performance guard model for p95 regression checks.
+- Added strict benchmark threshold args and report-level guard outputs.
+- Updated strict wasm gate scripts so CI fails when candidate wasm p95 regresses beyond configured limits.
+- Added contract coverage for performance guard logic.
+
+Current runtime/gate state:
+- Strict verify remains green with provisioned artifact and required exports.
+- Strict performance benchmark gate remains green with candidate `wasm-adapter` mode.
+- Full migration/build/Tauri/full-Jest revalidation remains green.
+
+Remaining risk concentration:
+- Production-scale threshold tuning and drift calibration as workloads evolve.
+- Android real-device acceptance evidence remains environment-dependent.
+
+---
+
+### Critical Issues Table
+
+| ID | Severity (Current) | Location | Current Status (2026-03-10) | Verification Evidence | Residual Risk |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **LOW (Managed)** | `src/frontend/runtime_bridge.js`, `src/frontend/storage_provider.js`, `src/frontend/source_manager.js`, `src/frontend/path_app.js`, `src/core/PathBridge.ts`, `src/backend/algorithms/WasmParityRuntime.ts`, `src/backend/algorithms/LayoutEngine.ts`, `src/backend/GraphMetrics.ts`, `src/backend/algorithms/WasmParityBenchmark.ts`, `src/backend/algorithms/WasmParityBenchmarkGuards.ts`, `src/backend/algorithms/WasmParityArtifactProbe.ts`, `src/backend/wasm/Cargo.toml`, `src/backend/wasm/src/lib.rs`, `src/backend/wasm/noteconnection_compute.wasm`, `scripts/benchmark-wasm-parity.js`, `scripts/verify-wasm-parity.js`, `scripts/build-wasm-parity-artifact.js`, `scripts/sync-wasm-parity-artifact.js`, `src/server.ts`, `src/server.migration.test.ts`, `src/wasm.parity.output.equivalence.contract.test.ts`, `src/wasm.parity.benchmark.contract.test.ts`, `src/wasm.parity.benchmark.guards.contract.test.ts`, `src/wasm.parity.artifact.probe.contract.test.ts`, `src/wasm.parity.artifact.provisioning.contract.test.ts`, `package.json`, `.github/workflows/migration-gates.yml` | Parity runtime risk is now managed: artifact exists, strict adapter activation is enforced, and strict p95 regression guards are enforced in gate scripts/CI. | `npm run verify:wasm:parity:strict`, `npm run benchmark:wasm:parity:strict:perf`, `npm run test:wasm:parity:gates`, `src/wasm.parity.benchmark.guards.contract.test.ts`, `tmp/wasm-parity-benchmark/latest.json`, `src/runtime.transport.adapter.contract.test.ts`, `src/wasm.parity.runtime.contract.test.ts`, `src/wasm.parity.runtime.functional.test.ts`, `src/wasm.parity.output.equivalence.contract.test.ts`, `src/server.migration.test.ts` | Remaining risk is threshold calibration for broader workload envelopes and longitudinal perf drift, not missing parity safeguards. |
+| **C-02** | **LOW (Resolved)** | `android/app/src/main/AndroidManifest.xml`, `package.json` | Storage-permission baseline remains implemented and verified. | `src/mobile.pipeline.test.ts`, manifest checks for `READ_EXTERNAL_STORAGE` + `READ_MEDIA_*` | Runtime still depends on user granting permissions on-device. |
+| **H-01** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Node EOL target remains removed; Node 22 + Brotli + `--no-bytecode` remains active. | `scripts/build-sidecar.js` target map (`node22-*`), `npm run build:sidecar` | Future maintenance risk remains tied to `pkg` ecosystem cadence. |
+| **H-02** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Cross-platform sidecar strategy remains implemented. | `npm run build:sidecar`, `npm run build:sidecar:all`, sidecar validation scripts | Runtime execution still must be validated on each target OS in CI/release stages. |
+| **M-01** | **LOW (Resolved)** | `src/server.ts` | Request-body memory hardening remains implemented and contract-covered. | `src/server.migration.test.ts` (oversize/invalid-json/content-type contracts) | Very large concurrent uploads can still increase disk I/O pressure by design. |
+
+---
+
+### Best Practices Compliance Checklist
+
+| Standard | Status | Current Evidence | Remaining Work |
+| :--- | :--- | :--- | :--- |
+| **Data Layer Abstraction** | ✅ | Runtime capability split remains active across source/storage paths; contracts remain green. | Keep adapter contracts stable while parity evolves. |
+| **Mobile Runtime** | ✅ (Core Parity + Perf Guardrails Active) | Provisioned wasm artifact, strict adapter activation checks, and strict p95 regression gates are active in scripts and CI. | Continue threshold calibration for large workload classes and multi-host variability. |
+| **Node Version** | ✅ | `scripts/build-sidecar.js` still targets `node22-*`. | Keep future Node LTS migration on roadmap. |
+| **Storage Permissions** | ✅ | `AndroidManifest.xml` includes `READ_EXTERNAL_STORAGE` and `READ_MEDIA_*`; dependency includes `@capacitor/filesystem`. | Device-level permission denial handling must stay regression-tested. |
+| **Brotli Compression** | ✅ | Sidecar build args include `--compress Brotli` and `--no-bytecode`. | Monitor binary size drift in release gates. |
+| **IPC Security** | ✅ | PathBridge enforces token-aware client authorization, unauthorized timeout, and authorized-only broadcast fan-out. | Continue threat-model review for local desktop process attack surface. |
+
+---
+
+### Verification Snapshot (2026-03-10)
+
+- `npm run test:migration` passed: **27 suites, 128 tests**.
+- `npm run test:wasm:parity:gates` passed (strict verify + strict perf benchmark guards).
+- `npm run build` passed.
+- `npm run test:tauri` passed: **19 Rust/Tauri tests**.
+- `npm test` passed: **30 suites, 145 tests**.
+
+---
+
+## 中文文档
+
+### 执行摘要
+
+**混合架构风险评分：1.6/10（关键断点持续关闭，严格性能回归屏障已补齐）**
+
+截至 **2026-03-10**，wasm parity 门禁已从“仅验证激活”升级为“激活 + 性能质量”双重强制：
+- 新增基准性能门禁模型，支持 p95 回归校验。
+- 基准脚本新增严格阈值参数，并在报告中输出门禁结果。
+- 严格 wasm 门禁脚本已接入性能阈值，CI 在性能退化时会直接失败。
+- 新增性能门禁契约测试，避免门禁逻辑回归。
+
+当前运行态/门禁态：
+- 严格探针持续通过（工件与导出完整）。
+- 严格性能基准门禁持续通过，candidate 保持 `wasm-adapter`。
+- migration/build/Tauri/全量 Jest 复验持续全绿。
+
+剩余风险重心：
+- 生产规模阈值校准与长期性能漂移治理。
+- Android 真机验收证据仍依赖在线设备环境。
+
+---
+
+### 关键问题表
+
+| ID | 当前严重程度 | 位置 | 当前状态（2026-03-10） | 验证证据 | 剩余风险 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **低（已进入可管理态）** | `src/frontend/runtime_bridge.js`、`src/frontend/storage_provider.js`、`src/frontend/source_manager.js`、`src/frontend/path_app.js`、`src/core/PathBridge.ts`、`src/backend/algorithms/WasmParityRuntime.ts`、`src/backend/algorithms/LayoutEngine.ts`、`src/backend/GraphMetrics.ts`、`src/backend/algorithms/WasmParityBenchmark.ts`、`src/backend/algorithms/WasmParityBenchmarkGuards.ts`、`src/backend/algorithms/WasmParityArtifactProbe.ts`、`src/backend/wasm/Cargo.toml`、`src/backend/wasm/src/lib.rs`、`src/backend/wasm/noteconnection_compute.wasm`、`scripts/benchmark-wasm-parity.js`、`scripts/verify-wasm-parity.js`、`scripts/build-wasm-parity-artifact.js`、`scripts/sync-wasm-parity-artifact.js`、`src/server.ts`、`src/server.migration.test.ts`、`src/wasm.parity.output.equivalence.contract.test.ts`、`src/wasm.parity.benchmark.contract.test.ts`、`src/wasm.parity.benchmark.guards.contract.test.ts`、`src/wasm.parity.artifact.probe.contract.test.ts`、`src/wasm.parity.artifact.provisioning.contract.test.ts`、`package.json`、`.github/workflows/migration-gates.yml` | parity 运行时风险已进入可管理态：工件已落地，严格 adapter 激活门禁有效，严格 p95 性能回归门禁已在脚本与 CI 强制执行。 | `npm run verify:wasm:parity:strict`、`npm run benchmark:wasm:parity:strict:perf`、`npm run test:wasm:parity:gates`、`src/wasm.parity.benchmark.guards.contract.test.ts`、`tmp/wasm-parity-benchmark/latest.json`、`src/runtime.transport.adapter.contract.test.ts`、`src/wasm.parity.runtime.contract.test.ts`、`src/wasm.parity.runtime.functional.test.ts`、`src/wasm.parity.output.equivalence.contract.test.ts`、`src/server.migration.test.ts` | 主要剩余风险已转为大规模阈值校准与长期性能漂移，不再是 parity 防护缺失。 |
+| **C-02** | **低（已解决）** | `android/app/src/main/AndroidManifest.xml`、`package.json` | Android 存储/媒体权限基线持续有效。 | `src/mobile.pipeline.test.ts` + 清单断言 | 仍依赖设备权限授权。 |
+| **H-01** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | Node EOL 目标持续移除，保持 Node 22 + Brotli + `--no-bytecode`。 | sidecar 构建脚本与目标映射 | `pkg` 生态演进节奏仍需跟踪。 |
+| **H-02** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | 跨平台 sidecar 构建策略持续有效。 | `npm run build:sidecar`、`npm run build:sidecar:all` | 发布前仍需目标 OS 实机运行验证。 |
+| **M-01** | **低（已解决）** | `src/server.ts` | 请求体内存安全加固持续有效。 | `src/server.migration.test.ts` | 高并发大请求下仍需容量化 I/O 规划。 |
+
+---
+
+### 最佳实践合规检查表
+
+| 标准 | 状态 | 当前证据 | 剩余工作 |
+| :--- | :--- | :--- | :--- |
+| **数据层抽象** | ✅ | source/storage 运行时能力分流持续有效，契约测试持续通过。 | 在后续等价演进中保持适配契约稳定。 |
+| **移动端运行时** | ✅（核心等价 + 性能门禁已激活） | 已具备工件落地、严格激活校验与严格 p95 性能回归门禁（脚本 + CI）。 | 持续进行大规模负载阈值校准与多主机差异治理。 |
+| **Node 版本** | ✅ | sidecar 目标保持 `node22-*`。 | 持续按 LTS 节奏升级。 |
+| **存储权限** | ✅ | 清单与依赖保持存储/媒体读取基线。 | 持续回归权限拒绝场景。 |
+| **Brotli 压缩** | ✅ | sidecar 构建保持 `--compress Brotli` 与 `--no-bytecode`。 | 持续监控二进制体积。 |
+| **IPC 安全** | ✅ | 鉴权广播与未授权超时机制保持有效。 | 持续评估本地进程攻防边界。 |
+
+---
+
+### 验证快照（2026-03-10）
+
+- `npm run test:migration` 通过：**27 suites, 128 tests**。
+- `npm run test:wasm:parity:gates` 通过（严格校验 + 严格性能门禁）。
+- `npm run build` 通过。
+- `npm run test:tauri` 通过：**19 项 Rust/Tauri 测试**。
+- `npm test` 通过：**30 suites, 145 tests**。
+
+---
+
+# 2026-03-10 v1.0.14
+
+# END-TO-END HYBRID ARCHITECTURE & PACKAGING AUDIT (WASM ARTIFACT PROVISIONED + STRICT CI GATES ACTIVE)
+**Date**: March 10, 2026
+**Target**: NoteConnection (Hybrid Node.js + Capacitor + Tauri/pkg Architecture)
+
+---
+
+## ENGLISH DOCUMENT
+
+### Executive Summary
+
+**Hybrid Architecture Risk Score: 1.8/10 (CRITICAL BREAKPOINTS CLOSED, WASM ARTIFACT NOW PROVISIONED)**
+
+As of **2026-03-10**, wasm parity has moved from readiness-only checks to real artifact provisioning:
+- Added a Rust-based wasm parity module with required JSON ABI exports.
+- Provisioned canonical artifact at `src/backend/wasm/noteconnection_compute.wasm`.
+- Added artifact build/sync scripts and build pipeline synchronization to `dist`.
+- Enabled strict wasm parity gates in scripts and CI workflow matrix.
+
+Current observed runtime state:
+- Strict probe passes with `ready: true`.
+- Strict benchmark now reaches `wasm-adapter` mode in both GraphMetrics and LayoutEngine.
+- Full migration/build/Tauri/full-Jest gates remain green after provisioning.
+
+Remaining risk concentration:
+- Production-scale performance tuning and long-horizon parity drift monitoring.
+- Android real-device acceptance evidence remains environment-dependent.
+
+---
+
+### Critical Issues Table
+
+| ID | Severity (Current) | Location | Current Status (2026-03-10) | Verification Evidence | Residual Risk |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **LOW (Closed to Managed Runtime Risk)** | `src/frontend/runtime_bridge.js`, `src/frontend/storage_provider.js`, `src/frontend/source_manager.js`, `src/frontend/path_app.js`, `src/core/PathBridge.ts`, `src/backend/algorithms/WasmParityRuntime.ts`, `src/backend/algorithms/LayoutEngine.ts`, `src/backend/GraphMetrics.ts`, `src/backend/wasm/Cargo.toml`, `src/backend/wasm/src/lib.rs`, `src/backend/wasm/noteconnection_compute.wasm`, `scripts/build-wasm-parity-artifact.js`, `scripts/sync-wasm-parity-artifact.js`, `scripts/benchmark-wasm-parity.js`, `scripts/verify-wasm-parity.js`, `src/server.ts`, `src/server.migration.test.ts`, `src/wasm.parity.output.equivalence.contract.test.ts`, `src/wasm.parity.benchmark.contract.test.ts`, `src/wasm.parity.artifact.probe.contract.test.ts`, `src/wasm.parity.artifact.provisioning.contract.test.ts`, `package.json`, `.github/workflows/migration-gates.yml` | Phantom-backend dependency remains mitigated and wasm parity artifact is now provisioned. Runtime can enter real `wasm-adapter` mode, strict gates are active, and CI matrix includes strict wasm parity suite. | `npm run build:wasm:parity`, `npm run verify:wasm:parity:strict`, `npm run benchmark:wasm:parity:strict`, `npm run test:wasm:parity:gates`, `src/wasm.parity.artifact.provisioning.contract.test.ts`, `tmp/wasm-parity-benchmark/latest.json`, `src/runtime.transport.adapter.contract.test.ts`, `src/wasm.parity.runtime.contract.test.ts`, `src/wasm.parity.runtime.functional.test.ts`, `src/wasm.parity.output.equivalence.contract.test.ts`, `src/server.migration.test.ts` | Main remaining risk is production-scale perf optimization and parity drift over time, not artifact absence. |
+| **C-02** | **LOW (Resolved)** | `android/app/src/main/AndroidManifest.xml`, `package.json` | Storage-permission baseline remains implemented and verified. | `src/mobile.pipeline.test.ts`, manifest checks for `READ_EXTERNAL_STORAGE` + `READ_MEDIA_*` | Runtime still depends on user granting permissions on-device. |
+| **H-01** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Node EOL target remains removed; Node 22 + Brotli + `--no-bytecode` remains active. | `scripts/build-sidecar.js` target map (`node22-*`), `npm run build:sidecar` | Future maintenance risk remains tied to `pkg` ecosystem cadence. |
+| **H-02** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Cross-platform sidecar strategy remains implemented. | `npm run build:sidecar`, `npm run build:sidecar:all`, sidecar validation scripts | Runtime execution still must be validated on each target OS in CI/release stages. |
+| **M-01** | **LOW (Resolved)** | `src/server.ts` | Request-body memory hardening remains implemented and contract-covered. | `src/server.migration.test.ts` (oversize/invalid-json/content-type contracts) | Very large concurrent uploads can still increase disk I/O pressure by design. |
+
+---
+
+### Best Practices Compliance Checklist
+
+| Standard | Status | Current Evidence | Remaining Work |
+| :--- | :--- | :--- | :--- |
+| **Data Layer Abstraction** | ✅ | Runtime capability split remains active across source/storage paths; contracts remain green. | Keep adapter contracts stable while parity evolves. |
+| **Mobile Runtime** | ✅ (Core Parity Path Closed, Performance Tuning Open) | Capacitor worker-first local build fallback remains active; backend heavy compute now has provisioned wasm artifact + strict gates + active adapter evidence. | Tune production-scale performance and monitor parity drift regressions. |
+| **Node Version** | ✅ | `scripts/build-sidecar.js` still targets `node22-*`. | Keep future Node LTS migration on roadmap. |
+| **Storage Permissions** | ✅ | `AndroidManifest.xml` includes `READ_EXTERNAL_STORAGE` and `READ_MEDIA_*`; dependency includes `@capacitor/filesystem`. | Device-level permission denial handling must stay regression-tested. |
+| **Brotli Compression** | ✅ | Sidecar build args include `--compress Brotli` and `--no-bytecode`. | Monitor binary size drift in release gates. |
+| **IPC Security** | ✅ | PathBridge enforces token-aware client authorization, unauthorized timeout, and authorized-only broadcast fan-out. | Continue threat-model review for local desktop process attack surface. |
+
+---
+
+### Verification Snapshot (2026-03-10)
+
+- `npm run build:wasm:parity` passed.
+- `npm run verify:wasm:parity` passed.
+- `npm run verify:wasm:parity:strict` passed.
+- `npm run benchmark:wasm:parity:strict` passed, candidate reached `wasm-adapter` mode.
+- `npm run test:wasm:parity:gates` passed.
+- `npm run test:migration` passed: **26 suites, 124 tests**.
+- `npm run build` passed.
+- `npm run test:tauri` passed: **19 Rust/Tauri tests**.
+- `npm test` passed: **29 suites, 141 tests**.
+
+---
+
+## 中文文档
+
+### 执行摘要
+
+**混合架构风险评分：1.8/10（关键断点持续关闭，WASM 工件已真实落地）**
+
+截至 **2026-03-10**，wasm parity 已从“可用性探针阶段”进入“真实工件落地阶段”：
+- 新增 Rust wasm parity 模块并实现必需 JSON ABI 导出。
+- 标准工件已落地：`src/backend/wasm/noteconnection_compute.wasm`。
+- 构建链路新增工件构建与同步脚本，并在 `build` 流程中同步到 `dist`。
+- 严格 wasm 门禁已接入脚本与 CI 工作流矩阵。
+
+当前运行态观测：
+- 严格探针通过，`ready: true`。
+- 严格基准中 GraphMetrics/LayoutEngine 的 candidate 均进入 `wasm-adapter`。
+- 工件落地后 migration/build/Tauri/全量 Jest 继续全绿。
+
+剩余风险重心：
+- 转为生产规模性能调优与长期等价漂移监控。
+- Android 真机验收证据仍依赖在线设备环境。
+
+---
+
+### 关键问题表
+
+| ID | 当前严重程度 | 位置 | 当前状态（2026-03-10） | 验证证据 | 剩余风险 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **低（已收口为可管理运行时风险）** | `src/frontend/runtime_bridge.js`、`src/frontend/storage_provider.js`、`src/frontend/source_manager.js`、`src/frontend/path_app.js`、`src/core/PathBridge.ts`、`src/backend/algorithms/WasmParityRuntime.ts`、`src/backend/algorithms/LayoutEngine.ts`、`src/backend/GraphMetrics.ts`、`src/backend/wasm/Cargo.toml`、`src/backend/wasm/src/lib.rs`、`src/backend/wasm/noteconnection_compute.wasm`、`scripts/build-wasm-parity-artifact.js`、`scripts/sync-wasm-parity-artifact.js`、`scripts/benchmark-wasm-parity.js`、`scripts/verify-wasm-parity.js`、`src/server.ts`、`src/server.migration.test.ts`、`src/wasm.parity.output.equivalence.contract.test.ts`、`src/wasm.parity.benchmark.contract.test.ts`、`src/wasm.parity.artifact.probe.contract.test.ts`、`src/wasm.parity.artifact.provisioning.contract.test.ts`、`package.json`、`.github/workflows/migration-gates.yml` | 幽灵后端依赖持续缓解，且 wasm parity 工件已真实落地。运行时可进入 `wasm-adapter`，严格门禁已激活，CI 矩阵已纳入严格 wasm 套件。 | `npm run build:wasm:parity`、`npm run verify:wasm:parity:strict`、`npm run benchmark:wasm:parity:strict`、`npm run test:wasm:parity:gates`、`src/wasm.parity.artifact.provisioning.contract.test.ts`、`tmp/wasm-parity-benchmark/latest.json`、`src/runtime.transport.adapter.contract.test.ts`、`src/wasm.parity.runtime.contract.test.ts`、`src/wasm.parity.runtime.functional.test.ts`、`src/wasm.parity.output.equivalence.contract.test.ts`、`src/server.migration.test.ts` | 主要剩余风险已转为生产规模性能调优与长期等价漂移监控，不再是工件缺失。 |
+| **C-02** | **低（已解决）** | `android/app/src/main/AndroidManifest.xml`、`package.json` | Android 存储/媒体权限基线持续有效。 | `src/mobile.pipeline.test.ts` + 清单断言 | 仍依赖设备权限授权。 |
+| **H-01** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | Node EOL 目标持续移除，保持 Node 22 + Brotli + `--no-bytecode`。 | sidecar 构建脚本与目标映射 | `pkg` 生态演进节奏仍需跟踪。 |
+| **H-02** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | 跨平台 sidecar 构建策略持续有效。 | `npm run build:sidecar`、`npm run build:sidecar:all` | 发布前仍需目标 OS 实机运行验证。 |
+| **M-01** | **低（已解决）** | `src/server.ts` | 请求体内存安全加固持续有效。 | `src/server.migration.test.ts` | 高并发大请求下仍需容量化 I/O 规划。 |
+
+---
+
+### 最佳实践合规检查表
+
+| 标准 | 状态 | 当前证据 | 剩余工作 |
+| :--- | :--- | :--- | :--- |
+| **数据层抽象** | ✅ | source/storage 运行时能力分流持续有效，契约测试持续通过。 | 在后续等价演进中保持适配契约稳定。 |
+| **移动端运行时** | ✅（核心等价链路闭环，性能调优待继续） | Capacitor 本地仍是 Worker 优先回退；后端重计算已具备“工件落地 + 严格门禁 + 实际 adapter 激活”证据。 | 聚焦生产规模性能调优与等价漂移监控。 |
+| **Node 版本** | ✅ | sidecar 目标保持 `node22-*`。 | 持续按 LTS 节奏升级。 |
+| **存储权限** | ✅ | 清单与依赖保持存储/媒体读取基线。 | 持续回归权限拒绝场景。 |
+| **Brotli 压缩** | ✅ | sidecar 构建保持 `--compress Brotli` 与 `--no-bytecode`。 | 持续监控二进制体积。 |
+| **IPC 安全** | ✅ | 鉴权广播与未授权超时机制保持有效。 | 持续评估本地进程攻防边界。 |
+
+---
+
+### 验证快照（2026-03-10）
+
+- `npm run build:wasm:parity` 通过。
+- `npm run verify:wasm:parity` 通过。
+- `npm run verify:wasm:parity:strict` 通过。
+- `npm run benchmark:wasm:parity:strict` 通过，candidate 进入 `wasm-adapter`。
+- `npm run test:wasm:parity:gates` 通过。
+- `npm run test:migration` 通过：**26 suites, 124 tests**。
+- `npm run build` 通过。
+- `npm run test:tauri` 通过：**19 项 Rust/Tauri 测试**。
+- `npm test` 通过：**29 suites, 141 tests**。
+
+---
+
+# 2026-03-10 v1.0.13
+
+# END-TO-END HYBRID ARCHITECTURE & PACKAGING AUDIT (WASM ARTIFACT READINESS GATING)
+**Date**: March 10, 2026
+**Target**: NoteConnection (Hybrid Node.js + Capacitor + Tauri/pkg Architecture)
+
+---
+
+## ENGLISH DOCUMENT
+
+### Executive Summary
+
+**Hybrid Architecture Risk Score: 2.2/10 (CRITICAL BREAKPOINTS CLOSED, ARTIFACT READINESS GATE ADDED)**
+
+As of **2026-03-10**, the wasm parity stream now includes explicit artifact readiness verification:
+- Added a reusable wasm artifact probe with required-export validation and failure taxonomy.
+- Added a verifier CLI with strict/non-strict behavior and JSON evidence output.
+- Added a dedicated npm strict verifier entrypoint to avoid npm argument-forwarding ambiguity.
+- Revalidated full migration/build/Tauri/full-Jest feasibility after this slice.
+
+Current evidence files:
+- `tmp/wasm-parity-benchmark/latest.json`
+- `tmp/wasm-parity-benchmark/verify-latest.json`
+
+Observed runtime state in this environment:
+- Candidate compute path remains worker fallback for GraphMetrics and LayoutEngine.
+- Verifier and runtime diagnostics indicate `artifact-not-found`; `wasm-adapter` is not active in this environment.
+- Strict gates now fail deterministically when artifact readiness is missing (expected behavior).
+
+Remaining high-risk gap:
+- Production wasm artifact availability/parity at scale remains open.
+- Worker↔wasm benchmark closure with active wasm execution remains open.
+- Android real-device acceptance evidence remains environment-dependent.
+
+---
+
+### Critical Issues Table
+
+| ID | Severity (Current) | Location | Current Status (2026-03-10) | Verification Evidence | Residual Risk |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **MEDIUM (Mitigated)** | `src/frontend/runtime_bridge.js`, `src/frontend/storage_provider.js`, `src/frontend/source_manager.js`, `src/frontend/path_app.js`, `src/core/PathBridge.ts`, `src/backend/algorithms/WasmParityRuntime.ts`, `src/backend/algorithms/LayoutEngine.ts`, `src/backend/GraphMetrics.ts`, `src/backend/algorithms/WasmParityBenchmark.ts`, `src/backend/algorithms/WasmParityArtifactProbe.ts`, `scripts/benchmark-wasm-parity.js`, `scripts/verify-wasm-parity.js`, `src/server.ts`, `src/server.migration.test.ts`, `src/wasm.parity.output.equivalence.contract.test.ts`, `src/wasm.parity.benchmark.contract.test.ts`, `src/wasm.parity.artifact.probe.contract.test.ts`, `package.json` | Phantom-backend dependency remains mitigated and parity readiness has advanced: deterministic fallback + API telemetry remain active; benchmark and artifact-readiness evidence are generated; strict verifier/benchmark paths now fail explicitly when artifact readiness is missing. | `npm run verify:wasm:parity`, `npm run verify:wasm:parity:strict`, `npm run benchmark:wasm:parity`, `npm run benchmark:wasm:parity:strict`, `tmp/wasm-parity-benchmark/latest.json`, `tmp/wasm-parity-benchmark/verify-latest.json`, `src/runtime.transport.adapter.contract.test.ts`, `src/wasm.parity.runtime.contract.test.ts`, `src/wasm.parity.runtime.functional.test.ts`, `src/wasm.parity.output.equivalence.contract.test.ts`, `src/wasm.parity.benchmark.contract.test.ts`, `src/wasm.parity.artifact.probe.contract.test.ts`, `src/server.migration.test.ts` | Active wasm execution path (`wasm-adapter`) is still blocked by artifact availability in this environment; scale/perf closure remains pending. |
+| **C-02** | **LOW (Resolved)** | `android/app/src/main/AndroidManifest.xml`, `package.json` | Storage-permission baseline remains implemented and verified. | `src/mobile.pipeline.test.ts`, manifest checks for `READ_EXTERNAL_STORAGE` + `READ_MEDIA_*` | Runtime still depends on user granting permissions on-device. |
+| **H-01** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Node EOL target remains removed; Node 22 + Brotli + `--no-bytecode` remains active. | `scripts/build-sidecar.js` target map (`node22-*`), `npm run build:sidecar` | Future maintenance risk remains tied to `pkg` ecosystem cadence. |
+| **H-02** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Cross-platform sidecar strategy remains implemented. | `npm run build:sidecar`, `npm run build:sidecar:all`, sidecar validation scripts | Runtime execution still must be validated on each target OS in CI/release stages. |
+| **M-01** | **LOW (Resolved)** | `src/server.ts` | Request-body memory hardening remains implemented and contract-covered. | `src/server.migration.test.ts` (oversize/invalid-json/content-type contracts) | Very large concurrent uploads can still increase disk I/O pressure by design. |
+
+---
+
+### Best Practices Compliance Checklist
+
+| Standard | Status | Current Evidence | Remaining Work |
+| :--- | :--- | :--- | :--- |
+| **Data Layer Abstraction** | ✅ | Runtime capability split remains active across source/storage paths; contracts remain green. | Keep adapter contracts stable while parity evolves. |
+| **Mobile Runtime** | ⚠️ Partial | Capacitor worker-first local build fallback remains active; backend heavy compute now has JSON ABI path + orchestration contracts + retry/diagnostic resilience + API telemetry + benchmark and artifact-readiness verifiers. | Close production wasm artifact parity and rerun worker↔wasm baselines with active wasm adapter mode. |
+| **Node Version** | ✅ | `scripts/build-sidecar.js` still targets `node22-*`. | Keep future Node LTS migration on roadmap. |
+| **Storage Permissions** | ✅ | `AndroidManifest.xml` includes `READ_EXTERNAL_STORAGE` and `READ_MEDIA_*`; dependency includes `@capacitor/filesystem`. | Device-level permission denial handling must stay regression-tested. |
+| **Brotli Compression** | ✅ | Sidecar build args include `--compress Brotli` and `--no-bytecode`. | Monitor binary size drift in release gates. |
+| **IPC Security** | ✅ | PathBridge enforces token-aware client authorization, unauthorized timeout, and authorized-only broadcast fan-out. | Continue threat-model review for local desktop process attack surface. |
+
+---
+
+### Verification Snapshot (2026-03-10)
+
+- `npx jest src/wasm.parity.artifact.probe.contract.test.ts --runInBand` passed.
+- `npx tsc --pretty false` passed.
+- `npm run verify:wasm:parity` passed.
+- `npm run verify:wasm:parity:strict` returned non-zero as expected (`artifact-not-found`).
+- `npm run benchmark:wasm:parity` passed and emitted evidence JSON.
+- `npm run benchmark:wasm:parity:strict` returned non-zero as expected (candidate did not reach `wasm-adapter`).
+- `npm run test:migration` passed: **25 suites, 123 tests**.
+- `npm run build` passed.
+- `npm run test:tauri` passed: **19 Rust/Tauri tests**.
+- `npm test` passed: **28 suites, 140 tests**.
+
+---
+
+## 中文文档
+
+### 执行摘要
+
+**混合架构风险评分：2.2/10（关键断点持续关闭，工件可用性门禁已补齐）**
+
+截至 **2026-03-10**，wasm 等价链路新增“工件可用性显式门禁”能力：
+- 新增可复用 wasm 工件探针，覆盖必需导出校验与失败类型归因。
+- 新增校验 CLI，支持严格/非严格模式并输出 JSON 证据。
+- 新增专用 npm 严格入口，规避参数透传歧义。
+- 本切片后再次完成 migration/build/Tauri/全量 Jest 可行性复验。
+
+当前证据文件：
+- `tmp/wasm-parity-benchmark/latest.json`
+- `tmp/wasm-parity-benchmark/verify-latest.json`
+
+本环境观测结果：
+- GraphMetrics 与 LayoutEngine 的 candidate 仍走 worker 回退。
+- 校验与运行时诊断均指向 `artifact-not-found`，说明本环境未激活 `wasm-adapter`。
+- 严格门禁在工件缺失时会稳定非零退出（预期行为）。
+
+剩余高风险：
+- 生产级 wasm 工件可用性与规模等价仍待闭环。
+- 需要在 wasm 真正激活后补齐 worker↔wasm 基准收口。
+- Android 真机验收证据仍依赖在线设备环境。
+
+---
+
+### 关键问题表
+
+| ID | 当前严重程度 | 位置 | 当前状态（2026-03-10） | 验证证据 | 剩余风险 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **中（已缓解）** | `src/frontend/runtime_bridge.js`、`src/frontend/storage_provider.js`、`src/frontend/source_manager.js`、`src/frontend/path_app.js`、`src/core/PathBridge.ts`、`src/backend/algorithms/WasmParityRuntime.ts`、`src/backend/algorithms/LayoutEngine.ts`、`src/backend/GraphMetrics.ts`、`src/backend/algorithms/WasmParityBenchmark.ts`、`src/backend/algorithms/WasmParityArtifactProbe.ts`、`scripts/benchmark-wasm-parity.js`、`scripts/verify-wasm-parity.js`、`src/server.ts`、`src/server.migration.test.ts`、`src/wasm.parity.output.equivalence.contract.test.ts`、`src/wasm.parity.benchmark.contract.test.ts`、`src/wasm.parity.artifact.probe.contract.test.ts`、`package.json` | 幽灵后端依赖持续缓解，且等价可用性门禁进一步闭环：确定性回退与 API 遥测保持有效；基准与工件校验证据可持续产出；当工件缺失时严格校验/基准会明确失败。 | `npm run verify:wasm:parity`、`npm run verify:wasm:parity:strict`、`npm run benchmark:wasm:parity`、`npm run benchmark:wasm:parity:strict`、`tmp/wasm-parity-benchmark/latest.json`、`tmp/wasm-parity-benchmark/verify-latest.json`、`src/runtime.transport.adapter.contract.test.ts`、`src/wasm.parity.runtime.contract.test.ts`、`src/wasm.parity.runtime.functional.test.ts`、`src/wasm.parity.output.equivalence.contract.test.ts`、`src/wasm.parity.benchmark.contract.test.ts`、`src/wasm.parity.artifact.probe.contract.test.ts`、`src/server.migration.test.ts` | 本环境下 `wasm-adapter` 仍受工件可用性限制；规模性能闭环仍待完成。 |
+| **C-02** | **低（已解决）** | `android/app/src/main/AndroidManifest.xml`、`package.json` | Android 存储/媒体权限基线持续有效。 | `src/mobile.pipeline.test.ts` + 清单断言 | 仍依赖设备权限授权。 |
+| **H-01** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | Node EOL 目标持续移除，保持 Node 22 + Brotli + `--no-bytecode`。 | sidecar 构建脚本与目标映射 | `pkg` 生态演进节奏仍需跟踪。 |
+| **H-02** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | 跨平台 sidecar 构建策略持续有效。 | `npm run build:sidecar`、`npm run build:sidecar:all` | 发布前仍需目标 OS 实机运行验证。 |
+| **M-01** | **低（已解决）** | `src/server.ts` | 请求体内存安全加固持续有效。 | `src/server.migration.test.ts` | 高并发大请求下仍需容量化 I/O 规划。 |
+
+---
+
+### 最佳实践合规检查表
+
+| 标准 | 状态 | 当前证据 | 剩余工作 |
+| :--- | :--- | :--- | :--- |
+| **数据层抽象** | ✅ | source/storage 运行时能力分流持续有效，契约测试持续通过。 | 在等价改造过程中保持适配契约稳定。 |
+| **移动端运行时** | ⚠️ 部分完成 | Capacitor 本地构建仍是 Worker 优先回退；后端重计算已具备 JSON ABI + 编排契约 + 重试/诊断韧性 + API 遥测 + 基准/工件校验脚手架。 | 闭环生产级 wasm 工件可用性，并在 wasm 激活后复跑 worker↔wasm 基准收口。 |
+| **Node 版本** | ✅ | sidecar 目标保持 `node22-*`。 | 持续按 LTS 节奏升级。 |
+| **存储权限** | ✅ | 清单与依赖保持存储/媒体读取基线。 | 持续回归权限拒绝场景。 |
+| **Brotli 压缩** | ✅ | sidecar 构建保持 `--compress Brotli` 与 `--no-bytecode`。 | 持续监控二进制体积。 |
+| **IPC 安全** | ✅ | 鉴权广播与未授权超时机制保持有效。 | 持续评估本地进程攻防边界。 |
+
+---
+
+### 验证快照（2026-03-10）
+
+- `npx jest src/wasm.parity.artifact.probe.contract.test.ts --runInBand` 通过。
+- `npx tsc --pretty false` 通过。
+- `npm run verify:wasm:parity` 通过。
+- `npm run verify:wasm:parity:strict` 按预期非零退出（`artifact-not-found`）。
+- `npm run benchmark:wasm:parity` 通过并输出证据 JSON。
+- `npm run benchmark:wasm:parity:strict` 按预期非零退出（candidate 未进入 `wasm-adapter`）。
+- `npm run test:migration` 通过：**25 suites, 123 tests**。
+- `npm run build` 通过。
+- `npm run test:tauri` 通过：**19 项 Rust/Tauri 测试**。
+- `npm test` 通过：**28 suites, 140 tests**。
+
+---
+
+# 2026-03-10 v1.0.12
+
+# END-TO-END HYBRID ARCHITECTURE & PACKAGING AUDIT (WORKER↔WASM BENCHMARK BASELINE EVIDENCE)
+**Date**: March 10, 2026
+**Target**: NoteConnection (Hybrid Node.js + Capacitor + Tauri/pkg Architecture)
+
+---
+
+## ENGLISH DOCUMENT
+
+### Executive Summary
+
+**Hybrid Architecture Risk Score: 2.3/10 (CRITICAL BREAKPOINTS CLOSED, BASELINE EVIDENCE PIPELINE ADDED)**
+
+As of **2026-03-10**, parity verification now includes a reproducible benchmark/evidence pipeline:
+- Added deterministic heavy-graph benchmark utilities for latency percentiles and betweenness equivalence.
+- Added runnable benchmark script that executes baseline (wasm off) vs candidate (wasm on) scenarios and emits JSON evidence.
+- Added contract coverage for benchmark math and fixture invariants.
+
+Current benchmark evidence exists at:
+- `tmp/wasm-parity-benchmark/latest.json`
+
+Observed runtime state in this environment:
+- Candidate path still resolves to worker fallback for both GraphMetrics and LayoutEngine.
+- `WasmParityRuntime` diagnostics report `artifact-not-found`, so `wasm-adapter` path is not yet activated here.
+
+Remaining risk is now narrower and explicit:
+- Production wasm artifact availability/parity at scale remains open.
+- Real workload worker↔wasm benchmark closure with active wasm execution remains open.
+- Android real-device acceptance evidence remains environment-dependent.
+
+---
+
+### Critical Issues Table
+
+| ID | Severity (Current) | Location | Current Status (2026-03-10) | Verification Evidence | Residual Risk |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **MEDIUM (Mitigated)** | `src/frontend/runtime_bridge.js`, `src/frontend/storage_provider.js`, `src/frontend/source_manager.js`, `src/frontend/path_app.js`, `src/core/PathBridge.ts`, `src/backend/algorithms/WasmParityRuntime.ts`, `src/backend/algorithms/LayoutEngine.ts`, `src/backend/GraphMetrics.ts`, `src/backend/algorithms/WasmParityBenchmark.ts`, `scripts/benchmark-wasm-parity.js`, `src/server.ts`, `src/server.migration.test.ts`, `src/wasm.parity.output.equivalence.contract.test.ts`, `src/wasm.parity.benchmark.contract.test.ts` | Phantom-backend dependency remains mitigated; deterministic fallback and API telemetry remain active; benchmark baseline evidence pipeline is now in place for worker↔wasm closure tracking. Current environment evidence still shows worker mode because wasm artifact is unavailable. | `node scripts/benchmark-wasm-parity.js 1 500`, `tmp/wasm-parity-benchmark/latest.json`, `src/runtime.transport.adapter.contract.test.ts`, `src/wasm.parity.runtime.contract.test.ts`, `src/wasm.parity.runtime.functional.test.ts`, `src/wasm.parity.output.equivalence.contract.test.ts`, `src/wasm.parity.benchmark.contract.test.ts`, `src/server.migration.test.ts` | Active wasm execution path (`wasm-adapter`) is still blocked by artifact availability in this environment; scale/perf closure remains pending. |
+| **C-02** | **LOW (Resolved)** | `android/app/src/main/AndroidManifest.xml`, `package.json` | Android storage/media permission baseline + filesystem dependency remain in place. | `src/mobile.pipeline.test.ts` + manifest checks | Runtime still depends on user/device permission grant. |
+| **H-01** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Node EOL target remains removed; Node 22 + Brotli + `--no-bytecode` remains active. | sidecar build scripts + target map | Ongoing maintenance depends on `pkg` ecosystem cadence. |
+| **H-02** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Cross-platform sidecar strategy remains implemented. | `npm run build:sidecar`, `npm run build:sidecar:all` | Runtime execution still requires per-target release verification. |
+| **M-01** | **LOW (Resolved)** | `src/server.ts` | Request-body memory hardening remains active (size limits + spool threshold + explicit status mapping). | `src/server.migration.test.ts` | High-concurrency large uploads can still raise disk I/O pressure by design. |
+
+---
+
+### Best Practices Compliance Checklist
+
+| Standard | Status | Current Evidence | Remaining Work |
+| :--- | :--- | :--- | :--- |
+| **Data Layer Abstraction** | ✅ | Runtime capability split remains active across source/storage paths. | Keep adapter contracts stable while parity evolves. |
+| **Mobile Runtime** | ⚠️ Partial | Capacitor worker-first local build fallback remains active; backend heavy compute now has JSON ABI path + orchestration contracts + retry/diagnostic resilience + API telemetry + benchmark evidence harness. | Close production wasm artifact parity and rerun worker↔wasm baselines with active wasm adapter mode. |
+| **Node Version** | ✅ | Sidecar remains on `node22-*`. | Maintain LTS migration cadence. |
+| **Storage Permissions** | ✅ | Android storage/media permission baseline is present. | Keep permission-denied UX regression coverage active. |
+| **Brotli Compression** | ✅ | Sidecar build keeps `--compress Brotli` and `--no-bytecode`. | Continue binary-size drift monitoring. |
+| **IPC Security** | ✅ | Authorized-only broadcast + unauthorized timeout + token-aware metadata are active. | Continue threat-model review for local process attack surfaces. |
+
+---
+
+### Verification Snapshot (2026-03-10)
+
+- `npx jest src/wasm.parity.benchmark.contract.test.ts --runInBand` passed.
+- `node scripts/benchmark-wasm-parity.js 1 500` passed and emitted evidence JSON.
+- `npx tsc --pretty false` passed.
+- `npm run test:migration` passed: **24 suites, 119 tests**.
+- `npm run build` passed.
+- `npm run test:tauri` passed: **19 Rust/Tauri tests**.
+- `npm test` passed: **27 suites, 136 tests**.
+
+---
+
+## 中文文档
+
+### 执行摘要
+
+**混合架构风险评分：2.3/10（关键断点持续关闭，新增基准证据流水线）**
+
+截至 **2026-03-10**，等价验证已具备可复现基准证据流水线：
+- 新增确定性重图基准工具，支持延迟百分位与介数中心性等价汇总。
+- 新增可执行基准脚本，执行 baseline（关闭 wasm）与 candidate（开启 wasm）并输出 JSON 证据。
+- 新增基准统计与夹具不变量的契约覆盖。
+
+当前证据位置：
+- `tmp/wasm-parity-benchmark/latest.json`
+
+本环境下观测结果：
+- candidate 在 GraphMetrics/LayoutEngine 上仍为 worker 回退模式。
+- `WasmParityRuntime` 诊断为 `artifact-not-found`，说明本环境尚未进入 `wasm-adapter` 执行路径。
+
+剩余风险已收敛并明确化：
+- 生产级 wasm 工件可用性与规模等价仍待闭环。
+- 需要在 wasm 真正激活后补齐真实负载 worker↔wasm 基准收口。
+- Android 真机验收证据仍依赖在线设备环境。
+
+---
+
+### 关键问题表
+
+| ID | 当前严重程度 | 位置 | 当前状态（2026-03-10） | 验证证据 | 剩余风险 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **中（已缓解）** | `src/frontend/runtime_bridge.js`、`src/frontend/storage_provider.js`、`src/frontend/source_manager.js`、`src/frontend/path_app.js`、`src/core/PathBridge.ts`、`src/backend/algorithms/WasmParityRuntime.ts`、`src/backend/algorithms/LayoutEngine.ts`、`src/backend/GraphMetrics.ts`、`src/backend/algorithms/WasmParityBenchmark.ts`、`scripts/benchmark-wasm-parity.js`、`src/server.ts`、`src/server.migration.test.ts`、`src/wasm.parity.output.equivalence.contract.test.ts`、`src/wasm.parity.benchmark.contract.test.ts` | 幽灵后端依赖持续缓解；确定性回退和 API 遥测保持有效；worker↔wasm 基准证据流水线已落地。当前环境证据显示 wasm 工件不可用，candidate 仍为 worker 模式。 | `node scripts/benchmark-wasm-parity.js 1 500`、`tmp/wasm-parity-benchmark/latest.json`、`src/runtime.transport.adapter.contract.test.ts`、`src/wasm.parity.runtime.contract.test.ts`、`src/wasm.parity.runtime.functional.test.ts`、`src/wasm.parity.output.equivalence.contract.test.ts`、`src/wasm.parity.benchmark.contract.test.ts`、`src/server.migration.test.ts` | 本环境下 `wasm-adapter` 仍被工件可用性阻塞；规模性能闭环仍待完成。 |
+| **C-02** | **低（已解决）** | `android/app/src/main/AndroidManifest.xml`、`package.json` | Android 存储/媒体权限基线和 filesystem 依赖持续有效。 | `src/mobile.pipeline.test.ts` + 清单断言 | 仍依赖设备权限授权。 |
+| **H-01** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | Node EOL 目标持续移除，保持 Node 22 + Brotli + `--no-bytecode`。 | sidecar 构建脚本与目标映射 | `pkg` 生态演进节奏仍需跟踪。 |
+| **H-02** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | 跨平台 sidecar 构建策略持续有效。 | `npm run build:sidecar`、`npm run build:sidecar:all` | 发布前仍需目标 OS 实机运行验证。 |
+| **M-01** | **低（已解决）** | `src/server.ts` | 请求体内存安全加固持续有效。 | `src/server.migration.test.ts` | 高并发大请求下仍需容量化 I/O 规划。 |
+
+---
+
+### 最佳实践合规检查表
+
+| 标准 | 状态 | 当前证据 | 剩余工作 |
+| :--- | :--- | :--- | :--- |
+| **数据层抽象** | ✅ | source/storage 运行时能力分流持续有效。 | 在等价性改造中保持契约稳定。 |
+| **移动端运行时** | ⚠️ 部分完成 | Capacitor 本地构建为 Worker 优先回退；后端重计算已具备 JSON ABI + 编排契约 + 重试/诊断韧性 + API 遥测 + 基准证据脚手架。 | 闭环生产级 wasm 工件可用性，并在 wasm 激活后复跑 worker↔wasm 基准收口。 |
+| **Node 版本** | ✅ | sidecar 目标保持 `node22-*`。 | 持续按 LTS 节奏升级。 |
+| **存储权限** | ✅ | 清单与依赖保持存储/媒体读取基线。 | 持续回归权限拒绝场景。 |
+| **Brotli 压缩** | ✅ | sidecar 构建保持 `--compress Brotli`。 | 持续监控二进制体积。 |
+| **IPC 安全** | ✅ | 鉴权广播与未授权超时机制保持有效。 | 持续评估本地进程攻防边界。 |
+
+---
+
+### 验证快照（2026-03-10）
+
+- `npx jest src/wasm.parity.benchmark.contract.test.ts --runInBand` 通过。
+- `node scripts/benchmark-wasm-parity.js 1 500` 通过，并输出 JSON 证据。
+- `npx tsc --pretty false` 通过。
+- `npm run test:migration` 通过：**24 suites, 119 tests**。
+- `npm run build` 通过。
+- `npm run test:tauri` 通过：**19 项 Rust/Tauri 测试**。
+- `npm test` 通过：**27 suites, 136 tests**。
+
+---
+
+# 2026-03-09 v1.0.11
+
+# END-TO-END HYBRID ARCHITECTURE & PACKAGING AUDIT (HEAVY COMPUTE MODE TELEMETRY CONTRACTS)
+**Date**: March 9, 2026
+**Target**: NoteConnection (Hybrid Node.js + Capacitor + Tauri/pkg Architecture)
+
+---
+
+## ENGLISH DOCUMENT
+
+### Executive Summary
+
+**Hybrid Architecture Risk Score: 2.4/10 (CRITICAL BREAKPOINTS CLOSED, HEAVY-COMPUTE PATH OBSERVABILITY STRENGTHENED)**
+
+As of **2026-03-09**, heavy-compute runtime behavior is now contract-observable:
+- Added deterministic execution diagnostics in heavy-compute engines:
+  - `GraphMetrics`: `none` / `wasm-adapter` / `worker` / `sequential`
+  - `LayoutEngine`: `none` / `gpu` / `wasm-adapter` / `worker` / `skipped`
+- Exposed compute-mode snapshot via authenticated APIs:
+  - `GET /api/runtime-diagnostics`
+  - `POST /api/build` (success + dedup responses)
+- Added contracts proving telemetry shape and fallback-mode behavior without changing deterministic fallback semantics.
+
+Remaining risk is still production-scale parity closure:
+- Real wasm artifact parity/performance on full workloads remains open.
+- Real workload worker↔wasm benchmark baselines (p95/p99 latency, memory) remain open.
+- Android real-device acceptance evidence remains environment-dependent.
+
+---
+
+### Critical Issues Table
+
+| ID | Severity (Current) | Location | Current Status (2026-03-09) | Verification Evidence | Residual Risk |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **MEDIUM (Mitigated)** | `src/frontend/runtime_bridge.js`, `src/frontend/storage_provider.js`, `src/frontend/source_manager.js`, `src/frontend/path_app.js`, `src/core/PathBridge.ts`, `src/backend/algorithms/WasmParityRuntime.ts`, `src/backend/algorithms/LayoutEngine.ts`, `src/backend/GraphMetrics.ts`, `src/server.ts`, `src/server.migration.test.ts`, `src/wasm.parity.output.equivalence.contract.test.ts` | Phantom-backend dependency remains mitigated. Capacitor native runtime remains storage-provider/filesystem based, sidecar bridge startup is skipped when unsupported, heavy compute path keeps deterministic fallback, and compute-mode telemetry is now API-visible and contract-guarded across wasm/worker/sequential/GPU/skipped routes. | `src/runtime.transport.adapter.contract.test.ts`, `src/source_manager.loadflow.test.ts`, `src/capacitor.runtime.contract.test.ts`, `src/storage.provider.contract.test.ts`, `src/storage.provider.capacitor.worker.contract.test.ts`, `src/wasm.parity.runtime.contract.test.ts`, `src/wasm.parity.runtime.functional.test.ts`, `src/wasm.parity.output.equivalence.contract.test.ts`, `src/server.migration.test.ts`, `src/pathbridge.handshake.contract.test.ts` | Production wasm artifact parity and real workload worker↔wasm benchmark closure remain pending. |
+| **C-02** | **LOW (Resolved)** | `android/app/src/main/AndroidManifest.xml`, `package.json` | Android storage/media permission baseline + filesystem dependency remain in place. | `src/mobile.pipeline.test.ts` + manifest checks | Runtime still depends on user/device permission grant. |
+| **H-01** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Node EOL target remains removed; Node 22 + Brotli + `--no-bytecode` remains active. | sidecar build scripts + target map | Ongoing maintenance depends on `pkg` ecosystem cadence. |
+| **H-02** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Cross-platform sidecar strategy remains implemented. | `npm run build:sidecar`, `npm run build:sidecar:all` | Runtime execution still requires per-target release verification. |
+| **M-01** | **LOW (Resolved)** | `src/server.ts` | Request-body memory hardening remains active (size limits + spool threshold + explicit status mapping). | `src/server.migration.test.ts` | High-concurrency large uploads can still raise disk I/O pressure by design. |
+
+---
+
+### Best Practices Compliance Checklist
+
+| Standard | Status | Current Evidence | Remaining Work |
+| :--- | :--- | :--- | :--- |
+| **Data Layer Abstraction** | ✅ | Runtime capability split remains active across source/storage paths. | Keep adapter contracts stable while parity evolves. |
+| **Mobile Runtime** | ⚠️ Partial | Capacitor worker-first local build fallback remains active; backend heavy compute now has JSON ABI path + orchestration contracts + retry/diagnostic resilience + API-level compute-mode telemetry. | Close production wasm artifact parity and real workload worker↔wasm benchmark/equivalence baselines. |
+| **Node Version** | ✅ | Sidecar remains on `node22-*`. | Maintain LTS migration cadence. |
+| **Storage Permissions** | ✅ | Android storage/media permission baseline is present. | Keep permission-denied UX regression coverage active. |
+| **Brotli Compression** | ✅ | Sidecar build keeps `--compress Brotli` and `--no-bytecode`. | Continue binary-size drift monitoring. |
+| **IPC Security** | ✅ | Authorized-only broadcast + unauthorized timeout + token-aware metadata are active. | Continue threat-model review for local process attack surfaces. |
+
+---
+
+### Verification Snapshot (2026-03-09)
+
+- `npx jest src/wasm.parity.output.equivalence.contract.test.ts src/server.migration.test.ts --runInBand` passed.
+- `npx tsc --pretty false` passed.
+- `npm run test:migration` passed: **23 suites, 114 tests**.
+- `npm run build` passed.
+- `npm run test:tauri` passed: **19 Rust/Tauri tests**.
+- `npm test` passed: **26 suites, 131 tests**.
+
+---
+
+## 中文文档
+
+### 执行摘要
+
+**混合架构风险评分：2.4/10（关键断点持续关闭，重计算路径可观测性进一步增强）**
+
+截至 **2026-03-09**，重计算运行时行为已具备契约化可观测能力：
+- 重计算引擎新增确定性执行诊断：
+  - `GraphMetrics`：`none` / `wasm-adapter` / `worker` / `sequential`
+  - `LayoutEngine`：`none` / `gpu` / `wasm-adapter` / `worker` / `skipped`
+- 计算模式快照已通过鉴权 API 暴露：
+  - `GET /api/runtime-diagnostics`
+  - `POST /api/build`（成功与去重响应）
+- 契约已验证诊断结构与回退路径行为，同时保持既有确定性回退语义不变。
+
+当前剩余风险仍是生产级规模收口：
+- 真实 wasm 工件在完整负载下的等价/性能仍待闭环。
+- 真实负载 worker↔wasm 基准（p95/p99 延迟、内存画像）仍待闭环。
+- Android 真机验收证据仍依赖在线设备环境。
+
+---
+
+### 关键问题表
+
+| ID | 当前严重程度 | 位置 | 当前状态（2026-03-09） | 验证证据 | 剩余风险 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **中（已缓解）** | `src/frontend/runtime_bridge.js`、`src/frontend/storage_provider.js`、`src/frontend/source_manager.js`、`src/frontend/path_app.js`、`src/core/PathBridge.ts`、`src/backend/algorithms/WasmParityRuntime.ts`、`src/backend/algorithms/LayoutEngine.ts`、`src/backend/GraphMetrics.ts`、`src/server.ts`、`src/server.migration.test.ts`、`src/wasm.parity.output.equivalence.contract.test.ts` | 幽灵后端依赖持续缓解。Capacitor 原生运行时保持 storage-provider/filesystem 路径；不支持 sidecar 时跳过桥接；重计算链路继续保持确定性回退；并且 wasm/worker/sequential/GPU/skipped 计算模式已实现 API 级可观测与契约护栏。 | `src/runtime.transport.adapter.contract.test.ts`、`src/source_manager.loadflow.test.ts`、`src/capacitor.runtime.contract.test.ts`、`src/storage.provider.contract.test.ts`、`src/storage.provider.capacitor.worker.contract.test.ts`、`src/wasm.parity.runtime.contract.test.ts`、`src/wasm.parity.runtime.functional.test.ts`、`src/wasm.parity.output.equivalence.contract.test.ts`、`src/server.migration.test.ts`、`src/pathbridge.handshake.contract.test.ts` | 生产级 wasm 工件等价与真实负载 worker↔wasm 基准仍待闭环。 |
+| **C-02** | **低（已解决）** | `android/app/src/main/AndroidManifest.xml`、`package.json` | Android 存储/媒体权限基线和 filesystem 依赖持续有效。 | `src/mobile.pipeline.test.ts` + 清单断言 | 仍依赖设备权限授权。 |
+| **H-01** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | Node EOL 目标持续移除，保持 Node 22 + Brotli + `--no-bytecode`。 | sidecar 构建脚本与目标映射 | `pkg` 生态演进节奏仍需跟踪。 |
+| **H-02** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | 跨平台 sidecar 构建策略持续有效。 | `npm run build:sidecar`、`npm run build:sidecar:all` | 发布前仍需目标 OS 实机运行验证。 |
+| **M-01** | **低（已解决）** | `src/server.ts` | 请求体内存安全加固持续有效。 | `src/server.migration.test.ts` | 高并发大请求下仍需容量化 I/O 规划。 |
+
+---
+
+### 最佳实践合规检查表
+
+| 标准 | 状态 | 当前证据 | 剩余工作 |
+| :--- | :--- | :--- | :--- |
+| **数据层抽象** | ✅ | source/storage 运行时能力分流持续有效。 | 在等价性改造中保持契约稳定。 |
+| **移动端运行时** | ⚠️ 部分完成 | Capacitor 本地构建为 Worker 优先回退；后端重计算已具备 JSON ABI + 编排契约 + 重试/诊断韧性，并新增 API 级计算模式可观测能力。 | 闭环生产级 wasm 工件等价与真实负载 worker↔wasm 基准回归。 |
+| **Node 版本** | ✅ | sidecar 目标保持 `node22-*`。 | 持续按 LTS 节奏升级。 |
+| **存储权限** | ✅ | 清单与依赖保持存储/媒体读取基线。 | 持续回归权限拒绝场景。 |
+| **Brotli 压缩** | ✅ | sidecar 构建保持 `--compress Brotli`。 | 持续监控二进制体积。 |
+| **IPC 安全** | ✅ | 鉴权广播与未授权超时机制保持有效。 | 持续评估本地进程攻防边界。 |
+
+---
+
+### 验证快照（2026-03-09）
+
+- `npx jest src/wasm.parity.output.equivalence.contract.test.ts src/server.migration.test.ts --runInBand` 通过。
+- `npx tsc --pretty false` 通过。
+- `npm run test:migration` 通过：**23 suites, 114 tests**。
+- `npm run build` 通过。
+- `npm run test:tauri` 通过：**19 项 Rust/Tauri 测试**。
+- `npm test` 通过：**26 suites, 131 tests**。
+
+---
+
+# 2026-03-09 v1.0.10
+
+# END-TO-END HYBRID ARCHITECTURE & PACKAGING AUDIT (RUNTIME DIAGNOSTICS EXPOSURE)
+**Date**: March 9, 2026
+**Target**: NoteConnection (Hybrid Node.js + Capacitor + Tauri/pkg Architecture)
+
+---
+
+## ENGLISH DOCUMENT
+
+### Executive Summary
+
+**Hybrid Architecture Risk Score: 2.6/10 (CRITICAL BREAKPOINTS CLOSED, DIAGNOSTIC OBSERVABILITY IMPROVED)**
+
+As of **2026-03-09**, runtime observability is strengthened:
+- Added authenticated sidecar diagnostics endpoint (`GET /api/runtime-diagnostics`).
+- Exposed wasm parity runtime state (`WasmParityRuntime.getDiagnostics`) for release/triage workflows.
+- Added contract coverage proving diagnostics payload does not leak auth token.
+
+Remaining risk remains concentrated in production-scale parity:
+- Real wasm artifact parity/performance at scale remains open.
+- Worker↔wasm benchmark/equivalence baselines remain open.
+- Android real-device acceptance evidence remains environment-dependent.
+
+---
+
+### Critical Issues Table
+
+| ID | Severity (Current) | Location | Current Status (2026-03-09) | Verification Evidence | Residual Risk |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **MEDIUM (Mitigated)** | `src/frontend/runtime_bridge.js`, `src/frontend/storage_provider.js`, `src/frontend/source_manager.js`, `src/frontend/path_app.js`, `src/core/PathBridge.ts`, `src/backend/algorithms/WasmParityRuntime.ts`, `src/backend/algorithms/LayoutEngine.ts`, `src/backend/GraphMetrics.ts`, `src/server.ts`, `src/server.migration.test.ts` | Phantom-backend dependency remains mitigated. Capacitor native runtime remains storage-provider/filesystem based, sidecar bridge startup is skipped when unsupported, heavy compute path has wasm parity runtime contracts, and sidecar now exposes runtime/wasm diagnostics without credential leakage. | `src/runtime.transport.adapter.contract.test.ts`, `src/source_manager.loadflow.test.ts`, `src/capacitor.runtime.contract.test.ts`, `src/storage.provider.contract.test.ts`, `src/storage.provider.capacitor.worker.contract.test.ts`, `src/wasm.parity.runtime.contract.test.ts`, `src/wasm.parity.runtime.functional.test.ts`, `src/wasm.parity.output.equivalence.contract.test.ts`, `src/server.migration.test.ts`, `src/pathbridge.handshake.contract.test.ts` | Production wasm artifact parity and worker↔wasm benchmark/equivalence at scale remain pending. |
+| **C-02** | **LOW (Resolved)** | `android/app/src/main/AndroidManifest.xml`, `package.json` | Android storage/media permission baseline + filesystem dependency remain in place. | `src/mobile.pipeline.test.ts` + manifest checks | Runtime still depends on user/device permission grant. |
+| **H-01** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Node EOL target remains removed; Node 22 + Brotli + `--no-bytecode` remains active. | sidecar build scripts + target map | Ongoing maintenance depends on `pkg` ecosystem cadence. |
+| **H-02** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Cross-platform sidecar strategy remains implemented. | `npm run build:sidecar`, `npm run build:sidecar:all` | Runtime execution still requires per-target release verification. |
+| **M-01** | **LOW (Resolved)** | `src/server.ts` | Request-body memory hardening remains active (size limits + spool threshold + explicit status mapping). | `src/server.migration.test.ts` | High-concurrency large uploads can still raise disk I/O pressure by design. |
+
+---
+
+### Best Practices Compliance Checklist
+
+| Standard | Status | Current Evidence | Remaining Work |
+| :--- | :--- | :--- | :--- |
+| **Data Layer Abstraction** | ✅ | Runtime capability split remains active across source/storage paths. | Keep adapter contracts stable while parity evolves. |
+| **Mobile Runtime** | ⚠️ Partial | Capacitor worker-first local build fallback remains active; backend heavy compute now has JSON ABI path + orchestration contracts + retry/diagnostic resilience, and sidecar diagnostics endpoint for runtime triage. | Close production wasm artifact parity and worker↔wasm benchmark/equivalence baselines. |
+| **Node Version** | ✅ | Sidecar remains on `node22-*`. | Maintain LTS migration cadence. |
+| **Storage Permissions** | ✅ | Android storage/media permission baseline is present. | Keep permission-denied UX regression coverage active. |
+| **Brotli Compression** | ✅ | Sidecar build keeps `--compress Brotli` and `--no-bytecode`. | Continue binary-size drift monitoring. |
+| **IPC Security** | ✅ | Authorized-only broadcast + unauthorized timeout + token-aware metadata are active. | Continue threat-model review for local process attack surfaces. |
+
+---
+
+### Verification Snapshot (2026-03-09)
+
+- `npx jest src/server.migration.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.output.equivalence.contract.test.ts --runInBand` passed.
+- `npx tsc --pretty false` passed.
+- `npm run test:migration` passed: **23 suites, 112 tests**.
+- `npm run build` passed.
+- `npm run test:tauri` passed: **19 Rust/Tauri tests**.
+- `npm test` passed: **26 suites, 129 tests**.
+
+---
+
+## 中文文档
+
+### 执行摘要
+
+**混合架构风险评分：2.6/10（关键断点持续关闭，诊断可观测性进一步增强）**
+
+截至 **2026-03-09**，运行时可观测性继续增强：
+- 新增鉴权 sidecar 诊断端点（`GET /api/runtime-diagnostics`）。
+- 暴露 wasm parity 运行时状态（`WasmParityRuntime.getDiagnostics`）用于发布和排障。
+- 新增契约覆盖，验证诊断返回不泄露 auth token。
+
+当前剩余风险仍集中在生产级规模等价：
+- 真实 wasm 工件在大规模场景下的等价/性能仍待闭环。
+- worker↔wasm 的基准等价回归仍待闭环。
+- Android 真机验收证据仍依赖在线设备环境。
+
+---
+
+### 关键问题表
+
+| ID | 当前严重程度 | 位置 | 当前状态（2026-03-09） | 验证证据 | 剩余风险 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **中（已缓解）** | `src/frontend/runtime_bridge.js`、`src/frontend/storage_provider.js`、`src/frontend/source_manager.js`、`src/frontend/path_app.js`、`src/core/PathBridge.ts`、`src/backend/algorithms/WasmParityRuntime.ts`、`src/backend/algorithms/LayoutEngine.ts`、`src/backend/GraphMetrics.ts`、`src/server.ts`、`src/server.migration.test.ts` | 幽灵后端依赖持续缓解。Capacitor 原生运行时保持 storage-provider/filesystem 路径；不支持 sidecar 时跳过桥接；重计算链路保持 wasm parity 契约覆盖；新增 sidecar 运行时/wasm 诊断端点且不暴露凭据。 | `src/runtime.transport.adapter.contract.test.ts`、`src/source_manager.loadflow.test.ts`、`src/capacitor.runtime.contract.test.ts`、`src/storage.provider.contract.test.ts`、`src/storage.provider.capacitor.worker.contract.test.ts`、`src/wasm.parity.runtime.contract.test.ts`、`src/wasm.parity.runtime.functional.test.ts`、`src/wasm.parity.output.equivalence.contract.test.ts`、`src/server.migration.test.ts`、`src/pathbridge.handshake.contract.test.ts` | 生产级 wasm 工件等价与 worker↔wasm 大规模基准/一致性仍待闭环。 |
+| **C-02** | **低（已解决）** | `android/app/src/main/AndroidManifest.xml`、`package.json` | Android 存储/媒体权限基线和 filesystem 依赖持续有效。 | `src/mobile.pipeline.test.ts` + 清单断言 | 仍依赖设备权限授权。 |
+| **H-01** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | Node EOL 目标持续移除，保持 Node 22 + Brotli + `--no-bytecode`。 | sidecar 构建脚本与目标映射 | `pkg` 生态演进节奏仍需跟踪。 |
+| **H-02** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | 跨平台 sidecar 构建策略持续有效。 | `npm run build:sidecar`、`npm run build:sidecar:all` | 发布前仍需目标 OS 实机运行验证。 |
+| **M-01** | **低（已解决）** | `src/server.ts` | 请求体内存安全加固持续有效。 | `src/server.migration.test.ts` | 高并发大请求下仍需容量化 I/O 规划。 |
+
+---
+
+### 最佳实践合规检查表
+
+| 标准 | 状态 | 当前证据 | 剩余工作 |
+| :--- | :--- | :--- | :--- |
+| **数据层抽象** | ✅ | source/storage 运行时能力分流持续有效。 | 在等价性改造中保持契约稳定。 |
+| **移动端运行时** | ⚠️ 部分完成 | Capacitor 本地构建为 Worker 优先回退；后端重计算已具备 JSON ABI + 编排契约 + 重试/诊断韧性，并新增 sidecar 诊断端点。 | 闭环生产级 wasm 工件等价与 worker↔wasm 基准回归。 |
+| **Node 版本** | ✅ | sidecar 目标保持 `node22-*`。 | 持续按 LTS 节奏升级。 |
+| **存储权限** | ✅ | 清单与依赖保持存储/媒体读取基线。 | 持续回归权限拒绝场景。 |
+| **Brotli 压缩** | ✅ | sidecar 构建保持 `--compress Brotli`。 | 持续监控二进制体积。 |
+| **IPC 安全** | ✅ | 鉴权广播与未授权超时机制保持有效。 | 持续评估本地进程攻防边界。 |
+
+---
+
+### 验证快照（2026-03-09）
+
+- `npx jest src/server.migration.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.output.equivalence.contract.test.ts --runInBand` 通过。
+- `npx tsc --pretty false` 通过。
+- `npm run test:migration` 通过：**23 suites, 112 tests**。
+- `npm run build` 通过。
+- `npm run test:tauri` 通过：**19 项 Rust/Tauri 测试**。
+- `npm test` 通过：**26 suites, 129 tests**。
+
+---
+
+# 2026-03-09 v1.0.9
+
+# END-TO-END HYBRID ARCHITECTURE & PACKAGING AUDIT (WASM RUNTIME RESILIENCE)
+**Date**: March 9, 2026
+**Target**: NoteConnection (Hybrid Node.js + Capacitor + Tauri/pkg Architecture)
+
+---
+
+## ENGLISH DOCUMENT
+
+### Executive Summary
+
+**Hybrid Architecture Risk Score: 2.8/10 (CRITICAL BREAKPOINTS CLOSED, RUNTIME RESILIENCE IMPROVED)**
+
+As of **2026-03-09**, runtime resilience was strengthened:
+- WASM runtime now retries failed/missing artifact loads after a controlled retry window (`NOTE_CONNECTION_WASM_RETRY_MS`), avoiding permanent null-cache lock.
+- Runtime diagnostics and execution-mode visibility were added (`getDiagnostics`, execution modes).
+- Functional contracts now cover retry-window behavior and diagnostics visibility.
+
+Remaining risk is no longer fallback reliability; it is production-scale parity:
+- Real wasm artifact parity/performance at scale remains open.
+- Worker↔wasm benchmark/equivalence baselines remain open.
+- Android real-device acceptance evidence remains environment-dependent.
+
+---
+
+### Critical Issues Table
+
+| ID | Severity (Current) | Location | Current Status (2026-03-09) | Verification Evidence | Residual Risk |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **MEDIUM (Mitigated)** | `src/frontend/runtime_bridge.js`, `src/frontend/storage_provider.js`, `src/frontend/source_manager.js`, `src/frontend/path_app.js`, `src/core/PathBridge.ts`, `src/backend/algorithms/WasmParityRuntime.ts`, `src/backend/algorithms/LayoutEngine.ts`, `src/backend/GraphMetrics.ts`, `src/wasm.parity.runtime.functional.test.ts`, `src/wasm.parity.output.equivalence.contract.test.ts` | Phantom-backend dependency remains mitigated. Capacitor native runtime is storage-provider/filesystem based, sidecar bridge startup is skipped when unsupported, and heavy compute routing now includes JSON ABI path + orchestration contracts + retry-window recoverability + diagnostics visibility. | `src/runtime.transport.adapter.contract.test.ts`, `src/source_manager.loadflow.test.ts`, `src/capacitor.runtime.contract.test.ts`, `src/storage.provider.contract.test.ts`, `src/storage.provider.capacitor.worker.contract.test.ts`, `src/wasm.parity.runtime.contract.test.ts`, `src/wasm.parity.runtime.functional.test.ts`, `src/wasm.parity.output.equivalence.contract.test.ts`, `src/pathbridge.handshake.contract.test.ts` | Production wasm artifact parity and worker↔wasm benchmark/equivalence at scale remain pending. |
+| **C-02** | **LOW (Resolved)** | `android/app/src/main/AndroidManifest.xml`, `package.json` | Android storage/media permission baseline + filesystem dependency remain in place. | `src/mobile.pipeline.test.ts` + manifest checks | Runtime still depends on user/device permission grant. |
+| **H-01** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Node EOL target remains removed; Node 22 + Brotli + `--no-bytecode` remains active. | sidecar build scripts + target map | Ongoing maintenance depends on `pkg` ecosystem cadence. |
+| **H-02** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Cross-platform sidecar strategy remains implemented. | `npm run build:sidecar`, `npm run build:sidecar:all` | Runtime execution still requires per-target release verification. |
+| **M-01** | **LOW (Resolved)** | `src/server.ts` | Request-body memory hardening remains active (size limits + spool threshold + explicit status mapping). | `src/server.migration.test.ts` | High-concurrency large uploads can still raise disk I/O pressure by design. |
+
+---
+
+### Best Practices Compliance Checklist
+
+| Standard | Status | Current Evidence | Remaining Work |
+| :--- | :--- | :--- | :--- |
+| **Data Layer Abstraction** | ✅ | Runtime capability split remains active across source/storage paths. | Keep adapter contracts stable while parity evolves. |
+| **Mobile Runtime** | ⚠️ Partial | Capacitor worker-first local build fallback remains active; backend heavy compute now has JSON ABI path + orchestration contracts + retry/diagnostic resilience. | Close production wasm artifact parity and worker↔wasm benchmark/equivalence baselines. |
+| **Node Version** | ✅ | Sidecar remains on `node22-*`. | Maintain LTS migration cadence. |
+| **Storage Permissions** | ✅ | Android storage/media permission baseline is present. | Keep permission-denied UX regression coverage active. |
+| **Brotli Compression** | ✅ | Sidecar build keeps `--compress Brotli` and `--no-bytecode`. | Continue binary-size drift monitoring. |
+| **IPC Security** | ✅ | Authorized-only broadcast + unauthorized timeout + token-aware metadata are active. | Continue threat-model review for local process attack surfaces. |
+
+---
+
+### Verification Snapshot (2026-03-09)
+
+- `npx jest src/wasm.parity.runtime.functional.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.output.equivalence.contract.test.ts --runInBand` passed.
+- `npx tsc --pretty false` passed.
+- `npm run test:migration` passed: **23 suites, 111 tests**.
+- `npm run build` passed.
+- `npm run test:tauri` passed: **19 Rust/Tauri tests**.
+- `npm test` passed: **26 suites, 128 tests**.
+
+---
+
+## 中文文档
+
+### 执行摘要
+
+**混合架构风险评分：2.8/10（关键断点持续关闭，运行时韧性进一步增强）**
+
+截至 **2026-03-09**，运行时韧性继续提升：
+- WASM 运行时新增受控重试窗口（`NOTE_CONNECTION_WASM_RETRY_MS`），避免缺失工件导致永久 null 缓存锁死。
+- 新增运行时诊断与执行模式可见性（`getDiagnostics` + execution mode）。
+- 功能契约已覆盖重试窗口行为与诊断可见性。
+
+当前剩余风险已从“回退可靠性”转为“生产级规模等价”：
+- 真实 wasm 工件在大规模场景下的等价/性能仍待闭环。
+- worker↔wasm 的基准等价回归仍待闭环。
+- Android 真机验收证据仍依赖在线设备环境。
+
+---
+
+### 关键问题表
+
+| ID | 当前严重程度 | 位置 | 当前状态（2026-03-09） | 验证证据 | 剩余风险 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **中（已缓解）** | `src/frontend/runtime_bridge.js`、`src/frontend/storage_provider.js`、`src/frontend/source_manager.js`、`src/frontend/path_app.js`、`src/core/PathBridge.ts`、`src/backend/algorithms/WasmParityRuntime.ts`、`src/backend/algorithms/LayoutEngine.ts`、`src/backend/GraphMetrics.ts`、`src/wasm.parity.runtime.functional.test.ts`、`src/wasm.parity.output.equivalence.contract.test.ts` | 幽灵后端依赖持续缓解。Capacitor 原生运行时保持 storage-provider/filesystem 路径；不支持 sidecar 时跳过桥接；重计算链路已具备 JSON ABI、编排契约、重试窗口可恢复性与诊断可见性。 | `src/runtime.transport.adapter.contract.test.ts`、`src/source_manager.loadflow.test.ts`、`src/capacitor.runtime.contract.test.ts`、`src/storage.provider.contract.test.ts`、`src/storage.provider.capacitor.worker.contract.test.ts`、`src/wasm.parity.runtime.contract.test.ts`、`src/wasm.parity.runtime.functional.test.ts`、`src/wasm.parity.output.equivalence.contract.test.ts`、`src/pathbridge.handshake.contract.test.ts` | 生产级 wasm 工件等价与 worker↔wasm 大规模基准/一致性仍待闭环。 |
+| **C-02** | **低（已解决）** | `android/app/src/main/AndroidManifest.xml`、`package.json` | Android 存储/媒体权限基线和 filesystem 依赖持续有效。 | `src/mobile.pipeline.test.ts` + 清单断言 | 仍依赖设备权限授权。 |
+| **H-01** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | Node EOL 目标持续移除，保持 Node 22 + Brotli + `--no-bytecode`。 | sidecar 构建脚本与目标映射 | `pkg` 生态演进节奏仍需跟踪。 |
+| **H-02** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | 跨平台 sidecar 构建策略持续有效。 | `npm run build:sidecar`、`npm run build:sidecar:all` | 发布前仍需目标 OS 实机运行验证。 |
+| **M-01** | **低（已解决）** | `src/server.ts` | 请求体内存安全加固持续有效。 | `src/server.migration.test.ts` | 高并发大请求下仍需容量化 I/O 规划。 |
+
+---
+
+### 最佳实践合规检查表
+
+| 标准 | 状态 | 当前证据 | 剩余工作 |
+| :--- | :--- | :--- | :--- |
+| **数据层抽象** | ✅ | source/storage 运行时能力分流持续有效。 | 在等价性改造中保持契约稳定。 |
+| **移动端运行时** | ⚠️ 部分完成 | Capacitor 本地构建为 Worker 优先回退；后端重计算已具备 JSON ABI + 编排契约 + 重试/诊断韧性。 | 闭环生产级 wasm 工件等价与 worker↔wasm 基准回归。 |
+| **Node 版本** | ✅ | sidecar 目标保持 `node22-*`。 | 持续按 LTS 节奏升级。 |
+| **存储权限** | ✅ | 清单与依赖保持存储/媒体读取基线。 | 持续回归权限拒绝场景。 |
+| **Brotli 压缩** | ✅ | sidecar 构建保持 `--compress Brotli`。 | 持续监控二进制体积。 |
+| **IPC 安全** | ✅ | 鉴权广播与未授权超时机制保持有效。 | 持续评估本地进程攻防边界。 |
+
+---
+
+### 验证快照（2026-03-09）
+
+- `npx jest src/wasm.parity.runtime.functional.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.output.equivalence.contract.test.ts --runInBand` 通过。
+- `npx tsc --pretty false` 通过。
+- `npm run test:migration` 通过：**23 suites, 111 tests**。
+- `npm run build` 通过。
+- `npm run test:tauri` 通过：**19 项 Rust/Tauri 测试**。
+- `npm test` 通过：**26 suites, 128 tests**。
+
+---
+
+# 2026-03-09 v1.0.8
+
+# END-TO-END HYBRID ARCHITECTURE & PACKAGING AUDIT (WASM PARITY ORCHESTRATION EQUIVALENCE)
+**Date**: March 9, 2026
+**Target**: NoteConnection (Hybrid Node.js + Capacitor + Tauri/pkg Architecture)
+
+---
+
+## ENGLISH DOCUMENT
+
+### Executive Summary
+
+**Hybrid Architecture Risk Score: 3.0/10 (CRITICAL BREAKPOINTS CLOSED, ORCHESTRATION PARITY COVERAGE EXPANDED)**
+
+As of **2026-03-09**, parity hardening advanced again:
+- Added orchestration-level output-equivalence contract coverage for heavy compute routing (`GraphMetrics` + `LayoutEngine`).
+- `LayoutEngine` fallback flow now resolves worker runtime lazily, only when GPU/WASM paths do not satisfy layout.
+- Full migration/build/Tauri/Jest gates remain green after the new contracts and runtime flow hardening.
+
+Remaining risk is concentrated in production-grade parity closure:
+- Real wasm artifact equivalence/performance at scale is still open.
+- Worker↔wasm benchmark baselines are still open.
+- Android real-device acceptance evidence remains environment-dependent.
+
+---
+
+### Critical Issues Table
+
+| ID | Severity (Current) | Location | Current Status (2026-03-09) | Verification Evidence | Residual Risk |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **MEDIUM (Mitigated)** | `src/frontend/runtime_bridge.js`, `src/frontend/storage_provider.js`, `src/frontend/source_manager.js`, `src/frontend/path_app.js`, `src/core/PathBridge.ts`, `src/backend/algorithms/WasmParityRuntime.ts`, `src/backend/algorithms/LayoutEngine.ts`, `src/backend/GraphMetrics.ts`, `src/wasm.parity.output.equivalence.contract.test.ts` | Phantom-backend dependency remains mitigated. Capacitor native runtime stays filesystem/storage-provider based; sidecar bridge startup is skipped when unsupported; heavy compute path now has JSON ABI runtime coverage plus orchestration-level output-equivalence contracts. | `src/runtime.transport.adapter.contract.test.ts`, `src/source_manager.loadflow.test.ts`, `src/capacitor.runtime.contract.test.ts`, `src/storage.provider.contract.test.ts`, `src/storage.provider.capacitor.worker.contract.test.ts`, `src/wasm.parity.runtime.contract.test.ts`, `src/wasm.parity.runtime.functional.test.ts`, `src/wasm.parity.output.equivalence.contract.test.ts`, `src/pathbridge.handshake.contract.test.ts` | Production wasm artifact parity and worker↔wasm benchmark/equivalence at scale remain pending. |
+| **C-02** | **LOW (Resolved)** | `android/app/src/main/AndroidManifest.xml`, `package.json` | Android storage/media permission baseline + filesystem dependency remain in place. | `src/mobile.pipeline.test.ts` + manifest checks | Runtime still depends on user/device permission grant. |
+| **H-01** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Node EOL target remains removed; Node 22 + Brotli + `--no-bytecode` remains active. | sidecar build scripts + target map | Ongoing maintenance depends on `pkg` ecosystem cadence. |
+| **H-02** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Cross-platform sidecar strategy remains implemented. | `npm run build:sidecar`, `npm run build:sidecar:all` | Runtime execution still requires per-target release verification. |
+| **M-01** | **LOW (Resolved)** | `src/server.ts` | Request-body memory hardening remains active (size limits + spool threshold + explicit status mapping). | `src/server.migration.test.ts` | High-concurrency large uploads can still raise disk I/O pressure by design. |
+
+---
+
+### Best Practices Compliance Checklist
+
+| Standard | Status | Current Evidence | Remaining Work |
+| :--- | :--- | :--- | :--- |
+| **Data Layer Abstraction** | ✅ | Runtime capability split remains active across source/storage paths. | Keep adapter contracts stable while parity evolves. |
+| **Mobile Runtime** | ⚠️ Partial | Capacitor worker-first local build fallback remains active; backend heavy compute has JSON ABI runtime path and orchestration-level output-equivalence contracts. | Close production wasm artifact parity and worker↔wasm benchmark/equivalence baselines. |
+| **Node Version** | ✅ | Sidecar remains on `node22-*`. | Maintain LTS migration cadence. |
+| **Storage Permissions** | ✅ | Android storage/media permission baseline is present. | Keep permission-denied UX regression coverage active. |
+| **Brotli Compression** | ✅ | Sidecar build keeps `--compress Brotli` and `--no-bytecode`. | Continue binary-size drift monitoring. |
+| **IPC Security** | ✅ | Authorized-only broadcast + unauthorized timeout + token-aware metadata are active. | Continue threat-model review for local process attack surfaces. |
+
+---
+
+### Verification Snapshot (2026-03-09)
+
+- `npx jest src/wasm.parity.output.equivalence.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.runtime.contract.test.ts --runInBand` passed.
+- `npx tsc --pretty false` passed.
+- `npm run test:migration` passed: **23 suites, 109 tests**.
+- `npm run build` passed.
+- `npm run test:tauri` passed: **19 Rust/Tauri tests**.
+- `npm test` passed: **26 suites, 126 tests**.
+
+---
+
+## 中文文档
+
+### 执行摘要
+
+**混合架构风险评分：3.0/10（关键断点持续关闭，编排层等价覆盖进一步增强）**
+
+截至 **2026-03-09**，等价性加固再次推进：
+- 重计算链路新增编排层输出一致性契约（`GraphMetrics` + `LayoutEngine`）。
+- `LayoutEngine` 回退流程改为惰性解析 worker 运行时，仅在 GPU/WASM 未满足时触发。
+- 新增契约与运行时优化后，migration/build/Tauri/Jest 全门禁持续全绿。
+
+当前剩余风险集中在生产级等价性收口：
+- 真实 wasm 工件在大规模场景下的一致性/性能仍待闭环。
+- worker↔wasm 的基准回归仍待闭环。
+- Android 真机验收证据仍依赖在线设备环境。
+
+---
+
+### 关键问题表
+
+| ID | 当前严重程度 | 位置 | 当前状态（2026-03-09） | 验证证据 | 剩余风险 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **中（已缓解）** | `src/frontend/runtime_bridge.js`、`src/frontend/storage_provider.js`、`src/frontend/source_manager.js`、`src/frontend/path_app.js`、`src/core/PathBridge.ts`、`src/backend/algorithms/WasmParityRuntime.ts`、`src/backend/algorithms/LayoutEngine.ts`、`src/backend/GraphMetrics.ts`、`src/wasm.parity.output.equivalence.contract.test.ts` | 幽灵后端依赖持续缓解。Capacitor 原生运行时保持 filesystem/storage-provider 路径；不支持 sidecar 时跳过桥接；重计算链路已具备 JSON ABI 运行时覆盖与编排层输出一致性契约。 | `src/runtime.transport.adapter.contract.test.ts`、`src/source_manager.loadflow.test.ts`、`src/capacitor.runtime.contract.test.ts`、`src/storage.provider.contract.test.ts`、`src/storage.provider.capacitor.worker.contract.test.ts`、`src/wasm.parity.runtime.contract.test.ts`、`src/wasm.parity.runtime.functional.test.ts`、`src/wasm.parity.output.equivalence.contract.test.ts`、`src/pathbridge.handshake.contract.test.ts` | 生产级 wasm 工件等价与 worker↔wasm 大规模基准/一致性仍待闭环。 |
+| **C-02** | **低（已解决）** | `android/app/src/main/AndroidManifest.xml`、`package.json` | Android 存储/媒体权限基线和 filesystem 依赖持续有效。 | `src/mobile.pipeline.test.ts` + 清单断言 | 仍依赖设备权限授权。 |
+| **H-01** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | Node EOL 目标持续移除，保持 Node 22 + Brotli + `--no-bytecode`。 | sidecar 构建脚本与目标映射 | `pkg` 生态演进节奏仍需跟踪。 |
+| **H-02** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | 跨平台 sidecar 构建策略持续有效。 | `npm run build:sidecar`、`npm run build:sidecar:all` | 发布前仍需目标 OS 实机运行验证。 |
+| **M-01** | **低（已解决）** | `src/server.ts` | 请求体内存安全加固持续有效。 | `src/server.migration.test.ts` | 高并发大请求下仍需容量化 I/O 规划。 |
+
+---
+
+### 最佳实践合规检查表
+
+| 标准 | 状态 | 当前证据 | 剩余工作 |
+| :--- | :--- | :--- | :--- |
+| **数据层抽象** | ✅ | source/storage 运行时能力分流持续有效。 | 在等价性改造中保持契约稳定。 |
+| **移动端运行时** | ⚠️ 部分完成 | Capacitor 本地构建为 Worker 优先回退；后端重计算已具备 JSON ABI 路径与编排层输出一致性契约。 | 闭环生产级 wasm 工件等价与 worker↔wasm 基准回归。 |
+| **Node 版本** | ✅ | sidecar 目标保持 `node22-*`。 | 持续按 LTS 节奏升级。 |
+| **存储权限** | ✅ | 清单与依赖保持存储/媒体读取基线。 | 持续回归权限拒绝场景。 |
+| **Brotli 压缩** | ✅ | sidecar 构建保持 `--compress Brotli`。 | 持续监控二进制体积。 |
+| **IPC 安全** | ✅ | 鉴权广播与未授权超时机制保持有效。 | 持续评估本地进程攻防边界。 |
+
+---
+
+### 验证快照（2026-03-09）
+
+- `npx jest src/wasm.parity.output.equivalence.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.runtime.contract.test.ts --runInBand` 通过。
+- `npx tsc --pretty false` 通过。
+- `npm run test:migration` 通过：**23 suites, 109 tests**。
+- `npm run build` 通过。
+- `npm run test:tauri` 通过：**19 项 Rust/Tauri 测试**。
+- `npm test` 通过：**26 suites, 126 tests**。
+
+---
+
+# 2026-03-09 v1.0.7
+
+# END-TO-END HYBRID ARCHITECTURE & PACKAGING AUDIT (WASM PARITY CONTINUATION)
+**Date**: March 9, 2026
+**Target**: NoteConnection (Hybrid Node.js + Capacitor + Tauri/pkg Architecture)
+
+---
+
+## ENGLISH DOCUMENT
+
+### Executive Summary
+
+**Hybrid Architecture Risk Score: 3.2/10 (CRITICAL BREAKPOINTS CLOSED, WASM PARITY PARTIALLY CLOSED)**
+
+As of **2026-03-09**, the WASM parity slice advanced from adapter wiring to JSON ABI result-path closure:
+- Heavy compute runtime now supports JSON ABI calls for layout and betweenness with guarded memory ABI handling.
+- Functional regression suite now validates JSON ABI success/fallback behavior (`src/wasm.parity.runtime.functional.test.ts`).
+- Existing deterministic fallback remains intact when wasm artifact/ABI is unavailable or invalid.
+
+Remaining risk is now concentrated in production parity closure:
+- Real wasm artifact conformance across full-scale workloads remains pending.
+- Node worker ↔ wasm output-equivalence/performance baselines are still open.
+- Android real-device evidence remains environment-dependent.
+
+---
+
+### Critical Issues Table
+
+| ID | Severity (Current) | Location | Current Status (2026-03-09) | Verification Evidence | Residual Risk |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **MEDIUM (Mitigated)** | `src/frontend/runtime_bridge.js`, `src/frontend/storage_provider.js`, `src/frontend/source_manager.js`, `src/frontend/path_app.js`, `src/core/PathBridge.ts`, `src/backend/algorithms/WasmParityRuntime.ts`, `src/backend/algorithms/LayoutEngine.ts`, `src/backend/GraphMetrics.ts` | Phantom-backend dependency remains mitigated. Capacitor native runtime follows storage-provider/filesystem path; sidecar bridge startup is skipped when unsupported; heavy compute path now includes JSON ABI wasm result ingestion with deterministic fallback. | `src/runtime.transport.adapter.contract.test.ts`, `src/source_manager.loadflow.test.ts`, `src/capacitor.runtime.contract.test.ts`, `src/storage.provider.contract.test.ts`, `src/storage.provider.capacitor.worker.contract.test.ts`, `src/wasm.parity.runtime.contract.test.ts`, `src/wasm.parity.runtime.functional.test.ts`, `src/pathbridge.handshake.contract.test.ts` | Production wasm artifact parity and worker↔wasm output-equivalence/performance closure are still pending. |
+| **C-02** | **LOW (Resolved)** | `android/app/src/main/AndroidManifest.xml`, `package.json` | Android storage/media permission baseline + filesystem dependency remain in place. | `src/mobile.pipeline.test.ts` + manifest checks | Runtime still depends on user/device permission grant. |
+| **H-01** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Node EOL target remains removed; Node 22 + Brotli + `--no-bytecode` remains active. | sidecar build scripts + target map | Ongoing maintenance depends on `pkg` ecosystem cadence. |
+| **H-02** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Cross-platform sidecar strategy remains implemented. | `npm run build:sidecar`, `npm run build:sidecar:all` | Runtime execution still requires per-target release verification. |
+| **M-01** | **LOW (Resolved)** | `src/server.ts` | Request-body memory hardening remains active (size limits + spool threshold + explicit status mapping). | `src/server.migration.test.ts` | High-concurrency large uploads can still raise disk I/O pressure by design. |
+
+---
+
+### Best Practices Compliance Checklist
+
+| Standard | Status | Current Evidence | Remaining Work |
+| :--- | :--- | :--- | :--- |
+| **Data Layer Abstraction** | ✅ | Runtime capability split remains active across source/storage paths. | Keep adapter contracts stable while parity evolves. |
+| **Mobile Runtime** | ⚠️ Partial | Capacitor worker-first local build fallback is active; heavy backend path now supports JSON ABI wasm result path with fallback. | Close production wasm artifact parity and output-equivalence/performance baselines. |
+| **Node Version** | ✅ | Sidecar remains on `node22-*`. | Maintain LTS migration cadence. |
+| **Storage Permissions** | ✅ | Android storage/media permission baseline is present. | Keep permission-denied UX regression coverage active. |
+| **Brotli Compression** | ✅ | Sidecar build keeps `--compress Brotli` and `--no-bytecode`. | Continue binary-size drift monitoring. |
+| **IPC Security** | ✅ | Authorized-only broadcast + unauthorized timeout + token-aware metadata are active. | Continue threat-model review for local process attack surfaces. |
+
+---
+
+### Verification Snapshot (2026-03-09)
+
+- `npx jest src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts --runInBand` passed.
+- `npx tsc --pretty false` passed.
+- `npm run test:migration` passed: **22 suites, 107 tests**.
+- `npm run build` passed.
+- `npm run test:tauri` passed: **19 Rust/Tauri tests**.
+- `npm test` passed: **25 suites, 124 tests**.
+
+---
+
+## 中文文档
+
+### 执行摘要
+
+**混合架构风险评分：3.2/10（关键断点持续关闭，WASM 等价性已部分闭环）**
+
+截至 **2026-03-09**，WASM 等价切片已从“接线阶段”推进到“JSON ABI 结果路径闭环”：
+- 重计算运行时已支持布局/中心性的 JSON ABI 调用，并具备内存 ABI 防护。
+- 新增功能回归套件，覆盖 JSON ABI 成功与失败回退行为（`src/wasm.parity.runtime.functional.test.ts`）。
+- 在 wasm 工件/ABI 缺失或异常时，仍保持既有确定性回退链路。
+
+当前剩余风险集中在生产级等价性收口：
+- 面向大规模场景的真实 wasm 工件一致性仍待闭环。
+- Node worker 与 wasm 的结果一致性/性能基线仍待闭环。
+- Android 真机证据仍依赖在线设备环境。
+
+---
+
+### 关键问题表
+
+| ID | 当前严重程度 | 位置 | 当前状态（2026-03-09） | 验证证据 | 剩余风险 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **中（已缓解）** | `src/frontend/runtime_bridge.js`、`src/frontend/storage_provider.js`、`src/frontend/source_manager.js`、`src/frontend/path_app.js`、`src/core/PathBridge.ts`、`src/backend/algorithms/WasmParityRuntime.ts`、`src/backend/algorithms/LayoutEngine.ts`、`src/backend/GraphMetrics.ts` | 幽灵后端依赖持续缓解。Capacitor 原生运行时走 storage-provider/filesystem；不支持 sidecar 时跳过桥接；重计算链路新增 JSON ABI wasm 结果消费并保持确定性回退。 | `src/runtime.transport.adapter.contract.test.ts`、`src/source_manager.loadflow.test.ts`、`src/capacitor.runtime.contract.test.ts`、`src/storage.provider.contract.test.ts`、`src/storage.provider.capacitor.worker.contract.test.ts`、`src/wasm.parity.runtime.contract.test.ts`、`src/wasm.parity.runtime.functional.test.ts`、`src/pathbridge.handshake.contract.test.ts` | 生产级 wasm 工件等价与 worker↔wasm 结果一致性/性能基线仍待闭环。 |
+| **C-02** | **低（已解决）** | `android/app/src/main/AndroidManifest.xml`、`package.json` | Android 存储/媒体权限基线和 filesystem 依赖持续有效。 | `src/mobile.pipeline.test.ts` + 清单断言 | 仍依赖设备权限授权。 |
+| **H-01** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | Node EOL 目标持续移除，保持 Node 22 + Brotli + `--no-bytecode`。 | sidecar 构建脚本与目标映射 | `pkg` 生态演进节奏仍需跟踪。 |
+| **H-02** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | 跨平台 sidecar 构建策略持续有效。 | `npm run build:sidecar`、`npm run build:sidecar:all` | 发布前仍需目标 OS 实机运行验证。 |
+| **M-01** | **低（已解决）** | `src/server.ts` | 请求体内存安全加固持续有效。 | `src/server.migration.test.ts` | 高并发大请求下仍需容量化 I/O 规划。 |
+
+---
+
+### 最佳实践合规检查表
+
+| 标准 | 状态 | 当前证据 | 剩余工作 |
+| :--- | :--- | :--- | :--- |
+| **数据层抽象** | ✅ | source/storage 运行时能力分流持续有效。 | 在等价性改造中保持契约稳定。 |
+| **移动端运行时** | ⚠️ 部分完成 | Capacitor 本地构建为 Worker 优先回退；后端重计算已支持 JSON ABI wasm 结果路径并保留回退。 | 闭环生产级 wasm 工件等价与结果一致性/性能基线。 |
+| **Node 版本** | ✅ | sidecar 目标保持 `node22-*`。 | 持续按 LTS 节奏升级。 |
+| **存储权限** | ✅ | 清单与依赖保持存储/媒体读取基线。 | 持续回归权限拒绝场景。 |
+| **Brotli 压缩** | ✅ | sidecar 构建保持 `--compress Brotli`。 | 持续监控二进制体积。 |
+| **IPC 安全** | ✅ | 鉴权广播与未授权超时机制保持有效。 | 持续评估本地进程攻防边界。 |
+
+---
+
+### 验证快照（2026-03-09）
+
+- `npx jest src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts --runInBand` 通过。
+- `npx tsc --pretty false` 通过。
+- `npm run test:migration` 通过：**22 suites, 107 tests**。
+- `npm run build` 通过。
+- `npm run test:tauri` 通过：**19 项 Rust/Tauri 测试**。
+- `npm test` 通过：**25 suites, 124 tests**。
+
+---
+
+# 2026-03-09 v1.0.6
+
+# END-TO-END HYBRID ARCHITECTURE & PACKAGING AUDIT
+**Date**: March 9, 2026
+**Target**: NoteConnection (Hybrid Node.js + Capacitor + Tauri/pkg Architecture)
+
+---
+
+## ENGLISH DOCUMENT
+
+### Executive Summary
+
+**Hybrid Architecture Risk Score: 3.5/10 (CRITICAL BREAKPOINTS CLOSED, PARITY/RELEASE RISK REMAINS)**
+
+As of **2026-03-09**, previously critical breakpoints remain closed and the parity slice has advanced:
+- Mobile runtime no longer hard-depends on localhost sidecar APIs for content/build flows.
+- PathBridge handshake/fan-out is tokenized, authorized-only, and timeout-guarded for unauthorized clients.
+- Sidecar packaging remains on Node 22 + Brotli + multi-target strategy.
+- `server.ts` request-body path remains bounded/spooled for memory safety.
+- New parity slice: heavy compute entrypoints (`LayoutEngine`, `GraphMetrics`) now route through a shared WASM parity runtime adapter before worker/sequential fallback.
+
+Remaining risk is parity closure, not architectural breakage:
+- WASM artifact ABI/output contract for real layout/centrality compute is not closed yet.
+- Large-scale parity still relies on existing Node worker/sequential fallback behavior.
+- Real-device acceptance evidence still requires an online Android device.
+
+---
+
+### Critical Issues Table
+
+| ID | Severity (Current) | Location | Current Status (2026-03-09) | Verification Evidence | Residual Risk |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **MEDIUM (Mitigated)** | `src/frontend/runtime_bridge.js`, `src/frontend/storage_provider.js`, `src/frontend/source_manager.js`, `src/frontend/path_app.js`, `src/core/PathBridge.ts`, `src/backend/algorithms/WasmParityRuntime.ts`, `src/backend/algorithms/LayoutEngine.ts`, `src/backend/GraphMetrics.ts` | Phantom-backend dependency remains mitigated. Capacitor native runtime routes through storage-provider/filesystem, sidecar bridge startup is skipped when unsupported, and backend heavy compute now includes WASM parity adapter routing with deterministic fallback. | `src/runtime.transport.adapter.contract.test.ts`, `src/source_manager.loadflow.test.ts`, `src/capacitor.runtime.contract.test.ts`, `src/storage.provider.contract.test.ts`, `src/storage.provider.capacitor.worker.contract.test.ts`, `src/wasm.parity.runtime.contract.test.ts`, `src/pathbridge.handshake.contract.test.ts` | WASM output ABI not yet closed; heavy compute still falls back to Node worker/sequential runtime for actual parity output. |
+| **C-02** | **LOW (Resolved)** | `android/app/src/main/AndroidManifest.xml`, `package.json` | Android storage/media permission baseline + filesystem dependency remain in place. | `src/mobile.pipeline.test.ts` + manifest checks | Runtime still depends on user/device permission grant. |
+| **H-01** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Node EOL target remains removed; Node 22 + Brotli + `--no-bytecode` is retained. | sidecar build scripts + target map | Ongoing maintenance depends on `pkg` ecosystem cadence. |
+| **H-02** | **LOW (Resolved)** | `scripts/build-sidecar.js`, `package.json` | Cross-platform sidecar strategy remains implemented. | `npm run build:sidecar`, `npm run build:sidecar:all` | Runtime execution must still be validated per target OS at release time. |
+| **M-01** | **LOW (Resolved)** | `src/server.ts` | Request-body memory hardening remains active (size limits + spool threshold + explicit status mapping). | `src/server.migration.test.ts` | High-concurrency large uploads can still raise disk I/O pressure by design. |
+
+---
+
+### Best Practices Compliance Checklist
+
+| Standard | Status | Current Evidence | Remaining Work |
+| :--- | :--- | :--- | :--- |
+| **Data Layer Abstraction** | ✅ | Runtime capability split remains active across source/storage paths. | Keep adapter contracts stable while parity slice evolves. |
+| **Mobile Runtime** | ⚠️ Partial | Worker-first local build fallback is active on Capacitor; heavy backend paths now include WASM parity adapter routing. | Close WASM ABI + output parity for layout/centrality and validate at scale. |
+| **Node Version** | ✅ | Sidecar remains on `node22-*`. | Maintain LTS migration cadence. |
+| **Storage Permissions** | ✅ | Android storage/media permission baseline is present. | Keep permission-denied UX regression coverage active. |
+| **Brotli Compression** | ✅ | Sidecar build keeps `--compress Brotli` and `--no-bytecode`. | Continue binary-size drift monitoring. |
+| **IPC Security** | ✅ | Authorized-only broadcast + unauthorized timeout + token-aware metadata are active. | Continue threat-model review for local process attack surfaces. |
+
+---
+
+### Verification Snapshot (2026-03-09)
+
+- `npm run test:migration` passed: **21 suites, 103 tests**.
+- `npm run build` passed.
+- `npm run test:tauri` passed: **19 Rust/Tauri tests**.
+- `npm test` passed: **24 suites, 120 tests**.
+
+---
+
+### Refactoring Plan (Remaining)
+
+1. Close WASM memory ABI and result contracts for heavy layout/centrality compute.
+2. Add output-equivalence regression tests between Node worker and WASM paths.
+3. Expose runtime capability telemetry (`worker`, `single-thread-fallback`, `wasm-adapter`, `desktop-full`) in UI/diagnostics.
+4. Keep macOS/Linux runtime execution and Android device evidence as release gates.
+
+---
+
+## 中文文档
+
+### 执行摘要
+
+**混合架构风险评分：3.5/10（关键断点已关闭，但等价性/发布风险仍存在）**
+
+截至 **2026-03-09**，关键断点持续关闭且等价性切片继续推进：
+- 移动端内容/构建链路不再硬依赖 localhost sidecar。
+- PathBridge 已具备 token 化鉴权、仅授权广播、未授权超时断开。
+- Sidecar 仍保持 Node 22 + Brotli + 多目标构建策略。
+- `server.ts` 请求体路径仍保持大小限制与落盘分流。
+- 新增：后端重计算入口（`LayoutEngine`、`GraphMetrics`）已接入共享 WASM 等价运行时适配器，并在失败时确定性回退。
+
+当前剩余风险是等价性闭环，而非架构断裂：
+- WASM 工件 ABI 与结果输出契约尚未闭环。
+- 大规模重计算结果当前仍以 Node worker/顺序回退链路为主。
+- 真机验收证据仍依赖在线 Android 设备。
+
+---
+
+### 关键问题表
+
+| ID | 当前严重程度 | 位置 | 当前状态（2026-03-09） | 验证证据 | 剩余风险 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **C-01** | **中（已缓解）** | `src/frontend/runtime_bridge.js`、`src/frontend/storage_provider.js`、`src/frontend/source_manager.js`、`src/frontend/path_app.js`、`src/core/PathBridge.ts`、`src/backend/algorithms/WasmParityRuntime.ts`、`src/backend/algorithms/LayoutEngine.ts`、`src/backend/GraphMetrics.ts` | 幽灵后端依赖持续缓解。Capacitor 原生运行时走 storage-provider/filesystem；不支持 sidecar 时跳过桥接；后端重计算入口新增 WASM 等价运行时适配并保持确定性回退。 | `src/runtime.transport.adapter.contract.test.ts`、`src/source_manager.loadflow.test.ts`、`src/capacitor.runtime.contract.test.ts`、`src/storage.provider.contract.test.ts`、`src/storage.provider.capacitor.worker.contract.test.ts`、`src/wasm.parity.runtime.contract.test.ts`、`src/pathbridge.handshake.contract.test.ts` | WASM 输出 ABI 未闭环，重计算结果仍主要回退到 Node worker/顺序路径。 |
+| **C-02** | **低（已解决）** | `android/app/src/main/AndroidManifest.xml`、`package.json` | Android 存储/媒体权限基线和 filesystem 依赖持续有效。 | `src/mobile.pipeline.test.ts` + 清单断言 | 仍依赖设备权限授权。 |
+| **H-01** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | Node EOL 目标持续移除，保持 Node 22 + Brotli + `--no-bytecode`。 | sidecar 构建脚本与目标映射 | `pkg` 生态演进节奏仍需跟踪。 |
+| **H-02** | **低（已解决）** | `scripts/build-sidecar.js`、`package.json` | 跨平台 sidecar 构建策略持续有效。 | `npm run build:sidecar`、`npm run build:sidecar:all` | 发布前仍需目标 OS 实机运行验证。 |
+| **M-01** | **低（已解决）** | `src/server.ts` | 请求体内存安全加固持续有效。 | `src/server.migration.test.ts` | 高并发大请求下仍需容量化 I/O 规划。 |
+
+---
+
+### 最佳实践合规检查表
+
+| 标准 | 状态 | 当前证据 | 剩余工作 |
+| :--- | :--- | :--- | :--- |
+| **数据层抽象** | ✅ | source/storage 运行时能力分流持续有效。 | 在等价性改造中保持契约稳定。 |
+| **移动端运行时** | ⚠️ 部分完成 | Capacitor 本地构建为 Worker 优先回退；后端重计算入口已接入 WASM 等价适配接线。 | 需闭环 WASM ABI + 结果路径并验证规模性能。 |
+| **Node 版本** | ✅ | sidecar 目标保持 `node22-*`。 | 持续按 LTS 节奏升级。 |
+| **存储权限** | ✅ | 清单与依赖保持存储/媒体读取基线。 | 持续回归权限拒绝场景。 |
+| **Brotli 压缩** | ✅ | sidecar 构建保持 `--compress Brotli`。 | 持续监控二进制体积。 |
+| **IPC 安全** | ✅ | 鉴权广播与未授权超时机制保持有效。 | 持续评估本地进程攻防边界。 |
+
+---
+
+### 验证快照（2026-03-09）
+
+- `npm run test:migration` 通过：**21 suites, 103 tests**。
+- `npm run build` 通过。
+- `npm run test:tauri` 通过：**19 项 Rust/Tauri 测试**。
+- `npm test` 通过：**24 suites, 120 tests**。
+
+---
+
+### 后续收口计划
+
+1. 闭环 WASM 内存 ABI 与布局/中心性输出契约。
+2. 增加 Node worker 与 WASM 结果一致性回归测试。
+3. 在 UI/诊断中显式暴露 `worker` / `single-thread-fallback` / `wasm-adapter` / `desktop-full` 能力态。
+4. 持续保留 macOS/Linux 运行验证与 Android 真机证据作为发布门禁。
+

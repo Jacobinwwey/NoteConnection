@@ -1,11 +1,172 @@
 import { Graph } from '../core/Graph';
-import { NoteNode } from '../core/types';
 import { Worker } from 'worker_threads';
 import * as os from 'os';
 import { config } from './config';
 import { resolveWorkerRuntimePath } from './utils/WorkerRuntime';
+import { WasmParityRuntime } from './algorithms/WasmParityRuntime';
+
+export type GraphMetricsComputeMode = 'none' | 'wasm-adapter' | 'worker' | 'sequential';
+
+export interface GraphMetricsComputeDiagnostics {
+    mode: GraphMetricsComputeMode;
+    nodeCount: number;
+    edgeCount: number;
+    durationMs: number;
+    reason: string | null;
+    updatedAtMs: number;
+}
+
+export interface GraphMetricsExecutionPolicy {
+    asyncNodeCountThreshold: number;
+    asyncWorkloadBenefitRatioThreshold: number;
+}
+
+function createDefaultComputeDiagnostics(): GraphMetricsComputeDiagnostics {
+    return {
+        mode: 'none',
+        nodeCount: 0,
+        edgeCount: 0,
+        durationMs: 0,
+        reason: null,
+        updatedAtMs: 0
+    };
+}
 
 export class GraphMetrics {
+    private static readonly DEFAULT_ASYNC_NODE_COUNT_THRESHOLD = 500;
+    private static readonly DEFAULT_ASYNC_WORKLOAD_BENEFIT_RATIO_THRESHOLD = 24;
+    private static lastComputeDiagnostics: GraphMetricsComputeDiagnostics = createDefaultComputeDiagnostics();
+
+    private static parsePositiveIntegerEnv(name: string): number | null {
+        const raw = String(process.env[name] || '').trim();
+        if (!raw) {
+            return null;
+        }
+
+        const parsed = Number(raw);
+        if (!Number.isFinite(parsed) || parsed <= 0) {
+            return null;
+        }
+
+        return Math.floor(parsed);
+    }
+
+    private static parsePositiveNumberEnv(name: string): number | null {
+        const raw = String(process.env[name] || '').trim();
+        if (!raw) {
+            return null;
+        }
+
+        const parsed = Number(raw);
+        if (!Number.isFinite(parsed) || parsed <= 0) {
+            return null;
+        }
+
+        return parsed;
+    }
+
+    private static resolveExecutionPolicy(): GraphMetricsExecutionPolicy {
+        const asyncNodeCountThreshold = this.parsePositiveIntegerEnv('NOTE_CONNECTION_GRAPHMETRICS_ASYNC_NODE_THRESHOLD');
+        const asyncWorkloadBenefitRatioThreshold = this.parsePositiveNumberEnv(
+            'NOTE_CONNECTION_GRAPHMETRICS_ASYNC_WORKLOAD_RATIO_THRESHOLD'
+        );
+
+        return {
+            asyncNodeCountThreshold: asyncNodeCountThreshold ?? this.DEFAULT_ASYNC_NODE_COUNT_THRESHOLD,
+            asyncWorkloadBenefitRatioThreshold:
+                asyncWorkloadBenefitRatioThreshold ?? this.DEFAULT_ASYNC_WORKLOAD_BENEFIT_RATIO_THRESHOLD
+        };
+    }
+
+    static getExecutionPolicy(): GraphMetricsExecutionPolicy {
+        return this.resolveExecutionPolicy();
+    }
+
+    private static resolveExecutionDecision(
+        nodeCount: number,
+        edgeCount: number,
+        workerCount: number,
+        memorySavingMode: boolean,
+        policy: GraphMetricsExecutionPolicy
+    ): {
+        useAsyncPath: boolean;
+        reason: string;
+        estimatedBenefitRatio: number | null;
+        estimatedWorkUnits: number;
+        estimatedWorkerOverheadUnits: number;
+    } {
+        if (memorySavingMode) {
+            return {
+                useAsyncPath: false,
+                reason: 'memory-saving-mode',
+                estimatedBenefitRatio: null,
+                estimatedWorkUnits: 0,
+                estimatedWorkerOverheadUnits: 0
+            };
+        }
+
+        if (nodeCount < policy.asyncNodeCountThreshold) {
+            return {
+                useAsyncPath: false,
+                reason: 'small-graph-threshold',
+                estimatedBenefitRatio: null,
+                estimatedWorkUnits: 0,
+                estimatedWorkerOverheadUnits: 0
+            };
+        }
+
+        const normalizedWorkerCount = Math.max(1, Math.floor(Number(workerCount) || 1));
+        const normalizedNodeCount = Math.max(0, Math.floor(Number(nodeCount) || 0));
+        const normalizedEdgeCount = Math.max(0, Math.floor(Number(edgeCount) || 0));
+        const estimatedWorkUnits = normalizedNodeCount * normalizedEdgeCount;
+        const estimatedWorkerOverheadUnits = normalizedWorkerCount * (normalizedNodeCount + normalizedEdgeCount);
+        const estimatedBenefitRatio = estimatedWorkUnits / Math.max(1, estimatedWorkerOverheadUnits);
+
+        if (estimatedBenefitRatio < policy.asyncWorkloadBenefitRatioThreshold) {
+            return {
+                useAsyncPath: false,
+                reason: 'sparse-workload-threshold',
+                estimatedBenefitRatio,
+                estimatedWorkUnits,
+                estimatedWorkerOverheadUnits
+            };
+        }
+
+        return {
+            useAsyncPath: true,
+            reason: 'workload-tier-async',
+            estimatedBenefitRatio,
+            estimatedWorkUnits,
+            estimatedWorkerOverheadUnits
+        };
+    }
+
+    private static markComputeMode(
+        mode: GraphMetricsComputeMode,
+        nodeCount: number,
+        edgeCount: number,
+        startedAtMs: number,
+        reason: string | null = null
+    ): void {
+        const updatedAtMs = Date.now();
+        this.lastComputeDiagnostics = {
+            mode,
+            nodeCount,
+            edgeCount,
+            durationMs: Math.max(0, updatedAtMs - startedAtMs),
+            reason,
+            updatedAtMs
+        };
+    }
+
+    static getLastComputeDiagnostics(): GraphMetricsComputeDiagnostics {
+        return { ...this.lastComputeDiagnostics };
+    }
+
+    static __resetComputeDiagnosticsForTests(): void {
+        this.lastComputeDiagnostics = createDefaultComputeDiagnostics();
+    }
+
     /**
      * Calculates Betweenness Centrality for all nodes (Parallel Version).
      * Uses Worker threads to distribute the Brandes Algorithm.
@@ -13,9 +174,21 @@ export class GraphMetrics {
      * 使用 Worker 线程分发 Brandes 算法。
      */
     static async calculateBetweennessAsync(graph: Graph): Promise<Map<string, number>> {
+        const startedAtMs = Date.now();
         const nodes = graph.toJSON().nodes;
         const allNodeIds = nodes.map(n => n.id);
         const nodeCount = nodes.length;
+        const edgeCount = graph.getEdges().length;
+        const numCPUs = os.cpus().length;
+        const workerCount = Math.max(1, config.maxWorkers ?? Math.max(1, numCPUs - 1));
+        const executionPolicy = this.resolveExecutionPolicy();
+        const executionDecision = this.resolveExecutionDecision(
+            nodeCount,
+            edgeCount,
+            workerCount,
+            config.memorySavingMode,
+            executionPolicy
+        );
 
         // Create a lightweight adjacency list for workers
         // 为 Workers 创建轻量级邻接表
@@ -24,15 +197,32 @@ export class GraphMetrics {
             adj[n.id] = graph.getOutgoingEdges(n.id).map(e => e.target);
         });
 
-        // Determine worker count
-        const numCPUs = os.cpus().length;
-        const workerCount = config.maxWorkers ?? Math.max(1, numCPUs - 1);
-        
-        // Threshold for parallelization or Memory Saving Check
-        // 并行化阈值或内存节省检查
-        if (nodeCount < 500 || config.memorySavingMode) {
-            console.log(`[GraphMetrics] Using Single-Core calculation (Memory Saving: ${config.memorySavingMode}, Nodes: ${nodeCount})`);
-            return this.calculateBetweenness(graph);
+        if (!executionDecision.useAsyncPath) {
+            const estimatedBenefitRatio = executionDecision.estimatedBenefitRatio;
+            const ratioPart = typeof estimatedBenefitRatio === 'number' && Number.isFinite(estimatedBenefitRatio)
+                ? `, workloadRatio=${estimatedBenefitRatio.toFixed(4)}`
+                : '';
+            console.log(
+                `[GraphMetrics] Using Single-Core calculation (${executionDecision.reason}, Nodes: ${nodeCount}, Edges: ${edgeCount}${ratioPart})`
+            );
+            const sequentialResult = this.calculateBetweenness(graph);
+            this.markComputeMode('sequential', nodeCount, edgeCount, startedAtMs, executionDecision.reason);
+            return sequentialResult;
+        }
+
+        // WASM parity slice: try wasm runtime before parallel worker fan-out.
+        // If wasm path is unavailable/incomplete, preserve existing behavior.
+        if (!config.memorySavingMode) {
+            try {
+                const wasmResult = await WasmParityRuntime.computeBetweenness(allNodeIds, adj);
+                if (wasmResult && wasmResult.size > 0) {
+                    console.log('[GraphMetrics] Using WASM parity betweenness runtime.');
+                    this.markComputeMode('wasm-adapter', nodeCount, edgeCount, startedAtMs, 'wasm-result-applied');
+                    return wasmResult;
+                }
+            } catch (wasmErr) {
+                console.warn('[GraphMetrics] WASM parity betweenness failed. Falling back to worker/sequential.', wasmErr);
+            }
         }
 
         console.log(`[GraphMetrics] Starting Parallel Betweenness Centrality with ${workerCount} workers...`);
@@ -47,7 +237,9 @@ export class GraphMetrics {
         if (!actualWorkerPath) {
             console.warn('[GraphMetrics] Worker script not found. Falling back to sequential calculation.');
             console.warn('[GraphMetrics] Checked paths:', workerRuntime.candidates);
-            return this.calculateBetweenness(graph);
+            const sequentialResult = this.calculateBetweenness(graph);
+            this.markComputeMode('sequential', nodeCount, edgeCount, startedAtMs, 'worker-script-unavailable');
+            return sequentialResult;
         }
 
         for (let i = 0; i < workerCount; i++) {
@@ -100,10 +292,13 @@ export class GraphMetrics {
                 }
             });
 
+            this.markComputeMode('worker', nodeCount, edgeCount, startedAtMs, null);
             return totalCB;
         } catch (err) {
             console.error('[GraphMetrics] Parallel calculation failed, falling back to sequential.', err);
-            return this.calculateBetweenness(graph);
+            const sequentialResult = this.calculateBetweenness(graph);
+            this.markComputeMode('sequential', nodeCount, edgeCount, startedAtMs, 'worker-failure-fallback');
+            return sequentialResult;
         }
     }
 

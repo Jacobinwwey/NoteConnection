@@ -1,4 +1,4 @@
-﻿import { WebSocketServer, WebSocket } from 'ws';
+import { WebSocketServer, WebSocket, RawData } from 'ws';
 
 type PathBridgeOptions = {
     port?: number;
@@ -65,6 +65,31 @@ type PendingMermaidRenderRequest = {
     timer: NodeJS.Timeout;
 };
 
+type BridgeInboundEnvelope = {
+    type: string;
+    payload?: unknown;
+    token?: unknown;
+    client?: unknown;
+};
+
+type BridgeInboundEnvelopeValidationResult = {
+    ok: boolean;
+    envelope?: BridgeInboundEnvelope;
+    reason?: string;
+};
+
+type OutboundQueueMessage = {
+    type: string;
+    serialized: string;
+    enqueuedAt: number;
+};
+
+type ClientOutboundQueueState = {
+    queue: OutboundQueueMessage[];
+    flushTimer: NodeJS.Timeout | null;
+    droppedCount: number;
+};
+
 export type PathTransportSummary = {
     centralId: string;
     totalNodes: number;
@@ -94,6 +119,8 @@ type PathValidationResult = {
 const PATH_REQUEST_TIMEOUT_MS = 3000;
 const PATH_PRODUCER_GRACE_MS = 30000;
 const MERMAID_RENDER_TIMEOUT_MS = 12000;
+const UNAUTHORIZED_CLIENT_TIMEOUT_MS = 5000;
+const MAX_INBOUND_MESSAGE_BYTES = 1024 * 1024;
 const PATH_MUTATION_TYPES = new Set([
     'nodeClick',
     'markComplete',
@@ -107,8 +134,176 @@ const PATH_MUTATION_TYPES = new Set([
     'configure',
 ]);
 
+const KNOWN_BRIDGE_MESSAGE_TYPES = new Set([
+    'authenticate',
+    'identify',
+    'requestPath',
+    'pathResult',
+    'pathStatus',
+    'renderMermaidResult',
+    'nodeClick',
+    'markComplete',
+    'switchCenter',
+    'openReader',
+    'unmarkComplete',
+    'completionSync',
+    'toggleCollapse',
+    'expandPrereqs',
+    'collapsePrereqs',
+    'collapseAll',
+    'configure',
+    'exitPathMode',
+]);
+
+const BRIDGE_OUTBOUND_MAX_QUEUE_MESSAGES = 256;
+const BRIDGE_OUTBOUND_MAX_BUFFERED_BYTES = 2 * 1024 * 1024;
+const BRIDGE_OUTBOUND_FLUSH_INTERVAL_MS = 25;
+
+export const BRIDGE_BACKPRESSURE_LIMITS = {
+    maxQueueMessages: BRIDGE_OUTBOUND_MAX_QUEUE_MESSAGES,
+    maxBufferedAmountBytes: BRIDGE_OUTBOUND_MAX_BUFFERED_BYTES,
+    flushIntervalMs: BRIDGE_OUTBOUND_FLUSH_INTERVAL_MS,
+};
+
+function validateKnownEnvelopePayload(type: string, payload: unknown): string | null {
+    switch (type) {
+        case 'authenticate':
+        case 'identify':
+            if (payload !== undefined && !isRecord(payload)) {
+                return `${type} payload must be an object when provided.`;
+            }
+            if (isRecord(payload)) {
+                const token = payload.token;
+                const client = payload.client ?? payload.tag;
+                if (token !== undefined && typeof token !== 'string') {
+                    return `${type} token must be a string when provided.`;
+                }
+                if (client !== undefined && typeof client !== 'string') {
+                    return `${type} client/tag must be a string when provided.`;
+                }
+            }
+            return null;
+
+        case 'pathResult':
+            if (!isRecord(payload)) {
+                return 'pathResult payload must be an object.';
+            }
+            return null;
+
+        case 'renderMermaidResult':
+        case 'pathStatus':
+        case 'configure':
+            if (payload !== undefined && !isRecord(payload)) {
+                return `${type} payload must be an object when provided.`;
+            }
+            return null;
+
+        case 'openReader':
+            if (payload === undefined || typeof payload === 'string') {
+                return null;
+            }
+            if (!isRecord(payload)) {
+                return 'openReader payload must be a string or object.';
+            }
+            if (payload.nodeId !== undefined && typeof payload.nodeId !== 'string') {
+                return 'openReader payload.nodeId must be a string when provided.';
+            }
+            return null;
+
+        case 'switchCenter':
+            if (!isRecord(payload)) {
+                return 'switchCenter payload must be an object.';
+            }
+            if (payload.newCenterId !== undefined && typeof payload.newCenterId !== 'string') {
+                return 'switchCenter payload.newCenterId must be a string when provided.';
+            }
+            return null;
+
+        case 'completionSync':
+            if (!isRecord(payload)) {
+                return 'completionSync payload must be an object.';
+            }
+            if (payload.completedIds !== undefined && !Array.isArray(payload.completedIds)) {
+                return 'completionSync payload.completedIds must be an array when provided.';
+            }
+            return null;
+
+        case 'nodeClick':
+        case 'markComplete':
+        case 'unmarkComplete':
+        case 'toggleCollapse':
+        case 'expandPrereqs':
+        case 'collapsePrereqs':
+            if (!isRecord(payload)) {
+                return `${type} payload must be an object.`;
+            }
+            if (payload.nodeId !== undefined && typeof payload.nodeId !== 'string') {
+                return `${type} payload.nodeId must be a string when provided.`;
+            }
+            return null;
+
+        default:
+            return null;
+    }
+}
+
+export function parseBridgeInboundEnvelope(data: unknown): BridgeInboundEnvelopeValidationResult {
+    if (!isRecord(data)) {
+        return {
+            ok: false,
+            reason: 'Bridge message must be a JSON object.',
+        };
+    }
+
+    const type = typeof data.type === 'string' ? data.type.trim() : '';
+    if (!type) {
+        return {
+            ok: false,
+            reason: 'Bridge message requires a non-empty type string.',
+        };
+    }
+
+    const envelope: BridgeInboundEnvelope = {
+        type,
+        payload: data.payload,
+        token: data.token,
+        client: data.client,
+    };
+
+    if (KNOWN_BRIDGE_MESSAGE_TYPES.has(type)) {
+        const payloadError = validateKnownEnvelopePayload(type, envelope.payload);
+        if (payloadError) {
+            return {
+                ok: false,
+                reason: payloadError,
+            };
+        }
+    }
+
+    return {
+        ok: true,
+        envelope,
+    };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
     return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function toBuffer(raw: RawData): Buffer {
+    if (Buffer.isBuffer(raw)) {
+        return raw;
+    }
+
+    if (typeof raw === 'string') {
+        return Buffer.from(raw, 'utf8');
+    }
+
+    if (Array.isArray(raw)) {
+        return Buffer.concat(raw.map((part) => Buffer.isBuffer(part) ? part : Buffer.from(part)));
+    }
+
+    return Buffer.from(raw);
 }
 
 function toStringList(value: unknown): string[] {
@@ -312,6 +507,8 @@ export class PathBridge {
     private currentPath: Record<string, unknown> | null = null;
     private pendingPathRequests: Map<WebSocket, PendingPathRequest> = new Map();
     private pendingMermaidRenderRequests: Map<string, PendingMermaidRenderRequest> = new Map();
+    private unauthorizedClientTimers: Map<WebSocket, NodeJS.Timeout> = new Map();
+    private outboundQueueState: Map<WebSocket, ClientOutboundQueueState> = new Map();
     private nextMermaidRenderRequestId = 1;
 
     constructor(options: number | PathBridgeOptions = 9876) {
@@ -339,14 +536,36 @@ export class PathBridge {
                 authorized: isAuthorized,
             });
             this.clients.add(ws);
+            this.outboundQueueState.set(ws, {
+                queue: [],
+                flushTimer: null,
+                droppedCount: 0,
+            });
             console.log(
                 `[PathBridge] Client connected #${clientId} (${clientTag}) from ${clientAddress}. Total clients: ${this.clients.size}`
             );
+            this.scheduleUnauthorizedDisconnect(ws);
 
             ws.on('message', (message) => {
                 try {
-                    const data = JSON.parse(message.toString());
-                    if (!this.authorizeClient(ws, data)) {
+                    const decodedMessage = this.decodeIncomingMessage(message);
+                    if (!decodedMessage.ok) {
+                        console.warn(`[PathBridge] Rejected malformed inbound frame: ${decodedMessage.reason}`);
+                        ws.close(4400, 'Bad Request');
+                        return;
+                    }
+
+                    const envelopeResult = parseBridgeInboundEnvelope(decodedMessage.payload);
+                    if (!envelopeResult.ok || !envelopeResult.envelope) {
+                        console.warn(
+                            `[PathBridge] Rejected malformed bridge envelope: ${envelopeResult.reason ?? 'unknown reason'}`
+                        );
+                        ws.close(4400, 'Bad Request');
+                        return;
+                    }
+
+                    const envelope = envelopeResult.envelope;
+                    if (!this.authorizeClient(ws, envelope)) {
                         const meta = this.clientMeta.get(ws);
                         console.warn(
                             `[PathBridge] Rejected unauthorized message from #${meta?.id ?? '?'} (${meta?.tag ?? 'unknown'})`
@@ -354,7 +573,7 @@ export class PathBridge {
                         ws.close(4401, 'Unauthorized');
                         return;
                     }
-                    this.handleMessage(data, ws);
+                    this.handleMessage(envelope, ws);
                 } catch (error) {
                     console.error('[PathBridge] Message error:', error);
                 }
@@ -364,7 +583,9 @@ export class PathBridge {
                 const meta = this.clientMeta.get(ws);
                 const reason = reasonBuffer?.toString() || '';
                 const wasProducer = !!meta && this.isPathProducerTag(meta.tag);
+                this.clearUnauthorizedDisconnect(ws);
                 this.clearPendingPathRequest(ws);
+                this.clearOutboundQueueState(ws);
                 this.clients.delete(ws);
                 this.clientMeta.delete(ws);
                 console.log(
@@ -408,8 +629,38 @@ export class PathBridge {
         return parsed?.searchParams.get('token')?.trim() || '';
     }
 
-    private authorizeClient(ws: WebSocket, data: any): boolean {
+    private decodeIncomingMessage(raw: RawData): {
+        ok: boolean;
+        payload?: unknown;
+        reason?: string;
+    } {
+        const buffer = toBuffer(raw);
+        if (buffer.length > MAX_INBOUND_MESSAGE_BYTES) {
+            return {
+                ok: false,
+                reason: `Inbound frame exceeded limit (${buffer.length} bytes).`,
+            };
+        }
+
+        let parsed: unknown;
+        try {
+            parsed = JSON.parse(buffer.toString('utf8'));
+        } catch (_error) {
+            return {
+                ok: false,
+                reason: 'Inbound frame is not valid JSON.',
+            };
+        }
+
+        return {
+            ok: true,
+            payload: parsed,
+        };
+    }
+
+    private authorizeClient(ws: WebSocket, envelope: BridgeInboundEnvelope): boolean {
         if (!this.authToken) {
+            this.clearUnauthorizedDisconnect(ws);
             return true;
         }
 
@@ -418,26 +669,76 @@ export class PathBridge {
             return false;
         }
         if (meta.authorized) {
+            this.clearUnauthorizedDisconnect(ws);
             return true;
         }
 
-        if (data?.type !== 'identify' && data?.type !== 'authenticate') {
+        if (envelope.type !== 'identify' && envelope.type !== 'authenticate') {
             return false;
         }
 
-        const providedToken = String(data?.payload?.token ?? data?.token ?? '').trim();
+        const payload = isRecord(envelope.payload) ? envelope.payload : {};
+        const providedToken = String(payload.token ?? envelope.token ?? '').trim();
         if (!providedToken || providedToken !== this.authToken) {
             return false;
         }
 
         meta.authorized = true;
         this.clientMeta.set(ws, meta);
-        const requestedTag = data?.payload?.client ?? data?.payload?.tag ?? data?.client;
+        this.clearUnauthorizedDisconnect(ws);
+        const requestedTag = payload.client ?? payload.tag ?? envelope.client;
         if (requestedTag) {
-            this.setClientTag(ws, requestedTag);
+            this.setClientTag(ws, String(requestedTag));
         }
         console.log(`[PathBridge] Client #${meta.id} authorized.`);
         return true;
+    }
+
+    private scheduleUnauthorizedDisconnect(ws: WebSocket): void {
+        if (!this.authToken) {
+            return;
+        }
+
+        const meta = this.clientMeta.get(ws);
+        if (!meta || meta.authorized) {
+            return;
+        }
+
+        this.clearUnauthorizedDisconnect(ws);
+        const timer = setTimeout(() => {
+            if (ws.readyState !== WebSocket.OPEN) {
+                this.unauthorizedClientTimers.delete(ws);
+                return;
+            }
+
+            const latestMeta = this.clientMeta.get(ws);
+            if (latestMeta?.authorized) {
+                this.unauthorizedClientTimers.delete(ws);
+                return;
+            }
+
+            console.warn(
+                `[PathBridge] Closing unauthorized client #${latestMeta?.id ?? '?'} ` +
+                `(${latestMeta?.tag ?? 'unknown'}) after auth timeout.`
+            );
+            try {
+                ws.close(4401, 'Unauthorized');
+            } finally {
+                this.unauthorizedClientTimers.delete(ws);
+            }
+        }, UNAUTHORIZED_CLIENT_TIMEOUT_MS);
+
+        this.unauthorizedClientTimers.set(ws, timer);
+    }
+
+    private clearUnauthorizedDisconnect(ws: WebSocket): void {
+        const timer = this.unauthorizedClientTimers.get(ws);
+        if (!timer) {
+            return;
+        }
+
+        clearTimeout(timer);
+        this.unauthorizedClientTimers.delete(ws);
     }
 
     private sanitizeClientTag(rawTag: unknown): string {
@@ -497,10 +798,17 @@ export class PathBridge {
         return Array.from(this.clients).filter((client) => client.readyState === WebSocket.OPEN);
     }
 
-    private getPathProducerClients(): WebSocket[] {
+    private getOpenAuthorizedClients(): WebSocket[] {
         return this.getOpenClients().filter((client) => {
             const meta = this.clientMeta.get(client);
-            return !!meta && meta.authorized && this.isPathProducerTag(meta.tag);
+            return !!meta && meta.authorized;
+        });
+    }
+
+    private getPathProducerClients(): WebSocket[] {
+        return this.getOpenAuthorizedClients().filter((client) => {
+            const meta = this.clientMeta.get(client);
+            return !!meta && this.isPathProducerTag(meta.tag);
         });
     }
 
@@ -521,28 +829,126 @@ export class PathBridge {
             if (!meta) {
                 return 'unknown';
             }
-            return `${meta.tag}#${meta.id}`;
+            return `${meta.tag}#${meta.id}${meta.authorized ? '' : '(unauthorized)'}`;
         });
+    }
+
+    private getOutboundQueueState(client: WebSocket): ClientOutboundQueueState {
+        const existing = this.outboundQueueState.get(client);
+        if (existing) {
+            return existing;
+        }
+
+        const nextState: ClientOutboundQueueState = {
+            queue: [],
+            flushTimer: null,
+            droppedCount: 0,
+        };
+        this.outboundQueueState.set(client, nextState);
+        return nextState;
+    }
+
+    private clearOutboundQueueState(client: WebSocket): void {
+        const state = this.outboundQueueState.get(client);
+        if (!state) {
+            return;
+        }
+
+        if (state.flushTimer) {
+            clearTimeout(state.flushTimer);
+            state.flushTimer = null;
+        }
+        state.queue.length = 0;
+        this.outboundQueueState.delete(client);
+    }
+
+    private enqueueOutboundMessage(client: WebSocket, message: OutboundQueueMessage): void {
+        const state = this.getOutboundQueueState(client);
+        if (state.queue.length >= BRIDGE_OUTBOUND_MAX_QUEUE_MESSAGES) {
+            state.queue.shift();
+            state.droppedCount += 1;
+            const meta = this.clientMeta.get(client);
+            console.warn(
+                `[PathBridge] Outbound queue overflow for #${meta?.id ?? '?'} (${meta?.tag ?? 'unknown'}); ` +
+                `dropped oldest frame count=${state.droppedCount}`
+            );
+        }
+
+        state.queue.push(message);
+        this.flushOutboundQueue(client);
+    }
+
+    private flushOutboundQueue(client: WebSocket): void {
+        const state = this.outboundQueueState.get(client);
+        if (!state) {
+            return;
+        }
+
+        if (state.flushTimer) {
+            clearTimeout(state.flushTimer);
+            state.flushTimer = null;
+        }
+
+        if (client.readyState !== WebSocket.OPEN) {
+            this.clearOutboundQueueState(client);
+            return;
+        }
+
+        while (state.queue.length > 0) {
+            if (client.bufferedAmount >= BRIDGE_OUTBOUND_MAX_BUFFERED_BYTES) {
+                state.flushTimer = setTimeout(
+                    () => this.flushOutboundQueue(client),
+                    BRIDGE_OUTBOUND_FLUSH_INTERVAL_MS
+                );
+                return;
+            }
+
+            const next = state.queue.shift();
+            if (!next) {
+                break;
+            }
+
+            try {
+                client.send(next.serialized);
+            } catch (error) {
+                const meta = this.clientMeta.get(client);
+                console.error(
+                    `[PathBridge] Send error to #${meta?.id ?? '?'} (${meta?.tag ?? 'unknown'}):`,
+                    error
+                );
+                this.clearOutboundQueueState(client);
+                return;
+            }
+        }
     }
 
     private sendMessage(client: WebSocket, type: string, payload: unknown): void {
         if (client.readyState !== WebSocket.OPEN) {
+            this.clearOutboundQueueState(client);
             return;
         }
 
+        let serialized = '';
         try {
-            client.send(JSON.stringify({ type, payload }));
+            serialized = JSON.stringify({ type, payload });
         } catch (error) {
             const meta = this.clientMeta.get(client);
             console.error(
-                `[PathBridge] Send error to #${meta?.id ?? '?'} (${meta?.tag ?? 'unknown'}):`,
+                `[PathBridge] Failed to serialize outbound frame ${type} for #${meta?.id ?? '?'} (${meta?.tag ?? 'unknown'}):`,
                 error
             );
+            return;
         }
+
+        this.enqueueOutboundMessage(client, {
+            type,
+            serialized,
+            enqueuedAt: Date.now(),
+        });
     }
 
     private broadcastTo(predicate: (client: WebSocket) => boolean, type: string, payload: unknown): void {
-        this.getOpenClients().forEach((client) => {
+        this.getOpenAuthorizedClients().forEach((client) => {
             if (!predicate(client)) {
                 return;
             }
@@ -827,7 +1233,6 @@ export class PathBridge {
         console.log(`[PathBridge] Received Mermaid render result from ${senderMeta.tag} for ${requestId}`);
         clearTimeout(pendingRequest.timer);
         this.pendingMermaidRenderRequests.delete(requestId);
-
         const pngBase64 = typeof payloadLike.pngBase64 === 'string' ? payloadLike.pngBase64.trim() : '';
         const ok = payloadLike.ok === true && pngBase64.length > 0;
         if (!ok) {
@@ -897,20 +1302,18 @@ export class PathBridge {
         this.broadcast('pathStatus', status);
     }
 
-    private handleMessage(data: any, sender: WebSocket): void {
-        console.log(`[PathBridge] Received: ${data.type}`);
+    private handleMessage(envelope: BridgeInboundEnvelope, sender: WebSocket): void {
+        const { type, payload, client } = envelope;
+        console.log(`[PathBridge] Received: ${type}`);
 
-        switch (data.type) {
+        switch (type) {
             case 'authenticate':
                 break;
 
             case 'identify': {
-                const requestedTag =
-                    data?.payload?.client ??
-                    data?.payload?.tag ??
-                    data?.client ??
-                    'unknown';
-                this.setClientTag(sender, requestedTag);
+                const identifyPayload = isRecord(payload) ? payload : {};
+                const requestedTag = identifyPayload.client ?? identifyPayload.tag ?? client ?? 'unknown';
+                this.setClientTag(sender, String(requestedTag));
                 break;
             }
 
@@ -919,94 +1322,98 @@ export class PathBridge {
                 break;
 
             case 'pathResult':
-                this.handlePathResult(data.payload, sender);
+                this.handlePathResult(payload, sender);
                 break;
 
             case 'pathStatus':
-                this.handlePathStatus(data.payload, sender);
+                this.handlePathStatus(payload, sender);
                 break;
 
             case 'renderMermaidResult':
-                this.handleMermaidRenderResult(data.payload, sender);
+                this.handleMermaidRenderResult(payload, sender);
                 break;
 
             case 'nodeClick':
                 this.invalidateCurrentPath('nodeClick');
-                console.log(`[PathBridge] Godot clicked node: ${data.payload?.nodeId}`);
-                this.broadcast('nodeClick', data.payload);
+                console.log(`[PathBridge] Godot clicked node: ${isRecord(payload) ? payload.nodeId : undefined}`);
+                this.broadcast('nodeClick', payload);
                 break;
 
             case 'markComplete':
                 this.invalidateCurrentPath('markComplete');
-                console.log(`[PathBridge] Node marked complete: ${data.payload?.nodeId}`);
-                this.broadcast('markComplete', data.payload);
+                console.log(`[PathBridge] Node marked complete: ${isRecord(payload) ? payload.nodeId : undefined}`);
+                this.broadcast('markComplete', payload);
                 break;
 
             case 'switchCenter':
                 this.invalidateCurrentPath('switchCenter');
-                console.log(`[PathBridge] Switch center to: ${data.payload?.newCenterId}`);
-                this.broadcast('switchCenter', data.payload);
+                console.log(`[PathBridge] Switch center to: ${isRecord(payload) ? payload.newCenterId : undefined}`);
+                this.broadcast('switchCenter', payload);
                 break;
 
             case 'openReader': {
-                const nodeId = data.payload?.nodeId || data.payload;
+                const nodeId = isRecord(payload) ? payload.nodeId : payload;
                 console.log(`[PathBridge] Open reader for: ${nodeId}`);
-                this.broadcast('openReader', data.payload);
+                this.broadcast('openReader', payload);
                 break;
             }
 
             case 'unmarkComplete':
                 this.invalidateCurrentPath('unmarkComplete');
-                console.log(`[PathBridge] Node unmarked: ${data.payload?.nodeId}`);
-                this.broadcast('unmarkComplete', data.payload);
+                console.log(`[PathBridge] Node unmarked: ${isRecord(payload) ? payload.nodeId : undefined}`);
+                this.broadcast('unmarkComplete', payload);
                 break;
 
             case 'completionSync':
                 this.invalidateCurrentPath('completionSync');
-                console.log(`[PathBridge] Completion sync, ${data.payload?.completedIds?.length || 0} nodes`);
-                this.broadcast('completionSync', data.payload);
+                console.log(
+                    `[PathBridge] Completion sync, ${
+                        isRecord(payload) && Array.isArray(payload.completedIds) ? payload.completedIds.length : 0
+                    } nodes`
+                );
+                this.broadcast('completionSync', payload);
                 break;
 
             case 'toggleCollapse':
                 this.invalidateCurrentPath('toggleCollapse');
-                console.log(`[PathBridge] Toggle collapse: ${data.payload?.nodeId}`);
-                this.broadcast('toggleCollapse', data.payload);
+                console.log(`[PathBridge] Toggle collapse: ${isRecord(payload) ? payload.nodeId : undefined}`);
+                this.broadcast('toggleCollapse', payload);
                 break;
 
             case 'expandPrereqs':
                 this.invalidateCurrentPath('expandPrereqs');
-                console.log(`[PathBridge] Expand prereqs: ${data.payload?.nodeId}`);
-                this.broadcast('expandPrereqs', data.payload);
+                console.log(`[PathBridge] Expand prereqs: ${isRecord(payload) ? payload.nodeId : undefined}`);
+                this.broadcast('expandPrereqs', payload);
                 break;
 
             case 'collapsePrereqs':
                 this.invalidateCurrentPath('collapsePrereqs');
-                console.log(`[PathBridge] Collapse prereqs: ${data.payload?.nodeId}`);
-                this.broadcast('collapsePrereqs', data.payload);
+                console.log(`[PathBridge] Collapse prereqs: ${isRecord(payload) ? payload.nodeId : undefined}`);
+                this.broadcast('collapsePrereqs', payload);
                 break;
 
             case 'collapseAll':
                 this.invalidateCurrentPath('collapseAll');
                 console.log('[PathBridge] Collapse ALL requested');
-                this.broadcast('collapseAll', data.payload);
+                this.broadcast('collapseAll', payload);
                 break;
 
             case 'configure':
                 this.invalidateCurrentPath('configure');
                 console.log('[PathBridge] Configuration update');
-                this.broadcast('configure', data.payload);
+                this.broadcast('configure', payload);
                 break;
 
             case 'exitPathMode':
                 console.log('[PathBridge] Exit Path Mode requested');
-                this.broadcast('exitPathMode', data.payload || {});
+                this.broadcast('exitPathMode', payload || {});
                 break;
 
             default:
-                if (PATH_MUTATION_TYPES.has(String(data.type || ''))) {
-                    this.invalidateCurrentPath(String(data.type || 'unknown'));
+                if (PATH_MUTATION_TYPES.has(type)) {
+                    this.invalidateCurrentPath(type);
                 }
-                console.log(`[PathBridge] Unknown message type: ${data.type}`);
+                console.log(`[PathBridge] Unknown message type: ${type}`);
         }
     }
 
@@ -1057,11 +1464,19 @@ export class PathBridge {
 
     public close(): void {
         this.clearAllPendingPathRequests();
+        Array.from(this.pendingMermaidRenderRequests.values()).forEach((pendingRequest) => {
+            clearTimeout(pendingRequest.timer);
+            pendingRequest.reject(new Error('PathBridge is closing before Mermaid render completed.'));
+        });
+        this.pendingMermaidRenderRequests.clear();
+        Array.from(this.unauthorizedClientTimers.keys()).forEach((client) => this.clearUnauthorizedDisconnect(client));
+        Array.from(this.outboundQueueState.keys()).forEach((client) => this.clearOutboundQueueState(client));
         this.wss.close();
         this.clients.clear();
         this.clientMeta.clear();
     }
 }
+
 
 
 

@@ -1,3 +1,117 @@
+# 2026-03-10 v1.5.38 - Multi-Terminal WASM Parity Implementation Plan (Mobile Bottleneck Closure)
+
+## English Document
+
+### Goal
+Use a single WASM compute strategy to reduce mobile-inherent bottlenecks while preserving deterministic behavior across desktop web, Tauri desktop, Capacitor mobile, and Tauri Android runtimes.
+
+### Mobile Inherent Problems (Current)
+
+1. Main-thread contention during heavy graph/layout compute can freeze interaction.
+2. Worker startup + JS serialization overhead can dominate on mobile CPUs for sparse graphs.
+3. Memory pressure and GC spikes increase crash/jank probability on constrained devices.
+4. Capability variance across WebView runtimes creates nondeterministic behavior without explicit probes.
+
+### Multi-Terminal Strategy
+
+1. One capability contract:
+   - Runtime exposes `supports_mobile_wasm_compute` and `mobile_wasm_reason`.
+   - Routing remains deterministic with explicit fallback reason tracking.
+2. One compute routing model:
+   - Preferred: `wasm-adapter`
+   - Fallback: `worker`
+   - Final fallback: `single-thread`
+3. One artifact governance path:
+   - Canonical WASM artifact probe + strict gate scripts + CI regression barriers.
+
+### Phased Execution Plan
+
+1. Phase A (Capability and Diagnostics) [Completed baseline]:
+   - Add runtime probe for mobile WASM readiness.
+   - Expose capability and reason in runtime caps.
+   - Keep existing behavior unchanged if capability is unavailable.
+2. Phase B (Routing Integration) [Active]:
+   - Thread mobile capability signal into on-device build stats.
+   - Add build-mode detail tags for mobile telemetry (`worker-wasm-ready`, `worker-wasm-not-ready`, fallback reasons).
+   - Keep deterministic fallback behavior.
+3. Phase C (Kernel Expansion):
+   - Move additional heavy kernels to WASM where correctness is contract-proven.
+   - Prioritize graph build hot spots that currently consume most mobile CPU time.
+4. Phase D (Artifact Provisioning per Terminal):
+   - Validate artifact packaging for:
+     - desktop web bundle
+     - Tauri desktop sidecar/runtime paths
+     - Capacitor mobile asset/runtime paths
+     - Tauri Android runtime paths
+5. Phase E (Performance and Stability Hard Gates):
+   - Enforce p95/p99 guardrails for mobile-oriented workloads.
+   - Enforce no-regression equivalence contracts between worker and WASM output.
+
+### Acceptance Criteria
+
+1. Runtime can always explain why WASM is enabled/disabled on mobile (`mobile_wasm_reason`).
+2. Mobile build path remains functional when WASM is unavailable (deterministic fallback verified).
+3. Migration gate suite remains fully green after each routing change.
+4. Bilingual docs remain synchronized for all plan/TODO/test-report updates.
+
+---
+
+## 中文文档
+
+### 目标
+通过统一的 WASM 计算策略，缓解移动端固有瓶颈，并在桌面 Web、Tauri 桌面、Capacitor 移动端、Tauri Android 多终端之间保持可预测的一致行为。
+
+### 当前移动端固有问题
+
+1. 重图计算/布局计算容易占用主线程，导致交互卡顿。
+2. 在稀疏图场景下，Worker 启动与 JS 序列化开销可能高于实际计算收益。
+3. 受限设备上内存压力与 GC 抖动更明显，稳定性风险更高。
+4. 不同 WebView 运行时能力差异较大，若缺少显式探测会造成行为不确定。
+
+### 多终端统一策略
+
+1. 统一能力契约：
+   - 运行时暴露 `supports_mobile_wasm_compute` 与 `mobile_wasm_reason`。
+   - 计算路由保留明确的回退原因，保证可诊断性。
+2. 统一计算路由模型：
+   - 首选：`wasm-adapter`
+   - 回退：`worker`
+   - 最终回退：`single-thread`
+3. 统一工件治理链路：
+   - 标准 WASM 工件探针 + 严格门禁脚本 + CI 回归屏障。
+
+### 分阶段执行计划
+
+1. 阶段 A（能力探测与诊断）[基线已完成]：
+   - 增加移动端 WASM 就绪探测。
+   - 在 runtime caps 中暴露能力与原因。
+   - 能力不可用时保持既有行为不变。
+2. 阶段 B（路由集成）[进行中]：
+   - 将移动端 WASM 能力信号接入本地构建统计。
+   - 增加移动构建模式细分标签（`worker-wasm-ready`、`worker-wasm-not-ready`、回退原因）。
+   - 保持确定性回退链路。
+3. 阶段 C（内核扩展）：
+   - 将更多重计算内核迁移到 WASM，并以契约验证正确性。
+   - 优先处理当前移动端 CPU 占用最高的图构建热点。
+4. 阶段 D（多终端工件落地）：
+   - 分别验证以下终端的工件打包与加载路径：
+     - 桌面 Web 资源包
+     - Tauri 桌面 sidecar/运行时路径
+     - Capacitor 移动端资源/运行时路径
+     - Tauri Android 运行时路径
+5. 阶段 E（性能与稳定性硬门禁）：
+   - 对移动端典型负载执行 p95/p99 门禁约束。
+   - 强制 worker 与 WASM 输出一致性无回归。
+
+### 验收标准
+
+1. 移动端必须能明确解释 WASM 启用/禁用原因（`mobile_wasm_reason`）。
+2. WASM 不可用时移动端构建链路仍可工作（确定性回退已验证）。
+3. 每一轮路由调整后，迁移门禁套件保持全绿。
+4. 所有计划/TODO/测试报告的中英文文档保持同步更新。
+
+---
+
 # 2026-03-04 v1.5.13 - Tauri Bridge-First Implementation Plan Update
 
 ## English Document

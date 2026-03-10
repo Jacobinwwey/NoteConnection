@@ -41,6 +41,13 @@ Audit flow:
 3. Remove obsolete items and correct mismatches.
 4. Rebuild as complete English section followed by complete Chinese section.
 
+## 0.1 Rendering Compatibility Constraint (Godot + Mermaid)
+
+- Godot runtime Mermaid consumption is PNG-only for authoritative rendering output.
+- SVG payload is retained only for diagnostics/debug snapshots and must not be used as runtime fallback in Godot.
+- Reason: current Godot SVG handling can fail non-deterministically (text/layout/raster instability across devices).
+- Change-control rule: any future Godot renderer optimization must preserve PNG decode as the primary path (`pngBase64` required); missing PNG is a hard failure.
+
 ---
 
 ## 1. Runtime and Path Contracts
@@ -772,6 +779,13 @@ This section records interface changes added after `v1.4.5`, keeping all previou
 2. 从源码重新提取接口。
 3. 删除过期项并修正不一致。
 4. 重建为完整英文部分 + 完整中文部分。
+
+## 0.1 渲染兼容性约束（Godot + Mermaid）
+
+- Godot 运行时中的 Mermaid 正式渲染链路仅允许 PNG（权威输出）。
+- SVG 仅保留用于诊断/调试快照，不得作为 Godot 运行时回退路径。
+- 原因：当前 Godot 的 SVG 处理存在非确定性失败（跨设备文本/布局/栅格不稳定）。
+- 变更规则：后续 Godot 渲染优化必须保持 PNG 解码主路径（`pngBase64` 必填）；缺失 PNG 视为失败。
 
 ---
 

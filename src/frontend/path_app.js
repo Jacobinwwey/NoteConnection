@@ -33,6 +33,8 @@ window.pathApp = {
         retainHistory: true
     },
     bridgeMermaidRenderQueue: Promise.resolve(),
+    semanticA11yLastSummaryKey: '',
+    semanticA11yLastAnnouncementAt: 0,
     
     // Animation State
     animationId: null,
@@ -72,6 +74,11 @@ window.pathApp = {
     },
 
     _connectBridgeSocket: function() {
+        if (!this._supportsSidecarBridge()) {
+            console.log('[PathApp] Sidecar bridge is disabled for this runtime; skipping WebSocket connect attempt.');
+            return;
+        }
+
         const hasActiveSocket = this.ws && (
             this.ws.readyState === WebSocket.OPEN ||
             this.ws.readyState === WebSocket.CONNECTING
@@ -162,6 +169,7 @@ window.pathApp = {
                     // Persist to localStorage
                     this._saveCompletedNodes();
                     console.log('[PathApp] Synced', completedIds.length, 'completed nodes from Godot');
+                    this._refreshPathSemanticA11y('Completion synced');
                 } else if (msg.type === 'markComplete') {
                     // ... existing code ...
                     // Single node marked complete from Godot
@@ -191,6 +199,7 @@ window.pathApp = {
                             console.log('[PathApp] Auto-reconstructing path because', nodeId, 'was completed');
                             this.triggerUpdate();
                         }
+                        this._refreshPathSemanticA11y('Node completed');
                     }
                 } else if (msg.type === 'unmarkComplete') {
                     // ... existing code ...
@@ -209,6 +218,7 @@ window.pathApp = {
                         }
                         
                         console.log('[PathApp] Unmarked from Godot:', nodeId);
+                        this._refreshPathSemanticA11y('Node unmarked');
                     }
                 }
             } catch(err) {
@@ -229,6 +239,11 @@ window.pathApp = {
     },
 
     setupWebSocket: function() {
+        if (!this._supportsSidecarBridge()) {
+            console.log('[PathApp] Sidecar bridge is disabled for this runtime; skipping setupWebSocket.');
+            return;
+        }
+
         const bridge = (typeof window !== 'undefined') ? window.NoteConnectionRuntime : null;
         const waitForRuntime = this._isTauriMode() && bridge && typeof bridge.whenReady === 'function';
 
@@ -244,6 +259,44 @@ window.pathApp = {
             .finally(() => {
                 this._connectBridgeSocket();
             });
+    },
+
+    _isCapacitorNativeRuntime: function() {
+        if (typeof window === 'undefined' || window.__TAURI__ || !window.Capacitor) {
+            return false;
+        }
+
+        try {
+            if (typeof window.Capacitor.getPlatform === 'function') {
+                const platform = window.Capacitor.getPlatform();
+                if (platform && platform !== 'web') {
+                    return true;
+                }
+            }
+            if (typeof window.Capacitor.isNativePlatform === 'function') {
+                return Boolean(window.Capacitor.isNativePlatform());
+            }
+        } catch (_err) {
+            return false;
+        }
+
+        return false;
+    },
+
+    _supportsSidecarBridge: function() {
+        const runtimeCaps = (typeof window !== 'undefined' && window.__NC_RUNTIME_CAPS)
+            ? window.__NC_RUNTIME_CAPS
+            : null;
+
+        if (runtimeCaps && runtimeCaps.supports_sidecar === false) {
+            return false;
+        }
+
+        if (this._isCapacitorNativeRuntime()) {
+            return false;
+        }
+
+        return true;
     },
 
     _getBridgeWsUrl: function() {
@@ -1815,6 +1868,7 @@ window.pathApp = {
         }
 
         if (this.uiInitialized) {
+            this._refreshPathSemanticA11y();
             return;
         }
         this.uiInitialized = true;
@@ -1893,6 +1947,135 @@ window.pathApp = {
                 }
             });
         }
+
+        this._ensurePathSemanticA11y();
+        this._refreshPathSemanticA11y('Path mode initialized');
+    },
+
+    _ensurePathSemanticA11y: function() {
+        const hostId = 'path-semantic-shadow';
+        let host = document.getElementById(hostId);
+        if (host) {
+            return host;
+        }
+
+        const pathContainer = document.getElementById('path-container');
+        if (!pathContainer) {
+            return null;
+        }
+
+        host = document.createElement('section');
+        host.id = hostId;
+        host.setAttribute('role', 'region');
+        host.setAttribute('aria-label', 'Path mode semantic summary');
+        host.style.position = 'absolute';
+        host.style.width = '1px';
+        host.style.height = '1px';
+        host.style.padding = '0';
+        host.style.margin = '-1px';
+        host.style.overflow = 'hidden';
+        host.style.clip = 'rect(0 0 0 0)';
+        host.style.clipPath = 'inset(50%)';
+        host.style.whiteSpace = 'nowrap';
+        host.style.border = '0';
+
+        const summary = document.createElement('p');
+        summary.id = 'path-semantic-summary';
+        summary.textContent = '';
+
+        const live = document.createElement('div');
+        live.id = 'path-semantic-live';
+        live.setAttribute('aria-live', 'polite');
+        live.setAttribute('aria-atomic', 'true');
+
+        host.appendChild(summary);
+        host.appendChild(live);
+        pathContainer.appendChild(host);
+        return host;
+    },
+
+    _collectSemanticNeighborLabels: function(centralId, limit = 5) {
+        if (!centralId || !Array.isArray(this.links) || !Array.isArray(this.nodes)) {
+            return [];
+        }
+
+        const neighborIds = new Set();
+        this.links.forEach((edge) => {
+            const sourceId = typeof edge?.source === 'object' ? edge.source.id : edge?.source;
+            const targetId = typeof edge?.target === 'object' ? edge.target.id : edge?.target;
+            if (sourceId === centralId && typeof targetId === 'string' && targetId.trim()) {
+                neighborIds.add(targetId.trim());
+            }
+            if (targetId === centralId && typeof sourceId === 'string' && sourceId.trim()) {
+                neighborIds.add(sourceId.trim());
+            }
+        });
+
+        const labelMap = new Map();
+        this.nodes.forEach((node) => {
+            if (node && typeof node.id === 'string') {
+                labelMap.set(node.id, String(node.label || node.id));
+            }
+        });
+
+        return Array.from(neighborIds)
+            .slice(0, Math.max(1, Math.floor(limit)))
+            .map((nodeId) => labelMap.get(nodeId) || nodeId);
+    },
+
+    _buildPathSemanticSummary: function() {
+        const totalNodes = Array.isArray(this.nodes) ? this.nodes.length : 0;
+        const completedCount = this.completedNodes instanceof Set ? this.completedNodes.size : 0;
+        const layout = this._getLayoutValue();
+        const centralNode = totalNodes > 0
+            ? (this.nodes.find((node) => node.id === this.centralNodeId) || null)
+            : null;
+        const centralId = centralNode?.id || '';
+        const centralLabel = centralNode?.label || centralId || 'none';
+        const remainingCount = Math.max(0, totalNodes - completedCount);
+        const nearbyLabels = this._collectSemanticNeighborLabels(centralId, 5);
+        const parts = [
+            `Layout ${layout}`,
+            `focus ${centralLabel}`,
+            `${completedCount} of ${totalNodes} nodes completed`,
+            `${remainingCount} remaining`
+        ];
+        if (nearbyLabels.length > 0) {
+            parts.push(`nearby topics ${nearbyLabels.join(', ')}`);
+        }
+        return {
+            key: `${layout}|${centralId}|${completedCount}|${totalNodes}|${nearbyLabels.join('|')}`,
+            text: parts.join('. ') + '.'
+        };
+    },
+
+    _refreshPathSemanticA11y: function(reason = '') {
+        const host = this._ensurePathSemanticA11y();
+        if (!host) {
+            return;
+        }
+
+        const summaryEl = document.getElementById('path-semantic-summary');
+        const liveEl = document.getElementById('path-semantic-live');
+        if (!summaryEl || !liveEl) {
+            return;
+        }
+
+        const snapshot = this._buildPathSemanticSummary();
+        summaryEl.textContent = snapshot.text;
+        if (snapshot.key === this.semanticA11yLastSummaryKey) {
+            return;
+        }
+
+        const now = Date.now();
+        if ((now - this.semanticA11yLastAnnouncementAt) < 250) {
+            return;
+        }
+
+        const reasonPrefix = reason ? reason + ': ' : '';
+        liveEl.textContent = reasonPrefix + snapshot.text;
+        this.semanticA11yLastSummaryKey = snapshot.key;
+        this.semanticA11yLastAnnouncementAt = now;
     },
 
     updateTargetDisplay: function() {
@@ -2076,6 +2259,7 @@ window.pathApp = {
         }
 
         this.centerView();
+        this._refreshPathSemanticA11y('Path recalculated');
         
         // Sync with Godot
         this.sendPathToBridge(result);
@@ -2333,12 +2517,14 @@ window.pathApp = {
             if (next) setTimeout(() => this.switchCentral(next.id), 500);
             
             this.render(); 
+            this._refreshPathSemanticA11y('Node completed');
         }
     },
 
     switchCentral: function(id) {
         console.log('[PathApp] switchCentral called with:', id);
         this.centralNodeId = id;
+        this._refreshPathSemanticA11y('Focus changed');
         
         // Use triggerUpdate to ensure Worker re-calculates Tree Layout with new Central ID
         this.triggerUpdate();

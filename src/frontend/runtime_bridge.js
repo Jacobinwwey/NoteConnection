@@ -197,8 +197,25 @@
         return nextInit;
     }
 
-    function getBridgeWsUrl(_clientTag) {
-        return state.bridgeWsUrl;
+    function getBridgeWsUrl(clientTag) {
+        const rawWsUrl = String(state.bridgeWsUrl || '').trim();
+        if (!rawWsUrl) {
+            return '';
+        }
+
+        try {
+            const url = new URL(rawWsUrl);
+            const normalizedClientTag = String(clientTag || '').trim();
+            if (normalizedClientTag) {
+                url.searchParams.set('client', normalizedClientTag);
+            }
+            if (state.authToken) {
+                url.searchParams.set('token', state.authToken);
+            }
+            return url.toString();
+        } catch (_error) {
+            return rawWsUrl;
+        }
     }
 
     function openBridgeSocket(clientTag, protocols) {
