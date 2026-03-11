@@ -14,6 +14,9 @@ type VerifyEvidenceModule = {
     now?: Date;
     maxAgeDays?: number;
     requireManualChecklist?: boolean;
+    requireLargeGraphEvidence?: boolean;
+    minimumLargeGraphNodeCount?: number;
+    minimumLargeGraphEdgeCount?: number;
   }) => VerifyEvidenceResult;
 };
 
@@ -45,6 +48,7 @@ describe('capacitor evidence verifier contracts', () => {
     generatedAt: string;
     includeLatestPointer?: boolean;
     checklistOverrides?: Record<string, boolean>;
+    workloadOverrides?: Record<string, number | boolean>;
   }): { evidenceRoot: string } {
     const runId = '20260311-120000-AB__CD';
     const evidenceRoot = path.join(fixtureRoot, 'mobile-evidence');
@@ -67,11 +71,22 @@ describe('capacitor evidence verifier contracts', () => {
     const checklist = {
       deviceConnectionGateExecuted: true,
       runtimeEvidenceArtifactsCollected: true,
+      largeGraphScenarioExecuted: false,
       appStartupManuallyVerified: false,
       sourcePanelManuallyVerified: false,
       readerManuallyVerified: false,
       pathModeEnterExitManuallyVerified: false,
       ...(options.checklistOverrides || {}),
+    };
+    const workload = {
+      nodeCount: 0,
+      edgeCount: 0,
+      thresholds: {
+        nodeCount: 10000,
+        edgeCount: 1000000,
+      },
+      meetsLargeGraphThreshold: false,
+      ...(options.workloadOverrides || {}),
     };
 
     const manifest = {
@@ -92,6 +107,7 @@ describe('capacitor evidence verifier contracts', () => {
           relativePath: relative(reportPath),
         },
       },
+      workload,
       checklist,
     };
     writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
@@ -168,5 +184,57 @@ describe('capacitor evidence verifier contracts', () => {
     expect(result.errors.join('\n')).toContain('Evidence is stale');
     expect(String(result.summary.resolutionMode)).toBe('directory-scan');
   });
-});
 
+  test('fails strict large-graph evidence mode when workload thresholds are not met', () => {
+    const fixture = createEvidenceFixture({
+      generatedAt: '2026-03-11T00:00:00.000Z',
+      includeLatestPointer: true,
+      workloadOverrides: {
+        nodeCount: 9999,
+        edgeCount: 999999,
+        meetsLargeGraphThreshold: false,
+      },
+    });
+
+    const result = verifier.verifyEvidence({
+      evidenceRoot: fixture.evidenceRoot,
+      now: new Date('2026-03-11T12:00:00.000Z'),
+      maxAgeDays: 30,
+      requireManualChecklist: false,
+      requireLargeGraphEvidence: true,
+      minimumLargeGraphNodeCount: 10000,
+      minimumLargeGraphEdgeCount: 1000000,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors.join('\n')).toContain('Manifest workload nodeCount');
+    expect(result.errors.join('\n')).toContain('Manifest workload edgeCount');
+  });
+
+  test('passes strict large-graph evidence mode when workload thresholds and checklist are satisfied', () => {
+    const fixture = createEvidenceFixture({
+      generatedAt: '2026-03-11T00:00:00.000Z',
+      includeLatestPointer: true,
+      checklistOverrides: {
+        largeGraphScenarioExecuted: true,
+      },
+      workloadOverrides: {
+        nodeCount: 15000,
+        edgeCount: 1500000,
+        meetsLargeGraphThreshold: true,
+      },
+    });
+
+    const result = verifier.verifyEvidence({
+      evidenceRoot: fixture.evidenceRoot,
+      now: new Date('2026-03-11T12:00:00.000Z'),
+      maxAgeDays: 30,
+      requireManualChecklist: false,
+      requireLargeGraphEvidence: true,
+      minimumLargeGraphNodeCount: 10000,
+      minimumLargeGraphEdgeCount: 1000000,
+    });
+
+    expect(result.ok).toBe(true);
+  });
+});

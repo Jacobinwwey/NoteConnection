@@ -15,6 +15,8 @@ const repoRoot = path.resolve(__dirname, '..');
 const apkPath = path.join(repoRoot, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
 const evidenceRoot = path.join(repoRoot, 'docs', 'mobile-evidence');
 const EVIDENCE_MANIFEST_SCHEMA_VERSION = 1;
+const LARGE_GRAPH_NODE_THRESHOLD = 10000;
+const LARGE_GRAPH_EDGE_THRESHOLD = 1000000;
 
 function fail(lines) {
   const normalized = Array.isArray(lines) ? lines : [String(lines)];
@@ -107,10 +109,40 @@ function fileLineCount(filePath) {
   return text.split(/\r?\n/).filter((line) => line.trim().length > 0).length;
 }
 
-function buildChecklist() {
+function parseOptionalPositiveInteger(rawValue) {
+  const value = Number(String(rawValue || '').trim());
+  if (!Number.isFinite(value) || value <= 0) {
+    return 0;
+  }
+  return Math.floor(value);
+}
+
+function resolveWorkloadEvidence() {
+  const nodeCount = parseOptionalPositiveInteger(
+    process.env.NOTE_CONNECTION_EVIDENCE_NODE_COUNT || process.env.NOTE_CONNECTION_EXPECTED_NODE_COUNT
+  );
+  const edgeCount = parseOptionalPositiveInteger(
+    process.env.NOTE_CONNECTION_EVIDENCE_EDGE_COUNT || process.env.NOTE_CONNECTION_EXPECTED_EDGE_COUNT
+  );
+  const meetsLargeGraphThreshold =
+    nodeCount >= LARGE_GRAPH_NODE_THRESHOLD && edgeCount >= LARGE_GRAPH_EDGE_THRESHOLD;
+
+  return {
+    nodeCount,
+    edgeCount,
+    thresholds: {
+      nodeCount: LARGE_GRAPH_NODE_THRESHOLD,
+      edgeCount: LARGE_GRAPH_EDGE_THRESHOLD,
+    },
+    meetsLargeGraphThreshold,
+  };
+}
+
+function buildChecklist(workloadEvidence) {
   return {
     deviceConnectionGateExecuted: true,
     runtimeEvidenceArtifactsCollected: true,
+    largeGraphScenarioExecuted: workloadEvidence.meetsLargeGraphThreshold,
     appStartupManuallyVerified: false,
     sourcePanelManuallyVerified: false,
     readerManuallyVerified: false,
@@ -154,6 +186,7 @@ function writeEvidenceManifest(manifestPath, context) {
         relativePath: toRepoRelative(context.reportPath),
       },
     },
+    workload: context.workloadEvidence,
     checklist: context.checklist,
   };
 
@@ -190,9 +223,16 @@ function writeEvidenceReport(reportPath, context) {
 - Logcat tail: [${path.basename(context.logcatPath)}](./${path.basename(context.logcatPath)})
 - Evidence manifest: [${path.basename(context.manifestPath)}](./${path.basename(context.manifestPath)})
 
+### Workload Context
+- Evidence nodes: ${context.workloadEvidence.nodeCount || 0}
+- Evidence edges: ${context.workloadEvidence.edgeCount || 0}
+- Large-graph threshold: nodes >= ${context.workloadEvidence.thresholds.nodeCount}, edges >= ${context.workloadEvidence.thresholds.edgeCount}
+- Meets large-graph threshold: ${context.workloadEvidence.meetsLargeGraphThreshold ? 'yes' : 'no'}
+
 ### Checklist Status
 - [x] Device connection gate executed.
 - [x] Runtime evidence artifacts collected.
+- [${context.workloadEvidence.meetsLargeGraphThreshold ? 'x' : ' '}] Large-graph scenario evidence captured (>=10k nodes and >=1M edges).
 - [ ] App startup behavior manually verified on device.
 - [ ] Source panel behavior manually verified on device.
 - [ ] Reader behavior manually verified on device.
@@ -214,9 +254,16 @@ function writeEvidenceReport(reportPath, context) {
 - Logcat 尾部日志: [${path.basename(context.logcatPath)}](./${path.basename(context.logcatPath)})
 - 证据清单: [${path.basename(context.manifestPath)}](./${path.basename(context.manifestPath)})
 
+### 负载上下文
+- 证据节点数: ${context.workloadEvidence.nodeCount || 0}
+- 证据边数: ${context.workloadEvidence.edgeCount || 0}
+- 大图阈值: 节点 >= ${context.workloadEvidence.thresholds.nodeCount}，边 >= ${context.workloadEvidence.thresholds.edgeCount}
+- 是否满足大图阈值: ${context.workloadEvidence.meetsLargeGraphThreshold ? '是' : '否'}
+
 ### 验收清单状态
 - [x] 已执行设备连接闸门检查。
 - [x] 已采集运行时证据文件。
+- [${context.workloadEvidence.meetsLargeGraphThreshold ? 'x' : ' '}] 已采集大图场景证据（>=10k 节点且 >=1M 边）。
 - [ ] 待人工确认设备启动行为。
 - [ ] 待人工确认数据源面板行为。
 - [ ] 待人工确认 Reader 行为。
@@ -284,7 +331,8 @@ function main() {
   const logcatPath = path.join(runDir, 'logcat-tail.txt');
   const manifestPath = path.join(runDir, 'acceptance_evidence.json');
   const reportPath = path.join(runDir, 'acceptance_evidence.md');
-  const checklist = buildChecklist();
+  const workloadEvidence = resolveWorkloadEvidence();
+  const checklist = buildChecklist(workloadEvidence);
 
   captureScreenshot(adbCommand, serial, screenshotPath);
   captureLogcat(adbCommand, serial, logcatPath);
@@ -299,6 +347,7 @@ function main() {
     screenshotPath,
     logcatPath,
     manifestPath,
+    workloadEvidence,
   });
   writeEvidenceManifest(manifestPath, {
     isoTime: now.toISOString(),
@@ -318,6 +367,7 @@ function main() {
     logcatSha256: sha256File(logcatPath),
     logcatLineCount: fileLineCount(logcatPath),
     reportPath,
+    workloadEvidence,
     checklist,
   });
   writeLatestPointer(path.join(evidenceRoot, 'latest.json'), {
@@ -333,6 +383,9 @@ function main() {
   console.log(`[Capacitor Evidence] Output: ${path.relative(repoRoot, runDir).replace(/\\/g, '/')}`);
   console.log(`[Capacitor Evidence] Manifest: ${path.relative(repoRoot, manifestPath).replace(/\\/g, '/')}`);
   console.log(`[Capacitor Evidence] Report: ${path.relative(repoRoot, reportPath).replace(/\\/g, '/')}`);
+  console.log(
+    `[Capacitor Evidence] Workload evidence: nodes=${workloadEvidence.nodeCount || 0}, edges=${workloadEvidence.edgeCount || 0}, largeGraph=${workloadEvidence.meetsLargeGraphThreshold}`
+  );
 }
 
 try {

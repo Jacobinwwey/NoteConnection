@@ -10,6 +10,16 @@ const MAX_AGE_DAYS_RANGE = {
   max: 365,
   default: 30,
 };
+const LARGE_GRAPH_NODE_COUNT_RANGE = {
+  min: 1000,
+  max: 2000000,
+  default: 10000,
+};
+const LARGE_GRAPH_EDGE_COUNT_RANGE = {
+  min: 10000,
+  max: 20000000,
+  default: 1000000,
+};
 
 function parseBoundedInteger(value, { min, max, defaultValue }) {
   const parsed = Number(String(value || '').trim());
@@ -71,7 +81,7 @@ function resolveLatestManifestPath(evidenceRoot) {
   return null;
 }
 
-function validateChecklist(checklist, requireManualChecklist) {
+function validateChecklist(checklist, requireManualChecklist, requireLargeGraphEvidence) {
   const errors = [];
   const warnings = [];
 
@@ -92,6 +102,14 @@ function validateChecklist(checklist, requireManualChecklist) {
     }
   }
 
+  if (requireLargeGraphEvidence) {
+    if (checklist.largeGraphScenarioExecuted !== true) {
+      errors.push('Checklist item must be true when large-graph evidence is required: largeGraphScenarioExecuted');
+    }
+  } else if (checklist.largeGraphScenarioExecuted !== true) {
+    warnings.push('Large-graph scenario checklist is pending: largeGraphScenarioExecuted');
+  }
+
   if (requireManualChecklist) {
     for (const key of requiredManual) {
       if (checklist[key] !== true) {
@@ -103,6 +121,45 @@ function validateChecklist(checklist, requireManualChecklist) {
     if (pending.length > 0) {
       warnings.push(`Manual checklist pending: ${pending.join(', ')}`);
     }
+  }
+
+  return { errors, warnings };
+}
+
+function validateLargeGraphWorkload(manifest, options) {
+  const errors = [];
+  const warnings = [];
+  const workload = manifest && typeof manifest.workload === 'object' && manifest.workload !== null
+    ? manifest.workload
+    : {};
+  const nodeCount = Number(workload.nodeCount || 0);
+  const edgeCount = Number(workload.edgeCount || 0);
+  const hasNodeCount = Number.isFinite(nodeCount) && nodeCount > 0;
+  const hasEdgeCount = Number.isFinite(edgeCount) && edgeCount > 0;
+
+  if (!options.requireLargeGraphEvidence) {
+    if (!hasNodeCount || !hasEdgeCount) {
+      warnings.push(
+        'Workload evidence is missing node/edge counts. Set NOTE_CONNECTION_EVIDENCE_NODE_COUNT and NOTE_CONNECTION_EVIDENCE_EDGE_COUNT during capture.'
+      );
+    }
+    return { errors, warnings };
+  }
+
+  if (!hasNodeCount || !hasEdgeCount) {
+    errors.push('Manifest workload evidence is missing nodeCount/edgeCount while large-graph evidence is required.');
+    return { errors, warnings };
+  }
+
+  if (Math.floor(nodeCount) < options.minimumLargeGraphNodeCount) {
+    errors.push(
+      `Manifest workload nodeCount (${Math.floor(nodeCount)}) is below required threshold (${options.minimumLargeGraphNodeCount}).`
+    );
+  }
+  if (Math.floor(edgeCount) < options.minimumLargeGraphEdgeCount) {
+    errors.push(
+      `Manifest workload edgeCount (${Math.floor(edgeCount)}) is below required threshold (${options.minimumLargeGraphEdgeCount}).`
+    );
   }
 
   return { errors, warnings };
@@ -159,9 +216,17 @@ function validateManifest(manifest, manifestPath, options) {
   });
 
   const checklist = manifest.checklist || {};
-  const checklistValidation = validateChecklist(checklist, options.requireManualChecklist);
+  const checklistValidation = validateChecklist(
+    checklist,
+    options.requireManualChecklist,
+    options.requireLargeGraphEvidence
+  );
   errors.push(...checklistValidation.errors);
   warnings.push(...checklistValidation.warnings);
+
+  const workloadValidation = validateLargeGraphWorkload(manifest, options);
+  errors.push(...workloadValidation.errors);
+  warnings.push(...workloadValidation.warnings);
 
   const result = {
     ok: errors.length === 0,
@@ -173,6 +238,9 @@ function validateManifest(manifest, manifestPath, options) {
       generatedAt: String(manifest.generatedAt || ''),
       maxAgeDays: options.maxAgeDays,
       strictManualChecklist: options.requireManualChecklist,
+      requireLargeGraphEvidence: options.requireLargeGraphEvidence,
+      minimumLargeGraphNodeCount: options.minimumLargeGraphNodeCount,
+      minimumLargeGraphEdgeCount: options.minimumLargeGraphEdgeCount,
     },
   };
   return result;
@@ -195,6 +263,23 @@ function verifyEvidence(options = {}) {
   const requireManualChecklist = typeof options.requireManualChecklist === 'boolean'
     ? options.requireManualChecklist
     : isTruthy(process.env.NOTE_CONNECTION_REQUIRE_MANUAL_MOBILE_CHECKLIST);
+  const requireLargeGraphEvidence = typeof options.requireLargeGraphEvidence === 'boolean'
+    ? options.requireLargeGraphEvidence
+    : isTruthy(process.env.NOTE_CONNECTION_REQUIRE_LARGE_GRAPH_EVIDENCE);
+  const minimumLargeGraphNodeCount = Number.isFinite(options.minimumLargeGraphNodeCount)
+    ? Number(options.minimumLargeGraphNodeCount)
+    : parseBoundedInteger(process.env.NOTE_CONNECTION_MIN_EVIDENCE_NODE_COUNT, {
+        min: LARGE_GRAPH_NODE_COUNT_RANGE.min,
+        max: LARGE_GRAPH_NODE_COUNT_RANGE.max,
+        defaultValue: LARGE_GRAPH_NODE_COUNT_RANGE.default,
+      });
+  const minimumLargeGraphEdgeCount = Number.isFinite(options.minimumLargeGraphEdgeCount)
+    ? Number(options.minimumLargeGraphEdgeCount)
+    : parseBoundedInteger(process.env.NOTE_CONNECTION_MIN_EVIDENCE_EDGE_COUNT, {
+        min: LARGE_GRAPH_EDGE_COUNT_RANGE.min,
+        max: LARGE_GRAPH_EDGE_COUNT_RANGE.max,
+        defaultValue: LARGE_GRAPH_EDGE_COUNT_RANGE.default,
+      });
 
   if (!fs.existsSync(evidenceRoot)) {
     return {
@@ -205,6 +290,9 @@ function verifyEvidence(options = {}) {
         evidenceRoot,
         maxAgeDays,
         strictManualChecklist: requireManualChecklist,
+        requireLargeGraphEvidence,
+        minimumLargeGraphNodeCount,
+        minimumLargeGraphEdgeCount,
       },
     };
   }
@@ -219,6 +307,9 @@ function verifyEvidence(options = {}) {
         evidenceRoot,
         maxAgeDays,
         strictManualChecklist: requireManualChecklist,
+        requireLargeGraphEvidence,
+        minimumLargeGraphNodeCount,
+        minimumLargeGraphEdgeCount,
       },
     };
   }
@@ -228,6 +319,9 @@ function verifyEvidence(options = {}) {
     now,
     maxAgeDays,
     requireManualChecklist,
+    requireLargeGraphEvidence,
+    minimumLargeGraphNodeCount,
+    minimumLargeGraphEdgeCount,
   });
   validated.summary.evidenceRoot = evidenceRoot;
   validated.summary.resolutionMode = resolved.via;

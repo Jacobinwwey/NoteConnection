@@ -26,6 +26,8 @@ jobs:
             command: npm run test:tauri
           - suite: mobile-pipeline-contract-suite
             command: npm run test:mobile:contracts
+          - suite: sidecar-signature-policy-contract-suite
+            command: npm run verify:sidecar:signatures -- --contract-only
 
     steps:
       - name: Checkout repository

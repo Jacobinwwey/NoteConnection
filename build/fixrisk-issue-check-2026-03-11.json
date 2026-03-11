@@ -1,0 +1,88 @@
+{
+  "generatedAt": "2026-03-11T10:46:50.753Z",
+  "source": [
+    "docs/en/fixrisk_TODO.md",
+    "docs/zh/fixrisk_TODO.md"
+  ],
+  "issues": [
+    {
+      "id": "FR-001",
+      "status": "closed-code",
+      "verification": [
+        "src/runtime.spool.policy.contract.test.ts passed"
+      ]
+    },
+    {
+      "id": "FR-002",
+      "status": "closed-code",
+      "verification": [
+        "src/pkg.sidecar.contract.test.ts passed",
+        "package.json only keeps @yao-pkg/pkg in devDependencies"
+      ]
+    },
+    {
+      "id": "FR-003",
+      "status": "closed-code",
+      "verification": [
+        "src/mobile.pipeline.test.ts passed",
+        "capacitor.config.ts loopback policy present"
+      ]
+    },
+    {
+      "id": "FR-004",
+      "status": "closed-code",
+      "verification": [
+        "src/pkg.snapshot.safety.contract.test.ts passed"
+      ]
+    },
+    {
+      "id": "FR-005",
+      "status": "closed-code",
+      "verification": [
+        "src/runtime.heap.policy.contract.test.ts passed"
+      ]
+    },
+    {
+      "id": "FR-006",
+      "status": "closed-policy-gate",
+      "verification": [
+        "src/sidecar.signature.contract.test.ts passed",
+        "node scripts/verify-sidecar-signatures.js --contract-only passed"
+      ]
+    },
+    {
+      "id": "FR-007",
+      "status": "closed-code",
+      "verification": [
+        "src/graph.accessibility.contract.test.ts passed"
+      ]
+    },
+    {
+      "id": "FR-008",
+      "status": "closed-code",
+      "verification": [
+        "src/privacy.manifest.contract.test.ts passed",
+        "node scripts/verify-privacy-manifest.js passed"
+      ]
+    },
+    {
+      "id": "FR-009",
+      "status": "tooling-closed-ops-pending",
+      "verification": [
+        "src/capacitor.evidence.contract.test.ts passed",
+        "strict verifier currently fails due missing docs/mobile-evidence on this machine"
+      ]
+    },
+    {
+      "id": "FR-010",
+      "status": "closed-pipeline",
+      "verification": [
+        "workflow grep confirms actions/checkout@v5 + actions/setup-node@v5 + FORCE_JAVASCRIPT_ACTIONS_TO_NODE24"
+      ]
+    }
+  ],
+  "overall": {
+    "allCodeLevelIssuesClosed": true,
+    "remainingOperationalBlocker": "FR-009 physical large-graph device evidence capture"
+  }
+}

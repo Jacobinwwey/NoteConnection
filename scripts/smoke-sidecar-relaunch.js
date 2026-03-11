@@ -1,51 +1,122 @@
 const http = require('http');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 
 const repoRoot = path.resolve(__dirname, '..');
 const serverEntry = path.join(repoRoot, 'dist', 'src', 'server.js');
-const waitMs = 15000;
+const serverPort = Number(process.env.NOTE_CONNECTION_PORT || 3000);
+const startupWaitMs = 20000;
+const shutdownWaitMs = 5000;
 
 function waitForServerStart(child) {
   return new Promise((resolve, reject) => {
+    const startedPattern = new RegExp(`Server running at http://(?:127\\.0\\.0\\.1|localhost):${serverPort}/`, 'i');
     const timeout = setTimeout(() => {
-      reject(new Error('Timed out waiting for server startup.'));
-    }, waitMs);
+      cleanup();
+      reject(new Error(`Timed out waiting for server startup on port ${serverPort}.`));
+    }, startupWaitMs);
 
-    child.stdout.on('data', (chunk) => {
+    const onStdout = (chunk) => {
       const text = chunk.toString();
-      if (text.includes('Server running at http://localhost:3000/')) {
-        clearTimeout(timeout);
+      if (startedPattern.test(text)) {
+        cleanup();
         resolve();
       }
-    });
+    };
 
-    child.stderr.on('data', (chunk) => {
+    const onStderr = (chunk) => {
       const text = chunk.toString();
-      if (text.toLowerCase().includes('error')) {
-        clearTimeout(timeout);
+      if (/\berror\b/i.test(text)) {
+        cleanup();
         reject(new Error(`Server stderr: ${text.trim()}`));
       }
-    });
+    };
 
-    child.on('exit', (code) => {
+    const onExit = (code, signal) => {
+      cleanup();
+      reject(new Error(`Server exited before startup. code=${code ?? 'null'} signal=${signal ?? 'null'}`));
+    };
+
+    const cleanup = () => {
       clearTimeout(timeout);
-      reject(new Error(`Server exited before startup. code=${code}`));
+      child.stdout.off('data', onStdout);
+      child.stderr.off('data', onStderr);
+      child.off('exit', onExit);
+    };
+
+    child.stdout.on('data', onStdout);
+    child.stderr.on('data', onStderr);
+    child.on('exit', onExit);
+  });
+}
+
+function waitForExit(child, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    let done = false;
+    const timeout = setTimeout(() => {
+      if (done) {
+        return;
+      }
+      done = true;
+      reject(new Error(`Timed out waiting for server process ${child.pid} to exit.`));
+    }, timeoutMs);
+
+    child.once('exit', () => {
+      if (done) {
+        return;
+      }
+      done = true;
+      clearTimeout(timeout);
+      resolve();
     });
   });
 }
 
-function waitForExit(child) {
-  return new Promise((resolve) => {
-    child.once('exit', () => resolve());
-  });
+function forceKillProcessTree(pid) {
+  if (!Number.isFinite(pid) || pid <= 0) {
+    return;
+  }
+
+  if (process.platform === 'win32') {
+    spawnSync('taskkill.exe', ['/PID', String(pid), '/T', '/F'], {
+      stdio: 'ignore',
+      windowsHide: true
+    });
+    return;
+  }
+
+  try {
+    process.kill(pid, 'SIGKILL');
+  } catch (_error) {
+    // Process may already be gone.
+  }
+}
+
+async function terminateChildProcess(child) {
+  if (!child || child.killed) {
+    return;
+  }
+
+  try {
+    child.kill('SIGTERM');
+  } catch (_error) {
+    // Ignore and attempt forced kill below.
+  }
+
+  try {
+    await waitForExit(child, shutdownWaitMs);
+    return;
+  } catch (_timeout) {
+    forceKillProcessTree(child.pid);
+    await waitForExit(child, shutdownWaitMs);
+  }
 }
 
 function assertPortFree(port) {
   return new Promise((resolve, reject) => {
     const probe = http.createServer();
     probe.once('error', (err) => reject(err));
-    probe.listen(port, () => {
+    probe.listen(port, '127.0.0.1', () => {
       probe.close((err) => {
         if (err) {
           reject(err);
@@ -63,6 +134,7 @@ async function main() {
     stdio: ['ignore', 'pipe', 'pipe'],
     env: {
       ...process.env,
+      NOTE_CONNECTION_PORT: String(serverPort),
       npm_config_path: '',
       npm_config_gpu: '',
       npm_config_workers: '',
@@ -71,10 +143,9 @@ async function main() {
   });
 
   await waitForServerStart(child);
-  child.kill();
-  await waitForExit(child);
-  await assertPortFree(3000);
-  console.log('[Smoke] Sidecar relaunch check passed: port 3000 is free after shutdown.');
+  await terminateChildProcess(child);
+  await assertPortFree(serverPort);
+  console.log(`[Smoke] Sidecar relaunch check passed: port ${serverPort} is free after shutdown.`);
 }
 
 main().catch((err) => {

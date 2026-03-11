@@ -1,0 +1,82 @@
+{
+  "generatedAt": "2026-03-11T11:32:45.182Z",
+  "projectVersion": "1.3.0",
+  "platforms": {
+    "web": {
+      "buildStatus": "success",
+      "artifact": {
+        "path": "dist/src/backend/wasm/noteconnection_compute.wasm",
+        "exists": true,
+        "sizeBytes": 208751,
+        "mtime": "2026-03-10T11:04:00.254Z",
+        "sha256": "c89d7c6980ac00c6360adf6aa6b3c89133eeae4b7ec2aab2296982b5367f9a28"
+      }
+    },
+    "sidecar_windows": {
+      "buildStatus": "success",
+      "artifact": {
+        "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
+        "exists": true,
+        "sizeBytes": 91006249,
+        "mtime": "2026-03-11T10:29:04.431Z",
+        "sha256": "4dc1984124d77b34ce58adb71992ee6583bb188cc2acb032124228e5f36940bd"
+      }
+    },
+    "sidecar_linux": {
+      "buildStatus": "success",
+      "artifact": {
+        "path": "src-tauri/bin/server-x86_64-unknown-linux-gnu",
+        "exists": true,
+        "sizeBytes": 107806520,
+        "mtime": "2026-03-11T10:16:56.501Z",
+        "sha256": "41dea912149bebfbe1bc425154241f40137796f16dc8259566a07886ccf26433"
+      }
+    },
+    "sidecar_macos_arm64": {
+      "buildStatus": "success-with-signing-warning",
+      "artifact": {
+        "path": "src-tauri/bin/server-aarch64-apple-darwin",
+        "exists": true,
+        "sizeBytes": 94760944,
+        "mtime": "2026-03-11T10:21:34.798Z",
+        "sha256": "bdb24072bbe8f2d4020818b1e81165ce21b44d5934dc774c5b10eed43803218c"
+      },
+      "notes": [
+        "requires signing on macOS before distribution"
+      ]
+    },
+    "godot_windows": {
+      "buildStatus": "ready",
+      "artifact": {
+        "path": "src-tauri/bin/godot-x86_64-pc-windows-msvc.exe",
+        "exists": true,
+        "sizeBytes": 171924488,
+        "mtime": "2026-01-25T18:30:53.000Z",
+        "sha256": "63913d01be2c2d1f929b4a626f5347117126b34e9c64cbf350ea9f35a9657ebf"
+      }
+    },
+    "android_capacitor": {
+      "buildStatus": "blocked",
+      "artifact": {
+        "path": "android/app/build/outputs/apk/debug/app-debug.apk",
+        "exists": true,
+        "sizeBytes": 173806084,
+        "mtime": "2026-03-04T08:17:35.215Z",
+        "sha256": "114ea80b28ae5d07bd1700c4ab186debd6fa2fae348a6e673536b55f8e1fd3e5"
+      },
+      "notes": [
+        "Gradle toolchain requires Java 21; host has JDK 23 only"
+      ]
+    },
+    "desktop_tauri_windows": {
+      "buildStatus": "blocked",
+      "artifact": {
+        "path": "src-tauri/target/release/bundle",
+        "exists": true
+      },
+      "notes": [
+        "tauri release build still fails with rustc-LLVM out-of-memory even under low-memory flags"
+      ]
+    }
+  }
+}

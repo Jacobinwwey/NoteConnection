@@ -84,6 +84,9 @@ describe('dual mobile pipeline configuration', () => {
   test('uses dist/src/frontend as the authoritative mobile web asset directory', () => {
     const capacitorConfig = fs.readFileSync(capacitorConfigPath, 'utf8');
     expect(capacitorConfig).toContain("webDir: 'dist/src/frontend'");
+    expect(capacitorConfig).toContain("hostname: 'localhost'");
+    expect(capacitorConfig).toContain('cleartext: true');
+    expect(capacitorConfig).toContain("allowNavigation: ['localhost', '127.0.0.1']");
 
     const buildApkScript = fs.readFileSync(buildApkScriptPath, 'utf8');
     expect(buildApkScript).toContain('NOTE_CONNECTION_NO_PAUSE');
@@ -133,11 +136,16 @@ describe('dual mobile pipeline configuration', () => {
     expect(captureScript).toContain("require('./capacitor-device-utils')");
     expect(captureScript).toContain('NOTE_CONNECTION_ANDROID_SERIAL');
     expect(captureScript).toContain('Device states:');
+    expect(captureScript).toContain('NOTE_CONNECTION_EVIDENCE_NODE_COUNT');
+    expect(captureScript).toContain('NOTE_CONNECTION_EVIDENCE_EDGE_COUNT');
     expect(captureScript).toContain('acceptance_evidence.json');
     expect(captureScript).toContain('latest.json');
 
     expect(verifyEvidenceScript).toContain('NOTE_CONNECTION_EVIDENCE_MAX_AGE_DAYS');
     expect(verifyEvidenceScript).toContain('NOTE_CONNECTION_REQUIRE_MANUAL_MOBILE_CHECKLIST');
+    expect(verifyEvidenceScript).toContain('NOTE_CONNECTION_REQUIRE_LARGE_GRAPH_EVIDENCE');
+    expect(verifyEvidenceScript).toContain('NOTE_CONNECTION_MIN_EVIDENCE_NODE_COUNT');
+    expect(verifyEvidenceScript).toContain('NOTE_CONNECTION_MIN_EVIDENCE_EDGE_COUNT');
     expect(verifyEvidenceScript).toContain('NOTE_CONNECTION_EVIDENCE_ROOT');
     expect(verifyEvidenceScript).toContain('acceptance_evidence.json');
     expect(verifyEvidenceScript).toContain('latest.json');

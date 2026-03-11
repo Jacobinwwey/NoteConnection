@@ -34,6 +34,9 @@ jobs:
       - name: Enforce strict wasm parity gates
         run: npm run test:wasm:parity:gates
 
+      - name: Verify sidecar signing gate contract
+        run: npm run verify:sidecar:signatures -- --contract-only
+
       - name: Run tests
         run: npm test
 
