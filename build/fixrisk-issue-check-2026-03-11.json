@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-11T10:46:50.753Z",
+  "generatedAt": "2026-03-11T12:41:55.221Z",
   "source": [
     "docs/en/fixrisk_TODO.md",
     "docs/zh/fixrisk_TODO.md"
@@ -78,6 +78,16 @@
       "status": "closed-pipeline",
       "verification": [
         "workflow grep confirms actions/checkout@v5 + actions/setup-node@v5 + FORCE_JAVASCRIPT_ACTIONS_TO_NODE24"
+      ]
+    },
+    {
+      "id": "FR-011",
+      "status": "closed-code-gate",
+      "verification": [
+        "src/tauri.test.runner.contract.test.ts passed",
+        "build_apk.bat now requires JDK 21+ and uses npx cap sync android",
+        "node scripts/verify-tauri-android-prereqs.js passed (JDK 23 on current host)",
+        "node scripts/run-tauri-tests.js produced local degraded OOM report with strict-mode support"
       ]
     }
   ],

@@ -15,6 +15,7 @@
 | FR-005 | 启动参数硬编码 12GB 堆内存（`--max-old-space-size=12288`） | High | Closed（代码） | 已改为自适应堆策略 + 负载提示：`scripts/start-server.js`、`scripts/lib/runtime-memory-policy.js`；契约测试：`src/runtime.heap.policy.contract.test.ts`。 |
 | FR-006 | CI/发布流程缺少可执行的 sidecar 签名闸门策略 | Medium | Closed（策略闸门） | 新增 `scripts/verify-sidecar-signatures.js`、`verify:sidecar:signatures` 脚本，接入 `.github/workflows/migration-gates.yml` 与 `.github/workflows/npm-publish.yml`，并有契约测试 `src/sidecar.signature.contract.test.ts`。 |
 | FR-010 | GitHub Actions Node 20 JavaScript Action 运行时弃用告警 | Medium | Closed（流水线） | 各工作流已升级为 `actions/checkout@v5` 与 `actions/setup-node@v5`，并统一设置 `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"`。 |
+| FR-011 | Android/Tauri 工具链可行性漂移（JDK 版本不匹配 + 本机 Rust 编译 OOM） | High | Closed（代码 + 闸门策略） | Android 前置检查已强制 JDK 21+（`scripts/verify-tauri-android-prereqs.js`）；Capacitor Android 构建改为仅同步 Android 平台（`build_apk.bat`）；Tauri Rust 测试改为资源感知执行器（`scripts/run-tauri-tests.js`），CI 严格失败、本机降级会输出诊断报告（`build/tauri-test-verification-latest.json`）。 |
 | FR-007 | Canvas 图语义对读屏不可访问 | Critical | Closed（代码） | 无障碍契约已纳入迁移测试集：`src/graph.accessibility.contract.test.ts`。 |
 | FR-008 | 隐私清单合规闸门缺失 | Critical | Closed（代码） | 已具备 Privacy Manifest + 校验脚本 + 契约测试：`ios/App/PrivacyInfo.xcprivacy`、`scripts/verify-privacy-manifest.js`、`src/privacy.manifest.contract.test.ts`。 |
 | FR-009 | 真机证据未强绑定“大图阈值” | High | Closed（工具）；Pending（运维证据） | 证据采集脚本已记录 workload 节点/边规模（`scripts/capture-capacitor-device-evidence.js`），校验脚本支持严格大图门槛（`scripts/verify-capacitor-evidence-freshness.js`），契约测试：`src/capacitor.evidence.contract.test.ts`。仍需实际真机采集。 |
@@ -35,7 +36,8 @@ node scripts/verify-privacy-manifest.js
 node scripts/verify-sidecar-signatures.js --contract-only
 node node_modules/typescript/bin/tsc --noEmit
 node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" run test:migration
-node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" test -- --runInBand
+node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" run test:gates
+node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" run test:tauri
 ```
 
 ## 最佳实践合规检查
@@ -49,6 +51,7 @@ node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" test -- --runInBa
 | 移动端 E2E/契约基线 | ✅ | Detox + Privacy + Mobile pipeline 校验已接入。 |
 | 无障碍契约 | ✅ | 已纳入迁移测试集。 |
 | 发布签名策略闸门 | ✅ | 签名校验脚本与 CI 契约接线已落地。 |
+| Android/Tauri 工具链护栏 | ✅ | 已强制 JDK 21+、Capacitor Android 定向同步、并接入内存感知 Tauri 测试执行器（CI 严格模式）。 |
 | 真机大图证据 | ⚠️ | 工具链已完成；仍需采集真实设备证据。 |
 
 diff --git a/e:\Knowledge_project\NoteConnection_app\docs\zh\fixrisk_TODO.md b/e:\Knowledge_project\NoteConnection_app\docs\zh\fixrisk_TODO.md

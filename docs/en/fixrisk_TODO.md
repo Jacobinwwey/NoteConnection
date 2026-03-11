@@ -15,6 +15,7 @@ This document tracks only real, currently verifiable risks. Items are marked `Cl
 | FR-005 | Hard-coded 12GB startup heap (`--max-old-space-size=12288`) | High | Closed (code) | Startup now uses adaptive memory policy + workload hints (`scripts/start-server.js`, `scripts/lib/runtime-memory-policy.js`) with contract test (`src/runtime.heap.policy.contract.test.ts`). |
 | FR-006 | No enforceable signed-sidecar gate policy in CI/release | Medium | Closed (policy gate) | Added `scripts/verify-sidecar-signatures.js`, package script `verify:sidecar:signatures`, CI contract wiring in `.github/workflows/migration-gates.yml` and `.github/workflows/npm-publish.yml`, plus tests (`src/sidecar.signature.contract.test.ts`). |
 | FR-010 | GitHub Actions Node 20 JavaScript action runtime deprecation warning | Medium | Closed (pipeline) | Workflows moved to `actions/checkout@v5` + `actions/setup-node@v5` and set `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"` in all active workflows. |
+| FR-011 | Android/Tauri toolchain feasibility drift (JDK mismatch + unconstrained local Rust OOM) | High | Closed (code + gate policy) | Android prerequisite verifier now enforces JDK 21+ (`scripts/verify-tauri-android-prereqs.js`), Capacitor Android build uses Android-only sync (`build_apk.bat`), and Tauri Rust tests run via resource-aware wrapper (`scripts/run-tauri-tests.js`) with strict CI fail + local degraded diagnostic report (`build/tauri-test-verification-latest.json`). |
 | FR-007 | Canvas graph semantics inaccessible to assistive tech | Critical | Closed (code) | Accessibility contract exists and is in migration gate set (`src/graph.accessibility.contract.test.ts`). |
 | FR-008 | Privacy manifest compliance gate missing | Critical | Closed (code) | iOS privacy manifest + verifier + contract are active (`ios/App/PrivacyInfo.xcprivacy`, `scripts/verify-privacy-manifest.js`, `src/privacy.manifest.contract.test.ts`). |
 | FR-009 | Physical-device evidence not explicitly tied to large-graph threshold | High | Closed (tooling); Pending (ops evidence) | Evidence schema now includes workload node/edge counts (`scripts/capture-capacitor-device-evidence.js`) and strict large-graph verifier controls (`scripts/verify-capacitor-evidence-freshness.js`) with contract tests (`src/capacitor.evidence.contract.test.ts`). Real device evidence still requires manual run. |
@@ -35,7 +36,8 @@ node scripts/verify-privacy-manifest.js
 node scripts/verify-sidecar-signatures.js --contract-only
 node node_modules/typescript/bin/tsc --noEmit
 node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" run test:migration
-node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" test -- --runInBand
+node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" run test:gates
+node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" run test:tauri
 ```
 
 ## Best-Practice Compliance Checklist
@@ -49,6 +51,7 @@ node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" test -- --runInBa
 | Mobile E2E/contract baseline | ✅ | Detox + privacy + mobile pipeline verifiers wired. |
 | Accessibility contract | ✅ | Graph accessibility contract in migration suite. |
 | Release signing policy gate | ✅ | Signature verifier script + CI contract wiring present. |
+| Android/Tauri toolchain guardrails | ✅ | Enforced JDK 21+, Android-only Capacitor sync, and memory-aware Tauri runner with strict CI mode. |
 | Real large-graph device evidence | ⚠️ | Tooling complete; physical evidence capture still required. |
 diff --git a/e:\Knowledge_project\NoteConnection_app\docs\en\fixrisk_TODO.md b/e:\Knowledge_project\NoteConnection_app\docs\en\fixrisk_TODO.md
 deleted file mode 100644

@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 function existsDir(dirPath) {
   try {
@@ -75,6 +76,85 @@ function fail(messageLines) {
   process.exit(1);
 }
 
+function parseJavaMajorVersion(versionString) {
+  if (!versionString) {
+    return 0;
+  }
+
+  const tokens = String(versionString).trim().split('.');
+  if (tokens.length === 0) {
+    return 0;
+  }
+
+  const first = Number.parseInt(tokens[0], 10);
+  if (!Number.isFinite(first)) {
+    return 0;
+  }
+
+  if (first === 1 && tokens.length > 1) {
+    const legacyMajor = Number.parseInt(tokens[1], 10);
+    return Number.isFinite(legacyMajor) ? legacyMajor : 0;
+  }
+
+  return first;
+}
+
+function detectJavacVersion() {
+  const result = spawnSync('javac', ['-version'], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+    shell: process.platform === 'win32'
+  });
+
+  if (result.error) {
+    return {
+      available: false,
+      message: result.error.message
+    };
+  }
+
+  const output = `${String(result.stdout || '').trim()} ${String(result.stderr || '').trim()}`.trim();
+  const match = output.match(/javac\s+([0-9][0-9._]*)/i);
+  if (!match) {
+    return {
+      available: false,
+      message: output || 'Unable to parse javac version output.'
+    };
+  }
+
+  const version = match[1];
+  const major = parseJavaMajorVersion(version);
+  if (major <= 0) {
+    return {
+      available: false,
+      message: `Unable to parse JDK major version from "${version}".`
+    };
+  }
+
+  return {
+    available: true,
+    version,
+    major
+  };
+}
+
+const javac = detectJavacVersion();
+if (!javac.available) {
+  fail([
+    '[Android Env] Java compiler (javac) not available on PATH.',
+    `[Android Env] Details: ${javac.message}`,
+    '[Android Env] Install JDK 21+ and ensure JAVA_HOME/bin is available in PATH.'
+  ]);
+}
+
+if (javac.major < 21) {
+  fail([
+    `[Android Env] Unsupported JDK detected: ${javac.version} (major ${javac.major}).`,
+    '[Android Env] Tauri Android and Gradle toolchain in this project require JDK 21+.',
+    '[Android Env] Install JDK 21+ and point JAVA_HOME to that installation before retrying.'
+  ]);
+}
+
 const sdkRoot = detectAndroidSdkRoot();
 if (!sdkRoot) {
   fail([
@@ -133,4 +213,5 @@ if (envNdk) {
 console.log(`[Android Env] SDK root: ${sdkRoot}`);
 console.log(`[Android Env] sdkmanager: ${sdkManager}`);
 console.log(`[Android Env] NDK: ${ndkPath}`);
+console.log(`[Android Env] JDK: ${javac.version} (major ${javac.major})`);
 console.log('[Android Env] Prerequisite check passed.');

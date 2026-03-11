@@ -91,7 +91,9 @@ describe('dual mobile pipeline configuration', () => {
     const buildApkScript = fs.readFileSync(buildApkScriptPath, 'utf8');
     expect(buildApkScript).toContain('NOTE_CONNECTION_NO_PAUSE');
     expect(buildApkScript).toContain("dist\\src\\frontend");
-    expect(buildApkScript).toContain('npx cap sync');
+    expect(buildApkScript).toContain('npx cap sync android');
+    expect(buildApkScript).toContain('requires JDK 21 or higher');
+    expect(buildApkScript).toContain('requires JDK 21+');
     expect(buildApkScript).toContain('gradlew.bat assembleDebug');
   });
 

@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-11T12:38:18.462Z",
+  "strictMode": false,
+  "cargoBuildJobs": 1,
+  "status": "degraded-oom",
+  "exitCode": 101
+}

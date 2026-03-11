@@ -41,14 +41,28 @@ where javac >nul 2>&1
 if %errorlevel% neq 0 (
     echo.
     echo [ERROR] Java JDK is NOT installed or NOT in your PATH.
-    echo         Android Gradle build requires JDK 17 or higher.
-    echo         [ACTION] Please install OpenJDK 17+.
+    echo         Android Gradle build requires JDK 21 or higher.
+    echo         [ACTION] Please install OpenJDK 21+.
     echo.
     if "%SHOULD_PAUSE%"=="1" pause
     exit /b 1
 )
 for /f "tokens=2 delims= " %%v in ('javac -version 2^>^&1') do set JAVA_VERSION=%%v
 echo   [OK] Java JDK Found: !JAVA_VERSION!
+set "JAVA_MAJOR=!JAVA_VERSION!"
+for /f "tokens=1 delims=." %%m in ("!JAVA_VERSION!") do set "JAVA_MAJOR=%%m"
+if "!JAVA_MAJOR!"=="1" (
+    for /f "tokens=2 delims=." %%m in ("!JAVA_VERSION!") do set "JAVA_MAJOR=%%m"
+)
+set /a JAVA_MAJOR_NUM=0+!JAVA_MAJOR! >nul 2>&1
+if !JAVA_MAJOR_NUM! lss 21 (
+    echo.
+    echo [ERROR] Detected JDK major version !JAVA_MAJOR_NUM!, but this project requires JDK 21+.
+    echo         [ACTION] Set JAVA_HOME to a JDK 21 installation and ensure javac resolves to that version.
+    echo.
+    if "%SHOULD_PAUSE%"=="1" pause
+    exit /b 1
+)
 
 REM Check JAVA_HOME
 if "%JAVA_HOME%"=="" (
@@ -159,10 +173,10 @@ REM 7. Native Asset Sync
 REM --------------------------------------------------------
 echo.
 echo [7/8] Syncing Web Assets to Native...
-call npx cap sync
+call npx cap sync android
 if %errorlevel% neq 0 (
     echo.
-    echo [ERROR] 'npx cap sync' failed.
+    echo [ERROR] 'npx cap sync android' failed.
     echo         Ensure you have a valid internet connection for Gradle dependencies.
     if "%SHOULD_PAUSE%"=="1" pause
     exit /b 1
@@ -193,7 +207,7 @@ if %errorlevel% neq 0 (
     echo [ERROR] Gradle build failed.
     echo.
     echo [TROUBLESHOOTING]
-    echo   1. Check JAVA_HOME matches JDK 17+.
+    echo   1. Check JAVA_HOME matches JDK 21+.
     echo   2. Ensure Android SDK is installed.
     echo   3. Try running 'cd android && gradlew clean' manually.
     cd ..
