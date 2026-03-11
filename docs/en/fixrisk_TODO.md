@@ -1,3 +1,147 @@
+# 2026-03-11 v1.0.32
+
+# RISK-CORRECTION EXECUTION UPDATE (WASM HISTORY MATURITY TIERS + READINESS ARTIFACTS)
+
+## ENGLISH DOCUMENT
+
+### Remediation Status (This Slice)
+- [x] Added reusable history readiness primitives in `src/backend/algorithms/WasmParityHistory.ts`:
+  - [x] `classifyWasmParityHistoryMaturity(...)`
+  - [x] `selectComparableWasmParityHistoryRecords(...)`
+  - [x] `summarizeWasmParityHistoryReadiness(...)`
+- [x] Extended benchmark runtime in `scripts/benchmark-wasm-parity.js`:
+  - [x] Added history maturity controls: `--history-strict-samples`, `--history-maturity-warn-tier`, `--history-maturity-fail-tier`.
+  - [x] Added per-run maturity transitions (`beforeRun` -> `afterRun`) for the active host profile.
+  - [x] Added fleet-level readiness summaries across comparable host profiles.
+  - [x] Added deterministic readiness artifacts:
+    - [x] `history-readiness-latest.json`
+    - [x] `history-readiness-latest.md`
+    - [x] timestamped readiness JSON/MD snapshots per run.
+- [x] Strengthened operational script/workflow wiring:
+  - [x] Updated `package.json` history scripts with strict-sample policy (`--history-strict-samples 15`).
+  - [x] Added release-facing gate script `benchmark:wasm:parity:history:release` (`--history-maturity-fail-tier enforced`).
+  - [x] Updated `.github/workflows/wasm-parity-benchmark-snapshots.yml` to print readiness summary in CI logs.
+- [x] Expanded regression coverage:
+  - [x] `src/backend/algorithms/WasmParityHistory.test.ts` now covers maturity classification, comparable selection, and readiness summarization.
+  - [x] `src/wasm.parity.history.gate.contract.test.ts` now locks readiness flags/artifacts and workflow summary wiring.
+
+### Best-Practice Compliance Delta
+- [x] Multi-host baseline accumulation is now operationally measurable (tiered maturity per host profile).
+- [x] CI can keep cold-start continuity while emitting explicit maturity warnings.
+- [x] Release-stage strictness can be enforced with a deterministic maturity tier requirement.
+- [ ] Remaining broader checklist item persists: physical-device p95/p99 evidence closure (environment-dependent).
+
+### Verification Snapshot (2026-03-11)
+- [x] `node node_modules/jest/bin/jest.js src/backend/algorithms/WasmParityHistory.test.ts src/wasm.parity.history.gate.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/mobile.pipeline.test.ts --runInBand` (**4 suites, 28 tests passed**)
+- [x] Migration matrix equivalent to `npm run test:migration`: **32 suites, 175 tests passed**
+- [x] Full Jest equivalent to `npm test`: **36 suites, 196 tests passed**
+- [x] `node node_modules/typescript/bin/tsc` passed.
+- [x] CI-policy smoke:
+  - [x] `node scripts/benchmark-wasm-parity.js --require-wasm-adapter 1 --history-window 30 --minimum-history-samples 5 --history-strict-samples 15 --bootstrap-history-guard 1 --history-maturity-warn-tier warming --history-maturity-fail-tier none --history-max-records 3000 --history-max-age-days 180 --max-candidate-to-history-graph-p95-ratio 1.25 --max-candidate-to-history-layout-p95-ratio 1.25 --max-candidate-to-history-graph-p99-ratio 1.25 --max-candidate-to-history-layout-p99-ratio 1.25 --iterations 1 --nodes 200 --out tmp/wasm-parity-history-ci-smoke --history-file tmp/wasm-parity-history-ci-smoke/history.jsonl` passed and emitted readiness artifacts.
+
+---
+
+# 2026-03-11 v1.0.31
+
+# RISK-CORRECTION EXECUTION UPDATE (WASM HISTORY CACHE + BOOTSTRAP READINESS GATE)
+
+## ENGLISH DOCUMENT
+
+### Remediation Status (This Slice)
+- [x] Added bootstrap readiness behavior in `scripts/benchmark-wasm-parity.js`:
+  - [x] New `--bootstrap-history-guard` control.
+  - [x] Strict history thresholds are auto-skipped only when comparable sample depth is below `--minimum-history-samples`.
+  - [x] Added explicit bootstrap diagnostics and report fields.
+- [x] Strengthened CI history continuity in `.github/workflows/wasm-parity-benchmark-snapshots.yml`:
+  - [x] Added `actions/cache/restore@v4` and `actions/cache/save@v4` for WASM history directory.
+  - [x] Unified strict/history-aware steps on shared `WASM_HISTORY_FILE`.
+  - [x] Added history directory to uploaded artifacts.
+- [x] Updated CI-facing history script policy in `package.json`:
+  - [x] `benchmark:wasm:parity:history:ci` now enforces `--minimum-history-samples 5` with bootstrap mode.
+- [x] Expanded contract protections:
+  - [x] Updated `src/wasm.parity.history.gate.contract.test.ts` to lock cache steps, env wiring, and bootstrap script flags.
+
+### Best-Practice Compliance Delta
+- [x] CI now persists parity history across runs instead of only per-run snapshots.
+- [x] Readiness bootstrap allows deterministic warm-up without permanently lowering strict thresholds.
+- [x] Workflow/script drift in history persistence and readiness wiring is regression-protected.
+- [ ] Remaining broader checklist items are unchanged in this slice (multi-host corpus accumulation and physical-device evidence closure).
+
+### Verification Snapshot (2026-03-11)
+- [x] `node node_modules/jest/bin/jest.js src/wasm.parity.history.gate.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/mobile.pipeline.test.ts --runInBand` (**3 suites, 21 tests passed**)
+- [x] Migration matrix equivalent to `npm run test:migration`: **31 suites, 168 tests passed**
+- [x] Full Jest equivalent to `npm test`: **35 suites, 189 tests passed**
+- [x] `node node_modules/typescript/bin/tsc` passed.
+- [x] `node scripts/benchmark-wasm-parity.js --iterations 1 --nodes 200 --out tmp/wasm-parity-bootstrap-smoke --history-file tmp/wasm-parity-bootstrap-smoke/history.jsonl --minimum-history-samples 5 --bootstrap-history-guard 1 --max-candidate-to-history-graph-p95-ratio 1.25 --max-candidate-to-history-layout-p95-ratio 1.25 --max-candidate-to-history-graph-p99-ratio 1.25 --max-candidate-to-history-layout-p99-ratio 1.25` passed.
+
+---
+
+# 2026-03-11 v1.0.30
+
+# RISK-CORRECTION EXECUTION UPDATE (WASM HISTORY GATE CI OPERATIONALIZATION)
+
+## ENGLISH DOCUMENT
+
+### Remediation Status (This Slice)
+- [x] Operationalized history-aware parity checks in CI-facing workflow/scripts:
+  - [x] Added `benchmark:wasm:parity:history:ci` in `package.json` (CI bootstrap-safe history gate).
+  - [x] Preserved stricter `benchmark:wasm:parity:history` for operator-side stronger sample requirements.
+- [x] Updated wasm snapshot workflow `.github/workflows/wasm-parity-benchmark-snapshots.yml`:
+  - [x] Strict benchmark snapshot writes to shared `history.jsonl`.
+  - [x] Added dedicated history-aware regression gate step using the same history file.
+- [x] Added wiring regression contract `src/wasm.parity.history.gate.contract.test.ts`:
+  - [x] Locks script entries (`history` + `history:ci`) in `package.json`.
+  - [x] Locks workflow-level strict + history-aware step presence and shared history path usage.
+- [x] Added new contract suite into migration matrix (`test:migration`).
+
+### Best-Practice Compliance Delta
+- [x] Historical parity checks are now part of CI workflow execution rather than manual-only tooling.
+- [x] Script/workflow drift on history-gate wiring is regression-protected.
+- [ ] Remaining broader checklist items are unchanged in this slice (multi-host baseline corpus accumulation and physical-device evidence closure).
+
+### Verification Snapshot (2026-03-11)
+- [x] `node node_modules/jest/bin/jest.js src/wasm.parity.history.gate.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/mobile.pipeline.test.ts --runInBand` (**3 suites, 20 tests passed**)
+- [x] Migration matrix equivalent to `npm run test:migration`: **31 suites, 167 tests passed**
+- [x] Full Jest equivalent to `npm test`: **35 suites, 188 tests passed**
+- [x] `node node_modules/typescript/bin/tsc` passed.
+
+---
+
+# 2026-03-11 v1.0.29
+
+# RISK-CORRECTION EXECUTION UPDATE (WASM HISTORY BASELINE + REGRESSION GUARDS)
+
+## ENGLISH DOCUMENT
+
+### Remediation Status (This Slice)
+- [x] Added historical benchmark guard primitives in `src/backend/algorithms/WasmParityBenchmarkGuards.ts`:
+  - [x] `evaluateWasmParityHistoricalMetricGuard(...)`
+  - [x] `evaluateWasmParityHistoricalPerformanceGuards(...)`
+  - [x] Median-history baseline derivation with explicit insufficient-history failure codes.
+- [x] Upgraded `scripts/benchmark-wasm-parity.js`:
+  - [x] Persistent JSONL history output (`--history-file`, default `<out>/history.jsonl`).
+  - [x] Comparable sample filtering by `host + nodeCount + maxWorkers`.
+  - [x] Optional history ratio guards (`graph/layout`, `p95/p99`) and sample controls (`--history-window`, `--minimum-history-samples`).
+- [x] Added script-level entrypoint in `package.json`:
+  - [x] `benchmark:wasm:parity:history`.
+- [x] Expanded contracts:
+  - [x] `src/wasm.parity.benchmark.guards.contract.test.ts` now covers historical baseline pass/fail behavior.
+
+### Best-Practice Compliance Delta
+- [x] Single-run benchmark snapshots are now complemented by persistent historical calibration data.
+- [x] Historical p95/p99 regression checks are now enforceable for production parity workflows.
+- [x] Missing-history conditions now fail explicitly when strict historical thresholds are requested.
+- [ ] Remaining broader checklist items are unchanged in this slice (multi-host corpus accumulation and physical-device evidence closure).
+
+### Verification Snapshot (2026-03-11)
+- [x] `node node_modules/jest/bin/jest.js src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.benchmark.contract.test.ts --runInBand` (**2 suites, 15 tests passed**)
+- [x] `node node_modules/jest/bin/jest.js src/mobile.pipeline.test.ts src/wasm.parity.benchmark.guards.contract.test.ts --runInBand` (**2 suites, 18 tests passed**)
+- [x] Migration matrix equivalent to `npm run test:migration`: **30 suites, 165 tests passed**
+- [x] `node scripts/benchmark-wasm-parity.js --iterations 1 --nodes 200 --out tmp/wasm-parity-benchmark-smoke` passed.
+- [x] `node scripts/benchmark-wasm-parity.js --iterations 1 --nodes 200 --out tmp/wasm-parity-benchmark-smoke --minimum-history-samples 1 --max-candidate-to-history-graph-p95-ratio 10 --max-candidate-to-history-layout-p95-ratio 10 --max-candidate-to-history-graph-p99-ratio 10 --max-candidate-to-history-layout-p99-ratio 10` passed.
+
+---
+
 # 2026-03-11 v1.0.28
 
 # RISK-CORRECTION EXECUTION UPDATE (MOBILE EVIDENCE MANIFEST + FRESHNESS/POLICY VERIFIER)

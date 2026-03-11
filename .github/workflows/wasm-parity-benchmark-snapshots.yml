@@ -11,6 +11,9 @@ permissions:
 jobs:
   benchmark-snapshot:
     runs-on: windows-latest
+    env:
+      WASM_HISTORY_DIR: tmp/wasm-parity-benchmark/history
+      WASM_HISTORY_FILE: tmp/wasm-parity-benchmark/history/history.jsonl
 
     steps:
       - name: Checkout repository
@@ -25,6 +28,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Restore wasm parity history cache
+        id: wasm-history-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.WASM_HISTORY_DIR }}
+          key: wasm-parity-history-${{ runner.os }}-node20-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            wasm-parity-history-${{ runner.os }}-node20-${{ github.ref_name }}-
+            wasm-parity-history-${{ runner.os }}-node20-
+
       - name: Build project (includes wasm artifact sync)
         run: npm run build
 
@@ -32,16 +45,38 @@ jobs:
         run: npm run verify:wasm:parity:strict
 
       - name: Run strict parity benchmark snapshot
-        run: npm run benchmark:wasm:parity:strict:perf -- --iterations 4 --nodes 500 --out tmp/wasm-parity-benchmark/snapshots
+        run: npm run benchmark:wasm:parity:strict:perf -- --iterations 4 --nodes 500 --out tmp/wasm-parity-benchmark/snapshots --history-file ${{ env.WASM_HISTORY_FILE }}
+
+      - name: Run history-aware parity regression gate
+        run: npm run benchmark:wasm:parity:history:ci -- --iterations 4 --nodes 500 --out tmp/wasm-parity-benchmark/snapshots --history-file ${{ env.WASM_HISTORY_FILE }}
+
+      - name: Print history readiness summary
+        if: always()
+        shell: pwsh
+        run: |
+          $summary = "tmp/wasm-parity-benchmark/snapshots/history-readiness-latest.md"
+          if (Test-Path $summary) {
+            Get-Content $summary
+          } else {
+            Write-Host "History readiness summary not found at $summary"
+          }
 
       - name: Run GraphMetrics tiering calibration snapshot
         run: node scripts/calibrate-graphmetrics-tiering.js --iterations 2 --max-workers 4 --out tmp/graphmetrics-tiering-calibration/snapshots
+
+      - name: Save wasm parity history cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.WASM_HISTORY_DIR }}
+          key: wasm-parity-history-${{ runner.os }}-node20-${{ github.ref_name }}-${{ github.run_id }}
 
       - name: Upload benchmark snapshot artifact
         uses: actions/upload-artifact@v4
         with:
           name: wasm-parity-benchmark-snapshot-${{ github.run_id }}
           path: |
+            tmp/wasm-parity-benchmark/history
             tmp/wasm-parity-benchmark/snapshots
             tmp/graphmetrics-tiering-calibration/snapshots
           retention-days: 30

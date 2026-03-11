@@ -1,3 +1,170 @@
+# 2026-03-11 v1.5.53 - 高优先级 WASM 多主机就绪可视化（分级基线成熟度）
+
+## 中文文档
+
+### 目标
+将 WASM 多主机基线积累这一剩余高优先级风险转化为“可观测、可量化、可门禁”的成熟度模型，使 CI/发布流程在不破坏冷启动连续性的前提下具备可执行判据。
+
+### 本轮完成
+- [x] 在 `src/backend/algorithms/WasmParityHistory.ts` 新增历史成熟度与就绪能力：
+  - [x] 可比样本筛选（`selectComparableWasmParityHistoryRecords`）。
+  - [x] 成熟度分级（`bootstrap` / `warming` / `enforced`）。
+  - [x] 多主机画像就绪汇总（`summarizeWasmParityHistoryReadiness`）。
+- [x] 升级 `scripts/benchmark-wasm-parity.js`：
+  - [x] 新增参数：
+    - [x] `--history-strict-samples`
+    - [x] `--history-maturity-warn-tier`
+    - [x] `--history-maturity-fail-tier`
+  - [x] 新增当前画像成熟度迁移遥测（`beforeRun` -> `afterRun`）。
+  - [x] 新增就绪工件输出：
+    - [x] `history-readiness-latest.json`
+    - [x] `history-readiness-latest.md`
+    - [x] 带时间戳的 JSON/MD 快照。
+- [x] 更新运行脚本与工作流：
+  - [x] `benchmark:wasm:parity:history` 纳入严格样本目标（`--history-strict-samples 15`）。
+  - [x] `benchmark:wasm:parity:history:ci` 纳入成熟度告警策略（`warming`），同时保持冷启动非阻塞。
+  - [x] 新增 `benchmark:wasm:parity:history:release`，使用 `--history-maturity-fail-tier enforced`。
+  - [x] CI 工作流新增 readiness markdown 摘要日志输出。
+- [x] 补齐回归覆盖：
+  - [x] `src/backend/algorithms/WasmParityHistory.test.ts`
+  - [x] `src/wasm.parity.history.gate.contract.test.ts`
+
+### 当前高优先级状态
+- [x] 多主机基线积累已可按主机画像进行成熟度量化。
+- [x] CI 已可显式暴露 readiness 状态并保持引导阶段连续运行。
+- [ ] 基于 `fixrisk_todo.md` 的剩余高优先级工作：
+  - [ ] 持续积累真实多主机样本，直至关键画像达到 `enforced` 成熟度。
+  - [ ] 在真实设备环境完成真机 p95/p99 证据闭环。
+
+### 验证门禁（已执行）
+- [x] `node node_modules/jest/bin/jest.js src/backend/algorithms/WasmParityHistory.test.ts src/wasm.parity.history.gate.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/mobile.pipeline.test.ts --runInBand`（**4 suites, 28 tests passed**）
+- [x] 等价 `npm run test:migration` 的迁移矩阵：**32 suites, 175 tests passed**
+- [x] 等价 `npm test` 的全量 Jest：**36 suites, 196 tests passed**
+- [x] 等价构建编译阶段：
+  - [x] `node node_modules/typescript/bin/tsc`
+- [x] CI 策略烟测：
+  - [x] `node scripts/benchmark-wasm-parity.js --require-wasm-adapter 1 --history-window 30 --minimum-history-samples 5 --history-strict-samples 15 --bootstrap-history-guard 1 --history-maturity-warn-tier warming --history-maturity-fail-tier none --history-max-records 3000 --history-max-age-days 180 --max-candidate-to-history-graph-p95-ratio 1.25 --max-candidate-to-history-layout-p95-ratio 1.25 --max-candidate-to-history-graph-p99-ratio 1.25 --max-candidate-to-history-layout-p99-ratio 1.25 --iterations 1 --nodes 200 --out tmp/wasm-parity-history-ci-smoke --history-file tmp/wasm-parity-history-ci-smoke/history.jsonl`
+
+---
+
+# 2026-03-11 v1.5.52 - 高优先级 WASM 历史持久化 + 就绪门禁（基线达标后自动严格）
+
+## 中文文档
+
+### 目标
+收口下一项运行层缺口：在 CI 多轮执行中持久化 WASM 历史数据，并加入“就绪态引导门禁”，使严格历史阈值在样本深度达标后自动生效。
+
+### 本轮完成
+- [x] 更新 `scripts/benchmark-wasm-parity.js`：
+  - [x] 新增 `--bootstrap-history-guard` 引导模式。
+  - [x] 当启用该模式且可比样本数低于 `--minimum-history-samples` 时，本轮临时跳过历史比例阈值。
+  - [x] 新增引导态诊断与报告字段（`bootstrapHistoryGuard`、`historyGuardBootstrapActive`、`comparableHistorySamples`）。
+- [x] 更新 `package.json`：
+  - [x] `benchmark:wasm:parity:history:ci` 改为严格目标（`--minimum-history-samples 5`）并启用引导模式（`--bootstrap-history-guard 1`）。
+- [x] 更新 `.github/workflows/wasm-parity-benchmark-snapshots.yml`：
+  - [x] 新增历史缓存恢复（`actions/cache/restore@v4`）。
+  - [x] 新增历史缓存保存（`actions/cache/save@v4`）。
+  - [x] 通过 `WASM_HISTORY_FILE` 统一历史路径，并在 strict/history-aware 两步共享。
+  - [x] 将历史目录纳入快照 artifacts 上传。
+- [x] 扩展契约：
+  - [x] 更新 `src/wasm.parity.history.gate.contract.test.ts`，锁定引导脚本接线与 workflow 缓存/就绪结构。
+
+### 当前高优先级状态
+- [x] 等价快照链路已具备跨 CI 运行的历史持久化能力。
+- [x] 严格历史阈值已具备确定性的引导/自动升级机制。
+- [ ] 剩余高优先级工作：继续积累多主机基线样本，并补齐真机 p95/p99 证据闭环。
+
+### 验证门禁（已执行）
+- [x] 聚焦契约：
+  - [x] `node node_modules/jest/bin/jest.js src/wasm.parity.history.gate.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/mobile.pipeline.test.ts --runInBand`（**3 suites, 21 tests passed**）
+- [x] 等价 `npm run test:migration` 的迁移矩阵：**31 suites, 168 tests passed**
+- [x] 等价 `npm test` 的全量 Jest：**35 suites, 189 tests passed**
+- [x] 等价构建编译阶段：
+  - [x] `node node_modules/typescript/bin/tsc`
+- [x] 引导模式烟测：
+  - [x] `node scripts/benchmark-wasm-parity.js --iterations 1 --nodes 200 --out tmp/wasm-parity-bootstrap-smoke --history-file tmp/wasm-parity-bootstrap-smoke/history.jsonl --minimum-history-samples 5 --bootstrap-history-guard 1 --max-candidate-to-history-graph-p95-ratio 1.25 --max-candidate-to-history-layout-p95-ratio 1.25 --max-candidate-to-history-graph-p99-ratio 1.25 --max-candidate-to-history-layout-p99-ratio 1.25`
+
+---
+
+# 2026-03-11 v1.5.51 - 高优先级 WASM 历史门禁落地（CI 快照工作流 + 契约护栏）
+
+## 中文文档
+
+### 目标
+将 WASM 历史基线加固从“工具能力”推进到“CI 运行能力”：把历史门禁接入快照工作流，并通过迁移契约锁定接线，避免后续漂移。
+
+### 本轮完成
+- [x] 更新 `package.json` 基准脚本：
+  - [x] 新增 `benchmark:wasm:parity:history:ci`（`minimum-history-samples=1`，保证 CI 冷启动可连续执行）。
+  - [x] 保留 `benchmark:wasm:parity:history` 作为更严格的运维入口（`minimum-history-samples=5`）。
+- [x] 更新迁移矩阵测试列表：
+  - [x] 将 `src/wasm.parity.history.gate.contract.test.ts` 纳入 `test:migration`。
+- [x] 更新 `.github/workflows/wasm-parity-benchmark-snapshots.yml`：
+  - [x] 严格快照基准写入共享 `history.jsonl`。
+  - [x] 新增共享历史文件驱动的 history-aware 回归门禁步骤。
+- [x] 新增回归契约 `src/wasm.parity.history.gate.contract.test.ts`：
+  - [x] 校验 `package.json` 脚本接线。
+  - [x] 校验 snapshot workflow 中 strict + history-aware 双门禁及共享历史路径。
+
+### 当前高优先级状态
+- [x] 历史门禁能力已接入 CI 快照工作流，不再停留在本地工具层。
+- [x] 脚本与工作流接线已由迁移契约测试保护。
+- [ ] 剩余高优先级工作：继续积累多主机历史样本，并补齐真机 p95/p99 证据闭环。
+
+### 验证门禁（已执行）
+- [x] 聚焦契约：
+  - [x] `node node_modules/jest/bin/jest.js src/wasm.parity.history.gate.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/mobile.pipeline.test.ts --runInBand`（**3 suites, 20 tests passed**）
+- [x] 等价 `npm run test:migration` 的迁移矩阵：**31 suites, 167 tests passed**
+- [x] 等价 `npm test` 的全量 Jest：**35 suites, 188 tests passed**
+- [x] 等价构建编译阶段：
+  - [x] `node node_modules/typescript/bin/tsc`
+
+---
+
+# 2026-03-11 v1.5.50 - 高优先级 WASM 历史基线门禁加固（多轮校准）
+
+## 中文文档
+
+### 目标
+收口下一阶段生产规模等价缺口：为 WASM 基准引入持久化历史基线与可选的历史 p95/p99 回归门禁，使性能回归可基于“同主机多轮数据”而非单次快照进行判定。
+
+### 本轮完成
+- [x] 扩展 `src/backend/algorithms/WasmParityBenchmarkGuards.ts`：
+  - [x] 新增历史基线门禁模型（`evaluateWasmParityHistoricalMetricGuard`、`evaluateWasmParityHistoricalPerformanceGuards`）。
+  - [x] 新增基于有限样本的中位数基线计算。
+  - [x] 当配置严格历史阈值且样本不足时，新增显式失败码。
+- [x] 升级 `scripts/benchmark-wasm-parity.js`：
+  - [x] 新增 JSONL 历史持久化（`--history-file`，默认 `<out>/history.jsonl`）。
+  - [x] 新增按 `host + nodeCount + maxWorkers` 的可比样本筛选。
+  - [x] 新增历史门禁阈值参数：
+    - [x] `--max-candidate-to-history-graph-p95-ratio`
+    - [x] `--max-candidate-to-history-layout-p95-ratio`
+    - [x] `--max-candidate-to-history-graph-p99-ratio`
+    - [x] `--max-candidate-to-history-layout-p99-ratio`
+  - [x] 新增样本窗口与最小样本控制（`--minimum-history-samples`、`--history-window`）。
+- [x] 在 `package.json` 新增命令：
+  - [x] `benchmark:wasm:parity:history`，用于严格历史回归校验。
+- [x] 扩展回归契约：
+  - [x] 在 `src/wasm.parity.benchmark.guards.contract.test.ts` 增加历史基线通过/失败与样本不足场景。
+
+### 当前高优先级状态
+- [x] WASM 等价基准已具备多轮历史基线持久化能力。
+- [x] 已具备基于历史样本的 p95/p99 回归门禁能力。
+- [ ] 剩余高优先级工作：继续积累多主机基线样本，并补齐移动端真机 p95/p99 证据闭环。
+
+### 验证门禁（已执行）
+- [x] 聚焦基准契约：
+  - [x] `node node_modules/jest/bin/jest.js src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.benchmark.contract.test.ts --runInBand`（**2 suites, 15 tests passed**）
+- [x] 聚焦流水线+门禁契约：
+  - [x] `node node_modules/jest/bin/jest.js src/mobile.pipeline.test.ts src/wasm.parity.benchmark.guards.contract.test.ts --runInBand`（**2 suites, 18 tests passed**）
+- [x] 等价 `npm run test:migration` 的迁移矩阵：**30 suites, 165 tests passed**
+- [x] 基准烟测（历史写入路径）：
+  - [x] `node scripts/benchmark-wasm-parity.js --iterations 1 --nodes 200 --out tmp/wasm-parity-benchmark-smoke`
+- [x] 基准烟测（历史门禁路径）：
+  - [x] `node scripts/benchmark-wasm-parity.js --iterations 1 --nodes 200 --out tmp/wasm-parity-benchmark-smoke --minimum-history-samples 1 --max-candidate-to-history-graph-p95-ratio 10 --max-candidate-to-history-layout-p95-ratio 10 --max-candidate-to-history-graph-p99-ratio 10 --max-candidate-to-history-layout-p99-ratio 10`
+
+---
+
 # 2026-03-11 v1.5.49 - 高优先级移动端证据链路加固（结构化清单 + 新鲜度校验器）
 
 ## 中文文档

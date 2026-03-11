@@ -17,8 +17,21 @@ const {
     summarizeDurations
 } = require('../src/backend/algorithms/WasmParityBenchmark');
 const {
+    evaluateWasmParityHistoricalPerformanceGuards,
     evaluateWasmParityPerformanceGuards
 } = require('../src/backend/algorithms/WasmParityBenchmarkGuards');
+const {
+    classifyWasmParityHistoryMaturity,
+    compactWasmParityHistoryRecords,
+    selectComparableWasmParityHistoryRecords,
+    summarizeWasmParityHistoryReadiness
+} = require('../src/backend/algorithms/WasmParityHistory');
+
+const HISTORY_MATURITY_TIER_ORDER = {
+    bootstrap: 0,
+    warming: 1,
+    enforced: 2
+};
 
 function parseArgs(argv) {
     const parsed = {
@@ -70,6 +83,27 @@ function parseOptionalPositiveNumber(rawValue) {
     return parsed;
 }
 
+function parseHistoryMaturityTier(rawValue, fallbackTier, options = {}) {
+    const { allowNone = false } = options;
+    const normalized = String(rawValue || '').trim().toLowerCase();
+    if (allowNone && normalized === 'none') {
+        return 'none';
+    }
+    if (normalized === 'bootstrap' || normalized === 'warming' || normalized === 'enforced') {
+        return normalized;
+    }
+    return fallbackTier;
+}
+
+function compareHistoryMaturityTier(leftTier, rightTier) {
+    const leftOrder = HISTORY_MATURITY_TIER_ORDER[String(leftTier || '').toLowerCase()] ?? -1;
+    const rightOrder = HISTORY_MATURITY_TIER_ORDER[String(rightTier || '').toLowerCase()] ?? -1;
+    if (leftOrder === rightOrder) {
+        return 0;
+    }
+    return leftOrder > rightOrder ? 1 : -1;
+}
+
 function toTopBetweennessRows(values, limit = 5) {
     return Array.from(values.entries())
         .sort((left, right) => {
@@ -98,6 +132,103 @@ function collectFiniteLayoutCoverage(graph) {
         finiteNodes: finiteNodes.length,
         coverageRatio: nodes.length > 0 ? finiteNodes.length / nodes.length : 0
     };
+}
+
+function toFiniteNonNegative(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric < 0) {
+        return 0;
+    }
+    return numeric;
+}
+
+function toHostKey(host) {
+    const nodeVersion = String(host.nodeVersion || '');
+    const nodeMajor = Number.parseInt(nodeVersion.replace(/^v/i, '').split('.')[0] || '0', 10);
+    return [
+        String(host.platform || 'unknown'),
+        String(host.arch || 'unknown'),
+        String(Number.isFinite(host.cpuCount) ? host.cpuCount : 0),
+        Number.isFinite(nodeMajor) ? `node${nodeMajor}` : 'node0'
+    ].join(':');
+}
+
+function loadHistoryRecords(historyFile) {
+    if (!historyFile || !fs.existsSync(historyFile)) {
+        return [];
+    }
+    const raw = fs.readFileSync(historyFile, 'utf8');
+    const lines = raw.split(/\r?\n/).map((line) => line.trim()).filter((line) => line.length > 0);
+    const records = [];
+    lines.forEach((line, index) => {
+        try {
+            const parsed = JSON.parse(line);
+            records.push(parsed);
+        } catch (error) {
+            console.warn('[WASM Benchmark] Ignoring malformed history line:', index + 1, 'file:', historyFile, 'error:', error.message);
+        }
+    });
+    return records;
+}
+
+function writeHistoryRecords(historyFile, records) {
+    if (!historyFile) {
+        return;
+    }
+    fs.mkdirSync(path.dirname(historyFile), { recursive: true });
+    const lines = Array.isArray(records)
+        ? records.map((record) => JSON.stringify(record))
+        : [];
+    const payload = lines.length > 0 ? `${lines.join('\n')}\n` : '';
+    fs.writeFileSync(historyFile, payload, 'utf8');
+}
+
+function toHistoryMetricSamples(records, metricKey) {
+    return records
+        .map((record) => ({
+            p95: toFiniteNonNegative(record?.[metricKey]?.candidateP95Ms),
+            p99: toFiniteNonNegative(record?.[metricKey]?.candidateP99Ms)
+        }))
+        .filter((entry) => entry.p95 > 0 && entry.p99 > 0);
+}
+
+function buildHistoryReadinessMarkdown(readinessReport) {
+    const lines = [];
+    const profileRows = Array.isArray(readinessReport?.summary?.profileSummaries)
+        ? readinessReport.summary.profileSummaries
+        : [];
+    lines.push('# WASM Parity History Readiness');
+    lines.push('');
+    lines.push(`Generated At: ${readinessReport.generatedAt}`);
+    lines.push(`History File: ${readinessReport.historyFile}`);
+    lines.push(`Current Profile: ${readinessReport.currentProfile.hostKey} / nodes=${readinessReport.currentProfile.nodeCount} / workers=${readinessReport.currentProfile.maxWorkers}`);
+    lines.push('');
+    lines.push('## Current Profile');
+    lines.push('');
+    lines.push(`- Before Run: ${readinessReport.currentProfile.beforeRun.sampleCount} samples (${readinessReport.currentProfile.beforeRun.tier})`);
+    lines.push(`- After Run: ${readinessReport.currentProfile.afterRun.sampleCount} samples (${readinessReport.currentProfile.afterRun.tier})`);
+    lines.push(`- Minimum Samples: ${readinessReport.currentProfile.afterRun.minimumSamples}`);
+    lines.push(`- Strict Samples: ${readinessReport.currentProfile.afterRun.strictSamples}`);
+    lines.push(`- Bootstrap Active This Run: ${readinessReport.currentProfile.historyGuardBootstrapActive ? 'yes' : 'no'}`);
+    lines.push('');
+    lines.push('## Fleet Summary');
+    lines.push('');
+    lines.push(`- Comparable Records: ${readinessReport.summary.comparableRecordCount}`);
+    lines.push(`- Profiles: ${readinessReport.summary.profileCount}`);
+    lines.push(`- Tier Counts: bootstrap=${readinessReport.summary.tierCounts.bootstrap}, warming=${readinessReport.summary.tierCounts.warming}, enforced=${readinessReport.summary.tierCounts.enforced}`);
+    lines.push('');
+    lines.push('## Profiles');
+    lines.push('');
+    lines.push('| Host Key | Nodes | Workers | Samples | Tier | First Seen | Last Seen |');
+    lines.push('| --- | ---: | ---: | ---: | --- | --- | --- |');
+    profileRows.forEach((profile) => {
+        lines.push(`| ${profile.hostKey} | ${profile.nodeCount} | ${profile.maxWorkers} | ${profile.sampleCount} | ${profile.maturity.tier} | ${profile.firstGeneratedAt} | ${profile.lastGeneratedAt} |`);
+    });
+    if (profileRows.length === 0) {
+        lines.push('| n/a | 0 | 0 | 0 | bootstrap | n/a | n/a |');
+    }
+    lines.push('');
+    return lines.join('\n');
 }
 
 async function runScenario(options) {
@@ -220,6 +351,32 @@ async function main() {
     const maxCandidateToBaselineLayoutP99Ratio = parseOptionalPositiveNumber(args['max-candidate-to-baseline-layout-p99-ratio']);
     const maxCandidateGraphP99Ms = parseOptionalPositiveNumber(args['max-candidate-graph-p99-ms']);
     const maxCandidateLayoutP99Ms = parseOptionalPositiveNumber(args['max-candidate-layout-p99-ms']);
+    const historyWindow = parsePositiveInt(args['history-window'], 20, 1, 500);
+    const minimumHistorySamples = parsePositiveInt(args['minimum-history-samples'], 5, 1, 200);
+    const historyStrictSamples = parsePositiveInt(
+        args['history-strict-samples'],
+        Math.max(minimumHistorySamples * 2, minimumHistorySamples),
+        minimumHistorySamples,
+        1000
+    );
+    const historyFile = path.resolve(args['history-file'] || path.join(outDir, 'history.jsonl'));
+    const historyMaxRecords = parsePositiveInt(args['history-max-records'], 2000, 100, 200000);
+    const historyMaxAgeDays = parsePositiveInt(args['history-max-age-days'], 90, 1, 3650);
+    const maxCandidateToHistoryGraphP95Ratio = parseOptionalPositiveNumber(args['max-candidate-to-history-graph-p95-ratio']);
+    const maxCandidateToHistoryLayoutP95Ratio = parseOptionalPositiveNumber(args['max-candidate-to-history-layout-p95-ratio']);
+    const maxCandidateToHistoryGraphP99Ratio = parseOptionalPositiveNumber(args['max-candidate-to-history-graph-p99-ratio']);
+    const maxCandidateToHistoryLayoutP99Ratio = parseOptionalPositiveNumber(args['max-candidate-to-history-layout-p99-ratio']);
+    const bootstrapHistoryGuard = parseBooleanFlag(args['bootstrap-history-guard']);
+    const historyMaturityWarnTier = parseHistoryMaturityTier(
+        args['history-maturity-warn-tier'],
+        'warming',
+        { allowNone: true }
+    );
+    const historyMaturityFailTier = parseHistoryMaturityTier(
+        args['history-maturity-fail-tier'],
+        'none',
+        { allowNone: true }
+    );
 
     const originalMemorySavingMode = config.memorySavingMode;
     const originalMaxWorkers = config.maxWorkers;
@@ -282,14 +439,61 @@ async function main() {
             }
         });
 
+        const host = {
+            nodeVersion: process.version,
+            platform: process.platform,
+            arch: process.arch,
+            cpuCount: os.cpus().length
+        };
+        const hostKey = toHostKey(host);
+        const historyRecords = loadHistoryRecords(historyFile);
+        const comparableHistoryRecords = selectComparableWasmParityHistoryRecords(historyRecords, {
+            hostKey,
+            nodeCount,
+            maxWorkers,
+            historyWindow
+        });
+        const historyGuardBootstrapActive = bootstrapHistoryGuard && comparableHistoryRecords.length < minimumHistorySamples;
+        const historyMaturityBeforeRun = classifyWasmParityHistoryMaturity(
+            comparableHistoryRecords.length,
+            minimumHistorySamples,
+            historyStrictSamples
+        );
+        const graphHistorySamples = toHistoryMetricSamples(comparableHistoryRecords, 'graphMetrics');
+        const layoutHistorySamples = toHistoryMetricSamples(comparableHistoryRecords, 'layoutEngine');
+        const historyPerformanceGuards = evaluateWasmParityHistoricalPerformanceGuards({
+            minimumHistorySamples,
+            graphMetrics: {
+                metric: 'graphMetrics',
+                candidateP95Ms: candidate.graphMetrics.durationStatsMs.p95Ms,
+                candidateP99Ms: candidate.graphMetrics.durationStatsMs.p99Ms,
+                historyBaselineP95SamplesMs: graphHistorySamples.map((sample) => sample.p95),
+                historyBaselineP99SamplesMs: graphHistorySamples.map((sample) => sample.p99),
+                config: {
+                    maxCandidateToBaselineP95Ratio: historyGuardBootstrapActive ? null : maxCandidateToHistoryGraphP95Ratio,
+                    maxCandidateToBaselineP99Ratio: historyGuardBootstrapActive ? null : maxCandidateToHistoryGraphP99Ratio
+                }
+            },
+            layoutEngine: {
+                metric: 'layoutEngine',
+                candidateP95Ms: candidate.layoutEngine.durationStatsMs.p95Ms,
+                candidateP99Ms: candidate.layoutEngine.durationStatsMs.p99Ms,
+                historyBaselineP95SamplesMs: layoutHistorySamples.map((sample) => sample.p95),
+                historyBaselineP99SamplesMs: layoutHistorySamples.map((sample) => sample.p99),
+                config: {
+                    maxCandidateToBaselineP95Ratio: historyGuardBootstrapActive ? null : maxCandidateToHistoryLayoutP95Ratio,
+                    maxCandidateToBaselineP99Ratio: historyGuardBootstrapActive ? null : maxCandidateToHistoryLayoutP99Ratio
+                }
+            }
+        });
+
+        const candidateMode = candidate.graphMetrics.lastDiagnostics.mode;
+        const wasmUsed = candidateMode === 'wasm-adapter' || candidate.layoutEngine.lastDiagnostics.mode === 'wasm-adapter';
+        const performanceGuardsPass = !performanceGuards.applied || performanceGuards.pass;
+
         const report = {
             generatedAt: new Date().toISOString(),
-            host: {
-                nodeVersion: process.version,
-                platform: process.platform,
-                arch: process.arch,
-                cpuCount: os.cpus().length
-            },
+            host,
             benchmarkConfig: {
                 nodeCount,
                 iterations,
@@ -297,6 +501,24 @@ async function main() {
                 repulsion,
                 distance,
                 wasmPath: wasmPath || null,
+                history: {
+                    historyFile,
+                    historyWindow,
+                    minimumHistorySamples,
+                    historyStrictSamples,
+                    bootstrapHistoryGuard,
+                    historyGuardBootstrapActive,
+                    comparableHistorySamples: comparableHistoryRecords.length,
+                    historyMaxRecords,
+                    historyMaxAgeDays,
+                    maxCandidateToHistoryGraphP95Ratio,
+                    maxCandidateToHistoryLayoutP95Ratio,
+                    maxCandidateToHistoryGraphP99Ratio,
+                    maxCandidateToHistoryLayoutP99Ratio,
+                    historyMaturityWarnTier,
+                    historyMaturityFailTier,
+                    historyMaturityBeforeRun
+                },
                 guards: {
                     maxCandidateToBaselineGraphP95Ratio,
                     maxCandidateToBaselineLayoutP95Ratio,
@@ -334,22 +556,120 @@ async function main() {
                     baseline: baseline.layoutEngine.lastCoverage,
                     candidate: candidate.layoutEngine.lastCoverage
                 },
-                performanceGuards
+                performanceGuards,
+                historyPerformanceGuards
             }
+        };
+
+        const historyRecord = {
+            generatedAt: report.generatedAt,
+            hostKey,
+            nodeCount,
+            iterations,
+            maxWorkers,
+            wasmUsed,
+            equivalenceWithinTolerance: betweennessDiff.withinTolerance,
+            performanceGuardsPass,
+            graphMetrics: {
+                candidateP95Ms: candidate.graphMetrics.durationStatsMs.p95Ms,
+                candidateP99Ms: candidate.graphMetrics.durationStatsMs.p99Ms,
+                mode: candidate.graphMetrics.lastDiagnostics.mode
+            },
+            layoutEngine: {
+                candidateP95Ms: candidate.layoutEngine.durationStatsMs.p95Ms,
+                candidateP99Ms: candidate.layoutEngine.durationStatsMs.p99Ms,
+                mode: candidate.layoutEngine.lastDiagnostics.mode
+            }
+        };
+        const compaction = compactWasmParityHistoryRecords(
+            [...historyRecords, historyRecord],
+            {
+                maxRecords: historyMaxRecords,
+                maxAgeDays: historyMaxAgeDays,
+                now: new Date(report.generatedAt)
+            }
+        );
+        writeHistoryRecords(historyFile, compaction.compacted);
+        report.benchmarkConfig.history.compaction = {
+            beforeCount: compaction.beforeCount,
+            afterCount: compaction.afterCount
+        };
+        const comparableHistoryRecordsAfterRun = selectComparableWasmParityHistoryRecords(compaction.compacted, {
+            hostKey,
+            nodeCount,
+            maxWorkers,
+            historyWindow
+        });
+        const historyMaturityAfterRun = classifyWasmParityHistoryMaturity(
+            comparableHistoryRecordsAfterRun.length,
+            minimumHistorySamples,
+            historyStrictSamples
+        );
+        const historyReadinessSummary = summarizeWasmParityHistoryReadiness(compaction.compacted, {
+            minimumSamples: minimumHistorySamples,
+            strictSamples: historyStrictSamples,
+            historyWindow
+        });
+        const historyReadinessReport = {
+            generatedAt: report.generatedAt,
+            historyFile,
+            currentProfile: {
+                hostKey,
+                nodeCount,
+                maxWorkers,
+                historyGuardBootstrapActive,
+                beforeRun: historyMaturityBeforeRun,
+                afterRun: historyMaturityAfterRun
+            },
+            policy: {
+                warnTier: historyMaturityWarnTier,
+                failTier: historyMaturityFailTier
+            },
+            summary: historyReadinessSummary
+        };
+        report.benchmarkConfig.history.historyMaturityAfterRun = historyMaturityAfterRun;
+        report.benchmarkConfig.history.historyReadinessSummary = {
+            comparableRecordCount: historyReadinessSummary.comparableRecordCount,
+            profileCount: historyReadinessSummary.profileCount,
+            tierCounts: historyReadinessSummary.tierCounts
         };
 
         fs.mkdirSync(outDir, { recursive: true });
         const timestamp = report.generatedAt.replace(/[:.]/g, '-');
         const reportFile = path.join(outDir, `wasm-parity-benchmark-${timestamp}.json`);
         const latestFile = path.join(outDir, 'latest.json');
+        const readinessFile = path.join(outDir, `history-readiness-${timestamp}.json`);
+        const readinessLatestFile = path.join(outDir, 'history-readiness-latest.json');
+        const readinessMarkdownFile = path.join(outDir, `history-readiness-${timestamp}.md`);
+        const readinessMarkdownLatestFile = path.join(outDir, 'history-readiness-latest.md');
+        const readinessMarkdown = buildHistoryReadinessMarkdown(historyReadinessReport);
         fs.writeFileSync(reportFile, JSON.stringify(report, null, 2), 'utf8');
         fs.writeFileSync(latestFile, JSON.stringify(report, null, 2), 'utf8');
-
-        const candidateMode = candidate.graphMetrics.lastDiagnostics.mode;
-        const wasmUsed = candidateMode === 'wasm-adapter' || candidate.layoutEngine.lastDiagnostics.mode === 'wasm-adapter';
+        fs.writeFileSync(readinessFile, JSON.stringify(historyReadinessReport, null, 2), 'utf8');
+        fs.writeFileSync(readinessLatestFile, JSON.stringify(historyReadinessReport, null, 2), 'utf8');
+        fs.writeFileSync(readinessMarkdownFile, readinessMarkdown, 'utf8');
+        fs.writeFileSync(readinessMarkdownLatestFile, readinessMarkdown, 'utf8');
 
         console.log('[WASM Benchmark] Report written:', reportFile);
         console.log('[WASM Benchmark] Latest report:', latestFile);
+        console.log('[WASM Benchmark] History readiness report:', readinessFile);
+        console.log('[WASM Benchmark] History readiness latest report:', readinessLatestFile);
+        console.log('[WASM Benchmark] History readiness markdown:', readinessMarkdownLatestFile);
+        console.log('[WASM Benchmark] History file:', historyFile);
+        console.log('[WASM Benchmark] History compaction:', `${compaction.beforeCount} -> ${compaction.afterCount}`);
+        console.log('[WASM Benchmark] Comparable history samples:', comparableHistoryRecords.length);
+        console.log(
+            '[WASM Benchmark] History maturity tier:',
+            `${historyMaturityBeforeRun.tier} -> ${historyMaturityAfterRun.tier}`,
+            `(samples ${historyMaturityBeforeRun.sampleCount} -> ${historyMaturityAfterRun.sampleCount})`
+        );
+        if (historyGuardBootstrapActive) {
+            console.warn(
+                '[WASM Benchmark] History guard bootstrap mode is active:',
+                `samples=${comparableHistoryRecords.length} < minimum=${minimumHistorySamples}.`,
+                'History ratio thresholds are temporarily skipped for this run.'
+            );
+        }
         console.log('[WASM Benchmark] GraphMetrics baseline mode:', baseline.graphMetrics.lastDiagnostics.mode);
         console.log('[WASM Benchmark] GraphMetrics candidate mode:', candidate.graphMetrics.lastDiagnostics.mode);
         console.log('[WASM Benchmark] Layout baseline mode:', baseline.layoutEngine.lastDiagnostics.mode);
@@ -378,6 +698,51 @@ async function main() {
                 );
             });
         }
+        if (historyPerformanceGuards.applied) {
+            console.log('[WASM Benchmark] History guards pass:', historyPerformanceGuards.pass);
+            historyPerformanceGuards.metrics.forEach((metric) => {
+                console.log(
+                    '[WASM Benchmark] History guard metric:',
+                    metric.metric,
+                    'sampleCount:',
+                    metric.historySampleCount,
+                    'baselineP95Ms:',
+                    metric.baselineP95Ms,
+                    'candidateP95Ms:',
+                    metric.candidateP95Ms,
+                    'p95Ratio:',
+                    metric.candidateToBaselineP95Ratio,
+                    'baselineP99Ms:',
+                    metric.baselineP99Ms,
+                    'candidateP99Ms:',
+                    metric.candidateP99Ms,
+                    'p99Ratio:',
+                    metric.candidateToBaselineP99Ratio,
+                    'failures:',
+                    metric.failures
+                );
+            });
+        }
+        if (
+            historyMaturityWarnTier !== 'none' &&
+            compareHistoryMaturityTier(historyMaturityAfterRun.tier, historyMaturityWarnTier) < 0
+        ) {
+            console.warn(
+                '[WASM Benchmark] History maturity tier is below warning policy:',
+                `current=${historyMaturityAfterRun.tier}`,
+                `warnTier=${historyMaturityWarnTier}`,
+                `(samples=${historyMaturityAfterRun.sampleCount}, strict=${historyMaturityAfterRun.strictSamples}).`
+            );
+        }
+        if (
+            historyMaturityFailTier !== 'none' &&
+            compareHistoryMaturityTier(historyMaturityAfterRun.tier, historyMaturityFailTier) < 0
+        ) {
+            throw new Error(
+                '[WASM Benchmark] History maturity tier requirement is not met: ' +
+                `current=${historyMaturityAfterRun.tier}, required=${historyMaturityFailTier}.`
+            );
+        }
         if (!wasmUsed) {
             const warning = '[WASM Benchmark] Candidate scenario did not execute wasm-adapter path. Check wasm artifact availability/path.';
             if (requireWasmAdapter) {
@@ -387,6 +752,9 @@ async function main() {
         }
         if (performanceGuards.applied && !performanceGuards.pass) {
             throw new Error('[WASM Benchmark] Performance guard thresholds were exceeded.');
+        }
+        if (historyPerformanceGuards.applied && !historyPerformanceGuards.pass) {
+            throw new Error('[WASM Benchmark] Historical performance guard thresholds were exceeded.');
         }
     } finally {
         config.memorySavingMode = originalMemorySavingMode;

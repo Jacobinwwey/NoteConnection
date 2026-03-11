@@ -40,6 +40,33 @@ export interface WasmParityPerformanceGuardsResult {
     metrics: WasmParityMetricGuardResult[];
 }
 
+export interface WasmParityHistoricalMetricGuardInput {
+    metric: WasmParityBenchmarkMetric;
+    candidateP95Ms: number;
+    candidateP99Ms?: number;
+    historyBaselineP95SamplesMs: number[];
+    historyBaselineP99SamplesMs?: number[];
+    config: WasmParityMetricGuardConfig;
+}
+
+export interface WasmParityHistoricalMetricGuardResult extends WasmParityMetricGuardResult {
+    historySampleCount: number;
+    historyBaselineSource: 'none' | 'median';
+}
+
+export interface WasmParityHistoricalPerformanceGuardsInput {
+    graphMetrics: WasmParityHistoricalMetricGuardInput;
+    layoutEngine: WasmParityHistoricalMetricGuardInput;
+    minimumHistorySamples?: number;
+}
+
+export interface WasmParityHistoricalPerformanceGuardsResult {
+    applied: boolean;
+    pass: boolean;
+    minimumHistorySamples: number;
+    metrics: WasmParityHistoricalMetricGuardResult[];
+}
+
 function toFiniteNonNegative(value: number): number {
     if (!Number.isFinite(value) || value < 0) {
         return 0;
@@ -54,6 +81,27 @@ function hasConfigThreshold(config: WasmParityMetricGuardConfig): boolean {
         (typeof config.maxCandidateToBaselineP99Ratio === 'number' && Number.isFinite(config.maxCandidateToBaselineP99Ratio)) ||
         (typeof config.maxCandidateP99Ms === 'number' && Number.isFinite(config.maxCandidateP99Ms))
     );
+}
+
+function toFinitePositiveSamples(values: number[]): number[] {
+    if (!Array.isArray(values)) {
+        return [];
+    }
+    return values
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value) && value > 0)
+        .sort((left, right) => left - right);
+}
+
+function toMedian(values: number[]): number | null {
+    if (!Array.isArray(values) || values.length === 0) {
+        return null;
+    }
+    const middle = Math.floor(values.length / 2);
+    if (values.length % 2 === 0) {
+        return (values[middle - 1] + values[middle]) / 2;
+    }
+    return values[middle];
 }
 
 export function evaluateWasmParityMetricGuard(input: WasmParityMetricGuardInput): WasmParityMetricGuardResult {
@@ -135,6 +183,81 @@ export function evaluateWasmParityPerformanceGuards(
     return {
         applied,
         pass,
+        metrics
+    };
+}
+
+export function evaluateWasmParityHistoricalMetricGuard(
+    input: WasmParityHistoricalMetricGuardInput,
+    minimumHistorySamples = 1
+): WasmParityHistoricalMetricGuardResult {
+    const requiredSamples = Math.max(1, Math.floor(Number(minimumHistorySamples) || 1));
+    const baselineP95Samples = toFinitePositiveSamples(input.historyBaselineP95SamplesMs);
+    const rawBaselineP99Samples = Array.isArray(input.historyBaselineP99SamplesMs)
+        ? input.historyBaselineP99SamplesMs
+        : [];
+    const baselineP99Samples = toFinitePositiveSamples(
+        rawBaselineP99Samples.length > 0 ? rawBaselineP99Samples : input.historyBaselineP95SamplesMs
+    );
+
+    const baselineP95Ms = toMedian(baselineP95Samples);
+    const baselineP99Ms = toMedian(baselineP99Samples);
+    const historySampleCount = Math.min(baselineP95Samples.length, baselineP99Samples.length);
+    const thresholdsApplied = hasConfigThreshold(input.config);
+
+    if (thresholdsApplied && (historySampleCount < requiredSamples || baselineP95Ms === null || baselineP99Ms === null)) {
+        return {
+            metric: input.metric,
+            applied: true,
+            pass: false,
+            baselineP95Ms: toFiniteNonNegative(baselineP95Ms === null ? 0 : baselineP95Ms),
+            candidateP95Ms: toFiniteNonNegative(input.candidateP95Ms),
+            candidateToBaselineP95Ratio: null,
+            baselineP99Ms: toFiniteNonNegative(baselineP99Ms === null ? 0 : baselineP99Ms),
+            candidateP99Ms: toFiniteNonNegative(
+                typeof input.candidateP99Ms === 'number' ? input.candidateP99Ms : input.candidateP95Ms
+            ),
+            candidateToBaselineP99Ratio: null,
+            failures: [
+                historySampleCount < requiredSamples
+                    ? 'history-baseline-insufficient-samples'
+                    : 'history-baseline-unavailable'
+            ],
+            historySampleCount,
+            historyBaselineSource: 'none'
+        };
+    }
+
+    const evaluated = evaluateWasmParityMetricGuard({
+        metric: input.metric,
+        baselineP95Ms: baselineP95Ms === null ? 0 : baselineP95Ms,
+        candidateP95Ms: input.candidateP95Ms,
+        baselineP99Ms: baselineP99Ms === null ? undefined : baselineP99Ms,
+        candidateP99Ms: input.candidateP99Ms,
+        config: input.config
+    });
+
+    return {
+        ...evaluated,
+        historySampleCount,
+        historyBaselineSource: (baselineP95Ms === null || baselineP99Ms === null) ? 'none' : 'median'
+    };
+}
+
+export function evaluateWasmParityHistoricalPerformanceGuards(
+    input: WasmParityHistoricalPerformanceGuardsInput
+): WasmParityHistoricalPerformanceGuardsResult {
+    const minimumHistorySamples = Math.max(1, Math.floor(Number(input.minimumHistorySamples) || 1));
+    const metrics = [
+        evaluateWasmParityHistoricalMetricGuard(input.graphMetrics, minimumHistorySamples),
+        evaluateWasmParityHistoricalMetricGuard(input.layoutEngine, minimumHistorySamples)
+    ];
+    const applied = metrics.some((metric) => metric.applied);
+    const pass = metrics.every((metric) => metric.pass);
+    return {
+        applied,
+        pass,
+        minimumHistorySamples,
         metrics
     };
 }
