@@ -1,3 +1,40 @@
+# 2026-03-11 v1.5.56 - High-Priority Fixrisk Issue Closure (Runtime + Mobile E2E + Compliance)
+
+## English Document
+
+### Objective
+Close outstanding `fixrisk_TODO` issues with enforceable implementation and tests while preserving large-graph stability (>10k nodes / >1M edges).
+
+### Completed in This Iteration
+- [x] Startup/runtime memory guardrails remain adaptive and workload-aware.
+- [x] PathBridge inbound payload policy remains large-graph aware.
+- [x] Added adaptive request-body spool threshold policy in `src/server.ts`.
+  - [x] New env controls: `NOTE_CONNECTION_REQUEST_BODY_SPOOL_THRESHOLD_KB`, `NOTE_CONNECTION_REQUEST_BODY_SPOOL_STRICT`.
+  - [x] Runtime diagnostics now include spool policy source/recommended/effective fields.
+- [x] Added pkg snapshot safety enforcement via `src/pkg.snapshot.safety.contract.test.ts`.
+- [x] Provisioned Detox contract pipeline.
+  - [x] Added `.detoxrc.json`, `e2e/*`, `scripts/verify-detox-pipeline.js`, `scripts/run-detox-e2e.js`.
+  - [x] Added workflow `.github/workflows/mobile-e2e-detox-contracts.yml`.
+  - [x] Added `src/detox.pipeline.contract.test.ts`.
+- [x] Accessibility closure is now contract-guarded (`src/graph.accessibility.contract.test.ts`).
+- [x] Privacy manifest baseline is provisioned and verified.
+  - [x] Added `ios/App/PrivacyInfo.xcprivacy`.
+  - [x] Added `scripts/verify-privacy-manifest.js`.
+  - [x] Added `src/privacy.manifest.contract.test.ts`.
+
+### High-Priority Work Status (Current)
+- [x] Runtime, CI contract, accessibility, and privacy-manifest issue tracks are closed for repository scope.
+- [ ] Remaining high-priority work from `fixrisk_todo.md`:
+  - [ ] Physical multi-device evidence closure for sustained >10k node / >1M edge workloads.
+
+### Verification Gate (Executed)
+- [x] `node scripts/verify-detox-pipeline.js`
+- [x] `node scripts/verify-privacy-manifest.js`
+- [x] `node node_modules/jest/bin/jest.js --runInBand` (**41 suites, 213 tests passed**)
+- [x] `node node_modules/typescript/bin/tsc --noEmit`
+
+---
+
 # 2026-03-11 v1.5.54 - High-Priority WASM History Gate Policy Tuning (Enforced-Only Failure in CI)
 
 ## English Document

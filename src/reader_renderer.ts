@@ -12,7 +12,7 @@ const { HandlerList } = require('mathjax-full/js/core/HandlerList.js');
 const { HTMLHandler } = require('mathjax-full/js/handlers/html/HTMLHandler.js');
 const { initWasm, Resvg } = require('@resvg/resvg-wasm');
 
-const dynamicImport = new Function('specifier', 'return import(specifier);') as (specifier: string) => Promise<any>;
+const importMermaidModule = (): Promise<any> => import('mermaid');
 const MATH_TEXT_COLOR = '#eef4ff';
 const MERMAID_BACKGROUND = 'transparent';
 const MERMAID_PADDING = 28;
@@ -471,7 +471,7 @@ async function loadMermaidModule(window: JSDOM['window']): Promise<any> {
     if (!(process as any).pkg) {
         if (!mermaidModulePromise) {
             mermaidModulePromise = (async () => {
-                const mermaidModule = await dynamicImport('mermaid');
+                const mermaidModule = await importMermaidModule();
                 return mermaidModule.default ?? mermaidModule;
             })();
         }

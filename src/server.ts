@@ -25,6 +25,17 @@ const AUTH_TOKEN = String(process.env.NOTE_CONNECTION_AUTH_TOKEN || '').trim();
 let pathBridge: PathBridge | null = null;
 const MEBIBYTE_BYTES = 1024 * 1024;
 const REQUEST_BODY_LIMIT_BYTES = 512 * 1024;
+const REQUEST_BODY_SPOOL_THRESHOLD_RANGE_KB = {
+    min: 64,
+    max: 8192,
+    default: 256
+} as const;
+const REQUEST_BODY_SPOOL_LARGE_GRAPH_KB = 1024;
+const REQUEST_BODY_SPOOL_EXTREME_GRAPH_KB = 2048;
+const REQUEST_BODY_LARGE_GRAPH_NODE_THRESHOLD = 5000;
+const REQUEST_BODY_EXTREME_GRAPH_NODE_THRESHOLD = 20000;
+const REQUEST_BODY_LARGE_GRAPH_EDGE_THRESHOLD = 500000;
+const REQUEST_BODY_EXTREME_GRAPH_EDGE_THRESHOLD = 2000000;
 const CLIPBOARD_BODY_LIMIT_RANGE_MB = {
     min: 1,
     max: 512,
@@ -37,7 +48,8 @@ const CLIPBOARD_BODY_LIMIT_MB = resolveBoundedMegabytesFromEnv({
     maxMb: CLIPBOARD_BODY_LIMIT_RANGE_MB.max
 });
 const CLIPBOARD_BODY_LIMIT_BYTES = CLIPBOARD_BODY_LIMIT_MB * MEBIBYTE_BYTES;
-const REQUEST_BODY_SPOOL_THRESHOLD_BYTES = 256 * 1024;
+const REQUEST_BODY_SPOOL_THRESHOLD_POLICY = resolveRequestBodySpoolThresholdPolicy(process.env);
+const REQUEST_BODY_SPOOL_THRESHOLD_BYTES = REQUEST_BODY_SPOOL_THRESHOLD_POLICY.selectedBytes;
 const ALLOWED_ORIGIN_PATTERNS = parseAllowedOrigins(
     process.env.NOTE_CONNECTION_ALLOWED_ORIGINS ||
     'tauri://localhost,http://tauri.localhost,http://localhost,http://127.0.0.1,capacitor://localhost'
@@ -80,6 +92,19 @@ type BoundedMegabyteEnvOptions = {
     maxMb: number;
 };
 
+type RequestBodySpoolThresholdPolicy = {
+    selectedKiB: number;
+    selectedBytes: number;
+    recommendedKiB: number;
+    source: 'default' | 'configured' | 'configured-strict' | 'auto-raised';
+    strictMode: boolean;
+    workloadHint: {
+        expectedNodeCount: number;
+        expectedEdgeCount: number;
+        scale: 'default' | 'large' | 'xlarge' | 'huge';
+    };
+};
+
 function resolveBoundedMegabytesFromEnv(options: BoundedMegabyteEnvOptions): number {
     const envKey = String(options.envKey || '').trim();
     const defaultMb = Math.max(1, Math.floor(Number(options.defaultMb) || 1));
@@ -111,6 +136,116 @@ function resolveBoundedMegabytesFromEnv(options: BoundedMegabyteEnvOptions): num
     }
 
     return normalizedMb;
+}
+
+function parsePositiveIntegerValue(rawValue: unknown): number {
+    const numericValue = Number(rawValue);
+    if (!Number.isFinite(numericValue) || numericValue <= 0) {
+        return 0;
+    }
+    return Math.floor(numericValue);
+}
+
+function parseBooleanFlag(rawValue: unknown): boolean {
+    const normalized = String(rawValue || '').trim().toLowerCase();
+    return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+}
+
+function normalizeGraphScaleHint(rawValue: unknown): 'default' | 'large' | 'xlarge' | 'huge' {
+    const normalized = String(rawValue || '').trim().toLowerCase();
+    if (normalized === 'large' || normalized === 'l') {
+        return 'large';
+    }
+    if (normalized === 'xlarge' || normalized === 'xl') {
+        return 'xlarge';
+    }
+    if (normalized === 'huge' || normalized === 'xxl' || normalized === 'extreme') {
+        return 'huge';
+    }
+    return 'default';
+}
+
+function clampInteger(value: number, minValue: number, maxValue: number): number {
+    return Math.min(maxValue, Math.max(minValue, Math.floor(value)));
+}
+
+function resolveRequestBodySpoolRecommendedKiB(workloadHint: RequestBodySpoolThresholdPolicy['workloadHint']): number {
+    let recommendedKiB: number = REQUEST_BODY_SPOOL_THRESHOLD_RANGE_KB.default;
+
+    if (workloadHint.scale === 'large' || workloadHint.scale === 'xlarge') {
+        recommendedKiB = Math.max(recommendedKiB, REQUEST_BODY_SPOOL_LARGE_GRAPH_KB);
+    } else if (workloadHint.scale === 'huge') {
+        recommendedKiB = Math.max(recommendedKiB, REQUEST_BODY_SPOOL_EXTREME_GRAPH_KB);
+    }
+
+    if (
+        workloadHint.expectedNodeCount >= REQUEST_BODY_LARGE_GRAPH_NODE_THRESHOLD ||
+        workloadHint.expectedEdgeCount >= REQUEST_BODY_LARGE_GRAPH_EDGE_THRESHOLD
+    ) {
+        recommendedKiB = Math.max(recommendedKiB, REQUEST_BODY_SPOOL_LARGE_GRAPH_KB);
+    }
+
+    if (
+        workloadHint.expectedNodeCount >= REQUEST_BODY_EXTREME_GRAPH_NODE_THRESHOLD ||
+        workloadHint.expectedEdgeCount >= REQUEST_BODY_EXTREME_GRAPH_EDGE_THRESHOLD
+    ) {
+        recommendedKiB = Math.max(recommendedKiB, REQUEST_BODY_SPOOL_EXTREME_GRAPH_KB);
+    }
+
+    return clampInteger(
+        recommendedKiB,
+        REQUEST_BODY_SPOOL_THRESHOLD_RANGE_KB.min,
+        REQUEST_BODY_SPOOL_THRESHOLD_RANGE_KB.max
+    );
+}
+
+function resolveRequestBodySpoolThresholdPolicy(env: NodeJS.ProcessEnv): RequestBodySpoolThresholdPolicy {
+    const workloadHint = {
+        expectedNodeCount: parsePositiveIntegerValue(env.NOTE_CONNECTION_EXPECTED_NODE_COUNT),
+        expectedEdgeCount: parsePositiveIntegerValue(env.NOTE_CONNECTION_EXPECTED_EDGE_COUNT),
+        scale: normalizeGraphScaleHint(env.NOTE_CONNECTION_GRAPH_SCALE)
+    } as const;
+    const recommendedKiB = resolveRequestBodySpoolRecommendedKiB(workloadHint);
+    const strictMode = parseBooleanFlag(env.NOTE_CONNECTION_REQUEST_BODY_SPOOL_STRICT);
+    const configuredKiB = parsePositiveIntegerValue(env.NOTE_CONNECTION_REQUEST_BODY_SPOOL_THRESHOLD_KB);
+
+    if (configuredKiB <= 0) {
+        return {
+            selectedKiB: recommendedKiB,
+            selectedBytes: recommendedKiB * 1024,
+            recommendedKiB,
+            source: recommendedKiB > REQUEST_BODY_SPOOL_THRESHOLD_RANGE_KB.default ? 'auto-raised' : 'default',
+            strictMode,
+            workloadHint
+        };
+    }
+
+    const boundedConfiguredKiB = clampInteger(
+        configuredKiB,
+        REQUEST_BODY_SPOOL_THRESHOLD_RANGE_KB.min,
+        REQUEST_BODY_SPOOL_THRESHOLD_RANGE_KB.max
+    );
+
+    if (strictMode) {
+        return {
+            selectedKiB: boundedConfiguredKiB,
+            selectedBytes: boundedConfiguredKiB * 1024,
+            recommendedKiB,
+            source: 'configured-strict',
+            strictMode,
+            workloadHint
+        };
+    }
+
+    const selectedKiB = Math.max(boundedConfiguredKiB, recommendedKiB);
+    return {
+        selectedKiB,
+        selectedBytes: selectedKiB * 1024,
+        recommendedKiB,
+        source: selectedKiB > boundedConfiguredKiB ? 'auto-raised' : 'configured',
+        strictMode,
+        workloadHint
+    };
 }
 
 function parseAllowedOrigins(rawValue: string): string[] {
@@ -1018,6 +1153,15 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         },
                         ingress: {
                             jsonBodyLimitBytes: REQUEST_BODY_LIMIT_BYTES,
+                            requestBodySpoolThresholdBytes: REQUEST_BODY_SPOOL_THRESHOLD_BYTES,
+                            requestBodySpoolThresholdKb: REQUEST_BODY_SPOOL_THRESHOLD_POLICY.selectedKiB,
+                            requestBodySpoolThresholdSource: REQUEST_BODY_SPOOL_THRESHOLD_POLICY.source,
+                            requestBodySpoolThresholdRecommendedKb: REQUEST_BODY_SPOOL_THRESHOLD_POLICY.recommendedKiB,
+                            requestBodySpoolThresholdStrictMode: REQUEST_BODY_SPOOL_THRESHOLD_POLICY.strictMode,
+                            requestBodySpoolThresholdRangeKb: {
+                                min: REQUEST_BODY_SPOOL_THRESHOLD_RANGE_KB.min,
+                                max: REQUEST_BODY_SPOOL_THRESHOLD_RANGE_KB.max
+                            },
                             clipboardBodyLimitBytes: CLIPBOARD_BODY_LIMIT_BYTES,
                             clipboardBodyLimitMb: CLIPBOARD_BODY_LIMIT_MB,
                             clipboardBodyLimitRangeMb: {
@@ -1415,7 +1559,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 try {
                     const payload = await readJsonBody(req, {
                         maxBytes: CLIPBOARD_BODY_LIMIT_BYTES,
-                        spoolThresholdBytes: 128 * 1024,
+                        spoolThresholdBytes: REQUEST_BODY_SPOOL_THRESHOLD_BYTES,
                     });
                     const pngBase64 = typeof payload.pngBase64 === 'string' ? payload.pngBase64.trim() : '';
                     if (!pngBase64) {
@@ -1452,7 +1596,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 try {
                     const pngBuffer = await readBinaryBody(req, {
                         maxBytes: CLIPBOARD_BODY_LIMIT_BYTES,
-                        spoolThresholdBytes: 128 * 1024,
+                        spoolThresholdBytes: REQUEST_BODY_SPOOL_THRESHOLD_BYTES,
                     });
                     if (!pngBuffer.length || !isPngBuffer(pngBuffer)) {
                         res.writeHead(400, { 'Content-Type': 'application/json' });

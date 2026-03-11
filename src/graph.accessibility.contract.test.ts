@@ -11,7 +11,11 @@ describe('graph accessibility semantic parity contract', () => {
     expect(appJs).toContain('graph-semantic-shadow');
     expect(appJs).toContain('graph-semantic-summary');
     expect(appJs).toContain('graph-semantic-live');
+    expect(appJs).toContain("graphContainer.setAttribute('role', 'group')");
+    expect(appJs).toContain("host.setAttribute('role', 'region')");
+    expect(appJs).toContain("host.setAttribute('aria-label', regionLabel)");
     expect(appJs).toContain("live.setAttribute('aria-live', 'polite')");
+    expect(appJs).toContain("live.setAttribute('aria-atomic', 'true')");
     expect(appJs).toContain('scheduleGraphSemanticA11yRefresh');
     expect(appJs).toContain('buildGraphSemanticSummary');
   });
@@ -30,6 +34,9 @@ describe('graph accessibility semantic parity contract', () => {
     expect(pathAppJs).toContain('path-semantic-shadow');
     expect(pathAppJs).toContain('path-semantic-summary');
     expect(pathAppJs).toContain('path-semantic-live');
+    expect(pathAppJs).toContain("host.setAttribute('role', 'region')");
+    expect(pathAppJs).toContain("host.setAttribute('aria-label', 'Path mode semantic summary')");
+    expect(pathAppJs).toContain("live.setAttribute('aria-live', 'polite')");
     expect(pathAppJs).toContain('_refreshPathSemanticA11y');
   });
 });

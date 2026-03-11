@@ -123,28 +123,134 @@ const MERMAID_RENDER_TIMEOUT_MS = 12000;
 const UNAUTHORIZED_CLIENT_TIMEOUT_MS = 5000;
 const BYTES_PER_MIB = 1024 * 1024;
 const DEFAULT_INBOUND_MESSAGE_LIMIT_MIB = 128;
-const MIN_INBOUND_MESSAGE_LIMIT_MIB = 1;
+const LARGE_GRAPH_INBOUND_MESSAGE_LIMIT_MIB = 256;
+const EXTREME_GRAPH_INBOUND_MESSAGE_LIMIT_MIB = 512;
+const MIN_INBOUND_MESSAGE_LIMIT_MIB = 8;
 const MAX_INBOUND_MESSAGE_LIMIT_MIB = 1024;
+const LARGE_GRAPH_NODE_THRESHOLD = 10000;
+const EXTREME_GRAPH_NODE_THRESHOLD = 20000;
+const LARGE_GRAPH_EDGE_THRESHOLD = 1000000;
+const EXTREME_GRAPH_EDGE_THRESHOLD = 2000000;
 
-function resolveInboundMessageLimitBytes(): number {
-    const rawConfiguredLimit = process.env.NOTE_CONNECTION_BRIDGE_MAX_INBOUND_MB;
-    if (!rawConfiguredLimit) {
-        return DEFAULT_INBOUND_MESSAGE_LIMIT_MIB * BYTES_PER_MIB;
+type BridgeInboundLimitConfig = {
+    selectedMessageMb: number;
+    selectedMessageBytes: number;
+    recommendedMessageMb: number;
+    source: 'default' | 'configured' | 'configured-strict' | 'auto-raised';
+    strictMode: boolean;
+    workloadHint: {
+        expectedNodeCount: number;
+        expectedEdgeCount: number;
+        scale: 'default' | 'large' | 'xlarge' | 'huge';
+    };
+};
+
+function parsePositiveInteger(value: unknown): number {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+        return 0;
     }
-
-    const parsedLimitMb = Number(rawConfiguredLimit);
-    if (!Number.isFinite(parsedLimitMb) || parsedLimitMb <= 0) {
-        return DEFAULT_INBOUND_MESSAGE_LIMIT_MIB * BYTES_PER_MIB;
-    }
-
-    const boundedLimitMb = Math.min(
-        MAX_INBOUND_MESSAGE_LIMIT_MIB,
-        Math.max(MIN_INBOUND_MESSAGE_LIMIT_MIB, Math.floor(parsedLimitMb))
-    );
-    return boundedLimitMb * BYTES_PER_MIB;
+    return Math.floor(numeric);
 }
 
-const MAX_INBOUND_MESSAGE_BYTES = resolveInboundMessageLimitBytes();
+function normalizeGraphScale(rawValue: unknown): 'default' | 'large' | 'xlarge' | 'huge' {
+    const normalized = String(rawValue ?? '').trim().toLowerCase();
+    if (normalized === 'large' || normalized === 'l') {
+        return 'large';
+    }
+    if (normalized === 'xlarge' || normalized === 'xl') {
+        return 'xlarge';
+    }
+    if (normalized === 'huge' || normalized === 'xxl' || normalized === 'extreme') {
+        return 'huge';
+    }
+    return 'default';
+}
+
+function parseBooleanFlag(rawValue: unknown): boolean {
+    const normalized = String(rawValue ?? '').trim().toLowerCase();
+    return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+}
+
+function clampInboundLimitMb(value: number): number {
+    return Math.min(
+        MAX_INBOUND_MESSAGE_LIMIT_MIB,
+        Math.max(MIN_INBOUND_MESSAGE_LIMIT_MIB, Math.floor(value))
+    );
+}
+
+function resolveRecommendedInboundMessageLimitMb(workloadHint: BridgeInboundLimitConfig['workloadHint']): number {
+    let recommendedMb = DEFAULT_INBOUND_MESSAGE_LIMIT_MIB;
+
+    if (workloadHint.scale === 'large' || workloadHint.scale === 'xlarge') {
+        recommendedMb = Math.max(recommendedMb, LARGE_GRAPH_INBOUND_MESSAGE_LIMIT_MIB);
+    } else if (workloadHint.scale === 'huge') {
+        recommendedMb = Math.max(recommendedMb, EXTREME_GRAPH_INBOUND_MESSAGE_LIMIT_MIB);
+    }
+
+    if (
+        workloadHint.expectedNodeCount >= LARGE_GRAPH_NODE_THRESHOLD ||
+        workloadHint.expectedEdgeCount >= LARGE_GRAPH_EDGE_THRESHOLD
+    ) {
+        recommendedMb = Math.max(recommendedMb, LARGE_GRAPH_INBOUND_MESSAGE_LIMIT_MIB);
+    }
+
+    if (
+        workloadHint.expectedNodeCount >= EXTREME_GRAPH_NODE_THRESHOLD ||
+        workloadHint.expectedEdgeCount >= EXTREME_GRAPH_EDGE_THRESHOLD
+    ) {
+        recommendedMb = Math.max(recommendedMb, EXTREME_GRAPH_INBOUND_MESSAGE_LIMIT_MIB);
+    }
+
+    return clampInboundLimitMb(recommendedMb);
+}
+
+export function resolveBridgeInboundLimitConfig(env: NodeJS.ProcessEnv = process.env): BridgeInboundLimitConfig {
+    const workloadHint = {
+        expectedNodeCount: parsePositiveInteger(env.NOTE_CONNECTION_EXPECTED_NODE_COUNT),
+        expectedEdgeCount: parsePositiveInteger(env.NOTE_CONNECTION_EXPECTED_EDGE_COUNT),
+        scale: normalizeGraphScale(env.NOTE_CONNECTION_GRAPH_SCALE),
+    };
+    const recommendedMessageMb = resolveRecommendedInboundMessageLimitMb(workloadHint);
+    const configuredLimitMb = parsePositiveInteger(env.NOTE_CONNECTION_BRIDGE_MAX_INBOUND_MB);
+    const strictMode = parseBooleanFlag(env.NOTE_CONNECTION_BRIDGE_STRICT_INBOUND_LIMIT);
+
+    if (configuredLimitMb <= 0) {
+        return {
+            selectedMessageMb: recommendedMessageMb,
+            selectedMessageBytes: recommendedMessageMb * BYTES_PER_MIB,
+            recommendedMessageMb,
+            source: 'default',
+            strictMode,
+            workloadHint,
+        };
+    }
+
+    const boundedConfiguredLimitMb = clampInboundLimitMb(configuredLimitMb);
+    if (strictMode) {
+        return {
+            selectedMessageMb: boundedConfiguredLimitMb,
+            selectedMessageBytes: boundedConfiguredLimitMb * BYTES_PER_MIB,
+            recommendedMessageMb,
+            source: 'configured-strict',
+            strictMode,
+            workloadHint,
+        };
+    }
+
+    const selectedMessageMb = Math.max(boundedConfiguredLimitMb, recommendedMessageMb);
+    return {
+        selectedMessageMb,
+        selectedMessageBytes: selectedMessageMb * BYTES_PER_MIB,
+        recommendedMessageMb,
+        source: selectedMessageMb > boundedConfiguredLimitMb ? 'auto-raised' : 'configured',
+        strictMode,
+        workloadHint,
+    };
+}
+
+const BRIDGE_INBOUND_LIMIT_CONFIG = resolveBridgeInboundLimitConfig(process.env);
+const MAX_INBOUND_MESSAGE_BYTES = BRIDGE_INBOUND_LIMIT_CONFIG.selectedMessageBytes;
 const PATH_MUTATION_TYPES = new Set([
     'nodeClick',
     'markComplete',
@@ -191,9 +297,12 @@ export const BRIDGE_BACKPRESSURE_LIMITS = {
 
 export const BRIDGE_INBOUND_LIMITS = {
     defaultMessageBytes: DEFAULT_INBOUND_MESSAGE_LIMIT_MIB * BYTES_PER_MIB,
+    recommendedMessageBytes: BRIDGE_INBOUND_LIMIT_CONFIG.recommendedMessageMb * BYTES_PER_MIB,
     minMessageBytes: MIN_INBOUND_MESSAGE_LIMIT_MIB * BYTES_PER_MIB,
     maxMessageBytes: MAX_INBOUND_MESSAGE_BYTES,
     hardCapBytes: MAX_INBOUND_MESSAGE_LIMIT_MIB * BYTES_PER_MIB,
+    selectedBy: BRIDGE_INBOUND_LIMIT_CONFIG.source,
+    strictMode: BRIDGE_INBOUND_LIMIT_CONFIG.strictMode,
 };
 
 function validateKnownEnvelopePayload(type: string, payload: unknown): string | null {
@@ -556,6 +665,11 @@ export class PathBridge {
         });
 
         console.log(`[PathBridge] WebSocket Server started on ws://${this.host}:${this.port}`);
+        console.log(
+            `[PathBridge] Inbound frame limit ${BRIDGE_INBOUND_LIMIT_CONFIG.selectedMessageMb} MiB ` +
+            `(recommended=${BRIDGE_INBOUND_LIMIT_CONFIG.recommendedMessageMb} MiB, ` +
+            `source=${BRIDGE_INBOUND_LIMIT_CONFIG.source}, strict=${BRIDGE_INBOUND_LIMIT_CONFIG.strictMode})`
+        );
 
         this.wss.on('connection', (ws, request) => {
             const clientId = this.nextClientId++;

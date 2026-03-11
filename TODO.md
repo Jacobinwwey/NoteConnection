@@ -1,3 +1,76 @@
+# 2026-03-11 v1.5.56 - High-Priority Fixrisk Issue Closure (Runtime + Mobile E2E + Compliance)
+
+## English Document
+
+### Objective
+Close the outstanding `fixrisk_TODO` issue tracks with enforceable code, contracts, and CI coverage while preserving large-graph readiness (>10k nodes / >1M edges).
+
+### Completed in This Iteration
+- [x] Startup/runtime memory safety remains adaptive (`scripts/start-server.js`, `scripts/lib/runtime-memory-policy.js`).
+- [x] PathBridge inbound payload policy remains large-graph aware (`src/core/PathBridge.ts`).
+- [x] Added adaptive HTTP request-body spool threshold policy in `src/server.ts`.
+  - [x] New controls: `NOTE_CONNECTION_REQUEST_BODY_SPOOL_THRESHOLD_KB`, `NOTE_CONNECTION_REQUEST_BODY_SPOOL_STRICT`.
+  - [x] Runtime diagnostics now expose spool threshold source/recommended/effective values.
+- [x] Closed runtime eval/pkg risk for critical paths.
+  - [x] Added `src/pkg.snapshot.safety.contract.test.ts`.
+- [x] Provisioned Detox contract pipeline.
+  - [x] Added `.detoxrc.json`, `e2e/*`, `scripts/verify-detox-pipeline.js`, `scripts/run-detox-e2e.js`.
+  - [x] Added CI workflow `.github/workflows/mobile-e2e-detox-contracts.yml`.
+  - [x] Added contract test `src/detox.pipeline.contract.test.ts`.
+- [x] Closed accessibility checklist item with enforceable contracts.
+  - [x] `src/graph.accessibility.contract.test.ts` validates semantic shadow/live region behavior.
+- [x] Provisioned iOS privacy manifest baseline.
+  - [x] Added `ios/App/PrivacyInfo.xcprivacy`.
+  - [x] Added `scripts/verify-privacy-manifest.js`.
+  - [x] Added `src/privacy.manifest.contract.test.ts`.
+
+### High-Priority Work Status (Current)
+- [x] Runtime memory and bridge/frame robustness issues are closed for implemented scope.
+- [x] CI/CD Detox contract baseline is provisioned.
+- [x] Accessibility and privacy-manifest checklist issues are closed for repository scope.
+- [ ] Remaining high-priority work from `fixrisk_todo.md`:
+  - [ ] Physical multi-device evidence closure for sustained >10k node / >1M edge workloads.
+
+### Verification Gate (Executed)
+- [x] `node scripts/verify-detox-pipeline.js`
+- [x] `node scripts/verify-privacy-manifest.js`
+- [x] `node node_modules/jest/bin/jest.js --runInBand` (**41 suites, 213 tests passed**)
+- [x] `node node_modules/typescript/bin/tsc --noEmit`
+
+---
+
+## 中文文档
+
+### 目标
+在不破坏大图谱能力（>10k 节点 / >1M 边）的前提下，完成 `fixrisk_TODO` 中剩余问题的代码化闭环（运行时、移动端 E2E、可访问性、合规）。
+
+### 本轮完成
+- [x] 运行时内存与 PathBridge 大载荷策略持续生效（已有自适应能力保留）。
+- [x] `src/server.ts` 新增自适应请求体落盘阈值策略与诊断可观测字段。
+- [x] 关键路径 pkg/审核风险收敛并加契约防回归（`src/pkg.snapshot.safety.contract.test.ts`）。
+- [x] 落地 Detox 合同化链路：
+  - [x] `.detoxrc.json`、`e2e/*`、验证脚本与执行脚本。
+  - [x] CI 工作流：`mobile-e2e-detox-contracts.yml`。
+  - [x] 契约测试：`src/detox.pipeline.contract.test.ts`。
+- [x] 可访问性闭环进入契约测试（`src/graph.accessibility.contract.test.ts`）。
+- [x] 隐私清单基线落地：
+  - [x] `ios/App/PrivacyInfo.xcprivacy`
+  - [x] `scripts/verify-privacy-manifest.js`
+  - [x] `src/privacy.manifest.contract.test.ts`
+
+### 当前高优先级状态
+- [x] fixrisk 的运行时/CI 合同/可访问性/合规问题已在仓库层完成闭环。
+- [ ] 基于 `fixrisk_todo.md` 的剩余高优先级工作：
+  - [ ] 真机多设备矩阵下持续大图谱（>10k 节点 / >1M 边）证据闭环。
+
+### 验证门禁（已执行）
+- [x] `node scripts/verify-detox-pipeline.js`
+- [x] `node scripts/verify-privacy-manifest.js`
+- [x] `node node_modules/jest/bin/jest.js --runInBand`（**41 suites, 213 tests passed**）
+- [x] `node node_modules/typescript/bin/tsc --noEmit`
+
+---
+
 # 2026-03-11 v1.5.54 - High-Priority WASM History Gate Policy Tuning (Enforced-Only Failure in CI)
 
 ## English Document

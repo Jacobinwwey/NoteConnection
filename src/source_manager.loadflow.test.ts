@@ -59,6 +59,13 @@ describe('source manager load-flow guards', () => {
     expect(source).toContain("setupEarlyWebSocket({");
   });
 
+  test('parses graph payload fallback without runtime eval', () => {
+    const source = fs.readFileSync(sourceManagerPath, 'utf8');
+    expect(source).toContain('const assignmentTargets = [');
+    expect(source).not.toContain('new Function(');
+    expect(source).toContain('Invalid graph data payload from sidecar (unsupported format).');
+  });
+
   test('uses storage provider folder listing as the canonical source list for KB folder names', () => {
     const source = fs.readFileSync(sourceManagerPath, 'utf8');
     expect(source).toContain('let folders = await provider.listFolders();');

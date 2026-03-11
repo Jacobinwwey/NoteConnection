@@ -6,6 +6,7 @@ import {
   buildBridgePathTransportSummary,
   computeBridgePathFingerprint,
   parseBridgeInboundEnvelope,
+  resolveBridgeInboundLimitConfig,
   validateBridgePathPayload,
 } from './core/PathBridge';
 
@@ -93,10 +94,34 @@ describe('path bridge handshake and transport verification contracts', () => {
 
   test('inbound frame limit is provisioned for high-volume graph payloads', () => {
     expect(BRIDGE_INBOUND_LIMITS.defaultMessageBytes).toBe(128 * 1024 * 1024);
-    expect(BRIDGE_INBOUND_LIMITS.minMessageBytes).toBe(1 * 1024 * 1024);
+    expect(BRIDGE_INBOUND_LIMITS.minMessageBytes).toBe(8 * 1024 * 1024);
     expect(BRIDGE_INBOUND_LIMITS.hardCapBytes).toBe(1024 * 1024 * 1024);
     expect(BRIDGE_INBOUND_LIMITS.maxMessageBytes).toBeGreaterThanOrEqual(BRIDGE_INBOUND_LIMITS.minMessageBytes);
     expect(BRIDGE_INBOUND_LIMITS.maxMessageBytes).toBeLessThanOrEqual(BRIDGE_INBOUND_LIMITS.hardCapBytes);
+    expect(BRIDGE_INBOUND_LIMITS.recommendedMessageBytes).toBeGreaterThanOrEqual(BRIDGE_INBOUND_LIMITS.defaultMessageBytes);
+  });
+
+  test('inbound frame policy auto-raises low configured limits for large graph hints unless strict mode is enabled', () => {
+    const autoRaised = resolveBridgeInboundLimitConfig({
+      NOTE_CONNECTION_BRIDGE_MAX_INBOUND_MB: '1',
+      NOTE_CONNECTION_EXPECTED_NODE_COUNT: '12000',
+      NOTE_CONNECTION_EXPECTED_EDGE_COUNT: '1200000',
+    });
+
+    expect(autoRaised.recommendedMessageMb).toBeGreaterThanOrEqual(256);
+    expect(autoRaised.selectedMessageMb).toBe(autoRaised.recommendedMessageMb);
+    expect(autoRaised.source).toBe('auto-raised');
+
+    const strict = resolveBridgeInboundLimitConfig({
+      NOTE_CONNECTION_BRIDGE_MAX_INBOUND_MB: '1',
+      NOTE_CONNECTION_EXPECTED_NODE_COUNT: '12000',
+      NOTE_CONNECTION_EXPECTED_EDGE_COUNT: '1200000',
+      NOTE_CONNECTION_BRIDGE_STRICT_INBOUND_LIMIT: '1',
+    });
+
+    expect(strict.selectedMessageMb).toBe(8);
+    expect(strict.source).toBe('configured-strict');
+    expect(strict.recommendedMessageMb).toBeGreaterThan(strict.selectedMessageMb);
   });
 
   test('path app identifies websocket role and emits verification metadata/status', () => {

@@ -1,3 +1,39 @@
+# 2026-03-11 v1.5.56 - 高优先级 fixrisk 问题收敛（运行时 + 移动端 E2E + 合规）
+
+## 中文文档
+
+### 目标
+在不破坏大图谱能力（>10k 节点 / >1M 边）的前提下，完成 `fixrisk_TODO` 剩余问题的可验证闭环（运行时、移动端 E2E、可访问性、合规）。
+
+### 本轮完成
+- [x] 运行时内存与 PathBridge 大载荷策略持续生效（保持自适应与有界约束）。
+- [x] `src/server.ts` 新增自适应请求体落盘阈值策略。
+  - [x] 新增参数：`NOTE_CONNECTION_REQUEST_BODY_SPOOL_THRESHOLD_KB`、`NOTE_CONNECTION_REQUEST_BODY_SPOOL_STRICT`。
+  - [x] 运行时诊断新增阈值来源/推荐值/生效值字段。
+- [x] 新增 pkg 快照安全契约：`src/pkg.snapshot.safety.contract.test.ts`。
+- [x] Detox 合同化流水线已落地。
+  - [x] 新增 `.detoxrc.json`、`e2e/*`、验证脚本与执行脚本。
+  - [x] 新增 CI 工作流：`.github/workflows/mobile-e2e-detox-contracts.yml`。
+  - [x] 新增契约测试：`src/detox.pipeline.contract.test.ts`。
+- [x] 可访问性问题已进入契约约束：`src/graph.accessibility.contract.test.ts`。
+- [x] 隐私清单基线已落地并可自动验证。
+  - [x] `ios/App/PrivacyInfo.xcprivacy`
+  - [x] `scripts/verify-privacy-manifest.js`
+  - [x] `src/privacy.manifest.contract.test.ts`
+
+### 当前高优先级状态
+- [x] fixrisk 的运行时、CI 合同、可访问性、隐私清单问题在仓库层已闭环。
+- [ ] 基于 `fixrisk_todo.md` 的剩余高优先级工作：
+  - [ ] 真机多设备矩阵下持续 >10k 节点 / >1M 边证据闭环。
+
+### 验证门禁（已执行）
+- [x] `node scripts/verify-detox-pipeline.js`
+- [x] `node scripts/verify-privacy-manifest.js`
+- [x] `node node_modules/jest/bin/jest.js --runInBand`（**41 suites, 213 tests passed**）
+- [x] `node node_modules/typescript/bin/tsc --noEmit`
+
+---
+
 # 2026-03-11 v1.5.54 - 高优先级 WASM 历史门禁策略调优（CI 仅 enforced 硬失败）
 
 ## 中文文档

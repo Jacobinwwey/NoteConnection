@@ -1,0 +1,34 @@
+name: Mobile E2E Detox Contracts
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  detox-contracts:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify Detox pipeline contract
+        run: npm run verify:detox:pipeline
+
+      - name: Verify privacy manifest contract
+        run: npm run verify:privacy:manifest
+
+      - name: Run Detox contract gate (no emulator by default)
+        run: npm run test:e2e:detox

@@ -368,6 +368,15 @@ describe('server migration settings routes', () => {
         }),
         ingress: expect.objectContaining({
           jsonBodyLimitBytes: 512 * 1024,
+          requestBodySpoolThresholdBytes: expect.any(Number),
+          requestBodySpoolThresholdKb: expect.any(Number),
+          requestBodySpoolThresholdSource: expect.any(String),
+          requestBodySpoolThresholdRecommendedKb: expect.any(Number),
+          requestBodySpoolThresholdStrictMode: expect.any(Boolean),
+          requestBodySpoolThresholdRangeKb: expect.objectContaining({
+            min: expect.any(Number),
+            max: expect.any(Number)
+          }),
           clipboardBodyLimitBytes: TEST_CLIPBOARD_LIMIT_BYTES,
           clipboardBodyLimitMb: TEST_CLIPBOARD_LIMIT_MB,
           clipboardBodyLimitRangeMb: expect.objectContaining({

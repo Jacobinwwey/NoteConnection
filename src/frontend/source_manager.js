@@ -268,14 +268,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Support direct JSON payload if endpoint format changes later.
                 parsed = JSON.parse(trimmed);
             } else {
-                // Fallback for unexpected payload shape.
-                parsed = new Function(
-                    `${text}\n; return typeof graphData !== 'undefined' ? graphData : (typeof window !== 'undefined' ? window.graphData : undefined);`
-                )();
+                // Fallback for assignment-based payloads without using runtime eval.
+                const assignmentTargets = [
+                    'window.graphData',
+                    'globalThis.graphData',
+                    'self.graphData',
+                    'graphData',
+                ];
+                for (const target of assignmentTargets) {
+                    const targetIndex = trimmed.indexOf(target);
+                    if (targetIndex < 0) {
+                        continue;
+                    }
+                    const equalsIndex = trimmed.indexOf('=', targetIndex + target.length);
+                    if (equalsIndex < 0) {
+                        continue;
+                    }
+                    let candidateJson = trimmed.slice(equalsIndex + 1).trim();
+                    if (candidateJson.endsWith(';')) {
+                        candidateJson = candidateJson.slice(0, -1).trim();
+                    }
+                    if (!candidateJson) {
+                        continue;
+                    }
+                    try {
+                        parsed = JSON.parse(candidateJson);
+                        break;
+                    } catch (_parseError) {
+                        // Keep scanning fallback patterns.
+                    }
+                }
             }
 
             if (!parsed || !Array.isArray(parsed.nodes)) {
-                throw new Error('Invalid graph data payload from sidecar.');
+                throw new Error('Invalid graph data payload from sidecar (unsupported format).');
             }
 
             return parsed;
