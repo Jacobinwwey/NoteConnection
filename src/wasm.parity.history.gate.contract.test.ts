@@ -26,11 +26,13 @@ describe('wasm parity history gate contract', () => {
         expect(scripts['benchmark:wasm:parity:history:ci']).toContain('--bootstrap-history-guard 1');
         expect(scripts['benchmark:wasm:parity:history:ci']).toContain('--history-maturity-warn-tier warming');
         expect(scripts['benchmark:wasm:parity:history:ci']).toContain('--history-maturity-fail-tier none');
+        expect(scripts['benchmark:wasm:parity:history:ci']).toContain('--history-performance-fail-mode enforced-only');
         expect(scripts['benchmark:wasm:parity:history:ci']).toContain('--history-max-records 3000');
         expect(scripts['benchmark:wasm:parity:history:ci']).toContain('--history-max-age-days 180');
         expect(scripts['benchmark:wasm:parity:history:ci']).toContain('--max-candidate-to-history-graph-p95-ratio 1.25');
         expect(scripts['benchmark:wasm:parity:history:ci']).toContain('--max-candidate-to-history-layout-p99-ratio 1.25');
         expect(scripts['benchmark:wasm:parity:history:release']).toContain('--history-maturity-fail-tier enforced');
+        expect(scripts['benchmark:wasm:parity:history:release']).toContain('--history-performance-fail-mode always');
         expect(scripts['test:migration']).toContain('src/wasm.parity.history.gate.contract.test.ts');
     });
 
@@ -67,9 +69,11 @@ describe('wasm parity history gate contract', () => {
         expect(script).toContain("args['history-strict-samples']");
         expect(script).toContain("args['history-maturity-warn-tier']");
         expect(script).toContain("args['history-maturity-fail-tier']");
+        expect(script).toContain("args['history-performance-fail-mode']");
         expect(script).toContain('history-readiness-latest.json');
         expect(script).toContain('history-readiness-latest.md');
         expect(script).toContain('summarizeWasmParityHistoryReadiness');
         expect(script).toContain('History maturity tier:');
+        expect(script).toContain('History performance policy decision:');
     });
 });

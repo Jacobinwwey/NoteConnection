@@ -23,6 +23,7 @@ const {
 const {
     classifyWasmParityHistoryMaturity,
     compactWasmParityHistoryRecords,
+    decideWasmParityHistoryPerformanceGuardOutcome,
     selectComparableWasmParityHistoryRecords,
     summarizeWasmParityHistoryReadiness
 } = require('../src/backend/algorithms/WasmParityHistory');
@@ -32,6 +33,12 @@ const HISTORY_MATURITY_TIER_ORDER = {
     warming: 1,
     enforced: 2
 };
+
+const HISTORY_PERFORMANCE_FAIL_MODES = new Set([
+    'always',
+    'enforced-only',
+    'never'
+]);
 
 function parseArgs(argv) {
     const parsed = {
@@ -102,6 +109,14 @@ function compareHistoryMaturityTier(leftTier, rightTier) {
         return 0;
     }
     return leftOrder > rightOrder ? 1 : -1;
+}
+
+function parseHistoryPerformanceFailMode(rawValue, fallbackMode) {
+    const normalized = String(rawValue || '').trim().toLowerCase();
+    if (HISTORY_PERFORMANCE_FAIL_MODES.has(normalized)) {
+        return normalized;
+    }
+    return fallbackMode;
 }
 
 function toTopBetweennessRows(values, limit = 5) {
@@ -210,6 +225,8 @@ function buildHistoryReadinessMarkdown(readinessReport) {
     lines.push(`- Minimum Samples: ${readinessReport.currentProfile.afterRun.minimumSamples}`);
     lines.push(`- Strict Samples: ${readinessReport.currentProfile.afterRun.strictSamples}`);
     lines.push(`- Bootstrap Active This Run: ${readinessReport.currentProfile.historyGuardBootstrapActive ? 'yes' : 'no'}`);
+    lines.push(`- History Performance Policy: ${readinessReport.policy.historyPerformanceFailMode}`);
+    lines.push(`- History Performance Decision: ${readinessReport.currentProfile.historyPerformancePolicyDecision.outcome}`);
     lines.push('');
     lines.push('## Fleet Summary');
     lines.push('');
@@ -377,6 +394,10 @@ async function main() {
         'none',
         { allowNone: true }
     );
+    const historyPerformanceFailMode = parseHistoryPerformanceFailMode(
+        args['history-performance-fail-mode'],
+        'always'
+    );
 
     const originalMemorySavingMode = config.memorySavingMode;
     const originalMaxWorkers = config.maxWorkers;
@@ -517,6 +538,7 @@ async function main() {
                     maxCandidateToHistoryLayoutP99Ratio,
                     historyMaturityWarnTier,
                     historyMaturityFailTier,
+                    historyPerformanceFailMode,
                     historyMaturityBeforeRun
                 },
                 guards: {
@@ -605,6 +627,13 @@ async function main() {
             minimumHistorySamples,
             historyStrictSamples
         );
+        const historyPerformancePolicyDecision = decideWasmParityHistoryPerformanceGuardOutcome({
+            mode: historyPerformanceFailMode,
+            applied: historyPerformanceGuards.applied,
+            pass: historyPerformanceGuards.pass,
+            profileTier: historyMaturityAfterRun.tier
+        });
+        const historyPerformanceGuardShouldFail = historyPerformancePolicyDecision.shouldFail;
         const historyReadinessSummary = summarizeWasmParityHistoryReadiness(compaction.compacted, {
             minimumSamples: minimumHistorySamples,
             strictSamples: historyStrictSamples,
@@ -619,11 +648,13 @@ async function main() {
                 maxWorkers,
                 historyGuardBootstrapActive,
                 beforeRun: historyMaturityBeforeRun,
-                afterRun: historyMaturityAfterRun
+                afterRun: historyMaturityAfterRun,
+                historyPerformancePolicyDecision
             },
             policy: {
                 warnTier: historyMaturityWarnTier,
-                failTier: historyMaturityFailTier
+                failTier: historyMaturityFailTier,
+                historyPerformanceFailMode
             },
             summary: historyReadinessSummary
         };
@@ -633,6 +664,7 @@ async function main() {
             profileCount: historyReadinessSummary.profileCount,
             tierCounts: historyReadinessSummary.tierCounts
         };
+        report.benchmarkConfig.history.historyPerformancePolicyDecision = historyPerformancePolicyDecision;
 
         fs.mkdirSync(outDir, { recursive: true });
         const timestamp = report.generatedAt.replace(/[:.]/g, '-');
@@ -723,6 +755,12 @@ async function main() {
                 );
             });
         }
+        console.log(
+            '[WASM Benchmark] History performance policy decision:',
+            `mode=${historyPerformancePolicyDecision.mode}`,
+            `profileTier=${historyPerformancePolicyDecision.profileTier}`,
+            `outcome=${historyPerformancePolicyDecision.outcome}`
+        );
         if (
             historyMaturityWarnTier !== 'none' &&
             compareHistoryMaturityTier(historyMaturityAfterRun.tier, historyMaturityWarnTier) < 0
@@ -754,7 +792,17 @@ async function main() {
             throw new Error('[WASM Benchmark] Performance guard thresholds were exceeded.');
         }
         if (historyPerformanceGuards.applied && !historyPerformanceGuards.pass) {
-            throw new Error('[WASM Benchmark] Historical performance guard thresholds were exceeded.');
+            if (historyPerformanceGuardShouldFail) {
+                throw new Error(
+                    '[WASM Benchmark] Historical performance guard thresholds were exceeded ' +
+                    `under mode=${historyPerformanceFailMode} (profileTier=${historyMaturityAfterRun.tier}).`
+                );
+            }
+            console.warn(
+                '[WASM Benchmark] Historical performance guard thresholds were exceeded but downgraded to warning:',
+                `mode=${historyPerformanceFailMode}`,
+                `profileTier=${historyMaturityAfterRun.tier}`
+            );
         }
     } finally {
         config.memorySavingMode = originalMemorySavingMode;

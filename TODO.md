@@ -1,3 +1,83 @@
+# 2026-03-11 v1.5.54 - High-Priority WASM History Gate Policy Tuning (Enforced-Only Failure in CI)
+
+## English Document
+
+### Objective
+Refine high-priority WASM history gating policy so CI remains non-blocking during baseline maturation while still hard-failing true regressions once a profile reaches enforced maturity.
+
+### Completed in This Iteration
+- [x] Added policy decision primitive in `src/backend/algorithms/WasmParityHistory.ts`:
+  - [x] `decideWasmParityHistoryPerformanceGuardOutcome(...)`.
+- [x] Updated `scripts/benchmark-wasm-parity.js`:
+  - [x] Added `--history-performance-fail-mode` (`always` | `enforced-only` | `never`).
+  - [x] Integrated policy decision into runtime failure behavior:
+    - [x] non-enforced profiles can downgrade history guard failures to warnings.
+    - [x] enforced profiles still fail hard under `enforced-only`.
+  - [x] Readiness artifacts now include policy decision outcome metadata.
+- [x] Updated script wiring:
+  - [x] `benchmark:wasm:parity:history:ci` -> `--history-performance-fail-mode enforced-only`.
+  - [x] `benchmark:wasm:parity:history:release` -> `--history-performance-fail-mode always`.
+- [x] Extended contract and unit coverage:
+  - [x] `src/backend/algorithms/WasmParityHistory.test.ts` policy matrix tests.
+  - [x] `src/wasm.parity.history.gate.contract.test.ts` script/runner wiring assertions.
+
+### High-Priority Work Status (Current)
+- [x] CI history-gate behavior is now maturity-aware and operationally resilient.
+- [x] Enforced-tier regressions remain blocking; pre-enforced regressions remain visible via warnings.
+- [ ] Remaining high-priority work from `fixrisk_todo.md`:
+  - [ ] Continue multi-host baseline accumulation until key profiles reach enforced tier.
+  - [ ] Complete physical-device p95/p99 evidence closure.
+
+### Verification Gate (Executed)
+- [x] `node node_modules/jest/bin/jest.js src/backend/algorithms/WasmParityHistory.test.ts src/wasm.parity.history.gate.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/mobile.pipeline.test.ts --runInBand` (**4 suites, 29 tests passed**)
+- [x] Migration matrix equivalent to `npm run test:migration`: **32 suites, 176 tests passed**
+- [x] Full Jest equivalent to `npm test`: **36 suites, 197 tests passed**
+- [x] TypeScript compile equivalent to build compile stage:
+  - [x] `node node_modules/typescript/bin/tsc`
+- [x] Behavioral smoke (warning-only on warming tier) passed.
+- [x] Behavioral smoke (hard-fail on enforced tier) passed.
+
+---
+
+## 中文文档
+
+### 目标
+细化高优先级 WASM 历史门禁策略：在基线成熟阶段保持 CI 非阻塞，同时在画像达到 enforced 成熟度后对真实回归保持硬失败。
+
+### 本轮完成
+- [x] 在 `src/backend/algorithms/WasmParityHistory.ts` 新增策略决策能力：
+  - [x] `decideWasmParityHistoryPerformanceGuardOutcome(...)`。
+- [x] 更新 `scripts/benchmark-wasm-parity.js`：
+  - [x] 新增 `--history-performance-fail-mode`（`always` | `enforced-only` | `never`）。
+  - [x] 接入策略化失败行为：
+    - [x] 非 enforced 画像可将历史门禁失败降级为告警。
+    - [x] `enforced-only` 模式下 enforced 画像仍硬失败。
+  - [x] readiness 工件新增策略决策结果元数据。
+- [x] 更新脚本接线：
+  - [x] `benchmark:wasm:parity:history:ci` 使用 `--history-performance-fail-mode enforced-only`。
+  - [x] `benchmark:wasm:parity:history:release` 使用 `--history-performance-fail-mode always`。
+- [x] 扩展契约与单测覆盖：
+  - [x] `src/backend/algorithms/WasmParityHistory.test.ts` 策略矩阵测试。
+  - [x] `src/wasm.parity.history.gate.contract.test.ts` 脚本/runner 接线断言。
+
+### 当前高优先级状态
+- [x] CI 历史门禁已具备成熟度感知与运行韧性。
+- [x] enforced 级别回归仍阻断；pre-enforced 回归仍有显式告警。
+- [ ] 基于 `fixrisk_todo.md` 的剩余高优先级工作：
+  - [ ] 持续积累多主机基线，直至关键画像达到 enforced。
+  - [ ] 完成真机 p95/p99 证据闭环。
+
+### 验证门禁（已执行）
+- [x] `node node_modules/jest/bin/jest.js src/backend/algorithms/WasmParityHistory.test.ts src/wasm.parity.history.gate.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/mobile.pipeline.test.ts --runInBand`（**4 suites, 29 tests passed**）
+- [x] 等价 `npm run test:migration` 的迁移矩阵：**32 suites, 176 tests passed**
+- [x] 等价 `npm test` 的全量 Jest：**36 suites, 197 tests passed**
+- [x] 等价构建编译阶段：
+  - [x] `node node_modules/typescript/bin/tsc`
+- [x] 行为烟测（warming 层级告警不失败）通过。
+- [x] 行为烟测（enforced 层级硬失败）通过。
+
+---
+
 # 2026-03-11 v1.5.53 - High-Priority WASM Multi-Host Readiness Visibility (Tiered Baseline Maturity)
 
 ## English Document

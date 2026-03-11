@@ -1,3 +1,45 @@
+# 2026-03-11 v1.0.33
+
+# 风险整改执行更新（历史回归策略分级：仅 enforced 硬失败）
+
+## 中文文档
+
+### 本轮整改状态
+- [x] 在 `scripts/benchmark-wasm-parity.js` 增加历史性能门禁策略模式：
+  - [x] 新增 `--history-performance-fail-mode`（`always` | `enforced-only` | `never`）。
+  - [x] CI 可使用 `enforced-only`：
+    - [x] `bootstrap`/`warming` 画像历史回归降级为告警。
+    - [x] `enforced` 画像历史回归保持硬失败。
+- [x] 在 `src/backend/algorithms/WasmParityHistory.ts` 新增可复用策略决策能力：
+  - [x] `decideWasmParityHistoryPerformanceGuardOutcome(...)`。
+- [x] 就绪工件与日志已接入策略结果：
+  - [x] readiness JSON 记录策略模式与当前画像决策结果。
+  - [x] readiness markdown 增加策略与决策摘要。
+- [x] 更新 `package.json` 脚本：
+  - [x] `benchmark:wasm:parity:history:ci` 使用 `--history-performance-fail-mode enforced-only`。
+  - [x] `benchmark:wasm:parity:history:release` 使用 `--history-performance-fail-mode always`。
+- [x] 扩展回归覆盖：
+  - [x] `src/backend/algorithms/WasmParityHistory.test.ts` 新增策略决策矩阵断言。
+  - [x] `src/wasm.parity.history.gate.contract.test.ts` 锁定新增脚本参数与 runner 接线。
+
+### 最佳实践合规增量
+- [x] CI 仅在成熟度达到 `enforced` 时才对历史回归执行硬失败。
+- [x] 非 enforced 画像在持续积累基线时不会被过早阻塞，且回归仍有明确告警。
+- [x] 发布链路保持严格（`always` 失败模式 + enforced 成熟度门禁）。
+- [ ] 更大范围清单中仍有未闭环项：真机 p95/p99 证据闭环（依赖外部设备环境）。
+
+### 验证快照（2026-03-11）
+- [x] `node node_modules/jest/bin/jest.js src/backend/algorithms/WasmParityHistory.test.ts src/wasm.parity.history.gate.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/mobile.pipeline.test.ts --runInBand`（**4 suites, 29 tests passed**）
+- [x] 等价 `npm run test:migration` 的迁移矩阵：**32 suites, 176 tests passed**
+- [x] 等价 `npm test` 的全量 Jest：**36 suites, 197 tests passed**
+- [x] `node node_modules/typescript/bin/tsc` 通过。
+- [x] 策略行为烟测（warming 画像，预期告警不失败）通过：
+  - [x] `node scripts/benchmark-wasm-parity.js ... --history-performance-fail-mode enforced-only --history-strict-samples 15 --max-candidate-to-history-graph-p95-ratio 0.1 --max-candidate-to-history-layout-p95-ratio 0.1 --max-candidate-to-history-graph-p99-ratio 0.1 --max-candidate-to-history-layout-p99-ratio 0.1`
+- [x] 策略行为烟测（enforced 画像，预期硬失败）通过：
+  - [x] `node scripts/benchmark-wasm-parity.js ... --history-performance-fail-mode enforced-only --history-strict-samples 5 --max-candidate-to-history-graph-p95-ratio 0.1 --max-candidate-to-history-layout-p95-ratio 0.1 --max-candidate-to-history-graph-p99-ratio 0.1 --max-candidate-to-history-layout-p99-ratio 0.1`
+
+---
+
 # 2026-03-11 v1.0.32
 
 # 风险整改执行更新（WASM 历史成熟度分级 + 就绪工件）

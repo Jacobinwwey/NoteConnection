@@ -1,3 +1,45 @@
+# 2026-03-11 v1.0.33
+
+# RISK-CORRECTION EXECUTION UPDATE (HISTORY REGRESSION POLICY TIERING: ENFORCED-ONLY FAIL MODE)
+
+## ENGLISH DOCUMENT
+
+### Remediation Status (This Slice)
+- [x] Added explicit history performance policy mode controls in `scripts/benchmark-wasm-parity.js`:
+  - [x] New `--history-performance-fail-mode` (`always` | `enforced-only` | `never`).
+  - [x] CI profile can now run with `enforced-only` policy:
+    - [x] `bootstrap`/`warming` profiles downgrade history regression failures to warnings.
+    - [x] `enforced` profiles still hard-fail on history regression.
+- [x] Added reusable policy decision primitive in `src/backend/algorithms/WasmParityHistory.ts`:
+  - [x] `decideWasmParityHistoryPerformanceGuardOutcome(...)`.
+- [x] Integrated policy decision into readiness artifacts/logging:
+  - [x] Readiness JSON now captures policy mode + per-profile decision outcome.
+  - [x] Readiness markdown now includes policy and decision summary.
+- [x] Updated package scripts:
+  - [x] `benchmark:wasm:parity:history:ci` now sets `--history-performance-fail-mode enforced-only`.
+  - [x] `benchmark:wasm:parity:history:release` now sets `--history-performance-fail-mode always`.
+- [x] Expanded regression contracts/tests:
+  - [x] `src/backend/algorithms/WasmParityHistory.test.ts` covers policy decision matrix.
+  - [x] `src/wasm.parity.history.gate.contract.test.ts` locks new script flags + runner argument wiring.
+
+### Best-Practice Compliance Delta
+- [x] CI now enforces strict regression failure only when profile maturity is truly `enforced`.
+- [x] Non-enforced profiles can continue accumulating baseline data without masking regressions (warnings remain explicit).
+- [x] Release path remains strict (`always` fail mode + enforced maturity gate script).
+- [ ] Remaining broader checklist item persists: physical-device p95/p99 evidence closure (environment-dependent).
+
+### Verification Snapshot (2026-03-11)
+- [x] `node node_modules/jest/bin/jest.js src/backend/algorithms/WasmParityHistory.test.ts src/wasm.parity.history.gate.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/mobile.pipeline.test.ts --runInBand` (**4 suites, 29 tests passed**)
+- [x] Migration matrix equivalent to `npm run test:migration`: **32 suites, 176 tests passed**
+- [x] Full Jest equivalent to `npm test`: **36 suites, 197 tests passed**
+- [x] `node node_modules/typescript/bin/tsc` passed.
+- [x] Policy-behavior smoke (warming profile, warning-only expected) passed:
+  - [x] `node scripts/benchmark-wasm-parity.js ... --history-performance-fail-mode enforced-only --history-strict-samples 15 --max-candidate-to-history-graph-p95-ratio 0.1 --max-candidate-to-history-layout-p95-ratio 0.1 --max-candidate-to-history-graph-p99-ratio 0.1 --max-candidate-to-history-layout-p99-ratio 0.1`
+- [x] Policy-behavior smoke (enforced profile, hard-fail expected) passed:
+  - [x] `node scripts/benchmark-wasm-parity.js ... --history-performance-fail-mode enforced-only --history-strict-samples 5 --max-candidate-to-history-graph-p95-ratio 0.1 --max-candidate-to-history-layout-p95-ratio 0.1 --max-candidate-to-history-graph-p99-ratio 0.1 --max-candidate-to-history-layout-p99-ratio 0.1`
+
+---
+
 # 2026-03-11 v1.0.32
 
 # RISK-CORRECTION EXECUTION UPDATE (WASM HISTORY MATURITY TIERS + READINESS ARTIFACTS)

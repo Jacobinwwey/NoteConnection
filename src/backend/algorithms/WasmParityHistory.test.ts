@@ -1,6 +1,7 @@
 import {
     classifyWasmParityHistoryMaturity,
     compactWasmParityHistoryRecords,
+    decideWasmParityHistoryPerformanceGuardOutcome,
     selectComparableWasmParityHistoryRecords,
     summarizeWasmParityHistoryReadiness
 } from './WasmParityHistory';
@@ -281,5 +282,52 @@ describe('WASM parity history readiness', () => {
         expect(summary.profileSummaries[0].firstGeneratedAt).toBe('2026-03-11T09:00:00.000Z');
         expect(summary.profileSummaries[0].lastGeneratedAt).toBe('2026-03-11T10:00:00.000Z');
         expect(summary.profileSummaries[0].maturity.tier).toBe('enforced');
+    });
+
+    test('decides history performance failure policy by profile tier and mode', () => {
+        const notApplied = decideWasmParityHistoryPerformanceGuardOutcome({
+            mode: 'always',
+            applied: false,
+            pass: true,
+            profileTier: 'bootstrap'
+        });
+        expect(notApplied.outcome).toBe('not-applied');
+        expect(notApplied.shouldFail).toBe(false);
+
+        const passOutcome = decideWasmParityHistoryPerformanceGuardOutcome({
+            mode: 'always',
+            applied: true,
+            pass: true,
+            profileTier: 'enforced'
+        });
+        expect(passOutcome.outcome).toBe('pass');
+        expect(passOutcome.shouldFail).toBe(false);
+
+        const warningOutcome = decideWasmParityHistoryPerformanceGuardOutcome({
+            mode: 'enforced-only',
+            applied: true,
+            pass: false,
+            profileTier: 'warming'
+        });
+        expect(warningOutcome.outcome).toBe('warn');
+        expect(warningOutcome.shouldFail).toBe(false);
+
+        const enforcedFail = decideWasmParityHistoryPerformanceGuardOutcome({
+            mode: 'enforced-only',
+            applied: true,
+            pass: false,
+            profileTier: 'enforced'
+        });
+        expect(enforcedFail.outcome).toBe('fail');
+        expect(enforcedFail.shouldFail).toBe(true);
+
+        const neverFail = decideWasmParityHistoryPerformanceGuardOutcome({
+            mode: 'never',
+            applied: true,
+            pass: false,
+            profileTier: 'enforced'
+        });
+        expect(neverFail.outcome).toBe('warn');
+        expect(neverFail.shouldFail).toBe(false);
     });
 });

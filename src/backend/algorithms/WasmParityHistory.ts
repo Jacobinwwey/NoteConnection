@@ -11,6 +11,8 @@ export interface WasmParityHistoryCompactionResult<TRecord> {
 }
 
 export type WasmParityHistoryMaturityTier = 'bootstrap' | 'warming' | 'enforced';
+export type WasmParityHistoryPerformanceFailMode = 'always' | 'enforced-only' | 'never';
+export type WasmParityHistoryPerformanceDecisionOutcome = 'not-applied' | 'pass' | 'warn' | 'fail';
 
 export interface WasmParityHistoryComparableRecord {
     generatedAt?: string;
@@ -60,6 +62,22 @@ export interface WasmParityHistoryReadinessOptions {
     minimumSamples: number;
     strictSamples: number;
     historyWindow: number;
+}
+
+export interface WasmParityHistoryPerformanceDecisionInput {
+    mode: WasmParityHistoryPerformanceFailMode;
+    applied: boolean;
+    pass: boolean;
+    profileTier: WasmParityHistoryMaturityTier;
+}
+
+export interface WasmParityHistoryPerformanceDecision {
+    mode: WasmParityHistoryPerformanceFailMode;
+    applied: boolean;
+    pass: boolean;
+    profileTier: WasmParityHistoryMaturityTier;
+    outcome: WasmParityHistoryPerformanceDecisionOutcome;
+    shouldFail: boolean;
 }
 
 function toFinitePositiveInteger(value: number, fallback: number): number {
@@ -319,5 +337,63 @@ export function summarizeWasmParityHistoryReadiness<TRecord extends WasmParityHi
         profileCount: profileSummaries.length,
         tierCounts,
         profileSummaries
+    };
+}
+
+export function decideWasmParityHistoryPerformanceGuardOutcome(
+    input: WasmParityHistoryPerformanceDecisionInput
+): WasmParityHistoryPerformanceDecision {
+    if (!input.applied) {
+        return {
+            mode: input.mode,
+            applied: input.applied,
+            pass: input.pass,
+            profileTier: input.profileTier,
+            outcome: 'not-applied',
+            shouldFail: false
+        };
+    }
+
+    if (input.pass) {
+        return {
+            mode: input.mode,
+            applied: input.applied,
+            pass: input.pass,
+            profileTier: input.profileTier,
+            outcome: 'pass',
+            shouldFail: false
+        };
+    }
+
+    if (input.mode === 'never') {
+        return {
+            mode: input.mode,
+            applied: input.applied,
+            pass: input.pass,
+            profileTier: input.profileTier,
+            outcome: 'warn',
+            shouldFail: false
+        };
+    }
+
+    if (input.mode === 'enforced-only') {
+        const enforcedProfile = input.profileTier === 'enforced';
+        return {
+            mode: input.mode,
+            applied: input.applied,
+            pass: input.pass,
+            profileTier: input.profileTier,
+            outcome: enforcedProfile ? 'fail' : 'warn',
+            shouldFail: enforcedProfile
+        };
+    }
+
+    return {
+        mode: input.mode,
+        applied: input.applied,
+        pass: input.pass,
+        profileTier: input.profileTier,
+        outcome: 'fail',
+        shouldFail: true
     };
 }

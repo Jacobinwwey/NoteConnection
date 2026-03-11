@@ -1,3 +1,44 @@
+# 2026-03-11 v1.5.54 - High-Priority WASM History Gate Policy Tuning (Enforced-Only Failure in CI)
+
+## English Document
+
+### Objective
+Refine high-priority WASM history gating policy so CI remains non-blocking during baseline maturation while still hard-failing true regressions once a profile reaches enforced maturity.
+
+### Completed in This Iteration
+- [x] Added policy decision primitive in `src/backend/algorithms/WasmParityHistory.ts`:
+  - [x] `decideWasmParityHistoryPerformanceGuardOutcome(...)`.
+- [x] Updated `scripts/benchmark-wasm-parity.js`:
+  - [x] Added `--history-performance-fail-mode` (`always` | `enforced-only` | `never`).
+  - [x] Integrated policy decision into runtime failure behavior:
+    - [x] non-enforced profiles can downgrade history guard failures to warnings.
+    - [x] enforced profiles still fail hard under `enforced-only`.
+  - [x] Readiness artifacts now include policy decision outcome metadata.
+- [x] Updated script wiring:
+  - [x] `benchmark:wasm:parity:history:ci` -> `--history-performance-fail-mode enforced-only`.
+  - [x] `benchmark:wasm:parity:history:release` -> `--history-performance-fail-mode always`.
+- [x] Extended contract and unit coverage:
+  - [x] `src/backend/algorithms/WasmParityHistory.test.ts` policy matrix tests.
+  - [x] `src/wasm.parity.history.gate.contract.test.ts` script/runner wiring assertions.
+
+### High-Priority Work Status (Current)
+- [x] CI history-gate behavior is now maturity-aware and operationally resilient.
+- [x] Enforced-tier regressions remain blocking; pre-enforced regressions remain visible via warnings.
+- [ ] Remaining high-priority work from `fixrisk_todo.md`:
+  - [ ] Continue multi-host baseline accumulation until key profiles reach enforced tier.
+  - [ ] Complete physical-device p95/p99 evidence closure.
+
+### Verification Gate (Executed)
+- [x] `node node_modules/jest/bin/jest.js src/backend/algorithms/WasmParityHistory.test.ts src/wasm.parity.history.gate.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/mobile.pipeline.test.ts --runInBand` (**4 suites, 29 tests passed**)
+- [x] Migration matrix equivalent to `npm run test:migration`: **32 suites, 176 tests passed**
+- [x] Full Jest equivalent to `npm test`: **36 suites, 197 tests passed**
+- [x] TypeScript compile equivalent to build compile stage:
+  - [x] `node node_modules/typescript/bin/tsc`
+- [x] Behavioral smoke (warning-only on warming tier) passed.
+- [x] Behavioral smoke (hard-fail on enforced tier) passed.
+
+---
+
 # 2026-03-11 v1.5.53 - High-Priority WASM Multi-Host Readiness Visibility (Tiered Baseline Maturity)
 
 ## English Document
