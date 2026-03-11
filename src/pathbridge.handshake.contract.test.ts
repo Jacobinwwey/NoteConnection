@@ -149,6 +149,18 @@ describe('path bridge handshake and transport verification contracts', () => {
     expect(readerRenderClient).toContain('Renderer response did not include a PNG payload.');
   });
 
+  test('godot clipboard transport prefers binary PNG upload and keeps base64 fallback', () => {
+    const readerRenderClient = fs.readFileSync(readerRenderClientPath, 'utf8');
+
+    expect(readerRenderClient).toContain('const BINARY_PNG_HEADERS := ["Content-Type: image/png"]');
+    expect(readerRenderClient).toContain('var binary_response: Dictionary = await _post_binary("/api/clipboard/image-binary", png_buffer)');
+    expect(readerRenderClient).toContain('var fallback_response: Dictionary = await _post_json("/api/clipboard/image", {"pngBase64": Marshalls.raw_to_base64(png_buffer)})');
+    expect(readerRenderClient).toContain('func _post_binary(endpoint: String, payload: PackedByteArray) -> Dictionary:');
+    expect(readerRenderClient).toContain('request.request_raw(');
+    expect(readerRenderClient).toContain('func _build_binary_headers() -> PackedStringArray:');
+    expect(readerRenderClient).toContain('fallback_response["transport"] = "base64-fallback"');
+  });
+
   test('backend validator accepts matching frontend transport summary and fingerprint', () => {
     const payload: Record<string, unknown> = {
       central: {

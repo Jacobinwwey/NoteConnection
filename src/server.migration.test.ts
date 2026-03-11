@@ -191,7 +191,59 @@ function requestRaw(
   });
 }
 
+function requestBinary(
+  port: number,
+  method: 'GET' | 'POST',
+  requestPath: string,
+  payload: Buffer,
+  extraHeaders?: Record<string, string>
+): Promise<JsonResponse> {
+  return new Promise((resolve, reject) => {
+    const headers: Record<string, string> = {
+      ...(extraHeaders || {}),
+      'Content-Length': String(payload.length)
+    };
+
+    const req = http.request(
+      {
+        host: '127.0.0.1',
+        port,
+        path: requestPath,
+        method,
+        headers
+      },
+      (res) => {
+        let text = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+          text += chunk;
+        });
+        res.on('end', () => {
+          let parsed: any = text;
+          if (text.length > 0) {
+            try {
+              parsed = JSON.parse(text);
+            } catch {
+              parsed = text;
+            }
+          }
+          resolve({
+            status: res.statusCode || 0,
+            body: parsed
+          });
+        });
+      }
+    );
+
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+}
+
 describe('server migration settings routes', () => {
+  const TEST_CLIPBOARD_LIMIT_MB = 4;
+  const TEST_CLIPBOARD_LIMIT_BYTES = TEST_CLIPBOARD_LIMIT_MB * 1024 * 1024;
   let temp: TempDir;
   let envRestorers: Array<() => void>;
   let server: Server;
@@ -227,6 +279,7 @@ describe('server migration settings routes', () => {
     envRestorers.push(setEnv('NOTE_CONNECTION_FRONTEND_DIR', frontendDir));
     envRestorers.push(setEnv('NOTE_CONNECTION_RUNTIME_DATA_DIR', runtimeDataDir));
     envRestorers.push(setEnv('NOTE_CONNECTION_KB_ROOT', kbRoot));
+    envRestorers.push(setEnv('NOTE_CONNECTION_CLIPBOARD_BODY_LIMIT_MB', String(TEST_CLIPBOARD_LIMIT_MB)));
     // Keep migration route tests hermetic even when CI injects auth env vars.
     envRestorers.push(setEnv('NOTE_CONNECTION_AUTH_TOKEN', undefined));
     envRestorers.push(setEnv('npm_config_path', undefined));
@@ -313,6 +366,15 @@ describe('server migration settings routes', () => {
           runtimeDataDir: expect.any(String),
           authRequired: false
         }),
+        ingress: expect.objectContaining({
+          jsonBodyLimitBytes: 512 * 1024,
+          clipboardBodyLimitBytes: TEST_CLIPBOARD_LIMIT_BYTES,
+          clipboardBodyLimitMb: TEST_CLIPBOARD_LIMIT_MB,
+          clipboardBodyLimitRangeMb: expect.objectContaining({
+            min: expect.any(Number),
+            max: expect.any(Number)
+          })
+        }),
         wasmParity: expect.objectContaining({
           enabled: expect.any(Boolean),
           hasCachedInstancePromise: expect.any(Boolean),
@@ -341,6 +403,12 @@ describe('server migration settings routes', () => {
     expect(response.body.wasmParity).toHaveProperty('artifactPath');
     expect(response.body.wasmParity).toHaveProperty('lastLoadError');
     expect(response.body.runtime.authToken).toBeUndefined();
+  });
+
+  test('server runtime path avoids synchronous filesystem APIs', () => {
+    const serverSourcePath = path.join(__dirname, 'server.ts');
+    const serverSource = fs.readFileSync(serverSourcePath, 'utf8');
+    expect(serverSource).not.toMatch(/fs\.(existsSync|mkdirSync|readdirSync|writeFileSync|readFileSync|statSync|accessSync)\b/);
   });
 
   test('merges available targets from folders and cached graph artifacts', async () => {
@@ -597,6 +665,69 @@ describe('server migration settings routes', () => {
     expect(response.body).toEqual(
       expect.objectContaining({
         error: expect.stringContaining('Unsupported Content-Type')
+      })
+    );
+  });
+
+  test('accepts binary PNG upload for clipboard copy without base64 JSON payload', async () => {
+    const tinyPng = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7+VwAAAABJRU5ErkJggg==',
+      'base64'
+    );
+    const response = await requestBinary(
+      port,
+      'POST',
+      '/api/clipboard/image-binary',
+      tinyPng,
+      {
+        'Content-Type': 'image/png'
+      }
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        ok: true,
+        transport: 'binary'
+      })
+    );
+  });
+
+  test('returns 415 for unsupported binary clipboard content type', async () => {
+    const response = await requestRaw(
+      port,
+      'POST',
+      '/api/clipboard/image-binary',
+      'not-a-png',
+      {
+        'Content-Type': 'text/plain'
+      }
+    );
+
+    expect(response.status).toBe(415);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: expect.stringContaining('Unsupported Content-Type')
+      })
+    );
+  });
+
+  test('returns 413 when binary clipboard payload exceeds limit', async () => {
+    const oversized = Buffer.alloc(TEST_CLIPBOARD_LIMIT_BYTES + 1, 0x00);
+    const response = await requestBinary(
+      port,
+      'POST',
+      '/api/clipboard/image-binary',
+      oversized,
+      {
+        'Content-Type': 'application/octet-stream'
+      }
+    );
+
+    expect(response.status).toBe(413);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: expect.stringContaining('too large')
       })
     );
   });

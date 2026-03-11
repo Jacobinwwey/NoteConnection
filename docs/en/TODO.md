@@ -1,3 +1,219 @@
+# 2026-03-11 v1.5.49 - High-Priority Mobile Evidence Hardening (Structured Manifest + Freshness Verifier)
+
+## English Document
+
+### Objective
+Close the remaining mobile physical-device evidence robustness gap by moving from markdown-only evidence records to machine-verifiable evidence manifests with freshness and checklist-policy validation.
+
+### Completed in This Iteration
+- [x] Enhanced evidence capture in `scripts/capture-capacitor-device-evidence.js`:
+  - [x] Generates `acceptance_evidence.json` manifest alongside markdown report.
+  - [x] Records structured metadata (device snapshot, artifact paths, checklist status).
+  - [x] Adds artifact integrity metadata (`sizeBytes`, `sha256`, `lineCount` where applicable).
+  - [x] Maintains rolling pointer `docs/mobile-evidence/latest.json` for deterministic verifier resolution.
+- [x] Added verifier script `scripts/verify-capacitor-evidence-freshness.js`:
+  - [x] Validates latest evidence manifest availability and artifact existence.
+  - [x] Enforces bounded freshness via `NOTE_CONNECTION_EVIDENCE_MAX_AGE_DAYS` (`1..365`, default `30`).
+  - [x] Supports strict manual checklist gating via `NOTE_CONNECTION_REQUIRE_MANUAL_MOBILE_CHECKLIST`.
+  - [x] Supports controlled evidence-root override via `NOTE_CONNECTION_EVIDENCE_ROOT`.
+  - [x] Exports validation helpers for contract-level testing.
+- [x] Wired npm script contract:
+  - [x] Added `verify:capacitor:evidence` to `package.json`.
+- [x] Added regression contracts:
+  - [x] New `src/capacitor.evidence.contract.test.ts` covers fresh/stale/manual-strict scenarios.
+  - [x] Updated `src/mobile.pipeline.test.ts` to enforce script wiring and key verifier/capture behaviors.
+  - [x] Added new evidence contract suite to `test:migration`.
+
+### High-Priority Work Status (Current)
+- [x] Mobile evidence is now machine-verifiable and freshness-gated instead of markdown-only.
+- [x] Manual verification remains explicit and policy-controlled (optional strict enforcement).
+- [ ] Remaining high-priority work: continue broader transport/storage refactors and further production-scale parity hardening.
+
+### Verification Gate (Executed)
+- [x] Focused contracts:
+  - [x] `node node_modules/jest/bin/jest.js src/capacitor.evidence.contract.test.ts src/mobile.pipeline.test.ts src/server.migration.test.ts --runInBand` (**3 suites, 33 tests passed**)
+- [x] Migration matrix equivalent to `npm run test:migration`:
+  - [x] `node node_modules/jest/bin/jest.js src/core/Graph.test.ts src/core/PathEngine.test.ts src/core/TreeLayout.test.ts src/backend/algorithms/CycleDetection.test.ts src/backend/algorithms/TopologicalSort.test.ts src/utils/RuntimePaths.test.ts src/server.migration.test.ts src/pkg.sidecar.contract.test.ts src/mobile.pipeline.test.ts src/capacitor.device.utils.contract.test.ts src/capacitor.evidence.contract.test.ts src/runtime.capabilities.test.ts src/runtime.transport.adapter.contract.test.ts src/storage.provider.contract.test.ts src/storage.provider.capacitor.content.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.output.equivalence.contract.test.ts src/wasm.parity.benchmark.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts src/source_manager.loadflow.test.ts src/capacitor.runtime.contract.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts src/android.pathmode.contract.test.ts src/android.pathmode.smoke.contract.test.ts src/pathbridge.handshake.contract.test.ts --runInBand` (**30 suites, 161 tests passed**)
+- [x] Full Jest equivalent to `npm test`: `node node_modules/jest/bin/jest.js` (**34 suites, 182 tests passed**)
+- [x] Build pipeline equivalent to `npm run build`:
+  - [x] `node scripts/copy-reader-runtime-assets.js`
+  - [x] `node node_modules/typescript/bin/tsc`
+  - [x] `node scripts/bundle_path_core.js`
+  - [x] `node scripts/copy-assets.js`
+  - [x] `node scripts/sync-wasm-parity-artifact.js`
+- [x] Sidecar pipeline equivalent to `npm run build:sidecar`:
+  - [x] `node scripts/build-sidecar.js`
+  - [x] `node scripts/ensure-godot-sidecar.js`
+  - [x] `node scripts/validate-tauri-sidecars.js`
+- [x] WASM strict gates equivalent to `npm run test:wasm:parity:gates`:
+  - [x] `node scripts/verify-wasm-parity.js --strict 1`
+  - [x] `node scripts/benchmark-wasm-parity.js --require-wasm-adapter 1 --max-candidate-to-baseline-graph-p95-ratio 1 --max-candidate-to-baseline-layout-p95-ratio 1 --max-candidate-to-baseline-graph-p99-ratio 1 --max-candidate-to-baseline-layout-p99-ratio 1`
+
+---
+
+# 2026-03-11 v1.5.48 - High-Priority Clipboard Ingress Scalability (Configurable Binary Limit + Runtime Diagnostics)
+
+## English Document
+
+### Objective
+Remove the rigid fixed clipboard binary body threshold and make large PNG ingress configurable, bounded, and observable for high-scale usage while preserving deterministic safety guards.
+
+### Completed in This Iteration
+- [x] Refactored clipboard body-limit handling in `src/server.ts`:
+  - [x] Replaced fixed `8 MiB` clipboard limit with bounded env-based config.
+  - [x] Added `NOTE_CONNECTION_CLIPBOARD_BODY_LIMIT_MB` support.
+  - [x] Added hard bounds (`min=1 MiB`, `max=512 MiB`) with clamp/warning behavior.
+  - [x] Default limit is now `64 MiB` when env is not provided.
+- [x] Added ingress observability to `/api/runtime-diagnostics`:
+  - [x] Reports JSON body limit and effective clipboard body limit (`bytes` + `MiB`) and configured range.
+- [x] Strengthened migration test coverage in `src/server.migration.test.ts`:
+  - [x] Hermetic env override for clipboard limit (`4 MiB`) to stabilize contract tests.
+  - [x] Runtime diagnostics contract now verifies ingress limit telemetry fields.
+  - [x] Oversize binary test now validates against configured limit, not hardcoded payload size.
+
+### High-Priority Work Status (Current)
+- [x] Clipboard binary ingress now scales via bounded configuration instead of a rigid fixed threshold.
+- [x] Effective ingress limits are diagnosable at runtime via explicit API telemetry.
+- [ ] Remaining high-priority work: continue mobile physical-device parity evidence and broaden wasm kernel coverage where worker cost remains dominant.
+
+### Verification Gate (Executed)
+- [x] `node node_modules/jest/bin/jest.js src/server.migration.test.ts --runInBand` (**1 suite, 22 tests passed**)
+- [x] Migration matrix equivalent to `npm run test:migration`:
+  - [x] `node node_modules/jest/bin/jest.js src/core/Graph.test.ts src/core/PathEngine.test.ts src/core/TreeLayout.test.ts src/backend/algorithms/CycleDetection.test.ts src/backend/algorithms/TopologicalSort.test.ts src/utils/RuntimePaths.test.ts src/server.migration.test.ts src/pkg.sidecar.contract.test.ts src/mobile.pipeline.test.ts src/capacitor.device.utils.contract.test.ts src/runtime.capabilities.test.ts src/runtime.transport.adapter.contract.test.ts src/storage.provider.contract.test.ts src/storage.provider.capacitor.content.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.output.equivalence.contract.test.ts src/wasm.parity.benchmark.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts src/source_manager.loadflow.test.ts src/capacitor.runtime.contract.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts src/android.pathmode.contract.test.ts src/android.pathmode.smoke.contract.test.ts src/pathbridge.handshake.contract.test.ts --runInBand` (**29 suites, 158 tests passed**)
+- [x] Full Jest equivalent to `npm test`: `node node_modules/jest/bin/jest.js` (**33 suites, 179 tests passed**)
+- [x] Build pipeline equivalent to `npm run build`:
+  - [x] `node scripts/copy-reader-runtime-assets.js`
+  - [x] `node node_modules/typescript/bin/tsc`
+  - [x] `node scripts/bundle_path_core.js`
+  - [x] `node scripts/copy-assets.js`
+  - [x] `node scripts/sync-wasm-parity-artifact.js`
+- [x] Sidecar pipeline equivalent to `npm run build:sidecar`:
+  - [x] `node scripts/build-sidecar.js`
+  - [x] `node scripts/ensure-godot-sidecar.js`
+  - [x] `node scripts/validate-tauri-sidecars.js`
+- [x] WASM strict gates equivalent to `npm run test:wasm:parity:gates`:
+  - [x] `node scripts/verify-wasm-parity.js --strict 1`
+  - [x] `node scripts/benchmark-wasm-parity.js --require-wasm-adapter 1 --max-candidate-to-baseline-graph-p95-ratio 1 --max-candidate-to-baseline-layout-p95-ratio 1 --max-candidate-to-baseline-graph-p99-ratio 1 --max-candidate-to-baseline-layout-p99-ratio 1`
+
+---
+
+# 2026-03-11 v1.5.47 - High-Priority Godot Clipboard Binary-First Migration (Transport Fallback Contract)
+
+## English Document
+
+### Objective
+Complete the Godot client migration slice so clipboard copy prefers binary PNG upload while preserving compatibility with older sidecars that still require base64 JSON transport.
+
+### Completed in This Iteration
+- [x] Updated `path_mode/scripts/reader_render_client.gd` clipboard flow:
+  - [x] Added binary-first upload call to `POST /api/clipboard/image-binary`.
+  - [x] Added compatibility fallback to `POST /api/clipboard/image` (`pngBase64`) when binary route fails.
+  - [x] Added merged/explicit error propagation for dual-route failure visibility.
+  - [x] Added dedicated binary header builder and `HTTPRequest.request_raw(...)` path.
+- [x] Strengthened regression contracts:
+  - [x] Added clipboard transport contract assertions in `src/pathbridge.handshake.contract.test.ts`.
+  - [x] Contract now enforces binary route presence, `request_raw` usage, and base64 fallback retention.
+- [x] Maintained runtime rendering constraints:
+  - [x] Godot runtime remains PNG-first.
+  - [x] SVG remains diagnostics-only because direct SVG handling in Godot is still unstable.
+
+### High-Priority Work Status (Current)
+- [x] Clipboard transport is now binary-first on the Godot client while retaining backward compatibility.
+- [x] Server + client transport path now has regression coverage on both sides (API route + client contract).
+- [ ] Remaining high-priority work: continue mobile physical-device parity evidence and broaden wasm kernel coverage where worker cost remains dominant.
+
+### Verification Gate (Executed)
+- [x] `node node_modules/jest/bin/jest.js src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts --runInBand` (**2 suites, 34 tests passed**)
+- [x] Migration matrix equivalent to `npm run test:migration`:
+  - [x] `node node_modules/jest/bin/jest.js src/core/Graph.test.ts src/core/PathEngine.test.ts src/core/TreeLayout.test.ts src/backend/algorithms/CycleDetection.test.ts src/backend/algorithms/TopologicalSort.test.ts src/utils/RuntimePaths.test.ts src/server.migration.test.ts src/pkg.sidecar.contract.test.ts src/mobile.pipeline.test.ts src/capacitor.device.utils.contract.test.ts src/runtime.capabilities.test.ts src/runtime.transport.adapter.contract.test.ts src/storage.provider.contract.test.ts src/storage.provider.capacitor.content.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.output.equivalence.contract.test.ts src/wasm.parity.benchmark.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts src/source_manager.loadflow.test.ts src/capacitor.runtime.contract.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts src/android.pathmode.contract.test.ts src/android.pathmode.smoke.contract.test.ts src/pathbridge.handshake.contract.test.ts --runInBand` (**29 suites, 158 tests passed**)
+- [x] Full Jest equivalent to `npm test`: `node node_modules/jest/bin/jest.js` (**33 suites, 179 tests passed**)
+- [x] Build pipeline equivalent to `npm run build`:
+  - [x] `node scripts/copy-reader-runtime-assets.js`
+  - [x] `node node_modules/typescript/bin/tsc`
+  - [x] `node scripts/bundle_path_core.js`
+  - [x] `node scripts/copy-assets.js`
+  - [x] `node scripts/sync-wasm-parity-artifact.js`
+- [x] Sidecar pipeline equivalent to `npm run build:sidecar`:
+  - [x] `node scripts/build-sidecar.js`
+  - [x] `node scripts/ensure-godot-sidecar.js`
+  - [x] `node scripts/validate-tauri-sidecars.js`
+- [x] WASM strict gates equivalent to `npm run test:wasm:parity:gates`:
+  - [x] `node scripts/verify-wasm-parity.js --strict 1`
+  - [x] `node scripts/benchmark-wasm-parity.js --require-wasm-adapter 1 --max-candidate-to-baseline-graph-p95-ratio 1 --max-candidate-to-baseline-layout-p95-ratio 1 --max-candidate-to-baseline-graph-p99-ratio 1 --max-candidate-to-baseline-layout-p99-ratio 1`
+
+---
+
+# 2026-03-11 v1.5.46 - High-Priority Clipboard Transport Hardening (Binary PNG Path + Spool-Safe Ingestion)
+
+## English Document
+
+### Objective
+Reduce large clipboard payload overhead and JSON/base64 memory pressure by introducing a binary PNG upload route with the same request-size and spool protections used in existing server body guards.
+
+### Completed in This Iteration
+- [x] Added binary clipboard API path in `src/server.ts`:
+  - [x] New endpoint: `POST /api/clipboard/image-binary`.
+  - [x] Accepts `image/png` and `application/octet-stream`.
+  - [x] Uses bounded body read with threshold-based spool-to-disk protection.
+  - [x] Validates PNG signature before forwarding to native clipboard bridge.
+- [x] Preserved compatibility with existing route:
+  - [x] Existing `POST /api/clipboard/image` (`pngBase64`) remains available.
+  - [x] Added stricter PNG-signature validation to the JSON/base64 route.
+- [x] Added migration regression coverage in `src/server.migration.test.ts`:
+  - [x] Binary PNG upload success contract.
+  - [x] Unsupported binary content-type (`415`) contract.
+  - [x] Oversized binary payload (`413`) contract.
+
+### High-Priority Work Status (Current)
+- [x] Clipboard transport now has a binary-safe path to avoid mandatory base64 expansion.
+- [x] Server ingress protection remains deterministic (size limits + spool handling + typed HTTP errors).
+- [ ] Remaining high-priority work: continue mobile physical-device parity evidence and broaden wasm kernel coverage where worker cost remains dominant.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/server.migration.test.ts --runInBand` (**1 suite, 22 tests passed**)
+- [x] `npm run test:migration` (**29 suites, 157 tests passed**)
+- [x] `npm test` (**33 suites, 178 tests passed**)
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+- [x] `npm run test:wasm:parity:gates`
+
+---
+
+# 2026-03-11 v1.5.45 - High-Priority Sidecar Runtime Hardening (Server Async FS + Non-Blocking Startup)
+
+## English Document
+
+### Objective
+Close a remaining high-priority robustness gap by removing synchronous filesystem operations from the Node sidecar server runtime path and enforcing this behavior with regression contracts.
+
+### Completed in This Iteration
+- [x] Refactored `src/server.ts` to remove blocking filesystem APIs:
+  - [x] Replaced `ensureRuntimeDataDir` and request-body spool directory provisioning with `fs.promises.mkdir(...)`.
+  - [x] Replaced sidecar runtime-manifest writes with `fs.promises.writeFile(...)`.
+  - [x] Removed sync runtime-data scans and moved CLI cache discovery to async helpers.
+  - [x] Replaced sync CLI path-existence heuristics with async fallback resolution in `startServer(...)`.
+- [x] Preserved behavior while improving startup/runtime safety:
+  - [x] Runtime manifest generation remains deterministic.
+  - [x] Cache restore flow now explicitly ensures runtime-data directory before copy.
+  - [x] Godot runtime contract remains PNG-first; no SVG runtime dependency introduced.
+- [x] Added regression guard:
+  - [x] `src/server.migration.test.ts` now asserts `src/server.ts` does not contain `fs.*Sync` calls on runtime/request paths.
+
+### High-Priority Work Status (Current)
+- [x] Server runtime/request path no longer relies on blocking fs sync operations.
+- [x] Migration, full test matrix, build, sidecar build, and wasm parity gates remain green after refactor.
+- [ ] Remaining high-priority work: continue mobile physical-device parity evidence and broaden wasm kernel coverage where worker cost remains dominant.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/server.migration.test.ts --runInBand` (**1 suite, 19 tests passed**)
+- [x] `npm run test:migration` (**29 suites, 154 tests passed**)
+- [x] `npm test` (**33 suites, 175 tests passed**)
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+- [x] `npm run test:wasm:parity:gates`
+
+---
+
 # 2026-03-10 v1.5.44 - High-Priority WASM Heavy-Compute Expansion (Topological Rank JSON ABI + Async Orchestration)
 
 ## English Document

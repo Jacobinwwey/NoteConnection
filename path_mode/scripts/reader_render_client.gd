@@ -4,6 +4,7 @@ extends Node
 const DEFAULT_HOST := "127.0.0.1"
 const DEFAULT_PORT := 3000
 const JSON_HEADERS := ["Content-Type: application/json"]
+const BINARY_PNG_HEADERS := ["Content-Type: image/png"]
 const CACHE_VERSION := "reader-v7"
 const SVG_MAX_DIMENSION := 16384.0
 const SVG_MIN_SCALE := 0.1
@@ -64,7 +65,28 @@ func copy_texture_to_clipboard(texture: Texture2D) -> Dictionary:
 	if png_buffer.is_empty():
 		return {"ok": false, "error": "Unable to encode the rendered image as PNG."}
 
-	return await _post_json("/api/clipboard/image", {"pngBase64": Marshalls.raw_to_base64(png_buffer)})
+	var binary_response: Dictionary = await _post_binary("/api/clipboard/image-binary", png_buffer)
+	if bool(binary_response.get("ok", false)):
+		return binary_response
+
+	# Backward-compatible fallback for older sidecars that only support base64 JSON route.
+	var fallback_response: Dictionary = await _post_json("/api/clipboard/image", {"pngBase64": Marshalls.raw_to_base64(png_buffer)})
+	if bool(fallback_response.get("ok", false)):
+		fallback_response["transport"] = "base64-fallback"
+		return fallback_response
+
+	var binary_error := String(binary_response.get("error", "")).strip_edges()
+	var fallback_error := String(fallback_response.get("error", "")).strip_edges()
+	if not binary_error.is_empty() and not fallback_error.is_empty():
+		return {
+			"ok": false,
+			"error": "Clipboard binary upload failed: %s; fallback failed: %s" % [binary_error, fallback_error]
+		}
+	if not fallback_error.is_empty():
+		return {"ok": false, "error": fallback_error}
+	if not binary_error.is_empty():
+		return {"ok": false, "error": binary_error}
+	return {"ok": false, "error": "Clipboard upload failed for both binary and base64 transports."}
 
 
 func _append_render_request_payload(payload: Dictionary, max_size: Vector2, render_scale: float) -> void:
@@ -124,6 +146,46 @@ func _post_json(endpoint: String, payload: Dictionary) -> Dictionary:
 		_build_json_headers(),
 		HTTPClient.METHOD_POST,
 		JSON.stringify(payload)
+	)
+	if error != OK:
+		request.queue_free()
+		return {"ok": false, "error": "HTTP request setup failed (%s)." % error_string(error)}
+
+	var result: Array = await request.request_completed
+	request.queue_free()
+
+	if result.size() < 4:
+		return {"ok": false, "error": "Renderer returned an incomplete HTTP response."}
+
+	var request_result := int(result[0])
+	var response_code := int(result[1])
+	var body: PackedByteArray = result[3]
+	if request_result != HTTPRequest.RESULT_SUCCESS:
+		return {"ok": false, "error": "HTTP request failed with result %d." % request_result}
+
+	var body_text := body.get_string_from_utf8()
+	var parsed_variant: Variant = JSON.parse_string(body_text)
+	var parsed: Dictionary = parsed_variant if parsed_variant is Dictionary else {}
+	if response_code < 200 or response_code >= 300:
+		var error_message := String(parsed.get("error", body_text)).strip_edges()
+		if error_message.is_empty():
+			error_message = "Renderer returned HTTP %d." % response_code
+		return {"ok": false, "error": error_message}
+
+	parsed["ok"] = true
+	return parsed
+
+
+func _post_binary(endpoint: String, payload: PackedByteArray) -> Dictionary:
+	var request := HTTPRequest.new()
+	request.use_threads = true
+	add_child(request)
+
+	var error := request.request_raw(
+		_resolve_base_url() + endpoint,
+		_build_binary_headers(),
+		HTTPClient.METHOD_POST,
+		payload
 	)
 	if error != OK:
 		request.queue_free()
@@ -228,6 +290,14 @@ func _read_runtime_manifest() -> Dictionary:
 
 func _build_json_headers() -> PackedStringArray:
 	var headers: PackedStringArray = PackedStringArray(JSON_HEADERS)
+	var auth_token := _resolve_auth_token()
+	if not auth_token.is_empty():
+		headers.append("X-NoteConnection-Token: %s" % auth_token)
+	return headers
+
+
+func _build_binary_headers() -> PackedStringArray:
+	var headers: PackedStringArray = PackedStringArray(BINARY_PNG_HEADERS)
 	var auth_token := _resolve_auth_token()
 	if not auth_token.is_empty():
 		headers.append("X-NoteConnection-Token: %s" % auth_token)

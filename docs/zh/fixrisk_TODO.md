@@ -1,3 +1,174 @@
+# 2026-03-11 v1.0.28
+
+# 风险整改执行更新（移动端证据清单 + 新鲜度/策略校验器）
+
+## 中文文档
+
+### 本轮整改状态
+- [x] 将移动端证据采集从 markdown-only 升级为结构化清单：
+  - [x] `scripts/capture-capacitor-device-evidence.js` 现可输出 `acceptance_evidence.json`。
+  - [x] 清单包含设备快照、证据文件指针、完整性元数据与清单状态。
+  - [x] 新增 `docs/mobile-evidence/latest.json` 滚动指针，实现确定性定位最新证据。
+- [x] 新增证据校验器 `scripts/verify-capacitor-evidence-freshness.js`：
+  - [x] 校验最新清单存在性与证据文件完整性。
+  - [x] 支持新鲜度策略门禁（`NOTE_CONNECTION_EVIDENCE_MAX_AGE_DAYS`，`1..365`，默认 `30`）。
+  - [x] 支持严格人工清单策略（`NOTE_CONNECTION_REQUIRE_MANUAL_MOBILE_CHECKLIST`）。
+  - [x] 支持证据根目录覆盖（`NOTE_CONNECTION_EVIDENCE_ROOT`），便于受控 CI/夹具校验。
+- [x] 强化契约覆盖与脚本接线：
+  - [x] 新增 `src/capacitor.evidence.contract.test.ts`（fresh/stale/manual-policy 场景）。
+  - [x] 更新 `src/mobile.pipeline.test.ts`，锁定脚本接线与关键行为断言。
+  - [x] 在 `package.json` 迁移门禁列表中纳入证据契约套件。
+
+### 最佳实践合规增量
+- [x] 移动端证据已升级为机器可读、可策略化校验，而非仅文档记录。
+- [x] 新鲜度与人工审核策略可被确定性强制执行。
+- [x] 回归契约已覆盖“证据策略行为”，不再仅覆盖“脚本存在性”。
+- [ ] 本切片未改变其余更大范围清单项（更大范围传输/存储重构与生产规模等价调优）。
+
+### 验证快照（2026-03-11）
+- [x] `node node_modules/jest/bin/jest.js src/capacitor.evidence.contract.test.ts src/mobile.pipeline.test.ts src/server.migration.test.ts --runInBand`（**3 suites, 33 tests passed**）
+- [x] 等价 `npm run test:migration` 的迁移矩阵：**30 suites, 161 tests passed**
+- [x] 等价 `npm test` 的全量 Jest：**34 suites, 182 tests passed**
+- [x] 等价 `npm run build` 的构建链路通过。
+- [x] 等价 `npm run build:sidecar` 的 sidecar 链路通过。
+- [x] 等价 `npm run test:wasm:parity:gates` 的 WASM 严格门禁通过。
+
+---
+
+# 2026-03-11 v1.0.27
+
+# 风险整改执行更新（可配置剪贴板入站上限 + 诊断遥测）
+
+## 中文文档
+
+### 本轮整改状态
+- [x] 在 `src/server.ts` 收口固定阈值导致的剪贴板入站刚性问题：
+  - [x] 新增有边界环境配置 `NOTE_CONNECTION_CLIPBOARD_BODY_LIMIT_MB`。
+  - [x] 将固定 `8 MiB` 上限升级为可配置有效上限（`default=64 MiB`、`min=1 MiB`、`max=512 MiB`）。
+  - [x] 对非法/越界配置加入 clamp 与告警行为。
+- [x] 在 `/api/runtime-diagnostics` 增加入站可观测性：
+  - [x] 输出 JSON 请求体上限。
+  - [x] 输出剪贴板有效上限（`bytes` + `MiB`）与配置边界。
+- [x] 在 `src/server.migration.test.ts` 强化回归契约：
+  - [x] 加入稳定环境覆盖（`4 MiB`）以保证剪贴板上限契约可复现。
+  - [x] 新增入站限制遥测字段断言。
+  - [x] 超限二进制用例改为基于配置上限校验。
+
+### 最佳实践合规增量
+- [x] 剪贴板入站已可按高负载场景配置扩展，同时保持边界安全约束。
+- [x] 有效入站约束已可通过运行时诊断接口直接观测（可运维性提升）。
+- [x] 新上限路径的行为与遥测均已由契约测试锁定。
+- [ ] 本切片未改变其余更大范围清单项（移动端真机证据与传输/存储体系重构）。
+
+### 验证快照（2026-03-11）
+- [x] `node node_modules/jest/bin/jest.js src/server.migration.test.ts --runInBand`（**1 suite, 22 tests passed**）
+- [x] 等价 `npm run test:migration` 的迁移矩阵：**29 suites, 158 tests passed**
+- [x] 等价 `npm test` 的全量 Jest：**33 suites, 179 tests passed**
+- [x] 等价 `npm run build` 的构建链路通过。
+- [x] 等价 `npm run build:sidecar` 的 sidecar 链路通过。
+- [x] 等价 `npm run test:wasm:parity:gates` 的 WASM 严格门禁通过。
+
+---
+
+# 2026-03-11 v1.0.26
+
+# 风险整改执行更新（Godot 剪贴板二进制优先迁移 + 回退契约锁定）
+
+## 中文文档
+
+### 本轮整改状态
+- [x] 在 `path_mode/scripts/reader_render_client.gd` 完成 Godot 客户端剪贴板传输迁移：
+  - [x] 剪贴板上传优先走 `POST /api/clipboard/image-binary`（二进制 PNG）。
+  - [x] 保留对 `POST /api/clipboard/image`（`pngBase64`）的兼容回退，确保旧 sidecar 可用。
+  - [x] 新增双路径失败时的显式错误上报，避免传输链路静默失败。
+- [x] 在 `src/pathbridge.handshake.contract.test.ts` 补齐传输契约锁定：
+  - [x] 断言 Godot 客户端使用二进制端点。
+  - [x] 断言存在 `HTTPRequest.request_raw(...)` 二进制发送路径。
+  - [x] 断言 base64 回退链路仍然保留。
+- [x] 保持渲染与运行时安全边界不变：
+  - [x] Godot 运行时继续保持 PNG-first。
+  - [x] SVG 继续仅用于诊断（Godot 直接处理 SVG 仍存在稳定性问题）。
+
+### 最佳实践合规增量
+- [x] Godot 客户端剪贴板链路已避免强制 base64 扩容。
+- [x] 通过确定性回退机制保留了对旧 sidecar 的向后兼容。
+- [x] 回归契约已同时覆盖服务端端点行为与客户端传输意图。
+- [ ] 本切片未改变其余更大范围清单项（移动端真机证据与传输/存储体系重构）。
+
+### 验证快照（2026-03-11）
+- [x] `node node_modules/jest/bin/jest.js src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts --runInBand`（**2 suites, 34 tests passed**）
+- [x] 等价 `npm run test:migration` 的迁移矩阵：**29 suites, 158 tests passed**
+- [x] 等价 `npm test` 的全量 Jest：**33 suites, 179 tests passed**
+- [x] 等价 `npm run build` 的构建链路通过。
+- [x] 等价 `npm run build:sidecar` 的 sidecar 链路通过。
+- [x] 等价 `npm run test:wasm:parity:gates` 的 WASM 严格门禁通过。
+
+---
+
+# 2026-03-11 v1.0.25
+
+# 风险整改执行更新（剪贴板二进制传输路径 + PNG 校验加固）
+
+## 中文文档
+
+### 本轮整改状态
+- [x] 在 `src/server.ts` 新增剪贴板二进制上传路径：
+  - [x] 新增端点 `POST /api/clipboard/image-binary`。
+  - [x] 支持 `image/png` 与 `application/octet-stream`。
+  - [x] 请求体读取保留大小上限与阈值落盘分流保护。
+- [x] 强化剪贴板载荷校验：
+  - [x] 在调用原生剪贴板桥接前新增 PNG 签名校验。
+  - [x] 现有 JSON/base64 端点（`/api/clipboard/image`）同步应用 PNG 签名校验。
+- [x] 增加回归证据：
+  - [x] `src/server.migration.test.ts` 新增二进制成功、非法内容类型（`415`）与超大负载（`413`）契约覆盖。
+
+### 最佳实践合规增量
+- [x] 剪贴板传输已不再仅依赖 base64 JSON 路径。
+- [x] 二进制与 JSON 剪贴板路由均保持入口保护（大小限制 + 落盘分流 + 明确错误码）。
+- [ ] 本切片未改变其余更大范围清单项（移动端真机证据与传输/存储体系重构）。
+
+### 验证快照（2026-03-11）
+- [x] `npx jest src/server.migration.test.ts --runInBand`（**1 suite, 22 tests passed**）
+- [x] `npm run test:migration`（**29 suites, 157 tests passed**）
+- [x] `npm test`（**33 suites, 178 tests passed**）
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+- [x] `npm run test:wasm:parity:gates`
+
+---
+
+# 2026-03-11 v1.0.24
+
+# 风险整改执行更新（Sidecar Server 同步文件系统移除 + 回归契约护栏）
+
+## 中文文档
+
+### 本轮整改状态
+- [x] 已移除 `src/server.ts` 运行/请求链路中的同步文件系统调用：
+  - [x] runtime-data 与请求体落盘目录创建统一改为 `fs.promises.mkdir(...)`。
+  - [x] sidecar 运行时 manifest 写入改为 `fs.promises.writeFile(...)`。
+  - [x] CLI 缓存发现与路径回退解析改为异步 helper。
+- [x] 在不改变既有行为的前提下完成稳健性加固：
+  - [x] 运行时 manifest 与缓存恢复流程仍保持确定性。
+  - [x] restore-cache 在复制前显式确保 runtime-data 目录可写且存在。
+  - [x] Godot 运行时契约保持 PNG-first，不引入 SVG 运行时依赖。
+- [x] 新增回归契约防回退：
+  - [x] `src/server.migration.test.ts` 新增断言，禁止 `src/server.ts` 在运行/请求路径重新引入 `fs.*Sync`。
+
+### 最佳实践合规增量
+- [x] `server 运行/请求链路禁止同步 fs.*` 已在 `src/server.ts` 收口。
+- [ ] 本切片未改变其余更大范围清单项（移动端真机证据与传输/存储体系重构）。
+
+### 验证快照（2026-03-11）
+- [x] `npx jest src/server.migration.test.ts --runInBand`（**1 suite, 19 tests passed**）
+- [x] `npm run test:migration`（**29 suites, 154 tests passed**）
+- [x] `npm test`（**33 suites, 175 tests passed**）
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+- [x] `npm run test:wasm:parity:gates`
+
+---
+
 # 2026-03-10 v1.0.23
 
 # WASM 拓扑等级等价切片更新（严格导出门禁 + 异步编排）

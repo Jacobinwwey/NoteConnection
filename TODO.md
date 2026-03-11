@@ -1,3 +1,425 @@
+# 2026-03-11 v1.5.49 - High-Priority Mobile Evidence Hardening (Structured Manifest + Freshness Verifier)
+
+## English Document
+
+### Objective
+Close the remaining mobile physical-device evidence robustness gap by moving from markdown-only evidence records to machine-verifiable evidence manifests with freshness and checklist-policy validation.
+
+### Completed in This Iteration
+- [x] Enhanced evidence capture in `scripts/capture-capacitor-device-evidence.js`:
+  - [x] Generates `acceptance_evidence.json` manifest alongside markdown report.
+  - [x] Records structured metadata (device snapshot, artifact paths, checklist status).
+  - [x] Adds artifact integrity metadata (`sizeBytes`, `sha256`, `lineCount` where applicable).
+  - [x] Maintains rolling pointer `docs/mobile-evidence/latest.json` for deterministic verifier resolution.
+- [x] Added verifier script `scripts/verify-capacitor-evidence-freshness.js`:
+  - [x] Validates latest evidence manifest availability and artifact existence.
+  - [x] Enforces bounded freshness via `NOTE_CONNECTION_EVIDENCE_MAX_AGE_DAYS` (`1..365`, default `30`).
+  - [x] Supports strict manual checklist gating via `NOTE_CONNECTION_REQUIRE_MANUAL_MOBILE_CHECKLIST`.
+  - [x] Supports controlled evidence-root override via `NOTE_CONNECTION_EVIDENCE_ROOT`.
+  - [x] Exports validation helpers for contract-level testing.
+- [x] Wired npm script contract:
+  - [x] Added `verify:capacitor:evidence` to `package.json`.
+- [x] Added regression contracts:
+  - [x] New `src/capacitor.evidence.contract.test.ts` covers fresh/stale/manual-strict scenarios.
+  - [x] Updated `src/mobile.pipeline.test.ts` to enforce script wiring and key verifier/capture behaviors.
+  - [x] Added new evidence contract suite to `test:migration`.
+
+### High-Priority Work Status (Current)
+- [x] Mobile evidence is now machine-verifiable and freshness-gated instead of markdown-only.
+- [x] Manual verification remains explicit and policy-controlled (optional strict enforcement).
+- [ ] Remaining high-priority work: continue broader transport/storage refactors and further production-scale parity hardening.
+
+### Verification Gate (Executed)
+- [x] Focused contracts:
+  - [x] `node node_modules/jest/bin/jest.js src/capacitor.evidence.contract.test.ts src/mobile.pipeline.test.ts src/server.migration.test.ts --runInBand` (**3 suites, 33 tests passed**)
+- [x] Migration matrix equivalent to `npm run test:migration`:
+  - [x] `node node_modules/jest/bin/jest.js src/core/Graph.test.ts src/core/PathEngine.test.ts src/core/TreeLayout.test.ts src/backend/algorithms/CycleDetection.test.ts src/backend/algorithms/TopologicalSort.test.ts src/utils/RuntimePaths.test.ts src/server.migration.test.ts src/pkg.sidecar.contract.test.ts src/mobile.pipeline.test.ts src/capacitor.device.utils.contract.test.ts src/capacitor.evidence.contract.test.ts src/runtime.capabilities.test.ts src/runtime.transport.adapter.contract.test.ts src/storage.provider.contract.test.ts src/storage.provider.capacitor.content.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.output.equivalence.contract.test.ts src/wasm.parity.benchmark.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts src/source_manager.loadflow.test.ts src/capacitor.runtime.contract.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts src/android.pathmode.contract.test.ts src/android.pathmode.smoke.contract.test.ts src/pathbridge.handshake.contract.test.ts --runInBand` (**30 suites, 161 tests passed**)
+- [x] Full Jest equivalent to `npm test`: `node node_modules/jest/bin/jest.js` (**34 suites, 182 tests passed**)
+- [x] Build pipeline equivalent to `npm run build`:
+  - [x] `node scripts/copy-reader-runtime-assets.js`
+  - [x] `node node_modules/typescript/bin/tsc`
+  - [x] `node scripts/bundle_path_core.js`
+  - [x] `node scripts/copy-assets.js`
+  - [x] `node scripts/sync-wasm-parity-artifact.js`
+- [x] Sidecar pipeline equivalent to `npm run build:sidecar`:
+  - [x] `node scripts/build-sidecar.js`
+  - [x] `node scripts/ensure-godot-sidecar.js`
+  - [x] `node scripts/validate-tauri-sidecars.js`
+- [x] WASM strict gates equivalent to `npm run test:wasm:parity:gates`:
+  - [x] `node scripts/verify-wasm-parity.js --strict 1`
+  - [x] `node scripts/benchmark-wasm-parity.js --require-wasm-adapter 1 --max-candidate-to-baseline-graph-p95-ratio 1 --max-candidate-to-baseline-layout-p95-ratio 1 --max-candidate-to-baseline-graph-p99-ratio 1 --max-candidate-to-baseline-layout-p99-ratio 1`
+
+---
+
+## 中文文档
+
+### 目标
+收口移动端真机证据链路的稳健性缺口：将“仅 markdown 记录”升级为“机器可验证的结构化证据清单 + 新鲜度与清单策略校验”。
+
+### 本轮完成
+- [x] 增强 `scripts/capture-capacitor-device-evidence.js` 证据采集能力：
+  - [x] 在 markdown 报告外新增 `acceptance_evidence.json` 结构化清单。
+  - [x] 记录设备快照、证据文件路径、清单状态等结构化信息。
+  - [x] 增加证据完整性元数据（`sizeBytes`、`sha256`、`lineCount`）。
+  - [x] 维护 `docs/mobile-evidence/latest.json` 指针，保证校验器可确定性定位最新证据。
+- [x] 新增校验脚本 `scripts/verify-capacitor-evidence-freshness.js`：
+  - [x] 校验最新证据清单存在性与证据文件完整性。
+  - [x] 通过 `NOTE_CONNECTION_EVIDENCE_MAX_AGE_DAYS` 强制新鲜度约束（`1..365`，默认 `30`）。
+  - [x] 通过 `NOTE_CONNECTION_REQUIRE_MANUAL_MOBILE_CHECKLIST` 支持严格人工清单门禁。
+  - [x] 通过 `NOTE_CONNECTION_EVIDENCE_ROOT` 支持受控证据根路径覆盖。
+  - [x] 导出校验函数以支持契约级测试。
+- [x] 完成 npm 脚本接线：
+  - [x] 在 `package.json` 新增 `verify:capacitor:evidence`。
+- [x] 补齐回归契约：
+  - [x] 新增 `src/capacitor.evidence.contract.test.ts`（fresh/stale/manual-strict 场景）。
+  - [x] 更新 `src/mobile.pipeline.test.ts`，锁定脚本接线与关键行为。
+  - [x] 将新证据契约纳入 `test:migration`。
+
+### 当前高优先级状态
+- [x] 移动端证据链路已从 markdown-only 升级为机器可验证 + 新鲜度门禁。
+- [x] 人工确认项仍保留且支持策略化严格开关（可按发布阶段开启强制）。
+- [ ] 剩余高优先级工作：继续推进更大范围传输/存储重构与生产规模等价性强化。
+
+### 验证门禁（已执行）
+- [x] 聚焦契约：
+  - [x] `node node_modules/jest/bin/jest.js src/capacitor.evidence.contract.test.ts src/mobile.pipeline.test.ts src/server.migration.test.ts --runInBand`（**3 suites, 33 tests passed**）
+- [x] 等价 `npm run test:migration` 的迁移矩阵：
+  - [x] `node node_modules/jest/bin/jest.js src/core/Graph.test.ts src/core/PathEngine.test.ts src/core/TreeLayout.test.ts src/backend/algorithms/CycleDetection.test.ts src/backend/algorithms/TopologicalSort.test.ts src/utils/RuntimePaths.test.ts src/server.migration.test.ts src/pkg.sidecar.contract.test.ts src/mobile.pipeline.test.ts src/capacitor.device.utils.contract.test.ts src/capacitor.evidence.contract.test.ts src/runtime.capabilities.test.ts src/runtime.transport.adapter.contract.test.ts src/storage.provider.contract.test.ts src/storage.provider.capacitor.content.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.output.equivalence.contract.test.ts src/wasm.parity.benchmark.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts src/source_manager.loadflow.test.ts src/capacitor.runtime.contract.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts src/android.pathmode.contract.test.ts src/android.pathmode.smoke.contract.test.ts src/pathbridge.handshake.contract.test.ts --runInBand`（**30 suites, 161 tests passed**）
+- [x] 等价 `npm test` 的全量 Jest：`node node_modules/jest/bin/jest.js`（**34 suites, 182 tests passed**）
+- [x] 等价 `npm run build` 的构建链路：
+  - [x] `node scripts/copy-reader-runtime-assets.js`
+  - [x] `node node_modules/typescript/bin/tsc`
+  - [x] `node scripts/bundle_path_core.js`
+  - [x] `node scripts/copy-assets.js`
+  - [x] `node scripts/sync-wasm-parity-artifact.js`
+- [x] 等价 `npm run build:sidecar` 的 sidecar 链路：
+  - [x] `node scripts/build-sidecar.js`
+  - [x] `node scripts/ensure-godot-sidecar.js`
+  - [x] `node scripts/validate-tauri-sidecars.js`
+- [x] 等价 `npm run test:wasm:parity:gates` 的严格门禁：
+  - [x] `node scripts/verify-wasm-parity.js --strict 1`
+  - [x] `node scripts/benchmark-wasm-parity.js --require-wasm-adapter 1 --max-candidate-to-baseline-graph-p95-ratio 1 --max-candidate-to-baseline-layout-p95-ratio 1 --max-candidate-to-baseline-graph-p99-ratio 1 --max-candidate-to-baseline-layout-p99-ratio 1`
+
+---
+
+# 2026-03-11 v1.5.48 - High-Priority Clipboard Ingress Scalability (Configurable Binary Limit + Runtime Diagnostics)
+
+## English Document
+
+### Objective
+Remove the rigid fixed clipboard binary body threshold and make large PNG ingress configurable, bounded, and observable for high-scale usage while preserving deterministic safety guards.
+
+### Completed in This Iteration
+- [x] Refactored clipboard body-limit handling in `src/server.ts`:
+  - [x] Replaced fixed `8 MiB` clipboard limit with bounded env-based config.
+  - [x] Added `NOTE_CONNECTION_CLIPBOARD_BODY_LIMIT_MB` support.
+  - [x] Added hard bounds (`min=1 MiB`, `max=512 MiB`) with clamp/warning behavior.
+  - [x] Default limit is now `64 MiB` when env is not provided.
+- [x] Added ingress observability to `/api/runtime-diagnostics`:
+  - [x] Reports JSON body limit and effective clipboard body limit (`bytes` + `MiB`) and configured range.
+- [x] Strengthened migration test coverage in `src/server.migration.test.ts`:
+  - [x] Hermetic env override for clipboard limit (`4 MiB`) to stabilize contract tests.
+  - [x] Runtime diagnostics contract now verifies ingress limit telemetry fields.
+  - [x] Oversize binary test now validates against configured limit, not hardcoded payload size.
+
+### High-Priority Work Status (Current)
+- [x] Clipboard binary ingress now scales via bounded configuration instead of a rigid fixed threshold.
+- [x] Effective ingress limits are diagnosable at runtime via explicit API telemetry.
+- [ ] Remaining high-priority work: continue mobile physical-device parity evidence and broaden wasm kernel coverage where worker cost remains dominant.
+
+### Verification Gate (Executed)
+- [x] `node node_modules/jest/bin/jest.js src/server.migration.test.ts --runInBand` (**1 suite, 22 tests passed**)
+- [x] Migration matrix equivalent to `npm run test:migration`:
+  - [x] `node node_modules/jest/bin/jest.js src/core/Graph.test.ts src/core/PathEngine.test.ts src/core/TreeLayout.test.ts src/backend/algorithms/CycleDetection.test.ts src/backend/algorithms/TopologicalSort.test.ts src/utils/RuntimePaths.test.ts src/server.migration.test.ts src/pkg.sidecar.contract.test.ts src/mobile.pipeline.test.ts src/capacitor.device.utils.contract.test.ts src/runtime.capabilities.test.ts src/runtime.transport.adapter.contract.test.ts src/storage.provider.contract.test.ts src/storage.provider.capacitor.content.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.output.equivalence.contract.test.ts src/wasm.parity.benchmark.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts src/source_manager.loadflow.test.ts src/capacitor.runtime.contract.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts src/android.pathmode.contract.test.ts src/android.pathmode.smoke.contract.test.ts src/pathbridge.handshake.contract.test.ts --runInBand` (**29 suites, 158 tests passed**)
+- [x] Full Jest equivalent to `npm test`: `node node_modules/jest/bin/jest.js` (**33 suites, 179 tests passed**)
+- [x] Build pipeline equivalent to `npm run build`:
+  - [x] `node scripts/copy-reader-runtime-assets.js`
+  - [x] `node node_modules/typescript/bin/tsc`
+  - [x] `node scripts/bundle_path_core.js`
+  - [x] `node scripts/copy-assets.js`
+  - [x] `node scripts/sync-wasm-parity-artifact.js`
+- [x] Sidecar pipeline equivalent to `npm run build:sidecar`:
+  - [x] `node scripts/build-sidecar.js`
+  - [x] `node scripts/ensure-godot-sidecar.js`
+  - [x] `node scripts/validate-tauri-sidecars.js`
+- [x] WASM strict gates equivalent to `npm run test:wasm:parity:gates`:
+  - [x] `node scripts/verify-wasm-parity.js --strict 1`
+  - [x] `node scripts/benchmark-wasm-parity.js --require-wasm-adapter 1 --max-candidate-to-baseline-graph-p95-ratio 1 --max-candidate-to-baseline-layout-p95-ratio 1 --max-candidate-to-baseline-graph-p99-ratio 1 --max-candidate-to-baseline-layout-p99-ratio 1`
+
+---
+
+## 中文文档
+
+### 目标
+移除剪贴板二进制请求体固定阈值带来的刚性限制，将大 PNG 入站能力升级为“可配置 + 有边界 + 可观测”，同时保持确定性安全护栏。
+
+### 本轮完成
+- [x] 在 `src/server.ts` 重构剪贴板请求体上限机制：
+  - [x] 将固定 `8 MiB` 剪贴板限制改为带边界的环境变量配置。
+  - [x] 新增 `NOTE_CONNECTION_CLIPBOARD_BODY_LIMIT_MB` 支持。
+  - [x] 新增硬边界（`min=1 MiB`、`max=512 MiB`）及 clamp/告警行为。
+  - [x] 未配置环境变量时默认上限为 `64 MiB`。
+- [x] 在 `/api/runtime-diagnostics` 增强入站可观测性：
+  - [x] 输出 JSON 请求体上限与剪贴板有效上限（`bytes` + `MiB`）及配置范围。
+- [x] 在 `src/server.migration.test.ts` 增强迁移契约覆盖：
+  - [x] 为测试注入稳定的剪贴板上限环境变量（`4 MiB`），保证契约可重复。
+  - [x] 运行时诊断契约新增入站限制遥测字段断言。
+  - [x] 二进制超限用例改为基于配置上限校验，不再依赖硬编码大小。
+
+### 当前高优先级状态
+- [x] 剪贴板二进制入站能力已从固定阈值升级为带边界的可扩展配置。
+- [x] 有效入站限制已可通过运行时诊断 API 明确观测。
+- [ ] 剩余高优先级工作：继续补齐移动端真机等价证据，并扩展仍以 worker 成本为主的 wasm 内核覆盖。
+
+### 验证门禁（已执行）
+- [x] `node node_modules/jest/bin/jest.js src/server.migration.test.ts --runInBand`（**1 suite, 22 tests passed**）
+- [x] 等价 `npm run test:migration` 的迁移矩阵：
+  - [x] `node node_modules/jest/bin/jest.js src/core/Graph.test.ts src/core/PathEngine.test.ts src/core/TreeLayout.test.ts src/backend/algorithms/CycleDetection.test.ts src/backend/algorithms/TopologicalSort.test.ts src/utils/RuntimePaths.test.ts src/server.migration.test.ts src/pkg.sidecar.contract.test.ts src/mobile.pipeline.test.ts src/capacitor.device.utils.contract.test.ts src/runtime.capabilities.test.ts src/runtime.transport.adapter.contract.test.ts src/storage.provider.contract.test.ts src/storage.provider.capacitor.content.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.output.equivalence.contract.test.ts src/wasm.parity.benchmark.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts src/source_manager.loadflow.test.ts src/capacitor.runtime.contract.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts src/android.pathmode.contract.test.ts src/android.pathmode.smoke.contract.test.ts src/pathbridge.handshake.contract.test.ts --runInBand`（**29 suites, 158 tests passed**）
+- [x] 等价 `npm test` 的全量 Jest：`node node_modules/jest/bin/jest.js`（**33 suites, 179 tests passed**）
+- [x] 等价 `npm run build` 的构建链路：
+  - [x] `node scripts/copy-reader-runtime-assets.js`
+  - [x] `node node_modules/typescript/bin/tsc`
+  - [x] `node scripts/bundle_path_core.js`
+  - [x] `node scripts/copy-assets.js`
+  - [x] `node scripts/sync-wasm-parity-artifact.js`
+- [x] 等价 `npm run build:sidecar` 的 sidecar 链路：
+  - [x] `node scripts/build-sidecar.js`
+  - [x] `node scripts/ensure-godot-sidecar.js`
+  - [x] `node scripts/validate-tauri-sidecars.js`
+- [x] 等价 `npm run test:wasm:parity:gates` 的严格门禁：
+  - [x] `node scripts/verify-wasm-parity.js --strict 1`
+  - [x] `node scripts/benchmark-wasm-parity.js --require-wasm-adapter 1 --max-candidate-to-baseline-graph-p95-ratio 1 --max-candidate-to-baseline-layout-p95-ratio 1 --max-candidate-to-baseline-graph-p99-ratio 1 --max-candidate-to-baseline-layout-p99-ratio 1`
+
+---
+
+# 2026-03-11 v1.5.47 - High-Priority Godot Clipboard Binary-First Migration (Transport Fallback Contract)
+
+## English Document
+
+### Objective
+Complete the Godot client migration slice so clipboard copy prefers binary PNG upload while preserving compatibility with older sidecars that still require base64 JSON transport.
+
+### Completed in This Iteration
+- [x] Updated `path_mode/scripts/reader_render_client.gd` clipboard flow:
+  - [x] Added binary-first upload call to `POST /api/clipboard/image-binary`.
+  - [x] Added compatibility fallback to `POST /api/clipboard/image` (`pngBase64`) when binary route fails.
+  - [x] Added merged/explicit error propagation for dual-route failure visibility.
+  - [x] Added dedicated binary header builder and `HTTPRequest.request_raw(...)` path.
+- [x] Strengthened regression contracts:
+  - [x] Added clipboard transport contract assertions in `src/pathbridge.handshake.contract.test.ts`.
+  - [x] Contract now enforces binary route presence, `request_raw` usage, and base64 fallback retention.
+- [x] Maintained runtime rendering constraints:
+  - [x] Godot runtime remains PNG-first.
+  - [x] SVG remains diagnostics-only because direct SVG handling in Godot is still unstable.
+
+### High-Priority Work Status (Current)
+- [x] Clipboard transport is now binary-first on the Godot client while retaining backward compatibility.
+- [x] Server + client transport path now has regression coverage on both sides (API route + client contract).
+- [ ] Remaining high-priority work: continue mobile physical-device parity evidence and broaden wasm kernel coverage where worker cost remains dominant.
+
+### Verification Gate (Executed)
+- [x] `node node_modules/jest/bin/jest.js src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts --runInBand` (**2 suites, 34 tests passed**)
+- [x] Migration matrix equivalent to `npm run test:migration`:
+  - [x] `node node_modules/jest/bin/jest.js src/core/Graph.test.ts src/core/PathEngine.test.ts src/core/TreeLayout.test.ts src/backend/algorithms/CycleDetection.test.ts src/backend/algorithms/TopologicalSort.test.ts src/utils/RuntimePaths.test.ts src/server.migration.test.ts src/pkg.sidecar.contract.test.ts src/mobile.pipeline.test.ts src/capacitor.device.utils.contract.test.ts src/runtime.capabilities.test.ts src/runtime.transport.adapter.contract.test.ts src/storage.provider.contract.test.ts src/storage.provider.capacitor.content.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.output.equivalence.contract.test.ts src/wasm.parity.benchmark.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts src/source_manager.loadflow.test.ts src/capacitor.runtime.contract.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts src/android.pathmode.contract.test.ts src/android.pathmode.smoke.contract.test.ts src/pathbridge.handshake.contract.test.ts --runInBand` (**29 suites, 158 tests passed**)
+- [x] Full Jest equivalent to `npm test`: `node node_modules/jest/bin/jest.js` (**33 suites, 179 tests passed**)
+- [x] Build pipeline equivalent to `npm run build`:
+  - [x] `node scripts/copy-reader-runtime-assets.js`
+  - [x] `node node_modules/typescript/bin/tsc`
+  - [x] `node scripts/bundle_path_core.js`
+  - [x] `node scripts/copy-assets.js`
+  - [x] `node scripts/sync-wasm-parity-artifact.js`
+- [x] Sidecar pipeline equivalent to `npm run build:sidecar`:
+  - [x] `node scripts/build-sidecar.js`
+  - [x] `node scripts/ensure-godot-sidecar.js`
+  - [x] `node scripts/validate-tauri-sidecars.js`
+- [x] WASM strict gates equivalent to `npm run test:wasm:parity:gates`:
+  - [x] `node scripts/verify-wasm-parity.js --strict 1`
+  - [x] `node scripts/benchmark-wasm-parity.js --require-wasm-adapter 1 --max-candidate-to-baseline-graph-p95-ratio 1 --max-candidate-to-baseline-layout-p95-ratio 1 --max-candidate-to-baseline-graph-p99-ratio 1 --max-candidate-to-baseline-layout-p99-ratio 1`
+
+---
+
+## 中文文档
+
+### 目标
+完成 Godot 客户端迁移切片：剪贴板复制优先走二进制 PNG 上传，同时保留对仅支持 base64 JSON 的旧版 sidecar 兼容能力。
+
+### 本轮完成
+- [x] 更新 `path_mode/scripts/reader_render_client.gd` 剪贴板链路：
+  - [x] 新增二进制优先上传：`POST /api/clipboard/image-binary`。
+  - [x] 当二进制路径失败时，保留兼容回退：`POST /api/clipboard/image`（`pngBase64`）。
+  - [x] 新增双路径失败时的合并/显式错误信息，便于定位问题。
+  - [x] 新增二进制请求头构造与 `HTTPRequest.request_raw(...)` 调用路径。
+- [x] 强化回归契约：
+  - [x] 在 `src/pathbridge.handshake.contract.test.ts` 增加剪贴板传输契约断言。
+  - [x] 契约明确锁定：二进制路由存在、`request_raw` 使用、base64 回退保留。
+- [x] 保持运行时渲染约束不变：
+  - [x] Godot 运行时仍为 PNG-first。
+  - [x] SVG 仍仅用于诊断，因为 Godot 直接处理 SVG 依然不稳定。
+
+### 当前高优先级状态
+- [x] Godot 客户端剪贴板传输已升级为二进制优先，同时保持向后兼容。
+- [x] 服务端与客户端两侧的传输链路均已具备回归覆盖（API 路由 + 客户端契约）。
+- [ ] 剩余高优先级工作：继续补齐移动端真机等价证据，并扩展仍以 worker 成本为主的 wasm 内核覆盖。
+
+### 验证门禁（已执行）
+- [x] `node node_modules/jest/bin/jest.js src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts --runInBand`（**2 suites, 34 tests passed**）
+- [x] 等价 `npm run test:migration` 的迁移矩阵：
+  - [x] `node node_modules/jest/bin/jest.js src/core/Graph.test.ts src/core/PathEngine.test.ts src/core/TreeLayout.test.ts src/backend/algorithms/CycleDetection.test.ts src/backend/algorithms/TopologicalSort.test.ts src/utils/RuntimePaths.test.ts src/server.migration.test.ts src/pkg.sidecar.contract.test.ts src/mobile.pipeline.test.ts src/capacitor.device.utils.contract.test.ts src/runtime.capabilities.test.ts src/runtime.transport.adapter.contract.test.ts src/storage.provider.contract.test.ts src/storage.provider.capacitor.content.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.output.equivalence.contract.test.ts src/wasm.parity.benchmark.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts src/source_manager.loadflow.test.ts src/capacitor.runtime.contract.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts src/android.pathmode.contract.test.ts src/android.pathmode.smoke.contract.test.ts src/pathbridge.handshake.contract.test.ts --runInBand`（**29 suites, 158 tests passed**）
+- [x] 等价 `npm test` 的全量 Jest：`node node_modules/jest/bin/jest.js`（**33 suites, 179 tests passed**）
+- [x] 等价 `npm run build` 的构建链路：
+  - [x] `node scripts/copy-reader-runtime-assets.js`
+  - [x] `node node_modules/typescript/bin/tsc`
+  - [x] `node scripts/bundle_path_core.js`
+  - [x] `node scripts/copy-assets.js`
+  - [x] `node scripts/sync-wasm-parity-artifact.js`
+- [x] 等价 `npm run build:sidecar` 的 sidecar 链路：
+  - [x] `node scripts/build-sidecar.js`
+  - [x] `node scripts/ensure-godot-sidecar.js`
+  - [x] `node scripts/validate-tauri-sidecars.js`
+- [x] 等价 `npm run test:wasm:parity:gates` 的严格门禁：
+  - [x] `node scripts/verify-wasm-parity.js --strict 1`
+  - [x] `node scripts/benchmark-wasm-parity.js --require-wasm-adapter 1 --max-candidate-to-baseline-graph-p95-ratio 1 --max-candidate-to-baseline-layout-p95-ratio 1 --max-candidate-to-baseline-graph-p99-ratio 1 --max-candidate-to-baseline-layout-p99-ratio 1`
+
+---
+
+# 2026-03-11 v1.5.46 - High-Priority Clipboard Transport Hardening (Binary PNG Path + Spool-Safe Ingestion)
+
+## English Document
+
+### Objective
+Reduce large clipboard payload overhead and JSON/base64 memory pressure by introducing a binary PNG upload route with the same request-size and spool protections used in existing server body guards.
+
+### Completed in This Iteration
+- [x] Added binary clipboard API path in `src/server.ts`:
+  - [x] New endpoint: `POST /api/clipboard/image-binary`.
+  - [x] Accepts `image/png` and `application/octet-stream`.
+  - [x] Uses bounded body read with threshold-based spool-to-disk protection.
+  - [x] Validates PNG signature before forwarding to native clipboard bridge.
+- [x] Preserved compatibility with existing route:
+  - [x] Existing `POST /api/clipboard/image` (`pngBase64`) remains available.
+  - [x] Added stricter PNG-signature validation to the JSON/base64 route.
+- [x] Added migration regression coverage in `src/server.migration.test.ts`:
+  - [x] Binary PNG upload success contract.
+  - [x] Unsupported binary content-type (`415`) contract.
+  - [x] Oversized binary payload (`413`) contract.
+
+### High-Priority Work Status (Current)
+- [x] Clipboard transport now has a binary-safe path to avoid mandatory base64 expansion.
+- [x] Server ingress protection remains deterministic (size limits + spool handling + typed HTTP errors).
+- [ ] Remaining high-priority work: continue mobile physical-device parity evidence and broaden wasm kernel coverage where worker cost remains dominant.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/server.migration.test.ts --runInBand` (**1 suite, 22 tests passed**)
+- [x] `npm run test:migration` (**29 suites, 157 tests passed**)
+- [x] `npm test` (**33 suites, 178 tests passed**)
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+- [x] `npm run test:wasm:parity:gates`
+
+---
+
+## 中文文档
+
+### 目标
+降低剪贴板大负载在 JSON/base64 传输中的体积与内存压力：新增二进制 PNG 上传路径，并保持与现有请求大小限制与临时落盘保护一致。
+
+### 本轮完成
+- [x] 在 `src/server.ts` 新增二进制剪贴板 API 路径：
+  - [x] 新增端点：`POST /api/clipboard/image-binary`。
+  - [x] 支持 `image/png` 与 `application/octet-stream`。
+  - [x] 读取链路具备大小上限与阈值触发的落盘分流保护。
+  - [x] 转发到原生剪贴板前执行 PNG 签名校验。
+- [x] 保持现有链路兼容：
+  - [x] 现有 `POST /api/clipboard/image`（`pngBase64`）继续可用。
+  - [x] 对 JSON/base64 路径补充更严格的 PNG 签名校验。
+- [x] 在 `src/server.migration.test.ts` 增加回归覆盖：
+  - [x] 二进制 PNG 上传成功契约。
+  - [x] 非法二进制内容类型（`415`）契约。
+  - [x] 超大二进制负载（`413`）契约。
+
+### 当前高优先级状态
+- [x] 剪贴板传输已具备二进制安全路径，不再强制依赖 base64 扩容。
+- [x] 服务器入口保护保持确定性（大小限制 + 落盘分流 + 明确 HTTP 错误映射）。
+- [ ] 剩余高优先级工作：继续补齐移动端真机等价证据，并扩展仍以 worker 为瓶颈的 wasm 内核覆盖。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/server.migration.test.ts --runInBand`（**1 suite, 22 tests passed**）
+- [x] `npm run test:migration`（**29 suites, 157 tests passed**）
+- [x] `npm test`（**33 suites, 178 tests passed**）
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+- [x] `npm run test:wasm:parity:gates`
+
+---
+
+# 2026-03-11 v1.5.45 - High-Priority Sidecar Runtime Hardening (Server Async FS + Non-Blocking Startup)
+
+## English Document
+
+### Objective
+Close a remaining high-priority robustness gap by removing synchronous filesystem operations from the Node sidecar server runtime path and enforcing this behavior with regression contracts.
+
+### Completed in This Iteration
+- [x] Refactored `src/server.ts` to remove blocking filesystem APIs:
+  - [x] Replaced `ensureRuntimeDataDir` and request-body spool directory provisioning with `fs.promises.mkdir(...)`.
+  - [x] Replaced sidecar runtime-manifest writes with `fs.promises.writeFile(...)`.
+  - [x] Removed sync runtime-data scans and moved CLI cache discovery to async helpers.
+  - [x] Replaced sync CLI path-existence heuristics with async fallback resolution in `startServer(...)`.
+- [x] Preserved behavior while improving startup/runtime safety:
+  - [x] Runtime manifest generation remains deterministic.
+  - [x] Cache restore flow now explicitly ensures runtime-data directory before copy.
+  - [x] Godot runtime contract remains PNG-first; no SVG runtime dependency introduced.
+- [x] Added regression guard:
+  - [x] `src/server.migration.test.ts` now asserts `src/server.ts` does not contain `fs.*Sync` calls on runtime/request paths.
+
+### High-Priority Work Status (Current)
+- [x] Server runtime/request path no longer relies on blocking fs sync operations.
+- [x] Migration, full test matrix, build, sidecar build, and wasm parity gates remain green after refactor.
+- [ ] Remaining high-priority work: continue mobile physical-device parity evidence and broaden wasm kernel coverage where worker cost remains dominant.
+
+### Verification Gate (Executed)
+- [x] `npx jest src/server.migration.test.ts --runInBand` (**1 suite, 19 tests passed**)
+- [x] `npm run test:migration` (**29 suites, 154 tests passed**)
+- [x] `npm test` (**33 suites, 175 tests passed**)
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+- [x] `npm run test:wasm:parity:gates`
+
+---
+
+## 中文文档
+
+### 目标
+收口一个剩余的高优先级稳健性缺口：移除 Node sidecar 服务器运行链路中的同步文件系统调用，并通过回归契约持续锁定该行为。
+
+### 本轮完成
+- [x] 重构 `src/server.ts`，移除阻塞式文件系统 API：
+  - [x] 将 `ensureRuntimeDataDir` 与请求体落盘目录创建改为 `fs.promises.mkdir(...)`。
+  - [x] 将 sidecar 运行时 manifest 写入改为 `fs.promises.writeFile(...)`。
+  - [x] 移除同步 runtime-data 扫描，并将 CLI 缓存发现迁移到异步 helper。
+  - [x] 将 CLI 路径存在性启发式从同步检查改为 `startServer(...)` 内异步回退解析。
+- [x] 在保持行为不变前提下提升运行时安全性：
+  - [x] 运行时 manifest 生成仍保持确定性。
+  - [x] 缓存恢复链路在复制前显式确保 runtime-data 目录存在。
+  - [x] Godot 运行时契约保持 PNG-first，不引入 SVG 运行时依赖。
+- [x] 新增回归护栏：
+  - [x] `src/server.migration.test.ts` 新增断言，确保 `src/server.ts` 运行链路不再出现 `fs.*Sync` 调用。
+
+### 当前高优先级状态
+- [x] 服务器运行/请求路径已不再依赖阻塞式 fs 同步调用。
+- [x] 迁移门禁、全量测试、构建、sidecar 构建与 wasm parity 门禁在本次重构后全部通过。
+- [ ] 剩余高优先级工作：继续补齐移动端真机等价证据，并扩展仍以 worker 为瓶颈的 wasm 内核覆盖。
+
+### 验证门禁（已执行）
+- [x] `npx jest src/server.migration.test.ts --runInBand`（**1 suite, 19 tests passed**）
+- [x] `npm run test:migration`（**29 suites, 154 tests passed**）
+- [x] `npm test`（**33 suites, 175 tests passed**）
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+- [x] `npm run test:wasm:parity:gates`
+
+---
+
 # 2026-03-10 v1.5.44 - High-Priority WASM Heavy-Compute Expansion (Topological Rank JSON ABI + Async Orchestration)
 
 ## English Document

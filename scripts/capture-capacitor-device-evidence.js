@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const {
@@ -13,6 +14,7 @@ const {
 const repoRoot = path.resolve(__dirname, '..');
 const apkPath = path.join(repoRoot, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
 const evidenceRoot = path.join(repoRoot, 'docs', 'mobile-evidence');
+const EVIDENCE_MANIFEST_SCHEMA_VERSION = 1;
 
 function fail(lines) {
   const normalized = Array.isArray(lines) ? lines : [String(lines)];
@@ -95,6 +97,82 @@ function captureLogcat(adbCommand, serial, logcatPath) {
   fs.writeFileSync(logcatPath, `${tailLines.join('\n')}\n`, 'utf8');
 }
 
+function sha256File(filePath) {
+  const content = fs.readFileSync(filePath);
+  return crypto.createHash('sha256').update(content).digest('hex');
+}
+
+function fileLineCount(filePath) {
+  const text = fs.readFileSync(filePath, 'utf8');
+  return text.split(/\r?\n/).filter((line) => line.trim().length > 0).length;
+}
+
+function buildChecklist() {
+  return {
+    deviceConnectionGateExecuted: true,
+    runtimeEvidenceArtifactsCollected: true,
+    appStartupManuallyVerified: false,
+    sourcePanelManuallyVerified: false,
+    readerManuallyVerified: false,
+    pathModeEnterExitManuallyVerified: false,
+  };
+}
+
+function toRepoRelative(targetPath) {
+  return path.relative(repoRoot, targetPath).replace(/\\/g, '/');
+}
+
+function writeEvidenceManifest(manifestPath, context) {
+  const manifest = {
+    schemaVersion: EVIDENCE_MANIFEST_SCHEMA_VERSION,
+    generatedAt: context.isoTime,
+    runId: context.runId,
+    apk: {
+      relativePath: context.apkRelative,
+      sizeBytes: context.apkSizeBytes,
+      sha256: context.apkSha256,
+    },
+    device: {
+      serialMasked: context.maskedSerial,
+      model: context.model || '',
+      androidVersion: context.androidVersion || '',
+    },
+    artifacts: {
+      screenshot: {
+        relativePath: toRepoRelative(context.screenshotPath),
+        sizeBytes: context.screenshotSizeBytes,
+        sha256: context.screenshotSha256,
+        mimeType: 'image/png',
+      },
+      logcat: {
+        relativePath: toRepoRelative(context.logcatPath),
+        sizeBytes: context.logcatSizeBytes,
+        sha256: context.logcatSha256,
+        lineCount: context.logcatLineCount,
+      },
+      markdownReport: {
+        relativePath: toRepoRelative(context.reportPath),
+      },
+    },
+    checklist: context.checklist,
+  };
+
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+}
+
+function writeLatestPointer(pointerPath, context) {
+  const pointer = {
+    schemaVersion: EVIDENCE_MANIFEST_SCHEMA_VERSION,
+    generatedAt: context.isoTime,
+    runId: context.runId,
+    runDirRelative: toRepoRelative(context.runDir),
+    manifestRelative: toRepoRelative(context.manifestPath),
+    markdownReportRelative: toRepoRelative(context.reportPath),
+    deviceSerialMasked: context.maskedSerial,
+  };
+  fs.writeFileSync(pointerPath, `${JSON.stringify(pointer, null, 2)}\n`, 'utf8');
+}
+
 function writeEvidenceReport(reportPath, context) {
   const report = `# ${context.dateLabel} v1.0.0 - Capacitor Device Acceptance Evidence
 
@@ -110,6 +188,7 @@ function writeEvidenceReport(reportPath, context) {
 ### Artifacts
 - Screenshot: [${path.basename(context.screenshotPath)}](./${path.basename(context.screenshotPath)})
 - Logcat tail: [${path.basename(context.logcatPath)}](./${path.basename(context.logcatPath)})
+- Evidence manifest: [${path.basename(context.manifestPath)}](./${path.basename(context.manifestPath)})
 
 ### Checklist Status
 - [x] Device connection gate executed.
@@ -133,6 +212,7 @@ function writeEvidenceReport(reportPath, context) {
 ### 证据文件
 - 截图: [${path.basename(context.screenshotPath)}](./${path.basename(context.screenshotPath)})
 - Logcat 尾部日志: [${path.basename(context.logcatPath)}](./${path.basename(context.logcatPath)})
+- 证据清单: [${path.basename(context.manifestPath)}](./${path.basename(context.manifestPath)})
 
 ### 验收清单状态
 - [x] 已执行设备连接闸门检查。
@@ -202,24 +282,56 @@ function main() {
 
   const screenshotPath = path.join(runDir, 'device-screenshot.png');
   const logcatPath = path.join(runDir, 'logcat-tail.txt');
+  const manifestPath = path.join(runDir, 'acceptance_evidence.json');
   const reportPath = path.join(runDir, 'acceptance_evidence.md');
+  const checklist = buildChecklist();
 
   captureScreenshot(adbCommand, serial, screenshotPath);
   captureLogcat(adbCommand, serial, logcatPath);
-
   writeEvidenceReport(reportPath, {
     dateLabel: now.toISOString().slice(0, 10),
     isoTime: now.toISOString(),
+    runId,
     maskedSerial: maskSerial(serial),
     model,
     androidVersion,
     apkRelative: path.relative(repoRoot, apkPath).replace(/\\/g, '/'),
     screenshotPath,
     logcatPath,
+    manifestPath,
+  });
+  writeEvidenceManifest(manifestPath, {
+    isoTime: now.toISOString(),
+    runId,
+    maskedSerial: maskSerial(serial),
+    model,
+    androidVersion,
+    runDir,
+    apkRelative: toRepoRelative(apkPath),
+    apkSizeBytes: fs.statSync(apkPath).size,
+    apkSha256: sha256File(apkPath),
+    screenshotPath,
+    screenshotSizeBytes: fs.statSync(screenshotPath).size,
+    screenshotSha256: sha256File(screenshotPath),
+    logcatPath,
+    logcatSizeBytes: fs.statSync(logcatPath).size,
+    logcatSha256: sha256File(logcatPath),
+    logcatLineCount: fileLineCount(logcatPath),
+    reportPath,
+    checklist,
+  });
+  writeLatestPointer(path.join(evidenceRoot, 'latest.json'), {
+    isoTime: now.toISOString(),
+    runId,
+    maskedSerial: maskSerial(serial),
+    runDir,
+    manifestPath,
+    reportPath,
   });
 
   console.log(`[Capacitor Evidence] Device: ${maskSerial(serial)}`);
   console.log(`[Capacitor Evidence] Output: ${path.relative(repoRoot, runDir).replace(/\\/g, '/')}`);
+  console.log(`[Capacitor Evidence] Manifest: ${path.relative(repoRoot, manifestPath).replace(/\\/g, '/')}`);
   console.log(`[Capacitor Evidence] Report: ${path.relative(repoRoot, reportPath).replace(/\\/g, '/')}`);
 }
 

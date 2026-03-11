@@ -48,6 +48,7 @@ describe('dual mobile pipeline configuration', () => {
   );
   const verifyCapacitorDeviceScriptPath = path.join(repoRoot, 'scripts', 'verify-capacitor-device-acceptance.js');
   const captureCapacitorEvidenceScriptPath = path.join(repoRoot, 'scripts', 'capture-capacitor-device-evidence.js');
+  const verifyCapacitorEvidenceFreshnessScriptPath = path.join(repoRoot, 'scripts', 'verify-capacitor-evidence-freshness.js');
 
   test('keeps Capacitor and Tauri Android npm scripts together', () => {
     const pkg = readJson<PackageJson>(packageJsonPath);
@@ -58,6 +59,7 @@ describe('dual mobile pipeline configuration', () => {
     expect(scripts['smoke:android:pathmode']).toContain('smoke-android-pathmode.js');
     expect(scripts['mobile:build:capacitor']).toBe('build_apk.bat');
     expect(scripts['capture:capacitor:evidence']).toContain('capture-capacitor-device-evidence.js');
+    expect(scripts['verify:capacitor:evidence']).toContain('verify-capacitor-evidence-freshness.js');
     expect(scripts['tauri:android:init']).toContain('verify:android:env');
     expect(scripts['tauri:android:dev']).toContain('verify:android:env');
     expect(scripts['tauri:android:build']).toContain('verify:android:env');
@@ -122,6 +124,7 @@ describe('dual mobile pipeline configuration', () => {
   test('keeps capacitor device acceptance scripts aligned with shared ADB diagnostics', () => {
     const verifyScript = fs.readFileSync(verifyCapacitorDeviceScriptPath, 'utf8');
     const captureScript = fs.readFileSync(captureCapacitorEvidenceScriptPath, 'utf8');
+    const verifyEvidenceScript = fs.readFileSync(verifyCapacitorEvidenceFreshnessScriptPath, 'utf8');
 
     expect(verifyScript).toContain("require('./capacitor-device-utils')");
     expect(verifyScript).toContain('NOTE_CONNECTION_ANDROID_SERIAL');
@@ -130,6 +133,14 @@ describe('dual mobile pipeline configuration', () => {
     expect(captureScript).toContain("require('./capacitor-device-utils')");
     expect(captureScript).toContain('NOTE_CONNECTION_ANDROID_SERIAL');
     expect(captureScript).toContain('Device states:');
+    expect(captureScript).toContain('acceptance_evidence.json');
+    expect(captureScript).toContain('latest.json');
+
+    expect(verifyEvidenceScript).toContain('NOTE_CONNECTION_EVIDENCE_MAX_AGE_DAYS');
+    expect(verifyEvidenceScript).toContain('NOTE_CONNECTION_REQUIRE_MANUAL_MOBILE_CHECKLIST');
+    expect(verifyEvidenceScript).toContain('NOTE_CONNECTION_EVIDENCE_ROOT');
+    expect(verifyEvidenceScript).toContain('acceptance_evidence.json');
+    expect(verifyEvidenceScript).toContain('latest.json');
   });
 
   test('declares Android storage permissions required by filesystem runtime paths', () => {

@@ -23,8 +23,20 @@ const PORT = Number(process.env.NOTE_CONNECTION_PORT || process.env.PORT || DEFA
 const PATH_BRIDGE_PORT = Number(process.env.NOTE_CONNECTION_BRIDGE_PORT || 9876);
 const AUTH_TOKEN = String(process.env.NOTE_CONNECTION_AUTH_TOKEN || '').trim();
 let pathBridge: PathBridge | null = null;
+const MEBIBYTE_BYTES = 1024 * 1024;
 const REQUEST_BODY_LIMIT_BYTES = 512 * 1024;
-const CLIPBOARD_BODY_LIMIT_BYTES = 8 * 1024 * 1024;
+const CLIPBOARD_BODY_LIMIT_RANGE_MB = {
+    min: 1,
+    max: 512,
+    default: 64
+} as const;
+const CLIPBOARD_BODY_LIMIT_MB = resolveBoundedMegabytesFromEnv({
+    envKey: 'NOTE_CONNECTION_CLIPBOARD_BODY_LIMIT_MB',
+    defaultMb: CLIPBOARD_BODY_LIMIT_RANGE_MB.default,
+    minMb: CLIPBOARD_BODY_LIMIT_RANGE_MB.min,
+    maxMb: CLIPBOARD_BODY_LIMIT_RANGE_MB.max
+});
+const CLIPBOARD_BODY_LIMIT_BYTES = CLIPBOARD_BODY_LIMIT_MB * MEBIBYTE_BYTES;
 const REQUEST_BODY_SPOOL_THRESHOLD_BYTES = 256 * 1024;
 const ALLOWED_ORIGIN_PATTERNS = parseAllowedOrigins(
     process.env.NOTE_CONNECTION_ALLOWED_ORIGINS ||
@@ -49,11 +61,56 @@ type ReadJsonBodyOptions = {
     spoolThresholdBytes?: number;
 };
 
+type ReadBinaryBodyOptions = {
+    maxBytes?: number;
+    spoolThresholdBytes?: number;
+};
+
 function collectComputeModeSnapshot() {
     return {
         layoutEngine: LayoutEngine.getLastComputeDiagnostics(),
         graphMetrics: GraphMetrics.getLastComputeDiagnostics()
     };
+}
+
+type BoundedMegabyteEnvOptions = {
+    envKey: string;
+    defaultMb: number;
+    minMb: number;
+    maxMb: number;
+};
+
+function resolveBoundedMegabytesFromEnv(options: BoundedMegabyteEnvOptions): number {
+    const envKey = String(options.envKey || '').trim();
+    const defaultMb = Math.max(1, Math.floor(Number(options.defaultMb) || 1));
+    const minMb = Math.max(1, Math.floor(Number(options.minMb) || 1));
+    const maxMb = Math.max(minMb, Math.floor(Number(options.maxMb) || minMb));
+    if (!envKey) {
+        return defaultMb;
+    }
+
+    const rawValue = String(process.env[envKey] || '').trim();
+    if (!rawValue) {
+        return defaultMb;
+    }
+
+    const parsedValue = Number(rawValue);
+    if (!Number.isFinite(parsedValue)) {
+        console.warn(`[Config] ${envKey} is not a number ("${rawValue}"). Using default ${defaultMb} MiB.`);
+        return defaultMb;
+    }
+
+    const normalizedMb = Math.floor(parsedValue);
+    if (normalizedMb < minMb) {
+        console.warn(`[Config] ${envKey}=${rawValue} is below minimum ${minMb} MiB. Clamping to ${minMb} MiB.`);
+        return minMb;
+    }
+    if (normalizedMb > maxMb) {
+        console.warn(`[Config] ${envKey}=${rawValue} exceeds maximum ${maxMb} MiB. Clamping to ${maxMb} MiB.`);
+        return maxMb;
+    }
+
+    return normalizedMb;
 }
 
 function parseAllowedOrigins(rawValue: string): string[] {
@@ -119,6 +176,12 @@ function getRequestPathname(req: http.IncomingMessage): string {
     }
 }
 
+function getRequestContentType(req: http.IncomingMessage): string {
+    return typeof req.headers['content-type'] === 'string'
+        ? req.headers['content-type'].split(';', 1)[0].trim().toLowerCase()
+        : '';
+}
+
 function getRawRequestPathname(rawUrl: string | undefined): string {
     const requestTarget = String(rawUrl || '/');
     const queryStart = requestTarget.indexOf('?');
@@ -173,16 +236,12 @@ function isGeneratedGraphAsset(filename: string): boolean {
     );
 }
 
-function ensureRuntimeDataDir(): void {
-    if (!fs.existsSync(RUNTIME_DATA_DIR)) {
-        fs.mkdirSync(RUNTIME_DATA_DIR, { recursive: true });
-    }
+async function ensureRuntimeDataDir(): Promise<void> {
+    await fs.promises.mkdir(RUNTIME_DATA_DIR, { recursive: true });
 }
 
-function ensureRequestBodySpoolDir(): void {
-    if (!fs.existsSync(REQUEST_BODY_SPOOL_DIR)) {
-        fs.mkdirSync(REQUEST_BODY_SPOOL_DIR, { recursive: true });
-    }
+async function ensureRequestBodySpoolDir(): Promise<void> {
+    await fs.promises.mkdir(REQUEST_BODY_SPOOL_DIR, { recursive: true });
 }
 
 function isFsNotFoundError(error: unknown): boolean {
@@ -199,7 +258,6 @@ function makeRequestBodyTooLargeError(): Error {
 }
 
 function generatedAssetWritePath(filename: string): string {
-    ensureRuntimeDataDir();
     return path.join(RUNTIME_DATA_DIR, filename);
 }
 
@@ -240,10 +298,26 @@ async function safeUnlink(filePath: string): Promise<void> {
 }
 
 function isJsonLikeContentType(req: http.IncomingMessage): boolean {
-    const contentType = typeof req.headers['content-type'] === 'string'
-        ? req.headers['content-type'].split(';', 1)[0].trim().toLowerCase()
-        : '';
+    const contentType = getRequestContentType(req);
     return !contentType || contentType === 'application/json' || contentType.endsWith('+json');
+}
+
+function isClipboardBinaryContentType(req: http.IncomingMessage): boolean {
+    const contentType = getRequestContentType(req);
+    return !contentType || contentType === 'application/octet-stream' || contentType === 'image/png';
+}
+
+function isPngBuffer(buffer: Buffer): boolean {
+    if (!Buffer.isBuffer(buffer) || buffer.length < 8) {
+        return false;
+    }
+    const pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+    for (let i = 0; i < pngSignature.length; i += 1) {
+        if (buffer[i] !== pngSignature[i]) {
+            return false;
+        }
+    }
+    return true;
 }
 
 async function readJsonBody(req: http.IncomingMessage, options: ReadJsonBodyOptions = {}): Promise<any> {
@@ -278,7 +352,7 @@ async function readJsonBody(req: http.IncomingMessage, options: ReadJsonBodyOpti
             }
 
             if (!spoolStream && totalBytes > spoolThresholdBytes) {
-                ensureRequestBodySpoolDir();
+                await ensureRequestBodySpoolDir();
                 spoolPath = path.join(
                     REQUEST_BODY_SPOOL_DIR,
                     `body-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.json`
@@ -321,6 +395,85 @@ async function readJsonBody(req: http.IncomingMessage, options: ReadJsonBodyOpti
         }
 
         return JSON.parse(body);
+    } finally {
+        if (spoolStream && !spoolStream.closed) {
+            spoolStream.destroy();
+        }
+        if (spoolPath) {
+            await safeUnlink(spoolPath);
+        }
+    }
+}
+
+async function readBinaryBody(req: http.IncomingMessage, options: ReadBinaryBodyOptions = {}): Promise<Buffer> {
+    const maxBytes = options.maxBytes ?? REQUEST_BODY_LIMIT_BYTES;
+    const spoolThresholdBytes = Math.max(
+        64 * 1024,
+        Math.min(options.spoolThresholdBytes ?? REQUEST_BODY_SPOOL_THRESHOLD_BYTES, maxBytes)
+    );
+
+    if (!isClipboardBinaryContentType(req)) {
+        throw new Error('Unsupported Content-Type. Expected image/png or application/octet-stream.');
+    }
+
+    const declaredLength = Number(req.headers['content-length'] || 0);
+    if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+        throw makeRequestBodyTooLargeError();
+    }
+
+    let totalBytes = 0;
+    const chunks: Buffer[] = [];
+    let spoolPath: string | null = null;
+    let spoolStream: fs.WriteStream | null = null;
+
+    try {
+        for await (const rawChunk of req) {
+            const chunk = Buffer.isBuffer(rawChunk) ? rawChunk : Buffer.from(rawChunk);
+            totalBytes += chunk.length;
+            if (totalBytes > maxBytes) {
+                const tooLargeError = makeRequestBodyTooLargeError();
+                req.destroy(tooLargeError);
+                throw tooLargeError;
+            }
+
+            if (!spoolStream && totalBytes > spoolThresholdBytes) {
+                await ensureRequestBodySpoolDir();
+                spoolPath = path.join(
+                    REQUEST_BODY_SPOOL_DIR,
+                    `body-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.bin`
+                );
+                spoolStream = fs.createWriteStream(spoolPath, { flags: 'wx' });
+                for (const buffered of chunks) {
+                    if (!spoolStream.write(buffered)) {
+                        await once(spoolStream, 'drain');
+                    }
+                }
+                chunks.length = 0;
+            }
+
+            if (spoolStream) {
+                if (!spoolStream.write(chunk)) {
+                    await once(spoolStream, 'drain');
+                }
+            } else {
+                chunks.push(chunk);
+            }
+        }
+
+        if (spoolStream) {
+            await new Promise<void>((resolve, reject) => {
+                if (!spoolStream) {
+                    resolve();
+                    return;
+                }
+                spoolStream.once('error', reject);
+                spoolStream.end(() => resolve());
+            });
+        }
+
+        return spoolPath
+            ? await fs.promises.readFile(spoolPath)
+            : Buffer.concat(chunks);
     } finally {
         if (spoolStream && !spoolStream.closed) {
             spoolStream.destroy();
@@ -397,11 +550,11 @@ function normalizeMermaidRendererPreference(value: unknown): MermaidRendererPref
     return FORCE_FRONTEND_MERMAID_RENDER ? 'frontend' : 'auto';
 }
 
-function writeSidecarRuntimeManifest(finalPort: number): void {
+async function writeSidecarRuntimeManifest(finalPort: number): Promise<void> {
     try {
         const manifestDir = path.dirname(SIDECAR_RUNTIME_MANIFEST);
-        fs.mkdirSync(manifestDir, { recursive: true });
-        fs.writeFileSync(
+        await fs.promises.mkdir(manifestDir, { recursive: true });
+        await fs.promises.writeFile(
             SIDECAR_RUNTIME_MANIFEST,
             JSON.stringify({
                 host: LOOPBACK_HOST,
@@ -533,6 +686,46 @@ async function collectAvailableTargetsFromPath(kbRoot: string): Promise<string[]
     }
 
     return Array.from(targets).sort((a, b) => a.localeCompare(b));
+}
+
+async function pathExists(candidatePath: string): Promise<boolean> {
+    try {
+        await fs.promises.access(candidatePath, fs.constants.F_OK);
+        return true;
+    } catch (error) {
+        if (isFsNotFoundError(error)) {
+            return false;
+        }
+        throw error;
+    }
+}
+
+async function resolveCliPathFallback(argsList: string[]): Promise<string | null> {
+    for (const arg of argsList) {
+        if (arg.startsWith('-') || arg === 'true') {
+            continue;
+        }
+        if (arg.includes('/') || arg.includes('\\')) {
+            return arg;
+        }
+        const resolved = path.resolve(KB_ROOT, arg);
+        if (await pathExists(resolved)) {
+            return arg;
+        }
+    }
+    return null;
+}
+
+async function findLatestCliBuildForKb(kbName: string): Promise<string | null> {
+    const files = (await readDirEntriesSafe(RUNTIME_DATA_DIR))
+        .filter((entry) => entry.isFile())
+        .map((entry) => entry.name);
+    const prefix = `data_cli_${kbName}_`;
+    const matches = files
+        .filter((fileName) => fileName.startsWith(prefix) && fileName.endsWith('.js'))
+        .sort()
+        .reverse();
+    return matches.length > 0 ? matches[0] : null;
 }
 
 function extractRelativePathFromKbMarker(rawFilePath: string): string | null {
@@ -679,7 +872,7 @@ for (let i = 0; i < args.length; i++) {
     }
     // Heuristic for Positional Args (if flags were stripped)
     // If not a flag (doesn't start with -) and looks like a path (contains / or \)
-    else if (!arg.startsWith('-') && (arg.includes('/') || arg.includes('\\') || fs.existsSync(path.resolve(KB_ROOT, arg)))) {
+    else if (!arg.startsWith('-') && (arg.includes('/') || arg.includes('\\'))) {
         // Assume it's the path if we haven't found one yet
         if (!cliOptions.targetPath) {
             cliOptions.targetPath = arg;
@@ -694,54 +887,30 @@ for (let i = 0; i < args.length; i++) {
     }
 }
 
-// FIX: If targetPath is 'true' (from bad npm config parsing), try to fix it using heuristic or fail gracefully.
-if (cliOptions.targetPath === 'true') {
-    // If we have a positional argument that looks like a path, use it instead.
-    // The previous loop might have missed it if we prioritized env vars blindly.
-    // Let's re-scan args for a non-flag string that isn't 'true'.
-    const fallbackPath = args.find(a => !a.startsWith('-') && a !== 'true' && (a.includes('/') || a.includes('\\') || fs.existsSync(path.resolve(KB_ROOT, a))));
-    if (fallbackPath) {
-        cliOptions.targetPath = fallbackPath;
-    } else {
-        // If still 'true', we have a problem.
-        console.warn("[CLI] Warning: targetPath detected as 'true'. This usually means npm consumed the flag incorrectly. Please check your command syntax.");
-    }
-}
-
 console.log('[CLI] Parsed Options:', cliOptions);
-
-// Generate timestamp for CLI output if CLI args are used
-if (hasCliBuild) {
-    // Determine Knowledge Base Name
-    const kbName = path.basename(cliOptions.targetPath || 'knowledge_base');
-    
-    // Check for existing CLI builds for this KB
-    let existingFile: string | null = null;
-    if (fs.existsSync(RUNTIME_DATA_DIR)) {
-        const files = fs.readdirSync(RUNTIME_DATA_DIR);
-        // Look for data_cli_{kbName}_{time}.js
-        // Pattern: data_cli_KB_TIME.js
-        const prefix = `data_cli_${kbName}_`;
-        const matches = files
-            .filter(f => f.startsWith(prefix) && f.endsWith('.js'))
-            .sort()
-            .reverse(); // Newest first
-
-        if (matches.length > 0) {
-            existingFile = matches[0]; // Latest
-        }
-    }
-
-    // Wrap async prompt logic in an IIFE or handle before server start
-    // Since top-level await is not always available depending on config, we'll handle this in server.listen callback or separate async function.
-    // However, server.listen is async. We can move this logic into `startServer` function.
-}
 
 export const startServer = async (options: { port?: number, targetPath?: string } = {}) => {
     // If options are provided, override CLI/Env defaults or merge them
     if (options.targetPath) {
         cliOptions.targetPath = options.targetPath;
         hasCliBuild = true; // Assume explicit path implies specific build intent or context
+    }
+    if (cliOptions.targetPath === 'true') {
+        const fallbackPath = await resolveCliPathFallback(args);
+        if (fallbackPath) {
+            cliOptions.targetPath = fallbackPath;
+            hasCliBuild = true;
+        } else {
+            console.warn("[CLI] Warning: targetPath detected as 'true'. This usually means npm consumed the flag incorrectly. Please check your command syntax.");
+            delete cliOptions.targetPath;
+            hasCliBuild = false;
+        }
+    } else if (!cliOptions.targetPath) {
+        const fallbackPath = await resolveCliPathFallback(args);
+        if (fallbackPath) {
+            cliOptions.targetPath = fallbackPath;
+            hasCliBuild = true;
+        }
     }
     const finalPort = options.port || PORT;
 
@@ -756,46 +925,37 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         // CHECK: If options.targetPath is passed, do we skip the prompt? 
         // If we are required to not block, we should probably default to "Load" if exists, or "Gen" if not.
         
-        if (fs.existsSync(RUNTIME_DATA_DIR)) {
-            const files = fs.readdirSync(RUNTIME_DATA_DIR);
-            const prefix = `data_cli_${kbName}_`;
-            const matches = files
-                .filter(f => f.startsWith(prefix) && f.endsWith('.js'))
-                .sort()
-                .reverse();
+        const latest = await findLatestCliBuildForKb(kbName);
+        if (latest) {
+            console.log(`\n[CLI] Found existing build for '${kbName}': ${latest}`);
 
-            if (matches.length > 0) {
-                const latest = matches[0];
-                console.log(`\n[CLI] Found existing build for '${kbName}': ${latest}`);
-                
-                // If specific options passed (embedded mode), default to Load to avoid blocking
-                // Otherwise use interactive prompt
-                if (options.targetPath) {
-                     useExisting = true;
-                     const suffix = latest.replace('data_cli_', '').replace('.js', '');
-                     cliOptions.outputPrefix = suffix;
-                     console.log(`[CLI] Auto-Loading existing data: ${latest}`);
-                } else {
-                    const rl = readline.createInterface({
-                        input: process.stdin,
-                        output: process.stdout
+            // If specific options passed (embedded mode), default to Load to avoid blocking
+            // Otherwise use interactive prompt
+            if (options.targetPath) {
+                useExisting = true;
+                const suffix = latest.replace('data_cli_', '').replace('.js', '');
+                cliOptions.outputPrefix = suffix;
+                console.log(`[CLI] Auto-Loading existing data: ${latest}`);
+            } else {
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout
+                });
+
+                const answer = await new Promise<string>(resolve => {
+                    rl.question('[CLI] Do you want to (L)oad existing or (R)egenerate? [L/r]: ', (ans) => {
+                        rl.close();
+                        resolve(ans.trim().toLowerCase());
                     });
+                });
 
-                    const answer = await new Promise<string>(resolve => {
-                        rl.question('[CLI] Do you want to (L)oad existing or (R)egenerate? [L/r]: ', (ans) => {
-                            rl.close();
-                            resolve(ans.trim().toLowerCase());
-                        });
-                    });
-
-                    if (answer === '' || answer === 'l') {
-                        useExisting = true;
-                        // Extract suffix: data_cli_{suffix}.js
-                        // suffix = kbName_time
-                        const suffix = latest.replace('data_cli_', '').replace('.js', '');
-                        cliOptions.outputPrefix = suffix;
-                        console.log(`[CLI] Loading existing data: ${latest}`);
-                    }
+                if (answer === '' || answer === 'l') {
+                    useExisting = true;
+                    // Extract suffix: data_cli_{suffix}.js
+                    // suffix = kbName_time
+                    const suffix = latest.replace('data_cli_', '').replace('.js', '');
+                    cliOptions.outputPrefix = suffix;
+                    console.log(`[CLI] Loading existing data: ${latest}`);
                 }
             }
         }
@@ -855,6 +1015,15 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                             frontendDir: FRONTEND_DIR,
                             runtimeDataDir: RUNTIME_DATA_DIR,
                             authRequired: AUTH_TOKEN.length > 0
+                        },
+                        ingress: {
+                            jsonBodyLimitBytes: REQUEST_BODY_LIMIT_BYTES,
+                            clipboardBodyLimitBytes: CLIPBOARD_BODY_LIMIT_BYTES,
+                            clipboardBodyLimitMb: CLIPBOARD_BODY_LIMIT_MB,
+                            clipboardBodyLimitRangeMb: {
+                                min: CLIPBOARD_BODY_LIMIT_RANGE_MB.min,
+                                max: CLIPBOARD_BODY_LIMIT_RANGE_MB.max
+                            }
                         },
                         wasmParity: WasmParityRuntime.getDiagnostics(),
                         computeModes: collectComputeModeSnapshot(),
@@ -1118,10 +1287,11 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         }
                         return;
                     }
-                    
+
                     const targetName = target.replace(/[^a-z0-9_\-]/gi, '_');
                     
                     const cacheJs = await resolveGeneratedAssetForReadAsync(`data_${targetName}.js`);
+                    await ensureRuntimeDataDir();
                     const targetJs = generatedAssetWritePath('data.js');
                     const cacheJson = await resolveGeneratedAssetForReadAsync(`graph_data_${targetName}.json`);
                     const targetJson = generatedAssetWritePath('graph_data.json');
@@ -1255,7 +1425,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     }
 
                     const pngBuffer = Buffer.from(pngBase64, 'base64');
-                    if (!pngBuffer.length) {
+                    if (!pngBuffer.length || !isPngBuffer(pngBuffer)) {
                         res.writeHead(400, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ error: 'Invalid PNG payload' }));
                         return;
@@ -1274,6 +1444,35 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     }
                     console.error(error);
                     CrashLogger.log(error, 'API:POST /api/clipboard/image');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: String(error) }));
+                }
+                return;
+            } else if (req.url === '/api/clipboard/image-binary') {
+                try {
+                    const pngBuffer = await readBinaryBody(req, {
+                        maxBytes: CLIPBOARD_BODY_LIMIT_BYTES,
+                        spoolThresholdBytes: 128 * 1024,
+                    });
+                    if (!pngBuffer.length || !isPngBuffer(pngBuffer)) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'Invalid PNG payload' }));
+                        return;
+                    }
+
+                    try {
+                        await copyPngToClipboard(pngBuffer);
+                    } finally {
+                        pngBuffer.fill(0);
+                    }
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ ok: true, transport: 'binary' }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/clipboard/image-binary');
                     res.writeHead(500, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ error: String(error) }));
                 }
@@ -1393,9 +1592,9 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             String(process.env.PORT || '').trim().length > 0;
         const allowEphemeralFallback = !hasExplicitPortSetting;
 
-        const initializeRuntime = (resolvedPort: number): void => {
-            ensureRuntimeDataDir();
-            writeSidecarRuntimeManifest(resolvedPort);
+        const initializeRuntime = async (resolvedPort: number): Promise<void> => {
+            await ensureRuntimeDataDir();
+            await writeSidecarRuntimeManifest(resolvedPort);
             console.log(`[Sidecar] Runtime Manifest: ${SIDECAR_RUNTIME_MANIFEST}`);
             console.log(`Server running at http://${LOOPBACK_HOST}:${resolvedPort}/`);
             console.log(`Knowledge Base Root: ${KB_ROOT}`);
@@ -1436,12 +1635,14 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 server.off('error', onError);
                 const address = server.address();
                 const resolvedPort = (address && typeof address === 'object') ? address.port : targetPort;
-                try {
-                    initializeRuntime(resolvedPort);
-                    resolve(server);
-                } catch (error) {
-                    reject(error as Error);
-                }
+                void (async () => {
+                    try {
+                        await initializeRuntime(resolvedPort);
+                        resolve(server);
+                    } catch (error) {
+                        reject(error as Error);
+                    }
+                })();
             };
 
             server.once('error', onError);

@@ -1,3 +1,174 @@
+# 2026-03-11 v1.0.28
+
+# RISK-CORRECTION EXECUTION UPDATE (MOBILE EVIDENCE MANIFEST + FRESHNESS/POLICY VERIFIER)
+
+## ENGLISH DOCUMENT
+
+### Remediation Status (This Slice)
+- [x] Upgraded mobile evidence capture from markdown-only to structured manifests:
+  - [x] `scripts/capture-capacitor-device-evidence.js` now writes `acceptance_evidence.json`.
+  - [x] Manifest includes structured device snapshot, artifact pointers, integrity metadata, and checklist states.
+  - [x] Added rolling pointer `docs/mobile-evidence/latest.json` for deterministic verification.
+- [x] Added explicit evidence verifier `scripts/verify-capacitor-evidence-freshness.js`:
+  - [x] Verifies latest manifest existence and artifact-file integrity.
+  - [x] Enforces bounded freshness policy (`NOTE_CONNECTION_EVIDENCE_MAX_AGE_DAYS`, `1..365`, default `30`).
+  - [x] Supports strict manual checklist policy (`NOTE_CONNECTION_REQUIRE_MANUAL_MOBILE_CHECKLIST`).
+  - [x] Supports evidence-root override (`NOTE_CONNECTION_EVIDENCE_ROOT`) for controlled CI/fixture runs.
+- [x] Strengthened contract coverage and script wiring:
+  - [x] Added `src/capacitor.evidence.contract.test.ts` (fresh/stale/manual-policy contract scenarios).
+  - [x] Updated `src/mobile.pipeline.test.ts` for script wiring and key verifier/capture assertions.
+  - [x] Added evidence contract suite to migration gate list in `package.json`.
+
+### Best-Practice Compliance Delta
+- [x] Mobile evidence is now machine-readable and policy-verifiable instead of document-only.
+- [x] Freshness and manual-approval policy can be enforced deterministically.
+- [x] Regression contracts now cover evidence-policy behavior, not just script presence.
+- [ ] Remaining broader checklist items are unchanged in this slice (broader transport/storage refactors and production-scale parity tuning).
+
+### Verification Snapshot (2026-03-11)
+- [x] `node node_modules/jest/bin/jest.js src/capacitor.evidence.contract.test.ts src/mobile.pipeline.test.ts src/server.migration.test.ts --runInBand` (**3 suites, 33 tests passed**)
+- [x] Migration matrix equivalent to `npm run test:migration`: **30 suites, 161 tests passed**
+- [x] Full Jest equivalent to `npm test`: **34 suites, 182 tests passed**
+- [x] Build pipeline equivalent to `npm run build` passed.
+- [x] Sidecar pipeline equivalent to `npm run build:sidecar` passed.
+- [x] WASM strict gates equivalent to `npm run test:wasm:parity:gates` passed.
+
+---
+
+# 2026-03-11 v1.0.27
+
+# RISK-CORRECTION EXECUTION UPDATE (CONFIGURABLE CLIPBOARD INGRESS LIMIT + DIAGNOSTIC TELEMETRY)
+
+## ENGLISH DOCUMENT
+
+### Remediation Status (This Slice)
+- [x] Closed fixed-threshold clipboard ingress rigidity in `src/server.ts`:
+  - [x] Added bounded env config `NOTE_CONNECTION_CLIPBOARD_BODY_LIMIT_MB`.
+  - [x] Replaced fixed `8 MiB` limit with bounded effective limit (`default=64 MiB`, `min=1 MiB`, `max=512 MiB`).
+  - [x] Added clamp/warning behavior for invalid or out-of-range configuration.
+- [x] Added runtime observability in `/api/runtime-diagnostics`:
+  - [x] Exposes JSON request body limit.
+  - [x] Exposes effective clipboard body limit (`bytes` + `MiB`) and configured bounds.
+- [x] Strengthened regression coverage in `src/server.migration.test.ts`:
+  - [x] Added deterministic env override (`4 MiB`) for hermetic clipboard-limit contracts.
+  - [x] Added diagnostics assertions for ingress limit telemetry.
+  - [x] Updated oversized binary payload case to validate against configured limit.
+
+### Best-Practice Compliance Delta
+- [x] Clipboard ingress is now configurable for high-scale payloads while remaining bounded for safety.
+- [x] Effective ingress constraints are now observable through runtime diagnostics (operability improvement).
+- [x] Contract tests now lock both behavior and telemetry for the new limit path.
+- [ ] Remaining broader checklist items are unchanged in this slice (mobile physical-device evidence and larger transport/storage refactors).
+
+### Verification Snapshot (2026-03-11)
+- [x] `node node_modules/jest/bin/jest.js src/server.migration.test.ts --runInBand` (**1 suite, 22 tests passed**)
+- [x] Migration matrix equivalent to `npm run test:migration`: **29 suites, 158 tests passed**
+- [x] Full Jest equivalent to `npm test`: **33 suites, 179 tests passed**
+- [x] Build pipeline equivalent to `npm run build` passed.
+- [x] Sidecar pipeline equivalent to `npm run build:sidecar` passed.
+- [x] WASM strict gates equivalent to `npm run test:wasm:parity:gates` passed.
+
+---
+
+# 2026-03-11 v1.0.26
+
+# RISK-CORRECTION EXECUTION UPDATE (GODOT CLIPBOARD BINARY-FIRST MIGRATION + FALLBACK CONTRACT LOCK)
+
+## ENGLISH DOCUMENT
+
+### Remediation Status (This Slice)
+- [x] Completed Godot client clipboard transport migration in `path_mode/scripts/reader_render_client.gd`:
+  - [x] Clipboard upload now prefers `POST /api/clipboard/image-binary` (binary PNG).
+  - [x] Preserved backward compatibility by retaining fallback to `POST /api/clipboard/image` (`pngBase64`).
+  - [x] Added explicit dual-route failure reporting to avoid silent transport ambiguity.
+- [x] Added transport contract enforcement in `src/pathbridge.handshake.contract.test.ts`:
+  - [x] Asserts binary endpoint usage in Godot client code.
+  - [x] Asserts `HTTPRequest.request_raw(...)` binary path is present.
+  - [x] Asserts base64 fallback path is still retained.
+- [x] Preserved rendering/runtime safety boundary:
+  - [x] Godot runtime remains PNG-first.
+  - [x] SVG remains diagnostics-only due to known direct-SVG instability in Godot runtime.
+
+### Best-Practice Compliance Delta
+- [x] Clipboard path now avoids mandatory base64 expansion on the Godot client.
+- [x] Backward compatibility with older sidecars is retained through deterministic fallback behavior.
+- [x] Regression contracts now cover both server-side endpoint behavior and client-side transport intent.
+- [ ] Remaining broader checklist items are unchanged in this slice (mobile physical-device evidence and larger transport/storage refactors).
+
+### Verification Snapshot (2026-03-11)
+- [x] `node node_modules/jest/bin/jest.js src/pathbridge.handshake.contract.test.ts src/server.migration.test.ts --runInBand` (**2 suites, 34 tests passed**)
+- [x] Migration matrix equivalent to `npm run test:migration`: **29 suites, 158 tests passed**
+- [x] Full Jest equivalent to `npm test`: **33 suites, 179 tests passed**
+- [x] Build pipeline equivalent to `npm run build` passed.
+- [x] Sidecar pipeline equivalent to `npm run build:sidecar` passed.
+- [x] WASM strict gates equivalent to `npm run test:wasm:parity:gates` passed.
+
+---
+
+# 2026-03-11 v1.0.25
+
+# RISK-CORRECTION EXECUTION UPDATE (CLIPBOARD BINARY TRANSPORT PATH + PNG VALIDATION HARDENING)
+
+## ENGLISH DOCUMENT
+
+### Remediation Status (This Slice)
+- [x] Added binary clipboard upload path in `src/server.ts`:
+  - [x] New endpoint `POST /api/clipboard/image-binary`.
+  - [x] Accepts `image/png` and `application/octet-stream`.
+  - [x] Uses bounded request-body ingestion with threshold spool-to-disk handling.
+- [x] Hardened payload validation for clipboard ingestion:
+  - [x] Added PNG signature validation before invoking native clipboard bridge.
+  - [x] Applied the same PNG validation guard to existing JSON/base64 endpoint (`/api/clipboard/image`).
+- [x] Added regression evidence:
+  - [x] `src/server.migration.test.ts` now covers binary success, unsupported content-type (`415`), and oversized payload (`413`) contracts.
+
+### Best-Practice Compliance Delta
+- [x] Clipboard transport no longer depends solely on base64 JSON payloads.
+- [x] Request ingress protection (limits + spool + explicit errors) remains enforced for both binary and JSON clipboard routes.
+- [ ] Remaining broader checklist items are unchanged in this slice (mobile physical-device evidence and larger transport/storage refactors).
+
+### Verification Snapshot (2026-03-11)
+- [x] `npx jest src/server.migration.test.ts --runInBand` (**1 suite, 22 tests passed**)
+- [x] `npm run test:migration` (**29 suites, 157 tests passed**)
+- [x] `npm test` (**33 suites, 178 tests passed**)
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+- [x] `npm run test:wasm:parity:gates`
+
+---
+
+# 2026-03-11 v1.0.24
+
+# RISK-CORRECTION EXECUTION UPDATE (SIDECAR SERVER SYNC-FS REMOVAL + CONTRACT GUARD)
+
+## ENGLISH DOCUMENT
+
+### Remediation Status (This Slice)
+- [x] Removed synchronous filesystem operations from `src/server.ts` runtime/request path:
+  - [x] Runtime-data and spool directory provisioning now use `fs.promises.mkdir(...)`.
+  - [x] Sidecar runtime-manifest writes now use `fs.promises.writeFile(...)`.
+  - [x] CLI cache discovery and path fallback resolution now use async helpers.
+- [x] Preserved behavior while hardening robustness:
+  - [x] Runtime manifest and cache-restore flows remain deterministic.
+  - [x] Restore-cache path now ensures writable runtime-data directory before copy.
+  - [x] Godot runtime contract remains PNG-first; no SVG runtime dependency introduced.
+- [x] Added regression contract to prevent reintroduction:
+  - [x] `src/server.migration.test.ts` now verifies `src/server.ts` contains no `fs.*Sync` usage on runtime/request paths.
+
+### Best-Practice Compliance Delta
+- [x] `No synchronous fs.* in server runtime/request path` is now remediated in `src/server.ts`.
+- [ ] Remaining broader checklist items are unchanged in this slice (mobile physical-device evidence and larger transport/storage refactors).
+
+### Verification Snapshot (2026-03-11)
+- [x] `npx jest src/server.migration.test.ts --runInBand` (**1 suite, 19 tests passed**)
+- [x] `npm run test:migration` (**29 suites, 154 tests passed**)
+- [x] `npm test` (**33 suites, 175 tests passed**)
+- [x] `npm run build`
+- [x] `npm run build:sidecar`
+- [x] `npm run test:wasm:parity:gates`
+
+---
+
 # 2026-03-10 v1.0.23
 
 # RISK-CORRECTION EXECUTION UPDATE (WASM TOPOLOGICAL RANK PARITY SLICE + STRICT EXPORT GATE ALIGNMENT)
