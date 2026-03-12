@@ -51,6 +51,8 @@
     "calibrate:graphmetrics:tiering": "node scripts/calibrate-graphmetrics-tiering.js",
     "test:wasm:parity:gates": "npm run verify:wasm:parity:strict && npm run benchmark:wasm:parity:strict:perf",
     "verify:detox:pipeline": "node scripts/verify-detox-pipeline.js",
+    "verify:fixrisk:issues": "node scripts/verify-fixrisk-issues.js",
+    "verify:fixrisk:issues:strict": "node scripts/verify-fixrisk-issues.js --strict-pending",
     "test:e2e:detox": "node scripts/run-detox-e2e.js",
     "test:e2e:detox:run": "node scripts/run-detox-e2e.js --run",
     "verify:privacy:manifest": "node scripts/verify-privacy-manifest.js",

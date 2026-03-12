@@ -36,6 +36,8 @@
 node scripts/verify-detox-pipeline.js
 node scripts/verify-privacy-manifest.js
 node scripts/verify-sidecar-signatures.js --contract-only
+node scripts/verify-fixrisk-issues.js
+node scripts/verify-fixrisk-issues.js --strict-pending
 node node_modules/typescript/bin/tsc --noEmit
 node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" run test:migration
 node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" run test:gates

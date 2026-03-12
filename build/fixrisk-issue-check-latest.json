@@ -1,0 +1,798 @@
+{
+  "generatedAt": "2026-03-12T04:37:27.720Z",
+  "completedAt": "2026-03-12T04:37:39.763Z",
+  "source": [
+    "docs/en/fixrisk_TODO.md",
+    "docs/zh/fixrisk_TODO.md"
+  ],
+  "options": {
+    "strictPending": false,
+    "writeDatedSnapshot": true
+  },
+  "contractSuite": {
+    "tests": [
+      "src/runtime.spool.policy.contract.test.ts",
+      "src/pkg.sidecar.contract.test.ts",
+      "src/mobile.pipeline.test.ts",
+      "src/pkg.snapshot.safety.contract.test.ts",
+      "src/runtime.heap.policy.contract.test.ts",
+      "src/sidecar.signature.contract.test.ts",
+      "src/graph.accessibility.contract.test.ts",
+      "src/privacy.manifest.contract.test.ts",
+      "src/capacitor.evidence.contract.test.ts",
+      "src/tauri.test.runner.contract.test.ts"
+    ],
+    "jestReportPath": "build/fixrisk-jest-contract-report.json",
+    "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\node_modules\\jest\\bin\\jest.js --runInBand --json --outputFile=E:\\Knowledge_project\\NoteConnection_app\\build\\fixrisk-jest-contract-report.json src/runtime.spool.policy.contract.test.ts src/pkg.sidecar.contract.test.ts src/mobile.pipeline.test.ts src/pkg.snapshot.safety.contract.test.ts src/runtime.heap.policy.contract.test.ts src/sidecar.signature.contract.test.ts src/graph.accessibility.contract.test.ts src/privacy.manifest.contract.test.ts src/capacitor.evidence.contract.test.ts src/tauri.test.runner.contract.test.ts",
+    "ok": true,
+    "exitCode": 0,
+    "durationMs": 8188
+  },
+  "issues": [
+    {
+      "id": "FR-001",
+      "status": "verified-closed",
+      "pendingReason": null,
+      "checks": [
+        {
+          "name": "Contract test src/runtime.spool.policy.contract.test.ts",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Jest status: passed"
+        },
+        {
+          "name": "EN issue row FR-001 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed (code)"
+        },
+        {
+          "name": "ZH issue row FR-001 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed（代码）"
+        },
+        {
+          "name": "EN/ZH status marker parity FR-001",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "EN=Closed (code) (closed) | ZH=Closed（代码） (closed)"
+        }
+      ],
+      "verification": [
+        "PASS Contract test src/runtime.spool.policy.contract.test.ts: Jest status: passed",
+        "PASS EN issue row FR-001 present: Closed (code)",
+        "PASS ZH issue row FR-001 present: Closed（代码）",
+        "PASS EN/ZH status marker parity FR-001: EN=Closed (code) (closed) | ZH=Closed（代码） (closed)"
+      ],
+      "passedChecks": 4,
+      "totalChecks": 4
+    },
+    {
+      "id": "FR-002",
+      "status": "verified-closed",
+      "pendingReason": null,
+      "checks": [
+        {
+          "name": "Contract test src/pkg.sidecar.contract.test.ts",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Jest status: passed"
+        },
+        {
+          "name": "package.json excludes legacy pkg dependency",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "No legacy pkg dependency found"
+        },
+        {
+          "name": "package.json includes @yao-pkg/pkg devDependency",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "@yao-pkg/pkg devDependency present"
+        },
+        {
+          "name": "EN issue row FR-002 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed (code)"
+        },
+        {
+          "name": "ZH issue row FR-002 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed（代码）"
+        },
+        {
+          "name": "EN/ZH status marker parity FR-002",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "EN=Closed (code) (closed) | ZH=Closed（代码） (closed)"
+        }
+      ],
+      "verification": [
+        "PASS Contract test src/pkg.sidecar.contract.test.ts: Jest status: passed",
+        "PASS package.json excludes legacy pkg dependency: No legacy pkg dependency found",
+        "PASS package.json includes @yao-pkg/pkg devDependency: @yao-pkg/pkg devDependency present",
+        "PASS EN issue row FR-002 present: Closed (code)",
+        "PASS ZH issue row FR-002 present: Closed（代码）",
+        "PASS EN/ZH status marker parity FR-002: EN=Closed (code) (closed) | ZH=Closed（代码） (closed)"
+      ],
+      "passedChecks": 6,
+      "totalChecks": 6
+    },
+    {
+      "id": "FR-003",
+      "status": "verified-closed",
+      "pendingReason": null,
+      "checks": [
+        {
+          "name": "Contract test src/mobile.pipeline.test.ts",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Jest status: passed"
+        },
+        {
+          "name": "capacitor.config.ts sets hostname localhost",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "hostname should be localhost"
+        },
+        {
+          "name": "capacitor.config.ts enables cleartext",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "cleartext should be true for local loopback transport"
+        },
+        {
+          "name": "capacitor.config.ts allowNavigation includes localhost/127.0.0.1",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "allowNavigation should include localhost and 127.0.0.1"
+        },
+        {
+          "name": "EN issue row FR-003 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed (code)"
+        },
+        {
+          "name": "ZH issue row FR-003 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed（代码）"
+        },
+        {
+          "name": "EN/ZH status marker parity FR-003",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "EN=Closed (code) (closed) | ZH=Closed（代码） (closed)"
+        }
+      ],
+      "verification": [
+        "PASS Contract test src/mobile.pipeline.test.ts: Jest status: passed",
+        "PASS capacitor.config.ts sets hostname localhost: hostname should be localhost",
+        "PASS capacitor.config.ts enables cleartext: cleartext should be true for local loopback transport",
+        "PASS capacitor.config.ts allowNavigation includes localhost/127.0.0.1: allowNavigation should include localhost and 127.0.0.1",
+        "PASS EN issue row FR-003 present: Closed (code)",
+        "PASS ZH issue row FR-003 present: Closed（代码）",
+        "PASS EN/ZH status marker parity FR-003: EN=Closed (code) (closed) | ZH=Closed（代码） (closed)"
+      ],
+      "passedChecks": 7,
+      "totalChecks": 7
+    },
+    {
+      "id": "FR-004",
+      "status": "verified-closed",
+      "pendingReason": null,
+      "checks": [
+        {
+          "name": "Contract test src/pkg.snapshot.safety.contract.test.ts",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Jest status: passed"
+        },
+        {
+          "name": "EN issue row FR-004 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed (code)"
+        },
+        {
+          "name": "ZH issue row FR-004 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed（代码）"
+        },
+        {
+          "name": "EN/ZH status marker parity FR-004",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "EN=Closed (code) (closed) | ZH=Closed（代码） (closed)"
+        }
+      ],
+      "verification": [
+        "PASS Contract test src/pkg.snapshot.safety.contract.test.ts: Jest status: passed",
+        "PASS EN issue row FR-004 present: Closed (code)",
+        "PASS ZH issue row FR-004 present: Closed（代码）",
+        "PASS EN/ZH status marker parity FR-004: EN=Closed (code) (closed) | ZH=Closed（代码） (closed)"
+      ],
+      "passedChecks": 4,
+      "totalChecks": 4
+    },
+    {
+      "id": "FR-005",
+      "status": "verified-closed",
+      "pendingReason": null,
+      "checks": [
+        {
+          "name": "Contract test src/runtime.heap.policy.contract.test.ts",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Jest status: passed"
+        },
+        {
+          "name": "EN issue row FR-005 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed (code)"
+        },
+        {
+          "name": "ZH issue row FR-005 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed（代码）"
+        },
+        {
+          "name": "EN/ZH status marker parity FR-005",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "EN=Closed (code) (closed) | ZH=Closed（代码） (closed)"
+        }
+      ],
+      "verification": [
+        "PASS Contract test src/runtime.heap.policy.contract.test.ts: Jest status: passed",
+        "PASS EN issue row FR-005 present: Closed (code)",
+        "PASS ZH issue row FR-005 present: Closed（代码）",
+        "PASS EN/ZH status marker parity FR-005: EN=Closed (code) (closed) | ZH=Closed（代码） (closed)"
+      ],
+      "passedChecks": 4,
+      "totalChecks": 4
+    },
+    {
+      "id": "FR-006",
+      "status": "verified-closed",
+      "pendingReason": null,
+      "checks": [
+        {
+          "name": "Contract test src/sidecar.signature.contract.test.ts",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Jest status: passed"
+        },
+        {
+          "name": "verify-sidecar-signatures --contract-only",
+          "ok": true,
+          "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-sidecar-signatures.js --contract-only",
+          "exitCode": 0,
+          "durationMs": 123,
+          "detail": "Contract-only sidecar signature gate passed"
+        },
+        {
+          "name": "EN issue row FR-006 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed (policy gate)"
+        },
+        {
+          "name": "ZH issue row FR-006 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed（策略闸门）"
+        },
+        {
+          "name": "EN/ZH status marker parity FR-006",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "EN=Closed (policy gate) (closed) | ZH=Closed（策略闸门） (closed)"
+        }
+      ],
+      "verification": [
+        "PASS Contract test src/sidecar.signature.contract.test.ts: Jest status: passed",
+        "PASS verify-sidecar-signatures --contract-only: Contract-only sidecar signature gate passed",
+        "PASS EN issue row FR-006 present: Closed (policy gate)",
+        "PASS ZH issue row FR-006 present: Closed（策略闸门）",
+        "PASS EN/ZH status marker parity FR-006: EN=Closed (policy gate) (closed) | ZH=Closed（策略闸门） (closed)"
+      ],
+      "passedChecks": 5,
+      "totalChecks": 5
+    },
+    {
+      "id": "FR-007",
+      "status": "verified-closed",
+      "pendingReason": null,
+      "checks": [
+        {
+          "name": "Contract test src/graph.accessibility.contract.test.ts",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Jest status: passed"
+        },
+        {
+          "name": "EN issue row FR-007 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed (code)"
+        },
+        {
+          "name": "ZH issue row FR-007 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed（代码）"
+        },
+        {
+          "name": "EN/ZH status marker parity FR-007",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "EN=Closed (code) (closed) | ZH=Closed（代码） (closed)"
+        }
+      ],
+      "verification": [
+        "PASS Contract test src/graph.accessibility.contract.test.ts: Jest status: passed",
+        "PASS EN issue row FR-007 present: Closed (code)",
+        "PASS ZH issue row FR-007 present: Closed（代码）",
+        "PASS EN/ZH status marker parity FR-007: EN=Closed (code) (closed) | ZH=Closed（代码） (closed)"
+      ],
+      "passedChecks": 4,
+      "totalChecks": 4
+    },
+    {
+      "id": "FR-008",
+      "status": "verified-closed",
+      "pendingReason": null,
+      "checks": [
+        {
+          "name": "Contract test src/privacy.manifest.contract.test.ts",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Jest status: passed"
+        },
+        {
+          "name": "verify-privacy-manifest",
+          "ok": true,
+          "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-privacy-manifest.js",
+          "exitCode": 0,
+          "durationMs": 126,
+          "detail": "Privacy manifest verifier passed"
+        },
+        {
+          "name": "EN issue row FR-008 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed (code)"
+        },
+        {
+          "name": "ZH issue row FR-008 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed（代码）"
+        },
+        {
+          "name": "EN/ZH status marker parity FR-008",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "EN=Closed (code) (closed) | ZH=Closed（代码） (closed)"
+        }
+      ],
+      "verification": [
+        "PASS Contract test src/privacy.manifest.contract.test.ts: Jest status: passed",
+        "PASS verify-privacy-manifest: Privacy manifest verifier passed",
+        "PASS EN issue row FR-008 present: Closed (code)",
+        "PASS ZH issue row FR-008 present: Closed（代码）",
+        "PASS EN/ZH status marker parity FR-008: EN=Closed (code) (closed) | ZH=Closed（代码） (closed)"
+      ],
+      "passedChecks": 5,
+      "totalChecks": 5
+    },
+    {
+      "id": "FR-009",
+      "status": "verified-pending",
+      "pendingReason": "Operational evidence pending: docs/mobile-evidence is missing or stale.",
+      "checks": [
+        {
+          "name": "Contract test src/capacitor.evidence.contract.test.ts",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Jest status: passed"
+        },
+        {
+          "name": "verify-capacitor-evidence-freshness",
+          "ok": true,
+          "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-capacitor-evidence-freshness.js",
+          "exitCode": 1,
+          "durationMs": 130,
+          "detail": "Accepted pending state: evidence root not found. [Capacitor Evidence Verify] Evidence verification failed.\n[Capacitor Evidence Verify] Error: Evidence root not found: E:\\Knowledge_project\\NoteConnection_app\\docs\\mobile-evidence"
+        },
+        {
+          "name": "EN issue row FR-009 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed (tooling); Pending (ops evidence)"
+        },
+        {
+          "name": "ZH issue row FR-009 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed（工具）；Pending（运维证据）"
+        },
+        {
+          "name": "EN/ZH status marker parity FR-009",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "EN=Closed (tooling); Pending (ops evidence) (closed+pending) | ZH=Closed（工具）；Pending（运维证据） (closed+pending)"
+        }
+      ],
+      "verification": [
+        "PASS Contract test src/capacitor.evidence.contract.test.ts: Jest status: passed",
+        "PASS verify-capacitor-evidence-freshness: Accepted pending state: evidence root not found. [Capacitor Evidence Verify] Evidence verification failed.\n[Capacitor Evidence Verify] Error: Evidence root not found: E:\\Knowledge_project\\NoteConnection_app\\docs\\mobile-evidence",
+        "PASS EN issue row FR-009 present: Closed (tooling); Pending (ops evidence)",
+        "PASS ZH issue row FR-009 present: Closed（工具）；Pending（运维证据）",
+        "PASS EN/ZH status marker parity FR-009: EN=Closed (tooling); Pending (ops evidence) (closed+pending) | ZH=Closed（工具）；Pending（运维证据） (closed+pending)"
+      ],
+      "passedChecks": 5,
+      "totalChecks": 5
+    },
+    {
+      "id": "FR-010",
+      "status": "verified-closed",
+      "pendingReason": null,
+      "checks": [
+        {
+          "name": "Workflow files discovered",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "migration-gates.yml, mobile-e2e-detox-contracts.yml, npm-publish.yml, version-check.yml, wasm-parity-benchmark-snapshots.yml"
+        },
+        {
+          "name": "migration-gates.yml: checkout action uses v5",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/checkout@v5 configured"
+        },
+        {
+          "name": "migration-gates.yml: setup-node action uses v5",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/setup-node@v5 configured"
+        },
+        {
+          "name": "migration-gates.yml: Node24 force flag set",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present"
+        },
+        {
+          "name": "mobile-e2e-detox-contracts.yml: checkout action uses v5",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/checkout@v5 configured"
+        },
+        {
+          "name": "mobile-e2e-detox-contracts.yml: setup-node action uses v5",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/setup-node@v5 configured"
+        },
+        {
+          "name": "mobile-e2e-detox-contracts.yml: Node24 force flag set",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present"
+        },
+        {
+          "name": "npm-publish.yml: checkout action uses v5",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/checkout@v5 configured"
+        },
+        {
+          "name": "npm-publish.yml: setup-node action uses v5",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/setup-node@v5 configured"
+        },
+        {
+          "name": "npm-publish.yml: Node24 force flag set",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present"
+        },
+        {
+          "name": "version-check.yml: checkout action uses v5",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/checkout@v5 configured"
+        },
+        {
+          "name": "version-check.yml: Node24 force flag set",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present"
+        },
+        {
+          "name": "wasm-parity-benchmark-snapshots.yml: checkout action uses v5",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/checkout@v5 configured"
+        },
+        {
+          "name": "wasm-parity-benchmark-snapshots.yml: setup-node action uses v5",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/setup-node@v5 configured"
+        },
+        {
+          "name": "wasm-parity-benchmark-snapshots.yml: Node24 force flag set",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present"
+        },
+        {
+          "name": "EN issue row FR-010 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed (pipeline)"
+        },
+        {
+          "name": "ZH issue row FR-010 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed（流水线）"
+        },
+        {
+          "name": "EN/ZH status marker parity FR-010",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "EN=Closed (pipeline) (closed) | ZH=Closed（流水线） (closed)"
+        }
+      ],
+      "verification": [
+        "PASS Workflow files discovered: migration-gates.yml, mobile-e2e-detox-contracts.yml, npm-publish.yml, version-check.yml, wasm-parity-benchmark-snapshots.yml",
+        "PASS migration-gates.yml: checkout action uses v5: actions/checkout@v5 configured",
+        "PASS migration-gates.yml: setup-node action uses v5: actions/setup-node@v5 configured",
+        "PASS migration-gates.yml: Node24 force flag set: FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present",
+        "PASS mobile-e2e-detox-contracts.yml: checkout action uses v5: actions/checkout@v5 configured",
+        "PASS mobile-e2e-detox-contracts.yml: setup-node action uses v5: actions/setup-node@v5 configured",
+        "PASS mobile-e2e-detox-contracts.yml: Node24 force flag set: FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present",
+        "PASS npm-publish.yml: checkout action uses v5: actions/checkout@v5 configured",
+        "PASS npm-publish.yml: setup-node action uses v5: actions/setup-node@v5 configured",
+        "PASS npm-publish.yml: Node24 force flag set: FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present",
+        "PASS version-check.yml: checkout action uses v5: actions/checkout@v5 configured",
+        "PASS version-check.yml: Node24 force flag set: FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present",
+        "PASS wasm-parity-benchmark-snapshots.yml: checkout action uses v5: actions/checkout@v5 configured",
+        "PASS wasm-parity-benchmark-snapshots.yml: setup-node action uses v5: actions/setup-node@v5 configured",
+        "PASS wasm-parity-benchmark-snapshots.yml: Node24 force flag set: FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present",
+        "PASS EN issue row FR-010 present: Closed (pipeline)",
+        "PASS ZH issue row FR-010 present: Closed（流水线）",
+        "PASS EN/ZH status marker parity FR-010: EN=Closed (pipeline) (closed) | ZH=Closed（流水线） (closed)"
+      ],
+      "passedChecks": 18,
+      "totalChecks": 18
+    },
+    {
+      "id": "FR-011",
+      "status": "verified-pending",
+      "pendingReason": "Host provisioning pending: Java 21 toolchain availability is required.",
+      "checks": [
+        {
+          "name": "Contract test src/tauri.test.runner.contract.test.ts",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Jest status: passed"
+        },
+        {
+          "name": "verify-tauri-android-prereqs",
+          "ok": true,
+          "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-tauri-android-prereqs.js",
+          "exitCode": 1,
+          "durationMs": 3337,
+          "detail": "Accepted pending state: needs java 21 toolchain availability. [Android Env] Active javac version is 23.0.1 (major 23), but this project needs Java 21 toolchain availability.\n[Android Env] Gradle wrapper probe did not find a Java 21 toolchain.\n[Android Env] Install JDK 21 and set JAVA_HOME to that installation before running Android builds."
+        },
+        {
+          "name": "EN issue row FR-011 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed (code gate); Pending (host provisioning)"
+        },
+        {
+          "name": "ZH issue row FR-011 present",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Closed（代码闸门）；Pending（主机环境）"
+        },
+        {
+          "name": "EN/ZH status marker parity FR-011",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "EN=Closed (code gate); Pending (host provisioning) (closed+pending) | ZH=Closed（代码闸门）；Pending（主机环境） (closed+pending)"
+        }
+      ],
+      "verification": [
+        "PASS Contract test src/tauri.test.runner.contract.test.ts: Jest status: passed",
+        "PASS verify-tauri-android-prereqs: Accepted pending state: needs java 21 toolchain availability. [Android Env] Active javac version is 23.0.1 (major 23), but this project needs Java 21 toolchain availability.\n[Android Env] Gradle wrapper probe did not find a Java 21 toolchain.\n[Android Env] Install JDK 21 and set JAVA_HOME to that installation before running Android builds.",
+        "PASS EN issue row FR-011 present: Closed (code gate); Pending (host provisioning)",
+        "PASS ZH issue row FR-011 present: Closed（代码闸门）；Pending（主机环境）",
+        "PASS EN/ZH status marker parity FR-011: EN=Closed (code gate); Pending (host provisioning) (closed+pending) | ZH=Closed（代码闸门）；Pending（主机环境） (closed+pending)"
+      ],
+      "passedChecks": 5,
+      "totalChecks": 5
+    }
+  ],
+  "nonIssueChecks": [
+    {
+      "name": "verify-detox-pipeline",
+      "ok": true,
+      "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-detox-pipeline.js",
+      "exitCode": 0,
+      "durationMs": 130,
+      "detail": "Detox pipeline verifier passed"
+    },
+    {
+      "name": "Fixrisk contract Jest aggregate command succeeded",
+      "ok": true,
+      "command": null,
+      "exitCode": 0,
+      "durationMs": 0,
+      "detail": "Jest suite passed (10 files)"
+    },
+    {
+      "name": "No unexpected FR IDs in EN/ZH issue tables",
+      "ok": true,
+      "command": null,
+      "exitCode": 0,
+      "durationMs": 0,
+      "detail": "No unexpected IDs found"
+    }
+  ],
+  "overall": {
+    "issueCount": 11,
+    "passedIssueCount": 9,
+    "pendingIssueCount": 2,
+    "failedIssueCount": 0,
+    "failedIssues": [],
+    "pendingIssues": [
+      "FR-009",
+      "FR-011"
+    ],
+    "allCodeLevelIssuesClosed": true,
+    "pendingOperationalBlocker": "FR-009, FR-011",
+    "totalChecks": 70,
+    "passedChecks": 70
+  }
+}
