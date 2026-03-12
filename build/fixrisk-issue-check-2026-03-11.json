@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-11T12:41:55.221Z",
+  "generatedAt": "2026-03-11T14:43:33.142Z",
   "source": [
     "docs/en/fixrisk_TODO.md",
     "docs/zh/fixrisk_TODO.md"
@@ -82,17 +82,18 @@
     },
     {
       "id": "FR-011",
-      "status": "closed-code-gate",
+      "status": "code-closed-host-pending",
       "verification": [
         "src/tauri.test.runner.contract.test.ts passed",
-        "build_apk.bat now requires JDK 21+ and uses npx cap sync android",
-        "node scripts/verify-tauri-android-prereqs.js passed (JDK 23 on current host)",
-        "node scripts/run-tauri-tests.js produced local degraded OOM report with strict-mode support"
+        "node scripts/verify-tauri-android-prereqs.js currently fails on this host: Java 21 toolchain not detected (javac=23)",
+        "build_apk.bat now fails fast with explicit Java 21 requirement before Gradle stage",
+        "build/tauri-test-verification-strict.json reports failed-oom in strict mode on current host",
+        "build/tauri-test-verification-nonstrict.json reports degraded-oom in non-strict mode on current host"
       ]
     }
   ],
   "overall": {
     "allCodeLevelIssuesClosed": true,
-    "remainingOperationalBlocker": "FR-009 physical large-graph device evidence capture"
+    "remainingOperationalBlocker": "FR-009 physical large-graph device evidence capture; FR-011 host provisioning for Java 21 toolchain and stable strict Tauri Rust compile memory"
   }
 }

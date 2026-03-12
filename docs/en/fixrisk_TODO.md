@@ -15,7 +15,7 @@ This document tracks only real, currently verifiable risks. Items are marked `Cl
 | FR-005 | Hard-coded 12GB startup heap (`--max-old-space-size=12288`) | High | Closed (code) | Startup now uses adaptive memory policy + workload hints (`scripts/start-server.js`, `scripts/lib/runtime-memory-policy.js`) with contract test (`src/runtime.heap.policy.contract.test.ts`). |
 | FR-006 | No enforceable signed-sidecar gate policy in CI/release | Medium | Closed (policy gate) | Added `scripts/verify-sidecar-signatures.js`, package script `verify:sidecar:signatures`, CI contract wiring in `.github/workflows/migration-gates.yml` and `.github/workflows/npm-publish.yml`, plus tests (`src/sidecar.signature.contract.test.ts`). |
 | FR-010 | GitHub Actions Node 20 JavaScript action runtime deprecation warning | Medium | Closed (pipeline) | Workflows moved to `actions/checkout@v5` + `actions/setup-node@v5` and set `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"` in all active workflows. |
-| FR-011 | Android/Tauri toolchain feasibility drift (JDK mismatch + unconstrained local Rust OOM) | High | Closed (code + gate policy) | Android prerequisite verifier now enforces JDK 21+ (`scripts/verify-tauri-android-prereqs.js`), Capacitor Android build uses Android-only sync (`build_apk.bat`), and Tauri Rust tests run via resource-aware wrapper (`scripts/run-tauri-tests.js`) with strict CI fail + local degraded diagnostic report (`build/tauri-test-verification-latest.json`). |
+| FR-011 | Android/Tauri toolchain feasibility drift (JDK mismatch + unconstrained local Rust OOM) | High | Closed (code gate); Pending (host provisioning) | Android prerequisite verifier now enforces Java 21 toolchain availability (`scripts/verify-tauri-android-prereqs.js`), Capacitor Android build uses Android-only sync (`build_apk.bat`), and Tauri Rust tests run via resource-aware wrapper (`scripts/run-tauri-tests.js`) with strict/non-strict diagnostic reports (`build/tauri-test-verification-strict.json`, `build/tauri-test-verification-nonstrict.json`). |
 | FR-007 | Canvas graph semantics inaccessible to assistive tech | Critical | Closed (code) | Accessibility contract exists and is in migration gate set (`src/graph.accessibility.contract.test.ts`). |
 | FR-008 | Privacy manifest compliance gate missing | Critical | Closed (code) | iOS privacy manifest + verifier + contract are active (`ios/App/PrivacyInfo.xcprivacy`, `scripts/verify-privacy-manifest.js`, `src/privacy.manifest.contract.test.ts`). |
 | FR-009 | Physical-device evidence not explicitly tied to large-graph threshold | High | Closed (tooling); Pending (ops evidence) | Evidence schema now includes workload node/edge counts (`scripts/capture-capacitor-device-evidence.js`) and strict large-graph verifier controls (`scripts/verify-capacitor-evidence-freshness.js`) with contract tests (`src/capacitor.evidence.contract.test.ts`). Real device evidence still requires manual run. |
@@ -28,6 +28,8 @@ The only remaining blocker is operational, not code completeness:
    - `NOTE_CONNECTION_REQUIRE_LARGE_GRAPH_EVIDENCE=1`
    - `NOTE_CONNECTION_MIN_EVIDENCE_NODE_COUNT=10000`
    - `NOTE_CONNECTION_MIN_EVIDENCE_EDGE_COUNT=1000000`
+3. Provision Java 21 toolchain on host/CI runners used for Android builds (current host only has JDK 23).
+4. Use a higher-memory runner for strict Tauri Rust compilation or keep strict mode in CI where memory budget is controlled.
 
 ## Commands (Verification Baseline)
 ```bash
@@ -51,7 +53,7 @@ node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" run test:tauri
 | Mobile E2E/contract baseline | ✅ | Detox + privacy + mobile pipeline verifiers wired. |
 | Accessibility contract | ✅ | Graph accessibility contract in migration suite. |
 | Release signing policy gate | ✅ | Signature verifier script + CI contract wiring present. |
-| Android/Tauri toolchain guardrails | ✅ | Enforced JDK 21+, Android-only Capacitor sync, and memory-aware Tauri runner with strict CI mode. |
+| Android/Tauri toolchain guardrails | ⚠️ | Guardrails are implemented; this host still needs Java 21 toolchain and stable memory headroom for strict Tauri Rust builds. |
 | Real large-graph device evidence | ⚠️ | Tooling complete; physical evidence capture still required. |
 diff --git a/e:\Knowledge_project\NoteConnection_app\docs\en\fixrisk_TODO.md b/e:\Knowledge_project\NoteConnection_app\docs\en\fixrisk_TODO.md
 deleted file mode 100644

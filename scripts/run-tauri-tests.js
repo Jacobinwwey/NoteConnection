@@ -63,6 +63,7 @@ function isLikelyOutOfMemoryFailure(stdout, stderr, errorMessage) {
   const markers = [
     'out of memory',
     'not enough memory',
+    'memory allocation of',
     'allocation failed',
     'fatal runtime error',
     'os error 1455',
@@ -81,6 +82,8 @@ function main() {
     ...process.env,
     CARGO_BUILD_JOBS: String(cargoJobs),
     CARGO_INCREMENTAL: process.env.CARGO_INCREMENTAL || '0',
+    CARGO_PROFILE_DEV_DEBUG: process.env.CARGO_PROFILE_DEV_DEBUG || '0',
+    CARGO_PROFILE_TEST_DEBUG: process.env.CARGO_PROFILE_TEST_DEBUG || '0',
     RUSTFLAGS: appendRustflagsForLowMemory(process.env.RUSTFLAGS)
   };
 

@@ -138,6 +138,52 @@ function detectJavacVersion() {
   };
 }
 
+function probeGradleJava21Toolchain(repoRoot) {
+  const androidRoot = path.join(repoRoot, 'android');
+  const gradlewName = process.platform === 'win32' ? 'gradlew.bat' : 'gradlew';
+  const gradlewPath = path.join(androidRoot, gradlewName);
+
+  if (!fs.existsSync(gradlewPath)) {
+    return {
+      checked: false,
+      available: false,
+      reason: `Missing Gradle wrapper: ${gradlewPath}`
+    };
+  }
+
+  const result = spawnSync(gradlewPath, ['-q', 'javaToolchains'], {
+    cwd: androidRoot,
+    encoding: 'utf8',
+    shell: process.platform === 'win32'
+  });
+
+  const stdout = String(result.stdout || '');
+  const stderr = String(result.stderr || '');
+  const output = `${stdout}\n${stderr}`;
+
+  if (result.error) {
+    return {
+      checked: false,
+      available: false,
+      reason: result.error.message
+    };
+  }
+
+  if (typeof result.status === 'number' && result.status !== 0) {
+    return {
+      checked: false,
+      available: false,
+      reason: output.trim() || `gradle javaToolchains probe exited with code ${result.status}`
+    };
+  }
+
+  return {
+    checked: true,
+    available: /Language Version:\s*21\b/i.test(output),
+    reason: ''
+  };
+}
+
 const javac = detectJavacVersion();
 if (!javac.available) {
   fail([
@@ -150,8 +196,23 @@ if (!javac.available) {
 if (javac.major < 21) {
   fail([
     `[Android Env] Unsupported JDK detected: ${javac.version} (major ${javac.major}).`,
-    '[Android Env] Tauri Android and Gradle toolchain in this project require JDK 21+.',
-    '[Android Env] Install JDK 21+ and point JAVA_HOME to that installation before retrying.'
+    '[Android Env] Tauri Android and Gradle toolchain in this project require Java 21.',
+    '[Android Env] Install JDK 21 and point JAVA_HOME to that installation before retrying.'
+  ]);
+}
+
+const repoRoot = path.resolve(__dirname, '..');
+const gradleJava21 = probeGradleJava21Toolchain(repoRoot);
+
+if (javac.major !== 21 && !gradleJava21.available) {
+  const details = gradleJava21.checked
+    ? 'Gradle wrapper probe did not find a Java 21 toolchain.'
+    : `Gradle wrapper probe failed: ${gradleJava21.reason}`;
+
+  fail([
+    `[Android Env] Active javac version is ${javac.version} (major ${javac.major}), but this project needs Java 21 toolchain availability.`,
+    `[Android Env] ${details}`,
+    '[Android Env] Install JDK 21 and set JAVA_HOME to that installation before running Android builds.'
   ]);
 }
 
@@ -214,4 +275,5 @@ console.log(`[Android Env] SDK root: ${sdkRoot}`);
 console.log(`[Android Env] sdkmanager: ${sdkManager}`);
 console.log(`[Android Env] NDK: ${ndkPath}`);
 console.log(`[Android Env] JDK: ${javac.version} (major ${javac.major})`);
+console.log(`[Android Env] Java 21 Toolchain: ${gradleJava21.available ? 'available' : 'not-detected'}`);
 console.log('[Android Env] Prerequisite check passed.');

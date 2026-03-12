@@ -28,19 +28,23 @@ describe('tauri runner and android prereq contracts', () => {
     expect(source).toContain("['test', '--manifest-path', cargoManifestPath, '-j'");
     expect(source).toContain('CARGO_BUILD_JOBS');
     expect(source).toContain('CARGO_INCREMENTAL');
+    expect(source).toContain('CARGO_PROFILE_DEV_DEBUG');
+    expect(source).toContain('CARGO_PROFILE_TEST_DEBUG');
     expect(source).toContain('NOTE_CONNECTION_TAURI_TEST_STRICT');
     expect(source).toContain("process.env.CI === 'true'");
+    expect(source).toContain('memory allocation of');
     expect(source).toContain('degraded-oom');
     expect(source).toContain('failed-oom');
   });
 
-  test('android prereq verifier enforces JDK 21+ before SDK checks', () => {
+  test('android prereq verifier enforces Java 21 toolchain availability before SDK checks', () => {
     const source = fs.readFileSync(androidPrereqPath, 'utf8');
 
     expect(source).toContain("spawnSync('javac', ['-version']");
     expect(source).toContain('parseJavaMajorVersion');
     expect(source).toContain('if (javac.major < 21)');
-    expect(source).toContain('require JDK 21+');
+    expect(source).toContain('probeGradleJava21Toolchain');
+    expect(source).toContain('needs Java 21 toolchain availability');
     expect(source).toContain('JDK: ${javac.version}');
   });
 });
