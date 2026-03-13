@@ -12,6 +12,8 @@ const jestJsonReportPath = path.join(buildDir, 'fixrisk-jest-contract-report.jso
 
 const EN_DOC_PATH = path.join(repoRoot, 'docs', 'en', 'fixrisk_TODO.md');
 const ZH_DOC_PATH = path.join(repoRoot, 'docs', 'zh', 'fixrisk_TODO.md');
+const MIGRATION_GATES_WORKFLOW_PATH = path.join(repoRoot, '.github', 'workflows', 'migration-gates.yml');
+const NPM_PUBLISH_WORKFLOW_PATH = path.join(repoRoot, '.github', 'workflows', 'npm-publish.yml');
 
 const REQUIRED_FR_IDS = [
   'FR-001',
@@ -24,7 +26,9 @@ const REQUIRED_FR_IDS = [
   'FR-008',
   'FR-009',
   'FR-010',
-  'FR-011'
+  'FR-011',
+  'FR-012',
+  'FR-013'
 ];
 
 const CONTRACT_TEST_FILES = [
@@ -36,6 +40,10 @@ const CONTRACT_TEST_FILES = [
   'src/sidecar.signature.contract.test.ts',
   'src/graph.accessibility.contract.test.ts',
   'src/privacy.manifest.contract.test.ts',
+  'src/server.port.fallback.contract.test.ts',
+  'src/sbom.policy.contract.test.ts',
+  'src/sbom.attestation.policy.contract.test.ts',
+  'src/pathbridge.strict.policy.contract.test.ts',
   'src/capacitor.evidence.contract.test.ts',
   'src/tauri.test.runner.contract.test.ts'
 ];
@@ -155,10 +163,11 @@ function parseFixriskIssueRows(docText) {
   const rows = {};
   const lines = docText.split(/\r?\n/);
   for (const line of lines) {
-    if (!line.startsWith('| FR-')) {
+    const normalizedLine = line.replace(/\*\*/g, '');
+    if (!normalizedLine.startsWith('| FR-')) {
       continue;
     }
-    const cells = line.split('|').map((cell) => cell.trim()).filter((cell) => cell.length > 0);
+    const cells = normalizedLine.split('|').map((cell) => cell.trim()).filter((cell) => cell.length > 0);
     if (cells.length < 4) {
       continue;
     }
@@ -414,6 +423,232 @@ function checkCapacitorLoopbackPolicy() {
   ];
 }
 
+function checkMigrationGatesJava21Provisioning() {
+  const checks = [];
+  if (!fs.existsSync(MIGRATION_GATES_WORKFLOW_PATH)) {
+    checks.push(
+      makeStaticCheck(
+        'migration-gates workflow exists',
+        false,
+        `${MIGRATION_GATES_WORKFLOW_PATH} is missing`
+      )
+    );
+    return checks;
+  }
+
+  const source = readText(MIGRATION_GATES_WORKFLOW_PATH);
+  checks.push(
+    makeStaticCheck(
+      'migration-gates tauri-rust-suite uses actions/setup-java@v5',
+      source.includes('uses: actions/setup-java@v5'),
+      source.includes('uses: actions/setup-java@v5')
+        ? 'actions/setup-java@v5 detected'
+        : 'actions/setup-java@v5 not found in migration-gates tauri-rust setup'
+    )
+  );
+  checks.push(
+    makeStaticCheck(
+      'migration-gates tauri-rust-suite pins java-version 21',
+      /java-version:\s*['"]?21['"]?/i.test(source),
+      /java-version:\s*['"]?21['"]?/i.test(source)
+        ? 'java-version 21 detected'
+        : 'Expected java-version: 21 in migration-gates tauri-rust setup'
+    )
+  );
+  checks.push(
+    makeStaticCheck(
+      'migration-gates Java setup is scoped to tauri-rust-suite',
+      source.includes("if: matrix.suite == 'tauri-rust-suite'"),
+      source.includes("if: matrix.suite == 'tauri-rust-suite'")
+        ? 'Conditional suite scoping detected'
+        : "Missing if: matrix.suite == 'tauri-rust-suite' scope"
+    )
+  );
+
+  return checks;
+}
+
+function checkSbomAttestationReleaseSignaturePolicy() {
+  const checks = [];
+  if (!fs.existsSync(NPM_PUBLISH_WORKFLOW_PATH)) {
+    checks.push(
+      makeStaticCheck(
+        'npm-publish workflow exists',
+        false,
+        `${NPM_PUBLISH_WORKFLOW_PATH} is missing`
+      )
+    );
+    return checks;
+  }
+
+  const source = readText(NPM_PUBLISH_WORKFLOW_PATH);
+  checks.push(
+    makeStaticCheck(
+      'npm-publish validates SBOM signing key pair configuration',
+      source.includes('Validate SBOM signing key pair configuration'),
+      source.includes('Validate SBOM signing key pair configuration')
+        ? 'Signing key pair validation step detected'
+        : 'Missing signing key pair validation step'
+    )
+  );
+  checks.push(
+    makeStaticCheck(
+      'npm-publish verifier toggles signature requirement from key provisioning',
+      source.includes('NOTE_CONNECTION_REQUIRE_SBOM_ATTESTATION_SIGNATURE'),
+      source.includes('NOTE_CONNECTION_REQUIRE_SBOM_ATTESTATION_SIGNATURE')
+        ? 'Signature requirement environment toggle detected'
+        : 'Missing NOTE_CONNECTION_REQUIRE_SBOM_ATTESTATION_SIGNATURE in publish gate'
+    )
+  );
+  checks.push(
+    makeStaticCheck(
+      'npm-publish verifier requires signed key-id when signing is enabled',
+      source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_REQUIRE_SIGNED_KEY_ID'),
+      source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_REQUIRE_SIGNED_KEY_ID')
+        ? 'Signed key-id requirement environment toggle detected'
+        : 'Missing NOTE_CONNECTION_SBOM_ATTESTATION_REQUIRE_SIGNED_KEY_ID in publish gate'
+    )
+  );
+  checks.push(
+    makeStaticCheck(
+      'npm-publish exports allowed/revoked SBOM key-id policy env',
+      source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_ALLOWED_KEY_IDS') &&
+        source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_REVOKED_KEY_IDS'),
+      source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_ALLOWED_KEY_IDS') &&
+        source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_REVOKED_KEY_IDS')
+        ? 'Allowed/revoked key-id policy environment configured'
+        : 'Missing NOTE_CONNECTION_SBOM_ATTESTATION_ALLOWED_KEY_IDS or NOTE_CONNECTION_SBOM_ATTESTATION_REVOKED_KEY_IDS'
+    )
+  );
+  checks.push(
+    makeStaticCheck(
+      'npm-publish validates signing key-id presence when signing keys are provisioned',
+      source.includes('signing key-id is required when signing keys are set'),
+      source.includes('signing key-id is required when signing keys are set')
+        ? 'Signing key-id validation step detected'
+        : 'Missing signing key-id validation guard in publish workflow'
+    )
+  );
+  checks.push(
+    makeStaticCheck(
+      'npm-publish enforces minimum SBOM attestation RSA key strength policy',
+      source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_MIN_RSA_BITS'),
+      source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_MIN_RSA_BITS')
+        ? 'Minimum RSA bits policy detected'
+        : 'Missing NOTE_CONNECTION_SBOM_ATTESTATION_MIN_RSA_BITS policy in publish workflow'
+    )
+  );
+  checks.push(
+    makeStaticCheck(
+      'npm-publish enforces SBOM key rotation overlap policy',
+      source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_MIN_ROTATION_OVERLAP_HOURS'),
+      source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_MIN_ROTATION_OVERLAP_HOURS')
+        ? 'Rotation overlap policy detected'
+        : 'Missing NOTE_CONNECTION_SBOM_ATTESTATION_MIN_ROTATION_OVERLAP_HOURS policy in publish workflow'
+    )
+  );
+  checks.push(
+    makeStaticCheck(
+      'npm-publish supports optional keyring policy materialization',
+      source.includes('Materialize SBOM signing keyring policy (optional)') &&
+        source.includes('NOTE_CONNECTION_SBOM_SIGNING_PUBLIC_KEYRING_FILE'),
+      source.includes('Materialize SBOM signing keyring policy (optional)') &&
+        source.includes('NOTE_CONNECTION_SBOM_SIGNING_PUBLIC_KEYRING_FILE')
+        ? 'Keyring materialization + verifier wiring detected'
+        : 'Missing keyring materialization or NOTE_CONNECTION_SBOM_SIGNING_PUBLIC_KEYRING_FILE wiring'
+    )
+  );
+  checks.push(
+    makeStaticCheck(
+      'npm-publish requires attestation provenance linkage in strict verification',
+      source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_REQUIRE_PROVENANCE') &&
+        source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_EXPECT_RELEASE_COMMIT_SHA') &&
+        source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_EXPECT_RELEASE_GIT_TAG') &&
+        source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_EXPECT_RELEASE_REF'),
+      source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_REQUIRE_PROVENANCE') &&
+        source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_EXPECT_RELEASE_COMMIT_SHA') &&
+        source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_EXPECT_RELEASE_GIT_TAG') &&
+        source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_EXPECT_RELEASE_REF')
+        ? 'Provenance requirement and immutable release linkage env detected'
+        : 'Missing provenance requirement or immutable release linkage env wiring in publish gate'
+    )
+  );
+  checks.push(
+    makeStaticCheck(
+      'npm-publish pins keyring schema/version when keyring policy is enabled',
+      source.includes('NOTE_CONNECTION_SBOM_KEYRING_REQUIRE_SCHEMA_PIN') &&
+        source.includes('NOTE_CONNECTION_SBOM_KEYRING_EXPECT_SCHEMA') &&
+        source.includes('NOTE_CONNECTION_SBOM_KEYRING_EXPECT_VERSION'),
+      source.includes('NOTE_CONNECTION_SBOM_KEYRING_REQUIRE_SCHEMA_PIN') &&
+        source.includes('NOTE_CONNECTION_SBOM_KEYRING_EXPECT_SCHEMA') &&
+        source.includes('NOTE_CONNECTION_SBOM_KEYRING_EXPECT_VERSION')
+        ? 'Keyring schema/version pin policy detected'
+        : 'Missing keyring schema/version pin policy wiring in publish workflow'
+    )
+  );
+  checks.push(
+    makeStaticCheck(
+      'npm-publish enables attestation transparency log generation',
+      source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_ENABLE_TRANSPARENCY_LOG') &&
+        source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_TRANSPARENCY_LOG_PATH'),
+      source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_ENABLE_TRANSPARENCY_LOG') &&
+        source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_TRANSPARENCY_LOG_PATH')
+        ? 'Transparency log generation policy detected'
+        : 'Missing attestation transparency log generation policy wiring'
+    )
+  );
+  checks.push(
+    makeStaticCheck(
+      'npm-publish enforces attestation transparency inclusion verification',
+      source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_REQUIRE_TRANSPARENCY_LOG') &&
+        source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_VERIFY_TRANSPARENCY_LOG_INCLUSION'),
+      source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_REQUIRE_TRANSPARENCY_LOG') &&
+        source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_VERIFY_TRANSPARENCY_LOG_INCLUSION')
+        ? 'Transparency inclusion verification policy detected'
+        : 'Missing transparency inclusion verification policy wiring'
+    )
+  );
+  checks.push(
+    makeStaticCheck(
+      'npm-publish pins transparency proof schema/version in strict gate',
+      source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_TRANSPARENCY_REQUIRE_SCHEMA_PIN') &&
+        source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_TRANSPARENCY_EXPECT_SCHEMA') &&
+        source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_TRANSPARENCY_EXPECT_VERSION'),
+      source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_TRANSPARENCY_REQUIRE_SCHEMA_PIN') &&
+        source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_TRANSPARENCY_EXPECT_SCHEMA') &&
+        source.includes('NOTE_CONNECTION_SBOM_ATTESTATION_TRANSPARENCY_EXPECT_VERSION')
+        ? 'Transparency proof schema/version pin policy detected'
+        : 'Missing transparency proof schema/version pin policy wiring'
+    )
+  );
+  return checks;
+}
+
+function checkLocalhostPortFallbackPolicy() {
+  const serverPath = path.join(repoRoot, 'src', 'server.ts');
+  const source = readText(serverPath);
+  return [
+    makeStaticCheck(
+      'server.ts gates ephemeral fallback behind explicit env opt-in',
+      source.includes('NOTE_CONNECTION_ALLOW_EPHEMERAL_PORT_FALLBACK') &&
+        source.includes('const allowEphemeralFallback = explicitEphemeralFallback'),
+      source.includes('NOTE_CONNECTION_ALLOW_EPHEMERAL_PORT_FALLBACK') &&
+        source.includes('const allowEphemeralFallback = explicitEphemeralFallback')
+        ? 'Explicit opt-in fallback flag detected'
+        : 'Missing explicit fallback opt-in policy'
+    ),
+    makeStaticCheck(
+      'server.ts emits deterministic-origin guidance on EADDRINUSE without opt-in',
+      source.includes('Ephemeral port fallback is disabled by default') &&
+        source.includes('origin policy deterministic'),
+      source.includes('Ephemeral port fallback is disabled by default') &&
+        source.includes('origin policy deterministic')
+        ? 'Deterministic-origin fallback guidance detected'
+        : 'Missing deterministic-origin EADDRINUSE guidance'
+    )
+  ];
+}
+
 function collectIssueResult(issueId, checks, options = {}) {
   const allPassed = checks.every((check) => check.ok);
   const pendingReason = options.pendingReason ? String(options.pendingReason).trim() : '';
@@ -478,8 +713,11 @@ function main() {
   const docsParity = checkDocsParity();
   const contractRun = runContractJestSuite();
   const workflowChecks = checkWorkflowNode24Migration();
+  const java21ProvisioningChecks = checkMigrationGatesJava21Provisioning();
+  const sbomAttestationReleaseChecks = checkSbomAttestationReleaseSignaturePolicy();
   const packageChecks = checkPackageSidecarConflict();
   const capacitorPolicyChecks = checkCapacitorLoopbackPolicy();
+  const localhostPortFallbackChecks = checkLocalhostPortFallbackPolicy();
 
   const sidecarSignatureVerify = runCommand(process.execPath, [
     path.join(repoRoot, 'scripts', 'verify-sidecar-signatures.js'),
@@ -491,9 +729,31 @@ function main() {
   const detoxPipelineVerify = runCommand(process.execPath, [
     path.join(repoRoot, 'scripts', 'verify-detox-pipeline.js')
   ]);
+  const sbomPolicyVerify = runCommand(process.execPath, [
+    path.join(repoRoot, 'scripts', 'verify-sbom-policy.js'),
+    '--contract-only'
+  ]);
+  const sbomAttestationPolicyVerify = runCommand(process.execPath, [
+    path.join(repoRoot, 'scripts', 'verify-sbom-attestation.js'),
+    '--contract-only'
+  ]);
+  const pathBridgeStrictSchemaVerify = runCommand(process.execPath, [
+    path.join(repoRoot, 'scripts', 'verify-pathbridge-strict-schema.js'),
+    '--contract-only'
+  ]);
+  const strictLargeGraphNodeCount = String(process.env.NOTE_CONNECTION_MIN_EVIDENCE_NODE_COUNT || '10000');
+  const strictLargeGraphEdgeCount = String(process.env.NOTE_CONNECTION_MIN_EVIDENCE_EDGE_COUNT || '1000000');
+  const strictLargeGraphEnv = {
+    ...process.env,
+    NOTE_CONNECTION_REQUIRE_LARGE_GRAPH_EVIDENCE: '1',
+    NOTE_CONNECTION_MIN_EVIDENCE_NODE_COUNT: strictLargeGraphNodeCount,
+    NOTE_CONNECTION_MIN_EVIDENCE_EDGE_COUNT: strictLargeGraphEdgeCount
+  };
   const capacitorEvidenceVerify = runCommand(process.execPath, [
     path.join(repoRoot, 'scripts', 'verify-capacitor-evidence-freshness.js')
-  ]);
+  ], {
+    env: strictLargeGraphEnv
+  });
   const tauriAndroidPrereqVerify = runCommand(process.execPath, [
     path.join(repoRoot, 'scripts', 'verify-tauri-android-prereqs.js')
   ]);
@@ -576,7 +836,14 @@ function main() {
 
   const fr009Pending = checkCommandWithKnownPending(capacitorEvidenceVerify, [
     'evidence root not found',
-    'no acceptance_evidence.json found'
+    'no acceptance_evidence.json found',
+    'evidence is stale',
+    'manifest workload evidence is missing nodecount/edgecount',
+    'manifest workload nodecount',
+    'manifest workload edgecount',
+    'checklist item must be true when large-graph evidence is required',
+    'manifest missing device.runtime classification required for physical-device evidence',
+    'evidence device is classified as emulator'
   ]);
   const fr009 = collectIssueResult(
     'FR-009',
@@ -593,7 +860,7 @@ function main() {
     {
       ...options,
       pendingReason: fr009Pending.pending
-        ? 'Operational evidence pending: docs/mobile-evidence is missing or stale.'
+        ? 'Operational evidence pending: large-graph physical-device evidence is missing, stale, or below threshold.'
         : ''
     }
   );
@@ -622,6 +889,7 @@ function main() {
         'Android prerequisite verifier passed',
         fr011Pending
       ),
+      ...java21ProvisioningChecks,
       ...docsParity.checks.filter((check) => check.name.includes('FR-011'))
     ],
     {
@@ -632,13 +900,49 @@ function main() {
     }
   );
 
-  const issues = [fr001, fr002, fr003, fr004, fr005, fr006, fr007, fr008, fr009, fr010, fr011];
+  const fr012 = collectIssueResult(
+    'FR-012',
+    [
+      makeJestExpectationCheck('src/privacy.manifest.contract.test.ts', contractRun),
+      makeCheck('verify-privacy-manifest', privacyManifestVerify, 'Privacy manifest verifier passed'),
+      ...docsParity.checks.filter((check) => check.name.includes('FR-012'))
+    ],
+    options
+  );
+
+  const fr013 = collectIssueResult(
+    'FR-013',
+    [
+      makeJestExpectationCheck('src/server.port.fallback.contract.test.ts', contractRun),
+      ...localhostPortFallbackChecks,
+      ...docsParity.checks.filter((check) => check.name.includes('FR-013'))
+    ],
+    options
+  );
+
+  const issues = [fr001, fr002, fr003, fr004, fr005, fr006, fr007, fr008, fr009, fr010, fr011, fr012, fr013];
   const allChecks = issues.flatMap((issue) => issue.checks);
   const failedIssues = issues.filter((issue) => issue.status.startsWith('verification-failed')).map((issue) => issue.id);
   const pendingIssues = issues.filter((issue) => issue.status === 'verified-pending').map((issue) => issue.id);
 
   const nonIssueChecks = [
     makeCheck('verify-detox-pipeline', detoxPipelineVerify, 'Detox pipeline verifier passed'),
+    makeCheck(
+      'verify-sbom-policy --contract-only',
+      sbomPolicyVerify,
+      'SBOM policy verifier contract mode passed'
+    ),
+    makeCheck(
+      'verify-sbom-attestation --contract-only',
+      sbomAttestationPolicyVerify,
+      'SBOM attestation verifier contract mode passed'
+    ),
+    makeCheck(
+      'verify-pathbridge-strict-schema --contract-only',
+      pathBridgeStrictSchemaVerify,
+      'PathBridge strict schema verifier contract mode passed'
+    ),
+    ...sbomAttestationReleaseChecks,
     makeStaticCheck(
       'Fixrisk contract Jest aggregate command succeeded',
       contractRun.commandResult.ok,

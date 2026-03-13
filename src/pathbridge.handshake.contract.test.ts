@@ -3,10 +3,12 @@ import * as path from 'path';
 import {
   BRIDGE_BACKPRESSURE_LIMITS,
   BRIDGE_INBOUND_LIMITS,
+  BRIDGE_INBOUND_SCHEMA_LIMITS,
   buildBridgePathTransportSummary,
   computeBridgePathFingerprint,
   parseBridgeInboundEnvelope,
   resolveBridgeInboundLimitConfig,
+  resolveBridgeInboundSchemaPolicy,
   validateBridgePathPayload,
 } from './core/PathBridge';
 
@@ -53,6 +55,164 @@ describe('path bridge handshake and transport verification contracts', () => {
     });
     expect(validIdentify.ok).toBe(true);
     expect(validIdentify.envelope?.type).toBe('identify');
+
+    const invalidSwitchCenter = parseBridgeInboundEnvelope({
+      type: 'switchCenter',
+      payload: {
+        newCenterId: '',
+      },
+    });
+    expect(invalidSwitchCenter.ok).toBe(false);
+    expect(invalidSwitchCenter.reason).toBe('switchCenter payload.newCenterId must be a non-empty string.');
+
+    const invalidCompletionSync = parseBridgeInboundEnvelope({
+      type: 'completionSync',
+      payload: {
+        completedIds: ['n1', 2],
+      },
+    });
+    expect(invalidCompletionSync.ok).toBe(false);
+    expect(invalidCompletionSync.reason).toBe(
+      'completionSync payload.completedIds must contain only non-empty strings.'
+    );
+
+    const invalidMermaidResult = parseBridgeInboundEnvelope({
+      type: 'renderMermaidResult',
+      payload: {
+        requestId: 'r-1',
+        ok: true,
+        pngBase64: '',
+      },
+    });
+    expect(invalidMermaidResult.ok).toBe(false);
+    expect(invalidMermaidResult.reason).toBe(
+      'renderMermaidResult payload.pngBase64 must be a non-empty string when ok=true.'
+    );
+
+    const validMermaidResult = parseBridgeInboundEnvelope({
+      type: 'renderMermaidResult',
+      payload: {
+        requestId: 'r-2',
+        ok: true,
+        pngBase64: 'ZmFrZS1wbmc=',
+        width: 640,
+        height: 360,
+        stages: [
+          {
+            stage: 'input',
+            svg: '<svg/>',
+            width: 640,
+            height: 360,
+          },
+        ],
+      },
+    });
+    expect(validMermaidResult.ok).toBe(true);
+
+    const invalidConfigureValue = parseBridgeInboundEnvelope({
+      type: 'configure',
+      payload: {
+        mode: 'invalid-mode',
+      },
+    });
+    expect(invalidConfigureValue.ok).toBe(false);
+    expect(invalidConfigureValue.reason).toContain('configure payload.mode must be one of');
+
+    const invalidConfigureLayout = parseBridgeInboundEnvelope({
+      type: 'configure',
+      payload: {
+        layout: 'force-directed',
+      },
+    });
+    expect(invalidConfigureLayout.ok).toBe(false);
+    expect(invalidConfigureLayout.reason).toContain('configure payload.layout must be one of');
+
+    const invalidConfigureBackground = parseBridgeInboundEnvelope({
+      type: 'configure',
+      payload: {
+        background: '../unsafe-path.exr',
+      },
+    });
+    expect(invalidConfigureBackground.ok).toBe(false);
+    expect(invalidConfigureBackground.reason).toContain('safe .exr/.hdr filename');
+
+    const invalidConfigureBrightness = parseBridgeInboundEnvelope({
+      type: 'configure',
+      payload: {
+        bg_brightness: 20,
+      },
+    });
+    expect(invalidConfigureBrightness.ok).toBe(false);
+    expect(invalidConfigureBrightness.reason).toContain('configure payload.bg_brightness must be within');
+
+    const invalidConfigureMediaScale = parseBridgeInboundEnvelope({
+      type: 'configure',
+      payload: {
+        reader_media_scale: 7,
+      },
+    });
+    expect(invalidConfigureMediaScale.ok).toBe(false);
+    expect(invalidConfigureMediaScale.reason).toContain('configure payload.reader_media_scale must be within');
+
+    const conflictingConfigureTarget = parseBridgeInboundEnvelope({
+      type: 'configure',
+      payload: {
+        targetId: 'node-a',
+        target_id: 'node-b',
+      },
+    });
+    expect(conflictingConfigureTarget.ok).toBe(false);
+    expect(conflictingConfigureTarget.reason).toContain('targetId and payload.target_id must match');
+
+    const validConfigurePayload = parseBridgeInboundEnvelope({
+      type: 'configure',
+      payload: {
+        mode: 'diffusion',
+        strategy: 'core',
+        layout: 'orbital',
+        targetId: 'knowledge/node-1',
+        auto_reconstruct: true,
+        retain_history: true,
+        focus_mode: false,
+        background: 'belfast_sunset_puresky_4k.exr',
+        bg_brightness: 1.2,
+        reading_mode: 'window',
+        reader_render_mode: 'render',
+        reader_toggle_source_shortcut: 'Ctrl+Shift+M',
+        reader_media_scale: 1.5,
+        reader_debug: false,
+      },
+    });
+    expect(validConfigurePayload.ok).toBe(true);
+
+    const strictUnknownPolicy = resolveBridgeInboundSchemaPolicy({
+      NOTE_CONNECTION_BRIDGE_REJECT_UNKNOWN_TYPES: '1',
+    } as NodeJS.ProcessEnv);
+    const unknownTypeInStrictMode = parseBridgeInboundEnvelope(
+      {
+        type: 'customEvent',
+        payload: {},
+      },
+      strictUnknownPolicy
+    );
+    expect(unknownTypeInStrictMode.ok).toBe(false);
+    expect(unknownTypeInStrictMode.reason).toContain('not allowed in strict unknown-type mode');
+
+    const strictConfigurePolicy = resolveBridgeInboundSchemaPolicy({
+      NOTE_CONNECTION_BRIDGE_STRICT_CONFIG_SCHEMA: '1',
+    } as NodeJS.ProcessEnv);
+    const unknownConfigureKeyInStrictMode = parseBridgeInboundEnvelope(
+      {
+        type: 'configure',
+        payload: {
+          mode: 'domain',
+          customRuntimeHint: true,
+        },
+      },
+      strictConfigurePolicy
+    );
+    expect(unknownConfigureKeyInStrictMode.ok).toBe(false);
+    expect(unknownConfigureKeyInStrictMode.reason).toContain('unsupported keys in strict mode');
   });
 
   test('godot websocket client uses URL accepted by Godot and queues pre-connect messages', () => {
@@ -99,6 +259,11 @@ describe('path bridge handshake and transport verification contracts', () => {
     expect(BRIDGE_INBOUND_LIMITS.maxMessageBytes).toBeGreaterThanOrEqual(BRIDGE_INBOUND_LIMITS.minMessageBytes);
     expect(BRIDGE_INBOUND_LIMITS.maxMessageBytes).toBeLessThanOrEqual(BRIDGE_INBOUND_LIMITS.hardCapBytes);
     expect(BRIDGE_INBOUND_LIMITS.recommendedMessageBytes).toBeGreaterThanOrEqual(BRIDGE_INBOUND_LIMITS.defaultMessageBytes);
+  });
+
+  test('schema policy defaults remain compatibility-safe unless explicitly tightened', () => {
+    expect(BRIDGE_INBOUND_SCHEMA_LIMITS.rejectUnknownTypes).toBe(false);
+    expect(BRIDGE_INBOUND_SCHEMA_LIMITS.strictConfigureSchema).toBe(false);
   });
 
   test('inbound frame policy auto-raises low configured limits for large graph hints unless strict mode is enabled', () => {

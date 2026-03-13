@@ -1,19 +1,73 @@
-# 2026-03-11 v1.5.56 - High-Priority Fixrisk Issue Closure (Runtime + Mobile E2E + Compliance)
+# 2026-03-12 v1.5.57 - Fixrisk High-Priority Closure Plan (Live)
 
 ## English Document
 
 ### Objective
-Close the outstanding `fixrisk_TODO` issue tracks with enforceable code, contracts, and CI coverage while preserving large-graph readiness (>10k nodes / >1M edges).
+Complete and verify all `fixrisk_TODO` closure items with executable checks, keeping robustness for large-graph workloads (>10k nodes / >1M edges).
 
-### Completed in This Iteration
-- [x] Startup/runtime memory safety remains adaptive (`scripts/start-server.js`, `scripts/lib/runtime-memory-policy.js`).
-- [x] PathBridge inbound payload policy remains large-graph aware (`src/core/PathBridge.ts`).
-- [x] Added adaptive HTTP request-body spool threshold policy in `src/server.ts`.
-  - [x] New controls: `NOTE_CONNECTION_REQUEST_BODY_SPOOL_THRESHOLD_KB`, `NOTE_CONNECTION_REQUEST_BODY_SPOOL_STRICT`.
-  - [x] Runtime diagnostics now expose spool threshold source/recommended/effective values.
-- [x] Closed runtime eval/pkg risk for critical paths.
-  - [x] Added `src/pkg.snapshot.safety.contract.test.ts`.
-- [x] Provisioned Detox contract pipeline.
+### Verified Closure Snapshot
+- [x] FR-001 .. FR-008 closed by code/contracts.
+- [x] FR-010 closed by pipeline migration to Node24-compatible action runtime (`actions/checkout@v5`, `actions/setup-node@v5` + force flag).
+- [x] FR-011 closed by Java 21 gate hardening:
+  - [x] Android prereq checker now supports Java 21 candidate discovery (env slots + common local install paths, including Android Studio JBR).
+  - [x] Migration gate provisions Java 21 for tauri-rust suite.
+- [x] Deferred hardening slice completed for stricter IPC schema guards on known PathBridge envelope families (`src/core/PathBridge.ts` + contracts).
+- [x] Deferred hardening policy slice completed:
+  - [x] Unknown bridge type strict-reject policy is now supported (`NOTE_CONNECTION_BRIDGE_REJECT_UNKNOWN_TYPES`).
+  - [x] Strict `configure` schema mode is now supported (`NOTE_CONNECTION_BRIDGE_STRICT_CONFIG_SCHEMA`).
+- [x] Deferred hardening configure-value slice completed:
+  - [x] `configure.layout` is now enum-validated (`vertical`/`horizontal`/`radial`/`orbital`).
+  - [x] `configure.background` now enforces safe `.exr`/`.hdr` filename rules (no traversal/path separators).
+  - [x] `configure.bg_brightness` and `configure.reader_media_scale` now enforce runtime-safe ranges.
+  - [x] `configure.targetId` and `configure.target_id` must match when both are present.
+- [x] Deferred hardening strict-policy gate slice completed:
+  - [x] Added executable strict PathBridge verifier (`npm run verify:pathbridge:strict`).
+  - [x] Migration/publish workflows now run a dedicated strict PathBridge schema gate.
+  - [x] Added strict gate contract coverage (`src/pathbridge.strict.policy.contract.test.ts`).
+- [x] Deferred hardening mobile memory ceiling slice completed:
+  - [x] Runtime heap policy now distinguishes `desktop`/`android`/`ios` platform ceilings.
+  - [x] iOS Jetsam tier support added (`NOTE_CONNECTION_IOS_JETSAM_TIER`).
+  - [x] Added iOS memory-bound contract coverage (`src/runtime.heap.policy.contract.test.ts`).
+- [x] Deferred hardening SBOM attestation slice completed:
+  - [x] Added SBOM attestation generator (`npm run generate:sbom:attestation`).
+  - [x] Added SBOM attestation verifier with strict mode (`npm run verify:sbom:attestation -- --strict 1`).
+  - [x] Migration/publish workflows now include SBOM attestation policy gates.
+  - [x] Release workflow now validates signing key-pair completeness and auto-enforces signature requirement when signing keys are provisioned.
+  - [x] Signed attestation key-id lifecycle policy is now enforced (required key-id + allowlist/revocation checks) with contract coverage.
+  - [x] Multi-key trust policy is now enforced (minimum RSA strength + rotation overlap + optional keyring policy file) with contract coverage.
+  - [x] Signed-attestation provenance linkage is now enforced (immutable release metadata expectations + keyring schema/version pin checks) with contract coverage.
+  - [x] Signed-attestation transparency inclusion policy is now enforced (append-only ledger + inclusion proof chain checks + schema/version pinning) with contract coverage.
+- [x] Deferred hardening slice completed for SBOM policy:
+  - [x] CycloneDX SBOM generator script is now available (`npm run generate:sbom`).
+  - [x] SBOM policy verifier is now available with strict mode (`npm run verify:sbom -- --strict 1`).
+  - [x] Migration/publish workflows now enforce SBOM policy contracts.
+- [ ] FR-009 remains pending only on real-device operational evidence (tooling already closed).
+
+### Remaining High-Priority Work (FR-009 Ops Closure)
+1. Device acceptance gate
+   - Run `node scripts/verify-capacitor-device-acceptance.js`.
+   - Ensure an online authorized physical Android device is connected (emulator targets are rejected by default).
+   - Use `NOTE_CONNECTION_ALLOW_EMULATOR_EVIDENCE=1` only for non-production emulator experiments.
+2. Large-graph evidence capture
+   - Set:
+     - `NOTE_CONNECTION_EVIDENCE_NODE_COUNT=10000`
+     - `NOTE_CONNECTION_EVIDENCE_EDGE_COUNT=1000000`
+   - Run `node scripts/capture-capacitor-device-evidence.js`.
+3. Strict evidence verification
+   - Set:
+     - `NOTE_CONNECTION_REQUIRE_LARGE_GRAPH_EVIDENCE=1`
+     - `NOTE_CONNECTION_MIN_EVIDENCE_NODE_COUNT=10000`
+     - `NOTE_CONNECTION_MIN_EVIDENCE_EDGE_COUNT=1000000`
+   - Run `node scripts/verify-capacitor-evidence-freshness.js`.
+4. Consolidated closure check
+   - Run `node scripts/verify-fixrisk-issues.js --strict-pending`.
+   - Run `node scripts/run-fixrisk-ops-closure.js`.
+
+### Robustness Guardrails
+- Keep adaptive memory policy enabled (`scripts/lib/runtime-memory-policy.js`) for large-graph bursts.
+- Keep bounded request-body + spool policy active in server runtime.
+- Maintain strict contract suite baseline (`node node_modules/jest/bin/jest.js --runInBand`).
+- Godot SVG limitation remains active: do not depend on direct SVG import in Godot runtime paths.
   - [x] Added `.detoxrc.json`, `e2e/*`, `scripts/verify-detox-pipeline.js`, `scripts/run-detox-e2e.js`.
   - [x] Added CI workflow `.github/workflows/mobile-e2e-detox-contracts.yml`.
   - [x] Added contract test `src/detox.pipeline.contract.test.ts`.

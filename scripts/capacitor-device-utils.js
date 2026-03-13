@@ -5,6 +5,11 @@ const { spawnSync } = require('child_process');
 const ADB_EXECUTABLE = process.platform === 'win32' ? 'adb.exe' : 'adb';
 const DEFAULT_TIMEOUT_MS = 15000;
 
+function isTruthy(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+}
+
 function runCommand(command, args, options = {}) {
   return spawnSync(command, args, {
     encoding: options.encoding || 'utf8',
@@ -118,7 +123,76 @@ function formatDeviceStateSummary(devices) {
   return orderedStates.map((state) => `${state}:${summary[state]}`).join(', ');
 }
 
+function getDeviceProperty(adbCommand, serial, propertyName) {
+  const output = runCommand(adbCommand, ['-s', serial, 'shell', 'getprop', propertyName]);
+  if (output.error || output.status !== 0) {
+    return '';
+  }
+  return String(output.stdout || '').trim();
+}
+
+function classifyDeviceRuntime(serial, runtime = {}) {
+  const reasons = [];
+  const normalizedSerial = String(serial || '').trim().toLowerCase();
+  if (normalizedSerial.startsWith('emulator-')) {
+    reasons.push('serial-prefix-emulator');
+  }
+
+  const qemu = String(runtime.roKernelQemu || '').trim();
+  if (qemu === '1') {
+    reasons.push('ro.kernel.qemu=1');
+  }
+
+  const combinedFingerprint = [
+    runtime.model,
+    runtime.device,
+    runtime.hardware,
+    runtime.fingerprint,
+    runtime.manufacturer,
+    runtime.brand,
+    runtime.product,
+  ]
+    .map((value) => String(value || '').trim().toLowerCase())
+    .filter((value) => value.length > 0)
+    .join(' ');
+
+  if (
+    /(emulator|sdk|generic|goldfish|ranchu|genymotion|vbox|virtualbox|simulator)/i.test(
+      combinedFingerprint
+    )
+  ) {
+    reasons.push('runtime-fingerprint-emulator-marker');
+  }
+
+  return {
+    likelyEmulator: reasons.length > 0,
+    reasons,
+  };
+}
+
+function inspectDeviceRuntime(adbCommand, serial) {
+  const runtime = {
+    roKernelQemu: getDeviceProperty(adbCommand, serial, 'ro.kernel.qemu'),
+    model: getDeviceProperty(adbCommand, serial, 'ro.product.model'),
+    manufacturer: getDeviceProperty(adbCommand, serial, 'ro.product.manufacturer'),
+    brand: getDeviceProperty(adbCommand, serial, 'ro.product.brand'),
+    product: getDeviceProperty(adbCommand, serial, 'ro.product.name'),
+    device: getDeviceProperty(adbCommand, serial, 'ro.product.device'),
+    hardware: getDeviceProperty(adbCommand, serial, 'ro.hardware'),
+    fingerprint: getDeviceProperty(adbCommand, serial, 'ro.build.fingerprint'),
+    androidVersion: getDeviceProperty(adbCommand, serial, 'ro.build.version.release'),
+  };
+
+  const classification = classifyDeviceRuntime(serial, runtime);
+  return {
+    ...runtime,
+    likelyEmulator: classification.likelyEmulator,
+    emulatorReasons: classification.reasons,
+  };
+}
+
 module.exports = {
+  isTruthy,
   runCommand,
   buildAdbCandidates,
   resolveAdbCommand,
@@ -127,5 +201,7 @@ module.exports = {
   getOnlineDevices,
   summarizeDeviceStates,
   formatDeviceStateSummary,
+  getDeviceProperty,
+  classifyDeviceRuntime,
+  inspectDeviceRuntime,
 };
-

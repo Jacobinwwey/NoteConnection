@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-12T04:37:27.720Z",
-  "completedAt": "2026-03-12T04:37:39.763Z",
+  "generatedAt": "2026-03-12T14:43:04.398Z",
+  "completedAt": "2026-03-12T14:43:18.683Z",
   "source": [
     "docs/en/fixrisk_TODO.md",
     "docs/zh/fixrisk_TODO.md"
@@ -19,14 +19,17 @@
       "src/sidecar.signature.contract.test.ts",
       "src/graph.accessibility.contract.test.ts",
       "src/privacy.manifest.contract.test.ts",
+      "src/sbom.policy.contract.test.ts",
+      "src/sbom.attestation.policy.contract.test.ts",
+      "src/pathbridge.strict.policy.contract.test.ts",
       "src/capacitor.evidence.contract.test.ts",
       "src/tauri.test.runner.contract.test.ts"
     ],
     "jestReportPath": "build/fixrisk-jest-contract-report.json",
-    "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\node_modules\\jest\\bin\\jest.js --runInBand --json --outputFile=E:\\Knowledge_project\\NoteConnection_app\\build\\fixrisk-jest-contract-report.json src/runtime.spool.policy.contract.test.ts src/pkg.sidecar.contract.test.ts src/mobile.pipeline.test.ts src/pkg.snapshot.safety.contract.test.ts src/runtime.heap.policy.contract.test.ts src/sidecar.signature.contract.test.ts src/graph.accessibility.contract.test.ts src/privacy.manifest.contract.test.ts src/capacitor.evidence.contract.test.ts src/tauri.test.runner.contract.test.ts",
+    "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\node_modules\\jest\\bin\\jest.js --runInBand --json --outputFile=E:\\Knowledge_project\\NoteConnection_app\\build\\fixrisk-jest-contract-report.json src/runtime.spool.policy.contract.test.ts src/pkg.sidecar.contract.test.ts src/mobile.pipeline.test.ts src/pkg.snapshot.safety.contract.test.ts src/runtime.heap.policy.contract.test.ts src/sidecar.signature.contract.test.ts src/graph.accessibility.contract.test.ts src/privacy.manifest.contract.test.ts src/sbom.policy.contract.test.ts src/sbom.attestation.policy.contract.test.ts src/pathbridge.strict.policy.contract.test.ts src/capacitor.evidence.contract.test.ts src/tauri.test.runner.contract.test.ts",
     "ok": true,
     "exitCode": 0,
-    "durationMs": 8188
+    "durationMs": 10031
   },
   "issues": [
     {
@@ -327,7 +330,7 @@
           "ok": true,
           "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-sidecar-signatures.js --contract-only",
           "exitCode": 0,
-          "durationMs": 123,
+          "durationMs": 69,
           "detail": "Contract-only sidecar signature gate passed"
         },
         {
@@ -430,7 +433,7 @@
           "ok": true,
           "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-privacy-manifest.js",
           "exitCode": 0,
-          "durationMs": 126,
+          "durationMs": 63,
           "detail": "Privacy manifest verifier passed"
         },
         {
@@ -471,7 +474,7 @@
     {
       "id": "FR-009",
       "status": "verified-pending",
-      "pendingReason": "Operational evidence pending: docs/mobile-evidence is missing or stale.",
+      "pendingReason": "Operational evidence pending: large-graph physical-device evidence is missing, stale, or below threshold.",
       "checks": [
         {
           "name": "Contract test src/capacitor.evidence.contract.test.ts",
@@ -486,7 +489,7 @@
           "ok": true,
           "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-capacitor-evidence-freshness.js",
           "exitCode": 1,
-          "durationMs": 130,
+          "durationMs": 80,
           "detail": "Accepted pending state: evidence root not found. [Capacitor Evidence Verify] Evidence verification failed.\n[Capacitor Evidence Verify] Error: Evidence root not found: E:\\Knowledge_project\\NoteConnection_app\\docs\\mobile-evidence"
         },
         {
@@ -699,8 +702,8 @@
     },
     {
       "id": "FR-011",
-      "status": "verified-pending",
-      "pendingReason": "Host provisioning pending: Java 21 toolchain availability is required.",
+      "status": "verified-closed",
+      "pendingReason": null,
       "checks": [
         {
           "name": "Contract test src/tauri.test.runner.contract.test.ts",
@@ -714,9 +717,33 @@
           "name": "verify-tauri-android-prereqs",
           "ok": true,
           "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-tauri-android-prereqs.js",
-          "exitCode": 1,
-          "durationMs": 3337,
-          "detail": "Accepted pending state: needs java 21 toolchain availability. [Android Env] Active javac version is 23.0.1 (major 23), but this project needs Java 21 toolchain availability.\n[Android Env] Gradle wrapper probe did not find a Java 21 toolchain.\n[Android Env] Install JDK 21 and set JAVA_HOME to that installation before running Android builds."
+          "exitCode": 0,
+          "durationMs": 3772,
+          "detail": "Android prerequisite verifier passed"
+        },
+        {
+          "name": "migration-gates tauri-rust-suite uses actions/setup-java@v5",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/setup-java@v5 detected"
+        },
+        {
+          "name": "migration-gates tauri-rust-suite pins java-version 21",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "java-version 21 detected"
+        },
+        {
+          "name": "migration-gates Java setup is scoped to tauri-rust-suite",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "Conditional suite scoping detected"
         },
         {
           "name": "EN issue row FR-011 present",
@@ -724,7 +751,7 @@
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "Closed (code gate); Pending (host provisioning)"
+          "detail": "Closed (code + environment gate)"
         },
         {
           "name": "ZH issue row FR-011 present",
@@ -732,7 +759,7 @@
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "Closed（代码闸门）；Pending（主机环境）"
+          "detail": "Closed（代码 + 环境闸门）"
         },
         {
           "name": "EN/ZH status marker parity FR-011",
@@ -740,18 +767,21 @@
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "EN=Closed (code gate); Pending (host provisioning) (closed+pending) | ZH=Closed（代码闸门）；Pending（主机环境） (closed+pending)"
+          "detail": "EN=Closed (code + environment gate) (closed) | ZH=Closed（代码 + 环境闸门） (closed)"
         }
       ],
       "verification": [
         "PASS Contract test src/tauri.test.runner.contract.test.ts: Jest status: passed",
-        "PASS verify-tauri-android-prereqs: Accepted pending state: needs java 21 toolchain availability. [Android Env] Active javac version is 23.0.1 (major 23), but this project needs Java 21 toolchain availability.\n[Android Env] Gradle wrapper probe did not find a Java 21 toolchain.\n[Android Env] Install JDK 21 and set JAVA_HOME to that installation before running Android builds.",
-        "PASS EN issue row FR-011 present: Closed (code gate); Pending (host provisioning)",
-        "PASS ZH issue row FR-011 present: Closed（代码闸门）；Pending（主机环境）",
-        "PASS EN/ZH status marker parity FR-011: EN=Closed (code gate); Pending (host provisioning) (closed+pending) | ZH=Closed（代码闸门）；Pending（主机环境） (closed+pending)"
+        "PASS verify-tauri-android-prereqs: Android prerequisite verifier passed",
+        "PASS migration-gates tauri-rust-suite uses actions/setup-java@v5: actions/setup-java@v5 detected",
+        "PASS migration-gates tauri-rust-suite pins java-version 21: java-version 21 detected",
+        "PASS migration-gates Java setup is scoped to tauri-rust-suite: Conditional suite scoping detected",
+        "PASS EN issue row FR-011 present: Closed (code + environment gate)",
+        "PASS ZH issue row FR-011 present: Closed（代码 + 环境闸门）",
+        "PASS EN/ZH status marker parity FR-011: EN=Closed (code + environment gate) (closed) | ZH=Closed（代码 + 环境闸门） (closed)"
       ],
-      "passedChecks": 5,
-      "totalChecks": 5
+      "passedChecks": 8,
+      "totalChecks": 8
     }
   ],
   "nonIssueChecks": [
@@ -760,8 +790,136 @@
       "ok": true,
       "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-detox-pipeline.js",
       "exitCode": 0,
-      "durationMs": 130,
+      "durationMs": 68,
       "detail": "Detox pipeline verifier passed"
+    },
+    {
+      "name": "verify-sbom-policy --contract-only",
+      "ok": true,
+      "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-sbom-policy.js --contract-only",
+      "exitCode": 0,
+      "durationMs": 63,
+      "detail": "SBOM policy verifier contract mode passed"
+    },
+    {
+      "name": "verify-sbom-attestation --contract-only",
+      "ok": true,
+      "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-sbom-attestation.js --contract-only",
+      "exitCode": 0,
+      "durationMs": 66,
+      "detail": "SBOM attestation verifier contract mode passed"
+    },
+    {
+      "name": "verify-pathbridge-strict-schema --contract-only",
+      "ok": true,
+      "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-pathbridge-strict-schema.js --contract-only",
+      "exitCode": 0,
+      "durationMs": 66,
+      "detail": "PathBridge strict schema verifier contract mode passed"
+    },
+    {
+      "name": "npm-publish validates SBOM signing key pair configuration",
+      "ok": true,
+      "command": null,
+      "exitCode": 0,
+      "durationMs": 0,
+      "detail": "Signing key pair validation step detected"
+    },
+    {
+      "name": "npm-publish verifier toggles signature requirement from key provisioning",
+      "ok": true,
+      "command": null,
+      "exitCode": 0,
+      "durationMs": 0,
+      "detail": "Signature requirement environment toggle detected"
+    },
+    {
+      "name": "npm-publish verifier requires signed key-id when signing is enabled",
+      "ok": true,
+      "command": null,
+      "exitCode": 0,
+      "durationMs": 0,
+      "detail": "Signed key-id requirement environment toggle detected"
+    },
+    {
+      "name": "npm-publish exports allowed/revoked SBOM key-id policy env",
+      "ok": true,
+      "command": null,
+      "exitCode": 0,
+      "durationMs": 0,
+      "detail": "Allowed/revoked key-id policy environment configured"
+    },
+    {
+      "name": "npm-publish validates signing key-id presence when signing keys are provisioned",
+      "ok": true,
+      "command": null,
+      "exitCode": 0,
+      "durationMs": 0,
+      "detail": "Signing key-id validation step detected"
+    },
+    {
+      "name": "npm-publish enforces minimum SBOM attestation RSA key strength policy",
+      "ok": true,
+      "command": null,
+      "exitCode": 0,
+      "durationMs": 0,
+      "detail": "Minimum RSA bits policy detected"
+    },
+    {
+      "name": "npm-publish enforces SBOM key rotation overlap policy",
+      "ok": true,
+      "command": null,
+      "exitCode": 0,
+      "durationMs": 0,
+      "detail": "Rotation overlap policy detected"
+    },
+    {
+      "name": "npm-publish supports optional keyring policy materialization",
+      "ok": true,
+      "command": null,
+      "exitCode": 0,
+      "durationMs": 0,
+      "detail": "Keyring materialization + verifier wiring detected"
+    },
+    {
+      "name": "npm-publish requires attestation provenance linkage in strict verification",
+      "ok": true,
+      "command": null,
+      "exitCode": 0,
+      "durationMs": 0,
+      "detail": "Provenance requirement and immutable release linkage env detected"
+    },
+    {
+      "name": "npm-publish pins keyring schema/version when keyring policy is enabled",
+      "ok": true,
+      "command": null,
+      "exitCode": 0,
+      "durationMs": 0,
+      "detail": "Keyring schema/version pin policy detected"
+    },
+    {
+      "name": "npm-publish enables attestation transparency log generation",
+      "ok": true,
+      "command": null,
+      "exitCode": 0,
+      "durationMs": 0,
+      "detail": "Transparency log generation policy detected"
+    },
+    {
+      "name": "npm-publish enforces attestation transparency inclusion verification",
+      "ok": true,
+      "command": null,
+      "exitCode": 0,
+      "durationMs": 0,
+      "detail": "Transparency inclusion verification policy detected"
+    },
+    {
+      "name": "npm-publish pins transparency proof schema/version in strict gate",
+      "ok": true,
+      "command": null,
+      "exitCode": 0,
+      "durationMs": 0,
+      "detail": "Transparency proof schema/version pin policy detected"
     },
     {
       "name": "Fixrisk contract Jest aggregate command succeeded",
@@ -769,7 +927,7 @@
       "command": null,
       "exitCode": 0,
       "durationMs": 0,
-      "detail": "Jest suite passed (10 files)"
+      "detail": "Jest suite passed (13 files)"
     },
     {
       "name": "No unexpected FR IDs in EN/ZH issue tables",
@@ -782,17 +940,16 @@
   ],
   "overall": {
     "issueCount": 11,
-    "passedIssueCount": 9,
-    "pendingIssueCount": 2,
+    "passedIssueCount": 10,
+    "pendingIssueCount": 1,
     "failedIssueCount": 0,
     "failedIssues": [],
     "pendingIssues": [
-      "FR-009",
-      "FR-011"
+      "FR-009"
     ],
     "allCodeLevelIssuesClosed": true,
-    "pendingOperationalBlocker": "FR-009, FR-011",
-    "totalChecks": 70,
-    "passedChecks": 70
+    "pendingOperationalBlocker": "FR-009",
+    "totalChecks": 89,
+    "passedChecks": 89
   }
 }

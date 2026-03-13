@@ -1,17 +1,71 @@
-# 2026-03-11 v1.5.56 - 高优先级 fixrisk 问题收敛（运行时 + 移动端 E2E + 合规）
+# 2026-03-12 v1.5.57 - Fixrisk 高优先级收敛计划（实时）
 
 ## 中文文档
 
 ### 目标
-在不破坏大图谱能力（>10k 节点 / >1M 边）的前提下，完成 `fixrisk_TODO` 剩余问题的可验证闭环（运行时、移动端 E2E、可访问性、合规）。
+在不破坏大图谱能力（>10k 节点 / >1M 边）的前提下，以“可执行验证”为准完成 `fixrisk_TODO` 的全部闭环。
 
-### 本轮完成
-- [x] 运行时内存与 PathBridge 大载荷策略持续生效（保持自适应与有界约束）。
-- [x] `src/server.ts` 新增自适应请求体落盘阈值策略。
-  - [x] 新增参数：`NOTE_CONNECTION_REQUEST_BODY_SPOOL_THRESHOLD_KB`、`NOTE_CONNECTION_REQUEST_BODY_SPOOL_STRICT`。
-  - [x] 运行时诊断新增阈值来源/推荐值/生效值字段。
-- [x] 新增 pkg 快照安全契约：`src/pkg.snapshot.safety.contract.test.ts`。
-- [x] Detox 合同化流水线已落地。
+### 已验证收敛快照
+- [x] FR-001 .. FR-008 已通过代码与契约测试闭环。
+- [x] FR-010 已通过工作流升级闭环（Node24 兼容 JavaScript Action 运行时）。
+- [x] FR-011 已闭环：
+  - [x] `scripts/verify-tauri-android-prereqs.js` 已支持 Java 21 候选发现（环境变量槽位 + 常见本地安装路径）。
+  - [x] `.github/workflows/migration-gates.yml` 已为 tauri-rust 套件固定预置 Java 21。
+- [x] 已完成一轮延后加固切片：对 PathBridge 已知消息族增加更严格 IPC schema 校验并补齐契约测试。
+- [x] 已完成策略化延后加固切片：
+  - [x] 未知消息类型严格拒绝策略（`NOTE_CONNECTION_BRIDGE_REJECT_UNKNOWN_TYPES`）。
+  - [x] `configure` 严格 schema 模式（`NOTE_CONNECTION_BRIDGE_STRICT_CONFIG_SCHEMA`）。
+- [x] 已完成 `configure` 值级别延后加固切片：
+  - [x] `configure.layout` 已改为枚举约束（`vertical`/`horizontal`/`radial`/`orbital`）。
+  - [x] `configure.background` 已增加安全 `.exr`/`.hdr` 文件名规则。
+  - [x] `configure.bg_brightness` 与 `configure.reader_media_scale` 已增加边界范围约束。
+  - [x] `configure.targetId` 与 `configure.target_id` 同时出现时必须一致。
+- [x] 已完成严格策略闸门延后加固切片：
+  - [x] 已新增可执行 PathBridge 严格校验器（`npm run verify:pathbridge:strict`）。
+  - [x] 迁移与发布工作流已接入独立 PathBridge 严格 schema 闸门。
+  - [x] 已补充严格闸门契约测试（`src/pathbridge.strict.policy.contract.test.ts`）。
+- [x] 已完成移动端内存上限延后加固切片：
+  - [x] 运行时堆策略已区分 `desktop`/`android`/`ios` 平台上限。
+  - [x] 已增加 iOS Jetsam 分层支持（`NOTE_CONNECTION_IOS_JETSAM_TIER`）。
+  - [x] 已补充 iOS 内存边界契约测试（`src/runtime.heap.policy.contract.test.ts`）。
+- [x] 已完成 SBOM attestation 延后加固切片：
+  - [x] 已增加 SBOM attestation 生成命令（`npm run generate:sbom:attestation`）。
+  - [x] 已增加 SBOM attestation 严格校验命令（`npm run verify:sbom:attestation -- --strict 1`）。
+  - [x] 迁移与发布工作流已接入 SBOM attestation 策略闸门。
+  - [x] 发布工作流已增加签名密钥成对校验，并在签名密钥被配置时自动强制签名要求。
+  - [x] 已实现签名 attestation 的 key-id 生命周期策略（必须 key-id + 允许/吊销列表）并补齐契约测试。
+  - [x] 已实现多密钥信任策略（最小 RSA 强度 + 轮换重叠窗口 + 可选 keyring 策略文件）并补齐契约测试。
+  - [x] 已实现签名 attestation 来源链路强校验（发布元数据不可变期望值 + keyring schema/version 固定）并补齐契约测试。
+  - [x] 已实现签名 attestation 透明日志包含性策略（追加式账本 + 包含性证明链校验 + schema/version 固定）并补齐契约测试。
+- [x] 已完成 SBOM 策略延后加固切片：
+  - [x] 已提供 CycloneDX SBOM 生成命令（`npm run generate:sbom`）。
+  - [x] 已提供 SBOM 严格校验命令（`npm run verify:sbom -- --strict 1`）。
+  - [x] 迁移与发布工作流已接入 SBOM 契约/策略闸门。
+- [ ] FR-009 当前仅剩“真机证据运维闭环”，工具链本身已完成。
+
+### 剩余高优先级工作（FR-009）
+1. 设备可用性检查
+   - `node scripts/verify-capacitor-device-acceptance.js`
+   - 连接真实物理设备（默认会拒绝模拟器判定设备）。
+   - 仅在非生产模拟器实验时使用 `NOTE_CONNECTION_ALLOW_EMULATOR_EVIDENCE=1`。
+2. 真机大图证据采集
+   - `NOTE_CONNECTION_EVIDENCE_NODE_COUNT=10000`
+   - `NOTE_CONNECTION_EVIDENCE_EDGE_COUNT=1000000`
+   - `node scripts/capture-capacitor-device-evidence.js`
+3. 严格证据新鲜度校验
+   - `NOTE_CONNECTION_REQUIRE_LARGE_GRAPH_EVIDENCE=1`
+   - `NOTE_CONNECTION_MIN_EVIDENCE_NODE_COUNT=10000`
+   - `NOTE_CONNECTION_MIN_EVIDENCE_EDGE_COUNT=1000000`
+   - `node scripts/verify-capacitor-evidence-freshness.js`
+4. 最终严格闭环验证
+   - `node scripts/verify-fixrisk-issues.js --strict-pending`
+   - `node scripts/run-fixrisk-ops-closure.js`
+
+### 稳健性护栏
+- 对超大节点/边场景保持自适应内存策略开启。
+- 保持请求体有界与落盘缓冲策略启用。
+- 维持全量契约基线：`node node_modules/jest/bin/jest.js --runInBand`。
+- 保留 Godot 的 SVG 限制假设：Godot 路径中不依赖直接 SVG 导入。
   - [x] 新增 `.detoxrc.json`、`e2e/*`、验证脚本与执行脚本。
   - [x] 新增 CI 工作流：`.github/workflows/mobile-e2e-detox-contracts.yml`。
   - [x] 新增契约测试：`src/detox.pipeline.contract.test.ts`。

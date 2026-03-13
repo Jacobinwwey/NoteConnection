@@ -1,11 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 const {
+  isTruthy,
   runCommand,
   resolveAdbCommand,
   listAdbDevices,
   getOnlineDevices,
   formatDeviceStateSummary,
+  inspectDeviceRuntime,
 } = require('./capacitor-device-utils');
 
 const apkPath = path.resolve(__dirname, '..', 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
@@ -71,9 +73,34 @@ const selectedDevices = requestedSerial
   ? onlineDevices.filter((device) => device.serial === requestedSerial)
   : onlineDevices;
 
+const allowEmulatorEvidence = isTruthy(process.env.NOTE_CONNECTION_ALLOW_EMULATOR_EVIDENCE);
+const evaluatedDevices = selectedDevices.map((device) => ({
+  ...device,
+  runtime: inspectDeviceRuntime(adbCommand, device.serial),
+}));
+const acceptedDevices = allowEmulatorEvidence
+  ? evaluatedDevices
+  : evaluatedDevices.filter((device) => !device.runtime.likelyEmulator);
+
+if (acceptedDevices.length === 0) {
+  const details = evaluatedDevices
+    .map((device) => {
+      const reasons = (device.runtime.emulatorReasons || []).join(', ') || 'unknown';
+      return `${device.serial} (${reasons})`;
+    })
+    .join('; ');
+  fail([
+    '[Capacitor Device Probe] No physical Android device detected (only emulator-like targets are online).',
+    `[Capacitor Device Probe] Evaluated devices: ${details || 'none'}`,
+    '[Capacitor Device Probe] Connect a physical USB/WiFi device and rerun.',
+    '[Capacitor Device Probe] Set NOTE_CONNECTION_ALLOW_EMULATOR_EVIDENCE=1 only for non-production emulator testing.'
+  ]);
+}
+
 console.log(`[Capacitor Device Probe] APK ready: ${apkPath}`);
-console.log(`[Capacitor Device Probe] Connected devices: ${selectedDevices.length}`);
-selectedDevices.forEach((device, index) => {
-  console.log(`  ${index + 1}. ${device.serial}`);
+console.log(`[Capacitor Device Probe] Connected devices: ${acceptedDevices.length}`);
+acceptedDevices.forEach((device, index) => {
+  const suffix = device.runtime.likelyEmulator ? ' [emulator-override]' : '';
+  console.log(`  ${index + 1}. ${device.serial}${suffix}`);
 });
 console.log('[Capacitor Device Probe] Probe passed. Physical-device acceptance can proceed.');

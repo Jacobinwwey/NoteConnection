@@ -228,6 +228,22 @@ function validateManifest(manifest, manifestPath, options) {
   errors.push(...workloadValidation.errors);
   warnings.push(...workloadValidation.warnings);
 
+  const runtimeInfo = manifest?.device?.runtime;
+  if (!options.allowEmulatorEvidence) {
+    if (!runtimeInfo || typeof runtimeInfo !== 'object') {
+      errors.push('Manifest missing device.runtime classification required for physical-device evidence.');
+    } else if (runtimeInfo.likelyEmulator === true) {
+      const reasons = Array.isArray(runtimeInfo.emulatorReasons)
+        ? runtimeInfo.emulatorReasons.join(', ')
+        : '';
+      errors.push(
+        `Evidence device is classified as emulator.${reasons ? ` Reasons: ${reasons}` : ''}`
+      );
+    }
+  } else if (!runtimeInfo || typeof runtimeInfo !== 'object') {
+    warnings.push('Manifest device.runtime classification missing (emulator override enabled).');
+  }
+
   const result = {
     ok: errors.length === 0,
     errors,
@@ -241,6 +257,7 @@ function validateManifest(manifest, manifestPath, options) {
       requireLargeGraphEvidence: options.requireLargeGraphEvidence,
       minimumLargeGraphNodeCount: options.minimumLargeGraphNodeCount,
       minimumLargeGraphEdgeCount: options.minimumLargeGraphEdgeCount,
+      allowEmulatorEvidence: options.allowEmulatorEvidence,
     },
   };
   return result;
@@ -280,6 +297,9 @@ function verifyEvidence(options = {}) {
         max: LARGE_GRAPH_EDGE_COUNT_RANGE.max,
         defaultValue: LARGE_GRAPH_EDGE_COUNT_RANGE.default,
       });
+  const allowEmulatorEvidence = typeof options.allowEmulatorEvidence === 'boolean'
+    ? options.allowEmulatorEvidence
+    : isTruthy(process.env.NOTE_CONNECTION_ALLOW_EMULATOR_EVIDENCE);
 
   if (!fs.existsSync(evidenceRoot)) {
     return {
@@ -293,6 +313,7 @@ function verifyEvidence(options = {}) {
         requireLargeGraphEvidence,
         minimumLargeGraphNodeCount,
         minimumLargeGraphEdgeCount,
+        allowEmulatorEvidence,
       },
     };
   }
@@ -310,6 +331,7 @@ function verifyEvidence(options = {}) {
         requireLargeGraphEvidence,
         minimumLargeGraphNodeCount,
         minimumLargeGraphEdgeCount,
+        allowEmulatorEvidence,
       },
     };
   }
@@ -322,6 +344,7 @@ function verifyEvidence(options = {}) {
     requireLargeGraphEvidence,
     minimumLargeGraphNodeCount,
     minimumLargeGraphEdgeCount,
+    allowEmulatorEvidence,
   });
   validated.summary.evidenceRoot = evidenceRoot;
   validated.summary.resolutionMode = resolved.via;

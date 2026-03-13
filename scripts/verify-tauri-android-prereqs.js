@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
+const JAVAC_EXECUTABLE = process.platform === 'win32' ? 'javac.exe' : 'javac';
+
 function existsDir(dirPath) {
   try {
     return fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory();
@@ -100,16 +102,25 @@ function parseJavaMajorVersion(versionString) {
 }
 
 function detectJavacVersion() {
-  const result = spawnSync('javac', ['-version'], {
+  return detectJavacVersionByCommand('javac', {
+    shell: process.platform === 'win32',
+    source: 'path'
+  });
+}
+
+function detectJavacVersionByCommand(command, options = {}) {
+  const result = spawnSync(command, ['-version'], {
     cwd: process.cwd(),
     encoding: 'utf8',
-    shell: process.platform === 'win32'
+    shell: Boolean(options.shell)
   });
 
   if (result.error) {
     return {
       available: false,
-      message: result.error.message
+      source: options.source || 'unknown',
+      message: result.error.message,
+      command: command || 'javac'
     };
   }
 
@@ -118,7 +129,9 @@ function detectJavacVersion() {
   if (!match) {
     return {
       available: false,
-      message: output || 'Unable to parse javac version output.'
+      source: options.source || 'unknown',
+      message: output || 'Unable to parse javac version output.',
+      command: command || 'javac'
     };
   }
 
@@ -127,18 +140,190 @@ function detectJavacVersion() {
   if (major <= 0) {
     return {
       available: false,
-      message: `Unable to parse JDK major version from "${version}".`
+      source: options.source || 'unknown',
+      message: `Unable to parse JDK major version from "${version}".`,
+      command: command || 'javac'
     };
   }
 
   return {
     available: true,
     version,
-    major
+    major,
+    source: options.source || 'unknown',
+    command: command || 'javac',
+    javaHome: options.javaHome || ''
   };
 }
 
-function probeGradleJava21Toolchain(repoRoot) {
+function dedupeStrings(values) {
+  const seen = new Set();
+  const output = [];
+  for (const value of values) {
+    const normalized = String(value || '').trim();
+    if (!normalized) {
+      continue;
+    }
+    const key = process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    output.push(normalized);
+  }
+  return output;
+}
+
+function listChildDirectoriesIfExists(parentDir) {
+  if (!existsDir(parentDir)) {
+    return [];
+  }
+  try {
+    return fs
+      .readdirSync(parentDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(parentDir, entry.name));
+  } catch {
+    return [];
+  }
+}
+
+function collectJavaHomeCandidates() {
+  const envCandidates = [
+    process.env.NOTE_CONNECTION_JAVA21_HOME,
+    process.env.JAVA_HOME_21_X64,
+    process.env.JAVA_HOME_21,
+    process.env.JDK21_HOME,
+    process.env.JAVA_HOME
+  ];
+
+  const platformCandidates = [];
+  if (process.platform === 'win32') {
+    platformCandidates.push(
+      'C:\\Program Files\\Java\\jdk-21',
+      'C:\\Program Files\\Java\\jdk-21.0.1',
+      'C:\\Program Files\\Java\\jdk-21.0.2',
+      'C:\\Program Files\\Java\\jdk-21.0.3',
+      'C:\\Program Files\\Java\\jdk-21.0.4',
+      'C:\\Program Files\\Java\\jdk-21.0.5',
+      'C:\\Program Files\\Java\\jdk-21.0.6',
+      'C:\\Program Files\\Eclipse Adoptium\\jdk-21',
+      'C:\\Program Files\\Android\\Android Studio\\jbr'
+    );
+
+    platformCandidates.push(
+      ...listChildDirectoriesIfExists('C:\\Program Files\\Java'),
+      ...listChildDirectoriesIfExists('C:\\Program Files\\Eclipse Adoptium')
+    );
+  } else {
+    platformCandidates.push(
+      '/usr/lib/jvm/java-21-openjdk',
+      '/usr/lib/jvm/java-21-openjdk-amd64',
+      '/usr/lib/jvm/temurin-21-jdk'
+    );
+    platformCandidates.push(...listChildDirectoriesIfExists('/usr/lib/jvm'));
+  }
+
+  return dedupeStrings([...envCandidates, ...platformCandidates]).filter((candidate) => existsDir(candidate));
+}
+
+function resolveJavacPath(javaHome) {
+  if (!javaHome) {
+    return '';
+  }
+  const javacPath = path.join(javaHome, 'bin', JAVAC_EXECUTABLE);
+  return fs.existsSync(javacPath) ? javacPath : '';
+}
+
+function detectAvailableJava21Toolchain() {
+  const candidates = collectJavaHomeCandidates();
+  const inspected = [];
+
+  for (const javaHome of candidates) {
+    const javacPath = resolveJavacPath(javaHome);
+    if (!javacPath) {
+      inspected.push({
+        javaHome,
+        ok: false,
+        reason: 'Missing javac binary in bin directory.'
+      });
+      continue;
+    }
+
+    const detected = detectJavacVersionByCommand(javacPath, {
+      shell: false,
+      source: 'candidate',
+      javaHome
+    });
+    if (!detected.available) {
+      inspected.push({
+        javaHome,
+        ok: false,
+        reason: detected.message
+      });
+      continue;
+    }
+
+    if (detected.major === 21) {
+      return {
+        found: true,
+        javaHome,
+        javacPath,
+        version: detected.version,
+        inspected
+      };
+    }
+
+    inspected.push({
+      javaHome,
+      ok: false,
+      reason: `Detected javac ${detected.version} (major ${detected.major}), expected major 21.`
+    });
+  }
+
+  return {
+    found: false,
+    javaHome: '',
+    javacPath: '',
+    version: '',
+    inspected
+  };
+}
+
+function mergePathWithJavaBin(existingPath, javaHome) {
+  const javaBin = path.join(javaHome, 'bin');
+  const separator = process.platform === 'win32' ? ';' : ':';
+  if (!existingPath) {
+    return javaBin;
+  }
+  const parts = String(existingPath)
+    .split(separator)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  const hasJavaBin = parts.some((part) => {
+    if (process.platform === 'win32') {
+      return part.toLowerCase() === javaBin.toLowerCase();
+    }
+    return part === javaBin;
+  });
+  if (hasJavaBin) {
+    return existingPath;
+  }
+  return [javaBin, ...parts].join(separator);
+}
+
+function buildEnvWithJavaHome(baseEnv, javaHome) {
+  if (!javaHome) {
+    return baseEnv;
+  }
+  return {
+    ...baseEnv,
+    JAVA_HOME: javaHome,
+    PATH: mergePathWithJavaBin(baseEnv.PATH || baseEnv.Path || '', javaHome)
+  };
+}
+
+function probeGradleJava21Toolchain(repoRoot, env) {
   const androidRoot = path.join(repoRoot, 'android');
   const gradlewName = process.platform === 'win32' ? 'gradlew.bat' : 'gradlew';
   const gradlewPath = path.join(androidRoot, gradlewName);
@@ -154,7 +339,8 @@ function probeGradleJava21Toolchain(repoRoot) {
   const result = spawnSync(gradlewPath, ['-q', 'javaToolchains'], {
     cwd: androidRoot,
     encoding: 'utf8',
-    shell: process.platform === 'win32'
+    shell: process.platform === 'win32',
+    env: env || process.env
   });
 
   const stdout = String(result.stdout || '');
@@ -184,35 +370,44 @@ function probeGradleJava21Toolchain(repoRoot) {
   };
 }
 
+const repoRoot = path.resolve(__dirname, '..');
 const javac = detectJavacVersion();
-if (!javac.available) {
+const java21Toolchain = detectAvailableJava21Toolchain();
+const defaultProbe = probeGradleJava21Toolchain(repoRoot, process.env);
+const java21Probe = java21Toolchain.found
+  ? probeGradleJava21Toolchain(repoRoot, buildEnvWithJavaHome(process.env, java21Toolchain.javaHome))
+  : { checked: false, available: false, reason: '' };
+
+if (!javac.available && !java21Toolchain.found) {
   fail([
     '[Android Env] Java compiler (javac) not available on PATH.',
-    `[Android Env] Details: ${javac.message}`,
-    '[Android Env] Install JDK 21+ and ensure JAVA_HOME/bin is available in PATH.'
+    `[Android Env] Details: ${javac.message || 'No javac binary detected.'}`,
+    '[Android Env] Java 21 toolchain discovery also failed.',
+    '[Android Env] Install JDK 21 and configure one of NOTE_CONNECTION_JAVA21_HOME/JAVA_HOME_21_X64/JAVA_HOME.'
   ]);
 }
 
-if (javac.major < 21) {
+if (javac.available && javac.major < 21 && !java21Toolchain.found) {
   fail([
     `[Android Env] Unsupported JDK detected: ${javac.version} (major ${javac.major}).`,
     '[Android Env] Tauri Android and Gradle toolchain in this project require Java 21.',
-    '[Android Env] Install JDK 21 and point JAVA_HOME to that installation before retrying.'
+    '[Android Env] Install JDK 21 and point JAVA_HOME/NOTE_CONNECTION_JAVA21_HOME to that installation before retrying.'
   ]);
 }
 
-const repoRoot = path.resolve(__dirname, '..');
-const gradleJava21 = probeGradleJava21Toolchain(repoRoot);
+const gradleJava21 = java21Probe.available ? java21Probe : defaultProbe;
 
-if (javac.major !== 21 && !gradleJava21.available) {
+const activeJdkIs21 = javac.available && javac.major === 21;
+const discoveredJdk21Available = java21Toolchain.found;
+if (!activeJdkIs21 && !discoveredJdk21Available && !gradleJava21.available) {
   const details = gradleJava21.checked
     ? 'Gradle wrapper probe did not find a Java 21 toolchain.'
     : `Gradle wrapper probe failed: ${gradleJava21.reason}`;
 
   fail([
-    `[Android Env] Active javac version is ${javac.version} (major ${javac.major}), but this project needs Java 21 toolchain availability.`,
+    `[Android Env] Active javac version is ${javac.available ? javac.version : 'unavailable'} (major ${javac.major || 0}), but this project needs Java 21 toolchain availability.`,
     `[Android Env] ${details}`,
-    '[Android Env] Install JDK 21 and set JAVA_HOME to that installation before running Android builds.'
+    '[Android Env] Install JDK 21 and set JAVA_HOME (or NOTE_CONNECTION_JAVA21_HOME) before running Android builds.'
   ]);
 }
 
@@ -274,6 +469,11 @@ if (envNdk) {
 console.log(`[Android Env] SDK root: ${sdkRoot}`);
 console.log(`[Android Env] sdkmanager: ${sdkManager}`);
 console.log(`[Android Env] NDK: ${ndkPath}`);
-console.log(`[Android Env] JDK: ${javac.version} (major ${javac.major})`);
-console.log(`[Android Env] Java 21 Toolchain: ${gradleJava21.available ? 'available' : 'not-detected'}`);
+console.log(`[Android Env] Active JDK: ${javac.available ? `${javac.version} (major ${javac.major})` : 'not-detected'}`);
+if (java21Toolchain.found) {
+  console.log(
+    `[Android Env] Java 21 candidate: ${java21Toolchain.version} @ ${java21Toolchain.javaHome}`
+  );
+}
+console.log(`[Android Env] Java 21 Toolchain: ${activeJdkIs21 || discoveredJdk21Available || gradleJava21.available ? 'available' : 'not-detected'}`);
 console.log('[Android Env] Prerequisite check passed.');

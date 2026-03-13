@@ -14,6 +14,7 @@ describe('privacy manifest compliance contract', () => {
   const packageJsonPath = path.join(repoRoot, 'package.json');
   const verifyScriptPath = path.join(repoRoot, 'scripts', 'verify-privacy-manifest.js');
   const manifestPath = path.join(repoRoot, 'ios', 'App', 'PrivacyInfo.xcprivacy');
+  const infoPlistPath = path.join(repoRoot, 'ios', 'App', 'Info.plist');
 
   test('provisions PrivacyInfo.xcprivacy baseline with required API reasons', () => {
     expect(fs.existsSync(manifestPath)).toBe(true);
@@ -28,12 +29,24 @@ describe('privacy manifest compliance contract', () => {
     expect(xml).toContain('E174.1');
   });
 
+  test('provisions iOS Info.plist tracking usage description baseline', () => {
+    expect(fs.existsSync(infoPlistPath)).toBe(true);
+    const plist = fs.readFileSync(infoPlistPath, 'utf8');
+
+    expect(plist).toContain('<key>NSUserTrackingUsageDescription</key>');
+    const match = plist.match(/<key>\s*NSUserTrackingUsageDescription\s*<\/key>\s*<string>([\s\S]*?)<\/string>/i);
+    const description = match && typeof match[1] === 'string' ? match[1].trim() : '';
+    expect(description.length).toBeGreaterThanOrEqual(16);
+  });
+
   test('ships privacy manifest verifier and npm integration', () => {
     expect(fs.existsSync(verifyScriptPath)).toBe(true);
     const verifyScript = fs.readFileSync(verifyScriptPath, 'utf8');
     expect(verifyScript).toContain('verifyPrivacyManifest');
     expect(verifyScript).toContain('NSPrivacyAccessedAPICategoryFileTimestamp');
     expect(verifyScript).toContain('NSPrivacyAccessedAPICategoryDiskSpace');
+    expect(verifyScript).toContain('Info.plist');
+    expect(verifyScript).toContain('NSUserTrackingUsageDescription');
 
     const pkg = readJson<PackageJson>(packageJsonPath);
     const scripts = pkg.scripts || {};

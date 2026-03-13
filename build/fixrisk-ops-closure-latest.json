@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-03-12T07:59:29.967Z",
+  "completedAt": "2026-03-12T07:59:34.878Z",
+  "dryRun": false,
+  "options": {
+    "dryRun": false,
+    "skipTauriEnv": false,
+    "skipStrictFixrisk": false,
+    "nodeCount": 10000,
+    "edgeCount": 1000000,
+    "serial": ""
+  },
+  "ok": false,
+  "failedStep": "verify-capacitor-device-acceptance",
+  "steps": [
+    {
+      "name": "verify-tauri-android-prereqs",
+      "script": "scripts/verify-tauri-android-prereqs.js",
+      "args": [],
+      "ok": true,
+      "exitCode": 0,
+      "durationMs": 4662,
+      "stdout": "[Android Env] SDK root: C:\\Users\\jacob\\AppData\\Local\\Android\\Sdk\n[Android Env] sdkmanager: C:\\Users\\jacob\\AppData\\Local\\Android\\Sdk\\cmdline-tools\\latest\\bin\\sdkmanager.bat\n[Android Env] NDK: C:\\Users\\jacob\\AppData\\Local\\Android\\Sdk\\ndk\\27.2.12479018\n[Android Env] Active JDK: 23.0.1 (major 23)\n[Android Env] Java 21 candidate: 21.0.8 @ C:\\Program Files\\Android\\Android Studio\\jbr\n[Android Env] Java 21 Toolchain: available\n[Android Env] Prerequisite check passed.",
+      "stderr": "",
+      "error": ""
+    },
+    {
+      "name": "verify-capacitor-device-acceptance",
+      "script": "scripts/verify-capacitor-device-acceptance.js",
+      "args": [],
+      "ok": false,
+      "exitCode": 1,
+      "durationMs": 246,
+      "stdout": "",
+      "stderr": "[Capacitor Device Probe] No online Android device detected.\n[Capacitor Device Probe] Device states: none\n[Capacitor Device Probe] Connect a device (USB debugging enabled), accept authorization prompts, and run again.",
+      "error": ""
+    }
+  ]
+}

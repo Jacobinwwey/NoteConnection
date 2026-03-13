@@ -9,6 +9,20 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  NOTE_CONNECTION_SBOM_ATTESTATION_KEY_ID: ${{ secrets.SBOM_SIGNING_KEY_ID }}
+  NOTE_CONNECTION_SBOM_SIGNING_PRIVATE_KEY_PEM: ${{ secrets.SBOM_SIGNING_PRIVATE_KEY_PEM }}
+  NOTE_CONNECTION_SBOM_SIGNING_PUBLIC_KEY_PEM: ${{ secrets.SBOM_SIGNING_PUBLIC_KEY_PEM }}
+  NOTE_CONNECTION_SBOM_ATTESTATION_ALLOWED_KEY_IDS: ${{ secrets.SBOM_SIGNING_ALLOWED_KEY_IDS }}
+  NOTE_CONNECTION_SBOM_ATTESTATION_REVOKED_KEY_IDS: ${{ secrets.SBOM_SIGNING_REVOKED_KEY_IDS }}
+  NOTE_CONNECTION_SBOM_ATTESTATION_MIN_RSA_BITS: "2048"
+  NOTE_CONNECTION_SBOM_ATTESTATION_MIN_ROTATION_OVERLAP_HOURS: "24"
+  NOTE_CONNECTION_SBOM_ATTESTATION_ENABLE_TRANSPARENCY_LOG: "true"
+  NOTE_CONNECTION_SBOM_ATTESTATION_TRANSPARENCY_LOG_PATH: "build/sbom/attestation-transparency-log.jsonl"
+  NOTE_CONNECTION_RELEASE_COMMIT_SHA: ${{ github.sha }}
+  NOTE_CONNECTION_RELEASE_GIT_TAG: ${{ github.ref_name }}
+  NOTE_CONNECTION_RELEASE_REF: ${{ github.ref }}
+  NOTE_CONNECTION_RELEASE_RUN_ID: ${{ github.run_id }}
+  NOTE_CONNECTION_RELEASE_REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
 
 jobs:
   publish:
@@ -30,6 +44,81 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Generate release SBOM
+        run: npm run generate:sbom
+
+      - name: Verify SBOM policy gate
+        run: npm run verify:sbom -- --strict 1
+
+      - name: Validate SBOM signing key pair configuration
+        shell: bash
+        run: |
+          KEY_ID="$(printf '%s' "${NOTE_CONNECTION_SBOM_ATTESTATION_KEY_ID}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          ALLOWED_KEY_IDS="$(printf '%s' "${NOTE_CONNECTION_SBOM_ATTESTATION_ALLOWED_KEY_IDS}" | tr -d '[:space:]')"
+          REVOKED_KEY_IDS="$(printf '%s' "${NOTE_CONNECTION_SBOM_ATTESTATION_REVOKED_KEY_IDS}" | tr -d '[:space:]')"
+
+          if [ -n "${NOTE_CONNECTION_SBOM_SIGNING_PRIVATE_KEY_PEM}" ] && [ -z "${NOTE_CONNECTION_SBOM_SIGNING_PUBLIC_KEY_PEM}" ]; then
+            echo "SBOM signing configuration is invalid: private key is set but public key is missing." >&2
+            exit 1
+          fi
+          if [ -z "${NOTE_CONNECTION_SBOM_SIGNING_PRIVATE_KEY_PEM}" ] && [ -n "${NOTE_CONNECTION_SBOM_SIGNING_PUBLIC_KEY_PEM}" ]; then
+            echo "SBOM signing configuration is invalid: public key is set but private key is missing." >&2
+            exit 1
+          fi
+          if [ -n "${NOTE_CONNECTION_SBOM_SIGNING_PRIVATE_KEY_PEM}" ] && [ -z "${KEY_ID}" ]; then
+            echo "SBOM signing configuration is invalid: signing key-id is required when signing keys are set." >&2
+            exit 1
+          fi
+          if [ -n "${KEY_ID}" ] && [ -n "${REVOKED_KEY_IDS}" ] && [[ ",${REVOKED_KEY_IDS}," == *",${KEY_ID},"* ]]; then
+            echo "SBOM signing configuration is invalid: configured key-id is listed as revoked." >&2
+            exit 1
+          fi
+          if [ -n "${KEY_ID}" ] && [ -n "${ALLOWED_KEY_IDS}" ] && [[ ",${ALLOWED_KEY_IDS}," != *",${KEY_ID},"* ]]; then
+            echo "SBOM signing configuration is invalid: configured key-id is not listed in allowed key IDs." >&2
+            exit 1
+          fi
+
+      - name: Generate SBOM attestation
+        env:
+          NOTE_CONNECTION_SBOM_ATTESTATION_ALLOW_UNSIGNED: ${{ secrets.SBOM_SIGNING_PRIVATE_KEY_PEM == '' }}
+          NOTE_CONNECTION_SBOM_ATTESTATION_ENABLE_TRANSPARENCY_LOG: "true"
+          NOTE_CONNECTION_SBOM_ATTESTATION_TRANSPARENCY_LOG_PATH: "build/sbom/attestation-transparency-log.jsonl"
+        run: npm run generate:sbom:attestation
+
+      - name: Materialize SBOM signing keyring policy (optional)
+        if: ${{ secrets.SBOM_SIGNING_KEYRING_JSON != '' }}
+        shell: bash
+        env:
+          SBOM_SIGNING_KEYRING_JSON: ${{ secrets.SBOM_SIGNING_KEYRING_JSON }}
+        run: |
+          mkdir -p build/sbom
+          printf '%s' "${SBOM_SIGNING_KEYRING_JSON}" > build/sbom/signing-keyring.json
+
+      - name: Verify SBOM attestation policy gate
+        env:
+          NOTE_CONNECTION_REQUIRE_SBOM_ATTESTATION_SIGNATURE: ${{ secrets.SBOM_SIGNING_PUBLIC_KEY_PEM != '' }}
+          NOTE_CONNECTION_SBOM_ATTESTATION_REQUIRE_SIGNED_KEY_ID: ${{ secrets.SBOM_SIGNING_PUBLIC_KEY_PEM != '' }}
+          NOTE_CONNECTION_SBOM_SIGNING_PUBLIC_KEYRING_FILE: ${{ secrets.SBOM_SIGNING_KEYRING_JSON != '' && 'build/sbom/signing-keyring.json' || '' }}
+          NOTE_CONNECTION_SBOM_ATTESTATION_REQUIRE_PROVENANCE: "true"
+          NOTE_CONNECTION_SBOM_ATTESTATION_EXPECT_REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
+          NOTE_CONNECTION_SBOM_ATTESTATION_EXPECT_RELEASE_COMMIT_SHA: ${{ github.sha }}
+          NOTE_CONNECTION_SBOM_ATTESTATION_EXPECT_RELEASE_GIT_TAG: ${{ github.ref_name }}
+          NOTE_CONNECTION_SBOM_ATTESTATION_EXPECT_RELEASE_REF: ${{ github.ref }}
+          NOTE_CONNECTION_SBOM_ATTESTATION_EXPECT_RELEASE_RUN_ID: ${{ github.run_id }}
+          NOTE_CONNECTION_SBOM_KEYRING_REQUIRE_SCHEMA_PIN: ${{ secrets.SBOM_SIGNING_KEYRING_JSON != '' }}
+          NOTE_CONNECTION_SBOM_KEYRING_EXPECT_SCHEMA: "noteconnection/sbom-keyring/v1"
+          NOTE_CONNECTION_SBOM_KEYRING_EXPECT_VERSION: "1"
+          NOTE_CONNECTION_SBOM_ATTESTATION_REQUIRE_TRANSPARENCY_LOG: "true"
+          NOTE_CONNECTION_SBOM_ATTESTATION_VERIFY_TRANSPARENCY_LOG_INCLUSION: "true"
+          NOTE_CONNECTION_SBOM_ATTESTATION_TRANSPARENCY_REQUIRE_SCHEMA_PIN: "true"
+          NOTE_CONNECTION_SBOM_ATTESTATION_TRANSPARENCY_EXPECT_SCHEMA: "noteconnection/sbom-attestation-transparency/v1"
+          NOTE_CONNECTION_SBOM_ATTESTATION_TRANSPARENCY_EXPECT_VERSION: "1"
+          NOTE_CONNECTION_SBOM_ATTESTATION_TRANSPARENCY_LOG_PATH: "build/sbom/attestation-transparency-log.jsonl"
+        run: npm run verify:sbom:attestation -- --strict 1 --allow-missing 0
+
+      - name: Enforce strict PathBridge inbound schema gate
+        run: npm run verify:pathbridge:strict
 
       - name: Enforce strict wasm parity gates
         run: npm run test:wasm:parity:gates

@@ -1,9 +1,15 @@
 const BYTES_PER_MEBIBYTE = 1024 * 1024;
 const MIN_OLD_SPACE_MB = 512;
 const DESKTOP_DEFAULT_OLD_SPACE_MB = 4096;
-const MOBILE_DEFAULT_OLD_SPACE_MB = 1024;
 const DESKTOP_MAX_OLD_SPACE_MB = 12288;
+const MOBILE_DEFAULT_OLD_SPACE_MB = 1024;
 const MOBILE_MAX_OLD_SPACE_MB = 4096;
+const IOS_DEFAULT_OLD_SPACE_MB = 768;
+const IOS_MAX_OLD_SPACE_MB = 2048;
+const IOS_TIGHT_DEFAULT_OLD_SPACE_MB = 640;
+const IOS_TIGHT_MAX_OLD_SPACE_MB = 1536;
+const IOS_RELAXED_DEFAULT_OLD_SPACE_MB = 1024;
+const IOS_RELAXED_MAX_OLD_SPACE_MB = 2560;
 const LARGE_GRAPH_OLD_SPACE_MB = 8192;
 const EXTREME_GRAPH_OLD_SPACE_MB = 12288;
 const LARGE_GRAPH_NODE_THRESHOLD = 5000;
@@ -42,23 +48,57 @@ function parseBooleanFlag(rawValue) {
     return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
 }
 
-function detectRuntimeClass(env) {
+function normalizeIosJetsamTier(rawValue) {
+    const normalized = String(rawValue || '').trim().toLowerCase();
+    if (normalized === 'tight' || normalized === 'strict' || normalized === 'low') {
+        return 'tight';
+    }
+    if (normalized === 'relaxed' || normalized === 'high' || normalized === 'highmem') {
+        return 'relaxed';
+    }
+    return 'balanced';
+}
+
+function detectRuntimePlatform(env) {
     const runtimeProfile = String(env.NOTE_CONNECTION_RUNTIME_PROFILE || '').trim().toLowerCase();
-    if (runtimeProfile === 'mobile' || runtimeProfile === 'android' || runtimeProfile === 'ios') {
+    if (runtimeProfile === 'android') {
+        return 'android';
+    }
+    if (runtimeProfile === 'ios') {
+        return 'ios';
+    }
+    if (runtimeProfile === 'mobile') {
         return 'mobile';
     }
     if (runtimeProfile === 'desktop' || runtimeProfile === 'server') {
         return 'desktop';
     }
 
-    const capacitorPlatform = String(env.CAPACITOR_PLATFORM || '').trim().toLowerCase();
-    if (capacitorPlatform === 'android' || capacitorPlatform === 'ios') {
+    const explicitRuntimePlatform = String(env.NOTE_CONNECTION_RUNTIME_PLATFORM || '').trim().toLowerCase();
+    if (explicitRuntimePlatform === 'android' || explicitRuntimePlatform === 'ios') {
+        return explicitRuntimePlatform;
+    }
+    if (explicitRuntimePlatform === 'mobile') {
         return 'mobile';
+    }
+    if (explicitRuntimePlatform === 'desktop') {
+        return 'desktop';
+    }
+
+    const capacitorPlatform = String(env.CAPACITOR_PLATFORM || '').trim().toLowerCase();
+    if (capacitorPlatform === 'android') {
+        return 'android';
+    }
+    if (capacitorPlatform === 'ios') {
+        return 'ios';
     }
 
     const tauriPlatform = String(env.TAURI_ENV_PLATFORM || '').trim().toLowerCase();
-    if (tauriPlatform.includes('android') || tauriPlatform.includes('ios')) {
-        return 'mobile';
+    if (tauriPlatform.includes('android')) {
+        return 'android';
+    }
+    if (tauriPlatform.includes('ios')) {
+        return 'ios';
     }
 
     if (parseBooleanFlag(env.NOTE_CONNECTION_MOBILE)) {
@@ -66,6 +106,50 @@ function detectRuntimeClass(env) {
     }
 
     return 'desktop';
+}
+
+function detectRuntimeClass(env) {
+    const runtimePlatform = detectRuntimePlatform(env);
+    return runtimePlatform === 'desktop' ? 'desktop' : 'mobile';
+}
+
+function resolveRuntimeBounds(runtimePlatform, env) {
+    if (runtimePlatform === 'ios') {
+        const iosJetsamTier = normalizeIosJetsamTier(env.NOTE_CONNECTION_IOS_JETSAM_TIER);
+        if (iosJetsamTier === 'tight') {
+            return {
+                runtimeDefaultMb: IOS_TIGHT_DEFAULT_OLD_SPACE_MB,
+                runtimeMaxMb: IOS_TIGHT_MAX_OLD_SPACE_MB,
+                iosJetsamTier,
+            };
+        }
+        if (iosJetsamTier === 'relaxed') {
+            return {
+                runtimeDefaultMb: IOS_RELAXED_DEFAULT_OLD_SPACE_MB,
+                runtimeMaxMb: IOS_RELAXED_MAX_OLD_SPACE_MB,
+                iosJetsamTier,
+            };
+        }
+        return {
+            runtimeDefaultMb: IOS_DEFAULT_OLD_SPACE_MB,
+            runtimeMaxMb: IOS_MAX_OLD_SPACE_MB,
+            iosJetsamTier,
+        };
+    }
+
+    if (runtimePlatform === 'android' || runtimePlatform === 'mobile') {
+        return {
+            runtimeDefaultMb: MOBILE_DEFAULT_OLD_SPACE_MB,
+            runtimeMaxMb: MOBILE_MAX_OLD_SPACE_MB,
+            iosJetsamTier: null,
+        };
+    }
+
+    return {
+        runtimeDefaultMb: DESKTOP_DEFAULT_OLD_SPACE_MB,
+        runtimeMaxMb: DESKTOP_MAX_OLD_SPACE_MB,
+        iosJetsamTier: null,
+    };
 }
 
 function resolveWorkloadHint(env) {
@@ -108,13 +192,11 @@ function resolveWorkloadTargetOldSpaceMb(workloadHint) {
 }
 
 function resolveRuntimeHeapPolicy(env, totalSystemMemoryMb) {
-    const runtimeClass = detectRuntimeClass(env);
-    const runtimeDefaultMb = runtimeClass === 'mobile'
-        ? MOBILE_DEFAULT_OLD_SPACE_MB
-        : DESKTOP_DEFAULT_OLD_SPACE_MB;
-    const runtimeMaxMb = runtimeClass === 'mobile'
-        ? MOBILE_MAX_OLD_SPACE_MB
-        : DESKTOP_MAX_OLD_SPACE_MB;
+    const runtimePlatform = detectRuntimePlatform(env);
+    const runtimeClass = runtimePlatform === 'desktop' ? 'desktop' : 'mobile';
+    const runtimeBounds = resolveRuntimeBounds(runtimePlatform, env);
+    const runtimeDefaultMb = runtimeBounds.runtimeDefaultMb;
+    const runtimeMaxMb = runtimeBounds.runtimeMaxMb;
     const workloadHint = resolveWorkloadHint(env);
     const workloadTargetMb = resolveWorkloadTargetOldSpaceMb(workloadHint);
     const recommendedOldSpaceMb = clampInteger(
@@ -171,8 +253,18 @@ function resolveRuntimeHeapPolicy(env, totalSystemMemoryMb) {
         effectiveMaxMb
     );
 
+    if (runtimePlatform === 'ios' && workloadTargetMb > runtimeMaxMb) {
+        const jetsamTierText = runtimeBounds.iosJetsamTier || 'balanced';
+        warnings.push(
+            `iOS Jetsam ceiling (${jetsamTierText}) constrained old-space to ${clampedSelectedOldSpaceMb} MiB ` +
+            `for workload target ${workloadTargetMb} MiB.`
+        );
+    }
+
     return {
         runtimeClass,
+        runtimePlatform,
+        iosJetsamTier: runtimeBounds.iosJetsamTier,
         source,
         selectedOldSpaceMb: clampedSelectedOldSpaceMb,
         recommendedOldSpaceMb: sanitizedRecommendedOldSpaceMb,
@@ -202,6 +294,11 @@ module.exports = {
     MIN_OLD_SPACE_MB,
     DESKTOP_MAX_OLD_SPACE_MB,
     MOBILE_MAX_OLD_SPACE_MB,
+    IOS_MAX_OLD_SPACE_MB,
+    IOS_TIGHT_MAX_OLD_SPACE_MB,
+    IOS_RELAXED_MAX_OLD_SPACE_MB,
+    detectRuntimeClass,
+    detectRuntimePlatform,
     resolveRuntimeHeapPolicy,
     stripMaxOldSpaceFromNodeOptions,
 };

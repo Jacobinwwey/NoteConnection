@@ -1047,7 +1047,8 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             hasCliBuild = true;
         }
     }
-    const finalPort = options.port || PORT;
+    const finalPort = typeof options.port === 'number' ? options.port : PORT;
+    let runtimePort = finalPort;
 
     if (hasCliBuild) {
         const kbName = path.basename(cliOptions.targetPath || 'knowledge_base');
@@ -1144,7 +1145,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     res.end(JSON.stringify({
                         runtime: {
                             host: LOOPBACK_HOST,
-                            port: finalPort,
+                            port: runtimePort,
                             bridgePort: PATH_BRIDGE_PORT,
                             kbRoot: KB_ROOT,
                             frontendDir: FRONTEND_DIR,
@@ -1730,13 +1731,17 @@ export const startServer = async (options: { port?: number, targetPath?: string 
     });
     
     return new Promise<http.Server>((resolve, reject) => {
+        const explicitEphemeralFallback = parseBooleanFlag(
+            process.env.NOTE_CONNECTION_ALLOW_EPHEMERAL_PORT_FALLBACK
+        );
         const hasExplicitPortSetting =
             typeof options.port === 'number' ||
             String(process.env.NOTE_CONNECTION_PORT || '').trim().length > 0 ||
             String(process.env.PORT || '').trim().length > 0;
-        const allowEphemeralFallback = !hasExplicitPortSetting;
+        const allowEphemeralFallback = explicitEphemeralFallback;
 
         const initializeRuntime = async (resolvedPort: number): Promise<void> => {
+            runtimePort = resolvedPort;
             await ensureRuntimeDataDir();
             await writeSidecarRuntimeManifest(resolvedPort);
             console.log(`[Sidecar] Runtime Manifest: ${SIDECAR_RUNTIME_MANIFEST}`);
@@ -1770,6 +1775,16 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         `[Sidecar] Port ${finalPort} is already in use. Retrying with an ephemeral loopback port.`
                     );
                     attachListenHandlers(0);
+                    return;
+                }
+                if (error?.code === 'EADDRINUSE' && targetPort === finalPort && !allowEphemeralFallback) {
+                    const guidanceError = new Error(
+                        `[Sidecar] Port ${finalPort} is already in use. ` +
+                        'Ephemeral port fallback is disabled by default to keep origin policy deterministic. ' +
+                        'Set NOTE_CONNECTION_ALLOW_EPHEMERAL_PORT_FALLBACK=1 to opt in explicitly.'
+                    ) as NodeJS.ErrnoException;
+                    guidanceError.code = 'EADDRINUSE';
+                    reject(guidanceError);
                     return;
                 }
                 reject(error);

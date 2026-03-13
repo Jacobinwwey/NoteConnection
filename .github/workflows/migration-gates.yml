@@ -26,6 +26,12 @@ jobs:
             command: npm run test:tauri
           - suite: mobile-pipeline-contract-suite
             command: npm run test:mobile:contracts
+          - suite: pathbridge-strict-schema-suite
+            command: npm run verify:pathbridge:strict
+          - suite: sbom-policy-contract-suite
+            command: npm run verify:sbom -- --contract-only
+          - suite: sbom-attestation-policy-contract-suite
+            command: npm run verify:sbom:attestation -- --contract-only
           - suite: sidecar-signature-policy-contract-suite
             command: npm run verify:sidecar:signatures -- --contract-only
 
@@ -41,6 +47,13 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Setup Java 21
+        if: matrix.suite == 'tauri-rust-suite'
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
 
       - name: Setup Rust toolchain
         if: matrix.suite == 'tauri-rust-suite'

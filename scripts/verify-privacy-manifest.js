@@ -11,6 +11,8 @@ const REQUIRED_ACCESS_API_TYPES = [
     reason: 'E174.1'
   }
 ];
+const REQUIRED_TRACKING_USAGE_DESCRIPTION_KEY = 'NSUserTrackingUsageDescription';
+const MIN_TRACKING_USAGE_DESCRIPTION_LENGTH = 16;
 
 function assert(condition, message) {
   if (!condition) {
@@ -20,6 +22,18 @@ function assert(condition, message) {
 
 function escapeForRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function extractPlistStringValue(xml, key) {
+  const keyPattern = new RegExp(
+    `<key>\\s*${escapeForRegex(key)}\\s*<\\/key>\\s*<string>([\\s\\S]*?)<\\/string>`,
+    'i'
+  );
+  const match = keyPattern.exec(xml);
+  if (!match || typeof match[1] !== 'string') {
+    return '';
+  }
+  return match[1].trim();
 }
 
 function verifyPrivacyManifest(repoRoot = path.resolve(__dirname, '..')) {
@@ -38,9 +52,22 @@ function verifyPrivacyManifest(repoRoot = path.resolve(__dirname, '..')) {
     assert(reasonPattern.test(xml), `Privacy manifest missing required reason code ${entry.reason} for ${entry.category}`);
   });
 
+  const infoPlistPath = path.join(repoRoot, 'ios', 'App', 'Info.plist');
+  assert(fs.existsSync(infoPlistPath), `Missing iOS Info.plist: ${infoPlistPath}`);
+  const infoPlistXml = fs.readFileSync(infoPlistPath, 'utf8');
+  const trackingUsageDescription = extractPlistStringValue(
+    infoPlistXml,
+    REQUIRED_TRACKING_USAGE_DESCRIPTION_KEY
+  );
+  assert(
+    trackingUsageDescription.length >= MIN_TRACKING_USAGE_DESCRIPTION_LENGTH,
+    `Info.plist must provide ${REQUIRED_TRACKING_USAGE_DESCRIPTION_KEY} with descriptive non-empty text.`
+  );
+
   return {
     manifestPath,
-    requiredEntries: REQUIRED_ACCESS_API_TYPES.length
+    requiredEntries: REQUIRED_ACCESS_API_TYPES.length,
+    infoPlistPath
   };
 }
 
@@ -49,6 +76,9 @@ if (require.main === module) {
     const result = verifyPrivacyManifest();
     console.log(
       `[Privacy Verify] Manifest contract passed (${result.requiredEntries} required-reason API entries): ${result.manifestPath}`
+    );
+    console.log(
+      `[Privacy Verify] Info.plist tracking usage description present: ${result.infoPlistPath}`
     );
   } catch (error) {
     console.error(`[Privacy Verify] ${error.message}`);

@@ -40,11 +40,13 @@ describe('tauri runner and android prereq contracts', () => {
   test('android prereq verifier enforces Java 21 toolchain availability before SDK checks', () => {
     const source = fs.readFileSync(androidPrereqPath, 'utf8');
 
-    expect(source).toContain("spawnSync('javac', ['-version']");
+    expect(source).toContain("detectJavacVersionByCommand('javac'");
     expect(source).toContain('parseJavaMajorVersion');
-    expect(source).toContain('if (javac.major < 21)');
+    expect(source).toContain('detectAvailableJava21Toolchain');
+    expect(source).toContain('if (javac.available && javac.major < 21 && !java21Toolchain.found)');
     expect(source).toContain('probeGradleJava21Toolchain');
     expect(source).toContain('needs Java 21 toolchain availability');
-    expect(source).toContain('JDK: ${javac.version}');
+    expect(source).toContain('Active JDK:');
+    expect(source).toContain('Java 21 candidate:');
   });
 });

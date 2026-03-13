@@ -4,17 +4,19 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const {
+  isTruthy,
   runCommand,
   resolveAdbCommand,
   listAdbDevices,
   getOnlineDevices,
   formatDeviceStateSummary,
+  inspectDeviceRuntime,
 } = require('./capacitor-device-utils');
 
 const repoRoot = path.resolve(__dirname, '..');
 const apkPath = path.join(repoRoot, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
 const evidenceRoot = path.join(repoRoot, 'docs', 'mobile-evidence');
-const EVIDENCE_MANIFEST_SCHEMA_VERSION = 1;
+const EVIDENCE_MANIFEST_SCHEMA_VERSION = 2;
 const LARGE_GRAPH_NODE_THRESHOLD = 10000;
 const LARGE_GRAPH_EDGE_THRESHOLD = 1000000;
 
@@ -36,14 +38,6 @@ function assertAdbAvailable(adbCommand) {
       'Configure ADB_PATH or install Android Platform Tools (PATH / ANDROID_SDK_ROOT).',
     ]);
   }
-}
-
-function getDeviceProperty(adbCommand, serial, propertyName) {
-  const result = runCommand(adbCommand, ['-s', serial, 'shell', 'getprop', propertyName]);
-  if (result.error || result.status !== 0) {
-    return '';
-  }
-  return String(result.stdout || '').trim();
 }
 
 function sanitizeSegment(value) {
@@ -168,6 +162,12 @@ function writeEvidenceManifest(manifestPath, context) {
       serialMasked: context.maskedSerial,
       model: context.model || '',
       androidVersion: context.androidVersion || '',
+      runtime: {
+        likelyEmulator: Boolean(context.runtime && context.runtime.likelyEmulator),
+        emulatorReasons: Array.isArray(context.runtime && context.runtime.emulatorReasons)
+          ? context.runtime.emulatorReasons
+          : [],
+      },
     },
     artifacts: {
       screenshot: {
@@ -216,6 +216,12 @@ function writeEvidenceReport(reportPath, context) {
 - Device serial (masked): ${context.maskedSerial}
 - Device model: ${context.model || 'Unknown'}
 - Android version: ${context.androidVersion || 'Unknown'}
+- Device class: ${context.runtime && context.runtime.likelyEmulator ? 'emulator' : 'physical'}
+- Emulator reasons: ${
+  context.runtime && Array.isArray(context.runtime.emulatorReasons) && context.runtime.emulatorReasons.length > 0
+    ? context.runtime.emulatorReasons.join(', ')
+    : 'none'
+}
 - APK path: ${context.apkRelative}
 
 ### Artifacts
@@ -247,6 +253,12 @@ function writeEvidenceReport(reportPath, context) {
 - 设备序列号（脱敏）: ${context.maskedSerial}
 - 设备型号: ${context.model || '未知'}
 - Android 版本: ${context.androidVersion || '未知'}
+- 设备类型: ${context.runtime && context.runtime.likelyEmulator ? '模拟器' : '真机'}
+- 模拟器判定原因: ${
+  context.runtime && Array.isArray(context.runtime.emulatorReasons) && context.runtime.emulatorReasons.length > 0
+    ? context.runtime.emulatorReasons.join(', ')
+    : '无'
+}
 - APK 路径: ${context.apkRelative}
 
 ### 证据文件
@@ -320,8 +332,19 @@ function main() {
     ]);
   }
 
-  const model = getDeviceProperty(adbCommand, serial, 'ro.product.model');
-  const androidVersion = getDeviceProperty(adbCommand, serial, 'ro.build.version.release');
+  const runtime = inspectDeviceRuntime(adbCommand, serial);
+  const allowEmulatorEvidence = isTruthy(process.env.NOTE_CONNECTION_ALLOW_EMULATOR_EVIDENCE);
+  if (runtime.likelyEmulator && !allowEmulatorEvidence) {
+    fail([
+      `Selected device ${serial} is classified as emulator.`,
+      `Reasons: ${(runtime.emulatorReasons || []).join(', ') || 'unknown'}`,
+      'Connect a physical device to capture production evidence.',
+      'Set NOTE_CONNECTION_ALLOW_EMULATOR_EVIDENCE=1 only for non-production emulator experiments.',
+    ]);
+  }
+
+  const model = runtime.model || '';
+  const androidVersion = runtime.androidVersion || '';
   const now = new Date();
   const runId = `${timestampKey(now)}-${sanitizeSegment(maskSerial(serial) || serial || 'device')}`;
   const runDir = path.join(evidenceRoot, runId);
@@ -343,6 +366,7 @@ function main() {
     maskedSerial: maskSerial(serial),
     model,
     androidVersion,
+    runtime,
     apkRelative: path.relative(repoRoot, apkPath).replace(/\\/g, '/'),
     screenshotPath,
     logcatPath,
@@ -355,6 +379,7 @@ function main() {
     maskedSerial: maskSerial(serial),
     model,
     androidVersion,
+    runtime,
     runDir,
     apkRelative: toRepoRelative(apkPath),
     apkSizeBytes: fs.statSync(apkPath).size,
@@ -380,6 +405,9 @@ function main() {
   });
 
   console.log(`[Capacitor Evidence] Device: ${maskSerial(serial)}`);
+  console.log(
+    `[Capacitor Evidence] Device class: ${runtime.likelyEmulator ? 'emulator' : 'physical'}`
+  );
   console.log(`[Capacitor Evidence] Output: ${path.relative(repoRoot, runDir).replace(/\\/g, '/')}`);
   console.log(`[Capacitor Evidence] Manifest: ${path.relative(repoRoot, manifestPath).replace(/\\/g, '/')}`);
   console.log(`[Capacitor Evidence] Report: ${path.relative(repoRoot, reportPath).replace(/\\/g, '/')}`);

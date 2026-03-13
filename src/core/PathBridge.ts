@@ -145,6 +145,11 @@ type BridgeInboundLimitConfig = {
     };
 };
 
+type BridgeInboundSchemaPolicy = {
+    rejectUnknownTypes: boolean;
+    strictConfigureSchema: boolean;
+};
+
 function parsePositiveInteger(value: unknown): number {
     const numeric = Number(value);
     if (!Number.isFinite(numeric) || numeric <= 0) {
@@ -170,6 +175,15 @@ function normalizeGraphScale(rawValue: unknown): 'default' | 'large' | 'xlarge' 
 function parseBooleanFlag(rawValue: unknown): boolean {
     const normalized = String(rawValue ?? '').trim().toLowerCase();
     return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+}
+
+export function resolveBridgeInboundSchemaPolicy(
+    env: NodeJS.ProcessEnv = process.env
+): BridgeInboundSchemaPolicy {
+    return {
+        rejectUnknownTypes: parseBooleanFlag(env.NOTE_CONNECTION_BRIDGE_REJECT_UNKNOWN_TYPES),
+        strictConfigureSchema: parseBooleanFlag(env.NOTE_CONNECTION_BRIDGE_STRICT_CONFIG_SCHEMA),
+    };
 }
 
 function clampInboundLimitMb(value: number): number {
@@ -250,6 +264,7 @@ export function resolveBridgeInboundLimitConfig(env: NodeJS.ProcessEnv = process
 }
 
 const BRIDGE_INBOUND_LIMIT_CONFIG = resolveBridgeInboundLimitConfig(process.env);
+const BRIDGE_INBOUND_SCHEMA_POLICY = resolveBridgeInboundSchemaPolicy(process.env);
 const MAX_INBOUND_MESSAGE_BYTES = BRIDGE_INBOUND_LIMIT_CONFIG.selectedMessageBytes;
 const PATH_MUTATION_TYPES = new Set([
     'nodeClick',
@@ -304,8 +319,311 @@ export const BRIDGE_INBOUND_LIMITS = {
     selectedBy: BRIDGE_INBOUND_LIMIT_CONFIG.source,
     strictMode: BRIDGE_INBOUND_LIMIT_CONFIG.strictMode,
 };
+export const BRIDGE_INBOUND_SCHEMA_LIMITS = {
+    rejectUnknownTypes: BRIDGE_INBOUND_SCHEMA_POLICY.rejectUnknownTypes,
+    strictConfigureSchema: BRIDGE_INBOUND_SCHEMA_POLICY.strictConfigureSchema,
+};
 
-function validateKnownEnvelopePayload(type: string, payload: unknown): string | null {
+const MAX_BRIDGE_MESSAGE_TYPE_LENGTH = 64;
+const ALLOWED_CONFIG_MODE_VALUES = new Set(['domain', 'diffusion']);
+const ALLOWED_CONFIG_STRATEGY_VALUES = new Set(['foundational', 'core']);
+const ALLOWED_CONFIG_LAYOUT_VALUES = new Set(['vertical', 'horizontal', 'radial', 'orbital']);
+const ALLOWED_READING_MODE_VALUES = new Set(['window', 'fullscreen']);
+const ALLOWED_READER_RENDER_MODE_VALUES = new Set(['render', 'source']);
+const ALLOWED_BACKGROUND_FILE_EXTENSIONS = ['.exr', '.hdr'];
+const CONFIG_TARGET_ID_MAX_LENGTH = 512;
+const CONFIG_SHORTCUT_MAX_LENGTH = 64;
+const CONFIG_BACKGROUND_MAX_LENGTH = 128;
+const CONFIG_BRIGHTNESS_MIN = 0.01;
+const CONFIG_BRIGHTNESS_MAX = 10.0;
+const CONFIG_READER_MEDIA_SCALE_MIN = 0.1;
+const CONFIG_READER_MEDIA_SCALE_MAX = 3.0;
+const CONFIG_CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f]/;
+const CONFIG_SHORTCUT_PATTERN = /^[A-Za-z0-9+\- _]+$/;
+const CONFIG_BACKGROUND_BASENAME_PATTERN = /^[A-Za-z0-9._-]+$/;
+const ALLOWED_CONFIG_KEYS = new Set([
+    'mode',
+    'strategy',
+    'layout',
+    'targetId',
+    'target_id',
+    'auto_reconstruct',
+    'retain_history',
+    'focus_mode',
+    'background',
+    'bg_brightness',
+    'reading_mode',
+    'reader_render_mode',
+    'reader_toggle_source_shortcut',
+    'reader_media_scale',
+    'reader_debug',
+]);
+
+function isNonEmptyString(value: unknown): value is string {
+    return typeof value === 'string' && value.trim().length > 0;
+}
+
+function isFiniteNumberValue(value: unknown): value is number {
+    return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isValidBridgeStatusLevel(value: unknown): boolean {
+    return value === 'info' || value === 'success' || value === 'warning' || value === 'error';
+}
+
+function isSafeConfigBackgroundValue(rawValue: string): boolean {
+    const value = rawValue.trim();
+    if (value.length === 0) {
+        return true;
+    }
+    if (value.length > CONFIG_BACKGROUND_MAX_LENGTH) {
+        return false;
+    }
+    if (value.includes('/') || value.includes('\\') || value.includes('..')) {
+        return false;
+    }
+    if (!CONFIG_BACKGROUND_BASENAME_PATTERN.test(value)) {
+        return false;
+    }
+
+    const normalizedValue = value.toLowerCase();
+    return ALLOWED_BACKGROUND_FILE_EXTENSIONS.some((extension) => normalizedValue.endsWith(extension));
+}
+
+function validateRequestPathPayload(payload: Record<string, unknown>): string | null {
+    if (payload.requestedBy !== undefined && !isNonEmptyString(payload.requestedBy)) {
+        return 'requestPath payload.requestedBy must be a non-empty string when provided.';
+    }
+    if (payload.requestedAt !== undefined && !isFiniteNumberValue(payload.requestedAt)) {
+        return 'requestPath payload.requestedAt must be a finite number when provided.';
+    }
+    return null;
+}
+
+function validatePathStatusPayload(payload: Record<string, unknown>): string | null {
+    if (payload.level !== undefined && !isValidBridgeStatusLevel(payload.level)) {
+        return 'pathStatus payload.level must be one of info/success/warning/error when provided.';
+    }
+    if (payload.code !== undefined && !isNonEmptyString(payload.code)) {
+        return 'pathStatus payload.code must be a non-empty string when provided.';
+    }
+    if (payload.message !== undefined && !isNonEmptyString(payload.message)) {
+        return 'pathStatus payload.message must be a non-empty string when provided.';
+    }
+    if (payload.terminal !== undefined && typeof payload.terminal !== 'boolean') {
+        return 'pathStatus payload.terminal must be a boolean when provided.';
+    }
+    if (payload.timestamp !== undefined && !isFiniteNumberValue(payload.timestamp)) {
+        return 'pathStatus payload.timestamp must be a finite number when provided.';
+    }
+    if (payload.details !== undefined && !isRecord(payload.details)) {
+        return 'pathStatus payload.details must be an object when provided.';
+    }
+    return null;
+}
+
+function validateMermaidRenderStages(stagesLike: unknown): string | null {
+    if (!Array.isArray(stagesLike)) {
+        return 'renderMermaidResult payload.stages must be an array when provided.';
+    }
+
+    for (let index = 0; index < stagesLike.length; index += 1) {
+        const stage = stagesLike[index];
+        if (!isRecord(stage)) {
+            return `renderMermaidResult payload.stages[${index}] must be an object.`;
+        }
+        if (!isNonEmptyString(stage.stage)) {
+            return `renderMermaidResult payload.stages[${index}].stage must be a non-empty string.`;
+        }
+        if (!isNonEmptyString(stage.svg)) {
+            return `renderMermaidResult payload.stages[${index}].svg must be a non-empty string.`;
+        }
+        if (stage.width !== undefined && !isFiniteNumberValue(stage.width)) {
+            return `renderMermaidResult payload.stages[${index}].width must be a finite number when provided.`;
+        }
+        if (stage.height !== undefined && !isFiniteNumberValue(stage.height)) {
+            return `renderMermaidResult payload.stages[${index}].height must be a finite number when provided.`;
+        }
+    }
+
+    return null;
+}
+
+function validateMermaidRenderResultPayload(payload: Record<string, unknown>): string | null {
+    if (!isNonEmptyString(payload.requestId)) {
+        return 'renderMermaidResult payload.requestId must be a non-empty string.';
+    }
+    if (typeof payload.ok !== 'boolean') {
+        return 'renderMermaidResult payload.ok must be a boolean.';
+    }
+    if (payload.ok === true && !isNonEmptyString(payload.pngBase64)) {
+        return 'renderMermaidResult payload.pngBase64 must be a non-empty string when ok=true.';
+    }
+    if (payload.error !== undefined && typeof payload.error !== 'string') {
+        return 'renderMermaidResult payload.error must be a string when provided.';
+    }
+    if (payload.svg !== undefined && typeof payload.svg !== 'string') {
+        return 'renderMermaidResult payload.svg must be a string when provided.';
+    }
+    if (payload.renderer !== undefined && typeof payload.renderer !== 'string') {
+        return 'renderMermaidResult payload.renderer must be a string when provided.';
+    }
+    if (payload.width !== undefined && !isFiniteNumberValue(payload.width)) {
+        return 'renderMermaidResult payload.width must be a finite number when provided.';
+    }
+    if (payload.height !== undefined && !isFiniteNumberValue(payload.height)) {
+        return 'renderMermaidResult payload.height must be a finite number when provided.';
+    }
+    if (payload.stages !== undefined) {
+        return validateMermaidRenderStages(payload.stages);
+    }
+    return null;
+}
+
+function validateConfigurePayload(
+    payload: Record<string, unknown>,
+    policy: BridgeInboundSchemaPolicy
+): string | null {
+    if (payload.mode !== undefined) {
+        if (!isNonEmptyString(payload.mode)) {
+            return 'configure payload.mode must be a non-empty string when provided.';
+        }
+        if (!ALLOWED_CONFIG_MODE_VALUES.has(payload.mode)) {
+            return `configure payload.mode must be one of: ${Array.from(ALLOWED_CONFIG_MODE_VALUES).join(', ')}.`;
+        }
+    }
+    if (payload.strategy !== undefined) {
+        if (!isNonEmptyString(payload.strategy)) {
+            return 'configure payload.strategy must be a non-empty string when provided.';
+        }
+        if (!ALLOWED_CONFIG_STRATEGY_VALUES.has(payload.strategy)) {
+            return `configure payload.strategy must be one of: ${Array.from(ALLOWED_CONFIG_STRATEGY_VALUES).join(', ')}.`;
+        }
+    }
+    if (payload.layout !== undefined) {
+        if (!isNonEmptyString(payload.layout)) {
+            return 'configure payload.layout must be a non-empty string when provided.';
+        }
+        if (!ALLOWED_CONFIG_LAYOUT_VALUES.has(payload.layout)) {
+            return `configure payload.layout must be one of: ${Array.from(ALLOWED_CONFIG_LAYOUT_VALUES).join(', ')}.`;
+        }
+    }
+    if (payload.targetId !== undefined && typeof payload.targetId !== 'string') {
+        return 'configure payload.targetId must be a string when provided.';
+    }
+    if (payload.target_id !== undefined && typeof payload.target_id !== 'string') {
+        return 'configure payload.target_id must be a string when provided.';
+    }
+    const normalizedTargetId = typeof payload.targetId === 'string' ? payload.targetId.trim() : '';
+    const normalizedLegacyTargetId = typeof payload.target_id === 'string' ? payload.target_id.trim() : '';
+    if (normalizedTargetId.length > CONFIG_TARGET_ID_MAX_LENGTH) {
+        return `configure payload.targetId must be at most ${CONFIG_TARGET_ID_MAX_LENGTH} characters.`;
+    }
+    if (normalizedLegacyTargetId.length > CONFIG_TARGET_ID_MAX_LENGTH) {
+        return `configure payload.target_id must be at most ${CONFIG_TARGET_ID_MAX_LENGTH} characters.`;
+    }
+    if (normalizedTargetId && CONFIG_CONTROL_CHARACTER_PATTERN.test(normalizedTargetId)) {
+        return 'configure payload.targetId must not contain control characters.';
+    }
+    if (normalizedLegacyTargetId && CONFIG_CONTROL_CHARACTER_PATTERN.test(normalizedLegacyTargetId)) {
+        return 'configure payload.target_id must not contain control characters.';
+    }
+    if (
+        normalizedTargetId.length > 0 &&
+        normalizedLegacyTargetId.length > 0 &&
+        normalizedTargetId !== normalizedLegacyTargetId
+    ) {
+        return 'configure payload.targetId and payload.target_id must match when both are provided.';
+    }
+    if (payload.auto_reconstruct !== undefined && typeof payload.auto_reconstruct !== 'boolean') {
+        return 'configure payload.auto_reconstruct must be a boolean when provided.';
+    }
+    if (payload.retain_history !== undefined && typeof payload.retain_history !== 'boolean') {
+        return 'configure payload.retain_history must be a boolean when provided.';
+    }
+    if (payload.focus_mode !== undefined && typeof payload.focus_mode !== 'boolean') {
+        return 'configure payload.focus_mode must be a boolean when provided.';
+    }
+    if (payload.background !== undefined) {
+        if (typeof payload.background !== 'string') {
+            return 'configure payload.background must be a string when provided.';
+        }
+        if (!isSafeConfigBackgroundValue(payload.background)) {
+            return 'configure payload.background must be empty or a safe .exr/.hdr filename.';
+        }
+    }
+    if (payload.bg_brightness !== undefined) {
+        if (!isFiniteNumberValue(payload.bg_brightness)) {
+            return 'configure payload.bg_brightness must be a finite number when provided.';
+        }
+        if (payload.bg_brightness < CONFIG_BRIGHTNESS_MIN || payload.bg_brightness > CONFIG_BRIGHTNESS_MAX) {
+            return `configure payload.bg_brightness must be within [${CONFIG_BRIGHTNESS_MIN}, ${CONFIG_BRIGHTNESS_MAX}].`;
+        }
+    }
+    if (payload.reading_mode !== undefined) {
+        if (!isNonEmptyString(payload.reading_mode)) {
+            return 'configure payload.reading_mode must be a non-empty string when provided.';
+        }
+        if (!ALLOWED_READING_MODE_VALUES.has(payload.reading_mode)) {
+            return `configure payload.reading_mode must be one of: ${Array.from(ALLOWED_READING_MODE_VALUES).join(', ')}.`;
+        }
+    }
+    if (payload.reader_render_mode !== undefined) {
+        if (!isNonEmptyString(payload.reader_render_mode)) {
+            return 'configure payload.reader_render_mode must be a non-empty string when provided.';
+        }
+        if (!ALLOWED_READER_RENDER_MODE_VALUES.has(payload.reader_render_mode)) {
+            return `configure payload.reader_render_mode must be one of: ${Array.from(ALLOWED_READER_RENDER_MODE_VALUES).join(', ')}.`;
+        }
+    }
+    if (
+        payload.reader_toggle_source_shortcut !== undefined &&
+        !isNonEmptyString(payload.reader_toggle_source_shortcut)
+    ) {
+        return 'configure payload.reader_toggle_source_shortcut must be a non-empty string when provided.';
+    }
+    if (payload.reader_toggle_source_shortcut !== undefined) {
+        const shortcut = payload.reader_toggle_source_shortcut.trim();
+        if (shortcut.length > CONFIG_SHORTCUT_MAX_LENGTH) {
+            return `configure payload.reader_toggle_source_shortcut must be at most ${CONFIG_SHORTCUT_MAX_LENGTH} characters.`;
+        }
+        if (CONFIG_CONTROL_CHARACTER_PATTERN.test(shortcut)) {
+            return 'configure payload.reader_toggle_source_shortcut must not contain control characters.';
+        }
+        if (!CONFIG_SHORTCUT_PATTERN.test(shortcut)) {
+            return 'configure payload.reader_toggle_source_shortcut contains unsupported characters.';
+        }
+    }
+    if (payload.reader_media_scale !== undefined) {
+        if (!isFiniteNumberValue(payload.reader_media_scale)) {
+            return 'configure payload.reader_media_scale must be a finite number when provided.';
+        }
+        if (
+            payload.reader_media_scale < CONFIG_READER_MEDIA_SCALE_MIN ||
+            payload.reader_media_scale > CONFIG_READER_MEDIA_SCALE_MAX
+        ) {
+            return `configure payload.reader_media_scale must be within [${CONFIG_READER_MEDIA_SCALE_MIN}, ${CONFIG_READER_MEDIA_SCALE_MAX}].`;
+        }
+    }
+    if (payload.reader_debug !== undefined && typeof payload.reader_debug !== 'boolean') {
+        return 'configure payload.reader_debug must be a boolean when provided.';
+    }
+
+    if (policy.strictConfigureSchema) {
+        const unknownKeys = Object.keys(payload).filter((key) => !ALLOWED_CONFIG_KEYS.has(key));
+        if (unknownKeys.length > 0) {
+            return `configure payload includes unsupported keys in strict mode: ${unknownKeys.join(', ')}.`;
+        }
+    }
+
+    return null;
+}
+
+function validateKnownEnvelopePayload(
+    type: string,
+    payload: unknown,
+    policy: BridgeInboundSchemaPolicy
+): string | null {
     switch (type) {
         case 'authenticate':
         case 'identify':
@@ -324,6 +642,15 @@ function validateKnownEnvelopePayload(type: string, payload: unknown): string | 
             }
             return null;
 
+        case 'requestPath':
+            if (payload !== undefined && !isRecord(payload)) {
+                return 'requestPath payload must be an object when provided.';
+            }
+            if (isRecord(payload)) {
+                return validateRequestPathPayload(payload);
+            }
+            return null;
+
         case 'pathResult':
             if (!isRecord(payload)) {
                 return 'pathResult payload must be an object.';
@@ -331,10 +658,23 @@ function validateKnownEnvelopePayload(type: string, payload: unknown): string | 
             return null;
 
         case 'renderMermaidResult':
+            if (!isRecord(payload)) {
+                return 'renderMermaidResult payload must be an object.';
+            }
+            return validateMermaidRenderResultPayload(payload);
+
         case 'pathStatus':
+            if (!isRecord(payload)) {
+                return 'pathStatus payload must be an object.';
+            }
+            return validatePathStatusPayload(payload);
+
         case 'configure':
             if (payload !== undefined && !isRecord(payload)) {
-                return `${type} payload must be an object when provided.`;
+                return 'configure payload must be an object when provided.';
+            }
+            if (isRecord(payload)) {
+                return validateConfigurePayload(payload, policy);
             }
             return null;
 
@@ -345,8 +685,8 @@ function validateKnownEnvelopePayload(type: string, payload: unknown): string | 
             if (!isRecord(payload)) {
                 return 'openReader payload must be a string or object.';
             }
-            if (payload.nodeId !== undefined && typeof payload.nodeId !== 'string') {
-                return 'openReader payload.nodeId must be a string when provided.';
+            if (!isNonEmptyString(payload.nodeId)) {
+                return 'openReader payload.nodeId must be a non-empty string.';
             }
             return null;
 
@@ -354,8 +694,8 @@ function validateKnownEnvelopePayload(type: string, payload: unknown): string | 
             if (!isRecord(payload)) {
                 return 'switchCenter payload must be an object.';
             }
-            if (payload.newCenterId !== undefined && typeof payload.newCenterId !== 'string') {
-                return 'switchCenter payload.newCenterId must be a string when provided.';
+            if (!isNonEmptyString(payload.newCenterId)) {
+                return 'switchCenter payload.newCenterId must be a non-empty string.';
             }
             return null;
 
@@ -365,6 +705,12 @@ function validateKnownEnvelopePayload(type: string, payload: unknown): string | 
             }
             if (payload.completedIds !== undefined && !Array.isArray(payload.completedIds)) {
                 return 'completionSync payload.completedIds must be an array when provided.';
+            }
+            if (Array.isArray(payload.completedIds)) {
+                const hasInvalidId = payload.completedIds.some((entry) => !isNonEmptyString(entry));
+                if (hasInvalidId) {
+                    return 'completionSync payload.completedIds must contain only non-empty strings.';
+                }
             }
             return null;
 
@@ -377,8 +723,8 @@ function validateKnownEnvelopePayload(type: string, payload: unknown): string | 
             if (!isRecord(payload)) {
                 return `${type} payload must be an object.`;
             }
-            if (payload.nodeId !== undefined && typeof payload.nodeId !== 'string') {
-                return `${type} payload.nodeId must be a string when provided.`;
+            if (!isNonEmptyString(payload.nodeId)) {
+                return `${type} payload.nodeId must be a non-empty string.`;
             }
             return null;
 
@@ -387,7 +733,10 @@ function validateKnownEnvelopePayload(type: string, payload: unknown): string | 
     }
 }
 
-export function parseBridgeInboundEnvelope(data: unknown): BridgeInboundEnvelopeValidationResult {
+export function parseBridgeInboundEnvelope(
+    data: unknown,
+    policy: BridgeInboundSchemaPolicy = BRIDGE_INBOUND_SCHEMA_POLICY
+): BridgeInboundEnvelopeValidationResult {
     if (!isRecord(data)) {
         return {
             ok: false,
@@ -402,6 +751,12 @@ export function parseBridgeInboundEnvelope(data: unknown): BridgeInboundEnvelope
             reason: 'Bridge message requires a non-empty type string.',
         };
     }
+    if (type.length > MAX_BRIDGE_MESSAGE_TYPE_LENGTH) {
+        return {
+            ok: false,
+            reason: `Bridge message type exceeds max length (${MAX_BRIDGE_MESSAGE_TYPE_LENGTH}).`,
+        };
+    }
 
     const envelope: BridgeInboundEnvelope = {
         type,
@@ -409,9 +764,29 @@ export function parseBridgeInboundEnvelope(data: unknown): BridgeInboundEnvelope
         token: data.token,
         client: data.client,
     };
+    if (envelope.token !== undefined && typeof envelope.token !== 'string') {
+        return {
+            ok: false,
+            reason: 'Bridge message token must be a string when provided.',
+        };
+    }
+    if (envelope.client !== undefined && typeof envelope.client !== 'string') {
+        return {
+            ok: false,
+            reason: 'Bridge message client must be a string when provided.',
+        };
+    }
 
-    if (KNOWN_BRIDGE_MESSAGE_TYPES.has(type)) {
-        const payloadError = validateKnownEnvelopePayload(type, envelope.payload);
+    const isKnownType = KNOWN_BRIDGE_MESSAGE_TYPES.has(type);
+    if (!isKnownType && policy.rejectUnknownTypes) {
+        return {
+            ok: false,
+            reason: `Bridge message type '${type}' is not allowed in strict unknown-type mode.`,
+        };
+    }
+
+    if (isKnownType) {
+        const payloadError = validateKnownEnvelopePayload(type, envelope.payload, policy);
         if (payloadError) {
             return {
                 ok: false,

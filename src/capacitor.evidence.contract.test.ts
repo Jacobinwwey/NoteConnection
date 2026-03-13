@@ -17,6 +17,7 @@ type VerifyEvidenceModule = {
     requireLargeGraphEvidence?: boolean;
     minimumLargeGraphNodeCount?: number;
     minimumLargeGraphEdgeCount?: number;
+    allowEmulatorEvidence?: boolean;
   }) => VerifyEvidenceResult;
 };
 
@@ -90,11 +91,17 @@ describe('capacitor evidence verifier contracts', () => {
     };
 
     const manifest = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       generatedAt: options.generatedAt,
       runId,
       apk: {
         relativePath: relative(apkPath),
+      },
+      device: {
+        runtime: {
+          likelyEmulator: false,
+          emulatorReasons: [],
+        },
       },
       artifacts: {
         screenshot: {
@@ -115,7 +122,7 @@ describe('capacitor evidence verifier contracts', () => {
     const includeLatestPointer = options.includeLatestPointer !== false;
     if (includeLatestPointer) {
       const latest = {
-        schemaVersion: 1,
+        schemaVersion: 2,
         generatedAt: options.generatedAt,
         runId,
         runDirRelative: relative(runDir),
@@ -236,5 +243,34 @@ describe('capacitor evidence verifier contracts', () => {
     });
 
     expect(result.ok).toBe(true);
+  });
+
+  test('fails physical evidence validation when manifest is marked as emulator', () => {
+    const fixture = createEvidenceFixture({
+      generatedAt: '2026-03-11T00:00:00.000Z',
+      includeLatestPointer: true,
+    });
+    const manifestPath = path.join(
+      fixture.evidenceRoot,
+      '20260311-120000-AB__CD',
+      'acceptance_evidence.json'
+    );
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as Record<string, unknown>;
+    (manifest as any).device.runtime = {
+      likelyEmulator: true,
+      emulatorReasons: ['serial-prefix-emulator'],
+    };
+    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+
+    const result = verifier.verifyEvidence({
+      evidenceRoot: fixture.evidenceRoot,
+      now: new Date('2026-03-11T12:00:00.000Z'),
+      maxAgeDays: 30,
+      requireManualChecklist: false,
+      requireLargeGraphEvidence: false,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors.join('\n')).toContain('classified as emulator');
   });
 });

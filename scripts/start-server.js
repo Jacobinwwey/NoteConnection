@@ -49,6 +49,8 @@ function start() {
 
     const runtimeSummary = [
         `[start-server] Runtime=${heapPolicy.runtimeClass}`,
+        `platform=${heapPolicy.runtimePlatform || heapPolicy.runtimeClass}`,
+        `iosJetsamTier=${heapPolicy.iosJetsamTier || 'n/a'}`,
         `source=${heapPolicy.source}`,
         `selected=${heapPolicy.selectedOldSpaceMb}MiB`,
         `recommended=${heapPolicy.recommendedOldSpaceMb}MiB`,
