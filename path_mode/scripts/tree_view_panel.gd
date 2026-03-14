@@ -54,7 +54,75 @@ func update_settings(settings: Dictionary) -> void:
 	if _tree_renderer:
 		_tree_renderer.set_focus_mode(settings.get("focus_mode", true))
 
+func _apply_modern_theme() -> void:
+	var root_style = StyleBoxFlat.new()
+	root_style.bg_color = Color(0.05, 0.06, 0.08, 0.98)
+	root_style.border_width_left = 1
+	root_style.border_width_top = 1
+	root_style.border_width_right = 1
+	root_style.border_width_bottom = 1
+	root_style.border_color = Color(0.15, 0.18, 0.22, 0.8)
+	root_style.corner_radius_top_left = 8
+	root_style.corner_radius_top_right = 8
+	root_style.corner_radius_bottom_left = 8
+	root_style.corner_radius_bottom_right = 8
+	self.add_theme_stylebox_override("panel", root_style)
+
+	var label := $VBoxContainer/Header/Label as Label
+	if label:
+		label.add_theme_font_size_override("font_size", 15)
+		label.add_theme_color_override("font_color", Color(0.92, 0.95, 0.98, 1.0))
+		label.text = "  Future Path" # padding
+
+	var sep := $VBoxContainer/Header/VSeparator as VSeparator
+	if sep:
+		sep.modulate.a = 0.0
+
+	var make_btn_style = func(bg: Color, outline: Color = Color.TRANSPARENT, margin_x: int = 12) -> StyleBoxFlat:
+		var sb = StyleBoxFlat.new()
+		sb.bg_color = bg
+		sb.corner_radius_top_left = 6
+		sb.corner_radius_top_right = 6
+		sb.corner_radius_bottom_left = 6
+		sb.corner_radius_bottom_right = 6
+		sb.content_margin_left = margin_x
+		sb.content_margin_right = margin_x
+		sb.content_margin_top = 4
+		sb.content_margin_bottom = 4
+		if outline != Color.TRANSPARENT:
+			sb.border_width_bottom = 1
+			sb.border_width_top = 1
+			sb.border_width_left = 1
+			sb.border_width_right = 1
+			sb.border_color = outline
+		return sb
+
+	if _style_option:
+		_style_option.add_theme_stylebox_override("normal", make_btn_style.call(Color(0.1, 0.12, 0.15, 0.5), Color(0.2, 0.25, 0.3, 0.3)))
+		_style_option.add_theme_stylebox_override("hover", make_btn_style.call(Color(0.16, 0.2, 0.25, 0.8), Color(0.3, 0.4, 0.5, 0.6)))
+		_style_option.add_theme_stylebox_override("pressed", make_btn_style.call(Color(0.08, 0.1, 0.12, 0.9)))
+		_style_option.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+		_style_option.add_theme_color_override("font_color", Color(0.85, 0.9, 0.95))
+		_style_option.add_theme_color_override("font_hover_color", Color(1.0, 1.0, 1.0))
+
+	var apply_icon_btn = func(btn: Button, icon_text: String):
+		if not btn: return
+		btn.text = icon_text
+		btn.add_theme_stylebox_override("normal", make_btn_style.call(Color(0.0, 0.0, 0.0, 0.0), Color.TRANSPARENT, 8))
+		btn.add_theme_stylebox_override("hover", make_btn_style.call(Color(0.3, 0.35, 0.45, 0.3), Color.TRANSPARENT, 8))
+		btn.add_theme_stylebox_override("pressed", make_btn_style.call(Color(0.15, 0.2, 0.25, 0.5), Color.TRANSPARENT, 8))
+		btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+		btn.add_theme_color_override("font_color", Color(0.65, 0.7, 0.75))
+		btn.add_theme_color_override("font_hover_color", Color(1.0, 1.0, 1.0))
+		btn.add_theme_font_size_override("font_size", 16)
+
+	apply_icon_btn.call(_expand_button, "⛶")
+	apply_icon_btn.call(_shrink_button, "✖")
+
+
 func _setup_ui() -> void:
+	_apply_modern_theme()
+	
 	if _style_option:
 		_style_option.clear()
 		for style in TREE_STYLES.STYLES:
