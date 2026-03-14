@@ -8,6 +8,9 @@ const repoRoot = path.resolve(__dirname, '..');
 const entryFile = path.join(repoRoot, 'dist', 'src', 'server.js');
 const outputDir = path.join(repoRoot, 'src-tauri', 'bin');
 const pkgCli = path.join(repoRoot, 'node_modules', '@yao-pkg', 'pkg', 'lib-es5', 'bin.js');
+const KNOWN_BENIGN_WARNING_PATTERNS = [
+  /esbuild transform returned no code for .*[@\\/]iconify[@\\/]types[@\\/]types\.js/i,
+];
 
 const TARGETS = {
   windows_x64: {
@@ -62,8 +65,12 @@ function runPkgBuild(targetConfig) {
   console.log(`[Sidecar Build] Building ${targetConfig.pkgTarget} -> ${outputPath}`);
   const result = spawnSync(process.execPath, pkgArgs, {
     cwd: repoRoot,
-    stdio: 'inherit',
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
+
+  writeFilteredOutput(result.stdout, process.stdout);
+  writeFilteredOutput(result.stderr, process.stderr);
 
   if (result.error) {
     throw result.error;
@@ -71,6 +78,29 @@ function runPkgBuild(targetConfig) {
   if (result.status !== 0) {
     throw new Error(`[Sidecar Build] pkg failed for target ${targetConfig.pkgTarget}.`);
   }
+}
+
+function isKnownBenignWarningLine(line) {
+  const normalizedLine = String(line || '').trim();
+  if (!normalizedLine) {
+    return false;
+  }
+  return KNOWN_BENIGN_WARNING_PATTERNS.some((pattern) => pattern.test(normalizedLine));
+}
+
+function writeFilteredOutput(rawOutput, targetStream) {
+  const output = String(rawOutput || '');
+  if (!output) {
+    return;
+  }
+  const lines = output.split(/\r?\n/);
+  const filtered = lines.filter((line) => !isKnownBenignWarningLine(line));
+  const hasTrailingNewline = /\r?\n$/.test(output);
+  const joined = filtered.join('\n');
+  if (!joined) {
+    return;
+  }
+  targetStream.write(hasTrailingNewline ? `${joined}\n` : joined);
 }
 
 function ensurePreconditions() {

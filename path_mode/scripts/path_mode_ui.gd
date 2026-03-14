@@ -873,7 +873,7 @@ func _create_reader_image_overlay() -> void:
 
 	_reader_image_frame = Panel.new()
 	_reader_image_frame.name = "ImageFrame"
-	_reader_image_frame.mouse_filter = Control.MOUSE_FILTER_STOP
+	_reader_image_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_reader_image_frame.focus_mode = Control.FOCUS_NONE
 	var frame_style := StyleBoxFlat.new()
 	frame_style.bg_color = Color(0.045, 0.05, 0.06, 0.992)
@@ -3736,11 +3736,11 @@ func _on_reader_image_overlay_input(event: InputEvent) -> void:
 					_reader_image_frame_size_origin = _reader_image_frame_size
 					_reader_image_overlay.accept_event()
 					return
-				var content_global_rect: Rect2 = _get_reader_image_content_global_rect()
-				if content_global_rect.size.x > 0.0 and content_global_rect.size.y > 0.0 and content_global_rect.has_point(event.global_position):
-					_reader_image_dragging = true
-					_reader_image_drag_origin = event.global_position
-					_reader_image_pan_origin = _get_reader_image_scroll_position()
+				
+				# Start dragging regardless of exact viewport collision for better UX
+				_reader_image_dragging = true
+				_reader_image_drag_origin = event.global_position
+				_reader_image_pan_origin = _get_reader_image_scroll_position()
 				_reader_image_overlay.accept_event()
 			else:
 				_reader_image_dragging = false

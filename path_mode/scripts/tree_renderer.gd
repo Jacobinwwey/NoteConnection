@@ -69,11 +69,22 @@ const TOGGLE_OFFSET_X := 16.0 # Distance from node edge to toggle button
 var _node_positions: Dictionary = {} # id -> Vector2
 var _click_areas: Array = [] # {rect, id}
 
+# Hull Node Management
+var _hull_canvas_group: Node2D = null
+var _hull_polygons: Array[Polygon2D] = []
+
 func _ready() -> void:
+	_hull_canvas_group = Node2D.new()
+	_hull_canvas_group.z_index = -1
+	add_child(_hull_canvas_group)
 	_update_style_config()
 	set_process(true)
 
 func _process(_delta: float) -> void:
+	if is_instance_valid(_hull_canvas_group):
+		_hull_canvas_group.position = _view_offset
+		_hull_canvas_group.scale = Vector2(_zoom_level, _zoom_level)
+
 	# Long Press logic
 	if _is_long_pressing and not _pressed_node_id.is_empty():
 		var elapsed = (Time.get_ticks_msec() / 1000.0) - _press_start_time
@@ -355,39 +366,158 @@ func _draw_layout_mode() -> void:
 		})
 
 func _draw_hulls() -> void:
-	if _layout_hulls.is_empty(): return
-	
-	for hull in _layout_hulls:
-		var member_ids = hull.get("memberIds", [])
-		if member_ids.is_empty(): continue
-		
-		var points = PackedVector2Array()
-		var node_size_half = Vector2(140.0, 50.0) * 0.5
-		var padding = 15.0
-		
-		for id in member_ids:
-			var node = _find_layout_node(id)
-			if node.is_empty(): continue
-			var pos = Vector2(node.x, node.y)
-			
-			var w = node_size_half.x + padding
-			var h = node_size_half.y + padding
-			
-			points.append(pos + Vector2(-w, -h))
-			points.append(pos + Vector2(w, -h))
-			points.append(pos + Vector2(w, h))
-			points.append(pos + Vector2(-w, h))
+	if _layout_hulls.is_empty():
+		for p in _hull_polygons:
+			p.hide()
+		return
 
-		if points.size() >= 3:
-			var hull_points = Geometry2D.convex_hull(points)
-			var color = Color(0.298, 0.686, 0.314, 0.08) # rgba(76, 175, 80, 0.08)
-			var stroke_color = Color(0.298, 0.686, 0.314, 0.4)
+	var hull_map = {}
+	for hull in _layout_hulls:
+		var group_id = hull.get("groupNodeId", "")
+		hull_map[group_id] = hull.get("memberIds", [])
+
+	var get_valid_members = func(root: String) -> Array:
+		var res = []
+		var stack = [root]
+		var visited = {}
+		while stack.size() > 0:
+			var curr = stack.pop_back()
+			if visited.has(curr): continue
+			visited[curr] = true
 			
-			draw_colored_polygon(hull_points, color)
+			if hull_map.has(curr):
+				var members = hull_map[curr]
+				for m in members:
+					if m != curr and not visited.has(m):
+						res.append(m)
+						stack.append(m)
+						
+		var unique_res = []
+		for item in res:
+			if not item in unique_res:
+				unique_res.append(item)
+		return unique_res
+
+	# Determine Default Active Hull (Largest by descendants)
+	var max_desc_count = -1
+	var max_root_id = ""
+	for hull in _layout_hulls:
+		var group_id = hull.get("groupNodeId", "")
+		var descs = get_valid_members.call(group_id)
+		if descs.size() > max_desc_count:
+			max_desc_count = descs.size()
+			max_root_id = group_id
 			
-			# Draw Outline 
-			hull_points.append(hull_points[0])
-			draw_polyline(hull_points, stroke_color, 2.0, true)
+	var active_root_id = max_root_id
+	
+	# Override if hovering a node
+	if not _hovered_node_id.is_empty():
+		var min_size = 999999
+		var hovered_root_id = ""
+		for hull in _layout_hulls:
+			var group_id = hull.get("groupNodeId", "")
+			var descs = get_valid_members.call(group_id)
+			if group_id == _hovered_node_id or _hovered_node_id in descs:
+				var size = descs.size()
+				if size < min_size:
+					min_size = size
+					hovered_root_id = group_id
+		if not hovered_root_id.is_empty():
+			active_root_id = hovered_root_id
+
+	for p in _hull_polygons:
+		p.hide()
+
+	if active_root_id.is_empty():
+		return
+		
+	var valid_member_ids = get_valid_members.call(active_root_id)
+	if valid_member_ids.is_empty(): return
+	
+	var all_polygons = []
+	var rx = 140.0 * 0.5 + 24.0
+	var ry = 50.0 * 0.5 + 24.0
+	
+	# Add Node Rectangles
+	for id in valid_member_ids:
+		var node = _find_layout_node(id)
+		if node.is_empty(): continue
+		var pos = Vector2(node.x, node.y)
+		all_polygons.append(PackedVector2Array([
+			pos + Vector2(-rx, -ry),
+			pos + Vector2(rx, -ry),
+			pos + Vector2(rx, ry),
+			pos + Vector2(-rx, ry)
+		]))
+		
+	# Add edge capsules
+	for edge in _layout_edges:
+		var from_id = edge.get("from", "")
+		var to_id = edge.get("to", "")
+		if from_id in valid_member_ids and to_id in valid_member_ids:
+			var from_node = _find_layout_node(from_id)
+			var to_node = _find_layout_node(to_id)
+			if not from_node.is_empty() and not to_node.is_empty():
+				var p1 = Vector2(from_node.x, from_node.y)
+				var p2 = Vector2(to_node.x, to_node.y)
+				var dir = (p2 - p1).normalized()
+				var perp = Vector2(-dir.y, dir.x) * (ry * 0.8)
+				all_polygons.append(PackedVector2Array([
+					p1 + perp, p1 - perp, p2 - perp, p2 + perp
+				]))
+
+	if all_polygons.is_empty():
+		return
+		
+	# Merge Polygons Additively, discarding holes
+	var finals: Array[PackedVector2Array] = []
+	finals.append(all_polygons[0])
+	for i in range(1, all_polygons.size()):
+		var pToAdd = all_polygons[i]
+		var did_merge = true
+		while did_merge:
+			did_merge = false
+			var next_finals: Array[PackedVector2Array] = []
+			for j in range(finals.size()):
+				var f = finals[j]
+				if not Geometry2D.intersect_polygons(f, pToAdd).is_empty():
+					var res = Geometry2D.merge_polygons(f, pToAdd)
+					pToAdd = res[0] # Take only the outer boundary
+					did_merge = true
+					for k in range(j + 1, finals.size()):
+						next_finals.append(finals[k])
+					break
+				else:
+					next_finals.append(f)
+			finals = next_finals
+		finals.append(pToAdd)
+
+	var stroke_color = Color(0.298, 0.686, 0.314, 0.6)
+	var shader = load("res://shaders/frosted_glass.gdshader")
+	var poly_index = 0
+	
+	for fp in finals:
+		var expanded_arr = Geometry2D.offset_polygon(fp, 18.0, Geometry2D.JOIN_ROUND)
+		for expanded in expanded_arr:
+			if poly_index >= _hull_polygons.size():
+				var poly = Polygon2D.new()
+				poly.antialiased = true
+				var mat = ShaderMaterial.new()
+				mat.shader = shader
+				poly.material = mat
+				poly.color = Color(1.0, 1.0, 1.0, 1.0)
+				_hull_canvas_group.add_child(poly)
+				_hull_polygons.append(poly)
+				
+			var poly = _hull_polygons[poly_index]
+			poly.polygon = expanded
+			poly.show()
+			poly_index += 1
+			
+			if expanded.size() > 2:
+				var outline = expanded.duplicate()
+				outline.append(outline[0])
+				draw_polyline(outline, stroke_color, 2.0, true)
 
 # Helper for bezier drawing
 func _draw_bezier_curve(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, color: Color, width: float) -> void:
