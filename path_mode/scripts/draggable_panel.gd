@@ -505,42 +505,42 @@ func collapse(button_text: String = "[>]", alignment: int = HORIZONTAL_ALIGNMENT
 	if not collapse_button:
 		collapse_button = Button.new()
 		collapse_button.text = button_text
-		collapse_button.custom_minimum_size = Vector2(44, 44)
+		collapse_button.custom_minimum_size = Vector2(56, 56)
 		collapse_button.focus_mode = Control.FOCUS_NONE
 		collapse_button.tooltip_text = "Show Panel"
 		
 		# Glassmorphic style for high visibility on any background
 		# 玻璃态设计，确保在任何背景下都有高可见性
 		var style = StyleBoxFlat.new()
-		style.bg_color = Color(0.08, 0.1, 0.14, 0.88)
-		style.corner_radius_top_left = 22
-		style.corner_radius_top_right = 22
-		style.corner_radius_bottom_left = 22
-		style.corner_radius_bottom_right = 22
-		style.border_width_left = 2
-		style.border_width_top = 2
-		style.border_width_right = 2
-		style.border_width_bottom = 2
-		style.border_color = Color(0.45, 0.55, 0.75, 0.9)
-		style.shadow_color = Color(0, 0, 0, 0.55)
-		style.shadow_size = 10
-		style.content_margin_left = 6
-		style.content_margin_right = 6
+		style.bg_color = Color(0.08, 0.1, 0.14, 0.92)
+		style.corner_radius_top_left = 28
+		style.corner_radius_top_right = 28
+		style.corner_radius_bottom_left = 28
+		style.corner_radius_bottom_right = 28
+		style.border_width_left = 1
+		style.border_width_top = 1
+		style.border_width_right = 1
+		style.border_width_bottom = 1
+		style.border_color = Color(0.45, 0.55, 0.75, 0.6)
+		style.shadow_color = Color(0, 0, 0, 0.65)
+		style.shadow_size = 12
 		
 		collapse_button.add_theme_stylebox_override("normal", style)
 		
 		var hover_style = style.duplicate() as StyleBoxFlat
-		hover_style.bg_color = Color(0.14, 0.18, 0.26, 0.95)
-		hover_style.border_color = Color(0.6, 0.72, 0.95, 1.0)
-		hover_style.shadow_size = 14
+		hover_style.bg_color = Color(0.14, 0.18, 0.26, 0.98)
+		hover_style.border_color = Color(0.6, 0.72, 0.95, 0.9)
+		hover_style.shadow_size = 16
+		hover_style.shadow_color = Color(0.2, 0.4, 0.8, 0.5)
 		collapse_button.add_theme_stylebox_override("hover", hover_style)
 		
 		var pressed_style = style.duplicate() as StyleBoxFlat
 		pressed_style.bg_color = Color(0.06, 0.08, 0.1, 0.95)
 		collapse_button.add_theme_stylebox_override("pressed", pressed_style)
 		
-		collapse_button.add_theme_color_override("font_color", Color(0.95, 0.97, 1.0, 1.0))
-		collapse_button.add_theme_font_size_override("font_size", 20)
+		collapse_button.add_theme_color_override("font_color", Color(0.85, 0.9, 0.95, 1.0))
+		collapse_button.add_theme_color_override("font_hover_color", Color(1.0, 1.0, 1.0, 1.0))
+		collapse_button.add_theme_font_size_override("font_size", 28)
 		
 		collapse_button.pressed.connect(restore)
 		

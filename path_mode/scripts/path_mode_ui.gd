@@ -302,12 +302,14 @@ func _create_dynamic_ui() -> void:
 		
 		# Add collapse button to the sidebar
 		var sidebar_collapse_btn := Button.new()
-		sidebar_collapse_btn.text = "[-]"
+		sidebar_collapse_btn.text = "✖"
 		sidebar_collapse_btn.tooltip_text = "Collapse Panel"
 		sidebar_collapse_btn.focus_mode = Control.FOCUS_NONE
+		sidebar_collapse_btn.custom_minimum_size = Vector2(28, 28)
+		_apply_button_style(sidebar_collapse_btn, Color(0.1, 0.13, 0.18, 0.0), Color(0.17, 0.22, 0.3, 0.5), Color(0.07, 0.1, 0.14, 0.8), Color(0.45, 0.6, 0.82, 0.95), Color(0.9, 0.96, 1.0, 1.0))
 		sidebar_collapse_btn.pressed.connect(func():
 			if sidebar.has_method("collapse"):
-				sidebar.call("collapse", "[<]", HORIZONTAL_ALIGNMENT_RIGHT)
+				sidebar.call("collapse", "☰", HORIZONTAL_ALIGNMENT_RIGHT)
 		)
 		sidebar_header_row.add_child(sidebar_collapse_btn)
 		
@@ -511,12 +513,14 @@ func _create_dynamic_ui() -> void:
 	header_hbox.add_child(tree_header)
 	
 	var collapse_btn := Button.new()
-	collapse_btn.text = "[-]"
+	collapse_btn.text = "✖"
 	collapse_btn.tooltip_text = "Collapse Panel"
 	collapse_btn.focus_mode = Control.FOCUS_NONE
+	collapse_btn.custom_minimum_size = Vector2(28, 28)
+	_apply_button_style(collapse_btn, Color(0.1, 0.13, 0.18, 0.0), Color(0.17, 0.22, 0.3, 0.5), Color(0.07, 0.1, 0.14, 0.8), Color(0.45, 0.6, 0.82, 0.95), Color(0.9, 0.96, 1.0, 1.0))
 	collapse_btn.pressed.connect(func():
 		if _tree_panel and _tree_panel.has_method("collapse"):
-			_tree_panel.call("collapse", "[>]", HORIZONTAL_ALIGNMENT_LEFT)
+			_tree_panel.call("collapse", "☰", HORIZONTAL_ALIGNMENT_LEFT)
 	)
 	header_hbox.add_child(collapse_btn)
 	if _tree_panel.has_method("register_interaction_exclusion"):

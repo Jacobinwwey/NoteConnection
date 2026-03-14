@@ -92,10 +92,10 @@ text = "Mark Complete"
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -250.0
-offset_top = 20.0
-offset_right = -20.0
-offset_bottom = 300.0
+offset_left = -320.0
+offset_top = 110.0
+offset_right = -90.0
+offset_bottom = 390.0
 
 [node name="HeaderButton" type="Button" parent="UI/GoldStarSidebar"]
 layout_mode = 2

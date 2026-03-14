@@ -285,6 +285,19 @@ func _draw_layout_mode() -> void:
 		var rect_pos = pos - (node_size * 0.5)
 		var rect = Rect2(rect_pos, node_size)
 		
+		# Draw Expanded Node Glow Effect
+		if node.get("isExpanded", false) and node.get("isSpine", false):
+			var glow_radius = max(node_size.x, node_size.y) * 0.7
+			var glow_color = color
+			glow_color.a = 0.3 # Base glow opacity
+			
+			# Draw multiple expanding rings for a soft glow
+			draw_circle(pos, glow_radius * 0.7, glow_color)
+			glow_color.a = 0.15
+			draw_circle(pos, glow_radius * 0.85, glow_color)
+			glow_color.a = 0.05
+			draw_circle(pos, glow_radius, glow_color)
+		
 		# Reuse stylebox to avoid allocation spam (though cheap)
 		sb.bg_color = color
 		draw_style_box(sb, rect)
