@@ -11,6 +11,7 @@ signal node_expand_prereqs_requested(node_id) # New
 signal node_collapse_prereqs_requested(node_id) # New
 signal collapse_all_requested() # New
 signal fullscreen_requested(expand: bool)
+signal node_reader_requested(node_id) # New: for double-clicking in hover info
 
 const MENU_NAVIGATE = 0
 const MENU_MARK = 1
@@ -18,6 +19,7 @@ const MENU_UNMARK = 2
 
 @onready var _tree_renderer = $VBoxContainer/SubViewportContainer/SubViewport/TreeRenderer
 @onready var _style_option: OptionButton = $VBoxContainer/Header/StyleOption
+@onready var _layout_option: OptionButton = $VBoxContainer/Header/LayoutOption
 @onready var _context_menu: PopupMenu = $ContextMenu
 @onready var _expand_button: Button = $VBoxContainer/Header/ExpandButton
 @onready var _shrink_button: Button = $VBoxContainer/Header/ShrinkButton
@@ -105,6 +107,14 @@ func _apply_modern_theme() -> void:
 		_style_option.add_theme_color_override("font_color", Color(0.85, 0.9, 0.95))
 		_style_option.add_theme_color_override("font_hover_color", Color(1.0, 1.0, 1.0))
 
+	if _layout_option:
+		_layout_option.add_theme_stylebox_override("normal", make_btn_style.call(Color(0.1, 0.12, 0.15, 0.5), Color(0.2, 0.25, 0.3, 0.3)))
+		_layout_option.add_theme_stylebox_override("hover", make_btn_style.call(Color(0.16, 0.2, 0.25, 0.8), Color(0.3, 0.4, 0.5, 0.6)))
+		_layout_option.add_theme_stylebox_override("pressed", make_btn_style.call(Color(0.08, 0.1, 0.12, 0.9)))
+		_layout_option.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+		_layout_option.add_theme_color_override("font_color", Color(0.85, 0.9, 0.95))
+		_layout_option.add_theme_color_override("font_hover_color", Color(1.0, 1.0, 1.0))
+
 	var apply_icon_btn = func(btn: Button, icon_text: String):
 		if not btn: return
 		btn.text = icon_text
@@ -130,6 +140,9 @@ func _setup_ui() -> void:
 		_style_option.selected = 0 # Set default selection
 		# Connect to defined handler which properly extracts text
 		_style_option.item_selected.connect(_on_style_selected)
+
+	if _layout_option:
+		_layout_option.item_selected.connect(_on_layout_selected)
 	
 	# Capture input from the container to isolate zoom/pan
 	var container = $VBoxContainer/SubViewportContainer
@@ -204,6 +217,7 @@ func _connect_signals() -> void:
 		_tree_renderer.node_collapse_prereqs_requested.connect(_on_node_collapse_prereqs_requested)
 		_tree_renderer.collapse_all_requested.connect(func(): collapse_all_requested.emit())
 		_tree_renderer.node_navigate_requested.connect(func(id): node_navigate_requested.emit(id)) # Wire up manual navigate signal
+		_tree_renderer.node_reader_requested.connect(func(id): node_reader_requested.emit(id)) # Double-click in hover info
 		# Apply any pending data
 		if not _pending_nodes.is_empty():
 			_tree_renderer.set_data(_pending_nodes, _pending_current, _pending_completed)
@@ -212,6 +226,9 @@ func _connect_signals() -> void:
 func _on_style_selected(index: int) -> void:
 	var style_name = _style_option.get_item_text(index).to_lower()
 	_tree_renderer.set_style(style_name)
+
+func _on_layout_selected(index: int) -> void:
+	_tree_renderer.set_orientation(index)
 
 func _on_node_clicked(node_id: String, global_pos: Vector2) -> void:
 	_show_context_menu(node_id, global_pos)

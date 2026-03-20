@@ -24,7 +24,7 @@ var previous_state: State = State.IDLE
 var current_central_id: String = ""
 var completed_ids: Array[String] = []
 var learning_path: Dictionary = {} ## {nodes: [], edges: [], strategy}
-var mode: String = "domain" ## "domain" or "diffusion"
+var mode: String = "diffusion" ## "domain" or "diffusion"
 var ultimate_target_id: String = "" ## For diffusion mode
 
 

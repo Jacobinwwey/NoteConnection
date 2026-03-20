@@ -23,6 +23,8 @@ var _reader_shortcut_input: LineEdit
 var _reader_media_scale_slider: HSlider
 var _reader_media_scale_label: Label
 var _reader_debug_check: CheckBox
+var _node_spacing_slider: HSlider
+var _node_spacing_label: Label
 
 var _background_files: Array[String] = []
 
@@ -36,7 +38,8 @@ var _settings: Dictionary = {
 	"reader_render_mode": "render",
 	"reader_toggle_source_shortcut": DEFAULT_READER_TOGGLE_SHORTCUT,
 	"reader_media_scale": READER_MEDIA_SCALE_DEFAULT,
-	"reader_debug": false
+	"reader_debug": false,
+	"node_spacing": 240.0
 }
 
 func _ready() -> void:
@@ -184,6 +187,30 @@ func _ready() -> void:
 		vbox.add_child(_reader_debug_check)
 		_reader_debug_check.toggled.connect(_on_reader_debug_toggled)
 
+		var spacing_hbox := HBoxContainer.new()
+		spacing_hbox.add_theme_constant_override("separation", 10)
+		vbox.add_child(spacing_hbox)
+
+		var spacing_label := Label.new()
+		spacing_label.text = "Node Spacing"
+		spacing_label.custom_minimum_size = Vector2(105, 0)
+		spacing_hbox.add_child(spacing_label)
+
+		_node_spacing_slider = HSlider.new()
+		_node_spacing_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_node_spacing_slider.min_value = 100.0
+		_node_spacing_slider.max_value = 600.0
+		_node_spacing_slider.step = 10.0
+		_node_spacing_slider.value = float(_settings.get("node_spacing", 240.0))
+		spacing_hbox.add_child(_node_spacing_slider)
+		
+		_node_spacing_label = Label.new()
+		_node_spacing_label.custom_minimum_size = Vector2(48, 0)
+		_node_spacing_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		spacing_hbox.add_child(_node_spacing_label)
+		
+		_node_spacing_slider.value_changed.connect(_on_node_spacing_changed)
+
 	_update_ui()
 
 func _scan_backgrounds() -> void:
@@ -245,6 +272,10 @@ func _update_ui() -> void:
 		_reader_media_scale_label.text = "%.2fx" % _reader_media_scale_slider.value
 	if _reader_debug_check:
 		_reader_debug_check.button_pressed = bool(_settings.get("reader_debug", false))
+	if _node_spacing_slider:
+		_node_spacing_slider.value = clampf(float(_settings.get("node_spacing", 240.0)), 100.0, 600.0)
+	if _node_spacing_label and _node_spacing_slider:
+		_node_spacing_label.text = "%d px" % int(_node_spacing_slider.value)
 
 func _on_auto_reconstruct_toggled(pressed: bool) -> void:
 	_settings["auto_reconstruct"] = pressed
@@ -294,6 +325,12 @@ func _on_reader_media_scale_changed(value: float) -> void:
 
 func _on_reader_debug_toggled(pressed: bool) -> void:
 	_settings["reader_debug"] = pressed
+	_save_and_emit(false)
+
+func _on_node_spacing_changed(value: float) -> void:
+	if _node_spacing_label:
+		_node_spacing_label.text = "%d px" % int(value)
+	_settings["node_spacing"] = value
 	_save_and_emit(false)
 
 func _normalize_shortcut_value(raw_value: String) -> String:
@@ -366,6 +403,7 @@ func _load_settings() -> void:
 		_settings["reader_toggle_source_shortcut"] = _normalize_shortcut_value(String(_settings.get("reader_toggle_source_shortcut", DEFAULT_READER_TOGGLE_SHORTCUT)))
 		_settings["reader_media_scale"] = clampf(float(_settings.get("reader_media_scale", READER_MEDIA_SCALE_DEFAULT)), READER_MEDIA_SCALE_MIN, READER_MEDIA_SCALE_MAX)
 		_settings["reader_debug"] = bool(_settings.get("reader_debug", false))
+		_settings["node_spacing"] = clampf(float(_settings.get("node_spacing", 240.0)), 100.0, 600.0)
 	else:
 		_save_settings()
 
@@ -381,6 +419,8 @@ func set_setting(key: String, value) -> void:
 		_settings[key] = _normalize_shortcut_value(String(value))
 	elif key == "reader_media_scale":
 		_settings[key] = clampf(float(value), READER_MEDIA_SCALE_MIN, READER_MEDIA_SCALE_MAX)
+	elif key == "node_spacing":
+		_settings[key] = clampf(float(value), 100.0, 600.0)
 	_update_ui()
 	_save_settings()
 	settings_changed.emit(_settings)

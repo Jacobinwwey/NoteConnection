@@ -40,6 +40,15 @@ popup/item_2/id = 2
 popup/item_3/text = "Minimal"
 popup/item_3/id = 3
 
+[node name="LayoutOption" type="OptionButton" parent="VBoxContainer/Header"]
+layout_mode = 2
+item_count = 2
+selected = 0
+popup/item_0/text = "Horizontal"
+popup/item_0/id = 0
+popup/item_1/text = "Vertical"
+popup/item_1/id = 1
+
 [node name="ExpandButton" type="Button" parent="VBoxContainer/Header"]
 layout_mode = 2
 tooltip_text = "Expand to Fullscreen"

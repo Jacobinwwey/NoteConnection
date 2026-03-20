@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Path Mode Application Controller
  * Handles interaction, rendering, and worker communication.
  */
@@ -22,6 +22,7 @@ window.pathApp = {
     expansionOrder: [],
     stickyClaimEnabled: true,
     currentTargetId: null,
+    currentTargetIds: [],
     lastTreeLayout: null, // Store tree layout for requestPath
     uiInitialized: false,
     runtimeConfig: {
@@ -29,6 +30,7 @@ window.pathApp = {
         strategy: 'foundational',
         layout: 'orbital', // Track(Focus) default in Tauri flow
         targetId: null,
+        targetIds: [],
         autoReconstruct: true,
         retainHistory: true
     },
@@ -1364,6 +1366,46 @@ window.pathApp = {
         });
     },
 
+    _sanitizeTargetIds: function(candidateIds) {
+        if (!Array.isArray(candidateIds)) {
+            return [];
+        }
+        const uniqueIds = [];
+        const seen = new Set();
+        candidateIds.forEach((id) => {
+            if (typeof id !== 'string') return;
+            const normalized = id.trim();
+            if (!normalized || seen.has(normalized)) return;
+            seen.add(normalized);
+            uniqueIds.push(normalized);
+        });
+        return uniqueIds;
+    },
+
+    _getDefaultTargetIds: function(limit = 1) {
+        const maxCount = Math.max(0, Number.isFinite(limit) ? Math.floor(limit) : 0);
+        if (maxCount <= 0) return [];
+        const result = [];
+        const seen = new Set();
+        const appendCandidate = (rawId) => {
+            if (typeof rawId !== 'string') return;
+            const normalized = rawId.trim();
+            if (!normalized || seen.has(normalized)) return;
+            seen.add(normalized);
+            result.push(normalized);
+        };
+
+        const sourceData = this._getSourceGraphData();
+        if (sourceData && Array.isArray(sourceData.nodes)) {
+            sourceData.nodes.forEach((node) => appendCandidate(node?.id));
+        }
+        if (result.length < maxCount && Array.isArray(this.nodes)) {
+            this.nodes.forEach((node) => appendCandidate(node?.id));
+        }
+
+        return result.slice(0, maxCount);
+    },
+
     _isTauriMode: function() {
         const hasTauriGlobal = typeof window !== 'undefined' && !!window.__TAURI__;
         const runtimeCaps = (typeof window !== 'undefined' && window.__NC_RUNTIME_CAPS) ? window.__NC_RUNTIME_CAPS : null;
@@ -1446,9 +1488,34 @@ window.pathApp = {
         if (typeof config.strategy === 'string') {
             this.runtimeConfig.strategy = config.strategy === 'core' ? 'core' : 'foundational';
         }
+        if (Array.isArray(config.targetIds)) {
+            const sanitizedTargetIds = this._sanitizeTargetIds(config.targetIds);
+            this.runtimeConfig.targetIds = sanitizedTargetIds;
+            this.currentTargetIds = sanitizedTargetIds;
+        }
         if (incomingTargetId !== null) {
             this.runtimeConfig.targetId = incomingTargetId || null;
             this.currentTargetId = incomingTargetId || null;
+        }
+
+        const sanitizedRuntimeTargetIds = this._sanitizeTargetIds(this.runtimeConfig.targetIds);
+        if (this.runtimeConfig.mode === 'diffusion') {
+            if (sanitizedRuntimeTargetIds.length === 0 && typeof this.runtimeConfig.targetId === 'string' && this.runtimeConfig.targetId.trim()) {
+                sanitizedRuntimeTargetIds.push(this.runtimeConfig.targetId.trim());
+            }
+            if (sanitizedRuntimeTargetIds.length > 0) {
+                const preferredTarget = (typeof this.runtimeConfig.targetId === 'string' && this.runtimeConfig.targetId.trim())
+                    ? this.runtimeConfig.targetId.trim()
+                    : sanitizedRuntimeTargetIds[0];
+                const primaryTarget = sanitizedRuntimeTargetIds.includes(preferredTarget) ? preferredTarget : sanitizedRuntimeTargetIds[0];
+                this.runtimeConfig.targetId = primaryTarget;
+                this.currentTargetId = primaryTarget;
+                this.runtimeConfig.targetIds = sanitizedRuntimeTargetIds;
+                this.currentTargetIds = sanitizedRuntimeTargetIds;
+            }
+        } else {
+            this.runtimeConfig.targetIds = sanitizedRuntimeTargetIds;
+            this.currentTargetIds = sanitizedRuntimeTargetIds;
         }
         if (typeof config.auto_reconstruct === 'boolean') {
             this.runtimeConfig.autoReconstruct = config.auto_reconstruct;
@@ -1705,6 +1772,7 @@ window.pathApp = {
                 label: n.label || n.id,
                 parentId: this._findParentId(n.id, result.edges)
             })),
+            availableTargets: this._buildAvailableTargetCatalog(),
             treeLayout: result.treeLayout || null,
             completedIds: Array.from(this.completedNodes),
             mode: 'orbital'
@@ -1725,6 +1793,27 @@ window.pathApp = {
             return window.graphData;
         }
         return null;
+    },
+
+    _buildAvailableTargetCatalog: function() {
+        const sourceData = this._getSourceGraphData();
+        const sourceNodes = (sourceData && Array.isArray(sourceData.nodes) && sourceData.nodes.length > 0)
+            ? sourceData.nodes
+            : (Array.isArray(this.nodes) ? this.nodes : []);
+        const catalog = [];
+        const seen = new Set();
+        sourceNodes.forEach((node) => {
+            const id = typeof node?.id === 'string' ? node.id.trim() : '';
+            if (!id || seen.has(id)) {
+                return;
+            }
+            seen.add(id);
+            catalog.push({
+                id,
+                label: typeof node?.label === 'string' && node.label.trim().length > 0 ? node.label : id
+            });
+        });
+        return catalog;
     },
 
     _getPreferredStandaloneCentralId: function(preferredNodeId = null) {
@@ -1894,6 +1983,8 @@ window.pathApp = {
                         this.showNodeSelector();
                     } else {
                         this.currentTargetId = null; // Clear target for Domain Mode
+                        this.currentTargetIds = [];
+                        this.runtimeConfig.targetIds = [];
                         this.updateTargetDisplay();
                         this.triggerUpdate();
                     }
@@ -2130,34 +2221,67 @@ window.pathApp = {
         const strategy = this._getStrategyValue();
         const layout = this._getLayoutValue();
         let targetId = this.currentTargetId;
-        if (mode === 'diffusion' && this.runtimeConfig.targetId) {
-            targetId = this.runtimeConfig.targetId;
-        }
-        if (mode === 'diffusion' && !targetId) {
-            const fallbackTarget = this.centralNodeId || (this.nodes.length > 0 ? this.nodes[0].id : null);
-            if (fallbackTarget) {
-                targetId = fallbackTarget;
-                this.currentTargetId = fallbackTarget;
-                this.runtimeConfig.targetId = fallbackTarget;
+        let targetIds = null;
+
+        if (mode === 'diffusion') {
+            const configuredTargetIds = this._sanitizeTargetIds(this.runtimeConfig.targetIds);
+            if (configuredTargetIds.length > 0) {
+                targetIds = configuredTargetIds;
             }
-        }
-        if (mode === 'diffusion' && !targetId) {
-            console.warn('[PathApp] Diffusion mode requested without target; skipping update.');
-            this._sendBridgeStatus(
-                'warning',
-                'path_target_missing',
-                'Diffusion mode requested without a target node. Unable to compute path.',
-                {
-                    mode,
-                    strategy,
-                    layout,
-                    centralId: this.centralNodeId || null,
-                    currentTargetId: this.currentTargetId || null,
-                    runtimeTargetId: this.runtimeConfig.targetId || null
-                },
-                true
-            );
-            return;
+            if (this.runtimeConfig.targetId) {
+                targetId = this.runtimeConfig.targetId;
+            }
+            if ((!targetId || !String(targetId).trim()) && Array.isArray(targetIds) && targetIds.length > 0) {
+                targetId = targetIds[0];
+            }
+            if ((!targetId || !String(targetId).trim()) && this.centralNodeId) {
+                targetId = this.centralNodeId;
+            }
+            if ((!targetId || !String(targetId).trim())) {
+                const fallback = this._getDefaultTargetIds(1);
+                if (fallback.length > 0) {
+                    targetId = fallback[0];
+                }
+            }
+            if (targetId && (!Array.isArray(targetIds) || targetIds.length === 0)) {
+                targetIds = [String(targetId).trim()];
+            }
+            if (!targetId || !String(targetId).trim()) {
+                targetId = null;
+            }
+            if (!targetId) {
+                console.warn('[PathApp] Diffusion mode requested without target; skipping update.');
+                this._sendBridgeStatus(
+                    'warning',
+                    'path_target_missing',
+                    'Diffusion mode requested without a target node. Unable to compute path.',
+                    {
+                        mode,
+                        strategy,
+                        layout,
+                        centralId: this.centralNodeId || null,
+                        currentTargetId: this.currentTargetId || null,
+                        runtimeTargetId: this.runtimeConfig.targetId || null
+                    },
+                    true
+                );
+                return;
+            }
+            const nextDiffusionTargetIds = this._sanitizeTargetIds([targetId].concat(Array.isArray(targetIds) ? targetIds : []));
+            targetIds = nextDiffusionTargetIds;
+            this.currentTargetId = targetId;
+            this.runtimeConfig.targetId = targetId;
+            this.runtimeConfig.targetIds = nextDiffusionTargetIds;
+            this.currentTargetIds = nextDiffusionTargetIds;
+        } else {
+            const configuredTargetIds = this._sanitizeTargetIds(this.runtimeConfig.targetIds);
+            if (configuredTargetIds.length > 0) {
+                targetIds = configuredTargetIds;
+            } else {
+                targetIds = this._getDefaultTargetIds(2);
+            }
+            this.runtimeConfig.targetIds = this._sanitizeTargetIds(targetIds);
+            this.currentTargetIds = this.runtimeConfig.targetIds;
         }
         
         // Preserve central focus if we already have one
@@ -2173,6 +2297,7 @@ window.pathApp = {
                 strategy, 
                 layout, 
                 targetId: targetId, 
+                targetIds,
                 centralId: this.centralNodeId,
                 collapsedIds: Array.from(this.collapsedNodes),
                 completedIds: Array.from(this.completedNodes),
@@ -2192,6 +2317,8 @@ window.pathApp = {
             if (targetId) {
                 this.runtimeConfig.mode = 'diffusion';
                 this.runtimeConfig.targetId = targetId;
+                this.runtimeConfig.targetIds = [targetId];
+                this.currentTargetIds = [targetId];
             } else if (!this.runtimeConfig.targetId) {
                 this.runtimeConfig.mode = 'domain';
             }
@@ -2621,6 +2748,9 @@ window.pathApp = {
             li.innerHTML = `<span>${node.label}</span>`;
             li.onclick = () => {
                 this.currentTargetId = node.id;
+                this.runtimeConfig.targetId = node.id;
+                this.runtimeConfig.targetIds = [node.id];
+                this.currentTargetIds = [node.id];
                 document.getElementById('node-select-modal').style.display = 'none';
                 this.triggerUpdate();
             };
@@ -2763,6 +2893,7 @@ window.pathApp = {
                     parentId: this._findParentId(nodeId, edges, allowedIds)
                 };
             }),
+            availableTargets: this._buildAvailableTargetCatalog(),
             treeLayout: null,
             completedIds: Array.from(this.completedNodes || []),
             mode: 'orbital'

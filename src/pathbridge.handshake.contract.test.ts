@@ -18,6 +18,8 @@ describe('path bridge handshake and transport verification contracts', () => {
   const serverPath = path.join(repoRoot, 'src', 'server.ts');
   const wsClientPath = path.join(repoRoot, 'path_mode', 'scripts', 'ws_client.gd');
   const pathAppPath = path.join(repoRoot, 'src', 'frontend', 'path_app.js');
+  const pathWorkerPath = path.join(repoRoot, 'src', 'frontend', 'path_worker.js');
+  const pathModeUiPath = path.join(repoRoot, 'path_mode', 'scripts', 'path_mode_ui.gd');
   const readerRenderClientPath = path.join(repoRoot, 'path_mode', 'scripts', 'reader_render_client.gd');
   const pathRendererPath = path.join(repoRoot, 'path_mode', 'scripts', 'path_renderer.gd');
 
@@ -309,6 +311,26 @@ describe('path bridge handshake and transport verification contracts', () => {
     expect(pathApp).toContain("_ensurePathSemanticA11y: function() {");
     expect(pathApp).toContain("host.id = hostId;");
     expect(pathApp).toContain("live.setAttribute('aria-live', 'polite')");
+  });
+
+  test('path mode preserves bounded default targeting and diffusion multi-target contract', () => {
+    const pathModeUi = fs.readFileSync(pathModeUiPath, 'utf8');
+    const pathApp = fs.readFileSync(pathAppPath, 'utf8');
+    const pathWorker = fs.readFileSync(pathWorkerPath, 'utf8');
+    const pathRenderer = fs.readFileSync(pathRendererPath, 'utf8');
+
+    expect(pathModeUi).toContain('func _get_effective_domain_target_ids() -> Array[String]:');
+    expect(pathModeUi).toContain('effective_ids = _get_default_target_ids(2)');
+    expect(pathModeUi).toContain('config["targetIds"] = domain_ids');
+    expect(pathModeUi).toContain('config["targetIds"] = diffusion_ids');
+    expect(pathApp).toContain('if (Array.isArray(config.targetIds)) {');
+    expect(pathApp).toContain('targetIds,');
+    expect(pathApp).toContain('availableTargets: this._buildAvailableTargetCatalog()');
+    expect(pathApp).toContain('_buildAvailableTargetCatalog: function() {');
+    expect(pathWorker).toContain('result = engine.domainLearning(domainTargets.length > 0 ? domainTargets : null, strategy);');
+    expect(pathWorker).toContain('result = mergePathResults(partialResults, strategy);');
+    expect(pathRenderer).toContain('var available_target_nodes_raw = path_data.get("availableTargets", path_nodes)');
+    expect(pathRenderer).toContain('ui.set_available_targets(available_target_nodes, _central_node.get("id", ""))');
   });
 
   test('godot renderer surfaces bridge status messages to the UI', () => {

@@ -347,6 +347,7 @@ const ALLOWED_CONFIG_KEYS = new Set([
     'layout',
     'targetId',
     'target_id',
+    'targetIds',
     'auto_reconstruct',
     'retain_history',
     'focus_mode',
@@ -357,6 +358,7 @@ const ALLOWED_CONFIG_KEYS = new Set([
     'reader_toggle_source_shortcut',
     'reader_media_scale',
     'reader_debug',
+    'node_spacing',
 ]);
 
 function isNonEmptyString(value: unknown): value is string {
@@ -535,6 +537,14 @@ function validateConfigurePayload(
     ) {
         return 'configure payload.targetId and payload.target_id must match when both are provided.';
     }
+    if (payload.targetIds !== undefined) {
+        if (!Array.isArray(payload.targetIds)) {
+            return 'configure payload.targetIds must be an array when provided.';
+        }
+        if (payload.targetIds.some(id => typeof id !== 'string')) {
+            return 'configure payload.targetIds must be an array of strings.';
+        }
+    }
     if (payload.auto_reconstruct !== undefined && typeof payload.auto_reconstruct !== 'boolean') {
         return 'configure payload.auto_reconstruct must be a boolean when provided.';
     }
@@ -607,6 +617,9 @@ function validateConfigurePayload(
     }
     if (payload.reader_debug !== undefined && typeof payload.reader_debug !== 'boolean') {
         return 'configure payload.reader_debug must be a boolean when provided.';
+    }
+    if (payload.node_spacing !== undefined && !isFiniteNumberValue(payload.node_spacing)) {
+        return 'configure payload.node_spacing must be a finite number when provided.';
     }
 
     if (policy.strictConfigureSchema) {
@@ -940,37 +953,42 @@ export function validateBridgePathPayload(pathData: unknown): PathValidationResu
         };
     }
 
-    if (!summary.centralId) {
-        errors.push('Path payload is missing central.id.');
-    }
-    if (summary.totalNodes <= 0) {
-        errors.push('Path payload must declare a positive totalNodes value.');
-    }
-    if (summary.pathNodeCount <= 0) {
-        errors.push('Path payload must include at least one path node.');
-    }
-    if (summary.totalNodes > 0 && summary.totalNodes !== summary.pathNodeCount) {
-        errors.push('Path payload totalNodes does not match pathNodes length.');
-    }
-    if (summary.progressCompleted > summary.progressTotal) {
-        errors.push('Path payload progress.completed exceeds progress.total.');
-    }
-    if (summary.progressTotal > 0 && summary.totalNodes > 0 && summary.progressTotal !== summary.totalNodes) {
-        warnings.push('Path payload progress.total does not match totalNodes.');
-    }
+    if (summary.totalNodes === 0 && summary.pathNodeCount === 0) {
+        // Valid empty graph state (e.g., Domain Learning with no selected targets)
+    } else {
+        if (!summary.centralId) {
+            errors.push('Path payload is missing central.id.');
+        }
+        if (summary.totalNodes <= 0) {
+            errors.push('Path payload must declare a positive totalNodes value.');
+        }
+        if (summary.pathNodeCount <= 0) {
+            errors.push('Path payload must include at least one path node.');
+        }
+        if (summary.totalNodes > 0 && summary.totalNodes !== summary.pathNodeCount) {
+            errors.push('Path payload totalNodes does not match pathNodes length.');
+        }
+        if (summary.progressCompleted > summary.progressTotal) {
+            errors.push('Path payload progress.completed exceeds progress.total.');
+        }
+        if (summary.progressTotal > 0 && summary.totalNodes > 0 && summary.progressTotal !== summary.totalNodes) {
+            warnings.push('Path payload progress.total does not match totalNodes.');
+        }
 
-    const pathNodeSet = new Set(summary.pathNodeIds);
-    if (pathNodeSet.size !== summary.pathNodeIds.length) {
-        errors.push('Path payload pathNodes contains duplicate node IDs.');
-    }
-    if (summary.centralId && !pathNodeSet.has(summary.centralId)) {
-        errors.push('Path payload central node is missing from pathNodes.');
-    }
-    if (summary.peripheralIds.some((nodeId) => !pathNodeSet.has(nodeId))) {
-        warnings.push('Path payload contains peripherals that are missing from pathNodes.');
-    }
-    if (summary.treeNodeIds.some((nodeId) => !pathNodeSet.has(nodeId))) {
-        warnings.push('Path payload treeLayout contains nodes that are missing from pathNodes.');
+        const pathNodeSet = new Set(summary.pathNodeIds);
+        if (pathNodeSet.size !== summary.pathNodeIds.length) {
+            errors.push('Path payload pathNodes contains duplicate node IDs.');
+        }
+        if (summary.centralId && !pathNodeSet.has(summary.centralId)) {
+            errors.push('Path payload central node is missing from pathNodes.');
+        }
+        if (summary.peripheralIds.some((nodeId) => !pathNodeSet.has(nodeId))) {
+            warnings.push('Path payload contains peripherals that are missing from pathNodes.');
+        }
+        if (summary.treeNodeIds.some((nodeId) => !pathNodeSet.has(nodeId))) {
+            warnings.push('Path payload treeLayout contains nodes that are missing from pathNodes.');
+        }
+
     }
 
     const transportMeta = isRecord(pathData._bridgeTransport) ? pathData._bridgeTransport : null;

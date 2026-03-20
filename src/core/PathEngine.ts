@@ -44,6 +44,8 @@ export interface TreeLayoutNode {
   hasPrereqs: boolean;
   inDegreeNames: string[];
   outDegreeNames: string[];
+  inDegreeIds: string[];
+  outDegreeIds: string[];
 }
 
 type InternalTreeLayoutNode = {
@@ -327,6 +329,7 @@ export class PathEngine {
     collapsedSet: Set<string> = new Set(),
     expansionOrder: string[] = [],
     stickyClaimEnabled = true,
+    spacing: { horizontalGap?: number; verticalGap?: number; spineSpacing?: number } = {}
   ): TreeLayoutResult | null {
     const rawNodesRaw = Array.isArray(learningPath.nodes) ? learningPath.nodes : [];
     if (rawNodesRaw.length === 0) {
@@ -357,9 +360,9 @@ export class PathEngine {
     spineCandidates.forEach((node, index) => spineIndexMap.set(node.id, index));
 
     const visualWidth = 140;
-    const horizontalGap = 50;
-    const verticalGap = 120;
-    const spineSpacing = 290;
+    const horizontalGap = spacing.horizontalGap ?? 50;
+    const verticalGap = spacing.verticalGap ?? 240; 
+    const spineSpacing = spacing.spineSpacing ?? 290;
 
     const nodes: InternalTreeLayoutNode[] = rawNodes.map((node) => {
       const isSpine = spineIndexMap.has(node.id);
@@ -747,11 +750,13 @@ export class PathEngine {
     const cleanNodes: TreeLayoutNode[] = visibleNodes.map((node) => {
       const inSources = getPrereqs(node.id);
       const inDegreeNames = inSources.map((source) => source.label || source.id);
+      const inDegreeIds = inSources.map((source) => source.id);
       const outTargets = outAdj.get(node.id) || new Set<string>();
       const outDegreeNames = [...outTargets].map((targetId) => {
         const target = getNode(targetId);
         return target ? (target.label || target.id) : targetId;
       });
+      const outDegreeIds = [...outTargets];
 
       return {
         id: node.id,
@@ -770,6 +775,8 @@ export class PathEngine {
         outDegree: outTargets.size,
         inDegreeNames,
         outDegreeNames,
+        inDegreeIds,
+        outDegreeIds,
       };
     });
 

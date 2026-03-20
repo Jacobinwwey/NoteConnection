@@ -12,6 +12,7 @@ signal node_expand_prereqs_requested(node_id) # New: For hidden prerequisites
 signal node_collapse_prereqs_requested(node_id) # New: For hiding prerequisites
 signal collapse_all_requested() # New: Middle click to collapse all
 signal node_navigate_requested(node_id) # New: Explicit navigation signal
+signal node_reader_requested(node_id) # New: Explicit reader request
 
 # State
 var _nodes: Array = []
@@ -20,6 +21,7 @@ var _completed_ids: Array = []
 var _current_style: String = "colorful"
 var _style_config: Dictionary = {}
 var _focus_mode_enabled: bool = true # New: Focus Highlighting
+var _orientation: int = 0 # 0 = Horizontal, 1 = Vertical
 
 # Layout Data Support
 var _use_layout_coords: bool = false
@@ -56,6 +58,8 @@ const HOVER_DELAY := 0.8 # 800ms hover delay for info box
 var _hover_info_rect: Rect2 = Rect2()
 var _hover_in_rect: Rect2 = Rect2()
 var _hover_out_rect: Rect2 = Rect2()
+var _hover_item_rects: Array[Dictionary] = [] # list of {rect, id}
+var _hover_detail_button_rects: Array[Dictionary] = [] # list of {rect, id}
 var _hover_pin_time: float = 0.0 # 5-second auto-close timer
 
 # Layout params
@@ -163,6 +167,19 @@ func set_focus_mode(enabled: bool) -> void:
 		_focus_mode_enabled = enabled
 		queue_redraw()
 
+func set_orientation(ori: int) -> void:
+	if _orientation != ori:
+		_orientation = ori
+		var tmp = _view_offset.x
+		_view_offset.x = _view_offset.y
+		_view_offset.y = tmp
+		queue_redraw()
+
+func _get_layout_pos(node: Dictionary) -> Vector2:
+	if _orientation == 1:
+		return Vector2(node.get("y", 0.0), node.get("x", 0.0))
+	return Vector2(node.get("x", 0.0), node.get("y", 0.0))
+
 func _update_style_config() -> void:
 	_style_config = TREE_STYLES.get_style(_current_style)
 
@@ -220,8 +237,8 @@ func _draw_layout_mode() -> void:
 		var to_node = _find_layout_node(to_id)
 		
 		if from_node and to_node:
-			var start = Vector2(from_node.x, from_node.y)
-			var end = Vector2(to_node.x, to_node.y)
+			var start = _get_layout_pos(from_node)
+			var end = _get_layout_pos(to_node)
 			
 			var color = _style_config.get("node_pending")
 			color.a = 0.5
@@ -239,16 +256,16 @@ func _draw_layout_mode() -> void:
 				else:
 					color.a = 0.1 # Dim
 					
-			# Horizontal S-Curve
-			var dist_x = (end.x - start.x) * 0.5
+			# Horizontal/Vertical S-Curve
+			var primary_dist = (end.y - start.y) * 0.5 if _orientation == 1 else (end.x - start.x) * 0.5
 			
 			# Edge Filtering (Skip-Level Check)
-			# Standard spacing is 250 in path_core.js. If distance > 300, it's a skip-level.
-			if abs(end.x - start.x) > 300.0:
+			if abs(primary_dist * 2.0) > 300.0:
 				continue # Skip drawing direct connection across levels
 				
-			var cp1 = start + Vector2(dist_x, 0)
-			var cp2 = end - Vector2(dist_x, 0)
+			var cp_offset = Vector2(0, primary_dist) if _orientation == 1 else Vector2(primary_dist, 0)
+			var cp1 = start + cp_offset
+			var cp2 = end - cp_offset
 			
 			_draw_bezier_curve(start, cp1, cp2, end, color, 2.0)
 			
@@ -260,7 +277,7 @@ func _draw_layout_mode() -> void:
 	sb.set_corner_radius_all(corner_radius)
 	
 	for node in _layout_nodes:
-		var pos = Vector2(node.x, node.y)
+		var pos = _get_layout_pos(node)
 		_node_positions[node.id] = pos
 		
 		var color = _style_config.get("node_pending")
@@ -455,7 +472,7 @@ func _draw_hulls() -> void:
 	for id in valid_member_ids:
 		var node = _find_layout_node(id)
 		if node.is_empty(): continue
-		var pos = Vector2(node.x, node.y)
+		var pos = _get_layout_pos(node)
 		all_polygons.append(PackedVector2Array([
 			pos + Vector2(-rx, -ry),
 			pos + Vector2(rx, -ry),
@@ -471,8 +488,8 @@ func _draw_hulls() -> void:
 			var from_node = _find_layout_node(from_id)
 			var to_node = _find_layout_node(to_id)
 			if not from_node.is_empty() and not to_node.is_empty():
-				var p1 = Vector2(from_node.x, from_node.y)
-				var p2 = Vector2(to_node.x, to_node.y)
+				var p1 = _get_layout_pos(from_node)
+				var p2 = _get_layout_pos(to_node)
 				var dir = (p2 - p1).normalized()
 				var perp = Vector2(-dir.y, dir.x) * (ry * 0.8)
 				all_polygons.append(PackedVector2Array([
@@ -715,12 +732,26 @@ func _handle_click(event: InputEventMouseButton) -> void:
 
 	# Intercept click if on hover info box / 如果点击在悬停信息框上，拦截点击
 	if _hover_info_visible and _hover_info_rect.has_point(event.position):
-		if _hover_in_rect.has_point(event.position):
-			_hover_in_expanded = true
-			queue_redraw()
-		elif _hover_out_rect.has_point(event.position):
-			_hover_out_expanded = true
-			queue_redraw()
+		for button_item in _hover_detail_button_rects:
+			if button_item.rect.has_point(event.position):
+				node_reader_requested.emit(button_item.id)
+				return # Consume click
+
+		var item_hit = false
+		for item in _hover_item_rects:
+			if item.rect.has_point(event.position):
+				item_hit = true
+				if event.double_click:
+					node_reader_requested.emit(item.id)
+				break
+
+		if not item_hit:
+			if _hover_in_rect.has_point(event.position):
+				_hover_in_expanded = true
+				queue_redraw()
+			elif _hover_out_rect.has_point(event.position):
+				_hover_out_expanded = true
+				queue_redraw()
 		return # Consume click
 
 	# Dismiss hover info box on any OTHER click / 点击其他地方时关闭信息框
@@ -728,6 +759,7 @@ func _handle_click(event: InputEventMouseButton) -> void:
 		_hover_info_visible = false
 		_hovered_node_id = ""
 		_hover_pin_time = 0.0
+		_hover_detail_button_rects.clear()
 		queue_redraw()
 
 	for area in _click_areas:
@@ -752,6 +784,15 @@ func _handle_click(event: InputEventMouseButton) -> void:
 		background_clicked.emit()
 
 func _handle_right_click(event: InputEventMouseButton) -> void:
+	if _hover_info_visible and _hover_info_rect.has_point(event.position):
+		for item in _hover_item_rects:
+			if item.rect.has_point(event.position):
+				node_navigate_requested.emit(item.id)
+				_hover_info_visible = false
+				queue_redraw()
+				return
+		return # Consume right click
+		
 	var world_pos = (event.position - _view_offset) / _zoom_level
 	for area in _click_areas:
 		if area.rect.has_point(world_pos) and area.get("type") == "node":
@@ -790,6 +831,7 @@ func _handle_hover(event: InputEventMouseMotion) -> void:
 			_hover_pin_time = 0.0
 			_hover_in_expanded = false
 			_hover_out_expanded = false
+			_hover_detail_button_rects.clear()
 			_hover_screen_pos = event.position
 			queue_redraw()
 		return
@@ -807,6 +849,7 @@ func _handle_hover(event: InputEventMouseMotion) -> void:
 		_hover_start_time = Time.get_ticks_msec() / 1000.0
 		_hover_in_expanded = false
 		_hover_out_expanded = false
+		_hover_detail_button_rects.clear()
 		_hover_screen_pos = event.position
 		queue_redraw()
 	else:
@@ -824,8 +867,9 @@ func _draw_hover_info_box() -> void:
 
 	var in_names: Array = node.get("inDegreeNames", [])
 	var out_names: Array = node.get("outDegreeNames", [])
+	var in_ids: Array = node.get("inDegreeIds", [])
+	var out_ids: Array = node.get("outDegreeIds", [])
 	
-	# User Request: Numbers should strictly match the number of nodes in the list
 	var in_deg = in_names.size()
 	var out_deg = out_names.size()
 	
@@ -836,42 +880,46 @@ func _draw_hover_info_box() -> void:
 	var line_h = 18.0
 	var pad = Vector2(12, 10)
 
-	# Build text lines / 组装文本行
-	var lines: Array[String] = []
-	lines.append(label)
-	lines.append("")
+	var lines: Array[Dictionary] = []
+	lines.append({"text": label, "id": ""})
+	lines.append({"text": "", "id": ""})
 
-	# In-Degree section
 	if in_deg < 10 or _hover_in_expanded:
-		lines.append("In (%d):" % in_deg)
-		for n in in_names:
-			lines.append("  ← " + str(n))
+		lines.append({"text": "In (%d):" % in_deg, "id": ""})
+		for i in range(in_deg):
+			var nid = in_ids[i] if i < in_ids.size() else ""
+			lines.append({"text": "  ← " + str(in_names[i]), "id": nid})
 	else:
-		lines.append("In: %d  [click ▶]" % in_deg)
+		lines.append({"text": "In: %d  [click ▶]" % in_deg, "id": ""})
 
-	lines.append("")
+	lines.append({"text": "", "id": ""})
 
-	# Out-Degree section
 	if out_deg < 10 or _hover_out_expanded:
-		lines.append("Out (%d):" % out_deg)
-		for n in out_names:
-			lines.append("  → " + str(n))
+		lines.append({"text": "Out (%d):" % out_deg, "id": ""})
+		for i in range(out_deg):
+			var nid = out_ids[i] if i < out_ids.size() else ""
+			lines.append({"text": "  → " + str(out_names[i]), "id": nid})
 	else:
-		lines.append("Out: %d  [click ▶]" % out_deg)
+		lines.append({"text": "Out: %d  [click ▶]" % out_deg, "id": ""})
 
-	# Calculate box dimensions / 计算框尺寸
+	var detail_button_text = "Details"
+	var detail_button_font_size = 11
+	var detail_button_pad = Vector2(8, 4)
+	var detail_button_gap = 10.0
+	var detail_button_w = font.get_string_size(detail_button_text, HORIZONTAL_ALIGNMENT_LEFT, -1, detail_button_font_size).x + detail_button_pad.x * 2.0
+	var detail_button_h = max(line_h - 4.0, 14.0)
+
 	var max_w = 0.0
-	for line in lines:
-		var lw = font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	for line_data in lines:
+		var lw = font.get_string_size(line_data.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+		if not str(line_data.get("id", "")).is_empty():
+			lw += detail_button_gap + detail_button_w
 		max_w = max(max_w, lw)
 
 	var box_w = max_w + pad.x * 2
 	var box_h = lines.size() * line_h + pad.y * 2
-
-	# Position: offset from mouse, clamped to viewport / 位置：从鼠标偏移
 	var box_pos = _hover_screen_pos + Vector2(16, -box_h / 2)
 
-	# Draw background panel / 绘制背景面板
 	var bg_rect = Rect2(box_pos, Vector2(box_w, box_h))
 	var sb = StyleBoxFlat.new()
 	sb.set_corner_radius_all(8)
@@ -880,30 +928,82 @@ func _draw_hover_info_box() -> void:
 	sb.set_border_width_all(1)
 	draw_style_box(sb, bg_rect)
 
-	# Draw text lines (and set hit rects) / 绘制文本并设置点击区域
 	var text_x = box_pos.x + pad.x
 	var text_y = box_pos.y + pad.y + font_size
 	
 	_hover_info_rect = bg_rect
 	_hover_in_rect = Rect2()
 	_hover_out_rect = Rect2()
-	
+	_hover_item_rects.clear()
+	_hover_detail_button_rects.clear()
+
 	for i in range(lines.size()):
-		var line = lines[i]
+		var line_data = lines[i]
+		var line = line_data.text
+		var line_id = str(line_data.get("id", ""))
 		var col = Color.WHITE
-		
-		# Define clickable rect for this line
+
 		var line_rect = Rect2(text_x, text_y + i * line_h - font_size, box_w - pad.x * 2, line_h + 2)
 		
 		if i == 0:
-			col = Color(0.4, 0.8, 1.0) # Title color
+			col = Color(0.4, 0.8, 1.0)
 		elif line.begins_with("In"):
-			col = Color(0.9, 0.9, 0.5) # Section header
+			col = Color(0.9, 0.9, 0.5)
 			_hover_in_rect = line_rect
 		elif line.begins_with("Out"):
-			col = Color(0.9, 0.9, 0.5) # Section header
+			col = Color(0.9, 0.9, 0.5)
 			_hover_out_rect = line_rect
+		elif line.begins_with("      "):
+			col = Color(0.55, 0.55, 0.55)
 		elif line.begins_with("  "):
-			col = Color(0.75, 0.75, 0.75) # Name items
-			
-		draw_string(font, Vector2(text_x, text_y + i * line_h), line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
+			col = Color(0.75, 0.75, 0.75)
+			if not line_id.is_empty():
+				_hover_item_rects.append({"rect": line_rect, "id": line_id})
+
+		var render_line = line
+		if not line_id.is_empty():
+			var max_text_w = box_w - pad.x * 2.0 - detail_button_gap - detail_button_w
+			render_line = _truncate_text_for_width(line, max_text_w, font, font_size)
+
+		draw_string(font, Vector2(text_x, text_y + i * line_h), render_line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
+
+		if not line_id.is_empty():
+			var button_rect = Rect2(
+				box_pos.x + box_w - pad.x - detail_button_w,
+				line_rect.position.y + (line_rect.size.y - detail_button_h) * 0.5,
+				detail_button_w,
+				detail_button_h
+			)
+
+			var button_style = StyleBoxFlat.new()
+			button_style.set_corner_radius_all(4)
+			button_style.bg_color = Color(0.2, 0.35, 0.55, 0.95)
+			button_style.border_color = Color(0.6, 0.8, 1.0, 0.8)
+			button_style.set_border_width_all(1)
+			draw_style_box(button_style, button_rect)
+
+			var detail_text_size = font.get_string_size(detail_button_text, HORIZONTAL_ALIGNMENT_LEFT, -1, detail_button_font_size)
+			var detail_text_pos = Vector2(
+				button_rect.position.x + (button_rect.size.x - detail_text_size.x) * 0.5,
+				button_rect.position.y + (button_rect.size.y + detail_button_font_size) * 0.5 - 2.0
+			)
+			draw_string(font, detail_text_pos, detail_button_text, HORIZONTAL_ALIGNMENT_LEFT, -1, detail_button_font_size, Color(0.95, 0.98, 1.0))
+
+			_hover_detail_button_rects.append({"rect": button_rect, "id": line_id})
+
+func _truncate_text_for_width(text: String, max_width: float, font: Font, font_size: int) -> String:
+	if max_width <= 0.0:
+		return ""
+
+	if font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= max_width:
+		return text
+
+	var ellipsis = "..."
+	var result = text
+	while result.length() > 0:
+		result = result.left(result.length() - 1)
+		var candidate = result + ellipsis
+		if font.get_string_size(candidate, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= max_width:
+			return candidate
+
+	return ellipsis

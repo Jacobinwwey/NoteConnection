@@ -423,7 +423,7 @@ class PathEngine {
         }
         return peripherals;
     }
-    getTreeLayout(centralId, learningPath, collapsedSet = new Set(), expansionOrder = [], stickyClaimEnabled = true) {
+    getTreeLayout(centralId, learningPath, collapsedSet = new Set(), expansionOrder = [], stickyClaimEnabled = true, spacing = {}) {
         const rawNodesRaw = Array.isArray(learningPath.nodes) ? learningPath.nodes : [];
         if (rawNodesRaw.length === 0) {
             return null;
@@ -448,9 +448,9 @@ class PathEngine {
         const spineIndexMap = new Map();
         spineCandidates.forEach((node, index) => spineIndexMap.set(node.id, index));
         const visualWidth = 140;
-        const horizontalGap = 50;
-        const verticalGap = 120;
-        const spineSpacing = 290;
+        const horizontalGap = spacing.horizontalGap ?? 50;
+        const verticalGap = spacing.verticalGap ?? 240;
+        const spineSpacing = spacing.spineSpacing ?? 290;
         const nodes = rawNodes.map((node) => {
             const isSpine = spineIndexMap.has(node.id);
             return {
@@ -772,11 +772,13 @@ class PathEngine {
         const cleanNodes = visibleNodes.map((node) => {
             const inSources = getPrereqs(node.id);
             const inDegreeNames = inSources.map((source) => source.label || source.id);
+            const inDegreeIds = inSources.map((source) => source.id);
             const outTargets = outAdj.get(node.id) || new Set();
             const outDegreeNames = [...outTargets].map((targetId) => {
                 const target = getNode(targetId);
                 return target ? (target.label || target.id) : targetId;
             });
+            const outDegreeIds = [...outTargets];
             return {
                 id: node.id,
                 label: node.label,
@@ -794,6 +796,8 @@ class PathEngine {
                 outDegree: outTargets.size,
                 inDegreeNames,
                 outDegreeNames,
+                inDegreeIds,
+                outDegreeIds,
             };
         });
         return {

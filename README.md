@@ -307,6 +307,10 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ## 📅 Changelog
 
+### v1.5.58 - Godot Path UI Enhancements (2026-03-19)
+- **Visuals**: Added Vertical/Horizontal main spine layout toggle and premium aesthetic color schemes (Nord, Tokyo Night, etc).
+- **Interactions**: Upgraded hover info box with deep node interactivity (Left/Double/Right click).
+
 ### v1.5.x Migration Runtime Logs (Canonical Archive)
 - Full bilingual logs are centrally archived in [`export.md`](export.md).
 - This README keeps summary pointers in the changelog for readability.

@@ -1,3 +1,37 @@
+# 2026-03-19 v1.5.58 - Godot Path UI Enhancements (Layout & Interactivity)
+
+## English Document
+
+### Objective
+Enhance the Future Path UI in Godot by providing vertical/horizontal spine layout toggles, introducing premium color palettes, and making the hover in-out information box fully interactive.
+
+### Completed in This Iteration
+- [x] Extended main spine layout support with a Vertical orientation, rendering downstream nodes top-to-bottom.
+- [x] Introduced new premium UI/UX color schemes (`tokyo_night`, `nord`, `rose_pine`, `cyberpunk`) in `tree_styles.gd`.
+- [x] enriched `PathEngine.ts` to export Node IDs along with names for in/out degree connections.
+- [x] Added rich interactivity to the Godot path hover info box:
+  - Left-Click: Inspect dependency node information directly within the hover box.
+  - Double-Click: Open dependency node in the Reader tab (`WsClient.send_open_reader`).
+  - Right-Click: Set dependency node as the new central anchor (`node_navigate_requested`).
+
+---
+
+## 中文文档
+
+### 目标
+增强 Godot 端的“未来路径”UI，通过提供垂直/水平主干布局切换、引入优质配色方案，并使悬停的出入度信息框具备完全交互能力。
+
+### 本轮完成
+- [x] 扩展主干布局：新增垂直（Vertical）方向支持，使后续节点自上而下呈现。
+- [x] 引入全新高级 UI/UX 配色方案（`tokyo_night`、`nord`、`rose_pine`、`cyberpunk`）。
+- [x] 增强 `PathEngine.ts`：随名称一并导出入度/出度节点 ID，以满足交互追踪。
+- [x] 为 Godot 路径悬停信息框新增深度交互能力：
+  - 左键单击：直接在悬停框中查看依赖节点的上下游信息。
+  - 双击：在阅读器中直接打开该依赖节点（`WsClient.send_open_reader`）。
+  - 右键单击：将该依赖节点设为新的中心锚点（`node_navigate_requested`）。
+
+---
+
 # 2026-03-12 v1.5.57 - Fixrisk High-Priority Closure Plan (Live)
 
 ## English Document

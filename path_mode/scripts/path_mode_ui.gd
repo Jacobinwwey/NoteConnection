@@ -21,6 +21,7 @@ signal collapse_all_requested() # New
 signal settings_updated(settings: Dictionary)
 signal exit_requested
 signal background_lock_toggled(is_locked: bool)
+signal node_reader_requested(node_id: String)
 
 const TREE_VIEW_SCENE = preload("res://scenes/tree_view_panel.tscn")
 const SETTINGS_SCENE = preload("res://scenes/settings_panel.tscn")
@@ -142,9 +143,11 @@ var _reader_render_client = null
 var _reader_render_revision: int = 0
 var _reader_renderable_blocks: Array[Dictionary] = []
 
-var _current_mode: String = "domain"
+var _current_mode: String = "diffusion"
 var _current_strategy: String = "foundational"
 var _current_target_id: String = ""
+var _current_diffusion_target_ids: Array[String] = []
+var _current_domain_target_ids: Array[String] = []
 var _current_target_label: String = ""
 var _current_central_id: String = ""
 var _target_nodes: Array[Dictionary] = []
@@ -208,6 +211,7 @@ func _create_dynamic_ui() -> void:
 		_mode_option.custom_minimum_size = Vector2(120, 34)
 		_mode_option.add_item("Domain", 0)
 		_mode_option.add_item("Diffusion", 1)
+		_mode_option.select(1)
 		control_row.add_child(_mode_option)
 		_apply_option_style(_mode_option)
 		
@@ -381,7 +385,7 @@ func _create_dynamic_ui() -> void:
 	_target_popup.add_child(target_vbox)
 
 	var title := Label.new()
-	title.text = "Select Diffusion Target"
+	title.text = "Select Diffusion Targets"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 18)
 	target_vbox.add_child(title)
@@ -4001,19 +4005,22 @@ func _connect_signals() -> void:
 	if _history_list:
 		_history_list.item_activated.connect(_on_history_item_activated)
 		_history_list.item_clicked.connect(func(index: int, _at: Vector2, _mouse_button: int):
-			_on_history_item_activated(index)
+			if _mouse_button == MOUSE_BUTTON_LEFT:
+				_on_history_item_activated(index)
 		)
 	if _target_filter_input:
 		_target_filter_input.text_changed.connect(_on_target_filter_changed)
 	if _target_list:
 		_target_list.item_activated.connect(_on_target_item_activated)
 		_target_list.item_clicked.connect(func(index: int, _at: Vector2, _mouse_button: int):
-			_on_target_item_activated(index)
+			if _mouse_button == MOUSE_BUTTON_LEFT:
+				_on_target_item_activated(index)
 		)
 	
 	## Tree View signals
 	if _tree_view:
 		_tree_view.node_navigate_requested.connect(func(id): tree_node_clicked.emit(id))
+		_tree_view.node_reader_requested.connect(func(id): node_reader_requested.emit(id))
 		_tree_view.node_mark_complete_requested.connect(func(id): mark_node_requested.emit(id))
 		_tree_view.node_unmark_requested.connect(func(id): unmark_requested.emit(id))
 		_tree_view.node_toggle_requested.connect(func(id): node_toggle_requested.emit(id))
@@ -4036,7 +4043,10 @@ func _setup_initial_state() -> void:
 	update_progress(0, 0)
 	_update_sidebar_header()
 	_update_target_button_state()
-	_emit_runtime_config()
+	## Diffusion startup config is emitted after targets are available so
+	## startup never sends an empty target payload.
+	if _current_mode == "domain":
+		_emit_runtime_config()
 
 
 ## Called when Mark Complete button is pressed
@@ -4056,11 +4066,122 @@ func update_complete_button(is_completed: bool) -> void:
 		_apply_button_style(mark_complete_btn, Color(0.9, 0.55, 0.15, 1.0), Color(1.0, 0.66, 0.22, 1.0), Color(0.78, 0.42, 0.08, 1.0), Color(0.25, 0.18, 0.1, 1.0), Color(0.09, 0.08, 0.07, 1.0))
 
 
+func _get_all_target_ids() -> Array[String]:
+	var ids: Array[String] = []
+	for node in _target_nodes:
+		var id: String = node.get("id", "")
+		if id.is_empty():
+			continue
+		ids.append(id)
+	return ids
+
+
+func _array_string_equals(left: Array[String], right: Array[String]) -> bool:
+	if left.size() != right.size():
+		return false
+	for i in range(left.size()):
+		if left[i] != right[i]:
+			return false
+	return true
+
+
+func _sanitize_target_ids(candidate_ids: Array[String], available_ids: Array[String] = []) -> Array[String]:
+	var all_ids := available_ids
+	if all_ids.size() == 0:
+		all_ids = _get_all_target_ids()
+	var available: Dictionary = {}
+	for id in all_ids:
+		available[id] = true
+
+	var sanitized: Array[String] = []
+	for id in candidate_ids:
+		if not (id in available):
+			continue
+		if id in sanitized:
+			continue
+		sanitized.append(id)
+	return sanitized
+
+
+func _get_default_target_ids(limit: int) -> Array[String]:
+	var ids := _get_all_target_ids()
+	var defaults: Array[String] = []
+	if limit <= 0:
+		return defaults
+	for id in ids:
+		defaults.append(id)
+		if defaults.size() >= limit:
+			break
+	return defaults
+
+
+func _reconcile_diffusion_targets() -> bool:
+	var previous_ids := _current_diffusion_target_ids.duplicate()
+	var available_ids := _get_all_target_ids()
+	var effective_ids := _sanitize_target_ids(_current_diffusion_target_ids, available_ids)
+	if effective_ids.size() == 0:
+		effective_ids = _get_default_target_ids(1)
+	_current_diffusion_target_ids = effective_ids
+
+	var previous_primary := _current_target_id
+	if effective_ids.size() > 0:
+		_current_target_id = effective_ids[0]
+		_current_target_label = _current_target_id
+		for node in _target_nodes:
+			if node.get("id", "") == _current_target_id:
+				_current_target_label = node.get("label", _current_target_id)
+				break
+	else:
+		_current_target_id = ""
+		_current_target_label = ""
+
+	return (not _array_string_equals(previous_ids, effective_ids)) or (previous_primary != _current_target_id)
+
+
+func _get_effective_diffusion_target_ids() -> Array[String]:
+	var available_ids := _get_all_target_ids()
+	var effective_ids := _sanitize_target_ids(_current_diffusion_target_ids, available_ids)
+	if effective_ids.size() == 0:
+		if not _current_target_id.is_empty():
+			effective_ids = [_current_target_id]
+		else:
+			effective_ids = _get_default_target_ids(1)
+	return effective_ids
+
+
+func _reconcile_domain_targets() -> bool:
+	var previous_ids := _current_domain_target_ids.duplicate()
+	var available_ids := _get_all_target_ids()
+	var effective_ids := _sanitize_target_ids(_current_domain_target_ids, available_ids)
+	if effective_ids.size() == 0:
+		## Domain default is intentionally bounded to avoid all-node OOM on large graphs.
+		effective_ids = _get_default_target_ids(2)
+	_current_domain_target_ids = effective_ids
+	return not _array_string_equals(previous_ids, effective_ids)
+
+
+func _get_effective_domain_target_ids() -> Array[String]:
+	var available_ids := _get_all_target_ids()
+	var effective_ids := _sanitize_target_ids(_current_domain_target_ids, available_ids)
+	if effective_ids.size() == 0:
+		effective_ids = _get_default_target_ids(2)
+	return effective_ids
+
+
+
 func _on_mode_selected(index: int) -> void:
-	_current_mode = "domain" if index == 0 else "diffusion"
+	var next_mode := "domain" if index == 0 else "diffusion"
+	var mode_changed := next_mode != _current_mode
+	_current_mode = next_mode
 	var mode_name := "Domain Learning" if _current_mode == "domain" else "Diffusion Learning"
 	update_mode(mode_name)
+	if _current_mode == "domain":
+		if mode_changed:
+			_current_domain_target_ids = _get_default_target_ids(2)
+		_reconcile_domain_targets()
 	if _current_mode == "diffusion":
+		if mode_changed:
+			_current_diffusion_target_ids = _get_default_target_ids(1)
 		_ensure_valid_diffusion_target()
 	_update_target_button_state()
 	_emit_runtime_config()
@@ -4074,10 +4195,14 @@ func _on_strategy_selected(index: int) -> void:
 
 
 func _on_target_pressed() -> void:
-	if _current_mode != "diffusion":
-		return
 	if not _target_popup:
 		return
+	if _current_mode == "domain":
+		_target_list.select_mode = ItemList.SELECT_MULTI
+		_target_popup.title = "Select Domain Targets"
+	else:
+		_target_list.select_mode = ItemList.SELECT_MULTI
+		_target_popup.title = "Select Diffusion Targets"
 	_ensure_valid_diffusion_target()
 	_populate_target_list(_target_filter_input.text if _target_filter_input else "")
 	_target_popup.popup_centered()
@@ -4095,9 +4220,20 @@ func _on_target_item_activated(index: int) -> void:
 	var node_id := _target_list.get_item_metadata(index) as String
 	if node_id.is_empty():
 		return
-	_select_target(node_id)
-	if _target_popup:
-		_target_popup.hide()
+	if _current_mode == "domain":
+		_current_domain_target_ids.clear()
+		for i in _target_list.get_selected_items():
+			_current_domain_target_ids.append(_target_list.get_item_metadata(i) as String)
+		_reconcile_domain_targets()
+		_update_target_button_state()
+		_emit_runtime_config()
+	else:
+		_current_diffusion_target_ids.clear()
+		for i in _target_list.get_selected_items():
+			_current_diffusion_target_ids.append(_target_list.get_item_metadata(i) as String)
+		_ensure_valid_diffusion_target()
+		_update_target_button_state()
+		_emit_runtime_config()
 
 
 func _select_target(node_id: String) -> void:
@@ -4107,6 +4243,7 @@ func _select_target(node_id: String) -> void:
 			_current_target_id = id
 			_current_target_label = node.get("label", id)
 			break
+	_current_diffusion_target_ids = [node_id]
 	_update_target_button_state()
 	_emit_runtime_config()
 
@@ -4116,6 +4253,12 @@ func _populate_target_list(filter_text: String = "") -> void:
 		return
 	_target_list.clear()
 	var filter_lower := filter_text.to_lower()
+	var domain_selected_ids: Array[String] = []
+	var diffusion_selected_ids: Array[String] = []
+	if _current_mode == "domain":
+		domain_selected_ids = _get_effective_domain_target_ids()
+	else:
+		diffusion_selected_ids = _get_effective_diffusion_target_ids()
 	for node in _target_nodes:
 		var id: String = node.get("id", "")
 		var label: String = node.get("label", id)
@@ -4128,50 +4271,64 @@ func _populate_target_list(filter_text: String = "") -> void:
 				continue
 		var idx := _target_list.add_item(label)
 		_target_list.set_item_metadata(idx, id)
-		if id == _current_target_id:
-			_target_list.select(idx)
+		if _current_mode == "domain":
+			if id in domain_selected_ids:
+				_target_list.select(idx, false)
+		elif id in diffusion_selected_ids:
+			_target_list.select(idx, false)
 
 
-func _ensure_valid_diffusion_target() -> void:
+func _ensure_valid_diffusion_target() -> bool:
 	if _current_mode != "diffusion":
-		return
-	if not _current_target_id.is_empty():
-		return
+		return false
 
-	if not _current_central_id.is_empty():
+	var previous_ids := _current_diffusion_target_ids.duplicate()
+
+	var changed := _reconcile_diffusion_targets()
+	if _current_diffusion_target_ids.size() == 0 and not _current_central_id.is_empty():
+		_current_diffusion_target_ids = [_current_central_id]
 		_current_target_id = _current_central_id
 		_current_target_label = _current_central_id
-		for node in _target_nodes:
-			if node.get("id", "") == _current_central_id:
-				_current_target_label = node.get("label", _current_central_id)
-				break
-		return
+		changed = true
 
-	if _target_nodes.size() > 0:
-		var first := _target_nodes[0]
-		_current_target_id = first.get("id", "")
-		_current_target_label = first.get("label", _current_target_id)
+	return changed or (not _array_string_equals(previous_ids, _current_diffusion_target_ids))
 
 
 func _update_target_button_state() -> void:
 	if not _target_button:
 		return
-	var enabled := _current_mode == "diffusion"
-	_target_button.disabled = not enabled
-	if not enabled:
-		_target_button.text = "Target: Domain Auto"
-		_target_button.tooltip_text = "Switch mode to Diffusion to pick a target."
+	_target_button.disabled = false
+	if _current_mode == "domain":
+		var domain_ids := _get_effective_domain_target_ids()
+		if domain_ids.size() > 0:
+			_target_button.text = "Targets: " + str(domain_ids.size()) + " Selected"
+		else:
+			_target_button.text = "Targets: None"
+		_target_button.tooltip_text = "Select Domain Targets"
 		return
 
 	_ensure_valid_diffusion_target()
-	var label := _current_target_label if not _current_target_label.is_empty() else _current_target_id
-	if label.is_empty():
-		label = "Select"
-	var display := label
-	if display.length() > 26:
-		display = display.substr(0, 23) + "..."
-	_target_button.text = "Target: %s" % display
-	_target_button.tooltip_text = "Current Diffusion target: %s" % label
+	var diffusion_ids := _get_effective_diffusion_target_ids()
+	if diffusion_ids.size() <= 1:
+		var label := _current_target_label if not _current_target_label.is_empty() else _current_target_id
+		if label.is_empty():
+			label = "Select"
+		var display := label
+		if display.length() > 26:
+			display = display.substr(0, 23) + "..."
+		_target_button.text = "Target: %s" % display
+		_target_button.tooltip_text = "Current Diffusion target: %s" % label
+	else:
+		_target_button.text = "Targets: %d Selected" % diffusion_ids.size()
+		var labels: Array[String] = []
+		for id in diffusion_ids:
+			var matched_label := id
+			for node in _target_nodes:
+				if node.get("id", "") == id:
+					matched_label = node.get("label", id)
+					break
+			labels.append(matched_label)
+		_target_button.tooltip_text = "Current Diffusion targets: %s" % ", ".join(PackedStringArray(labels))
 
 
 func _on_exit_pressed() -> void:
@@ -4249,8 +4406,14 @@ func _emit_runtime_config(extra: Dictionary = {}) -> void:
 			config[key] = stored_settings[key]
 	if _current_mode == "diffusion":
 		_ensure_valid_diffusion_target()
-		if not _current_target_id.is_empty():
-			config["targetId"] = _current_target_id
+		var diffusion_ids := _get_effective_diffusion_target_ids()
+		if diffusion_ids.size() > 0:
+			config["targetIds"] = diffusion_ids
+			config["targetId"] = diffusion_ids[0]
+	elif _current_mode == "domain":
+		var domain_ids := _get_effective_domain_target_ids()
+		if domain_ids.size() > 0:
+			config["targetIds"] = domain_ids
 	for key in extra.keys():
 		config[key] = extra[key]
 	settings_updated.emit(config)
@@ -4504,10 +4667,14 @@ func set_available_targets(nodes: Array, current_id: String) -> void:
 		return String(a.get("label", "")).to_lower() < String(b.get("label", "")).to_lower()
 	)
 
+	var diffusion_targets_changed := _reconcile_diffusion_targets()
+	var domain_targets_changed := _reconcile_domain_targets()
 	if _current_mode == "diffusion":
 		_ensure_valid_diffusion_target()
 	_update_target_button_state()
 	_populate_target_list(_target_filter_input.text if _target_filter_input else "")
+	if (_current_mode == "diffusion" and diffusion_targets_changed) or (_current_mode == "domain" and domain_targets_changed):
+		_emit_runtime_config()
 
 
 func clear_runtime_status() -> void:

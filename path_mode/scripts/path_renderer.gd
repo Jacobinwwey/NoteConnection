@@ -1,4 +1,4 @@
-﻿extends Node3D
+extends Node3D
 
 ## 3D Orbital Path Renderer for Path Mode
 ## Renders central + peripheral bubbles with orbital rotation animation
@@ -71,6 +71,7 @@ func _ready() -> void:
 		ui.node_expand_prereqs_requested.connect(_on_node_expand_prereqs_requested) # New
 		ui.node_collapse_prereqs_requested.connect(_on_node_collapse_prereqs_requested) # New
 		ui.collapse_all_requested.connect(_on_collapse_all_requested) # New
+		ui.node_reader_requested.connect(_on_node_reader_requested)
 		ui.settings_updated.connect(_on_settings_updated)
 		ui.exit_requested.connect(_on_exit_requested)
 		ui.background_lock_toggled.connect(_on_background_lock_toggled)
@@ -138,6 +139,46 @@ func _on_node_collapse_prereqs_requested(node_id: String) -> void:
 func _on_collapse_all_requested() -> void:
 	if ws_client:
 		ws_client.send_collapse_all()
+
+
+func _on_node_reader_requested(node_id: String) -> void:
+	if node_id.is_empty():
+		return
+
+	var reader_node := _find_reader_node(node_id)
+	if reader_node.is_empty():
+		reader_node = {
+			"id": node_id,
+			"label": node_id
+		}
+
+	if ui and ui.has_method("open_reader"):
+		ui.open_reader(reader_node)
+		return
+
+	push_warning("PathRenderer: Godot reader UI is unavailable for node %s." % node_id)
+
+
+func _find_reader_node(node_id: String) -> Dictionary:
+	if node_id.is_empty():
+		return {}
+
+	var central_id: String = _central_node.get("id", "")
+	if central_id == node_id:
+		return _central_node
+
+	for raw_peripheral in _peripheral_nodes:
+		var peripheral: Dictionary = raw_peripheral if raw_peripheral is Dictionary else {}
+		if peripheral.get("id", "") == node_id:
+			return peripheral
+
+	var path_nodes_raw: Array = _current_path.get("pathNodes", [])
+	for raw_path_node in path_nodes_raw:
+		var path_node: Dictionary = raw_path_node if raw_path_node is Dictionary else {}
+		if path_node.get("id", "") == node_id:
+			return path_node
+
+	return {}
 
 
 func _load_shader() -> void:
@@ -338,6 +379,8 @@ func render_path(path_data: Dictionary) -> void:
 	## Extract full path data for state machine
 	var total_nodes: int = path_data.get("totalNodes", 0)
 	var path_nodes: Array = path_data.get("pathNodes", [])
+	var available_target_nodes_raw = path_data.get("availableTargets", path_nodes)
+	var available_target_nodes: Array = available_target_nodes_raw if available_target_nodes_raw is Array else path_nodes
 	var completed_ids: Array = path_data.get("completedIds", [])
 	
 	## Update state machine with full learning path
@@ -364,7 +407,7 @@ func render_path(path_data: Dictionary) -> void:
 					break
 			ui.add_completed_node(node_id, node_label)
 		if ui.has_method("set_available_targets"):
-			ui.set_available_targets(path_nodes, _central_node.get("id", ""))
+			ui.set_available_targets(available_target_nodes, _central_node.get("id", ""))
 	
 	## Strict Reset of Central Bubble State
 	if _central_bubble:
@@ -999,5 +1042,3 @@ func _update_tree_panel() -> void:
 	else:
 		# Fallback to old list method if no layout
 		ui.build_tree(path_nodes, completed_ids, current_id)
-
-

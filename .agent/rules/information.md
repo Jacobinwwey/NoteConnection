@@ -10,7 +10,7 @@ Requirements:
 3.The project code should have good robustness and interpretability, and the comments need to support reading in both Chinese and English.
 4.Prioritize not relying on the api calls of LLMS but implementing functions through the design of systems engineering.
 5.For each function in the project,clear interface code information should be clearly stated, and a dedicated "interface Document.md" file should be maintained for the input and output interfaces of each function.
-6.For documents, md format is preferred. Please support reading in both Chinese and English, and the Chinese part should separate with English part, just as it goes in "README.md". The document structure is "Time and version Number - English Document - Chinese Document" for tracking and review.
+6.For documents, md format is preferred. Please support reading in both Chinese and English, and the Chinese version should separate with English version in docs/.
 7.After the code is updated, "Interface Document.md", "README.md" and "TODO.md" all need to be updated.
 8.After each stage of development is completed, functional testing needs to be conducted and updated to "TEST_REPORT.md".
 9.Before making any modifications, please back up the version with git. When using git, try not to open new branches. 10. Please try not to delete the original functions or document information but add new ones instead.
