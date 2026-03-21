@@ -1753,11 +1753,19 @@ window.pathApp = {
             return b.totalDegree - a.totalDegree;
         });
 
-        const selectedPeripherals = peripherals.slice(0, 4).map(n => ({
-            id: n.id,
-            label: n.label,
-            relation: n.priority === 2 ? 'prerequisite' : 'association'
-        }));
+        const selectedPeripherals = peripherals.slice(0, 4).map((node) => {
+            const fullNode = this._getFullNodeById(node.id, node) || node;
+            const serialized = this._serializeBridgeNode(fullNode, node.label || node.id) || {
+                id: node.id,
+                label: node.label || node.id,
+                content: '',
+                metadata: {}
+            };
+            return {
+                ...serialized,
+                relation: node.priority === 2 ? 'prerequisite' : 'association'
+            };
+        });
 
         const payload = {
             central: this._serializeBridgeNode(centralNode, centralPathNode?.label || centralId),
@@ -1767,11 +1775,19 @@ window.pathApp = {
                 total: result.nodes.length
             },
             totalNodes: result.nodes.length,
-            pathNodes: result.nodes.map(n => ({
-                id: n.id,
-                label: n.label || n.id,
-                parentId: this._findParentId(n.id, result.edges)
-            })),
+            pathNodes: result.nodes.map((node) => {
+                const fullNode = this._getFullNodeById(node.id, node) || node;
+                const serialized = this._serializeBridgeNode(fullNode, node.label || node.id) || {
+                    id: node.id,
+                    label: node.label || node.id,
+                    content: '',
+                    metadata: {}
+                };
+                return {
+                    ...serialized,
+                    parentId: this._findParentId(node.id, result.edges)
+                };
+            }),
             availableTargets: this._buildAvailableTargetCatalog(),
             treeLayout: result.treeLayout || null,
             completedIds: Array.from(this.completedNodes),
@@ -2875,21 +2891,34 @@ window.pathApp = {
 
         const payload = {
             central: this._serializeBridgeNode(centralNode, centralId),
-            peripherals: selectedPeripheralNodes.map(node => ({
-                id: node.id,
-                label: node.label || node.id,
-                relation: node.priority === 2 ? 'prerequisite' : 'association'
-            })),
+            peripherals: selectedPeripheralNodes.map((node) => {
+                const fullNode = this._getFullNodeById(node.id, node) || node;
+                const serialized = this._serializeBridgeNode(fullNode, node.label || node.id) || {
+                    id: node.id,
+                    label: node.label || node.id,
+                    content: '',
+                    metadata: {}
+                };
+                return {
+                    ...serialized,
+                    relation: node.priority === 2 ? 'prerequisite' : 'association'
+                };
+            }),
             progress: {
                 completed: this.completedNodes ? this.completedNodes.size : 0,
                 total: selectedNodeIds.length
             },
             totalNodes: selectedNodeIds.length,
-            pathNodes: selectedNodeIds.map(nodeId => {
+            pathNodes: selectedNodeIds.map((nodeId) => {
                 const node = this._getFullNodeById(nodeId);
-                return {
+                const serialized = this._serializeBridgeNode(node, node?.label || nodeId) || {
                     id: nodeId,
                     label: node?.label || nodeId,
+                    content: '',
+                    metadata: {}
+                };
+                return {
+                    ...serialized,
                     parentId: this._findParentId(nodeId, edges, allowedIds)
                 };
             }),
