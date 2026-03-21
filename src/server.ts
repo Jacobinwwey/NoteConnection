@@ -384,6 +384,17 @@ function isFsNotFoundError(error: unknown): boolean {
     return code === 'ENOENT' || code === 'ENOTDIR';
 }
 
+function isAccessDeniedError(error: unknown): boolean {
+    const code = (error as NodeJS.ErrnoException | undefined)?.code;
+    return code === 'EACCES' || code === 'EPERM';
+}
+
+function makeAccessDeniedError(message: string): NodeJS.ErrnoException {
+    const error = new Error(message) as NodeJS.ErrnoException;
+    error.code = 'EACCES';
+    return error;
+}
+
 function isRequestBodyTooLargeError(error: unknown): boolean {
     return error instanceof Error && error.message === 'Request body is too large.';
 }
@@ -884,24 +895,57 @@ function extractRelativePathFromKbMarker(rawFilePath: string): string | null {
 }
 
 function resolveContentCandidatePath(kbRoot: string, rawFilePath: string): string {
-    const normalized = rawFilePath.replace(/\\/g, '/');
+    const requestedPath = String(rawFilePath || '').trim();
+    if (!requestedPath) {
+        throw makeAccessDeniedError('Missing content path.');
+    }
+    if (requestedPath.includes('\0')) {
+        throw makeAccessDeniedError('Invalid content path.');
+    }
+
+    const normalized = requestedPath.replace(/\\/g, '/');
     const normalizedCandidate = path.normalize(normalized);
 
     const relativeFromKb = extractRelativePathFromKbMarker(rawFilePath);
     if (relativeFromKb) {
-        return path.join(kbRoot, path.normalize(relativeFromKb));
+        const markerScopedPath = path.resolve(kbRoot, path.normalize(relativeFromKb));
+        if (!isPathInsideRoot(markerScopedPath, kbRoot)) {
+            throw makeAccessDeniedError('Requested file is outside configured knowledge base.');
+        }
+        return markerScopedPath;
     }
 
     if (path.isAbsolute(normalizedCandidate)) {
-        return normalizedCandidate;
+        const absoluteCandidate = path.resolve(normalizedCandidate);
+        if ((process as NodeJS.Process & { pkg?: unknown }).pkg && isPkgSnapshotPath(absoluteCandidate)) {
+            throw makeAccessDeniedError('Absolute pkg snapshot content paths are not allowed.');
+        }
+        if (!isPathInsideRoot(absoluteCandidate, kbRoot)) {
+            throw makeAccessDeniedError('Requested file is outside configured knowledge base.');
+        }
+        return absoluteCandidate;
     }
 
-    return path.join(kbRoot, normalizedCandidate);
+    const resolvedCandidate = path.resolve(kbRoot, normalizedCandidate);
+    if (!isPathInsideRoot(resolvedCandidate, kbRoot)) {
+        throw makeAccessDeniedError('Requested file is outside configured knowledge base.');
+    }
+    return resolvedCandidate;
+}
+
+function normalizePathForComparison(candidatePath: string): string {
+    const resolved = path.resolve(candidatePath);
+    return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+}
+
+function isPkgSnapshotPath(candidatePath: string): boolean {
+    const normalized = normalizePathForComparison(candidatePath).replace(/\\/g, '/');
+    return normalized.includes('/snapshot/');
 }
 
 function isPathInsideRoot(candidatePath: string, rootPath: string): boolean {
-    const rootResolved = path.resolve(rootPath);
-    const candidateResolved = path.resolve(candidatePath);
+    const rootResolved = normalizePathForComparison(rootPath);
+    const candidateResolved = normalizePathForComparison(candidatePath);
     const relative = path.relative(rootResolved, candidateResolved);
     return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
@@ -1277,6 +1321,11 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     res.end(JSON.stringify({ content }));
     
                 } catch (error) {
+                    if (isAccessDeniedError(error)) {
+                        res.writeHead(403, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: String((error as Error).message || 'Access denied') }));
+                        return;
+                    }
                     if (isFsNotFoundError(error)) {
                         res.writeHead(404, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ error: 'File not found' }));
@@ -1709,7 +1758,16 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     const payload = await readJsonBody(req);
                     const kbPath = typeof payload.kbPath === 'string' ? payload.kbPath.trim() : '';
                     if (kbPath) {
-                        KB_ROOT = path.resolve(kbPath);
+                        const resolvedKbPath = path.resolve(kbPath);
+                        if ((process as NodeJS.Process & { pkg?: unknown }).pkg && isPkgSnapshotPath(resolvedKbPath)) {
+                            res.writeHead(403, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({
+                                success: false,
+                                error: 'pkg snapshot paths are not allowed as Knowledge Base roots'
+                            }));
+                            return;
+                        }
+                        KB_ROOT = resolvedKbPath;
                         console.log(`[API] Knowledge Base Root updated to: ${KB_ROOT}`);
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ success: true, kbPath: KB_ROOT }));

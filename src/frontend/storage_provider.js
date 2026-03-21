@@ -45,6 +45,9 @@
     const CAPACITOR_GRAPH_BUILD_MAX_FILES = 2000;
     const CAPACITOR_GRAPH_BUILD_MAX_BYTES = 16 * 1024 * 1024;
     const CAPACITOR_GRAPH_BUILD_WORKER_TIMEOUT_MS = 20000;
+    const CAPACITOR_BRIDGE_MAX_CHUNK_BYTES = 192 * 1024;
+    const CAPACITOR_BRIDGE_MAX_TEXT_PAYLOAD_BYTES = 64 * 1024 * 1024;
+    const CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES = 48 * 1024 * 1024;
 
     function getCapacitorDirectoryHints(filesystem) {
         const directoryHints = [];
@@ -362,6 +365,176 @@
         return '';
     }
 
+    function isHighSurrogateCodeUnit(codeUnit) {
+        return codeUnit >= 0xD800 && codeUnit <= 0xDBFF;
+    }
+
+    function isLowSurrogateCodeUnit(codeUnit) {
+        return codeUnit >= 0xDC00 && codeUnit <= 0xDFFF;
+    }
+
+    function* splitCapacitorPayloadIntoChunks(textPayload, maxChunkBytes) {
+        const text = String(textPayload || '');
+        const boundedChunkBytes = Math.max(
+            1024,
+            Math.floor(Number(maxChunkBytes) || CAPACITOR_BRIDGE_MAX_CHUNK_BYTES)
+        );
+        const maxChunkChars = Math.max(256, Math.floor(boundedChunkBytes / 3));
+
+        if (text.length === 0) {
+            yield '';
+            return;
+        }
+
+        let cursor = 0;
+        while (cursor < text.length) {
+            let end = Math.min(text.length, cursor + maxChunkChars);
+            if (end < text.length && end > cursor) {
+                const previousCodeUnit = text.charCodeAt(end - 1);
+                const nextCodeUnit = text.charCodeAt(end);
+                if (isHighSurrogateCodeUnit(previousCodeUnit) && isLowSurrogateCodeUnit(nextCodeUnit)) {
+                    end -= 1;
+                }
+            }
+            if (end <= cursor) {
+                end = Math.min(text.length, cursor + 1);
+            }
+            yield text.slice(cursor, end);
+            cursor = end;
+        }
+    }
+
+    function measureUtf8Bytes(textPayload) {
+        const text = String(textPayload || '');
+        if (!text) {
+            return 0;
+        }
+        if (typeof TextEncoder === 'function') {
+            return new TextEncoder().encode(text).length;
+        }
+        if (typeof Buffer !== 'undefined' && typeof Buffer.byteLength === 'function') {
+            return Buffer.byteLength(text, 'utf8');
+        }
+        return text.length;
+    }
+
+    async function writeCapacitorChunkSequenceToDirectory(filesystem, normalizedPath, chunkSequenceFactory, options) {
+        const directory = options && Object.prototype.hasOwnProperty.call(options, 'directory')
+            ? options.directory
+            : undefined;
+        const maxPayloadBytes = Math.max(
+            1024,
+            Math.floor(Number(options && options.maxPayloadBytes) || CAPACITOR_BRIDGE_MAX_TEXT_PAYLOAD_BYTES)
+        );
+        const payloadLabel = options && typeof options.payloadLabel === 'string'
+            ? options.payloadLabel
+            : normalizedPath;
+        const canAppend = typeof filesystem.appendFile === 'function';
+
+        let totalBytes = 0;
+        let wroteChunk = false;
+
+        const appendArgsBase = {
+            path: normalizedPath,
+            encoding: 'utf8'
+        };
+        if (directory) {
+            appendArgsBase.directory = directory;
+        }
+
+        for (const rawChunk of chunkSequenceFactory()) {
+            const sourceChunk = String(rawChunk || '');
+            for (const chunk of splitCapacitorPayloadIntoChunks(sourceChunk, CAPACITOR_BRIDGE_MAX_CHUNK_BYTES)) {
+                const chunkBytes = measureUtf8Bytes(chunk);
+                if (chunkBytes > CAPACITOR_BRIDGE_MAX_CHUNK_BYTES) {
+                    throw new Error(
+                        `Capacitor bridge chunk exceeds ${CAPACITOR_BRIDGE_MAX_CHUNK_BYTES} bytes for ${payloadLabel}.`
+                    );
+                }
+                if (chunk === '' && wroteChunk) {
+                    continue;
+                }
+
+                totalBytes += chunkBytes;
+                if (totalBytes > maxPayloadBytes) {
+                    throw new Error(
+                        `Capacitor bridge payload for ${payloadLabel} exceeds ${maxPayloadBytes} bytes.`
+                    );
+                }
+
+                if (!wroteChunk) {
+                    const writeArgs = {
+                        ...appendArgsBase,
+                        data: chunk,
+                        recursive: true
+                    };
+                    await filesystem.writeFile(writeArgs);
+                    wroteChunk = true;
+                    continue;
+                }
+
+                if (!canAppend) {
+                    throw new Error(
+                        'Capacitor Filesystem appendFile API is required for chunked graph serialization writes.'
+                    );
+                }
+                await filesystem.appendFile({
+                    ...appendArgsBase,
+                    data: chunk
+                });
+            }
+        }
+
+        if (!wroteChunk) {
+            await filesystem.writeFile({
+                ...appendArgsBase,
+                data: '',
+                recursive: true
+            });
+        }
+    }
+
+    async function capacitorWriteChunkSequence(pathValue, chunkSequenceFactory, options) {
+        const filesystem = getCapacitorFilesystemPlugin();
+        if (!filesystem || typeof filesystem.writeFile !== 'function') {
+            throw new Error('Capacitor Filesystem write API is unavailable.');
+        }
+
+        if (typeof chunkSequenceFactory !== 'function') {
+            throw new Error('Capacitor write sequence factory must be a function.');
+        }
+
+        await ensureCapacitorFilesystemPermission(filesystem);
+        const normalizedPath = normalizeCapacitorPath(pathValue);
+
+        const explicitDirectory = options && Object.prototype.hasOwnProperty.call(options, 'directory')
+            ? options.directory
+            : undefined;
+        const directoryHints = explicitDirectory === undefined
+            ? getCapacitorDirectoryHints(filesystem)
+            : [explicitDirectory];
+
+        let lastError = null;
+        for (const directory of directoryHints) {
+            try {
+                await writeCapacitorChunkSequenceToDirectory(
+                    filesystem,
+                    normalizedPath,
+                    chunkSequenceFactory,
+                    {
+                        ...options,
+                        directory
+                    }
+                );
+                return true;
+            } catch (err) {
+                lastError = err;
+            }
+        }
+
+        throw lastError || new Error(`Failed to write Capacitor file: ${normalizedPath}`);
+    }
+
     async function capacitorStat(pathValue, options) {
         const filesystem = getCapacitorFilesystemPlugin();
         if (!filesystem || typeof filesystem.stat !== 'function') {
@@ -429,42 +602,17 @@
     }
 
     async function capacitorWriteText(pathValue, textPayload, options) {
-        const filesystem = getCapacitorFilesystemPlugin();
-        if (!filesystem || typeof filesystem.writeFile !== 'function') {
-            throw new Error('Capacitor Filesystem write API is unavailable.');
-        }
-
-        await ensureCapacitorFilesystemPermission(filesystem);
-        const normalizedPath = normalizeCapacitorPath(pathValue);
         const payload = String(textPayload || '');
-
-        const explicitDirectory = options && Object.prototype.hasOwnProperty.call(options, 'directory')
-            ? options.directory
-            : undefined;
-        const directoryHints = explicitDirectory === undefined
-            ? getCapacitorDirectoryHints(filesystem)
-            : [explicitDirectory];
-
-        let lastError = null;
-        for (const directory of directoryHints) {
-            try {
-                const args = {
-                    path: normalizedPath,
-                    data: payload,
-                    encoding: 'utf8',
-                    recursive: true
-                };
-                if (directory) {
-                    args.directory = directory;
-                }
-                await filesystem.writeFile(args);
-                return true;
-            } catch (err) {
-                lastError = err;
+        return await capacitorWriteChunkSequence(
+            pathValue,
+            () => splitCapacitorPayloadIntoChunks(payload, CAPACITOR_BRIDGE_MAX_CHUNK_BYTES),
+            {
+                ...options,
+                maxPayloadBytes: options && Number.isFinite(options.maxPayloadBytes)
+                    ? Number(options.maxPayloadBytes)
+                    : CAPACITOR_BRIDGE_MAX_TEXT_PAYLOAD_BYTES
             }
-        }
-
-        throw lastError || new Error(`Failed to write Capacitor file: ${normalizedPath}`);
+        );
     }
 
     async function capacitorReadDirectoryEntries(pathValue) {
@@ -864,6 +1012,49 @@
         );
     }
 
+    function* createCapacitorGraphDataJsonChunks(graphData) {
+        const payload = graphData && typeof graphData === 'object' ? graphData : {};
+        const nodes = Array.isArray(payload.nodes) ? payload.nodes : [];
+        const edges = Array.isArray(payload.edges) ? payload.edges : [];
+        const extraKeys = Object.keys(payload).filter((key) => key !== 'nodes' && key !== 'edges');
+
+        yield '{"nodes":[';
+        for (let index = 0; index < nodes.length; index += 1) {
+            if (index > 0) {
+                yield ',';
+            }
+            yield JSON.stringify(nodes[index] ?? null);
+        }
+
+        yield '],"edges":[';
+        for (let index = 0; index < edges.length; index += 1) {
+            if (index > 0) {
+                yield ',';
+            }
+            yield JSON.stringify(edges[index] ?? null);
+        }
+        yield ']';
+
+        for (const key of extraKeys) {
+            yield `,${JSON.stringify(key)}:${JSON.stringify(payload[key] ?? null)}`;
+        }
+        yield '}';
+    }
+
+    function createCapacitorGraphJsonChunkFactory(graphData) {
+        return function* graphJsonFactory() {
+            yield* createCapacitorGraphDataJsonChunks(graphData);
+        };
+    }
+
+    function createCapacitorGraphJavascriptChunkFactory(graphData) {
+        return function* graphJavascriptFactory() {
+            yield 'const graphData = ';
+            yield* createCapacitorGraphDataJsonChunks(graphData);
+            yield ';';
+        };
+    }
+
     async function runCapacitorGraphBuildWorker(files) {
         if (!supportsCapacitorGraphBuildWorker()) {
             throw new Error('Capacitor graph build worker is unavailable in this runtime.');
@@ -1018,17 +1209,29 @@
         const files = await collectCapacitorMarkdownFiles(targetPath);
         const buildResult = await buildCapacitorGraphDataWithWorkerFallback(files);
         const graphData = buildResult.graphData;
-        const jsPayload = `const graphData = ${JSON.stringify(graphData, null, 2)};`;
-        const jsonPayload = JSON.stringify(graphData, null, 2);
+        const graphJsChunkFactory = createCapacitorGraphJavascriptChunkFactory(graphData);
+        const graphJsonChunkFactory = createCapacitorGraphJsonChunkFactory(graphData);
 
-        await capacitorWriteText('data.js', jsPayload);
-        await capacitorWriteText('graph_data.json', jsonPayload);
+        await capacitorWriteChunkSequence('data.js', graphJsChunkFactory, {
+            maxPayloadBytes: CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES,
+            payloadLabel: 'data.js graph payload'
+        });
+        await capacitorWriteChunkSequence('graph_data.json', graphJsonChunkFactory, {
+            maxPayloadBytes: CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES,
+            payloadLabel: 'graph_data.json graph payload'
+        });
 
         if (rawTarget !== 'ALL_FOLDERS') {
             const targetName = sanitizeTargetName(rawTarget);
             if (targetName) {
-                await capacitorWriteText(`data_${targetName}.js`, jsPayload);
-                await capacitorWriteText(`graph_data_${targetName}.json`, jsonPayload);
+                await capacitorWriteChunkSequence(`data_${targetName}.js`, graphJsChunkFactory, {
+                    maxPayloadBytes: CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES,
+                    payloadLabel: `data_${targetName}.js graph payload`
+                });
+                await capacitorWriteChunkSequence(`graph_data_${targetName}.json`, graphJsonChunkFactory, {
+                    maxPayloadBytes: CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES,
+                    payloadLabel: `graph_data_${targetName}.json graph payload`
+                });
             }
         }
 
@@ -1041,6 +1244,7 @@
                 edgeCount: graphData.edges.length,
                 buildMode: buildResult.buildMode,
                 buildModeDetail: resolveCapacitorBuildModeDetail(buildResult.buildMode, runtimeCaps || {}),
+                serializationMode: 'chunked-bridge-json-stream',
                 supportsMobileWasmCompute: Boolean(runtimeCaps && runtimeCaps.supports_mobile_wasm_compute === true),
                 mobileWasmReason: runtimeCaps && typeof runtimeCaps.mobile_wasm_reason === 'string'
                     ? runtimeCaps.mobile_wasm_reason

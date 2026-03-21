@@ -53,6 +53,7 @@
     "verify:detox:pipeline": "node scripts/verify-detox-pipeline.js",
     "verify:fixrisk:issues": "node scripts/verify-fixrisk-issues.js",
     "verify:fixrisk:issues:strict": "node scripts/verify-fixrisk-issues.js --strict-pending",
+    "verify:fixrisk:issues:strict:evidence": "node scripts/verify-fixrisk-issues.js --strict-pending --require-evidence-root",
     "verify:pathbridge:strict": "node scripts/verify-pathbridge-strict-schema.js",
     "generate:sbom": "node scripts/generate-sbom.js",
     "generate:sbom:attestation": "node scripts/generate-sbom-attestation.js",

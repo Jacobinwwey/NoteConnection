@@ -12,6 +12,9 @@ describe('fixrisk issue verifier contract', () => {
     expect(pkg.scripts['verify:fixrisk:issues:strict']).toBe(
       'node scripts/verify-fixrisk-issues.js --strict-pending'
     );
+    expect(pkg.scripts['verify:fixrisk:issues:strict:evidence']).toBe(
+      'node scripts/verify-fixrisk-issues.js --strict-pending --require-evidence-root'
+    );
     expect(pkg.scripts['verify:pathbridge:strict']).toBe('node scripts/verify-pathbridge-strict-schema.js');
     expect(pkg.scripts['ops:fixrisk:close']).toBe('node scripts/run-fixrisk-ops-closure.js');
     expect(pkg.scripts['ops:fixrisk:close:dry']).toBe('node scripts/run-fixrisk-ops-closure.js --dry-run');
@@ -24,6 +27,8 @@ describe('fixrisk issue verifier contract', () => {
     expect(script).toContain("'FR-001'");
     expect(script).toContain("'FR-011'");
     expect(script).toContain("'FR-013'");
+    expect(script).toContain("'FR-014'");
+    expect(script).toContain("'FR-015'");
     expect(script).toContain('actions/setup-java@v5');
     expect(script).toContain('java-version');
     expect(script).toContain('verify-capacitor-evidence-freshness.js');
@@ -56,11 +61,22 @@ describe('fixrisk issue verifier contract', () => {
     expect(script).toContain('checkLocalhostPortFallbackPolicy');
     expect(script).toContain('NOTE_CONNECTION_ALLOW_EPHEMERAL_PORT_FALLBACK');
     expect(script).toContain('verify-pathbridge-strict-schema.js');
+    expect(script).toContain('NOTE_CONNECTION_REQUIRE_EVIDENCE_ROOT');
+    expect(script).toContain('checkMobileEvidenceRootAvailability');
+    expect(script).toContain('requireEvidenceRoot');
+    expect(script).toContain('codeStatus');
+    expect(script).toContain('operationalStatus');
+    expect(script).toContain('isCodeCheck');
+    expect(script).toContain('allCodeChecksPassed');
+    expect(script).toContain('checkCapacitorBridgeSerializationPolicy');
+    expect(script).toContain('checkContentPathSandboxPolicy');
     expect(script).toContain('--contract-only');
     expect(script).toContain('src/server.port.fallback.contract.test.ts');
     expect(script).toContain('src/sbom.policy.contract.test.ts');
     expect(script).toContain('src/sbom.attestation.policy.contract.test.ts');
     expect(script).toContain('src/pathbridge.strict.policy.contract.test.ts');
+    expect(script).toContain('src/capacitor.bridge.serialization.contract.test.ts');
+    expect(script).toContain('src/content.path.sandbox.contract.test.ts');
   });
 
   test('ops closure orchestrator script exists with strict verification handoff', () => {
@@ -69,7 +85,7 @@ describe('fixrisk issue verifier contract', () => {
     expect(script).toContain('verify-capacitor-device-acceptance.js');
     expect(script).toContain('capture-capacitor-device-evidence.js');
     expect(script).toContain('verify-capacitor-evidence-freshness.js');
-    expect(script).toContain("['--strict-pending']");
+    expect(script).toContain("['--strict-pending', '--require-evidence-root']");
     expect(script).toContain('fixrisk-ops-closure-latest.json');
   });
 });

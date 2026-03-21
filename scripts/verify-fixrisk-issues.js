@@ -9,6 +9,7 @@ const buildDir = path.join(repoRoot, 'build');
 const latestReportPath = path.join(buildDir, 'fixrisk-issue-check-latest.json');
 const datedReportPath = path.join(buildDir, `fixrisk-issue-check-${new Date().toISOString().slice(0, 10)}.json`);
 const jestJsonReportPath = path.join(buildDir, 'fixrisk-jest-contract-report.json');
+const DEFAULT_MOBILE_EVIDENCE_ROOT = path.join(repoRoot, 'docs', 'mobile-evidence');
 
 const EN_DOC_PATH = path.join(repoRoot, 'docs', 'en', 'fixrisk_TODO.md');
 const ZH_DOC_PATH = path.join(repoRoot, 'docs', 'zh', 'fixrisk_TODO.md');
@@ -28,7 +29,9 @@ const REQUIRED_FR_IDS = [
   'FR-010',
   'FR-011',
   'FR-012',
-  'FR-013'
+  'FR-013',
+  'FR-014',
+  'FR-015'
 ];
 
 const CONTRACT_TEST_FILES = [
@@ -45,20 +48,35 @@ const CONTRACT_TEST_FILES = [
   'src/sbom.attestation.policy.contract.test.ts',
   'src/pathbridge.strict.policy.contract.test.ts',
   'src/capacitor.evidence.contract.test.ts',
-  'src/tauri.test.runner.contract.test.ts'
+  'src/tauri.test.runner.contract.test.ts',
+  'src/capacitor.bridge.serialization.contract.test.ts',
+  'src/content.path.sandbox.contract.test.ts'
 ];
 
 function parseArgs(argv) {
+  const envRequireEvidenceRoot = parseBooleanFlag(process.env.NOTE_CONNECTION_REQUIRE_EVIDENCE_ROOT);
+  const envEvidenceRootRaw = String(process.env.NOTE_CONNECTION_EVIDENCE_ROOT || '').trim();
   const options = {
     strictPending: false,
     writeDatedSnapshot: true,
-    reportPath: latestReportPath
+    reportPath: latestReportPath,
+    requireEvidenceRoot: envRequireEvidenceRoot,
+    evidenceRoot: envEvidenceRootRaw ? path.resolve(repoRoot, envEvidenceRootRaw) : DEFAULT_MOBILE_EVIDENCE_ROOT
   };
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--strict-pending') {
       options.strictPending = true;
+      continue;
+    }
+    if (arg === '--require-evidence-root') {
+      options.requireEvidenceRoot = true;
+      continue;
+    }
+    if (arg === '--evidence-root' && argv[index + 1]) {
+      options.evidenceRoot = path.resolve(repoRoot, argv[index + 1]);
+      index += 1;
       continue;
     }
     if (arg === '--no-dated-snapshot') {
@@ -73,6 +91,11 @@ function parseArgs(argv) {
   }
 
   return options;
+}
+
+function parseBooleanFlag(rawValue) {
+  const normalized = String(rawValue || '').trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
 }
 
 function readText(filePath) {
@@ -649,9 +672,171 @@ function checkLocalhostPortFallbackPolicy() {
   ];
 }
 
+function checkCapacitorBridgeSerializationPolicy() {
+  const storageProviderPath = path.join(repoRoot, 'src', 'frontend', 'storage_provider.js');
+  const source = readText(storageProviderPath);
+  return [
+    makeStaticCheck(
+      'storage_provider.js defines bridge chunk byte ceiling',
+      source.includes('CAPACITOR_BRIDGE_MAX_CHUNK_BYTES'),
+      source.includes('CAPACITOR_BRIDGE_MAX_CHUNK_BYTES')
+        ? 'CAPACITOR_BRIDGE_MAX_CHUNK_BYTES detected'
+        : 'Missing CAPACITOR_BRIDGE_MAX_CHUNK_BYTES policy'
+    ),
+    makeStaticCheck(
+      'storage_provider.js enforces graph serialization payload ceiling',
+      source.includes('CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES'),
+      source.includes('CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES')
+        ? 'CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES detected'
+        : 'Missing CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES policy'
+    ),
+    makeStaticCheck(
+      'storage_provider.js writes graph payloads via chunked sequence helpers',
+      source.includes('createCapacitorGraphDataJsonChunks') &&
+        source.includes('writeCapacitorChunkSequenceToDirectory') &&
+        source.includes('appendFile'),
+      source.includes('createCapacitorGraphDataJsonChunks') &&
+        source.includes('writeCapacitorChunkSequenceToDirectory') &&
+        source.includes('appendFile')
+        ? 'Chunked graph serialization + appendFile wiring detected'
+        : 'Missing chunked graph serialization helper or appendFile wiring'
+    ),
+    makeStaticCheck(
+      'storage_provider.js removes monolithic graphData JSON stringify path',
+      !source.includes('JSON.stringify(graphData, null, 2)'),
+      !source.includes('JSON.stringify(graphData, null, 2)')
+        ? 'Monolithic graphData stringify call removed'
+        : 'Found JSON.stringify(graphData, null, 2) monolithic serialization'
+    )
+  ];
+}
+
+function checkContentPathSandboxPolicy() {
+  const serverPath = path.join(repoRoot, 'src', 'server.ts');
+  const controllerPath = path.join(repoRoot, 'src', 'backend', 'controller.ts');
+  const serverSource = readText(serverPath);
+  const controllerSource = readText(controllerPath);
+  return [
+    makeStaticCheck(
+      'server.ts blocks absolute pkg snapshot content paths',
+      serverSource.includes('Absolute pkg snapshot content paths are not allowed.'),
+      serverSource.includes('Absolute pkg snapshot content paths are not allowed.')
+        ? 'Absolute pkg snapshot content path guard detected'
+        : 'Missing absolute pkg snapshot content path guard'
+    ),
+    makeStaticCheck(
+      'server.ts denies pkg snapshot KB root assignment',
+      serverSource.includes('pkg snapshot paths are not allowed as Knowledge Base roots'),
+      serverSource.includes('pkg snapshot paths are not allowed as Knowledge Base roots')
+        ? 'KB root snapshot guard detected'
+        : 'Missing KB root snapshot guard'
+    ),
+    makeStaticCheck(
+      'server.ts uses canonical root jail helper for content path checks',
+      serverSource.includes('normalizePathForComparison') &&
+        serverSource.includes('isPathInsideRoot'),
+      serverSource.includes('normalizePathForComparison') &&
+        serverSource.includes('isPathInsideRoot')
+        ? 'Canonical path jail helpers detected'
+        : 'Missing canonical path jail helper usage'
+    ),
+    makeStaticCheck(
+      'backend controller removes prefix-only startsWith path check',
+      !controllerSource.includes('startsWith(resolvedRoot)') &&
+        controllerSource.includes('isPathInsideRoot'),
+      !controllerSource.includes('startsWith(resolvedRoot)') &&
+        controllerSource.includes('isPathInsideRoot')
+        ? 'Controller uses path.relative-based root jail'
+        : 'Controller still relies on startsWith prefix check'
+    )
+  ];
+}
+
+function resolveMobileEvidenceManifestPath(evidenceRoot) {
+  const latestPointerPath = path.join(evidenceRoot, 'latest.json');
+  if (fs.existsSync(latestPointerPath)) {
+    try {
+      const latestPointer = JSON.parse(readText(latestPointerPath));
+      const manifestRelative = String(latestPointer.manifestRelative || '').trim();
+      if (manifestRelative) {
+        const manifestPath = path.resolve(repoRoot, manifestRelative);
+        if (fs.existsSync(manifestPath)) {
+          return {
+            manifestPath,
+            source: 'latest-pointer'
+          };
+        }
+      }
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  const runDirs = fs
+    .readdirSync(evidenceRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort((left, right) => right.localeCompare(left));
+  for (const runDir of runDirs) {
+    const candidate = path.join(evidenceRoot, runDir, 'acceptance_evidence.json');
+    if (fs.existsSync(candidate)) {
+      return {
+        manifestPath: candidate,
+        source: 'directory-scan'
+      };
+    }
+  }
+
+  return null;
+}
+
+function checkMobileEvidenceRootAvailability(options) {
+  const evidenceRoot = path.resolve(String(options.evidenceRoot || DEFAULT_MOBILE_EVIDENCE_ROOT));
+  const rootExists = fs.existsSync(evidenceRoot) && fs.statSync(evidenceRoot).isDirectory();
+  const resolvedManifest = rootExists ? resolveMobileEvidenceManifestPath(evidenceRoot) : null;
+  const requireEvidenceRoot = options.requireEvidenceRoot === true;
+
+  const rootExistsCheck = makeStaticCheck(
+    'mobile evidence root exists',
+    rootExists || !requireEvidenceRoot,
+    rootExists
+      ? `Mobile evidence root detected: ${evidenceRoot}`
+      : requireEvidenceRoot
+        ? `Missing required mobile evidence root: ${evidenceRoot}`
+        : `Missing mobile evidence root (non-strict guidance). Expected at: ${evidenceRoot}`
+  );
+
+  const manifestPresentCheck = makeStaticCheck(
+    'mobile evidence root has acceptance manifest pointer',
+    Boolean(resolvedManifest) || !requireEvidenceRoot,
+    resolvedManifest
+      ? `Resolved acceptance manifest via ${resolvedManifest.source}: ${resolvedManifest.manifestPath}`
+      : requireEvidenceRoot
+        ? `Missing acceptance_evidence.json or latest.json pointer under ${evidenceRoot}`
+        : `No acceptance manifest found under ${evidenceRoot} (non-strict guidance).`
+  );
+
+  return {
+    evidenceRoot,
+    checks: [rootExistsCheck, manifestPresentCheck]
+  };
+}
+
 function collectIssueResult(issueId, checks, options = {}) {
-  const allPassed = checks.every((check) => check.ok);
+  const normalizedChecks = Array.isArray(checks) ? checks : [];
+  const isCodeCheck = typeof options.isCodeCheck === 'function'
+    ? options.isCodeCheck
+    : () => true;
+  const codeChecks = normalizedChecks.filter((check) => isCodeCheck(check));
+  const effectiveCodeChecks = codeChecks.length > 0 ? codeChecks : normalizedChecks;
+  const allPassed = normalizedChecks.every((check) => check.ok);
+  const allCodeChecksPassed = effectiveCodeChecks.every((check) => check.ok);
   const pendingReason = options.pendingReason ? String(options.pendingReason).trim() : '';
+
+  const codeStatus = allCodeChecksPassed ? 'verified-closed' : 'verification-failed';
+  const operationalStatus = pendingReason.length > 0
+    ? (options.strictPending ? 'blocked' : 'pending')
+    : 'cleared';
 
   let status = 'verification-failed';
   if (allPassed && pendingReason.length === 0) {
@@ -663,11 +848,13 @@ function collectIssueResult(issueId, checks, options = {}) {
   return {
     id: issueId,
     status,
+    codeStatus,
+    operationalStatus,
     pendingReason: pendingReason.length > 0 ? pendingReason : null,
-    checks,
-    verification: checks.map((check) => `${check.ok ? 'PASS' : 'FAIL'} ${check.name}${check.detail ? `: ${check.detail}` : ''}`),
-    passedChecks: checks.filter((check) => check.ok).length,
-    totalChecks: checks.length
+    checks: normalizedChecks,
+    verification: normalizedChecks.map((check) => `${check.ok ? 'PASS' : 'FAIL'} ${check.name}${check.detail ? `: ${check.detail}` : ''}`),
+    passedChecks: normalizedChecks.filter((check) => check.ok).length,
+    totalChecks: normalizedChecks.length
   };
 }
 
@@ -718,6 +905,9 @@ function main() {
   const packageChecks = checkPackageSidecarConflict();
   const capacitorPolicyChecks = checkCapacitorLoopbackPolicy();
   const localhostPortFallbackChecks = checkLocalhostPortFallbackPolicy();
+  const capacitorBridgeSerializationChecks = checkCapacitorBridgeSerializationPolicy();
+  const contentPathSandboxChecks = checkContentPathSandboxPolicy();
+  const mobileEvidenceRoot = checkMobileEvidenceRootAvailability(options);
 
   const sidecarSignatureVerify = runCommand(process.execPath, [
     path.join(repoRoot, 'scripts', 'verify-sidecar-signatures.js'),
@@ -747,7 +937,8 @@ function main() {
     ...process.env,
     NOTE_CONNECTION_REQUIRE_LARGE_GRAPH_EVIDENCE: '1',
     NOTE_CONNECTION_MIN_EVIDENCE_NODE_COUNT: strictLargeGraphNodeCount,
-    NOTE_CONNECTION_MIN_EVIDENCE_EDGE_COUNT: strictLargeGraphEdgeCount
+    NOTE_CONNECTION_MIN_EVIDENCE_EDGE_COUNT: strictLargeGraphEdgeCount,
+    NOTE_CONNECTION_EVIDENCE_ROOT: mobileEvidenceRoot.evidenceRoot
   };
   const capacitorEvidenceVerify = runCommand(process.execPath, [
     path.join(repoRoot, 'scripts', 'verify-capacitor-evidence-freshness.js')
@@ -849,6 +1040,7 @@ function main() {
     'FR-009',
     [
       makeJestExpectationCheck('src/capacitor.evidence.contract.test.ts', contractRun),
+      ...mobileEvidenceRoot.checks,
       makeCheckWithPending(
         'verify-capacitor-evidence-freshness',
         capacitorEvidenceVerify,
@@ -859,6 +1051,9 @@ function main() {
     ],
     {
       ...options,
+      isCodeCheck: (check) =>
+        !check.name.startsWith('mobile evidence root ') &&
+        check.name !== 'verify-capacitor-evidence-freshness',
       pendingReason: fr009Pending.pending
         ? 'Operational evidence pending: large-graph physical-device evidence is missing, stale, or below threshold.'
         : ''
@@ -920,10 +1115,38 @@ function main() {
     options
   );
 
-  const issues = [fr001, fr002, fr003, fr004, fr005, fr006, fr007, fr008, fr009, fr010, fr011, fr012, fr013];
+  const fr014 = collectIssueResult(
+    'FR-014',
+    [
+      makeJestExpectationCheck('src/capacitor.bridge.serialization.contract.test.ts', contractRun),
+      ...capacitorBridgeSerializationChecks,
+      ...docsParity.checks.filter((check) => check.name.includes('FR-014'))
+    ],
+    options
+  );
+
+  const fr015 = collectIssueResult(
+    'FR-015',
+    [
+      makeJestExpectationCheck('src/content.path.sandbox.contract.test.ts', contractRun),
+      ...contentPathSandboxChecks,
+      ...docsParity.checks.filter((check) => check.name.includes('FR-015'))
+    ],
+    options
+  );
+
+  const issues = [fr001, fr002, fr003, fr004, fr005, fr006, fr007, fr008, fr009, fr010, fr011, fr012, fr013, fr014, fr015];
   const allChecks = issues.flatMap((issue) => issue.checks);
   const failedIssues = issues.filter((issue) => issue.status.startsWith('verification-failed')).map((issue) => issue.id);
   const pendingIssues = issues.filter((issue) => issue.status === 'verified-pending').map((issue) => issue.id);
+  const codeFailedIssues = issues.filter((issue) => issue.codeStatus !== 'verified-closed').map((issue) => issue.id);
+  const codePassedIssues = issues.filter((issue) => issue.codeStatus === 'verified-closed').map((issue) => issue.id);
+  const operationalPendingIssues = issues
+    .filter((issue) => issue.operationalStatus === 'pending')
+    .map((issue) => issue.id);
+  const operationalBlockedIssues = issues
+    .filter((issue) => issue.operationalStatus === 'blocked')
+    .map((issue) => issue.id);
 
   const nonIssueChecks = [
     makeCheck('verify-detox-pipeline', detoxPipelineVerify, 'Detox pipeline verifier passed'),
@@ -962,7 +1185,9 @@ function main() {
     ],
     options: {
       strictPending: options.strictPending,
-      writeDatedSnapshot: options.writeDatedSnapshot
+      writeDatedSnapshot: options.writeDatedSnapshot,
+      requireEvidenceRoot: options.requireEvidenceRoot,
+      evidenceRoot: path.relative(repoRoot, mobileEvidenceRoot.evidenceRoot).replace(/\\/g, '/')
     },
     contractSuite: {
       tests: CONTRACT_TEST_FILES,
@@ -981,10 +1206,17 @@ function main() {
       failedIssueCount: failedIssues.length,
       failedIssues,
       pendingIssues,
-      allCodeLevelIssuesClosed: failedIssues.length === 0,
+      codePassedIssueCount: codePassedIssues.length,
+      codeFailedIssueCount: codeFailedIssues.length,
+      codeFailedIssues,
+      allCodeLevelIssuesClosed: codeFailedIssues.length === 0,
+      operationalPendingIssueCount: operationalPendingIssues.length,
+      operationalBlockedIssueCount: operationalBlockedIssues.length,
+      operationalPendingIssues,
+      operationalBlockedIssues,
       pendingOperationalBlocker:
-        pendingIssues.length > 0
-          ? pendingIssues.join(', ')
+        operationalPendingIssues.length > 0 || operationalBlockedIssues.length > 0
+          ? [...operationalPendingIssues, ...operationalBlockedIssues].join(', ')
           : null,
       totalChecks: allChecks.length + nonIssueChecks.length,
       passedChecks: [...allChecks, ...nonIssueChecks].filter((check) => check.ok).length

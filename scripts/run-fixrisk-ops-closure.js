@@ -151,7 +151,7 @@ function main() {
     plannedSteps.push({
       name: 'verify-fixrisk-issues-strict',
       script: path.join(repoRoot, 'scripts', 'verify-fixrisk-issues.js'),
-      args: ['--strict-pending'],
+      args: ['--strict-pending', '--require-evidence-root'],
     });
   }
 
