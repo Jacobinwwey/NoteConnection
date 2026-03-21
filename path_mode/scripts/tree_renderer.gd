@@ -60,6 +60,7 @@ var _hover_in_rect: Rect2 = Rect2()
 var _hover_out_rect: Rect2 = Rect2()
 var _hover_item_rects: Array[Dictionary] = [] # list of {rect, id}
 var _hover_detail_button_rects: Array[Dictionary] = [] # list of {rect, id}
+var _hover_expanded_sub_nodes: Array[String] = [] # Expanded rows for in/out details
 var _hover_pin_time: float = 0.0 # 5-second auto-close timer
 
 # Layout params
@@ -129,6 +130,7 @@ func _process(_delta: float) -> void:
 					# 5 seconds elapsed while away, close it
 					_hover_info_visible = false
 					_hovered_node_id = ""
+					_hover_expanded_sub_nodes.clear()
 					_hover_pin_time = 0.0
 					queue_redraw()
 
@@ -743,6 +745,12 @@ func _handle_click(event: InputEventMouseButton) -> void:
 				item_hit = true
 				if event.double_click:
 					node_reader_requested.emit(item.id)
+				else:
+					if _hover_expanded_sub_nodes.has(item.id):
+						_hover_expanded_sub_nodes.erase(item.id)
+					else:
+						_hover_expanded_sub_nodes.append(item.id)
+					queue_redraw()
 				break
 
 		if not item_hit:
@@ -758,6 +766,7 @@ func _handle_click(event: InputEventMouseButton) -> void:
 	if _hover_info_visible:
 		_hover_info_visible = false
 		_hovered_node_id = ""
+		_hover_expanded_sub_nodes.clear()
 		_hover_pin_time = 0.0
 		_hover_detail_button_rects.clear()
 		queue_redraw()
@@ -789,6 +798,7 @@ func _handle_right_click(event: InputEventMouseButton) -> void:
 			if item.rect.has_point(event.position):
 				node_navigate_requested.emit(item.id)
 				_hover_info_visible = false
+				_hover_expanded_sub_nodes.clear()
 				queue_redraw()
 				return
 		return # Consume right click
@@ -831,6 +841,7 @@ func _handle_hover(event: InputEventMouseMotion) -> void:
 			_hover_pin_time = 0.0
 			_hover_in_expanded = false
 			_hover_out_expanded = false
+			_hover_expanded_sub_nodes.clear()
 			_hover_detail_button_rects.clear()
 			_hover_screen_pos = event.position
 			queue_redraw()
@@ -842,6 +853,7 @@ func _handle_hover(event: InputEventMouseMotion) -> void:
 		if not _hovered_node_id.is_empty():
 			_hovered_node_id = ""
 			_hover_start_time = 0.0
+			_hover_expanded_sub_nodes.clear()
 			queue_redraw()
 	elif found_node_id != _hovered_node_id:
 		# Mouse entered a new node — restart timer
@@ -849,6 +861,7 @@ func _handle_hover(event: InputEventMouseMotion) -> void:
 		_hover_start_time = Time.get_ticks_msec() / 1000.0
 		_hover_in_expanded = false
 		_hover_out_expanded = false
+		_hover_expanded_sub_nodes.clear()
 		_hover_detail_button_rects.clear()
 		_hover_screen_pos = event.position
 		queue_redraw()
@@ -869,10 +882,10 @@ func _draw_hover_info_box() -> void:
 	var out_names: Array = node.get("outDegreeNames", [])
 	var in_ids: Array = node.get("inDegreeIds", [])
 	var out_ids: Array = node.get("outDegreeIds", [])
-	
+
 	var in_deg = in_names.size()
 	var out_deg = out_names.size()
-	
+
 	var label = node.get("label", node.get("id", "?"))
 
 	var font = ThemeDB.fallback_font
@@ -888,9 +901,12 @@ func _draw_hover_info_box() -> void:
 		lines.append({"text": "In (%d):" % in_deg, "id": ""})
 		for i in range(in_deg):
 			var nid = in_ids[i] if i < in_ids.size() else ""
-			lines.append({"text": "  ← " + str(in_names[i]), "id": nid})
+			var icon = "[v]" if _hover_expanded_sub_nodes.has(nid) else "[>]"
+			lines.append({"text": "  <- " + icon + " " + str(in_names[i]), "id": nid})
+			if _hover_expanded_sub_nodes.has(nid):
+				_append_accordion_details(lines, nid, "      ")
 	else:
-		lines.append({"text": "In: %d  [click ▶]" % in_deg, "id": ""})
+		lines.append({"text": "In: %d  [click >]" % in_deg, "id": ""})
 
 	lines.append({"text": "", "id": ""})
 
@@ -898,9 +914,12 @@ func _draw_hover_info_box() -> void:
 		lines.append({"text": "Out (%d):" % out_deg, "id": ""})
 		for i in range(out_deg):
 			var nid = out_ids[i] if i < out_ids.size() else ""
-			lines.append({"text": "  → " + str(out_names[i]), "id": nid})
+			var icon = "[v]" if _hover_expanded_sub_nodes.has(nid) else "[>]"
+			lines.append({"text": "  -> " + icon + " " + str(out_names[i]), "id": nid})
+			if _hover_expanded_sub_nodes.has(nid):
+				_append_accordion_details(lines, nid, "      ")
 	else:
-		lines.append({"text": "Out: %d  [click ▶]" % out_deg, "id": ""})
+		lines.append({"text": "Out: %d  [click >]" % out_deg, "id": ""})
 
 	var detail_button_text = "Details"
 	var detail_button_font_size = 11
@@ -930,7 +949,7 @@ func _draw_hover_info_box() -> void:
 
 	var text_x = box_pos.x + pad.x
 	var text_y = box_pos.y + pad.y + font_size
-	
+
 	_hover_info_rect = bg_rect
 	_hover_in_rect = Rect2()
 	_hover_out_rect = Rect2()
@@ -944,7 +963,7 @@ func _draw_hover_info_box() -> void:
 		var col = Color.WHITE
 
 		var line_rect = Rect2(text_x, text_y + i * line_h - font_size, box_w - pad.x * 2, line_h + 2)
-		
+
 		if i == 0:
 			col = Color(0.4, 0.8, 1.0)
 		elif line.begins_with("In"):
@@ -990,6 +1009,28 @@ func _draw_hover_info_box() -> void:
 			draw_string(font, detail_text_pos, detail_button_text, HORIZONTAL_ALIGNMENT_LEFT, -1, detail_button_font_size, Color(0.95, 0.98, 1.0))
 
 			_hover_detail_button_rects.append({"rect": button_rect, "id": line_id})
+
+func _append_accordion_details(lines: Array[Dictionary], node_id: String, indent: String) -> void:
+	var node = _find_layout_node(node_id)
+	if node.is_empty():
+		return
+
+	var in_n: Array = node.get("inDegreeNames", [])
+	var out_n: Array = node.get("outDegreeNames", [])
+
+	if in_n.size() > 0:
+		lines.append({"text": indent + "[In: %d]" % in_n.size(), "id": ""})
+	for i in range(min(in_n.size(), 3)):
+		lines.append({"text": indent + "<- " + str(in_n[i]), "id": ""})
+	if in_n.size() > 3:
+		lines.append({"text": indent + "... (+%d)" % (in_n.size() - 3), "id": ""})
+
+	if out_n.size() > 0:
+		lines.append({"text": indent + "[Out: %d]" % out_n.size(), "id": ""})
+	for i in range(min(out_n.size(), 3)):
+		lines.append({"text": indent + "-> " + str(out_n[i]), "id": ""})
+	if out_n.size() > 3:
+		lines.append({"text": indent + "... (+%d)" % (out_n.size() - 3), "id": ""})
 
 func _truncate_text_for_width(text: String, max_width: float, font: Font, font_size: int) -> String:
 	if max_width <= 0.0:
