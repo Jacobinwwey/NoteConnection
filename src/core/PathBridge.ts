@@ -298,6 +298,7 @@ const KNOWN_BRIDGE_MESSAGE_TYPES = new Set([
     'collapseAll',
     'configure',
     'exitPathMode',
+    'setWindowVisible',
 ]);
 
 const BRIDGE_OUTBOUND_MAX_QUEUE_MESSAGES = 256;
@@ -1949,6 +1950,13 @@ export class PathBridge {
             case 'exitPathMode':
                 console.log('[PathBridge] Exit Path Mode requested');
                 this.broadcast('exitPathMode', payload || {});
+                break;
+
+            // Single-window toggle: relay visibility control to Godot client.
+            // 单窗口切换：将可见性控制消息转发给 Godot 客户端。
+            case 'setWindowVisible':
+                console.log(`[PathBridge] Set Godot window visible: ${isRecord(payload) ? payload.visible : undefined}`);
+                this.broadcast('setWindowVisible', payload);
                 break;
 
             default:

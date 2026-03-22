@@ -3368,9 +3368,6 @@ if (btnPathMode) {
                 const modeSelect = document.getElementById('learning-mode');
                 if(modeSelect) modeSelect.value = 'diffusion';
                 
-                // Hide main graph controls panel potentially?
-                // For now, path-container consumes full screen and has its own toolbar.
-                
                 window.pathApp.init(selectedNode.id);
             } else {
                 // Domain Learning
@@ -3378,6 +3375,25 @@ if (btnPathMode) {
                 if(modeSelect) modeSelect.value = 'domain';
                 
                 window.pathApp.init(null);
+            }
+
+            // Single-window toggle: hide Tauri, show Godot.
+            // 单窗口切换：隐藏 Tauri，显示 Godot。
+            if (window.__TAURI__ && window.__TAURI__.core && typeof window.__TAURI__.core.invoke === 'function') {
+                try {
+                    // 1. Hide the Tauri window via Rust IPC.
+                    await window.__TAURI__.core.invoke('toggle_pathmode_window', { showGodot: true });
+                    // 2. Send setWindowVisible to Godot via PathBridge WebSocket.
+                    if (window.pathApp && window.pathApp.ws && window.pathApp.ws.readyState === WebSocket.OPEN) {
+                        window.pathApp.ws.send(JSON.stringify({
+                            type: 'setWindowVisible',
+                            payload: { visible: true }
+                        }));
+                    }
+                    console.log('[Path Mode] Single-window toggle: Tauri hidden, Godot shown.');
+                } catch (err) {
+                    console.warn('[Path Mode] toggle_pathmode_window failed:', err);
+                }
             }
         } else {
             console.error('PathApp not loaded! Ensure libs/path_core.js and path_app.js are included.');

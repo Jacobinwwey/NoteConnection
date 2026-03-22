@@ -170,6 +170,25 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _handle_reader_unhandled_input(event):
 		get_viewport().set_input_as_handled()
 
+
+func _notification(what: int) -> void:
+	## Intercept close request to minimize instead of quitting.
+	## This prevents the user from accidentally closing the Godot window,
+	## which would break the single-window toggle with Tauri.
+	## 拦截关闭请求，改为最小化窗口而非退出。
+	## 防止用户误关 Godot 窗口导致与 Tauri 的单窗口切换失效。
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		if "--minimized" in OS.get_cmdline_args():
+			# Single-window mode: minimize instead of quit.
+			# 单窗口模式：最小化而非退出。
+			print("[PathModeUI] Close request intercepted, minimizing (single-window mode)")
+			get_window().mode = Window.MODE_MINIMIZED
+		else:
+			# Standalone mode: allow normal close.
+			# 独立模式：允许正常关闭。
+			get_tree().quit()
+
+
 func _ready() -> void:
 	_create_dynamic_ui()
 	_connect_signals()
@@ -4333,6 +4352,12 @@ func _update_target_button_state() -> void:
 
 func _on_exit_pressed() -> void:
 	exit_requested.emit()
+	## Auto-minimize Godot window after requesting exit from PathMode.
+	## The Tauri side will show its own window upon receiving 'exitPathMode'.
+	## 退出 PathMode 后自动最小化 Godot 窗口。
+	## Tauri 端收到 'exitPathMode' 后将显示自己的窗口。
+	if "--minimized" in OS.get_cmdline_args():
+		get_window().mode = Window.MODE_MINIMIZED
 
 
 func _on_bg_lock_toggled(pressed: bool) -> void:

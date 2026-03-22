@@ -1472,6 +1472,23 @@ window.pathApp = {
             sidebar.style.transform = 'translateX(100%)';
             sidebar.style.display = 'none';
         }
+        
+        // Single-window toggle: hide Godot, show Tauri.
+        // 单窗口切换：隐藏 Godot，显示 Tauri。
+        if (window.__TAURI__ && window.__TAURI__.core && typeof window.__TAURI__.core.invoke === 'function') {
+            // 1. Hide Godot window via PathBridge WebSocket.
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(JSON.stringify({
+                    type: 'setWindowVisible',
+                    payload: { visible: false }
+                }));
+            }
+            // 2. Restore Tauri window via Rust IPC.
+            window.__TAURI__.core.invoke('toggle_pathmode_window', { showGodot: false })
+                .then(() => console.log('[PathApp] Single-window toggle: Godot hidden, Tauri restored.'))
+                .catch((err) => console.warn('[PathApp] toggle_pathmode_window restore failed:', err));
+        }
+
         window.dispatchEvent(new Event('resize'));
     },
 

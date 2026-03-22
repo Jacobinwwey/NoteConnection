@@ -1395,6 +1395,50 @@ fn open_native_pathmode(request: NativePathmodeLaunchRequest) -> Result<NativePa
     }
 }
 
+/// Toggle between Tauri main window and Godot PathMode window.
+/// When `show_godot` is true, the Tauri window hides and Godot becomes visible.
+/// When `show_godot` is false, the Godot window hides and Tauri becomes visible.
+///
+/// 切换 Tauri 主窗口与 Godot PathMode 窗口。
+/// 当 `show_godot` 为 true 时，Tauri 窗口隐藏、Godot 窗口显示。
+/// 当 `show_godot` 为 false 时，Godot 窗口隐藏、Tauri 窗口显示。
+#[cfg(not(target_os = "android"))]
+#[tauri::command]
+fn toggle_pathmode_window(app: AppHandle, show_godot: bool) -> Result<(), String> {
+    let main_window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "Main Tauri window not found".to_string())?;
+
+    if show_godot {
+        // Hide Tauri window; Godot will show itself via WebSocket message.
+        // 隐藏 Tauri 窗口；Godot 将通过 WebSocket 消息自行显示。
+        main_window
+            .hide()
+            .map_err(|err| format!("Failed to hide Tauri window: {}", err))?;
+        println!("[Rust] Tauri window hidden for PathMode.");
+    } else {
+        // Show Tauri window; Godot will hide itself via WebSocket message.
+        // 显示 Tauri 窗口；Godot 将通过 WebSocket 消息自行隐藏。
+        main_window
+            .show()
+            .map_err(|err| format!("Failed to show Tauri window: {}", err))?;
+        main_window
+            .set_focus()
+            .map_err(|err| format!("Failed to focus Tauri window: {}", err))?;
+        println!("[Rust] Tauri window restored from PathMode.");
+    }
+
+    Ok(())
+}
+
+#[cfg(target_os = "android")]
+#[tauri::command]
+fn toggle_pathmode_window(_app: AppHandle, _show_godot: bool) -> Result<(), String> {
+    // Android uses native Pathmode activity instead of window toggling.
+    // Android 使用原生 Pathmode Activity，而非窗口切换。
+    Ok(())
+}
+
 impl Default for ChildProcessState {
     fn default() -> Self {
         Self {
@@ -1632,6 +1676,7 @@ pub fn run() {
             get_runtime_capabilities,
             get_sidecar_runtime_config,
             open_native_pathmode,
+            toggle_pathmode_window,
             set_user_language,
             get_user_language,
             check_cache,
@@ -1833,7 +1878,7 @@ pub fn run() {
                                     "NOTE_CONNECTION_AUTH_TOKEN",
                                     godot_runtime.auth_token.clone(),
                                 )
-                                .args(["--path", godot_project.to_string_lossy().as_ref()])
+                                .args(["--path", godot_project.to_string_lossy().as_ref(), "--minimized"])
                                 .spawn()
                             {
                                 Ok(child) => {

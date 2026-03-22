@@ -24,6 +24,15 @@ func _ready() -> void:
 	_setup_reconnect_timer()
 	_socket.inbound_buffer_size = 1048576 * 8 # Increase buffer to 8MB
 	_ws_url = _resolve_ws_url()
+
+	## Start window minimized if --minimized flag is present.
+	## This supports the single-window toggle UX where Tauri is the initial UI.
+	## 如果存在 --minimized 标志则以最小化状态启动窗口。
+	## 支持单窗口切换体验，Tauri 为初始界面。
+	if "--minimized" in OS.get_cmdline_args():
+		print("WsClient: Starting minimized (single-window mode)")
+		get_window().mode = Window.MODE_MINIMIZED
+
 	connect_to_server()
 
 
@@ -148,6 +157,19 @@ func _parse_message(text: String) -> void:
 			var ids: Array = payload.get("completedIds", [])
 			var timestamp: int = payload.get("timestamp", 0)
 			completion_sync.emit(ids, timestamp)
+		"setWindowVisible":
+			## Toggle Godot window visibility for single-window UX.
+			## Tauri sends this message via PathBridge to show/hide the Godot window.
+			## 切换 Godot 窗口可见性以实现单窗口体验。
+			## Tauri 通过 PathBridge 发送此消息来显示/隐藏 Godot 窗口。
+			var visible: bool = payload.get("visible", true)
+			if visible:
+				print("WsClient: Showing Godot window")
+				get_window().mode = Window.MODE_WINDOWED
+				get_window().grab_focus()
+			else:
+				print("WsClient: Hiding Godot window")
+				get_window().mode = Window.MODE_MINIMIZED
 
 
 ## Send a message to the frontend
