@@ -3287,10 +3287,143 @@ const notemdCloseButton = document.getElementById('btn-notemd-embed-close');
 const notemdIframe = document.getElementById('notemd-embed-frame');
 const NOTEMD_EMBED_RPC_REQUEST = 'noteconnection:notemd-rpc-request';
 const NOTEMD_EMBED_RPC_RESPONSE = 'noteconnection:notemd-rpc-response';
+const NOTEMD_EMBED_ALLOWED_COMMANDS = new Set([
+    'pick_notemd_file',
+    'save_notemd_file',
+    'pick_notemd_folder'
+]);
 
 function isNotemdIframeSource(source) {
     return !!(notemdIframe && notemdIframe.contentWindow && source === notemdIframe.contentWindow);
 }
+
+function resolveNotemdRpcTargetWindow(source) {
+    if (isNotemdIframeSource(source)) {
+        return source;
+    }
+    if (notemdIframe && notemdIframe.contentWindow) {
+        return notemdIframe.contentWindow;
+    }
+    return null;
+}
+
+function getTauriCoreInvoke() {
+    if (
+        window.__TAURI__ &&
+        window.__TAURI__.core &&
+        typeof window.__TAURI__.core.invoke === 'function'
+    ) {
+        return window.__TAURI__.core.invoke;
+    }
+    return null;
+}
+
+function getTauriDialogApi() {
+    if (window.__TAURI__ && window.__TAURI__.dialog && typeof window.__TAURI__.dialog.open === 'function') {
+        return window.__TAURI__.dialog;
+    }
+    const invoke = getTauriCoreInvoke();
+    if (invoke) {
+        return {
+            open(options) {
+                return invoke('plugin:dialog|open', { options: options || {} });
+            },
+            save(options) {
+                return invoke('plugin:dialog|save', { options: options || {} });
+            }
+        };
+    }
+    return null;
+}
+
+function normalizeNotemdPickerPayload(payload) {
+    const safePayload = payload && typeof payload === 'object' ? { ...payload } : {};
+    const initialPath = typeof safePayload.initialPath === 'string'
+        ? safePayload.initialPath
+        : (typeof safePayload.initial_path === 'string' ? safePayload.initial_path : null);
+    if (typeof initialPath === 'string') {
+        safePayload.initialPath = initialPath;
+        safePayload.initial_path = initialPath;
+    }
+    return safePayload;
+}
+
+function normalizeDialogSelection(selection) {
+    if (typeof selection === 'string') {
+        return selection;
+    }
+    if (Array.isArray(selection) && selection.length > 0 && typeof selection[0] === 'string') {
+        return selection[0];
+    }
+    return null;
+}
+
+async function invokeNotemdPickerFromHost(command, payload) {
+    const safePayload = normalizeNotemdPickerPayload(payload);
+    const invoke = getTauriCoreInvoke();
+    if (!invoke) {
+        throw new Error('Tauri host invoke API is unavailable.');
+    }
+    try {
+        return await invoke(command, safePayload);
+    } catch (err) {
+        console.warn(`[NoteMD] Rust command path failed for '${command}', trying dialog fallback:`, err);
+    }
+
+    const dialog = getTauriDialogApi();
+    const initialPath = typeof safePayload.initialPath === 'string' ? safePayload.initialPath : null;
+    if (!dialog) {
+        throw new Error('Tauri dialog API is unavailable and Rust command fallback failed.');
+    }
+
+    const defaultPath = initialPath && initialPath.trim() ? initialPath.trim() : undefined;
+    const markdownFilters = [{ name: 'Markdown', extensions: ['md', 'markdown', 'txt'] }];
+
+    if (command === 'pick_notemd_file') {
+        const selection = await dialog.open({
+            multiple: false,
+            directory: false,
+            defaultPath,
+            filters: markdownFilters
+        });
+        return normalizeDialogSelection(selection);
+    }
+
+    if (command === 'save_notemd_file') {
+        if (typeof dialog.save === 'function') {
+            const selection = await dialog.save({
+                defaultPath,
+                filters: markdownFilters
+            });
+            return normalizeDialogSelection(selection);
+        }
+        throw new Error('Tauri dialog.save API is unavailable.');
+    }
+
+    if (command === 'pick_notemd_folder') {
+        const selection = await dialog.open({
+            multiple: false,
+            directory: true,
+            defaultPath
+        });
+        return normalizeDialogSelection(selection);
+    }
+
+    throw new Error(`Unsupported NoteMD picker command '${command}'.`);
+}
+
+window.NoteConnectionHostInvoke = async function(command, payload) {
+    if (NOTEMD_EMBED_ALLOWED_COMMANDS.has(command)) {
+        console.log(`[NoteMD] Host picker invoke requested: ${command}`);
+        return invokeNotemdPickerFromHost(command, payload || {});
+    }
+
+    const invoke = getTauriCoreInvoke();
+    if (!invoke) {
+        throw new Error('Tauri host invoke API is unavailable.');
+    }
+    return invoke(command, payload || {});
+};
 
 function ensureNotemdIframeLoaded() {
     if (!notemdIframe) return;
@@ -3323,7 +3456,7 @@ window.addEventListener('message', async (event) => {
     if (!data || data.type !== NOTEMD_EMBED_RPC_REQUEST) {
         return;
     }
-    if (!isNotemdIframeSource(event.source)) {
+    if (!data || typeof data !== 'object') {
         return;
     }
 
@@ -3332,30 +3465,32 @@ window.addEventListener('message', async (event) => {
     if (!requestId || !command) {
         return;
     }
+    if (!NOTEMD_EMBED_ALLOWED_COMMANDS.has(command)) {
+        return;
+    }
+
+    console.log(`[NoteMD] RPC request received from iframe: ${command}`);
 
     let result = null;
     let error = null;
 
     try {
-        if (!window.__TAURI__ || !window.__TAURI__.core || typeof window.__TAURI__.core.invoke !== 'function') {
-            throw new Error('Tauri invoke API is unavailable in the host window.');
-        }
-        result = await window.__TAURI__.core.invoke(command, data.payload || {});
+        result = await window.NoteConnectionHostInvoke(command, data.payload || {});
     } catch (err) {
         error = err instanceof Error ? err.message : String(err);
     }
 
+    const targetWindow = resolveNotemdRpcTargetWindow(event.source);
     try {
-        if (event.source && typeof event.source.postMessage === 'function') {
-            event.source.postMessage(
-                {
-                    type: NOTEMD_EMBED_RPC_RESPONSE,
-                    requestId,
-                    result,
-                    error
-                },
-                '*'
-            );
+        if (targetWindow && typeof targetWindow.postMessage === 'function') {
+            targetWindow.postMessage({
+                type: NOTEMD_EMBED_RPC_RESPONSE,
+                requestId,
+                result,
+                error
+            }, '*');
+        } else {
+            console.warn('[NoteMD] Unable to resolve iframe target window for RPC response.');
         }
     } catch (err) {
         console.warn('[NoteMD] Failed to send RPC response back to iframe:', err);

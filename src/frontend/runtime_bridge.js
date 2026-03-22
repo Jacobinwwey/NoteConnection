@@ -3,6 +3,7 @@
     const DEFAULT_BRIDGE_WS_URL = 'ws://127.0.0.1:9876';
     const BRIDGE_RPC_VERSION = '2.0';
     const BRIDGE_RPC_METHOD_PREFIX = 'noteconnection.';
+    const TAURI_RUNTIME_HYDRATE_TIMEOUT_MS = 2000;
 
     function isPlainObject(value) {
         return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -236,6 +237,37 @@
         return window.__TAURI__.core.invoke;
     }
 
+    function invokeTauriWithTimeout(invoke, command, args, timeoutMs) {
+        return new Promise((resolve, reject) => {
+            let settled = false;
+            const timer = setTimeout(() => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                reject(new Error(`Tauri invoke timed out (${command}).`));
+            }, timeoutMs);
+
+            Promise.resolve(invoke(command, args))
+                .then((result) => {
+                    if (settled) {
+                        return;
+                    }
+                    settled = true;
+                    clearTimeout(timer);
+                    resolve(result);
+                })
+                .catch((error) => {
+                    if (settled) {
+                        return;
+                    }
+                    settled = true;
+                    clearTimeout(timer);
+                    reject(error);
+                });
+        });
+    }
+
     async function hydrateRuntimeFromTauri() {
         if (runtimeHydrationPromise) {
             return runtimeHydrationPromise;
@@ -248,7 +280,12 @@
             }
 
             try {
-                const caps = await invoke('get_runtime_capabilities');
+                const caps = await invokeTauriWithTimeout(
+                    invoke,
+                    'get_runtime_capabilities',
+                    undefined,
+                    TAURI_RUNTIME_HYDRATE_TIMEOUT_MS
+                );
                 if (caps && typeof caps === 'object') {
                     window.__NC_RUNTIME_CAPS = {
                         ...(window.__NC_RUNTIME_CAPS || {}),
@@ -258,7 +295,12 @@
 
                 const runtimeCaps = window.__NC_RUNTIME_CAPS || {};
                 if (runtimeCaps.supports_sidecar) {
-                    const runtimeConfig = await invoke('get_sidecar_runtime_config');
+                    const runtimeConfig = await invokeTauriWithTimeout(
+                        invoke,
+                        'get_sidecar_runtime_config',
+                        undefined,
+                        TAURI_RUNTIME_HYDRATE_TIMEOUT_MS
+                    );
                     setRuntimeConfig(runtimeConfig);
                 }
             } catch (error) {

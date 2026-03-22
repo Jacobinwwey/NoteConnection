@@ -4,7 +4,10 @@
   const settingsEditor = $("settings-json");
   const NOTEMD_EMBED_RPC_REQUEST = "noteconnection:notemd-rpc-request";
   const NOTEMD_EMBED_RPC_RESPONSE = "noteconnection:notemd-rpc-response";
+  const NOTEMD_RUNTIME_READY_TIMEOUT_MS = 2000;
+  const NOTEMD_INVOKE_TIMEOUT_MS = 300000;
   let notemdRpcSeq = 0;
+  let runtimeReadyTimeoutWarned = false;
 
   function nowString() {
     const d = new Date();
@@ -48,13 +51,46 @@
       window.NoteConnectionRuntime &&
       typeof window.NoteConnectionRuntime.whenReady === "function"
     ) {
-      runtimeReadyPromise = window.NoteConnectionRuntime.whenReady().catch((error) => {
-        appendLog(
-          `Runtime bridge initialization warning: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-          "warn"
-        );
+      runtimeReadyPromise = new Promise((resolve) => {
+        let settled = false;
+        const timeout = setTimeout(() => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          if (!runtimeReadyTimeoutWarned) {
+            appendLog(
+              `Runtime bridge readiness timed out after ${NOTEMD_RUNTIME_READY_TIMEOUT_MS}ms; continuing with fallback invoke.`,
+              "warn"
+            );
+            runtimeReadyTimeoutWarned = true;
+          }
+          resolve();
+        }, NOTEMD_RUNTIME_READY_TIMEOUT_MS);
+
+        Promise.resolve(window.NoteConnectionRuntime.whenReady())
+          .then(() => {
+            if (settled) {
+              return;
+            }
+            settled = true;
+            clearTimeout(timeout);
+            resolve();
+          })
+          .catch((error) => {
+            appendLog(
+              `Runtime bridge initialization warning: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+              "warn"
+            );
+            if (settled) {
+              return;
+            }
+            settled = true;
+            clearTimeout(timeout);
+            resolve();
+          });
       });
       return runtimeReadyPromise;
     }
@@ -83,15 +119,19 @@
     }
 
     for (const candidate of candidateWindows) {
-      const invoke =
-        candidate &&
-        candidate.__TAURI__ &&
-        candidate.__TAURI__.core &&
-        typeof candidate.__TAURI__.core.invoke === "function"
-          ? candidate.__TAURI__.core.invoke
-          : null;
-      if (invoke) {
-        return invoke.bind(candidate.__TAURI__.core);
+      try {
+        const invoke =
+          candidate &&
+          candidate.__TAURI__ &&
+          candidate.__TAURI__.core &&
+          typeof candidate.__TAURI__.core.invoke === "function"
+            ? candidate.__TAURI__.core.invoke
+            : null;
+        if (invoke) {
+          return invoke.bind(candidate.__TAURI__.core);
+        }
+      } catch (_error) {
+        // Ignore cross-frame access errors for inaccessible windows.
       }
     }
 
@@ -104,6 +144,52 @@
     } catch (_error) {
       return false;
     }
+  }
+
+  function withTimeout(promise, timeoutMs, errorMessage) {
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        reject(new Error(errorMessage));
+      }, timeoutMs);
+
+      Promise.resolve(promise)
+        .then((value) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          clearTimeout(timer);
+          resolve(value);
+        })
+        .catch((error) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          clearTimeout(timer);
+          reject(error instanceof Error ? error : new Error(String(error)));
+        });
+    });
+  }
+
+  function getParentHostInvoke() {
+    if (!canUseParentRpcBridge()) {
+      return null;
+    }
+    try {
+      const hostInvoke = window.parent && window.parent.NoteConnectionHostInvoke;
+      if (typeof hostInvoke === "function") {
+        return hostInvoke.bind(window.parent);
+      }
+    } catch (_error) {
+      // Ignore cross-frame access errors.
+    }
+    return null;
   }
 
   function invokeViaParentRpcBridge(command, payload, timeoutMs) {
@@ -156,12 +242,62 @@
   }
 
   async function invokeTauri(command, payload) {
-    await ensureRuntimeReady();
-    const invoke = getTauriInvoke();
-    if (!invoke) {
-      return invokeViaParentRpcBridge(command, payload, 12000);
+    // Picker commands should not be blocked by runtime hydration.
+    // Runtime readiness is only required for HTTP-sidecar API requests.
+    const parentHostInvoke = getParentHostInvoke();
+    if (parentHostInvoke) {
+      appendLog(`Picker bridge: host invoke -> ${command}`);
+      try {
+        return await withTimeout(
+          parentHostInvoke(command, payload || {}),
+          NOTEMD_INVOKE_TIMEOUT_MS,
+          `Host invoke timed out (${command}).`
+        );
+      } catch (error) {
+        appendLog(
+          `Direct host invoke fallback for '${command}' failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+          "warn"
+        );
+      }
     }
-    return invoke(command, payload || {});
+
+    const invoke = getTauriInvoke();
+    if (invoke) {
+      appendLog(`Picker bridge: direct invoke -> ${command}`);
+      try {
+        return await withTimeout(
+          invoke(command, payload || {}),
+          NOTEMD_INVOKE_TIMEOUT_MS,
+          `Tauri invoke timed out (${command}).`
+        );
+      } catch (error) {
+        appendLog(
+          `Direct Tauri invoke fallback for '${command}' failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+          "warn"
+        );
+      }
+    }
+
+    const preferParentRpc = canUseParentRpcBridge();
+    if (preferParentRpc) {
+      appendLog(`Picker bridge: RPC fallback -> ${command}`, "warn");
+      try {
+        return await invokeViaParentRpcBridge(command, payload, NOTEMD_INVOKE_TIMEOUT_MS);
+      } catch (error) {
+        appendLog(
+          `Host RPC fallback for '${command}' failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+          "warn"
+        );
+      }
+    }
+
+    throw new Error(`No available Tauri invoke bridge for command '${command}'.`);
   }
 
   async function apiRequest(resourcePath, options) {
@@ -243,6 +379,7 @@
       return;
     }
 
+    appendLog(`Opening ${saveFile ? "save-file" : "file"} picker...`);
     const command = saveFile ? "save_notemd_file" : "pick_notemd_file";
     const selectedPath = await invokeTauri(command, {
       initialPath: input.value.trim() || null,
@@ -261,6 +398,7 @@
       return;
     }
 
+    appendLog("Opening folder picker...");
     const selectedPath = await invokeTauri("pick_notemd_folder", {
       initialPath: input.value.trim() || null,
     });

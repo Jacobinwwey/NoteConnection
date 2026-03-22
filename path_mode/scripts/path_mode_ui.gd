@@ -156,6 +156,7 @@ var _target_nodes: Array[Dictionary] = []
 var _ws_client: Node = null
 var _close_confirm_dialog: ConfirmationDialog = null
 var _notemd_embed_panel: PopupPanel = null
+var _close_request_handled_by_signal: bool = false
 
 ## Tree panel fullscreen state
 var _is_tree_fullscreen: bool = false
@@ -178,19 +179,20 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
-		if _is_single_window_mode():
-			## In single-window mode, clicking the OS close button should ask whether
-			## to terminate the whole project instead of silently minimizing.
-			## 在单窗口模式下，点击窗口关闭按钮应询问是否关闭整个项目，
-			## 而不是直接最小化。
-			_show_close_project_confirmation()
-		else:
-			# Standalone mode: allow normal close.
-			# 独立模式：允许正常关闭。
-			get_tree().quit()
+		if _close_request_handled_by_signal:
+			return
+		_handle_window_close_request()
 
 
 func _ready() -> void:
+	## Prevent OS close requests from auto-quitting before custom confirmation dialog runs.
+	## 防止系统关闭请求在确认弹窗前自动退出。
+	if get_tree():
+		get_tree().auto_accept_quit = false
+	var main_window := get_window()
+	if main_window and not main_window.close_requested.is_connected(_on_window_close_requested):
+		main_window.close_requested.connect(_on_window_close_requested)
+
 	_ws_client = get_node_or_null("../WsClient")
 	_setup_close_confirmation_dialog()
 	_setup_notemd_embed_panel()
@@ -199,10 +201,34 @@ func _ready() -> void:
 	_setup_initial_state()
 
 
+func _handle_window_close_request() -> void:
+	if _is_single_window_mode():
+		_show_close_project_confirmation()
+	else:
+		get_tree().quit()
+
+
+func _on_window_close_requested() -> void:
+	_close_request_handled_by_signal = true
+	_handle_window_close_request()
+	call_deferred("_clear_close_request_signal_guard")
+
+
+func _clear_close_request_signal_guard() -> void:
+	_close_request_handled_by_signal = false
+
+
 func _is_single_window_mode() -> bool:
 	var env_hidden := OS.get_environment("NOTE_CONNECTION_START_HIDDEN").strip_edges()
 	if env_hidden == "1" or env_hidden.to_lower() == "true":
 		return true
+
+	var host_port := OS.get_environment("NOTE_CONNECTION_PORT").strip_edges()
+	var host_bridge_port := OS.get_environment("NOTE_CONNECTION_BRIDGE_PORT").strip_edges()
+	var force_visible := OS.get_environment("NOTE_CONNECTION_FORCE_VISIBLE").strip_edges().to_lower()
+	if (not host_port.is_empty() or not host_bridge_port.is_empty()) and force_visible != "1" and force_visible != "true":
+		return true
+
 	var args := OS.get_cmdline_args()
 	return "--nc-start-hidden" in args or "--minimized" in args
 
@@ -213,19 +239,20 @@ func _setup_close_confirmation_dialog() -> void:
 
 	_close_confirm_dialog = ConfirmationDialog.new()
 	_close_confirm_dialog.name = "CloseProjectConfirmationDialog"
-	_close_confirm_dialog.title = "Close Entire Project?"
-	_close_confirm_dialog.dialog_text = "Do you want to close the entire project?\n\nChoose Cancel to stay in PathMode, or click Exit to return to the original window."
+	_close_confirm_dialog.title = "Confirm Close Action"
+	_close_confirm_dialog.dialog_text = "Select what to do:\n\n- Return to Main Interface\n- Close All Windows"
 	_close_confirm_dialog.min_size = Vector2i(520, 180)
 	_close_confirm_dialog.exclusive = true
 	_close_confirm_dialog.confirmed.connect(_on_close_project_confirmed)
+	_close_confirm_dialog.canceled.connect(_on_close_project_return_to_main)
 	add_child(_close_confirm_dialog)
 
 	var ok_button := _close_confirm_dialog.get_ok_button()
 	if ok_button:
-		ok_button.text = "Close Project"
+		ok_button.text = "Close All Windows"
 	var cancel_button := _close_confirm_dialog.get_cancel_button()
 	if cancel_button:
-		cancel_button.text = "Cancel"
+		cancel_button.text = "Return to Main Interface"
 
 
 func _setup_notemd_embed_panel() -> void:
@@ -289,6 +316,11 @@ func _on_close_project_confirmed() -> void:
 	force_quit_timer.timeout.connect(func():
 		get_tree().quit()
 	)
+
+
+func _on_close_project_return_to_main() -> void:
+	print("[PathModeUI] User chose to return to the main interface from Godot close prompt.")
+	_on_exit_pressed()
 
 
 func _ensure_reader_render_client() -> void:
