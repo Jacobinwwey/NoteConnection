@@ -25,6 +25,8 @@
 | FR-015 | WebView 解析绝对路径时的 pkg 快照路径逃逸漏洞 | High | Closed | `src/server.ts` 与 `src/backend/controller.ts` 已增加规范化根目录沙箱校验与 pkg 快照路径拦截，并由 `src/content.path.sandbox.contract.test.ts` 和 `scripts/verify-fixrisk-issues.js` 强制校验。 |
 
 ## 下一步
+- 在发布分支执行严格证据工作流（`.github/workflows/fixrisk-operational-readiness.yml`），强制 FR-009 证据闭环并保留构建产物。
+- 在 `windows/x64/android` 自托管 Runner 上通过 workflow dispatch 且 `run_mobile_capture=true` 自动采集并刷新 `docs/mobile-evidence`。
 - 持续推进 fixrisk 范围外的延后加固项（Deferred Hardening）。
 
 ---

@@ -1,0 +1,173 @@
+name: Fixrisk Operational Readiness
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+      - release/**
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+    inputs:
+      run_strict_evidence:
+        description: "Run strict evidence gate (requires docs/mobile-evidence)."
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      run_mobile_capture:
+        description: "Run self-hosted physical-device evidence capture and closure flow."
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      android_serial:
+        description: "Optional adb serial for the target physical device."
+        required: false
+        type: string
+        default: ""
+      evidence_node_count:
+        description: "Large-graph evidence node count threshold."
+        required: false
+        type: string
+        default: "10000"
+      evidence_edge_count:
+        description: "Large-graph evidence edge count threshold."
+        required: false
+        type: string
+        default: "1000000"
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  fixrisk-issues-gate:
+    name: Fixrisk Issues Gate (Code-Level)
+    if: ${{ github.event_name != 'schedule' }}
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify fixrisk issue closure (code-level)
+        run: npm run verify:fixrisk:issues
+
+      - name: Upload fixrisk issue reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixrisk-issue-reports-code-gate
+          if-no-files-found: warn
+          path: |
+            build/fixrisk-issue-check-latest.json
+            build/fixrisk-issue-check-*.json
+            build/fixrisk-jest-contract-report.json
+
+  strict-evidence-gate:
+    name: Fixrisk Strict Evidence Gate (FR-009)
+    if: ${{ github.event_name == 'schedule' || startsWith(github.ref, 'refs/heads/release/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_strict_evidence == 'true') }}
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify fixrisk issue closure (strict evidence required)
+        env:
+          NOTE_CONNECTION_REQUIRE_EVIDENCE_ROOT: "1"
+          NOTE_CONNECTION_REQUIRE_LARGE_GRAPH_EVIDENCE: "1"
+          NOTE_CONNECTION_MIN_EVIDENCE_NODE_COUNT: "10000"
+          NOTE_CONNECTION_MIN_EVIDENCE_EDGE_COUNT: "1000000"
+        run: npm run verify:fixrisk:issues:strict:evidence
+
+      - name: Upload strict evidence verification reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixrisk-issue-reports-strict-evidence
+          if-no-files-found: warn
+          path: |
+            build/fixrisk-issue-check-latest.json
+            build/fixrisk-issue-check-*.json
+            build/fixrisk-jest-contract-report.json
+
+      - name: Upload mobile evidence snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-evidence-snapshot
+          if-no-files-found: warn
+          path: |
+            docs/mobile-evidence/**
+
+  capture-mobile-evidence:
+    name: Capture Mobile Evidence (Self-Hosted)
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.run_mobile_capture == 'true') || ((github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')) && vars.NOTE_CONNECTION_ENABLE_MOBILE_EVIDENCE_CAPTURE == '1') }}
+    runs-on:
+      - self-hosted
+      - windows
+      - x64
+      - android
+    timeout-minutes: 90
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Capacitor APK for evidence capture
+        run: npm run mobile:build:capacitor
+
+      - name: Run fixrisk operational closure pipeline
+        env:
+          NOTE_CONNECTION_ANDROID_SERIAL: ${{ github.event.inputs.android_serial }}
+          NOTE_CONNECTION_EVIDENCE_NODE_COUNT: ${{ github.event.inputs.evidence_node_count }}
+          NOTE_CONNECTION_EVIDENCE_EDGE_COUNT: ${{ github.event.inputs.evidence_edge_count }}
+          NOTE_CONNECTION_REQUIRE_EVIDENCE_ROOT: "1"
+          NOTE_CONNECTION_REQUIRE_LARGE_GRAPH_EVIDENCE: "1"
+        run: npm run ops:fixrisk:close
+
+      - name: Upload captured mobile evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-evidence-captured
+          if-no-files-found: error
+          path: |
+            docs/mobile-evidence/**
+            build/fixrisk-ops-closure-latest.json
+            build/fixrisk-issue-check-latest.json
+            build/fixrisk-issue-check-*.json

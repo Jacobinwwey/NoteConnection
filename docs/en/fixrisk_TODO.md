@@ -25,6 +25,8 @@ This document tracks only real, currently verifiable risks. Items are marked `Cl
 | FR-015 | pkg snapshot path escape vulnerability when resolving absolute paths from WebView | High | Closed | `src/server.ts` + `src/backend/controller.ts` now enforce canonical root-jail + pkg snapshot guards for content and KB-root updates, contract-tested via `src/content.path.sandbox.contract.test.ts` and verifier checks in `scripts/verify-fixrisk-issues.js`. |
 
 ## Next Steps
+- Run the strict evidence workflow on release branches (`.github/workflows/fixrisk-operational-readiness.yml`) to enforce FR-009 closure with artifact retention.
+- Use workflow dispatch with `run_mobile_capture=true` on a self-hosted `windows/x64/android` runner to capture fresh `docs/mobile-evidence` automatically.
 - Continue deferred hardening items outside fixrisk critical scope.
 
 ---
