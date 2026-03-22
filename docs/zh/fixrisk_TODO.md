@@ -1,6 +1,6 @@
 # NoteConnection Fixrisk TODO（实时状态）
 
-最后更新：2026-03-21
+最后更新：2026-03-22
 
 ## 范围说明
 本文件只保留“当前可验证”的真实风险。只有当问题具备代码修复和契约测试（或明确的运维闸门）时，才标记为 `Closed`。
@@ -28,6 +28,7 @@
 - 在发布分支执行严格证据工作流（`.github/workflows/fixrisk-operational-readiness.yml`），强制 FR-009 证据闭环并保留构建产物。
 - 在 `windows/x64/android` 自托管 Runner 上通过 workflow dispatch 且 `run_mobile_capture=true` 自动采集并刷新 `docs/mobile-evidence`。
 - 持续推进 fixrisk 范围外的延后加固项（Deferred Hardening）。
+- 本地 Tauri 验证建议：执行 `cargo check` 前先运行 `node scripts/cleanup-tauri-sidecars.js`，避免 Windows 下复制 sidecar 文件被锁导致 `PermissionDenied`。
 
 ---
 

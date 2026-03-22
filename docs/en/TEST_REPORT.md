@@ -1,3 +1,52 @@
+# 2026-03-22 v1.5.58 - NoteMD Integration & Tauri Feasibility Full Verification
+
+### Test Objective
+
+Verify that the NoteMD migration slice is fully workable and regression-safe across:
+
+1. NoteMD API/service integration behavior.
+2. Core project regression baseline.
+3. Packaging/build pipeline stability.
+4. Tauri/Rust feasibility path (`cargo check` + rust contracts).
+5. Fixrisk closure status consistency.
+
+### Executed Verification (2026-03-22)
+
+- [x] `node node_modules/jest/bin/jest.js src/notemd.server.integration.test.ts --runInBand`
+  - PASS (`1` suite, `4` tests)
+- [x] `node node_modules/jest/bin/jest.js --runInBand`
+  - PASS (`54` suites, `270` tests)
+- [x] `node node_modules/typescript/bin/tsc --noEmit`
+  - PASS
+- [x] Build pipeline scripts:
+  - [x] `node scripts/copy-reader-runtime-assets.js`
+  - [x] `node node_modules/typescript/bin/tsc`
+  - [x] `node scripts/bundle_path_core.js`
+  - [x] `node scripts/copy-assets.js`
+  - [x] `node scripts/sync-wasm-parity-artifact.js`
+  - PASS (all)
+- [x] `cargo check` (workdir `src-tauri`)
+  - PASS
+- [x] `node scripts/run-tauri-tests.js`
+  - PASS (`19` Rust tests)
+- [x] `node scripts/verify-fixrisk-issues.js --strict-pending`
+  - Expected failure mode: only FR-009 remains pending (ops evidence), all other FR items verified closed.
+
+### Key Findings
+
+1. NoteMD migration is functionally integrated and contract-verified.
+2. The previous Tauri check flake was caused by a stale lock on `src-tauri/target/debug/server.exe`, not by NoteMD code defects.
+3. Sidecar cleanup preflight restores deterministic `cargo` behavior.
+4. Build/export paths remain stable and unaffected by the NoteMD additions.
+5. Fixrisk closure remains consistent: FR-009 is the only intentionally pending operations gate.
+
+### Conclusion
+
+- NoteMD migration slice is feasible, stable, and regression-safe for current repository scope.
+- No new cross-platform regression was observed in web/Tauri/Godot bridge surfaces after integration.
+
+---
+
 # 2026-03-10 v1.5.38 - Multi-Terminal WASM Readiness Slice Verification (Mobile Capability Probe + Build-Mode Telemetry)
 
 ### Test Objective

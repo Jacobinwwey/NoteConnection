@@ -1,3 +1,52 @@
+# 2026-03-22 v1.5.58 - NoteMD 集成与 Tauri 可行性全量验证
+
+### 测试目标
+
+验证 NoteMD 迁移切片在以下维度可工作且无回归风险：
+
+1. NoteMD API/服务集成行为。
+2. 项目全量回归基线。
+3. 构建与打包链路稳定性。
+4. Tauri/Rust 可行性路径（`cargo check` + Rust 合同套件）。
+5. fixrisk 闭环状态一致性。
+
+### 已执行验证（2026-03-22）
+
+- [x] `node node_modules/jest/bin/jest.js src/notemd.server.integration.test.ts --runInBand`
+  - 通过（`1` suite，`4` tests）
+- [x] `node node_modules/jest/bin/jest.js --runInBand`
+  - 通过（`54` suites，`270` tests）
+- [x] `node node_modules/typescript/bin/tsc --noEmit`
+  - 通过
+- [x] 构建流水线脚本：
+  - [x] `node scripts/copy-reader-runtime-assets.js`
+  - [x] `node node_modules/typescript/bin/tsc`
+  - [x] `node scripts/bundle_path_core.js`
+  - [x] `node scripts/copy-assets.js`
+  - [x] `node scripts/sync-wasm-parity-artifact.js`
+  - 全部通过
+- [x] `cargo check`（workdir `src-tauri`）
+  - 通过
+- [x] `node scripts/run-tauri-tests.js`
+  - 通过（`19` 项 Rust 测试）
+- [x] `node scripts/verify-fixrisk-issues.js --strict-pending`
+  - 预期失败模式：仅 FR-009 保持 pending（运维证据项），其余 FR 项全部验证闭环。
+
+### 关键结论
+
+1. NoteMD 迁移已完成功能集成并通过契约化验证。
+2. 先前 Tauri 检查波动来自 `src-tauri/target/debug/server.exe` 残留锁，而非 NoteMD 代码缺陷。
+3. 通过 sidecar 预清理后，`cargo` 校验链路恢复为可重复稳定状态。
+4. NoteMD 增量接入未破坏现有构建/导出链路。
+5. fixrisk 当前状态保持一致：仅 FR-009 为预期待闭环项。
+
+### 最终结论
+
+- 在当前仓库范围内，NoteMD 迁移切片已具备可行性、稳定性与回归安全性。
+- 本轮未发现 web / Tauri / Godot 桥接路径的新增回归。
+
+---
+
 # 2026-03-10 v1.5.38 - 多终端 WASM 就绪切片验证（移动端能力探测 + 构建模式遥测）
 
 ### 测试目标

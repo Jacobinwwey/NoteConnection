@@ -1,3 +1,47 @@
+# 2026-03-22 v1.5.58 - NoteMD 迁移收口与可行性全量验证
+
+## 中文文档
+
+### 目标
+在严格稳健性约束下，完成 NoteMD 迁移剩余清单闭环，并对 API 契约、全量回归、构建链路、Tauri/Rust 可行性进行端到端验证。
+
+### 本轮完成项
+- [x] NoteMD 集成验证闭环：
+  - [x] `src/notemd.server.integration.test.ts` 通过（`1` suite，`4` tests）。
+  - [x] 全量 Jest 回归通过（`54` suites，`270` tests）。
+- [x] 构建/运行链路验证闭环：
+  - [x] TypeScript 编译通过（`node node_modules/typescript/bin/tsc --noEmit`）。
+  - [x] 全量构建脚本通过（`copy-reader-runtime-assets`、`tsc`、`bundle_path_core`、`copy-assets`、`sync-wasm-parity-artifact`）。
+  - [x] Tauri 可行性检查通过（`src-tauri` 下 `cargo check`）。
+  - [x] Rust 合同套件通过（`scripts/run-tauri-tests.js`，`19` 项 Rust 测试）。
+- [x] 既往 Tauri 检查波动根因闭环：
+  - [x] 已定位 `tauri-build` `PermissionDenied` 根因是 `src-tauri/target/debug/server.exe` 残留进程文件锁。
+  - [x] 已确认通过 sidecar 预清理可稳定规避该问题。
+- [x] 文档闭环：
+  - [x] 更新 `docs/en|zh/Interface Document.md`。
+  - [x] 更新 `docs/en|zh/README.md`。
+  - [x] 更新 `docs/en|zh/TODO.md`。
+  - [x] 新增本轮 `docs/en|zh/TEST_REPORT.md` 条目。
+  - [x] 关闭 `docs/en|zh/extra.md` 中 Phase-6 剩余复选项。
+
+### 剩余工作
+- [ ] FR-009 仍仅剩运维证据闭环（真机大图采集与新鲜度校验，受 `docs/mobile-evidence` 严格门禁约束）。
+
+### 验证门禁（已执行）
+- [x] `node node_modules/jest/bin/jest.js src/notemd.server.integration.test.ts --runInBand`
+- [x] `node node_modules/jest/bin/jest.js --runInBand`
+- [x] `node node_modules/typescript/bin/tsc --noEmit`
+- [x] `node scripts/copy-reader-runtime-assets.js`
+- [x] `node node_modules/typescript/bin/tsc`
+- [x] `node scripts/bundle_path_core.js`
+- [x] `node scripts/copy-assets.js`
+- [x] `node scripts/sync-wasm-parity-artifact.js`
+- [x] `cargo check`（workdir: `src-tauri`）
+- [x] `node scripts/run-tauri-tests.js`
+- [x] `node scripts/verify-fixrisk-issues.js --strict-pending`（预期仅 FR-009 pending）
+
+---
+
 # 2026-03-12 v1.5.57 - Fixrisk 高优先级收敛计划（实时）
 
 ## 中文文档

@@ -197,40 +197,54 @@
 - [x] 用户审核批准
 
 ### 阶段二：后端核心模块（`src/notemd/`）
-- [ ] 创建 `types.ts` — 设置/接口
-- [ ] 创建 `constants.ts` — 默认设置
-- [ ] 创建 `LlmProvider.ts` — 抽象 LLM 客户端（10个提供商）
-- [ ] 创建 `PromptManager.ts` — 提示模板引擎
-- [ ] 创建 `FileProcessor.ts` — 核心文件处理
-- [ ] 创建 `MermaidProcessor.ts` — Mermaid 语法修复
-- [ ] 创建 `FormulaFixer.ts` — LaTeX 公式清理
-- [ ] 创建 `Translator.ts` — 批量翻译
-- [ ] 创建 `BatchProcessor.ts` — 并发批处理操作
-- [ ] 创建 `DuplicateDetector.ts` — 重复检测
-- [ ] 创建 `ContentGenerator.ts` — 基于标题的内容生成
-- [ ] 创建 `index.ts` — 桶导出
+- [x] 创建 `types.ts` — 设置/接口
+- [x] 创建 `constants.ts` — 默认设置
+- [x] 创建 `LlmProvider.ts` — 抽象 LLM 客户端（10个提供商）
+- [x] 创建 `PromptManager.ts` — 提示模板引擎
+- [x] 创建 `FileProcessor.ts` — 核心文件处理
+- [x] 创建 `MermaidProcessor.ts` — Mermaid 语法修复
+- [x] 创建 `FormulaFixer.ts` — LaTeX 公式清理
+- [x] 创建 `Translator.ts` — 批量翻译
+- [x] 创建 `BatchProcessor.ts` — 并发批处理操作
+- [x] 创建 `DuplicateDetector.ts` — 重复检测
+- [x] 创建 `ContentGenerator.ts` — 基于标题的内容生成
+- [x] 创建 `index.ts` — 桶导出
 
 ### 阶段三：HTTP API 层
-- [ ] 在 `server.ts` 中添加 `/api/notemd/*` 端点
-- [ ] 接入 SSE 进度上报
-- [ ] 通过 `notemd_config.json` 添加设置持久化
+- [x] 在 `server.ts` 中添加 `/api/notemd/*` 端点
+- [x] 接入 SSE 进度上报
+- [x] 通过 `notemd_config.json` 添加设置持久化
 
 ### 阶段四：前端 UI
-- [ ] 创建 `notemd.html` — 独立 NoteMD 界面
-- [ ] 创建 `notemd.css` / `notemd.js` — 样式 + 逻辑
-- [ ] 在 `index.html` 中集成"NoteMD"按钮
+- [x] 创建 `notemd.html` — 独立 NoteMD 界面
+- [x] 创建 `notemd.css` / `notemd.js` — 样式 + 逻辑
+- [x] 在 `index.html` 中集成"NoteMD"按钮
 
 ### 阶段五：Tauri 与 Godot 集成
-- [ ] 在 Tauri `build_menu()` 中添加"NoteMD"菜单项
-- [ ] 添加 Tauri IPC 命令以打开 NoteMD 窗口
-- [ ] 添加 Godot WebSocket 桥接消息
-- [ ] 确保 `CloseRequested` 时的清理
+- [x] 在 Tauri `build_menu()` 中添加"NoteMD"菜单项
+- [x] 添加 Tauri IPC 命令以打开 NoteMD 窗口
+- [x] 添加 Godot WebSocket 桥接消息
+- [x] 确保 `CloseRequested` 时的清理
 
 ### 阶段六：测试与文档
-- [ ] 创建单元测试
-- [ ] 更新 `Interface Document.md`、`README.md`、`TODO.md`
-- [ ] 更新双语文档
-- [ ] 创建 `TEST_REPORT.md` 条目
+- [x] 创建单元测试
+- [x] 更新 `Interface Document.md`、`README.md`、`TODO.md`
+- [x] 更新双语文档
+- [x] 创建 `TEST_REPORT.md` 条目
+
+---
+
+## 最佳改进机会（按优先级）
+
+1. **P0 - 端到端可行性验证（已完成）**
+   - 已执行 NoteMD 服务集成验证（`src/notemd.server.integration.test.ts`）和全量回归（`54` suites，`270` tests），确认当前代码可工作。
+2. **P0 - Tauri 构建锁冲突稳健性（已完成）**
+   - 已定位 `cargo check` 失败根因：`src-tauri/target/debug/server.exe` 进程残留导致文件锁定。
+   - 已通过 `scripts/cleanup-tauri-sidecars.js` 预清理链路复验 `cargo check` 与 `scripts/run-tauri-tests.js`。
+3. **P1 - 双语文档与接口对齐（已完成）**
+   - 已同步更新 `docs/en` 与 `docs/zh` 下的 `Interface Document.md`、`README.md`、`TODO.md`、`TEST_REPORT.md`。
+4. **P1 - 剩余风险闭环（运维证据待补）**
+   - FR-009 仍为真机证据闭环项，严格校验门禁保持生效。
 
 ---
 
@@ -238,9 +252,11 @@
 
 ### 自动化测试
 ```bash
-node node_modules/jest/bin/jest.js src/notemd/NoteMD.test.ts --runInBand
-node node_modules/jest/bin/jest.js --runInBand          # 回归：所有 41+ 套件通过
-node node_modules/typescript/bin/tsc --noEmit            # 零错误
+node node_modules/jest/bin/jest.js src/notemd.core.test.ts src/notemd.api.contract.test.ts src/notemd.server.integration.test.ts --runInBand
+node node_modules/jest/bin/jest.js --runInBand          # 回归：所有 54 套件通过
+node node_modules/typescript/bin/tsc --noEmit           # 零错误
+node scripts/run-tauri-tests.js                         # cleanup + rust 合同套件
+cargo check --manifest-path src-tauri/Cargo.toml        # 执行前需 sidecar 清理预处理
 ```
 
 ### 手动验证

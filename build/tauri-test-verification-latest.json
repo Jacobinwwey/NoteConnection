@@ -1,7 +1,6 @@
 {
-  "timestamp": "2026-03-11T14:41:06.194Z",
-  "strictMode": true,
+  "timestamp": "2026-03-22T08:10:54.429Z",
+  "strictMode": false,
   "cargoBuildJobs": 1,
-  "status": "failed-oom",
-  "exitCode": 101
+  "status": "passed"
 }

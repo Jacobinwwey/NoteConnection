@@ -3281,6 +3281,123 @@ if (controlsPanelToggleTarget) {
 }
 
 // Path Mode Integration (v1.1.0)
+const btnNotemd = document.getElementById('btn-notemd');
+const notemdOverlay = document.getElementById('notemd-embed-overlay');
+const notemdCloseButton = document.getElementById('btn-notemd-embed-close');
+const notemdIframe = document.getElementById('notemd-embed-frame');
+const NOTEMD_EMBED_RPC_REQUEST = 'noteconnection:notemd-rpc-request';
+const NOTEMD_EMBED_RPC_RESPONSE = 'noteconnection:notemd-rpc-response';
+
+function isNotemdIframeSource(source) {
+    return !!(notemdIframe && notemdIframe.contentWindow && source === notemdIframe.contentWindow);
+}
+
+function ensureNotemdIframeLoaded() {
+    if (!notemdIframe) return;
+    if (notemdIframe.getAttribute('src') !== 'notemd.html') {
+        notemdIframe.setAttribute('src', 'notemd.html');
+    }
+}
+
+function showEmbeddedNoteMD(context = {}) {
+    ensureNotemdIframeLoaded();
+    if (notemdOverlay) {
+        notemdOverlay.style.display = 'flex';
+    }
+    console.log('[NoteMD] Embedded workspace opened:', context.source || 'unknown');
+}
+
+function hideEmbeddedNoteMD() {
+    if (notemdOverlay) {
+        notemdOverlay.style.display = 'none';
+    }
+}
+
+window.NoteConnectionEmbeddedNoteMD = {
+    open: showEmbeddedNoteMD,
+    close: hideEmbeddedNoteMD
+};
+
+window.addEventListener('message', async (event) => {
+    const data = event && event.data;
+    if (!data || data.type !== NOTEMD_EMBED_RPC_REQUEST) {
+        return;
+    }
+    if (!isNotemdIframeSource(event.source)) {
+        return;
+    }
+
+    const requestId = typeof data.requestId === 'string' ? data.requestId : '';
+    const command = typeof data.command === 'string' ? data.command : '';
+    if (!requestId || !command) {
+        return;
+    }
+
+    let result = null;
+    let error = null;
+
+    try {
+        if (!window.__TAURI__ || !window.__TAURI__.core || typeof window.__TAURI__.core.invoke !== 'function') {
+            throw new Error('Tauri invoke API is unavailable in the host window.');
+        }
+        result = await window.__TAURI__.core.invoke(command, data.payload || {});
+    } catch (err) {
+        error = err instanceof Error ? err.message : String(err);
+    }
+
+    try {
+        if (event.source && typeof event.source.postMessage === 'function') {
+            event.source.postMessage(
+                {
+                    type: NOTEMD_EMBED_RPC_RESPONSE,
+                    requestId,
+                    result,
+                    error
+                },
+                '*'
+            );
+        }
+    } catch (err) {
+        console.warn('[NoteMD] Failed to send RPC response back to iframe:', err);
+    }
+});
+
+if (notemdCloseButton) {
+    notemdCloseButton.addEventListener('click', () => {
+        hideEmbeddedNoteMD();
+    });
+}
+
+if (notemdOverlay) {
+    notemdOverlay.addEventListener('click', (event) => {
+        if (event.target === notemdOverlay) {
+            hideEmbeddedNoteMD();
+        }
+    });
+}
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && notemdOverlay && notemdOverlay.style.display !== 'none') {
+        hideEmbeddedNoteMD();
+    }
+});
+
+if (
+    window.__TAURI__ &&
+    window.__TAURI__.event &&
+    typeof window.__TAURI__.event.listen === 'function'
+) {
+    window.__TAURI__.event.listen('notemd-open-request', () => {
+        showEmbeddedNoteMD({ source: 'tauri-event' });
+    });
+}
+
+if (btnNotemd) {
+    btnNotemd.addEventListener('click', async () => {
+        showEmbeddedNoteMD({ source: 'main-button' });
+    });
+}
+
 const btnPathMode = document.getElementById('btn-path-mode');
 if (btnPathMode) {
     const tryOpenAndroidNativePathMode = async (selectedNode) => {

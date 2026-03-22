@@ -25,6 +25,7 @@ signal node_reader_requested(node_id: String)
 
 const TREE_VIEW_SCENE = preload("res://scenes/tree_view_panel.tscn")
 const SETTINGS_SCENE = preload("res://scenes/settings_panel.tscn")
+const NOTEMD_EMBED_PANEL_SCRIPT = preload("res://scripts/notemd_embed_panel.gd")
 const READER_RENDER_CLIENT_SCRIPT = preload("res://scripts/reader_render_client.gd")
 const READER_IMAGE_CANVAS_SCRIPT = preload("res://scripts/reader_image_canvas.gd")
 const SETTINGS_ICON := "⚙"
@@ -80,6 +81,7 @@ var _mode_option: OptionButton = null
 var _strategy_option: OptionButton = null
 var _target_button: Button = null
 var _history_button: Button = null
+var _notemd_button: Button = null
 var _exit_button: Button = null
 var _history_popup: PopupPanel = null
 var _history_list: ItemList = null
@@ -151,6 +153,9 @@ var _current_domain_target_ids: Array[String] = []
 var _current_target_label: String = ""
 var _current_central_id: String = ""
 var _target_nodes: Array[Dictionary] = []
+var _ws_client: Node = null
+var _close_confirm_dialog: ConfirmationDialog = null
+var _notemd_embed_panel: PopupPanel = null
 
 ## Tree panel fullscreen state
 var _is_tree_fullscreen: bool = false
@@ -172,17 +177,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _notification(what: int) -> void:
-	## Intercept close request to minimize instead of quitting.
-	## This prevents the user from accidentally closing the Godot window,
-	## which would break the single-window toggle with Tauri.
-	## 拦截关闭请求，改为最小化窗口而非退出。
-	## 防止用户误关 Godot 窗口导致与 Tauri 的单窗口切换失效。
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
-		if "--minimized" in OS.get_cmdline_args():
-			# Single-window mode: minimize instead of quit.
-			# 单窗口模式：最小化而非退出。
-			print("[PathModeUI] Close request intercepted, minimizing (single-window mode)")
-			get_window().mode = Window.MODE_MINIMIZED
+		if _is_single_window_mode():
+			## In single-window mode, clicking the OS close button should ask whether
+			## to terminate the whole project instead of silently minimizing.
+			## 在单窗口模式下，点击窗口关闭按钮应询问是否关闭整个项目，
+			## 而不是直接最小化。
+			_show_close_project_confirmation()
 		else:
 			# Standalone mode: allow normal close.
 			# 独立模式：允许正常关闭。
@@ -190,9 +191,104 @@ func _notification(what: int) -> void:
 
 
 func _ready() -> void:
+	_ws_client = get_node_or_null("../WsClient")
+	_setup_close_confirmation_dialog()
+	_setup_notemd_embed_panel()
 	_create_dynamic_ui()
 	_connect_signals()
 	_setup_initial_state()
+
+
+func _is_single_window_mode() -> bool:
+	var env_hidden := OS.get_environment("NOTE_CONNECTION_START_HIDDEN").strip_edges()
+	if env_hidden == "1" or env_hidden.to_lower() == "true":
+		return true
+	var args := OS.get_cmdline_args()
+	return "--nc-start-hidden" in args or "--minimized" in args
+
+
+func _setup_close_confirmation_dialog() -> void:
+	if _close_confirm_dialog:
+		return
+
+	_close_confirm_dialog = ConfirmationDialog.new()
+	_close_confirm_dialog.name = "CloseProjectConfirmationDialog"
+	_close_confirm_dialog.title = "Close Entire Project?"
+	_close_confirm_dialog.dialog_text = "Do you want to close the entire project?\n\nChoose Cancel to stay in PathMode, or click Exit to return to the original window."
+	_close_confirm_dialog.min_size = Vector2i(520, 180)
+	_close_confirm_dialog.exclusive = true
+	_close_confirm_dialog.confirmed.connect(_on_close_project_confirmed)
+	add_child(_close_confirm_dialog)
+
+	var ok_button := _close_confirm_dialog.get_ok_button()
+	if ok_button:
+		ok_button.text = "Close Project"
+	var cancel_button := _close_confirm_dialog.get_cancel_button()
+	if cancel_button:
+		cancel_button.text = "Cancel"
+
+
+func _setup_notemd_embed_panel() -> void:
+	if _notemd_embed_panel or NOTEMD_EMBED_PANEL_SCRIPT == null:
+		return
+
+	var panel_instance = NOTEMD_EMBED_PANEL_SCRIPT.new()
+	if panel_instance == null:
+		push_warning("[PathModeUI] Failed to instantiate embedded NoteMD panel.")
+		return
+
+	_notemd_embed_panel = panel_instance as PopupPanel
+	if _notemd_embed_panel == null:
+		push_warning("[PathModeUI] Embedded NoteMD panel is not a PopupPanel.")
+		return
+
+	_notemd_embed_panel.name = "EmbeddedNoteMDPanel"
+	add_child(_notemd_embed_panel)
+
+	if _notemd_embed_panel.has_signal("open_full_workspace_requested"):
+		_notemd_embed_panel.open_full_workspace_requested.connect(_on_notemd_open_full_workspace_requested)
+
+
+func _show_close_project_confirmation() -> void:
+	if not _close_confirm_dialog:
+		_setup_close_confirmation_dialog()
+	if not _close_confirm_dialog:
+		return
+
+	if _close_confirm_dialog.visible:
+		return
+
+	_close_confirm_dialog.popup_centered()
+
+
+func _on_close_project_confirmed() -> void:
+	print("[PathModeUI] User confirmed full project shutdown from Godot close button.")
+
+	var shutdown_requested := false
+	if _ws_client and _ws_client.has_method("send_request_app_shutdown"):
+		_ws_client.send_request_app_shutdown()
+		shutdown_requested = true
+	elif _ws_client and _ws_client.has_method("send_message"):
+		_ws_client.send_message({
+			"type": "requestAppShutdown",
+			"payload": {
+				"source": "godot_close_request"
+			}
+		})
+		shutdown_requested = true
+
+	if not shutdown_requested:
+		push_warning("[PathModeUI] Unable to reach WsClient for full shutdown request. Quitting Godot as fallback.")
+		get_tree().quit()
+		return
+
+	## Fallback guard: if host app does not exit in time, quit Godot process
+	## to avoid leaving a zombie fullscreen window.
+	## 兜底策略：若宿主应用未及时退出，则关闭 Godot 进程，避免残留窗口。
+	var force_quit_timer := get_tree().create_timer(1.0)
+	force_quit_timer.timeout.connect(func():
+		get_tree().quit()
+	)
 
 
 func _ensure_reader_render_client() -> void:
@@ -264,6 +360,11 @@ func _create_dynamic_ui() -> void:
 		_history_button.text = "History"
 		_history_button.custom_minimum_size = Vector2(88, 34)
 		control_row.add_child(_history_button)
+
+		_notemd_button = Button.new()
+		_notemd_button.text = "NoteMD"
+		_notemd_button.custom_minimum_size = Vector2(90, 34)
+		control_row.add_child(_notemd_button)
 		
 		_exit_button = Button.new()
 		_exit_button.text = "Exit"
@@ -574,6 +675,8 @@ func _create_dynamic_ui() -> void:
 	
 	if _history_button:
 		_apply_button_style(_history_button, Color(0.15, 0.21, 0.3, 1.0), Color(0.21, 0.29, 0.4, 1.0), Color(0.11, 0.17, 0.24, 1.0), Color(0.33, 0.47, 0.63, 1.0), Color(0.9, 0.96, 1.0, 1.0))
+	if _notemd_button:
+		_apply_button_style(_notemd_button, Color(0.11, 0.27, 0.24, 1.0), Color(0.15, 0.34, 0.29, 1.0), Color(0.08, 0.2, 0.17, 1.0), Color(0.22, 0.56, 0.48, 1.0), Color(0.92, 1.0, 0.98, 1.0))
 	if _exit_button:
 		_apply_button_style(_exit_button, Color(0.26, 0.19, 0.21, 1.0), Color(0.34, 0.23, 0.26, 1.0), Color(0.2, 0.14, 0.16, 1.0), Color(0.62, 0.3, 0.34, 1.0), Color(1.0, 0.92, 0.92, 1.0))
 
@@ -4016,6 +4119,8 @@ func _connect_signals() -> void:
 		_target_button.pressed.connect(_on_target_pressed)
 	if _history_button:
 		_history_button.pressed.connect(_on_history_pressed)
+	if _notemd_button:
+		_notemd_button.pressed.connect(_on_open_notemd_pressed)
 	if _exit_button:
 		_exit_button.pressed.connect(_on_exit_pressed)
 	if _bg_lock_button:
@@ -4352,12 +4457,36 @@ func _update_target_button_state() -> void:
 
 func _on_exit_pressed() -> void:
 	exit_requested.emit()
-	## Auto-minimize Godot window after requesting exit from PathMode.
+	## Auto-hide Godot window after requesting exit from PathMode.
 	## The Tauri side will show its own window upon receiving 'exitPathMode'.
 	## 退出 PathMode 后自动最小化 Godot 窗口。
 	## Tauri 端收到 'exitPathMode' 后将显示自己的窗口。
-	if "--minimized" in OS.get_cmdline_args():
-		get_window().mode = Window.MODE_MINIMIZED
+	if _is_single_window_mode():
+		var window := get_window()
+		if window:
+			DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_NO_FOCUS, true)
+			window.mode = Window.MODE_MINIMIZED
+
+
+func _on_open_notemd_pressed() -> void:
+	print("[PathModeUI] NoteMD button pressed from Godot UI.")
+	if _notemd_embed_panel and _notemd_embed_panel.has_method("open_panel"):
+		_notemd_embed_panel.open_panel()
+		return
+	_on_notemd_open_full_workspace_requested()
+
+
+func _on_notemd_open_full_workspace_requested() -> void:
+	print("[PathModeUI] Opening full NoteMD workspace in Tauri host.")
+	if _ws_client and _ws_client.has_method("send_open_notemd"):
+		_ws_client.send_open_notemd()
+	elif _ws_client and _ws_client.has_method("send_message"):
+		_ws_client.send_message({
+			"type": "open_notemd",
+			"payload": {}
+		})
+	else:
+		push_warning("[PathModeUI] WsClient unavailable; cannot forward NoteMD open request.")
 
 
 func _on_bg_lock_toggled(pressed: bool) -> void:

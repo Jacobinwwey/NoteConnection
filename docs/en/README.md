@@ -1,4 +1,4 @@
-# 2026-03-04 v1.5.13
+# 2026-03-22 v1.5.58
 
 # NoteConnection Knowledge Graph
 
@@ -57,6 +57,13 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 - **High-Capacity Parallel Processing**: Utilizes Node.js `worker_threads` (up to 12 cores) to distribute computationally intensive keyword matching.
 - **Simulation Controls (v0.9.0)**: Fine-tune the physics with a **Speed/Damping Slider** or use the **Freeze Layout** switch to stop the simulation for stable manual arrangement.
 - **Hover Lock**: Hovering over a node temporarily locks its position, allowing for stable inspection of connections.
+
+### 5. NoteMD AI Document Workbench (v1.5.58)
+
+- **Integrated NoteMD module**: Added `src/notemd/*` as a standalone, Obsidian-decoupled processing stack (LLM provider abstraction, prompt manager, batch/file processors, translation, Mermaid/formula fixers, and duplicate detection).
+- **New API surface**: Added `/api/notemd/*` endpoints for settings, file/folder processing, translation, content generation, concept extraction, duplicate checks, and cancellation.
+- **Desktop + Bridge access**: Added Tauri menu/IPC `open_notemd` and bridge routing for NoteMD window access from web/Tauri/Godot-connected workflows.
+- **Safety defaults**: NoteMD file operations are constrained by KB-root sandbox checks, with SSE progress reporting and cancel support for long-running operations.
 
 <img width="2012" height="2024" alt="image" src="https://github.com/user-attachments/assets/e5e4c42d-54a7-463c-bc43-0feb42469a12" />
 
@@ -308,6 +315,7 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 ### v1.5.x Migration Runtime Logs (Canonical Archive)
 - Full bilingual logs are centrally archived in [`export.md`](export.md).
 - This README keeps summary pointers in the changelog for readability.
+- `2026-03-22 v1.5.58`: NoteMD migration closure (integration contracts + full feasibility verification + bilingual docs closure)
 - `2026-03-03 v1.5.10`: Option A P0 Status Update (Tauri Android Native Folder/Build/Content Flow)
 - `2026-03-03 v1.5.5`: Migration Status Revalidation
 - `2026-03-03 v1.5.3`: Migration Gate Closure Update
@@ -823,5 +831,4 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 ---
 
 ---
-
 

@@ -1,3 +1,47 @@
+# 2026-03-22 v1.5.58 - NoteMD Migration Closure & Feasibility Verification
+
+## English Document
+
+### Objective
+Fully close the remaining NoteMD migration checklist items and verify end-to-end feasibility with strict robustness constraints (API contracts, regression baseline, build pipeline, and Tauri/Rust runtime checks).
+
+### Completed in This Iteration
+- [x] NoteMD integration test closure:
+  - [x] `src/notemd.server.integration.test.ts` passed (`1` suite, `4` tests).
+  - [x] Full Jest regression passed (`54` suites, `270` tests).
+- [x] Build/runtime verification closure:
+  - [x] TypeScript compile passed (`node node_modules/typescript/bin/tsc --noEmit`).
+  - [x] Full build pipeline scripts passed (`copy-reader-runtime-assets`, `tsc`, `bundle_path_core`, `copy-assets`, `sync-wasm-parity-artifact`).
+  - [x] Tauri feasibility check passed (`cargo check` in `src-tauri`).
+  - [x] Rust contract suite passed (`scripts/run-tauri-tests.js`, `19` Rust tests).
+- [x] Root-cause closure for prior Tauri check flake:
+  - [x] Identified stale `src-tauri/target/debug/server.exe` process lock as the direct cause of `tauri-build` `PermissionDenied`.
+  - [x] Confirmed deterministic mitigation via sidecar cleanup preflight.
+- [x] Documentation closure:
+  - [x] Updated `docs/en|zh/Interface Document.md`.
+  - [x] Updated `docs/en|zh/README.md`.
+  - [x] Updated `docs/en|zh/TODO.md`.
+  - [x] Added this cycle's `docs/en|zh/TEST_REPORT.md` entry.
+  - [x] Closed remaining Phase-6 checkboxes in `docs/en|zh/extra.md`.
+
+### Remaining Work
+- [ ] FR-009 remains pending operational evidence only (physical-device large-graph capture and freshness verification under `docs/mobile-evidence` gate policy).
+
+### Verification Gate (Executed)
+- [x] `node node_modules/jest/bin/jest.js src/notemd.server.integration.test.ts --runInBand`
+- [x] `node node_modules/jest/bin/jest.js --runInBand`
+- [x] `node node_modules/typescript/bin/tsc --noEmit`
+- [x] `node scripts/copy-reader-runtime-assets.js`
+- [x] `node node_modules/typescript/bin/tsc`
+- [x] `node scripts/bundle_path_core.js`
+- [x] `node scripts/copy-assets.js`
+- [x] `node scripts/sync-wasm-parity-artifact.js`
+- [x] `cargo check` (workdir: `src-tauri`)
+- [x] `node scripts/run-tauri-tests.js`
+- [x] `node scripts/verify-fixrisk-issues.js --strict-pending` (expected pending on FR-009 only)
+
+---
+
 # 2026-03-12 v1.5.57 - Fixrisk High-Priority Closure Plan (Live)
 
 ## English Document

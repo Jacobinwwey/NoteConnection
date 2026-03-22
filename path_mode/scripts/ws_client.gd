@@ -25,15 +25,68 @@ func _ready() -> void:
 	_socket.inbound_buffer_size = 1048576 * 8 # Increase buffer to 8MB
 	_ws_url = _resolve_ws_url()
 
-	## Start window minimized if --minimized flag is present.
-	## This supports the single-window toggle UX where Tauri is the initial UI.
-	## 如果存在 --minimized 标志则以最小化状态启动窗口。
-	## 支持单窗口切换体验，Tauri 为初始界面。
-	if "--minimized" in OS.get_cmdline_args():
-		print("WsClient: Starting minimized (single-window mode)")
-		get_window().mode = Window.MODE_MINIMIZED
+	## Start hidden in single-window mode.
+	## In practice, some Godot engine flags may be consumed before script args are inspected,
+	## so we check both custom env + args and enforce hide twice (immediate + deferred).
+	## 单窗口模式下启动时保持隐藏。
+	## 某些 Godot 引擎参数可能在脚本读取前被消耗，因此这里同时检查自定义环境变量和参数，
+	## 并执行两次最小化（立即 + 延迟）以提升稳定性。
+	if _is_single_window_mode_requested():
+		print("WsClient: Starting hidden (single-window mode)")
+		_apply_window_visibility(false)
+		call_deferred("_enforce_start_hidden")
+		var startup_hide_timer := get_tree().create_timer(0.25)
+		startup_hide_timer.timeout.connect(func():
+			if _is_single_window_mode_requested():
+				_apply_window_visibility(false)
+		)
+	else:
+		# Restore visible mode for standalone runs.
+		_apply_window_visibility(true)
 
 	connect_to_server()
+
+
+func _enforce_start_hidden() -> void:
+	if _is_single_window_mode_requested():
+		_apply_window_visibility(false)
+
+
+func _is_single_window_mode_requested() -> bool:
+	var env_hidden := OS.get_environment("NOTE_CONNECTION_START_HIDDEN").strip_edges()
+	if env_hidden == "1" or env_hidden.to_lower() == "true":
+		return true
+
+	# Host-launched Godot always receives runtime sidecar env vars.
+	# Treat this as single-window mode by default to avoid startup flashes.
+	var host_port := OS.get_environment("NOTE_CONNECTION_PORT").strip_edges()
+	var host_bridge_port := OS.get_environment("NOTE_CONNECTION_BRIDGE_PORT").strip_edges()
+	var force_visible := OS.get_environment("NOTE_CONNECTION_FORCE_VISIBLE").strip_edges().to_lower()
+	if (not host_port.is_empty() or not host_bridge_port.is_empty()) and force_visible != "1" and force_visible != "true":
+		return true
+
+	var args := OS.get_cmdline_args()
+	return "--nc-start-hidden" in args or "--minimized" in args
+
+
+func _apply_window_visibility(visible: bool) -> void:
+	var window := get_window()
+	if not window:
+		return
+
+	if visible:
+		print("WsClient: Showing Godot window")
+		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_NO_FOCUS, false)
+		window.mode = Window.MODE_WINDOWED
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		window.grab_focus()
+	else:
+		print("WsClient: Hiding Godot window")
+		## Godot main window does not support visibility toggles via hide()/visible.
+		## Use minimize mode instead to avoid runtime errors.
+		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_NO_FOCUS, true)
+		window.mode = Window.MODE_MINIMIZED
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_MINIMIZED)
 
 
 func _setup_reconnect_timer() -> void:
@@ -163,13 +216,7 @@ func _parse_message(text: String) -> void:
 			## 切换 Godot 窗口可见性以实现单窗口体验。
 			## Tauri 通过 PathBridge 发送此消息来显示/隐藏 Godot 窗口。
 			var visible: bool = payload.get("visible", true)
-			if visible:
-				print("WsClient: Showing Godot window")
-				get_window().mode = Window.MODE_WINDOWED
-				get_window().grab_focus()
-			else:
-				print("WsClient: Hiding Godot window")
-				get_window().mode = Window.MODE_MINIMIZED
+			_apply_window_visibility(visible)
 
 
 ## Send a message to the frontend
@@ -245,6 +292,21 @@ func send_exit_path_mode() -> void:
 	send_message({
 		"type": "exitPathMode",
 		"payload": {}
+	})
+
+
+func send_open_notemd() -> void:
+	send_message({
+		"type": "open_notemd",
+		"payload": {}
+	})
+
+func send_request_app_shutdown() -> void:
+	send_message({
+		"type": "requestAppShutdown",
+		"payload": {
+			"source": "godot_close_request"
+		}
 	})
 
 ## Check if WebSocket is connected

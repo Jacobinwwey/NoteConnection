@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://127.0.0.1:* http://localhost:* tauri://localhost http://tauri.localhost; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self';"
+    />
+    <title>NoteMD Workspace</title>
+    <link rel="stylesheet" href="notemd.css" />
+    <script src="runtime_bridge.js"></script>
+  </head>
+  <body>
+    <div class="noise-layer"></div>
+    <main class="page">
+      <header class="hero">
+        <div>
+          <h1>NoteMD Workspace</h1>
+          <p class="subtitle">
+            LLM-powered markdown workflow: process, translate, generate, fix, and validate.
+          </p>
+        </div>
+        <a
+          class="repo-link"
+          href="https://github.com/Jacobinwwey/obsidian-NotEMD"
+          target="_blank"
+          rel="noreferrer"
+          >Source Plugin</a
+        >
+      </header>
+
+      <section class="notice-panel" role="note" aria-label="Import reminder">
+        <strong>Import Reminder:</strong>
+        PDF files are not supported as direct input. Please convert PDF files to Markdown (`.md`) with Mineru first, then import the generated Markdown files/folders.
+      </section>
+
+      <section class="panel">
+        <h2>Runtime</h2>
+        <div class="grid two">
+          <label>
+            <span>Operation ID (optional)</span>
+            <input id="op-id" type="text" placeholder="notemd-..." />
+          </label>
+          <label>
+            <span>Target Language</span>
+            <input id="target-language" type="text" value="English" />
+          </label>
+        </div>
+        <div class="actions">
+          <button id="btn-load-settings">Load Settings</button>
+          <button id="btn-save-settings">Save Settings JSON</button>
+          <button id="btn-test-llm">Test Active LLM</button>
+          <button class="danger" id="btn-cancel-op">Cancel Operation</button>
+        </div>
+        <label class="full">
+          <span>Settings JSON</span>
+          <textarea id="settings-json" rows="8" spellcheck="false"></textarea>
+        </label>
+      </section>
+
+      <section class="panel">
+        <h2>File Operations</h2>
+        <div class="grid two">
+          <label>
+            <span>File Path</span>
+            <div class="path-input-row">
+              <input id="file-path" type="text" placeholder="Knowledge_Base/..." />
+              <button id="btn-browse-file-path" type="button" class="ghost">Browse...</button>
+            </div>
+          </label>
+          <label>
+            <span>Output Path (optional)</span>
+            <div class="path-input-row">
+              <input id="output-path" type="text" placeholder="Knowledge_Base/.../output.md" />
+              <button id="btn-browse-output-path" type="button" class="ghost">Browse...</button>
+            </div>
+          </label>
+        </div>
+        <div class="actions wrap">
+          <button id="btn-process-file">Process File</button>
+          <button id="btn-translate-file">Translate File</button>
+          <button id="btn-fix-mermaid">Fix Mermaid</button>
+          <button id="btn-fix-formulas">Fix Formulas</button>
+          <button id="btn-check-duplicates">Check Duplicates</button>
+          <button id="btn-extract-concepts">Extract Concepts</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Folder Operations</h2>
+        <div class="grid two">
+          <label>
+            <span>Folder Path</span>
+            <div class="path-input-row">
+              <input id="folder-path" type="text" placeholder="Knowledge_Base/..." />
+              <button id="btn-browse-folder-path" type="button" class="ghost">Browse...</button>
+            </div>
+          </label>
+          <label>
+            <span>Output Folder (optional)</span>
+            <div class="path-input-row">
+              <input id="output-folder-path" type="text" placeholder="Knowledge_Base/.../processed" />
+              <button id="btn-browse-output-folder-path" type="button" class="ghost">Browse...</button>
+            </div>
+          </label>
+        </div>
+        <div class="actions wrap">
+          <button id="btn-process-folder">Process Folder</button>
+          <button id="btn-translate-folder">Translate Folder</button>
+          <button id="btn-generate-folder">Generate Empty Files</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Generation</h2>
+        <div class="grid two">
+          <label>
+            <span>Title</span>
+            <input id="gen-title" type="text" placeholder="e.g. Graph Neural Networks" />
+          </label>
+          <label>
+            <span>Save To File (optional)</span>
+            <div class="path-input-row">
+              <input id="gen-file" type="text" placeholder="Knowledge_Base/.../topic.md" />
+              <button id="btn-browse-gen-file" type="button" class="ghost">Browse...</button>
+            </div>
+          </label>
+        </div>
+        <label class="full">
+          <span>Research Context (optional)</span>
+          <textarea id="gen-context" rows="5"></textarea>
+        </label>
+        <div class="actions wrap">
+          <button id="btn-generate-content">Generate Content</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Logs</h2>
+        <pre id="log-output" class="log-output"></pre>
+      </section>
+    </main>
+
+    <script src="notemd.js"></script>
+  </body>
+</html>

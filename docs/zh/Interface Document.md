@@ -48,6 +48,40 @@
 - 原因：当前 Godot 的 SVG 处理存在非确定性失败（跨设备文本/布局/栅格不稳定）。
 - 变更规则：后续 Godot 渲染优化必须保持 PNG 解码主路径（`pngBase64` 必填）；缺失 PNG 视为失败。
 
+## 0.2 NoteMD 模块接口契约（v1.5.58）
+
+NoteMD 以增量方式接入，不替代现有图谱/路径 API。
+
+### 后端模块命名空间（`src/notemd/`）
+
+- 核心接口与常量：`types.ts`、`constants.ts`
+- LLM 与提示词：`LlmProvider.ts`、`PromptManager.ts`
+- 处理核心：`FileProcessor.ts`、`MermaidProcessor.ts`、`FormulaFixer.ts`
+- 批处理与生成能力：`Translator.ts`、`BatchProcessor.ts`、`DuplicateDetector.ts`、`ContentGenerator.ts`
+- 服务聚合：`NotemdService.ts`、`index.ts`
+
+### HTTP API 契约（`src/server.ts`）
+
+- `GET /api/notemd/settings`
+- `POST|PUT /api/notemd/settings`
+- `POST /api/notemd/process-file`
+- `POST /api/notemd/process-folder`
+- `POST /api/notemd/test-llm`
+- `POST /api/notemd/generate-content`
+- `POST /api/notemd/translate-file`
+- `POST /api/notemd/translate-folder`
+- `POST /api/notemd/fix-mermaid`
+- `POST /api/notemd/fix-formulas`
+- `POST /api/notemd/check-duplicates`
+- `POST /api/notemd/extract-concepts`
+- `POST /api/notemd/cancel`
+
+### 安全与生命周期保证
+
+- NoteMD 文件/目录操作统一执行 KB 根路径沙箱校验。
+- 长任务支持 SSE 进度回传与显式取消。
+- Tauri/Godot 桥接新增 `open_notemd`，且不改变既有图谱桥协议语义。
+
 ---
 
 ## 1. 运行时与路径契约

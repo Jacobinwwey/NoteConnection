@@ -13,6 +13,15 @@ import { WasmParityRuntime } from './backend/algorithms/WasmParityRuntime';
 import { resolveRuntimePaths } from './utils/RuntimePaths';
 import { renderMathPng, renderMermaidPng } from './reader_renderer';
 import { copyPngToClipboard } from './native_clipboard';
+import {
+    DEFAULT_SETTINGS as DEFAULT_NOTEMD_SETTINGS,
+    LlmProviderClient,
+    NOTEMD_CONFIG_FILE_NAME,
+    NotemdService,
+    type NotemdSettings,
+    type ProgressEvent,
+    type ProgressReporter,
+} from './notemd';
 
 // Initialize Global Crash Handlers
 CrashLogger.initGlobalHandlers();
@@ -65,6 +74,21 @@ let activeBuildPromise: Promise<void> | null = null;
 let lastRestoreKey: string | null = null;
 let lastRestoreTs = 0;
 const SIDECAR_RUNTIME_MANIFEST = path.join(runtimePaths.projectRoot, 'tmp', 'active-sidecar-runtime.json');
+const NOTEMD_CONFIG_PATH = path.join(RUNTIME_DATA_DIR, NOTEMD_CONFIG_FILE_NAME);
+const notemdService = new NotemdService();
+const notemdLlmClient = new LlmProviderClient();
+let cachedNotemdSettings: NotemdSettings | null = null;
+
+type NotemdOperationState = {
+    id: string;
+    controller: AbortController;
+    status: 'running' | 'done' | 'cancelled' | 'error';
+    createdAt: number;
+    updatedAt: number;
+    logs: ProgressEvent[];
+};
+
+const NOTEMD_ACTIVE_OPERATIONS = new Map<string, NotemdOperationState>();
 
 type MermaidRendererPreference = 'auto' | 'local' | 'frontend';
 
@@ -286,7 +310,7 @@ function isAllowedOrigin(originHeader: string | undefined): boolean {
 function applyCorsHeaders(req: http.IncomingMessage, res: http.ServerResponse): boolean {
     const originHeader = typeof req.headers.origin === 'string' ? req.headers.origin.trim() : '';
     res.setHeader('Vary', 'Origin');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-NoteConnection-Token');
     res.setHeader('Access-Control-Max-Age', '86400');
 
@@ -650,6 +674,311 @@ function writeBodyParseErrorResponse(res: http.ServerResponse, error: unknown): 
     }
 
     return false;
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function cloneNotemdSettings(settings: NotemdSettings): NotemdSettings {
+    return JSON.parse(JSON.stringify(settings)) as NotemdSettings;
+}
+
+function clampNotemdInteger(value: unknown, fallback: number, minValue: number, maxValue: number): number {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) {
+        return fallback;
+    }
+    return Math.max(minValue, Math.min(maxValue, Math.floor(numericValue)));
+}
+
+function normalizeNotemdSettings(rawValue: unknown): NotemdSettings {
+    const defaults = cloneNotemdSettings(DEFAULT_NOTEMD_SETTINGS);
+    if (!isObjectRecord(rawValue)) {
+        return defaults;
+    }
+
+    const raw = rawValue as Partial<NotemdSettings> & Record<string, unknown>;
+    const merged = {
+        ...defaults,
+        ...raw,
+    } as NotemdSettings;
+
+    if (Array.isArray(raw.providers)) {
+        merged.providers = raw.providers
+            .map((providerCandidate) => {
+                if (!isObjectRecord(providerCandidate)) {
+                    return null;
+                }
+                const providerName = String(providerCandidate.name || '').trim();
+                const fallbackProvider = defaults.providers.find((provider) => provider.name === providerName);
+                if (!fallbackProvider) {
+                    return null;
+                }
+                return {
+                    ...fallbackProvider,
+                    ...providerCandidate,
+                    name: fallbackProvider.name,
+                    apiKey: String(providerCandidate.apiKey || '').trim(),
+                    baseUrl: String(providerCandidate.baseUrl || fallbackProvider.baseUrl).trim(),
+                    model: String(providerCandidate.model || fallbackProvider.model).trim(),
+                    temperature: Number.isFinite(Number(providerCandidate.temperature))
+                        ? Number(providerCandidate.temperature)
+                        : fallbackProvider.temperature,
+                };
+            })
+            .filter((provider): provider is NotemdSettings['providers'][number] => provider !== null);
+    } else {
+        merged.providers = defaults.providers;
+    }
+
+    const activeProviderExists = merged.providers.some((provider) => provider.name === merged.activeProvider);
+    if (!activeProviderExists) {
+        merged.activeProvider = defaults.activeProvider;
+    }
+
+    merged.chunkWordCount = clampNotemdInteger(raw.chunkWordCount, defaults.chunkWordCount, 300, 20000);
+    merged.maxTokens = clampNotemdInteger(raw.maxTokens, defaults.maxTokens, 128, 64000);
+    merged.batchConcurrency = clampNotemdInteger(raw.batchConcurrency, defaults.batchConcurrency, 1, 20);
+    merged.batchSize = clampNotemdInteger(raw.batchSize, defaults.batchSize, 1, 200);
+    merged.batchInterDelayMs = clampNotemdInteger(raw.batchInterDelayMs, defaults.batchInterDelayMs, 0, 600000);
+    merged.apiCallIntervalMs = clampNotemdInteger(raw.apiCallIntervalMs, defaults.apiCallIntervalMs, 0, 120000);
+    merged.maxRetries = clampNotemdInteger(raw.maxRetries, defaults.maxRetries, 0, 10);
+    merged.retryDelayMs = clampNotemdInteger(raw.retryDelayMs, defaults.retryDelayMs, 0, 600000);
+
+    merged.useCustomConceptNoteFolder = raw.useCustomConceptNoteFolder === true;
+    merged.useCustomProcessedFileFolder = raw.useCustomProcessedFileFolder === true;
+    merged.enableDuplicateDetection = raw.enableDuplicateDetection !== false;
+    merged.moveOriginalFileOnProcess = raw.moveOriginalFileOnProcess === true;
+    merged.enableBatchParallelism = raw.enableBatchParallelism !== false;
+    merged.autoMermaidFixAfterGenerate = raw.autoMermaidFixAfterGenerate === true;
+    merged.enableGlobalCustomPrompts = raw.enableGlobalCustomPrompts === true;
+    merged.enableFocusedLearning = raw.enableFocusedLearning === true;
+    merged.useMultiModelSettings = raw.useMultiModelSettings === true;
+    merged.useCustomAddLinksSuffix = raw.useCustomAddLinksSuffix === true;
+    merged.useCustomTranslationSuffix = raw.useCustomTranslationSuffix === true;
+    merged.useCustomTranslationSavePath = raw.useCustomTranslationSavePath === true;
+    merged.useCustomGenerateTitleOutputFolder = raw.useCustomGenerateTitleOutputFolder === true;
+    merged.useDifferentLanguagesForTasks = raw.useDifferentLanguagesForTasks === true;
+    merged.disableAutoTranslation = raw.disableAutoTranslation === true;
+    merged.enableResearchInGenerateContent = raw.enableResearchInGenerateContent === true;
+
+    merged.conceptNoteFolder = String(raw.conceptNoteFolder || defaults.conceptNoteFolder).trim();
+    merged.processedFileFolder = String(raw.processedFileFolder || defaults.processedFileFolder).trim();
+    merged.translationCustomSuffix = String(raw.translationCustomSuffix || defaults.translationCustomSuffix).trim();
+    merged.translationSavePath = String(raw.translationSavePath || defaults.translationSavePath).trim();
+    merged.addLinksCustomSuffix = String(raw.addLinksCustomSuffix || defaults.addLinksCustomSuffix).trim();
+    merged.generateTitleOutputFolderName = String(
+        raw.generateTitleOutputFolderName || defaults.generateTitleOutputFolderName
+    ).trim();
+    merged.focusedLearningDomain = String(raw.focusedLearningDomain || defaults.focusedLearningDomain).trim();
+
+    if (Array.isArray(raw.availableLanguages)) {
+        merged.availableLanguages = raw.availableLanguages
+            .map((languageCandidate) => {
+                if (!isObjectRecord(languageCandidate)) {
+                    return null;
+                }
+                const code = String(languageCandidate.code || '').trim();
+                const name = String(languageCandidate.name || '').trim();
+                if (!code || !name) {
+                    return null;
+                }
+                return { code, name };
+            })
+            .filter((language): language is NotemdSettings['availableLanguages'][number] => language !== null);
+    } else {
+        merged.availableLanguages = defaults.availableLanguages;
+    }
+    if (merged.availableLanguages.length === 0) {
+        merged.availableLanguages = defaults.availableLanguages;
+    }
+
+    merged.language = String(raw.language || defaults.language).trim() || defaults.language;
+    merged.generateTitleLanguage = String(raw.generateTitleLanguage || merged.language).trim() || merged.language;
+    merged.researchSummarizeLanguage = String(raw.researchSummarizeLanguage || merged.language).trim() || merged.language;
+    merged.addLinksLanguage = String(raw.addLinksLanguage || merged.language).trim() || merged.language;
+    merged.summarizeToMermaidLanguage = String(raw.summarizeToMermaidLanguage || merged.language).trim() || merged.language;
+    merged.extractConceptsLanguage = String(raw.extractConceptsLanguage || merged.language).trim() || merged.language;
+    merged.translateLanguage = String(raw.translateLanguage || merged.language).trim() || merged.language;
+
+    merged.addLinksModel = String(raw.addLinksModel || '').trim();
+    merged.researchModel = String(raw.researchModel || '').trim();
+    merged.generateTitleModel = String(raw.generateTitleModel || '').trim();
+    merged.translateModel = String(raw.translateModel || '').trim();
+    merged.summarizeToMermaidModel = String(raw.summarizeToMermaidModel || '').trim();
+    merged.extractConceptsModel = String(raw.extractConceptsModel || '').trim();
+    merged.extractOriginalTextModel = String(raw.extractOriginalTextModel || '').trim();
+
+    if (!isObjectRecord(raw.customPrompts)) {
+        merged.customPrompts = {};
+    } else {
+        const customPrompts = raw.customPrompts as Record<string, unknown>;
+        merged.customPrompts = {};
+        Object.keys(customPrompts).forEach((key) => {
+            const text = String(customPrompts[key] || '').trim();
+            if (text) {
+                (merged.customPrompts as Record<string, string>)[key] = text;
+            }
+        });
+    }
+
+    return merged;
+}
+
+async function loadNotemdSettings(): Promise<NotemdSettings> {
+    if (cachedNotemdSettings) {
+        return cloneNotemdSettings(cachedNotemdSettings);
+    }
+
+    try {
+        const content = await fs.promises.readFile(NOTEMD_CONFIG_PATH, 'utf8');
+        const parsed = JSON.parse(content);
+        cachedNotemdSettings = normalizeNotemdSettings(parsed);
+    } catch (error) {
+        if (!isFsNotFoundError(error)) {
+            console.warn('[NoteMD] Failed to read settings, using defaults:', error);
+        }
+        cachedNotemdSettings = normalizeNotemdSettings(DEFAULT_NOTEMD_SETTINGS);
+    }
+
+    return cloneNotemdSettings(cachedNotemdSettings);
+}
+
+async function persistNotemdSettings(settingsLike: unknown): Promise<NotemdSettings> {
+    const normalized = normalizeNotemdSettings(settingsLike);
+    await ensureRuntimeDataDir();
+    await fs.promises.writeFile(NOTEMD_CONFIG_PATH, JSON.stringify(normalized, null, 2), 'utf8');
+    cachedNotemdSettings = cloneNotemdSettings(normalized);
+    return cloneNotemdSettings(normalized);
+}
+
+function generateNotemdOperationId(): string {
+    return `notemd-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+}
+
+function createNotemdOperation(operationIdCandidate?: unknown): NotemdOperationState {
+    const requestedId = String(operationIdCandidate || '').trim();
+    const operationId = requestedId || generateNotemdOperationId();
+    const state: NotemdOperationState = {
+        id: operationId,
+        controller: new AbortController(),
+        status: 'running',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        logs: [],
+    };
+    NOTEMD_ACTIVE_OPERATIONS.set(operationId, state);
+    return state;
+}
+
+function finalizeNotemdOperation(state: NotemdOperationState, status: NotemdOperationState['status']): void {
+    state.status = status;
+    state.updatedAt = Date.now();
+    setTimeout(() => {
+        const current = NOTEMD_ACTIVE_OPERATIONS.get(state.id);
+        if (current === state && current.status !== 'running') {
+            NOTEMD_ACTIVE_OPERATIONS.delete(state.id);
+        }
+    }, 60000);
+}
+
+function writeSseEvent(res: http.ServerResponse, eventType: string, payload: unknown): void {
+    if (res.writableEnded) {
+        return;
+    }
+    res.write(`event: ${eventType}\n`);
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+}
+
+function createNotemdReporter(state: NotemdOperationState, res?: http.ServerResponse): ProgressReporter {
+    return {
+        report: (eventLike) => {
+            const event: ProgressEvent = {
+                ...eventLike,
+                operationId: state.id,
+                timestamp: Date.now(),
+            };
+            state.logs.push(event);
+            state.updatedAt = event.timestamp;
+            if (res) {
+                writeSseEvent(res, event.type, event);
+            }
+        },
+        isCancelled: () => state.controller.signal.aborted,
+    };
+}
+
+function shouldStreamNotemdResponse(req: http.IncomingMessage): boolean {
+    const acceptHeader = typeof req.headers.accept === 'string' ? req.headers.accept : '';
+    if (acceptHeader.includes('text/event-stream')) {
+        return true;
+    }
+    try {
+        const urlObj = new URL(req.url || '/', `http://${LOOPBACK_HOST}:${PORT}`);
+        return urlObj.searchParams.get('stream') === '1';
+    } catch (_error) {
+        return false;
+    }
+}
+
+async function resolveNearestExistingAncestor(candidatePath: string): Promise<string | null> {
+    let current = path.resolve(candidatePath);
+    for (;;) {
+        try {
+            return await fs.promises.realpath(current);
+        } catch (error) {
+            if (!isFsNotFoundError(error)) {
+                throw error;
+            }
+            const parent = path.dirname(current);
+            if (parent === current) {
+                return null;
+            }
+            current = parent;
+        }
+    }
+}
+
+async function resolvePathWithinKnowledgeBase(
+    rawPath: unknown,
+    options: { expectedType?: 'file' | 'directory' | 'any'; allowMissing?: boolean } = {}
+): Promise<string> {
+    const requestedPath = String(rawPath || '').trim();
+    if (!requestedPath) {
+        throw makeAccessDeniedError('Missing path.');
+    }
+
+    const kbRootCanonical = await fs.promises.realpath(KB_ROOT);
+    const candidate = path.isAbsolute(requestedPath)
+        ? path.resolve(requestedPath)
+        : path.resolve(kbRootCanonical, requestedPath);
+
+    if ((process as NodeJS.Process & { pkg?: unknown }).pkg && isPkgSnapshotPath(candidate)) {
+        throw makeAccessDeniedError('pkg snapshot paths are not allowed.');
+    }
+
+    if (options.allowMissing) {
+        const ancestor = await resolveNearestExistingAncestor(candidate);
+        if (!ancestor || !isPathInsideRoot(ancestor, kbRootCanonical)) {
+            throw makeAccessDeniedError('Path is outside configured knowledge base.');
+        }
+        return candidate;
+    }
+
+    const candidateCanonical = await fs.promises.realpath(candidate);
+    if (!isPathInsideRoot(candidateCanonical, kbRootCanonical)) {
+        throw makeAccessDeniedError('Path is outside configured knowledge base.');
+    }
+
+    const stat = await fs.promises.stat(candidateCanonical);
+    if (options.expectedType === 'file' && !stat.isFile()) {
+        throw makeAccessDeniedError('Expected a file path.');
+    }
+    if (options.expectedType === 'directory' && !stat.isDirectory()) {
+        throw makeAccessDeniedError('Expected a directory path.');
+    }
+    return candidateCanonical;
 }
 
 function parseOptionalPositiveDimension(value: unknown): number | undefined {
@@ -1176,6 +1505,35 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         }
 
         if (req.method === 'GET') {
+            const getPathname = getRawRequestPathname(req.url);
+
+            if (getPathname === '/api/notemd/settings') {
+                try {
+                    const settings = await loadNotemdSettings();
+                    const activeOperationCount = Array.from(NOTEMD_ACTIVE_OPERATIONS.values()).filter(
+                        (operation) => operation.status === 'running'
+                    ).length;
+
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(
+                        JSON.stringify({
+                            success: true,
+                            settings,
+                            operationSummary: {
+                                total: NOTEMD_ACTIVE_OPERATIONS.size,
+                                running: activeOperationCount,
+                            },
+                        })
+                    );
+                } catch (error) {
+                    console.error(error);
+                    CrashLogger.log(error, 'API:GET /api/notemd/settings');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
             if (req.url === '/api/runtime-diagnostics') {
                 try {
                     const bridgeSummary = pathBridge && typeof (pathBridge as any).getClientSummary === 'function'
@@ -1539,7 +1897,603 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 res.writeHead(500);
                 res.end(`Server Error: ${(error as NodeJS.ErrnoException | undefined)?.code || 'UNKNOWN'}`);
             }
-        } else if (req.method === 'POST') {
+        } else if (req.method === 'POST' || req.method === 'PUT') {
+            const postPathname = getRawRequestPathname(req.url);
+
+            if (postPathname === '/api/notemd/settings') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const settingsCandidate = isObjectRecord(payload) && payload.settings !== undefined
+                        ? payload.settings
+                        : payload;
+                    const settings = await persistNotemdSettings(settingsCandidate);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, settings }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/notemd/settings');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/notemd/cancel') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const operationId = String(payload.operationId || '').trim();
+                    if (!operationId) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: 'Missing operationId' }));
+                        return;
+                    }
+
+                    const operation = NOTEMD_ACTIVE_OPERATIONS.get(operationId);
+                    if (!operation) {
+                        res.writeHead(404, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: 'Operation not found' }));
+                        return;
+                    }
+
+                    if (operation.status !== 'running') {
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(
+                            JSON.stringify({
+                                success: false,
+                                operationId,
+                                status: operation.status,
+                                message: 'Operation is not running.',
+                            })
+                        );
+                        return;
+                    }
+
+                    operation.controller.abort();
+                    finalizeNotemdOperation(operation, 'cancelled');
+
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, operationId, status: 'cancelled' }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/notemd/cancel');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/notemd/test-llm') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const settings = await loadNotemdSettings();
+
+                    const providerName = String(payload.providerName || settings.activeProvider).trim();
+                    const provider = settings.providers.find((item) => item.name === providerName);
+                    if (!provider) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: `Unknown provider: ${providerName}` }));
+                        return;
+                    }
+
+                    const result = await notemdLlmClient.testConnection(provider);
+                    const statusCode = result.success ? 200 : 400;
+                    res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(result));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/notemd/test-llm');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/notemd/process-file') {
+                const streamEnabled = shouldStreamNotemdResponse(req);
+                let operation: NotemdOperationState | null = null;
+                try {
+                    const payload = await readJsonBody(req);
+                    const settings = await loadNotemdSettings();
+                    operation = createNotemdOperation(payload.operationId);
+                    const reporter = createNotemdReporter(operation, streamEnabled ? res : undefined);
+
+                    if (streamEnabled) {
+                        res.writeHead(200, {
+                            'Content-Type': 'text/event-stream',
+                            'Cache-Control': 'no-cache',
+                            Connection: 'keep-alive',
+                        });
+                        writeSseEvent(res, 'operation', {
+                            operationId: operation.id,
+                            status: operation.status,
+                        });
+                    }
+
+                    const resolvedFilePath = await resolvePathWithinKnowledgeBase(payload.filePath, {
+                        expectedType: 'file',
+                    });
+                    const resolvedOutputPath = payload.outputPath
+                        ? await resolvePathWithinKnowledgeBase(payload.outputPath, {
+                              expectedType: 'any',
+                              allowMissing: true,
+                          })
+                        : undefined;
+
+                    const result = await notemdService.processFile(
+                        {
+                            filePath: resolvedFilePath,
+                            outputPath: resolvedOutputPath,
+                            createConceptNotes: payload.createConceptNotes === true,
+                            dryRun: payload.dryRun === true,
+                        },
+                        settings,
+                        reporter,
+                        operation.controller.signal
+                    );
+
+                    finalizeNotemdOperation(operation, 'done');
+                    if (streamEnabled) {
+                        writeSseEvent(res, 'done', {
+                            success: true,
+                            operationId: operation.id,
+                            result,
+                        });
+                        res.end();
+                    } else {
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(
+                            JSON.stringify({
+                                success: true,
+                                operationId: operation.id,
+                                result,
+                                logs: operation.logs,
+                            })
+                        );
+                    }
+                } catch (error) {
+                    if (operation) {
+                        finalizeNotemdOperation(operation, operation.controller.signal.aborted ? 'cancelled' : 'error');
+                    }
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    if (isAccessDeniedError(error)) {
+                        const statusCode = operation?.controller.signal.aborted ? 499 : 403;
+                        const payload = { success: false, error: String((error as Error).message || 'Access denied') };
+                        if (streamEnabled) {
+                            writeSseEvent(res, 'error', payload);
+                            res.end();
+                        } else {
+                            res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify(payload));
+                        }
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/notemd/process-file');
+                    const payload = { success: false, error: String(error) };
+                    if (streamEnabled) {
+                        writeSseEvent(res, 'error', payload);
+                        res.end();
+                    } else {
+                        res.writeHead(500, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify(payload));
+                    }
+                }
+                return;
+            }
+
+            if (postPathname === '/api/notemd/process-folder') {
+                const streamEnabled = shouldStreamNotemdResponse(req);
+                let operation: NotemdOperationState | null = null;
+                try {
+                    const payload = await readJsonBody(req);
+                    const settings = await loadNotemdSettings();
+                    operation = createNotemdOperation(payload.operationId);
+                    const reporter = createNotemdReporter(operation, streamEnabled ? res : undefined);
+
+                    if (streamEnabled) {
+                        res.writeHead(200, {
+                            'Content-Type': 'text/event-stream',
+                            'Cache-Control': 'no-cache',
+                            Connection: 'keep-alive',
+                        });
+                        writeSseEvent(res, 'operation', {
+                            operationId: operation.id,
+                            status: operation.status,
+                        });
+                    }
+
+                    const resolvedFolderPath = await resolvePathWithinKnowledgeBase(payload.folderPath, {
+                        expectedType: 'directory',
+                    });
+                    const resolvedOutputFolderPath = payload.outputFolderPath
+                        ? await resolvePathWithinKnowledgeBase(payload.outputFolderPath, {
+                              expectedType: 'any',
+                              allowMissing: true,
+                          })
+                        : undefined;
+
+                    const result = await notemdService.processFolder(
+                        {
+                            folderPath: resolvedFolderPath,
+                            outputFolderPath: resolvedOutputFolderPath,
+                            createConceptNotes: payload.createConceptNotes === true,
+                            dryRun: payload.dryRun === true,
+                        },
+                        settings,
+                        reporter,
+                        operation.controller.signal
+                    );
+
+                    finalizeNotemdOperation(operation, 'done');
+                    if (streamEnabled) {
+                        writeSseEvent(res, 'done', {
+                            success: true,
+                            operationId: operation.id,
+                            result,
+                        });
+                        res.end();
+                    } else {
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(
+                            JSON.stringify({
+                                success: true,
+                                operationId: operation.id,
+                                result,
+                                logs: operation.logs,
+                            })
+                        );
+                    }
+                } catch (error) {
+                    if (operation) {
+                        finalizeNotemdOperation(operation, operation.controller.signal.aborted ? 'cancelled' : 'error');
+                    }
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    if (isAccessDeniedError(error)) {
+                        const statusCode = operation?.controller.signal.aborted ? 499 : 403;
+                        const payload = { success: false, error: String((error as Error).message || 'Access denied') };
+                        if (streamEnabled) {
+                            writeSseEvent(res, 'error', payload);
+                            res.end();
+                        } else {
+                            res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify(payload));
+                        }
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/notemd/process-folder');
+                    const payload = { success: false, error: String(error) };
+                    if (streamEnabled) {
+                        writeSseEvent(res, 'error', payload);
+                        res.end();
+                    } else {
+                        res.writeHead(500, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify(payload));
+                    }
+                }
+                return;
+            }
+
+            if (postPathname === '/api/notemd/generate-content') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const settings = await loadNotemdSettings();
+                    let title = String(payload.title || '').trim();
+                    const filePathCandidate = String(payload.filePath || '').trim();
+                    if (!title && filePathCandidate) {
+                        title = path.basename(filePathCandidate, path.extname(filePathCandidate));
+                    }
+                    if (!title) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: 'Missing title or filePath' }));
+                        return;
+                    }
+
+                    const content = await notemdService.generateContent(
+                        title,
+                        typeof payload.context === 'string' ? payload.context : undefined,
+                        settings
+                    );
+
+                    let outputPath: string | null = null;
+                    if (payload.outputPath) {
+                        outputPath = await resolvePathWithinKnowledgeBase(payload.outputPath, {
+                            expectedType: 'any',
+                            allowMissing: true,
+                        });
+                    } else if (filePathCandidate) {
+                        outputPath = await resolvePathWithinKnowledgeBase(filePathCandidate, {
+                            expectedType: 'any',
+                            allowMissing: true,
+                        });
+                    }
+                    if (outputPath) {
+                        await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
+                        await fs.promises.writeFile(outputPath, content, 'utf8');
+                    }
+
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(
+                        JSON.stringify({
+                            success: true,
+                            title,
+                            outputPath,
+                            content,
+                        })
+                    );
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    if (isAccessDeniedError(error)) {
+                        res.writeHead(403, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/notemd/generate-content');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/notemd/translate-file') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const settings = await loadNotemdSettings();
+                    const resolvedFilePath = await resolvePathWithinKnowledgeBase(payload.filePath, {
+                        expectedType: 'file',
+                    });
+                    const resolvedOutputPath = payload.outputPath
+                        ? await resolvePathWithinKnowledgeBase(payload.outputPath, {
+                              expectedType: 'any',
+                              allowMissing: true,
+                          })
+                        : undefined;
+                    const targetLanguage = String(payload.targetLanguage || settings.translateLanguage || settings.language).trim();
+                    if (!targetLanguage) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: 'Missing targetLanguage' }));
+                        return;
+                    }
+
+                    const result = await notemdService.translateFile(
+                        {
+                            filePath: resolvedFilePath,
+                            outputPath: resolvedOutputPath,
+                            targetLanguage,
+                        },
+                        settings
+                    );
+
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, result }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    if (isAccessDeniedError(error)) {
+                        res.writeHead(403, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/notemd/translate-file');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/notemd/translate-folder') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const settings = await loadNotemdSettings();
+                    const resolvedFolderPath = await resolvePathWithinKnowledgeBase(payload.folderPath, {
+                        expectedType: 'directory',
+                    });
+                    const targetLanguage = String(payload.targetLanguage || settings.translateLanguage || settings.language).trim();
+                    if (!targetLanguage) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: 'Missing targetLanguage' }));
+                        return;
+                    }
+
+                    const result = await notemdService.translateFolder(
+                        resolvedFolderPath,
+                        targetLanguage,
+                        settings
+                    );
+
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, result }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    if (isAccessDeniedError(error)) {
+                        res.writeHead(403, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/notemd/translate-folder');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/notemd/fix-mermaid') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const resolvedFilePath = await resolvePathWithinKnowledgeBase(payload.filePath, {
+                        expectedType: 'file',
+                    });
+                    const inPlace = payload.inPlace !== false;
+                    const result = await notemdService.fixMermaid(resolvedFilePath, inPlace);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, result }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    if (isAccessDeniedError(error)) {
+                        res.writeHead(403, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/notemd/fix-mermaid');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/notemd/fix-formulas') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const resolvedFilePath = await resolvePathWithinKnowledgeBase(payload.filePath, {
+                        expectedType: 'file',
+                    });
+                    const inPlace = payload.inPlace !== false;
+                    const result = await notemdService.fixFormulas(resolvedFilePath, inPlace);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, result }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    if (isAccessDeniedError(error)) {
+                        res.writeHead(403, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/notemd/fix-formulas');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/notemd/check-duplicates') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const resolvedFilePath = await resolvePathWithinKnowledgeBase(payload.filePath, {
+                        expectedType: 'file',
+                    });
+                    const result = await notemdService.checkDuplicates(resolvedFilePath);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, result }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    if (isAccessDeniedError(error)) {
+                        res.writeHead(403, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/notemd/check-duplicates');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/notemd/extract-concepts') {
+                const streamEnabled = shouldStreamNotemdResponse(req);
+                let operation: NotemdOperationState | null = null;
+                try {
+                    const payload = await readJsonBody(req);
+                    const settings = await loadNotemdSettings();
+                    operation = createNotemdOperation(payload.operationId);
+                    const reporter = createNotemdReporter(operation, streamEnabled ? res : undefined);
+
+                    if (streamEnabled) {
+                        res.writeHead(200, {
+                            'Content-Type': 'text/event-stream',
+                            'Cache-Control': 'no-cache',
+                            Connection: 'keep-alive',
+                        });
+                        writeSseEvent(res, 'operation', {
+                            operationId: operation.id,
+                            status: operation.status,
+                        });
+                    }
+
+                    const resolvedFilePath = await resolvePathWithinKnowledgeBase(payload.filePath, {
+                        expectedType: 'file',
+                    });
+                    const result = await notemdService.extractConcepts(
+                        resolvedFilePath,
+                        settings,
+                        reporter,
+                        operation.controller.signal
+                    );
+                    finalizeNotemdOperation(operation, 'done');
+
+                    if (streamEnabled) {
+                        writeSseEvent(res, 'done', {
+                            success: true,
+                            operationId: operation.id,
+                            result,
+                        });
+                        res.end();
+                    } else {
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: true, operationId: operation.id, result, logs: operation.logs }));
+                    }
+                } catch (error) {
+                    if (operation) {
+                        finalizeNotemdOperation(operation, operation.controller.signal.aborted ? 'cancelled' : 'error');
+                    }
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    if (isAccessDeniedError(error)) {
+                        const statusCode = operation?.controller.signal.aborted ? 499 : 403;
+                        const payload = { success: false, error: String((error as Error).message || 'Access denied') };
+                        if (streamEnabled) {
+                            writeSseEvent(res, 'error', payload);
+                            res.end();
+                        } else {
+                            res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify(payload));
+                        }
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/notemd/extract-concepts');
+                    const payload = { success: false, error: String(error) };
+                    if (streamEnabled) {
+                        writeSseEvent(res, 'error', payload);
+                        res.end();
+                    } else {
+                        res.writeHead(500, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify(payload));
+                    }
+                }
+                return;
+            }
+
             if (req.url === '/api/render/math') {
                 try {
                     const payload = await readJsonBody(req);

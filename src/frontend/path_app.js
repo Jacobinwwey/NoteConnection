@@ -162,6 +162,18 @@ window.pathApp = {
                 } else if (msg.type === 'exitPathMode') {
                     console.log('[PathApp] Remote exit Path Mode');
                     this.exitPathMode();
+                } else if (msg.type === 'openNotemd' || msg.type === 'open_notemd') {
+                    console.log('[PathApp] Remote open NoteMD request');
+                    void this.openEmbeddedNoteMD({
+                        source: 'bridge-openNotemd',
+                        restoreMainView: true
+                    });
+                } else if (msg.type === 'requestAppShutdown' || msg.type === 'request_app_shutdown') {
+                    console.log('[PathApp] Remote full app shutdown request');
+                    void this.requestFullApplicationShutdown({
+                        source: 'bridge-requestAppShutdown',
+                        payload: msg.payload || {}
+                    });
                 } else if (msg.type === 'completionSync') {
                     // ... existing code ...
                     // Bidirectional sync from Godot
@@ -1458,6 +1470,69 @@ window.pathApp = {
             setTimeout(() => {
                 sidebar.style.display = 'none';
             }, 300);
+        }
+    },
+
+    openEmbeddedNoteMD: async function(options = {}) {
+        const shouldRestoreMainView = options.restoreMainView !== false;
+        if (shouldRestoreMainView) {
+            this.exitPathMode();
+        }
+
+        const embeddedNoteMD = (typeof window !== 'undefined') ? window.NoteConnectionEmbeddedNoteMD : null;
+        if (embeddedNoteMD && typeof embeddedNoteMD.open === 'function') {
+            embeddedNoteMD.open({
+                source: options.source || 'path-app'
+            });
+            return;
+        }
+
+        const overlay = document.getElementById('notemd-embed-overlay');
+        const iframe = document.getElementById('notemd-embed-frame');
+        if (overlay && iframe) {
+            if (iframe.getAttribute('src') !== 'notemd.html') {
+                iframe.setAttribute('src', 'notemd.html');
+            }
+            overlay.style.display = 'flex';
+            return;
+        }
+
+        try {
+            if (
+                window.__TAURI__ &&
+                window.__TAURI__.core &&
+                typeof window.__TAURI__.core.invoke === 'function'
+            ) {
+                await window.__TAURI__.core.invoke('open_notemd');
+                return;
+            }
+        } catch (error) {
+            console.warn('[PathApp] open_notemd invoke failed:', error);
+        }
+
+        window.location.href = 'notemd.html';
+    },
+
+    requestFullApplicationShutdown: async function(options = {}) {
+        try {
+            if (
+                window.__TAURI__ &&
+                window.__TAURI__.core &&
+                typeof window.__TAURI__.core.invoke === 'function'
+            ) {
+                await window.__TAURI__.core.invoke('shutdown_application', {
+                    reason: options.source || 'path-app-bridge-request'
+                });
+                return;
+            }
+        } catch (error) {
+            console.warn('[PathApp] shutdown_application invoke failed:', error);
+        }
+
+        try {
+            window.close();
+        } catch (_error) {
+            // Ignore fallback errors in browser mode.
         }
     },
 
@@ -3042,6 +3117,16 @@ window.pathApp = {
                         this.applyRemoteConfigure(msg.payload || {});
                     } else if (msg.type === 'exitPathMode') {
                         this.exitPathMode();
+                    } else if (msg.type === 'openNotemd' || msg.type === 'open_notemd') {
+                        void this.openEmbeddedNoteMD({
+                            source: 'early-bridge-openNotemd',
+                            restoreMainView: true
+                        });
+                    } else if (msg.type === 'requestAppShutdown' || msg.type === 'request_app_shutdown') {
+                        void this.requestFullApplicationShutdown({
+                            source: 'early-bridge-requestAppShutdown',
+                            payload: msg.payload || {}
+                        });
                     }
                 } catch(err) {
                     console.error('[PathApp] Early WS Error:', err);

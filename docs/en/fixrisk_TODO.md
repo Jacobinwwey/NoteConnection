@@ -1,6 +1,6 @@
 # NoteConnection Fixrisk TODO (Live Status)
 
-Last updated: 2026-03-21
+Last updated: 2026-03-22
 
 ## Scope
 This document tracks only real, currently verifiable risks. Items are marked `Closed` only when backed by code + contract tests (or an explicit operational gate).
@@ -28,6 +28,7 @@ This document tracks only real, currently verifiable risks. Items are marked `Cl
 - Run the strict evidence workflow on release branches (`.github/workflows/fixrisk-operational-readiness.yml`) to enforce FR-009 closure with artifact retention.
 - Use workflow dispatch with `run_mobile_capture=true` on a self-hosted `windows/x64/android` runner to capture fresh `docs/mobile-evidence` automatically.
 - Continue deferred hardening items outside fixrisk critical scope.
+- Local Tauri verification tip: run `node scripts/cleanup-tauri-sidecars.js` before `cargo check` to avoid Windows file-lock `PermissionDenied` on copied sidecars.
 
 ---
 

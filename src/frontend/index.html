@@ -110,6 +110,19 @@
         >
           Path Mode
         </button>
+        <button
+          id="btn-notemd"
+          style="
+            background: #0f766e;
+            color: #f2fffd;
+            border: 1px solid #4f8f8a;
+            padding: 2px 8px;
+            cursor: pointer;
+          "
+          title="Open NoteMD Workspace"
+        >
+          NoteMD
+        </button>
         <span
           id="kb-current-path"
           style="
@@ -1348,6 +1361,23 @@
       <!-- Progress / Status -->
       <div id="path-status">
         Learning Path: <span id="path-count">0</span> nodes
+      </div>
+    </div>
+
+    <!-- Embedded NoteMD Workspace -->
+    <div id="notemd-embed-overlay" class="notemd-embed-overlay" style="display: none">
+      <div class="notemd-embed-shell" role="dialog" aria-modal="true" aria-label="NoteMD Workspace">
+        <div class="notemd-embed-header">
+          <span class="notemd-embed-title">NoteMD Workspace</span>
+          <button id="btn-notemd-embed-close" class="notemd-embed-close" type="button">Close</button>
+        </div>
+        <iframe
+          id="notemd-embed-frame"
+          class="notemd-embed-frame"
+          title="NoteMD Embedded Workspace"
+          loading="lazy"
+          src="about:blank"
+        ></iframe>
       </div>
     </div>
 

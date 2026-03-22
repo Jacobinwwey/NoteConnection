@@ -660,6 +660,69 @@ div.tooltip {
   color: white;
 }
 
+/* Embedded NoteMD Workspace */
+.notemd-embed-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.78);
+  z-index: 2600;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(2px);
+}
+
+.notemd-embed-shell {
+  width: min(1280px, 96vw);
+  height: min(900px, 94vh);
+  background: #11151c;
+  border: 1px solid #2e3c4f;
+  border-radius: 10px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.notemd-embed-header {
+  height: 48px;
+  background: #1a2330;
+  border-bottom: 1px solid #2b3a4f;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+}
+
+.notemd-embed-title {
+  color: #deedf9;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.notemd-embed-close {
+  border: 1px solid #3f4f65;
+  background: #243447;
+  color: #f4fbff;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.notemd-embed-close:hover {
+  background: #2f4760;
+}
+
+.notemd-embed-frame {
+  width: 100%;
+  height: calc(100% - 48px);
+  border: none;
+  background: #0b0f14;
+}
+
 /* Reading Window */
 .reading-overlay {
   position: fixed;
@@ -886,6 +949,26 @@ div.tooltip {
 
 /* --- Mobile Responsiveness (v0.9.2) --- */
 @media (max-width: 768px) {
+  .notemd-embed-shell {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    border: none;
+  }
+
+  .notemd-embed-header {
+    height: 52px;
+    padding: 0 10px;
+  }
+
+  .notemd-embed-close {
+    padding: 6px 10px;
+  }
+
+  .notemd-embed-frame {
+    height: calc(100% - 52px);
+  }
+
   /* 1. Main Controls: Collapsible or Compact */
   #controls {
     width: 40px;

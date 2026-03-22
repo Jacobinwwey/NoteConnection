@@ -247,6 +247,76 @@ fn pick_knowledge_base_folder(_default_dir: &str, _title: &str) -> Option<PathBu
     None
 }
 
+#[cfg(not(target_os = "android"))]
+fn resolve_notemd_initial_directory(initial_path: Option<&str>) -> Option<PathBuf> {
+    let raw_path = initial_path?.trim();
+    if raw_path.is_empty() {
+        return None;
+    }
+
+    let candidate = PathBuf::from(raw_path);
+    if candidate.exists() && candidate.is_dir() {
+        return Some(candidate);
+    }
+    if candidate.exists() && candidate.is_file() {
+        return candidate.parent().map(Path::to_path_buf);
+    }
+
+    candidate
+        .parent()
+        .filter(|parent| parent.exists() && parent.is_dir())
+        .map(Path::to_path_buf)
+}
+
+#[cfg(not(target_os = "android"))]
+fn pick_notemd_file_internal(initial_path: Option<&str>) -> Option<PathBuf> {
+    let mut dialog = rfd::FileDialog::new()
+        .set_title("Select Markdown File")
+        .add_filter("Markdown", &["md", "markdown", "txt"]);
+
+    if let Some(directory) = resolve_notemd_initial_directory(initial_path) {
+        dialog = dialog.set_directory(directory);
+    }
+
+    dialog.pick_file()
+}
+
+#[cfg(not(target_os = "android"))]
+fn save_notemd_file_internal(initial_path: Option<&str>) -> Option<PathBuf> {
+    let mut dialog = rfd::FileDialog::new()
+        .set_title("Select Output Markdown File")
+        .add_filter("Markdown", &["md", "markdown", "txt"]);
+
+    if let Some(directory) = resolve_notemd_initial_directory(initial_path) {
+        dialog = dialog.set_directory(directory);
+    }
+
+    if let Some(raw_path) = initial_path {
+        let file_name = PathBuf::from(raw_path)
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        if !file_name.is_empty() {
+            dialog = dialog.set_file_name(file_name);
+        }
+    }
+
+    dialog.save_file()
+}
+
+#[cfg(not(target_os = "android"))]
+fn pick_notemd_folder_internal(initial_path: Option<&str>) -> Option<PathBuf> {
+    let mut dialog = rfd::FileDialog::new().set_title("Select Folder");
+
+    if let Some(directory) = resolve_notemd_initial_directory(initial_path) {
+        dialog = dialog.set_directory(directory);
+    }
+
+    dialog.pick_folder()
+}
+
 fn ensure_startup_kb_path() -> String {
     let config_path = app_config_path();
     let has_existing_config = config_path.exists();
@@ -1019,6 +1089,45 @@ fn choose_kb_path() -> Result<Option<String>, String> {
     Ok(None)
 }
 
+#[cfg(not(target_os = "android"))]
+#[tauri::command]
+fn pick_notemd_file(initial_path: Option<String>) -> Result<Option<String>, String> {
+    Ok(pick_notemd_file_internal(initial_path.as_deref())
+        .map(|path| path.to_string_lossy().to_string()))
+}
+
+#[cfg(target_os = "android")]
+#[tauri::command]
+fn pick_notemd_file(_initial_path: Option<String>) -> Result<Option<String>, String> {
+    Ok(None)
+}
+
+#[cfg(not(target_os = "android"))]
+#[tauri::command]
+fn save_notemd_file(initial_path: Option<String>) -> Result<Option<String>, String> {
+    Ok(save_notemd_file_internal(initial_path.as_deref())
+        .map(|path| path.to_string_lossy().to_string()))
+}
+
+#[cfg(target_os = "android")]
+#[tauri::command]
+fn save_notemd_file(_initial_path: Option<String>) -> Result<Option<String>, String> {
+    Ok(None)
+}
+
+#[cfg(not(target_os = "android"))]
+#[tauri::command]
+fn pick_notemd_folder(initial_path: Option<String>) -> Result<Option<String>, String> {
+    Ok(pick_notemd_folder_internal(initial_path.as_deref())
+        .map(|path| path.to_string_lossy().to_string()))
+}
+
+#[cfg(target_os = "android")]
+#[tauri::command]
+fn pick_notemd_folder(_initial_path: Option<String>) -> Result<Option<String>, String> {
+    Ok(None)
+}
+
 #[tauri::command]
 fn reset_kb_path() -> Result<String, String> {
     let default_path = ensure_default_kb_root_exists();
@@ -1139,6 +1248,7 @@ fn build_menu<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     lang: &str,
 ) -> tauri::Result<tauri::menu::Menu<R>> {
+    let tools = if lang == "zh" { "工具" } else { "Tools" };
     let file = if lang == "zh" { "文件" } else { "File" };
     let _edit = if lang == "zh" { "编辑" } else { "Edit" };
     let _view = if lang == "zh" { "视图" } else { "View" };
@@ -1155,6 +1265,12 @@ fn build_menu<R: tauri::Runtime>(
         .separator()
         .item(&quit_item)
         .build()?;
+    let note_md_item = MenuItemBuilder::with_id("open_notemd", if lang == "zh" { "NoteMD..." } else { "NoteMD..." })
+        .accelerator("CmdOrCtrl+D")
+        .build(app)?;
+    let tools_submenu = SubmenuBuilder::new(app, tools)
+        .item(&note_md_item)
+        .build()?;
 
     let doc_item = MenuItemBuilder::with_id("docs", if lang == "zh" { "文档" } else { "Documentation" }).build(app)?;
     let about_item = MenuItemBuilder::with_id("about", if lang == "zh" { "关于" } else { "About" }).build(app)?;
@@ -1167,6 +1283,7 @@ fn build_menu<R: tauri::Runtime>(
 
     MenuBuilder::new(app)
         .item(&file_submenu)
+        .item(&tools_submenu)
         .item(&help_submenu)
         .build()
 }
@@ -1393,6 +1510,57 @@ fn open_native_pathmode(request: NativePathmodeLaunchRequest) -> Result<NativePa
             reason: Some("Native Android Pathmode is unsupported on this platform".to_string()),
         })
     }
+}
+
+#[cfg(not(target_os = "android"))]
+#[tauri::command]
+fn open_notemd(app: AppHandle) -> Result<(), String> {
+    // Single-window mode: always render NoteMD inside the main frontend window.
+    // 单窗口模式：始终在主前端窗口内嵌显示 NoteMD。
+    let main_window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "Main Tauri window not found".to_string())?;
+
+    main_window
+        .show()
+        .map_err(|err| format!("Failed to show main window for NoteMD: {}", err))?;
+    main_window
+        .set_focus()
+        .map_err(|err| format!("Failed to focus main window for NoteMD: {}", err))?;
+
+    app.emit(
+        "notemd-open-request",
+        json!({
+            "source": "tauri_command"
+        }),
+    )
+    .map_err(|err| format!("Failed to emit NoteMD open event: {}", err))?;
+
+    Ok(())
+}
+
+#[cfg(target_os = "android")]
+#[tauri::command]
+fn open_notemd(_app: AppHandle) -> Result<(), String> {
+    Err("Desktop NoteMD window command is unavailable on Android".to_string())
+}
+
+#[cfg(not(target_os = "android"))]
+#[tauri::command]
+fn shutdown_application(app: AppHandle, reason: Option<String>) -> Result<(), String> {
+    println!(
+        "[Rust] shutdown_application requested. reason={}",
+        reason.unwrap_or_else(|| "unspecified".to_string())
+    );
+    shutdown_child_processes(&app);
+    app.exit(0);
+    Ok(())
+}
+
+#[cfg(target_os = "android")]
+#[tauri::command]
+fn shutdown_application(_app: AppHandle, _reason: Option<String>) -> Result<(), String> {
+    Ok(())
 }
 
 /// Toggle between Tauri main window and Godot PathMode window.
@@ -1670,12 +1838,17 @@ pub fn run() {
             get_kb_path,
             set_kb_path,
             choose_kb_path,
+            pick_notemd_file,
+            save_notemd_file,
+            pick_notemd_folder,
             reset_kb_path,
             get_folders,
             get_available_targets,
             get_runtime_capabilities,
             get_sidecar_runtime_config,
             open_native_pathmode,
+            open_notemd,
+            shutdown_application,
             toggle_pathmode_window,
             set_user_language,
             get_user_language,
@@ -1731,6 +1904,11 @@ pub fn run() {
                                 Err(err) => {
                                     eprintln!("[Rust] Failed to persist reset KB path: {}", err);
                                 }
+                            }
+                        }
+                        "open_notemd" => {
+                            if let Err(err) = open_notemd(app_handle.clone()) {
+                                eprintln!("[Rust] Failed to open NoteMD window: {}", err);
                             }
                         }
                         "docs" => {
@@ -1878,7 +2056,13 @@ pub fn run() {
                                     "NOTE_CONNECTION_AUTH_TOKEN",
                                     godot_runtime.auth_token.clone(),
                                 )
-                                .args(["--path", godot_project.to_string_lossy().as_ref(), "--minimized"])
+                                .env("NOTE_CONNECTION_START_HIDDEN", "1")
+                                .args([
+                                    "--path",
+                                    godot_project.to_string_lossy().as_ref(),
+                                    "--nc-start-hidden",
+                                    "--minimized",
+                                ])
                                 .spawn()
                             {
                                 Ok(child) => {

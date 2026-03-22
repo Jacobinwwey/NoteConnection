@@ -197,40 +197,54 @@ Standalone page with dark-theme premium UI: operation cards, settings panel, SSE
 - [x] User review and approval
 
 ### Phase 2: Backend Core Modules (`src/notemd/`)
-- [ ] Create `types.ts` — Settings/interfaces
-- [ ] Create `constants.ts` — Default settings
-- [ ] Create `LlmProvider.ts` — Abstract LLM client (10 providers)
-- [ ] Create `PromptManager.ts` — Prompt template engine
-- [ ] Create `FileProcessor.ts` — Core file processing
-- [ ] Create `MermaidProcessor.ts` — Mermaid syntax fixing
-- [ ] Create `FormulaFixer.ts` — LaTeX formula cleanup
-- [ ] Create `Translator.ts` — Batch translation
-- [ ] Create `BatchProcessor.ts` — Concurrent batch operations
-- [ ] Create `DuplicateDetector.ts` — Duplicate detection
-- [ ] Create `ContentGenerator.ts` — Content generation from titles
-- [ ] Create `index.ts` — Barrel exports
+- [x] Create `types.ts` — Settings/interfaces
+- [x] Create `constants.ts` — Default settings
+- [x] Create `LlmProvider.ts` — Abstract LLM client (10 providers)
+- [x] Create `PromptManager.ts` — Prompt template engine
+- [x] Create `FileProcessor.ts` — Core file processing
+- [x] Create `MermaidProcessor.ts` — Mermaid syntax fixing
+- [x] Create `FormulaFixer.ts` — LaTeX formula cleanup
+- [x] Create `Translator.ts` — Batch translation
+- [x] Create `BatchProcessor.ts` — Concurrent batch operations
+- [x] Create `DuplicateDetector.ts` — Duplicate detection
+- [x] Create `ContentGenerator.ts` — Content generation from titles
+- [x] Create `index.ts` — Barrel exports
 
 ### Phase 3: HTTP API Layer
-- [ ] Add `/api/notemd/*` endpoints to `server.ts`
-- [ ] Wire SSE progress reporting
-- [ ] Add settings persistence via `notemd_config.json`
+- [x] Add `/api/notemd/*` endpoints to `server.ts`
+- [x] Wire SSE progress reporting
+- [x] Add settings persistence via `notemd_config.json`
 
 ### Phase 4: Frontend UI
-- [ ] Create `notemd.html` — Standalone NoteMD interface
-- [ ] Create `notemd.css` / `notemd.js` — Styling + logic
-- [ ] Integrate "NoteMD" button into `index.html`
+- [x] Create `notemd.html` — Standalone NoteMD interface
+- [x] Create `notemd.css` / `notemd.js` — Styling + logic
+- [x] Integrate "NoteMD" button into `index.html`
 
 ### Phase 5: Tauri & Godot Integration
-- [ ] Add "NoteMD" menu item in Tauri `build_menu()`
-- [ ] Add Tauri IPC command to open NoteMD window
-- [ ] Add WebSocket bridge message for Godot
-- [ ] Ensure cleanup on `CloseRequested`
+- [x] Add "NoteMD" menu item in Tauri `build_menu()`
+- [x] Add Tauri IPC command to open NoteMD window
+- [x] Add WebSocket bridge message for Godot
+- [x] Ensure cleanup on `CloseRequested`
 
 ### Phase 6: Testing & Documentation
-- [ ] Create unit tests
-- [ ] Update `Interface Document.md`, `README.md`, `TODO.md`
-- [ ] Update bilingual docs
-- [ ] Create `TEST_REPORT.md` entry
+- [x] Create unit tests
+- [x] Update `Interface Document.md`, `README.md`, `TODO.md`
+- [x] Update bilingual docs
+- [x] Create `TEST_REPORT.md` entry
+
+---
+
+## Best Improvement Opportunities (Prioritized)
+
+1. **P0 - End-to-end feasibility verification (Completed)**
+   - Executed NoteMD integration coverage (`src/notemd.server.integration.test.ts`) plus full regression (`54 suites`, `270 tests`) to validate runtime feasibility under current code.
+2. **P0 - Tauri build-script lock robustness (Completed)**
+   - Root cause of `cargo check` failure was a stale `src-tauri/target/debug/server.exe` process lock.
+   - Confirmed robust preflight path by using `scripts/cleanup-tauri-sidecars.js` and re-running `cargo check` / `scripts/run-tauri-tests.js`.
+3. **P1 - Bilingual operational documentation parity (Completed)**
+   - Updated `Interface Document.md`, `README.md`, `TODO.md`, and `TEST_REPORT.md` in both `docs/en` and `docs/zh`.
+4. **P1 - Remaining risk closure (Pending Ops Evidence)**
+   - FR-009 is still pending physical-device evidence collection and remains correctly blocked by strict verifier gates.
 
 ---
 
@@ -238,9 +252,11 @@ Standalone page with dark-theme premium UI: operation cards, settings panel, SSE
 
 ### Automated Tests
 ```bash
-node node_modules/jest/bin/jest.js src/notemd/NoteMD.test.ts --runInBand
-node node_modules/jest/bin/jest.js --runInBand          # regression: all 41+ suites pass
-node node_modules/typescript/bin/tsc --noEmit            # zero errors
+node node_modules/jest/bin/jest.js src/notemd.core.test.ts src/notemd.api.contract.test.ts src/notemd.server.integration.test.ts --runInBand
+node node_modules/jest/bin/jest.js --runInBand          # regression: all 54 suites pass
+node node_modules/typescript/bin/tsc --noEmit           # zero errors
+node scripts/run-tauri-tests.js                         # cleanup + rust contract suite
+cargo check --manifest-path src-tauri/Cargo.toml        # with sidecar cleanup preflight
 ```
 
 ### Manual Verification

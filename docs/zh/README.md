@@ -2,7 +2,7 @@
 ### Legacy Navigation Row (from shared bilingual table)
 |  **中文**   |   [核心特性](#key-features-zh)   | [硬件配置](#hardware-zh) |   [系统架构](#architecture-zh)   |  [快速开始](#quick-start-zh)   | [CLI](#cli-zh) | [更新日志](#changelog-zh)  |
 
-# 2026-03-04 v1.5.13
+# 2026-03-22 v1.5.58
 # NoteConnection: 层级知识图谱可视化系统
 
 <img width="606" height="309" alt="banner" src="https://github.com/user-attachments/assets/92e90de5-2b1a-4398-8e8b-6e142c92b6a2" />
@@ -54,6 +54,13 @@
 - **高容量并行处理**: 利用 Node.js `worker_threads` (最多 12 核) 分发计算密集的关键词匹配任务。
 - **模拟控制 (v0.9.0)**: 通过 **速度/阻尼滑块** 微调物理效果，或使用 **冻结布局** 开关停止模拟以进行稳定的手动排列。
 - **悬停锁定**: 悬停在节点上时暂时锁定其位置，以便稳定地检查连接。
+
+### 5. NoteMD AI 文档工作台（v1.5.58）
+
+- **NoteMD 模块已集成**：新增 `src/notemd/*` 独立能力层（LLM 适配、提示词管理、批处理/文件处理、翻译、Mermaid/公式修复、重复检测）。
+- **新增 API 面**：`/api/notemd/*` 覆盖设置、文件/文件夹处理、翻译、内容生成、概念提取、重复检测与任务取消。
+- **桌面与桥接接入**：新增 Tauri 菜单/IPC `open_notemd`，并在桥接链路支持 NoteMD 窗口打开。
+- **安全默认值**：NoteMD 文件操作启用 KB 根路径沙箱校验，长任务支持 SSE 进度回传与取消。
 
 <img width="2012" height="2024" alt="image" src="https://github.com/user-attachments/assets/bf6e7508-7e42-46cb-9a3e-b92be063ad3d" />
 
@@ -292,6 +299,7 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 ### v1.5.x 迁移运行时日志（统一归档）
 - 完整双语日志统一归档在 [`export.md`](export.md)。
 - 本 README 在更新日志中保留摘要指针，避免将日志前置堆叠在文档开头。
+- `2026-03-22 v1.5.58`：NoteMD 迁移收口（集成契约 + 全链路可行性验证 + 双语文档闭环）
 - `2026-03-03 v1.5.10`：方案 A P0 状态更新（Tauri Android 原生目录/构建/内容链路）
 - `2026-03-03 v1.5.5`：迁移状态复验
 - `2026-03-03 v1.5.3`：迁移闸门收口更新

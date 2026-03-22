@@ -299,6 +299,10 @@ const KNOWN_BRIDGE_MESSAGE_TYPES = new Set([
     'configure',
     'exitPathMode',
     'setWindowVisible',
+    'openNotemd',
+    'open_notemd',
+    'requestAppShutdown',
+    'request_app_shutdown',
 ]);
 
 const BRIDGE_OUTBOUND_MAX_QUEUE_MESSAGES = 256;
@@ -1957,6 +1961,18 @@ export class PathBridge {
             case 'setWindowVisible':
                 console.log(`[PathBridge] Set Godot window visible: ${isRecord(payload) ? payload.visible : undefined}`);
                 this.broadcast('setWindowVisible', payload);
+                break;
+
+            case 'openNotemd':
+            case 'open_notemd':
+                console.log('[PathBridge] Open NoteMD requested from bridge client');
+                this.broadcast('openNotemd', payload || {});
+                break;
+
+            case 'requestAppShutdown':
+            case 'request_app_shutdown':
+                console.log('[PathBridge] Full application shutdown requested from bridge client');
+                this.broadcast('requestAppShutdown', payload || {});
                 break;
 
             default:

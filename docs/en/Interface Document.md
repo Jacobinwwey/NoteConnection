@@ -48,6 +48,40 @@ Audit flow:
 - Reason: current Godot SVG handling can fail non-deterministically (text/layout/raster instability across devices).
 - Change-control rule: any future Godot renderer optimization must preserve PNG decode as the primary path (`pngBase64` required); missing PNG is a hard failure.
 
+## 0.2 NoteMD Module Interface Contracts (v1.5.58)
+
+NoteMD is integrated additively and does not replace existing graph/path APIs.
+
+### Backend module namespace (`src/notemd/`)
+
+- Core interfaces/constants: `types.ts`, `constants.ts`
+- LLM and prompts: `LlmProvider.ts`, `PromptManager.ts`
+- Processing primitives: `FileProcessor.ts`, `MermaidProcessor.ts`, `FormulaFixer.ts`
+- Batch/content utilities: `Translator.ts`, `BatchProcessor.ts`, `DuplicateDetector.ts`, `ContentGenerator.ts`
+- Facade service: `NotemdService.ts`, `index.ts`
+
+### HTTP API contract (`src/server.ts`)
+
+- `GET /api/notemd/settings`
+- `POST|PUT /api/notemd/settings`
+- `POST /api/notemd/process-file`
+- `POST /api/notemd/process-folder`
+- `POST /api/notemd/test-llm`
+- `POST /api/notemd/generate-content`
+- `POST /api/notemd/translate-file`
+- `POST /api/notemd/translate-folder`
+- `POST /api/notemd/fix-mermaid`
+- `POST /api/notemd/fix-formulas`
+- `POST /api/notemd/check-duplicates`
+- `POST /api/notemd/extract-concepts`
+- `POST /api/notemd/cancel`
+
+### Safety and lifecycle guarantees
+
+- KB-root jail validation is enforced for NoteMD file/folder operations.
+- Long-running operations support SSE progress and cancellation.
+- Tauri/Godot bridge contracts expose `open_notemd` without changing existing graph bridge semantics.
+
 ---
 
 ## 1. Runtime and Path Contracts
