@@ -8,49 +8,19 @@
 
 ---
 
-## 🚀 一键批处理流水线 (高级编排)
-
-原插件的一个关键特性是 **一键批处理流水线** (`extract-concepts-and-generate-titles` / `batch-generate-content-from-titles`)。该流水线实现了将非结构化笔记自动转化为全链接知识图谱的过程。
-
-### 流水线工作流
-
-1. **阶段一：处理 (注入链接与提取)**
-   - 扫描现有 Markdown 文件。
-   - LLM 读取内容并注入 `[[wiki-links]]`。
-   - 提取核心概念并创建 **空白概念笔记**（如：`[[机器学习.md]]`）。
-2. **阶段二：生成 (填补空白)**
-   - 扫描指定的输出文件夹，寻找新创建的空白概念笔记。
-   - 根据笔记标题（如“机器学习”）调用 LLM 生成详细内容（可选搭配网络搜索增强）。
-3. **阶段三：修复 (Mermaid 自动修复)**
-   - 若开启 `autoMermaidFixAfterGenerate`，系统将在生成后的文件上自动运行 Mermaid 语法修复模块，确保图表正确渲染。
-
-### 健壮性与安全机制
-
-为确保该流水线稳健地迁移至 NoteConnection，必须实现以下机制：
-
-- **预检配置 (Pre-flight Checks):** 在启动流水线前，系统必须校验：
-  - 存在活跃的 LLM 提供商及有效的 API 密钥。
-  - 源文件夹与目标文件夹路径有效且可读写。
-  - 基础提示词模板已定义。
-- **Token 消耗警告:** 该流水线具有递归性质，极其消耗 Token。系统必须显示强制警告对话框，预估处理文件数量，并要求用户在继续前确认潜在的 API 费用。
-- **全局互斥锁 (`isBusy` Mutex):** 防止流水线并发执行，避免引发文件锁定冲​​突或 API 限流耗尽。
-- **故障安全检查点 (Fail-Safe Checkpoints):** 如果阶段二因网络原因中断，系统必须记录确切失败的文件名，允许用户后续直接恢复批处理生成，而无需重新执行阶段一。
-
----
-
 ## 源插件分析
 
 ### 核心能力（15个模块，约6000行代码）
 
 | 模块 | 功能 |
 |---|---|
-| `llmUtils.ts` | 10种 LLM 提供商集成，含重试与错误处理 |
-| `fileUtils.ts` | 核心文件处理：Wiki链接注入、概念提取、重复检测 |
+| `llmUtils.ts` | 10种 LLM 提供商集成（OpenAI、Anthropic、Google、Mistral、DeepSeek、Ollama、LMStudio、OpenRouter、Azure、xAI），含重试与错误处理 |
+| `fileUtils.ts` | 核心文件处理：Wiki链接注入、概念提取、重复检测、基于标题的内容生成 |
 | `mermaidProcessor.ts` | 30+ 基于正则的 Mermaid 图表语法修复器 |
-| `promptUtils.ts` | 7种任务提示模板，支持变量替换 |
+| `promptUtils.ts` | 7种任务提示模板，支持变量替换和聚焦学习领域注入 |
 | `translate.ts` | 文件/文件夹翻译，支持分块和并发处理 |
 | `searchUtils.ts` | 网络搜索集成，用于研究驱动的内容生成 |
-| `utils.ts` | 并发原语（信号量）、内容分块 |
+| `utils.ts` | 并发原语（信号量）、内容分块、提供商/模型选择 |
 | `types.ts` / `constants.ts` | 设置接口和默认值 |
 | `formulaFixer.ts` | LaTeX 分隔符规范化 |
 | `extractOriginalText.ts` | 参考内容提取与映射 |
@@ -58,9 +28,10 @@
 ### Obsidian API 依赖
 
 插件深度依赖 Obsidian 内部 API：
-- **文件 I/O**：`app.vault.read()`、`app.vault.createFolder()` -> **迁移至**: `node:fs`
-- **HTTP**：`requestUrl()` -> **迁移至**: `fetch()`
-- **UI**：`Notice`、`WorkspaceLeaf` -> **迁移至**: SSE 事件流 + 自定义前端通知
+- **文件 I/O**：`app.vault.read()`、`app.vault.create()`、`app.vault.modify()`、`app.vault.createFolder()`
+- **HTTP**：`requestUrl()`（Obsidian 内建 HTTP 客户端）
+- **UI**：`Notice`、`ProgressModal`、`WorkspaceLeaf`
+- **类型系统**：`TFile`、`TFolder`、`App`
 
 ---
 
@@ -68,19 +39,21 @@
 
 ### 设计原则
 
-1. **完全解耦**：零 Obsidian 依赖。
-2. **纯增量**：不修改现有 NoteConnection 功能。NoteMD 是全新独立模块。
-3. **前后端分离**：业务逻辑在 `src/notemd/`（Node.js），UI 在 `src/frontend/notemd.html`。
-4. **跨平台访问**：通过 IPC/WebSocket，可从浏览器、Tauri 桌面和 Godot 窗口访问。
+1. **完全解耦**：零 Obsidian 依赖。所有 API 替换为 Node.js 等价物（`fs`、`fetch`）。
+2. **纯增量**：不修改或移除任何现有 NoteConnection 功能。NoteMD 是全新模块。
+3. **前后端分离**：业务逻辑在 `src/notemd/`（Node.js），UI 在 `src/frontend/notemd.html`（原生 JS）。
+4. **跨平台访问**：通过 HTTP API 和 IPC，可从浏览器、Tauri 桌面和 Godot 窗口访问。
 
 ### 系统架构
 
-```text
+```
 ┌─────────────────────────────────────────────────────┐
 │                   NoteConnection                     │
+│                                                      │
 │  ┌──────────────────┐    ┌────────────────────────┐ │
 │  │  现有图谱引擎     │    │  新增：NoteMD          │ │
 │  │  + 服务器         │    │  后端模块              │ │
+│  │  （不变）          │    │  (src/notemd/)         │ │
 │  └──────────────────┘    └────────┬───────────────┘ │
 │           │                        │                  │
 │  ┌────────┴────────────────────────┴──────────────┐ │
@@ -91,6 +64,17 @@
 │  ┌──────────┴──┐   ┌──────┴───────────────────┐   │
 │  │ index.html  │   │ notemd.html（新增）       │   │
 │  └─────────────┘   └──────────────────────────┘   │
+│             │              │                        │
+│  ┌──────────┴──────────────┴──────────────────┐   │
+│  │    Tauri 桌面壳 (src-tauri/)                │   │
+│  │    菜单: 文件 | 工具 | 帮助                  │   │
+│  │    窗口: 主窗口 | notemd（新增）             │   │
+│  └─────────────┬──────────────────────────────┘   │
+│                │                                    │
+│  ┌─────────────┴──────────────────────────────┐   │
+│  │    Godot 路径模式（WebSocket 桥接）          │   │
+│  │    按钮: "NoteMD"（新增）                    │   │
+│  └────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -98,43 +82,108 @@
 
 ## 实施方案
 
-### 后端：`src/notemd/`（13个新文件）
+### 后端：`src/notemd/`（12个新文件）
 
-- `types.ts` / `constants.ts` — 设置和默认值。
-- `LlmProvider.ts` — 统一 LLM 客户端（OpenAI, DeepSeek等）。
-- `PromptManager.ts` — 7种任务提示模板引擎。
-- `FileProcessor.ts` / `ContentGenerator.ts` — 核心生成逻辑。
-- `MermaidProcessor.ts` / `FormulaFixer.ts` — 语法修复层。
-- **`PipelineOrchestrator.ts`** *(新)* — 管理一键批处理流水线、预检配置及互斥锁。
-- `Translator.ts`, `BatchProcessor.ts`, `DuplicateDetector.ts` — 实用工具。
-- `index.ts` — 桶导出。
+| 文件 | 用途 |
+|---|---|
+| `types.ts` | `NotemdSettings`、`TaskKey`、`ProgressReporter`、错误类 |
+| `constants.ts` | `DEFAULT_SETTINGS`，含10个 LLM 提供商 |
+| `LlmProvider.ts` | 统一 LLM 客户端（OpenAI/Anthropic/Google/Mistral/DeepSeek/Ollama/LMStudio/OpenRouter/Azure/xAI） |
+| `PromptManager.ts` | 7种任务提示模板，支持变量替换 |
+| `FileProcessor.ts` | 核心：Wiki链接注入、概念提取、分块 LLM 处理 |
+| `MermaidProcessor.ts` | 30+ Mermaid 语法修复器（纯字符串） |
+| `FormulaFixer.ts` | LaTeX 分隔符规范化 |
+| `Translator.ts` | 文件/文件夹翻译（支持批量） |
+| `BatchProcessor.ts` | 基于信号量的并发批处理操作 |
+| `DuplicateDetector.ts` | 重复词/概念检测 |
+| `ContentGenerator.ts` | 基于标题的内容生成（可选网络研究） |
+| `index.ts` | 桶导出 |
 
-### HTTP API：`/api/notemd/*`（13个端点）
+### API 替换对照
+
+| Obsidian API | 替换方案 |
+|---|---|
+| `app.vault.read(file)` | `fs.promises.readFile(path, 'utf-8')` |
+| `app.vault.create(path, content)` | `fs.promises.writeFile(path, content)` |
+| `app.vault.modify(file, content)` | `fs.promises.writeFile(path, content)` |
+| `app.vault.createFolder(path)` | `fs.promises.mkdir(path, { recursive: true })` |
+| `new Notice(msg)` | SSE 事件 / HTTP 响应消息 |
+| `requestUrl(options)` | `fetch()` / `https.request()` |
+| `TFile` / `TFolder` | `string` 路径 |
+
+### HTTP API：`/api/notemd/*`（12个端点）
 
 | 端点 | 方法 | 用途 |
 |---|---|---|
-| `/settings` | GET/PUT | 读写 NoteMD 配置 |
-| `/process-file` | POST | 处理单个文件（SSE） |
-| `/process-folder` | POST | 批量处理文件夹（SSE） |
-| `/generate-content` | POST | 基于标题生成内容 |
-| `/fix-mermaid` / `/fix-formulas` | POST | 语法修复 |
-| `/check-duplicates` | POST | 重复检测 |
-| `/cancel` | POST | 取消操作 |
-| `/pipeline/one-click` | POST | **运行完整的一键批处理流水线** |
-| `/pipeline/preflight` | POST | **执行配置连通性及合法性预检** |
+| `/api/notemd/settings` | GET/PUT | 读写 NoteMD 配置 |
+| `/api/notemd/process-file` | POST | 处理单个文件（SSE） |
+| `/api/notemd/process-folder` | POST | 批量处理文件夹（SSE） |
+| `/api/notemd/test-llm` | POST | 测试 LLM 连接 |
+| `/api/notemd/generate-content` | POST | 基于标题生成内容 |
+| `/api/notemd/translate-file` | POST | 翻译单个文件 |
+| `/api/notemd/translate-folder` | POST | 批量翻译 |
+| `/api/notemd/fix-mermaid` | POST | 修复 Mermaid 语法 |
+| `/api/notemd/fix-formulas` | POST | 修复公式格式 |
+| `/api/notemd/check-duplicates` | POST | 重复检测 |
+| `/api/notemd/extract-concepts` | POST | 概念提取 |
+| `/api/notemd/cancel` | POST | 取消运行中的操作 |
+
+### 一键批处理流水线 (One-Click Batch Pipeline)
+
+原 Obsidian 插件具有高效的“一键”流水线（`extract-concepts-and-generate-titles` 命令），我们将作为专属按钮在 NoteMD UI 中保留此功能。
+
+#### 流水线流程
+1. **阶段 1：处理文件/文件夹（`extract-concepts`）**
+   - LLM 扫描 Markdown 内容，识别核心概念，并注入 `[[wiki-links]]`。
+   - 系统为每个新的 wiki-link 在概念笔记（Concept Note）文件夹中自动创建空白的 Markdown 文件。
+2. **阶段 2：生成内容（`batch-generate-content-from-titles`）**
+   - 系统扫描概念笔记文件夹中的空白文件。
+   - 对于每个空白文件，LLM 仅基于文件名（即概念标题）生成完整的文章内容，并可配置是否使用网络搜索作为辅助上下文。
+3. **阶段 3：清理格式（`fix-mermaid`）**
+   - 如果开启了 `autoMermaidFixAfterGenerate` 设置，系统将自动对所有新生成的文件运行基于正则的 Mermaid 语法修复器，以纠正 LLM 可能产生的格式错误。
+
+#### 鲁棒性与警告系统
+在触发此一键流水线之前，UI 必须执行飞行前检查（Pre-flight check）：
+- **配置检查**：确保已选择有效的 LLM 提供商，并且已配置 `conceptNoteFolder` 和 `processedFileFolder` 路径。
+- **Token 消耗警告**：显示醒目的模态警告框：*“此操作将处理整个文件夹，提取概念，并生成新文章。这可能会消耗大量的 LLM Token 并需要较长时间。您确定要继续吗？”*
+- **可取消性**：流水线必须支持在任何阶段完全中止，通过向下传递给批处理工具的 `AbortController` 实现。
 
 ### 前端：`notemd.html`
 
-独立高级深色 UI 界面：
-- **快捷操作栏**: 醒目的"一键流水线"按钮。
-- **独立操作卡片**: 手动执行单个任务。
-- **设置面板**: API 密钥及提示词微调。
-- **进度视图**: 细粒度 SSE 事件流展现批处理进度。
+独立页面，采用深色主题高级 UI：操作卡片、设置面板、SSE 进度显示、文件浏览器。使用 **NoteMD** 品牌名称和 GitHub 链接。
 
-### 系统集成
+### Tauri 集成
 
-- **Tauri**: 新增"工具"菜单 -> "NoteMD"（弹出独立 WebView 窗口）。
-- **Godot**: WebSocket 桥接消息 `open_notemd` 按需触发 UI。
+1. **菜单**：新增"工具"子菜单，含"NoteMD..."选项（Ctrl+D）
+2. **窗口**：新 Tauri 窗口（`notemd`）指向 `notemd.html`
+3. **IPC**：`open_notemd` 命令
+4. **清理**：现有 `on_window_event(CloseRequested)` 已处理 — NoteMD 窗口随主窗口自动关闭
+
+### Godot 集成
+
+1. WebSocket 桥接消息：`open_notemd`
+2. 前端 `#source-control` 中的"NoteMD"按钮
+
+### 窗口生命周期
+
+- NoteMD 窗口是辅助 Tauri WebView
+- 主窗口关闭 → `shutdown_child_processes()` → 所有窗口销毁
+- NoteMD 窗口可独立关闭，不影响主应用
+- 不可能产生孤儿进程
+
+---
+
+## 可行性评估
+
+| 方面 | 评估 | 风险 |
+|---|---|---|
+| Obsidian API 替换 | 所有 API 都有直接的 Node.js 等价物 | **低** |
+| LLM 提供商集成 | 纯 HTTP 调用，无平台依赖 | **低** |
+| Mermaid/公式修复 | 纯字符串操作，零依赖 | **无** |
+| Tauri 窗口管理 | 内建 `WebviewWindowBuilder` API | **低** |
+| Godot 桥接扩展 | 现有 WebSocket 协议支持新消息类型 | **低** |
+| 性能（批处理） | 如需可使用 Node.js `worker_threads` | **低** |
+| 安全性（API 密钥） | 基于文件配置，不在 IPC 中暴露 | **中** |
 
 ---
 
@@ -142,32 +191,59 @@
 
 ### 阶段一：规划与分析
 - [x] 分析 `obsidian-NoteMD_new` 插件代码
-- [x] 分析 NoteConnection 架构并映射依赖
-- [x] 撰写一键批处理流水线详尽分析与方案
+- [x] 分析 NoteConnection 项目架构
+- [x] 识别需要替换的 Obsidian API 依赖
+- [x] 创建实施方案和双语 docs/extra.md
 - [x] 用户审核批准
 
 ### 阶段二：后端核心模块（`src/notemd/`）
-- [ ] 创建 `types.ts` & `constants.ts`
-- [ ] 创建 `LlmProvider.ts` & `PromptManager.ts`
-- [ ] 创建 `FileProcessor.ts` & `ContentGenerator.ts`
-- [ ] 创建 `MermaidProcessor.ts` & `FormulaFixer.ts`
-- [ ] 创建 `PipelineOrchestrator.ts` (一键流水线核心)
-- [ ] 创建 `Translator.ts`, `DuplicateDetector.ts`, `BatchProcessor.ts`
+- [ ] 创建 `types.ts` — 设置/接口
+- [ ] 创建 `constants.ts` — 默认设置
+- [ ] 创建 `LlmProvider.ts` — 抽象 LLM 客户端（10个提供商）
+- [ ] 创建 `PromptManager.ts` — 提示模板引擎
+- [ ] 创建 `FileProcessor.ts` — 核心文件处理
+- [ ] 创建 `MermaidProcessor.ts` — Mermaid 语法修复
+- [ ] 创建 `FormulaFixer.ts` — LaTeX 公式清理
+- [ ] 创建 `Translator.ts` — 批量翻译
+- [ ] 创建 `BatchProcessor.ts` — 并发批处理操作
+- [ ] 创建 `DuplicateDetector.ts` — 重复检测
+- [ ] 创建 `ContentGenerator.ts` — 基于标题的内容生成
+- [ ] 创建 `index.ts` — 桶导出
 
 ### 阶段三：HTTP API 层
-- [ ] 添加 `/api/notemd/*` 端点
-- [ ] 实现稳健的 SSE 事件流进度响应
-- [ ] 增加 JSON 设置持久化
+- [ ] 在 `server.ts` 中添加 `/api/notemd/*` 端点
+- [ ] 接入 SSE 进度上报
+- [ ] 通过 `notemd_config.json` 添加设置持久化
 
 ### 阶段四：前端 UI
-- [ ] 搭建 `notemd.html` (高级深色组件)
-- [ ] 实现"一键流水线" Token 消耗警告及预校验机制
-- [ ] 与 `index.html` 的导航按钮集成
+- [ ] 创建 `notemd.html` — 独立 NoteMD 界面
+- [ ] 创建 `notemd.css` / `notemd.js` — 样式 + 逻辑
+- [ ] 在 `index.html` 中集成"NoteMD"按钮
 
-### 阶段五：系统集成
-- [ ] Tauri 菜单栏更新及 IPC 调用
-- [ ] PathBridge WebSocket 协议扩展
+### 阶段五：Tauri 与 Godot 集成
+- [ ] 在 Tauri `build_menu()` 中添加"NoteMD"菜单项
+- [ ] 添加 Tauri IPC 命令以打开 NoteMD 窗口
+- [ ] 添加 Godot WebSocket 桥接消息
+- [ ] 确保 `CloseRequested` 时的清理
 
 ### 阶段六：测试与文档
-- [ ] 针对一键批处理流水线编写集成测试
-- [ ] 更新 README 与 TODO，同步开发进度
+- [ ] 创建单元测试
+- [ ] 更新 `Interface Document.md`、`README.md`、`TODO.md`
+- [ ] 更新双语文档
+- [ ] 创建 `TEST_REPORT.md` 条目
+
+---
+
+## 验证计划
+
+### 自动化测试
+```bash
+node node_modules/jest/bin/jest.js src/notemd/NoteMD.test.ts --runInBand
+node node_modules/jest/bin/jest.js --runInBand          # 回归：所有 41+ 套件通过
+node node_modules/typescript/bin/tsc --noEmit            # 零错误
+```
+
+### 手动验证
+1. 浏览器：`http://localhost:3000/notemd.html` 正确加载
+2. Tauri：工具菜单中"NoteMD"打开窗口
+3. 窗口生命周期：关闭时无孤儿窗口
