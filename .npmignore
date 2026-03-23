@@ -1,0 +1,19 @@
+# Exclude oversized generated artifacts that are not required for runtime usage.
+dist/.tsbuildinfo
+dist/frontend/
+dist/backend/
+dist/core/
+dist/index.js
+dist/server.js
+
+# Exclude probe/generated mirrors and heavyweight sample graph payloads.
+dist/src/frontend.__generated2/
+dist/src/frontend/frontend.__probe/
+dist/src/frontend/data.js
+dist/src/frontend/graph_data.json
+dist/src/frontend/data_*.js
+dist/src/frontend/graph_data_*.json
+
+# Exclude compiled test bundles from published package.
+dist/src/**/*.test.js
+
