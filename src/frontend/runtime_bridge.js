@@ -237,7 +237,7 @@
         return window.__TAURI__.core.invoke;
     }
 
-    function invokeTauriWithTimeout(invoke, command, args, timeoutMs) {
+    function invokeTauriWithTimeout(invokeCall, commandLabel, timeoutMs) {
         return new Promise((resolve, reject) => {
             let settled = false;
             const timer = setTimeout(() => {
@@ -245,10 +245,10 @@
                     return;
                 }
                 settled = true;
-                reject(new Error(`Tauri invoke timed out (${command}).`));
+                reject(new Error(`Tauri invoke timed out (${commandLabel}).`));
             }, timeoutMs);
 
-            Promise.resolve(invoke(command, args))
+            Promise.resolve(invokeCall())
                 .then((result) => {
                     if (settled) {
                         return;
@@ -281,9 +281,8 @@
 
             try {
                 const caps = await invokeTauriWithTimeout(
-                    invoke,
+                    () => invoke('get_runtime_capabilities'),
                     'get_runtime_capabilities',
-                    undefined,
                     TAURI_RUNTIME_HYDRATE_TIMEOUT_MS
                 );
                 if (caps && typeof caps === 'object') {
@@ -296,9 +295,8 @@
                 const runtimeCaps = window.__NC_RUNTIME_CAPS || {};
                 if (runtimeCaps.supports_sidecar) {
                     const runtimeConfig = await invokeTauriWithTimeout(
-                        invoke,
+                        () => invoke('get_sidecar_runtime_config'),
                         'get_sidecar_runtime_config',
-                        undefined,
                         TAURI_RUNTIME_HYDRATE_TIMEOUT_MS
                     );
                     setRuntimeConfig(runtimeConfig);
