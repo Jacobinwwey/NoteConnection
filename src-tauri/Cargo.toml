@@ -33,3 +33,12 @@ rfd = "0.17.2"
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.21.1"
 ndk-context = "0.1.1"
+
+[profile.release]
+opt-level = 0
+codegen-units = 256
+debug = 0
+lto = false
+panic = "abort"
+incremental = false
+strip = "debuginfo"
