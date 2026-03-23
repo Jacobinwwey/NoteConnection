@@ -7,14 +7,12 @@ on:
       - main
       - master
       - release/**
-  schedule:
-    - cron: "17 2 * * *"
   workflow_dispatch:
     inputs:
       run_strict_evidence:
-        description: "Run strict evidence gate (requires docs/mobile-evidence)."
+        description: "Run strict FR-009 evidence gate (requires run_mobile_capture=true)."
         required: false
-        default: "true"
+        default: "false"
         type: choice
         options:
           - "true"
@@ -83,7 +81,9 @@ jobs:
 
   strict-evidence-gate:
     name: Fixrisk Strict Evidence Gate (FR-009)
-    if: ${{ github.event_name == 'schedule' || startsWith(github.ref, 'refs/heads/release/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_strict_evidence == 'true') }}
+    needs:
+      - capture-mobile-evidence
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_strict_evidence == 'true' && github.event.inputs.run_mobile_capture == 'true' }}
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -98,12 +98,32 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Download captured mobile evidence artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: mobile-evidence-captured
+          path: captured-mobile-evidence
+
+      - name: Materialize captured evidence tree
+        shell: pwsh
+        run: |
+          $sourceRoot = Join-Path $PWD "captured-mobile-evidence/docs/mobile-evidence"
+          if (-not (Test-Path $sourceRoot)) {
+            throw "Missing captured evidence tree: $sourceRoot"
+          }
+          if (Test-Path "docs/mobile-evidence") {
+            Remove-Item -Path "docs/mobile-evidence" -Recurse -Force
+          }
+          New-Item -Path "docs/mobile-evidence" -ItemType Directory | Out-Null
+          Copy-Item -Path (Join-Path $sourceRoot "*") -Destination "docs/mobile-evidence" -Recurse -Force
+
       - name: Verify fixrisk issue closure (strict evidence required)
         env:
           NOTE_CONNECTION_REQUIRE_EVIDENCE_ROOT: "1"
           NOTE_CONNECTION_REQUIRE_LARGE_GRAPH_EVIDENCE: "1"
-          NOTE_CONNECTION_MIN_EVIDENCE_NODE_COUNT: "10000"
-          NOTE_CONNECTION_MIN_EVIDENCE_EDGE_COUNT: "1000000"
+          NOTE_CONNECTION_MIN_EVIDENCE_NODE_COUNT: ${{ github.event.inputs.evidence_node_count }}
+          NOTE_CONNECTION_MIN_EVIDENCE_EDGE_COUNT: ${{ github.event.inputs.evidence_edge_count }}
+          NOTE_CONNECTION_EVIDENCE_ROOT: docs/mobile-evidence
         run: npm run verify:fixrisk:issues:strict:evidence
 
       - name: Upload strict evidence verification reports

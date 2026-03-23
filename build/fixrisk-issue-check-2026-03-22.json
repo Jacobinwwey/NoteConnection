@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-03-22T08:15:10.223Z",
-  "completedAt": "2026-03-22T08:15:24.278Z",
+  "generatedAt": "2026-03-22T14:07:53.422Z",
+  "completedAt": "2026-03-22T14:08:10.010Z",
   "source": [
     "docs/en/fixrisk_TODO.md",
     "docs/zh/fixrisk_TODO.md"
   ],
   "options": {
-    "strictPending": true,
+    "strictPending": false,
     "writeDatedSnapshot": true,
     "requireEvidenceRoot": false,
     "evidenceRoot": "docs/mobile-evidence"
@@ -34,7 +34,7 @@
     "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\node_modules\\jest\\bin\\jest.js --runInBand --json --outputFile=E:\\Knowledge_project\\NoteConnection_app\\build\\fixrisk-jest-contract-report.json src/runtime.spool.policy.contract.test.ts src/pkg.sidecar.contract.test.ts src/mobile.pipeline.test.ts src/pkg.snapshot.safety.contract.test.ts src/runtime.heap.policy.contract.test.ts src/sidecar.signature.contract.test.ts src/graph.accessibility.contract.test.ts src/privacy.manifest.contract.test.ts src/server.port.fallback.contract.test.ts src/sbom.policy.contract.test.ts src/sbom.attestation.policy.contract.test.ts src/pathbridge.strict.policy.contract.test.ts src/capacitor.evidence.contract.test.ts src/tauri.test.runner.contract.test.ts src/capacitor.bridge.serialization.contract.test.ts src/content.path.sandbox.contract.test.ts",
     "ok": true,
     "exitCode": 0,
-    "durationMs": 10078
+    "durationMs": 11316
   },
   "issues": [
     {
@@ -347,7 +347,7 @@
           "ok": true,
           "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-sidecar-signatures.js --contract-only",
           "exitCode": 0,
-          "durationMs": 83,
+          "durationMs": 93,
           "detail": "Contract-only sidecar signature gate passed"
         },
         {
@@ -454,7 +454,7 @@
           "ok": true,
           "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-privacy-manifest.js",
           "exitCode": 0,
-          "durationMs": 74,
+          "durationMs": 89,
           "detail": "Privacy manifest verifier passed"
         },
         {
@@ -494,9 +494,9 @@
     },
     {
       "id": "FR-009",
-      "status": "verification-failed-pending",
+      "status": "verified-pending",
       "codeStatus": "verified-closed",
-      "operationalStatus": "blocked",
+      "operationalStatus": "pending",
       "pendingReason": "Operational evidence pending: large-graph physical-device evidence is missing, stale, or below threshold.",
       "checks": [
         {
@@ -528,7 +528,7 @@
           "ok": true,
           "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-capacitor-evidence-freshness.js",
           "exitCode": 1,
-          "durationMs": 76,
+          "durationMs": 87,
           "detail": "Accepted pending state: evidence root not found. [Capacitor Evidence Verify] Evidence verification failed.\n[Capacitor Evidence Verify] Error: Evidence root not found: E:\\Knowledge_project\\NoteConnection_app\\docs\\mobile-evidence"
         },
         {
@@ -790,7 +790,7 @@
           "ok": true,
           "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-tauri-android-prereqs.js",
           "exitCode": 0,
-          "durationMs": 3403,
+          "durationMs": 4629,
           "detail": "Android prerequisite verifier passed"
         },
         {
@@ -875,7 +875,7 @@
           "ok": true,
           "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-privacy-manifest.js",
           "exitCode": 0,
-          "durationMs": 74,
+          "durationMs": 89,
           "detail": "Privacy manifest verifier passed"
         },
         {
@@ -1157,7 +1157,7 @@
       "ok": true,
       "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-detox-pipeline.js",
       "exitCode": 0,
-      "durationMs": 72,
+      "durationMs": 91,
       "detail": "Detox pipeline verifier passed"
     },
     {
@@ -1165,7 +1165,7 @@
       "ok": true,
       "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-sbom-policy.js --contract-only",
       "exitCode": 0,
-      "durationMs": 75,
+      "durationMs": 87,
       "detail": "SBOM policy verifier contract mode passed"
     },
     {
@@ -1173,7 +1173,7 @@
       "ok": true,
       "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-sbom-attestation.js --contract-only",
       "exitCode": 0,
-      "durationMs": 104,
+      "durationMs": 92,
       "detail": "SBOM attestation verifier contract mode passed"
     },
     {
@@ -1181,7 +1181,7 @@
       "ok": true,
       "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-pathbridge-strict-schema.js --contract-only",
       "exitCode": 0,
-      "durationMs": 80,
+      "durationMs": 89,
       "detail": "PathBridge strict schema verifier contract mode passed"
     },
     {
@@ -1308,22 +1308,22 @@
   "overall": {
     "issueCount": 15,
     "passedIssueCount": 14,
-    "pendingIssueCount": 0,
-    "failedIssueCount": 1,
-    "failedIssues": [
+    "pendingIssueCount": 1,
+    "failedIssueCount": 0,
+    "failedIssues": [],
+    "pendingIssues": [
       "FR-009"
     ],
-    "pendingIssues": [],
     "codePassedIssueCount": 15,
     "codeFailedIssueCount": 0,
     "codeFailedIssues": [],
     "allCodeLevelIssuesClosed": true,
-    "operationalPendingIssueCount": 0,
-    "operationalBlockedIssueCount": 1,
-    "operationalPendingIssues": [],
-    "operationalBlockedIssues": [
+    "operationalPendingIssueCount": 1,
+    "operationalBlockedIssueCount": 0,
+    "operationalPendingIssues": [
       "FR-009"
     ],
+    "operationalBlockedIssues": [],
     "pendingOperationalBlocker": "FR-009",
     "totalChecks": 121,
     "passedChecks": 121

@@ -3,6 +3,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const JAVAC_EXECUTABLE = process.platform === 'win32' ? 'javac.exe' : 'javac';
+const MIN_SUPPORTED_JAVA_MAJOR = 21;
 
 function existsDir(dirPath) {
   try {
@@ -101,6 +102,10 @@ function parseJavaMajorVersion(versionString) {
   return first;
 }
 
+function isSupportedJavaMajor(major) {
+  return Number.isFinite(major) && major >= MIN_SUPPORTED_JAVA_MAJOR;
+}
+
 function detectJavacVersion() {
   return detectJavacVersionByCommand('javac', {
     shell: process.platform === 'win32',
@@ -190,9 +195,11 @@ function listChildDirectoriesIfExists(parentDir) {
 
 function collectJavaHomeCandidates() {
   const envCandidates = [
+    process.env.NOTE_CONNECTION_JAVA_HOME,
     process.env.NOTE_CONNECTION_JAVA21_HOME,
     process.env.JAVA_HOME_21_X64,
     process.env.JAVA_HOME_21,
+    process.env.JDK_HOME,
     process.env.JDK21_HOME,
     process.env.JAVA_HOME
   ];
@@ -235,7 +242,7 @@ function resolveJavacPath(javaHome) {
   return fs.existsSync(javacPath) ? javacPath : '';
 }
 
-function detectAvailableJava21Toolchain() {
+function detectAvailableJavaToolchain() {
   const candidates = collectJavaHomeCandidates();
   const inspected = [];
 
@@ -264,12 +271,13 @@ function detectAvailableJava21Toolchain() {
       continue;
     }
 
-    if (detected.major === 21) {
+    if (isSupportedJavaMajor(detected.major)) {
       return {
         found: true,
         javaHome,
         javacPath,
         version: detected.version,
+        major: detected.major,
         inspected
       };
     }
@@ -277,7 +285,7 @@ function detectAvailableJava21Toolchain() {
     inspected.push({
       javaHome,
       ok: false,
-      reason: `Detected javac ${detected.version} (major ${detected.major}), expected major 21.`
+      reason: `Detected javac ${detected.version} (major ${detected.major}), expected major >= ${MIN_SUPPORTED_JAVA_MAJOR}.`
     });
   }
 
@@ -286,6 +294,7 @@ function detectAvailableJava21Toolchain() {
     javaHome: '',
     javacPath: '',
     version: '',
+    major: 0,
     inspected
   };
 }
@@ -323,7 +332,7 @@ function buildEnvWithJavaHome(baseEnv, javaHome) {
   };
 }
 
-function probeGradleJava21Toolchain(repoRoot, env) {
+function probeGradleJavaToolchain(repoRoot, env) {
   const androidRoot = path.join(repoRoot, 'android');
   const gradlewName = process.platform === 'win32' ? 'gradlew.bat' : 'gradlew';
   const gradlewPath = path.join(androidRoot, gradlewName);
@@ -359,55 +368,68 @@ function probeGradleJava21Toolchain(repoRoot, env) {
     return {
       checked: false,
       available: false,
+      detectedMajors: [],
       reason: output.trim() || `gradle javaToolchains probe exited with code ${result.status}`
     };
   }
 
+  const detectedMajors = Array.from(
+    new Set(
+      [...output.matchAll(/Language Version:\s*([0-9]+)\b/gi)]
+        .map((match) => Number.parseInt(match[1], 10))
+        .filter((major) => Number.isFinite(major) && major > 0)
+        .sort((left, right) => left - right)
+    )
+  );
+
+  const available = detectedMajors.some((major) => isSupportedJavaMajor(major));
+
   return {
     checked: true,
-    available: /Language Version:\s*21\b/i.test(output),
+    available,
+    detectedMajors,
     reason: ''
   };
 }
 
 const repoRoot = path.resolve(__dirname, '..');
 const javac = detectJavacVersion();
-const java21Toolchain = detectAvailableJava21Toolchain();
-const defaultProbe = probeGradleJava21Toolchain(repoRoot, process.env);
-const java21Probe = java21Toolchain.found
-  ? probeGradleJava21Toolchain(repoRoot, buildEnvWithJavaHome(process.env, java21Toolchain.javaHome))
+const javaToolchain = detectAvailableJavaToolchain();
+const defaultProbe = probeGradleJavaToolchain(repoRoot, process.env);
+const preferredProbe = javaToolchain.found
+  ? probeGradleJavaToolchain(repoRoot, buildEnvWithJavaHome(process.env, javaToolchain.javaHome))
   : { checked: false, available: false, reason: '' };
 
-if (!javac.available && !java21Toolchain.found) {
+if (!javac.available && !javaToolchain.found) {
   fail([
     '[Android Env] Java compiler (javac) not available on PATH.',
     `[Android Env] Details: ${javac.message || 'No javac binary detected.'}`,
-    '[Android Env] Java 21 toolchain discovery also failed.',
-    '[Android Env] Install JDK 21 and configure one of NOTE_CONNECTION_JAVA21_HOME/JAVA_HOME_21_X64/JAVA_HOME.'
+    `[Android Env] Java ${MIN_SUPPORTED_JAVA_MAJOR}+ toolchain discovery also failed.`,
+    `[Android Env] Install JDK ${MIN_SUPPORTED_JAVA_MAJOR}+ and configure one of NOTE_CONNECTION_JAVA_HOME/NOTE_CONNECTION_JAVA21_HOME/JAVA_HOME.`
   ]);
 }
 
-if (javac.available && javac.major < 21 && !java21Toolchain.found) {
+if (javac.available && !isSupportedJavaMajor(javac.major) && !javaToolchain.found) {
   fail([
     `[Android Env] Unsupported JDK detected: ${javac.version} (major ${javac.major}).`,
-    '[Android Env] Tauri Android and Gradle toolchain in this project require Java 21.',
-    '[Android Env] Install JDK 21 and point JAVA_HOME/NOTE_CONNECTION_JAVA21_HOME to that installation before retrying.'
+    `[Android Env] Tauri Android and Gradle toolchain in this project require Java ${MIN_SUPPORTED_JAVA_MAJOR} or newer.`,
+    `[Android Env] Install JDK ${MIN_SUPPORTED_JAVA_MAJOR}+ and point JAVA_HOME/NOTE_CONNECTION_JAVA_HOME to that installation before retrying.`
   ]);
 }
 
-const gradleJava21 = java21Probe.available ? java21Probe : defaultProbe;
+const gradleToolchain = preferredProbe.available ? preferredProbe : defaultProbe;
 
-const activeJdkIs21 = javac.available && javac.major === 21;
-const discoveredJdk21Available = java21Toolchain.found;
-if (!activeJdkIs21 && !discoveredJdk21Available && !gradleJava21.available) {
-  const details = gradleJava21.checked
-    ? 'Gradle wrapper probe did not find a Java 21 toolchain.'
-    : `Gradle wrapper probe failed: ${gradleJava21.reason}`;
+const activeJdkSupported = javac.available && isSupportedJavaMajor(javac.major);
+const discoveredJdkAvailable = javaToolchain.found;
+if (!activeJdkSupported && !discoveredJdkAvailable && !gradleToolchain.available) {
+  const details = gradleToolchain.checked
+    ? `Gradle wrapper probe did not find a Java ${MIN_SUPPORTED_JAVA_MAJOR}+ toolchain. Detected toolchains: ${gradleToolchain.detectedMajors && gradleToolchain.detectedMajors.length > 0 ? gradleToolchain.detectedMajors.join(', ') : 'none'}.`
+    : `Gradle wrapper probe failed: ${gradleToolchain.reason}`;
 
   fail([
-    `[Android Env] Active javac version is ${javac.available ? javac.version : 'unavailable'} (major ${javac.major || 0}), but this project needs Java 21 toolchain availability.`,
+    `[Android Env] Active javac version is ${javac.available ? javac.version : 'unavailable'} (major ${javac.major || 0}), but this project needs Java ${MIN_SUPPORTED_JAVA_MAJOR}+ toolchain availability.`,
     `[Android Env] ${details}`,
-    '[Android Env] Install JDK 21 and set JAVA_HOME (or NOTE_CONNECTION_JAVA21_HOME) before running Android builds.'
+    `[Android Env] Install JDK ${MIN_SUPPORTED_JAVA_MAJOR}+ and set JAVA_HOME (or NOTE_CONNECTION_JAVA_HOME) before running Android builds.`
   ]);
 }
 
@@ -470,10 +492,10 @@ console.log(`[Android Env] SDK root: ${sdkRoot}`);
 console.log(`[Android Env] sdkmanager: ${sdkManager}`);
 console.log(`[Android Env] NDK: ${ndkPath}`);
 console.log(`[Android Env] Active JDK: ${javac.available ? `${javac.version} (major ${javac.major})` : 'not-detected'}`);
-if (java21Toolchain.found) {
+if (javaToolchain.found) {
   console.log(
-    `[Android Env] Java 21 candidate: ${java21Toolchain.version} @ ${java21Toolchain.javaHome}`
+    `[Android Env] Java ${MIN_SUPPORTED_JAVA_MAJOR}+ candidate: ${javaToolchain.version} @ ${javaToolchain.javaHome}`
   );
 }
-console.log(`[Android Env] Java 21 Toolchain: ${activeJdkIs21 || discoveredJdk21Available || gradleJava21.available ? 'available' : 'not-detected'}`);
+console.log(`[Android Env] Java ${MIN_SUPPORTED_JAVA_MAJOR}+ Toolchain: ${activeJdkSupported || discoveredJdkAvailable || gradleToolchain.available ? 'available' : 'not-detected'}`);
 console.log('[Android Env] Prerequisite check passed.');

@@ -18,14 +18,14 @@ This document tracks only real, currently verifiable risks. Items are marked `Cl
 | FR-008 | Privacy manifest compliance gate missing | Critical | Closed | iOS privacy manifest active. |
 | FR-009 | Physical-device evidence not explicitly tied to large-graph | High | Pending (Ops Evidence) | Strict verifier controls enforce constraints and block closure until fresh physical-device evidence exists under `docs/mobile-evidence`. |
 | FR-010 | Node 20 deprecation in GitHub Actions | Medium | Closed | Updated to Node 24. |
-| FR-011 | Android/Tauri toolchain feasibility drift | High | Closed | Java 21 enforcement. |
+| FR-011 | Android/Tauri toolchain feasibility drift | High | Closed | Java 21+ enforcement. |
 | FR-012 | App Store rejection risk (missing tracking usage description) | High | Closed | `ios/App/Info.plist` now includes `NSUserTrackingUsageDescription`; verifier + contract enforce it (`scripts/verify-privacy-manifest.js`, `src/privacy.manifest.contract.test.ts`). |
 | FR-013 | Unbound localhost server port fallback | Medium | Closed | Ephemeral fallback requires explicit opt-in (`NOTE_CONNECTION_ALLOW_EPHEMERAL_PORT_FALLBACK=1`) and is contract-tested (`src/server.ts`, `src/server.port.fallback.contract.test.ts`). |
 | FR-014 | Capacitor IPC bridge JSON serialization threshold risk with large graph payloads | Critical | Closed | `src/frontend/storage_provider.js` now enforces chunked/byte-bounded graph serialization (`CAPACITOR_BRIDGE_MAX_CHUNK_BYTES`, `CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES`) with contract coverage in `src/capacitor.bridge.serialization.contract.test.ts` and verifier wiring in `scripts/verify-fixrisk-issues.js`. |
 | FR-015 | pkg snapshot path escape vulnerability when resolving absolute paths from WebView | High | Closed | `src/server.ts` + `src/backend/controller.ts` now enforce canonical root-jail + pkg snapshot guards for content and KB-root updates, contract-tested via `src/content.path.sandbox.contract.test.ts` and verifier checks in `scripts/verify-fixrisk-issues.js`. |
 
 ## Next Steps
-- Run the strict evidence workflow on release branches (`.github/workflows/fixrisk-operational-readiness.yml`) to enforce FR-009 closure with artifact retention.
+- Run workflow dispatch in `.github/workflows/fixrisk-operational-readiness.yml` with `run_mobile_capture=true` and `run_strict_evidence=true` to enforce FR-009 closure with artifact retention.
 - Use workflow dispatch with `run_mobile_capture=true` on a self-hosted `windows/x64/android` runner to capture fresh `docs/mobile-evidence` automatically.
 - Continue deferred hardening items outside fixrisk critical scope.
 - Local Tauri verification tip: run `node scripts/cleanup-tauri-sidecars.js` before `cargo check` to avoid Windows file-lock `PermissionDenied` on copied sidecars.
@@ -126,4 +126,4 @@ App Store metadata is comprehensively covered. `ios/App/Info.plist` utilizes `NS
 
 ### CURRENT OPERATIONAL BLOCKERS (Next Steps)
 
-1. **FR-009 Closure:** Dispatch a self-hosted physical device run utilizing `run_mobile_capture=true` to capture fresh ops evidence in `docs/mobile-evidence` and formally clear the final FixRisk item.
+1. **FR-009 Closure:** Dispatch a self-hosted physical device run with `run_mobile_capture=true` and `run_strict_evidence=true` to capture fresh ops evidence in `docs/mobile-evidence` and formally clear the final FixRisk item.

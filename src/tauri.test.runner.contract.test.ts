@@ -37,16 +37,17 @@ describe('tauri runner and android prereq contracts', () => {
     expect(source).toContain('failed-oom');
   });
 
-  test('android prereq verifier enforces Java 21 toolchain availability before SDK checks', () => {
+  test('android prereq verifier enforces Java 21+ toolchain availability before SDK checks', () => {
     const source = fs.readFileSync(androidPrereqPath, 'utf8');
 
     expect(source).toContain("detectJavacVersionByCommand('javac'");
     expect(source).toContain('parseJavaMajorVersion');
-    expect(source).toContain('detectAvailableJava21Toolchain');
-    expect(source).toContain('if (javac.available && javac.major < 21 && !java21Toolchain.found)');
-    expect(source).toContain('probeGradleJava21Toolchain');
-    expect(source).toContain('needs Java 21 toolchain availability');
+    expect(source).toContain('MIN_SUPPORTED_JAVA_MAJOR = 21');
+    expect(source).toContain('detectAvailableJavaToolchain');
+    expect(source).toContain('if (javac.available && !isSupportedJavaMajor(javac.major) && !javaToolchain.found)');
+    expect(source).toContain('probeGradleJavaToolchain');
+    expect(source).toContain('needs Java ${MIN_SUPPORTED_JAVA_MAJOR}+ toolchain availability');
     expect(source).toContain('Active JDK:');
-    expect(source).toContain('Java 21 candidate:');
+    expect(source).toContain('Java ${MIN_SUPPORTED_JAVA_MAJOR}+ candidate:');
   });
 });

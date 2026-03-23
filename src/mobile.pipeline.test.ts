@@ -16,6 +16,7 @@ describe('dual mobile pipeline configuration', () => {
   const packageJsonPath = path.join(repoRoot, 'package.json');
   const capacitorConfigPath = path.join(repoRoot, 'capacitor.config.ts');
   const buildApkScriptPath = path.join(repoRoot, 'build_apk.bat');
+  const alignCapacitorJavaCompatScriptPath = path.join(repoRoot, 'scripts', 'align-capacitor-java-compat.js');
   const tauriAndroidRunnerPath = path.join(repoRoot, 'scripts', 'run-tauri-android.js');
   const tauriConfigPath = path.join(repoRoot, 'src-tauri', 'tauri.conf.json');
   const androidManifestPath = path.join(repoRoot, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
@@ -92,9 +93,19 @@ describe('dual mobile pipeline configuration', () => {
     expect(buildApkScript).toContain('NOTE_CONNECTION_NO_PAUSE');
     expect(buildApkScript).toContain("dist\\src\\frontend");
     expect(buildApkScript).toContain('npx cap sync android');
-    expect(buildApkScript).toContain('requires JDK 21.');
-    expect(buildApkScript).toContain('major version 21');
+    expect(buildApkScript).toContain('align-capacitor-java-compat.js');
+    expect(buildApkScript).toContain('requires JDK 21 or newer.');
+    expect(buildApkScript).toContain('major version 21+');
     expect(buildApkScript).toContain('gradlew.bat assembleDebug');
+  });
+
+  test('aligns generated Capacitor compile options to active JDK with a Java 21+ floor', () => {
+    const alignScript = fs.readFileSync(alignCapacitorJavaCompatScriptPath, 'utf8');
+    expect(alignScript).toContain('MIN_SUPPORTED_JAVA_MAJOR = 21');
+    expect(alignScript).toContain('Math.max(MIN_SUPPORTED_JAVA_MAJOR');
+    expect(alignScript).toContain('JavaVersion.toVersion(');
+    expect(alignScript).toContain('sourceCompatibility');
+    expect(alignScript).toContain('targetCompatibility');
   });
 
   test('uses a non-example Android app id consistently across Capacitor and native Android config', () => {

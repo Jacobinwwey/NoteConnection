@@ -1070,7 +1070,8 @@ function main() {
   );
 
   const fr011Pending = checkCommandWithKnownPending(tauriAndroidPrereqVerify, [
-    'needs java 21 toolchain availability',
+    'needs java 21+ toolchain availability',
+    'require java 21 or newer',
     'unsupported jdk detected',
     'java compiler (javac) not available on path'
   ]);
@@ -1090,7 +1091,7 @@ function main() {
     {
       ...options,
       pendingReason: fr011Pending.pending
-        ? 'Host provisioning pending: Java 21 toolchain availability is required.'
+        ? 'Host provisioning pending: Java 21+ toolchain availability is required.'
         : ''
     }
   );

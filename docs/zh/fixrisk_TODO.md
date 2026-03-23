@@ -18,14 +18,14 @@
 | FR-008 | 隐私清单合规闸门缺失 | Critical | Closed | 已具备 Privacy Manifest 测试。 |
 | FR-009 | 真机证据未强绑定大图阈值 | High | Pending（运维证据） | 校验脚本已严格校验，并在 `docs/mobile-evidence` 缺少新鲜真机证据时阻断闭环。 |
 | FR-010 | Action 节点弃用 | Medium | Closed | 升级 Node 24 流程。 |
-| FR-011 | Android 工具链漂移 | High | Closed | 强制 Java 21。 |
+| FR-011 | Android 工具链漂移 | High | Closed | 强制 Java 21+。 |
 | FR-012 | App Store 拒审风险（缺少跟踪用途说明） | High | Closed | `ios/App/Info.plist` 已加入 `NSUserTrackingUsageDescription`，并由 `scripts/verify-privacy-manifest.js` 与 `src/privacy.manifest.contract.test.ts` 强制校验。 |
 | FR-013 | 无界限 localhost 端口回退 | Medium | Closed | 临时端口回退改为显式开关（`NOTE_CONNECTION_ALLOW_EPHEMERAL_PORT_FALLBACK=1`），并由 `src/server.port.fallback.contract.test.ts` 进行契约回归测试。 |
 | FR-014 | 大图负载下 Capacitor IPC 桥接 JSON 序列化阈值风险 | Critical | Closed | `src/frontend/storage_provider.js` 已实现分块+字节上限序列化（`CAPACITOR_BRIDGE_MAX_CHUNK_BYTES`、`CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES`），并由 `src/capacitor.bridge.serialization.contract.test.ts` 与 `scripts/verify-fixrisk-issues.js` 进行契约与门禁校验。 |
 | FR-015 | WebView 解析绝对路径时的 pkg 快照路径逃逸漏洞 | High | Closed | `src/server.ts` 与 `src/backend/controller.ts` 已增加规范化根目录沙箱校验与 pkg 快照路径拦截，并由 `src/content.path.sandbox.contract.test.ts` 和 `scripts/verify-fixrisk-issues.js` 强制校验。 |
 
 ## 下一步
-- 在发布分支执行严格证据工作流（`.github/workflows/fixrisk-operational-readiness.yml`），强制 FR-009 证据闭环并保留构建产物。
+- 在 `.github/workflows/fixrisk-operational-readiness.yml` 中通过 workflow dispatch 同时启用 `run_mobile_capture=true` 与 `run_strict_evidence=true`，以强制 FR-009 证据闭环并保留构建产物。
 - 在 `windows/x64/android` 自托管 Runner 上通过 workflow dispatch 且 `run_mobile_capture=true` 自动采集并刷新 `docs/mobile-evidence`。
 - 持续推进 fixrisk 范围外的延后加固项（Deferred Hardening）。
 - 本地 Tauri 验证建议：执行 `cargo check` 前先运行 `node scripts/cleanup-tauri-sidecars.js`，避免 Windows 下复制 sidecar 文件被锁导致 `PermissionDenied`。
@@ -126,4 +126,4 @@ App Store 元数据得到了全面覆盖。`ios/App/Info.plist` 安全地利用�
 
 ### 当前运维阻塞项 (后续步骤)
 
-1. **FR-009 闭环：** 使用 `run_mobile_capture=true` 调度自托管的物理设备运行，以在 `docs/mobile-evidence` 中捕获新鲜的运维证据，并正式清除最后一个 FixRisk 待办事项。
+1. **FR-009 闭环：** 使用 `run_mobile_capture=true` 且 `run_strict_evidence=true` 调度自托管的物理设备运行，以在 `docs/mobile-evidence` 中捕获新鲜的运维证据，并正式清除最后一个 FixRisk 待办事项。
