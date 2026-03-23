@@ -15,7 +15,7 @@ use jni::JavaVM;
 use std::net::TcpListener;
 #[cfg(not(target_os = "android"))]
 use std::sync::OnceLock;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::UNIX_EPOCH;
 use tauri::{AppHandle, Manager};
 #[cfg(not(target_os = "android"))]
 use tauri::Emitter;
@@ -1918,7 +1918,7 @@ pub fn run() {
                         "about" => {
                             println!("Action: About");
                             let _ = tauri_plugin_dialog::DialogExt::dialog(app_handle)
-                                .message("NoteConnection v1.3.0\n\nDeveloped by Jacob\nGitHub: https://github.com/Jacobinwwey")
+                                .message("NoteConnection v1.6.0\n\nDeveloped by Jacob\nGitHub: https://github.com/Jacobinwwey")
                                 .title("About NoteConnection")
                                 .show(|_| {});
                         }

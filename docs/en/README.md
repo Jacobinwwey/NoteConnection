@@ -312,6 +312,26 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ## 📅 Changelog
 
+### v1.6.0 - Unified Runtime, NoteMD Integration & Release Hardening (2026-03-23)
+
+- **Single-Window Runtime Orchestration**:
+  - Implemented Tauri <-> Godot visibility handoff so only one primary window is shown at a time.
+  - Added Godot close-confirm flow ("Return to main interface" vs "Close all windows") to prevent accidental full shutdown.
+  - Stabilized Godot window visibility control and removed deprecated foreground APIs.
+- **NoteMD Embedded Experience**:
+  - Kept NoteMD as an embedded experience (not a standalone desktop window) aligned with both Tauri and Godot flows.
+  - Fixed non-responsive `Browse` actions in Tauri NoteMD (file/folder/save pickers now complete the IPC flow).
+  - Added user guidance that PDF files must be converted to Markdown via Mineru before import.
+- **Platform & Toolchain Release Readiness**:
+  - Standardized Java policy to **JDK 21+** and verified support for **JDK 23.0.1** in Android prerequisites/build tooling.
+  - Added Android/Tauri patching and verification scripts for prerequisite checks, sidecar validation, and strict evidence gates.
+- **Reliability & Security Gates**:
+  - Expanded CI/workflow coverage for FixRisk operational readiness, mobile e2e contracts, wasm parity, SBOM, attestation, and signature/privacy checks.
+  - Added broad contract-level regression coverage across mobile/runtime/pathbridge/storage layers.
+- **Build Performance & Developer Experience**:
+  - Added low-memory Tauri build wrappers and release-profile safeguards for constrained environments.
+  - Added sidecar readiness preflight to skip redundant rebuilds during dev startup, reducing warm `tauri:dev:mini:gpu` startup latency.
+
 ### v1.5.x Migration Runtime Logs (Canonical Archive)
 - Full bilingual logs are centrally archived in [`export.md`](export.md).
 - This README keeps summary pointers in the changelog for readability.
@@ -831,4 +851,3 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 ---
 
 ---
-

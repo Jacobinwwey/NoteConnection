@@ -307,6 +307,26 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ## 📅 Changelog
 
+### v1.6.0 - Unified Runtime, NoteMD Integration & Release Hardening (2026-03-23)
+
+- **Single-Window Runtime Orchestration**:
+  - Implemented Tauri <-> Godot visibility handoff so only one primary window is shown at a time.
+  - Added Godot close-confirm flow ("Return to main interface" vs "Close all windows") to prevent accidental full shutdown.
+  - Stabilized Godot window visibility control and removed deprecated foreground APIs.
+- **NoteMD Embedded Experience**:
+  - Kept NoteMD as an embedded experience (not a standalone desktop window) aligned with both Tauri and Godot flows.
+  - Fixed non-responsive `Browse` actions in Tauri NoteMD (file/folder/save pickers now complete the IPC flow).
+  - Added user guidance that PDF files must be converted to Markdown via Mineru before import.
+- **Platform & Toolchain Release Readiness**:
+  - Standardized Java policy to **JDK 21+** and verified support for **JDK 23.0.1** in Android prerequisites/build tooling.
+  - Added Android/Tauri patching and verification scripts for prerequisite checks, sidecar validation, and strict evidence gates.
+- **Reliability & Security Gates**:
+  - Expanded CI/workflow coverage for FixRisk operational readiness, mobile e2e contracts, wasm parity, SBOM, attestation, and signature/privacy checks.
+  - Added broad contract-level regression coverage across mobile/runtime/pathbridge/storage layers.
+- **Build Performance & Developer Experience**:
+  - Added low-memory Tauri build wrappers and release-profile safeguards for constrained environments.
+  - Added sidecar readiness preflight to skip redundant rebuilds during dev startup, reducing warm `tauri:dev:mini:gpu` startup latency.
+
 ### v1.5.58 - Godot Path UI Enhancements (2026-03-19)
 - **Visuals**: Added Vertical/Horizontal main spine layout toggle and premium aesthetic color schemes (Nord, Tokyo Night, etc).
 - **Interactions**: Upgraded hover info box with deep node interactivity (Left/Double/Right click).
@@ -1120,6 +1140,26 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 <a id="changelog-zh"></a>
 
 ## 更新日志 (Changelog)
+
+### v1.6.0 - 单窗口运行时、NoteMD 集成与发布加固 (2026-03-23)
+
+- **单窗口运行时编排**:
+  - 实现 Tauri <-> Godot 的可见性切换，同一时刻仅显示一个主窗口。
+  - 增加 Godot 关闭确认流程（“返回主界面” / “关闭全部窗口”），避免误操作导致全局退出。
+  - 修复并稳定 Godot 窗口可见性控制，移除已弃用前台激活调用。
+- **NoteMD 嵌入式体验**:
+  - 保持 NoteMD 为嵌入式能力（非独立桌面窗口），与 Tauri/Godot 双前端统一。
+  - 修复 Tauri 中 NoteMD 的 `Browse` 按钮无响应问题（文件/文件夹/保存选择器端到端可用）。
+  - 增加导入提示：PDF 需先通过 Mineru 转换为 Markdown 再导入。
+- **平台与工具链发布就绪**:
+  - 统一 Java 基线为 **JDK 21+**，并验证 **JDK 23.0.1** 在 Android 构建链路可用。
+  - 新增 Android/Tauri 的补丁与校验脚本，覆盖前置依赖、sidecar 有效性、严格证据门禁。
+- **可靠性与安全门禁**:
+  - 扩展 CI/工作流：FixRisk 运维就绪、移动端 e2e 合约、wasm parity、SBOM、attestation、签名与隐私清单校验。
+  - 新增多层合约回归覆盖（mobile/runtime/pathbridge/storage）。
+- **构建性能与开发体验**:
+  - 增加低内存 Tauri 构建包装器与 release 配置保护，提升受限内存环境可构建性。
+  - 增加 sidecar 预检，避免开发期重复重建，缩短 `tauri:dev:mini:gpu` 热启动耗时。
 
 ### v1.5.x 迁移运行时日志（统一归档）
 - 完整双语日志统一归档在 [`export.md`](export.md)。
