@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-23T09:36:07.059Z",
-  "completedAt": "2026-03-23T09:37:37.988Z",
+  "generatedAt": "2026-03-23T11:45:00.252Z",
+  "completedAt": "2026-03-23T11:45:22.144Z",
   "source": [
     "docs/en/fixrisk_TODO.md",
     "docs/zh/fixrisk_TODO.md"
@@ -34,7 +34,7 @@
     "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\node_modules\\jest\\bin\\jest.js --runInBand --json --outputFile=E:\\Knowledge_project\\NoteConnection_app\\build\\fixrisk-jest-contract-report.json src/runtime.spool.policy.contract.test.ts src/pkg.sidecar.contract.test.ts src/mobile.pipeline.test.ts src/pkg.snapshot.safety.contract.test.ts src/runtime.heap.policy.contract.test.ts src/sidecar.signature.contract.test.ts src/graph.accessibility.contract.test.ts src/privacy.manifest.contract.test.ts src/server.port.fallback.contract.test.ts src/sbom.policy.contract.test.ts src/sbom.attestation.policy.contract.test.ts src/pathbridge.strict.policy.contract.test.ts src/capacitor.evidence.contract.test.ts src/tauri.test.runner.contract.test.ts src/capacitor.bridge.serialization.contract.test.ts src/content.path.sandbox.contract.test.ts",
     "ok": true,
     "exitCode": 0,
-    "durationMs": 86141
+    "durationMs": 16865
   },
   "issues": [
     {
@@ -347,7 +347,7 @@
           "ok": true,
           "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-sidecar-signatures.js --contract-only",
           "exitCode": 0,
-          "durationMs": 83,
+          "durationMs": 90,
           "detail": "Contract-only sidecar signature gate passed"
         },
         {
@@ -454,7 +454,7 @@
           "ok": true,
           "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-privacy-manifest.js",
           "exitCode": 0,
-          "durationMs": 96,
+          "durationMs": 82,
           "detail": "Privacy manifest verifier passed"
         },
         {
@@ -528,7 +528,7 @@
           "ok": true,
           "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-capacitor-evidence-freshness.js",
           "exitCode": 1,
-          "durationMs": 83,
+          "durationMs": 77,
           "detail": "Accepted pending state: evidence root not found. [Capacitor Evidence Verify] Evidence verification failed.\n[Capacitor Evidence Verify] Error: Evidence root not found: E:\\Knowledge_project\\NoteConnection_app\\docs\\mobile-evidence"
         },
         {
@@ -790,7 +790,7 @@
           "ok": true,
           "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-tauri-android-prereqs.js",
           "exitCode": 0,
-          "durationMs": 3976,
+          "durationMs": 4408,
           "detail": "Android prerequisite verifier passed"
         },
         {
@@ -875,7 +875,7 @@
           "ok": true,
           "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-privacy-manifest.js",
           "exitCode": 0,
-          "durationMs": 96,
+          "durationMs": 82,
           "detail": "Privacy manifest verifier passed"
         },
         {
@@ -1157,7 +1157,7 @@
       "ok": true,
       "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-detox-pipeline.js",
       "exitCode": 0,
-      "durationMs": 173,
+      "durationMs": 85,
       "detail": "Detox pipeline verifier passed"
     },
     {
@@ -1165,7 +1165,7 @@
       "ok": true,
       "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-sbom-policy.js --contract-only",
       "exitCode": 0,
-      "durationMs": 117,
+      "durationMs": 89,
       "detail": "SBOM policy verifier contract mode passed"
     },
     {
@@ -1173,7 +1173,7 @@
       "ok": true,
       "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-sbom-attestation.js --contract-only",
       "exitCode": 0,
-      "durationMs": 85,
+      "durationMs": 94,
       "detail": "SBOM attestation verifier contract mode passed"
     },
     {
@@ -1181,7 +1181,7 @@
       "ok": true,
       "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-pathbridge-strict-schema.js --contract-only",
       "exitCode": 0,
-      "durationMs": 81,
+      "durationMs": 87,
       "detail": "PathBridge strict schema verifier contract mode passed"
     },
     {
