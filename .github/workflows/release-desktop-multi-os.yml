@@ -205,3 +205,71 @@ jobs:
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-and-upload-android:
+    name: Build and Upload (android-apk)
+    needs: ensure-release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_ref != '' && github.event.inputs.source_ref || github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+          lfs: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup Java 23.0.1
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "23.0.1"
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-36" \
+            "ndk;27.2.12479018"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Android universal APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          NOTE_CONNECTION_TAURI_ANDROID_TARGET=universal npm run tauri:android:build
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ needs.ensure-release.outputs.tag_name }}-android-apk
+          if-no-files-found: error
+          path: |
+            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+
+      - name: Upload APK assets to GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.ensure-release.outputs.tag_name }}
+          files: |
+            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
