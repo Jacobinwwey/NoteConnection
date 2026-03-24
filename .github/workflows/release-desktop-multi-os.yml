@@ -90,7 +90,7 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_ref != '' && github.event.inputs.source_ref || github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
           fetch-depth: 0
-          lfs: true
+          lfs: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -217,7 +217,7 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_ref != '' && github.event.inputs.source_ref || github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
           fetch-depth: 0
-          lfs: true
+          lfs: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
