@@ -1,0 +1,186 @@
+name: Release Desktop Multi-OS
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build and upload (for example: v1.6.1)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  ensure-release:
+    name: Ensure GitHub Release Exists
+    runs-on: ubuntu-latest
+    outputs:
+      tag_name: ${{ steps.tag.outputs.tag_name }}
+    steps:
+      - name: Resolve tag name
+        id: tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG_NAME="${{ github.event.inputs.tag }}"
+          else
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+          fi
+          if [ -z "$TAG_NAME" ]; then
+            echo "::error::Unable to resolve release tag."
+            exit 1
+          fi
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "Resolved tag: $TAG_NAME"
+
+      - name: Ensure release record exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          TAG_NAME="${{ steps.tag.outputs.tag_name }}"
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Release already exists for $TAG_NAME."
+          else
+            gh release create "$TAG_NAME" --title "$TAG_NAME" --notes "Automated desktop multi-OS release assets."
+          fi
+
+  build-and-upload:
+    name: Build and Upload (${{ matrix.platform_label }})
+    needs: ensure-release
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            platform_label: windows
+            files: |
+              src-tauri/target/release/bundle/**/*.exe
+              src-tauri/target/release/bundle/**/*.msi
+          - runner: ubuntu-latest
+            platform_label: linux
+            files: |
+              src-tauri/target/release/bundle/**/*.AppImage
+              src-tauri/target/release/bundle/**/*.deb
+          - runner: macos-13
+            platform_label: macos
+            files: |
+              src-tauri/target/release/bundle/**/*.dmg
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+          lfs: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux native dependencies
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          if sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            librsvg2-dev \
+            patchelf \
+            libappindicator3-dev \
+            libayatana-appindicator3-dev; then
+            echo "Installed WebKitGTK 4.1 dependency stack."
+          else
+            sudo apt-get install -y \
+              libwebkit2gtk-4.0-dev \
+              libgtk-3-dev \
+              librsvg2-dev \
+              patchelf \
+              libappindicator3-dev \
+              libayatana-appindicator3-dev
+            echo "Installed WebKitGTK 4.0 fallback dependency stack."
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare Godot sidecar binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Path "build\godot" -Force | Out-Null
+          $archive = "build\godot\godot-win64.zip"
+          Invoke-WebRequest -Uri "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_win64.exe.zip" -OutFile $archive
+          Expand-Archive -Path $archive -DestinationPath "build\godot\extract" -Force
+          $godotExe = Get-ChildItem -Path "build\godot\extract" -Filter "*.exe" -Recurse | Select-Object -First 1
+          if (-not $godotExe) {
+            throw "Failed to locate extracted Godot Windows executable."
+          }
+          Copy-Item -Path $godotExe.FullName -Destination "src-tauri\bin\godot-x86_64-pc-windows-msvc.exe" -Force
+
+      - name: Prepare Godot sidecar binary (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/godot
+          curl -fsSL "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip" -o build/godot/godot-linux.zip
+          unzip -q -o build/godot/godot-linux.zip -d build/godot/extract
+          GODOT_BIN="$(find build/godot/extract -maxdepth 2 -type f -name 'Godot_v4.3-stable_linux.x86_64' | head -n 1)"
+          if [ -z "${GODOT_BIN}" ]; then
+            echo "Failed to locate extracted Godot Linux executable."
+            exit 1
+          fi
+          cp "${GODOT_BIN}" src-tauri/bin/godot-x86_64-unknown-linux-gnu
+          chmod +x src-tauri/bin/godot-x86_64-unknown-linux-gnu
+
+      - name: Prepare Godot sidecar binary (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/godot
+          curl -fsSL "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_macos.universal.zip" -o build/godot/godot-macos.zip
+          unzip -q -o build/godot/godot-macos.zip -d build/godot/extract
+          GODOT_BIN="$(find build/godot/extract -type f -path '*Godot.app/Contents/MacOS/Godot' | head -n 1)"
+          if [ -z "${GODOT_BIN}" ]; then
+            echo "Failed to locate extracted Godot macOS executable."
+            exit 1
+          fi
+          cp "${GODOT_BIN}" src-tauri/bin/godot-x86_64-apple-darwin
+          chmod +x src-tauri/bin/godot-x86_64-apple-darwin
+
+      - name: Build desktop bundle
+        run: npm run tauri:build:mini
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ needs.ensure-release.outputs.tag_name }}-${{ matrix.platform_label }}
+          if-no-files-found: error
+          path: ${{ matrix.files }}
+
+      - name: Upload assets to GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.ensure-release.outputs.tag_name }}
+          files: ${{ matrix.files }}
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -256,6 +256,7 @@ describe('server migration settings routes', () => {
   let buildGraphMock: jest.Mock;
   let renderMathPngMock: jest.Mock;
   let renderMermaidPngMock: jest.Mock;
+  let copyPngToClipboardMock: jest.Mock;
   let originalArgv: string[];
 
   beforeAll(async () => {
@@ -301,6 +302,7 @@ describe('server migration settings routes', () => {
       width: 640,
       height: 360
     });
+    copyPngToClipboardMock = jest.fn().mockResolvedValue(undefined);
     jest.resetModules();
     originalArgv = [...process.argv];
     process.argv = process.argv.slice(0, 2);
@@ -313,6 +315,9 @@ describe('server migration settings routes', () => {
     jest.doMock('./reader_renderer', () => ({
       renderMathPng: renderMathPngMock,
       renderMermaidPng: renderMermaidPngMock
+    }));
+    jest.doMock('./native_clipboard', () => ({
+      copyPngToClipboard: copyPngToClipboardMock
     }));
 
     const serverModule = require('./server') as {
@@ -342,6 +347,7 @@ describe('server migration settings routes', () => {
     jest.dontMock('./index');
     jest.dontMock('./core/PathBridge');
     jest.dontMock('./reader_renderer');
+    jest.dontMock('./native_clipboard');
     process.argv = originalArgv;
     temp.cleanup();
   });

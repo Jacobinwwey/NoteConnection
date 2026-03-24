@@ -19,6 +19,34 @@ describe('sbom attestation policy contract', () => {
   const verifierPath = path.join(repoRoot, 'scripts', 'verify-sbom-attestation.js');
   const migrationWorkflowPath = path.join(repoRoot, '.github', 'workflows', 'migration-gates.yml');
   const npmPublishWorkflowPath = path.join(repoRoot, '.github', 'workflows', 'npm-publish.yml');
+  let noteConnectionEnvSnapshot: Record<string, string | undefined>;
+
+  beforeEach(() => {
+    // Keep contract tests hermetic even when CI injects NOTE_CONNECTION_* policy env vars.
+    noteConnectionEnvSnapshot = {};
+    for (const key of Object.keys(process.env)) {
+      if (!key.startsWith('NOTE_CONNECTION_')) {
+        continue;
+      }
+      noteConnectionEnvSnapshot[key] = process.env[key];
+      delete process.env[key];
+    }
+  });
+
+  afterEach(() => {
+    for (const key of Object.keys(process.env)) {
+      if (key.startsWith('NOTE_CONNECTION_')) {
+        delete process.env[key];
+      }
+    }
+    for (const [key, value] of Object.entries(noteConnectionEnvSnapshot || {})) {
+      if (typeof value === 'undefined') {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  });
 
   test('exports attestation generation/verification scripts and gate wiring', () => {
     const packageJson = readJson<PackageJson>(packageJsonPath);
