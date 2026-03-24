@@ -1,150 +1,124 @@
-# NoteConnection v1.6.0 发布更新报告
+# NoteConnection v1.6.0 发布对比报告
 
 ## 1. 对比基线
 
-- **项目**: NoteConnection
-- **目标版本**: `v1.6.0`
-- **对比范围**: `v1.3.0..HEAD`
-- **基线标签时间**: `2026-01-24 20:37:25 +0800`
-- **当前提交**: `7f3bb04`（`2026-03-23 19:20:27 +0800`）
+- 项目：`NoteConnection`
+- 对比范围：`v1.3.0..v1.6.0`
+- 基线标签（`v1.3.0`）：`376ae600fbf14700c9dbbc10c4bb6190a34078e4`（`2026-01-24 20:37:25 +0800`）
+- 目标标签（`v1.6.0`）：`eb2bb2ec7b9fd239c559accb034e5537f56613e7`（`2026-03-23 22:08:28 +0800`）
 
-## 2. 变更规模总览
+## 2. 量化差异总览
 
-- **提交数（不含 merge）**: `104`
-- **变更文件数**: `297`
-- **代码/文档变更量**: `+125,500 / -10,075`
+基于 `git diff v1.3.0..v1.6.0`：
 
-按新增行数统计的主要变更区域：
+- 提交数：`107`
+- 变更文件数：`301`
+- 代码/文档变更量：`+125,957 / -10,083`
+- 净增长：`+115,874`
 
-1. `src/`: `+29,116`（`115` 文件）
-2. `build/`: `+24,851`（`15` 文件）
-3. `docs/`: `+21,589`（`38` 文件）
-4. `path_mode/`: `+10,798`（`27` 文件）
-5. `scripts/`: `+10,394`（`40` 文件）
-6. `src-tauri/`: `+8,889`（`17` 文件）
+基于 `git diff --name-status` 的状态分布：
 
-质量保障范围扩展：
+- 新增：`241`
+- 修改：`56`
+- 删除：`3`
+- 重命名：`1`
 
-- **新增/更新测试文件**: `53`
-- **其中合约测试**: `38`
-- **NoteMD 后端新增模块文件**: `13`
-- **新增/更新 CI 工作流**: `6`
+## 3. 顶层目录变更覆盖
 
-## 3. v1.3.0 以来的核心工程升级
+按变更文件数统计：
 
-### A. 运行时架构与桌面壳层
+1. `src/`: `116`
+2. `docs/`: `41`
+3. `scripts/`: `40`
+4. `path_mode/`: `27`
+5. `src-tauri/`: `19`
+6. `build/`: `15`
+7. `.github/workflows/`: `6`
+8. `android/`: `6`
 
-- 引入并强化 Tauri 主导架构（`src-tauri/` 大规模扩展）。
-- 移除历史 Electron 运行时文件，切换到 sidecar 驱动打包模式。
-- 完成 Tauri 与 Godot 间单窗口编排（窗口切换而非双窗口并存）。
-- 增强关闭流程与窗口可见性交接逻辑，降低误关风险。
+质量与治理扩展：
 
-### B. NoteMD 端到端集成
+- 新增/变更测试文件：`53`
+- 新增/变更合约测试：`38`
+- 新增/变更工作流：`6`
 
-- 新增 `src/notemd/` 完整后端子系统：
-  - `BatchProcessor`、`FileProcessor`、`Translator`、`ContentGenerator`
-  - `MermaidProcessor`、`FormulaFixer`、`DuplicateDetector`
-  - `NotemdService` 与类型化请求/响应契约
-- 新增前端界面与逻辑（`src/frontend/notemd.html/js/css`）。
-- 修复 Tauri 中 Browse/文件/文件夹/保存选择链路无响应问题。
-- 明确导入规范：`PDF -> Mineru -> Markdown`。
+## 4. 自 v1.3.0 以来的关键工程增量
 
-### C. Godot Path Mode 与交互体验
+### A. 运行时与打包架构
 
-- `path_mode/` 新增场景、渲染逻辑、面板系统与嵌入能力。
-- 路径 UI、树渲染、设置流和桥接同步机制均有增强。
-- 修复 Godot 可见性控制路径与已弃用 API 警告链路。
+- 在 `src-tauri/` 引入并强化了 Tauri 运行时与 sidecar 架构。
+- 清理了 Electron 运行时入口（`src/electron/main.ts`、`src/electron/preload.ts`、`electron-builder.yml`）。
+- 增加前端运行时能力注入与 sidecar 运行时配置水合流程，提升桥接稳定性。
 
-### D. 移动端导出与双管线支持
+### B. Godot Path Mode 扩展
 
-- 扩展双 Android 管线：
-  - Capacitor Android（`android/`）
-  - Tauri Android（`src-tauri/gen/android/...` + runner/patch 脚本）
-- 新增 Java 兼容性对齐与前置依赖校验脚本。
-- 统一 Android 包信息与构建脚本，保证发布一致性。
+- `path_mode/` 显著扩容：
+  - 新场景（主场景、设置、树面板）
+  - 状态机与面板脚本
+  - 渲染器与 WebSocket 客户端升级
+  - NoteMD 嵌入面板挂接
+- 稳定了 Tauri 与 Godot 的单窗口编排行为。
 
-### E. 可靠性、安全与运维治理
+### C. NoteMD 体系集成
 
-- 增加 FixRisk 运维就绪工作流与严格证据门禁支持。
-- 增加 SBOM 生成、attestation 生成与校验脚本/合约。
-- 增加 privacy manifest、sidecar 签名、pathbridge 严格 schema、detox 管线校验。
-- 增加 wasm parity 校验、基准测试与历史阈值护栏。
+- 在 `src/notemd/` 引入完整 NoteMD 后端模块族。
+- 新增前端 NoteMD 界面（`notemd.html/js/css`）。
+- 打通了 Tauri/Godot 桥接调用链路。
+- 修复 Tauri 集成中的文件/文件夹/保存选择器流程。
 
-### F. 构建性能与开发效率
+### D. 移动端与多导出流水线
 
-- 增加低内存 Tauri 构建包装器：
-  - `scripts/run-tauri-build.js`
-  - `scripts/run-tauri-android.js` 低内存策略
-  - `src-tauri/Cargo.toml` release profile 保护
-- 增加 `scripts/ensure-sidecar-ready.js`，热启动阶段跳过冗余 sidecar 重建。
-- 启用 TypeScript 增量编译缓存（`tsconfig.json`）。
+- 双 Android 路线成熟化（Capacitor + Tauri Android）。
+- 增加 Android/Tauri 兼容脚本（环境校验、补丁、sidecar 校验）。
+- 增加 Java 兼容性对齐能力，提升 APK/AAB 导出的确定性。
 
-## 4. v1.6.0 版本同步项
+### E. 校验、安全与发布治理
 
-已同步为 `1.6.0`：
+- 新增/扩展：
+  - FixRisk 运维就绪自动化
+  - SBOM 生成与 attestation 校验
+  - sidecar 签名校验
+  - 隐私清单校验
+  - pathbridge 严格 schema 门禁
+  - wasm parity 历史基线与性能护栏
+  - 移动端 detox 合约校验
 
-- `package.json`
-- `package-lock.json`（顶层与 root package 条目）
-- `src-tauri/tauri.conf.json`
-- `src-tauri/src/lib.rs`（About 版本显示）
-- `android/app/build.gradle`（`versionName 1.6.0`，`versionCode 16000`）
+### F. 性能与开发体验
 
-README 同步完成：
+- 增加低内存 Tauri 包装器与运行时内存策略工具。
+- 增加 sidecar 预检以减少热启动重复重建。
+- 增加 Mermaid/Resvg 运行时资源生成与校验链路。
 
-- `README.md`（中英双区段）
-- `docs/en/README.md`
-- `docs/zh/README.md`
+## 5. 最高影响文件（按总代码行变更）
 
-## 5. 平台发布矩阵（v1.6.0）
+来自 `git diff --numstat` 的代表性结果：
 
-| 平台 | 版本 | 产物 | 状态 |
-|---|---|---|---|
-| npm 包 | `1.6.0` | `package.json` 发布目标 | 就绪 |
-| Windows 桌面版（Tauri x64） | `1.6.0` | `src-tauri/target/release/bundle/nsis/NoteConnection_1.6.0_x64-setup.exe` | 已构建 |
-| Windows 桌面版（Tauri MSI） | `1.6.0` | `src-tauri/target/release/bundle/msi/NoteConnection_1.6.0_x64_en-US.msi` | 已构建 |
-| Android（Capacitor debug） | `1.6.0` | `android/app/build/outputs/apk/debug/app-debug.apk` | 已构建 |
-| Android（Tauri universal APK） | `1.6.0` | `src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk` | 产物可用 |
-| Android（Tauri universal AAB） | `1.6.0` | `src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab` | 产物可用 |
+1. `build/sbom/noteconnection-sbom.cdx.json`（`+17016 / -0`）
+2. `TODO.md`（`+6684 / -1611`）
+3. `package-lock.json`（`+3850 / -3183`）
+4. `src-tauri/Cargo.lock`（`+5631 / -0`）
+5. `TEST_REPORT.md`（`+3883 / -1410`）
+6. `path_mode/scripts/path_mode_ui.gd`（`+4950 / -0`）
+7. `src/server.ts`（`+2751 / -291`）
+8. `src/frontend/path_app.js`（`+2579 / -86`）
+9. `src-tauri/src/lib.rs`（`+2664 / -0`）
+10. `src/core/PathBridge.ts`（`+2020 / -26`）
 
-Tauri Android 元数据快照：
+## 6. 本轮文档补齐项
 
-- `src-tauri/gen/android/app/build/outputs/apk/universal/release/output-metadata.json`
-- `versionName: "1.6.0"`
-- `versionCode: 1006000`
+基于 `v1.3.0..v1.6.0` 对比审计，本轮已补齐以下文档缺口：
 
-Capacitor Android 元数据快照：
+- 将核心 README/手册/接口文档的过期版本头统一更新到 `v1.6.0`。
+- 将本发布报告改为严格 tag-to-tag 口径（移除 `..HEAD` 造成的歧义）。
+- 在发布说明与 README 更新日志中补充 compare 口径信息。
+- 更新双语索引，纳入 `v1.3.0` 之后新增的双语配对文档。
 
-- `android/app/build/outputs/apk/debug/output-metadata.json`
-- `versionName: "1.6.0"`
-- `versionCode: 16000`
+## 7. 发布结论建议
 
-## 6. 本轮发布验证证据
+相对于 `v1.3.0`，`v1.6.0` 属于运行时与治理能力的大版本跃迁，而非补丁级更新。
 
-通过命令：
+建议对外发布叙事聚焦：
 
-1. `npm run build:mini`
-2. `npm run verify:fixrisk:issues`
-3. `npm run tauri:build:mini`
-4. `npm run mobile:build:capacitor`
-5. `npm run mobile:build:both`（双移动端全链路构建）
-
-FixRisk 状态：
-
-- `FR-001..FR-008`、`FR-010..FR-015`: `VERIFIED-CLOSED`
-- `FR-009`: `VERIFIED-PENDING`（运维证据新鲜度/阈值仍待补齐）
-
-## 7. 已知风险说明
-
-1. **Tauri Android 重复构建存在宿主机内存不稳定问题**：
-   - 在本机多次重跑 `npm run tauri:android:build:universal` 时，可能在 Rust Android 目标编译阶段出现内存分配失败。
-   - 但先前生成的 `v1.6.0` universal APK/AAB 产物已存在且版本对齐。
-2. **FR-009 仍是运维层 pending**：
-   - 功能校验已通过，但严格的大图实机证据闭环仍需刷新。
-
-## 8. 发布建议
-
-建议执行 `v1.6.0` 的 GitHub + npm 同步发布，附带两点运维建议：
-
-1. 先发布当前已产出的 `1.6.0` 桌面与 Android 产物。
-2. 若要求“从零可重复构建”证明，建议在更高内存 CI/构建机上重跑 Tauri Android 打包并替换产物。
-
+1. 架构迁移：Electron 清退，Tauri 主导。
+2. 体验迁移：单窗口编排与 NoteMD 嵌入式流程。
+3. 交付迁移：双 Android 管线 + 更严格的 CI/安全治理。

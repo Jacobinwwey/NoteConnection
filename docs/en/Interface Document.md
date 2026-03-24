@@ -1,6 +1,6 @@
-# 2026-03-04 v1.5.13
+# 2026-03-24 v1.6.0
 
-# Interface Document (v1.5.13)
+# Interface Document (v1.6.0)
 
 This document is the canonical interface handover for the current codebase.
 It was rebuilt from source verification, not appended to legacy sections.
@@ -48,7 +48,7 @@ Audit flow:
 - Reason: current Godot SVG handling can fail non-deterministically (text/layout/raster instability across devices).
 - Change-control rule: any future Godot renderer optimization must preserve PNG decode as the primary path (`pngBase64` required); missing PNG is a hard failure.
 
-## 0.2 NoteMD Module Interface Contracts (v1.5.58)
+## 0.2 NoteMD Module Interface Contracts (v1.6.0)
 
 NoteMD is integrated additively and does not replace existing graph/path APIs.
 
@@ -81,6 +81,16 @@ NoteMD is integrated additively and does not replace existing graph/path APIs.
 - KB-root jail validation is enforced for NoteMD file/folder operations.
 - Long-running operations support SSE progress and cancellation.
 - Tauri/Godot bridge contracts expose `open_notemd` without changing existing graph bridge semantics.
+
+## 0.3 v1.6.0 Interface Delta (Compared to v1.3.0)
+
+- Added runtime-capability hydration bridge contract in frontend/runtime integration:
+  - `invoke('get_runtime_capabilities')`
+  - `invoke('get_sidecar_runtime_config')`
+- Added sidecar runtime config command contract in Rust runtime:
+  - `get_sidecar_runtime_config`
+- Added stricter frontend runtime bridge readiness sequencing (`whenReady`) before path-mode flows.
+- Added contract-level policy gates for pathbridge strict schema, storage provider abstraction, mobile runtime capability boundaries, and SBOM/attestation verification scripts.
 
 ---
 

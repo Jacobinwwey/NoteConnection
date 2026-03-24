@@ -1,3 +1,7 @@
+# 2026-03-24 v1.6.0
+
+# 用户手册
+
 ## Chinese Document
 
 ### 1. 简介
@@ -90,3 +94,18 @@ NoteConnection 包含一个一键式脚本，用于构建原生 Android APK (v1.
   - **布局**: 在径向 (Radial)、垂直树 (Vertical Tree) 和水平树 (Horizontal Tree) 视图之间切换。
   - **退出**: 点击“Exit”返回主图谱。
 - **桌面模式**: 在桌面端应用程序 (Tauri) 中，路径模式会在高性能原生 3D 窗口 (Godot) 中打开，可流畅渲染多达 50,000 个节点，并通过 WebSocket 自动同步。
+
+### 9. v1.6.0 运行时与 NoteMD 行为
+
+- **单窗口行为**:
+  - 在 `npm run tauri:dev:mini:gpu` 下，默认显示 Tauri 主窗口。
+  - 进入 Path Mode 时切换为 Godot 前端显示。
+  - 任意时刻应只显示一个主前端窗口。
+- **Godot 关闭确认**:
+  - 关闭 Godot 窗口时应先弹出确认框。
+  - 用户可选择返回主界面，或关闭全部窗口。
+- **NoteMD 嵌入式流程**:
+  - NoteMD 作为嵌入能力存在于 Tauri 和 Godot 两条前端链路中，不应作为独立桌面窗口运行。
+  - 在 Tauri 中点击文件/文件夹/保存 Browse 应触发原生选择器并回填路径。
+- **PDF 导入规则**:
+  - PDF 需要先用 Mineru 转换成 Markdown，再导入 NoteMD。

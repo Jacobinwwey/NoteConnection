@@ -1,4 +1,4 @@
-# 2026-03-04 v1.5.13
+# 2026-03-24 v1.6.0
 
 # User Manual
 
@@ -95,5 +95,19 @@ NoteConnection includes a one-click script to build a native Android APK (v1.1.0
   - **Exit**: Click "Exit" to return to the main graph.
 - **Desktop Mode**: In the desktop application (Tauri), Path Mode opens in a high-performance native 3D window (Godot) for rendering up to 50,000 nodes smoothly, automatically syncing via WebSocket.
 
----
+### 9. v1.6.0 Runtime and NoteMD Behavior
 
+- **Single-window behavior**:
+  - In `npm run tauri:dev:mini:gpu`, Tauri is the default visible window.
+  - Entering Path Mode switches visibility to the Godot frontend.
+  - At any moment, only one primary frontend window should remain visible.
+- **Godot close confirmation**:
+  - Closing the Godot window should show a confirmation dialog.
+  - Users can either return to the main interface or close all windows.
+- **NoteMD embedded workflow**:
+  - NoteMD is integrated as an embedded workflow in both Tauri and Godot flows (not a standalone desktop app window).
+  - File/folder/save browse actions in Tauri are expected to trigger native pickers and return selected paths.
+- **PDF import rule**:
+  - PDF files must be converted to Markdown with Mineru before importing into NoteMD.
+
+---

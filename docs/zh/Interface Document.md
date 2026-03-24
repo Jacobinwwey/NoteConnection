@@ -1,6 +1,6 @@
 
-# 2026-03-04 v1.5.13
-# 接口文档 (v1.5.13)
+# 2026-03-24 v1.6.0
+# 接口文档 (v1.6.0)
 
 本文件是当前代码状态下的权威接口交接文档。
 本版不是在旧文档上追加，而是按源码核对后重建。
@@ -48,7 +48,7 @@
 - 原因：当前 Godot 的 SVG 处理存在非确定性失败（跨设备文本/布局/栅格不稳定）。
 - 变更规则：后续 Godot 渲染优化必须保持 PNG 解码主路径（`pngBase64` 必填）；缺失 PNG 视为失败。
 
-## 0.2 NoteMD 模块接口契约（v1.5.58）
+## 0.2 NoteMD 模块接口契约（v1.6.0）
 
 NoteMD 以增量方式接入，不替代现有图谱/路径 API。
 
@@ -81,6 +81,16 @@ NoteMD 以增量方式接入，不替代现有图谱/路径 API。
 - NoteMD 文件/目录操作统一执行 KB 根路径沙箱校验。
 - 长任务支持 SSE 进度回传与显式取消。
 - Tauri/Godot 桥接新增 `open_notemd`，且不改变既有图谱桥协议语义。
+
+## 0.3 v1.6.0 接口增量（相对 v1.3.0）
+
+- 前端运行时桥接增加运行时能力水合契约：
+  - `invoke('get_runtime_capabilities')`
+  - `invoke('get_sidecar_runtime_config')`
+- Rust 运行时新增 sidecar 运行时配置命令契约：
+  - `get_sidecar_runtime_config`
+- 前端 runtime bridge 增加 `whenReady` 顺序保证，用于 Path Mode 入口前的能力就绪。
+- 增加 pathbridge 严格 schema、存储提供者抽象、移动端运行时能力边界、SBOM/attestation 校验等合约门禁链路。
 
 ---
 

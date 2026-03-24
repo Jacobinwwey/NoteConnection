@@ -1,4 +1,4 @@
-# 2026-03-22 v1.5.58
+# 2026-03-24 v1.6.0
 
 # NoteConnection Knowledge Graph
 
@@ -314,6 +314,11 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ### v1.6.0 - Unified Runtime, NoteMD Integration & Release Hardening (2026-03-23)
 
+- **Tag Compare Snapshot (`v1.3.0..v1.6.0`)**:
+  - `107` commits, `301` files changed, `+125,957 / -10,083` churn.
+  - File status distribution: `241` added, `56` modified, `3` deleted, `1` renamed.
+  - Main engineering footprint: `src/`, `docs/`, `scripts/`, `path_mode/`, and `src-tauri/`.
+
 - **Single-Window Runtime Orchestration**:
   - Implemented Tauri <-> Godot visibility handoff so only one primary window is shown at a time.
   - Added Godot close-confirm flow ("Return to main interface" vs "Close all windows") to prevent accidental full shutdown.
@@ -328,6 +333,7 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 - **Reliability & Security Gates**:
   - Expanded CI/workflow coverage for FixRisk operational readiness, mobile e2e contracts, wasm parity, SBOM, attestation, and signature/privacy checks.
   - Added broad contract-level regression coverage across mobile/runtime/pathbridge/storage layers.
+  - Included pre-release CI compatibility fixes for runtime bridge invoke-contract assertions and unsigned SBOM transparency policy handling.
 - **Build Performance & Developer Experience**:
   - Added low-memory Tauri build wrappers and release-profile safeguards for constrained environments.
   - Added sidecar readiness preflight to skip redundant rebuilds during dev startup, reducing warm `tauri:dev:mini:gpu` startup latency.

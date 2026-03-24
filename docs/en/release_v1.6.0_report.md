@@ -1,150 +1,124 @@
-# NoteConnection v1.6.0 Release Update Report
+# NoteConnection v1.6.0 Release Compare Report
 
-## 1. Comparison Baseline
+## 1. Compare Baseline
 
-- **Project**: NoteConnection
-- **Target release**: `v1.6.0`
-- **Diff range**: `v1.3.0..HEAD`
-- **Baseline tag timestamp**: `2026-01-24 20:37:25 +0800`
-- **Current head**: `7f3bb04` (`2026-03-23 19:20:27 +0800`)
+- Project: `NoteConnection`
+- Compare range: `v1.3.0..v1.6.0`
+- Baseline tag (`v1.3.0`): `376ae600fbf14700c9dbbc10c4bb6190a34078e4` (`2026-01-24 20:37:25 +0800`)
+- Target tag (`v1.6.0`): `eb2bb2ec7b9fd239c559accb034e5537f56613e7` (`2026-03-23 22:08:28 +0800`)
 
-## 2. Quantitative Change Summary
+## 2. Quantitative Diff Summary
 
-- **Commits (no merges)**: `104`
-- **Files changed**: `297`
-- **Code/doc churn**: `+125,500 / -10,075`
+Tag-to-tag results from `git diff v1.3.0..v1.6.0`:
 
-Top change concentration (by added lines):
+- Commits: `107`
+- Files changed: `301`
+- Churn: `+125,957 / -10,083`
+- Net growth: `+115,874`
 
-1. `src/`: `+29,116` (`115` files)
-2. `build/`: `+24,851` (`15` files)
-3. `docs/`: `+21,589` (`38` files)
-4. `path_mode/`: `+10,798` (`27` files)
-5. `scripts/`: `+10,394` (`40` files)
-6. `src-tauri/`: `+8,889` (`17` files)
+File status breakdown from `git diff --name-status`:
 
-Quality scope expansion:
+- Added: `241`
+- Modified: `56`
+- Deleted: `3`
+- Renamed: `1`
 
-- **Test files added/updated**: `53`
-- **Contract tests**: `38`
-- **New NoteMD backend module files**: `13`
-- **New/updated CI workflows**: `6`
+## 3. Change Footprint by Top-Level Area
 
-## 3. Major Engineering Changes Since v1.3.0
+By changed-file count:
 
-### A. Runtime Architecture and Desktop Shell
+1. `src/`: `116`
+2. `docs/`: `41`
+3. `scripts/`: `40`
+4. `path_mode/`: `27`
+5. `src-tauri/`: `19`
+6. `build/`: `15`
+7. `.github/workflows/`: `6`
+8. `android/`: `6`
 
-- Migrated and hardened a Tauri-first runtime (`src-tauri/` introduced and expanded).
-- Removed legacy Electron runtime files and switched to sidecar-driven desktop packaging.
-- Implemented single-window orchestration behavior between Tauri and Godot path mode flows.
-- Added safer close behavior and visibility handoff logic for runtime window switching.
+Quality and governance expansion:
 
-### B. NoteMD End-to-End Integration
+- Test files changed/added: `53`
+- Contract tests changed/added: `38`
+- Workflow files changed/added: `6`
 
-- Added full NoteMD backend subsystem under `src/notemd/`:
-  - `BatchProcessor`, `FileProcessor`, `Translator`, `ContentGenerator`
-  - `MermaidProcessor`, `FormulaFixer`, `DuplicateDetector`
-  - `NotemdService`, typed request/response contracts
-- Added frontend integration (`src/frontend/notemd.html`, `notemd.js`, `notemd.css`).
-- Stabilized Browse/file/folder/save picker interaction path in Tauri integration.
-- Enforced user guidance for PDF import workflow (`PDF -> Mineru -> Markdown`).
+## 4. Critical Engineering Deltas Since v1.3.0
 
-### C. Godot Path Mode and UX
+### A. Runtime and Packaging Architecture
 
-- Expanded `path_mode/` with new scenes, renderer logic, panel system, and embedding panel hooks.
-- Improved Path UI behavior, tree rendering, settings flow, and bridge synchronization.
-- Fixed Godot window visibility and deprecated API usage paths.
+- Tauri runtime and sidecar stack was introduced and hardened under `src-tauri/`.
+- Electron runtime entries were removed (`src/electron/main.ts`, `src/electron/preload.ts`, `electron-builder.yml`).
+- Runtime capability hydration and sidecar runtime config flow were added for frontend bridge stability.
 
-### D. Mobile Export and Multi-Pipeline Support
+### B. Godot Path Mode Expansion
 
-- Expanded dual Android strategy:
-  - Capacitor Android pipeline (`android/`)
-  - Tauri Android pipeline (`src-tauri/gen/android/...`, runner/patch scripts)
-- Added Java compatibility alignment and prerequisite verification tooling.
-- Updated Android package/application metadata and build scripts for release consistency.
+- `path_mode/` gained a significantly larger UI/runtime surface:
+  - new scenes (`main`, settings, tree panel)
+  - state machine and panel scripts
+  - renderer and websocket client upgrades
+  - embedded NoteMD panel hooks
+- Single-window orchestration behavior was stabilized between Tauri and Godot windows.
 
-### E. Reliability, Security, and Operational Governance
+### C. NoteMD System Integration
 
-- Added FixRisk operational workflow and strict evidence support.
-- Added SBOM generation + attestation + verification scripts/contracts.
-- Added privacy manifest, sidecar signature, pathbridge strict schema, and detox pipeline verifications.
-- Added wasm parity verification/benchmarking and historical guardrails.
+- Full NoteMD backend module family was added in `src/notemd/`.
+- Frontend NoteMD surfaces were added (`notemd.html/js/css`).
+- Runtime integration was connected to Tauri/Godot bridge paths.
+- File/folder/save picker workflows were fixed in Tauri integration paths.
 
-### F. Build Performance and Dev Productivity
+### D. Mobile and Multi-Export Pipelines
 
-- Added low-memory Tauri build wrappers:
-  - `scripts/run-tauri-build.js`
-  - low-memory policy updates in `scripts/run-tauri-android.js`
-  - release profile controls in `src-tauri/Cargo.toml`
-- Added sidecar preflight (`scripts/ensure-sidecar-ready.js`) to skip redundant rebuilds in warm dev loops.
-- Enabled TypeScript incremental compile cache (`tsconfig.json` incremental options).
+- Dual Android pipeline matured (Capacitor and Tauri Android).
+- Android/Tauri compatibility scripts were added (env checks, patching, sidecar validation).
+- Java compatibility alignment tooling was added for deterministic APK/AAB export.
 
-## 4. Version Synchronization for v1.6.0
+### E. Verification, Security, and Release Governance
 
-Updated to `1.6.0`:
+- Added/expanded:
+  - FixRisk readiness automation
+  - SBOM generation and attestation verification
+  - sidecar signature verification
+  - privacy manifest checks
+  - pathbridge strict schema gates
+  - wasm parity benchmark/guard history controls
+  - mobile detox contract checks
 
-- `package.json`
-- `package-lock.json` (top-level and root package entry)
-- `src-tauri/tauri.conf.json`
-- `src-tauri/src/lib.rs` (About dialog display string)
-- `android/app/build.gradle` (`versionName 1.6.0`, `versionCode 16000`)
+### F. Performance and Developer Experience
 
-README synchronization completed:
+- Added low-memory Tauri wrappers and runtime memory policy tooling.
+- Added sidecar preflight scripts to reduce redundant rebuilds in warm dev loops.
+- Added generated runtime assets for Mermaid/Resvg and associated verification plumbing.
 
-- `README.md` (EN + ZH sections)
-- `docs/en/README.md`
-- `docs/zh/README.md`
+## 5. Highest-Impact File Deltas (By Total Line Change)
 
-## 5. Platform Release Matrix (v1.6.0)
+Representative examples from `git diff --numstat`:
 
-| Platform | Version | Artifact(s) | Status |
-|---|---|---|---|
-| npm package | `1.6.0` | publish target from `package.json` | Ready |
-| Windows Desktop (Tauri x64) | `1.6.0` | `src-tauri/target/release/bundle/nsis/NoteConnection_1.6.0_x64-setup.exe` | Built |
-| Windows Desktop (Tauri MSI) | `1.6.0` | `src-tauri/target/release/bundle/msi/NoteConnection_1.6.0_x64_en-US.msi` | Built |
-| Android (Capacitor debug) | `1.6.0` | `android/app/build/outputs/apk/debug/app-debug.apk` | Built |
-| Android (Tauri universal APK) | `1.6.0` | `src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk` | Artifact available |
-| Android (Tauri universal AAB) | `1.6.0` | `src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab` | Artifact available |
+1. `build/sbom/noteconnection-sbom.cdx.json` (`+17016 / -0`)
+2. `TODO.md` (`+6684 / -1611`)
+3. `package-lock.json` (`+3850 / -3183`)
+4. `src-tauri/Cargo.lock` (`+5631 / -0`)
+5. `TEST_REPORT.md` (`+3883 / -1410`)
+6. `path_mode/scripts/path_mode_ui.gd` (`+4950 / -0`)
+7. `src/server.ts` (`+2751 / -291`)
+8. `src/frontend/path_app.js` (`+2579 / -86`)
+9. `src-tauri/src/lib.rs` (`+2664 / -0`)
+10. `src/core/PathBridge.ts` (`+2020 / -26`)
 
-Tauri Android metadata snapshot:
+## 6. Documentation Completion Work (This Pass)
 
-- `src-tauri/gen/android/app/build/outputs/apk/universal/release/output-metadata.json`
-- `versionName: "1.6.0"`
-- `versionCode: 1006000`
+Based on the `v1.3.0..v1.6.0` compare audit, the following documentation gaps were normalized:
 
-Capacitor Android metadata snapshot:
+- Updated stale top-version headers to `v1.6.0` in canonical README/manual/interface docs.
+- Refreshed this release report to use strict tag-to-tag metrics (removed `..HEAD` ambiguity).
+- Added missing compare-scope context to release notes/readme changelog entries.
+- Updated bilingual index coverage to include new paired documents added after `v1.3.0`.
 
-- `android/app/build/outputs/apk/debug/output-metadata.json`
-- `versionName: "1.6.0"`
-- `versionCode: 16000`
+## 7. Release State Recommendation
 
-## 6. Verification Evidence (This Release Pass)
+`v1.6.0` is a major runtime and governance expansion relative to `v1.3.0`, not a patch-level delta.
 
-Successful commands:
+Recommended release communication framing:
 
-1. `npm run build:mini`
-2. `npm run verify:fixrisk:issues`
-3. `npm run tauri:build:mini`
-4. `npm run mobile:build:capacitor`
-5. `npm run mobile:build:both` (full dual mobile pipeline run)
-
-FixRisk status:
-
-- `FR-001..FR-008`, `FR-010..FR-015`: `VERIFIED-CLOSED`
-- `FR-009`: `VERIFIED-PENDING` (operational evidence freshness/threshold pending)
-
-## 7. Known Risk Notes
-
-1. **Intermittent Tauri Android rebuild OOM on this host**:
-   - Repeated `npm run tauri:android:build:universal` retries can fail in Rust Android target compilation with memory allocation aborts.
-   - Previously generated `v1.6.0` universal APK/AAB artifacts are present and version-aligned.
-2. **FR-009 remains operationally pending**:
-   - Functional checks pass, but strict large-graph physical-device evidence must be refreshed for complete closure.
-
-## 8. Release Recommendation
-
-**Go** for `v1.6.0` GitHub + npm synchronization, with two operational notes:
-
-1. Publish the current desktop and Android artifacts already generated for `1.6.0`.
-2. Run Tauri Android rebuild on a higher-memory CI/host before final Android artifact rotation if reproducibility from clean state is required.
-
+1. Runtime transition: Electron-decommissioned, Tauri-first architecture.
+2. UX transition: single-window orchestration and embedded NoteMD flow.
+3. Delivery transition: dual Android pipeline plus stricter CI/security governance.

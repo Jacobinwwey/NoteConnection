@@ -1,4 +1,4 @@
-# 2026-03-04 v1.5.13
+# 2026-03-24 v1.6.0
 
 # NoteConnection Knowledge Graph
 
@@ -309,6 +309,11 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ### v1.6.0 - Unified Runtime, NoteMD Integration & Release Hardening (2026-03-23)
 
+- **Tag Compare Snapshot (`v1.3.0..v1.6.0`)**:
+  - `107` commits, `301` files changed, `+125,957 / -10,083` churn.
+  - File-level status: `241` added, `56` modified, `3` deleted, `1` renamed.
+  - Largest engineering footprint: `src/`, `docs/`, `scripts/`, `path_mode/`, `src-tauri/`.
+
 - **Single-Window Runtime Orchestration**:
   - Implemented Tauri <-> Godot visibility handoff so only one primary window is shown at a time.
   - Added Godot close-confirm flow ("Return to main interface" vs "Close all windows") to prevent accidental full shutdown.
@@ -323,6 +328,7 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 - **Reliability & Security Gates**:
   - Expanded CI/workflow coverage for FixRisk operational readiness, mobile e2e contracts, wasm parity, SBOM, attestation, and signature/privacy checks.
   - Added broad contract-level regression coverage across mobile/runtime/pathbridge/storage layers.
+  - Included pre-release CI compatibility fixes for runtime bridge invoke-contract assertions and unsigned SBOM transparency policy handling.
 - **Build Performance & Developer Experience**:
   - Added low-memory Tauri build wrappers and release-profile safeguards for constrained environments.
   - Added sidecar readiness preflight to skip redundant rebuilds during dev startup, reducing warm `tauri:dev:mini:gpu` startup latency.
@@ -854,7 +860,7 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 ## 中文文档
 
 
-# 2026-03-04 v1.5.13
+# 2026-03-24 v1.6.0
 # NoteConnection: 层级知识图谱可视化系统
 
 <img width="606" height="309" alt="banner" src="https://github.com/user-attachments/assets/92e90de5-2b1a-4398-8e8b-6e142c92b6a2" />
@@ -1143,6 +1149,11 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 
 ### v1.6.0 - 单窗口运行时、NoteMD 集成与发布加固 (2026-03-23)
 
+- **Tag 对比快照（`v1.3.0..v1.6.0`）**:
+  - `107` 个提交、`301` 个变更文件、`+125,957 / -10,083` 代码/文档变更量。
+  - 文件状态分布：新增 `241`、修改 `56`、删除 `3`、重命名 `1`。
+  - 主要工程变更面集中在：`src/`、`docs/`、`scripts/`、`path_mode/`、`src-tauri/`。
+
 - **单窗口运行时编排**:
   - 实现 Tauri <-> Godot 的可见性切换，同一时刻仅显示一个主窗口。
   - 增加 Godot 关闭确认流程（“返回主界面” / “关闭全部窗口”），避免误操作导致全局退出。
@@ -1157,6 +1168,7 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 - **可靠性与安全门禁**:
   - 扩展 CI/工作流：FixRisk 运维就绪、移动端 e2e 合约、wasm parity、SBOM、attestation、签名与隐私清单校验。
   - 新增多层合约回归覆盖（mobile/runtime/pathbridge/storage）。
+  - 纳入发布前 CI 兼容修复：runtime bridge invoke 契约断言兼容与无签名 SBOM transparency 条件化策略。
 - **构建性能与开发体验**:
   - 增加低内存 Tauri 构建包装器与 release 配置保护，提升受限内存环境可构建性。
   - 增加 sidecar 预检，避免开发期重复重建，缩短 `tauri:dev:mini:gpu` 热启动耗时。

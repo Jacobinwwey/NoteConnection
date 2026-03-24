@@ -1,6 +1,6 @@
-# 2026-03-04 v1.5.13
+# 2026-03-24 v1.6.0
 
-# Interface Document (v1.5.13)
+# Interface Document (v1.6.0)
 
 This document is the canonical interface handover for the current codebase.
 It was rebuilt from source verification, not appended to legacy sections.
@@ -738,8 +738,8 @@ This section records interface changes added after `v1.4.5`, keeping all previou
 
 ## 中文文档
 
-# 2026-03-04 v1.5.13
-# 接口文档 (v1.5.13)
+# 2026-03-24 v1.6.0
+# 接口文档 (v1.6.0)
 
 本文件是当前代码状态下的权威接口交接文档。
 本版不是在旧文档上追加，而是按源码核对后重建。
