@@ -299,6 +299,16 @@ For developers building from source, NoteConnection offers two build modes:
 - **GPU Dev Start (`npm run tauri:dev:mini:gpu`)**: Recommended GPU-enabled Tauri development command.
 - **Do not use** `npm run tauri:dev:mini --gpu` because npm treats `--gpu` as config and prints warnings.
 
+## 📚 Documentation Architecture (Diataxis + MkDocs)
+
+- Canonical long-form docs remain under `docs/en/*` and `docs/zh/*`.
+- Diataxis navigation pages are maintained under `docs/diataxis/<lang>/*`.
+- Mapping governance is versioned in `docs/diataxis-map.json`.
+- Run mapping validation: `npm run docs:diataxis:check`.
+- Run local docs site preview: `npm run docs:site:serve`.
+- Build static docs site: `npm run docs:site:build`.
+- CI policy gate for docs mapping and site build: `.github/workflows/docs-diataxis-site.yml`.
+
 ## 🛠️ Hardware & Driver Requirements (AMDGPU)
 
 For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA cards (like RX 7900XT):

@@ -294,6 +294,16 @@ For developers building from source, NoteConnection offers two build modes:
 - **GPU Dev Start (`npm run tauri:dev:mini:gpu`)**: Recommended GPU-enabled Tauri development command.
 - **Do not use** `npm run tauri:dev:mini --gpu` because npm treats `--gpu` as config and prints warnings.
 
+## 📚 Documentation Architecture (Diataxis + MkDocs)
+
+- Canonical long-form docs remain under `docs/en/*` and `docs/zh/*`.
+- Diataxis navigation pages are maintained under `docs/diataxis/<lang>/*`.
+- Mapping governance is versioned in `docs/diataxis-map.json`.
+- Run mapping validation: `npm run docs:diataxis:check`.
+- Run local docs site preview: `npm run docs:site:serve`.
+- Build static docs site: `npm run docs:site:build`.
+- CI policy gate for docs mapping and site build: `.github/workflows/docs-diataxis-site.yml`.
+
 ## 🛠️ Hardware & Driver Requirements (AMDGPU)
 
 For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA cards (like RX 7900XT):
@@ -1140,6 +1150,16 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 - **Tauri 精简构建** (`npm run tauri:build:mini`): 构建排除大型预生成图谱数据的桌面安装包。
 - **GPU 开发启动（推荐）** (`npm run tauri:dev:mini:gpu`)。
 - **不要使用** `npm run tauri:dev:mini --gpu`，该写法会被 npm 当作配置参数并触发告警。
+
+## 📚 文档架构（Diataxis + MkDocs）
+
+- 权威长文档仍保持在 `docs/en/*` 与 `docs/zh/*`。
+- Diataxis 导航页维护在 `docs/diataxis/<lang>/*`。
+- 映射治理文件为 `docs/diataxis-map.json`。
+- 映射一致性校验：`npm run docs:diataxis:check`。
+- 本地预览文档站点：`npm run docs:site:serve`。
+- 构建静态文档站点：`npm run docs:site:build`。
+- CI 文档治理工作流：`.github/workflows/docs-diataxis-site.yml`。
 
 ---
 

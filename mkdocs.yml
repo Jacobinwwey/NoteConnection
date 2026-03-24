@@ -1,0 +1,70 @@
+site_name: NoteConnection Docs
+site_description: Diataxis-based bilingual documentation for NoteConnection
+site_url: https://jacobinwwey.github.io/NoteConnection/
+repo_url: https://github.com/Jacobinwwey/NoteConnection
+repo_name: Jacobinwwey/NoteConnection
+docs_dir: docs
+site_dir: build/mkdocs-site
+strict: false
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+    - search.highlight
+    - search.suggest
+  palette:
+    - scheme: default
+      primary: blue
+      accent: cyan
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Home: index.md
+  - English:
+      - Diataxis Overview: diataxis/en/overview.md
+      - Tutorials:
+          - First Run: diataxis/en/tutorials/first-run.md
+      - How-To Guides:
+          - Build and Export: diataxis/en/how-to/build-and-export.md
+          - Single Window Runtime: diataxis/en/how-to/single-window-runtime.md
+      - Reference:
+          - Interfaces and Runtime: diataxis/en/reference/interfaces-and-runtime.md
+          - Release and Governance: diataxis/en/reference/release-and-governance.md
+      - Explanation:
+          - Architecture and Migration: diataxis/en/explanation/architecture-and-migration.md
+  - 中文:
+      - Diataxis 概览: diataxis/zh/overview.md
+      - 教程:
+          - 首次运行: diataxis/zh/tutorials/first-run.md
+      - 操作指南:
+          - 构建与导出: diataxis/zh/how-to/build-and-export.md
+          - 单窗口运行时: diataxis/zh/how-to/single-window-runtime.md
+      - 参考:
+          - 接口与运行时: diataxis/zh/reference/interfaces-and-runtime.md
+          - 发布与治理: diataxis/zh/reference/release-and-governance.md
+      - 解释:
+          - 架构与迁移: diataxis/zh/explanation/architecture-and-migration.md

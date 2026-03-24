@@ -72,7 +72,10 @@
     "test:gates": "npm run test:migration && npm run test:wasm:parity:gates && npm run test:tauri && npm run verify:android:env && npm run verify:detox:pipeline && npm run verify:privacy:manifest && npm run verify:pathbridge:strict && npm run verify:sbom -- --contract-only && npm run verify:sbom:attestation -- --contract-only && npm run verify:sidecar:signatures -- --contract-only",
     "prepublishOnly": "npm run build:mini",
     "test": "jest",
-    "cleanup:tauri:sidecars": "node scripts/cleanup-tauri-sidecars.js"
+    "cleanup:tauri:sidecars": "node scripts/cleanup-tauri-sidecars.js",
+    "docs:diataxis:check": "node scripts/verify-diataxis-map.js",
+    "docs:site:build": "mkdocs build --config-file mkdocs.yml",
+    "docs:site:serve": "mkdocs serve --config-file mkdocs.yml"
   },
   "pkg": {
     "scripts": [

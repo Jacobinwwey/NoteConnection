@@ -1,0 +1,54 @@
+name: Docs Diataxis Site
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  verify-diataxis-map:
+    name: verify-diataxis-map
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify Diataxis mapping governance
+        run: npm run docs:diataxis:check
+
+  build-mkdocs-site:
+    name: build-mkdocs-site
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: docs/requirements-mkdocs.txt
+
+      - name: Install MkDocs dependencies
+        run: pip install -r docs/requirements-mkdocs.txt
+
+      - name: Build docs site
+        run: mkdocs build --config-file mkdocs.yml

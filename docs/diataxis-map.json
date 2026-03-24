@@ -1,0 +1,78 @@
+{
+  "version": "1.0.0",
+  "categories": ["tutorials", "how-to", "reference", "explanation"],
+  "entries": [
+    {
+      "id": "first-run",
+      "category": "tutorials",
+      "en": {
+        "canonical": ["docs/en/README.md"],
+        "diataxis": "docs/diataxis/en/tutorials/first-run.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/README.md"],
+        "diataxis": "docs/diataxis/zh/tutorials/first-run.md"
+      }
+    },
+    {
+      "id": "build-and-export",
+      "category": "how-to",
+      "en": {
+        "canonical": ["docs/en/export.md", "docs/en/README.md"],
+        "diataxis": "docs/diataxis/en/how-to/build-and-export.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/export.md", "docs/zh/README.md"],
+        "diataxis": "docs/diataxis/zh/how-to/build-and-export.md"
+      }
+    },
+    {
+      "id": "single-window-runtime",
+      "category": "how-to",
+      "en": {
+        "canonical": ["docs/en/single_window_migration_plan.md", "docs/en/User_Manual.md"],
+        "diataxis": "docs/diataxis/en/how-to/single-window-runtime.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/single_window_migration_plan.md", "docs/zh/User_Manual.md"],
+        "diataxis": "docs/diataxis/zh/how-to/single-window-runtime.md"
+      }
+    },
+    {
+      "id": "interfaces-and-runtime",
+      "category": "reference",
+      "en": {
+        "canonical": ["docs/en/Interface Document.md"],
+        "diataxis": "docs/diataxis/en/reference/interfaces-and-runtime.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/Interface Document.md"],
+        "diataxis": "docs/diataxis/zh/reference/interfaces-and-runtime.md"
+      }
+    },
+    {
+      "id": "release-and-governance",
+      "category": "reference",
+      "en": {
+        "canonical": ["docs/en/release_v1.6.0_report.md", "docs/release_notes_v1.6.0.md"],
+        "diataxis": "docs/diataxis/en/reference/release-and-governance.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/release_v1.6.0_report.md", "docs/release_notes_v1.6.0.md"],
+        "diataxis": "docs/diataxis/zh/reference/release-and-governance.md"
+      }
+    },
+    {
+      "id": "architecture-and-migration",
+      "category": "explanation",
+      "en": {
+        "canonical": ["docs/en/tauri_brainstorming.md", "docs/en/electron_migration_analysis.md"],
+        "diataxis": "docs/diataxis/en/explanation/architecture-and-migration.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/tauri_brainstorming.md", "docs/zh/electron_migration_analysis.md"],
+        "diataxis": "docs/diataxis/zh/explanation/architecture-and-migration.md"
+      }
+    }
+  ]
+}

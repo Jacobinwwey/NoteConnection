@@ -290,6 +290,16 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 - **GPU 开发启动（推荐）** (`npm run tauri:dev:mini:gpu`)。
 - **不要使用** `npm run tauri:dev:mini --gpu`，该写法会被 npm 当作配置参数并触发告警。
 
+## 📚 文档架构（Diataxis + MkDocs）
+
+- 权威长文档仍保持在 `docs/en/*` 与 `docs/zh/*`。
+- Diataxis 导航页维护在 `docs/diataxis/<lang>/*`。
+- 映射治理文件为 `docs/diataxis-map.json`。
+- 映射一致性校验：`npm run docs:diataxis:check`。
+- 本地预览文档站点：`npm run docs:site:serve`。
+- 构建静态文档站点：`npm run docs:site:build`。
+- CI 文档治理工作流：`.github/workflows/docs-diataxis-site.yml`。
+
 ---
 
 <a id="changelog-zh"></a>
