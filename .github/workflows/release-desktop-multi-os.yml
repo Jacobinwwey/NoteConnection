@@ -75,7 +75,7 @@ jobs:
             files: |
               src-tauri/target/release/bundle/**/*.AppImage
               src-tauri/target/release/bundle/**/*.deb
-          - runner: macos-13
+          - runner: macos-latest
             platform_label: macos
             files: |
               src-tauri/target/release/bundle/**/*.dmg
@@ -101,25 +101,25 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
+          set -euo pipefail
           sudo apt-get update
-          if sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
+          if apt-cache show libwebkit2gtk-4.1-dev >/dev/null 2>&1; then
+            WEBKIT_PKG="libwebkit2gtk-4.1-dev"
+          else
+            WEBKIT_PKG="libwebkit2gtk-4.0-dev"
+          fi
+          if apt-cache show libayatana-appindicator3-dev >/dev/null 2>&1; then
+            APPINDICATOR_PKG="libayatana-appindicator3-dev"
+          else
+            APPINDICATOR_PKG="libappindicator3-dev"
+          fi
+          sudo apt-get install -y \
+            "${WEBKIT_PKG}" \
             libgtk-3-dev \
             librsvg2-dev \
             patchelf \
-            libappindicator3-dev \
-            libayatana-appindicator3-dev; then
-            echo "Installed WebKitGTK 4.1 dependency stack."
-          else
-            sudo apt-get install -y \
-              libwebkit2gtk-4.0-dev \
-              libgtk-3-dev \
-              librsvg2-dev \
-              patchelf \
-              libappindicator3-dev \
-              libayatana-appindicator3-dev
-            echo "Installed WebKitGTK 4.0 fallback dependency stack."
-          fi
+            "${APPINDICATOR_PKG}"
+          echo "Installed Linux native dependencies with ${WEBKIT_PKG} and ${APPINDICATOR_PKG}."
 
       - name: Install dependencies
         run: npm ci
@@ -133,9 +133,15 @@ jobs:
           $archive = "build\godot\godot-win64.zip"
           Invoke-WebRequest -Uri "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_win64.exe.zip" -OutFile $archive
           Expand-Archive -Path $archive -DestinationPath "build\godot\extract" -Force
-          $godotExe = Get-ChildItem -Path "build\godot\extract" -Filter "*.exe" -Recurse | Select-Object -First 1
+          $godotExe = Get-ChildItem -Path "build\godot\extract" -Filter "Godot_v4.3-stable_win64.exe" -Recurse | Select-Object -First 1
+          if (-not $godotExe) {
+            $godotExe = Get-ChildItem -Path "build\godot\extract" -Filter "*.exe" -Recurse | Where-Object { $_.Name -notmatch "_console\.exe$" } | Sort-Object Length -Descending | Select-Object -First 1
+          }
           if (-not $godotExe) {
             throw "Failed to locate extracted Godot Windows executable."
+          }
+          if ($godotExe.Length -lt 1048576) {
+            throw "Resolved Godot executable is too small ($($godotExe.Length) bytes): $($godotExe.FullName)"
           }
           Copy-Item -Path $godotExe.FullName -Destination "src-tauri\bin\godot-x86_64-pc-windows-msvc.exe" -Force
 
@@ -168,8 +174,14 @@ jobs:
             echo "Failed to locate extracted Godot macOS executable."
             exit 1
           fi
-          cp "${GODOT_BIN}" src-tauri/bin/godot-x86_64-apple-darwin
-          chmod +x src-tauri/bin/godot-x86_64-apple-darwin
+          ARCH="$(uname -m)"
+          if [ "${ARCH}" = "arm64" ] || [ "${ARCH}" = "aarch64" ]; then
+            TARGET_BIN="src-tauri/bin/godot-aarch64-apple-darwin"
+          else
+            TARGET_BIN="src-tauri/bin/godot-x86_64-apple-darwin"
+          fi
+          cp "${GODOT_BIN}" "${TARGET_BIN}"
+          chmod +x "${TARGET_BIN}"
 
       - name: Build desktop bundle
         run: npm run tauri:build:mini
