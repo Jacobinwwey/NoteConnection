@@ -10,6 +10,10 @@ on:
         description: "Tag to build and upload (for example: v1.6.1)"
         required: true
         type: string
+      source_ref:
+        description: "Optional build source ref (branch/commit/tag). Defaults to the release tag when omitted."
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -84,7 +88,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_ref != '' && github.event.inputs.source_ref || github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
           fetch-depth: 0
           lfs: true
 
