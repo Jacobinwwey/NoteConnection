@@ -92,6 +92,49 @@ function runPathmodePatch({ allowMissing }) {
   return patchResult.status === 0;
 }
 
+function spawnTauriCommand(tauriArgs, envOverrides) {
+  const isWindows = process.platform === 'win32';
+  const execCommand = isWindows ? 'cmd.exe' : 'npx';
+  const execArgs = isWindows ? ['/d', '/s', '/c', 'npx', ...tauriArgs] : tauriArgs;
+
+  return spawnSync(execCommand, execArgs, {
+    stdio: 'inherit',
+    env: envOverrides
+  });
+}
+
+function ensureAndroidProjectScaffold(envOverrides) {
+  const androidAppDir = path.resolve(__dirname, '..', 'src-tauri', 'gen', 'android', 'app');
+  if (existsDir(androidAppDir)) {
+    return true;
+  }
+
+  console.log('[Tauri Android Runner] Android scaffold is missing. Bootstrapping with: npx tauri android init --ci');
+  const initResult = spawnTauriCommand(['tauri', 'android', 'init', '--ci'], envOverrides);
+
+  if (initResult.error) {
+    console.error(`[Tauri Android Runner] Failed to start android init: ${initResult.error.message}`);
+    return false;
+  }
+  if (initResult.signal) {
+    console.error(`[Tauri Android Runner] Android init terminated by signal: ${initResult.signal}`);
+    return false;
+  }
+
+  const initStatus = initResult.status === null ? 1 : initResult.status;
+  if (initStatus !== 0) {
+    console.error(`[Tauri Android Runner] Android init failed with status ${initStatus}.`);
+    return false;
+  }
+
+  if (!existsDir(androidAppDir)) {
+    console.error(`[Tauri Android Runner] Android init completed but scaffold is still missing: ${androidAppDir}`);
+    return false;
+  }
+
+  return true;
+}
+
 function main() {
   const mode = process.argv[2];
   const cliTarget = process.argv[3];
@@ -117,10 +160,6 @@ function main() {
   if (target) {
     tauriArgs.push('--target', target);
   }
-
-  const isWindows = process.platform === 'win32';
-  const execCommand = isWindows ? 'cmd.exe' : 'npx';
-  const execArgs = isWindows ? ['/d', '/s', '/c', 'npx', ...tauriArgs] : tauriArgs;
   const cargoBuildJobs = String(parsePositiveInt(process.env.CARGO_BUILD_JOBS, 1));
   const cargoReleaseOptLevel = String(process.env.CARGO_PROFILE_RELEASE_OPT_LEVEL || '0');
   const cargoReleaseCodegenUnits = String(
@@ -131,9 +170,29 @@ function main() {
   const cargoReleasePanic = String(process.env.CARGO_PROFILE_RELEASE_PANIC || 'abort');
   const cargoIncremental = String(process.env.CARGO_INCREMENTAL || '0');
   const rustflags = appendRustflag(process.env.RUSTFLAGS, '-C debuginfo=0');
+  const tauriEnv = {
+    ...process.env,
+    ANDROID_HOME: sdkRoot,
+    ANDROID_SDK_ROOT: sdkRoot,
+    NDK_HOME: ndkHome,
+    ANDROID_NDK_HOME: ndkHome,
+    CARGO_BUILD_JOBS: cargoBuildJobs,
+    CARGO_PROFILE_RELEASE_OPT_LEVEL: cargoReleaseOptLevel,
+    CARGO_PROFILE_RELEASE_CODEGEN_UNITS: cargoReleaseCodegenUnits,
+    CARGO_PROFILE_RELEASE_DEBUG: cargoReleaseDebug,
+    CARGO_PROFILE_RELEASE_LTO: cargoReleaseLto,
+    CARGO_PROFILE_RELEASE_PANIC: cargoReleasePanic,
+    CARGO_INCREMENTAL: cargoIncremental,
+    RUSTFLAGS: rustflags
+  };
 
-  // For dev/build, Android project should already exist and must be patched before compile.
+  // Dev/build commands require the generated Android project before patching.
   if (mode === 'dev' || mode === 'build') {
+    if (!ensureAndroidProjectScaffold(tauriEnv)) {
+      console.error('[Tauri Android Runner] Failed to prepare Android scaffold before build/dev.');
+      process.exit(1);
+    }
+
     if (!runPathmodePatch({ allowMissing: false })) {
       console.error('[Tauri Android Runner] Failed to apply Android Pathmode patch before build/dev.');
       process.exit(1);
@@ -160,24 +219,7 @@ function main() {
   }
   console.log(`[Tauri Android Runner] Executing: npx ${tauriArgs.join(' ')}`);
 
-  const result = spawnSync(execCommand, execArgs, {
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      ANDROID_HOME: sdkRoot,
-      ANDROID_SDK_ROOT: sdkRoot,
-      NDK_HOME: ndkHome,
-      ANDROID_NDK_HOME: ndkHome,
-      CARGO_BUILD_JOBS: cargoBuildJobs,
-      CARGO_PROFILE_RELEASE_OPT_LEVEL: cargoReleaseOptLevel,
-      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: cargoReleaseCodegenUnits,
-      CARGO_PROFILE_RELEASE_DEBUG: cargoReleaseDebug,
-      CARGO_PROFILE_RELEASE_LTO: cargoReleaseLto,
-      CARGO_PROFILE_RELEASE_PANIC: cargoReleasePanic,
-      CARGO_INCREMENTAL: cargoIncremental,
-      RUSTFLAGS: rustflags
-    }
-  });
+  const result = spawnTauriCommand(tauriArgs, tauriEnv);
 
   if (result.error) {
     console.error(`[Tauri Android Runner] Failed to start command: ${result.error.message}`);
