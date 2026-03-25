@@ -27,7 +27,14 @@ Choose one path:
 1. Click `Path Mode`.
 2. Confirm that runtime window handoff behavior is single-window in desktop runtime.
 
+## Step 5: Verify Local Runtime Config
+
+1. Open your local `app_config.toml`.
+2. Confirm `knowledge_base_path`, `user_language`, and `[multi_window]` values.
+3. If needed, apply the template and restart.
+
 ## Canonical Detailed Sources
 
 - [docs/en/README.md](../../../en/README.md)
 - [docs/en/User_Manual.md](../../../en/User_Manual.md)
+- [docs/en/app_config.toml_guide.md](../../../en/app_config.toml_guide.md)

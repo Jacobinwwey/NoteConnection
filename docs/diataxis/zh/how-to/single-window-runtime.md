@@ -24,3 +24,4 @@
 
 - [docs/zh/single_window_migration_plan.md](../../../zh/single_window_migration_plan.md)
 - [docs/zh/User_Manual.md](../../../zh/User_Manual.md)
+- [docs/zh/app_config.toml_guide.md](../../../zh/app_config.toml_guide.md)

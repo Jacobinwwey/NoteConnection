@@ -98,6 +98,31 @@
         return value.replace(/\/+$/, '');
     }
 
+    function normalizeLanguageCode(rawValue) {
+        const value = String(rawValue || '').trim().toLowerCase();
+        return value.startsWith('zh') ? 'zh' : 'en';
+    }
+
+    function normalizeBoolean(value, fallback) {
+        if (typeof value === 'boolean') {
+            return value;
+        }
+        return fallback;
+    }
+
+    function getDefaultAppRuntimeConfig() {
+        return {
+            language: 'en',
+            multiWindow: {
+                singleWindowMode: true,
+                hideTauriWhenPathmodeOpens: true,
+                restoreTauriWhenPathmodeExits: true,
+                confirmBeforeFullShutdownFromGodot: true,
+                syncLanguage: true
+            }
+        };
+    }
+
     const state = {
         baseUrl: normalizeBaseUrl(window.__NC_SIDECAR_RUNTIME && window.__NC_SIDECAR_RUNTIME.baseUrl),
         bridgeWsUrl: normalizeBridgeWsUrl(window.__NC_SIDECAR_RUNTIME && window.__NC_SIDECAR_RUNTIME.bridgeWsUrl),
@@ -106,6 +131,34 @@
         port: Number((window.__NC_SIDECAR_RUNTIME && window.__NC_SIDECAR_RUNTIME.port) || 3000),
         bridgePort: Number((window.__NC_SIDECAR_RUNTIME && window.__NC_SIDECAR_RUNTIME.bridgePort) || 9876)
     };
+    const appState = getDefaultAppRuntimeConfig();
+    if (window.__NC_APP_CONFIG && typeof window.__NC_APP_CONFIG === 'object') {
+        const bootAppConfig = window.__NC_APP_CONFIG;
+        appState.language = normalizeLanguageCode(bootAppConfig.language || appState.language);
+        if (bootAppConfig.multiWindow && typeof bootAppConfig.multiWindow === 'object') {
+            const bootMultiWindow = bootAppConfig.multiWindow;
+            appState.multiWindow.singleWindowMode = normalizeBoolean(
+                bootMultiWindow.singleWindowMode,
+                appState.multiWindow.singleWindowMode
+            );
+            appState.multiWindow.hideTauriWhenPathmodeOpens = normalizeBoolean(
+                bootMultiWindow.hideTauriWhenPathmodeOpens,
+                appState.multiWindow.hideTauriWhenPathmodeOpens
+            );
+            appState.multiWindow.restoreTauriWhenPathmodeExits = normalizeBoolean(
+                bootMultiWindow.restoreTauriWhenPathmodeExits,
+                appState.multiWindow.restoreTauriWhenPathmodeExits
+            );
+            appState.multiWindow.confirmBeforeFullShutdownFromGodot = normalizeBoolean(
+                bootMultiWindow.confirmBeforeFullShutdownFromGodot,
+                appState.multiWindow.confirmBeforeFullShutdownFromGodot
+            );
+            appState.multiWindow.syncLanguage = normalizeBoolean(
+                bootMultiWindow.syncLanguage,
+                appState.multiWindow.syncLanguage
+            );
+        }
+    }
 
     let runtimeReadyResolved = false;
     let runtimeHydrationPromise = null;
@@ -124,6 +177,20 @@
             authToken: state.authToken
         };
         return window.__NC_SIDECAR_RUNTIME;
+    }
+
+    function syncGlobalAppState() {
+        window.__NC_APP_CONFIG = {
+            language: appState.language,
+            multiWindow: {
+                singleWindowMode: appState.multiWindow.singleWindowMode,
+                hideTauriWhenPathmodeOpens: appState.multiWindow.hideTauriWhenPathmodeOpens,
+                restoreTauriWhenPathmodeExits: appState.multiWindow.restoreTauriWhenPathmodeExits,
+                confirmBeforeFullShutdownFromGodot: appState.multiWindow.confirmBeforeFullShutdownFromGodot,
+                syncLanguage: appState.multiWindow.syncLanguage
+            }
+        };
+        return window.__NC_APP_CONFIG;
     }
 
     function finalizeRuntimeReady() {
@@ -168,6 +235,44 @@
 
     function getRuntimeConfig() {
         return syncGlobalState();
+    }
+
+    function setAppRuntimeConfig(nextConfig) {
+        const merged = getDefaultAppRuntimeConfig();
+        if (nextConfig && typeof nextConfig === 'object') {
+            merged.language = normalizeLanguageCode(nextConfig.language || merged.language);
+            const nextMultiWindow = nextConfig.multiWindow && typeof nextConfig.multiWindow === 'object'
+                ? nextConfig.multiWindow
+                : {};
+            merged.multiWindow.singleWindowMode = normalizeBoolean(
+                nextMultiWindow.singleWindowMode,
+                merged.multiWindow.singleWindowMode
+            );
+            merged.multiWindow.hideTauriWhenPathmodeOpens = normalizeBoolean(
+                nextMultiWindow.hideTauriWhenPathmodeOpens,
+                merged.multiWindow.hideTauriWhenPathmodeOpens
+            );
+            merged.multiWindow.restoreTauriWhenPathmodeExits = normalizeBoolean(
+                nextMultiWindow.restoreTauriWhenPathmodeExits,
+                merged.multiWindow.restoreTauriWhenPathmodeExits
+            );
+            merged.multiWindow.confirmBeforeFullShutdownFromGodot = normalizeBoolean(
+                nextMultiWindow.confirmBeforeFullShutdownFromGodot,
+                merged.multiWindow.confirmBeforeFullShutdownFromGodot
+            );
+            merged.multiWindow.syncLanguage = normalizeBoolean(
+                nextMultiWindow.syncLanguage,
+                merged.multiWindow.syncLanguage
+            );
+        }
+
+        appState.language = merged.language;
+        appState.multiWindow = merged.multiWindow;
+        return syncGlobalAppState();
+    }
+
+    function getAppRuntimeConfig() {
+        return syncGlobalAppState();
     }
 
     function buildUrl(resourcePath, query) {
@@ -292,6 +397,11 @@
                     };
                 }
 
+            } catch (error) {
+                console.warn('[RuntimeBridge] Failed to hydrate runtime capabilities from Tauri. Using runtime bridge defaults.', error);
+            }
+
+            try {
                 const runtimeCaps = window.__NC_RUNTIME_CAPS || {};
                 if (runtimeCaps.supports_sidecar) {
                     const runtimeConfig = await invokeTauriWithTimeout(
@@ -305,11 +415,23 @@
                 console.warn('[RuntimeBridge] Failed to hydrate sidecar runtime config from Tauri. Using runtime bridge defaults.', error);
             }
 
+            try {
+                const appConfig = await invokeTauriWithTimeout(
+                    () => invoke('get_app_runtime_config'),
+                    'get_app_runtime_config',
+                    TAURI_RUNTIME_HYDRATE_TIMEOUT_MS
+                );
+                setAppRuntimeConfig(appConfig);
+            } catch (error) {
+                console.warn('[RuntimeBridge] Failed to hydrate app runtime config from Tauri. Using runtime defaults.', error);
+            }
+
             if (typeof window.dispatchEvent === 'function' && typeof window.CustomEvent === 'function') {
                 window.dispatchEvent(new CustomEvent('noteconnection:runtime-ready', {
                     detail: {
                         runtime: syncGlobalState(),
-                        caps: window.__NC_RUNTIME_CAPS || null
+                        caps: window.__NC_RUNTIME_CAPS || null,
+                        appConfig: syncGlobalAppState()
                     }
                 }));
             }
@@ -330,6 +452,8 @@
     window.NoteConnectionRuntime = {
         setRuntimeConfig,
         getRuntimeConfig,
+        setAppRuntimeConfig,
+        getAppRuntimeConfig,
         buildUrl,
         buildFetchOptions,
         createAuthHeaders,
@@ -349,6 +473,7 @@
     };
 
     syncGlobalState();
+    syncGlobalAppState();
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {

@@ -109,3 +109,17 @@ NoteConnection 包含一个一键式脚本，用于构建原生 Android APK (v1.
   - 在 Tauri 中点击文件/文件夹/保存 Browse 应触发原生选择器并回填路径。
 - **PDF 导入规则**:
   - PDF 需要先用 Mineru 转换成 Markdown，再导入 NoteMD。
+
+### 10. 本地运行时配置（`app_config.toml`）
+
+- **用途**:
+  - 统一持久化 KB 根目录、语言与多窗口策略。
+- **Windows 默认位置**:
+  - `%LOCALAPPDATA%/NoteConnection/app_config.toml`
+- **路径覆盖变量**:
+  - `NOTE_CONNECTION_CONFIG_PATH`（完整文件路径）
+  - `NOTE_CONNECTION_CONFIG_DIR`（包含 `app_config.toml` 的目录）
+- **模板**:
+  - [`docs/examples/app_config.template.toml`](../examples/app_config.template.toml)
+- **详细指南**:
+  - [`docs/zh/app_config.toml_guide.md`](app_config.toml_guide.md)

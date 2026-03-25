@@ -36,7 +36,7 @@
 
 现有的 Electron 主进程承担了渲染 Web 视图之外的几个关键角色：
 
-- **配置管理：** 在用户数据目录中读取/写入 `kb_config.json`，用于知识库路径和语言偏好。
+- **配置管理：** Electron 阶段在用户数据目录读取/写入 `kb_config.json`，用于知识库路径和语言偏好（现已在 Tauri 中由 `app_config.toml` 取代，并支持旧配置自动迁移）。
 - **菜单本地化：** 根据用户偏好动态构建英文或中文的原生窗口菜单。
 - **首次启动设置：** 如果不存在配置，则生成原生目录选择对话框 (`dialog.showOpenDialog`)。
 - **Node.js 后端执行：** 在同一进程中直接导入并运行 `NoteController.triggerBuild()`，管理文件 I/O 并生成工作线程。
@@ -48,14 +48,14 @@
 
 | Electron IPC 钩子    | 当前后端实现 (`main.ts`)                 | Tauri 迁移策略                                                        |
 | :------------------- | :--------------------------------------- | :-------------------------------------------------------------------- |
-| `getKbPath()`        | 从 `kb_config.json` 读取。               | 使用 Rust 通过 `fs` 或 `tauri-plugin-store` 实现。                    |
+| `getKbPath()`        | 从 `kb_config.json` 读取。               | 已由 Rust 基于 `app_config.toml` 完成（`get_kb_path`/`set_kb_path`），并在启动时自动迁移旧 JSON 配置。 |
 | `getFolders()`       | 调用 `NoteController.getFolders()`。     | 迁移至针对 Node Sidecar 的 HTTP fetch (`GET /api/folders`)。          |
 | `getContent(path)`   | 调用 `NoteController.getContent()`。     | 迁移至针对 Node Sidecar 的 HTTP fetch (`GET /api/content?path=...`)。 |
 | `buildGraph(opts)`   | 调用 `NoteController.triggerBuild()`。   | 迁移至针对 Node Sidecar 的 HTTP POST，或触发 sidecar 的 Rust 命令。   |
 | `checkCache(target)` | 检查 `data_[target].js` 的 `fs.stat`。   | 作为 Rust `#[tauri::command]` 实现。                                  |
 | `restoreCache(t)`    | 将 `data_[target].js` 复制到 `data.js`。 | 作为 Rust `#[tauri::command]` 实现。                                  |
-| `getUserLanguage()`  | 从 `kb_config.json` 读取。               | 在 Rust 中实现或迁移至前端 `localStorage`。                           |
-| `setUserLanguage()`  | 写入配置并更新系统菜单。                 | 在 Rust 中实现 `#[tauri::command]` 以动态更新 Tauri 菜单。            |
+| `getUserLanguage()`  | 从 `kb_config.json` 读取。               | 已由 Rust 基于 `app_config.toml` 完成（`get_user_language`），并接入前端运行时初始化。 |
+| `setUserLanguage()`  | 写入配置并更新系统菜单。                 | 已由 Rust `#[tauri::command]` 完成：更新 `app_config.toml`、重建 Tauri 菜单并广播统一语言更新事件。 |
 | `on('build-log')`    | 接收来自构建过程的实时输出。             | Rust 拦截 Sidecar stdout 并使用 `app_handle.emit()` 推送至前端。      |
 
 ## 3. Node.js 服务器 (`server.ts`) 的 API 缺口

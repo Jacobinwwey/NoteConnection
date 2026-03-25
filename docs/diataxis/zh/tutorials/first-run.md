@@ -27,7 +27,14 @@
 1. 点击 `Path Mode`。
 2. 在桌面运行时确认窗口切换行为符合单窗口规范。
 
+## 步骤 5：确认本地运行时配置
+
+1. 打开本地 `app_config.toml`。
+2. 确认 `knowledge_base_path`、`user_language`、`[multi_window]` 是否符合预期。
+3. 如需调整，按模板修改后重启应用。
+
 ## 详细权威来源
 
 - [docs/zh/README.md](../../../zh/README.md)
 - [docs/zh/User_Manual.md](../../../zh/User_Manual.md)
+- [docs/zh/app_config.toml_guide.md](../../../zh/app_config.toml_guide.md)

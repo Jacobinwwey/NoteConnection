@@ -216,6 +216,9 @@
     "buildFailed": "Build failed. Please check your knowledge base path.",
     "noData": "No data available. Please load a knowledge base first."
   },
+  "pathMode": {
+    "loadKbFirst": "Please load a Knowledge Base first."
+  },
   "manual": {
     "loading": "Loading documentation...",
     "error": "Error Loading Documentation",

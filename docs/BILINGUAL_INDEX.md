@@ -1,4 +1,4 @@
-# 2026-03-24 v1.6.0 - Bilingual Docs Pair Index
+# 2026-03-25 v1.6.0 - Bilingual Docs Pair Index
 
 ## English Document
 
@@ -9,9 +9,9 @@
 
 ### Summary
 
-- English files: `18`
-- Chinese files: `17`
-- Bilingual pairs: `17`
+- English files: `19`
+- Chinese files: `18`
+- Bilingual pairs: `18`
 - English-only files: `1`
 - Chinese-only files: `0`
 
@@ -36,6 +36,7 @@
 | 15 | `TODO.md` | `docs/en/TODO.md` | `docs/zh/TODO.md` | Paired |
 | 16 | `User_Manual.md` | `docs/en/User_Manual.md` | `docs/zh/User_Manual.md` | Paired |
 | 17 | `walkthrough.md` | `docs/en/walkthrough.md` | `docs/zh/walkthrough.md` | Paired |
+| 18 | `app_config.toml_guide.md` | `docs/en/app_config.toml_guide.md` | `docs/zh/app_config.toml_guide.md` | Paired |
 
 ### Unmatched Files
 
@@ -55,9 +56,9 @@
 
 ### 汇总
 
-- 英文文件数：`18`
-- 中文文件数：`17`
-- 中英配对数：`17`
+- 英文文件数：`19`
+- 中文文件数：`18`
+- 中英配对数：`18`
 - 仅英文文件数：`1`
 - 仅中文文件数：`0`
 
@@ -82,6 +83,7 @@
 | 15 | `TODO.md` | `docs/en/TODO.md` | `docs/zh/TODO.md` | 已配对 |
 | 16 | `User_Manual.md` | `docs/en/User_Manual.md` | `docs/zh/User_Manual.md` | 已配对 |
 | 17 | `walkthrough.md` | `docs/en/walkthrough.md` | `docs/zh/walkthrough.md` | 已配对 |
+| 18 | `app_config.toml_guide.md` | `docs/en/app_config.toml_guide.md` | `docs/zh/app_config.toml_guide.md` | 已配对 |
 
 ### 未配对文件
 

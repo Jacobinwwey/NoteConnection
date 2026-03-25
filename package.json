@@ -1,6 +1,6 @@
 {
   "name": "noteconnection",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "description": "Hierarchical Knowledge Graph Visualization System",
   "main": "dist/src/server.js",
   "bin": {
@@ -74,8 +74,8 @@
     "test": "jest",
     "cleanup:tauri:sidecars": "node scripts/cleanup-tauri-sidecars.js",
     "docs:diataxis:check": "node scripts/verify-diataxis-map.js",
-    "docs:site:build": "mkdocs build --config-file mkdocs.yml",
-    "docs:site:serve": "mkdocs serve --config-file mkdocs.yml"
+    "docs:site:build": "node scripts/run-mkdocs.js build --config-file mkdocs.yml",
+    "docs:site:serve": "node scripts/run-mkdocs.js serve --config-file mkdocs.yml"
   },
   "pkg": {
     "scripts": [

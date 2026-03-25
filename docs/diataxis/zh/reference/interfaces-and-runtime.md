@@ -14,7 +14,19 @@
   - `invoke('get_sidecar_runtime_config')`
 - Rust sidecar 运行时配置命令：
   - `get_sidecar_runtime_config`
+- Rust 应用运行时配置命令：
+  - `get_app_runtime_config`
 - Runtime bridge 通过 `whenReady()` 保障调用时序。
+
+## app_config 运行时契约挂载点
+
+- 前端配置水合命令：
+  - `invoke('get_app_runtime_config')`
+- 水合后的投影：
+  - `window.__NC_APP_CONFIG.language`
+  - `window.__NC_APP_CONFIG.multiWindow.*`
+- 详细结构请见：
+  - [app_config.toml 结构](./app-config-schema.md)
 
 ## 策略门禁族
 

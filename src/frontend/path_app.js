@@ -34,6 +34,7 @@ window.pathApp = {
         autoReconstruct: true,
         retainHistory: true
     },
+    bridgeLanguageListenerRegistered: false,
     bridgeMermaidRenderQueue: Promise.resolve(),
     semanticA11yLastSummaryKey: '',
     semanticA11yLastAnnouncementAt: 0,
@@ -98,6 +99,8 @@ window.pathApp = {
         this.ws.onopen = () => {
             console.log('[PathApp] Connected to Bridge');
             this._sendBridgeMessage('identify', this._getBridgeIdentifyPayload('frontend'));
+            this._ensureLanguageSyncListener();
+            this.syncLanguageWithBridge();
         };
         this.ws.onmessage = (e) => {
             try {
@@ -249,6 +252,8 @@ window.pathApp = {
         if (hasActiveSocket && this.ws.readyState === WebSocket.OPEN) {
             console.log('[PathApp] Reusing existing Bridge socket');
             this._sendBridgeMessage('identify', this._getBridgeIdentifyPayload('frontend'));
+            this._ensureLanguageSyncListener();
+            this.syncLanguageWithBridge();
         }
     },
 
@@ -257,6 +262,8 @@ window.pathApp = {
             console.log('[PathApp] Sidecar bridge is disabled for this runtime; skipping setupWebSocket.');
             return;
         }
+
+        this._ensureLanguageSyncListener();
 
         const bridge = (typeof window !== 'undefined') ? window.NoteConnectionRuntime : null;
         const waitForRuntime = this._isTauriMode() && bridge && typeof bridge.whenReady === 'function';
@@ -351,6 +358,102 @@ window.pathApp = {
             payload.token = authToken;
         }
         return payload;
+    },
+
+    _normalizeLanguageCode: function(rawLanguage) {
+        const value = String(rawLanguage || '').trim().toLowerCase();
+        return value.startsWith('zh') ? 'zh' : 'en';
+    },
+
+    _getActiveLanguage: function() {
+        if (window.i18n && typeof window.i18n.currentLanguage === 'string') {
+            return this._normalizeLanguageCode(window.i18n.currentLanguage);
+        }
+        const languageSelect = document.getElementById('set-language');
+        if (languageSelect && typeof languageSelect.value === 'string') {
+            return this._normalizeLanguageCode(languageSelect.value);
+        }
+        const appConfig = this._getAppRuntimeConfig();
+        if (appConfig && typeof appConfig.language === 'string') {
+            return this._normalizeLanguageCode(appConfig.language);
+        }
+        return 'en';
+    },
+
+    _getAppRuntimeConfig: function() {
+        if (
+            typeof window !== 'undefined' &&
+            window.NoteConnectionRuntime &&
+            typeof window.NoteConnectionRuntime.getAppRuntimeConfig === 'function'
+        ) {
+            return window.NoteConnectionRuntime.getAppRuntimeConfig();
+        }
+        if (typeof window !== 'undefined' && window.__NC_APP_CONFIG && typeof window.__NC_APP_CONFIG === 'object') {
+            return window.__NC_APP_CONFIG;
+        }
+        return null;
+    },
+
+    _resolveMultiWindowOptions: function() {
+        const defaults = {
+            singleWindowMode: true,
+            hideTauriWhenPathmodeOpens: true,
+            restoreTauriWhenPathmodeExits: true,
+            confirmBeforeFullShutdownFromGodot: true,
+            syncLanguage: true
+        };
+        const appConfig = this._getAppRuntimeConfig();
+        if (!appConfig || !appConfig.multiWindow || typeof appConfig.multiWindow !== 'object') {
+            return defaults;
+        }
+        return {
+            singleWindowMode: typeof appConfig.multiWindow.singleWindowMode === 'boolean'
+                ? appConfig.multiWindow.singleWindowMode
+                : defaults.singleWindowMode,
+            hideTauriWhenPathmodeOpens: typeof appConfig.multiWindow.hideTauriWhenPathmodeOpens === 'boolean'
+                ? appConfig.multiWindow.hideTauriWhenPathmodeOpens
+                : defaults.hideTauriWhenPathmodeOpens,
+            restoreTauriWhenPathmodeExits: typeof appConfig.multiWindow.restoreTauriWhenPathmodeExits === 'boolean'
+                ? appConfig.multiWindow.restoreTauriWhenPathmodeExits
+                : defaults.restoreTauriWhenPathmodeExits,
+            confirmBeforeFullShutdownFromGodot: typeof appConfig.multiWindow.confirmBeforeFullShutdownFromGodot === 'boolean'
+                ? appConfig.multiWindow.confirmBeforeFullShutdownFromGodot
+                : defaults.confirmBeforeFullShutdownFromGodot,
+            syncLanguage: typeof appConfig.multiWindow.syncLanguage === 'boolean'
+                ? appConfig.multiWindow.syncLanguage
+                : defaults.syncLanguage
+        };
+    },
+
+    _buildLanguageConfigurePayload: function(rawLanguage) {
+        return {
+            language: this._normalizeLanguageCode(rawLanguage || this._getActiveLanguage())
+        };
+    },
+
+    syncLanguageWithBridge: function(rawLanguage) {
+        const options = this._resolveMultiWindowOptions();
+        if (!options.syncLanguage) {
+            return false;
+        }
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            return false;
+        }
+        const payload = this._buildLanguageConfigurePayload(rawLanguage);
+        return this._sendBridgeMessage('configure', payload);
+    },
+
+    _ensureLanguageSyncListener: function() {
+        if (this.bridgeLanguageListenerRegistered) {
+            return;
+        }
+        if (!window.i18n || typeof window.i18n.onLanguageChange !== 'function') {
+            return;
+        }
+        this.bridgeLanguageListenerRegistered = true;
+        window.i18n.onLanguageChange((lang) => {
+            this.syncLanguageWithBridge(lang);
+        });
     },
 
     _getRuntimeBridgeAdapter: function() {
@@ -1547,21 +1650,28 @@ window.pathApp = {
             sidebar.style.transform = 'translateX(100%)';
             sidebar.style.display = 'none';
         }
+        const multiWindowOptions = this._resolveMultiWindowOptions();
         
         // Single-window toggle: hide Godot, show Tauri.
         // 单窗口切换：隐藏 Godot，显示 Tauri。
         if (window.__TAURI__ && window.__TAURI__.core && typeof window.__TAURI__.core.invoke === 'function') {
             // 1. Hide Godot window via PathBridge WebSocket.
-            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            if (
+                multiWindowOptions.singleWindowMode &&
+                this.ws &&
+                this.ws.readyState === WebSocket.OPEN
+            ) {
                 this.ws.send(JSON.stringify({
                     type: 'setWindowVisible',
                     payload: { visible: false }
                 }));
             }
             // 2. Restore Tauri window via Rust IPC.
-            window.__TAURI__.core.invoke('toggle_pathmode_window', { showGodot: false })
-                .then(() => console.log('[PathApp] Single-window toggle: Godot hidden, Tauri restored.'))
-                .catch((err) => console.warn('[PathApp] toggle_pathmode_window restore failed:', err));
+            if (multiWindowOptions.restoreTauriWhenPathmodeExits) {
+                window.__TAURI__.core.invoke('toggle_pathmode_window', { showGodot: false })
+                    .then(() => console.log('[PathApp] Single-window toggle: Godot hidden, Tauri restored.'))
+                    .catch((err) => console.warn('[PathApp] toggle_pathmode_window restore failed:', err));
+            }
         }
 
         window.dispatchEvent(new Event('resize'));
@@ -1573,6 +1683,19 @@ window.pathApp = {
         const incomingTargetId = typeof config.targetId === 'string'
             ? config.targetId
             : (typeof config.target_id === 'string' ? config.target_id : null);
+
+        if (typeof config.language === 'string') {
+            const normalizedLanguage = this._normalizeLanguageCode(config.language);
+            if (
+                window.i18n &&
+                typeof window.i18n.setLanguage === 'function' &&
+                window.i18n.currentLanguage !== normalizedLanguage
+            ) {
+                void window.i18n.setLanguage(normalizedLanguage).catch((error) => {
+                    console.warn('[PathApp] Failed to apply language from remote configure payload:', error);
+                });
+            }
+        }
 
         if (typeof config.mode === 'string') {
             this.runtimeConfig.mode = config.mode === 'diffusion' ? 'diffusion' : 'domain';
@@ -3059,6 +3182,8 @@ window.pathApp = {
             this.ws.onopen = () => {
                 console.log('[PathApp] Early WS Connected to Bridge');
                 this._sendBridgeMessage('identify', this._getBridgeIdentifyPayload('frontend-early'));
+                this._ensureLanguageSyncListener();
+                this.syncLanguageWithBridge();
 
                 const initialCentralId = this._getPreferredStandaloneCentralId(preferredCentralId);
                 if (initialCentralId) {

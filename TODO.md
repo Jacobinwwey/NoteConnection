@@ -3785,7 +3785,7 @@ Convert the last open `v1.5.9` sign-off item (Capacitor physical-device checklis
 
 ### Phase P0 - Must Complete Before Electron Removal
 
-- [x] **Implement Tauri persistent config parity (`kb_config` equivalent)**
+- [x] **Implement Tauri persistent config parity (`app_config.toml` + legacy `kb_config` auto-migration)**
   - [x] Persist selected KB path in Tauri app data.
   - [x] Persist user language in Tauri app data.
   - [x] Load both values on startup before frontend initialization.
@@ -4183,7 +4183,7 @@ Convert the last open `v1.5.9` sign-off item (Capacitor physical-device checklis
   - [x] **CSP Enhancement**: Updated Content Security Policy to allow external font loading (Google Fonts).
   - [x] **Security Hardening**: Removed insecure `enableBlinkFeatures` flag.
 - [x] **User-Defined Knowledge Base**
-  - [x] **Persistence**: Implemented `kb_config.json` to store user-selected paths.
+  - [x] **Persistence**: Implemented `app_config.toml` to store user-selected paths (with legacy `kb_config.json` auto-migration).
   - [x] **First-Run Experience**: Added setup wizard for selecting initial KB folder.
   - [x] **Menu Integration**: Added "Change Knowledge Base" and "Reset to Default" to File menu.
 - [x] **Stability & Installer Reliability**
@@ -6127,7 +6127,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 ### 阶段 P0 - 移除 Electron 前必须完成
 
-- [x] **实现 Tauri 持久化配置对等能力（等价 `kb_config`）**
+- [x] **实现 Tauri 持久化配置对等能力（`app_config.toml` + 旧版 `kb_config` 自动迁移）**
   - [x] 在 Tauri 应用数据目录持久化 KB 路径。
   - [x] 在 Tauri 应用数据目录持久化语言设置。
   - [x] 启动时在前端初始化前读取并应用。

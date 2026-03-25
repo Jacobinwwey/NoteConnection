@@ -275,9 +275,26 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 管理知识库源现在变得更加简单。
 
 - **首次运行设置**: 首次启动时，系统会提示您选择 `Knowledge_Base` 文件夹。
-- **持久化配置**: 您的选择保存在 `kb_config.json` 中，并在重启后自动加载。
+- **持久化配置 (`app_config.toml`)**: KB 路径、语言及多窗口偏好默认保存到 `%LOCALAPPDATA%/NoteConnection/app_config.toml`（Windows），重启后自动恢复。
+- **旧配置自动迁移**: 若同目录存在旧版 `kb_config.json`，启动时会自动迁移到 `app_config.toml`。
 - **随时更改**: 使用 **文件 > 更改知识库...** 菜单选项即时切换文件夹。
 - **重置**: 使用 **文件 > 重置为默认** 返回由捆绑的演示笔记。
+- **配置路径覆盖**: 可通过 `NOTE_CONNECTION_CONFIG_PATH`（完整文件路径）或 `NOTE_CONNECTION_CONFIG_DIR`（目录）自定义 `app_config.toml` 位置。
+- **窗口行为可调**: 在 `app_config.toml` 的 `[multi_window]` 段调整 `single_window_mode`、`hide_tauri_when_pathmode_opens`、`restore_tauri_when_pathmode_exits`、`confirm_before_full_shutdown_from_godot`、`sync_language`。
+- **详细配置说明**: 参见 [`docs/zh/app_config.toml_guide.md`](app_config.toml_guide.md) 与模板 [`docs/examples/app_config.template.toml`](../examples/app_config.template.toml)。
+
+```toml
+# 推荐最小 app_config.toml
+knowledge_base_path = "E:/Knowledge_project/NoteConnection_app/Knowledge_Base"
+user_language = "en"
+
+[multi_window]
+single_window_mode = true
+hide_tauri_when_pathmode_opens = true
+restore_tauri_when_pathmode_exits = true
+confirm_before_full_shutdown_from_godot = true
+sync_language = true
+```
 
 ## 🏗️ 构建与部署 (Build & Deployment)
 

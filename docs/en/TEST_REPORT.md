@@ -1300,7 +1300,7 @@ Determine whether the Electron -> Tauri migration is currently complete enough t
 | Cache decision and restore flow | IPC `checkCache` + `restoreCache` | Sidecar APIs + Tauri commands + modal prompt in `source_manager.js` | **Migrated** |
 | Tutorial choice behavior | Welcome + tutorial choice | `welcome.js` + `tutorial.js` include skip/session guards | **Migrated** |
 | Menu language switch | Electron dynamic menu rebuild | Tauri menu rebuild in `set_user_language` | **Partially Migrated** |
-| Persistent KB path + language config | `kb_config.json` in Electron userData | Tauri currently defaults path, no equivalent persistent config file | **Not Fully Migrated** |
+| Persistent KB path + language config | `kb_config.json` in Electron userData | Tauri persists KB path + language + multi-window settings in `app_config.toml` (auto-migrates legacy `kb_config.json`) | **Migrated (v1.6.0+)** |
 | Godot process integration | N/A in Electron mainline release path | Tauri currently spawns Godot via hardcoded absolute path, not robust sidecar usage | **Not Fully Migrated** |
 | Sidecar/Godot lifecycle shutdown guarantees | Electron app lifecycle owns process lifetime | Tauri code does not implement explicit shutdown management verification for spawned children | **Partially Migrated** |
 | Release-ready path model | Electron used app-local protocol and known layout | Tauri sidecar paths are tuned for repo/dev layout (`dist/src/frontend`, `Knowledge_Base`) | **Partially Migrated** |
@@ -1321,9 +1321,9 @@ Determine whether the Electron -> Tauri migration is currently complete enough t
 
 #### 2) High-Risk Gaps Before Removing Electron
 
-- **Persistent user configuration parity is incomplete**:
+- **Persistent user configuration parity is now complete (updated 2026-03-25)**:
   - Electron persisted KB path and language in `kb_config.json`.
-  - Tauri currently returns default KB path and does not persist selected KB root across restarts in equivalent form.
+  - Tauri now persists KB path, language, and multi-window policy in `app_config.toml`, with startup auto-migration from legacy `kb_config.json`.
 - **Godot launch path is environment-coupled**:
   - `src-tauri/src/lib.rs` uses hardcoded absolute Windows paths for Godot executable/project.
   - This is not portable across machines or release packaging.
@@ -1415,7 +1415,7 @@ Electron -> Tauri migration is **functionally successful in current desktop deve
 - **Steps**:
   1. Ran `npm start`.
   2. Selected a custom folder in the First Run setup.
-  3. Verified `kb_config.json` was created in `AppData`.
+  3. Verified legacy `kb_config.json` was created in `AppData` (superseded by `app_config.toml` in v1.6.0+).
   4. Used "File > Reset to Default" and "File > Change Knowledge Base" menus.
 - **Result**: Config updates correctly; app reloads and loads the specific folder.
 - **Status**: **Pass**

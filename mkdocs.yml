@@ -51,9 +51,11 @@ nav:
       - How-To Guides:
           - Build and Export: diataxis/en/how-to/build-and-export.md
           - Single Window Runtime: diataxis/en/how-to/single-window-runtime.md
+          - Configure app_config.toml: diataxis/en/how-to/configure-app-config.md
       - Reference:
           - Interfaces and Runtime: diataxis/en/reference/interfaces-and-runtime.md
           - Release and Governance: diataxis/en/reference/release-and-governance.md
+          - app_config.toml Schema: diataxis/en/reference/app-config-schema.md
       - Explanation:
           - Architecture and Migration: diataxis/en/explanation/architecture-and-migration.md
   - 中文:
@@ -63,8 +65,10 @@ nav:
       - 操作指南:
           - 构建与导出: diataxis/zh/how-to/build-and-export.md
           - 单窗口运行时: diataxis/zh/how-to/single-window-runtime.md
+          - 配置 app_config.toml: diataxis/zh/how-to/configure-app-config.md
       - 参考:
           - 接口与运行时: diataxis/zh/reference/interfaces-and-runtime.md
           - 发布与治理: diataxis/zh/reference/release-and-governance.md
+          - app_config.toml 结构: diataxis/zh/reference/app-config-schema.md
       - 解释:
           - 架构与迁移: diataxis/zh/explanation/architecture-and-migration.md

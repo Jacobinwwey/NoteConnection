@@ -53,6 +53,70 @@ const READER_MEDIA_SCALE_MAX := 3.00
 const READER_MEDIA_SCALE_STEP := 0.01
 const READER_MEDIA_SCALE_DEFAULT := 1.50
 const DEFAULT_READER_TOGGLE_SHORTCUT := "Ctrl+M"
+const UI_TEXTS := {
+	"en": {
+		"close_confirm_title": "Confirm Close Action",
+		"close_confirm_text": "Select what to do:\n\n- Return to Main Interface\n- Close All Windows",
+		"close_all_windows": "Close All Windows",
+		"return_to_main": "Return to Main Interface",
+		"mode_domain": "Domain",
+		"mode_diffusion": "Diffusion",
+		"strategy_foundational": "Foundational",
+		"strategy_core": "Core",
+		"history": "History",
+		"exit": "Exit",
+		"target_auto": "Target: Auto",
+		"select_diffusion_targets": "Select Diffusion Targets",
+		"search_node": "Search node...",
+		"close": "Close",
+		"navigation_history": "Navigation History",
+		"clear": "Clear",
+		"learning_path": "Learning Path",
+		"collapse_panel": "Collapse Panel",
+		"progress_template": "Progress: %d of %d",
+		"path_mode_template": "Path Mode: %s",
+		"targets_selected": "Targets: %d Selected",
+		"targets_none": "Targets: None",
+		"select_domain_targets": "Select Domain Targets",
+		"target_label": "Target: %s",
+		"current_diffusion_target": "Current Diffusion target: %s",
+		"current_diffusion_targets": "Current Diffusion targets: %s",
+		"target_select_fallback": "Select",
+		"complete": "Complete",
+		"cancel_completion": "Cancel Completion"
+	},
+	"zh": {
+		"close_confirm_title": "确认关闭操作",
+		"close_confirm_text": "请选择要执行的操作：\n\n- 返回主界面\n- 关闭全部窗口",
+		"close_all_windows": "关闭全部窗口",
+		"return_to_main": "返回主界面",
+		"mode_domain": "领域",
+		"mode_diffusion": "扩散",
+		"strategy_foundational": "基础",
+		"strategy_core": "核心",
+		"history": "历史",
+		"exit": "退出",
+		"target_auto": "目标：自动",
+		"select_diffusion_targets": "选择扩散目标",
+		"search_node": "搜索节点...",
+		"close": "关闭",
+		"navigation_history": "导航历史",
+		"clear": "清空",
+		"learning_path": "学习路径",
+		"collapse_panel": "折叠面板",
+		"progress_template": "进度：%d / %d",
+		"path_mode_template": "路径模式：%s",
+		"targets_selected": "目标：已选择 %d 项",
+		"targets_none": "目标：无",
+		"select_domain_targets": "选择领域目标",
+		"target_label": "目标：%s",
+		"current_diffusion_target": "当前扩散目标：%s",
+		"current_diffusion_targets": "当前扩散目标：%s",
+		"target_select_fallback": "选择",
+		"complete": "完成",
+		"cancel_completion": "取消完成"
+	}
+}
 
 @onready var mode_label: Label = $MarginContainer/VBoxContainer/ModeLabel
 @onready var progress_label: Label = $MarginContainer/VBoxContainer/ProgressLabel
@@ -144,6 +208,14 @@ var _reader_image_debug_capture_id: int = 0
 var _reader_render_client = null
 var _reader_render_revision: int = 0
 var _reader_renderable_blocks: Array[Dictionary] = []
+var _ui_language: String = "en"
+var _target_popup_title_label: Label = null
+var _history_popup_title_label: Label = null
+var _target_popup_close_button: Button = null
+var _history_popup_clear_button: Button = null
+var _history_popup_close_button: Button = null
+var _tree_header_label: Label = null
+var _tree_collapse_button: Button = null
 
 var _current_mode: String = "diffusion"
 var _current_strategy: String = "foundational"
@@ -198,11 +270,12 @@ func _ready() -> void:
 	_setup_notemd_embed_panel()
 	_create_dynamic_ui()
 	_connect_signals()
+	set_ui_language(_resolve_startup_ui_language())
 	_setup_initial_state()
 
 
 func _handle_window_close_request() -> void:
-	if _is_single_window_mode():
+	if _should_confirm_shutdown_from_close():
 		_show_close_project_confirmation()
 	else:
 		get_tree().quit()
@@ -218,7 +291,105 @@ func _clear_close_request_signal_guard() -> void:
 	_close_request_handled_by_signal = false
 
 
+func _read_env_bool(env_name: String) -> int:
+	var raw_value := OS.get_environment(env_name).strip_edges().to_lower()
+	if raw_value.is_empty():
+		return -1
+	if raw_value == "1" or raw_value == "true" or raw_value == "yes" or raw_value == "on":
+		return 1
+	if raw_value == "0" or raw_value == "false" or raw_value == "no" or raw_value == "off":
+		return 0
+	return -1
+
+
+func _resolve_startup_ui_language() -> String:
+	var env_language := OS.get_environment("NOTE_CONNECTION_UI_LANGUAGE").strip_edges().to_lower()
+	if env_language.begins_with("zh"):
+		return "zh"
+	return "en"
+
+
+func _resolve_ui_text(key: String, fallback: String = "") -> String:
+	var bundle: Dictionary = UI_TEXTS.get(_ui_language, UI_TEXTS.get("en", {}))
+	var value = bundle.get(key, null)
+	if value == null and _ui_language != "en":
+		var default_bundle: Dictionary = UI_TEXTS.get("en", {})
+		value = default_bundle.get(key, null)
+	if value == null:
+		return fallback
+	return String(value)
+
+
+func _apply_ui_language() -> void:
+	if _close_confirm_dialog:
+		_close_confirm_dialog.title = _resolve_ui_text("close_confirm_title", _close_confirm_dialog.title)
+		_close_confirm_dialog.dialog_text = _resolve_ui_text("close_confirm_text", _close_confirm_dialog.dialog_text)
+		var ok_button := _close_confirm_dialog.get_ok_button()
+		if ok_button:
+			ok_button.text = _resolve_ui_text("close_all_windows", ok_button.text)
+		var cancel_button := _close_confirm_dialog.get_cancel_button()
+		if cancel_button:
+			cancel_button.text = _resolve_ui_text("return_to_main", cancel_button.text)
+
+	if _mode_option and _mode_option.item_count >= 2:
+		_mode_option.set_item_text(0, _resolve_ui_text("mode_domain", _mode_option.get_item_text(0)))
+		_mode_option.set_item_text(1, _resolve_ui_text("mode_diffusion", _mode_option.get_item_text(1)))
+
+	if _strategy_option and _strategy_option.item_count >= 2:
+		_strategy_option.set_item_text(0, _resolve_ui_text("strategy_foundational", _strategy_option.get_item_text(0)))
+		_strategy_option.set_item_text(1, _resolve_ui_text("strategy_core", _strategy_option.get_item_text(1)))
+
+	if _history_button:
+		_history_button.text = _resolve_ui_text("history", _history_button.text)
+	if _exit_button:
+		_exit_button.text = _resolve_ui_text("exit", _exit_button.text)
+
+	if _target_popup_title_label:
+		_target_popup_title_label.text = _resolve_ui_text("select_diffusion_targets", _target_popup_title_label.text)
+	if _target_filter_input:
+		_target_filter_input.placeholder_text = _resolve_ui_text("search_node", _target_filter_input.placeholder_text)
+	if _target_popup_close_button:
+		_target_popup_close_button.text = _resolve_ui_text("close", _target_popup_close_button.text)
+	if _history_popup_title_label:
+		_history_popup_title_label.text = _resolve_ui_text("navigation_history", _history_popup_title_label.text)
+	if _history_popup_clear_button:
+		_history_popup_clear_button.text = _resolve_ui_text("clear", _history_popup_clear_button.text)
+	if _history_popup_close_button:
+		_history_popup_close_button.text = _resolve_ui_text("close", _history_popup_close_button.text)
+	if _tree_header_label:
+		_tree_header_label.text = _resolve_ui_text("learning_path", _tree_header_label.text)
+	if _tree_collapse_button:
+		_tree_collapse_button.tooltip_text = _resolve_ui_text("collapse_panel", _tree_collapse_button.tooltip_text)
+
+	if _target_button:
+		_target_button.text = _resolve_ui_text("target_auto", _target_button.text)
+	if mark_complete_btn:
+		var current_complete_text := mark_complete_btn.text
+		var en_cancel := String(UI_TEXTS.get("en", {}).get("cancel_completion", "Cancel Completion"))
+		var zh_cancel := String(UI_TEXTS.get("zh", {}).get("cancel_completion", "取消完成"))
+		if current_complete_text == en_cancel or current_complete_text == zh_cancel:
+			mark_complete_btn.text = _resolve_ui_text("cancel_completion", current_complete_text)
+		else:
+			mark_complete_btn.text = _resolve_ui_text("complete", current_complete_text)
+
+	_update_target_button_state()
+
+
+func set_ui_language(language: String) -> void:
+	var normalized := "en"
+	if String(language).strip_edges().to_lower().begins_with("zh"):
+		normalized = "zh"
+	_ui_language = normalized
+	_apply_ui_language()
+
+
 func _is_single_window_mode() -> bool:
+	var explicit_mode := _read_env_bool("NOTE_CONNECTION_SINGLE_WINDOW_MODE")
+	if explicit_mode == 1:
+		return true
+	if explicit_mode == 0:
+		return false
+
 	var env_hidden := OS.get_environment("NOTE_CONNECTION_START_HIDDEN").strip_edges()
 	if env_hidden == "1" or env_hidden.to_lower() == "true":
 		return true
@@ -233,14 +404,23 @@ func _is_single_window_mode() -> bool:
 	return "--nc-start-hidden" in args or "--minimized" in args
 
 
+func _should_confirm_shutdown_from_close() -> bool:
+	var explicit_confirm := _read_env_bool("NOTE_CONNECTION_CONFIRM_CLOSE_FROM_GODOT")
+	if explicit_confirm == 1:
+		return true
+	if explicit_confirm == 0:
+		return false
+	return _is_single_window_mode()
+
+
 func _setup_close_confirmation_dialog() -> void:
 	if _close_confirm_dialog:
 		return
 
 	_close_confirm_dialog = ConfirmationDialog.new()
 	_close_confirm_dialog.name = "CloseProjectConfirmationDialog"
-	_close_confirm_dialog.title = "Confirm Close Action"
-	_close_confirm_dialog.dialog_text = "Select what to do:\n\n- Return to Main Interface\n- Close All Windows"
+	_close_confirm_dialog.title = _resolve_ui_text("close_confirm_title", "Confirm Close Action")
+	_close_confirm_dialog.dialog_text = _resolve_ui_text("close_confirm_text", "Select what to do:\n\n- Return to Main Interface\n- Close All Windows")
 	_close_confirm_dialog.min_size = Vector2i(520, 180)
 	_close_confirm_dialog.exclusive = true
 	_close_confirm_dialog.confirmed.connect(_on_close_project_confirmed)
@@ -249,10 +429,10 @@ func _setup_close_confirmation_dialog() -> void:
 
 	var ok_button := _close_confirm_dialog.get_ok_button()
 	if ok_button:
-		ok_button.text = "Close All Windows"
+		ok_button.text = _resolve_ui_text("close_all_windows", "Close All Windows")
 	var cancel_button := _close_confirm_dialog.get_cancel_button()
 	if cancel_button:
-		cancel_button.text = "Return to Main Interface"
+		cancel_button.text = _resolve_ui_text("return_to_main", "Return to Main Interface")
 
 
 func _setup_notemd_embed_panel() -> void:
@@ -356,8 +536,8 @@ func _create_dynamic_ui() -> void:
 		
 		_mode_option = OptionButton.new()
 		_mode_option.custom_minimum_size = Vector2(120, 34)
-		_mode_option.add_item("Domain", 0)
-		_mode_option.add_item("Diffusion", 1)
+		_mode_option.add_item(_resolve_ui_text("mode_domain", "Domain"), 0)
+		_mode_option.add_item(_resolve_ui_text("mode_diffusion", "Diffusion"), 1)
 		_mode_option.select(1)
 		control_row.add_child(_mode_option)
 		_apply_option_style(_mode_option)
@@ -368,13 +548,13 @@ func _create_dynamic_ui() -> void:
 		
 		_strategy_option = OptionButton.new()
 		_strategy_option.custom_minimum_size = Vector2(130, 34)
-		_strategy_option.add_item("Foundational", 0)
-		_strategy_option.add_item("Core", 1)
+		_strategy_option.add_item(_resolve_ui_text("strategy_foundational", "Foundational"), 0)
+		_strategy_option.add_item(_resolve_ui_text("strategy_core", "Core"), 1)
 		control_row.add_child(_strategy_option)
 		_apply_option_style(_strategy_option)
 
 		_target_button = Button.new()
-		_target_button.text = "Target: Auto"
+		_target_button.text = _resolve_ui_text("target_auto", "Target: Auto")
 		_target_button.custom_minimum_size = Vector2(160, 34)
 		control_row.add_child(_target_button)
 		_apply_button_style(_target_button, Color(0.18, 0.24, 0.31, 1.0), Color(0.24, 0.31, 0.4, 1.0), Color(0.14, 0.19, 0.25, 1.0), Color(0.36, 0.5, 0.66, 1.0), Color(0.92, 0.97, 1.0, 1.0))
@@ -389,7 +569,7 @@ func _create_dynamic_ui() -> void:
 		control_row.add_child(spacer)
 		
 		_history_button = Button.new()
-		_history_button.text = "History"
+		_history_button.text = _resolve_ui_text("history", "History")
 		_history_button.custom_minimum_size = Vector2(88, 34)
 		control_row.add_child(_history_button)
 
@@ -399,7 +579,7 @@ func _create_dynamic_ui() -> void:
 		control_row.add_child(_notemd_button)
 		
 		_exit_button = Button.new()
-		_exit_button.text = "Exit"
+		_exit_button.text = _resolve_ui_text("exit", "Exit")
 		_exit_button.custom_minimum_size = Vector2(72, 34)
 		control_row.add_child(_exit_button)
 		
@@ -536,14 +716,14 @@ func _create_dynamic_ui() -> void:
 	target_vbox.offset_bottom = 508
 	_target_popup.add_child(target_vbox)
 
-	var title := Label.new()
-	title.text = "Select Diffusion Targets"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 18)
-	target_vbox.add_child(title)
+	_target_popup_title_label = Label.new()
+	_target_popup_title_label.text = _resolve_ui_text("select_diffusion_targets", "Select Diffusion Targets")
+	_target_popup_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_target_popup_title_label.add_theme_font_size_override("font_size", 18)
+	target_vbox.add_child(_target_popup_title_label)
 
 	_target_filter_input = LineEdit.new()
-	_target_filter_input.placeholder_text = "Search node..."
+	_target_filter_input.placeholder_text = _resolve_ui_text("search_node", "Search node...")
 	target_vbox.add_child(_target_filter_input)
 
 	_target_list = ItemList.new()
@@ -554,12 +734,12 @@ func _create_dynamic_ui() -> void:
 	var target_actions := HBoxContainer.new()
 	target_vbox.add_child(target_actions)
 
-	var close_target_btn := Button.new()
-	close_target_btn.text = "Close"
-	close_target_btn.custom_minimum_size = Vector2(88, 34)
-	target_actions.add_child(close_target_btn)
-	_apply_button_style(close_target_btn, Color(0.23, 0.26, 0.3, 1.0), Color(0.29, 0.33, 0.38, 1.0), Color(0.18, 0.21, 0.25, 1.0), Color(0.42, 0.47, 0.55, 1.0), Color(0.95, 0.97, 1.0, 1.0))
-	close_target_btn.pressed.connect(func():
+	_target_popup_close_button = Button.new()
+	_target_popup_close_button.text = _resolve_ui_text("close", "Close")
+	_target_popup_close_button.custom_minimum_size = Vector2(88, 34)
+	target_actions.add_child(_target_popup_close_button)
+	_apply_button_style(_target_popup_close_button, Color(0.23, 0.26, 0.3, 1.0), Color(0.29, 0.33, 0.38, 1.0), Color(0.18, 0.21, 0.25, 1.0), Color(0.42, 0.47, 0.55, 1.0), Color(0.95, 0.97, 1.0, 1.0))
+	_target_popup_close_button.pressed.connect(func():
 		if _target_popup:
 			_target_popup.hide()
 	)
@@ -582,11 +762,11 @@ func _create_dynamic_ui() -> void:
 	history_vbox.add_theme_constant_override("separation", 8)
 	history_margin.add_child(history_vbox)
 
-	var history_title := Label.new()
-	history_title.text = "Navigation History"
-	history_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	history_title.add_theme_font_size_override("font_size", 18)
-	history_vbox.add_child(history_title)
+	_history_popup_title_label = Label.new()
+	_history_popup_title_label.text = _resolve_ui_text("navigation_history", "Navigation History")
+	_history_popup_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_history_popup_title_label.add_theme_font_size_override("font_size", 18)
+	history_vbox.add_child(_history_popup_title_label)
 
 	_history_list = ItemList.new()
 	_history_list.select_mode = ItemList.SELECT_SINGLE
@@ -596,12 +776,12 @@ func _create_dynamic_ui() -> void:
 	var history_actions := HBoxContainer.new()
 	history_vbox.add_child(history_actions)
 
-	var clear_history_btn := Button.new()
-	clear_history_btn.text = "Clear"
-	clear_history_btn.custom_minimum_size = Vector2(88, 34)
-	history_actions.add_child(clear_history_btn)
-	_apply_button_style(clear_history_btn, Color(0.23, 0.26, 0.3, 1.0), Color(0.29, 0.33, 0.38, 1.0), Color(0.18, 0.21, 0.25, 1.0), Color(0.42, 0.47, 0.55, 1.0), Color(0.95, 0.97, 1.0, 1.0))
-	clear_history_btn.pressed.connect(func():
+	_history_popup_clear_button = Button.new()
+	_history_popup_clear_button.text = _resolve_ui_text("clear", "Clear")
+	_history_popup_clear_button.custom_minimum_size = Vector2(88, 34)
+	history_actions.add_child(_history_popup_clear_button)
+	_apply_button_style(_history_popup_clear_button, Color(0.23, 0.26, 0.3, 1.0), Color(0.29, 0.33, 0.38, 1.0), Color(0.18, 0.21, 0.25, 1.0), Color(0.42, 0.47, 0.55, 1.0), Color(0.95, 0.97, 1.0, 1.0))
+	_history_popup_clear_button.pressed.connect(func():
 		_end_browsing()
 		_refresh_history_popup()
 	)
@@ -610,12 +790,12 @@ func _create_dynamic_ui() -> void:
 	history_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	history_actions.add_child(history_spacer)
 
-	var close_history_btn := Button.new()
-	close_history_btn.text = "Close"
-	close_history_btn.custom_minimum_size = Vector2(88, 34)
-	history_actions.add_child(close_history_btn)
-	_apply_button_style(close_history_btn, Color(0.23, 0.26, 0.3, 1.0), Color(0.29, 0.33, 0.38, 1.0), Color(0.18, 0.21, 0.25, 1.0), Color(0.42, 0.47, 0.55, 1.0), Color(0.95, 0.97, 1.0, 1.0))
-	close_history_btn.pressed.connect(func():
+	_history_popup_close_button = Button.new()
+	_history_popup_close_button.text = _resolve_ui_text("close", "Close")
+	_history_popup_close_button.custom_minimum_size = Vector2(88, 34)
+	history_actions.add_child(_history_popup_close_button)
+	_apply_button_style(_history_popup_close_button, Color(0.23, 0.26, 0.3, 1.0), Color(0.29, 0.33, 0.38, 1.0), Color(0.18, 0.21, 0.25, 1.0), Color(0.42, 0.47, 0.55, 1.0), Color(0.95, 0.97, 1.0, 1.0))
+	_history_popup_close_button.pressed.connect(func():
 		if _history_popup:
 			_history_popup.hide()
 	)
@@ -661,26 +841,26 @@ func _create_dynamic_ui() -> void:
 	else:
 		push_warning("[PathModeUI] TreePanel is missing DraggablePanel behavior; drag support disabled.")
 	
-	var tree_header := Label.new()
-	tree_header.text = "Learning Path"
-	tree_header.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tree_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tree_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	header_hbox.add_child(tree_header)
-	
-	var collapse_btn := Button.new()
-	collapse_btn.text = "✖"
-	collapse_btn.tooltip_text = "Collapse Panel"
-	collapse_btn.focus_mode = Control.FOCUS_NONE
-	collapse_btn.custom_minimum_size = Vector2(28, 28)
-	_apply_button_style(collapse_btn, Color(0.1, 0.13, 0.18, 0.0), Color(0.17, 0.22, 0.3, 0.5), Color(0.07, 0.1, 0.14, 0.8), Color(0.45, 0.6, 0.82, 0.95), Color(0.9, 0.96, 1.0, 1.0))
-	collapse_btn.pressed.connect(func():
+	_tree_header_label = Label.new()
+	_tree_header_label.text = _resolve_ui_text("learning_path", "Learning Path")
+	_tree_header_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tree_header_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tree_header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header_hbox.add_child(_tree_header_label)
+
+	_tree_collapse_button = Button.new()
+	_tree_collapse_button.text = "✖"
+	_tree_collapse_button.tooltip_text = _resolve_ui_text("collapse_panel", "Collapse Panel")
+	_tree_collapse_button.focus_mode = Control.FOCUS_NONE
+	_tree_collapse_button.custom_minimum_size = Vector2(28, 28)
+	_apply_button_style(_tree_collapse_button, Color(0.1, 0.13, 0.18, 0.0), Color(0.17, 0.22, 0.3, 0.5), Color(0.07, 0.1, 0.14, 0.8), Color(0.45, 0.6, 0.82, 0.95), Color(0.9, 0.96, 1.0, 1.0))
+	_tree_collapse_button.pressed.connect(func():
 		if _tree_panel and _tree_panel.has_method("collapse"):
 			_tree_panel.call("collapse", "☰", HORIZONTAL_ALIGNMENT_LEFT)
 	)
-	header_hbox.add_child(collapse_btn)
+	header_hbox.add_child(_tree_collapse_button)
 	if _tree_panel.has_method("register_interaction_exclusion"):
-		_tree_panel.call("register_interaction_exclusion", collapse_btn)
+		_tree_panel.call("register_interaction_exclusion", _tree_collapse_button)
 	
 	## Instantiate new Tree View Panel
 	if TREE_VIEW_SCENE:
@@ -4215,10 +4395,10 @@ func update_complete_button(is_completed: bool) -> void:
 	if not mark_complete_btn:
 		return
 	if is_completed:
-		mark_complete_btn.text = "Cancel Completion"
+		mark_complete_btn.text = _resolve_ui_text("cancel_completion", "Cancel Completion")
 		_apply_button_style(mark_complete_btn, Color(0.7, 0.3, 0.3, 1.0), Color(0.8, 0.4, 0.4, 1.0), Color(0.6, 0.2, 0.2, 1.0), Color(0.8, 0.5, 0.5, 1.0), Color(1.0, 0.9, 0.9, 1.0))
 	else:
-		mark_complete_btn.text = "Complete"
+		mark_complete_btn.text = _resolve_ui_text("complete", "Complete")
 		_apply_button_style(mark_complete_btn, Color(0.9, 0.55, 0.15, 1.0), Color(1.0, 0.66, 0.22, 1.0), Color(0.78, 0.42, 0.08, 1.0), Color(0.25, 0.18, 0.1, 1.0), Color(0.09, 0.08, 0.07, 1.0))
 
 
@@ -4457,10 +4637,10 @@ func _update_target_button_state() -> void:
 	if _current_mode == "domain":
 		var domain_ids := _get_effective_domain_target_ids()
 		if domain_ids.size() > 0:
-			_target_button.text = "Targets: " + str(domain_ids.size()) + " Selected"
+			_target_button.text = _resolve_ui_text("targets_selected", "Targets: %d Selected") % domain_ids.size()
 		else:
-			_target_button.text = "Targets: None"
-		_target_button.tooltip_text = "Select Domain Targets"
+			_target_button.text = _resolve_ui_text("targets_none", "Targets: None")
+		_target_button.tooltip_text = _resolve_ui_text("select_domain_targets", "Select Domain Targets")
 		return
 
 	_ensure_valid_diffusion_target()
@@ -4468,14 +4648,14 @@ func _update_target_button_state() -> void:
 	if diffusion_ids.size() <= 1:
 		var label := _current_target_label if not _current_target_label.is_empty() else _current_target_id
 		if label.is_empty():
-			label = "Select"
+			label = _resolve_ui_text("target_select_fallback", "Select")
 		var display := label
 		if display.length() > 26:
 			display = display.substr(0, 23) + "..."
-		_target_button.text = "Target: %s" % display
-		_target_button.tooltip_text = "Current Diffusion target: %s" % label
+		_target_button.text = _resolve_ui_text("target_label", "Target: %s") % display
+		_target_button.tooltip_text = _resolve_ui_text("current_diffusion_target", "Current Diffusion target: %s") % label
 	else:
-		_target_button.text = "Targets: %d Selected" % diffusion_ids.size()
+		_target_button.text = _resolve_ui_text("targets_selected", "Targets: %d Selected") % diffusion_ids.size()
 		var labels: Array[String] = []
 		for id in diffusion_ids:
 			var matched_label := id
@@ -4484,7 +4664,7 @@ func _update_target_button_state() -> void:
 					matched_label = node.get("label", id)
 					break
 			labels.append(matched_label)
-		_target_button.tooltip_text = "Current Diffusion targets: %s" % ", ".join(PackedStringArray(labels))
+		_target_button.tooltip_text = _resolve_ui_text("current_diffusion_targets", "Current Diffusion targets: %s") % ", ".join(PackedStringArray(labels))
 
 
 func _on_exit_pressed() -> void:
@@ -4584,7 +4764,8 @@ func _emit_runtime_config(extra: Dictionary = {}) -> void:
 	var config: Dictionary = {
 		"mode": _current_mode,
 		"strategy": _current_strategy,
-		"layout": "orbital"
+		"layout": "orbital",
+		"language": _ui_language
 	}
 	if _settings_panel and _settings_panel.has_method("get_all_settings"):
 		var stored_settings: Dictionary = _settings_panel.get_all_settings()
@@ -4887,13 +5068,13 @@ func set_runtime_status(message: String, tone: String = "info") -> void:
 func update_progress(completed: int, total: int) -> void:
 	if progress_label:
 		clear_runtime_status()
-		progress_label.text = "Progress: %d of %d" % [completed, total]
+		progress_label.text = _resolve_ui_text("progress_template", "Progress: %d of %d") % [completed, total]
 
 
 ## Update the mode label
 func update_mode(mode_name: String) -> void:
 	if mode_label:
-		mode_label.text = "Path Mode: %s" % mode_name
+		mode_label.text = _resolve_ui_text("path_mode_template", "Path Mode: %s") % mode_name
 
 
 ## Add a completed node to the sidebar

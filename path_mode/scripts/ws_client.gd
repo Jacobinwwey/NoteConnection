@@ -52,7 +52,24 @@ func _enforce_start_hidden() -> void:
 		_apply_window_visibility(false)
 
 
+func _read_env_bool(env_name: String) -> int:
+	var raw_value := OS.get_environment(env_name).strip_edges().to_lower()
+	if raw_value.is_empty():
+		return -1
+	if raw_value == "1" or raw_value == "true" or raw_value == "yes" or raw_value == "on":
+		return 1
+	if raw_value == "0" or raw_value == "false" or raw_value == "no" or raw_value == "off":
+		return 0
+	return -1
+
+
 func _is_single_window_mode_requested() -> bool:
+	var explicit_mode := _read_env_bool("NOTE_CONNECTION_SINGLE_WINDOW_MODE")
+	if explicit_mode == 1:
+		return true
+	if explicit_mode == 0:
+		return false
+
 	var env_hidden := OS.get_environment("NOTE_CONNECTION_START_HIDDEN").strip_edges()
 	if env_hidden == "1" or env_hidden.to_lower() == "true":
 		return true

@@ -39,6 +39,18 @@
       }
     },
     {
+      "id": "configure-app-config",
+      "category": "how-to",
+      "en": {
+        "canonical": ["docs/en/app_config.toml_guide.md", "docs/en/User_Manual.md", "docs/en/README.md"],
+        "diataxis": "docs/diataxis/en/how-to/configure-app-config.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/app_config.toml_guide.md", "docs/zh/User_Manual.md", "docs/zh/README.md"],
+        "diataxis": "docs/diataxis/zh/how-to/configure-app-config.md"
+      }
+    },
+    {
       "id": "interfaces-and-runtime",
       "category": "reference",
       "en": {
@@ -48,6 +60,18 @@
       "zh": {
         "canonical": ["docs/zh/Interface Document.md"],
         "diataxis": "docs/diataxis/zh/reference/interfaces-and-runtime.md"
+      }
+    },
+    {
+      "id": "app-config-schema",
+      "category": "reference",
+      "en": {
+        "canonical": ["docs/en/app_config.toml_guide.md", "docs/en/Interface Document.md"],
+        "diataxis": "docs/diataxis/en/reference/app-config-schema.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/app_config.toml_guide.md", "docs/zh/Interface Document.md"],
+        "diataxis": "docs/diataxis/zh/reference/app-config-schema.md"
       }
     },
     {

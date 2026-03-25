@@ -557,6 +557,8 @@ func _on_ws_data_received(data: Dictionary) -> void:
 			render_path(payload)
 		"pathStatus":
 			_handle_path_status(payload)
+		"configure":
+			_handle_remote_configure(payload)
 
 
 func _handle_path_status(payload: Dictionary) -> void:
@@ -566,6 +568,14 @@ func _handle_path_status(payload: Dictionary) -> void:
 	print("[PathRenderer] Bridge status (%s/%s): %s" % [level, code, message])
 	if ui and ui.has_method("set_runtime_status"):
 		ui.set_runtime_status(message, level)
+
+
+func _handle_remote_configure(payload: Dictionary) -> void:
+	if payload.is_empty():
+		return
+
+	if payload.has("language") and ui and ui.has_method("set_ui_language"):
+		ui.set_ui_language(String(payload.get("language", "en")))
 
 
 ## Handle bidirectional completion sync from Electron

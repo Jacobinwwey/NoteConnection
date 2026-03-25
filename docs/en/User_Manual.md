@@ -110,4 +110,18 @@ NoteConnection includes a one-click script to build a native Android APK (v1.1.0
 - **PDF import rule**:
   - PDF files must be converted to Markdown with Mineru before importing into NoteMD.
 
+### 10. Local Runtime Config (`app_config.toml`)
+
+- **Purpose**:
+  - Persist KB root, language, and multi-window policy in one local TOML file.
+- **Default location (Windows)**:
+  - `%LOCALAPPDATA%/NoteConnection/app_config.toml`
+- **Path overrides**:
+  - `NOTE_CONNECTION_CONFIG_PATH` (absolute file path)
+  - `NOTE_CONNECTION_CONFIG_DIR` (directory containing `app_config.toml`)
+- **Template**:
+  - [`docs/examples/app_config.template.toml`](../examples/app_config.template.toml)
+- **Detailed guide**:
+  - [`docs/en/app_config.toml_guide.md`](app_config.toml_guide.md)
+
 ---

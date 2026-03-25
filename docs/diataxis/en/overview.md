@@ -27,4 +27,10 @@ mkdocs build --config-file mkdocs.yml
 - Product overview: [docs/en/README.md](../../en/README.md)
 - Interface contracts: [docs/en/Interface Document.md](../../en/Interface%20Document.md)
 - User manual: [docs/en/User_Manual.md](../../en/User_Manual.md)
+- app_config guide: [docs/en/app_config.toml_guide.md](../../en/app_config.toml_guide.md)
 - Release compare report: [docs/en/release_v1.6.0_report.md](../../en/release_v1.6.0_report.md)
+
+## Runtime Config Entry Points
+
+- How-to: [Configure app_config.toml](./how-to/configure-app-config.md)
+- Reference: [app_config.toml Schema](./reference/app-config-schema.md)

@@ -1,0 +1,39 @@
+# NoteConnection application runtime configuration template (v1.6.0+)
+# Save this as app_config.toml in your config directory.
+# Default Windows location:
+#   %LOCALAPPDATA%/NoteConnection/app_config.toml
+#
+# Override location (optional):
+#   NOTE_CONNECTION_CONFIG_PATH=<absolute file path>
+#   NOTE_CONNECTION_CONFIG_DIR=<directory containing app_config.toml>
+
+# Knowledge base root directory.
+# Path must exist and be a directory.
+# If you point to a subfolder inside Knowledge_Base, NoteConnection normalizes it to the Knowledge_Base root.
+knowledge_base_path = "E:/Knowledge_project/NoteConnection_app/Knowledge_Base"
+
+# UI language.
+# Allowed values: "en", "zh"
+# Any other value falls back to "en".
+user_language = "en"
+
+[multi_window]
+# true  -> single-window handoff: Tauri shown by default, Godot hidden until Path Mode.
+# false -> allow non-single-window startup behavior (Godot may be visible by default).
+single_window_mode = true
+
+# true  -> hide Tauri window when Path Mode (Godot) opens.
+# false -> keep Tauri visible while opening Path Mode.
+hide_tauri_when_pathmode_opens = true
+
+# true  -> restore and focus Tauri when exiting Path Mode.
+# false -> do not automatically restore Tauri on Path Mode exit.
+restore_tauri_when_pathmode_exits = true
+
+# true  -> when user closes Godot window, ask whether to return to main window or close all windows.
+# false -> skip confirmation flow and use direct close behavior.
+confirm_before_full_shutdown_from_godot = true
+
+# true  -> keep language synchronized across Tauri and Godot runtime.
+# false -> disable runtime language sync broadcast to Path Mode.
+sync_language = true

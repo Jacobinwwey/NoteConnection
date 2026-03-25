@@ -27,4 +27,10 @@ mkdocs build --config-file mkdocs.yml
 - 产品总览：[docs/zh/README.md](../../zh/README.md)
 - 接口契约：[docs/zh/Interface Document.md](../../zh/Interface%20Document.md)
 - 用户手册：[docs/zh/User_Manual.md](../../zh/User_Manual.md)
+- app_config 指南：[docs/zh/app_config.toml_guide.md](../../zh/app_config.toml_guide.md)
 - 发布对比报告：[docs/zh/release_v1.6.0_report.md](../../zh/release_v1.6.0_report.md)
+
+## 运行时配置入口
+
+- 操作指南：[配置 app_config.toml](./how-to/configure-app-config.md)
+- 参考文档：[app_config.toml 结构](./reference/app-config-schema.md)

@@ -14,7 +14,19 @@ This reference tracks canonical API/runtime contracts.
   - `invoke('get_sidecar_runtime_config')`
 - Rust sidecar runtime config command:
   - `get_sidecar_runtime_config`
+- Rust app runtime config command:
+  - `get_app_runtime_config`
 - Runtime bridge readiness sequencing via `whenReady()`.
+
+## app_config Runtime Contract Hook
+
+- Frontend app-config hydration command:
+  - `invoke('get_app_runtime_config')`
+- Hydrated projection:
+  - `window.__NC_APP_CONFIG.language`
+  - `window.__NC_APP_CONFIG.multiWindow.*`
+- Detailed schema reference:
+  - [app_config.toml Schema](./app-config-schema.md)
 
 ## Policy Gate Families
 

@@ -2396,7 +2396,7 @@
 
 ### 阶段 P0 - 移除 Electron 前必须完成
 
-- [x] **实现 Tauri 持久化配置对等能力（等价 `kb_config`）**
+- [x] **实现 Tauri 持久化配置对等能力（`app_config.toml` + 旧版 `kb_config` 自动迁移）**
   - [x] 在 Tauri 应用数据目录持久化 KB 路径。
   - [x] 在 Tauri 应用数据目录持久化语言设置。
   - [x] 启动时在前端初始化前读取并应用。

@@ -335,6 +335,7 @@ const ALLOWED_CONFIG_STRATEGY_VALUES = new Set(['foundational', 'core']);
 const ALLOWED_CONFIG_LAYOUT_VALUES = new Set(['vertical', 'horizontal', 'radial', 'orbital']);
 const ALLOWED_READING_MODE_VALUES = new Set(['window', 'fullscreen']);
 const ALLOWED_READER_RENDER_MODE_VALUES = new Set(['render', 'source']);
+const ALLOWED_CONFIG_LANGUAGE_VALUES = new Set(['en', 'zh']);
 const ALLOWED_BACKGROUND_FILE_EXTENSIONS = ['.exr', '.hdr'];
 const CONFIG_TARGET_ID_MAX_LENGTH = 512;
 const CONFIG_SHORTCUT_MAX_LENGTH = 64;
@@ -350,6 +351,7 @@ const ALLOWED_CONFIG_KEYS = new Set([
     'mode',
     'strategy',
     'layout',
+    'language',
     'targetId',
     'target_id',
     'targetIds',
@@ -513,6 +515,15 @@ function validateConfigurePayload(
         }
         if (!ALLOWED_CONFIG_LAYOUT_VALUES.has(payload.layout)) {
             return `configure payload.layout must be one of: ${Array.from(ALLOWED_CONFIG_LAYOUT_VALUES).join(', ')}.`;
+        }
+    }
+    if (payload.language !== undefined) {
+        if (!isNonEmptyString(payload.language)) {
+            return 'configure payload.language must be a non-empty string when provided.';
+        }
+        const normalizedLanguage = payload.language.trim().toLowerCase();
+        if (!ALLOWED_CONFIG_LANGUAGE_VALUES.has(normalizedLanguage)) {
+            return `configure payload.language must be one of: ${Array.from(ALLOWED_CONFIG_LANGUAGE_VALUES).join(', ')}.`;
         }
     }
     if (payload.targetId !== undefined && typeof payload.targetId !== 'string') {

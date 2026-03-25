@@ -458,6 +458,40 @@ function isGraphA11yZhMode() {
     return String(window.i18n.currentLanguage).toLowerCase().startsWith('zh');
 }
 
+function getRuntimeAppConfig() {
+    if (
+        window.NoteConnectionRuntime &&
+        typeof window.NoteConnectionRuntime.getAppRuntimeConfig === 'function'
+    ) {
+        return window.NoteConnectionRuntime.getAppRuntimeConfig();
+    }
+    if (window.__NC_APP_CONFIG && typeof window.__NC_APP_CONFIG === 'object') {
+        return window.__NC_APP_CONFIG;
+    }
+    return null;
+}
+
+function resolveRuntimeMultiWindowOptions() {
+    const defaults = {
+        singleWindowMode: true,
+        hideTauriWhenPathmodeOpens: true,
+        restoreTauriWhenPathmodeExits: true,
+        confirmBeforeFullShutdownFromGodot: true,
+        syncLanguage: true
+    };
+    const config = getRuntimeAppConfig();
+    if (!config || typeof config !== 'object' || !config.multiWindow || typeof config.multiWindow !== 'object') {
+        return defaults;
+    }
+    const next = { ...defaults };
+    Object.keys(defaults).forEach((key) => {
+        if (typeof config.multiWindow[key] === 'boolean') {
+            next[key] = config.multiWindow[key];
+        }
+    });
+    return next;
+}
+
 function getGraphRendererMode() {
     const checked = document.querySelector('input[name="rendererMode"]:checked');
     if (!checked || (checked.value !== 'svg' && checked.value !== 'canvas')) {
@@ -967,9 +1001,12 @@ document.querySelectorAll('input[name="degreeMode"]').forEach(radio => {
 // Localization is now handled by i18n.js
 // We just need to listen for changes to update dynamic UI components like Analysis Panel
 if (window.i18n) {
-    window.i18n.onLanguageChange(() => {
+    window.i18n.onLanguageChange((newLang) => {
         if (typeof window.updateAnalysisUI === 'function') {
             window.updateAnalysisUI();
+        }
+        if (window.pathApp && typeof window.pathApp.syncLanguageWithBridge === 'function') {
+            window.pathApp.syncLanguageWithBridge(newLang);
         }
         scheduleGraphSemanticA11yRefresh('Language changed');
     });
@@ -3525,6 +3562,22 @@ if (
     window.__TAURI__.event.listen('notemd-open-request', () => {
         showEmbeddedNoteMD({ source: 'tauri-event' });
     });
+    window.__TAURI__.event.listen('app-language-updated', async (event) => {
+        const language = event && event.payload && typeof event.payload.language === 'string'
+            ? event.payload.language
+            : '';
+        if (!language || !window.i18n || typeof window.i18n.setLanguage !== 'function') {
+            return;
+        }
+        if (window.i18n.currentLanguage === language) {
+            return;
+        }
+        try {
+            await window.i18n.setLanguage(language);
+        } catch (error) {
+            console.warn('[i18n] Failed to apply app-language-updated event payload:', error);
+        }
+    });
 }
 
 if (btnNotemd) {
@@ -3572,7 +3625,9 @@ if (btnPathMode) {
         const hasData = (typeof nodes !== 'undefined' && nodes.length > 0);
         
         if (!hasData) {
-            const msg = (window.i18n && window.i18n.currentLanguage === 'zh') ? "请先加载知识库。" : "Please load a Knowledge Base first.";
+            const msg = (window.i18n && typeof window.i18n.t === 'function')
+                ? window.i18n.t('pathMode.loadKbFirst')
+                : 'Please load a Knowledge Base first.';
             
             // Inline Feedback
             let feedbackEl = document.getElementById('path-mode-feedback');
@@ -3600,6 +3655,7 @@ if (btnPathMode) {
         // Check for active selection for Diffusion Learning
         const highlightState = window.highlightManager ? window.highlightManager.getState() : null;
         const selectedNode = (highlightState && highlightState.currentNode) ? highlightState.currentNode : null;
+        const multiWindowOptions = resolveRuntimeMultiWindowOptions();
         
         console.log('[Path Mode] Entering...', selectedNode ? `Target: ${selectedNode.id}` : 'Domain Mode');
 
@@ -3636,7 +3692,12 @@ if (btnPathMode) {
                     // 1. Hide the Tauri window via Rust IPC.
                     await window.__TAURI__.core.invoke('toggle_pathmode_window', { showGodot: true });
                     // 2. Send setWindowVisible to Godot via PathBridge WebSocket.
-                    if (window.pathApp && window.pathApp.ws && window.pathApp.ws.readyState === WebSocket.OPEN) {
+                    if (
+                        multiWindowOptions.singleWindowMode &&
+                        window.pathApp &&
+                        window.pathApp.ws &&
+                        window.pathApp.ws.readyState === WebSocket.OPEN
+                    ) {
                         window.pathApp.ws.send(JSON.stringify({
                             type: 'setWindowVisible',
                             payload: { visible: true }

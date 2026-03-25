@@ -71,49 +71,131 @@ fn app_config_path() -> PathBuf {
     if let Ok(custom_dir) = std::env::var("NOTE_CONNECTION_CONFIG_DIR") {
         let mut base = PathBuf::from(custom_dir);
         ensure_directory(&base);
-        base.push("kb_config.json");
+        base.push("app_config.toml");
         return base;
     }
 
     let mut base = dirs::data_local_dir().unwrap_or_else(resolve_project_root);
     base.push("NoteConnection");
     ensure_directory(&base);
-    base.push("kb_config.json");
+    base.push("app_config.toml");
     base
 }
 
+fn legacy_app_config_path_from(primary_path: &Path) -> PathBuf {
+    if let Some(parent) = primary_path.parent() {
+        return parent.join("kb_config.json");
+    }
+    PathBuf::from("kb_config.json")
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+struct MultiWindowConfig {
+    #[serde(alias = "singleWindowMode")]
+    single_window_mode: bool,
+    #[serde(alias = "hideTauriWhenPathmodeOpens")]
+    hide_tauri_when_pathmode_opens: bool,
+    #[serde(alias = "restoreTauriWhenPathmodeExits")]
+    restore_tauri_when_pathmode_exits: bool,
+    #[serde(alias = "confirmBeforeFullShutdownFromGodot")]
+    confirm_before_full_shutdown_from_godot: bool,
+    #[serde(alias = "syncLanguage")]
+    sync_language: bool,
+}
+
+impl Default for MultiWindowConfig {
+    fn default() -> Self {
+        Self {
+            single_window_mode: true,
+            hide_tauri_when_pathmode_opens: true,
+            restore_tauri_when_pathmode_exits: true,
+            confirm_before_full_shutdown_from_godot: true,
+            sync_language: true,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
 struct StoredConfig {
-    #[serde(rename = "knowledgeBasePath")]
+    #[serde(alias = "knowledgeBasePath")]
     knowledge_base_path: Option<String>,
-    #[serde(rename = "userLanguage")]
+    #[serde(alias = "userLanguage")]
     user_language: Option<String>,
+    #[serde(alias = "multiWindow")]
+    multi_window: MultiWindowConfig,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum StoredConfigFormat {
+    Toml,
+    Json,
+}
+
+fn try_load_stored_config_from_path(path: &Path) -> Option<(StoredConfig, StoredConfigFormat)> {
+    if !path.exists() {
+        return None;
+    }
+
+    let content = match fs::read_to_string(path) {
+        Ok(value) => value,
+        Err(err) => {
+            eprintln!(
+                "[Rust] Failed to read config '{}': {}",
+                path.to_string_lossy(),
+                err
+            );
+            return None;
+        }
+    };
+
+    if let Ok(config) = toml::from_str::<StoredConfig>(&content) {
+        return Some((config, StoredConfigFormat::Toml));
+    }
+
+    if let Ok(config) = serde_json::from_str::<StoredConfig>(&content) {
+        return Some((config, StoredConfigFormat::Json));
+    }
+
+    eprintln!(
+        "[Rust] Failed to parse config '{}': content is neither valid TOML nor legacy JSON.",
+        path.to_string_lossy()
+    );
+    None
 }
 
 fn load_stored_config() -> StoredConfig {
     let config_path = app_config_path();
-    if !config_path.exists() {
-        return StoredConfig::default();
+    if let Some((config, format)) = try_load_stored_config_from_path(&config_path) {
+        if format != StoredConfigFormat::Toml {
+            if let Err(err) = save_stored_config(&config) {
+                eprintln!(
+                    "[Rust] Failed to migrate config '{}' to TOML: {}",
+                    config_path.to_string_lossy(),
+                    err
+                );
+            }
+        }
+        return config;
     }
 
-    match fs::read_to_string(&config_path) {
-        Ok(content) => serde_json::from_str::<StoredConfig>(&content).unwrap_or_else(|err| {
-            eprintln!(
-                "[Rust] Failed to parse config '{}': {}",
-                config_path.to_string_lossy(),
-                err
-            );
-            StoredConfig::default()
-        }),
-        Err(err) => {
-            eprintln!(
-                "[Rust] Failed to read config '{}': {}",
-                config_path.to_string_lossy(),
-                err
-            );
-            StoredConfig::default()
+    let legacy_path = legacy_app_config_path_from(&config_path);
+    if legacy_path != config_path {
+        if let Some((config, _format)) = try_load_stored_config_from_path(&legacy_path) {
+            if let Err(err) = save_stored_config(&config) {
+                eprintln!(
+                    "[Rust] Failed to migrate legacy config '{}' to '{}': {}",
+                    legacy_path.to_string_lossy(),
+                    config_path.to_string_lossy(),
+                    err
+                );
+            }
+            return config;
         }
     }
+
+    StoredConfig::default()
 }
 
 fn save_stored_config(config: &StoredConfig) -> Result<(), String> {
@@ -122,7 +204,7 @@ fn save_stored_config(config: &StoredConfig) -> Result<(), String> {
         ensure_directory(parent);
     }
 
-    let content = serde_json::to_string_pretty(config).map_err(|err| err.to_string())?;
+    let content = toml::to_string_pretty(config).map_err(|err| err.to_string())?;
     fs::write(&config_path, content).map_err(|err| err.to_string())
 }
 
@@ -231,6 +313,49 @@ fn persist_user_language(lang: &str) -> Result<String, String> {
     Ok(normalized)
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MultiWindowRuntimeConfig {
+    single_window_mode: bool,
+    hide_tauri_when_pathmode_opens: bool,
+    restore_tauri_when_pathmode_exits: bool,
+    confirm_before_full_shutdown_from_godot: bool,
+    sync_language: bool,
+}
+
+impl From<MultiWindowConfig> for MultiWindowRuntimeConfig {
+    fn from(config: MultiWindowConfig) -> Self {
+        Self {
+            single_window_mode: config.single_window_mode,
+            hide_tauri_when_pathmode_opens: config.hide_tauri_when_pathmode_opens,
+            restore_tauri_when_pathmode_exits: config.restore_tauri_when_pathmode_exits,
+            confirm_before_full_shutdown_from_godot: config
+                .confirm_before_full_shutdown_from_godot,
+            sync_language: config.sync_language,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AppRuntimeConfig {
+    language: String,
+    multi_window: MultiWindowRuntimeConfig,
+}
+
+fn resolve_multi_window_config_from_config() -> MultiWindowConfig {
+    load_stored_config().multi_window
+}
+
+fn resolve_app_runtime_config() -> AppRuntimeConfig {
+    let config = load_stored_config();
+    let language = normalize_menu_lang(config.user_language.as_deref().unwrap_or("en")).to_string();
+    AppRuntimeConfig {
+        language,
+        multi_window: MultiWindowRuntimeConfig::from(config.multi_window),
+    }
+}
+
 #[cfg(not(target_os = "android"))]
 fn pick_knowledge_base_folder(default_dir: &str, title: &str) -> Option<PathBuf> {
     rfd::FileDialog::new()
@@ -319,7 +444,8 @@ fn pick_notemd_folder_internal(initial_path: Option<&str>) -> Option<PathBuf> {
 
 fn ensure_startup_kb_path() -> String {
     let config_path = app_config_path();
-    let has_existing_config = config_path.exists();
+    let legacy_config_path = legacy_app_config_path_from(&config_path);
+    let has_existing_config = config_path.exists() || legacy_config_path.exists();
     let mut config = load_stored_config();
 
     if let Some(saved) = config.knowledge_base_path.clone() {
@@ -1140,6 +1266,11 @@ fn get_user_language() -> Result<String, String> {
 }
 
 #[tauri::command]
+fn get_app_runtime_config() -> Result<AppRuntimeConfig, String> {
+    Ok(resolve_app_runtime_config())
+}
+
+#[tauri::command]
 fn get_folders() -> Result<Vec<String>, String> {
     let kb_path = resolve_kb_path_from_config();
     let mut folders = Vec::new();
@@ -1576,24 +1707,33 @@ fn toggle_pathmode_window(app: AppHandle, show_godot: bool) -> Result<(), String
     let main_window = app
         .get_webview_window("main")
         .ok_or_else(|| "Main Tauri window not found".to_string())?;
+    let multi_window = resolve_multi_window_config_from_config();
 
     if show_godot {
-        // Hide Tauri window; Godot will show itself via WebSocket message.
-        // 隐藏 Tauri 窗口；Godot 将通过 WebSocket 消息自行显示。
-        main_window
-            .hide()
-            .map_err(|err| format!("Failed to hide Tauri window: {}", err))?;
-        println!("[Rust] Tauri window hidden for PathMode.");
+        if multi_window.hide_tauri_when_pathmode_opens {
+            // Hide Tauri window; Godot will show itself via WebSocket message.
+            // 隐藏 Tauri 窗口；Godot 将通过 WebSocket 消息自行显示。
+            main_window
+                .hide()
+                .map_err(|err| format!("Failed to hide Tauri window: {}", err))?;
+            println!("[Rust] Tauri window hidden for PathMode.");
+        } else {
+            println!("[Rust] PathMode requested without hiding Tauri window (config override).");
+        }
     } else {
-        // Show Tauri window; Godot will hide itself via WebSocket message.
-        // 显示 Tauri 窗口；Godot 将通过 WebSocket 消息自行隐藏。
-        main_window
-            .show()
-            .map_err(|err| format!("Failed to show Tauri window: {}", err))?;
-        main_window
-            .set_focus()
-            .map_err(|err| format!("Failed to focus Tauri window: {}", err))?;
-        println!("[Rust] Tauri window restored from PathMode.");
+        if multi_window.restore_tauri_when_pathmode_exits {
+            // Show Tauri window; Godot will hide itself via WebSocket message.
+            // 显示 Tauri 窗口；Godot 将通过 WebSocket 消息自行隐藏。
+            main_window
+                .show()
+                .map_err(|err| format!("Failed to show Tauri window: {}", err))?;
+            main_window
+                .set_focus()
+                .map_err(|err| format!("Failed to focus Tauri window: {}", err))?;
+            println!("[Rust] Tauri window restored from PathMode.");
+        } else {
+            println!("[Rust] PathMode exit requested without restoring Tauri window (config override).");
+        }
     }
 
     Ok(())
@@ -1663,6 +1803,17 @@ fn set_user_language(app: AppHandle, lang: String) -> Result<(), String> {
             if let Ok(mut state) = menu_lang_state().lock() {
                 *state = normalized_lang;
             }
+        }
+
+        let app_runtime = resolve_app_runtime_config();
+        if app_runtime.multi_window.sync_language {
+            let _ = app.emit(
+                "app-language-updated",
+                json!({
+                    "language": app_runtime.language,
+                    "multiWindow": app_runtime.multi_window
+                }),
+            );
         }
     }
 
@@ -1852,6 +2003,7 @@ pub fn run() {
             toggle_pathmode_window,
             set_user_language,
             get_user_language,
+            get_app_runtime_config,
             check_cache,
             restore_cache,
             build_graph_runtime,
@@ -1861,7 +2013,11 @@ pub fn run() {
         .setup(|app| {
             let startup_kb_path = ensure_startup_kb_path();
             #[cfg(not(target_os = "android"))]
-            let startup_lang = resolve_user_language_from_config();
+            let startup_app_runtime = resolve_app_runtime_config();
+            #[cfg(not(target_os = "android"))]
+            let startup_lang = startup_app_runtime.language.clone();
+            #[cfg(not(target_os = "android"))]
+            let startup_multi_window = startup_app_runtime.multi_window.clone();
             #[cfg(target_os = "android")]
             let _ = app;
 
@@ -2030,6 +2186,11 @@ pub fn run() {
 
                 // Spawn Godot process using robust candidate resolution.
                 let godot_state_handle = app.handle().clone();
+                let godot_single_window_mode = startup_multi_window.single_window_mode;
+                let godot_confirm_close_from_window =
+                    startup_multi_window.confirm_before_full_shutdown_from_godot;
+                let godot_sync_language = startup_multi_window.sync_language;
+                let godot_ui_language = startup_lang.clone();
                 tauri::async_runtime::spawn(async move {
                     let godot_project = resolve_godot_project_path(&project_root);
                     if !godot_project.exists() {
@@ -2046,7 +2207,8 @@ pub fn run() {
                                 "[Rust] Launching Godot executable: {}",
                                 godot_exe.to_string_lossy()
                             );
-                            match std::process::Command::new(&godot_exe)
+                            let mut godot_command = std::process::Command::new(&godot_exe);
+                            godot_command
                                 .env("NOTE_CONNECTION_PORT", godot_runtime.port.to_string())
                                 .env(
                                     "NOTE_CONNECTION_BRIDGE_PORT",
@@ -2056,15 +2218,41 @@ pub fn run() {
                                     "NOTE_CONNECTION_AUTH_TOKEN",
                                     godot_runtime.auth_token.clone(),
                                 )
-                                .env("NOTE_CONNECTION_START_HIDDEN", "1")
-                                .args([
-                                    "--path",
-                                    godot_project.to_string_lossy().as_ref(),
-                                    "--nc-start-hidden",
-                                    "--minimized",
-                                ])
-                                .spawn()
-                            {
+                                .env(
+                                    "NOTE_CONNECTION_SINGLE_WINDOW_MODE",
+                                    if godot_single_window_mode { "1" } else { "0" },
+                                )
+                                .env(
+                                    "NOTE_CONNECTION_CONFIRM_CLOSE_FROM_GODOT",
+                                    if godot_confirm_close_from_window {
+                                        "1"
+                                    } else {
+                                        "0"
+                                    },
+                                )
+                                .env(
+                                    "NOTE_CONNECTION_SYNC_LANGUAGE",
+                                    if godot_sync_language { "1" } else { "0" },
+                                )
+                                .env("NOTE_CONNECTION_UI_LANGUAGE", godot_ui_language.clone());
+
+                            if godot_single_window_mode {
+                                godot_command
+                                    .env("NOTE_CONNECTION_START_HIDDEN", "1")
+                                    .args([
+                                        "--path",
+                                        godot_project.to_string_lossy().as_ref(),
+                                        "--nc-start-hidden",
+                                        "--minimized",
+                                    ]);
+                            } else {
+                                godot_command
+                                    .env("NOTE_CONNECTION_START_HIDDEN", "0")
+                                    .env("NOTE_CONNECTION_FORCE_VISIBLE", "1")
+                                    .args(["--path", godot_project.to_string_lossy().as_ref()]);
+                            }
+
+                            match godot_command.spawn() {
                                 Ok(child) => {
                                     if let Ok(mut godot_slot) = godot_state_handle
                                         .state::<ChildProcessState>()
@@ -2316,7 +2504,7 @@ mod tests {
     fn kb_path_and_language_persist_and_resolve() {
         let _lock = lock_test_env();
         let temp = TempDir::new("config_roundtrip");
-        let config_file = temp.child("kb_config.json");
+        let config_file = temp.child("app_config.toml");
         let kb_dir = temp.child("Knowledge_Base");
         fs::create_dir_all(&kb_dir).expect("failed to create kb directory");
 
@@ -2338,10 +2526,76 @@ mod tests {
     }
 
     #[test]
+    fn load_stored_config_migrates_legacy_json_file_to_toml() {
+        let _lock = lock_test_env();
+        let temp = TempDir::new("legacy_json_to_toml");
+        let config_dir = temp.child("config_dir");
+        fs::create_dir_all(&config_dir).expect("failed to create config directory");
+
+        let legacy_config_file = config_dir.join("kb_config.json");
+        let migrated_config_file = config_dir.join("app_config.toml");
+        fs::write(
+            &legacy_config_file,
+            r#"{"knowledgeBasePath":"E:\\Knowledge_Base","userLanguage":"zh"}"#,
+        )
+        .expect("failed to write legacy json config");
+
+        let _config_dir_guard = EnvVarGuard::set(
+            "NOTE_CONNECTION_CONFIG_DIR",
+            config_dir.to_string_lossy().as_ref(),
+        );
+
+        let loaded = load_stored_config();
+        assert_eq!(loaded.user_language.as_deref(), Some("zh"));
+        assert!(migrated_config_file.exists());
+
+        let migrated_content =
+            fs::read_to_string(&migrated_config_file).expect("failed to read migrated toml config");
+        assert!(migrated_content.contains("user_language = \"zh\""));
+        assert!(migrated_content.contains("[multi_window]"));
+    }
+
+    #[test]
+    fn app_runtime_config_reflects_toml_multi_window_settings() {
+        let _lock = lock_test_env();
+        let temp = TempDir::new("runtime_config_from_toml");
+        let config_file = temp.child("app_config.toml");
+
+        fs::write(
+            &config_file,
+            r#"
+knowledge_base_path = "E:/Knowledge_Base"
+user_language = "zh"
+
+[multi_window]
+single_window_mode = false
+hide_tauri_when_pathmode_opens = false
+restore_tauri_when_pathmode_exits = true
+confirm_before_full_shutdown_from_godot = false
+sync_language = true
+"#,
+        )
+        .expect("failed to write app_config.toml");
+
+        let _config_guard = EnvVarGuard::set(
+            "NOTE_CONNECTION_CONFIG_PATH",
+            config_file.to_string_lossy().as_ref(),
+        );
+
+        let runtime_config = get_app_runtime_config().expect("get_app_runtime_config should succeed");
+        assert_eq!(runtime_config.language, "zh");
+        assert!(!runtime_config.multi_window.single_window_mode);
+        assert!(!runtime_config.multi_window.hide_tauri_when_pathmode_opens);
+        assert!(runtime_config.multi_window.restore_tauri_when_pathmode_exits);
+        assert!(!runtime_config.multi_window.confirm_before_full_shutdown_from_godot);
+        assert!(runtime_config.multi_window.sync_language);
+    }
+
+    #[test]
     fn persist_kb_path_normalizes_path_inside_knowledge_base() {
         let _lock = lock_test_env();
         let temp = TempDir::new("kb_normalize_persist");
-        let config_file = temp.child("kb_config.json");
+        let config_file = temp.child("app_config.toml");
         let kb_dir = temp.child("Knowledge_Base");
         let nested_dir = kb_dir.join("financial");
 
@@ -2360,7 +2614,7 @@ mod tests {
     fn resolve_kb_path_from_config_normalizes_stale_nested_kb_path() {
         let _lock = lock_test_env();
         let temp = TempDir::new("kb_normalize_resolve");
-        let config_file = temp.child("kb_config.json");
+        let config_file = temp.child("app_config.toml");
         let kb_dir = temp.child("Knowledge_Base");
         let nested_dir = kb_dir.join("financial");
 
@@ -2393,7 +2647,7 @@ mod tests {
     fn persist_kb_path_rejects_non_existing_directory() {
         let _lock = lock_test_env();
         let temp = TempDir::new("invalid_kb");
-        let config_file = temp.child("kb_config.json");
+        let config_file = temp.child("app_config.toml");
         let missing_dir = temp.child("missing_folder");
         let _config_guard = EnvVarGuard::set(
             "NOTE_CONNECTION_CONFIG_PATH",
@@ -2408,7 +2662,7 @@ mod tests {
     fn read_node_content_supports_absolute_and_relative_paths_within_kb_root() {
         let _lock = lock_test_env();
         let temp = TempDir::new("read_node_content_ok");
-        let config_file = temp.child("kb_config.json");
+        let config_file = temp.child("app_config.toml");
         let kb_dir = temp.child("Knowledge_Base");
         let note_dir = kb_dir.join("financial");
         let note_file = note_dir.join("overview.md");
@@ -2441,7 +2695,7 @@ mod tests {
     fn read_node_content_rejects_file_outside_kb_root() {
         let _lock = lock_test_env();
         let temp = TempDir::new("read_node_content_outside");
-        let config_file = temp.child("kb_config.json");
+        let config_file = temp.child("app_config.toml");
         let kb_dir = temp.child("Knowledge_Base");
         let outside_file = temp.child("outside.md");
 

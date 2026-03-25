@@ -22,6 +22,7 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+toml = "0.8"
 tauri-plugin-shell = "2.3.5"
 dirs = "6.0.0"
 tauri-plugin-global-shortcut = "2.3.1"

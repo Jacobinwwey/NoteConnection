@@ -1304,7 +1304,7 @@
 | 缓存提示与恢复 | IPC `checkCache`/`restoreCache` | sidecar API + Tauri 命令 + `source_manager.js` 弹窗 | **已迁移** |
 | 教程选择逻辑 | Welcome + Tutorial | `welcome.js` + `tutorial.js` 会话跳过保护 | **已迁移** |
 | 菜单语言切换 | Electron 动态重建菜单 | Tauri `set_user_language` 动态重建菜单 | **部分迁移** |
-| KB 路径/语言持久化 | Electron `kb_config.json` | Tauri 尚无等价持久化配置文件闭环 | **未完全迁移** |
+| KB 路径/语言持久化 | Electron `kb_config.json` | Tauri 已在 `app_config.toml` 持久化 KB 路径、语言与多窗口设置（启动自动迁移旧 `kb_config.json`） | **已迁移（v1.6.0+）** |
 | Godot 进程集成 | Electron 期未形成统一方案 | Tauri 仍使用硬编码绝对路径拉起 Godot | **未完全迁移** |
 | 子进程生命周期收敛 | Electron 生命周期统一管理 | Tauri 未完成显式关闭与回收验证 | **部分迁移** |
 | 发布态路径模型 | Electron `app://` + 明确资源关系 | Tauri 仍偏向仓库开发目录路径假设 | **部分迁移** |
@@ -1325,9 +1325,9 @@
 
 #### 2) 立即删除 Electron 前的高风险缺口
 
-- **用户配置持久化对等性不足**：
-  - Electron 有 `kb_config.json` 持久化。
-  - Tauri 尚未形成等价的 KB 路径与语言持久化闭环。
+- **用户配置持久化对等性已补齐（更新于 2026-03-25）**：
+  - Electron 时代使用 `kb_config.json` 持久化。
+  - Tauri 已使用 `app_config.toml` 持久化 KB 路径、语言与多窗口策略，并在启动时自动迁移旧版 `kb_config.json`。
 - **Godot 启动路径耦合开发机**：
   - `src-tauri/src/lib.rs` 使用硬编码绝对路径。
   - 换机或发布环境极易失效。
@@ -1435,7 +1435,7 @@ Electron -> Tauri 在**桌面开发态**已达到可用水平，但按 `docs/tau
 - **步骤**:
   1. 运行 `npm start`。
   2. 在首次运行设置中选择自定义文件夹。
-  3. 验证 `kb_config.json` 已在 `AppData` 中创建。
+  3. 验证旧版 `kb_config.json` 已在 `AppData` 中创建（该方案已在 v1.6.0+ 由 `app_config.toml` 取代）。
   4. 使用“文件 > 重置为默认”和“文件 > 更改知识库”菜单。
 - **结果**: 配置更新正确；应用重载并加载指定文件夹。
 - **状态**: **通过**

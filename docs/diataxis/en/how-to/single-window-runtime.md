@@ -24,3 +24,4 @@ Use this guide to verify and operate Tauri/Godot single-window behavior.
 
 - [docs/en/single_window_migration_plan.md](../../../en/single_window_migration_plan.md)
 - [docs/en/User_Manual.md](../../../en/User_Manual.md)
+- [docs/en/app_config.toml_guide.md](../../../en/app_config.toml_guide.md)

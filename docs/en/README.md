@@ -284,9 +284,26 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 Managing your knowledge base source is now easier than ever.
 
 - **First Run Setup**: On first launch, you will be prompted to select your `Knowledge_Base` folder.
-- **Persistent Config**: Your selection is saved in `kb_config.json` and remembered across restarts.
+- **Persistent Config (`app_config.toml`)**: Your KB path, language, and multi-window preferences are saved in `%LOCALAPPDATA%/NoteConnection/app_config.toml` (Windows default) and remembered across restarts.
+- **Legacy Auto-Migration**: If a legacy `kb_config.json` exists in the same config directory, NoteConnection automatically migrates it to `app_config.toml`.
 - **Change Anytime**: Use the **File > Change Knowledge Base...** menu option to switch folders instantly.
 - **Reset**: Use **File > Reset to Default** to return to the bundled demo notes.
+- **Config Path Overrides**: Set `NOTE_CONNECTION_CONFIG_PATH` (full file path) or `NOTE_CONNECTION_CONFIG_DIR` (directory) to customize where `app_config.toml` is stored.
+- **Window Behavior Tuning**: Edit `[multi_window]` in `app_config.toml` (`single_window_mode`, `hide_tauri_when_pathmode_opens`, `restore_tauri_when_pathmode_exits`, `confirm_before_full_shutdown_from_godot`, `sync_language`).
+- **Detailed Config Guide**: See [`docs/en/app_config.toml_guide.md`](app_config.toml_guide.md) and template [`docs/examples/app_config.template.toml`](../examples/app_config.template.toml).
+
+```toml
+# Minimal recommended app_config.toml
+knowledge_base_path = "E:/Knowledge_project/NoteConnection_app/Knowledge_Base"
+user_language = "en"
+
+[multi_window]
+single_window_mode = true
+hide_tauri_when_pathmode_opens = true
+restore_tauri_when_pathmode_exits = true
+confirm_before_full_shutdown_from_godot = true
+sync_language = true
+```
 
 ## 🏗️ Build & Deployment
 

@@ -216,6 +216,9 @@
     "buildFailed": "构建失败。请检查您的知识库路径。",
     "noData": "无可用数据。请先加载知识库。"
   },
+  "pathMode": {
+    "loadKbFirst": "请先加载知识库。"
+  },
   "nodes": "节点",
   "edges": "边",
   "show_all": "显示全部",
