@@ -130,7 +130,9 @@ jobs:
         run: npm run verify:sidecar:signatures -- --contract-only
 
       - name: Run tests
-        run: npm test
+        # Release CI is intentionally serialized here because the parallel Jest
+        # worker pool can trigger broken stdout pipes in spawned Node CLIs.
+        run: npx jest --runInBand
 
       - name: Publish to npm
         run: npm publish

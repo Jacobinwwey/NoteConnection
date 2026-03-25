@@ -129,6 +129,7 @@ describe('sbom attestation policy contract', () => {
     expect(npmPublishWorkflow).toContain('NOTE_CONNECTION_SBOM_ATTESTATION_VERIFY_TRANSPARENCY_LOG_INCLUSION');
     expect(npmPublishWorkflow).toContain('NOTE_CONNECTION_SBOM_ATTESTATION_TRANSPARENCY_EXPECT_SCHEMA');
     expect(npmPublishWorkflow).toContain('NOTE_CONNECTION_SBOM_ATTESTATION_TRANSPARENCY_EXPECT_VERSION');
+    expect(npmPublishWorkflow).toContain('npx jest --runInBand');
   });
 
   test('attestation generator and verifier work in unsigned strict policy mode', () => {
