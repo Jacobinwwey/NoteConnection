@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          lfs: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -39,6 +41,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          lfs: false
 
       - name: Setup Python
         uses: actions/setup-python@v6
