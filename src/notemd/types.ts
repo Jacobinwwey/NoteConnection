@@ -36,6 +36,7 @@ export interface NotemdLanguage {
 export interface NotemdSettings {
     providers: LlmProviderConfig[];
     activeProvider: LlmProviderName;
+    developerMode: boolean;
 
     useCustomConceptNoteFolder: boolean;
     conceptNoteFolder: string;

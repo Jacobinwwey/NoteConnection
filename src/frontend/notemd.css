@@ -186,6 +186,13 @@ button:hover {
   border-color: var(--accent);
 }
 
+button.primary {
+  border-color: rgba(123, 240, 214, 0.45);
+  background: linear-gradient(160deg, #17475a, #123847);
+  color: #efffff;
+  font-weight: 600;
+}
+
 button.ghost {
   white-space: nowrap;
   min-width: 96px;
@@ -209,6 +216,26 @@ button.danger {
   border-radius: 8px;
   padding: 0.7rem;
   white-space: pre-wrap;
+  font-size: 0.84rem;
+}
+
+input[readonly] {
+  opacity: 0.82;
+  cursor: default;
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+.advanced-panel.is-hidden {
+  display: none;
+}
+
+.developer-note {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
   font-size: 0.84rem;
 }
 

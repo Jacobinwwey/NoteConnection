@@ -102,6 +102,7 @@ export const DEFAULT_PROVIDERS: LlmProviderConfig[] = [
 export const DEFAULT_SETTINGS: NotemdSettings = {
     providers: DEFAULT_PROVIDERS,
     activeProvider: 'DeepSeek',
+    developerMode: false,
 
     useCustomConceptNoteFolder: false,
     conceptNoteFolder: 'Concepts',

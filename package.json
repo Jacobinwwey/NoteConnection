@@ -1,6 +1,6 @@
 {
   "name": "noteconnection",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "description": "Hierarchical Knowledge Graph Visualization System",
   "main": "dist/src/server.js",
   "bin": {
@@ -132,6 +132,7 @@
     "@capacitor/cli": "^8.0.0",
     "@capacitor/core": "^8.0.0",
     "@capacitor/filesystem": "^8.1.2",
+    "@iarna/toml": "^2.2.5",
     "@resvg/resvg-wasm": "^2.6.2",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-opener": "^2.5.3",

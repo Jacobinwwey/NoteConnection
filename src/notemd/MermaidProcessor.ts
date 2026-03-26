@@ -7,6 +7,43 @@ type BlockFixResult = {
 
 const MERMAID_BLOCK_PATTERN = /```mermaid\s*([\s\S]*?)```/gi;
 
+function cleanQuotedNoteContent(rawContent: string): string {
+    return String(rawContent || '')
+        .replace(/\[""\]/g, '')
+        .replace(/\["\]/g, '')
+        .replace(/\["/g, '[')
+        .replace(/"\]/g, ']')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function expandNoteStatements(blockSource: string): { next: string; changed: boolean } {
+    const nextLines: string[] = [];
+    let changed = false;
+
+    blockSource.split('\n').forEach((line) => {
+        const match = /^(\s*)note\s+([A-Za-z0-9_]+)\s+"([^"]*)"\s*;?\s*$/i.exec(line);
+        if (!match) {
+            nextLines.push(line);
+            return;
+        }
+
+        const indent = match[1] || '';
+        const targetId = match[2];
+        const noteId = `Note${targetId}`;
+        const content = cleanQuotedNoteContent(match[3]);
+
+        nextLines.push(`${indent}${noteId}["${content}"]`);
+        nextLines.push(`${indent}${targetId} -.- ${noteId}`);
+        changed = true;
+    });
+
+    return {
+        next: nextLines.join('\n'),
+        changed,
+    };
+}
+
 function normalizeSubgraphLine(line: string): { next: string; changed: boolean } {
     const match = /^(\s*subgraph\s+)(.+)$/i.exec(line);
     if (!match) {
@@ -60,6 +97,12 @@ function fixMermaidBlock(blockSource: string): BlockFixResult {
     }
     next = lines.join('\n');
 
+    const expandedNotes = expandNoteStatements(next);
+    if (expandedNotes.changed) {
+        next = expandedNotes.next;
+        fixes.push('Converted Mermaid note statements into linked note nodes.');
+    }
+
     return {
         block: next.trimEnd(),
         fixes,
@@ -91,4 +134,3 @@ export class MermaidProcessor {
 export function fixMermaidSyntax(markdown: string): MermaidFixResult {
     return new MermaidProcessor().fixInMarkdown(markdown);
 }
-

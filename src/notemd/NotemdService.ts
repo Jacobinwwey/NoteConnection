@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { NOTEMD_SUPPORTED_TEXT_EXTENSIONS } from './constants';
 import { ContentGenerator } from './ContentGenerator';
 import { DuplicateDetector } from './DuplicateDetector';
 import { FileProcessor } from './FileProcessor';
@@ -102,6 +103,36 @@ export class NotemdService {
         return this.contentGenerator.generateFolderFromTitles(folderPath, settings, reporter, signal);
     }
 
+    public async batchFixMermaid(
+        folderPath: string,
+        inPlace = true
+    ): Promise<{
+        folderPath: string;
+        totalFiles: number;
+        fixedFiles: number;
+        results: Array<{ filePath: string; changed: boolean; fixes: string[]; content: string }>;
+    }> {
+        const resolvedFolderPath = path.resolve(String(folderPath || '').trim());
+        const stats = await fs.promises.stat(resolvedFolderPath);
+        if (!stats.isDirectory()) {
+            throw new ValidationError(`Not a directory: ${resolvedFolderPath}`);
+        }
+
+        const files = await this.collectMermaidCandidateFiles(resolvedFolderPath);
+        const results: Array<{ filePath: string; changed: boolean; fixes: string[]; content: string }> = [];
+
+        for (const filePath of files) {
+            results.push(await this.fixMermaid(filePath, inPlace));
+        }
+
+        return {
+            folderPath: resolvedFolderPath,
+            totalFiles: files.length,
+            fixedFiles: results.filter((result) => result.changed).length,
+            results,
+        };
+    }
+
     public async fixMermaid(filePath: string, inPlace = true): Promise<{ filePath: string; changed: boolean; fixes: string[]; content: string }> {
         const resolvedPath = path.resolve(String(filePath || '').trim());
         if (!resolvedPath) {
@@ -172,5 +203,119 @@ export class NotemdService {
             concepts: Array.from(concepts).sort((a, b) => a.localeCompare(b)),
         };
     }
-}
 
+    public async oneClickExtract(
+        filePath: string,
+        settings: NotemdSettings,
+        reporter: ProgressReporter = defaultReporter(),
+        signal?: AbortSignal
+    ): Promise<{
+        sourceFilePath: string;
+        outputFolderPath: string;
+        concepts: string[];
+        generated: { totalFiles: number; generatedFiles: number; failedFiles: number; outputs: string[] };
+        mermaid: {
+            folderPath: string;
+            totalFiles: number;
+            fixedFiles: number;
+            results: Array<{ filePath: string; changed: boolean; fixes: string[]; content: string }>;
+        };
+    }> {
+        const resolvedPath = path.resolve(String(filePath || '').trim());
+        if (!resolvedPath) {
+            throw new ValidationError('Missing filePath.');
+        }
+
+        const source = await fs.promises.readFile(resolvedPath, 'utf8');
+        const concepts = Array.from(
+            await this.fileProcessor.extractConceptsFromText(source, settings, reporter, signal)
+        ).sort((a, b) => a.localeCompare(b));
+        const outputFolderPath = path.join(
+            this.resolveKnowledgeBaseRootForFile(resolvedPath),
+            path.basename(resolvedPath, path.extname(resolvedPath))
+        );
+
+        await fs.promises.mkdir(outputFolderPath, { recursive: true });
+        await this.scaffoldConceptFiles(outputFolderPath, concepts);
+
+        const generated = await this.contentGenerator.generateFolderFromTitles(
+            outputFolderPath,
+            settings,
+            reporter,
+            signal
+        );
+        const mermaid = await this.batchFixMermaid(outputFolderPath, true);
+
+        return {
+            sourceFilePath: resolvedPath,
+            outputFolderPath,
+            concepts,
+            generated,
+            mermaid,
+        };
+    }
+
+    private async scaffoldConceptFiles(outputFolderPath: string, concepts: string[]): Promise<void> {
+        for (const concept of concepts) {
+            const safeName = concept.replace(/[\\/:*?"<>|]/g, '').trim();
+            if (!safeName) {
+                continue;
+            }
+
+            const conceptFilePath = path.join(outputFolderPath, `${safeName}.md`);
+            try {
+                const stats = await fs.promises.stat(conceptFilePath);
+                if (stats.isFile()) {
+                    continue;
+                }
+            } catch (_error) {
+                // File does not exist yet; continue with scaffold creation.
+            }
+            await fs.promises.writeFile(conceptFilePath, '', 'utf8');
+        }
+    }
+
+    private resolveKnowledgeBaseRootForFile(filePath: string): string {
+        let current = path.dirname(filePath);
+        for (;;) {
+            if (path.basename(current).toLowerCase() === 'knowledge_base') {
+                return current;
+            }
+            const parent = path.dirname(current);
+            if (parent === current) {
+                return path.dirname(filePath);
+            }
+            current = parent;
+        }
+    }
+
+    private async collectMermaidCandidateFiles(rootDir: string): Promise<string[]> {
+        const results: string[] = [];
+        const queue = [rootDir];
+
+        while (queue.length > 0) {
+            const current = queue.shift();
+            if (!current) {
+                continue;
+            }
+
+            const entries = await fs.promises.readdir(current, { withFileTypes: true });
+            for (const entry of entries) {
+                const fullPath = path.join(current, entry.name);
+                if (entry.isDirectory()) {
+                    queue.push(fullPath);
+                    continue;
+                }
+                if (!entry.isFile()) {
+                    continue;
+                }
+                if (!NOTEMD_SUPPORTED_TEXT_EXTENSIONS.has(path.extname(fullPath).toLowerCase())) {
+                    continue;
+                }
+                results.push(fullPath);
+            }
+        }
+
+        return results.sort((a, b) => a.localeCompare(b));
+    }
+}

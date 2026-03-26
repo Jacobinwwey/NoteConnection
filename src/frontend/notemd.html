@@ -36,103 +36,113 @@
       </section>
 
       <section class="panel">
-        <h2>Runtime</h2>
+        <h2>NoteMD API Settings</h2>
         <div class="grid two">
+          <label>
+            <span>Provider</span>
+            <input id="provider-name" type="text" placeholder="OpenAI / DeepSeek / ..." />
+          </label>
+          <label>
+            <span>Model</span>
+            <input id="api-model" type="text" placeholder="gpt-4o-mini" />
+          </label>
+        </div>
+        <div class="grid two">
+          <label>
+            <span>Base URL</span>
+            <input id="api-base-url" type="text" placeholder="https://api.openai.com/v1" />
+          </label>
+          <label>
+            <span>API Key</span>
+            <input id="api-key" type="password" placeholder="sk-..." />
+          </label>
+        </div>
+        <div class="grid two">
+          <label>
+            <span>API Version (optional)</span>
+            <input id="api-version" type="text" placeholder="2025-01-01-preview" />
+          </label>
+          <label>
+            <span>Temperature</span>
+            <input id="api-temperature" type="number" min="0" max="2" step="0.1" value="0.5" />
+          </label>
+        </div>
+        <div class="grid two">
+          <label>
+            <span>Chunk Word Count</span>
+            <input id="chunk-word-count" type="number" min="300" step="100" value="2800" />
+          </label>
+          <label>
+            <span>Max Tokens</span>
+            <input id="max-tokens" type="number" min="128" step="128" value="4096" />
+          </label>
+        </div>
+        <div class="grid two">
+          <label>
+            <span>Developer Mode</span>
+            <input id="developer-mode" type="checkbox" />
+          </label>
           <label>
             <span>Operation ID (optional)</span>
             <input id="op-id" type="text" placeholder="notemd-..." />
           </label>
-          <label>
-            <span>Target Language</span>
-            <input id="target-language" type="text" value="English" />
-          </label>
         </div>
-        <div class="actions">
+        <div class="actions wrap">
           <button id="btn-load-settings">Load Settings</button>
-          <button id="btn-save-settings">Save Settings JSON</button>
+          <button id="btn-save-settings">Save TOML Settings</button>
           <button id="btn-test-llm">Test Active LLM</button>
           <button class="danger" id="btn-cancel-op">Cancel Operation</button>
         </div>
-        <label class="full">
-          <span>Settings JSON</span>
-          <textarea id="settings-json" rows="8" spellcheck="false"></textarea>
-        </label>
+        <p id="developer-state" class="developer-note"></p>
       </section>
 
       <section class="panel">
-        <h2>File Operations</h2>
+        <h2>Standard Extraction Workflow</h2>
+        <p class="subtitle">
+          Default flow: Extract concepts from the current file, generate concept notes from titles, then batch-fix Mermaid syntax in the generated folder.
+        </p>
         <div class="grid two">
           <label>
-            <span>File Path</span>
+            <span>Source Markdown File</span>
             <div class="path-input-row">
               <input id="file-path" type="text" placeholder="Knowledge_Base/..." />
               <button id="btn-browse-file-path" type="button" class="ghost">Browse...</button>
             </div>
           </label>
           <label>
-            <span>Output Path (optional)</span>
+            <span>Output Folder Preview</span>
             <div class="path-input-row">
-              <input id="output-path" type="text" placeholder="Knowledge_Base/.../output.md" />
-              <button id="btn-browse-output-path" type="button" class="ghost">Browse...</button>
+              <input id="output-folder-preview" type="text" placeholder="Knowledge_Base/<source-file-name>" readonly />
             </div>
           </label>
         </div>
-        <div class="actions wrap">
-          <button id="btn-process-file">Process File</button>
-          <button id="btn-translate-file">Translate File</button>
-          <button id="btn-fix-mermaid">Fix Mermaid</button>
-          <button id="btn-fix-formulas">Fix Formulas</button>
-          <button id="btn-check-duplicates">Check Duplicates</button>
-          <button id="btn-extract-concepts">Extract Concepts</button>
+        <div class="actions">
+          <button id="btn-one-click-extract" class="primary">One-Click Extract</button>
         </div>
       </section>
 
-      <section class="panel">
-        <h2>Folder Operations</h2>
+      <section id="advanced-panel" class="panel advanced-panel is-hidden">
+        <h2>Step-by-Step Processing</h2>
+        <p class="subtitle">
+          Visible only in developer mode. Use these controls to run each stage of the standard workflow manually.
+        </p>
         <div class="grid two">
           <label>
-            <span>Folder Path</span>
+            <span>Workflow Folder</span>
             <div class="path-input-row">
               <input id="folder-path" type="text" placeholder="Knowledge_Base/..." />
               <button id="btn-browse-folder-path" type="button" class="ghost">Browse...</button>
             </div>
           </label>
           <label>
-            <span>Output Folder (optional)</span>
-            <div class="path-input-row">
-              <input id="output-folder-path" type="text" placeholder="Knowledge_Base/.../processed" />
-              <button id="btn-browse-output-folder-path" type="button" class="ghost">Browse...</button>
-            </div>
+            <span>Target Language</span>
+            <input id="target-language" type="text" value="English" />
           </label>
         </div>
         <div class="actions wrap">
-          <button id="btn-process-folder">Process Folder</button>
-          <button id="btn-translate-folder">Translate Folder</button>
-          <button id="btn-generate-folder">Generate Empty Files</button>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>Generation</h2>
-        <div class="grid two">
-          <label>
-            <span>Title</span>
-            <input id="gen-title" type="text" placeholder="e.g. Graph Neural Networks" />
-          </label>
-          <label>
-            <span>Save To File (optional)</span>
-            <div class="path-input-row">
-              <input id="gen-file" type="text" placeholder="Knowledge_Base/.../topic.md" />
-              <button id="btn-browse-gen-file" type="button" class="ghost">Browse...</button>
-            </div>
-          </label>
-        </div>
-        <label class="full">
-          <span>Research Context (optional)</span>
-          <textarea id="gen-context" rows="5"></textarea>
-        </label>
-        <div class="actions wrap">
-          <button id="btn-generate-content">Generate Content</button>
+          <button id="btn-extract-concepts">Extract Concepts (Current File)</button>
+          <button id="btn-generate-folder">Batch Generate From Titles</button>
+          <button id="btn-batch-fix-mermaid">Batch Mermaid Fix</button>
         </div>
       </section>
 

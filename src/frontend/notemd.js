@@ -1,7 +1,7 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   const logOutput = $("log-output");
-  const settingsEditor = $("settings-json");
+  let currentSettings = null;
   const NOTEMD_EMBED_RPC_REQUEST = "noteconnection:notemd-rpc-request";
   const NOTEMD_EMBED_RPC_RESPONSE = "noteconnection:notemd-rpc-response";
   const NOTEMD_RUNTIME_READY_TIMEOUT_MS = 2000;
@@ -345,20 +345,8 @@
     return $("file-path").value.trim();
   }
 
-  function getOutputPath() {
-    return $("output-path").value.trim();
-  }
-
   function getFolderPath() {
     return $("folder-path").value.trim();
-  }
-
-  function getOutputFolderPath() {
-    return $("output-folder-path").value.trim();
-  }
-
-  function getTargetLanguage() {
-    return $("target-language").value.trim() || "English";
   }
 
   function isPdfPath(rawPath) {
@@ -371,6 +359,105 @@
         `${label} points to a PDF file. Please convert PDF to Markdown (.md) with Mineru before importing.`
       );
     }
+  }
+
+  function getTargetLanguage() {
+    return $("target-language").value.trim() || "English";
+  }
+
+  function getOutputFolderNameFromFile(rawPath) {
+    const normalized = String(rawPath || "").trim().replace(/\\/g, "/");
+    const fileName = normalized.split("/").pop() || "";
+    return fileName.replace(/\.[^.]+$/, "");
+  }
+
+  function updateOutputFolderPreview() {
+    const preview = $("output-folder-preview");
+    if (!preview) {
+      return;
+    }
+    const filePath = getFilePath();
+    const folderName = getOutputFolderNameFromFile(filePath);
+    preview.value = folderName ? `Knowledge_Base/${folderName}` : "";
+  }
+
+  function getActiveProvider(settings) {
+    const providers = Array.isArray(settings && settings.providers) ? settings.providers : [];
+    return (
+      providers.find((provider) => provider.name === settings.activeProvider) ||
+      providers[0] ||
+      null
+    );
+  }
+
+  function updateDeveloperModeUi(enabled) {
+    const advancedPanel = $("advanced-panel");
+    const developerState = $("developer-state");
+    if (advancedPanel) {
+      advancedPanel.classList.toggle("is-hidden", !enabled);
+    }
+    if (developerState) {
+      developerState.textContent = enabled
+        ? "Developer mode is enabled. Step-by-step processing controls are visible."
+        : "Developer mode is disabled. Only the built-in One-Click Extract workflow is shown.";
+    }
+  }
+
+  function applySettingsToForm(settings) {
+    currentSettings = settings;
+    const activeProvider = getActiveProvider(settings);
+    $("provider-name").value = activeProvider ? activeProvider.name : "";
+    $("api-base-url").value = activeProvider ? activeProvider.baseUrl || "" : "";
+    $("api-model").value = activeProvider ? activeProvider.model || "" : "";
+    $("api-key").value = activeProvider ? activeProvider.apiKey || "" : "";
+    $("api-version").value = activeProvider ? activeProvider.apiVersion || "" : "";
+    $("api-temperature").value =
+      activeProvider && Number.isFinite(Number(activeProvider.temperature))
+        ? String(activeProvider.temperature)
+        : "0.5";
+    $("chunk-word-count").value = String(settings.chunkWordCount || 2800);
+    $("max-tokens").value = String(settings.maxTokens || 4096);
+    $("developer-mode").checked = settings.developerMode === true;
+    updateDeveloperModeUi(settings.developerMode === true);
+  }
+
+  function buildSettingsPayload() {
+    if (!currentSettings) {
+      throw new Error("Settings have not been loaded yet.");
+    }
+
+    const providerName = $("provider-name").value.trim();
+    if (!providerName) {
+      throw new Error("Provider is required.");
+    }
+
+    const next = JSON.parse(JSON.stringify(currentSettings));
+    const provider = next.providers.find((item) => item.name === providerName);
+    if (!provider) {
+      throw new Error(`Unsupported provider: ${providerName}`);
+    }
+
+    next.activeProvider = providerName;
+    next.chunkWordCount = Math.max(300, Number($("chunk-word-count").value || next.chunkWordCount || 2800));
+    next.maxTokens = Math.max(128, Number($("max-tokens").value || next.maxTokens || 4096));
+    next.developerMode = $("developer-mode").checked;
+    next.autoMermaidFixAfterGenerate = true;
+
+    next.providers = next.providers.map((item) => {
+      if (item.name !== providerName) {
+        return item;
+      }
+      return {
+        ...item,
+        baseUrl: $("api-base-url").value.trim(),
+        model: $("api-model").value.trim(),
+        apiKey: $("api-key").value,
+        apiVersion: $("api-version").value.trim(),
+        temperature: Number($("api-temperature").value || item.temperature || 0.5),
+      };
+    });
+
+    return next;
   }
 
   async function browseForFileInput(inputId, saveFile) {
@@ -386,6 +473,7 @@
     });
     if (typeof selectedPath === "string" && selectedPath.trim()) {
       input.value = selectedPath;
+      updateOutputFolderPreview();
       appendLog(`Selected path: ${selectedPath}`);
     } else {
       appendLog("Path selection was cancelled.");
@@ -412,24 +500,17 @@
 
   async function loadSettings() {
     const payload = await apiRequest("/api/notemd/settings", { method: "GET" });
-    settingsEditor.value = JSON.stringify(payload.settings || {}, null, 2);
-    appendLog("Loaded NoteMD settings.");
+    applySettingsToForm(payload.settings || {});
+    appendLog("Loaded NoteMD settings from app_config.toml.");
   }
 
   async function saveSettings() {
-    let parsed;
-    try {
-      parsed = JSON.parse(settingsEditor.value || "{}");
-    } catch (error) {
-      throw new Error(`Settings JSON parse failed: ${error.message}`);
-    }
-
     const payload = await apiRequest("/api/notemd/settings", {
       method: "POST",
-      body: parsed,
+      body: buildSettingsPayload(),
     });
-    settingsEditor.value = JSON.stringify(payload.settings || {}, null, 2);
-    appendLog("Saved NoteMD settings.");
+    applySettingsToForm(payload.settings || {});
+    appendLog("Saved NoteMD settings to app_config.toml.");
   }
 
   async function testLlm() {
@@ -450,181 +531,67 @@
     appendLog(`Operation ${payload.operationId || operationId} cancelled.`);
   }
 
-  async function processFile() {
+  async function oneClickExtract() {
     const filePath = getFilePath();
     if (!filePath) {
-      throw new Error("File path is required.");
+      throw new Error("Source markdown file is required.");
     }
-    assertNotPdfInput(filePath, "File path");
-    const payload = await apiRequest("/api/notemd/process-file", {
+    assertNotPdfInput(filePath, "Source markdown file");
+    const payload = await apiRequest("/api/notemd/one-click-extract", {
       body: {
         filePath,
-        outputPath: getOutputPath() || undefined,
         operationId: getOperationId() || undefined,
       },
     });
-    appendLog(`Processed file with ${payload.result.linkCount} wiki-link inserts.`);
+
+    $("folder-path").value = payload.result.outputFolderPath || "";
+    $("output-folder-preview").value = payload.result.outputFolderPath || $("output-folder-preview").value;
+    appendLog(
+      `One-Click Extract completed. ${payload.result.concepts.length} concepts -> ${payload.result.generated.generatedFiles} generated files -> ${payload.result.mermaid.fixedFiles} Mermaid-fixed files.`
+    );
     if (Array.isArray(payload.logs)) {
       payload.logs.forEach((item) => appendLog(item.message || JSON.stringify(item)));
     }
   }
 
-  async function processFolder() {
-    const folderPath = getFolderPath();
-    if (!folderPath) {
-      throw new Error("Folder path is required.");
-    }
-    const payload = await apiRequest("/api/notemd/process-folder", {
-      body: {
-        folderPath,
-        outputFolderPath: getOutputFolderPath() || undefined,
-        operationId: getOperationId() || undefined,
-      },
-    });
-    appendLog(
-      `Processed folder: ${payload.result.processedFiles}/${payload.result.totalFiles} files succeeded.`
-    );
-  }
-
-  async function translateFile() {
-    const filePath = getFilePath();
-    if (!filePath) {
-      throw new Error("File path is required.");
-    }
-    assertNotPdfInput(filePath, "File path");
-    const payload = await apiRequest("/api/notemd/translate-file", {
-      body: {
-        filePath,
-        outputPath: getOutputPath() || undefined,
-        targetLanguage: getTargetLanguage(),
-      },
-    });
-    appendLog(`Translated file saved to: ${payload.result.outputPath}`);
-  }
-
-  async function translateFolder() {
-    const folderPath = getFolderPath();
-    if (!folderPath) {
-      throw new Error("Folder path is required.");
-    }
-    const payload = await apiRequest("/api/notemd/translate-folder", {
-      body: {
-        folderPath,
-        targetLanguage: getTargetLanguage(),
-      },
-    });
-    appendLog(
-      `Translated folder: ${payload.result.translatedFiles}/${payload.result.totalFiles} files succeeded.`
-    );
-  }
-
-  async function fixMermaid() {
-    const filePath = getFilePath();
-    if (!filePath) {
-      throw new Error("File path is required.");
-    }
-    assertNotPdfInput(filePath, "File path");
-    const payload = await apiRequest("/api/notemd/fix-mermaid", {
-      body: {
-        filePath,
-        inPlace: true,
-      },
-    });
-    appendLog(
-      payload.result.changed
-        ? `Mermaid fixed (${payload.result.fixes.length} fix types).`
-        : "No Mermaid changes needed."
-    );
-  }
-
-  async function fixFormulas() {
-    const filePath = getFilePath();
-    if (!filePath) {
-      throw new Error("File path is required.");
-    }
-    assertNotPdfInput(filePath, "File path");
-    const payload = await apiRequest("/api/notemd/fix-formulas", {
-      body: {
-        filePath,
-        inPlace: true,
-      },
-    });
-    appendLog(
-      payload.result.changed
-        ? `Formula delimiters normalized (${payload.result.fixes.length} fix types).`
-        : "No formula changes needed."
-    );
-  }
-
-  async function checkDuplicates() {
-    const filePath = getFilePath();
-    if (!filePath) {
-      throw new Error("File path is required.");
-    }
-    assertNotPdfInput(filePath, "File path");
-    const payload = await apiRequest("/api/notemd/check-duplicates", {
-      body: { filePath },
-    });
-    const dupTerms = payload.result.duplicateTerms || [];
-    const dupLinks = payload.result.duplicateWikiLinks || [];
-    appendLog(`Duplicate terms: ${dupTerms.length}, duplicate wiki-links: ${dupLinks.length}`);
-  }
-
   async function extractConcepts() {
     const filePath = getFilePath();
     if (!filePath) {
-      throw new Error("File path is required.");
+      throw new Error("Source markdown file is required.");
     }
-    assertNotPdfInput(filePath, "File path");
+    assertNotPdfInput(filePath, "Source markdown file");
     const payload = await apiRequest("/api/notemd/extract-concepts", {
       body: {
         filePath,
         operationId: getOperationId() || undefined,
       },
     });
-    appendLog(`Extracted ${payload.result.concepts.length} concepts.`);
-  }
-
-  async function generateContent() {
-    const title = $("gen-title").value.trim();
-    const filePath = $("gen-file").value.trim();
-    if (!title && !filePath) {
-      throw new Error("Title or file path is required.");
-    }
-    if (filePath) {
-      assertNotPdfInput(filePath, "Save-to file path");
-    }
-    const payload = await apiRequest("/api/notemd/generate-content", {
-      body: {
-        title: title || undefined,
-        filePath: filePath || undefined,
-        context: $("gen-context").value.trim() || undefined,
-      },
-    });
-    appendLog(
-      payload.outputPath
-        ? `Generated content saved to ${payload.outputPath}`
-        : `Generated content for "${payload.title}"`
-    );
-    if (!payload.outputPath && payload.content) {
-      appendLog("Generated markdown preview:");
-      appendLog(payload.content.slice(0, 800));
-    }
+    appendLog(`Extracted ${payload.result.concepts.length} concepts from the current file.`);
   }
 
   async function generateFolder() {
     const folderPath = getFolderPath();
     if (!folderPath) {
-      throw new Error("Folder path is required.");
+      throw new Error("Workflow folder is required.");
     }
-    const payload = await apiRequest("/api/notemd/process-folder", {
-      body: {
-        folderPath,
-        dryRun: true,
-      },
+    const payload = await apiRequest("/api/notemd/generate-folder-content", {
+      body: { folderPath },
     });
     appendLog(
-      `Folder preflight: ${payload.result.totalFiles} files eligible. Use Process Folder for write mode.`
+      `Batch generate completed: ${payload.result.generatedFiles}/${payload.result.totalFiles} files written.`
+    );
+  }
+
+  async function batchFixMermaid() {
+    const folderPath = getFolderPath();
+    if (!folderPath) {
+      throw new Error("Workflow folder is required.");
+    }
+    const payload = await apiRequest("/api/notemd/batch-fix-mermaid", {
+      body: { folderPath, inPlace: true },
+    });
+    appendLog(
+      `Batch Mermaid fix completed: ${payload.result.fixedFiles}/${payload.result.totalFiles} files changed.`
     );
   }
 
@@ -642,31 +609,36 @@
     });
   }
 
+  $("file-path").addEventListener("input", updateOutputFolderPreview);
+  $("developer-mode").addEventListener("change", () => {
+    updateDeveloperModeUi($("developer-mode").checked);
+  });
+
   bind("btn-load-settings", loadSettings);
   bind("btn-save-settings", saveSettings);
   bind("btn-test-llm", testLlm);
   bind("btn-cancel-op", cancelOperation);
-  bind("btn-process-file", processFile);
-  bind("btn-process-folder", processFolder);
-  bind("btn-translate-file", translateFile);
-  bind("btn-translate-folder", translateFolder);
-  bind("btn-fix-mermaid", fixMermaid);
-  bind("btn-fix-formulas", fixFormulas);
-  bind("btn-check-duplicates", checkDuplicates);
+  bind("btn-one-click-extract", oneClickExtract);
   bind("btn-extract-concepts", extractConcepts);
-  bind("btn-generate-content", generateContent);
   bind("btn-generate-folder", generateFolder);
+  bind("btn-batch-fix-mermaid", batchFixMermaid);
   bind("btn-browse-file-path", () => browseForFileInput("file-path", false));
-  bind("btn-browse-output-path", () => browseForFileInput("output-path", true));
   bind("btn-browse-folder-path", () => browseForFolderInput("folder-path"));
-  bind("btn-browse-output-folder-path", () => browseForFolderInput("output-folder-path"));
-  bind("btn-browse-gen-file", () => browseForFileInput("gen-file", true));
 
-  ensureRuntimeReady().finally(() => {
+  ensureRuntimeReady().finally(async () => {
     appendLog(`NoteMD UI initialized against ${getBaseUrl()}`);
     appendLog("Reminder: convert PDF files to Markdown with Mineru before importing.");
     if (window.NoteConnectionRuntime && typeof window.NoteConnectionRuntime.whenReady === "function") {
       appendLog(`Runtime bridge ready: ${getBaseUrl()}`);
+    }
+    try {
+      await loadSettings();
+      updateOutputFolderPreview();
+    } catch (error) {
+      appendLog(
+        `Initial settings load failed: ${error instanceof Error ? error.message : String(error)}`,
+        "warn"
+      );
     }
   });
 })();

@@ -61,7 +61,10 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 ### 5. NoteMD AI Document Workbench (v1.5.58)
 
 - **Integrated NoteMD module**: Added `src/notemd/*` as a standalone, Obsidian-decoupled processing stack (LLM provider abstraction, prompt manager, batch/file processors, translation, Mermaid/formula fixers, and duplicate detection).
-- **New API surface**: Added `/api/notemd/*` endpoints for settings, file/folder processing, translation, content generation, concept extraction, duplicate checks, and cancellation.
+- **One-Click Extract workflow**: The embedded NoteMD window now defaults to a single standard workflow button that chains concept extraction, title-based batch generation, and batch Mermaid repair. Generated files land in a KB subfolder named after the source file.
+- **TOML-backed API profile**: Embedded NoteMD reads and writes its active API configuration from `app_config.toml` via `[notemd]` and `[notemd.api]`.
+- **CLI compatibility**: Core NoteMD workflows are invokable through `noteconnection notemd ...`, including `settings show`, `settings set-api`, `one-click-extract`, `batch-generate`, `batch-mermaid-fix`, and `fix-mermaid`.
+- **New API surface**: Added `/api/notemd/*` endpoints for settings, file/folder processing, workflow orchestration, translation, content generation, concept extraction, duplicate checks, and cancellation.
 - **Desktop + Bridge access**: Added Tauri menu/IPC `open_notemd` and bridge routing for NoteMD window access from web/Tauri/Godot-connected workflows.
 - **Safety defaults**: NoteMD file operations are constrained by KB-root sandbox checks, with SSE progress reporting and cancel support for long-running operations.
 

@@ -16,12 +16,17 @@ import { copyPngToClipboard } from './native_clipboard';
 import {
     DEFAULT_SETTINGS as DEFAULT_NOTEMD_SETTINGS,
     LlmProviderClient,
-    NOTEMD_CONFIG_FILE_NAME,
     NotemdService,
     type NotemdSettings,
     type ProgressEvent,
     type ProgressReporter,
 } from './notemd';
+import {
+    applyNotemdSettingsToAppConfig,
+    extractNotemdSettingsFromAppConfig,
+    loadAppConfigToml,
+    saveAppConfigToml,
+} from './notemd/AppConfigToml';
 
 // Initialize Global Crash Handlers
 CrashLogger.initGlobalHandlers();
@@ -74,7 +79,6 @@ let activeBuildPromise: Promise<void> | null = null;
 let lastRestoreKey: string | null = null;
 let lastRestoreTs = 0;
 const SIDECAR_RUNTIME_MANIFEST = path.join(runtimePaths.projectRoot, 'tmp', 'active-sidecar-runtime.json');
-const NOTEMD_CONFIG_PATH = path.join(RUNTIME_DATA_DIR, NOTEMD_CONFIG_FILE_NAME);
 const notemdService = new NotemdService();
 const notemdLlmClient = new LlmProviderClient();
 let cachedNotemdSettings: NotemdSettings | null = null;
@@ -762,6 +766,7 @@ function normalizeNotemdSettings(rawValue: unknown): NotemdSettings {
     merged.useDifferentLanguagesForTasks = raw.useDifferentLanguagesForTasks === true;
     merged.disableAutoTranslation = raw.disableAutoTranslation === true;
     merged.enableResearchInGenerateContent = raw.enableResearchInGenerateContent === true;
+    merged.developerMode = raw.developerMode === true;
 
     merged.conceptNoteFolder = String(raw.conceptNoteFolder || defaults.conceptNoteFolder).trim();
     merged.processedFileFolder = String(raw.processedFileFolder || defaults.processedFileFolder).trim();
@@ -832,13 +837,11 @@ async function loadNotemdSettings(): Promise<NotemdSettings> {
     }
 
     try {
-        const content = await fs.promises.readFile(NOTEMD_CONFIG_PATH, 'utf8');
-        const parsed = JSON.parse(content);
-        cachedNotemdSettings = normalizeNotemdSettings(parsed);
+        const appConfig = await loadAppConfigToml();
+        const parsedSettings = extractNotemdSettingsFromAppConfig(appConfig);
+        cachedNotemdSettings = normalizeNotemdSettings(parsedSettings);
     } catch (error) {
-        if (!isFsNotFoundError(error)) {
-            console.warn('[NoteMD] Failed to read settings, using defaults:', error);
-        }
+        console.warn('[NoteMD] Failed to read settings from TOML, using defaults:', error);
         cachedNotemdSettings = normalizeNotemdSettings(DEFAULT_NOTEMD_SETTINGS);
     }
 
@@ -847,8 +850,9 @@ async function loadNotemdSettings(): Promise<NotemdSettings> {
 
 async function persistNotemdSettings(settingsLike: unknown): Promise<NotemdSettings> {
     const normalized = normalizeNotemdSettings(settingsLike);
-    await ensureRuntimeDataDir();
-    await fs.promises.writeFile(NOTEMD_CONFIG_PATH, JSON.stringify(normalized, null, 2), 'utf8');
+    const appConfig = await loadAppConfigToml();
+    const nextAppConfig = applyNotemdSettingsToAppConfig(appConfig, normalized);
+    await saveAppConfigToml(nextAppConfig);
     cachedNotemdSettings = cloneNotemdSettings(normalized);
     return cloneNotemdSettings(normalized);
 }
@@ -1396,6 +1400,128 @@ for (let i = 0; i < args.length; i++) {
 }
 
 console.log('[CLI] Parsed Options:', cliOptions);
+
+function getCliFlagValue(argsList: string[], flagName: string): string | undefined {
+    const index = argsList.indexOf(flagName);
+    if (index < 0 || index + 1 >= argsList.length) {
+        return undefined;
+    }
+    return String(argsList[index + 1] || '').trim() || undefined;
+}
+
+export async function executeNotemdCliCommand(subArgs: string[]): Promise<Record<string, unknown>> {
+    const command = String(subArgs[0] || '').trim().toLowerCase();
+    const action = String(subArgs[1] || '').trim().toLowerCase();
+
+    if (!command) {
+        throw new Error('Missing NoteMD CLI command.');
+    }
+
+    if (command === 'settings' && action === 'show') {
+        return {
+            command: 'settings.show',
+            settings: await loadNotemdSettings(),
+        };
+    }
+
+    if (command === 'settings' && action === 'set-api') {
+        const settings = await loadNotemdSettings();
+        const providerName = getCliFlagValue(subArgs, '--provider');
+        if (!providerName) {
+            throw new Error('Missing --provider for settings set-api.');
+        }
+        const provider = settings.providers.find((item) => item.name === providerName);
+        if (!provider) {
+            throw new Error(`Unknown provider: ${providerName}`);
+        }
+
+        const nextSettings = cloneNotemdSettings(settings);
+        nextSettings.activeProvider = provider.name;
+        nextSettings.providers = nextSettings.providers.map((item) => {
+            if (item.name !== provider.name) {
+                return item;
+            }
+            return {
+                ...item,
+                baseUrl: getCliFlagValue(subArgs, '--base-url') || item.baseUrl,
+                model: getCliFlagValue(subArgs, '--model') || item.model,
+                apiKey: getCliFlagValue(subArgs, '--api-key') || item.apiKey,
+                apiVersion: getCliFlagValue(subArgs, '--api-version') || item.apiVersion,
+                temperature: Number.isFinite(Number(getCliFlagValue(subArgs, '--temperature')))
+                    ? Number(getCliFlagValue(subArgs, '--temperature'))
+                    : item.temperature,
+            };
+        });
+
+        return {
+            command: 'settings.set-api',
+            settings: await persistNotemdSettings(nextSettings),
+        };
+    }
+
+    const settings = await loadNotemdSettings();
+    if (command === 'one-click-extract') {
+        const filePath = getCliFlagValue(subArgs, '--file');
+        if (!filePath) {
+            throw new Error('Missing --file for one-click-extract.');
+        }
+        const resolvedFilePath = await resolvePathWithinKnowledgeBase(filePath, { expectedType: 'file' });
+        return {
+            command: 'one-click-extract',
+            result: await notemdService.oneClickExtract(resolvedFilePath, settings),
+        };
+    }
+
+    if (command === 'extract-concepts') {
+        const filePath = getCliFlagValue(subArgs, '--file');
+        if (!filePath) {
+            throw new Error('Missing --file for extract-concepts.');
+        }
+        const resolvedFilePath = await resolvePathWithinKnowledgeBase(filePath, { expectedType: 'file' });
+        return {
+            command: 'extract-concepts',
+            result: await notemdService.extractConcepts(resolvedFilePath, settings),
+        };
+    }
+
+    if (command === 'batch-generate') {
+        const folderPath = getCliFlagValue(subArgs, '--folder');
+        if (!folderPath) {
+            throw new Error('Missing --folder for batch-generate.');
+        }
+        const resolvedFolderPath = await resolvePathWithinKnowledgeBase(folderPath, { expectedType: 'directory' });
+        return {
+            command: 'batch-generate',
+            result: await notemdService.generateFolderContent(resolvedFolderPath, settings),
+        };
+    }
+
+    if (command === 'batch-mermaid-fix') {
+        const folderPath = getCliFlagValue(subArgs, '--folder');
+        if (!folderPath) {
+            throw new Error('Missing --folder for batch-mermaid-fix.');
+        }
+        const resolvedFolderPath = await resolvePathWithinKnowledgeBase(folderPath, { expectedType: 'directory' });
+        return {
+            command: 'batch-mermaid-fix',
+            result: await notemdService.batchFixMermaid(resolvedFolderPath, true),
+        };
+    }
+
+    if (command === 'fix-mermaid') {
+        const filePath = getCliFlagValue(subArgs, '--file');
+        if (!filePath) {
+            throw new Error('Missing --file for fix-mermaid.');
+        }
+        const resolvedFilePath = await resolvePathWithinKnowledgeBase(filePath, { expectedType: 'file' });
+        return {
+            command: 'fix-mermaid',
+            result: await notemdService.fixMermaid(resolvedFilePath, true),
+        };
+    }
+
+    throw new Error(`Unsupported NoteMD CLI command: ${[command, action].filter(Boolean).join(' ')}`);
+}
 
 export const startServer = async (options: { port?: number, targetPath?: string } = {}) => {
     // If options are provided, override CLI/Env defaults or merge them
@@ -2494,6 +2620,98 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 return;
             }
 
+            if (postPathname === '/api/notemd/one-click-extract') {
+                let operation: NotemdOperationState | null = null;
+                try {
+                    const payload = await readJsonBody(req);
+                    const settings = await loadNotemdSettings();
+                    operation = createNotemdOperation(payload.operationId);
+                    const reporter = createNotemdReporter(operation);
+                    const resolvedFilePath = await resolvePathWithinKnowledgeBase(payload.filePath, {
+                        expectedType: 'file',
+                    });
+                    const result = await notemdService.oneClickExtract(
+                        resolvedFilePath,
+                        settings,
+                        reporter,
+                        operation.controller.signal
+                    );
+                    finalizeNotemdOperation(operation, 'done');
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, operationId: operation.id, result, logs: operation.logs }));
+                } catch (error) {
+                    if (operation) {
+                        finalizeNotemdOperation(operation, operation.controller.signal.aborted ? 'cancelled' : 'error');
+                    }
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    if (isAccessDeniedError(error)) {
+                        res.writeHead(403, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/notemd/one-click-extract');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/notemd/batch-fix-mermaid') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const resolvedFolderPath = await resolvePathWithinKnowledgeBase(payload.folderPath, {
+                        expectedType: 'directory',
+                    });
+                    const result = await notemdService.batchFixMermaid(resolvedFolderPath, payload.inPlace !== false);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, result }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    if (isAccessDeniedError(error)) {
+                        res.writeHead(403, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/notemd/batch-fix-mermaid');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/notemd/generate-folder-content') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const settings = await loadNotemdSettings();
+                    const resolvedFolderPath = await resolvePathWithinKnowledgeBase(payload.folderPath, {
+                        expectedType: 'directory',
+                    });
+                    const result = await notemdService.generateFolderContent(resolvedFolderPath, settings);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, result }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    if (isAccessDeniedError(error)) {
+                        res.writeHead(403, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/notemd/generate-folder-content');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
             if (req.url === '/api/render/math') {
                 try {
                     const payload = await readJsonBody(req);
@@ -2827,7 +3045,17 @@ export const startServer = async (options: { port?: number, targetPath?: string 
 
 // Only run if called directly
 if (require.main === module) {
-    startServer();
+    if (args[0] === 'notemd') {
+        executeNotemdCliCommand(args.slice(1))
+            .then((result) => {
+                console.log(JSON.stringify(result, null, 2));
+                process.exit(0);
+            })
+            .catch((error) => {
+                console.error(`[NoteMD CLI] ${error instanceof Error ? error.message : String(error)}`);
+                process.exit(1);
+            });
+    } else {
+        startServer();
+    }
 }
-
-

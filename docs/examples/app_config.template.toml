@@ -37,3 +37,30 @@ confirm_before_full_shutdown_from_godot = true
 # true  -> keep language synchronized across Tauri and Godot runtime.
 # false -> disable runtime language sync broadcast to Path Mode.
 sync_language = true
+
+[notemd]
+# true  -> show developer-only step-by-step processing controls in the embedded NoteMD window.
+# false -> keep the UI focused on the default One-Click Extract workflow.
+developer_mode = false
+
+# Default language used by embedded NoteMD prompts/settings.
+language = "en"
+
+# Max approximate words per chunk sent to the extraction model.
+chunk_word_count = 2800
+
+# Max completion tokens for NoteMD generation/extraction requests.
+max_tokens = 4096
+
+# true  -> automatically run Mermaid repair after Mermaid-producing generation flows.
+# false -> leave generated Mermaid untouched unless manually fixed.
+auto_mermaid_fix_after_generate = true
+
+[notemd.api]
+# Active NoteMD API profile. This is the single embedded profile used by the NoteMD window and CLI.
+provider = "DeepSeek"
+base_url = "https://api.deepseek.com/v1"
+model = "deepseek-reasoner"
+api_key = ""
+api_version = ""
+temperature = 0.5

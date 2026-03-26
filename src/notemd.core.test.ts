@@ -7,6 +7,7 @@ import { DuplicateDetector } from './notemd/DuplicateDetector';
 import { FileProcessor } from './notemd/FileProcessor';
 import { fixFormulaFormats } from './notemd/FormulaFixer';
 import { fixMermaidSyntax } from './notemd/MermaidProcessor';
+import { NotemdService } from './notemd/NotemdService';
 
 class TempDir {
   public readonly path: string;
@@ -19,6 +20,12 @@ class TempDir {
     const fullPath = path.join(this.path, relativePath);
     fs.mkdirSync(path.dirname(fullPath), { recursive: true });
     fs.writeFileSync(fullPath, content, 'utf8');
+    return fullPath;
+  }
+
+  public mkdir(relativePath: string): string {
+    const fullPath = path.join(this.path, relativePath);
+    fs.mkdirSync(fullPath, { recursive: true });
     return fullPath;
   }
 
@@ -56,6 +63,20 @@ describe('NoteMD core primitives', () => {
     expect(result.content).toContain('graph TD');
     expect(result.content).toContain('-->');
     expect(result.content).toContain('subgraph "Material Mechanical Properties"');
+  });
+
+  test('fixMermaidSyntax upgrades note syntax into linked note nodes', () => {
+    const source = [
+      '```mermaid',
+      'graph TD',
+      'note Torque "Angular acceleration insight"',
+      '```',
+    ].join('\n');
+
+    const result = fixMermaidSyntax(source);
+    expect(result.changed).toBe(true);
+    expect(result.content).toContain('NoteTorque["Angular acceleration insight"]');
+    expect(result.content).toContain('Torque -.- NoteTorque');
   });
 
   test('DuplicateDetector reports repeated terms and wiki-links', () => {
@@ -130,5 +151,96 @@ describe('NoteMD core primitives', () => {
       temp.cleanup();
     }
   });
-});
 
+  test('NotemdService one-click extract scaffolds a source-named folder and chains generation plus mermaid fixing', async () => {
+    const temp = new TempDir('notemd-one-click');
+    try {
+      const kbRoot = temp.mkdir('Knowledge_Base');
+      const sourcePath = temp.file(
+        'Knowledge_Base/science/Topic.md',
+        '# Topic\n\nGraph theory studies node systems.'
+      );
+
+      const fakeFileProcessor = {
+        extractConceptsFromText: jest.fn(async () => new Set(['Graph Theory', 'Node Systems'])),
+      } as any;
+
+      const fakeContentGenerator = {
+        generateFolderFromTitles: jest.fn(async (folderPath: string) => {
+          expect(folderPath).toBe(path.join(kbRoot, 'Topic'));
+          expect(fs.existsSync(path.join(folderPath, 'Graph Theory.md'))).toBe(true);
+          expect(fs.existsSync(path.join(folderPath, 'Node Systems.md'))).toBe(true);
+          fs.writeFileSync(
+            path.join(folderPath, 'Graph Theory.md'),
+            ['```mermaid', 'graph TD', 'note GT "Needs cleanup"', '```'].join('\n'),
+            'utf8'
+          );
+          fs.writeFileSync(
+            path.join(folderPath, 'Node Systems.md'),
+            ['```mermaid', 'graph TD', 'note NS "Needs cleanup"', '```'].join('\n'),
+            'utf8'
+          );
+          return {
+            totalFiles: 2,
+            generatedFiles: 2,
+            failedFiles: 0,
+            outputs: [
+              path.join(folderPath, 'Graph Theory.md'),
+              path.join(folderPath, 'Node Systems.md'),
+            ],
+          };
+        }),
+      } as any;
+
+      const service = new NotemdService(
+        fakeFileProcessor,
+        undefined,
+        fakeContentGenerator
+      );
+
+      const result = await (service as any).oneClickExtract(
+        sourcePath,
+        { ...DEFAULT_SETTINGS },
+        { report: () => undefined, isCancelled: () => false }
+      );
+
+      expect(result.outputFolderPath).toBe(path.join(kbRoot, 'Topic'));
+      expect(result.concepts).toEqual(['Graph Theory', 'Node Systems']);
+      expect(result.generated.generatedFiles).toBe(2);
+      expect(result.mermaid.fixedFiles).toBe(2);
+      expect(fs.readFileSync(path.join(result.outputFolderPath, 'Graph Theory.md'), 'utf8')).toContain(
+        'NoteGT["Needs cleanup"]'
+      );
+    } finally {
+      temp.cleanup();
+    }
+  });
+
+  test('NotemdService can batch-fix Mermaid files across a folder tree', async () => {
+    const temp = new TempDir('notemd-batch-mermaid');
+    try {
+      const folder = temp.mkdir('Knowledge_Base/Topic');
+      const nested = temp.mkdir('Knowledge_Base/Topic/nested');
+      const fileA = temp.file(
+        'Knowledge_Base/Topic/a.md',
+        ['```mermaid', 'graph TD', 'note A "Alpha"', '```'].join('\n')
+      );
+      const fileB = temp.file(
+        'Knowledge_Base/Topic/nested/b.md',
+        ['```mermaid', 'graph TD', 'note B "Beta"', '```'].join('\n')
+      );
+
+      const service = new NotemdService();
+      const result = await (service as any).batchFixMermaid(folder);
+
+      expect(result.totalFiles).toBe(2);
+      expect(result.fixedFiles).toBe(2);
+      expect(result.results.map((item: any) => item.filePath).sort()).toEqual([fileA, fileB].sort());
+      expect(fs.readFileSync(fileA, 'utf8')).toContain('NoteA["Alpha"]');
+      expect(fs.readFileSync(fileB, 'utf8')).toContain('NoteB["Beta"]');
+      expect(fs.existsSync(nested)).toBe(true);
+    } finally {
+      temp.cleanup();
+    }
+  });
+});

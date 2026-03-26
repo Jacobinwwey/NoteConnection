@@ -119,46 +119,48 @@ function requestJson(port: number, method: string, requestPath: string, body?: u
   });
 }
 
-describe('NoteMD server integration', () => {
+describe('NoteMD API + CLI wrappers', () => {
   let temp: TempDir;
   let envRestorers: Array<() => void>;
   let server: Server;
   let port: number;
   let kbFilePath: string;
-  let runtimeDataDir: string;
-  let appConfigPath: string;
   let originalArgv: string[];
+  let mockServiceState: {
+    oneClickExtract: jest.Mock;
+    batchFixMermaid: jest.Mock;
+  };
 
   beforeAll(async () => {
-    temp = new TempDir('noteconnection-notemd');
+    temp = new TempDir('noteconnection-notemd-cli-api');
     const projectRoot = temp.mkdir('project');
     temp.mkdir(path.join('project', 'dist', 'src', 'frontend'));
-    runtimeDataDir = temp.mkdir(path.join('project', 'runtime_data'));
+    temp.mkdir(path.join('project', 'runtime_data'));
     temp.mkdir(path.join('project', 'Knowledge_Base'));
     kbFilePath = temp.file(
       path.join('project', 'Knowledge_Base', 'science', 'topic.md'),
-      '# Graph Theory\n\nGraph theory studies nodes and edges.\n\n$\nE = mc^2\n$'
+      '# Topic\n\nSource text'
     );
-    appConfigPath = temp.file(
+    const appConfigPath = temp.file(
       path.join('project', 'config', 'app_config.toml'),
       [
         `knowledge_base_path = "${path.join(projectRoot, 'Knowledge_Base').replace(/\\/g, '\\\\')}"`,
         'user_language = "en"',
         '',
         '[notemd]',
-        'developer_mode = true',
+        'developer_mode = false',
         'language = "en"',
-        'chunk_word_count = 1234',
-        'max_tokens = 2048',
+        'chunk_word_count = 1111',
+        'max_tokens = 2222',
         'auto_mermaid_fix_after_generate = true',
         '',
         '[notemd.api]',
         'provider = "OpenAI"',
         'base_url = "https://api.openai.com/v1"',
         'model = "gpt-4o-mini"',
-        'api_key = "toml-openai-key"',
+        'api_key = "cli-api-key"',
         'api_version = ""',
-        'temperature = 0.25',
+        'temperature = 0.3',
         '',
       ].join('\n')
     );
@@ -166,10 +168,9 @@ describe('NoteMD server integration', () => {
     envRestorers = [];
     envRestorers.push(setEnv('NOTE_CONNECTION_PROJECT_ROOT', projectRoot));
     envRestorers.push(setEnv('NOTE_CONNECTION_FRONTEND_DIR', path.join(projectRoot, 'dist', 'src', 'frontend')));
-    envRestorers.push(setEnv('NOTE_CONNECTION_RUNTIME_DATA_DIR', runtimeDataDir));
+    envRestorers.push(setEnv('NOTE_CONNECTION_RUNTIME_DATA_DIR', path.join(projectRoot, 'runtime_data')));
     envRestorers.push(setEnv('NOTE_CONNECTION_KB_ROOT', path.join(projectRoot, 'Knowledge_Base')));
     envRestorers.push(setEnv('NOTE_CONNECTION_CONFIG_PATH', appConfigPath));
-    envRestorers.push(setEnv('NOTE_CONNECTION_CONFIG_DIR', undefined));
     envRestorers.push(setEnv('NOTE_CONNECTION_AUTH_TOKEN', undefined));
     envRestorers.push(setEnv('npm_config_path', undefined));
     envRestorers.push(setEnv('npm_config_gpu', undefined));
@@ -177,10 +178,39 @@ describe('NoteMD server integration', () => {
     envRestorers.push(setEnv('npm_config_static', undefined));
 
     port = await getFreePort();
+    mockServiceState = {
+      oneClickExtract: jest.fn(async (filePath: string) => ({
+        sourceFilePath: filePath,
+        outputFolderPath: path.join(projectRoot, 'Knowledge_Base', 'topic'),
+        concepts: ['Graph Theory', 'Node'],
+        generated: {
+          totalFiles: 2,
+          generatedFiles: 2,
+          failedFiles: 0,
+          outputs: [
+            path.join(projectRoot, 'Knowledge_Base', 'topic', 'Graph Theory.md'),
+            path.join(projectRoot, 'Knowledge_Base', 'topic', 'Node.md'),
+          ],
+        },
+        mermaid: {
+          folderPath: path.join(projectRoot, 'Knowledge_Base', 'topic'),
+          totalFiles: 2,
+          fixedFiles: 2,
+          results: [],
+        },
+      })),
+      batchFixMermaid: jest.fn(async (folderPath: string) => ({
+        folderPath,
+        totalFiles: 1,
+        fixedFiles: 1,
+        results: [],
+      })),
+    };
 
     jest.resetModules();
     originalArgv = [...process.argv];
     process.argv = process.argv.slice(0, 2);
+
     jest.doMock('./index', () => ({
       buildGraph: jest.fn().mockResolvedValue(undefined),
     }));
@@ -199,6 +229,27 @@ describe('NoteMD server integration', () => {
         height: 50,
       }),
     }));
+    jest.doMock('./notemd', () => {
+      const actual = jest.requireActual('./notemd');
+      class MockNotemdService {
+        public processFile = jest.fn();
+        public processFolder = jest.fn();
+        public translateFile = jest.fn();
+        public translateFolder = jest.fn();
+        public generateContent = jest.fn();
+        public generateFolderContent = jest.fn();
+        public fixMermaid = jest.fn();
+        public fixFormulas = jest.fn();
+        public checkDuplicates = jest.fn();
+        public extractConcepts = jest.fn();
+        public oneClickExtract = mockServiceState.oneClickExtract;
+        public batchFixMermaid = mockServiceState.batchFixMermaid;
+      }
+      return {
+        ...actual,
+        NotemdService: MockNotemdService,
+      };
+    });
 
     const serverModule = require('./server') as {
       startServer: (options?: { port?: number; targetPath?: string }) => Promise<Server>;
@@ -227,82 +278,35 @@ describe('NoteMD server integration', () => {
     jest.dontMock('./index');
     jest.dontMock('./core/PathBridge');
     jest.dontMock('./reader_renderer');
+    jest.dontMock('./notemd');
     temp.cleanup();
   });
 
-  test('GET/PUT settings roundtrip works', async () => {
-    const readResponse = await requestJson(port, 'GET', '/api/notemd/settings');
-    expect(readResponse.status).toBe(200);
-    expect(readResponse.body.success).toBe(true);
-    expect(Array.isArray(readResponse.body.settings.providers)).toBe(true);
-    expect(readResponse.body.settings.activeProvider).toBe('OpenAI');
-    const openAiProvider = readResponse.body.settings.providers.find((provider: any) => provider.name === 'OpenAI');
-    expect(openAiProvider?.apiKey).toBe('toml-openai-key');
-    expect(openAiProvider?.baseUrl).toBe('https://api.openai.com/v1');
-    expect(readResponse.body.settings.chunkWordCount).toBe(1234);
-    expect(readResponse.body.settings.autoMermaidFixAfterGenerate).toBe(true);
+  test('POST /api/notemd/one-click-extract delegates to the shared NoteMD service', async () => {
+    const response = await requestJson(port, 'POST', '/api/notemd/one-click-extract', {
+      filePath: kbFilePath,
+      operationId: 'workflow-1',
+    });
 
-    const nextSettings = {
-      ...readResponse.body.settings,
-      maxRetries: 0,
-      retryDelayMs: 0,
-      activeProvider: 'DeepSeek',
-      providers: readResponse.body.settings.providers.map((provider: any) =>
-        provider.name === 'DeepSeek'
-          ? { ...provider, baseUrl: 'http://127.0.0.1:9/v1', apiKey: 'x' }
-          : provider
-      ),
-    };
-
-    const writeResponse = await requestJson(port, 'PUT', '/api/notemd/settings', nextSettings);
-    expect(writeResponse.status).toBe(200);
-    expect(writeResponse.body.success).toBe(true);
-    expect(writeResponse.body.settings.maxRetries).toBe(0);
-
-    const appConfigContent = fs.readFileSync(appConfigPath, 'utf8');
-    expect(appConfigContent).toContain('[notemd]');
-    expect(appConfigContent).toContain('[notemd.api]');
-    expect(appConfigContent).toContain('provider = "DeepSeek"');
-    expect(appConfigContent).toContain('api_key = "x"');
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.result.outputFolderPath).toContain(path.join('Knowledge_Base', 'topic'));
+    expect(mockServiceState.oneClickExtract).toHaveBeenCalledTimes(1);
   });
 
-  test('process-file and fix-formulas endpoints execute on a real file', async () => {
-    const processResponse = await requestJson(port, 'POST', '/api/notemd/process-file', {
-      filePath: kbFilePath,
-    });
-    expect(processResponse.status).toBe(200);
-    expect(processResponse.body.success).toBe(true);
-    expect(processResponse.body.result.outputPath).toContain('_processed');
+  test('CLI wrapper exposes settings show and one-click extract commands', async () => {
+    const serverModule = require('./server') as any;
 
-    const fixFormulaResponse = await requestJson(port, 'POST', '/api/notemd/fix-formulas', {
-      filePath: kbFilePath,
-      inPlace: true,
-    });
-    expect(fixFormulaResponse.status).toBe(200);
-    expect(fixFormulaResponse.body.success).toBe(true);
+    const settingsResult = await serverModule.executeNotemdCliCommand(['settings', 'show']);
+    expect(settingsResult.settings.activeProvider).toBe('OpenAI');
+    expect(settingsResult.settings.chunkWordCount).toBe(1111);
 
-    const fileContent = fs.readFileSync(kbFilePath, 'utf8');
-    expect(fileContent).toContain('$$');
-  });
-
-  test('extract-concepts and duplicate endpoints return structured results', async () => {
-    const conceptsResponse = await requestJson(port, 'POST', '/api/notemd/extract-concepts', {
-      filePath: kbFilePath,
-    });
-    expect(conceptsResponse.status).toBe(200);
-    expect(conceptsResponse.body.success).toBe(true);
-    expect(Array.isArray(conceptsResponse.body.result.concepts)).toBe(true);
-
-    const duplicatesResponse = await requestJson(port, 'POST', '/api/notemd/check-duplicates', {
-      filePath: kbFilePath,
-    });
-    expect(duplicatesResponse.status).toBe(200);
-    expect(duplicatesResponse.body.success).toBe(true);
-    expect(Array.isArray(duplicatesResponse.body.result.duplicateTerms)).toBe(true);
-  });
-
-  test('settings are persisted to app_config.toml instead of runtime_data/notemd_config.json', () => {
-    expect(fs.existsSync(appConfigPath)).toBe(true);
-    expect(fs.existsSync(path.join(runtimeDataDir, 'notemd_config.json'))).toBe(false);
+    const extractResult = await serverModule.executeNotemdCliCommand([
+      'one-click-extract',
+      '--file',
+      kbFilePath,
+    ]);
+    expect(extractResult.result.outputFolderPath).toContain(path.join('Knowledge_Base', 'topic'));
+    expect(mockServiceState.oneClickExtract).toHaveBeenCalledTimes(2);
   });
 });

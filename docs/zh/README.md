@@ -58,7 +58,10 @@
 ### 5. NoteMD AI 文档工作台（v1.5.58）
 
 - **NoteMD 模块已集成**：新增 `src/notemd/*` 独立能力层（LLM 适配、提示词管理、批处理/文件处理、翻译、Mermaid/公式修复、重复检测）。
-- **新增 API 面**：`/api/notemd/*` 覆盖设置、文件/文件夹处理、翻译、内容生成、概念提取、重复检测与任务取消。
+- **默认一键提取工作流**：嵌入式 NoteMD 现在默认保留一个 `One-Click Extract` 入口，按顺序串联“当前文件概念提取 -> 按标题批量生成 -> 批量 Mermaid 修复”，并将输出写入以源文件名命名的 KB 子目录。
+- **TOML API 配置**：嵌入式 NoteMD 的活动 API 配置改为写入 `app_config.toml` 中的 `[notemd]` 与 `[notemd.api]`。
+- **CLI 兼容**：可通过 `noteconnection notemd ...` 调用核心 NoteMD 能力，例如 `settings show`、`settings set-api`、`one-click-extract`、`batch-generate`、`batch-mermaid-fix`、`fix-mermaid`。
+- **新增 API 面**：`/api/notemd/*` 覆盖设置、工作流编排、文件/文件夹处理、翻译、内容生成、概念提取、重复检测与任务取消。
 - **桌面与桥接接入**：新增 Tauri 菜单/IPC `open_notemd`，并在桥接链路支持 NoteMD 窗口打开。
 - **安全默认值**：NoteMD 文件操作启用 KB 根路径沙箱校验，长任务支持 SSE 进度回传与取消。
 

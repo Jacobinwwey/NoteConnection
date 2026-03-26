@@ -348,6 +348,9 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 - **NoteMD Embedded Experience**:
   - Kept NoteMD as an embedded experience (not a standalone desktop window) aligned with both Tauri and Godot flows.
   - Fixed non-responsive `Browse` actions in Tauri NoteMD (file/folder/save pickers now complete the IPC flow).
+  - Defaulted embedded NoteMD to a single `One-Click Extract` workflow that chains concept extraction, batch generation from titles, and batch Mermaid repair into a source-file-named KB folder.
+  - Moved embedded NoteMD API configuration into `app_config.toml` under `[notemd]` and `[notemd.api]`, with matching fields in the embedded NoteMD window.
+  - Added `noteconnection notemd ...` CLI entrypoints for shared NoteMD actions.
   - Added user guidance that PDF files must be converted to Markdown via Mineru before import.
 - **Platform & Toolchain Release Readiness**:
   - Standardized Java policy to **JDK 21+** and verified support for **JDK 23.0.1** in Android prerequisites/build tooling.
