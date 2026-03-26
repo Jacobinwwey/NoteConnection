@@ -12,6 +12,16 @@ function readJson<T>(filePath: string): T {
   return JSON.parse(fs.readFileSync(filePath, 'utf8')) as T;
 }
 
+function buildUnsignedGeneratorEnv(): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    NOTE_CONNECTION_SBOM_SIGNING_PRIVATE_KEY_PEM: '',
+    NOTE_CONNECTION_SBOM_SIGNING_PRIVATE_KEY_FILE: '',
+    NOTE_CONNECTION_SBOM_ATTESTATION_ENABLE_TRANSPARENCY_LOG: '0',
+    NOTE_CONNECTION_SBOM_ATTESTATION_TRANSPARENCY_LOG_PATH: '',
+  };
+}
+
 describe('sbom attestation policy contract', () => {
   const repoRoot = path.resolve(__dirname, '..');
   const packageJsonPath = path.join(repoRoot, 'package.json');
@@ -154,6 +164,7 @@ describe('sbom attestation policy contract', () => {
       cwd: repoRoot,
       encoding: 'utf8',
       stdio: 'pipe',
+      env: buildUnsignedGeneratorEnv(),
     });
     expect(generateResult.status).toBe(0);
 
@@ -202,6 +213,7 @@ describe('sbom attestation policy contract', () => {
       cwd: repoRoot,
       encoding: 'utf8',
       stdio: 'pipe',
+      env: buildUnsignedGeneratorEnv(),
     });
     expect(generateResult.status).toBe(0);
 
@@ -258,6 +270,7 @@ describe('sbom attestation policy contract', () => {
       cwd: repoRoot,
       encoding: 'utf8',
       stdio: 'pipe',
+      env: buildUnsignedGeneratorEnv(),
     });
     expect(generateResult.status).toBe(0);
 
@@ -308,6 +321,7 @@ describe('sbom attestation policy contract', () => {
       cwd: repoRoot,
       encoding: 'utf8',
       stdio: 'pipe',
+      env: buildUnsignedGeneratorEnv(),
     });
     expect(generateResult.status).toBe(0);
 
