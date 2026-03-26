@@ -20,6 +20,7 @@
 npm run docs:diataxis:check
 mkdocs serve --config-file mkdocs.yml
 mkdocs build --config-file mkdocs.yml
+npm run docs:edgeone:publish
 ```
 
 ## 权威来源文档
@@ -29,6 +30,7 @@ mkdocs build --config-file mkdocs.yml
 - 用户手册：[docs/zh/User_Manual.md](../../zh/User_Manual.md)
 - app_config 指南：[docs/zh/app_config.toml_guide.md](../../zh/app_config.toml_guide.md)
 - 发布对比报告：[docs/zh/release_v1.6.0_report.md](../../zh/release_v1.6.0_report.md)
+- Sharelife 文档发布与回滚：[docs/zh/sharelife_community_release_and_rollback.md](../../zh/sharelife_community_release_and_rollback.md)
 
 ## 运行时配置入口
 

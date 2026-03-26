@@ -266,6 +266,37 @@ describe('NoteMD server integration', () => {
     expect(appConfigContent).toContain('api_key = "x"');
   });
 
+  test('GET/PUT path-mode settings roundtrip works', async () => {
+    const readResponse = await requestJson(port, 'GET', '/api/path-mode/settings');
+    expect(readResponse.status).toBe(200);
+    expect(readResponse.body.success).toBe(true);
+    expect(readResponse.body.settings).toEqual(
+      expect.objectContaining({
+        auto_reconstruct: true,
+        reading_mode: 'window',
+      })
+    );
+
+    const writeResponse = await requestJson(port, 'PUT', '/api/path-mode/settings', {
+      auto_reconstruct: false,
+      retain_history: false,
+      focus_mode: false,
+      reading_mode: 'fullscreen',
+      reader_render_mode: 'source',
+      reader_media_scale: 1.75,
+      node_spacing: 300,
+    });
+    expect(writeResponse.status).toBe(200);
+    expect(writeResponse.body.success).toBe(true);
+    expect(writeResponse.body.settings.reading_mode).toBe('fullscreen');
+    expect(writeResponse.body.settings.reader_render_mode).toBe('source');
+
+    const appConfigContent = fs.readFileSync(appConfigPath, 'utf8');
+    expect(appConfigContent).toContain('[path_mode]');
+    expect(appConfigContent).toContain('auto_reconstruct = false');
+    expect(appConfigContent).toContain('reader_render_mode = "source"');
+  });
+
   test('process-file and fix-formulas endpoints execute on a real file', async () => {
     const processResponse = await requestJson(port, 'POST', '/api/notemd/process-file', {
       filePath: kbFilePath,

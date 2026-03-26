@@ -50,6 +50,7 @@ nav:
           - First Run: diataxis/en/tutorials/first-run.md
       - How-To Guides:
           - Build and Export: diataxis/en/how-to/build-and-export.md
+          - Publish Docs to EdgeOne: diataxis/en/how-to/publish-docs-edgeone.md
           - Single Window Runtime: diataxis/en/how-to/single-window-runtime.md
           - Configure app_config.toml: diataxis/en/how-to/configure-app-config.md
       - Reference:
@@ -64,6 +65,7 @@ nav:
           - 首次运行: diataxis/zh/tutorials/first-run.md
       - 操作指南:
           - 构建与导出: diataxis/zh/how-to/build-and-export.md
+          - 发布文档到 EdgeOne: diataxis/zh/how-to/publish-docs-edgeone.md
           - 单窗口运行时: diataxis/zh/how-to/single-window-runtime.md
           - 配置 app_config.toml: diataxis/zh/how-to/configure-app-config.md
       - 参考:

@@ -1,4 +1,4 @@
-# 2026-03-24 v1.6.0
+﻿# 2026-03-24 v1.6.0
 
 # NoteConnection Knowledge Graph
 
@@ -326,7 +326,12 @@ For developers building from source, NoteConnection offers two build modes:
   - Users: `/diataxis/zh/tutorials/first-run/` or `/diataxis/en/tutorials/first-run/`
   - Developers: `/diataxis/en/reference/interfaces-and-runtime/` and `/diataxis/en/reference/release-and-governance/`
 - EdgeOne publish command (MkDocs site): `edgeone pages deploy build/mkdocs-site -n noteconnection-docs -e production -a global`.
+- One-click docs publish command: `npm run docs:edgeone:publish`.
+- CI auto publish workflow (EdgeOne): `.github/workflows/docs-edgeone-publish.yml`.
 - CI policy gate for docs mapping and site build: `.github/workflows/docs-diataxis-site.yml`.
+- Sharelife community UI docs release + rollback guide:
+  - English: [`docs/en/sharelife_community_release_and_rollback.md`](docs/en/sharelife_community_release_and_rollback.md)
+  - 中文: [`docs/zh/sharelife_community_release_and_rollback.md`](docs/zh/sharelife_community_release_and_rollback.md)
 
 ## 🛠️ Hardware & Driver Requirements (AMDGPU)
 
@@ -341,6 +346,16 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ## 📅 Changelog
 
+### v1.6.6 - Unified Provider Runtime & TOML Settings Consolidation (2026-03-26)
+- Upgraded NoteMD API calling flow to a definition-driven provider architecture inspired by recent obsidian-NotEMD and cline patterns.
+- Added transport-based dispatch (openai-compatible, anthropic, google, azure-openai, ollama) and provider metadata (apiKeyMode, apiTestMode, category).
+- Expanded built-in provider presets: Qwen, Doubao, Moonshot, GLM, MiniMax, Groq, Together, Fireworks, Requesty, OpenAI Compatible.
+- Unified runtime settings persistence in app_config.toml across Tauri + Godot + NoteMD:
+  - full NoteMD settings in [notemd] + [[notemd.providers]] (with legacy [notemd.api] compatibility mirror)
+  - Godot Path Mode settings in [path_mode] with runtime API endpoint /api/path-mode/settings
+  - Godot settings panel migrated to runtime TOML sync path.
+- Hardened Rust-side TOML writes to preserve unknown sections, preventing accidental loss of [notemd] / [path_mode] when Tauri updates KB path or language.
+- Updated bilingual documentation and templates for v1.6.6 schema and operations.
 ### v1.6.5 - Documentation Portal Update (2026-03-26)
 
 - Published MkDocs documentation to EdgeOne Pages project `noteconnection-docs`.
@@ -1217,7 +1232,12 @@ sync_language = true
   - 用户文档：`/diataxis/zh/tutorials/first-run/` 或 `/diataxis/en/tutorials/first-run/`
   - 开发文档：`/diataxis/en/reference/interfaces-and-runtime/` 与 `/diataxis/en/reference/release-and-governance/`
 - EdgeOne 发布命令（MkDocs 产物）：`edgeone pages deploy build/mkdocs-site -n noteconnection-docs -e production -a global`。
+- 一键文档发布命令：`npm run docs:edgeone:publish`。
+- CI 自动发布工作流（EdgeOne）：`.github/workflows/docs-edgeone-publish.yml`。
 - CI 文档治理工作流：`.github/workflows/docs-diataxis-site.yml`。
+- Sharelife 社区界面文档发布与回滚指南：
+  - English：[`docs/en/sharelife_community_release_and_rollback.md`](docs/en/sharelife_community_release_and_rollback.md)
+  - 中文：[`docs/zh/sharelife_community_release_and_rollback.md`](docs/zh/sharelife_community_release_and_rollback.md)
 
 ---
 
@@ -1225,13 +1245,25 @@ sync_language = true
 
 ## 更新日志 (Changelog)
 
-### v1.6.5 - �ĵ��Ż����£�2026-03-26��
+### v1.6.6 - Provider 运行时流程与 TOML 配置统一 (2026-03-26)
+- 参考 obsidian-NotEMD 与 cline 的 Provider 策略，重构 NoteMD API 调用流为定义驱动。
+- 新增 transport 分发（openai-compatible / anthropic / google / azure-openai / ollama）与 provider 元数据（apiKeyMode、apiTestMode、category）。
+- 扩展内置 Provider 预设：Qwen、Doubao、Moonshot、GLM、MiniMax、Groq、Together、Fireworks、Requesty、OpenAI Compatible。
+- 完成 Tauri + Godot + NoteMD 的 app_config.toml 统一配置：
+  - NoteMD 全量配置持久化到 [notemd] + [[notemd.providers]]（保留 [notemd.api] 兼容镜像）
+  - Path Mode 配置持久化到 [path_mode]，并提供 /api/path-mode/settings 读写接口
+  - Godot 设置面板升级为运行时 TOML 同步链路。
+- 加固 Rust 端 TOML 回写：保留未知 section，避免 Tauri 更新 KB/语言时覆盖 [notemd] / [path_mode]。
+- 同步更新 v1.6.6 双语模板与 Diataxis 文档。
 
-- �ѽ� MkDocs �ĵ������� EdgeOne Pages ��Ŀ `noteconnection-docs`��
-- ���� README ������Ӣ�Ĳ�ѯָ���������û��̳�����뿪���ο���ڣ���
-- ά���߷�������ͳһΪ��
+### v1.6.5 - 文档门户更新 (2026-03-26)
+
+- 已将 MkDocs 文档发布到 EdgeOne Pages 项目 `noteconnection-docs`。
+- 在 README 中补充了面向用户与开发者的中英文文档检索入口。
+- 维护者发布命令统一为：
   - `npm run docs:site:build`
   - `edgeone pages deploy build/mkdocs-site -n noteconnection-docs -e production -a global`
+
 ### v1.6.0 - 单窗口运行时、NoteMD 集成与发布加固 (2026-03-23)
 
 - **Tag 对比快照（`v1.3.0..v1.6.0`）**:

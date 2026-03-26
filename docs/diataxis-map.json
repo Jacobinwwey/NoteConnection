@@ -27,6 +27,18 @@
       }
     },
     {
+      "id": "publish-docs-edgeone",
+      "category": "how-to",
+      "en": {
+        "canonical": ["docs/en/sharelife_community_release_and_rollback.md", ".github/workflows/docs-edgeone-publish.yml", "scripts/deploy-docs-edgeone.js"],
+        "diataxis": "docs/diataxis/en/how-to/publish-docs-edgeone.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/sharelife_community_release_and_rollback.md", ".github/workflows/docs-edgeone-publish.yml", "scripts/deploy-docs-edgeone.js"],
+        "diataxis": "docs/diataxis/zh/how-to/publish-docs-edgeone.md"
+      }
+    },
+    {
       "id": "single-window-runtime",
       "category": "how-to",
       "en": {

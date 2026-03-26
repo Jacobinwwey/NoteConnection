@@ -1,4 +1,5 @@
 import { LlmProviderConfig, NotemdLanguage, NotemdSettings } from './types';
+import { createDefaultProviders, DEFAULT_PROVIDER_NAME } from './LlmProviderDefinitions';
 
 export const NOTEMD_CONFIG_FILE_NAME = 'notemd_config.json';
 
@@ -15,93 +16,11 @@ export const DEFAULT_LANGUAGES: NotemdLanguage[] = [
     { code: 'es', name: 'Español' },
 ];
 
-export const DEFAULT_PROVIDERS: LlmProviderConfig[] = [
-    {
-        name: 'DeepSeek',
-        apiKey: '',
-        baseUrl: 'https://api.deepseek.com/v1',
-        model: 'deepseek-reasoner',
-        temperature: 0.5,
-        enabled: true,
-    },
-    {
-        name: 'OpenAI',
-        apiKey: '',
-        baseUrl: 'https://api.openai.com/v1',
-        model: 'gpt-4o',
-        temperature: 0.5,
-        enabled: true,
-    },
-    {
-        name: 'Anthropic',
-        apiKey: '',
-        baseUrl: 'https://api.anthropic.com',
-        model: 'claude-3-5-sonnet-20240620',
-        temperature: 0.5,
-        enabled: true,
-    },
-    {
-        name: 'Google',
-        apiKey: '',
-        baseUrl: 'https://generativelanguage.googleapis.com/v1',
-        model: 'gemini-2.0-flash',
-        temperature: 0.5,
-        enabled: true,
-    },
-    {
-        name: 'Mistral',
-        apiKey: '',
-        baseUrl: 'https://api.mistral.ai/v1',
-        model: 'mistral-large-latest',
-        temperature: 0.5,
-        enabled: true,
-    },
-    {
-        name: 'Azure OpenAI',
-        apiKey: '',
-        baseUrl: '',
-        model: 'gpt-4o',
-        temperature: 0.5,
-        apiVersion: '2025-01-01-preview',
-        enabled: true,
-    },
-    {
-        name: 'LMStudio',
-        apiKey: 'EMPTY',
-        baseUrl: 'http://localhost:1234/v1',
-        model: 'local-model',
-        temperature: 0.7,
-        enabled: true,
-    },
-    {
-        name: 'Ollama',
-        apiKey: '',
-        baseUrl: 'http://localhost:11434/api',
-        model: 'llama3',
-        temperature: 0.7,
-        enabled: true,
-    },
-    {
-        name: 'OpenRouter',
-        apiKey: '',
-        baseUrl: 'https://openrouter.ai/api/v1',
-        model: 'openai/gpt-4o-mini',
-        temperature: 0.7,
-        enabled: true,
-    },
-    {
-        name: 'xAI',
-        apiKey: '',
-        baseUrl: 'https://api.x.ai/v1',
-        model: 'grok-2-latest',
-        temperature: 0.7,
-        enabled: true,
-    },
-];
+export const DEFAULT_PROVIDERS: LlmProviderConfig[] = createDefaultProviders();
 
 export const DEFAULT_SETTINGS: NotemdSettings = {
     providers: DEFAULT_PROVIDERS,
-    activeProvider: 'DeepSeek',
+    activeProvider: DEFAULT_PROVIDER_NAME,
     developerMode: false,
 
     useCustomConceptNoteFolder: false,
@@ -119,13 +38,13 @@ export const DEFAULT_SETTINGS: NotemdSettings = {
     enableFocusedLearning: false,
 
     useMultiModelSettings: false,
-    addLinksProvider: 'DeepSeek',
-    researchProvider: 'DeepSeek',
-    generateTitleProvider: 'DeepSeek',
-    translateProvider: 'DeepSeek',
-    summarizeToMermaidProvider: 'DeepSeek',
-    extractConceptsProvider: 'DeepSeek',
-    extractOriginalTextProvider: 'DeepSeek',
+    addLinksProvider: DEFAULT_PROVIDER_NAME,
+    researchProvider: DEFAULT_PROVIDER_NAME,
+    generateTitleProvider: DEFAULT_PROVIDER_NAME,
+    translateProvider: DEFAULT_PROVIDER_NAME,
+    summarizeToMermaidProvider: DEFAULT_PROVIDER_NAME,
+    extractConceptsProvider: DEFAULT_PROVIDER_NAME,
+    extractOriginalTextProvider: DEFAULT_PROVIDER_NAME,
 
     addLinksModel: '',
     researchModel: '',

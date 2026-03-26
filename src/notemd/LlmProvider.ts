@@ -7,18 +7,26 @@ import {
     TaskKey,
     ValidationError,
 } from './types';
+import { getProviderDefinition, LlmProviderDefinition } from './LlmProviderDefinitions';
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
+
+const RETRYABLE_STATUS_CODES = new Set([408, 409, 423, 425, 429, 500, 502, 503, 504]);
+const DEFAULT_MAX_RETRIES = 2;
+const DEFAULT_RETRY_DELAY_MS = 1200;
+const MAX_RETRY_DELAY_MS = 60_000;
 
 class ProviderHttpError extends Error {
     public readonly status: number;
     public readonly retryable: boolean;
+    public readonly retryAfterMs: number | null;
 
-    constructor(message: string, status: number) {
+    constructor(message: string, status: number, retryAfterMs: number | null = null) {
         super(message);
         this.name = 'ProviderHttpError';
         this.status = status;
-        this.retryable = status === 408 || status === 429 || status >= 500;
+        this.retryable = RETRYABLE_STATUS_CODES.has(status);
+        this.retryAfterMs = retryAfterMs;
     }
 }
 
@@ -31,7 +39,9 @@ function joinUrl(baseUrl: string, suffix: string): string {
 function isAbortLike(error: unknown): boolean {
     return (
         (error instanceof Error && error.name === 'AbortError') ||
-        (typeof DOMException !== 'undefined' && error instanceof DOMException && error.name === 'AbortError')
+        (typeof DOMException !== 'undefined' &&
+            error instanceof DOMException &&
+            error.name === 'AbortError')
     );
 }
 
@@ -54,10 +64,75 @@ function resolveErrorMessage(payload: unknown): string {
     return '';
 }
 
+function parseRetryAfterMs(headers: Headers): number | null {
+    const raw = headers.get('retry-after');
+    if (!raw) {
+        return null;
+    }
+
+    const asSeconds = Number(raw.trim());
+    if (Number.isFinite(asSeconds) && asSeconds >= 0) {
+        return Math.floor(asSeconds * 1000);
+    }
+
+    const asDate = Date.parse(raw);
+    if (Number.isFinite(asDate)) {
+        return Math.max(0, asDate - Date.now());
+    }
+
+    return null;
+}
+
+function toJsonRecord(text: string): Record<string, unknown> {
+    if (!text.trim()) {
+        return {};
+    }
+    try {
+        const decoded = JSON.parse(text);
+        if (decoded && typeof decoded === 'object' && !Array.isArray(decoded)) {
+            return decoded as Record<string, unknown>;
+        }
+        return {};
+    } catch {
+        return {};
+    }
+}
+
+function normalizeMessageContent(value: unknown): string {
+    if (typeof value === 'string') {
+        return value.trim();
+    }
+
+    if (Array.isArray(value)) {
+        return value
+            .map((item) => {
+                if (typeof item === 'string') {
+                    return item;
+                }
+                if (item && typeof item === 'object') {
+                    const itemRecord = item as Record<string, unknown>;
+                    if (typeof itemRecord.text === 'string') {
+                        return itemRecord.text;
+                    }
+                    if (typeof itemRecord.content === 'string') {
+                        return itemRecord.content;
+                    }
+                }
+                return '';
+            })
+            .filter(Boolean)
+            .join('\n')
+            .trim();
+    }
+
+    return '';
+}
+
 async function waitWithAbort(ms: number, signal?: AbortSignal): Promise<void> {
     if (ms <= 0) {
         return;
     }
+
     await new Promise<void>((resolve, reject) => {
         const timer = setTimeout(() => {
             if (signal) {
@@ -107,7 +182,11 @@ export function selectProviderForTask(settings: NotemdSettings, taskKey: TaskKey
     return provider;
 }
 
-export function selectModelForTask(settings: NotemdSettings, taskKey: TaskKey, provider: LlmProviderConfig): string {
+export function selectModelForTask(
+    settings: NotemdSettings,
+    taskKey: TaskKey,
+    provider: LlmProviderConfig
+): string {
     if (!settings.useMultiModelSettings) {
         return provider.model;
     }
@@ -144,8 +223,33 @@ export class LlmProviderClient {
         }
     }
 
-    public async testConnection(provider: LlmProviderConfig, signal?: AbortSignal): Promise<{ success: boolean; message: string }> {
+    public async testConnection(
+        provider: LlmProviderConfig,
+        signal?: AbortSignal
+    ): Promise<{ success: boolean; message: string }> {
+        const definition = getProviderDefinition(provider.name);
         try {
+            this.assertProviderConfig(provider, definition);
+
+            if (
+                definition.transport === 'openai-compatible' &&
+                definition.apiTestMode === 'models-then-chat'
+            ) {
+                try {
+                    const modelCount = await this.probeOpenAiCompatibleModels(
+                        provider,
+                        definition,
+                        signal
+                    );
+                    return {
+                        success: true,
+                        message: `Connected to ${provider.name}. Model catalog probe succeeded (${modelCount} models).`,
+                    };
+                } catch {
+                    // Fall through to chat probe for compatibility with gateways that disable /models.
+                }
+            }
+
             const result = await this.complete({
                 provider,
                 model: provider.model,
@@ -170,6 +274,9 @@ export class LlmProviderClient {
 
     public async complete(request: LlmCompletionRequest): Promise<LlmCompletionResult> {
         const provider = request.provider;
+        const definition = getProviderDefinition(provider.name);
+        this.assertProviderConfig(provider, definition);
+
         const model = String(request.model || provider.model || '').trim();
         if (!model) {
             throw new ValidationError(`Provider "${provider.name}" has no model configured.`);
@@ -178,8 +285,8 @@ export class LlmProviderClient {
         const prompt = String(request.prompt || '').trim();
         const content = String(request.content || '');
         const maxTokens = Math.max(1, Math.floor(request.maxTokens || 1024));
-        const maxRetries = Math.max(0, Math.floor(request.maxRetries ?? 2));
-        const retryDelayMs = Math.max(0, Math.floor(request.retryDelayMs ?? 1200));
+        const maxRetries = Math.max(0, Math.floor(request.maxRetries ?? DEFAULT_MAX_RETRIES));
+        const retryDelayMs = Math.max(0, Math.floor(request.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS));
         const signal = request.signal;
 
         let lastError: unknown = null;
@@ -187,9 +294,11 @@ export class LlmProviderClient {
             if (signal?.aborted) {
                 throw new Error('Operation cancelled.');
             }
+
             try {
                 const text = await this.callProvider({
                     provider,
+                    definition,
                     model,
                     prompt,
                     content,
@@ -212,8 +321,15 @@ export class LlmProviderClient {
                     break;
                 }
 
-                request.onRetry?.(attempt + 1, error instanceof Error ? error.message : String(error));
-                const backoff = retryDelayMs * Math.max(1, 2 ** attempt);
+                request.onRetry?.(
+                    attempt + 1,
+                    error instanceof Error ? error.message : String(error)
+                );
+                const backoff = this.resolveRetryDelayMs(
+                    attempt,
+                    retryDelayMs,
+                    error instanceof ProviderHttpError ? error.retryAfterMs : null
+                );
                 await waitWithAbort(backoff, signal);
             }
         }
@@ -224,66 +340,141 @@ export class LlmProviderClient {
         throw new NetworkError(`${provider.name} completion failed.`);
     }
 
+    private resolveRetryDelayMs(
+        attempt: number,
+        retryDelayMs: number,
+        retryAfterMs: number | null
+    ): number {
+        const exponential = Math.min(MAX_RETRY_DELAY_MS, retryDelayMs * Math.max(1, 2 ** attempt));
+        const jitter = Math.floor(Math.random() * Math.min(250, exponential));
+        const computed = exponential + jitter;
+        if (Number.isFinite(retryAfterMs) && (retryAfterMs as number) > 0) {
+            return Math.max(computed, Math.min(MAX_RETRY_DELAY_MS, retryAfterMs as number));
+        }
+        return computed;
+    }
+
+    private assertProviderConfig(
+        provider: LlmProviderConfig,
+        definition: LlmProviderDefinition
+    ): void {
+        const apiKey = String(provider.apiKey || '').trim();
+        const baseUrl = String(provider.baseUrl || '').trim();
+
+        if (!baseUrl) {
+            throw new ValidationError(`Provider "${provider.name}" requires a base URL.`);
+        }
+        if (definition.apiKeyMode === 'required' && !apiKey) {
+            throw new ValidationError(`Provider "${provider.name}" requires an API key.`);
+        }
+        if (definition.transport === 'azure-openai') {
+            if (!String(provider.apiVersion || '').trim()) {
+                throw new ValidationError('Azure OpenAI requires apiVersion.');
+            }
+        }
+    }
+
     private async callProvider(args: {
         provider: LlmProviderConfig;
+        definition: LlmProviderDefinition;
         model: string;
         prompt: string;
         content: string;
         maxTokens: number;
         signal?: AbortSignal;
     }): Promise<string> {
-        const { provider } = args;
-        switch (provider.name) {
-            case 'OpenAI':
-            case 'DeepSeek':
-            case 'Mistral':
-            case 'OpenRouter':
-            case 'xAI':
-            case 'LMStudio':
-                return this.callOpenAICompatible(provider, args);
-            case 'Azure OpenAI':
-                return this.callAzureOpenAI(provider, args);
-            case 'Anthropic':
-                return this.callAnthropic(provider, args);
-            case 'Google':
-                return this.callGoogle(provider, args);
-            case 'Ollama':
-                return this.callOllama(provider, args);
+        switch (args.definition.transport) {
+            case 'openai-compatible':
+                return this.callOpenAICompatible(args);
+            case 'azure-openai':
+                return this.callAzureOpenAI(args);
+            case 'anthropic':
+                return this.callAnthropic(args);
+            case 'google':
+                return this.callGoogle(args);
+            case 'ollama':
+                return this.callOllama(args);
             default:
-                throw new ValidationError(`Unsupported provider: ${provider.name}`);
+                throw new ValidationError(`Unsupported provider transport: ${args.definition.transport}`);
         }
     }
 
-    private async parseJsonResponse(response: Response, providerName: string): Promise<Record<string, unknown>> {
+    private async parseJsonResponse(
+        response: Response,
+        providerName: string
+    ): Promise<Record<string, unknown>> {
         const text = await response.text();
-        let data: Record<string, unknown> = {};
-        try {
-            data = text ? (JSON.parse(text) as Record<string, unknown>) : {};
-        } catch {
-            data = {};
-        }
+        const data = toJsonRecord(text);
 
         if (!response.ok) {
             const fromPayload = resolveErrorMessage(data);
-            const message = fromPayload || text || `${providerName} API failed with status ${response.status}.`;
-            throw new ProviderHttpError(message, response.status);
+            const message =
+                fromPayload || text || `${providerName} API failed with status ${response.status}.`;
+            throw new ProviderHttpError(
+                message,
+                response.status,
+                parseRetryAfterMs(response.headers)
+            );
         }
 
         return data;
     }
 
-    private async callOpenAICompatible(
+    private buildOpenAiCompatibleHeaders(
         provider: LlmProviderConfig,
-        args: {
-            model: string;
-            prompt: string;
-            content: string;
-            maxTokens: number;
-            signal?: AbortSignal;
+        definition: LlmProviderDefinition
+    ): Record<string, string> {
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+        };
+
+        const apiKey = String(provider.apiKey || '').trim();
+        if ((definition.apiKeyMode === 'required' || definition.apiKeyMode === 'optional') && apiKey) {
+            headers.Authorization = `Bearer ${apiKey}`;
         }
-    ): Promise<string> {
+
+        if (definition.extraHeaders) {
+            Object.keys(definition.extraHeaders).forEach((key) => {
+                const value = String(definition.extraHeaders?.[key] || '').trim();
+                if (value) {
+                    headers[key] = value;
+                }
+            });
+        }
+
+        return headers;
+    }
+
+    private async probeOpenAiCompatibleModels(
+        provider: LlmProviderConfig,
+        definition: LlmProviderDefinition,
+        signal?: AbortSignal
+    ): Promise<number> {
+        const url = joinUrl(provider.baseUrl, 'models');
+        const response = await this.fetchImpl(url, {
+            method: 'GET',
+            headers: this.buildOpenAiCompatibleHeaders(provider, definition),
+            signal,
+        });
+        const payload = await this.parseJsonResponse(response, provider.name);
+        const models = Array.isArray(payload.data) ? payload.data : [];
+        return models.length;
+    }
+
+    private async callOpenAICompatible(args: {
+        provider: LlmProviderConfig;
+        definition: LlmProviderDefinition;
+        model: string;
+        prompt: string;
+        content: string;
+        maxTokens: number;
+        signal?: AbortSignal;
+    }): Promise<string> {
+        const { provider, definition } = args;
         const url = joinUrl(provider.baseUrl, 'chat/completions');
-        const isReasoningModel = /^o[13]/i.test(args.model) || /reasoner|r1/i.test(args.model);
+        const loweredModel = args.model.toLowerCase();
+        const isReasoningModel =
+            /^o[13]/i.test(args.model) || /reasoner|r1|thinking/.test(loweredModel);
         const combinedUserContent = `${args.prompt}\n\n${args.content}`.trim();
 
         const payload: Record<string, unknown> = {
@@ -296,117 +487,118 @@ export class LlmProviderClient {
                   ],
         };
 
-        if (provider.name === 'DeepSeek' && /reasoner|r1/i.test(args.model)) {
+        if (isReasoningModel) {
             payload.max_completion_tokens = args.maxTokens;
         } else {
             payload.max_tokens = args.maxTokens;
-        }
-
-        if (!isReasoningModel) {
-            payload.temperature = provider.temperature;
-        }
-
-        const headers: Record<string, string> = {
-            'Content-Type': 'application/json',
-        };
-        if (provider.name === 'LMStudio') {
-            headers.Authorization = `Bearer ${provider.apiKey || 'EMPTY'}`;
-        } else if (provider.apiKey.trim()) {
-            headers.Authorization = `Bearer ${provider.apiKey.trim()}`;
-        }
-        if (provider.name === 'OpenRouter') {
-            headers['HTTP-Referer'] = 'https://github.com/Jacobinwwey/NoteConnection';
-            headers['X-Title'] = 'NoteConnection NoteMD';
+            payload.temperature = Number.isFinite(provider.temperature)
+                ? provider.temperature
+                : 0.5;
         }
 
         const response = await this.fetchImpl(url, {
             method: 'POST',
-            headers,
+            headers: this.buildOpenAiCompatibleHeaders(provider, definition),
             body: JSON.stringify(payload),
             signal: args.signal,
         });
         const data = await this.parseJsonResponse(response, provider.name);
+
         const choices = Array.isArray(data.choices) ? data.choices : [];
-        const firstChoice = (choices[0] || {}) as Record<string, unknown>;
-        const message = (firstChoice.message || {}) as Record<string, unknown>;
-        const content = String(message.content || '').trim();
-        const reasoning = String((message as Record<string, unknown>).reasoning || '').trim();
-        const text = content || reasoning;
+        const firstChoice =
+            choices.length > 0 && choices[0] && typeof choices[0] === 'object'
+                ? (choices[0] as Record<string, unknown>)
+                : {};
+        const message =
+            firstChoice.message && typeof firstChoice.message === 'object'
+                ? (firstChoice.message as Record<string, unknown>)
+                : {};
+        const text =
+            normalizeMessageContent(message.content) ||
+            String(message.reasoning || '').trim() ||
+            String(firstChoice.text || '').trim();
+
         if (!text) {
             throw new NetworkError(`${provider.name} returned no completion content.`);
         }
         return text;
     }
 
-    private async callAzureOpenAI(
-        provider: LlmProviderConfig,
-        args: {
-            model: string;
-            prompt: string;
-            content: string;
-            maxTokens: number;
-            signal?: AbortSignal;
-        }
-    ): Promise<string> {
-        if (!provider.apiVersion || !provider.baseUrl) {
-            throw new ValidationError('Azure OpenAI requires baseUrl and apiVersion.');
-        }
-
+    private async callAzureOpenAI(args: {
+        provider: LlmProviderConfig;
+        model: string;
+        prompt: string;
+        content: string;
+        maxTokens: number;
+        signal?: AbortSignal;
+    }): Promise<string> {
+        const { provider } = args;
         const deployment = encodeURIComponent(args.model);
-        const url = `${provider.baseUrl.replace(/\/+$/, '')}/openai/deployments/${deployment}/chat/completions?api-version=${encodeURIComponent(provider.apiVersion)}`;
+        const apiVersion = String(provider.apiVersion || '').trim();
+        const url = `${provider.baseUrl.replace(
+            /\/+$/,
+            ''
+        )}/openai/deployments/${deployment}/chat/completions?api-version=${encodeURIComponent(
+            apiVersion
+        )}`;
         const payload: Record<string, unknown> = {
             messages: [
                 { role: 'system', content: args.prompt },
                 { role: 'user', content: args.content || 'Proceed.' },
             ],
             max_tokens: args.maxTokens,
-            temperature: provider.temperature,
+            temperature: Number.isFinite(provider.temperature) ? provider.temperature : 0.5,
         };
 
         const response = await this.fetchImpl(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'api-key': provider.apiKey.trim(),
+                'api-key': String(provider.apiKey || '').trim(),
             },
             body: JSON.stringify(payload),
             signal: args.signal,
         });
         const data = await this.parseJsonResponse(response, provider.name);
         const choices = Array.isArray(data.choices) ? data.choices : [];
-        const firstChoice = (choices[0] || {}) as Record<string, unknown>;
-        const message = (firstChoice.message || {}) as Record<string, unknown>;
-        const text = String(message.content || '').trim();
+        const firstChoice =
+            choices.length > 0 && choices[0] && typeof choices[0] === 'object'
+                ? (choices[0] as Record<string, unknown>)
+                : {};
+        const message =
+            firstChoice.message && typeof firstChoice.message === 'object'
+                ? (firstChoice.message as Record<string, unknown>)
+                : {};
+        const text = normalizeMessageContent(message.content);
         if (!text) {
             throw new NetworkError('Azure OpenAI returned no completion content.');
         }
         return text;
     }
 
-    private async callAnthropic(
-        provider: LlmProviderConfig,
-        args: {
-            model: string;
-            prompt: string;
-            content: string;
-            maxTokens: number;
-            signal?: AbortSignal;
-        }
-    ): Promise<string> {
+    private async callAnthropic(args: {
+        provider: LlmProviderConfig;
+        model: string;
+        prompt: string;
+        content: string;
+        maxTokens: number;
+        signal?: AbortSignal;
+    }): Promise<string> {
+        const { provider } = args;
         const url = joinUrl(provider.baseUrl, 'v1/messages');
         const payload = {
             model: args.model,
             system: args.prompt,
             messages: [{ role: 'user', content: args.content || 'Proceed.' }],
             max_tokens: args.maxTokens,
-            temperature: provider.temperature,
+            temperature: Number.isFinite(provider.temperature) ? provider.temperature : 0.5,
         };
 
         const response = await this.fetchImpl(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': provider.apiKey.trim(),
+                'x-api-key': String(provider.apiKey || '').trim(),
                 'anthropic-version': '2023-06-01',
             },
             body: JSON.stringify(payload),
@@ -415,7 +607,11 @@ export class LlmProviderClient {
         const data = await this.parseJsonResponse(response, provider.name);
         const parts = Array.isArray(data.content) ? data.content : [];
         const text = parts
-            .map((item) => (item && typeof item === 'object' ? String((item as Record<string, unknown>).text || '') : ''))
+            .map((item) =>
+                item && typeof item === 'object'
+                    ? String((item as Record<string, unknown>).text || '')
+                    : ''
+            )
             .join('\n')
             .trim();
         if (!text) {
@@ -424,17 +620,22 @@ export class LlmProviderClient {
         return text;
     }
 
-    private async callGoogle(
-        provider: LlmProviderConfig,
-        args: {
-            model: string;
-            prompt: string;
-            content: string;
-            maxTokens: number;
-            signal?: AbortSignal;
-        }
-    ): Promise<string> {
-        const url = `${provider.baseUrl.replace(/\/+$/, '')}/models/${encodeURIComponent(args.model)}:generateContent?key=${encodeURIComponent(provider.apiKey.trim())}`;
+    private async callGoogle(args: {
+        provider: LlmProviderConfig;
+        model: string;
+        prompt: string;
+        content: string;
+        maxTokens: number;
+        signal?: AbortSignal;
+    }): Promise<string> {
+        const { provider } = args;
+        const apiKey = String(provider.apiKey || '').trim();
+        const url = `${provider.baseUrl.replace(
+            /\/+$/,
+            ''
+        )}/models/${encodeURIComponent(args.model)}:generateContent?key=${encodeURIComponent(
+            apiKey
+        )}`;
         const payload = {
             contents: [
                 {
@@ -443,7 +644,7 @@ export class LlmProviderClient {
                 },
             ],
             generationConfig: {
-                temperature: provider.temperature,
+                temperature: Number.isFinite(provider.temperature) ? provider.temperature : 0.5,
                 maxOutputTokens: args.maxTokens,
             },
         };
@@ -458,11 +659,21 @@ export class LlmProviderClient {
         });
         const data = await this.parseJsonResponse(response, provider.name);
         const candidates = Array.isArray(data.candidates) ? data.candidates : [];
-        const firstCandidate = (candidates[0] || {}) as Record<string, unknown>;
-        const candidateContent = (firstCandidate.content || {}) as Record<string, unknown>;
+        const firstCandidate =
+            candidates.length > 0 && candidates[0] && typeof candidates[0] === 'object'
+                ? (candidates[0] as Record<string, unknown>)
+                : {};
+        const candidateContent =
+            firstCandidate.content && typeof firstCandidate.content === 'object'
+                ? (firstCandidate.content as Record<string, unknown>)
+                : {};
         const parts = Array.isArray(candidateContent.parts) ? candidateContent.parts : [];
         const text = parts
-            .map((item) => (item && typeof item === 'object' ? String((item as Record<string, unknown>).text || '') : ''))
+            .map((item) =>
+                item && typeof item === 'object'
+                    ? String((item as Record<string, unknown>).text || '')
+                    : ''
+            )
             .join('\n')
             .trim();
         if (!text) {
@@ -471,16 +682,15 @@ export class LlmProviderClient {
         return text;
     }
 
-    private async callOllama(
-        provider: LlmProviderConfig,
-        args: {
-            model: string;
-            prompt: string;
-            content: string;
-            maxTokens: number;
-            signal?: AbortSignal;
-        }
-    ): Promise<string> {
+    private async callOllama(args: {
+        provider: LlmProviderConfig;
+        model: string;
+        prompt: string;
+        content: string;
+        maxTokens: number;
+        signal?: AbortSignal;
+    }): Promise<string> {
+        const { provider } = args;
         const url = joinUrl(provider.baseUrl, 'chat');
         const payload = {
             model: args.model,
@@ -490,7 +700,7 @@ export class LlmProviderClient {
             ],
             stream: false,
             options: {
-                temperature: provider.temperature,
+                temperature: Number.isFinite(provider.temperature) ? provider.temperature : 0.5,
                 num_predict: args.maxTokens,
             },
         };
@@ -504,7 +714,10 @@ export class LlmProviderClient {
             signal: args.signal,
         });
         const data = await this.parseJsonResponse(response, provider.name);
-        const message = (data.message || {}) as Record<string, unknown>;
+        const message =
+            data.message && typeof data.message === 'object'
+                ? (data.message as Record<string, unknown>)
+                : {};
         const text = String(message.content || '').trim();
         if (!text) {
             throw new NetworkError('Ollama returned no completion content.');
@@ -512,4 +725,3 @@ export class LlmProviderClient {
         return text;
     }
 }
-

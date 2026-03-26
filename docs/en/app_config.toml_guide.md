@@ -1,16 +1,20 @@
-# 2026-03-25 v1.6.0
+# 2026-03-26 v1.6.6
 
 # app_config.toml Guide
 
-This guide explains how to configure NoteConnection runtime behavior through `app_config.toml`.
+This guide explains how NoteConnection `v1.6.6+` unifies runtime settings for:
+
+- Tauri shell/runtime policy
+- Godot Path Mode UI/runtime
+- NoteMD LLM workflow/runtime
 
 ## 1. What This File Controls
 
-`app_config.toml` controls:
+`app_config.toml` is now the single persisted source for:
 
-- Knowledge base root path persistence.
-- UI language (`en` / `zh`).
-- Multi-window runtime policy between Tauri and Godot.
+- `knowledge_base_path`, `user_language`, and `[multi_window]` (Tauri runtime).
+- `[path_mode]` (Godot runtime settings that were previously split to local cfg).
+- `[notemd]` + `[[notemd.providers]]` (full NoteMD settings + provider registry values).
 
 ## 2. Where NoteConnection Reads `app_config.toml`
 
@@ -19,19 +23,19 @@ Resolution order (highest priority first):
 1. `NOTE_CONNECTION_CONFIG_PATH` (exact file path).
 2. `NOTE_CONNECTION_CONFIG_DIR` + `/app_config.toml`.
 3. Default path:
-   - Windows: `%LOCALAPPDATA%/NoteConnection/app_config.toml`.
+   - Windows: `%LOCALAPPDATA%/NoteConnection/app_config.toml`
 
 Legacy compatibility:
 
-- If `kb_config.json` exists in the same config directory, NoteConnection automatically migrates it to `app_config.toml` at startup.
+- If legacy `kb_config.json` exists in the same config directory, startup migrates it to TOML.
 
-## 3. Template (Recommended Starting Point)
-
-Use the canonical template:
+## 3. Canonical Template
 
 - [`docs/examples/app_config.template.toml`](../examples/app_config.template.toml)
 
-Quick inline template:
+## 4. Key Sections
+
+### 4.1 Core Runtime (Tauri)
 
 ```toml
 knowledge_base_path = "E:/Knowledge_project/NoteConnection_app/Knowledge_Base"
@@ -45,72 +49,64 @@ confirm_before_full_shutdown_from_godot = true
 sync_language = true
 ```
 
-## 4. Parameter Semantics and Effects
-
-| Key | Type | Default | Allowed Values | Effect |
-|---|---|---|---|---|
-| `knowledge_base_path` | `string` | auto default KB path | existing directory path | Persists KB root. If the path is inside `Knowledge_Base`, runtime normalizes to the `Knowledge_Base` root. |
-| `user_language` | `string` | `"en"` | `"en"`, `"zh"` | Sets app language. Any other value resolves to `"en"`. |
-| `multi_window.single_window_mode` | `bool` | `true` | `true`/`false` | Controls startup mode and Godot launch visibility strategy. |
-| `multi_window.hide_tauri_when_pathmode_opens` | `bool` | `true` | `true`/`false` | If true, Tauri hides when Path Mode opens. |
-| `multi_window.restore_tauri_when_pathmode_exits` | `bool` | `true` | `true`/`false` | If true, Tauri restores/focuses when Path Mode exits. |
-| `multi_window.confirm_before_full_shutdown_from_godot` | `bool` | `true` | `true`/`false` | If true, closing Godot shows a confirmation dialog ("return" vs "close all"). |
-| `multi_window.sync_language` | `bool` | `true` | `true`/`false` | If true, language updates are synchronized across runtime windows. |
-
-Compatibility aliases (accepted for migration):
-
-- `knowledgeBasePath` -> `knowledge_base_path`
-- `userLanguage` -> `user_language`
-- `[multiWindow]` -> `[multi_window]`
-- `singleWindowMode` -> `single_window_mode`
-- `hideTauriWhenPathmodeOpens` -> `hide_tauri_when_pathmode_opens`
-- `restoreTauriWhenPathmodeExits` -> `restore_tauri_when_pathmode_exits`
-- `confirmBeforeFullShutdownFromGodot` -> `confirm_before_full_shutdown_from_godot`
-- `syncLanguage` -> `sync_language`
-
-## 5. Recommended Presets
-
-### A) Strict single-window (recommended)
+### 4.2 Godot Path Mode Runtime
 
 ```toml
-[multi_window]
-single_window_mode = true
-hide_tauri_when_pathmode_opens = true
-restore_tauri_when_pathmode_exits = true
-confirm_before_full_shutdown_from_godot = true
-sync_language = true
+[path_mode]
+auto_reconstruct = true
+retain_history = true
+focus_mode = true
+background = "belfast_sunset_puresky_4k.exr"
+bg_brightness = 1.0
+reading_mode = "window"
+reader_render_mode = "render"
+reader_toggle_source_shortcut = "Ctrl+M"
+reader_media_scale = 1.5
+reader_debug = false
+node_spacing = 240.0
 ```
 
-Behavior:
-
-- Only one primary frontend window is visible at a time.
-- Path Mode close requires explicit user choice.
-
-### B) Dev co-visibility / debugging mode
+### 4.3 NoteMD Runtime + Provider Strategy
 
 ```toml
-[multi_window]
-single_window_mode = false
-hide_tauri_when_pathmode_opens = false
-restore_tauri_when_pathmode_exits = true
-confirm_before_full_shutdown_from_godot = true
-sync_language = true
+[notemd]
+active_provider = "DeepSeek"
+developer_mode = false
+chunk_word_count = 2800
+max_tokens = 4096
+max_retries = 3
+retry_delay_ms = 1200
+auto_mermaid_fix_after_generate = false
+
+[[notemd.providers]]
+name = "DeepSeek"
+api_key = ""
+base_url = "https://api.deepseek.com/v1"
+model = "deepseek-reasoner"
+temperature = 0.5
+api_version = ""
+enabled = true
 ```
 
-Behavior:
+Built-in provider names include:
 
-- Tauri can remain visible while Path Mode opens.
-- Useful for debugging bridge/UI interactions.
+`DeepSeek`, `OpenAI`, `Anthropic`, `Google`, `Mistral`, `Azure OpenAI`, `LMStudio`, `Ollama`, `OpenRouter`, `xAI`, `Qwen`, `Doubao`, `Moonshot`, `GLM`, `MiniMax`, `Groq`, `Together`, `Fireworks`, `Requesty`, `OpenAI Compatible`.
 
-## 6. Safe Update Workflow
+## 5. API Calling Flow (v1.6.6)
 
-1. Exit NoteConnection.
-2. Edit `app_config.toml`.
-3. Save file with UTF-8 text encoding.
-4. Start NoteConnection again.
-5. Validate:
-   - Main window/Path Mode handoff follows your multi-window policy.
-   - Language and KB path are loaded as expected.
+NoteMD provider calls are now definition-driven:
+
+1. Resolve provider definition (`transport`, `apiKeyMode`, `apiTestMode`).
+2. Dispatch by transport (`openai-compatible`, `anthropic`, `google`, `azure-openai`, `ollama`).
+3. Apply provider-specific headers/policies.
+4. Use retry/backoff with `Retry-After` awareness for retryable HTTP failures.
+5. Use provider-aware connectivity probing (`models-then-chat` or `chat-only`).
+
+## 6. Safety Notes
+
+- Keep `app_config.toml` in UTF-8.
+- For PDF sources, convert to Markdown with Mineru before importing into NoteMD.
+- If you run standalone Godot without sidecar runtime, local fallback settings may still be used for development, but host runtime prefers TOML-backed settings.
 
 ## 7. Related Diataxis Pages
 

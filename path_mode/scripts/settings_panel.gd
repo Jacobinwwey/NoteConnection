@@ -4,6 +4,7 @@ extends PopupPanel
 signal settings_changed(settings: Dictionary)
 
 const SETTINGS_FILE := "user://settings.cfg"
+const PATH_MODE_SETTINGS_ENDPOINT := "/api/path-mode/settings"
 const BACKGROUNDS_DIR := "res://assets/backgrounds"
 const DEFAULT_READER_TOGGLE_SHORTCUT := "Ctrl+M"
 const READER_MEDIA_SCALE_MIN := 0.10
@@ -27,6 +28,9 @@ var _node_spacing_slider: HSlider
 var _node_spacing_label: Label
 
 var _background_files: Array[String] = []
+var _runtime_base_url := ""
+var _runtime_save_in_flight := false
+var _runtime_save_pending := false
 
 var _settings: Dictionary = {
 	"auto_reconstruct": true,
@@ -45,6 +49,7 @@ var _settings: Dictionary = {
 func _ready() -> void:
 	size = Vector2i(460, 520)
 	_scan_backgrounds()
+	_runtime_base_url = _resolve_runtime_base_url()
 	_load_settings()
 
 	if _auto_reconstruct_check:
@@ -378,8 +383,21 @@ func _save_and_emit(refresh_ui: bool = true) -> void:
 	_save_settings()
 	if refresh_ui:
 		_update_ui()
+	settings_changed.emit(_settings.duplicate(true))
 
 func _save_settings() -> void:
+	if _runtime_base_url.is_empty():
+		_save_settings_local()
+		return
+
+	if _runtime_save_in_flight:
+		_runtime_save_pending = true
+		return
+
+	_runtime_save_in_flight = true
+	call_deferred("_save_settings_to_runtime_async")
+
+func _save_settings_local() -> void:
 	var config := ConfigFile.new()
 	for key in _settings:
 		config.set_value("path_mode", key, _settings[key])
@@ -387,6 +405,11 @@ func _save_settings() -> void:
 	config.save(SETTINGS_FILE)
 
 func _load_settings() -> void:
+	_load_settings_local()
+	if not _runtime_base_url.is_empty():
+		call_deferred("_load_settings_from_runtime_async")
+
+func _load_settings_local() -> void:
 	var config := ConfigFile.new()
 	var err := config.load(SETTINGS_FILE)
 	if err == OK:
@@ -400,11 +423,155 @@ func _load_settings() -> void:
 			for key in _settings.keys():
 				config.set_value("path_mode", key, _settings[key])
 			config.save(SETTINGS_FILE)
-		_settings["reader_toggle_source_shortcut"] = _normalize_shortcut_value(String(_settings.get("reader_toggle_source_shortcut", DEFAULT_READER_TOGGLE_SHORTCUT)))
-		_settings["reader_media_scale"] = clampf(float(_settings.get("reader_media_scale", READER_MEDIA_SCALE_DEFAULT)), READER_MEDIA_SCALE_MIN, READER_MEDIA_SCALE_MAX)
-		_settings["reader_debug"] = bool(_settings.get("reader_debug", false))
-		_settings["node_spacing"] = clampf(float(_settings.get("node_spacing", 240.0)), 100.0, 600.0)
+		_normalize_settings_values()
+	elif _runtime_base_url.is_empty():
+		_save_settings_local()
+
+func _normalize_settings_values() -> void:
+	_settings["auto_reconstruct"] = bool(_settings.get("auto_reconstruct", true))
+	_settings["retain_history"] = bool(_settings.get("retain_history", true))
+	_settings["focus_mode"] = bool(_settings.get("focus_mode", true))
+	_settings["background"] = String(_settings.get("background", ""))
+	_settings["bg_brightness"] = clampf(float(_settings.get("bg_brightness", 1.0)), 0.01, 10.0)
+
+	var reading_mode := String(_settings.get("reading_mode", "window")).to_lower()
+	_settings["reading_mode"] = "fullscreen" if reading_mode == "fullscreen" else "window"
+
+	var render_mode := String(_settings.get("reader_render_mode", "render")).to_lower()
+	_settings["reader_render_mode"] = "source" if render_mode == "source" else "render"
+
+	_settings["reader_toggle_source_shortcut"] = _normalize_shortcut_value(
+		String(_settings.get("reader_toggle_source_shortcut", DEFAULT_READER_TOGGLE_SHORTCUT))
+	)
+	_settings["reader_media_scale"] = clampf(
+		float(_settings.get("reader_media_scale", READER_MEDIA_SCALE_DEFAULT)),
+		READER_MEDIA_SCALE_MIN,
+		READER_MEDIA_SCALE_MAX
+	)
+	_settings["reader_debug"] = bool(_settings.get("reader_debug", false))
+	_settings["node_spacing"] = clampf(float(_settings.get("node_spacing", 240.0)), 100.0, 600.0)
+
+func _resolve_runtime_base_url() -> String:
+	var explicit_base := OS.get_environment("NOTE_CONNECTION_BASE_URL").strip_edges()
+	if not explicit_base.is_empty():
+		return explicit_base.trim_suffix("/")
+
+	var port_text := OS.get_environment("NOTE_CONNECTION_PORT").strip_edges()
+	if port_text.is_valid_int():
+		var port := int(port_text)
+		if port > 0:
+			return "http://127.0.0.1:%d" % port
+	return ""
+
+func _apply_remote_settings(remote_settings: Dictionary) -> void:
+	for key in _settings.keys():
+		if remote_settings.has(key):
+			_settings[key] = remote_settings[key]
+	_normalize_settings_values()
+
+func _request_runtime_json(path_suffix: String, method: int, body: Dictionary = {}) -> Dictionary:
+	if _runtime_base_url.is_empty():
+		return {
+			"ok": false,
+			"error": "Runtime API unavailable."
+		}
+
+	var request := HTTPRequest.new()
+	add_child(request)
+
+	var url := "%s%s" % [_runtime_base_url, path_suffix]
+	var headers := PackedStringArray()
+	var auth_token := OS.get_environment("NOTE_CONNECTION_AUTH_TOKEN").strip_edges()
+	if not auth_token.is_empty():
+		headers.append("X-NoteConnection-Token: %s" % auth_token)
+	var payload := ""
+	if method != HTTPClient.METHOD_GET:
+		headers.append("Content-Type: application/json")
+		payload = JSON.stringify(body)
+
+	var request_err := request.request(url, headers, method, payload)
+	if request_err != OK:
+		request.queue_free()
+		return {
+			"ok": false,
+			"error": "HTTPRequest failed to start (%s)." % request_err
+		}
+
+	var response: Array = await request.request_completed
+	request.queue_free()
+
+	if response.size() < 4:
+		return {
+			"ok": false,
+			"error": "Malformed HTTP response."
+		}
+
+	var response_code := int(response[1])
+	var response_body := ""
+	if response[3] is PackedByteArray:
+		response_body = (response[3] as PackedByteArray).get_string_from_utf8()
+
+	var decoded := JSON.parse_string(response_body)
+	if typeof(decoded) != TYPE_DICTIONARY:
+		if response_code >= 200 and response_code < 300:
+			return {
+				"ok": false,
+				"error": "Invalid JSON response from runtime settings API."
+			}
+		return {
+			"ok": false,
+			"error": "Runtime settings API request failed (HTTP %d)." % response_code
+		}
+
+	var payload_dict: Dictionary = decoded
+	if response_code < 200 or response_code >= 300:
+		return {
+			"ok": false,
+			"error": String(payload_dict.get("error", "Runtime settings API request failed."))
+		}
+
+	return {
+		"ok": true,
+		"data": payload_dict
+	}
+
+func _load_settings_from_runtime_async() -> void:
+	var result: Dictionary = await _request_runtime_json(PATH_MODE_SETTINGS_ENDPOINT, HTTPClient.METHOD_GET)
+	if not bool(result.get("ok", false)):
+		push_warning("[SettingsPanel] Failed to load TOML path_mode settings: %s" % String(result.get("error", "unknown")))
+		return
+
+	var payload: Dictionary = result.get("data", {})
+	var remote_settings = payload.get("settings", {})
+	if typeof(remote_settings) != TYPE_DICTIONARY:
+		push_warning("[SettingsPanel] Runtime settings response does not contain a dictionary.")
+		return
+
+	_apply_remote_settings(remote_settings)
+	_update_ui()
+	settings_changed.emit(_settings.duplicate(true))
+
+func _save_settings_to_runtime_async() -> void:
+	var result: Dictionary = await _request_runtime_json(
+		PATH_MODE_SETTINGS_ENDPOINT,
+		HTTPClient.METHOD_POST,
+		{
+			"settings": _settings
+		}
+	)
+
+	if bool(result.get("ok", false)):
+		var payload: Dictionary = result.get("data", {})
+		var remote_settings = payload.get("settings", {})
+		if typeof(remote_settings) == TYPE_DICTIONARY:
+			_apply_remote_settings(remote_settings)
 	else:
+		push_warning("[SettingsPanel] Failed to persist TOML path_mode settings: %s. Falling back to local cfg." % String(result.get("error", "unknown")))
+		_save_settings_local()
+
+	_runtime_save_in_flight = false
+	if _runtime_save_pending:
+		_runtime_save_pending = false
 		_save_settings()
 
 func get_all_settings() -> Dictionary:

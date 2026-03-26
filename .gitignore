@@ -64,3 +64,7 @@ npm-debug.log*
 yarn-error.log*
 tmp
 .npm-cache
+
+# Local docs deploy/build artifacts
+.edgeone/
+build/mkdocs-site/

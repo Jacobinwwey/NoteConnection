@@ -1,5 +1,6 @@
 export * from './types';
 export * from './constants';
+export * from './LlmProviderDefinitions';
 export * from './BatchProcessor';
 export * from './PromptManager';
 export * from './LlmProvider';
@@ -10,4 +11,3 @@ export * from './MermaidProcessor';
 export * from './FormulaFixer';
 export * from './DuplicateDetector';
 export * from './NotemdService';
-

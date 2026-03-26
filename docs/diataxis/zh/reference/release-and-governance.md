@@ -19,6 +19,10 @@
 - Mobile e2e detox 合约工作流
 - NPM 发布策略门禁（SBOM + attestation）
 - Sidecar 签名与隐私策略校验
+- 文档发布工作流：
+  - `.github/workflows/docs-edgeone-publish.yml`
+- 文档发布与回滚运行手册：
+  - [`docs/zh/sharelife_community_release_and_rollback.md`](../../../zh/sharelife_community_release_and_rollback.md)
 
 ## 文档治理控制面
 
@@ -26,3 +30,5 @@
   - [docs/diataxis-map.json](../../../diataxis-map.json)
 - 映射校验命令：
   - `npm run docs:diataxis:check`
+- 一键文档发布命令：
+  - `npm run docs:edgeone:publish`

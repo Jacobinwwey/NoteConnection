@@ -8,7 +8,17 @@ export type LlmProviderName =
     | 'LMStudio'
     | 'Ollama'
     | 'OpenRouter'
-    | 'xAI';
+    | 'xAI'
+    | 'Qwen'
+    | 'Doubao'
+    | 'Moonshot'
+    | 'GLM'
+    | 'MiniMax'
+    | 'Groq'
+    | 'Together'
+    | 'Fireworks'
+    | 'Requesty'
+    | 'OpenAI Compatible';
 
 export type TaskKey =
     | 'extractConcepts'

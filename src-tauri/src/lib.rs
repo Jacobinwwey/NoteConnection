@@ -204,7 +204,26 @@ fn save_stored_config(config: &StoredConfig) -> Result<(), String> {
         ensure_directory(parent);
     }
 
-    let content = toml::to_string_pretty(config).map_err(|err| err.to_string())?;
+    let mut merged_table = toml::map::Map::new();
+    if let Ok(existing_content) = fs::read_to_string(&config_path) {
+        if let Ok(existing_value) = toml::from_str::<toml::Value>(&existing_content) {
+            if let Some(existing_table) = existing_value.as_table() {
+                merged_table = existing_table.clone();
+            }
+        }
+    }
+
+    let config_value = toml::Value::try_from(config).map_err(|err| err.to_string())?;
+    let Some(config_table) = config_value.as_table() else {
+        return Err("Failed to serialize stored config to TOML table.".to_string());
+    };
+
+    for (key, value) in config_table {
+        merged_table.insert(key.clone(), value.clone());
+    }
+
+    let merged_value = toml::Value::Table(merged_table);
+    let content = toml::to_string_pretty(&merged_value).map_err(|err| err.to_string())?;
     fs::write(&config_path, content).map_err(|err| err.to_string())
 }
 
@@ -2589,6 +2608,52 @@ sync_language = true
         assert!(runtime_config.multi_window.restore_tauri_when_pathmode_exits);
         assert!(!runtime_config.multi_window.confirm_before_full_shutdown_from_godot);
         assert!(runtime_config.multi_window.sync_language);
+    }
+
+    #[test]
+    fn save_stored_config_preserves_unknown_toml_sections() {
+        let _lock = lock_test_env();
+        let temp = TempDir::new("preserve_unknown_sections");
+        let config_file = temp.child("app_config.toml");
+
+        fs::write(
+            &config_file,
+            r#"
+knowledge_base_path = "E:/Knowledge_Base"
+user_language = "en"
+
+[multi_window]
+single_window_mode = true
+hide_tauri_when_pathmode_opens = true
+restore_tauri_when_pathmode_exits = true
+confirm_before_full_shutdown_from_godot = true
+sync_language = true
+
+[notemd]
+developer_mode = true
+chunk_word_count = 2800
+
+[path_mode]
+auto_reconstruct = true
+reader_media_scale = 1.5
+"#,
+        )
+        .expect("failed to write seed app_config.toml");
+
+        let _config_guard = EnvVarGuard::set(
+            "NOTE_CONNECTION_CONFIG_PATH",
+            config_file.to_string_lossy().as_ref(),
+        );
+
+        let persisted_lang = persist_user_language("zh").expect("persist_user_language should work");
+        assert_eq!(persisted_lang, "zh");
+
+        let updated = fs::read_to_string(&config_file).expect("failed to read updated config");
+        assert!(updated.contains("user_language = \"zh\""));
+        assert!(updated.contains("[notemd]"));
+        assert!(updated.contains("developer_mode = true"));
+        assert!(updated.contains("[path_mode]"));
+        assert!(updated.contains("reader_media_scale = 1.5"));
     }
 
     #[test]

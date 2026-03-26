@@ -1,37 +1,41 @@
-# 2026-03-25 v1.6.0
+# 2026-03-26 v1.6.6
 
 # app_config.toml 配置指南
 
-本指南用于说明如何通过 `app_config.toml` 配置 NoteConnection 的运行时行为。
+本指南说明 NoteConnection `v1.6.6+` 如何将以下运行时配置统一到同一个 `app_config.toml`：
 
-## 1. 这个文件控制什么
+- Tauri 壳层/运行策略
+- Godot Path Mode 界面与运行参数
+- NoteMD 的 LLM 工作流与 Provider 参数
 
-`app_config.toml` 负责以下配置：
+## 1. 这个文件现在控制什么
 
-- 知识库根目录（KB）持久化。
-- 界面语言（`en` / `zh`）。
-- Tauri 与 Godot 之间的多窗口运行策略。
+`app_config.toml` 已成为统一持久化入口：
+
+- `knowledge_base_path`、`user_language`、`[multi_window]`（Tauri 运行配置）
+- `[path_mode]`（Godot 运行配置，替代原先分散的本地 cfg）
+- `[notemd]` + `[[notemd.providers]]`（NoteMD 全量配置 + Provider 列表）
 
 ## 2. NoteConnection 如何定位 `app_config.toml`
 
 读取优先级（从高到低）：
 
-1. `NOTE_CONNECTION_CONFIG_PATH`（完整文件路径）。
-2. `NOTE_CONNECTION_CONFIG_DIR` + `/app_config.toml`。
+1. `NOTE_CONNECTION_CONFIG_PATH`（完整文件路径）
+2. `NOTE_CONNECTION_CONFIG_DIR` + `/app_config.toml`
 3. 默认路径：
-   - Windows：`%LOCALAPPDATA%/NoteConnection/app_config.toml`。
+   - Windows：`%LOCALAPPDATA%/NoteConnection/app_config.toml`
 
 旧配置兼容：
 
-- 若同目录存在 `kb_config.json`，启动时会自动迁移为 `app_config.toml`。
+- 若同目录存在旧版 `kb_config.json`，启动时会自动迁移为 TOML。
 
-## 3. 模板（推荐起点）
-
-请优先使用权威模板：
+## 3. 权威模板
 
 - [`docs/examples/app_config.template.toml`](../examples/app_config.template.toml)
 
-快速模板如下：
+## 4. 核心分段示例
+
+### 4.1 Tauri 核心运行配置
 
 ```toml
 knowledge_base_path = "E:/Knowledge_project/NoteConnection_app/Knowledge_Base"
@@ -45,72 +49,64 @@ confirm_before_full_shutdown_from_godot = true
 sync_language = true
 ```
 
-## 4. 参数语义与效果
-
-| 键 | 类型 | 默认值 | 可选值 | 效果 |
-|---|---|---|---|---|
-| `knowledge_base_path` | `string` | 自动默认 KB 路径 | 已存在目录路径 | 持久化 KB 根目录。若路径在 `Knowledge_Base` 子目录内，运行时会自动归一到 `Knowledge_Base` 根。 |
-| `user_language` | `string` | `"en"` | `"en"`、`"zh"` | 设置应用语言。其它值会回退到 `"en"`。 |
-| `multi_window.single_window_mode` | `bool` | `true` | `true`/`false` | 控制启动模式与 Godot 初始可见策略。 |
-| `multi_window.hide_tauri_when_pathmode_opens` | `bool` | `true` | `true`/`false` | 为 true 时，进入 Path Mode 后隐藏 Tauri。 |
-| `multi_window.restore_tauri_when_pathmode_exits` | `bool` | `true` | `true`/`false` | 为 true 时，退出 Path Mode 后恢复并聚焦 Tauri。 |
-| `multi_window.confirm_before_full_shutdown_from_godot` | `bool` | `true` | `true`/`false` | 为 true 时，关闭 Godot 会先弹确认框（返回主界面/关闭全部）。 |
-| `multi_window.sync_language` | `bool` | `true` | `true`/`false` | 为 true 时，语言更新会在运行时窗口间同步。 |
-
-兼容别名（迁移场景可识别）：
-
-- `knowledgeBasePath` -> `knowledge_base_path`
-- `userLanguage` -> `user_language`
-- `[multiWindow]` -> `[multi_window]`
-- `singleWindowMode` -> `single_window_mode`
-- `hideTauriWhenPathmodeOpens` -> `hide_tauri_when_pathmode_opens`
-- `restoreTauriWhenPathmodeExits` -> `restore_tauri_when_pathmode_exits`
-- `confirmBeforeFullShutdownFromGodot` -> `confirm_before_full_shutdown_from_godot`
-- `syncLanguage` -> `sync_language`
-
-## 5. 推荐方案
-
-### A) 严格单窗口（推荐）
+### 4.2 Godot Path Mode 运行配置
 
 ```toml
-[multi_window]
-single_window_mode = true
-hide_tauri_when_pathmode_opens = true
-restore_tauri_when_pathmode_exits = true
-confirm_before_full_shutdown_from_godot = true
-sync_language = true
+[path_mode]
+auto_reconstruct = true
+retain_history = true
+focus_mode = true
+background = "belfast_sunset_puresky_4k.exr"
+bg_brightness = 1.0
+reading_mode = "window"
+reader_render_mode = "render"
+reader_toggle_source_shortcut = "Ctrl+M"
+reader_media_scale = 1.5
+reader_debug = false
+node_spacing = 240.0
 ```
 
-效果：
-
-- 任意时刻仅显示一个主前端窗口。
-- 关闭 Path Mode 时会要求用户明确选择。
-
-### B) 联调并行可见模式（开发调试）
+### 4.3 NoteMD 配置与 Provider 策略
 
 ```toml
-[multi_window]
-single_window_mode = false
-hide_tauri_when_pathmode_opens = false
-restore_tauri_when_pathmode_exits = true
-confirm_before_full_shutdown_from_godot = true
-sync_language = true
+[notemd]
+active_provider = "DeepSeek"
+developer_mode = false
+chunk_word_count = 2800
+max_tokens = 4096
+max_retries = 3
+retry_delay_ms = 1200
+auto_mermaid_fix_after_generate = false
+
+[[notemd.providers]]
+name = "DeepSeek"
+api_key = ""
+base_url = "https://api.deepseek.com/v1"
+model = "deepseek-reasoner"
+temperature = 0.5
+api_version = ""
+enabled = true
 ```
 
-效果：
+内置 Provider 名称包括：
 
-- 打开 Path Mode 时可保留 Tauri 可见。
-- 适用于桥接通信和界面联调。
+`DeepSeek`、`OpenAI`、`Anthropic`、`Google`、`Mistral`、`Azure OpenAI`、`LMStudio`、`Ollama`、`OpenRouter`、`xAI`、`Qwen`、`Doubao`、`Moonshot`、`GLM`、`MiniMax`、`Groq`、`Together`、`Fireworks`、`Requesty`、`OpenAI Compatible`。
 
-## 6. 安全修改流程
+## 5. v1.6.6 的 API 调用流程
 
-1. 退出 NoteConnection。
-2. 编辑 `app_config.toml`。
-3. 使用 UTF-8 编码保存。
-4. 重新启动 NoteConnection。
-5. 验证：
-   - 主窗口与 Path Mode 切换行为符合你的多窗口策略。
-   - 语言与 KB 路径按预期加载。
+NoteMD 的 Provider 调用流程已改为“定义驱动”：
+
+1. 读取 provider definition（`transport`、`apiKeyMode`、`apiTestMode`）
+2. 按 transport 分发（`openai-compatible`、`anthropic`、`google`、`azure-openai`、`ollama`）
+3. 应用 provider 级请求头与策略
+4. 对可重试 HTTP 错误执行带 `Retry-After` 感知的重试退避
+5. 按 provider 测试模式进行连通性探测（`models-then-chat` 或 `chat-only`）
+
+## 6. 使用注意事项
+
+- 编辑并保存为 UTF-8 编码文本。
+- PDF 文件需要先用 Mineru 转为 Markdown，再导入 NoteMD。
+- 独立运行 Godot 时可使用本地回退配置；在宿主运行时，优先使用 TOML 统一配置。
 
 ## 7. 关联 Diataxis 页面
 

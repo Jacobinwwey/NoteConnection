@@ -19,6 +19,10 @@
 - Mobile e2e detox contracts workflow
 - NPM publish policy gates (SBOM + attestation)
 - Sidecar signature and privacy policy checks
+- Docs deploy workflow:
+  - `.github/workflows/docs-edgeone-publish.yml`
+- Docs release and rollback runbook:
+  - [`docs/en/sharelife_community_release_and_rollback.md`](../../../en/sharelife_community_release_and_rollback.md)
 
 ## Docs Governance Controls
 
@@ -26,3 +30,5 @@
   - [docs/diataxis-map.json](../../../diataxis-map.json)
 - Mapping verifier:
   - `npm run docs:diataxis:check`
+- One-click docs publish:
+  - `npm run docs:edgeone:publish`

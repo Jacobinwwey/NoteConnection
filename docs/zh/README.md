@@ -1,4 +1,4 @@
-
+﻿
 ### Legacy Navigation Row (from shared bilingual table)
 |  **中文**   |   [核心特性](#key-features-zh)   | [硬件配置](#hardware-zh) |   [系统架构](#architecture-zh)   |  [快速开始](#quick-start-zh)   | [CLI](#cli-zh) | [更新日志](#changelog-zh)  |
 
@@ -325,6 +325,22 @@ sync_language = true
 <a id="changelog-zh"></a>
 
 ## 更新日志 (Changelog)
+
+### v1.6.6 - Provider 运行时流程与 TOML 配置统一 (2026-03-26)
+- 参考 obsidian-NotEMD 与 cline 的 Provider 策略，重构 NoteMD API 调用流为“定义驱动”：transport 分发 + provider 元数据 + Retry-After 感知重试。
+- 扩展内置 Provider 预设：Qwen、Doubao、Moonshot、GLM、MiniMax、Groq、Together、Fireworks、Requesty、OpenAI Compatible。
+- 完成 Tauri + Godot + NoteMD 的 app_config.toml 统一配置：
+  - NoteMD 全量配置持久化到 [notemd] + [[notemd.providers]]
+  - Path Mode 配置持久化到 [path_mode] 并通过 /api/path-mode/settings 读写
+  - 保留 [notemd.api] 兼容镜像。
+- 加固 Rust TOML 回写逻辑：保留未知 section，避免 Tauri 更新 KB/语言时覆盖 NoteMD/Path Mode 配置。
+
+### v1.6.5 - 文档门户更新 (2026-03-26)
+- 已将 MkDocs 文档发布到 EdgeOne Pages 项目 `noteconnection-docs`。
+- 在 README 中补充了面向用户与开发者的中英文文档检索入口。
+- 维护者发布命令统一为：
+  - `npm run docs:site:build`
+  - `edgeone pages deploy build/mkdocs-site -n noteconnection-docs -e production -a global`
 
 ### v1.6.0 - 单窗口运行时、NoteMD 集成与发布加固 (2026-03-23)
 

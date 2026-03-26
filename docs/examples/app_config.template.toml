@@ -1,5 +1,6 @@
-# NoteConnection application runtime configuration template (v1.6.0+)
+# NoteConnection application runtime configuration template (v1.6.6+)
 # Save this as app_config.toml in your config directory.
+#
 # Default Windows location:
 #   %LOCALAPPDATA%/NoteConnection/app_config.toml
 #
@@ -7,57 +8,191 @@
 #   NOTE_CONNECTION_CONFIG_PATH=<absolute file path>
 #   NOTE_CONNECTION_CONFIG_DIR=<directory containing app_config.toml>
 
-# Knowledge base root directory.
-# Path must exist and be a directory.
-# If you point to a subfolder inside Knowledge_Base, NoteConnection normalizes it to the Knowledge_Base root.
-knowledge_base_path = "E:/Knowledge_project/NoteConnection_app/Knowledge_Base"
+# -----------------------------------------------------------------------------
+# Core Tauri Runtime
+# -----------------------------------------------------------------------------
 
-# UI language.
-# Allowed values: "en", "zh"
-# Any other value falls back to "en".
-user_language = "en"
+knowledge_base_path = "E:/Knowledge_project/NoteConnection_app/Knowledge_Base"
+user_language = "en" # allowed: "en", "zh"
 
 [multi_window]
-# true  -> single-window handoff: Tauri shown by default, Godot hidden until Path Mode.
-# false -> allow non-single-window startup behavior (Godot may be visible by default).
 single_window_mode = true
-
-# true  -> hide Tauri window when Path Mode (Godot) opens.
-# false -> keep Tauri visible while opening Path Mode.
 hide_tauri_when_pathmode_opens = true
-
-# true  -> restore and focus Tauri when exiting Path Mode.
-# false -> do not automatically restore Tauri on Path Mode exit.
 restore_tauri_when_pathmode_exits = true
-
-# true  -> when user closes Godot window, ask whether to return to main window or close all windows.
-# false -> skip confirmation flow and use direct close behavior.
 confirm_before_full_shutdown_from_godot = true
-
-# true  -> keep language synchronized across Tauri and Godot runtime.
-# false -> disable runtime language sync broadcast to Path Mode.
 sync_language = true
 
+# -----------------------------------------------------------------------------
+# Godot Path Mode Runtime (unified in app_config.toml)
+# -----------------------------------------------------------------------------
+
+[path_mode]
+auto_reconstruct = true
+retain_history = true
+focus_mode = true
+background = "belfast_sunset_puresky_4k.exr"
+bg_brightness = 1.0
+reading_mode = "window" # "window" | "fullscreen"
+reader_render_mode = "render" # "render" | "source"
+reader_toggle_source_shortcut = "Ctrl+M"
+reader_media_scale = 1.5 # clamped to [0.1, 3.0]
+reader_debug = false
+node_spacing = 240.0 # clamped to [100, 600]
+
+# -----------------------------------------------------------------------------
+# NoteMD Runtime (unified in app_config.toml)
+# -----------------------------------------------------------------------------
+
 [notemd]
-# true  -> show developer-only step-by-step processing controls in the embedded NoteMD window.
-# false -> keep the UI focused on the default One-Click Extract workflow.
+active_provider = "DeepSeek"
 developer_mode = false
 
-# Default language used by embedded NoteMD prompts/settings.
-language = "en"
+use_custom_concept_note_folder = false
+concept_note_folder = "Concepts"
+use_custom_processed_file_folder = false
+processed_file_folder = "Processed"
 
-# Max approximate words per chunk sent to the extraction model.
 chunk_word_count = 2800
-
-# Max completion tokens for NoteMD generation/extraction requests.
 max_tokens = 4096
+enable_duplicate_detection = true
+move_original_file_on_process = false
 
-# true  -> automatically run Mermaid repair after Mermaid-producing generation flows.
-# false -> leave generated Mermaid untouched unless manually fixed.
-auto_mermaid_fix_after_generate = true
+enable_research_in_generate_content = false
+focused_learning_domain = ""
+enable_focused_learning = false
 
+use_multi_model_settings = false
+add_links_provider = "DeepSeek"
+research_provider = "DeepSeek"
+generate_title_provider = "DeepSeek"
+translate_provider = "DeepSeek"
+summarize_to_mermaid_provider = "DeepSeek"
+extract_concepts_provider = "DeepSeek"
+extract_original_text_provider = "DeepSeek"
+
+add_links_model = ""
+research_model = ""
+generate_title_model = ""
+translate_model = ""
+summarize_to_mermaid_model = ""
+extract_concepts_model = ""
+extract_original_text_model = ""
+
+use_custom_add_links_suffix = false
+add_links_custom_suffix = ""
+use_custom_translation_suffix = false
+translation_custom_suffix = "_translated"
+use_custom_translation_save_path = false
+translation_save_path = ""
+use_custom_generate_title_output_folder = false
+generate_title_output_folder_name = "_complete"
+
+enable_batch_parallelism = true
+batch_concurrency = 2
+batch_size = 20
+batch_inter_delay_ms = 500
+api_call_interval_ms = 400
+
+max_retries = 3
+retry_delay_ms = 1200
+auto_mermaid_fix_after_generate = false
+
+language = "en"
+use_different_languages_for_tasks = false
+generate_title_language = "en"
+research_summarize_language = "en"
+add_links_language = "en"
+summarize_to_mermaid_language = "en"
+extract_concepts_language = "en"
+translate_language = "en"
+disable_auto_translation = false
+
+enable_global_custom_prompts = false
+
+# Task-level nested mirrors (equivalent to flat keys above).
+[notemd.task_providers]
+add_links_provider = "DeepSeek"
+research_provider = "DeepSeek"
+generate_title_provider = "DeepSeek"
+translate_provider = "DeepSeek"
+summarize_to_mermaid_provider = "DeepSeek"
+extract_concepts_provider = "DeepSeek"
+extract_original_text_provider = "DeepSeek"
+
+[notemd.task_models]
+add_links_model = ""
+research_model = ""
+generate_title_model = ""
+translate_model = ""
+summarize_to_mermaid_model = ""
+extract_concepts_model = ""
+extract_original_text_model = ""
+
+[notemd.task_languages]
+generate_title_language = "en"
+research_summarize_language = "en"
+add_links_language = "en"
+summarize_to_mermaid_language = "en"
+extract_concepts_language = "en"
+translate_language = "en"
+
+[notemd.custom_prompts]
+# Optional task prompt overrides:
+# extractConcepts = "..."
+# addLinks = "..."
+# generateTitle = "..."
+# translate = "..."
+# summarizeToMermaid = "..."
+# extractOriginalText = "..."
+
+# Available languages in NoteMD UI.
+[[notemd.available_languages]]
+code = "en"
+name = "English"
+
+[[notemd.available_languages]]
+code = "zh-CN"
+name = "简体中文"
+
+[[notemd.available_languages]]
+code = "zh-TW"
+name = "繁體中文"
+
+# Provider list. Add or remove entries as needed.
+# Built-in names include:
+# DeepSeek, OpenAI, Anthropic, Google, Mistral, Azure OpenAI, LMStudio, Ollama,
+# OpenRouter, xAI, Qwen, Doubao, Moonshot, GLM, MiniMax, Groq, Together,
+# Fireworks, Requesty, OpenAI Compatible
+
+[[notemd.providers]]
+name = "DeepSeek"
+api_key = ""
+base_url = "https://api.deepseek.com/v1"
+model = "deepseek-reasoner"
+temperature = 0.5
+api_version = ""
+enabled = true
+
+[[notemd.providers]]
+name = "OpenAI"
+api_key = ""
+base_url = "https://api.openai.com/v1"
+model = "gpt-4o"
+temperature = 0.5
+api_version = ""
+enabled = true
+
+[[notemd.providers]]
+name = "Qwen"
+api_key = ""
+base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+model = "qwen-max-latest"
+temperature = 0.5
+api_version = ""
+enabled = true
+
+# Backward-compatible legacy mirror for older builds.
 [notemd.api]
-# Active NoteMD API profile. This is the single embedded profile used by the NoteMD window and CLI.
 provider = "DeepSeek"
 base_url = "https://api.deepseek.com/v1"
 model = "deepseek-reasoner"

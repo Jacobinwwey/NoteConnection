@@ -1,4 +1,4 @@
-# 2026-03-24 v1.6.0
+﻿# 2026-03-24 v1.6.0
 
 # NoteConnection Knowledge Graph
 
@@ -341,6 +341,22 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 <a id="changelog-en"></a>
 
 ## 📅 Changelog
+
+### v1.6.6 - Unified Provider Runtime & TOML Settings Consolidation (2026-03-26)
+- Upgraded NoteMD provider calls to a definition-driven architecture with transport dispatch and provider metadata (apiKeyMode, apiTestMode, category).
+- Added expanded built-in provider presets (Qwen, Doubao, Moonshot, GLM, MiniMax, Groq, Together, Fireworks, Requesty, OpenAI Compatible) while keeping legacy compatibility.
+- Unified persisted settings across Tauri + Godot + NoteMD in app_config.toml:
+  - full NoteMD settings and provider registry ([notemd] + [[notemd.providers]])
+  - Path Mode runtime settings ([path_mode]) via /api/path-mode/settings
+  - migration-safe legacy [notemd.api] mirror.
+- Hardened Rust TOML save behavior to preserve unknown sections so Tauri writes do not erase NoteMD/Path Mode config blocks.
+
+### v1.6.5 - Documentation Portal Update (2026-03-26)
+- Published MkDocs docs to EdgeOne Pages project `noteconnection-docs`.
+- Added bilingual README navigation for user and developer doc entry points.
+- Standardized maintainer publish commands:
+  - `npm run docs:site:build`
+  - `edgeone pages deploy build/mkdocs-site -n noteconnection-docs -e production -a global`
 
 ### v1.6.0 - Unified Runtime, NoteMD Integration & Release Hardening (2026-03-23)
 
@@ -885,5 +901,4 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 - [x] **Worker Scaling**: Increased thread limit to 12.
 
 ---
-
 ---

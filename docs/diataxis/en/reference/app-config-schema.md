@@ -1,6 +1,6 @@
 # Reference: app_config.toml Schema
 
-This page defines the authoritative `app_config.toml` runtime schema for NoteConnection `v1.6.0+`.
+This page defines the authoritative `app_config.toml` schema for NoteConnection `v1.6.6+`.
 
 ## File Resolution Priority
 
@@ -8,11 +8,11 @@ This page defines the authoritative `app_config.toml` runtime schema for NoteCon
 2. `NOTE_CONNECTION_CONFIG_DIR` + `app_config.toml`
 3. `%LOCALAPPDATA%/NoteConnection/app_config.toml` (Windows default)
 
-Legacy file migration:
+Legacy migration:
 
-- Legacy `kb_config.json` in the same config directory is auto-migrated to TOML at startup.
+- Legacy `kb_config.json` is auto-migrated into TOML.
 
-## Schema
+## Canonical Shape
 
 ```toml
 knowledge_base_path = "E:/Knowledge_project/NoteConnection_app/Knowledge_Base"
@@ -24,19 +24,54 @@ hide_tauri_when_pathmode_opens = true
 restore_tauri_when_pathmode_exits = true
 confirm_before_full_shutdown_from_godot = true
 sync_language = true
+
+[path_mode]
+auto_reconstruct = true
+retain_history = true
+focus_mode = true
+background = "belfast_sunset_puresky_4k.exr"
+bg_brightness = 1.0
+reading_mode = "window"
+reader_render_mode = "render"
+reader_toggle_source_shortcut = "Ctrl+M"
+reader_media_scale = 1.5
+reader_debug = false
+node_spacing = 240.0
+
+[notemd]
+active_provider = "DeepSeek"
+developer_mode = false
+chunk_word_count = 2800
+max_tokens = 4096
+max_retries = 3
+retry_delay_ms = 1200
+auto_mermaid_fix_after_generate = false
+
+[[notemd.providers]]
+name = "DeepSeek"
+api_key = ""
+base_url = "https://api.deepseek.com/v1"
+model = "deepseek-reasoner"
+temperature = 0.5
+api_version = ""
+enabled = true
 ```
 
 ## Key Contract Table
 
 | Key | Type | Default | Constraints | Runtime Contract |
 |---|---|---|---|---|
-| `knowledge_base_path` | `string` | auto default KB root | must be an existing directory | Persisted KB root. Normalized to `Knowledge_Base` root if path points inside it. |
-| `user_language` | `string` | `"en"` | `"en"` or `"zh"` (`"zh-CN"` is not accepted and falls back to `"en"`) | Controls startup language and menu language. |
-| `multi_window.single_window_mode` | `bool` | `true` | boolean | Governs single-window startup/handoff policy and Godot launch visibility mode. |
-| `multi_window.hide_tauri_when_pathmode_opens` | `bool` | `true` | boolean | If true, `toggle_pathmode_window(show_godot=true)` hides Tauri main window. |
-| `multi_window.restore_tauri_when_pathmode_exits` | `bool` | `true` | boolean | If true, `toggle_pathmode_window(show_godot=false)` restores and focuses Tauri window. |
-| `multi_window.confirm_before_full_shutdown_from_godot` | `bool` | `true` | boolean | If true, Godot close flow requires confirmation ("return" vs "close all"). |
-| `multi_window.sync_language` | `bool` | `true` | boolean | If true, language updates emit runtime sync event payload to frontend windows. |
+| `knowledge_base_path` | `string` | auto KB root | existing directory | Tauri persisted KB root; normalizes subpaths inside `Knowledge_Base` to root. |
+| `user_language` | `string` | `"en"` | `"en"` or `"zh"` | Runtime language and menu language source. |
+| `multi_window.*` | `bool` | see template | boolean | Governs single-window handoff and shutdown confirmation policy. |
+| `path_mode.auto_reconstruct` | `bool` | `true` | boolean | Path reconstruction behavior toggle for Godot runtime. |
+| `path_mode.reader_media_scale` | `number` | `1.5` | clamped `[0.1, 3.0]` | Reader media rendering scale in Godot runtime. |
+| `path_mode.node_spacing` | `number` | `240` | clamped `[100, 600]` | Node spacing in Godot Path Mode tree render. |
+| `notemd.active_provider` | `string` | `"DeepSeek"` | provider name in `[[notemd.providers]]` | Active NoteMD provider used by default tasks. |
+| `notemd.providers[]` | array(table) | built-in presets | provider names + config fields | Provider registry used by definition-driven API dispatch. |
+| `notemd.max_retries` | `number` | `3` | `>=0` | Retry policy for LLM requests in NoteMD runtime. |
+| `notemd.retry_delay_ms` | `number` | `1200` | `>=0` | Base retry delay before exponential backoff. |
+| `notemd.api` | table | active provider mirror | optional legacy block | Legacy-compatible mirror retained for older runtimes. |
 
 ## Backward-Compatible Aliases
 
@@ -51,18 +86,6 @@ sync_language = true
 | `confirm_before_full_shutdown_from_godot` | `confirmBeforeFullShutdownFromGodot` |
 | `sync_language` | `syncLanguage` |
 
-## Runtime Projection to Frontend
-
-Frontend hydration uses `invoke('get_app_runtime_config')` and projects values to:
-
-- `window.__NC_APP_CONFIG.language`
-- `window.__NC_APP_CONFIG.multiWindow.singleWindowMode`
-- `window.__NC_APP_CONFIG.multiWindow.hideTauriWhenPathmodeOpens`
-- `window.__NC_APP_CONFIG.multiWindow.restoreTauriWhenPathmodeExits`
-- `window.__NC_APP_CONFIG.multiWindow.confirmBeforeFullShutdownFromGodot`
-- `window.__NC_APP_CONFIG.multiWindow.syncLanguage`
-
-## Canonical Detailed Sources
+## Related Pages
 
 - [docs/en/app_config.toml_guide.md](../../../en/app_config.toml_guide.md)
-- [docs/en/Interface Document.md](../../../en/Interface%20Document.md)

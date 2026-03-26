@@ -20,6 +20,7 @@ This documentation system is organized by Diataxis:
 npm run docs:diataxis:check
 mkdocs serve --config-file mkdocs.yml
 mkdocs build --config-file mkdocs.yml
+npm run docs:edgeone:publish
 ```
 
 ## Canonical Source Documents
@@ -29,6 +30,7 @@ mkdocs build --config-file mkdocs.yml
 - User manual: [docs/en/User_Manual.md](../../en/User_Manual.md)
 - app_config guide: [docs/en/app_config.toml_guide.md](../../en/app_config.toml_guide.md)
 - Release compare report: [docs/en/release_v1.6.0_report.md](../../en/release_v1.6.0_report.md)
+- Sharelife docs release + rollback: [docs/en/sharelife_community_release_and_rollback.md](../../en/sharelife_community_release_and_rollback.md)
 
 ## Runtime Config Entry Points
 

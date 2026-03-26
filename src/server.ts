@@ -23,9 +23,12 @@ import {
     type ProgressReporter,
 } from './notemd';
 import {
+    applyPathModeSettingsToAppConfig,
     applyNotemdSettingsToAppConfig,
+    extractPathModeSettingsFromAppConfig,
     extractNotemdSettingsFromAppConfig,
     loadAppConfigToml,
+    type PathModeSettings,
     saveAppConfigToml,
 } from './notemd/AppConfigToml';
 
@@ -148,6 +151,7 @@ const SIDECAR_RUNTIME_MANIFEST = path.join(runtimePaths.projectRoot, 'tmp', 'act
 const notemdService = new NotemdService();
 const notemdLlmClient = new LlmProviderClient();
 let cachedNotemdSettings: NotemdSettings | null = null;
+let cachedPathModeSettings: PathModeSettings | null = null;
 
 type NotemdOperationState = {
     id: string;
@@ -921,6 +925,35 @@ async function persistNotemdSettings(settingsLike: unknown): Promise<NotemdSetti
     await saveAppConfigToml(nextAppConfig);
     cachedNotemdSettings = cloneNotemdSettings(normalized);
     return cloneNotemdSettings(normalized);
+}
+
+function clonePathModeSettings(settings: PathModeSettings): PathModeSettings {
+    return JSON.parse(JSON.stringify(settings)) as PathModeSettings;
+}
+
+async function loadPathModeSettings(): Promise<PathModeSettings> {
+    if (cachedPathModeSettings) {
+        return clonePathModeSettings(cachedPathModeSettings);
+    }
+
+    try {
+        const appConfig = await loadAppConfigToml();
+        cachedPathModeSettings = extractPathModeSettingsFromAppConfig(appConfig);
+    } catch (error) {
+        warnDiagnostic('[PathMode] Failed to read TOML settings. Falling back to defaults.', error);
+        cachedPathModeSettings = extractPathModeSettingsFromAppConfig({});
+    }
+
+    return clonePathModeSettings(cachedPathModeSettings);
+}
+
+async function persistPathModeSettings(settingsLike: unknown): Promise<PathModeSettings> {
+    const appConfig = await loadAppConfigToml();
+    const nextAppConfig = applyPathModeSettingsToAppConfig(appConfig, settingsLike);
+    await saveAppConfigToml(nextAppConfig);
+    const persisted = extractPathModeSettingsFromAppConfig(nextAppConfig);
+    cachedPathModeSettings = clonePathModeSettings(persisted);
+    return clonePathModeSettings(persisted);
 }
 
 function generateNotemdOperationId(): string {
@@ -1726,6 +1759,25 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 return;
             }
 
+            if (getPathname === '/api/path-mode/settings') {
+                try {
+                    const settings = await loadPathModeSettings();
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(
+                        JSON.stringify({
+                            success: true,
+                            settings,
+                        })
+                    );
+                } catch (error) {
+                    console.error(error);
+                    CrashLogger.log(error, 'API:GET /api/path-mode/settings');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
             if (req.url === '/api/runtime-diagnostics') {
                 try {
                     const bridgeSummary = pathBridge && typeof (pathBridge as any).getClientSummary === 'function'
@@ -2107,6 +2159,27 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     }
                     console.error(error);
                     CrashLogger.log(error, 'API:POST /api/notemd/settings');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/path-mode/settings') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const settingsCandidate = isObjectRecord(payload) && payload.settings !== undefined
+                        ? payload.settings
+                        : payload;
+                    const settings = await persistPathModeSettings(settingsCandidate);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, settings }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/path-mode/settings');
                     res.writeHead(500, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ success: false, error: String(error) }));
                 }
