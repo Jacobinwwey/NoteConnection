@@ -18,12 +18,14 @@ describe('pkg snapshot safety contract', () => {
     });
   });
 
-  test('reader and source manager keep static import fallback paths for packaging', () => {
+  test('reader and source manager keep packaging-safe Mermaid/runtime fallback paths', () => {
     const readerRenderer = fs.readFileSync(runtimeEntryFiles[0], 'utf8');
     const sourceManager = fs.readFileSync(runtimeEntryFiles[2], 'utf8');
 
     expect(readerRenderer).toContain('loadMermaidModule');
-    expect(readerRenderer).toContain("import('mermaid')");
+    expect(readerRenderer).toContain('MERMAID_BROWSER_BUNDLE_BASE64');
+    expect(readerRenderer).toContain("createElement('script')");
+    expect(readerRenderer).not.toContain("require('mermaid')");
     expect(sourceManager).toContain('parseGraphDataPayload');
     expect(sourceManager).toContain('Fallback for assignment-based payloads without using runtime eval.');
   });

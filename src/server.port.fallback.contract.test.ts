@@ -119,6 +119,14 @@ describe('server ephemeral port fallback policy contract', () => {
   let envRestorers: Array<() => void> = [];
   let originalArgv: string[] = [];
 
+  test('server installs stdio broken-pipe guards before emitting fallback logs', () => {
+    const serverSource = fs.readFileSync(path.join(__dirname, 'server.ts'), 'utf8');
+
+    expect(serverSource).toContain('installBrokenPipeGuard(process.stdout');
+    expect(serverSource).toContain('installBrokenPipeGuard(process.stderr');
+    expect(serverSource).toContain("error?.code === 'EPIPE'");
+  });
+
   beforeEach(() => {
     tempProject = makeTempProject('noteconnection-port-policy');
     const projectRoot = path.join(tempProject.root, 'project');

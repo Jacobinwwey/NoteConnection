@@ -12,7 +12,6 @@ const { HandlerList } = require('mathjax-full/js/core/HandlerList.js');
 const { HTMLHandler } = require('mathjax-full/js/handlers/html/HTMLHandler.js');
 const { initWasm, Resvg } = require('@resvg/resvg-wasm');
 
-const importMermaidModule = (): Promise<any> => import('mermaid');
 const MATH_TEXT_COLOR = '#eef4ff';
 const MERMAID_BACKGROUND = 'transparent';
 const MERMAID_PADDING = 28;
@@ -104,7 +103,6 @@ const mathDocument = mathHandlers.document('', {
 });
 
 let mermaidEnvironmentPromise: Promise<MermaidEnvironment> | null = null;
-let mermaidModulePromise: Promise<any> | null = null;
 let mermaidRenderQueue: Promise<unknown> = Promise.resolve();
 let mermaidRenderCounter = 0;
 let resvgInitPromise: Promise<void> | null = null;
@@ -468,14 +466,9 @@ async function createMermaidEnvironment(theme: 'dark' | 'default'): Promise<Merm
 }
 
 async function loadMermaidModule(window: JSDOM['window']): Promise<any> {
-    if (!(process as any).pkg) {
-        if (!mermaidModulePromise) {
-            mermaidModulePromise = (async () => {
-                const mermaidModule = await importMermaidModule();
-                return mermaidModule.default ?? mermaidModule;
-            })();
-        }
-        return mermaidModulePromise;
+    const existingMermaid = (window as any).mermaid;
+    if (existingMermaid) {
+        return existingMermaid;
     }
 
     const script = window.document.createElement('script');
@@ -1600,8 +1593,6 @@ function isFiniteBounds(bounds: Bounds): boolean {
         && bounds.maxX >= bounds.minX
         && bounds.maxY >= bounds.minY;
 }
-
-
 
 
 

@@ -2,6 +2,7 @@
 import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as net from 'net';
 import * as readline from 'readline';
 import { once } from 'events';
 import { buildGraph } from './index';
@@ -27,6 +28,71 @@ import {
     loadAppConfigToml,
     saveAppConfigToml,
 } from './notemd/AppConfigToml';
+
+type WritableProcessStream = NodeJS.WriteStream & {
+    __noteConnectionBrokenPipeGuardInstalled?: boolean;
+};
+
+function installBrokenPipeGuard(stream: WritableProcessStream | undefined): void {
+    if (!stream || stream.__noteConnectionBrokenPipeGuardInstalled) {
+        return;
+    }
+    stream.__noteConnectionBrokenPipeGuardInstalled = true;
+    stream.on('error', (error: NodeJS.ErrnoException) => {
+        if (error?.code === 'EPIPE' || error?.code === 'ERR_STREAM_DESTROYED') {
+            return;
+        }
+        throw error;
+    });
+}
+
+installBrokenPipeGuard(process.stdout as WritableProcessStream);
+installBrokenPipeGuard(process.stderr as WritableProcessStream);
+
+const IS_JEST_RUNTIME = String(process.env.JEST_WORKER_ID || '').trim().length > 0;
+
+function logDiagnostic(...args: unknown[]): void {
+    if (IS_JEST_RUNTIME) {
+        return;
+    }
+    console.log(...args);
+}
+
+function warnDiagnostic(...args: unknown[]): void {
+    if (IS_JEST_RUNTIME) {
+        return;
+    }
+    console.warn(...args);
+}
+
+type GuardedSocketPrototype = typeof net.Socket.prototype & {
+    __noteConnectionBrokenPipeGuardInstalled?: boolean;
+};
+
+function installJestSocketBrokenPipeGuard(): void {
+    if (!IS_JEST_RUNTIME) {
+        return;
+    }
+    const socketPrototype = net.Socket.prototype as GuardedSocketPrototype;
+    if (socketPrototype.__noteConnectionBrokenPipeGuardInstalled) {
+        return;
+    }
+
+    const originalEmit = socketPrototype.emit;
+    socketPrototype.__noteConnectionBrokenPipeGuardInstalled = true;
+    socketPrototype.emit = function (this: net.Socket, event: string | symbol, ...args: unknown[]): boolean {
+        if (
+            event === 'error'
+            && CrashLogger.isIgnorableProcessWriteError(args[0])
+            && (this.destroyed || this.writable === false)
+        ) {
+            return true;
+        }
+        return originalEmit.call(this, event, ...args);
+    };
+}
+
+installJestSocketBrokenPipeGuard();
 
 // Initialize Global Crash Handlers
 CrashLogger.initGlobalHandlers();
@@ -149,17 +215,17 @@ function resolveBoundedMegabytesFromEnv(options: BoundedMegabyteEnvOptions): num
 
     const parsedValue = Number(rawValue);
     if (!Number.isFinite(parsedValue)) {
-        console.warn(`[Config] ${envKey} is not a number ("${rawValue}"). Using default ${defaultMb} MiB.`);
+        warnDiagnostic(`[Config] ${envKey} is not a number ("${rawValue}"). Using default ${defaultMb} MiB.`);
         return defaultMb;
     }
 
     const normalizedMb = Math.floor(parsedValue);
     if (normalizedMb < minMb) {
-        console.warn(`[Config] ${envKey}=${rawValue} is below minimum ${minMb} MiB. Clamping to ${minMb} MiB.`);
+        warnDiagnostic(`[Config] ${envKey}=${rawValue} is below minimum ${minMb} MiB. Clamping to ${minMb} MiB.`);
         return minMb;
     }
     if (normalizedMb > maxMb) {
-        console.warn(`[Config] ${envKey}=${rawValue} exceeds maximum ${maxMb} MiB. Clamping to ${maxMb} MiB.`);
+        warnDiagnostic(`[Config] ${envKey}=${rawValue} exceeds maximum ${maxMb} MiB. Clamping to ${maxMb} MiB.`);
         return maxMb;
     }
 
@@ -466,7 +532,7 @@ async function safeUnlink(filePath: string): Promise<void> {
         await fs.promises.unlink(filePath);
     } catch (error) {
         if (!isFsNotFoundError(error)) {
-            console.warn('[Sidecar] Failed to clean up temporary request body file:', error);
+            warnDiagnostic('[Sidecar] Failed to clean up temporary request body file:', error);
         }
     }
 }
@@ -841,7 +907,7 @@ async function loadNotemdSettings(): Promise<NotemdSettings> {
         const parsedSettings = extractNotemdSettingsFromAppConfig(appConfig);
         cachedNotemdSettings = normalizeNotemdSettings(parsedSettings);
     } catch (error) {
-        console.warn('[NoteMD] Failed to read settings from TOML, using defaults:', error);
+        warnDiagnostic('[NoteMD] Failed to read settings from TOML, using defaults:', error);
         cachedNotemdSettings = normalizeNotemdSettings(DEFAULT_NOTEMD_SETTINGS);
     }
 
@@ -1050,7 +1116,7 @@ async function writeSidecarRuntimeManifest(finalPort: number): Promise<void> {
             'utf8'
         );
     } catch (error) {
-        console.warn('[Sidecar] Failed to write runtime manifest:', error);
+        warnDiagnostic('[Sidecar] Failed to write runtime manifest:', error);
     }
 }
 async function renderMermaidWithPreference(
@@ -1093,7 +1159,7 @@ async function renderMermaidWithPreference(
             if (options.rendererPreference === 'frontend') {
                 throw error;
             }
-            console.warn('[Reader] Frontend Mermaid render unavailable, falling back to local resvg:', error);
+            warnDiagnostic('[Reader] Frontend Mermaid render unavailable, falling back to local resvg:', error);
         }
     }
 
@@ -1359,7 +1425,7 @@ if (process.env.NOTE_CONNECTION_GPU === 'true' || process.env.NOTE_CONNECTION_GP
     cliOptions.enableGPULayout = true;
 }
 if (process.env.npm_config_static === 'true' || process.env.npm_config_static === '') {
-    console.log('[CLI] Static mode requested (via env).');
+    logDiagnostic('[CLI] Static mode requested (via env).');
 }
 if (process.env.npm_config_workers) {
     cliOptions.maxWorkers = parseInt(process.env.npm_config_workers);
@@ -1378,7 +1444,7 @@ for (let i = 0; i < args.length; i++) {
         cliOptions.enableGPU = false;
         cliOptions.enableGPULayout = false;
     } else if (arg === '--static') {
-        console.log('[CLI] Static mode requested (Frontend auto-detects large graphs).');
+        logDiagnostic('[CLI] Static mode requested (Frontend auto-detects large graphs).');
     } else if (arg === '--workers' && args[i+1]) {
         cliOptions.maxWorkers = parseInt(args[++i]);
     }
@@ -1399,7 +1465,7 @@ for (let i = 0; i < args.length; i++) {
     }
 }
 
-console.log('[CLI] Parsed Options:', cliOptions);
+logDiagnostic('[CLI] Parsed Options:', cliOptions);
 
 function getCliFlagValue(argsList: string[], flagName: string): string | undefined {
     const index = argsList.indexOf(flagName);
@@ -1535,7 +1601,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             cliOptions.targetPath = fallbackPath;
             hasCliBuild = true;
         } else {
-            console.warn("[CLI] Warning: targetPath detected as 'true'. This usually means npm consumed the flag incorrectly. Please check your command syntax.");
+            warnDiagnostic("[CLI] Warning: targetPath detected as 'true'. This usually means npm consumed the flag incorrectly. Please check your command syntax.");
             delete cliOptions.targetPath;
             hasCliBuild = false;
         }
@@ -1562,7 +1628,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         
         const latest = await findLatestCliBuildForKb(kbName);
         if (latest) {
-            console.log(`\n[CLI] Found existing build for '${kbName}': ${latest}`);
+            logDiagnostic(`\n[CLI] Found existing build for '${kbName}': ${latest}`);
 
             // If specific options passed (embedded mode), default to Load to avoid blocking
             // Otherwise use interactive prompt
@@ -1570,7 +1636,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 useExisting = true;
                 const suffix = latest.replace('data_cli_', '').replace('.js', '');
                 cliOptions.outputPrefix = suffix;
-                console.log(`[CLI] Auto-Loading existing data: ${latest}`);
+                logDiagnostic(`[CLI] Auto-Loading existing data: ${latest}`);
             } else {
                 const rl = readline.createInterface({
                     input: process.stdin,
@@ -1590,7 +1656,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     // suffix = kbName_time
                     const suffix = latest.replace('data_cli_', '').replace('.js', '');
                     cliOptions.outputPrefix = suffix;
-                    console.log(`[CLI] Loading existing data: ${latest}`);
+                    logDiagnostic(`[CLI] Loading existing data: ${latest}`);
                 }
             }
         }
@@ -1600,10 +1666,10 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             const timeStr = now.toISOString().replace(/[-:T]/g, '').slice(0, 15);
             cliOptions.outputPrefix = `${kbName}_${timeStr}`;
             
-            console.log(`[CLI] Generating new knowledge graph for: ${cliOptions.targetPath}`);
+            logDiagnostic(`[CLI] Generating new knowledge graph for: ${cliOptions.targetPath}`);
             try {
                 await buildGraph(cliOptions);
-                console.log('[CLI] Generation complete.');
+                logDiagnostic('[CLI] Generation complete.');
             } catch (e) {
                 console.error('[CLI] Build failed:', e);
                 process.exit(1);
@@ -1946,7 +2012,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     const restoreKey = `restore:${target}`;
                     const now = Date.now();
                     if (lastRestoreKey === restoreKey && (now - lastRestoreTs) < 3000) {
-                        console.log(`[Cache] Duplicate restore suppressed for ${target}`);
+                        logDiagnostic(`[Cache] Duplicate restore suppressed for ${target}`);
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ success: true, deduped: true }));
                         return;
@@ -2847,7 +2913,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 try {
                     const payload = await readJsonBody(req);
                     const { target, maxWorkers, enableGPU, enableGPULayout, memorySavingMode, deepDebug } = payload;
-                    console.log('Received build request for:', target, 'maxWorkers:', maxWorkers, 'enableGPU:', enableGPU, 'enableGPULayout:', enableGPULayout, 'memorySavingMode:', memorySavingMode, 'deepDebug:', deepDebug);
+                    logDiagnostic('Received build request for:', target, 'maxWorkers:', maxWorkers, 'enableGPU:', enableGPU, 'enableGPULayout:', enableGPULayout, 'memorySavingMode:', memorySavingMode, 'deepDebug:', deepDebug);
                     const buildKey = JSON.stringify({
                         target,
                         maxWorkers,
@@ -2860,7 +2926,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     // De-duplicate accidental double-submit from frontend.
                     if (activeBuildPromise) {
                         if (activeBuildKey === buildKey) {
-                            console.log('[Build] Duplicate request detected. Waiting for in-flight build.');
+                            logDiagnostic('[Build] Duplicate request detected. Waiting for in-flight build.');
                             await activeBuildPromise;
                             res.writeHead(200, { 'Content-Type': 'application/json' });
                             res.end(JSON.stringify({
@@ -2940,7 +3006,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                             return;
                         }
                         KB_ROOT = resolvedKbPath;
-                        console.log(`[API] Knowledge Base Root updated to: ${KB_ROOT}`);
+                        logDiagnostic(`[API] Knowledge Base Root updated to: ${KB_ROOT}`);
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ success: true, kbPath: KB_ROOT }));
                     } else {
@@ -2974,11 +3040,11 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             runtimePort = resolvedPort;
             await ensureRuntimeDataDir();
             await writeSidecarRuntimeManifest(resolvedPort);
-            console.log(`[Sidecar] Runtime Manifest: ${SIDECAR_RUNTIME_MANIFEST}`);
-            console.log(`Server running at http://${LOOPBACK_HOST}:${resolvedPort}/`);
-            console.log(`Knowledge Base Root: ${KB_ROOT}`);
-            console.log(`Frontend Root: ${FRONTEND_DIR}`);
-            console.log(`Runtime Data Root: ${RUNTIME_DATA_DIR}`);
+            logDiagnostic(`[Sidecar] Runtime Manifest: ${SIDECAR_RUNTIME_MANIFEST}`);
+            logDiagnostic(`Server running at http://${LOOPBACK_HOST}:${resolvedPort}/`);
+            logDiagnostic(`Knowledge Base Root: ${KB_ROOT}`);
+            logDiagnostic(`Frontend Root: ${FRONTEND_DIR}`);
+            logDiagnostic(`Runtime Data Root: ${RUNTIME_DATA_DIR}`);
 
             // Initialize PathBridge
             try {
@@ -2987,13 +3053,13 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     host: LOOPBACK_HOST,
                     authToken: AUTH_TOKEN,
                 });
-                console.log(`[Sidecar] PathBridge initialized on ws://${LOOPBACK_HOST}:${PATH_BRIDGE_PORT}`);
+                logDiagnostic(`[Sidecar] PathBridge initialized on ws://${LOOPBACK_HOST}:${PATH_BRIDGE_PORT}`);
             } catch (e) {
                 console.error(`[Sidecar] Failed to initialize PathBridge:`, e);
             }
 
             if (hasCliBuild) {
-                console.log('[CLI] Ready.');
+                    logDiagnostic('[CLI] Ready.');
             }
         };
 
@@ -3001,7 +3067,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             const onError = (error: NodeJS.ErrnoException): void => {
                 server.off('listening', onListening);
                 if (error?.code === 'EADDRINUSE' && allowEphemeralFallback && targetPort === finalPort) {
-                    console.warn(
+                    warnDiagnostic(
                         `[Sidecar] Port ${finalPort} is already in use. Retrying with an ephemeral loopback port.`
                     );
                     attachListenHandlers(0);

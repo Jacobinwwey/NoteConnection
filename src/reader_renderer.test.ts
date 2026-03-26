@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { JSDOM } from 'jsdom';
@@ -95,6 +96,14 @@ describe('reader_renderer', () => {
             stdio: 'inherit',
         });
     }, 120000);
+
+    it('keeps the compiled Mermaid loader on the embedded browser runtime path instead of requiring the ESM package directly', () => {
+        const compiledRenderer = fs.readFileSync(distRendererPath, 'utf8');
+
+        expect(compiledRenderer).not.toContain("require('mermaid')");
+        expect(compiledRenderer).toContain('MERMAID_BROWSER_BUNDLE_BASE64');
+        expect(compiledRenderer).toContain("createElement('script')");
+    });
 
     it('renders display math to svg', () => {
         const svg = runRenderer('renderMathSvg', 'E = mc^2', { displayMode: true });

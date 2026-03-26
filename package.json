@@ -1,6 +1,6 @@
 {
   "name": "noteconnection",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "description": "Hierarchical Knowledge Graph Visualization System",
   "main": "dist/src/server.js",
   "bin": {

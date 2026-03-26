@@ -26,10 +26,11 @@ describe('NoteMD API contract wiring', () => {
     });
   });
 
-  test('server persists NoteMD settings in runtime data directory', () => {
-    expect(serverSource).toContain('NOTEMD_CONFIG_FILE_NAME');
+  test('server persists NoteMD settings through app_config.toml helpers', () => {
+    expect(serverSource).toContain("from './notemd/AppConfigToml'");
+    expect(serverSource).toContain('loadAppConfigToml');
+    expect(serverSource).toContain('saveAppConfigToml');
     expect(serverSource).toContain('persistNotemdSettings');
     expect(serverSource).toContain('loadNotemdSettings');
   });
 });
-

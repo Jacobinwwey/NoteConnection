@@ -4,6 +4,13 @@ import * as os from 'os';
 
 export class CrashLogger {
     private static logFilePath = path.join(process.cwd(), 'crash.log');
+    private static globalHandlersInstalled = false;
+
+    static isIgnorableProcessWriteError(error: unknown): boolean {
+        const code = typeof error === 'object' && error ? String((error as { code?: unknown }).code || '') : '';
+        const syscall = typeof error === 'object' && error ? String((error as { syscall?: unknown }).syscall || '') : '';
+        return code === 'EPIPE' || code === 'ERR_STREAM_DESTROYED' || (code === 'EOF' && syscall === 'write');
+    }
 
     static log(error: any, context: string = 'General') {
         const timestamp = new Date().toISOString();
@@ -23,13 +30,24 @@ export class CrashLogger {
     }
 
     static initGlobalHandlers() {
+        if (this.globalHandlersInstalled) {
+            return;
+        }
+        this.globalHandlersInstalled = true;
+
         process.on('uncaughtException', (error) => {
+            if (CrashLogger.isIgnorableProcessWriteError(error)) {
+                return;
+            }
             console.error('Uncaught Exception:', error);
             CrashLogger.log(error, 'UncaughtException');
             process.exit(1); // Exit is mandatory for uncaught exceptions to avoid undefined state
         });
 
         process.on('unhandledRejection', (reason, promise) => {
+            if (CrashLogger.isIgnorableProcessWriteError(reason)) {
+                return;
+            }
             console.error('Unhandled Rejection at:', promise, 'reason:', reason);
             CrashLogger.log(reason, 'UnhandledRejection');
         });
