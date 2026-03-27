@@ -7,6 +7,10 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: npm-publish-${{ github.event.release.tag_name || github.ref_name }}
+  cancel-in-progress: false
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   NOTE_CONNECTION_SBOM_ATTESTATION_KEY_ID: ${{ secrets.SBOM_SIGNING_KEY_ID }}
@@ -40,19 +44,48 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           cache: "npm"
 
+      - name: Resolve package metadata
+        id: package_meta
+        shell: bash
+        run: |
+          PACKAGE_NAME="$(node -p "require('./package.json').name")"
+          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
+          echo "name=${PACKAGE_NAME}" >> "$GITHUB_OUTPUT"
+          echo "version=${PACKAGE_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Package: ${PACKAGE_NAME}@${PACKAGE_VERSION}"
+
+      - name: Check npm version existence (idempotent publish guard)
+        id: npm_guard
+        shell: bash
+        run: |
+          PACKAGE_NAME="${{ steps.package_meta.outputs.name }}"
+          PACKAGE_VERSION="${{ steps.package_meta.outputs.version }}"
+          if npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version >/dev/null 2>&1; then
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping publish because ${PACKAGE_NAME}@${PACKAGE_VERSION} already exists on npm."
+          else
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+            echo "Version ${PACKAGE_NAME}@${PACKAGE_VERSION} does not exist yet. Continue publish workflow."
+          fi
+
       - name: Install dependencies
+        if: ${{ steps.npm_guard.outputs.already_published != 'true' }}
         run: npm ci
 
       - name: Build
+        if: ${{ steps.npm_guard.outputs.already_published != 'true' }}
         run: npm run build
 
       - name: Generate release SBOM
+        if: ${{ steps.npm_guard.outputs.already_published != 'true' }}
         run: npm run generate:sbom
 
       - name: Verify SBOM policy gate
+        if: ${{ steps.npm_guard.outputs.already_published != 'true' }}
         run: npm run verify:sbom -- --strict 1
 
       - name: Validate SBOM signing key pair configuration
+        if: ${{ steps.npm_guard.outputs.already_published != 'true' }}
         shell: bash
         run: |
           KEY_ID="$(printf '%s' "${NOTE_CONNECTION_SBOM_ATTESTATION_KEY_ID}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
@@ -81,6 +114,7 @@ jobs:
           fi
 
       - name: Generate SBOM attestation
+        if: ${{ steps.npm_guard.outputs.already_published != 'true' }}
         env:
           NOTE_CONNECTION_SBOM_ATTESTATION_ALLOW_UNSIGNED: ${{ env.NOTE_CONNECTION_SBOM_SIGNING_PRIVATE_KEY_PEM == '' }}
           NOTE_CONNECTION_SBOM_ATTESTATION_ENABLE_TRANSPARENCY_LOG: ${{ env.NOTE_CONNECTION_SBOM_SIGNING_PRIVATE_KEY_PEM != '' }}
@@ -88,7 +122,7 @@ jobs:
         run: npm run generate:sbom:attestation
 
       - name: Materialize SBOM signing keyring policy (optional)
-        if: ${{ env.NOTE_CONNECTION_SBOM_SIGNING_KEYRING_JSON != '' }}
+        if: ${{ steps.npm_guard.outputs.already_published != 'true' && env.NOTE_CONNECTION_SBOM_SIGNING_KEYRING_JSON != '' }}
         shell: bash
         env:
           SBOM_SIGNING_KEYRING_JSON: ${{ env.NOTE_CONNECTION_SBOM_SIGNING_KEYRING_JSON }}
@@ -97,6 +131,7 @@ jobs:
           printf '%s' "${SBOM_SIGNING_KEYRING_JSON}" > build/sbom/signing-keyring.json
 
       - name: Verify SBOM attestation policy gate
+        if: ${{ steps.npm_guard.outputs.already_published != 'true' }}
         env:
           NOTE_CONNECTION_REQUIRE_SBOM_ATTESTATION_SIGNATURE: ${{ env.NOTE_CONNECTION_SBOM_SIGNING_PUBLIC_KEY_PEM != '' }}
           NOTE_CONNECTION_SBOM_ATTESTATION_REQUIRE_SIGNED_KEY_ID: ${{ env.NOTE_CONNECTION_SBOM_SIGNING_PUBLIC_KEY_PEM != '' }}
@@ -119,20 +154,30 @@ jobs:
         run: npm run verify:sbom:attestation -- --strict 1 --allow-missing 0
 
       - name: Enforce strict PathBridge inbound schema gate
+        if: ${{ steps.npm_guard.outputs.already_published != 'true' }}
         run: npm run verify:pathbridge:strict
 
       - name: Enforce strict wasm parity gates
+        if: ${{ steps.npm_guard.outputs.already_published != 'true' }}
         run: npm run test:wasm:parity:gates
 
       - name: Verify sidecar signing gate contract
+        if: ${{ steps.npm_guard.outputs.already_published != 'true' }}
         run: npm run verify:sidecar:signatures -- --contract-only
 
       - name: Run tests
+        if: ${{ steps.npm_guard.outputs.already_published != 'true' }}
         # Release CI is intentionally serialized here because the parallel Jest
         # worker pool can trigger broken stdout pipes in spawned Node CLIs.
         run: npx jest --runInBand
 
       - name: Publish to npm
+        if: ${{ steps.npm_guard.outputs.already_published != 'true' }}
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Skip publish summary
+        if: ${{ steps.npm_guard.outputs.already_published == 'true' }}
+        run: |
+          echo "npm publish skipped: ${{ steps.package_meta.outputs.name }}@${{ steps.package_meta.outputs.version }} already exists."
