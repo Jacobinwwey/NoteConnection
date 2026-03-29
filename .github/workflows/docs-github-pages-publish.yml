@@ -107,6 +107,25 @@ jobs:
       - name: Build docs site
         run: mkdocs build --config-file mkdocs.yml
 
+      - name: Preflight GitHub Pages enablement check
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          PAGES_API="https://api.github.com/repos/${{ github.repository }}/pages"
+          STATUS_CODE="$(curl -sS -o /tmp/pages-site.json -w '%{http_code}' \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            "${PAGES_API}")"
+
+          if [ "${STATUS_CODE}" = "404" ]; then
+            echo "::warning::GitHub Pages site is not enabled yet for this repository. CI can still publish gh-pages branch, but https://jacobinwwey.github.io/NoteConnection/ will stay 404 until Settings -> Pages is configured to Deploy from branch (gh-pages / root)."
+          elif [ "${STATUS_CODE}" -ge 200 ] && [ "${STATUS_CODE}" -lt 300 ]; then
+            echo "GitHub Pages site API is available (HTTP ${STATUS_CODE})."
+          else
+            echo "::warning::Unable to verify GitHub Pages site state (HTTP ${STATUS_CODE})."
+          fi
+
       - name: Deploy docs to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:

@@ -52,4 +52,4 @@ Recommended sequence:
 
 ## Canonical Detailed Source
 
-- [docs/en/sharelife_community_release_and_rollback.md](../../../en/sharelife_community_release_and_rollback.md)
+- [docs/en/docs_release_and_rollback.md](../../../en/docs_release_and_rollback.md)

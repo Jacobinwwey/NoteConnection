@@ -11,6 +11,7 @@
 
 - [docs/zh/release_v1.6.0_report.md](../../../zh/release_v1.6.0_report.md)
 - [docs/release_notes_v1.6.0.md](../../../release_notes_v1.6.0.md)
+- [docs/release_notes_v1.6.7.md](../../../release_notes_v1.6.7.md)
 
 ## 治理控制面
 
@@ -22,7 +23,7 @@
 - 文档发布工作流：
   - `.github/workflows/docs-github-pages-publish.yml`
 - 文档发布与回滚运行手册：
-  - [`docs/zh/sharelife_community_release_and_rollback.md`](../../../zh/sharelife_community_release_and_rollback.md)
+  - [`docs/zh/docs_release_and_rollback.md`](../../../zh/docs_release_and_rollback.md)
 
 ## 文档治理控制面
 

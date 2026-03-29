@@ -52,4 +52,4 @@ MkDocs 地址行为已改为环境变量可切换：
 
 ## 权威详细来源
 
-- [docs/zh/sharelife_community_release_and_rollback.md](../../../zh/sharelife_community_release_and_rollback.md)
+- [docs/zh/docs_release_and_rollback.md](../../../zh/docs_release_and_rollback.md)

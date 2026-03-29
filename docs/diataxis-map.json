@@ -30,11 +30,11 @@
       "id": "publish-docs-github-pages",
       "category": "how-to",
       "en": {
-        "canonical": ["docs/en/sharelife_community_release_and_rollback.md", ".github/workflows/docs-github-pages-publish.yml", "mkdocs.yml"],
+        "canonical": ["docs/en/docs_release_and_rollback.md", ".github/workflows/docs-github-pages-publish.yml", "mkdocs.yml"],
         "diataxis": "docs/diataxis/en/how-to/publish-docs-github-pages.md"
       },
       "zh": {
-        "canonical": ["docs/zh/sharelife_community_release_and_rollback.md", ".github/workflows/docs-github-pages-publish.yml", "mkdocs.yml"],
+        "canonical": ["docs/zh/docs_release_and_rollback.md", ".github/workflows/docs-github-pages-publish.yml", "mkdocs.yml"],
         "diataxis": "docs/diataxis/zh/how-to/publish-docs-github-pages.md"
       }
     },

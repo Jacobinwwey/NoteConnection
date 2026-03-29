@@ -11,6 +11,7 @@
 
 - [docs/en/release_v1.6.0_report.md](../../../en/release_v1.6.0_report.md)
 - [docs/release_notes_v1.6.0.md](../../../release_notes_v1.6.0.md)
+- [docs/release_notes_v1.6.7.md](../../../release_notes_v1.6.7.md)
 
 ## Governance Controls
 
@@ -22,7 +23,7 @@
 - Docs deploy workflow:
   - `.github/workflows/docs-github-pages-publish.yml`
 - Docs release and rollback runbook:
-  - [`docs/en/sharelife_community_release_and_rollback.md`](../../../en/sharelife_community_release_and_rollback.md)
+  - [`docs/en/docs_release_and_rollback.md`](../../../en/docs_release_and_rollback.md)
 
 ## Docs Governance Controls
 

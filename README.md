@@ -346,9 +346,9 @@ For developers building from source, NoteConnection offers two build modes:
 - Manual rollback entry: run workflow dispatch and set `git_ref` to a stable tag/commit.
 - MkDocs base/path can be overridden by environment variables: `MKDOCS_SITE_URL`, `MKDOCS_BASE_PATH`.
 - CI policy gate for docs mapping and site build: `.github/workflows/docs-diataxis-site.yml`.
-- Sharelife community UI docs release + rollback guide:
-  - English: [`docs/en/sharelife_community_release_and_rollback.md`](docs/en/sharelife_community_release_and_rollback.md)
-  - 中文: [`docs/zh/sharelife_community_release_and_rollback.md`](docs/zh/sharelife_community_release_and_rollback.md)
+- Docs release + rollback runbook:
+  - English: [`docs/en/docs_release_and_rollback.md`](docs/en/docs_release_and_rollback.md)
+  - 中文: [`docs/zh/docs_release_and_rollback.md`](docs/zh/docs_release_and_rollback.md)
 
 ## 🛠️ Hardware & Driver Requirements (AMDGPU)
 
@@ -362,6 +362,16 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 <a id="changelog-en"></a>
 
 ## 📅 Changelog
+
+### v1.6.7 - Docs Governance Cleanup & GitHub Pages Stabilization (2026-03-29)
+- Removed unrelated external community UI documentation references from the repository documentation system.
+- Replaced legacy external runbooks with project-owned docs operations runbooks:
+  - `docs/en/docs_release_and_rollback.md`
+  - `docs/zh/docs_release_and_rollback.md`
+- Updated Diataxis governance mapping and cross-links to use the new canonical runbook paths.
+- Added GitHub Pages preflight verification in docs publish workflow to surface clear warnings when Pages is not enabled.
+- Resolved docs portal 404 condition by enabling repository Pages with `gh-pages` branch as publish source.
+- Prepared formal release metadata and version alignment to `1.6.7` (npm + Tauri).
 
 ### v1.6.6 - Unified Provider Runtime & TOML Settings Consolidation (2026-03-26)
 - Upgraded NoteMD API calling flow to a definition-driven provider architecture inspired by recent obsidian-NotEMD and cline patterns.
@@ -936,7 +946,7 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 ## 中文文档
 
 
-# 2026-03-24 v1.6.0
+# 2026-03-29 v1.6.7
 # NoteConnection: 层级知识图谱可视化系统
 
 <img width="606" height="309" alt="banner" src="https://github.com/user-attachments/assets/92e90de5-2b1a-4398-8e8b-6e142c92b6a2" />
@@ -1269,15 +1279,25 @@ max_doc_bytes = 100663296
 - 手动回滚入口：运行 workflow_dispatch 并设置 `git_ref` 为稳定 tag/commit。
 - MkDocs base/path 可通过环境变量覆盖：`MKDOCS_SITE_URL`、`MKDOCS_BASE_PATH`。
 - CI 文档治理工作流：`.github/workflows/docs-diataxis-site.yml`。
-- Sharelife 社区界面文档发布与回滚指南：
-  - English：[`docs/en/sharelife_community_release_and_rollback.md`](docs/en/sharelife_community_release_and_rollback.md)
-  - 中文：[`docs/zh/sharelife_community_release_and_rollback.md`](docs/zh/sharelife_community_release_and_rollback.md)
+- 文档发布与回滚运行手册：
+  - English：[`docs/en/docs_release_and_rollback.md`](docs/en/docs_release_and_rollback.md)
+  - 中文：[`docs/zh/docs_release_and_rollback.md`](docs/zh/docs_release_and_rollback.md)
 
 ---
 
 <a id="changelog-zh"></a>
 
 ## 更新日志 (Changelog)
+
+### v1.6.7 - 文档治理清理与 GitHub Pages 稳定性修复 (2026-03-29)
+- 清理并移除了项目文档体系中与本项目无关的外部社区界面文档引用。
+- 将历史外部手册替换为项目内通用文档运维手册：
+  - `docs/en/docs_release_and_rollback.md`
+  - `docs/zh/docs_release_and_rollback.md`
+- 同步更新 Diataxis 映射与跨文档链接，确保权威来源路径一致。
+- 在文档发布工作流新增 GitHub Pages 预检步骤，未启用 Pages 时给出明确告警。
+- 已通过仓库 Pages 启用与 `gh-pages` 源配置修复文档站点 404 问题。
+- 完成下个正式版本发布准备，并将版本统一到 `1.6.7`（npm + Tauri）。
 
 ### v1.6.6 - Provider 运行时流程与 TOML 配置统一 (2026-03-26)
 - 参考 obsidian-NotEMD 与 cline 的 Provider 策略，重构 NoteMD API 调用流为定义驱动。
