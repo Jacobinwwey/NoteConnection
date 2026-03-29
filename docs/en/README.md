@@ -293,6 +293,7 @@ Managing your knowledge base source is now easier than ever.
 - **Reset**: Use **File > Reset to Default** to return to the bundled demo notes.
 - **Config Path Overrides**: Set `NOTE_CONNECTION_CONFIG_PATH` (full file path) or `NOTE_CONNECTION_CONFIG_DIR` (directory) to customize where `app_config.toml` is stored.
 - **Window Behavior Tuning**: Edit `[multi_window]` in `app_config.toml` (`single_window_mode`, `hide_tauri_when_pathmode_opens`, `restore_tauri_when_pathmode_exits`, `confirm_before_full_shutdown_from_godot`, `sync_language`).
+- **Reader Protocol Tuning**: Edit `[frontend_settings.reading]` (`markdown_engine`, `chunk_block_size`, `prefetch_blocks`, `index_cache_ttl_sec`, `max_doc_bytes`) to control markdown reading behavior in both Tauri and Godot.
 - **Detailed Config Guide**: See [`docs/en/app_config.toml_guide.md`](app_config.toml_guide.md) and template [`docs/examples/app_config.template.toml`](../examples/app_config.template.toml).
 
 ```toml
@@ -306,7 +307,24 @@ hide_tauri_when_pathmode_opens = true
 restore_tauri_when_pathmode_exits = true
 confirm_before_full_shutdown_from_godot = true
 sync_language = true
+
+[frontend_settings.reading]
+mode = "window"
+markdown_engine = "auto" # "legacy" | "pulldown" | "auto"
+chunk_block_size = 36
+prefetch_blocks = 8
+index_cache_ttl_sec = 1800
+max_doc_bytes = 100663296
 ```
+
+### Markdown Reader Protocol (v1.6.6)
+
+- Dual-engine gray rollout:
+  - `auto`: pulldown first, legacy fallback on failure.
+  - `pulldown`: still keeps legacy fallback for session safety.
+  - `legacy`: force original parser behavior.
+- Unified protocol across windows: Tauri and Godot readers consume `POST /api/markdown/index`, `chunk`, `resolve-node`, and `resolve-wiki`.
+- Large-document resilience: reader now supports block-based incremental loading rather than requiring a single full-document response.
 
 ## 🏗️ Build & Deployment
 
@@ -327,6 +345,8 @@ For developers building from source, NoteConnection offers two build modes:
 - Run mapping validation: `npm run docs:diataxis:check`.
 - Run local docs site preview: `npm run docs:site:serve`.
 - Build static docs site: `npm run docs:site:build`.
+- GitHub Pages docs portal (project site): `https://jacobinwwey.github.io/NoteConnection/`.
+- Publish workflow: `.github/workflows/docs-github-pages-publish.yml` (`workflow_dispatch` + `git_ref` rollback).
 - CI policy gate for docs mapping and site build: `.github/workflows/docs-diataxis-site.yml`.
 
 ## 🛠️ Hardware & Driver Requirements (AMDGPU)
@@ -352,11 +372,11 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 - Hardened Rust TOML save behavior to preserve unknown sections so Tauri writes do not erase NoteMD/Path Mode config blocks.
 
 ### v1.6.5 - Documentation Portal Update (2026-03-26)
-- Published MkDocs docs to EdgeOne Pages project `noteconnection-docs`.
+- Published MkDocs docs to GitHub Pages project site.
 - Added bilingual README navigation for user and developer doc entry points.
-- Standardized maintainer publish commands:
+- Standardized maintainer publish flow:
   - `npm run docs:site:build`
-  - `edgeone pages deploy build/mkdocs-site -n noteconnection-docs -e production -a global`
+  - `.github/workflows/docs-github-pages-publish.yml` (`workflow_dispatch` supports `git_ref` rollback)
 
 ### v1.6.0 - Unified Runtime, NoteMD Integration & Release Hardening (2026-03-23)
 

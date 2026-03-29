@@ -48,6 +48,11 @@ export interface NotemdSettings {
     activeProvider: LlmProviderName;
     developerMode: boolean;
 
+    workspaceFilePath: string;
+    workspaceFolderPath: string;
+    workspaceOutputFilePath: string;
+    workspaceOutputFolderPath: string;
+
     useCustomConceptNoteFolder: boolean;
     conceptNoteFolder: string;
     useCustomProcessedFileFolder: boolean;

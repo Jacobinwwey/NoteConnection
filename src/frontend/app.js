@@ -60,8 +60,22 @@ const runtimeGraphData =
         ? graphData
         : ((typeof window !== 'undefined' && window.graphData) ? window.graphData : null);
 const graphDataExists = runtimeGraphData !== null;
-const nodes = (graphDataExists && runtimeGraphData.nodes) ? runtimeGraphData.nodes.map(d => Object.create(d)) : [];
-let links = (graphDataExists && runtimeGraphData.edges) ? runtimeGraphData.edges.map(d => Object.create(d)) : [];
+const sourceNodes = (graphDataExists && Array.isArray(runtimeGraphData.nodes)) ? runtimeGraphData.nodes : [];
+const sourceLinks = (graphDataExists && Array.isArray(runtimeGraphData.edges)) ? runtimeGraphData.edges : [];
+const graphPreprocessStartTs = (typeof performance !== 'undefined' && typeof performance.now === 'function')
+    ? performance.now()
+    : Date.now();
+
+// Use direct shallow clones instead of Object.create(...) prototype chains.
+// This keeps property access predictable and avoids startup overhead on huge graphs.
+const nodes = new Array(sourceNodes.length);
+for (let nodeIndex = 0; nodeIndex < sourceNodes.length; nodeIndex += 1) {
+    const rawNode = sourceNodes[nodeIndex];
+    nodes[nodeIndex] = (rawNode && typeof rawNode === 'object')
+        ? { ...rawNode }
+        : rawNode;
+}
+let links = [];
 
 // Log startup mode for diagnostics
 if (!graphDataExists) {
@@ -74,18 +88,49 @@ if (!graphDataExists) {
 // This allows us to feed a SUBSET to the physics engine while keeping ALL links for rendering.
 // 优化：预解析连接以确保它们是对象而不是字符串。
 // 这允许我们将子集提供给物理引擎，同时保留所有连接以供渲染。
-const nodeMap = new Map(nodes.map(n => [n.id, n]));
-links.forEach(l => {
-    if (typeof l.source !== 'object') l.source = nodeMap.get(l.source);
-    if (typeof l.target !== 'object') l.target = nodeMap.get(l.target);
-});
+const nodeMap = new Map();
+for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex += 1) {
+    const node = nodes[nodeIndex];
+    if (node && node.id !== undefined && node.id !== null) {
+        nodeMap.set(node.id, node);
+    }
+}
 
-// Filter out broken links (where source/target missing)
-// 过滤掉断开的连接（源/目标丢失）
-const validLinks = links.filter(l => l.source && l.target);
-// Replace original links array with valid ones to avoid errors in render
-// 用有效的链接数组替换原始链接数组以避免渲染错误
-links = validLinks;
+const normalizedLinks = new Array(sourceLinks.length);
+let validLinkCount = 0;
+for (let linkIndex = 0; linkIndex < sourceLinks.length; linkIndex += 1) {
+    const rawLink = sourceLinks[linkIndex];
+    if (!rawLink || typeof rawLink !== 'object') {
+        continue;
+    }
+    const link = { ...rawLink };
+
+    const sourceId = (link.source && typeof link.source === 'object')
+        ? link.source.id
+        : link.source;
+    const targetId = (link.target && typeof link.target === 'object')
+        ? link.target.id
+        : link.target;
+    const sourceNode = nodeMap.get(sourceId);
+    const targetNode = nodeMap.get(targetId);
+    if (!sourceNode || !targetNode) {
+        continue;
+    }
+
+    link.source = sourceNode;
+    link.target = targetNode;
+    normalizedLinks[validLinkCount] = link;
+    validLinkCount += 1;
+}
+
+if (validLinkCount < normalizedLinks.length) {
+    normalizedLinks.length = validLinkCount;
+}
+links = normalizedLinks;
+const graphPreprocessElapsedMs = ((typeof performance !== 'undefined' && typeof performance.now === 'function')
+    ? performance.now()
+    : Date.now()) - graphPreprocessStartTs;
+console.log(`[Init Perf] Graph preprocessing completed in ${graphPreprocessElapsedMs.toFixed(2)}ms (nodes=${nodes.length}, links=${links.length}).`);
 
 // Optimization: Default to Canvas for large graphs (>3000 nodes) to save memory
 if (nodes.length > 3000) {
@@ -291,8 +336,35 @@ const simulation = {
 
 // Initialize Worker
 // Send simplified data structure (avoid circular refs)
-const workerNodes = nodes.map(n => ({ id: n.id, x: n.x || Math.random()* width, y: n.y || Math.random()*height, fx: n.fx, fy: n.fy, rank: n.rank }));
-const workerLinks = physicsLinks.map(l => ({ source: l.source.id, target: l.target.id }));
+const workerPayloadBuildStartTs = (typeof performance !== 'undefined' && typeof performance.now === 'function')
+    ? performance.now()
+    : Date.now();
+const workerNodes = new Array(nodes.length);
+for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex += 1) {
+    const node = nodes[nodeIndex];
+    const hasX = Number.isFinite(Number(node && node.x));
+    const hasY = Number.isFinite(Number(node && node.y));
+    workerNodes[nodeIndex] = {
+        id: node.id,
+        x: hasX ? Number(node.x) : Math.random() * width,
+        y: hasY ? Number(node.y) : Math.random() * height,
+        fx: node.fx,
+        fy: node.fy,
+        rank: node.rank,
+    };
+}
+const workerLinks = new Array(physicsLinks.length);
+for (let linkIndex = 0; linkIndex < physicsLinks.length; linkIndex += 1) {
+    const link = physicsLinks[linkIndex];
+    workerLinks[linkIndex] = {
+        source: link.source.id,
+        target: link.target.id,
+    };
+}
+const workerPayloadBuildElapsedMs = ((typeof performance !== 'undefined' && typeof performance.now === 'function')
+    ? performance.now()
+    : Date.now()) - workerPayloadBuildStartTs;
+console.log(`[Init Perf] Worker payload prepared in ${workerPayloadBuildElapsedMs.toFixed(2)}ms (workerNodes=${workerNodes.length}, workerLinks=${workerLinks.length}).`);
 
 simulationWorker.postMessage({ 
     type: 'init', 
@@ -587,17 +659,38 @@ function buildGraphSemanticSummary() {
         : (zh ? '矢量' : 'svg');
 
     const totalNodes = Array.isArray(nodes) ? nodes.length : 0;
-    const visibleNodeIds = new Set();
-    let visibleNodeCount = 0;
+    const minDegree = controls && controls.minDegree
+        ? (Number.parseInt(controls.minDegree.value, 10) || 0)
+        : 0;
+    const showOrphans = !!(controls && controls.showOrphans && controls.showOrphans.checked);
+    const searchTerm = controls && controls.search
+        ? String(controls.search.value || '').trim()
+        : '';
+    const clusterFilter = activeClusterFilter || 'all';
+    const hasActiveFilters = (
+        minDegree > 0
+        || !showOrphans
+        || searchTerm.length > 0
+        || clusterFilter !== 'all'
+    );
 
-    nodes.forEach((nodeRef) => {
-        if (isNodeVisible(nodeRef)) {
+    let visibleNodeCount = 0;
+    let visibleNodeIds = null;
+    if (!hasActiveFilters && !focusNode) {
+        visibleNodeCount = totalNodes;
+    } else {
+        visibleNodeIds = new Set();
+        for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex += 1) {
+            const nodeRef = nodes[nodeIndex];
+            if (!isNodeVisible(nodeRef)) {
+                continue;
+            }
             visibleNodeCount += 1;
             if (nodeRef && nodeRef.id) {
                 visibleNodeIds.add(nodeRef.id);
             }
         }
-    });
+    }
 
     const highlightState = window.highlightManager && typeof window.highlightManager.getState === 'function'
         ? window.highlightManager.getState()
@@ -610,13 +703,14 @@ function buildGraphSemanticSummary() {
 
     let visibleEdgeCount = 0;
     if (focusNode && rendererMode === 'svg') {
+        const activeVisibleNodeIds = visibleNodeIds || new Set();
         links.forEach((edge) => {
             const sourceId = resolveGraphEndpointId(edge ? edge.source : null);
             const targetId = resolveGraphEndpointId(edge ? edge.target : null);
             if (!sourceId || !targetId) {
                 return;
             }
-            if (visibleNodeIds.has(sourceId) && visibleNodeIds.has(targetId)) {
+            if (activeVisibleNodeIds.has(sourceId) && activeVisibleNodeIds.has(targetId)) {
                 visibleEdgeCount += 1;
             }
         });
@@ -625,16 +719,9 @@ function buildGraphSemanticSummary() {
         if (connections && Array.isArray(connections.links)) {
             visibleEdgeCount = connections.links.length;
         }
+    } else if (!hasActiveFilters && !focusNode) {
+        visibleEdgeCount = links.length;
     }
-
-    const minDegree = controls && controls.minDegree
-        ? (Number.parseInt(controls.minDegree.value, 10) || 0)
-        : 0;
-    const showOrphans = !!(controls && controls.showOrphans && controls.showOrphans.checked);
-    const searchTerm = controls && controls.search
-        ? String(controls.search.value || '').trim()
-        : '';
-    const clusterFilter = activeClusterFilter || 'all';
 
     const parts = [];
     if (zh) {
@@ -3324,11 +3411,13 @@ const notemdCloseButton = document.getElementById('btn-notemd-embed-close');
 const notemdIframe = document.getElementById('notemd-embed-frame');
 const NOTEMD_EMBED_RPC_REQUEST = 'noteconnection:notemd-rpc-request';
 const NOTEMD_EMBED_RPC_RESPONSE = 'noteconnection:notemd-rpc-response';
+const NOTEMD_EMBED_REFRESH = 'noteconnection:notemd-refresh';
 const NOTEMD_EMBED_ALLOWED_COMMANDS = new Set([
     'pick_notemd_file',
     'save_notemd_file',
     'pick_notemd_folder'
 ]);
+let notemdRefreshNonce = 0;
 
 function isNotemdIframeSource(source) {
     return !!(notemdIframe && notemdIframe.contentWindow && source === notemdIframe.contentWindow);
@@ -3469,10 +3558,40 @@ function ensureNotemdIframeLoaded() {
     }
 }
 
+function notifyNotemdIframeRefresh(context = {}) {
+    if (!notemdIframe || !notemdIframe.contentWindow || typeof notemdIframe.contentWindow.postMessage !== 'function') {
+        return false;
+    }
+    const safeContext = context && typeof context === 'object' ? context : {};
+    try {
+        notemdIframe.contentWindow.postMessage({
+            type: NOTEMD_EMBED_REFRESH,
+            requestId: `notemd-refresh-${Date.now()}-${++notemdRefreshNonce}`,
+            context: safeContext
+        }, '*');
+        return true;
+    } catch (error) {
+        console.warn('[NoteMD] Failed to send refresh signal to embedded iframe:', error);
+        return false;
+    }
+}
+
 function showEmbeddedNoteMD(context = {}) {
+    const shouldWaitForLoad = !notemdIframe || notemdIframe.getAttribute('src') !== 'notemd.html';
     ensureNotemdIframeLoaded();
     if (notemdOverlay) {
         notemdOverlay.style.display = 'flex';
+    }
+    const refreshContext = context && typeof context === 'object' ? context : {};
+    if (shouldWaitForLoad && notemdIframe) {
+        notemdIframe.addEventListener('load', () => {
+            notifyNotemdIframeRefresh({
+                ...refreshContext,
+                source: refreshContext.source || 'iframe-load'
+            });
+        }, { once: true });
+    } else {
+        notifyNotemdIframeRefresh(refreshContext);
     }
     console.log('[NoteMD] Embedded workspace opened:', context.source || 'unknown');
 }

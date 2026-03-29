@@ -1434,7 +1434,6 @@ func open_reader(node: Dictionary) -> void:
 	var metadata_variant = node.get("metadata", {})
 	var metadata: Dictionary = metadata_variant if metadata_variant is Dictionary else {}
 	var filepath := String(metadata.get("filepath", node.get("filepath", "")))
-	var content := _resolve_reader_content(node)
 
 	_reader_title_label.text = title
 	_reader_meta_label.text = filepath if not filepath.is_empty() else "Godot Reader"
@@ -1442,12 +1441,147 @@ func open_reader(node: Dictionary) -> void:
 	_apply_reader_mode_setting()
 	_sync_reader_controls_from_settings()
 	_set_reader_lock(true)
-	_start_reader_document_render(content, filepath)
+	_start_reader_document_render("Loading content...", filepath)
+	_start_reader_document_render_from_node(_reader_current_node, filepath)
 	if _reader_toast_panel:
 		_reader_toast_panel.hide()
 	_reader_overlay.show()
 	move_child(_reader_overlay, get_child_count() - 1)
 	_update_reader_media_debug_overlay()
+
+func _start_reader_document_render_from_node(node: Dictionary, fallback_filepath: String) -> void:
+	var protocol_result: Dictionary = await _load_reader_content_via_markdown_protocol(node, fallback_filepath)
+	if bool(protocol_result.get("ok", false)):
+		var protocol_blocks_variant: Variant = protocol_result.get("blocks", [])
+		var protocol_blocks: Array = protocol_blocks_variant if protocol_blocks_variant is Array else []
+		var resolved_filepath := String(protocol_result.get("filePath", fallback_filepath)).strip_edges()
+		var target_block_id := int(protocol_result.get("targetBlockId", -1))
+		if protocol_blocks.is_empty():
+			protocol_blocks = [{"type": "paragraph", "text": "No note content is available for this node yet."}]
+		_reader_meta_label.text = resolved_filepath if not resolved_filepath.is_empty() else _reader_meta_label.text
+		_start_reader_blocks_render(protocol_blocks, resolved_filepath, target_block_id)
+		return
+
+	var fallback_content := _resolve_reader_content(node)
+	_start_reader_document_render(fallback_content, fallback_filepath)
+
+func _load_reader_content_via_markdown_protocol(node: Dictionary, fallback_filepath: String) -> Dictionary:
+	if _reader_render_client == null:
+		return {"ok": false, "error": "Reader render client is unavailable."}
+
+	var resolved_file_path := String(fallback_filepath).strip_edges()
+	var node_id := String(node.get("id", "")).strip_edges()
+	var target_block_id := -1
+	var pre_resolved_variant = node.get("_reader_resolve_target", {})
+	var pre_resolved: Dictionary = pre_resolved_variant if pre_resolved_variant is Dictionary else {}
+	if not pre_resolved.is_empty():
+		resolved_file_path = String(pre_resolved.get("filePath", resolved_file_path)).strip_edges()
+		target_block_id = int(pre_resolved.get("targetBlockId", target_block_id))
+	if target_block_id < 0 and not node_id.is_empty():
+		var resolve_response: Dictionary = await _reader_render_client.resolve_markdown_node(node_id, resolved_file_path)
+		if bool(resolve_response.get("ok", false)):
+			resolved_file_path = String(resolve_response.get("filePath", resolved_file_path)).strip_edges()
+			target_block_id = int(resolve_response.get("targetBlockId", -1))
+
+	if resolved_file_path.is_empty():
+		return {"ok": false, "error": "No markdown file path was resolved for the reader node."}
+
+	var index_response: Dictionary = await _reader_render_client.fetch_markdown_index(resolved_file_path)
+	if not bool(index_response.get("ok", false)):
+		return index_response
+	var index_id := String(index_response.get("indexId", "")).strip_edges()
+	if index_id.is_empty():
+		return {"ok": false, "error": "Markdown index API did not return indexId."}
+
+	var block_count := 36
+	var chunk_source: Variant = index_response.get("blocksSummary", {})
+	if chunk_source is Dictionary:
+		var summary: Dictionary = chunk_source
+		var suggested_chunk := int(summary.get("chunkBlockSize", block_count))
+		if suggested_chunk > 0:
+			block_count = suggested_chunk
+	block_count = clampi(block_count, 1, 512)
+
+	var start_block := 0
+	var has_more := true
+	var chunks_guard := 0
+	var render_blocks: Array[Dictionary] = []
+	while has_more and chunks_guard < 100000:
+		chunks_guard += 1
+		var chunk_response: Dictionary = await _reader_render_client.fetch_markdown_chunk(index_id, start_block, block_count)
+		if not bool(chunk_response.get("ok", false)):
+			return chunk_response
+		var blocks_variant: Variant = chunk_response.get("blocks", [])
+		var blocks: Array = blocks_variant if blocks_variant is Array else []
+		if blocks.is_empty():
+			has_more = false
+			break
+		for block_variant in blocks:
+			var block: Dictionary = block_variant if block_variant is Dictionary else {}
+			var converted_blocks: Array = _convert_markdown_protocol_block(block)
+			for converted_variant in converted_blocks:
+				var converted: Dictionary = converted_variant if converted_variant is Dictionary else {}
+				if converted.is_empty():
+					continue
+				render_blocks.append(converted)
+		start_block = int(chunk_response.get("nextStartBlock", start_block + blocks.size()))
+		has_more = bool(chunk_response.get("hasMore", false))
+
+	if render_blocks.is_empty():
+		return {"ok": false, "error": "Markdown chunk API returned empty content."}
+
+	return {
+		"ok": true,
+		"blocks": render_blocks,
+		"filePath": resolved_file_path,
+		"targetBlockId": target_block_id
+	}
+
+func _convert_markdown_protocol_block(protocol_block: Dictionary) -> Array:
+	var block_id := int(protocol_block.get("id", -1))
+	var block_type := String(protocol_block.get("type", "paragraph")).strip_edges().to_lower()
+	var text := String(protocol_block.get("text", ""))
+	var normalized_blocks: Array = []
+
+	if not text.strip_edges().is_empty():
+		var parsed_blocks: Array = _parse_markdown_blocks(text)
+		if not parsed_blocks.is_empty():
+			for parsed_variant in parsed_blocks:
+				var parsed: Dictionary = parsed_variant if parsed_variant is Dictionary else {}
+				if parsed.is_empty():
+					continue
+				parsed["_protocol_block_id"] = block_id
+				normalized_blocks.append(parsed)
+			return normalized_blocks
+
+	var fallback_block: Dictionary = {}
+	match block_type:
+		"heading":
+			fallback_block = {"type": "heading", "level": 1, "text": text.strip_edges()}
+		"blockquote":
+			fallback_block = {"type": "blockquote", "text": text.strip_edges()}
+		"list", "list_item":
+			fallback_block = {
+				"type": "list",
+				"ordered": false,
+				"items": [
+					{"text": text.strip_edges()}
+				]
+			}
+		"table":
+			fallback_block = {"type": "table", "headers": [], "rows": []}
+		"code":
+			fallback_block = {"type": "code", "language": "", "text": text}
+		"rule":
+			fallback_block = {"type": "rule"}
+		_:
+			if text.strip_edges().is_empty():
+				return []
+			fallback_block = {"type": "paragraph", "text": text.strip_edges()}
+
+	fallback_block["_protocol_block_id"] = block_id
+	normalized_blocks.append(fallback_block)
+	return normalized_blocks
 
 
 func close_reader() -> void:
@@ -2043,8 +2177,16 @@ func _start_reader_document_render(raw_content: String, note_filepath: String) -
 	var render_revision := _reader_render_revision
 	_render_reader_document_async(raw_content, note_filepath, render_revision)
 
+func _start_reader_blocks_render(blocks: Array, note_filepath: String, target_block_id: int = -1) -> void:
+	_reader_render_revision += 1
+	var render_revision := _reader_render_revision
+	_render_reader_blocks_async(blocks, note_filepath, render_revision, target_block_id)
 
 func _render_reader_document_async(raw_content: String, note_filepath: String, render_revision: int) -> void:
+	var blocks := _parse_markdown_blocks(raw_content)
+	_render_reader_blocks_async(blocks, note_filepath, render_revision, -1)
+
+func _render_reader_blocks_async(blocks: Array, note_filepath: String, render_revision: int, target_block_id: int = -1) -> void:
 	if not _reader_blocks:
 		return
 
@@ -2055,25 +2197,47 @@ func _render_reader_document_async(raw_content: String, note_filepath: String, r
 		return
 
 	_clear_reader_blocks()
-	var blocks := _parse_markdown_blocks(raw_content)
 	if blocks.is_empty():
 		_reader_blocks.add_child(_make_reader_notice_block("No note content is available for this node yet."))
-	else:
-		for block_variant in blocks:
-			if render_revision != _reader_render_revision or not _reader_blocks:
-				return
-			var block: Dictionary = block_variant if block_variant is Dictionary else {}
-			var control_variant = await _build_reader_block_async(block, note_filepath, render_revision)
-			if render_revision != _reader_render_revision or not _reader_blocks:
-				return
-			var control := control_variant as Control
-			if control:
-				_reader_blocks.add_child(control)
-				_apply_reader_zoom_recursive(control)
-				control.update_minimum_size()
+		_apply_reader_zoom()
+		call_deferred("_reset_reader_scroll")
+		return
+
+	var target_control: Control = null
+	for block_variant in blocks:
+		if render_revision != _reader_render_revision or not _reader_blocks:
+			return
+		var block: Dictionary = block_variant if block_variant is Dictionary else {}
+		if block.is_empty():
+			continue
+		var control_variant = await _build_reader_block_async(block, note_filepath, render_revision)
+		if render_revision != _reader_render_revision or not _reader_blocks:
+			return
+		var control := control_variant as Control
+		if control:
+			_reader_blocks.add_child(control)
+			_apply_reader_zoom_recursive(control)
+			control.update_minimum_size()
+			var protocol_block_id := int(block.get("_protocol_block_id", -1))
+			if protocol_block_id >= 0:
+				control.set_meta("protocol_block_id", protocol_block_id)
+				if target_block_id >= 0 and protocol_block_id == target_block_id and target_control == null:
+					target_control = control
 
 	_apply_reader_zoom()
-	call_deferred("_reset_reader_scroll")
+	if target_control:
+		call_deferred("_focus_reader_block_control", target_control)
+	else:
+		call_deferred("_reset_reader_scroll")
+
+func _focus_reader_block_control(target_control: Control) -> void:
+	if _reader_scroll == null or target_control == null:
+		_reset_reader_scroll()
+		return
+	var content_top := _reader_blocks.global_position.y if _reader_blocks else 0.0
+	var target_top := target_control.global_position.y - content_top
+	var desired_scroll := maxi(0.0, target_top - (_reader_scroll.size.y * 0.35))
+	_reader_scroll.scroll_vertical = int(desired_scroll)
 
 
 func _clear_reader_blocks() -> void:
@@ -3383,8 +3547,7 @@ func _on_reader_meta_clicked(meta: Variant) -> void:
 	if value.begins_with("wiki:"):
 		var target := value.substr(5).strip_edges()
 		if not target.is_empty():
-			close_reader()
-			tree_node_clicked.emit(target)
+			_open_reader_from_wiki_target(target)
 		return
 	if value.begins_with("http://") or value.begins_with("https://"):
 		OS.shell_open(value)
@@ -3401,6 +3564,41 @@ func _on_reader_meta_clicked(meta: Variant) -> void:
 	var resolved := _resolve_reader_asset_path(value, filepath)
 	if not resolved.is_empty() and (resolved.contains("://") or resolved.contains(":") or resolved.begins_with("/")):
 		OS.shell_open(resolved)
+
+func _open_reader_from_wiki_target(target: String) -> void:
+	if _reader_render_client == null:
+		close_reader()
+		tree_node_clicked.emit(target)
+		return
+	var metadata_variant = _reader_current_node.get("metadata", {})
+	var metadata: Dictionary = metadata_variant if metadata_variant is Dictionary else {}
+	var current_filepath := String(metadata.get("filepath", _reader_current_node.get("filepath", ""))).strip_edges()
+	if current_filepath.is_empty():
+		close_reader()
+		tree_node_clicked.emit(target)
+		return
+
+	var resolve_response: Dictionary = await _reader_render_client.resolve_markdown_wiki(target, current_filepath)
+	if not bool(resolve_response.get("ok", false)):
+		close_reader()
+		tree_node_clicked.emit(target)
+		return
+
+	var next_filepath := String(resolve_response.get("filePath", "")).strip_edges()
+	if next_filepath.is_empty():
+		close_reader()
+		tree_node_clicked.emit(target)
+		return
+
+	var next_node: Dictionary = {
+		"id": target,
+		"label": next_filepath.get_file().get_basename(),
+		"metadata": {
+			"filepath": next_filepath
+		},
+		"_reader_resolve_target": resolve_response
+	}
+	open_reader(next_node)
 
 func _parse_markdown_blocks(markdown: String) -> Array:
 	var normalized := _normalize_reader_markdown(markdown)

@@ -6,6 +6,7 @@
 
 - Tauri 壳层/运行策略
 - Godot Path Mode 界面与运行参数
+- 前端图谱/阅读器运行参数（Tauri + Godot Bridge 共享）
 - NoteMD 的 LLM 工作流与 Provider 参数
 
 ## 1. 这个文件现在控制什么
@@ -14,6 +15,7 @@
 
 - `knowledge_base_path`、`user_language`、`[multi_window]`（Tauri 运行配置）
 - `[path_mode]`（Godot 运行配置，替代原先分散的本地 cfg）
+- `[frontend_settings]`（图谱物理参数、视觉参数、性能参数与 Markdown 阅读协议参数）
 - `[notemd]` + `[[notemd.providers]]`（NoteMD 全量配置 + Provider 列表）
 
 ## 2. NoteConnection 如何定位 `app_config.toml`
@@ -87,6 +89,26 @@ temperature = 0.5
 api_version = ""
 enabled = true
 ```
+
+### 4.4 前端阅读协议（Pulldown/Legacy 灰度）
+
+```toml
+[frontend_settings.reading]
+mode = "window"
+markdown_engine = "auto" # "legacy" | "pulldown" | "auto"
+chunk_block_size = 36
+prefetch_blocks = 8
+index_cache_ttl_sec = 1800
+max_doc_bytes = 100663296
+```
+
+运行时行为：
+
+- `markdown_engine = "auto"`：优先使用 `pulldown-cmark` 的索引/分块协议，失败自动回退 legacy。
+- `markdown_engine = "pulldown"`：若 worker 或协议异常，仍自动回退到 legacy，避免阅读器空白。
+- `chunk_block_size` + `prefetch_blocks`：控制大文档分块读取吞吐。
+- `index_cache_ttl_sec`：控制服务端 Markdown 索引缓存有效期。
+- `max_doc_bytes`：Markdown 索引请求的安全上限。
 
 内置 Provider 名称包括：
 

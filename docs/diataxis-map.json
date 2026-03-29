@@ -27,15 +27,15 @@
       }
     },
     {
-      "id": "publish-docs-edgeone",
+      "id": "publish-docs-github-pages",
       "category": "how-to",
       "en": {
-        "canonical": ["docs/en/sharelife_community_release_and_rollback.md", ".github/workflows/docs-edgeone-publish.yml", "scripts/deploy-docs-edgeone.js"],
-        "diataxis": "docs/diataxis/en/how-to/publish-docs-edgeone.md"
+        "canonical": ["docs/en/sharelife_community_release_and_rollback.md", ".github/workflows/docs-github-pages-publish.yml", "mkdocs.yml"],
+        "diataxis": "docs/diataxis/en/how-to/publish-docs-github-pages.md"
       },
       "zh": {
-        "canonical": ["docs/zh/sharelife_community_release_and_rollback.md", ".github/workflows/docs-edgeone-publish.yml", "scripts/deploy-docs-edgeone.js"],
-        "diataxis": "docs/diataxis/zh/how-to/publish-docs-edgeone.md"
+        "canonical": ["docs/zh/sharelife_community_release_and_rollback.md", ".github/workflows/docs-github-pages-publish.yml", "mkdocs.yml"],
+        "diataxis": "docs/diataxis/zh/how-to/publish-docs-github-pages.md"
       }
     },
     {

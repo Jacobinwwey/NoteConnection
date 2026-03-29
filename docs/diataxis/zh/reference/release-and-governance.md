@@ -20,7 +20,7 @@
 - NPM 发布策略门禁（SBOM + attestation）
 - Sidecar 签名与隐私策略校验
 - 文档发布工作流：
-  - `.github/workflows/docs-edgeone-publish.yml`
+  - `.github/workflows/docs-github-pages-publish.yml`
 - 文档发布与回滚运行手册：
   - [`docs/zh/sharelife_community_release_and_rollback.md`](../../../zh/sharelife_community_release_and_rollback.md)
 
@@ -31,4 +31,4 @@
 - 映射校验命令：
   - `npm run docs:diataxis:check`
 - 一键文档发布命令：
-  - `npm run docs:edgeone:publish`
+  - GitHub Actions 工作流：`Docs GitHub Pages Publish`

@@ -284,6 +284,7 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 - **重置**: 使用 **文件 > 重置为默认** 返回由捆绑的演示笔记。
 - **配置路径覆盖**: 可通过 `NOTE_CONNECTION_CONFIG_PATH`（完整文件路径）或 `NOTE_CONNECTION_CONFIG_DIR`（目录）自定义 `app_config.toml` 位置。
 - **窗口行为可调**: 在 `app_config.toml` 的 `[multi_window]` 段调整 `single_window_mode`、`hide_tauri_when_pathmode_opens`、`restore_tauri_when_pathmode_exits`、`confirm_before_full_shutdown_from_godot`、`sync_language`。
+- **阅读协议可调**: 在 `[frontend_settings.reading]` 中统一调节 Tauri/Godot 阅读行为（`markdown_engine`、`chunk_block_size`、`prefetch_blocks`、`index_cache_ttl_sec`、`max_doc_bytes`）。
 - **详细配置说明**: 参见 [`docs/zh/app_config.toml_guide.md`](app_config.toml_guide.md) 与模板 [`docs/examples/app_config.template.toml`](../examples/app_config.template.toml)。
 
 ```toml
@@ -297,7 +298,24 @@ hide_tauri_when_pathmode_opens = true
 restore_tauri_when_pathmode_exits = true
 confirm_before_full_shutdown_from_godot = true
 sync_language = true
+
+[frontend_settings.reading]
+mode = "window"
+markdown_engine = "auto" # "legacy" | "pulldown" | "auto"
+chunk_block_size = 36
+prefetch_blocks = 8
+index_cache_ttl_sec = 1800
+max_doc_bytes = 100663296
 ```
+
+### Markdown 阅读协议（v1.6.6）
+
+- 双引擎灰度发布：
+  - `auto`：优先 pulldown，失败自动回退 legacy。
+  - `pulldown`：仍保留 legacy 回退以保证会话稳定。
+  - `legacy`：强制旧解析链路。
+- 双窗口统一协议：Tauri 与 Godot 阅读器统一消费 `POST /api/markdown/index`、`chunk`、`resolve-node`、`resolve-wiki`。
+- 大文档稳定性：阅读链路支持块级增量加载，不再依赖单次整文响应。
 
 ## 🏗️ 构建与部署 (Build & Deployment)
 
@@ -318,6 +336,8 @@ sync_language = true
 - 映射一致性校验：`npm run docs:diataxis:check`。
 - 本地预览文档站点：`npm run docs:site:serve`。
 - 构建静态文档站点：`npm run docs:site:build`。
+- GitHub Pages 文档入口（project site）：`https://jacobinwwey.github.io/NoteConnection/`。
+- 发布工作流：`.github/workflows/docs-github-pages-publish.yml`（`workflow_dispatch` + `git_ref` 回滚）。
 - CI 文档治理工作流：`.github/workflows/docs-diataxis-site.yml`。
 
 ---
@@ -336,11 +356,11 @@ sync_language = true
 - 加固 Rust TOML 回写逻辑：保留未知 section，避免 Tauri 更新 KB/语言时覆盖 NoteMD/Path Mode 配置。
 
 ### v1.6.5 - 文档门户更新 (2026-03-26)
-- 已将 MkDocs 文档发布到 EdgeOne Pages 项目 `noteconnection-docs`。
+- 已将 MkDocs 文档发布到 GitHub Pages project site。
 - 在 README 中补充了面向用户与开发者的中英文文档检索入口。
-- 维护者发布命令统一为：
+- 维护者发布流程统一为：
   - `npm run docs:site:build`
-  - `edgeone pages deploy build/mkdocs-site -n noteconnection-docs -e production -a global`
+  - `.github/workflows/docs-github-pages-publish.yml`（`workflow_dispatch` 支持 `git_ref` 回滚）
 
 ### v1.6.0 - 单窗口运行时、NoteMD 集成与发布加固 (2026-03-23)
 

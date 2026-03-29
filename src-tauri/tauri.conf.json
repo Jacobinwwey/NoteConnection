@@ -33,7 +33,8 @@
     ],
     "externalBin": [
       "bin/server",
-      "bin/godot"
+      "bin/godot",
+      "bin/markdown-worker"
     ]
   }
 }

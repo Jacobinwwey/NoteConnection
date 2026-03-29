@@ -40,6 +40,38 @@ reader_debug = false
 node_spacing = 240.0 # clamped to [100, 600]
 
 # -----------------------------------------------------------------------------
+# Unified Frontend Runtime Settings (Tauri + Godot Reader bridge)
+# -----------------------------------------------------------------------------
+
+[frontend_settings.physics]
+repulsion_force = -550
+repulsion_dag = -850
+link_distance = 250
+collision_radius = 25
+
+[frontend_settings.visuals]
+edge_opacity = 0.6
+base_node_size = 5
+degree_mode = "visible" # "visible" | "total"
+
+[frontend_settings.performance]
+max_workers = 4
+enable_gpu = true
+gpu_rendering = true
+memory_saving_mode = false
+compact_mode = false
+static_mode = false
+deep_debug = false
+
+[frontend_settings.reading]
+mode = "window" # "window" | "fullscreen"
+markdown_engine = "auto" # "legacy" | "pulldown" | "auto"
+chunk_block_size = 36 # [1, 4096]
+prefetch_blocks = 8 # [0, 1024]
+index_cache_ttl_sec = 1800 # [5, 86400]
+max_doc_bytes = 100663296 # [262144, 2147483648]
+
+# -----------------------------------------------------------------------------
 # NoteMD Runtime (unified in app_config.toml)
 # -----------------------------------------------------------------------------
 

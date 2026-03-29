@@ -511,7 +511,7 @@ func _request_runtime_json(path_suffix: String, method: int, body: Dictionary = 
 	if response[3] is PackedByteArray:
 		response_body = (response[3] as PackedByteArray).get_string_from_utf8()
 
-	var decoded := JSON.parse_string(response_body)
+	var decoded: Variant = JSON.parse_string(response_body)
 	if typeof(decoded) != TYPE_DICTIONARY:
 		if response_code >= 200 and response_code < 300:
 			return {

@@ -7,7 +7,7 @@ const path = require('path');
 const repoRoot = path.resolve(__dirname, '..');
 const targetRoot = path.join(repoRoot, 'src-tauri', 'target');
 const targetModes = ['debug', 'release'];
-const sidecarNames = ['server', 'godot'];
+const sidecarNames = ['server', 'godot', 'markdown-worker'];
 
 function loadCargoPackageName() {
   try {

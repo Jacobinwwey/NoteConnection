@@ -80,6 +80,21 @@ function runPkgBuild(targetConfig) {
   }
 }
 
+function runMarkdownWorkerBuild(args) {
+  const scriptPath = path.join(repoRoot, 'scripts', 'build-markdown-worker.js');
+  const result = spawnSync(process.execPath, [scriptPath, ...args], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    stdio: 'inherit',
+  });
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error('[Sidecar Build] Markdown worker build failed.');
+  }
+}
+
 function isKnownBenignWarningLine(line) {
   const normalizedLine = String(line || '').trim();
   if (!normalizedLine) {
@@ -120,6 +135,7 @@ function main() {
 
   const args = new Set(process.argv.slice(2));
   const buildAll = args.has('--all');
+  const forceBuild = args.has('--force') || process.env.NOTE_CONNECTION_FORCE_SIDECAR_REBUILD === '1';
   const targets = buildAll
     ? [TARGETS.windows_x64, TARGETS.linux_x64, TARGETS.macos_arm64]
     : [resolveHostTarget()].filter(Boolean);
@@ -131,6 +147,7 @@ function main() {
   }
 
   targets.forEach((target) => runPkgBuild(target));
+  runMarkdownWorkerBuild(forceBuild ? ['--force'] : []);
   console.log(`[Sidecar Build] Completed ${targets.length} target(s).`);
 }
 

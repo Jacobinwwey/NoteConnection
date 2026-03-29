@@ -4,10 +4,14 @@
   let currentSettings = null;
   const NOTEMD_EMBED_RPC_REQUEST = "noteconnection:notemd-rpc-request";
   const NOTEMD_EMBED_RPC_RESPONSE = "noteconnection:notemd-rpc-response";
+  const NOTEMD_EMBED_REFRESH = "noteconnection:notemd-refresh";
   const NOTEMD_RUNTIME_READY_TIMEOUT_MS = 2000;
   const NOTEMD_INVOKE_TIMEOUT_MS = 300000;
+  const NOTEMD_WORKSPACE_ENDPOINT = "/api/notemd/workspace";
   let notemdRpcSeq = 0;
   let runtimeReadyTimeoutWarned = false;
+  let workspacePersistTimer = null;
+  let embeddedRefreshPromise = null;
 
   function nowString() {
     const d = new Date();
@@ -381,6 +385,88 @@
     preview.value = folderName ? `Knowledge_Base/${folderName}` : "";
   }
 
+  function normalizeWorkspacePayload(workspace) {
+    const source = workspace && typeof workspace === "object" ? workspace : {};
+    return {
+      filePath: typeof source.filePath === "string" ? source.filePath.trim() : "",
+      folderPath: typeof source.folderPath === "string" ? source.folderPath.trim() : "",
+      outputFilePath: typeof source.outputFilePath === "string" ? source.outputFilePath.trim() : "",
+      outputFolderPath: typeof source.outputFolderPath === "string" ? source.outputFolderPath.trim() : "",
+    };
+  }
+
+  function applyWorkspaceToForm(workspace) {
+    const normalized = normalizeWorkspacePayload(workspace);
+    const fileInput = $("file-path");
+    const folderInput = $("folder-path");
+    const outputPreview = $("output-folder-preview");
+
+    if (fileInput) {
+      fileInput.value = normalized.filePath;
+    }
+    if (folderInput) {
+      folderInput.value = normalized.folderPath;
+    }
+
+    if (outputPreview) {
+      if (normalized.outputFolderPath) {
+        outputPreview.value = normalized.outputFolderPath;
+      } else {
+        updateOutputFolderPreview();
+      }
+    }
+  }
+
+  function collectWorkspaceFromForm() {
+    const outputFolderPreview = $("output-folder-preview");
+    return {
+      filePath: getFilePath(),
+      folderPath: getFolderPath(),
+      outputFilePath: "",
+      outputFolderPath: outputFolderPreview ? outputFolderPreview.value.trim() : "",
+    };
+  }
+
+  function syncWorkspaceIntoCurrentSettings(workspace) {
+    if (!currentSettings || !workspace || typeof workspace !== "object") {
+      return;
+    }
+    const normalized = normalizeWorkspacePayload(workspace);
+    currentSettings.workspaceFilePath = normalized.filePath;
+    currentSettings.workspaceFolderPath = normalized.folderPath;
+    currentSettings.workspaceOutputFilePath = normalized.outputFilePath;
+    currentSettings.workspaceOutputFolderPath = normalized.outputFolderPath;
+  }
+
+  async function persistWorkspaceToToml(silent = true) {
+    const payload = await apiRequest(NOTEMD_WORKSPACE_ENDPOINT, {
+      method: "POST",
+      body: {
+        workspace: collectWorkspaceFromForm(),
+      },
+    });
+    const workspace = normalizeWorkspacePayload(payload.workspace || {});
+    syncWorkspaceIntoCurrentSettings(workspace);
+    if (!silent) {
+      appendLog("Workspace paths synced to app_config.toml.");
+    }
+  }
+
+  function scheduleWorkspacePersist() {
+    if (workspacePersistTimer) {
+      clearTimeout(workspacePersistTimer);
+    }
+    workspacePersistTimer = setTimeout(() => {
+      workspacePersistTimer = null;
+      persistWorkspaceToToml(true).catch((error) => {
+        appendLog(
+          `Workspace sync warning: ${error instanceof Error ? error.message : String(error)}`,
+          "warn"
+        );
+      });
+    }, 250);
+  }
+
   function getActiveProvider(settings) {
     const providers = Array.isArray(settings && settings.providers) ? settings.providers : [];
     return (
@@ -419,6 +505,12 @@
     $("max-tokens").value = String(settings.maxTokens || 4096);
     $("developer-mode").checked = settings.developerMode === true;
     updateDeveloperModeUi(settings.developerMode === true);
+    applyWorkspaceToForm({
+      filePath: settings.workspaceFilePath || "",
+      folderPath: settings.workspaceFolderPath || "",
+      outputFilePath: settings.workspaceOutputFilePath || "",
+      outputFolderPath: settings.workspaceOutputFolderPath || "",
+    });
   }
 
   function buildSettingsPayload() {
@@ -442,6 +534,11 @@
     next.maxTokens = Math.max(128, Number($("max-tokens").value || next.maxTokens || 4096));
     next.developerMode = $("developer-mode").checked;
     next.autoMermaidFixAfterGenerate = true;
+    const workspace = collectWorkspaceFromForm();
+    next.workspaceFilePath = workspace.filePath;
+    next.workspaceFolderPath = workspace.folderPath;
+    next.workspaceOutputFilePath = workspace.outputFilePath;
+    next.workspaceOutputFolderPath = workspace.outputFolderPath;
 
     next.providers = next.providers.map((item) => {
       if (item.name !== providerName) {
@@ -474,6 +571,7 @@
     if (typeof selectedPath === "string" && selectedPath.trim()) {
       input.value = selectedPath;
       updateOutputFolderPreview();
+      scheduleWorkspacePersist();
       appendLog(`Selected path: ${selectedPath}`);
     } else {
       appendLog("Path selection was cancelled.");
@@ -492,15 +590,28 @@
     });
     if (typeof selectedPath === "string" && selectedPath.trim()) {
       input.value = selectedPath;
+      scheduleWorkspacePersist();
       appendLog(`Selected folder: ${selectedPath}`);
     } else {
       appendLog("Folder selection was cancelled.");
     }
   }
 
+  async function loadWorkspace(silent = false) {
+    const payload = await apiRequest(NOTEMD_WORKSPACE_ENDPOINT, { method: "GET" });
+    const workspace = normalizeWorkspacePayload(payload.workspace || {});
+    applyWorkspaceToForm(workspace);
+    syncWorkspaceIntoCurrentSettings(workspace);
+    if (!silent) {
+      appendLog("Loaded NoteMD workspace from app_config.toml.");
+    }
+    return workspace;
+  }
+
   async function loadSettings() {
     const payload = await apiRequest("/api/notemd/settings", { method: "GET" });
     applySettingsToForm(payload.settings || {});
+    await loadWorkspace(true);
     appendLog("Loaded NoteMD settings from app_config.toml.");
   }
 
@@ -546,6 +657,7 @@
 
     $("folder-path").value = payload.result.outputFolderPath || "";
     $("output-folder-preview").value = payload.result.outputFolderPath || $("output-folder-preview").value;
+    scheduleWorkspacePersist();
     appendLog(
       `One-Click Extract completed. ${payload.result.concepts.length} concepts -> ${payload.result.generated.generatedFiles} generated files -> ${payload.result.mermaid.fixedFiles} Mermaid-fixed files.`
     );
@@ -566,6 +678,7 @@
         operationId: getOperationId() || undefined,
       },
     });
+    scheduleWorkspacePersist();
     appendLog(`Extracted ${payload.result.concepts.length} concepts from the current file.`);
   }
 
@@ -577,6 +690,7 @@
     const payload = await apiRequest("/api/notemd/generate-folder-content", {
       body: { folderPath },
     });
+    scheduleWorkspacePersist();
     appendLog(
       `Batch generate completed: ${payload.result.generatedFiles}/${payload.result.totalFiles} files written.`
     );
@@ -590,6 +704,7 @@
     const payload = await apiRequest("/api/notemd/batch-fix-mermaid", {
       body: { folderPath, inPlace: true },
     });
+    scheduleWorkspacePersist();
     appendLog(
       `Batch Mermaid fix completed: ${payload.result.fixedFiles}/${payload.result.totalFiles} files changed.`
     );
@@ -609,7 +724,13 @@
     });
   }
 
-  $("file-path").addEventListener("input", updateOutputFolderPreview);
+  $("file-path").addEventListener("input", () => {
+    updateOutputFolderPreview();
+    scheduleWorkspacePersist();
+  });
+  $("folder-path").addEventListener("input", () => {
+    scheduleWorkspacePersist();
+  });
   $("developer-mode").addEventListener("change", () => {
     updateDeveloperModeUi($("developer-mode").checked);
   });
@@ -625,6 +746,41 @@
   bind("btn-browse-file-path", () => browseForFileInput("file-path", false));
   bind("btn-browse-folder-path", () => browseForFolderInput("folder-path"));
 
+  window.addEventListener("message", (event) => {
+    const data = event && event.data;
+    if (!data || typeof data !== "object" || data.type !== NOTEMD_EMBED_REFRESH) {
+      return;
+    }
+
+    const isFromParent = event.source && window.parent && event.source === window.parent;
+    const isStandalone = !window.parent || window.parent === window;
+    if (!isFromParent && !isStandalone) {
+      return;
+    }
+
+    if (embeddedRefreshPromise) {
+      return;
+    }
+
+    const context = data.context && typeof data.context === "object" ? data.context : {};
+    embeddedRefreshPromise = (async () => {
+      await loadSettings();
+      const source = typeof context.source === "string" && context.source.trim()
+        ? context.source.trim()
+        : "embedded-open";
+      appendLog(`Unified frontend settings refreshed (${source}).`);
+    })()
+      .catch((error) => {
+        appendLog(
+          `Embedded refresh failed: ${error instanceof Error ? error.message : String(error)}`,
+          "warn"
+        );
+      })
+      .finally(() => {
+        embeddedRefreshPromise = null;
+      });
+  });
+
   ensureRuntimeReady().finally(async () => {
     appendLog(`NoteMD UI initialized against ${getBaseUrl()}`);
     appendLog("Reminder: convert PDF files to Markdown with Mineru before importing.");
@@ -633,7 +789,11 @@
     }
     try {
       await loadSettings();
-      updateOutputFolderPreview();
+      const outputPreview = $("output-folder-preview");
+      if (outputPreview && !outputPreview.value.trim()) {
+        updateOutputFolderPreview();
+      }
+      await persistWorkspaceToToml(true).catch(() => undefined);
     } catch (error) {
       appendLog(
         `Initial settings load failed: ${error instanceof Error ? error.message : String(error)}`,

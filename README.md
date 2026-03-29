@@ -285,6 +285,7 @@ Managing your knowledge base source is now easier than ever.
 - **Reset**: Use **File > Reset to Default** to return to the bundled demo notes.
 - **Config Path Overrides**: Set `NOTE_CONNECTION_CONFIG_PATH` (full file path) or `NOTE_CONNECTION_CONFIG_DIR` (directory) to customize where `app_config.toml` is stored.
 - **Window Behavior Tuning**: Edit `[multi_window]` in `app_config.toml` (`single_window_mode`, `hide_tauri_when_pathmode_opens`, `restore_tauri_when_pathmode_exits`, `confirm_before_full_shutdown_from_godot`, `sync_language`).
+- **Reader Protocol Tuning**: Edit `[frontend_settings.reading]` to control markdown rendering runtime (`markdown_engine`, `chunk_block_size`, `prefetch_blocks`, `index_cache_ttl_sec`, `max_doc_bytes`).
 - **Detailed Config Guide**: See [`docs/en/app_config.toml_guide.md`](docs/en/app_config.toml_guide.md) and template [`docs/examples/app_config.template.toml`](docs/examples/app_config.template.toml).
 
 ```toml
@@ -298,7 +299,24 @@ hide_tauri_when_pathmode_opens = true
 restore_tauri_when_pathmode_exits = true
 confirm_before_full_shutdown_from_godot = true
 sync_language = true
+
+[frontend_settings.reading]
+mode = "window"
+markdown_engine = "auto" # "legacy" | "pulldown" | "auto"
+chunk_block_size = 36
+prefetch_blocks = 8
+index_cache_ttl_sec = 1800
+max_doc_bytes = 100663296
 ```
+
+### Markdown Reader Protocol (v1.6.6)
+
+- **Dual-engine gray release**:
+  - `markdown_engine = "auto"`: prefer `pulldown-cmark`, fallback to legacy on failure.
+  - `markdown_engine = "pulldown"`: keep automatic fallback to legacy to avoid blank readers.
+  - `markdown_engine = "legacy"`: force original parser path.
+- **Unified cross-window behavior**: Tauri reader and Godot reader now both consume the same sidecar markdown protocol (`index/chunk/resolve-node/resolve-wiki`).
+- **Large file stability**: reader no longer requires single-shot full markdown payloads and supports block-based incremental loading.
 
 ## 🏗️ Build & Deployment
 
@@ -319,15 +337,14 @@ For developers building from source, NoteConnection offers two build modes:
 - Run mapping validation: `npm run docs:diataxis:check`.
 - Run local docs site preview: `npm run docs:site:serve`.
 - Build static docs site: `npm run docs:site:build`.
-- EdgeOne Docs Portal (MkDocs deploy): `https://noteconnection-docs.edgeone.run`
-  - If you see `401 Authorization Required`, open the latest signed URL printed by deployment as `EDGEONE_DEPLOY_URL`, or disable preset-domain protection in EdgeOne Pages settings.
-- Public mirror (fallback): `https://jacobinwwey.github.io/NoteConnection/`.
+- GitHub Pages Docs Portal (project site): `https://jacobinwwey.github.io/NoteConnection/`.
+- Host root (for routing baseline): `https://jacobinwwey.github.io/`.
 - Recommended lookup entry points:
   - Users: `/diataxis/zh/tutorials/first-run/` or `/diataxis/en/tutorials/first-run/`
   - Developers: `/diataxis/en/reference/interfaces-and-runtime/` and `/diataxis/en/reference/release-and-governance/`
-- EdgeOne publish command (MkDocs site): `edgeone pages deploy build/mkdocs-site -n noteconnection-docs -e production -a global`.
-- One-click docs publish command: `npm run docs:edgeone:publish`.
-- CI auto publish workflow (EdgeOne): `.github/workflows/docs-edgeone-publish.yml`.
+- CI auto publish workflow (GitHub Pages): `.github/workflows/docs-github-pages-publish.yml`.
+- Manual rollback entry: run workflow dispatch and set `git_ref` to a stable tag/commit.
+- MkDocs base/path can be overridden by environment variables: `MKDOCS_SITE_URL`, `MKDOCS_BASE_PATH`.
 - CI policy gate for docs mapping and site build: `.github/workflows/docs-diataxis-site.yml`.
 - Sharelife community UI docs release + rollback guide:
   - English: [`docs/en/sharelife_community_release_and_rollback.md`](docs/en/sharelife_community_release_and_rollback.md)
@@ -358,11 +375,11 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 - Updated bilingual documentation and templates for v1.6.6 schema and operations.
 ### v1.6.5 - Documentation Portal Update (2026-03-26)
 
-- Published MkDocs documentation to EdgeOne Pages project `noteconnection-docs`.
+- Published MkDocs documentation to GitHub Pages project site.
 - Added bilingual README guidance for docs lookup paths (user/tutorial and developer/reference entry points).
-- Standardized docs publish command for maintainers:
+- Standardized docs publish flow for maintainers:
   - `npm run docs:site:build`
-  - `edgeone pages deploy build/mkdocs-site -n noteconnection-docs -e production -a global`
+  - `.github/workflows/docs-github-pages-publish.yml` (`workflow_dispatch` supports `git_ref` rollback)
 ### v1.6.0 - Unified Runtime, NoteMD Integration & Release Hardening (2026-03-23)
 
 - **Tag Compare Snapshot (`v1.3.0..v1.6.0`)**:
@@ -1191,6 +1208,7 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 - **重置**: 使用 **文件 > 重置为默认** 返回由捆绑的演示笔记。
 - **配置路径覆盖**: 可通过 `NOTE_CONNECTION_CONFIG_PATH`（完整文件路径）或 `NOTE_CONNECTION_CONFIG_DIR`（目录）自定义 `app_config.toml` 位置。
 - **窗口行为可调**: 在 `app_config.toml` 的 `[multi_window]` 段调整 `single_window_mode`、`hide_tauri_when_pathmode_opens`、`restore_tauri_when_pathmode_exits`、`confirm_before_full_shutdown_from_godot`、`sync_language`。
+- **阅读协议可调**: 在 `[frontend_settings.reading]` 中统一调节 Markdown 渲染链路（`markdown_engine`、`chunk_block_size`、`prefetch_blocks`、`index_cache_ttl_sec`、`max_doc_bytes`）。
 - **详细配置说明**: 参见 [`docs/zh/app_config.toml_guide.md`](docs/zh/app_config.toml_guide.md) 与模板 [`docs/examples/app_config.template.toml`](docs/examples/app_config.template.toml)。
 
 ```toml
@@ -1204,7 +1222,24 @@ hide_tauri_when_pathmode_opens = true
 restore_tauri_when_pathmode_exits = true
 confirm_before_full_shutdown_from_godot = true
 sync_language = true
+
+[frontend_settings.reading]
+mode = "window"
+markdown_engine = "auto" # "legacy" | "pulldown" | "auto"
+chunk_block_size = 36
+prefetch_blocks = 8
+index_cache_ttl_sec = 1800
+max_doc_bytes = 100663296
 ```
+
+### Markdown 阅读协议（v1.6.6）
+
+- **双引擎灰度发布**：
+  - `markdown_engine = "auto"`：优先 `pulldown-cmark`，失败自动回退 legacy。
+  - `markdown_engine = "pulldown"`：仍保留自动回退 legacy，避免阅读器空白。
+  - `markdown_engine = "legacy"`：强制使用旧解析链路。
+- **双窗口统一行为**：Tauri 阅读器与 Godot 阅读器都统一消费 sidecar Markdown 协议（`index/chunk/resolve-node/resolve-wiki`）。
+- **大文档稳定性提升**：阅读链路不再依赖单次整文全量载入，改为块级增量加载。
 
 ## 🏗️ 构建与部署 (Build & Deployment)
 
@@ -1225,15 +1260,14 @@ sync_language = true
 - 映射一致性校验：`npm run docs:diataxis:check`。
 - 本地预览文档站点：`npm run docs:site:serve`。
 - 构建静态文档站点：`npm run docs:site:build`。
-- EdgeOne 文档入口（MkDocs 发布）：`https://noteconnection-docs.edgeone.run`
-  - 若出现 `401 Authorization Required`，请使用最近一次部署输出中的 `EDGEONE_DEPLOY_URL` 签名链接，或在 EdgeOne Pages 项目中关闭预设域名访问保护。
-- 公共镜像（兜底）：`https://jacobinwwey.github.io/NoteConnection/`。
+- GitHub Pages 文档入口（project site）：`https://jacobinwwey.github.io/NoteConnection/`。
+- 根域名（路由基线）：`https://jacobinwwey.github.io/`。
 - 推荐查询入口：
   - 用户文档：`/diataxis/zh/tutorials/first-run/` 或 `/diataxis/en/tutorials/first-run/`
   - 开发文档：`/diataxis/en/reference/interfaces-and-runtime/` 与 `/diataxis/en/reference/release-and-governance/`
-- EdgeOne 发布命令（MkDocs 产物）：`edgeone pages deploy build/mkdocs-site -n noteconnection-docs -e production -a global`。
-- 一键文档发布命令：`npm run docs:edgeone:publish`。
-- CI 自动发布工作流（EdgeOne）：`.github/workflows/docs-edgeone-publish.yml`。
+- CI 自动发布工作流（GitHub Pages）：`.github/workflows/docs-github-pages-publish.yml`。
+- 手动回滚入口：运行 workflow_dispatch 并设置 `git_ref` 为稳定 tag/commit。
+- MkDocs base/path 可通过环境变量覆盖：`MKDOCS_SITE_URL`、`MKDOCS_BASE_PATH`。
 - CI 文档治理工作流：`.github/workflows/docs-diataxis-site.yml`。
 - Sharelife 社区界面文档发布与回滚指南：
   - English：[`docs/en/sharelife_community_release_and_rollback.md`](docs/en/sharelife_community_release_and_rollback.md)
@@ -1258,11 +1292,11 @@ sync_language = true
 
 ### v1.6.5 - 文档门户更新 (2026-03-26)
 
-- 已将 MkDocs 文档发布到 EdgeOne Pages 项目 `noteconnection-docs`。
+- 已将 MkDocs 文档发布到 GitHub Pages project site。
 - 在 README 中补充了面向用户与开发者的中英文文档检索入口。
-- 维护者发布命令统一为：
+- 维护者发布流程统一为：
   - `npm run docs:site:build`
-  - `edgeone pages deploy build/mkdocs-site -n noteconnection-docs -e production -a global`
+  - `.github/workflows/docs-github-pages-publish.yml`（`workflow_dispatch` 支持 `git_ref` 回滚）
 
 ### v1.6.0 - 单窗口运行时、NoteMD 集成与发布加固 (2026-03-23)
 

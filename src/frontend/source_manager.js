@@ -226,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const maxAttempts = 30;
+        const maxAttempts = 12;
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 const pingRes = await fetch(buildSidecarUrl('api/kb-path', { v: Date.now() }), buildSidecarFetchOptions({ cache: 'no-store' }));
@@ -237,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Sidecar is still starting; retry.
             }
 
-            await sleep(Math.min(1200, 80 * attempt));
+            await sleep(Math.min(500, 60 * attempt));
         }
 
         console.warn('[Loader] Sidecar readiness check timed out. Proceeding with startup fallback.');
@@ -912,8 +912,11 @@ document.addEventListener('DOMContentLoaded', () => {
         await resolveRuntimeCapabilities();
         updateRuntimeCapabilityNotice();
         updateKbPathControls();
-        await waitForSidecarReady();
+
+        // Start static graph/frontend bootstrap immediately so UI initialization
+        // does not block on sidecar ping retries.
         bootstrapScriptLoad();
+        await waitForSidecarReady();
 
         if (window.i18n && window.i18n.isInitialized) {
             await fetchFolders();

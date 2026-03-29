@@ -20,7 +20,7 @@ This documentation system is organized by Diataxis:
 npm run docs:diataxis:check
 mkdocs serve --config-file mkdocs.yml
 mkdocs build --config-file mkdocs.yml
-npm run docs:edgeone:publish
+# publish is handled by GitHub Actions workflow: Docs GitHub Pages Publish
 ```
 
 ## Canonical Source Documents

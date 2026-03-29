@@ -297,6 +297,158 @@ describe('NoteMD server integration', () => {
     expect(appConfigContent).toContain('reader_render_mode = "source"');
   });
 
+  test('GET/PUT frontend settings roundtrip works', async () => {
+    const readResponse = await requestJson(port, 'GET', '/api/frontend/settings');
+    expect(readResponse.status).toBe(200);
+    expect(readResponse.body.success).toBe(true);
+    expect(readResponse.body.settings).toEqual(
+      expect.objectContaining({
+        physics: expect.any(Object),
+        visuals: expect.any(Object),
+        performance: expect.any(Object),
+        reading: expect.any(Object),
+      })
+    );
+    expect(readResponse.body.settings.visuals.degreeMode).toBe('visible');
+
+    const writeResponse = await requestJson(port, 'PUT', '/api/frontend/settings', {
+      physics: {
+        repulsionForce: -640,
+        repulsionDAG: -980,
+        linkDistance: 360,
+        collisionRadius: 38,
+      },
+      visuals: {
+        edgeOpacity: 0.35,
+        baseNodeSize: 7,
+        degreeMode: 'total',
+      },
+      performance: {
+        maxWorkers: 6,
+        enableGPU: true,
+        gpuRendering: false,
+        memorySavingMode: true,
+        compactMode: true,
+        staticMode: false,
+        deepDebug: true,
+      },
+      reading: {
+        mode: 'fullscreen',
+        markdownEngine: 'pulldown',
+        chunkBlockSize: 48,
+        prefetchBlocks: 10,
+        indexCacheTtlSec: 2400,
+        maxDocBytes: 150994944,
+      },
+    });
+    expect(writeResponse.status).toBe(200);
+    expect(writeResponse.body.success).toBe(true);
+    expect(writeResponse.body.settings.visuals.degreeMode).toBe('total');
+    expect(writeResponse.body.settings.performance.maxWorkers).toBe(6);
+    expect(writeResponse.body.settings.reading.mode).toBe('fullscreen');
+    expect(writeResponse.body.settings.reading.markdownEngine).toBe('pulldown');
+    expect(writeResponse.body.settings.reading.chunkBlockSize).toBe(48);
+    expect(writeResponse.body.settings.reading.prefetchBlocks).toBe(10);
+    expect(writeResponse.body.settings.reading.indexCacheTtlSec).toBe(2400);
+    expect(writeResponse.body.settings.reading.maxDocBytes).toBe(150994944);
+
+    const verifyResponse = await requestJson(port, 'GET', '/api/frontend/settings');
+    expect(verifyResponse.status).toBe(200);
+    expect(verifyResponse.body.settings.visuals.degreeMode).toBe('total');
+    expect(verifyResponse.body.settings.performance.maxWorkers).toBe(6);
+    expect(verifyResponse.body.settings.reading.mode).toBe('fullscreen');
+    expect(verifyResponse.body.settings.reading.markdownEngine).toBe('pulldown');
+
+    const appConfigContent = fs.readFileSync(appConfigPath, 'utf8');
+    expect(appConfigContent).toContain('[frontend_settings.physics]');
+    expect(appConfigContent).toContain('[frontend_settings.visuals]');
+    expect(appConfigContent).toContain('[frontend_settings.performance]');
+    expect(appConfigContent).toContain('[frontend_settings.reading]');
+    expect(appConfigContent).toContain('degree_mode = "total"');
+    expect(appConfigContent).toContain('max_workers = 6');
+    expect(appConfigContent).toContain('markdown_engine = "pulldown"');
+    expect(appConfigContent).toContain('chunk_block_size = 48');
+  });
+
+  test('markdown protocol endpoints index/chunk/resolve-node/resolve-wiki work with fallback-safe payloads', async () => {
+    const indexResponse = await requestJson(port, 'POST', '/api/markdown/index', {
+      filePath: kbFilePath,
+      forceRebuild: true,
+    });
+    expect(indexResponse.status).toBe(200);
+    expect(indexResponse.body.success).toBe(true);
+    expect(typeof indexResponse.body.indexId).toBe('string');
+    expect(indexResponse.body.filePath).toBe(kbFilePath);
+    expect(indexResponse.body.blocksSummary.totalBlocks).toBeGreaterThan(0);
+    expect(indexResponse.body.markdownProtocolVersion).toBe('1.0.0');
+
+    const chunkResponse = await requestJson(port, 'POST', '/api/markdown/chunk', {
+      indexId: indexResponse.body.indexId,
+      startBlock: 0,
+      blockCount: 8,
+    });
+    expect(chunkResponse.status).toBe(200);
+    expect(chunkResponse.body.success).toBe(true);
+    expect(Array.isArray(chunkResponse.body.blocks)).toBe(true);
+    expect(chunkResponse.body.blocks.length).toBeGreaterThan(0);
+    expect(typeof chunkResponse.body.blocks[0].text).toBe('string');
+
+    const resolveNodeResponse = await requestJson(port, 'POST', '/api/markdown/resolve-node', {
+      nodeId: 'topic',
+      currentFilePath: kbFilePath,
+    });
+    expect(resolveNodeResponse.status).toBe(200);
+    expect(resolveNodeResponse.body.success).toBe(true);
+    expect(resolveNodeResponse.body.filePath).toBe(kbFilePath);
+    expect(typeof resolveNodeResponse.body.targetBlockId).toBe('number');
+
+    const resolveWikiResponse = await requestJson(port, 'POST', '/api/markdown/resolve-wiki', {
+      wikiTarget: '[[topic]]',
+      currentFilePath: kbFilePath,
+    });
+    expect(resolveWikiResponse.status).toBe(200);
+    expect(resolveWikiResponse.body.success).toBe(true);
+    expect(resolveWikiResponse.body.filePath).toBe(kbFilePath);
+    expect(['exact', 'alias', 'heading', 'fallback']).toContain(resolveWikiResponse.body.matchType);
+  });
+
+  test('GET/POST NoteMD workspace roundtrip works and persists to app_config.toml', async () => {
+    const readResponse = await requestJson(port, 'GET', '/api/notemd/workspace');
+    expect(readResponse.status).toBe(200);
+    expect(readResponse.body.success).toBe(true);
+    expect(readResponse.body.workspace).toEqual(
+      expect.objectContaining({
+        filePath: '',
+        folderPath: '',
+        outputFilePath: '',
+        outputFolderPath: '',
+      })
+    );
+
+    const nextWorkspace = {
+      filePath: kbFilePath,
+      folderPath: path.dirname(kbFilePath),
+      outputFilePath: path.join(path.dirname(kbFilePath), 'topic_processed.md'),
+      outputFolderPath: path.join(path.dirname(kbFilePath), 'topic'),
+    };
+    const writeResponse = await requestJson(port, 'POST', '/api/notemd/workspace', {
+      workspace: nextWorkspace,
+    });
+    expect(writeResponse.status).toBe(200);
+    expect(writeResponse.body.success).toBe(true);
+    expect(writeResponse.body.workspace).toEqual(expect.objectContaining(nextWorkspace));
+
+    const verifyResponse = await requestJson(port, 'GET', '/api/notemd/workspace');
+    expect(verifyResponse.status).toBe(200);
+    expect(verifyResponse.body.workspace).toEqual(expect.objectContaining(nextWorkspace));
+
+    const appConfigContent = fs.readFileSync(appConfigPath, 'utf8');
+    expect(appConfigContent).toContain('workspace_file_path =');
+    expect(appConfigContent).toContain('workspace_folder_path =');
+    expect(appConfigContent).toContain('workspace_output_file_path =');
+    expect(appConfigContent).toContain('workspace_output_folder_path =');
+  });
+
   test('process-file and fix-formulas endpoints execute on a real file', async () => {
     const processResponse = await requestJson(port, 'POST', '/api/notemd/process-file', {
       filePath: kbFilePath,
@@ -314,6 +466,11 @@ describe('NoteMD server integration', () => {
 
     const fileContent = fs.readFileSync(kbFilePath, 'utf8');
     expect(fileContent).toContain('$$');
+
+    const workspaceResponse = await requestJson(port, 'GET', '/api/notemd/workspace');
+    expect(workspaceResponse.status).toBe(200);
+    expect(workspaceResponse.body.workspace.filePath).toBe(kbFilePath);
+    expect(workspaceResponse.body.workspace.folderPath).toBe(path.dirname(kbFilePath));
   });
 
   test('extract-concepts and duplicate endpoints return structured results', async () => {

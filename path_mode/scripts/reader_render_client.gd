@@ -15,6 +15,65 @@ var _texture_cache: Dictionary = {}
 var _runtime_manifest_cache: Dictionary = {}
 var _runtime_manifest_loaded: bool = false
 
+func fetch_markdown_index(file_path: String, force_rebuild: bool = false) -> Dictionary:
+	var normalized_path := file_path.strip_edges()
+	if normalized_path.is_empty():
+		return {"ok": false, "error": "Missing filePath for markdown index request."}
+	var payload := {
+		"filePath": normalized_path,
+		"forceRebuild": force_rebuild
+	}
+	var response: Dictionary = await _post_json("/api/markdown/index", payload)
+	return _normalize_markdown_response(response, "markdown/index")
+
+func fetch_markdown_chunk(index_id: String, start_block: int, block_count: int) -> Dictionary:
+	var normalized_index := index_id.strip_edges()
+	if normalized_index.is_empty():
+		return {"ok": false, "error": "Missing indexId for markdown chunk request."}
+	var payload := {
+		"indexId": normalized_index,
+		"startBlock": max(0, start_block),
+		"blockCount": max(1, block_count)
+	}
+	var response: Dictionary = await _post_json("/api/markdown/chunk", payload)
+	return _normalize_markdown_response(response, "markdown/chunk")
+
+func resolve_markdown_node(node_id: String, current_file_path: String = "") -> Dictionary:
+	var normalized_node := node_id.strip_edges()
+	if normalized_node.is_empty():
+		return {"ok": false, "error": "Missing nodeId for markdown resolve-node request."}
+	var payload := {
+		"nodeId": normalized_node
+	}
+	var normalized_path := current_file_path.strip_edges()
+	if not normalized_path.is_empty():
+		payload["currentFilePath"] = normalized_path
+	var response: Dictionary = await _post_json("/api/markdown/resolve-node", payload)
+	return _normalize_markdown_response(response, "markdown/resolve-node")
+
+func resolve_markdown_wiki(wiki_target: String, current_file_path: String) -> Dictionary:
+	var normalized_wiki := wiki_target.strip_edges()
+	var normalized_path := current_file_path.strip_edges()
+	if normalized_wiki.is_empty() or normalized_path.is_empty():
+		return {"ok": false, "error": "Missing wikiTarget or currentFilePath for markdown resolve-wiki request."}
+	var payload := {
+		"wikiTarget": normalized_wiki,
+		"currentFilePath": normalized_path
+	}
+	var response: Dictionary = await _post_json("/api/markdown/resolve-wiki", payload)
+	return _normalize_markdown_response(response, "markdown/resolve-wiki")
+
+func _normalize_markdown_response(response: Dictionary, endpoint_name: String) -> Dictionary:
+	if not bool(response.get("ok", false)):
+		return response
+	if bool(response.get("success", false)):
+		response.erase("success")
+		return response
+	return {
+		"ok": false,
+		"error": String(response.get("error", "Unexpected markdown API response for %s." % endpoint_name))
+	}
+
 func render_math_texture(source: String, display_mode: bool = true, scale: float = 2.6, max_size: Vector2 = Vector2.ZERO) -> Dictionary:
 	var cache_key := "%s|math|%s|%s|%.2f|%d|%d" % [
 		CACHE_VERSION,

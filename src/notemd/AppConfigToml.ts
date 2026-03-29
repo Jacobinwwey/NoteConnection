@@ -39,6 +39,10 @@ const NOTEMD_NUMBER_KEYS = [
 ] as const;
 
 const NOTEMD_STRING_KEYS = [
+    'workspaceFilePath',
+    'workspaceFolderPath',
+    'workspaceOutputFilePath',
+    'workspaceOutputFolderPath',
     'conceptNoteFolder',
     'processedFileFolder',
     'focusedLearningDomain',
@@ -128,6 +132,76 @@ export const DEFAULT_PATH_MODE_SETTINGS: PathModeSettings = {
     node_spacing: 240.0,
 };
 
+export interface FrontendPhysicsSettings {
+    repulsionForce: number;
+    repulsionDAG: number;
+    linkDistance: number;
+    collisionRadius: number;
+}
+
+export interface FrontendVisualSettings {
+    edgeOpacity: number;
+    baseNodeSize: number;
+    degreeMode: 'visible' | 'total';
+}
+
+export interface FrontendPerformanceSettings {
+    maxWorkers: number;
+    enableGPU: boolean;
+    gpuRendering: boolean;
+    memorySavingMode: boolean;
+    compactMode: boolean;
+    staticMode: boolean;
+    deepDebug: boolean;
+}
+
+export interface FrontendReadingSettings {
+    mode: 'window' | 'fullscreen';
+    markdownEngine: 'legacy' | 'pulldown' | 'auto';
+    chunkBlockSize: number;
+    prefetchBlocks: number;
+    indexCacheTtlSec: number;
+    maxDocBytes: number;
+}
+
+export interface FrontendSettings {
+    physics: FrontendPhysicsSettings;
+    visuals: FrontendVisualSettings;
+    performance: FrontendPerformanceSettings;
+    reading: FrontendReadingSettings;
+}
+
+export const DEFAULT_FRONTEND_SETTINGS: FrontendSettings = {
+    physics: {
+        repulsionForce: -550,
+        repulsionDAG: -850,
+        linkDistance: 250,
+        collisionRadius: 25,
+    },
+    visuals: {
+        edgeOpacity: 0.6,
+        baseNodeSize: 5,
+        degreeMode: 'visible',
+    },
+    performance: {
+        maxWorkers: 4,
+        enableGPU: true,
+        gpuRendering: true,
+        memorySavingMode: false,
+        compactMode: false,
+        staticMode: false,
+        deepDebug: false,
+    },
+    reading: {
+        mode: 'window',
+        markdownEngine: 'auto',
+        chunkBlockSize: 36,
+        prefetchBlocks: 8,
+        indexCacheTtlSec: 1800,
+        maxDocBytes: 100663296,
+    },
+};
+
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
     return !!value && typeof value === 'object' && !Array.isArray(value);
 }
@@ -213,6 +287,252 @@ function normalizePathModeReadingMode(value: unknown): 'window' | 'fullscreen' {
 function normalizePathModeRenderMode(value: unknown): 'render' | 'source' {
     const text = String(value || '').trim().toLowerCase();
     return text === 'source' ? 'source' : 'render';
+}
+
+function cloneFrontendSettings(settings: FrontendSettings): FrontendSettings {
+    return JSON.parse(JSON.stringify(settings)) as FrontendSettings;
+}
+
+function readNumberWithNestedFallback(
+    nestedSection: Record<string, unknown>,
+    section: Record<string, unknown>,
+    snakeKey: string,
+    camelKey: string
+): number | undefined {
+    const nestedValue = readNumber(nestedSection, snakeKey, camelKey);
+    if (typeof nestedValue === 'number') {
+        return nestedValue;
+    }
+    return readNumber(section, snakeKey, camelKey);
+}
+
+function readBooleanWithNestedFallback(
+    nestedSection: Record<string, unknown>,
+    section: Record<string, unknown>,
+    snakeKey: string,
+    camelKey: string
+): boolean | undefined {
+    const nestedValue = readBoolean(nestedSection, snakeKey, camelKey);
+    if (typeof nestedValue === 'boolean') {
+        return nestedValue;
+    }
+    return readBoolean(section, snakeKey, camelKey);
+}
+
+function normalizeFrontendReadingMode(value: unknown): 'window' | 'fullscreen' {
+    const text = String(value || '').trim().toLowerCase();
+    return text === 'fullscreen' ? 'fullscreen' : 'window';
+}
+
+function normalizeMarkdownEngine(value: unknown): 'legacy' | 'pulldown' | 'auto' {
+    const text = String(value || '').trim().toLowerCase();
+    if (text === 'legacy') {
+        return 'legacy';
+    }
+    if (text === 'pulldown') {
+        return 'pulldown';
+    }
+    return 'auto';
+}
+
+function normalizeFrontendDegreeMode(value: unknown): 'visible' | 'total' {
+    const text = String(value || '').trim().toLowerCase();
+    return text === 'total' ? 'total' : 'visible';
+}
+
+function normalizeRepulsionValue(value: unknown, fallback: number): number {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) {
+        return fallback;
+    }
+    return clampNumber(numericValue, -10000, -1);
+}
+
+function normalizeFrontendSettingsValue(raw: unknown): FrontendSettings {
+    const section = isObjectRecord(raw) ? raw : {};
+    const physicsSection = readObject(section, 'physics', 'physics') || {};
+    const visualsSection = readObject(section, 'visuals', 'visuals') || {};
+    const performanceSection = readObject(section, 'performance', 'performance') || {};
+    const readingSection = readObject(section, 'reading', 'reading') || {};
+    const merged = cloneFrontendSettings(DEFAULT_FRONTEND_SETTINGS);
+
+    merged.physics.repulsionForce = normalizeRepulsionValue(
+        readNumberWithNestedFallback(physicsSection, section, 'repulsion_force', 'repulsionForce'),
+        merged.physics.repulsionForce
+    );
+    merged.physics.repulsionDAG = normalizeRepulsionValue(
+        readNumberWithNestedFallback(physicsSection, section, 'repulsion_dag', 'repulsionDAG'),
+        merged.physics.repulsionDAG
+    );
+
+    const linkDistance = readNumberWithNestedFallback(
+        physicsSection,
+        section,
+        'link_distance',
+        'linkDistance'
+    );
+    if (typeof linkDistance === 'number') {
+        merged.physics.linkDistance = clampNumber(linkDistance, 20, 2000);
+    }
+
+    const collisionRadius = readNumberWithNestedFallback(
+        physicsSection,
+        section,
+        'collision_radius',
+        'collisionRadius'
+    );
+    if (typeof collisionRadius === 'number') {
+        merged.physics.collisionRadius = clampNumber(collisionRadius, 1, 300);
+    }
+
+    const edgeOpacity = readNumberWithNestedFallback(
+        visualsSection,
+        section,
+        'edge_opacity',
+        'edgeOpacity'
+    );
+    if (typeof edgeOpacity === 'number') {
+        merged.visuals.edgeOpacity = clampNumber(edgeOpacity, 0, 1);
+    }
+
+    const baseNodeSize = readNumberWithNestedFallback(
+        visualsSection,
+        section,
+        'base_node_size',
+        'baseNodeSize'
+    );
+    if (typeof baseNodeSize === 'number') {
+        merged.visuals.baseNodeSize = clampNumber(baseNodeSize, 1, 100);
+    }
+
+    merged.visuals.degreeMode = normalizeFrontendDegreeMode(
+        readString(visualsSection, 'degree_mode', 'degreeMode')
+            ?? readString(section, 'degree_mode', 'degreeMode')
+            ?? merged.visuals.degreeMode
+    );
+
+    const maxWorkers = readNumberWithNestedFallback(
+        performanceSection,
+        section,
+        'max_workers',
+        'maxWorkers'
+    );
+    if (typeof maxWorkers === 'number') {
+        merged.performance.maxWorkers = Math.round(clampNumber(maxWorkers, 1, 64));
+    }
+
+    const enableGPU = readBooleanWithNestedFallback(
+        performanceSection,
+        section,
+        'enable_gpu',
+        'enableGPU'
+    );
+    if (typeof enableGPU === 'boolean') {
+        merged.performance.enableGPU = enableGPU;
+    }
+
+    const gpuRendering = readBooleanWithNestedFallback(
+        performanceSection,
+        section,
+        'gpu_rendering',
+        'gpuRendering'
+    );
+    if (typeof gpuRendering === 'boolean') {
+        merged.performance.gpuRendering = gpuRendering;
+    }
+
+    const memorySavingMode = readBooleanWithNestedFallback(
+        performanceSection,
+        section,
+        'memory_saving_mode',
+        'memorySavingMode'
+    );
+    if (typeof memorySavingMode === 'boolean') {
+        merged.performance.memorySavingMode = memorySavingMode;
+    }
+
+    const compactMode = readBooleanWithNestedFallback(
+        performanceSection,
+        section,
+        'compact_mode',
+        'compactMode'
+    );
+    if (typeof compactMode === 'boolean') {
+        merged.performance.compactMode = compactMode;
+    }
+
+    const staticMode = readBooleanWithNestedFallback(
+        performanceSection,
+        section,
+        'static_mode',
+        'staticMode'
+    );
+    if (typeof staticMode === 'boolean') {
+        merged.performance.staticMode = staticMode;
+    }
+
+    const deepDebug = readBooleanWithNestedFallback(
+        performanceSection,
+        section,
+        'deep_debug',
+        'deepDebug'
+    );
+    if (typeof deepDebug === 'boolean') {
+        merged.performance.deepDebug = deepDebug;
+    }
+
+    merged.reading.mode = normalizeFrontendReadingMode(
+        readString(readingSection, 'mode', 'mode')
+            ?? readString(section, 'reading_mode', 'readingMode')
+            ?? merged.reading.mode
+    );
+    merged.reading.markdownEngine = normalizeMarkdownEngine(
+        readString(readingSection, 'markdown_engine', 'markdownEngine')
+            ?? readString(section, 'markdown_engine', 'markdownEngine')
+            ?? merged.reading.markdownEngine
+    );
+
+    const chunkBlockSize = readNumberWithNestedFallback(
+        readingSection,
+        section,
+        'chunk_block_size',
+        'chunkBlockSize'
+    );
+    if (typeof chunkBlockSize === 'number') {
+        merged.reading.chunkBlockSize = Math.round(clampNumber(chunkBlockSize, 1, 4096));
+    }
+
+    const prefetchBlocks = readNumberWithNestedFallback(
+        readingSection,
+        section,
+        'prefetch_blocks',
+        'prefetchBlocks'
+    );
+    if (typeof prefetchBlocks === 'number') {
+        merged.reading.prefetchBlocks = Math.round(clampNumber(prefetchBlocks, 0, 1024));
+    }
+
+    const indexCacheTtlSec = readNumberWithNestedFallback(
+        readingSection,
+        section,
+        'index_cache_ttl_sec',
+        'indexCacheTtlSec'
+    );
+    if (typeof indexCacheTtlSec === 'number') {
+        merged.reading.indexCacheTtlSec = Math.round(clampNumber(indexCacheTtlSec, 5, 86400));
+    }
+
+    const maxDocBytes = readNumberWithNestedFallback(
+        readingSection,
+        section,
+        'max_doc_bytes',
+        'maxDocBytes'
+    );
+    if (typeof maxDocBytes === 'number') {
+        merged.reading.maxDocBytes = Math.round(clampNumber(maxDocBytes, 256 * 1024, 2 * 1024 * 1024 * 1024));
+    }
+
+    return merged;
 }
 
 function normalizePathModeSettingsValue(raw: unknown): PathModeSettings {
@@ -639,6 +959,53 @@ export function applyPathModeSettingsToAppConfig(
             reader_media_scale: normalized.reader_media_scale,
             reader_debug: normalized.reader_debug,
             node_spacing: normalized.node_spacing,
+        },
+    };
+}
+
+export function extractFrontendSettingsFromAppConfig(appConfig: AppConfigRecord): FrontendSettings {
+    const frontendSection = isObjectRecord(appConfig.frontend_settings)
+        ? appConfig.frontend_settings
+        : (isObjectRecord(appConfig.frontend) ? appConfig.frontend : {});
+    return normalizeFrontendSettingsValue(frontendSection);
+}
+
+export function applyFrontendSettingsToAppConfig(
+    appConfig: AppConfigRecord,
+    settingsLike: unknown
+): AppConfigRecord {
+    const normalized = normalizeFrontendSettingsValue(settingsLike);
+    return {
+        ...appConfig,
+        frontend_settings: {
+            physics: {
+                repulsion_force: normalized.physics.repulsionForce,
+                repulsion_dag: normalized.physics.repulsionDAG,
+                link_distance: normalized.physics.linkDistance,
+                collision_radius: normalized.physics.collisionRadius,
+            },
+            visuals: {
+                edge_opacity: normalized.visuals.edgeOpacity,
+                base_node_size: normalized.visuals.baseNodeSize,
+                degree_mode: normalized.visuals.degreeMode,
+            },
+            performance: {
+                max_workers: normalized.performance.maxWorkers,
+                enable_gpu: normalized.performance.enableGPU,
+                gpu_rendering: normalized.performance.gpuRendering,
+                memory_saving_mode: normalized.performance.memorySavingMode,
+                compact_mode: normalized.performance.compactMode,
+                static_mode: normalized.performance.staticMode,
+                deep_debug: normalized.performance.deepDebug,
+            },
+            reading: {
+                mode: normalized.reading.mode,
+                markdown_engine: normalized.reading.markdownEngine,
+                chunk_block_size: normalized.reading.chunkBlockSize,
+                prefetch_blocks: normalized.reading.prefetchBlocks,
+                index_cache_ttl_sec: normalized.reading.indexCacheTtlSec,
+                max_doc_bytes: normalized.reading.maxDocBytes,
+            },
         },
     };
 }

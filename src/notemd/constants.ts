@@ -23,6 +23,11 @@ export const DEFAULT_SETTINGS: NotemdSettings = {
     activeProvider: DEFAULT_PROVIDER_NAME,
     developerMode: false,
 
+    workspaceFilePath: '',
+    workspaceFolderPath: '',
+    workspaceOutputFilePath: '',
+    workspaceOutputFolderPath: '',
+
     useCustomConceptNoteFolder: false,
     conceptNoteFolder: 'Concepts',
     useCustomProcessedFileFolder: false,

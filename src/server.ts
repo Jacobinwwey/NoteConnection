@@ -23,14 +23,22 @@ import {
     type ProgressReporter,
 } from './notemd';
 import {
+    applyFrontendSettingsToAppConfig,
     applyPathModeSettingsToAppConfig,
     applyNotemdSettingsToAppConfig,
+    extractFrontendSettingsFromAppConfig,
     extractPathModeSettingsFromAppConfig,
     extractNotemdSettingsFromAppConfig,
     loadAppConfigToml,
+    type FrontendSettings,
     type PathModeSettings,
     saveAppConfigToml,
 } from './notemd/AppConfigToml';
+import {
+    MarkdownGateway,
+    MARKDOWN_PROTOCOL_VERSION,
+    normalizeMarkdownRuntimeConfig,
+} from './markdown/MarkdownGateway';
 
 type WritableProcessStream = NodeJS.WriteStream & {
     __noteConnectionBrokenPipeGuardInstalled?: boolean;
@@ -152,6 +160,18 @@ const notemdService = new NotemdService();
 const notemdLlmClient = new LlmProviderClient();
 let cachedNotemdSettings: NotemdSettings | null = null;
 let cachedPathModeSettings: PathModeSettings | null = null;
+let cachedFrontendSettings: FrontendSettings | null = null;
+const markdownGateway = new MarkdownGateway({
+    projectRoot: runtimePaths.projectRoot,
+    getKnowledgeBaseRoot: () => KB_ROOT,
+    resolveMarkdownPath: async (rawPath: string) => resolvePathWithinKnowledgeBase(rawPath, {
+        expectedType: 'file',
+    }),
+    logger: {
+        info: (...args: unknown[]) => logDiagnostic(...args),
+        warn: (...args: unknown[]) => warnDiagnostic(...args),
+    },
+});
 
 type NotemdOperationState = {
     id: string;
@@ -840,6 +860,10 @@ function normalizeNotemdSettings(rawValue: unknown): NotemdSettings {
 
     merged.conceptNoteFolder = String(raw.conceptNoteFolder || defaults.conceptNoteFolder).trim();
     merged.processedFileFolder = String(raw.processedFileFolder || defaults.processedFileFolder).trim();
+    merged.workspaceFilePath = String(raw.workspaceFilePath || defaults.workspaceFilePath).trim();
+    merged.workspaceFolderPath = String(raw.workspaceFolderPath || defaults.workspaceFolderPath).trim();
+    merged.workspaceOutputFilePath = String(raw.workspaceOutputFilePath || defaults.workspaceOutputFilePath).trim();
+    merged.workspaceOutputFolderPath = String(raw.workspaceOutputFolderPath || defaults.workspaceOutputFolderPath).trim();
     merged.translationCustomSuffix = String(raw.translationCustomSuffix || defaults.translationCustomSuffix).trim();
     merged.translationSavePath = String(raw.translationSavePath || defaults.translationSavePath).trim();
     merged.addLinksCustomSuffix = String(raw.addLinksCustomSuffix || defaults.addLinksCustomSuffix).trim();
@@ -927,8 +951,82 @@ async function persistNotemdSettings(settingsLike: unknown): Promise<NotemdSetti
     return cloneNotemdSettings(normalized);
 }
 
+type NotemdWorkspaceState = {
+    filePath: string;
+    folderPath: string;
+    outputFilePath: string;
+    outputFolderPath: string;
+};
+
+function extractNotemdWorkspaceState(settings: NotemdSettings): NotemdWorkspaceState {
+    return {
+        filePath: String(settings.workspaceFilePath || '').trim(),
+        folderPath: String(settings.workspaceFolderPath || '').trim(),
+        outputFilePath: String(settings.workspaceOutputFilePath || '').trim(),
+        outputFolderPath: String(settings.workspaceOutputFolderPath || '').trim(),
+    };
+}
+
+function normalizeWorkspaceField(
+    source: Record<string, unknown>,
+    keys: string[],
+    fallback: string
+): string {
+    for (const key of keys) {
+        if (!Object.prototype.hasOwnProperty.call(source, key)) {
+            continue;
+        }
+        return String(source[key] || '').trim();
+    }
+    return fallback;
+}
+
+function applyWorkspacePatchToSettings(
+    settings: NotemdSettings,
+    workspacePatch: unknown
+): NotemdSettings {
+    const next = cloneNotemdSettings(settings);
+    if (!isObjectRecord(workspacePatch)) {
+        return next;
+    }
+
+    next.workspaceFilePath = normalizeWorkspaceField(
+        workspacePatch,
+        ['filePath', 'file_path', 'workspaceFilePath', 'workspace_file_path'],
+        next.workspaceFilePath
+    );
+    next.workspaceFolderPath = normalizeWorkspaceField(
+        workspacePatch,
+        ['folderPath', 'folder_path', 'workspaceFolderPath', 'workspace_folder_path'],
+        next.workspaceFolderPath
+    );
+    next.workspaceOutputFilePath = normalizeWorkspaceField(
+        workspacePatch,
+        ['outputFilePath', 'output_file_path', 'workspaceOutputFilePath', 'workspace_output_file_path'],
+        next.workspaceOutputFilePath
+    );
+    next.workspaceOutputFolderPath = normalizeWorkspaceField(
+        workspacePatch,
+        ['outputFolderPath', 'output_folder_path', 'workspaceOutputFolderPath', 'workspace_output_folder_path'],
+        next.workspaceOutputFolderPath
+    );
+
+    return next;
+}
+
+async function persistNotemdWorkspacePatch(workspacePatch: unknown): Promise<NotemdWorkspaceState> {
+    const settings = await loadNotemdSettings();
+    const nextSettings = applyWorkspacePatchToSettings(settings, workspacePatch);
+    const persisted = await persistNotemdSettings(nextSettings);
+    return extractNotemdWorkspaceState(persisted);
+}
+
 function clonePathModeSettings(settings: PathModeSettings): PathModeSettings {
     return JSON.parse(JSON.stringify(settings)) as PathModeSettings;
+}
+
+function cloneFrontendSettings(settings: FrontendSettings): FrontendSettings {
+    return JSON.parse(JSON.stringify(settings)) as FrontendSettings;
 }
 
 async function loadPathModeSettings(): Promise<PathModeSettings> {
@@ -954,6 +1052,31 @@ async function persistPathModeSettings(settingsLike: unknown): Promise<PathModeS
     const persisted = extractPathModeSettingsFromAppConfig(nextAppConfig);
     cachedPathModeSettings = clonePathModeSettings(persisted);
     return clonePathModeSettings(persisted);
+}
+
+async function loadFrontendSettings(): Promise<FrontendSettings> {
+    if (cachedFrontendSettings) {
+        return cloneFrontendSettings(cachedFrontendSettings);
+    }
+
+    try {
+        const appConfig = await loadAppConfigToml();
+        cachedFrontendSettings = extractFrontendSettingsFromAppConfig(appConfig);
+    } catch (error) {
+        warnDiagnostic('[Frontend] Failed to read TOML settings. Falling back to defaults.', error);
+        cachedFrontendSettings = extractFrontendSettingsFromAppConfig({});
+    }
+
+    return cloneFrontendSettings(cachedFrontendSettings);
+}
+
+async function persistFrontendSettings(settingsLike: unknown): Promise<FrontendSettings> {
+    const appConfig = await loadAppConfigToml();
+    const nextAppConfig = applyFrontendSettingsToAppConfig(appConfig, settingsLike);
+    await saveAppConfigToml(nextAppConfig);
+    const persisted = extractFrontendSettingsFromAppConfig(nextAppConfig);
+    cachedFrontendSettings = cloneFrontendSettings(persisted);
+    return cloneFrontendSettings(persisted);
 }
 
 function generateNotemdOperationId(): string {
@@ -1759,6 +1882,26 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 return;
             }
 
+            if (getPathname === '/api/notemd/workspace') {
+                try {
+                    const settings = await loadNotemdSettings();
+                    const workspace = extractNotemdWorkspaceState(settings);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(
+                        JSON.stringify({
+                            success: true,
+                            workspace,
+                        })
+                    );
+                } catch (error) {
+                    console.error(error);
+                    CrashLogger.log(error, 'API:GET /api/notemd/workspace');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
             if (getPathname === '/api/path-mode/settings') {
                 try {
                     const settings = await loadPathModeSettings();
@@ -1772,6 +1915,25 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 } catch (error) {
                     console.error(error);
                     CrashLogger.log(error, 'API:GET /api/path-mode/settings');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (getPathname === '/api/frontend/settings') {
+                try {
+                    const settings = await loadFrontendSettings();
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(
+                        JSON.stringify({
+                            success: true,
+                            settings,
+                        })
+                    );
+                } catch (error) {
+                    console.error(error);
+                    CrashLogger.log(error, 'API:GET /api/frontend/settings');
                     res.writeHead(500, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ success: false, error: String(error) }));
                 }
@@ -2165,6 +2327,27 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 return;
             }
 
+            if (postPathname === '/api/notemd/workspace') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const workspaceCandidate = isObjectRecord(payload) && payload.workspace !== undefined
+                        ? payload.workspace
+                        : payload;
+                    const workspace = await persistNotemdWorkspacePatch(workspaceCandidate);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, workspace }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/notemd/workspace');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
             if (postPathname === '/api/path-mode/settings') {
                 try {
                     const payload = await readJsonBody(req);
@@ -2182,6 +2365,258 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     CrashLogger.log(error, 'API:POST /api/path-mode/settings');
                     res.writeHead(500, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/frontend/settings') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const settingsCandidate = isObjectRecord(payload) && payload.settings !== undefined
+                        ? payload.settings
+                        : payload;
+                    const settings = await persistFrontendSettings(settingsCandidate);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, settings }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/frontend/settings');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/markdown/index') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const requestBody = isObjectRecord(payload) ? payload : {};
+                    const filePath = String(requestBody.filePath || '').trim();
+                    if (!filePath) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({
+                            success: false,
+                            error: 'Missing filePath for /api/markdown/index',
+                            markdownProtocolVersion: MARKDOWN_PROTOCOL_VERSION,
+                        }));
+                        return;
+                    }
+
+                    const frontendSettings = await loadFrontendSettings();
+                    const readingConfig = normalizeMarkdownRuntimeConfig(frontendSettings.reading);
+                    const result = await markdownGateway.buildIndex(
+                        {
+                            filePath,
+                            forceRebuild: requestBody.forceRebuild === true,
+                        },
+                        readingConfig
+                    );
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: true,
+                        ...result,
+                    }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    if (isAccessDeniedError(error)) {
+                        res.writeHead(403, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({
+                            success: false,
+                            error: String((error as Error).message || 'Access denied'),
+                            markdownProtocolVersion: MARKDOWN_PROTOCOL_VERSION,
+                        }));
+                        return;
+                    }
+                    if (isFsNotFoundError(error)) {
+                        res.writeHead(404, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({
+                            success: false,
+                            error: 'Markdown file not found',
+                            markdownProtocolVersion: MARKDOWN_PROTOCOL_VERSION,
+                        }));
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/markdown/index');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: false,
+                        error: String(error),
+                        markdownProtocolVersion: MARKDOWN_PROTOCOL_VERSION,
+                    }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/markdown/chunk') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const requestBody = isObjectRecord(payload) ? payload : {};
+                    const indexId = String(requestBody.indexId || '').trim();
+                    if (!indexId) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({
+                            success: false,
+                            error: 'Missing indexId for /api/markdown/chunk',
+                            markdownProtocolVersion: MARKDOWN_PROTOCOL_VERSION,
+                        }));
+                        return;
+                    }
+
+                    const result = await markdownGateway.getChunk({
+                        indexId,
+                        startBlock: Number(requestBody.startBlock) || 0,
+                        blockCount: Number(requestBody.blockCount) || 1,
+                    });
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: true,
+                        ...result,
+                    }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/markdown/chunk');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: false,
+                        error: String(error),
+                        markdownProtocolVersion: MARKDOWN_PROTOCOL_VERSION,
+                    }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/markdown/resolve-node') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const requestBody = isObjectRecord(payload) ? payload : {};
+                    const nodeId = String(requestBody.nodeId || '').trim();
+                    if (!nodeId) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({
+                            success: false,
+                            error: 'Missing nodeId for /api/markdown/resolve-node',
+                            markdownProtocolVersion: MARKDOWN_PROTOCOL_VERSION,
+                        }));
+                        return;
+                    }
+
+                    const frontendSettings = await loadFrontendSettings();
+                    const readingConfig = normalizeMarkdownRuntimeConfig(frontendSettings.reading);
+                    const result = await markdownGateway.resolveNode(
+                        {
+                            nodeId,
+                            currentFilePath: String(requestBody.currentFilePath || '').trim() || undefined,
+                        },
+                        readingConfig
+                    );
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: true,
+                        ...result,
+                    }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    if (isAccessDeniedError(error)) {
+                        res.writeHead(403, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({
+                            success: false,
+                            error: String((error as Error).message || 'Access denied'),
+                            markdownProtocolVersion: MARKDOWN_PROTOCOL_VERSION,
+                        }));
+                        return;
+                    }
+                    if (isFsNotFoundError(error)) {
+                        res.writeHead(404, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({
+                            success: false,
+                            error: 'Markdown file not found',
+                            markdownProtocolVersion: MARKDOWN_PROTOCOL_VERSION,
+                        }));
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/markdown/resolve-node');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: false,
+                        error: String(error),
+                        markdownProtocolVersion: MARKDOWN_PROTOCOL_VERSION,
+                    }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/markdown/resolve-wiki') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const requestBody = isObjectRecord(payload) ? payload : {};
+                    const wikiTarget = String(requestBody.wikiTarget || '').trim();
+                    const currentFilePath = String(requestBody.currentFilePath || '').trim();
+                    if (!wikiTarget || !currentFilePath) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({
+                            success: false,
+                            error: 'Missing wikiTarget or currentFilePath for /api/markdown/resolve-wiki',
+                            markdownProtocolVersion: MARKDOWN_PROTOCOL_VERSION,
+                        }));
+                        return;
+                    }
+
+                    const frontendSettings = await loadFrontendSettings();
+                    const readingConfig = normalizeMarkdownRuntimeConfig(frontendSettings.reading);
+                    const result = await markdownGateway.resolveWiki(
+                        {
+                            wikiTarget,
+                            currentFilePath,
+                        },
+                        readingConfig
+                    );
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: true,
+                        ...result,
+                    }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    if (isAccessDeniedError(error)) {
+                        res.writeHead(403, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({
+                            success: false,
+                            error: String((error as Error).message || 'Access denied'),
+                            markdownProtocolVersion: MARKDOWN_PROTOCOL_VERSION,
+                        }));
+                        return;
+                    }
+                    if (isFsNotFoundError(error)) {
+                        res.writeHead(404, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({
+                            success: false,
+                            error: 'Markdown file not found',
+                            markdownProtocolVersion: MARKDOWN_PROTOCOL_VERSION,
+                        }));
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/markdown/resolve-wiki');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: false,
+                        error: String(error),
+                        markdownProtocolVersion: MARKDOWN_PROTOCOL_VERSION,
+                    }));
                 }
                 return;
             }
@@ -2304,6 +2739,14 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         reporter,
                         operation.controller.signal
                     );
+                    void persistNotemdWorkspacePatch({
+                        filePath: resolvedFilePath,
+                        folderPath: path.dirname(resolvedFilePath),
+                        outputFilePath: resolvedOutputPath || result.outputPath || '',
+                        outputFolderPath: path.dirname(resolvedOutputPath || result.outputPath || resolvedFilePath),
+                    }).catch((workspaceError) => {
+                        warnDiagnostic('[NoteMD] Failed to persist workspace state after process-file.', workspaceError);
+                    });
 
                     finalizeNotemdOperation(operation, 'done');
                     if (streamEnabled) {
@@ -2399,6 +2842,12 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         reporter,
                         operation.controller.signal
                     );
+                    void persistNotemdWorkspacePatch({
+                        folderPath: resolvedFolderPath,
+                        outputFolderPath: resolvedOutputFolderPath || '',
+                    }).catch((workspaceError) => {
+                        warnDiagnostic('[NoteMD] Failed to persist workspace state after process-folder.', workspaceError);
+                    });
 
                     finalizeNotemdOperation(operation, 'done');
                     if (streamEnabled) {
@@ -2713,6 +3162,12 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         reporter,
                         operation.controller.signal
                     );
+                    void persistNotemdWorkspacePatch({
+                        filePath: resolvedFilePath,
+                        folderPath: path.dirname(resolvedFilePath),
+                    }).catch((workspaceError) => {
+                        warnDiagnostic('[NoteMD] Failed to persist workspace state after extract-concepts.', workspaceError);
+                    });
                     finalizeNotemdOperation(operation, 'done');
 
                     if (streamEnabled) {
@@ -2775,6 +3230,13 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         reporter,
                         operation.controller.signal
                     );
+                    void persistNotemdWorkspacePatch({
+                        filePath: resolvedFilePath,
+                        folderPath: result.outputFolderPath,
+                        outputFolderPath: result.outputFolderPath,
+                    }).catch((workspaceError) => {
+                        warnDiagnostic('[NoteMD] Failed to persist workspace state after one-click-extract.', workspaceError);
+                    });
                     finalizeNotemdOperation(operation, 'done');
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ success: true, operationId: operation.id, result, logs: operation.logs }));

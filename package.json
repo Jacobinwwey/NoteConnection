@@ -76,8 +76,8 @@
     "docs:diataxis:check": "node scripts/verify-diataxis-map.js",
     "docs:site:build": "node scripts/run-mkdocs.js build --config-file mkdocs.yml",
     "docs:site:serve": "node scripts/run-mkdocs.js serve --config-file mkdocs.yml",
-    "docs:edgeone:publish": "node scripts/deploy-docs-edgeone.js",
-    "docs:edgeone:publish:quick": "node scripts/deploy-docs-edgeone.js --skip-verify --skip-build"
+    "docs:github-pages:publish": "node -e \"console.log('Use GitHub Actions workflow: Docs GitHub Pages Publish (.github/workflows/docs-github-pages-publish.yml).')\"",
+    "docs:github-pages:rollback": "node -e \"console.log('Run workflow_dispatch for docs-github-pages-publish.yml and set git_ref to the target stable tag/commit.')\""
   },
   "pkg": {
     "scripts": [

@@ -20,7 +20,7 @@
 npm run docs:diataxis:check
 mkdocs serve --config-file mkdocs.yml
 mkdocs build --config-file mkdocs.yml
-npm run docs:edgeone:publish
+# 发布由 GitHub Actions 工作流 Docs GitHub Pages Publish 执行
 ```
 
 ## 权威来源文档

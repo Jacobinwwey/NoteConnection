@@ -9,6 +9,13 @@ const SERVER_BINARIES = {
   macos_x64: 'server-x86_64-apple-darwin',
 };
 
+const MARKDOWN_WORKER_BINARIES = {
+  windows_x64: 'markdown-worker-x86_64-pc-windows-msvc.exe',
+  linux_x64: 'markdown-worker-x86_64-unknown-linux-gnu',
+  macos_arm64: 'markdown-worker-aarch64-apple-darwin',
+  macos_x64: 'markdown-worker-x86_64-apple-darwin',
+};
+
 function binarySize(filePath) {
   try {
     if (!fs.existsSync(filePath)) return 0;
@@ -48,6 +55,22 @@ function resolveHostServerBinaryName() {
   return null;
 }
 
+function resolveHostMarkdownWorkerBinaryName() {
+  if (process.platform === 'win32' && process.arch === 'x64') {
+    return MARKDOWN_WORKER_BINARIES.windows_x64;
+  }
+  if (process.platform === 'linux' && process.arch === 'x64') {
+    return MARKDOWN_WORKER_BINARIES.linux_x64;
+  }
+  if (process.platform === 'darwin' && process.arch === 'arm64') {
+    return MARKDOWN_WORKER_BINARIES.macos_arm64;
+  }
+  if (process.platform === 'darwin' && process.arch === 'x64') {
+    return MARKDOWN_WORKER_BINARIES.macos_x64;
+  }
+  return null;
+}
+
 const repoRoot = path.resolve(__dirname, '..');
 const binDir = path.join(repoRoot, 'src-tauri', 'bin');
 const godotBinary = path.join(binDir, 'godot-x86_64-pc-windows-msvc.exe');
@@ -57,6 +80,7 @@ const validateAll = args.has('--all');
 const requiredServerBinaryNames = validateAll
   ? [SERVER_BINARIES.windows_x64, SERVER_BINARIES.linux_x64, SERVER_BINARIES.macos_arm64]
   : [resolveHostServerBinaryName()].filter(Boolean);
+const requiredMarkdownWorkerBinaryNames = [resolveHostMarkdownWorkerBinaryName()].filter(Boolean);
 
 if (!requiredServerBinaryNames.length) {
   console.error(
@@ -70,6 +94,13 @@ for (const binaryName of requiredServerBinaryNames) {
   const serverBinary = path.join(binDir, binaryName);
   if (!isNonEmptyBinary(serverBinary)) {
     invalid.push(`${serverBinary} (missing or empty)`);
+  }
+}
+
+for (const binaryName of requiredMarkdownWorkerBinaryNames) {
+  const workerBinary = path.join(binDir, binaryName);
+  if (!isNonEmptyBinary(workerBinary)) {
+    invalid.push(`${workerBinary} (missing or empty)`);
   }
 }
 

@@ -6,6 +6,7 @@ This guide explains how NoteConnection `v1.6.6+` unifies runtime settings for:
 
 - Tauri shell/runtime policy
 - Godot Path Mode UI/runtime
+- Frontend graph/reader runtime policy (shared by Tauri + Godot bridge)
 - NoteMD LLM workflow/runtime
 
 ## 1. What This File Controls
@@ -14,6 +15,7 @@ This guide explains how NoteConnection `v1.6.6+` unifies runtime settings for:
 
 - `knowledge_base_path`, `user_language`, and `[multi_window]` (Tauri runtime).
 - `[path_mode]` (Godot runtime settings that were previously split to local cfg).
+- `[frontend_settings]` (graph physics/visual/performance + markdown reader protocol knobs).
 - `[notemd]` + `[[notemd.providers]]` (full NoteMD settings + provider registry values).
 
 ## 2. Where NoteConnection Reads `app_config.toml`
@@ -87,6 +89,26 @@ temperature = 0.5
 api_version = ""
 enabled = true
 ```
+
+### 4.4 Frontend Reader Protocol (Pulldown/Legacy Gray Release)
+
+```toml
+[frontend_settings.reading]
+mode = "window"
+markdown_engine = "auto" # "legacy" | "pulldown" | "auto"
+chunk_block_size = 36
+prefetch_blocks = 8
+index_cache_ttl_sec = 1800
+max_doc_bytes = 100663296
+```
+
+Runtime behavior:
+
+- `markdown_engine = "auto"`: prefer `pulldown-cmark` index/chunk protocol and automatically fall back to legacy parser.
+- `markdown_engine = "pulldown"`: still falls back to legacy parser if worker or protocol fails (to avoid blank reader sessions).
+- `chunk_block_size` + `prefetch_blocks`: control incremental reader throughput for large Markdown files.
+- `index_cache_ttl_sec`: controls server-side markdown index cache lifetime.
+- `max_doc_bytes`: hard safety cap for markdown indexing requests.
 
 Built-in provider names include:
 

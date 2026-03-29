@@ -1,11 +1,14 @@
 site_name: NoteConnection Docs
 site_description: Diataxis-based bilingual documentation for NoteConnection
-site_url: https://jacobinwwey.github.io/NoteConnection/
+site_url: !ENV [MKDOCS_SITE_URL, "https://jacobinwwey.github.io/NoteConnection/"]
 repo_url: https://github.com/Jacobinwwey/NoteConnection
 repo_name: Jacobinwwey/NoteConnection
 docs_dir: docs
 site_dir: build/mkdocs-site
 strict: false
+extra:
+  docs_base_path: !ENV [MKDOCS_BASE_PATH, "/NoteConnection/"]
+  docs_host: !ENV [MKDOCS_DOCS_HOST, "https://jacobinwwey.github.io/"]
 
 theme:
   name: material
@@ -50,7 +53,7 @@ nav:
           - First Run: diataxis/en/tutorials/first-run.md
       - How-To Guides:
           - Build and Export: diataxis/en/how-to/build-and-export.md
-          - Publish Docs to EdgeOne: diataxis/en/how-to/publish-docs-edgeone.md
+          - Publish Docs to GitHub Pages: diataxis/en/how-to/publish-docs-github-pages.md
           - Single Window Runtime: diataxis/en/how-to/single-window-runtime.md
           - Configure app_config.toml: diataxis/en/how-to/configure-app-config.md
       - Reference:
@@ -65,7 +68,7 @@ nav:
           - 首次运行: diataxis/zh/tutorials/first-run.md
       - 操作指南:
           - 构建与导出: diataxis/zh/how-to/build-and-export.md
-          - 发布文档到 EdgeOne: diataxis/zh/how-to/publish-docs-edgeone.md
+          - 发布文档到 GitHub Pages: diataxis/zh/how-to/publish-docs-github-pages.md
           - 单窗口运行时: diataxis/zh/how-to/single-window-runtime.md
           - 配置 app_config.toml: diataxis/zh/how-to/configure-app-config.md
       - 参考:

@@ -11,8 +11,11 @@ const markerFiles = [
   path.join(repoRoot, 'package.json'),
   path.join(repoRoot, 'tsconfig.json'),
   path.join(repoRoot, 'scripts', 'build-sidecar.js'),
+  path.join(repoRoot, 'scripts', 'build-markdown-worker.js'),
   path.join(repoRoot, 'scripts', 'ensure-godot-sidecar.js'),
   path.join(repoRoot, 'scripts', 'validate-tauri-sidecars.js'),
+  path.join(repoRoot, 'tools', 'markdown_worker', 'Cargo.toml'),
+  path.join(repoRoot, 'tools', 'markdown_worker', 'src', 'main.rs'),
 ];
 
 const serverBinaryByHost = {
@@ -160,6 +163,14 @@ function shouldForceRebuild(argv) {
 
 function main() {
   const forceRebuild = shouldForceRebuild(process.argv.slice(2));
+  const workerBuildStatus = runNodeScript(
+    'build-markdown-worker.js',
+    forceRebuild ? ['--force'] : []
+  );
+  if (workerBuildStatus !== 0) {
+    process.exit(workerBuildStatus);
+  }
+
   const hostServerBinary = resolveHostServerBinaryPath();
 
   if (!hostServerBinary) {
