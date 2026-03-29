@@ -32,9 +32,7 @@ on:
         type: string
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: docs-github-pages
@@ -109,25 +107,11 @@ jobs:
       - name: Build docs site
         run: mkdocs build --config-file mkdocs.yml
 
-      - name: Setup GitHub Pages
-        uses: actions/configure-pages@v5
+      - name: Deploy docs to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          enablement: true
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: build/mkdocs-site
-
-  deploy-site:
-    name: deploy-site
-    runs-on: ubuntu-latest
-    needs: build-site
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: build/mkdocs-site
+          publish_branch: gh-pages
+          force_orphan: true
+          commit_message: "docs: publish site from ${{ github.sha }}"
