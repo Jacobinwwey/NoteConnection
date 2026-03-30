@@ -34,6 +34,16 @@ Android (Windows): run `build_apk.bat` (requires Node.js, Java JDK 17+, and Andr
 - **TypeScript `strict`**: Enabled natively (`tsconfig.json`). Keep public APIs rigorously typed to prevent parsing failures at the IPC/WebSocket boundary.
 - **Naming Pattern**: `PascalCase.ts` with matching `PascalCase.test.ts` for modules. Godot prefers standard `snake_case` patterns for GDScript.
 
+## Mermaid Compatibility Baseline (Obsidian)
+
+- Canonical Mermaid authoring format is Obsidian fenced Markdown: a standalone line starting with \`\`\`mermaid and a standalone closing \`\`\`.
+- This fenced format must remain render-compatible across Web reader, Tauri runtime, and Godot reader flows.
+- `$$```mermaid` (or any non-line-start Mermaid fence concatenation) is treated as malformed content and must be fixed at source data level.
+- Default remediation for `$$```mermaid`: split into two lines (`$$` then ` ```mermaid`), or run `npm run fix:markdown:mermaid:fence -- Knowledge_Base/testconcept`.
+- Reader runtime guardrail: on Markdown reader open, run lightweight self-check and auto-heal `$$```mermaid` to `$$` + newline + ` ```mermaid` before rendering.
+- Godot Mermaid runtime path must use renderer preference that allows fallback (`auto`), so missing frontend bridge does not break diagram display.
+- Any interface/runtime change touching markdown parsing or Mermaid rendering must preserve this baseline and re-verify it on `Knowledge_Base/testconcept`.
+
 ## Testing Guidelines
 
 - Framework: Jest with `ts-jest` arrayed in `jest.config.js`.

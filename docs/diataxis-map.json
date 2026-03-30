@@ -63,6 +63,18 @@
       }
     },
     {
+      "id": "godot-notemd-markdown-workflows",
+      "category": "how-to",
+      "en": {
+        "canonical": ["docs/en/User_Manual.md", "docs/en/Interface Document.md"],
+        "diataxis": "docs/diataxis/en/how-to/godot-notemd-markdown-workflows.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/User_Manual.md", "docs/zh/Interface Document.md"],
+        "diataxis": "docs/diataxis/zh/how-to/godot-notemd-markdown-workflows.md"
+      }
+    },
+    {
       "id": "interfaces-and-runtime",
       "category": "reference",
       "en": {
@@ -72,6 +84,18 @@
       "zh": {
         "canonical": ["docs/zh/Interface Document.md"],
         "diataxis": "docs/diataxis/zh/reference/interfaces-and-runtime.md"
+      }
+    },
+    {
+      "id": "godot-notemd-markdown-interfaces",
+      "category": "reference",
+      "en": {
+        "canonical": ["docs/en/Interface Document.md", "docs/en/User_Manual.md"],
+        "diataxis": "docs/diataxis/en/reference/godot-notemd-markdown-interfaces.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/Interface Document.md", "docs/zh/User_Manual.md"],
+        "diataxis": "docs/diataxis/zh/reference/godot-notemd-markdown-interfaces.md"
       }
     },
     {

@@ -91,7 +91,7 @@ func render_math_texture(source: String, display_mode: bool = true, scale: float
 
 
 func render_mermaid_texture(source: String, scale: float = 3.0, max_size: Vector2 = Vector2.ZERO) -> Dictionary:
-	var renderer_preference := "frontend"
+	var renderer_preference := "auto"
 	var cache_key := "%s|mermaid|%s|%s|%.2f|%d|%d" % [
 		CACHE_VERSION,
 		renderer_preference,
@@ -104,8 +104,7 @@ func render_mermaid_texture(source: String, scale: float = 3.0, max_size: Vector
 		return {"ok": true, "texture": _texture_cache[cache_key]}
 	var payload: Dictionary = {
 		"source": source,
-		# Mermaid text is currently reliable in the frontend bridge renderer.
-		# Keep this explicit to avoid textless local-resvg outputs.
+		# Prefer frontend bridge when available, but allow server-side local fallback.
 		"renderer": renderer_preference
 	}
 	_append_render_request_payload(payload, max_size, scale)
@@ -162,8 +161,9 @@ func _render_texture(cache_key: String, endpoint: String, payload: Dictionary) -
 	if not bool(response.get("ok", false)):
 		return response
 	if endpoint == "/api/render/mermaid":
-		var renderer_name := String(response.get("renderer", ""))
-		if not renderer_name.is_empty() and renderer_name != "frontend-bridge":
+		var renderer_name := String(response.get("renderer", "")).strip_edges()
+		var expected_renderers := PackedStringArray(["frontend-bridge", "local-resvg"])
+		if not renderer_name.is_empty() and not expected_renderers.has(renderer_name):
 			push_warning("ReaderRenderClient: Mermaid rendered by unexpected pipeline '%s'." % renderer_name)
 
 	var texture := _texture_from_render_response(response)

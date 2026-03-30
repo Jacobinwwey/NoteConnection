@@ -7,6 +7,11 @@
 - [docs/zh/Interface Document.md](../../../zh/Interface%20Document.md)
 - [docs/zh/User_Manual.md](../../../zh/User_Manual.md)
 
+## 集成专题参考
+
+- [Godot + NoteMD + Markdown 接口](./godot-notemd-markdown-interfaces.md)
+- [Godot + NoteMD + Markdown 工作流](../how-to/godot-notemd-markdown-workflows.md)
+
 ## v1.6.0 关键运行时契约点
 
 - 前端运行时能力水合 invoke 契约：
@@ -17,6 +22,13 @@
 - Rust 应用运行时配置命令：
   - `get_app_runtime_config`
 - Runtime bridge 通过 `whenReady()` 保障调用时序。
+
+## Mermaid 标准兼容基线（Obsidian）
+
+- 标准兼容格式：fenced code block，起始行为 ` ```mermaid`，结束行为 ` ``` `。
+- Godot 运行时渲染保持 PNG-first；Mermaid 渲染偏好需允许回退（`auto`），避免仅 bridge 可用时才成功。
+- 字段级路由与契约细节：
+  - [Godot + NoteMD + Markdown 接口](./godot-notemd-markdown-interfaces.md)
 
 ## app_config 运行时契约挂载点
 

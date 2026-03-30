@@ -7,6 +7,11 @@ This reference tracks canonical API/runtime contracts.
 - [docs/en/Interface Document.md](../../../en/Interface%20Document.md)
 - [docs/en/User_Manual.md](../../../en/User_Manual.md)
 
+## Focused Integration References
+
+- [Godot + NoteMD + Markdown Interfaces](./godot-notemd-markdown-interfaces.md)
+- [Godot + NoteMD + Markdown Workflows](../how-to/godot-notemd-markdown-workflows.md)
+
 ## Key Runtime Contract Points (v1.6.0)
 
 - Frontend runtime hydration invoke contracts:
@@ -17,6 +22,13 @@ This reference tracks canonical API/runtime contracts.
 - Rust app runtime config command:
   - `get_app_runtime_config`
 - Runtime bridge readiness sequencing via `whenReady()`.
+
+## Mermaid Canonical Baseline (Obsidian)
+
+- Standard compatible format: fenced code block using ` ```mermaid` (opening line) and ` ``` ` (closing line).
+- Godot runtime rendering remains PNG-first; Mermaid renderer preference should allow fallback (`auto`) to avoid bridge-only hard failures.
+- Detailed field and route contracts:
+  - [Godot + NoteMD + Markdown Interfaces](./godot-notemd-markdown-interfaces.md)
 
 ## app_config Runtime Contract Hook
 

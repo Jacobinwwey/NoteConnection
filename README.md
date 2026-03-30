@@ -309,7 +309,7 @@ index_cache_ttl_sec = 1800
 max_doc_bytes = 100663296
 ```
 
-### Markdown Reader Protocol (v1.6.6)
+### Markdown Reader Protocol (v1.6.8)
 
 - **Dual-engine gray release**:
   - `markdown_engine = "auto"`: prefer `pulldown-cmark`, fallback to legacy on failure.
@@ -317,6 +317,13 @@ max_doc_bytes = 100663296
   - `markdown_engine = "legacy"`: force original parser path.
 - **Unified cross-window behavior**: Tauri reader and Godot reader now both consume the same sidecar markdown protocol (`index/chunk/resolve-node/resolve-wiki`).
 - **Large file stability**: reader no longer requires single-shot full markdown payloads and supports block-based incremental loading.
+- **Mermaid reliability hardening**:
+  - Godot reader Mermaid rendering now uses `renderer = "auto"` so it can prefer frontend bridge and automatically fallback to local `resvg` when bridge render is unavailable.
+  - Mermaid fences must start on a new line; inline `$$```mermaid` patterns can break block classification.
+  - Use `npm run verify:markdown:mermaid:fence -- Knowledge_Base/testconcept` to catch malformed inline Mermaid fences before release.
+- **Local MCP web-debug baseline (Runbrowser)**:
+  - Build locally from source: `pnpm --filter @jiweiyuan/runbrowser-server build`, `pnpm --filter @jiweiyuan/runbrowser-core build`, `pnpm --filter @jiweiyuan/runbrowser-mcp build`.
+  - Run local MCP entrypoint: `node E:\Knowledge_project\tools\runbrowser\packages\mcp\bin.js`.
 
 ## 🏗️ Build & Deployment
 
@@ -1242,7 +1249,7 @@ index_cache_ttl_sec = 1800
 max_doc_bytes = 100663296
 ```
 
-### Markdown 阅读协议（v1.6.6）
+### Markdown 阅读协议（v1.6.8）
 
 - **双引擎灰度发布**：
   - `markdown_engine = "auto"`：优先 `pulldown-cmark`，失败自动回退 legacy。
@@ -1250,6 +1257,13 @@ max_doc_bytes = 100663296
   - `markdown_engine = "legacy"`：强制使用旧解析链路。
 - **双窗口统一行为**：Tauri 阅读器与 Godot 阅读器都统一消费 sidecar Markdown 协议（`index/chunk/resolve-node/resolve-wiki`）。
 - **大文档稳定性提升**：阅读链路不再依赖单次整文全量载入，改为块级增量加载。
+- **Mermaid 稳定性加固**：
+  - Godot 阅读器 Mermaid 渲染已切换为 `renderer = "auto"`，优先走前端桥接渲染，桥接不可用时自动回退本地 `resvg`。
+  - Mermaid fenced code 必须独占新行起始；`$$```mermaid` 这类行内拼接会导致分块识别失败。
+  - 发布前可执行 `npm run verify:markdown:mermaid:fence -- Knowledge_Base/testconcept`，提前拦截异常 Mermaid fence。
+- **本地 MCP 网页调试基线（Runbrowser）**：
+  - 建议按源码本地构建：`pnpm --filter @jiweiyuan/runbrowser-server build`、`pnpm --filter @jiweiyuan/runbrowser-core build`、`pnpm --filter @jiweiyuan/runbrowser-mcp build`。
+  - 本地 MCP 入口：`node E:\Knowledge_project\tools\runbrowser\packages\mcp\bin.js`。
 
 ## 🏗️ 构建与部署 (Build & Deployment)
 

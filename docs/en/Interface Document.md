@@ -5,6 +5,13 @@
 This document is the canonical interface handover for the current codebase.
 It was rebuilt from source verification, not appended to legacy sections.
 
+## 0. Fast Track Links (Godot + NoteMD + Markdown)
+
+Before starting the next integrated feature slice, execute against these docs first:
+
+- Workflow baseline: [Diataxis How-To: Godot + NoteMD + Markdown Workflows](../diataxis/en/how-to/godot-notemd-markdown-workflows.md)
+- Field-level contract baseline: [Diataxis Reference: Godot + NoteMD + Markdown Interfaces](../diataxis/en/reference/godot-notemd-markdown-interfaces.md)
+
 ## 0. Verification Scope
 
 Verified against implementation files:
@@ -47,6 +54,9 @@ Audit flow:
 - SVG payload is retained only for diagnostics/debug snapshots and must not be used as runtime fallback in Godot.
 - Reason: current Godot SVG handling can fail non-deterministically (text/layout/raster instability across devices).
 - Change-control rule: any future Godot renderer optimization must preserve PNG decode as the primary path (`pngBase64` required); missing PNG is a hard failure.
+- Obsidian compatibility baseline: canonical Mermaid markdown is fenced code with opening \`\`\`mermaid on its own line and closing \`\`\` on its own line.
+- Any inline-concatenated fence pattern (for example `$$```mermaid`) is malformed input and outside the canonical compatibility baseline.
+- Reader runtime guardrail: markdown reader performs a lightweight self-check on open and auto-heals `$$```mermaid` to newline-split form before parsing/rendering.
 
 ## 0.2 NoteMD Module Interface Contracts (v1.6.0)
 

@@ -5,6 +5,13 @@
 本文件是当前代码状态下的权威接口交接文档。
 本版不是在旧文档上追加，而是按源码核对后重建。
 
+## 0. 开发前速查入口（Godot + NoteMD + Markdown）
+
+进入下一阶段集成功能开发前，请先以以下文档为执行基线：
+
+- 工作流基线：[Diataxis 操作指南：Godot + NoteMD + Markdown 工作流](../diataxis/zh/how-to/godot-notemd-markdown-workflows.md)
+- 字段级契约基线：[Diataxis 参考：Godot + NoteMD + Markdown 接口](../diataxis/zh/reference/godot-notemd-markdown-interfaces.md)
+
 ## 0. 核对范围
 
 已逐一对照以下文件：
@@ -47,6 +54,9 @@
 - SVG 仅保留用于诊断/调试快照，不得作为 Godot 运行时回退路径。
 - 原因：当前 Godot 的 SVG 处理存在非确定性失败（跨设备文本/布局/栅格不稳定）。
 - 变更规则：后续 Godot 渲染优化必须保持 PNG 解码主路径（`pngBase64` 必填）；缺失 PNG 视为失败。
+- Obsidian 兼容性基线：Mermaid 的标准 Markdown 输入为 fenced code，起始 \`\`\`mermaid 与结束 \`\`\` 必须各自独占一行。
+- 任意同行拼接 fence（例如 `$$```mermaid`）都属于 malformed 输入，不在标准兼容基线内。
+- Reader 运行时护栏：打开 Markdown 阅读器时执行轻量自检，并在解析/渲染前自动将 `$$```mermaid` 修复为换行分隔形式。
 
 ## 0.2 NoteMD 模块接口契约（v1.6.0）
 

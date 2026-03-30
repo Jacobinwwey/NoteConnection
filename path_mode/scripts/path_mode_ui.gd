@@ -3780,7 +3780,19 @@ func _normalize_reader_markdown(markdown: String) -> String:
 				var remaining := lines.slice(line_index + 1)
 				normalized = _join_strings(remaining, "\n")
 				break
+	normalized = _auto_fix_inline_mermaid_fence_after_block_math(normalized)
 	return normalized.strip_edges()
+
+
+func _auto_fix_inline_mermaid_fence_after_block_math(markdown: String) -> String:
+	if markdown.is_empty():
+		return markdown
+	if markdown.find("```mermaid") == -1 or markdown.find("$$") == -1:
+		return markdown
+	var inline_fence_pattern := RegEx.new()
+	if inline_fence_pattern.compile("\\$\\$[ \\t]*```mermaid") != OK:
+		return markdown
+	return inline_fence_pattern.sub(markdown, "$$\n```mermaid", true)
 
 func _parse_code_fence(trimmed: String) -> Dictionary:
 	if trimmed.begins_with("```"):
