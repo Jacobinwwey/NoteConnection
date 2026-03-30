@@ -14,6 +14,7 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - Use [Godot + NoteMD + Markdown Interfaces](diataxis/en/reference/godot-notemd-markdown-interfaces.md) for field-level API/message contracts.
 - Use [app_config.toml Schema](diataxis/en/reference/app-config-schema.md) for exact config keys/defaults/effects.
 - Use [Explanation](diataxis/en/explanation/architecture-and-migration.md) for architecture decisions.
+- Use [Startup Node Update Acceleration Plan](diataxis/en/explanation/startup-node-update-acceleration-plan.md) for phased performance rollout.
 
 ## 中文
 
@@ -27,3 +28,4 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - 字段级 API/桥接契约请查看 [Godot + NoteMD + Markdown 接口](diataxis/zh/reference/godot-notemd-markdown-interfaces.md)。
 - 参数键/默认值/效果请查看 [app_config.toml 结构](diataxis/zh/reference/app-config-schema.md)。
 - 需要理解架构决策请查看 [解释文档](diataxis/zh/explanation/architecture-and-migration.md)。
+- 启动性能分阶段落地请查看 [启动节点更新提速方案](diataxis/zh/explanation/startup-node-update-acceleration-plan.md)。

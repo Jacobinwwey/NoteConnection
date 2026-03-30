@@ -64,6 +64,7 @@ nav:
           - app_config.toml Schema: diataxis/en/reference/app-config-schema.md
       - Explanation:
           - Architecture and Migration: diataxis/en/explanation/architecture-and-migration.md
+          - Startup Node Update Acceleration Plan: diataxis/en/explanation/startup-node-update-acceleration-plan.md
   - 中文:
       - Diataxis 概览: diataxis/zh/overview.md
       - 教程:
@@ -81,3 +82,4 @@ nav:
           - app_config.toml 结构: diataxis/zh/reference/app-config-schema.md
       - 解释:
           - 架构与迁移: diataxis/zh/explanation/architecture-and-migration.md
+          - 启动节点更新提速方案: diataxis/zh/explanation/startup-node-update-acceleration-plan.md

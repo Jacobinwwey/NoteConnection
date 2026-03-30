@@ -133,6 +133,18 @@
         "canonical": ["docs/zh/tauri_brainstorming.md", "docs/zh/electron_migration_analysis.md"],
         "diataxis": "docs/diataxis/zh/explanation/architecture-and-migration.md"
       }
+    },
+    {
+      "id": "startup-node-update-acceleration-plan",
+      "category": "explanation",
+      "en": {
+        "canonical": ["docs/en/Interface Document.md", "docs/en/User_Manual.md"],
+        "diataxis": "docs/diataxis/en/explanation/startup-node-update-acceleration-plan.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/Interface Document.md", "docs/zh/User_Manual.md"],
+        "diataxis": "docs/diataxis/zh/explanation/startup-node-update-acceleration-plan.md"
+      }
     }
   ]
 }
