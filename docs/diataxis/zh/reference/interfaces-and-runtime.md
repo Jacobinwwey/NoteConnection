@@ -46,6 +46,9 @@
 - 运行时覆盖开关（用于回滚与 A/B 验证）：
   - `localStorage['nc.startupPerfProfile'] = 'off'` 可关闭试点行为。
   - `localStorage['nc.startupPerfProfile'] = 'desktop_windows_pilot'` 可强制开启试点行为。
+- 自动化基线/试点汇总脚本：
+  - `npm run perf:startup:compare -- --baseline <baseline-log-path> --pilot <pilot-log-path>`
+  - 支持文件或目录输入，自动按 `[Startup Perf]` 检查点切分会话并输出 P50/P95 KPI 报告。
 
 ## Mermaid 标准兼容基线（Obsidian）
 

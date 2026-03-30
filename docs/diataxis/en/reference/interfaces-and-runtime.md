@@ -46,6 +46,9 @@ This reference tracks canonical API/runtime contracts.
 - Runtime override switch (for rollback/A-B validation):
   - `localStorage['nc.startupPerfProfile'] = 'off'` disables pilot behavior.
   - `localStorage['nc.startupPerfProfile'] = 'desktop_windows_pilot'` force-enables pilot behavior.
+- Automated baseline vs pilot summary script:
+  - `npm run perf:startup:compare -- --baseline <baseline-log-path> --pilot <pilot-log-path>`
+  - Supports file or directory inputs, auto-parses sessions from `[Startup Perf]` checkpoints, outputs P50/P95 KPI report.
 
 ## Mermaid Canonical Baseline (Obsidian)
 

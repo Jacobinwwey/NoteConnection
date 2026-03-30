@@ -57,6 +57,7 @@
     "verify:fixrisk:issues:strict:evidence": "node scripts/verify-fixrisk-issues.js --strict-pending --require-evidence-root",
     "verify:markdown:mermaid:fence": "node scripts/verify-markdown-mermaid-fence.js",
     "fix:markdown:mermaid:fence": "node scripts/verify-markdown-mermaid-fence.js --fix",
+    "perf:startup:compare": "node scripts/compare-startup-perf.js",
     "verify:pathbridge:strict": "node scripts/verify-pathbridge-strict-schema.js",
     "generate:sbom": "node scripts/generate-sbom.js",
     "generate:sbom:attestation": "node scripts/generate-sbom-attestation.js",
