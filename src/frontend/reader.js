@@ -15,6 +15,12 @@ class Reader {
         this._protocolRenderState = null;
         this._protocolScrollHandler = null;
         this._mermaidInitialized = false;
+        this._mermaidRenderStats = {
+            frontendRender: 0,
+            frontendRun: 0,
+            backendPng: 0,
+            failed: 0,
+        };
 
         this.init();
     }
@@ -509,8 +515,21 @@ class Reader {
         this.body.addEventListener('scroll', this._protocolScrollHandler, { passive: true });
     }
 
+    autoFixInlineMermaidFenceAfterBlockMath(markdownText) {
+        const source = String(markdownText || '');
+        if (!source) {
+            return source;
+        }
+        if (!source.includes('```mermaid') || !source.includes('$$')) {
+            return source;
+        }
+        return source.replace(/\$\$[ \t]*```mermaid\b/g, '$$\n```mermaid');
+    }
+
     normalizeProtocolBlock(block) {
-        const source = String(block && block.text ? block.text : '');
+        const source = this.autoFixInlineMermaidFenceAfterBlockMath(
+            String(block && block.text ? block.text : '')
+        );
         const type = String(block && block.type ? block.type : '').trim().toLowerCase();
         const normalizedType = type || 'paragraph';
         if (!source) {
@@ -712,7 +731,10 @@ class Reader {
     }
 
     async renderRawMarkdown(rawContent, currentFilePath, sessionId) {
-        const markdownText = this.transformWikiLinks(String(rawContent || '*No content available.*'));
+        const sanitizedMarkdown = this.autoFixInlineMermaidFenceAfterBlockMath(
+            String(rawContent || '*No content available.*')
+        );
+        const markdownText = this.transformWikiLinks(sanitizedMarkdown);
         this.body.innerHTML = marked.parse(markdownText);
         this.bindWikiLinks(this.body, currentFilePath || this.getRuntimeBaseUrl());
         this.renderMathInContainer(this.body);
@@ -734,10 +756,8 @@ class Reader {
     }
 
     async renderMermaidInContainer(container) {
-        if (!window.mermaid) {
-            return;
-        }
-        if (!this._mermaidInitialized) {
+        const hasFrontendMermaid = Boolean(window.mermaid);
+        if (hasFrontendMermaid && !this._mermaidInitialized) {
             mermaid.initialize({
                 startOnLoad: false,
                 theme: 'dark',
@@ -766,25 +786,121 @@ class Reader {
             const renderId = `reader-mermaid-${this._mermaidRenderCounter}`;
             const wrapper = document.createElement('div');
             wrapper.className = 'mermaid';
-            wrapper.id = renderId;
             parentPre.parentNode.replaceChild(wrapper, parentPre);
-            try {
-                const rendered = await mermaid.render(renderId, graphDefinition);
-                wrapper.innerHTML = rendered.svg;
-            } catch (error) {
-                wrapper.innerText = `Mermaid render error: ${String(error && error.message ? error.message : error)}`;
-                console.error('Mermaid error:', error);
+            let rendered = false;
+            const renderErrors = [];
+            let renderSource = '';
+            const section = wrapper.closest('.reader-block');
+            const blockId = section && section.dataset ? String(section.dataset.blockId || '').trim() : '';
+
+            if (hasFrontendMermaid) {
+                try {
+                    const renderedResult = await mermaid.render(renderId, graphDefinition);
+                    if (renderedResult && typeof renderedResult.svg === 'string' && renderedResult.svg.trim()) {
+                        wrapper.innerHTML = renderedResult.svg;
+                        rendered = true;
+                        renderSource = 'frontend-render';
+                        this._mermaidRenderStats.frontendRender += 1;
+                    }
+                } catch (error) {
+                    renderErrors.push(error);
+                }
+            } else {
+                renderErrors.push(new Error('Mermaid runtime is unavailable in current webview.'));
+            }
+
+            if (!rendered && hasFrontendMermaid) {
+                try {
+                    wrapper.textContent = graphDefinition;
+                    await mermaid.run({ nodes: [wrapper] });
+                    rendered = /<svg[\s>]/i.test(String(wrapper.innerHTML || ''));
+                    if (rendered) {
+                        renderSource = 'frontend-run';
+                        this._mermaidRenderStats.frontendRun += 1;
+                    }
+                } catch (error) {
+                    renderErrors.push(error);
+                }
+            }
+
+            if (!rendered) {
+                const backendRendered = await this.renderMermaidViaBackend(graphDefinition);
+                if (backendRendered && backendRendered.pngBase64) {
+                    const altRenderer = backendRendered.renderer ? ` (${backendRendered.renderer})` : '';
+                    wrapper.innerHTML = `<img class="mermaid-fallback-image" src="data:image/png;base64,${backendRendered.pngBase64}" alt="Mermaid diagram${altRenderer}" />`;
+                    rendered = true;
+                    renderSource = backendRendered.renderer ? `backend-${backendRendered.renderer}` : 'backend-png';
+                    this._mermaidRenderStats.backendPng += 1;
+                }
+            }
+
+            if (!rendered) {
+                const lastError = renderErrors.length > 0 ? renderErrors[renderErrors.length - 1] : null;
+                wrapper.innerText = `Mermaid render error: ${String(lastError && lastError.message ? lastError.message : 'Unknown error')}`;
+                if (lastError) {
+                    console.error('Mermaid error:', lastError);
+                }
+                renderSource = 'failed';
+                this._mermaidRenderStats.failed += 1;
+            }
+
+            if (renderSource) {
+                wrapper.dataset.renderSource = renderSource;
+                const blockSuffix = blockId ? ` block=${blockId}` : '';
+                console.info(`[Reader] Mermaid render source: ${renderSource}${blockSuffix}`);
             }
         }
         if (mermaidBlocks.length > 0) {
+            console.info(
+                `[Reader] Mermaid render stats: frontend-render=${this._mermaidRenderStats.frontendRender}, frontend-run=${this._mermaidRenderStats.frontendRun}, backend-png=${this._mermaidRenderStats.backendPng}, failed=${this._mermaidRenderStats.failed}`
+            );
             this.initMermaidZoom();
+        }
+    }
+
+    async renderMermaidViaBackend(graphDefinition) {
+        const source = String(graphDefinition || '').trim();
+        if (!source) {
+            return null;
+        }
+        try {
+            const response = await fetch(
+                this.buildRuntimeUrl('/api/render/mermaid'),
+                this.buildRuntimeFetchOptions({
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        source,
+                        renderer: 'auto',
+                    }),
+                })
+            );
+            const payload = await response.json().catch(() => null);
+            if (!response.ok || !payload || typeof payload.pngBase64 !== 'string' || !payload.pngBase64.trim()) {
+                return null;
+            }
+            return {
+                pngBase64: payload.pngBase64.trim(),
+                renderer: typeof payload.renderer === 'string' ? payload.renderer.trim() : '',
+            };
+        } catch (error) {
+            console.warn('[Reader] Mermaid backend fallback failed:', error);
+            return null;
         }
     }
 
     initMermaidZoom() {
         const mermaidDivs = this.body.querySelectorAll('.mermaid');
         mermaidDivs.forEach(div => {
+            if (div.dataset && div.dataset.readerZoomBound === '1') {
+                return;
+            }
             div.style.cursor = 'zoom-in';
+            if (div.dataset) {
+                div.dataset.readerZoomBound = '1';
+            }
             div.addEventListener('click', (e) => {
                 e.stopPropagation(); // Prevent Reader close
                 this.openMermaidOverlay(div.innerHTML);
@@ -793,6 +909,11 @@ class Reader {
     }
 
     openMermaidOverlay(svgContent) {
+        const existingOverlay = document.getElementById('mermaid-zoom-overlay');
+        if (existingOverlay && existingOverlay.parentNode) {
+            existingOverlay.parentNode.removeChild(existingOverlay);
+        }
+
         // Create Overlay
         const overlay = document.createElement('div');
         overlay.id = 'mermaid-zoom-overlay';
@@ -802,14 +923,28 @@ class Reader {
         const container = document.createElement('div');
         container.className = 'mermaid-zoom-container';
         container.innerHTML = svgContent;
+        container.addEventListener('click', (event) => {
+            event.stopPropagation();
+        });
         overlay.appendChild(container);
 
         // Close Button
         const closeBtn = document.createElement('button');
         closeBtn.innerText = '×';
         closeBtn.className = 'mermaid-close-btn';
-        closeBtn.onclick = () => document.body.removeChild(overlay);
+        closeBtn.onclick = (event) => {
+            event.stopPropagation();
+            if (overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+        };
         overlay.appendChild(closeBtn);
+
+        overlay.addEventListener('click', () => {
+            if (overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+        });
 
         document.body.appendChild(overlay);
 

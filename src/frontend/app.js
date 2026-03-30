@@ -3808,21 +3808,25 @@ if (btnPathMode) {
             // 单窗口切换：隐藏 Tauri，显示 Godot。
             if (window.__TAURI__ && window.__TAURI__.core && typeof window.__TAURI__.core.invoke === 'function') {
                 try {
-                    // 1. Hide the Tauri window via Rust IPC.
-                    await window.__TAURI__.core.invoke('toggle_pathmode_window', { showGodot: true });
-                    // 2. Send setWindowVisible to Godot via PathBridge WebSocket.
+                    let bridgeVisibilityReady = true;
                     if (
                         multiWindowOptions.singleWindowMode &&
                         window.pathApp &&
-                        window.pathApp.ws &&
-                        window.pathApp.ws.readyState === WebSocket.OPEN
+                        typeof window.pathApp.requestBridgeWindowVisibility === 'function'
                     ) {
-                        window.pathApp.ws.send(JSON.stringify({
-                            type: 'setWindowVisible',
-                            payload: { visible: true }
-                        }));
+                        bridgeVisibilityReady = await window.pathApp.requestBridgeWindowVisibility(true, {
+                            waitMs: 2500,
+                            reason: 'enter-pathmode'
+                        });
                     }
-                    console.log('[Path Mode] Single-window toggle: Tauri hidden, Godot shown.');
+
+                    if (multiWindowOptions.singleWindowMode && !bridgeVisibilityReady) {
+                        console.warn('[Path Mode] Bridge window visibility message was not delivered in time; skip hiding Tauri to avoid black-screen switch.');
+                    } else {
+                        // Hide the Tauri window via Rust IPC only after window-visibility intent is delivered.
+                        await window.__TAURI__.core.invoke('toggle_pathmode_window', { showGodot: true });
+                        console.log('[Path Mode] Single-window toggle: Tauri hidden, Godot shown.');
+                    }
                 } catch (err) {
                     console.warn('[Path Mode] toggle_pathmode_window failed:', err);
                 }

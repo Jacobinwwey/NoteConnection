@@ -36,6 +36,7 @@ window.pathApp = {
     },
     bridgeLanguageListenerRegistered: false,
     bridgeMermaidRenderQueue: Promise.resolve(),
+    pendingWindowVisibility: null,
     semanticA11yLastSummaryKey: '',
     semanticA11yLastAnnouncementAt: 0,
     
@@ -101,6 +102,7 @@ window.pathApp = {
             this._sendBridgeMessage('identify', this._getBridgeIdentifyPayload('frontend'));
             this._ensureLanguageSyncListener();
             this.syncLanguageWithBridge();
+            this._flushPendingWindowVisibility('socket-open');
         };
         this.ws.onmessage = (e) => {
             try {
@@ -254,6 +256,7 @@ window.pathApp = {
             this._sendBridgeMessage('identify', this._getBridgeIdentifyPayload('frontend'));
             this._ensureLanguageSyncListener();
             this.syncLanguageWithBridge();
+            this._flushPendingWindowVisibility('socket-reuse');
         }
     },
 
@@ -495,6 +498,68 @@ window.pathApp = {
         }
         this.ws.send(JSON.stringify({ type, payload }));
         return true;
+    },
+
+    _waitForBridgeSocketOpen: async function(timeoutMs = 2500) {
+        const budget = Math.max(0, Number(timeoutMs) || 0);
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            return true;
+        }
+        if (budget === 0) {
+            return false;
+        }
+        this._connectBridgeSocket();
+        const startedAt = Date.now();
+        while (Date.now() - startedAt < budget) {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                return true;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 80));
+            this._connectBridgeSocket();
+        }
+        return this.ws && this.ws.readyState === WebSocket.OPEN;
+    },
+
+    _flushPendingWindowVisibility: function(reason = 'flush') {
+        if (typeof this.pendingWindowVisibility !== 'boolean') {
+            return false;
+        }
+        const visible = this.pendingWindowVisibility;
+        const sent = this._sendBridgeMessage('setWindowVisible', { visible });
+        if (sent) {
+            console.log(`[PathApp] Flushed pending setWindowVisible(${visible}) via ${reason}.`);
+            this.pendingWindowVisibility = null;
+            return true;
+        }
+        return false;
+    },
+
+    requestBridgeWindowVisibility: async function(visible, options = {}) {
+        const targetVisible = visible === true;
+        const waitMs = Math.max(0, Number(options.waitMs) || 0);
+        const reason = String(options.reason || 'manual');
+
+        const sentImmediately = this._sendBridgeMessage('setWindowVisible', { visible: targetVisible });
+        if (sentImmediately) {
+            console.log(`[PathApp] Sent setWindowVisible(${targetVisible}) immediately. reason=${reason}`);
+            this.pendingWindowVisibility = null;
+            return true;
+        }
+
+        this.pendingWindowVisibility = targetVisible;
+        this._connectBridgeSocket();
+        if (waitMs === 0) {
+            console.warn(`[PathApp] Deferred setWindowVisible(${targetVisible}) until socket opens. reason=${reason}`);
+            return false;
+        }
+
+        const ready = await this._waitForBridgeSocketOpen(waitMs);
+        if (!ready) {
+            console.warn(`[PathApp] Bridge socket not ready for setWindowVisible(${targetVisible}). reason=${reason}`);
+            return false;
+        }
+        const flushed = this._flushPendingWindowVisibility(`wait-${reason}`);
+        return flushed;
     },
 
     _getBridgeMermaidConfig: function(theme = 'dark') {
@@ -1656,15 +1721,11 @@ window.pathApp = {
         // 单窗口切换：隐藏 Godot，显示 Tauri。
         if (window.__TAURI__ && window.__TAURI__.core && typeof window.__TAURI__.core.invoke === 'function') {
             // 1. Hide Godot window via PathBridge WebSocket.
-            if (
-                multiWindowOptions.singleWindowMode &&
-                this.ws &&
-                this.ws.readyState === WebSocket.OPEN
-            ) {
-                this.ws.send(JSON.stringify({
-                    type: 'setWindowVisible',
-                    payload: { visible: false }
-                }));
+            if (multiWindowOptions.singleWindowMode) {
+                void this.requestBridgeWindowVisibility(false, {
+                    waitMs: 1200,
+                    reason: 'exit-pathmode'
+                });
             }
             // 2. Restore Tauri window via Rust IPC.
             if (multiWindowOptions.restoreTauriWhenPathmodeExits) {
