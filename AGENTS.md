@@ -45,3 +45,10 @@ Android (Windows): run `build_apk.bat` (requires Node.js, Java JDK 17+, and Andr
 - Follow Conventional Commits: `feat: ...`, `fix: ...`, `docs: ...`, `refactor: ...`. Add Godot-specific scoping where necessary e.g., `fix(godot-ui): padding`.
 - PRs must document: the root cause trace, verification tests run locally across both UI clients (web browser vs Tauri WebView vs Godot executable), and UI screenshots.
 - Release tags `vX.Y.Z` must precisely match `package.json`’s version.
+
+## Release Notes Discipline
+
+- After creating/pushing any new release tag, update the matching bilingual release note source file in `docs/` (for example `docs/release_notes_v1.6.7.md`) before considering the release finalized.
+- GitHub Release notes must not stay as placeholder text. Use the previous high-quality release page as the structure benchmark; until superseded, treat [`v1.6.6`](https://github.com/Jacobinwwey/NoteConnection/releases/tag/v1.6.6) as the canonical quality bar for tone, bilingual layout, and subsystem grouping.
+- Every release note must contain separated `## English` and `## 中文` sections, a compare baseline, concrete highlights, and subsystem-oriented bullets that reflect the actual shipped delta rather than generic “release prep” wording.
+- When a version includes runtime, packaging, CI, docs, or governance changes, summarize each affected surface explicitly so the GitHub Release body can be published directly from the checked-in docs note with minimal or no manual rewriting.

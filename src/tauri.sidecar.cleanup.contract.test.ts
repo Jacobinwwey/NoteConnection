@@ -44,7 +44,7 @@ describe('tauri sidecar cleanup integration', () => {
   test('cleanup script targets copied tauri sidecars in debug and release outputs', () => {
     const script = fs.readFileSync(cleanupScriptPath, 'utf8');
     expect(script).toContain("const targetModes = ['debug', 'release'];");
-    expect(script).toContain("const sidecarNames = ['server', 'godot'];");
+    expect(script).toContain("const sidecarNames = ['server', 'godot', 'markdown-worker'];");
     expect(script).toContain("targetRoot, mode, `${name}.exe`");
     expect(script).toContain('Failed to terminate stale copied sidecars');
   });
