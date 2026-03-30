@@ -23,6 +23,30 @@ This reference tracks canonical API/runtime contracts.
   - `get_app_runtime_config`
 - Runtime bridge readiness sequencing via `whenReady()`.
 
+## Startup Perf Telemetry and Pilot Profile (v1.6.9+ pilot)
+
+- Frontend startup checkpoints are emitted as one-shot logs:
+  - `T0 app_boot`
+  - `T1 graph_preprocessed`
+  - `T2 worker_init_sent`
+  - `T3 first_tick_received`
+  - `T4 first_interactive_render`
+  - `T5 stable_layout`
+- Worker startup profile is passed through `simulationWorker` init payload:
+  - `startupProfile.id`
+  - `startupProfile.tickMaxFps`
+  - `startupProfile.stableAlphaThreshold`
+  - `startupProfile.stableHoldTicks`
+  - `startupProfile.stableTimeoutMs`
+- Windows pilot profile:
+  - Profile ID: `desktop_windows_pilot`
+  - Tick cap: `26 FPS` (worker-side emit throttle)
+  - SVG edge geometry delay: `400ms`
+  - Startup SVG edge cap window: `1500ms`, cap `18000` links
+- Runtime override switch (for rollback/A-B validation):
+  - `localStorage['nc.startupPerfProfile'] = 'off'` disables pilot behavior.
+  - `localStorage['nc.startupPerfProfile'] = 'desktop_windows_pilot'` force-enables pilot behavior.
+
 ## Mermaid Canonical Baseline (Obsidian)
 
 - Standard compatible format: fenced code block using ` ```mermaid` (opening line) and ` ``` ` (closing line).

@@ -23,6 +23,30 @@
   - `get_app_runtime_config`
 - Runtime bridge 通过 `whenReady()` 保障调用时序。
 
+## 启动性能观测与试点 Profile（v1.6.9+ 试点）
+
+- 前端启动关键点采用单次日志输出：
+  - `T0 app_boot`
+  - `T1 graph_preprocessed`
+  - `T2 worker_init_sent`
+  - `T3 first_tick_received`
+  - `T4 first_interactive_render`
+  - `T5 stable_layout`
+- Worker 通过 `simulationWorker` 初始化载荷接收启动 profile：
+  - `startupProfile.id`
+  - `startupProfile.tickMaxFps`
+  - `startupProfile.stableAlphaThreshold`
+  - `startupProfile.stableHoldTicks`
+  - `startupProfile.stableTimeoutMs`
+- Windows 试点 profile：
+  - Profile ID：`desktop_windows_pilot`
+  - Tick 上限：`26 FPS`（worker 侧发送限流）
+  - SVG 边几何延迟：`400ms`
+  - 启动窗口 SVG 边上限：`1500ms` 内最多更新 `18000` 条边
+- 运行时覆盖开关（用于回滚与 A/B 验证）：
+  - `localStorage['nc.startupPerfProfile'] = 'off'` 可关闭试点行为。
+  - `localStorage['nc.startupPerfProfile'] = 'desktop_windows_pilot'` 可强制开启试点行为。
+
 ## Mermaid 标准兼容基线（Obsidian）
 
 - 标准兼容格式：fenced code block，起始行为 ` ```mermaid`，结束行为 ` ``` `。

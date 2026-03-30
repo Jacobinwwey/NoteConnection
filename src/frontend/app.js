@@ -8,6 +8,130 @@ const graphSemanticA11yState = {
     pendingTimer: null
 };
 
+function nowMs() {
+    return (typeof performance !== 'undefined' && typeof performance.now === 'function')
+        ? performance.now()
+        : Date.now();
+}
+
+function readStartupPerfProfileOverride() {
+    if (typeof localStorage === 'undefined') {
+        return '';
+    }
+
+    try {
+        const value = localStorage.getItem('nc.startupPerfProfile');
+        return typeof value === 'string' ? value.trim() : '';
+    } catch (_err) {
+        return '';
+    }
+}
+
+function resolveStartupPerfProfile(runtimeCaps) {
+    const base = {
+        id: 'default',
+        pilotEnabled: false,
+        tickMaxFps: 0,
+        edgeGeometryDelayMs: 0,
+        edgeStartupWindowMs: 0,
+        edgeStartupSvgCap: 0,
+        stableAlphaThreshold: 0.05,
+        stableHoldTicks: 8,
+        stableTimeoutMs: 12000
+    };
+
+    const windowsPilot = {
+        id: 'desktop_windows_pilot',
+        pilotEnabled: true,
+        tickMaxFps: 26,
+        edgeGeometryDelayMs: 400,
+        edgeStartupWindowMs: 1500,
+        edgeStartupSvgCap: 18000,
+        stableAlphaThreshold: 0.05,
+        stableHoldTicks: 8,
+        stableTimeoutMs: 12000
+    };
+
+    const override = readStartupPerfProfileOverride();
+    if (override === 'off') {
+        return {
+            ...base,
+            override: 'off'
+        };
+    }
+
+    if (override === windowsPilot.id) {
+        return {
+            ...windowsPilot,
+            override: 'forced'
+        };
+    }
+
+    const runtimeLooksLikeWindows = Boolean(
+        runtimeCaps && runtimeCaps.platform === 'windows'
+    ) || Boolean(
+        typeof window !== 'undefined' &&
+        window.__TAURI__ &&
+        typeof navigator !== 'undefined' &&
+        typeof navigator.userAgent === 'string' &&
+        /Windows/i.test(navigator.userAgent)
+    );
+
+    if (runtimeLooksLikeWindows) {
+        return {
+            ...windowsPilot,
+            override: ''
+        };
+    }
+
+    return {
+        ...base,
+        override: ''
+    };
+}
+
+const startupRuntimeCaps = (typeof window !== 'undefined' && window.__NC_RUNTIME_CAPS)
+    ? window.__NC_RUNTIME_CAPS
+    : {};
+const startupPerfProfile = resolveStartupPerfProfile(startupRuntimeCaps);
+const startupPerfState = {
+    bootTs: nowMs(),
+    checkpoints: {},
+    t3Seen: false,
+    t4Seen: false,
+    t5Seen: false,
+    edgeDelayLogged: false,
+    edgeDelayReleasedLogged: false,
+    edgeCapLogged: false,
+    edgeCapReleasedLogged: false,
+    lastWorkerAlpha: null
+};
+
+function markStartupCheckpoint(label, details = null) {
+    if (Object.prototype.hasOwnProperty.call(startupPerfState.checkpoints, label)) {
+        return startupPerfState.checkpoints[label];
+    }
+
+    const at = nowMs();
+    const elapsedMs = at - startupPerfState.bootTs;
+    startupPerfState.checkpoints[label] = at;
+
+    if (details && typeof details === 'object' && Object.keys(details).length > 0) {
+        console.log(`[Startup Perf] ${label} +${elapsedMs.toFixed(2)}ms`, details);
+    } else {
+        console.log(`[Startup Perf] ${label} +${elapsedMs.toFixed(2)}ms`);
+    }
+
+    return at;
+}
+
+markStartupCheckpoint('T0 app_boot', {
+    profile: startupPerfProfile.id,
+    pilotEnabled: startupPerfProfile.pilotEnabled,
+    platform: startupRuntimeCaps && startupRuntimeCaps.platform ? startupRuntimeCaps.platform : 'unknown',
+    override: startupPerfProfile.override || 'none'
+});
+
 // State for Cluster Filtering
 let activeClusterFilter = localStorage.getItem('activeClusterFilter') || 'all';
 // Clear it immediately so it doesn't persist unwantedly on manual refreshes? 
@@ -131,6 +255,11 @@ const graphPreprocessElapsedMs = ((typeof performance !== 'undefined' && typeof 
     ? performance.now()
     : Date.now()) - graphPreprocessStartTs;
 console.log(`[Init Perf] Graph preprocessing completed in ${graphPreprocessElapsedMs.toFixed(2)}ms (nodes=${nodes.length}, links=${links.length}).`);
+markStartupCheckpoint('T1 graph_preprocessed', {
+    nodes: nodes.length,
+    links: links.length,
+    preprocessMs: Number(graphPreprocessElapsedMs.toFixed(2))
+});
 
 // Optimization: Default to Canvas for large graphs (>3000 nodes) to save memory
 if (nodes.length > 3000) {
@@ -264,8 +393,24 @@ const simulationWorker = new Worker("simulationWorker.js");
 let currentPositions = new Map();
 
 simulationWorker.onmessage = function(event) {
-    const { type, nodes: workerNodes } = event.data;
+    const {
+        type,
+        nodes: workerNodes,
+        alpha: workerAlpha,
+        isStartupStable
+    } = event.data;
     if (type === 'tick') {
+        if (!startupPerfState.t3Seen) {
+            startupPerfState.t3Seen = true;
+            markStartupCheckpoint('T3 first_tick_received', {
+                alpha: Number.isFinite(workerAlpha) ? Number(workerAlpha.toFixed(4)) : null
+            });
+        }
+
+        if (Number.isFinite(workerAlpha)) {
+            startupPerfState.lastWorkerAlpha = workerAlpha;
+        }
+
         // v0.9.80: Ignore worker ticks in Focus Mode to prevent position overwrite
         // In Focus Mode, positions are managed by the main thread's highlightManager
         if (focusNode) return;
@@ -281,6 +426,32 @@ simulationWorker.onmessage = function(event) {
         });
         
         ticked();
+
+        if (!startupPerfState.t4Seen) {
+            startupPerfState.t4Seen = true;
+            const rendererModeInput = document.querySelector('input[name="rendererMode"]:checked');
+            const layoutModeInput = document.querySelector('input[name="layoutMode"]:checked');
+            markStartupCheckpoint('T4 first_interactive_render', {
+                renderer: rendererModeInput ? rendererModeInput.value : 'unknown',
+                layout: layoutModeInput ? layoutModeInput.value : 'unknown'
+            });
+        }
+
+        if (isStartupStable === true && !startupPerfState.t5Seen) {
+            startupPerfState.t5Seen = true;
+            markStartupCheckpoint('T5 stable_layout', {
+                alpha: Number.isFinite(workerAlpha) ? Number(workerAlpha.toFixed(4)) : null,
+                source: 'worker_tick'
+            });
+        }
+    } else if (type === 'startupStable') {
+        if (!startupPerfState.t5Seen) {
+            startupPerfState.t5Seen = true;
+            markStartupCheckpoint('T5 stable_layout', {
+                alpha: Number.isFinite(workerAlpha) ? Number(workerAlpha.toFixed(4)) : null,
+                source: 'worker_signal'
+            });
+        }
     }
 };
 
@@ -366,6 +537,21 @@ const workerPayloadBuildElapsedMs = ((typeof performance !== 'undefined' && type
     : Date.now()) - workerPayloadBuildStartTs;
 console.log(`[Init Perf] Worker payload prepared in ${workerPayloadBuildElapsedMs.toFixed(2)}ms (workerNodes=${workerNodes.length}, workerLinks=${workerLinks.length}).`);
 
+const workerStartupProfile = {
+    id: startupPerfProfile.id,
+    pilotEnabled: startupPerfProfile.pilotEnabled === true,
+    tickMaxFps: startupPerfProfile.tickMaxFps,
+    stableAlphaThreshold: startupPerfProfile.stableAlphaThreshold,
+    stableHoldTicks: startupPerfProfile.stableHoldTicks,
+    stableTimeoutMs: startupPerfProfile.stableTimeoutMs
+};
+
+markStartupCheckpoint('T2 worker_init_sent', {
+    workerNodes: workerNodes.length,
+    workerLinks: workerLinks.length,
+    profile: workerStartupProfile.id,
+    tickMaxFps: workerStartupProfile.tickMaxFps
+});
 simulationWorker.postMessage({ 
     type: 'init', 
     payload: { 
@@ -378,7 +564,8 @@ simulationWorker.postMessage({
                 distance: 100,
                 velocityDecay: 0.2,
                 gpuRendering: (window.settingsManager ? window.settingsManager.settings.performance.gpuRendering : true)
-            }
+            },
+            startupProfile: workerStartupProfile
     } 
 });
 
@@ -464,6 +651,20 @@ const link = g.append("g")
     .enter().append("path")
     .attr("class", "link")
     .attr("marker-end", "url(#arrow)");
+
+let startupSvgLinkSelection = link;
+if (
+    startupPerfProfile.pilotEnabled === true &&
+    Number.isFinite(startupPerfProfile.edgeStartupSvgCap) &&
+    startupPerfProfile.edgeStartupSvgCap > 0 &&
+    links.length > startupPerfProfile.edgeStartupSvgCap
+) {
+    startupSvgLinkSelection = link.filter((_, idx) => idx < startupPerfProfile.edgeStartupSvgCap);
+    console.log('[Startup Perf] Startup SVG edge cap enabled.', {
+        cap: startupPerfProfile.edgeStartupSvgCap,
+        totalLinks: links.length
+    });
+}
 
 // Render Nodes
 const node = g.append("g")
@@ -1611,6 +1812,55 @@ function checkSimulationState() {
     }
 }
 
+function startupElapsedMs() {
+    return nowMs() - startupPerfState.bootTs;
+}
+
+function shouldBypassStartupEdgeOptimizations() {
+    if (focusNode) {
+        return true;
+    }
+
+    const highlightState = window.highlightManager ? window.highlightManager.getState() : null;
+    return Boolean(highlightState && highlightState.currentNode);
+}
+
+function isStartupEdgeDelayActive() {
+    if (startupPerfProfile.pilotEnabled !== true) {
+        return false;
+    }
+
+    if (!Number.isFinite(startupPerfProfile.edgeGeometryDelayMs) || startupPerfProfile.edgeGeometryDelayMs <= 0) {
+        return false;
+    }
+
+    if (shouldBypassStartupEdgeOptimizations()) {
+        return false;
+    }
+
+    return startupElapsedMs() < startupPerfProfile.edgeGeometryDelayMs;
+}
+
+function shouldUseStartupSvgEdgeCap() {
+    if (startupPerfProfile.pilotEnabled !== true) {
+        return false;
+    }
+
+    if (!Number.isFinite(startupPerfProfile.edgeStartupWindowMs) || startupPerfProfile.edgeStartupWindowMs <= 0) {
+        return false;
+    }
+
+    if (startupSvgLinkSelection === link) {
+        return false;
+    }
+
+    if (shouldBypassStartupEdgeOptimizations()) {
+        return false;
+    }
+
+    return startupElapsedMs() < startupPerfProfile.edgeStartupWindowMs;
+}
+
 // Simulation Tick
 function ticked() {
     const renderer = document.querySelector('input[name="rendererMode"]:checked').value;
@@ -1630,17 +1880,50 @@ function ticked() {
     }
 
     if (renderer === 'svg') {
-        // SVG Update Logic
-        if (layoutMode === 'dag') {
-            link.attr("d", d => {
-                const sx = d.source.x;
-                const sy = d.source.y;
-                const tx = d.target.x;
-                const ty = d.target.y;
-                return `M${sx},${sy} C${sx},${(sy + ty) / 2} ${tx},${(sy + ty) / 2} ${tx},${ty}`;
+        const edgeDelayActive = isStartupEdgeDelayActive();
+        if (edgeDelayActive && !startupPerfState.edgeDelayLogged) {
+            startupPerfState.edgeDelayLogged = true;
+            console.log('[Startup Perf] Startup SVG edge geometry delay active.', {
+                edgeGeometryDelayMs: startupPerfProfile.edgeGeometryDelayMs
             });
-        } else {
-            link.attr("d", d => `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`);
+        }
+
+        if (!edgeDelayActive) {
+            if (startupPerfState.edgeDelayLogged && !startupPerfState.edgeDelayReleasedLogged) {
+                startupPerfState.edgeDelayReleasedLogged = true;
+                console.log('[Startup Perf] Startup SVG edge geometry delay released.', {
+                    elapsedMs: Number(startupElapsedMs().toFixed(2))
+                });
+            }
+
+            const useStartupEdgeCap = shouldUseStartupSvgEdgeCap();
+            if (useStartupEdgeCap && !startupPerfState.edgeCapLogged) {
+                startupPerfState.edgeCapLogged = true;
+                console.log('[Startup Perf] Startup SVG edge cap window active.', {
+                    edgeStartupWindowMs: startupPerfProfile.edgeStartupWindowMs,
+                    edgeStartupSvgCap: startupPerfProfile.edgeStartupSvgCap
+                });
+            }
+
+            if (!useStartupEdgeCap && startupPerfState.edgeCapLogged && !startupPerfState.edgeCapReleasedLogged) {
+                startupPerfState.edgeCapReleasedLogged = true;
+                console.log('[Startup Perf] Startup SVG edge cap window released.', {
+                    elapsedMs: Number(startupElapsedMs().toFixed(2))
+                });
+            }
+
+            const activeLinkSelection = useStartupEdgeCap ? startupSvgLinkSelection : link;
+            if (layoutMode === 'dag') {
+                activeLinkSelection.attr("d", d => {
+                    const sx = d.source.x;
+                    const sy = d.source.y;
+                    const tx = d.target.x;
+                    const ty = d.target.y;
+                    return `M${sx},${sy} C${sx},${(sy + ty) / 2} ${tx},${(sy + ty) / 2} ${tx},${ty}`;
+                });
+            } else {
+                activeLinkSelection.attr("d", d => `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`);
+            }
         }
         node.filter(d => !d.isCulled).attr("transform", d => `translate(${d.x},${d.y})`);
     } else {

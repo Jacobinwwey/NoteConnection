@@ -12,6 +12,68 @@ let currentSettings = {
     velocityDecay: 0.2
 };
 
+let startupProfile = {
+    id: 'default',
+    pilotEnabled: false,
+    tickMaxFps: 0,
+    stableAlphaThreshold: 0.05,
+    stableHoldTicks: 8,
+    stableTimeoutMs: 12000
+};
+
+let startupRuntimeState = {
+    tickMinIntervalMs: 0,
+    lastTickEmitTs: 0,
+    initTs: 0,
+    stableTickStreak: 0,
+    stableAnnounced: false
+};
+
+function parseFiniteNumber(value, fallback) {
+    if (Number.isFinite(value)) {
+        return value;
+    }
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function parsePositiveInt(value, fallback) {
+    const parsed = Math.floor(parseFiniteNumber(value, fallback));
+    return parsed > 0 ? parsed : fallback;
+}
+
+function configureStartupProfile(profile) {
+    const next = {
+        id: (profile && typeof profile.id === 'string' && profile.id.trim().length > 0)
+            ? profile.id.trim()
+            : 'default',
+        pilotEnabled: Boolean(profile && profile.pilotEnabled === true),
+        tickMaxFps: Math.max(0, parsePositiveInt(profile ? profile.tickMaxFps : 0, 0)),
+        stableAlphaThreshold: Math.max(0.0001, parseFiniteNumber(profile ? profile.stableAlphaThreshold : 0.05, 0.05)),
+        stableHoldTicks: Math.max(1, parsePositiveInt(profile ? profile.stableHoldTicks : 8, 8)),
+        stableTimeoutMs: Math.max(1000, parsePositiveInt(profile ? profile.stableTimeoutMs : 12000, 12000))
+    };
+
+    startupProfile = next;
+    startupRuntimeState = {
+        tickMinIntervalMs: next.tickMaxFps > 0 ? Math.max(1, Math.floor(1000 / next.tickMaxFps)) : 0,
+        lastTickEmitTs: 0,
+        initTs: Date.now(),
+        stableTickStreak: 0,
+        stableAnnounced: false
+    };
+
+    console.log('[Worker] Startup profile configured:', {
+        id: next.id,
+        pilotEnabled: next.pilotEnabled,
+        tickMaxFps: next.tickMaxFps,
+        tickMinIntervalMs: startupRuntimeState.tickMinIntervalMs,
+        stableAlphaThreshold: next.stableAlphaThreshold,
+        stableHoldTicks: next.stableHoldTicks,
+        stableTimeoutMs: next.stableTimeoutMs
+    });
+}
+
 onmessage = function(event) {
     const { type, payload } = event.data;
 
@@ -52,9 +114,11 @@ function initSimulation(data) {
     nodes = data.nodes;
     links = data.links;
     const { width, height } = data;
-    const { settings } = data; // Settings if provided
+    const { settings, startupProfile: startupProfilePayload } = data; // Settings if provided
 
     console.log(`[Worker] Initializing simulation with ${nodes.length} nodes, ${links.length} edges`);
+
+    configureStartupProfile(startupProfilePayload || {});
 
     if (settings) {
         currentSettings = { ...currentSettings, ...settings };
@@ -89,10 +153,50 @@ function initSimulation(data) {
         .velocityDecay(currentSettings.velocityDecay);
 
     simulation.on("tick", () => {
-        // Optimization: For very large graphs, maybe use Float32Array?
-        // For now, post simplified objects
+        const now = Date.now();
+        if (
+            startupRuntimeState.tickMinIntervalMs > 0 &&
+            (now - startupRuntimeState.lastTickEmitTs) < startupRuntimeState.tickMinIntervalMs
+        ) {
+            return;
+        }
+        startupRuntimeState.lastTickEmitTs = now;
+
+        const alpha = (simulation && typeof simulation.alpha === 'function')
+            ? simulation.alpha()
+            : 1;
+        let isStartupStable = false;
+
+        if (!startupRuntimeState.stableAnnounced) {
+            if (alpha <= startupProfile.stableAlphaThreshold) {
+                startupRuntimeState.stableTickStreak += 1;
+            } else {
+                startupRuntimeState.stableTickStreak = 0;
+            }
+
+            const elapsedMs = now - startupRuntimeState.initTs;
+            if (
+                startupRuntimeState.stableTickStreak >= startupProfile.stableHoldTicks ||
+                elapsedMs >= startupProfile.stableTimeoutMs
+            ) {
+                startupRuntimeState.stableAnnounced = true;
+                isStartupStable = true;
+                postMessage({
+                    type: 'startupStable',
+                    alpha,
+                    elapsedMs
+                });
+            }
+        }
+
         const positions = nodes.map(n => ({ id: n.id, x: n.x, y: n.y }));
-        postMessage({ type: 'tick', nodes: positions });
+        postMessage({
+            type: 'tick',
+            nodes: positions,
+            alpha,
+            emittedAt: now,
+            isStartupStable
+        });
     });
     
     // Initial warmup
