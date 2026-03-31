@@ -137,7 +137,7 @@ function parseArgs(argv) {
   return args;
 }
 
-function runNodeScript(scriptPath, scriptArgs, options = {}) {
+function runNodeScript(scriptPath, scriptArgs) {
   const result = spawnSync(process.execPath, [scriptPath, ...scriptArgs], {
     cwd: process.cwd(),
     encoding: 'utf8'
@@ -155,7 +155,7 @@ function runNodeScript(scriptPath, scriptArgs, options = {}) {
     status: result.status,
     error: result.error ? result.error.message : '',
     command: `${path.basename(scriptPath)} ${scriptArgs.join(' ')}`.trim(),
-    note: options.note || ''
+    pendingTodo: false
   };
 }
 
@@ -181,21 +181,29 @@ function hasRealCohortData(rootDir) {
   if (!fs.existsSync(rootDir)) {
     return false;
   }
-  const cohortNames = ['small', 'medium', 'large'];
-  for (const cohort of cohortNames) {
-    const cohortRoot = path.join(rootDir, cohort);
-    if (!fs.existsSync(cohortRoot)) {
+  for (const cohort of ['small', 'medium', 'large']) {
+    if (!fs.existsSync(path.join(rootDir, cohort))) {
       return false;
     }
   }
   return true;
 }
 
-function renderStatus(ok, blocked = false) {
-  if (blocked) {
-    return 'BLOCKED';
+function renderStatus(ok, pendingTodo = false) {
+  if (pendingTodo) {
+    return 'TODO';
   }
   return ok ? 'PASS' : 'FAIL';
+}
+
+function buildFutureTodoBacklog(realCohortsRoot) {
+  return [
+    `Collect real macOS cohorts under ${path.join(realCohortsRoot, 'small|medium|large', 'macos', 'baseline|pilot')}.`,
+    `Collect real Android cohorts under ${path.join(realCohortsRoot, 'small|medium|large', 'android', 'baseline|pilot')}.`,
+    `Collect real iOS cohorts under ${path.join(realCohortsRoot, 'small|medium|large', 'ios', 'baseline|pilot')}.`,
+    'Ensure each platform has >=10 sessions for baseline and pilot in each cohort.',
+    'Run perf:startup:cohorts:verify on real datasets and archive report-cohorts-real.md as release evidence.'
+  ];
 }
 
 function buildReport(summary, args) {
@@ -204,47 +212,54 @@ function buildReport(summary, args) {
     '',
     `Generated at: ${summary.generatedAt}`,
     '',
-    '## 中文',
+    '## Chinese',
     '',
-    '### 分层签收结论',
-    `- 工程签收（无多端硬件）: ${renderStatus(summary.engineeringGatePass)}`,
-    `- 发布签收（真实多端硬件）: ${renderStatus(summary.releaseGatePass, summary.releaseGateBlocked)}`,
+    '### Layered Signoff',
+    `- Engineering signoff (no multi-device hardware): ${renderStatus(summary.engineeringGatePass)}`,
+    `- Release signoff (real multi-device hardware): ${renderStatus(summary.releaseGatePass, summary.releaseGatePendingTodo)}`,
     '',
-    '### 执行明细',
+    '### Execution Detail',
     '| Step | Status | Command |',
     '|---|---|---|'
   ];
 
   for (const step of summary.steps) {
-    lines.push(`| ${step.name} | ${renderStatus(step.ok, step.blocked)} | \`${step.command}\` |`);
+    lines.push(`| ${step.name} | ${renderStatus(step.ok, step.pendingTodo)} | \`${step.command}\` |`);
   }
 
   lines.push('');
-  lines.push('### 说明');
-  lines.push(`- Windows 根目录: \`${args.windowsRoot}\``);
-  lines.push(`- 模拟多端目录: \`${args.simulatedRoot}\``);
-  lines.push(`- 模拟三规模目录: \`${args.simulatedCohortsRoot}\``);
-  lines.push(`- 真实三规模目录: \`${args.realCohortsRoot}\``);
-  lines.push(`- 门禁阈值: TTI P50 >= ${args.minTtiImprove}%, TFS P50 >= ${args.minTfsImprove}%`);
-  lines.push(`- 样本门槛: 每平台 baseline/pilot >= ${args.minSessionsPerPlatform}`);
-  lines.push('- 说明: 无多端硬件时，发布签收会标记为 BLOCKED，不会误判为 PASS。');
+  lines.push('### Notes');
+  lines.push(`- Windows root: \`${args.windowsRoot}\``);
+  lines.push(`- Simulated platform root: \`${args.simulatedRoot}\``);
+  lines.push(`- Simulated cohorts root: \`${args.simulatedCohortsRoot}\``);
+  lines.push(`- Real cohorts root: \`${args.realCohortsRoot}\``);
+  lines.push(`- Gate thresholds: TTI P50 >= ${args.minTtiImprove}%, TFS P50 >= ${args.minTfsImprove}%`);
+  lines.push(`- Session floor: baseline/pilot >= ${args.minSessionsPerPlatform}`);
+  lines.push('- Without real multi-device data, release signoff is TODO and tracked in backlog.');
+  lines.push('');
+  lines.push('### Future TODO Backlog');
+  for (const item of summary.futureTodos) {
+    lines.push(`- [ ] ${item}`);
+  }
 
   lines.push('');
   lines.push('## English');
   lines.push('');
-  lines.push('### Signoff Summary');
-  lines.push(`- Engineering gate (no multi-device hardware): ${renderStatus(summary.engineeringGatePass)}`);
-  lines.push(`- Release gate (real multi-device hardware): ${renderStatus(summary.releaseGatePass, summary.releaseGateBlocked)}`);
+  lines.push('### Layered Signoff');
+  lines.push(`- Engineering signoff (no multi-device hardware): ${renderStatus(summary.engineeringGatePass)}`);
+  lines.push(`- Release signoff (real multi-device hardware): ${renderStatus(summary.releaseGatePass, summary.releaseGatePendingTodo)}`);
   lines.push('');
-  lines.push('### Details');
+  lines.push('### Execution Detail');
   lines.push('| Step | Status | Command |');
   lines.push('|---|---|---|');
   for (const step of summary.steps) {
-    lines.push(`| ${step.name} | ${renderStatus(step.ok, step.blocked)} | \`${step.command}\` |`);
+    lines.push(`| ${step.name} | ${renderStatus(step.ok, step.pendingTodo)} | \`${step.command}\` |`);
   }
   lines.push('');
-  lines.push('### Notes');
-  lines.push('- Release gate remains BLOCKED without real macOS/Android/iOS cohort datasets.');
+  lines.push('### Future TODO Backlog');
+  for (const item of summary.futureTodos) {
+    lines.push(`- [ ] ${item}`);
+  }
 
   return lines.join('\n');
 }
@@ -265,7 +280,6 @@ function main() {
 
   const steps = [];
 
-  // Step 1: Windows baseline/pilot compare gate
   const windowsCompareOut = path.join(windowsRoot, 'report-phase1-windows-compare.md');
   const stepWindowsCompare = runNodeScript(compareScript, [
     '--baseline', path.join(windowsRoot, 'baseline'),
@@ -274,9 +288,8 @@ function main() {
     '--min-tti-improve', String(args.minTtiImprove),
     '--min-tfs-improve', String(args.minTfsImprove)
   ]);
-  steps.push({ name: 'windows-compare', ...stepWindowsCompare, blocked: false });
+  steps.push({ name: 'windows-compare', ...stepWindowsCompare });
 
-  // Step 2: Windows matrix strict gate
   const windowsMatrixOut = path.join(windowsRoot, 'report-phase1-windows-matrix.md');
   const stepWindowsMatrix = runNodeScript(matrixScript, [
     '--root', windowsRoot,
@@ -286,24 +299,22 @@ function main() {
     '--min-tfs-improve', String(args.minTfsImprove),
     '--strict'
   ]);
-  steps.push({ name: 'windows-matrix', ...stepWindowsMatrix, blocked: false });
+  steps.push({ name: 'windows-matrix', ...stepWindowsMatrix });
 
-  // Step 3: Simulated multi-platform matrix preparation
   const stepSimulate = runNodeScript(simulateScript, [
     '--seed-root', windowsRoot,
     '--out-root', simulatedRoot,
     '--sessions-per-platform', String(args.sessionsPerPlatform),
     '--seed', String(args.seed)
   ]);
-  steps.push({ name: 'simulate-platform-logs', ...stepSimulate, blocked: false });
+  steps.push({ name: 'simulate-platform-logs', ...stepSimulate });
 
-  // Step 4: Simulated cohorts gate
   let stepSimulatedCohorts = {
     ok: false,
     status: 1,
     error: '',
     command: `${path.basename(cohortsScript)} --root ${simulatedCohortsRoot}`,
-    blocked: false
+    pendingTodo: false
   };
   if (stepSimulate.ok) {
     ensureDir(simulatedCohortsRoot);
@@ -324,15 +335,14 @@ function main() {
   } else {
     stepSimulatedCohorts.error = 'skip due to simulation generation failure';
   }
-  steps.push({ name: 'simulated-cohorts-gate', ...stepSimulatedCohorts, blocked: false });
+  steps.push({ name: 'simulated-cohorts-gate', ...stepSimulatedCohorts });
 
-  // Step 5: Real cohorts gate (blocked when no hardware datasets)
   let stepRealCohorts = {
     ok: false,
     status: null,
     error: '',
     command: `${path.basename(cohortsScript)} --root ${realCohortsRoot}`,
-    blocked: false
+    pendingTodo: false
   };
   const realCohortsAvailable = hasRealCohortData(realCohortsRoot);
   if (realCohortsAvailable) {
@@ -351,21 +361,23 @@ function main() {
       status: null,
       error: 'no real multi-device cohort dataset found',
       command: `${path.basename(cohortsScript)} --root ${realCohortsRoot}`,
-      blocked: true
+      pendingTodo: true
     };
   }
   steps.push({ name: 'real-cohorts-gate', ...stepRealCohorts });
 
   const engineeringGatePass = stepWindowsCompare.ok && stepWindowsMatrix.ok && stepSimulatedCohorts.ok;
-  const releaseGateBlocked = stepRealCohorts.blocked === true;
-  const releaseGatePass = !releaseGateBlocked && stepRealCohorts.ok;
+  const releaseGatePendingTodo = stepRealCohorts.pendingTodo === true;
+  const releaseGatePass = !releaseGatePendingTodo && stepRealCohorts.ok;
+  const futureTodos = releaseGatePendingTodo ? buildFutureTodoBacklog(args.realCohortsRoot) : [];
 
   const summary = {
     generatedAt: new Date().toISOString(),
     steps,
     engineeringGatePass,
     releaseGatePass,
-    releaseGateBlocked
+    releaseGatePendingTodo,
+    futureTodos
   };
 
   const report = buildReport(summary, args);
@@ -374,7 +386,7 @@ function main() {
   console.log(`[startup-signoff] Report written: ${outPath}`);
   console.log(
     `[startup-signoff] engineeringGate=${renderStatus(engineeringGatePass)}, ` +
-      `releaseGate=${renderStatus(releaseGatePass, releaseGateBlocked)}`
+      `releaseGate=${renderStatus(releaseGatePass, releaseGatePendingTodo)}`
   );
 
   if (args.strictEngineering && !engineeringGatePass) {

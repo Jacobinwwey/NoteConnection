@@ -220,4 +220,4 @@ npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label w
 - 产物：`tmp/startup-logs/report-startup-signoff.md`
 - 分层结论：
   - 工程签收：基于 Windows 真实日志 + 模拟多端三规模门禁。
-  - 发布签收：若缺少真实多端 cohort，状态为 `BLOCKED`（不会误判为 `PASS`）。
+  - 发布签收：若缺少真实多端 cohort，状态为 `TODO`，并写入未来待办待测事项。

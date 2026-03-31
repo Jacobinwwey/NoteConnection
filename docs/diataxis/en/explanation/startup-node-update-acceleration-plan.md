@@ -220,4 +220,4 @@ npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label w
 - Output: `tmp/startup-logs/report-startup-signoff.md`
 - Layered decision model:
   - Engineering signoff: based on Windows real logs + simulated multi-platform three-cohort gates.
-  - Release signoff: marked as `BLOCKED` when real multi-device cohorts are missing (never falsely `PASS`).
+  - Release signoff: marked as `TODO` when real multi-device cohorts are missing and tracked in future test backlog.
