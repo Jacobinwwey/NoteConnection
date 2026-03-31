@@ -15,6 +15,7 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - Use [app_config.toml Schema](diataxis/en/reference/app-config-schema.md) for exact config keys/defaults/effects.
 - Use [Explanation](diataxis/en/explanation/architecture-and-migration.md) for architecture decisions.
 - Use [Startup Node Update Acceleration Plan](diataxis/en/explanation/startup-node-update-acceleration-plan.md) for phased performance rollout.
+- Use [Knowledge Mastery Evolution Roadmap](diataxis/en/explanation/knowledge-mastery-evolution-roadmap.md) for the next-stage learning-system strategy.
 
 ## 中文
 
@@ -29,3 +30,4 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - 参数键/默认值/效果请查看 [app_config.toml 结构](diataxis/zh/reference/app-config-schema.md)。
 - 需要理解架构决策请查看 [解释文档](diataxis/zh/explanation/architecture-and-migration.md)。
 - 启动性能分阶段落地请查看 [启动节点更新提速方案](diataxis/zh/explanation/startup-node-update-acceleration-plan.md)。
+- 下一阶段学习系统战略请查看 [知识彻底掌握演进路线图](diataxis/zh/explanation/knowledge-mastery-evolution-roadmap.md)。

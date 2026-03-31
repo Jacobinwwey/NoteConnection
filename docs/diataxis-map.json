@@ -145,6 +145,18 @@
         "canonical": ["docs/zh/Interface Document.md", "docs/zh/User_Manual.md"],
         "diataxis": "docs/diataxis/zh/explanation/startup-node-update-acceleration-plan.md"
       }
+    },
+    {
+      "id": "knowledge-mastery-evolution-roadmap",
+      "category": "explanation",
+      "en": {
+        "canonical": ["docs/en/knowledge_mastery_evolution_plan.md"],
+        "diataxis": "docs/diataxis/en/explanation/knowledge-mastery-evolution-roadmap.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/knowledge_mastery_evolution_plan.md"],
+        "diataxis": "docs/diataxis/zh/explanation/knowledge-mastery-evolution-roadmap.md"
+      }
     }
   ]
 }
