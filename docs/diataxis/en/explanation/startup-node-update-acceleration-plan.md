@@ -151,3 +151,24 @@ Reason:
 ### Rollback Gates
 - Any startup regression > 10% on P95.
 - Any reproducible interaction regression (focus/path mode/reader).
+
+## 11) Validation Snapshot (March 31, 2026)
+
+### Executed Command (Windows pilot)
+
+```bash
+npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label windows --out tmp/startup-logs/report-platform-matrix.md
+```
+
+### Current Sample Result (`tmp/startup-logs/report-platform-matrix.md`)
+
+- Platform: `windows`
+- Session count: baseline `2` / pilot `2`
+- `TTI P50` improvement: `31.13%` (gate >= `30%`)
+- `TFS P50` improvement: `26.96%` (gate >= `20%`)
+- Overall gate: `PASS`
+
+### Conclusion
+
+- The current Windows pilot sample clears the v1 gate and is ready for broader cohort capture on macOS/Android/iOS.
+- Because sample size is still small, collect at least `>=10` complete startup sessions per platform before release-go decisions.

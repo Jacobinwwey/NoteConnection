@@ -151,3 +151,24 @@
 ### 回滚门槛
 - 任一 P95 启动指标回退 > 10%
 - 出现可复现的交互回归（Focus/PathMode/Reader）
+
+## 11) 落地验证快照（2026-03-31）
+
+### 执行命令（Windows 试点）
+
+```bash
+npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label windows --out tmp/startup-logs/report-platform-matrix.md
+```
+
+### 当前样本结果（`tmp/startup-logs/report-platform-matrix.md`）
+
+- 平台：`windows`
+- 会话数：baseline `2` / pilot `2`
+- `TTI P50` 改善：`31.13%`（门槛 >= `30%`）
+- `TFS P50` 改善：`26.96%`（门槛 >= `20%`）
+- 总体门禁：`PASS`
+
+### 结论
+
+- 当前 Windows 试点样本满足 v1 门禁，具备继续扩展到 macOS/Android/iOS 分组采集的条件。
+- 由于样本量仍偏小，发布级决策前建议每个平台至少采集 `>=10` 个完整启动会话。

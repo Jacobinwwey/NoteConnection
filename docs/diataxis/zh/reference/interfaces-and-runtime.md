@@ -56,6 +56,10 @@
 - 自动化基线/试点汇总脚本：
   - `npm run perf:startup:compare -- --baseline <baseline-log-path> --pilot <pilot-log-path>`
   - 支持文件或目录输入，自动按 `[Startup Perf]` 检查点切分会话并输出 P50/P95 KPI 报告。
+- 自动化多平台矩阵汇总脚本：
+  - `npm run perf:startup:matrix -- --root <startup-logs-root> [--out <report-path>]`
+  - 推荐目录结构：`<root>/<platform>/baseline|pilot`（例如 `windows`、`macos`、`android`）。
+  - 兼容单平台目录：`<root>/baseline|pilot`，可配合 `--single-platform-label <label>` 指定平台标签。
 
 ## Mermaid 标准兼容基线（Obsidian）
 

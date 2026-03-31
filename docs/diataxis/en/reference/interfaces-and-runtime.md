@@ -56,6 +56,10 @@ This reference tracks canonical API/runtime contracts.
 - Automated baseline vs pilot summary script:
   - `npm run perf:startup:compare -- --baseline <baseline-log-path> --pilot <pilot-log-path>`
   - Supports file or directory inputs, auto-parses sessions from `[Startup Perf]` checkpoints, outputs P50/P95 KPI report.
+- Automated cross-platform matrix summary script:
+  - `npm run perf:startup:matrix -- --root <startup-logs-root> [--out <report-path>]`
+  - Recommended layout: `<root>/<platform>/baseline|pilot` (for example `windows`, `macos`, `android`).
+  - Backward-compatible single-platform layout: `<root>/baseline|pilot`, with `--single-platform-label <label>` as platform tag.
 
 ## Mermaid Canonical Baseline (Obsidian)
 
