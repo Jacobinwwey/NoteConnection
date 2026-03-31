@@ -107,6 +107,227 @@ const startupPerfState = {
     lastWorkerAlpha: null
 };
 
+let startupWorldOverlayState = null;
+
+function createStartupWorldOverlay() {
+    const wrapper = document.getElementById('graph-wrapper');
+    if (!wrapper) {
+        return null;
+    }
+
+    const existing = document.getElementById('startup-world-overlay');
+    if (existing) {
+        return null;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'startup-world-overlay';
+    overlay.className = 'startup-world-overlay';
+    overlay.innerHTML = `
+        <div class="startup-world-card" role="status" aria-live="polite">
+            <div class="startup-world-title">等待世界构建</div>
+            <div class="startup-world-subtitle">星辰正在连接知识节点...</div>
+            <canvas class="startup-world-canvas" aria-label="Startup Starfield"></canvas>
+            <div class="startup-world-hint">点击星辰可点暗</div>
+        </div>
+    `;
+    wrapper.appendChild(overlay);
+
+    const card = overlay.querySelector('.startup-world-card');
+    const canvas = overlay.querySelector('.startup-world-canvas');
+    if (!card || !canvas) {
+        overlay.remove();
+        return null;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        overlay.remove();
+        return null;
+    }
+
+    const state = {
+        overlay,
+        card,
+        canvas,
+        ctx,
+        stars: [],
+        running: true,
+        frameHandle: null,
+        resizeObserver: null,
+        resizeHandler: null,
+        width: 0,
+        height: 0,
+        dpr: 1,
+        leaveHandle: null,
+        fallbackHandle: null,
+        hidden: false
+    };
+
+    function buildStars() {
+        const starCount = Math.min(220, Math.max(90, Math.round((state.width * state.height) / 2200)));
+        state.stars = new Array(starCount);
+        for (let index = 0; index < starCount; index += 1) {
+            state.stars[index] = {
+                x: Math.random() * state.width,
+                y: Math.random() * state.height,
+                radius: 0.7 + Math.random() * 2.4,
+                hue: 195 + Math.random() * 35,
+                lightness: 75 + Math.random() * 20,
+                baseAlpha: 0.3 + Math.random() * 0.55,
+                twinkleSpeed: 0.8 + Math.random() * 2.4,
+                phase: Math.random() * Math.PI * 2,
+                dimTarget: 0,
+                dimValue: 0
+            };
+        }
+    }
+
+    function resizeCanvas() {
+        const rect = state.canvas.getBoundingClientRect();
+        state.width = Math.max(1, Math.floor(rect.width));
+        state.height = Math.max(1, Math.floor(rect.height));
+        state.dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+        state.canvas.width = Math.floor(state.width * state.dpr);
+        state.canvas.height = Math.floor(state.height * state.dpr);
+        state.ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+        buildStars();
+    }
+
+    function drawFrame(frameTimeMs) {
+        if (!state.running) {
+            return;
+        }
+
+        const t = frameTimeMs * 0.001;
+        const renderCtx = state.ctx;
+        renderCtx.clearRect(0, 0, state.width, state.height);
+
+        const nebulaA = renderCtx.createRadialGradient(
+            state.width * 0.28,
+            state.height * 0.28,
+            8,
+            state.width * 0.28,
+            state.height * 0.28,
+            state.width * 0.85
+        );
+        nebulaA.addColorStop(0, 'rgba(108, 149, 255, 0.22)');
+        nebulaA.addColorStop(1, 'rgba(108, 149, 255, 0)');
+        renderCtx.fillStyle = nebulaA;
+        renderCtx.fillRect(0, 0, state.width, state.height);
+
+        const nebulaB = renderCtx.createRadialGradient(
+            state.width * 0.78,
+            state.height * 0.72,
+            12,
+            state.width * 0.78,
+            state.height * 0.72,
+            state.width * 0.7
+        );
+        nebulaB.addColorStop(0, 'rgba(165, 126, 255, 0.18)');
+        nebulaB.addColorStop(1, 'rgba(165, 126, 255, 0)');
+        renderCtx.fillStyle = nebulaB;
+        renderCtx.fillRect(0, 0, state.width, state.height);
+
+        for (let index = 0; index < state.stars.length; index += 1) {
+            const star = state.stars[index];
+            star.dimValue += (star.dimTarget - star.dimValue) * 0.12;
+
+            const twinkle = 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(t * star.twinkleSpeed + star.phase));
+            const alpha = Math.max(0.02, star.baseAlpha * twinkle * (1 - 0.9 * star.dimValue));
+            const radius = star.radius * (0.9 + twinkle * 0.3);
+
+            renderCtx.beginPath();
+            renderCtx.arc(star.x, star.y, radius, 0, Math.PI * 2);
+            renderCtx.fillStyle = `hsla(${star.hue}, 92%, ${star.lightness}%, ${alpha})`;
+            renderCtx.shadowBlur = 9 + star.radius * 6;
+            renderCtx.shadowColor = `hsla(${star.hue}, 95%, ${Math.min(98, star.lightness + 5)}%, ${Math.min(0.85, alpha + 0.12)})`;
+            renderCtx.fill();
+            renderCtx.shadowBlur = 0;
+        }
+
+        state.frameHandle = window.requestAnimationFrame(drawFrame);
+    }
+
+    function dimNearestStar(event) {
+        const rect = state.canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        let nearestStar = null;
+        let nearestDistSq = Infinity;
+        for (let index = 0; index < state.stars.length; index += 1) {
+            const star = state.stars[index];
+            const dx = star.x - x;
+            const dy = star.y - y;
+            const distSq = dx * dx + dy * dy;
+            const hitRadius = Math.max(11, star.radius * 5);
+            if (distSq <= hitRadius * hitRadius && distSq < nearestDistSq) {
+                nearestDistSq = distSq;
+                nearestStar = star;
+            }
+        }
+
+        if (nearestStar) {
+            nearestStar.dimTarget = 1;
+        }
+    }
+
+    state.canvas.addEventListener('pointerdown', dimNearestStar);
+
+    state.resizeHandler = resizeCanvas;
+    if (typeof ResizeObserver === 'function') {
+        state.resizeObserver = new ResizeObserver(() => resizeCanvas());
+        state.resizeObserver.observe(state.card);
+    } else {
+        window.addEventListener('resize', state.resizeHandler);
+    }
+
+    resizeCanvas();
+    state.frameHandle = window.requestAnimationFrame(drawFrame);
+
+    return state;
+}
+
+function hideStartupWorldOverlay(reason = '') {
+    if (!startupWorldOverlayState || startupWorldOverlayState.hidden) {
+        return;
+    }
+
+    const state = startupWorldOverlayState;
+    state.hidden = true;
+    state.running = false;
+
+    if (state.frameHandle !== null) {
+        window.cancelAnimationFrame(state.frameHandle);
+        state.frameHandle = null;
+    }
+
+    if (state.resizeObserver) {
+        state.resizeObserver.disconnect();
+        state.resizeObserver = null;
+    } else if (state.resizeHandler) {
+        window.removeEventListener('resize', state.resizeHandler);
+    }
+
+    if (state.fallbackHandle !== null) {
+        window.clearTimeout(state.fallbackHandle);
+        state.fallbackHandle = null;
+    }
+
+    state.overlay.classList.add('is-leaving');
+    if (reason) {
+        console.log(`[Startup Overlay] Closing overlay: ${reason}`);
+    }
+
+    state.leaveHandle = window.setTimeout(() => {
+        if (state.overlay && state.overlay.parentNode) {
+            state.overlay.parentNode.removeChild(state.overlay);
+        }
+        startupWorldOverlayState = null;
+    }, 620);
+}
+
 function markStartupCheckpoint(label, details = null) {
     if (Object.prototype.hasOwnProperty.call(startupPerfState.checkpoints, label)) {
         return startupPerfState.checkpoints[label];
@@ -120,6 +341,10 @@ function markStartupCheckpoint(label, details = null) {
         console.log(`[Startup Perf] ${label} +${elapsedMs.toFixed(2)}ms`, details);
     } else {
         console.log(`[Startup Perf] ${label} +${elapsedMs.toFixed(2)}ms`);
+    }
+
+    if (typeof label === 'string' && label.startsWith('T5 ')) {
+        hideStartupWorldOverlay('initial-layout-complete');
     }
 
     return at;
@@ -186,6 +411,18 @@ const runtimeGraphData =
 const graphDataExists = runtimeGraphData !== null;
 const sourceNodes = (graphDataExists && Array.isArray(runtimeGraphData.nodes)) ? runtimeGraphData.nodes : [];
 const sourceLinks = (graphDataExists && Array.isArray(runtimeGraphData.edges)) ? runtimeGraphData.edges : [];
+
+if (graphDataExists && sourceNodes.length > 0) {
+    startupWorldOverlayState = createStartupWorldOverlay();
+    if (startupWorldOverlayState) {
+        startupWorldOverlayState.fallbackHandle = window.setTimeout(() => {
+            hideStartupWorldOverlay('safety-timeout');
+        }, 30000);
+    }
+} else {
+    console.log('[Startup Overlay] Skipped: no preloaded graph payload detected.');
+}
+
 const graphPreprocessStartTs = (typeof performance !== 'undefined' && typeof performance.now === 'function')
     ? performance.now()
     : Date.now();
