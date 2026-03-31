@@ -23,7 +23,7 @@ This reference tracks canonical API/runtime contracts.
   - `get_app_runtime_config`
 - Runtime bridge readiness sequencing via `whenReady()`.
 
-## Startup Perf Telemetry and Pilot Profile (v1.6.9+ pilot)
+## Startup Perf Telemetry and Pilot Profile (v1.7.0+ pilot)
 
 - Frontend startup checkpoints are emitted as one-shot logs:
   - `T0 app_boot`
@@ -43,10 +43,14 @@ This reference tracks canonical API/runtime contracts.
   - `startupProfile.deltaEnabled`
   - `startupProfile.deltaEpsilonPx`
   - `startupProfile.fullSyncEveryTicks`
+  - `startupProfile.lowAlphaDeltaEpsilonMultiplier`
+  - `startupProfile.lowAlphaFullSyncEveryTicks`
 - Worker -> main-thread tick transport contract (Phase 2):
   - `tickMode: 'full' | 'delta'`
   - `isDelta: boolean`
-  - `nodes: [{ id, x, y }]` (delta mode only includes changed nodes)
+  - `nodes: [{ id, i, x, y }]` (`i` is the worker node index fast-path; delta mode only includes changed nodes)
+  - Startup tick application is frame-coalesced on main thread to reduce redundant repaint pressure.
+  - `T5 stable_layout` details include `tickSummary` (`fullTicks`, `deltaTicks`, `deltaRatio`, payload stats).
 - Multi-platform startup pilot profiles:
   - `desktop_windows_pilot`: `26 FPS`, `400ms` edge delay, `1500ms` SVG cap window (`18000` links).
   - `desktop_macos_pilot`: `24 FPS`, `430ms` edge delay, `1700ms` SVG cap window (`15000` links).

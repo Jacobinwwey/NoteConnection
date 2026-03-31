@@ -23,7 +23,7 @@
   - `get_app_runtime_config`
 - Runtime bridge 通过 `whenReady()` 保障调用时序。
 
-## 启动性能观测与试点 Profile（v1.6.9+ 试点）
+## 启动性能观测与试点 Profile（v1.7.0+ 试点）
 
 - 前端启动关键点采用单次日志输出：
   - `T0 app_boot`
@@ -43,10 +43,14 @@
   - `startupProfile.deltaEnabled`
   - `startupProfile.deltaEpsilonPx`
   - `startupProfile.fullSyncEveryTicks`
+  - `startupProfile.lowAlphaDeltaEpsilonMultiplier`
+  - `startupProfile.lowAlphaFullSyncEveryTicks`
 - Worker -> 主线程 tick 传输契约（Phase 2）：
   - `tickMode: 'full' | 'delta'`
   - `isDelta: boolean`
-  - `nodes: [{ id, x, y }]`（delta 模式仅包含变化节点）
+  - `nodes: [{ id, i, x, y }]`（`i` 为 Worker 节点索引快速路径；delta 模式仅包含变化节点）
+  - 主线程对启动期 tick 采用帧级合并应用，降低重复重绘压力。
+  - `T5 stable_layout` 附带 `tickSummary`（`fullTicks`、`deltaTicks`、`deltaRatio` 与载荷统计）。
 - 多平台启动试点 profile：
   - `desktop_windows_pilot`：`26 FPS`、`400ms` 边延迟、`1500ms` SVG 窗口（`18000` 条边）。
   - `desktop_macos_pilot`：`24 FPS`、`430ms` 边延迟、`1700ms` SVG 窗口（`15000` 条边）。

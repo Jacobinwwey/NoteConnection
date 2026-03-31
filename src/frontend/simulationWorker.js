@@ -23,7 +23,9 @@ let startupProfile = {
     stableTimeoutMs: 12000,
     deltaEnabled: false,
     deltaEpsilonPx: 0.6,
-    fullSyncEveryTicks: 3
+    fullSyncEveryTicks: 3,
+    lowAlphaDeltaEpsilonMultiplier: 1.35,
+    lowAlphaFullSyncEveryTicks: 5
 };
 
 let startupRuntimeState = {
@@ -64,7 +66,18 @@ function configureStartupProfile(profile) {
         stableTimeoutMs: Math.max(1000, parsePositiveInt(profile ? profile.stableTimeoutMs : 12000, 12000)),
         deltaEnabled: Boolean(profile && profile.deltaEnabled === true),
         deltaEpsilonPx: Math.max(0.0001, parseFiniteNumber(profile ? profile.deltaEpsilonPx : 0.6, 0.6)),
-        fullSyncEveryTicks: Math.max(1, parsePositiveInt(profile ? profile.fullSyncEveryTicks : 3, 3))
+        fullSyncEveryTicks: Math.max(1, parsePositiveInt(profile ? profile.fullSyncEveryTicks : 3, 3)),
+        lowAlphaDeltaEpsilonMultiplier: Math.max(
+            1,
+            parseFiniteNumber(profile ? profile.lowAlphaDeltaEpsilonMultiplier : 1.35, 1.35)
+        ),
+        lowAlphaFullSyncEveryTicks: Math.max(
+            1,
+            parsePositiveInt(
+                profile ? profile.lowAlphaFullSyncEveryTicks : Math.max(4, parsePositiveInt(profile ? profile.fullSyncEveryTicks : 3, 3)),
+                Math.max(4, parsePositiveInt(profile ? profile.fullSyncEveryTicks : 3, 3))
+            )
+        )
     };
 
     startupProfile = next;
@@ -92,7 +105,9 @@ function configureStartupProfile(profile) {
         stableTimeoutMs: next.stableTimeoutMs,
         deltaEnabled: next.deltaEnabled,
         deltaEpsilonPx: next.deltaEpsilonPx,
-        fullSyncEveryTicks: next.fullSyncEveryTicks
+        fullSyncEveryTicks: next.fullSyncEveryTicks,
+        lowAlphaDeltaEpsilonMultiplier: next.lowAlphaDeltaEpsilonMultiplier,
+        lowAlphaFullSyncEveryTicks: next.lowAlphaFullSyncEveryTicks
     });
 }
 
@@ -108,41 +123,57 @@ function resolveTickMinIntervalMs(alpha) {
     return highAlphaIntervalMs;
 }
 
+function resolveDeltaEpsilonPx(alpha) {
+    let epsilon = startupProfile.deltaEpsilonPx;
+    if (alpha <= startupProfile.lowAlphaThreshold) {
+        epsilon *= startupProfile.lowAlphaDeltaEpsilonMultiplier;
+    }
+    return Math.max(0.0001, epsilon);
+}
+
+function resolveFullSyncEveryTicks(alpha) {
+    if (alpha <= startupProfile.lowAlphaThreshold) {
+        return Math.max(startupProfile.fullSyncEveryTicks, startupProfile.lowAlphaFullSyncEveryTicks);
+    }
+    return startupProfile.fullSyncEveryTicks;
+}
+
 function buildFullPositionPayload() {
     const payload = new Array(nodes.length);
     for (let index = 0; index < nodes.length; index += 1) {
         const n = nodes[index];
         const x = Number.isFinite(n.x) ? n.x : 0;
         const y = Number.isFinite(n.y) ? n.y : 0;
-        payload[index] = { id: n.id, x, y };
+        payload[index] = { id: n.id, i: index, x, y };
         startupRuntimeState.prevPositions.set(n.id, { x, y });
     }
     return payload;
 }
 
-function buildDeltaPositionPayload() {
+function buildDeltaPositionPayload(alpha) {
     const payload = [];
-    const epsilon = startupProfile.deltaEpsilonPx;
+    const epsilon = resolveDeltaEpsilonPx(alpha);
     for (let index = 0; index < nodes.length; index += 1) {
         const n = nodes[index];
         const x = Number.isFinite(n.x) ? n.x : 0;
         const y = Number.isFinite(n.y) ? n.y : 0;
         const prev = startupRuntimeState.prevPositions.get(n.id);
         if (!prev || Math.abs(prev.x - x) >= epsilon || Math.abs(prev.y - y) >= epsilon) {
-            payload.push({ id: n.id, x, y });
+            payload.push({ id: n.id, i: index, x, y });
             startupRuntimeState.prevPositions.set(n.id, { x, y });
         }
     }
     return payload;
 }
 
-function buildTickPositionsPayload() {
+function buildTickPositionsPayload(alpha) {
     startupRuntimeState.tickCount += 1;
+    const activeFullSyncEveryTicks = resolveFullSyncEveryTicks(alpha);
     const forceFull =
         startupRuntimeState.tickCount === 1 ||
         startupProfile.deltaEnabled !== true ||
-        startupProfile.fullSyncEveryTicks <= 1 ||
-        (startupRuntimeState.tickCount % startupProfile.fullSyncEveryTicks) === 0;
+        activeFullSyncEveryTicks <= 1 ||
+        (startupRuntimeState.tickCount % activeFullSyncEveryTicks) === 0;
 
     if (forceFull) {
         return {
@@ -152,7 +183,7 @@ function buildTickPositionsPayload() {
         };
     }
 
-    const deltaNodes = buildDeltaPositionPayload();
+    const deltaNodes = buildDeltaPositionPayload(alpha);
     const changeRatio = nodes.length > 0 ? (deltaNodes.length / nodes.length) : 0;
     if (changeRatio >= 0.7) {
         return {
@@ -285,7 +316,7 @@ function initSimulation(data) {
             }
         }
 
-        const tickPositions = buildTickPositionsPayload();
+        const tickPositions = buildTickPositionsPayload(alpha);
         postMessage({
             type: 'tick',
             nodes: tickPositions.nodes,

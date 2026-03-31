@@ -91,6 +91,8 @@ function resolveStartupPerfProfile(runtimeCaps) {
         deltaTickEnabled: false,
         deltaEpsilonPx: 0.6,
         deltaFullSyncEveryTicks: 3,
+        deltaLowAlphaEpsilonMultiplier: 1.35,
+        deltaLowAlphaFullSyncEveryTicks: 5,
         startupOverlayEnabled: true,
         overlaySafetyTimeoutMs: 30000,
         overlayMinStars: 70,
@@ -113,6 +115,8 @@ function resolveStartupPerfProfile(runtimeCaps) {
             deltaTickEnabled: true,
             deltaEpsilonPx: 0.75,
             deltaFullSyncEveryTicks: 3,
+            deltaLowAlphaEpsilonMultiplier: 1.45,
+            deltaLowAlphaFullSyncEveryTicks: 5,
             overlayMinStars: 90,
             overlayMaxStars: 220,
             overlayStarDensity: 2200
@@ -130,6 +134,8 @@ function resolveStartupPerfProfile(runtimeCaps) {
             deltaTickEnabled: true,
             deltaEpsilonPx: 0.75,
             deltaFullSyncEveryTicks: 3,
+            deltaLowAlphaEpsilonMultiplier: 1.45,
+            deltaLowAlphaFullSyncEveryTicks: 5,
             overlayMinStars: 84,
             overlayMaxStars: 200,
             overlayStarDensity: 2400
@@ -147,6 +153,8 @@ function resolveStartupPerfProfile(runtimeCaps) {
             deltaTickEnabled: true,
             deltaEpsilonPx: 0.75,
             deltaFullSyncEveryTicks: 3,
+            deltaLowAlphaEpsilonMultiplier: 1.45,
+            deltaLowAlphaFullSyncEveryTicks: 5,
             overlayMinStars: 86,
             overlayMaxStars: 205,
             overlayStarDensity: 2350
@@ -167,6 +175,8 @@ function resolveStartupPerfProfile(runtimeCaps) {
             deltaTickEnabled: true,
             deltaEpsilonPx: 0.95,
             deltaFullSyncEveryTicks: 4,
+            deltaLowAlphaEpsilonMultiplier: 1.6,
+            deltaLowAlphaFullSyncEveryTicks: 6,
             overlaySafetyTimeoutMs: 36000,
             overlayMinStars: 52,
             overlayMaxStars: 120,
@@ -189,6 +199,8 @@ function resolveStartupPerfProfile(runtimeCaps) {
             deltaTickEnabled: true,
             deltaEpsilonPx: 0.95,
             deltaFullSyncEveryTicks: 4,
+            deltaLowAlphaEpsilonMultiplier: 1.6,
+            deltaLowAlphaFullSyncEveryTicks: 6,
             overlaySafetyTimeoutMs: 36000,
             overlayMinStars: 48,
             overlayMaxStars: 110,
@@ -252,7 +264,12 @@ const startupPerfState = {
     edgeStage1Logged: false,
     edgeStage1ReleasedLogged: false,
     tickModeSamples: {},
-    lastWorkerAlpha: null
+    lastWorkerAlpha: null,
+    tickMessagesReceived: 0,
+    tickPayloadNodesTotal: 0,
+    tickPayloadNodesMax: 0,
+    tickFramesApplied: 0,
+    tickEmptyDeltaFramesSkipped: 0
 };
 
 const STARTUP_LAYOUT_SNAPSHOT_DB_NAME = 'noteconnection-startup';
@@ -468,6 +485,45 @@ function collectStartupLayoutSnapshotRecord(reason = '') {
     };
 }
 
+function validateStartupLayoutSnapshotRecord(record) {
+    if (!record || !Array.isArray(record.positions) || record.positions.length === 0) {
+        return { ok: false, reason: 'empty-positions' };
+    }
+
+    if (startupLayoutSnapshotState.fingerprint && record.fingerprint && record.fingerprint !== startupLayoutSnapshotState.fingerprint) {
+        return { ok: false, reason: 'fingerprint-mismatch' };
+    }
+
+    const now = Date.now();
+    if (Number.isFinite(record.savedAt) && (now - record.savedAt) > STARTUP_LAYOUT_SNAPSHOT_MAX_AGE_MS) {
+        return { ok: false, reason: 'snapshot-expired' };
+    }
+
+    const expectedNodeCount = Array.isArray(nodes) ? nodes.length : 0;
+    const expectedEdgeCount = Array.isArray(links) ? links.length : 0;
+
+    if (Number.isFinite(record.nodeCount) && expectedNodeCount > 0 && record.nodeCount !== expectedNodeCount) {
+        return { ok: false, reason: 'node-count-mismatch' };
+    }
+    if (Number.isFinite(record.edgeCount) && expectedEdgeCount > 0 && record.edgeCount !== expectedEdgeCount) {
+        return { ok: false, reason: 'edge-count-mismatch' };
+    }
+
+    const positionCount = record.positions.length;
+    const coverage = expectedNodeCount > 0 ? (positionCount / expectedNodeCount) : 0;
+    if (expectedNodeCount > 0 && coverage < 0.9) {
+        return { ok: false, reason: 'position-coverage-low', coverage: Number(coverage.toFixed(4)) };
+    }
+
+    return {
+        ok: true,
+        coverage: Number(coverage.toFixed(4)),
+        positionCount,
+        expectedNodeCount,
+        expectedEdgeCount
+    };
+}
+
 function applyStartupLayoutSnapshotRecord(record) {
     if (!record || !Array.isArray(record.positions) || record.positions.length === 0 || !nodeMap) {
         return { appliedCount: 0, total: 0 };
@@ -503,6 +559,21 @@ function maybeApplyStartupWarmSnapshot(trigger = '') {
         return false;
     }
 
+    const validation = validateStartupLayoutSnapshotRecord(record);
+    if (!validation.ok) {
+        console.warn('[Startup Warm Snapshot] Skip applying invalid snapshot record.', {
+            trigger,
+            reason: validation.reason,
+            fingerprint: startupLayoutSnapshotState.fingerprint,
+            recordFingerprint: record.fingerprint || null,
+            recordNodeCount: record.nodeCount || 0,
+            recordEdgeCount: record.edgeCount || 0,
+            positionCount: Array.isArray(record.positions) ? record.positions.length : 0
+        });
+        startupLayoutSnapshotState.pendingRecord = null;
+        return false;
+    }
+
     const result = applyStartupLayoutSnapshotRecord(record);
     if (result.appliedCount <= 0) {
         return false;
@@ -514,7 +585,8 @@ function maybeApplyStartupWarmSnapshot(trigger = '') {
         fingerprint: startupLayoutSnapshotState.fingerprint,
         appliedCount: result.appliedCount,
         totalNodes: result.total,
-        savedAt: record.savedAt || null
+        savedAt: record.savedAt || null,
+        coverage: validation.coverage
     });
 
     if (typeof ticked === 'function') {
@@ -1180,6 +1252,135 @@ const simulationWorker = new Worker("simulationWorker.js");
 
 // Position buffer for rendering
 let currentPositions = new Map();
+const startupTickApplyQueue = {
+    frameHandle: null,
+    pendingById: new Map(),
+    pendingTickMode: 'delta',
+    pendingStable: false
+};
+
+function buildStartupTickModeSummary() {
+    const fullCount = Number(startupPerfState.tickModeSamples.full || 0);
+    const deltaCount = Number(startupPerfState.tickModeSamples.delta || 0);
+    const totalTickCount = fullCount + deltaCount;
+    return {
+        tickMessages: startupPerfState.tickMessagesReceived,
+        tickFramesApplied: startupPerfState.tickFramesApplied,
+        fullTicks: fullCount,
+        deltaTicks: deltaCount,
+        deltaRatio: totalTickCount > 0 ? Number((deltaCount / totalTickCount).toFixed(4)) : 0,
+        avgPayloadNodes: startupPerfState.tickMessagesReceived > 0
+            ? Number((startupPerfState.tickPayloadNodesTotal / startupPerfState.tickMessagesReceived).toFixed(2))
+            : 0,
+        maxPayloadNodes: startupPerfState.tickPayloadNodesMax,
+        skippedEmptyDeltaFrames: startupPerfState.tickEmptyDeltaFramesSkipped
+    };
+}
+
+function flushStartupTickApplyQueue() {
+    startupTickApplyQueue.frameHandle = null;
+
+    if (focusNode) {
+        startupTickApplyQueue.pendingById.clear();
+        startupTickApplyQueue.pendingTickMode = 'delta';
+        startupTickApplyQueue.pendingStable = false;
+        return;
+    }
+
+    let appliedCount = 0;
+    startupTickApplyQueue.pendingById.forEach((payloadNode, nodeId) => {
+        if (!payloadNode) {
+            return;
+        }
+
+        const payloadIndex = Number(payloadNode.i);
+        const hasValidIndex = Number.isInteger(payloadIndex) && payloadIndex >= 0 && payloadIndex < nodes.length;
+        let originalNode = hasValidIndex ? nodes[payloadIndex] : null;
+        if (!originalNode || originalNode.id !== nodeId) {
+            originalNode = nodeMap.get(nodeId);
+        }
+        if (!originalNode) {
+            return;
+        }
+
+        const nextX = Number.isFinite(Number(payloadNode.x)) ? Number(payloadNode.x) : originalNode.x;
+        const nextY = Number.isFinite(Number(payloadNode.y)) ? Number(payloadNode.y) : originalNode.y;
+        originalNode.x = nextX;
+        originalNode.y = nextY;
+        currentPositions.set(nodeId, { x: nextX, y: nextY });
+        appliedCount += 1;
+    });
+
+    const shouldRender = appliedCount > 0 || startupTickApplyQueue.pendingTickMode !== 'delta';
+    if (shouldRender) {
+        ticked();
+        startupPerfState.tickFramesApplied += 1;
+    } else {
+        startupPerfState.tickEmptyDeltaFramesSkipped += 1;
+    }
+
+    if (!startupPerfState.t4Seen && shouldRender) {
+        startupPerfState.t4Seen = true;
+        const rendererModeInput = document.querySelector('input[name="rendererMode"]:checked');
+        const layoutModeInput = document.querySelector('input[name="layoutMode"]:checked');
+        markStartupCheckpoint('T4 first_interactive_render', {
+            renderer: rendererModeInput ? rendererModeInput.value : 'unknown',
+            layout: layoutModeInput ? layoutModeInput.value : 'unknown'
+        });
+    }
+
+    if (startupTickApplyQueue.pendingStable === true && !startupPerfState.t5Seen) {
+        startupPerfState.t5Seen = true;
+        markStartupCheckpoint('T5 stable_layout', {
+            alpha: Number.isFinite(startupPerfState.lastWorkerAlpha) ? Number(startupPerfState.lastWorkerAlpha.toFixed(4)) : null,
+            source: 'worker_tick',
+            tickSummary: buildStartupTickModeSummary()
+        });
+        scheduleStartupLayoutSnapshotPersist('startup-stable-worker-tick');
+    }
+
+    startupTickApplyQueue.pendingById.clear();
+    startupTickApplyQueue.pendingTickMode = 'delta';
+    startupTickApplyQueue.pendingStable = false;
+}
+
+function scheduleStartupTickApplyFlush() {
+    if (startupTickApplyQueue.frameHandle !== null) {
+        return;
+    }
+
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+        startupTickApplyQueue.frameHandle = window.requestAnimationFrame(() => {
+            flushStartupTickApplyQueue();
+        });
+    } else {
+        startupTickApplyQueue.frameHandle = setTimeout(() => {
+            flushStartupTickApplyQueue();
+        }, 16);
+    }
+}
+
+function queueStartupTickForApply(workerNodes, resolvedTickMode, isStartupStable) {
+    if (resolvedTickMode === 'full') {
+        startupTickApplyQueue.pendingById.clear();
+        startupTickApplyQueue.pendingTickMode = 'full';
+    } else if (startupTickApplyQueue.pendingTickMode !== 'full') {
+        startupTickApplyQueue.pendingTickMode = 'delta';
+    }
+
+    for (let index = 0; index < workerNodes.length; index += 1) {
+        const n = workerNodes[index];
+        if (!n || n.id === undefined || n.id === null) {
+            continue;
+        }
+        startupTickApplyQueue.pendingById.set(n.id, n);
+    }
+
+    if (isStartupStable === true) {
+        startupTickApplyQueue.pendingStable = true;
+    }
+    scheduleStartupTickApplyFlush();
+}
 
 simulationWorker.onmessage = function(event) {
     const {
@@ -1195,6 +1396,10 @@ simulationWorker.onmessage = function(event) {
         const resolvedTickMode = (typeof tickMode === 'string' && tickMode.length > 0)
             ? tickMode
             : (isDelta === true ? 'delta' : 'full');
+
+        startupPerfState.tickMessagesReceived += 1;
+        startupPerfState.tickPayloadNodesTotal += safeWorkerNodes.length;
+        startupPerfState.tickPayloadNodesMax = Math.max(startupPerfState.tickPayloadNodesMax, safeWorkerNodes.length);
 
         if (!Object.prototype.hasOwnProperty.call(startupPerfState.tickModeSamples, resolvedTickMode)) {
             startupPerfState.tickModeSamples[resolvedTickMode] = 0;
@@ -1217,46 +1422,14 @@ simulationWorker.onmessage = function(event) {
         // v0.9.80: Ignore worker ticks in Focus Mode to prevent position overwrite
         // In Focus Mode, positions are managed by the main thread's highlightManager
         if (focusNode) return;
-
-        // Update positions (supports full snapshot and delta snapshot payloads)
-        safeWorkerNodes.forEach(n => {
-            currentPositions.set(n.id, { x: n.x, y: n.y });
-            const originalNode = nodeMap.get(n.id);
-            if (originalNode) {
-                originalNode.x = n.x;
-                originalNode.y = n.y;
-            }
-        });
-
-        // Skip rendering on empty delta payloads to reduce no-op paints near stable phase.
-        if (safeWorkerNodes.length > 0 || resolvedTickMode !== 'delta') {
-            ticked();
-        }
-
-        if (!startupPerfState.t4Seen) {
-            startupPerfState.t4Seen = true;
-            const rendererModeInput = document.querySelector('input[name="rendererMode"]:checked');
-            const layoutModeInput = document.querySelector('input[name="layoutMode"]:checked');
-            markStartupCheckpoint('T4 first_interactive_render', {
-                renderer: rendererModeInput ? rendererModeInput.value : 'unknown',
-                layout: layoutModeInput ? layoutModeInput.value : 'unknown'
-            });
-        }
-
-        if (isStartupStable === true && !startupPerfState.t5Seen) {
-            startupPerfState.t5Seen = true;
-            markStartupCheckpoint('T5 stable_layout', {
-                alpha: Number.isFinite(workerAlpha) ? Number(workerAlpha.toFixed(4)) : null,
-                source: 'worker_tick'
-            });
-            scheduleStartupLayoutSnapshotPersist('startup-stable-worker-tick');
-        }
+        queueStartupTickForApply(safeWorkerNodes, resolvedTickMode, isStartupStable === true);
     } else if (type === 'startupStable') {
         if (!startupPerfState.t5Seen) {
             startupPerfState.t5Seen = true;
             markStartupCheckpoint('T5 stable_layout', {
                 alpha: Number.isFinite(workerAlpha) ? Number(workerAlpha.toFixed(4)) : null,
-                source: 'worker_signal'
+                source: 'worker_signal',
+                tickSummary: buildStartupTickModeSummary()
             });
             scheduleStartupLayoutSnapshotPersist('startup-stable-worker-signal');
         }
@@ -1356,7 +1529,9 @@ const workerStartupProfile = {
     stableTimeoutMs: startupPerfProfile.stableTimeoutMs,
     deltaEnabled: startupPerfProfile.deltaTickEnabled === true,
     deltaEpsilonPx: startupPerfProfile.deltaEpsilonPx,
-    fullSyncEveryTicks: startupPerfProfile.deltaFullSyncEveryTicks
+    fullSyncEveryTicks: startupPerfProfile.deltaFullSyncEveryTicks,
+    lowAlphaDeltaEpsilonMultiplier: startupPerfProfile.deltaLowAlphaEpsilonMultiplier,
+    lowAlphaFullSyncEveryTicks: startupPerfProfile.deltaLowAlphaFullSyncEveryTicks
 };
 
 markStartupCheckpoint('T2 worker_init_sent', {
@@ -1365,7 +1540,9 @@ markStartupCheckpoint('T2 worker_init_sent', {
     profile: workerStartupProfile.id,
     tickMaxFps: workerStartupProfile.tickMaxFps,
     deltaEnabled: workerStartupProfile.deltaEnabled,
-    deltaFullSyncEveryTicks: workerStartupProfile.fullSyncEveryTicks
+    deltaFullSyncEveryTicks: workerStartupProfile.fullSyncEveryTicks,
+    deltaLowAlphaEpsilonMultiplier: workerStartupProfile.lowAlphaDeltaEpsilonMultiplier,
+    deltaLowAlphaFullSyncEveryTicks: workerStartupProfile.lowAlphaFullSyncEveryTicks
 });
 simulationWorker.postMessage({ 
     type: 'init', 
@@ -4996,4 +5173,3 @@ if (btnPathMode) {
         }
     });
 }
-

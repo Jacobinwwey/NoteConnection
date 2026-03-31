@@ -237,3 +237,32 @@ npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label w
   - `TFS`: `2299.40ms -> 1679.50ms`, improvement `26.96%`
 - Final report:
   - `tmp/startup-logs/report-planb-final-windows.md`
+
+## 17) v1.1 Optimization + Risk Guardrail Hardening (March 31, 2026)
+
+- Runtime optimization additions:
+  - Worker delta now supports low-alpha adaptive policy:
+    - `lowAlphaDeltaEpsilonMultiplier` (raises epsilon near stable phase to reduce payload size)
+    - `lowAlphaFullSyncEveryTicks` (relaxes periodic full-sync frequency near stable phase)
+  - Worker tick payload now includes node index fast-path (`nodes[].i`) to reduce main-thread id-map lookup overhead.
+  - Main thread startup tick application is frame-coalesced:
+    - multiple tick messages in one frame are merged,
+    - position updates apply once per frame,
+    - redundant empty-delta paints are skipped.
+- Risk mitigation additions:
+  - Warm snapshot apply now has strict runtime validation:
+    - fingerprint consistency check,
+    - snapshot age guard (`STARTUP_LAYOUT_SNAPSHOT_MAX_AGE_MS`),
+    - node/edge count consistency check,
+    - position coverage floor (`>=90%`) to avoid partial snapshot corruption.
+  - Invalid snapshots are auto-rejected with structured warning logs and cold-start fallback.
+- Observability additions:
+  - `T5 stable_layout` checkpoint now emits `tickSummary`:
+    - `fullTicks`, `deltaTicks`, `deltaRatio`,
+    - `avgPayloadNodes`, `maxPayloadNodes`,
+    - `tickFramesApplied`, `skippedEmptyDeltaFrames`.
+
+Expected effect:
+- Lower startup transfer pressure in low-alpha settle phase.
+- Lower main-thread no-op paint ratio under high tick cadence.
+- Better safety against stale/corrupt snapshot recovery regressions.

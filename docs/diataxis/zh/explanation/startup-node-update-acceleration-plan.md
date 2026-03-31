@@ -237,3 +237,32 @@ npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label w
   - `TFS`：`2299.40ms -> 1679.50ms`，提升 `26.96%`
 - 最终报告：
   - `tmp/startup-logs/report-planb-final-windows.md`
+
+## 17) v1.1 优化与风险护栏加固（2026-03-31）
+
+- 运行时优化新增：
+  - Worker Delta 在低 alpha 阶段支持自适应策略：
+    - `lowAlphaDeltaEpsilonMultiplier`（稳定期增大 epsilon，降低传输载荷）
+    - `lowAlphaFullSyncEveryTicks`（稳定期放宽全量同步周期）
+  - Worker tick 载荷新增节点索引快速路径（`nodes[].i`），减少主线程按 id 回查开销。
+  - 主线程启动期 tick 改为“帧级合并应用”：
+    - 同一帧内多条 tick 合并，
+    - 每帧仅一次位置回写与渲染触发，
+    - 空 delta 帧自动跳过，减少无效重绘。
+- 风险规避新增：
+  - Warm Snapshot 应用前增加严格校验：
+    - 指纹一致性校验，
+    - 快照时效校验（`STARTUP_LAYOUT_SNAPSHOT_MAX_AGE_MS`），
+    - 节点/边数量一致性校验，
+    - 位置覆盖率下限（`>=90%`）校验，规避局部损坏快照误恢复。
+  - 非法快照自动拒绝并记录结构化告警日志，回退至冷启动路径。
+- 观测增强新增：
+  - `T5 stable_layout` 增加 `tickSummary` 输出：
+    - `fullTicks`、`deltaTicks`、`deltaRatio`，
+    - `avgPayloadNodes`、`maxPayloadNodes`，
+    - `tickFramesApplied`、`skippedEmptyDeltaFrames`。
+
+预期效果：
+- 进一步降低稳定阶段 Worker->主线程传输压力。
+- 降低高频 tick 下主线程无效重绘比例。
+- 提升快照恢复链路对陈旧/损坏数据的容错能力。
