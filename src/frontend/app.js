@@ -82,9 +82,15 @@ function resolveStartupPerfProfile(runtimeCaps) {
         edgeGeometryDelayMs: 0,
         edgeStartupWindowMs: 0,
         edgeStartupSvgCap: 0,
+        edgeStage1TopK: 0,
         stableAlphaThreshold: 0.05,
         stableHoldTicks: 8,
         stableTimeoutMs: 12000,
+        lowAlphaThreshold: 0.08,
+        lowAlphaTickMaxFps: 0,
+        deltaTickEnabled: false,
+        deltaEpsilonPx: 0.6,
+        deltaFullSyncEveryTicks: 3,
         startupOverlayEnabled: true,
         overlaySafetyTimeoutMs: 30000,
         overlayMinStars: 70,
@@ -102,6 +108,11 @@ function resolveStartupPerfProfile(runtimeCaps) {
             edgeGeometryDelayMs: 400,
             edgeStartupWindowMs: 1500,
             edgeStartupSvgCap: 18000,
+            edgeStage1TopK: 3500,
+            lowAlphaTickMaxFps: 12,
+            deltaTickEnabled: true,
+            deltaEpsilonPx: 0.75,
+            deltaFullSyncEveryTicks: 3,
             overlayMinStars: 90,
             overlayMaxStars: 220,
             overlayStarDensity: 2200
@@ -114,6 +125,11 @@ function resolveStartupPerfProfile(runtimeCaps) {
             edgeGeometryDelayMs: 430,
             edgeStartupWindowMs: 1700,
             edgeStartupSvgCap: 15000,
+            edgeStage1TopK: 3000,
+            lowAlphaTickMaxFps: 11,
+            deltaTickEnabled: true,
+            deltaEpsilonPx: 0.75,
+            deltaFullSyncEveryTicks: 3,
             overlayMinStars: 84,
             overlayMaxStars: 200,
             overlayStarDensity: 2400
@@ -126,6 +142,11 @@ function resolveStartupPerfProfile(runtimeCaps) {
             edgeGeometryDelayMs: 420,
             edgeStartupWindowMs: 1600,
             edgeStartupSvgCap: 16000,
+            edgeStage1TopK: 3200,
+            lowAlphaTickMaxFps: 11,
+            deltaTickEnabled: true,
+            deltaEpsilonPx: 0.75,
+            deltaFullSyncEveryTicks: 3,
             overlayMinStars: 86,
             overlayMaxStars: 205,
             overlayStarDensity: 2350
@@ -138,8 +159,14 @@ function resolveStartupPerfProfile(runtimeCaps) {
             edgeGeometryDelayMs: 560,
             edgeStartupWindowMs: 2200,
             edgeStartupSvgCap: 7000,
+            edgeStage1TopK: 1500,
             stableHoldTicks: 10,
             stableTimeoutMs: 18000,
+            lowAlphaThreshold: 0.1,
+            lowAlphaTickMaxFps: 8,
+            deltaTickEnabled: true,
+            deltaEpsilonPx: 0.95,
+            deltaFullSyncEveryTicks: 4,
             overlaySafetyTimeoutMs: 36000,
             overlayMinStars: 52,
             overlayMaxStars: 120,
@@ -154,8 +181,14 @@ function resolveStartupPerfProfile(runtimeCaps) {
             edgeGeometryDelayMs: 600,
             edgeStartupWindowMs: 2300,
             edgeStartupSvgCap: 6200,
+            edgeStage1TopK: 1300,
             stableHoldTicks: 10,
             stableTimeoutMs: 19000,
+            lowAlphaThreshold: 0.1,
+            lowAlphaTickMaxFps: 8,
+            deltaTickEnabled: true,
+            deltaEpsilonPx: 0.95,
+            deltaFullSyncEveryTicks: 4,
             overlaySafetyTimeoutMs: 36000,
             overlayMinStars: 48,
             overlayMaxStars: 110,
@@ -216,6 +249,9 @@ const startupPerfState = {
     edgeDelayReleasedLogged: false,
     edgeCapLogged: false,
     edgeCapReleasedLogged: false,
+    edgeStage1Logged: false,
+    edgeStage1ReleasedLogged: false,
+    tickModeSamples: {},
     lastWorkerAlpha: null
 };
 
@@ -791,13 +827,27 @@ simulationWorker.onmessage = function(event) {
         type,
         nodes: workerNodes,
         alpha: workerAlpha,
-        isStartupStable
+        isStartupStable,
+        isDelta,
+        tickMode
     } = event.data;
     if (type === 'tick') {
+        const safeWorkerNodes = Array.isArray(workerNodes) ? workerNodes : [];
+        const resolvedTickMode = (typeof tickMode === 'string' && tickMode.length > 0)
+            ? tickMode
+            : (isDelta === true ? 'delta' : 'full');
+
+        if (!Object.prototype.hasOwnProperty.call(startupPerfState.tickModeSamples, resolvedTickMode)) {
+            startupPerfState.tickModeSamples[resolvedTickMode] = 0;
+        }
+        startupPerfState.tickModeSamples[resolvedTickMode] += 1;
+
         if (!startupPerfState.t3Seen) {
             startupPerfState.t3Seen = true;
             markStartupCheckpoint('T3 first_tick_received', {
-                alpha: Number.isFinite(workerAlpha) ? Number(workerAlpha.toFixed(4)) : null
+                alpha: Number.isFinite(workerAlpha) ? Number(workerAlpha.toFixed(4)) : null,
+                tickMode: resolvedTickMode,
+                payloadNodes: safeWorkerNodes.length
             });
         }
 
@@ -809,8 +859,8 @@ simulationWorker.onmessage = function(event) {
         // In Focus Mode, positions are managed by the main thread's highlightManager
         if (focusNode) return;
 
-        // Update positions
-        workerNodes.forEach(n => {
+        // Update positions (supports full snapshot and delta snapshot payloads)
+        safeWorkerNodes.forEach(n => {
             currentPositions.set(n.id, { x: n.x, y: n.y });
             const originalNode = nodeMap.get(n.id);
             if (originalNode) {
@@ -818,8 +868,11 @@ simulationWorker.onmessage = function(event) {
                 originalNode.y = n.y;
             }
         });
-        
-        ticked();
+
+        // Skip rendering on empty delta payloads to reduce no-op paints near stable phase.
+        if (safeWorkerNodes.length > 0 || resolvedTickMode !== 'delta') {
+            ticked();
+        }
 
         if (!startupPerfState.t4Seen) {
             startupPerfState.t4Seen = true;
@@ -935,16 +988,23 @@ const workerStartupProfile = {
     id: startupPerfProfile.id,
     pilotEnabled: startupPerfProfile.pilotEnabled === true,
     tickMaxFps: startupPerfProfile.tickMaxFps,
+    lowAlphaTickMaxFps: startupPerfProfile.lowAlphaTickMaxFps,
+    lowAlphaThreshold: startupPerfProfile.lowAlphaThreshold,
     stableAlphaThreshold: startupPerfProfile.stableAlphaThreshold,
     stableHoldTicks: startupPerfProfile.stableHoldTicks,
-    stableTimeoutMs: startupPerfProfile.stableTimeoutMs
+    stableTimeoutMs: startupPerfProfile.stableTimeoutMs,
+    deltaEnabled: startupPerfProfile.deltaTickEnabled === true,
+    deltaEpsilonPx: startupPerfProfile.deltaEpsilonPx,
+    fullSyncEveryTicks: startupPerfProfile.deltaFullSyncEveryTicks
 };
 
 markStartupCheckpoint('T2 worker_init_sent', {
     workerNodes: workerNodes.length,
     workerLinks: workerLinks.length,
     profile: workerStartupProfile.id,
-    tickMaxFps: workerStartupProfile.tickMaxFps
+    tickMaxFps: workerStartupProfile.tickMaxFps,
+    deltaEnabled: workerStartupProfile.deltaEnabled,
+    deltaFullSyncEveryTicks: workerStartupProfile.fullSyncEveryTicks
 });
 simulationWorker.postMessage({ 
     type: 'init', 
@@ -1046,17 +1106,65 @@ const link = g.append("g")
     .attr("class", "link")
     .attr("marker-end", "url(#arrow)");
 
-let startupSvgLinkSelection = link;
-if (
-    startupPerfProfile.pilotEnabled === true &&
-    Number.isFinite(startupPerfProfile.edgeStartupSvgCap) &&
-    startupPerfProfile.edgeStartupSvgCap > 0 &&
-    links.length > startupPerfProfile.edgeStartupSvgCap
-) {
-    startupSvgLinkSelection = link.filter((_, idx) => idx < startupPerfProfile.edgeStartupSvgCap);
-    console.log('[Startup Perf] Startup SVG edge cap enabled.', {
-        cap: startupPerfProfile.edgeStartupSvgCap,
-        totalLinks: links.length
+function buildStartupStage1LinkSet(allNodes, allLinks, topK) {
+    if (!Array.isArray(allLinks) || allLinks.length === 0) {
+        return null;
+    }
+    const normalizedTopK = Math.max(0, Math.floor(Number(topK) || 0));
+    if (normalizedTopK <= 0 || normalizedTopK >= allLinks.length) {
+        return null;
+    }
+
+    const topNodeCount = Math.min(Math.max(normalizedTopK, 64), Math.max(64, Math.floor(allNodes.length * 0.08)));
+    const sortedNodes = allNodes
+        .map((n) => ({
+            id: n.id,
+            score: Number.isFinite(Number(n.centrality))
+                ? Number(n.centrality)
+                : Number((n.inDegree || 0) + (n.outDegree || 0))
+        }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topNodeCount);
+    const topNodeIds = new Set(sortedNodes.map((item) => item.id));
+
+    const selectedLinks = [];
+    for (let index = 0; index < allLinks.length && selectedLinks.length < normalizedTopK; index += 1) {
+        const edge = allLinks[index];
+        const sourceId = edge && edge.source && typeof edge.source === 'object' ? edge.source.id : edge.source;
+        const targetId = edge && edge.target && typeof edge.target === 'object' ? edge.target.id : edge.target;
+        if (topNodeIds.has(sourceId) || topNodeIds.has(targetId)) {
+            selectedLinks.push(edge);
+        }
+    }
+
+    if (selectedLinks.length < normalizedTopK) {
+        for (let index = 0; index < allLinks.length && selectedLinks.length < normalizedTopK; index += 1) {
+            const edge = allLinks[index];
+            if (!selectedLinks.includes(edge)) {
+                selectedLinks.push(edge);
+            }
+        }
+    }
+
+    return new Set(selectedLinks);
+}
+
+const startupStage1TopK = Math.max(
+    0,
+    Math.floor(
+        Number.isFinite(startupPerfProfile.edgeStage1TopK) && startupPerfProfile.edgeStage1TopK > 0
+            ? startupPerfProfile.edgeStage1TopK
+            : startupPerfProfile.edgeStartupSvgCap
+    )
+);
+const startupStage1LinkSet = buildStartupStage1LinkSet(nodes, links, startupStage1TopK);
+let startupSvgStage1LinkSelection = link;
+if (startupStage1LinkSet && startupStage1LinkSet.size > 0 && startupStage1LinkSet.size < links.length) {
+    startupSvgStage1LinkSelection = link.filter((edgeDatum) => startupStage1LinkSet.has(edgeDatum));
+    console.log('[Startup Perf] Startup SVG key-edge stage prepared.', {
+        totalLinks: links.length,
+        stage1Links: startupStage1LinkSet.size,
+        stage1TopK: startupStage1TopK
     });
 }
 
@@ -2235,7 +2343,7 @@ function isStartupEdgeDelayActive() {
     return startupElapsedMs() < startupPerfProfile.edgeGeometryDelayMs;
 }
 
-function shouldUseStartupSvgEdgeCap() {
+function shouldUseStartupSvgStage1Edges() {
     if (startupPerfProfile.pilotEnabled !== true) {
         return false;
     }
@@ -2244,7 +2352,7 @@ function shouldUseStartupSvgEdgeCap() {
         return false;
     }
 
-    if (startupSvgLinkSelection === link) {
+    if (startupSvgStage1LinkSelection === link) {
         return false;
     }
 
@@ -2290,23 +2398,23 @@ function ticked() {
                 });
             }
 
-            const useStartupEdgeCap = shouldUseStartupSvgEdgeCap();
-            if (useStartupEdgeCap && !startupPerfState.edgeCapLogged) {
-                startupPerfState.edgeCapLogged = true;
-                console.log('[Startup Perf] Startup SVG edge cap window active.', {
+            const useStartupStage1Edges = shouldUseStartupSvgStage1Edges();
+            if (useStartupStage1Edges && !startupPerfState.edgeStage1Logged) {
+                startupPerfState.edgeStage1Logged = true;
+                console.log('[Startup Perf] Startup SVG key-edge stage active.', {
                     edgeStartupWindowMs: startupPerfProfile.edgeStartupWindowMs,
-                    edgeStartupSvgCap: startupPerfProfile.edgeStartupSvgCap
+                    edgeStage1TopK: startupStage1TopK
                 });
             }
 
-            if (!useStartupEdgeCap && startupPerfState.edgeCapLogged && !startupPerfState.edgeCapReleasedLogged) {
-                startupPerfState.edgeCapReleasedLogged = true;
-                console.log('[Startup Perf] Startup SVG edge cap window released.', {
+            if (!useStartupStage1Edges && startupPerfState.edgeStage1Logged && !startupPerfState.edgeStage1ReleasedLogged) {
+                startupPerfState.edgeStage1ReleasedLogged = true;
+                console.log('[Startup Perf] Startup SVG key-edge stage released.', {
                     elapsedMs: Number(startupElapsedMs().toFixed(2))
                 });
             }
 
-            const activeLinkSelection = useStartupEdgeCap ? startupSvgLinkSelection : link;
+            const activeLinkSelection = useStartupStage1Edges ? startupSvgStage1LinkSelection : link;
             if (layoutMode === 'dag') {
                 activeLinkSelection.attr("d", d => {
                     const sx = d.source.x;

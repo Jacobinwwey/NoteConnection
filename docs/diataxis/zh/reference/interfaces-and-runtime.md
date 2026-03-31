@@ -35,9 +35,18 @@
 - Worker 通过 `simulationWorker` 初始化载荷接收启动 profile：
   - `startupProfile.id`
   - `startupProfile.tickMaxFps`
+  - `startupProfile.lowAlphaTickMaxFps`
+  - `startupProfile.lowAlphaThreshold`
   - `startupProfile.stableAlphaThreshold`
   - `startupProfile.stableHoldTicks`
   - `startupProfile.stableTimeoutMs`
+  - `startupProfile.deltaEnabled`
+  - `startupProfile.deltaEpsilonPx`
+  - `startupProfile.fullSyncEveryTicks`
+- Worker -> 主线程 tick 传输契约（Phase 2）：
+  - `tickMode: 'full' | 'delta'`
+  - `isDelta: boolean`
+  - `nodes: [{ id, x, y }]`（delta 模式仅包含变化节点）
 - 多平台启动试点 profile：
   - `desktop_windows_pilot`：`26 FPS`、`400ms` 边延迟、`1500ms` SVG 窗口（`18000` 条边）。
   - `desktop_macos_pilot`：`24 FPS`、`430ms` 边延迟、`1700ms` SVG 窗口（`15000` 条边）。
@@ -73,6 +82,10 @@
   - `npm run perf:startup:matrix:simulate -- --seed-root tmp/startup-logs --out-root tmp/startup-logs-simulated`
   - `npm run perf:startup:matrix -- --root tmp/startup-logs-simulated --out tmp/startup-logs-simulated/report-platform-matrix.md`
   - 注意：`tmp/startup-logs-simulated` 为模拟数据，禁止用于 release-go 性能结论，仅用于脚本/门禁流程演练。
+- 三规模自动回归与灰度门禁（Phase 4）：
+  - `npm run perf:startup:cohorts:verify -- --root <cohorts-root> --cohorts small,medium,large --out <report-path> --strict`
+  - 目录约定：`<cohorts-root>/<cohort>/<platform>/baseline|pilot`
+  - 支持样本量门禁：`--min-sessions-per-platform <N>`
 
 ## Mermaid 标准兼容基线（Obsidian）
 

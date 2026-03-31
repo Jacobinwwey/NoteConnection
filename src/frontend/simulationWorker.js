@@ -16,17 +16,25 @@ let startupProfile = {
     id: 'default',
     pilotEnabled: false,
     tickMaxFps: 0,
+    lowAlphaTickMaxFps: 0,
+    lowAlphaThreshold: 0.08,
     stableAlphaThreshold: 0.05,
     stableHoldTicks: 8,
-    stableTimeoutMs: 12000
+    stableTimeoutMs: 12000,
+    deltaEnabled: false,
+    deltaEpsilonPx: 0.6,
+    fullSyncEveryTicks: 3
 };
 
 let startupRuntimeState = {
     tickMinIntervalMs: 0,
+    lowAlphaTickMinIntervalMs: 0,
     lastTickEmitTs: 0,
     initTs: 0,
     stableTickStreak: 0,
-    stableAnnounced: false
+    stableAnnounced: false,
+    tickCount: 0,
+    prevPositions: new Map()
 };
 
 function parseFiniteNumber(value, fallback) {
@@ -49,18 +57,26 @@ function configureStartupProfile(profile) {
             : 'default',
         pilotEnabled: Boolean(profile && profile.pilotEnabled === true),
         tickMaxFps: Math.max(0, parsePositiveInt(profile ? profile.tickMaxFps : 0, 0)),
+        lowAlphaTickMaxFps: Math.max(0, parsePositiveInt(profile ? profile.lowAlphaTickMaxFps : 0, 0)),
+        lowAlphaThreshold: Math.max(0.0001, parseFiniteNumber(profile ? profile.lowAlphaThreshold : 0.08, 0.08)),
         stableAlphaThreshold: Math.max(0.0001, parseFiniteNumber(profile ? profile.stableAlphaThreshold : 0.05, 0.05)),
         stableHoldTicks: Math.max(1, parsePositiveInt(profile ? profile.stableHoldTicks : 8, 8)),
-        stableTimeoutMs: Math.max(1000, parsePositiveInt(profile ? profile.stableTimeoutMs : 12000, 12000))
+        stableTimeoutMs: Math.max(1000, parsePositiveInt(profile ? profile.stableTimeoutMs : 12000, 12000)),
+        deltaEnabled: Boolean(profile && profile.deltaEnabled === true),
+        deltaEpsilonPx: Math.max(0.0001, parseFiniteNumber(profile ? profile.deltaEpsilonPx : 0.6, 0.6)),
+        fullSyncEveryTicks: Math.max(1, parsePositiveInt(profile ? profile.fullSyncEveryTicks : 3, 3))
     };
 
     startupProfile = next;
     startupRuntimeState = {
         tickMinIntervalMs: next.tickMaxFps > 0 ? Math.max(1, Math.floor(1000 / next.tickMaxFps)) : 0,
+        lowAlphaTickMinIntervalMs: next.lowAlphaTickMaxFps > 0 ? Math.max(1, Math.floor(1000 / next.lowAlphaTickMaxFps)) : 0,
         lastTickEmitTs: 0,
         initTs: Date.now(),
         stableTickStreak: 0,
-        stableAnnounced: false
+        stableAnnounced: false,
+        tickCount: 0,
+        prevPositions: new Map()
     };
 
     console.log('[Worker] Startup profile configured:', {
@@ -68,10 +84,89 @@ function configureStartupProfile(profile) {
         pilotEnabled: next.pilotEnabled,
         tickMaxFps: next.tickMaxFps,
         tickMinIntervalMs: startupRuntimeState.tickMinIntervalMs,
+        lowAlphaTickMaxFps: next.lowAlphaTickMaxFps,
+        lowAlphaTickMinIntervalMs: startupRuntimeState.lowAlphaTickMinIntervalMs,
+        lowAlphaThreshold: next.lowAlphaThreshold,
         stableAlphaThreshold: next.stableAlphaThreshold,
         stableHoldTicks: next.stableHoldTicks,
-        stableTimeoutMs: next.stableTimeoutMs
+        stableTimeoutMs: next.stableTimeoutMs,
+        deltaEnabled: next.deltaEnabled,
+        deltaEpsilonPx: next.deltaEpsilonPx,
+        fullSyncEveryTicks: next.fullSyncEveryTicks
     });
+}
+
+function resolveTickMinIntervalMs(alpha) {
+    const highAlphaIntervalMs = startupRuntimeState.tickMinIntervalMs;
+    const lowAlphaIntervalMs = startupRuntimeState.lowAlphaTickMinIntervalMs;
+    if (lowAlphaIntervalMs <= 0) {
+        return highAlphaIntervalMs;
+    }
+    if (alpha <= startupProfile.lowAlphaThreshold) {
+        return Math.max(highAlphaIntervalMs, lowAlphaIntervalMs);
+    }
+    return highAlphaIntervalMs;
+}
+
+function buildFullPositionPayload() {
+    const payload = new Array(nodes.length);
+    for (let index = 0; index < nodes.length; index += 1) {
+        const n = nodes[index];
+        const x = Number.isFinite(n.x) ? n.x : 0;
+        const y = Number.isFinite(n.y) ? n.y : 0;
+        payload[index] = { id: n.id, x, y };
+        startupRuntimeState.prevPositions.set(n.id, { x, y });
+    }
+    return payload;
+}
+
+function buildDeltaPositionPayload() {
+    const payload = [];
+    const epsilon = startupProfile.deltaEpsilonPx;
+    for (let index = 0; index < nodes.length; index += 1) {
+        const n = nodes[index];
+        const x = Number.isFinite(n.x) ? n.x : 0;
+        const y = Number.isFinite(n.y) ? n.y : 0;
+        const prev = startupRuntimeState.prevPositions.get(n.id);
+        if (!prev || Math.abs(prev.x - x) >= epsilon || Math.abs(prev.y - y) >= epsilon) {
+            payload.push({ id: n.id, x, y });
+            startupRuntimeState.prevPositions.set(n.id, { x, y });
+        }
+    }
+    return payload;
+}
+
+function buildTickPositionsPayload() {
+    startupRuntimeState.tickCount += 1;
+    const forceFull =
+        startupRuntimeState.tickCount === 1 ||
+        startupProfile.deltaEnabled !== true ||
+        startupProfile.fullSyncEveryTicks <= 1 ||
+        (startupRuntimeState.tickCount % startupProfile.fullSyncEveryTicks) === 0;
+
+    if (forceFull) {
+        return {
+            nodes: buildFullPositionPayload(),
+            isDelta: false,
+            tickMode: 'full'
+        };
+    }
+
+    const deltaNodes = buildDeltaPositionPayload();
+    const changeRatio = nodes.length > 0 ? (deltaNodes.length / nodes.length) : 0;
+    if (changeRatio >= 0.7) {
+        return {
+            nodes: buildFullPositionPayload(),
+            isDelta: false,
+            tickMode: 'full'
+        };
+    }
+
+    return {
+        nodes: deltaNodes,
+        isDelta: true,
+        tickMode: 'delta'
+    };
 }
 
 onmessage = function(event) {
@@ -154,17 +249,18 @@ function initSimulation(data) {
 
     simulation.on("tick", () => {
         const now = Date.now();
+        const alpha = (simulation && typeof simulation.alpha === 'function')
+            ? simulation.alpha()
+            : 1;
+        const activeTickMinIntervalMs = resolveTickMinIntervalMs(alpha);
         if (
-            startupRuntimeState.tickMinIntervalMs > 0 &&
-            (now - startupRuntimeState.lastTickEmitTs) < startupRuntimeState.tickMinIntervalMs
+            activeTickMinIntervalMs > 0 &&
+            (now - startupRuntimeState.lastTickEmitTs) < activeTickMinIntervalMs
         ) {
             return;
         }
         startupRuntimeState.lastTickEmitTs = now;
 
-        const alpha = (simulation && typeof simulation.alpha === 'function')
-            ? simulation.alpha()
-            : 1;
         let isStartupStable = false;
 
         if (!startupRuntimeState.stableAnnounced) {
@@ -189,10 +285,12 @@ function initSimulation(data) {
             }
         }
 
-        const positions = nodes.map(n => ({ id: n.id, x: n.x, y: n.y }));
+        const tickPositions = buildTickPositionsPayload();
         postMessage({
             type: 'tick',
-            nodes: positions,
+            nodes: tickPositions.nodes,
+            isDelta: tickPositions.isDelta,
+            tickMode: tickPositions.tickMode,
             alpha,
             emittedAt: now,
             isStartupStable
@@ -279,6 +377,8 @@ function setNodes(payload) {
     // Re-initialize key forces
     simulation.nodes(nodes);
     simulation.force("link").links(links);
+    startupRuntimeState.prevPositions = new Map();
+    startupRuntimeState.tickCount = 0;
     
     // If we want to support collision updates based on new subset
     // simulation.force("collide")...
@@ -320,7 +420,7 @@ function fixNodes(nodeUpdates) {
     nodeUpdates.forEach(update => {
         const node = nodes.find(n => n.id === update.id);
         if (node) {
-            if (update.cod === 'fix') {
+            if (update.cmd === 'fix') {
                  node.fx = update.x;
                  node.fy = update.y;
             } else if (update.cmd === 'unfix') {

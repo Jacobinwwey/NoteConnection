@@ -35,9 +35,18 @@ This reference tracks canonical API/runtime contracts.
 - Worker startup profile is passed through `simulationWorker` init payload:
   - `startupProfile.id`
   - `startupProfile.tickMaxFps`
+  - `startupProfile.lowAlphaTickMaxFps`
+  - `startupProfile.lowAlphaThreshold`
   - `startupProfile.stableAlphaThreshold`
   - `startupProfile.stableHoldTicks`
   - `startupProfile.stableTimeoutMs`
+  - `startupProfile.deltaEnabled`
+  - `startupProfile.deltaEpsilonPx`
+  - `startupProfile.fullSyncEveryTicks`
+- Worker -> main-thread tick transport contract (Phase 2):
+  - `tickMode: 'full' | 'delta'`
+  - `isDelta: boolean`
+  - `nodes: [{ id, x, y }]` (delta mode only includes changed nodes)
 - Multi-platform startup pilot profiles:
   - `desktop_windows_pilot`: `26 FPS`, `400ms` edge delay, `1500ms` SVG cap window (`18000` links).
   - `desktop_macos_pilot`: `24 FPS`, `430ms` edge delay, `1700ms` SVG cap window (`15000` links).
@@ -73,6 +82,10 @@ This reference tracks canonical API/runtime contracts.
   - `npm run perf:startup:matrix:simulate -- --seed-root tmp/startup-logs --out-root tmp/startup-logs-simulated`
   - `npm run perf:startup:matrix -- --root tmp/startup-logs-simulated --out tmp/startup-logs-simulated/report-platform-matrix.md`
   - Note: `tmp/startup-logs-simulated` is synthetic data and must not be used for release-go performance decisions.
+- Three-cohort automatic regression and rollout gate (Phase 4):
+  - `npm run perf:startup:cohorts:verify -- --root <cohorts-root> --cohorts small,medium,large --out <report-path> --strict`
+  - Directory contract: `<cohorts-root>/<cohort>/<platform>/baseline|pilot`
+  - Session floor gate is configurable via `--min-sessions-per-platform <N>`
 
 ## Mermaid Canonical Baseline (Obsidian)
 

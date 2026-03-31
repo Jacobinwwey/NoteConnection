@@ -183,3 +183,16 @@ npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label w
 - 数据边界：
   - `tmp/startup-logs-simulated` 全部为模拟数据，仅用于脚本链路、门禁规则与报表产物验证。
   - 发布级性能结论必须基于真实设备同设备双阶段样本（baseline/pilot）。
+
+## 13) Phase 2-4 收尾执行快照（2026-03-31）
+
+- Phase 2（增量协议）：
+  - Worker 支持 `tickMode=full|delta` 与 `isDelta` 标记。
+  - 按 `deltaEpsilonPx` 仅回传变化节点，并以 `fullSyncEveryTicks` 周期全量兜底。
+  - 根据 `alpha` 自动切换 `tickMaxFps` 与 `lowAlphaTickMaxFps`（低 alpha 降频）。
+- Phase 3（分层渲染）：
+  - SVG 启动阶段改为 key-edge TopK（按节点中心性/度优先）优先渲染。
+  - 启动窗口结束后自动补齐全边，保留边几何延迟策略。
+- Phase 4（验证与灰度）：
+  - 新增 `perf:startup:cohorts:verify`，支持 `small/medium/large` 三规模回归门禁。
+  - 支持样本量门禁（`--min-sessions-per-platform`）与 `--strict` 失败即退出。

@@ -183,3 +183,16 @@ npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label w
 - Data boundary:
   - `tmp/startup-logs-simulated` is synthetic and only valid for pipeline/gate/report flow verification.
   - Release-go performance decisions must be based on real same-device baseline/pilot cohorts.
+
+## 13) Phase 2-4 Execution Snapshot (March 31, 2026)
+
+- Phase 2 (delta protocol):
+  - Worker now emits `tickMode=full|delta` with `isDelta`.
+  - Delta payloads send changed nodes only (epsilon-controlled) with periodic full-sync fallback (`fullSyncEveryTicks`).
+  - Tick emission now adapts by alpha (`tickMaxFps` vs `lowAlphaTickMaxFps`).
+- Phase 3 (staged rendering):
+  - SVG startup stage now renders key-edge TopK first (priority by node centrality/degree).
+  - Full edges are restored automatically after startup window while keeping geometry delay guard.
+- Phase 4 (verification and rollout gate):
+  - Added `perf:startup:cohorts:verify` for three-cohort (`small/medium/large`) automatic gates.
+  - Supports session-floor gate (`--min-sessions-per-platform`) and strict CI exit (`--strict`).
