@@ -1,4 +1,4 @@
-﻿# 2026-03-24 v1.6.0
+﻿# 2026-03-31 v1.7.0
 
 # NoteConnection Knowledge Graph
 
@@ -369,6 +369,25 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 <a id="changelog-en"></a>
 
 ## 📅 Changelog
+
+### v1.7.0 - Startup Acceleration Closure, Multi-Platform Validation, and Learning Roadmap Foundation (2026-03-31)
+- **Tag Compare Snapshot (`v1.6.0..v1.7.0`)**:
+  - `47` commits, `160` files changed, `+20,224 / -1,444` churn.
+  - Engineering footprint concentrated in: `src/frontend/`, `scripts/`, `docs/`, `src-tauri/`, `package*.json`.
+- **Startup Runtime Optimization Closure (Phase 2/3/4 + v1.1 Hardening)**:
+  - Added startup delta tick transport (`tickMode: full|delta`) with low-alpha adaptive controls (`lowAlphaDeltaEpsilonMultiplier`, `lowAlphaFullSyncEveryTicks`).
+  - Added frame-coalesced startup tick application on main thread to reduce redundant repaint pressure near stable phase.
+  - Hardened warm-start recovery with strict snapshot validation (fingerprint, age, node/edge consistency, position coverage threshold).
+  - Expanded startup telemetry at `T5 stable_layout` with `tickSummary` (`fullTicks`, `deltaTicks`, `deltaRatio`, payload and frame metrics).
+- **Cross-Platform Startup Validation Toolchain**:
+  - Added/extended compare + matrix + watch + simulate + cohorts + signoff automation scripts for startup KPI governance.
+  - Introduced no-hardware engineering signoff flow (Windows real logs + simulated cohorts) while preserving release-grade requirement for real multi-device cohorts.
+- **Runtime Contract and Documentation Alignment**:
+  - Synced Diataxis EN/ZH runtime references with the new startup profile fields and telemetry semantics.
+  - Extended startup acceleration plan docs with v1.1 optimization and risk-guardrail closure details.
+  - Added bilingual knowledge-mastery evolution roadmap docs and integrated them into Diataxis navigation and mapping.
+- **Version Metadata Alignment**:
+  - Unified release metadata to `1.7.0` in `package.json`, `package-lock.json`, and `src-tauri/tauri.conf.json`.
 
 ### v1.6.7 - Docs Governance Cleanup & GitHub Pages Stabilization (2026-03-29)
 - Removed unrelated external community UI documentation references from the repository documentation system.
@@ -953,7 +972,7 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 ## 中文文档
 
 
-# 2026-03-29 v1.6.7
+# 2026-03-31 v1.7.0
 # NoteConnection: 层级知识图谱可视化系统
 
 <img width="606" height="309" alt="banner" src="https://github.com/user-attachments/assets/92e90de5-2b1a-4398-8e8b-6e142c92b6a2" />
@@ -1302,6 +1321,25 @@ max_doc_bytes = 100663296
 <a id="changelog-zh"></a>
 
 ## 更新日志 (Changelog)
+
+### v1.7.0 - 启动加速收口、多平台验证与学习路线图底座 (2026-03-31)
+- **Tag 对比快照（`v1.6.0..v1.7.0`）**:
+  - `47` 个提交、`160` 个变更文件、`+20,224 / -1,444` 代码/文档变更量。
+  - 工程变更面主要集中在：`src/frontend/`、`scripts/`、`docs/`、`src-tauri/`、`package*.json`。
+- **启动运行时优化收口（Phase 2/3/4 + v1.1 加固）**:
+  - 新增启动 tick 差量传输（`tickMode: full|delta`），并引入低 alpha 自适应控制（`lowAlphaDeltaEpsilonMultiplier`、`lowAlphaFullSyncEveryTicks`）。
+  - 主线程新增按帧合并的 startup tick 应用策略，减少稳定阶段附近的重复重绘压力。
+  - 加固 warm-start 恢复，新增严格快照校验（fingerprint、age、node/edge 一致性、position coverage 阈值）。
+  - 在 `T5 stable_layout` 扩展启动遥测，新增 `tickSummary`（`fullTicks`、`deltaTicks`、`deltaRatio`、payload/frame 指标）。
+- **跨平台启动验证工具链**:
+  - 新增/扩展 compare、matrix、watch、simulate、cohorts、signoff 自动化脚本，形成启动 KPI 治理闭环。
+  - 建立“无硬件工程签收”流程（Windows 实机日志 + 模拟 cohorts），并保留正式发布阶段的实机多设备 cohorts 要求。
+- **运行时契约与文档对齐**:
+  - 同步 Diataxis EN/ZH 运行时参考文档，对齐新的 startup profile 字段与遥测语义。
+  - 扩展启动加速方案文档，纳入 v1.1 优化与风险护栏收口细节。
+  - 新增知识掌握演进路线图双语文档，并接入 Diataxis 导航与映射。
+- **版本元数据对齐**:
+  - 将 `package.json`、`package-lock.json`、`src-tauri/tauri.conf.json` 的发布元数据统一到 `1.7.0`。
 
 ### v1.6.7 - 文档治理清理与 GitHub Pages 稳定性修复 (2026-03-29)
 - 清理并移除了项目文档体系中与本项目无关的外部社区界面文档引用。
