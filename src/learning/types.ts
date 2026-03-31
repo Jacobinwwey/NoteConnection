@@ -205,6 +205,13 @@ export interface KnowledgeQueryResponse {
         retrievalModes: string[];
         asOf: string;
         totalActiveAtoms: number;
+        modeWeights: {
+            keyword: number;
+            graph: number;
+            temporal: number;
+        };
+        latencyMs: number;
+        evidenceCoverageRatio: number;
     };
 }
 
@@ -300,9 +307,63 @@ export interface KnowledgeSystemState {
     temporalEdges: number;
     masteryStates: number;
     tutorTraces: number;
+    retrievalTelemetry: {
+        queryCount: number;
+        queryP95Ms: number;
+        queryAverageMs: number;
+        queryMaxMs: number;
+    };
     memoryEntries: {
         session: number;
         unit: number;
         longTerm: number;
     };
+}
+
+export interface LearningQualitySnapshot {
+    retestPassRatePct: number;
+    misconceptionRecurrenceRatePct: number;
+    evidenceBackedSuggestionRatioPct: number;
+    averagePathMasteryGainPct: number;
+    randomPathMasteryGainPct: number;
+    queryP95Ms?: number;
+}
+
+export interface LearningQualityThresholds {
+    retestPassRateUpliftPct: number;
+    misconceptionRecurrenceReductionPct: number;
+    evidenceBackedSuggestionRatioPct: number;
+    pathEffectivenessLiftPct: number;
+    queryP95Ms: number;
+}
+
+export interface LearningQualityEvaluationRequest {
+    baseline: LearningQualitySnapshot;
+    current: LearningQualitySnapshot;
+    thresholds?: Partial<LearningQualityThresholds>;
+    evaluatedAt?: string;
+}
+
+export interface LearningQualityGateResult {
+    gateId: 'retest_pass_rate_uplift' | 'misconception_reduction' | 'evidence_ratio' | 'path_effectiveness' | 'query_p95';
+    passed: boolean;
+    comparator: '>=' | '<=';
+    observedValue: number;
+    threshold: number;
+    unit: 'pct' | 'ms';
+    message: string;
+}
+
+export interface LearningQualityEvaluationResponse {
+    evaluatedAt: string;
+    thresholds: LearningQualityThresholds;
+    baseline: LearningQualitySnapshot;
+    current: LearningQualitySnapshot;
+    deltas: {
+        retestPassRateUpliftPct: number;
+        misconceptionRecurrenceReductionPct: number;
+        pathEffectivenessLiftPct: number;
+    };
+    gates: LearningQualityGateResult[];
+    overallPassed: boolean;
 }

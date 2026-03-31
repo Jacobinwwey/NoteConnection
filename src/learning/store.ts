@@ -36,6 +36,7 @@ export interface KnowledgeGraphSnapshot {
     activeAtomIds: string[];
     learnerStates: LearnerConceptState[];
     tutorTraces: TutorTrace[];
+    queryLatencyHistoryMs: number[];
     userMemory: Record<string, {
         session: MemoryEntry[];
         unit: MemoryEntry[];
@@ -139,4 +140,3 @@ export class FileBackedKnowledgeGraphStore implements KnowledgeGraphStore {
 export function createFileBackedKnowledgeGraphStore(options: FileBackedKnowledgeGraphStoreOptions): KnowledgeGraphStore {
     return new FileBackedKnowledgeGraphStore(options);
 }
-

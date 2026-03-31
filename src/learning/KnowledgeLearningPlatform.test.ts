@@ -92,6 +92,10 @@ describe('KnowledgeLearningPlatform', () => {
         expect(Array.isArray(queryResult.items[0].relationPath)).toBe(true);
         expect(queryResult.items[0].temporalValidity.checkedAt).toBe('2026-03-31T08:30:00.000Z');
         expect(queryResult.trace.retrievalModes).toContain('temporal_filter');
+        expect(queryResult.trace.modeWeights.keyword).toBeGreaterThan(0);
+        expect(queryResult.trace.modeWeights.graph).toBeGreaterThan(0);
+        expect(queryResult.trace.latencyMs).toBeGreaterThanOrEqual(0);
+        expect(queryResult.trace.evidenceCoverageRatio).toBeGreaterThan(0);
     });
 
     test('ingest extracts markdown text, code, formula, and mermaid atoms', async () => {
@@ -178,6 +182,65 @@ describe('KnowledgeLearningPlatform', () => {
         expect(pathResult.recommendedActions.length).toBeGreaterThan(0);
     });
 
+    test('learning quality evaluation enforces mastery and evidence thresholds', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_eval',
+                    sourcePath: 'Knowledge_Base/doc_eval.md',
+                    language: 'en',
+                    content: '# Eval\nQuality gates require evidence and mastery uplift.',
+                },
+            ],
+        });
+
+        await platform.queryKnowledge({ query: 'quality gates evidence mastery', topK: 3 });
+        await platform.queryKnowledge({ query: 'quality gates evidence mastery', topK: 3 });
+
+        const passResult = await platform.evaluateLearningQuality({
+            baseline: {
+                retestPassRatePct: 50,
+                misconceptionRecurrenceRatePct: 40,
+                evidenceBackedSuggestionRatioPct: 80,
+                averagePathMasteryGainPct: 22,
+                randomPathMasteryGainPct: 12,
+            },
+            current: {
+                retestPassRatePct: 74,
+                misconceptionRecurrenceRatePct: 12,
+                evidenceBackedSuggestionRatioPct: 93,
+                averagePathMasteryGainPct: 28,
+                randomPathMasteryGainPct: 18,
+            },
+        });
+
+        expect(passResult.overallPassed).toBe(true);
+        expect(passResult.deltas.retestPassRateUpliftPct).toBeGreaterThanOrEqual(20);
+        expect(passResult.deltas.misconceptionRecurrenceReductionPct).toBeGreaterThanOrEqual(25);
+        expect(passResult.gates.find((gate) => gate.gateId === 'evidence_ratio')?.passed).toBe(true);
+
+        const failResult = await platform.evaluateLearningQuality({
+            baseline: {
+                retestPassRatePct: 65,
+                misconceptionRecurrenceRatePct: 30,
+                evidenceBackedSuggestionRatioPct: 92,
+                averagePathMasteryGainPct: 21,
+                randomPathMasteryGainPct: 17,
+            },
+            current: {
+                retestPassRatePct: 70,
+                misconceptionRecurrenceRatePct: 28,
+                evidenceBackedSuggestionRatioPct: 85,
+                averagePathMasteryGainPct: 18,
+                randomPathMasteryGainPct: 17,
+            },
+        });
+
+        expect(failResult.overallPassed).toBe(false);
+        expect(failResult.gates.some((gate) => gate.passed === false)).toBe(true);
+    });
+
     test('tutor actions and memory policy APIs are operational', async () => {
         const ingest = await platform.ingestKnowledge({
             incremental: true,
@@ -247,5 +310,9 @@ describe('KnowledgeLearningPlatform', () => {
             now: '2026-03-31T23:59:59.000Z',
         });
         expect(evictResult.evictedCount).toBeGreaterThanOrEqual(0);
+
+        const state = platform.getKnowledgeState();
+        expect(state.retrievalTelemetry.queryCount).toBeGreaterThanOrEqual(0);
+        expect(state.retrievalTelemetry.queryP95Ms).toBeGreaterThanOrEqual(0);
     });
 });

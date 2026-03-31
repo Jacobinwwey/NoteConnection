@@ -9,6 +9,8 @@ import type {
     MasteryDiagnosticsResponse,
     MemoryPolicyRequest,
     MemoryPolicyResponse,
+    LearningQualityEvaluationRequest,
+    LearningQualityEvaluationResponse,
     TutorActionRequest,
     TutorActionResponse,
     KnowledgeSystemState,
@@ -38,6 +40,10 @@ export interface MemoryPolicyAPI {
     applyMemoryPolicy(request: MemoryPolicyRequest): Promise<MemoryPolicyResponse>;
 }
 
+export interface LearningQualityGateAPI {
+    evaluateLearningQuality(request: LearningQualityEvaluationRequest): Promise<LearningQualityEvaluationResponse>;
+}
+
 export interface KnowledgeRuntimeStateAPI {
     getKnowledgeState(): KnowledgeSystemState;
 }
@@ -49,5 +55,6 @@ export interface KnowledgeLearningPlatformAPI extends
     LearningPathAPI,
     TutorActionAPI,
     MemoryPolicyAPI,
+    LearningQualityGateAPI,
     KnowledgeRuntimeStateAPI {
 }

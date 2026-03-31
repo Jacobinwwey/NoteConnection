@@ -8,6 +8,11 @@ import type {
     KnowledgeDocumentInput,
     KnowledgeIngestRequest,
     KnowledgeIngestResponse,
+    LearningQualityEvaluationRequest,
+    LearningQualityEvaluationResponse,
+    LearningQualityGateResult,
+    LearningQualitySnapshot,
+    LearningQualityThresholds,
     KnowledgeQueryItem,
     KnowledgeQueryRequest,
     KnowledgeQueryResponse,
@@ -103,6 +108,16 @@ const MEMORY_LAYER_CAPACITY: Record<MemoryLayer, number> = {
     long_term: 1200,
 };
 
+const DEFAULT_LEARNING_QUALITY_THRESHOLDS: LearningQualityThresholds = {
+    retestPassRateUpliftPct: 20,
+    misconceptionRecurrenceReductionPct: 25,
+    evidenceBackedSuggestionRatioPct: 90,
+    pathEffectivenessLiftPct: 5,
+    queryP95Ms: 800,
+};
+
+const QUERY_LATENCY_HISTORY_LIMIT = 2000;
+
 function clamp(value: number, minValue: number, maxValue: number): number {
     return Math.min(maxValue, Math.max(minValue, value));
 }
@@ -158,6 +173,17 @@ function isNonEmptyString(value: unknown): value is string {
     return typeof value === 'string' && value.trim().length > 0;
 }
 
+function computePercentile(values: number[], percentile: number): number {
+    if (!values.length) {
+        return 0;
+    }
+    const sorted = [...values].sort((left, right) => left - right);
+    const clampedPercentile = clamp(percentile, 0, 100);
+    const rank = Math.ceil((clampedPercentile / 100) * sorted.length) - 1;
+    const index = clamp(rank, 0, sorted.length - 1);
+    return Number(sorted[index].toFixed(4));
+}
+
 export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     private idCounter = 0;
 
@@ -184,6 +210,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     private readonly titleToAtomIds = new Map<string, Set<string>>();
 
     private readonly relationEdgeSignatures = new Set<string>();
+
+    private readonly queryLatencyHistoryMs: number[] = [];
 
     private readonly nowProvider: () => Date;
 
@@ -393,6 +421,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     public async queryKnowledge(request: KnowledgeQueryRequest): Promise<KnowledgeQueryResponse> {
         await this.ensureHydrated();
+        const queryStartAtMs = Date.now();
         const query = normalizeWhitespace(String(request.query || ''));
         const asOf = this.resolveTimestamp(request.asOf);
         const topK = clamp(Math.floor(Number(request.topK) || 5), 1, 20);
@@ -443,14 +472,35 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 };
             });
 
-        return {
+        const latencyMs = Date.now() - queryStartAtMs;
+        this.recordQueryLatency(latencyMs);
+        const evidenceCoverageRatio = items.length > 0
+            ? Number((items.filter((item) => item.evidenceSpans.length > 0).length / items.length).toFixed(4))
+            : 1;
+        const dynamicGraphWeight = items.length > 0
+            ? Number((items.reduce((sum, item) => sum + item.relationPath.length, 0) / (items.length * 3)).toFixed(4))
+            : 0;
+        const graphWeight = clamp(0.25 + dynamicGraphWeight * 0.45, 0.25, 0.65);
+        const temporalWeight = query.length > 0 ? 0.15 : 0.2;
+        const keywordWeight = Number((1 - graphWeight - temporalWeight).toFixed(4));
+
+        const response: KnowledgeQueryResponse = {
             items,
             trace: {
                 retrievalModes: ['keyword', 'graph_traversal', 'temporal_filter'],
                 asOf,
                 totalActiveAtoms: this.activeAtomIds.size,
+                modeWeights: {
+                    keyword: Number(clamp(keywordWeight, 0.1, 0.6).toFixed(4)),
+                    graph: Number(graphWeight.toFixed(4)),
+                    temporal: Number(temporalWeight.toFixed(4)),
+                },
+                latencyMs,
+                evidenceCoverageRatio,
             },
         };
+        await this.persistIfNeeded();
+        return response;
     }
 
     public async diagnoseMastery(request: MasteryDiagnosticsRequest): Promise<MasteryDiagnosticsResponse> {
@@ -682,6 +732,91 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
     }
 
+    public async evaluateLearningQuality(
+        request: LearningQualityEvaluationRequest
+    ): Promise<LearningQualityEvaluationResponse> {
+        await this.ensureHydrated();
+        const evaluatedAt = this.resolveTimestamp(request.evaluatedAt);
+        const runtimeP95 = this.buildRetrievalTelemetry().queryP95Ms;
+        const baseline = this.normalizeLearningQualitySnapshot(request.baseline, runtimeP95);
+        const current = this.normalizeLearningQualitySnapshot(request.current, runtimeP95);
+        const currentQueryP95Ms = Number(current.queryP95Ms ?? runtimeP95);
+        const thresholds = this.resolveLearningQualityThresholds(request.thresholds);
+
+        const retestPassRateUpliftPct = Number((current.retestPassRatePct - baseline.retestPassRatePct).toFixed(4));
+        const misconceptionRecurrenceReductionPct = Number(
+            (baseline.misconceptionRecurrenceRatePct - current.misconceptionRecurrenceRatePct).toFixed(4)
+        );
+        const pathEffectivenessLiftPct = Number(
+            (current.averagePathMasteryGainPct - current.randomPathMasteryGainPct).toFixed(4)
+        );
+
+        const gates: LearningQualityGateResult[] = [
+            {
+                gateId: 'retest_pass_rate_uplift',
+                passed: retestPassRateUpliftPct >= thresholds.retestPassRateUpliftPct,
+                comparator: '>=',
+                observedValue: retestPassRateUpliftPct,
+                threshold: thresholds.retestPassRateUpliftPct,
+                unit: 'pct',
+                message: 'Retest pass-rate uplift should satisfy the v1.5 threshold.',
+            },
+            {
+                gateId: 'misconception_reduction',
+                passed: misconceptionRecurrenceReductionPct >= thresholds.misconceptionRecurrenceReductionPct,
+                comparator: '>=',
+                observedValue: misconceptionRecurrenceReductionPct,
+                threshold: thresholds.misconceptionRecurrenceReductionPct,
+                unit: 'pct',
+                message: 'Misconception recurrence should decline after intervention.',
+            },
+            {
+                gateId: 'evidence_ratio',
+                passed: current.evidenceBackedSuggestionRatioPct >= thresholds.evidenceBackedSuggestionRatioPct,
+                comparator: '>=',
+                observedValue: current.evidenceBackedSuggestionRatioPct,
+                threshold: thresholds.evidenceBackedSuggestionRatioPct,
+                unit: 'pct',
+                message: 'Evidence-backed recommendation ratio should remain high.',
+            },
+            {
+                gateId: 'path_effectiveness',
+                passed: pathEffectivenessLiftPct >= thresholds.pathEffectivenessLiftPct,
+                comparator: '>=',
+                observedValue: pathEffectivenessLiftPct,
+                threshold: thresholds.pathEffectivenessLiftPct,
+                unit: 'pct',
+                message: 'Mastery-oriented paths should outperform random paths.',
+            },
+            {
+                gateId: 'query_p95',
+                passed: currentQueryP95Ms <= thresholds.queryP95Ms,
+                comparator: '<=',
+                observedValue: currentQueryP95Ms,
+                threshold: thresholds.queryP95Ms,
+                unit: 'ms',
+                message: 'Knowledge query p95 latency should stay within interactive budget.',
+            },
+        ];
+
+        return {
+            evaluatedAt,
+            thresholds,
+            baseline,
+            current: {
+                ...current,
+                queryP95Ms: currentQueryP95Ms,
+            },
+            deltas: {
+                retestPassRateUpliftPct,
+                misconceptionRecurrenceReductionPct,
+                pathEffectivenessLiftPct,
+            },
+            gates,
+            overallPassed: gates.every((gate) => gate.passed),
+        };
+    }
+
     public async ensureReady(): Promise<void> {
         await this.ensureHydrated();
     }
@@ -714,6 +849,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     public getKnowledgeState(): KnowledgeSystemState {
+        const retrievalTelemetry = this.buildRetrievalTelemetry();
         const memoryStats = this.collectMemoryStats();
         return {
             documents: this.documents.size,
@@ -722,7 +858,69 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             temporalEdges: this.temporalEdges.size,
             masteryStates: this.learnerStates.size,
             tutorTraces: this.tutorTraces.length,
+            retrievalTelemetry,
             memoryEntries: memoryStats,
+        };
+    }
+
+    private recordQueryLatency(latencyMs: number): void {
+        const normalized = Number.isFinite(latencyMs) && latencyMs >= 0 ? latencyMs : 0;
+        this.queryLatencyHistoryMs.push(Number(normalized.toFixed(4)));
+        if (this.queryLatencyHistoryMs.length > QUERY_LATENCY_HISTORY_LIMIT) {
+            this.queryLatencyHistoryMs.splice(0, this.queryLatencyHistoryMs.length - QUERY_LATENCY_HISTORY_LIMIT);
+        }
+    }
+
+    private buildRetrievalTelemetry(): KnowledgeSystemState['retrievalTelemetry'] {
+        const queryCount = this.queryLatencyHistoryMs.length;
+        const queryP95Ms = queryCount > 0 ? computePercentile(this.queryLatencyHistoryMs, 95) : 0;
+        const queryAverageMs = queryCount > 0
+            ? Number((this.queryLatencyHistoryMs.reduce((sum, value) => sum + value, 0) / queryCount).toFixed(4))
+            : 0;
+        const queryMaxMs = queryCount > 0 ? Number(Math.max(...this.queryLatencyHistoryMs).toFixed(4)) : 0;
+        return {
+            queryCount,
+            queryP95Ms,
+            queryAverageMs,
+            queryMaxMs,
+        };
+    }
+
+    private normalizeLearningQualitySnapshot(
+        snapshot: LearningQualitySnapshot,
+        fallbackQueryP95Ms: number
+    ): LearningQualitySnapshot {
+        const clampPct = (value: number): number => Number(clamp(Number(value || 0), 0, 100).toFixed(4));
+        const resolvedQueryP95Ms = Number(
+            clamp(
+                Number(snapshot.queryP95Ms ?? fallbackQueryP95Ms ?? 0),
+                0,
+                60000
+            ).toFixed(4)
+        );
+        return {
+            retestPassRatePct: clampPct(snapshot.retestPassRatePct),
+            misconceptionRecurrenceRatePct: clampPct(snapshot.misconceptionRecurrenceRatePct),
+            evidenceBackedSuggestionRatioPct: clampPct(snapshot.evidenceBackedSuggestionRatioPct),
+            averagePathMasteryGainPct: clampPct(snapshot.averagePathMasteryGainPct),
+            randomPathMasteryGainPct: clampPct(snapshot.randomPathMasteryGainPct),
+            queryP95Ms: resolvedQueryP95Ms,
+        };
+    }
+
+    private resolveLearningQualityThresholds(
+        overrides: Partial<LearningQualityThresholds> | undefined
+    ): LearningQualityThresholds {
+        const merged: LearningQualityThresholds = {
+            ...DEFAULT_LEARNING_QUALITY_THRESHOLDS,
+            ...(overrides || {}),
+        };
+        return {
+            retestPassRateUpliftPct: Number(clamp(merged.retestPassRateUpliftPct, 0, 100).toFixed(4)),
+            misconceptionRecurrenceReductionPct: Number(clamp(merged.misconceptionRecurrenceReductionPct, 0, 100).toFixed(4)),
+            evidenceBackedSuggestionRatioPct: Number(clamp(merged.evidenceBackedSuggestionRatioPct, 0, 100).toFixed(4)),
+            pathEffectivenessLiftPct: Number(clamp(merged.pathEffectivenessLiftPct, 0, 100).toFixed(4)),
+            queryP95Ms: Number(clamp(merged.queryP95Ms, 10, 60000).toFixed(4)),
         };
     }
 
@@ -797,6 +995,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             activeAtomIds: Array.from(this.activeAtomIds.values()),
             learnerStates: Array.from(this.learnerStates.values()),
             tutorTraces: [...this.tutorTraces],
+            queryLatencyHistoryMs: [...this.queryLatencyHistoryMs],
             userMemory,
             relationEdgeSignatures: Array.from(this.relationEdgeSignatures.values()),
         };
@@ -861,6 +1060,17 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         (snapshot.tutorTraces || []).forEach((trace) => {
             this.tutorTraces.push(trace);
         });
+
+        this.queryLatencyHistoryMs.length = 0;
+        (snapshot.queryLatencyHistoryMs || []).forEach((latency) => {
+            const normalized = Number(latency);
+            if (Number.isFinite(normalized) && normalized >= 0) {
+                this.queryLatencyHistoryMs.push(Number(normalized.toFixed(4)));
+            }
+        });
+        if (this.queryLatencyHistoryMs.length > QUERY_LATENCY_HISTORY_LIMIT) {
+            this.queryLatencyHistoryMs.splice(0, this.queryLatencyHistoryMs.length - QUERY_LATENCY_HISTORY_LIMIT);
+        }
 
         this.userMemory.clear();
         const memoryObject = snapshot.userMemory || {};

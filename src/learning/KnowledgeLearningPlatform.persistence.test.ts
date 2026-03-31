@@ -67,6 +67,10 @@ describe('KnowledgeLearningPlatform persistence', () => {
                 },
             ],
         });
+        await platformA.queryKnowledge({
+            query: 'persistence graph snapshots',
+            topK: 2,
+        });
 
         expect(fs.existsSync(snapshotPath)).toBe(true);
 
@@ -82,6 +86,7 @@ describe('KnowledgeLearningPlatform persistence', () => {
         expect(state.activeAtoms).toBeGreaterThan(0);
         expect(state.masteryStates).toBeGreaterThan(0);
         expect(state.memoryEntries.session).toBeGreaterThan(0);
+        expect(state.retrievalTelemetry.queryCount).toBeGreaterThan(0);
 
         const queryResult = await platformB.queryKnowledge({
             query: 'persistence snapshots restarts',

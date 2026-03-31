@@ -14,6 +14,7 @@ describe('Knowledge mastery API contract wiring', () => {
             '/api/knowledge/query',
             '/api/knowledge/mastery/diagnose',
             '/api/knowledge/path',
+            '/api/knowledge/quality/evaluate',
             '/api/knowledge/tutor/action',
             '/api/knowledge/memory/policy',
         ];
@@ -39,6 +40,7 @@ describe('Knowledge mastery API contract wiring', () => {
             'interface LearningPathAPI',
             'interface TutorActionAPI',
             'interface MemoryPolicyAPI',
+            'interface LearningQualityGateAPI',
         ];
         requiredInterfaces.forEach((interfaceName) => {
             expect(learningApiSource).toContain(interfaceName);

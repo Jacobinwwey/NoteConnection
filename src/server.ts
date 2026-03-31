@@ -44,6 +44,7 @@ import {
     createFileBackedKnowledgeGraphStore,
     type KnowledgeIngestRequest,
     type KnowledgeQueryRequest,
+    type LearningQualityEvaluationRequest,
     type LearningPathRequest,
     type MasteryDiagnosticsRequest,
     type MemoryPolicyRequest,
@@ -2453,6 +2454,25 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     }
                     console.error(error);
                     CrashLogger.log(error, 'API:POST /api/knowledge/path');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/knowledge/quality/evaluate') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const requestPayload = payload as LearningQualityEvaluationRequest;
+                    const result = await knowledgeLearningPlatform.evaluateLearningQuality(requestPayload);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, result }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/knowledge/quality/evaluate');
                     res.writeHead(500, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ success: false, error: String(error) }));
                 }
