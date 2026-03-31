@@ -221,3 +221,19 @@ npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label w
 - Layered decision model:
   - Engineering signoff: based on Windows real logs + simulated multi-platform three-cohort gates.
   - Release signoff: marked as `TODO` when real multi-device cohorts are missing and tracked in future test backlog.
+
+## 16) Final Windows Automation Snapshot (March 31, 2026)
+
+- Execution chain:
+  - `npm run perf:startup:compare -- --baseline tmp/startup-logs/baseline --pilot tmp/startup-logs/pilot --out tmp/startup-logs/report-phase1-windows-compare.md`
+  - `npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label windows --out tmp/startup-logs/report-phase1-windows-matrix.md --strict`
+  - `npm run perf:startup:signoff:nohw`
+- Result:
+  - Windows single-platform gate: `PASS`
+  - Engineering signoff (no multi-device hardware): `PASS`
+  - Release signoff: `TODO` (pending real macOS/Android/iOS cohorts)
+- Core comparison (P50):
+  - `TTI`: `1509.40ms -> 1039.50ms`, improvement `31.13%`
+  - `TFS`: `2299.40ms -> 1679.50ms`, improvement `26.96%`
+- Final report:
+  - `tmp/startup-logs/report-planb-final-windows.md`

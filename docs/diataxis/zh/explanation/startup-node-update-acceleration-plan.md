@@ -221,3 +221,19 @@ npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label w
 - 分层结论：
   - 工程签收：基于 Windows 真实日志 + 模拟多端三规模门禁。
   - 发布签收：若缺少真实多端 cohort，状态为 `TODO`，并写入未来待办待测事项。
+
+## 16) 最终 Windows 自动化验收快照（2026-03-31）
+
+- 执行链路：
+  - `npm run perf:startup:compare -- --baseline tmp/startup-logs/baseline --pilot tmp/startup-logs/pilot --out tmp/startup-logs/report-phase1-windows-compare.md`
+  - `npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label windows --out tmp/startup-logs/report-phase1-windows-matrix.md --strict`
+  - `npm run perf:startup:signoff:nohw`
+- 结果：
+  - Windows 单平台门禁：`PASS`
+  - 工程签收（无多端硬件）：`PASS`
+  - 发布签收：`TODO`（待真实 macOS/Android/iOS cohort）
+- 核心对比（P50）：
+  - `TTI`：`1509.40ms -> 1039.50ms`，提升 `31.13%`
+  - `TFS`：`2299.40ms -> 1679.50ms`，提升 `26.96%`
+- 最终报告：
+  - `tmp/startup-logs/report-planb-final-windows.md`
