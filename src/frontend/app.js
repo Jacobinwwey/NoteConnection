@@ -255,6 +255,337 @@ const startupPerfState = {
     lastWorkerAlpha: null
 };
 
+const STARTUP_LAYOUT_SNAPSHOT_DB_NAME = 'noteconnection-startup';
+const STARTUP_LAYOUT_SNAPSHOT_STORE_NAME = 'layoutSnapshots';
+const STARTUP_LAYOUT_SNAPSHOT_LS_PREFIX = 'nc.startupLayoutSnapshot.';
+const STARTUP_LAYOUT_SNAPSHOT_VERSION = 1;
+const STARTUP_LAYOUT_SNAPSHOT_MAX_RECORDS = 6;
+const STARTUP_LAYOUT_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
+
+const startupLayoutSnapshotState = {
+    fingerprint: '',
+    warmRestoreApplied: false,
+    pendingRecord: null,
+    restorePromise: null,
+    saveHandle: null,
+    lastSaveAtMs: 0
+};
+
+function hashFNV1a32(input) {
+    let hash = 0x811c9dc5;
+    const text = String(input || '');
+    for (let i = 0; i < text.length; i += 1) {
+        hash ^= text.charCodeAt(i);
+        hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+    }
+    return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+function buildStartupGraphFingerprint(nodeList, linkList, graphPayload) {
+    const safeNodes = Array.isArray(nodeList) ? nodeList : [];
+    const safeLinks = Array.isArray(linkList) ? linkList : [];
+    const graphVersion = graphPayload && graphPayload.version !== undefined
+        ? String(graphPayload.version)
+        : 'v0';
+
+    const nodeStep = Math.max(1, Math.floor(safeNodes.length / 256));
+    const nodeTokens = [];
+    for (let index = 0; index < safeNodes.length && nodeTokens.length < 256; index += nodeStep) {
+        const item = safeNodes[index];
+        nodeTokens.push(item && item.id !== undefined ? String(item.id) : `idx:${index}`);
+    }
+
+    const linkStep = Math.max(1, Math.floor(safeLinks.length / 256));
+    const linkTokens = [];
+    for (let index = 0; index < safeLinks.length && linkTokens.length < 256; index += linkStep) {
+        const item = safeLinks[index];
+        const sourceId = item && item.source && typeof item.source === 'object' ? item.source.id : item && item.source;
+        const targetId = item && item.target && typeof item.target === 'object' ? item.target.id : item && item.target;
+        linkTokens.push(`${sourceId}->${targetId}`);
+    }
+
+    const signature = [
+        `version=${graphVersion}`,
+        `nodes=${safeNodes.length}`,
+        `links=${safeLinks.length}`,
+        `nodeSample=${nodeTokens.join('|')}`,
+        `linkSample=${linkTokens.join('|')}`
+    ].join('||');
+
+    return `nc-layout-v${STARTUP_LAYOUT_SNAPSHOT_VERSION}-${hashFNV1a32(signature)}`;
+}
+
+function openStartupLayoutSnapshotDb() {
+    return new Promise((resolve, reject) => {
+        if (typeof window === 'undefined' || !window.indexedDB) {
+            resolve(null);
+            return;
+        }
+
+        let request;
+        try {
+            request = window.indexedDB.open(STARTUP_LAYOUT_SNAPSHOT_DB_NAME, STARTUP_LAYOUT_SNAPSHOT_VERSION);
+        } catch (error) {
+            reject(error);
+            return;
+        }
+
+        request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(STARTUP_LAYOUT_SNAPSHOT_STORE_NAME)) {
+                const store = db.createObjectStore(STARTUP_LAYOUT_SNAPSHOT_STORE_NAME, { keyPath: 'fingerprint' });
+                store.createIndex('savedAt', 'savedAt');
+            }
+        };
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('indexedDB open failed'));
+    });
+}
+
+function loadStartupLayoutSnapshotFromLocalStorage(fingerprint) {
+    if (!fingerprint || typeof localStorage === 'undefined') {
+        return null;
+    }
+    const key = `${STARTUP_LAYOUT_SNAPSHOT_LS_PREFIX}${fingerprint}`;
+    try {
+        const raw = localStorage.getItem(key);
+        if (!raw) {
+            return null;
+        }
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (_err) {
+        return null;
+    }
+}
+
+function saveStartupLayoutSnapshotToLocalStorage(record) {
+    if (!record || !record.fingerprint || typeof localStorage === 'undefined') {
+        return;
+    }
+    try {
+        const key = `${STARTUP_LAYOUT_SNAPSHOT_LS_PREFIX}${record.fingerprint}`;
+        localStorage.setItem(key, JSON.stringify(record));
+    } catch (_err) {
+        // Ignore quota failures.
+    }
+}
+
+async function loadStartupLayoutSnapshotRecord(fingerprint) {
+    if (!fingerprint) {
+        return null;
+    }
+
+    const db = await openStartupLayoutSnapshotDb();
+    if (!db) {
+        return loadStartupLayoutSnapshotFromLocalStorage(fingerprint);
+    }
+
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STARTUP_LAYOUT_SNAPSHOT_STORE_NAME, 'readonly');
+        const store = tx.objectStore(STARTUP_LAYOUT_SNAPSHOT_STORE_NAME);
+        const req = store.get(fingerprint);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error || new Error('indexedDB read failed'));
+        tx.oncomplete = () => db.close();
+        tx.onerror = () => db.close();
+        tx.onabort = () => db.close();
+    });
+}
+
+async function persistStartupLayoutSnapshotRecord(record) {
+    if (!record || !record.fingerprint) {
+        return;
+    }
+
+    const db = await openStartupLayoutSnapshotDb();
+    if (!db) {
+        saveStartupLayoutSnapshotToLocalStorage(record);
+        return;
+    }
+
+    await new Promise((resolve, reject) => {
+        const tx = db.transaction(STARTUP_LAYOUT_SNAPSHOT_STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STARTUP_LAYOUT_SNAPSHOT_STORE_NAME);
+        store.put(record);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error || new Error('indexedDB write failed'));
+        tx.onabort = () => reject(tx.error || new Error('indexedDB write aborted'));
+    });
+
+    // Keep snapshot store bounded to avoid unbounded growth.
+    await new Promise((resolve, reject) => {
+        const tx = db.transaction(STARTUP_LAYOUT_SNAPSHOT_STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STARTUP_LAYOUT_SNAPSHOT_STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => {
+            const now = Date.now();
+            const allRecords = Array.isArray(req.result) ? req.result : [];
+            allRecords.sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0));
+            for (let i = 0; i < allRecords.length; i += 1) {
+                const item = allRecords[i];
+                const isExpired = Number.isFinite(item.savedAt) && (now - item.savedAt) > STARTUP_LAYOUT_SNAPSHOT_MAX_AGE_MS;
+                const overflow = i >= STARTUP_LAYOUT_SNAPSHOT_MAX_RECORDS;
+                if (isExpired || overflow) {
+                    store.delete(item.fingerprint);
+                }
+            }
+        };
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error || new Error('indexedDB cleanup failed'));
+        tx.onabort = () => reject(tx.error || new Error('indexedDB cleanup aborted'));
+    });
+
+    db.close();
+}
+
+function collectStartupLayoutSnapshotRecord(reason = '') {
+    if (!startupLayoutSnapshotState.fingerprint || !Array.isArray(nodes) || nodes.length === 0) {
+        return null;
+    }
+
+    const positions = new Array(nodes.length);
+    for (let index = 0; index < nodes.length; index += 1) {
+        const n = nodes[index];
+        positions[index] = {
+            id: n.id,
+            x: Number.isFinite(Number(n.x)) ? Number(n.x) : 0,
+            y: Number.isFinite(Number(n.y)) ? Number(n.y) : 0,
+            fx: Number.isFinite(Number(n.fx)) ? Number(n.fx) : null,
+            fy: Number.isFinite(Number(n.fy)) ? Number(n.fy) : null
+        };
+    }
+
+    return {
+        fingerprint: startupLayoutSnapshotState.fingerprint,
+        savedAt: Date.now(),
+        reason: String(reason || ''),
+        profileId: startupPerfProfile.id,
+        nodeCount: nodes.length,
+        edgeCount: Array.isArray(links) ? links.length : 0,
+        positions
+    };
+}
+
+function applyStartupLayoutSnapshotRecord(record) {
+    if (!record || !Array.isArray(record.positions) || record.positions.length === 0 || !nodeMap) {
+        return { appliedCount: 0, total: 0 };
+    }
+    const layoutById = new Map(record.positions.map((item) => [item.id, item]));
+    let appliedCount = 0;
+
+    for (let index = 0; index < nodes.length; index += 1) {
+        const n = nodes[index];
+        const saved = layoutById.get(n.id);
+        if (!saved) {
+            continue;
+        }
+        n.x = Number.isFinite(saved.x) ? saved.x : n.x;
+        n.y = Number.isFinite(saved.y) ? saved.y : n.y;
+        n.fx = Number.isFinite(saved.fx) ? saved.fx : null;
+        n.fy = Number.isFinite(saved.fy) ? saved.fy : null;
+        if (currentPositions && typeof currentPositions.set === 'function') {
+            currentPositions.set(n.id, { x: n.x, y: n.y });
+        }
+        appliedCount += 1;
+    }
+
+    return { appliedCount, total: nodes.length };
+}
+
+function maybeApplyStartupWarmSnapshot(trigger = '') {
+    if (startupLayoutSnapshotState.warmRestoreApplied) {
+        return false;
+    }
+    const record = startupLayoutSnapshotState.pendingRecord;
+    if (!record || !simulationWorker) {
+        return false;
+    }
+
+    const result = applyStartupLayoutSnapshotRecord(record);
+    if (result.appliedCount <= 0) {
+        return false;
+    }
+    startupLayoutSnapshotState.warmRestoreApplied = true;
+
+    console.log('[Startup Warm Snapshot] Applied persisted layout snapshot.', {
+        trigger,
+        fingerprint: startupLayoutSnapshotState.fingerprint,
+        appliedCount: result.appliedCount,
+        totalNodes: result.total,
+        savedAt: record.savedAt || null
+    });
+
+    if (typeof ticked === 'function') {
+        ticked();
+    }
+
+    const syncNodes = nodes.map((n) => ({
+        id: n.id,
+        x: Number.isFinite(Number(n.x)) ? Number(n.x) : 0,
+        y: Number.isFinite(Number(n.y)) ? Number(n.y) : 0,
+        fx: Number.isFinite(Number(n.fx)) ? Number(n.fx) : null,
+        fy: Number.isFinite(Number(n.fy)) ? Number(n.fy) : null,
+        rank: n.rank
+    }));
+    const syncLinks = physicsLinks.map((l) => ({
+        source: l.source && typeof l.source === 'object' ? l.source.id : l.source,
+        target: l.target && typeof l.target === 'object' ? l.target.id : l.target
+    }));
+    simulationWorker.postMessage({
+        type: 'setNodes',
+        payload: {
+            nodes: syncNodes,
+            links: syncLinks,
+            restart: true
+        }
+    });
+    simulationWorker.postMessage({
+        type: 'updateParams',
+        payload: {
+            alpha: 0.18,
+            velocityDecay: 0.92,
+            restart: true
+        }
+    });
+
+    return true;
+}
+
+function scheduleStartupLayoutSnapshotPersist(reason = '', delayMs = 800) {
+    if (startupPerfProfile.pilotEnabled !== true) {
+        return;
+    }
+    if (!startupLayoutSnapshotState.fingerprint) {
+        return;
+    }
+
+    if (startupLayoutSnapshotState.saveHandle !== null) {
+        clearTimeout(startupLayoutSnapshotState.saveHandle);
+        startupLayoutSnapshotState.saveHandle = null;
+    }
+
+    startupLayoutSnapshotState.saveHandle = setTimeout(async () => {
+        startupLayoutSnapshotState.saveHandle = null;
+        const record = collectStartupLayoutSnapshotRecord(reason);
+        if (!record) {
+            return;
+        }
+        try {
+            await persistStartupLayoutSnapshotRecord(record);
+            startupLayoutSnapshotState.lastSaveAtMs = record.savedAt;
+            console.log('[Startup Warm Snapshot] Persisted layout snapshot.', {
+                fingerprint: record.fingerprint,
+                reason: record.reason,
+                nodeCount: record.nodeCount
+            });
+        } catch (error) {
+            console.warn('[Startup Warm Snapshot] Persist failed:', error && error.message ? error.message : String(error));
+        }
+    }, Math.max(0, Math.floor(delayMs)));
+}
+
 let startupWorldOverlayState = null;
 
 function createStartupWorldOverlay() {
@@ -691,6 +1022,34 @@ markStartupCheckpoint('T1 graph_preprocessed', {
     preprocessMs: Number(graphPreprocessElapsedMs.toFixed(2))
 });
 
+startupLayoutSnapshotState.fingerprint = buildStartupGraphFingerprint(nodes, links, runtimeGraphData);
+console.log('[Startup Warm Snapshot] Fingerprint prepared.', {
+    fingerprint: startupLayoutSnapshotState.fingerprint,
+    nodes: nodes.length,
+    links: links.length
+});
+startupLayoutSnapshotState.restorePromise = loadStartupLayoutSnapshotRecord(startupLayoutSnapshotState.fingerprint)
+    .then((record) => {
+        startupLayoutSnapshotState.pendingRecord = record;
+        if (!record) {
+            console.log('[Startup Warm Snapshot] No persisted snapshot matched current fingerprint.');
+            return;
+        }
+        if (!Array.isArray(record.positions) || record.positions.length === 0) {
+            console.log('[Startup Warm Snapshot] Matched snapshot is empty. Skip applying.');
+            return;
+        }
+        console.log('[Startup Warm Snapshot] Snapshot matched and ready for apply.', {
+            fingerprint: startupLayoutSnapshotState.fingerprint,
+            savedAt: record.savedAt || null,
+            positionCount: record.positions.length
+        });
+        maybeApplyStartupWarmSnapshot('restore-ready');
+    })
+    .catch((error) => {
+        console.warn('[Startup Warm Snapshot] Restore load failed:', error && error.message ? error.message : String(error));
+    });
+
 // Optimization: Default to Canvas for large graphs (>3000 nodes) to save memory
 if (nodes.length > 3000) {
     console.log(`[Optimization] Large graph detected (${nodes.length} nodes). Switching to Canvas mode.`);
@@ -890,6 +1249,7 @@ simulationWorker.onmessage = function(event) {
                 alpha: Number.isFinite(workerAlpha) ? Number(workerAlpha.toFixed(4)) : null,
                 source: 'worker_tick'
             });
+            scheduleStartupLayoutSnapshotPersist('startup-stable-worker-tick');
         }
     } else if (type === 'startupStable') {
         if (!startupPerfState.t5Seen) {
@@ -898,6 +1258,7 @@ simulationWorker.onmessage = function(event) {
                 alpha: Number.isFinite(workerAlpha) ? Number(workerAlpha.toFixed(4)) : null,
                 source: 'worker_signal'
             });
+            scheduleStartupLayoutSnapshotPersist('startup-stable-worker-signal');
         }
     }
 };
@@ -1022,6 +1383,7 @@ simulationWorker.postMessage({
             startupProfile: workerStartupProfile
     } 
 });
+maybeApplyStartupWarmSnapshot('after-worker-init');
 
 // v0.9.37: Two-stage Damping Strategy handled in worker or re-implemented here?
 // Re-implementing logic via messages
@@ -1041,9 +1403,22 @@ setTimeout(() => {
     // Static Mode Enforcement
     if (nodes.length > 5000 || links.length > 200000) {
          console.log("[Simulation] Large graph detected. Freezing simulation after relaxation.");
-         simulation.stop();
+        simulation.stop();
     }
 }, 2000);
+
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            scheduleStartupLayoutSnapshotPersist('visibility-hidden', 0);
+        }
+    });
+}
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('beforeunload', () => {
+        scheduleStartupLayoutSnapshotPersist('beforeunload', 0);
+    });
+}
 
 // Handle Resize
 const resizeObserver = new ResizeObserver(entries => {

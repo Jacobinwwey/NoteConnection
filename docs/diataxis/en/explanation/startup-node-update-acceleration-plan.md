@@ -196,3 +196,20 @@ npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label w
 - Phase 4 (verification and rollout gate):
   - Added `perf:startup:cohorts:verify` for three-cohort (`small/medium/large`) automatic gates.
   - Supports session-floor gate (`--min-sessions-per-platform`) and strict CI exit (`--strict`).
+
+## 14) Plan B Progress Confirmation (March 31, 2026)
+
+- Phase 0 (telemetry): completed  
+  - Startup checkpoints `T0..T5` are wired and parsed by automation scripts.
+- Phase 1 (Warm Start): v1 loop completed  
+  - Graph fingerprint + persisted layout snapshot are now implemented (IndexedDB with localStorage fallback).
+  - Snapshot hit can restore startup layout and sync Worker for low-alpha stabilization.
+  - Snapshot persistence is triggered at `T5 stable_layout`, on page hidden, and before unload.
+- Phase 2 (delta protocol): completed  
+  - Worker supports `full|delta` tick modes, epsilon-based change filtering, and periodic full-sync fallback.
+  - Low-alpha adaptive tick throttling is enabled.
+- Phase 3 (staged rendering): completed  
+  - Startup renders key-edge TopK first, then restores full edges after startup window.
+- Phase 4 (verification and rollout gate): automation completed  
+  - `compare / matrix / cohorts` gate scripts are available and validated.
+  - Release-grade cross-platform signoff still requires real macOS/Android/iOS datasets.

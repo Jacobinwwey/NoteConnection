@@ -196,3 +196,20 @@ npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label w
 - Phase 4（验证与灰度）：
   - 新增 `perf:startup:cohorts:verify`，支持 `small/medium/large` 三规模回归门禁。
   - 支持样本量门禁（`--min-sessions-per-platform`）与 `--strict` 失败即退出。
+
+## 14) 方案 B 执行进度确认（2026-03-31）
+
+- Phase 0（埋点）：已完成  
+  - `T0..T5` 启动时序埋点已接入并可被自动化脚本解析。
+- Phase 1（Warm Start）：已完成 v1 闭环  
+  - 已实现 `graph fingerprint` 计算与持久化布局快照（IndexedDB，含 localStorage 兜底）。
+  - 启动命中快照后可自动恢复布局，并同步 Worker 进入低 alpha 微调。
+  - 在 `T5 stable_layout`、页面隐藏与退出前触发快照持久化。
+- Phase 2（增量协议）：已完成  
+  - Worker 支持 `full|delta` 双模式、epsilon 变化阈值与周期性全量同步兜底。
+  - 低 alpha 阶段自动降频，降低稳定阶段传输与绘制压力。
+- Phase 3（分层渲染）：已完成  
+  - 启动阶段优先渲染 key-edge TopK，窗口结束后补齐全边。
+- Phase 4（验证灰度）：已完成自动化链路  
+  - 已有 `compare / matrix / cohorts` 三类门禁脚本。
+  - 当前仍需补齐真实多端样本（macOS/Android/iOS）以完成发布级跨端验收。
