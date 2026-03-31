@@ -106,6 +106,12 @@ Reason:
 - Add startup edge render delay.
 - Add startup link render cap (optional guard).
 
+### Phase 1b: Multi-platform Rollout (Desktop + Mobile)
+- Extend startup profiles to macOS/Linux/Android/iOS runtime variants.
+- Keep the same telemetry checkpoints (`T0..T5`) and compare by platform cohort.
+- Scale startup visual overlay density and animation per runtime capability.
+- Keep localStorage force-profile switches for fallback and A/B replay.
+
 ### Phase 2: Warm Start
 - Persist per-graph layout snapshot keyed by graph fingerprint.
 - Restore snapshot on startup and run low-alpha stabilization.
@@ -122,13 +128,20 @@ Reason:
 3. Rendering incompleteness perception when edges are delayed:
    - Mitigation: short delay window + status hint + progressive edge restore.
 
-## 10) v1 Optimization Spec (Windows Pilot)
+## 10) v1 Optimization Spec (Multi-platform)
 
-### Runtime Profile (pilot default)
-- Profile ID: `desktop_windows_pilot`
-- Worker tick cap: `24–30 FPS`
-- Edge render delay: `~400ms`
-- Startup partial edge cap window: `first 1500ms`
+### Runtime Profiles
+- `desktop_windows_pilot`: `26 FPS`, `400ms` edge delay, `1500ms` startup SVG cap window (`18000` links).
+- `desktop_macos_pilot`: `24 FPS`, `430ms` edge delay, `1700ms` startup SVG cap window (`15000` links).
+- `desktop_linux_pilot`: `24 FPS`, `420ms` edge delay, `1600ms` startup SVG cap window (`16000` links).
+- `mobile_android_pilot`: `18 FPS`, `560ms` edge delay, `2200ms` startup SVG cap window (`7000` links).
+- `mobile_ios_pilot`: `17 FPS`, `600ms` edge delay, `2300ms` startup SVG cap window (`6200` links).
+
+### Startup Overlay Contract
+- Show blurred startup overlay until `T5 stable_layout` or safety timeout.
+- Text baseline: `等待世界构建`.
+- Interactive starfield allows click-to-dim interactions.
+- Mobile and reduced-motion environments use lowered star density and lower animation intensity.
 
 ### Success Criteria
 - `TTI` improvement >= 30% vs baseline median.
@@ -138,4 +151,3 @@ Reason:
 ### Rollback Gates
 - Any startup regression > 10% on P95.
 - Any reproducible interaction regression (focus/path mode/reader).
-

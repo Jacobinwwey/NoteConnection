@@ -106,6 +106,12 @@
 - 增加启动期边渲染延迟。
 - 可选：启动窗口内的边渲染数量保护阈值。
 
+### Phase 1b：多平台扩展（桌面 + 移动）
+- 将启动 profile 扩展到 macOS/Linux/Android/iOS 运行时变体。
+- 保持 `T0..T5` 统一观测口径，按平台分组对比指标。
+- 按运行时能力自动降低启动遮罩星空密度与动画强度。
+- 保留 localStorage 强制 profile 开关，支持回滚与 A/B 回放。
+
 ### Phase 2：Warm Start
 - 以图指纹作为 Key 持久化布局快照。
 - 启动时优先恢复快照，并进行低 alpha 稳定化。
@@ -122,13 +128,20 @@
 3. 边延迟渲染造成“内容不完整”误解：
    - 缓解：短时窗口 + 渐进恢复 + 状态提示。
 
-## 10) v1 试点规格（Windows）
+## 10) v1 试点规格（多平台）
 
-### 运行时配置（试点默认）
-- Profile：`desktop_windows_pilot`
-- Tick 上限：`24-30 FPS`
-- 边渲染延迟：`约 400ms`
-- 启动窗口边渲染保护：`前 1500ms`
+### 运行时 Profile
+- `desktop_windows_pilot`：`26 FPS`、`400ms` 边延迟、`1500ms` SVG 窗口（`18000` 条边）。
+- `desktop_macos_pilot`：`24 FPS`、`430ms` 边延迟、`1700ms` SVG 窗口（`15000` 条边）。
+- `desktop_linux_pilot`：`24 FPS`、`420ms` 边延迟、`1600ms` SVG 窗口（`16000` 条边）。
+- `mobile_android_pilot`：`18 FPS`、`560ms` 边延迟、`2200ms` SVG 窗口（`7000` 条边）。
+- `mobile_ios_pilot`：`17 FPS`、`600ms` 边延迟、`2300ms` SVG 窗口（`6200` 条边）。
+
+### 启动遮罩契约
+- 在 `T5 stable_layout` 前显示虚化遮罩，超时自动安全关闭。
+- 核心文案：`等待世界构建`。
+- 星空支持点击点暗（可交互）。
+- 移动端与 reduced-motion 环境自动降载（星点与动画强度）。
 
 ### 验收标准
 - `TTI` 中位数改善 >= 30%

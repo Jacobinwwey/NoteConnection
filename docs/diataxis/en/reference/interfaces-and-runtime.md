@@ -38,14 +38,21 @@ This reference tracks canonical API/runtime contracts.
   - `startupProfile.stableAlphaThreshold`
   - `startupProfile.stableHoldTicks`
   - `startupProfile.stableTimeoutMs`
-- Windows pilot profile:
-  - Profile ID: `desktop_windows_pilot`
-  - Tick cap: `26 FPS` (worker-side emit throttle)
-  - SVG edge geometry delay: `400ms`
-  - Startup SVG edge cap window: `1500ms`, cap `18000` links
+- Multi-platform startup pilot profiles:
+  - `desktop_windows_pilot`: `26 FPS`, `400ms` edge delay, `1500ms` SVG cap window (`18000` links).
+  - `desktop_macos_pilot`: `24 FPS`, `430ms` edge delay, `1700ms` SVG cap window (`15000` links).
+  - `desktop_linux_pilot`: `24 FPS`, `420ms` edge delay, `1600ms` SVG cap window (`16000` links).
+  - `mobile_android_pilot`: `18 FPS`, `560ms` edge delay, `2200ms` SVG cap window (`7000` links), reduced overlay density.
+  - `mobile_ios_pilot`: `17 FPS`, `600ms` edge delay, `2300ms` SVG cap window (`6200` links), reduced overlay density.
+- Startup visual overlay contract:
+  - A blurred startup overlay is shown until `T5 stable_layout` (or safety timeout).
+  - Core text: `等待世界构建`.
+  - Interactive starfield: stars twinkle naturally, and pointer clicks can dim nearby stars.
+  - Overlay automatically scales down density/animation intensity on mobile and reduced-motion environments.
 - Runtime override switch (for rollback/A-B validation):
   - `localStorage['nc.startupPerfProfile'] = 'off'` disables pilot behavior.
   - `localStorage['nc.startupPerfProfile'] = 'desktop_windows_pilot'` force-enables pilot behavior.
+  - `localStorage['nc.startupPerfProfile'] = 'desktop_macos_pilot' | 'desktop_linux_pilot' | 'mobile_android_pilot' | 'mobile_ios_pilot'` force-selects the target profile.
 - Automated baseline vs pilot summary script:
   - `npm run perf:startup:compare -- --baseline <baseline-log-path> --pilot <pilot-log-path>`
   - Supports file or directory inputs, auto-parses sessions from `[Startup Perf]` checkpoints, outputs P50/P95 KPI report.

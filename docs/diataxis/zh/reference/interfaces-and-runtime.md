@@ -38,14 +38,21 @@
   - `startupProfile.stableAlphaThreshold`
   - `startupProfile.stableHoldTicks`
   - `startupProfile.stableTimeoutMs`
-- Windows 试点 profile：
-  - Profile ID：`desktop_windows_pilot`
-  - Tick 上限：`26 FPS`（worker 侧发送限流）
-  - SVG 边几何延迟：`400ms`
-  - 启动窗口 SVG 边上限：`1500ms` 内最多更新 `18000` 条边
+- 多平台启动试点 profile：
+  - `desktop_windows_pilot`：`26 FPS`、`400ms` 边延迟、`1500ms` SVG 窗口（`18000` 条边）。
+  - `desktop_macos_pilot`：`24 FPS`、`430ms` 边延迟、`1700ms` SVG 窗口（`15000` 条边）。
+  - `desktop_linux_pilot`：`24 FPS`、`420ms` 边延迟、`1600ms` SVG 窗口（`16000` 条边）。
+  - `mobile_android_pilot`：`18 FPS`、`560ms` 边延迟、`2200ms` SVG 窗口（`7000` 条边），并降低启动星空密度。
+  - `mobile_ios_pilot`：`17 FPS`、`600ms` 边延迟、`2300ms` SVG 窗口（`6200` 条边），并降低启动星空密度。
+- 启动视觉遮罩契约：
+  - 在 `T5 stable_layout` 前显示虚化启动层（若超时则安全关闭）。
+  - 核心文案：`等待世界构建`。
+  - 星空可交互：星星自然闪烁，用户点击可点暗附近星星。
+  - 在移动端和 reduced-motion 环境自动降载（星点密度/动画强度）。
 - 运行时覆盖开关（用于回滚与 A/B 验证）：
   - `localStorage['nc.startupPerfProfile'] = 'off'` 可关闭试点行为。
   - `localStorage['nc.startupPerfProfile'] = 'desktop_windows_pilot'` 可强制开启试点行为。
+  - `localStorage['nc.startupPerfProfile'] = 'desktop_macos_pilot' | 'desktop_linux_pilot' | 'mobile_android_pilot' | 'mobile_ios_pilot'` 可强制选择对应 profile。
 - 自动化基线/试点汇总脚本：
   - `npm run perf:startup:compare -- --baseline <baseline-log-path> --pilot <pilot-log-path>`
   - 支持文件或目录输入，自动按 `[Startup Perf]` 检查点切分会话并输出 P50/P95 KPI 报告。

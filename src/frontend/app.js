@@ -27,6 +27,53 @@ function readStartupPerfProfileOverride() {
     }
 }
 
+function resolveRuntimePlatform(runtimeCaps) {
+    const rawPlatform = runtimeCaps && typeof runtimeCaps.platform === 'string'
+        ? runtimeCaps.platform.trim().toLowerCase()
+        : '';
+
+    if (rawPlatform.includes('android')) {
+        return 'android';
+    }
+    if (rawPlatform.includes('ios')) {
+        return 'ios';
+    }
+    if (rawPlatform.includes('windows') || rawPlatform === 'win32') {
+        return 'windows';
+    }
+    if (rawPlatform.includes('macos') || rawPlatform.includes('darwin') || rawPlatform === 'mac') {
+        return 'macos';
+    }
+    if (rawPlatform.includes('linux')) {
+        return 'linux';
+    }
+    if (rawPlatform.includes('web')) {
+        return 'web';
+    }
+
+    if (typeof navigator !== 'undefined' && typeof navigator.userAgent === 'string') {
+        const ua = navigator.userAgent;
+        if (/Android/i.test(ua)) return 'android';
+        if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+        if (/Windows/i.test(ua)) return 'windows';
+        if (/Macintosh|Mac OS X/i.test(ua)) return 'macos';
+        if (/Linux/i.test(ua)) return 'linux';
+    }
+
+    if (typeof window !== 'undefined' && window.Capacitor && typeof window.Capacitor.getPlatform === 'function') {
+        try {
+            const capPlatform = String(window.Capacitor.getPlatform() || '').toLowerCase();
+            if (capPlatform === 'android') return 'android';
+            if (capPlatform === 'ios') return 'ios';
+            if (capPlatform === 'web') return 'web';
+        } catch (_err) {
+            // Ignore and fall through.
+        }
+    }
+
+    return 'unknown';
+}
+
 function resolveStartupPerfProfile(runtimeCaps) {
     const base = {
         id: 'default',
@@ -37,57 +84,122 @@ function resolveStartupPerfProfile(runtimeCaps) {
         edgeStartupSvgCap: 0,
         stableAlphaThreshold: 0.05,
         stableHoldTicks: 8,
-        stableTimeoutMs: 12000
+        stableTimeoutMs: 12000,
+        startupOverlayEnabled: true,
+        overlaySafetyTimeoutMs: 30000,
+        overlayMinStars: 70,
+        overlayMaxStars: 180,
+        overlayStarDensity: 2400,
+        overlayDprCap: 2
     };
 
-    const windowsPilot = {
-        id: 'desktop_windows_pilot',
-        pilotEnabled: true,
-        tickMaxFps: 26,
-        edgeGeometryDelayMs: 400,
-        edgeStartupWindowMs: 1500,
-        edgeStartupSvgCap: 18000,
-        stableAlphaThreshold: 0.05,
-        stableHoldTicks: 8,
-        stableTimeoutMs: 12000
+    const profileCatalog = {
+        desktop_windows_pilot: {
+            ...base,
+            id: 'desktop_windows_pilot',
+            pilotEnabled: true,
+            tickMaxFps: 26,
+            edgeGeometryDelayMs: 400,
+            edgeStartupWindowMs: 1500,
+            edgeStartupSvgCap: 18000,
+            overlayMinStars: 90,
+            overlayMaxStars: 220,
+            overlayStarDensity: 2200
+        },
+        desktop_macos_pilot: {
+            ...base,
+            id: 'desktop_macos_pilot',
+            pilotEnabled: true,
+            tickMaxFps: 24,
+            edgeGeometryDelayMs: 430,
+            edgeStartupWindowMs: 1700,
+            edgeStartupSvgCap: 15000,
+            overlayMinStars: 84,
+            overlayMaxStars: 200,
+            overlayStarDensity: 2400
+        },
+        desktop_linux_pilot: {
+            ...base,
+            id: 'desktop_linux_pilot',
+            pilotEnabled: true,
+            tickMaxFps: 24,
+            edgeGeometryDelayMs: 420,
+            edgeStartupWindowMs: 1600,
+            edgeStartupSvgCap: 16000,
+            overlayMinStars: 86,
+            overlayMaxStars: 205,
+            overlayStarDensity: 2350
+        },
+        mobile_android_pilot: {
+            ...base,
+            id: 'mobile_android_pilot',
+            pilotEnabled: true,
+            tickMaxFps: 18,
+            edgeGeometryDelayMs: 560,
+            edgeStartupWindowMs: 2200,
+            edgeStartupSvgCap: 7000,
+            stableHoldTicks: 10,
+            stableTimeoutMs: 18000,
+            overlaySafetyTimeoutMs: 36000,
+            overlayMinStars: 52,
+            overlayMaxStars: 120,
+            overlayStarDensity: 3600,
+            overlayDprCap: 1.6
+        },
+        mobile_ios_pilot: {
+            ...base,
+            id: 'mobile_ios_pilot',
+            pilotEnabled: true,
+            tickMaxFps: 17,
+            edgeGeometryDelayMs: 600,
+            edgeStartupWindowMs: 2300,
+            edgeStartupSvgCap: 6200,
+            stableHoldTicks: 10,
+            stableTimeoutMs: 19000,
+            overlaySafetyTimeoutMs: 36000,
+            overlayMinStars: 48,
+            overlayMaxStars: 110,
+            overlayStarDensity: 3900,
+            overlayDprCap: 1.5
+        }
     };
 
+    const detectedPlatform = resolveRuntimePlatform(runtimeCaps);
     const override = readStartupPerfProfileOverride();
     if (override === 'off') {
         return {
             ...base,
-            override: 'off'
+            override: 'off',
+            detectedPlatform
         };
     }
 
-    if (override === windowsPilot.id) {
+    if (override && Object.prototype.hasOwnProperty.call(profileCatalog, override)) {
         return {
-            ...windowsPilot,
-            override: 'forced'
+            ...profileCatalog[override],
+            override: 'forced',
+            detectedPlatform
         };
     }
 
-    const runtimeLooksLikeWindows = Boolean(
-        runtimeCaps && runtimeCaps.platform === 'windows'
-    ) || Boolean(
-        typeof window !== 'undefined' &&
-        window.__TAURI__ &&
-        typeof navigator !== 'undefined' &&
-        typeof navigator.userAgent === 'string' &&
-        /Windows/i.test(navigator.userAgent)
-    );
-
-    if (runtimeLooksLikeWindows) {
-        return {
-            ...windowsPilot,
-            override: ''
-        };
+    if (override && override !== 'auto') {
+        console.warn(`[Startup Perf] Unknown override profile "${override}", fallback to auto-detected platform profile.`);
     }
 
-    return {
-        ...base,
-        override: ''
-    };
+    switch (detectedPlatform) {
+        case 'windows':
+            return { ...profileCatalog.desktop_windows_pilot, override: '', detectedPlatform };
+        case 'macos':
+            return { ...profileCatalog.desktop_macos_pilot, override: '', detectedPlatform };
+        case 'linux':
+            return { ...profileCatalog.desktop_linux_pilot, override: '', detectedPlatform };
+        case 'android':
+            return { ...profileCatalog.mobile_android_pilot, override: '', detectedPlatform };
+        case 'ios':
+            return { ...profileCatalog.mobile_ios_pilot, override: '', detectedPlatform };
+        default:
+            return { ...base, override: '', detectedPlatform };
+    }
 }
 
 const startupRuntimeCaps = (typeof window !== 'undefined' && window.__NC_RUNTIME_CAPS)
@@ -110,6 +222,10 @@ const startupPerfState = {
 let startupWorldOverlayState = null;
 
 function createStartupWorldOverlay() {
+    if (startupPerfProfile.startupOverlayEnabled === false) {
+        return null;
+    }
+
     const wrapper = document.getElementById('graph-wrapper');
     if (!wrapper) {
         return null;
@@ -161,12 +277,34 @@ function createStartupWorldOverlay() {
         dpr: 1,
         leaveHandle: null,
         fallbackHandle: null,
-        hidden: false
+        hidden: false,
+        reducedMotion: false
     };
 
+    if (typeof window.matchMedia === 'function') {
+        try {
+            state.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        } catch (_err) {
+            state.reducedMotion = false;
+        }
+    }
+
     function buildStars() {
-        const starCount = Math.min(220, Math.max(90, Math.round((state.width * state.height) / 2200)));
+        const minStars = Number.isFinite(startupPerfProfile.overlayMinStars)
+            ? Math.max(20, Math.floor(startupPerfProfile.overlayMinStars))
+            : 70;
+        const maxStars = Number.isFinite(startupPerfProfile.overlayMaxStars)
+            ? Math.max(minStars, Math.floor(startupPerfProfile.overlayMaxStars))
+            : 180;
+        const densityDivisor = Number.isFinite(startupPerfProfile.overlayStarDensity)
+            ? Math.max(800, Math.floor(startupPerfProfile.overlayStarDensity))
+            : 2400;
+        let starCount = Math.min(maxStars, Math.max(minStars, Math.round((state.width * state.height) / densityDivisor)));
+        if (state.reducedMotion) {
+            starCount = Math.max(24, Math.round(starCount * 0.7));
+        }
         state.stars = new Array(starCount);
+        const twinkleScale = state.reducedMotion ? 0.45 : 1;
         for (let index = 0; index < starCount; index += 1) {
             state.stars[index] = {
                 x: Math.random() * state.width,
@@ -175,7 +313,7 @@ function createStartupWorldOverlay() {
                 hue: 195 + Math.random() * 35,
                 lightness: 75 + Math.random() * 20,
                 baseAlpha: 0.3 + Math.random() * 0.55,
-                twinkleSpeed: 0.8 + Math.random() * 2.4,
+                twinkleSpeed: (0.8 + Math.random() * 2.4) * twinkleScale,
                 phase: Math.random() * Math.PI * 2,
                 dimTarget: 0,
                 dimValue: 0
@@ -187,7 +325,10 @@ function createStartupWorldOverlay() {
         const rect = state.canvas.getBoundingClientRect();
         state.width = Math.max(1, Math.floor(rect.width));
         state.height = Math.max(1, Math.floor(rect.height));
-        state.dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+        const dprCap = Number.isFinite(startupPerfProfile.overlayDprCap)
+            ? Math.max(1, startupPerfProfile.overlayDprCap)
+            : 2;
+        state.dpr = Math.min(dprCap, Math.max(1, window.devicePixelRatio || 1));
         state.canvas.width = Math.floor(state.width * state.dpr);
         state.canvas.height = Math.floor(state.height * state.dpr);
         state.ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
@@ -233,14 +374,16 @@ function createStartupWorldOverlay() {
             const star = state.stars[index];
             star.dimValue += (star.dimTarget - star.dimValue) * 0.12;
 
-            const twinkle = 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(t * star.twinkleSpeed + star.phase));
+            const twinkle = state.reducedMotion
+                ? 0.82
+                : (0.55 + 0.45 * (0.5 + 0.5 * Math.sin(t * star.twinkleSpeed + star.phase)));
             const alpha = Math.max(0.02, star.baseAlpha * twinkle * (1 - 0.9 * star.dimValue));
             const radius = star.radius * (0.9 + twinkle * 0.3);
 
             renderCtx.beginPath();
             renderCtx.arc(star.x, star.y, radius, 0, Math.PI * 2);
             renderCtx.fillStyle = `hsla(${star.hue}, 92%, ${star.lightness}%, ${alpha})`;
-            renderCtx.shadowBlur = 9 + star.radius * 6;
+            renderCtx.shadowBlur = state.reducedMotion ? (5 + star.radius * 3) : (9 + star.radius * 6);
             renderCtx.shadowColor = `hsla(${star.hue}, 95%, ${Math.min(98, star.lightness + 5)}%, ${Math.min(0.85, alpha + 0.12)})`;
             renderCtx.fill();
             renderCtx.shadowBlur = 0;
@@ -353,7 +496,8 @@ function markStartupCheckpoint(label, details = null) {
 markStartupCheckpoint('T0 app_boot', {
     profile: startupPerfProfile.id,
     pilotEnabled: startupPerfProfile.pilotEnabled,
-    platform: startupRuntimeCaps && startupRuntimeCaps.platform ? startupRuntimeCaps.platform : 'unknown',
+    platform: startupPerfProfile.detectedPlatform || 'unknown',
+    runtimePlatformRaw: startupRuntimeCaps && startupRuntimeCaps.platform ? startupRuntimeCaps.platform : 'unknown',
     override: startupPerfProfile.override || 'none'
 });
 
@@ -415,9 +559,22 @@ const sourceLinks = (graphDataExists && Array.isArray(runtimeGraphData.edges)) ?
 if (graphDataExists && sourceNodes.length > 0) {
     startupWorldOverlayState = createStartupWorldOverlay();
     if (startupWorldOverlayState) {
+        const overlaySafetyTimeoutMs = Number.isFinite(startupPerfProfile.overlaySafetyTimeoutMs)
+            ? Math.max(8000, Math.floor(startupPerfProfile.overlaySafetyTimeoutMs))
+            : 30000;
+        console.log('[Startup Overlay] Activated.', {
+            profile: startupPerfProfile.id,
+            platform: startupPerfProfile.detectedPlatform || 'unknown',
+            overlaySafetyTimeoutMs
+        });
         startupWorldOverlayState.fallbackHandle = window.setTimeout(() => {
             hideStartupWorldOverlay('safety-timeout');
-        }, 30000);
+        }, overlaySafetyTimeoutMs);
+    } else {
+        console.log('[Startup Overlay] Skipped by profile/runtime policy.', {
+            profile: startupPerfProfile.id,
+            platform: startupPerfProfile.detectedPlatform || 'unknown'
+        });
     }
 } else {
     console.log('[Startup Overlay] Skipped: no preloaded graph payload detected.');
