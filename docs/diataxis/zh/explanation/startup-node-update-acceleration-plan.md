@@ -172,3 +172,14 @@ npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label w
 
 - 当前 Windows 试点样本满足 v1 门禁，具备继续扩展到 macOS/Android/iOS 分组采集的条件。
 - 由于样本量仍偏小，发布级决策前建议每个平台至少采集 `>=10` 个完整启动会话。
+
+## 12) 无多端设备时的连续推进策略（2026-03-31）
+
+- 目的：在缺少 macOS/Android/iOS 实机日志时，继续推进自动化链路与门禁流程，避免开发停滞。
+- 执行步骤：
+  - `npm run perf:startup:matrix:simulate -- --seed-root tmp/startup-logs --out-root tmp/startup-logs-simulated`
+  - `npm run perf:startup:matrix -- --root tmp/startup-logs-simulated --out tmp/startup-logs-simulated/report-platform-matrix.md`
+  - `npm run perf:startup:matrix:watch -- --root tmp/startup-logs-simulated --out tmp/startup-logs-simulated/report-platform-matrix.md --strict`
+- 数据边界：
+  - `tmp/startup-logs-simulated` 全部为模拟数据，仅用于脚本链路、门禁规则与报表产物验证。
+  - 发布级性能结论必须基于真实设备同设备双阶段样本（baseline/pilot）。

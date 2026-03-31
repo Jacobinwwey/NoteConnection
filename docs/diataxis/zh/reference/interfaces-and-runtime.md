@@ -69,6 +69,10 @@
     - `<root>/android/pilot/*.log`
     - `<root>/ios/baseline/*.log`
     - `<root>/ios/pilot/*.log`
+- 无多端设备条件下的替代链路（仅链路验证）：
+  - `npm run perf:startup:matrix:simulate -- --seed-root tmp/startup-logs --out-root tmp/startup-logs-simulated`
+  - `npm run perf:startup:matrix -- --root tmp/startup-logs-simulated --out tmp/startup-logs-simulated/report-platform-matrix.md`
+  - 注意：`tmp/startup-logs-simulated` 为模拟数据，禁止用于 release-go 性能结论，仅用于脚本/门禁流程演练。
 
 ## Mermaid 标准兼容基线（Obsidian）
 

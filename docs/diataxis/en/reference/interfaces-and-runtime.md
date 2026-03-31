@@ -69,6 +69,10 @@ This reference tracks canonical API/runtime contracts.
     - `<root>/android/pilot/*.log`
     - `<root>/ios/baseline/*.log`
     - `<root>/ios/pilot/*.log`
+- Fallback flow without multi-device hardware (pipeline validation only):
+  - `npm run perf:startup:matrix:simulate -- --seed-root tmp/startup-logs --out-root tmp/startup-logs-simulated`
+  - `npm run perf:startup:matrix -- --root tmp/startup-logs-simulated --out tmp/startup-logs-simulated/report-platform-matrix.md`
+  - Note: `tmp/startup-logs-simulated` is synthetic data and must not be used for release-go performance decisions.
 
 ## Mermaid Canonical Baseline (Obsidian)
 

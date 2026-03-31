@@ -172,3 +172,14 @@ npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label w
 
 - The current Windows pilot sample clears the v1 gate and is ready for broader cohort capture on macOS/Android/iOS.
 - Because sample size is still small, collect at least `>=10` complete startup sessions per platform before release-go decisions.
+
+## 12) Continuous Progress Without Multi-Device Hardware (March 31, 2026)
+
+- Goal: keep automation and gate pipelines moving when macOS/Android/iOS physical logs are not yet available.
+- Execution:
+  - `npm run perf:startup:matrix:simulate -- --seed-root tmp/startup-logs --out-root tmp/startup-logs-simulated`
+  - `npm run perf:startup:matrix -- --root tmp/startup-logs-simulated --out tmp/startup-logs-simulated/report-platform-matrix.md`
+  - `npm run perf:startup:matrix:watch -- --root tmp/startup-logs-simulated --out tmp/startup-logs-simulated/report-platform-matrix.md --strict`
+- Data boundary:
+  - `tmp/startup-logs-simulated` is synthetic and only valid for pipeline/gate/report flow verification.
+  - Release-go performance decisions must be based on real same-device baseline/pilot cohorts.
