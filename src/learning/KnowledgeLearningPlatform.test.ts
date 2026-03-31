@@ -315,4 +315,46 @@ describe('KnowledgeLearningPlatform', () => {
         expect(state.retrievalTelemetry.queryCount).toBeGreaterThanOrEqual(0);
         expect(state.retrievalTelemetry.queryP95Ms).toBeGreaterThanOrEqual(0);
     });
+
+    test('tutor adapter output is guarded by evidence binding and confidence thresholds', async () => {
+        const guardedPlatform = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(nowIso),
+            tutorAdapter: {
+                id: 'mock-adapter',
+                mode: 'local',
+                async execute(input) {
+                    return {
+                        message: `Synthetic tutor response for ${input.atom.title}`,
+                        confidence: 0.42,
+                        evidenceSpanIds: [],
+                    };
+                },
+            },
+        });
+
+        const ingest = await guardedPlatform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_guardrail',
+                    sourcePath: 'Knowledge_Base/doc_guardrail.md',
+                    language: 'en',
+                    content: '# Guardrails\nTutor output should be evidence bound.',
+                },
+            ],
+        });
+        const atomId = ingest.atoms[0]?.id as string;
+
+        const result = await guardedPlatform.executeTutorAction({
+            userId: 'user_guardrail',
+            actionKind: 'follow_up',
+            atomId,
+            prompt: 'Generate a follow-up explanation.',
+        });
+
+        expect(result.trace.source).toBe('llm-adapter');
+        expect(result.trace.confidence).toBeLessThan(0.65);
+        expect(result.message).toContain('Low-confidence tutor output detected');
+        expect(result.trace.notes.toLowerCase()).toContain('downgraded');
+    });
 });
