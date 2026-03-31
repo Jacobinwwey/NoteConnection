@@ -60,6 +60,15 @@ This reference tracks canonical API/runtime contracts.
   - `npm run perf:startup:matrix -- --root <startup-logs-root> [--out <report-path>]`
   - Recommended layout: `<root>/<platform>/baseline|pilot` (for example `windows`, `macos`, `android`).
   - Backward-compatible single-platform layout: `<root>/baseline|pilot`, with `--single-platform-label <label>` as platform tag.
+- Near-real-time matrix gate (auto-refresh when logs change):
+  - `npm run perf:startup:matrix:watch -- --root <startup-logs-root> --out <report-path> --strict`
+  - Recommended same-device dual-phase layout:
+    - `<root>/macos/baseline/*.log`
+    - `<root>/macos/pilot/*.log`
+    - `<root>/android/baseline/*.log`
+    - `<root>/android/pilot/*.log`
+    - `<root>/ios/baseline/*.log`
+    - `<root>/ios/pilot/*.log`
 
 ## Mermaid Canonical Baseline (Obsidian)
 

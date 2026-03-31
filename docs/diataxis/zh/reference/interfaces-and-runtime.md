@@ -60,6 +60,15 @@
   - `npm run perf:startup:matrix -- --root <startup-logs-root> [--out <report-path>]`
   - 推荐目录结构：`<root>/<platform>/baseline|pilot`（例如 `windows`、`macos`、`android`）。
   - 兼容单平台目录：`<root>/baseline|pilot`，可配合 `--single-platform-label <label>` 指定平台标签。
+- 准实时矩阵门禁（日志变更自动重算）：
+  - `npm run perf:startup:matrix:watch -- --root <startup-logs-root> --out <report-path> --strict`
+  - 推荐目录（同设备双阶段）：
+    - `<root>/macos/baseline/*.log`
+    - `<root>/macos/pilot/*.log`
+    - `<root>/android/baseline/*.log`
+    - `<root>/android/pilot/*.log`
+    - `<root>/ios/baseline/*.log`
+    - `<root>/ios/pilot/*.log`
 
 ## Mermaid 标准兼容基线（Obsidian）
 

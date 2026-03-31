@@ -59,6 +59,7 @@
     "fix:markdown:mermaid:fence": "node scripts/verify-markdown-mermaid-fence.js --fix",
     "perf:startup:compare": "node scripts/compare-startup-perf.js",
     "perf:startup:matrix": "node scripts/compare-startup-perf-matrix.js",
+    "perf:startup:matrix:watch": "node scripts/watch-startup-perf-matrix.js",
     "verify:pathbridge:strict": "node scripts/verify-pathbridge-strict-schema.js",
     "generate:sbom": "node scripts/generate-sbom.js",
     "generate:sbom:attestation": "node scripts/generate-sbom-attestation.js",
