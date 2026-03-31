@@ -213,3 +213,11 @@ npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label w
 - Phase 4 (verification and rollout gate): automation completed  
   - `compare / matrix / cohorts` gate scripts are available and validated.
   - Release-grade cross-platform signoff still requires real macOS/Android/iOS datasets.
+
+## 15) Signoff Strategy Without Multi-Device Hardware (March 31, 2026)
+
+- One-click command: `npm run perf:startup:signoff:nohw`
+- Output: `tmp/startup-logs/report-startup-signoff.md`
+- Layered decision model:
+  - Engineering signoff: based on Windows real logs + simulated multi-platform three-cohort gates.
+  - Release signoff: marked as `BLOCKED` when real multi-device cohorts are missing (never falsely `PASS`).

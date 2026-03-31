@@ -82,6 +82,10 @@ This reference tracks canonical API/runtime contracts.
   - `npm run perf:startup:matrix:simulate -- --seed-root tmp/startup-logs --out-root tmp/startup-logs-simulated`
   - `npm run perf:startup:matrix -- --root tmp/startup-logs-simulated --out tmp/startup-logs-simulated/report-platform-matrix.md`
   - Note: `tmp/startup-logs-simulated` is synthetic data and must not be used for release-go performance decisions.
+- One-click no-hardware signoff (engineering gate + release gate blocking status):
+  - `npm run perf:startup:signoff:nohw`
+  - This command automatically runs: Windows real-log gates + simulated multi-platform three-cohort gates, then writes a layered signoff report.
+  - If real multi-device cohort data is missing, release signoff is marked as `BLOCKED` (not falsely `PASS`).
 - Three-cohort automatic regression and rollout gate (Phase 4):
   - `npm run perf:startup:cohorts:verify -- --root <cohorts-root> --cohorts small,medium,large --out <report-path> --strict`
   - Directory contract: `<cohorts-root>/<cohort>/<platform>/baseline|pilot`

@@ -82,6 +82,10 @@
   - `npm run perf:startup:matrix:simulate -- --seed-root tmp/startup-logs --out-root tmp/startup-logs-simulated`
   - `npm run perf:startup:matrix -- --root tmp/startup-logs-simulated --out tmp/startup-logs-simulated/report-platform-matrix.md`
   - 注意：`tmp/startup-logs-simulated` 为模拟数据，禁止用于 release-go 性能结论，仅用于脚本/门禁流程演练。
+- 无硬件一键签收（工程签收 + 发布签收阻塞提示）：
+  - `npm run perf:startup:signoff:nohw`
+  - 该命令会自动执行：Windows 真实日志门禁 + 模拟多端三规模门禁，并输出分层签收报告。
+  - 若缺少真实多端 cohort 数据，发布签收会标记为 `BLOCKED`（而非误判为 `PASS`）。
 - 三规模自动回归与灰度门禁（Phase 4）：
   - `npm run perf:startup:cohorts:verify -- --root <cohorts-root> --cohorts small,medium,large --out <report-path> --strict`
   - 目录约定：`<cohorts-root>/<cohort>/<platform>/baseline|pilot`

@@ -62,6 +62,7 @@
     "perf:startup:matrix:watch": "node scripts/watch-startup-perf-matrix.js",
     "perf:startup:matrix:simulate": "node scripts/simulate-startup-perf-platform-logs.js",
     "perf:startup:cohorts:verify": "node scripts/verify-startup-perf-cohorts.js",
+    "perf:startup:signoff:nohw": "node scripts/verify-startup-release-readiness.js --strict-engineering",
     "verify:pathbridge:strict": "node scripts/verify-pathbridge-strict-schema.js",
     "generate:sbom": "node scripts/generate-sbom.js",
     "generate:sbom:attestation": "node scripts/generate-sbom-attestation.js",

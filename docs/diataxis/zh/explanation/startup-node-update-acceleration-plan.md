@@ -213,3 +213,11 @@ npm run perf:startup:matrix -- --root tmp/startup-logs --single-platform-label w
 - Phase 4（验证灰度）：已完成自动化链路  
   - 已有 `compare / matrix / cohorts` 三类门禁脚本。
   - 当前仍需补齐真实多端样本（macOS/Android/iOS）以完成发布级跨端验收。
+
+## 15) 无多端硬件时的签收策略（2026-03-31）
+
+- 一键命令：`npm run perf:startup:signoff:nohw`
+- 产物：`tmp/startup-logs/report-startup-signoff.md`
+- 分层结论：
+  - 工程签收：基于 Windows 真实日志 + 模拟多端三规模门禁。
+  - 发布签收：若缺少真实多端 cohort，状态为 `BLOCKED`（不会误判为 `PASS`）。
