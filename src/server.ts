@@ -39,6 +39,15 @@ import {
     MARKDOWN_PROTOCOL_VERSION,
     normalizeMarkdownRuntimeConfig,
 } from './markdown/MarkdownGateway';
+import {
+    createKnowledgeLearningPlatform,
+    type KnowledgeIngestRequest,
+    type KnowledgeQueryRequest,
+    type LearningPathRequest,
+    type MasteryDiagnosticsRequest,
+    type MemoryPolicyRequest,
+    type TutorActionRequest,
+} from './learning';
 
 type WritableProcessStream = NodeJS.WriteStream & {
     __noteConnectionBrokenPipeGuardInstalled?: boolean;
@@ -158,6 +167,7 @@ let lastRestoreTs = 0;
 const SIDECAR_RUNTIME_MANIFEST = path.join(runtimePaths.projectRoot, 'tmp', 'active-sidecar-runtime.json');
 const notemdService = new NotemdService();
 const notemdLlmClient = new LlmProviderClient();
+const knowledgeLearningPlatform = createKnowledgeLearningPlatform();
 let cachedNotemdSettings: NotemdSettings | null = null;
 let cachedPathModeSettings: PathModeSettings | null = null;
 let cachedFrontendSettings: FrontendSettings | null = null;
@@ -1855,6 +1865,25 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         if (req.method === 'GET') {
             const getPathname = getRawRequestPathname(req.url);
 
+            if (getPathname === '/api/knowledge/state') {
+                try {
+                    const state = knowledgeLearningPlatform.getKnowledgeState();
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(
+                        JSON.stringify({
+                            success: true,
+                            state,
+                        })
+                    );
+                } catch (error) {
+                    console.error(error);
+                    CrashLogger.log(error, 'API:GET /api/knowledge/state');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
             if (getPathname === '/api/notemd/settings') {
                 try {
                     const settings = await loadNotemdSettings();
@@ -2305,6 +2334,120 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             }
         } else if (req.method === 'POST' || req.method === 'PUT') {
             const postPathname = getRawRequestPathname(req.url);
+
+            if (postPathname === '/api/knowledge/ingest') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const requestPayload = payload as KnowledgeIngestRequest;
+                    const result = await knowledgeLearningPlatform.ingestKnowledge(requestPayload);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, result }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/knowledge/ingest');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/knowledge/query') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const requestPayload = payload as KnowledgeQueryRequest;
+                    const result = await knowledgeLearningPlatform.queryKnowledge(requestPayload);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, result }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/knowledge/query');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/knowledge/mastery/diagnose') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const requestPayload = payload as MasteryDiagnosticsRequest;
+                    const result = await knowledgeLearningPlatform.diagnoseMastery(requestPayload);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, result }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/knowledge/mastery/diagnose');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/knowledge/path') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const requestPayload = payload as LearningPathRequest;
+                    const result = await knowledgeLearningPlatform.buildLearningPath(requestPayload);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, result }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/knowledge/path');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/knowledge/tutor/action') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const requestPayload = payload as TutorActionRequest;
+                    const result = await knowledgeLearningPlatform.executeTutorAction(requestPayload);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, result }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/knowledge/tutor/action');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/knowledge/memory/policy') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const requestPayload = payload as MemoryPolicyRequest;
+                    const result = await knowledgeLearningPlatform.applyMemoryPolicy(requestPayload);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, result }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/knowledge/memory/policy');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
 
             if (postPathname === '/api/notemd/settings') {
                 try {

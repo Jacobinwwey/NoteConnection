@@ -1,0 +1,305 @@
+export type RelationKind =
+    | 'prerequisite'
+    | 'analogy'
+    | 'contrast'
+    | 'causal'
+    | 'application'
+    | 'reference'
+    | 'sequence';
+
+export type RelationProvenance = 'fact' | 'inferred';
+
+export type TemporalEdgeKind = 'supersedes' | 'validity_window' | 'derived_from';
+
+export type MasteryOutcome = 'correct' | 'incorrect' | 'partial' | 'skipped';
+
+export type LearningActionKind =
+    | 'quiz'
+    | 'explain'
+    | 'review'
+    | 'transfer'
+    | 'counterexample'
+    | 'reflection';
+
+export type TutorActionKind = 'generate_quiz' | 'analyze_answer' | 'follow_up' | 'recap';
+
+export type MemoryLayer = 'session' | 'unit' | 'long_term';
+
+export interface EvidenceSpan {
+    id: string;
+    documentId: string;
+    sourcePath: string;
+    language: string;
+    startOffset: number;
+    endOffset: number;
+    startLine: number;
+    endLine: number;
+    snippet: string;
+    sourceHash: string;
+    createdAt: string;
+}
+
+export interface KnowledgeAtom {
+    id: string;
+    stableKey: string;
+    documentId: string;
+    sourcePath: string;
+    title: string;
+    content: string;
+    keywords: string[];
+    evidenceSpanIds: string[];
+    createdAt: string;
+    updatedAt: string;
+    metadata: {
+        sectionPath: string[];
+        version: number;
+        sourceHash: string;
+        language: string;
+    };
+}
+
+export interface RelationEdge {
+    id: string;
+    sourceAtomId: string;
+    targetAtomId: string;
+    relationKind: RelationKind;
+    provenance: RelationProvenance;
+    confidence: number;
+    evidenceSpanIds: string[];
+    temporal: {
+        validFrom: string;
+        validTo?: string;
+    };
+}
+
+export interface TemporalEdge {
+    id: string;
+    sourceAtomId: string;
+    targetAtomId: string;
+    edgeKind: TemporalEdgeKind;
+    validFrom: string;
+    validTo?: string;
+    sourceDocumentHash: string;
+    isActive: boolean;
+}
+
+export interface LearnerConceptState {
+    userId: string;
+    atomId: string;
+    masteryProbability: number;
+    reviewCount: number;
+    correctCount: number;
+    incorrectCount: number;
+    partialCount: number;
+    skippedCount: number;
+    lastOutcome: MasteryOutcome | null;
+    lastUpdatedAt: string;
+    nextReviewAt: string;
+    errorTags: string[];
+}
+
+export interface LearningAction {
+    id: string;
+    kind: LearningActionKind;
+    atomId: string;
+    priority: number;
+    expectedGain: number;
+    rationale: string;
+    evidenceSpanIds: string[];
+    relationPathAtomIds: string[];
+    estimatedMinutes: number;
+}
+
+export interface TutorTrace {
+    traceId: string;
+    userId: string;
+    actionKind: TutorActionKind;
+    atomId?: string;
+    createdAt: string;
+    confidence: number;
+    evidenceSpanIds: string[];
+    relationPathAtomIds: string[];
+    source: 'rule-engine' | 'llm-adapter';
+    notes: string;
+}
+
+export interface MasteryPath {
+    id: string;
+    targetAtomId: string;
+    priority: number;
+    expectedMasteryGain: number;
+    actions: LearningAction[];
+}
+
+export interface DivergencePath {
+    id: string;
+    sourceAtomId: string;
+    targetAtomId: string;
+    priority: number;
+    expectedExplorationGain: number;
+    actions: LearningAction[];
+}
+
+export interface KnowledgeDocumentInput {
+    documentId?: string;
+    sourcePath: string;
+    content: string;
+    language?: string;
+    updatedAt?: string;
+}
+
+export interface StalenessRecord {
+    documentId: string;
+    sourcePath: string;
+    status: 'new' | 'unchanged' | 'updated';
+    previousHash?: string;
+    currentHash: string;
+    previousVersion?: number;
+    currentVersion: number;
+}
+
+export interface KnowledgeIngestRequest {
+    documents: KnowledgeDocumentInput[];
+    incremental?: boolean;
+    ingestedAt?: string;
+}
+
+export interface KnowledgeIngestResponse {
+    atoms: KnowledgeAtom[];
+    evidenceSpans: EvidenceSpan[];
+    relationEdges: RelationEdge[];
+    temporalEdges: TemporalEdge[];
+    staleness: StalenessRecord[];
+    summary: {
+        ingestedDocuments: number;
+        changedDocuments: number;
+        activeAtoms: number;
+        activeRelationEdges: number;
+    };
+}
+
+export interface KnowledgeQueryRequest {
+    query: string;
+    topK?: number;
+    asOf?: string;
+}
+
+export interface KnowledgeQueryItem {
+    atom: KnowledgeAtom;
+    score: number;
+    evidenceSpans: EvidenceSpan[];
+    relationPath: RelationEdge[];
+    temporalValidity: {
+        isValid: boolean;
+        checkedAt: string;
+        reasons: string[];
+    };
+}
+
+export interface KnowledgeQueryResponse {
+    items: KnowledgeQueryItem[];
+    trace: {
+        retrievalModes: string[];
+        asOf: string;
+        totalActiveAtoms: number;
+    };
+}
+
+export interface MasteryObservation {
+    atomId: string;
+    outcome: MasteryOutcome;
+    errorTag?: string;
+    responseTimeMs?: number;
+    confidence?: number;
+}
+
+export interface MasteryDiagnosticsRequest {
+    userId: string;
+    observations: MasteryObservation[];
+    observedAt?: string;
+}
+
+export interface MasteryDiagnosticsResponse {
+    updatedStates: LearnerConceptState[];
+    summary: {
+        updatedCount: number;
+        averageMasteryBefore: number;
+        averageMasteryAfter: number;
+    };
+}
+
+export interface LearningPathRequest {
+    userId: string;
+    focusAtomIds?: string[];
+    maxMasteryPaths?: number;
+    maxDivergencePaths?: number;
+    generatedAt?: string;
+}
+
+export interface LearningPathResponse {
+    masteryPaths: MasteryPath[];
+    divergencePaths: DivergencePath[];
+    recommendedActions: LearningAction[];
+}
+
+export interface TutorActionRequest {
+    userId: string;
+    actionKind: TutorActionKind;
+    atomId?: string;
+    prompt?: string;
+    answer?: string;
+}
+
+export interface TutorActionResponse {
+    message: string;
+    suggestedActions: LearningAction[];
+    evidenceSpans: EvidenceSpan[];
+    trace: TutorTrace;
+}
+
+export interface MemoryEntry {
+    key: string;
+    value: string;
+    tags: string[];
+    confidence: number;
+    references: string[];
+    createdAt: string;
+    updatedAt: string;
+    expiresAt?: string;
+}
+
+export interface MemoryPolicyRequest {
+    userId: string;
+    operation: 'write' | 'read' | 'evict' | 'snapshot';
+    layer: MemoryLayer;
+    entries?: MemoryEntry[];
+    query?: string;
+    limit?: number;
+    now?: string;
+}
+
+export interface MemoryPolicyResponse {
+    layer: MemoryLayer;
+    operation: 'write' | 'read' | 'evict' | 'snapshot';
+    entries: MemoryEntry[];
+    evictedCount: number;
+    stats: {
+        session: number;
+        unit: number;
+        longTerm: number;
+    };
+}
+
+export interface KnowledgeSystemState {
+    documents: number;
+    activeAtoms: number;
+    activeRelationEdges: number;
+    temporalEdges: number;
+    masteryStates: number;
+    tutorTraces: number;
+    memoryEntries: {
+        session: number;
+        unit: number;
+        longTerm: number;
+    };
+}
