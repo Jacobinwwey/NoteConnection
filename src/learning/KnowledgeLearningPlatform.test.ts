@@ -94,6 +94,46 @@ describe('KnowledgeLearningPlatform', () => {
         expect(queryResult.trace.retrievalModes).toContain('temporal_filter');
     });
 
+    test('ingest extracts markdown text, code, formula, and mermaid atoms', async () => {
+        const ingest = await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_structured',
+                    sourcePath: 'Knowledge_Base/doc_structured.md',
+                    language: 'en',
+                    content: [
+                        '# Structured Parsing',
+                        'This section includes code, formula, and diagram evidence.',
+                        '',
+                        '```ts',
+                        'const mastery = estimateMastery(state);',
+                        '```',
+                        '',
+                        '$$',
+                        'P(A|B) = P(B|A) P(A) / P(B)',
+                        '$$',
+                        '',
+                        '```mermaid',
+                        'graph TD',
+                        'A[Atom] --> B[Evidence]',
+                        '```',
+                    ].join('\n'),
+                },
+            ],
+        });
+
+        const representationTypes = new Set(ingest.atoms.map((atom) => atom.representationType));
+        expect(representationTypes.has('text')).toBe(true);
+        expect(representationTypes.has('code')).toBe(true);
+        expect(representationTypes.has('formula')).toBe(true);
+        expect(representationTypes.has('mermaid')).toBe(true);
+
+        const mermaidAtom = ingest.atoms.find((atom) => atom.representationType === 'mermaid');
+        expect(mermaidAtom).toBeDefined();
+        expect(mermaidAtom?.content.toLowerCase()).toContain('graph td');
+    });
+
     test('mastery diagnostics and path generation produce actionable outputs', async () => {
         const ingest = await platform.ingestKnowledge({
             incremental: true,

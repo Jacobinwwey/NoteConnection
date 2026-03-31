@@ -25,6 +25,8 @@ export type TutorActionKind = 'generate_quiz' | 'analyze_answer' | 'follow_up' |
 
 export type MemoryLayer = 'session' | 'unit' | 'long_term';
 
+export type KnowledgeRepresentationType = 'text' | 'code' | 'formula' | 'mermaid';
+
 export interface EvidenceSpan {
     id: string;
     documentId: string;
@@ -46,6 +48,7 @@ export interface KnowledgeAtom {
     sourcePath: string;
     title: string;
     content: string;
+    representationType: KnowledgeRepresentationType;
     keywords: string[];
     evidenceSpanIds: string[];
     createdAt: string;

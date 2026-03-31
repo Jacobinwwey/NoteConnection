@@ -8,6 +8,8 @@ describe('Knowledge mastery API contract wiring', () => {
     test('server exposes planned /api/knowledge endpoints', () => {
         const endpoints = [
             '/api/knowledge/state',
+            '/api/knowledge/store-diagnostics',
+            '/api/knowledge/store/reload',
             '/api/knowledge/ingest',
             '/api/knowledge/query',
             '/api/knowledge/mastery/diagnose',
@@ -24,7 +26,9 @@ describe('Knowledge mastery API contract wiring', () => {
     test('server initializes local knowledge learning platform', () => {
         expect(serverSource).toContain("from './learning'");
         expect(serverSource).toContain('createKnowledgeLearningPlatform');
+        expect(serverSource).toContain('createFileBackedKnowledgeGraphStore');
         expect(serverSource).toContain('knowledgeLearningPlatform');
+        expect(serverSource).toContain('KNOWLEDGE_GRAPH_STORE_PATH');
     });
 
     test('learning module declares all required public APIs', () => {

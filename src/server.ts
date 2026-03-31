@@ -41,6 +41,7 @@ import {
 } from './markdown/MarkdownGateway';
 import {
     createKnowledgeLearningPlatform,
+    createFileBackedKnowledgeGraphStore,
     type KnowledgeIngestRequest,
     type KnowledgeQueryRequest,
     type LearningPathRequest,
@@ -167,7 +168,13 @@ let lastRestoreTs = 0;
 const SIDECAR_RUNTIME_MANIFEST = path.join(runtimePaths.projectRoot, 'tmp', 'active-sidecar-runtime.json');
 const notemdService = new NotemdService();
 const notemdLlmClient = new LlmProviderClient();
-const knowledgeLearningPlatform = createKnowledgeLearningPlatform();
+const KNOWLEDGE_GRAPH_STORE_PATH = path.join(RUNTIME_DATA_DIR, 'knowledge_graph_store.v1.json');
+const knowledgeGraphStore = createFileBackedKnowledgeGraphStore({
+    filePath: KNOWLEDGE_GRAPH_STORE_PATH,
+});
+const knowledgeLearningPlatform = createKnowledgeLearningPlatform({
+    store: knowledgeGraphStore,
+});
 let cachedNotemdSettings: NotemdSettings | null = null;
 let cachedPathModeSettings: PathModeSettings | null = null;
 let cachedFrontendSettings: FrontendSettings | null = null;
@@ -1867,17 +1874,39 @@ export const startServer = async (options: { port?: number, targetPath?: string 
 
             if (getPathname === '/api/knowledge/state') {
                 try {
+                    await knowledgeLearningPlatform.ensureReady();
                     const state = knowledgeLearningPlatform.getKnowledgeState();
+                    const store = await knowledgeLearningPlatform.getStoreDiagnostics();
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(
                         JSON.stringify({
                             success: true,
                             state,
+                            store,
                         })
                     );
                 } catch (error) {
                     console.error(error);
                     CrashLogger.log(error, 'API:GET /api/knowledge/state');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (getPathname === '/api/knowledge/store-diagnostics') {
+                try {
+                    const store = await knowledgeLearningPlatform.getStoreDiagnostics();
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(
+                        JSON.stringify({
+                            success: true,
+                            store,
+                        })
+                    );
+                } catch (error) {
+                    console.error(error);
+                    CrashLogger.log(error, 'API:GET /api/knowledge/store-diagnostics');
                     res.writeHead(500, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ success: false, error: String(error) }));
                 }
@@ -2334,6 +2363,25 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             }
         } else if (req.method === 'POST' || req.method === 'PUT') {
             const postPathname = getRawRequestPathname(req.url);
+
+            if (postPathname === '/api/knowledge/store/reload') {
+                try {
+                    const restored = await knowledgeLearningPlatform.reloadFromStore();
+                    const state = knowledgeLearningPlatform.getKnowledgeState();
+                    const store = await knowledgeLearningPlatform.getStoreDiagnostics();
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, restored, state, store }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/knowledge/store/reload');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
 
             if (postPathname === '/api/knowledge/ingest') {
                 try {

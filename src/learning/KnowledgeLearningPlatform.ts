@@ -11,6 +11,7 @@ import type {
     KnowledgeQueryItem,
     KnowledgeQueryRequest,
     KnowledgeQueryResponse,
+    KnowledgeRepresentationType,
     KnowledgeSystemState,
     LearnerConceptState,
     LearningAction,
@@ -32,11 +33,18 @@ import type {
     TutorActionResponse,
     TutorTrace,
 } from './types';
+import type {
+    KnowledgeGraphSnapshot,
+    KnowledgeGraphStore,
+    KnowledgeGraphStoreDiagnostics,
+    SerializedDocumentSnapshot,
+} from './store';
 
 type ParsedAtomDraft = {
     stableKey: string;
     title: string;
     content: string;
+    representationType: KnowledgeRepresentationType;
     sectionPath: string[];
     startLine: number;
     endLine: number;
@@ -73,6 +81,12 @@ type MemoryStats = {
     session: number;
     unit: number;
     longTerm: number;
+};
+
+export type KnowledgeLearningPlatformOptions = {
+    nowProvider?: () => Date;
+    store?: KnowledgeGraphStore;
+    autoPersist?: boolean;
 };
 
 const STOPWORDS = new Set<string>([
@@ -171,10 +185,31 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     private readonly relationEdgeSignatures = new Set<string>();
 
-    constructor(private readonly nowProvider: () => Date = () => new Date()) {
+    private readonly nowProvider: () => Date;
+
+    private readonly store: KnowledgeGraphStore | null;
+
+    private readonly autoPersist: boolean;
+
+    private hydrated = false;
+
+    private hydrationPromise: Promise<void> | null = null;
+
+    constructor(nowProviderOrOptions: (() => Date) | KnowledgeLearningPlatformOptions = {}) {
+        if (typeof nowProviderOrOptions === 'function') {
+            this.nowProvider = nowProviderOrOptions;
+            this.store = null;
+            this.autoPersist = true;
+            return;
+        }
+
+        this.nowProvider = nowProviderOrOptions.nowProvider || (() => new Date());
+        this.store = nowProviderOrOptions.store || null;
+        this.autoPersist = nowProviderOrOptions.autoPersist !== false;
     }
 
     public async ingestKnowledge(request: KnowledgeIngestRequest): Promise<KnowledgeIngestResponse> {
+        await this.ensureHydrated();
         const documents = Array.isArray(request.documents) ? request.documents : [];
         const ingestedAt = this.resolveTimestamp(request.ingestedAt);
         const incremental = request.incremental !== false;
@@ -265,6 +300,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     sourcePath: normalizedInput.sourcePath,
                     title: draft.title,
                     content: draft.content,
+                    representationType: draft.representationType,
                     keywords: draft.keywords,
                     evidenceSpanIds: [evidenceId],
                     createdAt: ingestedAt,
@@ -338,7 +374,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             inferredEdges.forEach((edge) => responseRelations.push(edge));
         }
 
-        return {
+        const response: KnowledgeIngestResponse = {
             atoms: responseAtoms,
             evidenceSpans: responseEvidence,
             relationEdges: responseRelations,
@@ -351,9 +387,12 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 activeRelationEdges: this.collectActiveRelationEdges(ingestedAt).length,
             },
         };
+        await this.persistIfNeeded();
+        return response;
     }
 
     public async queryKnowledge(request: KnowledgeQueryRequest): Promise<KnowledgeQueryResponse> {
+        await this.ensureHydrated();
         const query = normalizeWhitespace(String(request.query || ''));
         const asOf = this.resolveTimestamp(request.asOf);
         const topK = clamp(Math.floor(Number(request.topK) || 5), 1, 20);
@@ -415,6 +454,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     public async diagnoseMastery(request: MasteryDiagnosticsRequest): Promise<MasteryDiagnosticsResponse> {
+        await this.ensureHydrated();
         const userId = String(request.userId || '').trim();
         if (!userId) {
             throw new Error('MasteryDiagnosticsAPI requires a non-empty userId.');
@@ -439,7 +479,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         }
 
         const updatedCount = updatedStates.length;
-        return {
+        const response: MasteryDiagnosticsResponse = {
             updatedStates,
             summary: {
                 updatedCount,
@@ -447,9 +487,12 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 averageMasteryAfter: updatedCount > 0 ? Number((masteryAfter / updatedCount).toFixed(6)) : 0,
             },
         };
+        await this.persistIfNeeded();
+        return response;
     }
 
     public async buildLearningPath(request: LearningPathRequest): Promise<LearningPathResponse> {
+        await this.ensureHydrated();
         const userId = String(request.userId || '').trim();
         if (!userId) {
             throw new Error('LearningPathAPI requires a non-empty userId.');
@@ -477,6 +520,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     public async executeTutorAction(request: TutorActionRequest): Promise<TutorActionResponse> {
+        await this.ensureHydrated();
         const userId = String(request.userId || '').trim();
         if (!userId) {
             throw new Error('TutorActionAPI requires a non-empty userId.');
@@ -528,15 +572,18 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
         this.tutorTraces.push(trace);
 
-        return {
+        const response: TutorActionResponse = {
             message,
             suggestedActions,
             evidenceSpans,
             trace,
         };
+        await this.persistIfNeeded();
+        return response;
     }
 
     public async applyMemoryPolicy(request: MemoryPolicyRequest): Promise<MemoryPolicyResponse> {
+        await this.ensureHydrated();
         const userId = String(request.userId || '').trim();
         if (!userId) {
             throw new Error('MemoryPolicyAPI requires a non-empty userId.');
@@ -580,24 +627,28 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 }
             }
             evictedCount = this.evictMemoryLayer(bank, layer, nowIso);
-            return {
+            const response: MemoryPolicyResponse = {
                 layer,
                 operation,
                 entries: [...bank[layer]],
                 evictedCount,
                 stats: this.collectMemoryStats(),
             };
+            await this.persistIfNeeded();
+            return response;
         }
 
         if (operation === 'evict') {
             evictedCount = this.evictMemoryLayer(bank, layer, nowIso);
-            return {
+            const response: MemoryPolicyResponse = {
                 layer,
                 operation,
                 entries: [...bank[layer]],
                 evictedCount,
                 stats: this.collectMemoryStats(),
             };
+            await this.persistIfNeeded();
+            return response;
         }
 
         if (operation === 'read') {
@@ -631,6 +682,37 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
     }
 
+    public async ensureReady(): Promise<void> {
+        await this.ensureHydrated();
+    }
+
+    public async getStoreDiagnostics(): Promise<KnowledgeGraphStoreDiagnostics> {
+        await this.ensureHydrated();
+        if (!this.store) {
+            return {
+                storeType: 'none',
+                exists: false,
+                loaded: this.hydrated,
+            };
+        }
+        return this.store.getDiagnostics();
+    }
+
+    public async reloadFromStore(): Promise<boolean> {
+        if (!this.store) {
+            this.hydrated = true;
+            return false;
+        }
+        const snapshot = await this.store.loadSnapshot();
+        if (!snapshot) {
+            this.hydrated = true;
+            return false;
+        }
+        this.restoreFromSnapshot(snapshot);
+        this.hydrated = true;
+        return true;
+    }
+
     public getKnowledgeState(): KnowledgeSystemState {
         const memoryStats = this.collectMemoryStats();
         return {
@@ -642,6 +724,167 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             tutorTraces: this.tutorTraces.length,
             memoryEntries: memoryStats,
         };
+    }
+
+    private async ensureHydrated(): Promise<void> {
+        if (this.hydrated) {
+            return;
+        }
+        if (!this.store) {
+            this.hydrated = true;
+            return;
+        }
+        if (!this.hydrationPromise) {
+            this.hydrationPromise = (async () => {
+                const snapshot = await this.store?.loadSnapshot();
+                if (snapshot) {
+                    this.restoreFromSnapshot(snapshot);
+                }
+                this.hydrated = true;
+            })().finally(() => {
+                this.hydrationPromise = null;
+            });
+        }
+        await this.hydrationPromise;
+    }
+
+    private async persistIfNeeded(): Promise<void> {
+        if (!this.store || !this.autoPersist) {
+            return;
+        }
+        const snapshot = this.buildSnapshot();
+        await this.store.saveSnapshot(snapshot);
+    }
+
+    private buildSnapshot(): KnowledgeGraphSnapshot {
+        const savedAt = this.resolveTimestamp(undefined);
+        const userMemory: Record<string, {
+            session: MemoryEntry[];
+            unit: MemoryEntry[];
+            long_term: MemoryEntry[];
+        }> = {};
+        this.userMemory.forEach((bank, userId) => {
+            userMemory[userId] = {
+                session: [...bank.session],
+                unit: [...bank.unit],
+                long_term: [...bank.long_term],
+            };
+        });
+
+        const documents: SerializedDocumentSnapshot[] = Array.from(this.documents.values()).map((snapshot) => ({
+            documentId: snapshot.documentId,
+            sourcePath: snapshot.sourcePath,
+            sourceHash: snapshot.sourceHash,
+            version: snapshot.version,
+            updatedAt: snapshot.updatedAt,
+            atomStableKeyToId: Array.from(snapshot.atomStableKeyToId.entries()),
+            atomIds: [...snapshot.atomIds],
+            evidenceSpanIds: [...snapshot.evidenceSpanIds],
+            relationEdgeIds: [...snapshot.relationEdgeIds],
+            temporalEdgeIds: [...snapshot.temporalEdgeIds],
+        }));
+
+        return {
+            schemaVersion: 1,
+            savedAt,
+            idCounter: this.idCounter,
+            atoms: Array.from(this.atoms.values()),
+            evidenceSpans: Array.from(this.evidenceSpans.values()),
+            relationEdges: Array.from(this.relationEdges.values()),
+            temporalEdges: Array.from(this.temporalEdges.values()),
+            documents,
+            activeStableKeyToAtomId: Array.from(this.activeStableKeyToAtomId.entries()),
+            activeAtomIds: Array.from(this.activeAtomIds.values()),
+            learnerStates: Array.from(this.learnerStates.values()),
+            tutorTraces: [...this.tutorTraces],
+            userMemory,
+            relationEdgeSignatures: Array.from(this.relationEdgeSignatures.values()),
+        };
+    }
+
+    private restoreFromSnapshot(snapshot: KnowledgeGraphSnapshot): void {
+        this.idCounter = Number(snapshot.idCounter || 0);
+
+        this.atoms.clear();
+        (snapshot.atoms || []).forEach((atom) => {
+            this.atoms.set(atom.id, atom);
+        });
+
+        this.evidenceSpans.clear();
+        (snapshot.evidenceSpans || []).forEach((evidenceSpan) => {
+            this.evidenceSpans.set(evidenceSpan.id, evidenceSpan);
+        });
+
+        this.relationEdges.clear();
+        (snapshot.relationEdges || []).forEach((relationEdge) => {
+            this.relationEdges.set(relationEdge.id, relationEdge);
+        });
+
+        this.temporalEdges.clear();
+        (snapshot.temporalEdges || []).forEach((temporalEdge) => {
+            this.temporalEdges.set(temporalEdge.id, temporalEdge);
+        });
+
+        this.documents.clear();
+        (snapshot.documents || []).forEach((documentSnapshot) => {
+            this.documents.set(documentSnapshot.documentId, {
+                documentId: documentSnapshot.documentId,
+                sourcePath: documentSnapshot.sourcePath,
+                sourceHash: documentSnapshot.sourceHash,
+                version: documentSnapshot.version,
+                updatedAt: documentSnapshot.updatedAt,
+                atomStableKeyToId: new Map(documentSnapshot.atomStableKeyToId || []),
+                atomIds: [...(documentSnapshot.atomIds || [])],
+                evidenceSpanIds: [...(documentSnapshot.evidenceSpanIds || [])],
+                relationEdgeIds: [...(documentSnapshot.relationEdgeIds || [])],
+                temporalEdgeIds: [...(documentSnapshot.temporalEdgeIds || [])],
+            });
+        });
+
+        this.activeStableKeyToAtomId.clear();
+        (snapshot.activeStableKeyToAtomId || []).forEach(([stableKey, atomId]) => {
+            this.activeStableKeyToAtomId.set(stableKey, atomId);
+        });
+
+        this.activeAtomIds.clear();
+        (snapshot.activeAtomIds || []).forEach((atomId) => {
+            this.activeAtomIds.add(atomId);
+        });
+
+        this.learnerStates.clear();
+        (snapshot.learnerStates || []).forEach((learnerState) => {
+            const key = this.makeLearnerStateKey(learnerState.userId, learnerState.atomId);
+            this.learnerStates.set(key, learnerState);
+        });
+
+        this.tutorTraces.length = 0;
+        (snapshot.tutorTraces || []).forEach((trace) => {
+            this.tutorTraces.push(trace);
+        });
+
+        this.userMemory.clear();
+        const memoryObject = snapshot.userMemory || {};
+        Object.keys(memoryObject).forEach((userId) => {
+            const bank = memoryObject[userId];
+            this.userMemory.set(userId, {
+                session: [...(bank?.session || [])],
+                unit: [...(bank?.unit || [])],
+                long_term: [...(bank?.long_term || [])],
+            });
+        });
+
+        this.relationEdgeSignatures.clear();
+        (snapshot.relationEdgeSignatures || []).forEach((signature) => {
+            this.relationEdgeSignatures.add(signature);
+        });
+
+        if (this.relationEdgeSignatures.size === 0) {
+            this.relationEdges.forEach((edge) => {
+                const signature = `${edge.sourceAtomId}::${edge.targetAtomId}::${edge.relationKind}::${edge.provenance}`;
+                this.relationEdgeSignatures.add(signature);
+            });
+        }
+        this.rebuildTitleIndex();
     }
 
     private normalizeDocumentInput(input: KnowledgeDocumentInput): Required<KnowledgeDocumentInput> {
@@ -672,9 +915,67 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const atoms: ParsedAtomDraft[] = [];
         const wikiLinksByStableKey = new Map<string, string[]>();
         const sectionStack: string[] = [];
+        const headingAnchors: Array<{ lineIndex: number; sectionPath: string[]; title: string }> = [];
         let currentStartLineIndex = 0;
         let currentTitle = `${path.basename(documentInput.sourcePath)} preamble`;
         let currentSectionPath: string[] = [];
+
+        const resolveContextForLine = (lineIndex: number): { sectionPath: string[]; title: string } => {
+            for (let index = headingAnchors.length - 1; index >= 0; index -= 1) {
+                if (headingAnchors[index].lineIndex <= lineIndex) {
+                    return {
+                        sectionPath: [...headingAnchors[index].sectionPath],
+                        title: headingAnchors[index].title,
+                    };
+                }
+            }
+            return {
+                sectionPath: ['preamble'],
+                title: `${path.basename(documentInput.sourcePath)} preamble`,
+            };
+        };
+
+        const pushAtomDraft = (params: {
+            title: string;
+            sectionPath: string[];
+            representationType: KnowledgeRepresentationType;
+            startLine: number;
+            endLine: number;
+            startOffset: number;
+            endOffset: number;
+            rawContent: string;
+        }): void => {
+            const normalizedContent = normalizeWhitespace(params.rawContent);
+            if (!normalizedContent || !/[A-Za-z0-9\u4e00-\u9fff]/.test(normalizedContent)) {
+                return;
+            }
+
+            const canonicalSectionPath = params.sectionPath.length > 0 ? [...params.sectionPath] : ['preamble'];
+            const stableKey = params.representationType === 'text'
+                ? `${documentInput.documentId}::${canonicalSectionPath.join('>').toLowerCase()}`
+                : `${documentInput.documentId}::${canonicalSectionPath.join('>').toLowerCase()}::${params.representationType}_${params.startLine}`;
+            const keywords = tokenize(`${params.title} ${normalizedContent}`).slice(0, 48);
+            const atomDraft: ParsedAtomDraft = {
+                stableKey,
+                title: params.title,
+                content: normalizedContent,
+                representationType: params.representationType,
+                sectionPath: canonicalSectionPath,
+                startLine: params.startLine,
+                endLine: params.endLine,
+                startOffset: params.startOffset,
+                endOffset: params.endOffset,
+                keywords,
+            };
+            atoms.push(atomDraft);
+
+            const wikiLinks = Array.from(normalizedContent.matchAll(/\[\[([^\]]+)\]\]/g))
+                .map((match) => normalizeIdentifier(String(match[1] || '')))
+                .filter((target) => target.length > 0);
+            if (wikiLinks.length > 0) {
+                wikiLinksByStableKey.set(stableKey, wikiLinks);
+            }
+        };
 
         const flushSegment = (endLineExclusive: number): void => {
             if (endLineExclusive <= currentStartLineIndex) {
@@ -684,33 +985,16 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             const endOffset = endLineExclusive >= rawLines.length
                 ? content.length
                 : (lineStartOffsets[endLineExclusive] || content.length);
-            const segmentContent = normalizeWhitespace(content.slice(startOffset, endOffset));
-            if (!segmentContent || !/[A-Za-z0-9\u4e00-\u9fff]/.test(segmentContent)) {
-                return;
-            }
-            const canonicalSectionPath = currentSectionPath.length > 0
-                ? [...currentSectionPath]
-                : ['preamble'];
-            const stableKey = `${documentInput.documentId}::${canonicalSectionPath.join('>').toLowerCase()}`;
-            const keywords = tokenize(`${currentTitle} ${segmentContent}`).slice(0, 32);
-            const atomDraft: ParsedAtomDraft = {
-                stableKey,
+            pushAtomDraft({
                 title: currentTitle,
-                content: segmentContent,
-                sectionPath: canonicalSectionPath,
+                sectionPath: currentSectionPath.length > 0 ? [...currentSectionPath] : ['preamble'],
+                representationType: 'text',
                 startLine: currentStartLineIndex + 1,
                 endLine: endLineExclusive,
                 startOffset,
                 endOffset,
-                keywords,
-            };
-            atoms.push(atomDraft);
-            const wikiLinks = Array.from(segmentContent.matchAll(/\[\[([^\]]+)\]\]/g))
-                .map((match) => normalizeIdentifier(String(match[1] || '')))
-                .filter((target) => target.length > 0);
-            if (wikiLinks.length > 0) {
-                wikiLinksByStableKey.set(stableKey, wikiLinks);
-            }
+                rawContent: content.slice(startOffset, endOffset),
+            });
         };
 
         for (let index = 0; index < rawLines.length; index += 1) {
@@ -731,9 +1015,84 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             currentSectionPath = [...sectionStack];
             currentTitle = headingTitle;
             currentStartLineIndex = index;
+            headingAnchors.push({
+                lineIndex: index,
+                sectionPath: [...currentSectionPath],
+                title: headingTitle,
+            });
         }
 
         flushSegment(rawLines.length);
+
+        let lineIndex = 0;
+        while (lineIndex < rawLines.length) {
+            const normalizedLine = rawLines[lineIndex].replace(/\r$/, '');
+            const codeFenceMatch = normalizedLine.match(/^\s*```([A-Za-z0-9_-]+)?\s*$/);
+            if (codeFenceMatch) {
+                const languageHint = String(codeFenceMatch[1] || '').trim().toLowerCase();
+                const representationType: KnowledgeRepresentationType = languageHint === 'mermaid' ? 'mermaid' : 'code';
+                let blockEndLineIndex = lineIndex + 1;
+                while (blockEndLineIndex < rawLines.length) {
+                    const candidate = rawLines[blockEndLineIndex].replace(/\r$/, '');
+                    if (/^\s*```\s*$/.test(candidate)) {
+                        blockEndLineIndex += 1;
+                        break;
+                    }
+                    blockEndLineIndex += 1;
+                }
+                const endLineExclusive = Math.min(blockEndLineIndex, rawLines.length);
+                const startOffset = lineStartOffsets[lineIndex] || 0;
+                const endOffset = endLineExclusive >= rawLines.length
+                    ? content.length
+                    : (lineStartOffsets[endLineExclusive] || content.length);
+                const context = resolveContextForLine(lineIndex);
+                const titleSuffix = representationType === 'mermaid' ? 'mermaid block' : 'code block';
+                pushAtomDraft({
+                    title: `${context.title} (${titleSuffix})`,
+                    sectionPath: [...context.sectionPath, representationType],
+                    representationType,
+                    startLine: lineIndex + 1,
+                    endLine: endLineExclusive,
+                    startOffset,
+                    endOffset,
+                    rawContent: content.slice(startOffset, endOffset),
+                });
+                lineIndex = endLineExclusive;
+                continue;
+            }
+
+            if (/^\s*\$\$\s*$/.test(normalizedLine)) {
+                let formulaEndLineIndex = lineIndex + 1;
+                while (formulaEndLineIndex < rawLines.length) {
+                    const candidate = rawLines[formulaEndLineIndex].replace(/\r$/, '');
+                    if (/^\s*\$\$\s*$/.test(candidate)) {
+                        formulaEndLineIndex += 1;
+                        break;
+                    }
+                    formulaEndLineIndex += 1;
+                }
+                const endLineExclusive = Math.min(formulaEndLineIndex, rawLines.length);
+                const startOffset = lineStartOffsets[lineIndex] || 0;
+                const endOffset = endLineExclusive >= rawLines.length
+                    ? content.length
+                    : (lineStartOffsets[endLineExclusive] || content.length);
+                const context = resolveContextForLine(lineIndex);
+                pushAtomDraft({
+                    title: `${context.title} (formula block)`,
+                    sectionPath: [...context.sectionPath, 'formula'],
+                    representationType: 'formula',
+                    startLine: lineIndex + 1,
+                    endLine: endLineExclusive,
+                    startOffset,
+                    endOffset,
+                    rawContent: content.slice(startOffset, endOffset),
+                });
+                lineIndex = endLineExclusive;
+                continue;
+            }
+
+            lineIndex += 1;
+        }
 
         return {
             atoms,
@@ -1393,6 +1752,6 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 }
 
-export function createKnowledgeLearningPlatform(): KnowledgeLearningPlatform {
-    return new KnowledgeLearningPlatform();
+export function createKnowledgeLearningPlatform(options: KnowledgeLearningPlatformOptions = {}): KnowledgeLearningPlatform {
+    return new KnowledgeLearningPlatform(options);
 }
