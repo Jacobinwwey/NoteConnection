@@ -1293,6 +1293,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             ingestLatencyHistoryMs: [...this.ingestLatencyHistoryMs],
             recomputeLatencyHistoryMs: [...this.recomputeLatencyHistoryMs],
             queryLatencyHistoryMs: [...this.queryLatencyHistoryMs],
+            latestIngestSummary: this.latestIngestSummary ? { ...this.latestIngestSummary } : null,
             userMemory,
             relationEdgeSignatures: Array.from(this.relationEdgeSignatures.values()),
         };
@@ -1300,7 +1301,33 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     private restoreFromSnapshot(snapshot: KnowledgeGraphSnapshot): void {
         this.idCounter = Number(snapshot.idCounter || 0);
-        this.latestIngestSummary = null;
+        this.latestIngestSummary = snapshot.latestIngestSummary
+            ? {
+                ...snapshot.latestIngestSummary,
+                ingestedDocuments: Math.floor(clamp(Number(snapshot.latestIngestSummary.ingestedDocuments || 0), 0, 1000000)),
+                changedDocuments: Math.floor(clamp(Number(snapshot.latestIngestSummary.changedDocuments || 0), 0, 1000000)),
+                deletedDocuments: Math.floor(clamp(Number(snapshot.latestIngestSummary.deletedDocuments || 0), 0, 1000000)),
+                activeAtoms: Math.floor(clamp(Number(snapshot.latestIngestSummary.activeAtoms || 0), 0, 5000000)),
+                activeRelationEdges: Math.floor(clamp(Number(snapshot.latestIngestSummary.activeRelationEdges || 0), 0, 5000000)),
+                recomputedDynamicRelations: snapshot.latestIngestSummary.recomputedDynamicRelations === true,
+                invalidatedRelationEdges: Math.floor(
+                    clamp(Number(snapshot.latestIngestSummary.invalidatedRelationEdges || 0), 0, 5000000)
+                ),
+                regeneratedRelationEdges: Math.floor(
+                    clamp(Number(snapshot.latestIngestSummary.regeneratedRelationEdges || 0), 0, 5000000)
+                ),
+                resolvedRelationRecomputeMode: ((): Exclude<RelationRecomputeMode, 'auto'> => {
+                    const candidate = snapshot.latestIngestSummary?.resolvedRelationRecomputeMode;
+                    if (candidate === 'full' || candidate === 'incremental' || candidate === 'none') {
+                        return candidate;
+                    }
+                    return 'none';
+                })(),
+                relationRecomputeLatencyMs: Number(
+                    clamp(Number(snapshot.latestIngestSummary.relationRecomputeLatencyMs || 0), 0, 120000).toFixed(4)
+                ),
+            }
+            : null;
 
         this.atoms.clear();
         (snapshot.atoms || []).forEach((atom) => {

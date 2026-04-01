@@ -3,6 +3,7 @@ import * as path from 'path';
 import type {
     EvidenceSpan,
     KnowledgeAtom,
+    KnowledgeIngestResponse,
     LearnerConceptState,
     MemoryEntry,
     RelationEdge,
@@ -39,6 +40,7 @@ export interface KnowledgeGraphSnapshot {
     ingestLatencyHistoryMs: number[];
     recomputeLatencyHistoryMs: number[];
     queryLatencyHistoryMs: number[];
+    latestIngestSummary: KnowledgeIngestResponse['summary'] | null;
     userMemory: Record<string, {
         session: MemoryEntry[];
         unit: MemoryEntry[];

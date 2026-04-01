@@ -100,6 +100,10 @@ describe('KnowledgeLearningPlatform persistence', () => {
         expect(storeDiagnostics.exists).toBe(true);
         expect(storeDiagnostics.loaded).toBe(true);
 
+        const guardrail = await platformB.evaluateIngestGuardrails({});
+        expect(guardrail.latestSummary).not.toBeNull();
+        expect(guardrail.latestSummary?.ingestedDocuments).toBe(1);
+
         const restored = await platformB.reloadFromStore();
         expect(restored).toBe(true);
     });
