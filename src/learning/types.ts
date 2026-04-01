@@ -393,6 +393,54 @@ export interface StudySessionActionExecutionResponse {
     };
 }
 
+export interface StudySessionPlanExecutionRequest {
+    userId: string;
+    focusAtomIds?: string[];
+    maxActions?: number;
+    includeDivergence?: boolean;
+    includeRetrain?: boolean;
+    sessionPlan?: StudySessionResponse;
+    actionLimit?: number;
+    answersByActionId?: Record<string, string>;
+    answersByAtomId?: Record<string, string>;
+    autoAnalyzeAnswer?: boolean;
+    autoUpdateMasteryFromAnswer?: boolean;
+    persistMemory?: boolean;
+    memoryLayer?: MemoryLayer;
+    stopOnError?: boolean;
+    executedAt?: string;
+}
+
+export interface StudySessionPlanExecutionItem {
+    action: StudySessionAction;
+    status: 'executed' | 'skipped' | 'failed';
+    reason?: string;
+    result?: StudySessionActionExecutionResponse | null;
+    error?: string;
+}
+
+export interface StudySessionPlanExecutionResponse {
+    userId: string;
+    executedAt: string;
+    sessionPlan: StudySessionResponse;
+    items: StudySessionPlanExecutionItem[];
+    summary: {
+        plannedActions: number;
+        attemptedActions: number;
+        executedCount: number;
+        skippedCount: number;
+        failedCount: number;
+        updatedMasteryCount: number;
+        inferredMasteryCount: number;
+        explicitMasteryCount: number;
+        analyzedAnswerCount: number;
+        memoryPersistedCount: number;
+        totalEstimatedMinutes: number;
+        averageTutorConfidence: number;
+        stoppedEarly: boolean;
+    };
+}
+
 export interface TutorActionRequest {
     userId: string;
     actionKind: TutorActionKind;

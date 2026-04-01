@@ -49,6 +49,7 @@ window.pathApp = {
         misconceptions: null,
         runtimeState: null,
         tutorFeedback: null,
+        sessionExecution: null,
     },
     
     // Animation State
@@ -1997,6 +1998,77 @@ window.pathApp = {
         }
     },
 
+    runLearningWorkbenchSession: async function(options = {}) {
+        if (this.learningWorkbench.loading) {
+            return;
+        }
+        const userId = this._normalizeLearningWorkbenchUserId(this.learningWorkbench.userId);
+        const sessionPlan = this.learningWorkbench.sessionPlan;
+        if (!sessionPlan || !Array.isArray(sessionPlan.actions) || sessionPlan.actions.length === 0) {
+            this._setLearningWorkbenchStatus('No session plan actions to execute. Refresh first.', true);
+            return;
+        }
+        let actionLimit = Number(options.actionLimit);
+        if (!Number.isFinite(actionLimit) || actionLimit <= 0) {
+            if (typeof window !== 'undefined' && typeof window.prompt === 'function') {
+                const suggestedLimit = Math.min(3, sessionPlan.actions.length);
+                const raw = window.prompt(
+                    `Run how many planned actions? (1-${Math.min(20, sessionPlan.actions.length)})`,
+                    String(suggestedLimit)
+                );
+                if (raw === null) {
+                    this._setLearningWorkbenchStatus('Session execution canceled.');
+                    return;
+                }
+                actionLimit = Number(raw);
+            } else {
+                actionLimit = Math.min(3, sessionPlan.actions.length);
+            }
+        }
+        actionLimit = Math.max(1, Math.min(20, Math.floor(Number(actionLimit) || 1), sessionPlan.actions.length));
+
+        this.learningWorkbench.loading = true;
+        this._setLearningWorkbenchStatus(`Running session plan execution for top ${actionLimit} actions...`);
+        this._renderLearningWorkbenchState();
+        try {
+            const result = await this._requestLearningApi('/api/knowledge/session/execute', {
+                userId,
+                sessionPlan,
+                actionLimit,
+                persistMemory: true,
+                memoryLayer: 'session',
+            });
+            this.learningWorkbench.sessionExecution = {
+                ...result,
+                receivedAt: new Date().toISOString(),
+            };
+            const firstExecuted = Array.isArray(result?.items)
+                ? result.items.find((item) => item && item.status === 'executed' && item.result)
+                : null;
+            if (firstExecuted && firstExecuted.result) {
+                this.learningWorkbench.tutorFeedback = {
+                    atomId: firstExecuted.action?.atomId || '',
+                    actionKind: firstExecuted.action?.kind || '',
+                    source: firstExecuted.action?.source || 'session_plan',
+                    result: firstExecuted.result,
+                    tutorResult: firstExecuted.result?.tutor || null,
+                    receivedAt: new Date().toISOString(),
+                };
+            }
+            const summary = result?.summary || {};
+            this._setLearningWorkbenchStatus(
+                `Session execution finished: executed ${Number(summary.executedCount || 0)}/${Number(summary.attemptedActions || 0)}, mastery updates ${Number(summary.updatedMasteryCount || 0)}.`
+            );
+        } catch (error) {
+            const message = String(error?.message || error || 'Unknown session execution error');
+            this.learningWorkbench.lastError = message;
+            this._setLearningWorkbenchStatus(`Session execution failed: ${message}`, true);
+        } finally {
+            this.learningWorkbench.loading = false;
+            this._renderLearningWorkbenchState();
+        }
+    },
+
     _renderLearningWorkbenchState: function() {
         const userIdInput = document.getElementById('learning-user-id');
         if (userIdInput && userIdInput.value !== this.learningWorkbench.userId) {
@@ -2009,6 +2081,7 @@ window.pathApp = {
         const runtimeEl = document.getElementById('learning-runtime-summary');
         const updatedEl = document.getElementById('learning-workbench-updated-at');
         const tutorFeedbackEl = document.getElementById('learning-tutor-feedback');
+        const sessionExecutionEl = document.getElementById('learning-session-execution');
 
         if (updatedEl) {
             updatedEl.textContent = this.learningWorkbench.lastUpdatedAt
@@ -2103,6 +2176,24 @@ window.pathApp = {
                     '',
                     'Answer Analysis:',
                     safeAnswerAnalysis,
+                ].join('\n');
+            }
+        }
+
+        if (sessionExecutionEl) {
+            const execution = this.learningWorkbench.sessionExecution;
+            if (!execution || !execution.summary) {
+                sessionExecutionEl.textContent = 'No session execution yet.';
+            } else {
+                const summary = execution.summary || {};
+                sessionExecutionEl.textContent = [
+                    `Executed at: ${execution.executedAt || '-'}`,
+                    `Planned/Attempted/Executed: ${Number(summary.plannedActions || 0)}/${Number(summary.attemptedActions || 0)}/${Number(summary.executedCount || 0)}`,
+                    `Skipped/Failed: ${Number(summary.skippedCount || 0)}/${Number(summary.failedCount || 0)}`,
+                    `Mastery updates (inferred/explicit): ${Number(summary.updatedMasteryCount || 0)} (${Number(summary.inferredMasteryCount || 0)}/${Number(summary.explicitMasteryCount || 0)})`,
+                    `Answer analyzed: ${Number(summary.analyzedAnswerCount || 0)}, memory persisted: ${Number(summary.memoryPersistedCount || 0)}`,
+                    `Avg tutor confidence: ${Number(summary.averageTutorConfidence || 0).toFixed(3)}`,
+                    `Stopped early: ${summary.stoppedEarly === true ? 'yes' : 'no'}`,
                 ].join('\n');
             }
         }
@@ -2757,6 +2848,7 @@ window.pathApp = {
         const workbenchCloseBtn = document.getElementById('btn-close-learning-workbench');
         const workbenchRefreshBtn = document.getElementById('btn-refresh-learning-workbench');
         const workbenchIngestBtn = document.getElementById('btn-ingest-focus-node');
+        const workbenchRunSessionBtn = document.getElementById('btn-run-learning-session');
         const workbenchUserIdInput = document.getElementById('learning-user-id');
         const workbenchActionsList = document.getElementById('learning-session-actions');
 
@@ -2810,6 +2902,12 @@ window.pathApp = {
         if (workbenchIngestBtn) {
             workbenchIngestBtn.addEventListener('click', () => {
                 void this.ingestFocusNodeForLearningWorkbench();
+            });
+        }
+
+        if (workbenchRunSessionBtn) {
+            workbenchRunSessionBtn.addEventListener('click', () => {
+                void this.runLearningWorkbenchSession();
             });
         }
 

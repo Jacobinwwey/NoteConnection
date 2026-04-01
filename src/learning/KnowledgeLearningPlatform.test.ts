@@ -504,6 +504,55 @@ describe('KnowledgeLearningPlatform', () => {
         expect(stateAfterExecution.sessionActionTelemetry.outcomeCounts.incorrect).toBe(1);
     });
 
+    test('session plan execution runs top actions and returns aggregate execution summary', async () => {
+        const ingest = await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_session_exec_a',
+                    sourcePath: 'Knowledge_Base/doc_session_exec_a.md',
+                    language: 'en',
+                    content: '# Session Execute A\nPractice evidence-backed retrieval for core concept A.',
+                },
+                {
+                    documentId: 'doc_session_exec_b',
+                    sourcePath: 'Knowledge_Base/doc_session_exec_b.md',
+                    language: 'en',
+                    content: '# Session Execute B\nApply concept B to transfer scenarios.',
+                },
+            ],
+        });
+        const focusAtomIds = ingest.atoms.map((item) => item.id);
+        const sessionPlan = await platform.buildStudySession({
+            userId: 'user_session_execute',
+            focusAtomIds,
+            maxActions: 8,
+            includeDivergence: true,
+            includeRetrain: true,
+        });
+        expect(sessionPlan.actions.length).toBeGreaterThan(0);
+
+        const execution = await platform.executeStudySessionPlan({
+            userId: 'user_session_execute',
+            sessionPlan,
+            actionLimit: 3,
+            persistMemory: true,
+            memoryLayer: 'session',
+        });
+
+        expect(execution.items.length).toBe(3);
+        expect(execution.summary.plannedActions).toBe(sessionPlan.actions.length);
+        expect(execution.summary.attemptedActions).toBe(3);
+        expect(execution.summary.executedCount).toBe(3);
+        expect(execution.summary.failedCount).toBe(0);
+        expect(execution.summary.skippedCount).toBe(0);
+        expect(execution.summary.stoppedEarly).toBe(false);
+        expect(execution.summary.averageTutorConfidence).toBeGreaterThan(0);
+
+        const stateAfterExecution = platform.getKnowledgeState();
+        expect(stateAfterExecution.sessionActionTelemetry.executionCount).toBeGreaterThanOrEqual(3);
+    });
+
     test('learning quality evaluation enforces mastery and evidence thresholds', async () => {
         await platform.ingestKnowledge({
             incremental: true,

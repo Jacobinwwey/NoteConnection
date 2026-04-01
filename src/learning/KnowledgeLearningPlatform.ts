@@ -51,6 +51,8 @@ import type {
     StudySessionAction,
     StudySessionActionExecutionRequest,
     StudySessionActionExecutionResponse,
+    StudySessionPlanExecutionRequest,
+    StudySessionPlanExecutionResponse,
     StudySessionRequest,
     StudySessionResponse,
     TemporalEdge,
@@ -1107,6 +1109,195 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 masterySource,
                 effectiveOutcome,
                 effectiveErrorTag,
+            },
+        };
+    }
+
+    public async executeStudySessionPlan(
+        request: StudySessionPlanExecutionRequest
+    ): Promise<StudySessionPlanExecutionResponse> {
+        await this.ensureHydrated();
+        const userId = String(request.userId || '').trim();
+        if (!userId) {
+            throw new Error('StudySessionPlanExecutionAPI requires a non-empty userId.');
+        }
+        const executedAt = this.resolveTimestamp(request.executedAt);
+        const maxActions = clamp(Math.floor(Number(request.maxActions) || 12), 1, 80);
+        const actionLimitRequest = Number(request.actionLimit);
+        const actionLimit = Number.isFinite(actionLimitRequest)
+            ? clamp(Math.floor(actionLimitRequest), 1, 40)
+            : clamp(Math.min(maxActions, 6), 1, 40);
+        const sourceFallback = 'mastery_path';
+        const providedPlan = request.sessionPlan;
+        const hasValidProvidedPlan = Boolean(
+            providedPlan
+            && providedPlan.userId === userId
+            && Array.isArray(providedPlan.actions)
+        );
+        const sessionPlan: StudySessionResponse = hasValidProvidedPlan
+            ? (() => {
+                const plan = providedPlan as StudySessionResponse;
+                const safeActions = plan.actions
+                    .filter((action): action is StudySessionAction => Boolean(action && typeof action === 'object'))
+                    .map((action) => {
+                        const sourceRaw = String(action.source || '').trim();
+                        const source: StudySessionAction['source'] = (
+                            sourceRaw === 'mastery_path'
+                            || sourceRaw === 'divergence_path'
+                            || sourceRaw === 'retrain_plan'
+                            || sourceRaw === 'misconception_remediation'
+                        )
+                            ? sourceRaw as StudySessionAction['source']
+                            : sourceFallback;
+                        return {
+                            ...action,
+                            source,
+                        };
+                    });
+                const totalEstimatedMinutes = safeActions.reduce(
+                    (sum, action) => sum + Math.max(0, Math.floor(Number(action.estimatedMinutes || 0))),
+                    0
+                );
+                const evidenceCoverageRatio = safeActions.length > 0
+                    ? Number((safeActions.filter((action) => Array.isArray(action.evidenceSpanIds) && action.evidenceSpanIds.length > 0).length / safeActions.length).toFixed(4))
+                    : 1;
+                return {
+                    userId,
+                    generatedAt: isNonEmptyString(plan.generatedAt) ? plan.generatedAt : executedAt,
+                    actions: safeActions,
+                    signals: {
+                        misconceptions: Array.isArray(plan.signals?.misconceptions)
+                            ? plan.signals.misconceptions
+                            : [],
+                        dueRetrainAtoms: Array.isArray(plan.signals?.dueRetrainAtoms)
+                            ? plan.signals.dueRetrainAtoms
+                            : [],
+                        masteryPathTargets: Array.isArray(plan.signals?.masteryPathTargets)
+                            ? plan.signals.masteryPathTargets
+                            : [],
+                        divergenceTargets: Array.isArray(plan.signals?.divergenceTargets)
+                            ? plan.signals.divergenceTargets
+                            : [],
+                    },
+                    summary: {
+                        totalActions: safeActions.length,
+                        totalEstimatedMinutes,
+                        evidenceCoverageRatio,
+                    },
+                };
+            })()
+            : await this.buildStudySession({
+                userId,
+                focusAtomIds: request.focusAtomIds,
+                maxActions,
+                includeDivergence: request.includeDivergence,
+                includeRetrain: request.includeRetrain,
+                generatedAt: executedAt,
+            });
+        const selectedActions = sessionPlan.actions.slice(0, actionLimit);
+        const stopOnError = request.stopOnError === true;
+        const answersByActionId = request.answersByActionId && typeof request.answersByActionId === 'object'
+            ? request.answersByActionId
+            : {};
+        const answersByAtomId = request.answersByAtomId && typeof request.answersByAtomId === 'object'
+            ? request.answersByAtomId
+            : {};
+        const items: StudySessionPlanExecutionResponse['items'] = [];
+        let stoppedEarly = false;
+
+        for (const action of selectedActions) {
+            const atomId = String(action.atomId || '').trim();
+            if (!atomId || !this.activeAtomIds.has(atomId)) {
+                items.push({
+                    action,
+                    status: 'skipped',
+                    reason: 'inactive_atom',
+                    result: null,
+                });
+                continue;
+            }
+            const answerByActionId = isNonEmptyString(answersByActionId[action.id])
+                ? String(answersByActionId[action.id]).trim()
+                : '';
+            const answerByAtomId = isNonEmptyString(answersByAtomId[atomId])
+                ? String(answersByAtomId[atomId]).trim()
+                : '';
+            const answer = answerByActionId || answerByAtomId || undefined;
+            try {
+                const result = await this.executeStudySessionAction({
+                    userId,
+                    action: {
+                        atomId,
+                        kind: action.kind,
+                        source: action.source,
+                        prompt: `Session plan execution: ${action.kind} from ${action.source}`,
+                        answer,
+                    },
+                    autoAnalyzeAnswer: request.autoAnalyzeAnswer,
+                    autoUpdateMasteryFromAnswer: request.autoUpdateMasteryFromAnswer,
+                    persistMemory: request.persistMemory,
+                    memoryLayer: request.memoryLayer,
+                    executedAt,
+                });
+                items.push({
+                    action,
+                    status: 'executed',
+                    result,
+                });
+            } catch (error) {
+                const message = String((error as Error)?.message || error || 'Unknown session plan execution error');
+                items.push({
+                    action,
+                    status: 'failed',
+                    error: message,
+                    result: null,
+                });
+                if (stopOnError) {
+                    stoppedEarly = true;
+                    break;
+                }
+            }
+        }
+
+        const executedItems = items.filter(
+            (item): item is StudySessionPlanExecutionResponse['items'][number] & { result: StudySessionActionExecutionResponse } =>
+                item.status === 'executed' && !!item.result
+        );
+        const skippedCount = items.filter((item) => item.status === 'skipped').length;
+        const failedCount = items.filter((item) => item.status === 'failed').length;
+        const updatedMasteryCount = executedItems.filter((item) => item.result.trace.updatedMastery === true).length;
+        const inferredMasteryCount = executedItems.filter((item) => item.result.trace.masterySource === 'inferred').length;
+        const explicitMasteryCount = executedItems.filter((item) => item.result.trace.masterySource === 'explicit').length;
+        const analyzedAnswerCount = executedItems.filter((item) => item.result.trace.analyzedAnswer === true).length;
+        const memoryPersistedCount = executedItems.filter((item) => item.result.trace.persistedMemory === true).length;
+        const averageTutorConfidence = executedItems.length > 0
+            ? Number((
+                executedItems.reduce((sum, item) => sum + Number(item.result.tutor.trace.confidence || 0), 0) / executedItems.length
+            ).toFixed(4))
+            : 0;
+
+        return {
+            userId,
+            executedAt,
+            sessionPlan,
+            items,
+            summary: {
+                plannedActions: sessionPlan.actions.length,
+                attemptedActions: selectedActions.length,
+                executedCount: executedItems.length,
+                skippedCount,
+                failedCount,
+                updatedMasteryCount,
+                inferredMasteryCount,
+                explicitMasteryCount,
+                analyzedAnswerCount,
+                memoryPersistedCount,
+                totalEstimatedMinutes: selectedActions.reduce(
+                    (sum, action) => sum + Math.max(0, Math.floor(Number(action.estimatedMinutes || 0))),
+                    0
+                ),
+                averageTutorConfidence,
+                stoppedEarly,
             },
         };
     }
