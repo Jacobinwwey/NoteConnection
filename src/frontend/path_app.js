@@ -2115,6 +2115,77 @@ window.pathApp = {
         }
     },
 
+    runLearningWorkbenchRetestSession: async function() {
+        if (this.learningWorkbench.loading) {
+            return;
+        }
+        const userId = this._normalizeLearningWorkbenchUserId(this.learningWorkbench.userId);
+        const existingExecution = this.learningWorkbench.sessionExecution || null;
+        const retestActions = Array.isArray(existingExecution?.retestPlan?.actions)
+            ? existingExecution.retestPlan.actions
+            : [];
+        if (retestActions.length === 0) {
+            this._setLearningWorkbenchStatus('No immediate retest actions available. Run a session first.', true);
+            return;
+        }
+        const answersByActionId = this._collectOptionalAnswersForSessionActions(retestActions);
+        const answerCount = Object.keys(answersByActionId).length;
+        const autoAnalyzeAnswer = answerCount > 0;
+        const generatedAt = new Date().toISOString();
+        const totalEstimatedMinutes = retestActions.reduce(
+            (sum, action) => sum + Number(action?.estimatedMinutes || 0),
+            0
+        );
+        const retestSessionPlan = {
+            userId,
+            generatedAt,
+            actions: retestActions,
+            signals: {
+                misconceptions: [],
+                dueRetrainAtoms: Array.from(new Set(retestActions.map((action) => String(action.atomId || '').trim()))),
+                masteryPathTargets: [],
+                divergenceTargets: [],
+            },
+            summary: {
+                totalActions: retestActions.length,
+                totalEstimatedMinutes,
+                evidenceCoverageRatio: 1,
+            },
+        };
+
+        this.learningWorkbench.loading = true;
+        this._setLearningWorkbenchStatus(`Running immediate retest for ${retestActions.length} actions...`);
+        this._renderLearningWorkbenchState();
+        try {
+            const result = await this._requestLearningApi('/api/knowledge/session/execute', {
+                userId,
+                sessionPlan: retestSessionPlan,
+                actionLimit: retestActions.length,
+                answersByActionId,
+                autoAnalyzeAnswer,
+                autoUpdateMasteryFromAnswer: autoAnalyzeAnswer,
+                persistMemory: true,
+                memoryLayer: 'session',
+                includeRetestPlan: false,
+            });
+            this.learningWorkbench.sessionExecution = {
+                ...result,
+                receivedAt: new Date().toISOString(),
+            };
+            const summary = result?.summary || {};
+            this._setLearningWorkbenchStatus(
+                `Retest execution finished: executed ${Number(summary.executedCount || 0)}/${Number(summary.attemptedActions || 0)}, mastery delta ${Number(summary.averageMasteryDelta || 0).toFixed(3)}.`
+            );
+        } catch (error) {
+            const message = String(error?.message || error || 'Unknown retest execution error');
+            this.learningWorkbench.lastError = message;
+            this._setLearningWorkbenchStatus(`Retest execution failed: ${message}`, true);
+        } finally {
+            this.learningWorkbench.loading = false;
+            this._renderLearningWorkbenchState();
+        }
+    },
+
     _renderLearningWorkbenchState: function() {
         const userIdInput = document.getElementById('learning-user-id');
         if (userIdInput && userIdInput.value !== this.learningWorkbench.userId) {
@@ -2931,6 +3002,7 @@ window.pathApp = {
         const workbenchRefreshBtn = document.getElementById('btn-refresh-learning-workbench');
         const workbenchIngestBtn = document.getElementById('btn-ingest-focus-node');
         const workbenchRunSessionBtn = document.getElementById('btn-run-learning-session');
+        const workbenchRunRetestBtn = document.getElementById('btn-run-retest-session');
         const workbenchUserIdInput = document.getElementById('learning-user-id');
         const workbenchActionsList = document.getElementById('learning-session-actions');
 
@@ -2990,6 +3062,12 @@ window.pathApp = {
         if (workbenchRunSessionBtn) {
             workbenchRunSessionBtn.addEventListener('click', () => {
                 void this.runLearningWorkbenchSession();
+            });
+        }
+
+        if (workbenchRunRetestBtn) {
+            workbenchRunRetestBtn.addEventListener('click', () => {
+                void this.runLearningWorkbenchRetestSession();
             });
         }
 

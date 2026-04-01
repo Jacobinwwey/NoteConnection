@@ -536,6 +536,7 @@ describe('KnowledgeLearningPlatform', () => {
             userId: 'user_session_execute',
             sessionPlan,
             actionLimit: 3,
+            includeRetestPlan: false,
             persistMemory: true,
             memoryLayer: 'session',
         });
@@ -552,7 +553,7 @@ describe('KnowledgeLearningPlatform', () => {
         expect(execution.summary.averageMasteryAfter).toBeGreaterThanOrEqual(0);
         expect(execution.masteryDelta.comparedAtoms).toBeGreaterThan(0);
         expect(execution.masteryDelta.items.length).toBe(execution.masteryDelta.comparedAtoms);
-        expect(execution.retestPlan.summary.totalActions).toBeGreaterThanOrEqual(0);
+        expect(execution.retestPlan.summary.totalActions).toBe(0);
 
         const stateAfterExecution = platform.getKnowledgeState();
         expect(stateAfterExecution.sessionActionTelemetry.executionCount).toBeGreaterThanOrEqual(3);
