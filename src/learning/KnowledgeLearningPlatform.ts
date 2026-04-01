@@ -5,8 +5,10 @@ import type {
     DivergencePath,
     EvidenceSpan,
     KnowledgeAtom,
+    KnowledgeDocumentDeleteInput,
     KnowledgeDocumentInput,
     KnowledgeIngestRequest,
+    KnowledgeIngestOperation,
     KnowledgeIngestResponse,
     LearningQualityEvaluationRequest,
     LearningQualityEvaluationResponse,
@@ -119,6 +121,7 @@ const DEFAULT_LEARNING_QUALITY_THRESHOLDS: LearningQualityThresholds = {
 };
 
 const QUERY_LATENCY_HISTORY_LIMIT = 2000;
+const INGEST_LATENCY_HISTORY_LIMIT = 2000;
 
 function clamp(value: number, minValue: number, maxValue: number): number {
     return Math.min(maxValue, Math.max(minValue, value));
@@ -213,6 +216,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     private readonly relationEdgeSignatures = new Set<string>();
 
+    private readonly ingestLatencyHistoryMs: number[] = [];
+
+    private readonly recomputeLatencyHistoryMs: number[] = [];
+
     private readonly queryLatencyHistoryMs: number[] = [];
 
     private readonly nowProvider: () => Date;
@@ -244,10 +251,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     public async ingestKnowledge(request: KnowledgeIngestRequest): Promise<KnowledgeIngestResponse> {
         await this.ensureHydrated();
-        const documents = Array.isArray(request.documents) ? request.documents : [];
+        const ingestStartAtMs = Date.now();
         const ingestedAt = this.resolveTimestamp(request.ingestedAt);
         const incremental = request.incremental !== false;
-        const changedDocIds: string[] = [];
+        const changedDocIds = new Set<string>();
+        const deletedDocIds = new Set<string>();
         const responseAtoms: KnowledgeAtom[] = [];
         const responseEvidence: EvidenceSpan[] = [];
         const responseRelations: RelationEdge[] = [];
@@ -255,9 +263,14 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const staleness: StalenessRecord[] = [];
         const newAtomIds: string[] = [];
         const wikiLinksByAtomId = new Map<string, string[]>();
+        let ingestedDocumentCount = 0;
+        let invalidatedRelationEdges = 0;
+        let regeneratedRelationEdges = 0;
+        let recomputeLatencyMs: number | null = null;
 
-        for (const documentInput of documents) {
+        const processUpsert = (documentInput: KnowledgeDocumentInput): void => {
             const normalizedInput = this.normalizeDocumentInput(documentInput);
+            ingestedDocumentCount += 1;
             const sourceHash = this.computeHash(normalizedInput.content);
             const previousSnapshot = this.documents.get(normalizedInput.documentId);
             const previousVersion = previousSnapshot?.version ?? 0;
@@ -273,7 +286,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     previousVersion: previousSnapshot.version,
                     currentVersion: previousSnapshot.version,
                 });
-                continue;
+                return;
             }
 
             const status: StalenessRecord['status'] = previousSnapshot ? 'updated' : 'new';
@@ -286,8 +299,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 previousVersion: previousSnapshot?.version,
                 currentVersion,
             });
+            changedDocIds.add(normalizedInput.documentId);
 
-            changedDocIds.push(normalizedInput.documentId);
             const parsedDocument = this.parseDocument(normalizedInput);
             const snapshot: DocumentSnapshot = {
                 documentId: normalizedInput.documentId,
@@ -303,7 +316,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             };
 
             if (previousSnapshot) {
-                this.retireRemovedStableKeys({
+                invalidatedRelationEdges += this.retireRemovedStableKeys({
                     previousSnapshot,
                     parsedDocument,
                     retiredAt: ingestedAt,
@@ -374,7 +387,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     this.temporalEdges.set(supersedesEdge.id, supersedesEdge);
                     snapshot.temporalEdgeIds.push(supersedesEdge.id);
                     responseTemporals.push(supersedesEdge);
-                    this.expireRelationsForAtom(previousAtomId, ingestedAt);
+                    invalidatedRelationEdges += this.expireRelationsForAtom(previousAtomId, ingestedAt);
                 }
             }
 
@@ -398,13 +411,61 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             }
 
             this.documents.set(normalizedInput.documentId, snapshot);
+        };
+
+        const processDelete = (deleteInput: KnowledgeDocumentDeleteInput): void => {
+            const deleted = this.deleteDocumentSnapshot(deleteInput, ingestedAt, responseTemporals);
+            if (!deleted.deleted || !deleted.documentId || !deleted.sourcePath) {
+                return;
+            }
+            deletedDocIds.add(deleted.documentId);
+            invalidatedRelationEdges += deleted.invalidatedRelationEdges;
+            staleness.push({
+                documentId: deleted.documentId,
+                sourcePath: deleted.sourcePath,
+                status: 'deleted',
+                previousHash: deleted.previousHash,
+                currentHash: `deleted:${ingestedAt}`,
+                previousVersion: deleted.previousVersion,
+                currentVersion: deleted.previousVersion || 0,
+            });
+        };
+
+        const hasOperations = Array.isArray(request.operations) && request.operations.length > 0;
+        if (hasOperations) {
+            const operations = request.operations as KnowledgeIngestOperation[];
+            operations.forEach((operation) => {
+                if (operation.op === 'upsert') {
+                    processUpsert(operation.document);
+                } else if (operation.op === 'delete') {
+                    processDelete(operation.document);
+                }
+            });
+        } else {
+            const documents = Array.isArray(request.documents) ? request.documents : [];
+            documents.forEach((documentInput) => processUpsert(documentInput));
+            const deletedDocuments = Array.isArray(request.deletedDocuments) ? request.deletedDocuments : [];
+            deletedDocuments.forEach((deletedDocument) => processDelete(deletedDocument));
         }
 
-        if (newAtomIds.length > 0) {
-            this.rebuildTitleIndex();
+        let recomputedDynamicRelations = false;
+        const shouldRecomputeDynamicRelations = request.recomputeRelations === true
+            || (request.recomputeRelations !== false && (changedDocIds.size > 0 || deletedDocIds.size > 0));
+
+        this.rebuildTitleIndex();
+        if (shouldRecomputeDynamicRelations) {
+            recomputedDynamicRelations = true;
+            const recomputeStartAtMs = Date.now();
+            const recomputeResult = this.recomputeDynamicRelations(ingestedAt);
+            invalidatedRelationEdges += recomputeResult.invalidatedRelationEdges;
+            regeneratedRelationEdges += recomputeResult.createdEdges.length;
+            recomputeResult.createdEdges.forEach((edge) => responseRelations.push(edge));
+            recomputeLatencyMs = Date.now() - recomputeStartAtMs;
+        } else if (newAtomIds.length > 0) {
             const referenceEdges = this.createReferenceEdges(newAtomIds, wikiLinksByAtomId, ingestedAt);
-            referenceEdges.forEach((edge) => responseRelations.push(edge));
             const inferredEdges = this.createInferredEdges(newAtomIds, ingestedAt);
+            regeneratedRelationEdges += referenceEdges.length + inferredEdges.length;
+            referenceEdges.forEach((edge) => responseRelations.push(edge));
             inferredEdges.forEach((edge) => responseRelations.push(edge));
         }
 
@@ -415,12 +476,21 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             temporalEdges: responseTemporals,
             staleness,
             summary: {
-                ingestedDocuments: documents.length,
-                changedDocuments: changedDocIds.length,
+                ingestedDocuments: ingestedDocumentCount,
+                changedDocuments: changedDocIds.size,
+                deletedDocuments: deletedDocIds.size,
                 activeAtoms: this.activeAtomIds.size,
                 activeRelationEdges: this.collectActiveRelationEdges(ingestedAt).length,
+                recomputedDynamicRelations,
+                invalidatedRelationEdges,
+                regeneratedRelationEdges,
             },
         };
+        const ingestLatencyMs = Date.now() - ingestStartAtMs;
+        this.recordIngestLatency(ingestLatencyMs);
+        if (recomputeLatencyMs !== null) {
+            this.recordRecomputeLatency(recomputeLatencyMs);
+        }
         await this.persistIfNeeded();
         return response;
     }
@@ -897,6 +967,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     public getKnowledgeState(): KnowledgeSystemState {
+        const ingestTelemetry = this.buildIngestTelemetry();
         const retrievalTelemetry = this.buildRetrievalTelemetry();
         const memoryStats = this.collectMemoryStats();
         return {
@@ -906,8 +977,52 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             temporalEdges: this.temporalEdges.size,
             masteryStates: this.learnerStates.size,
             tutorTraces: this.tutorTraces.length,
+            ingestTelemetry,
             retrievalTelemetry,
             memoryEntries: memoryStats,
+        };
+    }
+
+    private recordIngestLatency(latencyMs: number): void {
+        const normalized = Number.isFinite(latencyMs) && latencyMs >= 0 ? latencyMs : 0;
+        this.ingestLatencyHistoryMs.push(Number(normalized.toFixed(4)));
+        if (this.ingestLatencyHistoryMs.length > INGEST_LATENCY_HISTORY_LIMIT) {
+            this.ingestLatencyHistoryMs.splice(0, this.ingestLatencyHistoryMs.length - INGEST_LATENCY_HISTORY_LIMIT);
+        }
+    }
+
+    private recordRecomputeLatency(latencyMs: number): void {
+        const normalized = Number.isFinite(latencyMs) && latencyMs >= 0 ? latencyMs : 0;
+        this.recomputeLatencyHistoryMs.push(Number(normalized.toFixed(4)));
+        if (this.recomputeLatencyHistoryMs.length > INGEST_LATENCY_HISTORY_LIMIT) {
+            this.recomputeLatencyHistoryMs.splice(0, this.recomputeLatencyHistoryMs.length - INGEST_LATENCY_HISTORY_LIMIT);
+        }
+    }
+
+    private buildIngestTelemetry(): KnowledgeSystemState['ingestTelemetry'] {
+        const ingestCount = this.ingestLatencyHistoryMs.length;
+        const ingestP95Ms = ingestCount > 0 ? computePercentile(this.ingestLatencyHistoryMs, 95) : 0;
+        const ingestAverageMs = ingestCount > 0
+            ? Number((this.ingestLatencyHistoryMs.reduce((sum, value) => sum + value, 0) / ingestCount).toFixed(4))
+            : 0;
+        const ingestMaxMs = ingestCount > 0 ? Number(Math.max(...this.ingestLatencyHistoryMs).toFixed(4)) : 0;
+
+        const recomputeCount = this.recomputeLatencyHistoryMs.length;
+        const recomputeP95Ms = recomputeCount > 0 ? computePercentile(this.recomputeLatencyHistoryMs, 95) : 0;
+        const recomputeAverageMs = recomputeCount > 0
+            ? Number((this.recomputeLatencyHistoryMs.reduce((sum, value) => sum + value, 0) / recomputeCount).toFixed(4))
+            : 0;
+        const recomputeMaxMs = recomputeCount > 0 ? Number(Math.max(...this.recomputeLatencyHistoryMs).toFixed(4)) : 0;
+
+        return {
+            ingestCount,
+            ingestP95Ms,
+            ingestAverageMs,
+            ingestMaxMs,
+            recomputeCount,
+            recomputeP95Ms,
+            recomputeAverageMs,
+            recomputeMaxMs,
         };
     }
 
@@ -1043,6 +1158,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             activeAtomIds: Array.from(this.activeAtomIds.values()),
             learnerStates: Array.from(this.learnerStates.values()),
             tutorTraces: [...this.tutorTraces],
+            ingestLatencyHistoryMs: [...this.ingestLatencyHistoryMs],
+            recomputeLatencyHistoryMs: [...this.recomputeLatencyHistoryMs],
             queryLatencyHistoryMs: [...this.queryLatencyHistoryMs],
             userMemory,
             relationEdgeSignatures: Array.from(this.relationEdgeSignatures.values()),
@@ -1109,6 +1226,28 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             this.tutorTraces.push(trace);
         });
 
+        this.ingestLatencyHistoryMs.length = 0;
+        (snapshot.ingestLatencyHistoryMs || []).forEach((latency) => {
+            const normalized = Number(latency);
+            if (Number.isFinite(normalized) && normalized >= 0) {
+                this.ingestLatencyHistoryMs.push(Number(normalized.toFixed(4)));
+            }
+        });
+        if (this.ingestLatencyHistoryMs.length > INGEST_LATENCY_HISTORY_LIMIT) {
+            this.ingestLatencyHistoryMs.splice(0, this.ingestLatencyHistoryMs.length - INGEST_LATENCY_HISTORY_LIMIT);
+        }
+
+        this.recomputeLatencyHistoryMs.length = 0;
+        (snapshot.recomputeLatencyHistoryMs || []).forEach((latency) => {
+            const normalized = Number(latency);
+            if (Number.isFinite(normalized) && normalized >= 0) {
+                this.recomputeLatencyHistoryMs.push(Number(normalized.toFixed(4)));
+            }
+        });
+        if (this.recomputeLatencyHistoryMs.length > INGEST_LATENCY_HISTORY_LIMIT) {
+            this.recomputeLatencyHistoryMs.splice(0, this.recomputeLatencyHistoryMs.length - INGEST_LATENCY_HISTORY_LIMIT);
+        }
+
         this.queryLatencyHistoryMs.length = 0;
         (snapshot.queryLatencyHistoryMs || []).forEach((latency) => {
             const normalized = Number(latency);
@@ -1138,7 +1277,12 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
         if (this.relationEdgeSignatures.size === 0) {
             this.relationEdges.forEach((edge) => {
-                const signature = `${edge.sourceAtomId}::${edge.targetAtomId}::${edge.relationKind}::${edge.provenance}`;
+                const signature = this.buildRelationSignature({
+                    sourceAtomId: edge.sourceAtomId,
+                    targetAtomId: edge.targetAtomId,
+                    relationKind: edge.relationKind,
+                    provenance: edge.provenance,
+                });
                 this.relationEdgeSignatures.add(signature);
             });
         }
@@ -1358,12 +1502,120 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
     }
 
+    private resolveDeleteDocumentId(input: KnowledgeDocumentDeleteInput): string | null {
+        if (isNonEmptyString(input.documentId)) {
+            return input.documentId.trim();
+        }
+        if (isNonEmptyString(input.sourcePath)) {
+            return normalizeIdentifier(input.sourcePath.replace(/\\/g, '/'));
+        }
+        return null;
+    }
+
+    private deleteDocumentSnapshot(
+        deleteInput: KnowledgeDocumentDeleteInput,
+        deletedAt: string,
+        responseTemporals: TemporalEdge[]
+    ): {
+        deleted: boolean;
+        documentId?: string;
+        sourcePath?: string;
+        previousHash?: string;
+        previousVersion?: number;
+        invalidatedRelationEdges: number;
+    } {
+        const documentId = this.resolveDeleteDocumentId(deleteInput);
+        if (!documentId) {
+            return { deleted: false, invalidatedRelationEdges: 0 };
+        }
+        const snapshot = this.documents.get(documentId);
+        if (!snapshot) {
+            return { deleted: false, documentId, invalidatedRelationEdges: 0 };
+        }
+
+        this.documents.delete(documentId);
+        let invalidatedRelationEdges = 0;
+        snapshot.atomStableKeyToId.forEach((atomId, stableKey) => {
+            this.activeStableKeyToAtomId.delete(stableKey);
+            this.activeAtomIds.delete(atomId);
+            invalidatedRelationEdges += this.expireRelationsForAtom(atomId, deletedAt);
+            const temporalEdge = this.createTemporalEdge({
+                sourceAtomId: atomId,
+                targetAtomId: atomId,
+                edgeKind: 'validity_window',
+                validFrom: deletedAt,
+                validTo: deletedAt,
+                sourceDocumentHash: snapshot.sourceHash,
+                isActive: false,
+            });
+            this.temporalEdges.set(temporalEdge.id, temporalEdge);
+            responseTemporals.push(temporalEdge);
+        });
+
+        return {
+            deleted: true,
+            documentId: snapshot.documentId,
+            sourcePath: snapshot.sourcePath,
+            previousHash: snapshot.sourceHash,
+            previousVersion: snapshot.version,
+            invalidatedRelationEdges,
+        };
+    }
+
+    private collectWikiLinksByAtomId(atomIds: string[]): Map<string, string[]> {
+        const wikiLinksByAtomId = new Map<string, string[]>();
+        atomIds.forEach((atomId) => {
+            const atom = this.atoms.get(atomId);
+            if (!atom) {
+                return;
+            }
+            const links = Array.from(atom.content.matchAll(/\[\[([^\]]+)\]\]/g))
+                .map((match) => normalizeIdentifier(String(match[1] || '')))
+                .filter((target) => target.length > 0);
+            if (links.length > 0) {
+                wikiLinksByAtomId.set(atomId, links);
+            }
+        });
+        return wikiLinksByAtomId;
+    }
+
+    private recomputeDynamicRelations(nowIso: string): {
+        invalidatedRelationEdges: number;
+        createdEdges: RelationEdge[];
+    } {
+        let invalidatedRelationEdges = 0;
+        this.relationEdges.forEach((edge) => {
+            const isDynamicEdge = edge.provenance === 'inferred' || edge.relationKind === 'reference';
+            if (!isDynamicEdge || edge.temporal.validTo) {
+                return;
+            }
+            edge.temporal.validTo = nowIso;
+            invalidatedRelationEdges += 1;
+            this.relationEdgeSignatures.delete(this.buildRelationSignature({
+                sourceAtomId: edge.sourceAtomId,
+                targetAtomId: edge.targetAtomId,
+                relationKind: edge.relationKind,
+                provenance: edge.provenance,
+            }));
+        });
+
+        const activeAtomIds = Array.from(this.activeAtomIds.values());
+        const wikiLinksByAtomId = this.collectWikiLinksByAtomId(activeAtomIds);
+        const referenceEdges = this.createReferenceEdges(activeAtomIds, wikiLinksByAtomId, nowIso);
+        const inferredEdges = this.createInferredEdges(activeAtomIds, nowIso);
+        return {
+            invalidatedRelationEdges,
+            createdEdges: [...referenceEdges, ...inferredEdges],
+        };
+    }
+
     private retireRemovedStableKeys(params: {
         previousSnapshot: DocumentSnapshot;
         parsedDocument: ParsedDocument;
         retiredAt: string;
         responseTemporals: TemporalEdge[];
-    }): void {
+    }): number {
+        let invalidatedRelationEdges = 0;
         const nextStableKeys = new Set(params.parsedDocument.atoms.map((atom) => atom.stableKey));
         params.previousSnapshot.atomStableKeyToId.forEach((atomId, stableKey) => {
             if (nextStableKeys.has(stableKey)) {
@@ -1382,8 +1634,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             });
             this.temporalEdges.set(temporalEdge.id, temporalEdge);
             params.responseTemporals.push(temporalEdge);
-            this.expireRelationsForAtom(atomId, params.retiredAt);
+            invalidatedRelationEdges += this.expireRelationsForAtom(atomId, params.retiredAt);
         });
+        return invalidatedRelationEdges;
     }
 
     private createReferenceEdges(
@@ -1472,7 +1725,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         evidenceSpanIds: string[];
         validFrom: string;
     }): RelationEdge | null {
-        const signature = `${params.sourceAtomId}::${params.targetAtomId}::${params.relationKind}::${params.provenance}`;
+        const signature = this.buildRelationSignature(params);
         if (this.relationEdgeSignatures.has(signature)) {
             return null;
         }
@@ -1491,6 +1744,15 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
         this.relationEdges.set(relationEdge.id, relationEdge);
         return relationEdge;
+    }
+
+    private buildRelationSignature(params: {
+        sourceAtomId: string;
+        targetAtomId: string;
+        relationKind: RelationKind;
+        provenance: 'fact' | 'inferred';
+    }): string {
+        return `${params.sourceAtomId}::${params.targetAtomId}::${params.relationKind}::${params.provenance}`;
     }
 
     private createTemporalEdge(params: {
@@ -1514,15 +1776,18 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
     }
 
-    private expireRelationsForAtom(atomId: string, expiredAt: string): void {
+    private expireRelationsForAtom(atomId: string, expiredAt: string): number {
+        let invalidated = 0;
         this.relationEdges.forEach((relation) => {
             if (relation.sourceAtomId !== atomId && relation.targetAtomId !== atomId) {
                 return;
             }
             if (!relation.temporal.validTo) {
                 relation.temporal.validTo = expiredAt;
+                invalidated += 1;
             }
         });
+        return invalidated;
     }
 
     private rebuildTitleIndex(): void {

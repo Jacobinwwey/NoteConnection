@@ -98,6 +98,64 @@ describe('KnowledgeLearningPlatform', () => {
         expect(queryResult.trace.evidenceCoverageRatio).toBeGreaterThan(0);
     });
 
+    test('ingest diff operations support delete and dynamic relation recompute', async () => {
+        const seed = await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_a',
+                    sourcePath: 'Knowledge_Base/doc_a.md',
+                    language: 'en',
+                    content: '# Topic A\nSee [[Topic B]] for prerequisite context.',
+                },
+                {
+                    documentId: 'doc_b',
+                    sourcePath: 'Knowledge_Base/doc_b.md',
+                    language: 'en',
+                    content: '# Topic B\nLegacy concept that will be removed.',
+                },
+            ],
+        });
+        expect(seed.summary.changedDocuments).toBe(2);
+
+        const diffResult = await platform.ingestKnowledge({
+            incremental: true,
+            recomputeRelations: true,
+            operations: [
+                {
+                    op: 'upsert',
+                    document: {
+                        documentId: 'doc_a',
+                        sourcePath: 'Knowledge_Base/doc_a.md',
+                        language: 'en',
+                        content: '# Topic A\nUpdated without outbound wiki links.',
+                    },
+                },
+                {
+                    op: 'delete',
+                    document: {
+                        documentId: 'doc_b',
+                    },
+                },
+            ],
+        });
+
+        expect(diffResult.summary.ingestedDocuments).toBe(1);
+        expect(diffResult.summary.changedDocuments).toBe(1);
+        expect(diffResult.summary.deletedDocuments).toBe(1);
+        expect(diffResult.summary.recomputedDynamicRelations).toBe(true);
+        expect(diffResult.summary.invalidatedRelationEdges).toBeGreaterThanOrEqual(1);
+        expect(diffResult.summary.regeneratedRelationEdges).toBeGreaterThanOrEqual(0);
+        expect(diffResult.staleness.some((entry) => entry.status === 'deleted' && entry.documentId === 'doc_b')).toBe(true);
+
+        const deletedQuery = await platform.queryKnowledge({
+            query: 'Legacy concept removed',
+            topK: 5,
+            asOf: '2026-03-31T09:00:00.000Z',
+        });
+        expect(deletedQuery.items.length).toBe(0);
+    });
+
     test('ingest extracts markdown text, code, formula, and mermaid atoms', async () => {
         const ingest = await platform.ingestKnowledge({
             incremental: true,
@@ -312,6 +370,8 @@ describe('KnowledgeLearningPlatform', () => {
         expect(evictResult.evictedCount).toBeGreaterThanOrEqual(0);
 
         const state = platform.getKnowledgeState();
+        expect(state.ingestTelemetry.ingestCount).toBeGreaterThan(0);
+        expect(state.ingestTelemetry.ingestP95Ms).toBeGreaterThanOrEqual(0);
         expect(state.retrievalTelemetry.queryCount).toBeGreaterThanOrEqual(0);
         expect(state.retrievalTelemetry.queryP95Ms).toBeGreaterThanOrEqual(0);
     });

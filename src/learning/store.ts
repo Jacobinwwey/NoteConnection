@@ -36,6 +36,8 @@ export interface KnowledgeGraphSnapshot {
     activeAtomIds: string[];
     learnerStates: LearnerConceptState[];
     tutorTraces: TutorTrace[];
+    ingestLatencyHistoryMs: number[];
+    recomputeLatencyHistoryMs: number[];
     queryLatencyHistoryMs: number[];
     userMemory: Record<string, {
         session: MemoryEntry[];

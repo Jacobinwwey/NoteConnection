@@ -151,10 +151,19 @@ export interface KnowledgeDocumentInput {
     updatedAt?: string;
 }
 
+export interface KnowledgeDocumentDeleteInput {
+    documentId?: string;
+    sourcePath?: string;
+}
+
+export type KnowledgeIngestOperation =
+    | { op: 'upsert'; document: KnowledgeDocumentInput }
+    | { op: 'delete'; document: KnowledgeDocumentDeleteInput };
+
 export interface StalenessRecord {
     documentId: string;
     sourcePath: string;
-    status: 'new' | 'unchanged' | 'updated';
+    status: 'new' | 'unchanged' | 'updated' | 'deleted';
     previousHash?: string;
     currentHash: string;
     previousVersion?: number;
@@ -162,8 +171,11 @@ export interface StalenessRecord {
 }
 
 export interface KnowledgeIngestRequest {
-    documents: KnowledgeDocumentInput[];
+    documents?: KnowledgeDocumentInput[];
+    deletedDocuments?: KnowledgeDocumentDeleteInput[];
+    operations?: KnowledgeIngestOperation[];
     incremental?: boolean;
+    recomputeRelations?: boolean;
     ingestedAt?: string;
 }
 
@@ -176,8 +188,12 @@ export interface KnowledgeIngestResponse {
     summary: {
         ingestedDocuments: number;
         changedDocuments: number;
+        deletedDocuments: number;
         activeAtoms: number;
         activeRelationEdges: number;
+        recomputedDynamicRelations: boolean;
+        invalidatedRelationEdges: number;
+        regeneratedRelationEdges: number;
     };
 }
 
@@ -307,6 +323,16 @@ export interface KnowledgeSystemState {
     temporalEdges: number;
     masteryStates: number;
     tutorTraces: number;
+    ingestTelemetry: {
+        ingestCount: number;
+        ingestP95Ms: number;
+        ingestAverageMs: number;
+        ingestMaxMs: number;
+        recomputeCount: number;
+        recomputeP95Ms: number;
+        recomputeAverageMs: number;
+        recomputeMaxMs: number;
+    };
     retrievalTelemetry: {
         queryCount: number;
         queryP95Ms: number;

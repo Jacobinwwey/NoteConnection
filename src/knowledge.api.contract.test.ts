@@ -11,6 +11,7 @@ describe('Knowledge mastery API contract wiring', () => {
             '/api/knowledge/store-diagnostics',
             '/api/knowledge/store/reload',
             '/api/knowledge/ingest',
+            '/api/knowledge/ingest-diff',
             '/api/knowledge/query',
             '/api/knowledge/mastery/diagnose',
             '/api/knowledge/path',

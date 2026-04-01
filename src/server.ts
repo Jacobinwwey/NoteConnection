@@ -2384,7 +2384,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 return;
             }
 
-            if (postPathname === '/api/knowledge/ingest') {
+            if (postPathname === '/api/knowledge/ingest' || postPathname === '/api/knowledge/ingest-diff') {
                 try {
                     const payload = await readJsonBody(req);
                     const requestPayload = payload as KnowledgeIngestRequest;
@@ -2396,7 +2396,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         return;
                     }
                     console.error(error);
-                    CrashLogger.log(error, 'API:POST /api/knowledge/ingest');
+                    CrashLogger.log(error, `API:POST ${postPathname}`);
                     res.writeHead(500, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ success: false, error: String(error) }));
                 }

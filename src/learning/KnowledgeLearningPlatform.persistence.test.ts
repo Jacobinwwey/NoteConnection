@@ -86,6 +86,7 @@ describe('KnowledgeLearningPlatform persistence', () => {
         expect(state.activeAtoms).toBeGreaterThan(0);
         expect(state.masteryStates).toBeGreaterThan(0);
         expect(state.memoryEntries.session).toBeGreaterThan(0);
+        expect(state.ingestTelemetry.ingestCount).toBeGreaterThan(0);
         expect(state.retrievalTelemetry.queryCount).toBeGreaterThan(0);
 
         const queryResult = await platformB.queryKnowledge({
