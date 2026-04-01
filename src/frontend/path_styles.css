@@ -342,6 +342,9 @@
   border: 1px solid #2d394d;
   border-radius: 6px;
   background: #1a222f;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .workbench-list li.muted {
@@ -363,4 +366,20 @@
   font-size: 0.76rem;
   color: #b3bfd6;
   line-height: 1.45;
+}
+
+.workbench-run-action {
+  align-self: flex-start;
+}
+
+.workbench-feedback {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #dbe9ff;
+  background: #121c2b;
+  border: 1px solid #2d4568;
+  border-radius: 6px;
+  padding: 8px;
+  white-space: pre-wrap;
+  line-height: 1.5;
 }

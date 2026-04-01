@@ -48,6 +48,7 @@ window.pathApp = {
         qualitySnapshot: null,
         misconceptions: null,
         runtimeState: null,
+        tutorFeedback: null,
     },
     
     // Animation State
@@ -1914,6 +1915,69 @@ window.pathApp = {
         }
     },
 
+    _escapeHtml: function(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    },
+
+    _mapLearningActionToTutorActionKind: function(actionKind) {
+        const normalized = String(actionKind || '').trim().toLowerCase();
+        if (normalized === 'quiz') {
+            return 'generate_quiz';
+        }
+        if (normalized === 'transfer' || normalized === 'counterexample') {
+            return 'follow_up';
+        }
+        if (normalized === 'review' || normalized === 'reflection' || normalized === 'explain') {
+            return 'recap';
+        }
+        return 'follow_up';
+    },
+
+    executeLearningWorkbenchAction: async function(params = {}) {
+        const userId = this._normalizeLearningWorkbenchUserId(this.learningWorkbench.userId);
+        const atomId = String(params.atomId || '').trim();
+        const actionKind = String(params.actionKind || '').trim();
+        const source = String(params.source || '').trim();
+        if (!atomId || !actionKind) {
+            this._setLearningWorkbenchStatus('Invalid action payload for tutor execution.', true);
+            return;
+        }
+
+        const tutorActionKind = this._mapLearningActionToTutorActionKind(actionKind);
+        this.learningWorkbench.loading = true;
+        this._setLearningWorkbenchStatus(`Running tutor action (${tutorActionKind}) for ${atomId}...`);
+        this._renderLearningWorkbenchState();
+        try {
+            const result = await this._requestLearningApi('/api/knowledge/tutor/action', {
+                userId,
+                actionKind: tutorActionKind,
+                atomId,
+                prompt: `Learning workbench action: ${actionKind} from ${source || 'session_plan'}`,
+            });
+            this.learningWorkbench.tutorFeedback = {
+                atomId,
+                actionKind,
+                tutorActionKind,
+                source,
+                result,
+                receivedAt: new Date().toISOString(),
+            };
+            this._setLearningWorkbenchStatus(`Tutor response received for ${atomId}.`);
+        } catch (error) {
+            const message = String(error?.message || error || 'Unknown tutor execution error');
+            this.learningWorkbench.lastError = message;
+            this._setLearningWorkbenchStatus(`Tutor action failed: ${message}`, true);
+        } finally {
+            this.learningWorkbench.loading = false;
+            this._renderLearningWorkbenchState();
+        }
+    },
+
     _renderLearningWorkbenchState: function() {
         const userIdInput = document.getElementById('learning-user-id');
         if (userIdInput && userIdInput.value !== this.learningWorkbench.userId) {
@@ -1925,6 +1989,7 @@ window.pathApp = {
         const actionsEl = document.getElementById('learning-session-actions');
         const runtimeEl = document.getElementById('learning-runtime-summary');
         const updatedEl = document.getElementById('learning-workbench-updated-at');
+        const tutorFeedbackEl = document.getElementById('learning-tutor-feedback');
 
         if (updatedEl) {
             updatedEl.textContent = this.learningWorkbench.lastUpdatedAt
@@ -1971,8 +2036,42 @@ window.pathApp = {
                     const kind = String(action.kind || 'action');
                     const atomId = String(action.atomId || '');
                     const minutes = Number(action.estimatedMinutes || 0);
-                    return `<li><strong>${kind}</strong> <span class="chip">${source}</span> <code>${atomId}</code> (${minutes}m)</li>`;
+                    const safeKind = this._escapeHtml(kind);
+                    const safeSource = this._escapeHtml(source);
+                    const safeAtomId = this._escapeHtml(atomId);
+                    const encodedKind = encodeURIComponent(kind);
+                    const encodedAtomId = encodeURIComponent(atomId);
+                    const encodedSource = encodeURIComponent(source);
+                    return `
+                        <li>
+                          <div><strong>${safeKind}</strong> <span class="chip">${safeSource}</span> <code>${safeAtomId}</code> (${minutes}m)</div>
+                          <button
+                            class="btn-small workbench-run-action"
+                            data-action-kind="${encodedKind}"
+                            data-atom-id="${encodedAtomId}"
+                            data-action-source="${encodedSource}"
+                            type="button"
+                          >
+                            Ask Tutor
+                          </button>
+                        </li>
+                    `;
                 }).join('');
+            }
+        }
+
+        if (tutorFeedbackEl) {
+            const tutorFeedback = this.learningWorkbench.tutorFeedback;
+            if (!tutorFeedback || !tutorFeedback.result) {
+                tutorFeedbackEl.textContent = 'No tutor feedback yet.';
+            } else {
+                const message = String(tutorFeedback.result.message || '').trim();
+                const safeMessage = message.length > 0 ? message : 'Tutor returned an empty message.';
+                tutorFeedbackEl.textContent = [
+                    `Action: ${tutorFeedback.actionKind} (${tutorFeedback.tutorActionKind})`,
+                    `Atom: ${tutorFeedback.atomId}`,
+                    safeMessage,
+                ].join('\n');
             }
         }
 
@@ -2623,6 +2722,7 @@ window.pathApp = {
         const workbenchRefreshBtn = document.getElementById('btn-refresh-learning-workbench');
         const workbenchIngestBtn = document.getElementById('btn-ingest-focus-node');
         const workbenchUserIdInput = document.getElementById('learning-user-id');
+        const workbenchActionsList = document.getElementById('learning-session-actions');
 
         if (!tauriMode) {
             if (learningModeEl) {
@@ -2687,6 +2787,25 @@ window.pathApp = {
                 workbenchUserIdInput.value = this.learningWorkbench.userId;
                 this._persistLearningWorkbenchPreferences();
                 this._renderLearningWorkbenchState();
+            });
+        }
+
+        if (workbenchActionsList) {
+            workbenchActionsList.addEventListener('click', (event) => {
+                const runBtn = event.target && typeof event.target.closest === 'function'
+                    ? event.target.closest('.workbench-run-action')
+                    : null;
+                if (!runBtn) {
+                    return;
+                }
+                const actionKind = decodeURIComponent(runBtn.getAttribute('data-action-kind') || '');
+                const atomId = decodeURIComponent(runBtn.getAttribute('data-atom-id') || '');
+                const source = decodeURIComponent(runBtn.getAttribute('data-action-source') || '');
+                void this.executeLearningWorkbenchAction({
+                    actionKind,
+                    atomId,
+                    source,
+                });
             });
         }
 
