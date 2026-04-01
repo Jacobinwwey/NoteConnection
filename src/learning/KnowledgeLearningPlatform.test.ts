@@ -553,6 +553,55 @@ describe('KnowledgeLearningPlatform', () => {
         expect(stateAfterExecution.sessionActionTelemetry.executionCount).toBeGreaterThanOrEqual(3);
     });
 
+    test('session plan execution consumes answersByActionId for auto analysis and inferred mastery updates', async () => {
+        const ingest = await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_session_exec_answers',
+                    sourcePath: 'Knowledge_Base/doc_session_exec_answers.md',
+                    language: 'en',
+                    content: '# Session Execute Answers\nSupport answer-driven diagnostics during batch execution.',
+                },
+            ],
+        });
+        const focusAtomIds = ingest.atoms.map((item) => item.id);
+        const sessionPlan = await platform.buildStudySession({
+            userId: 'user_session_exec_answers',
+            focusAtomIds,
+            maxActions: 4,
+            includeDivergence: false,
+            includeRetrain: false,
+        });
+        expect(sessionPlan.actions.length).toBeGreaterThan(0);
+        const firstAction = sessionPlan.actions[0];
+        expect(firstAction).toBeDefined();
+
+        const execution = await platform.executeStudySessionPlan({
+            userId: 'user_session_exec_answers',
+            sessionPlan: {
+                ...sessionPlan,
+                actions: [firstAction],
+            },
+            actionLimit: 1,
+            answersByActionId: {
+                [firstAction.id]: 'xylophone quasar nebula',
+            },
+            autoAnalyzeAnswer: true,
+            autoUpdateMasteryFromAnswer: true,
+            persistMemory: true,
+            memoryLayer: 'session',
+        });
+
+        expect(execution.summary.executedCount).toBe(1);
+        expect(execution.summary.analyzedAnswerCount).toBe(1);
+        expect(execution.summary.inferredMasteryCount).toBe(1);
+        const firstItem = execution.items[0];
+        expect(firstItem?.status).toBe('executed');
+        expect(firstItem?.result?.answerAnalysis).not.toBeNull();
+        expect(firstItem?.result?.trace.masterySource).toBe('inferred');
+    });
+
     test('learning quality evaluation enforces mastery and evidence thresholds', async () => {
         await platform.ingestKnowledge({
             incremental: true,

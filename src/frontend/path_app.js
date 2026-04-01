@@ -1941,6 +1941,44 @@ window.pathApp = {
         return answer.trim();
     },
 
+    _collectOptionalAnswersForSessionActions: function(actions = []) {
+        if (typeof window === 'undefined' || typeof window.prompt !== 'function') {
+            return {};
+        }
+        if (!Array.isArray(actions) || actions.length === 0) {
+            return {};
+        }
+        const confirmation = window.prompt(
+            'Provide learner answers for this session run? Type "yes" to enable, leave empty to skip.',
+            ''
+        );
+        if (!confirmation || !/^y(es)?$/i.test(String(confirmation).trim())) {
+            return {};
+        }
+        const answerMap = {};
+        const promptableActions = actions
+            .filter((action) => ['quiz', 'review', 'explain'].includes(String(action?.kind || '').trim().toLowerCase()))
+            .slice(0, 6);
+        promptableActions.forEach((action) => {
+            const actionId = String(action?.id || '').trim();
+            if (!actionId) {
+                return;
+            }
+            const atomId = String(action?.atomId || 'unknown_atom').trim();
+            const actionKind = String(action?.kind || 'action').trim();
+            const promptText = `Optional answer for ${actionKind} on ${atomId} (leave empty to skip):`;
+            const answer = window.prompt(promptText, '');
+            if (typeof answer !== 'string') {
+                return;
+            }
+            const normalized = answer.trim();
+            if (normalized.length > 0) {
+                answerMap[actionId] = normalized;
+            }
+        });
+        return answerMap;
+    },
+
     executeLearningWorkbenchAction: async function(params = {}) {
         const userId = this._normalizeLearningWorkbenchUserId(this.learningWorkbench.userId);
         const atomId = String(params.atomId || '').trim();
@@ -2026,6 +2064,10 @@ window.pathApp = {
             }
         }
         actionLimit = Math.max(1, Math.min(20, Math.floor(Number(actionLimit) || 1), sessionPlan.actions.length));
+        const selectedActions = sessionPlan.actions.slice(0, actionLimit);
+        const answersByActionId = this._collectOptionalAnswersForSessionActions(selectedActions);
+        const answerCount = Object.keys(answersByActionId).length;
+        const autoAnalyzeAnswer = answerCount > 0;
 
         this.learningWorkbench.loading = true;
         this._setLearningWorkbenchStatus(`Running session plan execution for top ${actionLimit} actions...`);
@@ -2035,6 +2077,9 @@ window.pathApp = {
                 userId,
                 sessionPlan,
                 actionLimit,
+                answersByActionId,
+                autoAnalyzeAnswer,
+                autoUpdateMasteryFromAnswer: autoAnalyzeAnswer,
                 persistMemory: true,
                 memoryLayer: 'session',
             });
@@ -2057,7 +2102,7 @@ window.pathApp = {
             }
             const summary = result?.summary || {};
             this._setLearningWorkbenchStatus(
-                `Session execution finished: executed ${Number(summary.executedCount || 0)}/${Number(summary.attemptedActions || 0)}, mastery updates ${Number(summary.updatedMasteryCount || 0)}.`
+                `Session execution finished: executed ${Number(summary.executedCount || 0)}/${Number(summary.attemptedActions || 0)}, mastery updates ${Number(summary.updatedMasteryCount || 0)}, analyzed answers ${Number(summary.analyzedAnswerCount || 0)} (input=${answerCount}).`
             );
         } catch (error) {
             const message = String(error?.message || error || 'Unknown session execution error');
