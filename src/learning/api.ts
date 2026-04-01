@@ -13,6 +13,8 @@ import type {
     MasteryMisconceptionResponse,
     MemoryPolicyRequest,
     MemoryPolicyResponse,
+    StudySessionRequest,
+    StudySessionResponse,
     LearningQualityEvaluationRequest,
     LearningQualityEvaluationResponse,
     TutorActionRequest,
@@ -38,6 +40,10 @@ export interface MasteryMisconceptionAPI {
 
 export interface LearningPathAPI {
     buildLearningPath(request: LearningPathRequest): Promise<LearningPathResponse>;
+}
+
+export interface StudySessionAPI {
+    buildStudySession(request: StudySessionRequest): Promise<StudySessionResponse>;
 }
 
 export interface TutorActionAPI {
@@ -66,6 +72,7 @@ export interface KnowledgeLearningPlatformAPI extends
     MasteryDiagnosticsAPI,
     MasteryMisconceptionAPI,
     LearningPathAPI,
+    StudySessionAPI,
     TutorActionAPI,
     MemoryPolicyAPI,
     LearningQualityGateAPI,

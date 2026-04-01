@@ -45,6 +45,9 @@ import type {
     RelationEdge,
     RelationKind,
     StalenessRecord,
+    StudySessionAction,
+    StudySessionRequest,
+    StudySessionResponse,
     TemporalEdge,
     TutorActionRequest,
     TutorActionResponse,
@@ -781,15 +784,25 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             throw new Error('LearningPathAPI requires a non-empty userId.');
         }
         const generatedAt = this.resolveTimestamp(request.generatedAt);
-        const maxMasteryPaths = clamp(Math.floor(Number(request.maxMasteryPaths) || 3), 1, 12);
-        const maxDivergencePaths = clamp(Math.floor(Number(request.maxDivergencePaths) || 3), 1, 12);
+        const resolvedMaxMasteryPaths = Number.isFinite(Number(request.maxMasteryPaths))
+            ? Number(request.maxMasteryPaths)
+            : 3;
+        const resolvedMaxDivergencePaths = Number.isFinite(Number(request.maxDivergencePaths))
+            ? Number(request.maxDivergencePaths)
+            : 3;
+        const maxMasteryPaths = clamp(Math.floor(resolvedMaxMasteryPaths), 0, 12);
+        const maxDivergencePaths = clamp(Math.floor(resolvedMaxDivergencePaths), 0, 12);
         const focusAtomIds = Array.isArray(request.focusAtomIds)
             ? request.focusAtomIds.filter((atomId): atomId is string => isNonEmptyString(atomId) && this.activeAtomIds.has(atomId))
             : [];
 
         const candidateAtomIds = focusAtomIds.length > 0 ? focusAtomIds : Array.from(this.activeAtomIds);
-        const masteryPaths = this.buildMasteryPaths(userId, candidateAtomIds, maxMasteryPaths, generatedAt);
-        const divergencePaths = this.buildDivergencePaths(userId, candidateAtomIds, maxDivergencePaths, generatedAt);
+        const masteryPaths = maxMasteryPaths > 0
+            ? this.buildMasteryPaths(userId, candidateAtomIds, maxMasteryPaths, generatedAt)
+            : [];
+        const divergencePaths = maxDivergencePaths > 0
+            ? this.buildDivergencePaths(userId, candidateAtomIds, maxDivergencePaths, generatedAt)
+            : [];
         const recommendedActions = [...masteryPaths, ...divergencePaths]
             .flatMap((pathItem) => pathItem.actions)
             .sort((left, right) => right.priority - left.priority)
@@ -799,6 +812,137 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             masteryPaths,
             divergencePaths,
             recommendedActions,
+        };
+    }
+
+    public async buildStudySession(request: StudySessionRequest): Promise<StudySessionResponse> {
+        await this.ensureHydrated();
+        const userId = String(request.userId || '').trim();
+        if (!userId) {
+            throw new Error('StudySessionAPI requires a non-empty userId.');
+        }
+        const generatedAt = this.resolveTimestamp(request.generatedAt);
+        const maxActions = clamp(Math.floor(Number(request.maxActions) || 12), 1, 80);
+        const includeDivergence = request.includeDivergence !== false;
+        const includeRetrain = request.includeRetrain !== false;
+        const focusAtomIds = Array.isArray(request.focusAtomIds)
+            ? request.focusAtomIds.filter((atomId): atomId is string => isNonEmptyString(atomId) && this.activeAtomIds.has(atomId))
+            : [];
+        const candidateAtomIds = focusAtomIds.length > 0 ? focusAtomIds : Array.from(this.activeAtomIds);
+        const misconceptionResult = await this.queryMasteryMisconceptions({
+            userId,
+            atomIds: candidateAtomIds,
+            topK: 8,
+            generatedAt,
+        });
+        const pathResult = await this.buildLearningPath({
+            userId,
+            focusAtomIds: candidateAtomIds,
+            maxMasteryPaths: 4,
+            maxDivergencePaths: includeDivergence ? 3 : 0,
+            generatedAt,
+        });
+
+        const retrainResponse = includeRetrain
+            ? await this.applyMemoryPolicy({
+                userId,
+                layer: 'session',
+                operation: 'retrain_plan',
+                limit: maxActions,
+                now: generatedAt,
+            })
+            : null;
+
+        const masteryActions: StudySessionAction[] = pathResult.masteryPaths
+            .flatMap((pathItem) =>
+                pathItem.actions.map((action) => ({
+                    ...action,
+                    source: 'mastery_path' as const,
+                }))
+            );
+        const divergenceActions: StudySessionAction[] = includeDivergence
+            ? pathResult.divergencePaths.flatMap((pathItem) =>
+                pathItem.actions.map((action) => ({
+                    ...action,
+                    source: 'divergence_path' as const,
+                }))
+            )
+            : [];
+        const retrainActions: StudySessionAction[] = (retrainResponse?.recommendedActions || [])
+            .map((action) => ({
+                ...action,
+                source: 'retrain_plan' as const,
+            }));
+        const misconceptionActions = misconceptionResult.items
+            .slice(0, 4)
+            .reduce<StudySessionAction[]>((actions, item, index) => {
+                const atomId = item.affectedAtomIds.find((candidateAtomId) => this.activeAtomIds.has(candidateAtomId));
+                if (!atomId) {
+                    return actions;
+                }
+                const atom = this.atoms.get(atomId);
+                const kind = item.recommendedActionKinds[0] || 'review';
+                const expectedGain = Number(
+                    clamp(item.severityScore * 0.6 + (1 - item.averageMasteryProbability) * 0.4, 0.05, 0.9).toFixed(4)
+                );
+                actions.push({
+                    ...this.createLearningAction({
+                        kind,
+                        atomId,
+                        priority: 112 - index * 3,
+                        expectedGain,
+                        rationale: `Target misconception "${item.errorTag}" before next expansion.`,
+                        evidenceSpanIds: atom?.evidenceSpanIds || [],
+                        relationPathAtomIds: [atomId],
+                        estimatedMinutes: 7,
+                    }),
+                    source: 'misconception_remediation',
+                    errorTag: item.errorTag,
+                });
+                return actions;
+            }, []);
+
+        const dedupedBySignature = new Map<string, StudySessionAction>();
+        [...misconceptionActions, ...retrainActions, ...masteryActions, ...divergenceActions].forEach((action) => {
+            const signature = `${action.source}::${action.kind}::${action.atomId}`;
+            const existing = dedupedBySignature.get(signature);
+            if (!existing) {
+                dedupedBySignature.set(signature, action);
+                return;
+            }
+            if (action.priority > existing.priority) {
+                dedupedBySignature.set(signature, action);
+            }
+        });
+
+        const actions = Array.from(dedupedBySignature.values())
+            .sort((left, right) => {
+                if (right.priority !== left.priority) {
+                    return right.priority - left.priority;
+                }
+                return right.expectedGain - left.expectedGain;
+            })
+            .slice(0, maxActions);
+        const evidenceCoverageRatio = actions.length > 0
+            ? Number((actions.filter((action) => action.evidenceSpanIds.length > 0).length / actions.length).toFixed(4))
+            : 1;
+        const dueRetrainAtoms = Array.from(new Set(retrainActions.map((action) => action.atomId)));
+
+        return {
+            userId,
+            generatedAt,
+            actions,
+            signals: {
+                misconceptions: misconceptionResult.items,
+                dueRetrainAtoms,
+                masteryPathTargets: pathResult.masteryPaths.map((pathItem) => pathItem.targetAtomId),
+                divergenceTargets: pathResult.divergencePaths.map((pathItem) => pathItem.targetAtomId),
+            },
+            summary: {
+                totalActions: actions.length,
+                totalEstimatedMinutes: actions.reduce((sum, action) => sum + action.estimatedMinutes, 0),
+                evidenceCoverageRatio,
+            },
         };
     }
 
@@ -832,7 +976,14 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             .map((evidenceId) => this.evidenceSpans.get(evidenceId))
             .filter((span): span is EvidenceSpan => Boolean(span));
         const neighbors = this.collectNeighborAtomIds(targetAtom.id, 3);
-        const suggestedActions = this.buildTutorSuggestedActions(targetAtom.id, evidenceSpans, neighbors);
+        const learnerState = this.learnerStates.has(this.makeLearnerStateKey(userId, targetAtom.id))
+            ? this.normalizeLearnerState(
+                this.learnerStates.get(this.makeLearnerStateKey(userId, targetAtom.id)) as LearnerConceptState,
+                nowIso
+            )
+            : null;
+        const dominantErrorTag = learnerState ? this.getDominantErrorTag(learnerState) : null;
+        const suggestedActions = this.buildTutorSuggestedActions(targetAtom.id, evidenceSpans, neighbors, dominantErrorTag);
         let message = this.renderTutorMessage({
             actionKind: request.actionKind,
             atom: targetAtom,
@@ -840,10 +991,13 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             prompt: request.prompt,
             neighbors,
             evidenceSpans,
+            dominantErrorTag,
         });
         let traceSource: TutorTrace['source'] = 'rule-engine';
         let traceConfidence = this.estimateTutorConfidence(request.actionKind, request.answer, targetAtom);
-        let traceNotes = 'Evidence-first response generated by local rule engine.';
+        let traceNotes = dominantErrorTag
+            ? `Evidence-first response generated by local rule engine with misconception focus: ${dominantErrorTag}.`
+            : 'Evidence-first response generated by local rule engine.';
         let traceEvidenceSpanIds = evidenceSpans.map((span) => span.id);
 
         if (this.tutorAdapter) {
@@ -2703,24 +2857,37 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         return neighborIds;
     }
 
-    private buildTutorSuggestedActions(atomId: string, evidenceSpans: EvidenceSpan[], neighbors: string[]): LearningAction[] {
+    private buildTutorSuggestedActions(
+        atomId: string,
+        evidenceSpans: EvidenceSpan[],
+        neighbors: string[],
+        dominantErrorTag: string | null
+    ): LearningAction[] {
+        const actionKinds = this.resolveActionKindsForErrorTag(dominantErrorTag);
+        const primaryKind = actionKinds[0] || 'quiz';
+        const secondaryKind = actionKinds[1] || 'reflection';
+        const tagHint = dominantErrorTag
+            ? ` Targets misconception "${dominantErrorTag}".`
+            : '';
         return [
             this.createLearningAction({
-                kind: 'quiz',
+                kind: primaryKind,
                 atomId,
                 priority: 88,
                 expectedGain: 0.24,
-                rationale: 'Immediate retrieval practice to test current mastery.',
+                rationale: `Immediate retrieval practice to test current mastery.${tagHint}`,
                 evidenceSpanIds: evidenceSpans.map((span) => span.id),
                 relationPathAtomIds: [atomId, ...neighbors],
                 estimatedMinutes: 7,
             }),
             this.createLearningAction({
-                kind: 'reflection',
+                kind: secondaryKind,
                 atomId,
                 priority: 82,
                 expectedGain: 0.17,
-                rationale: 'Reflect on misunderstandings and bind corrections to evidence.',
+                rationale: dominantErrorTag
+                    ? `Reflect on why "${dominantErrorTag}" happened and bind correction to evidence.`
+                    : 'Reflect on misunderstandings and bind corrections to evidence.',
                 evidenceSpanIds: evidenceSpans.map((span) => span.id),
                 relationPathAtomIds: [atomId],
                 estimatedMinutes: 5,
@@ -2735,14 +2902,19 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         answer?: string;
         neighbors: string[];
         evidenceSpans: EvidenceSpan[];
+        dominantErrorTag: string | null;
     }): string {
         const firstEvidence = params.evidenceSpans[0]?.snippet || params.atom.content.slice(0, 220);
+        const misconceptionHint = params.dominantErrorTag
+            ? `Known misconception to repair: ${params.dominantErrorTag}.`
+            : '';
         if (params.actionKind === 'generate_quiz') {
             return [
                 `Question: Explain the core idea of "${params.atom.title}" in your own words.`,
                 'Constraint: include one evidence-backed statement from the source.',
+                misconceptionHint,
                 `Evidence hint: ${firstEvidence}`,
-            ].join('\n');
+            ].filter((line) => line.length > 0).join('\n');
         }
         if (params.actionKind === 'analyze_answer') {
             const answerTokens = tokenize(String(params.answer || ''));
@@ -2751,8 +2923,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             return [
                 `Answer quality: ${quality}.`,
                 `Matched keywords: ${keywordOverlap}/${params.atom.keywords.length}.`,
+                misconceptionHint,
                 `Repair focus: align your reasoning with this evidence: ${firstEvidence}`,
-            ].join('\n');
+            ].filter((line) => line.length > 0).join('\n');
         }
         if (params.actionKind === 'follow_up') {
             const neighborTitle = params.neighbors
@@ -2762,14 +2935,16 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             return [
                 `Follow-up: compare "${params.atom.title}" with "${neighborTitle}".`,
                 'Prompt: identify one shared mechanism and one critical difference.',
+                misconceptionHint,
                 `Evidence anchor: ${firstEvidence}`,
-            ].join('\n');
+            ].filter((line) => line.length > 0).join('\n');
         }
         return [
             `Recap for "${params.atom.title}":`,
+            misconceptionHint,
             `- Key evidence: ${firstEvidence}`,
             '- Suggested next move: apply the concept to a transfer task and verify against source.',
-        ].join('\n');
+        ].filter((line) => line.length > 0).join('\n');
     }
 
     private estimateTutorConfidence(

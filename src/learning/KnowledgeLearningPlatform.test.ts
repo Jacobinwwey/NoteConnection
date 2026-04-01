@@ -349,6 +349,57 @@ describe('KnowledgeLearningPlatform', () => {
         expect(pathResult.masteryPaths[0]?.actions.some((action) => action.kind === 'quiz')).toBe(true);
     });
 
+    test('study session plan orchestrates misconception remediation, retrain, and mastery actions', async () => {
+        const ingest = await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_session_a',
+                    sourcePath: 'Knowledge_Base/doc_session_a.md',
+                    language: 'en',
+                    content: '# Session A\nFocus on retrieval and evidence alignment.',
+                },
+                {
+                    documentId: 'doc_session_b',
+                    sourcePath: 'Knowledge_Base/doc_session_b.md',
+                    language: 'en',
+                    content: '# Session B\nCross-apply the core concept.',
+                },
+            ],
+        });
+        const atomA = ingest.atoms[0]?.id as string;
+        const atomB = ingest.atoms[1]?.id as string;
+
+        await platform.diagnoseMastery({
+            userId: 'user_session',
+            observedAt: '2026-03-31T08:00:00.000Z',
+            observations: [
+                { atomId: atomA, outcome: 'incorrect', errorTag: 'retrieval_failure' },
+                { atomId: atomA, outcome: 'incorrect', errorTag: 'evidence_mismatch' },
+                { atomId: atomB, outcome: 'partial', errorTag: 'transfer_failure' },
+            ],
+        });
+
+        const session = await platform.buildStudySession({
+            userId: 'user_session',
+            focusAtomIds: [atomA, atomB],
+            includeDivergence: false,
+            includeRetrain: true,
+            maxActions: 8,
+            generatedAt: '2026-04-20T00:00:00.000Z',
+        });
+
+        expect(session.actions.length).toBeGreaterThan(0);
+        expect(session.signals.misconceptions.length).toBeGreaterThan(0);
+        expect(session.signals.misconceptions[0]?.errorTag).toBe('retrieval_failure');
+        expect(session.signals.dueRetrainAtoms).toContain(atomA);
+        expect(session.signals.divergenceTargets.length).toBe(0);
+        expect(session.actions.some((action) => action.source === 'misconception_remediation')).toBe(true);
+        expect(session.actions.some((action) => action.source === 'retrain_plan')).toBe(true);
+        expect(session.summary.totalActions).toBe(session.actions.length);
+        expect(session.summary.evidenceCoverageRatio).toBeGreaterThan(0);
+    });
+
     test('learning quality evaluation enforces mastery and evidence thresholds', async () => {
         await platform.ingestKnowledge({
             incremental: true,
@@ -551,6 +602,43 @@ describe('KnowledgeLearningPlatform', () => {
         expect(state.ingestTelemetry.ingestP95Ms).toBeGreaterThanOrEqual(0);
         expect(state.retrievalTelemetry.queryCount).toBeGreaterThanOrEqual(0);
         expect(state.retrievalTelemetry.queryP95Ms).toBeGreaterThanOrEqual(0);
+    });
+
+    test('tutor action uses misconception context for targeted guidance', async () => {
+        const ingest = await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_tutor_focus',
+                    sourcePath: 'Knowledge_Base/doc_tutor_focus.md',
+                    language: 'en',
+                    content: '# Tutor Focus\nAnswers should map claims to source evidence.',
+                },
+            ],
+        });
+        const atomId = ingest.atoms[0]?.id as string;
+
+        await platform.diagnoseMastery({
+            userId: 'user_tutor_focus',
+            observations: [
+                {
+                    atomId,
+                    outcome: 'incorrect',
+                    errorTag: 'evidence_mismatch',
+                },
+            ],
+        });
+
+        const tutor = await platform.executeTutorAction({
+            userId: 'user_tutor_focus',
+            actionKind: 'analyze_answer',
+            atomId,
+            answer: 'I summarized the topic without citing exact evidence.',
+        });
+
+        expect(tutor.message).toContain('Known misconception to repair: evidence_mismatch.');
+        expect(tutor.suggestedActions.some((action) => action.kind === 'review')).toBe(true);
+        expect(tutor.trace.notes).toContain('misconception focus: evidence_mismatch');
     });
 
     test('tutor adapter output is guarded by evidence binding and confidence thresholds', async () => {

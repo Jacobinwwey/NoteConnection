@@ -321,6 +321,43 @@ export interface LearningPathResponse {
     recommendedActions: LearningAction[];
 }
 
+export type StudySessionActionSource =
+    | 'mastery_path'
+    | 'divergence_path'
+    | 'retrain_plan'
+    | 'misconception_remediation';
+
+export interface StudySessionRequest {
+    userId: string;
+    focusAtomIds?: string[];
+    maxActions?: number;
+    includeDivergence?: boolean;
+    includeRetrain?: boolean;
+    generatedAt?: string;
+}
+
+export interface StudySessionAction extends LearningAction {
+    source: StudySessionActionSource;
+    errorTag?: MasteryErrorTag | string;
+}
+
+export interface StudySessionResponse {
+    userId: string;
+    generatedAt: string;
+    actions: StudySessionAction[];
+    signals: {
+        misconceptions: MasteryMisconceptionItem[];
+        dueRetrainAtoms: string[];
+        masteryPathTargets: string[];
+        divergenceTargets: string[];
+    };
+    summary: {
+        totalActions: number;
+        totalEstimatedMinutes: number;
+        evidenceCoverageRatio: number;
+    };
+}
+
 export interface TutorActionRequest {
     userId: string;
     actionKind: TutorActionKind;
