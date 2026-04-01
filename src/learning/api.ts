@@ -17,6 +17,8 @@ import type {
     StudySessionResponse,
     LearningQualityEvaluationRequest,
     LearningQualityEvaluationResponse,
+    LearningQualitySnapshotRequest,
+    LearningQualitySnapshotResponse,
     TutorActionRequest,
     TutorActionResponse,
     KnowledgeSystemState,
@@ -58,6 +60,10 @@ export interface LearningQualityGateAPI {
     evaluateLearningQuality(request: LearningQualityEvaluationRequest): Promise<LearningQualityEvaluationResponse>;
 }
 
+export interface LearningQualitySnapshotAPI {
+    captureLearningQualitySnapshot(request: LearningQualitySnapshotRequest): Promise<LearningQualitySnapshotResponse>;
+}
+
 export interface IngestGuardrailAPI {
     evaluateIngestGuardrails(request: IngestGuardrailEvaluationRequest): Promise<IngestGuardrailEvaluationResponse>;
 }
@@ -76,6 +82,7 @@ export interface KnowledgeLearningPlatformAPI extends
     TutorActionAPI,
     MemoryPolicyAPI,
     LearningQualityGateAPI,
+    LearningQualitySnapshotAPI,
     IngestGuardrailAPI,
     KnowledgeRuntimeStateAPI {
 }

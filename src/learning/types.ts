@@ -446,6 +446,23 @@ export interface LearningQualitySnapshot {
     queryP95Ms?: number;
 }
 
+export interface LearningQualitySnapshotRequest {
+    userId?: string;
+    sampledAt?: string;
+}
+
+export interface LearningQualitySnapshotResponse {
+    sampledAt: string;
+    snapshot: LearningQualitySnapshot;
+    diagnostics: {
+        learnerStates: number;
+        totalReviews: number;
+        misconceptionEvents: number;
+        evidenceBackedTutorTraces: number;
+        totalTutorTraces: number;
+    };
+}
+
 export interface LearningQualityThresholds {
     retestPassRateUpliftPct: number;
     misconceptionRecurrenceReductionPct: number;

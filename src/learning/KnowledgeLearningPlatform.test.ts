@@ -459,6 +459,50 @@ describe('KnowledgeLearningPlatform', () => {
         expect(failResult.gates.some((gate) => gate.passed === false)).toBe(true);
     });
 
+    test('quality snapshot captures runtime learning metrics for governance', async () => {
+        const ingest = await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_quality_snapshot',
+                    sourcePath: 'Knowledge_Base/doc_quality_snapshot.md',
+                    language: 'en',
+                    content: '# Snapshot\nQuality metrics should reflect runtime evidence and mastery.',
+                },
+            ],
+        });
+        const atomId = ingest.atoms[0]?.id as string;
+
+        await platform.diagnoseMastery({
+            userId: 'user_quality_snapshot',
+            observations: [
+                { atomId, outcome: 'correct' },
+                { atomId, outcome: 'incorrect', errorTag: 'retrieval_failure' },
+            ],
+        });
+        await platform.queryKnowledge({
+            query: 'quality snapshot runtime',
+            topK: 2,
+        });
+        await platform.executeTutorAction({
+            userId: 'user_quality_snapshot',
+            actionKind: 'recap',
+            atomId,
+        });
+
+        const snapshotResult = await platform.captureLearningQualitySnapshot({
+            userId: 'user_quality_snapshot',
+        });
+        expect(snapshotResult.snapshot.retestPassRatePct).toBeGreaterThanOrEqual(0);
+        expect(snapshotResult.snapshot.retestPassRatePct).toBeLessThanOrEqual(100);
+        expect(snapshotResult.snapshot.misconceptionRecurrenceRatePct).toBeGreaterThanOrEqual(0);
+        expect(snapshotResult.snapshot.evidenceBackedSuggestionRatioPct).toBeGreaterThanOrEqual(0);
+        expect(snapshotResult.snapshot.averagePathMasteryGainPct).toBeGreaterThanOrEqual(0);
+        expect(snapshotResult.snapshot.queryP95Ms).toBeGreaterThanOrEqual(0);
+        expect(snapshotResult.diagnostics.learnerStates).toBeGreaterThan(0);
+        expect(snapshotResult.diagnostics.totalTutorTraces).toBeGreaterThan(0);
+    });
+
     test('ingest guardrail evaluation enforces thresholds over latest ingest and telemetry', async () => {
         await platform.ingestKnowledge({
             incremental: true,

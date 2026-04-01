@@ -17,6 +17,7 @@ describe('Knowledge mastery API contract wiring', () => {
             '/api/knowledge/mastery/misconceptions',
             '/api/knowledge/path',
             '/api/knowledge/session/plan',
+            '/api/knowledge/quality/snapshot',
             '/api/knowledge/quality/evaluate',
             '/api/knowledge/ingest/guardrails/evaluate',
             '/api/knowledge/tutor/action',
@@ -47,6 +48,7 @@ describe('Knowledge mastery API contract wiring', () => {
             'interface TutorActionAPI',
             'interface MemoryPolicyAPI',
             'interface LearningQualityGateAPI',
+            'interface LearningQualitySnapshotAPI',
             'interface IngestGuardrailAPI',
         ];
         requiredInterfaces.forEach((interfaceName) => {

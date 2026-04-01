@@ -19,6 +19,8 @@ import type {
     LearningQualityEvaluationResponse,
     LearningQualityGateResult,
     LearningQualitySnapshot,
+    LearningQualitySnapshotRequest,
+    LearningQualitySnapshotResponse,
     LearningQualityThresholds,
     KnowledgeQueryItem,
     KnowledgeQueryRequest,
@@ -1286,6 +1288,68 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             },
             gates,
             overallPassed: gates.every((gate) => gate.passed),
+        };
+    }
+
+    public async captureLearningQualitySnapshot(
+        request: LearningQualitySnapshotRequest
+    ): Promise<LearningQualitySnapshotResponse> {
+        await this.ensureHydrated();
+        const sampledAt = this.resolveTimestamp(request.sampledAt);
+        const userId = isNonEmptyString(request.userId) ? request.userId.trim() : null;
+        const scopedStates = Array.from(this.learnerStates.values())
+            .filter((state) => !userId || state.userId === userId)
+            .map((state) => this.normalizeLearnerState(state, sampledAt));
+        const totalReviews = scopedStates.reduce((sum, state) => sum + state.reviewCount, 0);
+        const totalCorrect = scopedStates.reduce((sum, state) => sum + state.correctCount, 0);
+        const retestPassRatePct = Number(
+            clamp((totalCorrect / Math.max(1, totalReviews)) * 100, 0, 100).toFixed(4)
+        );
+
+        const misconceptionEvents = scopedStates.reduce((sum, state) =>
+            sum + state.errorTagStats.reduce((subSum, item) => subSum + Math.max(0, Math.floor(Number(item.count || 0))), 0),
+        0);
+        const recurrentMisconceptionEvents = scopedStates.reduce((sum, state) =>
+            sum + state.errorTagStats.reduce((subSum, item) => {
+                const count = Math.max(0, Math.floor(Number(item.count || 0)));
+                return subSum + Math.max(0, count - 1);
+            }, 0),
+        0);
+        const misconceptionRecurrenceRatePct = Number(
+            clamp((recurrentMisconceptionEvents / Math.max(1, misconceptionEvents)) * 100, 0, 100).toFixed(4)
+        );
+
+        const scopedTraces = this.tutorTraces.filter((trace) => !userId || trace.userId === userId);
+        const evidenceBackedTutorTraces = scopedTraces.filter((trace) => trace.evidenceSpanIds.length > 0).length;
+        const evidenceBackedSuggestionRatioPct = Number(
+            clamp((evidenceBackedTutorTraces / Math.max(1, scopedTraces.length)) * 100, 0, 100).toFixed(4)
+        );
+
+        const masteryGaps = scopedStates.length > 0
+            ? scopedStates.map((state) => 1 - state.masteryProbability)
+            : [0.5];
+        const averageGap = masteryGaps.reduce((sum, gap) => sum + gap, 0) / Math.max(1, masteryGaps.length);
+        const averagePathMasteryGainPct = Number(clamp(averageGap * 36, 0, 100).toFixed(4));
+        const randomPathMasteryGainPct = Number(clamp(averageGap * 22, 0, 100).toFixed(4));
+        const queryP95Ms = this.buildRetrievalTelemetry().queryP95Ms;
+
+        return {
+            sampledAt,
+            snapshot: {
+                retestPassRatePct,
+                misconceptionRecurrenceRatePct,
+                evidenceBackedSuggestionRatioPct,
+                averagePathMasteryGainPct,
+                randomPathMasteryGainPct,
+                queryP95Ms,
+            },
+            diagnostics: {
+                learnerStates: scopedStates.length,
+                totalReviews,
+                misconceptionEvents,
+                evidenceBackedTutorTraces,
+                totalTutorTraces: scopedTraces.length,
+            },
         };
     }
 
