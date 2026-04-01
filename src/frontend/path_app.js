@@ -50,6 +50,7 @@ window.pathApp = {
         runtimeState: null,
         tutorFeedback: null,
         sessionExecution: null,
+        sessionHistory: null,
     },
     
     // Animation State
@@ -1876,7 +1877,7 @@ window.pathApp = {
         const includeDivergence = true;
         const includeRetrain = true;
         try {
-            const [sessionPlan, qualitySnapshot, misconceptions, runtimeState] = await Promise.all([
+            const [sessionPlan, qualitySnapshot, misconceptions, runtimeState, sessionHistory] = await Promise.all([
                 this._requestLearningApi('/api/knowledge/session/plan', {
                     userId,
                     focusAtomIds,
@@ -1895,6 +1896,10 @@ window.pathApp = {
                 fetch('/api/knowledge/state', { method: 'GET' })
                     .then((response) => response.json())
                     .catch(() => null),
+                this._requestLearningApi('/api/knowledge/session/history', {
+                    userId,
+                    limit: 8,
+                }),
             ]);
             this.learningWorkbench.sessionPlan = sessionPlan || null;
             this.learningWorkbench.qualitySnapshot = qualitySnapshot || null;
@@ -1902,6 +1907,7 @@ window.pathApp = {
             this.learningWorkbench.runtimeState = runtimeState && runtimeState.success === true
                 ? runtimeState
                 : null;
+            this.learningWorkbench.sessionHistory = sessionHistory || null;
             this.learningWorkbench.lastUpdatedAt = new Date().toISOString();
 
             const actionCount = Number(sessionPlan?.summary?.totalActions || sessionPlan?.actions?.length || 0);
@@ -1977,6 +1983,49 @@ window.pathApp = {
             }
         });
         return answerMap;
+    },
+
+    _appendLearningWorkbenchSessionRecord: function(record) {
+        if (!record || typeof record !== 'object') {
+            return;
+        }
+        const recordId = String(record.id || '').trim();
+        if (!recordId) {
+            return;
+        }
+        const base = this.learningWorkbench.sessionHistory && typeof this.learningWorkbench.sessionHistory === 'object'
+            ? this.learningWorkbench.sessionHistory
+            : {
+                userId: this.learningWorkbench.userId,
+                generatedAt: new Date().toISOString(),
+                records: [],
+                summary: {
+                    totalRecords: 0,
+                    totalExecutedActions: 0,
+                    totalUpdatedMasteryCount: 0,
+                    averageMasteryDelta: 0,
+                    averageTutorConfidence: 0,
+                },
+            };
+        const existingRecords = Array.isArray(base.records) ? base.records.slice() : [];
+        const deduped = [record, ...existingRecords.filter((item) => String(item?.id || '').trim() !== recordId)].slice(0, 8);
+        this.learningWorkbench.sessionHistory = {
+            ...base,
+            generatedAt: new Date().toISOString(),
+            records: deduped,
+            summary: {
+                ...(base.summary || {}),
+                totalRecords: deduped.length,
+                totalExecutedActions: deduped.reduce((sum, item) => sum + Number(item?.executedCount || 0), 0),
+                totalUpdatedMasteryCount: deduped.reduce((sum, item) => sum + Number(item?.updatedMasteryCount || 0), 0),
+                averageMasteryDelta: deduped.length > 0
+                    ? deduped.reduce((sum, item) => sum + Number(item?.averageMasteryDelta || 0), 0) / deduped.length
+                    : 0,
+                averageTutorConfidence: deduped.length > 0
+                    ? deduped.reduce((sum, item) => sum + Number(item?.averageTutorConfidence || 0), 0) / deduped.length
+                    : 0,
+            },
+        };
     },
 
     executeLearningWorkbenchAction: async function(params = {}) {
@@ -2075,6 +2124,7 @@ window.pathApp = {
         try {
             const result = await this._requestLearningApi('/api/knowledge/session/execute', {
                 userId,
+                executionKind: 'session',
                 sessionPlan,
                 actionLimit,
                 answersByActionId,
@@ -2087,6 +2137,7 @@ window.pathApp = {
                 ...result,
                 receivedAt: new Date().toISOString(),
             };
+            this._appendLearningWorkbenchSessionRecord(result?.record || null);
             const firstExecuted = Array.isArray(result?.items)
                 ? result.items.find((item) => item && item.status === 'executed' && item.result)
                 : null;
@@ -2159,6 +2210,7 @@ window.pathApp = {
         try {
             const result = await this._requestLearningApi('/api/knowledge/session/execute', {
                 userId,
+                executionKind: 'retest',
                 sessionPlan: retestSessionPlan,
                 actionLimit: retestActions.length,
                 answersByActionId,
@@ -2172,6 +2224,7 @@ window.pathApp = {
                 ...result,
                 receivedAt: new Date().toISOString(),
             };
+            this._appendLearningWorkbenchSessionRecord(result?.record || null);
             const summary = result?.summary || {};
             this._setLearningWorkbenchStatus(
                 `Retest execution finished: executed ${Number(summary.executedCount || 0)}/${Number(summary.attemptedActions || 0)}, mastery delta ${Number(summary.averageMasteryDelta || 0).toFixed(3)}.`
@@ -2199,6 +2252,7 @@ window.pathApp = {
         const updatedEl = document.getElementById('learning-workbench-updated-at');
         const tutorFeedbackEl = document.getElementById('learning-tutor-feedback');
         const sessionExecutionEl = document.getElementById('learning-session-execution');
+        const sessionHistoryEl = document.getElementById('learning-session-history');
 
         if (updatedEl) {
             updatedEl.textContent = this.learningWorkbench.lastUpdatedAt
@@ -2351,15 +2405,33 @@ window.pathApp = {
             }
         }
 
+        if (sessionHistoryEl) {
+            const records = this.learningWorkbench.sessionHistory?.records || [];
+            if (!Array.isArray(records) || records.length === 0) {
+                sessionHistoryEl.innerHTML = '<li class="muted">No session history yet.</li>';
+            } else {
+                sessionHistoryEl.innerHTML = records.slice(0, 8).map((record) => {
+                    const executedAt = new Date(record.executedAt || Date.now()).toLocaleString();
+                    const kind = this._escapeHtml(String(record.executionKind || 'session'));
+                    const executedCount = Number(record.executedCount || 0);
+                    const attempted = Number(record.attemptedActions || 0);
+                    const delta = Number(record.averageMasteryDelta || 0);
+                    const signedDelta = `${delta >= 0 ? '+' : ''}${delta.toFixed(3)}`;
+                    return `<li><span class="chip">${kind}</span> ${executedAt} · ${executedCount}/${attempted} · mastery Δ ${signedDelta}</li>`;
+                }).join('');
+            }
+        }
+
         if (runtimeEl) {
             const runtimeState = this.learningWorkbench.runtimeState?.state || null;
             if (!runtimeState) {
                 runtimeEl.textContent = 'Runtime: unavailable';
             } else {
                 const sessionTelemetry = runtimeState.sessionActionTelemetry || null;
+                const historyCount = Number(runtimeState.sessionExecutionHistoryRecords || 0);
                 const sessionSummary = sessionTelemetry
-                    ? `, sessionActions=${Number(sessionTelemetry.executionCount || 0)}, inferred=${Number(sessionTelemetry.inferredMasteryUpdateCount || 0)}, explicit=${Number(sessionTelemetry.explicitMasteryUpdateCount || 0)}`
-                    : '';
+                    ? `, sessionActions=${Number(sessionTelemetry.executionCount || 0)}, inferred=${Number(sessionTelemetry.inferredMasteryUpdateCount || 0)}, explicit=${Number(sessionTelemetry.explicitMasteryUpdateCount || 0)}, history=${historyCount}`
+                    : `, history=${historyCount}`;
                 runtimeEl.textContent = `Runtime: docs=${runtimeState.documents}, atoms=${runtimeState.activeAtoms}, relations=${runtimeState.activeRelationEdges}, ingestP95=${Number(runtimeState.ingestTelemetry?.ingestP95Ms || 0).toFixed(2)}ms${sessionSummary}`;
             }
         }

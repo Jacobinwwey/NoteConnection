@@ -327,6 +327,8 @@ export type StudySessionActionSource =
     | 'retrain_plan'
     | 'misconception_remediation';
 
+export type StudySessionExecutionKind = 'session' | 'retest' | 'custom';
+
 export interface StudySessionRequest {
     userId: string;
     focusAtomIds?: string[];
@@ -395,6 +397,7 @@ export interface StudySessionActionExecutionResponse {
 
 export interface StudySessionPlanExecutionRequest {
     userId: string;
+    executionKind?: StudySessionExecutionKind;
     focusAtomIds?: string[];
     maxActions?: number;
     includeDivergence?: boolean;
@@ -429,6 +432,46 @@ export interface StudySessionMasteryDeltaItem {
     deltaMastery: number;
     updatedByExecution: boolean;
     lastOutcome: MasteryOutcome | null;
+}
+
+export interface StudySessionExecutionRecord {
+    id: string;
+    userId: string;
+    executionKind: StudySessionExecutionKind;
+    executedAt: string;
+    plannedActions: number;
+    attemptedActions: number;
+    executedCount: number;
+    updatedMasteryCount: number;
+    inferredMasteryCount: number;
+    explicitMasteryCount: number;
+    analyzedAnswerCount: number;
+    memoryPersistedCount: number;
+    averageTutorConfidence: number;
+    averageMasteryDelta: number;
+    improvedAtomCount: number;
+    regressedAtomCount: number;
+    unchangedAtomCount: number;
+    retestActions: number;
+    stoppedEarly: boolean;
+}
+
+export interface StudySessionHistoryRequest {
+    userId: string;
+    limit?: number;
+}
+
+export interface StudySessionHistoryResponse {
+    userId: string;
+    generatedAt: string;
+    records: StudySessionExecutionRecord[];
+    summary: {
+        totalRecords: number;
+        totalExecutedActions: number;
+        totalUpdatedMasteryCount: number;
+        averageMasteryDelta: number;
+        averageTutorConfidence: number;
+    };
 }
 
 export interface StudySessionPlanExecutionResponse {
@@ -475,6 +518,7 @@ export interface StudySessionPlanExecutionResponse {
             targetAtoms: string[];
         };
     };
+    record: StudySessionExecutionRecord;
 }
 
 export interface TutorActionRequest {
@@ -562,6 +606,7 @@ export interface KnowledgeSystemState {
             skipped: number;
         };
     };
+    sessionExecutionHistoryRecords: number;
     memoryEntries: {
         session: number;
         unit: number;

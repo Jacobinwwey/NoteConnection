@@ -51,6 +51,9 @@ import type {
     StudySessionAction,
     StudySessionActionExecutionRequest,
     StudySessionActionExecutionResponse,
+    StudySessionExecutionRecord,
+    StudySessionHistoryRequest,
+    StudySessionHistoryResponse,
     StudySessionMasteryDeltaItem,
     StudySessionPlanExecutionRequest,
     StudySessionPlanExecutionResponse,
@@ -178,6 +181,7 @@ const DEFAULT_INGEST_GUARDRAIL_THRESHOLDS: IngestGuardrailThresholds = {
 
 const QUERY_LATENCY_HISTORY_LIMIT = 2000;
 const INGEST_LATENCY_HISTORY_LIMIT = 2000;
+const SESSION_EXECUTION_HISTORY_LIMIT = 400;
 
 function createEmptySessionActionTelemetry(): KnowledgeSystemState['sessionActionTelemetry'] {
     return {
@@ -305,6 +309,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     private latestIngestSummary: KnowledgeIngestResponse['summary'] | null = null;
 
     private sessionActionTelemetry: KnowledgeSystemState['sessionActionTelemetry'] = createEmptySessionActionTelemetry();
+
+    private readonly sessionExecutionHistory: StudySessionExecutionRecord[] = [];
 
     private hydrated = false;
 
@@ -973,6 +979,46 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
     }
 
+    public async queryStudySessionHistory(request: StudySessionHistoryRequest): Promise<StudySessionHistoryResponse> {
+        await this.ensureHydrated();
+        const userId = String(request.userId || '').trim();
+        if (!userId) {
+            throw new Error('StudySessionHistoryAPI requires a non-empty userId.');
+        }
+        const generatedAt = this.resolveTimestamp(undefined);
+        const limit = clamp(Math.floor(Number(request.limit) || 10), 1, 100);
+        const records = this.sessionExecutionHistory
+            .filter((record) => record.userId === userId)
+            .slice(0, limit)
+            .map((record) => ({ ...record }));
+        const totalExecutedActions = records.reduce(
+            (sum, record) => sum + Math.max(0, Math.floor(Number(record.executedCount || 0))),
+            0
+        );
+        const totalUpdatedMasteryCount = records.reduce(
+            (sum, record) => sum + Math.max(0, Math.floor(Number(record.updatedMasteryCount || 0))),
+            0
+        );
+        const averageMasteryDelta = records.length > 0
+            ? Number((records.reduce((sum, record) => sum + Number(record.averageMasteryDelta || 0), 0) / records.length).toFixed(6))
+            : 0;
+        const averageTutorConfidence = records.length > 0
+            ? Number((records.reduce((sum, record) => sum + Number(record.averageTutorConfidence || 0), 0) / records.length).toFixed(6))
+            : 0;
+        return {
+            userId,
+            generatedAt,
+            records,
+            summary: {
+                totalRecords: records.length,
+                totalExecutedActions,
+                totalUpdatedMasteryCount,
+                averageMasteryDelta,
+                averageTutorConfidence,
+            },
+        };
+    }
+
     public async executeStudySessionAction(
         request: StudySessionActionExecutionRequest
     ): Promise<StudySessionActionExecutionResponse> {
@@ -1122,6 +1168,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         if (!userId) {
             throw new Error('StudySessionPlanExecutionAPI requires a non-empty userId.');
         }
+        const executionKind = this.normalizeStudySessionExecutionKind(request.executionKind);
         const executedAt = this.resolveTimestamp(request.executedAt);
         const maxActions = clamp(Math.floor(Number(request.maxActions) || 12), 1, 80);
         const actionLimitRequest = Number(request.actionLimit);
@@ -1400,6 +1447,32 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 return Array.from(deduped.values()).slice(0, retestActionLimit);
             })()
             : [];
+        const record: StudySessionExecutionRecord = {
+            id: this.nextId('session_exec'),
+            userId,
+            executionKind,
+            executedAt,
+            plannedActions: sessionPlan.actions.length,
+            attemptedActions: selectedActions.length,
+            executedCount: executedItems.length,
+            updatedMasteryCount,
+            inferredMasteryCount,
+            explicitMasteryCount,
+            analyzedAnswerCount,
+            memoryPersistedCount,
+            averageTutorConfidence,
+            averageMasteryDelta,
+            improvedAtomCount,
+            regressedAtomCount,
+            unchangedAtomCount,
+            retestActions: retestPlanActions.length,
+            stoppedEarly,
+        };
+        this.sessionExecutionHistory.unshift(record);
+        if (this.sessionExecutionHistory.length > SESSION_EXECUTION_HISTORY_LIMIT) {
+            this.sessionExecutionHistory.splice(SESSION_EXECUTION_HISTORY_LIMIT);
+        }
+        await this.persistIfNeeded();
 
         return {
             userId,
@@ -1448,6 +1521,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     targetAtoms: Array.from(new Set(retestPlanActions.map((action) => action.atomId))),
                 },
             },
+            record,
         };
     }
 
@@ -1970,6 +2044,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             ingestTelemetry,
             retrievalTelemetry,
             sessionActionTelemetry: this.buildSessionActionTelemetry(),
+            sessionExecutionHistoryRecords: this.sessionExecutionHistory.length,
             memoryEntries: memoryStats,
         };
     }
@@ -2037,6 +2112,54 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 incorrect: Math.max(0, Math.floor(Number(source.outcomeCounts?.incorrect ?? fallback.outcomeCounts.incorrect))),
                 skipped: Math.max(0, Math.floor(Number(source.outcomeCounts?.skipped ?? fallback.outcomeCounts.skipped))),
             },
+        };
+    }
+
+    private normalizeStudySessionExecutionKind(value: unknown): StudySessionExecutionRecord['executionKind'] {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (normalized === 'retest') {
+            return 'retest';
+        }
+        if (normalized === 'custom') {
+            return 'custom';
+        }
+        return 'session';
+    }
+
+    private normalizeSessionExecutionRecord(
+        value: Partial<StudySessionExecutionRecord> | undefined,
+        fallbackExecutedAt: string
+    ): StudySessionExecutionRecord | null {
+        if (!value || typeof value !== 'object') {
+            return null;
+        }
+        const userId = String(value.userId || '').trim();
+        if (!userId) {
+            return null;
+        }
+        const executedAt = isNonEmptyString(value.executedAt) ? value.executedAt : fallbackExecutedAt;
+        const fallbackIdSeed = `${userId}:${executedAt}:${Math.floor(Number(value.executedCount || 0))}`;
+        const fallbackId = `session_exec_restored_${createHash('sha1').update(fallbackIdSeed).digest('hex').slice(0, 12)}`;
+        return {
+            id: isNonEmptyString(value.id) ? value.id : fallbackId,
+            userId,
+            executionKind: this.normalizeStudySessionExecutionKind(value.executionKind),
+            executedAt,
+            plannedActions: Math.max(0, Math.floor(Number(value.plannedActions || 0))),
+            attemptedActions: Math.max(0, Math.floor(Number(value.attemptedActions || 0))),
+            executedCount: Math.max(0, Math.floor(Number(value.executedCount || 0))),
+            updatedMasteryCount: Math.max(0, Math.floor(Number(value.updatedMasteryCount || 0))),
+            inferredMasteryCount: Math.max(0, Math.floor(Number(value.inferredMasteryCount || 0))),
+            explicitMasteryCount: Math.max(0, Math.floor(Number(value.explicitMasteryCount || 0))),
+            analyzedAnswerCount: Math.max(0, Math.floor(Number(value.analyzedAnswerCount || 0))),
+            memoryPersistedCount: Math.max(0, Math.floor(Number(value.memoryPersistedCount || 0))),
+            averageTutorConfidence: Number(clamp(Number(value.averageTutorConfidence || 0), 0, 1).toFixed(6)),
+            averageMasteryDelta: Number(clamp(Number(value.averageMasteryDelta || 0), -1, 1).toFixed(6)),
+            improvedAtomCount: Math.max(0, Math.floor(Number(value.improvedAtomCount || 0))),
+            regressedAtomCount: Math.max(0, Math.floor(Number(value.regressedAtomCount || 0))),
+            unchangedAtomCount: Math.max(0, Math.floor(Number(value.unchangedAtomCount || 0))),
+            retestActions: Math.max(0, Math.floor(Number(value.retestActions || 0))),
+            stoppedEarly: value.stoppedEarly === true,
         };
     }
 
@@ -2258,6 +2381,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             queryLatencyHistoryMs: [...this.queryLatencyHistoryMs],
             latestIngestSummary: this.latestIngestSummary ? { ...this.latestIngestSummary } : null,
             sessionActionTelemetry: this.buildSessionActionTelemetry(),
+            sessionExecutionHistory: this.sessionExecutionHistory.map((record) => ({ ...record })),
             userMemory,
             relationEdgeSignatures: Array.from(this.relationEdgeSignatures.values()),
         };
@@ -2293,6 +2417,17 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             }
             : null;
         this.sessionActionTelemetry = this.normalizeSessionActionTelemetry(snapshot.sessionActionTelemetry);
+        this.sessionExecutionHistory.length = 0;
+        (snapshot.sessionExecutionHistory || []).forEach((record) => {
+            const normalized = this.normalizeSessionExecutionRecord(record, this.resolveTimestamp(undefined));
+            if (normalized) {
+                this.sessionExecutionHistory.push(normalized);
+            }
+        });
+        this.sessionExecutionHistory.sort((left, right) => right.executedAt.localeCompare(left.executedAt));
+        if (this.sessionExecutionHistory.length > SESSION_EXECUTION_HISTORY_LIMIT) {
+            this.sessionExecutionHistory.splice(SESSION_EXECUTION_HISTORY_LIMIT);
+        }
 
         this.atoms.clear();
         (snapshot.atoms || []).forEach((atom) => {

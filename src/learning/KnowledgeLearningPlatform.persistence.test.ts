@@ -82,6 +82,21 @@ describe('KnowledgeLearningPlatform persistence', () => {
             persistMemory: true,
             memoryLayer: 'session',
         });
+        const sessionPlan = await platformA.buildStudySession({
+            userId: 'user_persist',
+            focusAtomIds: [atomId],
+            maxActions: 2,
+            includeDivergence: false,
+            includeRetrain: false,
+        });
+        await platformA.executeStudySessionPlan({
+            userId: 'user_persist',
+            executionKind: 'session',
+            sessionPlan,
+            actionLimit: 1,
+            persistMemory: true,
+            memoryLayer: 'session',
+        });
 
         expect(fs.existsSync(snapshotPath)).toBe(true);
 
@@ -101,6 +116,7 @@ describe('KnowledgeLearningPlatform persistence', () => {
         expect(state.retrievalTelemetry.queryCount).toBeGreaterThan(0);
         expect(state.sessionActionTelemetry.executionCount).toBeGreaterThan(0);
         expect(state.sessionActionTelemetry.analyzedAnswerCount).toBeGreaterThan(0);
+        expect(state.sessionExecutionHistoryRecords).toBeGreaterThan(0);
 
         const queryResult = await platformB.queryKnowledge({
             query: 'persistence snapshots restarts',
@@ -112,6 +128,13 @@ describe('KnowledgeLearningPlatform persistence', () => {
         expect(storeDiagnostics.storeType).toBe('file');
         expect(storeDiagnostics.exists).toBe(true);
         expect(storeDiagnostics.loaded).toBe(true);
+
+        const history = await platformB.queryStudySessionHistory({
+            userId: 'user_persist',
+            limit: 5,
+        });
+        expect(history.records.length).toBeGreaterThan(0);
+        expect(history.records[0]?.executionKind).toBe('session');
 
         const guardrail = await platformB.evaluateIngestGuardrails({});
         expect(guardrail.latestSummary).not.toBeNull();

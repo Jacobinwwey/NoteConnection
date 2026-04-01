@@ -8,6 +8,7 @@ import type {
     LearnerConceptState,
     MemoryEntry,
     RelationEdge,
+    StudySessionExecutionRecord,
     TemporalEdge,
     TutorTrace,
 } from './types';
@@ -43,6 +44,7 @@ export interface KnowledgeGraphSnapshot {
     queryLatencyHistoryMs: number[];
     latestIngestSummary: KnowledgeIngestResponse['summary'] | null;
     sessionActionTelemetry?: KnowledgeSystemState['sessionActionTelemetry'];
+    sessionExecutionHistory?: StudySessionExecutionRecord[];
     userMemory: Record<string, {
         session: MemoryEntry[];
         unit: MemoryEntry[];

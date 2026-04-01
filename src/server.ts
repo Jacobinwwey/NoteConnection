@@ -52,6 +52,7 @@ import {
     type MasteryMisconceptionRequest,
     type MemoryPolicyRequest,
     type StudySessionActionExecutionRequest,
+    type StudySessionHistoryRequest,
     type StudySessionPlanExecutionRequest,
     type StudySessionRequest,
     type TutorActionRequest,
@@ -2536,6 +2537,25 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     }
                     console.error(error);
                     CrashLogger.log(error, 'API:POST /api/knowledge/session/execute');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/knowledge/session/history') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const requestPayload = payload as StudySessionHistoryRequest;
+                    const result = await knowledgeLearningPlatform.queryStudySessionHistory(requestPayload);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, result }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/knowledge/session/history');
                     res.writeHead(500, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ success: false, error: String(error) }));
                 }

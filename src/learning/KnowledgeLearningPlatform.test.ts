@@ -535,6 +535,7 @@ describe('KnowledgeLearningPlatform', () => {
         const execution = await platform.executeStudySessionPlan({
             userId: 'user_session_execute',
             sessionPlan,
+            executionKind: 'session',
             actionLimit: 3,
             includeRetestPlan: false,
             persistMemory: true,
@@ -554,9 +555,19 @@ describe('KnowledgeLearningPlatform', () => {
         expect(execution.masteryDelta.comparedAtoms).toBeGreaterThan(0);
         expect(execution.masteryDelta.items.length).toBe(execution.masteryDelta.comparedAtoms);
         expect(execution.retestPlan.summary.totalActions).toBe(0);
+        expect(execution.record.userId).toBe('user_session_execute');
+        expect(execution.record.executionKind).toBe('session');
+        const history = await platform.queryStudySessionHistory({
+            userId: 'user_session_execute',
+            limit: 5,
+        });
+        expect(history.records.length).toBeGreaterThanOrEqual(1);
+        expect(history.records[0]?.id).toBe(execution.record.id);
+        expect(history.summary.totalExecutedActions).toBeGreaterThan(0);
 
         const stateAfterExecution = platform.getKnowledgeState();
         expect(stateAfterExecution.sessionActionTelemetry.executionCount).toBeGreaterThanOrEqual(3);
+        expect(stateAfterExecution.sessionExecutionHistoryRecords).toBeGreaterThanOrEqual(1);
     });
 
     test('session plan execution consumes answersByActionId for auto analysis and inferred mastery updates', async () => {
@@ -589,6 +600,7 @@ describe('KnowledgeLearningPlatform', () => {
                 ...sessionPlan,
                 actions: [firstAction],
             },
+            executionKind: 'retest',
             actionLimit: 1,
             answersByActionId: {
                 [firstAction.id]: 'xylophone quasar nebula',
@@ -611,6 +623,7 @@ describe('KnowledgeLearningPlatform', () => {
         expect(execution.masteryDelta.items[0]?.updatedByExecution).toBe(true);
         expect(execution.retestPlan.summary.totalActions).toBeGreaterThanOrEqual(1);
         expect(execution.retestPlan.actions[0]?.source).toBe('retrain_plan');
+        expect(execution.record.executionKind).toBe('retest');
     });
 
     test('learning quality evaluation enforces mastery and evidence thresholds', async () => {
