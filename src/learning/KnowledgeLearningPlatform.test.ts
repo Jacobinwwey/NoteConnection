@@ -548,6 +548,10 @@ describe('KnowledgeLearningPlatform', () => {
         expect(execution.summary.skippedCount).toBe(0);
         expect(execution.summary.stoppedEarly).toBe(false);
         expect(execution.summary.averageTutorConfidence).toBeGreaterThan(0);
+        expect(execution.summary.averageMasteryBefore).toBeGreaterThanOrEqual(0);
+        expect(execution.summary.averageMasteryAfter).toBeGreaterThanOrEqual(0);
+        expect(execution.masteryDelta.comparedAtoms).toBeGreaterThan(0);
+        expect(execution.masteryDelta.items.length).toBe(execution.masteryDelta.comparedAtoms);
 
         const stateAfterExecution = platform.getKnowledgeState();
         expect(stateAfterExecution.sessionActionTelemetry.executionCount).toBeGreaterThanOrEqual(3);
@@ -596,10 +600,13 @@ describe('KnowledgeLearningPlatform', () => {
         expect(execution.summary.executedCount).toBe(1);
         expect(execution.summary.analyzedAnswerCount).toBe(1);
         expect(execution.summary.inferredMasteryCount).toBe(1);
+        expect(execution.summary.averageMasteryDelta).toBeLessThan(0);
+        expect(execution.masteryDelta.regressedCount).toBeGreaterThanOrEqual(1);
         const firstItem = execution.items[0];
         expect(firstItem?.status).toBe('executed');
         expect(firstItem?.result?.answerAnalysis).not.toBeNull();
         expect(firstItem?.result?.trace.masterySource).toBe('inferred');
+        expect(execution.masteryDelta.items[0]?.updatedByExecution).toBe(true);
     });
 
     test('learning quality evaluation enforces mastery and evidence thresholds', async () => {

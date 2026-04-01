@@ -2231,6 +2231,17 @@ window.pathApp = {
                 sessionExecutionEl.textContent = 'No session execution yet.';
             } else {
                 const summary = execution.summary || {};
+                const masteryDelta = execution.masteryDelta || null;
+                const topDeltaLines = Array.isArray(masteryDelta?.items)
+                    ? masteryDelta.items.slice(0, 3).map((item) => {
+                        const before = Number(item.beforeMastery || 0).toFixed(3);
+                        const after = Number(item.afterMastery || 0).toFixed(3);
+                        const delta = Number(item.deltaMastery || 0);
+                        const signedDelta = `${delta >= 0 ? '+' : ''}${delta.toFixed(3)}`;
+                        const atomId = String(item.atomId || 'unknown_atom');
+                        return `- ${atomId}: ${before} -> ${after} (${signedDelta})`;
+                    })
+                    : [];
                 sessionExecutionEl.textContent = [
                     `Executed at: ${execution.executedAt || '-'}`,
                     `Planned/Attempted/Executed: ${Number(summary.plannedActions || 0)}/${Number(summary.attemptedActions || 0)}/${Number(summary.executedCount || 0)}`,
@@ -2238,7 +2249,16 @@ window.pathApp = {
                     `Mastery updates (inferred/explicit): ${Number(summary.updatedMasteryCount || 0)} (${Number(summary.inferredMasteryCount || 0)}/${Number(summary.explicitMasteryCount || 0)})`,
                     `Answer analyzed: ${Number(summary.analyzedAnswerCount || 0)}, memory persisted: ${Number(summary.memoryPersistedCount || 0)}`,
                     `Avg tutor confidence: ${Number(summary.averageTutorConfidence || 0).toFixed(3)}`,
+                    `Mastery avg before/after/delta: ${Number(summary.averageMasteryBefore || 0).toFixed(3)} / ${Number(summary.averageMasteryAfter || 0).toFixed(3)} / ${Number(summary.averageMasteryDelta || 0).toFixed(3)}`,
+                    `Mastery movement improved/regressed/flat: ${Number(summary.improvedAtomCount || 0)}/${Number(summary.regressedAtomCount || 0)}/${Number(summary.unchangedAtomCount || 0)}`,
                     `Stopped early: ${summary.stoppedEarly === true ? 'yes' : 'no'}`,
+                    ...(masteryDelta
+                        ? [
+                            `Compared atoms: ${Number(masteryDelta.comparedAtoms || 0)}, avg delta: ${Number(masteryDelta.averageDelta || 0).toFixed(3)}`,
+                            'Top mastery delta atoms:',
+                            ...(topDeltaLines.length > 0 ? topDeltaLines : ['- n/a']),
+                        ]
+                        : []),
                 ].join('\n');
             }
         }

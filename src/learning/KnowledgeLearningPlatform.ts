@@ -51,6 +51,7 @@ import type {
     StudySessionAction,
     StudySessionActionExecutionRequest,
     StudySessionActionExecutionResponse,
+    StudySessionMasteryDeltaItem,
     StudySessionPlanExecutionRequest,
     StudySessionPlanExecutionResponse,
     StudySessionRequest,
@@ -1195,6 +1196,22 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 generatedAt: executedAt,
             });
         const selectedActions = sessionPlan.actions.slice(0, actionLimit);
+        const comparedAtomIds = Array.from(new Set(
+            selectedActions
+                .map((action) => String(action.atomId || '').trim())
+                .filter((atomId) => atomId.length > 0 && this.activeAtomIds.has(atomId))
+        ));
+        const baselineMasteryByAtom = new Map<string, number>();
+        comparedAtomIds.forEach((atomId) => {
+            const stateKey = this.makeLearnerStateKey(userId, atomId);
+            const baselineState = this.learnerStates.has(stateKey)
+                ? this.normalizeLearnerState(
+                    this.learnerStates.get(stateKey) as LearnerConceptState,
+                    executedAt
+                )
+                : this.createDefaultLearnerState(userId, atomId, executedAt);
+            baselineMasteryByAtom.set(atomId, baselineState.masteryProbability);
+        });
         const stopOnError = request.stopOnError === true;
         const answersByActionId = request.answersByActionId && typeof request.answersByActionId === 'object'
             ? request.answersByActionId
@@ -1275,6 +1292,52 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 executedItems.reduce((sum, item) => sum + Number(item.result.tutor.trace.confidence || 0), 0) / executedItems.length
             ).toFixed(4))
             : 0;
+        const lastExecutionByAtom = new Map<string, StudySessionActionExecutionResponse>();
+        executedItems.forEach((item) => {
+            const atomId = String(item.action.atomId || '').trim();
+            if (!atomId) {
+                return;
+            }
+            lastExecutionByAtom.set(atomId, item.result);
+        });
+        const masteryDeltaItems: StudySessionMasteryDeltaItem[] = comparedAtomIds
+            .map((atomId) => {
+                const stateKey = this.makeLearnerStateKey(userId, atomId);
+                const currentState = this.learnerStates.has(stateKey)
+                    ? this.normalizeLearnerState(
+                        this.learnerStates.get(stateKey) as LearnerConceptState,
+                        executedAt
+                    )
+                    : this.createDefaultLearnerState(userId, atomId, executedAt);
+                const beforeMastery = Number((baselineMasteryByAtom.get(atomId) || 0.5).toFixed(6));
+                const afterMastery = Number(currentState.masteryProbability.toFixed(6));
+                const deltaMastery = Number((afterMastery - beforeMastery).toFixed(6));
+                const executionResult = lastExecutionByAtom.get(atomId);
+                return {
+                    atomId,
+                    title: this.atoms.get(atomId)?.title || atomId,
+                    beforeMastery,
+                    afterMastery,
+                    deltaMastery,
+                    updatedByExecution: executionResult?.trace.updatedMastery === true,
+                    lastOutcome: executionResult?.trace.effectiveOutcome || null,
+                };
+            })
+            .sort((left, right) => Math.abs(right.deltaMastery) - Math.abs(left.deltaMastery));
+        const improvedAtomCount = masteryDeltaItems.filter((item) => item.deltaMastery > 0.000001).length;
+        const regressedAtomCount = masteryDeltaItems.filter((item) => item.deltaMastery < -0.000001).length;
+        const unchangedAtomCount = masteryDeltaItems.length - improvedAtomCount - regressedAtomCount;
+        const averageMasteryBefore = masteryDeltaItems.length > 0
+            ? Number((
+                masteryDeltaItems.reduce((sum, item) => sum + item.beforeMastery, 0) / masteryDeltaItems.length
+            ).toFixed(6))
+            : 0;
+        const averageMasteryAfter = masteryDeltaItems.length > 0
+            ? Number((
+                masteryDeltaItems.reduce((sum, item) => sum + item.afterMastery, 0) / masteryDeltaItems.length
+            ).toFixed(6))
+            : 0;
+        const averageMasteryDelta = Number((averageMasteryAfter - averageMasteryBefore).toFixed(6));
 
         return {
             userId,
@@ -1297,7 +1360,23 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     0
                 ),
                 averageTutorConfidence,
+                averageMasteryBefore,
+                averageMasteryAfter,
+                averageMasteryDelta,
+                improvedAtomCount,
+                regressedAtomCount,
+                unchangedAtomCount,
                 stoppedEarly,
+            },
+            masteryDelta: {
+                comparedAtoms: masteryDeltaItems.length,
+                averageBefore: averageMasteryBefore,
+                averageAfter: averageMasteryAfter,
+                averageDelta: averageMasteryDelta,
+                improvedCount: improvedAtomCount,
+                regressedCount: regressedAtomCount,
+                unchangedCount: unchangedAtomCount,
+                items: masteryDeltaItems,
             },
         };
     }

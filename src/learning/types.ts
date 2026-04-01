@@ -419,6 +419,16 @@ export interface StudySessionPlanExecutionItem {
     error?: string;
 }
 
+export interface StudySessionMasteryDeltaItem {
+    atomId: string;
+    title: string;
+    beforeMastery: number;
+    afterMastery: number;
+    deltaMastery: number;
+    updatedByExecution: boolean;
+    lastOutcome: MasteryOutcome | null;
+}
+
 export interface StudySessionPlanExecutionResponse {
     userId: string;
     executedAt: string;
@@ -437,7 +447,23 @@ export interface StudySessionPlanExecutionResponse {
         memoryPersistedCount: number;
         totalEstimatedMinutes: number;
         averageTutorConfidence: number;
+        averageMasteryBefore: number;
+        averageMasteryAfter: number;
+        averageMasteryDelta: number;
+        improvedAtomCount: number;
+        regressedAtomCount: number;
+        unchangedAtomCount: number;
         stoppedEarly: boolean;
+    };
+    masteryDelta: {
+        comparedAtoms: number;
+        averageBefore: number;
+        averageAfter: number;
+        averageDelta: number;
+        improvedCount: number;
+        regressedCount: number;
+        unchangedCount: number;
+        items: StudySessionMasteryDeltaItem[];
     };
 }
 
