@@ -478,6 +478,18 @@ describe('KnowledgeLearningPlatform', () => {
         expect(tutor.trace.source).toBe('rule-engine');
         expect(tutor.evidenceSpans.length).toBeGreaterThan(0);
 
+        await platform.diagnoseMastery({
+            userId: 'user_tutor',
+            observations: [
+                {
+                    atomId,
+                    outcome: 'incorrect',
+                    errorTag: 'retrieval_failure',
+                },
+            ],
+            observedAt: '2026-03-31T08:40:00.000Z',
+        });
+
         const writeResult = await platform.applyMemoryPolicy({
             userId: 'user_tutor',
             layer: 'session',
@@ -523,6 +535,16 @@ describe('KnowledgeLearningPlatform', () => {
             now: '2026-03-31T23:59:59.000Z',
         });
         expect(evictResult.evictedCount).toBeGreaterThanOrEqual(0);
+
+        const retrainResult = await platform.applyMemoryPolicy({
+            userId: 'user_tutor',
+            layer: 'session',
+            operation: 'retrain_plan',
+            limit: 3,
+            now: '2026-04-10T00:00:00.000Z',
+        });
+        expect(retrainResult.recommendedActions?.length).toBeGreaterThan(0);
+        expect(retrainResult.recommendedActions?.[0]?.atomId).toBe(atomId);
 
         const state = platform.getKnowledgeState();
         expect(state.ingestTelemetry.ingestCount).toBeGreaterThan(0);

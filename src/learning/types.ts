@@ -349,7 +349,7 @@ export interface MemoryEntry {
 
 export interface MemoryPolicyRequest {
     userId: string;
-    operation: 'write' | 'read' | 'evict' | 'snapshot';
+    operation: 'write' | 'read' | 'evict' | 'snapshot' | 'retrain_plan';
     layer: MemoryLayer;
     entries?: MemoryEntry[];
     query?: string;
@@ -359,9 +359,10 @@ export interface MemoryPolicyRequest {
 
 export interface MemoryPolicyResponse {
     layer: MemoryLayer;
-    operation: 'write' | 'read' | 'evict' | 'snapshot';
+    operation: 'write' | 'read' | 'evict' | 'snapshot' | 'retrain_plan';
     entries: MemoryEntry[];
     evictedCount: number;
+    recommendedActions?: LearningAction[];
     stats: {
         session: number;
         unit: number;

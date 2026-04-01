@@ -998,6 +998,49 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             };
         }
 
+        if (operation === 'retrain_plan') {
+            const limit = clamp(Math.floor(Number(request.limit) || 8), 1, 40);
+            const nowTime = Date.parse(nowIso);
+            const dueStates = Array.from(this.learnerStates.values())
+                .filter((state) => state.userId === userId)
+                .map((state) => this.normalizeLearnerState(state, nowIso))
+                .filter((state) => {
+                    const nextReviewAtTime = Date.parse(state.nextReviewAt);
+                    if (!Number.isFinite(nextReviewAtTime)) {
+                        return true;
+                    }
+                    return nextReviewAtTime <= nowTime;
+                })
+                .sort((left, right) => {
+                    const leftGap = 1 - left.masteryProbability;
+                    const rightGap = 1 - right.masteryProbability;
+                    if (rightGap !== leftGap) {
+                        return rightGap - leftGap;
+                    }
+                    return left.nextReviewAt.localeCompare(right.nextReviewAt);
+                })
+                .slice(0, limit);
+
+            const recommendedActions = dueStates.flatMap((state, index) => {
+                const expectedGain = Number(clamp((1 - state.masteryProbability) * 0.65, 0.05, 0.85).toFixed(4));
+                return this.buildMasteryActions(
+                    state.atomId,
+                    expectedGain,
+                    index + 1,
+                    this.getDominantErrorTag(state)
+                ).slice(0, 2);
+            });
+
+            return {
+                layer,
+                operation,
+                entries: [],
+                evictedCount: 0,
+                recommendedActions,
+                stats: this.collectMemoryStats(),
+            };
+        }
+
         return {
             layer,
             operation: 'snapshot',
