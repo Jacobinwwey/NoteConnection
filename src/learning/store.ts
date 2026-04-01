@@ -4,6 +4,7 @@ import type {
     EvidenceSpan,
     KnowledgeAtom,
     KnowledgeIngestResponse,
+    KnowledgeSystemState,
     LearnerConceptState,
     MemoryEntry,
     RelationEdge,
@@ -41,6 +42,7 @@ export interface KnowledgeGraphSnapshot {
     recomputeLatencyHistoryMs: number[];
     queryLatencyHistoryMs: number[];
     latestIngestSummary: KnowledgeIngestResponse['summary'] | null;
+    sessionActionTelemetry?: KnowledgeSystemState['sessionActionTelemetry'];
     userMemory: Record<string, {
         session: MemoryEntry[];
         unit: MemoryEntry[];

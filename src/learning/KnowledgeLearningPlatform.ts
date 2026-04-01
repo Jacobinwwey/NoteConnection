@@ -176,6 +176,22 @@ const DEFAULT_INGEST_GUARDRAIL_THRESHOLDS: IngestGuardrailThresholds = {
 const QUERY_LATENCY_HISTORY_LIMIT = 2000;
 const INGEST_LATENCY_HISTORY_LIMIT = 2000;
 
+function createEmptySessionActionTelemetry(): KnowledgeSystemState['sessionActionTelemetry'] {
+    return {
+        executionCount: 0,
+        analyzedAnswerCount: 0,
+        inferredMasteryUpdateCount: 0,
+        explicitMasteryUpdateCount: 0,
+        memoryPersistedCount: 0,
+        outcomeCounts: {
+            correct: 0,
+            partial: 0,
+            incorrect: 0,
+            skipped: 0,
+        },
+    };
+}
+
 function clamp(value: number, minValue: number, maxValue: number): number {
     return Math.min(maxValue, Math.max(minValue, value));
 }
@@ -284,6 +300,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     private readonly tutorAdapter: TutorAdapter | null;
 
     private latestIngestSummary: KnowledgeIngestResponse['summary'] | null = null;
+
+    private sessionActionTelemetry: KnowledgeSystemState['sessionActionTelemetry'] = createEmptySessionActionTelemetry();
 
     private hydrated = false;
 
@@ -1067,6 +1085,14 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             });
         }
 
+        this.recordSessionActionTelemetry({
+            analyzedAnswer: answerAnalysis !== null,
+            persistedMemory: persistMemory,
+            masterySource,
+            effectiveOutcome,
+        });
+        await this.persistIfNeeded();
+
         return {
             executedAt,
             tutor,
@@ -1603,7 +1629,74 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             tutorTraces: this.tutorTraces.length,
             ingestTelemetry,
             retrievalTelemetry,
+            sessionActionTelemetry: this.buildSessionActionTelemetry(),
             memoryEntries: memoryStats,
+        };
+    }
+
+    private recordSessionActionTelemetry(params: {
+        analyzedAnswer: boolean;
+        persistedMemory: boolean;
+        masterySource: 'explicit' | 'inferred' | 'none';
+        effectiveOutcome: MasteryOutcome | null;
+    }): void {
+        this.sessionActionTelemetry.executionCount += 1;
+        if (params.analyzedAnswer) {
+            this.sessionActionTelemetry.analyzedAnswerCount += 1;
+        }
+        if (params.persistedMemory) {
+            this.sessionActionTelemetry.memoryPersistedCount += 1;
+        }
+        if (params.masterySource === 'explicit') {
+            this.sessionActionTelemetry.explicitMasteryUpdateCount += 1;
+        } else if (params.masterySource === 'inferred') {
+            this.sessionActionTelemetry.inferredMasteryUpdateCount += 1;
+        }
+        if (params.effectiveOutcome) {
+            const outcomeKey = params.effectiveOutcome;
+            this.sessionActionTelemetry.outcomeCounts[outcomeKey] += 1;
+        }
+    }
+
+    private buildSessionActionTelemetry(): KnowledgeSystemState['sessionActionTelemetry'] {
+        return {
+            executionCount: Math.max(0, Math.floor(Number(this.sessionActionTelemetry.executionCount || 0))),
+            analyzedAnswerCount: Math.max(0, Math.floor(Number(this.sessionActionTelemetry.analyzedAnswerCount || 0))),
+            inferredMasteryUpdateCount: Math.max(
+                0,
+                Math.floor(Number(this.sessionActionTelemetry.inferredMasteryUpdateCount || 0))
+            ),
+            explicitMasteryUpdateCount: Math.max(
+                0,
+                Math.floor(Number(this.sessionActionTelemetry.explicitMasteryUpdateCount || 0))
+            ),
+            memoryPersistedCount: Math.max(0, Math.floor(Number(this.sessionActionTelemetry.memoryPersistedCount || 0))),
+            outcomeCounts: {
+                correct: Math.max(0, Math.floor(Number(this.sessionActionTelemetry.outcomeCounts.correct || 0))),
+                partial: Math.max(0, Math.floor(Number(this.sessionActionTelemetry.outcomeCounts.partial || 0))),
+                incorrect: Math.max(0, Math.floor(Number(this.sessionActionTelemetry.outcomeCounts.incorrect || 0))),
+                skipped: Math.max(0, Math.floor(Number(this.sessionActionTelemetry.outcomeCounts.skipped || 0))),
+            },
+        };
+    }
+
+    private normalizeSessionActionTelemetry(
+        value: Partial<KnowledgeSystemState['sessionActionTelemetry']> | undefined
+    ): KnowledgeSystemState['sessionActionTelemetry'] {
+        const fallback = createEmptySessionActionTelemetry();
+        const source = value || {};
+        return {
+            executionCount: Math.max(0, Math.floor(Number(source.executionCount || 0))),
+            analyzedAnswerCount: Math.max(0, Math.floor(Number(source.analyzedAnswerCount || 0))),
+            inferredMasteryUpdateCount: Math.max(0, Math.floor(Number(source.inferredMasteryUpdateCount || 0))),
+            explicitMasteryUpdateCount: Math.max(0, Math.floor(Number(source.explicitMasteryUpdateCount || 0))),
+            memoryPersistedCount: Math.max(0, Math.floor(Number(source.memoryPersistedCount || 0))),
+            outcomeCounts: {
+                correct: Math.max(0, Math.floor(Number(source.outcomeCounts?.correct ?? fallback.outcomeCounts.correct))),
+                partial: Math.max(0, Math.floor(Number(source.outcomeCounts?.partial ?? fallback.outcomeCounts.partial))),
+                incorrect: Math.max(0, Math.floor(Number(source.outcomeCounts?.incorrect ?? fallback.outcomeCounts.incorrect))),
+                skipped: Math.max(0, Math.floor(Number(source.outcomeCounts?.skipped ?? fallback.outcomeCounts.skipped))),
+            },
         };
     }
 
@@ -1824,6 +1917,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             recomputeLatencyHistoryMs: [...this.recomputeLatencyHistoryMs],
             queryLatencyHistoryMs: [...this.queryLatencyHistoryMs],
             latestIngestSummary: this.latestIngestSummary ? { ...this.latestIngestSummary } : null,
+            sessionActionTelemetry: this.buildSessionActionTelemetry(),
             userMemory,
             relationEdgeSignatures: Array.from(this.relationEdgeSignatures.values()),
         };
@@ -1858,6 +1952,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 ),
             }
             : null;
+        this.sessionActionTelemetry = this.normalizeSessionActionTelemetry(snapshot.sessionActionTelemetry);
 
         this.atoms.clear();
         (snapshot.atoms || []).forEach((atom) => {

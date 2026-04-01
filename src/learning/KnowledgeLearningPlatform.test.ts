@@ -439,6 +439,11 @@ describe('KnowledgeLearningPlatform', () => {
         expect(execution.memory?.stats.session).toBeGreaterThan(0);
         expect(execution.mastery).not.toBeNull();
         expect(execution.mastery?.summary.updatedCount).toBe(1);
+        const stateAfterExecution = platform.getKnowledgeState();
+        expect(stateAfterExecution.sessionActionTelemetry.executionCount).toBe(1);
+        expect(stateAfterExecution.sessionActionTelemetry.explicitMasteryUpdateCount).toBe(1);
+        expect(stateAfterExecution.sessionActionTelemetry.inferredMasteryUpdateCount).toBe(0);
+        expect(stateAfterExecution.sessionActionTelemetry.outcomeCounts.incorrect).toBe(1);
 
         const memoryRead = await platform.applyMemoryPolicy({
             userId: 'user_session_action',
@@ -491,6 +496,12 @@ describe('KnowledgeLearningPlatform', () => {
         expect(execution.answerAnalysis?.trace.actionKind).toBe('analyze_answer');
         expect(execution.mastery).not.toBeNull();
         expect(execution.mastery?.summary.updatedCount).toBe(1);
+        const stateAfterExecution = platform.getKnowledgeState();
+        expect(stateAfterExecution.sessionActionTelemetry.executionCount).toBe(1);
+        expect(stateAfterExecution.sessionActionTelemetry.analyzedAnswerCount).toBe(1);
+        expect(stateAfterExecution.sessionActionTelemetry.inferredMasteryUpdateCount).toBe(1);
+        expect(stateAfterExecution.sessionActionTelemetry.explicitMasteryUpdateCount).toBe(0);
+        expect(stateAfterExecution.sessionActionTelemetry.outcomeCounts.incorrect).toBe(1);
     });
 
     test('learning quality evaluation enforces mastery and evidence thresholds', async () => {
@@ -739,6 +750,7 @@ describe('KnowledgeLearningPlatform', () => {
         expect(state.ingestTelemetry.ingestP95Ms).toBeGreaterThanOrEqual(0);
         expect(state.retrievalTelemetry.queryCount).toBeGreaterThanOrEqual(0);
         expect(state.retrievalTelemetry.queryP95Ms).toBeGreaterThanOrEqual(0);
+        expect(state.sessionActionTelemetry.executionCount).toBeGreaterThanOrEqual(0);
     });
 
     test('tutor action uses misconception context for targeted guidance', async () => {

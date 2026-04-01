@@ -2112,7 +2112,11 @@ window.pathApp = {
             if (!runtimeState) {
                 runtimeEl.textContent = 'Runtime: unavailable';
             } else {
-                runtimeEl.textContent = `Runtime: docs=${runtimeState.documents}, atoms=${runtimeState.activeAtoms}, relations=${runtimeState.activeRelationEdges}, ingestP95=${Number(runtimeState.ingestTelemetry?.ingestP95Ms || 0).toFixed(2)}ms`;
+                const sessionTelemetry = runtimeState.sessionActionTelemetry || null;
+                const sessionSummary = sessionTelemetry
+                    ? `, sessionActions=${Number(sessionTelemetry.executionCount || 0)}, inferred=${Number(sessionTelemetry.inferredMasteryUpdateCount || 0)}, explicit=${Number(sessionTelemetry.explicitMasteryUpdateCount || 0)}`
+                    : '';
+                runtimeEl.textContent = `Runtime: docs=${runtimeState.documents}, atoms=${runtimeState.activeAtoms}, relations=${runtimeState.activeRelationEdges}, ingestP95=${Number(runtimeState.ingestTelemetry?.ingestP95Ms || 0).toFixed(2)}ms${sessionSummary}`;
             }
         }
     },

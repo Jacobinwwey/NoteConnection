@@ -465,6 +465,19 @@ export interface KnowledgeSystemState {
         queryAverageMs: number;
         queryMaxMs: number;
     };
+    sessionActionTelemetry: {
+        executionCount: number;
+        analyzedAnswerCount: number;
+        inferredMasteryUpdateCount: number;
+        explicitMasteryUpdateCount: number;
+        memoryPersistedCount: number;
+        outcomeCounts: {
+            correct: number;
+            partial: number;
+            incorrect: number;
+            skipped: number;
+        };
+    };
     memoryEntries: {
         session: number;
         unit: number;

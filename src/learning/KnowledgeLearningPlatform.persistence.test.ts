@@ -71,6 +71,17 @@ describe('KnowledgeLearningPlatform persistence', () => {
             query: 'persistence graph snapshots',
             topK: 2,
         });
+        await platformA.executeStudySessionAction({
+            userId: 'user_persist',
+            action: {
+                atomId,
+                kind: 'quiz',
+                source: 'mastery_path',
+                answer: 'xylophone quasar nebula',
+            },
+            persistMemory: true,
+            memoryLayer: 'session',
+        });
 
         expect(fs.existsSync(snapshotPath)).toBe(true);
 
@@ -88,6 +99,8 @@ describe('KnowledgeLearningPlatform persistence', () => {
         expect(state.memoryEntries.session).toBeGreaterThan(0);
         expect(state.ingestTelemetry.ingestCount).toBeGreaterThan(0);
         expect(state.retrievalTelemetry.queryCount).toBeGreaterThan(0);
+        expect(state.sessionActionTelemetry.executionCount).toBeGreaterThan(0);
+        expect(state.sessionActionTelemetry.analyzedAnswerCount).toBeGreaterThan(0);
 
         const queryResult = await platformB.queryKnowledge({
             query: 'persistence snapshots restarts',
