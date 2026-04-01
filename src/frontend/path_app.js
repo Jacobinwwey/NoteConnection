@@ -39,6 +39,16 @@ window.pathApp = {
     pendingWindowVisibility: null,
     semanticA11yLastSummaryKey: '',
     semanticA11yLastAnnouncementAt: 0,
+    learningWorkbench: {
+        userId: 'path_user_default',
+        loading: false,
+        lastError: '',
+        lastUpdatedAt: '',
+        sessionPlan: null,
+        qualitySnapshot: null,
+        misconceptions: null,
+        runtimeState: null,
+    },
     
     // Animation State
     animationId: null,
@@ -1641,6 +1651,341 @@ window.pathApp = {
         }
     },
 
+    _normalizeLearningWorkbenchUserId: function(rawValue) {
+        const candidate = String(rawValue || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[^\p{L}\p{N}_-]+/gu, '_')
+            .replace(/_+/g, '_');
+        if (!candidate) {
+            return 'path_user_default';
+        }
+        return candidate.slice(0, 64);
+    },
+
+    _restoreLearningWorkbenchPreferences: function() {
+        try {
+            const stored = localStorage.getItem('nc_learning_workbench_prefs');
+            if (!stored) {
+                return;
+            }
+            const parsed = JSON.parse(stored);
+            if (parsed && typeof parsed === 'object' && typeof parsed.userId === 'string') {
+                this.learningWorkbench.userId = this._normalizeLearningWorkbenchUserId(parsed.userId);
+            }
+        } catch (error) {
+            console.warn('[PathApp] Failed to restore learning workbench prefs:', error);
+        }
+    },
+
+    _persistLearningWorkbenchPreferences: function() {
+        try {
+            const payload = {
+                userId: this._normalizeLearningWorkbenchUserId(this.learningWorkbench.userId),
+            };
+            localStorage.setItem('nc_learning_workbench_prefs', JSON.stringify(payload));
+        } catch (error) {
+            console.warn('[PathApp] Failed to persist learning workbench prefs:', error);
+        }
+    },
+
+    _toggleLearningWorkbenchSidebar: function() {
+        const sidebar = document.getElementById('learning-workbench-sidebar');
+        if (!sidebar) return;
+        sidebar.style.zIndex = '3001';
+        if (sidebar.style.display === 'none' || sidebar.style.display === '') {
+            sidebar.style.display = 'flex';
+            sidebar.offsetHeight;
+            setTimeout(() => {
+                sidebar.style.transform = 'translateX(0)';
+            }, 10);
+            void this.refreshLearningWorkbench({ force: false });
+            return;
+        }
+        this._closeLearningWorkbenchSidebar();
+    },
+
+    _closeLearningWorkbenchSidebar: function() {
+        const sidebar = document.getElementById('learning-workbench-sidebar');
+        if (!sidebar) return;
+        sidebar.style.transform = 'translateX(-100%)';
+        setTimeout(() => {
+            sidebar.style.display = 'none';
+        }, 300);
+    },
+
+    _setLearningWorkbenchStatus: function(message, isError = false) {
+        const statusEl = document.getElementById('learning-workbench-status');
+        if (!statusEl) return;
+        statusEl.textContent = String(message || '');
+        statusEl.classList.toggle('is-error', !!isError);
+        statusEl.classList.toggle('is-loading', this.learningWorkbench.loading === true);
+    },
+
+    _requestLearningApi: async function(endpoint, payload = {}) {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload || {}),
+        });
+
+        let body = null;
+        try {
+            body = await response.json();
+        } catch (_error) {
+            body = null;
+        }
+
+        if (!response.ok) {
+            const message = body && body.error
+                ? body.error
+                : `Request failed (${response.status})`;
+            throw new Error(String(message));
+        }
+        if (!body || body.success !== true) {
+            const message = body && body.error
+                ? body.error
+                : `API ${endpoint} returned an unexpected response`;
+            throw new Error(String(message));
+        }
+        return body.result;
+    },
+
+    _getFocusAtomIdsForLearning: function() {
+        const ids = [];
+        if (typeof this.currentTargetId === 'string' && this.currentTargetId.trim()) {
+            ids.push(this.currentTargetId.trim());
+        }
+        if (Array.isArray(this.currentTargetIds)) {
+            this.currentTargetIds.forEach((id) => {
+                if (typeof id === 'string' && id.trim()) {
+                    ids.push(id.trim());
+                }
+            });
+        }
+        if (typeof this.centralNodeId === 'string' && this.centralNodeId.trim()) {
+            ids.push(this.centralNodeId.trim());
+        }
+        return Array.from(new Set(ids));
+    },
+
+    _getCurrentFocusNode: function() {
+        const sourceData = this._getSourceGraphData();
+        if (!sourceData || !Array.isArray(sourceData.nodes)) {
+            return null;
+        }
+        const preferredIds = this._getFocusAtomIdsForLearning();
+        for (const candidateId of preferredIds) {
+            const matched = sourceData.nodes.find((node) => node && node.id === candidateId);
+            if (matched) {
+                return matched;
+            }
+        }
+        if (typeof this.centralNodeId === 'string' && this.centralNodeId.trim()) {
+            const matched = sourceData.nodes.find((node) => node && node.id === this.centralNodeId);
+            if (matched) {
+                return matched;
+            }
+        }
+        return this.nodes && this.nodes.length > 0 ? this.nodes[0] : null;
+    },
+
+    _buildLearningDocumentFromNode: function(node) {
+        if (!node || typeof node !== 'object') {
+            return null;
+        }
+        const nodeId = typeof node.id === 'string' ? node.id.trim() : '';
+        if (!nodeId) {
+            return null;
+        }
+        const normalizedDocId = `path_${nodeId.toLowerCase().replace(/[^\p{L}\p{N}_-]+/gu, '_').slice(0, 96)}`;
+        const sourcePathRaw = node?.metadata?.filepath
+            || node?.filepath
+            || `Knowledge_Base/path_mode/${normalizedDocId}.md`;
+        const sourcePath = String(sourcePathRaw || '').replace(/\\/g, '/');
+        const title = typeof node.label === 'string' && node.label.trim()
+            ? node.label.trim()
+            : nodeId;
+        const contentRaw = typeof node.content === 'string'
+            ? node.content
+            : (typeof node.summary === 'string' ? node.summary : '');
+        const content = String(contentRaw || '').trim();
+        const finalContent = content.length > 0
+            ? `# ${title}\n\n${content}`
+            : `# ${title}\n\nNode ${nodeId} was captured from Path Mode for learning orchestration.`;
+        return {
+            documentId: normalizedDocId,
+            sourcePath,
+            language: 'en',
+            content: finalContent,
+        };
+    },
+
+    ingestFocusNodeForLearningWorkbench: async function() {
+        const focusNode = this._getCurrentFocusNode();
+        if (!focusNode) {
+            this._setLearningWorkbenchStatus('No focus node available to ingest.', true);
+            return;
+        }
+
+        const document = this._buildLearningDocumentFromNode(focusNode);
+        if (!document) {
+            this._setLearningWorkbenchStatus('Failed to build ingest document from focus node.', true);
+            return;
+        }
+
+        this.learningWorkbench.loading = true;
+        this.learningWorkbench.lastError = '';
+        this._setLearningWorkbenchStatus('Ingesting focus node into learning graph...');
+        try {
+            const result = await this._requestLearningApi('/api/knowledge/ingest', {
+                incremental: true,
+                relationRecomputeMode: 'incremental',
+                documents: [document],
+            });
+            const changedDocs = Number(result?.summary?.changedDocuments || 0);
+            this._setLearningWorkbenchStatus(`Ingest succeeded. Changed documents: ${changedDocs}.`);
+            await this.refreshLearningWorkbench({ force: true });
+        } catch (error) {
+            const message = String(error?.message || error || 'Unknown ingest error');
+            this.learningWorkbench.lastError = message;
+            this._setLearningWorkbenchStatus(`Ingest failed: ${message}`, true);
+        } finally {
+            this.learningWorkbench.loading = false;
+            this._renderLearningWorkbenchState();
+        }
+    },
+
+    refreshLearningWorkbench: async function(options = {}) {
+        if (this.learningWorkbench.loading) {
+            return;
+        }
+        const userId = this._normalizeLearningWorkbenchUserId(this.learningWorkbench.userId);
+        this.learningWorkbench.userId = userId;
+        this._persistLearningWorkbenchPreferences();
+        this.learningWorkbench.loading = true;
+        this.learningWorkbench.lastError = '';
+        this._setLearningWorkbenchStatus('Refreshing learning workbench...');
+        this._renderLearningWorkbenchState();
+
+        const focusAtomIds = this._getFocusAtomIdsForLearning();
+        const includeDivergence = true;
+        const includeRetrain = true;
+        try {
+            const [sessionPlan, qualitySnapshot, misconceptions, runtimeState] = await Promise.all([
+                this._requestLearningApi('/api/knowledge/session/plan', {
+                    userId,
+                    focusAtomIds,
+                    maxActions: 14,
+                    includeDivergence,
+                    includeRetrain,
+                }),
+                this._requestLearningApi('/api/knowledge/quality/snapshot', {
+                    userId,
+                }),
+                this._requestLearningApi('/api/knowledge/mastery/misconceptions', {
+                    userId,
+                    atomIds: focusAtomIds,
+                    topK: 6,
+                }),
+                fetch('/api/knowledge/state', { method: 'GET' })
+                    .then((response) => response.json())
+                    .catch(() => null),
+            ]);
+            this.learningWorkbench.sessionPlan = sessionPlan || null;
+            this.learningWorkbench.qualitySnapshot = qualitySnapshot || null;
+            this.learningWorkbench.misconceptions = misconceptions || null;
+            this.learningWorkbench.runtimeState = runtimeState && runtimeState.success === true
+                ? runtimeState
+                : null;
+            this.learningWorkbench.lastUpdatedAt = new Date().toISOString();
+
+            const actionCount = Number(sessionPlan?.summary?.totalActions || sessionPlan?.actions?.length || 0);
+            this._setLearningWorkbenchStatus(`Learning workbench updated. Planned actions: ${actionCount}.`);
+        } catch (error) {
+            const message = String(error?.message || error || 'Unknown refresh error');
+            this.learningWorkbench.lastError = message;
+            this._setLearningWorkbenchStatus(`Refresh failed: ${message}`, true);
+        } finally {
+            this.learningWorkbench.loading = false;
+            this._renderLearningWorkbenchState();
+        }
+    },
+
+    _renderLearningWorkbenchState: function() {
+        const userIdInput = document.getElementById('learning-user-id');
+        if (userIdInput && userIdInput.value !== this.learningWorkbench.userId) {
+            userIdInput.value = this.learningWorkbench.userId;
+        }
+
+        const qualityEl = document.getElementById('learning-quality-summary');
+        const misconceptionEl = document.getElementById('learning-misconception-list');
+        const actionsEl = document.getElementById('learning-session-actions');
+        const runtimeEl = document.getElementById('learning-runtime-summary');
+        const updatedEl = document.getElementById('learning-workbench-updated-at');
+
+        if (updatedEl) {
+            updatedEl.textContent = this.learningWorkbench.lastUpdatedAt
+                ? `Last updated: ${new Date(this.learningWorkbench.lastUpdatedAt).toLocaleString()}`
+                : 'Last updated: -';
+        }
+
+        if (qualityEl) {
+            const snapshot = this.learningWorkbench.qualitySnapshot?.snapshot || null;
+            if (!snapshot) {
+                qualityEl.innerHTML = '<li class="muted">No quality snapshot yet.</li>';
+            } else {
+                qualityEl.innerHTML = [
+                    `<li>Retest pass rate: <strong>${Number(snapshot.retestPassRatePct || 0).toFixed(2)}%</strong></li>`,
+                    `<li>Misconception recurrence: <strong>${Number(snapshot.misconceptionRecurrenceRatePct || 0).toFixed(2)}%</strong></li>`,
+                    `<li>Evidence-backed suggestions: <strong>${Number(snapshot.evidenceBackedSuggestionRatioPct || 0).toFixed(2)}%</strong></li>`,
+                    `<li>Path gain vs random: <strong>${Number(snapshot.averagePathMasteryGainPct || 0).toFixed(2)}% / ${Number(snapshot.randomPathMasteryGainPct || 0).toFixed(2)}%</strong></li>`,
+                    `<li>Query p95: <strong>${Number(snapshot.queryP95Ms || 0).toFixed(2)} ms</strong></li>`,
+                ].join('');
+            }
+        }
+
+        if (misconceptionEl) {
+            const items = this.learningWorkbench.misconceptions?.items || [];
+            if (!Array.isArray(items) || items.length === 0) {
+                misconceptionEl.innerHTML = '<li class="muted">No recurring misconceptions detected.</li>';
+            } else {
+                misconceptionEl.innerHTML = items.map((item) => {
+                    const tag = String(item.errorTag || 'unknown');
+                    const count = Number(item.count || 0);
+                    const severity = Number(item.severityScore || 0).toFixed(3);
+                    return `<li><span class="chip">${tag}</span> count=${count}, severity=${severity}</li>`;
+                }).join('');
+            }
+        }
+
+        if (actionsEl) {
+            const actions = this.learningWorkbench.sessionPlan?.actions || [];
+            if (!Array.isArray(actions) || actions.length === 0) {
+                actionsEl.innerHTML = '<li class="muted">No session actions yet.</li>';
+            } else {
+                actionsEl.innerHTML = actions.slice(0, 10).map((action) => {
+                    const source = String(action.source || 'unknown');
+                    const kind = String(action.kind || 'action');
+                    const atomId = String(action.atomId || '');
+                    const minutes = Number(action.estimatedMinutes || 0);
+                    return `<li><strong>${kind}</strong> <span class="chip">${source}</span> <code>${atomId}</code> (${minutes}m)</li>`;
+                }).join('');
+            }
+        }
+
+        if (runtimeEl) {
+            const runtimeState = this.learningWorkbench.runtimeState?.state || null;
+            if (!runtimeState) {
+                runtimeEl.textContent = 'Runtime: unavailable';
+            } else {
+                runtimeEl.textContent = `Runtime: docs=${runtimeState.documents}, atoms=${runtimeState.activeAtoms}, relations=${runtimeState.activeRelationEdges}, ingestP95=${Number(runtimeState.ingestTelemetry?.ingestP95Ms || 0).toFixed(2)}ms`;
+            }
+        }
+    },
+
     openEmbeddedNoteMD: async function(options = {}) {
         const shouldRestoreMainView = options.restoreMainView !== false;
         if (shouldRestoreMainView) {
@@ -1708,12 +2053,17 @@ window.pathApp = {
         const pathContainer = document.getElementById('path-container');
         const graphWrapper = document.getElementById('graph-wrapper');
         const sidebar = document.getElementById('learning-history-sidebar');
+        const workbenchSidebar = document.getElementById('learning-workbench-sidebar');
 
         if (pathContainer) pathContainer.style.display = 'none';
         if (graphWrapper) graphWrapper.style.display = 'block';
         if (sidebar) {
             sidebar.style.transform = 'translateX(100%)';
             sidebar.style.display = 'none';
+        }
+        if (workbenchSidebar) {
+            workbenchSidebar.style.transform = 'translateX(-100%)';
+            workbenchSidebar.style.display = 'none';
         }
         const multiWindowOptions = this._resolveMultiWindowOptions();
         
@@ -2237,6 +2587,8 @@ window.pathApp = {
         const tauriMode = this._isTauriMode();
         const toolbar = document.getElementById('path-toolbar');
 
+        this._restoreLearningWorkbenchPreferences();
+
         if (tauriMode && toolbar) {
             // In Tauri, controls are migrated to Godot. Keep canvas view only.
             toolbar.style.display = 'none';
@@ -2266,6 +2618,11 @@ window.pathApp = {
         const markBtn = document.getElementById('btn-mark-complete');
         const historyBtn = document.getElementById('btn-toggle-history');
         const closeHistoryBtn = document.getElementById('btn-close-history');
+        const workbenchToggleBtn = document.getElementById('btn-toggle-learning-workbench');
+        const workbenchCloseBtn = document.getElementById('btn-close-learning-workbench');
+        const workbenchRefreshBtn = document.getElementById('btn-refresh-learning-workbench');
+        const workbenchIngestBtn = document.getElementById('btn-ingest-focus-node');
+        const workbenchUserIdInput = document.getElementById('learning-user-id');
 
         if (!tauriMode) {
             if (learningModeEl) {
@@ -2286,6 +2643,11 @@ window.pathApp = {
             if (layoutEl) layoutEl.addEventListener('change', () => this.triggerUpdate());
             if (markBtn) markBtn.addEventListener('click', () => this.markComplete());
             if (historyBtn) historyBtn.addEventListener('click', () => this._toggleHistorySidebar());
+            if (workbenchToggleBtn) {
+                workbenchToggleBtn.addEventListener('click', () => {
+                    this._toggleLearningWorkbenchSidebar();
+                });
+            }
         }
 
         if (closeHistoryBtn) {
@@ -2296,6 +2658,35 @@ window.pathApp = {
                 setTimeout(() => {
                     sidebar.style.display = 'none';
                 }, 300);
+            });
+        }
+
+        if (workbenchCloseBtn) {
+            workbenchCloseBtn.addEventListener('click', () => this._closeLearningWorkbenchSidebar());
+        }
+
+        if (workbenchRefreshBtn) {
+            workbenchRefreshBtn.addEventListener('click', () => {
+                void this.refreshLearningWorkbench({ force: true });
+            });
+        }
+
+        if (workbenchIngestBtn) {
+            workbenchIngestBtn.addEventListener('click', () => {
+                void this.ingestFocusNodeForLearningWorkbench();
+            });
+        }
+
+        if (workbenchUserIdInput) {
+            workbenchUserIdInput.value = this.learningWorkbench.userId || 'path_user_default';
+            workbenchUserIdInput.addEventListener('change', (event) => {
+                const candidate = typeof event?.target?.value === 'string'
+                    ? event.target.value
+                    : '';
+                this.learningWorkbench.userId = this._normalizeLearningWorkbenchUserId(candidate);
+                workbenchUserIdInput.value = this.learningWorkbench.userId;
+                this._persistLearningWorkbenchPreferences();
+                this._renderLearningWorkbenchState();
             });
         }
 
@@ -2334,6 +2725,7 @@ window.pathApp = {
 
         this._ensurePathSemanticA11y();
         this._refreshPathSemanticA11y('Path mode initialized');
+        this._renderLearningWorkbenchState();
     },
 
     _ensurePathSemanticA11y: function() {
@@ -2932,6 +3324,10 @@ window.pathApp = {
             }
             this.saveHistory();
             this.updateHistorySidebar();
+            const workbenchSidebar = document.getElementById('learning-workbench-sidebar');
+            if (workbenchSidebar && workbenchSidebar.style.display && workbenchSidebar.style.display !== 'none') {
+                void this.refreshLearningWorkbench({ force: false });
+            }
             
             const next = this.nodes.find(n => !this.completedNodes.has(n.id) && n.id !== node.id);
             if (next) setTimeout(() => this.switchCentral(next.id), 500);

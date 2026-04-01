@@ -238,3 +238,129 @@
   background: #444;
   color: #fff;
 }
+
+/* Learning Workbench */
+.workbench-sidebar {
+  left: 0;
+  right: auto;
+  width: min(380px, 86vw);
+  border-left: none;
+  border-right: 1px solid #444;
+  transform: translateX(-100%);
+}
+
+.workbench-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.workbench-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.workbench-field label {
+  font-size: 0.78rem;
+  color: #a8b6c7;
+}
+
+.workbench-field input {
+  background: #1c232f;
+  color: #f2f7ff;
+  border: 1px solid #3e4d63;
+  border-radius: 6px;
+  padding: 7px 8px;
+  font-size: 0.88rem;
+}
+
+.workbench-row {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-small {
+  background: #2a3a52;
+  color: #ecf2fb;
+  border: 1px solid #4b6385;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-small:hover {
+  background: #334869;
+}
+
+.workbench-status {
+  font-size: 0.82rem;
+  color: #9bd6ff;
+  padding: 8px 10px;
+  border: 1px solid #2b5678;
+  background: #142333;
+  border-radius: 6px;
+}
+
+.workbench-status.is-loading {
+  color: #ffe8a3;
+  border-color: #8a6a20;
+  background: #2b230f;
+}
+
+.workbench-status.is-error {
+  color: #ffb4bc;
+  border-color: #7d3240;
+  background: #2a1118;
+}
+
+.workbench-updated-at {
+  font-size: 0.75rem;
+  color: #96a2b8;
+}
+
+.workbench-section h4 {
+  margin: 0 0 6px;
+  font-size: 0.88rem;
+  color: #ffd38a;
+}
+
+.workbench-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.workbench-list li {
+  font-size: 0.8rem;
+  color: #d8dfec;
+  padding: 6px 8px;
+  border: 1px solid #2d394d;
+  border-radius: 6px;
+  background: #1a222f;
+}
+
+.workbench-list li.muted {
+  color: #8b96aa;
+}
+
+.chip {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid #51657f;
+  background: #223046;
+  color: #d4e6ff;
+  font-size: 0.72rem;
+  margin-right: 4px;
+}
+
+.workbench-runtime {
+  font-size: 0.76rem;
+  color: #b3bfd6;
+  line-height: 1.45;
+}

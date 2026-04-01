@@ -1345,6 +1345,16 @@
           </button>
         </div>
 
+        <div class="toolbar-group">
+          <button
+            id="btn-toggle-learning-workbench"
+            class="icon-btn"
+            title="Toggle Learning Workbench"
+          >
+            <span>Workbench</span>
+          </button>
+        </div>
+
         <div class="toolbar-group right">
           <button id="btn-exit-path" class="icon-btn" title="Exit Path Mode">
             <i class="fas fa-times"></i> <span data-i18n="btn_exit">Exit</span>
@@ -1393,6 +1403,59 @@
       </div>
       <div id="history-list" class="sidebar-content">
         <!-- Items injected here -->
+      </div>
+    </div>
+
+    <!-- Learning Workbench Sidebar -->
+    <div
+      id="learning-workbench-sidebar"
+      class="path-sidebar workbench-sidebar"
+      style="display: none"
+    >
+      <div class="sidebar-header">
+        <h3>Learning Workbench</h3>
+        <button id="btn-close-learning-workbench" class="close-btn">&times;</button>
+      </div>
+      <div class="sidebar-content workbench-content">
+        <div class="workbench-field">
+          <label for="learning-user-id">Learner ID</label>
+          <input
+            id="learning-user-id"
+            type="text"
+            placeholder="path_user_default"
+          />
+        </div>
+        <div class="workbench-row">
+          <button id="btn-refresh-learning-workbench" class="btn-small">Refresh</button>
+          <button id="btn-ingest-focus-node" class="btn-small">Ingest Focus</button>
+        </div>
+        <div id="learning-workbench-status" class="workbench-status">Ready.</div>
+        <div id="learning-workbench-updated-at" class="workbench-updated-at">Last updated: -</div>
+
+        <div class="workbench-section">
+          <h4>Quality Snapshot</h4>
+          <ul id="learning-quality-summary" class="workbench-list">
+            <li class="muted">No quality snapshot yet.</li>
+          </ul>
+        </div>
+
+        <div class="workbench-section">
+          <h4>Top Misconceptions</h4>
+          <ul id="learning-misconception-list" class="workbench-list">
+            <li class="muted">No recurring misconceptions detected.</li>
+          </ul>
+        </div>
+
+        <div class="workbench-section">
+          <h4>Session Actions</h4>
+          <ul id="learning-session-actions" class="workbench-list">
+            <li class="muted">No session actions yet.</li>
+          </ul>
+        </div>
+
+        <div id="learning-runtime-summary" class="workbench-runtime">
+          Runtime: unavailable
+        </div>
       </div>
     </div>
 
