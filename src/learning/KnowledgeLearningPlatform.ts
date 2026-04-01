@@ -1338,6 +1338,68 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             ).toFixed(6))
             : 0;
         const averageMasteryDelta = Number((averageMasteryAfter - averageMasteryBefore).toFixed(6));
+        const includeRetestPlan = request.includeRetestPlan !== false;
+        const retestActionLimit = clamp(Math.floor(Number(request.retestActionLimit) || 6), 1, 24);
+        const retestPlanActions: StudySessionAction[] = includeRetestPlan
+            ? (() => {
+                const retestCandidates = executedItems
+                    .map<StudySessionAction | null>((item) => {
+                        const atomId = String(item.action.atomId || '').trim();
+                        if (!atomId || !this.activeAtomIds.has(atomId)) {
+                            return null;
+                        }
+                        const outcome = item.result.trace.effectiveOutcome;
+                        if (outcome !== 'incorrect' && outcome !== 'partial' && outcome !== 'skipped') {
+                            return null;
+                        }
+                        const atom = this.atoms.get(atomId);
+                        const kind: LearningActionKind = outcome === 'partial' ? 'quiz' : 'review';
+                        const priority = outcome === 'incorrect'
+                            ? 108
+                            : (outcome === 'partial' ? 96 : 92);
+                        const expectedGain = outcome === 'incorrect'
+                            ? 0.24
+                            : (outcome === 'partial' ? 0.16 : 0.12);
+                        const effectiveErrorTag = item.result.trace.effectiveErrorTag || item.action.errorTag;
+                        const errorHint = effectiveErrorTag
+                            ? ` (focus: ${effectiveErrorTag})`
+                            : '';
+                        const generatedAction = this.createLearningAction({
+                            kind,
+                            atomId,
+                            priority,
+                            expectedGain,
+                            rationale: `Immediate retest after ${outcome} outcome${errorHint}.`,
+                            evidenceSpanIds: Array.isArray(item.action.evidenceSpanIds) && item.action.evidenceSpanIds.length > 0
+                                ? item.action.evidenceSpanIds
+                                : (atom?.evidenceSpanIds || []),
+                            relationPathAtomIds: [atomId],
+                            estimatedMinutes: outcome === 'incorrect' ? 7 : 5,
+                        });
+                        const retestAction: StudySessionAction = {
+                            ...generatedAction,
+                            source: 'retrain_plan',
+                            ...(effectiveErrorTag ? { errorTag: effectiveErrorTag } : {}),
+                        };
+                        return retestAction;
+                    })
+                    .filter((action): action is StudySessionAction => Boolean(action))
+                    .sort((left, right) => {
+                        if (right.priority !== left.priority) {
+                            return right.priority - left.priority;
+                        }
+                        return right.expectedGain - left.expectedGain;
+                    });
+                const deduped = new Map<string, StudySessionAction>();
+                retestCandidates.forEach((action) => {
+                    const signature = `${action.atomId}::${action.kind}`;
+                    if (!deduped.has(signature)) {
+                        deduped.set(signature, action);
+                    }
+                });
+                return Array.from(deduped.values()).slice(0, retestActionLimit);
+            })()
+            : [];
 
         return {
             userId,
@@ -1377,6 +1439,14 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 regressedCount: regressedAtomCount,
                 unchangedCount: unchangedAtomCount,
                 items: masteryDeltaItems,
+            },
+            retestPlan: {
+                generatedAt: executedAt,
+                actions: retestPlanActions,
+                summary: {
+                    totalActions: retestPlanActions.length,
+                    targetAtoms: Array.from(new Set(retestPlanActions.map((action) => action.atomId))),
+                },
             },
         };
     }

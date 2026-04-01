@@ -2101,8 +2101,9 @@ window.pathApp = {
                 };
             }
             const summary = result?.summary || {};
+            const retestCount = Number(result?.retestPlan?.summary?.totalActions || 0);
             this._setLearningWorkbenchStatus(
-                `Session execution finished: executed ${Number(summary.executedCount || 0)}/${Number(summary.attemptedActions || 0)}, mastery updates ${Number(summary.updatedMasteryCount || 0)}, analyzed answers ${Number(summary.analyzedAnswerCount || 0)} (input=${answerCount}).`
+                `Session execution finished: executed ${Number(summary.executedCount || 0)}/${Number(summary.attemptedActions || 0)}, mastery updates ${Number(summary.updatedMasteryCount || 0)}, analyzed answers ${Number(summary.analyzedAnswerCount || 0)} (input=${answerCount}), retest actions ${retestCount}.`
             );
         } catch (error) {
             const message = String(error?.message || error || 'Unknown session execution error');
@@ -2232,6 +2233,7 @@ window.pathApp = {
             } else {
                 const summary = execution.summary || {};
                 const masteryDelta = execution.masteryDelta || null;
+                const retestPlan = execution.retestPlan || null;
                 const topDeltaLines = Array.isArray(masteryDelta?.items)
                     ? masteryDelta.items.slice(0, 3).map((item) => {
                         const before = Number(item.beforeMastery || 0).toFixed(3);
@@ -2240,6 +2242,14 @@ window.pathApp = {
                         const signedDelta = `${delta >= 0 ? '+' : ''}${delta.toFixed(3)}`;
                         const atomId = String(item.atomId || 'unknown_atom');
                         return `- ${atomId}: ${before} -> ${after} (${signedDelta})`;
+                    })
+                    : [];
+                const retestPreviewLines = Array.isArray(retestPlan?.actions)
+                    ? retestPlan.actions.slice(0, 3).map((action) => {
+                        const atomId = String(action.atomId || 'unknown_atom');
+                        const kind = String(action.kind || 'action');
+                        const source = String(action.source || 'retrain_plan');
+                        return `- ${kind} @ ${atomId} (${source})`;
                     })
                     : [];
                 sessionExecutionEl.textContent = [
@@ -2257,6 +2267,13 @@ window.pathApp = {
                             `Compared atoms: ${Number(masteryDelta.comparedAtoms || 0)}, avg delta: ${Number(masteryDelta.averageDelta || 0).toFixed(3)}`,
                             'Top mastery delta atoms:',
                             ...(topDeltaLines.length > 0 ? topDeltaLines : ['- n/a']),
+                        ]
+                        : []),
+                    ...(retestPlan
+                        ? [
+                            `Immediate retest actions: ${Number(retestPlan.summary?.totalActions || 0)}`,
+                            'Retest preview:',
+                            ...(retestPreviewLines.length > 0 ? retestPreviewLines : ['- n/a']),
                         ]
                         : []),
                 ].join('\n');

@@ -552,6 +552,7 @@ describe('KnowledgeLearningPlatform', () => {
         expect(execution.summary.averageMasteryAfter).toBeGreaterThanOrEqual(0);
         expect(execution.masteryDelta.comparedAtoms).toBeGreaterThan(0);
         expect(execution.masteryDelta.items.length).toBe(execution.masteryDelta.comparedAtoms);
+        expect(execution.retestPlan.summary.totalActions).toBeGreaterThanOrEqual(0);
 
         const stateAfterExecution = platform.getKnowledgeState();
         expect(stateAfterExecution.sessionActionTelemetry.executionCount).toBeGreaterThanOrEqual(3);
@@ -607,6 +608,8 @@ describe('KnowledgeLearningPlatform', () => {
         expect(firstItem?.result?.answerAnalysis).not.toBeNull();
         expect(firstItem?.result?.trace.masterySource).toBe('inferred');
         expect(execution.masteryDelta.items[0]?.updatedByExecution).toBe(true);
+        expect(execution.retestPlan.summary.totalActions).toBeGreaterThanOrEqual(1);
+        expect(execution.retestPlan.actions[0]?.source).toBe('retrain_plan');
     });
 
     test('learning quality evaluation enforces mastery and evidence thresholds', async () => {

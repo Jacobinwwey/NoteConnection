@@ -405,6 +405,8 @@ export interface StudySessionPlanExecutionRequest {
     answersByAtomId?: Record<string, string>;
     autoAnalyzeAnswer?: boolean;
     autoUpdateMasteryFromAnswer?: boolean;
+    includeRetestPlan?: boolean;
+    retestActionLimit?: number;
     persistMemory?: boolean;
     memoryLayer?: MemoryLayer;
     stopOnError?: boolean;
@@ -464,6 +466,14 @@ export interface StudySessionPlanExecutionResponse {
         regressedCount: number;
         unchangedCount: number;
         items: StudySessionMasteryDeltaItem[];
+    };
+    retestPlan: {
+        generatedAt: string;
+        actions: StudySessionAction[];
+        summary: {
+            totalActions: number;
+            targetAtoms: string[];
+        };
     };
 }
 
