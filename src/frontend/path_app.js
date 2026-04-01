@@ -1924,6 +1924,22 @@ window.pathApp = {
             .replace(/'/g, '&#39;');
     },
 
+    _collectOptionalAnswerForLearningAction: function(actionKind, atomId) {
+        const normalized = String(actionKind || '').trim().toLowerCase();
+        if (!['quiz', 'review', 'explain'].includes(normalized)) {
+            return '';
+        }
+        if (typeof window === 'undefined' || typeof window.prompt !== 'function') {
+            return '';
+        }
+        const promptMessage = `Optional: enter learner answer for ${actionKind} on ${atomId}.\nLeave empty to skip mastery diagnostics.`;
+        const answer = window.prompt(promptMessage, '');
+        if (typeof answer !== 'string') {
+            return '';
+        }
+        return answer.trim();
+    },
+
     executeLearningWorkbenchAction: async function(params = {}) {
         const userId = this._normalizeLearningWorkbenchUserId(this.learningWorkbench.userId);
         const atomId = String(params.atomId || '').trim();
@@ -1933,6 +1949,8 @@ window.pathApp = {
             this._setLearningWorkbenchStatus('Invalid action payload for tutor execution.', true);
             return;
         }
+        const answer = this._collectOptionalAnswerForLearningAction(actionKind, atomId);
+        const shouldAnalyzeAnswer = answer.length > 0;
 
         this.learningWorkbench.loading = true;
         this._setLearningWorkbenchStatus(`Running session action (${actionKind}) for ${atomId}...`);
@@ -1945,7 +1963,10 @@ window.pathApp = {
                     kind: actionKind,
                     source: source || 'session_plan',
                     prompt: `Learning workbench action: ${actionKind} from ${source || 'session_plan'}`,
+                    answer: shouldAnalyzeAnswer ? answer : undefined,
                 },
+                autoAnalyzeAnswer: shouldAnalyzeAnswer,
+                autoUpdateMasteryFromAnswer: shouldAnalyzeAnswer,
                 persistMemory: true,
                 memoryLayer: 'session',
             });
@@ -1960,8 +1981,11 @@ window.pathApp = {
             };
             const tutorActionKind = result?.trace?.tutorActionKind || 'unknown';
             const persistedMemory = result?.trace?.persistedMemory === true;
+            const updatedMastery = result?.trace?.updatedMastery === true;
+            const effectiveOutcome = result?.trace?.effectiveOutcome || 'n/a';
+            const masterySource = result?.trace?.masterySource || 'none';
             this._setLearningWorkbenchStatus(
-                `Session action finished (${tutorActionKind}); memory ${persistedMemory ? 'persisted' : 'skipped'}.`
+                `Session action finished (${tutorActionKind}); memory ${persistedMemory ? 'persisted' : 'skipped'}; mastery ${updatedMastery ? `updated (${effectiveOutcome}, ${masterySource})` : 'unchanged'}.`
             );
         } catch (error) {
             const message = String(error?.message || error || 'Unknown tutor execution error');
@@ -2064,11 +2088,21 @@ window.pathApp = {
                 const tutorResult = tutorFeedback.tutorResult || tutorFeedback.result?.tutor || {};
                 const message = String(tutorResult.message || '').trim();
                 const safeMessage = message.length > 0 ? message : 'Tutor returned an empty message.';
+                const answerAnalysis = tutorFeedback.result?.answerAnalysis || null;
+                const answerAnalysisMessage = String(answerAnalysis?.message || '').trim();
+                const safeAnswerAnalysis = answerAnalysisMessage.length > 0
+                    ? answerAnalysisMessage
+                    : 'No answer analysis was generated.';
                 tutorFeedbackEl.textContent = [
                     `Action: ${tutorFeedback.actionKind} (${trace.tutorActionKind || 'unknown'})`,
                     `Atom: ${tutorFeedback.atomId}`,
                     `Memory persisted: ${trace.persistedMemory === true ? 'yes' : 'no'}`,
+                    `Mastery updated: ${trace.updatedMastery === true ? 'yes' : 'no'} (${trace.masterySource || 'none'})`,
+                    `Outcome/Error: ${trace.effectiveOutcome || 'n/a'} / ${trace.effectiveErrorTag || 'n/a'}`,
                     safeMessage,
+                    '',
+                    'Answer Analysis:',
+                    safeAnswerAnalysis,
                 ].join('\n');
             }
         }

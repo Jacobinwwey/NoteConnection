@@ -429,7 +429,12 @@ describe('KnowledgeLearningPlatform', () => {
 
         expect(execution.trace.tutorActionKind).toBe('generate_quiz');
         expect(execution.trace.persistedMemory).toBe(true);
+        expect(execution.trace.analyzedAnswer).toBe(false);
+        expect(execution.trace.masterySource).toBe('explicit');
+        expect(execution.trace.effectiveOutcome).toBe('incorrect');
+        expect(execution.trace.effectiveErrorTag).toBe('retrieval_failure');
         expect(execution.tutor.message).toContain('Question:');
+        expect(execution.answerAnalysis).toBeNull();
         expect(execution.memory).not.toBeNull();
         expect(execution.memory?.stats.session).toBeGreaterThan(0);
         expect(execution.mastery).not.toBeNull();
@@ -449,6 +454,43 @@ describe('KnowledgeLearningPlatform', () => {
             topK: 5,
         });
         expect(misconceptions.items.some((item) => item.errorTag === 'retrieval_failure')).toBe(true);
+    });
+
+    test('session action execution auto-analyzes answers and infers mastery diagnostics', async () => {
+        const ingest = await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_session_action_auto',
+                    sourcePath: 'Knowledge_Base/doc_session_action_auto.md',
+                    language: 'en',
+                    content: '# Session Action Auto\nAuto diagnostics should infer outcome from answer quality.',
+                },
+            ],
+        });
+        const atomId = ingest.atoms[0]?.id as string;
+
+        const execution = await platform.executeStudySessionAction({
+            userId: 'user_session_action_auto',
+            action: {
+                atomId,
+                kind: 'quiz',
+                source: 'mastery_path',
+                answer: 'xylophone quasar nebula',
+            },
+            persistMemory: true,
+            memoryLayer: 'session',
+        });
+
+        expect(execution.trace.tutorActionKind).toBe('generate_quiz');
+        expect(execution.trace.analyzedAnswer).toBe(true);
+        expect(execution.trace.masterySource).toBe('inferred');
+        expect(execution.trace.effectiveOutcome).toBe('incorrect');
+        expect(execution.trace.effectiveErrorTag).toBe('retrieval_failure');
+        expect(execution.answerAnalysis).not.toBeNull();
+        expect(execution.answerAnalysis?.trace.actionKind).toBe('analyze_answer');
+        expect(execution.mastery).not.toBeNull();
+        expect(execution.mastery?.summary.updatedCount).toBe(1);
     });
 
     test('learning quality evaluation enforces mastery and evidence thresholds', async () => {

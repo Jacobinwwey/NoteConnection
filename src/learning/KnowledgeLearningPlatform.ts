@@ -35,6 +35,7 @@ import type {
     MasteryDiagnosticsRequest,
     MasteryDiagnosticsResponse,
     MasteryErrorTag,
+    MasteryOutcome,
     MasteryMisconceptionItem,
     MasteryMisconceptionRequest,
     MasteryMisconceptionResponse,
@@ -967,6 +968,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const learningActionKind = action.kind;
         const tutorActionKind = this.resolveTutorActionKindFromLearningKind(learningActionKind);
         const executedAt = this.resolveTimestamp(request.executedAt);
+        const hasAnswer = isNonEmptyString(action.answer);
         const tutor = await this.executeTutorAction({
             userId,
             actionKind: tutorActionKind,
@@ -974,6 +976,28 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             prompt: action.prompt,
             answer: action.answer,
         });
+        const shouldAnalyzeAnswer = hasAnswer && request.autoAnalyzeAnswer !== false;
+        const answerAnalysis = shouldAnalyzeAnswer
+            ? await this.executeTutorAction({
+                userId,
+                actionKind: 'analyze_answer',
+                atomId,
+                prompt: action.prompt,
+                answer: action.answer,
+            })
+            : null;
+        const inferredOutcome = request.autoUpdateMasteryFromAnswer === false
+            ? null
+            : this.inferMasteryOutcomeFromTutorAnalysis(answerAnalysis);
+        const effectiveOutcome = request.outcome || inferredOutcome;
+        const explicitErrorTag = isNonEmptyString(request.errorTag)
+            ? this.normalizeMasteryErrorTag(request.errorTag)
+            : null;
+        const inferredErrorTag = this.inferMasteryErrorTagFromTutorAnalysis(answerAnalysis, effectiveOutcome);
+        const effectiveErrorTag = explicitErrorTag || inferredErrorTag;
+        const masterySource = request.outcome
+            ? 'explicit'
+            : (effectiveOutcome ? 'inferred' : 'none');
 
         const persistMemory = request.persistMemory !== false;
         let memory: MemoryPolicyResponse | null = null;
@@ -981,20 +1005,36 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             const memoryLayer: MemoryLayer = request.memoryLayer || 'session';
             const memoryKey = `session_action:${atomId}:${this.nextId('session')}`;
             const sourceTag = isNonEmptyString(action.source) ? action.source : 'session_plan';
+            const memoryMessage = [
+                tutor.message,
+                answerAnalysis ? `Answer analysis:\n${answerAnalysis.message}` : '',
+                effectiveOutcome ? `Outcome: ${effectiveOutcome}` : '',
+                effectiveErrorTag ? `ErrorTag: ${effectiveErrorTag}` : '',
+            ]
+                .filter((line) => line.length > 0)
+                .join('\n\n')
+                .slice(0, 1200);
+            const memoryConfidenceBase = answerAnalysis
+                ? Math.max(tutor.trace.confidence, answerAnalysis.trace.confidence)
+                : tutor.trace.confidence;
             const memoryEntry: MemoryEntry = {
                 key: memoryKey,
-                value: tutor.message.slice(0, 1200),
+                value: memoryMessage,
                 tags: [
                     'session_action',
                     `action_kind:${learningActionKind}`,
                     `action_source:${sourceTag}`,
                     `tutor_action:${tutorActionKind}`,
+                    ...(effectiveOutcome ? [`mastery_outcome:${effectiveOutcome}`] : []),
+                    ...(effectiveErrorTag ? [`error_tag:${effectiveErrorTag}`] : []),
                 ],
-                confidence: Number(clamp(tutor.trace.confidence, 0.1, 1).toFixed(4)),
+                confidence: Number(clamp(memoryConfidenceBase, 0.1, 1).toFixed(4)),
                 references: Array.from(new Set([
                     atomId,
                     ...tutor.trace.evidenceSpanIds,
                     tutor.trace.traceId,
+                    ...(answerAnalysis ? answerAnalysis.trace.evidenceSpanIds : []),
+                    ...(answerAnalysis ? [answerAnalysis.trace.traceId] : []),
                 ])),
                 createdAt: executedAt,
                 updatedAt: executedAt,
@@ -1009,16 +1049,19 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         }
 
         let mastery: MasteryDiagnosticsResponse | null = null;
-        if (request.outcome) {
+        if (effectiveOutcome) {
+            const observationConfidence = answerAnalysis
+                ? Number(clamp(answerAnalysis.trace.confidence, 0, 1).toFixed(4))
+                : Number(clamp(tutor.trace.confidence, 0, 1).toFixed(4));
             mastery = await this.diagnoseMastery({
                 userId,
                 observedAt: executedAt,
                 observations: [
                     {
                         atomId,
-                        outcome: request.outcome,
-                        errorTag: request.errorTag,
-                        confidence: Number(clamp(tutor.trace.confidence, 0, 1).toFixed(4)),
+                        outcome: effectiveOutcome,
+                        errorTag: effectiveErrorTag || undefined,
+                        confidence: observationConfidence,
                     },
                 ],
             });
@@ -1027,12 +1070,17 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         return {
             executedAt,
             tutor,
+            answerAnalysis,
             memory,
             mastery,
             trace: {
                 tutorActionKind,
                 persistedMemory: persistMemory,
                 updatedMastery: mastery !== null,
+                analyzedAnswer: answerAnalysis !== null,
+                masterySource,
+                effectiveOutcome,
+                effectiveErrorTag,
             },
         };
     }
@@ -2807,6 +2855,70 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             return 'recap';
         }
         return 'follow_up';
+    }
+
+    private inferMasteryOutcomeFromTutorAnalysis(analysis: TutorActionResponse | null): MasteryOutcome | null {
+        if (!analysis) {
+            return null;
+        }
+        const message = String(analysis.message || '');
+        const qualityMatch = message.match(/answer\s+quality:\s*(strong|partial|weak)/i);
+        if (qualityMatch) {
+            const quality = qualityMatch[1].toLowerCase();
+            if (quality === 'strong') {
+                return 'correct';
+            }
+            if (quality === 'partial') {
+                return 'partial';
+            }
+            if (quality === 'weak') {
+                return 'incorrect';
+            }
+        }
+        const confidence = Number(clamp(analysis.trace.confidence, 0, 1));
+        if (confidence >= 0.85) {
+            return 'correct';
+        }
+        if (confidence >= 0.58) {
+            return 'partial';
+        }
+        return 'incorrect';
+    }
+
+    private inferMasteryErrorTagFromTutorAnalysis(
+        analysis: TutorActionResponse | null,
+        outcome: MasteryOutcome | null
+    ): MasteryErrorTag | string | null {
+        if (!analysis || !outcome || outcome === 'correct') {
+            return null;
+        }
+        if (outcome === 'skipped') {
+            return 'skipped';
+        }
+        const message = String(analysis.message || '');
+        const keywordMatch = message.match(/matched\s+keywords:\s*(\d+)\s*\/\s*(\d+)/i);
+        if (keywordMatch) {
+            const matched = Number(keywordMatch[1]);
+            const total = Math.max(1, Number(keywordMatch[2]));
+            const ratio = matched / total;
+            if (outcome === 'incorrect') {
+                if (matched === 0) {
+                    return 'retrieval_failure';
+                }
+                if (ratio < 0.3) {
+                    return 'evidence_mismatch';
+                }
+                return 'incorrect_answer';
+            }
+            if (ratio < 0.4) {
+                return 'evidence_mismatch';
+            }
+            return 'reasoning_jump';
+        }
+        if (outcome === 'incorrect') {
+            return 'incorrect_answer';
+        }
+        return 'reasoning_jump';
     }
 
     private calculateNextReviewAt(baseIso: string, masteryProbability: number): string {

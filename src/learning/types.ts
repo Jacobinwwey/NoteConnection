@@ -369,6 +369,8 @@ export interface StudySessionActionExecutionRequest {
     };
     outcome?: MasteryOutcome;
     errorTag?: MasteryErrorTag | string;
+    autoAnalyzeAnswer?: boolean;
+    autoUpdateMasteryFromAnswer?: boolean;
     executedAt?: string;
     persistMemory?: boolean;
     memoryLayer?: MemoryLayer;
@@ -377,12 +379,17 @@ export interface StudySessionActionExecutionRequest {
 export interface StudySessionActionExecutionResponse {
     executedAt: string;
     tutor: TutorActionResponse;
+    answerAnalysis: TutorActionResponse | null;
     memory: MemoryPolicyResponse | null;
     mastery: MasteryDiagnosticsResponse | null;
     trace: {
         tutorActionKind: TutorActionKind;
         persistedMemory: boolean;
         updatedMastery: boolean;
+        analyzedAnswer: boolean;
+        masterySource: 'explicit' | 'inferred' | 'none';
+        effectiveOutcome: MasteryOutcome | null;
+        effectiveErrorTag: MasteryErrorTag | string | null;
     };
 }
 
