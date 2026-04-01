@@ -1924,20 +1924,6 @@ window.pathApp = {
             .replace(/'/g, '&#39;');
     },
 
-    _mapLearningActionToTutorActionKind: function(actionKind) {
-        const normalized = String(actionKind || '').trim().toLowerCase();
-        if (normalized === 'quiz') {
-            return 'generate_quiz';
-        }
-        if (normalized === 'transfer' || normalized === 'counterexample') {
-            return 'follow_up';
-        }
-        if (normalized === 'review' || normalized === 'reflection' || normalized === 'explain') {
-            return 'recap';
-        }
-        return 'follow_up';
-    },
-
     executeLearningWorkbenchAction: async function(params = {}) {
         const userId = this._normalizeLearningWorkbenchUserId(this.learningWorkbench.userId);
         const atomId = String(params.atomId || '').trim();
@@ -1948,26 +1934,35 @@ window.pathApp = {
             return;
         }
 
-        const tutorActionKind = this._mapLearningActionToTutorActionKind(actionKind);
         this.learningWorkbench.loading = true;
-        this._setLearningWorkbenchStatus(`Running tutor action (${tutorActionKind}) for ${atomId}...`);
+        this._setLearningWorkbenchStatus(`Running session action (${actionKind}) for ${atomId}...`);
         this._renderLearningWorkbenchState();
         try {
-            const result = await this._requestLearningApi('/api/knowledge/tutor/action', {
+            const result = await this._requestLearningApi('/api/knowledge/session/action', {
                 userId,
-                actionKind: tutorActionKind,
-                atomId,
-                prompt: `Learning workbench action: ${actionKind} from ${source || 'session_plan'}`,
+                action: {
+                    atomId,
+                    kind: actionKind,
+                    source: source || 'session_plan',
+                    prompt: `Learning workbench action: ${actionKind} from ${source || 'session_plan'}`,
+                },
+                persistMemory: true,
+                memoryLayer: 'session',
             });
+            const tutorResult = result && result.tutor ? result.tutor : null;
             this.learningWorkbench.tutorFeedback = {
                 atomId,
                 actionKind,
-                tutorActionKind,
                 source,
                 result,
+                tutorResult,
                 receivedAt: new Date().toISOString(),
             };
-            this._setLearningWorkbenchStatus(`Tutor response received for ${atomId}.`);
+            const tutorActionKind = result?.trace?.tutorActionKind || 'unknown';
+            const persistedMemory = result?.trace?.persistedMemory === true;
+            this._setLearningWorkbenchStatus(
+                `Session action finished (${tutorActionKind}); memory ${persistedMemory ? 'persisted' : 'skipped'}.`
+            );
         } catch (error) {
             const message = String(error?.message || error || 'Unknown tutor execution error');
             this.learningWorkbench.lastError = message;
@@ -2065,11 +2060,14 @@ window.pathApp = {
             if (!tutorFeedback || !tutorFeedback.result) {
                 tutorFeedbackEl.textContent = 'No tutor feedback yet.';
             } else {
-                const message = String(tutorFeedback.result.message || '').trim();
+                const trace = tutorFeedback.result?.trace || {};
+                const tutorResult = tutorFeedback.tutorResult || tutorFeedback.result?.tutor || {};
+                const message = String(tutorResult.message || '').trim();
                 const safeMessage = message.length > 0 ? message : 'Tutor returned an empty message.';
                 tutorFeedbackEl.textContent = [
-                    `Action: ${tutorFeedback.actionKind} (${tutorFeedback.tutorActionKind})`,
+                    `Action: ${tutorFeedback.actionKind} (${trace.tutorActionKind || 'unknown'})`,
                     `Atom: ${tutorFeedback.atomId}`,
+                    `Memory persisted: ${trace.persistedMemory === true ? 'yes' : 'no'}`,
                     safeMessage,
                 ].join('\n');
             }

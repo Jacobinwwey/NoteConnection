@@ -15,6 +15,8 @@ import type {
     MemoryPolicyResponse,
     StudySessionRequest,
     StudySessionResponse,
+    StudySessionActionExecutionRequest,
+    StudySessionActionExecutionResponse,
     LearningQualityEvaluationRequest,
     LearningQualityEvaluationResponse,
     LearningQualitySnapshotRequest,
@@ -48,6 +50,10 @@ export interface StudySessionAPI {
     buildStudySession(request: StudySessionRequest): Promise<StudySessionResponse>;
 }
 
+export interface StudySessionActionAPI {
+    executeStudySessionAction(request: StudySessionActionExecutionRequest): Promise<StudySessionActionExecutionResponse>;
+}
+
 export interface TutorActionAPI {
     executeTutorAction(request: TutorActionRequest): Promise<TutorActionResponse>;
 }
@@ -79,6 +85,7 @@ export interface KnowledgeLearningPlatformAPI extends
     MasteryMisconceptionAPI,
     LearningPathAPI,
     StudySessionAPI,
+    StudySessionActionAPI,
     TutorActionAPI,
     MemoryPolicyAPI,
     LearningQualityGateAPI,

@@ -400,6 +400,57 @@ describe('KnowledgeLearningPlatform', () => {
         expect(session.summary.evidenceCoverageRatio).toBeGreaterThan(0);
     });
 
+    test('session action execution orchestrates tutor, memory persistence, and mastery update', async () => {
+        const ingest = await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_session_action',
+                    sourcePath: 'Knowledge_Base/doc_session_action.md',
+                    language: 'en',
+                    content: '# Session Action\nExecute learning actions as a closed-loop operation.',
+                },
+            ],
+        });
+        const atomId = ingest.atoms[0]?.id as string;
+
+        const execution = await platform.executeStudySessionAction({
+            userId: 'user_session_action',
+            action: {
+                atomId,
+                kind: 'quiz',
+                source: 'mastery_path',
+            },
+            outcome: 'incorrect',
+            errorTag: 'retrieval_failure',
+            persistMemory: true,
+            memoryLayer: 'session',
+        });
+
+        expect(execution.trace.tutorActionKind).toBe('generate_quiz');
+        expect(execution.trace.persistedMemory).toBe(true);
+        expect(execution.tutor.message).toContain('Question:');
+        expect(execution.memory).not.toBeNull();
+        expect(execution.memory?.stats.session).toBeGreaterThan(0);
+        expect(execution.mastery).not.toBeNull();
+        expect(execution.mastery?.summary.updatedCount).toBe(1);
+
+        const memoryRead = await platform.applyMemoryPolicy({
+            userId: 'user_session_action',
+            layer: 'session',
+            operation: 'read',
+            query: 'session_action',
+            limit: 5,
+        });
+        expect(memoryRead.entries.length).toBeGreaterThan(0);
+
+        const misconceptions = await platform.queryMasteryMisconceptions({
+            userId: 'user_session_action',
+            topK: 5,
+        });
+        expect(misconceptions.items.some((item) => item.errorTag === 'retrieval_failure')).toBe(true);
+    });
+
     test('learning quality evaluation enforces mastery and evidence thresholds', async () => {
         await platform.ingestKnowledge({
             incremental: true,

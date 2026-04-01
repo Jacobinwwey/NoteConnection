@@ -358,6 +358,34 @@ export interface StudySessionResponse {
     };
 }
 
+export interface StudySessionActionExecutionRequest {
+    userId: string;
+    action: {
+        atomId: string;
+        kind: LearningActionKind;
+        source?: StudySessionActionSource;
+        prompt?: string;
+        answer?: string;
+    };
+    outcome?: MasteryOutcome;
+    errorTag?: MasteryErrorTag | string;
+    executedAt?: string;
+    persistMemory?: boolean;
+    memoryLayer?: MemoryLayer;
+}
+
+export interface StudySessionActionExecutionResponse {
+    executedAt: string;
+    tutor: TutorActionResponse;
+    memory: MemoryPolicyResponse | null;
+    mastery: MasteryDiagnosticsResponse | null;
+    trace: {
+        tutorActionKind: TutorActionKind;
+        persistedMemory: boolean;
+        updatedMastery: boolean;
+    };
+}
+
 export interface TutorActionRequest {
     userId: string;
     actionKind: TutorActionKind;

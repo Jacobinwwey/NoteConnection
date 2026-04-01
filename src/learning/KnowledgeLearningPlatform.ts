@@ -48,10 +48,13 @@ import type {
     RelationKind,
     StalenessRecord,
     StudySessionAction,
+    StudySessionActionExecutionRequest,
+    StudySessionActionExecutionResponse,
     StudySessionRequest,
     StudySessionResponse,
     TemporalEdge,
     TutorActionRequest,
+    TutorActionKind,
     TutorActionResponse,
     TutorTrace,
 } from './types';
@@ -944,6 +947,92 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 totalActions: actions.length,
                 totalEstimatedMinutes: actions.reduce((sum, action) => sum + action.estimatedMinutes, 0),
                 evidenceCoverageRatio,
+            },
+        };
+    }
+
+    public async executeStudySessionAction(
+        request: StudySessionActionExecutionRequest
+    ): Promise<StudySessionActionExecutionResponse> {
+        await this.ensureHydrated();
+        const userId = String(request.userId || '').trim();
+        if (!userId) {
+            throw new Error('StudySessionActionAPI requires a non-empty userId.');
+        }
+        const action = request.action || {} as StudySessionActionExecutionRequest['action'];
+        const atomId = String(action.atomId || '').trim();
+        if (!atomId || !this.activeAtomIds.has(atomId)) {
+            throw new Error('StudySessionActionAPI requires a valid active atomId.');
+        }
+        const learningActionKind = action.kind;
+        const tutorActionKind = this.resolveTutorActionKindFromLearningKind(learningActionKind);
+        const executedAt = this.resolveTimestamp(request.executedAt);
+        const tutor = await this.executeTutorAction({
+            userId,
+            actionKind: tutorActionKind,
+            atomId,
+            prompt: action.prompt,
+            answer: action.answer,
+        });
+
+        const persistMemory = request.persistMemory !== false;
+        let memory: MemoryPolicyResponse | null = null;
+        if (persistMemory) {
+            const memoryLayer: MemoryLayer = request.memoryLayer || 'session';
+            const memoryKey = `session_action:${atomId}:${this.nextId('session')}`;
+            const sourceTag = isNonEmptyString(action.source) ? action.source : 'session_plan';
+            const memoryEntry: MemoryEntry = {
+                key: memoryKey,
+                value: tutor.message.slice(0, 1200),
+                tags: [
+                    'session_action',
+                    `action_kind:${learningActionKind}`,
+                    `action_source:${sourceTag}`,
+                    `tutor_action:${tutorActionKind}`,
+                ],
+                confidence: Number(clamp(tutor.trace.confidence, 0.1, 1).toFixed(4)),
+                references: Array.from(new Set([
+                    atomId,
+                    ...tutor.trace.evidenceSpanIds,
+                    tutor.trace.traceId,
+                ])),
+                createdAt: executedAt,
+                updatedAt: executedAt,
+            };
+            memory = await this.applyMemoryPolicy({
+                userId,
+                operation: 'write',
+                layer: memoryLayer,
+                entries: [memoryEntry],
+                now: executedAt,
+            });
+        }
+
+        let mastery: MasteryDiagnosticsResponse | null = null;
+        if (request.outcome) {
+            mastery = await this.diagnoseMastery({
+                userId,
+                observedAt: executedAt,
+                observations: [
+                    {
+                        atomId,
+                        outcome: request.outcome,
+                        errorTag: request.errorTag,
+                        confidence: Number(clamp(tutor.trace.confidence, 0, 1).toFixed(4)),
+                    },
+                ],
+            });
+        }
+
+        return {
+            executedAt,
+            tutor,
+            memory,
+            mastery,
+            trace: {
+                tutorActionKind,
+                persistedMemory: persistMemory,
+                updatedMastery: mastery !== null,
             },
         };
     }
@@ -2705,6 +2794,19 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             return ERROR_TAG_TO_ACTION_KINDS.other;
         }
         return ERROR_TAG_TO_ACTION_KINDS[normalized as MasteryErrorTag];
+    }
+
+    private resolveTutorActionKindFromLearningKind(kind: LearningActionKind): TutorActionKind {
+        if (kind === 'quiz') {
+            return 'generate_quiz';
+        }
+        if (kind === 'transfer' || kind === 'counterexample') {
+            return 'follow_up';
+        }
+        if (kind === 'review' || kind === 'reflection' || kind === 'explain') {
+            return 'recap';
+        }
+        return 'follow_up';
     }
 
     private calculateNextReviewAt(baseIso: string, masteryProbability: number): string {
