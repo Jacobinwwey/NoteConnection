@@ -9,6 +9,8 @@ import type {
     LearningPathResponse,
     MasteryDiagnosticsRequest,
     MasteryDiagnosticsResponse,
+    MasteryMisconceptionRequest,
+    MasteryMisconceptionResponse,
     MemoryPolicyRequest,
     MemoryPolicyResponse,
     LearningQualityEvaluationRequest,
@@ -28,6 +30,10 @@ export interface KnowledgeQueryAPI {
 
 export interface MasteryDiagnosticsAPI {
     diagnoseMastery(request: MasteryDiagnosticsRequest): Promise<MasteryDiagnosticsResponse>;
+}
+
+export interface MasteryMisconceptionAPI {
+    queryMasteryMisconceptions(request: MasteryMisconceptionRequest): Promise<MasteryMisconceptionResponse>;
 }
 
 export interface LearningPathAPI {
@@ -58,6 +64,7 @@ export interface KnowledgeLearningPlatformAPI extends
     KnowledgeIngestAPI,
     KnowledgeQueryAPI,
     MasteryDiagnosticsAPI,
+    MasteryMisconceptionAPI,
     LearningPathAPI,
     TutorActionAPI,
     MemoryPolicyAPI,

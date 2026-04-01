@@ -3,6 +3,7 @@ import * as path from 'path';
 import type { KnowledgeLearningPlatformAPI } from './api';
 import type {
     DivergencePath,
+    ErrorTagStat,
     EvidenceSpan,
     IngestGuardrailEvaluationRequest,
     IngestGuardrailEvaluationResponse,
@@ -31,6 +32,10 @@ import type {
     LearningPathResponse,
     MasteryDiagnosticsRequest,
     MasteryDiagnosticsResponse,
+    MasteryErrorTag,
+    MasteryMisconceptionItem,
+    MasteryMisconceptionRequest,
+    MasteryMisconceptionResponse,
     MasteryObservation,
     MemoryEntry,
     MemoryLayer,
@@ -115,6 +120,32 @@ const MEMORY_LAYER_CAPACITY: Record<MemoryLayer, number> = {
     session: 80,
     unit: 320,
     long_term: 1200,
+};
+
+const NORMALIZED_MASTERY_ERROR_TAGS = new Set<string>([
+    'concept_boundary',
+    'causal_confusion',
+    'prerequisite_gap',
+    'evidence_mismatch',
+    'retrieval_failure',
+    'transfer_failure',
+    'reasoning_jump',
+    'incorrect_answer',
+    'skipped',
+    'other',
+]);
+
+const ERROR_TAG_TO_ACTION_KINDS: Record<MasteryErrorTag, LearningActionKind[]> = {
+    concept_boundary: ['review', 'explain', 'counterexample'],
+    causal_confusion: ['review', 'explain', 'quiz'],
+    prerequisite_gap: ['review', 'quiz', 'transfer'],
+    evidence_mismatch: ['review', 'reflection', 'quiz'],
+    retrieval_failure: ['quiz', 'review', 'reflection'],
+    transfer_failure: ['transfer', 'counterexample', 'review'],
+    reasoning_jump: ['explain', 'reflection', 'counterexample'],
+    incorrect_answer: ['quiz', 'review', 'explain'],
+    skipped: ['review', 'quiz', 'reflection'],
+    other: ['review', 'explain', 'quiz'],
 };
 
 const DEFAULT_LEARNING_QUALITY_THRESHOLDS: LearningQualityThresholds = {
@@ -621,7 +652,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 continue;
             }
             const stateKey = this.makeLearnerStateKey(userId, observation.atomId);
-            const previousState = this.learnerStates.get(stateKey) || this.createDefaultLearnerState(userId, observation.atomId, observedAt);
+            const previousState = this.normalizeLearnerState(
+                this.learnerStates.get(stateKey) || this.createDefaultLearnerState(userId, observation.atomId, observedAt),
+                observedAt
+            );
             masteryBefore += previousState.masteryProbability;
             const updatedState = this.applyMasteryObservation(previousState, observation, observedAt);
             masteryAfter += updatedState.masteryProbability;
@@ -640,6 +674,104 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
         await this.persistIfNeeded();
         return response;
+    }
+
+    public async queryMasteryMisconceptions(
+        request: MasteryMisconceptionRequest
+    ): Promise<MasteryMisconceptionResponse> {
+        await this.ensureHydrated();
+        const userId = String(request.userId || '').trim();
+        if (!userId) {
+            throw new Error('MasteryMisconceptionAPI requires a non-empty userId.');
+        }
+        const generatedAt = this.resolveTimestamp(request.generatedAt);
+        const topK = clamp(Math.floor(Number(request.topK) || 10), 1, 100);
+        const atomScope = Array.isArray(request.atomIds) && request.atomIds.length > 0
+            ? new Set(request.atomIds.filter((atomId): atomId is string => isNonEmptyString(atomId)))
+            : null;
+
+        const aggregated = new Map<string, {
+            errorTag: string;
+            count: number;
+            lastSeenAt: string;
+            affectedAtomIds: Set<string>;
+            masteryWeightedSum: number;
+        }>();
+
+        this.learnerStates.forEach((state) => {
+            if (state.userId !== userId) {
+                return;
+            }
+            if (atomScope && !atomScope.has(state.atomId)) {
+                return;
+            }
+            const normalizedState = this.normalizeLearnerState(state, generatedAt);
+            normalizedState.errorTagStats.forEach((stat) => {
+                const normalizedTag = this.normalizeMasteryErrorTag(String(stat.tag));
+                if (!normalizedTag) {
+                    return;
+                }
+                const current = aggregated.get(normalizedTag) || {
+                    errorTag: normalizedTag,
+                    count: 0,
+                    lastSeenAt: generatedAt,
+                    affectedAtomIds: new Set<string>(),
+                    masteryWeightedSum: 0,
+                };
+                current.count += Math.max(0, Math.floor(Number(stat.count || 0)));
+                if (isNonEmptyString(stat.lastSeenAt) && stat.lastSeenAt > current.lastSeenAt) {
+                    current.lastSeenAt = stat.lastSeenAt;
+                }
+                current.affectedAtomIds.add(normalizedState.atomId);
+                current.masteryWeightedSum += normalizedState.masteryProbability * Math.max(1, Number(stat.count || 1));
+                aggregated.set(normalizedTag, current);
+            });
+        });
+
+        const items: MasteryMisconceptionItem[] = Array.from(aggregated.values())
+            .filter((item) => item.count > 0)
+            .map((item) => {
+                const averageMasteryProbability = Number(
+                    clamp(item.masteryWeightedSum / Math.max(1, item.count), 0, 1).toFixed(6)
+                );
+                const frequencyFactor = clamp(item.count / Math.max(1, item.count + 5), 0, 1);
+                const severityScore = Number(
+                    clamp(
+                        frequencyFactor * 0.65 + (1 - averageMasteryProbability) * 0.35,
+                        0,
+                        1
+                    ).toFixed(6)
+                );
+                return {
+                    errorTag: item.errorTag,
+                    count: item.count,
+                    affectedAtomIds: Array.from(item.affectedAtomIds.values()),
+                    averageMasteryProbability,
+                    severityScore,
+                    lastSeenAt: item.lastSeenAt,
+                    recommendedActionKinds: this.resolveActionKindsForErrorTag(item.errorTag),
+                };
+            })
+            .sort((left, right) => {
+                if (right.severityScore !== left.severityScore) {
+                    return right.severityScore - left.severityScore;
+                }
+                if (right.count !== left.count) {
+                    return right.count - left.count;
+                }
+                return right.lastSeenAt.localeCompare(left.lastSeenAt);
+            })
+            .slice(0, topK);
+
+        return {
+            userId,
+            generatedAt,
+            items,
+            summary: {
+                trackedTags: items.length,
+                totalObservations: items.reduce((sum, item) => sum + item.count, 0),
+            },
+        };
     }
 
     public async buildLearningPath(request: LearningPathRequest): Promise<LearningPathResponse> {
@@ -1377,8 +1509,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
         this.learnerStates.clear();
         (snapshot.learnerStates || []).forEach((learnerState) => {
-            const key = this.makeLearnerStateKey(learnerState.userId, learnerState.atomId);
-            this.learnerStates.set(key, learnerState);
+            const normalizedLearnerState = this.normalizeLearnerState(learnerState, this.resolveTimestamp(undefined));
+            const key = this.makeLearnerStateKey(normalizedLearnerState.userId, normalizedLearnerState.atomId);
+            this.learnerStates.set(key, normalizedLearnerState);
         });
 
         this.tutorTraces.length = 0;
@@ -2032,6 +2165,92 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         return `${userId}::${atomId}`;
     }
 
+    private normalizeLearnerState(state: LearnerConceptState, fallbackIso: string): LearnerConceptState {
+        const normalizedErrorTags = Array.isArray(state.errorTags)
+            ? state.errorTags
+                .map((tag) => this.normalizeMasteryErrorTag(String(tag)))
+                .filter((tag): tag is string => Boolean(tag))
+                .slice(0, 12)
+            : [];
+        const normalizedRecentErrorTags = Array.isArray(state.recentErrorTags)
+            ? state.recentErrorTags
+                .map((tag) => this.normalizeMasteryErrorTag(String(tag)))
+                .filter((tag): tag is string => Boolean(tag))
+                .slice(-24)
+            : [];
+        const normalizedErrorTagStats = Array.isArray(state.errorTagStats)
+            ? state.errorTagStats
+                .map((item) => {
+                    const normalizedTag = this.normalizeMasteryErrorTag(String(item.tag || ''));
+                    if (!normalizedTag) {
+                        return null;
+                    }
+                    return {
+                        tag: normalizedTag,
+                        count: Math.max(0, Math.floor(Number(item.count || 0))),
+                        lastSeenAt: isNonEmptyString(item.lastSeenAt) ? item.lastSeenAt : fallbackIso,
+                    } as ErrorTagStat;
+                })
+                .filter((item): item is ErrorTagStat => Boolean(item))
+            : [];
+        const mergedStatsMap = new Map<string, ErrorTagStat>();
+        normalizedErrorTagStats.forEach((item) => {
+            const current = mergedStatsMap.get(String(item.tag));
+            if (!current) {
+                mergedStatsMap.set(String(item.tag), { ...item });
+                return;
+            }
+            current.count += item.count;
+            if (item.lastSeenAt > current.lastSeenAt) {
+                current.lastSeenAt = item.lastSeenAt;
+            }
+        });
+        const mergedStats = Array.from(mergedStatsMap.values())
+            .sort((left, right) => {
+                if (right.count !== left.count) {
+                    return right.count - left.count;
+                }
+                return right.lastSeenAt.localeCompare(left.lastSeenAt);
+            })
+            .slice(0, 24);
+        if (mergedStats.length === 0) {
+            const fallbackStatsMap = new Map<string, ErrorTagStat>();
+            const fallbackSource = normalizedRecentErrorTags.length > 0 ? normalizedRecentErrorTags : normalizedErrorTags;
+            fallbackSource.forEach((tag) => {
+                const current = fallbackStatsMap.get(tag) || {
+                    tag,
+                    count: 0,
+                    lastSeenAt: isNonEmptyString(state.lastUpdatedAt) ? state.lastUpdatedAt : fallbackIso,
+                };
+                current.count += 1;
+                fallbackStatsMap.set(tag, current);
+            });
+            Array.from(fallbackStatsMap.values()).forEach((item) => {
+                mergedStats.push(item);
+            });
+        }
+        const fallbackErrorTags = Array.from(new Set([
+            ...normalizedErrorTags,
+            ...mergedStats.map((item) => item.tag),
+        ])).slice(0, 12);
+
+        return {
+            ...state,
+            masteryProbability: Number(clamp(Number(state.masteryProbability || 0.5), 0.01, 0.99).toFixed(6)),
+            reviewCount: Math.max(0, Math.floor(Number(state.reviewCount || 0))),
+            correctCount: Math.max(0, Math.floor(Number(state.correctCount || 0))),
+            incorrectCount: Math.max(0, Math.floor(Number(state.incorrectCount || 0))),
+            partialCount: Math.max(0, Math.floor(Number(state.partialCount || 0))),
+            skippedCount: Math.max(0, Math.floor(Number(state.skippedCount || 0))),
+            lastOutcome: state.lastOutcome || null,
+            lastUpdatedAt: isNonEmptyString(state.lastUpdatedAt) ? state.lastUpdatedAt : fallbackIso,
+            nextReviewAt: isNonEmptyString(state.nextReviewAt) ? state.nextReviewAt : plusDays(fallbackIso, 3),
+            errorTags: fallbackErrorTags,
+            recentErrorTags: normalizedRecentErrorTags,
+            errorTagStats: mergedStats,
+        };
+    }
+
     private createDefaultLearnerState(userId: string, atomId: string, nowIso: string): LearnerConceptState {
         return {
             userId,
@@ -2046,6 +2265,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             lastUpdatedAt: nowIso,
             nextReviewAt: plusDays(nowIso, 3),
             errorTags: [],
+            recentErrorTags: [],
+            errorTagStats: [],
         };
     }
 
@@ -2054,16 +2275,35 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         observation: MasteryObservation,
         observedAt: string
     ): LearnerConceptState {
+        const baseTagStats = Array.isArray(state.errorTagStats) ? state.errorTagStats : [];
+        const baseRecentTags = Array.isArray(state.recentErrorTags) ? state.recentErrorTags : [];
         const nextState: LearnerConceptState = {
             ...state,
             reviewCount: state.reviewCount + 1,
             lastOutcome: observation.outcome,
             lastUpdatedAt: observedAt,
             errorTags: [...state.errorTags],
+            recentErrorTags: [...baseRecentTags],
+            errorTagStats: baseTagStats.map((item) => ({ ...item })),
         };
         const confidence = clamp(Number(observation.confidence ?? 0.7), 0, 1);
         const previousMastery = state.masteryProbability;
         let mastery = previousMastery;
+        const collectedTags: string[] = [];
+        const addCollectedTag = (candidate: string | undefined): void => {
+            if (!isNonEmptyString(candidate)) {
+                return;
+            }
+            const normalized = this.normalizeMasteryErrorTag(candidate);
+            if (!normalized) {
+                return;
+            }
+            collectedTags.push(normalized);
+        };
+        addCollectedTag(observation.errorTag);
+        if (Array.isArray(observation.errorTags)) {
+            observation.errorTags.forEach((tag) => addCollectedTag(tag));
+        }
 
         if (observation.outcome === 'correct') {
             nextState.correctCount += 1;
@@ -2071,27 +2311,139 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         } else if (observation.outcome === 'partial') {
             nextState.partialCount += 1;
             mastery += (1 - mastery) * (0.06 + confidence * 0.04);
-            if (observation.errorTag) {
-                nextState.errorTags.push(observation.errorTag);
+            if (!collectedTags.length) {
+                addCollectedTag('concept_boundary');
             }
         } else if (observation.outcome === 'incorrect') {
             nextState.incorrectCount += 1;
             mastery -= mastery * (0.22 + (1 - confidence) * 0.08);
-            if (observation.errorTag) {
-                nextState.errorTags.push(observation.errorTag);
-            } else {
-                nextState.errorTags.push('incorrect_answer');
+            if (!collectedTags.length) {
+                addCollectedTag('incorrect_answer');
             }
         } else {
             nextState.skippedCount += 1;
             mastery -= mastery * 0.12;
-            nextState.errorTags.push('skipped');
+            addCollectedTag('skipped');
         }
 
+        if (collectedTags.length > 0) {
+            this.mergeErrorTagsIntoState(nextState, collectedTags, observedAt);
+        }
         nextState.masteryProbability = Number(clamp(mastery, 0.01, 0.99).toFixed(6));
-        nextState.errorTags = Array.from(new Set(nextState.errorTags)).slice(0, 12);
         nextState.nextReviewAt = this.calculateNextReviewAt(observedAt, nextState.masteryProbability);
         return nextState;
+    }
+
+    private normalizeMasteryErrorTag(rawTag: string): MasteryErrorTag | string | null {
+        if (!isNonEmptyString(rawTag)) {
+            return null;
+        }
+        const normalized = String(rawTag)
+            .trim()
+            .toLowerCase()
+            .replace(/[^\p{L}\p{N}\s_-]+/gu, '')
+            .replace(/\s+/g, '_');
+        if (!normalized) {
+            return null;
+        }
+        if (NORMALIZED_MASTERY_ERROR_TAGS.has(normalized)) {
+            return normalized as MasteryErrorTag;
+        }
+        return normalized;
+    }
+
+    private mergeErrorTagsIntoState(state: LearnerConceptState, tags: string[], observedAt: string): void {
+        if (!Array.isArray(state.errorTagStats)) {
+            state.errorTagStats = [];
+        }
+        if (!Array.isArray(state.recentErrorTags)) {
+            state.recentErrorTags = [];
+        }
+
+        const statsByTag = new Map<string, ErrorTagStat>();
+        state.errorTagStats.forEach((item) => {
+            if (!isNonEmptyString(item.tag)) {
+                return;
+            }
+            const normalizedTag = this.normalizeMasteryErrorTag(String(item.tag));
+            if (!normalizedTag) {
+                return;
+            }
+            const existing = statsByTag.get(normalizedTag);
+            if (existing) {
+                existing.count += Math.max(0, Math.floor(Number(item.count || 0)));
+                if (isNonEmptyString(item.lastSeenAt) && item.lastSeenAt > existing.lastSeenAt) {
+                    existing.lastSeenAt = item.lastSeenAt;
+                }
+                return;
+            }
+            statsByTag.set(normalizedTag, {
+                tag: normalizedTag,
+                count: Math.max(0, Math.floor(Number(item.count || 0))),
+                lastSeenAt: isNonEmptyString(item.lastSeenAt) ? item.lastSeenAt : observedAt,
+            });
+        });
+
+        tags.forEach((tag) => {
+            const normalizedTag = this.normalizeMasteryErrorTag(tag);
+            if (!normalizedTag) {
+                return;
+            }
+            const current = statsByTag.get(normalizedTag) || {
+                tag: normalizedTag,
+                count: 0,
+                lastSeenAt: observedAt,
+            };
+            current.count += 1;
+            current.lastSeenAt = observedAt;
+            statsByTag.set(normalizedTag, current);
+            state.recentErrorTags.push(normalizedTag);
+        });
+
+        const orderedStats = Array.from(statsByTag.values())
+            .filter((item) => item.count > 0)
+            .sort((left, right) => {
+                if (right.count !== left.count) {
+                    return right.count - left.count;
+                }
+                return right.lastSeenAt.localeCompare(left.lastSeenAt);
+            })
+            .slice(0, 24);
+        state.errorTagStats = orderedStats;
+        state.errorTags = orderedStats.map((item) => item.tag).slice(0, 12);
+        state.recentErrorTags = state.recentErrorTags.slice(-24);
+    }
+
+    private getDominantErrorTag(state: LearnerConceptState): string | null {
+        if (Array.isArray(state.errorTagStats) && state.errorTagStats.length > 0) {
+            return String(state.errorTagStats[0].tag);
+        }
+        if (Array.isArray(state.errorTags) && state.errorTags.length > 0) {
+            return String(state.errorTags[0]);
+        }
+        return null;
+    }
+
+    private estimateMisconceptionIntensity(state: LearnerConceptState): number {
+        const reviewCount = Math.max(1, Math.floor(Number(state.reviewCount || 0)));
+        const topCounts = (Array.isArray(state.errorTagStats) ? state.errorTagStats : [])
+            .slice(0, 3)
+            .reduce((sum, item) => sum + Math.max(0, Math.floor(Number(item.count || 0))), 0);
+        return Number(clamp(topCounts / reviewCount, 0, 1).toFixed(4));
+    }
+
+    private resolveActionKindsForErrorTag(errorTag: string | null): LearningActionKind[] {
+        if (!errorTag) {
+            return ['review', 'quiz', 'explain'];
+        }
+        const normalized = this.normalizeMasteryErrorTag(errorTag);
+        if (!normalized) {
+            return ['review', 'quiz', 'explain'];
+        }
+        if (!Object.prototype.hasOwnProperty.call(ERROR_TAG_TO_ACTION_KINDS, normalized)) {
+            return ERROR_TAG_TO_ACTION_KINDS.other;
+        }
+        return ERROR_TAG_TO_ACTION_KINDS[normalized as MasteryErrorTag];
     }
 
     private calculateNextReviewAt(baseIso: string, masteryProbability: number): string {
@@ -2121,16 +2473,38 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }> {
         const scored = candidateAtomIds
             .map((atomId) => {
-                const state = this.learnerStates.get(this.makeLearnerStateKey(userId, atomId))
-                    || this.createDefaultLearnerState(userId, atomId, generatedAt);
-                return { atomId, mastery: state.masteryProbability };
+                const state = this.normalizeLearnerState(
+                    this.learnerStates.get(this.makeLearnerStateKey(userId, atomId))
+                    || this.createDefaultLearnerState(userId, atomId, generatedAt),
+                    generatedAt
+                );
+                const misconceptionIntensity = this.estimateMisconceptionIntensity(state);
+                const priorityScore = Number(
+                    (
+                        (1 - state.masteryProbability) * 0.75
+                        + misconceptionIntensity * 0.25
+                    ).toFixed(6)
+                );
+                return {
+                    atomId,
+                    state,
+                    misconceptionIntensity,
+                    priorityScore,
+                };
             })
-            .sort((left, right) => left.mastery - right.mastery)
+            .sort((left, right) => right.priorityScore - left.priorityScore)
             .slice(0, maxPaths);
 
         return scored.map((item, index) => {
-            const expectedGain = Number((0.75 - item.mastery).toFixed(4));
-            const actions = this.buildMasteryActions(item.atomId, expectedGain, index + 1);
+            const expectedGain = Number(
+                clamp(
+                    (1 - item.state.masteryProbability) * 0.7 + item.misconceptionIntensity * 0.3,
+                    0.01,
+                    0.95
+                ).toFixed(4)
+            );
+            const dominantErrorTag = this.getDominantErrorTag(item.state);
+            const actions = this.buildMasteryActions(item.atomId, expectedGain, index + 1, dominantErrorTag);
             return {
                 id: this.nextId('mastery_path'),
                 targetAtomId: item.atomId,
@@ -2141,36 +2515,50 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         });
     }
 
-    private buildMasteryActions(atomId: string, expectedGain: number, rank: number): LearningAction[] {
+    private buildMasteryActions(
+        atomId: string,
+        expectedGain: number,
+        rank: number,
+        dominantErrorTag: string | null
+    ): LearningAction[] {
         const atom = this.atoms.get(atomId);
         const evidenceSpanIds = atom?.evidenceSpanIds || [];
+        const recommendedKinds = this.resolveActionKindsForErrorTag(dominantErrorTag);
+        const primaryKind = recommendedKinds[0] || 'review';
+        const secondaryKind = recommendedKinds[1] || 'quiz';
+        const tertiaryKind = recommendedKinds[2] || 'explain';
+        const tagHint = dominantErrorTag
+            ? ` Focus remediation on "${dominantErrorTag}".`
+            : '';
         return [
             this.createLearningAction({
-                kind: 'review',
+                kind: primaryKind,
                 atomId,
                 priority: 100 - rank * 2,
                 expectedGain: expectedGain * 0.5,
-                rationale: 'Review source evidence first to rebuild grounded understanding.',
+                rationale: `Review source evidence first to rebuild grounded understanding.${tagHint}`,
                 evidenceSpanIds,
                 relationPathAtomIds: [atomId],
                 estimatedMinutes: 8,
             }),
             this.createLearningAction({
-                kind: 'quiz',
+                kind: secondaryKind,
                 atomId,
                 priority: 95 - rank * 2,
                 expectedGain: expectedGain * 0.3,
-                rationale: 'Run retrieval practice to validate stable recall.',
+                rationale: dominantErrorTag
+                    ? `Targeted practice for "${dominantErrorTag}" to validate correction quality.`
+                    : 'Run retrieval practice to validate stable recall.',
                 evidenceSpanIds,
                 relationPathAtomIds: [atomId],
                 estimatedMinutes: 6,
             }),
             this.createLearningAction({
-                kind: 'explain',
+                kind: tertiaryKind,
                 atomId,
                 priority: 90 - rank * 2,
                 expectedGain: expectedGain * 0.2,
-                rationale: 'Self-explanation consolidates concept boundaries and misconceptions.',
+                rationale: 'Self-explanation consolidates concept boundaries and misconception repair.',
                 evidenceSpanIds,
                 relationPathAtomIds: [atomId],
                 estimatedMinutes: 6,

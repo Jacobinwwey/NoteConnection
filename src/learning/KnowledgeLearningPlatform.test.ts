@@ -271,6 +271,7 @@ describe('KnowledgeLearningPlatform', () => {
                     atomId: atomId as string,
                     outcome: 'incorrect',
                     errorTag: 'concept_boundary',
+                    errorTags: ['retrieval_failure'],
                 },
                 {
                     atomId: atomId as string,
@@ -281,6 +282,7 @@ describe('KnowledgeLearningPlatform', () => {
 
         expect(diagnostics.summary.updatedCount).toBe(2);
         expect(diagnostics.updatedStates[0].reviewCount).toBeGreaterThan(0);
+        expect(diagnostics.updatedStates[0].errorTagStats.length).toBeGreaterThan(0);
 
         const pathResult = await platform.buildLearningPath({
             userId: 'user_a',
@@ -291,6 +293,60 @@ describe('KnowledgeLearningPlatform', () => {
 
         expect(pathResult.masteryPaths.length).toBeGreaterThan(0);
         expect(pathResult.recommendedActions.length).toBeGreaterThan(0);
+    });
+
+    test('misconception query aggregates recurring error tags and guides path prioritization', async () => {
+        const ingest = await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_misconception_a',
+                    sourcePath: 'Knowledge_Base/doc_misconception_a.md',
+                    language: 'en',
+                    content: '# Retrieval Stability\nPractice retrieval under varied prompts.',
+                },
+                {
+                    documentId: 'doc_misconception_b',
+                    sourcePath: 'Knowledge_Base/doc_misconception_b.md',
+                    language: 'en',
+                    content: '# Transfer Bridge\nApply the same concept in new domains.',
+                },
+            ],
+        });
+        const atomA = ingest.atoms[0]?.id as string;
+        const atomB = ingest.atoms[1]?.id as string;
+        expect(atomA).toBeDefined();
+        expect(atomB).toBeDefined();
+
+        await platform.diagnoseMastery({
+            userId: 'user_misconception',
+            observations: [
+                { atomId: atomA, outcome: 'incorrect', errorTag: 'retrieval_failure' },
+                { atomId: atomA, outcome: 'incorrect', errorTags: ['retrieval_failure', 'evidence_mismatch'] },
+                { atomId: atomA, outcome: 'partial', errorTag: 'retrieval_failure' },
+                { atomId: atomB, outcome: 'correct' },
+            ],
+        });
+
+        const misconception = await platform.queryMasteryMisconceptions({
+            userId: 'user_misconception',
+            topK: 5,
+        });
+        expect(misconception.summary.totalObservations).toBeGreaterThanOrEqual(3);
+        expect(misconception.items.length).toBeGreaterThan(0);
+        expect(misconception.items[0].errorTag).toBe('retrieval_failure');
+        expect(misconception.items[0].recommendedActionKinds).toContain('quiz');
+        expect(misconception.items[0].severityScore).toBeGreaterThan(0);
+
+        const pathResult = await platform.buildLearningPath({
+            userId: 'user_misconception',
+            focusAtomIds: [atomA, atomB],
+            maxMasteryPaths: 2,
+            maxDivergencePaths: 1,
+        });
+        expect(pathResult.masteryPaths.length).toBeGreaterThan(0);
+        expect(pathResult.masteryPaths[0]?.targetAtomId).toBe(atomA);
+        expect(pathResult.masteryPaths[0]?.actions.some((action) => action.kind === 'quiz')).toBe(true);
     });
 
     test('learning quality evaluation enforces mastery and evidence thresholds', async () => {

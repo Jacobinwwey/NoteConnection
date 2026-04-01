@@ -48,6 +48,7 @@ import {
     type LearningQualityEvaluationRequest,
     type LearningPathRequest,
     type MasteryDiagnosticsRequest,
+    type MasteryMisconceptionRequest,
     type MemoryPolicyRequest,
     type TutorActionRequest,
 } from './learning';
@@ -2436,6 +2437,25 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     }
                     console.error(error);
                     CrashLogger.log(error, 'API:POST /api/knowledge/mastery/diagnose');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: String(error) }));
+                }
+                return;
+            }
+
+            if (postPathname === '/api/knowledge/mastery/misconceptions') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const requestPayload = payload as MasteryMisconceptionRequest;
+                    const result = await knowledgeLearningPlatform.queryMasteryMisconceptions(requestPayload);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, result }));
+                } catch (error) {
+                    if (writeBodyParseErrorResponse(res, error)) {
+                        return;
+                    }
+                    console.error(error);
+                    CrashLogger.log(error, 'API:POST /api/knowledge/mastery/misconceptions');
                     res.writeHead(500, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ success: false, error: String(error) }));
                 }

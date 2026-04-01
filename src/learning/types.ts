@@ -13,6 +13,18 @@ export type TemporalEdgeKind = 'supersedes' | 'validity_window' | 'derived_from'
 
 export type MasteryOutcome = 'correct' | 'incorrect' | 'partial' | 'skipped';
 
+export type MasteryErrorTag =
+    | 'concept_boundary'
+    | 'causal_confusion'
+    | 'prerequisite_gap'
+    | 'evidence_mismatch'
+    | 'retrieval_failure'
+    | 'transfer_failure'
+    | 'reasoning_jump'
+    | 'incorrect_answer'
+    | 'skipped'
+    | 'other';
+
 export type LearningActionKind =
     | 'quiz'
     | 'explain'
@@ -26,6 +38,12 @@ export type TutorActionKind = 'generate_quiz' | 'analyze_answer' | 'follow_up' |
 export type MemoryLayer = 'session' | 'unit' | 'long_term';
 
 export type KnowledgeRepresentationType = 'text' | 'code' | 'formula' | 'mermaid';
+
+export interface ErrorTagStat {
+    tag: MasteryErrorTag | string;
+    count: number;
+    lastSeenAt: string;
+}
 
 export interface EvidenceSpan {
     id: string;
@@ -99,6 +117,8 @@ export interface LearnerConceptState {
     lastUpdatedAt: string;
     nextReviewAt: string;
     errorTags: string[];
+    recentErrorTags: string[];
+    errorTagStats: ErrorTagStat[];
 }
 
 export interface LearningAction {
@@ -239,7 +259,8 @@ export interface KnowledgeQueryResponse {
 export interface MasteryObservation {
     atomId: string;
     outcome: MasteryOutcome;
-    errorTag?: string;
+    errorTag?: MasteryErrorTag | string;
+    errorTags?: Array<MasteryErrorTag | string>;
     responseTimeMs?: number;
     confidence?: number;
 }
@@ -256,6 +277,33 @@ export interface MasteryDiagnosticsResponse {
         updatedCount: number;
         averageMasteryBefore: number;
         averageMasteryAfter: number;
+    };
+}
+
+export interface MasteryMisconceptionRequest {
+    userId: string;
+    atomIds?: string[];
+    topK?: number;
+    generatedAt?: string;
+}
+
+export interface MasteryMisconceptionItem {
+    errorTag: MasteryErrorTag | string;
+    count: number;
+    affectedAtomIds: string[];
+    averageMasteryProbability: number;
+    severityScore: number;
+    lastSeenAt: string;
+    recommendedActionKinds: LearningActionKind[];
+}
+
+export interface MasteryMisconceptionResponse {
+    userId: string;
+    generatedAt: string;
+    items: MasteryMisconceptionItem[];
+    summary: {
+        trackedTags: number;
+        totalObservations: number;
     };
 }
 
