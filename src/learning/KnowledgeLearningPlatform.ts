@@ -4,6 +4,10 @@ import type { KnowledgeLearningPlatformAPI } from './api';
 import type {
     DivergencePath,
     EvidenceSpan,
+    IngestGuardrailEvaluationRequest,
+    IngestGuardrailEvaluationResponse,
+    IngestGuardrailGateResult,
+    IngestGuardrailThresholds,
     KnowledgeAtom,
     KnowledgeDocumentDeleteInput,
     KnowledgeDocumentInput,
@@ -32,6 +36,7 @@ import type {
     MemoryLayer,
     MemoryPolicyRequest,
     MemoryPolicyResponse,
+    RelationRecomputeMode,
     RelationEdge,
     RelationKind,
     StalenessRecord,
@@ -118,6 +123,14 @@ const DEFAULT_LEARNING_QUALITY_THRESHOLDS: LearningQualityThresholds = {
     evidenceBackedSuggestionRatioPct: 90,
     pathEffectivenessLiftPct: 5,
     queryP95Ms: 800,
+};
+
+const DEFAULT_INGEST_GUARDRAIL_THRESHOLDS: IngestGuardrailThresholds = {
+    maxChangedDocuments: 2000,
+    maxDeletedDocuments: 500,
+    maxActiveAtoms: 200000,
+    maxIngestP95Ms: 5000,
+    maxRecomputeP95Ms: 5000,
 };
 
 const QUERY_LATENCY_HISTORY_LIMIT = 2000;
@@ -229,6 +242,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     private readonly autoPersist: boolean;
 
     private readonly tutorAdapter: TutorAdapter | null;
+
+    private latestIngestSummary: KnowledgeIngestResponse['summary'] | null = null;
 
     private hydrated = false;
 
@@ -448,12 +463,16 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             deletedDocuments.forEach((deletedDocument) => processDelete(deletedDocument));
         }
 
+        const resolvedRelationRecomputeMode = this.resolveRelationRecomputeMode({
+            request,
+            changedDocuments: changedDocIds.size,
+            deletedDocuments: deletedDocIds.size,
+            hasNewAtoms: newAtomIds.length > 0,
+        });
         let recomputedDynamicRelations = false;
-        const shouldRecomputeDynamicRelations = request.recomputeRelations === true
-            || (request.recomputeRelations !== false && (changedDocIds.size > 0 || deletedDocIds.size > 0));
 
         this.rebuildTitleIndex();
-        if (shouldRecomputeDynamicRelations) {
+        if (resolvedRelationRecomputeMode === 'full') {
             recomputedDynamicRelations = true;
             const recomputeStartAtMs = Date.now();
             const recomputeResult = this.recomputeDynamicRelations(ingestedAt);
@@ -461,7 +480,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             regeneratedRelationEdges += recomputeResult.createdEdges.length;
             recomputeResult.createdEdges.forEach((edge) => responseRelations.push(edge));
             recomputeLatencyMs = Date.now() - recomputeStartAtMs;
-        } else if (newAtomIds.length > 0) {
+        } else if (resolvedRelationRecomputeMode === 'incremental' && newAtomIds.length > 0) {
             const referenceEdges = this.createReferenceEdges(newAtomIds, wikiLinksByAtomId, ingestedAt);
             const inferredEdges = this.createInferredEdges(newAtomIds, ingestedAt);
             regeneratedRelationEdges += referenceEdges.length + inferredEdges.length;
@@ -469,6 +488,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             inferredEdges.forEach((edge) => responseRelations.push(edge));
         }
 
+        const relationRecomputeLatencyMs = Number((recomputeLatencyMs ?? 0).toFixed(4));
         const response: KnowledgeIngestResponse = {
             atoms: responseAtoms,
             evidenceSpans: responseEvidence,
@@ -484,7 +504,12 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 recomputedDynamicRelations,
                 invalidatedRelationEdges,
                 regeneratedRelationEdges,
+                resolvedRelationRecomputeMode,
+                relationRecomputeLatencyMs,
             },
+        };
+        this.latestIngestSummary = {
+            ...response.summary,
         };
         const ingestLatencyMs = Date.now() - ingestStartAtMs;
         this.recordIngestLatency(ingestLatencyMs);
@@ -935,6 +960,75 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
     }
 
+    public async evaluateIngestGuardrails(
+        request: IngestGuardrailEvaluationRequest
+    ): Promise<IngestGuardrailEvaluationResponse> {
+        await this.ensureHydrated();
+        const evaluatedAt = this.resolveTimestamp(request.evaluatedAt);
+        const thresholds = this.resolveIngestGuardrailThresholds(request.thresholds);
+        const telemetry = this.buildIngestTelemetry();
+        const latestSummary = this.latestIngestSummary ? { ...this.latestIngestSummary } : null;
+        const changedDocuments = latestSummary?.changedDocuments ?? 0;
+        const deletedDocuments = latestSummary?.deletedDocuments ?? 0;
+        const activeAtoms = latestSummary?.activeAtoms ?? this.activeAtomIds.size;
+
+        const gates: IngestGuardrailGateResult[] = [
+            {
+                gateId: 'changed_documents',
+                passed: changedDocuments <= thresholds.maxChangedDocuments,
+                comparator: '<=',
+                observedValue: changedDocuments,
+                threshold: thresholds.maxChangedDocuments,
+                unit: 'count',
+                message: 'Changed document volume should stay inside ingest risk budget.',
+            },
+            {
+                gateId: 'deleted_documents',
+                passed: deletedDocuments <= thresholds.maxDeletedDocuments,
+                comparator: '<=',
+                observedValue: deletedDocuments,
+                threshold: thresholds.maxDeletedDocuments,
+                unit: 'count',
+                message: 'Deleted document volume should stay inside rollback-safe budget.',
+            },
+            {
+                gateId: 'active_atoms',
+                passed: activeAtoms <= thresholds.maxActiveAtoms,
+                comparator: '<=',
+                observedValue: activeAtoms,
+                threshold: thresholds.maxActiveAtoms,
+                unit: 'count',
+                message: 'Active atom cardinality should remain within local capacity limits.',
+            },
+            {
+                gateId: 'ingest_p95',
+                passed: telemetry.ingestP95Ms <= thresholds.maxIngestP95Ms,
+                comparator: '<=',
+                observedValue: telemetry.ingestP95Ms,
+                threshold: thresholds.maxIngestP95Ms,
+                unit: 'ms',
+                message: 'Ingest p95 latency should satisfy local interaction budget.',
+            },
+            {
+                gateId: 'recompute_p95',
+                passed: telemetry.recomputeP95Ms <= thresholds.maxRecomputeP95Ms,
+                comparator: '<=',
+                observedValue: telemetry.recomputeP95Ms,
+                threshold: thresholds.maxRecomputeP95Ms,
+                unit: 'ms',
+                message: 'Relation recompute p95 latency should satisfy governance budget.',
+            },
+        ];
+
+        return {
+            evaluatedAt,
+            thresholds,
+            latestSummary,
+            gates,
+            overallPassed: gates.every((gate) => gate.passed),
+        };
+    }
+
     public async ensureReady(): Promise<void> {
         await this.ensureHydrated();
     }
@@ -1087,6 +1181,44 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
     }
 
+    private resolveIngestGuardrailThresholds(
+        overrides: Partial<IngestGuardrailThresholds> | undefined
+    ): IngestGuardrailThresholds {
+        const merged: IngestGuardrailThresholds = {
+            ...DEFAULT_INGEST_GUARDRAIL_THRESHOLDS,
+            ...(overrides || {}),
+        };
+        return {
+            maxChangedDocuments: Math.floor(clamp(Number(merged.maxChangedDocuments || 0), 0, 1000000)),
+            maxDeletedDocuments: Math.floor(clamp(Number(merged.maxDeletedDocuments || 0), 0, 1000000)),
+            maxActiveAtoms: Math.floor(clamp(Number(merged.maxActiveAtoms || 0), 1, 5000000)),
+            maxIngestP95Ms: Number(clamp(Number(merged.maxIngestP95Ms || 0), 1, 120000).toFixed(4)),
+            maxRecomputeP95Ms: Number(clamp(Number(merged.maxRecomputeP95Ms || 0), 1, 120000).toFixed(4)),
+        };
+    }
+
+    private resolveRelationRecomputeMode(params: {
+        request: KnowledgeIngestRequest;
+        changedDocuments: number;
+        deletedDocuments: number;
+        hasNewAtoms: boolean;
+    }): Exclude<RelationRecomputeMode, 'auto'> {
+        const requestedMode = params.request.relationRecomputeMode || 'auto';
+        if (requestedMode !== 'auto') {
+            return requestedMode;
+        }
+        if (params.request.recomputeRelations === true) {
+            return 'full';
+        }
+        if (params.request.recomputeRelations === false) {
+            return params.hasNewAtoms ? 'incremental' : 'none';
+        }
+        if (params.changedDocuments > 0 || params.deletedDocuments > 0) {
+            return 'full';
+        }
+        return params.hasNewAtoms ? 'incremental' : 'none';
+    }
+
     private async ensureHydrated(): Promise<void> {
         if (this.hydrated) {
             return;
@@ -1168,6 +1300,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     private restoreFromSnapshot(snapshot: KnowledgeGraphSnapshot): void {
         this.idCounter = Number(snapshot.idCounter || 0);
+        this.latestIngestSummary = null;
 
         this.atoms.clear();
         (snapshot.atoms || []).forEach((atom) => {

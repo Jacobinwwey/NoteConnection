@@ -156,6 +156,8 @@ export interface KnowledgeDocumentDeleteInput {
     sourcePath?: string;
 }
 
+export type RelationRecomputeMode = 'auto' | 'none' | 'incremental' | 'full';
+
 export type KnowledgeIngestOperation =
     | { op: 'upsert'; document: KnowledgeDocumentInput }
     | { op: 'delete'; document: KnowledgeDocumentDeleteInput };
@@ -176,6 +178,7 @@ export interface KnowledgeIngestRequest {
     operations?: KnowledgeIngestOperation[];
     incremental?: boolean;
     recomputeRelations?: boolean;
+    relationRecomputeMode?: RelationRecomputeMode;
     ingestedAt?: string;
 }
 
@@ -194,6 +197,8 @@ export interface KnowledgeIngestResponse {
         recomputedDynamicRelations: boolean;
         invalidatedRelationEdges: number;
         regeneratedRelationEdges: number;
+        resolvedRelationRecomputeMode: Exclude<RelationRecomputeMode, 'auto'>;
+        relationRecomputeLatencyMs: number;
     };
 }
 
@@ -391,5 +396,36 @@ export interface LearningQualityEvaluationResponse {
         pathEffectivenessLiftPct: number;
     };
     gates: LearningQualityGateResult[];
+    overallPassed: boolean;
+}
+
+export interface IngestGuardrailThresholds {
+    maxChangedDocuments: number;
+    maxDeletedDocuments: number;
+    maxActiveAtoms: number;
+    maxIngestP95Ms: number;
+    maxRecomputeP95Ms: number;
+}
+
+export interface IngestGuardrailEvaluationRequest {
+    thresholds?: Partial<IngestGuardrailThresholds>;
+    evaluatedAt?: string;
+}
+
+export interface IngestGuardrailGateResult {
+    gateId: 'changed_documents' | 'deleted_documents' | 'active_atoms' | 'ingest_p95' | 'recompute_p95';
+    passed: boolean;
+    comparator: '<=' | '>=';
+    observedValue: number;
+    threshold: number;
+    unit: 'count' | 'ms';
+    message: string;
+}
+
+export interface IngestGuardrailEvaluationResponse {
+    evaluatedAt: string;
+    thresholds: IngestGuardrailThresholds;
+    latestSummary: KnowledgeIngestResponse['summary'] | null;
+    gates: IngestGuardrailGateResult[];
     overallPassed: boolean;
 }

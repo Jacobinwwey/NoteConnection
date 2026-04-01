@@ -144,6 +144,8 @@ describe('KnowledgeLearningPlatform', () => {
         expect(diffResult.summary.changedDocuments).toBe(1);
         expect(diffResult.summary.deletedDocuments).toBe(1);
         expect(diffResult.summary.recomputedDynamicRelations).toBe(true);
+        expect(diffResult.summary.resolvedRelationRecomputeMode).toBe('full');
+        expect(diffResult.summary.relationRecomputeLatencyMs).toBeGreaterThanOrEqual(0);
         expect(diffResult.summary.invalidatedRelationEdges).toBeGreaterThanOrEqual(1);
         expect(diffResult.summary.regeneratedRelationEdges).toBeGreaterThanOrEqual(0);
         expect(diffResult.staleness.some((entry) => entry.status === 'deleted' && entry.documentId === 'doc_b')).toBe(true);
@@ -154,6 +156,57 @@ describe('KnowledgeLearningPlatform', () => {
             asOf: '2026-03-31T09:00:00.000Z',
         });
         expect(deletedQuery.items.length).toBe(0);
+    });
+
+    test('relation recompute mode supports none and incremental strategies', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            relationRecomputeMode: 'none',
+            documents: [
+                {
+                    documentId: 'doc_target',
+                    sourcePath: 'Knowledge_Base/doc_target.md',
+                    language: 'en',
+                    content: '# Target Topic\nReference target concept.',
+                },
+            ],
+        });
+
+        const noneModeResult = await platform.ingestKnowledge({
+            incremental: true,
+            relationRecomputeMode: 'none',
+            documents: [
+                {
+                    documentId: 'doc_source',
+                    sourcePath: 'Knowledge_Base/doc_source.md',
+                    language: 'en',
+                    content: '# Source Topic\nSee [[Target Topic]] for details.',
+                },
+            ],
+        });
+
+        expect(noneModeResult.summary.resolvedRelationRecomputeMode).toBe('none');
+        expect(noneModeResult.summary.recomputedDynamicRelations).toBe(false);
+        expect(noneModeResult.summary.relationRecomputeLatencyMs).toBe(0);
+        expect(noneModeResult.relationEdges.some((edge) => edge.relationKind === 'reference')).toBe(false);
+
+        const incrementalResult = await platform.ingestKnowledge({
+            incremental: true,
+            relationRecomputeMode: 'incremental',
+            documents: [
+                {
+                    documentId: 'doc_source',
+                    sourcePath: 'Knowledge_Base/doc_source.md',
+                    language: 'en',
+                    content: '# Source Topic\nUpdated and still references [[Target Topic]].',
+                },
+            ],
+        });
+
+        expect(incrementalResult.summary.resolvedRelationRecomputeMode).toBe('incremental');
+        expect(incrementalResult.summary.recomputedDynamicRelations).toBe(false);
+        expect(incrementalResult.summary.relationRecomputeLatencyMs).toBe(0);
+        expect(incrementalResult.relationEdges.some((edge) => edge.relationKind === 'reference')).toBe(true);
     });
 
     test('ingest extracts markdown text, code, formula, and mermaid atoms', async () => {
@@ -297,6 +350,52 @@ describe('KnowledgeLearningPlatform', () => {
 
         expect(failResult.overallPassed).toBe(false);
         expect(failResult.gates.some((gate) => gate.passed === false)).toBe(true);
+    });
+
+    test('ingest guardrail evaluation enforces thresholds over latest ingest and telemetry', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            relationRecomputeMode: 'full',
+            documents: [
+                {
+                    documentId: 'doc_guardrail_a',
+                    sourcePath: 'Knowledge_Base/doc_guardrail_a.md',
+                    language: 'en',
+                    content: '# Guardrail A\nIngest guardrails track changed docs and active atoms.',
+                },
+                {
+                    documentId: 'doc_guardrail_b',
+                    sourcePath: 'Knowledge_Base/doc_guardrail_b.md',
+                    language: 'en',
+                    content: '# Guardrail B\nTelemetry should stay under threshold budgets.',
+                },
+            ],
+        });
+
+        const passResult = await platform.evaluateIngestGuardrails({
+            thresholds: {
+                maxChangedDocuments: 10,
+                maxDeletedDocuments: 5,
+                maxActiveAtoms: 1000,
+                maxIngestP95Ms: 60000,
+                maxRecomputeP95Ms: 60000,
+            },
+        });
+        expect(passResult.overallPassed).toBe(true);
+        expect(passResult.latestSummary?.changedDocuments).toBe(2);
+        expect(passResult.gates.find((gate) => gate.gateId === 'changed_documents')?.passed).toBe(true);
+
+        const failResult = await platform.evaluateIngestGuardrails({
+            thresholds: {
+                maxChangedDocuments: 0,
+                maxDeletedDocuments: 0,
+                maxActiveAtoms: 1,
+                maxIngestP95Ms: 1,
+                maxRecomputeP95Ms: 1,
+            },
+        });
+        expect(failResult.overallPassed).toBe(false);
+        expect(failResult.gates.find((gate) => gate.gateId === 'changed_documents')?.passed).toBe(false);
     });
 
     test('tutor actions and memory policy APIs are operational', async () => {
