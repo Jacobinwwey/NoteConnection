@@ -132,9 +132,12 @@ describe('KnowledgeLearningPlatform persistence', () => {
         const history = await platformB.queryStudySessionHistory({
             userId: 'user_persist',
             limit: 5,
+            executionKinds: ['session'],
         });
         expect(history.records.length).toBeGreaterThan(0);
         expect(history.records[0]?.executionKind).toBe('session');
+        expect(history.page.totalFilteredRecords).toBeGreaterThan(0);
+        expect(history.summary.executionKindBreakdown.find((item) => item.executionKind === 'session')?.recordCount).toBeGreaterThan(0);
 
         const guardrail = await platformB.evaluateIngestGuardrails({});
         expect(guardrail.latestSummary).not.toBeNull();

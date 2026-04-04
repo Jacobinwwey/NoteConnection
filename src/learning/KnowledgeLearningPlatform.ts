@@ -987,34 +987,86 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         }
         const generatedAt = this.resolveTimestamp(undefined);
         const limit = clamp(Math.floor(Number(request.limit) || 10), 1, 100);
-        const records = this.sessionExecutionHistory
+        const offset = Math.max(0, Math.floor(Number(request.offset) || 0));
+        const requestedKinds = Array.isArray(request.executionKinds)
+            ? request.executionKinds
+                .map((kind) => String(kind || '').trim().toLowerCase())
+                .filter((kind): kind is StudySessionExecutionRecord['executionKind'] =>
+                    kind === 'session' || kind === 'retest' || kind === 'custom'
+                )
+            : [];
+        const activeKindFilter = requestedKinds.length > 0
+            ? new Set(requestedKinds)
+            : null;
+        const fromExecutedAtIso = this.resolveOptionalTimestamp(request.fromExecutedAt);
+        const toExecutedAtIso = this.resolveOptionalTimestamp(request.toExecutedAt);
+        const fromExecutedAtMs = fromExecutedAtIso ? Date.parse(fromExecutedAtIso) : Number.NEGATIVE_INFINITY;
+        const toExecutedAtMs = toExecutedAtIso ? Date.parse(toExecutedAtIso) : Number.POSITIVE_INFINITY;
+        const rangeStartMs = Math.min(fromExecutedAtMs, toExecutedAtMs);
+        const rangeEndMs = Math.max(fromExecutedAtMs, toExecutedAtMs);
+        const filteredRecords = this.sessionExecutionHistory
             .filter((record) => record.userId === userId)
-            .slice(0, limit)
+            .filter((record) => activeKindFilter ? activeKindFilter.has(record.executionKind) : true)
+            .filter((record) => {
+                const executedAtMs = Date.parse(record.executedAt);
+                if (!Number.isFinite(executedAtMs)) {
+                    return false;
+                }
+                return executedAtMs >= rangeStartMs && executedAtMs <= rangeEndMs;
+            });
+        const records = filteredRecords
+            .slice(offset, offset + limit)
             .map((record) => ({ ...record }));
-        const totalExecutedActions = records.reduce(
+        const totalExecutedActions = filteredRecords.reduce(
             (sum, record) => sum + Math.max(0, Math.floor(Number(record.executedCount || 0))),
             0
         );
-        const totalUpdatedMasteryCount = records.reduce(
+        const totalUpdatedMasteryCount = filteredRecords.reduce(
             (sum, record) => sum + Math.max(0, Math.floor(Number(record.updatedMasteryCount || 0))),
             0
         );
-        const averageMasteryDelta = records.length > 0
-            ? Number((records.reduce((sum, record) => sum + Number(record.averageMasteryDelta || 0), 0) / records.length).toFixed(6))
+        const averageMasteryDelta = filteredRecords.length > 0
+            ? Number((filteredRecords.reduce((sum, record) => sum + Number(record.averageMasteryDelta || 0), 0) / filteredRecords.length).toFixed(6))
             : 0;
-        const averageTutorConfidence = records.length > 0
-            ? Number((records.reduce((sum, record) => sum + Number(record.averageTutorConfidence || 0), 0) / records.length).toFixed(6))
+        const averageTutorConfidence = filteredRecords.length > 0
+            ? Number((filteredRecords.reduce((sum, record) => sum + Number(record.averageTutorConfidence || 0), 0) / filteredRecords.length).toFixed(6))
             : 0;
+        const executionKindBreakdown = (['session', 'retest', 'custom'] as const).map((executionKind) => {
+            const kindRecords = filteredRecords.filter((record) => record.executionKind === executionKind);
+            const kindExecutedActions = kindRecords.reduce(
+                (sum, record) => sum + Math.max(0, Math.floor(Number(record.executedCount || 0))),
+                0
+            );
+            const kindAverageMasteryDelta = kindRecords.length > 0
+                ? Number((kindRecords.reduce((sum, record) => sum + Number(record.averageMasteryDelta || 0), 0) / kindRecords.length).toFixed(6))
+                : 0;
+            return {
+                executionKind,
+                recordCount: kindRecords.length,
+                totalExecutedActions: kindExecutedActions,
+                averageMasteryDelta: kindAverageMasteryDelta,
+            };
+        });
+        const hasMore = offset + records.length < filteredRecords.length;
         return {
             userId,
             generatedAt,
             records,
+            page: {
+                limit,
+                offset,
+                returnedRecords: records.length,
+                totalFilteredRecords: filteredRecords.length,
+                hasMore,
+                nextOffset: hasMore ? offset + records.length : null,
+            },
             summary: {
-                totalRecords: records.length,
+                totalRecords: filteredRecords.length,
                 totalExecutedActions,
                 totalUpdatedMasteryCount,
                 averageMasteryDelta,
                 averageTutorConfidence,
+                executionKindBreakdown,
             },
         };
     }
@@ -3877,6 +3929,17 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             }
         }
         return this.nowProvider().toISOString();
+    }
+
+    private resolveOptionalTimestamp(preferred: unknown): string | null {
+        if (!isNonEmptyString(preferred)) {
+            return null;
+        }
+        const parsed = new Date(preferred);
+        if (!Number.isNaN(parsed.getTime())) {
+            return parsed.toISOString();
+        }
+        return null;
     }
 
     private computeHash(content: string): string {

@@ -51,6 +51,11 @@ window.pathApp = {
         tutorFeedback: null,
         sessionExecution: null,
         sessionHistory: null,
+        sessionHistoryQuery: {
+            limit: 8,
+            offset: 0,
+            executionKind: 'all',
+        },
     },
     
     // Animation State
@@ -1666,6 +1671,83 @@ window.pathApp = {
         return candidate.slice(0, 64);
     },
 
+    _normalizeLearningHistoryExecutionKind: function(rawValue) {
+        const value = String(rawValue || 'all').trim().toLowerCase();
+        if (value === 'session' || value === 'retest' || value === 'custom') {
+            return value;
+        }
+        return 'all';
+    },
+
+    _getLearningWorkbenchSessionHistoryQuery: function() {
+        const existing = this.learningWorkbench.sessionHistoryQuery && typeof this.learningWorkbench.sessionHistoryQuery === 'object'
+            ? this.learningWorkbench.sessionHistoryQuery
+            : {};
+        const limit = Math.max(1, Math.min(20, Math.floor(Number(existing.limit) || 8)));
+        const offset = Math.max(0, Math.floor(Number(existing.offset) || 0));
+        const executionKind = this._normalizeLearningHistoryExecutionKind(existing.executionKind);
+        const normalized = {
+            limit,
+            offset,
+            executionKind,
+        };
+        this.learningWorkbench.sessionHistoryQuery = normalized;
+        return normalized;
+    },
+
+    _buildLearningWorkbenchSessionHistoryRequest: function(userId) {
+        const query = this._getLearningWorkbenchSessionHistoryQuery();
+        return {
+            userId,
+            limit: query.limit,
+            offset: query.offset,
+            executionKinds: query.executionKind === 'all' ? undefined : [query.executionKind],
+        };
+    },
+
+    _setLearningWorkbenchHistoryExecutionKind: function(rawValue, options = {}) {
+        const nextKind = this._normalizeLearningHistoryExecutionKind(rawValue);
+        const query = this._getLearningWorkbenchSessionHistoryQuery();
+        const changed = query.executionKind !== nextKind;
+        this.learningWorkbench.sessionHistoryQuery = {
+            ...query,
+            executionKind: nextKind,
+            offset: 0,
+        };
+        this._persistLearningWorkbenchPreferences();
+        if (changed && options.refresh !== false) {
+            void this.refreshLearningWorkbench({ force: false });
+            return;
+        }
+        this._renderLearningWorkbenchState();
+    },
+
+    _changeLearningWorkbenchHistoryPage: function(direction) {
+        const step = Math.sign(Number(direction) || 0);
+        if (step === 0) {
+            return;
+        }
+        const query = this._getLearningWorkbenchSessionHistoryQuery();
+        const page = this.learningWorkbench.sessionHistory && this.learningWorkbench.sessionHistory.page
+            ? this.learningWorkbench.sessionHistory.page
+            : null;
+        if (step > 0 && page && page.hasMore !== true) {
+            return;
+        }
+        const nextOffset = step > 0
+            ? query.offset + query.limit
+            : Math.max(0, query.offset - query.limit);
+        if (nextOffset === query.offset) {
+            return;
+        }
+        this.learningWorkbench.sessionHistoryQuery = {
+            ...query,
+            offset: nextOffset,
+        };
+        this._persistLearningWorkbenchPreferences();
+        void this.refreshLearningWorkbench({ force: false });
+    },
+
     _restoreLearningWorkbenchPreferences: function() {
         try {
             const stored = localStorage.getItem('nc_learning_workbench_prefs');
@@ -1676,6 +1758,14 @@ window.pathApp = {
             if (parsed && typeof parsed === 'object' && typeof parsed.userId === 'string') {
                 this.learningWorkbench.userId = this._normalizeLearningWorkbenchUserId(parsed.userId);
             }
+            if (parsed && typeof parsed === 'object') {
+                const query = this._getLearningWorkbenchSessionHistoryQuery();
+                this.learningWorkbench.sessionHistoryQuery = {
+                    ...query,
+                    executionKind: this._normalizeLearningHistoryExecutionKind(parsed.historyExecutionKind),
+                    offset: 0,
+                };
+            }
         } catch (error) {
             console.warn('[PathApp] Failed to restore learning workbench prefs:', error);
         }
@@ -1683,8 +1773,10 @@ window.pathApp = {
 
     _persistLearningWorkbenchPreferences: function() {
         try {
+            const historyQuery = this._getLearningWorkbenchSessionHistoryQuery();
             const payload = {
                 userId: this._normalizeLearningWorkbenchUserId(this.learningWorkbench.userId),
+                historyExecutionKind: historyQuery.executionKind,
             };
             localStorage.setItem('nc_learning_workbench_prefs', JSON.stringify(payload));
         } catch (error) {
@@ -1876,6 +1968,7 @@ window.pathApp = {
         const focusAtomIds = this._getFocusAtomIdsForLearning();
         const includeDivergence = true;
         const includeRetrain = true;
+        const sessionHistoryRequest = this._buildLearningWorkbenchSessionHistoryRequest(userId);
         try {
             const [sessionPlan, qualitySnapshot, misconceptions, runtimeState, sessionHistory] = await Promise.all([
                 this._requestLearningApi('/api/knowledge/session/plan', {
@@ -1896,10 +1989,7 @@ window.pathApp = {
                 fetch('/api/knowledge/state', { method: 'GET' })
                     .then((response) => response.json())
                     .catch(() => null),
-                this._requestLearningApi('/api/knowledge/session/history', {
-                    userId,
-                    limit: 8,
-                }),
+                this._requestLearningApi('/api/knowledge/session/history', sessionHistoryRequest),
             ]);
             this.learningWorkbench.sessionPlan = sessionPlan || null;
             this.learningWorkbench.qualitySnapshot = qualitySnapshot || null;
@@ -1993,26 +2083,70 @@ window.pathApp = {
         if (!recordId) {
             return;
         }
+        const historyQuery = this._getLearningWorkbenchSessionHistoryQuery();
+        if (historyQuery.offset > 0) {
+            return;
+        }
+        const normalizedRecordKind = this._normalizeLearningHistoryExecutionKind(record.executionKind);
+        const recordExecutionKind = normalizedRecordKind === 'all' ? 'session' : normalizedRecordKind;
+        if (historyQuery.executionKind !== 'all' && historyQuery.executionKind !== recordExecutionKind) {
+            return;
+        }
         const base = this.learningWorkbench.sessionHistory && typeof this.learningWorkbench.sessionHistory === 'object'
             ? this.learningWorkbench.sessionHistory
             : {
                 userId: this.learningWorkbench.userId,
                 generatedAt: new Date().toISOString(),
                 records: [],
+                page: {
+                    limit: historyQuery.limit,
+                    offset: 0,
+                    returnedRecords: 0,
+                    totalFilteredRecords: 0,
+                    hasMore: false,
+                    nextOffset: null,
+                },
                 summary: {
                     totalRecords: 0,
                     totalExecutedActions: 0,
                     totalUpdatedMasteryCount: 0,
                     averageMasteryDelta: 0,
                     averageTutorConfidence: 0,
+                    executionKindBreakdown: [],
                 },
             };
         const existingRecords = Array.isArray(base.records) ? base.records.slice() : [];
-        const deduped = [record, ...existingRecords.filter((item) => String(item?.id || '').trim() !== recordId)].slice(0, 8);
+        const deduped = [record, ...existingRecords.filter((item) => String(item?.id || '').trim() !== recordId)]
+            .slice(0, historyQuery.limit);
+        const executionKindBreakdown = ['session', 'retest', 'custom'].map((executionKind) => {
+            const kindRecords = deduped.filter((item) => {
+                const normalizedKind = this._normalizeLearningHistoryExecutionKind(item?.executionKind);
+                const resolvedKind = normalizedKind === 'all' ? 'session' : normalizedKind;
+                return resolvedKind === executionKind;
+            });
+            const totalExecutedActions = kindRecords.reduce((sum, item) => sum + Number(item?.executedCount || 0), 0);
+            const averageMasteryDelta = kindRecords.length > 0
+                ? kindRecords.reduce((sum, item) => sum + Number(item?.averageMasteryDelta || 0), 0) / kindRecords.length
+                : 0;
+            return {
+                executionKind,
+                recordCount: kindRecords.length,
+                totalExecutedActions,
+                averageMasteryDelta,
+            };
+        });
         this.learningWorkbench.sessionHistory = {
             ...base,
             generatedAt: new Date().toISOString(),
             records: deduped,
+            page: {
+                limit: historyQuery.limit,
+                offset: 0,
+                returnedRecords: deduped.length,
+                totalFilteredRecords: deduped.length,
+                hasMore: false,
+                nextOffset: null,
+            },
             summary: {
                 ...(base.summary || {}),
                 totalRecords: deduped.length,
@@ -2024,6 +2158,7 @@ window.pathApp = {
                 averageTutorConfidence: deduped.length > 0
                     ? deduped.reduce((sum, item) => sum + Number(item?.averageTutorConfidence || 0), 0) / deduped.length
                     : 0,
+                executionKindBreakdown,
             },
         };
     },
@@ -2253,6 +2388,11 @@ window.pathApp = {
         const tutorFeedbackEl = document.getElementById('learning-tutor-feedback');
         const sessionExecutionEl = document.getElementById('learning-session-execution');
         const sessionHistoryEl = document.getElementById('learning-session-history');
+        const sessionHistorySummaryEl = document.getElementById('learning-session-history-summary');
+        const sessionHistoryFilterEl = document.getElementById('learning-history-kind-filter');
+        const sessionHistoryPrevBtn = document.getElementById('btn-learning-history-prev');
+        const sessionHistoryNextBtn = document.getElementById('btn-learning-history-next');
+        const sessionHistoryPageEl = document.getElementById('learning-history-page');
 
         if (updatedEl) {
             updatedEl.textContent = this.learningWorkbench.lastUpdatedAt
@@ -2407,17 +2547,44 @@ window.pathApp = {
 
         if (sessionHistoryEl) {
             const records = this.learningWorkbench.sessionHistory?.records || [];
+            const summary = this.learningWorkbench.sessionHistory?.summary || null;
+            const page = this.learningWorkbench.sessionHistory?.page || null;
+            const historyQuery = this._getLearningWorkbenchSessionHistoryQuery();
+            if (sessionHistoryFilterEl) {
+                sessionHistoryFilterEl.value = historyQuery.executionKind;
+            }
+            if (sessionHistoryPrevBtn) {
+                sessionHistoryPrevBtn.disabled = this.learningWorkbench.loading === true || historyQuery.offset <= 0;
+            }
+            if (sessionHistoryNextBtn) {
+                const canGoNext = page ? page.hasMore === true : false;
+                sessionHistoryNextBtn.disabled = this.learningWorkbench.loading === true || !canGoNext;
+            }
+            if (sessionHistoryPageEl) {
+                const totalFilteredRecords = Math.max(0, Number(page?.totalFilteredRecords || 0));
+                const totalPages = Math.max(1, Math.ceil(totalFilteredRecords / Math.max(1, historyQuery.limit)));
+                const pageIndex = Math.floor(historyQuery.offset / Math.max(1, historyQuery.limit)) + 1;
+                sessionHistoryPageEl.textContent = `Page ${Math.min(pageIndex, totalPages)}/${totalPages}`;
+            }
+            if (sessionHistorySummaryEl) {
+                const totalRecords = Number(summary?.totalRecords || 0);
+                const totalExecuted = Number(summary?.totalExecutedActions || 0);
+                const totalUpdated = Number(summary?.totalUpdatedMasteryCount || 0);
+                const avgDelta = Number(summary?.averageMasteryDelta || 0).toFixed(3);
+                const avgConfidence = Number(summary?.averageTutorConfidence || 0).toFixed(3);
+                sessionHistorySummaryEl.textContent = `History summary: records=${totalRecords}, executed=${totalExecuted}, updated=${totalUpdated}, avgDelta=${avgDelta}, avgConfidence=${avgConfidence}`;
+            }
             if (!Array.isArray(records) || records.length === 0) {
                 sessionHistoryEl.innerHTML = '<li class="muted">No session history yet.</li>';
             } else {
-                sessionHistoryEl.innerHTML = records.slice(0, 8).map((record) => {
+                sessionHistoryEl.innerHTML = records.slice(0, Math.max(1, historyQuery.limit)).map((record) => {
                     const executedAt = new Date(record.executedAt || Date.now()).toLocaleString();
                     const kind = this._escapeHtml(String(record.executionKind || 'session'));
                     const executedCount = Number(record.executedCount || 0);
                     const attempted = Number(record.attemptedActions || 0);
                     const delta = Number(record.averageMasteryDelta || 0);
                     const signedDelta = `${delta >= 0 ? '+' : ''}${delta.toFixed(3)}`;
-                    return `<li><span class="chip">${kind}</span> ${executedAt} · ${executedCount}/${attempted} · mastery Δ ${signedDelta}</li>`;
+                    return `<li><span class="chip">${kind}</span> ${executedAt} - ${executedCount}/${attempted} - mastery delta ${signedDelta}</li>`;
                 }).join('');
             }
         }
@@ -3077,6 +3244,9 @@ window.pathApp = {
         const workbenchRunRetestBtn = document.getElementById('btn-run-retest-session');
         const workbenchUserIdInput = document.getElementById('learning-user-id');
         const workbenchActionsList = document.getElementById('learning-session-actions');
+        const workbenchHistoryKindFilter = document.getElementById('learning-history-kind-filter');
+        const workbenchHistoryPrevBtn = document.getElementById('btn-learning-history-prev');
+        const workbenchHistoryNextBtn = document.getElementById('btn-learning-history-next');
 
         if (!tauriMode) {
             if (learningModeEl) {
@@ -3150,9 +3320,36 @@ window.pathApp = {
                     ? event.target.value
                     : '';
                 this.learningWorkbench.userId = this._normalizeLearningWorkbenchUserId(candidate);
+                const historyQuery = this._getLearningWorkbenchSessionHistoryQuery();
+                this.learningWorkbench.sessionHistoryQuery = {
+                    ...historyQuery,
+                    offset: 0,
+                };
                 workbenchUserIdInput.value = this.learningWorkbench.userId;
                 this._persistLearningWorkbenchPreferences();
                 this._renderLearningWorkbenchState();
+            });
+        }
+
+        if (workbenchHistoryKindFilter) {
+            workbenchHistoryKindFilter.value = this._getLearningWorkbenchSessionHistoryQuery().executionKind;
+            workbenchHistoryKindFilter.addEventListener('change', (event) => {
+                const nextValue = typeof event?.target?.value === 'string'
+                    ? event.target.value
+                    : 'all';
+                this._setLearningWorkbenchHistoryExecutionKind(nextValue, { refresh: true });
+            });
+        }
+
+        if (workbenchHistoryPrevBtn) {
+            workbenchHistoryPrevBtn.addEventListener('click', () => {
+                this._changeLearningWorkbenchHistoryPage(-1);
+            });
+        }
+
+        if (workbenchHistoryNextBtn) {
+            workbenchHistoryNextBtn.addEventListener('click', () => {
+                this._changeLearningWorkbenchHistoryPage(1);
             });
         }
 

@@ -626,6 +626,100 @@ describe('KnowledgeLearningPlatform', () => {
         expect(execution.record.executionKind).toBe('retest');
     });
 
+    test('session history supports execution-kind filtering, time windows, and pagination', async () => {
+        const ingest = await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_session_history_query',
+                    sourcePath: 'Knowledge_Base/doc_session_history_query.md',
+                    language: 'en',
+                    content: '# Session History Query\nFilter and paginate execution records.',
+                },
+            ],
+        });
+        const focusAtomIds = ingest.atoms.map((item) => item.id);
+        const sessionPlan = await platform.buildStudySession({
+            userId: 'user_session_history_query',
+            focusAtomIds,
+            maxActions: 3,
+            includeDivergence: false,
+            includeRetrain: false,
+        });
+
+        await platform.executeStudySessionPlan({
+            userId: 'user_session_history_query',
+            executionKind: 'session',
+            sessionPlan,
+            actionLimit: 1,
+            includeRetestPlan: false,
+            persistMemory: false,
+            executedAt: '2026-04-01T08:00:00.000Z',
+        });
+        await platform.executeStudySessionPlan({
+            userId: 'user_session_history_query',
+            executionKind: 'retest',
+            sessionPlan,
+            actionLimit: 1,
+            includeRetestPlan: false,
+            persistMemory: false,
+            executedAt: '2026-04-02T08:00:00.000Z',
+        });
+        await platform.executeStudySessionPlan({
+            userId: 'user_session_history_query',
+            executionKind: 'custom',
+            sessionPlan,
+            actionLimit: 1,
+            includeRetestPlan: false,
+            persistMemory: false,
+            executedAt: '2026-04-03T08:00:00.000Z',
+        });
+
+        const paged = await platform.queryStudySessionHistory({
+            userId: 'user_session_history_query',
+            limit: 1,
+            offset: 1,
+        });
+        expect(paged.records.length).toBe(1);
+        expect(paged.records[0]?.executionKind).toBe('retest');
+        expect(paged.page.limit).toBe(1);
+        expect(paged.page.offset).toBe(1);
+        expect(paged.page.totalFilteredRecords).toBe(3);
+        expect(paged.page.hasMore).toBe(true);
+        expect(paged.page.nextOffset).toBe(2);
+        expect(paged.summary.totalRecords).toBe(3);
+        expect(paged.summary.totalExecutedActions).toBeGreaterThanOrEqual(3);
+
+        const retestOnly = await platform.queryStudySessionHistory({
+            userId: 'user_session_history_query',
+            executionKinds: ['retest'],
+            limit: 5,
+        });
+        expect(retestOnly.records.length).toBe(1);
+        expect(retestOnly.records[0]?.executionKind).toBe('retest');
+        expect(retestOnly.summary.totalRecords).toBe(1);
+        expect(retestOnly.page.totalFilteredRecords).toBe(1);
+        expect(retestOnly.summary.executionKindBreakdown.find((item) => item.executionKind === 'retest')?.recordCount).toBe(1);
+        expect(retestOnly.summary.executionKindBreakdown.find((item) => item.executionKind === 'session')?.recordCount).toBe(0);
+
+        const rangeFiltered = await platform.queryStudySessionHistory({
+            userId: 'user_session_history_query',
+            fromExecutedAt: '2026-04-02T00:00:00.000Z',
+            toExecutedAt: '2026-04-03T23:59:59.000Z',
+            limit: 10,
+        });
+        expect(rangeFiltered.records.length).toBe(2);
+        expect(rangeFiltered.summary.totalRecords).toBe(2);
+
+        const reversedRange = await platform.queryStudySessionHistory({
+            userId: 'user_session_history_query',
+            fromExecutedAt: '2026-04-03T23:59:59.000Z',
+            toExecutedAt: '2026-04-02T00:00:00.000Z',
+            limit: 10,
+        });
+        expect(reversedRange.summary.totalRecords).toBe(2);
+    });
+
     test('learning quality evaluation enforces mastery and evidence thresholds', async () => {
         await platform.ingestKnowledge({
             incremental: true,

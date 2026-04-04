@@ -1467,6 +1467,21 @@
 
         <div class="workbench-section">
           <h4>Session History</h4>
+          <div class="workbench-row">
+            <label for="learning-history-kind-filter">Kind</label>
+            <select id="learning-history-kind-filter" class="control-select">
+              <option value="all">All</option>
+              <option value="session">Session</option>
+              <option value="retest">Retest</option>
+              <option value="custom">Custom</option>
+            </select>
+            <button id="btn-learning-history-prev" class="btn-small" type="button">Prev</button>
+            <button id="btn-learning-history-next" class="btn-small" type="button">Next</button>
+            <span id="learning-history-page" class="muted">Page 1/1</span>
+          </div>
+          <div id="learning-session-history-summary" class="workbench-runtime">
+            History summary: unavailable
+          </div>
           <ul id="learning-session-history" class="workbench-list">
             <li class="muted">No session history yet.</li>
           </ul>

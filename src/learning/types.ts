@@ -459,18 +459,38 @@ export interface StudySessionExecutionRecord {
 export interface StudySessionHistoryRequest {
     userId: string;
     limit?: number;
+    offset?: number;
+    executionKinds?: StudySessionExecutionKind[];
+    fromExecutedAt?: string;
+    toExecutedAt?: string;
+}
+
+export interface StudySessionHistoryKindSummaryItem {
+    executionKind: StudySessionExecutionKind;
+    recordCount: number;
+    totalExecutedActions: number;
+    averageMasteryDelta: number;
 }
 
 export interface StudySessionHistoryResponse {
     userId: string;
     generatedAt: string;
     records: StudySessionExecutionRecord[];
+    page: {
+        limit: number;
+        offset: number;
+        returnedRecords: number;
+        totalFilteredRecords: number;
+        hasMore: boolean;
+        nextOffset: number | null;
+    };
     summary: {
         totalRecords: number;
         totalExecutedActions: number;
         totalUpdatedMasteryCount: number;
         averageMasteryDelta: number;
         averageTutorConfidence: number;
+        executionKindBreakdown: StudySessionHistoryKindSummaryItem[];
     };
 }
 
