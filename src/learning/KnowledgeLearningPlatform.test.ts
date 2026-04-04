@@ -557,6 +557,7 @@ describe('KnowledgeLearningPlatform', () => {
         expect(execution.retestPlan.summary.totalActions).toBe(0);
         expect(execution.record.userId).toBe('user_session_execute');
         expect(execution.record.executionKind).toBe('session');
+        expect(execution.record.focusAtomIds.length).toBeGreaterThan(0);
         const history = await platform.queryStudySessionHistory({
             userId: 'user_session_execute',
             limit: 5,
@@ -624,6 +625,7 @@ describe('KnowledgeLearningPlatform', () => {
         expect(execution.retestPlan.summary.totalActions).toBeGreaterThanOrEqual(1);
         expect(execution.retestPlan.actions[0]?.source).toBe('retrain_plan');
         expect(execution.record.executionKind).toBe('retest');
+        expect(execution.record.focusAtomIds.length).toBeGreaterThan(0);
     });
 
     test('session history supports execution-kind filtering, time windows, and pagination', async () => {
@@ -682,6 +684,7 @@ describe('KnowledgeLearningPlatform', () => {
         });
         expect(paged.records.length).toBe(1);
         expect(paged.records[0]?.executionKind).toBe('retest');
+        expect(paged.records[0]?.focusAtomIds.length).toBeGreaterThan(0);
         expect(paged.page.limit).toBe(1);
         expect(paged.page.offset).toBe(1);
         expect(paged.page.totalFilteredRecords).toBe(3);

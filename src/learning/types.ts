@@ -439,6 +439,7 @@ export interface StudySessionExecutionRecord {
     userId: string;
     executionKind: StudySessionExecutionKind;
     executedAt: string;
+    focusAtomIds: string[];
     plannedActions: number;
     attemptedActions: number;
     executedCount: number;

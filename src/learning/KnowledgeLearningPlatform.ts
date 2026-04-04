@@ -1504,6 +1504,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             userId,
             executionKind,
             executedAt,
+            focusAtomIds: comparedAtomIds,
             plannedActions: sessionPlan.actions.length,
             attemptedActions: selectedActions.length,
             executedCount: executedItems.length,
@@ -2190,6 +2191,15 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             return null;
         }
         const executedAt = isNonEmptyString(value.executedAt) ? value.executedAt : fallbackExecutedAt;
+        const focusAtomIds = Array.isArray(value.focusAtomIds)
+            ? Array.from(
+                new Set(
+                    value.focusAtomIds
+                        .map((atomId) => String(atomId || '').trim())
+                        .filter((atomId) => atomId.length > 0)
+                )
+            ).slice(0, 120)
+            : [];
         const fallbackIdSeed = `${userId}:${executedAt}:${Math.floor(Number(value.executedCount || 0))}`;
         const fallbackId = `session_exec_restored_${createHash('sha1').update(fallbackIdSeed).digest('hex').slice(0, 12)}`;
         return {
@@ -2197,6 +2207,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             userId,
             executionKind: this.normalizeStudySessionExecutionKind(value.executionKind),
             executedAt,
+            focusAtomIds,
             plannedActions: Math.max(0, Math.floor(Number(value.plannedActions || 0))),
             attemptedActions: Math.max(0, Math.floor(Number(value.attemptedActions || 0))),
             executedCount: Math.max(0, Math.floor(Number(value.executedCount || 0))),

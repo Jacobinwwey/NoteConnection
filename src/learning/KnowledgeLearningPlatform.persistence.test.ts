@@ -136,6 +136,7 @@ describe('KnowledgeLearningPlatform persistence', () => {
         });
         expect(history.records.length).toBeGreaterThan(0);
         expect(history.records[0]?.executionKind).toBe('session');
+        expect(history.records[0]?.focusAtomIds.length).toBeGreaterThan(0);
         expect(history.page.totalFilteredRecords).toBeGreaterThan(0);
         expect(history.summary.executionKindBreakdown.find((item) => item.executionKind === 'session')?.recordCount).toBeGreaterThan(0);
 

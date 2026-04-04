@@ -2426,6 +2426,86 @@ window.pathApp = {
         }
     },
 
+    runLearningWorkbenchHistoryRetest: async function(recordId) {
+        if (this.learningWorkbench.loading) {
+            return;
+        }
+        const normalizedRecordId = String(recordId || '').trim();
+        if (!normalizedRecordId) {
+            this._setLearningWorkbenchStatus('Invalid history record id for replay.', true);
+            return;
+        }
+        const userId = this._normalizeLearningWorkbenchUserId(this.learningWorkbench.userId);
+        const records = Array.isArray(this.learningWorkbench.sessionHistory?.records)
+            ? this.learningWorkbench.sessionHistory.records
+            : [];
+        const targetRecord = records.find((item) => String(item?.id || '').trim() === normalizedRecordId) || null;
+        if (!targetRecord) {
+            this._setLearningWorkbenchStatus('Target history record was not found in current page.', true);
+            return;
+        }
+        const focusAtomIds = Array.from(
+            new Set(
+                (Array.isArray(targetRecord.focusAtomIds) ? targetRecord.focusAtomIds : [])
+                    .map((atomId) => String(atomId || '').trim())
+                    .filter((atomId) => atomId.length > 0)
+            )
+        );
+        if (focusAtomIds.length === 0) {
+            this._setLearningWorkbenchStatus('Selected history record has no focus atoms for replay.', true);
+            return;
+        }
+
+        this.learningWorkbench.loading = true;
+        this._setLearningWorkbenchStatus(`Replaying retest from history record ${normalizedRecordId}...`);
+        this._renderLearningWorkbenchState();
+        try {
+            const sessionPlan = await this._requestLearningApi('/api/knowledge/session/plan', {
+                userId,
+                focusAtomIds,
+                maxActions: Math.min(14, Math.max(4, focusAtomIds.length * 2)),
+                includeDivergence: false,
+                includeRetrain: true,
+            });
+            if (!sessionPlan || !Array.isArray(sessionPlan.actions) || sessionPlan.actions.length === 0) {
+                throw new Error('Replay retest failed because no runnable actions were generated.');
+            }
+            const actionLimit = Math.max(1, Math.min(8, focusAtomIds.length, sessionPlan.actions.length));
+            const selectedActions = sessionPlan.actions.slice(0, actionLimit);
+            const answersByActionId = this._collectOptionalAnswersForSessionActions(selectedActions);
+            const answerCount = Object.keys(answersByActionId).length;
+            const autoAnalyzeAnswer = answerCount > 0;
+            const result = await this._requestLearningApi('/api/knowledge/session/execute', {
+                userId,
+                executionKind: 'retest',
+                sessionPlan,
+                actionLimit,
+                answersByActionId,
+                autoAnalyzeAnswer,
+                autoUpdateMasteryFromAnswer: autoAnalyzeAnswer,
+                persistMemory: true,
+                memoryLayer: 'session',
+                includeRetestPlan: false,
+            });
+            this.learningWorkbench.sessionExecution = {
+                ...result,
+                receivedAt: new Date().toISOString(),
+            };
+            this._appendLearningWorkbenchSessionRecord(result?.record || null);
+            const summary = result?.summary || {};
+            this._setLearningWorkbenchStatus(
+                `History replay finished: executed ${Number(summary.executedCount || 0)}/${Number(summary.attemptedActions || 0)}, mastery delta ${Number(summary.averageMasteryDelta || 0).toFixed(3)}.`
+            );
+        } catch (error) {
+            const message = String(error?.message || error || 'Unknown history replay error');
+            this.learningWorkbench.lastError = message;
+            this._setLearningWorkbenchStatus(`History replay failed: ${message}`, true);
+        } finally {
+            this.learningWorkbench.loading = false;
+            this._renderLearningWorkbenchState();
+        }
+    },
+
     _renderLearningWorkbenchState: function() {
         const userIdInput = document.getElementById('learning-user-id');
         if (userIdInput && userIdInput.value !== this.learningWorkbench.userId) {
@@ -2656,7 +2736,23 @@ window.pathApp = {
                     const attempted = Number(record.attemptedActions || 0);
                     const delta = Number(record.averageMasteryDelta || 0);
                     const signedDelta = `${delta >= 0 ? '+' : ''}${delta.toFixed(3)}`;
-                    return `<li><span class="chip">${kind}</span> ${executedAt} - ${executedCount}/${attempted} - mastery delta ${signedDelta}</li>`;
+                    const recordId = String(record.id || '').trim();
+                    const encodedRecordId = encodeURIComponent(recordId);
+                    const focusAtomIds = Array.isArray(record.focusAtomIds) ? record.focusAtomIds : [];
+                    const focusAtomCount = focusAtomIds.length;
+                    const focusPreview = focusAtomIds
+                        .slice(0, 3)
+                        .map((atomId) => this._escapeHtml(String(atomId || '')))
+                        .filter((atomId) => atomId.length > 0)
+                        .join(', ');
+                    const replayDisabledAttr = focusAtomCount > 0 ? '' : ' disabled';
+                    return `
+                        <li>
+                          <div><span class="chip">${kind}</span> ${executedAt} - ${executedCount}/${attempted} - mastery delta ${signedDelta}</div>
+                          <div class="muted">Focus atoms: ${focusAtomCount}${focusPreview ? ` (${focusPreview})` : ''}</div>
+                          <button class="btn-small workbench-run-history-retest" data-history-record-id="${encodedRecordId}" type="button"${replayDisabledAttr}>Replay Retest</button>
+                        </li>
+                    `;
                 }).join('');
             }
         }
@@ -3316,6 +3412,7 @@ window.pathApp = {
         const workbenchRunRetestBtn = document.getElementById('btn-run-retest-session');
         const workbenchUserIdInput = document.getElementById('learning-user-id');
         const workbenchActionsList = document.getElementById('learning-session-actions');
+        const workbenchHistoryList = document.getElementById('learning-session-history');
         const workbenchHistoryKindFilter = document.getElementById('learning-history-kind-filter');
         const workbenchHistoryFromDate = document.getElementById('learning-history-from-date');
         const workbenchHistoryToDate = document.getElementById('learning-history-to-date');
@@ -3471,6 +3568,19 @@ window.pathApp = {
                     atomId,
                     source,
                 });
+            });
+        }
+
+        if (workbenchHistoryList) {
+            workbenchHistoryList.addEventListener('click', (event) => {
+                const replayBtn = event.target && typeof event.target.closest === 'function'
+                    ? event.target.closest('.workbench-run-history-retest')
+                    : null;
+                if (!replayBtn) {
+                    return;
+                }
+                const recordId = decodeURIComponent(replayBtn.getAttribute('data-history-record-id') || '');
+                void this.runLearningWorkbenchHistoryRetest(recordId);
             });
         }
 
