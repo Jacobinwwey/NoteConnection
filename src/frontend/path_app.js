@@ -55,6 +55,8 @@ window.pathApp = {
             limit: 8,
             offset: 0,
             executionKind: 'all',
+            fromDate: '',
+            toDate: '',
         },
     },
     
@@ -1679,6 +1681,21 @@ window.pathApp = {
         return 'all';
     },
 
+    _normalizeLearningHistoryDateValue: function(rawValue) {
+        const value = String(rawValue || '').trim();
+        if (!value) {
+            return '';
+        }
+        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            return value;
+        }
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) {
+            return '';
+        }
+        return parsed.toISOString().slice(0, 10);
+    },
+
     _getLearningWorkbenchSessionHistoryQuery: function() {
         const existing = this.learningWorkbench.sessionHistoryQuery && typeof this.learningWorkbench.sessionHistoryQuery === 'object'
             ? this.learningWorkbench.sessionHistoryQuery
@@ -1686,10 +1703,14 @@ window.pathApp = {
         const limit = Math.max(1, Math.min(20, Math.floor(Number(existing.limit) || 8)));
         const offset = Math.max(0, Math.floor(Number(existing.offset) || 0));
         const executionKind = this._normalizeLearningHistoryExecutionKind(existing.executionKind);
+        const fromDate = this._normalizeLearningHistoryDateValue(existing.fromDate);
+        const toDate = this._normalizeLearningHistoryDateValue(existing.toDate);
         const normalized = {
             limit,
             offset,
             executionKind,
+            fromDate,
+            toDate,
         };
         this.learningWorkbench.sessionHistoryQuery = normalized;
         return normalized;
@@ -1697,11 +1718,19 @@ window.pathApp = {
 
     _buildLearningWorkbenchSessionHistoryRequest: function(userId) {
         const query = this._getLearningWorkbenchSessionHistoryQuery();
+        const fromExecutedAt = query.fromDate
+            ? `${query.fromDate}T00:00:00.000Z`
+            : undefined;
+        const toExecutedAt = query.toDate
+            ? `${query.toDate}T23:59:59.999Z`
+            : undefined;
         return {
             userId,
             limit: query.limit,
             offset: query.offset,
             executionKinds: query.executionKind === 'all' ? undefined : [query.executionKind],
+            fromExecutedAt,
+            toExecutedAt,
         };
     },
 
@@ -1712,6 +1741,25 @@ window.pathApp = {
         this.learningWorkbench.sessionHistoryQuery = {
             ...query,
             executionKind: nextKind,
+            offset: 0,
+        };
+        this._persistLearningWorkbenchPreferences();
+        if (changed && options.refresh !== false) {
+            void this.refreshLearningWorkbench({ force: false });
+            return;
+        }
+        this._renderLearningWorkbenchState();
+    },
+
+    _applyLearningWorkbenchHistoryDateRange: function(rawFromDate, rawToDate, options = {}) {
+        const fromDate = this._normalizeLearningHistoryDateValue(rawFromDate);
+        const toDate = this._normalizeLearningHistoryDateValue(rawToDate);
+        const query = this._getLearningWorkbenchSessionHistoryQuery();
+        const changed = query.fromDate !== fromDate || query.toDate !== toDate;
+        this.learningWorkbench.sessionHistoryQuery = {
+            ...query,
+            fromDate,
+            toDate,
             offset: 0,
         };
         this._persistLearningWorkbenchPreferences();
@@ -1763,6 +1811,8 @@ window.pathApp = {
                 this.learningWorkbench.sessionHistoryQuery = {
                     ...query,
                     executionKind: this._normalizeLearningHistoryExecutionKind(parsed.historyExecutionKind),
+                    fromDate: this._normalizeLearningHistoryDateValue(parsed.historyFromDate),
+                    toDate: this._normalizeLearningHistoryDateValue(parsed.historyToDate),
                     offset: 0,
                 };
             }
@@ -1777,6 +1827,8 @@ window.pathApp = {
             const payload = {
                 userId: this._normalizeLearningWorkbenchUserId(this.learningWorkbench.userId),
                 historyExecutionKind: historyQuery.executionKind,
+                historyFromDate: historyQuery.fromDate,
+                historyToDate: historyQuery.toDate,
             };
             localStorage.setItem('nc_learning_workbench_prefs', JSON.stringify(payload));
         } catch (error) {
@@ -2390,6 +2442,10 @@ window.pathApp = {
         const sessionHistoryEl = document.getElementById('learning-session-history');
         const sessionHistorySummaryEl = document.getElementById('learning-session-history-summary');
         const sessionHistoryFilterEl = document.getElementById('learning-history-kind-filter');
+        const sessionHistoryFromDateEl = document.getElementById('learning-history-from-date');
+        const sessionHistoryToDateEl = document.getElementById('learning-history-to-date');
+        const sessionHistoryApplyRangeBtn = document.getElementById('btn-learning-history-apply-range');
+        const sessionHistoryClearRangeBtn = document.getElementById('btn-learning-history-clear-range');
         const sessionHistoryPrevBtn = document.getElementById('btn-learning-history-prev');
         const sessionHistoryNextBtn = document.getElementById('btn-learning-history-next');
         const sessionHistoryPageEl = document.getElementById('learning-history-page');
@@ -2553,6 +2609,19 @@ window.pathApp = {
             if (sessionHistoryFilterEl) {
                 sessionHistoryFilterEl.value = historyQuery.executionKind;
             }
+            if (sessionHistoryFromDateEl) {
+                sessionHistoryFromDateEl.value = historyQuery.fromDate;
+            }
+            if (sessionHistoryToDateEl) {
+                sessionHistoryToDateEl.value = historyQuery.toDate;
+            }
+            if (sessionHistoryApplyRangeBtn) {
+                sessionHistoryApplyRangeBtn.disabled = this.learningWorkbench.loading === true;
+            }
+            if (sessionHistoryClearRangeBtn) {
+                const hasDateRange = historyQuery.fromDate.length > 0 || historyQuery.toDate.length > 0;
+                sessionHistoryClearRangeBtn.disabled = this.learningWorkbench.loading === true || !hasDateRange;
+            }
             if (sessionHistoryPrevBtn) {
                 sessionHistoryPrevBtn.disabled = this.learningWorkbench.loading === true || historyQuery.offset <= 0;
             }
@@ -2572,7 +2641,10 @@ window.pathApp = {
                 const totalUpdated = Number(summary?.totalUpdatedMasteryCount || 0);
                 const avgDelta = Number(summary?.averageMasteryDelta || 0).toFixed(3);
                 const avgConfidence = Number(summary?.averageTutorConfidence || 0).toFixed(3);
-                sessionHistorySummaryEl.textContent = `History summary: records=${totalRecords}, executed=${totalExecuted}, updated=${totalUpdated}, avgDelta=${avgDelta}, avgConfidence=${avgConfidence}`;
+                const rangeSummary = historyQuery.fromDate || historyQuery.toDate
+                    ? `, range=${historyQuery.fromDate || '-'}..${historyQuery.toDate || '-'}`
+                    : '';
+                sessionHistorySummaryEl.textContent = `History summary: records=${totalRecords}, executed=${totalExecuted}, updated=${totalUpdated}, avgDelta=${avgDelta}, avgConfidence=${avgConfidence}${rangeSummary}`;
             }
             if (!Array.isArray(records) || records.length === 0) {
                 sessionHistoryEl.innerHTML = '<li class="muted">No session history yet.</li>';
@@ -3245,6 +3317,10 @@ window.pathApp = {
         const workbenchUserIdInput = document.getElementById('learning-user-id');
         const workbenchActionsList = document.getElementById('learning-session-actions');
         const workbenchHistoryKindFilter = document.getElementById('learning-history-kind-filter');
+        const workbenchHistoryFromDate = document.getElementById('learning-history-from-date');
+        const workbenchHistoryToDate = document.getElementById('learning-history-to-date');
+        const workbenchHistoryApplyRangeBtn = document.getElementById('btn-learning-history-apply-range');
+        const workbenchHistoryClearRangeBtn = document.getElementById('btn-learning-history-clear-range');
         const workbenchHistoryPrevBtn = document.getElementById('btn-learning-history-prev');
         const workbenchHistoryNextBtn = document.getElementById('btn-learning-history-next');
 
@@ -3338,6 +3414,32 @@ window.pathApp = {
                     ? event.target.value
                     : 'all';
                 this._setLearningWorkbenchHistoryExecutionKind(nextValue, { refresh: true });
+            });
+        }
+
+        if (workbenchHistoryFromDate) {
+            workbenchHistoryFromDate.value = this._getLearningWorkbenchSessionHistoryQuery().fromDate;
+        }
+
+        if (workbenchHistoryToDate) {
+            workbenchHistoryToDate.value = this._getLearningWorkbenchSessionHistoryQuery().toDate;
+        }
+
+        if (workbenchHistoryApplyRangeBtn) {
+            workbenchHistoryApplyRangeBtn.addEventListener('click', () => {
+                const fromDate = workbenchHistoryFromDate && typeof workbenchHistoryFromDate.value === 'string'
+                    ? workbenchHistoryFromDate.value
+                    : '';
+                const toDate = workbenchHistoryToDate && typeof workbenchHistoryToDate.value === 'string'
+                    ? workbenchHistoryToDate.value
+                    : '';
+                this._applyLearningWorkbenchHistoryDateRange(fromDate, toDate, { refresh: true });
+            });
+        }
+
+        if (workbenchHistoryClearRangeBtn) {
+            workbenchHistoryClearRangeBtn.addEventListener('click', () => {
+                this._applyLearningWorkbenchHistoryDateRange('', '', { refresh: true });
             });
         }
 
