@@ -1436,9 +1436,14 @@
 
         <div class="workbench-section">
           <h4>Quality Snapshot</h4>
+          <div class="workbench-row">
+            <button id="btn-set-quality-baseline" class="btn-small" type="button">Set Baseline</button>
+            <button id="btn-evaluate-quality-gates" class="btn-small" type="button">Evaluate Gates</button>
+          </div>
           <ul id="learning-quality-summary" class="workbench-list">
             <li class="muted">No quality snapshot yet.</li>
           </ul>
+          <pre id="learning-quality-gates" class="workbench-feedback">No quality gate evaluation yet.</pre>
         </div>
 
         <div class="workbench-section">

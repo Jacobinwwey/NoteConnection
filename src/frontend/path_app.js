@@ -46,6 +46,8 @@ window.pathApp = {
         lastUpdatedAt: '',
         sessionPlan: null,
         qualitySnapshot: null,
+        qualityGateEvaluation: null,
+        qualityBaselineSnapshot: null,
         misconceptions: null,
         runtimeState: null,
         tutorFeedback: null,
@@ -1673,6 +1675,144 @@ window.pathApp = {
         return candidate.slice(0, 64);
     },
 
+    _getLearningQualityBaselineStorageKey: function(userId) {
+        const normalizedUserId = this._normalizeLearningWorkbenchUserId(userId);
+        return `nc_learning_quality_baseline::${normalizedUserId}`;
+    },
+
+    _normalizeLearningQualitySnapshotShape: function(snapshot) {
+        if (!snapshot || typeof snapshot !== 'object') {
+            return null;
+        }
+        const requiredKeys = [
+            'retestPassRatePct',
+            'misconceptionRecurrenceRatePct',
+            'evidenceBackedSuggestionRatioPct',
+            'averagePathMasteryGainPct',
+            'randomPathMasteryGainPct',
+        ];
+        const hasRequiredKeys = requiredKeys.every((key) => Number.isFinite(Number(snapshot[key])));
+        if (!hasRequiredKeys) {
+            return null;
+        }
+        const clamp = (value, minValue, maxValue, digits = 4) => {
+            const numericValue = Number(value || 0);
+            const bounded = Math.min(maxValue, Math.max(minValue, numericValue));
+            return Number(bounded.toFixed(digits));
+        };
+        return {
+            retestPassRatePct: clamp(snapshot.retestPassRatePct, 0, 100),
+            misconceptionRecurrenceRatePct: clamp(snapshot.misconceptionRecurrenceRatePct, 0, 100),
+            evidenceBackedSuggestionRatioPct: clamp(snapshot.evidenceBackedSuggestionRatioPct, 0, 100),
+            averagePathMasteryGainPct: clamp(snapshot.averagePathMasteryGainPct, 0, 100),
+            randomPathMasteryGainPct: clamp(snapshot.randomPathMasteryGainPct, 0, 100),
+            historyWindowDays: Math.max(1, Math.min(180, Math.floor(Number(snapshot.historyWindowDays || 14)))),
+            historyWindowRecords: Math.max(0, Math.floor(Number(snapshot.historyWindowRecords || 0))),
+            historyWindowAverageMasteryDelta: clamp(snapshot.historyWindowAverageMasteryDelta, -1, 1, 6),
+            historyWindowRetestPositiveDeltaRatePct: clamp(snapshot.historyWindowRetestPositiveDeltaRatePct, 0, 100),
+            queryP95Ms: clamp(snapshot.queryP95Ms, 0, 60000),
+        };
+    },
+
+    _loadLearningQualityBaseline: function(userId) {
+        if (typeof localStorage === 'undefined') {
+            return null;
+        }
+        try {
+            const storageKey = this._getLearningQualityBaselineStorageKey(userId);
+            const raw = localStorage.getItem(storageKey);
+            if (!raw) {
+                return null;
+            }
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') {
+                return null;
+            }
+            return this._normalizeLearningQualitySnapshotShape(parsed.snapshot || null);
+        } catch (error) {
+            console.warn('[PathApp] Failed to load quality baseline:', error);
+            return null;
+        }
+    },
+
+    _saveLearningQualityBaseline: function(userId, snapshot) {
+        if (typeof localStorage === 'undefined') {
+            return false;
+        }
+        const normalizedSnapshot = this._normalizeLearningQualitySnapshotShape(snapshot);
+        if (!normalizedSnapshot) {
+            return false;
+        }
+        try {
+            const storageKey = this._getLearningQualityBaselineStorageKey(userId);
+            localStorage.setItem(storageKey, JSON.stringify({
+                userId: this._normalizeLearningWorkbenchUserId(userId),
+                storedAt: new Date().toISOString(),
+                snapshot: normalizedSnapshot,
+            }));
+            return true;
+        } catch (error) {
+            console.warn('[PathApp] Failed to save quality baseline:', error);
+            return false;
+        }
+    },
+
+    evaluateLearningWorkbenchQualityGates: async function() {
+        if (this.learningWorkbench.loading) {
+            return;
+        }
+        const userId = this._normalizeLearningWorkbenchUserId(this.learningWorkbench.userId);
+        const currentSnapshot = this.learningWorkbench.qualitySnapshot?.snapshot || null;
+        const baselineSnapshot = this._loadLearningQualityBaseline(userId);
+        if (!currentSnapshot) {
+            this._setLearningWorkbenchStatus('No current quality snapshot available. Refresh first.', true);
+            return;
+        }
+        if (!baselineSnapshot) {
+            this._setLearningWorkbenchStatus('No quality baseline found. Set baseline first.', true);
+            return;
+        }
+        this.learningWorkbench.loading = true;
+        this.learningWorkbench.qualityBaselineSnapshot = baselineSnapshot;
+        this._setLearningWorkbenchStatus('Evaluating learning quality gates...');
+        this._renderLearningWorkbenchState();
+        try {
+            const evaluation = await this._requestLearningApi('/api/knowledge/quality/evaluate', {
+                baseline: baselineSnapshot,
+                current: currentSnapshot,
+            });
+            this.learningWorkbench.qualityGateEvaluation = evaluation || null;
+            this._setLearningWorkbenchStatus(
+                `Quality gate evaluation finished: ${evaluation?.overallPassed === true ? 'PASS' : 'FAIL'}.`
+            );
+        } catch (error) {
+            const message = String(error?.message || error || 'Unknown quality gate evaluation error');
+            this.learningWorkbench.lastError = message;
+            this._setLearningWorkbenchStatus(`Quality gate evaluation failed: ${message}`, true);
+        } finally {
+            this.learningWorkbench.loading = false;
+            this._renderLearningWorkbenchState();
+        }
+    },
+
+    setLearningWorkbenchQualityBaselineFromCurrent: function() {
+        const userId = this._normalizeLearningWorkbenchUserId(this.learningWorkbench.userId);
+        const snapshot = this.learningWorkbench.qualitySnapshot?.snapshot || null;
+        if (!snapshot) {
+            this._setLearningWorkbenchStatus('No quality snapshot available. Refresh first.', true);
+            return;
+        }
+        const persisted = this._saveLearningQualityBaseline(userId, snapshot);
+        if (!persisted) {
+            this._setLearningWorkbenchStatus('Failed to persist quality baseline snapshot.', true);
+            return;
+        }
+        this.learningWorkbench.qualityBaselineSnapshot = this._loadLearningQualityBaseline(userId);
+        this.learningWorkbench.qualityGateEvaluation = null;
+        this._setLearningWorkbenchStatus('Quality baseline updated from current snapshot.');
+        this._renderLearningWorkbenchState();
+    },
+
     _normalizeLearningHistoryExecutionKind: function(rawValue) {
         const value = String(rawValue || 'all').trim().toLowerCase();
         if (value === 'session' || value === 'retest' || value === 'custom') {
@@ -1816,6 +1956,8 @@ window.pathApp = {
                     offset: 0,
                 };
             }
+            this.learningWorkbench.qualityBaselineSnapshot = this._loadLearningQualityBaseline(this.learningWorkbench.userId);
+            this.learningWorkbench.qualityGateEvaluation = null;
         } catch (error) {
             console.warn('[PathApp] Failed to restore learning workbench prefs:', error);
         }
@@ -2011,6 +2153,8 @@ window.pathApp = {
         }
         const userId = this._normalizeLearningWorkbenchUserId(this.learningWorkbench.userId);
         this.learningWorkbench.userId = userId;
+        this.learningWorkbench.qualityBaselineSnapshot = this._loadLearningQualityBaseline(userId);
+        this.learningWorkbench.qualityGateEvaluation = null;
         this._persistLearningWorkbenchPreferences();
         this.learningWorkbench.loading = true;
         this.learningWorkbench.lastError = '';
@@ -2051,6 +2195,21 @@ window.pathApp = {
                 : null;
             this.learningWorkbench.sessionHistory = sessionHistory || null;
             this.learningWorkbench.lastUpdatedAt = new Date().toISOString();
+            const currentSnapshot = qualitySnapshot && qualitySnapshot.snapshot
+                ? this._normalizeLearningQualitySnapshotShape(qualitySnapshot.snapshot)
+                : null;
+            if (currentSnapshot && this.learningWorkbench.qualityBaselineSnapshot) {
+                try {
+                    const qualityGateEvaluation = await this._requestLearningApi('/api/knowledge/quality/evaluate', {
+                        baseline: this.learningWorkbench.qualityBaselineSnapshot,
+                        current: currentSnapshot,
+                    });
+                    this.learningWorkbench.qualityGateEvaluation = qualityGateEvaluation || null;
+                } catch (qualityGateError) {
+                    console.warn('[PathApp] Quality gate evaluation during refresh failed:', qualityGateError);
+                    this.learningWorkbench.qualityGateEvaluation = null;
+                }
+            }
 
             const actionCount = Number(sessionPlan?.summary?.totalActions || sessionPlan?.actions?.length || 0);
             this._setLearningWorkbenchStatus(`Learning workbench updated. Planned actions: ${actionCount}.`);
@@ -2513,6 +2672,9 @@ window.pathApp = {
         }
 
         const qualityEl = document.getElementById('learning-quality-summary');
+        const qualityGatesEl = document.getElementById('learning-quality-gates');
+        const setQualityBaselineBtn = document.getElementById('btn-set-quality-baseline');
+        const evaluateQualityGatesBtn = document.getElementById('btn-evaluate-quality-gates');
         const misconceptionEl = document.getElementById('learning-misconception-list');
         const actionsEl = document.getElementById('learning-session-actions');
         const runtimeEl = document.getElementById('learning-runtime-summary');
@@ -2538,6 +2700,13 @@ window.pathApp = {
 
         if (qualityEl) {
             const snapshot = this.learningWorkbench.qualitySnapshot?.snapshot || null;
+            const baseline = this.learningWorkbench.qualityBaselineSnapshot || null;
+            if (setQualityBaselineBtn) {
+                setQualityBaselineBtn.disabled = this.learningWorkbench.loading === true || !snapshot;
+            }
+            if (evaluateQualityGatesBtn) {
+                evaluateQualityGatesBtn.disabled = this.learningWorkbench.loading === true || !snapshot || !baseline;
+            }
             if (!snapshot) {
                 qualityEl.innerHTML = '<li class="muted">No quality snapshot yet.</li>';
             } else {
@@ -2550,7 +2719,39 @@ window.pathApp = {
                     `<li>History mastery delta avg: <strong>${Number(snapshot.historyWindowAverageMasteryDelta || 0).toFixed(3)}</strong></li>`,
                     `<li>History retest positive delta rate: <strong>${Number(snapshot.historyWindowRetestPositiveDeltaRatePct || 0).toFixed(2)}%</strong></li>`,
                     `<li>Query p95: <strong>${Number(snapshot.queryP95Ms || 0).toFixed(2)} ms</strong></li>`,
+                    `<li>Baseline status: <strong>${baseline ? 'configured' : 'missing'}</strong></li>`,
                 ].join('');
+            }
+        }
+
+        if (qualityGatesEl) {
+            const evaluation = this.learningWorkbench.qualityGateEvaluation || null;
+            const baseline = this.learningWorkbench.qualityBaselineSnapshot || null;
+            if (!baseline) {
+                qualityGatesEl.textContent = 'No quality baseline yet. Use "Set Baseline" after refreshing quality snapshot.';
+            } else if (!evaluation) {
+                qualityGatesEl.textContent = 'No quality gate evaluation yet.';
+            } else {
+                const gateLines = Array.isArray(evaluation.gates)
+                    ? evaluation.gates.map((gate) => {
+                        const status = gate.passed === true ? 'PASS' : 'FAIL';
+                        const comparator = String(gate.comparator || '>=');
+                        const observedValue = Number(gate.observedValue || 0).toFixed(gate.unit === 'ms' ? 2 : 4);
+                        const threshold = Number(gate.threshold || 0).toFixed(gate.unit === 'ms' ? 2 : 4);
+                        return `- [${status}] ${gate.gateId}: ${observedValue} ${comparator} ${threshold} ${gate.unit}`;
+                    })
+                    : [];
+                const deltas = evaluation.deltas || {};
+                qualityGatesEl.textContent = [
+                    `Evaluated at: ${evaluation.evaluatedAt || '-'}`,
+                    `Overall: ${evaluation.overallPassed === true ? 'PASS' : 'FAIL'}`,
+                    `Delta retest pass-rate uplift: ${Number(deltas.retestPassRateUpliftPct || 0).toFixed(4)}`,
+                    `Delta misconception reduction: ${Number(deltas.misconceptionRecurrenceReductionPct || 0).toFixed(4)}`,
+                    `Delta path effectiveness lift: ${Number(deltas.pathEffectivenessLiftPct || 0).toFixed(4)}`,
+                    `Delta history mastery uplift: ${Number(deltas.historyWindowAverageMasteryDeltaUplift || 0).toFixed(6)}`,
+                    'Gates:',
+                    ...(gateLines.length > 0 ? gateLines : ['- n/a']),
+                ].join('\n');
             }
         }
 
@@ -3410,6 +3611,8 @@ window.pathApp = {
         const workbenchToggleBtn = document.getElementById('btn-toggle-learning-workbench');
         const workbenchCloseBtn = document.getElementById('btn-close-learning-workbench');
         const workbenchRefreshBtn = document.getElementById('btn-refresh-learning-workbench');
+        const workbenchSetQualityBaselineBtn = document.getElementById('btn-set-quality-baseline');
+        const workbenchEvaluateQualityGatesBtn = document.getElementById('btn-evaluate-quality-gates');
         const workbenchIngestBtn = document.getElementById('btn-ingest-focus-node');
         const workbenchRunSessionBtn = document.getElementById('btn-run-learning-session');
         const workbenchRunRetestBtn = document.getElementById('btn-run-retest-session');
@@ -3471,6 +3674,18 @@ window.pathApp = {
             });
         }
 
+        if (workbenchSetQualityBaselineBtn) {
+            workbenchSetQualityBaselineBtn.addEventListener('click', () => {
+                this.setLearningWorkbenchQualityBaselineFromCurrent();
+            });
+        }
+
+        if (workbenchEvaluateQualityGatesBtn) {
+            workbenchEvaluateQualityGatesBtn.addEventListener('click', () => {
+                void this.evaluateLearningWorkbenchQualityGates();
+            });
+        }
+
         if (workbenchIngestBtn) {
             workbenchIngestBtn.addEventListener('click', () => {
                 void this.ingestFocusNodeForLearningWorkbench();
@@ -3501,6 +3716,8 @@ window.pathApp = {
                     ...historyQuery,
                     offset: 0,
                 };
+                this.learningWorkbench.qualityBaselineSnapshot = this._loadLearningQualityBaseline(this.learningWorkbench.userId);
+                this.learningWorkbench.qualityGateEvaluation = null;
                 workbenchUserIdInput.value = this.learningWorkbench.userId;
                 this._persistLearningWorkbenchPreferences();
                 this._renderLearningWorkbenchState();
