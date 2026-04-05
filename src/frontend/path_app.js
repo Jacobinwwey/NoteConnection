@@ -2546,6 +2546,9 @@ window.pathApp = {
                     `<li>Misconception recurrence: <strong>${Number(snapshot.misconceptionRecurrenceRatePct || 0).toFixed(2)}%</strong></li>`,
                     `<li>Evidence-backed suggestions: <strong>${Number(snapshot.evidenceBackedSuggestionRatioPct || 0).toFixed(2)}%</strong></li>`,
                     `<li>Path gain vs random: <strong>${Number(snapshot.averagePathMasteryGainPct || 0).toFixed(2)}% / ${Number(snapshot.randomPathMasteryGainPct || 0).toFixed(2)}%</strong></li>`,
+                    `<li>History window: <strong>${Math.max(1, Math.floor(Number(snapshot.historyWindowDays || 14)))}d, records ${Math.max(0, Math.floor(Number(snapshot.historyWindowRecords || 0)))}</strong></li>`,
+                    `<li>History mastery delta avg: <strong>${Number(snapshot.historyWindowAverageMasteryDelta || 0).toFixed(3)}</strong></li>`,
+                    `<li>History retest positive delta rate: <strong>${Number(snapshot.historyWindowRetestPositiveDeltaRatePct || 0).toFixed(2)}%</strong></li>`,
                     `<li>Query p95: <strong>${Number(snapshot.queryP95Ms || 0).toFixed(2)} ms</strong></li>`,
                 ].join('');
             }

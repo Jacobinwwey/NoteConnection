@@ -746,6 +746,7 @@ describe('KnowledgeLearningPlatform', () => {
                 evidenceBackedSuggestionRatioPct: 80,
                 averagePathMasteryGainPct: 22,
                 randomPathMasteryGainPct: 12,
+                historyWindowAverageMasteryDelta: 0.01,
             },
             current: {
                 retestPassRatePct: 74,
@@ -753,13 +754,16 @@ describe('KnowledgeLearningPlatform', () => {
                 evidenceBackedSuggestionRatioPct: 93,
                 averagePathMasteryGainPct: 28,
                 randomPathMasteryGainPct: 18,
+                historyWindowAverageMasteryDelta: 0.04,
             },
         });
 
         expect(passResult.overallPassed).toBe(true);
         expect(passResult.deltas.retestPassRateUpliftPct).toBeGreaterThanOrEqual(20);
         expect(passResult.deltas.misconceptionRecurrenceReductionPct).toBeGreaterThanOrEqual(25);
+        expect(passResult.deltas.historyWindowAverageMasteryDeltaUplift).toBeGreaterThan(0);
         expect(passResult.gates.find((gate) => gate.gateId === 'evidence_ratio')?.passed).toBe(true);
+        expect(passResult.gates.find((gate) => gate.gateId === 'history_mastery_delta_uplift')?.passed).toBe(true);
 
         const failResult = await platform.evaluateLearningQuality({
             baseline: {
@@ -768,6 +772,7 @@ describe('KnowledgeLearningPlatform', () => {
                 evidenceBackedSuggestionRatioPct: 92,
                 averagePathMasteryGainPct: 21,
                 randomPathMasteryGainPct: 17,
+                historyWindowAverageMasteryDelta: 0.03,
             },
             current: {
                 retestPassRatePct: 70,
@@ -775,11 +780,13 @@ describe('KnowledgeLearningPlatform', () => {
                 evidenceBackedSuggestionRatioPct: 85,
                 averagePathMasteryGainPct: 18,
                 randomPathMasteryGainPct: 17,
+                historyWindowAverageMasteryDelta: 0.01,
             },
         });
 
         expect(failResult.overallPassed).toBe(false);
         expect(failResult.gates.some((gate) => gate.passed === false)).toBe(true);
+        expect(failResult.gates.find((gate) => gate.gateId === 'history_mastery_delta_uplift')?.passed).toBe(false);
     });
 
     test('quality snapshot captures runtime learning metrics for governance', async () => {
@@ -812,18 +819,53 @@ describe('KnowledgeLearningPlatform', () => {
             actionKind: 'recap',
             atomId,
         });
+        const sessionPlan = await platform.buildStudySession({
+            userId: 'user_quality_snapshot',
+            focusAtomIds: [atomId],
+            maxActions: 3,
+            includeDivergence: false,
+            includeRetrain: true,
+        });
+        await platform.executeStudySessionPlan({
+            userId: 'user_quality_snapshot',
+            executionKind: 'session',
+            sessionPlan,
+            actionLimit: 1,
+            includeRetestPlan: false,
+            persistMemory: false,
+            executedAt: '2026-04-02T09:30:00.000Z',
+        });
+        await platform.executeStudySessionPlan({
+            userId: 'user_quality_snapshot',
+            executionKind: 'retest',
+            sessionPlan,
+            actionLimit: 1,
+            includeRetestPlan: false,
+            persistMemory: false,
+            executedAt: '2026-04-03T09:30:00.000Z',
+        });
 
         const snapshotResult = await platform.captureLearningQualitySnapshot({
             userId: 'user_quality_snapshot',
+            sampledAt: '2026-04-05T09:30:00.000Z',
+            historyWindowDays: 14,
         });
         expect(snapshotResult.snapshot.retestPassRatePct).toBeGreaterThanOrEqual(0);
         expect(snapshotResult.snapshot.retestPassRatePct).toBeLessThanOrEqual(100);
         expect(snapshotResult.snapshot.misconceptionRecurrenceRatePct).toBeGreaterThanOrEqual(0);
         expect(snapshotResult.snapshot.evidenceBackedSuggestionRatioPct).toBeGreaterThanOrEqual(0);
         expect(snapshotResult.snapshot.averagePathMasteryGainPct).toBeGreaterThanOrEqual(0);
+        expect(snapshotResult.snapshot.historyWindowDays).toBe(14);
+        expect(snapshotResult.snapshot.historyWindowRecords).toBeGreaterThan(0);
+        expect(snapshotResult.snapshot.historyWindowAverageMasteryDelta).toBeGreaterThanOrEqual(-1);
+        expect(snapshotResult.snapshot.historyWindowAverageMasteryDelta).toBeLessThanOrEqual(1);
+        expect(snapshotResult.snapshot.historyWindowRetestPositiveDeltaRatePct).toBeGreaterThanOrEqual(0);
+        expect(snapshotResult.snapshot.historyWindowRetestPositiveDeltaRatePct).toBeLessThanOrEqual(100);
         expect(snapshotResult.snapshot.queryP95Ms).toBeGreaterThanOrEqual(0);
         expect(snapshotResult.diagnostics.learnerStates).toBeGreaterThan(0);
         expect(snapshotResult.diagnostics.totalTutorTraces).toBeGreaterThan(0);
+        expect(snapshotResult.diagnostics.historyWindowRecords).toBeGreaterThan(0);
+        expect(snapshotResult.diagnostics.historyWindowRetestRecords).toBeGreaterThanOrEqual(0);
     });
 
     test('ingest guardrail evaluation enforces thresholds over latest ingest and telemetry', async () => {

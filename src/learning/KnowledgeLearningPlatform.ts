@@ -168,6 +168,7 @@ const DEFAULT_LEARNING_QUALITY_THRESHOLDS: LearningQualityThresholds = {
     misconceptionRecurrenceReductionPct: 25,
     evidenceBackedSuggestionRatioPct: 90,
     pathEffectivenessLiftPct: 5,
+    historyWindowAverageMasteryDeltaUplift: 0,
     queryP95Ms: 800,
 };
 
@@ -1854,6 +1855,12 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const pathEffectivenessLiftPct = Number(
             (current.averagePathMasteryGainPct - current.randomPathMasteryGainPct).toFixed(4)
         );
+        const historyWindowAverageMasteryDeltaUplift = Number(
+            (
+                Number(current.historyWindowAverageMasteryDelta || 0)
+                - Number(baseline.historyWindowAverageMasteryDelta || 0)
+            ).toFixed(6)
+        );
 
         const gates: LearningQualityGateResult[] = [
             {
@@ -1893,6 +1900,15 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 message: 'Mastery-oriented paths should outperform random paths.',
             },
             {
+                gateId: 'history_mastery_delta_uplift',
+                passed: historyWindowAverageMasteryDeltaUplift >= thresholds.historyWindowAverageMasteryDeltaUplift,
+                comparator: '>=',
+                observedValue: historyWindowAverageMasteryDeltaUplift,
+                threshold: thresholds.historyWindowAverageMasteryDeltaUplift,
+                unit: 'pct',
+                message: 'Recent session-history mastery delta should show positive uplift.',
+            },
+            {
                 gateId: 'query_p95',
                 passed: currentQueryP95Ms <= thresholds.queryP95Ms,
                 comparator: '<=',
@@ -1915,6 +1931,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 retestPassRateUpliftPct,
                 misconceptionRecurrenceReductionPct,
                 pathEffectivenessLiftPct,
+                historyWindowAverageMasteryDeltaUplift,
             },
             gates,
             overallPassed: gates.every((gate) => gate.passed),
@@ -1927,6 +1944,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         await this.ensureHydrated();
         const sampledAt = this.resolveTimestamp(request.sampledAt);
         const userId = isNonEmptyString(request.userId) ? request.userId.trim() : null;
+        const historyWindowDays = Math.floor(clamp(Number(request.historyWindowDays || 14), 1, 180));
+        const sampledAtMs = Date.parse(sampledAt);
+        const historyWindowStartMs = sampledAtMs - historyWindowDays * 24 * 60 * 60 * 1000;
         const scopedStates = Array.from(this.learnerStates.values())
             .filter((state) => !userId || state.userId === userId)
             .map((state) => this.normalizeLearnerState(state, sampledAt));
@@ -1961,6 +1981,36 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const averageGap = masteryGaps.reduce((sum, gap) => sum + gap, 0) / Math.max(1, masteryGaps.length);
         const averagePathMasteryGainPct = Number(clamp(averageGap * 36, 0, 100).toFixed(4));
         const randomPathMasteryGainPct = Number(clamp(averageGap * 22, 0, 100).toFixed(4));
+        const scopedHistoryRecords = this.sessionExecutionHistory.filter((record) => {
+            if (userId && record.userId !== userId) {
+                return false;
+            }
+            const executedAtMs = Date.parse(record.executedAt);
+            if (!Number.isFinite(executedAtMs)) {
+                return false;
+            }
+            return executedAtMs >= historyWindowStartMs && executedAtMs <= sampledAtMs;
+        });
+        const historyWindowRecords = scopedHistoryRecords.length;
+        const historyWindowAverageMasteryDelta = historyWindowRecords > 0
+            ? Number(
+                (
+                    scopedHistoryRecords.reduce((sum, record) => sum + Number(record.averageMasteryDelta || 0), 0)
+                    / historyWindowRecords
+                ).toFixed(6)
+            )
+            : 0;
+        const scopedRetestHistoryRecords = scopedHistoryRecords.filter((record) => record.executionKind === 'retest');
+        const historyWindowRetestPositiveDeltaRatePct = Number(
+            clamp(
+                (
+                    scopedRetestHistoryRecords.filter((record) => Number(record.averageMasteryDelta || 0) > 0).length
+                    / Math.max(1, scopedRetestHistoryRecords.length)
+                ) * 100,
+                0,
+                100
+            ).toFixed(4)
+        );
         const queryP95Ms = this.buildRetrievalTelemetry().queryP95Ms;
 
         return {
@@ -1971,6 +2021,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 evidenceBackedSuggestionRatioPct,
                 averagePathMasteryGainPct,
                 randomPathMasteryGainPct,
+                historyWindowDays,
+                historyWindowRecords,
+                historyWindowAverageMasteryDelta,
+                historyWindowRetestPositiveDeltaRatePct,
                 queryP95Ms,
             },
             diagnostics: {
@@ -1979,6 +2033,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 misconceptionEvents,
                 evidenceBackedTutorTraces,
                 totalTutorTraces: scopedTraces.length,
+                historyWindowRecords,
+                historyWindowRetestRecords: scopedRetestHistoryRecords.length,
             },
         };
     }
@@ -2297,6 +2353,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         fallbackQueryP95Ms: number
     ): LearningQualitySnapshot {
         const clampPct = (value: number): number => Number(clamp(Number(value || 0), 0, 100).toFixed(4));
+        const clampRatio = (value: number): number => Number(clamp(Number(value || 0), -1, 1).toFixed(6));
         const resolvedQueryP95Ms = Number(
             clamp(
                 Number(snapshot.queryP95Ms ?? fallbackQueryP95Ms ?? 0),
@@ -2310,6 +2367,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             evidenceBackedSuggestionRatioPct: clampPct(snapshot.evidenceBackedSuggestionRatioPct),
             averagePathMasteryGainPct: clampPct(snapshot.averagePathMasteryGainPct),
             randomPathMasteryGainPct: clampPct(snapshot.randomPathMasteryGainPct),
+            historyWindowDays: Math.floor(clamp(Number(snapshot.historyWindowDays || 14), 1, 180)),
+            historyWindowRecords: Math.max(0, Math.floor(Number(snapshot.historyWindowRecords || 0))),
+            historyWindowAverageMasteryDelta: clampRatio(Number(snapshot.historyWindowAverageMasteryDelta || 0)),
+            historyWindowRetestPositiveDeltaRatePct: clampPct(Number(snapshot.historyWindowRetestPositiveDeltaRatePct || 0)),
             queryP95Ms: resolvedQueryP95Ms,
         };
     }
@@ -2326,6 +2387,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             misconceptionRecurrenceReductionPct: Number(clamp(merged.misconceptionRecurrenceReductionPct, 0, 100).toFixed(4)),
             evidenceBackedSuggestionRatioPct: Number(clamp(merged.evidenceBackedSuggestionRatioPct, 0, 100).toFixed(4)),
             pathEffectivenessLiftPct: Number(clamp(merged.pathEffectivenessLiftPct, 0, 100).toFixed(4)),
+            historyWindowAverageMasteryDeltaUplift: Number(
+                clamp(Number(merged.historyWindowAverageMasteryDeltaUplift || 0), -1, 1).toFixed(6)
+            ),
             queryP95Ms: Number(clamp(merged.queryP95Ms, 10, 60000).toFixed(4)),
         };
     }

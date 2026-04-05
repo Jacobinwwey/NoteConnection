@@ -641,12 +641,17 @@ export interface LearningQualitySnapshot {
     evidenceBackedSuggestionRatioPct: number;
     averagePathMasteryGainPct: number;
     randomPathMasteryGainPct: number;
+    historyWindowDays?: number;
+    historyWindowRecords?: number;
+    historyWindowAverageMasteryDelta?: number;
+    historyWindowRetestPositiveDeltaRatePct?: number;
     queryP95Ms?: number;
 }
 
 export interface LearningQualitySnapshotRequest {
     userId?: string;
     sampledAt?: string;
+    historyWindowDays?: number;
 }
 
 export interface LearningQualitySnapshotResponse {
@@ -658,6 +663,8 @@ export interface LearningQualitySnapshotResponse {
         misconceptionEvents: number;
         evidenceBackedTutorTraces: number;
         totalTutorTraces: number;
+        historyWindowRecords: number;
+        historyWindowRetestRecords: number;
     };
 }
 
@@ -666,6 +673,7 @@ export interface LearningQualityThresholds {
     misconceptionRecurrenceReductionPct: number;
     evidenceBackedSuggestionRatioPct: number;
     pathEffectivenessLiftPct: number;
+    historyWindowAverageMasteryDeltaUplift: number;
     queryP95Ms: number;
 }
 
@@ -677,7 +685,13 @@ export interface LearningQualityEvaluationRequest {
 }
 
 export interface LearningQualityGateResult {
-    gateId: 'retest_pass_rate_uplift' | 'misconception_reduction' | 'evidence_ratio' | 'path_effectiveness' | 'query_p95';
+    gateId:
+    | 'retest_pass_rate_uplift'
+    | 'misconception_reduction'
+    | 'evidence_ratio'
+    | 'path_effectiveness'
+    | 'history_mastery_delta_uplift'
+    | 'query_p95';
     passed: boolean;
     comparator: '>=' | '<=';
     observedValue: number;
@@ -695,6 +709,7 @@ export interface LearningQualityEvaluationResponse {
         retestPassRateUpliftPct: number;
         misconceptionRecurrenceReductionPct: number;
         pathEffectivenessLiftPct: number;
+        historyWindowAverageMasteryDeltaUplift: number;
     };
     gates: LearningQualityGateResult[];
     overallPassed: boolean;
