@@ -22,6 +22,7 @@
 - 移动端打包内容和移动端运行时能力必须分开判断。
 - docs 与 npm publish 流水线已经与当前 no-new-LFS 方向兼容。
 - 2026-04-08 的 release smoke 已经证明：workflow 可以在桌面 bundle job 启动前冷启动创建并补齐项目自控的 `godot-mirror-v4.3-stable` tag。
+- 当前 release workflow 也已经会在使用镜像前，对 Windows、Linux、macOS 三份 Godot 归档执行固定 SHA256 校验。
 - 仍有一个非阻塞的 release 治理风险：GitHub Actions 已提示 `actions/upload-artifact@v4` 与 `softprops/action-gh-release@v2` 仍是 Node 20 目标。
 
 ## 适用场景

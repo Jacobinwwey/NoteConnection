@@ -85,6 +85,7 @@ Treat that as expected current-state behavior, not as evidence that the graph-pa
 
 - This migration slice did require scoped GitHub Actions changes, but not a wholesale CI redesign.
 - `.github/workflows/release-desktop-multi-os.yml` now maintains a dedicated `godot-mirror-v4.3-stable` release and downloads Godot mirror-first before falling back to upstream.
+- The same workflow now also pins the three desktop Godot archives with fixed SHA256 values before mirror upload or runner-side extraction continues.
 - The no-checkout mirror job also needed explicit `gh --repo "$GITHUB_REPOSITORY"` binding and `--target "$GITHUB_SHA"` to behave correctly in live release smoke runs.
 - The workflow shape is still the same high-level design: ensure release record, ensure mirror assets, then run per-platform desktop and Android build jobs.
 - This guide remains primarily for local developer bootstrap and future repository/LFS decoupling work, but it now intentionally shares the same mirror-capable supply model used by release CI.

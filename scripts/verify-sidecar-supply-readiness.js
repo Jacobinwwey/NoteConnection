@@ -28,6 +28,9 @@ function printHumanReport(result) {
     `[Sidecar Supply] Release workflow direct upstream download: ${result.ci.releaseWorkflowDirectUpstreamDownload ? 'yes' : 'no'}`
   );
   console.log(
+    `[Sidecar Supply] Release workflow archive digest pinned: ${result.ci.releaseWorkflowArchiveDigestPinned ? 'yes' : 'no'}`
+  );
+  console.log(
     `[Sidecar Supply] Legacy protected LFS paths: ${result.legacyLfsProtectedPaths.length}`
   );
   result.legacyLfsProtectedPaths.forEach((entry) => {

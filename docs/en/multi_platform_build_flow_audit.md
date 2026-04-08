@@ -187,7 +187,7 @@ Observed contract:
 
 - release packaging is already largely detached from repository-stored LFS graph payloads
 - release CI still needs sidecar/bootstrap materialization, but it now prefers a project-controlled GitHub Releases mirror instead of going straight to third-party upstream on the main path
-- upstream fallback still exists as a transitional safety rail, so digest pinning and fallback removal remain future hardening work
+- upstream fallback still exists as a transitional safety rail, while archive digest pinning is now enforced in the workflow; fallback removal and digest-rotation governance remain future hardening work
 - real smoke runs on 2026-04-08 already proved the cold-start mirror job can create and seed `godot-mirror-v4.3-stable`, and that Windows, macOS, Linux, and Android release assets can all ship through the current mirror-first release path
 - release logs also surfaced a non-blocking operational debt item: `actions/upload-artifact@v4` and `softprops/action-gh-release@v2` are still Node 20-targeted and currently depend on GitHub's Node 24 forced-runtime compatibility
 

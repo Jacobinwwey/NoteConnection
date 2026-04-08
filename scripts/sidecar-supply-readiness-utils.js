@@ -50,6 +50,24 @@ function detectReleaseWorkflowMirrorFirstDownload(repoRoot) {
     || /github\.com\/Jacobinwwey\/NoteConnection\/releases\/download\/\$env:GODOT_MIRROR_TAG/i.test(workflow);
 }
 
+function detectReleaseWorkflowArchiveDigestPinned(repoRoot) {
+  const workflowPath = path.join(repoRoot, '.github', 'workflows', 'release-desktop-multi-os.yml');
+  const workflow = readTextIfExists(workflowPath);
+  if (!workflow) {
+    return false;
+  }
+
+  const hasEnvPins = /GODOT_WINDOWS_ARCHIVE_SHA256:\s*"([a-f0-9]{64})"/i.test(workflow)
+    && /GODOT_LINUX_ARCHIVE_SHA256:\s*"([a-f0-9]{64})"/i.test(workflow)
+    && /GODOT_MACOS_ARCHIVE_SHA256:\s*"([a-f0-9]{64})"/i.test(workflow);
+  const hasMirrorSeedingCheck = /sha256sum "\$ARCHIVE_PATH"/i.test(workflow);
+  const hasWindowsCheck = /Get-FileHash -Path \$archive -Algorithm SHA256/i.test(workflow);
+  const hasLinuxCheck = /sha256sum build\/godot\/godot-linux\.zip/i.test(workflow);
+  const hasMacosCheck = /sha256sum build\/godot\/godot-macos\.zip/i.test(workflow);
+
+  return hasEnvPins && hasMirrorSeedingCheck && hasWindowsCheck && hasLinuxCheck && hasMacosCheck;
+}
+
 function evaluateServerArtifact(repoRoot, platform, arch) {
   const binaryName = resolveHostServerBinaryName({ platform, arch });
   const filePath = binaryName ? path.join(repoRoot, 'src-tauri', 'bin', binaryName) : '';
@@ -148,7 +166,9 @@ function buildRecommendations({ server, markdownWorker, godot, ci, legacyLfsProt
 
   if (ci.releaseWorkflowMirrorFirstDownload && ci.releaseWorkflowDirectUpstreamDownload) {
     recommendations.push(
-      'Keep the release workflow mirror-first, but add digest pinning and reduce direct upstream fallback reliance before strict no-LFS mode.'
+      ci.releaseWorkflowArchiveDigestPinned
+        ? 'Keep the release workflow mirror-first, keep archive digest pinning enforced, and reduce direct upstream fallback reliance before strict no-LFS mode.'
+        : 'Keep the release workflow mirror-first, but add digest pinning and reduce direct upstream fallback reliance before strict no-LFS mode.'
     );
   }
 
@@ -197,6 +217,7 @@ function evaluateSidecarSupplyReadiness(options = {}) {
   const ci = {
     releaseWorkflowMirrorFirstDownload: detectReleaseWorkflowMirrorFirstDownload(repoRoot),
     releaseWorkflowDirectUpstreamDownload: detectReleaseWorkflowDirectUpstreamDownload(repoRoot),
+    releaseWorkflowArchiveDigestPinned: detectReleaseWorkflowArchiveDigestPinned(repoRoot),
   };
 
   const gitattributesText = readTextIfExists(path.join(repoRoot, '.gitattributes'));
