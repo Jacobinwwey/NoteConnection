@@ -68,6 +68,31 @@ function detectReleaseWorkflowArchiveDigestPinned(repoRoot) {
   return hasEnvPins && hasMirrorSeedingCheck && hasWindowsCheck && hasLinuxCheck && hasMacosCheck;
 }
 
+function detectReleaseWorkflowMirrorOnlyModeAvailable(repoRoot) {
+  const workflowPath = path.join(repoRoot, '.github', 'workflows', 'release-desktop-multi-os.yml');
+  const workflow = readTextIfExists(workflowPath);
+  if (!workflow) {
+    return false;
+  }
+
+  const hasDispatchInput = /allow_godot_upstream_fallback:\s*\n(?:.*\n)*?\s+default:\s*true\s*\n(?:.*\n)*?\s+type:\s*boolean/i.test(workflow);
+  const hasSharedEnvToggle = /GODOT_ALLOW_UPSTREAM_FALLBACK:\s*\$\{\{\s*github\.event_name != 'workflow_dispatch' \|\| github\.event\.inputs\.allow_godot_upstream_fallback != 'false'\s*\}\}/i.test(workflow);
+  const hasWindowsGuard = /\$allowUpstreamFallback = "\$env:GODOT_ALLOW_UPSTREAM_FALLBACK"\.ToLower\(\) -eq "true"/i.test(workflow)
+    && /Project mirror download failed and upstream fallback is disabled:/i.test(workflow);
+  const hasUnixGuard = /if \[ "\$\{GODOT_ALLOW_UPSTREAM_FALLBACK\}" != "true" \]; then\s+echo "::error::Project mirror download failed and upstream fallback is disabled\."\s+exit 1\s+fi/i.test(workflow);
+
+  return hasDispatchInput && hasSharedEnvToggle && hasWindowsGuard && hasUnixGuard;
+}
+
+function detectReleaseWorkflowDefaultUpstreamFallbackEnabled(repoRoot) {
+  const workflowPath = path.join(repoRoot, '.github', 'workflows', 'release-desktop-multi-os.yml');
+  const workflow = readTextIfExists(workflowPath);
+  if (!workflow) {
+    return false;
+  }
+  return /allow_godot_upstream_fallback:\s*\n(?:.*\n)*?\s+default:\s*true/i.test(workflow);
+}
+
 function evaluateServerArtifact(repoRoot, platform, arch) {
   const binaryName = resolveHostServerBinaryName({ platform, arch });
   const filePath = binaryName ? path.join(repoRoot, 'src-tauri', 'bin', binaryName) : '';
@@ -149,7 +174,7 @@ function deriveRating({ offlineBootstrapReady, godot, ci }) {
   if (offlineBootstrapReady) {
     return 'offline-ready';
   }
-  if (godot.networkRequiredForBootstrap || ci.releaseWorkflowDirectUpstreamDownload) {
+  if (godot.networkRequiredForBootstrap || ci.releaseWorkflowDefaultUpstreamFallbackEnabled) {
     return 'network-dependent';
   }
   return 'partial-local';
@@ -166,7 +191,9 @@ function buildRecommendations({ server, markdownWorker, godot, ci, legacyLfsProt
 
   if (ci.releaseWorkflowMirrorFirstDownload && ci.releaseWorkflowDirectUpstreamDownload) {
     recommendations.push(
-      ci.releaseWorkflowArchiveDigestPinned
+      ci.releaseWorkflowArchiveDigestPinned && ci.releaseWorkflowMirrorOnlyModeAvailable
+        ? 'Keep the release workflow mirror-first, keep archive digest pinning enforced, exercise mirror-only smoke runs regularly, and remove default upstream fallback reliance before strict no-LFS mode.'
+        : ci.releaseWorkflowArchiveDigestPinned
         ? 'Keep the release workflow mirror-first, keep archive digest pinning enforced, and reduce direct upstream fallback reliance before strict no-LFS mode.'
         : 'Keep the release workflow mirror-first, but add digest pinning and reduce direct upstream fallback reliance before strict no-LFS mode.'
     );
@@ -218,6 +245,8 @@ function evaluateSidecarSupplyReadiness(options = {}) {
     releaseWorkflowMirrorFirstDownload: detectReleaseWorkflowMirrorFirstDownload(repoRoot),
     releaseWorkflowDirectUpstreamDownload: detectReleaseWorkflowDirectUpstreamDownload(repoRoot),
     releaseWorkflowArchiveDigestPinned: detectReleaseWorkflowArchiveDigestPinned(repoRoot),
+    releaseWorkflowMirrorOnlyModeAvailable: detectReleaseWorkflowMirrorOnlyModeAvailable(repoRoot),
+    releaseWorkflowDefaultUpstreamFallbackEnabled: detectReleaseWorkflowDefaultUpstreamFallbackEnabled(repoRoot),
   };
 
   const gitattributesText = readTextIfExists(path.join(repoRoot, '.gitattributes'));

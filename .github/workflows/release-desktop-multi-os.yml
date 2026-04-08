@@ -14,12 +14,18 @@ on:
         description: "Optional build source ref (branch/commit/tag). Defaults to the release tag when omitted."
         required: false
         type: string
+      allow_godot_upstream_fallback:
+        description: "Allow desktop release jobs to fall back to the upstream Godot release when the project mirror is unavailable."
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  GODOT_ALLOW_UPSTREAM_FALLBACK: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.allow_godot_upstream_fallback != 'false' }}
   GODOT_MIRROR_TAG: "godot-mirror-v4.3-stable"
   GODOT_UPSTREAM_BASE_URL: "https://github.com/godotengine/godot/releases/download/4.3-stable"
   GODOT_WINDOWS_ARCHIVE_NAME: "Godot_v4.3-stable_win64.exe.zip"
@@ -221,6 +227,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
+          $allowUpstreamFallback = "$env:GODOT_ALLOW_UPSTREAM_FALLBACK".ToLower() -eq "true"
           New-Item -ItemType Directory -Path "build\godot" -Force | Out-Null
           $archive = "build\godot\godot-win64.zip"
           $mirrorBaseUrl = "https://github.com/Jacobinwwey/NoteConnection/releases/download/$env:GODOT_MIRROR_TAG"
@@ -230,6 +237,9 @@ jobs:
             Invoke-WebRequest -Uri $mirrorUrl -OutFile $archive
             Write-Host "Downloaded Godot archive from project mirror: $mirrorUrl"
           } catch {
+            if (-not $allowUpstreamFallback) {
+              throw "Project mirror download failed and upstream fallback is disabled: $mirrorUrl"
+            }
             Write-Warning "Project mirror download failed, falling back to upstream: $upstreamUrl"
             Invoke-WebRequest -Uri $upstreamUrl -OutFile $archive
           }
@@ -258,6 +268,10 @@ jobs:
           mkdir -p build/godot
           MIRROR_BASE_URL="https://github.com/Jacobinwwey/NoteConnection/releases/download/${GODOT_MIRROR_TAG}"
           if ! curl -fsSL "${MIRROR_BASE_URL}/${GODOT_LINUX_ARCHIVE_NAME}" -o build/godot/godot-linux.zip; then
+            if [ "${GODOT_ALLOW_UPSTREAM_FALLBACK}" != "true" ]; then
+              echo "::error::Project mirror download failed and upstream fallback is disabled."
+              exit 1
+            fi
             echo "Project mirror download failed, falling back to upstream."
             curl -fsSL "${GODOT_UPSTREAM_BASE_URL}/${GODOT_LINUX_ARCHIVE_NAME}" -o build/godot/godot-linux.zip
           fi
@@ -283,6 +297,10 @@ jobs:
           mkdir -p build/godot
           MIRROR_BASE_URL="https://github.com/Jacobinwwey/NoteConnection/releases/download/${GODOT_MIRROR_TAG}"
           if ! curl -fsSL "${MIRROR_BASE_URL}/${GODOT_MACOS_ARCHIVE_NAME}" -o build/godot/godot-macos.zip; then
+            if [ "${GODOT_ALLOW_UPSTREAM_FALLBACK}" != "true" ]; then
+              echo "::error::Project mirror download failed and upstream fallback is disabled."
+              exit 1
+            fi
             echo "Project mirror download failed, falling back to upstream."
             curl -fsSL "${GODOT_UPSTREAM_BASE_URL}/${GODOT_MACOS_ARCHIVE_NAME}" -o build/godot/godot-macos.zip
           fi

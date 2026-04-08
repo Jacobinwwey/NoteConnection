@@ -179,7 +179,7 @@
 主要代码证据：
 
 - 桌面 job 使用 `lfs: false` checkout
-- 桌面 job 现在会先维护项目 GitHub Releases 中的 Godot 镜像 tag，再以“镜像优先、上游回退”方式在 runner 上下载 Godot
+- 桌面 job 现在会先维护项目 GitHub Releases 中的 Godot 镜像 tag，再以“镜像优先”为主路径下载 Godot，并通过显式的 `allow_godot_upstream_fallback` 开关支持 mirror-only smoke
 - 桌面 job 通过 `npm run tauri:build:mini` 构建
 - Android release job 通过 `NOTE_CONNECTION_TAURI_ANDROID_TARGET=universal npm run tauri:android:build` 构建
 
@@ -187,7 +187,7 @@
 
 - release 打包已经基本脱离 repo-head 图谱 LFS 大文件
 - release CI 仍需要 sidecar/bootstrap 物化，但主路径上的 Godot 供给现在优先来自项目自控的 GitHub Releases 镜像，而不是直接访问第三方上游
-- 迁移期仍保留上游回退，但 workflow 里已经对归档启用了 digest pinning；彻底去掉上游回退与后续摘要轮换治理仍属于后续加固任务
+- 迁移期默认仍保留上游回退，但 workflow 里已经对归档启用了 digest pinning；现在也可以通过 `allow_godot_upstream_fallback=false` 让同一条 workflow 进入 mirror-only smoke 校验，彻底去掉默认上游回退与后续摘要轮换治理仍属于后续加固任务
 - 2026-04-08 的真实 smoke run 已经证明冷启动镜像 job 可以创建并补齐 `godot-mirror-v4.3-stable`，同时 Windows、macOS、Linux、Android 的 release 资产都可以经当前 mirror-first 主路径产出
 - release 日志还暴露出一个非阻塞运维债务：`actions/upload-artifact@v4` 与 `softprops/action-gh-release@v2` 仍是 Node 20 目标，目前依赖 GitHub 的 Node 24 强制兼容层继续运行
 

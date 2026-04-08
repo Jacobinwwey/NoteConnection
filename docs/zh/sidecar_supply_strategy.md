@@ -150,7 +150,7 @@ npm run verify:sidecar:supply -- --json
 
 ### 在严格 no-LFS 之前必须先解决的风险
 
-1. 当前 CI 已经会先维护并优先使用项目自控的 GitHub Releases Godot 镜像，真实 smoke run 也已经证明镜像可以冷启动创建；同时 workflow 现在已经用固定 SHA256 对桌面归档做 digest 固定。迁移期仍保留上游回退，作为过渡期安全护栏。
+1. 当前 CI 已经会先维护并优先使用项目自控的 GitHub Releases Godot 镜像，真实 smoke run 也已经证明镜像可以冷启动创建；同时 workflow 现在已经用固定 SHA256 对桌面归档做 digest 固定。迁移期默认仍保留上游回退，作为过渡期安全护栏，但 `workflow_dispatch` 现在已经可以显式关闭它来验证 mirror-only smoke。
 2. 本地与 CI 的产物信任模型还没有完全统一。
 3. Windows 开发者 bootstrap 对缺失 Godot 仍然敏感，因为当前 bootstrap 把它视为必要项。
 4. `server-*` 的可得性仍依赖本地构建可重复性，或依赖历史 LFS 过渡桥接。
@@ -179,7 +179,8 @@ npm run verify:sidecar:supply -- --json
 
 - GitHub Releases 很接近当前维护模型，因为仓库已经在 release 流程里创建 release 并上传应用包。
 - release workflow 现在也会在桌面构建前把独立的 Godot 镜像归档补到一个专用镜像 tag 中，而且这一行为已经在 2026-04-08 的真实 smoke run 中被证明。
-- 但这条链路还没有完全加固，因为迁移期仍保留上游回退，而且未来升级 Godot 版本时还需要受控地轮换摘要，而不是临时手改。
+- release workflow 现在也可以通过 `allow_godot_upstream_fallback=false` 触发严格 mirror-only 校验，而不必改动默认 tag release 路径。
+- 但这条链路还没有完全加固，因为迁移期默认仍保留上游回退，而且未来升级 Godot 版本时还需要受控地轮换摘要，而不是临时手改。
 - 第一阶段迁移不需要额外付费镜像服务，因为 GitHub Releases 已经与当前项目维护面天然对齐。
 - 通用 HTTPS 对象存储现在也具备技术可行性，因为 bootstrap 只依赖 URL + SHA256 + cache，而不依赖特定厂商 API。
 
@@ -194,7 +195,8 @@ npm run verify:sidecar:supply -- --json
 
 - 让 CI 与本地 bootstrap 朝共享镜像 + 摘要校验策略收敛
 - 保留缓存与人工离线种子支持
-- 只有在移除上游回退并验证镜像/bootstrap 对齐后，才把 Godot 从历史 LFS 中移除
+- 持续用 `allow_godot_upstream_fallback=false` 跑 mirror-only smoke
+- 只有在移除默认上游回退并验证镜像/bootstrap 对齐后，才把 Godot 从历史 LFS 中移除
 
 #### Phase C：再解决 server 产物可重复性
 

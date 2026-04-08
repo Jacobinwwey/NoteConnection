@@ -31,6 +31,12 @@ function printHumanReport(result) {
     `[Sidecar Supply] Release workflow archive digest pinned: ${result.ci.releaseWorkflowArchiveDigestPinned ? 'yes' : 'no'}`
   );
   console.log(
+    `[Sidecar Supply] Release workflow mirror-only mode available: ${result.ci.releaseWorkflowMirrorOnlyModeAvailable ? 'yes' : 'no'}`
+  );
+  console.log(
+    `[Sidecar Supply] Release workflow default upstream fallback enabled: ${result.ci.releaseWorkflowDefaultUpstreamFallbackEnabled ? 'yes' : 'no'}`
+  );
+  console.log(
     `[Sidecar Supply] Legacy protected LFS paths: ${result.legacyLfsProtectedPaths.length}`
   );
   result.legacyLfsProtectedPaths.forEach((entry) => {

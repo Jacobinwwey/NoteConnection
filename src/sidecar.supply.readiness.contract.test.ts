@@ -24,6 +24,8 @@ type SupplyReadinessResult = {
     releaseWorkflowMirrorFirstDownload: boolean;
     releaseWorkflowDirectUpstreamDownload: boolean;
     releaseWorkflowArchiveDigestPinned: boolean;
+    releaseWorkflowMirrorOnlyModeAvailable: boolean;
+    releaseWorkflowDefaultUpstreamFallbackEnabled: boolean;
   };
   legacyLfsProtectedPaths: string[];
   recommendations: string[];
@@ -114,6 +116,8 @@ describe('sidecar supply readiness contract', () => {
     expect(result.ci.releaseWorkflowMirrorFirstDownload).toBe(false);
     expect(result.ci.releaseWorkflowDirectUpstreamDownload).toBe(false);
     expect(result.ci.releaseWorkflowArchiveDigestPinned).toBe(false);
+    expect(result.ci.releaseWorkflowMirrorOnlyModeAvailable).toBe(false);
+    expect(result.ci.releaseWorkflowDefaultUpstreamFallbackEnabled).toBe(false);
   });
 
   test('reports network-dependent when godot is only reachable through configured download fallback', () => {
@@ -143,7 +147,7 @@ describe('sidecar supply readiness contract', () => {
     expect(result.artifacts.godot.sourceKindsAvailable).toContain('download');
   });
 
-  test('current repo pins archive digests while still carrying upstream fallback and legacy protected lfs paths', () => {
+  test('current repo pins archive digests and can disable upstream fallback for mirror-only release smoke runs', () => {
     const result = utils.evaluateSidecarSupplyReadiness({
       repoRoot,
       platform: 'linux',
@@ -154,6 +158,8 @@ describe('sidecar supply readiness contract', () => {
     expect(result.ci.releaseWorkflowMirrorFirstDownload).toBe(true);
     expect(result.ci.releaseWorkflowDirectUpstreamDownload).toBe(true);
     expect(result.ci.releaseWorkflowArchiveDigestPinned).toBe(true);
+    expect(result.ci.releaseWorkflowMirrorOnlyModeAvailable).toBe(true);
+    expect(result.ci.releaseWorkflowDefaultUpstreamFallbackEnabled).toBe(true);
     expect(result.legacyLfsProtectedPaths).toEqual([
       'src-tauri/bin/godot-x86_64-pc-windows-msvc.exe',
       'src-tauri/bin/server-aarch64-apple-darwin',
@@ -161,7 +167,7 @@ describe('sidecar supply readiness contract', () => {
       'src-tauri/bin/server-x86_64-unknown-linux-gnu',
     ]);
     expect(result.recommendations).toContain(
-      'Keep the release workflow mirror-first, keep archive digest pinning enforced, and reduce direct upstream fallback reliance before strict no-LFS mode.'
+      'Keep the release workflow mirror-first, keep archive digest pinning enforced, exercise mirror-only smoke runs regularly, and remove default upstream fallback reliance before strict no-LFS mode.'
     );
   });
 });

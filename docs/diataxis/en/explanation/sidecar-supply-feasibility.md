@@ -41,7 +41,7 @@ Contract evidence:
 | Option | Extra infra fee | User barrier | Maintainer cost | Current code fit | Current gap | Verdict |
 |---|---|---|---|---|---|---|
 | Keep using Git LFS for desktop sidecars | Already incurring bandwidth/storage cost | Low | Low now, rising later | Already works | LFS bandwidth remains the bottleneck | Transitional only |
-| GitHub Releases as first mirror | Usually lowest additional cost | Low if kept out of runtime and used only for bootstrap/release supply | Low | Strong | Current release workflow now seeds a dedicated Godot mirror tag, keeps fixed SHA256 archive pinning, and still retains upstream fallback | Best current fit |
+| GitHub Releases as first mirror | Usually lowest additional cost | Low if kept out of runtime and used only for bootstrap/release supply | Low | Strong | Current release workflow now seeds a dedicated Godot mirror tag, keeps fixed SHA256 archive pinning, and can disable upstream fallback for mirror-only smoke while retaining it by default | Best current fit |
 | Generic object storage mirror (R2/B2) | Low to medium recurring cost | Low if hidden behind cache/bootstrap scripts | Medium | Strong | Needs upload/publish automation and secret management | Good second step |
 | Direct third-party upstream download only | Low direct hosting cost | Medium to high | Medium | Already possible for Godot | Too network-sensitive; trust model diverges | Reject |
 | Fully self-hosted mirror/CDN | Medium to high | Low for users | High | Compatible | Infra ownership becomes the real project | Reject for current stage |
@@ -56,11 +56,12 @@ Why:
 - bootstrap already accepts a pinned download URL and cache path
 - this keeps the initial migration close to the current GitHub-centered maintenance model
 - release CI now seeds the dedicated `godot-mirror-v4.3-stable` release tag before desktop bundle jobs run
-- desktop bundle jobs now download mirror-first and keep upstream fallback as a transitional safety rail
+- desktop bundle jobs now download mirror-first and keep upstream fallback as a transitional safety rail by default
+- the same workflow can now be dispatched with `allow_godot_upstream_fallback=false` for mirror-only smoke verification
 
 What is still missing:
 
-- eventual removal of upstream fallback once mirror behavior is proven stable
+- routine mirror-only smoke evidence before removing default upstream fallback
 - controlled digest rotation and verification governance when the pinned Godot version changes
 
 Cloud validation snapshot:

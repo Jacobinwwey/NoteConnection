@@ -150,7 +150,7 @@ What this proves:
 
 ### Critical risks to address before strict no-LFS mode
 
-1. CI now seeds and prefers a project-controlled GitHub Releases mirror for Godot, live smoke runs have proven cold-start mirror creation, and the workflow now pins the mirrored desktop archives with fixed SHA256 values. Upstream fallback still remains enabled as a transitional safety rail.
+1. CI now seeds and prefers a project-controlled GitHub Releases mirror for Godot, live smoke runs have proven cold-start mirror creation, and the workflow now pins the mirrored desktop archives with fixed SHA256 values. Upstream fallback still remains enabled by default as a transitional safety rail, but `workflow_dispatch` can now disable it explicitly for mirror-only smoke verification.
 2. Local and CI artifact trust models are not fully unified yet.
 3. Windows developer bootstrap remains sensitive to missing Godot because current bootstrap treats it as required.
 4. `server-*` binary availability still depends on local build reproducibility or legacy LFS bridge paths.
@@ -179,7 +179,8 @@ Important boundary:
 
 - GitHub Releases is already close to the current maintenance model because the repo already creates releases and uploads application bundles there.
 - The release workflow now also seeds standalone Godot mirror archives into a dedicated mirror tag before desktop bundle jobs run, and that behavior has been proven in live smoke runs on 2026-04-08.
-- It is still not fully hardened because upstream fallback remains enabled, and future Godot version bumps will need controlled digest rotation rather than ad-hoc edits.
+- The release workflow can now be dispatched with `allow_godot_upstream_fallback=false` to verify strict mirror-only release behavior without changing the default tag-release path.
+- It is still not fully hardened because upstream fallback remains enabled by default, and future Godot version bumps will need controlled digest rotation rather than ad-hoc edits.
 - No separate paid mirror service was required for this first migration slice because GitHub Releases already matched the current project maintenance surface.
 - Generic HTTPS object storage is also technically feasible now because bootstrap only depends on URL + SHA256 + cache, not on a specific vendor API.
 
@@ -194,7 +195,8 @@ Important boundary:
 
 - move CI and local bootstrap toward a shared mirror + digest policy
 - keep cache and manual seed support
-- remove upstream fallback and then remove Godot from legacy LFS once mirror/bootstrap parity is proven
+- keep exercising mirror-only smoke runs with `allow_godot_upstream_fallback=false`
+- remove default upstream fallback and then remove Godot from legacy LFS once mirror/bootstrap parity is proven
 
 #### Phase C: server artifact reproducibility
 
