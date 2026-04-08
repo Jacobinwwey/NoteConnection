@@ -77,10 +77,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          if gh release view "$GODOT_MIRROR_TAG" >/dev/null 2>&1; then
+          if gh release view "$GODOT_MIRROR_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "Godot mirror release already exists: $GODOT_MIRROR_TAG"
           else
             gh release create "$GODOT_MIRROR_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
               --title "$GODOT_MIRROR_TAG" \
               --notes "Project-controlled mirror for Godot desktop bootstrap archives."
@@ -93,7 +94,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/godot-mirror
-          mapfile -t EXISTING_ASSETS < <(gh release view "$GODOT_MIRROR_TAG" --json assets --jq '.assets[].name')
+          mapfile -t EXISTING_ASSETS < <(gh release view "$GODOT_MIRROR_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
 
           has_asset() {
             local needle="$1"
@@ -118,7 +119,7 @@ jobs:
 
             ARCHIVE_PATH="build/godot-mirror/$ASSET_NAME"
             curl -fsSL "${GODOT_UPSTREAM_BASE_URL}/${ASSET_NAME}" -o "$ARCHIVE_PATH"
-            gh release upload "$GODOT_MIRROR_TAG" "$ARCHIVE_PATH" --clobber
+            gh release upload "$GODOT_MIRROR_TAG" "$ARCHIVE_PATH" --repo "$GITHUB_REPOSITORY" --clobber
             echo "Uploaded mirror asset: $ASSET_NAME"
           done
 
