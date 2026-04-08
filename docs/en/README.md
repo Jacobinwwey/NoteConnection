@@ -1,4 +1,4 @@
-﻿# 2026-03-24 v1.6.0
+﻿# 2026-04-07 v1.7.0
 
 # NoteConnection Knowledge Graph
 
@@ -174,10 +174,15 @@ NoteConnection now supports **two Android generation paths**:
 1. **Capacitor APK path** (web-asset runtime, stable for reader/visualization workflows).
 2. **Tauri Android path** (native shell pipeline aligned with `docs/tauri_brainstorming.md`).
 
+Build/release/runtime details are audited in:
+
+- `docs/en/multi_platform_build_flow_audit.md`
+- `docs/zh/multi_platform_build_flow_audit.md`
+
 #### Prerequisites
 
 - **Node.js** (LTS)
-- **Java JDK** (17 or higher)
+- **Java JDK** (21 or higher)
 - **Android SDK** (Configured in `ANDROID_HOME` or via Android Studio)
 
 #### Method A: Capacitor Build (Stable)
@@ -232,8 +237,8 @@ npm run tauri:android:build
 
 #### Mobile Capability Boundary
 
-- Capacitor path currently packages web assets and does not embed the local Node sidecar workflow (`/api/build`, `/api/folders`, `/api/content`).
-- Tauri Android path is provided as the native-shell migration route and should be used when mobile-side parity with the Tauri architecture is required.
+- Capacitor packaging path does not embed the desktop Node sidecar workflow, but native Capacitor runtime can still build graph payloads locally when Filesystem APIs are available and the dataset stays within mobile limits.
+- Tauri Android path provides the native-shell runtime route and uses Android-native `build_graph_runtime` when mobile-side parity with the Tauri architecture is required.
 
 ### 3. Usage Guide
 
@@ -332,8 +337,16 @@ For developers building from source, NoteConnection offers two build modes:
 
 - **Electron desktop pipeline was removed on 2026-03-01 (deprecated and decommissioned).**
 
-- **Tauri Full Build (`npm run tauri:build`)**: Builds desktop package with full frontend assets.
-- **Tauri Mini Build (`npm run tauri:build:mini`)**: Builds desktop package excluding large pre-generated graph data files.
+- **Tauri Build (`npm run tauri:build`)**: Default desktop package path. Uses runtime-first assets and excludes pre-generated graph payloads.
+- **Tauri Mini Build (`npm run tauri:build:mini`)**: Legacy-compatible alias of the same runtime-first packaging path.
+- **Tauri Full Graph Build (`npm run tauri:build:full`)**: Explicit opt-in path for including generated graph assets when real files are present locally.
+- **Build (`npm run build`)**: Default runtime-first frontend build.
+- **Build Full Graph Assets (`npm run build:full`)**: Explicit opt-in frontend build for local/demo scenarios that need pre-generated graph assets.
+- **Godot Bootstrap** (`npm run prepare:godot:bin`): materializes the host Godot sidecar from local overrides/search paths, cache, or a pinned download URL.
+- **Desktop Release Godot Mirror**: release CI now seeds a project-controlled GitHub Releases mirror tag for Godot archives, then downloads mirror-first with upstream fallback.
+- **LFS Policy Guard** (`npm run verify:lfs:policy`): blocks new Git LFS drift under `src/frontend/` and `src-tauri/bin/` while migration still carries legacy exemptions. Future strict mode is available via `npm run verify:lfs:policy:strict`.
+- **Sidecar Supply Readiness** (`npm run verify:sidecar:supply`): reports whether the current desktop host is offline-ready or still network-dependent before shrinking the remaining sidecar LFS bridge.
+- **Mirror Feasibility Docs**: use `/diataxis/en/explanation/sidecar-supply-feasibility/` for the current cost/user-friction/maintainer-burden decision matrix behind GitHub Releases vs object storage mirror options.
 - **GPU Dev Start (`npm run tauri:dev:mini:gpu`)**: Recommended GPU-enabled Tauri development command.
 - **Do not use** `npm run tauri:dev:mini --gpu` because npm treats `--gpu` as config and prints warnings.
 

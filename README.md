@@ -1,4 +1,4 @@
-﻿# 2026-03-31 v1.7.0
+﻿# 2026-04-07 v1.7.0
 
 # NoteConnection Knowledge Graph
 
@@ -166,10 +166,15 @@ NoteConnection now supports **two Android generation paths**:
 1. **Capacitor APK path** (web-asset runtime, stable for reader/visualization workflows).
 2. **Tauri Android path** (native shell pipeline aligned with `docs/tauri_brainstorming.md`).
 
+Build/release/runtime details are audited in:
+
+- `docs/en/multi_platform_build_flow_audit.md`
+- `docs/zh/multi_platform_build_flow_audit.md`
+
 #### Prerequisites
 
 - **Node.js** (LTS)
-- **Java JDK** (17 or higher)
+- **Java JDK** (21 or higher)
 - **Android SDK** (Configured in `ANDROID_HOME` or via Android Studio)
 
 #### Method A: Capacitor Build (Stable)
@@ -224,8 +229,8 @@ npm run tauri:android:build
 
 #### Mobile Capability Boundary
 
-- Capacitor path currently packages web assets and does not embed the local Node sidecar workflow (`/api/build`, `/api/folders`, `/api/content`).
-- Tauri Android path is provided as the native-shell migration route and should be used when mobile-side parity with the Tauri architecture is required.
+- Capacitor packaging path does not embed the desktop Node sidecar workflow, but native Capacitor runtime can still build graph payloads locally when Filesystem APIs are available and the dataset stays within mobile limits.
+- Tauri Android path provides the native-shell runtime route and uses Android-native `build_graph_runtime` when mobile-side parity with the Tauri architecture is required.
 
 ### 3. Usage Guide
 
@@ -327,12 +332,19 @@ max_doc_bytes = 100663296
 
 ## 🏗️ Build & Deployment
 
-For developers building from source, NoteConnection offers two build modes:
+For developers building from source, NoteConnection now defaults to the runtime-first path:
 
 - **Electron desktop pipeline was removed on 2026-03-01 (deprecated and decommissioned).**
 
-- **Tauri Full Build (`npm run tauri:build`)**: Builds desktop package with full frontend assets.
-- **Tauri Mini Build (`npm run tauri:build:mini`)**: Builds desktop package excluding large pre-generated graph data files.
+- **Tauri Build (`npm run tauri:build`)**: Default desktop package path. Uses runtime-first assets and excludes pre-generated graph payloads.
+- **Tauri Mini Build (`npm run tauri:build:mini`)**: Legacy-compatible alias of the same runtime-first packaging path.
+- **Tauri Full Graph Build (`npm run tauri:build:full`)**: Explicit opt-in path for including generated graph assets when real files are present locally.
+- **Build (`npm run build`)**: Default runtime-first frontend build.
+- **Build Full Graph Assets (`npm run build:full`)**: Explicit opt-in frontend build for local/demo scenarios that need pre-generated graph assets.
+- **Godot Bootstrap** (`npm run prepare:godot:bin`): materializes the host Godot sidecar from local overrides/search paths, cache, or a pinned download URL.
+- **Desktop Release Godot Mirror**: release CI now seeds a project-controlled GitHub Releases mirror tag for Godot archives, then downloads mirror-first with upstream fallback.
+- **LFS Policy Guard** (`npm run verify:lfs:policy`): blocks new Git LFS drift under `src/frontend/` and `src-tauri/bin/` while migration still carries legacy exemptions. Future strict mode is available via `npm run verify:lfs:policy:strict`.
+- **Sidecar Supply Readiness** (`npm run verify:sidecar:supply`): reports whether the current desktop host is offline-ready or still network-dependent before shrinking the remaining sidecar LFS bridge.
 - **GPU Dev Start (`npm run tauri:dev:mini:gpu`)**: Recommended GPU-enabled Tauri development command.
 - **Do not use** `npm run tauri:dev:mini --gpu` because npm treats `--gpu` as config and prints warnings.
 
@@ -349,6 +361,8 @@ For developers building from source, NoteConnection offers two build modes:
 - Recommended lookup entry points:
   - Users: `/diataxis/zh/tutorials/first-run/` or `/diataxis/en/tutorials/first-run/`
   - Developers: `/diataxis/en/reference/interfaces-and-runtime/` and `/diataxis/en/reference/release-and-governance/`
+  - Maintainers assessing LFS / desktop bootstrap risk: `/en/sidecar_supply_strategy/` or `/zh/sidecar_supply_strategy/`
+  - Maintainers comparing mirror cost / user friction / maintenance burden: `/diataxis/en/explanation/sidecar-supply-feasibility/` or `/diataxis/zh/explanation/sidecar-supply-feasibility/`
 - CI auto publish workflow (GitHub Pages): `.github/workflows/docs-github-pages-publish.yml`.
 - Manual rollback entry: run workflow dispatch and set `git_ref` to a stable tag/commit.
 - MkDocs base/path can be overridden by environment variables: `MKDOCS_SITE_URL`, `MKDOCS_BASE_PATH`.
@@ -972,7 +986,7 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 ## 中文文档
 
 
-# 2026-03-31 v1.7.0
+# 2026-04-07 v1.7.0
 # NoteConnection: 层级知识图谱可视化系统
 
 <img width="606" height="309" alt="banner" src="https://github.com/user-attachments/assets/92e90de5-2b1a-4398-8e8b-6e142c92b6a2" />
@@ -1131,10 +1145,15 @@ NoteConnection 现支持 **两条 Android 生成路径**：
 1. **Capacitor APK 路径**（Web 资产运行时，适合阅读与可视化流程）。
 2. **Tauri Android 路径**（原生壳流程，对齐 `docs/tauri_brainstorming.md`）。
 
+与构建/release/运行时边界相关的完整审计文档见：
+
+- `docs/en/multi_platform_build_flow_audit.md`
+- `docs/zh/multi_platform_build_flow_audit.md`
+
 #### 先决条件
 
 - **Node.js** (LTS)
-- **Java JDK** (17 或更高版本)
+- **Java JDK** (21 或更高版本)
 - **Android SDK** (配置在 `ANDROID_HOME` 或通过 Android Studio 安装)
 
 #### 方法 A: Capacitor 构建（稳定）
@@ -1189,8 +1208,8 @@ npm run tauri:android:build
 
 #### 移动端能力边界
 
-- Capacitor 路径当前是 Web 资产打包，不内置桌面端本地 Node sidecar 流程（`/api/build`、`/api/folders`、`/api/content`）。
-- 若需要与 Tauri 架构一致的移动端原生壳路线，请使用 Tauri Android 路径。
+- Capacitor 打包路径本身不内置桌面 Node sidecar，但在具备 Filesystem API 且数据量不超过移动端限制时，Capacitor 原生运行时仍可本地图谱构建。
+- 如果需要与 Tauri 架构一致的移动端原生壳能力，请使用 Tauri Android 路径；该路径会通过 Android 原生命令 `build_graph_runtime` 构图。
 
 ---
 
@@ -1286,12 +1305,18 @@ max_doc_bytes = 100663296
 
 ## 🏗️ 构建与部署 (Build & Deployment)
 
-对于从源码构建的开发者，NoteConnection 提供两种构建模式：
+对于从源码构建的开发者，NoteConnection 现在默认采用 runtime-first 路径：
 
 - **Electron 桌面构建链路已于 2026-03-01 下线（弃用并完成清退）。**
-
-- **Tauri 完整构建** (`npm run tauri:build`): 构建带完整前端资源的桌面安装包。
-- **Tauri 精简构建** (`npm run tauri:build:mini`): 构建排除大型预生成图谱数据的桌面安装包。
+- **Tauri 构建** (`npm run tauri:build`)：默认桌面打包路径，采用 runtime-first 资产流，不默认打入预生成图谱载荷。
+- **Tauri 精简构建** (`npm run tauri:build:mini`)：与当前默认 runtime-first 打包路径保持兼容的旧别名。
+- **Tauri 完整图谱构建** (`npm run tauri:build:full`)：仅在本地存在真实图谱文件时，显式选择把生成型图谱资产打入包中。
+- **Build (`npm run build`)**：默认 runtime-first 前端构建。
+- **完整图谱前端构建** (`npm run build:full`)：仅供本地 / demo 场景显式选择预生成图谱资产。
+- **Godot Bootstrap** (`npm run prepare:godot:bin`)：可从本地覆盖路径 / 搜索目录 / 缓存 / 固定下载 URL 物化当前主机所需的 Godot sidecar。
+- **桌面 Release Godot 镜像**：release CI 现在会先在项目 GitHub Releases 中维护 Godot 镜像 tag，并以“镜像优先、上游回退”方式下载。
+- **LFS Policy Guard** (`npm run verify:lfs:policy`)：在迁移仍保留历史豁免项时，阻止新的 Git LFS 路径再次进入 `src/frontend/` 与 `src-tauri/bin/`。未来严格模式可通过 `npm run verify:lfs:policy:strict` 启用。
+- **Sidecar 供给就绪度** (`npm run verify:sidecar:supply`)：在继续缩减桌面 sidecar 的 LFS 桥接之前，显式报告当前主机是否已具备离线 bootstrap 能力，还是仍依赖网络。
 - **GPU 开发启动（推荐）** (`npm run tauri:dev:mini:gpu`)。
 - **不要使用** `npm run tauri:dev:mini --gpu`，该写法会被 npm 当作配置参数并触发告警。
 
@@ -1308,6 +1333,8 @@ max_doc_bytes = 100663296
 - 推荐查询入口：
   - 用户文档：`/diataxis/zh/tutorials/first-run/` 或 `/diataxis/en/tutorials/first-run/`
   - 开发文档：`/diataxis/en/reference/interfaces-and-runtime/` 与 `/diataxis/en/reference/release-and-governance/`
+  - 维护者评估 LFS / 桌面 bootstrap 风险：`/en/sidecar_supply_strategy/` 或 `/zh/sidecar_supply_strategy/`
+  - 维护者比较镜像成本 / 用户门槛 / 维护负担：`/diataxis/en/explanation/sidecar-supply-feasibility/` 或 `/diataxis/zh/explanation/sidecar-supply-feasibility/`
 - CI 自动发布工作流（GitHub Pages）：`.github/workflows/docs-github-pages-publish.yml`。
 - 手动回滚入口：运行 workflow_dispatch 并设置 `git_ref` 为稳定 tag/commit。
 - MkDocs base/path 可通过环境变量覆盖：`MKDOCS_SITE_URL`、`MKDOCS_BASE_PATH`。

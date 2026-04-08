@@ -2,6 +2,26 @@
 
 const { spawnSync } = require('child_process');
 
+function extractFrontendBuildMode(argv) {
+  const passthroughArgs = [];
+  let frontendBuildMode = '';
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === '--frontend-build-mode') {
+      frontendBuildMode = String(argv[index + 1] || '').trim();
+      index += 1;
+      continue;
+    }
+    passthroughArgs.push(arg);
+  }
+
+  return {
+    frontendBuildMode,
+    passthroughArgs
+  };
+}
+
 function parsePositiveInt(value, fallback) {
   const parsed = Number.parseInt(String(value || ''), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -22,7 +42,7 @@ function buildLowMemoryRustflags(existingRustflags) {
 }
 
 function main() {
-  const passthroughArgs = process.argv.slice(2);
+  const { frontendBuildMode, passthroughArgs } = extractFrontendBuildMode(process.argv.slice(2));
   const cargoBuildJobs = parsePositiveInt(process.env.CARGO_BUILD_JOBS, 1);
   const cargoReleaseOptLevel = String(process.env.CARGO_PROFILE_RELEASE_OPT_LEVEL || '0');
   const cargoReleaseCodegenUnits = parsePositiveInt(
@@ -48,12 +68,14 @@ function main() {
   console.log(`[Tauri Build Runner] Cargo release panic: ${cargoReleasePanic}`);
   console.log(`[Tauri Build Runner] Cargo incremental: ${cargoIncremental}`);
   console.log(`[Tauri Build Runner] RUSTFLAGS: ${rustflags || '(empty)'}`);
+  console.log(`[Tauri Build Runner] Frontend build mode: ${frontendBuildMode || 'runtime-first'}`);
   console.log(`[Tauri Build Runner] Executing: npx ${tauriArgs.join(' ')}`);
 
   const result = spawnSync(execCommand, execArgs, {
     stdio: 'inherit',
     env: {
       ...process.env,
+      NOTE_CONNECTION_TAURI_FRONTEND_BUILD_MODE: frontendBuildMode || process.env.NOTE_CONNECTION_TAURI_FRONTEND_BUILD_MODE || '',
       CARGO_BUILD_JOBS: String(cargoBuildJobs),
       CARGO_PROFILE_RELEASE_OPT_LEVEL: cargoReleaseOptLevel,
       CARGO_PROFILE_RELEASE_CODEGEN_UNITS: String(cargoReleaseCodegenUnits),

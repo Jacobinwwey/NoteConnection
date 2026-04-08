@@ -69,3 +69,4 @@ tmp
 # Local docs deploy/build artifacts
 .edgeone/
 build/mkdocs-site/
+.venv-mkdocs/

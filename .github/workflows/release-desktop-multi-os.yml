@@ -20,6 +20,11 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  GODOT_MIRROR_TAG: "godot-mirror-v4.3-stable"
+  GODOT_UPSTREAM_BASE_URL: "https://github.com/godotengine/godot/releases/download/4.3-stable"
+  GODOT_WINDOWS_ARCHIVE_NAME: "Godot_v4.3-stable_win64.exe.zip"
+  GODOT_LINUX_ARCHIVE_NAME: "Godot_v4.3-stable_linux.x86_64.zip"
+  GODOT_MACOS_ARCHIVE_NAME: "Godot_v4.3-stable_macos.universal.zip"
 
 jobs:
   ensure-release:
@@ -61,9 +66,64 @@ jobs:
             gh release create "$TAG_NAME" --title "$TAG_NAME" --notes "Automated desktop multi-OS release assets."
           fi
 
+  ensure-godot-mirror-assets:
+    name: Ensure Godot Mirror Assets
+    needs: ensure-release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ensure Godot mirror release exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          if gh release view "$GODOT_MIRROR_TAG" >/dev/null 2>&1; then
+            echo "Godot mirror release already exists: $GODOT_MIRROR_TAG"
+          else
+            gh release create "$GODOT_MIRROR_TAG" \
+              --title "$GODOT_MIRROR_TAG" \
+              --notes "Project-controlled mirror for Godot desktop bootstrap archives."
+          fi
+
+      - name: Seed Godot mirror assets from upstream when missing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/godot-mirror
+          mapfile -t EXISTING_ASSETS < <(gh release view "$GODOT_MIRROR_TAG" --json assets --jq '.assets[].name')
+
+          has_asset() {
+            local needle="$1"
+            local asset
+            for asset in "${EXISTING_ASSETS[@]}"; do
+              if [ "$asset" = "$needle" ]; then
+                return 0
+              fi
+            done
+            return 1
+          }
+
+          for ASSET_NAME in \
+            "$GODOT_WINDOWS_ARCHIVE_NAME" \
+            "$GODOT_LINUX_ARCHIVE_NAME" \
+            "$GODOT_MACOS_ARCHIVE_NAME"
+          do
+            if has_asset "$ASSET_NAME"; then
+              echo "Mirror asset already present: $ASSET_NAME"
+              continue
+            fi
+
+            ARCHIVE_PATH="build/godot-mirror/$ASSET_NAME"
+            curl -fsSL "${GODOT_UPSTREAM_BASE_URL}/${ASSET_NAME}" -o "$ARCHIVE_PATH"
+            gh release upload "$GODOT_MIRROR_TAG" "$ARCHIVE_PATH" --clobber
+            echo "Uploaded mirror asset: $ASSET_NAME"
+          done
+
   build-and-upload:
     name: Build and Upload (${{ matrix.platform_label }})
-    needs: ensure-release
+    needs: [ensure-release, ensure-godot-mirror-assets]
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -135,7 +195,16 @@ jobs:
           $ErrorActionPreference = "Stop"
           New-Item -ItemType Directory -Path "build\godot" -Force | Out-Null
           $archive = "build\godot\godot-win64.zip"
-          Invoke-WebRequest -Uri "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_win64.exe.zip" -OutFile $archive
+          $mirrorBaseUrl = "https://github.com/Jacobinwwey/NoteConnection/releases/download/$env:GODOT_MIRROR_TAG"
+          $mirrorUrl = "$mirrorBaseUrl/$env:GODOT_WINDOWS_ARCHIVE_NAME"
+          $upstreamUrl = "$env:GODOT_UPSTREAM_BASE_URL/$env:GODOT_WINDOWS_ARCHIVE_NAME"
+          try {
+            Invoke-WebRequest -Uri $mirrorUrl -OutFile $archive
+            Write-Host "Downloaded Godot archive from project mirror: $mirrorUrl"
+          } catch {
+            Write-Warning "Project mirror download failed, falling back to upstream: $upstreamUrl"
+            Invoke-WebRequest -Uri $upstreamUrl -OutFile $archive
+          }
           Expand-Archive -Path $archive -DestinationPath "build\godot\extract" -Force
           $godotExe = Get-ChildItem -Path "build\godot\extract" -Filter "Godot_v4.3-stable_win64.exe" -Recurse | Select-Object -First 1
           if (-not $godotExe) {
@@ -155,7 +224,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/godot
-          curl -fsSL "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip" -o build/godot/godot-linux.zip
+          MIRROR_BASE_URL="https://github.com/Jacobinwwey/NoteConnection/releases/download/${GODOT_MIRROR_TAG}"
+          if ! curl -fsSL "${MIRROR_BASE_URL}/${GODOT_LINUX_ARCHIVE_NAME}" -o build/godot/godot-linux.zip; then
+            echo "Project mirror download failed, falling back to upstream."
+            curl -fsSL "${GODOT_UPSTREAM_BASE_URL}/${GODOT_LINUX_ARCHIVE_NAME}" -o build/godot/godot-linux.zip
+          fi
           unzip -q -o build/godot/godot-linux.zip -d build/godot/extract
           GODOT_BIN="$(find build/godot/extract -maxdepth 2 -type f -name 'Godot_v4.3-stable_linux.x86_64' | head -n 1)"
           if [ -z "${GODOT_BIN}" ]; then
@@ -171,7 +244,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/godot
-          curl -fsSL "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_macos.universal.zip" -o build/godot/godot-macos.zip
+          MIRROR_BASE_URL="https://github.com/Jacobinwwey/NoteConnection/releases/download/${GODOT_MIRROR_TAG}"
+          if ! curl -fsSL "${MIRROR_BASE_URL}/${GODOT_MACOS_ARCHIVE_NAME}" -o build/godot/godot-macos.zip; then
+            echo "Project mirror download failed, falling back to upstream."
+            curl -fsSL "${GODOT_UPSTREAM_BASE_URL}/${GODOT_MACOS_ARCHIVE_NAME}" -o build/godot/godot-macos.zip
+          fi
           unzip -q -o build/godot/godot-macos.zip -d build/godot/extract
           GODOT_BIN="$(find build/godot/extract -type f -path '*Godot.app/Contents/MacOS/Godot' | head -n 1)"
           if [ -z "${GODOT_BIN}" ]; then

@@ -1,3 +1,74 @@
+# 2026-04-07 v1.7.0 - Git LFS Migration Build-Flow Audit Closure
+
+## English Document
+
+### Objective
+
+Turn the Git LFS migration plan into a code-backed, multi-platform build contract that can be checked against current desktop, mobile, publish, release, and docs-delivery paths.
+
+### Completed in This Iteration
+
+- [x] Added a canonical multi-platform build audit document:
+  - [x] `docs/en/multi_platform_build_flow_audit.md`
+  - [x] `docs/zh/multi_platform_build_flow_audit.md`
+- [x] Added Diataxis web-reference pages for the same build matrix:
+  - [x] `docs/diataxis/en/reference/multi-platform-build-flows.md`
+  - [x] `docs/diataxis/zh/reference/multi-platform-build-flows.md`
+- [x] Fixed a real build-contract drift in desktop Tauri full builds:
+  - [x] Added `scripts/run-tauri-frontend-build.js`
+  - [x] Updated `src-tauri/tauri.conf.json` `beforeBuildCommand`
+  - [x] Updated `package.json` `tauri:build:full`
+  - [x] Added contract coverage in `src/tauri.frontend.build.contract.test.ts`
+- [x] Corrected docs-level platform mismatches:
+  - [x] Android JDK baseline now documented as 21+
+  - [x] README/docs now distinguish mobile packaging from mobile runtime capability
+  - [x] README/docs now link to the new build-flow audit
+- [x] Added sidecar supply hardening guardrails without changing CI workflow design:
+  - [x] `scripts/sidecar-supply-readiness-utils.js`
+  - [x] `scripts/verify-sidecar-supply-readiness.js`
+  - [x] `src/sidecar.supply.readiness.contract.test.ts`
+  - [x] `docs/en/sidecar_supply_strategy.md`
+  - [x] `docs/zh/sidecar_supply_strategy.md`
+- [x] Added mirror-feasibility documentation to the MkDocs site and revalidated provider-neutral bootstrap support:
+  - [x] `docs/diataxis/en/explanation/sidecar-supply-feasibility.md`
+  - [x] `docs/diataxis/zh/explanation/sidecar-supply-feasibility.md`
+  - [x] `docs/diataxis-map.json`
+  - [x] `mkdocs.yml`
+  - [x] `src/godot.sidecar.bootstrap.contract.test.ts`
+- [x] Added the first justified CI change for mirror-first Godot release supply while preserving the existing release flow shape:
+  - [x] `.github/workflows/release-desktop-multi-os.yml`
+  - [x] `src/release.godot.mirror.contract.test.ts`
+  - [x] `scripts/sidecar-supply-readiness-utils.js`
+  - [x] `scripts/verify-sidecar-supply-readiness.js`
+- [x] Updated docs governance/index surfaces:
+  - [x] `mkdocs.yml`
+  - [x] `docs/index.md`
+  - [x] `docs/diataxis-map.json`
+  - [x] `docs/BILINGUAL_INDEX.md`
+  - [x] `docs/en|zh/Interface Document.md`
+  - [x] `docs/en|zh/TODO.md`
+
+### Remaining Work
+
+- [ ] Replace Windows-only helper entrypoints (`build_apk.bat`, `set VAR=...&&` npm wrappers) with Node-based cross-platform runners if local shell portability becomes a priority.
+- [ ] Simplify redundant frontend rebuilds in Tauri bundle and npm publish paths when it can be done without changing CI semantics.
+- [ ] Continue Phase 2 sidecar-bootstrap hardening until fresh-checkout desktop bootstrap is fully reproducible without repository-stored binaries.
+
+### Verification Gate (Executed)
+
+- [x] `npx jest src/tauri.frontend.build.contract.test.ts --runInBand`
+- [x] `npm run docs:diataxis:check`
+- [x] `npm run docs:site:build`
+- [x] `npm run test:migration`
+- [x] `npm run build`
+- [x] `npm run build:full`
+- [x] `npm run verify:lfs:policy`
+- [x] `npm run verify:sidecar:supply`
+- [x] `npx jest src/godot.sidecar.bootstrap.contract.test.ts --runInBand`
+- [x] `npx jest src/release.godot.mirror.contract.test.ts src/sidecar.supply.readiness.contract.test.ts --runInBand`
+
+---
+
 # 2026-03-22 v1.5.58 - NoteMD Migration Closure & Feasibility Verification
 
 ## English Document

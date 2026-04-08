@@ -2,7 +2,7 @@
 ### Legacy Navigation Row (from shared bilingual table)
 |  **中文**   |   [核心特性](#key-features-zh)   | [硬件配置](#hardware-zh) |   [系统架构](#architecture-zh)   |  [快速开始](#quick-start-zh)   | [CLI](#cli-zh) | [更新日志](#changelog-zh)  |
 
-# 2026-03-24 v1.6.0
+# 2026-04-07 v1.7.0
 # NoteConnection: 层级知识图谱可视化系统
 
 <img width="606" height="309" alt="banner" src="https://github.com/user-attachments/assets/92e90de5-2b1a-4398-8e8b-6e142c92b6a2" />
@@ -171,10 +171,15 @@ NoteConnection 现支持 **两条 Android 生成路径**：
 1. **Capacitor APK 路径**（Web 资产运行时，适合阅读与可视化流程）。
 2. **Tauri Android 路径**（原生壳流程，对齐 `docs/tauri_brainstorming.md`）。
 
+与构建/release/运行时边界相关的完整审计文档见：
+
+- `docs/en/multi_platform_build_flow_audit.md`
+- `docs/zh/multi_platform_build_flow_audit.md`
+
 #### 先决条件
 
 - **Node.js** (LTS)
-- **Java JDK** (17 或更高版本)
+- **Java JDK** (21 或更高版本)
 - **Android SDK** (配置在 `ANDROID_HOME` 或通过 Android Studio 安装)
 
 #### 方法 A: Capacitor 构建（稳定）
@@ -229,8 +234,8 @@ npm run tauri:android:build
 
 #### 移动端能力边界
 
-- Capacitor 路径当前是 Web 资产打包，不内置桌面端本地 Node sidecar 流程（`/api/build`、`/api/folders`、`/api/content`）。
-- 若需要与 Tauri 架构一致的移动端原生壳路线，请使用 Tauri Android 路径。
+- Capacitor 打包路径本身不内置桌面 Node sidecar，但在具备 Filesystem API 且数据量不超过移动端限制时，Capacitor 原生运行时仍可本地图谱构建。
+- 如果需要与 Tauri 架构一致的移动端原生壳能力，请使用 Tauri Android 路径；该路径会通过 Android 原生命令 `build_graph_runtime` 构图。
 
 ---
 
@@ -323,8 +328,16 @@ max_doc_bytes = 100663296
 
 - **Electron 桌面构建链路已于 2026-03-01 下线（弃用并完成清退）。**
 
-- **Tauri 完整构建** (`npm run tauri:build`): 构建带完整前端资源的桌面安装包。
-- **Tauri 精简构建** (`npm run tauri:build:mini`): 构建排除大型预生成图谱数据的桌面安装包。
+- **Tauri 构建** (`npm run tauri:build`): 默认桌面打包路径，采用 runtime-first 资产流，不再默认打入预生成图谱载荷。
+- **Tauri 精简构建** (`npm run tauri:build:mini`): 与当前默认 runtime-first 路径保持兼容的旧别名。
+- **Tauri 完整图谱构建** (`npm run tauri:build:full`): 仅在本地真实生成图谱文件存在时，显式选择把图谱资产打入包中。
+- **Build (`npm run build`)**: 默认 runtime-first 前端构建。
+- **完整图谱前端构建** (`npm run build:full`): 仅供本地 / demo 场景显式选择预生成图谱资产。
+- **Godot Bootstrap** (`npm run prepare:godot:bin`): 可从本地覆盖路径 / 搜索目录 / 缓存 / 固定下载 URL 物化主机 Godot sidecar。
+- **桌面 Release Godot 镜像**：release CI 现在会先在项目 GitHub Releases 中维护 Godot 镜像 tag，并以“镜像优先、上游回退”方式下载。
+- **LFS Policy Guard** (`npm run verify:lfs:policy`): 在迁移仍保留历史豁免项时，阻止新的 Git LFS 路径再次进入 `src/frontend/` 与 `src-tauri/bin/`。未来严格模式可通过 `npm run verify:lfs:policy:strict` 启用。
+- **Sidecar 供给就绪度** (`npm run verify:sidecar:supply`): 在继续缩减桌面 sidecar LFS 桥接之前，显式报告当前主机是否已具备离线 bootstrap 能力，还是仍依赖网络。
+- **镜像可行性文档**：若要比较 GitHub Releases 与对象存储镜像的成本 / 用户门槛 / 维护负担，请查看 `/diataxis/zh/explanation/sidecar-supply-feasibility/`。
 - **GPU 开发启动（推荐）** (`npm run tauri:dev:mini:gpu`)。
 - **不要使用** `npm run tauri:dev:mini --gpu`，该写法会被 npm 当作配置参数并触发告警。
 
