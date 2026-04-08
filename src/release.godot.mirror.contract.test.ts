@@ -15,6 +15,8 @@ describe('release workflow godot mirror contract', () => {
 
     expect(workflow).toContain('GODOT_MIRROR_TAG: "godot-mirror-v4.3-stable"');
     expect(workflow).toContain('ensure-godot-mirror-assets:');
+    expect(workflow).toContain('gh release create "$GODOT_MIRROR_TAG" \\');
+    expect(workflow).toContain('--target "$GITHUB_SHA" \\');
     expect(workflow).toContain('gh release upload "$GODOT_MIRROR_TAG"');
     expect(workflow).toContain(
       'https://github.com/Jacobinwwey/NoteConnection/releases/download/${GODOT_MIRROR_TAG}'

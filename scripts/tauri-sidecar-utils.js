@@ -430,6 +430,7 @@ function validateTauriSidecars(options = {}) {
   const repoRoot = options.repoRoot || path.resolve(__dirname, '..');
   const platform = options.platform || process.platform;
   const arch = options.arch || process.arch;
+  const env = options.env || process.env;
   const validateAll = options.validateAll === true;
   const binDir = path.join(repoRoot, 'src-tauri', 'bin');
 
@@ -437,7 +438,11 @@ function validateTauriSidecars(options = {}) {
     ? [SERVER_BINARIES.windows_x64, SERVER_BINARIES.linux_x64, SERVER_BINARIES.macos_arm64]
     : [resolveHostServerBinaryName({ platform, arch })].filter(Boolean);
   const requiredMarkdownWorkerBinaryNames = [resolveHostMarkdownWorkerBinaryName({ platform, arch })].filter(Boolean);
-  const requiredGodotBinaryNames = [resolveHostGodotBinaryName({ platform, arch })].filter(Boolean);
+  const requiredGodotBinaryNames = validateAll
+    ? [HOST_GODOT_BINARY.windows_x64].filter(Boolean)
+    : shouldFailOnMissing({ platform, env })
+      ? [resolveHostGodotBinaryName({ platform, arch })].filter(Boolean)
+      : [];
 
   const invalid = [];
 

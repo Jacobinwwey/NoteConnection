@@ -41,6 +41,7 @@ type SidecarUtilsModule = {
     platform?: string;
     arch?: string;
     validateAll?: boolean;
+    env?: Record<string, string | undefined>;
   }) => ValidateSidecarsResult;
 };
 
@@ -233,15 +234,11 @@ describe('godot sidecar bootstrap contracts', () => {
     ).rejects.toThrow(/sha256/i);
   });
 
-  test('validates the host-specific godot binary name together with server and markdown worker sidecars', () => {
+  test('does not require a linux host godot binary by default when validating sidecars', () => {
     const fakeRepoRoot = temp.mkdir('repo');
     const binDir = temp.mkdir(path.join('repo', 'src-tauri', 'bin'));
     fs.writeFileSync(path.join(binDir, 'server-x86_64-unknown-linux-gnu'), 'server');
     fs.writeFileSync(path.join(binDir, 'markdown-worker-x86_64-unknown-linux-gnu'), 'worker');
-    fs.writeFileSync(
-      path.join(binDir, 'godot-x86_64-unknown-linux-gnu'),
-      Buffer.alloc(sidecarUtils.MIN_GODOT_BINARY_BYTES + 8, 5)
-    );
 
     const result = sidecarUtils.validateTauriSidecars({
       repoRoot: fakeRepoRoot,
@@ -255,6 +252,36 @@ describe('godot sidecar bootstrap contracts', () => {
     expect(result.invalid).toEqual([]);
   });
 
+  test('requires the windows host godot binary together with server and markdown worker sidecars', () => {
+    const fakeRepoRoot = temp.mkdir('repo');
+    const binDir = temp.mkdir(path.join('repo', 'src-tauri', 'bin'));
+    fs.writeFileSync(path.join(binDir, 'server-x86_64-pc-windows-msvc.exe'), 'server');
+    fs.writeFileSync(path.join(binDir, 'markdown-worker-x86_64-pc-windows-msvc.exe'), 'worker');
+
+    const missingGodot = sidecarUtils.validateTauriSidecars({
+      repoRoot: fakeRepoRoot,
+      platform: 'win32',
+      arch: 'x64',
+    });
+
+    expect(missingGodot.invalid).toEqual([
+      expect.stringContaining('godot-x86_64-pc-windows-msvc.exe'),
+    ]);
+
+    fs.writeFileSync(
+      path.join(binDir, 'godot-x86_64-pc-windows-msvc.exe'),
+      Buffer.alloc(sidecarUtils.MIN_GODOT_BINARY_BYTES + 8, 5)
+    );
+
+    const ready = sidecarUtils.validateTauriSidecars({
+      repoRoot: fakeRepoRoot,
+      platform: 'win32',
+      arch: 'x64',
+    });
+
+    expect(ready.invalid).toEqual([]);
+  });
+
   test('treats git-lfs pointer placeholders as invalid server and markdown-worker sidecars', () => {
     const fakeRepoRoot = temp.mkdir('repo');
     const binDir = temp.mkdir(path.join('repo', 'src-tauri', 'bin'));
@@ -266,11 +293,6 @@ describe('godot sidecar bootstrap contracts', () => {
 
     fs.writeFileSync(path.join(binDir, 'server-x86_64-unknown-linux-gnu'), lfsPointer);
     fs.writeFileSync(path.join(binDir, 'markdown-worker-x86_64-unknown-linux-gnu'), lfsPointer);
-    fs.writeFileSync(
-      path.join(binDir, 'godot-x86_64-unknown-linux-gnu'),
-      Buffer.alloc(sidecarUtils.MIN_GODOT_BINARY_BYTES + 8, 5)
-    );
-
     const result = sidecarUtils.validateTauriSidecars({
       repoRoot: fakeRepoRoot,
       platform: 'linux',

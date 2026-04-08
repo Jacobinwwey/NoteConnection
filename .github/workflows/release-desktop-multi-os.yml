@@ -81,6 +81,7 @@ jobs:
             echo "Godot mirror release already exists: $GODOT_MIRROR_TAG"
           else
             gh release create "$GODOT_MIRROR_TAG" \
+              --target "$GITHUB_SHA" \
               --title "$GODOT_MIRROR_TAG" \
               --notes "Project-controlled mirror for Godot desktop bootstrap archives."
           fi
