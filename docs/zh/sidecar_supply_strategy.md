@@ -134,12 +134,27 @@ npm run verify:sidecar:supply -- --json
 - `src/sidecar.replacement.boundary.contract.test.ts`
 - `src/lfs.asset.policy.contract.test.ts`
 
+### 真实云端执行证据
+
+2026-04-08 这条 mirror-first 链路已经在真实 GitHub Actions release run 中被执行，而不只是停留在本地测试：
+
+- `smoke-lfs-mirror-first-20260408-002012` 暴露了 no-checkout 镜像 job 里的 `gh release create/upload` 仍在依赖本地 `.git` 推断仓库上下文；同时也暴露出 Android 回归，因为宿主机校验一度错误地把 Linux Godot 变成了 Android 构建前置。
+- `smoke-lfs-mirror-first-20260408-002917` 证明 Android 侧的护栏修正已生效，但也进一步暴露 `gh release view/create/upload` 在镜像 job 里仍需要显式绑定 `--repo "$GITHUB_REPOSITORY"`。
+- `smoke-lfs-mirror-first-20260408-003325` 随后已经冷启动创建并补齐了专用的 `godot-mirror-v4.3-stable` release，其中包含 Windows、Linux、macOS 三个平台的 Godot 归档；同一次 run 中，Windows、macOS、Linux、Android 全部 release job 最终都成功完成，并上传了预期的桌面安装包/发行包与通用 Android APK。
+
+这证明了什么：
+
+- 项目自控镜像补种已经是真实 workflow 行为，不再只是方案描述
+- mirror-first 供给可以在不拆掉桌面 sidecar 架构的前提下落地
+- 当前主要风险已经从“能不能做”转向“供给链怎么继续加固、发布治理债务怎么收口”
+
 ### 在严格 no-LFS 之前必须先解决的风险
 
-1. 当前 CI 已经会先维护并优先使用项目自控的 GitHub Releases Godot 镜像，但仍保留上游回退，且尚未对归档文件做 digest 固定。
+1. 当前 CI 已经会先维护并优先使用项目自控的 GitHub Releases Godot 镜像，而且真实 smoke run 已经证明镜像可以冷启动创建；但迁移期仍保留上游回退，且尚未对归档文件做 digest 固定。
 2. 本地与 CI 的产物信任模型还没有完全统一。
 3. Windows 开发者 bootstrap 对缺失 Godot 仍然敏感，因为当前 bootstrap 把它视为必要项。
 4. `server-*` 的可得性仍依赖本地构建可重复性，或依赖历史 LFS 过渡桥接。
+5. release smoke 日志里已经出现一个非阻塞平台预警：`actions/upload-artifact@v4` 与 `softprops/action-gh-release@v2` 仍是 Node 20 目标，目前只是被 GitHub Actions 强制映射到 Node 24 才继续运行。
 
 ### 镜像方案可行性矩阵
 
@@ -163,8 +178,9 @@ npm run verify:sidecar:supply -- --json
 重要边界：
 
 - GitHub Releases 很接近当前维护模型，因为仓库已经在 release 流程里创建 release 并上传应用包。
-- release workflow 现在也会在桌面构建前把独立的 Godot 镜像归档补到一个专用镜像 tag 中。
+- release workflow 现在也会在桌面构建前把独立的 Godot 镜像归档补到一个专用镜像 tag 中，而且这一行为已经在 2026-04-08 的真实 smoke run 中被证明。
 - 但这条链路还没有完全加固，因为 CI 里还没有做归档 digest 固定，且仍保留上游回退。
+- 第一阶段迁移不需要额外付费镜像服务，因为 GitHub Releases 已经与当前项目维护面天然对齐。
 - 通用 HTTPS 对象存储现在也具备技术可行性，因为 bootstrap 只依赖 URL + SHA256 + cache，而不依赖特定厂商 API。
 
 ### 建议的分阶段路线

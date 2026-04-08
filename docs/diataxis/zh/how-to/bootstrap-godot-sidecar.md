@@ -83,9 +83,11 @@ export NOTE_CONNECTION_GODOT_SEARCH_DIRS="/opt/tools:/mnt/shared/godot"
 
 ## 对 CI / Release 的影响
 
-- 这一批 bootstrap 改动不需要改 GitHub Actions workflow。
-- 现有 release CI 保持原设计不变。
-- 本页服务于本地开发者 bootstrap 和后续仓库 / LFS 解耦工作。
+- 这一批迁移确实需要做范围受控的 GitHub Actions 改动，但不需要推翻原有 CI 设计。
+- `.github/workflows/release-desktop-multi-os.yml` 现在会维护专用的 `godot-mirror-v4.3-stable` release，并在 runner 上以“镜像优先、上游回退”方式下载 Godot。
+- no-checkout 的镜像 job 还需要显式写出 `gh --repo "$GITHUB_REPOSITORY"` 与 `--target "$GITHUB_SHA"`，这一点已经在真实 release smoke run 中被验证出来。
+- workflow 的高层结构仍保持不变：先确保 release 记录，再确保镜像资产，然后执行按平台拆分的桌面与 Android 构建 job。
+- 本页仍主要服务于本地开发者 bootstrap 与后续仓库 / LFS 解耦，但它现在刻意与 release CI 共享同一类 mirror-capable 供给模型。
 
 ## 权威来源
 

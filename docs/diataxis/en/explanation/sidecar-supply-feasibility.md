@@ -63,6 +63,13 @@ What is still missing:
 - digest pinning for the mirrored archives
 - eventual removal of upstream fallback once mirror behavior is proven stable
 
+Cloud validation snapshot:
+
+- smoke tags `smoke-lfs-mirror-first-20260408-002012` and `smoke-lfs-mirror-first-20260408-002917` exposed real cold-start issues in the mirror job, which is stronger evidence than mock-only confidence
+- those runs drove targeted fixes in `.github/workflows/release-desktop-multi-os.yml` and `scripts/tauri-sidecar-utils.js`
+- `smoke-lfs-mirror-first-20260408-003325` then cold-created and seeded `godot-mirror-v4.3-stable` with all three desktop Godot archives, and the full Windows/macOS/Linux/Android release matrix completed through the mirror-first path
+- this first mirror step required no additional paid infra because GitHub Releases already sits on the existing project maintenance path
+
 ### 2. R2/B2 is also technically feasible now
 
 Why:
@@ -104,5 +111,6 @@ The current repo already supports a lower-risk path:
 - first mirror candidate: GitHub Releases
 - second-stage hardening: generic HTTPS object storage mirror
 - non-negotiable safety rails: cache, checksum pinning, and offline seed
+- non-blocking but real maintenance debt: release logs now warn that `actions/upload-artifact@v4` and `softprops/action-gh-release@v2` are still Node 20-targeted and currently rely on GitHub's forced Node 24 runtime
 
 The wrong move would be to remove LFS and replace it with direct public-upstream download only.

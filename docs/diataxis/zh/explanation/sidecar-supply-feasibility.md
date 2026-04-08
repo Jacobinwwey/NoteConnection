@@ -62,6 +62,13 @@
 - 镜像归档的 digest 固定
 - 在镜像链路验证稳定后移除上游回退
 
+云端验证快照：
+
+- `smoke-lfs-mirror-first-20260408-002012` 与 `smoke-lfs-mirror-first-20260408-002917` 先后暴露了镜像 job 的真实冷启动问题，这比只靠 mock 建立信心更有价值
+- 这些 run 直接推动了 `.github/workflows/release-desktop-multi-os.yml` 与 `scripts/tauri-sidecar-utils.js` 的定点修正
+- `smoke-lfs-mirror-first-20260408-003325` 随后已经冷启动创建并补齐 `godot-mirror-v4.3-stable`，并让完整的 Windows/macOS/Linux/Android release 矩阵经由 mirror-first 主路径完成
+- 第一阶段镜像化并不需要额外付费基础设施，因为 GitHub Releases 已经处在项目现有维护路径上
+
 ### 2. R2/B2 现在也具备技术可行性
 
 原因：
@@ -103,5 +110,6 @@
 - 第一镜像候选：GitHub Releases
 - 第二阶段加固：通用 HTTPS 对象存储镜像
 - 不可妥协的护栏：本地缓存、SHA256 固定摘要、离线种子
+- 非阻塞但真实存在的维护债务：release 日志已经提示 `actions/upload-artifact@v4` 与 `softprops/action-gh-release@v2` 仍是 Node 20 目标，目前依赖 GitHub 的 Node 24 强制运行兼容层
 
 真正错误的方向，是删掉 LFS 之后只保留对公共上游的直接下载。

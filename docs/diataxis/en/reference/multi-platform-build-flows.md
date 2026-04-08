@@ -21,6 +21,8 @@ This page is the Diataxis reference entry for the current multi-platform build m
 - Desktop bundles still treat sidecar binaries as a separate bootstrap concern.
 - Mobile packaging and mobile runtime capability must be evaluated separately.
 - Docs and npm publish pipelines are already compatible with the current no-new-LFS direction.
+- Release smoke on 2026-04-08 already proved the workflow can cold-create and seed the project-controlled `godot-mirror-v4.3-stable` tag before desktop bundle jobs run.
+- A non-blocking release-governance risk remains: GitHub Actions currently warns that `actions/upload-artifact@v4` and `softprops/action-gh-release@v2` are still Node 20-targeted.
 
 ## Use This Reference When
 
