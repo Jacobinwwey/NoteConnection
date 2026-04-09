@@ -207,6 +207,46 @@ npm run verify:sidecar:supply -- --json
 
 - 从“允许历史豁免”的校验，切换到对受保护目录执行严格 no-LFS
 
+### 月度 LFS 带宽超量时的运行手册（2026-04-09）
+
+当本地 checkout/pull 因 Git LFS 带宽超量失败时，按以下应急路径执行：
+
+1. 在切分支与同步阶段跳过 LFS smudge：
+
+```bash
+GIT_LFS_SKIP_SMUDGE=1 git checkout main
+GIT_LFS_SKIP_SMUDGE=1 git pull --ff-only origin main
+```
+
+2. 先确认没有新增受保护 LFS 回流：
+
+```bash
+npm run verify:lfs:policy
+```
+
+3. 再确认 sidecar 供给就绪度与网络依赖现状：
+
+```bash
+npm run verify:sidecar:supply -- --json
+```
+
+4. 启动本地文档站点用于运维可视化与复核：
+
+```bash
+npm run docs:site:serve -- -a 127.0.0.1:8013
+```
+
+5. 保持 CI 设计稳定：这个应急流程不要求重构默认 release CI；继续沿用现有 mirror-first 工作流，仅在 `workflow_dispatch` 下通过 `allow_godot_upstream_fallback=false` 做 mirror-only smoke 校验。
+
+2026-04-09 已验证执行记录：
+
+- PR #1 已合并到 `main`，并且该提交触发的 `main` 工作流全部成功：
+  - Migration Gates
+  - Mobile E2E Detox Contracts
+  - Fixrisk Operational Readiness
+  - Docs Diataxis Site
+  - Docs GitHub Pages Publish
+
 ### 结论
 
 真正该问的问题不是：

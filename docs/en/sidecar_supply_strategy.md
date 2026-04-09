@@ -207,6 +207,46 @@ Important boundary:
 
 - switch from legacy-allowlist verification toward strict no-LFS enforcement for protected roots
 
+### Operational playbook when monthly LFS bandwidth is exhausted (2026-04-09)
+
+When local checkout/pull fails due to Git LFS bandwidth exhaustion, use this fallback path:
+
+1. Skip LFS smudge for branch switch and sync:
+
+```bash
+GIT_LFS_SKIP_SMUDGE=1 git checkout main
+GIT_LFS_SKIP_SMUDGE=1 git pull --ff-only origin main
+```
+
+2. Verify that no new protected LFS drift was introduced:
+
+```bash
+npm run verify:lfs:policy
+```
+
+3. Verify sidecar supply readiness and current network dependency status:
+
+```bash
+npm run verify:sidecar:supply -- --json
+```
+
+4. Serve docs locally for ops visibility and review:
+
+```bash
+npm run docs:site:serve -- -a 127.0.0.1:8013
+```
+
+5. Keep CI design stable. Do not redesign default release CI for this emergency flow; use the existing mirror-first release workflow and only use `allow_godot_upstream_fallback=false` through `workflow_dispatch` for mirror-only smoke verification.
+
+Execution note validated on 2026-04-09:
+
+- PR #1 was merged to `main` and all triggered `main` workflows completed successfully:
+  - Migration Gates
+  - Mobile E2E Detox Contracts
+  - Fixrisk Operational Readiness
+  - Docs Diataxis Site
+  - Docs GitHub Pages Publish
+
 ### Bottom line
 
 The correct question is not:
