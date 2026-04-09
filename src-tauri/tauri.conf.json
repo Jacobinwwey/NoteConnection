@@ -5,7 +5,7 @@
   "identifier": "com.jacobinwwey.noteconnection",
   "build": {
     "beforeDevCommand": "",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "node scripts/run-tauri-frontend-build.js",
     "frontendDist": "../dist/src/frontend"
   },
   "app": {

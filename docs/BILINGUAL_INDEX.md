@@ -1,17 +1,17 @@
-# 2026-03-25 v1.6.0 - Bilingual Docs Pair Index
+# 2026-04-07 v1.7.0 - Bilingual Docs Pair Index
 
 ## English Document
 
 ### Scope
 
 - Canonical pairing index for `docs/en` and `docs/zh`.
-- Built from current repository state after `v1.3.0..v1.6.0` doc compare audit.
+- Updated against the current repository state after the `v1.7.0` migration-plan doc sync.
 
 ### Summary
 
-- English files: `19`
-- Chinese files: `18`
-- Bilingual pairs: `18`
+- English files: `22`
+- Chinese files: `21`
+- Bilingual pairs: `21`
 - English-only files: `1`
 - Chinese-only files: `0`
 
@@ -37,6 +37,9 @@
 | 16 | `User_Manual.md` | `docs/en/User_Manual.md` | `docs/zh/User_Manual.md` | Paired |
 | 17 | `walkthrough.md` | `docs/en/walkthrough.md` | `docs/zh/walkthrough.md` | Paired |
 | 18 | `app_config.toml_guide.md` | `docs/en/app_config.toml_guide.md` | `docs/zh/app_config.toml_guide.md` | Paired |
+| 19 | `lfs_asset_migration_plan.md` | `docs/en/lfs_asset_migration_plan.md` | `docs/zh/lfs_asset_migration_plan.md` | Paired |
+| 20 | `multi_platform_build_flow_audit.md` | `docs/en/multi_platform_build_flow_audit.md` | `docs/zh/multi_platform_build_flow_audit.md` | Paired |
+| 21 | `sidecar_supply_strategy.md` | `docs/en/sidecar_supply_strategy.md` | `docs/zh/sidecar_supply_strategy.md` | Paired |
 
 ### Unmatched Files
 
@@ -52,13 +55,13 @@
 ### 范围
 
 - `docs/en` 与 `docs/zh` 的当前双语配对索引。
-- 基于 `v1.3.0..v1.6.0` 文档审计后的仓库现状生成。
+- 已根据 `v1.7.0` 迁移方案文档同步后的仓库现状更新。
 
 ### 汇总
 
-- 英文文件数：`19`
-- 中文文件数：`18`
-- 中英配对数：`18`
+- 英文文件数：`22`
+- 中文文件数：`21`
+- 中英配对数：`21`
 - 仅英文文件数：`1`
 - 仅中文文件数：`0`
 
@@ -84,6 +87,9 @@
 | 16 | `User_Manual.md` | `docs/en/User_Manual.md` | `docs/zh/User_Manual.md` | 已配对 |
 | 17 | `walkthrough.md` | `docs/en/walkthrough.md` | `docs/zh/walkthrough.md` | 已配对 |
 | 18 | `app_config.toml_guide.md` | `docs/en/app_config.toml_guide.md` | `docs/zh/app_config.toml_guide.md` | 已配对 |
+| 19 | `lfs_asset_migration_plan.md` | `docs/en/lfs_asset_migration_plan.md` | `docs/zh/lfs_asset_migration_plan.md` | 已配对 |
+| 20 | `multi_platform_build_flow_audit.md` | `docs/en/multi_platform_build_flow_audit.md` | `docs/zh/multi_platform_build_flow_audit.md` | 已配对 |
+| 21 | `sidecar_supply_strategy.md` | `docs/en/sidecar_supply_strategy.md` | `docs/zh/sidecar_supply_strategy.md` | 已配对 |
 
 ### 未配对文件
 

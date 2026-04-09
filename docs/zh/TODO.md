@@ -1,3 +1,74 @@
+# 2026-04-07 v1.7.0 - Git LFS 迁移构建流审计闭环
+
+## 中文文档
+
+### 目标
+
+把 Git LFS 迁移方案进一步收敛成“有真实代码支撑的多平台构建契约”，并覆盖桌面、移动、publish、release 与文档交付路径。
+
+### 本轮完成项
+
+- [x] 新增权威的多平台构建审计文档：
+  - [x] `docs/en/multi_platform_build_flow_audit.md`
+  - [x] `docs/zh/multi_platform_build_flow_audit.md`
+- [x] 为同一套构建矩阵补上 Diataxis 网页参考入口：
+  - [x] `docs/diataxis/en/reference/multi-platform-build-flows.md`
+  - [x] `docs/diataxis/zh/reference/multi-platform-build-flows.md`
+- [x] 修复桌面 Tauri full build 的真实构建契约漂移：
+  - [x] 新增 `scripts/run-tauri-frontend-build.js`
+  - [x] 更新 `src-tauri/tauri.conf.json` 中的 `beforeBuildCommand`
+  - [x] 更新 `package.json` 中的 `tauri:build:full`
+  - [x] 新增契约测试 `src/tauri.frontend.build.contract.test.ts`
+- [x] 修正文档层的平台错位表述：
+  - [x] Android JDK 基线改为 21+
+  - [x] README/docs 现在明确区分“移动端打包内容”和“移动端运行时能力”
+  - [x] README/docs 已链接到新的构建流审计文档
+- [x] 在不改 CI workflow 设计的前提下，补上 sidecar 供给加固护栏：
+  - [x] `scripts/sidecar-supply-readiness-utils.js`
+  - [x] `scripts/verify-sidecar-supply-readiness.js`
+  - [x] `src/sidecar.supply.readiness.contract.test.ts`
+  - [x] `docs/en/sidecar_supply_strategy.md`
+  - [x] `docs/zh/sidecar_supply_strategy.md`
+- [x] 把镜像可行性说明接入 MkDocs 站点，并复核 provider-neutral bootstrap 契约：
+  - [x] `docs/diataxis/en/explanation/sidecar-supply-feasibility.md`
+  - [x] `docs/diataxis/zh/explanation/sidecar-supply-feasibility.md`
+  - [x] `docs/diataxis-map.json`
+  - [x] `mkdocs.yml`
+  - [x] `src/godot.sidecar.bootstrap.contract.test.ts`
+- [x] 在保持 release 主体结构不变的前提下，补上首个“镜像优先”的 Godot CI 切片：
+  - [x] `.github/workflows/release-desktop-multi-os.yml`
+  - [x] `src/release.godot.mirror.contract.test.ts`
+  - [x] `scripts/sidecar-supply-readiness-utils.js`
+  - [x] `scripts/verify-sidecar-supply-readiness.js`
+- [x] 更新文档治理与索引层：
+  - [x] `mkdocs.yml`
+  - [x] `docs/index.md`
+  - [x] `docs/diataxis-map.json`
+  - [x] `docs/BILINGUAL_INDEX.md`
+  - [x] `docs/en|zh/Interface Document.md`
+  - [x] `docs/en|zh/TODO.md`
+
+### 剩余工作
+
+- [ ] 如果后续要提升本地 shell 可移植性，需要把 Windows-only helper 入口（`build_apk.bat`、`set VAR=...&&` npm wrapper）替换成 Node-based cross-platform runner。
+- [ ] 在不改 CI 语义的前提下，后续可以再简化 Tauri bundle 与 npm publish 里的重复前端构建。
+- [ ] 持续推进 Phase 2 的 sidecar bootstrap 加固，直到 fresh checkout 的桌面 bootstrap 不再依赖仓库内预置大二进制。
+
+### 验证门禁（已执行）
+
+- [x] `npx jest src/tauri.frontend.build.contract.test.ts --runInBand`
+- [x] `npm run docs:diataxis:check`
+- [x] `npm run docs:site:build`
+- [x] `npm run test:migration`
+- [x] `npm run build`
+- [x] `npm run build:full`
+- [x] `npm run verify:lfs:policy`
+- [x] `npm run verify:sidecar:supply`
+- [x] `npx jest src/godot.sidecar.bootstrap.contract.test.ts --runInBand`
+- [x] `npx jest src/release.godot.mirror.contract.test.ts src/sidecar.supply.readiness.contract.test.ts --runInBand`
+
+---
+
 # 2026-03-22 v1.5.58 - NoteMD 迁移收口与可行性全量验证
 
 ## 中文文档

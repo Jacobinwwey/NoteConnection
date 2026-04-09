@@ -75,6 +75,18 @@
       }
     },
     {
+      "id": "bootstrap-godot-sidecar",
+      "category": "how-to",
+      "en": {
+        "canonical": ["docs/en/lfs_asset_migration_plan.md", "scripts/ensure-godot-sidecar.js", "scripts/tauri-sidecar-utils.js", "scripts/validate-tauri-sidecars.js"],
+        "diataxis": "docs/diataxis/en/how-to/bootstrap-godot-sidecar.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/lfs_asset_migration_plan.md", "scripts/ensure-godot-sidecar.js", "scripts/tauri-sidecar-utils.js", "scripts/validate-tauri-sidecars.js"],
+        "diataxis": "docs/diataxis/zh/how-to/bootstrap-godot-sidecar.md"
+      }
+    },
+    {
       "id": "interfaces-and-runtime",
       "category": "reference",
       "en": {
@@ -123,6 +135,18 @@
       }
     },
     {
+      "id": "multi-platform-build-flows",
+      "category": "reference",
+      "en": {
+        "canonical": ["docs/en/multi_platform_build_flow_audit.md", "docs/en/lfs_asset_migration_plan.md", "package.json", ".github/workflows/release-desktop-multi-os.yml", ".github/workflows/npm-publish.yml", "build_apk.bat", "capacitor.config.ts", "src-tauri/tauri.conf.json", "src-tauri/tauri.android.conf.json"],
+        "diataxis": "docs/diataxis/en/reference/multi-platform-build-flows.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/multi_platform_build_flow_audit.md", "docs/zh/lfs_asset_migration_plan.md", "package.json", ".github/workflows/release-desktop-multi-os.yml", ".github/workflows/npm-publish.yml", "build_apk.bat", "capacitor.config.ts", "src-tauri/tauri.conf.json", "src-tauri/tauri.android.conf.json"],
+        "diataxis": "docs/diataxis/zh/reference/multi-platform-build-flows.md"
+      }
+    },
+    {
       "id": "architecture-and-migration",
       "category": "explanation",
       "en": {
@@ -132,6 +156,18 @@
       "zh": {
         "canonical": ["docs/zh/tauri_brainstorming.md", "docs/zh/electron_migration_analysis.md"],
         "diataxis": "docs/diataxis/zh/explanation/architecture-and-migration.md"
+      }
+    },
+    {
+      "id": "git-lfs-asset-migration",
+      "category": "explanation",
+      "en": {
+        "canonical": ["docs/en/lfs_asset_migration_plan.md", "docs/en/tauri_brainstorming.md", "docs/en/electron_migration_analysis.md"],
+        "diataxis": "docs/diataxis/en/explanation/git-lfs-asset-migration.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/lfs_asset_migration_plan.md", "docs/zh/tauri_brainstorming.md", "docs/zh/electron_migration_analysis.md"],
+        "diataxis": "docs/diataxis/zh/explanation/git-lfs-asset-migration.md"
       }
     },
     {
@@ -156,6 +192,18 @@
       "zh": {
         "canonical": ["docs/zh/knowledge_mastery_evolution_plan.md"],
         "diataxis": "docs/diataxis/zh/explanation/knowledge-mastery-evolution-roadmap.md"
+      }
+    },
+    {
+      "id": "sidecar-supply-feasibility",
+      "category": "explanation",
+      "en": {
+        "canonical": ["docs/en/sidecar_supply_strategy.md", "scripts/tauri-sidecar-utils.js", "scripts/ensure-godot-sidecar.js", "scripts/verify-sidecar-supply-readiness.js", ".github/workflows/release-desktop-multi-os.yml"],
+        "diataxis": "docs/diataxis/en/explanation/sidecar-supply-feasibility.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/sidecar_supply_strategy.md", "scripts/tauri-sidecar-utils.js", "scripts/ensure-godot-sidecar.js", "scripts/verify-sidecar-supply-readiness.js", ".github/workflows/release-desktop-multi-os.yml"],
+        "diataxis": "docs/diataxis/zh/explanation/sidecar-supply-feasibility.md"
       }
     }
   ]

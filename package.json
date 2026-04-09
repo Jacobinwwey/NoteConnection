@@ -12,10 +12,12 @@
     "tauri": "tauri",
     "tauri:dev": "npm run build && npm run ensure:sidecar:dev && npm run cleanup:tauri:sidecars && npx kill-port 3000 && npx tauri dev",
     "tauri:dev:mini": "npm run build:mini && npm run ensure:sidecar:dev && npm run cleanup:tauri:sidecars && npx kill-port 3000 && npx tauri dev",
+    "tauri:dev:full": "npm run build:full && npm run ensure:sidecar:dev && npm run cleanup:tauri:sidecars && npx kill-port 3000 && npx tauri dev",
     "tauri:dev:gpu": "set NOTE_CONNECTION_GPU=1&& npm run tauri:dev",
     "tauri:dev:mini:gpu": "set NOTE_CONNECTION_GPU=1&& npm run tauri:dev:mini",
     "tauri:build": "npm run build && npm run build:sidecar && npm run cleanup:tauri:sidecars && node scripts/run-tauri-build.js",
     "tauri:build:mini": "npm run build:mini && npm run build:sidecar && npm run cleanup:tauri:sidecars && node scripts/run-tauri-build.js",
+    "tauri:build:full": "npm run build:full && npm run build:sidecar && npm run cleanup:tauri:sidecars && node scripts/run-tauri-build.js --frontend-build-mode full",
     "verify:android:env": "node scripts/verify-tauri-android-prereqs.js",
     "verify:capacitor:device": "node scripts/verify-capacitor-device-acceptance.js",
     "capture:capacitor:evidence": "node scripts/capture-capacitor-device-evidence.js",
@@ -31,6 +33,7 @@
     "mobile:build:both": "npm run mobile:build:capacitor && npm run mobile:build:tauri-android",
     "build": "node scripts/copy-reader-runtime-assets.js && tsc && node scripts/bundle_path_core.js && node scripts/copy-assets.js && node scripts/sync-wasm-parity-artifact.js",
     "build:mini": "node scripts/copy-reader-runtime-assets.js && tsc && node scripts/bundle_path_core.js && node scripts/copy-assets.js --mini && node scripts/sync-wasm-parity-artifact.js",
+    "build:full": "node scripts/copy-reader-runtime-assets.js && tsc && node scripts/bundle_path_core.js && node scripts/copy-assets.js --include-generated-graph-assets && node scripts/sync-wasm-parity-artifact.js",
     "prepare:godot:bin": "node scripts/ensure-godot-sidecar.js",
     "verify:tauri:bin": "node scripts/validate-tauri-sidecars.js",
     "build:sidecar": "node scripts/copy-reader-runtime-assets.js && tsc && node scripts/build-sidecar.js && npm run prepare:godot:bin && npm run verify:tauri:bin",
@@ -55,6 +58,9 @@
     "verify:fixrisk:issues": "node scripts/verify-fixrisk-issues.js",
     "verify:fixrisk:issues:strict": "node scripts/verify-fixrisk-issues.js --strict-pending",
     "verify:fixrisk:issues:strict:evidence": "node scripts/verify-fixrisk-issues.js --strict-pending --require-evidence-root",
+    "verify:lfs:policy": "node scripts/verify-lfs-asset-policy.js",
+    "verify:lfs:policy:strict": "node scripts/verify-lfs-asset-policy.js --strict",
+    "verify:sidecar:supply": "node scripts/verify-sidecar-supply-readiness.js",
     "verify:markdown:mermaid:fence": "node scripts/verify-markdown-mermaid-fence.js",
     "fix:markdown:mermaid:fence": "node scripts/verify-markdown-mermaid-fence.js --fix",
     "perf:startup:compare": "node scripts/compare-startup-perf.js",
@@ -75,10 +81,10 @@
     "ops:fixrisk:close": "node scripts/run-fixrisk-ops-closure.js",
     "ops:fixrisk:close:dry": "node scripts/run-fixrisk-ops-closure.js --dry-run",
     "test:mobile:contracts": "jest src/mobile.pipeline.test.ts src/runtime.capabilities.test.ts src/source_manager.loadflow.test.ts src/capacitor.runtime.contract.test.ts src/android.pathmode.contract.test.ts src/android.pathmode.smoke.contract.test.ts src/graph.accessibility.contract.test.ts src/detox.pipeline.contract.test.ts src/privacy.manifest.contract.test.ts --runInBand && npm run verify:detox:pipeline && npm run verify:privacy:manifest",
-    "test:migration": "jest src/core/Graph.test.ts src/core/PathEngine.test.ts src/core/TreeLayout.test.ts src/backend/algorithms/CycleDetection.test.ts src/backend/algorithms/TopologicalSort.test.ts src/backend/algorithms/WasmParityHistory.test.ts src/utils/RuntimePaths.test.ts src/server.migration.test.ts src/pkg.sidecar.contract.test.ts src/pkg.snapshot.safety.contract.test.ts src/mobile.pipeline.test.ts src/capacitor.device.utils.contract.test.ts src/capacitor.evidence.contract.test.ts src/runtime.capabilities.test.ts src/runtime.heap.policy.contract.test.ts src/runtime.spool.policy.contract.test.ts src/runtime.transport.adapter.contract.test.ts src/storage.provider.contract.test.ts src/storage.provider.capacitor.content.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.output.equivalence.contract.test.ts src/wasm.parity.benchmark.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.history.gate.contract.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts src/source_manager.loadflow.test.ts src/capacitor.runtime.contract.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts src/android.pathmode.contract.test.ts src/android.pathmode.smoke.contract.test.ts src/pathbridge.handshake.contract.test.ts src/pathbridge.strict.policy.contract.test.ts src/graph.accessibility.contract.test.ts src/detox.pipeline.contract.test.ts src/privacy.manifest.contract.test.ts src/server.port.fallback.contract.test.ts src/sidecar.signature.contract.test.ts src/sbom.policy.contract.test.ts src/sbom.attestation.policy.contract.test.ts src/sidecar.relaunch.contract.test.ts src/tauri.test.runner.contract.test.ts --runInBand",
+    "test:migration": "jest src/core/Graph.test.ts src/core/PathEngine.test.ts src/core/TreeLayout.test.ts src/backend/algorithms/CycleDetection.test.ts src/backend/algorithms/TopologicalSort.test.ts src/backend/algorithms/WasmParityHistory.test.ts src/utils/RuntimePaths.test.ts src/server.migration.test.ts src/pkg.sidecar.contract.test.ts src/pkg.snapshot.safety.contract.test.ts src/godot.sidecar.bootstrap.contract.test.ts src/release.godot.mirror.contract.test.ts src/sidecar.replacement.boundary.contract.test.ts src/sidecar.supply.readiness.contract.test.ts src/lfs.asset.policy.contract.test.ts src/tauri.frontend.build.contract.test.ts src/mobile.pipeline.test.ts src/capacitor.device.utils.contract.test.ts src/capacitor.evidence.contract.test.ts src/runtime.capabilities.test.ts src/runtime.heap.policy.contract.test.ts src/runtime.spool.policy.contract.test.ts src/runtime.transport.adapter.contract.test.ts src/storage.provider.contract.test.ts src/storage.provider.capacitor.content.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.output.equivalence.contract.test.ts src/wasm.parity.benchmark.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.history.gate.contract.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts src/source_manager.loadflow.test.ts src/capacitor.runtime.contract.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts src/android.pathmode.contract.test.ts src/android.pathmode.smoke.contract.test.ts src/pathbridge.handshake.contract.test.ts src/pathbridge.strict.policy.contract.test.ts src/graph.accessibility.contract.test.ts src/detox.pipeline.contract.test.ts src/privacy.manifest.contract.test.ts src/server.port.fallback.contract.test.ts src/sidecar.signature.contract.test.ts src/sbom.policy.contract.test.ts src/sbom.attestation.policy.contract.test.ts src/sidecar.relaunch.contract.test.ts src/tauri.test.runner.contract.test.ts --runInBand",
     "test:tauri": "node scripts/run-tauri-tests.js",
     "test:gates": "npm run test:migration && npm run test:wasm:parity:gates && npm run test:tauri && npm run verify:android:env && npm run verify:detox:pipeline && npm run verify:privacy:manifest && npm run verify:pathbridge:strict && npm run verify:sbom -- --contract-only && npm run verify:sbom:attestation -- --contract-only && npm run verify:sidecar:signatures -- --contract-only",
-    "prepublishOnly": "npm run build:mini",
+    "prepublishOnly": "npm run build",
     "test": "jest",
     "cleanup:tauri:sidecars": "node scripts/cleanup-tauri-sidecars.js",
     "docs:diataxis:check": "node scripts/verify-diataxis-map.js",
@@ -92,9 +98,7 @@
       "dist/src/backend/workers/**/*.js"
     ],
     "assets": [
-      "dist/src/**/*",
-      "data.js",
-      "graph_data.json"
+      "dist/src/**/*"
     ]
   },
   "files": [

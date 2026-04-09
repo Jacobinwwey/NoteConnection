@@ -24,11 +24,15 @@ describe('pkg sidecar packaging contract', () => {
     const pkg = packageJson.pkg || {};
     const pkgScripts = pkg.scripts || [];
     const pkgAssets = pkg.assets || [];
+    const scripts = packageJson.scripts || {};
 
     expect(pkgScripts).toContain('dist/src/backend/workers/**/*.js');
     expect(pkgAssets).toContain('dist/src/**/*');
-    expect(pkgAssets).toContain('data.js');
-    expect(pkgAssets).toContain('graph_data.json');
+    expect(pkgAssets).not.toContain('data.js');
+    expect(pkgAssets).not.toContain('graph_data.json');
+    expect(scripts['build:full']).toContain('--include-generated-graph-assets');
+    expect(scripts['tauri:build:full']).toContain('npm run build:full');
+    expect(scripts.prepublishOnly).toBe('npm run build');
   });
 
   test('retains hardened node22 sidecar build args and target mapping', () => {

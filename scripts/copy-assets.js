@@ -1,128 +1,234 @@
 const fs = require('fs');
 const path = require('path');
 
-const src = path.join(__dirname, '../src/frontend');
-const dest = path.join(__dirname, '../dist/src/frontend');
+const DEFAULT_SRC = path.join(__dirname, '../src/frontend');
+const DEFAULT_DEST = path.join(__dirname, '../dist/src/frontend');
+const REPO_ROOT = path.join(__dirname, '..');
+const LFS_POINTER_PREFIX = 'version https://git-lfs.github.com/spec/v1';
 
-// Check for --mini flag in command line arguments
-const isMiniMode = process.argv.includes('--mini');
-
-console.log(`\n📦 Build Mode: ${isMiniMode ? 'MINI (Excluding large data files)' : 'FULL (Including all files)'}\n`);
-
-// Files to exclude ONLY in mini mode (runtime-generated data)
-const MINI_EXCLUDE_FILES = [
-    'data.js',                  // 169 MB - Runtime generated graph data
-    'graph_data.json',          // 471 MB - Runtime generated JSON
+const GENERATED_GRAPH_FILES = [
+    'data.js',
+    'graph_data.json'
 ];
 
-// Patterns to exclude ONLY in mini mode (case-insensitive)
-const MINI_EXCLUDE_PATTERNS = [
-    /^data_cli_.*\.js$/,        // CLI-generated data files
-    /^graph_data_cli_.*\.json$/ // CLI-generated graph files
+const GENERATED_GRAPH_PATTERNS = [
+    /^data_cli_.*\.js$/i,
+    /^graph_data_cli_.*\.json$/i
 ];
 
-function shouldExclude(filename) {
-    // If not in mini mode, include everything
-    if (!isMiniMode) {
-        return false;
-    }
-    
-    // In mini mode, check exclusion rules
-    // Check exact matches
-    if (MINI_EXCLUDE_FILES.includes(filename)) {
-        return true;
-    }
-    
-    // Check patterns
-    return MINI_EXCLUDE_PATTERNS.some(pattern => pattern.test(filename));
+function isGeneratedGraphAsset(filename) {
+    return GENERATED_GRAPH_FILES.includes(filename)
+        || GENERATED_GRAPH_PATTERNS.some((pattern) => pattern.test(filename));
 }
 
-function copyDir(src, dest) {
-    if (!fs.existsSync(dest)) {
-        fs.mkdirSync(dest, { recursive: true });
+function isLfsPointerContent(content) {
+    if (typeof content !== 'string') {
+        return false;
     }
-    
+
+    return content.startsWith(LFS_POINTER_PREFIX)
+        && content.includes('\noid sha256:')
+        && content.includes('\nsize ');
+}
+
+function isLfsPointerFile(filePath) {
+    if (!fs.existsSync(filePath)) {
+        return false;
+    }
+
+    const stats = fs.statSync(filePath);
+    if (!stats.isFile() || stats.size > 1024) {
+        return false;
+    }
+
+    return isLfsPointerContent(fs.readFileSync(filePath, 'utf8'));
+}
+
+function resolveCopyMode(args = process.argv.slice(2)) {
+    const includeGeneratedGraphAssets = args.includes('--include-generated-graph-assets');
+    const usesLegacyMiniAlias = args.includes('--mini');
+
+    return {
+        includeGeneratedGraphAssets,
+        usesLegacyMiniAlias
+    };
+}
+
+function ensureDirectory(targetPath) {
+    if (!fs.existsSync(targetPath)) {
+        fs.mkdirSync(targetPath, { recursive: true });
+    }
+}
+
+function removeExistingFileIfPresent(targetPath, logger) {
+    if (fs.existsSync(targetPath)) {
+        fs.unlinkSync(targetPath);
+        logger.log(`  [Cleaned] Removed existing artifact: ${path.basename(targetPath)}`);
+    }
+}
+
+function describeGraphAssetSkip(srcPath, entryName, logger, reason) {
+    const sizeMB = (fs.statSync(srcPath).size / 1024 / 1024).toFixed(2);
+    logger.log(`  [Excluded] ${entryName} (${sizeMB} MB) (${reason})`);
+}
+
+function shouldSkipFile(srcPath, entryName, includeGeneratedGraphAssets) {
+    if (!isGeneratedGraphAsset(entryName)) {
+        return {
+            skip: false,
+            reason: null
+        };
+    }
+
+    if (!includeGeneratedGraphAssets) {
+        return {
+            skip: true,
+            reason: 'runtime-generated graph asset'
+        };
+    }
+
+    if (isLfsPointerFile(srcPath)) {
+        return {
+            skip: true,
+            reason: 'git-lfs pointer placeholder'
+        };
+    }
+
+    return {
+        skip: false,
+        reason: null
+    };
+}
+
+function copyDir(src, dest, options) {
+    const {
+        includeGeneratedGraphAssets,
+        logger
+    } = options;
+
+    ensureDirectory(dest);
+
     const entries = fs.readdirSync(src, { withFileTypes: true });
 
-    for (let entry of entries) {
+    for (const entry of entries) {
         const srcPath = path.join(src, entry.name);
         const destPath = path.join(dest, entry.name);
 
-        // Skip excluded files (only in mini mode)
-        if (!entry.isDirectory() && shouldExclude(entry.name)) {
-            const sizeMB = (fs.statSync(srcPath).size / 1024 / 1024).toFixed(2);
-            console.log(`  [Excluded] ${entry.name} (${sizeMB} MB)`);
-            
-            // Critical Fix: Ensure the file is removed from dist if it exists from a previous build
-            if (fs.existsSync(destPath)) {
-                fs.unlinkSync(destPath);
-                console.log(`  [Cleaned] Removed existing artifact: ${entry.name}`);
-            }
+        if (entry.isDirectory()) {
+            copyDir(srcPath, destPath, options);
             continue;
         }
 
-        if (entry.isDirectory()) {
-            copyDir(srcPath, destPath);
-        } else {
-            fs.copyFileSync(srcPath, destPath);
+        const skipDecision = shouldSkipFile(srcPath, entry.name, includeGeneratedGraphAssets);
+        if (skipDecision.skip) {
+            describeGraphAssetSkip(srcPath, entry.name, logger, skipDecision.reason);
+            removeExistingFileIfPresent(destPath, logger);
+            continue;
         }
+
+        fs.copyFileSync(srcPath, destPath);
     }
 }
 
-try {
-    copyDir(src, dest);
-    
-    // Copy locale files for i18n support
+function copyProjectAssets(options = {}) {
+    const {
+        src = DEFAULT_SRC,
+        dest = DEFAULT_DEST,
+        includeGeneratedGraphAssets = false,
+        logger = console
+    } = options;
+
+    copyDir(src, dest, {
+        includeGeneratedGraphAssets,
+        logger
+    });
+
     const localesSrc = path.join(src, 'locales');
     const localesDest = path.join(dest, 'locales');
     if (fs.existsSync(localesSrc)) {
-        console.log('\\n📁 Copying locale files...');
-        copyDir(localesSrc, localesDest);
-        console.log('  ✓ Locale files copied');
+        logger.log('\n📁 Copying locale files...');
+        copyDir(localesSrc, localesDest, {
+            includeGeneratedGraphAssets,
+            logger
+        });
+        logger.log('  ✓ Locale files copied');
     }
-    
-    // Copy README.md for offline docs fallback
-    const readmeSrc = path.join(__dirname, '../README.md');
+
+    const readmeSrc = path.join(REPO_ROOT, 'README.md');
     const readmeDest = path.join(dest, 'README.md');
     if (fs.existsSync(readmeSrc)) {
          fs.copyFileSync(readmeSrc, readmeDest);
-         console.log('  ✓ README.md copied');
+         logger.log('  ✓ README.md copied');
     }
 
-    // Copy User Manual (English) - PRIMARY offline documentation
     const manualSrc = path.join(src, 'User_Manual.md');
     const manualDest = path.join(dest, 'User_Manual.md');
     if (fs.existsSync(manualSrc)) {
          fs.copyFileSync(manualSrc, manualDest);
-         console.log('  ✓ User_Manual.md (English) copied');
+         logger.log('  ✓ User_Manual.md (English) copied');
     } else {
-        console.warn('  ⚠️  User_Manual.md not found in src/frontend');
-        
-        // Fallback: Try root directory
-        const manualRootSrc = path.join(__dirname, '../User_Manual.md');
+        logger.warn('  ⚠️  User_Manual.md not found in src/frontend');
+
+        const manualRootSrc = path.join(REPO_ROOT, 'User_Manual.md');
         if (fs.existsSync(manualRootSrc)) {
             fs.copyFileSync(manualRootSrc, manualDest);
-            console.log('  ✓ User_Manual.md copied from root');
+            logger.log('  ✓ User_Manual.md copied from root');
         }
     }
-    
-    // Copy User Manual (Chinese) - For Chinese language support
+
     const manualZhSrc = path.join(src, 'User_Manual_zh.md');
     const manualZhDest = path.join(dest, 'User_Manual_zh.md');
     if (fs.existsSync(manualZhSrc)) {
          fs.copyFileSync(manualZhSrc, manualZhDest);
-         console.log('  ✓ User_Manual_zh.md (Chinese) copied');
+         logger.log('  ✓ User_Manual_zh.md (Chinese) copied');
     } else {
-        console.warn('  ⚠️  User_Manual_zh.md not found');
+        logger.warn('  ⚠️  User_Manual_zh.md not found');
     }
 
-    console.log(`\\n✅ Assets copied from ${src} to ${dest}`);
-    console.log(`\\n📊 Build Summary:`);
-    console.log(`  - Mode: ${isMiniMode ? 'MINI' : 'FULL'}`);
-    console.log(`  - i18n: Locale files included`);
-    console.log(`  - Docs: User manuals (EN + ZH) included`);
-    console.log(`  - Tutorial: CSS and scripts included`);
-} catch (e) {
-    console.error('❌ Error copying assets:', e);
-    process.exit(1);
+    logger.log(`\n✅ Assets copied from ${src} to ${dest}`);
+    logger.log('\n📊 Build Summary:');
+    logger.log(`  - Mode: ${includeGeneratedGraphAssets ? 'FULL_GRAPH_ASSETS' : 'RUNTIME_FIRST'}`);
+    logger.log('  - i18n: Locale files included');
+    logger.log('  - Docs: User manuals (EN + ZH) included');
+    logger.log('  - Tutorial: CSS and scripts included');
 }
+
+function main() {
+    const {
+        includeGeneratedGraphAssets,
+        usesLegacyMiniAlias
+    } = resolveCopyMode();
+
+    console.log(
+        `\n📦 Build Mode: ${
+            includeGeneratedGraphAssets
+                ? 'FULL (Including generated graph assets when real files exist)'
+                : 'RUNTIME-FIRST (Excluding runtime-generated graph assets)'
+        }\n`
+    );
+
+    if (usesLegacyMiniAlias) {
+        console.log('  [Info] --mini is now a legacy alias for the default runtime-first mode.');
+    }
+
+    try {
+        copyProjectAssets({
+            includeGeneratedGraphAssets
+        });
+    } catch (e) {
+        console.error('❌ Error copying assets:', e);
+        process.exit(1);
+    }
+}
+
+if (require.main === module) {
+    main();
+}
+
+module.exports = {
+    copyProjectAssets,
+    isGeneratedGraphAsset,
+    isLfsPointerContent,
+    isLfsPointerFile,
+    resolveCopyMode
+};
