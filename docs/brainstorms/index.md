@@ -10,3 +10,6 @@ This page tracks active and archived brainstorming outputs used before implement
 
 - Use brainstorm documents to align problem framing, requirements, and scope boundaries.
 - Promote a brainstorm output to technical execution through `/prompts:ce-plan`.
+- Track implementation execution in:
+  - [EN Development Progress Dashboard](../diataxis/en/explanation/development-progress-dashboard.md)
+  - [ZH 开发进度看板](../diataxis/zh/explanation/development-progress-dashboard.md)

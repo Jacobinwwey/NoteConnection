@@ -12,6 +12,30 @@ This reference tracks canonical API/runtime contracts.
 - [Godot + NoteMD + Markdown Interfaces](./godot-notemd-markdown-interfaces.md)
 - [Godot + NoteMD + Markdown Workflows](../how-to/godot-notemd-markdown-workflows.md)
 
+## Development Baseline Quick Links (v1.7.0+)
+
+- [Knowledge Mastery Evolution Roadmap](../explanation/knowledge-mastery-evolution-roadmap.md)
+- [Development Progress Dashboard](../explanation/development-progress-dashboard.md)
+- [Learning Platform Contract and Workbench Baseline](../../../solutions/documentation-gaps/learning-platform-api-workbench-contract-gap-2026-04-02.md)
+- [Evolution Progress Alignment Requirements](../../../brainstorms/2026-04-11-evolution-progress-alignment-requirements.md)
+
+## Learning Platform Contract Surfaces
+
+- Interface contracts:
+  - `src/learning/api.ts`
+  - `src/learning/types.ts`
+- Runtime implementation:
+  - `src/learning/KnowledgeLearningPlatform.ts`
+  - `src/learning/store.ts`
+  - `src/learning/queryBackend.ts`
+  - `src/learning/runtimeCapability.ts`
+- API wiring and alias normalization:
+  - `src/server.ts`
+- Frontend operational integration:
+  - `src/frontend/path_app.js`
+- Contract safety net:
+  - `src/knowledge.api.contract.test.ts`
+
 ## Key Runtime Contract Points (v1.6.0)
 
 - Frontend runtime hydration invoke contracts:

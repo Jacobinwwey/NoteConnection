@@ -6,6 +6,7 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 
 - Use `npm run docs:diataxis:check` to validate Diataxis mapping consistency.
 - Use `npm run docs:site:build` to validate page rendering and link stability.
+- Use `npm run docs:site:serve` for local browsing during iterative doc updates.
 - Use [Working Docs / Brainstorms](brainstorms/index.md) and [Working Docs / Solutions](solutions/index.md) for in-progress alignment artifacts and durable solution notes.
 
 ## English
@@ -24,6 +25,7 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - Use [Explanation](diataxis/en/explanation/architecture-and-migration.md) for architecture decisions.
 - Use [Startup Node Update Acceleration Plan](diataxis/en/explanation/startup-node-update-acceleration-plan.md) for phased performance rollout.
 - Use [Knowledge Mastery Evolution Roadmap](diataxis/en/explanation/knowledge-mastery-evolution-roadmap.md) for the next-stage learning-system strategy.
+- Use [Development Progress Dashboard](diataxis/en/explanation/development-progress-dashboard.md) for implementation status, code evidence anchors, and operational runbook flow.
 - Use [Brainstorms](brainstorms/index.md) for current requirement-alignment outputs before planning.
 - Use [Solutions](solutions/index.md) for baseline implementation decisions and recovery patterns.
 - Use [Git LFS Asset Migration](diataxis/en/explanation/git-lfs-asset-migration.md) for the phased repository/runtime decoupling strategy.
@@ -46,6 +48,7 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - 需要理解架构决策请查看 [解释文档](diataxis/zh/explanation/architecture-and-migration.md)。
 - 启动性能分阶段落地请查看 [启动节点更新提速方案](diataxis/zh/explanation/startup-node-update-acceleration-plan.md)。
 - 下一阶段学习系统战略请查看 [知识彻底掌握演进路线图](diataxis/zh/explanation/knowledge-mastery-evolution-roadmap.md)。
+- 需要查看实现进度、代码证据与调试链路请查看 [开发进度看板](diataxis/zh/explanation/development-progress-dashboard.md)。
 - 需求对齐与规划前输出请查看 [Brainstorms](brainstorms/index.md)。
 - 沉淀的解决方案基线请查看 [Solutions](solutions/index.md)。
 - 仓库与运行时资产解耦迁移请查看 [Git LFS 资产迁移](diataxis/zh/explanation/git-lfs-asset-migration.md)。

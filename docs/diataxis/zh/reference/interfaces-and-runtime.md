@@ -12,6 +12,30 @@
 - [Godot + NoteMD + Markdown 接口](./godot-notemd-markdown-interfaces.md)
 - [Godot + NoteMD + Markdown 工作流](../how-to/godot-notemd-markdown-workflows.md)
 
+## 开发基线快速入口（v1.7.0+）
+
+- [知识彻底掌握演进路线图](../explanation/knowledge-mastery-evolution-roadmap.md)
+- [开发进度看板](../explanation/development-progress-dashboard.md)
+- [学习平台契约与工作台基线](../../../solutions/documentation-gaps/learning-platform-api-workbench-contract-gap-2026-04-02.md)
+- [演进进度对齐需求](../../../brainstorms/2026-04-11-evolution-progress-alignment-requirements.md)
+
+## 学习平台契约面
+
+- 接口契约层：
+  - `src/learning/api.ts`
+  - `src/learning/types.ts`
+- 运行时实现层：
+  - `src/learning/KnowledgeLearningPlatform.ts`
+  - `src/learning/store.ts`
+  - `src/learning/queryBackend.ts`
+  - `src/learning/runtimeCapability.ts`
+- API 路由与 alias 归一化：
+  - `src/server.ts`
+- 前端操作与调试集成：
+  - `src/frontend/path_app.js`
+- 契约回归护栏：
+  - `src/knowledge.api.contract.test.ts`
+
 ## v1.6.0 关键运行时契约点
 
 - 前端运行时能力水合 invoke 契约：

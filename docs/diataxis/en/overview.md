@@ -36,3 +36,11 @@ mkdocs build --config-file mkdocs.yml
 
 - How-to: [Configure app_config.toml](./how-to/configure-app-config.md)
 - Reference: [app_config.toml Schema](./reference/app-config-schema.md)
+
+## Progress Tracking Entry Points
+
+- Strategy and rationale: [Knowledge Mastery Evolution Roadmap](./explanation/knowledge-mastery-evolution-roadmap.md)
+- Implementation status and runbook flow: [Development Progress Dashboard](./explanation/development-progress-dashboard.md)
+- Working requirements and execution evidence:
+  - [Brainstorms](../../brainstorms/index.md)
+  - [Solutions](../../solutions/index.md)
