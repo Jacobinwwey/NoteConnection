@@ -47,6 +47,9 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Working Docs:
+      - Brainstorms: brainstorms/index.md
+      - Solutions: solutions/index.md
   - English:
       - Diataxis Overview: diataxis/en/overview.md
       - Tutorials:

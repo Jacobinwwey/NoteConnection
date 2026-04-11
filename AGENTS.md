@@ -9,6 +9,7 @@
 - `scripts/`: Build helpers (asset copying, path-core bundling via `bundle_path_core.js`, smoke tests).
 - `android/`: Capacitor Android project (APK build output is under `android/app/build/...`).
 - `dist/`: Generated build output from `tsc` and asset bundling (do not edit by hand).
+- `docs/solutions/`: Documented solutions to past problems (bugs, best practices, workflow patterns), organized by category with YAML frontmatter (`module`, `tags`, `problem_type`); relevant when implementing or debugging in documented areas.
 
 ## Build, Test, and Development Commands
 

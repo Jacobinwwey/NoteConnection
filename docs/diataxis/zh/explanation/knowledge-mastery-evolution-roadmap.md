@@ -21,6 +21,19 @@
 
 - [docs/zh/knowledge_mastery_evolution_plan.md](../../../zh/knowledge_mastery_evolution_plan.md)
 
+## v1.7.0 之后的实施基线
+
+- [学习平台契约与工作台基线（v1.7.0 到 HEAD）](../../../solutions/documentation-gaps/learning-platform-api-workbench-contract-gap-2026-04-02.md)
+- [演进进度对齐需求（2026-04-11）](../../../brainstorms/2026-04-11-evolution-progress-alignment-requirements.md)
+
+## 当前推进摘要（2026-04-11）
+
+- 学习域核心契约已落地（`KnowledgeIngestAPI`、`KnowledgeQueryAPI`、`MasteryDiagnosticsAPI`、`LearningPathAPI`、`TutorActionAPI`、`MemoryPolicyAPI`）。
+- 检索、导师、记忆、运行时治理能力已接入 Learning Workbench 与服务端统一 API 面。
+- 当前仍需优先补齐的结构缺口：
+  - 本地图数据库底座深度（当前 `graphdb` 路径仍以文件适配器为主）
+  - 独立向量检索后端集成
+
 ## 关联解释文档
 
 - [架构与迁移](./architecture-and-migration.md)

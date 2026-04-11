@@ -1,4 +1,4 @@
-# 2026-04-07 v1.7.0 - Bilingual Docs Pair Index
+# 2026-04-11 v1.7.0 - Bilingual Docs Pair Index
 
 ## English Document
 
@@ -6,6 +6,7 @@
 
 - Canonical pairing index for `docs/en` and `docs/zh`.
 - Updated against the current repository state after the `v1.7.0` migration-plan doc sync.
+- Working-doc archives under `docs/brainstorms/` and `docs/solutions/` are tracked separately from `docs/en` and `docs/zh` pairing.
 
 ### Summary
 
@@ -56,6 +57,7 @@
 
 - `docs/en` 与 `docs/zh` 的当前双语配对索引。
 - 已根据 `v1.7.0` 迁移方案文档同步后的仓库现状更新。
+- `docs/brainstorms/` 与 `docs/solutions/` 作为工作归档目录，不计入 `docs/en` 与 `docs/zh` 双语配对统计。
 
 ### 汇总
 

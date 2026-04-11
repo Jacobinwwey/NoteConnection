@@ -2,6 +2,12 @@
 
 This site adopts the Diataxis framework to make documentation easier to navigate and maintain.
 
+## Documentation Stability
+
+- Use `npm run docs:diataxis:check` to validate Diataxis mapping consistency.
+- Use `npm run docs:site:build` to validate page rendering and link stability.
+- Use [Working Docs / Brainstorms](brainstorms/index.md) and [Working Docs / Solutions](solutions/index.md) for in-progress alignment artifacts and durable solution notes.
+
 ## English
 
 - Start with [Diataxis Overview](diataxis/en/overview.md).
@@ -18,6 +24,8 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - Use [Explanation](diataxis/en/explanation/architecture-and-migration.md) for architecture decisions.
 - Use [Startup Node Update Acceleration Plan](diataxis/en/explanation/startup-node-update-acceleration-plan.md) for phased performance rollout.
 - Use [Knowledge Mastery Evolution Roadmap](diataxis/en/explanation/knowledge-mastery-evolution-roadmap.md) for the next-stage learning-system strategy.
+- Use [Brainstorms](brainstorms/index.md) for current requirement-alignment outputs before planning.
+- Use [Solutions](solutions/index.md) for baseline implementation decisions and recovery patterns.
 - Use [Git LFS Asset Migration](diataxis/en/explanation/git-lfs-asset-migration.md) for the phased repository/runtime decoupling strategy.
 - Use [Sidecar Supply Feasibility](diataxis/en/explanation/sidecar-supply-feasibility.md) for the cost/user-friction/maintainer-burden decision matrix behind mirror choices.
 - Use [Anti-Fragile Sidecar Supply Strategy](en/sidecar_supply_strategy.md) for the cache-first, mirror-aware, offline-seed path that explicitly rejects download-only replacement.
@@ -38,6 +46,8 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - 需要理解架构决策请查看 [解释文档](diataxis/zh/explanation/architecture-and-migration.md)。
 - 启动性能分阶段落地请查看 [启动节点更新提速方案](diataxis/zh/explanation/startup-node-update-acceleration-plan.md)。
 - 下一阶段学习系统战略请查看 [知识彻底掌握演进路线图](diataxis/zh/explanation/knowledge-mastery-evolution-roadmap.md)。
+- 需求对齐与规划前输出请查看 [Brainstorms](brainstorms/index.md)。
+- 沉淀的解决方案基线请查看 [Solutions](solutions/index.md)。
 - 仓库与运行时资产解耦迁移请查看 [Git LFS 资产迁移](diataxis/zh/explanation/git-lfs-asset-migration.md)。
 - 镜像方案的成本 / 用户门槛 / 维护负担矩阵请查看 [Sidecar 供给可行性](diataxis/zh/explanation/sidecar-supply-feasibility.md)。
 - 桌面 sidecar 的缓存优先 / 镜像感知 / 离线种子迁移路径请查看 [反脆弱 Sidecar 供给策略](zh/sidecar_supply_strategy.md)。
