@@ -1861,3 +1861,9 @@ max_doc_bytes = 100663296
 
 - [x] **Canvas 渲染器**: 添加 HTML5 Canvas 支持以实现高性能。
 - [x] **Worker 扩展**: 将线程限制增加到 12。
+
+## License / 开源许可
+
+This project is licensed under the **GNU General Public License v3.0 (GPL-3.0-only)**.
+
+本项目采用 **GNU General Public License v3.0（GPL-3.0-only）** 开源协议。

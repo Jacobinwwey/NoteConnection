@@ -127,7 +127,7 @@
   "bugs": {
     "url": "https://github.com/Jacobinwwey/NoteConnection/issues"
   },
-  "license": "ISC",
+  "license": "GPL-3.0-only",
   "type": "commonjs",
   "devDependencies": {
     "@tauri-apps/cli": "^2.10.0",
