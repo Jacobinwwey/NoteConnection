@@ -10,7 +10,7 @@
   - `src/learning/`: Knowledge learning platform. `api.ts` defines 31 typed interfaces; `KnowledgeLearningPlatform.ts` implements them. `domains/` contains 7 domain classes (`KnowledgeIngestor`, `KnowledgeQuerier`, `ConversationManager`, `MasteryEngine`, `QualityEvaluator`, `TutorRouter`, `MemoryPolicyManager`) with `*Platform` interfaces for gradual extraction.
   - `src/notemd/`: NoteMD LLM-powered Markdown processing.
   - `src/utils/`: Runtime path resolution (`RuntimePaths.ts`), cross-platform detection (`platform.ts`).
-- `src/frontend/`: Static UI (HTML/CSS/vanilla JS + ES modules). Employs Web Workers (`path_worker.js`, `simulationWorker.js`) to offload rendering and physics. Uses Vite for ES module bundling (4 chunks: main, graph-app, agent-workspace, path-mode). Legacy IIFE files (`.js`) coexist with ES module versions (`.mjs`).
+- `src/frontend/`: Static UI (HTML/CSS/vanilla JS + ES modules). Employs Web Workers (`path_worker.js`, `simulationWorker.js`) to offload rendering and physics. Uses Vite for ES module bundling (6 chunks: main, graph-app, graph-state, agent-workspace, path-mode, path-workbench, path-worker). Extracted ES modules: `i18n.mjs`, `runtime_bridge.mjs`, `main.mjs`, `path_worker_bridge.mjs`, `workbench_state.mjs`, `graph_state.mjs`. Legacy IIFE files (`.js`) coexist with ES module versions (`.mjs`).
 - `path_mode/`: Godot 4.3 UI layer (Forward+ Vulkan renderer, GL Compatibility fallback for mobile).
 - `src-tauri/`: Tauri v2 (Rust) desktop shell. Platform configs at `tauri.{linux,macos,windows,android}.conf.json`; sidecar binaries at `bin/`.
 - `scripts/`: Build helpers (~50 scripts: sidecar build, verification, benchmarking, docs).
@@ -59,6 +59,26 @@ npm run tauri:android:build   # release APK/AAB
 - Reader runtime guardrail: on Markdown reader open, run lightweight self-check and auto-heal `$$```mermaid` to `$$` + newline + ` ```mermaid` before rendering.
 - Godot Mermaid runtime path must use renderer preference that allows fallback (`auto`), so missing frontend bridge does not break diagram display.
 - Any interface/runtime change touching markdown parsing or Mermaid rendering must preserve this baseline and re-verify it on `Knowledge_Base/testconcept`.
+
+## Domain Diagnostics Panel
+
+The `GET /api/runtime-diagnostics` endpoint exposes runtime metrics from all 7 domain classes under the `domains` key:
+
+```json
+{
+  "domains": {
+    "ingest":      { "ingestCount", "averageIngestLatencyMs", "stalenessQueryCount", ... },
+    "query":       { "queryCount", "cacheHitRate", "latencyP95Ms", "fallbackCount", ... },
+    "conversation": { "turnCount", "averageResponseLatencyMs", "memoryOperations", ... },
+    "mastery":     { "pathGenerationCount", "sessionExecutionCount", ... },
+    "quality":     { "evaluationCount", "recentPassRate", "snapshotCount", ... },
+    "tutor":       { "actionExecutionCount", "actionKindDistribution", ... },
+    "memory":      { "policyApplicationCount", "policyLayerDistribution", ... }
+  }
+}
+```
+
+Route migration metrics (`routeMigration.registryHitRate`) and global route count (`routeMigration.totalModularRoutes: 65`) are also exposed.
 
 ## Testing Guidelines
 

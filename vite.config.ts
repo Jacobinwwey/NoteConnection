@@ -24,8 +24,11 @@ export default defineConfig({
                 manualChunks(id) {
                     if (id.includes('node_modules')) return 'vendor';
                     if (id.includes('/libs/')) return 'vendor-libs';
-                    if (id.includes('path_app') || id.includes('path_worker') || id.includes('path_worker_bridge')) return 'path-mode';
+                    if (id.includes('path_worker_bridge') || id.includes('workbench_state')) return 'path-workbench';
+                    if (id.includes('path_worker') && !id.includes('bridge')) return 'path-worker';
+                    if (id.includes('path_app')) return 'path-mode';
                     if (id.includes('workspace_panes') || id.includes('agent_workspace')) return 'agent-workspace';
+                    if (id.includes('graph_state')) return 'graph-state';
                     if (id.includes('app.js') || id.includes('source_manager')) return 'graph-app';
                 },
             },

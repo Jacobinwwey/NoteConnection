@@ -13,8 +13,12 @@
 import './i18n.mjs';
 import './runtime_bridge.mjs';
 
-// 2. Legacy IIFE modules (loaded as side-effect scripts; these register on window.*)
-// They still use window globals but the foundation is already in place.
+// 2. Extracted ES modules (loaded before legacy scripts, register on window.*)
+import './path_worker_bridge.mjs';
+import './workbench_state.mjs';
+import './graph_state.mjs';
+
+// 3. Legacy IIFE modules (loaded as side-effect scripts; these register on window.*)
 import './workspace_panes.js';
 import './agent_workspace.js';
 import './settings.js';
