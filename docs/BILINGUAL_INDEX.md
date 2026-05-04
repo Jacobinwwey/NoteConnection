@@ -10,11 +10,14 @@
 
 ### Summary
 
-- English files: `22`
-- Chinese files: `21`
-- Bilingual pairs: `21`
-- English-only files: `1`
+- English files: `24`
+- Chinese files: `24`
+- Bilingual pairs: `23`
+- English-only files: `1` (brainstorms/ individual files — index.md is bilingual)
 - Chinese-only files: `0`
+- Archived: `TODO.en.md` + `TODO.zh.md` (moved to `docs/archive/`)
+
+> Updated 2026-05-04: analysis_ref.md now has a Chinese counterpart; TODO.md files archived; v1.6.6 release notes added; brainstorms/index.md updated with bilingual table.
 
 ### Bilingual Pairs
 
@@ -85,17 +88,19 @@
 | 12 | `tauri_brainstorming.md` | `docs/en/tauri_brainstorming.md` | `docs/zh/tauri_brainstorming.md` | 已配对 |
 | 13 | `tauri_tasks.md` | `docs/en/tauri_tasks.md` | `docs/zh/tauri_tasks.md` | 已配对 |
 | 14 | `TEST_REPORT.md` | `docs/en/TEST_REPORT.md` | `docs/zh/TEST_REPORT.md` | 已配对 |
-| 15 | `TODO.md` | `docs/en/TODO.md` | `docs/zh/TODO.md` | 已配对 |
+| 15 | `TODO.md` | `docs/archive/TODO.en.md` | `docs/archive/TODO.zh.md` | 已归档 |
 | 16 | `User_Manual.md` | `docs/en/User_Manual.md` | `docs/zh/User_Manual.md` | 已配对 |
 | 17 | `walkthrough.md` | `docs/en/walkthrough.md` | `docs/zh/walkthrough.md` | 已配对 |
 | 18 | `app_config.toml_guide.md` | `docs/en/app_config.toml_guide.md` | `docs/zh/app_config.toml_guide.md` | 已配对 |
 | 19 | `lfs_asset_migration_plan.md` | `docs/en/lfs_asset_migration_plan.md` | `docs/zh/lfs_asset_migration_plan.md` | 已配对 |
 | 20 | `multi_platform_build_flow_audit.md` | `docs/en/multi_platform_build_flow_audit.md` | `docs/zh/multi_platform_build_flow_audit.md` | 已配对 |
 | 21 | `sidecar_supply_strategy.md` | `docs/en/sidecar_supply_strategy.md` | `docs/zh/sidecar_supply_strategy.md` | 已配对 |
+| 22 | `analysis_ref.md` | `docs/en/analysis_ref.md` | `docs/zh/analysis_ref.md` | 已配对 (2026-05) |
+| 23 | `docs_release_and_rollback.md` | `docs/en/docs_release_and_rollback.md` | `docs/zh/docs_release_and_rollback.md` | 已配对 |
+| 24 | `knowledge_mastery_evolution_plan.md` | `docs/en/knowledge_mastery_evolution_plan.md` | `docs/zh/knowledge_mastery_evolution_plan.md` | 已配对 |
 
 ### 未配对文件
 
-- 仅英文：
-  - `docs/en/analysis_ref.md`
-- 仅中文：
-  - 无
+- 仅英文：无（brainstorms/ 单文件为索引文档，已中文化）
+- 仅中文：无
+- 已归档：`TODO.en.md` + `TODO.zh.md` → `docs/archive/`

@@ -20,6 +20,8 @@ jobs:
         include:
           - suite: desktop-migration-suite
             command: npm run test:migration
+          - suite: foundation-rollout-boundary-suite
+            command: npm run test:foundation:rollout-boundary
           - suite: wasm-parity-strict-suite
             command: npm run test:wasm:parity:gates
           - suite: tauri-rust-suite
@@ -34,6 +36,8 @@ jobs:
             command: npm run verify:sbom:attestation -- --contract-only
           - suite: sidecar-signature-policy-contract-suite
             command: npm run verify:sidecar:signatures -- --contract-only
+          - suite: license-policy-contract-suite
+            command: npm run test:license:contract
 
     steps:
       - name: Checkout repository
@@ -77,3 +81,138 @@ jobs:
 
       - name: Run gate
         run: ${{ matrix.command }}
+
+  route-registry-contract-gates:
+    name: route-registry-contract-gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          lfs: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run route registry contract tests
+        run: npx jest src/routes/registry.contract.test.ts --no-coverage --runInBand
+
+  agent-workspace-contract-gates:
+    name: agent-workspace-contract-gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          lfs: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run agent-workspace contract suites
+        run: |
+          npm run test:agent-workspace:contracts
+          npm run test:conversation-turn-cache:durability
+
+  agent-workspace-tauri-strict-evidence:
+    name: agent-workspace-tauri-strict-evidence
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          lfs: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux native dependencies for strict tauri evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libjavascriptcoregtk-4.1-dev \
+            libsoup-3.0-dev
+          pkg-config --modversion webkit2gtk-4.1
+          pkg-config --modversion javascriptcoregtk-4.1
+          pkg-config --modversion libsoup-3.0
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run strict tauri rust lifecycle gate
+        run: npm run verify:agent-workspace:tauri:rust:strict
+
+      - name: Run strict tauri window evidence gate
+        run: npm run verify:agent-workspace:tauri:window-evidence:strict
+
+      - name: Build tauri evidence index (always)
+        if: always()
+        run: npm run verify:agent-workspace:tauri:evidence:index
+
+      - name: Enforce strict tauri evidence index gate
+        if: success()
+        run: npm run verify:agent-workspace:tauri:evidence:index:strict
+
+      - name: Render tauri evidence summary (always)
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run verify:agent-workspace:tauri:evidence:summary -- --append-step-summary
+
+      - name: Render tauri evidence release fragment (always)
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/render-agent-workspace-tauri-evidence-release-fragment.js --append-step-summary
+
+      - name: Render tauri evidence manifest (always)
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run verify:agent-workspace:tauri:evidence:manifest
+
+      - name: Enforce strict tauri evidence manifest gate
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run verify:agent-workspace:tauri:evidence:manifest:strict
+
+      - name: Upload strict tauri evidence artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-workspace-tauri-strict-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            output/tauri/agent-workspace-rust-tests/**
+            output/tauri/agent-workspace-window-evidence/**
+            output/tauri/agent-workspace-smoke/**
+            output/tauri/agent-workspace-evidence-index/**

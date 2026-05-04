@@ -140,6 +140,71 @@
         ></span>
       </div>
 
+      <div id="agent-workspace-shell" class="agent-workspace-shell">
+        <section id="agent-chat-pane" class="agent-chat-pane">
+          <div class="agent-pane-header">
+            <h3 data-i18n="agentWorkspace.title">Agent Workspace</h3>
+            <span class="agent-pane-subtitle" data-i18n="agentWorkspace.subtitle">Conversation + local knowledge actions</span>
+          </div>
+          <div class="agent-pane-field">
+            <label for="agent-workspace-user-id" data-i18n="agentWorkspace.userId">Learner ID</label>
+            <input id="agent-workspace-user-id" type="text" value="path_user_default" />
+          </div>
+          <div id="agent-workspace-chat-messages" class="agent-chat-messages"></div>
+          <div class="agent-pane-field">
+            <label for="agent-workspace-chat-input" data-i18n="agentWorkspace.inputLabel">Ask the local learning graph</label>
+            <textarea
+              id="agent-workspace-chat-input"
+              rows="3"
+              placeholder="Ask about a concept, proof step, or prerequisite..."
+              data-i18n-placeholder="agentWorkspace.inputPlaceholder"
+            ></textarea>
+          </div>
+          <div class="agent-pane-actions">
+            <button id="btn-agent-workspace-send" type="button" data-i18n="agentWorkspace.actions.send">Send</button>
+          </div>
+          <div id="agent-workspace-knowledge-points" class="agent-knowledge-points">
+            <div class="agent-knowledge-empty" data-i18n="agentWorkspace.knowledge.emptyInitial">No local knowledge points yet.</div>
+          </div>
+        </section>
+
+        <div id="agent-side-work-area" class="agent-side-work-area">
+          <section
+            id="agent-graph-focus-pane"
+            class="agent-workspace-pane"
+            data-open="false"
+            data-fullscreen="false"
+          >
+            <div class="agent-workspace-pane-header">
+              <h4 data-i18n="agentWorkspace.graphFocus.title">Graph Focus</h4>
+              <div class="agent-pane-controls">
+                <button id="btn-agent-graph-focus-fullscreen" type="button" data-i18n="agentWorkspace.actions.fullscreen">Fullscreen</button>
+              </div>
+            </div>
+            <div id="agent-graph-focus-body" class="agent-workspace-pane-body">
+              <div class="agent-pane-empty" data-i18n="agentWorkspace.graphFocus.emptyIdle">Graph focus pane is idle.</div>
+            </div>
+          </section>
+
+          <section
+            id="agent-learning-path-pane"
+            class="agent-workspace-pane"
+            data-open="false"
+            data-fullscreen="false"
+          >
+            <div class="agent-workspace-pane-header">
+              <h4 data-i18n="agentWorkspace.learningPath.title">Learning Path</h4>
+              <div class="agent-pane-controls">
+                <button id="btn-agent-learning-path-fullscreen" type="button" data-i18n="agentWorkspace.actions.fullscreen">Fullscreen</button>
+              </div>
+            </div>
+            <div id="agent-learning-path-body" class="agent-workspace-pane-body">
+              <div class="agent-pane-empty" data-i18n="agentWorkspace.learningPath.emptyIdle">Learning path pane is idle.</div>
+            </div>
+          </section>
+        </div>
+      </div>
+
       <div id="controls">
         <h3
           style="
@@ -828,8 +893,21 @@
             </button>
           </div>
         </div>
-        <div id="reading-body" class="reading-body locked">
-          <!-- Content injected here -->
+        <div class="reading-layout">
+          <div class="reading-main">
+            <div id="reading-diagnostics" class="reading-diagnostics">
+              <span class="reading-diagnostics-item" data-i18n="reader_loading">Reader loading...</span>
+            </div>
+            <div id="reading-body" class="reading-body locked">
+              <!-- Content injected here -->
+            </div>
+          </div>
+          <aside id="reading-outline" class="reading-outline" aria-label="Document outline">
+            <div class="reading-outline-header" data-i18n="reader_outline_title">Outline</div>
+            <div id="reading-outline-body" class="reading-outline-body">
+              <div class="reading-outline-empty" data-i18n="reader_outline_empty">No headings available.</div>
+            </div>
+          </aside>
         </div>
       </div>
     </div>
@@ -1270,6 +1348,8 @@
     <!-- app.js removed for dynamic loading after data.js -->
     <script src="analysis.js"></script>
     <script src="loading.js"></script>
+    <script src="workspace_panes.js"></script>
+    <script src="agent_workspace.js"></script>
     <script src="source_manager.js"></script>
     <script src="welcome.js"></script>
     <!-- Path Mode Container (Hidden by default) -->
@@ -1514,6 +1594,8 @@
     <!-- Path Mode Scripts -->
     <script src="libs/path_core.js"></script>
     <script src="path_app.js"></script>
+
+    <!-- ES Module Entry (Vite dev/build) - loads after legacy scripts for backward compat -->
+    <script type="module" src="./main.mjs"></script>
   </body>
 </html>
-

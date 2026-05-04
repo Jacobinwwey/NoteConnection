@@ -127,6 +127,16 @@ NoteConnection is built on a modular architecture designed for performance and e
 
 ## 📦 Quick Start
 
+### Desktop System Dependencies
+
+| Platform | Required Dependencies |
+|---|---|
+| **Linux** | `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libsoup3.0`, `libjavascriptcoregtk-4.1-0` (Ubuntu/Debian: `sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev patchelf`) |
+| **macOS** | No additional dependencies (system WebKit included) |
+| **Windows** | [Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (pre-installed on Windows 11; Windows 10 may need manual install) |
+
+> **Linux Wayland users**: Godot Path Mode requires `GDK_BACKEND=x11` on pure Wayland compositors. The launcher sets this automatically when `XDG_SESSION_TYPE=wayland` is detected.
+
 ### Option 1: Windows Installer (Recommended)
 
 1. Download `NoteConnection.Setup.exe` from the [Latest Releases](https://github.com/Jacobinwwey/NoteConnection/releases).
@@ -161,15 +171,7 @@ npm start
 
 ### Option 5: Mobile Support (Android)
 
-NoteConnection now supports **two Android generation paths**:
-
-1. **Capacitor APK path** (web-asset runtime, stable for reader/visualization workflows).
-2. **Tauri Android path** (native shell pipeline aligned with `docs/tauri_brainstorming.md`).
-
-Build/release/runtime details are audited in:
-
-- `docs/en/multi_platform_build_flow_audit.md`
-- `docs/zh/multi_platform_build_flow_audit.md`
+NoteConnection supports Android via **Tauri Android** (native shell pipeline). The Capacitor APK path is **deprecated** and retained for historical reference only.
 
 #### Prerequisites
 
@@ -177,31 +179,28 @@ Build/release/runtime details are audited in:
 - **Java JDK** (21 or higher)
 - **Android SDK** (Configured in `ANDROID_HOME` or via Android Studio)
 
-#### Method A: Capacitor Build (Stable)
-
-Simply run the included batch script on Windows:
-
-```cmd
-build_apk.bat
-```
-
-This script automatically:
-
-1. Checks your environment (Node, Java, Android SDK).
-2. Installs dependencies.
-3. Builds web assets.
-4. Syncs with Capacitor.
-5. Compiles the APK using Gradle.
-
-You can also trigger the same pipeline through npm:
+#### Recommended: Tauri Android Build (Native Shell)
 
 ```bash
-npm run mobile:build:capacitor
+# First-time setup
+npm run tauri:android:init
+
+# Development build
+npm run tauri:android:dev
+
+# Release APK/AAB
+npm run tauri:android:build
 ```
 
-#### Method B: Tauri Android Build (Native Shell)
+For universal APK (armeabi-v7a + arm64-v8a + x86_64):
 
 ```bash
+npm run tauri:android:build:universal
+```
+
+#### Deprecated: Capacitor Build
+
+The Capacitor APK path (`build_apk.bat`, `npm run mobile:build:capacitor`) is deprecated as of 2026-05. The `android/` Capacitor project directory is retained for historical reference. All active Android development targets the Tauri Android pipeline.
 # First-time setup on the machine
 npm run tauri:android:init
 
@@ -1106,6 +1105,16 @@ NoteConnection 基于模块化架构构建，旨在实现高性能和可扩展�
 
 ## 📦 快速开始
 
+### 桌面系统依赖
+
+| 平台 | 必要依赖 |
+|---|---|
+| **Linux** | `libwebkit2gtk-4.1-dev`、`libgtk-3-dev`、`libsoup3.0`、`libjavascriptcoregtk-4.1-0`（Ubuntu/Debian: `sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev patchelf`） |
+| **macOS** | 无需额外依赖（系统内置 WebKit） |
+| **Windows** | [Edge WebView2 运行时](https://developer.microsoft.com/microsoft-edge/webview2/)（Windows 11 预装；Windows 10 可能需要手动安装） |
+
+> **Linux Wayland 用户**：Godot Path Mode 在纯 Wayland 合成器上需要 `GDK_BACKEND=x11`。启动器检测到 `XDG_SESSION_TYPE=wayland` 时会自动设置。
+
 ### 选项 1: Windows 安装程序 (推荐)
 
 1. 从 [最新发布页面](https://github.com/Jacobinwwey/NoteConnection/releases) 下载 `NoteConnection.Setup.exe`。
@@ -1140,15 +1149,7 @@ npm start
 
 ### 选项 5: 移动端支持 (Android)
 
-NoteConnection 现支持 **两条 Android 生成路径**：
-
-1. **Capacitor APK 路径**（Web 资产运行时，适合阅读与可视化流程）。
-2. **Tauri Android 路径**（原生壳流程，对齐 `docs/tauri_brainstorming.md`）。
-
-与构建/release/运行时边界相关的完整审计文档见：
-
-- `docs/en/multi_platform_build_flow_audit.md`
-- `docs/zh/multi_platform_build_flow_audit.md`
+NoteConnection 通过 **Tauri Android**（原生壳流水线）支持 Android。Capacitor APK 路径已**废弃**，仅保留作为历史参考。
 
 #### 先决条件
 
@@ -1156,39 +1157,30 @@ NoteConnection 现支持 **两条 Android 生成路径**：
 - **Java JDK** (21 或更高版本)
 - **Android SDK** (配置在 `ANDROID_HOME` 或通过 Android Studio 安装)
 
-#### 方法 A: Capacitor 构建（稳定）
-
-在 Windows 上直接运行包含的批处理脚本：
-
-```cmd
-build_apk.bat
-```
-
-该脚本会自动：
-
-1. 检查您的环境 (Node, Java, Android SDK)。
-2. 安装依赖项。
-3. 构建 Web 资源。
-4. 同步 Capacitor。
-5. 使用 Gradle 编译 APK。
-
-也可以通过 npm 脚本触发同一路径：
+#### 推荐: Tauri Android 构建（原生壳）
 
 ```bash
-npm run mobile:build:capacitor
-```
-
-#### 方法 B: Tauri Android 构建（原生壳）
-
-```bash
-# 机器首次初始化
+# 首次初始化
 npm run tauri:android:init
 
-# 通过 Tauri Android 流水线构建
+# 开发构建
+npm run tauri:android:dev
+
+# 发布 APK/AAB
 npm run tauri:android:build
 ```
 
-#### 方法 C: Capacitor 手动构建步骤
+构建通用 APK（armeabi-v7a + arm64-v8a + x86_64）：
+
+```bash
+npm run tauri:android:build:universal
+```
+
+#### 已废弃: Capacitor 构建
+
+Capacitor APK 路径（`build_apk.bat`、`npm run mobile:build:capacitor`）已于 2026-05 废弃。`android/` 目录保留作为历史参考。所有活跃的 Android 开发均以 Tauri Android 流水线为目标。
+
+#### 历史参考: Capacitor 手动构建步骤
 
 1.  **构建 Web 资源**:
     ```bash

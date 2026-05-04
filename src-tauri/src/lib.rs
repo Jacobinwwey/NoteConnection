@@ -1713,25 +1713,94 @@ fn shutdown_application(_app: AppHandle, _reason: Option<String>) -> Result<(), 
     Ok(())
 }
 
+#[cfg(not(target_os = "android"))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct PathmodeWindowTogglePlan {
+    send_pathmode_show: bool,
+    send_pathmode_hide: bool,
+    hide_tauri_main_window: bool,
+    show_tauri_main_window: bool,
+    focus_tauri_main_window: bool,
+}
+
+#[cfg(not(target_os = "android"))]
+fn resolve_pathmode_window_toggle_plan(
+    show_godot: bool,
+    multi_window: &MultiWindowConfig,
+) -> PathmodeWindowTogglePlan {
+    if show_godot {
+        return PathmodeWindowTogglePlan {
+            send_pathmode_show: true,
+            send_pathmode_hide: false,
+            hide_tauri_main_window: multi_window.hide_tauri_when_pathmode_opens,
+            show_tauri_main_window: false,
+            focus_tauri_main_window: false,
+        };
+    }
+
+    let should_restore_tauri = multi_window.restore_tauri_when_pathmode_exits;
+    PathmodeWindowTogglePlan {
+        send_pathmode_show: false,
+        send_pathmode_hide: true,
+        hide_tauri_main_window: false,
+        show_tauri_main_window: should_restore_tauri,
+        focus_tauri_main_window: should_restore_tauri,
+    }
+}
+
+#[cfg(not(target_os = "android"))]
+fn build_pathmode_window_toggled_event_payload(
+    show_godot: bool,
+    multi_window: &MultiWindowConfig,
+    plan: PathmodeWindowTogglePlan,
+) -> Value {
+    json!({
+        "showGodot": show_godot,
+        "triggeredAtMs": SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_millis())
+            .unwrap_or(0),
+        "config": {
+            "singleWindowMode": multi_window.single_window_mode,
+            "hideTauriWhenPathmodeOpens": multi_window.hide_tauri_when_pathmode_opens,
+            "restoreTauriWhenPathmodeExits": multi_window.restore_tauri_when_pathmode_exits,
+            "confirmBeforeFullShutdownFromGodot": multi_window.confirm_before_full_shutdown_from_godot,
+            "syncLanguage": multi_window.sync_language,
+        },
+        "plan": {
+            "sendPathmodeShow": plan.send_pathmode_show,
+            "sendPathmodeHide": plan.send_pathmode_hide,
+            "hideTauriMainWindow": plan.hide_tauri_main_window,
+            "showTauriMainWindow": plan.show_tauri_main_window,
+            "focusTauriMainWindow": plan.focus_tauri_main_window,
+        }
+    })
+}
+
 /// Toggle between Tauri main window and Godot PathMode window.
-/// When `show_godot` is true, the Tauri window hides and Godot becomes visible.
-/// When `show_godot` is false, the Godot window hides and Tauri becomes visible.
+/// When `show_godot` is true, the frontend bridge is expected to request Godot visibility,
+/// and Tauri hides only if configured to do so.
+/// When `show_godot` is false, the frontend bridge is expected to request Godot hide,
+/// and Tauri restores only if configured to do so.
 ///
 /// 切换 Tauri 主窗口与 Godot PathMode 窗口。
-/// 当 `show_godot` 为 true 时，Tauri 窗口隐藏、Godot 窗口显示。
-/// 当 `show_godot` 为 false 时，Godot 窗口隐藏、Tauri 窗口显示。
+/// 当 `show_godot` 为 true 时，前端 bridge 负责请求 Godot 显示，
+/// Tauri 是否隐藏由配置决定。
+/// 当 `show_godot` 为 false 时，前端 bridge 负责请求 Godot 隐藏，
+/// Tauri 是否恢复由配置决定。
 #[cfg(not(target_os = "android"))]
-#[tauri::command]
-fn toggle_pathmode_window(app: AppHandle, show_godot: bool) -> Result<(), String> {
+fn toggle_pathmode_window_with_runtime<R: tauri::Runtime>(
+    app: AppHandle<R>,
+    show_godot: bool,
+) -> Result<(), String> {
     let main_window = app
         .get_webview_window("main")
         .ok_or_else(|| "Main Tauri window not found".to_string())?;
     let multi_window = resolve_multi_window_config_from_config();
+    let plan = resolve_pathmode_window_toggle_plan(show_godot, &multi_window);
 
     if show_godot {
-        if multi_window.hide_tauri_when_pathmode_opens {
-            // Hide Tauri window; Godot will show itself via WebSocket message.
-            // 隐藏 Tauri 窗口；Godot 将通过 WebSocket 消息自行显示。
+        if plan.hide_tauri_main_window {
             main_window
                 .hide()
                 .map_err(|err| format!("Failed to hide Tauri window: {}", err))?;
@@ -1740,22 +1809,33 @@ fn toggle_pathmode_window(app: AppHandle, show_godot: bool) -> Result<(), String
             println!("[Rust] PathMode requested without hiding Tauri window (config override).");
         }
     } else {
-        if multi_window.restore_tauri_when_pathmode_exits {
-            // Show Tauri window; Godot will hide itself via WebSocket message.
-            // 显示 Tauri 窗口；Godot 将通过 WebSocket 消息自行隐藏。
+        if plan.show_tauri_main_window {
             main_window
                 .show()
                 .map_err(|err| format!("Failed to show Tauri window: {}", err))?;
-            main_window
-                .set_focus()
-                .map_err(|err| format!("Failed to focus Tauri window: {}", err))?;
+            if plan.focus_tauri_main_window {
+                main_window
+                    .set_focus()
+                    .map_err(|err| format!("Failed to focus Tauri window: {}", err))?;
+            }
             println!("[Rust] Tauri window restored from PathMode.");
         } else {
             println!("[Rust] PathMode exit requested without restoring Tauri window (config override).");
         }
     }
 
+    let payload = build_pathmode_window_toggled_event_payload(show_godot, &multi_window, plan);
+    if let Err(err) = app.emit("pathmode-window-toggled", payload) {
+        eprintln!("[Rust] Failed to emit pathmode-window-toggled event: {}", err);
+    }
+
     Ok(())
+}
+
+#[cfg(not(target_os = "android"))]
+#[tauri::command]
+fn toggle_pathmode_window(app: AppHandle, show_godot: bool) -> Result<(), String> {
+    toggle_pathmode_window_with_runtime(app, show_godot)
 }
 
 #[cfg(target_os = "android")]
@@ -2255,6 +2335,17 @@ pub fn run() {
                                 )
                                 .env("NOTE_CONNECTION_UI_LANGUAGE", godot_ui_language.clone());
 
+                            #[cfg(target_os = "linux")]
+                            {
+                                let session_type =
+                                    std::env::var("XDG_SESSION_TYPE").unwrap_or_default();
+                                if session_type == "wayland" {
+                                    godot_command
+                                        .env("GDK_BACKEND", "x11")
+                                        .env("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+                                }
+                            }
+
                             if godot_single_window_mode {
                                 godot_command
                                     .env("NOTE_CONNECTION_START_HIDDEN", "1")
@@ -2608,6 +2699,223 @@ sync_language = true
         assert!(runtime_config.multi_window.restore_tauri_when_pathmode_exits);
         assert!(!runtime_config.multi_window.confirm_before_full_shutdown_from_godot);
         assert!(runtime_config.multi_window.sync_language);
+    }
+
+    #[cfg(not(target_os = "android"))]
+    #[test]
+    fn pathmode_window_toggle_plan_decouples_godot_signal_from_tauri_hide_restore_flags() {
+        let config = MultiWindowConfig {
+            single_window_mode: false,
+            hide_tauri_when_pathmode_opens: false,
+            restore_tauri_when_pathmode_exits: false,
+            confirm_before_full_shutdown_from_godot: true,
+            sync_language: true,
+        };
+
+        let open_plan = resolve_pathmode_window_toggle_plan(true, &config);
+        assert!(open_plan.send_pathmode_show);
+        assert!(!open_plan.send_pathmode_hide);
+        assert!(!open_plan.hide_tauri_main_window);
+        assert!(!open_plan.show_tauri_main_window);
+        assert!(!open_plan.focus_tauri_main_window);
+
+        let exit_plan = resolve_pathmode_window_toggle_plan(false, &config);
+        assert!(!exit_plan.send_pathmode_show);
+        assert!(exit_plan.send_pathmode_hide);
+        assert!(!exit_plan.hide_tauri_main_window);
+        assert!(!exit_plan.show_tauri_main_window);
+        assert!(!exit_plan.focus_tauri_main_window);
+    }
+
+    #[cfg(not(target_os = "android"))]
+    #[test]
+    fn pathmode_window_toggle_plan_restores_tauri_focus_when_restore_policy_is_enabled() {
+        let config = MultiWindowConfig {
+            single_window_mode: true,
+            hide_tauri_when_pathmode_opens: true,
+            restore_tauri_when_pathmode_exits: true,
+            confirm_before_full_shutdown_from_godot: true,
+            sync_language: true,
+        };
+
+        let open_plan = resolve_pathmode_window_toggle_plan(true, &config);
+        assert!(open_plan.send_pathmode_show);
+        assert!(open_plan.hide_tauri_main_window);
+        assert!(!open_plan.show_tauri_main_window);
+        assert!(!open_plan.focus_tauri_main_window);
+
+        let exit_plan = resolve_pathmode_window_toggle_plan(false, &config);
+        assert!(exit_plan.send_pathmode_hide);
+        assert!(!exit_plan.hide_tauri_main_window);
+        assert!(exit_plan.show_tauri_main_window);
+        assert!(exit_plan.focus_tauri_main_window);
+    }
+
+    #[cfg(not(target_os = "android"))]
+    #[test]
+    fn pathmode_window_toggled_event_payload_contains_config_and_execution_plan() {
+        let config = MultiWindowConfig {
+            single_window_mode: true,
+            hide_tauri_when_pathmode_opens: true,
+            restore_tauri_when_pathmode_exits: false,
+            confirm_before_full_shutdown_from_godot: false,
+            sync_language: false,
+        };
+        let plan = resolve_pathmode_window_toggle_plan(true, &config);
+        let payload = build_pathmode_window_toggled_event_payload(true, &config, plan);
+
+        assert_eq!(payload.get("showGodot").and_then(Value::as_bool), Some(true));
+        assert_eq!(
+            payload
+                .get("config")
+                .and_then(|value| value.get("hideTauriWhenPathmodeOpens"))
+                .and_then(Value::as_bool),
+            Some(true)
+        );
+        assert_eq!(
+            payload
+                .get("config")
+                .and_then(|value| value.get("restoreTauriWhenPathmodeExits"))
+                .and_then(Value::as_bool),
+            Some(false)
+        );
+        assert_eq!(
+            payload
+                .get("plan")
+                .and_then(|value| value.get("sendPathmodeShow"))
+                .and_then(Value::as_bool),
+            Some(true)
+        );
+        assert_eq!(
+            payload
+                .get("plan")
+                .and_then(|value| value.get("hideTauriMainWindow"))
+                .and_then(Value::as_bool),
+            Some(true)
+        );
+        assert_eq!(
+            payload
+                .get("plan")
+                .and_then(|value| value.get("showTauriMainWindow"))
+                .and_then(Value::as_bool),
+            Some(false)
+        );
+        assert!(
+            payload
+                .get("triggeredAtMs")
+                .and_then(Value::as_u64)
+                .is_some()
+        );
+    }
+
+    #[cfg(not(target_os = "android"))]
+    #[test]
+    fn pathmode_window_real_app_window_requires_main_window() {
+        let app = tauri::test::mock_builder()
+            .build(tauri::test::mock_context(tauri::test::noop_assets()))
+            .expect("failed to build mock app");
+
+        let result = toggle_pathmode_window_with_runtime(app.app_handle().clone(), true);
+        assert!(result.is_err());
+        assert!(
+            result
+                .err()
+                .unwrap_or_default()
+                .contains("Main Tauri window not found")
+        );
+    }
+
+    #[cfg(not(target_os = "android"))]
+    #[test]
+    fn pathmode_window_real_app_window_lifecycle_emits_toggle_events() {
+        use tauri::Listener;
+
+        let _lock = lock_test_env();
+        let temp = TempDir::new("pathmode_window_mock_app");
+        let config_file = temp.child("app_config.toml");
+
+        fs::write(
+            &config_file,
+            r#"
+[multi_window]
+single_window_mode = true
+hide_tauri_when_pathmode_opens = true
+restore_tauri_when_pathmode_exits = true
+confirm_before_full_shutdown_from_godot = true
+sync_language = true
+"#,
+        )
+        .expect("failed to write pathmode mock app config");
+
+        let _config_guard = EnvVarGuard::set(
+            "NOTE_CONNECTION_CONFIG_PATH",
+            config_file.to_string_lossy().as_ref(),
+        );
+
+        let app = tauri::test::mock_builder()
+            .build(tauri::test::mock_context(tauri::test::noop_assets()))
+            .expect("failed to build mock app");
+        let _main_window = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+            .build()
+            .expect("failed to build mock main window");
+
+        let (tx, rx) = std::sync::mpsc::channel::<Value>();
+        let listener_id = app.listen("pathmode-window-toggled", move |event: tauri::Event| {
+            if let Ok(payload) = serde_json::from_str::<Value>(event.payload()) {
+                let _ = tx.send(payload);
+            }
+        });
+
+        toggle_pathmode_window_with_runtime(app.app_handle().clone(), true)
+            .expect("open toggle should succeed");
+        toggle_pathmode_window_with_runtime(app.app_handle().clone(), false)
+            .expect("close toggle should succeed");
+
+        let open_payload = rx
+            .recv_timeout(std::time::Duration::from_secs(1))
+            .expect("missing open payload");
+        let close_payload = rx
+            .recv_timeout(std::time::Duration::from_secs(1))
+            .expect("missing close payload");
+        app.unlisten(listener_id);
+
+        assert_eq!(open_payload.get("showGodot").and_then(Value::as_bool), Some(true));
+        assert_eq!(close_payload.get("showGodot").and_then(Value::as_bool), Some(false));
+        assert_eq!(
+            open_payload
+                .get("plan")
+                .and_then(|value| value.get("sendPathmodeShow"))
+                .and_then(Value::as_bool),
+            Some(true)
+        );
+        assert_eq!(
+            close_payload
+                .get("plan")
+                .and_then(|value| value.get("sendPathmodeHide"))
+                .and_then(Value::as_bool),
+            Some(true)
+        );
+        assert_eq!(
+            open_payload
+                .get("plan")
+                .and_then(|value| value.get("hideTauriMainWindow"))
+                .and_then(Value::as_bool),
+            Some(true)
+        );
+        assert_eq!(
+            close_payload
+                .get("plan")
+                .and_then(|value| value.get("showTauriMainWindow"))
+                .and_then(Value::as_bool),
+            Some(true)
+        );
+        assert_eq!(
+            close_payload
+                .get("plan")
+                .and_then(|value| value.get("focusTauriMainWindow"))
+                .and_then(Value::as_bool),
+            Some(true)
+        );
     }
 
     #[test]
@@ -2973,11 +3281,5 @@ reader_media_scale = 1.5
         assert!(err.contains("Target directory does not exist"));
     }
 }
-
-
-
-
-
-
 
 

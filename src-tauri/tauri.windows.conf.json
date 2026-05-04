@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "app": {
+    "windows": [
+      {
+        "title": "NoteConnection",
+        "width": 1280,
+        "height": 900
+      }
+    ]
+  },
+  "bundle": {
+    "externalBin": [
+      "bin/server-x86_64-pc-windows-msvc.exe",
+      "bin/godot-x86_64-pc-windows-msvc.exe",
+      "bin/markdown-worker-x86_64-pc-windows-msvc.exe"
+    ]
+  }
+}

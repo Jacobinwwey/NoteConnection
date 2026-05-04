@@ -1,0 +1,162 @@
+import type { RouteEntry, ServerContext } from './types';
+import { CrashLogger } from '../backend/utils/CrashLogger';
+
+export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
+    const { notemdService, loadNotemdSettings } = ctx;
+
+    const api = (path: string) => `/api/notemd${path}`;
+
+    const json = (res: any, code: number, data: unknown) => {
+        res.writeHead(code, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(data));
+    };
+
+    const ok = (res: any, data: unknown) => json(res, 200, { success: true, ...(data as any) });
+    const fail = (res: any, error: unknown, label: string) => {
+        console.error(error);
+        CrashLogger.log(error, label);
+        json(res, 500, { success: false, error: String(error) });
+    };
+
+    const readBody = (req: any): Promise<string> =>
+        new Promise((resolve, reject) => {
+            const chunks: Buffer[] = [];
+            req.on('data', (c: Buffer) => chunks.push(c));
+            req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+            req.on('error', reject);
+        });
+
+    return [
+        {
+            method: 'GET',
+            path: api('/settings'),
+            handler: async (_req, res) => {
+                try {
+                    const settings = await loadNotemdSettings();
+                    ok(res, { settings });
+                } catch (e) { fail(res, e, 'API:GET /api/notemd/settings'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/settings'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const payload = JSON.parse(body);
+                    const result = await notemdService.updateSettings(payload);
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/settings'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/test-llm'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await notemdService.testLlmConnection(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/test-llm'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/process-file'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await notemdService.processFile(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/process-file'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/process-folder'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await notemdService.processFolder(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/process-folder'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/generate-content'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await notemdService.generateContent(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/generate-content'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/translate-file'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await notemdService.translateFile(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/translate-file'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/fix-mermaid'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await notemdService.fixMermaid(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/fix-mermaid'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/fix-formulas'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await notemdService.fixFormulas(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/fix-formulas'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/check-duplicates'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await notemdService.checkDuplicates(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/check-duplicates'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/extract-concepts'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await notemdService.extractConcepts(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/extract-concepts'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/cancel'),
+            handler: async (_req, res) => {
+                try {
+                    notemdService.cancelCurrentOperation();
+                    ok(res, { cancelled: true });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/cancel'); }
+            },
+        },
+    ];
+}
