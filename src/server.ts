@@ -106,7 +106,10 @@ import {
     type TutorTraceDiagnosticsRequest,
 } from './learning';
 import { registerAllRoutes, type ServerContext, type RouteEntry } from './routes';
-import { KnowledgeIngestor, KnowledgeQuerier } from './learning/domains';
+import {
+    KnowledgeIngestor, KnowledgeQuerier, ConversationManager,
+    MasteryEngine, QualityEvaluator, TutorRouter, MemoryPolicyManager,
+} from './learning/domains';
 
 // Note: applyCorsHeaders, isAuthorizedRequest, resolveRequestId, ERROR_CODE_HEADER
 // are defined locally in this file; the middleware module types are for external consumers.
@@ -6874,6 +6877,11 @@ const knowledgeLearningPlatform = createKnowledgeLearningPlatform({
 // Domain class wrappers (gradual extraction from monolith)
 const knowledgeIngestor = new KnowledgeIngestor(knowledgeLearningPlatform);
 const knowledgeQuerier = new KnowledgeQuerier(knowledgeLearningPlatform);
+const conversationManager = new ConversationManager(knowledgeLearningPlatform);
+const masteryEngine = new MasteryEngine(knowledgeLearningPlatform);
+const qualityEvaluator = new QualityEvaluator(knowledgeLearningPlatform, LEARNING_QUALITY_THRESHOLDS);
+const tutorRouter = new TutorRouter(knowledgeLearningPlatform);
+const memoryPolicyManager = new MemoryPolicyManager(knowledgeLearningPlatform);
 
 let cachedNotemdSettings: NotemdSettings | null = null;
 let cachedPathModeSettings: PathModeSettings | null = null;
@@ -13031,6 +13039,11 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         knowledgeLearningPlatform,
         knowledgeIngestor,
         knowledgeQuerier,
+        conversationManager,
+        masteryEngine,
+        qualityEvaluator,
+        tutorRouter,
+        memoryPolicyManager,
         notemdService,
         loadNotemdSettings,
         LOOPBACK_HOST,
@@ -14602,8 +14615,15 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                             inlineFallbacks: routeMigrationStats.inlineFallbacks(),
                             registryHitRate: routeMigrationStats.registryHitRate(),
                         },
-                        ingest: knowledgeIngestor.getDiagnostics(),
-                        query: knowledgeQuerier.getDiagnosticsSummary()
+                        domains: {
+                            ingest: knowledgeIngestor.getDiagnostics(),
+                            query: knowledgeQuerier.getDiagnosticsSummary(),
+                            conversation: conversationManager.getDiagnosticsSummary(),
+                            mastery: masteryEngine.getDiagnosticsSummary(),
+                            quality: qualityEvaluator.getDiagnosticsSummary(),
+                            tutor: tutorRouter.getDiagnosticsSummary(),
+                            memory: memoryPolicyManager.getDiagnosticsSummary(),
+                        }
                     }));
                 } catch (error) {
                     console.error(error);

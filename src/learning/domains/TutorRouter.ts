@@ -22,18 +22,25 @@ export interface TutorPlatform {
 
 export class TutorRouter {
     private actionExecutionCount = 0;
+    private catalogFetchCount = 0;
+    private telemetryFetchCount = 0;
+    private traceQueryCount = 0;
+    private actionKindCounts: Record<string, number> = {};
 
     constructor(private readonly platform: TutorPlatform) {}
 
     async getCatalog(): Promise<TutorAdapterCatalogResponse> {
+        this.catalogFetchCount++;
         return this.platform.getTutorAdapterCatalog();
     }
 
     async getTelemetry(): Promise<TutorAdapterTelemetryResponse> {
+        this.telemetryFetchCount++;
         return this.platform.getTutorAdapterTelemetry();
     }
 
     async queryTraceDiagnostics(request: TutorTraceDiagnosticsRequest): Promise<TutorTraceDiagnosticsResponse> {
+        this.traceQueryCount++;
         return this.platform.queryTutorTraceDiagnostics(request);
     }
 
@@ -47,8 +54,20 @@ export class TutorRouter {
 
     async executeAction(request: TutorActionRequest): Promise<TutorActionResponse> {
         this.actionExecutionCount++;
+        const kind = String(request.actionKind ?? 'unknown');
+        this.actionKindCounts[kind] = (this.actionKindCounts[kind] || 0) + 1;
         return this.platform.executeTutorAction(request);
     }
 
     getActionExecutionCount(): number { return this.actionExecutionCount; }
+
+    getDiagnosticsSummary() {
+        return {
+            actionExecutionCount: this.actionExecutionCount,
+            catalogFetchCount: this.catalogFetchCount,
+            telemetryFetchCount: this.telemetryFetchCount,
+            traceQueryCount: this.traceQueryCount,
+            actionKindDistribution: { ...this.actionKindCounts },
+        };
+    }
 }

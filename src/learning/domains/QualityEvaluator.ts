@@ -30,15 +30,23 @@ export interface QualityPlatform {
 export class QualityEvaluator {
     private evaluationCount = 0;
     private snapshotCount = 0;
+    private planEvaluationCount = 0;
+    private lastEvaluationAt: string | null = null;
+    private evaluationPassRateHistory: boolean[] = [];
 
     constructor(
         private readonly platform: QualityPlatform,
-        private readonly defaultThresholds: LearningQualityThresholds,
+        private readonly defaultThresholds: Partial<LearningQualityThresholds> = {},
     ) {}
 
     async evaluate(request: LearningQualityEvaluationRequest): Promise<LearningQualityEvaluationResponse> {
         this.evaluationCount++;
-        return this.platform.evaluateLearningQuality(request);
+        this.lastEvaluationAt = new Date().toISOString();
+        const result = await this.platform.evaluateLearningQuality(request);
+        const passed = result.deltas ? Object.keys(result.deltas).length === 0 : true;
+        this.evaluationPassRateHistory.push(passed);
+        if (this.evaluationPassRateHistory.length > 200) this.evaluationPassRateHistory.shift();
+        return result;
     }
 
     async captureSnapshot(request: LearningQualitySnapshotRequest): Promise<LearningQualitySnapshotResponse> {
@@ -57,6 +65,7 @@ export class QualityEvaluator {
     getThresholds(): LearningQualityThresholds { return this.platform.getLearningQualityThresholds(); }
 
     async evaluatePlanQuality(request: StudySessionPlanQualityEvaluationRequest): Promise<StudySessionPlanQualityEvaluationResponse> {
+        this.planEvaluationCount++;
         return this.platform.evaluateStudySessionPlanQuality(request);
     }
 
@@ -74,4 +83,22 @@ export class QualityEvaluator {
 
     getEvaluationCount(): number { return this.evaluationCount; }
     getSnapshotCount(): number { return this.snapshotCount; }
+
+    /** Pass rate over the last N evaluations (default 50). */
+    recentPassRate(n = 50): number {
+        const window = this.evaluationPassRateHistory.slice(-n);
+        if (window.length === 0) return 1;
+        return window.filter(Boolean).length / window.length;
+    }
+
+    getDiagnosticsSummary() {
+        return {
+            evaluationCount: this.evaluationCount,
+            snapshotCount: this.snapshotCount,
+            planEvaluationCount: this.planEvaluationCount,
+            lastEvaluationAt: this.lastEvaluationAt,
+            recentPassRate: Number((this.recentPassRate(50) * 100).toFixed(1)),
+            evaluationPassRateHistorySize: this.evaluationPassRateHistory.length,
+        };
+    }
 }

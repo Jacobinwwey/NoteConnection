@@ -4,6 +4,11 @@ export interface ServerContext {
     knowledgeLearningPlatform: any;
     knowledgeIngestor: any;
     knowledgeQuerier: any;
+    conversationManager: any;
+    masteryEngine: any;
+    qualityEvaluator: any;
+    tutorRouter: any;
+    memoryPolicyManager: any;
     notemdService: any;
     loadNotemdSettings: () => Promise<any>;
     LOOPBACK_HOST: string;
