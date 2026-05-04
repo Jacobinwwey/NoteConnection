@@ -133,7 +133,29 @@ status: active
 10. **管道 DAG 形式化**（GraphBuilder 10 阶段 → 显式 DAG）
 11. **Provider 抽象模式**（支持未来笔记格式扩展）
 
-## 六、关联文档
+## 六、进展更新 (2026-05-04, phases N-P)
+
+自初始差距分析后新增交付：
+
+| 领域类 | 新增自有逻辑 | 生产路由 |
+|---|---|---|
+| KnowledgeQuerier | 查询缓存(TTL+修剪)、延迟统计(avg/P95)、回退分析、10 项诊断 | `POST /api/knowledge/query` |
+| ConversationManager | Turn 计数、响应延迟、记忆操作计数器 | 已实例化 |
+| MasteryEngine | 路径/会话/动作计数、掌握诊断指标 | 已实例化 |
+| QualityEvaluator | 通过率追踪(200 窗口)、计划质量指标 | 已实例化 |
+| TutorRouter | 动作种类分布、目录/遥测计数 | 已实例化 |
+| MemoryPolicyManager | 策略层级分布 | 已实例化 |
+
+| 前端模块 | 提取来源 |
+|---|---|
+| workbench_state.mjs | path_app.js 工作台刷新生命周期 |
+| graph_state.mjs | app.js 平台检测/焦点状态/布局模式 |
+
+**全部 7 领域类完整实现** ✅ — `GET /api/runtime-diagnostics` 暴露完整领域诊断面板。
+
+**测试验证**：核心算法 27/27 ✅ | 路由合约 8/8 ✅
+
+## 七、关联文档
 
 - [跨平台架构优化方案](cross-platform-architecture-refinement-2026-05-02.md)
 - [开发进度仪表板](../diataxis/en/explanation/development-progress-dashboard.md)
