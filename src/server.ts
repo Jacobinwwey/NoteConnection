@@ -106,7 +106,7 @@ import {
     type TutorTraceDiagnosticsRequest,
 } from './learning';
 import { registerAllRoutes, type ServerContext, type RouteEntry } from './routes';
-import { KnowledgeIngestor } from './learning/domains';
+import { KnowledgeIngestor, KnowledgeQuerier } from './learning/domains';
 
 // Note: applyCorsHeaders, isAuthorizedRequest, resolveRequestId, ERROR_CODE_HEADER
 // are defined locally in this file; the middleware module types are for external consumers.
@@ -6873,6 +6873,7 @@ const knowledgeLearningPlatform = createKnowledgeLearningPlatform({
 
 // Domain class wrappers (gradual extraction from monolith)
 const knowledgeIngestor = new KnowledgeIngestor(knowledgeLearningPlatform);
+const knowledgeQuerier = new KnowledgeQuerier(knowledgeLearningPlatform);
 
 let cachedNotemdSettings: NotemdSettings | null = null;
 let cachedPathModeSettings: PathModeSettings | null = null;
@@ -13029,6 +13030,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
     const routeContext: ServerContext = {
         knowledgeLearningPlatform,
         knowledgeIngestor,
+        knowledgeQuerier,
         notemdService,
         loadNotemdSettings,
         LOOPBACK_HOST,
@@ -14600,7 +14602,8 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                             inlineFallbacks: routeMigrationStats.inlineFallbacks(),
                             registryHitRate: routeMigrationStats.registryHitRate(),
                         },
-                        ingest: knowledgeIngestor.getDiagnostics()
+                        ingest: knowledgeIngestor.getDiagnostics(),
+                        query: knowledgeQuerier.getDiagnosticsSummary()
                     }));
                 } catch (error) {
                     console.error(error);

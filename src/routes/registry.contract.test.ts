@@ -8,6 +8,7 @@ function createMockContext(): ServerContext {
     return {
         knowledgeLearningPlatform: {} as any,
         knowledgeIngestor: { ingestKnowledge: async () => ({}), averageIngestLatencyMs: () => 0 } as any,
+        knowledgeQuerier: { queryKnowledge: async () => ({}), getDiagnosticsSummary: () => ({}) } as any,
         notemdService: {} as any,
         loadNotemdSettings: async () => ({}),
         LOOPBACK_HOST: '127.0.0.1',

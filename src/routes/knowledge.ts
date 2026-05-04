@@ -5,6 +5,7 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
     const {
         knowledgeLearningPlatform,
         knowledgeIngestor,
+        knowledgeQuerier,
         LOOPBACK_HOST,
         finalPort,
         KNOWLEDGE_GRAPH_STORE_BACKEND,
@@ -288,8 +289,8 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
-                    const result = await knowledgeLearningPlatform.queryKnowledge(JSON.parse(body));
-                    ok(res, { result });
+                    const result = await knowledgeQuerier.queryKnowledge(JSON.parse(body));
+                    ok(res, { result, queryStats: knowledgeQuerier.getDiagnosticsSummary() });
                 } catch (e) { fail(res, e, 'POST /api/knowledge/query'); }
             },
         },

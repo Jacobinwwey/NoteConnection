@@ -3,6 +3,7 @@ import type * as http from 'http';
 export interface ServerContext {
     knowledgeLearningPlatform: any;
     knowledgeIngestor: any;
+    knowledgeQuerier: any;
     notemdService: any;
     loadNotemdSettings: () => Promise<any>;
     LOOPBACK_HOST: string;
