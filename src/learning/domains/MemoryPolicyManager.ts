@@ -1,4 +1,4 @@
-/** MemoryPolicyManager domain — L5: Memory policy + diagnostics governance. */
+/** MemoryPolicyManager — L5: Memory policy governance + layer validation. */
 export interface MemoryPlatform {
     applyMemoryPolicy(request: any): Promise<any>;
     queryMemoryPolicyDiagnostics(request: any): Promise<any>;
@@ -15,14 +15,30 @@ export class MemoryPolicyManager {
 
     constructor(private readonly platform: MemoryPlatform) {}
 
-    async apply(r: any) { this.policyApplicationCount++; const layer = String(r?.layer ?? 'unknown'); this.policyLayerCounts[layer] = (this.policyLayerCounts[layer] || 0) + 1; return this.platform.applyMemoryPolicy(r); }
+    async apply(r: any) {
+        this.validatePolicyRequest(r);
+        this.policyApplicationCount++;
+        const layer = String(r?.layer ?? 'unknown');
+        this.policyLayerCounts[layer] = (this.policyLayerCounts[layer] || 0) + 1;
+        const response = await this.platform.applyMemoryPolicy(r);
+        return this.augmentPolicyResponse(response, layer);
+    }
+
     async queryDiagnostics(r: any) { this.diagnosticsQueryCount++; return this.platform.queryMemoryPolicyDiagnostics(r); }
     async queryDiagnosticsHistory(r: any) { this.historyQueryCount++; return this.platform.queryMemoryPolicyDiagnosticsHistory(r); }
     async queryDiagnosticsTrend(r: any) { this.trendQueryCount++; return this.platform.queryMemoryPolicyDiagnosticsTrend(r); }
 
     getPolicyApplicationCount(): number { return this.policyApplicationCount; }
 
-    getDiagnosticsSummary() {
-        return { policyApplicationCount: this.policyApplicationCount, diagnosticsQueryCount: this.diagnosticsQueryCount, historyQueryCount: this.historyQueryCount, trendQueryCount: this.trendQueryCount, policyLayerDistribution: { ...this.policyLayerCounts } };
+    getDiagnosticsSummary() { return { policyApplicationCount: this.policyApplicationCount, diagnosticsQueryCount: this.diagnosticsQueryCount, historyQueryCount: this.historyQueryCount, trendQueryCount: this.trendQueryCount, policyLayerDistribution: { ...this.policyLayerCounts } }; }
+
+    private validatePolicyRequest(r: any): void {
+        if (!r) throw new Error('Memory policy request is required.');
+        if (!r?.userId) throw new Error('userId is required for memory policy operations.');
+        if (!r?.layer) throw new Error('Memory layer (session/unit/long_term) is required.');
+    }
+
+    private augmentPolicyResponse(response: any, layer: string): any {
+        return { ...response, _domain: { layer, applicationNumber: this.policyApplicationCount, layerCount: this.policyLayerCounts[layer] || 1, layers: Object.keys(this.policyLayerCounts) } };
     }
 }

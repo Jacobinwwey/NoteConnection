@@ -1,4 +1,4 @@
-/** TutorRouter domain — L4: Tutor adapter catalog, telemetry, action execution. */
+/** TutorRouter — L4: Tutor adapter governance + action routing validation. */
 export interface TutorPlatform {
     getTutorAdapterCatalog(): Promise<any>;
     getTutorAdapterTelemetry(): Promise<any>;
@@ -21,11 +21,27 @@ export class TutorRouter {
     async queryTraceDiagnostics(r: any) { return this.platform.queryTutorTraceDiagnostics(r); }
     async queryProviderTrendDiagnostics(r: any) { return this.platform.queryTutorProviderTrendDiagnostics(r); }
     async queryProviderTrendHistory(r: any) { return this.platform.queryTutorProviderTrendHistory(r); }
-    async executeAction(r: any) { this.actionExecutionCount++; const kind = String(r?.actionKind ?? 'unknown'); this.actionKindCounts[kind] = (this.actionKindCounts[kind] || 0) + 1; return this.platform.executeTutorAction(r); }
+
+    async executeAction(r: any) {
+        this.validateActionRequest(r);
+        this.actionExecutionCount++;
+        const kind = String(r?.actionKind ?? 'unknown');
+        this.actionKindCounts[kind] = (this.actionKindCounts[kind] || 0) + 1;
+        const response = await this.platform.executeTutorAction(r);
+        return this.augmentActionResponse(response, kind);
+    }
 
     getActionExecutionCount(): number { return this.actionExecutionCount; }
 
-    getDiagnosticsSummary() {
-        return { actionExecutionCount: this.actionExecutionCount, catalogFetchCount: this.catalogFetchCount, telemetryFetchCount: this.telemetryFetchCount, actionKindDistribution: { ...this.actionKindCounts } };
+    getDiagnosticsSummary() { return { actionExecutionCount: this.actionExecutionCount, catalogFetchCount: this.catalogFetchCount, telemetryFetchCount: this.telemetryFetchCount, actionKindDistribution: { ...this.actionKindCounts } }; }
+
+    private validateActionRequest(r: any): void {
+        if (!r) throw new Error('Tutor action request is required.');
+        if (!r?.userId) throw new Error('userId is required for tutor actions.');
+        if (!r?.actionKind) throw new Error('actionKind is required for tutor actions.');
+    }
+
+    private augmentActionResponse(response: any, kind: string): any {
+        return { ...response, _domain: { actionKind: kind, executionNumber: this.actionExecutionCount, kindCount: this.actionKindCounts[kind] || 1 } };
     }
 }

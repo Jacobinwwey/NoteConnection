@@ -1,4 +1,4 @@
-/** QualityEvaluator domain — L5: Learning quality + plan quality governance. */
+/** QualityEvaluator — L5: Learning quality + plan quality governance. */
 export interface QualityPlatform {
     evaluateLearningQuality(request: any): Promise<any>;
     captureLearningQualitySnapshot(request: any): Promise<any>;
@@ -20,7 +20,14 @@ export class QualityEvaluator {
 
     constructor(private readonly platform: QualityPlatform, private readonly defaultThresholds: any = {}) {}
 
-    async evaluate(r: any) { this.evaluationCount++; this.lastEvaluationAt = new Date().toISOString(); const result = await this.platform.evaluateLearningQuality(r); this.evaluationPassRateHistory.push(true); if (this.evaluationPassRateHistory.length > 200) this.evaluationPassRateHistory.shift(); return result; }
+    async evaluate(r: any) {
+        this.validateEvaluationRequest(r);
+        this.evaluationCount++; this.lastEvaluationAt = new Date().toISOString();
+        const result = await this.platform.evaluateLearningQuality(r);
+        this.evaluationPassRateHistory.push(true);
+        if (this.evaluationPassRateHistory.length > 200) this.evaluationPassRateHistory.shift();
+        return this.augmentEvaluationResponse(result);
+    }
     async captureSnapshot(r: any) { this.snapshotCount++; return this.platform.captureLearningQualitySnapshot(r); }
     async queryHistory(r: any) { return this.platform.queryLearningQualityHistory(r); }
     async queryTrend(r: any) { return this.platform.queryLearningQualityTrend(r); }
@@ -31,14 +38,16 @@ export class QualityEvaluator {
     async queryPlanQualityRuntimeThresholds(r: any) { return this.platform.queryStudySessionPlanQualityRuntimeThresholds(r); }
 
     getEvaluationCount(): number { return this.evaluationCount; }
-    getSnapshotCount(): number { return this.snapshotCount; }
+    recentPassRate(n = 50): number { const w = this.evaluationPassRateHistory.slice(-n); return w.length === 0 ? 1 : w.filter(Boolean).length / w.length; }
 
-    recentPassRate(n = 50): number {
-        const w = this.evaluationPassRateHistory.slice(-n);
-        return w.length === 0 ? 1 : w.filter(Boolean).length / w.length;
+    getDiagnosticsSummary() { return { evaluationCount: this.evaluationCount, snapshotCount: this.snapshotCount, planEvaluationCount: this.planEvaluationCount, lastEvaluationAt: this.lastEvaluationAt, recentPassRate: Number((this.recentPassRate(50) * 100).toFixed(1)) }; }
+
+    private validateEvaluationRequest(r: any): void {
+        if (!r) throw new Error('Quality evaluation request is required.');
+        if (!r?.userId) throw new Error('userId is required for quality evaluation.');
     }
 
-    getDiagnosticsSummary() {
-        return { evaluationCount: this.evaluationCount, snapshotCount: this.snapshotCount, planEvaluationCount: this.planEvaluationCount, lastEvaluationAt: this.lastEvaluationAt, recentPassRate: Number((this.recentPassRate(50) * 100).toFixed(1)) };
+    private augmentEvaluationResponse(response: any): any {
+        return { ...response, _domain: { evaluationNumber: this.evaluationCount, snapshotCount: this.snapshotCount, recentPassRate: this.recentPassRate(20), evaluatedAt: this.lastEvaluationAt } };
     }
 }
