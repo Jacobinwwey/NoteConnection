@@ -1,73 +1,31 @@
-/**
- * TutorRouter domain — L4: Pluggable tutor adapter catalog, telemetry,
- * trace diagnostics, provider trend analysis, and tutor action execution.
- */
-
-import type {
-    TutorActionRequest, TutorActionResponse,
-    TutorAdapterCatalogResponse, TutorAdapterTelemetryResponse,
-    TutorTraceDiagnosticsRequest, TutorTraceDiagnosticsResponse,
-    TutorProviderTrendDiagnosticsRequest, TutorProviderTrendDiagnosticsResponse,
-    TutorProviderTrendHistoryRequest, TutorProviderTrendHistoryResponse,
-} from '../types';
-
+/** TutorRouter domain — L4: Tutor adapter catalog, telemetry, action execution. */
 export interface TutorPlatform {
-    getTutorAdapterCatalog(): Promise<TutorAdapterCatalogResponse>;
-    getTutorAdapterTelemetry(): Promise<TutorAdapterTelemetryResponse>;
-    queryTutorTraceDiagnostics(request: TutorTraceDiagnosticsRequest): Promise<TutorTraceDiagnosticsResponse>;
-    queryTutorProviderTrendDiagnostics(request: TutorProviderTrendDiagnosticsRequest): Promise<TutorProviderTrendDiagnosticsResponse>;
-    queryTutorProviderTrendHistory(request: TutorProviderTrendHistoryRequest): Promise<TutorProviderTrendHistoryResponse>;
-    executeTutorAction(request: TutorActionRequest): Promise<TutorActionResponse>;
+    getTutorAdapterCatalog(): Promise<any>;
+    getTutorAdapterTelemetry(): Promise<any>;
+    queryTutorTraceDiagnostics(request: any): Promise<any>;
+    queryTutorProviderTrendDiagnostics(request: any): Promise<any>;
+    queryTutorProviderTrendHistory(request: any): Promise<any>;
+    executeTutorAction(request: any): Promise<any>;
 }
 
 export class TutorRouter {
     private actionExecutionCount = 0;
     private catalogFetchCount = 0;
     private telemetryFetchCount = 0;
-    private traceQueryCount = 0;
     private actionKindCounts: Record<string, number> = {};
 
     constructor(private readonly platform: TutorPlatform) {}
 
-    async getCatalog(): Promise<TutorAdapterCatalogResponse> {
-        this.catalogFetchCount++;
-        return this.platform.getTutorAdapterCatalog();
-    }
-
-    async getTelemetry(): Promise<TutorAdapterTelemetryResponse> {
-        this.telemetryFetchCount++;
-        return this.platform.getTutorAdapterTelemetry();
-    }
-
-    async queryTraceDiagnostics(request: TutorTraceDiagnosticsRequest): Promise<TutorTraceDiagnosticsResponse> {
-        this.traceQueryCount++;
-        return this.platform.queryTutorTraceDiagnostics(request);
-    }
-
-    async queryProviderTrendDiagnostics(request: TutorProviderTrendDiagnosticsRequest): Promise<TutorProviderTrendDiagnosticsResponse> {
-        return this.platform.queryTutorProviderTrendDiagnostics(request);
-    }
-
-    async queryProviderTrendHistory(request: TutorProviderTrendHistoryRequest): Promise<TutorProviderTrendHistoryResponse> {
-        return this.platform.queryTutorProviderTrendHistory(request);
-    }
-
-    async executeAction(request: TutorActionRequest): Promise<TutorActionResponse> {
-        this.actionExecutionCount++;
-        const kind = String(request.actionKind ?? 'unknown');
-        this.actionKindCounts[kind] = (this.actionKindCounts[kind] || 0) + 1;
-        return this.platform.executeTutorAction(request);
-    }
+    async getCatalog() { this.catalogFetchCount++; return this.platform.getTutorAdapterCatalog(); }
+    async getTelemetry() { this.telemetryFetchCount++; return this.platform.getTutorAdapterTelemetry(); }
+    async queryTraceDiagnostics(r: any) { return this.platform.queryTutorTraceDiagnostics(r); }
+    async queryProviderTrendDiagnostics(r: any) { return this.platform.queryTutorProviderTrendDiagnostics(r); }
+    async queryProviderTrendHistory(r: any) { return this.platform.queryTutorProviderTrendHistory(r); }
+    async executeAction(r: any) { this.actionExecutionCount++; const kind = String(r?.actionKind ?? 'unknown'); this.actionKindCounts[kind] = (this.actionKindCounts[kind] || 0) + 1; return this.platform.executeTutorAction(r); }
 
     getActionExecutionCount(): number { return this.actionExecutionCount; }
 
     getDiagnosticsSummary() {
-        return {
-            actionExecutionCount: this.actionExecutionCount,
-            catalogFetchCount: this.catalogFetchCount,
-            telemetryFetchCount: this.telemetryFetchCount,
-            traceQueryCount: this.traceQueryCount,
-            actionKindDistribution: { ...this.actionKindCounts },
-        };
+        return { actionExecutionCount: this.actionExecutionCount, catalogFetchCount: this.catalogFetchCount, telemetryFetchCount: this.telemetryFetchCount, actionKindDistribution: { ...this.actionKindCounts } };
     }
 }

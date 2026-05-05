@@ -13164,9 +13164,20 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             routeInlineFallbacks++;
         }
 
+        // ── Inline Chain ───────────────────────────────────────────
+        // Routes not yet extracted to src/routes/ modules.
+        // Covered by registry (65 routes): knowledge.ts, notemd.ts, data.ts,
+        //   render.ts, markdown.ts, diagnostics.ts — see routes/index.ts
+        // Registry dispatch above intercepts these before reaching this chain.
+        // Tag: [REGISTRY_COVERED] on routes already handled by registry.
+        //
+        // Migration tracking: GET /api/runtime-diagnostics → routeMigration
+
         if (req.method === 'GET') {
             const getPathname = getRawRequestPathname(req.url);
 
+            // ── Knowledge routes (covered by routes/knowledge.ts: 33 routes) ──
+            // [REGISTRY_COVERED: routes/knowledge.ts]
             if (getPathname === '/api/knowledge/state') {
                 try {
                     const runtimePayload = await buildKnowledgeRuntimePayload(new Date().toISOString());
@@ -14438,6 +14449,8 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 return;
             }
 
+            // ── Notemd routes (covered by routes/notemd.ts: 12 routes) ──
+            // [REGISTRY_COVERED: routes/notemd.ts]
             if (getPathname === '/api/notemd/settings') {
                 try {
                     const settings = await loadNotemdSettings();
@@ -15580,6 +15593,8 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 return;
             }
 
+            // ── Notemd POST routes (covered by routes/notemd.ts) ──
+            // [REGISTRY_COVERED: routes/notemd.ts]
             if (postPathname === '/api/notemd/settings') {
                 try {
                     const payload = await readJsonBody(req);

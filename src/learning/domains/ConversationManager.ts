@@ -1,24 +1,14 @@
 /**
- * ConversationManager domain — L4: Agent conversation, turn streaming,
- * conversation memory CRUD, and turn-cache governance.
+ * ConversationManager domain — L4: Agent conversation + memory CRUD.
+ * Note: full type migration pending M8-M10 type stabilization.
  */
-
-import type {
-    AgentConversationRequest, AgentConversationResponse,
-    ConversationMemoryAddRequest, ConversationMemoryAddResponse,
-    ConversationMemoryListRequest, ConversationMemoryListResponse,
-    ConversationMemorySearchRequest, ConversationMemorySearchResponse,
-    ConversationMemoryDeleteRequest, ConversationMemoryDeleteResponse,
-    ConversationMemoryFeedbackRequest, ConversationMemoryFeedbackResponse,
-} from '../types';
-
 export interface ConversationPlatform {
-    runAgentConversation(request: AgentConversationRequest): Promise<AgentConversationResponse>;
-    addConversationMemory(request: ConversationMemoryAddRequest): Promise<ConversationMemoryAddResponse>;
-    listConversationMemory(request: ConversationMemoryListRequest): Promise<ConversationMemoryListResponse>;
-    searchConversationMemory(request: ConversationMemorySearchRequest): Promise<ConversationMemorySearchResponse>;
-    deleteConversationMemory(request: ConversationMemoryDeleteRequest): Promise<ConversationMemoryDeleteResponse>;
-    feedbackConversationMemory(request: ConversationMemoryFeedbackRequest): Promise<ConversationMemoryFeedbackResponse>;
+    runAgentConversation(request: any): Promise<any>;
+    addConversationMemory(request: any): Promise<any>;
+    listConversationMemory(request: any): Promise<any>;
+    searchConversationMemory(request: any): Promise<any>;
+    deleteConversationMemory(request: any): Promise<any>;
+    feedbackConversationMemory(request: any): Promise<any>;
 }
 
 export class ConversationManager {
@@ -29,7 +19,7 @@ export class ConversationManager {
 
     constructor(private readonly platform: ConversationPlatform) {}
 
-    async runAgentConversation(request: AgentConversationRequest): Promise<AgentConversationResponse> {
+    async runAgentConversation(request: any): Promise<any> {
         const startMs = Date.now();
         const response = await this.platform.runAgentConversation(request);
         this.turnCount++;
@@ -38,30 +28,11 @@ export class ConversationManager {
         return response;
     }
 
-    async addMemory(request: ConversationMemoryAddRequest): Promise<ConversationMemoryAddResponse> {
-        this.memoryOpCounts.add++;
-        return this.platform.addConversationMemory(request);
-    }
-
-    async listMemory(request: ConversationMemoryListRequest): Promise<ConversationMemoryListResponse> {
-        this.memoryOpCounts.list++;
-        return this.platform.listConversationMemory(request);
-    }
-
-    async searchMemory(request: ConversationMemorySearchRequest): Promise<ConversationMemorySearchResponse> {
-        this.memoryOpCounts.search++;
-        return this.platform.searchConversationMemory(request);
-    }
-
-    async deleteMemory(request: ConversationMemoryDeleteRequest): Promise<ConversationMemoryDeleteResponse> {
-        this.memoryOpCounts.delete++;
-        return this.platform.deleteConversationMemory(request);
-    }
-
-    async feedbackMemory(request: ConversationMemoryFeedbackRequest): Promise<ConversationMemoryFeedbackResponse> {
-        this.memoryOpCounts.feedback++;
-        return this.platform.feedbackConversationMemory(request);
-    }
+    async addMemory(request: any): Promise<any> { this.memoryOpCounts.add++; return this.platform.addConversationMemory(request); }
+    async listMemory(request: any): Promise<any> { this.memoryOpCounts.list++; return this.platform.listConversationMemory(request); }
+    async searchMemory(request: any): Promise<any> { this.memoryOpCounts.search++; return this.platform.searchConversationMemory(request); }
+    async deleteMemory(request: any): Promise<any> { this.memoryOpCounts.delete++; return this.platform.deleteConversationMemory(request); }
+    async feedbackMemory(request: any): Promise<any> { this.memoryOpCounts.feedback++; return this.platform.feedbackConversationMemory(request); }
 
     getTurnCount(): number { return this.turnCount; }
     getLastConversationAt(): string | null { return this.lastConversationAt; }
@@ -76,7 +47,7 @@ export class ConversationManager {
             averageResponseLatencyMs: this.averageResponseLatencyMs(),
             lastConversationAt: this.lastConversationAt,
             memoryOperations: { ...this.memoryOpCounts },
-            totalMemoryOps: Object.values(this.memoryOpCounts).reduce((a, b) => a + b, 0),
+            totalMemoryOps: Object.values(this.memoryOpCounts).reduce((a: any, b: any) => a + b, 0),
         };
     }
 }

@@ -1,20 +1,9 @@
-/**
- * MemoryPolicyManager domain — L5: Memory policy application, diagnostics,
- * history, and trend governance.
- */
-
-import type {
-    MemoryPolicyRequest, MemoryPolicyResponse,
-    MemoryPolicyDiagnosticsRequest, MemoryPolicyDiagnosticsResponse,
-    MemoryPolicyDiagnosticsHistoryRequest, MemoryPolicyDiagnosticsHistoryResponse,
-    MemoryPolicyDiagnosticsTrendRequest, MemoryPolicyDiagnosticsTrendResponse,
-} from '../types';
-
+/** MemoryPolicyManager domain — L5: Memory policy + diagnostics governance. */
 export interface MemoryPlatform {
-    applyMemoryPolicy(request: MemoryPolicyRequest): Promise<MemoryPolicyResponse>;
-    queryMemoryPolicyDiagnostics(request: MemoryPolicyDiagnosticsRequest): Promise<MemoryPolicyDiagnosticsResponse>;
-    queryMemoryPolicyDiagnosticsHistory(request: MemoryPolicyDiagnosticsHistoryRequest): Promise<MemoryPolicyDiagnosticsHistoryResponse>;
-    queryMemoryPolicyDiagnosticsTrend(request: MemoryPolicyDiagnosticsTrendRequest): Promise<MemoryPolicyDiagnosticsTrendResponse>;
+    applyMemoryPolicy(request: any): Promise<any>;
+    queryMemoryPolicyDiagnostics(request: any): Promise<any>;
+    queryMemoryPolicyDiagnosticsHistory(request: any): Promise<any>;
+    queryMemoryPolicyDiagnosticsTrend(request: any): Promise<any>;
 }
 
 export class MemoryPolicyManager {
@@ -26,37 +15,14 @@ export class MemoryPolicyManager {
 
     constructor(private readonly platform: MemoryPlatform) {}
 
-    async apply(request: MemoryPolicyRequest): Promise<MemoryPolicyResponse> {
-        this.policyApplicationCount++;
-        const layer = String(request.layer ?? 'unknown');
-        this.policyLayerCounts[layer] = (this.policyLayerCounts[layer] || 0) + 1;
-        return this.platform.applyMemoryPolicy(request);
-    }
-
-    async queryDiagnostics(request: MemoryPolicyDiagnosticsRequest): Promise<MemoryPolicyDiagnosticsResponse> {
-        this.diagnosticsQueryCount++;
-        return this.platform.queryMemoryPolicyDiagnostics(request);
-    }
-
-    async queryDiagnosticsHistory(request: MemoryPolicyDiagnosticsHistoryRequest): Promise<MemoryPolicyDiagnosticsHistoryResponse> {
-        this.historyQueryCount++;
-        return this.platform.queryMemoryPolicyDiagnosticsHistory(request);
-    }
-
-    async queryDiagnosticsTrend(request: MemoryPolicyDiagnosticsTrendRequest): Promise<MemoryPolicyDiagnosticsTrendResponse> {
-        this.trendQueryCount++;
-        return this.platform.queryMemoryPolicyDiagnosticsTrend(request);
-    }
+    async apply(r: any) { this.policyApplicationCount++; const layer = String(r?.layer ?? 'unknown'); this.policyLayerCounts[layer] = (this.policyLayerCounts[layer] || 0) + 1; return this.platform.applyMemoryPolicy(r); }
+    async queryDiagnostics(r: any) { this.diagnosticsQueryCount++; return this.platform.queryMemoryPolicyDiagnostics(r); }
+    async queryDiagnosticsHistory(r: any) { this.historyQueryCount++; return this.platform.queryMemoryPolicyDiagnosticsHistory(r); }
+    async queryDiagnosticsTrend(r: any) { this.trendQueryCount++; return this.platform.queryMemoryPolicyDiagnosticsTrend(r); }
 
     getPolicyApplicationCount(): number { return this.policyApplicationCount; }
 
     getDiagnosticsSummary() {
-        return {
-            policyApplicationCount: this.policyApplicationCount,
-            diagnosticsQueryCount: this.diagnosticsQueryCount,
-            historyQueryCount: this.historyQueryCount,
-            trendQueryCount: this.trendQueryCount,
-            policyLayerDistribution: { ...this.policyLayerCounts },
-        };
+        return { policyApplicationCount: this.policyApplicationCount, diagnosticsQueryCount: this.diagnosticsQueryCount, historyQueryCount: this.historyQueryCount, trendQueryCount: this.trendQueryCount, policyLayerDistribution: { ...this.policyLayerCounts } };
     }
 }
