@@ -54,13 +54,24 @@ export interface KnowledgeGraphSnapshot {
 }
 
 export interface KnowledgeGraphStoreDiagnostics {
-    storeType: 'none' | 'file';
+    storeType: 'none' | 'file' | 'graphdb';
     location?: string;
     exists: boolean;
     loaded: boolean;
     lastLoadAt?: string;
     lastSaveAt?: string;
     lastError?: string;
+    connector?: {
+        healthStatus?: string;
+        circuitState?: string;
+        requestCount?: number;
+        retryCount?: number;
+        shortCircuitCount?: number;
+    };
+    adapterId?: string;
+    usingFallback?: boolean;
+    backendReady?: boolean;
+    fallbackEnabled?: boolean;
 }
 
 export interface KnowledgeGraphStore {

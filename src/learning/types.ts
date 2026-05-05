@@ -313,6 +313,7 @@ export interface LearningPathRequest {
     maxMasteryPaths?: number;
     maxDivergencePaths?: number;
     generatedAt?: string;
+    strategy?: 'foundational' | 'core' | string;
 }
 
 export interface LearningPathResponse {
@@ -612,6 +613,17 @@ export interface KnowledgeSystemState {
         unit: number;
         longTerm: number;
     };
+    sessionStrategyTelemetry?: {
+        totalSessions: number;
+        strategyBreakdown?: Record<string, number>;
+        selectionSourceCounts?: Record<string, number>;
+        selectionSourcePositiveRatioPct?: Record<string, number>;
+        selectionSourceAverageMasteryDeltaPct?: Record<string, number>;
+    };
+    tutorAdapterTelemetry?: {
+        activeAdapterCount: number;
+        providerUsage?: Record<string, number>;
+    };
 }
 
 export interface LearningQualitySnapshot {
@@ -646,6 +658,12 @@ export interface LearningQualityThresholds {
     evidenceBackedSuggestionRatioPct: number;
     pathEffectivenessLiftPct: number;
     queryP95Ms: number;
+    maxQueryBackendFallbackRatioPct?: number;
+    minQueryEvidenceCoverageRatioPct?: number;
+    minQueryRelationPathCoverageRatioPct?: number;
+    minQueryTemporalValidityPassRatioPct?: number;
+    minSessionMemoryPromotionCoveragePct?: number;
+    maxPendingVerificationRatioPct?: number;
 }
 
 export interface LearningQualityEvaluationRequest {
