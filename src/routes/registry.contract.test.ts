@@ -23,6 +23,7 @@ function createMockContext(): ServerContext {
         KNOWLEDGE_GRAPHDB_ADAPTER_ID: '',
         KNOWLEDGE_GRAPHDB_FALLBACK_ENABLED: false,
         KNOWLEDGE_GRAPHDB_OPERATION_MODE: 'read_write',
+        kbRoot: '/tmp/test-kb',
     };
 }
 

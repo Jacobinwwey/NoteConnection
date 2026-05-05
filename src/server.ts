@@ -13053,6 +13053,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         KNOWLEDGE_GRAPHDB_ADAPTER_ID,
         KNOWLEDGE_GRAPHDB_FALLBACK_ENABLED,
         KNOWLEDGE_GRAPHDB_OPERATION_MODE,
+        kbRoot: KB_ROOT,
     };
 
     // Route migration tracking
@@ -13075,11 +13076,17 @@ export const startServer = async (options: { port?: number, targetPath?: string 
 
     const routeMigrationStats = {
         totalModularRoutes: allRoutes.length,
+        totalInlineRoutes: 13, // inline-only routes not yet extracted
         registryHits: () => routeRegistryHits,
         inlineFallbacks: () => routeInlineFallbacks,
         registryHitRate: () => {
             const total = routeRegistryHits + routeInlineFallbacks;
-            return total === 0 ? 0 : (routeRegistryHits / total * 100).toFixed(1) + '%';
+            return total === 0 ? '0.0%' : (routeRegistryHits / total * 100).toFixed(1) + '%';
+        },
+        migrationProgress: () => {
+            const covered = allRoutes.length;
+            const total = covered + 13;
+            return (covered / total * 100).toFixed(1) + '%';
         },
     };
 
@@ -14628,6 +14635,9 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                             registryHits: routeMigrationStats.registryHits(),
                             inlineFallbacks: routeMigrationStats.inlineFallbacks(),
                             registryHitRate: routeMigrationStats.registryHitRate(),
+                            migrationProgress: routeMigrationStats.migrationProgress(),
+                            modularRoutes: routeMigrationStats.totalModularRoutes,
+                            inlineOnlyRoutes: routeMigrationStats.totalInlineRoutes,
                         },
                         domains: {
                             ingest: knowledgeIngestor.getDiagnostics(),

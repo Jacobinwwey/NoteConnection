@@ -8,7 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 export function registerDataRoutes(ctx: ServerContext): RouteEntry[] {
-    const { LOOPBACK_HOST, finalPort } = ctx;
+    const { LOOPBACK_HOST, finalPort, kbRoot } = ctx;
 
     const json = (res: any, code: number, data: unknown) => {
         res.writeHead(code, { 'Content-Type': 'application/json' });
@@ -52,14 +52,37 @@ export function registerDataRoutes(ctx: ServerContext): RouteEntry[] {
             method: 'GET',
             path: '/api/folders',
             handler: async (_req, res) => {
-                json(res, 200, { folders: [], message: 'Folder listing delegated to server.ts' });
+                try {
+                    let entries: fs.Dirent[] = [];
+                    try {
+                        entries = await fs.promises.readdir(kbRoot, { withFileTypes: true });
+                    } catch (error: any) {
+                        if (error?.code === 'ENOENT') {
+                            json(res, 200, { folders: [] });
+                            return;
+                        }
+                        throw error;
+                    }
+                    const folders = entries.filter(d => d.isDirectory()).map(d => d.name).sort((a, b) => a.localeCompare(b));
+                    json(res, 200, { folders });
+                } catch (e) { fail(res, e, 'GET /api/folders'); }
             },
         },
         {
             method: 'GET',
             path: '/api/available-targets',
             handler: async (_req, res) => {
-                json(res, 200, { targets: [], message: 'Target listing delegated to server.ts' });
+                try {
+                    let entries: fs.Dirent[] = [];
+                    try {
+                        entries = await fs.promises.readdir(kbRoot, { withFileTypes: true });
+                    } catch {
+                        json(res, 200, { targets: [] });
+                        return;
+                    }
+                    const targets = entries.filter(d => d.isDirectory()).map(d => d.name);
+                    json(res, 200, { targets });
+                } catch (e) { fail(res, e, 'GET /api/available-targets'); }
             },
         },
         {
