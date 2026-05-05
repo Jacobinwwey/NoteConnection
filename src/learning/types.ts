@@ -776,3 +776,4 @@ export type StudySessionOrchestrationConfigUpdateRequest = any;
 export type StudySessionPlanQualityTrendRequest = any;
 export type StudySessionPlanQualityThresholds = any;
 export type StudySessionPlanQualityRuntimeThresholdDiagnosticsRequest = any;
+export type LearningQualityTrendResponse = any;

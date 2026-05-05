@@ -67,6 +67,7 @@ export interface KnowledgeGraphStoreDiagnostics {
         requestCount?: number;
         retryCount?: number;
         shortCircuitCount?: number;
+        successCount?: number;
     };
     adapterId?: string;
     usingFallback?: boolean;
