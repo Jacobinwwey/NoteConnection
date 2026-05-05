@@ -43,6 +43,6 @@ describe('pkg sidecar packaging contract', () => {
     expect(buildSidecar).toContain("'--compress'");
     expect(buildSidecar).toContain("'Brotli'");
     expect(buildSidecar).toContain("'--no-bytecode'");
-    expect(buildSidecar).toContain("'--public'");
+    expect(buildSidecar).toContain("'--public-packages'");
   });
 });
