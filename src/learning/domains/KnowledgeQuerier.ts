@@ -37,14 +37,20 @@ export class KnowledgeQuerier {
             this.cacheHits++;
             return cached.response;
         }
+        // Domain-level query validation
+        this.validateQueryRequest(request);
+
         this.cacheMisses++;
         const startMs = Date.now();
         try {
             const response = await this.platform.queryKnowledge(request);
-            this.recordLatency(Date.now() - startMs);
+            const latencyMs = Date.now() - startMs;
+            this.recordLatency(latencyMs);
             this.queryCache.set(cacheKey, { response, cachedAt: new Date().toISOString(), ttlMs: this.cacheTtlMs });
             this.pruneCache();
-            return response;
+
+            // Augment response with domain-level telemetry
+            return this.augmentQueryResponse(response, latencyMs, request);
         } catch (error) {
             this.queryBackendFallbackCount++;
             this.queryBackendLastError = String(error);
@@ -106,6 +112,42 @@ export class KnowledgeQuerier {
 
     private buildCacheKey(request: any): string {
         return [request.query ?? '', String(request.topK ?? 10), request.queryBackend ?? 'default', request.asOf ?? ''].join('|');
+    }
+
+    /**
+     * Domain-level query validation: ensure the request meets minimum
+     * quality standards before dispatching to the platform.
+     */
+    private validateQueryRequest(request: any): void {
+        if (!request) {
+            throw new Error('Query request is required.');
+        }
+        const query = String(request.query ?? '').trim();
+        if (!query) {
+            throw new Error('Query string must not be empty.');
+        }
+        if (query.length > 5000) {
+            throw new Error('Query string exceeds maximum length (5000 chars).');
+        }
+    }
+
+    /**
+     * Augment the platform response with domain-level telemetry:
+     * query latency, cache status, backend identity, and result metadata.
+     */
+    private augmentQueryResponse(response: any, latencyMs: number, request: any): any {
+        const items = Array.isArray(response?.items) ? response.items : [];
+        return {
+            ...response,
+            _domain: {
+                latencyMs: Math.round(latencyMs),
+                cacheHit: false,
+                cacheSize: this.queryCache.size,
+                backend: request?.queryBackend ?? 'default',
+                resultCount: items.length,
+                topScore: items.length > 0 ? items[0]?.score ?? null : null,
+            },
+        };
     }
 
     private pruneCache(): void {

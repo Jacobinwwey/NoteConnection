@@ -155,7 +155,25 @@ status: active
 
 **测试验证**：核心算法 27/27 ✅ | 路由合约 8/8 ✅
 
-## 七、关联文档
+## 七、最终进展 (2026-05-05, phases R-T)
+
+**方法体迁移已启动：**
+
+| 领域类 | 自有逻辑 | 迁移深度 |
+|---|---|---|
+| KnowledgeIngestor.evaluateGuardrails | 4 项领域门禁 (changed_docs/deleted_docs/avg_latency_ms/history_available) + 增强响应 | ✅ 首批方法体迁移 |
+| KnowledgeQuerier.queryKnowledge | 查询验证 (空值/长度/上限) + 响应增强 (_domain 遥测) | ✅ 领域验证逻辑 |
+
+**内联链清理：**
+- 路由分布已文档化：~80 registry-covered + ~13 inline-only
+- `[REGISTRY_COVERED]` 标签标记所有已迁移路由组
+- 迁移指标可通过 `GET /api/runtime-diagnostics → routeMigration` 追踪
+
+**合约测试：10/10 passed**（新增 2 项领域诊断验证）
+
+**全阶段进度：21 phases, 46 files, 8 commits**
+
+## 八、关联文档
 
 - [跨平台架构优化方案](cross-platform-architecture-refinement-2026-05-02.md)
 - [开发进度仪表板](../diataxis/en/explanation/development-progress-dashboard.md)
