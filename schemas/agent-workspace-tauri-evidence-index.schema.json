@@ -1,0 +1,282 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noteconnection.local/schemas/agent-workspace-tauri-evidence-index.schema.json",
+  "title": "Agent Workspace Tauri Evidence Index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "generatedAt",
+    "schema",
+    "version",
+    "evidenceSetId",
+    "strict",
+    "artifacts",
+    "ci",
+    "reports",
+    "summary"
+  ],
+  "properties": {
+    "generatedAt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schema": {
+      "const": "noteconnection.agent-workspace.tauri-evidence-index"
+    },
+    "version": {
+      "const": 1
+    },
+    "evidenceSetId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "strict": {
+      "type": "boolean"
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactDir",
+        "indexPath",
+        "latestIndexPath"
+      ],
+      "properties": {
+        "artifactDir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "indexPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "latestIndexPath": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "ci": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runId",
+        "runAttempt",
+        "workflow",
+        "job",
+        "sha",
+        "ref",
+        "eventName"
+      ],
+      "properties": {
+        "runId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "runAttempt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "workflow": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "job": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sha": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "eventName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "reports": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rust",
+        "windowEvidence",
+        "proxySmoke"
+      ],
+      "properties": {
+        "rust": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "found",
+            "reportPath",
+            "source",
+            "passed",
+            "skipped",
+            "strictSystemDeps",
+            "summary"
+          ],
+          "properties": {
+            "found": {
+              "type": "boolean"
+            },
+            "reportPath": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1
+            },
+            "passed": {
+              "type": "boolean"
+            },
+            "skipped": {
+              "type": "boolean"
+            },
+            "strictSystemDeps": {
+              "type": "boolean"
+            },
+            "summary": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        },
+        "windowEvidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "found",
+            "reportPath",
+            "source",
+            "passed",
+            "status",
+            "strictWindowEvidence",
+            "summary"
+          ],
+          "properties": {
+            "found": {
+              "type": "boolean"
+            },
+            "reportPath": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1
+            },
+            "passed": {
+              "type": "boolean"
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1
+            },
+            "strictWindowEvidence": {
+              "type": "boolean"
+            },
+            "summary": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        },
+        "proxySmoke": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "found",
+            "reportPath",
+            "source",
+            "passed",
+            "lifecyclePassed"
+          ],
+          "properties": {
+            "found": {
+              "type": "boolean"
+            },
+            "reportPath": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1
+            },
+            "passed": {
+              "type": "boolean"
+            },
+            "lifecyclePassed": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "passed",
+        "missing",
+        "reasons"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "passed",
+            "failed"
+          ]
+        },
+        "passed": {
+          "type": "boolean"
+        },
+        "missing": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
