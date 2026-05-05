@@ -131,7 +131,10 @@ export type KnowledgeLearningPlatformOptions = {
     localVectorAccelerationAdapter?: string;
     localVectorAccelerationFailureMode?: string;
     localVectorAccelerationRepresentationStrict?: boolean;
-};
+    studySessionOrchestrationTrendRuntimeConfig?: Record<string, number>;
+    studySessionOrchestrationMemorySignalConfig?: Record<string, number>;
+    studySessionOrchestrationTutorRoutingConfig?: Record<string, number>;
+}
 
 const STOPWORDS = new Set<string>([
     'a', 'an', 'and', 'are', 'as', 'at', 'be', 'been', 'being',

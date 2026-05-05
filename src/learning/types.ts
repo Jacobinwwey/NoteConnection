@@ -383,6 +383,7 @@ export interface StudySessionActionExecutionRequest {
     memoryLayer?: MemoryLayer;
     tutorAdapterId?: string;
     tutorProviderName?: string;
+    tutorProviderMode?: string;
 }
 
 export interface StudySessionActionExecutionResponse {
@@ -423,6 +424,7 @@ export interface StudySessionPlanExecutionRequest {
     executedAt?: string;
     tutorAdapterId?: string;
     tutorProviderName?: string;
+	    tutorProviderMode?: string;
 }
 
 export interface StudySessionPlanExecutionItem {
@@ -674,6 +676,7 @@ export interface LearningQualitySnapshot {
     queryP95Ms?: number;
     pathStrategyExecutionCoveragePct?: number;
     pathStrategyAverageMasteryDeltaPct?: number;
+    queryEvidenceCoverageRatioPct?: number;
 }
 
 export interface LearningQualitySnapshotRequest {
