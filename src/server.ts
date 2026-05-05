@@ -13164,14 +13164,15 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             routeInlineFallbacks++;
         }
 
-        // ── Inline Chain ───────────────────────────────────────────
-        // Routes not yet extracted to src/routes/ modules.
-        // Covered by registry (65 routes): knowledge.ts, notemd.ts, data.ts,
-        //   render.ts, markdown.ts, diagnostics.ts — see routes/index.ts
-        // Registry dispatch above intercepts these before reaching this chain.
-        // Tag: [REGISTRY_COVERED] on routes already handled by registry.
+        // ── Inline Chain (Legacy) ──────────────────────────────────
+        // Route distribution:
+        //   Registry-covered: ~80 routes (knowledge:36G+28P, notemd:2G+16P, + data/render)
+        //   Inline-only:      ~13 routes (runtime-diagnostics, folders, kb-path, content, build, etc.)
+        //   Total:            ~105 route patterns
         //
-        // Migration tracking: GET /api/runtime-diagnostics → routeMigration
+        // The registry dispatch (above) intercepts covered routes first.
+        // Tag [REGISTRY_COVERED] marks routes already handled by registry.
+        // Migration metrics: GET /api/runtime-diagnostics → routeMigration
 
         if (req.method === 'GET') {
             const getPathname = getRawRequestPathname(req.url);
