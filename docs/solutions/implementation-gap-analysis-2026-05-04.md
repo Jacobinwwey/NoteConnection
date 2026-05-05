@@ -173,7 +173,39 @@ status: active
 
 **全阶段进度：21 phases, 46 files, 8 commits**
 
-## 八、关联文档
+## 八、最终完成状态 (2026-05-05, phases R-W)
+
+**全部 7 领域类方法体迁移完成。** 每个领域类遵循统一的四步模式：
+
+```
+validate → delegate → augment → diagnostics
+```
+
+| 领域类 | 验证维度 | 增强字段 |
+|---|---|---|
+| KnowledgeIngestor | 4 domain gates (docs/latency/history) | domainGates + domainOverallPassed |
+| KnowledgeQuerier | 空值/长度/上限守卫 | _domain(latency/backend/topScore) |
+| ConversationManager | query + memory op 验证 | _domain(turnNumber/memoryOps) |
+| MasteryEngine | targetId required | _domain(pathLength/duration) |
+| QualityEvaluator | userId required | _domain(passRate/snapshotCount) |
+| TutorRouter | userId + actionKind | _domain(kind/executionNumber) |
+| MemoryPolicyManager | userId + layer | _domain(layer/layerCount) |
+
+**Vite 构建优化：** path-mode 430KB → 93KB (-78%)，构建时间 742ms → 463ms (-38%)
+
+**方案达成度终评：**
+
+| 阶段 | 原目标 | 达成 | 评价 |
+|---|---|---|---|
+| A 平台可用性 | 8 items | 8/8 | ✅ 完成 |
+| B 代码单体拆分 | 6 items | 核心达成 | ✅ 10 路由+5 中间件+7 领域+ES modules+Vite |
+| C 文档移动端 | 8 items | 7/8 | ✅ ProGuard 规则为低优先级 |
+
+**超出原方案的交付：** 7/7 领域类方法体迁移、领域诊断面板、路由合约测试 10/10、CI 19 jobs、Vite chunk 优化 78%
+
+**剩余差距（低优先级）：** KnowledgeLearningPlatform 深度方法体迁移、path_app.js 深度拆分、`src/shared/` 独立类型包、容器化部署
+
+## 九、关联文档
 
 - [跨平台架构优化方案](cross-platform-architecture-refinement-2026-05-02.md)
 - [开发进度仪表板](../diataxis/en/explanation/development-progress-dashboard.md)
