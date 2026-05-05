@@ -68,11 +68,20 @@ export interface KnowledgeGraphStoreDiagnostics {
         retryCount?: number;
         shortCircuitCount?: number;
         successCount?: number;
+        failureCount?: number;
+        consecutiveFailures?: number;
+        healthMessage?: string;
+        lastRequestId?: string;
+        lastErrorCode?: string;
+        lastStatusCode?: number;
+        lastRetryAfterMs?: number;
     };
     adapterId?: string;
     usingFallback?: boolean;
     backendReady?: boolean;
     fallbackEnabled?: boolean;
+    graphDbOperationMode?: string;
+    fallbackStoreType?: string;
 }
 
 export interface KnowledgeGraphStore {

@@ -121,6 +121,16 @@ export type KnowledgeLearningPlatformOptions = {
     store?: KnowledgeGraphStore;
     autoPersist?: boolean;
     tutorAdapter?: TutorAdapter;
+    learningQualityThresholds?: Partial<import('./types').LearningQualityThresholds>;
+    studySessionPlanQualityAdaptiveThresholdsEnabled?: boolean;
+    studySessionPlanQualityAdaptiveThresholdRuntimeConfig?: Record<string, number>;
+    graphQueryBackendFactoryOptions?: Record<string, unknown>;
+    tutorAdapters?: any[];
+    localVectorIndexPath?: string;
+    localVectorAnnPrefilterEnabled?: boolean;
+    localVectorAccelerationAdapter?: string;
+    localVectorAccelerationFailureMode?: string;
+    localVectorAccelerationRepresentationStrict?: boolean;
 };
 
 const STOPWORDS = new Set<string>([

@@ -226,6 +226,7 @@ export interface KnowledgeQueryRequest {
     query: string;
     topK?: number;
     asOf?: string;
+    queryBackend?: 'local_hybrid' | 'keyword_only' | 'local_vector' | string;
 }
 
 export interface KnowledgeQueryItem {
@@ -314,6 +315,7 @@ export interface LearningPathRequest {
     maxDivergencePaths?: number;
     generatedAt?: string;
     strategy?: 'foundational' | 'core' | string;
+    recommendedActionLimit?: number;
 }
 
 export interface LearningPathResponse {
@@ -337,6 +339,8 @@ export interface StudySessionRequest {
     includeDivergence?: boolean;
     includeRetrain?: boolean;
     generatedAt?: string;
+    pathStrategy?: string;
+    pathRecommendedActionLimit?: number;
 }
 
 export interface StudySessionAction extends LearningAction {
@@ -377,6 +381,8 @@ export interface StudySessionActionExecutionRequest {
     executedAt?: string;
     persistMemory?: boolean;
     memoryLayer?: MemoryLayer;
+    tutorAdapterId?: string;
+    tutorProviderName?: string;
 }
 
 export interface StudySessionActionExecutionResponse {
@@ -415,6 +421,8 @@ export interface StudySessionPlanExecutionRequest {
     memoryLayer?: MemoryLayer;
     stopOnError?: boolean;
     executedAt?: string;
+    tutorAdapterId?: string;
+    tutorProviderName?: string;
 }
 
 export interface StudySessionPlanExecutionItem {
@@ -460,6 +468,10 @@ export interface StudySessionExecutionRecord {
 export interface StudySessionHistoryRequest {
     userId: string;
     limit?: number;
+    pathStrategySelectionSource?: string;
+    refreshSource?: string;
+    sinceMinutes?: number;
+    pathStrategy?: string;
 }
 
 export interface StudySessionHistoryResponse {
@@ -528,6 +540,9 @@ export interface TutorActionRequest {
     atomId?: string;
     prompt?: string;
     answer?: string;
+    adapterId?: string;
+    providerName?: string;
+    providerMode?: string;
 }
 
 export interface TutorActionResponse {
@@ -550,12 +565,16 @@ export interface MemoryEntry {
 
 export interface MemoryPolicyRequest {
     userId: string;
-    operation: 'write' | 'read' | 'evict' | 'snapshot' | 'retrain_plan';
+    operation: 'write' | 'read' | 'evict' | 'snapshot' | 'retrain_plan' | 'promote';
     layer: MemoryLayer;
+    targetLayer?: MemoryLayer;
     entries?: MemoryEntry[];
     query?: string;
     limit?: number;
     now?: string;
+    minConfidence?: number;
+    includeExpired?: boolean;
+    removeFromSource?: boolean;
 }
 
 export interface MemoryPolicyResponse {
@@ -608,6 +627,7 @@ export interface KnowledgeSystemState {
         memoryPersistedCount: number;
         memoryPromotionCount?: number;
         memoryPromotionAppliedCount?: number;
+        verifiedTutorCount?: number;
         outcomeCounts: {
             correct: number;
             partial: number;
@@ -652,6 +672,8 @@ export interface LearningQualitySnapshot {
     averagePathMasteryGainPct: number;
     randomPathMasteryGainPct: number;
     queryP95Ms?: number;
+    pathStrategyExecutionCoveragePct?: number;
+    pathStrategyAverageMasteryDeltaPct?: number;
 }
 
 export interface LearningQualitySnapshotRequest {
@@ -777,3 +799,8 @@ export type StudySessionPlanQualityTrendRequest = any;
 export type StudySessionPlanQualityThresholds = any;
 export type StudySessionPlanQualityRuntimeThresholdDiagnosticsRequest = any;
 export type LearningQualityTrendResponse = any;
+export type LearningQualityTrendRequest = any;
+export type LearningQualityHistoryRequest = any;
+export type MemoryPolicyDiagnosticsRequest = any;
+export type StudySessionPlanQualityEvaluationRequest = any;
+export type StudySessionPlanQualityHistoryRequest = any;
