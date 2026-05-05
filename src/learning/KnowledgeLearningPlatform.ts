@@ -125,15 +125,16 @@ export type KnowledgeLearningPlatformOptions = {
     studySessionPlanQualityAdaptiveThresholdsEnabled?: boolean;
     studySessionPlanQualityAdaptiveThresholdRuntimeConfig?: Record<string, number>;
     graphQueryBackendFactoryOptions?: Record<string, unknown>;
+    graphQueryBackend?: any;
     tutorAdapters?: any[];
     localVectorIndexPath?: string;
     localVectorAnnPrefilterEnabled?: boolean;
     localVectorAccelerationAdapter?: string;
     localVectorAccelerationFailureMode?: string;
     localVectorAccelerationRepresentationStrict?: boolean;
-    studySessionOrchestrationTrendRuntimeConfig?: Record<string, number>;
+    studySessionOrchestrationTrendRuntimeConfig?: Record<string, unknown>;
     studySessionOrchestrationMemorySignalConfig?: Record<string, number>;
-    studySessionOrchestrationTutorRoutingConfig?: Record<string, number>;
+    studySessionOrchestrationTutorRoutingConfig?: Record<string, unknown>;
 }
 
 const STOPWORDS = new Set<string>([

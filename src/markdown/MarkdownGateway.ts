@@ -139,6 +139,7 @@ type MarkdownGatewayOptions = {
     projectRoot: string;
     getKnowledgeBaseRoot: () => Promise<string> | string;
     resolveMarkdownPath: (rawPath: string) => Promise<string>;
+    getRendererRuntimeAvailability?: () => Promise<{ graphvizBackendPngAvailable: boolean }>;
     logger?: Logger;
 };
 

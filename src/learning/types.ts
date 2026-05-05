@@ -384,6 +384,10 @@ export interface StudySessionActionExecutionRequest {
     tutorAdapterId?: string;
     tutorProviderName?: string;
     tutorProviderMode?: string;
+    autoPromoteMemory?: boolean;
+    promoteMemoryTargetLayer?: MemoryLayer;
+    promoteMemoryMinConfidence?: number;
+    promoteMemoryRemoveFromSource?: boolean;
 }
 
 export interface StudySessionActionExecutionResponse {
@@ -424,7 +428,13 @@ export interface StudySessionPlanExecutionRequest {
     executedAt?: string;
     tutorAdapterId?: string;
     tutorProviderName?: string;
-	    tutorProviderMode?: string;
+    tutorProviderMode?: string;
+    pathStrategy?: string;
+    pathRecommendedActionLimit?: number;
+    autoPromoteMemory?: boolean;
+    promoteMemoryTargetLayer?: MemoryLayer;
+    promoteMemoryMinConfidence?: number;
+    promoteMemoryRemoveFromSource?: boolean;
 }
 
 export interface StudySessionPlanExecutionItem {
@@ -630,6 +640,7 @@ export interface KnowledgeSystemState {
         memoryPromotionCount?: number;
         memoryPromotionAppliedCount?: number;
         verifiedTutorCount?: number;
+        pendingVerificationCount?: number;
         outcomeCounts: {
             correct: number;
             partial: number;
@@ -647,7 +658,7 @@ export interface KnowledgeSystemState {
         totalSessions: number;
         totalRecords?: number;
         strategyBreakdown?: Record<string, number>;
-        strategyRecords?: Record<string, number>;
+        strategyRecords?: number;
         selectionSourceCounts?: Record<string, number>;
         selectionSourcePositiveRatioPct?: Record<string, number>;
         selectionSourceAverageMasteryDeltaPct?: Record<string, number>;
@@ -677,6 +688,11 @@ export interface LearningQualitySnapshot {
     pathStrategyExecutionCoveragePct?: number;
     pathStrategyAverageMasteryDeltaPct?: number;
     queryEvidenceCoverageRatioPct?: number;
+    queryRelationPathCoverageRatioPct?: number;
+    queryTemporalValidityPassRatioPct?: number;
+    pendingVerificationRatioPct?: number;
+    queryBackendFallbackRatioPct?: number;
+    sessionMemoryPromotionCoveragePct?: number;
 }
 
 export interface LearningQualitySnapshotRequest {

@@ -170,8 +170,8 @@ export function createFileBackedKnowledgeGraphStore(options: FileBackedKnowledge
     return new FileBackedKnowledgeGraphStore(options);
 }
 export type GraphDbSnapshotAdapter = any;
-export const createFileGraphDbSnapshotAdapter = () => ({}) as any;
-export const createGraphDbSnapshotAdapter = () => ({}) as any;
+export const createFileGraphDbSnapshotAdapter = (_options?: any) => ({}) as any;
+export const createGraphDbSnapshotAdapter = (_options?: any) => ({}) as any;
 export const normalizeGraphDbSnapshotAdapterProvider = (v: any) => v;
 export const normalizeGraphDbStoreOperationMode = (v: any) => v;
 export const normalizeKnowledgeGraphStoreBackend = (v: any) => v;

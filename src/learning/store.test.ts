@@ -324,7 +324,7 @@ describe('Knowledge graph store backend factory', () => {
             async loadSnapshot() {
                 return persisted;
             },
-            async saveSnapshot(snapshot) {
+            async saveSnapshot(snapshot: any) {
                 persisted = snapshot;
             },
             getDiagnostics() {
@@ -403,7 +403,7 @@ describe('Knowledge graph store backend factory', () => {
                 loadOpsCount += 1;
                 return persisted;
             },
-            async saveSnapshotByOps(snapshot) {
+            async saveSnapshotByOps(snapshot: any) {
                 saveOpsCount += 1;
                 persisted = snapshot;
             },
@@ -474,7 +474,7 @@ describe('Knowledge graph store backend factory', () => {
                 loadCount += 1;
                 return persisted;
             },
-            async saveSnapshot(snapshot) {
+            async saveSnapshot(snapshot: any) {
                 saveCount += 1;
                 persisted = snapshot;
             },
@@ -540,7 +540,7 @@ describe('Knowledge graph store backend factory', () => {
                 loadSnapshotCount += 1;
                 return persisted;
             },
-            async saveSnapshot(snapshot) {
+            async saveSnapshot(snapshot: any) {
                 saveSnapshotCount += 1;
                 persisted = snapshot;
             },
@@ -594,7 +594,7 @@ describe('Knowledge graph store backend factory', () => {
                 loadCount += 1;
                 return persisted;
             },
-            async saveSnapshot(snapshot) {
+            async saveSnapshot(snapshot: any) {
                 saveCount += 1;
                 persisted = snapshot;
             },

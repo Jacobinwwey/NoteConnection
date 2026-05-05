@@ -7743,7 +7743,7 @@ async function buildKnowledgeRuntimePayload(generatedAt: string): Promise<Knowle
                     averageProviderAttemptCount: tutorTraceDiagnostics.summary?.averageProviderAttemptCount,
                 },
                 providerBreakdown: Array.isArray(tutorTraceDiagnostics.providerBreakdown)
-                    ? tutorTraceDiagnostics.providerBreakdown.map((item) => ({
+                    ? tutorTraceDiagnostics.providerBreakdown.map((item: any) => ({
                         providerName: item.providerName,
                         traces: item.traces,
                         fallbackTraces: item.fallbackTraces,
@@ -7771,7 +7771,7 @@ async function buildKnowledgeRuntimePayload(generatedAt: string): Promise<Knowle
                     recommendedFocusProviderName: tutorProviderTrendHistory.summary?.recommendedFocusProviderName,
                 },
                 records: Array.isArray(tutorProviderTrendHistory.records)
-                    ? tutorProviderTrendHistory.records.map((item) => ({
+                    ? tutorProviderTrendHistory.records.map((item: any) => ({
                         providerName: item.providerName,
                         windowIndex: item.windowIndex,
                         sampleCount: item.sampleCount,
@@ -7798,7 +7798,7 @@ async function buildKnowledgeRuntimePayload(generatedAt: string): Promise<Knowle
                     recommendedFocusReason: tutorProviderTrendDiagnostics.summary?.recommendedFocusReason,
                 },
                 providers: Array.isArray(tutorProviderTrendDiagnostics.providers)
-                    ? tutorProviderTrendDiagnostics.providers.map((item) => ({
+                    ? tutorProviderTrendDiagnostics.providers.map((item: any) => ({
                         providerName: item.providerName,
                         trendStatus: item.trendStatus,
                         trendScore: item.trendScore,
@@ -8955,7 +8955,7 @@ function resolveStudySessionPlanQualityThresholdOverridesFromEnv(
     mappings.forEach(([key, envKey]) => {
         const parsed = parseFiniteNumberOrUndefined(env[envKey]);
         if (typeof parsed === 'number') {
-            overrides[key] = parsed;
+            overrides[key as string] = parsed;
         }
     });
     return overrides;
@@ -10771,7 +10771,7 @@ function normalizeStudySessionPlanQualityThresholdOverrides(
     mappings.forEach(([key, keys]) => {
         const parsed = parseFiniteNumberOrUndefined(readFirstPresentValue(record, keys));
         if (typeof parsed === 'number') {
-            output[key] = parsed;
+            output[key as string] = parsed;
         }
     });
     return Object.keys(output).length > 0 ? output : undefined;
@@ -10957,7 +10957,7 @@ function normalizeStudySessionOrchestrationConfigPatch(
     trendMappings.forEach(([key, keys]) => {
         const parsed = parsePositiveIntegerValue(readFirstPresentValue(trendRuntimeConfigRecord, keys));
         if (parsed > 0) {
-            (trendRuntimeConfig as Record<string, unknown>)[key] = parsed;
+            (trendRuntimeConfig as Record<string, unknown>)[key as string] = parsed;
         }
     });
     const strategyAutoPathEnabled = parseBooleanFlagOrUndefined(
@@ -10993,7 +10993,7 @@ function normalizeStudySessionOrchestrationConfigPatch(
     memoryMappings.forEach(([key, keys]) => {
         const parsed = parseFiniteNumberOrUndefined(readFirstPresentValue(memorySignalConfigRecord, keys));
         if (typeof parsed === 'number') {
-            memorySignalConfig[key] = parsed;
+            memorySignalConfig[key as string] = parsed;
         }
     });
 
