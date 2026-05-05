@@ -115,7 +115,7 @@
 | L4 交互层 | 工作台统一操作与诊断 | Learning Workbench 已接入会话、质量、runbook、trace 诊断，已支持可配置整改回放控制（`replayMode`、`replayLimit`、`dryRun`、`replaySelectionPolicy`、`replayMinRiskRatioPct`）与调度编排控制（`enabled`、`intervalMinutes`、`triggerPolicy`、阈值）并持久化工作台偏好。当前分支还已落入第一版 host-owned agent workspace shell、停靠式 conversation action、现有 path runtime 的 learning-path-pane 嵌入挂载、graph workspace 级 focus fullscreen promotion、双语壳层覆盖、真实 backend + 真实 graph/path runtime 的 browser smoke 与证据产物、首条真实 app/window handle 生命周期证据路径、`migration-gates` 中的 CI strict 桌面证据常态化作业、`release-desktop-multi-os` 中 Linux 路径 strict 证据门禁、`/api/knowledge/conversation` 上 accept 协商的 SSE 回合流基线、可重放的 turnId 幂等恢复语义、可观测的 turn 缓存诊断与可调参数（`/api/knowledge/conversation/turn-cache/diagnostics` + TTL/容量 env 调参）、阈值化告警治理（汇总状态 + 策略检查 + 阈值画像）、以及告警趋势/历史与升级治理（`/api/knowledge/conversation/turn-cache/diagnostics/trend` + 采样/窗口/streak 策略可调），并已补齐显式 index/export operator 能力动作（`inspect_conversation_turn_cache_alert_trend_index` / `inspect_conversation_turn_cache_alert_trend_export`）、replay-schedule 建议遥测（`telemetry.recommendations`）、策略模板遥测（`telemetry.policyTemplates`）、配置期模板套用（`policyTemplate`）、自动执行安全门禁与诊断（`config.autoExecution`、`telemetry.autoExecution`、parity/blocker 决策语义）以及建议/模板驱动状态文案；并已具备可执行 conversation contract：覆盖 `focus`、`learning path`、tutor 侧 `generate_quiz` / `recap` / `generate_transfer` / `generate_counterexample` / `follow_up`、query 侧 `compare_query_backends` / `inspect_query_backend_diagnostics` / `inspect_query_backend_comparison_history` / `inspect_query_backend_comparison_trend`、导师诊断侧 `inspect_tutor_adapter_telemetry` / `inspect_tutor_trace_diagnostics`、质量/会话诊断侧 `inspect_learning_quality_trend` / `inspect_learning_quality_history` / `inspect_session_plan_quality_trend` / `inspect_session_plan_quality_history`、session 侧 `inspect_session_history` / `build_study_session`、对话记忆召回 `inspect_conversation_memory`、以及 turn-cache operator 诊断 `inspect_conversation_turn_cache_diagnostics` / `inspect_conversation_turn_cache_alert_trend`，同时已具备结构化 `conversation_turn_cache_diagnostics_card` / `conversation_turn_cache_alert_trend_card` / `query_backend_comparison_card` / `query_backend_diagnostics_card` / `query_backend_comparison_history_card` / `query_backend_comparison_trend_card` / `tutor_adapter_telemetry_card` / `tutor_trace_diagnostics_card` / `learning_quality_trend_card` / `learning_quality_history_card` / `session_plan_quality_trend_card` / `session_plan_quality_history_card` / `session_history_card` / `study_session_card` / `tutor_action_card` / `assistant_message` 结果呈现。该交互契约已完成 typed-only 收敛（统一使用 `capabilities`），legacy `availableActions` fallback 已从后端与前端主路径移除。 | 持续维持 strict 证据工件治理健康度，在灰度策略窗口内校准自动执行建议/模板质量，并将实现重心切换到 Phase 1 底座收敛（真实图后端适配器 + 生产级 ANN 连接器落地边界）。 |
 | L5 治理层 | 运行时检查、趋势门禁、整改闭环 | runtime capability matrix + runbook + remediation event 已实现，包含 `query_backend_runtime_health`、`query_vector_index_*`、`store_graphdb_connector_health` 与 `query_vector_acceleration_mode`/`query_vector_acceleration_health`/`query_vector_acceleration_prefilter_effectiveness`/`query_vector_acceleration_traceability`/`query_vector_acceleration_circuit_state` 检查；其中 circuit-state 已升级为阈值驱动（短路计数/比例、连续失败、半开探测成功率），prefilter-effectiveness 则用于识别代表性流量下 ANN 长期回退 `full_scan` 的失效场景 | 强化阈值校准与故障回放自动化 |
 
-## 架构重构状态（2026-05-04）
+## 架构重构状态（2026-05-05，最终）
 
 基于基线的 12 阶段重构（A→L）已完成。以下模块已交付：
 
@@ -152,13 +152,36 @@
 
 | 领域类 | 自有逻辑 | 生产使用 |
 |---|---|---|
-| `KnowledgeIngestor` | 延迟追踪、过期缓存、护栏通过率、7 项诊断 | ✅ `POST /api/knowledge/ingest` |
-| `KnowledgeQuerier` | 延迟追踪、回退计数 | 骨架 |
-| `ConversationManager` | Turn 计数、响应延迟 | 骨架 |
-| `MasteryEngine` | 路径生成计数 | 骨架 |
-| `QualityEvaluator` | 评估/快照计数 | 骨架 |
-| `TutorRouter` | 动作执行计数 | 骨架 |
-| `MemoryPolicyManager` | 策略应用计数 | 骨架 |
+| `KnowledgeIngestor` | 4 领域门禁、延迟追踪、过期缓存、护栏通过率、8 诊断 | ✅ `POST /api/knowledge/ingest` |
+| `KnowledgeQuerier` | 查询验证（空值/长度/上限）、_domain 遥测、缓存(TTL+修剪)、延迟P95、10 诊断 | ✅ `POST /api/knowledge/query` |
+| `ConversationManager` | 查询+记忆验证、Turn 计数、响应延迟、记忆操作、6 诊断 | ✅ (已实例化) |
+| `MasteryEngine` | 路径验证、_domain 增强(pathLength/duration)、会话指标、6 诊断 | ✅ (已实例化) |
+| `QualityEvaluator` | 用户验证、通过率追踪(200窗口)、快照指标、5 诊断 | ✅ (已实例化) |
+| `TutorRouter` | 用户ID+动作种类验证、动作分布、执行元数据、4 诊断 | ✅ (已实例化) |
+| `MemoryPolicyManager` | 用户ID+层级验证、策略层级分布、_domain 增强、5 诊断 | ✅ (已实例化) |
+
+**全部 7/7 领域类完成方法体迁移。**
+
+### 重构指标
+
+| 指标 | 之前 | 之后 |
+|---|---|---|
+| 路由模块 | 0（内联 if/else 链） | 10 模块, 73 路由 |
+| 中间件 | 0（内联函数） | 5 独立模块 |
+| 领域类 | 1（3,894 行单体） | 7 类 + 7 Platform 接口 (7/7 方法体迁移) |
+| 前端模块系统 | `<script>` 标签链 | 7 ES modules + Vite 6-chunk (430ms) |
+| 平台配置 | 1 通用 + 1 Android | 5 配置 |
+| Godot 渲染器 | GL Compatibility | Forward+ (Vulkan) + Wayland fallback |
+| 移动端 | Capacitor + Tauri | Tauri Android（Capacitor 废弃） |
+| 双语文档对 | 21 | 24 |
+| CI jobs | 16 | 19 |
+| 路由合约测试 | 0 | 10/10 通过 |
+| 运行时可观测性 | 无路由迁移指标 | registryHitRate + migrationProgress + 7 领域面板 |
+| 路由迁移覆盖率 | 0% | 91.3% (73 modular + 7 terminal inline) |
+| 内联链复杂度 | 单体 if/else 链 | 清晰分段 + [REGISTRY_COVERED] 标注 |
+| 领域类方法体 | 0（全在单体中） | 7/7 完成 (validate → delegate → augment → diagnostics) |
+| Vite 构建时间 | N/A | 430ms |
+| Path-mode chunk 大小 | N/A | 93KB |
 
 ## 核心 API 与运行时基线
 

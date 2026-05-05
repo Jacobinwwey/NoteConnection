@@ -116,7 +116,7 @@ Operational note:
 | L4 Interaction | Workbench for operations + tutoring + diagnostics | Learning Workbench is wired to session, quality, runbook, trace diagnostics APIs, including configurable remediation replay controls (`replayMode`, `replayLimit`, `dryRun`, `replaySelectionPolicy`, `replayMinRiskRatioPct`) plus schedule orchestration controls (`enabled`, `intervalMinutes`, `triggerPolicy`, thresholds) with persisted workbench preferences. The current branch also ships the first host-owned agent workspace shell, docked conversation actions, embedded learning-path-pane mounting of the existing path runtime, body-level graph-workspace promotion for focus fullscreen, bilingual shell coverage, browser smoke over real backend + real graph/path runtimes with evidence artifacts, a first real app/window-handle lifecycle evidence path, an always-on CI strict desktop evidence job in `migration-gates`, strict Linux release-gate evidence checks in `release-desktop-multi-os`, an accept-negotiated SSE turn-streaming baseline on `/api/knowledge/conversation`, replay-safe turn-id idempotency/recovery semantics for interrupted streams, operator-visible turn-cache diagnostics/tuning (`/api/knowledge/conversation/turn-cache/diagnostics` + env-tunable TTL/capacity), thresholded turn-cache alert governance (summary status + policy checks + threshold profile), turn-cache alert trend/history + escalation governance (`/api/knowledge/conversation/turn-cache/diagnostics/trend` with env-tunable sampling/window/streak policies), explicit trend index/export operator actions (`inspect_conversation_turn_cache_alert_trend_index` / `inspect_conversation_turn_cache_alert_trend_export`), replay-schedule recommendation telemetry (`telemetry.recommendations`), policy-template telemetry (`telemetry.policyTemplates`), config-time template application (`policyTemplate`), auto-execution safety gates + diagnostics (`config.autoExecution`, `telemetry.autoExecution`, parity/blocker semantics), and recommendation/template-aware status rendering, and an execution-capable conversation contract spanning `focus`, `learning path`, tutor-side `generate_quiz`/`recap`/`generate_transfer`/`generate_counterexample`/`follow_up`, query-side `compare_query_backends`/`inspect_query_backend_diagnostics`/`inspect_query_backend_comparison_history`/`inspect_query_backend_comparison_trend`, tutor diagnostics `inspect_tutor_adapter_telemetry`/`inspect_tutor_trace_diagnostics`, quality/session diagnostics `inspect_learning_quality_trend`/`inspect_learning_quality_history`/`inspect_session_plan_quality_trend`/`inspect_session_plan_quality_history`, session-side `inspect_session_history`/`build_study_session`, conversation-memory recall `inspect_conversation_memory`, and turn-cache operator inspection `inspect_conversation_turn_cache_diagnostics` / `inspect_conversation_turn_cache_alert_trend`, with structured `conversation_turn_cache_diagnostics_card`/`conversation_turn_cache_alert_trend_card`/`query_backend_comparison_card`/`query_backend_diagnostics_card`/`query_backend_comparison_history_card`/`query_backend_comparison_trend_card`/`tutor_adapter_telemetry_card`/`tutor_trace_diagnostics_card`/`learning_quality_trend_card`/`learning_quality_history_card`/`session_plan_quality_trend_card`/`session_plan_quality_history_card`/`session_history_card`/`study_session_card`/`tutor_action_card`/`assistant_message` result presentations. This interaction contract is now typed-only (`capabilities`) across backend and frontend, with legacy `availableActions` fallback removed. | Keep strict evidence artifact governance healthy, calibrate auto-execution recommendation/template quality under canary policy windows, and shift active implementation energy to Phase 1 foundation hardening (real graph backend adapter + production ANN connector rollout). |
 | L5 Governance | Runtime checks, trend gates, remediation loop | Runtime capability matrix + runbook + remediation event pipeline are implemented, including `query_backend_runtime_health`, `query_vector_index_*`, `store_graphdb_connector_health`, and `query_vector_acceleration_mode`/`query_vector_acceleration_health`/`query_vector_acceleration_prefilter_effectiveness`/`query_vector_acceleration_traceability`/`query_vector_acceleration_circuit_state` checks; circuit-state governance is now threshold-driven (short-circuit count/ratio, consecutive failures, half-open success rate), while prefilter-effectiveness governance detects persistent ANN fallback to `full_scan` under representative traffic | Harden threshold calibration and incident replay automation |
 
-## Architecture Refactoring Status (2026-05-04)
+## Architecture Refactoring Status (2026-05-05, FINAL)
 
 A 12-phase refactoring (A→L) was executed against the baseline. The following modules are now delivered:
 
@@ -151,20 +151,25 @@ A 12-phase refactoring (A→L) was executed against the baseline. The following 
 | TODO files | 448KB in docs tree | Archived to `docs/archive/` |
 | Bilingual doc pairs | 21 | 24 |
 | CI jobs (migration-gates) | 16 | 18 |
-| Route contract tests | 0 | 8/8 passing |
-| Runtime observability | No route migration metrics | registryHitRate + ingest diagnostics |
+| Route contract tests | 0 | 10/10 passing |
+| Runtime observability | No route migration metrics | registryHitRate + migrationProgress + 7 domain panels |
+| Route migration coverage | 0% | 91.3% (73 modular + 7 terminal inline) |
+| Inline chain complexity | Monolithic if/else chain | Clearly sectioned + [REGISTRY_COVERED] annotations |
+| Domain class method bodies | 0 (all in monolith) | 7/7 complete (validate → delegate → augment → diagnostics) |
+| Vite build time | N/A | 430ms |
+| Path-mode chunk size | N/A | 93KB (from 430KB in legacy bundle) |
 
 ### Domain Class Implementation Status
 
 | Domain Class | Platform Interface | Own Logic | Production Use |
 |---|---|---|---|
-| `KnowledgeIngestor` | `IngestPlatform` | Latency tracking, staleness cache, guardrail pass rate, 7 diagnostics | ✅ `POST /api/knowledge/ingest` |
-| `KnowledgeQuerier` | `QueryPlatform` | Latency tracking, fallback count | Skeleton |
-| `ConversationManager` | `ConversationPlatform` | Turn count, response latency | Skeleton |
-| `MasteryEngine` | `MasteryPlatform` | Path generation count | Skeleton |
-| `QualityEvaluator` | `QualityPlatform` | Evaluation/snapshot counts | Skeleton |
-| `TutorRouter` | `TutorPlatform` | Action execution count | Skeleton |
-| `MemoryPolicyManager` | `MemoryPlatform` | Policy application count | Skeleton |
+| `KnowledgeIngestor` | `IngestPlatform` | 4 domain gates, latency tracking, staleness cache, guardrail pass rate, 8 diagnostics | ✅ `POST /api/knowledge/ingest` |
+| `KnowledgeQuerier` | `QueryPlatform` | Query validation (empty/length/max), _domain telemetry, cache (TTL+pruning), latency P95, 10 diagnostics | ✅ `POST /api/knowledge/query` |
+| `ConversationManager` | `ConversationPlatform` | Query+memory validation, turn count, response latency, memory ops, 6 diagnostics | ✅ (instantiated) |
+| `MasteryEngine` | `MasteryPlatform` | Path validation, _domain augmentation (pathLength/duration), session metrics, 6 diagnostics | ✅ (instantiated) |
+| `QualityEvaluator` | `QualityPlatform` | User validation, pass rate tracking (200-window), snapshot metrics, 5 diagnostics | ✅ (instantiated) |
+| `TutorRouter` | `TutorPlatform` | UserID+actionKind validation, action distribution, execution metadata, 4 diagnostics | ✅ (instantiated) |
+| `MemoryPolicyManager` | `MemoryPlatform` | UserID+layer validation, policy layer distribution, _domain augmentation, 5 diagnostics | ✅ (instantiated) |
 
 ## Core API and Runtime Baseline
 
