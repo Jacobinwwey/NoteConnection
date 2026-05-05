@@ -66,6 +66,10 @@ yarn-error.log*
 tmp
 .npm-cache
 
+# Local build output and runtime artifacts
+output/
+src-tauri/bin/
+
 # Local docs deploy/build artifacts
 .edgeone/
 build/mkdocs-site/
