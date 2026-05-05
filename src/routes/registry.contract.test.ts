@@ -32,7 +32,7 @@ describe('Route Registry', () => {
     const routes = registerAllRoutes(ctx);
 
     test('registers all route groups', () => {
-        expect(routes.length).toBeGreaterThanOrEqual(68);
+        expect(routes.length).toBeGreaterThanOrEqual(70);
     });
 
     test('every route has required fields', () => {
