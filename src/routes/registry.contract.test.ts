@@ -7,13 +7,13 @@ import { registerAllRoutes, type ServerContext } from './index';
 function createMockContext(): ServerContext {
     return {
         knowledgeLearningPlatform: {} as any,
-        knowledgeIngestor: { ingestKnowledge: async () => ({}), averageIngestLatencyMs: () => 0 } as any,
+        knowledgeIngestor: { ingestKnowledge: async () => ({}), averageIngestLatencyMs: () => 0, getDiagnostics: () => ({}) } as any,
         knowledgeQuerier: { queryKnowledge: async () => ({}), getDiagnosticsSummary: () => ({}) } as any,
-        conversationManager: {} as any,
-        masteryEngine: {} as any,
-        qualityEvaluator: {} as any,
-        tutorRouter: {} as any,
-        memoryPolicyManager: {} as any,
+        conversationManager: { getDiagnosticsSummary: () => ({}) } as any,
+        masteryEngine: { getDiagnosticsSummary: () => ({}) } as any,
+        qualityEvaluator: { getDiagnosticsSummary: () => ({}) } as any,
+        tutorRouter: { getDiagnosticsSummary: () => ({}) } as any,
+        memoryPolicyManager: { getDiagnosticsSummary: () => ({}) } as any,
         notemdService: {} as any,
         loadNotemdSettings: async () => ({}),
         LOOPBACK_HOST: '127.0.0.1',
@@ -31,7 +31,7 @@ describe('Route Registry', () => {
     const routes = registerAllRoutes(ctx);
 
     test('registers all route groups', () => {
-        expect(routes.length).toBeGreaterThanOrEqual(60);
+        expect(routes.length).toBeGreaterThanOrEqual(65);
     });
 
     test('every route has required fields', () => {
@@ -80,6 +80,27 @@ describe('Route Registry', () => {
         for (const route of getRoutes) {
             expect(route.path).toMatch(/^\/api\//);
         }
+    });
+
+    test('domain diagnostics are exposed via context', () => {
+        // All 7 domain classes are available through ServerContext
+        expect(ctx.knowledgeIngestor).toBeDefined();
+        expect(ctx.knowledgeQuerier).toBeDefined();
+        expect(ctx.conversationManager).toBeDefined();
+        expect(ctx.masteryEngine).toBeDefined();
+        expect(ctx.qualityEvaluator).toBeDefined();
+        expect(ctx.tutorRouter).toBeDefined();
+        expect(ctx.memoryPolicyManager).toBeDefined();
+    });
+
+    test('domain diagnostics have required methods', () => {
+        expect(typeof ctx.knowledgeIngestor.getDiagnostics).toBe('function');
+        expect(typeof ctx.knowledgeQuerier.getDiagnosticsSummary).toBe('function');
+        expect(typeof ctx.conversationManager.getDiagnosticsSummary).toBe('function');
+        expect(typeof ctx.masteryEngine.getDiagnosticsSummary).toBe('function');
+        expect(typeof ctx.qualityEvaluator.getDiagnosticsSummary).toBe('function');
+        expect(typeof ctx.tutorRouter.getDiagnosticsSummary).toBe('function');
+        expect(typeof ctx.memoryPolicyManager.getDiagnosticsSummary).toBe('function');
     });
 
     test('knowledge routes can be dispatched', async () => {

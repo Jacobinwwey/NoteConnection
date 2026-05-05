@@ -52,11 +52,32 @@ export class KnowledgeIngestor {
         return response;
     }
 
+    /**
+     * Evaluate ingest guardrails with domain-level gate logic.
+     * Augments the platform response with independent gate validation
+     * and maintains a pass-rate history for governance dashboards.
+     */
     async evaluateGuardrails(request: any): Promise<any> {
         const response = await this.platform.evaluateIngestGuardrails(request);
-        this.guardrailEvaluationHistory.push({ passed: response?.overallPassed ?? true, timestamp: new Date().toISOString() });
-        if (this.guardrailEvaluationHistory.length > 100) this.guardrailEvaluationHistory.shift();
-        return response;
+
+        // Domain-level gate validation (independent of platform)
+        const domainGates = this.buildDomainGuardrailGates(request, response);
+        const allPassed = domainGates.every((g: any) => g.passed);
+
+        this.guardrailEvaluationHistory.push({
+            passed: allPassed,
+            timestamp: new Date().toISOString(),
+        });
+        if (this.guardrailEvaluationHistory.length > 200) {
+            this.guardrailEvaluationHistory.shift();
+        }
+
+        // Augment response with domain-level gate telemetry
+        return {
+            ...response,
+            domainGates,
+            domainOverallPassed: allPassed,
+        };
     }
 
     getLatestIngestSummary() { return this.latestIngestSummary; }
@@ -93,6 +114,49 @@ export class KnowledgeIngestor {
             guardrailEvaluationCount: this.guardrailEvaluationHistory.length,
             guardrailPassRate: Number((this.getGuardrailPassRate() * 100).toFixed(1)),
         };
+    }
+
+    /**
+     * Build domain-level guardrail gates using ingest telemetry.
+     * These gates run independently of the platform's gate evaluation,
+     * providing a second layer of governance verification.
+     */
+    private buildDomainGuardrailGates(request: any, platformResponse: any): any[] {
+        const summary = this.latestIngestSummary || {};
+        const changedDocs = summary.changedDocuments ?? 0;
+        const deletedDocs = summary.deletedDocuments ?? 0;
+        const avgLatency = this.averageIngestLatencyMs(20);
+
+        return [
+            {
+                gateId: 'domain:changed_docs',
+                passed: changedDocs <= 500,
+                observedValue: changedDocs,
+                threshold: 500,
+                message: 'Changed document count within domain budget.',
+            },
+            {
+                gateId: 'domain:deleted_docs',
+                passed: deletedDocs <= 100,
+                observedValue: deletedDocs,
+                threshold: 100,
+                message: 'Deleted document count within rollback-safe budget.',
+            },
+            {
+                gateId: 'domain:avg_latency_ms',
+                passed: avgLatency <= 30000,
+                observedValue: Math.round(avgLatency),
+                threshold: 30000,
+                message: 'Average ingest latency within performance budget.',
+            },
+            {
+                gateId: 'domain:history_available',
+                passed: this.ingestLatencyHistoryMs.length >= 3,
+                observedValue: this.ingestLatencyHistoryMs.length,
+                threshold: 3,
+                message: 'Sufficient ingest history for statistical significance.',
+            },
+        ];
     }
 
     private buildStalenessCacheKey(request: any): string {
