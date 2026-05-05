@@ -23,6 +23,8 @@ export class KnowledgeQuerier {
     private cacheHits = 0;
     private cacheMisses = 0;
     private comparisonCount = 0;
+    private queryPatternCounts = new Map<string, number>();
+    private slowQueryCount = 0;
     private readonly cacheTtlMs: number;
 
     constructor(private readonly platform: QueryPlatform, options?: { cacheTtlMs?: number }) {
@@ -48,6 +50,9 @@ export class KnowledgeQuerier {
             this.recordLatency(latencyMs);
             this.queryCache.set(cacheKey, { response, cachedAt: new Date().toISOString(), ttlMs: this.cacheTtlMs });
             this.pruneCache();
+
+            // Track query pattern for analytics
+            this.trackQueryPattern(String(request?.query ?? '').toLowerCase());
 
             // Augment response with domain-level telemetry
             return this.augmentQueryResponse(response, latencyMs, request);
@@ -92,22 +97,58 @@ export class KnowledgeQuerier {
     }
 
     getDiagnosticsSummary() {
+        const topQueries = [...this.queryPatternCounts.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([term, count]) => ({ term, count }));
         return {
             queryCount: this.queryLatencyHistoryMs.length,
             averageLatencyMs: this.averageQueryLatencyMs(20),
             latencyP95Ms: this.queryLatencyP95(50),
+            latencyP99Ms: this.queryLatencyP99(100),
             fallbackCount: this.queryBackendFallbackCount,
             lastError: this.queryBackendLastError ?? null,
             lastQueryAt: this.lastQueryAt,
             cacheSize: this.queryCache.size,
             cacheHitRate: Number((this.getCacheHitRate() * 100).toFixed(1)),
             comparisonCount: this.comparisonCount,
+            slowQueryCount: this.slowQueryCount,
+            uniqueQueryTerms: this.queryPatternCounts.size,
+            topQueryTerms: topQueries,
         };
+    }
+
+    queryLatencyP99(n = 100): number {
+        const w = [...this.queryLatencyHistoryMs.slice(-n)].sort((a, b) => a - b);
+        if (w.length === 0) return 0;
+        return w[Math.ceil(w.length * 0.99) - 1];
     }
 
     private recordLatency(ms: number): void {
         this.queryLatencyHistoryMs.push(ms);
         if (this.queryLatencyHistoryMs.length > 500) this.queryLatencyHistoryMs.shift();
+    }
+
+    /** Track query term frequency for pattern analysis. */
+    private trackQueryPattern(query: string): void {
+        if (!query) return;
+        const terms = query.split(/\s+/).filter(t => t.length > 2);
+        for (const term of terms) {
+            this.queryPatternCounts.set(term, (this.queryPatternCounts.get(term) || 0) + 1);
+        }
+        // Prune to top 200 terms
+        if (this.queryPatternCounts.size > 200) {
+            const sorted = [...this.queryPatternCounts.entries()].sort((a, b) => b[1] - a[1]);
+            this.queryPatternCounts = new Map(sorted.slice(0, 150));
+        }
+    }
+
+    /** Mark a query as slow (exceeds latency threshold). */
+    private markSlowQuery(latencyMs: number): void {
+        const p95 = this.queryLatencyP95(50);
+        if (p95 > 0 && latencyMs > p95 * 2) {
+            this.slowQueryCount++;
+        }
     }
 
     private buildCacheKey(request: any): string {
