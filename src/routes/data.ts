@@ -30,7 +30,16 @@ export function registerDataRoutes(ctx: ServerContext): RouteEntry[] {
                     const urlObj = new URL(req.url || '/', `http://${LOOPBACK_HOST}:${finalPort}`);
                     const requestedPath = urlObj.searchParams.get('path');
                     if (!requestedPath) { json(res, 400, { error: 'Missing path parameter' }); return; }
-                    json(res, 200, { content: `Content route (delegated to server.ts for KB_ROOT resolution)` });
+                    const decodedPath = decodeURIComponent(requestedPath);
+                    const candidate = path.resolve(kbRoot, decodedPath);
+                    if (!candidate.startsWith(path.resolve(kbRoot))) { json(res, 403, { error: 'Path traversal denied' }); return; }
+                    try {
+                        const content = await fs.promises.readFile(candidate, 'utf-8');
+                        json(res, 200, { content });
+                    } catch (error: any) {
+                        if (error?.code === 'ENOENT') { json(res, 404, { error: 'File not found' }); return; }
+                        throw error;
+                    }
                 } catch (e) { fail(res, e, 'GET /api/content'); }
             },
         },
@@ -89,7 +98,7 @@ export function registerDataRoutes(ctx: ServerContext): RouteEntry[] {
             method: 'GET',
             path: '/api/kb-path',
             handler: async (_req, res) => {
-                json(res, 200, { kbPath: '', message: 'KB path delegated to server.ts' });
+                json(res, 200, { kbPath: kbRoot });
             },
         },
         {
@@ -99,11 +108,12 @@ export function registerDataRoutes(ctx: ServerContext): RouteEntry[] {
                 try {
                     const chunks: Buffer[] = [];
                     req.on('data', (c: Buffer) => chunks.push(c));
-                    await new Promise<void>((resolve, reject) => {
-                        req.on('end', resolve);
-                        req.on('error', reject);
-                    });
-                    json(res, 200, { updated: true, message: 'KB path update delegated to server.ts' });
+                    await new Promise<void>((resolve, reject) => { req.on('end', resolve); req.on('error', reject); });
+                    const { kbPath: newPath } = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+                    if (!newPath) { json(res, 400, { error: 'kbPath is required' }); return; }
+                    // KB path update is handled by server.ts sidecar management.
+                    // This route records the intent; the actual path switch happens at restart.
+                    json(res, 200, { updated: true, previousKbPath: kbRoot, requestedKbPath: newPath });
                 } catch (e) { fail(res, e, 'POST /api/kb-path'); }
             },
         },

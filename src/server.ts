@@ -13076,7 +13076,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
 
     const routeMigrationStats = {
         totalModularRoutes: allRoutes.length,
-        totalInlineRoutes: 13, // inline-only routes not yet extracted
+        totalInlineRoutes: 10, // inline-only routes not yet extracted
         registryHits: () => routeRegistryHits,
         inlineFallbacks: () => routeInlineFallbacks,
         registryHitRate: () => {
@@ -13085,7 +13085,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         },
         migrationProgress: () => {
             const covered = allRoutes.length;
-            const total = covered + 13;
+            const total = covered + 10;
             return (covered / total * 100).toFixed(1) + '%';
         },
     };
@@ -13174,7 +13174,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         // ── Inline Chain (Legacy) ──────────────────────────────────
         // Route distribution:
         //   Registry-covered: ~80 routes (knowledge:36G+28P, notemd:2G+16P, + data/render)
-        //   Inline-only:      ~13 routes (runtime-diagnostics, folders, kb-path, content, build, etc.)
+        //   Inline-only:      ~10 routes (runtime-diagnostics, check-cache, restore-cache, build, static serve, etc.)
         //   Total:            ~105 route patterns
         //
         // The registry dispatch (above) intercepts covered routes first.
