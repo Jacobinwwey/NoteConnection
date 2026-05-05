@@ -17,6 +17,7 @@ import './runtime_bridge.mjs';
 import './path_worker_bridge.mjs';
 import './workbench_state.mjs';
 import './graph_state.mjs';
+import './path_layout.mjs';
 
 // 3. Legacy IIFE modules (loaded as side-effect scripts; these register on window.*)
 import './workspace_panes.js';

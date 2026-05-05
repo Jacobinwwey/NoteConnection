@@ -22,7 +22,18 @@ export class MasteryEngine {
 
     async diagnoseMastery(r: any) { this.masteryDiagnosticCount++; return this.platform.diagnoseMastery(r); }
     async queryMisconceptions(r: any) { return this.platform.queryMasteryMisconceptions(r); }
-    async buildLearningPath(r: any) { this.pathGenerationCount++; this.lastPathGeneratedAt = new Date().toISOString(); return this.platform.buildLearningPath(r); }
+    async buildLearningPath(r: any) {
+        this.pathGenerationCount++;
+        this.lastPathGeneratedAt = new Date().toISOString();
+
+        // Domain-level path quality validation
+        this.validatePathRequest(r);
+
+        const response = await this.platform.buildLearningPath(r);
+
+        // Augment with domain-level path quality metrics
+        return this.augmentPathResponse(response);
+    }
     async buildStudySession(r: any) { this.sessionBuildCount++; return this.platform.buildStudySession(r); }
     async querySessionHistory(r: any) { return this.platform.queryStudySessionHistory(r); }
     async executeSessionAction(r: any) { this.actionExecutionCount++; return this.platform.executeStudySessionAction(r); }
@@ -34,5 +45,27 @@ export class MasteryEngine {
 
     getDiagnosticsSummary() {
         return { masteryDiagnosticCount: this.masteryDiagnosticCount, pathGenerationCount: this.pathGenerationCount, lastPathGeneratedAt: this.lastPathGeneratedAt, sessionBuildCount: this.sessionBuildCount, sessionExecutionCount: this.sessionExecutionCount, actionExecutionCount: this.actionExecutionCount };
+    }
+
+    private validatePathRequest(r: any): void {
+        if (!r) throw new Error('Learning path request is required.');
+        const targetId = String(r?.targetId ?? '').trim();
+        if (!targetId && !r?.targetIds?.length) {
+            throw new Error('At least one targetId is required to build a learning path.');
+        }
+    }
+
+    private augmentPathResponse(response: any): any {
+        const nodes = Array.isArray(response?.nodes) ? response.nodes : [];
+        return {
+            ...response,
+            _domain: {
+                pathLength: nodes.length,
+                generatedAt: this.lastPathGeneratedAt,
+                generationNumber: this.pathGenerationCount,
+                hasPrerequisites: nodes.some((n: any) => n?.prerequisites?.length > 0),
+                estimatedDurationMinutes: nodes.length * 15, // rough estimate: 15 min per concept
+            },
+        };
     }
 }
