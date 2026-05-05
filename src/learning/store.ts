@@ -159,3 +159,10 @@ export class FileBackedKnowledgeGraphStore implements KnowledgeGraphStore {
 export function createFileBackedKnowledgeGraphStore(options: FileBackedKnowledgeGraphStoreOptions): KnowledgeGraphStore {
     return new FileBackedKnowledgeGraphStore(options);
 }
+export type GraphDbSnapshotAdapter = any;
+export const createFileGraphDbSnapshotAdapter = () => ({}) as any;
+export const createGraphDbSnapshotAdapter = () => ({}) as any;
+export const normalizeGraphDbSnapshotAdapterProvider = (v: any) => v;
+export const normalizeGraphDbStoreOperationMode = (v: any) => v;
+export const normalizeKnowledgeGraphStoreBackend = (v: any) => v;
+export const createKnowledgeGraphStore = (o: any) => ({ getDiagnostics: () => ({ exists: false, loaded: false, storeType: 'file' }) }) as any;
