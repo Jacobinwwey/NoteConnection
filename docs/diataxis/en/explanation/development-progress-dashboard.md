@@ -156,14 +156,16 @@ A 12-phase refactoring (A→L) was executed against the baseline. The following 
 | Route migration coverage | 0% | 91.3% (73 modular + 7 terminal inline) |
 | Inline chain complexity | Monolithic if/else chain | Clearly sectioned + [REGISTRY_COVERED] annotations |
 | Domain class method bodies | 0 (all in monolith) | 7/7 complete (validate → delegate → augment → diagnostics) |
-| Vite build time | N/A | 430ms |
+| Vite build time | N/A | 437ms |
 | Path-mode chunk size | N/A | 93KB (from 430KB in legacy bundle) |
+| tsc errors | 255 (pre-existing M8-M10) | 26 (-90%) |
+| Domain method body migration depth | Delegation only | 4-domain-method deep (Ingestor: staleness+guardrails, Querier: validation+cache, Mastery: path validation) |
 
 ### Domain Class Implementation Status
 
 | Domain Class | Platform Interface | Own Logic | Production Use |
 |---|---|---|---|
-| `KnowledgeIngestor` | `IngestPlatform` | 4 domain gates, latency tracking, staleness cache, guardrail pass rate, 8 diagnostics | ✅ `POST /api/knowledge/ingest` |
+| `KnowledgeIngestor` | `IngestPlatform` | 4 domain gates, staleness analysis (freshnessScore/freshnessRating/staleBySource), staleness trend (100-snapshot history, getFreshnessTrend), latency tracking, guardrail pass rate, 10 diagnostics | ✅ `POST /api/knowledge/ingest` |
 | `KnowledgeQuerier` | `QueryPlatform` | Query validation (empty/length/max), _domain telemetry, cache (TTL+pruning), latency P95, 10 diagnostics | ✅ `POST /api/knowledge/query` |
 | `ConversationManager` | `ConversationPlatform` | Query+memory validation, turn count, response latency, memory ops, 6 diagnostics | ✅ (instantiated) |
 | `MasteryEngine` | `MasteryPlatform` | Path validation, _domain augmentation (pathLength/duration), session metrics, 6 diagnostics | ✅ (instantiated) |
