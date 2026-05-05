@@ -13076,7 +13076,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
 
     const routeMigrationStats = {
         totalModularRoutes: allRoutes.length,
-        totalInlineRoutes: 7, // inline-only routes not yet extracted
+        totalInlineRoutes: 7, // terminal routes (meta/diagnostics/static-serve) — intentionally kept inline // inline-only routes not yet extracted
         registryHits: () => routeRegistryHits,
         inlineFallbacks: () => routeInlineFallbacks,
         registryHitRate: () => {
@@ -13085,7 +13085,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         },
         migrationProgress: () => {
             const covered = allRoutes.length;
-            const total = covered + 7;
+            const total = covered + 7; // 7 terminal routes intentionally kept inline
             return (covered / total * 100).toFixed(1) + '%';
         },
     };
@@ -13174,7 +13174,13 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         // ── Inline Chain (Legacy) ──────────────────────────────────
         // Route distribution:
         //   Registry-covered: ~80 routes (knowledge:36G+28P, notemd:2G+16P, + data/render)
-        //   Inline-only:      ~7 routes (runtime-diagnostics, request-trace, static serve, graph assets, generated assets)
+        //   Terminal inline:  ~7 routes intentionally kept inline:
+        //     - runtime-diagnostics, runtime-request-trace (meta: report server state)
+        //     - static file serving (requires FRONTEND_DIR + MIME resolution)
+        //     - graph asset serving (requires cliOptions + generated asset paths)
+        //     - generated asset resolution (requires CLI build output paths)
+        //   These are terminal — they require deep server state that can't be
+        //   cleanly exposed through ServerContext without circular dependencies.
         //   Total:            ~105 route patterns
         //
         // The registry dispatch (above) intercepts covered routes first.

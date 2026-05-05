@@ -17,7 +17,7 @@
 - Chinese-only files: `0`
 - Archived: `TODO.en.md` + `TODO.zh.md` (moved to `docs/archive/`)
 
-> Updated 2026-05-04: analysis_ref.md now has a Chinese counterpart; TODO.md files archived; v1.6.6 release notes added; brainstorms/index.md updated with bilingual table.
+> Updated 2026-05-05: Route migration 91.3% complete (73 modular + 7 terminal inline). All 7 domain classes with method body migration. Vite build 430ms. 7 ES modules extracted. 15 commits.
 
 ### Bilingual Pairs
 
