@@ -6,6 +6,7 @@ import { registerRenderRoutes } from './render';
 import { registerSettingsRoutes } from './settings';
 import { registerDiagnosticsRoutes } from './diagnostics';
 import { registerDataRoutes } from './data';
+import { registerAgentWorkspaceDiagnosticsRoutes } from './agentWorkspaceDiagnostics';
 
 export type { RouteEntry, ServerContext } from './types';
 
@@ -18,5 +19,6 @@ export function registerAllRoutes(ctx: ServerContext): RouteEntry[] {
         ...registerSettingsRoutes(ctx),
         ...registerDiagnosticsRoutes(ctx),
         ...registerDataRoutes(ctx),
+        ...registerAgentWorkspaceDiagnosticsRoutes(ctx),
     ];
 }

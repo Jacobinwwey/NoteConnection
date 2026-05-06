@@ -240,6 +240,20 @@ const AGENT_CONVERSATION_TURN_CACHE_ALERT_HISTORY_PERSIST_PATH = path.join(
     'agent_conversation_turn_cache_alert_history.v1.json'
 );
 const RUNTIME_RUNBOOK_CHECK_ID_CONVERSATION_TURN_CACHE_ALERT_TREND = 'conversation_turn_cache_alert_trend';
+const AGENT_WORKSPACE_DIAGNOSTICS_DIR = path.join(RUNTIME_DATA_DIR, 'agent_workspace_diagnostics');
+const AGENT_WORKSPACE_DIAGNOSTICS_INDEX_PATH = path.join(AGENT_WORKSPACE_DIAGNOSTICS_DIR, 'index.v1.json');
+const AGENT_WORKSPACE_DIAGNOSTICS_TRIAGE_POLICY_PATH = path.join(
+    AGENT_WORKSPACE_DIAGNOSTICS_DIR,
+    'triage_policy.v1.json'
+);
+const AGENT_WORKSPACE_DIAGNOSTICS_TRIAGE_POLICY_AUDIT_PATH = path.join(
+    AGENT_WORKSPACE_DIAGNOSTICS_DIR,
+    'triage_policy_audit.v1.json'
+);
+const AGENT_WORKSPACE_DIAGNOSTICS_MAX_ENTRIES = 40;
+const AGENT_WORKSPACE_DIAGNOSTICS_TRIAGE_TOP_LIMIT = 5;
+const AGENT_WORKSPACE_DIAGNOSTICS_TRIAGE_TOP_LIMIT_MIN = 1;
+const AGENT_WORKSPACE_DIAGNOSTICS_TRIAGE_TOP_LIMIT_MAX = 10;
 const REQUEST_BODY_SPOOL_DIR = path.join(runtimePaths.projectRoot, 'tmp', 'request-bodies');
 let KB_ROOT = runtimePaths.kbRoot;
 let activeBuildKey: string | null = null;
@@ -13054,6 +13068,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         KNOWLEDGE_GRAPHDB_FALLBACK_ENABLED,
         KNOWLEDGE_GRAPHDB_OPERATION_MODE,
         kbRoot: KB_ROOT,
+        runtimeDataDir: RUNTIME_DATA_DIR,
     };
 
     // Route migration tracking

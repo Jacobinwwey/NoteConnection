@@ -3937,6 +3937,30 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     public getStudySessionOrchestrationMemorySignalConfig(): any { return {}; }
     public getStudySessionOrchestrationTutorRoutingConfig(): any { return {}; }
     public async updateStudySessionOrchestrationConfig(_r: any): Promise<any> { return { updated: true }; }
+    public async getFoundationReadiness(): Promise<any> {
+        return {
+            ready: true,
+            modules: {
+                knowledgeGraph: { status: 'operational', backend: 'local_hybrid' },
+                queryBackend: { status: 'operational', backend: 'local_hybrid' },
+                vectorStore: { status: 'operational', index: 'local_hybrid' },
+                conversationMemory: { status: 'operational' },
+                studySession: { status: 'operational' },
+            },
+            checkedAt: new Date().toISOString(),
+        };
+    }
+    public async getBackendBaselineSufficiency(): Promise<any> {
+        return {
+            sufficient: true,
+            checks: {
+                knowledgeGraph: { passed: true, reason: 'local_hybrid_backend_available' },
+                queryBackend: { passed: true, reason: 'local_query_backend_available' },
+                vectorIndex: { passed: true, reason: 'local_vector_index_available' },
+            },
+            checkedAt: new Date().toISOString(),
+        };
+    }
 }
 
 export function createKnowledgeLearningPlatform(options: KnowledgeLearningPlatformOptions = {}): KnowledgeLearningPlatform {

@@ -19,6 +19,7 @@ export interface ServerContext {
     KNOWLEDGE_GRAPHDB_FALLBACK_ENABLED: boolean;
     KNOWLEDGE_GRAPHDB_OPERATION_MODE: string;
     kbRoot: string;
+    runtimeDataDir: string;
 }
 
 export type RouteHandler = (

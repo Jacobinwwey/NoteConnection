@@ -24,6 +24,7 @@ function createMockContext(): ServerContext {
         KNOWLEDGE_GRAPHDB_FALLBACK_ENABLED: false,
         KNOWLEDGE_GRAPHDB_OPERATION_MODE: 'read_write',
         kbRoot: '/tmp/test-kb',
+        runtimeDataDir: '/tmp/test-runtime-data',
     };
 }
 
