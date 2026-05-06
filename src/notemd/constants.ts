@@ -91,4 +91,55 @@ export const DEFAULT_SETTINGS: NotemdSettings = {
 
     enableGlobalCustomPrompts: false,
     customPrompts: {},
+
+    // ── Search (obsidian-notemd v1.8.4) ──
+    tavilyApiKey: '',
+    searchProvider: 'tavily',
+    ddgMaxResults: 5,
+    ddgFetchTimeout: 10000,
+    maxResearchContentTokens: 32000,
+    tavilyMaxResults: 5,
+    tavilySearchDepth: 'basic',
+
+    // ── Diagram pipeline (obsidian-notemd v1.8.4) ──
+    enableExperimentalDiagramPipeline: false,
+    experimentalDiagramCompatibilityMode: 'best-fit',
+    preferredDiagramIntent: undefined,
+    useCustomSummarizeToMermaidSuffix: false,
+    summarizeToMermaidCustomSuffix: '',
+    useCustomSummarizeToMermaidSavePath: false,
+    summarizeToMermaidSavePath: '',
+    translateSummarizeToMermaidOutput: false,
+
+    // ── Mermaid error detection (obsidian-notemd v1.8.4) ──
+    enableMermaidErrorDetection: false,
+    moveMermaidErrorFiles: false,
+    mermaidErrorFolderPath: '',
+
+    // ── Extract original text (obsidian-notemd v1.8.4) ──
+    extractOriginalTextMergedMode: false,
+    extractOriginalTextUseCustomOutput: false,
+    extractOriginalTextCustomPath: '',
+    extractOriginalTextCustomSuffix: '',
+    translateExtractOriginalTextOutput: false,
+
+    // ── Duplicate detection (obsidian-notemd v1.8.4) ──
+    duplicateCheckScopeMode: 'vault',
+    duplicateCheckScopePaths: '',
+
+    // ── Add links post-processing (obsidian-notemd v1.8.4) ──
+    removeCodeFencesOnAddLinks: false,
+
+    // ── Workflow (obsidian-notemd v1.8.4) ──
+    extractQuestions: '',
+    customWorkflowErrorStrategy: 'stop_on_error',
+    customWorkflowButtonsDsl: '',
+
+    // ── Developer diagnostics (obsidian-notemd v1.8.4) ──
+    enableDeveloperMode: false,
+    developerDiagnosticCallMode: 'single',
+    developerDiagnosticStabilityRuns: 5,
+    developerDiagnosticTimeoutMs: 10000,
+    enableApiErrorDebugMode: false,
+    enableStableApiCall: false,
 };

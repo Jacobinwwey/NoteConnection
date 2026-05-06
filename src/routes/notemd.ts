@@ -158,5 +158,86 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/cancel'); }
             },
         },
+        // ── Diagram generation (obsidian-notemd v1.8.4) ──
+        {
+            method: 'POST',
+            path: api('/generate-diagram'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await notemdService.generateDiagram(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/generate-diagram'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/preview-diagram'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await notemdService.previewDiagram(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/preview-diagram'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/export-diagram'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await notemdService.exportDiagram(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/export-diagram'); }
+            },
+        },
+        // ── Web search (obsidian-notemd v1.8.4) ──
+        {
+            method: 'POST',
+            path: api('/search'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await notemdService.search(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/search'); }
+            },
+        },
+        // ── Batch progress query (obsidian-notemd v1.8.4) ──
+        {
+            method: 'GET',
+            path: api('/progress'),
+            handler: async (_req, res) => {
+                try {
+                    const progress = await notemdService.getBatchProgress();
+                    ok(res, { progress });
+                } catch (e) { fail(res, e, 'API:GET /api/notemd/progress'); }
+            },
+        },
+        // ── LLM provider diagnostics (obsidian-notemd v1.8.4) ──
+        {
+            method: 'POST',
+            path: api('/diagnose-llm'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await notemdService.diagnoseLlmProvider(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/diagnose-llm'); }
+            },
+        },
+        // ── Extract original text (obsidian-notemd v1.8.4) ──
+        {
+            method: 'POST',
+            path: api('/extract-original-text'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await notemdService.extractOriginalText(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/extract-original-text'); }
+            },
+        },
     ];
 }

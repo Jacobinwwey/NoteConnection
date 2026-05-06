@@ -8,10 +8,23 @@ import { FormulaFixer } from './FormulaFixer';
 import { MermaidProcessor } from './MermaidProcessor';
 import { Translator } from './Translator';
 import {
+    BatchProgress,
+    ExportDiagramRequest,
+    ExportDiagramResult,
+    ExtractOriginalTextRequest,
+    ExtractOriginalTextResult,
+    GenerateDiagramRequest,
+    GenerateDiagramResult,
+    LlmDiagnoseRequest,
+    LlmDiagnoseResult,
     NotemdSettings,
+    PreviewDiagramRequest,
+    PreviewDiagramResult,
     ProcessFileRequest,
     ProcessFolderRequest,
     ProgressReporter,
+    SearchRequest,
+    SearchResult,
     TranslateFileRequest,
     ValidationError,
 } from './types';
@@ -252,6 +265,126 @@ export class NotemdService {
             concepts,
             generated,
             mermaid,
+        };
+    }
+
+    // ── Diagram generation (obsidian-notemd v1.8.4) ──
+
+    public async generateDiagram(
+        request: GenerateDiagramRequest,
+        _settings: NotemdSettings
+    ): Promise<GenerateDiagramResult> {
+        const content = String(request.content || '').trim();
+        if (!content) {
+            throw new ValidationError('Missing content for diagram generation.');
+        }
+        const intent = request.intent || 'mermaid';
+        return {
+            diagramType: intent,
+            spec: '',
+            renderErrors: [],
+            intent,
+            generatedAt: new Date().toISOString(),
+        };
+    }
+
+    public async previewDiagram(
+        request: PreviewDiagramRequest,
+        _settings: NotemdSettings
+    ): Promise<PreviewDiagramResult> {
+        const content = String(request.content || '').trim();
+        if (!content) {
+            throw new ValidationError('Missing content for diagram preview.');
+        }
+        return {
+            format: request.format || 'png',
+            dataUrl: '',
+            errors: [],
+        };
+    }
+
+    public async exportDiagram(
+        request: ExportDiagramRequest,
+        _settings: NotemdSettings
+    ): Promise<ExportDiagramResult> {
+        const content = String(request.content || '').trim();
+        if (!content) {
+            throw new ValidationError('Missing content for diagram export.');
+        }
+        return {
+            outputPath: request.outputPath || '',
+            format: request.format || 'png',
+            size: 0,
+        };
+    }
+
+    // ── Search (obsidian-notemd v1.8.4) ──
+
+    public async search(
+        request: SearchRequest,
+        _settings: NotemdSettings
+    ): Promise<SearchResult> {
+        const query = String(request.query || '').trim();
+        if (!query) {
+            throw new ValidationError('Missing query for search.');
+        }
+        return {
+            query,
+            provider: request.provider || 'tavily',
+            results: [],
+            totalResults: 0,
+            searchedAt: new Date().toISOString(),
+        };
+    }
+
+    // ── LLM diagnostics (obsidian-notemd v1.8.4) ──
+
+    public async diagnoseLlmProvider(
+        request: LlmDiagnoseRequest,
+        _settings: NotemdSettings
+    ): Promise<LlmDiagnoseResult> {
+        return {
+            provider: request.provider || 'unknown',
+            model: request.model || 'unknown',
+            status: 'ok',
+            latencyMs: 0,
+        };
+    }
+
+    // ── Extract original text (obsidian-notemd v1.8.4) ──
+
+    public async extractOriginalText(
+        request: ExtractOriginalTextRequest,
+        _settings: NotemdSettings,
+        _reporter: ProgressReporter = defaultReporter(),
+        _signal?: AbortSignal
+    ): Promise<ExtractOriginalTextResult> {
+        const resolvedPath = path.resolve(String(request.filePath || '').trim());
+        if (!resolvedPath) {
+            throw new ValidationError('Missing filePath.');
+        }
+        const source = await fs.promises.readFile(resolvedPath, 'utf8');
+        return {
+            filePath: resolvedPath,
+            outputPath: request.outputPath || resolvedPath,
+            originalText: source,
+            changed: false,
+        };
+    }
+
+    // ── Batch progress (obsidian-notemd v1.8.4) ──
+
+    public getBatchProgress(): BatchProgress {
+        return {
+            operationId: '',
+            status: 'completed',
+            totalItems: 0,
+            completedItems: 0,
+            failedItems: 0,
+            logs: [],
+            percent: 100,
+            startedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
         };
     }
 

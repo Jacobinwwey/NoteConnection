@@ -32,6 +32,16 @@ const DEFAULT_PROMPTS: Record<TaskKey, string> = {
         'Do not paraphrase.',
         'If none found, output: No match found in reference.',
     ].join('\n'),
+    extractOriginalTextMerged: [
+        'For each user query, extract exact matching passages from reference content.',
+        'Combine matching passages into a single merged response.',
+        'Do not paraphrase. If none found, output: No match found in reference.',
+    ].join('\n'),
+    searchResearch: [
+        'Research the given topic using web search results.',
+        'Summarize findings in structured markdown with citations.',
+        'Include key facts, different perspectives, and references.',
+    ].join('\n'),
 };
 
 function safeReplace(template: string, replacements: Record<string, string>): string {
