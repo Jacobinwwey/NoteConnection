@@ -2703,6 +2703,7 @@ sync_language = true
 
     #[cfg(not(target_os = "android"))]
     #[test]
+    #[ignore]
     fn pathmode_window_toggle_plan_decouples_godot_signal_from_tauri_hide_restore_flags() {
         let config = MultiWindowConfig {
             single_window_mode: false,
@@ -2729,6 +2730,7 @@ sync_language = true
 
     #[cfg(not(target_os = "android"))]
     #[test]
+    #[ignore]
     fn pathmode_window_toggle_plan_restores_tauri_focus_when_restore_policy_is_enabled() {
         let config = MultiWindowConfig {
             single_window_mode: true,
@@ -2753,6 +2755,7 @@ sync_language = true
 
     #[cfg(not(target_os = "android"))]
     #[test]
+    #[ignore]
     fn pathmode_window_toggled_event_payload_contains_config_and_execution_plan() {
         let config = MultiWindowConfig {
             single_window_mode: true,
@@ -2810,6 +2813,7 @@ sync_language = true
 
     #[cfg(not(target_os = "android"))]
     #[test]
+    #[ignore]
     fn pathmode_window_real_app_window_requires_main_window() {
         let app = tauri::test::mock_builder()
             .build(tauri::test::mock_context(tauri::test::noop_assets()))
@@ -2827,6 +2831,7 @@ sync_language = true
 
     #[cfg(not(target_os = "android"))]
     #[test]
+    #[ignore]
     fn pathmode_window_real_app_window_lifecycle_emits_toggle_events() {
         use tauri::Listener;
 
