@@ -206,7 +206,8 @@ status: active
 |---|---|---|---|---|
 | path_app.js 深度拆分 (15K→模块) | **高** | 已提取 5 模块，主控降至 4,245 行 (-72%) | 事件流耦合需重构 | 下一迭代 |
 | `src/shared/` 独立类型包 | **高** | domains/types.ts 已有内部类型定义 | 需前后端构建流程调整 | 下一迭代 |
-| **AGENT_WORKSPACE_DIAGNOSTICS 基础设施恢复** | **高** ⚠️ | force push 中丢失（~20 path 常量 + AgentConversationRequest/Response + foundation/readiness 端点），当前 server.ts 无此能力 | 需与当前 route extraction 版本 server.ts 合并 | 下一迭代 |
+| **AGENT_WORKSPACE_DIAGNOSTICS 基础设施恢复** | **高** ✅ | ✅ 已完成: foundation/readiness + backend/sufficiency 端点 + 5 诊断路由 + KLP 方法 + path 常量 | 9 orphaned 测试中 3 个已恢复通过，6 个待后端合同对齐 | 2026-05-06 已交付 |
+| **`src/shared/` 独立类型包** | **高** ✅ | ✅ 已创建: src/shared/types.ts 重导出全部合同类型 + RuntimeCapabilityContract + AgentWorkspaceContract | 前端 .mjs JSDoc 引用待后续添加 | 2026-05-06 已交付 |
 | server.ts 内联链清理 | **中** | 路由已模块化，内联链仍保留 | registry 覆盖率需达 80%+ | 渐进式 |
 | KLP 方法体深度解耦 | **中** | 233 个私有成员，领域类已有并行实现 | 领域类模式已建立，逐步迁移 | Phase 2 期间 |
 | ProGuard 规则文档 | **低** | Capacitor 已废弃 | 尚未遇到实际问题 | 待触发 |
