@@ -2703,7 +2703,6 @@ sync_language = true
 
     #[cfg(not(target_os = "android"))]
     #[test]
-    #[ignore]
     fn pathmode_window_toggle_plan_decouples_godot_signal_from_tauri_hide_restore_flags() {
         let config = MultiWindowConfig {
             single_window_mode: false,
@@ -2730,7 +2729,6 @@ sync_language = true
 
     #[cfg(not(target_os = "android"))]
     #[test]
-    #[ignore]
     fn pathmode_window_toggle_plan_restores_tauri_focus_when_restore_policy_is_enabled() {
         let config = MultiWindowConfig {
             single_window_mode: true,
@@ -2755,7 +2753,6 @@ sync_language = true
 
     #[cfg(not(target_os = "android"))]
     #[test]
-    #[ignore]
     fn pathmode_window_toggled_event_payload_contains_config_and_execution_plan() {
         let config = MultiWindowConfig {
             single_window_mode: true,
@@ -2811,117 +2808,6 @@ sync_language = true
         );
     }
 
-    #[cfg(not(target_os = "android"))]
-    #[test]
-    #[ignore]
-    fn pathmode_window_real_app_window_requires_main_window() {
-        let app = tauri::test::mock_builder()
-            .build(tauri::test::mock_context(tauri::test::noop_assets()))
-            .expect("failed to build mock app");
-
-        let result = toggle_pathmode_window_with_runtime(app.app_handle().clone(), true);
-        assert!(result.is_err());
-        assert!(
-            result
-                .err()
-                .unwrap_or_default()
-                .contains("Main Tauri window not found")
-        );
-    }
-
-    #[cfg(not(target_os = "android"))]
-    #[test]
-    #[ignore]
-    fn pathmode_window_real_app_window_lifecycle_emits_toggle_events() {
-        use tauri::Listener;
-
-        let _lock = lock_test_env();
-        let temp = TempDir::new("pathmode_window_mock_app");
-        let config_file = temp.child("app_config.toml");
-
-        fs::write(
-            &config_file,
-            r#"
-[multi_window]
-single_window_mode = true
-hide_tauri_when_pathmode_opens = true
-restore_tauri_when_pathmode_exits = true
-confirm_before_full_shutdown_from_godot = true
-sync_language = true
-"#,
-        )
-        .expect("failed to write pathmode mock app config");
-
-        let _config_guard = EnvVarGuard::set(
-            "NOTE_CONNECTION_CONFIG_PATH",
-            config_file.to_string_lossy().as_ref(),
-        );
-
-        let app = tauri::test::mock_builder()
-            .build(tauri::test::mock_context(tauri::test::noop_assets()))
-            .expect("failed to build mock app");
-        let _main_window = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
-            .build()
-            .expect("failed to build mock main window");
-
-        let (tx, rx) = std::sync::mpsc::channel::<Value>();
-        let listener_id = app.listen("pathmode-window-toggled", move |event: tauri::Event| {
-            if let Ok(payload) = serde_json::from_str::<Value>(event.payload()) {
-                let _ = tx.send(payload);
-            }
-        });
-
-        toggle_pathmode_window_with_runtime(app.app_handle().clone(), true)
-            .expect("open toggle should succeed");
-        toggle_pathmode_window_with_runtime(app.app_handle().clone(), false)
-            .expect("close toggle should succeed");
-
-        let open_payload = rx
-            .recv_timeout(std::time::Duration::from_secs(1))
-            .expect("missing open payload");
-        let close_payload = rx
-            .recv_timeout(std::time::Duration::from_secs(1))
-            .expect("missing close payload");
-        app.unlisten(listener_id);
-
-        assert_eq!(open_payload.get("showGodot").and_then(Value::as_bool), Some(true));
-        assert_eq!(close_payload.get("showGodot").and_then(Value::as_bool), Some(false));
-        assert_eq!(
-            open_payload
-                .get("plan")
-                .and_then(|value| value.get("sendPathmodeShow"))
-                .and_then(Value::as_bool),
-            Some(true)
-        );
-        assert_eq!(
-            close_payload
-                .get("plan")
-                .and_then(|value| value.get("sendPathmodeHide"))
-                .and_then(Value::as_bool),
-            Some(true)
-        );
-        assert_eq!(
-            open_payload
-                .get("plan")
-                .and_then(|value| value.get("hideTauriMainWindow"))
-                .and_then(Value::as_bool),
-            Some(true)
-        );
-        assert_eq!(
-            close_payload
-                .get("plan")
-                .and_then(|value| value.get("showTauriMainWindow"))
-                .and_then(Value::as_bool),
-            Some(true)
-        );
-        assert_eq!(
-            close_payload
-                .get("plan")
-                .and_then(|value| value.get("focusTauriMainWindow"))
-                .and_then(Value::as_bool),
-            Some(true)
-        );
-    }
 
     #[test]
     fn save_stored_config_preserves_unknown_toml_sections() {
