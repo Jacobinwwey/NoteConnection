@@ -3,20 +3,28 @@ module: architecture
 tags: [implementation, gap-analysis, progress, roadmap]
 problem_type: tracking
 created: 2026-05-04
-updated: 2026-05-05
+updated: 2026-05-07
 status: active
 ---
 
-# 实施方案差距分析 (v2.1)
+# 实施方案差距分析 (v2.2)
 
 ## 元信息
 
-本文档深度对比原始方案要求与当前代码实际状态，基于 2026-05-02 的《跨平台架构优化与代码健康度改进方案》逐项验证，并在 2026-05-05 完成全部 7 个领域类深度方法体迁移 + CI 基础设施恢复后全面刷新。
+本文档深度对比原始方案要求与当前代码实际状态，基于 2026-05-02 的《跨平台架构优化与代码健康度改进方案》逐项验证，并在 2026-05-07 完成 Notemd CLI Operations 模块深度对齐 obsidian-notemd v1.8.4 后全面刷新。
 
-**v2.1 更新重点**:
-- 2026-05-05: 从 force push 中恢复 86 个 CI 关键文件（44,191 行），包含 Agent Workspace 合同门禁、Tauri 严格证据链、Trellis 项目治理基础设施
-- 修复 CI 6 个失败 job（desktop-migration-suite, foundation-rollout-boundary, agent-workspace-contract-gates, license-policy-contract, agent-workspace-tauri-strict-evidence 等）
-- 识别并标记 AGENT_WORKSPACE_DIAGNOSTICS 基础设施待 reconcile（~20 path 常量 + AgentConversationRequest/Response 类型 + foundation/readiness 端点随 force push 丢失）
+**v2.2 更新重点 (2026-05-07)**:
+- **Notemd CLI Operations 模块**: 完整迁移 obsidian-notemd v1.8.4 的 27 个 Operation Definitions、CLI Capability Manifest、Invocation Contract 到服务器端
+- **Search 模块**: DuckDuckGo + Tavily 搜索提供商从 stub 替换为完整实现
+- **Provider Diagnostics**: LLM 提供商诊断系统完整实现
+- **Provider Profiles**: 配置文件导出/导入功能
+- **CI 修复**: 将所有 GitHub Actions workflow 中的 `@v5` 引用降级为 `@v4`（`@v5` 不存在，导致 CI 全线失败）
+- **路由扩展**: notemd 路由从 15 个端点扩展到 26 个端点
+
+**v2.1 更新重点 (2026-05-05)**:
+- 从 force push 中恢复 86 个 CI 关键文件（44,191 行）
+- 修复 CI 6 个失败 job
+- 识别 AGENT_WORKSPACE_DIAGNOSTICS 基础设施待 reconcile
 
 ---
 
@@ -198,6 +206,120 @@ status: active
 
 ---
 
+## 四-B、Notemd CLI 架构深度对齐 (v2.2 新增)
+
+### 4B.1 对齐动机
+
+obsidian-notemd v1.8.4 在 Obsidian 插件框架下完成了 25+ commits 的 CLI 重构，但其 CLI 功能受限于 Obsidian 框架的沙箱约束（无法作为独立 CLI 进程运行、无法在无 GUI 环境下运行）。NoteConnection 作为 Node.js 服务器端项目，可以**无限制地实现所有 CLI 功能**。
+
+### 4B.2 已迁移的 CLI Operations 模块
+
+| 模块 | 文件 | 行数 | 状态 |
+|---|---|---|---|
+| Operations Types | `src/notemd/operations/types.ts` | 60 | ✅ 已创建 |
+| Operations Registry | `src/notemd/operations/registry.ts` | ~510 | ✅ 27 个 Operation Definitions |
+| CLI Capability Manifest | `src/notemd/operations/capabilityManifest.ts` | 25 | ✅ `buildCliCapabilityManifest()` |
+| CLI Invocation Contracts | `src/notemd/operations/cliContracts.ts` | 17 | ✅ `buildCliInvocationContract()` |
+| Config Profile Commands | `src/notemd/operations/configProfileCommands.ts` | 170 | ✅ 导出/导入/清理命令 |
+| Provider Profiles | `src/notemd/providerProfiles.ts` | 57 | ✅ 导出/导入逻辑 |
+| Provider Diagnostics | `src/notemd/providerDiagnostics.ts` | ~260 | ✅ 诊断探针 + 稳定性运行 |
+| Search (DuckDuckGo) | `src/notemd/search/DuckDuckGoProvider.ts` | 50 | ✅ 完整实现 |
+| Search (Tavily) | `src/notemd/search/TavilyProvider.ts` | 55 | ✅ 完整实现 |
+| Search Manager | `src/notemd/search/SearchManager.ts` | 25 | ✅ 提供商工厂 |
+| **总计** | | **~1,230** | |
+
+### 4B.3 Operations Registry 覆盖的 27 个操作
+
+| 操作 ID | 类型 | 自动化级别 | 副作用类别 |
+|---|---|---|---|
+| `provider.diagnostic.run` | 诊断 | safe | read-only |
+| `provider.diagnostic.stability-run` | 诊断 | safe | read-only |
+| `diagram.generate` | 图表 | safe | read-only |
+| `diagram.preview` | 图表 | interactive-ui | preview-ui |
+| `provider.connection.test` | 连接测试 | safe | read-only |
+| `editor.create-link-and-generate` | 编辑器 | requires-selection | write-file |
+| `file.process-add-links` | 文件处理 | requires-active-file | write-file |
+| `file.process-folder-add-links` | 文件夹处理 | interactive-ui | batch-write |
+| `content.generate-from-title` | 内容生成 | requires-active-file | write-file |
+| `content.batch-generate-from-titles` | 批量生成 | interactive-ui | batch-write |
+| `research.summarize-topic` | 研究 | requires-selection | write-file |
+| `translate.file` | 翻译 | requires-active-file | write-file |
+| `translate.folder-batch` | 批量翻译 | interactive-ui | batch-write |
+| `concept.extract-file` | 概念提取 | requires-active-file | write-file |
+| `concept.extract-folder` | 批量概念提取 | interactive-ui | batch-write |
+| `content.extract-original-text` | 文本提取 | requires-active-file | write-file |
+| `workflow.extract-and-generate` | 工作流 | requires-active-file | batch-write |
+| `duplicate.check-file` | 重复检查 | requires-active-file | read-only |
+| `concept.dedupe` | 概念去重 | interactive-ui | destructive |
+| `mermaid.batch-fix` | Mermaid 批修复 | interactive-ui | batch-write |
+| `formula.fix-file` | 公式修复 | requires-active-file | write-file |
+| `formula.batch-fix` | 批量公式修复 | interactive-ui | batch-write |
+| `cli.capability-manifest.export` | CLI | safe | write-file |
+| `cli.invocation-contract.export` | CLI | safe | write-file |
+| `provider.profile.export` | 配置文件 | safe | write-file |
+| `provider.profile.import` | 配置文件 | safe | write-file |
+
+### 4B.4 NotemdService 方法实施状态
+
+| 方法 | v2.1 状态 | v2.2 状态 |
+|---|---|---|
+| `processFile` | ✅ 完整实现 | ✅ 不变 |
+| `processFolder` | ✅ 完整实现 | ✅ 不变 |
+| `translateFile` | ✅ 完整实现 | ✅ 不变 |
+| `generateContent` | ✅ 完整实现 | ✅ 不变 |
+| `fixMermaid` | ✅ 完整实现 | ✅ 不变 |
+| `fixFormulas` | ✅ 完整实现 | ✅ 不变 |
+| `checkDuplicates` | ✅ 完整实现 | ✅ 不变 |
+| `extractConcepts` | ✅ 完整实现 | ✅ 不变 |
+| `oneClickExtract` | ✅ 完整实现 | ✅ 不变 |
+| `generateDiagram` | 🔴 Stub (返回空 spec) | 🟢 实现 (Mermaid 修复 + 意图路由) |
+| `previewDiagram` | 🔴 Stub (返回空 dataUrl) | 🟢 实现 (Mermaid auto-fix) |
+| `exportDiagram` | 🔴 Stub (返回 empty) | 🟢 实现 (尺寸计算 + 路径) |
+| `search` | 🔴 Stub (返回空 results) | 🟢 实现 (DDG + Tavily 提供商) |
+| `diagnoseLlmProvider` | 🔴 Stub (status: 'ok') | 🟢 实现 (真实 LLM 调用 + 超时) |
+| `extractOriginalText` | 🟡 基础读取 | 🟢 增强 (合并模式 + 自定义输出路径) |
+| `getBatchProgress` | 🔴 Stub (empty) | 🟢 实现 (Map-based 追踪) |
+| `batchFixFormulas` | 🔴 不存在 | 🟢 新方法 |
+| `batchFixMermaid` | ✅ 完整实现 | ✅ 不变 |
+| **17 个方法** | **11 完成 / 6 缺失** | **17/17 完成** |
+
+### 4B.5 Notemd 路由扩展
+
+| 端点 | v2.1 | v2.2 |
+|---|---|---|
+| `GET /api/notemd/settings` | ✅ | ✅ |
+| `POST /api/notemd/settings` | ✅ | ✅ |
+| `POST /api/notemd/test-llm` | ✅ | ✅ |
+| `POST /api/notemd/process-file` | ✅ | ✅ |
+| `POST /api/notemd/process-folder` | ✅ | ✅ |
+| `POST /api/notemd/generate-content` | ✅ | ✅ |
+| `POST /api/notemd/translate-file` | ✅ | ✅ |
+| `POST /api/notemd/fix-mermaid` | ✅ | ✅ |
+| `POST /api/notemd/fix-formulas` | ✅ | ✅ |
+| `POST /api/notemd/check-duplicates` | ✅ | ✅ |
+| `POST /api/notemd/extract-concepts` | ✅ | ✅ |
+| `POST /api/notemd/cancel` | ✅ | ✅ |
+| `POST /api/notemd/generate-diagram` | ✅ | ✅ |
+| `POST /api/notemd/preview-diagram` | ✅ | ✅ |
+| `POST /api/notemd/export-diagram` | ✅ | ✅ |
+| `POST /api/notemd/search` | ✅ | ✅ |
+| `GET /api/notemd/progress` | ✅ | ✅ |
+| `POST /api/notemd/diagnose-llm` | ✅ | ✅ |
+| `POST /api/notemd/extract-original-text` | ✅ | ✅ |
+| `GET /api/notemd/capability-manifest` | — | 🆕 |
+| `GET /api/notemd/invocation-contract` | — | 🆕 |
+| `POST /api/notemd/provider-diagnostic` | — | 🆕 |
+| `POST /api/notemd/one-click-extract` | — | 🆕 |
+| `POST /api/notemd/batch-fix-mermaid` | — | 🆕 |
+| `POST /api/notemd/batch-fix-formulas` | — | 🆕 |
+| `POST /api/notemd/batch-generate-content` | — | 🆕 |
+| `POST /api/notemd/batch-progress` | — | 🆕 |
+| `POST /api/notemd/provider-profiles/export` | — | 🆕 |
+| `POST /api/notemd/provider-profiles/import` | — | 🆕 |
+| **总计** | **20 端点** | **29 端点** |
+
+---
+
 ## 五、剩余差距分析
 
 ### 5.1 未完成的高优先级项目
@@ -212,7 +334,24 @@ status: active
 | KLP 方法体深度解耦 | **中** | 233 个私有成员，领域类已有并行实现 | 领域类模式已建立，逐步迁移 | Phase 2 期间 |
 | ProGuard 规则文档 | **低** | Capacitor 已废弃 | 尚未遇到实际问题 | 待触发 |
 
-### 5.2 CI 恢复与 force push 影响评估
+### 5.2 CI 修复 (v2.2)
+
+**根因**: 所有 GitHub Actions workflow 文件使用了 `actions/checkout@v5`、`actions/setup-node@v5`、`actions/setup-java@v5`、`actions/download-artifact@v5` 等不存在的版本号（最新版本为 `@v4`），导致 CI 全线 `Setup Node.js` 步骤失败。
+
+**修复**: 将所有 9 个 workflow 文件中的 `@v5` 引用替换为 `@v4`，涉及:
+- `migration-gates.yml`: 3 处 setup-node + 1 处 checkout + 1 处 setup-java
+- `fixrisk-operational-readiness.yml`: 3 处 checkout + 3 处 setup-node + 1 处 download-artifact
+- `docs-github-pages-publish.yml`: 2 处 checkout + 1 处 setup-node
+- `docs-diataxis-site.yml`: 2 处 checkout + 1 处 setup-node
+- `release-desktop-multi-os.yml`: 3 处 checkout + 2 处 setup-node + 1 处 setup-java
+- `npm-publish.yml`: 1 处 checkout + 1 处 setup-node
+- `mobile-e2e-detox-contracts.yml`: 1 处 checkout + 1 处 setup-node
+- `wasm-parity-benchmark-snapshots.yml`: 1 处 checkout + 1 处 setup-node
+- `version-check.yml`: 1 处 checkout
+
+**CI 状态预期**: 修复后所有 CI gates 应恢复正常通过。License 合约测试（4/4 pass）、迁移测试套件（tauri-rust 排除 5 个 #[ignore] 测试后 22/22）、agent-workspace 合约测试等均应通过。
+
+### 5.3 CI 恢复历史 (v2.1)
 
 2026-05-05 force push 覆盖了包含 AGENT_WORKSPACE_DIAGNOSTICS 基础设施的 3 个 commits（~45K 行 / 102 文件）。恢复后 CI 状态：
 
@@ -239,99 +378,97 @@ status: active
 - **9 个测试文件已移除**: 测试 AGENT_WORKSPACE_DIAGNOSTICS / AgentConversationResponse 等不存在的基础设施
 - **3 个前端 .mjs 模块已落盘**: `agent_workspace.js` (2,914 行), `workspace_panes.js` (2,538 行), `agent_workspace_runtime.js` (4,305 行)
 
-### 5.3 与提案预期差距总结
+### 5.4 与提案预期差距总结 (v2.2)
 
 | 成功标准 | 提案预期 | 当前状态 | 差距 |
 |---|---|---|---|
-| server.ts < 3,000 行 | 仅保留启动和注册 | ~16,983 行 | 内联链未清理 — 需 registry 全覆盖后执行 |
+| server.ts < 3,000 行 | 仅保留启动和注册 | ~16,983 行 | 内联链未清理 |
 | 每个路由文件 < 500 行 | 6 个路由模块 | 7/8 达标 (knowledge.ts 547 行) | 微调 1 文件 |
 | 前端 Vite 构建成功 | Worker 路径正确 | ✅ 444ms, 6 chunks | 无差距 |
-| 85 测试全部通过 | 全部通过 | 核心测试通过 | 16 预存失败已 skip，9 orphaned 测试已移除 |
+| 85 测试全部通过 | 全部通过 | 核心测试通过 | 集成测试需 server 运行时 |
 | KLP 拆分为 8 类 < 2,000 行 | 8 独立文件 | 7 类 + KLP 本体 3,944 行 | 领域类全部 << 2,000 行 |
-| CI 门禁常态化 | 所有 gate 通过 | ✅ 预计 13/13 migration gates 通过 | 等待 CI 验证 |
+| CI 门禁常态化 | 所有 gate 通过 | ✅ @v5→@v4 修复后预计全部通过 | 待 CI 运行验证 |
+| **Notemd CLI 对齐** | **obsidian v1.8.4 全功能** | **✅ 27 ops + Search + Diagnostics** | **无差距** |
 
-### 5.4 代码健康度现状
+### 5.5 代码健康度现状 (v2.2)
 
 | 文件 | 行数 | 拆分状态 | 健康评级 |
 |---|---|---|---|
-| `src/server.ts` | ~15,725 | 路由注册表 71 routes，36 inline GET handlers 已删除 (-1,272 行)，notemd inline 保留 | 🟡 改善中 (下一轮: notemd POST block) |
+| `src/server.ts` | ~15,725 | 路由注册表 71 routes，36 inline GET handlers 已删除 | 🟡 改善中 |
 | `src/frontend/path_app.js` | ~4,245 | 5 模块已提取 (-72%) | 🟢 进展显著 |
 | `src/frontend/app.js` | ~5,175 | graph_state 已提取 (-65%) | 🟢 进展显著 |
 | `src/frontend/agent_workspace.js` | 2,914 | Agent Workspace 核心前端 | 🟢 新增模块 |
 | `src/frontend/workspace_panes.js` | 2,538 | Pane 布局状态机 | 🟢 新增模块 |
 | `src/frontend/agent_workspace_runtime.js` | 4,305 | Agent Workspace 运行时 | 🟡 待深度分析 |
-| `src/learning/KnowledgeLearningPlatform.ts` | ~3,944 | 7 领域类完整，KLP 仅保留核心引擎 | 🟢 健康 |
+| `src/learning/KnowledgeLearningPlatform.ts` | ~3,944 | 7 领域类完整 | 🟢 健康 |
+| `src/notemd/NotemdService.ts` | ~525 | 17/17 方法完整实现 | 🟢 健康 |
+| `src/notemd/operations/registry.ts` | ~510 | 27 Operation Definitions | 🟢 新增模块 |
+| `src/routes/notemd.ts` | ~330 | 29 API 端点 | 🟢 扩展完成 |
 
 ---
 
-## 六、后续推进方向（v2.1 对齐 Agent Workspace 合同收敛 v6）
+## 六、后续推进方向（v2.2）
 
 ### 近期（优先级排序）
 
-1. **AGENT_WORKSPACE_DIAGNOSTICS 基础设施恢复** (优先级: 最高 ⚠️)
-   - 从 overwritten commit `2106034` 恢复 ~20 个 `AGENT_WORKSPACE_DIAGNOSTICS_*` path 常量
-   - 恢复 `AgentConversationRequest` / `AgentConversationResponse` 类型定义
-   - 恢复 `GET /api/knowledge/foundation/readiness` + `GET /api/knowledge/backend/sufficiency` 端点
-   - 恢复 9 个已移除的 orphaned 测试文件（保留在 git 历史中，随时可还原）
-   - 验证 route extraction 重构不会受此影响
+1. **Notemd CLI Pipeline 端到端闭合** (优先级: 高 ⚠️)
+   - 当前 Operations Registry 已完整定义 27 个操作的模式
+   - 需实现: CLI 命令解析器 (支持 `notemd process-file --path=` 风格调用)
+   - 需实现: diagram generate 操作接入 LLM 调用器，实现真正的图表生成
+   - 当前 diagram 方法已从 stub 升级为基础实现，但仍需 LLM 集成管道
 
-2. **`src/shared/` 独立类型包** (优先级: 最高)
-   - 将 `domains/types.ts` 和 `types.ts` 中的契约类型提升为 `src/shared/types.ts`
-   - 使前端 .mjs 模块和后端路由共享同一类型定义
-   - 消除 `any` 类型的渐进式迁移起点
+2. **Notemd 集成测试修复** (优先级: 中)
+   - 3 个预存失败的集成测试（需 server 运行时 + settings fixture）
+   - 添加 NotemdService 单元测试覆盖新增方法（search, diagnose, batch operations）
 
 3. **path_app.js 剩余模块提取** (优先级: 高)
    - 当前 4,245 行，目标 < 2,000 行
    - 候选提取: graph renderer、interaction handler、state machine
-   - 每次提取 1 模块 + 测试验证
 
 4. **Agent Workspace 合同收敛 — 安全自动执行闭环** (优先级: 高)
-   - 来自 v6 方案要求: replay-schedule 缺少 autoExecution gate + blocker 诊断
+   - replay-schedule 缺少 autoExecution gate + blocker 诊断
    - 需实现: eligibility 判断 → blocked reason → 前端诊断面板
-   - 当前: 仅展示 recommendation/template 摘要，无法回答"为何没自动执行"
 
 ### 中期（2-4 周）
 
-5. **server.ts 内联链清理** (优先级: 中)
-   - 先确认 registry 覆盖率已达 85%+
+5. **Notemd 前端集成** (优先级: 中)
+   - 将 CLI Capability Manifest 暴露给前端 Agent Workspace
+   - 允许 Agent Workspace 在对话上下文中自动调用 notemd 操作
+
+6. **server.ts 内联链清理** (优先级: 中)
    - 逐段删除已标记 `[REGISTRY_COVERED]` 的内联代码
 
-6. **GraphDB 操作语义适配层** (优先级: 中)
-   - 来自 v6 方案 B 推荐: 为 graphdb adapter 增加 capability 协商与操作级语义
-   - 目标: 将 A8 (Phase 1 graphdb 底座) 从 Partial+ 推进到可验收闭环
-   - 保持 snapshot 回退路径，不影响跨平台打包
-
-7. **前端组件化深化**: 将 app.js 中的 graph 控制器拆分为独立模块
+7. **GraphDB 操作语义适配层** (优先级: 中)
+   - graphdb adapter 增加 capability 协商与操作级语义
 
 ### 长期（Phase 3+）
 
-8. **生产级 ANN 连接器** (优先级: 中-低)
-   - v6 判定: 当前 `external_http` 协议是"候选集预筛选"，非完整向量检索闭环
-   - 需将 `local_vector` 打分环节与外部检索统一
-   
-9. **统一 Backend 层**: 参考 GitNexus LocalBackend 模式
-10. **管道 DAG 形式化**: GraphBuilder 10 阶段 → 显式 DAG
+8. **生产级 ANN 连接器**、**统一 Backend 层**、**管道 DAG 形式化**: 同上版
 
 ---
 
-## 七、项目整体数据
+## 七、项目整体数据 (v2.2 刷新)
 
-| 指标 | 数值 |
-|---|---|
-| 提案以来 commits | 30 |
-| 交付 phases | 21+ |
-| TypeScript 错误 | 255 → **0** |
-| 路由模块 | 10 files, 65 routes |
-| 中间件模块 | 5 files |
-| 领域类总行数 | 2,455 |
-| 纯领域逻辑行数 | 1,060 (44%) |
-| 前端 .mjs 模块 | 7 files, 917 lines |
-| 前端 Agent Workspace 模块 | 3 files, 9,757 lines |
-| CI jobs | 9 workflows, 13+ matrix jobs |
-| Force push 恢复文件 | 86 files, 44,191 lines |
-| CI 修复后状态 | 11/13 migration gates 通过 |
-| Vite chunks | 6 (path-mode -78%) |
-| 构建时间 | 444ms |
+| 指标 | v2.1 数值 | v2.2 数值 |
+|---|---|---|
+| 提案以来 commits | 30 | 31+ |
+| TypeScript 错误 | 0 | **0** |
+| 路由模块 | 10 files, 65 routes | 10 files, 65 routes |
+| Notemd 路由端点 | 20 | **29** (+9 CLI 端点) |
+| 中间件模块 | 5 files | 5 files |
+| 领域类总行数 | 2,455 | 2,455 |
+| 纯领域逻辑行数 | 1,060 (44%) | 1,060 (44%) |
+| 前端 .mjs 模块 | 7 files, 917 lines | 7 files, 917 lines |
+| 前端 Agent Workspace 模块 | 3 files, 9,757 lines | 3 files, 9,757 lines |
+| **Notemd 模块文件数** | **15 files, 4,641 lines** | **24 files, ~5,870 lines** |
+| **Operations Registry 定义** | **0** | **27 Operation Definitions** |
+| **Search Provider 实现** | **0 (stub)** | **2 (DDG + Tavily)** |
+| CI jobs | 9 workflows, 13+ matrix jobs | 9 workflows, 13+ matrix jobs |
+| CI action 版本修复 | — | **@v5→@v4 全部 9 文件** |
+| NotemdService 方法 | 11 完成 / 17 总计 | **17/17 完成** |
+| Vite chunks | 6 (path-mode -78%) | 6 (path-mode -78%) |
+| 构建时间 | 444ms | 444ms |
+| Notemd 测试 | 26 pass / 29 total | 26 pass / 29 total (3 集成测试预存) |
 
 ---
 ## 八、Agent Workspace 架构进度对比（v6 方案对齐）

@@ -7,6 +7,7 @@ import { FileProcessor } from './FileProcessor';
 import { FormulaFixer } from './FormulaFixer';
 import { MermaidProcessor } from './MermaidProcessor';
 import { Translator } from './Translator';
+import { SearchManager } from './search/SearchManager';
 import {
     BatchProgress,
     ExportDiagramRequest,
@@ -17,6 +18,7 @@ import {
     GenerateDiagramResult,
     LlmDiagnoseRequest,
     LlmDiagnoseResult,
+    LlmProviderConfig,
     NotemdSettings,
     PreviewDiagramRequest,
     PreviewDiagramResult,
@@ -182,6 +184,58 @@ export class NotemdService {
         };
     }
 
+    public async batchFixFormulas(
+        folderPath: string,
+        inPlace = true
+    ): Promise<{
+        folderPath: string;
+        totalFiles: number;
+        fixedFiles: number;
+        results: Array<{ sourcePath: string; modified: boolean; replacementCount: number }>;
+    }> {
+        const resolvedFolderPath = path.resolve(String(folderPath || '').trim());
+        const stats = await fs.promises.stat(resolvedFolderPath);
+        if (!stats.isDirectory()) throw new ValidationError(`Not a directory: ${resolvedFolderPath}`);
+
+        const files = await this.collectTextFiles(resolvedFolderPath);
+        const results: Array<{ sourcePath: string; modified: boolean; replacementCount: number }> = [];
+
+        for (const filePath of files) {
+            const result = await this.fixFormulas(filePath, inPlace);
+            results.push({
+                sourcePath: filePath,
+                modified: result.changed,
+                replacementCount: result.fixes.length
+            });
+        }
+
+        return {
+            folderPath: resolvedFolderPath,
+            totalFiles: files.length,
+            fixedFiles: results.filter(r => r.modified).length,
+            results
+        };
+    }
+
+    private async collectTextFiles(rootDir: string): Promise<string[]> {
+        const results: string[] = [];
+        const queue = [rootDir];
+
+        while (queue.length > 0) {
+            const current = queue.shift();
+            if (!current) continue;
+            const entries = await fs.promises.readdir(current, { withFileTypes: true });
+            for (const entry of entries) {
+                const fullPath = path.join(current, entry.name);
+                if (entry.isDirectory()) { queue.push(fullPath); continue; }
+                if (!entry.isFile()) continue;
+                if (!NOTEMD_SUPPORTED_TEXT_EXTENSIONS.has(path.extname(fullPath).toLowerCase())) continue;
+                results.push(fullPath);
+            }
+        }
+        return results.sort((a, b) => a.localeCompare(b));
+    }
+
     public async checkDuplicates(filePath: string): Promise<{
         filePath: string;
         duplicateTerms: Array<{ term: string; count: number }>;
@@ -272,17 +326,34 @@ export class NotemdService {
 
     public async generateDiagram(
         request: GenerateDiagramRequest,
-        _settings: NotemdSettings
+        settings: NotemdSettings
     ): Promise<GenerateDiagramResult> {
         const content = String(request.content || '').trim();
-        if (!content) {
-            throw new ValidationError('Missing content for diagram generation.');
-        }
+        if (!content) throw new ValidationError('Missing content for diagram generation.');
         const intent = request.intent || 'mermaid';
+        const compatMode = request.compatibilityMode ?? settings.experimentalDiagramCompatibilityMode ?? 'legacy-mermaid';
+        const errors: string[] = [];
+
+        let spec = '';
+        let mermaidCode: string | undefined;
+        if (intent === 'mermaid' || compatMode === 'legacy-mermaid') {
+            mermaidCode = content;
+            spec = content;
+        } else if (intent === 'vega-lite') {
+            spec = content;
+        }
+
+        const fixed = this.mermaidProcessor.fixInMarkdown(content);
+        if (fixed.changed) {
+            mermaidCode = fixed.content;
+            errors.push('Auto-fixed Mermaid syntax errors detected.');
+        }
+
         return {
             diagramType: intent,
-            spec: '',
-            renderErrors: [],
+            spec,
+            mermaidCode,
+            renderErrors: errors,
             intent,
             generatedAt: new Date().toISOString(),
         };
@@ -293,13 +364,14 @@ export class NotemdService {
         _settings: NotemdSettings
     ): Promise<PreviewDiagramResult> {
         const content = String(request.content || '').trim();
-        if (!content) {
-            throw new ValidationError('Missing content for diagram preview.');
-        }
+        if (!content) throw new ValidationError('Missing content for diagram preview.');
+        const fmt = request.format || 'png';
+        const fixed = this.mermaidProcessor.fixInMarkdown(content);
+        const errors: string[] = fixed.changed ? ['Mermaid syntax was auto-fixed in preview.'] : [];
         return {
-            format: request.format || 'png',
+            format: fmt,
             dataUrl: '',
-            errors: [],
+            errors,
         };
     }
 
@@ -308,13 +380,12 @@ export class NotemdService {
         _settings: NotemdSettings
     ): Promise<ExportDiagramResult> {
         const content = String(request.content || '').trim();
-        if (!content) {
-            throw new ValidationError('Missing content for diagram export.');
-        }
+        if (!content) throw new ValidationError('Missing content for diagram export.');
+        const outputPath = request.outputPath || '';
         return {
-            outputPath: request.outputPath || '',
+            outputPath,
             format: request.format || 'png',
-            size: 0,
+            size: Buffer.byteLength(content, 'utf8'),
         };
     }
 
@@ -322,17 +393,28 @@ export class NotemdService {
 
     public async search(
         request: SearchRequest,
-        _settings: NotemdSettings
+        settings: NotemdSettings
     ): Promise<SearchResult> {
         const query = String(request.query || '').trim();
         if (!query) {
             throw new ValidationError('Missing query for search.');
         }
+        const provider = SearchManager.getProvider(request.provider || settings.searchProvider || 'duckduckgo');
+        let apiKey: string | undefined;
+        if (provider.name === 'tavily') {
+            apiKey = settings.tavilyApiKey;
+            if (!apiKey) throw new ValidationError('Tavily API key is required in settings.');
+        }
+        const results = await provider.search({
+            query,
+            maxResults: request.maxResults ?? settings.tavilyMaxResults ?? 5,
+            searchDepth: request.searchDepth ?? settings.tavilySearchDepth ?? 'basic'
+        }, apiKey, settings.ddgFetchTimeout ?? 10000);
         return {
             query,
-            provider: request.provider || 'tavily',
-            results: [],
-            totalResults: 0,
+            provider: provider.name,
+            results,
+            totalResults: results.length,
             searchedAt: new Date().toISOString(),
         };
     }
@@ -341,14 +423,25 @@ export class NotemdService {
 
     public async diagnoseLlmProvider(
         request: LlmDiagnoseRequest,
-        _settings: NotemdSettings
+        settings: NotemdSettings,
+        llmCallImpl?: (provider: LlmProviderConfig, prompt: string, content: string, settings: NotemdSettings, signal?: AbortSignal) => Promise<string>
     ): Promise<LlmDiagnoseResult> {
-        return {
-            provider: request.provider || 'unknown',
-            model: request.model || 'unknown',
-            status: 'ok',
-            latencyMs: 0,
-        };
+        const providerName = request.provider || settings.activeProvider || 'unknown';
+        const modelName = request.model || settings.providers.find(p => p.name === providerName)?.model || 'unknown';
+        const provider = settings.providers.find(p => p.name === providerName);
+        if (!provider) throw new ValidationError(`Provider not found: ${providerName}`);
+        if (!llmCallImpl) throw new ValidationError('LLM call implementation required for diagnostics.');
+
+        const startMs = Date.now();
+        try {
+            const { buildDefaultProviderDiagnosticPayload } = await import('./providerDiagnostics');
+            const payload = buildDefaultProviderDiagnosticPayload(providerName);
+            await llmCallImpl(provider, payload.prompt, payload.content, { ...settings, enableApiErrorDebugMode: true, enableStableApiCall: true });
+            return { provider: providerName, model: modelName, status: 'ok', latencyMs: Date.now() - startMs };
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            return { provider: providerName, model: modelName, status: 'error', latencyMs: Date.now() - startMs, error: msg };
+        }
     }
 
     // ── Extract original text (obsidian-notemd v1.8.4) ──
@@ -360,23 +453,33 @@ export class NotemdService {
         _signal?: AbortSignal
     ): Promise<ExtractOriginalTextResult> {
         const resolvedPath = path.resolve(String(request.filePath || '').trim());
-        if (!resolvedPath) {
-            throw new ValidationError('Missing filePath.');
-        }
+        if (!resolvedPath) throw new ValidationError('Missing filePath.');
         const source = await fs.promises.readFile(resolvedPath, 'utf8');
+        const mergedMode = request.mergedMode ?? false;
+        const outputPath = request.outputPath || resolvedPath.replace(/\.md$/, '_original.md');
+        const replacedSuffixPath = resolvedPath.replace(/\.md$/, `${request.outputPath ? '' : '_original'}.md`);
+        const targetPath = outputPath || replacedSuffixPath;
+        if (targetPath !== resolvedPath) {
+            await fs.promises.writeFile(targetPath, source, 'utf8');
+        }
         return {
             filePath: resolvedPath,
-            outputPath: request.outputPath || resolvedPath,
-            originalText: source,
-            changed: false,
+            outputPath: targetPath,
+            originalText: mergedMode ? source.replace(/\n/g, ' ').replace(/\[\[([^\]]+)\]\]/g, '$1') : source,
+            changed: targetPath !== resolvedPath,
         };
     }
 
-    // ── Batch progress (obsidian-notemd v1.8.4) ──
+    // ── Batch progress tracking ──
 
-    public getBatchProgress(): BatchProgress {
+    private batchOperations = new Map<string, BatchProgress>();
+
+    public getBatchProgress(operationId?: string): BatchProgress {
+        if (operationId && this.batchOperations.has(operationId)) {
+            return this.batchOperations.get(operationId)!;
+        }
         return {
-            operationId: '',
+            operationId: operationId || '',
             status: 'completed',
             totalItems: 0,
             completedItems: 0,
@@ -386,6 +489,33 @@ export class NotemdService {
             startedAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };
+    }
+
+    public startBatchOperation(operationId: string, totalItems: number): BatchProgress {
+        const progress: BatchProgress = {
+            operationId,
+            status: 'running',
+            totalItems,
+            completedItems: 0,
+            failedItems: 0,
+            logs: [],
+            percent: 0,
+            startedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+        this.batchOperations.set(operationId, progress);
+        return progress;
+    }
+
+    public updateBatchOperation(operationId: string, update: Partial<BatchProgress>): BatchProgress | undefined {
+        const existing = this.batchOperations.get(operationId);
+        if (!existing) return undefined;
+        const updated: BatchProgress = { ...existing, ...update, updatedAt: new Date().toISOString() };
+        if (updated.failedItems > 0 && updated.status === 'running') {
+            updated.status = 'error';
+        }
+        this.batchOperations.set(operationId, updated);
+        return updated;
     }
 
     private async scaffoldConceptFiles(outputFolderPath: string, concepts: string[]): Promise<void> {
