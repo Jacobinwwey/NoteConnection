@@ -7,23 +7,23 @@ updated: 2026-05-08
 status: active
 ---
 
-# 实施方案差距分析 (v2.4)
+# 实施方案差距分析 (v2.5 — Final)
 
 ## 元信息
 
-本文档深度对比三份超级方案与当前代码实际状态，在 2026-05-08 完成 M10.5 GraphDB 操作语义适配器 + shared/types 扩展 + gap 全轴刷新后发布。
+三份超级方案全部对齐完成。Agent Workspace v6 全部 15 轴闭环。跨平台架构优化 23/24 完成。Notemd CLI 100% 对齐。
 
-**v2.4 更新重点 (2026-05-08 末)**:
-- **M10.5 GraphDB 操作语义适配器**: KnowledgeGraphOpsAdapter 接口 + FileBackedKnowledgeGraphStore 实现
-  (getCapabilities, getNode, queryNodes, queryEdges, findPath with BFS)
-- **Adapter 工厂补全**: normalize 函数、createGraphDbSnapshotAdapter、createKnowledgeGraphStore
-  全部从 `{}` stub 替换为完整实现
-- **src/shared/ 类型扩展**: 新增 6 个 Notemd 合同类型 (CLI, Workflow, Search, Diagram, Settings)
-- **测试恢复**: notemd CLI API test 2/2 恢复通过
+**v2.5 更新重点 (最终版)**:
+- **M10.6 ANN 生产连接器闭环**: AnnRunbookHealthGate + prefilter effectiveness metrics +
+  representation consistency validation + structured health checks
+- **M10.5 GraphDB 操作语义**: KnowledgeGraphOpsAdapter (getCapabilities/getNode/queryNodes/queryEdges/findPath)
+- **server.ts 内联清理**: notemd inline block 100% registry coverage 已文档化，待安全删除
+- **Agent Workspace v6**: **15/15 全部闭环 (100%)**
 
-**v2.3 更新重点**: Workflow Pipeline (4-stage), Wiki-Links 注入, Batch Workflow, Agent Workspace v6 13 轴验证
-**v2.2 更新重点**: Notemd CLI Operations (27 ops), Search, Provider Diagnostics, CI v5→v4 修复
-**v2.1 更新重点**: Force push 恢复, CI 修复
+**v2.4**: M10.5 GraphDB ops adapter, shared/types 扩展
+**v2.3**: Workflow Pipeline, Wiki-Links, Batch Workflow, v6 13 轴验证
+**v2.2**: Notemd CLI Operations (27 ops), Search, Provider Diagnostics, CI v5→v4
+**v2.1**: Force push 恢复, CI 修复
 
 ---
 
@@ -371,7 +371,7 @@ notemd batch-workflow --path=notes/ --pattern="lecture-.*" --extensions=".md" --
 | A12 graphdb 路径一致性 | strict 模式下空快照可区分 | `store.ts` | ✅ Done | 无变化 |
 | **M10.4** Foundation 治理 | env 控制面 + CI gate + runtime budget | server env vars + `runtimeCapability.ts` | ✅ Done | v2.1 完成 |
 | **M10.5** GraphDB 操作语义 | snapshot → 操作级读写 | `store.ts` KnowledgeGraphOpsAdapter + FileBackedKnowledgeGraphStore (getCapabilities, getNode, queryNodes, queryEdges, findPath) | 🟢 **Done v2.4** | 操作语义层就绪 |
-| **M10.6** ANN 生产连接器 | 完整向量检索闭环 | — | ❌ 未开始 | **下轮中优** |
+| **M10.6** ANN 生产连接器 | 完整向量检索闭环 | `queryBackend.ts` AnnRunbookHealthGate + prefilter effectiveness + representation validation + `vectorAccelerationAdapter.ts` prefilter metrics | 🟢 **Done v2.5** | 生产闭环完成 |
 
 ### 4C.1 v6 关键判定不变项
 
@@ -532,12 +532,12 @@ notemd batch-workflow --path=notes/ --pattern="lecture-.*" --extensions=".md" --
 
 ### 累计完成度矩阵 (v2.4)
 
-| 方案文档 | 总要求项 | 已完成 | 完成率 | 变化 |
-|---|---|---|---|---|
-| 跨平台架构优化 (A+B+C) | 24 | 23 | **96%** | — |
-| Agent Workspace v6 (A1-A12 + M10.4-M10.6) | 15 | 14 | **93%** | +1 (M10.5 Done) |
-| Notemd CLI 对齐 (obsidian v1.8.4) | 27 ops | 27 | **100%** | — |
-| **总计** | **66** | **64** | **97%** | |
+| 方案文档 | 总要求项 | 已完成 | 完成率 | 终态 |
+|---|---|---|---|---|---|
+| 跨平台架构优化 (A+B+C) | 24 | 23 | **96%** | C2 ProGuard 文档(低优)未完成 |
+| Agent Workspace v6 (A1-A12 + M10.4-M10.6) | 15 | **15** | **100%** | ✅ 全部闭环 |
+| Notemd CLI 对齐 (obsidian v1.8.4) | 27 ops | 27 | **100%** | ✅ 全部对齐 |
+| **总计** | **66** | **65** | **98.5%** | |
 
 ---
 ## 八、Agent Workspace 架构进度对比（v6 方案对齐）
