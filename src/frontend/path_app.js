@@ -1,7 +1,24 @@
 /**
  * Path Mode Application Controller
  * Handles interaction, rendering, and worker communication.
+ *
+ * Phase 4 P5: Canonical utility implementations now live in
+ * path_mermaid_utils.mjs and path_state.mjs, exposed via
+ * window.pathModules (loaded by path_modules_bridge.js).
+ * The _methodName functions below delegate to window.pathModules
+ * when available, falling back to inline implementations.
  */
+
+(function () {
+    'use strict';
+    var _pm = window.pathModules;
+    if (_pm && _pm.utils) {
+        // Pre-bind canonical implementations before pathApp definition.
+        // These will be used by the methods defined below.
+        window._pathUtils = _pm.utils;
+        window._pathState = _pm.state;
+    }
+})();
 
 window.pathApp = {
     canvas: null,
@@ -738,6 +755,7 @@ window.pathApp = {
     },
 
     _normalizeBridgeInlineText: function(text) {
+        if (window._pathUtils) return window._pathUtils.normalizeBridgeInlineText(text);
         return String(text || '').replace(/\s+/g, ' ').trim();
     },
 
@@ -772,6 +790,7 @@ window.pathApp = {
     },
 
     _parseBridgeCssLength: function(lengthValue, baseFontSize) {
+        if (window._pathUtils) return window._pathUtils.parseBridgeCssLength(lengthValue, baseFontSize);
         if (!lengthValue) {
             return 0;
         }
@@ -840,6 +859,7 @@ window.pathApp = {
     },
 
     _estimateBridgeTextLineWidth: function(text, fontSize) {
+        if (window._pathUtils) return window._pathUtils.estimateBridgeTextLineWidth(text, fontSize);
         let units = 0;
         for (const char of Array.from(String(text || ''))) {
             units += this._estimateBridgeGlyphWidthUnits(char);
