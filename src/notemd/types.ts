@@ -305,7 +305,7 @@ export interface FormulaFixResult {
 }
 
 // ── Diagram generation (obsidian-notemd v1.8.4) ──
-export type DiagramIntent = 'mermaid' | 'vega-lite' | 'canvas';
+export type DiagramIntent = 'mindmap' | 'flowchart' | 'sequence' | 'classDiagram' | 'erDiagram' | 'stateDiagram' | 'canvasMap' | 'dataChart';
 
 export interface GenerateDiagramRequest {
     content: string;

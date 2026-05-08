@@ -8,6 +8,8 @@ import { FormulaFixer } from './FormulaFixer';
 import { MermaidProcessor } from './MermaidProcessor';
 import { Translator } from './Translator';
 import { SearchManager } from './search/SearchManager';
+import { generateDiagramArtifact, DiagramGenerationOptions } from './diagram/diagramGenerationService';
+import { DiagramIntent } from './diagram/types';
 import {
     BatchProgress,
     ExportDiagramRequest,
@@ -326,34 +328,43 @@ export class NotemdService {
 
     public async generateDiagram(
         request: GenerateDiagramRequest,
-        settings: NotemdSettings
+        settings: NotemdSettings,
+        llmInvoker?: (systemPrompt: string, sourceMarkdown: string) => Promise<string>
     ): Promise<GenerateDiagramResult> {
         const content = String(request.content || '').trim();
         if (!content) throw new ValidationError('Missing content for diagram generation.');
-        const intent = request.intent || 'mermaid';
-        const compatMode = request.compatibilityMode ?? settings.experimentalDiagramCompatibilityMode ?? 'legacy-mermaid';
+        const intent = (request.intent || 'mermaid') as DiagramIntent;
+        const compatMode = (request.compatibilityMode ?? settings.experimentalDiagramCompatibilityMode ?? 'legacy-mermaid') as 'best-fit' | 'legacy-mermaid';
         const errors: string[] = [];
 
-        let spec = '';
-        let mermaidCode: string | undefined;
-        if (intent === 'mermaid' || compatMode === 'legacy-mermaid') {
-            mermaidCode = content;
-            spec = content;
-        } else if (intent === 'vega-lite') {
-            spec = content;
+        if (llmInvoker) {
+            try {
+                const result = await generateDiagramArtifact(content, {
+                    compatibilityMode: compatMode,
+                    requestedIntent: intent,
+                    targetLanguage: undefined,
+                    llmInvoker
+                });
+                return {
+                    diagramType: result.spec.intent,
+                    spec: JSON.stringify(result.spec, null, 2),
+                    mermaidCode: result.mermaidContent,
+                    renderErrors: result.renderError ? [result.renderError] : [],
+                    intent: result.spec.intent,
+                    generatedAt: new Date().toISOString(),
+                };
+            } catch (error: unknown) {
+                errors.push(error instanceof Error ? error.message : String(error));
+            }
         }
 
+        // Fallback: basic Mermaid fix without LLM
         const fixed = this.mermaidProcessor.fixInMarkdown(content);
-        if (fixed.changed) {
-            mermaidCode = fixed.content;
-            errors.push('Auto-fixed Mermaid syntax errors detected.');
-        }
-
         return {
             diagramType: intent,
-            spec,
-            mermaidCode,
-            renderErrors: errors,
+            spec: content,
+            mermaidCode: fixed.changed ? fixed.content : content,
+            renderErrors: fixed.changed ? ['Auto-fixed Mermaid syntax errors detected.', ...errors] : errors,
             intent,
             generatedAt: new Date().toISOString(),
         };
