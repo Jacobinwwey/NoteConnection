@@ -509,6 +509,7 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
                     backendReady: false,
                     usingFallback: false,
                     fallbackEnabled: false,
+                    lastError: 'graphdb_adapter_unavailable_no_fallback',
                     graphDbOperationMode: normalizeGraphDbStoreOperationMode(graphdbOperationMode),
                     graphDbAdapterCapabilityMode: 'unknown',
                     graphDbReadPath: 'fallback',
