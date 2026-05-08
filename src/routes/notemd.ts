@@ -57,7 +57,8 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
-                    const result = await notemdService.testLlmConnection(JSON.parse(body));
+                    const settings = await loadNotemdSettings();
+                    const result = await notemdService.testLlmConnection(JSON.parse(body), settings);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/test-llm'); }
             },
@@ -68,7 +69,8 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
-                    const result = await notemdService.processFile(JSON.parse(body));
+                    const settings = await loadNotemdSettings();
+                    const result = await notemdService.processFile(JSON.parse(body), settings);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/process-file'); }
             },
@@ -79,7 +81,8 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
-                    const result = await notemdService.processFolder(JSON.parse(body));
+                    const settings = await loadNotemdSettings();
+                    const result = await notemdService.processFolder(JSON.parse(body), settings);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/process-folder'); }
             },
@@ -90,7 +93,8 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
-                    const result = await notemdService.generateContent(JSON.parse(body));
+                    const settings = await loadNotemdSettings();
+                    const result = await notemdService.generateContent(JSON.parse(body), settings);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/generate-content'); }
             },
@@ -101,7 +105,8 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
-                    const result = await notemdService.translateFile(JSON.parse(body));
+                    const settings = await loadNotemdSettings();
+                    const result = await notemdService.translateFile(JSON.parse(body), settings);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/translate-file'); }
             },
@@ -111,8 +116,9 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
             path: api('/fix-mermaid'),
             handler: async (req, res) => {
                 try {
-                    const body = await readBody(req);
-                    const result = await notemdService.fixMermaid(JSON.parse(body));
+                    const raw = await readBody(req);
+                    const { filePath, inPlace } = JSON.parse(raw);
+                    const result = await notemdService.fixMermaid(filePath, inPlace);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/fix-mermaid'); }
             },
@@ -122,8 +128,9 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
             path: api('/fix-formulas'),
             handler: async (req, res) => {
                 try {
-                    const body = await readBody(req);
-                    const result = await notemdService.fixFormulas(JSON.parse(body));
+                    const raw = await readBody(req);
+                    const { filePath, inPlace } = JSON.parse(raw);
+                    const result = await notemdService.fixFormulas(filePath, inPlace);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/fix-formulas'); }
             },
@@ -133,8 +140,9 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
             path: api('/check-duplicates'),
             handler: async (req, res) => {
                 try {
-                    const body = await readBody(req);
-                    const result = await notemdService.checkDuplicates(JSON.parse(body));
+                    const raw = await readBody(req);
+                    const { filePath } = JSON.parse(raw);
+                    const result = await notemdService.checkDuplicates(filePath);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/check-duplicates'); }
             },
@@ -144,8 +152,10 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
             path: api('/extract-concepts'),
             handler: async (req, res) => {
                 try {
-                    const body = await readBody(req);
-                    const result = await notemdService.extractConcepts(JSON.parse(body));
+                    const raw = await readBody(req);
+                    const settings = await loadNotemdSettings();
+                    const { filePath } = JSON.parse(raw);
+                    const result = await notemdService.extractConcepts(filePath, settings);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/extract-concepts'); }
             },
@@ -167,7 +177,8 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
-                    const result = await notemdService.generateDiagram(JSON.parse(body));
+                    const settings = await loadNotemdSettings();
+                    const result = await notemdService.generateDiagram(JSON.parse(body), settings);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/generate-diagram'); }
             },
@@ -178,7 +189,8 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
-                    const result = await notemdService.previewDiagram(JSON.parse(body));
+                    const settings = await loadNotemdSettings();
+                    const result = await notemdService.previewDiagram(JSON.parse(body), settings);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/preview-diagram'); }
             },
@@ -189,7 +201,8 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
-                    const result = await notemdService.exportDiagram(JSON.parse(body));
+                    const settings = await loadNotemdSettings();
+                    const result = await notemdService.exportDiagram(JSON.parse(body), settings);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/export-diagram'); }
             },
@@ -201,7 +214,8 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
-                    const result = await notemdService.search(JSON.parse(body));
+                    const settings = await loadNotemdSettings();
+                    const result = await notemdService.search(JSON.parse(body), settings);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/search'); }
             },
@@ -236,7 +250,8 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
-                    const result = await notemdService.extractOriginalText(JSON.parse(body));
+                    const settings = await loadNotemdSettings();
+                    const result = await notemdService.extractOriginalText(JSON.parse(body), settings);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/extract-original-text'); }
             },
