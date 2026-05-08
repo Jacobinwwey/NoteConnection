@@ -58,6 +58,7 @@ export interface KnowledgeGraphStoreDiagnostics {
     location?: string;
     exists: boolean;
     loaded: boolean;
+    [key: string]: unknown;
     lastLoadAt?: string;
     lastSaveAt?: string;
     lastError?: string;
@@ -417,11 +418,13 @@ export function createGraphDbSnapshotAdapter(options?: Record<string, unknown>):
     const provider = normalizeGraphDbSnapshotAdapterProvider(rawProvider);
     if (provider === 'none') return null;
     if (provider === 'file') {
-        return createFileGraphDbSnapshotAdapter({
+        const fileAdapter = createFileGraphDbSnapshotAdapter({
             provider: 'file',
             filePath: options?.filePath as string | undefined,
             id: (options?.fileAdapterId ?? options?.id) as string | undefined,
         });
+        if (!fileAdapter) return null;
+        return fileAdapter;
     }
     // HTTP adapter — return stub with id
     if (provider === 'http' && options?.baseUrl) {
@@ -449,19 +452,25 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
 
     if (backend === 'graphdb') {
         const adapter = graphdbConfig?.adapter ?? null;
-        if (adapter && typeof (adapter as any).loadSnapshot === 'function') {
+        if (adapter && typeof adapter.loadSnapshot === 'function') {
+            const a = adapter; // Narrowed reference
             return {
-                loadSnapshot: () => adapter.loadSnapshot(),
-                saveSnapshot: (snapshot) => adapter.saveSnapshot(snapshot),
-                getDiagnostics: () => ({
-                    ...adapter.getDiagnostics(),
-                    storeType: 'graphdb' as const,
-                    graphDbOperationMode: normalizeGraphDbStoreOperationMode(graphdbConfig?.operationMode),
-                    fallbackEnabled: true,
-                    graphDbAdapterCapabilityMode: (adapter.getDiagnostics() as any).capabilityMode ?? 'unknown',
-                    graphDbReadPath: (adapter.getDiagnostics() as any).lastReadPath ?? 'fallback',
-                    graphDbWritePath: (adapter.getDiagnostics() as any).lastWritePath ?? 'fallback',
-                }),
+                loadSnapshot: () => a.loadSnapshot!(),
+                saveSnapshot: (snapshot: KnowledgeGraphSnapshot) => a.saveSnapshot!(snapshot),
+                getDiagnostics: () => {
+                    const diag = a.getDiagnostics?.() ?? ({} as KnowledgeGraphStoreDiagnostics);
+                    return {
+                        exists: diag.exists ?? false,
+                        loaded: diag.loaded ?? false,
+                        ...diag,
+                        storeType: 'graphdb' as const,
+                        graphDbOperationMode: normalizeGraphDbStoreOperationMode(graphdbConfig?.operationMode),
+                        fallbackEnabled: true,
+                        graphDbAdapterCapabilityMode: (diag as any).capabilityMode ?? 'unknown',
+                        graphDbReadPath: (diag as any).lastReadPath ?? 'fallback',
+                        graphDbWritePath: (diag as any).lastWritePath ?? 'fallback',
+                    };
+                },
             };
         }
         // Fall back to file store
