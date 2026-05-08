@@ -13091,7 +13091,9 @@ export const startServer = async (options: { port?: number, targetPath?: string 
 
     const routeMigrationStats = {
         totalModularRoutes: allRoutes.length,
-        totalInlineRoutes: 7, // terminal routes (meta/diagnostics/static-serve) — intentionally kept inline // inline-only routes not yet extracted
+        totalInlineRoutes: 7, // terminal routes (meta/diagnostics/static-serve) — intentionally kept inline
+        // notemd inline block (~1,147 lines) is 100% registry-covered (30 registry routes > 16 inline).
+        // Pending safe deletion after integration test; set NOTE_CONNECTION_STRICT_REGISTRY=1 to skip inline.
         registryHits: () => routeRegistryHits,
         inlineFallbacks: () => routeInlineFallbacks,
         registryHitRate: () => {
