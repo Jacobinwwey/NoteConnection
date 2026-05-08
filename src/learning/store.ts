@@ -419,9 +419,30 @@ export function createFileGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapte
         id: options?.id ?? 'file-graphdb-local',
         provider: 'file',
         opsCapable: true,
+        getCapabilities: () => ({
+            snapshotSupported: true, nodeQuerySupported: true,
+            edgeQuerySupported: true, pathQuerySupported: true,
+            writeSupported: true, serverSideQuery: false,
+            mode: 'ops_capable',
+            supportedReadOperations: ['load_snapshot', 'load_snapshot_by_ops', 'probe_snapshot_metadata'],
+            supportedWriteOperations: ['save_snapshot', 'save_snapshot_by_ops'],
+        }),
         loadSnapshot: () => store.loadSnapshot(),
         saveSnapshot: (snapshot) => store.saveSnapshot(snapshot),
-        getDiagnostics: () => store.getDiagnostics(),
+        loadSnapshotByOps: () => store.loadSnapshot(),
+        saveSnapshotByOps: (snapshot) => store.saveSnapshot(snapshot),
+        probeSnapshotMetadata: async () => {
+            const s = await store.loadSnapshot();
+            return s ? { schemaVersion: s.schemaVersion, savedAt: s.savedAt, atomCount: s.atoms.length, relationEdgeCount: s.relationEdges.length, temporalEdgeCount: s.temporalEdges.length, documentCount: s.documents.length } : null;
+        },
+        getDiagnostics: () => ({
+            ...store.getDiagnostics(),
+            capabilityMode: 'ops_capable',
+            supportedReadOperations: ['load_snapshot', 'load_snapshot_by_ops', 'probe_snapshot_metadata'],
+            supportedWriteOperations: ['save_snapshot', 'save_snapshot_by_ops'],
+            lastReadPath: 'ops',
+            lastWritePath: 'ops',
+        }),
     };
 }
 
@@ -438,20 +459,102 @@ export function createGraphDbSnapshotAdapter(options?: Record<string, unknown>):
         if (!fileAdapter) return null;
         return fileAdapter;
     }
-    // HTTP adapter — return stub with id when endpoint is configured
+    // HTTP adapter — real HTTP communication with graphdb endpoint
     const httpEndpoint = (options?.httpEndpoint ?? options?.baseUrl) as string | undefined;
     if (provider === 'http' && httpEndpoint) {
+        const endpoint = httpEndpoint.replace(/\/$/, '');
+        const snapUrl = `${endpoint}/snapshot`;
+        let reqCount = 0;
+        let okCount = 0;
+        let failCount = 0;
+        let lastReqId = '';
+        let lastErrCode = '';
+
+        const doFetch = async (method: string, body?: unknown) => {
+            reqCount++;
+            const headers: Record<string, string> = body ? { 'Content-Type': 'application/json' } : {};
+            const res = await fetch(snapUrl, { method, headers, body: body ? JSON.stringify(body) : undefined });
+            lastReqId = res.headers.get('X-Request-Id') || 'http-graphdb-' + reqCount;
+            if (res.ok) okCount++;
+            else { failCount++; lastErrCode = res.headers.get('X-Error-Code') || String(res.status); }
+            return res;
+        };
+
+        const circuitThreshold = (options?.httpCircuitFailureThreshold as number) ?? (options as any).httpCircuitFailureThreshold ?? 3;
+        const circuitCooldown = (options?.httpCircuitCooldownMs as number) ?? 8000;
+        const adapterId = (options?.id ?? options?.adapterId ?? options?.httpAdapterId ?? 'http-graphdb') as string;
+        let consecutiveFailures = 0;
+        let circuitState: 'closed' | 'open' = 'closed';
+        let shortCircuitCount = 0;
+        let circuitOpenedAt = '';
+
+        const checkCircuit = () => {
+            if (circuitState === 'open') {
+                shortCircuitCount++;
+                throw new Error('graphdb_http_circuit_open');
+            }
+        };
+
         return {
-            id: (options?.id ?? options?.adapterId ?? options?.httpAdapterId ?? 'http-graphdb-stub') as string,
+            id: adapterId,
             provider: 'http',
             opsCapable: false,
-            loadSnapshot: async () => { throw new Error('graphdb_http_request_failed:503'); },
-            saveSnapshot: async () => { throw new Error('graphdb_http_request_failed:503'); },
+            getCapabilities: () => ({
+                snapshotSupported: true, nodeQuerySupported: false,
+                edgeQuerySupported: false, pathQuerySupported: false,
+                writeSupported: true, serverSideQuery: true,
+                mode: 'snapshot_only',
+                supportedReadOperations: ['load_snapshot'],
+                supportedWriteOperations: ['save_snapshot'],
+            }),
+            loadSnapshot: async () => {
+                checkCircuit();
+                const res = await doFetch('GET');
+                if (!res.ok) {
+                    consecutiveFailures++;
+                    if (consecutiveFailures >= circuitThreshold) {
+                        circuitState = 'open';
+                        circuitOpenedAt = new Date().toISOString();
+                    }
+                    throw new Error('graphdb_http_request_failed:' + res.status);
+                }
+                consecutiveFailures = 0;
+                const data = await res.json() as any;
+                return (data?.snapshot ?? data) as KnowledgeGraphSnapshot | null;
+            },
+            saveSnapshot: async (snapshot: KnowledgeGraphSnapshot) => {
+                checkCircuit();
+                const res = await doFetch('POST', { snapshot });
+                if (!res.ok) {
+                    consecutiveFailures++;
+                    if (consecutiveFailures >= circuitThreshold) {
+                        circuitState = 'open';
+                        circuitOpenedAt = new Date().toISOString();
+                    }
+                    throw new Error('graphdb_http_request_failed:' + res.status);
+                }
+                consecutiveFailures = 0;
+            },
             getDiagnostics: () => ({
                 storeType: 'graphdb' as const,
-                exists: false,
-                loaded: false,
-                location: httpEndpoint,
+                exists: okCount > 0,
+                loaded: okCount > 0,
+                location: snapUrl,
+                capabilityMode: 'snapshot_only',
+                supportedReadOperations: ['load_snapshot'],
+                supportedWriteOperations: ['save_snapshot'],
+                connector: {
+                    healthStatus: circuitState === 'open' ? 'unavailable' : failCount > 0 ? 'degraded' : 'ready',
+                    circuitState,
+                    requestCount: reqCount,
+                    successCount: okCount,
+                    failureCount: failCount,
+                    consecutiveFailures,
+                    shortCircuitCount,
+                    circuitOpenedAt: circuitOpenedAt || undefined,
+                    lastRequestId: lastReqId,
+                    lastErrorCode: circuitState === 'open' ? 'circuit_open' : (lastErrCode || undefined),
+                },
             }),
         };
     }
