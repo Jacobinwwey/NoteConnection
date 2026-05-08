@@ -340,7 +340,7 @@ describe('Knowledge graph store backend factory', () => {
             const store = createKnowledgeGraphStore({
                 backend: 'graphdb',
                 filePath,
-                graphDbAdapter: adapter,
+                graphdb: { adapter },
             });
             const snapshot = createSnapshot('graphdb_adapter_user');
             await store.saveSnapshot(snapshot);
@@ -425,7 +425,7 @@ describe('Knowledge graph store backend factory', () => {
             const store = createKnowledgeGraphStore({
                 backend: 'graphdb',
                 filePath,
-                graphDbAdapter: adapter,
+                graphdb: { adapter },
                 graphDbOperationMode: 'ops_preferred',
             });
             const snapshot = createSnapshot('graphdb_ops_capable_user');
@@ -488,7 +488,7 @@ describe('Knowledge graph store backend factory', () => {
             const store = createKnowledgeGraphStore({
                 backend: 'graphdb',
                 filePath,
-                graphDbAdapter: adapter,
+                graphdb: { adapter },
                 graphDbFallbackEnabled: false,
                 graphDbOperationMode: 'ops_preferred',
             });
@@ -550,7 +550,7 @@ describe('Knowledge graph store backend factory', () => {
             const store = createKnowledgeGraphStore({
                 backend: 'graphdb',
                 filePath,
-                graphDbAdapter: adapter,
+                graphdb: { adapter },
                 graphDbFallbackEnabled: false,
                 graphDbOperationMode: 'ops_preferred',
             });
@@ -616,7 +616,7 @@ describe('Knowledge graph store backend factory', () => {
             const store = createKnowledgeGraphStore({
                 backend: 'graphdb',
                 filePath,
-                graphDbAdapter: adapter,
+                graphdb: { adapter },
                 graphDbOperationMode: 'ops_preferred',
             });
             const snapshot = createSnapshot('graphdb_snapshot_only_user');
@@ -646,7 +646,7 @@ describe('Knowledge graph store backend factory', () => {
             const store = createKnowledgeGraphStore({
                 backend: 'graphdb',
                 filePath,
-                graphDbAdapter: null,
+                graphdb: { adapter: null },
                 graphDbFallbackEnabled: false,
             });
             const snapshot = createSnapshot('graphdb_strict_user');
@@ -671,16 +671,18 @@ describe('Knowledge graph store backend factory', () => {
 
         try {
             const adapter = createFileGraphDbSnapshotAdapter({
+                provider: 'file',
                 filePath: graphDbPath,
-                adapterId: 'file-graphdb-test',
+                id: 'file-graphdb-test',
             });
+            expect(adapter).not.toBeNull();
             const snapshot = createSnapshot('file_graphdb_user');
-            await adapter.saveSnapshot(snapshot);
-            const restored = await adapter.loadSnapshot();
+            await adapter!.saveSnapshot!(snapshot);
+            const restored = await adapter!.loadSnapshot!();
 
             expect(restored).toEqual(snapshot);
             expect(fs.existsSync(graphDbPath)).toBe(true);
-            const diagnostics = adapter.getDiagnostics ? adapter.getDiagnostics() : {};
+            const diagnostics = adapter?.getDiagnostics ? adapter.getDiagnostics() : ({} as any);
             expect(diagnostics.location).toContain('knowledge_graph_store.graphdb.v1.json');
             expect(diagnostics.exists).toBe(true);
             expect(diagnostics.capabilityMode).toBe('ops_capable');
@@ -710,8 +712,8 @@ describe('Knowledge graph store backend factory', () => {
             expect(adapter?.id).toBe('http-graphdb-test');
 
             const snapshot = createSnapshot('http_graphdb_user');
-            await adapter!.saveSnapshot(snapshot);
-            const restored = await adapter!.loadSnapshot();
+            await adapter!.saveSnapshot!(snapshot);
+            const restored = await adapter!.loadSnapshot!();
 
             expect(restored).toEqual(snapshot);
             const diagnostics = adapter!.getDiagnostics ? adapter!.getDiagnostics() : {};
@@ -778,9 +780,9 @@ describe('Knowledge graph store backend factory', () => {
             });
             expect(adapter).not.toBeNull();
 
-            await expect(adapter!.loadSnapshot()).rejects.toThrow('graphdb_http_request_failed:503');
-            await expect(adapter!.loadSnapshot()).rejects.toThrow('graphdb_http_request_failed:503');
-            await expect(adapter!.loadSnapshot()).rejects.toThrow('graphdb_http_circuit_open');
+            await expect(adapter!.loadSnapshot!()).rejects.toThrow('graphdb_http_request_failed:503');
+            await expect(adapter!.loadSnapshot!()).rejects.toThrow('graphdb_http_request_failed:503');
+            await expect(adapter!.loadSnapshot!()).rejects.toThrow('graphdb_http_circuit_open');
 
             const diagnostics = adapter!.getDiagnostics ? adapter!.getDiagnostics() : {};
             expect(String(diagnostics.connector?.healthStatus || '')).toBe('unavailable');

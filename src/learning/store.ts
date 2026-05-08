@@ -54,7 +54,7 @@ export interface KnowledgeGraphSnapshot {
 }
 
 export interface KnowledgeGraphStoreDiagnostics {
-    storeType: 'none' | 'file' | 'graphdb';
+    storeType: 'none' | 'file' | 'graphdb' | 'memory';
     location?: string;
     exists: boolean;
     loaded: boolean;
@@ -382,6 +382,7 @@ export interface GraphDbSnapshotAdapter {
 export function normalizeKnowledgeGraphStoreBackend(v: unknown): string {
     const valid = new Set(['file', 'graphdb', 'none', 'memory']);
     const s = String(v ?? 'file').trim().toLowerCase();
+    if (s === 'memory') return 'memory';
     return valid.has(s) ? s : 'file';
 }
 
@@ -389,14 +390,15 @@ export function normalizeGraphDbSnapshotAdapterProvider(v: unknown): GraphDbAdap
     const s = String(v ?? 'file').trim().toLowerCase();
     if (s === 'local-file' || s === 'file') return 'file';
     if (s === 'external_http' || s === 'remote-http' || s === 'service' || s === 'http') return 'http';
-    if (s === 'none') return 'none';
+    if (s === 'none' || s === 'disabled' || s === 'fallback_only') return 'none';
+    if (s === 'unknown') return 'file';
     return 'file';
 }
 
 export function normalizeGraphDbStoreOperationMode(v: unknown): GraphDbOperationMode {
     const s = String(v ?? 'snapshot').trim().toLowerCase();
     if (s === 'snapshot' || s === 'snapshot_only') return 'snapshot_only';
-    if (s === 'ops' || s === 'ops_preferred') return 'ops_preferred';
+    if (s === 'ops' || s === 'ops_preferred' || s === 'operations') return 'ops_preferred';
     return 'snapshot_only';
 }
 
@@ -448,12 +450,28 @@ export function createGraphDbSnapshotAdapter(options?: Record<string, unknown>):
 export function createKnowledgeGraphStore(o: Record<string, unknown>): KnowledgeGraphStore {
     const backend = normalizeKnowledgeGraphStoreBackend(o.backend);
     const filePath = (o.filePath as string) ?? '/tmp/notemd-kg-default.json';
-    const graphdbConfig = (o.graphdb ?? o.graphDbAdapter ? { adapter: (o.graphdb as any)?.adapter ?? (o as any).graphDbAdapter ?? null, operationMode: (o.graphdb as any)?.operationMode ?? (o as any).graphDbOperationMode } : null) as { adapter?: GraphDbSnapshotAdapter | null; operationMode?: string } | null;
+    // Support both old (flat) and new (nested) parameter styles
+    const graphdbAdapter = (o.graphdb as any)?.adapter ?? (o as any).graphDbAdapter ?? null;
+    const graphdbOperationMode = ((o.graphdb as any)?.operationMode ?? (o as any).graphDbOperationMode ?? 'snapshot') as string;
+    const graphdbFallbackEnabled = ((o.graphdb as any)?.fallbackEnabled ?? (o as any).graphDbFallbackEnabled ?? true) as boolean;
+
+    if (backend === 'memory') {
+        // In-memory store for testing
+        let memorySnapshot: KnowledgeGraphSnapshot | null = null;
+        return {
+            loadSnapshot: async () => memorySnapshot,
+            saveSnapshot: async (snapshot) => { memorySnapshot = snapshot; },
+            getDiagnostics: () => ({
+                storeType: 'memory' as const,
+                exists: memorySnapshot !== null,
+                loaded: memorySnapshot !== null,
+            }),
+        };
+    }
 
     if (backend === 'graphdb') {
-        const adapter = graphdbConfig?.adapter ?? null;
-        if (adapter && typeof adapter.loadSnapshot === 'function') {
-            const a = adapter; // Narrowed reference
+        if (graphdbAdapter && typeof (graphdbAdapter as any).loadSnapshot === 'function') {
+            const a = graphdbAdapter as GraphDbSnapshotAdapter;
             return {
                 loadSnapshot: () => a.loadSnapshot!(),
                 saveSnapshot: (snapshot: KnowledgeGraphSnapshot) => a.saveSnapshot!(snapshot),
@@ -464,8 +482,8 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
                         loaded: diag.loaded ?? false,
                         ...diag,
                         storeType: 'graphdb' as const,
-                        graphDbOperationMode: normalizeGraphDbStoreOperationMode(graphdbConfig?.operationMode),
-                        fallbackEnabled: true,
+                        graphDbOperationMode: normalizeGraphDbStoreOperationMode(graphdbOperationMode),
+                        fallbackEnabled: graphdbFallbackEnabled,
                         graphDbAdapterCapabilityMode: (diag as any).capabilityMode ?? 'unknown',
                         graphDbReadPath: (diag as any).lastReadPath ?? 'fallback',
                         graphDbWritePath: (diag as any).lastWritePath ?? 'fallback',
