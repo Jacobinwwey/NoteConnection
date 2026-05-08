@@ -98,6 +98,21 @@
         return match && match[1] ? String(match[1]).trim() : null;
     }
 
+    function wrapBridgeMeasurementLine(line, fontSize, maxLineWidth) {
+        var normalized = normalizeBridgeInlineText(line);
+        if (!normalized) return [];
+        if (estimateBridgeTextLineWidth(normalized, fontSize) <= maxLineWidth) {
+            return [normalized];
+        }
+        var tokens = normalized.split(/\s+/);
+        var wrapped = [];
+        for (var i = 0; i < tokens.length; i++) {
+            var tokenWrapped = splitBridgeTokenForWrap(tokens[i], fontSize, maxLineWidth);
+            wrapped = wrapped.concat(tokenWrapped);
+        }
+        return wrapped;
+    }
+
     function resolveBridgeTextProperty(element, propertyName) {
         var current = element;
         while (current) {
@@ -184,6 +199,7 @@
             estimateBridgeTextLineWidth: estimateBridgeTextLineWidth,
             estimateBridgeGlyphWidthUnits: estimateBridgeGlyphWidthUnits,
             splitBridgeTokenForWrap: splitBridgeTokenForWrap,
+            wrapBridgeMeasurementLine: wrapBridgeMeasurementLine,
             isBridgeWideGlyph: isBridgeWideGlyph,
         },
         state: {

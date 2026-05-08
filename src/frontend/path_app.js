@@ -893,6 +893,7 @@ window.pathApp = {
     },
 
     _wrapBridgeMeasurementLine: function(line, fontSize, maxLineWidth) {
+        if (window._pathUtils) return window._pathUtils.wrapBridgeMeasurementLine(line, fontSize, maxLineWidth);
         const normalizedLine = this._normalizeBridgeInlineText(line);
         if (!normalizedLine) {
             return [];
