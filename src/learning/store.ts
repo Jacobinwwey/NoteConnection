@@ -484,10 +484,61 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
         if (graphdbAdapter && typeof (graphdbAdapter as any).loadSnapshot === 'function') {
             const a = graphdbAdapter as GraphDbSnapshotAdapter;
             const opsCapable = hasOpsCapablePath(a);
-            const useOpsPath = opsCapable && normalizeGraphDbStoreOperationMode(graphdbOperationMode) === 'ops_preferred';
+            const requestMode = normalizeGraphDbStoreOperationMode(graphdbOperationMode);
+            const opsState = { probed: false, loadCalled: false, opsReadUsed: false, opsWriteUsed: false, lastProbeResult: null as Record<string, unknown> | null };
+
+            const resolveOpsPath = async (): Promise<boolean> => {
+                if (!opsCapable || requestMode !== 'ops_preferred') return false;
+                if (opsState.probed) return true;
+                if (typeof a.probeSnapshotMetadata === 'function') {
+                    try {
+                        opsState.lastProbeResult = await a.probeSnapshotMetadata();
+                        opsState.probed = true;
+                        return true;
+                    } catch { /* probe failed, fall through to snapshot */ }
+                }
+                // No probe method: try ops path anyway, let it fail gracefully
+                return true; // allow ops attempt — downgrade on failure
+            };
+
             return {
-                loadSnapshot: () => useOpsPath ? a.loadSnapshotByOps!() : a.loadSnapshot!(),
-                saveSnapshot: (snapshot: KnowledgeGraphSnapshot) => useOpsPath ? a.saveSnapshotByOps!(snapshot) : a.saveSnapshot!(snapshot),
+                loadSnapshot: async () => {
+                    if (opsCapable && requestMode === 'ops_preferred') {
+                        if (typeof a.probeSnapshotMetadata === 'function' && !opsState.probed) {
+                            try {
+                                opsState.lastProbeResult = await a.probeSnapshotMetadata();
+                                opsState.probed = true;
+                            } catch { /* fall through */ }
+                        }
+                        if ((opsState.probed || typeof a.probeSnapshotMetadata !== 'function') && typeof a.loadSnapshotByOps === 'function') {
+                            try {
+                                const result = await a.loadSnapshotByOps();
+                                opsState.loadCalled = true;
+                                opsState.probed = true;
+                                opsState.opsReadUsed = true;
+                                return result;
+                            } catch {
+                                // Downgrade: ops read failed, fall back to snapshot read
+                            }
+                        }
+                    }
+                    return a.loadSnapshot!();
+                },
+                saveSnapshot: async (snapshot: KnowledgeGraphSnapshot) => {
+                    if (await resolveOpsPath() && typeof a.saveSnapshotByOps === 'function') {
+                        try {
+                            await a.saveSnapshotByOps(snapshot);
+                            opsState.opsWriteUsed = true;
+                            if (typeof a.probeSnapshotMetadata === 'function') {
+                                try { opsState.lastProbeResult = await a.probeSnapshotMetadata(); } catch { /* ignore */ }
+                            }
+                            return;
+                        } catch {
+                            // Downgrade: ops write failed, fall back to snapshot write
+                        }
+                    }
+                    return a.saveSnapshot!(snapshot);
+                },
                 getDiagnostics: () => {
                     const diag = a.getDiagnostics?.() ?? ({} as KnowledgeGraphStoreDiagnostics);
                     return {
@@ -500,12 +551,12 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
                         storeType: 'graphdb' as const,
                         graphDbOperationMode: normalizeGraphDbStoreOperationMode(graphdbOperationMode),
                         fallbackEnabled: graphdbFallbackEnabled,
-                        graphDbAdapterCapabilityMode: (diag as any).capabilityMode ?? (opsCapable ? 'ops_capable' : 'snapshot_only'),
-                        graphDbReadPath: useOpsPath ? 'ops' : (diag as any).lastReadPath ?? (opsCapable ? 'ops' : 'snapshot'),
-                        graphDbWritePath: useOpsPath ? 'ops' : (diag as any).lastWritePath ?? (opsCapable ? 'ops' : 'snapshot'),
+                        graphDbAdapterCapabilityMode: (diag as any).capabilityMode ?? ((a.getCapabilities?.() as any)?.mode) ?? (opsCapable ? 'ops_capable' : 'snapshot_only'),
+                        graphDbReadPath: opsState.opsReadUsed ? 'ops' : (diag as any).lastReadPath ?? 'snapshot',
+                        graphDbWritePath: opsState.opsWriteUsed ? 'ops' : (diag as any).lastWritePath ?? 'snapshot',
                         graphDbSupportedReadOperations: (diag as any).supportedReadOperations,
                         graphDbSupportedWriteOperations: (diag as any).supportedWriteOperations,
-                        graphDbLastSnapshotMetadata: (diag as any).lastSnapshotMetadata,
+                        graphDbLastSnapshotMetadata: opsState.lastProbeResult ?? (diag as any).lastSnapshotMetadata,
                     };
                 },
             };
