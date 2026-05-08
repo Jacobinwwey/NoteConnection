@@ -403,6 +403,9 @@ export function createVectorAccelerationAdapter(
     let indexSignature = '';
     let representationStatus: 'aligned' | 'mismatch' | 'unknown' = 'unknown';
     let representationStatusReason = '';
+    /** M10.6: Prefilter effectiveness tracking. */
+    let prefilterEffectivenessRatio = 1;
+    let lastTotalAtomsInScope = 0;
     const buildHealthTelemetryFields = (): Omit<
         LocalVectorAccelerationAdapterHealth,
         'status' | 'message' | 'checkedAt'
@@ -428,6 +431,8 @@ export function createVectorAccelerationAdapter(
         indexSignature: indexSignature || undefined,
         representationStatus,
         representationStatusReason: representationStatusReason || undefined,
+        prefilterEffectivenessRatio: prefilterEffectivenessRatio || undefined,
+        lastTotalAtomsInScope: lastTotalAtomsInScope > 0 ? lastTotalAtomsInScope : undefined,
     });
     let lastHealth: LocalVectorAccelerationAdapterHealth = endpoint
         ? {

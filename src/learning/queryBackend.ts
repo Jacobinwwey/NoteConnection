@@ -101,7 +101,103 @@ export interface GraphQueryBackendDiagnostics {
             representationStatus?: 'aligned' | 'mismatch' | 'unknown';
             representationStatusReason?: string;
             representationStrictMode?: boolean;
+            /** M10.6: Prefilter effectiveness ratio (candidates / total atoms in scope). */
+            prefilterEffectivenessRatio?: number;
+            /** M10.6: Last prefilter total atoms in scope. */
+            lastTotalAtomsInScope?: number;
         };
+    };
+}
+
+// ── M10.6: ANN Runbook Health Gate ──
+
+export interface AnnRunbookHealthGate {
+    status: 'healthy' | 'degraded' | 'unhealthy';
+    checks: AnnRunbookCheck[];
+    summary: string;
+    checkedAt: string;
+}
+
+export interface AnnRunbookCheck {
+    name: string;
+    passed: boolean;
+    value: number | string;
+    threshold: number | string;
+    operator: 'lt' | 'gt' | 'eq' | 'lte' | 'gte' | 'contains';
+    message: string;
+}
+
+export function evaluateAnnRunbookHealth(params: {
+    healthStatus?: string;
+    circuitState?: string;
+    consecutiveFailures?: number;
+    failureThreshold?: number;
+    prefilterEffectivenessRatio?: number;
+    minPrefilterEffectivenessRatio?: number;
+    representationStatus?: string;
+    representationStrictMode?: boolean;
+}): AnnRunbookHealthGate {
+    const checks: AnnRunbookCheck[] = [];
+    const threshold = params.failureThreshold ?? 3;
+    const minEffectiveness = params.minPrefilterEffectivenessRatio ?? 0.01;
+
+    // Check 1: Circuit state
+    const circuitHealthy = params.circuitState !== 'open';
+    checks.push({
+        name: 'circuit_state',
+        passed: circuitHealthy,
+        value: params.circuitState ?? 'unknown',
+        threshold: 'closed',
+        operator: 'eq',
+        message: circuitHealthy ? 'Circuit closed' : 'Circuit open — requests blocked',
+    });
+
+    // Check 2: Consecutive failures
+    const failuresHealthy = (params.consecutiveFailures ?? 0) < threshold;
+    checks.push({
+        name: 'consecutive_failures',
+        passed: failuresHealthy,
+        value: params.consecutiveFailures ?? 0,
+        threshold,
+        operator: 'lt',
+        message: failuresHealthy ? 'Within threshold' : `Exceeded threshold (${params.consecutiveFailures} >= ${threshold})`,
+    });
+
+    // Check 3: Prefilter effectiveness
+    const effectiveness = params.prefilterEffectivenessRatio ?? 1;
+    const prefilterHealthy = effectiveness >= minEffectiveness;
+    checks.push({
+        name: 'prefilter_effectiveness',
+        passed: prefilterHealthy,
+        value: effectiveness,
+        threshold: minEffectiveness,
+        operator: 'gte',
+        message: prefilterHealthy ? 'Effective prefilter' : 'Prefilter too narrow — may miss relevant atoms',
+    });
+
+    // Check 4: Representation consistency
+    const repHealthy = params.representationStatus !== 'mismatch';
+    checks.push({
+        name: 'representation_consistency',
+        passed: repHealthy || !params.representationStrictMode,
+        value: params.representationStatus ?? 'unknown',
+        threshold: 'aligned',
+        operator: 'eq',
+        message: repHealthy ? 'Aligned' : `Mismatch: ${params.representationStatus}`,
+    });
+
+    const failed = checks.filter(c => !c.passed);
+    const status = failed.length === 0 ? 'healthy'
+        : failed.length <= 1 && checks[0].passed ? 'degraded'
+        : 'unhealthy';
+
+    return {
+        status,
+        checks,
+        summary: failed.length === 0
+            ? 'All ANN health checks passed.'
+            : `${failed.length}/${checks.length} checks failed: ${failed.map(c => c.name).join(', ')}.`,
+        checkedAt: new Date().toISOString(),
     };
 }
 
@@ -142,6 +238,10 @@ export type LocalVectorAccelerationAdapterHealth = {
     indexSignature?: string;
     representationStatus?: 'aligned' | 'mismatch' | 'unknown';
     representationStatusReason?: string;
+    /** M10.6: Prefilter effectiveness ratio for runbook health gate. */
+    prefilterEffectivenessRatio?: number;
+    /** M10.6: Total atoms in scope of last prefilter selection. */
+    lastTotalAtomsInScope?: number;
 };
 
 export type LocalVectorAccelerationSelectionInput = {
@@ -162,6 +262,21 @@ export type LocalVectorAccelerationSelectionOutput = {
     used: boolean;
     candidateAtomIds: string[];
     mode: LocalVectorAccelerationSelectionMode;
+    /** M10.6: Validated representation contract from the prefilter output. */
+    representation?: {
+        version?: string;
+        embeddingModelId?: string;
+        embeddingDimension?: number;
+        indexSignature?: string;
+        validated: boolean;
+    };
+    /** M10.6: Prefilter effectiveness metrics for runbook health gate. */
+    prefilterMetrics?: {
+        candidatesReturned: number;
+        totalAtomsInScope: number;
+        prefilterRatio: number;
+        signatureMatch: boolean;
+    };
 };
 
 export interface LocalVectorAccelerationAdapter {
