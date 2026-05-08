@@ -143,6 +143,8 @@ async function executeCommand(
                 filePath,
                 outputFolderPath: output,
                 language,
+                addWikiLinks: flags.has('with-wikilinks') || flags.has('ww') || flags.has('links'),
+                wikiLinksInPlace: flags.has('wikilinks-in-place') || flags.has('wi'),
                 skipGenerate: flags.has('no-generate'),
                 skipMermaidFix: flags.has('no-mermaid')
             }, settings);
@@ -191,6 +193,8 @@ async function executeCommand(
                 outputBasePath: output,
                 filePattern: pattern,
                 fileExtensions: extensions?.split(',').map(e => e.trim()),
+                addWikiLinks: flags.has('with-wikilinks') || flags.has('ww') || flags.has('links'),
+                wikiLinksInPlace: flags.has('wikilinks-in-place') || flags.has('wi'),
                 skipGenerate: flags.has('no-generate'),
                 skipMermaidFix: flags.has('no-mermaid'),
                 maxFiles: maxFiles ? parseInt(maxFiles, 10) : undefined

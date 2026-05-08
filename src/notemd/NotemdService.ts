@@ -300,69 +300,106 @@ export class NotemdService {
 
         await fs.promises.mkdir(outputFolderPath, { recursive: true });
 
+        const enableWikilinks = request.addWikiLinks === true;
+        const enableGenerate = !request.skipGenerate;
+        const enableMermaid = !request.skipMermaidFix;
+        const totalStages = 1 + (enableWikilinks ? 1 : 0) + (enableGenerate ? 1 : 0) + (enableMermaid ? 1 : 0);
+        let stageNum = 0;
+
         // Stage 1: Extract Concepts
+        stageNum += 1;
         stages.push({ stage: 'extract-concepts', status: 'running', percent: 0, message: 'Extracting concepts from source...' });
-        reporter.report({ type: 'status', message: `[1/3] Extracting concepts from ${baseName}${ext}`, percent: 5, operationId: 'workflow-extract' });
+        reporter.report({ type: 'status', message: `[${stageNum}/${totalStages}] Extracting concepts from ${baseName}${ext}`, percent: Math.floor((stageNum - 1) / totalStages * 100), operationId: 'workflow-extract' });
 
         let concepts: string[] = [];
+        let sourceContent = '';
         try {
-            const source = await fs.promises.readFile(resolvedPath, 'utf8');
+            sourceContent = await fs.promises.readFile(resolvedPath, 'utf8');
             concepts = Array.from(
-                await this.fileProcessor.extractConceptsFromText(source, settings, reporter, signal)
+                await this.fileProcessor.extractConceptsFromText(sourceContent, settings, reporter, signal)
             ).sort((a, b) => a.localeCompare(b));
 
             await this.scaffoldConceptFiles(outputFolderPath, concepts);
             stages[0] = { stage: 'extract-concepts', status: 'completed', percent: 100, message: `Extracted ${concepts.length} concepts`, details: { count: concepts.length, concepts } };
-            reporter.report({ type: 'status', message: `[1/3] ✓ Extracted ${concepts.length} concepts`, percent: 33, operationId: 'workflow-extract' });
+            reporter.report({ type: 'status', message: `[${stageNum}/${totalStages}] ✓ Extracted ${concepts.length} concepts`, percent: Math.floor(stageNum / totalStages * 100), operationId: 'workflow-extract' });
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : String(e);
             stages[0] = { stage: 'extract-concepts', status: 'error', percent: 100, message: msg };
             errors.push(`extract-concepts: ${msg}`);
-            reporter.report({ type: 'error', message: `[1/3] ✕ Concept extraction failed: ${msg}`, percent: 33, operationId: 'workflow-extract' });
+            reporter.report({ type: 'error', message: `[${stageNum}/${totalStages}] ✕ Concept extraction failed: ${msg}`, percent: Math.floor(stageNum / totalStages * 100), operationId: 'workflow-extract' });
         }
 
-        // Stage 2: Generate from Titles
+        // Stage 2 (optional): Add Wiki-Links to source
+        let wikiLinkCount = 0;
+        if (enableWikilinks && concepts.length > 0) {
+            stageNum += 1;
+            stages.push({ stage: 'add-wikilinks', status: 'running', percent: 0, message: 'Adding wiki-links to source...' });
+            reporter.report({ type: 'status', message: `[${stageNum}/${totalStages}] Adding [[wiki-links]] for ${concepts.length} concepts`, percent: Math.floor((stageNum - 1) / totalStages * 100), operationId: 'workflow-wikilinks' });
+
+            try {
+                const injected = this.fileProcessor.injectWikiLinks(sourceContent, concepts);
+                wikiLinkCount = injected.linkCount;
+
+                // Write wikified output: in-place or _wikified copy
+                let wikifiedPath: string;
+                if (request.wikiLinksInPlace) {
+                    wikifiedPath = resolvedPath;
+                } else {
+                    wikifiedPath = path.join(path.dirname(resolvedPath), `${baseName}_wikified${ext}`);
+                }
+                await fs.promises.writeFile(wikifiedPath, injected.content, 'utf8');
+
+                stages.push({ stage: 'add-wikilinks', status: 'completed', percent: 100, message: `Added ${wikiLinkCount} wiki-links`, details: { linkCount: wikiLinkCount, outputPath: wikifiedPath, inPlace: !!request.wikiLinksInPlace } });
+                reporter.report({ type: 'status', message: `[${stageNum}/${totalStages}] ✓ Added ${wikiLinkCount} wiki-links → ${path.basename(wikifiedPath)}`, percent: Math.floor(stageNum / totalStages * 100), operationId: 'workflow-wikilinks' });
+            } catch (e: unknown) {
+                const msg = e instanceof Error ? e.message : String(e);
+                stages.push({ stage: 'add-wikilinks', status: 'error', percent: 100, message: msg });
+                errors.push(`add-wikilinks: ${msg}`);
+                reporter.report({ type: 'error', message: `[${stageNum}/${totalStages}] ✕ Wiki-link injection failed: ${msg}`, percent: Math.floor(stageNum / totalStages * 100), operationId: 'workflow-wikilinks' });
+            }
+        } else if (enableWikilinks && concepts.length === 0) {
+            stageNum += 1;
+            stages.push({ stage: 'add-wikilinks', status: 'skipped', percent: 100, message: 'No concepts to link', details: { linkCount: 0 } });
+        }
+
+        // Stage 3 (optional): Generate from Titles
         let generated = { totalFiles: 0, generatedFiles: 0, failedFiles: 0, outputs: [] as string[] };
-        if (!request.skipGenerate) {
+        if (enableGenerate) {
+            stageNum += 1;
             stages.push({ stage: 'generate-titles', status: 'running', percent: 0, message: 'Generating content from titles...' });
-            reporter.report({ type: 'status', message: `[2/3] Generating content from titles in ${path.basename(outputFolderPath)}`, percent: 35, operationId: 'workflow-generate' });
+            reporter.report({ type: 'status', message: `[${stageNum}/${totalStages}] Generating content from titles in ${path.basename(outputFolderPath)}`, percent: Math.floor((stageNum - 1) / totalStages * 100), operationId: 'workflow-generate' });
 
             try {
                 generated = await this.contentGenerator.generateFolderFromTitles(
                     outputFolderPath, settings, reporter, signal
                 );
-                stages[1] = { stage: 'generate-titles', status: 'completed', percent: 100, message: `Generated ${generated.generatedFiles}/${generated.totalFiles} files`, details: { totalFiles: generated.totalFiles, generatedFiles: generated.generatedFiles, failedFiles: generated.failedFiles, outputs: generated.outputs } };
-                reporter.report({ type: 'status', message: `[2/3] ✓ Generated ${generated.generatedFiles}/${generated.totalFiles} files`, percent: 66, operationId: 'workflow-generate' });
+                stages.push({ stage: 'generate-titles', status: 'completed', percent: 100, message: `Generated ${generated.generatedFiles}/${generated.totalFiles} files`, details: { totalFiles: generated.totalFiles, generatedFiles: generated.generatedFiles, failedFiles: generated.failedFiles, outputs: generated.outputs } });
+                reporter.report({ type: 'status', message: `[${stageNum}/${totalStages}] ✓ Generated ${generated.generatedFiles}/${generated.totalFiles} files`, percent: Math.floor(stageNum / totalStages * 100), operationId: 'workflow-generate' });
             } catch (e: unknown) {
                 const msg = e instanceof Error ? e.message : String(e);
-                stages[1] = { stage: 'generate-titles', status: 'error', percent: 100, message: msg };
+                stages.push({ stage: 'generate-titles', status: 'error', percent: 100, message: msg });
                 errors.push(`generate-titles: ${msg}`);
-                reporter.report({ type: 'error', message: `[2/3] ✕ Content generation failed: ${msg}`, percent: 66, operationId: 'workflow-generate' });
+                reporter.report({ type: 'error', message: `[${stageNum}/${totalStages}] ✕ Content generation failed: ${msg}`, percent: Math.floor(stageNum / totalStages * 100), operationId: 'workflow-generate' });
             }
-        } else {
-            stages.push({ stage: 'generate-titles', status: 'completed', percent: 100, message: 'Skipped', details: { skipped: true } });
-            reporter.report({ type: 'status', message: `[2/3] ⊘ Content generation skipped`, percent: 66, operationId: 'workflow-generate' });
         }
 
-        // Stage 3: Mermaid Fix
+        // Stage 4 (optional): Mermaid Fix
         let mermaid = { folderPath: outputFolderPath, totalFiles: 0, fixedFiles: 0, results: [] as Array<{ filePath: string; changed: boolean; fixes: string[]; content: string }> };
-        if (!request.skipMermaidFix) {
+        if (enableMermaid) {
+            stageNum += 1;
             stages.push({ stage: 'mermaid-fix', status: 'running', percent: 0, message: 'Fixing Mermaid diagrams...' });
-            reporter.report({ type: 'status', message: `[3/3] Fixing Mermaid diagrams in ${path.basename(outputFolderPath)}`, percent: 68, operationId: 'workflow-mermaid' });
+            reporter.report({ type: 'status', message: `[${stageNum}/${totalStages}] Fixing Mermaid diagrams in ${path.basename(outputFolderPath)}`, percent: Math.floor((stageNum - 1) / totalStages * 100), operationId: 'workflow-mermaid' });
 
             try {
                 mermaid = await this.batchFixMermaid(outputFolderPath, true);
-                stages[2] = { stage: 'mermaid-fix', status: 'completed', percent: 100, message: `Fixed ${mermaid.fixedFiles}/${mermaid.totalFiles} files`, details: { fixedFiles: mermaid.fixedFiles, totalFiles: mermaid.totalFiles, results: mermaid.results } };
-                reporter.report({ type: 'status', message: `[3/3] ✓ Fixed ${mermaid.fixedFiles}/${mermaid.totalFiles} Mermaid diagrams`, percent: 100, operationId: 'workflow-mermaid' });
+                stages.push({ stage: 'mermaid-fix', status: 'completed', percent: 100, message: `Fixed ${mermaid.fixedFiles}/${mermaid.totalFiles} files`, details: { fixedFiles: mermaid.fixedFiles, totalFiles: mermaid.totalFiles, results: mermaid.results } });
+                reporter.report({ type: 'status', message: `[${stageNum}/${totalStages}] ✓ Fixed ${mermaid.fixedFiles}/${mermaid.totalFiles} Mermaid diagrams`, percent: 100, operationId: 'workflow-mermaid' });
             } catch (e: unknown) {
                 const msg = e instanceof Error ? e.message : String(e);
-                stages[2] = { stage: 'mermaid-fix', status: 'error', percent: 100, message: msg };
+                stages.push({ stage: 'mermaid-fix', status: 'error', percent: 100, message: msg });
                 errors.push(`mermaid-fix: ${msg}`);
-                reporter.report({ type: 'error', message: `[3/3] ✕ Mermaid fix failed: ${msg}`, percent: 100, operationId: 'workflow-mermaid' });
+                reporter.report({ type: 'error', message: `[${stageNum}/${totalStages}] ✕ Mermaid fix failed: ${msg}`, percent: 100, operationId: 'workflow-mermaid' });
             }
-        } else {
-            stages.push({ stage: 'mermaid-fix', status: 'completed', percent: 100, message: 'Skipped', details: { skipped: true } });
-            reporter.report({ type: 'status', message: `[3/3] ⊘ Mermaid fix skipped`, percent: 100, operationId: 'workflow-mermaid' });
         }
 
         reporter.report({ type: 'done', message: `Workflow complete for ${baseName}${ext}`, percent: 100, operationId: 'workflow' });
@@ -373,6 +410,7 @@ export class NotemdService {
             stages,
             summary: {
                 conceptsExtracted: concepts.length,
+                wikiLinksAdded: wikiLinkCount,
                 titlesGenerated: generated.generatedFiles,
                 titlesFailed: generated.failedFiles,
                 mermaidFilesFixed: mermaid.fixedFiles,
@@ -507,12 +545,15 @@ export class NotemdService {
             outputFolderPath,
         }, settings, reporter, signal);
 
-        const conceptsStage = result.stages[0];
+        const findStage = (name: string) => [...result.stages].reverse().find(s => s.stage === name);
+        const conceptsStage = findStage('extract-concepts');
         const concepts = (conceptsStage?.status === 'completed' && conceptsStage?.details?.concepts)
             ? (conceptsStage.details.concepts as string[])
             : [];
-        const genDetails = (result.stages[1]?.details || {}) as any;
-        const mermaidDetails = (result.stages[2]?.details || {}) as any;
+        const genStage = findStage('generate-titles');
+        const genDetails = (genStage?.details || {}) as any;
+        const mermaidStage = findStage('mermaid-fix');
+        const mermaidDetails = (mermaidStage?.details || {}) as any;
 
         return {
             sourceFilePath: resolvedPath,

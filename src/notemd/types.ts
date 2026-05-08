@@ -423,13 +423,17 @@ export interface WorkflowRequest {
     filePath: string;
     outputFolderPath?: string;
     language?: string;
+    addWikiLinks?: boolean;        // inject [[wiki-links]] into source for extracted concepts
+    wikiLinksInPlace?: boolean;    // modify source in place (default: write _wikified copy)
     skipGenerate?: boolean;
     skipMermaidFix?: boolean;
 }
 
+export type WorkflowStageName = 'extract-concepts' | 'add-wikilinks' | 'generate-titles' | 'mermaid-fix';
+
 export interface WorkflowStage {
-    stage: 'extract-concepts' | 'generate-titles' | 'mermaid-fix';
-    status: 'pending' | 'running' | 'completed' | 'error';
+    stage: WorkflowStageName;
+    status: 'pending' | 'running' | 'completed' | 'error' | 'skipped';
     percent: number;
     message: string;
     details?: Record<string, unknown>;
@@ -441,6 +445,7 @@ export interface WorkflowResult {
     stages: WorkflowStage[];
     summary: {
         conceptsExtracted: number;
+        wikiLinksAdded: number;
         titlesGenerated: number;
         titlesFailed: number;
         mermaidFilesFixed: number;
@@ -455,6 +460,8 @@ export interface BatchWorkflowRequest {
     filePattern?: string;       // regex string for filename matching
     fileExtensions?: string[];   // e.g. ['.md', '.txt']
     language?: string;
+    addWikiLinks?: boolean;
+    wikiLinksInPlace?: boolean;
     skipGenerate?: boolean;
     skipMermaidFix?: boolean;
     maxFiles?: number;

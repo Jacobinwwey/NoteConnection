@@ -293,7 +293,7 @@ const CLI_COMMANDS: CliCommandDef[] = [
     {
         name: 'workflow',
         aliases: ['wf', 'run'],
-        description: 'Run full pipeline: extract concepts → generate titles → fix mermaid',
+        description: 'Run pipeline: extract concepts → (add wikilinks) → generate titles → fix mermaid',
         operationId: 'workflow.extract-and-generate',
         automationLevel: 'requires-active-file',
         requiredContext: 'active-file',
@@ -304,6 +304,8 @@ const CLI_COMMANDS: CliCommandDef[] = [
             { name: 'language', aliases: ['l', 'lang'], description: 'Output language code', required: false }
         ],
         flags: [
+            { name: 'with-wikilinks', aliases: ['ww', 'links'], description: 'Add [[wiki-links]] for extracted concepts in source' },
+            { name: 'wikilinks-in-place', aliases: ['wi'], description: 'Modify source in place (default: write _wikified copy)' },
             { name: 'no-generate', aliases: ['ng'], description: 'Skip content generation stage' },
             { name: 'no-mermaid', aliases: ['nm'], description: 'Skip Mermaid fix stage' }
         ]
@@ -324,6 +326,8 @@ const CLI_COMMANDS: CliCommandDef[] = [
             { name: 'max', aliases: ['max-files'], description: 'Maximum files to process', required: false }
         ],
         flags: [
+            { name: 'with-wikilinks', aliases: ['ww', 'links'], description: 'Add [[wiki-links]] for extracted concepts in each source' },
+            { name: 'wikilinks-in-place', aliases: ['wi'], description: 'Modify source in place (default: write _wikified copy)' },
             { name: 'no-generate', aliases: ['ng'], description: 'Skip content generation stage' },
             { name: 'no-mermaid', aliases: ['nm'], description: 'Skip Mermaid fix stage' }
         ]
