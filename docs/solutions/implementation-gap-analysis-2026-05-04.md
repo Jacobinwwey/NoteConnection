@@ -563,6 +563,7 @@ notemd batch-workflow --path=notes/ --pattern="lecture-.*" --extensions=".md" --
 - [跨平台架构优化方案](cross-platform-architecture-refinement-2026-05-02.md)
 - [Agent Workspace 合同收敛 v6](../brainstorms/2026-04-14-agent-workspace-contract-closure-next-direction-requirements.md)
 - [Agent Workspace 架构推进 v4](../brainstorms/2026-04-13-agent-workspace-architecture-progress-and-next-direction-requirements.md)
+- [Phase 4 推进方案](implementation-plan-2026-05-08.md)
 - [开发进度仪表板](../diataxis/en/explanation/development-progress-dashboard.md)
 - [知识掌握演进路线图](../diataxis/en/explanation/knowledge-mastery-evolution-roadmap.md)
 - [架构与迁移说明](../diataxis/en/explanation/architecture-and-migration.md)
