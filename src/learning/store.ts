@@ -379,6 +379,16 @@ export interface GraphDbSnapshotAdapter {
     [extra: string]: unknown;
 }
 
+function hasOpsCapablePath(adapter: GraphDbSnapshotAdapter): boolean {
+    const hasMethods = typeof adapter.loadSnapshotByOps === 'function'
+        && typeof adapter.saveSnapshotByOps === 'function';
+    if (!hasMethods) return false;
+    // Check explicit flag or capabilities return value
+    if (adapter.opsCapable === true) return true;
+    const caps = adapter.getCapabilities?.();
+    return (caps as any)?.mode === 'ops_capable';
+}
+
 export function normalizeKnowledgeGraphStoreBackend(v: unknown): string {
     const valid = new Set(['file', 'graphdb', 'none', 'memory']);
     const s = String(v ?? 'file').trim().toLowerCase();
@@ -473,9 +483,11 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
     if (backend === 'graphdb') {
         if (graphdbAdapter && typeof (graphdbAdapter as any).loadSnapshot === 'function') {
             const a = graphdbAdapter as GraphDbSnapshotAdapter;
+            const opsCapable = hasOpsCapablePath(a);
+            const useOpsPath = opsCapable && normalizeGraphDbStoreOperationMode(graphdbOperationMode) === 'ops_preferred';
             return {
-                loadSnapshot: () => a.loadSnapshot!(),
-                saveSnapshot: (snapshot: KnowledgeGraphSnapshot) => a.saveSnapshot!(snapshot),
+                loadSnapshot: () => useOpsPath ? a.loadSnapshotByOps!() : a.loadSnapshot!(),
+                saveSnapshot: (snapshot: KnowledgeGraphSnapshot) => useOpsPath ? a.saveSnapshotByOps!(snapshot) : a.saveSnapshot!(snapshot),
                 getDiagnostics: () => {
                     const diag = a.getDiagnostics?.() ?? ({} as KnowledgeGraphStoreDiagnostics);
                     return {
@@ -488,9 +500,9 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
                         storeType: 'graphdb' as const,
                         graphDbOperationMode: normalizeGraphDbStoreOperationMode(graphdbOperationMode),
                         fallbackEnabled: graphdbFallbackEnabled,
-                        graphDbAdapterCapabilityMode: (diag as any).capabilityMode ?? (a.opsCapable ? 'ops_capable' : 'snapshot_only'),
-                        graphDbReadPath: (diag as any).lastReadPath ?? (a.opsCapable ? 'ops' : 'snapshot'),
-                        graphDbWritePath: (diag as any).lastWritePath ?? (a.opsCapable ? 'ops' : 'snapshot'),
+                        graphDbAdapterCapabilityMode: (diag as any).capabilityMode ?? (opsCapable ? 'ops_capable' : 'snapshot_only'),
+                        graphDbReadPath: useOpsPath ? 'ops' : (diag as any).lastReadPath ?? (opsCapable ? 'ops' : 'snapshot'),
+                        graphDbWritePath: useOpsPath ? 'ops' : (diag as any).lastWritePath ?? (opsCapable ? 'ops' : 'snapshot'),
                         graphDbSupportedReadOperations: (diag as any).supportedReadOperations,
                         graphDbSupportedWriteOperations: (diag as any).supportedWriteOperations,
                         graphDbLastSnapshotMetadata: (diag as any).lastSnapshotMetadata,
