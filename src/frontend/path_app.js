@@ -760,11 +760,13 @@ window.pathApp = {
     },
 
     _parseBridgeNumericAttribute: function(element, name, fallback = 0) {
+        if (window._pathUtils) return window._pathUtils.parseBridgeNumericAttribute(element, name, fallback);
         const numeric = Number.parseFloat(String(element?.getAttribute?.(name) || ''));
         return Number.isFinite(numeric) ? numeric : fallback;
     },
 
     _extractBridgeInlineStyleValue: function(styleValue, propertyName) {
+        if (window._pathUtils) return window._pathUtils.extractBridgeInlineStyleValue(styleValue, propertyName);
         if (!styleValue) {
             return null;
         }
@@ -812,12 +814,14 @@ window.pathApp = {
     },
 
     _resolveBridgeSvgFontSize: function(element) {
+        if (window._pathUtils) return window._pathUtils.resolveBridgeSvgFontSize(element);
         const resolvedValue = this._resolveBridgeTextProperty(element, 'font-size');
         const parsed = this._parseBridgeCssLength(resolvedValue, 16);
         return parsed > 0 ? parsed : 16;
     },
 
     _resolveBridgeSvgLineHeight: function(element, fontSize) {
+        if (window._pathUtils) return window._pathUtils.resolveBridgeSvgLineHeight(element, fontSize);
         const resolvedValue = this._resolveBridgeTextProperty(element, 'line-height');
         const parsed = this._parseBridgeCssLength(resolvedValue, fontSize);
         return parsed > 0 ? parsed : Math.max(fontSize * 1.18, fontSize + 4);
@@ -828,6 +832,7 @@ window.pathApp = {
     },
 
     _estimateBridgeGlyphWidthUnits: function(char) {
+        if (window._pathUtils) return window._pathUtils.estimateBridgeGlyphWidthUnits(char);
         if (!char) {
             return 0;
         }
@@ -868,6 +873,7 @@ window.pathApp = {
     },
 
     _splitBridgeTokenForWrap: function(token, fontSize, maxLineWidth) {
+        if (window._pathUtils) return window._pathUtils.splitBridgeTokenForWrap(token, fontSize, maxLineWidth);
         const wrapped = [];
         let segment = '';
         for (const char of Array.from(token)) {

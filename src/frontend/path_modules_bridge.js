@@ -86,6 +86,18 @@
         return numeric;
     }
 
+    function parseBridgeNumericAttribute(element, name, fallback) {
+        var numeric = parseFloat(String((element && element.getAttribute) ? element.getAttribute(name) : ''));
+        return isFinite(numeric) ? numeric : (fallback || 0);
+    }
+
+    function extractBridgeInlineStyleValue(styleValue, propertyName) {
+        if (!styleValue) return null;
+        var pattern = new RegExp('(?:^|;)\\s*' + propertyName + '\\s*:\\s*([^;]+)', 'i');
+        var match = String(styleValue).match(pattern);
+        return match && match[1] ? String(match[1]).trim() : null;
+    }
+
     function resolveBridgeSvgFontSize(element) {
         var current = element;
         while (current) {
@@ -95,6 +107,17 @@
         }
         var parsed = parseBridgeCssLength('16', 16);
         return parsed > 0 ? parsed : 16;
+    }
+
+    function resolveBridgeSvgLineHeight(element, fontSize) {
+        var current = element;
+        while (current) {
+            var attr = current.getAttribute && current.getAttribute('line-height');
+            if (attr && String(attr).trim()) return String(attr).trim();
+            current = current.parentElement || null;
+        }
+        var parsed = parseBridgeCssLength('normal', fontSize);
+        return parsed > 0 ? parsed : Math.max(fontSize * 1.18, fontSize + 4);
     }
 
     // ── State Factories (from path_state.mjs) ──
@@ -138,12 +161,15 @@
     window.pathModules = {
         utils: {
             normalizeBridgeInlineText: normalizeBridgeInlineText,
+            parseBridgeNumericAttribute: parseBridgeNumericAttribute,
+            extractBridgeInlineStyleValue: extractBridgeInlineStyleValue,
+            parseBridgeCssLength: parseBridgeCssLength,
+            resolveBridgeSvgFontSize: resolveBridgeSvgFontSize,
+            resolveBridgeSvgLineHeight: resolveBridgeSvgLineHeight,
             estimateBridgeTextLineWidth: estimateBridgeTextLineWidth,
             estimateBridgeGlyphWidthUnits: estimateBridgeGlyphWidthUnits,
             splitBridgeTokenForWrap: splitBridgeTokenForWrap,
             isBridgeWideGlyph: isBridgeWideGlyph,
-            parseBridgeCssLength: parseBridgeCssLength,
-            resolveBridgeSvgFontSize: resolveBridgeSvgFontSize,
         },
         state: {
             createPathGraphState: createPathGraphState,
