@@ -12,10 +12,10 @@ describe('shared types module', () => {
         expect(fs.existsSync(typesFile)).toBe(true);
     });
 
-    test('shared types file is under 200 lines (contract boundary discipline)', () => {
+    test('shared types file is under 300 lines (contract boundary discipline, v2.3 expanded for notemd)', () => {
         const source = fs.readFileSync(typesFile, 'utf8');
         const lines = source.split('\n').length;
-        expect(lines).toBeLessThan(200);
+        expect(lines).toBeLessThan(300);
     });
 
     test('shared types file contains canonical contract documentation', () => {
@@ -48,5 +48,21 @@ describe('shared types module', () => {
         expect(source).toContain('AgentWorkspaceContract');
         expect(source).toContain('conversationId');
         expect(source).toContain('activePaneId');
+    });
+
+    test('shared types defines Notemd CLI and workflow contracts', () => {
+        const source = fs.readFileSync(typesFile, 'utf8');
+        expect(source).toContain('NotemdCliOperationContract');
+        expect(source).toContain('NotemdCliInvocationContract');
+        expect(source).toContain('NotemdWorkflowStageContract');
+        expect(source).toContain('NotemdWorkflowResultContract');
+    });
+
+    test('shared types defines Search and Diagram contracts', () => {
+        const source = fs.readFileSync(typesFile, 'utf8');
+        expect(source).toContain('SearchResultItemContract');
+        expect(source).toContain('SearchResultContract');
+        expect(source).toContain('DiagramGenerationContract');
+        expect(source).toContain('NotemdSettingsContract');
     });
 });
