@@ -14,7 +14,24 @@
  * Types defined here belong to the API contract, not to any single module.
  * They are versioned with the project and must remain backward-compatible
  * within a major version.
+ *
+ * @module shared/types
+ * @version 2.3.0 — added Notemd CLI, workflow, search, diagram contracts
  */
+
+// ── Frontend JSDoc type declarations ──
+// For .mjs consumers: copy the @typedef lines below into your module JSDoc header.
+//
+// /** @typedef {import('../shared/types').RuntimeCapabilityContract} RuntimeCapabilityContract */
+// /** @typedef {import('../shared/types').AgentWorkspaceContract} AgentWorkspaceContract */
+// /** @typedef {import('../shared/types').NotemdCliOperationContract} NotemdCliOperationContract */
+// /** @typedef {import('../shared/types').NotemdCliInvocationContract} NotemdCliInvocationContract */
+// /** @typedef {import('../shared/types').NotemdWorkflowStageContract} NotemdWorkflowStageContract */
+// /** @typedef {import('../shared/types').NotemdWorkflowResultContract} NotemdWorkflowResultContract */
+// /** @typedef {import('../shared/types').SearchResultItemContract} SearchResultItemContract */
+// /** @typedef {import('../shared/types').SearchResultContract} SearchResultContract */
+// /** @typedef {import('../shared/types').DiagramGenerationContract} DiagramGenerationContract */
+// /** @typedef {import('../shared/types').NotemdSettingsContract} NotemdSettingsContract */
 
 // Re-export core data model types from the learning type system
 export type {
@@ -121,4 +138,98 @@ export interface AgentWorkspaceContract {
     activePaneId: string | null;
     paneState: Record<string, unknown>;
     lastUpdatedAt: string;
+}
+
+// ── Notemd shared contracts (v2.3) ──
+
+/**
+ * Notemd CLI operation contract — describes a single CLI operation
+ * that frontend agents can invoke via the notemd API.
+ */
+export interface NotemdCliOperationContract {
+    operationId: string;
+    operationVersion: 1;
+    inputSchema: Record<string, unknown>;
+    resultSchema: Record<string, unknown>;
+}
+
+/**
+ * Notemd CLI invocation contract — complete set of invocable operations.
+ */
+export interface NotemdCliInvocationContract {
+    version: 1;
+    operations: NotemdCliOperationContract[];
+}
+
+/**
+ * Notemd workflow stage — shared progress tracking between
+ * frontend progress UI and backend workflow execution.
+ */
+export interface NotemdWorkflowStageContract {
+    stage: string;
+    status: 'pending' | 'running' | 'completed' | 'error' | 'skipped';
+    percent: number;
+    message: string;
+    details?: Record<string, unknown>;
+}
+
+/**
+ * Notemd workflow result — structured result for frontend display.
+ */
+export interface NotemdWorkflowResultContract {
+    sourceFilePath: string;
+    outputFolderPath: string;
+    stages: NotemdWorkflowStageContract[];
+    summary: {
+        conceptsExtracted: number;
+        wikiLinksAdded: number;
+        titlesGenerated: number;
+        titlesFailed: number;
+        mermaidFilesFixed: number;
+        totalElapsedMs: number;
+    };
+    errors: string[];
+}
+
+/**
+ * Search result contract — shared between frontend search UI
+ * and backend search providers.
+ */
+export interface SearchResultItemContract {
+    title: string;
+    url: string;
+    content: string;
+}
+
+export interface SearchResultContract {
+    query: string;
+    provider: string;
+    results: SearchResultItemContract[];
+    totalResults: number;
+    searchedAt: string;
+}
+
+/**
+ * Diagram generation contract.
+ */
+export interface DiagramGenerationContract {
+    diagramType: string;
+    spec: string;
+    mermaidCode?: string;
+    renderErrors: string[];
+    intent: string;
+    generatedAt: string;
+}
+
+/**
+ * Notemd settings contract — subset of settings relevant to frontend.
+ */
+export interface NotemdSettingsContract {
+    activeProvider: string;
+    searchProvider: string;
+    language: string;
+    enableExperimentalDiagramPipeline: boolean;
+    enableBatchParallelism: boolean;
+    developerMode: boolean;
+    enableDuplicateDetection: boolean;
 }
