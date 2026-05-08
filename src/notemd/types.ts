@@ -417,3 +417,57 @@ export interface BatchProgress {
     startedAt: string;
     updatedAt: string;
 }
+
+// ── Workflow pipeline (NoteConnection native) ──
+export interface WorkflowRequest {
+    filePath: string;
+    outputFolderPath?: string;
+    language?: string;
+    skipGenerate?: boolean;
+    skipMermaidFix?: boolean;
+}
+
+export interface WorkflowStage {
+    stage: 'extract-concepts' | 'generate-titles' | 'mermaid-fix';
+    status: 'pending' | 'running' | 'completed' | 'error';
+    percent: number;
+    message: string;
+    details?: Record<string, unknown>;
+}
+
+export interface WorkflowResult {
+    sourceFilePath: string;
+    outputFolderPath: string;
+    stages: WorkflowStage[];
+    summary: {
+        conceptsExtracted: number;
+        titlesGenerated: number;
+        titlesFailed: number;
+        mermaidFilesFixed: number;
+        totalElapsedMs: number;
+    };
+    errors: string[];
+}
+
+export interface BatchWorkflowRequest {
+    folderPath: string;
+    outputBasePath?: string;
+    filePattern?: string;       // regex string for filename matching
+    fileExtensions?: string[];   // e.g. ['.md', '.txt']
+    language?: string;
+    skipGenerate?: boolean;
+    skipMermaidFix?: boolean;
+    maxFiles?: number;
+}
+
+export interface BatchWorkflowResult {
+    folderPath: string;
+    outputBasePath: string;
+    filter: { pattern?: string; extensions?: string[] };
+    totalFiles: number;
+    completedFiles: number;
+    failedFiles: number;
+    results: WorkflowResult[];
+    errors: Array<{ filePath: string; error: string }>;
+    totalElapsedMs: number;
+}

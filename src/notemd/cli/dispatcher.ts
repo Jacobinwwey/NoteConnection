@@ -134,6 +134,20 @@ async function executeCommand(
             return service.extractConcepts(filePath, settings);
         }
 
+        case 'workflow.extract-and-generate': {
+            const filePath = resolveParam(params, ['path', 'p', 'file']);
+            if (!filePath) throw new Error('Missing required param: --path');
+            const output = resolveParam(params, ['output', 'o']);
+            const language = resolveParam(params, ['language', 'l', 'lang']);
+            return service.runWorkflow({
+                filePath,
+                outputFolderPath: output,
+                language,
+                skipGenerate: flags.has('no-generate'),
+                skipMermaidFix: flags.has('no-mermaid')
+            }, settings);
+        }
+
         case 'content.extract-original-text': {
             const filePath = resolveParam(params, ['path', 'p', 'file']);
             if (!filePath) throw new Error('Missing required param: --path');
@@ -163,6 +177,24 @@ async function executeCommand(
             const folderPath = resolveParam(params, ['path', 'p', 'folder']);
             if (!folderPath) throw new Error('Missing required param: --path');
             return { folderPath, dedupeStatus: 'not-implemented' };
+        }
+
+        case 'workflow.batch': {
+            const folderPath = resolveParam(params, ['path', 'p', 'folder']);
+            if (!folderPath) throw new Error('Missing required param: --path');
+            const output = resolveParam(params, ['output', 'o']);
+            const pattern = resolveParam(params, ['pattern', 'filter', 'regex']);
+            const extensions = resolveParam(params, ['ext', 'extensions']);
+            const maxFiles = resolveParam(params, ['max', 'max-files']);
+            return service.runBatchWorkflow({
+                folderPath,
+                outputBasePath: output,
+                filePattern: pattern,
+                fileExtensions: extensions?.split(',').map(e => e.trim()),
+                skipGenerate: flags.has('no-generate'),
+                skipMermaidFix: flags.has('no-mermaid'),
+                maxFiles: maxFiles ? parseInt(maxFiles, 10) : undefined
+            }, settings);
         }
 
         case 'provider.profile.export': {

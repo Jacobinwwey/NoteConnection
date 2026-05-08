@@ -12,6 +12,8 @@ import { generateDiagramArtifact, DiagramGenerationOptions } from './diagram/dia
 import { DiagramIntent } from './diagram/types';
 import {
     BatchProgress,
+    BatchWorkflowRequest,
+    BatchWorkflowResult,
     ExportDiagramRequest,
     ExportDiagramResult,
     ExtractOriginalTextRequest,
@@ -31,6 +33,9 @@ import {
     SearchResult,
     TranslateFileRequest,
     ValidationError,
+    WorkflowRequest,
+    WorkflowResult,
+    WorkflowStage,
 } from './types';
 
 function defaultReporter(): ProgressReporter {
@@ -273,6 +278,209 @@ export class NotemdService {
         };
     }
 
+    // ── Workflow Pipeline (NoteConnection native) ──
+
+    public async runWorkflow(
+        request: WorkflowRequest,
+        settings: NotemdSettings,
+        reporter: ProgressReporter = defaultReporter(),
+        signal?: AbortSignal
+    ): Promise<WorkflowResult> {
+        const resolvedPath = path.resolve(String(request.filePath || '').trim());
+        if (!resolvedPath) throw new ValidationError('Missing filePath.');
+
+        const startedAt = Date.now();
+        const stages: WorkflowStage[] = [];
+        const errors: string[] = [];
+        const ext = path.extname(resolvedPath);
+        const baseName = path.basename(resolvedPath, ext);
+        const outputFolderPath = request.outputFolderPath
+            ? path.resolve(request.outputFolderPath)
+            : path.join(path.dirname(resolvedPath), `${baseName}_notemd_output`);
+
+        await fs.promises.mkdir(outputFolderPath, { recursive: true });
+
+        // Stage 1: Extract Concepts
+        stages.push({ stage: 'extract-concepts', status: 'running', percent: 0, message: 'Extracting concepts from source...' });
+        reporter.report({ type: 'status', message: `[1/3] Extracting concepts from ${baseName}${ext}`, percent: 5, operationId: 'workflow-extract' });
+
+        let concepts: string[] = [];
+        try {
+            const source = await fs.promises.readFile(resolvedPath, 'utf8');
+            concepts = Array.from(
+                await this.fileProcessor.extractConceptsFromText(source, settings, reporter, signal)
+            ).sort((a, b) => a.localeCompare(b));
+
+            await this.scaffoldConceptFiles(outputFolderPath, concepts);
+            stages[0] = { stage: 'extract-concepts', status: 'completed', percent: 100, message: `Extracted ${concepts.length} concepts`, details: { count: concepts.length, concepts } };
+            reporter.report({ type: 'status', message: `[1/3] ✓ Extracted ${concepts.length} concepts`, percent: 33, operationId: 'workflow-extract' });
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            stages[0] = { stage: 'extract-concepts', status: 'error', percent: 100, message: msg };
+            errors.push(`extract-concepts: ${msg}`);
+            reporter.report({ type: 'error', message: `[1/3] ✕ Concept extraction failed: ${msg}`, percent: 33, operationId: 'workflow-extract' });
+        }
+
+        // Stage 2: Generate from Titles
+        let generated = { totalFiles: 0, generatedFiles: 0, failedFiles: 0, outputs: [] as string[] };
+        if (!request.skipGenerate) {
+            stages.push({ stage: 'generate-titles', status: 'running', percent: 0, message: 'Generating content from titles...' });
+            reporter.report({ type: 'status', message: `[2/3] Generating content from titles in ${path.basename(outputFolderPath)}`, percent: 35, operationId: 'workflow-generate' });
+
+            try {
+                generated = await this.contentGenerator.generateFolderFromTitles(
+                    outputFolderPath, settings, reporter, signal
+                );
+                stages[1] = { stage: 'generate-titles', status: 'completed', percent: 100, message: `Generated ${generated.generatedFiles}/${generated.totalFiles} files`, details: { totalFiles: generated.totalFiles, generatedFiles: generated.generatedFiles, failedFiles: generated.failedFiles, outputs: generated.outputs } };
+                reporter.report({ type: 'status', message: `[2/3] ✓ Generated ${generated.generatedFiles}/${generated.totalFiles} files`, percent: 66, operationId: 'workflow-generate' });
+            } catch (e: unknown) {
+                const msg = e instanceof Error ? e.message : String(e);
+                stages[1] = { stage: 'generate-titles', status: 'error', percent: 100, message: msg };
+                errors.push(`generate-titles: ${msg}`);
+                reporter.report({ type: 'error', message: `[2/3] ✕ Content generation failed: ${msg}`, percent: 66, operationId: 'workflow-generate' });
+            }
+        } else {
+            stages.push({ stage: 'generate-titles', status: 'completed', percent: 100, message: 'Skipped', details: { skipped: true } });
+            reporter.report({ type: 'status', message: `[2/3] ⊘ Content generation skipped`, percent: 66, operationId: 'workflow-generate' });
+        }
+
+        // Stage 3: Mermaid Fix
+        let mermaid = { folderPath: outputFolderPath, totalFiles: 0, fixedFiles: 0, results: [] as Array<{ filePath: string; changed: boolean; fixes: string[]; content: string }> };
+        if (!request.skipMermaidFix) {
+            stages.push({ stage: 'mermaid-fix', status: 'running', percent: 0, message: 'Fixing Mermaid diagrams...' });
+            reporter.report({ type: 'status', message: `[3/3] Fixing Mermaid diagrams in ${path.basename(outputFolderPath)}`, percent: 68, operationId: 'workflow-mermaid' });
+
+            try {
+                mermaid = await this.batchFixMermaid(outputFolderPath, true);
+                stages[2] = { stage: 'mermaid-fix', status: 'completed', percent: 100, message: `Fixed ${mermaid.fixedFiles}/${mermaid.totalFiles} files`, details: { fixedFiles: mermaid.fixedFiles, totalFiles: mermaid.totalFiles, results: mermaid.results } };
+                reporter.report({ type: 'status', message: `[3/3] ✓ Fixed ${mermaid.fixedFiles}/${mermaid.totalFiles} Mermaid diagrams`, percent: 100, operationId: 'workflow-mermaid' });
+            } catch (e: unknown) {
+                const msg = e instanceof Error ? e.message : String(e);
+                stages[2] = { stage: 'mermaid-fix', status: 'error', percent: 100, message: msg };
+                errors.push(`mermaid-fix: ${msg}`);
+                reporter.report({ type: 'error', message: `[3/3] ✕ Mermaid fix failed: ${msg}`, percent: 100, operationId: 'workflow-mermaid' });
+            }
+        } else {
+            stages.push({ stage: 'mermaid-fix', status: 'completed', percent: 100, message: 'Skipped', details: { skipped: true } });
+            reporter.report({ type: 'status', message: `[3/3] ⊘ Mermaid fix skipped`, percent: 100, operationId: 'workflow-mermaid' });
+        }
+
+        reporter.report({ type: 'done', message: `Workflow complete for ${baseName}${ext}`, percent: 100, operationId: 'workflow' });
+
+        return {
+            sourceFilePath: resolvedPath,
+            outputFolderPath,
+            stages,
+            summary: {
+                conceptsExtracted: concepts.length,
+                titlesGenerated: generated.generatedFiles,
+                titlesFailed: generated.failedFiles,
+                mermaidFilesFixed: mermaid.fixedFiles,
+                totalElapsedMs: Date.now() - startedAt,
+            },
+            errors,
+        };
+    }
+
+    public async runBatchWorkflow(
+        request: BatchWorkflowRequest,
+        settings: NotemdSettings,
+        reporter: ProgressReporter = defaultReporter(),
+        signal?: AbortSignal
+    ): Promise<BatchWorkflowResult> {
+        const resolvedFolderPath = path.resolve(String(request.folderPath || '').trim());
+        if (!resolvedFolderPath) throw new ValidationError('Missing folderPath.');
+
+        const startedAt = Date.now();
+        const stats = await fs.promises.stat(resolvedFolderPath);
+        if (!stats.isDirectory()) throw new ValidationError(`Not a directory: ${resolvedFolderPath}`);
+
+        const outputBase = request.outputBasePath
+            ? path.resolve(request.outputBasePath)
+            : path.join(resolvedFolderPath, '_notemd_batch_output');
+
+        await fs.promises.mkdir(outputBase, { recursive: true });
+
+        reporter.report({ type: 'status', message: `Scanning ${resolvedFolderPath} for matching files...`, percent: 0, operationId: 'batch-workflow' });
+
+        // Collect matching files
+        let files = await this.collectTextFiles(resolvedFolderPath);
+
+        // Apply extension filter
+        if (request.fileExtensions && request.fileExtensions.length > 0) {
+            const exts = new Set(request.fileExtensions.map(e => e.toLowerCase()));
+            files = files.filter(f => exts.has(path.extname(f).toLowerCase()));
+        }
+
+        // Apply regex pattern filter
+        if (request.filePattern) {
+            try {
+                const regex = new RegExp(request.filePattern, 'i');
+                files = files.filter(f => regex.test(path.basename(f)));
+            } catch {
+                throw new ValidationError(`Invalid regex pattern: ${request.filePattern}`);
+            }
+        }
+
+        // Limit files
+        if (request.maxFiles && request.maxFiles > 0) {
+            files = files.slice(0, request.maxFiles);
+        }
+
+        const totalFiles = files.length;
+        reporter.report({ type: 'status', message: `Found ${totalFiles} matching files. Starting batch workflow...`, percent: 5, operationId: 'batch-workflow' });
+
+        const results: WorkflowResult[] = [];
+        const errors: Array<{ filePath: string; error: string }> = [];
+
+        for (let i = 0; i < files.length; i++) {
+            if (signal?.aborted) break;
+
+            const filePath = files[i];
+            const fileBaseName = path.basename(filePath, path.extname(filePath));
+            const baseProgress = 5 + Math.floor((i / files.length) * 90);
+
+            reporter.report({
+                type: 'status',
+                message: `[${i + 1}/${totalFiles}] Processing ${path.basename(filePath)}...`,
+                percent: baseProgress,
+                operationId: 'batch-workflow'
+            });
+
+            try {
+                const fileOutputFolder = path.join(outputBase, fileBaseName);
+                const result = await this.runWorkflow({
+                    filePath,
+                    outputFolderPath: fileOutputFolder,
+                    language: request.language,
+                    skipGenerate: request.skipGenerate,
+                    skipMermaidFix: request.skipMermaidFix,
+                }, settings, reporter, signal);
+
+                results.push(result);
+            } catch (e: unknown) {
+                const msg = e instanceof Error ? e.message : String(e);
+                errors.push({ filePath, error: msg });
+                reporter.report({ type: 'error', message: `Failed ${path.basename(filePath)}: ${msg}`, percent: baseProgress, operationId: 'batch-workflow' });
+            }
+        }
+
+        reporter.report({ type: 'done', message: `Batch workflow complete: ${results.length}/${totalFiles} files processed`, percent: 100, operationId: 'batch-workflow' });
+
+        return {
+            folderPath: resolvedFolderPath,
+            outputBasePath: outputBase,
+            filter: { pattern: request.filePattern, extensions: request.fileExtensions },
+            totalFiles,
+            completedFiles: results.length,
+            failedFiles: errors.length,
+            results,
+            errors,
+            totalElapsedMs: Date.now() - startedAt,
+        };
+    }
+
+    // Backward-compatible wrapper — uses knowledge-base-root-relative output path
     public async oneClickExtract(
         filePath: string,
         settings: NotemdSettings,
@@ -291,36 +499,37 @@ export class NotemdService {
         };
     }> {
         const resolvedPath = path.resolve(String(filePath || '').trim());
-        if (!resolvedPath) {
-            throw new ValidationError('Missing filePath.');
-        }
+        const kbRoot = this.resolveKnowledgeBaseRootForFile(resolvedPath);
+        const outputFolderPath = path.join(kbRoot, path.basename(resolvedPath, path.extname(resolvedPath)));
 
-        const source = await fs.promises.readFile(resolvedPath, 'utf8');
-        const concepts = Array.from(
-            await this.fileProcessor.extractConceptsFromText(source, settings, reporter, signal)
-        ).sort((a, b) => a.localeCompare(b));
-        const outputFolderPath = path.join(
-            this.resolveKnowledgeBaseRootForFile(resolvedPath),
-            path.basename(resolvedPath, path.extname(resolvedPath))
-        );
-
-        await fs.promises.mkdir(outputFolderPath, { recursive: true });
-        await this.scaffoldConceptFiles(outputFolderPath, concepts);
-
-        const generated = await this.contentGenerator.generateFolderFromTitles(
+        const result = await this.runWorkflow({
+            filePath: resolvedPath,
             outputFolderPath,
-            settings,
-            reporter,
-            signal
-        );
-        const mermaid = await this.batchFixMermaid(outputFolderPath, true);
+        }, settings, reporter, signal);
+
+        const conceptsStage = result.stages[0];
+        const concepts = (conceptsStage?.status === 'completed' && conceptsStage?.details?.concepts)
+            ? (conceptsStage.details.concepts as string[])
+            : [];
+        const genDetails = (result.stages[1]?.details || {}) as any;
+        const mermaidDetails = (result.stages[2]?.details || {}) as any;
 
         return {
             sourceFilePath: resolvedPath,
-            outputFolderPath,
+            outputFolderPath: result.outputFolderPath,
             concepts,
-            generated,
-            mermaid,
+            generated: {
+                totalFiles: genDetails.totalFiles || 0,
+                generatedFiles: genDetails.generatedFiles || 0,
+                failedFiles: genDetails.failedFiles || 0,
+                outputs: genDetails.outputs || [],
+            },
+            mermaid: {
+                folderPath: result.outputFolderPath,
+                totalFiles: mermaidDetails.totalFiles || 0,
+                fixedFiles: mermaidDetails.fixedFiles || 0,
+                results: mermaidDetails.results || [],
+            },
         };
     }
 

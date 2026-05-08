@@ -289,6 +289,44 @@ const CLI_COMMANDS: CliCommandDef[] = [
         flags: [
             { name: 'force', aliases: ['f'], description: 'Delete without confirmation' }
         ]
+    },
+    {
+        name: 'workflow',
+        aliases: ['wf', 'run'],
+        description: 'Run full pipeline: extract concepts → generate titles → fix mermaid',
+        operationId: 'workflow.extract-and-generate',
+        automationLevel: 'requires-active-file',
+        requiredContext: 'active-file',
+        sideEffectClass: 'batch-write',
+        params: [
+            { name: 'path', aliases: ['p', 'file'], description: 'Path to the markdown/text file', required: true },
+            { name: 'output', aliases: ['o'], description: 'Custom output folder path', required: false },
+            { name: 'language', aliases: ['l', 'lang'], description: 'Output language code', required: false }
+        ],
+        flags: [
+            { name: 'no-generate', aliases: ['ng'], description: 'Skip content generation stage' },
+            { name: 'no-mermaid', aliases: ['nm'], description: 'Skip Mermaid fix stage' }
+        ]
+    },
+    {
+        name: 'batch-workflow',
+        aliases: ['bwf', 'batch'],
+        description: 'Run pipeline on all matching files in a folder with regex filtering',
+        operationId: 'workflow.batch',
+        automationLevel: 'interactive-ui',
+        requiredContext: 'folder-selection',
+        sideEffectClass: 'batch-write',
+        params: [
+            { name: 'path', aliases: ['p', 'folder'], description: 'Path to the folder', required: true },
+            { name: 'output', aliases: ['o'], description: 'Output base folder path', required: false },
+            { name: 'pattern', aliases: ['filter', 'regex'], description: 'Regex pattern for filename matching', required: false },
+            { name: 'extensions', aliases: ['ext'], description: 'Comma-separated extensions (e.g. ".md,.txt")', required: false },
+            { name: 'max', aliases: ['max-files'], description: 'Maximum files to process', required: false }
+        ],
+        flags: [
+            { name: 'no-generate', aliases: ['ng'], description: 'Skip content generation stage' },
+            { name: 'no-mermaid', aliases: ['nm'], description: 'Skip Mermaid fix stage' }
+        ]
     }
 ];
 

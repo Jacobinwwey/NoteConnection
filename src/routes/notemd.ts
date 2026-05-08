@@ -350,6 +350,33 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/batch-progress'); }
             },
         },
+        // ── Workflow pipeline (NoteConnection native) ──
+        {
+            method: 'POST',
+            path: api('/workflow'),
+            handler: async (req, res) => {
+                try {
+                    const raw = await readBody(req);
+                    const settings = await loadNotemdSettings();
+                    const request = JSON.parse(raw);
+                    const result = await notemdService.runWorkflow(request, settings);
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/workflow'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/batch-workflow'),
+            handler: async (req, res) => {
+                try {
+                    const raw = await readBody(req);
+                    const settings = await loadNotemdSettings();
+                    const request = JSON.parse(raw);
+                    const result = await notemdService.runBatchWorkflow(request, settings);
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'API:POST /api/notemd/batch-workflow'); }
+            },
+        },
         {
             method: 'POST',
             path: api('/provider-profiles/export'),
