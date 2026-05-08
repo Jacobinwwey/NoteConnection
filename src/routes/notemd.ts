@@ -2,6 +2,8 @@ import type { RouteEntry, ServerContext } from './types';
 import { CrashLogger } from '../backend/utils/CrashLogger';
 import { buildCliCapabilityManifest } from '../notemd/operations/capabilityManifest';
 import { buildCliInvocationContract } from '../notemd/operations/cliContracts';
+import { listOperationDefinitions } from '../notemd/operations/registry';
+import type { NotemdAgentManifest, NotemdAgentOperation } from '../shared/types';
 
 export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
     const { notemdService, loadNotemdSettings } = ctx;
@@ -387,6 +389,37 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
                     const profile = buildProviderProfileExport(settings.providers);
                     ok(res, { profile });
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/provider-profiles/export'); }
+            },
+        },
+        // ── Agent Workspace Bridge (Phase 4 P3) ──
+        {
+            method: 'GET',
+            path: api('/agent-manifest'),
+            handler: async (_req, res) => {
+                try {
+                    const defs = listOperationDefinitions();
+                    const operations: NotemdAgentOperation[] = defs.map(def => ({
+                        operationId: def.id,
+                        description: def.commandBindings[0]?.commandId ?? def.id,
+                        automationLevel: def.automationLevel,
+                        requiredContext: def.requiredContext,
+                        sideEffectClass: def.sideEffectClass,
+                        agentAutoExecutable: def.automationLevel === 'safe',
+                        requiredParams: def.inputSchema
+                            ? (def.inputSchema as any).required ?? []
+                            : [],
+                    }));
+
+                    const manifest: NotemdAgentManifest = {
+                        version: 1,
+                        generatedAt: new Date().toISOString(),
+                        totalOperations: operations.length,
+                        agentExecutableCount: operations.filter(o => o.agentAutoExecutable).length,
+                        operations,
+                    };
+
+                    ok(res, { manifest });
+                } catch (e) { fail(res, e, 'API:GET /api/notemd/agent-manifest'); }
             },
         },
         {

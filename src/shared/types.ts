@@ -233,3 +233,33 @@ export interface NotemdSettingsContract {
     developerMode: boolean;
     enableDuplicateDetection: boolean;
 }
+
+// ── Agent ↔ Notemd Bridge Contracts (Phase 4 P3) ──
+
+/**
+ * Simplified operation description for Agent Workspace consumption.
+ * Agents use this to discover and invoke notemd operations.
+ */
+export interface NotemdAgentOperation {
+    operationId: string;
+    description: string;
+    automationLevel: 'safe' | 'requires-active-file' | 'requires-selection' | 'interactive-ui';
+    requiredContext: string;
+    sideEffectClass: string;
+    /** Whether the agent can auto-execute this without user interaction. */
+    agentAutoExecutable: boolean;
+    /** Required input parameter names for the operation. */
+    requiredParams: string[];
+}
+
+/**
+ * Agent-oriented manifest — lightweight version of the full CLI
+ * capability manifest, designed for Agent Workspace consumption.
+ */
+export interface NotemdAgentManifest {
+    version: 1;
+    generatedAt: string;
+    totalOperations: number;
+    agentExecutableCount: number;
+    operations: NotemdAgentOperation[];
+}
