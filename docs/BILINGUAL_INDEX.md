@@ -44,6 +44,7 @@
 | 19 | `lfs_asset_migration_plan.md` | `docs/en/lfs_asset_migration_plan.md` | `docs/zh/lfs_asset_migration_plan.md` | Paired |
 | 20 | `multi_platform_build_flow_audit.md` | `docs/en/multi_platform_build_flow_audit.md` | `docs/zh/multi_platform_build_flow_audit.md` | Paired |
 | 21 | `sidecar_supply_strategy.md` | `docs/en/sidecar_supply_strategy.md` | `docs/zh/sidecar_supply_strategy.md` | Paired |
+| 22 | `android-release-build.md` | `docs/diataxis/en/how-to/android-release-build.md` | `docs/diataxis/zh/how-to/android-release-build.md` | Paired (2026-05) |
 
 ### Unmatched Files
 
@@ -98,6 +99,7 @@
 | 22 | `analysis_ref.md` | `docs/en/analysis_ref.md` | `docs/zh/analysis_ref.md` | 已配对 (2026-05) |
 | 23 | `docs_release_and_rollback.md` | `docs/en/docs_release_and_rollback.md` | `docs/zh/docs_release_and_rollback.md` | 已配对 |
 | 24 | `knowledge_mastery_evolution_plan.md` | `docs/en/knowledge_mastery_evolution_plan.md` | `docs/zh/knowledge_mastery_evolution_plan.md` | 已配对 |
+| 25 | `android-release-build.md` | `docs/diataxis/en/how-to/android-release-build.md` | `docs/diataxis/zh/how-to/android-release-build.md` | 已配对 (2026-05) |
 
 ### 未配对文件
 
