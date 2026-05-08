@@ -853,6 +853,22 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        id: 'workflow.batch',
+        automationLevel: 'interactive-ui',
+        requiredContext: 'folder-selection',
+        sideEffectClass: 'batch-write',
+        commandBindings: [
+            staticBinding('batch-workflow', {
+                automationLevel: 'interactive-ui',
+                requiredContext: 'folder-selection',
+                sideEffectClass: 'batch-write'
+            })
+        ],
+        inputSchema: PROCESS_FOLDER_INPUT_SCHEMA,
+        resultSchema: PROCESS_FOLDER_RESULT_SCHEMA
+    },
+    {
+        version: 1,
         id: 'duplicate.check-file',
         automationLevel: 'requires-active-file',
         requiredContext: 'active-file',

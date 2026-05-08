@@ -34,6 +34,7 @@ src-tauri/gen/
 src/backend/wasm/target/
 tools/markdown_worker/target/
 runtime_data/
+build/
 
 # Android generated and local build outputs
 android/.gradle/
