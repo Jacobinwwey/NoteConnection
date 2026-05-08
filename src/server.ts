@@ -13048,6 +13048,12 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         }
     }
 
+    // --- Strict Registry Mode ---
+    // When set, notemd inline fallback handlers return 501 instead of serving.
+    // This verifies 100% registry coverage before safe deletion of inline code.
+    // Set NOTE_CONNECTION_STRICT_REGISTRY=1 in CI to enforce registry-only routing.
+    const STRICT_REGISTRY = process.env.NOTE_CONNECTION_STRICT_REGISTRY === '1';
+
     // --- Route Registry (modular dispatch for extracted route groups) ---
     const routeContext: ServerContext = {
         knowledgeLearningPlatform,
@@ -13207,8 +13213,14 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         if (req.method === 'GET') {
             const getPathname = getRawRequestPathname(req.url);
 
-            // ── Notemd routes (covered by routes/notemd.ts: 12 routes) ──
+            // ── Notemd routes (covered by routes/notemd.ts) ──
             // [REGISTRY_COVERED: routes/notemd.ts]
+            if (STRICT_REGISTRY && getPathname.startsWith('/api/notemd/')) {
+                res.writeHead(501, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'strict_registry: route must be handled by modular registry', path: getPathname }));
+                routeInlineFallbacks++;
+                return;
+            }
             if (getPathname === '/api/notemd/settings') {
                 try {
                     const settings = await loadNotemdSettings();
@@ -14356,6 +14368,12 @@ export const startServer = async (options: { port?: number, targetPath?: string 
 
             // ── Notemd POST routes (covered by routes/notemd.ts) ──
             // [REGISTRY_COVERED: routes/notemd.ts]
+            if (STRICT_REGISTRY && postPathname.startsWith('/api/notemd/')) {
+                res.writeHead(501, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'strict_registry: route must be handled by modular registry', path: postPathname }));
+                routeInlineFallbacks++;
+                return;
+            }
             if (postPathname === '/api/notemd/settings') {
                 try {
                     const payload = await readJsonBody(req);
