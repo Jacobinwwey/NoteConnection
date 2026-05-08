@@ -481,17 +481,42 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
                     return {
                         exists: diag.exists ?? false,
                         loaded: diag.loaded ?? false,
+                        backendReady: true,
+                        usingFallback: false,
+                        adapterId: a.id,
                         ...diag,
                         storeType: 'graphdb' as const,
                         graphDbOperationMode: normalizeGraphDbStoreOperationMode(graphdbOperationMode),
                         fallbackEnabled: graphdbFallbackEnabled,
-                        graphDbAdapterCapabilityMode: (diag as any).capabilityMode ?? 'unknown',
-                        graphDbReadPath: (diag as any).lastReadPath ?? 'fallback',
-                        graphDbWritePath: (diag as any).lastWritePath ?? 'fallback',
+                        graphDbAdapterCapabilityMode: (diag as any).capabilityMode ?? (a.opsCapable ? 'ops_capable' : 'snapshot_only'),
+                        graphDbReadPath: (diag as any).lastReadPath ?? (a.opsCapable ? 'ops' : 'snapshot'),
+                        graphDbWritePath: (diag as any).lastWritePath ?? (a.opsCapable ? 'ops' : 'snapshot'),
+                        graphDbSupportedReadOperations: (diag as any).supportedReadOperations,
+                        graphDbSupportedWriteOperations: (diag as any).supportedWriteOperations,
+                        graphDbLastSnapshotMetadata: (diag as any).lastSnapshotMetadata,
                     };
                 },
             };
         }
+        // Fail closed when fallback is disabled and adapter is unavailable
+        if (!graphdbFallbackEnabled) {
+            return {
+                loadSnapshot: async () => { throw new Error('graphdb_adapter_unavailable_no_fallback'); },
+                saveSnapshot: async () => { throw new Error('graphdb_adapter_unavailable_no_fallback'); },
+                getDiagnostics: () => ({
+                    storeType: 'graphdb' as const,
+                    exists: false, loaded: false,
+                    backendReady: false,
+                    usingFallback: false,
+                    fallbackEnabled: false,
+                    graphDbOperationMode: normalizeGraphDbStoreOperationMode(graphdbOperationMode),
+                    graphDbAdapterCapabilityMode: 'unknown',
+                    graphDbReadPath: 'fallback',
+                    graphDbWritePath: 'fallback',
+                }),
+            };
+        }
+
         // Fall back to file store
         const fallback = new FileBackedKnowledgeGraphStore({ filePath });
         return {
@@ -500,8 +525,10 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
             getDiagnostics: () => ({
                 ...fallback.getDiagnostics(),
                 storeType: 'graphdb' as const,
+                backendReady: false,
                 usingFallback: true,
                 fallbackEnabled: true,
+                fallbackStoreType: 'file',
                 graphDbOperationMode: 'snapshot_only',
                 graphDbAdapterCapabilityMode: 'unknown',
                 graphDbReadPath: 'fallback',
