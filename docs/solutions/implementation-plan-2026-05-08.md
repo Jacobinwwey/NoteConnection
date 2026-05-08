@@ -74,39 +74,33 @@ status: active
 
 ### P1: path_app.js → import extracted modules
 
-**目标**: 将已提取的 `path_mermaid_utils.mjs` (11 函数, ~130 lines) 导入回 path_app.js，消除重复代码
+**状态**: ⏳ 阻塞 — path_app.js 通过 `<script src>` 加载（非 ES module），不能直接 import。需先迁移到 `<script type="module">` 加载模式。
 
-**步骤**:
-1. path_app.js 顶部添加 `import { ... } from './path_mermaid_utils.mjs'`
-2. 替换 `this._funcName(...)` 为直接函数调用
-3. 保留原始 `this._funcName` 定义但标记 `@deprecated`
+**预置**: `path_mermaid_utils.mjs` (11 函数, ~130 lines) 已创建完毕，等待加载模式升级。
 
-**触点**: `src/frontend/path_app.js`, `src/frontend/path_mermaid_utils.mjs`
-**验证**: `npm run test:frontend` (browser required)
+### P2: path_state.mjs — 状态对象提取 ✅ Done
 
-### P2: path_state.mjs — 状态对象提取
+**交付** (`30dc1ec`):
+- `src/frontend/path_state.mjs`: 6 个工厂函数 (~120 lines)
+  - `createPathGraphState()` — canvas/worker/transform/nodes/links
+  - `createPathLearningState()` — centralNodeId/completedNodes/collapsedNodes
+  - `createPathRuntimeConfig()` — mode/strategy/layout + overrides
+  - `createLearningWorkbenchState()` — sessionPlan/quality/misconceptions
+  - `createAnimationState()` — animationId/orbitalAngle
+  - `createFullPathAppState()` — 组合所有 substates + Set/Promise 重新初始化
+- 纯数据构造函数，无 DOM/event/rendering 依赖
+- 等待 path_app.js ES module 迁移后使用
 
-**目标**: 从 path_app.js 提取 `learningWorkbench`, `runtimeConfig`, 动画状态为独立模块
+### P3: Notemd → Agent Workspace 前端集成 ✅ Done (Bridge Layer)
 
-**步骤**:
-1. 创建 `src/frontend/path_state.mjs` 导出状态工厂函数
-2. path_app.js 导入并使用工厂函数初始化状态
-3. 保持事件监听器不变（仅提取数据定义）
+**交付** (`30dc1ec`):
+- `src/shared/types.ts`: `NotemdAgentOperation` + `NotemdAgentManifest` 类型
+- `GET /api/notemd/agent-manifest` 端点:
+  - 返回 27 operations，每个含 `agentAutoExecutable` 标记
+  - 8 个 safe-auto-exec 操作（provider diag, diagram, manifest export 等）
+  - Agent Workspace 可通过单次 API 调用发现全部 notemd 能力
 
-**触点**: `src/frontend/path_app.js`, `src/frontend/path_state.mjs`
-**预计节省**: ~200 lines
-
-### P3: Notemd → Agent Workspace 前端集成
-
-**目标**: Agent Workspace 对话面板可展示并调用 notemd CLI 操作
-
-**步骤**:
-1. `workspace_panes.js` 新增 "Notemd Tools" pane
-2. 调用 `GET /api/notemd/capability-manifest` 获取操作列表
-3. 操作卡片渲染（automationLevel + sideEffectClass + description）
-4. 用户点击操作 → 弹出参数表单 → `POST /api/notemd/workflow`
-
-**触点**: `src/frontend/agent_workspace.js`, `src/frontend/workspace_panes.js`, `src/shared/types.ts`
+**下一步 (前端面板)**: `workspace_panes.js` 消费 agent-manifest → 渲染操作卡片
 
 ### P4: store.test.ts mock 对齐
 
