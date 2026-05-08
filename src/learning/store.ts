@@ -423,15 +423,16 @@ export function createGraphDbSnapshotAdapter(options?: Record<string, unknown>):
         const fileAdapter = createFileGraphDbSnapshotAdapter({
             provider: 'file',
             filePath: options?.filePath as string | undefined,
-            id: (options?.fileAdapterId ?? options?.id) as string | undefined,
+            id: (options?.id ?? options?.fileAdapterId ?? options?.adapterId) as string | undefined,
         });
         if (!fileAdapter) return null;
         return fileAdapter;
     }
-    // HTTP adapter — return stub with id
-    if (provider === 'http' && options?.baseUrl) {
+    // HTTP adapter — return stub with id when endpoint is configured
+    const httpEndpoint = (options?.httpEndpoint ?? options?.baseUrl) as string | undefined;
+    if (provider === 'http' && httpEndpoint) {
         return {
-            id: (options?.httpAdapterId ?? options?.id ?? 'http-graphdb-stub') as string,
+            id: (options?.id ?? options?.adapterId ?? options?.httpAdapterId ?? 'http-graphdb-stub') as string,
             provider: 'http',
             opsCapable: false,
             loadSnapshot: async () => { throw new Error('graphdb_http_request_failed:503'); },
@@ -440,7 +441,7 @@ export function createGraphDbSnapshotAdapter(options?: Record<string, unknown>):
                 storeType: 'graphdb' as const,
                 exists: false,
                 loaded: false,
-                location: options?.baseUrl as string,
+                location: httpEndpoint,
             }),
         };
     }
