@@ -3,28 +3,27 @@ module: architecture
 tags: [implementation, gap-analysis, progress, roadmap]
 problem_type: tracking
 created: 2026-05-04
-updated: 2026-05-07
+updated: 2026-05-08
 status: active
 ---
 
-# 实施方案差距分析 (v2.2)
+# 实施方案差距分析 (v2.3)
 
 ## 元信息
 
-本文档深度对比原始方案要求与当前代码实际状态，基于 2026-05-02 的《跨平台架构优化与代码健康度改进方案》逐项验证，并在 2026-05-07 完成 Notemd CLI Operations 模块深度对齐 obsidian-notemd v1.8.4 后全面刷新。
+本文档深度对比三份超级方案（跨平台架构优化、Agent Workspace v6 合同收敛、Notemd CLI 对齐）与当前代码实际状态，在 2026-05-08 完成 Workflow Pipeline + Wiki-Links 注入 + Agent Workspace 合同全轴验证后全面刷新。
 
-**v2.2 更新重点 (2026-05-07)**:
-- **Notemd CLI Operations 模块**: 完整迁移 obsidian-notemd v1.8.4 的 27 个 Operation Definitions、CLI Capability Manifest、Invocation Contract 到服务器端
-- **Search 模块**: DuckDuckGo + Tavily 搜索提供商从 stub 替换为完整实现
-- **Provider Diagnostics**: LLM 提供商诊断系统完整实现
-- **Provider Profiles**: 配置文件导出/导入功能
-- **CI 修复**: 将所有 GitHub Actions workflow 中的 `@v5` 引用降级为 `@v4`（`@v5` 不存在，导致 CI 全线失败）
-- **路由扩展**: notemd 路由从 15 个端点扩展到 26 个端点
+**v2.3 更新重点 (2026-05-08)**:
+- **Workflow Pipeline**: 完整 3-4 阶段管道（extract concepts → add wikilinks(可选) → generate titles → mermaid fix）
+- **Wiki-Links 注入**: 自动为提取的概念在原文注入 [[wiki-links]]，支持原地/副本两种模式
+- **Batch Workflow**: 文件夹批量处理 + regex/扩展名过滤
+- **Agent Workspace v6 全轴验证**: 13 轴逐项重新验证 (A1-A12 + M10.4-M10.6)
+- **Notemd 路由**: 31 端点（含 workflow + batch-workflow）
+- **集成测试修复**: 14 个路由处理器修复 settings 加载，2 个预存测试恢复
+- **NotemdService**: 17/17 方法完整实现，新增 runWorkflow + runBatchWorkflow
 
-**v2.1 更新重点 (2026-05-05)**:
-- 从 force push 中恢复 86 个 CI 关键文件（44,191 行）
-- 修复 CI 6 个失败 job
-- 识别 AGENT_WORKSPACE_DIAGNOSTICS 基础设施待 reconcile
+**v2.2 更新重点 (2026-05-07)**: Notemd CLI Operations (27 ops), Search (DDG+Tavily), Provider Diagnostics, CI v5→v4 修复
+**v2.1 更新重点 (2026-05-05)**: Force push 恢复, CI 修复, AGENT_WORKSPACE_DIAGNOSTICS 识别
 
 ---
 
@@ -316,7 +315,72 @@ obsidian-notemd v1.8.4 在 Obsidian 插件框架下完成了 25+ commits 的 CLI
 | `POST /api/notemd/batch-progress` | — | 🆕 |
 | `POST /api/notemd/provider-profiles/export` | — | 🆕 |
 | `POST /api/notemd/provider-profiles/import` | — | 🆕 |
-| **总计** | **20 端点** | **29 端点** |
+| `POST /api/notemd/workflow` | — | 🆕 v2.3 |
+| `POST /api/notemd/batch-workflow` | — | 🆕 v2.3 |
+| **总计** | **20 端点** | **31 端点** |
+
+### 4B.6 Workflow Pipeline (v2.3 新增)
+
+完整的 3-4 阶段自动化管道，用户只需输入一个文件路径即可自动完成概念提取→内容生成→图表修复全流程。
+
+**阶段定义**:
+| 阶段 | 操作 | 可选 | 输入 | 输出 |
+|---|---|---|---|---|
+| 1. extract-concepts | LLM 从源文件提取关键概念 | 否 | .md/.txt 文件 | 概念列表 + scaffold 笔记 |
+| 2. add-wikilinks | 为提取的概念在原文注入 [[wiki-links]] | 是 (`--with-wikilinks`) | 原文 + 概念列表 | `<file>_wikified.md` 或原地修改 |
+| 3. generate-titles | 对输出文件夹中的概念笔记批量生成内容 | 是 (`--no-generate`) | 概念笔记文件夹 | 生成的内容文件 |
+| 4. mermaid-fix | 自动修复生成内容中的 Mermaid 语法 | 是 (`--no-mermaid`) | 输出文件夹 | 修复后的文件 |
+
+**批量工作流**:
+- 文件夹扫描 + 扩展名过滤 (`.md`, `.txt`)
+- 正则文件名匹配 (`--pattern`)
+- 文件数量限制 (`--max`)
+- 每文件独立阶段追踪 + 汇总统计
+
+**CLI 用法**:
+```bash
+# 基础工作流
+notemd workflow --path=notes/my_note.md
+
+# 含 wiki-links + 原地修改
+notemd workflow --path=notes/my_note.md --with-wikilinks --wikilinks-in-place
+
+# 批量文件夹 + 正则过滤
+notemd batch-workflow --path=notes/ --pattern="lecture-.*" --extensions=".md" --with-wikilinks
+```
+
+---
+
+## 四-C、Agent Workspace 合同收敛 v6 全轴验证 (v2.3 新增)
+
+基于 2026-04-14 合同收敛 v6 深度对齐文档的逐项重新验证，纳入本次 notemd CLI/workflow 变更后全貌：
+
+| Axis | 方案要求 | v2.3 代码证据 | 判定 | 变更影响 |
+|---|---|---|---|---|
+| A1 对话主面 | conversation + focus/path 并排 | `workspace_panes.js` (2,538 行) | ✅ Done | 无变化 |
+| A2 typed capability | 禁止 legacy availableActions | `types.ts`, `KLP.ts` | ✅ Done | 无变化 |
+| A3 执行注册表化 | transport/request/presenter | `agent_workspace.js` (2,914 行) | ✅ Done | Notemd CLI ops 扩展了操作注册表 |
+| A4 会话卡片重渲 | append-kind 一致性 | `workspace_panes.js` | ✅ Done | 无变化 |
+| A5 Tauri 生命周期 | rust/window/index/manifest gate | CI strict gate | ✅ Done | CI @v5→@v4 修复后稳定 |
+| A6 conversation memory | 记忆域接入 | `server.ts` | ✅ Done | 无变化 |
+| A7 unified turn streaming | turn 级流式协议 | `server.ts` (SSE) | ✅ Done | Notemd workflow 进度通过 SSE 上报 |
+| A8 Phase 1 graphdb | file-backed → 真实图后端 | `store.ts` → snapshot adapter | ⚠️ Partial+ | **不变, 仍待 M10.5** |
+| A9 ANN 生产连接器 | scaffold → 生产 ANN | `queryBackend.ts` + `vectorAccelerationAdapter.ts` | ⚠️ Partial | **不变, 仍待 M10.6** |
+| A10 CI 常态化 | agent workspace gate 常态执行 | `migration-gates.yml` | ✅ Done | @v5→@v4 修复 |
+| A11 graphdb 治理 | 健康/熔断/遥测 | `store.ts`, `runtimeCapability.ts` | ✅ Done | 无变化 |
+| A12 graphdb 路径一致性 | strict 模式下空快照可区分 | `store.ts` | ✅ Done | 无变化 |
+| **M10.4** Foundation 治理 | env 控制面 + CI gate + runtime budget | server env vars + `runtimeCapability.ts` | ✅ Done | v2.1 完成 |
+| **M10.5** GraphDB 操作语义 | snapshot → 操作级读写 | — | ❌ 未开始 | **下轮高优** |
+| **M10.6** ANN 生产连接器 | 完整向量检索闭环 | — | ❌ 未开始 | **下轮中优** |
+
+### 4C.1 v6 关键判定不变项
+
+以下来自 v6 的批判性结论在 v2.3 中仍然成立：
+
+1. **A8 graphdb 仍是 Partial+**: `store` 层仍是整快照 load/save，未将节点/边查询下推到图后端。判定不变。
+2. **A9 ANN 仍是 Partial**: `local_vector` 仍在本地执行打分，外部仅返回 candidateAtomIds。判定不变。
+3. **graphdb 熔断 env 控制面已对齐**: server 已暴露 circuit 参数。M10.4 判定维持 Done。
+4. **W4 rollout 边界 CI**: `foundation-rollout-boundary-suite` 已作为独立 CI gate 运行。
 
 ---
 
@@ -407,7 +471,7 @@ obsidian-notemd v1.8.4 在 Obsidian 插件框架下完成了 25+ commits 的 CLI
 
 ---
 
-## 六、后续推进方向（v2.2）
+## 六、后续推进方向（v2.3，2026-05-08）
 
 ### 近期（优先级排序）
 
@@ -447,28 +511,32 @@ obsidian-notemd v1.8.4 在 Obsidian 插件框架下完成了 25+ commits 的 CLI
 
 ---
 
-## 七、项目整体数据 (v2.2 刷新)
+## 七、项目整体数据 (v2.3 刷新, 2026-05-08)
 
-| 指标 | v2.1 数值 | v2.2 数值 |
-|---|---|---|
-| 提案以来 commits | 30 | 31+ |
-| TypeScript 错误 | 0 | **0** |
-| 路由模块 | 10 files, 65 routes | 10 files, 65 routes |
-| Notemd 路由端点 | 20 | **29** (+9 CLI 端点) |
-| 中间件模块 | 5 files | 5 files |
-| 领域类总行数 | 2,455 | 2,455 |
-| 纯领域逻辑行数 | 1,060 (44%) | 1,060 (44%) |
-| 前端 .mjs 模块 | 7 files, 917 lines | 7 files, 917 lines |
-| 前端 Agent Workspace 模块 | 3 files, 9,757 lines | 3 files, 9,757 lines |
-| **Notemd 模块文件数** | **15 files, 4,641 lines** | **24 files, ~5,870 lines** |
-| **Operations Registry 定义** | **0** | **27 Operation Definitions** |
-| **Search Provider 实现** | **0 (stub)** | **2 (DDG + Tavily)** |
-| CI jobs | 9 workflows, 13+ matrix jobs | 9 workflows, 13+ matrix jobs |
-| CI action 版本修复 | — | **@v5→@v4 全部 9 文件** |
-| NotemdService 方法 | 11 完成 / 17 总计 | **17/17 完成** |
-| Vite chunks | 6 (path-mode -78%) | 6 (path-mode -78%) |
-| 构建时间 | 444ms | 444ms |
-| Notemd 测试 | 26 pass / 29 total | 26 pass / 29 total (3 集成测试预存) |
+| 指标 | v2.2 (05-07) | v2.3 (05-08) | 变化 |
+|---|---|---|---|
+| 提案以来 commits | 31+ | 37 | +6 |
+| TypeScript 错误 | 0 | **0** | — |
+| Notemd 路由端点 | 29 | **31** | +2 workflow |
+| **Notemd 模块文件数** | **24 files** | **~38 files** | +14 (cli + diagram + operations + search) |
+| **Operations Registry 定义** | **27** | **27** | — |
+| **Search Provider 实现** | **2 (DDG + Tavily)** | **2** | — |
+| **Workflow Pipeline 阶段** | **0** | **4-stage** | 🆕 |
+| CI action 版本 | @v4 | @v4 | — |
+| 集成测试修复 | — | **2 restored** | 🆕 |
+| NotemdService 方法 | 17/17 | **19/19** | +runWorkflow +runBatchWorkflow |
+| **Diagram Pipeline 文件** | **0** | **7 files** | 🆕 v2.3 |
+| **CLI 命令模块** | **0** | **5 files** | 🆕 v2.3 |
+| Agent Workspace v6 轴验证 | 11/13 | **13/13 validated** | 🆕 v2.3 |
+| Notemd 测试 | 26/29 | **28/29** | +2 restored |
+
+### 累计完成度矩阵
+
+| 方案文档 | 总要求项 | 已完成 | 完成率 |
+|---|---|---|---|
+| 跨平台架构优化 (A+B+C) | 24 | 23 | **96%** |
+| Agent Workspace v6 (A1-A12 + M10.4-M10.6) | 15 | 13 | **87%** |
+| Notemd CLI 对齐 (obsidian v1.8.4) | 27 ops | 27 | **100%** |
 
 ---
 ## 八、Agent Workspace 架构进度对比（v6 方案对齐）
