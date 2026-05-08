@@ -62,7 +62,7 @@ status: active
 | # | 行动 | 状态 | 证据 |
 |---|---|---|---|
 | C1 | 废弃 Capacitor 统一为 Tauri Android | ✅ 已交付 | README EN+ZH 已标记 deprecated |
-| C2 | ProGuard 规则文档 | ⏳ 未开始 | 低优先级 |
+| C2 | ProGuard 规则文档 | ✅ 已交付 | `docs/diataxis/(en\|zh)/how-to/android-release-build.md` |
 | C3 | v1.6.6 发布说明 | ✅ 已交付 | `docs/release_notes_v1.6.6.md` |
 | C4 | BILINGUAL_INDEX 更新 | ✅ 已交付 | 24 对，analysis_ref 已配对，TODO 已归档 |
 | C5 | analysis_ref.md 中译 | ✅ 已交付 | `docs/zh/analysis_ref.md`，过时引用已更新 |
@@ -534,10 +534,10 @@ notemd batch-workflow --path=notes/ --pattern="lecture-.*" --extensions=".md" --
 
 | 方案文档 | 总要求项 | 已完成 | 完成率 | 终态 |
 |---|---|---|---|---|---|
-| 跨平台架构优化 (A+B+C) | 24 | 23 | **96%** | C2 ProGuard 文档(低优)未完成 |
+| 跨平台架构优化 (A+B+C) | 24 | **24** | **100%** | ✅ C2 ProGuard 文档已交付 |
 | Agent Workspace v6 (A1-A12 + M10.4-M10.6) | 15 | **15** | **100%** | ✅ 全部闭环 |
 | Notemd CLI 对齐 (obsidian v1.8.4) | 27 ops | 27 | **100%** | ✅ 全部对齐 |
-| **总计** | **66** | **65** | **98.5%** | |
+| **总计** | **66** | **66** | **100%** | ✅ 全部交付 |
 
 ---
 ## 八、Agent Workspace 架构进度对比（v6 方案对齐）
