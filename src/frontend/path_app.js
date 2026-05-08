@@ -776,6 +776,7 @@ window.pathApp = {
     },
 
     _resolveBridgeTextProperty: function(element, propertyName) {
+        if (window._pathUtils) return window._pathUtils.resolveBridgeTextProperty(element, propertyName);
         let current = element;
         while (current) {
             const attributeValue = current.getAttribute && current.getAttribute(propertyName);

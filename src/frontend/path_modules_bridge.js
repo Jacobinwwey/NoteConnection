@@ -98,6 +98,20 @@
         return match && match[1] ? String(match[1]).trim() : null;
     }
 
+    function resolveBridgeTextProperty(element, propertyName) {
+        var current = element;
+        while (current) {
+            var attr = current.getAttribute && current.getAttribute(propertyName);
+            if (attr && String(attr).trim()) return String(attr).trim();
+            var styleVal = extractBridgeInlineStyleValue(
+                current.getAttribute && current.getAttribute('style'), propertyName
+            );
+            if (styleVal) return styleVal;
+            current = current.parentElement || null;
+        }
+        return null;
+    }
+
     function resolveBridgeSvgFontSize(element) {
         var current = element;
         while (current) {
@@ -164,6 +178,7 @@
             parseBridgeNumericAttribute: parseBridgeNumericAttribute,
             extractBridgeInlineStyleValue: extractBridgeInlineStyleValue,
             parseBridgeCssLength: parseBridgeCssLength,
+            resolveBridgeTextProperty: resolveBridgeTextProperty,
             resolveBridgeSvgFontSize: resolveBridgeSvgFontSize,
             resolveBridgeSvgLineHeight: resolveBridgeSvgLineHeight,
             estimateBridgeTextLineWidth: estimateBridgeTextLineWidth,
