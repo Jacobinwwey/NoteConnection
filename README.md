@@ -1856,37 +1856,14 @@ max_doc_bytes = 100663296
 
 ## Acknowledgments / 致谢
 
-This project's architecture and tooling draw deep inspiration from four outstanding open-source projects. We are grateful to their authors and maintainers for pioneering the patterns we build upon.
+Standing on the shoulders of these great projects. Thank you to their authors and maintainers!
 
-本项目架构及工具链深受以下四个优秀开源项目的深度启发，特此致谢：
+感谢以下优秀开源项目及其作者与维护者：
 
-### [obsidian-notemd](https://github.com/Jacobinwwey/obsidian-NotEMD) — Notemd Operations Engine
-
-The canonical source for Notemd's CLI operations, diagram generation pipeline, provider diagnostics, and search infrastructure. NoteConnection ports the full v1.8.4 operations registry (27 operations), rendering pipeline, and workflow engine from the Obsidian plugin sandbox into a standalone server-side TypeScript implementation.
-
-- **Adopted**: Operations registry (27 definitions), diagram pipeline (intent → planner → spec → render), provider diagnostics, DuckDuckGo/Tavily search providers, workflow pipeline (extract → wikilinks → generate → mermaid), CLI command parser, capability manifest
-- **Code**: `src/notemd/operations/`, `src/notemd/diagram/`, `src/notemd/cli/`, `src/notemd/search/`
-
-### [GitNexus](https://github.com/Compound-Engineering/GitNexus) — Compound Engineering Architecture
-
-The reference architecture for monorepo shared types, knowledge graph persistence, snapshot staleness tracking, and DAG-based ingestion pipelines. NoteConnection adopts the `shared/` contract boundary pattern, the snapshot staleness comparison pattern (savedAt vs file mtime), and the operational semantics adapter for graph backends.
-
-- **Adopted**: `src/shared/` contract types package (`@noteconnection/shared`), snapshot staleness diagnostics (`staleSince`/`fileMtime`), `KnowledgeGraphOpsAdapter` with capability negotiation (getCapabilities → probe → *ByOps), circuit breaker pattern for HTTP graphdb adapter
-- **Code**: `src/shared/types.ts`, `src/shared/package.json`, `src/learning/store.ts`
-
-### [DeepTutor](https://github.com/DeepTutor/DeepTutor) — Agent-Native Two-Layer Model
-
-The architectural inspiration for our two-layer operations model: **Tools** (stateless, single-function, safe for agent auto-execution) and **Capabilities** (stateful, multi-step, context-requiring). This maps directly to our operations registry where 18 tools are agent-auto-executable and 9 capabilities require user interaction.
-
-- **Adopted**: `CapabilityLevel` type (`'tool'` | `'capability'`), agent auto-execution eligibility (safe operations), capability negotiation in the operations registry, staged progress reporting with per-stage error isolation
-- **Code**: `src/notemd/operations/types.ts` (CapabilityLevel), `src/notemd/operations/registry.ts` (27 ops: 18 tools + 9 capabilities)
-
-### [cline](https://github.com/cline/cline) — Co-Located Test Architecture
-
-The pattern of placing contract/unit tests directly alongside their source modules, rather than in a separate `__tests__/` directory. This keeps test expectations close to implementation, reduces import path friction, and makes test coverage gaps immediately visible during code review.
-
-- **Adopted**: `registry.contract.test.ts` alongside `registry.ts`, `types.contract.test.ts` alongside `types.ts` in `src/shared/`. All 16 registry tests and 10 shared type tests follow this co-located pattern.
-- **Code**: `src/notemd/operations/registry.contract.test.ts`, `src/shared/types.contract.test.ts`
+- **[obsidian-notemd](https://github.com/Jacobinwwey/obsidian-NotEMD)** — the heart of our Notemd engine ❤️
+- **[GitNexus](https://github.com/Compound-Engineering/GitNexus)** — shared types, staleness tracking, and graph ops patterns
+- **[DeepTutor](https://github.com/DeepTutor/DeepTutor)** — agent-native two-layer model (Tools + Capabilities)
+- **[cline](https://github.com/cline/cline)** — co-located test architecture that keeps our tests close
 
 ## License / 开源许可
 
