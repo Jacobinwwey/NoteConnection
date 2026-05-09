@@ -1,0 +1,18 @@
+{
+  "name": "@noteconnection/shared",
+  "version": "2.9.0",
+  "description": "Shared contract types for NoteConnection — consumed by backend (.ts) and frontend (.mjs)",
+  "type": "module",
+  "main": "./types.ts",
+  "types": "./types.ts",
+  "exports": {
+    ".": "./types.ts",
+    "./types": "./types.ts"
+  },
+  "files": [
+    "types.ts",
+    "package.json"
+  ],
+  "license": "GPL-3.0-only",
+  "private": true
+}

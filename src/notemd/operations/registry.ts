@@ -566,6 +566,7 @@ const CLI_INVOCATION_CONTRACT_EXPORT_RESULT_SCHEMA: OperationSchema = {
 const OPERATION_DEFINITIONS: OperationDefinition[] = [
     {
         version: 1,
+        capabilityLevel: 'tool',
         id: 'provider.diagnostic.run',
         automationLevel: 'safe',
         requiredContext: 'none',
@@ -582,6 +583,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'tool',
         id: 'provider.diagnostic.stability-run',
         automationLevel: 'safe',
         requiredContext: 'none',
@@ -598,6 +600,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'tool',
         id: 'diagram.generate',
         automationLevel: 'safe',
         requiredContext: 'none',
@@ -624,6 +627,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'tool',
         id: 'diagram.preview',
         automationLevel: 'interactive-ui',
         requiredContext: 'preview-ui',
@@ -645,6 +649,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'tool',
         id: 'provider.connection.test',
         automationLevel: 'safe',
         requiredContext: 'none',
@@ -661,6 +666,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'tool',
         id: 'editor.create-link-and-generate',
         automationLevel: 'requires-selection',
         requiredContext: 'editor-selection',
@@ -677,6 +683,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'tool',
         id: 'file.process-add-links',
         automationLevel: 'requires-active-file',
         requiredContext: 'active-file',
@@ -693,6 +700,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'capability',
         id: 'file.process-folder-add-links',
         automationLevel: 'interactive-ui',
         requiredContext: 'folder-selection',
@@ -709,6 +717,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'capability',
         id: 'content.generate-from-title',
         automationLevel: 'requires-active-file',
         requiredContext: 'active-file',
@@ -725,6 +734,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'capability',
         id: 'content.batch-generate-from-titles',
         automationLevel: 'interactive-ui',
         requiredContext: 'folder-selection',
@@ -741,6 +751,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'capability',
         id: 'research.summarize-topic',
         automationLevel: 'requires-selection',
         requiredContext: 'editor-selection',
@@ -757,6 +768,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'tool',
         id: 'translate.file',
         automationLevel: 'requires-active-file',
         requiredContext: 'active-file',
@@ -773,6 +785,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'capability',
         id: 'translate.folder-batch',
         automationLevel: 'interactive-ui',
         requiredContext: 'folder-selection',
@@ -789,6 +802,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'capability',
         id: 'concept.extract-file',
         automationLevel: 'requires-active-file',
         requiredContext: 'active-file',
@@ -805,6 +819,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'capability',
         id: 'concept.extract-folder',
         automationLevel: 'interactive-ui',
         requiredContext: 'folder-selection',
@@ -821,6 +836,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'capability',
         id: 'content.extract-original-text',
         automationLevel: 'requires-active-file',
         requiredContext: 'active-file',
@@ -837,6 +853,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'capability',
         id: 'workflow.extract-and-generate',
         automationLevel: 'requires-active-file',
         requiredContext: 'active-file',
@@ -853,6 +870,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'capability',
         id: 'workflow.batch',
         automationLevel: 'interactive-ui',
         requiredContext: 'folder-selection',
@@ -869,6 +887,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'capability',
         id: 'duplicate.check-file',
         automationLevel: 'requires-active-file',
         requiredContext: 'active-file',
@@ -885,6 +904,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'capability',
         id: 'concept.dedupe',
         automationLevel: 'interactive-ui',
         requiredContext: 'folder-selection',
@@ -901,6 +921,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'capability',
         id: 'mermaid.batch-fix',
         automationLevel: 'interactive-ui',
         requiredContext: 'folder-selection',
@@ -917,6 +938,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'capability',
         id: 'formula.fix-file',
         automationLevel: 'requires-active-file',
         requiredContext: 'active-file',
@@ -933,6 +955,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'capability',
         id: 'formula.batch-fix',
         automationLevel: 'interactive-ui',
         requiredContext: 'folder-selection',
@@ -949,6 +972,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'capability',
         id: 'cli.capability-manifest.export',
         automationLevel: 'safe',
         requiredContext: 'none',
@@ -965,6 +989,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'tool',
         id: 'cli.invocation-contract.export',
         automationLevel: 'safe',
         requiredContext: 'none',
@@ -981,6 +1006,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'tool',
         id: 'provider.profile.export',
         automationLevel: 'safe',
         requiredContext: 'none',
@@ -997,6 +1023,7 @@ const OPERATION_DEFINITIONS: OperationDefinition[] = [
     },
     {
         version: 1,
+        capabilityLevel: 'tool',
         id: 'provider.profile.import',
         automationLevel: 'safe',
         requiredContext: 'none',
