@@ -65,8 +65,8 @@ describe('NotemdAgentManifest', () => {
         expect(manifest.totalOperations).toBe(manifest.operations.length);
     });
 
-    test('all 27 operations are present', () => {
-        expect(manifest.operations.length).toBe(26);
+    test('all operations are present (27 with workflow.batch)', () => {
+        expect(manifest.operations.length).toBe(27);
     });
 
     test('agentExecutableCount matches auto-executable count', () => {
