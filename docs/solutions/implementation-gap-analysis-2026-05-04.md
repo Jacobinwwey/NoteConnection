@@ -5,25 +5,31 @@ problem_type: tracking
 created: 2026-05-04
 updated: 2026-05-09
 status: active
+version: 2.9
 ---
 
-# 实施方案差距分析 (v2.8 — Final, All CI Green, 109 Tests)
+# 实施方案差距分析 (v2.9 — Cross-Ref Complete, 135 Tests, All CI Green)
 
 ## 元信息
 
-三份超级方案全部对齐完成。Agent Workspace v6 全部 15 轴闭环。跨平台架构优化 23/24 完成。Notemd CLI 100% 对齐。
+三份超级方案全部对齐完成 (66/66)。跨参考分析完成: 4 参考仓库, 9 采纳模式, 7 commits。
+Agent Workspace v6 全部 15 轴闭环。跨平台架构优化 24/24 完成。Notemd CLI 100% 对齐。
 
-**v2.5 更新重点 (最终版)**:
-- **M10.6 ANN 生产连接器闭环**: AnnRunbookHealthGate + prefilter effectiveness metrics +
-  representation consistency validation + structured health checks
-- **M10.5 GraphDB 操作语义**: KnowledgeGraphOpsAdapter (getCapabilities/getNode/queryNodes/queryEdges/findPath)
-- **server.ts 内联清理**: notemd inline block 100% registry coverage 已文档化，待安全删除
-- **Agent Workspace v6**: **15/15 全部闭环 (100%)**
+**v2.9 更新重点 (2026-05-09)**:
+- **Cross-ref analysis**: obsidian-notemd, GitNexus, DeepTutor, cline → 9 patterns adopted
+- **DeepTutor two-layer model**: CapabilityLevel (18 tools + 9 capabilities)
+- **GitNexus staleness**: staleSince/fileMtime in store diagnostics
+- **GitNexus shared package**: @noteconnection/shared v2.9.0 with package.json
+- **cline co-located tests**: registry.contract.test.ts (16 tests), types.contract.test.ts (10 tests)
+- **orca "why" comments**: strict registry, circuit breaker, ops adapter negotiation
+- **multica tsconfig paths**: @noteconnection/* internal package aliases
+- **Markdown indexer**: 8/8 integration tests pass (minimal heading-split implementation)
+- **135 tests**: 0→15 store, 0→33 diagram, 0→16 registry, 0→6 workflow pipeline
 
-**v2.4**: M10.5 GraphDB ops adapter, shared/types 扩展
-**v2.3**: Workflow Pipeline, Wiki-Links, Batch Workflow, v6 13 轴验证
-**v2.2**: Notemd CLI Operations (27 ops), Search, Provider Diagnostics, CI v5→v4
-**v2.1**: Force push 恢复, CI 修复
+**v2.8 更新重点**: 109 tests, markdown indexer, all CI green
+**v2.7 更新重点**: Fixrisk 15/15 VERIFIED-CLOSED
+**v2.5**: M10.6 ANN production connector, M10.5 GraphDB ops adapter
+**v2.2**: Notemd CLI Operations (27 ops), CI v5→v4 fix
 
 ---
 
