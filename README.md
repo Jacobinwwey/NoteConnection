@@ -1854,6 +1854,22 @@ max_doc_bytes = 100663296
 - [x] **Canvas 渲染器**: 添加 HTML5 Canvas 支持以实现高性能。
 - [x] **Worker 扩展**: 将线程限制增加到 12。
 
+## Acknowledgments / 致谢
+
+This project's architecture and tooling draw inspiration from several outstanding open-source projects. We are grateful to their authors and maintainers.
+
+本项目架构及工具链深受以下优秀开源项目的启发，特此致谢：
+
+| Repo | Inspiration / 启发点 | Link |
+|------|---------------------|------|
+| **obsidian-notemd** | Notemd CLI operations, diagram pipeline, provider diagnostics | [Jacobinwwey/obsidian-NotEMD](https://github.com/Jacobinwwey/obsidian-NotEMD) |
+| **GitNexus** | Shared types monorepo, snapshot staleness, DAG pipeline architecture | [Compound-Engineering/GitNexus](https://github.com/Compound-Engineering/GitNexus) |
+| **paseo** | CI_STATUS.md tracking, test status visibility | [paseo/paseo](https://github.com/paseo/paseo) |
+| **DeepTutor** | Two-layer plugin model (Tools + Capabilities), agent-native architecture | [DeepTutor/DeepTutor](https://github.com/DeepTutor/DeepTutor) |
+| **cline** | Co-located test patterns (source + test side-by-side) | [cline/cline](https://github.com/cline/cline) |
+| **orca** | "Why" comment conventions, Electron multi-platform build | [orca-app/orca](https://github.com/orca-app/orca) |
+| **multica** | Internal packages (raw .ts export), dependency direction, daemon architecture | [multica-ai/multica](https://github.com/multica-ai/multica) |
+
 ## License / 开源许可
 
 This project is licensed under the **GNU General Public License v3.0 (GPL-3.0-only)**.
