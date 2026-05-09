@@ -8,7 +8,16 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@noteconnection/shared": ["src/shared/types.ts"],
+      "@noteconnection/shared/*": ["src/shared/*"],
+      "@noteconnection/notemd": ["src/notemd/index.ts"],
+      "@noteconnection/notemd/*": ["src/notemd/*"],
+      "@noteconnection/learning": ["src/learning"],
+      "@noteconnection/learning/*": ["src/learning/*"]
+    }
   },
   "include": ["src/**/*", "amdgpu/**/*"]
 }

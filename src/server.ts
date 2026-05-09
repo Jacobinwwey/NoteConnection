@@ -13049,9 +13049,13 @@ export const startServer = async (options: { port?: number, targetPath?: string 
     }
 
     // --- Strict Registry Mode ---
-    // When set, notemd inline fallback handlers return 501 instead of serving.
-    // This verifies 100% registry coverage before safe deletion of inline code.
-    // Set NOTE_CONNECTION_STRICT_REGISTRY=1 in CI to enforce registry-only routing.
+    // Why: The inline notemd handlers (~1,147 lines) are a legacy fallback from
+    // the pre-modularization era. The route registry intercepts all covered routes
+    // first (line ~13170), making the inline handlers unreachable in production.
+    // This flag lets us verify 100% coverage in CI before safe deletion.
+    // Conditional (off by default): integration tests start the server without
+    // full registry init and depend on the inline fallback. Once all tests use
+    // the registry, this becomes default and inline handlers can be deleted.
     const STRICT_REGISTRY = process.env.NOTE_CONNECTION_STRICT_REGISTRY === '1';
 
     // --- Route Registry (modular dispatch for extracted route groups) ---

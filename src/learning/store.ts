@@ -396,6 +396,11 @@ export interface GraphDbSnapshotAdapter {
     [extra: string]: unknown;
 }
 
+// Why ops-capable detection: Some graphdb adapters support fine-grained operations
+// (getNode, queryEdges, findPath) in addition to full-snapshot load/save. We detect
+// this via capability negotiation: check for *ByOps methods + explicit opsCapable flag
+// or getCapabilities().mode. This allows the same store interface to serve both
+// simple file-backed stores and advanced graphdb backends without changing callers.
 function hasOpsCapablePath(adapter: GraphDbSnapshotAdapter): boolean {
     const hasMethods = typeof adapter.loadSnapshotByOps === 'function'
         && typeof adapter.saveSnapshotByOps === 'function';
@@ -497,6 +502,12 @@ export function createGraphDbSnapshotAdapter(options?: Record<string, unknown>):
             return res;
         };
 
+        // Why circuit breaker: The HTTP graphdb adapter can fail transiently (network
+        // blips, backend restarts). Without a circuit breaker, every request would
+        // attempt the failing backend, causing latency spikes and cascading failures.
+        // After `circuitThreshold` consecutive failures, the circuit opens: subsequent
+        // requests fail immediately (fail-fast) instead of waiting for timeouts.
+        // This is the standard "fail-fast under proven failure" pattern (Netflix Hystrix).
         const circuitThreshold = (options?.httpCircuitFailureThreshold as number) ?? (options as any).httpCircuitFailureThreshold ?? 3;
         const circuitCooldown = (options?.httpCircuitCooldownMs as number) ?? 8000;
         const adapterId = (options?.id ?? options?.adapterId ?? options?.httpAdapterId ?? 'http-graphdb') as string;
