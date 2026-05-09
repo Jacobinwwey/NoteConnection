@@ -7,7 +7,7 @@ updated: 2026-05-09
 status: active
 ---
 
-# 实施方案差距分析 (v2.7 — All CI Green)
+# 实施方案差距分析 (v2.8 — Final, All CI Green, 109 Tests)
 
 ## 元信息
 
@@ -549,7 +549,7 @@ notemd batch-workflow --path=notes/ --pattern="lecture-.*" --extensions=".md" --
 | **Diagram Pipeline 文件** | **0** | **7 files** | 🆕 v2.3 |
 | **CLI 命令模块** | **0** | **5 files** | 🆕 v2.3 |
 | Agent Workspace v6 轴验证 | 11/13 | **13/13 validated** | 🆕 v2.3 |
-| Notemd 测试 | 26/29 | **28/29** | +2 restored |
+| Notemd 测试 | 26/29 | **107/109** | +81 (11 test files) |
 
 ### 累计完成度矩阵 (v2.4)
 
