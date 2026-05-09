@@ -89,6 +89,10 @@ export interface KnowledgeGraphStoreDiagnostics {
     graphDbSupportedReadOperations?: string[];
     graphDbSupportedWriteOperations?: string[];
     graphDbLastSnapshotMetadata?: Record<string, unknown>;
+    /** Staleness tracking (GitNexus pattern): ISO timestamp when file became newer than last save. */
+    staleSince?: string;
+    /** File mtime for staleness comparison. */
+    fileMtime?: string;
 }
 
 export interface KnowledgeGraphStore {
@@ -333,6 +337,17 @@ export class FileBackedKnowledgeGraphStore implements KnowledgeGraphOpsAdapter {
     public getDiagnostics(): KnowledgeGraphStoreDiagnostics {
         const filePath = path.resolve(this.options.filePath);
         const caps = this.getCapabilities();
+        // Staleness tracking (GitNexus pattern): compare snapshot save time to file mtime
+        let staleSince: string | undefined;
+        let fileMtime: string | undefined;
+        try {
+            const stat = fs.statSync(filePath);
+            fileMtime = stat.mtime.toISOString();
+            if (this.lastSaveAt && stat.mtime > new Date(this.lastSaveAt)) {
+                staleSince = stat.mtime.toISOString();
+            }
+        } catch { /* file may not exist yet */ }
+
         return {
             storeType: 'file',
             location: filePath,
@@ -344,6 +359,8 @@ export class FileBackedKnowledgeGraphStore implements KnowledgeGraphOpsAdapter {
             adapterId: 'file-backed-ops',
             graphDbOperationMode: caps.serverSideQuery ? 'server-side-query' : 'snapshot-with-ops',
             backendReady: this.loaded,
+            staleSince,
+            fileMtime,
         };
     }
 }
