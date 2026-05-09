@@ -263,3 +263,46 @@ export interface NotemdAgentManifest {
     agentExecutableCount: number;
     operations: NotemdAgentOperation[];
 }
+
+// ── CI & Infrastructure Contracts (GitNexus cross-ref pattern) ──
+
+/**
+ * CI gate status contract — shared between CI workflows and
+ * runtime diagnostics dashboard.
+ */
+export interface CiGateStatusContract {
+    gate: string;
+    workflow: string;
+    status: 'pass' | 'fail' | 'in_progress' | 'skipped';
+    lastRunAt: string;
+    lastRunSha: string;
+    url?: string;
+}
+
+/**
+ * CI dashboard contract — complete CI health snapshot.
+ */
+export interface CiDashboardContract {
+    generatedAt: string;
+    gates: CiGateStatusContract[];
+    summary: {
+        total: number;
+        passed: number;
+        failed: number;
+    };
+}
+
+/**
+ * Snapshot staleness contract — shared between store diagnostics
+ * and frontend staleness indicators (GitNexus pattern).
+ */
+export interface SnapshotStalenessContract {
+    /** ISO timestamp of last snapshot save. */
+    lastSaveAt?: string;
+    /** ISO timestamp when the underlying file became newer than the save. */
+    staleSince?: string;
+    /** Current file mtime for comparison. */
+    fileMtime?: string;
+    /** Whether the snapshot is stale (file modified after last save). */
+    isStale: boolean;
+}

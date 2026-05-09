@@ -12,10 +12,10 @@ describe('shared types module', () => {
         expect(fs.existsSync(typesFile)).toBe(true);
     });
 
-    test('shared types file is under 300 lines (contract boundary discipline, v2.3 expanded for notemd)', () => {
+    test('shared types file is under 350 lines (contract boundary discipline, v2.9 expanded for CI contracts)', () => {
         const source = fs.readFileSync(typesFile, 'utf8');
         const lines = source.split('\n').length;
-        expect(lines).toBeLessThan(300);
+        expect(lines).toBeLessThan(350);
     });
 
     test('shared types file contains canonical contract documentation', () => {
@@ -64,5 +64,20 @@ describe('shared types module', () => {
         expect(source).toContain('SearchResultContract');
         expect(source).toContain('DiagramGenerationContract');
         expect(source).toContain('NotemdSettingsContract');
+    });
+
+    test('shared types defines CI and Infrastructure contracts (GitNexus pattern)', () => {
+        const source = fs.readFileSync(typesFile, 'utf8');
+        expect(source).toContain('CiGateStatusContract');
+        expect(source).toContain('CiDashboardContract');
+        expect(source).toContain('SnapshotStalenessContract');
+    });
+
+    test('SnapshotStalenessContract has staleness tracking fields', () => {
+        const source = fs.readFileSync(typesFile, 'utf8');
+        expect(source).toContain('lastSaveAt');
+        expect(source).toContain('staleSince');
+        expect(source).toContain('fileMtime');
+        expect(source).toContain('isStale');
     });
 });
