@@ -106,4 +106,50 @@ describe('CLI Commands Registry', () => {
             }
         }
     });
+
+    test('all commands have unique names', () => {
+        const cmds = listCommands();
+        const names = cmds.map(c => c.name);
+        const unique = new Set(names);
+        expect(unique.size).toBe(names.length);
+    });
+
+    test('command aliases do not collide with command names', () => {
+        const cmds = listCommands();
+        const names = new Set(cmds.map(c => c.name));
+        for (const cmd of cmds) {
+            for (const alias of cmd.aliases) {
+                expect(names.has(alias)).toBe(false);
+            }
+        }
+    });
+});
+
+describe('CLI Help Output', () => {
+    test('every command has a non-empty description', () => {
+        for (const cmd of listCommands()) {
+            expect(cmd.description.length).toBeGreaterThan(0);
+        }
+    });
+
+    test('every command has at least one alias or uses the primary name', () => {
+        for (const cmd of listCommands()) {
+            expect(cmd.name.length).toBeGreaterThan(0);
+            expect(Array.isArray(cmd.aliases)).toBe(true);
+        }
+    });
+
+    test('automation level is valid for all commands', () => {
+        const valid = ['safe', 'requires-active-file', 'requires-selection', 'interactive-ui'];
+        for (const cmd of listCommands()) {
+            expect(valid).toContain(cmd.automationLevel);
+        }
+    });
+
+    test('side effect class is valid for all commands', () => {
+        const valid = ['read-only', 'write-file', 'batch-write', 'preview-ui', 'destructive'];
+        for (const cmd of listCommands()) {
+            expect(valid).toContain(cmd.sideEffectClass);
+        }
+    });
 });
