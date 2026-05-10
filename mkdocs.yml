@@ -47,12 +47,16 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Working Docs:
+      - Brainstorms: brainstorms/index.md
+      - Solutions: solutions/index.md
   - English:
       - Diataxis Overview: diataxis/en/overview.md
       - Tutorials:
           - First Run: diataxis/en/tutorials/first-run.md
       - How-To Guides:
           - Build and Export: diataxis/en/how-to/build-and-export.md
+          - Bootstrap Godot Sidecar: diataxis/en/how-to/bootstrap-godot-sidecar.md
           - Publish Docs to GitHub Pages: diataxis/en/how-to/publish-docs-github-pages.md
           - Single Window Runtime: diataxis/en/how-to/single-window-runtime.md
           - Configure app_config.toml: diataxis/en/how-to/configure-app-config.md
@@ -60,18 +64,23 @@ nav:
       - Reference:
           - Interfaces and Runtime: diataxis/en/reference/interfaces-and-runtime.md
           - Godot + NoteMD + Markdown Interfaces: diataxis/en/reference/godot-notemd-markdown-interfaces.md
+          - Multi-Platform Build Flows: diataxis/en/reference/multi-platform-build-flows.md
           - Release and Governance: diataxis/en/reference/release-and-governance.md
           - app_config.toml Schema: diataxis/en/reference/app-config-schema.md
       - Explanation:
           - Architecture and Migration: diataxis/en/explanation/architecture-and-migration.md
+          - Git LFS Asset Migration: diataxis/en/explanation/git-lfs-asset-migration.md
+          - Sidecar Supply Feasibility: diataxis/en/explanation/sidecar-supply-feasibility.md
           - Startup Node Update Acceleration Plan: diataxis/en/explanation/startup-node-update-acceleration-plan.md
           - Knowledge Mastery Evolution Roadmap: diataxis/en/explanation/knowledge-mastery-evolution-roadmap.md
+          - Development Progress Dashboard: diataxis/en/explanation/development-progress-dashboard.md
   - 中文:
       - Diataxis 概览: diataxis/zh/overview.md
       - 教程:
           - 首次运行: diataxis/zh/tutorials/first-run.md
       - 操作指南:
           - 构建与导出: diataxis/zh/how-to/build-and-export.md
+          - 引导 Godot Sidecar: diataxis/zh/how-to/bootstrap-godot-sidecar.md
           - 发布文档到 GitHub Pages: diataxis/zh/how-to/publish-docs-github-pages.md
           - 单窗口运行时: diataxis/zh/how-to/single-window-runtime.md
           - 配置 app_config.toml: diataxis/zh/how-to/configure-app-config.md
@@ -79,9 +88,13 @@ nav:
       - 参考:
           - 接口与运行时: diataxis/zh/reference/interfaces-and-runtime.md
           - Godot + NoteMD + Markdown 接口: diataxis/zh/reference/godot-notemd-markdown-interfaces.md
+          - 多平台构建流程: diataxis/zh/reference/multi-platform-build-flows.md
           - 发布与治理: diataxis/zh/reference/release-and-governance.md
           - app_config.toml 结构: diataxis/zh/reference/app-config-schema.md
       - 解释:
           - 架构与迁移: diataxis/zh/explanation/architecture-and-migration.md
+          - Git LFS 资产迁移: diataxis/zh/explanation/git-lfs-asset-migration.md
+          - Sidecar 供给可行性: diataxis/zh/explanation/sidecar-supply-feasibility.md
           - 启动节点更新提速方案: diataxis/zh/explanation/startup-node-update-acceleration-plan.md
           - 知识彻底掌握演进路线图: diataxis/zh/explanation/knowledge-mastery-evolution-roadmap.md
+          - 开发进度看板: diataxis/zh/explanation/development-progress-dashboard.md

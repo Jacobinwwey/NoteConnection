@@ -1,0 +1,83 @@
+/**
+ * Shared types contract test — validates shared type module integrity.
+ */
+import * as path from 'path';
+import * as fs from 'fs';
+
+describe('shared types module', () => {
+    const sharedDir = path.resolve(__dirname);
+    const typesFile = path.join(sharedDir, 'types.ts');
+
+    test('shared types file exists on disk', () => {
+        expect(fs.existsSync(typesFile)).toBe(true);
+    });
+
+    test('shared types file is under 350 lines (contract boundary discipline, v2.9 expanded for CI contracts)', () => {
+        const source = fs.readFileSync(typesFile, 'utf8');
+        const lines = source.split('\n').length;
+        expect(lines).toBeLessThan(350);
+    });
+
+    test('shared types file contains canonical contract documentation', () => {
+        const source = fs.readFileSync(typesFile, 'utf8');
+        expect(source).toContain('Shared contract types');
+        expect(source).toContain('single source of truth');
+        expect(source).toContain('API contract boundary');
+    });
+
+    test('shared types re-exports from learning/types', () => {
+        const source = fs.readFileSync(typesFile, 'utf8');
+        expect(source).toContain("from '../learning/types'");
+        // Verify key contract types are re-exported
+        expect(source).toContain('KnowledgeAtom');
+        expect(source).toContain('KnowledgeQueryRequest');
+        expect(source).toContain('KnowledgeQueryResponse');
+        expect(source).toContain('AgentConversationRequest');
+        expect(source).toContain('AgentConversationResponse');
+    });
+
+    test('shared types defines RuntimeCapabilityContract', () => {
+        const source = fs.readFileSync(typesFile, 'utf8');
+        expect(source).toContain('RuntimeCapabilityContract');
+        expect(source).toContain('capabilityId');
+        expect(source).toContain('status');
+    });
+
+    test('shared types defines AgentWorkspaceContract', () => {
+        const source = fs.readFileSync(typesFile, 'utf8');
+        expect(source).toContain('AgentWorkspaceContract');
+        expect(source).toContain('conversationId');
+        expect(source).toContain('activePaneId');
+    });
+
+    test('shared types defines Notemd CLI and workflow contracts', () => {
+        const source = fs.readFileSync(typesFile, 'utf8');
+        expect(source).toContain('NotemdCliOperationContract');
+        expect(source).toContain('NotemdCliInvocationContract');
+        expect(source).toContain('NotemdWorkflowStageContract');
+        expect(source).toContain('NotemdWorkflowResultContract');
+    });
+
+    test('shared types defines Search and Diagram contracts', () => {
+        const source = fs.readFileSync(typesFile, 'utf8');
+        expect(source).toContain('SearchResultItemContract');
+        expect(source).toContain('SearchResultContract');
+        expect(source).toContain('DiagramGenerationContract');
+        expect(source).toContain('NotemdSettingsContract');
+    });
+
+    test('shared types defines CI and Infrastructure contracts (GitNexus pattern)', () => {
+        const source = fs.readFileSync(typesFile, 'utf8');
+        expect(source).toContain('CiGateStatusContract');
+        expect(source).toContain('CiDashboardContract');
+        expect(source).toContain('SnapshotStalenessContract');
+    });
+
+    test('SnapshotStalenessContract has staleness tracking fields', () => {
+        const source = fs.readFileSync(typesFile, 'utf8');
+        expect(source).toContain('lastSaveAt');
+        expect(source).toContain('staleSince');
+        expect(source).toContain('fileMtime');
+        expect(source).toContain('isStale');
+    });
+});

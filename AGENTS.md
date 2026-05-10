@@ -2,13 +2,21 @@
 
 ## Project Structure & Module Organization
 
-- `src/`: TypeScript backend + graph/layout core. Main entry points are `src/server.ts` (CLI + HTTP server) and `src/index.ts` (graph build APIs). Contains bridging logic (`PathBridge.ts`) and algorithm components.
-- `src/frontend/`: Static UI (HTML/CSS/vanilla JS). Employs Web Workers (`path_worker.js`, `graph_worker.js`) to offload expensive graph rendering and D3 physics simulations to background threads. Includes datasets like `data.js` and `graph_data.json` (excluded in “mini” builds).
-- `path_mode/`: Godot 4.3 UI layer for the "Future Path" visualizations. Uses Godot WebSockets to synchronize graph data (`PathEngine`) rendered locally within standard GDScript nodes (`tree_renderer.gd`, `path_mode_ui.gd`).
-- `src-tauri/`: Tauri (Rust) desktop shell. Configuration lives in `src-tauri/tauri.conf.json`; sidecar binaries live in `src-tauri/bin/`.
-- `scripts/`: Build helpers (asset copying, path-core bundling via `bundle_path_core.js`, smoke tests).
-- `android/`: Capacitor Android project (APK build output is under `android/app/build/...`).
-- `dist/`: Generated build output from `tsc` and asset bundling (do not edit by hand).
+- `src/`: TypeScript backend + graph/layout core. Main entry points are `src/server.ts` (CLI + HTTP server) and `src/index.ts` (graph build APIs).
+  - `src/routes/`: Modular API route handlers (knowledge, notemd, markdown, render, settings, diagnostics, data). Routes are registered via `registerAllRoutes()` and dispatched before the server.ts inline chain.
+  - `src/middleware/`: HTTP middleware (CORS, auth, body-parser, request-trace).
+  - `src/core/`: Bridging logic (`PathBridge.ts`), graph data structures, path/layout engines.
+  - `src/backend/`: Graph construction pipeline, algorithms, workers.
+  - `src/learning/`: Knowledge learning platform. `api.ts` defines 31 typed interfaces; `KnowledgeLearningPlatform.ts` implements them. `domains/` contains 7 domain classes (`KnowledgeIngestor`, `KnowledgeQuerier`, `ConversationManager`, `MasteryEngine`, `QualityEvaluator`, `TutorRouter`, `MemoryPolicyManager`) with `*Platform` interfaces for gradual extraction.
+  - `src/notemd/`: NoteMD LLM-powered Markdown processing.
+  - `src/utils/`: Runtime path resolution (`RuntimePaths.ts`), cross-platform detection (`platform.ts`).
+- `src/frontend/`: Static UI (HTML/CSS/vanilla JS + ES modules). Employs Web Workers (`path_worker.js`, `simulationWorker.js`) to offload rendering and physics. Uses Vite for ES module bundling (6 chunks: main, graph-app, graph-state, agent-workspace, path-mode, path-workbench, path-worker). Extracted ES modules: `i18n.mjs`, `runtime_bridge.mjs`, `main.mjs`, `path_worker_bridge.mjs`, `workbench_state.mjs`, `graph_state.mjs`. Legacy IIFE files (`.js`) coexist with ES module versions (`.mjs`).
+- `path_mode/`: Godot 4.3 UI layer (Forward+ Vulkan renderer, GL Compatibility fallback for mobile).
+- `src-tauri/`: Tauri v2 (Rust) desktop shell. Platform configs at `tauri.{linux,macos,windows,android}.conf.json`; sidecar binaries at `bin/`.
+- `scripts/`: Build helpers (~50 scripts: sidecar build, verification, benchmarking, docs).
+- `android/`: Capacitor Android project (deprecated; Tauri Android is the active mobile path).
+- `dist/`: Generated build output from `tsc`, `vite build`, and asset bundling.
+- `docs/`: Diataxis-framework bilingual docs (EN/ZH). Solutions in `docs/solutions/`, archive in `docs/archive/`.
 
 ## Build, Test, and Development Commands
 
@@ -16,16 +24,24 @@ This repo is TypeScript/Node-first integrated with Tauri/Godot. (CI uses Node.js
 
 ```bash
 npm install            # install dependencies
-npm run build          # compile tsc -> dist/ + bundle frontend assets (path_core.js)
+npm run build          # tsc + copy assets + bundle path_core.js
+npm run build:vite     # Vite frontend build (ES module bundling)
+npm run build:with-vite # full build (tsc + vite)
 npm start              # dev server at http://localhost:3000
+npm run dev:vite       # Vite dev server (HMR, proxy to :3000)
 npm test               # jest (ts-jest) test runner
 
 npm run tauri:dev      # Tauri dev (runs build + sidecar build)
-npm run tauri:dev:mini # Tauri dev without huge graph payloads
-npm run build:sidecar  # pkg -> src-tauri/bin/server-windows...exe
+npm run tauri:build    # Tauri production build + sidecar packaging
+npm run build:sidecar  # pkg -> src-tauri/bin/server-{target-triple}
 ```
 
-Android (Windows): run `build_apk.bat` (requires Node.js, Java JDK 17+, and Android SDK).
+Mobile (Tauri Android, recommended):
+```bash
+npm run tauri:android:init    # first-time setup
+npm run tauri:android:dev     # dev build
+npm run tauri:android:build   # release APK/AAB
+```
 
 ## Coding Style & Architectural Conventions
 
@@ -43,6 +59,26 @@ Android (Windows): run `build_apk.bat` (requires Node.js, Java JDK 17+, and Andr
 - Reader runtime guardrail: on Markdown reader open, run lightweight self-check and auto-heal `$$```mermaid` to `$$` + newline + ` ```mermaid` before rendering.
 - Godot Mermaid runtime path must use renderer preference that allows fallback (`auto`), so missing frontend bridge does not break diagram display.
 - Any interface/runtime change touching markdown parsing or Mermaid rendering must preserve this baseline and re-verify it on `Knowledge_Base/testconcept`.
+
+## Domain Diagnostics Panel
+
+The `GET /api/runtime-diagnostics` endpoint exposes runtime metrics from all 7 domain classes under the `domains` key:
+
+```json
+{
+  "domains": {
+    "ingest":      { "ingestCount", "averageIngestLatencyMs", "stalenessQueryCount", ... },
+    "query":       { "queryCount", "cacheHitRate", "latencyP95Ms", "fallbackCount", ... },
+    "conversation": { "turnCount", "averageResponseLatencyMs", "memoryOperations", ... },
+    "mastery":     { "pathGenerationCount", "sessionExecutionCount", ... },
+    "quality":     { "evaluationCount", "recentPassRate", "snapshotCount", ... },
+    "tutor":       { "actionExecutionCount", "actionKindDistribution", ... },
+    "memory":      { "policyApplicationCount", "policyLayerDistribution", ... }
+  }
+}
+```
+
+Route migration metrics (`routeMigration.registryHitRate`) and global route count (`routeMigration.totalModularRoutes: 65`) are also exposed.
 
 ## Testing Guidelines
 

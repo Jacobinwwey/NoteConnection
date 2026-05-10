@@ -801,4 +801,68 @@
       );
     }
   });
+
+  // ── Agent Tools: fetch & render CLI capability manifest ──
+  async function loadAgentTools() {
+    const grid = document.getElementById('agent-tools-grid');
+    const badge = document.getElementById('agent-op-count');
+    if (!grid || !badge) return;
+
+    try {
+      const res = await fetch('/api/notemd/agent-manifest');
+      if (!res.ok) throw new Error('agent-manifest fetch failed: ' + res.status);
+      const data = await res.json();
+      const manifest = data.manifest;
+      if (!manifest || !Array.isArray(manifest.operations)) return;
+
+      badge.textContent = manifest.agentExecutableCount + ' auto / ' + manifest.totalOperations + ' total';
+
+      const safeLabel = function (level) {
+        switch (level) {
+          case 'safe': return 'auto';
+          case 'requires-active-file': return 'file';
+          case 'requires-selection': return 'select';
+          case 'interactive-ui': return 'ui';
+          default: return level;
+        }
+      };
+
+      manifest.operations.forEach(function (op) {
+        var card = document.createElement('div');
+        card.className = 'agent-tool-card' + (op.agentAutoExecutable ? ' auto-exec' : '');
+        card.title = op.operationId + '\nContext: ' + op.requiredContext + '\nSide Effects: ' + op.sideEffectClass;
+
+        var header = document.createElement('div');
+        header.className = 'agent-tool-header';
+
+        var name = document.createElement('span');
+        name.className = 'agent-tool-name';
+        name.textContent = op.description;
+
+        var level = document.createElement('span');
+        level.className = 'agent-tool-level level-' + op.automationLevel;
+        level.textContent = safeLabel(op.automationLevel);
+
+        var params = document.createElement('div');
+        params.className = 'agent-tool-params';
+        if (op.requiredParams.length > 0) {
+          params.textContent = 'params: ' + op.requiredParams.join(', ');
+        } else {
+          params.textContent = 'no required params';
+        }
+
+        header.appendChild(name);
+        header.appendChild(level);
+        card.appendChild(header);
+        card.appendChild(params);
+        grid.appendChild(card);
+      });
+
+      appendLog('Agent Tools: loaded ' + manifest.totalOperations + ' operations (' + manifest.agentExecutableCount + ' auto-executable)', 'info');
+    } catch (error) {
+      appendLog('Agent Tools failed: ' + (error instanceof Error ? error.message : String(error)), 'warn');
+    }
+  }
+
+  loadAgentTools();
 })();

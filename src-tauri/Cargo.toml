@@ -2,6 +2,7 @@
 name = "npm"
 version = "0.1.0"
 description = "A Tauri App"
+license = "GPL-3.0-only"
 authors = ["you"]
 edition = "2021"
 

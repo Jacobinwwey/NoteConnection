@@ -1,9 +1,48 @@
-
-# 2026-03-24 v1.6.0
-# 接口文档 (v1.6.0)
+# 2026-04-07 v1.7.0
+# 接口文档 (v1.7.0)
 
 本文件是当前代码状态下的权威接口交接文档。
 本版不是在旧文档上追加，而是按源码核对后重建。
+
+## 0.0 多平台构建契约补充（v1.7.0）
+
+本补充段专门固化当前 Git LFS 迁移和跨平台交付安全所依赖的构建/运行时契约。
+
+配套权威文档：
+
+- `docs/zh/lfs_asset_migration_plan.md`
+- `docs/zh/multi_platform_build_flow_audit.md`
+- `docs/zh/sidecar_supply_strategy.md`
+
+当前构建契约结论：
+
+- 默认前端构建契约已经是 `npm run build` 对应的 runtime-first。
+- 显式 full-mode 仍被支持，而且桌面 `tauri:build:full` 现在会通过 `scripts/run-tauri-frontend-build.js` 穿过 Tauri `beforeBuildCommand` 保留 full-mode。
+- Android 构建工具链的当前基线是 JDK 21+，无论是本地 helper 校验还是 CI/release 都以此为准。
+- Capacitor 打包与 Tauri Android 打包必须和“移动端运行时能力”分开看：
+  - 在具备 Filesystem API 时，Capacitor 原生运行时可本地图谱构建。
+  - Tauri Android 运行时暴露原生命令 `build_graph_runtime`，并上报 `supports_build=true`。
+- 桌面 sidecar/bootstrap 仍是当前有效的构建契约；现阶段迁移方向是加固供给链，而不是删除这套架构。
+- 当前 Godot bootstrap 在下载契约层已经是 provider-neutral：固定摘要的 GitHub Releases URL 与通用 HTTPS 对象存储镜像 URL 都能落在同一套 URL + SHA256 + cache 模型中。
+- release CI 现在也加入了一个最小 Godot 镜像切片：会维护项目自控的 GitHub Releases 镜像 tag，并以“镜像优先、上游回退”方式下载，作为迁移期的安全护栏。
+
+本补充段已核对的构建面文件：
+
+- `package.json`
+- `build_apk.bat`
+- `capacitor.config.ts`
+- `scripts/copy-assets.js`
+- `scripts/run-tauri-build.js`
+- `scripts/run-tauri-frontend-build.js`
+- `scripts/run-tauri-android.js`
+- `scripts/verify-tauri-android-prereqs.js`
+- `src-tauri/tauri.conf.json`
+- `src-tauri/tauri.android.conf.json`
+- `src-tauri/src/lib.rs`
+- `src/frontend/storage_provider.js`
+- `src/frontend/source_manager.js`
+- `.github/workflows/release-desktop-multi-os.yml`
+- `.github/workflows/npm-publish.yml`
 
 ## 0. 开发前速查入口（Godot + NoteMD + Markdown）
 

@@ -33,7 +33,7 @@ export type LearningActionKind =
     | 'counterexample'
     | 'reflection';
 
-export type TutorActionKind = 'generate_quiz' | 'analyze_answer' | 'follow_up' | 'recap';
+export type TutorActionKind = 'generate_quiz' | 'analyze_answer' | 'follow_up' | 'recap' | 'generate_transfer' | 'generate_counterexample';
 
 export type MemoryLayer = 'session' | 'unit' | 'long_term';
 
@@ -226,6 +226,7 @@ export interface KnowledgeQueryRequest {
     query: string;
     topK?: number;
     asOf?: string;
+    queryBackend?: 'local_hybrid' | 'keyword_only' | 'local_vector' | string;
 }
 
 export interface KnowledgeQueryItem {
@@ -313,6 +314,8 @@ export interface LearningPathRequest {
     maxMasteryPaths?: number;
     maxDivergencePaths?: number;
     generatedAt?: string;
+    strategy?: 'foundational' | 'core' | string;
+    recommendedActionLimit?: number;
 }
 
 export interface LearningPathResponse {
@@ -336,6 +339,8 @@ export interface StudySessionRequest {
     includeDivergence?: boolean;
     includeRetrain?: boolean;
     generatedAt?: string;
+    pathStrategy?: string;
+    pathRecommendedActionLimit?: number;
 }
 
 export interface StudySessionAction extends LearningAction {
@@ -376,6 +381,13 @@ export interface StudySessionActionExecutionRequest {
     executedAt?: string;
     persistMemory?: boolean;
     memoryLayer?: MemoryLayer;
+    tutorAdapterId?: string;
+    tutorProviderName?: string;
+    tutorProviderMode?: string;
+    autoPromoteMemory?: boolean;
+    promoteMemoryTargetLayer?: MemoryLayer;
+    promoteMemoryMinConfidence?: number;
+    promoteMemoryRemoveFromSource?: boolean;
 }
 
 export interface StudySessionActionExecutionResponse {
@@ -414,6 +426,15 @@ export interface StudySessionPlanExecutionRequest {
     memoryLayer?: MemoryLayer;
     stopOnError?: boolean;
     executedAt?: string;
+    tutorAdapterId?: string;
+    tutorProviderName?: string;
+    tutorProviderMode?: string;
+    pathStrategy?: string;
+    pathRecommendedActionLimit?: number;
+    autoPromoteMemory?: boolean;
+    promoteMemoryTargetLayer?: MemoryLayer;
+    promoteMemoryMinConfidence?: number;
+    promoteMemoryRemoveFromSource?: boolean;
 }
 
 export interface StudySessionPlanExecutionItem {
@@ -464,6 +485,10 @@ export interface StudySessionHistoryRequest {
     executionKinds?: StudySessionExecutionKind[];
     fromExecutedAt?: string;
     toExecutedAt?: string;
+    pathStrategySelectionSource?: string;
+    refreshSource?: string;
+    sinceMinutes?: number;
+    pathStrategy?: string;
 }
 
 export interface StudySessionHistoryKindSummaryItem {
@@ -548,6 +573,9 @@ export interface TutorActionRequest {
     atomId?: string;
     prompt?: string;
     answer?: string;
+    adapterId?: string;
+    providerName?: string;
+    providerMode?: string;
 }
 
 export interface TutorActionResponse {
@@ -570,12 +598,16 @@ export interface MemoryEntry {
 
 export interface MemoryPolicyRequest {
     userId: string;
-    operation: 'write' | 'read' | 'evict' | 'snapshot' | 'retrain_plan';
+    operation: 'write' | 'read' | 'evict' | 'snapshot' | 'retrain_plan' | 'promote';
     layer: MemoryLayer;
+    targetLayer?: MemoryLayer;
     entries?: MemoryEntry[];
     query?: string;
     limit?: number;
     now?: string;
+    minConfidence?: number;
+    includeExpired?: boolean;
+    removeFromSource?: boolean;
 }
 
 export interface MemoryPolicyResponse {
@@ -613,6 +645,12 @@ export interface KnowledgeSystemState {
         queryP95Ms: number;
         queryAverageMs: number;
         queryMaxMs: number;
+        queryEvidenceCoverageRatioPct?: number;
+        queryRelationPathCoverageRatioPct?: number;
+        queryTemporalValidityPassRatioPct?: number;
+        queryAverageEvidenceSpanCount?: number;
+        queryAverageRelationPathLength?: number;
+        queryExplainabilitySampleCount?: number;
     };
     sessionActionTelemetry: {
         executionCount: number;
@@ -620,6 +658,10 @@ export interface KnowledgeSystemState {
         inferredMasteryUpdateCount: number;
         explicitMasteryUpdateCount: number;
         memoryPersistedCount: number;
+        memoryPromotionCount?: number;
+        memoryPromotionAppliedCount?: number;
+        verifiedTutorCount?: number;
+        pendingVerificationCount?: number;
         outcomeCounts: {
             correct: number;
             partial: number;
@@ -632,6 +674,28 @@ export interface KnowledgeSystemState {
         session: number;
         unit: number;
         longTerm: number;
+    };
+    sessionStrategyTelemetry?: {
+        totalSessions: number;
+        totalRecords?: number;
+        strategyBreakdown?: Record<string, number>;
+        strategyRecords?: number;
+        selectionSourceCounts?: Record<string, number>;
+        selectionSourcePositiveRatioPct?: Record<string, number>;
+        selectionSourceAverageMasteryDeltaPct?: Record<string, number>;
+        modeFallbackSelectionSharePct?: number;
+        trendAutoSelectionSharePct?: number;
+        trendAutoNegativeRatioPct?: number;
+        trendAutoAverageMasteryDeltaPct?: number;
+    };
+    tutorAdapterTelemetry?: {
+        activeAdapterCount: number;
+        providerUsage?: Record<string, number>;
+        lastRoutingStrategy?: string;
+        lastRoutingReason?: string;
+        lastRoutingScore?: number;
+        lastRoutingDynamicPreferredMode?: string;
+        lastRoutingDynamicModeReason?: string;
     };
 }
 
@@ -646,6 +710,14 @@ export interface LearningQualitySnapshot {
     historyWindowAverageMasteryDelta?: number;
     historyWindowRetestPositiveDeltaRatePct?: number;
     queryP95Ms?: number;
+    pathStrategyExecutionCoveragePct?: number;
+    pathStrategyAverageMasteryDeltaPct?: number;
+    queryEvidenceCoverageRatioPct?: number;
+    queryRelationPathCoverageRatioPct?: number;
+    queryTemporalValidityPassRatioPct?: number;
+    pendingVerificationRatioPct?: number;
+    queryBackendFallbackRatioPct?: number;
+    sessionMemoryPromotionCoveragePct?: number;
 }
 
 export interface LearningQualitySnapshotRequest {
@@ -675,6 +747,12 @@ export interface LearningQualityThresholds {
     pathEffectivenessLiftPct: number;
     historyWindowAverageMasteryDeltaUplift: number;
     queryP95Ms: number;
+    maxQueryBackendFallbackRatioPct?: number;
+    minQueryEvidenceCoverageRatioPct?: number;
+    minQueryRelationPathCoverageRatioPct?: number;
+    minQueryTemporalValidityPassRatioPct?: number;
+    minSessionMemoryPromotionCoveragePct?: number;
+    maxPendingVerificationRatioPct?: number;
 }
 
 export interface LearningQualityEvaluationRequest {
@@ -745,3 +823,39 @@ export interface IngestGuardrailEvaluationResponse {
     gates: IngestGuardrailGateResult[];
     overallPassed: boolean;
 }
+
+// ── M8-M10 type aliases (pending full stabilization) ──
+
+export type KnowledgeQueryBackendDiagnostics = any;
+export type KnowledgeQueryModeWeights = any;
+export type KnowledgeStalenessDiagnosticsRequest = any;
+export type KnowledgeStalenessDiagnosticsResponse = any;
+export type KnowledgeStalenessRebuildRequest = any;
+export type KnowledgeQueryBackendComparisonRequest = any;
+export type KnowledgeQueryBackendComparisonHistoryRequest = any;
+export type KnowledgeQueryBackendComparisonTrendRequest = any;
+export type KnowledgeQueryBackendConfigRequest = any;
+export type TutorAdapterRoutingStrategy = any;
+export type TutorTraceDiagnosticsRequest = any;
+export type TutorProviderTrendDiagnosticsRequest = any;
+export type TutorProviderTrendHistoryRequest = any;
+export type AgentConversationRequest = any;
+export type AgentConversationResponse = any;
+export type AgentConversationTurnEvent = any;
+export type ConversationMemoryAddRequest = any;
+export type ConversationMemoryDeleteRequest = any;
+export type ConversationMemoryFeedbackRequest = any;
+export type ConversationMemoryListRequest = any;
+export type ConversationMemorySearchRequest = any;
+export type MemoryPolicyDiagnosticsHistoryRequest = any;
+export type MemoryPolicyDiagnosticsTrendRequest = any;
+export type StudySessionOrchestrationConfigUpdateRequest = any;
+export type StudySessionPlanQualityTrendRequest = any;
+export type StudySessionPlanQualityThresholds = any;
+export type StudySessionPlanQualityRuntimeThresholdDiagnosticsRequest = any;
+export type LearningQualityTrendResponse = any;
+export type LearningQualityTrendRequest = any;
+export type LearningQualityHistoryRequest = any;
+export type MemoryPolicyDiagnosticsRequest = any;
+export type StudySessionPlanQualityEvaluationRequest = any;
+export type StudySessionPlanQualityHistoryRequest = any;

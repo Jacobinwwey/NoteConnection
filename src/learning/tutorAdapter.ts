@@ -8,6 +8,9 @@ export interface TutorAdapterInput {
     answer?: string;
     evidenceSpans: EvidenceSpan[];
     relatedAtomIds: string[];
+    providerNameHint?: string;
+    providerModeHint?: string;
+    adapterIdHint?: string;
 }
 
 export interface TutorAdapterResult {

@@ -3,3 +3,8 @@ export * from './api';
 export * from './KnowledgeLearningPlatform';
 export * from './store';
 export * from './tutorAdapter';
+export * from './queryBackend';
+export * from './vectorAccelerationAdapter';
+export * from './runtimeCapability';
+export * from './errors';
+export * from './domains';

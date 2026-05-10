@@ -249,3 +249,52 @@ input[type="checkbox"] {
     align-items: flex-start;
   }
 }
+
+/* ── Agent Tools ── */
+.badge {
+  background: var(--accent);
+  color: var(--bg-0);
+  font-size: 0.75rem;
+  padding: 0.15em 0.5em;
+  border-radius: 8px;
+  margin-left: 0.5em;
+  vertical-align: middle;
+}
+.agent-tool-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6em 0.9em;
+  margin: 0.3em 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+}
+.agent-tool-card.auto-exec {
+  border-left: 3px solid #4caf50;
+}
+.agent-tool-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.agent-tool-name {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.agent-tool-level {
+  font-size: 0.65rem;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.level-safe       { background: #1b5e20; color: #a5d6a7; }
+.level-requires-active-file { background: #0d47a1; color: #90caf9; }
+.level-requires-selection  { background: #e65100; color: #ffcc80; }
+.level-interactive-ui      { background: #4a148c; color: #ce93d8; }
+.agent-tool-params {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  font-family: monospace;
+}

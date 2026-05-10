@@ -1,9 +1,49 @@
-# 2026-03-24 v1.6.0
+# 2026-04-07 v1.7.0
 
-# Interface Document (v1.6.0)
+# Interface Document (v1.7.0)
 
 This document is the canonical interface handover for the current codebase.
 It was rebuilt from source verification, not appended to legacy sections.
+
+## 0.0 Multi-Platform Build Contract Addendum (v1.7.0)
+
+This addendum captures the build/runtime contracts that now matter to the Git LFS migration and to cross-platform delivery safety.
+
+Canonical companion docs:
+
+- `docs/en/lfs_asset_migration_plan.md`
+- `docs/en/multi_platform_build_flow_audit.md`
+- `docs/en/sidecar_supply_strategy.md`
+
+Current build-contract conclusions:
+
+- The default frontend build contract is runtime-first via `npm run build`.
+- Explicit full-mode is still supported, and desktop `tauri:build:full` now preserves full-mode through Tauri `beforeBuildCommand` by routing through `scripts/run-tauri-frontend-build.js`.
+- Android build tooling baseline is JDK 21+ for both local helper verification and current CI/release setup.
+- Capacitor packaging and Tauri Android packaging must be treated separately from mobile runtime capability:
+  - Capacitor native runtime can locally build graph payloads when Filesystem APIs are available.
+  - Tauri Android runtime exposes native `build_graph_runtime` and reports `supports_build=true`.
+- Desktop sidecar/bootstrap remains an active build contract; the current migration direction is supply hardening, not architecture deletion.
+- Current Godot bootstrap is provider-neutral at the download-contract layer: pinned GitHub Releases URLs and generic HTTPS object-storage mirror URLs both fit the same URL + SHA256 + cache model.
+- Release CI now includes a minimal Godot mirror-seeding slice: it maintains a project-controlled GitHub Releases mirror tag and downloads mirror-first while retaining upstream fallback as a transitional safety rail.
+
+Build-surface files verified for this addendum:
+
+- `package.json`
+- `build_apk.bat`
+- `capacitor.config.ts`
+- `scripts/copy-assets.js`
+- `scripts/run-tauri-build.js`
+- `scripts/run-tauri-frontend-build.js`
+- `scripts/run-tauri-android.js`
+- `scripts/verify-tauri-android-prereqs.js`
+- `src-tauri/tauri.conf.json`
+- `src-tauri/tauri.android.conf.json`
+- `src-tauri/src/lib.rs`
+- `src/frontend/storage_provider.js`
+- `src/frontend/source_manager.js`
+- `.github/workflows/release-desktop-multi-os.yml`
+- `.github/workflows/npm-publish.yml`
 
 ## 0. Fast Track Links (Godot + NoteMD + Markdown)
 

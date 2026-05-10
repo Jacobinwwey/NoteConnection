@@ -34,6 +34,7 @@ src-tauri/gen/
 src/backend/wasm/target/
 tools/markdown_worker/target/
 runtime_data/
+build/
 
 # Android generated and local build outputs
 android/.gradle/
@@ -66,6 +67,11 @@ yarn-error.log*
 tmp
 .npm-cache
 
+# Local build output and runtime artifacts
+output/
+src-tauri/bin/
+
 # Local docs deploy/build artifacts
 .edgeone/
 build/mkdocs-site/
+.venv-mkdocs/

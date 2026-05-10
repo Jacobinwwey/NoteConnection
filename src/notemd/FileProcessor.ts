@@ -354,7 +354,7 @@ export class FileProcessor {
         return Array.from(result);
     }
 
-    private injectWikiLinks(content: string, concepts: string[]): LinkInjectionResult {
+    public injectWikiLinks(content: string, concepts: string[]): LinkInjectionResult {
         const codeBlocks: string[] = [];
         let safeText = String(content || '').replace(/```[\s\S]*?```/g, (match) => {
             const token = `__NOTEMD_CODE_BLOCK_${codeBlocks.length}__`;

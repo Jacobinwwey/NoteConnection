@@ -20,6 +20,8 @@ jobs:
         include:
           - suite: desktop-migration-suite
             command: npm run test:migration
+          - suite: foundation-rollout-boundary-suite
+            command: npm run test:foundation:rollout-boundary
           - suite: wasm-parity-strict-suite
             command: npm run test:wasm:parity:gates
           - suite: tauri-rust-suite
@@ -34,15 +36,17 @@ jobs:
             command: npm run verify:sbom:attestation -- --contract-only
           - suite: sidecar-signature-policy-contract-suite
             command: npm run verify:sidecar:signatures -- --contract-only
+          - suite: license-policy-contract-suite
+            command: npm run test:license:contract
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           lfs: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
@@ -52,7 +56,7 @@ jobs:
 
       - name: Setup Java 21
         if: matrix.suite == 'tauri-rust-suite'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
@@ -77,3 +81,48 @@ jobs:
 
       - name: Run gate
         run: ${{ matrix.command }}
+
+  route-registry-contract-gates:
+    name: route-registry-contract-gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run route registry contract tests
+        run: npx jest src/routes/registry.contract.test.ts --no-coverage --runInBand
+
+  agent-workspace-contract-gates:
+    name: agent-workspace-contract-gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run agent-workspace contract suites
+        run: |
+          npm run test:agent-workspace:contracts
+          npm run test:conversation-turn-cache:durability
+

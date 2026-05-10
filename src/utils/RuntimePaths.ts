@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+import { getAppDataDir } from './platform';
+
 export interface RuntimePaths {
     projectRoot: string;
     frontendDir: string;
@@ -39,20 +41,6 @@ function pickExisting(candidates: string[]): string | null {
         }
     }
     return null;
-}
-
-function resolveAppDataRoot(cwd: string): string {
-    const localAppData = process.env.LOCALAPPDATA || process.env.APPDATA;
-    if (localAppData) {
-        return path.join(localAppData, 'NoteConnection');
-    }
-
-    const home = process.env.HOME || process.env.USERPROFILE;
-    if (home) {
-        return path.join(home, '.noteconnection');
-    }
-
-    return path.join(cwd, '.noteconnection');
 }
 
 function ensureWritableDirectory(targetPath: string): boolean {
@@ -138,10 +126,12 @@ export function resolveRuntimePaths(moduleDir: string): RuntimePaths {
     const frontendDir =
         pickExisting(frontendCandidates) || path.join(projectRoot, 'dist', 'src', 'frontend');
 
+    const appDataRoot = getAppDataDir();
+
     const runtimeDataCandidates = uniqPaths(
         [
             envRuntimeDataDir,
-            path.join(resolveAppDataRoot(cwd), 'runtime_data'),
+            path.join(appDataRoot, 'runtime_data'),
             path.join(projectRoot, 'runtime_data'),
             path.join(cwd, 'runtime_data'),
             path.join(os.tmpdir(), 'noteconnection', 'runtime_data')
@@ -149,7 +139,7 @@ export function resolveRuntimePaths(moduleDir: string): RuntimePaths {
     );
 
     const runtimeDataDirCandidate = runtimeDataCandidates.find((candidate) => ensureWritableDirectory(candidate))
-        || path.join(resolveAppDataRoot(cwd), 'runtime_data');
+        || path.join(appDataRoot, 'runtime_data');
     if (!ensureWritableDirectory(runtimeDataDirCandidate)) {
         throw new Error(`Unable to provision writable runtime data directory: ${runtimeDataDirCandidate}`);
     }

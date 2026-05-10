@@ -1,7 +1,24 @@
 /**
  * Path Mode Application Controller
  * Handles interaction, rendering, and worker communication.
+ *
+ * Phase 4 P5: Canonical utility implementations now live in
+ * path_mermaid_utils.mjs and path_state.mjs, exposed via
+ * window.pathModules (loaded by path_modules_bridge.js).
+ * The _methodName functions below delegate to window.pathModules
+ * when available, falling back to inline implementations.
  */
+
+(function () {
+    'use strict';
+    var _pm = window.pathModules;
+    if (_pm && _pm.utils) {
+        // Pre-bind canonical implementations before pathApp definition.
+        // These will be used by the methods defined below.
+        window._pathUtils = _pm.utils;
+        window._pathState = _pm.state;
+    }
+})();
 
 window.pathApp = {
     canvas: null,
@@ -747,15 +764,18 @@ window.pathApp = {
     },
 
     _normalizeBridgeInlineText: function(text) {
+        if (window._pathUtils) return window._pathUtils.normalizeBridgeInlineText(text);
         return String(text || '').replace(/\s+/g, ' ').trim();
     },
 
     _parseBridgeNumericAttribute: function(element, name, fallback = 0) {
+        if (window._pathUtils) return window._pathUtils.parseBridgeNumericAttribute(element, name, fallback);
         const numeric = Number.parseFloat(String(element?.getAttribute?.(name) || ''));
         return Number.isFinite(numeric) ? numeric : fallback;
     },
 
     _extractBridgeInlineStyleValue: function(styleValue, propertyName) {
+        if (window._pathUtils) return window._pathUtils.extractBridgeInlineStyleValue(styleValue, propertyName);
         if (!styleValue) {
             return null;
         }
@@ -765,6 +785,7 @@ window.pathApp = {
     },
 
     _resolveBridgeTextProperty: function(element, propertyName) {
+        if (window._pathUtils) return window._pathUtils.resolveBridgeTextProperty(element, propertyName);
         let current = element;
         while (current) {
             const attributeValue = current.getAttribute && current.getAttribute(propertyName);
@@ -781,6 +802,7 @@ window.pathApp = {
     },
 
     _parseBridgeCssLength: function(lengthValue, baseFontSize) {
+        if (window._pathUtils) return window._pathUtils.parseBridgeCssLength(lengthValue, baseFontSize);
         if (!lengthValue) {
             return 0;
         }
@@ -802,12 +824,14 @@ window.pathApp = {
     },
 
     _resolveBridgeSvgFontSize: function(element) {
+        if (window._pathUtils) return window._pathUtils.resolveBridgeSvgFontSize(element);
         const resolvedValue = this._resolveBridgeTextProperty(element, 'font-size');
         const parsed = this._parseBridgeCssLength(resolvedValue, 16);
         return parsed > 0 ? parsed : 16;
     },
 
     _resolveBridgeSvgLineHeight: function(element, fontSize) {
+        if (window._pathUtils) return window._pathUtils.resolveBridgeSvgLineHeight(element, fontSize);
         const resolvedValue = this._resolveBridgeTextProperty(element, 'line-height');
         const parsed = this._parseBridgeCssLength(resolvedValue, fontSize);
         return parsed > 0 ? parsed : Math.max(fontSize * 1.18, fontSize + 4);
@@ -818,6 +842,7 @@ window.pathApp = {
     },
 
     _estimateBridgeGlyphWidthUnits: function(char) {
+        if (window._pathUtils) return window._pathUtils.estimateBridgeGlyphWidthUnits(char);
         if (!char) {
             return 0;
         }
@@ -849,6 +874,7 @@ window.pathApp = {
     },
 
     _estimateBridgeTextLineWidth: function(text, fontSize) {
+        if (window._pathUtils) return window._pathUtils.estimateBridgeTextLineWidth(text, fontSize);
         let units = 0;
         for (const char of Array.from(String(text || ''))) {
             units += this._estimateBridgeGlyphWidthUnits(char);
@@ -857,6 +883,7 @@ window.pathApp = {
     },
 
     _splitBridgeTokenForWrap: function(token, fontSize, maxLineWidth) {
+        if (window._pathUtils) return window._pathUtils.splitBridgeTokenForWrap(token, fontSize, maxLineWidth);
         const wrapped = [];
         let segment = '';
         for (const char of Array.from(token)) {
@@ -875,6 +902,7 @@ window.pathApp = {
     },
 
     _wrapBridgeMeasurementLine: function(line, fontSize, maxLineWidth) {
+        if (window._pathUtils) return window._pathUtils.wrapBridgeMeasurementLine(line, fontSize, maxLineWidth);
         const normalizedLine = this._normalizeBridgeInlineText(line);
         if (!normalizedLine) {
             return [];
