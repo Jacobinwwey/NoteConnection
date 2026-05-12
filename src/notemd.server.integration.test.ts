@@ -493,4 +493,71 @@ describe('NoteMD server integration', () => {
     expect(fs.existsSync(appConfigPath)).toBe(true);
     expect(fs.existsSync(path.join(runtimeDataDir, 'notemd_config.json'))).toBe(false);
   });
+
+  test('foundation readiness and backend sufficiency reflect embedded sqlite graph runtime after ingest', async () => {
+    const ingestResponse = await requestJson(port, 'POST', '/api/knowledge/ingest', {
+      incremental: true,
+      documents: [
+        {
+          documentId: 'doc_foundation_runtime',
+          sourcePath: path.join(path.dirname(kbFilePath), 'foundation_runtime.md'),
+          language: 'en',
+          content: '# Foundation Runtime\n\nEmbedded graph backend readiness should be measurable after ingest.',
+        },
+      ],
+    });
+    expect(ingestResponse.status).toBe(200);
+    expect(ingestResponse.body.success).toBe(true);
+
+    const readinessResponse = await requestJson(port, 'GET', '/api/knowledge/foundation/readiness');
+    expect(readinessResponse.status).toBe(200);
+    expect(readinessResponse.body.success).toBe(true);
+    expect(readinessResponse.body.readiness).toEqual(
+      expect.objectContaining({
+        status: 'integrated',
+        decision: 'go',
+        ready: true,
+      })
+    );
+    expect(readinessResponse.body.readiness.baseline).toEqual(
+      expect.objectContaining({
+        storeType: 'sqlite',
+        graphBackendStatus: 'independent',
+        graphBackendSignalKind: 'embedded_graphdb',
+        graphBackendIndependent: true,
+        queryBackendDefaultMode: 'local_hybrid',
+        vectorAdapterStatus: 'independent',
+        vectorAdapterSignalKind: 'embedding_ann',
+      })
+    );
+    expect(readinessResponse.body.readiness.promotionCriteriaPassed).toBe(
+      readinessResponse.body.readiness.promotionCriteriaTotal
+    );
+
+    const sufficiencyResponse = await requestJson(port, 'GET', '/api/knowledge/backend/sufficiency');
+    expect(sufficiencyResponse.status).toBe(200);
+    expect(sufficiencyResponse.body.success).toBe(true);
+    expect(sufficiencyResponse.body.sufficiency).toEqual(
+      expect.objectContaining({
+        sufficient: true,
+      })
+    );
+    expect(sufficiencyResponse.body.sufficiency.checks.knowledgeGraph).toEqual(
+      expect.objectContaining({
+        passed: true,
+        reason: 'embedded_graphdb',
+      })
+    );
+    expect(sufficiencyResponse.body.sufficiency.checks.queryBackend).toEqual(
+      expect.objectContaining({
+        passed: true,
+      })
+    );
+    expect(sufficiencyResponse.body.sufficiency.checks.vectorIndex).toEqual(
+      expect.objectContaining({
+        passed: true,
+        reason: 'embedding_ann',
+      })
+    );
+  });
 });

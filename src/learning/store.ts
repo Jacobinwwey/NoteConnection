@@ -106,6 +106,7 @@ export interface KnowledgeGraphStore {
     loadSnapshot(): Promise<KnowledgeGraphSnapshot | null>;
     saveSnapshot(snapshot: KnowledgeGraphSnapshot): Promise<void>;
     getDiagnostics(): KnowledgeGraphStoreDiagnostics;
+    close?(): void;
 }
 
 // ── M10.5: GraphDB Operational Semantics ──
@@ -1152,6 +1153,9 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
                 exists: memorySnapshot !== null,
                 loaded: memorySnapshot !== null,
             }),
+            close: () => {
+                memorySnapshot = null;
+            },
         };
     }
 
@@ -1283,6 +1287,12 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
             return {
                 loadSnapshot: async () => loadSnapshotThroughAdapter(),
                 saveSnapshot: async (snapshot: KnowledgeGraphSnapshot) => saveSnapshotThroughAdapter(snapshot),
+                close: () => {
+                    try {
+                        a.close?.();
+                    } catch {
+                    }
+                },
                 getDiagnostics: () => {
                     const diag = a.getDiagnostics?.() ?? ({} as KnowledgeGraphStoreDiagnostics);
                     const caps = resolveOpsCapabilities();
@@ -1370,6 +1380,7 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
             return {
                 loadSnapshot: async () => { throw new Error('graphdb_adapter_unavailable_no_fallback'); },
                 saveSnapshot: async () => { throw new Error('graphdb_adapter_unavailable_no_fallback'); },
+                close: () => {},
                 getDiagnostics: () => ({
                     storeType: 'graphdb' as const,
                     exists: false, loaded: false,
@@ -1390,6 +1401,12 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
         return {
             loadSnapshot: () => fallback.loadSnapshot(),
             saveSnapshot: (snapshot) => fallback.saveSnapshot(snapshot),
+            close: () => {
+                try {
+                    graphdbAdapter?.close?.();
+                } catch {
+                }
+            },
             getDiagnostics: () => ({
                 ...fallback.getDiagnostics(),
                 storeType: 'graphdb' as const,

@@ -15651,6 +15651,14 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             }
         }
     });
+
+    server.on('close', () => {
+        try {
+            knowledgeGraphStore.close?.();
+        } catch (error) {
+            warnDiagnostic('[Learning] Failed to close knowledgeGraphStore cleanly during server shutdown.', error);
+        }
+    });
     
     return new Promise<http.Server>((resolve, reject) => {
         const explicitEphemeralFallback = parseBooleanFlag(
