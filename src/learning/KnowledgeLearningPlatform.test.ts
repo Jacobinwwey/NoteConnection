@@ -1,6 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { KnowledgeLearningPlatform } from './KnowledgeLearningPlatform';
+import {
+    createGraphDbSnapshotAdapter,
+    createKnowledgeGraphStore,
+} from './store';
 
 describe('KnowledgeLearningPlatform', () => {
     let nowIso: string;
@@ -1741,5 +1745,84 @@ describe('KnowledgeLearningPlatform', () => {
         expect(runtimeThresholds.thresholds.minTotalActions).toBeGreaterThan(0);
         expect(runtimeThresholds.summary.totalRecords).toBeGreaterThanOrEqual(2);
         expect(runtimeThresholds.summary.latestEvaluatedAt).toBe('2026-04-12T08:05:00.000Z');
+    });
+
+    test('foundation readiness and backend baseline sufficiency reflect embedded graph and ann signals', async () => {
+        const tmpRoot = path.join(process.cwd(), 'tmp');
+        fs.mkdirSync(tmpRoot, { recursive: true });
+        const tempDir = fs.mkdtempSync(path.join(tmpRoot, 'klp-foundation-'));
+        const sqlitePath = path.join(tempDir, 'knowledge_graph_store.graphdb.v1.sqlite');
+        const fallbackPath = path.join(tempDir, 'knowledge_graph_store.v1.json');
+        let adapter: ReturnType<typeof createGraphDbSnapshotAdapter> | null = null;
+
+        try {
+            adapter = createGraphDbSnapshotAdapter({
+                provider: 'sqlite',
+                sqlitePath,
+                adapterId: 'embedded-sqlite-graphdb',
+            });
+            expect(adapter).not.toBeNull();
+
+            const readinessStore = createKnowledgeGraphStore({
+                backend: 'graphdb',
+                filePath: fallbackPath,
+                graphdb: {
+                    adapter,
+                },
+                graphDbFallbackEnabled: false,
+                graphDbOperationMode: 'ops_preferred',
+            });
+            const readinessPlatform = new KnowledgeLearningPlatform({
+                nowProvider: () => new Date(nowIso),
+                store: readinessStore,
+            });
+
+            await readinessPlatform.ingestKnowledge({
+                incremental: true,
+                documents: [
+                    {
+                        documentId: 'doc_foundation_readiness',
+                        sourcePath: 'Knowledge_Base/doc_foundation_readiness.md',
+                        language: 'en',
+                        content: '# Foundation Readiness\nEmbedded graph and ANN readiness should be measurable.',
+                    },
+                ],
+            });
+
+            const readiness = await readinessPlatform.getFoundationReadiness();
+            expect(readiness.status).toBe('integrated');
+            expect(readiness.decision).toBe('go');
+            expect(readiness.baseline.storeType).toBe('sqlite');
+            expect(readiness.baseline.graphBackendStatus).toBe('independent');
+            expect(readiness.baseline.graphBackendSignalKind).toBe('embedded_graphdb');
+            expect(readiness.baseline.graphBackendIndependent).toBe(true);
+            expect(readiness.baseline.queryBackendDefaultMode).toBe('local_hybrid');
+            expect(readiness.baseline.vectorAdapterStatus).toBe('independent');
+            expect(readiness.baseline.vectorAdapterSignalKind).toBe('embedding_ann');
+            expect(readiness.promotionCriteriaPassed).toBe(readiness.promotionCriteriaTotal);
+            expect(readiness.promotionCriteriaSatisfiedIds).toEqual(
+                expect.arrayContaining([
+                    'store_backend_evidence_present',
+                    'graph_backend_independent',
+                    'query_backend_boundary_present',
+                    'vector_backend_present',
+                    'vector_backend_independent',
+                    'docs_aligned',
+                    'readiness_verifier_present',
+                ])
+            );
+
+            const sufficiency = await readinessPlatform.getBackendBaselineSufficiency();
+            expect(sufficiency.sufficient).toBe(true);
+            expect(sufficiency.checks.knowledgeGraph.passed).toBe(true);
+            expect(sufficiency.checks.queryBackend.passed).toBe(true);
+            expect(sufficiency.checks.vectorIndex.passed).toBe(true);
+        } finally {
+            try {
+                adapter?.close?.();
+            } catch {
+            }
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        }
     });
 });

@@ -438,6 +438,8 @@ describe('Knowledge graph store backend factory', () => {
         expect(normalizeGraphDbSnapshotAdapterProvider('external_http')).toBe('http');
         expect(normalizeGraphDbSnapshotAdapterProvider('remote-http')).toBe('http');
         expect(normalizeGraphDbSnapshotAdapterProvider('service')).toBe('http');
+        expect(normalizeGraphDbSnapshotAdapterProvider('sqlite')).toBe('sqlite');
+        expect(normalizeGraphDbSnapshotAdapterProvider('embedded_sqlite')).toBe('sqlite');
         expect(normalizeGraphDbSnapshotAdapterProvider('none')).toBe('none');
         expect(normalizeGraphDbSnapshotAdapterProvider('disabled')).toBe('none');
         expect(normalizeGraphDbSnapshotAdapterProvider('fallback_only')).toBe('none');
@@ -1000,6 +1002,65 @@ describe('Knowledge graph store backend factory', () => {
             expect(mockServer.requests.some((item) => item.path === '/graphdb/ops/path')).toBe(true);
         } finally {
             await mockServer.close();
+        }
+    });
+
+    test('built-in sqlite graphdb adapter persists snapshots and serves ops locally', async () => {
+        const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowledge-store-sqlite-graphdb-'));
+        const sqlitePath = path.join(tempRoot, 'runtime_data', 'knowledge_graph_store.graphdb.v1.sqlite');
+        let adapter: ReturnType<typeof createGraphDbSnapshotAdapter> | null = null;
+
+        try {
+            adapter = createGraphDbSnapshotAdapter({
+                provider: 'sqlite',
+                sqlitePath,
+                adapterId: 'embedded-sqlite-graphdb-test',
+            });
+            expect(adapter).not.toBeNull();
+
+            const snapshot = createSnapshot('sqlite_graphdb_user');
+            snapshot.atoms = [
+                createAtom('atom_a', 'Alpha'),
+                createAtom('atom_b', 'Beta'),
+                createAtom('atom_c', 'Gamma'),
+            ];
+            snapshot.relationEdges = [
+                createRelation('edge_a_b', 'atom_a', 'atom_b'),
+                createRelation('edge_b_c', 'atom_b', 'atom_c'),
+            ];
+
+            await adapter!.saveSnapshot!(snapshot);
+            const restored = await adapter!.loadSnapshot!();
+            expect(restored).toEqual(snapshot);
+
+            const node = await adapter!.getNodeByOps?.('atom_b');
+            expect(node?.id).toBe('atom_b');
+
+            const nodes = await adapter!.queryNodesByOps?.({ nodeIds: ['atom_c', 'missing'] });
+            expect(nodes?.map((item) => item.id)).toEqual(['atom_c']);
+
+            const edges = await adapter!.queryEdgesByOps?.({ fromNodeId: 'atom_a' });
+            expect(edges?.map((item) => item.id)).toEqual(['edge_a_b']);
+
+            const pathResult = await adapter!.findPathByOps?.('atom_a', 'atom_c', 4);
+            expect(pathResult?.found).toBe(true);
+            expect(pathResult?.path).toEqual(['atom_a', 'atom_b', 'atom_c']);
+
+            const diagnostics = adapter!.getDiagnostics ? adapter!.getDiagnostics() : {};
+            expect(String(diagnostics.location || '')).toContain('knowledge_graph_store.graphdb.v1.sqlite');
+            expect(diagnostics.storeType).toBe('graphdb');
+            expect(String((diagnostics as any).storageEngine || '')).toBe('sqlite');
+            expect((diagnostics as any).capabilityMode).toBe('ops_capable');
+            expect((diagnostics as any).supportedReadOperations).toEqual(
+                expect.arrayContaining(['load_snapshot', 'get_node', 'query_nodes', 'query_edges', 'find_path'])
+            );
+            expect((diagnostics as any).supportedWriteOperations).toEqual(['save_snapshot']);
+        } finally {
+            try {
+                adapter?.close?.();
+            } catch {
+            }
+            fs.rmSync(tempRoot, { recursive: true, force: true });
         }
     });
 

@@ -8,7 +8,8 @@
 - [x] Tutor telemetry, tutor trace/provider trend diagnostics, conversation memory, and memory-policy diagnostics now have real backend implementations.
 - [x] Query-backend comparison/history/trend, staleness diagnostics/rebuild planning, learning-quality history/trend, session-plan quality evaluate/history/trend/runtime-threshold diagnostics, query-backend config, and query-backend diagnostics are now live in `src/learning/KnowledgeLearningPlatform.ts`.
 - [x] Default server runtime now injects an active local `tutorAdapter` while retaining the `local` + `cloud` adapter catalog.
-- [ ] Reclassify Phase-1 A8 as `Partial+`: the default graph backend is still `local-file-graphdb`, so a real local graph database engine is not yet the delivered baseline.
+- [x] Default runtime graph backend is no longer `local-file-graphdb`: the server now targets embedded `graphdb/sqlite` with explicit file fallback.
+- [ ] Prove the new embedded `graphdb/sqlite` baseline across packaged/runtime paths and workload durability gates before calling A8 production-closed.
 - [ ] Reclassify Phase-1 A9 as `Partial+`: the current ANN path is scaffolded telemetry + `external_http` boundary, not a production-backed ANN service/engine.
 - [ ] Promote the new Phase-2 diagnostics from “implementation-real” to release-grade gates only after the same checks run on a non-`Partial+` graphdb/ANN baseline.
 - [ ] Extend tutor routing from the new local-first baseline into a production-proven multi-provider policy.
@@ -30,7 +31,7 @@ After syncing the repository to the latest upstream `main` baseline, we re-audit
 - [~] Phase-1 foundation hardening was previously marked closed, but HEAD now reclassifies it as `Partial+`:
   - [x] Graph backend adapter paths do expose HTTP ops-ready semantics (node/edge/path query routes plus diagnostics telemetry).
   - [x] ANN connector hardening does expose candidate normalization, representation telemetry, and prefilter effectiveness signals.
-  - [ ] Default runtime still needs a real graph backend beyond `local-file-graphdb`.
+  - [x] Default runtime now targets an embedded `graphdb/sqlite` backend with explicit file fallback.
   - [ ] ANN still needs a production-backed connector path beyond scaffolding.
 - [ ] Next active implementation phase is now split:
   - [ ] finish real Phase-1 backend closure,

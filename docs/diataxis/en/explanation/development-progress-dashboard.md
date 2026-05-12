@@ -17,17 +17,17 @@ It tracks what is already implemented, where the hard gaps remain, and how to ve
 
 - The previous "Phase-1 closure" wording is too optimistic for current HEAD and is superseded by this section.
 - What is real at HEAD:
-  - graph/store operations semantics exist in `src/learning/store.ts`, including file-backed ops and HTTP adapter paths with fallback diagnostics,
+  - graph/store operations semantics exist in `src/learning/store.ts`, including file-backed ops, embedded SQLite graphdb persistence/query paths, and HTTP adapter paths with fallback diagnostics,
   - ANN-style prefilter, representation telemetry, circuit health, and `external_http` connector scaffolding exist in `src/learning/queryBackend.ts` and `src/learning/vectorAccelerationAdapter.ts`,
   - Phase-2 runtime diagnostics are now materially implemented in `src/learning/KnowledgeLearningPlatform.ts` for query-backend comparison/history/trend, knowledge staleness diagnostics/rebuild planning, learning-quality history/trend, session-plan quality evaluation/history/trend/runtime-threshold diagnostics, query-backend config, and query-backend diagnostics,
   - Phase-3 tutor/memory diagnostics remain real and now include an active default runtime tutor adapter path in `src/server.ts`, so normal server execution can emit adapter telemetry instead of staying catalog-only.
 - What is not closed yet:
-  - Phase-1 A8 remains `Partial+`, because the default runtime graph backend still points to `local-file-graphdb` in `src/server.ts`, not a real local graph database engine,
+  - Phase-1 A8 has advanced beyond a file-only default: `src/server.ts` now defaults to `graphdb/sqlite` with explicit file fallback, but packaged/runtime proof, durability, and workload hardening are still open before calling the local graph backend production-closed,
   - Phase-1 A9 remains `Partial+`, because the ANN path still stops at `external_stub` / `external_http` scaffolds plus rollout telemetry rather than a proven production ANN backend,
   - Phase-2 quality/session/query observability is now real, but it is not yet release-closed because these gates still sit on top of the same `Partial+` Phase-1 graph/ANN baseline,
   - default tutor routing is no longer catalog-only, but the runtime is still effectively `local`-first and retains explicit rule-engine fallback rather than a production-proven multi-provider routing policy.
 - Active execution focus therefore shifts to truth-first foundation recovery:
-  - close the real graph/vector backend gaps,
+  - harden the new embedded graph backend baseline,
   - keep the new diagnostic surfaces honest against the same runtime truth,
   - then promote Phase-2 / Phase-3 gates as release-significant only after Phase-1 backend closure.
 
@@ -149,7 +149,7 @@ Operational note:
 
 | Phase | Plan Target | Current Status | Evidence |
 |---|---|---|---|
-| Phase 1 | Knowledge parsing + graph backbone + staleness governance | Partial+ | `src/learning/store.ts`, `src/learning/queryBackend.ts`, `src/learning/vectorAccelerationAdapter.ts`, `src/server.ts` |
+| Phase 1 | Knowledge parsing + graph backbone + staleness governance | Operational baseline | `src/learning/store.ts`, `src/learning/queryBackend.ts`, `src/learning/vectorAccelerationAdapter.ts`, `src/server.ts` |
 | Phase 2 | Mastery loop + divergence engine | Partial | `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/path_app.js` |
 | Phase 3 | Pluggable tutor + memory operating layer | Early operational | `src/learning/KnowledgeLearningPlatform.ts`, `src/learning/tutorAdapter.ts`, `src/server.ts`, `src/routes/knowledge.ts` |
 
@@ -246,8 +246,8 @@ A 12-phase refactoring (A→L) was executed against the baseline. The following 
 - Store backends in `src/learning/store.ts`:
   - `file`
   - `memory`
-  - `graphdb` (currently file-adapter backed with fallback behavior)
-- Known structural limit: graphdb mode still uses `FileGraphDbSnapshotAdapter` (`local-file-graphdb`) rather than a true local graph database engine.
+  - `graphdb` (now supports embedded SQLite, file, and HTTP adapter paths)
+- Current structural limit: the new default graphdb path is embedded SQLite with explicit fallback, but it still needs packaged/runtime proof and workload hardening before being called production-closed.
 
 ## Retrieval layer
 

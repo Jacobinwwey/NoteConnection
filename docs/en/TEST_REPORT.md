@@ -6,6 +6,10 @@
 
 - [x] `node node_modules/jest/bin/jest.js src/agent_workspace.contract.parity.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.runtime.behavior.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
   - PASS
+- [x] `node node_modules/jest/bin/jest.js src/learning/store.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
+  - PASS
+- [x] `node node_modules/jest/bin/jest.js src/knowledge.api.contract.test.ts src/agent_workspace.contract.parity.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand --no-cache`
+  - PASS
 - [x] `npm run verify:agent-workspace:runtime`
   - PASS
 - [x] `npm run verify:agent-workspace:browser`
@@ -16,6 +20,8 @@
   - PASS (existing MkDocs nav/link warnings remain)
 - [x] `npm run build:with-vite`
   - PASS
+- [x] `npm run build:sidecar`
+  - PASS (with automatic retry without `--no-bytecode` when `pkg` requires bytecode for the current dependency graph)
 
 ### What These Passes Prove
 
@@ -25,7 +31,7 @@
    - conversation memory lifecycle,
    - memory-policy diagnostics/history/trend.
 2. These passes do **not** prove Phase-1 A8/A9 closure:
-   - runtime still defaults to `local-file-graphdb`,
+   - runtime no longer defaults to `local-file-graphdb`, but the new embedded `graphdb/sqlite` baseline still needs packaged/runtime proof and workload hardening,
    - ANN still depends on scaffolded connector boundaries (`external_stub` / `external_http`) rather than a proven production backend.
 3. These passes do **not** prove Phase-2 quality-gate closure:
    - query comparison, staleness, learning-quality, session-plan-quality, and query-backend diagnostics are now implementation-real, but they still sit on the same `Partial+` Phase-1 graph/ANN baseline and therefore are not release-closed yet.

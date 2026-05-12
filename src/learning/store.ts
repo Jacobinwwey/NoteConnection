@@ -95,6 +95,7 @@ export interface KnowledgeGraphStoreDiagnostics {
     graphDbSupportedReadOperations?: string[];
     graphDbSupportedWriteOperations?: string[];
     graphDbLastSnapshotMetadata?: Record<string, unknown>;
+    storageEngine?: string;
     /** Staleness tracking (GitNexus pattern): ISO timestamp when file became newer than last save. */
     staleSince?: string;
     /** File mtime for staleness comparison. */
@@ -389,11 +390,12 @@ export function createFileBackedKnowledgeGraphStore(options: FileBackedKnowledge
 // ── GraphDB Adapter (M10.5) ──
 
 export type GraphDbOperationMode = 'snapshot_only' | 'ops_preferred';
-export type GraphDbAdapterProvider = 'file' | 'http' | 'none';
+export type GraphDbAdapterProvider = 'file' | 'http' | 'sqlite' | 'none';
 
 export interface GraphDbSnapshotAdapterConfig {
     provider?: GraphDbAdapterProvider;
     filePath?: string;
+    sqlitePath?: string;
     baseUrl?: string;
     headers?: Record<string, string>;
     id?: string;
@@ -404,6 +406,7 @@ export interface GraphDbSnapshotAdapter {
     id?: string;
     provider?: string;
     opsCapable?: boolean;
+    close?(): void;
     getCapabilities?(): Partial<KnowledgeGraphOpsCapabilities> & Record<string, unknown>;
     loadSnapshot?(): Promise<KnowledgeGraphSnapshot | null>;
     saveSnapshot?(snapshot: KnowledgeGraphSnapshot): Promise<void>;
@@ -461,6 +464,7 @@ export function normalizeGraphDbSnapshotAdapterProvider(v: unknown): GraphDbAdap
     const s = String(v ?? 'file').trim().toLowerCase();
     if (s === 'local-file' || s === 'file') return 'file';
     if (s === 'external_http' || s === 'remote-http' || s === 'service' || s === 'http') return 'http';
+    if (s === 'sqlite' || s === 'embedded_sqlite' || s === 'embedded-sqlite' || s === 'embedded') return 'sqlite';
     if (s === 'none' || s === 'disabled' || s === 'fallback_only') return 'none';
     if (s === 'unknown') return 'file';
     return 'file';
@@ -507,6 +511,398 @@ export function createFileGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapte
     };
 }
 
+type NodeSqliteModuleLike = {
+    DatabaseSync: new (location: string) => {
+        exec(sql: string): void;
+        prepare(sql: string): {
+            run(...params: unknown[]): unknown;
+            get(...params: unknown[]): Record<string, unknown> | undefined;
+            all(...params: unknown[]): Array<Record<string, unknown>>;
+        };
+    };
+};
+
+function tryLoadNodeSqlite(): NodeSqliteModuleLike | null {
+    try {
+        return require('node:sqlite') as NodeSqliteModuleLike;
+    } catch {
+        return null;
+    }
+}
+
+function createSqliteGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapterConfig): GraphDbSnapshotAdapter | null {
+    const sqliteModule = tryLoadNodeSqlite();
+    if (!sqliteModule || typeof sqliteModule.DatabaseSync !== 'function') {
+        return null;
+    }
+
+    const sqlitePath = path.resolve(
+        String(options?.sqlitePath || options?.filePath || '/tmp/notemd-kg-snapshot.sqlite')
+    );
+    fs.mkdirSync(path.dirname(sqlitePath), { recursive: true });
+    const db = new sqliteModule.DatabaseSync(sqlitePath);
+    const adapterId = options?.id ?? 'embedded-sqlite-graphdb';
+    let loaded = false;
+    let lastLoadAt = '';
+    let lastSaveAt = '';
+    let lastError = '';
+    let lastReadPath = 'ops';
+    let lastWritePath = 'ops';
+
+    const ensureSchema = (): void => {
+        db.exec(`
+            PRAGMA journal_mode = WAL;
+            PRAGMA synchronous = NORMAL;
+            PRAGMA busy_timeout = 2000;
+            CREATE TABLE IF NOT EXISTS snapshot_store (
+                snapshot_id INTEGER PRIMARY KEY CHECK (snapshot_id = 1),
+                schema_version INTEGER NOT NULL,
+                saved_at TEXT NOT NULL,
+                payload_json TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS atoms (
+                atom_id TEXT PRIMARY KEY,
+                stable_key TEXT,
+                title TEXT NOT NULL,
+                source_path TEXT,
+                updated_at TEXT,
+                raw_json TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_atoms_stable_key ON atoms(stable_key);
+            CREATE TABLE IF NOT EXISTS relation_edges (
+                edge_id TEXT PRIMARY KEY,
+                source_atom_id TEXT NOT NULL,
+                target_atom_id TEXT NOT NULL,
+                relation_kind TEXT NOT NULL,
+                confidence REAL NOT NULL,
+                raw_json TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_relation_edges_source ON relation_edges(source_atom_id);
+            CREATE INDEX IF NOT EXISTS idx_relation_edges_target ON relation_edges(target_atom_id);
+            CREATE INDEX IF NOT EXISTS idx_relation_edges_kind ON relation_edges(relation_kind);
+        `);
+    };
+
+    const loadSnapshotRow = (): Record<string, unknown> | undefined => {
+        ensureSchema();
+        return db.prepare(`
+            SELECT schema_version, saved_at, payload_json
+            FROM snapshot_store
+            WHERE snapshot_id = 1
+        `).get();
+    };
+
+    const loadSnapshotPayload = (): KnowledgeGraphSnapshot | null => {
+        const row = loadSnapshotRow();
+        if (!row || !row.payload_json) {
+            loaded = false;
+            return null;
+        }
+        const parsed = JSON.parse(String(row.payload_json)) as Partial<KnowledgeGraphSnapshot>;
+        if (parsed.schemaVersion !== 1 || !Array.isArray(parsed.atoms) || !Array.isArray(parsed.documents)) {
+            throw new Error('Invalid sqlite knowledge graph snapshot schema.');
+        }
+        loaded = true;
+        lastLoadAt = new Date().toISOString();
+        lastError = '';
+        return parsed as KnowledgeGraphSnapshot;
+    };
+
+    const replaceSnapshotData = (snapshot: KnowledgeGraphSnapshot): void => {
+        ensureSchema();
+        db.exec('BEGIN IMMEDIATE TRANSACTION');
+        try {
+            db.exec('DELETE FROM snapshot_store');
+            db.exec('DELETE FROM atoms');
+            db.exec('DELETE FROM relation_edges');
+            db.prepare(`
+                INSERT INTO snapshot_store (snapshot_id, schema_version, saved_at, payload_json)
+                VALUES (1, ?, ?, ?)
+            `).run(
+                snapshot.schemaVersion,
+                snapshot.savedAt,
+                JSON.stringify(snapshot)
+            );
+            const insertAtom = db.prepare(`
+                INSERT INTO atoms (atom_id, stable_key, title, source_path, updated_at, raw_json)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `);
+            snapshot.atoms.forEach((atom) => {
+                insertAtom.run(
+                    atom.id,
+                    atom.stableKey || '',
+                    atom.title,
+                    atom.sourcePath || '',
+                    atom.updatedAt || '',
+                    JSON.stringify(atom)
+                );
+            });
+            const insertRelationEdge = db.prepare(`
+                INSERT INTO relation_edges (edge_id, source_atom_id, target_atom_id, relation_kind, confidence, raw_json)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `);
+            snapshot.relationEdges.forEach((edge) => {
+                insertRelationEdge.run(
+                    edge.id,
+                    edge.sourceAtomId,
+                    edge.targetAtomId,
+                    edge.relationKind,
+                    Number(edge.confidence || 0),
+                    JSON.stringify(edge)
+                );
+            });
+            db.exec('COMMIT');
+            loaded = true;
+            lastSaveAt = new Date().toISOString();
+            lastError = '';
+        } catch (error) {
+            try {
+                db.exec('ROLLBACK');
+            } catch {
+            }
+            lastError = String((error as Error)?.message || error);
+            throw error;
+        }
+    };
+
+    const mapNodeRows = (rows: Array<Record<string, unknown>>): KnowledgeAtom[] => rows
+        .map((row) => {
+            try {
+                return JSON.parse(String(row.raw_json || 'null')) as KnowledgeAtom;
+            } catch {
+                return null;
+            }
+        })
+        .filter((atom): atom is KnowledgeAtom => Boolean(atom && typeof atom === 'object'));
+
+    const mapEdgeRows = (rows: Array<Record<string, unknown>>): RelationEdge[] => rows
+        .map((row) => {
+            try {
+                return JSON.parse(String(row.raw_json || 'null')) as RelationEdge;
+            } catch {
+                return null;
+            }
+        })
+        .filter((edge): edge is RelationEdge => Boolean(edge && typeof edge === 'object'));
+
+    const buildInClause = (values: string[]): { placeholders: string; params: string[] } => ({
+        placeholders: values.map(() => '?').join(', '),
+        params: values,
+    });
+
+    return {
+        id: adapterId,
+        provider: 'sqlite',
+        opsCapable: true,
+        getCapabilities: () => ({
+            snapshotSupported: true,
+            nodeQuerySupported: true,
+            edgeQuerySupported: true,
+            pathQuerySupported: true,
+            writeSupported: true,
+            serverSideQuery: true,
+            mode: 'ops_capable',
+            supportedReadOperations: ['load_snapshot', 'get_node', 'query_nodes', 'query_edges', 'find_path', 'probe_snapshot_metadata'],
+            supportedWriteOperations: ['save_snapshot'],
+        }),
+        loadSnapshot: async () => {
+            lastReadPath = 'ops';
+            try {
+                return loadSnapshotPayload();
+            } catch (error) {
+                loaded = false;
+                lastError = String((error as Error)?.message || error);
+                throw error;
+            }
+        },
+        saveSnapshot: async (snapshot: KnowledgeGraphSnapshot) => {
+            lastWritePath = 'ops';
+            replaceSnapshotData(snapshot);
+        },
+        probeSnapshotMetadata: async () => {
+            ensureSchema();
+            const snapshotRow = loadSnapshotRow();
+            if (!snapshotRow) {
+                return null;
+            }
+            const atomCountRow = db.prepare('SELECT COUNT(*) AS count FROM atoms').get();
+            const relationCountRow = db.prepare('SELECT COUNT(*) AS count FROM relation_edges').get();
+            const snapshot = loadSnapshotPayload();
+            return {
+                schemaVersion: Number(snapshotRow.schema_version || snapshot?.schemaVersion || 1),
+                savedAt: String(snapshotRow.saved_at || snapshot?.savedAt || ''),
+                atomCount: Number(atomCountRow?.count || 0),
+                relationEdgeCount: Number(relationCountRow?.count || 0),
+                temporalEdgeCount: snapshot?.temporalEdges.length || 0,
+                documentCount: snapshot?.documents.length || 0,
+            };
+        },
+        loadSnapshotByOps: async () => {
+            lastReadPath = 'ops';
+            return loadSnapshotPayload();
+        },
+        saveSnapshotByOps: async (snapshot: KnowledgeGraphSnapshot) => {
+            lastWritePath = 'ops';
+            replaceSnapshotData(snapshot);
+        },
+        getNodeByOps: async (atomId: string) => {
+            ensureSchema();
+            lastReadPath = 'ops';
+            const normalizedId = String(atomId || '').trim();
+            if (!normalizedId) {
+                return null;
+            }
+            const row = db.prepare(`
+                SELECT raw_json
+                FROM atoms
+                WHERE atom_id = ? OR stable_key = ?
+                LIMIT 1
+            `).get(normalizedId, normalizedId);
+            return mapNodeRows(row ? [row] : [])[0] || null;
+        },
+        queryNodesByOps: async (filter: NodeQueryFilter) => {
+            ensureSchema();
+            lastReadPath = 'ops';
+            const clauses: string[] = [];
+            const params: string[] = [];
+            if (Array.isArray(filter.nodeIds) && filter.nodeIds.length > 0) {
+                const normalizedIds = Array.from(new Set(
+                    filter.nodeIds.map((item) => String(item || '').trim()).filter(Boolean)
+                ));
+                if (normalizedIds.length > 0) {
+                    const inClause = buildInClause(normalizedIds);
+                    clauses.push(`(atom_id IN (${inClause.placeholders}) OR stable_key IN (${inClause.placeholders}))`);
+                    params.push(...inClause.params, ...inClause.params);
+                }
+            }
+            if (String(filter.stableKey || '').trim()) {
+                clauses.push('stable_key = ?');
+                params.push(String(filter.stableKey).trim());
+            }
+            let sql = 'SELECT raw_json FROM atoms';
+            if (clauses.length > 0) {
+                sql += ` WHERE ${clauses.join(' AND ')}`;
+            }
+            sql += ' ORDER BY atom_id ASC';
+            if (filter.limit && filter.limit > 0) {
+                sql += ` LIMIT ${Math.max(1, Math.floor(filter.limit))}`;
+            }
+            return mapNodeRows(db.prepare(sql).all(...params));
+        },
+        queryEdgesByOps: async (filter: EdgeQueryFilter) => {
+            ensureSchema();
+            lastReadPath = 'ops';
+            const clauses: string[] = [];
+            const params: string[] = [];
+            if (String(filter.fromNodeId || '').trim()) {
+                clauses.push('source_atom_id = ?');
+                params.push(String(filter.fromNodeId).trim());
+            }
+            if (String(filter.toNodeId || '').trim()) {
+                clauses.push('target_atom_id = ?');
+                params.push(String(filter.toNodeId).trim());
+            }
+            if (String(filter.relationKind || '').trim()) {
+                clauses.push('relation_kind = ?');
+                params.push(String(filter.relationKind).trim());
+            }
+            let sql = 'SELECT raw_json FROM relation_edges';
+            if (clauses.length > 0) {
+                sql += ` WHERE ${clauses.join(' AND ')}`;
+            }
+            sql += ' ORDER BY edge_id ASC';
+            if (filter.limit && filter.limit > 0) {
+                sql += ` LIMIT ${Math.max(1, Math.floor(filter.limit))}`;
+            }
+            return mapEdgeRows(db.prepare(sql).all(...params));
+        },
+        findPathByOps: async (sourceId: string, targetId: string, maxDepth = 10) => {
+            ensureSchema();
+            lastReadPath = 'ops';
+            const source = String(sourceId || '').trim();
+            const target = String(targetId || '').trim();
+            if (!source || !target) {
+                return { path: [], length: 0, edges: [], found: false };
+            }
+            const rows = db.prepare(`
+                SELECT source_atom_id, target_atom_id, relation_kind
+                FROM relation_edges
+            `).all();
+            const adjacency = new Map<string, Array<{ to: string; relation?: string }>>();
+            rows.forEach((row) => {
+                const from = String(row.source_atom_id || '').trim();
+                const to = String(row.target_atom_id || '').trim();
+                if (!from || !to) {
+                    return;
+                }
+                if (!adjacency.has(from)) {
+                    adjacency.set(from, []);
+                }
+                adjacency.get(from)?.push({
+                    to,
+                    relation: String(row.relation_kind || '').trim() || undefined,
+                });
+            });
+            const visited = new Set<string>([source]);
+            const queue: Array<{ nodeId: string; path: string[]; edges: Array<{ from: string; to: string; relation?: string }> }> = [
+                { nodeId: source, path: [source], edges: [] },
+            ];
+            while (queue.length > 0) {
+                const current = queue.shift() as {
+                    nodeId: string;
+                    path: string[];
+                    edges: Array<{ from: string; to: string; relation?: string }>;
+                };
+                if (current.path.length > maxDepth) {
+                    continue;
+                }
+                if (current.nodeId === target) {
+                    return {
+                        path: current.path,
+                        length: current.path.length - 1,
+                        edges: current.edges,
+                        found: true,
+                    };
+                }
+                const neighbors = adjacency.get(current.nodeId) || [];
+                for (const neighbor of neighbors) {
+                    if (visited.has(neighbor.to)) {
+                        continue;
+                    }
+                    visited.add(neighbor.to);
+                    queue.push({
+                        nodeId: neighbor.to,
+                        path: [...current.path, neighbor.to],
+                        edges: [...current.edges, { from: current.nodeId, to: neighbor.to, relation: neighbor.relation }],
+                    });
+                }
+            }
+            return { path: [], length: 0, edges: [], found: false };
+        },
+        getDiagnostics: () => ({
+            storeType: 'graphdb' as const,
+            location: sqlitePath,
+            exists: fs.existsSync(sqlitePath),
+            loaded,
+            lastLoadAt: lastLoadAt || undefined,
+            lastSaveAt: lastSaveAt || undefined,
+            lastError: lastError || undefined,
+            capabilityMode: 'ops_capable',
+            supportedReadOperations: ['load_snapshot', 'get_node', 'query_nodes', 'query_edges', 'find_path', 'probe_snapshot_metadata'],
+            supportedWriteOperations: ['save_snapshot'],
+            lastReadPath,
+            lastWritePath,
+            storageEngine: 'sqlite',
+        }),
+        close: () => {
+            try {
+                (db as { close?: () => void }).close?.();
+            } catch {
+            }
+        },
+    };
+}
+
 export function createGraphDbSnapshotAdapter(options?: Record<string, unknown>): GraphDbSnapshotAdapter | null {
     const rawProvider = options?.provider as string | undefined;
     const provider = normalizeGraphDbSnapshotAdapterProvider(rawProvider);
@@ -519,6 +915,16 @@ export function createGraphDbSnapshotAdapter(options?: Record<string, unknown>):
         });
         if (!fileAdapter) return null;
         return fileAdapter;
+    }
+    if (provider === 'sqlite') {
+        const sqliteAdapter = createSqliteGraphDbSnapshotAdapter({
+            provider: 'sqlite',
+            filePath: options?.filePath as string | undefined,
+            sqlitePath: options?.sqlitePath as string | undefined,
+            id: (options?.id ?? options?.sqliteAdapterId ?? options?.adapterId) as string | undefined,
+        });
+        if (!sqliteAdapter) return null;
+        return sqliteAdapter;
     }
     // HTTP adapter — real HTTP communication with graphdb endpoint
     const httpEndpoint = (options?.httpEndpoint ?? options?.baseUrl) as string | undefined;

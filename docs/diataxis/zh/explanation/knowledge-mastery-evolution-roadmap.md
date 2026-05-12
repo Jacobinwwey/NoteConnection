@@ -6,7 +6,7 @@
 
 - 当前分支已经落入真实的 Phase-3 tutor/memory 切片，但不能继续沿用“Phase-1 已闭环”的说法。
 - 当前更准确的口径是：
-  - Phase-1 A8 为 `Partial+`：graph/store ops 语义与 HTTP adapter 路径已经存在，但默认 runtime 仍是 `local-file-graphdb`，尚非真实本地图数据库基线；
+  - Phase-1 A8 已推进到 embedded 本地图后端基线：graph/store ops 语义、embedded SQLite graphdb persistence/query 路径与 HTTP adapter 路径已经存在，且默认 runtime 现在走 `graphdb/sqlite` 并保留显式 file fallback；但 packaged/runtime 证明与工作负载级加固仍未完成；
   - Phase-1 A9 为 `Partial+`：ANN 风格 prefilter、representation telemetry 与 `external_http` 脚手架已经存在，但默认交付路径仍没有接上已验证的生产级 ANN 后端；
   - Phase-2 现已具备运行级诊断基线：`learning quality`、`session plan quality`、query compare、staleness、query-backend config、query-backend diagnostics 都已接通真实实现，但由于仍建立在同一个 `Partial+` 的 Phase-1 graph/ANN 交付路径之上，因此还不能宣称发布级闭环；
   - Phase-3 现已进入 operational baseline：导师遥测、导师 trace/provider trend、conversation memory、memory-policy diagnostics，以及默认 runtime tutor-adapter 注入都是真实实现，但生产级多适配器路由策略仍未闭环。
@@ -62,7 +62,7 @@
 ## 2026-05-12 HEAD 真实状态重分级
 
 - 当前准确状态是：
-  - Phase-1 A8 仍是 `Partial+`：graph/store ops 语义与 HTTP adapter 路径已经存在，但默认 runtime 仍指向 `local-file-graphdb`，尚未交付真实本地图数据库基线。
+  - Phase-1 A8 已推进到 embedded 本地图后端基线：graph/store ops 语义、embedded SQLite graphdb persistence/query 路径与 HTTP adapter 路径已经存在，且默认 runtime 现在走 `graphdb/sqlite` 并保留显式 file fallback；但 packaged/runtime 证明与工作负载级加固仍未完成。
   - Phase-1 A9 仍是 `Partial+`：ANN 风格 prefilter、representation telemetry 与 `external_http` 脚手架已经存在，但默认交付路径上仍没有已验证的生产级 ANN 后端。
   - Phase-2 现已具备运行级诊断基线：`learning quality`、`session plan quality`、query comparison、staleness、query-backend config、query-backend diagnostics 都已接通真实实现，但由于它们仍建立在同一个 `Partial+` 的 Phase-1 graph/ANN 交付路径之上，因此还不能宣称发布级闭环。
   - Phase-3 现已从 catalog-only 前进到 operational baseline：tutor telemetry、tutor trace/provider trends、conversation memory、memory-policy diagnostics，以及默认 runtime tutor-adapter 注入都是真实的，但生产级多 provider 路由策略仍未闭环。
@@ -70,8 +70,8 @@
 ## 当前仍需优先补齐的结构缺口
 
 1. 真实 graph backend 闭环：
-   - 让默认 graphdb 路径超出 `local-file-graphdb`，
-   - 针对真实本地图引擎验证 ops-preferred 查询语义、fallback 一致性与持久化行为。
+   - 让新的 embedded `graphdb/sqlite` 默认基线在 packaged/runtime 路径中持续成立，
+   - 针对这一真实本地图引擎验证 ops-preferred 查询语义、fallback 一致性、持久化行为与工作负载级耐久性。
 2. 真实 ANN connector 闭环：
    - 把 `external_stub` / `external_http` 从“脚手架状态”推进到至少一条生产级 connector 路径，
    - 在宣称向量层可用于生产前完成 recall / latency 阈值校准。

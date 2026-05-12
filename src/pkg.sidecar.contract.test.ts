@@ -44,5 +44,7 @@ describe('pkg sidecar packaging contract', () => {
     expect(buildSidecar).toContain("'Brotli'");
     expect(buildSidecar).toContain("'--no-bytecode'");
     expect(buildSidecar).toContain("'--public-packages'");
+    expect(buildSidecar).toContain('PKG_NO_BYTECODE_RETRY_PATTERN');
+    expect(buildSidecar).toContain('without --no-bytecode');
   });
 });

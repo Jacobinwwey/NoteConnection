@@ -7,17 +7,17 @@
 
 - 先前“Phase-1 已收口”的表述对当前 HEAD 过于乐观，现以本节为准。
 - 当前已经真实落地的部分：
-  - `src/learning/store.ts` 已具备 file-backed ops 与 HTTP adapter 语义路径，
+  - `src/learning/store.ts` 已具备 file-backed ops、embedded SQLite graphdb persistence/query 路径，以及 HTTP adapter 语义路径，
   - `src/learning/queryBackend.ts` / `src/learning/vectorAccelerationAdapter.ts` 已具备 ANN 风格 prefilter、representation telemetry、circuit health 与 `external_http` 连接器脚手架，
   - `src/learning/KnowledgeLearningPlatform.ts` 中的 Phase-2 运行时诊断面已接通真实实现，包括 query-backend comparison/history/trend、knowledge staleness diagnostics/rebuild planning、learning-quality history/trend、session-plan quality evaluate/history/trend/runtime-threshold diagnostics、query-backend config、query-backend diagnostics，
   - Phase-3 的导师/记忆诊断仍为真实实现，且 `src/server.ts` 现已注入默认激活态 tutor adapter，正常 server 路径可直接产出 adapter telemetry。
 - 当前仍未闭环的部分：
-  - Phase-1 A8 仍是 `Partial+`：默认 runtime graph backend 仍指向 `local-file-graphdb`，尚未交付“真实本地图数据库引擎”基线；
+  - Phase-1 A8 已经超出 file-only 默认态：`src/server.ts` 现在默认走 `graphdb/sqlite` 并保留显式 file fallback，但在宣布本地图后端达到生产闭环之前，packaged/runtime 证明、耐久性与工作负载级加固仍未完成；
   - Phase-1 A9 仍是 `Partial+`：ANN 路径仍停留在 `external_stub` / `external_http` 脚手架与 rollout telemetry，尚未接通已验证的生产级 ANN 后端；
   - Phase-2 的 quality/session/query 可观测性已不再是空占位，但它们仍建立在同一个 `Partial+` 的 Phase-1 graph/ANN 基线之上，因此还不能宣称发布级闭环；
   - 默认 tutor routing 已不再只是 catalog-only，但当前 runtime 仍是 `local`-first，并保留显式 rule-engine fallback，而不是已验证的生产级多 provider 路由策略。
 - 因此当前活跃重心不是“默认认为 Phase-1 已完成然后推进上层”，而是：
-  1. 先把真实 graph/vector backend 缺口补齐，
+  1. 先把新的 embedded graph backend 基线继续加固，
   2. 让这批新诊断面始终与同一份运行时真相保持一致，
   3. 只有在 Phase-1 真正闭环后，才把 Phase-2 / Phase-3 门禁升级为发布级结论。
 
@@ -37,7 +37,7 @@
 
 | Phase | 目标 | 当前状态 | 代码证据 |
 |---|---|---|---|
-| Phase 1 | 知识解析 + 图谱底座 + staleness 治理 | `Partial+` | `src/learning/store.ts`、`src/learning/queryBackend.ts`、`src/learning/vectorAccelerationAdapter.ts`、`src/server.ts` |
+| Phase 1 | 知识解析 + 图谱底座 + staleness 治理 | `Operational baseline` | `src/learning/store.ts`、`src/learning/queryBackend.ts`、`src/learning/vectorAccelerationAdapter.ts`、`src/server.ts` |
 | Phase 2 | 掌握闭环 + 发散引擎 | `Partial` | `src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/path_app.js` |
 | Phase 3 | 可插拔导师 + 记忆操作层 | `Early operational` | `src/learning/KnowledgeLearningPlatform.ts`、`src/learning/tutorAdapter.ts`、`src/server.ts`、`src/routes/knowledge.ts` |
 
@@ -266,8 +266,8 @@
 - `src/learning/store.ts` 已支持：
   - `file`
   - `memory`
-  - `graphdb`（当前为 file-adapter + fallback）
-- 当前结构上限：`graphdb` 仍基于 `FileGraphDbSnapshotAdapter`（`local-file-graphdb`），尚非真实本地图数据库引擎。
+  - `graphdb`（现已支持 embedded SQLite、file、HTTP adapter 路径）
+- 当前结构上限：新的默认 graphdb 路径已经是 embedded SQLite 并保留显式 fallback，但在宣布其达到生产闭环之前，仍需补齐 packaged/runtime 证明与工作负载级加固。
 
 ## 检索层
 

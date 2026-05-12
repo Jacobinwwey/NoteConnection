@@ -8,8 +8,10 @@
 ### 2026-05-12 本轮实现增量
 
 - 本轮代码已完成：
+  - `store.ts` 已新增 embedded SQLite graphdb adapter/provider，`server.ts` 默认 runtime 也已从 `local-file-graphdb` 切到 `graphdb/sqlite`，同时保留显式 file fallback。
   - `KnowledgeLearningPlatform.ts` 已补齐 query-backend comparison/history/trend、staleness diagnostics/rebuild planning、learning-quality history/trend、session-plan quality evaluate/history/trend/runtime-threshold diagnostics、query-backend config、query-backend diagnostics 的真实实现。
   - `queryKnowledge()` 已改为遵循当前配置的 backend，并保留显式 runtime fallback 语义。
+  - foundation readiness 与 backend baseline sufficiency 已改为根据真实 store/query/vector 信号判定，而不再是静态占位返回。
   - `server.ts` 现已注入默认激活态本地 `tutorAdapter`，同时保留 `local` + `cloud` adapter catalog。
 - 这会改变执行重心：
   - P3 的“placeholder 替换”在当前 runtime 面上已经完成实现；
@@ -20,7 +22,7 @@
 
 | 区域 | 方案期望 | 当前 HEAD 现实 | 状态 |
 |---|---|---|---|
-| Phase-1 A8 graph backend | 生产级本地图后端 | ops 语义已存在，但默认 runtime 仍是 `local-file-graphdb` | Partial+ |
+| Phase-1 A8 graph backend | 生产级本地图后端 | ops 语义已存在，且默认 runtime 已切到 embedded `graphdb/sqlite` 并保留显式 file fallback，但 packaged/runtime 证明与工作负载级加固仍未完成 | Operational baseline |
 | Phase-1 A9 ANN connector | 生产级 ANN connector | prefilter / circuit / representation telemetry 已有，但默认交付仍停留在 `external_stub` / `external_http` 脚手架 | Partial+ |
 | Phase-2 quality gates | 真实掌握闭环 / 发散质量门禁 | query-backend comparison、staleness、learning-quality、session-plan-quality 运行面已在 `KnowledgeLearningPlatform.ts` 中接通真实实现，但由于仍建立在同一个 `Partial+` 的 Phase-1 graph/ANN 基线上，所以还不能宣称发布级闭环 | Operational baseline |
 | Phase-3 tutor + memory | 导师与记忆操作层真实落地 | tutor telemetry / trace-provider trend / conversation memory / memory-policy diagnostics 已真实，且默认 runtime 已注入本地 tutor adapter；生产级多 provider 路由仍待闭环 | Operational baseline |
@@ -32,9 +34,9 @@
    - 先让进度文档与代码现状一致，
    - 不再把 placeholder 返回或 catalog-only wiring 视为“已完成”。
 2. P1：真实 graph backend 闭环
-   - 把默认 graphdb 路径从 file-only 基线推进到真实后端，
+   - 对新的 embedded `graphdb/sqlite` 默认基线补齐 packaged/runtime 级验证，
    - 保留 fallback，
-   - 补齐 adapter / fallback 一致性验证。
+   - 补齐耐久性/性能与 adapter / fallback 一致性验证。
 3. P2：生产级 ANN 闭环
    - 把 ANN 从脚手架路径推进到至少一条真实 connector 路径，
    - 校准 recall / latency 阈值，

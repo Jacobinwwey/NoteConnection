@@ -11,6 +11,7 @@ const pkgCli = path.join(repoRoot, 'node_modules', '@yao-pkg', 'pkg', 'lib-es5',
 const KNOWN_BENIGN_WARNING_PATTERNS = [
   /esbuild transform returned no code for .*[@\\/]iconify[@\\/]types[@\\/]types\.js/i,
 ];
+const PKG_NO_BYTECODE_RETRY_PATTERN = /--no-bytecode and no source breaks final executable/i;
 
 const TARGETS = {
   windows_x64: {
@@ -49,29 +50,46 @@ function resolveHostTarget() {
 
 function runPkgBuild(targetConfig) {
   const outputPath = path.join(outputDir, targetConfig.outputFile);
-  const pkgArgs = [
+  const basePkgArgs = [
     pkgCli,
     entryFile,
     '--target',
     targetConfig.pkgTarget,
     '--compress',
     'Brotli',
-    '--no-bytecode',
     '--public-packages',
     '*',
     '--output',
     outputPath,
   ];
-
-  console.log(`[Sidecar Build] Building ${targetConfig.pkgTarget} -> ${outputPath}`);
-  const result = spawnSync(process.execPath, pkgArgs, {
+  const executePkg = (args) => spawnSync(process.execPath, args, {
     cwd: repoRoot,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
+  console.log(`[Sidecar Build] Building ${targetConfig.pkgTarget} -> ${outputPath}`);
+  let result = executePkg([
+    ...basePkgArgs.slice(0, 6),
+    '--no-bytecode',
+    ...basePkgArgs.slice(6),
+  ]);
+
   writeFilteredOutput(result.stdout, process.stdout);
   writeFilteredOutput(result.stderr, process.stderr);
+
+  const firstAttemptOutput = `${String(result.stdout || '')}\n${String(result.stderr || '')}`;
+  if (
+    result.status !== 0
+    && PKG_NO_BYTECODE_RETRY_PATTERN.test(firstAttemptOutput)
+  ) {
+    console.warn(
+      `[Sidecar Build] Retrying ${targetConfig.pkgTarget} without --no-bytecode because pkg requires bytecode for the current dependency graph.`
+    );
+    result = executePkg(basePkgArgs);
+    writeFilteredOutput(result.stdout, process.stdout);
+    writeFilteredOutput(result.stderr, process.stderr);
+  }
 
   if (result.error) {
     throw result.error;

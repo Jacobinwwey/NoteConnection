@@ -6,6 +6,10 @@
 
 - [x] `node node_modules/jest/bin/jest.js src/agent_workspace.contract.parity.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.runtime.behavior.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
   - 通过
+- [x] `node node_modules/jest/bin/jest.js src/learning/store.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
+  - 通过
+- [x] `node node_modules/jest/bin/jest.js src/knowledge.api.contract.test.ts src/agent_workspace.contract.parity.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand --no-cache`
+  - 通过
 - [x] `npm run verify:agent-workspace:runtime`
   - 通过
 - [x] `npm run verify:agent-workspace:browser`
@@ -16,6 +20,8 @@
   - 通过（仍存在既有 MkDocs nav/link warning）
 - [x] `npm run build:with-vite`
   - 通过
+- [x] `npm run build:sidecar`
+  - 通过（当 `pkg` 对当前依赖图要求 bytecode 时，会自动回退到不带 `--no-bytecode` 的重试路径）
 
 ### 这些通过项实际证明了什么
 
@@ -25,7 +31,7 @@
    - conversation memory lifecycle，
    - memory-policy diagnostics/history/trend。
 2. 这些通过项**不等于** Phase-1 A8/A9 已闭环：
-   - runtime 默认 graph backend 仍是 `local-file-graphdb`；
+   - runtime 已不再默认 `local-file-graphdb`，但新的 embedded `graphdb/sqlite` 基线仍需要 packaged/runtime 证明与工作负载级加固；
    - ANN 仍依赖 `external_stub` / `external_http` 脚手架边界，而不是已验证的生产级后端。
 3. 这些通过项**不等于** Phase-2 quality gate 已闭环：
    - query compare、staleness、learning-quality、session-plan-quality、query-backend diagnostics 这批运行面已经具备真实实现，但它们仍建立在同一个 `Partial+` 的 Phase-1 graph/ANN 基线之上，因此还不能宣称发布级闭环。

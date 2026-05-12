@@ -6171,6 +6171,7 @@ function createNotemdTutorAdapter(mode: TutorProviderMode): TutorAdapter {
 
 const KNOWLEDGE_GRAPH_STORE_PATH = path.join(RUNTIME_DATA_DIR, 'knowledge_graph_store.v1.json');
 const KNOWLEDGE_GRAPH_GRAPHDB_PATH = path.join(RUNTIME_DATA_DIR, 'knowledge_graph_store.graphdb.v1.json');
+const KNOWLEDGE_GRAPH_GRAPHDB_SQLITE_PATH = path.join(RUNTIME_DATA_DIR, 'knowledge_graph_store.graphdb.v1.sqlite');
 const KNOWLEDGE_QUERY_VECTOR_INDEX_PATH = path.join(RUNTIME_DATA_DIR, 'knowledge_query_vector_index.v1.json');
 type RuntimeQualityTrendRequestConfig = {
     limit: number;
@@ -6715,14 +6716,14 @@ function resolveRuntimeApiRequestTraceTelemetryConfigFromEnv(
 }
 
 const KNOWLEDGE_GRAPH_STORE_BACKEND = normalizeKnowledgeGraphStoreBackend(
-    process.env.NOTE_CONNECTION_KNOWLEDGE_STORE_BACKEND
+    process.env.NOTE_CONNECTION_KNOWLEDGE_STORE_BACKEND || 'graphdb'
 );
 const KNOWLEDGE_GRAPHDB_ADAPTER_PROVIDER = normalizeGraphDbSnapshotAdapterProvider(
-    process.env.NOTE_CONNECTION_KNOWLEDGE_GRAPHDB_ADAPTER_PROVIDER
+    process.env.NOTE_CONNECTION_KNOWLEDGE_GRAPHDB_ADAPTER_PROVIDER || 'sqlite'
 );
 const KNOWLEDGE_GRAPHDB_ADAPTER_ID = String(
-    process.env.NOTE_CONNECTION_KNOWLEDGE_GRAPHDB_ADAPTER_ID || 'local-file-graphdb'
-).trim() || 'local-file-graphdb';
+    process.env.NOTE_CONNECTION_KNOWLEDGE_GRAPHDB_ADAPTER_ID || 'embedded-sqlite-graphdb'
+).trim() || 'embedded-sqlite-graphdb';
 const KNOWLEDGE_GRAPHDB_HTTP_ENDPOINT = String(
     process.env.NOTE_CONNECTION_KNOWLEDGE_GRAPHDB_HTTP_ENDPOINT || ''
 ).trim();
@@ -6791,6 +6792,7 @@ const KNOWLEDGE_GRAPHDB_ADAPTER = KNOWLEDGE_GRAPH_STORE_BACKEND === 'graphdb'
     ? createGraphDbSnapshotAdapter({
         provider: KNOWLEDGE_GRAPHDB_ADAPTER_PROVIDER,
         filePath: KNOWLEDGE_GRAPH_GRAPHDB_PATH,
+        sqlitePath: KNOWLEDGE_GRAPH_GRAPHDB_SQLITE_PATH,
         adapterId: KNOWLEDGE_GRAPHDB_ADAPTER_ID,
         httpEndpoint: KNOWLEDGE_GRAPHDB_HTTP_ENDPOINT,
         httpTimeoutMs: KNOWLEDGE_GRAPHDB_HTTP_TIMEOUT_MS,

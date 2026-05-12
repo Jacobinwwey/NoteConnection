@@ -54,7 +54,7 @@ This requires:
 
 - The branch now contains real Phase-3 tutor/memory slices, but current HEAD should not be described as "Phase-1 closed".
 - The accurate state is:
-  - Phase-1 A8 is `Partial+`: graph/store ops semantics and HTTP adapter paths exist, but the default runtime still targets `local-file-graphdb` instead of a true local graph database engine.
+  - Phase-1 A8 has advanced into an embedded local-backend baseline: graph/store ops semantics, embedded SQLite graphdb persistence/query paths, and HTTP adapter paths exist, and the default runtime now targets `graphdb/sqlite` with explicit file fallback; packaged/runtime proof and workload hardening are still open.
   - Phase-1 A9 is `Partial+`: ANN-style prefilter, representation telemetry, and `external_http` scaffolding exist, but there is still no proven production ANN backend wired into the default delivery path.
   - Phase-2 now has an operational diagnostics baseline: `learning quality`, `session plan quality`, query comparison, staleness, query-backend config, and query-backend diagnostics are live in `KnowledgeLearningPlatform.ts`, but they are not yet release-closed because they still sit on top of the same `Partial+` Phase-1 graph/ANN delivery path.
   - Phase-3 is now operational-baseline rather than catalog-only: tutor telemetry, tutor trace/provider trends, conversation memory, memory-policy diagnostics, and default runtime tutor-adapter injection are real, but production-proven multi-provider routing policy is still open.
@@ -63,8 +63,8 @@ This requires:
 ## Primary Structural Gaps Still Open
 
 1. Real graph backend closure:
-   - move the default graphdb path beyond `local-file-graphdb`,
-   - prove ops-preferred query semantics, fallback consistency, and persistence behavior against a real local graph engine.
+   - keep the new embedded `graphdb/sqlite` default alive across packaged/runtime paths,
+   - prove ops-preferred query semantics, fallback consistency, persistence behavior, and workload durability against that local graph engine.
 2. Real ANN connector closure:
    - replace `external_stub` / `external_http` scaffolding status with one production-backed ANN connector path,
    - benchmark recall/latency thresholds before calling the vector layer production-ready.

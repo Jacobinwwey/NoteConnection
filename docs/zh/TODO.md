@@ -8,7 +8,8 @@
 - [x] tutor telemetry、tutor trace/provider trend、conversation memory、memory-policy diagnostics 已有真实后端实现。
 - [x] `src/learning/KnowledgeLearningPlatform.ts` 中的 query-backend comparison/history/trend、staleness diagnostics/rebuild planning、learning-quality history/trend、session-plan quality evaluate/history/trend/runtime-threshold diagnostics、query-backend config、query-backend diagnostics 已全部接通真实实现。
 - [x] 默认 server runtime 现已注入激活态本地 `tutorAdapter`，同时保留 `local` + `cloud` adapter catalog。
-- [ ] 将 Phase-1 A8 重新归类为 `Partial+`：默认 graph backend 仍是 `local-file-graphdb`，真实本地图数据库基线尚未交付。
+- [x] 默认 runtime graph backend 已不再是 `local-file-graphdb`：server 现已切到 embedded `graphdb/sqlite`，同时保留显式 file fallback。
+- [ ] 在 packaged/runtime 路径与工作负载级耐久性门禁上证明新的 embedded `graphdb/sqlite` 基线，再谈 A8 生产闭环。
 - [ ] 将 Phase-1 A9 重新归类为 `Partial+`：当前 ANN 路径仍属于脚手架 telemetry + `external_http` 边界，而非生产级 ANN 服务/引擎。
 - [ ] 只有在同一套检查运行在非 `Partial+` 的 graphdb/ANN 基线上之后，才能把这批新的 Phase-2 诊断面升级为发布级门禁。
 - [ ] 在当前 local-first 基线之上，把 tutor routing 继续推进到生产级多 provider 策略。
@@ -30,7 +31,7 @@
 - [~] Phase-1 底座加固曾被标记为“已收口”，但当前 HEAD 已重新归类为 `Partial+`：
   - [x] 图后端适配器路径已具备 HTTP 操作级语义（节点/边/路径查询 + 诊断遥测）。
   - [x] ANN 连接器加固已具备候选集合归一化、表示一致性遥测与 prefilter 有效性信号。
-  - [ ] 默认 runtime 仍需从 `local-file-graphdb` 升级到真实 graph backend。
+  - [x] 默认 runtime 现在已经切到 embedded `graphdb/sqlite`，并保留显式 file fallback。
   - [ ] ANN 仍需从脚手架状态推进到生产级 connector 路径。
 - [ ] 下一活跃实施阶段现已拆分为：
   - [ ] 先补真实 Phase-1 backend 闭环，

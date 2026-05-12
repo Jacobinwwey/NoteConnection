@@ -9,8 +9,10 @@ Bring code truth, active progress docs, and next execution order back into align
 ### 2026-05-12 Implementation Delta
 
 - Completed in code on this turn:
+  - `store.ts` now ships an embedded SQLite graphdb adapter/provider and the server runtime now defaults to `graphdb/sqlite` instead of `local-file-graphdb`, while preserving explicit file fallback.
   - `KnowledgeLearningPlatform.ts` now has live query-backend comparison/history/trend, staleness diagnostics/rebuild planning, learning-quality history/trend, session-plan quality evaluate/history/trend/runtime-threshold diagnostics, query-backend config, and query-backend diagnostics.
   - `queryKnowledge()` now follows the configured backend and preserves explicit runtime fallback semantics.
+  - foundation readiness and backend-baseline sufficiency are now evaluated from real store/query/vector signals instead of static placeholders.
   - `server.ts` now injects an active default local `tutorAdapter` while retaining the `local` + `cloud` adapter catalog.
 - This changes the execution focus:
   - P3 placeholder replacement is implementation-complete for the current runtime surfaces.
@@ -21,7 +23,7 @@ Bring code truth, active progress docs, and next execution order back into align
 
 | Area | Planned Expectation | Current HEAD Reality | Status |
 |---|---|---|---|
-| Phase-1 A8 graph backend | production-grade local graph backend | ops semantics exist, but default runtime still points to `local-file-graphdb` | Partial+ |
+| Phase-1 A8 graph backend | production-grade local graph backend | ops semantics exist and default runtime now targets embedded `graphdb/sqlite` with explicit file fallback, but packaged/runtime proof and workload hardening are still open | Operational baseline |
 | Phase-1 A9 ANN connector | production-grade ANN connector | prefilter/circuit/representation telemetry exists, but delivery still stops at `external_stub` / `external_http` scaffolding | Partial+ |
 | Phase-2 quality gates | live mastery/divergence quality trend gates | query-backend comparison, staleness, learning-quality, and session-plan-quality runtime surfaces are now live in `KnowledgeLearningPlatform.ts`, but they are not yet release-closed because they still sit on top of the same `Partial+` Phase-1 graph/ANN baseline | Operational baseline |
 | Phase-3 tutor + memory | tutor and memory operating layer becomes real | tutor telemetry/trace/provider trends + conversation memory + memory-policy diagnostics are real, and default runtime now injects a local tutor adapter; production-proven multi-provider routing is still open | Operational baseline |
@@ -33,9 +35,9 @@ Bring code truth, active progress docs, and next execution order back into align
    - keep progress docs aligned with actual code status,
    - stop treating placeholder-backed or catalog-only surfaces as closed.
 2. P1: Real graph backend closure
-   - activate a non-file-only graph backend path for the production-ready baseline,
+   - validate the new embedded `graphdb/sqlite` default across packaged/runtime paths,
    - preserve fallback behavior,
-   - add adapter/fallback consistency verification.
+   - add durability/performance and adapter/fallback consistency verification.
 3. P2: Production ANN closure
    - replace scaffold-only ANN delivery with one proven connector path,
    - benchmark recall/latency thresholds,

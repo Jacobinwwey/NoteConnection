@@ -8032,28 +8032,315 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
     }
     public async updateStudySessionOrchestrationConfig(_r: any): Promise<any> { return { updated: true }; }
-    public async getFoundationReadiness(): Promise<any> {
+
+    private readPackageScripts(): Record<string, unknown> {
+        const packagePath = path.resolve(process.cwd(), 'package.json');
+        try {
+            const parsed = JSON.parse(fs.readFileSync(packagePath, 'utf8')) as { scripts?: Record<string, unknown> };
+            return parsed.scripts && typeof parsed.scripts === 'object' ? parsed.scripts : {};
+        } catch {
+            return {};
+        }
+    }
+
+    private buildFoundationQueryBackendScoreSignals(configuredBackend: string): string[] {
+        if (configuredBackend === 'keyword_only') {
+            return ['keyword_matches', 'title_match_bonus', 'content_match_bonus'];
+        }
+        if (configuredBackend === 'local_vector') {
+            return ['vector_ann_similarity_bonus', 'semantic_similarity_bonus', 'relation_bonus'];
+        }
+        return ['keyword_matches', 'title_match_bonus', 'vector_ann_similarity_bonus', 'relation_bonus'];
+    }
+
+    private resolveFoundationVectorSignal(queryBackendDiagnostics: Record<string, unknown>): {
+        status: string;
+        signalKind: string;
+        independent: boolean;
+        linkedIntoQueryBackend: boolean;
+        modulePresent: boolean;
+    } {
+        const configuredProvider = String(
+            queryBackendDiagnostics.configuredVectorAccelerationProvider
+            || this.graphQueryBackendFactoryOptions.localVectorAccelerationAdapter
+            || 'local'
+        ).trim().toLowerCase();
+        const configuredBackend = String(queryBackendDiagnostics.configuredBackend || this.currentGraphQueryBackendType).trim();
+        const runtime = (
+            queryBackendDiagnostics.runtime
+            && typeof queryBackendDiagnostics.runtime === 'object'
+        ) ? queryBackendDiagnostics.runtime as Record<string, unknown> : {};
+        const vectorIndex = (
+            runtime.vectorIndex
+            && typeof runtime.vectorIndex === 'object'
+        ) ? runtime.vectorIndex as Record<string, unknown> : {};
+        const acceleration = (
+            vectorIndex.acceleration
+            && typeof vectorIndex.acceleration === 'object'
+        ) ? vectorIndex.acceleration as Record<string, unknown> : {};
+        const linkedIntoQueryBackend = configuredBackend === 'local_hybrid' || configuredBackend === 'local_vector';
+        if (configuredProvider === 'external_http' || configuredProvider === 'http') {
+            return {
+                status: String(acceleration.healthStatus || 'degraded').trim() || 'degraded',
+                signalKind: 'service_ann',
+                independent: String(acceleration.healthStatus || '').trim().toLowerCase() === 'ready',
+                linkedIntoQueryBackend,
+                modulePresent: true,
+            };
+        }
+        if (configuredProvider === 'external_stub' || configuredProvider === 'stub') {
+            return {
+                status: 'scaffolded',
+                signalKind: 'stub_ann',
+                independent: false,
+                linkedIntoQueryBackend,
+                modulePresent: true,
+            };
+        }
         return {
-            ready: true,
+            status: linkedIntoQueryBackend ? 'independent' : 'available',
+            signalKind: 'embedding_ann',
+            independent: linkedIntoQueryBackend,
+            linkedIntoQueryBackend,
+            modulePresent: true,
+        };
+    }
+
+    private async buildFoundationReadinessPayload(): Promise<any> {
+        await this.ensureHydrated();
+        const evaluatedAt = this.resolveTimestamp(undefined);
+        const storeDiagnostics = await this.getStoreDiagnostics();
+        const queryBackendConfig = this.getQueryBackendConfig();
+        const queryBackendDiagnostics = this.getQueryBackendDiagnostics();
+        const packageScripts = this.readPackageScripts();
+        const repoRoot = path.resolve(process.cwd());
+        const docsPresence = {
+            checklistPagesPresent: fs.existsSync(path.join(repoRoot, 'docs', 'en', 'TODO.md'))
+                && fs.existsSync(path.join(repoRoot, 'docs', 'zh', 'TODO.md')),
+            dashboardReferencesPresent: fs.existsSync(path.join(repoRoot, 'docs', 'diataxis', 'en', 'explanation', 'development-progress-dashboard.md'))
+                && fs.existsSync(path.join(repoRoot, 'docs', 'diataxis', 'zh', 'explanation', 'development-progress-dashboard.md')),
+        };
+        const readinessVerifierPresent = Boolean(packageScripts['verify:agent-workspace:runtime']);
+        const storageEngine = String(
+            (storeDiagnostics as Record<string, unknown>).storageEngine
+            || (
+                String(storeDiagnostics.location || '').trim().toLowerCase().endsWith('.sqlite')
+                    ? 'sqlite'
+                    : ''
+            )
+        ).trim().toLowerCase();
+        const fallbackStoreType = String((storeDiagnostics as Record<string, unknown>).fallbackStoreType || '').trim().toLowerCase();
+        const usingFallback = storeDiagnostics.usingFallback === true;
+        const configuredBackend = String(queryBackendConfig.configuredBackend || this.currentGraphQueryBackendType).trim();
+        const vectorSignal = this.resolveFoundationVectorSignal(queryBackendDiagnostics);
+        const baselineStoreType = storageEngine === 'sqlite'
+            ? 'sqlite'
+            : (usingFallback && fallbackStoreType ? fallbackStoreType : String(storeDiagnostics.storeType || 'none'));
+        const graphBackendSignalKind = storageEngine === 'sqlite'
+            ? 'embedded_graphdb'
+            : String(storeDiagnostics.location || '').trim().toLowerCase().startsWith('http')
+                ? 'service_graphdb'
+                : 'file_snapshot';
+        const graphBackendIndependent = (
+            String(storeDiagnostics.storeType || '').trim() === 'graphdb'
+            && !usingFallback
+            && storageEngine === 'sqlite'
+        ) || (
+            String(storeDiagnostics.storeType || '').trim() === 'graphdb'
+            && !usingFallback
+            && graphBackendSignalKind === 'service_graphdb'
+            && storeDiagnostics.backendReady !== false
+        );
+        const graphBackendStatus = graphBackendIndependent
+            ? 'independent'
+            : usingFallback
+                ? 'fallback'
+                : String(storeDiagnostics.storeType || '').trim() === 'graphdb'
+                    ? 'provisioned'
+                    : 'file_backed';
+        const baseline = {
+            storeType: baselineStoreType,
+            exists: Boolean(storeDiagnostics.exists),
+            loaded: Boolean(storeDiagnostics.loaded),
+            fileBackedStore: baselineStoreType === 'file',
+            graphBackendStatus,
+            graphBackendSignalKind,
+            graphBackendIndependent,
+            graphAdapterModulePresent: String(storeDiagnostics.storeType || '').trim() === 'graphdb' || storageEngine === 'sqlite',
+            queryBackendDefaultMode: configuredBackend,
+            queryBackendScoreSignals: this.buildFoundationQueryBackendScoreSignals(configuredBackend),
+            vectorAdapterModulePresent: vectorSignal.modulePresent,
+            vectorAdapterStatus: vectorSignal.status,
+            vectorAdapterSignalKind: vectorSignal.signalKind,
+            vectorAdapterIndependent: vectorSignal.independent,
+            vectorAdapterLinkedIntoQueryBackend: vectorSignal.linkedIntoQueryBackend,
+        };
+        const promotionCriteria = [
+            {
+                criterionId: 'store_backend_evidence_present',
+                satisfied: baseline.exists || baseline.loaded,
+                summary: baseline.exists || baseline.loaded
+                    ? 'Store backend evidence is present in the repository baseline.'
+                    : 'Store backend evidence is missing from the current runtime baseline.',
+            },
+            {
+                criterionId: 'graph_backend_independent',
+                satisfied: baseline.graphBackendIndependent,
+                summary: baseline.graphBackendIndependent
+                    ? 'Graph backend resolves to independent graph semantics.'
+                    : 'Graph backend still falls back to file-backed semantics.',
+            },
+            {
+                criterionId: 'query_backend_boundary_present',
+                satisfied: configuredBackend.length > 0,
+                summary: configuredBackend.length > 0
+                    ? 'Dedicated query backend boundary is present.'
+                    : 'Query backend boundary is not configured.',
+            },
+            {
+                criterionId: 'vector_backend_present',
+                satisfied: vectorSignal.modulePresent,
+                summary: vectorSignal.modulePresent
+                    ? 'Dedicated vector adapter boundary is present.'
+                    : 'Vector adapter boundary is missing.',
+            },
+            {
+                criterionId: 'vector_backend_independent',
+                satisfied: vectorSignal.independent,
+                summary: vectorSignal.independent
+                    ? 'Vector backend resolves to independent ANN semantics.'
+                    : 'Vector backend still resolves to scaffolded or fallback semantics.',
+            },
+            {
+                criterionId: 'docs_aligned',
+                satisfied: docsPresence.checklistPagesPresent && docsPresence.dashboardReferencesPresent,
+                summary: docsPresence.checklistPagesPresent && docsPresence.dashboardReferencesPresent
+                    ? 'EN/ZH checklist and dashboard references are aligned.'
+                    : 'Bilingual checklist/dashboard references are incomplete.',
+            },
+            {
+                criterionId: 'readiness_verifier_present',
+                satisfied: readinessVerifierPresent,
+                summary: readinessVerifierPresent
+                    ? 'Readiness verifier command is present in package scripts.'
+                    : 'Readiness verifier command is missing from package scripts.',
+            },
+        ];
+        const promotionCriteriaSatisfiedIds = promotionCriteria
+            .filter((entry) => entry.satisfied)
+            .map((entry) => entry.criterionId);
+        const promotionCriteriaUnsatisfiedIds = promotionCriteria
+            .filter((entry) => !entry.satisfied)
+            .map((entry) => entry.criterionId);
+        const promotionBlockers = promotionCriteria
+            .filter((entry) => !entry.satisfied)
+            .map((entry) => ({
+                blockerId: entry.criterionId,
+                summary: entry.summary,
+            }));
+        const promotionCriteriaPassed = promotionCriteriaSatisfiedIds.length;
+        const promotionCriteriaTotal = promotionCriteria.length;
+        const status = promotionBlockers.length <= 0
+            ? 'integrated'
+            : graphBackendIndependent || vectorSignal.independent
+                ? 'transitional'
+                : 'partial';
+        const decision = promotionBlockers.length <= 0 ? 'go' : 'hold';
+        return {
+            evaluatedAt,
+            status,
+            decision,
+            baseline,
+            documents: docsPresence,
+            packageScripts: {
+                readinessVerifierPresent,
+            },
+            provenance: {
+                repoRootSource: 'cwd',
+                runtimeProjectRootAligned: fs.existsSync(path.join(repoRoot, 'src')) && fs.existsSync(path.join(repoRoot, 'docs')),
+            },
+            promotionCriteriaPassed,
+            promotionCriteriaTotal,
+            promotionCriteriaSatisfiedIds,
+            promotionCriteriaUnsatisfiedIds,
+            promotionCriteria,
+            mandatoryChecks: [
+                {
+                    gateId: 'contract',
+                    command: 'node node_modules/jest/bin/jest.js src/knowledge.api.contract.test.ts --runInBand --no-cache',
+                },
+                {
+                    gateId: 'core_behavior',
+                    command: 'node node_modules/jest/bin/jest.js src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache',
+                },
+                {
+                    gateId: 'persistence_safety',
+                    command: 'node node_modules/jest/bin/jest.js src/learning/store.test.ts --runInBand --no-cache',
+                },
+                {
+                    gateId: 'interaction_non_regression',
+                    command: 'npm run test:agent-workspace:contracts',
+                },
+                {
+                    gateId: 'documentation',
+                    command: 'npm run docs:diataxis:check && npm run docs:site:build',
+                },
+            ],
+            promotionBlockers,
+            recommendations: promotionBlockers.length <= 0
+                ? ['Keep mandatory foundation gates green and preserve anti-overclaim wording while adapter depth evolves.']
+                : promotionBlockers.map((entry) => `Resolve ${entry.blockerId}: ${entry.summary}`),
             modules: {
-                knowledgeGraph: { status: 'operational', backend: 'local_hybrid' },
-                queryBackend: { status: 'operational', backend: 'local_hybrid' },
-                vectorStore: { status: 'operational', index: 'local_hybrid' },
+                knowledgeGraph: {
+                    status: graphBackendStatus,
+                    backend: baseline.storeType,
+                    signalKind: graphBackendSignalKind,
+                },
+                queryBackend: {
+                    status: configuredBackend ? 'operational' : 'missing',
+                    backend: configuredBackend || 'unknown',
+                },
+                vectorStore: {
+                    status: vectorSignal.status,
+                    index: vectorSignal.signalKind,
+                },
                 conversationMemory: { status: 'operational' },
                 studySession: { status: 'operational' },
             },
-            checkedAt: new Date().toISOString(),
+            ready: promotionBlockers.length <= 0,
+            checkedAt: evaluatedAt,
         };
     }
+
+    public async getFoundationReadiness(): Promise<any> {
+        return this.buildFoundationReadinessPayload();
+    }
     public async getBackendBaselineSufficiency(): Promise<any> {
-        return {
-            sufficient: true,
-            checks: {
-                knowledgeGraph: { passed: true, reason: 'local_hybrid_backend_available' },
-                queryBackend: { passed: true, reason: 'local_query_backend_available' },
-                vectorIndex: { passed: true, reason: 'local_vector_index_available' },
+        const readiness = await this.buildFoundationReadinessPayload();
+        const checks = {
+            knowledgeGraph: {
+                passed: Boolean(readiness.baseline?.graphBackendIndependent),
+                reason: Boolean(readiness.baseline?.graphBackendIndependent)
+                    ? String(readiness.baseline?.graphBackendSignalKind || 'embedded_graphdb')
+                    : 'graph_backend_not_independent',
             },
-            checkedAt: new Date().toISOString(),
+            queryBackend: {
+                passed: String(readiness.baseline?.queryBackendDefaultMode || '').trim().length > 0,
+                reason: String(readiness.baseline?.queryBackendDefaultMode || '').trim().length > 0
+                    ? 'local_query_backend_available'
+                    : 'query_backend_missing',
+            },
+            vectorIndex: {
+                passed: Boolean(readiness.baseline?.vectorAdapterIndependent),
+                reason: Boolean(readiness.baseline?.vectorAdapterIndependent)
+                    ? String(readiness.baseline?.vectorAdapterSignalKind || 'embedding_ann')
+                    : 'vector_backend_not_independent',
+            },
+        };
+        return {
+            sufficient: checks.knowledgeGraph.passed && checks.queryBackend.passed && checks.vectorIndex.passed,
+            checks,
+            checkedAt: readiness.evaluatedAt,
         };
     }
 }
