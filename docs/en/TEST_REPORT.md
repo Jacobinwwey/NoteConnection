@@ -28,8 +28,8 @@
    - runtime still defaults to `local-file-graphdb`,
    - ANN still depends on scaffolded connector boundaries (`external_stub` / `external_http`) rather than a proven production backend.
 3. These passes do **not** prove Phase-2 quality-gate closure:
-   - query comparison, staleness, learning-quality, and session-plan-quality runtime surfaces remain partially placeholder-backed in `src/learning/KnowledgeLearningPlatform.ts`.
-4. Default runtime tutor execution is still rule-engine-first until server bootstrap injects an active `tutorAdapter`.
+   - query comparison, staleness, learning-quality, session-plan-quality, and query-backend diagnostics are now implementation-real, but they still sit on the same `Partial+` Phase-1 graph/ANN baseline and therefore are not release-closed yet.
+4. Default runtime tutor execution now runs with an injected local `tutorAdapter`, but this is still a local-first baseline rather than a production-proven multi-provider routing policy.
 
 ### Phase 2 Verification Snapshot (2026-05-12)
 
@@ -57,10 +57,10 @@
 ### Phase 2 Interpretation
 
 1. Agent-workspace conversation, capability execution, browser strict evidence, Tauri smoke, load-flow parity, history synchronization, and sidecar/bootstrap readiness are implementation-closed.
-2. However, Phase 2 is **not** fully closed at application level, because query comparison, staleness, learning-quality, and session-plan-quality runtime surfaces still contain placeholder-backed methods in `KnowledgeLearningPlatform.ts`.
+2. However, Phase 2 is **not** fully closed at application level, because the new query comparison, staleness, learning-quality, and session-plan-quality runtime surfaces still need release-grade calibration on top of a non-`Partial+` graphdb/ANN baseline.
 3. Remaining work is therefore a mix of:
    - operational/release prerequisites (`FR-009`, Linux-host strict Tauri dependency provisioning, Electron decommission review),
-   - application-layer implementation gaps (non-placeholder quality/session/query diagnostics).
+   - application-layer implementation gaps (real graphdb/ANN delivery plus stronger release-grade calibration for the new quality/session/query diagnostics).
 4. Phase 3 implementation work can proceed in parallel, but it should not be reported as if Phase 1 and Phase 2 are already fully closed.
 
 ### Test Objective

@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { KnowledgeLearningPlatform } from './KnowledgeLearningPlatform';
 
 describe('KnowledgeLearningPlatform', () => {
@@ -1433,5 +1435,311 @@ describe('KnowledgeLearningPlatform', () => {
         });
         expect(trend.status).toBe('improving');
         expect(Number(trend.deltas.healthScoreDelta || 0)).toBeGreaterThan(0);
+    });
+
+    test('query backend config drives runtime queries and comparison diagnostics persist history', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_query_backend_a',
+                    sourcePath: 'Knowledge_Base/doc_query_backend_a.md',
+                    language: 'en',
+                    content: '# Evidence Router\nUse evidence-backed graph retrieval and relation paths.',
+                },
+                {
+                    documentId: 'doc_query_backend_b',
+                    sourcePath: 'Knowledge_Base/doc_query_backend_b.md',
+                    language: 'en',
+                    content: '# Vector Signals\nSemantic overlap should preserve temporal and evidence coverage.',
+                },
+            ],
+        });
+
+        expect(platform.getQueryBackendConfig().configuredBackend).toBe('local_hybrid');
+
+        await platform.updateQueryBackendConfig({
+            configuredBackend: 'keyword_only',
+        });
+        expect(platform.getQueryBackendConfig().configuredBackend).toBe('keyword_only');
+
+        const keywordQuery = await platform.queryKnowledge({
+            query: 'evidence graph retrieval',
+            topK: 3,
+            asOf: '2026-04-10T02:00:00.000Z',
+        });
+        expect(keywordQuery.trace.retrievalModes).toContain('keyword');
+        expect(keywordQuery.trace.retrievalModes).not.toContain('vector_similarity');
+
+        await platform.updateQueryBackendConfig({
+            configuredBackend: 'local_vector',
+        });
+        expect(platform.getQueryBackendConfig().configuredBackend).toBe('local_vector');
+
+        const vectorQuery = await platform.queryKnowledge({
+            query: 'semantic overlap evidence',
+            topK: 3,
+            asOf: '2026-04-10T02:05:00.000Z',
+        });
+        expect(vectorQuery.trace.retrievalModes).toContain('vector_similarity');
+        expect((vectorQuery.trace as Record<string, unknown>).vectorAcceleration).toBeDefined();
+
+        const firstComparison = await platform.compareQueryBackends({
+            query: 'evidence graph retrieval',
+            topK: 3,
+            leftBackend: 'local_hybrid',
+            rightBackend: 'keyword_only',
+            comparedAt: '2026-04-10T03:00:00.000Z',
+        });
+        expect(firstComparison.left.backend).toBe('local_hybrid');
+        expect(firstComparison.right.backend).toBe('keyword_only');
+        expect(typeof firstComparison.summary.overlapRatioPct).toBe('number');
+
+        const secondComparison = await platform.compareQueryBackends({
+            query: 'semantic overlap evidence',
+            topK: 3,
+            leftBackend: 'local_vector',
+            rightBackend: 'local_hybrid',
+            comparedAt: '2026-04-10T04:00:00.000Z',
+        });
+        expect(secondComparison.left.backend).toBe('local_vector');
+        expect(secondComparison.right.backend).toBe('local_hybrid');
+
+        const history = await platform.queryKnowledgeQueryBackendComparisonHistory({
+            limit: 5,
+        });
+        expect(history.summary.totalRecords).toBe(2);
+        expect(history.summary.returnedRecords).toBe(2);
+        expect(history.records[0]?.comparedAt).toBe('2026-04-10T04:00:00.000Z');
+
+        const trend = await platform.queryKnowledgeQueryBackendComparisonTrend({
+            limit: 4,
+            windowSize: 1,
+            minSamples: 1,
+        });
+        expect(['improving', 'stable', 'regressing', 'insufficient_data']).toContain(trend.status);
+        expect(trend.summary.totalRecords).toBe(2);
+        expect(trend.summary.latestComparedAt).toBe('2026-04-10T04:00:00.000Z');
+
+        const diagnostics = platform.getQueryBackendDiagnostics();
+        expect(diagnostics.configuredBackend).toBe('local_vector');
+        expect(diagnostics.comparisonTelemetry.totalComparisons).toBe(2);
+        expect(diagnostics.runtime.ready).toBe(true);
+    });
+
+    test('knowledge staleness diagnostics and rebuild planning detect source drift', async () => {
+        const tmpRoot = path.join(process.cwd(), 'tmp');
+        fs.mkdirSync(tmpRoot, { recursive: true });
+        const tempDir = fs.mkdtempSync(path.join(tmpRoot, 'klp-staleness-'));
+        const filePath = path.join(tempDir, 'doc_staleness.md');
+        const originalContent = '# Staleness\nFresh source content for diagnostics.\n';
+        fs.writeFileSync(filePath, originalContent, 'utf8');
+
+        try {
+            await platform.ingestKnowledge({
+                incremental: true,
+                documents: [
+                    {
+                        documentId: 'doc_staleness_runtime',
+                        sourcePath: filePath,
+                        language: 'en',
+                        content: originalContent,
+                    },
+                ],
+            });
+
+            const freshDiagnostics = await platform.queryKnowledgeStalenessDiagnostics({
+                limit: 5,
+            });
+            expect(freshDiagnostics.summary.upToDateDocuments).toBe(1);
+            expect(freshDiagnostics.summary.staleDocuments).toBe(0);
+
+            fs.writeFileSync(filePath, `${originalContent}\nChanged downstream source.\n`, 'utf8');
+
+            const staleDiagnostics = await platform.queryKnowledgeStalenessDiagnostics({
+                limit: 5,
+            });
+            expect(staleDiagnostics.summary.hashMismatchDocuments).toBe(1);
+            expect(staleDiagnostics.summary.staleDocuments).toBe(1);
+            expect(staleDiagnostics.records[0]?.status).toBe('hash_mismatch');
+
+            const rebuild = await platform.rebuildKnowledgeFromStalenessDiagnostics({
+                limit: 5,
+            });
+            expect(rebuild.mode).toBe('plan_only');
+            expect(rebuild.rebuilt).toBe(0);
+            expect(rebuild.plannedDocuments).toBe(1);
+        } finally {
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        }
+    });
+
+    test('learning quality and session plan quality diagnostics use execution-backed history', async () => {
+        const ingest = await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_quality_a',
+                    sourcePath: 'Knowledge_Base/doc_quality_a.md',
+                    language: 'en',
+                    content: '# Quality A\nRetrieval practice with evidence-backed review loops.',
+                },
+                {
+                    documentId: 'doc_quality_b',
+                    sourcePath: 'Knowledge_Base/doc_quality_b.md',
+                    language: 'en',
+                    content: '# Quality B\nDivergence tasks should stay budget-aware and evidence-bound.',
+                },
+            ],
+        });
+        const atomA = ingest.atoms[0]?.id as string;
+        const atomB = ingest.atoms[1]?.id as string;
+        const evidenceA = ingest.atoms[0]?.evidenceSpanIds?.[0] as string;
+        const evidenceB = ingest.atoms[1]?.evidenceSpanIds?.[0] as string;
+
+        await platform.executeStudySessionPlan({
+            userId: 'quality_runtime_user',
+            executedAt: '2026-04-11T08:05:00.000Z',
+            actionLimit: 3,
+            sessionPlan: {
+                userId: 'quality_runtime_user',
+                generatedAt: '2026-04-11T08:00:00.000Z',
+                actions: [
+                    {
+                        id: 'strong-action-1',
+                        atomId: atomA,
+                        kind: 'review',
+                        source: 'mastery_path',
+                        priority: 98,
+                        expectedGain: 0.18,
+                        rationale: 'Repair retrieval precision with cited evidence.',
+                        evidenceSpanIds: [evidenceA],
+                        relationPathAtomIds: [atomA],
+                        estimatedMinutes: 5,
+                    },
+                    {
+                        id: 'strong-action-2',
+                        atomId: atomA,
+                        kind: 'quiz',
+                        source: 'misconception_remediation',
+                        priority: 94,
+                        expectedGain: 0.16,
+                        rationale: 'Verify misconception remediation with a targeted quiz.',
+                        evidenceSpanIds: [evidenceA],
+                        relationPathAtomIds: [atomA],
+                        estimatedMinutes: 4,
+                    },
+                    {
+                        id: 'strong-action-3',
+                        atomId: atomB,
+                        kind: 'review',
+                        source: 'retrain_plan',
+                        priority: 88,
+                        expectedGain: 0.14,
+                        rationale: 'Stage a recovery-oriented follow-up before divergence.',
+                        evidenceSpanIds: [evidenceB],
+                        relationPathAtomIds: [atomB],
+                        estimatedMinutes: 4,
+                    },
+                ],
+                signals: {
+                    misconceptions: [],
+                    dueRetrainAtoms: [atomB],
+                    masteryPathTargets: [atomA],
+                    divergenceTargets: [],
+                },
+                summary: {
+                    totalActions: 3,
+                    totalEstimatedMinutes: 13,
+                    evidenceCoverageRatio: 1,
+                },
+            },
+        });
+
+        await platform.executeStudySessionPlan({
+            userId: 'quality_runtime_user',
+            executedAt: '2026-04-12T08:05:00.000Z',
+            actionLimit: 4,
+            maxActions: 4,
+            sessionPlan: {
+                userId: 'quality_runtime_user',
+                generatedAt: '2026-04-12T08:00:00.000Z',
+                actions: [
+                    {
+                        id: 'weak-action-1',
+                        atomId: atomB,
+                        kind: 'transfer',
+                        source: 'divergence_path',
+                        priority: 36,
+                        expectedGain: 0.06,
+                        rationale: 'Push divergence without recovery context.',
+                        evidenceSpanIds: [],
+                        relationPathAtomIds: [atomB],
+                        estimatedMinutes: 4,
+                    },
+                ],
+                signals: {
+                    misconceptions: [],
+                    dueRetrainAtoms: [],
+                    masteryPathTargets: [],
+                    divergenceTargets: [atomB],
+                },
+                summary: {
+                    totalActions: 1,
+                    totalEstimatedMinutes: 4,
+                    evidenceCoverageRatio: 0,
+                },
+            },
+        });
+
+        const learningHistory = await platform.queryLearningQualityHistory({
+            userId: 'quality_runtime_user',
+            limit: 5,
+        });
+        expect(learningHistory.summary.totalRecords).toBeGreaterThanOrEqual(2);
+        expect(learningHistory.summary.returnedRecords).toBeGreaterThanOrEqual(2);
+        expect(learningHistory.records[0]?.snapshot).toBeDefined();
+
+        const learningTrend = await platform.queryLearningQualityTrend({
+            userId: 'quality_runtime_user',
+            limit: 4,
+            windowSize: 1,
+            minSamples: 1,
+        });
+        expect(['improving', 'stable', 'regressing', 'insufficient_data']).toContain(learningTrend.status);
+        expect(learningTrend.summary.totalRecords).toBeGreaterThanOrEqual(2);
+
+        const qualityThresholds = platform.getLearningQualityThresholds();
+        expect(qualityThresholds.queryP95Ms).toBeGreaterThan(0);
+        expect(qualityThresholds.evidenceBackedSuggestionRatioPct).toBeGreaterThan(0);
+
+        const sessionQualityHistory = await platform.queryStudySessionPlanQualityHistory({
+            userId: 'quality_runtime_user',
+            limit: 5,
+        });
+        expect(sessionQualityHistory.summary.totalRecords).toBeGreaterThanOrEqual(2);
+        expect(sessionQualityHistory.summary.overallPassRatePct).toBeLessThan(100);
+        expect(Array.isArray(sessionQualityHistory.summary.commonFailedGates)).toBe(true);
+
+        const sessionQualityTrend = await platform.queryStudySessionPlanQualityTrend({
+            userId: 'quality_runtime_user',
+            limit: 4,
+            windowSize: 1,
+            minSamples: 1,
+        });
+        expect(sessionQualityTrend.status).toBe('regressing');
+        expect(sessionQualityTrend.summary.totalRecords).toBeGreaterThanOrEqual(2);
+
+        const runtimeThresholds = await platform.queryStudySessionPlanQualityRuntimeThresholds({
+            userId: 'quality_runtime_user',
+            adaptiveThresholdsEnabled: true,
+            historyLimit: 5,
+            trendLimit: 4,
+            trendWindowSize: 1,
+            trendMinSamples: 1,
+        });
+        expect(runtimeThresholds.thresholds.minTotalActions).toBeGreaterThan(0);
+        expect(runtimeThresholds.summary.totalRecords).toBeGreaterThanOrEqual(2);
+        expect(runtimeThresholds.summary.latestEvaluatedAt).toBe('2026-04-12T08:05:00.000Z');
     });
 });

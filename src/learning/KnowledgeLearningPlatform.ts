@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import * as fs from 'fs';
 import * as path from 'path';
 import type { KnowledgeLearningPlatformAPI } from './api';
 import type {
@@ -78,6 +79,16 @@ import type {
     SerializedDocumentSnapshot,
 } from './store';
 import type { TutorAdapter } from './tutorAdapter';
+import {
+    createGraphQueryBackend,
+    normalizeGraphQueryBackendType,
+} from './queryBackend';
+import type {
+    GraphQueryBackend,
+    GraphQueryBackendFactoryOptions,
+    GraphQueryBackendResult,
+    GraphQueryBackendType,
+} from './queryBackend';
 
 type ParsedAtomDraft = {
     stableKey: string;
@@ -122,6 +133,115 @@ type MemoryStats = {
     longTerm: number;
 };
 
+type LearningQualityHistoryRecord = {
+    recordId: string;
+    userId: string | null;
+    sampledAt: string;
+    source: 'session_execution' | 'manual_snapshot';
+    executionRecordId: string | null;
+    executionKind: StudySessionExecutionRecord['executionKind'] | null;
+    snapshot: LearningQualitySnapshot;
+    diagnostics: Record<string, unknown>;
+};
+
+type QueryBackendExecutionResult = {
+    backend: GraphQueryBackendType;
+    backendId: string;
+    items: KnowledgeQueryItem[];
+    trace: KnowledgeQueryResponse['trace'] & Record<string, unknown>;
+    latencyMs: number;
+    evidenceCoverageRatio: number;
+    relationPathCoverageRatio: number;
+    temporalValidityPassRatio: number;
+    usedFallback: boolean;
+    fallbackBackend: GraphQueryBackendType | null;
+    error: string | null;
+};
+
+type QueryBackendComparisonSide = {
+    backend: GraphQueryBackendType;
+    backendId: string;
+    latencyMs: number;
+    itemCount: number;
+    evidenceCoverageRatio: number;
+    relationPathCoverageRatio: number;
+    temporalValidityPassRatio: number;
+    usedFallback: boolean;
+    fallbackBackend: GraphQueryBackendType | null;
+    error: string | null;
+    retrievalModes: string[];
+    modeWeights: Record<string, number>;
+    items: Array<{
+        atomId: string;
+        score: number;
+    }>;
+};
+
+type QueryBackendComparisonRecord = {
+    comparedAt: string;
+    query: string;
+    topK: number;
+    left: QueryBackendComparisonSide;
+    right: QueryBackendComparisonSide;
+    summary: {
+        preferredBackend: 'left' | 'right' | 'tie';
+        reason: string;
+        overlapRatioPct: number;
+        latencyDeltaMs: number;
+        leftEvidenceCoverageRatio: number;
+        rightEvidenceCoverageRatio: number;
+        leftRelationPathCoverageRatio: number;
+        rightRelationPathCoverageRatio: number;
+        leftTemporalValidityPassRatio: number;
+        rightTemporalValidityPassRatio: number;
+        leftPreferenceScore: number;
+        rightPreferenceScore: number;
+    };
+};
+
+type StudySessionPlanQualityThresholdSet = {
+    minTotalActions: number;
+    minEvidenceCoverageRatioPct: number;
+    maxBudgetDeviationActions: number;
+    minRecoverySharePctWhenRegressing: number;
+    maxDivergenceSharePctWhenRegressing: number;
+    minDivergenceSharePctWhenImproving: number;
+};
+
+type StudySessionPlanQualityGate = {
+    gateId: string;
+    passed: boolean;
+    comparator: '>=' | '<=';
+    observedValue: number;
+    threshold: number;
+    unit: 'count' | 'pct';
+    message: string;
+};
+
+type StudySessionPlanQualityHistoryRecord = {
+    recordId: string;
+    userId: string | null;
+    source: 'session_execution' | 'manual_evaluation';
+    evaluatedAt: string;
+    planGeneratedAt: string | null;
+    executionRecordId: string | null;
+    executionKind: StudySessionExecutionRecord['executionKind'] | null;
+    trendContextStatus: 'improving' | 'stable' | 'regressing' | 'insufficient_data';
+    totalActions: number;
+    evidenceCoverageRatioPct: number;
+    budgetDeviationActions: number;
+    recoverySharePct: number;
+    divergenceSharePct: number;
+    overallPassed: boolean;
+    status: 'healthy' | 'watch' | 'risk';
+    score: number;
+    confidence: number;
+    summaryReason: string;
+    thresholds: StudySessionPlanQualityThresholdSet;
+    gates: StudySessionPlanQualityGate[];
+    failedGateIds: string[];
+};
+
 export type KnowledgeLearningPlatformOptions = {
     nowProvider?: () => Date;
     store?: KnowledgeGraphStore;
@@ -130,8 +250,8 @@ export type KnowledgeLearningPlatformOptions = {
     learningQualityThresholds?: Partial<import('./types').LearningQualityThresholds>;
     studySessionPlanQualityAdaptiveThresholdsEnabled?: boolean;
     studySessionPlanQualityAdaptiveThresholdRuntimeConfig?: Record<string, number>;
-    graphQueryBackendFactoryOptions?: Record<string, unknown>;
-    graphQueryBackend?: any;
+    graphQueryBackendFactoryOptions?: GraphQueryBackendFactoryOptions;
+    graphQueryBackend?: GraphQueryBackend;
     tutorAdapters?: any[];
     localVectorIndexPath?: string;
     localVectorAnnPrefilterEnabled?: boolean;
@@ -187,9 +307,24 @@ const DEFAULT_LEARNING_QUALITY_THRESHOLDS: LearningQualityThresholds = {
     retestPassRateUpliftPct: 20,
     misconceptionRecurrenceReductionPct: 25,
     evidenceBackedSuggestionRatioPct: 90,
+    minQueryEvidenceCoverageRatioPct: 80,
+    minQueryRelationPathCoverageRatioPct: 60,
+    minQueryTemporalValidityPassRatioPct: 90,
+    maxPendingVerificationRatioPct: 20,
+    maxQueryBackendFallbackRatioPct: 10,
+    minSessionMemoryPromotionCoveragePct: 25,
     pathEffectivenessLiftPct: 5,
     historyWindowAverageMasteryDeltaUplift: 0,
     queryP95Ms: 800,
+};
+
+const DEFAULT_STUDY_SESSION_PLAN_QUALITY_THRESHOLDS: StudySessionPlanQualityThresholdSet = {
+    minTotalActions: 2,
+    minEvidenceCoverageRatioPct: 70,
+    maxBudgetDeviationActions: 2,
+    minRecoverySharePctWhenRegressing: 50,
+    maxDivergenceSharePctWhenRegressing: 35,
+    minDivergenceSharePctWhenImproving: 15,
 };
 
 const DEFAULT_INGEST_GUARDRAIL_THRESHOLDS: IngestGuardrailThresholds = {
@@ -334,11 +469,23 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     private readonly configuredTutorAdapters: TutorAdapter[];
 
+    private readonly learningQualityThresholds: LearningQualityThresholds;
+
+    private readonly studySessionPlanQualityAdaptiveThresholdsEnabled: boolean;
+
+    private readonly studySessionPlanQualityAdaptiveThresholdRuntimeConfig: Record<string, number>;
+
     private readonly studySessionOrchestrationTrendRuntimeConfig: Record<string, unknown>;
 
     private readonly studySessionOrchestrationMemorySignalConfig: Record<string, unknown>;
 
     private readonly studySessionOrchestrationTutorRoutingConfig: Record<string, unknown>;
+
+    private currentGraphQueryBackendType: GraphQueryBackendType;
+
+    private graphQueryBackend: GraphQueryBackend;
+
+    private graphQueryBackendFactoryOptions: GraphQueryBackendFactoryOptions;
 
     private latestIngestSummary: KnowledgeIngestResponse['summary'] | null = null;
 
@@ -346,7 +493,17 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     private readonly sessionExecutionHistory: StudySessionExecutionRecord[] = [];
 
+    private readonly learningQualityHistoryRecords: LearningQualityHistoryRecord[] = [];
+
+    private readonly queryBackendComparisonHistoryRecords: QueryBackendComparisonRecord[] = [];
+
+    private readonly studySessionPlanQualityHistoryRecords: StudySessionPlanQualityHistoryRecord[] = [];
+
     private readonly memoryPolicyDiagnosticsHistoryRecords: Array<Record<string, unknown>> = [];
+
+    private queryBackendFallbackCount = 0;
+
+    private queryBackendLastError = '';
 
     private hydrated = false;
 
@@ -359,9 +516,17 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             this.autoPersist = true;
             this.tutorAdapter = null;
             this.configuredTutorAdapters = [];
+            this.learningQualityThresholds = this.resolveLearningQualityThresholds(undefined);
+            this.studySessionPlanQualityAdaptiveThresholdsEnabled = false;
+            this.studySessionPlanQualityAdaptiveThresholdRuntimeConfig = {};
             this.studySessionOrchestrationTrendRuntimeConfig = {};
             this.studySessionOrchestrationMemorySignalConfig = {};
             this.studySessionOrchestrationTutorRoutingConfig = {};
+            this.currentGraphQueryBackendType = 'local_hybrid';
+            this.graphQueryBackendFactoryOptions = {
+                backend: this.currentGraphQueryBackendType,
+            };
+            this.graphQueryBackend = createGraphQueryBackend(this.graphQueryBackendFactoryOptions);
             return;
         }
 
@@ -377,6 +542,14 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 .filter((adapter): adapter is TutorAdapter => Boolean(adapter && isNonEmptyString(adapter.id)))
                 .map((adapter) => [adapter.id, adapter])
         ).values());
+        this.learningQualityThresholds = this.resolveLearningQualityThresholds(
+            nowProviderOrOptions.learningQualityThresholds
+        );
+        this.studySessionPlanQualityAdaptiveThresholdsEnabled =
+            nowProviderOrOptions.studySessionPlanQualityAdaptiveThresholdsEnabled === true;
+        this.studySessionPlanQualityAdaptiveThresholdRuntimeConfig = {
+            ...(nowProviderOrOptions.studySessionPlanQualityAdaptiveThresholdRuntimeConfig || {}),
+        };
         this.studySessionOrchestrationTrendRuntimeConfig = {
             ...(nowProviderOrOptions.studySessionOrchestrationTrendRuntimeConfig || {}),
         };
@@ -386,6 +559,18 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         this.studySessionOrchestrationTutorRoutingConfig = {
             ...(nowProviderOrOptions.studySessionOrchestrationTutorRoutingConfig || {}),
         };
+        const inferredBackendType = normalizeGraphQueryBackendType(
+            nowProviderOrOptions.graphQueryBackendFactoryOptions?.backend
+            || this.inferGraphQueryBackendTypeFromId(nowProviderOrOptions.graphQueryBackend?.id)
+            || 'local_hybrid'
+        );
+        this.currentGraphQueryBackendType = inferredBackendType;
+        this.graphQueryBackendFactoryOptions = {
+            ...(nowProviderOrOptions.graphQueryBackendFactoryOptions || {}),
+            backend: inferredBackendType,
+        };
+        this.graphQueryBackend = nowProviderOrOptions.graphQueryBackend
+            || createGraphQueryBackend(this.graphQueryBackendFactoryOptions);
     }
 
     public async ingestKnowledge(request: KnowledgeIngestRequest): Promise<KnowledgeIngestResponse> {
@@ -646,83 +831,19 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     public async queryKnowledge(request: KnowledgeQueryRequest): Promise<KnowledgeQueryResponse> {
         await this.ensureHydrated();
-        const queryStartAtMs = Date.now();
-        const query = normalizeWhitespace(String(request.query || ''));
-        const asOf = this.resolveTimestamp(request.asOf);
-        const topK = clamp(Math.floor(Number(request.topK) || 5), 1, 20);
-        const tokens = tokenize(query);
-        const activeEdges = this.collectActiveRelationEdges(asOf);
-
-        const scoredItems: Array<{ atom: KnowledgeAtom; score: number }> = [];
-        this.activeAtomIds.forEach((atomId) => {
-            const atom = this.atoms.get(atomId);
-            if (!atom) {
-                return;
+        const backend = normalizeGraphQueryBackendType(request.queryBackend || this.currentGraphQueryBackendType);
+        const execution = await this.executeQueryBackend(
+            request,
+            backend,
+            {
+                allowRuntimeFallback: true,
+                recordFallback: true,
             }
-            const titleLower = atom.title.toLowerCase();
-            const contentLower = atom.content.toLowerCase();
-            const keywordMatches = tokens.filter((token) => atom.keywords.includes(token)).length;
-            const titleMatchBonus = query && titleLower.includes(query.toLowerCase()) ? 2 : 0;
-            const contentMatchBonus = tokens.filter((token) => contentLower.includes(token)).length * 0.25;
-            const relationBonus = activeEdges.filter((edge) =>
-                edge.sourceAtomId === atom.id || edge.targetAtomId === atom.id
-            ).length * 0.08;
-            const score = keywordMatches + titleMatchBonus + contentMatchBonus + relationBonus;
-            if (score > 0) {
-                scoredItems.push({ atom, score });
-            }
-        });
-
-        scoredItems.sort((left, right) => {
-            if (right.score !== left.score) {
-                return right.score - left.score;
-            }
-            return right.atom.updatedAt.localeCompare(left.atom.updatedAt);
-        });
-
-        const items: KnowledgeQueryItem[] = scoredItems
-            .slice(0, topK)
-            .map(({ atom, score }) => {
-                const evidenceSpans = atom.evidenceSpanIds
-                    .map((evidenceId) => this.evidenceSpans.get(evidenceId))
-                    .filter((span): span is EvidenceSpan => Boolean(span));
-                const relationPath = this.selectRelationPath(atom.id, activeEdges, 3);
-                const temporalValidity = this.evaluateTemporalValidity(atom.id, asOf);
-                return {
-                    atom,
-                    score: Number(score.toFixed(4)),
-                    evidenceSpans,
-                    relationPath,
-                    temporalValidity,
-                };
-            });
-
-        const latencyMs = Date.now() - queryStartAtMs;
-        this.recordQueryLatency(latencyMs);
-        const evidenceCoverageRatio = items.length > 0
-            ? Number((items.filter((item) => item.evidenceSpans.length > 0).length / items.length).toFixed(4))
-            : 1;
-        const dynamicGraphWeight = items.length > 0
-            ? Number((items.reduce((sum, item) => sum + item.relationPath.length, 0) / (items.length * 3)).toFixed(4))
-            : 0;
-        const graphWeight = clamp(0.25 + dynamicGraphWeight * 0.45, 0.25, 0.65);
-        const temporalWeight = query.length > 0 ? 0.15 : 0.2;
-        const keywordWeight = Number((1 - graphWeight - temporalWeight).toFixed(4));
-
+        );
+        this.recordQueryLatency(execution.latencyMs);
         const response: KnowledgeQueryResponse = {
-            items,
-            trace: {
-                retrievalModes: ['keyword', 'graph_traversal', 'temporal_filter'],
-                asOf,
-                totalActiveAtoms: this.activeAtomIds.size,
-                modeWeights: {
-                    keyword: Number(clamp(keywordWeight, 0.1, 0.6).toFixed(4)),
-                    graph: Number(graphWeight.toFixed(4)),
-                    temporal: Number(temporalWeight.toFixed(4)),
-                },
-                latencyMs,
-                evidenceCoverageRatio,
-            },
+            items: execution.items,
+            trace: execution.trace,
         };
         await this.persistIfNeeded();
         return response;
@@ -1582,6 +1703,35 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         if (this.sessionExecutionHistory.length > SESSION_EXECUTION_HISTORY_LIMIT) {
             this.sessionExecutionHistory.splice(SESSION_EXECUTION_HISTORY_LIMIT);
         }
+        const sessionPlanQualityRecord = this.evaluateStudySessionPlanQualityInternal({
+            request: {
+                actionLimit,
+                maxActions,
+            },
+            sessionPlan,
+            userId,
+            evaluatedAt: executedAt,
+            source: 'session_execution',
+            executionRecordId: record.id,
+            executionKind,
+        });
+        this.recordStudySessionPlanQualityHistory(sessionPlanQualityRecord);
+        const learningQualitySnapshot = await this.captureLearningQualitySnapshot({
+            userId,
+            sampledAt: executedAt,
+        });
+        this.recordLearningQualityHistory({
+            recordId: this.nextId('learning_quality'),
+            userId,
+            sampledAt: learningQualitySnapshot.sampledAt,
+            source: 'session_execution',
+            executionRecordId: record.id,
+            executionKind,
+            snapshot: this.cloneLearningQualitySnapshot(learningQualitySnapshot.snapshot),
+            diagnostics: {
+                ...learningQualitySnapshot.diagnostics,
+            },
+        });
         await this.persistIfNeeded();
 
         return {
@@ -2124,7 +2274,35 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 100
             ).toFixed(4)
         );
+        const pendingVerificationRatioPct = Number(
+            clamp(
+                (
+                    scopedTraces.filter((trace) => String(trace.verificationStatus || '').trim() === 'pending').length
+                    / Math.max(1, scopedTraces.length)
+                ) * 100,
+                0,
+                100
+            ).toFixed(4)
+        );
+        const queryTelemetry = this.buildRetrievalTelemetry();
         const queryP95Ms = this.buildRetrievalTelemetry().queryP95Ms;
+        const queryBackendFallbackRatioPct = Number(
+            clamp(
+                (this.queryBackendFallbackCount / Math.max(1, queryTelemetry.queryCount)) * 100,
+                0,
+                100
+            ).toFixed(4)
+        );
+        const sessionMemoryPromotionCoveragePct = Number(
+            clamp(
+                (
+                    Number(this.sessionActionTelemetry.memoryPersistedCount || 0)
+                    / Math.max(1, Number(this.sessionActionTelemetry.executionCount || 0))
+                ) * 100,
+                0,
+                100
+            ).toFixed(4)
+        );
 
         return {
             sampledAt,
@@ -2139,6 +2317,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 historyWindowAverageMasteryDelta,
                 historyWindowRetestPositiveDeltaRatePct,
                 queryP95Ms,
+                pendingVerificationRatioPct,
+                queryBackendFallbackRatioPct,
+                sessionMemoryPromotionCoveragePct,
             },
             diagnostics: {
                 learnerStates: scopedStates.length,
@@ -2650,6 +2831,49 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 clamp(Number(merged.historyWindowAverageMasteryDeltaUplift || 0), -1, 1).toFixed(6)
             ),
             queryP95Ms: Number(clamp(merged.queryP95Ms, 10, 60000).toFixed(4)),
+            maxQueryBackendFallbackRatioPct: Number(
+                clamp(Number(merged.maxQueryBackendFallbackRatioPct ?? 10), 0, 100).toFixed(4)
+            ),
+            minQueryEvidenceCoverageRatioPct: Number(
+                clamp(Number(merged.minQueryEvidenceCoverageRatioPct ?? 80), 0, 100).toFixed(4)
+            ),
+            minQueryRelationPathCoverageRatioPct: Number(
+                clamp(Number(merged.minQueryRelationPathCoverageRatioPct ?? 60), 0, 100).toFixed(4)
+            ),
+            minQueryTemporalValidityPassRatioPct: Number(
+                clamp(Number(merged.minQueryTemporalValidityPassRatioPct ?? 90), 0, 100).toFixed(4)
+            ),
+            minSessionMemoryPromotionCoveragePct: Number(
+                clamp(Number(merged.minSessionMemoryPromotionCoveragePct ?? 25), 0, 100).toFixed(4)
+            ),
+            maxPendingVerificationRatioPct: Number(
+                clamp(Number(merged.maxPendingVerificationRatioPct ?? 20), 0, 100).toFixed(4)
+            ),
+        };
+    }
+
+    private resolveStudySessionPlanQualityThresholds(
+        overrides: Partial<StudySessionPlanQualityThresholdSet> | undefined
+    ): StudySessionPlanQualityThresholdSet {
+        const merged: StudySessionPlanQualityThresholdSet = {
+            ...DEFAULT_STUDY_SESSION_PLAN_QUALITY_THRESHOLDS,
+            ...(overrides || {}),
+        };
+        return {
+            minTotalActions: Math.max(1, Math.floor(Number(merged.minTotalActions || 0))),
+            minEvidenceCoverageRatioPct: Number(
+                clamp(Number(merged.minEvidenceCoverageRatioPct || 0), 0, 100).toFixed(4)
+            ),
+            maxBudgetDeviationActions: Math.max(0, Math.floor(Number(merged.maxBudgetDeviationActions || 0))),
+            minRecoverySharePctWhenRegressing: Number(
+                clamp(Number(merged.minRecoverySharePctWhenRegressing || 0), 0, 100).toFixed(4)
+            ),
+            maxDivergenceSharePctWhenRegressing: Number(
+                clamp(Number(merged.maxDivergenceSharePctWhenRegressing || 0), 0, 100).toFixed(4)
+            ),
+            minDivergenceSharePctWhenImproving: Number(
+                clamp(Number(merged.minDivergenceSharePctWhenImproving || 0), 0, 100).toFixed(4)
+            ),
         };
     }
 
@@ -2689,6 +2913,560 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             return 'full';
         }
         return params.hasNewAtoms ? 'incremental' : 'none';
+    }
+
+    private inferGraphQueryBackendTypeFromId(value: unknown): GraphQueryBackendType {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (normalized.includes('keyword')) {
+            return 'keyword_only';
+        }
+        if (normalized.includes('vector')) {
+            return 'local_vector';
+        }
+        return 'local_hybrid';
+    }
+
+    private buildQueryBackendContext(
+        request: KnowledgeQueryRequest,
+        backend: GraphQueryBackendType
+    ): {
+        query: string;
+        asOf: string;
+        topK: number;
+        activeEdges: RelationEdge[];
+        atoms: KnowledgeAtom[];
+        context: {
+            request: KnowledgeQueryRequest;
+            query: string;
+            queryTokens: string[];
+            asOf: string;
+            topK: number;
+            atoms: KnowledgeAtom[];
+            activeEdges: RelationEdge[];
+        };
+    } {
+        const query = normalizeWhitespace(String(request.query || ''));
+        const asOf = this.resolveTimestamp(request.asOf);
+        const topK = clamp(Math.floor(Number(request.topK) || 5), 1, 20);
+        const activeEdges = this.collectActiveRelationEdges(asOf);
+        const atoms = Array.from(this.activeAtomIds.values())
+            .map((atomId) => this.atoms.get(atomId))
+            .filter((atom): atom is KnowledgeAtom => Boolean(atom));
+        return {
+            query,
+            asOf,
+            topK,
+            activeEdges,
+            atoms,
+            context: {
+                request: {
+                    ...request,
+                    query,
+                    asOf,
+                    topK,
+                    queryBackend: backend,
+                },
+                query,
+                queryTokens: tokenize(query),
+                asOf,
+                topK,
+                atoms,
+                activeEdges,
+            },
+        };
+    }
+
+    private materializeQueryBackendItems(
+        result: GraphQueryBackendResult,
+        asOf: string,
+        activeEdges: RelationEdge[],
+        topK: number
+    ): KnowledgeQueryItem[] {
+        return result.candidates
+            .filter((candidate) => this.activeAtomIds.has(candidate.atomId))
+            .slice(0, topK)
+            .map((candidate) => {
+                const atom = this.atoms.get(candidate.atomId);
+                if (!atom) {
+                    return null;
+                }
+                const evidenceSpans = atom.evidenceSpanIds
+                    .map((evidenceId) => this.evidenceSpans.get(evidenceId))
+                    .filter((span): span is EvidenceSpan => Boolean(span));
+                return {
+                    atom,
+                    score: Number(Number(candidate.score || 0).toFixed(4)),
+                    evidenceSpans,
+                    relationPath: this.selectRelationPath(atom.id, activeEdges, 3),
+                    temporalValidity: this.evaluateTemporalValidity(atom.id, asOf),
+                };
+            })
+            .filter((item): item is KnowledgeQueryItem => Boolean(item));
+    }
+
+    private summarizeQueryItems(items: KnowledgeQueryItem[]): {
+        evidenceCoverageRatio: number;
+        relationPathCoverageRatio: number;
+        temporalValidityPassRatio: number;
+    } {
+        if (items.length <= 0) {
+            return {
+                evidenceCoverageRatio: 1,
+                relationPathCoverageRatio: 0,
+                temporalValidityPassRatio: 1,
+            };
+        }
+        return {
+            evidenceCoverageRatio: Number(
+                (items.filter((item) => item.evidenceSpans.length > 0).length / items.length).toFixed(4)
+            ),
+            relationPathCoverageRatio: Number(
+                (items.filter((item) => item.relationPath.length > 0).length / items.length).toFixed(4)
+            ),
+            temporalValidityPassRatio: Number(
+                (items.filter((item) => item.temporalValidity.isValid).length / items.length).toFixed(4)
+            ),
+        };
+    }
+
+    private async executeQueryBackend(
+        request: KnowledgeQueryRequest,
+        backend: GraphQueryBackendType,
+        options: {
+            allowRuntimeFallback: boolean;
+            recordFallback: boolean;
+            overrideBackend?: GraphQueryBackend;
+        }
+    ): Promise<QueryBackendExecutionResult> {
+        const contextBundle = this.buildQueryBackendContext(request, backend);
+        const backendInstance = options.overrideBackend
+            || (
+                backend === this.currentGraphQueryBackendType
+                    ? this.graphQueryBackend
+                    : createGraphQueryBackend({
+                        ...this.graphQueryBackendFactoryOptions,
+                        backend,
+                    })
+            );
+        const startedAtMs = Date.now();
+        try {
+            const backendResult = await backendInstance.query(contextBundle.context);
+            const items = this.materializeQueryBackendItems(
+                backendResult,
+                contextBundle.asOf,
+                contextBundle.activeEdges,
+                contextBundle.topK
+            );
+            const metrics = this.summarizeQueryItems(items);
+            const latencyMs = Date.now() - startedAtMs;
+            const rawModeWeights = backendResult.trace?.modeWeights || {};
+            const trace = {
+                retrievalModes: Array.isArray(backendResult.trace?.retrievalModes)
+                    ? [...backendResult.trace.retrievalModes]
+                    : ['keyword', 'graph_traversal', 'temporal_filter'],
+                asOf: contextBundle.asOf,
+                totalActiveAtoms: this.activeAtomIds.size,
+                modeWeights: {
+                    keyword: Number(
+                        clamp(Number((rawModeWeights as Record<string, unknown>).keyword ?? (backend === 'keyword_only' ? 0.72 : 0.32)), 0, 1)
+                            .toFixed(4)
+                    ),
+                    graph: Number(
+                        clamp(Number((rawModeWeights as Record<string, unknown>).graph ?? (backend === 'local_vector' ? 0.1 : 0.3)), 0, 1)
+                            .toFixed(4)
+                    ),
+                    temporal: Number(
+                        clamp(Number((rawModeWeights as Record<string, unknown>).temporal ?? 0.18), 0, 1)
+                            .toFixed(4)
+                    ),
+                },
+                latencyMs,
+                evidenceCoverageRatio: metrics.evidenceCoverageRatio,
+                ...(backendResult.trace?.vectorAcceleration
+                    ? { vectorAcceleration: backendResult.trace.vectorAcceleration }
+                    : {}),
+            } as KnowledgeQueryResponse['trace'] & Record<string, unknown>;
+            this.queryBackendLastError = '';
+            return {
+                backend,
+                backendId: String(backendInstance.id || backend).trim() || backend,
+                items,
+                trace,
+                latencyMs,
+                evidenceCoverageRatio: metrics.evidenceCoverageRatio,
+                relationPathCoverageRatio: metrics.relationPathCoverageRatio,
+                temporalValidityPassRatio: metrics.temporalValidityPassRatio,
+                usedFallback: false,
+                fallbackBackend: null,
+                error: null,
+            };
+        } catch (error) {
+            const errorMessage = String((error as Error)?.message || error || 'query_backend_error')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .slice(0, 280);
+            this.queryBackendLastError = errorMessage;
+            if (options.allowRuntimeFallback && backend !== 'local_hybrid') {
+                const fallbackExecution = await this.executeQueryBackend(
+                    request,
+                    'local_hybrid',
+                    {
+                        allowRuntimeFallback: false,
+                        recordFallback: false,
+                    }
+                );
+                if (options.recordFallback) {
+                    this.queryBackendFallbackCount += 1;
+                }
+                return {
+                    ...fallbackExecution,
+                    backend,
+                    backendId: String(backendInstance.id || backend).trim() || backend,
+                    usedFallback: true,
+                    fallbackBackend: 'local_hybrid',
+                    error: errorMessage,
+                    trace: {
+                        ...fallbackExecution.trace,
+                        retrievalModes: Array.from(new Set([
+                            ...fallbackExecution.trace.retrievalModes,
+                            'backend_fallback',
+                        ])),
+                        backendFallback: {
+                            fromBackend: backend,
+                            toBackend: 'local_hybrid',
+                            reason: errorMessage,
+                        },
+                    } as KnowledgeQueryResponse['trace'] & Record<string, unknown>,
+                };
+            }
+            throw error;
+        }
+    }
+
+    private calculateQueryBackendPreferenceScore(side: QueryBackendComparisonSide): number {
+        const latencyScore = clamp(1 - Math.min(Math.max(0, side.latencyMs), 1500) / 1500, 0, 1);
+        const reliabilityPenalty = side.error ? 0.2 : 0;
+        return Number(clamp(
+            side.evidenceCoverageRatio * 0.42
+            + side.relationPathCoverageRatio * 0.23
+            + side.temporalValidityPassRatio * 0.25
+            + latencyScore * 0.1
+            - reliabilityPenalty,
+            0,
+            1
+        ).toFixed(4));
+    }
+
+    private buildQueryBackendComparisonRecord(params: {
+        comparedAt: string;
+        query: string;
+        topK: number;
+        left: QueryBackendExecutionResult;
+        right: QueryBackendExecutionResult;
+    }): QueryBackendComparisonRecord {
+        const leftAtomIds = params.left.items.map((item) => item.atom.id);
+        const rightAtomIds = params.right.items.map((item) => item.atom.id);
+        const overlapRatioPct = Number((computeJaccard(leftAtomIds, rightAtomIds) * 100).toFixed(4));
+        const leftSide: QueryBackendComparisonSide = {
+            backend: params.left.backend,
+            backendId: params.left.backendId,
+            latencyMs: params.left.latencyMs,
+            itemCount: params.left.items.length,
+            evidenceCoverageRatio: params.left.evidenceCoverageRatio,
+            relationPathCoverageRatio: params.left.relationPathCoverageRatio,
+            temporalValidityPassRatio: params.left.temporalValidityPassRatio,
+            usedFallback: params.left.usedFallback,
+            fallbackBackend: params.left.fallbackBackend,
+            error: params.left.error,
+            retrievalModes: [...params.left.trace.retrievalModes],
+            modeWeights: {
+                ...params.left.trace.modeWeights,
+            },
+            items: params.left.items.map((item) => ({
+                atomId: item.atom.id,
+                score: Number(item.score.toFixed(4)),
+            })),
+        };
+        const rightSide: QueryBackendComparisonSide = {
+            backend: params.right.backend,
+            backendId: params.right.backendId,
+            latencyMs: params.right.latencyMs,
+            itemCount: params.right.items.length,
+            evidenceCoverageRatio: params.right.evidenceCoverageRatio,
+            relationPathCoverageRatio: params.right.relationPathCoverageRatio,
+            temporalValidityPassRatio: params.right.temporalValidityPassRatio,
+            usedFallback: params.right.usedFallback,
+            fallbackBackend: params.right.fallbackBackend,
+            error: params.right.error,
+            retrievalModes: [...params.right.trace.retrievalModes],
+            modeWeights: {
+                ...params.right.trace.modeWeights,
+            },
+            items: params.right.items.map((item) => ({
+                atomId: item.atom.id,
+                score: Number(item.score.toFixed(4)),
+            })),
+        };
+        const leftPreferenceScore = this.calculateQueryBackendPreferenceScore(leftSide);
+        const rightPreferenceScore = this.calculateQueryBackendPreferenceScore(rightSide);
+        const scoreDelta = Number((leftPreferenceScore - rightPreferenceScore).toFixed(4));
+        let preferredBackend: 'left' | 'right' | 'tie' = 'tie';
+        if (params.left.error && !params.right.error) {
+            preferredBackend = 'right';
+        } else if (!params.left.error && params.right.error) {
+            preferredBackend = 'left';
+        } else if (scoreDelta >= 0.035) {
+            preferredBackend = 'left';
+        } else if (scoreDelta <= -0.035) {
+            preferredBackend = 'right';
+        }
+        const preferredLabel = preferredBackend === 'left'
+            ? leftSide.backend
+            : preferredBackend === 'right'
+                ? rightSide.backend
+                : 'tie';
+        const reason = params.left.error || params.right.error
+            ? (
+                preferredBackend === 'tie'
+                    ? `Both backends surfaced execution issues. left=${params.left.error || 'ok'}, right=${params.right.error || 'ok'}.`
+                    : `${preferredLabel} was preferred because the counterpart returned an execution issue.`
+            )
+            : preferredBackend === 'tie'
+                ? `Quality scores were near-parity (${leftPreferenceScore.toFixed(4)} vs ${rightPreferenceScore.toFixed(4)}).`
+                : `${preferredLabel} delivered the stronger explainability-latency balance (${leftPreferenceScore.toFixed(4)} vs ${rightPreferenceScore.toFixed(4)}).`;
+        return {
+            comparedAt: params.comparedAt,
+            query: params.query,
+            topK: params.topK,
+            left: leftSide,
+            right: rightSide,
+            summary: {
+                preferredBackend,
+                reason,
+                overlapRatioPct,
+                latencyDeltaMs: Number((leftSide.latencyMs - rightSide.latencyMs).toFixed(4)),
+                leftEvidenceCoverageRatio: leftSide.evidenceCoverageRatio,
+                rightEvidenceCoverageRatio: rightSide.evidenceCoverageRatio,
+                leftRelationPathCoverageRatio: leftSide.relationPathCoverageRatio,
+                rightRelationPathCoverageRatio: rightSide.relationPathCoverageRatio,
+                leftTemporalValidityPassRatio: leftSide.temporalValidityPassRatio,
+                rightTemporalValidityPassRatio: rightSide.temporalValidityPassRatio,
+                leftPreferenceScore,
+                rightPreferenceScore,
+            },
+        };
+    }
+
+    private recordLearningQualityHistory(record: LearningQualityHistoryRecord): void {
+        this.learningQualityHistoryRecords.unshift(record);
+        if (this.learningQualityHistoryRecords.length > SESSION_EXECUTION_HISTORY_LIMIT) {
+            this.learningQualityHistoryRecords.splice(SESSION_EXECUTION_HISTORY_LIMIT);
+        }
+    }
+
+    private recordQueryBackendComparisonHistory(record: QueryBackendComparisonRecord): void {
+        this.queryBackendComparisonHistoryRecords.unshift(record);
+        if (this.queryBackendComparisonHistoryRecords.length > SESSION_EXECUTION_HISTORY_LIMIT) {
+            this.queryBackendComparisonHistoryRecords.splice(SESSION_EXECUTION_HISTORY_LIMIT);
+        }
+    }
+
+    private resolveStudySessionPlanTrendContextStatus(
+        userId: string | null
+    ): 'improving' | 'stable' | 'regressing' | 'insufficient_data' {
+        const scopedRecords = this.sessionExecutionHistory.filter((record) => !userId || record.userId === userId);
+        if (scopedRecords.length <= 0) {
+            return 'insufficient_data';
+        }
+        const recentRecords = scopedRecords.slice(0, 4);
+        const averageDelta = recentRecords.reduce((sum, record) => sum + Number(record.averageMasteryDelta || 0), 0)
+            / Math.max(1, recentRecords.length);
+        if (averageDelta >= 0.02) {
+            return 'improving';
+        }
+        if (averageDelta <= -0.02) {
+            return 'regressing';
+        }
+        return 'stable';
+    }
+
+    private evaluateStudySessionPlanQualityInternal(params: {
+        request?: Record<string, unknown>;
+        sessionPlan: StudySessionResponse;
+        userId: string | null;
+        evaluatedAt: string;
+        source: 'session_execution' | 'manual_evaluation';
+        executionRecordId?: string | null;
+        executionKind?: StudySessionExecutionRecord['executionKind'] | null;
+    }): StudySessionPlanQualityHistoryRecord {
+        const request = params.request || {};
+        const thresholds = this.resolveStudySessionPlanQualityThresholds(
+            (request.thresholds && typeof request.thresholds === 'object'
+                ? request.thresholds
+                : undefined) as Partial<StudySessionPlanQualityThresholdSet> | undefined
+        );
+        const actions = Array.isArray(params.sessionPlan.actions) ? params.sessionPlan.actions : [];
+        const totalActions = actions.length;
+        const evidenceCoverageRatioPct = Number(
+            clamp(
+                (
+                    actions.filter((action) => Array.isArray(action.evidenceSpanIds) && action.evidenceSpanIds.length > 0).length
+                    / Math.max(1, totalActions)
+                ) * 100,
+                0,
+                100
+            ).toFixed(4)
+        );
+        const requestedBudget = Number(
+            request.expectedActionBudget
+            ?? request.actionLimit
+            ?? request.maxActions
+            ?? params.sessionPlan.summary?.totalActions
+            ?? totalActions
+        );
+        const budgetTarget = Number.isFinite(requestedBudget) && requestedBudget > 0
+            ? Math.max(1, Math.floor(requestedBudget))
+            : totalActions;
+        const budgetDeviationActions = Math.abs(totalActions - budgetTarget);
+        const recoveryCount = actions.filter((action) => (
+            action.source === 'mastery_path'
+            || action.source === 'retrain_plan'
+            || action.source === 'misconception_remediation'
+        )).length;
+        const divergenceCount = actions.filter((action) => action.source === 'divergence_path').length;
+        const recoverySharePct = Number(
+            clamp((recoveryCount / Math.max(1, totalActions)) * 100, 0, 100).toFixed(4)
+        );
+        const divergenceSharePct = Number(
+            clamp((divergenceCount / Math.max(1, totalActions)) * 100, 0, 100).toFixed(4)
+        );
+        const trendContextStatus = (
+            request.trendContextStatus === 'improving'
+            || request.trendContextStatus === 'stable'
+            || request.trendContextStatus === 'regressing'
+            || request.trendContextStatus === 'insufficient_data'
+        )
+            ? request.trendContextStatus
+            : this.resolveStudySessionPlanTrendContextStatus(params.userId);
+        const gates: StudySessionPlanQualityGate[] = [
+            {
+                gateId: 'total_actions',
+                passed: totalActions >= thresholds.minTotalActions,
+                comparator: '>=',
+                observedValue: totalActions,
+                threshold: thresholds.minTotalActions,
+                unit: 'count',
+                message: 'Session plans should include enough actions to represent a meaningful learning arc.',
+            },
+            {
+                gateId: 'evidence_coverage',
+                passed: evidenceCoverageRatioPct >= thresholds.minEvidenceCoverageRatioPct,
+                comparator: '>=',
+                observedValue: evidenceCoverageRatioPct,
+                threshold: thresholds.minEvidenceCoverageRatioPct,
+                unit: 'pct',
+                message: 'Most session actions should stay evidence-bound.',
+            },
+            {
+                gateId: 'budget_deviation',
+                passed: budgetDeviationActions <= thresholds.maxBudgetDeviationActions,
+                comparator: '<=',
+                observedValue: budgetDeviationActions,
+                threshold: thresholds.maxBudgetDeviationActions,
+                unit: 'count',
+                message: 'Planned action volume should stay near the requested execution budget.',
+            },
+        ];
+        if (trendContextStatus === 'regressing') {
+            gates.push({
+                gateId: 'recovery_share_regressing',
+                passed: recoverySharePct >= thresholds.minRecoverySharePctWhenRegressing,
+                comparator: '>=',
+                observedValue: recoverySharePct,
+                threshold: thresholds.minRecoverySharePctWhenRegressing,
+                unit: 'pct',
+                message: 'Regressing learners should receive a recovery-heavy action mix.',
+            });
+            gates.push({
+                gateId: 'divergence_share_regressing',
+                passed: divergenceSharePct <= thresholds.maxDivergenceSharePctWhenRegressing,
+                comparator: '<=',
+                observedValue: divergenceSharePct,
+                threshold: thresholds.maxDivergenceSharePctWhenRegressing,
+                unit: 'pct',
+                message: 'Regressing learners should not be overloaded with divergence-first actions.',
+            });
+        } else if (trendContextStatus === 'improving') {
+            gates.push({
+                gateId: 'divergence_share_improving',
+                passed: divergenceSharePct >= thresholds.minDivergenceSharePctWhenImproving,
+                comparator: '>=',
+                observedValue: divergenceSharePct,
+                threshold: thresholds.minDivergenceSharePctWhenImproving,
+                unit: 'pct',
+                message: 'Improving learners should preserve some divergence pressure.',
+            });
+        }
+        const failedGateIds = gates.filter((gate) => gate.passed === false).map((gate) => gate.gateId);
+        const gatePassRatio = gates.filter((gate) => gate.passed === true).length / Math.max(1, gates.length);
+        const budgetScore = 1 - clamp(
+            budgetDeviationActions / Math.max(1, thresholds.maxBudgetDeviationActions + 2),
+            0,
+            1
+        );
+        const score = Number(clamp(
+            gatePassRatio * 0.58
+            + (evidenceCoverageRatioPct / 100) * 0.2
+            + budgetScore * 0.12
+            + (recoverySharePct / 100) * 0.06
+            + (1 - divergenceSharePct / 100) * 0.04,
+            0,
+            1
+        ).toFixed(4));
+        const confidence = Number(clamp(
+            totalActions / Math.max(2, thresholds.minTotalActions * 2),
+            totalActions > 0 ? 0.35 : 0,
+            1
+        ).toFixed(4));
+        const overallPassed = failedGateIds.length <= 0;
+        const status: StudySessionPlanQualityHistoryRecord['status'] = overallPassed
+            ? 'healthy'
+            : failedGateIds.length >= 2
+                ? 'risk'
+                : 'watch';
+        const summaryReason = overallPassed
+            ? `Plan satisfied ${gates.length}/${gates.length} quality gates with evidence coverage ${evidenceCoverageRatioPct.toFixed(2)} pct.`
+            : `Failed gates: ${failedGateIds.join(', ')}. Evidence coverage ${evidenceCoverageRatioPct.toFixed(2)} pct, budget deviation ${budgetDeviationActions}.`;
+        return {
+            recordId: this.nextId('session_plan_quality'),
+            userId: params.userId,
+            source: params.source,
+            evaluatedAt: params.evaluatedAt,
+            planGeneratedAt: isNonEmptyString(params.sessionPlan.generatedAt) ? params.sessionPlan.generatedAt : null,
+            executionRecordId: params.executionRecordId || null,
+            executionKind: params.executionKind || null,
+            trendContextStatus,
+            totalActions,
+            evidenceCoverageRatioPct,
+            budgetDeviationActions,
+            recoverySharePct,
+            divergenceSharePct,
+            overallPassed,
+            status,
+            score,
+            confidence,
+            summaryReason,
+            thresholds,
+            gates,
+            failedGateIds,
+        };
+    }
+
+    private recordStudySessionPlanQualityHistory(record: StudySessionPlanQualityHistoryRecord): void {
+        this.studySessionPlanQualityHistoryRecords.unshift(record);
+        if (this.studySessionPlanQualityHistoryRecords.length > SESSION_EXECUTION_HISTORY_LIMIT) {
+            this.studySessionPlanQualityHistoryRecords.splice(SESSION_EXECUTION_HISTORY_LIMIT);
+        }
     }
 
     private async ensureHydrated(): Promise<void> {
@@ -2768,7 +3546,36 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             latestIngestSummary: this.latestIngestSummary ? { ...this.latestIngestSummary } : null,
             sessionActionTelemetry: this.buildSessionActionTelemetry(),
             sessionExecutionHistory: this.sessionExecutionHistory.map((record) => ({ ...record })),
+            learningQualityHistoryRecords: this.learningQualityHistoryRecords.map((record) => ({
+                ...record,
+                snapshot: this.cloneLearningQualitySnapshot(record.snapshot),
+                diagnostics: { ...record.diagnostics },
+            })),
+            queryBackendComparisonHistoryRecords: this.queryBackendComparisonHistoryRecords.map((record) => ({
+                ...record,
+                left: {
+                    ...record.left,
+                    retrievalModes: [...record.left.retrievalModes],
+                    modeWeights: { ...record.left.modeWeights },
+                    items: record.left.items.map((item) => ({ ...item })),
+                },
+                right: {
+                    ...record.right,
+                    retrievalModes: [...record.right.retrievalModes],
+                    modeWeights: { ...record.right.modeWeights },
+                    items: record.right.items.map((item) => ({ ...item })),
+                },
+                summary: { ...record.summary },
+            })),
+            studySessionPlanQualityHistoryRecords: this.studySessionPlanQualityHistoryRecords.map((record) => ({
+                ...record,
+                thresholds: { ...record.thresholds },
+                gates: record.gates.map((gate) => ({ ...gate })),
+                failedGateIds: [...record.failedGateIds],
+            })),
             memoryPolicyDiagnosticsHistoryRecords: this.memoryPolicyDiagnosticsHistoryRecords.map((record) => ({ ...record })),
+            queryBackendFallbackCount: this.queryBackendFallbackCount,
+            queryBackendLastError: this.queryBackendLastError,
             userMemory,
             relationEdgeSignatures: Array.from(this.relationEdgeSignatures.values()),
         };
@@ -2815,6 +3622,105 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         if (this.sessionExecutionHistory.length > SESSION_EXECUTION_HISTORY_LIMIT) {
             this.sessionExecutionHistory.splice(SESSION_EXECUTION_HISTORY_LIMIT);
         }
+        this.learningQualityHistoryRecords.length = 0;
+        (snapshot.learningQualityHistoryRecords || []).forEach((record) => {
+            if (!record || typeof record !== 'object') {
+                return;
+            }
+            const raw = record as Partial<LearningQualityHistoryRecord>;
+            const sampledAt = this.resolveOptionalTimestamp(raw.sampledAt) || this.resolveTimestamp(undefined);
+            this.learningQualityHistoryRecords.push({
+                recordId: isNonEmptyString(raw.recordId) ? raw.recordId : this.nextId('learning_quality_restored'),
+                userId: isNonEmptyString(raw.userId) ? raw.userId : null,
+                sampledAt,
+                source: raw.source === 'manual_snapshot' ? 'manual_snapshot' : 'session_execution',
+                executionRecordId: isNonEmptyString(raw.executionRecordId) ? raw.executionRecordId : null,
+                executionKind: raw.executionKind === 'retest' || raw.executionKind === 'custom' || raw.executionKind === 'session'
+                    ? raw.executionKind
+                    : null,
+                snapshot: this.normalizeLearningQualitySnapshot(
+                    (raw.snapshot || {}) as LearningQualitySnapshot,
+                    this.buildRetrievalTelemetry().queryP95Ms
+                ),
+                diagnostics: raw.diagnostics && typeof raw.diagnostics === 'object'
+                    ? { ...(raw.diagnostics as Record<string, unknown>) }
+                    : {},
+            });
+        });
+        this.learningQualityHistoryRecords.sort((left, right) => right.sampledAt.localeCompare(left.sampledAt));
+        if (this.learningQualityHistoryRecords.length > SESSION_EXECUTION_HISTORY_LIMIT) {
+            this.learningQualityHistoryRecords.splice(SESSION_EXECUTION_HISTORY_LIMIT);
+        }
+        this.queryBackendComparisonHistoryRecords.length = 0;
+        (snapshot.queryBackendComparisonHistoryRecords || []).forEach((record) => {
+            if (!record || typeof record !== 'object') {
+                return;
+            }
+            this.queryBackendComparisonHistoryRecords.push(record as QueryBackendComparisonRecord);
+        });
+        this.queryBackendComparisonHistoryRecords.sort((left, right) => right.comparedAt.localeCompare(left.comparedAt));
+        if (this.queryBackendComparisonHistoryRecords.length > SESSION_EXECUTION_HISTORY_LIMIT) {
+            this.queryBackendComparisonHistoryRecords.splice(SESSION_EXECUTION_HISTORY_LIMIT);
+        }
+        this.studySessionPlanQualityHistoryRecords.length = 0;
+        (snapshot.studySessionPlanQualityHistoryRecords || []).forEach((record) => {
+            if (!record || typeof record !== 'object') {
+                return;
+            }
+            const raw = record as Partial<StudySessionPlanQualityHistoryRecord>;
+            this.studySessionPlanQualityHistoryRecords.push({
+                recordId: isNonEmptyString(raw.recordId) ? raw.recordId : this.nextId('session_plan_quality_restored'),
+                userId: isNonEmptyString(raw.userId) ? raw.userId : null,
+                source: raw.source === 'manual_evaluation' ? 'manual_evaluation' : 'session_execution',
+                evaluatedAt: this.resolveOptionalTimestamp(raw.evaluatedAt) || this.resolveTimestamp(undefined),
+                planGeneratedAt: this.resolveOptionalTimestamp(raw.planGeneratedAt) || null,
+                executionRecordId: isNonEmptyString(raw.executionRecordId) ? raw.executionRecordId : null,
+                executionKind: raw.executionKind === 'retest' || raw.executionKind === 'custom' || raw.executionKind === 'session'
+                    ? raw.executionKind
+                    : null,
+                trendContextStatus: raw.trendContextStatus === 'improving'
+                    || raw.trendContextStatus === 'stable'
+                    || raw.trendContextStatus === 'regressing'
+                    || raw.trendContextStatus === 'insufficient_data'
+                    ? raw.trendContextStatus
+                    : 'stable',
+                totalActions: Math.max(0, Math.floor(Number(raw.totalActions || 0))),
+                evidenceCoverageRatioPct: Number(clamp(Number(raw.evidenceCoverageRatioPct || 0), 0, 100).toFixed(4)),
+                budgetDeviationActions: Math.max(0, Math.floor(Number(raw.budgetDeviationActions || 0))),
+                recoverySharePct: Number(clamp(Number(raw.recoverySharePct || 0), 0, 100).toFixed(4)),
+                divergenceSharePct: Number(clamp(Number(raw.divergenceSharePct || 0), 0, 100).toFixed(4)),
+                overallPassed: raw.overallPassed === true,
+                status: raw.status === 'healthy' || raw.status === 'watch' || raw.status === 'risk'
+                    ? raw.status
+                    : 'watch',
+                score: Number(clamp(Number(raw.score || 0), 0, 1).toFixed(4)),
+                confidence: Number(clamp(Number(raw.confidence || 0), 0, 1).toFixed(4)),
+                summaryReason: String(raw.summaryReason || '').trim(),
+                thresholds: this.resolveStudySessionPlanQualityThresholds(
+                    (raw.thresholds || {}) as Partial<StudySessionPlanQualityThresholdSet>
+                ),
+                gates: Array.isArray(raw.gates)
+                    ? raw.gates
+                        .filter((gate): gate is StudySessionPlanQualityGate => Boolean(gate && typeof gate === 'object'))
+                        .map((gate) => ({
+                            gateId: String(gate.gateId || '').trim(),
+                            passed: gate.passed === true,
+                            comparator: gate.comparator === '>=' ? '>=' : '<=',
+                            observedValue: Number(gate.observedValue || 0),
+                            threshold: Number(gate.threshold || 0),
+                            unit: gate.unit === 'count' ? 'count' : 'pct',
+                            message: String(gate.message || '').trim(),
+                        }))
+                    : [],
+                failedGateIds: Array.isArray(raw.failedGateIds)
+                    ? raw.failedGateIds.map((gateId) => String(gateId || '').trim()).filter(Boolean)
+                    : [],
+            });
+        });
+        this.studySessionPlanQualityHistoryRecords.sort((left, right) => right.evaluatedAt.localeCompare(left.evaluatedAt));
+        if (this.studySessionPlanQualityHistoryRecords.length > SESSION_EXECUTION_HISTORY_LIMIT) {
+            this.studySessionPlanQualityHistoryRecords.splice(SESSION_EXECUTION_HISTORY_LIMIT);
+        }
         this.memoryPolicyDiagnosticsHistoryRecords.length = 0;
         (snapshot.memoryPolicyDiagnosticsHistoryRecords || []).forEach((record) => {
             if (record && typeof record === 'object') {
@@ -2827,6 +3733,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         if (this.memoryPolicyDiagnosticsHistoryRecords.length > SESSION_EXECUTION_HISTORY_LIMIT) {
             this.memoryPolicyDiagnosticsHistoryRecords.splice(SESSION_EXECUTION_HISTORY_LIMIT);
         }
+        this.queryBackendFallbackCount = Math.max(0, Math.floor(Number(snapshot.queryBackendFallbackCount || 0)));
+        this.queryBackendLastError = String(snapshot.queryBackendLastError || '').trim();
 
         this.atoms.clear();
         (snapshot.atoms || []).forEach((atom) => {
@@ -6094,18 +7002,781 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             stats: this.collectMemoryStats(),
         };
     }
-    public async compareQueryBackends(_r: any): Promise<any> { return { comparisons: [] }; }
-    public async queryKnowledgeQueryBackendComparisonHistory(_r: any): Promise<any> { return { history: [] }; }
-    public async queryKnowledgeQueryBackendComparisonTrend(_r: any): Promise<any> { return { trend: [] }; }
-    public async queryKnowledgeStalenessDiagnostics(_r: any): Promise<any> { return { records: [] }; }
-    public async rebuildKnowledgeFromStalenessDiagnostics(_r: any): Promise<any> { return { rebuilt: 0 }; }
-    public async queryLearningQualityHistory(_r: any): Promise<any> { return { history: [] }; }
-    public async queryLearningQualityTrend(_r: any): Promise<any> { return { trend: [] }; }
-    public getLearningQualityThresholds(): any { return {}; }
-    public async evaluateStudySessionPlanQuality(_r: any): Promise<any> { return { evaluated: true }; }
-    public async queryStudySessionPlanQualityHistory(_r: any): Promise<any> { return { history: [] }; }
-    public async queryStudySessionPlanQualityTrend(_r: any): Promise<any> { return { trend: [] }; }
-    public async queryStudySessionPlanQualityRuntimeThresholds(_r: any): Promise<any> { return { thresholds: {} }; }
+    public async compareQueryBackends(request: any = {}): Promise<any> {
+        await this.ensureHydrated();
+        const comparedAt = this.resolveTimestamp(request.comparedAt);
+        const query = normalizeWhitespace(String(request.query || ''));
+        const topK = clamp(Math.floor(Number(request.topK) || 6), 1, 20);
+        const leftBackend = normalizeGraphQueryBackendType(request.leftBackend || 'local_hybrid');
+        const rightBackend = normalizeGraphQueryBackendType(
+            request.rightBackend
+            || (leftBackend === 'local_hybrid' ? 'keyword_only' : 'local_hybrid')
+        );
+        const left = await this.executeQueryBackend(
+            {
+                query,
+                topK,
+                asOf: request.asOf,
+                queryBackend: leftBackend,
+            },
+            leftBackend,
+            {
+                allowRuntimeFallback: false,
+                recordFallback: false,
+            }
+        );
+        const right = await this.executeQueryBackend(
+            {
+                query,
+                topK,
+                asOf: request.asOf,
+                queryBackend: rightBackend,
+            },
+            rightBackend,
+            {
+                allowRuntimeFallback: false,
+                recordFallback: false,
+            }
+        );
+        const record = this.buildQueryBackendComparisonRecord({
+            comparedAt,
+            query,
+            topK,
+            left,
+            right,
+        });
+        this.recordQueryBackendComparisonHistory(record);
+        await this.persistIfNeeded();
+        return record;
+    }
+
+    public async queryKnowledgeQueryBackendComparisonHistory(request: any = {}): Promise<any> {
+        await this.ensureHydrated();
+        const limit = clamp(Math.floor(Number(request.limit) || 8), 1, 200);
+        const records = this.queryBackendComparisonHistoryRecords
+            .slice()
+            .sort((left, right) => right.comparedAt.localeCompare(left.comparedAt))
+            .slice(0, limit)
+            .map((record) => ({
+                ...record,
+                left: {
+                    ...record.left,
+                    retrievalModes: [...record.left.retrievalModes],
+                    modeWeights: { ...record.left.modeWeights },
+                    items: record.left.items.map((item) => ({ ...item })),
+                },
+                right: {
+                    ...record.right,
+                    retrievalModes: [...record.right.retrievalModes],
+                    modeWeights: { ...record.right.modeWeights },
+                    items: record.right.items.map((item) => ({ ...item })),
+                },
+                summary: { ...record.summary },
+            }));
+        const averageMetric = (selector: (record: QueryBackendComparisonRecord) => number): number => (
+            records.length > 0
+                ? Number((records.reduce((sum, record) => sum + selector(record), 0) / records.length).toFixed(4))
+                : 0
+        );
+        const preferredCounts = records.reduce((accumulator, record) => {
+            accumulator[record.summary.preferredBackend] += 1;
+            return accumulator;
+        }, { left: 0, right: 0, tie: 0 });
+        return {
+            summary: {
+                totalRecords: this.queryBackendComparisonHistoryRecords.length,
+                returnedRecords: records.length,
+                averageOverlapRatioPct: averageMetric((record) => record.summary.overlapRatioPct),
+                averageLatencyDeltaMs: averageMetric((record) => record.summary.latencyDeltaMs),
+                averageLeftEvidenceCoverageRatio: averageMetric((record) => record.summary.leftEvidenceCoverageRatio),
+                averageRightEvidenceCoverageRatio: averageMetric((record) => record.summary.rightEvidenceCoverageRatio),
+                preferredCounts,
+                latestComparedAt: records[0]?.comparedAt || null,
+            },
+            records,
+        };
+    }
+
+    public async queryKnowledgeQueryBackendComparisonTrend(request: any = {}): Promise<any> {
+        await this.ensureHydrated();
+        const limit = clamp(Math.floor(Number(request.limit) || 12), 1, 200);
+        const windowSize = clamp(Math.floor(Number(request.windowSize) || 2), 1, 50);
+        const minSamples = clamp(Math.floor(Number(request.minSamples) || 1), 1, 50);
+        const records = this.queryBackendComparisonHistoryRecords
+            .slice()
+            .sort((left, right) => right.comparedAt.localeCompare(left.comparedAt))
+            .slice(0, limit);
+        const currentWindow = records.slice(0, windowSize);
+        const previousWindow = records.slice(windowSize, windowSize * 2);
+        const summarizeWindow = (items: QueryBackendComparisonRecord[]) => {
+            const count = items.length;
+            const preferredLeft = items.filter((record) => record.summary.preferredBackend === 'left').length;
+            const preferredRight = items.filter((record) => record.summary.preferredBackend === 'right').length;
+            const overlap = count > 0
+                ? items.reduce((sum, record) => sum + record.summary.overlapRatioPct, 0) / count
+                : 0;
+            const latencyImbalance = count > 0
+                ? items.reduce((sum, record) => sum + Math.abs(Number(record.summary.latencyDeltaMs || 0)), 0) / count
+                : 0;
+            const explainabilityGap = count > 0
+                ? items.reduce((sum, record) => {
+                    const leftExplainability = (
+                        record.summary.leftEvidenceCoverageRatio
+                        + record.summary.leftRelationPathCoverageRatio
+                        + record.summary.leftTemporalValidityPassRatio
+                    ) / 3;
+                    const rightExplainability = (
+                        record.summary.rightEvidenceCoverageRatio
+                        + record.summary.rightRelationPathCoverageRatio
+                        + record.summary.rightTemporalValidityPassRatio
+                    ) / 3;
+                    return sum + Math.abs(leftExplainability - rightExplainability) * 100;
+                }, 0) / count
+                : 0;
+            return {
+                count,
+                overlapRatioPct: Number(overlap.toFixed(4)),
+                latencyImbalanceDeltaMs: Number(latencyImbalance.toFixed(4)),
+                explainabilityGapDeltaPct: Number(explainabilityGap.toFixed(4)),
+                leftPreferredSharePct: Number(((preferredLeft / Math.max(1, count)) * 100).toFixed(4)),
+                rightPreferredSharePct: Number(((preferredRight / Math.max(1, count)) * 100).toFixed(4)),
+            };
+        };
+        const current = summarizeWindow(currentWindow);
+        const previous = summarizeWindow(previousWindow);
+        const deltas = {
+            overlapDeltaPct: Number((current.overlapRatioPct - previous.overlapRatioPct).toFixed(4)),
+            latencyImbalanceDeltaMs: Number((current.latencyImbalanceDeltaMs - previous.latencyImbalanceDeltaMs).toFixed(4)),
+            explainabilityGapDeltaPct: Number((current.explainabilityGapDeltaPct - previous.explainabilityGapDeltaPct).toFixed(4)),
+            leftPreferredShareDeltaPct: Number((current.leftPreferredSharePct - previous.leftPreferredSharePct).toFixed(4)),
+            rightPreferredShareDeltaPct: Number((current.rightPreferredSharePct - previous.rightPreferredSharePct).toFixed(4)),
+        };
+        const score = Number(clamp(
+            (current.overlapRatioPct / 100) * 0.35
+            + (1 - Math.min(current.latencyImbalanceDeltaMs, 1500) / 1500) * 0.25
+            + (1 - current.explainabilityGapDeltaPct / 100) * 0.4,
+            0,
+            1
+        ).toFixed(4));
+        if (currentWindow.length < minSamples || previousWindow.length < minSamples) {
+            return {
+                status: 'insufficient_data',
+                confidence: Number(clamp(records.length / Math.max(1, minSamples * 2), 0, 1).toFixed(4)),
+                score,
+                summary: {
+                    totalRecords: records.length,
+                    evaluatedRecords: currentWindow.length,
+                    reason: `Need ${minSamples} backend comparisons in both windows before trend scoring is reliable.`,
+                    latestComparedAt: records[0]?.comparedAt || null,
+                },
+                deltas,
+            };
+        }
+        let status: 'improving' | 'stable' | 'regressing' | 'insufficient_data' = 'stable';
+        if (
+            deltas.overlapDeltaPct >= 5
+            && deltas.latencyImbalanceDeltaMs <= 0
+            && deltas.explainabilityGapDeltaPct <= 0
+        ) {
+            status = 'improving';
+        } else if (
+            deltas.overlapDeltaPct <= -5
+            || deltas.latencyImbalanceDeltaMs >= 15
+            || deltas.explainabilityGapDeltaPct >= 5
+        ) {
+            status = 'regressing';
+        }
+        return {
+            status,
+            confidence: Number(clamp(
+                Math.min(currentWindow.length, previousWindow.length) / Math.max(1, minSamples * 2),
+                0,
+                1
+            ).toFixed(4)),
+            score,
+            summary: {
+                totalRecords: records.length,
+                evaluatedRecords: currentWindow.length + previousWindow.length,
+                reason: `Overlap delta ${deltas.overlapDeltaPct.toFixed(2)} pct, latency imbalance delta ${deltas.latencyImbalanceDeltaMs.toFixed(2)} ms, explainability gap delta ${deltas.explainabilityGapDeltaPct.toFixed(2)} pct.`,
+                latestComparedAt: records[0]?.comparedAt || null,
+            },
+            deltas,
+        };
+    }
+
+    public async queryKnowledgeStalenessDiagnostics(request: any = {}): Promise<any> {
+        await this.ensureHydrated();
+        const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 500);
+        const onlyStale = request.onlyStale === true;
+        const sourcePathPrefix = String(request.sourcePathPrefix || '').trim();
+        const records = await Promise.all(
+            Array.from(this.documents.values())
+                .filter((snapshot) => !sourcePathPrefix || snapshot.sourcePath.startsWith(sourcePathPrefix))
+                .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+                .map(async (snapshot) => {
+                    const resolvedPath = path.resolve(snapshot.sourcePath);
+                    try {
+                        const stat = await fs.promises.stat(resolvedPath);
+                        const content = await fs.promises.readFile(resolvedPath, 'utf8');
+                        const currentHash = this.computeHash(content);
+                        const status = currentHash === snapshot.sourceHash ? 'up_to_date' : 'hash_mismatch';
+                        return {
+                            documentId: snapshot.documentId,
+                            sourcePath: snapshot.sourcePath,
+                            resolvedSourcePath: resolvedPath,
+                            status,
+                            version: snapshot.version,
+                            storedHash: snapshot.sourceHash,
+                            currentHash,
+                            updatedAt: snapshot.updatedAt,
+                            fileMtime: stat.mtime.toISOString(),
+                            stale: status !== 'up_to_date',
+                        };
+                    } catch (error) {
+                        const code = (error as NodeJS.ErrnoException | undefined)?.code;
+                        const status = code === 'ENOENT' || code === 'ENOTDIR'
+                            ? 'missing_source'
+                            : 'read_error';
+                        return {
+                            documentId: snapshot.documentId,
+                            sourcePath: snapshot.sourcePath,
+                            resolvedSourcePath: resolvedPath,
+                            status,
+                            version: snapshot.version,
+                            storedHash: snapshot.sourceHash,
+                            currentHash: null,
+                            updatedAt: snapshot.updatedAt,
+                            fileMtime: null,
+                            stale: true,
+                            error: String((error as Error)?.message || error || status).trim(),
+                        };
+                    }
+                })
+        );
+        const filteredRecords = onlyStale ? records.filter((record) => record.stale) : records;
+        const returnedRecords = filteredRecords.slice(0, limit);
+        const upToDateDocuments = records.filter((record) => record.status === 'up_to_date').length;
+        const hashMismatchDocuments = records.filter((record) => record.status === 'hash_mismatch').length;
+        const missingSourceDocuments = records.filter((record) => record.status === 'missing_source').length;
+        const readErrorDocuments = records.filter((record) => record.status === 'read_error').length;
+        const staleDocuments = hashMismatchDocuments + missingSourceDocuments + readErrorDocuments;
+        const evaluatedDocuments = records.length;
+        return {
+            summary: {
+                totalDocuments: this.documents.size,
+                evaluatedDocuments,
+                returnedRecords: returnedRecords.length,
+                upToDateDocuments,
+                hashMismatchDocuments,
+                missingSourceDocuments,
+                readErrorDocuments,
+                staleDocuments,
+                freshnessRatioPct: Number(
+                    clamp((upToDateDocuments / Math.max(1, evaluatedDocuments)) * 100, 0, 100).toFixed(4)
+                ),
+                staleRatioPct: Number(
+                    clamp((staleDocuments / Math.max(1, evaluatedDocuments)) * 100, 0, 100).toFixed(4)
+                ),
+                reason: staleDocuments > 0
+                    ? `Detected ${staleDocuments} stale source document(s) across ${evaluatedDocuments} evaluated snapshots.`
+                    : 'All evaluated source documents match the stored knowledge snapshot.',
+            },
+            records: returnedRecords,
+        };
+    }
+
+    public async rebuildKnowledgeFromStalenessDiagnostics(request: any = {}): Promise<any> {
+        await this.ensureHydrated();
+        if (Array.isArray(request.documents) && request.documents.length > 0) {
+            const ingestResult = await this.ingestKnowledge({
+                incremental: true,
+                documents: request.documents,
+                relationRecomputeMode: 'full',
+                ingestedAt: request.rebuiltAt,
+            });
+            return {
+                rebuilt: ingestResult.summary.changedDocuments,
+                mode: 'reingest_documents',
+                rebuiltAt: this.resolveTimestamp(request.rebuiltAt),
+                plannedDocuments: ingestResult.summary.changedDocuments,
+                summary: ingestResult.summary,
+            };
+        }
+        const diagnostics = await this.queryKnowledgeStalenessDiagnostics(request);
+        const staleRecords = Array.isArray(diagnostics.records)
+            ? diagnostics.records.filter((record: Record<string, unknown>) => record && record.stale === true)
+            : [];
+        return {
+            rebuilt: 0,
+            mode: 'plan_only',
+            rebuiltAt: this.resolveTimestamp(request.rebuiltAt),
+            plannedDocuments: staleRecords.length,
+            staleDocuments: Number(diagnostics.summary?.staleDocuments || staleRecords.length),
+            reason: 'Runtime snapshots retain hashes and evidence, not full source payloads. Rebuild requires caller-supplied document content for re-ingest.',
+            records: staleRecords,
+        };
+    }
+
+    public async queryLearningQualityHistory(request: any = {}): Promise<any> {
+        await this.ensureHydrated();
+        const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 200);
+        const userId = String(request.userId || '').trim();
+        const records = this.learningQualityHistoryRecords
+            .filter((record) => !userId || record.userId === userId)
+            .slice()
+            .sort((left, right) => right.sampledAt.localeCompare(left.sampledAt))
+            .slice(0, limit)
+            .map((record) => ({
+                ...record,
+                snapshot: this.cloneLearningQualitySnapshot(record.snapshot),
+                diagnostics: { ...record.diagnostics },
+            }));
+        const averageMetric = (selector: (record: LearningQualityHistoryRecord) => number): number => (
+            records.length > 0
+                ? Number((records.reduce((sum, record) => sum + selector(record), 0) / records.length).toFixed(4))
+                : 0
+        );
+        return {
+            summary: {
+                totalRecords: this.learningQualityHistoryRecords.filter((record) => !userId || record.userId === userId).length,
+                returnedRecords: records.length,
+                latestSampledAt: records[0]?.sampledAt || null,
+                oldestSampledAt: records[records.length - 1]?.sampledAt || null,
+                averageRetestPassRatePct: averageMetric((record) => Number(record.snapshot.retestPassRatePct || 0)),
+                averageEvidenceBackedSuggestionRatioPct: averageMetric((record) => Number(record.snapshot.evidenceBackedSuggestionRatioPct || 0)),
+                averageMisconceptionRecurrenceRatePct: averageMetric((record) => Number(record.snapshot.misconceptionRecurrenceRatePct || 0)),
+                averageQueryBackendFallbackRatioPct: averageMetric((record) => Number(record.snapshot.queryBackendFallbackRatioPct || 0)),
+            },
+            records,
+        };
+    }
+
+    public async queryLearningQualityTrend(request: any = {}): Promise<any> {
+        await this.ensureHydrated();
+        const limit = clamp(Math.floor(Number(request.limit) || 10), 1, 200);
+        const windowSize = clamp(Math.floor(Number(request.windowSize) || 2), 1, 50);
+        const minSamples = clamp(Math.floor(Number(request.minSamples) || 1), 1, 50);
+        const userId = String(request.userId || '').trim();
+        const records = this.learningQualityHistoryRecords
+            .filter((record) => !userId || record.userId === userId)
+            .slice()
+            .sort((left, right) => right.sampledAt.localeCompare(left.sampledAt))
+            .slice(0, limit);
+        const summarizeWindow = (items: LearningQualityHistoryRecord[]) => {
+            const count = items.length;
+            const average = (selector: (record: LearningQualityHistoryRecord) => number): number => (
+                count > 0
+                    ? items.reduce((sum, record) => sum + selector(record), 0) / count
+                    : 0
+            );
+            return {
+                count,
+                retestPassRatePct: Number(average((record) => Number(record.snapshot.retestPassRatePct || 0)).toFixed(4)),
+                evidenceBackedSuggestionRatioPct: Number(average((record) => Number(record.snapshot.evidenceBackedSuggestionRatioPct || 0)).toFixed(4)),
+                misconceptionRecurrenceRatePct: Number(average((record) => Number(record.snapshot.misconceptionRecurrenceRatePct || 0)).toFixed(4)),
+                queryBackendFallbackRatioPct: Number(average((record) => Number(record.snapshot.queryBackendFallbackRatioPct || 0)).toFixed(4)),
+            };
+        };
+        const currentWindow = records.slice(0, windowSize);
+        const previousWindow = records.slice(windowSize, windowSize * 2);
+        const current = summarizeWindow(currentWindow);
+        const previous = summarizeWindow(previousWindow);
+        const deltas = {
+            retestPassRateDeltaPct: Number((current.retestPassRatePct - previous.retestPassRatePct).toFixed(4)),
+            evidenceBackedSuggestionDeltaPct: Number((current.evidenceBackedSuggestionRatioPct - previous.evidenceBackedSuggestionRatioPct).toFixed(4)),
+            misconceptionRecurrenceDeltaPct: Number((current.misconceptionRecurrenceRatePct - previous.misconceptionRecurrenceRatePct).toFixed(4)),
+            queryBackendFallbackDeltaPct: Number((current.queryBackendFallbackRatioPct - previous.queryBackendFallbackRatioPct).toFixed(4)),
+        };
+        const score = Number(clamp(
+            (current.retestPassRatePct / 100) * 0.25
+            + (current.evidenceBackedSuggestionRatioPct / 100) * 0.3
+            + (1 - current.misconceptionRecurrenceRatePct / 100) * 0.25
+            + (1 - current.queryBackendFallbackRatioPct / 100) * 0.2,
+            0,
+            1
+        ).toFixed(4));
+        if (currentWindow.length < minSamples || previousWindow.length < minSamples) {
+            return {
+                status: 'insufficient_data',
+                confidence: Number(clamp(records.length / Math.max(1, minSamples * 2), 0, 1).toFixed(4)),
+                score,
+                summary: {
+                    totalRecords: records.length,
+                    evaluatedRecords: currentWindow.length,
+                    reason: `Need ${minSamples} learning-quality records in both windows before trend scoring is reliable.`,
+                    latestSampledAt: records[0]?.sampledAt || null,
+                },
+                deltas,
+            };
+        }
+        let status: 'improving' | 'stable' | 'regressing' | 'insufficient_data' = 'stable';
+        if (
+            deltas.retestPassRateDeltaPct >= 3
+            && deltas.evidenceBackedSuggestionDeltaPct >= 0
+            && deltas.misconceptionRecurrenceDeltaPct <= 0
+            && deltas.queryBackendFallbackDeltaPct <= 0
+        ) {
+            status = 'improving';
+        } else if (
+            deltas.retestPassRateDeltaPct <= -3
+            || deltas.evidenceBackedSuggestionDeltaPct <= -5
+            || deltas.misconceptionRecurrenceDeltaPct >= 5
+            || deltas.queryBackendFallbackDeltaPct >= 5
+        ) {
+            status = 'regressing';
+        }
+        return {
+            status,
+            confidence: Number(clamp(
+                Math.min(currentWindow.length, previousWindow.length) / Math.max(1, minSamples * 2),
+                0,
+                1
+            ).toFixed(4)),
+            score,
+            summary: {
+                totalRecords: records.length,
+                evaluatedRecords: currentWindow.length + previousWindow.length,
+                reason: `Retest delta ${deltas.retestPassRateDeltaPct.toFixed(2)} pct, evidence delta ${deltas.evidenceBackedSuggestionDeltaPct.toFixed(2)} pct, misconception delta ${deltas.misconceptionRecurrenceDeltaPct.toFixed(2)} pct, fallback delta ${deltas.queryBackendFallbackDeltaPct.toFixed(2)} pct.`,
+                latestSampledAt: records[0]?.sampledAt || null,
+            },
+            deltas,
+        };
+    }
+
+    public getLearningQualityThresholds(): any {
+        return {
+            ...this.learningQualityThresholds,
+        };
+    }
+
+    public async evaluateStudySessionPlanQuality(request: any = {}): Promise<any> {
+        await this.ensureHydrated();
+        const sessionPlan = request.sessionPlan && typeof request.sessionPlan === 'object'
+            ? request.sessionPlan as StudySessionResponse
+            : null;
+        if (!sessionPlan) {
+            throw new Error('study_session_plan_quality_session_plan_required');
+        }
+        const evaluatedAt = this.resolveTimestamp(request.evaluatedAt);
+        const userId = isNonEmptyString(request.userId)
+            ? request.userId.trim()
+            : (isNonEmptyString(sessionPlan.userId) ? sessionPlan.userId.trim() : null);
+        const record = this.evaluateStudySessionPlanQualityInternal({
+            request,
+            sessionPlan,
+            userId,
+            evaluatedAt,
+            source: 'manual_evaluation',
+        });
+        if (request.persistRecord !== false) {
+            this.recordStudySessionPlanQualityHistory(record);
+            await this.persistIfNeeded();
+        }
+        return {
+            evaluated: true,
+            evaluatedAt,
+            userId,
+            thresholds: { ...record.thresholds },
+            metrics: {
+                totalActions: record.totalActions,
+                evidenceCoverageRatioPct: record.evidenceCoverageRatioPct,
+                budgetDeviationActions: record.budgetDeviationActions,
+                recoverySharePct: record.recoverySharePct,
+                divergenceSharePct: record.divergenceSharePct,
+            },
+            summary: {
+                overallPassed: record.overallPassed,
+                status: record.status,
+                score: record.score,
+                confidence: record.confidence,
+                reason: record.summaryReason,
+                trendContextStatus: record.trendContextStatus,
+            },
+            gates: record.gates.map((gate) => ({ ...gate })),
+            record: {
+                ...record,
+                thresholds: { ...record.thresholds },
+                gates: record.gates.map((gate) => ({ ...gate })),
+                failedGateIds: [...record.failedGateIds],
+            },
+        };
+    }
+
+    public async queryStudySessionPlanQualityHistory(request: any = {}): Promise<any> {
+        await this.ensureHydrated();
+        const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 200);
+        const userId = String(request.userId || '').trim();
+        const scopedRecords = this.studySessionPlanQualityHistoryRecords
+            .filter((record) => !userId || record.userId === userId)
+            .slice()
+            .sort((left, right) => right.evaluatedAt.localeCompare(left.evaluatedAt));
+        const records = scopedRecords
+            .slice(0, limit)
+            .map((record) => ({
+                ...record,
+                thresholds: { ...record.thresholds },
+                gates: record.gates.map((gate) => ({ ...gate })),
+                failedGateIds: [...record.failedGateIds],
+            }));
+        const overallPassRatePct = Number(
+            clamp(
+                (scopedRecords.filter((record) => record.overallPassed).length / Math.max(1, scopedRecords.length)) * 100,
+                0,
+                100
+            ).toFixed(4)
+        );
+        const returnedPassRatePct = Number(
+            clamp(
+                (records.filter((record) => record.overallPassed).length / Math.max(1, records.length)) * 100,
+                0,
+                100
+            ).toFixed(4)
+        );
+        let consecutiveFailureCount = 0;
+        for (const record of scopedRecords) {
+            if (record.overallPassed) {
+                break;
+            }
+            consecutiveFailureCount += 1;
+        }
+        const failedGateCounts = new Map<string, number>();
+        scopedRecords.forEach((record) => {
+            record.failedGateIds.forEach((gateId) => {
+                failedGateCounts.set(gateId, (failedGateCounts.get(gateId) || 0) + 1);
+            });
+        });
+        const commonFailedGates = Array.from(failedGateCounts.entries())
+            .map(([gateId, count]) => ({ gateId, count }))
+            .sort((left, right) => right.count - left.count);
+        const averageBudgetDeviationActions = records.length > 0
+            ? Number((records.reduce((sum, record) => sum + record.budgetDeviationActions, 0) / records.length).toFixed(4))
+            : 0;
+        return {
+            summary: {
+                totalRecords: scopedRecords.length,
+                returnedRecords: records.length,
+                overallPassRatePct,
+                returnedPassRatePct,
+                consecutiveFailureCount,
+                averageBudgetDeviationActions,
+                commonFailedGates,
+                latestEvaluatedAt: records[0]?.evaluatedAt || null,
+            },
+            records,
+        };
+    }
+
+    public async queryStudySessionPlanQualityTrend(request: any = {}): Promise<any> {
+        await this.ensureHydrated();
+        const limit = clamp(Math.floor(Number(request.limit) || 10), 1, 200);
+        const windowSize = clamp(Math.floor(Number(request.windowSize) || 2), 1, 50);
+        const minSamples = clamp(Math.floor(Number(request.minSamples) || 1), 1, 50);
+        const userId = String(request.userId || '').trim();
+        const records = this.studySessionPlanQualityHistoryRecords
+            .filter((record) => !userId || record.userId === userId)
+            .slice()
+            .sort((left, right) => right.evaluatedAt.localeCompare(left.evaluatedAt))
+            .slice(0, limit);
+        const summarizeWindow = (items: StudySessionPlanQualityHistoryRecord[]) => {
+            const count = items.length;
+            const average = (selector: (record: StudySessionPlanQualityHistoryRecord) => number): number => (
+                count > 0
+                    ? items.reduce((sum, record) => sum + selector(record), 0) / count
+                    : 0
+            );
+            return {
+                count,
+                passRatePct: Number(
+                    clamp((items.filter((record) => record.overallPassed).length / Math.max(1, count)) * 100, 0, 100).toFixed(4)
+                ),
+                evidenceCoverageRatioPct: Number(average((record) => record.evidenceCoverageRatioPct).toFixed(4)),
+                budgetDeviationActions: Number(average((record) => record.budgetDeviationActions).toFixed(4)),
+                recoverySharePct: Number(average((record) => record.recoverySharePct).toFixed(4)),
+                divergenceSharePct: Number(average((record) => record.divergenceSharePct).toFixed(4)),
+            };
+        };
+        const currentWindow = records.slice(0, windowSize);
+        const previousWindow = records.slice(windowSize, windowSize * 2);
+        const current = summarizeWindow(currentWindow);
+        const previous = summarizeWindow(previousWindow);
+        const deltas = {
+            passRateDeltaPct: Number((current.passRatePct - previous.passRatePct).toFixed(4)),
+            evidenceCoverageDeltaPct: Number((current.evidenceCoverageRatioPct - previous.evidenceCoverageRatioPct).toFixed(4)),
+            budgetDeviationDeltaActions: Number((current.budgetDeviationActions - previous.budgetDeviationActions).toFixed(4)),
+            recoveryShareDeltaPct: Number((current.recoverySharePct - previous.recoverySharePct).toFixed(4)),
+            divergenceShareDeltaPct: Number((current.divergenceSharePct - previous.divergenceSharePct).toFixed(4)),
+        };
+        const score = Number(clamp(
+            (current.passRatePct / 100) * 0.55
+            + (current.evidenceCoverageRatioPct / 100) * 0.25
+            + (1 - Math.min(current.budgetDeviationActions, 6) / 6) * 0.1
+            + (current.recoverySharePct / 100) * 0.05
+            + (1 - current.divergenceSharePct / 100) * 0.05,
+            0,
+            1
+        ).toFixed(4));
+        if (currentWindow.length < minSamples || previousWindow.length < minSamples) {
+            return {
+                status: 'insufficient_data',
+                confidence: Number(clamp(records.length / Math.max(1, minSamples * 2), 0, 1).toFixed(4)),
+                score,
+                summary: {
+                    totalRecords: records.length,
+                    evaluatedRecords: currentWindow.length,
+                    reason: `Need ${minSamples} study-session plan quality records in both windows before trend scoring is reliable.`,
+                    latestEvaluatedAt: records[0]?.evaluatedAt || null,
+                },
+                deltas,
+            };
+        }
+        let status: 'improving' | 'stable' | 'regressing' | 'insufficient_data' = 'stable';
+        if (
+            deltas.passRateDeltaPct >= 10
+            && deltas.evidenceCoverageDeltaPct >= 0
+            && deltas.budgetDeviationDeltaActions <= 0
+        ) {
+            status = 'improving';
+        } else if (
+            deltas.passRateDeltaPct <= -10
+            || deltas.evidenceCoverageDeltaPct <= -10
+            || deltas.budgetDeviationDeltaActions >= 1
+        ) {
+            status = 'regressing';
+        }
+        return {
+            status,
+            confidence: Number(clamp(
+                Math.min(currentWindow.length, previousWindow.length) / Math.max(1, minSamples * 2),
+                0,
+                1
+            ).toFixed(4)),
+            score,
+            summary: {
+                totalRecords: records.length,
+                evaluatedRecords: currentWindow.length + previousWindow.length,
+                reason: `Pass-rate delta ${deltas.passRateDeltaPct.toFixed(2)} pct, evidence delta ${deltas.evidenceCoverageDeltaPct.toFixed(2)} pct, budget delta ${deltas.budgetDeviationDeltaActions.toFixed(2)} actions.`,
+                latestEvaluatedAt: records[0]?.evaluatedAt || null,
+            },
+            deltas,
+        };
+    }
+
+    public async queryStudySessionPlanQualityRuntimeThresholds(request: any = {}): Promise<any> {
+        await this.ensureHydrated();
+        const historyLimit = clamp(
+            Math.floor(
+                Number(
+                    request.historyLimit
+                    ?? this.studySessionPlanQualityAdaptiveThresholdRuntimeConfig.historyLimit
+                    ?? 12
+                ) || 12
+            ),
+            1,
+            200
+        );
+        const trendLimit = clamp(
+            Math.floor(
+                Number(
+                    request.trendLimit
+                    ?? this.studySessionPlanQualityAdaptiveThresholdRuntimeConfig.trendLimit
+                    ?? 12
+                ) || 12
+            ),
+            1,
+            200
+        );
+        const trendWindowSize = clamp(
+            Math.floor(
+                Number(
+                    request.trendWindowSize
+                    ?? this.studySessionPlanQualityAdaptiveThresholdRuntimeConfig.trendWindowSize
+                    ?? 2
+                ) || 2
+            ),
+            1,
+            50
+        );
+        const trendMinSamples = clamp(
+            Math.floor(
+                Number(
+                    request.trendMinSamples
+                    ?? this.studySessionPlanQualityAdaptiveThresholdRuntimeConfig.trendMinSamples
+                    ?? 1
+                ) || 1
+            ),
+            1,
+            50
+        );
+        const userId = String(request.userId || '').trim();
+        const baseThresholds = this.resolveStudySessionPlanQualityThresholds(
+            (request.thresholds && typeof request.thresholds === 'object'
+                ? request.thresholds
+                : undefined) as Partial<StudySessionPlanQualityThresholdSet> | undefined
+        );
+        const adaptiveThresholdsEnabled = request.adaptiveThresholdsEnabled === true
+            || (
+                request.adaptiveThresholdsEnabled !== false
+                && this.studySessionPlanQualityAdaptiveThresholdsEnabled === true
+            );
+        const history = await this.queryStudySessionPlanQualityHistory({
+            userId: userId || undefined,
+            limit: historyLimit,
+        });
+        const trend = await this.queryStudySessionPlanQualityTrend({
+            userId: userId || undefined,
+            limit: trendLimit,
+            windowSize: trendWindowSize,
+            minSamples: trendMinSamples,
+        });
+        const records = this.studySessionPlanQualityHistoryRecords
+            .filter((record) => !userId || record.userId === userId)
+            .slice(0, historyLimit);
+        const thresholds = {
+            ...baseThresholds,
+        };
+        const adaptiveAdjustments: Record<string, number> = {};
+        if (adaptiveThresholdsEnabled && records.length > 0) {
+            const averageTotalActions = records.reduce((sum, record) => sum + record.totalActions, 0) / records.length;
+            const averageEvidenceCoverageRatioPct = records.reduce((sum, record) => sum + record.evidenceCoverageRatioPct, 0) / records.length;
+            const averageBudgetDeviationActions = records.reduce((sum, record) => sum + record.budgetDeviationActions, 0) / records.length;
+            thresholds.minTotalActions = Math.max(1, Math.floor(Math.max(baseThresholds.minTotalActions, averageTotalActions * 0.6)));
+            thresholds.minEvidenceCoverageRatioPct = Number(
+                clamp(Math.max(baseThresholds.minEvidenceCoverageRatioPct, averageEvidenceCoverageRatioPct * 0.85), 0, 100).toFixed(4)
+            );
+            thresholds.maxBudgetDeviationActions = Math.max(
+                baseThresholds.maxBudgetDeviationActions,
+                Math.ceil(averageBudgetDeviationActions + 1)
+            );
+            adaptiveAdjustments.minTotalActions = Number((thresholds.minTotalActions - baseThresholds.minTotalActions).toFixed(4));
+            adaptiveAdjustments.minEvidenceCoverageRatioPct = Number(
+                (thresholds.minEvidenceCoverageRatioPct - baseThresholds.minEvidenceCoverageRatioPct).toFixed(4)
+            );
+            adaptiveAdjustments.maxBudgetDeviationActions = Number(
+                (thresholds.maxBudgetDeviationActions - baseThresholds.maxBudgetDeviationActions).toFixed(4)
+            );
+        }
+        return {
+            adaptiveThresholdsEnabled,
+            baseThresholds,
+            thresholds,
+            adaptiveAdjustments,
+            runtimeConfig: {
+                ...this.studySessionPlanQualityAdaptiveThresholdRuntimeConfig,
+                historyLimit,
+                trendLimit,
+                trendWindowSize,
+                trendMinSamples,
+            },
+            summary: {
+                totalRecords: Number(history.summary?.totalRecords || records.length),
+                latestEvaluatedAt: history.summary?.latestEvaluatedAt || null,
+                trendStatus: String(trend.status || 'insufficient_data'),
+                reason: adaptiveThresholdsEnabled
+                    ? 'Adaptive session-plan quality thresholds were derived from recent execution history.'
+                    : 'Static session-plan quality thresholds are active.',
+            },
+        };
+    }
     public async queryMemoryPolicyDiagnostics(request: any = {}): Promise<any> {
         await this.ensureHydrated();
         const diagnostics = this.buildMemoryPolicyDiagnosticsSnapshot(request);
@@ -6230,9 +7901,121 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             deltas,
         };
     }
-    public getQueryBackendConfig(): any { return { backend: 'local_hybrid' }; }
-    public async updateQueryBackendConfig(_r: any): Promise<any> { return { updated: true }; }
-    public getQueryBackendDiagnostics(): any { return { ready: true }; }
+    public getQueryBackendConfig(): any {
+        return {
+            configuredBackend: this.currentGraphQueryBackendType,
+            backendId: this.graphQueryBackend.id,
+            queryVectorAnnPrefilterEnabled: this.graphQueryBackendFactoryOptions.localVectorAnnPrefilterEnabled !== false,
+            localVectorIndexPath: isNonEmptyString(this.graphQueryBackendFactoryOptions.localVectorIndexPath)
+                ? this.graphQueryBackendFactoryOptions.localVectorIndexPath
+                : null,
+            configuredVectorAccelerationProvider: (() => {
+                const provider = this.graphQueryBackendFactoryOptions.localVectorAccelerationAdapter;
+                if (typeof provider === 'string') {
+                    return provider;
+                }
+                return String(provider && typeof provider === 'object' ? (provider as { id?: string }).id || '' : '').trim() || null;
+            })(),
+            configuredVectorAccelerationFailureMode: String(
+                this.graphQueryBackendFactoryOptions.localVectorAccelerationFailureMode || 'fail_open'
+            ).trim(),
+            configuredVectorAccelerationRepresentationStrict:
+                this.graphQueryBackendFactoryOptions.localVectorAccelerationRepresentationStrict === true,
+        };
+    }
+
+    public async updateQueryBackendConfig(request: any = {}): Promise<any> {
+        await this.ensureHydrated();
+        const previousConfig = this.getQueryBackendConfig();
+        const nextBackend = normalizeGraphQueryBackendType(
+            request.configuredBackend || request.backend || this.currentGraphQueryBackendType
+        );
+        const nextFactoryOptions: GraphQueryBackendFactoryOptions = {
+            ...this.graphQueryBackendFactoryOptions,
+            backend: nextBackend,
+        };
+        if ('localVectorIndexPath' in request) {
+            nextFactoryOptions.localVectorIndexPath = isNonEmptyString(request.localVectorIndexPath)
+                ? String(request.localVectorIndexPath).trim()
+                : undefined;
+        }
+        if ('queryVectorAnnPrefilterEnabled' in request || 'localVectorAnnPrefilterEnabled' in request) {
+            nextFactoryOptions.localVectorAnnPrefilterEnabled = (
+                request.queryVectorAnnPrefilterEnabled ?? request.localVectorAnnPrefilterEnabled
+            ) !== false;
+        }
+        if ('localVectorAccelerationAdapter' in request && request.localVectorAccelerationAdapter) {
+            nextFactoryOptions.localVectorAccelerationAdapter = request.localVectorAccelerationAdapter;
+        }
+        if ('configuredVectorAccelerationFailureMode' in request || 'localVectorAccelerationFailureMode' in request) {
+            nextFactoryOptions.localVectorAccelerationFailureMode =
+                request.configuredVectorAccelerationFailureMode ?? request.localVectorAccelerationFailureMode;
+        }
+        if (
+            'configuredVectorAccelerationRepresentationStrict' in request
+            || 'localVectorAccelerationRepresentationStrict' in request
+        ) {
+            nextFactoryOptions.localVectorAccelerationRepresentationStrict = (
+                request.configuredVectorAccelerationRepresentationStrict
+                ?? request.localVectorAccelerationRepresentationStrict
+            ) === true;
+        }
+        this.currentGraphQueryBackendType = nextBackend;
+        this.graphQueryBackendFactoryOptions = nextFactoryOptions;
+        this.graphQueryBackend = createGraphQueryBackend(nextFactoryOptions);
+        this.queryBackendLastError = '';
+        return {
+            updated: true,
+            updatedAt: this.resolveTimestamp(undefined),
+            previousConfig,
+            queryBackendConfig: this.getQueryBackendConfig(),
+        };
+    }
+
+    public getQueryBackendDiagnostics(): any {
+        const runtime = this.graphQueryBackend.getDiagnostics
+            ? this.graphQueryBackend.getDiagnostics()
+            : {
+                backendId: this.graphQueryBackend.id,
+                ready: true,
+            };
+        const comparisonHistory = this.queryBackendComparisonHistoryRecords.slice(0, 20);
+        const preferredCounts = comparisonHistory.reduce((accumulator, record) => {
+            accumulator[record.summary.preferredBackend] += 1;
+            return accumulator;
+        }, { left: 0, right: 0, tie: 0 });
+        const totalComparisons = comparisonHistory.length;
+        const averageMetric = (selector: (record: QueryBackendComparisonRecord) => number): number => (
+            totalComparisons > 0
+                ? Number((comparisonHistory.reduce((sum, record) => sum + selector(record), 0) / totalComparisons).toFixed(4))
+                : 0
+        );
+        const config = this.getQueryBackendConfig();
+        return {
+            backendId: runtime.backendId || this.graphQueryBackend.id,
+            configuredBackend: config.configuredBackend,
+            fallbackCount: this.queryBackendFallbackCount,
+            fallbackBackendId: 'local-hybrid-v1',
+            lastError: this.queryBackendLastError || runtime.lastError || '',
+            runtime,
+            comparisonTelemetry: {
+                totalComparisons,
+                averageOverlapRatioPct: averageMetric((record) => record.summary.overlapRatioPct),
+                averageLatencyDeltaMs: averageMetric((record) => record.summary.latencyDeltaMs),
+                averageLeftEvidenceCoverageRatio: averageMetric((record) => record.summary.leftEvidenceCoverageRatio),
+                averageRightEvidenceCoverageRatio: averageMetric((record) => record.summary.rightEvidenceCoverageRatio),
+                leftPreferredCount: preferredCounts.left,
+                rightPreferredCount: preferredCounts.right,
+                tieCount: preferredCounts.tie,
+                latestComparedAt: comparisonHistory[0]?.comparedAt || null,
+            },
+            queryVectorAnnPrefilterEnabled: config.queryVectorAnnPrefilterEnabled,
+            configuredVectorAccelerationProvider: config.configuredVectorAccelerationProvider,
+            configuredVectorAccelerationFailureMode: config.configuredVectorAccelerationFailureMode,
+            configuredVectorAccelerationRepresentationStrict: config.configuredVectorAccelerationRepresentationStrict,
+            rolloutMode: this.currentGraphQueryBackendType,
+        };
+    }
     public getStudySessionOrchestrationTrendRuntimeConfig(): any {
         return {
             ...this.studySessionOrchestrationTrendRuntimeConfig,

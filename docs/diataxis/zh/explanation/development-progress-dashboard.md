@@ -9,26 +9,27 @@
 - 当前已经真实落地的部分：
   - `src/learning/store.ts` 已具备 file-backed ops 与 HTTP adapter 语义路径，
   - `src/learning/queryBackend.ts` / `src/learning/vectorAccelerationAdapter.ts` 已具备 ANN 风格 prefilter、representation telemetry、circuit health 与 `external_http` 连接器脚手架，
-  - `src/learning/KnowledgeLearningPlatform.ts` 中的导师遥测、导师 trace/provider trend、conversation memory、memory-policy diagnostics 已不再是空占位。
+  - `src/learning/KnowledgeLearningPlatform.ts` 中的 Phase-2 运行时诊断面已接通真实实现，包括 query-backend comparison/history/trend、knowledge staleness diagnostics/rebuild planning、learning-quality history/trend、session-plan quality evaluate/history/trend/runtime-threshold diagnostics、query-backend config、query-backend diagnostics，
+  - Phase-3 的导师/记忆诊断仍为真实实现，且 `src/server.ts` 现已注入默认激活态 tutor adapter，正常 server 路径可直接产出 adapter telemetry。
 - 当前仍未闭环的部分：
   - Phase-1 A8 仍是 `Partial+`：默认 runtime graph backend 仍指向 `local-file-graphdb`，尚未交付“真实本地图数据库引擎”基线；
   - Phase-1 A9 仍是 `Partial+`：ANN 路径仍停留在 `external_stub` / `external_http` 脚手架与 rollout telemetry，尚未接通已验证的生产级 ANN 后端；
-  - `KnowledgeLearningPlatform.ts` 中 query compare / staleness / learning-quality / session-plan-quality 一组运行面仍有 placeholder 返回；
-  - `server.ts` 虽配置了 `tutorAdapters` catalog，但默认 runtime 并未注入激活态 `tutorAdapter`，正常 tutor 执行仍是 rule-engine-first。
+  - Phase-2 的 quality/session/query 可观测性已不再是空占位，但它们仍建立在同一个 `Partial+` 的 Phase-1 graph/ANN 基线之上，因此还不能宣称发布级闭环；
+  - 默认 tutor routing 已不再只是 catalog-only，但当前 runtime 仍是 `local`-first，并保留显式 rule-engine fallback，而不是已验证的生产级多 provider 路由策略。
 - 因此当前活跃重心不是“默认认为 Phase-1 已完成然后推进上层”，而是：
   1. 先把真实 graph/vector backend 缺口补齐，
-  2. 再把 placeholder 诊断面替换为 live telemetry，
-  3. 最后才把 Phase-2 / Phase-3 门禁升级为发布级结论。
+  2. 让这批新诊断面始终与同一份运行时真相保持一致，
+  3. 只有在 Phase-1 真正闭环后，才把 Phase-2 / Phase-3 门禁升级为发布级结论。
 
 ## 2026-05-12 当前架构体量
 
 | 文件 | 当前行数 | 含义 |
 |---|---:|---|
-| `src/server.ts` | 15,752 | 路由虽已模块化，但主服务单体仍然偏大 |
-| `src/learning/KnowledgeLearningPlatform.ts` | 6,281 | KLP 仍然承载了大量实现重心 |
-| `src/frontend/path_app.js` | 5,012 | path workbench / controller 仍未拆完 |
-| `src/frontend/app.js` | 5,211 | graph host 侧控制面仍较厚 |
-| `src/routes/knowledge.ts` | 698 | knowledge route 还需要进一步拆分 |
+| `src/server.ts` | 14,992 | 路由虽已模块化，但主服务单体仍然偏大 |
+| `src/learning/KnowledgeLearningPlatform.ts` | 7,706 | KLP 仍然承载了大量实现重心 |
+| `src/frontend/path_app.js` | 4,649 | path workbench / controller 仍未拆完 |
+| `src/frontend/app.js` | 4,713 | graph host 侧控制面仍较厚 |
+| `src/routes/knowledge.ts` | 690 | knowledge route 还需要进一步拆分 |
 
 > 本节数字是当前 HEAD 的权威口径。下方较早的重构缩减表仍可保留作历史追溯，但不再等同于当前分支真实状态。
 

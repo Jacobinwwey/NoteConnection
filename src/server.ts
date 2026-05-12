@@ -6832,6 +6832,8 @@ const knowledgeGraphStore = createKnowledgeGraphStore({
     graphDbFallbackEnabled: KNOWLEDGE_GRAPHDB_FALLBACK_ENABLED,
     graphDbOperationMode: KNOWLEDGE_GRAPHDB_OPERATION_MODE,
 });
+const defaultLocalTutorAdapter = createNotemdTutorAdapter('local');
+const defaultCloudTutorAdapter = createNotemdTutorAdapter('cloud');
 const knowledgeLearningPlatform = createKnowledgeLearningPlatform({
     store: knowledgeGraphStore,
     learningQualityThresholds: LEARNING_QUALITY_THRESHOLDS,
@@ -6876,15 +6878,17 @@ const knowledgeLearningPlatform = createKnowledgeLearningPlatform({
         localVectorAccelerationRepresentationStrict: QUERY_VECTOR_ACCELERATION_REPRESENTATION_STRICT_ENABLED,
     }),
     graphQueryBackendFactoryOptions: {
+        backend: ACTIVE_KNOWLEDGE_QUERY_BACKEND,
         localVectorIndexPath: QUERY_VECTOR_INDEX_PERSIST_ENABLED ? KNOWLEDGE_QUERY_VECTOR_INDEX_PATH : undefined,
         localVectorAnnPrefilterEnabled: QUERY_VECTOR_ANN_PREFILTER_ENABLED,
         localVectorAccelerationAdapter: QUERY_VECTOR_ACCELERATION_ADAPTER,
         localVectorAccelerationFailureMode: QUERY_VECTOR_ACCELERATION_FAILURE_MODE,
         localVectorAccelerationRepresentationStrict: QUERY_VECTOR_ACCELERATION_REPRESENTATION_STRICT_ENABLED,
     },
+    tutorAdapter: defaultLocalTutorAdapter,
     tutorAdapters: [
-        createNotemdTutorAdapter('local'),
-        createNotemdTutorAdapter('cloud'),
+        defaultLocalTutorAdapter,
+        defaultCloudTutorAdapter,
     ],
 });
 

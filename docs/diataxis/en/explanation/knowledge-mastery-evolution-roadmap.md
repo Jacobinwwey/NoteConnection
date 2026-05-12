@@ -56,8 +56,8 @@ This requires:
 - The accurate state is:
   - Phase-1 A8 is `Partial+`: graph/store ops semantics and HTTP adapter paths exist, but the default runtime still targets `local-file-graphdb` instead of a true local graph database engine.
   - Phase-1 A9 is `Partial+`: ANN-style prefilter, representation telemetry, and `external_http` scaffolding exist, but there is still no proven production ANN backend wired into the default delivery path.
-  - Phase-2 is still not quality-gate-complete: `learning quality`, `session plan quality`, query comparison, and staleness surfaces remain partially placeholder-backed in `KnowledgeLearningPlatform.ts`.
-  - Phase-3 is now early-operational: tutor telemetry, tutor trace/provider trends, conversation memory, and memory-policy diagnostics are real, but default runtime tutor execution is still rule-engine-first because server bootstrap does not inject an active `tutorAdapter`.
+  - Phase-2 now has an operational diagnostics baseline: `learning quality`, `session plan quality`, query comparison, staleness, query-backend config, and query-backend diagnostics are live in `KnowledgeLearningPlatform.ts`, but they are not yet release-closed because they still sit on top of the same `Partial+` Phase-1 graph/ANN delivery path.
+  - Phase-3 is now operational-baseline rather than catalog-only: tutor telemetry, tutor trace/provider trends, conversation memory, memory-policy diagnostics, and default runtime tutor-adapter injection are real, but production-proven multi-provider routing policy is still open.
 - Active rollout focus therefore changes from "assume closure and move on" to "finish real backend closure, then promote quality/tutor gates honestly."
 
 ## Primary Structural Gaps Still Open
@@ -69,11 +69,11 @@ This requires:
    - replace `external_stub` / `external_http` scaffolding status with one production-backed ANN connector path,
    - benchmark recall/latency thresholds before calling the vector layer production-ready.
 3. Phase-2 quality gating:
-   - replace placeholder `learning quality`, `session plan quality`, query-comparison, and staleness diagnostics with live telemetry-backed implementations,
-   - promote trend diagnostics from observability to release-blocking governance only after the methods stop returning placeholders.
-4. Tutor-routing activation:
-   - wire server bootstrap to an active `tutorAdapter` / routing strategy instead of a catalog-only `tutorAdapters` list,
-   - keep rule-engine fallback explicit and measurable.
+   - keep the new `learning quality`, `session plan quality`, query-comparison, and staleness diagnostics aligned with the same runtime truth,
+   - promote those trend diagnostics from observability to release-blocking governance only after Phase-1 backend closure is no longer `Partial+`.
+4. Tutor-routing hardening:
+   - keep the newly active default `tutorAdapter` observable,
+   - extend from local-first routing into a production-proven multi-provider policy while preserving explicit fallback behavior.
 5. Architecture pressure:
    - continue reducing the major monoliths (`server.ts`, `KnowledgeLearningPlatform.ts`, `path_app.js`, `app.js`, `routes/knowledge.ts`) so roadmap claims and code structure stop drifting apart.
 

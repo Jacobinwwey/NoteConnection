@@ -28,8 +28,8 @@
    - runtime 默认 graph backend 仍是 `local-file-graphdb`；
    - ANN 仍依赖 `external_stub` / `external_http` 脚手架边界，而不是已验证的生产级后端。
 3. 这些通过项**不等于** Phase-2 quality gate 已闭环：
-   - query compare、staleness、learning-quality、session-plan-quality 一组运行面在 `src/learning/KnowledgeLearningPlatform.ts` 中仍有 placeholder 返回。
-4. 默认 runtime tutor 执行在 `server.ts` 注入激活态 `tutorAdapter` 之前，仍是 rule-engine-first。
+   - query compare、staleness、learning-quality、session-plan-quality、query-backend diagnostics 这批运行面已经具备真实实现，但它们仍建立在同一个 `Partial+` 的 Phase-1 graph/ANN 基线之上，因此还不能宣称发布级闭环。
+4. 默认 runtime tutor 执行现在已经注入本地 `tutorAdapter`，但当前仍只是 local-first 基线，而不是已验证的生产级多 provider 路由策略。
 
 ### Phase 2 验证快照（2026-05-12）
 
@@ -57,10 +57,10 @@
 ### 对 Phase 2 的含义
 
 1. agent-workspace 对话、能力执行、浏览器 strict 证据、Tauri smoke、load-flow parity、History 同步与 sidecar/bootstrap readiness 已在实现层面闭环。
-2. 但 Phase 2 在应用层仍**未完全闭环**：`KnowledgeLearningPlatform.ts` 中 query compare、staleness、learning-quality、session-plan-quality 一组运行面仍有 placeholder 返回。
+2. 但 Phase 2 在应用层仍**未完全闭环**：这批新的 query compare、staleness、learning-quality、session-plan-quality 运行面虽然已接通真实实现，但仍需要在非 `Partial+` 的 graphdb/ANN 基线上完成发布级校准。
 3. 因此当前剩余工作既包括：
    - 运维/发布前置条件（FR-009 真机证据、Linux 宿主 strict Tauri 依赖预装、Electron 下线审查），
-   - 也包括应用层实现缺口（非 placeholder 的 quality / session / query 诊断面）。
+   - 也包括应用层实现缺口（真实 graphdb/ANN 交付，以及这批新的 quality / session / query 诊断面的更强发布级校准）。
 4. Phase 3 可以并行推进，但不能再把当前状态表述成“Phase 1 / Phase 2 已完全闭环”。
 
 ### 测试目标

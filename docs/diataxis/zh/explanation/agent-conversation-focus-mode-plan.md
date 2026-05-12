@@ -40,7 +40,8 @@
 
 - Tauri strict 生命周期与窗口证据链在实现层面已经闭环，但在宿主层面仍依赖 Linux/CI 预装 `javascriptcoregtk-4.1`、`libsoup-3.0`、`webkit2gtk-4.1` 才能通过 `verify:agent-workspace:tauri:rust:strict`、`verify:agent-workspace:tauri:window-evidence:strict`、`verify:agent-workspace:tauri:evidence:index:strict`、`verify:agent-workspace:tauri:evidence:manifest:strict`；当前 Windows 宿主则主要证明 non-strict tauri/runtime 行为与 load-flow parity 路径。
 - 当前 `study_session_card` / `tutor_action_card` / `session_history_card` / `query_backend_comparison_card` / `query_backend_diagnostics_card` / `query_backend_comparison_history_card` / `query_backend_comparison_trend_card` / `tutor_adapter_telemetry_card` / `tutor_trace_diagnostics_card` / `learning_quality_trend_card` / `learning_quality_history_card` / `session_plan_quality_trend_card` / `session_plan_quality_history_card` 已支持语言切换后重渲，且已统一走注册表驱动；同时已新增源码级门禁测试校验 append-kind 与注册表键集合一致（`src/agent_workspace.frontend.test.ts`）。后续新增 card kind 时，需要默认通过该门禁。
-- 可执行 contract 已具备，且不再只停留在 quiz/recap，但仍需继续吸收更广的 tutor/query/session 动作。
+- 可执行 contract 现已由 `src/learning/KnowledgeLearningPlatform.ts` 的真实 query-comparison、staleness、learning-quality、session-plan-quality、query-backend-diagnostics 结果面支撑；后续重点不再是“把空占位接通”，而是把这些输出对齐到真实 Phase-1 graphdb/ANN 基线并升级为发布级门禁。
+- server bootstrap 现在已经注入默认激活态本地 `tutorAdapter`，同时保留 `local` + `cloud` catalog，因此正常 runtime tutor 执行已可产出 adapter telemetry；后续路由工作是生产级多 provider 策略，而不是基础激活问题。
 
 ## 产品目标
 

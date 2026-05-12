@@ -8,8 +8,8 @@
 - 当前更准确的口径是：
   - Phase-1 A8 为 `Partial+`：graph/store ops 语义与 HTTP adapter 路径已经存在，但默认 runtime 仍是 `local-file-graphdb`，尚非真实本地图数据库基线；
   - Phase-1 A9 为 `Partial+`：ANN 风格 prefilter、representation telemetry 与 `external_http` 脚手架已经存在，但默认交付路径仍没有接上已验证的生产级 ANN 后端；
-  - Phase-2 仍未达到质量门禁闭环：`learning quality`、`session plan quality`、query compare、staleness 等运行面仍有 placeholder 返回；
-  - Phase-3 现已进入 `Early operational`：导师遥测、导师 trace/provider trend、conversation memory、memory-policy diagnostics 为真实实现，但默认 runtime tutor 执行尚未激活多适配器路由。
+  - Phase-2 现已具备运行级诊断基线：`learning quality`、`session plan quality`、query compare、staleness、query-backend config、query-backend diagnostics 都已接通真实实现，但由于仍建立在同一个 `Partial+` 的 Phase-1 graph/ANN 交付路径之上，因此还不能宣称发布级闭环；
+  - Phase-3 现已进入 operational baseline：导师遥测、导师 trace/provider trend、conversation memory、memory-policy diagnostics，以及默认 runtime tutor-adapter 注入都是真实实现，但生产级多适配器路由策略仍未闭环。
 - 因此下一轮推进不应再以“假定底座完成”为前提，而应先补齐真实 backend 闭环，再升级质量与导师门禁。
 
 ## 战略总目标
@@ -59,12 +59,13 @@
 - 服务端 API 面在 `src/server.ts`，由 `src/knowledge.api.contract.test.ts` 持续做契约覆盖。
 - Learning Workbench 在 `src/frontend/path_app.js` 集成会话、治理与调试能力。
 
-## 2026-05-10 Phase-1 收口更新
+## 2026-05-12 HEAD 真实状态重分级
 
-- Phase-1 的 A8/A9 底座加固已完成代码落地：
-  - graphdb HTTP 适配器已具备操作级查询语义（`getNode/queryNodes/queryEdges/findPath`）并接入运行时诊断追踪。
-  - 外部 ANN 连接器加固已落地候选归一化、表示一致性遥测传递与 prefilter 有效性信号。
-- 活跃推进重心切换到 Phase 2 的效果门禁（掌握闭环 + 发散学习回路质量阈值）。
+- 当前准确状态是：
+  - Phase-1 A8 仍是 `Partial+`：graph/store ops 语义与 HTTP adapter 路径已经存在，但默认 runtime 仍指向 `local-file-graphdb`，尚未交付真实本地图数据库基线。
+  - Phase-1 A9 仍是 `Partial+`：ANN 风格 prefilter、representation telemetry 与 `external_http` 脚手架已经存在，但默认交付路径上仍没有已验证的生产级 ANN 后端。
+  - Phase-2 现已具备运行级诊断基线：`learning quality`、`session plan quality`、query comparison、staleness、query-backend config、query-backend diagnostics 都已接通真实实现，但由于它们仍建立在同一个 `Partial+` 的 Phase-1 graph/ANN 交付路径之上，因此还不能宣称发布级闭环。
+  - Phase-3 现已从 catalog-only 前进到 operational baseline：tutor telemetry、tutor trace/provider trends、conversation memory、memory-policy diagnostics，以及默认 runtime tutor-adapter 注入都是真实的，但生产级多 provider 路由策略仍未闭环。
 
 ## 当前仍需优先补齐的结构缺口
 
@@ -75,11 +76,11 @@
    - 把 `external_stub` / `external_http` 从“脚手架状态”推进到至少一条生产级 connector 路径，
    - 在宣称向量层可用于生产前完成 recall / latency 阈值校准。
 3. Phase-2 质量门禁：
-   - 将 query compare、staleness、learning-quality、session-plan-quality 一组 placeholder 运行面替换为 live telemetry，
-   - 仅在这些方法不再返回 placeholder 之后，才把趋势输出升级为发布阻断门禁。
-4. tutor routing 激活：
-   - 把 server bootstrap 从 `tutorAdapters` catalog-only 升级为默认 runtime 激活态 `tutorAdapter` / routing strategy，
-   - 同时保留显式 rule-engine fallback。
+   - 让新接通的 `learning quality`、`session plan quality`、query comparison、staleness 诊断与同一份运行时真相持续对齐，
+   - 只有在 Phase-1 backend 不再是 `Partial+` 之后，才把这些趋势输出升级为发布阻断门禁。
+4. tutor routing 加固：
+   - 保持当前已激活的默认 `tutorAdapter` 可观测，
+   - 在保留显式 fallback 行为的前提下，从 local-first 继续推进到生产级多 provider 路由策略。
 5. 架构压力：
    - 持续压缩 `server.ts`、`KnowledgeLearningPlatform.ts`、`path_app.js`、`app.js`、`routes/knowledge.ts`，避免“文档说已收口、代码仍在回涨”的结构漂移。
 

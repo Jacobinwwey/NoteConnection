@@ -19,16 +19,17 @@ It tracks what is already implemented, where the hard gaps remain, and how to ve
 - What is real at HEAD:
   - graph/store operations semantics exist in `src/learning/store.ts`, including file-backed ops and HTTP adapter paths with fallback diagnostics,
   - ANN-style prefilter, representation telemetry, circuit health, and `external_http` connector scaffolding exist in `src/learning/queryBackend.ts` and `src/learning/vectorAccelerationAdapter.ts`,
-  - Phase-3 tutor/memory diagnostics are now materially implemented in `src/learning/KnowledgeLearningPlatform.ts` for tutor telemetry, tutor trace/provider trends, conversation memory, and memory-policy diagnostics.
+  - Phase-2 runtime diagnostics are now materially implemented in `src/learning/KnowledgeLearningPlatform.ts` for query-backend comparison/history/trend, knowledge staleness diagnostics/rebuild planning, learning-quality history/trend, session-plan quality evaluation/history/trend/runtime-threshold diagnostics, query-backend config, and query-backend diagnostics,
+  - Phase-3 tutor/memory diagnostics remain real and now include an active default runtime tutor adapter path in `src/server.ts`, so normal server execution can emit adapter telemetry instead of staying catalog-only.
 - What is not closed yet:
   - Phase-1 A8 remains `Partial+`, because the default runtime graph backend still points to `local-file-graphdb` in `src/server.ts`, not a real local graph database engine,
   - Phase-1 A9 remains `Partial+`, because the ANN path still stops at `external_stub` / `external_http` scaffolds plus rollout telemetry rather than a proven production ANN backend,
-  - several query/quality/session/staleness surfaces are still placeholder-backed in `src/learning/KnowledgeLearningPlatform.ts`, including `compareQueryBackends`, query-backend comparison history/trend, staleness diagnostics/rebuild, learning-quality history/trend, session-plan quality evaluate/history/trend/runtime thresholds, `getLearningQualityThresholds`, and `getQueryBackendDiagnostics`,
-  - server bootstrap currently configures a `tutorAdapters` catalog but does not inject an active `tutorAdapter`, so default runtime tutor execution is still rule-engine-first rather than multi-adapter-routed.
+  - Phase-2 quality/session/query observability is now real, but it is not yet release-closed because these gates still sit on top of the same `Partial+` Phase-1 graph/ANN baseline,
+  - default tutor routing is no longer catalog-only, but the runtime is still effectively `local`-first and retains explicit rule-engine fallback rather than a production-proven multi-provider routing policy.
 - Active execution focus therefore shifts to truth-first foundation recovery:
   - close the real graph/vector backend gaps,
-  - replace placeholder diagnostics with live telemetry-backed implementations,
-  - then promote Phase-2 / Phase-3 gates as release-significant.
+  - keep the new diagnostic surfaces honest against the same runtime truth,
+  - then promote Phase-2 / Phase-3 gates as release-significant only after Phase-1 backend closure.
 
 ## Scope
 
@@ -43,11 +44,11 @@ It tracks what is already implemented, where the hard gaps remain, and how to ve
 
 | File | Current Lines | Implication |
 |---|---:|---|
-| `src/server.ts` | 15,752 | routing is modularized, but the main server monolith is still large |
-| `src/learning/KnowledgeLearningPlatform.ts` | 6,281 | KLP still carries major implementation gravity despite domain extraction |
-| `src/frontend/path_app.js` | 5,012 | path workbench/controller split is incomplete |
-| `src/frontend/app.js` | 5,211 | graph runtime still keeps a large host-side control surface |
-| `src/routes/knowledge.ts` | 698 | knowledge routes need another split before claiming route-layer compaction |
+| `src/server.ts` | 14,992 | routing is modularized, but the main server monolith is still large |
+| `src/learning/KnowledgeLearningPlatform.ts` | 7,706 | KLP still carries major implementation gravity despite domain extraction |
+| `src/frontend/path_app.js` | 4,649 | path workbench/controller split is incomplete |
+| `src/frontend/app.js` | 4,713 | graph runtime still keeps a large host-side control surface |
+| `src/routes/knowledge.ts` | 690 | knowledge routes need another split before claiming route-layer compaction |
 
 Use these numbers as the current HEAD truth. Older size-reduction tables later in this page remain useful as historical traceability, but they no longer describe the current branch state exactly.
 
@@ -69,8 +70,8 @@ Current branch status for this slice:
 
 - the main frontend now contains an agent workspace shell (`src/frontend/index.html`, `src/frontend/styles.css`),
 - the conversation route now returns actionable local knowledge points with typed capability descriptors, including execution / failure / UI-hint metadata for `focus`, `learning path`, tutor-side actions (`generate_quiz`, `recap`, `generate_transfer`, `generate_counterexample`, `follow_up`), query-side `compare_query_backends` / `inspect_query_backend_diagnostics` / `inspect_query_backend_comparison_history` / `inspect_query_backend_comparison_trend`, tutor diagnostics `inspect_tutor_adapter_telemetry` / `inspect_tutor_trace_diagnostics`, quality/session diagnostics (`inspect_learning_quality_trend` / `inspect_learning_quality_history` / `inspect_session_plan_quality_trend` / `inspect_session_plan_quality_history`), session-side `inspect_session_history` / `build_study_session`, and conversation-memory recall `inspect_conversation_memory` (`src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/learning/types.ts`),
-- many capability actions are now contract-wired end to end, but several result surfaces are still placeholder-backed in `KnowledgeLearningPlatform.ts` (`compareQueryBackends`, query-backend comparison history/trend, staleness diagnostics/rebuild, learning-quality history/trend, session-plan quality evaluate/history/trend/runtime thresholds, `getLearningQualityThresholds`, and `getQueryBackendDiagnostics`),
-- runtime tutor catalog metadata now exists, but the default server bootstrap still does not activate a concrete `tutorAdapter`, so tutor execution remains rule-engine-first on the normal runtime path,
+- the capability actions that inspect query comparison, staleness, learning quality, session-plan quality, and query-backend diagnostics are now backed by live `KnowledgeLearningPlatform.ts` implementations instead of empty placeholders,
+- default server bootstrap now injects a concrete local `tutorAdapter` while preserving the multi-adapter catalog (`local` + `cloud`), so normal runtime tutor execution can emit adapter telemetry and still degrade explicitly to guarded fallback behavior when needed,
 - conversation knowledge points are now typed-only (`capabilities` is the single action source), and legacy `availableActions` fallback telemetry/synthesis has been removed from both backend response shape and pane rendering (`src/learning/types.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/workspace_panes.js`, `src/agent_workspace.frontend.test.ts`, `src/knowledge.api.contract.test.ts`),
 - agent workspace capability execution dispatch now enforces explicit execution-kind handlers without legacy action fallback execution; knowledge operations are split into independent transport and request-builder registries, while result presentation is split into custom presenters plus card-presentation descriptors and payload-builder registries with fail-fast `unsupported_result_presentation*` drift semantics, and parity/frontend diagnostics now cover transport/request-builder/custom-presentation/card-presentation/payload-builder/execution-kind completeness (`src/frontend/agent_workspace.js`, `src/agent_workspace.frontend.test.ts`, `src/agent_workspace.contract.parity.test.ts`),
 - clicking `Learning Path` now mounts the existing path workspace (`path-container` + sidebars) into the docked learning-path pane instead of stopping at a text-only preview (`src/frontend/workspace_panes.js`, `src/frontend/agent_workspace.js`),
@@ -128,8 +129,8 @@ Current branch status for this slice:
 - Sidecar/bootstrap readiness on the current Windows host is now `offline-ready`; remaining bootstrap work is policy hardening before strict no-LFS mode, not an immediate host-readiness blocker.
 - Practical Phase boundary:
   - interaction/runtime verification infrastructure is strong enough to continue selective Phase-3 hardening in parallel,
-  - but neither Phase-1 backend closure nor Phase-2 quality-gate closure is actually done at HEAD,
-  - remaining work is not only ops/release prerequisites; it also includes unresolved application-layer implementation gaps around real graphdb/ANN delivery, non-placeholder quality/session/query diagnostics, and active tutor routing.
+- but neither Phase-1 backend closure nor Phase-2 governance closure is actually done at HEAD,
+- remaining work is not only ops/release prerequisites; it still includes unresolved real graphdb/ANN delivery, stronger release-grade calibration for the new diagnostics, and continued architecture reduction.
 
 Operational note:
 

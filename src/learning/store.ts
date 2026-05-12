@@ -45,7 +45,12 @@ export interface KnowledgeGraphSnapshot {
     latestIngestSummary: KnowledgeIngestResponse['summary'] | null;
     sessionActionTelemetry?: KnowledgeSystemState['sessionActionTelemetry'];
     sessionExecutionHistory?: StudySessionExecutionRecord[];
+    learningQualityHistoryRecords?: Array<Record<string, unknown>>;
+    queryBackendComparisonHistoryRecords?: Array<Record<string, unknown>>;
+    studySessionPlanQualityHistoryRecords?: Array<Record<string, unknown>>;
     memoryPolicyDiagnosticsHistoryRecords?: Array<Record<string, unknown>>;
+    queryBackendFallbackCount?: number;
+    queryBackendLastError?: string;
     userMemory: Record<string, {
         session: MemoryEntry[];
         unit: MemoryEntry[];

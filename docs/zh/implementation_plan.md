@@ -5,15 +5,26 @@
 
 在当前分支已经出现真实 Phase-3 切片、但 Phase-1 / Phase-2 仍存在关键缺口的背景下，把代码真相、活跃进度文档、以及后续执行顺序重新对齐。
 
+### 2026-05-12 本轮实现增量
+
+- 本轮代码已完成：
+  - `KnowledgeLearningPlatform.ts` 已补齐 query-backend comparison/history/trend、staleness diagnostics/rebuild planning、learning-quality history/trend、session-plan quality evaluate/history/trend/runtime-threshold diagnostics、query-backend config、query-backend diagnostics 的真实实现。
+  - `queryKnowledge()` 已改为遵循当前配置的 backend，并保留显式 runtime fallback 语义。
+  - `server.ts` 现已注入默认激活态本地 `tutorAdapter`，同时保留 `local` + `cloud` adapter catalog。
+- 这会改变执行重心：
+  - P3 的“placeholder 替换”在当前 runtime 面上已经完成实现；
+  - P4 的“默认 tutor-routing 激活”在本地优先基线上已经完成实现；
+  - 下一关键路径重新回到真实 Phase-1 graph backend 闭环、生产级 ANN 闭环，以及架构减压。
+
 ### 代码 vs 方案现状矩阵
 
 | 区域 | 方案期望 | 当前 HEAD 现实 | 状态 |
 |---|---|---|---|
 | Phase-1 A8 graph backend | 生产级本地图后端 | ops 语义已存在，但默认 runtime 仍是 `local-file-graphdb` | Partial+ |
 | Phase-1 A9 ANN connector | 生产级 ANN connector | prefilter / circuit / representation telemetry 已有，但默认交付仍停留在 `external_stub` / `external_http` 脚手架 | Partial+ |
-| Phase-2 quality gates | 真实掌握闭环 / 发散质量门禁 | learning-quality 与 session-plan-quality 运行面仍有 placeholder 返回 | Open |
-| Phase-3 tutor + memory | 导师与记忆操作层真实落地 | tutor telemetry / trace-provider trend / conversation memory / memory-policy diagnostics 已真实，但默认 tutor routing 尚未激活 | Early operational |
-| 架构缩减 | 主单体下降到可持续体量 | `server.ts` 15,752、`KnowledgeLearningPlatform.ts` 6,281、`path_app.js` 5,012、`app.js` 5,211、`routes/knowledge.ts` 698 | Open |
+| Phase-2 quality gates | 真实掌握闭环 / 发散质量门禁 | query-backend comparison、staleness、learning-quality、session-plan-quality 运行面已在 `KnowledgeLearningPlatform.ts` 中接通真实实现，但由于仍建立在同一个 `Partial+` 的 Phase-1 graph/ANN 基线上，所以还不能宣称发布级闭环 | Operational baseline |
+| Phase-3 tutor + memory | 导师与记忆操作层真实落地 | tutor telemetry / trace-provider trend / conversation memory / memory-policy diagnostics 已真实，且默认 runtime 已注入本地 tutor adapter；生产级多 provider 路由仍待闭环 | Operational baseline |
+| 架构缩减 | 主单体下降到可持续体量 | `server.ts` 14,992、`KnowledgeLearningPlatform.ts` 7,706、`path_app.js` 4,649、`app.js` 4,713、`routes/knowledge.ts` 690 | Open |
 
 ### 执行顺序
 
@@ -28,12 +39,12 @@
    - 把 ANN 从脚手架路径推进到至少一条真实 connector 路径，
    - 校准 recall / latency 阈值，
    - 保持 runbook telemetry 与 failure semantics。
-4. P3：Phase-2 quality gate 完整实现
-   - 将 query/staleness/learning-quality/session-plan-quality 一组 placeholder 运行面替换为 live telemetry，
-   - 再将其升级为发布级门禁。
-5. P4：Phase-3 tutor routing 激活
-   - 在默认 server runtime 中注入激活态 `tutorAdapter` / routing strategy，
-   - 同时保留显式 rule-engine fallback。
+4. P3：Phase-2 quality gate 加固
+   - 让新接通的 query/staleness/learning-quality/session-plan-quality 诊断面始终与同一份 runtime 真相对齐，
+   - 只有在 Phase-1 backend 真正闭环后，才把它们升级为发布级门禁。
+5. P4：Phase-3 tutor routing 加固
+   - 保持当前已激活的默认 `tutorAdapter` 可观测，
+   - 从 local-first 继续推进到生产级多 provider 路由策略。
 6. P5：继续降低架构压力
    - 继续拆 `routes/knowledge.ts`，
    - 持续压缩 `server.ts`、`KnowledgeLearningPlatform.ts`、`path_app.js`、`app.js`。

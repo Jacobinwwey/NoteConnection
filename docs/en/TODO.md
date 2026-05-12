@@ -6,17 +6,12 @@
 
 - [x] Agent-workspace browser/runtime/Tauri verification closure is real on the current branch.
 - [x] Tutor telemetry, tutor trace/provider trend diagnostics, conversation memory, and memory-policy diagnostics now have real backend implementations.
+- [x] Query-backend comparison/history/trend, staleness diagnostics/rebuild planning, learning-quality history/trend, session-plan quality evaluate/history/trend/runtime-threshold diagnostics, query-backend config, and query-backend diagnostics are now live in `src/learning/KnowledgeLearningPlatform.ts`.
+- [x] Default server runtime now injects an active local `tutorAdapter` while retaining the `local` + `cloud` adapter catalog.
 - [ ] Reclassify Phase-1 A8 as `Partial+`: the default graph backend is still `local-file-graphdb`, so a real local graph database engine is not yet the delivered baseline.
 - [ ] Reclassify Phase-1 A9 as `Partial+`: the current ANN path is scaffolded telemetry + `external_http` boundary, not a production-backed ANN service/engine.
-- [ ] Replace placeholder-backed runtime surfaces in `src/learning/KnowledgeLearningPlatform.ts`:
-  - `compareQueryBackends`
-  - query-backend comparison history/trend
-  - staleness diagnostics/rebuild
-  - learning-quality history/trend
-  - session-plan quality evaluate/history/trend/runtime thresholds
-  - `getLearningQualityThresholds`
-  - `getQueryBackendDiagnostics`
-- [ ] Activate runtime tutor routing in server bootstrap: `tutorAdapters` catalog is configured, but no active `tutorAdapter` is injected into `executeTutorAction`.
+- [ ] Promote the new Phase-2 diagnostics from “implementation-real” to release-grade gates only after the same checks run on a non-`Partial+` graphdb/ANN baseline.
+- [ ] Extend tutor routing from the new local-first baseline into a production-proven multi-provider policy.
 - [ ] Continue FR-009 evidence freshness, Linux strict Tauri host provisioning, and final Electron decommission review.
 
 ### 2026-05-10 Post-Pull Open-Goal Audit
@@ -39,13 +34,13 @@ After syncing the repository to the latest upstream `main` baseline, we re-audit
   - [ ] ANN still needs a production-backed connector path beyond scaffolding.
 - [ ] Next active implementation phase is now split:
   - [ ] finish real Phase-1 backend closure,
-  - [ ] replace placeholder-backed Phase-2 diagnostics,
+  - [ ] harden the now-live Phase-2 diagnostics into release-grade gates on top of a non-`Partial+` graphdb/ANN baseline,
   - [ ] continue Phase-3 tutor/memory hardening in parallel.
   - [x] Agent Workspace browser/runtime route closure now passes real strict evidence (`STRICT`, `UI_STRICT`, `UI_DYNAMIC_STRICT`) with live conversation, capability buttons, and request-card flows.
   - [x] Current Windows host bootstrap reproducibility is engineering-ready (`npm run verify:sidecar:supply` => `offline-ready`).
   - [ ] Remaining Phase 2 work now spans both:
     - operational/release-class gates (`FR-009`, Linux-host strict Tauri evidence provisioning, Electron decommission review),
-    - application-layer implementation gaps (non-placeholder quality/query/session diagnostics).
+    - application-layer implementation gaps (real graphdb/ANN delivery plus stronger release-grade calibration for the new quality/query/session diagnostics).
   - [x] Phase 3 implementation can start in parallel without waiting on the above host/evidence prerequisites.
 
 Reference trackers:

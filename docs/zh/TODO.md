@@ -6,17 +6,12 @@
 
 - [x] agent-workspace 的 browser/runtime/Tauri 验证闭环已经是真实状态。
 - [x] tutor telemetry、tutor trace/provider trend、conversation memory、memory-policy diagnostics 已有真实后端实现。
+- [x] `src/learning/KnowledgeLearningPlatform.ts` 中的 query-backend comparison/history/trend、staleness diagnostics/rebuild planning、learning-quality history/trend、session-plan quality evaluate/history/trend/runtime-threshold diagnostics、query-backend config、query-backend diagnostics 已全部接通真实实现。
+- [x] 默认 server runtime 现已注入激活态本地 `tutorAdapter`，同时保留 `local` + `cloud` adapter catalog。
 - [ ] 将 Phase-1 A8 重新归类为 `Partial+`：默认 graph backend 仍是 `local-file-graphdb`，真实本地图数据库基线尚未交付。
 - [ ] 将 Phase-1 A9 重新归类为 `Partial+`：当前 ANN 路径仍属于脚手架 telemetry + `external_http` 边界，而非生产级 ANN 服务/引擎。
-- [ ] 替换 `src/learning/KnowledgeLearningPlatform.ts` 中的 placeholder 运行面：
-  - `compareQueryBackends`
-  - query-backend comparison history/trend
-  - staleness diagnostics/rebuild
-  - learning-quality history/trend
-  - session-plan quality evaluate/history/trend/runtime thresholds
-  - `getLearningQualityThresholds`
-  - `getQueryBackendDiagnostics`
-- [ ] 激活默认 runtime tutor routing：当前 `tutorAdapters` 只有 catalog，`executeTutorAction` 仍未注入激活态 `tutorAdapter`。
+- [ ] 只有在同一套检查运行在非 `Partial+` 的 graphdb/ANN 基线上之后，才能把这批新的 Phase-2 诊断面升级为发布级门禁。
+- [ ] 在当前 local-first 基线之上，把 tutor routing 继续推进到生产级多 provider 策略。
 - [ ] 持续推进 FR-009 证据新鲜度、Linux strict Tauri 宿主依赖预装、Electron 下线终审。
 
 ### 2026-05-10 拉取后未完成目标审计
@@ -39,13 +34,13 @@
   - [ ] ANN 仍需从脚手架状态推进到生产级 connector 路径。
 - [ ] 下一活跃实施阶段现已拆分为：
   - [ ] 先补真实 Phase-1 backend 闭环，
-  - [ ] 再补 Phase-2 placeholder 诊断面，
+  - [ ] 在非 `Partial+` 的 graphdb/ANN 基线上，把当前已接通的 Phase-2 诊断面继续加固为发布级门禁，
   - [ ] 同时并行推进 Phase-3 tutor/memory 加固。
   - [x] Agent Workspace 浏览器/运行时路由闭环已通过真实严格证据（`STRICT`、`UI_STRICT`、`UI_DYNAMIC_STRICT`），覆盖真实会话、能力按钮与请求卡片链路。
   - [x] 当前 Windows 宿主的 sidecar/bootstrap 可复现性已具备工程闭环（`npm run verify:sidecar:supply` => `offline-ready`）。
   - [ ] Phase 2 剩余工作现在同时包括：
     - 运维/发布级门禁（`FR-009`、Linux 宿主 strict Tauri 依赖预装、Electron 下线审查），
-    - 应用层实现缺口（非 placeholder 的 quality/query/session 诊断面）。
+    - 应用层实现缺口（真实 graphdb/ANN 交付，以及这批新的 quality/query/session 诊断面的更强发布级校准）。
   - [x] 不必等待上述宿主/证据前置条件，Phase 3 实现工作可并行启动。
 
 参考看板：

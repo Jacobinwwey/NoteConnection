@@ -6,15 +6,26 @@
 
 Bring code truth, active progress docs, and next execution order back into alignment after the branch accumulated real Phase-3 slices while still carrying unfinished Phase-1 and Phase-2 requirements.
 
+### 2026-05-12 Implementation Delta
+
+- Completed in code on this turn:
+  - `KnowledgeLearningPlatform.ts` now has live query-backend comparison/history/trend, staleness diagnostics/rebuild planning, learning-quality history/trend, session-plan quality evaluate/history/trend/runtime-threshold diagnostics, query-backend config, and query-backend diagnostics.
+  - `queryKnowledge()` now follows the configured backend and preserves explicit runtime fallback semantics.
+  - `server.ts` now injects an active default local `tutorAdapter` while retaining the `local` + `cloud` adapter catalog.
+- This changes the execution focus:
+  - P3 placeholder replacement is implementation-complete for the current runtime surfaces.
+  - P4 default tutor-routing activation is implementation-complete for the local-first baseline.
+  - the next critical path returns to real Phase-1 graph backend closure, production-backed ANN closure, and architecture reduction.
+
 ### Code-vs-Plan Reality Matrix
 
 | Area | Planned Expectation | Current HEAD Reality | Status |
 |---|---|---|---|
 | Phase-1 A8 graph backend | production-grade local graph backend | ops semantics exist, but default runtime still points to `local-file-graphdb` | Partial+ |
 | Phase-1 A9 ANN connector | production-grade ANN connector | prefilter/circuit/representation telemetry exists, but delivery still stops at `external_stub` / `external_http` scaffolding | Partial+ |
-| Phase-2 quality gates | live mastery/divergence quality trend gates | learning-quality and session-plan-quality runtime surfaces remain placeholder-backed in `KnowledgeLearningPlatform.ts` | Open |
-| Phase-3 tutor + memory | tutor and memory operating layer becomes real | tutor telemetry/trace/provider trends + conversation memory + memory-policy diagnostics are now real, but runtime tutor routing is not active by default | Early operational |
-| Architecture compaction | major monoliths reduced to sustainable size | `server.ts` 15,752, `KnowledgeLearningPlatform.ts` 6,281, `path_app.js` 5,012, `app.js` 5,211, `routes/knowledge.ts` 698 | Open |
+| Phase-2 quality gates | live mastery/divergence quality trend gates | query-backend comparison, staleness, learning-quality, and session-plan-quality runtime surfaces are now live in `KnowledgeLearningPlatform.ts`, but they are not yet release-closed because they still sit on top of the same `Partial+` Phase-1 graph/ANN baseline | Operational baseline |
+| Phase-3 tutor + memory | tutor and memory operating layer becomes real | tutor telemetry/trace/provider trends + conversation memory + memory-policy diagnostics are real, and default runtime now injects a local tutor adapter; production-proven multi-provider routing is still open | Operational baseline |
+| Architecture compaction | major monoliths reduced to sustainable size | `server.ts` 14,992, `KnowledgeLearningPlatform.ts` 7,706, `path_app.js` 4,649, `app.js` 4,713, `routes/knowledge.ts` 690 | Open |
 
 ### Execution Order
 
@@ -29,12 +40,12 @@ Bring code truth, active progress docs, and next execution order back into align
    - replace scaffold-only ANN delivery with one proven connector path,
    - benchmark recall/latency thresholds,
    - keep runbook telemetry and failure semantics intact.
-4. P3: Phase-2 quality gate completion
-   - replace placeholder query/staleness/learning-quality/session-plan-quality methods with live telemetry-backed implementations,
-   - wire those outputs into release-significant threshold gates.
-5. P4: Phase-3 tutor routing activation
-   - inject an active `tutorAdapter` / routing strategy into normal server runtime,
-   - keep rule-engine fallback explicit and observable.
+4. P3: Phase-2 quality gate hardening
+   - keep the new telemetry-backed query/staleness/learning-quality/session-plan-quality surfaces aligned with the same runtime truth,
+   - promote them into release-significant threshold gates only after Phase-1 backend closure is real.
+5. P4: Tutor routing hardening
+   - keep the newly active default `tutorAdapter` observable,
+   - extend from local-first routing into a production-proven multi-provider policy.
 6. P5: Architecture pressure reduction
    - continue splitting `routes/knowledge.ts`,
    - keep reducing `server.ts`, `KnowledgeLearningPlatform.ts`, `path_app.js`, and `app.js`.
