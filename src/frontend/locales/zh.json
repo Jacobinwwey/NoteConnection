@@ -343,5 +343,145 @@
   "focus_outbound": "继续探索",
   "lbl_inbound_count": "入度统计:",
   "opt_visible": "可见节点 (默认)",
-  "opt_total": "统计总数"
+  "opt_total": "统计总数",
+  "agentWorkspace": {
+    "title": "Agent 工作区",
+    "subtitle": "对话 + 本地知识操作",
+    "userId": "学习者 ID",
+    "inputLabel": "向本地学习图提问",
+    "inputPlaceholder": "可以询问概念、证明步骤或先修依赖...",
+    "knowledge": {
+      "emptyInitial": "暂无本地知识点。",
+      "empty": "暂无本地知识点。"
+    },
+    "graphFocus": {
+      "title": "图谱聚焦",
+      "emptyIdle": "图谱聚焦面板当前为空。"
+    },
+    "learningPath": {
+      "title": "学习路径",
+      "emptyIdle": "学习路径面板当前为空。"
+    },
+    "actions": {
+      "send": "发送",
+      "focus": "聚焦",
+      "learningPath": "学习路径",
+      "studySession": "学习会话",
+      "generate_quiz": "测验",
+      "recap": "回顾",
+      "generate_transfer": "迁移挑战",
+      "generate_counterexample": "反例挑战",
+      "follow_up": "追问",
+      "compareQueryBackends": "后端对比",
+      "queryBackendDiagnostics": "后端诊断",
+      "queryBackendComparisonHistory": "对比历史",
+      "queryBackendComparisonTrend": "对比趋势",
+      "tutorAdapterTelemetry": "导师适配器遥测",
+      "tutorTraceDiagnostics": "导师追踪诊断",
+      "learningQualityTrend": "学习质量趋势",
+      "learningQualityHistory": "学习质量历史",
+      "sessionPlanQualityTrend": "会话计划趋势",
+      "sessionPlanQualityHistory": "会话计划历史",
+      "sessionHistory": "会话历史",
+      "runtimeRunbookVerify": "运行时验证",
+      "runtimeRunbookHistory": "运行时历史",
+      "runtimeRunbookChecks": "运行时检查",
+      "runtimeRunbookActionQueue": "运行时队列",
+      "conversationMemory": "对话记忆",
+      "conversationTurnCacheDiagnostics": "轮次缓存诊断",
+      "conversationTurnCacheAlertTrend": "轮次缓存趋势",
+      "conversationTurnCacheAlertTrendIndex": "轮次缓存趋势索引",
+      "conversationTurnCacheAlertTrendExport": "轮次缓存趋势导出",
+      "restore": "恢复",
+      "fullscreen": "全屏"
+    },
+    "messages": {
+      "localNodeUnavailable": "本地节点 {nodeId} 不可用。",
+      "ready": "Agent 工作区已就绪。"
+    },
+    "studySession": {
+      "cardTitle": "学习会话计划",
+      "summary": "{totalActions} 个动作，约 {totalEstimatedMinutes} 分钟。",
+      "actionsHeading": "推荐动作",
+      "empty": "未返回学习动作。"
+    },
+    "sessionHistory": {
+      "cardTitle": "会话历史",
+      "summary": "最近 {sinceMinutes} 分钟内共有 {matchedRecordsBeforeLimit} 次会话；平均掌握度变化 {averageMasteryDeltaPct}%。",
+      "metricsHeading": "关键指标",
+      "none": "无"
+    },
+    "queryBackendComparison": {
+      "cardTitle": "检索后端对比",
+      "summary": "对比当前知识点在不同检索后端下的取舍。",
+      "metricsHeading": "关键指标",
+      "none": "无"
+    },
+    "queryBackendComparisonHistory": {
+      "cardTitle": "后端对比历史",
+      "summary": "检索后端历史对比汇总。",
+      "metricsHeading": "关键指标",
+      "none": "无"
+    },
+    "queryBackendComparisonTrend": {
+      "cardTitle": "后端对比趋势",
+      "summary": "检索后端对比趋势信号。",
+      "metricsHeading": "关键指标",
+      "none": "无"
+    },
+    "learningQualityTrend": {
+      "cardTitle": "学习质量趋势",
+      "summary": "学习质量趋势信号。",
+      "metricsHeading": "关键指标",
+      "none": "无"
+    },
+    "learningQualityHistory": {
+      "cardTitle": "学习质量历史",
+      "summary": "最近学习质量历史快照。",
+      "metricsHeading": "关键指标",
+      "none": "无"
+    },
+    "sessionPlanQualityTrend": {
+      "cardTitle": "会话计划质量趋势",
+      "summary": "学习会话计划质量趋势。",
+      "metricsHeading": "关键指标",
+      "none": "无"
+    },
+    "sessionPlanQualityHistory": {
+      "cardTitle": "会话计划质量历史",
+      "summary": "最近学习会话计划质量历史。",
+      "metricsHeading": "关键指标",
+      "none": "无"
+    },
+    "runtimeRunbookChecks": {
+      "cardTitle": "运行时 Runbook 检查",
+      "summary": "运行时验证历史中的重点检查汇总。",
+      "metricsHeading": "关键指标",
+      "none": "无"
+    },
+    "runtimeRunbookActionQueue": {
+      "cardTitle": "运行时动作队列",
+      "summary": "优先级排序后的运行时修复队列。",
+      "metricsHeading": "关键指标",
+      "none": "无"
+    },
+    "conversationTurnCacheAlertTrend": {
+      "cardTitle": "对话轮次缓存告警趋势",
+      "summary": "轮次缓存告警趋势与存储状态。",
+      "metricsHeading": "关键指标",
+      "none": "无"
+    },
+    "tutorAction": {
+      "quizTitle": "测验提示",
+      "evidenceHeading": "证据",
+      "emptyEvidence": "暂无证据片段。"
+    },
+    "queryBackendDiagnostics": {
+      "rolloutModeLabel": "发布策略模式",
+      "accelerationProviderLabel": "加速提供方配置",
+      "accelerationFailureModeLabel": "加速失败模式配置",
+      "accelerationRepresentationStrictLabel": "加速表示一致性严格模式配置",
+      "annPrefilterLabel": "ANN 预筛选发布状态"
+    }
+  }
 }

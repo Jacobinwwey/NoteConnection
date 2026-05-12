@@ -2,6 +2,61 @@
 
 ## 中文文档
 
+### 2026-05-12 HEAD 真实状态重分级
+
+- [x] agent-workspace 的 browser/runtime/Tauri 验证闭环已经是真实状态。
+- [x] tutor telemetry、tutor trace/provider trend、conversation memory、memory-policy diagnostics 已有真实后端实现。
+- [ ] 将 Phase-1 A8 重新归类为 `Partial+`：默认 graph backend 仍是 `local-file-graphdb`，真实本地图数据库基线尚未交付。
+- [ ] 将 Phase-1 A9 重新归类为 `Partial+`：当前 ANN 路径仍属于脚手架 telemetry + `external_http` 边界，而非生产级 ANN 服务/引擎。
+- [ ] 替换 `src/learning/KnowledgeLearningPlatform.ts` 中的 placeholder 运行面：
+  - `compareQueryBackends`
+  - query-backend comparison history/trend
+  - staleness diagnostics/rebuild
+  - learning-quality history/trend
+  - session-plan quality evaluate/history/trend/runtime thresholds
+  - `getLearningQualityThresholds`
+  - `getQueryBackendDiagnostics`
+- [ ] 激活默认 runtime tutor routing：当前 `tutorAdapters` 只有 catalog，`executeTutorAction` 仍未注入激活态 `tutorAdapter`。
+- [ ] 持续推进 FR-009 证据新鲜度、Linux strict Tauri 宿主依赖预装、Electron 下线终审。
+
+### 2026-05-10 拉取后未完成目标审计
+
+仓库同步到最新上游 `main` 基线后，已重新审计当前活跃目标看板。
+
+- [x] 已在 `feat/knowledge-mastery-foundation-phase1` 分支完成仓库同步（合并最新 `origin/main`）。
+- [x] 已保留并回放拉取前本地改动（`src/learning/api.ts`、`src/learning/types.ts`）。
+- [ ] FR-009 运维证据闭环仍待完成（`docs/mobile-evidence` 门禁下的真机大图采集与新鲜度校验）。
+- [x] Tauri 加载流程一致性实现门禁现已通过合同验证：
+  - [x] 缓存已存在提示的一致性严格回归已确认（`src/source_manager.loadflow.test.ts`、`src/welcome.loadflow.test.ts`）。
+  - [x] 启动/重连场景下重复加载执行防护已确认（`src/source_manager.loadflow.test.ts`、`npm run verify:agent-workspace:tauri`）。
+  - [x] Godot 中心切换动作的 History 同步已验收（`src/pathmode.history.contract.test.ts`）。
+- [ ] Linux 宿主 strict Tauri 证据前置条件仍保留为环境/发布门禁：在必须运行 `verify:agent-workspace:tauri:rust:strict` 与 `verify:agent-workspace:tauri:window-evidence:strict` 的宿主上，仍需预装 `webkit2gtk-4.1`、`javascriptcoregtk-4.1`、`libsoup-3.0`。
+- [ ] Electron 下线前最终闸门审查仍待完成。
+- [~] Phase-1 底座加固曾被标记为“已收口”，但当前 HEAD 已重新归类为 `Partial+`：
+  - [x] 图后端适配器路径已具备 HTTP 操作级语义（节点/边/路径查询 + 诊断遥测）。
+  - [x] ANN 连接器加固已具备候选集合归一化、表示一致性遥测与 prefilter 有效性信号。
+  - [ ] 默认 runtime 仍需从 `local-file-graphdb` 升级到真实 graph backend。
+  - [ ] ANN 仍需从脚手架状态推进到生产级 connector 路径。
+- [ ] 下一活跃实施阶段现已拆分为：
+  - [ ] 先补真实 Phase-1 backend 闭环，
+  - [ ] 再补 Phase-2 placeholder 诊断面，
+  - [ ] 同时并行推进 Phase-3 tutor/memory 加固。
+  - [x] Agent Workspace 浏览器/运行时路由闭环已通过真实严格证据（`STRICT`、`UI_STRICT`、`UI_DYNAMIC_STRICT`），覆盖真实会话、能力按钮与请求卡片链路。
+  - [x] 当前 Windows 宿主的 sidecar/bootstrap 可复现性已具备工程闭环（`npm run verify:sidecar:supply` => `offline-ready`）。
+  - [ ] Phase 2 剩余工作现在同时包括：
+    - 运维/发布级门禁（`FR-009`、Linux 宿主 strict Tauri 依赖预装、Electron 下线审查），
+    - 应用层实现缺口（非 placeholder 的 quality/query/session 诊断面）。
+  - [x] 不必等待上述宿主/证据前置条件，Phase 3 实现工作可并行启动。
+
+参考看板：
+
+- `docs/zh/TODO.md`
+- `docs/zh/task.md`
+- `docs/zh/tauri_tasks.md`
+- `docs/diataxis/zh/explanation/development-progress-dashboard.md`
+
+---
+
 ### 目标
 
 把 Git LFS 迁移方案进一步收敛成“有真实代码支撑的多平台构建契约”，并覆盖桌面、移动、publish、release 与文档交付路径。

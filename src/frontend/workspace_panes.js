@@ -76,6 +76,7 @@
         'learning-quality-trend': renderLearningQualityTrendCard,
         'session-plan-quality-trend': renderSessionPlanQualityTrendCard,
         'learning-quality-history': renderLearningQualityHistoryCard,
+        'learning-quality-baseline-evaluation': renderLearningQualityBaselineEvaluationCard,
         'session-plan-quality-history': renderSessionPlanQualityHistoryCard,
         'runtime-capability-runbook-verify': renderRuntimeCapabilityRunbookVerifyCard,
         'runtime-capability-runbook-history': renderRuntimeCapabilityRunbookHistoryCard,
@@ -1366,6 +1367,79 @@
         `;
     }
 
+    function renderLearningQualityBaselineEvaluationCard(node, payload) {
+        const summary = payload && typeof payload === 'object' ? payload : {};
+        const title = translate(
+            'agentWorkspace.learningQualityBaselineEvaluation.cardTitle',
+            'Learning Quality Baseline Evaluation'
+        );
+        const summaryText = translate(
+            'agentWorkspace.learningQualityBaselineEvaluation.summary',
+            'User {userId}: overall {overallStatus}, failed gates {failedGateCount}.',
+            {
+                userId: String(summary.userId || 'unknown'),
+                overallStatus: summary.overallPassed ? 'PASS' : 'FAIL',
+                failedGateCount: String(summary.failedGateCount == null ? 0 : summary.failedGateCount),
+            }
+        );
+        const metricsHeading = translate(
+            'agentWorkspace.learningQualityBaselineEvaluation.metricsHeading',
+            'Key Metrics'
+        );
+        const noneLabel = translate(
+            'agentWorkspace.learningQualityBaselineEvaluation.none',
+            'none'
+        );
+        const metrics = [
+            {
+                title: translate(
+                    'agentWorkspace.learningQualityBaselineEvaluation.baselineLabel',
+                    'Baseline retest/evidence'
+                ),
+                value: `${String(summary.baselineRetestPassRatePct == null ? 0 : summary.baselineRetestPassRatePct)}% / `
+                    + `${String(summary.baselineEvidenceBackedSuggestionRatioPct == null ? 0 : summary.baselineEvidenceBackedSuggestionRatioPct)}%`,
+            },
+            {
+                title: translate(
+                    'agentWorkspace.learningQualityBaselineEvaluation.currentLabel',
+                    'Current retest/evidence'
+                ),
+                value: `${String(summary.currentRetestPassRatePct == null ? 0 : summary.currentRetestPassRatePct)}% / `
+                    + `${String(summary.currentEvidenceBackedSuggestionRatioPct == null ? 0 : summary.currentEvidenceBackedSuggestionRatioPct)}%`,
+            },
+            {
+                title: translate(
+                    'agentWorkspace.learningQualityBaselineEvaluation.failedGateLabel',
+                    'First failed gate'
+                ),
+                value: summary.firstFailedGateId
+                    ? `${String(summary.firstFailedGateId)} (${String(summary.firstFailedGateObserved)} / ${String(summary.firstFailedGateThreshold)})`
+                    : noneLabel,
+            },
+            {
+                title: translate(
+                    'agentWorkspace.learningQualityBaselineEvaluation.timestampsLabel',
+                    'Baseline stored / current sampled / evaluated'
+                ),
+                value: `${String(summary.baselineStoredAt || noneLabel)} | ${String(summary.currentSampledAt || noneLabel)} | ${String(summary.evaluatedAt || noneLabel)}`,
+            },
+        ];
+        const metricsHtml = metrics.map((metric) => `
+            <li class="agent-chat-card-list-item">
+                <div class="agent-chat-card-list-title">${escapeHtml(metric.title)}</div>
+                <div class="agent-chat-card-list-meta">${escapeHtml(metric.value)}</div>
+            </li>
+        `).join('');
+        node.innerHTML = `
+            <div class="agent-chat-card">
+                <div class="agent-chat-card-title">${escapeHtml(title)}</div>
+                <div class="agent-chat-card-summary">${escapeHtml(summaryText)}</div>
+                <div class="agent-chat-card-section-title">${escapeHtml(metricsHeading)}</div>
+                <ul class="agent-chat-card-list">${metricsHtml}</ul>
+            </div>
+        `;
+    }
+
     function renderSessionPlanQualityHistoryCard(node, payload) {
         const summary = payload && typeof payload === 'object' ? payload : {};
         const title = translate(
@@ -2401,6 +2475,19 @@
             node.setAttribute('data-agent-workspace-card-kind', 'learning-quality-history');
             node.setAttribute('data-agent-workspace-card-payload', JSON.stringify(payload || {}));
             renderLearningQualityHistoryCard(node, payload || {});
+            container.appendChild(node);
+            return node;
+        },
+        appendLearningQualityBaselineEvaluationCard: function (payload) {
+            const container = getElement('agent-workspace-chat-messages');
+            if (!container) {
+                return null;
+            }
+            const node = document.createElement('div');
+            node.className = 'agent-chat-message agent-chat-message-assistant agent-chat-message-card';
+            node.setAttribute('data-agent-workspace-card-kind', 'learning-quality-baseline-evaluation');
+            node.setAttribute('data-agent-workspace-card-payload', JSON.stringify(payload || {}));
+            renderLearningQualityBaselineEvaluationCard(node, payload || {});
             container.appendChild(node);
             return node;
         },

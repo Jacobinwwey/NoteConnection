@@ -3,7 +3,12 @@ import * as path from 'path';
 
 describe('Knowledge mastery API contract wiring', () => {
     const serverSource = fs.readFileSync(path.join(__dirname, 'server.ts'), 'utf8');
+    const knowledgeRoutesSource = fs.readFileSync(path.join(__dirname, 'routes', 'knowledge.ts'), 'utf8');
     const learningApiSource = fs.readFileSync(path.join(__dirname, 'learning', 'api.ts'), 'utf8');
+    const learningPlatformSource = fs.readFileSync(
+        path.join(__dirname, 'learning', 'KnowledgeLearningPlatform.ts'),
+        'utf8'
+    );
 
     test('server exposes planned /api/knowledge endpoints', () => {
         const endpoints = [
@@ -21,23 +26,28 @@ describe('Knowledge mastery API contract wiring', () => {
             '/api/knowledge/session/execute',
             '/api/knowledge/session/history',
             '/api/knowledge/quality/snapshot',
+            '/api/knowledge/quality/baseline',
+            '/api/knowledge/quality/baseline/clear',
+            '/api/knowledge/quality/baseline/evaluate',
             '/api/knowledge/quality/evaluate',
             '/api/knowledge/ingest/guardrails/evaluate',
             '/api/knowledge/tutor/action',
             '/api/knowledge/memory/policy',
         ];
 
+        const aggregatedRouteSource = `${serverSource}\n${knowledgeRoutesSource}`;
         endpoints.forEach((endpoint) => {
-            expect(serverSource).toContain(endpoint);
+            expect(aggregatedRouteSource).toContain(endpoint);
         });
     });
 
     test('server initializes local knowledge learning platform', () => {
         expect(serverSource).toContain("from './learning'");
         expect(serverSource).toContain('createKnowledgeLearningPlatform');
-        expect(serverSource).toContain('createFileBackedKnowledgeGraphStore');
+        expect(serverSource).toContain('createKnowledgeGraphStore');
+        expect(serverSource).toContain('createGraphDbSnapshotAdapter');
         expect(serverSource).toContain('knowledgeLearningPlatform');
-        expect(serverSource).toContain('KNOWLEDGE_GRAPH_STORE_PATH');
+        expect(serverSource).toContain('KNOWLEDGE_GRAPH_STORE_BACKEND');
     });
 
     test('learning module declares all required public APIs', () => {
@@ -59,6 +69,31 @@ describe('Knowledge mastery API contract wiring', () => {
         ];
         requiredInterfaces.forEach((interfaceName) => {
             expect(learningApiSource).toContain(interfaceName);
+        });
+    });
+
+    test('modular knowledge routes reference concrete platform methods', () => {
+        const requiredMethods = [
+            'agentConversation',
+            'queryMasteryDiagnostics',
+            'generateLearningPath',
+            'queryKnowledgeQueryBackendComparisonHistory',
+            'queryKnowledgeQueryBackendComparisonTrend',
+            'getAgentConversationTurnCacheDiagnostics',
+            'getAgentConversationTurnCacheTrend',
+            'getRuntimeCapabilityMatrix',
+            'getRuntimeCapabilityRunbook',
+            'verifyRuntimeCapabilityRunbook',
+            'getRuntimeCapabilityRunbookHistory',
+            'queryRuntimeCapabilityRunbookChecks',
+            'queryRuntimeCapabilityRunbookActionQueue',
+            'getRuntimeCapabilityRunbookRemediationHistory',
+            'getRuntimeCapabilityRunbookReplaySchedule',
+            'evaluateIngestGuardrail',
+        ];
+        requiredMethods.forEach((methodName) => {
+            expect(knowledgeRoutesSource).toContain(`knowledgeLearningPlatform.${methodName}`);
+            expect(learningPlatformSource).toContain(`${methodName}(`);
         });
     });
 });

@@ -1,4 +1,53 @@
 
+# 2026-05-12 v1.7.0 - HEAD 现实对齐实施计划
+
+### 目标
+
+在当前分支已经出现真实 Phase-3 切片、但 Phase-1 / Phase-2 仍存在关键缺口的背景下，把代码真相、活跃进度文档、以及后续执行顺序重新对齐。
+
+### 代码 vs 方案现状矩阵
+
+| 区域 | 方案期望 | 当前 HEAD 现实 | 状态 |
+|---|---|---|---|
+| Phase-1 A8 graph backend | 生产级本地图后端 | ops 语义已存在，但默认 runtime 仍是 `local-file-graphdb` | Partial+ |
+| Phase-1 A9 ANN connector | 生产级 ANN connector | prefilter / circuit / representation telemetry 已有，但默认交付仍停留在 `external_stub` / `external_http` 脚手架 | Partial+ |
+| Phase-2 quality gates | 真实掌握闭环 / 发散质量门禁 | learning-quality 与 session-plan-quality 运行面仍有 placeholder 返回 | Open |
+| Phase-3 tutor + memory | 导师与记忆操作层真实落地 | tutor telemetry / trace-provider trend / conversation memory / memory-policy diagnostics 已真实，但默认 tutor routing 尚未激活 | Early operational |
+| 架构缩减 | 主单体下降到可持续体量 | `server.ts` 15,752、`KnowledgeLearningPlatform.ts` 6,281、`path_app.js` 5,012、`app.js` 5,211、`routes/knowledge.ts` 698 | Open |
+
+### 执行顺序
+
+1. P0：真相校正与门禁重分级
+   - 先让进度文档与代码现状一致，
+   - 不再把 placeholder 返回或 catalog-only wiring 视为“已完成”。
+2. P1：真实 graph backend 闭环
+   - 把默认 graphdb 路径从 file-only 基线推进到真实后端，
+   - 保留 fallback，
+   - 补齐 adapter / fallback 一致性验证。
+3. P2：生产级 ANN 闭环
+   - 把 ANN 从脚手架路径推进到至少一条真实 connector 路径，
+   - 校准 recall / latency 阈值，
+   - 保持 runbook telemetry 与 failure semantics。
+4. P3：Phase-2 quality gate 完整实现
+   - 将 query/staleness/learning-quality/session-plan-quality 一组 placeholder 运行面替换为 live telemetry，
+   - 再将其升级为发布级门禁。
+5. P4：Phase-3 tutor routing 激活
+   - 在默认 server runtime 中注入激活态 `tutorAdapter` / routing strategy，
+   - 同时保留显式 rule-engine fallback。
+6. P5：继续降低架构压力
+   - 继续拆 `routes/knowledge.ts`，
+   - 持续压缩 `server.ts`、`KnowledgeLearningPlatform.ts`、`path_app.js`、`app.js`。
+
+### 验收标准
+
+1. 默认 graph backend 不再是 `local-file-graphdb`。
+2. 至少一条 ANN connector 路径超出脚手架阶段，并在真实请求下通过 runbook / telemetry 验证。
+3. `KnowledgeLearningPlatform.ts` 不再对 query compare、staleness、learning-quality、session-plan-quality 返回 placeholder。
+4. 默认 runtime tutor 执行在真实 server 路径下能产生非零 adapter telemetry。
+5. 每个里程碑后都能通过 `docs:diataxis:check`、`docs:site:build`、`build:with-vite`、以及 targeted agent-workspace / KLP tests。
+
+---
+
 # 2026-03-10 v1.5.38 - 多终端 WASM 等价实施计划（移动端固有瓶颈收口）
 
 ### 目标

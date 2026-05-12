@@ -12757,6 +12757,8 @@ function getStaticContentType(filePath: string): string {
         case '.html':
             return 'text/html';
         case '.js':
+        case '.mjs':
+        case '.cjs':
             return 'text/javascript';
         case '.css':
             return 'text/css';

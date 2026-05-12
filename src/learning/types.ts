@@ -144,6 +144,14 @@ export interface TutorTrace {
     relationPathAtomIds: string[];
     source: 'rule-engine' | 'llm-adapter';
     notes: string;
+    adapterId?: string;
+    providerName?: string;
+    providerMode?: 'local' | 'cloud' | string;
+    verificationStatus?: 'verified' | 'pending' | 'failed' | string;
+    providerAttemptCount?: number;
+    fallbackUsed?: boolean;
+    failed?: boolean;
+    errorMessage?: string;
 }
 
 export interface MasteryPath {
@@ -724,6 +732,42 @@ export interface LearningQualitySnapshotRequest {
     userId?: string;
     sampledAt?: string;
     historyWindowDays?: number;
+}
+
+export interface LearningQualityBaselineGetRequest {
+    userId: string;
+}
+
+export interface LearningQualityBaselineSetRequest {
+    userId: string;
+    snapshot: LearningQualitySnapshot;
+    storedAt?: string;
+}
+
+export interface LearningQualityBaselineClearRequest {
+    userId: string;
+}
+
+export interface LearningQualityBaselineResponse {
+    userId: string;
+    found: boolean;
+    storedAt: string | null;
+    snapshot: LearningQualitySnapshot | null;
+}
+
+export interface LearningQualityBaselineEvaluateRequest {
+    userId: string;
+    current?: LearningQualitySnapshot;
+    sampledAt?: string;
+    historyWindowDays?: number;
+    thresholds?: Partial<LearningQualityThresholds>;
+}
+
+export interface LearningQualityBaselineEvaluateResponse {
+    userId: string;
+    baseline: LearningQualityBaselineResponse;
+    currentSnapshot: LearningQualitySnapshotResponse;
+    evaluation: LearningQualityEvaluationResponse;
 }
 
 export interface LearningQualitySnapshotResponse {

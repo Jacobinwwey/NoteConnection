@@ -95,7 +95,20 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const params = parseQuery(req);
-                    const result = await knowledgeLearningPlatform.queryTutorTraceDiagnostics({ limit: Number(params.get('limit')) || 20 });
+                    const fallbackUsedToken = String(params.get('fallbackUsed') || '').trim().toLowerCase();
+                    const result = await knowledgeLearningPlatform.queryTutorTraceDiagnostics({
+                        userId: String(params.get('userId') || '').trim() || undefined,
+                        source: String(params.get('source') || '').trim() || undefined,
+                        actionKind: String(params.get('actionKind') || '').trim() || undefined,
+                        providerName: String(params.get('providerName') || '').trim() || undefined,
+                        providerMode: String(params.get('providerMode') || '').trim() || undefined,
+                        fallbackUsed: fallbackUsedToken === 'true'
+                            ? true
+                            : fallbackUsedToken === 'false'
+                                ? false
+                                : undefined,
+                        limit: Number(params.get('limit')) || 20,
+                    });
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'GET /api/knowledge/tutor/trace-diagnostics'); }
             },
@@ -108,6 +121,34 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
                     const diag = await knowledgeLearningPlatform.getQueryBackendDiagnostics();
                     ok(res, { queryBackendDiagnostics: diag });
                 } catch (e) { fail(res, e, 'GET /api/knowledge/query-backend-diagnostics'); }
+            },
+        },
+        {
+            method: 'GET',
+            path: api('/query/compare-backends/history'),
+            handler: async (req, res) => {
+                try {
+                    const params = parseQuery(req);
+                    const result = await knowledgeLearningPlatform.queryKnowledgeQueryBackendComparisonHistory({
+                        limit: Number(params.get('limit')) || 8,
+                    });
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'GET /api/knowledge/query/compare-backends/history'); }
+            },
+        },
+        {
+            method: 'GET',
+            path: api('/query/compare-backends/trend'),
+            handler: async (req, res) => {
+                try {
+                    const params = parseQuery(req);
+                    const result = await knowledgeLearningPlatform.queryKnowledgeQueryBackendComparisonTrend({
+                        limit: Number(params.get('limit')) || 12,
+                        windowSize: Number(params.get('windowSize')) || 2,
+                        minSamples: Number(params.get('minSamples')) || 1,
+                    });
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'GET /api/knowledge/query/compare-backends/trend'); }
             },
         },
         {
@@ -126,7 +167,12 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const params = parseQuery(req);
-                    const result = await knowledgeLearningPlatform.queryLearningQualityTrend({ limit: Number(params.get('limit')) || 10 });
+                    const result = await knowledgeLearningPlatform.queryLearningQualityTrend({
+                        userId: String(params.get('userId') || '').trim() || undefined,
+                        limit: Number(params.get('limit')) || 10,
+                        windowSize: Number(params.get('windowSize')) || undefined,
+                        minSamples: Number(params.get('minSamples')) || undefined,
+                    });
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'GET /api/knowledge/quality/trend'); }
             },
@@ -137,9 +183,24 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const params = parseQuery(req);
-                    const result = await knowledgeLearningPlatform.queryLearningQualityHistory({ limit: Number(params.get('limit')) || 20 });
+                    const result = await knowledgeLearningPlatform.queryLearningQualityHistory({
+                        userId: String(params.get('userId') || '').trim() || undefined,
+                        limit: Number(params.get('limit')) || 20,
+                    });
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'GET /api/knowledge/quality/history'); }
+            },
+        },
+        {
+            method: 'GET',
+            path: api('/quality/baseline'),
+            handler: async (req, res) => {
+                try {
+                    const params = parseQuery(req);
+                    const userId = String(params.get('userId') || '').trim();
+                    const result = await knowledgeLearningPlatform.getLearningQualityBaseline({ userId });
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'GET /api/knowledge/quality/baseline'); }
             },
         },
         {
@@ -148,7 +209,12 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const params = parseQuery(req);
-                    const result = await knowledgeLearningPlatform.queryStudySessionHistory({ limit: Number(params.get('limit')) || 20 });
+                    const result = await knowledgeLearningPlatform.queryStudySessionHistory({
+                        userId: String(params.get('userId') || '').trim() || undefined,
+                        limit: Number(params.get('limit')) || 20,
+                        sinceMinutes: Number(params.get('sinceMinutes')) || undefined,
+                        refreshSource: String(params.get('refreshSource') || '').trim() || undefined,
+                    });
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'GET /api/knowledge/session/history'); }
             },
@@ -159,7 +225,12 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const params = parseQuery(req);
-                    const result = await knowledgeLearningPlatform.queryStudySessionPlanQualityTrend({ limit: Number(params.get('limit')) || 10 });
+                    const result = await knowledgeLearningPlatform.queryStudySessionPlanQualityTrend({
+                        userId: String(params.get('userId') || '').trim() || undefined,
+                        limit: Number(params.get('limit')) || 10,
+                        windowSize: Number(params.get('windowSize')) || undefined,
+                        minSamples: Number(params.get('minSamples')) || undefined,
+                    });
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'GET /api/knowledge/session/plan/quality/trend'); }
             },
@@ -170,7 +241,10 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const params = parseQuery(req);
-                    const result = await knowledgeLearningPlatform.queryStudySessionPlanQualityHistory({ limit: Number(params.get('limit')) || 20 });
+                    const result = await knowledgeLearningPlatform.queryStudySessionPlanQualityHistory({
+                        userId: String(params.get('userId') || '').trim() || undefined,
+                        limit: Number(params.get('limit')) || 20,
+                    });
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'GET /api/knowledge/session/plan/quality/history'); }
             },
@@ -181,7 +255,20 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const params = parseQuery(req);
-                    const result = await knowledgeLearningPlatform.queryMemoryPolicyDiagnostics({ limit: Number(params.get('limit')) || 20 });
+                    const persistRecordToken = String(params.get('persistRecord') || '').trim().toLowerCase();
+                    const result = await knowledgeLearningPlatform.queryMemoryPolicyDiagnostics({
+                        limit: Number(params.get('limit')) || undefined,
+                        sampleLimit: Number(params.get('sampleLimit')) || undefined,
+                        staleAfterHours: Number(params.get('staleAfterHours')) || undefined,
+                        nearExpiryHours: Number(params.get('nearExpiryHours')) || undefined,
+                        lowConfidenceThreshold: Number(params.get('lowConfidenceThreshold')) || undefined,
+                        now: String(params.get('now') || '').trim() || undefined,
+                        persistRecord: persistRecordToken === 'false'
+                            ? false
+                            : persistRecordToken === 'true'
+                                ? true
+                                : undefined,
+                    });
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'GET /api/knowledge/memory-policy/diagnostics'); }
             },
@@ -252,6 +339,44 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
         },
         {
             method: 'GET',
+            path: api('/runtime-capability-runbook/history/checks'),
+            handler: async (req, res) => {
+                try {
+                    const params = parseQuery(req);
+                    const result = await knowledgeLearningPlatform.queryRuntimeCapabilityRunbookChecks({
+                        limit: Number(params.get('limit')) || 8,
+                        sinceMinutes: Number(params.get('sinceMinutes')) || 10080,
+                        status: String(params.get('status') || '').trim(),
+                        checkQuery: String(params.get('checkQuery') || '').trim(),
+                    });
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'GET /api/knowledge/runtime-capability-runbook/history/checks'); }
+            },
+        },
+        {
+            method: 'GET',
+            path: api('/runtime-capability-runbook/history/action-queue'),
+            handler: async (req, res) => {
+                try {
+                    const params = parseQuery(req);
+                    const result = await knowledgeLearningPlatform.queryRuntimeCapabilityRunbookActionQueue({
+                        limit: Number(params.get('limit')) || 8,
+                        sinceMinutes: Number(params.get('sinceMinutes')) || 10080,
+                        status: String(params.get('status') || '').trim(),
+                        checkQuery: String(params.get('checkQuery') || '').trim(),
+                        queueLimit: Number(params.get('queueLimit')) || 12,
+                        priority: String(params.get('priority') || '').trim(),
+                        category: String(params.get('category') || '').trim(),
+                        checkId: String(params.get('checkId') || '').trim(),
+                        remediationStatus: String(params.get('remediationStatus') || '').trim(),
+                        remediationTrend: String(params.get('remediationTrend') || '').trim(),
+                    });
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'GET /api/knowledge/runtime-capability-runbook/history/action-queue'); }
+            },
+        },
+        {
+            method: 'GET',
             path: api('/runtime-capability-runbook/remediation-history'),
             handler: async (req, res) => {
                 try {
@@ -301,16 +426,8 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
                 try {
                     const body = await readBody(req);
                     const payload = JSON.parse(body);
-                    const acceptSSE = (req.headers.accept || '').includes('text/event-stream');
-                    if (acceptSSE) {
-                        res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
-                        const stream = await knowledgeLearningPlatform.streamAgentConversation(payload);
-                        for await (const event of stream) { res.write(`data: ${JSON.stringify(event)}\n\n`); }
-                        res.end();
-                    } else {
-                        const result = await knowledgeLearningPlatform.agentConversation(payload);
-                        ok(res, { result });
-                    }
+                    const result = await knowledgeLearningPlatform.agentConversation(payload);
+                    ok(res, { result });
                 } catch (e) { fail(res, e, 'POST /api/knowledge/conversation'); }
             },
         },
@@ -378,6 +495,39 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
                     const result = await knowledgeLearningPlatform.captureLearningQualitySnapshot(JSON.parse(body));
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'POST /api/knowledge/quality/snapshot'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/quality/baseline'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await knowledgeLearningPlatform.setLearningQualityBaseline(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'POST /api/knowledge/quality/baseline'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/quality/baseline/clear'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await knowledgeLearningPlatform.clearLearningQualityBaseline(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'POST /api/knowledge/quality/baseline/clear'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/quality/baseline/evaluate'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await knowledgeLearningPlatform.evaluateLearningQualityAgainstBaseline(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'POST /api/knowledge/quality/baseline/evaluate'); }
             },
         },
         {

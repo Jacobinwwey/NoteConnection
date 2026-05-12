@@ -7,6 +7,7 @@ This page is an indexed catalog for **all Markdown docs** under `docs/`.
 ## All Markdown Files
 
 - [`BILINGUAL_INDEX.md`](BILINGUAL_INDEX.md)
+- [`open_goal_audit_2026-05-10.md`](open_goal_audit_2026-05-10.md)
 - [`brainstorms/2026-04-11-deeptutor-reuse-analysis.md`](brainstorms/2026-04-11-deeptutor-reuse-analysis.md)
 - [`brainstorms/2026-04-11-evolution-progress-alignment-requirements.md`](brainstorms/2026-04-11-evolution-progress-alignment-requirements.md)
 - [`brainstorms/2026-04-12-agent-workspace-next-direction-requirements.md`](brainstorms/2026-04-12-agent-workspace-next-direction-requirements.md)

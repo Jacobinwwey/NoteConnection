@@ -8,6 +8,7 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - Use `npm run docs:site:build` to validate page rendering and link stability.
 - Use `npm run docs:site:serve` for local browsing during iterative doc updates.
 - Use [Working Docs / Brainstorms](brainstorms/index.md) and [Working Docs / Solutions](solutions/index.md) for in-progress alignment artifacts and durable solution notes.
+- Use [Open Goal Audit (2026-05-10)](open_goal_audit_2026-05-10.md) as the all-docs unresolved-goal snapshot.
 
 ## English
 
@@ -31,6 +32,7 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - Use [Git LFS Asset Migration](diataxis/en/explanation/git-lfs-asset-migration.md) for the phased repository/runtime decoupling strategy.
 - Use [Sidecar Supply Feasibility](diataxis/en/explanation/sidecar-supply-feasibility.md) for the cost/user-friction/maintainer-burden decision matrix behind mirror choices.
 - Use [Anti-Fragile Sidecar Supply Strategy](en/sidecar_supply_strategy.md) for the cache-first, mirror-aware, offline-seed path that explicitly rejects download-only replacement.
+- Use [Open Goal Audit (2026-05-10)](open_goal_audit_2026-05-10.md) for cross-doc unresolved-goal status.
 
 ## 中文
 
@@ -54,3 +56,4 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - 仓库与运行时资产解耦迁移请查看 [Git LFS 资产迁移](diataxis/zh/explanation/git-lfs-asset-migration.md)。
 - 镜像方案的成本 / 用户门槛 / 维护负担矩阵请查看 [Sidecar 供给可行性](diataxis/zh/explanation/sidecar-supply-feasibility.md)。
 - 桌面 sidecar 的缓存优先 / 镜像感知 / 离线种子迁移路径请查看 [反脆弱 Sidecar 供给策略](zh/sidecar_supply_strategy.md)。
+- 全量文档未完成目标快照请查看 [Open Goal Audit (2026-05-10)](open_goal_audit_2026-05-10.md)。

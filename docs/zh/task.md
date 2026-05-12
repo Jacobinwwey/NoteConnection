@@ -1,21 +1,35 @@
+## 2026-05-12 代码 / 方案现实快照
+
+- [x] agent-workspace 的 browser/runtime/Tauri 验证闭环已经是真实可重复的。
+- [x] Phase-3 中的 tutor telemetry、tutor trace/provider trend、conversation memory、memory-policy diagnostics 已有具体后端实现。
+- [ ] Phase-1 A8 仍为 `Partial+`：默认 graph backend 仍是 `local-file-graphdb`，真实本地图数据库基线尚未交付。
+- [ ] Phase-1 A9 仍为 `Partial+`：ANN 路径当前仍停留在 `external_stub` / `external_http` 脚手架与 telemetry，尚非生产级 ANN 后端。
+- [ ] `KnowledgeLearningPlatform.ts` 里 query compare / staleness / learning-quality / session-plan-quality 一组运行面仍有 placeholder 返回。
+- [ ] `server.ts` 虽然暴露了 `tutorAdapters` catalog，但默认 runtime 没有注入激活态 `tutorAdapter`，正常 tutor 执行仍是 rule-engine-first。
+
+## 2026-05-10 跨文档状态说明
+
+- 本任务看板已与 [Open Goal Audit (2026-05-10)](../open_goal_audit_2026-05-10.md) 同步。
+- 未完成目标的最终裁定请与 `TODO.md`、`tauri_tasks.md`、`TEST_REPORT.md` 保持一致。
 
 ### 当前任务快照
 
 - [x] Bridge-first 迁移基线已启用（`Tauri + Node sidecar + Godot Path Mode`）。
 - [x] Sidecar 与前端数据根路径的运行时适配已集成。
 - [x] 打包 Sidecar 场景下的 Worker 路径解析已稳定。
-- [ ] Tauri 加载流程中“缓存已存在提示”一致性仍需最终严格回归确认。
-- [ ] 重复加载执行防护仍需在启动/重连场景下完成最终验证。
-- [ ] Godot 中心切换动作的 History 记录仍需最终验收。
+- [ ] 真实 graph backend 激活与 fallback 一致性验证仍待完成。
+- [ ] 生产级 ANN connector 激活与基准阈值校准仍待完成。
+- [ ] query/quality/session 运行面的 placeholder 必须替换为 live telemetry，之后才能宣称 Phase 2 门禁闭环。
+- [ ] tutor 运行路径必须从 catalog-only 升级为默认 runtime 的激活态 adapter 执行。
 - [ ] Electron 下线前最终就绪清单仍待完成。
 
 ### 当前验收目标
 
-1. 缓存存在时只出现一次选择提示。
-2. 每次用户触发加载仅执行一次 load/build/restore。
-3. WebSocket 生命周期稳定，无启动抖动副作用。
-4. Godot 交互触发的中心节点切换可写入 History 面板。
-5. Tauri 桌面与 Android 路径具备文档化说明，并与 Capacitor 共存策略一致。
+1. 默认 graphdb 交付路径不再是 `local-file-graphdb`。
+2. 至少一条 ANN connector 路径在真实请求下超出脚手架阶段，并具备可用 runbook/telemetry 证据。
+3. `KnowledgeLearningPlatform.ts` 不再对 query compare、staleness、learning-quality、session-plan-quality 返回 placeholder。
+4. 默认 server runtime 下的 tutor 执行会产生真实 adapter telemetry，同时保留明确的 rule-engine fallback。
+5. Tauri 桌面与 Android 路径继续保持可验证、可文档化，并与历史 Electron 上下文清晰分层。
 
 ---
 

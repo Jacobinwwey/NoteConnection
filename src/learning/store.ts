@@ -45,6 +45,7 @@ export interface KnowledgeGraphSnapshot {
     latestIngestSummary: KnowledgeIngestResponse['summary'] | null;
     sessionActionTelemetry?: KnowledgeSystemState['sessionActionTelemetry'];
     sessionExecutionHistory?: StudySessionExecutionRecord[];
+    memoryPolicyDiagnosticsHistoryRecords?: Array<Record<string, unknown>>;
     userMemory: Record<string, {
         session: MemoryEntry[];
         unit: MemoryEntry[];
@@ -137,6 +138,85 @@ export interface PathQueryResult {
     found: boolean;
 }
 
+function filterNodesFromSnapshot(snapshot: KnowledgeGraphSnapshot, filter: NodeQueryFilter): KnowledgeAtom[] {
+    let results = snapshot.atoms;
+    if (filter.nodeIds && filter.nodeIds.length > 0) {
+        const idSet = new Set(filter.nodeIds);
+        results = results.filter((atom) => idSet.has(atom.id) || idSet.has(atom.stableKey ?? ''));
+    }
+    if (filter.stableKey) {
+        results = results.filter((atom) => atom.stableKey === filter.stableKey);
+    }
+    if (filter.limit && filter.limit > 0) {
+        results = results.slice(0, filter.limit);
+    }
+    return results;
+}
+
+function filterEdgesFromSnapshot(snapshot: KnowledgeGraphSnapshot, filter: EdgeQueryFilter): RelationEdge[] {
+    let results = snapshot.relationEdges;
+    if (filter.fromNodeId) {
+        results = results.filter((edge) => edge.sourceAtomId === filter.fromNodeId);
+    }
+    if (filter.toNodeId) {
+        results = results.filter((edge) => edge.targetAtomId === filter.toNodeId);
+    }
+    if (filter.relationKind) {
+        results = results.filter((edge) => edge.relationKind === filter.relationKind);
+    }
+    if (filter.limit && filter.limit > 0) {
+        results = results.slice(0, filter.limit);
+    }
+    return results;
+}
+
+function findPathInSnapshot(
+    snapshot: KnowledgeGraphSnapshot,
+    sourceId: string,
+    targetId: string,
+    maxDepth = 10
+): PathQueryResult {
+    const adjacency = new Map<string, Array<{ to: string; edge: RelationEdge }>>();
+    for (const edge of snapshot.relationEdges) {
+        if (!adjacency.has(edge.sourceAtomId)) adjacency.set(edge.sourceAtomId, []);
+        adjacency.get(edge.sourceAtomId)!.push({ to: edge.targetAtomId, edge });
+    }
+
+    const visited = new Set<string>();
+    const queue: Array<{ nodeId: string; path: string[]; edges: PathQueryResult['edges'] }> = [
+        { nodeId: sourceId, path: [sourceId], edges: [] }
+    ];
+    visited.add(sourceId);
+
+    while (queue.length > 0) {
+        const current = queue.shift()!;
+        if (current.path.length > maxDepth) continue;
+
+        if (current.nodeId === targetId) {
+            return {
+                path: current.path,
+                length: current.path.length - 1,
+                edges: current.edges,
+                found: true,
+            };
+        }
+
+        const neighbors = adjacency.get(current.nodeId) ?? [];
+        for (const { to, edge } of neighbors) {
+            if (!visited.has(to)) {
+                visited.add(to);
+                queue.push({
+                    nodeId: to,
+                    path: [...current.path, to],
+                    edges: [...current.edges, { from: edge.sourceAtomId, to: edge.targetAtomId, relation: edge.relationKind }],
+                });
+            }
+        }
+    }
+
+    return { path: [], length: 0, edges: [], found: false };
+}
+
 export interface KnowledgeGraphOpsAdapter extends KnowledgeGraphStore {
     /** Declare what operations this adapter supports. */
     getCapabilities(): KnowledgeGraphOpsCapabilities;
@@ -200,86 +280,19 @@ export class FileBackedKnowledgeGraphStore implements KnowledgeGraphOpsAdapter {
     public async queryNodes(filter: NodeQueryFilter): Promise<KnowledgeAtom[]> {
         const snapshot = await this.ensureSnapshot();
         if (!snapshot) return [];
-        let results = snapshot.atoms;
-        if (filter.nodeIds && filter.nodeIds.length > 0) {
-            const idSet = new Set(filter.nodeIds);
-            results = results.filter(a => idSet.has(a.id) || idSet.has(a.stableKey ?? ''));
-        }
-        if (filter.stableKey) {
-            results = results.filter(a => a.stableKey === filter.stableKey);
-        }
-        if (filter.limit && filter.limit > 0) {
-            results = results.slice(0, filter.limit);
-        }
-        return results;
+        return filterNodesFromSnapshot(snapshot, filter);
     }
 
     public async queryEdges(filter: EdgeQueryFilter): Promise<RelationEdge[]> {
         const snapshot = await this.ensureSnapshot();
         if (!snapshot) return [];
-        let results = snapshot.relationEdges;
-        if (filter.fromNodeId) {
-            results = results.filter(e => e.sourceAtomId === filter.fromNodeId);
-        }
-        if (filter.toNodeId) {
-            results = results.filter(e => e.targetAtomId === filter.toNodeId);
-        }
-        if (filter.relationKind) {
-            results = results.filter(e => e.relationKind === filter.relationKind);
-        }
-        if (filter.limit && filter.limit > 0) {
-            results = results.slice(0, filter.limit);
-        }
-        return results;
+        return filterEdgesFromSnapshot(snapshot, filter);
     }
 
     public async findPath(sourceId: string, targetId: string, maxDepth = 10): Promise<PathQueryResult> {
         const snapshot = await this.ensureSnapshot();
-        if (!snapshot) {
-            return { path: [], length: 0, edges: [], found: false };
-        }
-
-        // Build adjacency list from edges
-        const adjacency = new Map<string, Array<{ to: string; edge: RelationEdge }>>();
-        for (const edge of snapshot.relationEdges) {
-            if (!adjacency.has(edge.sourceAtomId)) adjacency.set(edge.sourceAtomId, []);
-            adjacency.get(edge.sourceAtomId)!.push({ to: edge.targetAtomId, edge });
-        }
-
-        // BFS path finding
-        const visited = new Set<string>();
-        const queue: Array<{ nodeId: string; path: string[]; edges: PathQueryResult['edges'] }> = [
-            { nodeId: sourceId, path: [sourceId], edges: [] }
-        ];
-        visited.add(sourceId);
-
-        while (queue.length > 0) {
-            const current = queue.shift()!;
-            if (current.path.length > maxDepth) continue;
-
-            if (current.nodeId === targetId) {
-                return {
-                    path: current.path,
-                    length: current.path.length - 1,
-                    edges: current.edges,
-                    found: true,
-                };
-            }
-
-            const neighbors = adjacency.get(current.nodeId) ?? [];
-            for (const { to, edge } of neighbors) {
-                if (!visited.has(to)) {
-                    visited.add(to);
-                    queue.push({
-                        nodeId: to,
-                        path: [...current.path, to],
-                        edges: [...current.edges, { from: edge.sourceAtomId, to: edge.targetAtomId, relation: edge.relationKind }],
-                    });
-                }
-            }
-        }
-
-        return { path: [], length: 0, edges: [], found: false };
+        if (!snapshot) return { path: [], length: 0, edges: [], found: false };
+        return findPathInSnapshot(snapshot, sourceId, targetId, maxDepth);
     }
 
     private async ensureSnapshot(): Promise<KnowledgeGraphSnapshot | null> {
@@ -393,7 +406,18 @@ export interface GraphDbSnapshotAdapter {
     probeSnapshotMetadata?(): Promise<Record<string, unknown> | null>;
     loadSnapshotByOps?(): Promise<KnowledgeGraphSnapshot | null>;
     saveSnapshotByOps?(snapshot: KnowledgeGraphSnapshot): Promise<void>;
+    getNodeByOps?(atomId: string): Promise<KnowledgeAtom | null>;
+    queryNodesByOps?(filter: NodeQueryFilter): Promise<KnowledgeAtom[]>;
+    queryEdgesByOps?(filter: EdgeQueryFilter): Promise<RelationEdge[]>;
+    findPathByOps?(sourceId: string, targetId: string, maxDepth?: number): Promise<PathQueryResult>;
     [extra: string]: unknown;
+}
+
+function hasGraphQueryOpsPath(adapter: GraphDbSnapshotAdapter): boolean {
+    return typeof adapter.getNodeByOps === 'function'
+        || typeof adapter.queryNodesByOps === 'function'
+        || typeof adapter.queryEdgesByOps === 'function'
+        || typeof adapter.findPathByOps === 'function';
 }
 
 // Why ops-capable detection: Some graphdb adapters support fine-grained operations
@@ -402,13 +426,23 @@ export interface GraphDbSnapshotAdapter {
 // or getCapabilities().mode. This allows the same store interface to serve both
 // simple file-backed stores and advanced graphdb backends without changing callers.
 function hasOpsCapablePath(adapter: GraphDbSnapshotAdapter): boolean {
-    const hasMethods = typeof adapter.loadSnapshotByOps === 'function'
+    const hasSnapshotOpsMethods = typeof adapter.loadSnapshotByOps === 'function'
         && typeof adapter.saveSnapshotByOps === 'function';
-    if (!hasMethods) return false;
-    // Check explicit flag or capabilities return value
+    const hasQueryOpsMethods = hasGraphQueryOpsPath(adapter);
+    if (!hasSnapshotOpsMethods && !hasQueryOpsMethods) return false;
+
     if (adapter.opsCapable === true) return true;
     const caps = adapter.getCapabilities?.();
-    return (caps as any)?.mode === 'ops_capable';
+    if ((caps as any)?.mode === 'ops_capable') return true;
+
+    if (hasQueryOpsMethods) {
+        const nodeQuerySupported = (caps as any)?.nodeQuerySupported === true;
+        const edgeQuerySupported = (caps as any)?.edgeQuerySupported === true;
+        const pathQuerySupported = (caps as any)?.pathQuerySupported === true;
+        return nodeQuerySupported || edgeQuerySupported || pathQuerySupported;
+    }
+
+    return false;
 }
 
 export function normalizeKnowledgeGraphStoreBackend(v: unknown): string {
@@ -486,17 +520,23 @@ export function createGraphDbSnapshotAdapter(options?: Record<string, unknown>):
     if (provider === 'http' && httpEndpoint) {
         const endpoint = httpEndpoint.replace(/\/$/, '');
         const snapUrl = `${endpoint}/snapshot`;
+        const nodeUrl = `${endpoint}/ops/node`;
+        const nodesUrl = `${endpoint}/ops/nodes`;
+        const edgesUrl = `${endpoint}/ops/edges`;
+        const pathUrl = `${endpoint}/ops/path`;
         let reqCount = 0;
         let okCount = 0;
         let failCount = 0;
         let lastReqId = '';
         let lastErrCode = '';
+        let lastStatusCode = 0;
 
-        const doFetch = async (method: string, body?: unknown) => {
+        const doFetch = async (requestUrl: string, method: string, body?: unknown) => {
             reqCount++;
             const headers: Record<string, string> = body ? { 'Content-Type': 'application/json' } : {};
-            const res = await fetch(snapUrl, { method, headers, body: body ? JSON.stringify(body) : undefined });
+            const res = await fetch(requestUrl, { method, headers, body: body ? JSON.stringify(body) : undefined });
             lastReqId = res.headers.get('X-Request-Id') || 'http-graphdb-' + reqCount;
+            lastStatusCode = Math.max(0, Math.floor(Number(res.status || 0)));
             if (res.ok) okCount++;
             else { failCount++; lastErrCode = res.headers.get('X-Error-Code') || String(res.status); }
             return res;
@@ -526,18 +566,18 @@ export function createGraphDbSnapshotAdapter(options?: Record<string, unknown>):
         return {
             id: adapterId,
             provider: 'http',
-            opsCapable: false,
+            opsCapable: true,
             getCapabilities: () => ({
-                snapshotSupported: true, nodeQuerySupported: false,
-                edgeQuerySupported: false, pathQuerySupported: false,
+                snapshotSupported: true, nodeQuerySupported: true,
+                edgeQuerySupported: true, pathQuerySupported: true,
                 writeSupported: true, serverSideQuery: true,
-                mode: 'snapshot_only',
-                supportedReadOperations: ['load_snapshot'],
+                mode: 'ops_capable',
+                supportedReadOperations: ['load_snapshot', 'get_node', 'query_nodes', 'query_edges', 'find_path'],
                 supportedWriteOperations: ['save_snapshot'],
             }),
             loadSnapshot: async () => {
                 checkCircuit();
-                const res = await doFetch('GET');
+                const res = await doFetch(snapUrl, 'GET');
                 if (!res.ok) {
                     consecutiveFailures++;
                     if (consecutiveFailures >= circuitThreshold) {
@@ -552,7 +592,7 @@ export function createGraphDbSnapshotAdapter(options?: Record<string, unknown>):
             },
             saveSnapshot: async (snapshot: KnowledgeGraphSnapshot) => {
                 checkCircuit();
-                const res = await doFetch('POST', { snapshot });
+                const res = await doFetch(snapUrl, 'POST', { snapshot });
                 if (!res.ok) {
                     consecutiveFailures++;
                     if (consecutiveFailures >= circuitThreshold) {
@@ -563,13 +603,105 @@ export function createGraphDbSnapshotAdapter(options?: Record<string, unknown>):
                 }
                 consecutiveFailures = 0;
             },
+            getNodeByOps: async (atomId: string) => {
+                checkCircuit();
+                const safeId = encodeURIComponent(String(atomId || '').trim());
+                if (!safeId) {
+                    return null;
+                }
+                const res = await doFetch(`${nodeUrl}/${safeId}`, 'GET');
+                if (res.status === 404) {
+                    return null;
+                }
+                if (!res.ok) {
+                    consecutiveFailures++;
+                    if (consecutiveFailures >= circuitThreshold) {
+                        circuitState = 'open';
+                        circuitOpenedAt = new Date().toISOString();
+                    }
+                    throw new Error('graphdb_http_request_failed:' + res.status);
+                }
+                consecutiveFailures = 0;
+                const payload = await res.json() as any;
+                const node = payload?.node ?? payload?.atom ?? payload?.item ?? payload ?? null;
+                if (!node || typeof node !== 'object') {
+                    return null;
+                }
+                return node as KnowledgeAtom;
+            },
+            queryNodesByOps: async (filter: NodeQueryFilter) => {
+                checkCircuit();
+                const res = await doFetch(nodesUrl, 'POST', { filter: filter || {} });
+                if (!res.ok) {
+                    consecutiveFailures++;
+                    if (consecutiveFailures >= circuitThreshold) {
+                        circuitState = 'open';
+                        circuitOpenedAt = new Date().toISOString();
+                    }
+                    throw new Error('graphdb_http_request_failed:' + res.status);
+                }
+                consecutiveFailures = 0;
+                const payload = await res.json() as any;
+                const nodes = payload?.nodes ?? payload?.atoms ?? payload?.items ?? [];
+                return Array.isArray(nodes) ? nodes.filter((item) => Boolean(item && typeof item === 'object')) as KnowledgeAtom[] : [];
+            },
+            queryEdgesByOps: async (filter: EdgeQueryFilter) => {
+                checkCircuit();
+                const res = await doFetch(edgesUrl, 'POST', { filter: filter || {} });
+                if (!res.ok) {
+                    consecutiveFailures++;
+                    if (consecutiveFailures >= circuitThreshold) {
+                        circuitState = 'open';
+                        circuitOpenedAt = new Date().toISOString();
+                    }
+                    throw new Error('graphdb_http_request_failed:' + res.status);
+                }
+                consecutiveFailures = 0;
+                const payload = await res.json() as any;
+                const edges = payload?.edges ?? payload?.relationEdges ?? payload?.items ?? [];
+                return Array.isArray(edges) ? edges.filter((item) => Boolean(item && typeof item === 'object')) as RelationEdge[] : [];
+            },
+            findPathByOps: async (sourceId: string, targetId: string, maxDepth?: number) => {
+                checkCircuit();
+                const res = await doFetch(pathUrl, 'POST', {
+                    sourceId: String(sourceId || ''),
+                    targetId: String(targetId || ''),
+                    maxDepth: typeof maxDepth === 'number' ? Math.max(1, Math.floor(maxDepth)) : undefined,
+                });
+                if (!res.ok) {
+                    consecutiveFailures++;
+                    if (consecutiveFailures >= circuitThreshold) {
+                        circuitState = 'open';
+                        circuitOpenedAt = new Date().toISOString();
+                    }
+                    throw new Error('graphdb_http_request_failed:' + res.status);
+                }
+                consecutiveFailures = 0;
+                const payload = await res.json() as any;
+                const pathResult = payload?.pathResult ?? payload?.result ?? payload;
+                if (!pathResult || typeof pathResult !== 'object') {
+                    return { path: [], length: 0, edges: [], found: false } as PathQueryResult;
+                }
+                return {
+                    path: Array.isArray(pathResult.path) ? pathResult.path.map((item: unknown) => String(item || '')) : [],
+                    length: Math.max(0, Math.floor(Number(pathResult.length || 0))),
+                    edges: Array.isArray(pathResult.edges)
+                        ? pathResult.edges.map((item: any) => ({
+                            from: String(item?.from || ''),
+                            to: String(item?.to || ''),
+                            relation: item?.relation ? String(item.relation) : undefined,
+                        }))
+                        : [],
+                    found: pathResult.found === true,
+                } as PathQueryResult;
+            },
             getDiagnostics: () => ({
                 storeType: 'graphdb' as const,
                 exists: okCount > 0,
                 loaded: okCount > 0,
                 location: snapUrl,
-                capabilityMode: 'snapshot_only',
-                supportedReadOperations: ['load_snapshot'],
+                capabilityMode: 'ops_capable',
+                supportedReadOperations: ['load_snapshot', 'get_node', 'query_nodes', 'query_edges', 'find_path'],
                 supportedWriteOperations: ['save_snapshot'],
                 connector: {
                     healthStatus: circuitState === 'open' ? 'unavailable' : failCount > 0 ? 'degraded' : 'ready',
@@ -582,6 +714,7 @@ export function createGraphDbSnapshotAdapter(options?: Record<string, unknown>):
                     circuitOpenedAt: circuitOpenedAt || undefined,
                     lastRequestId: lastReqId,
                     lastErrorCode: circuitState === 'open' ? 'circuit_open' : (lastErrCode || undefined),
+                    lastStatusCode: lastStatusCode > 0 ? lastStatusCode : undefined,
                 },
             }),
         };
@@ -616,7 +749,17 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
             const a = graphdbAdapter as GraphDbSnapshotAdapter;
             const opsCapable = hasOpsCapablePath(a);
             const requestMode = normalizeGraphDbStoreOperationMode(graphdbOperationMode);
-            const opsState = { probed: false, loadCalled: false, opsReadUsed: false, opsWriteUsed: false, lastProbeResult: null as Record<string, unknown> | null };
+            const opsState = { probed: false, opsReadUsed: false, opsWriteUsed: false, lastProbeResult: null as Record<string, unknown> | null };
+            const queryOpsState = {
+                nodeOpsReadCount: 0,
+                nodeFallbackCount: 0,
+                nodesOpsReadCount: 0,
+                nodesFallbackCount: 0,
+                edgesOpsReadCount: 0,
+                edgesFallbackCount: 0,
+                pathOpsReadCount: 0,
+                pathFallbackCount: 0,
+            };
 
             const resolveOpsPath = async (): Promise<boolean> => {
                 if (!opsCapable || requestMode !== 'ops_preferred') return false;
@@ -632,46 +775,114 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
                 return true; // allow ops attempt — downgrade on failure
             };
 
-            return {
-                loadSnapshot: async () => {
-                    if (opsCapable && requestMode === 'ops_preferred') {
-                        if (typeof a.probeSnapshotMetadata === 'function' && !opsState.probed) {
-                            try {
-                                opsState.lastProbeResult = await a.probeSnapshotMetadata();
-                                opsState.probed = true;
-                            } catch { /* fall through */ }
-                        }
-                        if ((opsState.probed || typeof a.probeSnapshotMetadata !== 'function') && typeof a.loadSnapshotByOps === 'function') {
-                            try {
-                                const result = await a.loadSnapshotByOps();
-                                opsState.loadCalled = true;
-                                opsState.probed = true;
-                                opsState.opsReadUsed = true;
-                                return result;
-                            } catch {
-                                // Downgrade: ops read failed, fall back to snapshot read
-                            }
-                        }
-                    }
-                    return a.loadSnapshot!();
-                },
-                saveSnapshot: async (snapshot: KnowledgeGraphSnapshot) => {
-                    if (await resolveOpsPath() && typeof a.saveSnapshotByOps === 'function') {
+            const loadSnapshotThroughAdapter = async (): Promise<KnowledgeGraphSnapshot | null> => {
+                if (opsCapable && requestMode === 'ops_preferred') {
+                    if (typeof a.probeSnapshotMetadata === 'function' && !opsState.probed) {
                         try {
-                            await a.saveSnapshotByOps(snapshot);
-                            opsState.opsWriteUsed = true;
-                            if (typeof a.probeSnapshotMetadata === 'function') {
-                                try { opsState.lastProbeResult = await a.probeSnapshotMetadata(); } catch { /* ignore */ }
-                            }
-                            return;
+                            opsState.lastProbeResult = await a.probeSnapshotMetadata();
+                            opsState.probed = true;
+                        } catch { /* fall through */ }
+                    }
+                    if ((opsState.probed || typeof a.probeSnapshotMetadata !== 'function') && typeof a.loadSnapshotByOps === 'function') {
+                        try {
+                            const result = await a.loadSnapshotByOps();
+                            opsState.probed = true;
+                            opsState.opsReadUsed = true;
+                            return result;
                         } catch {
-                            // Downgrade: ops write failed, fall back to snapshot write
+                            // Downgrade: ops read failed, fall back to snapshot read
                         }
                     }
-                    return a.saveSnapshot!(snapshot);
-                },
+                }
+                return a.loadSnapshot!();
+            };
+
+            const saveSnapshotThroughAdapter = async (snapshot: KnowledgeGraphSnapshot): Promise<void> => {
+                if (await resolveOpsPath() && typeof a.saveSnapshotByOps === 'function') {
+                    try {
+                        await a.saveSnapshotByOps(snapshot);
+                        opsState.opsWriteUsed = true;
+                        if (typeof a.probeSnapshotMetadata === 'function') {
+                            try { opsState.lastProbeResult = await a.probeSnapshotMetadata(); } catch { /* ignore */ }
+                        }
+                        return;
+                    } catch {
+                        // Downgrade: ops write failed, fall back to snapshot write
+                    }
+                }
+                await a.saveSnapshot!(snapshot);
+            };
+
+            const resolveOpsCapabilities = (): KnowledgeGraphOpsCapabilities => {
+                const caps = a.getCapabilities?.() ?? {};
+                const supportedReadOperations = Array.isArray((caps as any).supportedReadOperations)
+                    ? (caps as any).supportedReadOperations as string[]
+                    : [];
+                const supportedWriteOperations = Array.isArray((caps as any).supportedWriteOperations)
+                    ? (caps as any).supportedWriteOperations as string[]
+                    : [];
+
+                const nodeQuerySupported = (caps as any).nodeQuerySupported === true || typeof a.getNodeByOps === 'function';
+                const edgeQuerySupported = (caps as any).edgeQuerySupported === true || typeof a.queryEdgesByOps === 'function';
+                const pathQuerySupported = (caps as any).pathQuerySupported === true || typeof a.findPathByOps === 'function';
+                const snapshotSupported = (caps as any).snapshotSupported !== false;
+                const writeSupported = (caps as any).writeSupported !== false;
+                const serverSideQuery = (caps as any).serverSideQuery === true
+                    || nodeQuerySupported
+                    || edgeQuerySupported
+                    || pathQuerySupported;
+
+                return {
+                    snapshotSupported,
+                    nodeQuerySupported,
+                    edgeQuerySupported,
+                    pathQuerySupported,
+                    writeSupported,
+                    serverSideQuery,
+                    mode: String((caps as any).mode || (opsCapable ? 'ops_capable' : 'snapshot_only')),
+                    supportedReadOperations,
+                    supportedWriteOperations,
+                };
+            };
+
+            const querySnapshotForNode = async (atomId: string): Promise<KnowledgeAtom | null> => {
+                const snapshot = await loadSnapshotThroughAdapter();
+                if (!snapshot) return null;
+                return snapshot.atoms.find((atom) => atom.id === atomId || atom.stableKey === atomId) ?? null;
+            };
+
+            const querySnapshotForNodes = async (filter: NodeQueryFilter): Promise<KnowledgeAtom[]> => {
+                const snapshot = await loadSnapshotThroughAdapter();
+                if (!snapshot) return [];
+                return filterNodesFromSnapshot(snapshot, filter);
+            };
+
+            const querySnapshotForEdges = async (filter: EdgeQueryFilter): Promise<RelationEdge[]> => {
+                const snapshot = await loadSnapshotThroughAdapter();
+                if (!snapshot) return [];
+                return filterEdgesFromSnapshot(snapshot, filter);
+            };
+
+            const querySnapshotForPath = async (sourceId: string, targetId: string, maxDepth = 10): Promise<PathQueryResult> => {
+                const snapshot = await loadSnapshotThroughAdapter();
+                if (!snapshot) return { path: [], length: 0, edges: [], found: false };
+                return findPathInSnapshot(snapshot, sourceId, targetId, maxDepth);
+            };
+
+            return {
+                loadSnapshot: async () => loadSnapshotThroughAdapter(),
+                saveSnapshot: async (snapshot: KnowledgeGraphSnapshot) => saveSnapshotThroughAdapter(snapshot),
                 getDiagnostics: () => {
                     const diag = a.getDiagnostics?.() ?? ({} as KnowledgeGraphStoreDiagnostics);
+                    const caps = resolveOpsCapabilities();
+                    const totalQueryOpsReadCount = queryOpsState.nodeOpsReadCount
+                        + queryOpsState.nodesOpsReadCount
+                        + queryOpsState.edgesOpsReadCount
+                        + queryOpsState.pathOpsReadCount;
+                    const totalQueryFallbackCount = queryOpsState.nodeFallbackCount
+                        + queryOpsState.nodesFallbackCount
+                        + queryOpsState.edgesFallbackCount
+                        + queryOpsState.pathFallbackCount;
                     return {
                         exists: diag.exists ?? false,
                         loaded: diag.loaded ?? false,
@@ -682,15 +893,66 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
                         storeType: 'graphdb' as const,
                         graphDbOperationMode: normalizeGraphDbStoreOperationMode(graphdbOperationMode),
                         fallbackEnabled: graphdbFallbackEnabled,
-                        graphDbAdapterCapabilityMode: (diag as any).capabilityMode ?? ((a.getCapabilities?.() as any)?.mode) ?? (opsCapable ? 'ops_capable' : 'snapshot_only'),
+                        graphDbAdapterCapabilityMode: (diag as any).capabilityMode ?? caps.mode ?? (opsCapable ? 'ops_capable' : 'snapshot_only'),
                         graphDbReadPath: opsState.opsReadUsed ? 'ops' : (diag as any).lastReadPath ?? 'snapshot',
                         graphDbWritePath: opsState.opsWriteUsed ? 'ops' : (diag as any).lastWritePath ?? 'snapshot',
-                        graphDbSupportedReadOperations: (diag as any).supportedReadOperations,
-                        graphDbSupportedWriteOperations: (diag as any).supportedWriteOperations,
+                        graphDbSupportedReadOperations: (diag as any).supportedReadOperations ?? caps.supportedReadOperations,
+                        graphDbSupportedWriteOperations: (diag as any).supportedWriteOperations ?? caps.supportedWriteOperations,
                         graphDbLastSnapshotMetadata: opsState.lastProbeResult ?? (diag as any).lastSnapshotMetadata,
+                        graphDbQueryPath: totalQueryOpsReadCount > 0 ? 'ops' : 'snapshot',
+                        graphDbQueryOpsReadCount: totalQueryOpsReadCount,
+                        graphDbQueryFallbackCount: totalQueryFallbackCount,
+                        graphDbNodeQuerySupported: caps.nodeQuerySupported,
+                        graphDbEdgeQuerySupported: caps.edgeQuerySupported,
+                        graphDbPathQuerySupported: caps.pathQuerySupported,
                     };
                 },
-            };
+                getCapabilities: () => resolveOpsCapabilities(),
+                getNode: async (atomId: string) => {
+                    if (requestMode === 'ops_preferred' && typeof a.getNodeByOps === 'function') {
+                        try {
+                            queryOpsState.nodeOpsReadCount += 1;
+                            return await a.getNodeByOps(atomId);
+                        } catch {
+                            queryOpsState.nodeFallbackCount += 1;
+                        }
+                    }
+                    return querySnapshotForNode(atomId);
+                },
+                queryNodes: async (filter: NodeQueryFilter) => {
+                    if (requestMode === 'ops_preferred' && typeof a.queryNodesByOps === 'function') {
+                        try {
+                            queryOpsState.nodesOpsReadCount += 1;
+                            return await a.queryNodesByOps(filter);
+                        } catch {
+                            queryOpsState.nodesFallbackCount += 1;
+                        }
+                    }
+                    return querySnapshotForNodes(filter);
+                },
+                queryEdges: async (filter: EdgeQueryFilter) => {
+                    if (requestMode === 'ops_preferred' && typeof a.queryEdgesByOps === 'function') {
+                        try {
+                            queryOpsState.edgesOpsReadCount += 1;
+                            return await a.queryEdgesByOps(filter);
+                        } catch {
+                            queryOpsState.edgesFallbackCount += 1;
+                        }
+                    }
+                    return querySnapshotForEdges(filter);
+                },
+                findPath: async (sourceId: string, targetId: string, maxDepth = 10) => {
+                    if (requestMode === 'ops_preferred' && typeof a.findPathByOps === 'function') {
+                        try {
+                            queryOpsState.pathOpsReadCount += 1;
+                            return await a.findPathByOps(sourceId, targetId, maxDepth);
+                        } catch {
+                            queryOpsState.pathFallbackCount += 1;
+                        }
+                    }
+                    return querySnapshotForPath(sourceId, targetId, maxDepth);
+                },
+            } as KnowledgeGraphStore;
         }
         // Fail closed when fallback is disabled and adapter is unavailable
         if (!graphdbFallbackEnabled) {

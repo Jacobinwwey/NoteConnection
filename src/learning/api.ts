@@ -23,6 +23,12 @@ import type {
     StudySessionPlanExecutionResponse,
     LearningQualityEvaluationRequest,
     LearningQualityEvaluationResponse,
+    LearningQualityBaselineClearRequest,
+    LearningQualityBaselineEvaluateRequest,
+    LearningQualityBaselineEvaluateResponse,
+    LearningQualityBaselineGetRequest,
+    LearningQualityBaselineResponse,
+    LearningQualityBaselineSetRequest,
     LearningQualitySnapshotRequest,
     LearningQualitySnapshotResponse,
     TutorActionRequest,
@@ -82,6 +88,15 @@ export interface LearningQualitySnapshotAPI {
     captureLearningQualitySnapshot(request: LearningQualitySnapshotRequest): Promise<LearningQualitySnapshotResponse>;
 }
 
+export interface LearningQualityBaselineAPI {
+    getLearningQualityBaseline(request: LearningQualityBaselineGetRequest): Promise<LearningQualityBaselineResponse>;
+    setLearningQualityBaseline(request: LearningQualityBaselineSetRequest): Promise<LearningQualityBaselineResponse>;
+    clearLearningQualityBaseline(request: LearningQualityBaselineClearRequest): Promise<LearningQualityBaselineResponse>;
+    evaluateLearningQualityAgainstBaseline(
+        request: LearningQualityBaselineEvaluateRequest
+    ): Promise<LearningQualityBaselineEvaluateResponse>;
+}
+
 export interface IngestGuardrailAPI {
     evaluateIngestGuardrails(request: IngestGuardrailEvaluationRequest): Promise<IngestGuardrailEvaluationResponse>;
 }
@@ -104,6 +119,7 @@ export interface KnowledgeLearningPlatformAPI extends
     MemoryPolicyAPI,
     LearningQualityGateAPI,
     LearningQualitySnapshotAPI,
+    LearningQualityBaselineAPI,
     IngestGuardrailAPI,
     KnowledgeRuntimeStateAPI {
 }

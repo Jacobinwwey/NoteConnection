@@ -18,6 +18,9 @@ export interface TutorAdapterResult {
     confidence: number;
     evidenceSpanIds: string[];
     modelId?: string;
+    providerName?: string;
+    providerMode?: 'local' | 'cloud' | string;
+    adapterId?: string;
     metadata?: Record<string, unknown>;
 }
 
@@ -26,4 +29,3 @@ export interface TutorAdapter {
     mode: 'local' | 'cloud';
     execute(input: TutorAdapterInput): Promise<TutorAdapterResult>;
 }
-

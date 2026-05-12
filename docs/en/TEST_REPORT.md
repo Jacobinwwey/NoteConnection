@@ -1,5 +1,68 @@
 # 2026-03-22 v1.5.58 - NoteMD Integration & Tauri Feasibility Full Verification
 
+> Status sync note (2026-05-10): unresolved-goal cross-doc baseline is tracked in [Open Goal Audit (2026-05-10)](../open_goal_audit_2026-05-10.md).
+
+### Architecture / Phase Truth Snapshot (2026-05-12)
+
+- [x] `node node_modules/jest/bin/jest.js src/agent_workspace.contract.parity.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.runtime.behavior.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
+  - PASS
+- [x] `npm run verify:agent-workspace:runtime`
+  - PASS
+- [x] `npm run verify:agent-workspace:browser`
+  - PASS
+- [x] `npm run docs:diataxis:check`
+  - PASS
+- [x] `npm run docs:site:build`
+  - PASS (existing MkDocs nav/link warnings remain)
+- [x] `npm run build:with-vite`
+  - PASS
+
+### What These Passes Prove
+
+1. The Phase-3 tutor/memory slice is now real for:
+   - tutor adapter telemetry,
+   - tutor trace/provider trend diagnostics,
+   - conversation memory lifecycle,
+   - memory-policy diagnostics/history/trend.
+2. These passes do **not** prove Phase-1 A8/A9 closure:
+   - runtime still defaults to `local-file-graphdb`,
+   - ANN still depends on scaffolded connector boundaries (`external_stub` / `external_http`) rather than a proven production backend.
+3. These passes do **not** prove Phase-2 quality-gate closure:
+   - query comparison, staleness, learning-quality, and session-plan-quality runtime surfaces remain partially placeholder-backed in `src/learning/KnowledgeLearningPlatform.ts`.
+4. Default runtime tutor execution is still rule-engine-first until server bootstrap injects an active `tutorAdapter`.
+
+### Phase 2 Verification Snapshot (2026-05-12)
+
+- [x] `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_STRICT=1 node scripts/verify-agent-workspace-browser.js`
+  - PASS
+- [x] `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1 node scripts/verify-agent-workspace-browser.js`
+  - PASS
+- [x] `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_DYNAMIC_STRICT=1 node scripts/verify-agent-workspace-browser.js`
+  - PASS
+- [x] `npm run verify:agent-workspace:runtime`
+  - PASS
+- [x] `npm run verify:agent-workspace:tauri`
+  - PASS
+- [x] `node node_modules/jest/bin/jest.js src/agent_workspace.contract.parity.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand --no-cache`
+  - PASS
+- [x] `node node_modules/jest/bin/jest.js src/source_manager.loadflow.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts src/godot.sidecar.bootstrap.contract.test.ts src/sidecar.supply.readiness.contract.test.ts --runInBand --no-cache`
+  - PASS
+- [x] `npm run verify:sidecar:supply`
+  - PASS (`offline-ready` on current Windows host)
+- [ ] `npm run verify:agent-workspace:tauri:rust:strict`
+  - Expected host failure on current Windows machine: missing Linux GTK/WebKit dependencies (`webkit2gtk-4.1`, `javascriptcoregtk-4.1`, `libsoup-3.0`)
+- [ ] `npm run verify:agent-workspace:tauri:window-evidence:strict`
+  - Expected host failure on current Windows machine for the same dependency reason
+
+### Phase 2 Interpretation
+
+1. Agent-workspace conversation, capability execution, browser strict evidence, Tauri smoke, load-flow parity, history synchronization, and sidecar/bootstrap readiness are implementation-closed.
+2. However, Phase 2 is **not** fully closed at application level, because query comparison, staleness, learning-quality, and session-plan-quality runtime surfaces still contain placeholder-backed methods in `KnowledgeLearningPlatform.ts`.
+3. Remaining work is therefore a mix of:
+   - operational/release prerequisites (`FR-009`, Linux-host strict Tauri dependency provisioning, Electron decommission review),
+   - application-layer implementation gaps (non-placeholder quality/session/query diagnostics).
+4. Phase 3 implementation work can proceed in parallel, but it should not be reported as if Phase 1 and Phase 2 are already fully closed.
+
 ### Test Objective
 
 Verify that the NoteMD migration slice is fully workable and regression-safe across:

@@ -343,5 +343,145 @@
   "focus_outbound": "Continue Exploring",
   "lbl_inbound_count": "Inbound Count:",
   "opt_visible": "Visible Nodes (Default)",
-  "opt_total": "Total Statistical"
+  "opt_total": "Total Statistical",
+  "agentWorkspace": {
+    "title": "Agent Workspace",
+    "subtitle": "Conversation + local knowledge actions",
+    "userId": "Learner ID",
+    "inputLabel": "Ask the local learning graph",
+    "inputPlaceholder": "Ask about a concept, proof step, or prerequisite...",
+    "knowledge": {
+      "emptyInitial": "No local knowledge points yet.",
+      "empty": "No local knowledge points."
+    },
+    "graphFocus": {
+      "title": "Graph Focus",
+      "emptyIdle": "Graph focus pane is idle."
+    },
+    "learningPath": {
+      "title": "Learning Path",
+      "emptyIdle": "Learning path pane is idle."
+    },
+    "actions": {
+      "send": "Send",
+      "focus": "Focus",
+      "learningPath": "Learning Path",
+      "studySession": "Study Session",
+      "generate_quiz": "Quiz",
+      "recap": "Recap",
+      "generate_transfer": "Transfer Challenge",
+      "generate_counterexample": "Counterexample Challenge",
+      "follow_up": "Follow-Up",
+      "compareQueryBackends": "Query Backend Comparison",
+      "queryBackendDiagnostics": "Backend Diagnostics",
+      "queryBackendComparisonHistory": "Comparison History",
+      "queryBackendComparisonTrend": "Comparison Trend",
+      "tutorAdapterTelemetry": "Tutor Adapter Telemetry",
+      "tutorTraceDiagnostics": "Tutor Trace Diagnostics",
+      "learningQualityTrend": "Learning Quality Trend",
+      "learningQualityHistory": "Learning Quality History",
+      "sessionPlanQualityTrend": "Session Plan Quality Trend",
+      "sessionPlanQualityHistory": "Session Plan Quality History",
+      "sessionHistory": "Session History",
+      "runtimeRunbookVerify": "Runtime Verify",
+      "runtimeRunbookHistory": "Runtime History",
+      "runtimeRunbookChecks": "Runtime Checks",
+      "runtimeRunbookActionQueue": "Runtime Queue",
+      "conversationMemory": "Conversation Memory",
+      "conversationTurnCacheDiagnostics": "Turn Cache Diagnostics",
+      "conversationTurnCacheAlertTrend": "Turn Cache Trend",
+      "conversationTurnCacheAlertTrendIndex": "Turn Cache Trend Index",
+      "conversationTurnCacheAlertTrendExport": "Turn Cache Trend Export",
+      "restore": "Restore",
+      "fullscreen": "Fullscreen"
+    },
+    "messages": {
+      "localNodeUnavailable": "Local node {nodeId} is unavailable.",
+      "ready": "Agent workspace ready."
+    },
+    "studySession": {
+      "cardTitle": "Study Session Plan",
+      "summary": "{totalActions} actions, about {totalEstimatedMinutes} minutes.",
+      "actionsHeading": "Recommended Actions",
+      "empty": "No study actions returned."
+    },
+    "sessionHistory": {
+      "cardTitle": "Session History",
+      "summary": "{matchedRecordsBeforeLimit} sessions in last {sinceMinutes} minutes; avg mastery delta {averageMasteryDeltaPct}%.",
+      "metricsHeading": "Key Metrics",
+      "none": "none"
+    },
+    "queryBackendComparison": {
+      "cardTitle": "Backend Comparison",
+      "summary": "Compare left/right retrieval tradeoffs for the current knowledge point.",
+      "metricsHeading": "Key Metrics",
+      "none": "none"
+    },
+    "queryBackendComparisonHistory": {
+      "cardTitle": "Backend Comparison History",
+      "summary": "Historical comparison rollup for retrieval backends.",
+      "metricsHeading": "Key Metrics",
+      "none": "none"
+    },
+    "queryBackendComparisonTrend": {
+      "cardTitle": "Backend Comparison Trend",
+      "summary": "Trend signal for backend comparison telemetry.",
+      "metricsHeading": "Key Metrics",
+      "none": "none"
+    },
+    "learningQualityTrend": {
+      "cardTitle": "Learning Quality Trend",
+      "summary": "Trend signal for learning quality telemetry.",
+      "metricsHeading": "Key Metrics",
+      "none": "none"
+    },
+    "learningQualityHistory": {
+      "cardTitle": "Learning Quality History",
+      "summary": "Recent learning quality history snapshot.",
+      "metricsHeading": "Key Metrics",
+      "none": "none"
+    },
+    "sessionPlanQualityTrend": {
+      "cardTitle": "Session Plan Quality Trend",
+      "summary": "Trend signal for study-session plan quality.",
+      "metricsHeading": "Key Metrics",
+      "none": "none"
+    },
+    "sessionPlanQualityHistory": {
+      "cardTitle": "Session Plan Quality History",
+      "summary": "Recent study-session plan quality history.",
+      "metricsHeading": "Key Metrics",
+      "none": "none"
+    },
+    "runtimeRunbookChecks": {
+      "cardTitle": "Runtime Runbook Checks",
+      "summary": "Focused check rollup from runtime verification history.",
+      "metricsHeading": "Key Metrics",
+      "none": "none"
+    },
+    "runtimeRunbookActionQueue": {
+      "cardTitle": "Runtime Action Queue",
+      "summary": "Prioritized runtime remediation queue.",
+      "metricsHeading": "Key Metrics",
+      "none": "none"
+    },
+    "conversationTurnCacheAlertTrend": {
+      "cardTitle": "Conversation Turn-Cache Alert Trend",
+      "summary": "Turn-cache alert trend and storage status.",
+      "metricsHeading": "Key Metrics",
+      "none": "none"
+    },
+    "tutorAction": {
+      "quizTitle": "Quiz Prompt",
+      "evidenceHeading": "Evidence",
+      "emptyEvidence": "No evidence snippets available."
+    },
+    "queryBackendDiagnostics": {
+      "rolloutModeLabel": "Rollout profile mode",
+      "accelerationProviderLabel": "Configured acceleration provider",
+      "accelerationFailureModeLabel": "Configured acceleration failure mode",
+      "accelerationRepresentationStrictLabel": "Configured acceleration representation strict mode",
+      "annPrefilterLabel": "ANN prefilter rollout"
+    }
+  }
 }

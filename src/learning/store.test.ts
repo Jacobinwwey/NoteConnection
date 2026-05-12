@@ -6,6 +6,7 @@ import {
     createGraphDbSnapshotAdapter,
     createFileGraphDbSnapshotAdapter,
     createKnowledgeGraphStore,
+    isOpsAdapter,
     normalizeGraphDbSnapshotAdapterProvider,
     normalizeGraphDbStoreOperationMode,
     normalizeKnowledgeGraphStoreBackend,
@@ -60,6 +61,48 @@ function createSnapshot(seed: string): KnowledgeGraphSnapshot {
     };
 }
 
+function createAtom(id: string, title: string, content?: string): KnowledgeGraphSnapshot['atoms'][number] {
+    return {
+        id,
+        stableKey: `${id}_stable`,
+        documentId: 'doc_ops',
+        sourcePath: '/ops/doc.md',
+        title,
+        content: content || `${title} content`,
+        representationType: 'text',
+        keywords: [title.toLowerCase()],
+        evidenceSpanIds: [],
+        createdAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+        metadata: {
+            sectionPath: ['root'],
+            version: 1,
+            sourceHash: `${id}_hash`,
+            language: 'en',
+        },
+    };
+}
+
+function createRelation(
+    id: string,
+    sourceAtomId: string,
+    targetAtomId: string,
+    relationKind: KnowledgeGraphSnapshot['relationEdges'][number]['relationKind'] = 'sequence'
+): KnowledgeGraphSnapshot['relationEdges'][number] {
+    return {
+        id,
+        sourceAtomId,
+        targetAtomId,
+        relationKind,
+        provenance: 'fact',
+        confidence: 0.95,
+        evidenceSpanIds: [],
+        temporal: {
+            validFrom: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+        },
+    };
+}
+
 function buildProbeMetadataFromSnapshot(snapshot: KnowledgeGraphSnapshot | null): {
     schemaVersion?: number;
     savedAt?: string;
@@ -110,6 +153,162 @@ async function startMockGraphDbSnapshotServer(): Promise<{
                 path: requestPath,
                 body: parsedBody,
             });
+            const nodeMatch = requestPath.match(/^\/graphdb\/ops\/node\/(.+)$/);
+            if (nodeMatch && method === 'GET') {
+                if (!persistedSnapshot) {
+                    res.statusCode = 404;
+                    res.setHeader('X-Request-Id', `graphdb-mock-${requests.length}`);
+                    res.setHeader('X-Error-Code', 'snapshot_not_found');
+                    res.end(JSON.stringify({ error: 'snapshot_not_found' }));
+                    return;
+                }
+                const rawId = decodeURIComponent(nodeMatch[1] || '').trim();
+                const node = persistedSnapshot.atoms.find((atom) => atom.id === rawId || atom.stableKey === rawId) ?? null;
+                if (!node) {
+                    res.statusCode = 404;
+                    res.setHeader('X-Request-Id', `graphdb-mock-${requests.length}`);
+                    res.setHeader('X-Error-Code', 'node_not_found');
+                    res.end(JSON.stringify({ error: 'node_not_found' }));
+                    return;
+                }
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.setHeader('X-Request-Id', `graphdb-mock-${requests.length}`);
+                res.end(JSON.stringify({ success: true, node }));
+                return;
+            }
+
+            if (requestPath === '/graphdb/ops/nodes' && method === 'POST') {
+                if (!persistedSnapshot) {
+                    res.statusCode = 404;
+                    res.setHeader('X-Request-Id', `graphdb-mock-${requests.length}`);
+                    res.setHeader('X-Error-Code', 'snapshot_not_found');
+                    res.end(JSON.stringify({ error: 'snapshot_not_found' }));
+                    return;
+                }
+                const filter = (
+                    parsedBody
+                    && typeof parsedBody === 'object'
+                    && !Array.isArray(parsedBody)
+                    && (parsedBody as any).filter
+                    && typeof (parsedBody as any).filter === 'object'
+                ) ? (parsedBody as any).filter : {};
+                let nodes = persistedSnapshot.atoms;
+                if (Array.isArray(filter.nodeIds) && filter.nodeIds.length > 0) {
+                    const idSet = new Set(filter.nodeIds.map((item: unknown) => String(item || '')));
+                    nodes = nodes.filter((atom) => idSet.has(atom.id) || idSet.has(atom.stableKey ?? ''));
+                }
+                if (String(filter.stableKey || '').trim()) {
+                    nodes = nodes.filter((atom) => atom.stableKey === String(filter.stableKey));
+                }
+                if (Number.isFinite(Number(filter.limit)) && Number(filter.limit) > 0) {
+                    nodes = nodes.slice(0, Math.max(1, Math.floor(Number(filter.limit))));
+                }
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.setHeader('X-Request-Id', `graphdb-mock-${requests.length}`);
+                res.end(JSON.stringify({ success: true, nodes }));
+                return;
+            }
+
+            if (requestPath === '/graphdb/ops/edges' && method === 'POST') {
+                if (!persistedSnapshot) {
+                    res.statusCode = 404;
+                    res.setHeader('X-Request-Id', `graphdb-mock-${requests.length}`);
+                    res.setHeader('X-Error-Code', 'snapshot_not_found');
+                    res.end(JSON.stringify({ error: 'snapshot_not_found' }));
+                    return;
+                }
+                const filter = (
+                    parsedBody
+                    && typeof parsedBody === 'object'
+                    && !Array.isArray(parsedBody)
+                    && (parsedBody as any).filter
+                    && typeof (parsedBody as any).filter === 'object'
+                ) ? (parsedBody as any).filter : {};
+                let edges = persistedSnapshot.relationEdges;
+                if (String(filter.fromNodeId || '').trim()) {
+                    edges = edges.filter((edge) => edge.sourceAtomId === String(filter.fromNodeId));
+                }
+                if (String(filter.toNodeId || '').trim()) {
+                    edges = edges.filter((edge) => edge.targetAtomId === String(filter.toNodeId));
+                }
+                if (String(filter.relationKind || '').trim()) {
+                    edges = edges.filter((edge) => edge.relationKind === String(filter.relationKind));
+                }
+                if (Number.isFinite(Number(filter.limit)) && Number(filter.limit) > 0) {
+                    edges = edges.slice(0, Math.max(1, Math.floor(Number(filter.limit))));
+                }
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.setHeader('X-Request-Id', `graphdb-mock-${requests.length}`);
+                res.end(JSON.stringify({ success: true, edges }));
+                return;
+            }
+
+            if (requestPath === '/graphdb/ops/path' && method === 'POST') {
+                if (!persistedSnapshot) {
+                    res.statusCode = 404;
+                    res.setHeader('X-Request-Id', `graphdb-mock-${requests.length}`);
+                    res.setHeader('X-Error-Code', 'snapshot_not_found');
+                    res.end(JSON.stringify({ error: 'snapshot_not_found' }));
+                    return;
+                }
+                const sourceId = String((parsedBody as any)?.sourceId || '').trim();
+                const targetId = String((parsedBody as any)?.targetId || '').trim();
+                const maxDepth = Number.isFinite(Number((parsedBody as any)?.maxDepth))
+                    ? Math.max(1, Math.floor(Number((parsedBody as any)?.maxDepth)))
+                    : 10;
+                const adjacency = new Map<string, Array<{ to: string; relation?: string }>>();
+                for (const edge of persistedSnapshot.relationEdges) {
+                    if (!adjacency.has(edge.sourceAtomId)) adjacency.set(edge.sourceAtomId, []);
+                    adjacency.get(edge.sourceAtomId)!.push({
+                        to: edge.targetAtomId,
+                        relation: edge.relationKind,
+                    });
+                }
+                const visited = new Set<string>();
+                const queue: Array<{ nodeId: string; path: string[]; edges: Array<{ from: string; to: string; relation?: string }> }> = [
+                    { nodeId: sourceId, path: [sourceId], edges: [] },
+                ];
+                visited.add(sourceId);
+                let pathResult = { path: [], length: 0, edges: [], found: false } as {
+                    path: string[];
+                    length: number;
+                    edges: Array<{ from: string; to: string; relation?: string }>;
+                    found: boolean;
+                };
+                while (queue.length > 0) {
+                    const current = queue.shift()!;
+                    if (current.path.length > maxDepth) continue;
+                    if (current.nodeId === targetId) {
+                        pathResult = {
+                            path: current.path,
+                            length: current.path.length - 1,
+                            edges: current.edges,
+                            found: true,
+                        };
+                        break;
+                    }
+                    const neighbors = adjacency.get(current.nodeId) ?? [];
+                    for (const neighbor of neighbors) {
+                        if (!visited.has(neighbor.to)) {
+                            visited.add(neighbor.to);
+                            queue.push({
+                                nodeId: neighbor.to,
+                                path: [...current.path, neighbor.to],
+                                edges: [...current.edges, { from: current.nodeId, to: neighbor.to, relation: neighbor.relation }],
+                            });
+                        }
+                    }
+                }
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.setHeader('X-Request-Id', `graphdb-mock-${requests.length}`);
+                res.end(JSON.stringify({ success: true, pathResult }));
+                return;
+            }
+
             if (requestPath !== '/graphdb/snapshot') {
                 res.statusCode = 404;
                 res.setHeader('X-Request-Id', `graphdb-mock-${requests.length}`);
@@ -719,8 +918,10 @@ describe('Knowledge graph store backend factory', () => {
             const diagnostics = adapter!.getDiagnostics ? adapter!.getDiagnostics() : {};
             expect(String(diagnostics.location || '')).toContain('/graphdb/snapshot');
             expect(diagnostics.exists).toBe(true);
-            expect(diagnostics.capabilityMode).toBe('snapshot_only');
-            expect(diagnostics.supportedReadOperations).toEqual(['load_snapshot']);
+            expect(diagnostics.capabilityMode).toBe('ops_capable');
+            expect(diagnostics.supportedReadOperations).toEqual(
+                expect.arrayContaining(['load_snapshot', 'get_node', 'query_nodes', 'query_edges', 'find_path'])
+            );
             expect(diagnostics.supportedWriteOperations).toEqual(['save_snapshot']);
             expect(String(diagnostics.connector?.healthStatus || '')).toBe('ready');
             expect(String(diagnostics.connector?.circuitState || '')).toBe('closed');
@@ -730,6 +931,73 @@ describe('Knowledge graph store backend factory', () => {
             expect(String(diagnostics.connector?.lastRequestId || '')).toContain('graphdb-mock-');
             expect(mockServer.requests.some((item) => item.method === 'POST' && item.path === '/graphdb/snapshot')).toBe(true);
             expect(mockServer.requests.some((item) => item.method === 'GET' && item.path === '/graphdb/snapshot')).toBe(true);
+        } finally {
+            await mockServer.close();
+        }
+    });
+
+    test('graphdb store proxies node/edge/path operations through http ops adapter when ops mode is preferred', async () => {
+        const mockServer = await startMockGraphDbSnapshotServer();
+        try {
+            const adapter = createGraphDbSnapshotAdapter({
+                provider: 'http',
+                filePath: '/tmp/unused.graphdb.v1.json',
+                adapterId: 'http-graphdb-ops-test',
+                httpEndpoint: mockServer.endpoint,
+                httpTimeoutMs: 1200,
+                httpMaxRetries: 0,
+            });
+            expect(adapter).not.toBeNull();
+
+            const store = createKnowledgeGraphStore({
+                backend: 'graphdb',
+                graphdb: { adapter },
+                graphDbFallbackEnabled: false,
+                graphDbOperationMode: 'ops_preferred',
+            });
+
+            const snapshot = createSnapshot('http_graphdb_ops_user');
+            snapshot.atoms = [
+                createAtom('atom_a', 'Alpha'),
+                createAtom('atom_b', 'Beta'),
+                createAtom('atom_c', 'Gamma'),
+            ];
+            snapshot.relationEdges = [
+                createRelation('edge_a_b', 'atom_a', 'atom_b'),
+                createRelation('edge_b_c', 'atom_b', 'atom_c'),
+            ];
+            await store.saveSnapshot(snapshot);
+
+            expect(isOpsAdapter(store)).toBe(true);
+            if (!isOpsAdapter(store)) {
+                throw new Error('Expected ops adapter interface on graphdb store.');
+            }
+            const opsStore = store;
+            const node = await opsStore.getNode('atom_b');
+            expect(node?.id).toBe('atom_b');
+
+            const nodes = await opsStore.queryNodes({ nodeIds: ['atom_c', 'missing'] });
+            expect(nodes.map((item) => item.id)).toEqual(['atom_c']);
+
+            const edges = await opsStore.queryEdges({ fromNodeId: 'atom_a' });
+            expect(edges.map((item) => item.id)).toEqual(['edge_a_b']);
+
+            const pathResult = await opsStore.findPath('atom_a', 'atom_c', 4);
+            expect(pathResult.found).toBe(true);
+            expect(pathResult.path).toEqual(['atom_a', 'atom_b', 'atom_c']);
+
+            const diagnostics = store.getDiagnostics();
+            expect(diagnostics.graphDbQueryPath).toBe('ops');
+            expect(Number(diagnostics.graphDbQueryOpsReadCount || 0)).toBeGreaterThanOrEqual(4);
+            expect(String(diagnostics.graphDbAdapterCapabilityMode || '')).toBe('ops_capable');
+            expect(diagnostics.graphDbSupportedReadOperations).toEqual(
+                expect.arrayContaining(['get_node', 'query_nodes', 'query_edges', 'find_path'])
+            );
+
+            expect(mockServer.requests.some((item) => item.path === '/graphdb/ops/node/atom_b')).toBe(true);
+            expect(mockServer.requests.some((item) => item.path === '/graphdb/ops/nodes')).toBe(true);
+            expect(mockServer.requests.some((item) => item.path === '/graphdb/ops/edges')).toBe(true);
+            expect(mockServer.requests.some((item) => item.path === '/graphdb/ops/path')).toBe(true);
         } finally {
             await mockServer.close();
         }

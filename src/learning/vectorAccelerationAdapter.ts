@@ -43,6 +43,9 @@ const EXTERNAL_HTTP_CIRCUIT_FAILURE_THRESHOLD_MAX = 20;
 const EXTERNAL_HTTP_CIRCUIT_COOLDOWN_MS_DEFAULT = 8000;
 const EXTERNAL_HTTP_CIRCUIT_COOLDOWN_MS_MIN = 100;
 const EXTERNAL_HTTP_CIRCUIT_COOLDOWN_MS_MAX = 600000;
+const EXTERNAL_HTTP_CANDIDATE_MULTIPLIER = 32;
+const EXTERNAL_HTTP_CANDIDATE_MIN_FLOOR = 64;
+const EXTERNAL_HTTP_CANDIDATE_MAX_CAP = 4096;
 const EXTERNAL_STUB_REPRESENTATION_VERSION = 'external-stub-vector-acceleration-v1';
 const EXTERNAL_STUB_EMBEDDING_MODEL_ID = 'external-stub-token-prefilter-v1';
 const EXTERNAL_HTTP_REQUEST_ID_PREFIX = 'nc-vector-accel';
@@ -60,6 +63,75 @@ function uniqueTokens(tokens: string[]): string[] {
         unique.push(normalized);
     });
     return unique;
+}
+
+function buildKnownAtomIdSet(input: LocalVectorAccelerationSelectionInput): Set<string> {
+    const knownAtomIds = new Set<string>();
+    for (const atomIds of input.tokenToAtomIds.values()) {
+        for (const atomId of atomIds) {
+            const normalized = String(atomId || '').trim();
+            if (normalized) knownAtomIds.add(normalized);
+        }
+    }
+    for (const atomIds of input.signatureBuckets.values()) {
+        for (const atomId of atomIds) {
+            const normalized = String(atomId || '').trim();
+            if (normalized) knownAtomIds.add(normalized);
+        }
+    }
+    return knownAtomIds;
+}
+
+function normalizeExternalHttpCandidateIds(
+    rawCandidateAtomIds: unknown,
+    input: LocalVectorAccelerationSelectionInput
+): {
+    candidateAtomIds: string[];
+    rejectedCount: number;
+    totalAtomsInScope: number;
+    prefilterRatio: number;
+} {
+    const knownAtomIds = buildKnownAtomIdSet(input);
+    const totalAtomsInScope = Math.max(
+        1,
+        knownAtomIds.size > 0 ? knownAtomIds.size : Math.max(0, Math.floor(Number(input.atomCount || 0)))
+    );
+
+    const rawCandidateIds = Array.isArray(rawCandidateAtomIds)
+        ? rawCandidateAtomIds
+            .map((item: unknown) => String(item || '').trim())
+            .filter(Boolean)
+        : [];
+
+    const seen = new Set<string>();
+    const normalizedCandidates: string[] = [];
+    for (const candidateId of rawCandidateIds) {
+        if (knownAtomIds.size > 0 && !knownAtomIds.has(candidateId)) {
+            continue;
+        }
+        if (seen.has(candidateId)) {
+            continue;
+        }
+        seen.add(candidateId);
+        normalizedCandidates.push(candidateId);
+    }
+
+    const maxCandidateCount = Math.max(
+        EXTERNAL_HTTP_CANDIDATE_MIN_FLOOR,
+        Math.min(
+            EXTERNAL_HTTP_CANDIDATE_MAX_CAP,
+            Math.max(1, Math.floor(Number(input.topK || 0))) * EXTERNAL_HTTP_CANDIDATE_MULTIPLIER
+        )
+    );
+    const candidateAtomIds = normalizedCandidates.slice(0, maxCandidateCount);
+    const rejectedCount = Math.max(0, rawCandidateIds.length - candidateAtomIds.length);
+    const prefilterRatio = candidateAtomIds.length / totalAtomsInScope;
+    return {
+        candidateAtomIds,
+        rejectedCount,
+        totalAtomsInScope,
+        prefilterRatio,
+    };
 }
 
 export function normalizeVectorAccelerationAdapterProvider(rawValue: unknown): VectorAccelerationAdapterProvider {
@@ -666,14 +738,24 @@ export function createVectorAccelerationAdapter(
                         representationStatus = 'unknown';
                         representationStatusReason = 'representation_metadata_unavailable';
                     }
-                    const candidateAtomIds = Array.isArray(payload?.candidateAtomIds)
-                        ? payload.candidateAtomIds
-                            .map((item: unknown) => String(item || '').trim())
-                            .filter(Boolean)
-                        : [];
+                    const candidateNormalization = normalizeExternalHttpCandidateIds(
+                        payload?.candidateAtomIds,
+                        input
+                    );
+                    const candidateAtomIds = candidateNormalization.candidateAtomIds;
+                    if (candidateNormalization.rejectedCount > 0) {
+                        const rejectedReason = `candidate_ids_out_of_scope:${candidateNormalization.rejectedCount}`;
+                        representationStatusReason = representationStatusReason
+                            ? `${representationStatusReason}|${rejectedReason}`
+                            : rejectedReason;
+                    }
                     const used = payload?.used === true
                         && normalizedMode !== 'full_scan'
                         && candidateAtomIds.length > 0;
+                    prefilterEffectivenessRatio = used ? candidateNormalization.prefilterRatio : 1;
+                    lastTotalAtomsInScope = used
+                        ? candidateNormalization.totalAtomsInScope
+                        : Math.max(1, Math.floor(Number(input.atomCount || 0)));
                     consecutiveFailures = 0;
                     circuitState = 'closed';
                     lastErrorCode = '';
@@ -694,6 +776,19 @@ export function createVectorAccelerationAdapter(
                         used,
                         candidateAtomIds: used ? candidateAtomIds : [],
                         mode: used ? normalizedMode : 'full_scan',
+                        representation: {
+                            version: representationVersion || undefined,
+                            embeddingModelId: embeddingModelId || undefined,
+                            embeddingDimension: embeddingDimension > 0 ? embeddingDimension : undefined,
+                            indexSignature: indexSignature || undefined,
+                            validated: representationStatus !== 'mismatch',
+                        },
+                        prefilterMetrics: {
+                            candidatesReturned: used ? candidateAtomIds.length : 0,
+                            totalAtomsInScope: candidateNormalization.totalAtomsInScope,
+                            prefilterRatio: used ? candidateNormalization.prefilterRatio : 1,
+                            signatureMatch: !representationMismatchReasons.includes('index_signature'),
+                        },
                     };
                 } catch (error) {
                     lastError = error;

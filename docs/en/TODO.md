@@ -2,6 +2,61 @@
 
 ## English Document
 
+### 2026-05-12 HEAD Truth Reclassification
+
+- [x] Agent-workspace browser/runtime/Tauri verification closure is real on the current branch.
+- [x] Tutor telemetry, tutor trace/provider trend diagnostics, conversation memory, and memory-policy diagnostics now have real backend implementations.
+- [ ] Reclassify Phase-1 A8 as `Partial+`: the default graph backend is still `local-file-graphdb`, so a real local graph database engine is not yet the delivered baseline.
+- [ ] Reclassify Phase-1 A9 as `Partial+`: the current ANN path is scaffolded telemetry + `external_http` boundary, not a production-backed ANN service/engine.
+- [ ] Replace placeholder-backed runtime surfaces in `src/learning/KnowledgeLearningPlatform.ts`:
+  - `compareQueryBackends`
+  - query-backend comparison history/trend
+  - staleness diagnostics/rebuild
+  - learning-quality history/trend
+  - session-plan quality evaluate/history/trend/runtime thresholds
+  - `getLearningQualityThresholds`
+  - `getQueryBackendDiagnostics`
+- [ ] Activate runtime tutor routing in server bootstrap: `tutorAdapters` catalog is configured, but no active `tutorAdapter` is injected into `executeTutorAction`.
+- [ ] Continue FR-009 evidence freshness, Linux strict Tauri host provisioning, and final Electron decommission review.
+
+### 2026-05-10 Post-Pull Open-Goal Audit
+
+After syncing the repository to the latest upstream `main` baseline, we re-audited active goal trackers.
+
+- [x] Repository sync completed on branch `feat/knowledge-mastery-foundation-phase1` (latest `origin/main` merged).
+- [x] Local pre-pull edits were preserved and re-applied (`src/learning/api.ts`, `src/learning/types.ts`).
+- [ ] FR-009 operational evidence closure is still pending (physical-device large-graph capture + freshness verification under `docs/mobile-evidence` governance).
+- [x] Final Tauri load-flow parity implementation gates are now contract-verified:
+  - [x] Existing-cache prompt strict regression confirmed (`src/source_manager.loadflow.test.ts`, `src/welcome.loadflow.test.ts`).
+  - [x] Duplicate load-execution guard across startup/reconnect confirmed (`src/source_manager.loadflow.test.ts`, `npm run verify:agent-workspace:tauri`).
+  - [x] Godot center-switch history synchronization accepted (`src/pathmode.history.contract.test.ts`).
+- [ ] Linux-host strict Tauri evidence provisioning still remains as an environment/release gate on hosts that must run `verify:agent-workspace:tauri:rust:strict` and `verify:agent-workspace:tauri:window-evidence:strict` (requires `webkit2gtk-4.1`, `javascriptcoregtk-4.1`, `libsoup-3.0`).
+- [ ] Final Electron decommission gate review remains pending.
+- [~] Phase-1 foundation hardening was previously marked closed, but HEAD now reclassifies it as `Partial+`:
+  - [x] Graph backend adapter paths do expose HTTP ops-ready semantics (node/edge/path query routes plus diagnostics telemetry).
+  - [x] ANN connector hardening does expose candidate normalization, representation telemetry, and prefilter effectiveness signals.
+  - [ ] Default runtime still needs a real graph backend beyond `local-file-graphdb`.
+  - [ ] ANN still needs a production-backed connector path beyond scaffolding.
+- [ ] Next active implementation phase is now split:
+  - [ ] finish real Phase-1 backend closure,
+  - [ ] replace placeholder-backed Phase-2 diagnostics,
+  - [ ] continue Phase-3 tutor/memory hardening in parallel.
+  - [x] Agent Workspace browser/runtime route closure now passes real strict evidence (`STRICT`, `UI_STRICT`, `UI_DYNAMIC_STRICT`) with live conversation, capability buttons, and request-card flows.
+  - [x] Current Windows host bootstrap reproducibility is engineering-ready (`npm run verify:sidecar:supply` => `offline-ready`).
+  - [ ] Remaining Phase 2 work now spans both:
+    - operational/release-class gates (`FR-009`, Linux-host strict Tauri evidence provisioning, Electron decommission review),
+    - application-layer implementation gaps (non-placeholder quality/query/session diagnostics).
+  - [x] Phase 3 implementation can start in parallel without waiting on the above host/evidence prerequisites.
+
+Reference trackers:
+
+- `docs/en/TODO.md`
+- `docs/en/task.md`
+- `docs/en/tauri_tasks.md`
+- `docs/diataxis/en/explanation/development-progress-dashboard.md`
+
+---
+
 ### Objective
 
 Turn the Git LFS migration plan into a code-backed, multi-platform build contract that can be checked against current desktop, mobile, publish, release, and docs-delivery paths.

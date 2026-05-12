@@ -1763,6 +1763,22 @@ window.pathApp = {
         }
     },
 
+    _fetchLearningQualityBaselineFromServer: async function(userId) {
+        const normalizedUserId = this._normalizeLearningWorkbenchUserId(userId);
+        try {
+            const result = await this._requestLearningApiGet('/api/knowledge/quality/baseline', {
+                userId: normalizedUserId,
+            });
+            if (!result || result.found !== true) {
+                return null;
+            }
+            return this._normalizeLearningQualitySnapshotShape(result.snapshot || null);
+        } catch (error) {
+            console.warn('[PathApp] Failed to fetch quality baseline from server:', error);
+            return null;
+        }
+    },
+
     _saveLearningQualityBaseline: function(userId, snapshot) {
         if (typeof localStorage === 'undefined') {
             return false;
@@ -1785,13 +1801,43 @@ window.pathApp = {
         }
     },
 
+    _saveLearningQualityBaselineToServer: async function(userId, snapshot) {
+        const normalizedUserId = this._normalizeLearningWorkbenchUserId(userId);
+        const normalizedSnapshot = this._normalizeLearningQualitySnapshotShape(snapshot);
+        if (!normalizedSnapshot) {
+            return false;
+        }
+        try {
+            const result = await this._requestLearningApi('/api/knowledge/quality/baseline', {
+                userId: normalizedUserId,
+                snapshot: normalizedSnapshot,
+            });
+            return Boolean(result && result.found === true);
+        } catch (error) {
+            console.warn('[PathApp] Failed to persist quality baseline to server:', error);
+            return false;
+        }
+    },
+
+    _syncLearningQualityBaselineFromServer: async function(userId) {
+        const normalizedUserId = this._normalizeLearningWorkbenchUserId(userId);
+        const serverSnapshot = await this._fetchLearningQualityBaselineFromServer(normalizedUserId);
+        if (!serverSnapshot) {
+            this.learningWorkbench.qualityBaselineSnapshot = this._loadLearningQualityBaseline(normalizedUserId);
+            return this.learningWorkbench.qualityBaselineSnapshot;
+        }
+        this.learningWorkbench.qualityBaselineSnapshot = serverSnapshot;
+        this._saveLearningQualityBaseline(normalizedUserId, serverSnapshot);
+        return serverSnapshot;
+    },
+
     evaluateLearningWorkbenchQualityGates: async function() {
         if (this.learningWorkbench.loading) {
             return;
         }
         const userId = this._normalizeLearningWorkbenchUserId(this.learningWorkbench.userId);
         const currentSnapshot = this.learningWorkbench.qualitySnapshot?.snapshot || null;
-        const baselineSnapshot = this._loadLearningQualityBaseline(userId);
+        const baselineSnapshot = await this._syncLearningQualityBaselineFromServer(userId);
         if (!currentSnapshot) {
             this._setLearningWorkbenchStatus('No current quality snapshot available. Refresh first.', true);
             return;
@@ -1805,13 +1851,29 @@ window.pathApp = {
         this._setLearningWorkbenchStatus('Evaluating learning quality gates...');
         this._renderLearningWorkbenchState();
         try {
-            const evaluation = await this._requestLearningApi('/api/knowledge/quality/evaluate', {
-                baseline: baselineSnapshot,
-                current: currentSnapshot,
-            });
+            let evaluation = null;
+            let usedLegacyFallback = false;
+            try {
+                const evaluationEnvelope = await this._requestLearningApi('/api/knowledge/quality/baseline/evaluate', {
+                    userId,
+                    current: currentSnapshot,
+                    sampledAt: this.learningWorkbench.qualitySnapshot?.sampledAt || undefined,
+                    historyWindowDays: this.learningWorkbench.qualitySnapshot?.snapshot?.historyWindowDays || undefined,
+                });
+                evaluation = evaluationEnvelope && typeof evaluationEnvelope === 'object'
+                    ? evaluationEnvelope.evaluation
+                    : null;
+            } catch (_baselineEvaluateError) {
+                evaluation = await this._requestLearningApi('/api/knowledge/quality/evaluate', {
+                    baseline: baselineSnapshot,
+                    current: currentSnapshot,
+                });
+                usedLegacyFallback = true;
+            }
             this.learningWorkbench.qualityGateEvaluation = evaluation || null;
             this._setLearningWorkbenchStatus(
-                `Quality gate evaluation finished: ${evaluation?.overallPassed === true ? 'PASS' : 'FAIL'}.`
+                `Quality gate evaluation finished: ${evaluation?.overallPassed === true ? 'PASS' : 'FAIL'}`
+                + `${usedLegacyFallback ? ' (legacy fallback route).' : '.'}`
             );
         } catch (error) {
             const message = String(error?.message || error || 'Unknown quality gate evaluation error');
@@ -1823,21 +1885,30 @@ window.pathApp = {
         }
     },
 
-    setLearningWorkbenchQualityBaselineFromCurrent: function() {
+    setLearningWorkbenchQualityBaselineFromCurrent: async function() {
         const userId = this._normalizeLearningWorkbenchUserId(this.learningWorkbench.userId);
         const snapshot = this.learningWorkbench.qualitySnapshot?.snapshot || null;
         if (!snapshot) {
             this._setLearningWorkbenchStatus('No quality snapshot available. Refresh first.', true);
             return;
         }
-        const persisted = this._saveLearningQualityBaseline(userId, snapshot);
-        if (!persisted) {
+        this.learningWorkbench.loading = true;
+        this._renderLearningWorkbenchState();
+        const persistedServer = await this._saveLearningQualityBaselineToServer(userId, snapshot);
+        const persistedLocal = this._saveLearningQualityBaseline(userId, snapshot);
+        if (!persistedServer && !persistedLocal) {
+            this.learningWorkbench.loading = false;
+            this._renderLearningWorkbenchState();
             this._setLearningWorkbenchStatus('Failed to persist quality baseline snapshot.', true);
             return;
         }
-        this.learningWorkbench.qualityBaselineSnapshot = this._loadLearningQualityBaseline(userId);
+        this.learningWorkbench.qualityBaselineSnapshot = await this._syncLearningQualityBaselineFromServer(userId);
         this.learningWorkbench.qualityGateEvaluation = null;
-        this._setLearningWorkbenchStatus('Quality baseline updated from current snapshot.');
+        this.learningWorkbench.loading = false;
+        const storageHint = persistedServer
+            ? 'server + local cache'
+            : 'local cache';
+        this._setLearningWorkbenchStatus(`Quality baseline updated from current snapshot (${storageHint}).`);
         this._renderLearningWorkbenchState();
     },
 
@@ -2070,6 +2141,44 @@ window.pathApp = {
         return body.result;
     },
 
+    _requestLearningApiGet: async function(endpoint, params = {}) {
+        const query = new URLSearchParams();
+        Object.keys(params || {}).forEach((key) => {
+            const value = params[key];
+            if (value === undefined || value === null || value === '') {
+                return;
+            }
+            query.set(key, String(value));
+        });
+        const url = query.toString()
+            ? `${endpoint}?${query.toString()}`
+            : endpoint;
+        const response = await fetch(url, {
+            method: 'GET',
+        });
+
+        let body = null;
+        try {
+            body = await response.json();
+        } catch (_error) {
+            body = null;
+        }
+
+        if (!response.ok) {
+            const message = body && body.error
+                ? body.error
+                : `Request failed (${response.status})`;
+            throw new Error(String(message));
+        }
+        if (!body || body.success !== true) {
+            const message = body && body.error
+                ? body.error
+                : `API ${url} returned an unexpected response`;
+            throw new Error(String(message));
+        }
+        return body.result;
+    },
+
     _getFocusAtomIdsForLearning: function() {
         const ids = [];
         if (typeof this.currentTargetId === 'string' && this.currentTargetId.trim()) {
@@ -2181,7 +2290,7 @@ window.pathApp = {
         }
         const userId = this._normalizeLearningWorkbenchUserId(this.learningWorkbench.userId);
         this.learningWorkbench.userId = userId;
-        this.learningWorkbench.qualityBaselineSnapshot = this._loadLearningQualityBaseline(userId);
+        this.learningWorkbench.qualityBaselineSnapshot = await this._syncLearningQualityBaselineFromServer(userId);
         this.learningWorkbench.qualityGateEvaluation = null;
         this._persistLearningWorkbenchPreferences();
         this.learningWorkbench.loading = true;
@@ -3704,7 +3813,7 @@ window.pathApp = {
 
         if (workbenchSetQualityBaselineBtn) {
             workbenchSetQualityBaselineBtn.addEventListener('click', () => {
-                this.setLearningWorkbenchQualityBaselineFromCurrent();
+                void this.setLearningWorkbenchQualityBaselineFromCurrent();
             });
         }
 
@@ -3749,6 +3858,10 @@ window.pathApp = {
                 workbenchUserIdInput.value = this.learningWorkbench.userId;
                 this._persistLearningWorkbenchPreferences();
                 this._renderLearningWorkbenchState();
+                void this._syncLearningQualityBaselineFromServer(this.learningWorkbench.userId)
+                    .then(() => {
+                        this._renderLearningWorkbenchState();
+                    });
             });
         }
 
@@ -4896,7 +5009,3 @@ window.pathApp = {
         }
     }, 500);
 })();
-
-
-
-

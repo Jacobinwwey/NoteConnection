@@ -868,6 +868,84 @@ describe('KnowledgeLearningPlatform', () => {
         expect(snapshotResult.diagnostics.historyWindowRetestRecords).toBeGreaterThanOrEqual(0);
     });
 
+    test('learning quality baseline APIs support get/set/clear lifecycle', async () => {
+        const initialBaseline = await platform.getLearningQualityBaseline({
+            userId: 'baseline_user_a',
+        });
+        expect(initialBaseline.found).toBe(false);
+        expect(initialBaseline.storedAt).toBeNull();
+        expect(initialBaseline.snapshot).toBeNull();
+
+        const setBaseline = await platform.setLearningQualityBaseline({
+            userId: 'baseline_user_a',
+            storedAt: '2026-05-10T10:00:00.000Z',
+            snapshot: {
+                retestPassRatePct: 72,
+                misconceptionRecurrenceRatePct: 18,
+                evidenceBackedSuggestionRatioPct: 90,
+                averagePathMasteryGainPct: 21,
+                randomPathMasteryGainPct: 11,
+                historyWindowDays: 14,
+                historyWindowRecords: 8,
+                historyWindowAverageMasteryDelta: 0.12,
+                historyWindowRetestPositiveDeltaRatePct: 75,
+                queryP95Ms: 120,
+            },
+        });
+        expect(setBaseline.found).toBe(true);
+        expect(setBaseline.storedAt).toBe('2026-05-10T10:00:00.000Z');
+        expect(setBaseline.snapshot?.retestPassRatePct).toBe(72);
+
+        const loadedBaseline = await platform.getLearningQualityBaseline({
+            userId: 'baseline_user_a',
+        });
+        expect(loadedBaseline.found).toBe(true);
+        expect(loadedBaseline.storedAt).toBe('2026-05-10T10:00:00.000Z');
+        expect(loadedBaseline.snapshot?.misconceptionRecurrenceRatePct).toBe(18);
+
+        const clearedBaseline = await platform.clearLearningQualityBaseline({
+            userId: 'baseline_user_a',
+        });
+        expect(clearedBaseline.found).toBe(false);
+        expect(clearedBaseline.snapshot).toBeNull();
+        expect(clearedBaseline.storedAt).toBeNull();
+    });
+
+    test('learning quality baseline evaluation uses stored baseline and current snapshot', async () => {
+        await platform.setLearningQualityBaseline({
+            userId: 'baseline_eval_user',
+            storedAt: '2026-05-10T10:00:00.000Z',
+            snapshot: {
+                retestPassRatePct: 60,
+                misconceptionRecurrenceRatePct: 40,
+                evidenceBackedSuggestionRatioPct: 70,
+                averagePathMasteryGainPct: 18,
+                randomPathMasteryGainPct: 10,
+                queryP95Ms: 250,
+            },
+        });
+
+        const result = await platform.evaluateLearningQualityAgainstBaseline({
+            userId: 'baseline_eval_user',
+            current: {
+                retestPassRatePct: 78,
+                misconceptionRecurrenceRatePct: 22,
+                evidenceBackedSuggestionRatioPct: 88,
+                averagePathMasteryGainPct: 24,
+                randomPathMasteryGainPct: 12,
+                queryP95Ms: 180,
+            },
+            sampledAt: '2026-05-11T10:00:00.000Z',
+        });
+
+        expect(result.userId).toBe('baseline_eval_user');
+        expect(result.baseline.found).toBe(true);
+        expect(result.currentSnapshot.snapshot.retestPassRatePct).toBe(78);
+        expect(result.evaluation.baseline.retestPassRatePct).toBe(60);
+        expect(result.evaluation.current.retestPassRatePct).toBe(78);
+        expect(typeof result.evaluation.overallPassed).toBe('boolean');
+    });
+
     test('ingest guardrail evaluation enforces thresholds over latest ingest and telemetry', async () => {
         await platform.ingestKnowledge({
             incremental: true,
@@ -1091,5 +1169,269 @@ describe('KnowledgeLearningPlatform', () => {
         expect(result.trace.confidence).toBeLessThan(0.65);
         expect(result.message).toContain('Low-confidence tutor output detected');
         expect(result.trace.notes.toLowerCase()).toContain('downgraded');
+    });
+
+    test('phase-3 tutor telemetry and provider trend diagnostics summarize llm traces', async () => {
+        let adapterCallCount = 0;
+        const telemetryPlatform = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(nowIso),
+            tutorAdapter: {
+                id: 'mock-cloud',
+                mode: 'cloud',
+                async execute(input) {
+                    adapterCallCount += 1;
+                    if (adapterCallCount <= 3) {
+                        return {
+                            message: `Accepted tutor answer for ${input.atom.title}`,
+                            confidence: 0.86,
+                            evidenceSpanIds: input.evidenceSpans.slice(0, 1).map((span) => span.id),
+                            adapterId: 'mock-cloud',
+                            providerName: 'cloud_llm',
+                            providerMode: 'cloud',
+                            metadata: {
+                                attemptedProviders: ['cloud_llm'],
+                                selectedProvider: 'cloud_llm',
+                            },
+                        };
+                    }
+                    return {
+                        message: `Fallback-heavy tutor answer for ${input.atom.title}`,
+                        confidence: 0.34,
+                        evidenceSpanIds: [],
+                        adapterId: 'mock-cloud',
+                        providerName: 'cloud_llm',
+                        providerMode: 'cloud',
+                        metadata: {
+                            attemptedProviders: ['cloud_llm', 'local_llm'],
+                            selectedProvider: 'cloud_llm',
+                        },
+                    };
+                },
+            },
+        });
+
+        const ingest = await telemetryPlatform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_phase3_tutor',
+                    sourcePath: 'Knowledge_Base/doc_phase3_tutor.md',
+                    language: 'en',
+                    content: '# Tutor Telemetry\nTrack provider routing, fallback, and trace quality.',
+                },
+            ],
+        });
+        const atomId = ingest.atoms[0]?.id as string;
+
+        for (let index = 0; index < 6; index += 1) {
+            nowIso = `2026-03-31T${String(8 + index).padStart(2, '0')}:00:00.000Z`;
+            await telemetryPlatform.executeTutorAction({
+                userId: 'phase3_tutor_user',
+                actionKind: 'recap',
+                atomId,
+                prompt: `phase3 tutor trace ${index + 1}`,
+            });
+        }
+
+        const catalog = await telemetryPlatform.getTutorAdapterCatalog();
+        expect(catalog.summary.totalAdapters).toBe(1);
+        expect(catalog.adapters[0]?.adapterId).toBe('mock-cloud');
+
+        const telemetry = await telemetryPlatform.getTutorAdapterTelemetry();
+        expect(telemetry.summary.totalRequests).toBe(6);
+        expect(telemetry.summary.acceptedResponses).toBe(3);
+        expect(telemetry.summary.providerFallbackResponses).toBe(3);
+        expect(telemetry.summary.averageProviderAttemptCount).toBeGreaterThan(1);
+        expect(telemetry.adapters[0]?.adapterId).toBe('mock-cloud');
+
+        const diagnostics = await telemetryPlatform.queryTutorTraceDiagnostics({
+            source: 'llm-adapter',
+            providerName: 'cloud_llm',
+            limit: 4,
+        });
+        expect(diagnostics.summary.matchedTraces).toBe(6);
+        expect(diagnostics.summary.returnedTraces).toBe(4);
+        expect(diagnostics.providerBreakdown[0]?.providerName).toBe('cloud_llm');
+        expect(diagnostics.providerBreakdown[0]?.fallbackTraces).toBe(3);
+
+        const trendDiagnostics = await telemetryPlatform.queryTutorProviderTrendDiagnostics({
+            source: 'llm-adapter',
+            limit: 4,
+            windowSize: 3,
+            minSamples: 2,
+        });
+        expect(trendDiagnostics.providers[0]?.providerName).toBe('cloud_llm');
+        expect(trendDiagnostics.providers[0]?.trendStatus).toBe('regressing');
+        expect(Number(trendDiagnostics.providers[0]?.deltas?.fallbackRatioDeltaPct || 0)).toBeGreaterThan(0);
+
+        const trendHistory = await telemetryPlatform.queryTutorProviderTrendHistory({
+            source: 'llm-adapter',
+            limit: 6,
+            windowSize: 3,
+            minSamples: 2,
+        });
+        expect(trendHistory.summary.totalProviders).toBe(1);
+        expect(trendHistory.summary.totalRecords).toBeGreaterThan(0);
+        expect(trendHistory.records[0]?.providerName).toBe('cloud_llm');
+    });
+
+    test('conversation memory lifecycle supports add search feedback list and delete', async () => {
+        const addResult = await platform.addConversationMemory({
+            userId: 'conversation_memory_user',
+            namespace: 'conversation',
+            content: 'Remember to revisit focus evidence before transfer tasks.',
+            tags: ['focus', 'evidence'],
+            source: 'manual_note',
+            confidence: 0.74,
+            now: '2026-04-02T10:00:00.000Z',
+        });
+        const memoryId = String(addResult.memory?.memoryId || '');
+        expect(addResult.added).toBe(true);
+        expect(memoryId).toContain('conv_memory_');
+
+        await platform.addConversationMemory({
+            userId: 'conversation_memory_user',
+            namespace: 'study_session',
+            content: 'Review transfer path sequencing after the recap.',
+            tags: ['transfer'],
+            now: '2026-04-02T10:05:00.000Z',
+        });
+
+        const searchResult = await platform.searchConversationMemory({
+            userId: 'conversation_memory_user',
+            namespace: 'conversation',
+            query: 'focus evidence',
+            limit: 5,
+            now: '2026-04-02T10:10:00.000Z',
+        });
+        expect(searchResult.summary.matchedResults).toBe(1);
+        expect(searchResult.message).toContain('Conversation memory recall (1/1)');
+        expect(searchResult.results[0]?.namespace).toBe('conversation');
+
+        const feedbackResult = await platform.feedbackConversationMemory({
+            userId: 'conversation_memory_user',
+            namespace: 'conversation',
+            memoryId,
+            feedback: 'correct',
+            correctedContent: 'Remember to revisit focus evidence before transfer tasks and cite the exact span.',
+            now: '2026-04-02T10:15:00.000Z',
+        });
+        expect(feedbackResult.recorded).toBe(true);
+        expect(feedbackResult.memory?.content).toContain('cite the exact span');
+        expect(Number(feedbackResult.memory?.confidence || 0)).toBeGreaterThanOrEqual(0.9);
+
+        const listResult = await platform.listConversationMemory({
+            userId: 'conversation_memory_user',
+            namespace: 'conversation',
+            limit: 5,
+            now: '2026-04-02T10:20:00.000Z',
+        });
+        expect(listResult.summary.returnedEntries).toBe(1);
+        expect(listResult.entries[0]?.memoryId).toBe(memoryId);
+
+        const deleteResult = await platform.deleteConversationMemory({
+            userId: 'conversation_memory_user',
+            namespace: 'conversation',
+            memoryId,
+            now: '2026-04-02T10:25:00.000Z',
+        });
+        expect(deleteResult.deleted).toBe(true);
+
+        const finalList = await platform.listConversationMemory({
+            userId: 'conversation_memory_user',
+            namespace: 'conversation',
+            limit: 5,
+            now: '2026-04-02T10:30:00.000Z',
+        });
+        expect(finalList.summary.returnedEntries).toBe(0);
+    });
+
+    test('memory policy diagnostics records history and improving trend snapshots', async () => {
+        await platform.applyMemoryPolicy({
+            userId: 'memory_diag_user',
+            layer: 'session',
+            operation: 'write',
+            now: '2026-04-01T00:00:00.000Z',
+            entries: [
+                {
+                    key: 'expired-entry',
+                    value: 'Old expired note',
+                    tags: ['diagnostic'],
+                    confidence: 0.2,
+                    references: [],
+                    createdAt: '2026-04-01T00:00:00.000Z',
+                    updatedAt: '2026-04-01T00:00:00.000Z',
+                    expiresAt: '2026-04-02T00:00:00.000Z',
+                },
+                {
+                    key: 'stale-entry',
+                    value: 'Still relevant but stale',
+                    tags: ['diagnostic'],
+                    confidence: 0.3,
+                    references: [],
+                    createdAt: '2026-04-01T00:00:00.000Z',
+                    updatedAt: '2026-04-01T00:00:00.000Z',
+                },
+            ],
+        });
+
+        const firstDiagnostics = await platform.queryMemoryPolicyDiagnostics({
+            now: '2026-04-03T08:00:00.000Z',
+            staleAfterHours: 12,
+            nearExpiryHours: 6,
+            lowConfidenceThreshold: 0.5,
+            sampleLimit: 5,
+        });
+        expect(firstDiagnostics.summary.expiredEntries).toBeGreaterThan(0);
+        expect(firstDiagnostics.summary.lowConfidenceEntries).toBeGreaterThan(0);
+        expect(firstDiagnostics.summary.status).toBe('risk');
+
+        await platform.applyMemoryPolicy({
+            userId: 'memory_diag_user',
+            layer: 'session',
+            operation: 'evict',
+            now: '2026-04-03T09:00:00.000Z',
+        });
+        await platform.applyMemoryPolicy({
+            userId: 'memory_diag_user',
+            layer: 'session',
+            operation: 'write',
+            now: '2026-04-03T09:00:00.000Z',
+            entries: [
+                {
+                    key: 'stale-entry',
+                    value: 'Refreshed confidence-backed note',
+                    tags: ['diagnostic'],
+                    confidence: 0.92,
+                    references: [],
+                    createdAt: '2026-04-01T00:00:00.000Z',
+                    updatedAt: '2026-04-03T09:00:00.000Z',
+                },
+            ],
+        });
+
+        const secondDiagnostics = await platform.queryMemoryPolicyDiagnostics({
+            now: '2026-04-03T09:00:00.000Z',
+            staleAfterHours: 12,
+            nearExpiryHours: 6,
+            lowConfidenceThreshold: 0.5,
+            sampleLimit: 5,
+        });
+        expect(secondDiagnostics.summary.healthScore).toBeGreaterThan(firstDiagnostics.summary.healthScore);
+        expect(secondDiagnostics.summary.expiredEntries).toBe(0);
+
+        const history = await platform.queryMemoryPolicyDiagnosticsHistory({
+            limit: 5,
+        });
+        expect(history.summary.totalRecords).toBeGreaterThanOrEqual(2);
+        expect(history.records[0]?.recordedAt).toBe('2026-04-03T09:00:00.000Z');
+
+        const trend = await platform.queryMemoryPolicyDiagnosticsTrend({
+            limit: 4,
+            windowSize: 1,
+            minSamples: 1,
+        });
+        expect(trend.status).toBe('improving');
+        expect(Number(trend.deltas.healthScoreDelta || 0)).toBeGreaterThan(0);
     });
 });

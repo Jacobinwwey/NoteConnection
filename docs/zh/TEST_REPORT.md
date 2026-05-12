@@ -1,5 +1,68 @@
 # 2026-03-22 v1.5.58 - NoteMD 集成与 Tauri 可行性全量验证
 
+> 状态同步说明（2026-05-10）：跨文档未完成目标基线统一见 [Open Goal Audit (2026-05-10)](../open_goal_audit_2026-05-10.md)。
+
+### 架构 / 阶段真实状态快照（2026-05-12）
+
+- [x] `node node_modules/jest/bin/jest.js src/agent_workspace.contract.parity.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.runtime.behavior.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
+  - 通过
+- [x] `npm run verify:agent-workspace:runtime`
+  - 通过
+- [x] `npm run verify:agent-workspace:browser`
+  - 通过
+- [x] `npm run docs:diataxis:check`
+  - 通过
+- [x] `npm run docs:site:build`
+  - 通过（仍存在既有 MkDocs nav/link warning）
+- [x] `npm run build:with-vite`
+  - 通过
+
+### 这些通过项实际证明了什么
+
+1. Phase-3 的 tutor/memory 切片已经真实落地于：
+   - tutor adapter telemetry，
+   - tutor trace/provider trend diagnostics，
+   - conversation memory lifecycle，
+   - memory-policy diagnostics/history/trend。
+2. 这些通过项**不等于** Phase-1 A8/A9 已闭环：
+   - runtime 默认 graph backend 仍是 `local-file-graphdb`；
+   - ANN 仍依赖 `external_stub` / `external_http` 脚手架边界，而不是已验证的生产级后端。
+3. 这些通过项**不等于** Phase-2 quality gate 已闭环：
+   - query compare、staleness、learning-quality、session-plan-quality 一组运行面在 `src/learning/KnowledgeLearningPlatform.ts` 中仍有 placeholder 返回。
+4. 默认 runtime tutor 执行在 `server.ts` 注入激活态 `tutorAdapter` 之前，仍是 rule-engine-first。
+
+### Phase 2 验证快照（2026-05-12）
+
+- [x] `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_STRICT=1 node scripts/verify-agent-workspace-browser.js`
+  - 通过
+- [x] `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1 node scripts/verify-agent-workspace-browser.js`
+  - 通过
+- [x] `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_DYNAMIC_STRICT=1 node scripts/verify-agent-workspace-browser.js`
+  - 通过
+- [x] `npm run verify:agent-workspace:runtime`
+  - 通过
+- [x] `npm run verify:agent-workspace:tauri`
+  - 通过
+- [x] `node node_modules/jest/bin/jest.js src/agent_workspace.contract.parity.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand --no-cache`
+  - 通过
+- [x] `node node_modules/jest/bin/jest.js src/source_manager.loadflow.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts src/godot.sidecar.bootstrap.contract.test.ts src/sidecar.supply.readiness.contract.test.ts --runInBand --no-cache`
+  - 通过
+- [x] `npm run verify:sidecar:supply`
+  - 通过（当前 Windows 宿主评级为 `offline-ready`）
+- [ ] `npm run verify:agent-workspace:tauri:rust:strict`
+  - 当前 Windows 主机上的预期宿主失败：缺少 Linux GTK/WebKit 依赖（`webkit2gtk-4.1`、`javascriptcoregtk-4.1`、`libsoup-3.0`）
+- [ ] `npm run verify:agent-workspace:tauri:window-evidence:strict`
+  - 同样因宿主依赖原因在当前 Windows 主机上预期失败
+
+### 对 Phase 2 的含义
+
+1. agent-workspace 对话、能力执行、浏览器 strict 证据、Tauri smoke、load-flow parity、History 同步与 sidecar/bootstrap readiness 已在实现层面闭环。
+2. 但 Phase 2 在应用层仍**未完全闭环**：`KnowledgeLearningPlatform.ts` 中 query compare、staleness、learning-quality、session-plan-quality 一组运行面仍有 placeholder 返回。
+3. 因此当前剩余工作既包括：
+   - 运维/发布前置条件（FR-009 真机证据、Linux 宿主 strict Tauri 依赖预装、Electron 下线审查），
+   - 也包括应用层实现缺口（非 placeholder 的 quality / session / query 诊断面）。
+4. Phase 3 可以并行推进，但不能再把当前状态表述成“Phase 1 / Phase 2 已完全闭环”。
+
 ### 测试目标
 
 验证 NoteMD 迁移切片在以下维度可工作且无回归风险：

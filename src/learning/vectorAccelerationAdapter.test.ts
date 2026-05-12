@@ -92,7 +92,7 @@ describe('vector acceleration adapter', () => {
             json: async () => ({
                 used: true,
                 mode: 'token_prefilter',
-                candidateAtomIds: ['atom_focus', 'atom_aux'],
+                candidateAtomIds: ['atom_10', 'atom_21'],
                 representationVersion: 'local-vector-representation-v1',
                 embeddingModelId: 'local-semantic-tfidf-v1',
                 embeddingDimension: 512,
@@ -123,13 +123,42 @@ describe('vector acceleration adapter', () => {
         expect(String(requestBody.indexSignature || '')).toBe('idx_sig_abc123');
         expect(selection?.used).toBe(true);
         expect(selection?.mode).toBe('token_prefilter');
-        expect(selection?.candidateAtomIds).toEqual(['atom_focus', 'atom_aux']);
+        expect(selection?.candidateAtomIds).toEqual(['atom_10', 'atom_21']);
+        expect(selection?.representation?.validated).toBe(true);
+        expect(selection?.prefilterMetrics?.candidatesReturned).toBe(2);
+        expect(Number(selection?.prefilterMetrics?.totalAtomsInScope || 0)).toBeGreaterThan(0);
         expect(adapter?.getHealth?.().status).toBe('ready');
         expect(String(adapter?.getHealth?.().lastRequestId || '')).toContain('nc-vector-accel-');
         expect(adapter?.getHealth?.().representationStatus).toBe('aligned');
         expect(adapter?.getHealth?.().representationVersion).toBe('local-vector-representation-v1');
         expect(adapter?.getHealth?.().embeddingModelId).toBe('local-semantic-tfidf-v1');
         expect(Number(adapter?.getHealth?.().embeddingDimension || 0)).toBe(512);
+    });
+
+    test('external http adapter filters out-of-scope candidate ids and keeps only valid ids', async () => {
+        const fetchMock = jest.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({
+                used: true,
+                mode: 'token_prefilter',
+                candidateAtomIds: ['atom_999', 'atom_10', 'atom_10'],
+            }),
+        });
+        globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+        const adapter = createVectorAccelerationAdapter('external_http', {
+            externalHttp: {
+                endpoint: 'http://127.0.0.1:18080',
+            },
+        });
+        const selection = await adapter?.selectCandidates(baseSelectionInput);
+
+        expect(selection?.used).toBe(true);
+        expect(selection?.candidateAtomIds).toEqual(['atom_10']);
+        expect(selection?.prefilterMetrics?.candidatesReturned).toBe(1);
+        expect(selection?.prefilterMetrics?.prefilterRatio).toBeGreaterThan(0);
+        expect(String(adapter?.getHealth?.().representationStatusReason || '')).toContain('candidate_ids_out_of_scope');
     });
 
     test('external http adapter infers representation mismatch when connector metadata drifts', async () => {
@@ -139,7 +168,7 @@ describe('vector acceleration adapter', () => {
             json: async () => ({
                 used: true,
                 mode: 'token_prefilter',
-                candidateAtomIds: ['atom_focus'],
+                candidateAtomIds: ['atom_10'],
                 representationVersion: 'remote-vector-representation-v2',
                 embeddingModelId: 'local-semantic-tfidf-v1',
                 embeddingDimension: 512,
@@ -193,7 +222,7 @@ describe('vector acceleration adapter', () => {
                 json: async () => ({
                     used: true,
                     mode: 'token_prefilter',
-                    candidateAtomIds: ['atom_retry_success'],
+                    candidateAtomIds: ['atom_22'],
                 }),
             });
         globalThis.fetch = fetchMock as unknown as typeof fetch;
@@ -218,7 +247,7 @@ describe('vector acceleration adapter', () => {
         setTimeoutSpy.mockRestore();
         expect(fetchMock).toHaveBeenCalledTimes(2);
         expect(selection?.used).toBe(true);
-        expect(selection?.candidateAtomIds).toEqual(['atom_retry_success']);
+        expect(selection?.candidateAtomIds).toEqual(['atom_22']);
         expect(adapter?.getHealth?.().status).toBe('ready');
         expect(recordedTimeoutDelays.some((delay) => delay >= 30)).toBe(true);
         expect(String(adapter?.getHealth?.().lastRequestId || '')).toBe('connector-retry-success');
@@ -311,7 +340,7 @@ describe('vector acceleration adapter', () => {
                 json: async () => ({
                     used: true,
                     mode: 'token_prefilter',
-                    candidateAtomIds: ['atom_half_open_recovered'],
+                    candidateAtomIds: ['atom_23'],
                 }),
             });
         globalThis.fetch = fetchMock as unknown as typeof fetch;
@@ -337,7 +366,7 @@ describe('vector acceleration adapter', () => {
         const recovered = await adapter?.selectCandidates(baseSelectionInput);
         expect(fetchMock).toHaveBeenCalledTimes(2);
         expect(recovered?.used).toBe(true);
-        expect(recovered?.candidateAtomIds).toEqual(['atom_half_open_recovered']);
+        expect(recovered?.candidateAtomIds).toEqual(['atom_23']);
         expect(adapter?.getHealth?.().status).toBe('ready');
         expect(String(adapter?.getHealth?.().message || '')).toContain('circuit=closed');
     });

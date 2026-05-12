@@ -41,6 +41,7 @@ mkdocs build --config-file mkdocs.yml
 
 - 战略与路径说明：[知识彻底掌握演进路线图](./explanation/knowledge-mastery-evolution-roadmap.md)
 - 实施进度与调试链路：[开发进度看板](./explanation/development-progress-dashboard.md)
+- 跨文档未完成目标审计：[Open Goal Audit (2026-05-10)](../../open_goal_audit_2026-05-10.md)
 - 需求与方案沉淀入口：
   - [Brainstorms](../../brainstorms/index.md)
   - [Solutions](../../solutions/index.md)

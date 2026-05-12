@@ -50,23 +50,45 @@ This requires:
 - API surface is wired in `src/server.ts` and validated by `src/knowledge.api.contract.test.ts`.
 - Learning Workbench orchestration and diagnostics are integrated in `src/frontend/path_app.js`.
 
+## 2026-05-12 Head Reclassification
+
+- The branch now contains real Phase-3 tutor/memory slices, but current HEAD should not be described as "Phase-1 closed".
+- The accurate state is:
+  - Phase-1 A8 is `Partial+`: graph/store ops semantics and HTTP adapter paths exist, but the default runtime still targets `local-file-graphdb` instead of a true local graph database engine.
+  - Phase-1 A9 is `Partial+`: ANN-style prefilter, representation telemetry, and `external_http` scaffolding exist, but there is still no proven production ANN backend wired into the default delivery path.
+  - Phase-2 is still not quality-gate-complete: `learning quality`, `session plan quality`, query comparison, and staleness surfaces remain partially placeholder-backed in `KnowledgeLearningPlatform.ts`.
+  - Phase-3 is now early-operational: tutor telemetry, tutor trace/provider trends, conversation memory, and memory-policy diagnostics are real, but default runtime tutor execution is still rule-engine-first because server bootstrap does not inject an active `tutorAdapter`.
+- Active rollout focus therefore changes from "assume closure and move on" to "finish real backend closure, then promote quality/tutor gates honestly."
+
 ## Primary Structural Gaps Still Open
 
-1. Graph persistence depth:
-   - `graphdb` mode currently relies on `FileGraphDbSnapshotAdapter` in `src/learning/store.ts`.
-   - this preserves fallback reliability but does not yet deliver a true local graph database backend.
-2. Vector retrieval independence:
-   - retrieval currently uses `local_hybrid` token/semantic heuristics and `keyword_only` fallback in `src/learning/queryBackend.ts`.
-   - a standalone vector index backend is not integrated yet.
+1. Real graph backend closure:
+   - move the default graphdb path beyond `local-file-graphdb`,
+   - prove ops-preferred query semantics, fallback consistency, and persistence behavior against a real local graph engine.
+2. Real ANN connector closure:
+   - replace `external_stub` / `external_http` scaffolding status with one production-backed ANN connector path,
+   - benchmark recall/latency thresholds before calling the vector layer production-ready.
+3. Phase-2 quality gating:
+   - replace placeholder `learning quality`, `session plan quality`, query-comparison, and staleness diagnostics with live telemetry-backed implementations,
+   - promote trend diagnostics from observability to release-blocking governance only after the methods stop returning placeholders.
+4. Tutor-routing activation:
+   - wire server bootstrap to an active `tutorAdapter` / routing strategy instead of a catalog-only `tutorAdapters` list,
+   - keep rule-engine fallback explicit and measurable.
+5. Architecture pressure:
+   - continue reducing the major monoliths (`server.ts`, `KnowledgeLearningPlatform.ts`, `path_app.js`, `app.js`, `routes/knowledge.ts`) so roadmap claims and code structure stop drifting apart.
 
 ## Decision Rules for Next Iterations
 
-1. Foundation first:
-   - close graph backend and vector backend gaps before large new feature expansion.
-2. Evidence before promotion:
-   - every new ability must ship with contract wiring, runtime observability, and test evidence.
-3. Quality gates over demos:
-   - trend outputs are useful, but release decisions must be tied to threshold gate outcomes.
+1. Truth before closure:
+   - a route, card, or adapter surface is not "done" merely because the contract exists; placeholder methods and catalog-only wiring must stay classified as open work.
+2. Foundation recovery before rollout claims:
+   - finish real graphdb/ANN delivery before calling the backbone production-grade.
+3. Evidence before promotion:
+   - every new ability must ship with contract wiring, runtime observability, and fresh test evidence.
+4. Quality gates over demos:
+   - trend outputs are useful, but release decisions must be tied to non-placeholder threshold-gate outcomes.
+5. Tutor routing must be active, not only enumerable:
+   - multi-adapter tutor support is only closed after normal server runtime emits real adapter telemetry under live execution.
 
 ## Progress Tracking Entry
 

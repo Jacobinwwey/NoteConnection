@@ -7,6 +7,7 @@ Current active migration decision/status tracking is maintained in:
 
 - `TODO.md` (release gate decisions and action checklist)
 - `TEST_REPORT.md` (verification evidence and risk status)
+- `open_goal_audit_2026-05-10.md` (cross-doc unresolved-goal status snapshot)
 
 ## 中文文档
 
@@ -15,6 +16,7 @@ Current active migration decision/status tracking is maintained in:
 
 - `TODO.md`（发布闸门决策与行动清单）
 - `TEST_REPORT.md`（验证证据与风险状态）
+- `open_goal_audit_2026-05-10.md`（跨文档未完成目标状态快照）
 
 ---
 
@@ -36,9 +38,10 @@ Complete migration from Electron-primary runtime to Tauri-primary runtime while 
 - [x] PathBridge communication between backend and Godot is operational.
 - [x] Runtime path handling has been aligned for sidecar execution.
 - [x] Worker module resolution issues in sidecar runtime have been addressed.
-- [ ] Cache decision UX parity (reuse vs rebuild prompt) still needs locked regression validation.
-- [ ] Duplicate execution prevention for load flow still needs final startup-race hardening.
-- [ ] Godot history synchronization on center-switch interactions still needs final verification.
+- [x] Cache decision UX parity (reuse vs rebuild prompt) is now regression-locked by contract coverage.
+- [x] Duplicate execution prevention for load flow is now covered by startup/reconnect load-flow contract checks.
+- [x] Godot history synchronization on center-switch interactions is now covered by history contract verification.
+- [ ] Linux-host strict Tauri evidence still depends on preinstalled `webkit2gtk-4.1`, `javascriptcoregtk-4.1`, and `libsoup-3.0`; this is now a host-provisioning gate rather than an implementation gap.
 - [ ] Final Electron removal gate review remains pending.
 
 ### Remaining P1.5 Deliverables
@@ -63,9 +66,10 @@ Complete migration from Electron-primary runtime to Tauri-primary runtime while 
 - [x] 后端与 Godot 的 PathBridge 通信可运行。
 - [x] Sidecar 运行时路径处理已对齐。
 - [x] Sidecar 运行时 Worker 模块路径问题已处理。
-- [ ] 缓存选择交互（复用/重建提示）一致性仍需锁定回归验证。
-- [ ] 加载流程防重复执行仍需完成启动竞态加固。
-- [ ] Godot 中心切换交互下的 History 同步仍需最终验证。
+- [x] 缓存选择交互（复用/重建提示）一致性现已由合同回归锁定。
+- [x] 加载流程防重复执行现已由启动/重连 load-flow 合同检查覆盖。
+- [x] Godot 中心切换交互下的 History 同步现已由历史合同验证覆盖。
+- [ ] Linux 宿主 strict Tauri 证据仍依赖预装 `webkit2gtk-4.1`、`javascriptcoregtk-4.1`、`libsoup-3.0`；该项现属于宿主供给门禁，而非实现缺口。
 - [ ] Electron 下线闸门审查仍待完成。
 
 ### P1.5 余下交付

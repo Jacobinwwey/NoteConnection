@@ -162,6 +162,31 @@ async function stopRuntimeServer(child) {
 }
 
 async function verifyAgentWorkspaceRuntime(options = {}) {
+    const maxAttempts = Math.max(
+        1,
+        Number.isFinite(Number(options.maxAttempts))
+            ? Math.floor(Number(options.maxAttempts))
+            : 3
+    );
+    const retryDelayMs = Math.max(
+        250,
+        Number.isFinite(Number(options.retryDelayMs))
+            ? Math.floor(Number(options.retryDelayMs))
+            : 1000
+    );
+    const attempt = Number.isFinite(Number(options.__attempt))
+        ? Math.floor(Number(options.__attempt))
+        : 1;
+    const isRetryableRuntimeError = (error) => {
+        const text = String((error && error.stack) ? error.stack : error || '');
+        return (
+            text.includes('ECONNREFUSED')
+            || text.includes('spawn UNKNOWN')
+            || text.includes('Timed out')
+            || text.includes('Runtime verification request failed')
+        );
+    };
+
     const logger = createLogger(options.logger);
     const fixture = makeTempProject();
     const port = typeof options.port === 'number' ? options.port : await getFreePort();
@@ -281,6 +306,21 @@ async function verifyAgentWorkspaceRuntime(options = {}) {
         }
 
         return report;
+    } catch (error) {
+        if (attempt < maxAttempts && isRetryableRuntimeError(error)) {
+            await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+            return verifyAgentWorkspaceRuntime({
+                ...options,
+                __attempt: attempt + 1,
+                maxAttempts,
+                retryDelayMs,
+            });
+        }
+        const detail = String((error && error.stack) ? error.stack : error);
+        throw new Error(
+            `[agent-workspace-runtime] Runtime verification request failed:\n${detail}\n` +
+            `--- runtime logs ---\n${runtime.getLogs()}`
+        );
     } finally {
         await stopRuntimeServer(runtime.child);
         fixture.cleanup();

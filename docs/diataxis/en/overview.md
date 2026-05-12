@@ -41,6 +41,7 @@ mkdocs build --config-file mkdocs.yml
 
 - Strategy and rationale: [Knowledge Mastery Evolution Roadmap](./explanation/knowledge-mastery-evolution-roadmap.md)
 - Implementation status and runbook flow: [Development Progress Dashboard](./explanation/development-progress-dashboard.md)
+- Cross-doc unresolved-goal audit: [Open Goal Audit (2026-05-10)](../../open_goal_audit_2026-05-10.md)
 - Working requirements and execution evidence:
   - [Brainstorms](../../brainstorms/index.md)
   - [Solutions](../../solutions/index.md)

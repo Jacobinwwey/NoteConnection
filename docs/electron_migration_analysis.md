@@ -2,6 +2,8 @@
 
 ## English Document
 
+> Status sync note (2026-05-10): unresolved-goal baseline is consolidated in [Open Goal Audit (2026-05-10)](open_goal_audit_2026-05-10.md).
+
 ### Current Readiness Position
 
 The migration has reached functional parity on core runtime paths for Tauri desktop, but Electron cannot be removed immediately without controlled gating.
@@ -29,6 +31,8 @@ Electron removal should be executed only after a formal pass/fail gate:
 - Documentation and operator runbooks are updated for Tauri-only + dual Android output strategy.
 
 ## 中文文档
+
+> 状态同步说明（2026-05-10）：未完成目标统一基线见 [Open Goal Audit (2026-05-10)](open_goal_audit_2026-05-10.md)。
 
 ### 当前就绪结论
 

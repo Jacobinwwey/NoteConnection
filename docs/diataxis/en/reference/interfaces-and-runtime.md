@@ -36,6 +36,23 @@ This reference tracks canonical API/runtime contracts.
 - Contract safety net:
   - `src/knowledge.api.contract.test.ts`
 
+## Agent Workspace Verification Commands (v1.7.0+)
+
+- Runtime shell and locale checks:
+  - `npm run verify:agent-workspace:runtime`
+- Desktop/Tauri contract checks:
+  - `npm run verify:agent-workspace:tauri`
+- Browser smoke checks:
+  - `npm run verify:agent-workspace:browser`
+- Windows compatibility note:
+  - Browser smoke runs with relaxed assertions by default on Windows to avoid Playwright CLI path/argument-limit drift.
+  - Set `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_STRICT=1` to enforce strict critical availability assertions.
+  - Set `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1` to enforce deterministic UI assertions (shell text + promotion + localized fallback messages).
+  - Set `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_DYNAMIC_STRICT=1` together with `..._UI_STRICT=1` to additionally enforce dynamic conversation/request-card assertions.
+  - Dynamic strict now blocks on real browser-driven conversation + capability execution evidence: conversation, learning-path, study-session, tutor action, query-backend comparison/history/trend, learning-quality trend/history, session-plan quality trend/history, session history, runtime runbook checks/action queue, and conversation turn-cache alert trend.
+  - Modular knowledge-route parity is part of this gate: if `/api/knowledge/*` route wiring drifts from `KnowledgeLearningPlatform`, browser strict fails instead of silently falling back to synthetic snapshot data.
+  - Dynamic recovery remains as a diagnostic fallback, but missing/failed request traces are now treated as hard failures rather than non-blocking variance.
+
 ## Key Runtime Contract Points (v1.6.0)
 
 - Frontend runtime hydration invoke contracts:
@@ -331,6 +348,11 @@ This reference tracks canonical API/runtime contracts.
   - Core fields: `strategy`, `status`, `score`, `confidence`, `reason`
   - Window snapshots: `windows.recent` and `windows.previous` with `sampleCount`, `executionCoveragePct`, `averageMasteryDeltaPct`
   - Strategy deltas: `deltas.executionCoverageDeltaPct`, `deltas.averageMasteryDeltaDeltaPct`
+- Learning quality baseline management endpoints are now available:
+  - `GET /api/knowledge/quality/baseline?userId=<id>`
+  - `POST /api/knowledge/quality/baseline` (set/update baseline snapshot)
+  - `POST /api/knowledge/quality/baseline/clear` (clear baseline snapshot)
+  - `POST /api/knowledge/quality/baseline/evaluate` (evaluate current quality against stored baseline)
 - `StudySessionResponse.signals.orchestration` now includes path-strategy decision telemetry:
   - `recommendedPathStrategy`
   - `pathStrategySelectionSource=explicit_request|strategy_trend|mode_fallback`

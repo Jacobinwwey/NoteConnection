@@ -3727,6 +3727,41 @@ window.focusOnNode = function(id) {
     }
 };
 
+// Compatibility API for agent workspace graph-focus capabilities.
+// Keeps agent runtime decoupled from historical global helper names.
+window.NoteConnectionGraphView = {
+    resolveNodeById: function(nodeId) {
+        const id = String(nodeId || '').trim();
+        if (!id) {
+            return null;
+        }
+        return nodes.find((node) => node.id === id) || null;
+    },
+    openFocusModeById: function(nodeId) {
+        const node = this.resolveNodeById(nodeId);
+        if (!node) {
+            return false;
+        }
+        if (window.highlightManager && typeof window.highlightManager.unhighlight === 'function') {
+            window.highlightManager.unhighlight({ force: true });
+        }
+        const popup = document.getElementById('node-stats-popup');
+        if (popup) {
+            popup.style.display = 'none';
+        }
+        enterFocusMode(node);
+        return true;
+    },
+    getFocusNode: function() {
+        return focusNode && typeof focusNode === 'object'
+            ? focusNode
+            : null;
+    },
+    getNodeCount: function() {
+        return Array.isArray(nodes) ? nodes.length : 0;
+    },
+};
+
 
 
 // --- Query History Implementation (v0.9.77) ---

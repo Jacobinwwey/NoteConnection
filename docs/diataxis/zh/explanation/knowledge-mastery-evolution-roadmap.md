@@ -2,6 +2,16 @@
 
 本页用于说明 NoteConnection 如何从“知识可视化系统”演进为“本地优先、可验证学习成效”的学习平台。
 
+## 2026-05-12 HEAD 重新定级
+
+- 当前分支已经落入真实的 Phase-3 tutor/memory 切片，但不能继续沿用“Phase-1 已闭环”的说法。
+- 当前更准确的口径是：
+  - Phase-1 A8 为 `Partial+`：graph/store ops 语义与 HTTP adapter 路径已经存在，但默认 runtime 仍是 `local-file-graphdb`，尚非真实本地图数据库基线；
+  - Phase-1 A9 为 `Partial+`：ANN 风格 prefilter、representation telemetry 与 `external_http` 脚手架已经存在，但默认交付路径仍没有接上已验证的生产级 ANN 后端；
+  - Phase-2 仍未达到质量门禁闭环：`learning quality`、`session plan quality`、query compare、staleness 等运行面仍有 placeholder 返回；
+  - Phase-3 现已进入 `Early operational`：导师遥测、导师 trace/provider trend、conversation memory、memory-policy diagnostics 为真实实现，但默认 runtime tutor 执行尚未激活多适配器路由。
+- 因此下一轮推进不应再以“假定底座完成”为前提，而应先补齐真实 backend 闭环，再升级质量与导师门禁。
+
 ## 战略总目标
 
 路线图只围绕一个核心目标展开：
@@ -49,23 +59,42 @@
 - 服务端 API 面在 `src/server.ts`，由 `src/knowledge.api.contract.test.ts` 持续做契约覆盖。
 - Learning Workbench 在 `src/frontend/path_app.js` 集成会话、治理与调试能力。
 
+## 2026-05-10 Phase-1 收口更新
+
+- Phase-1 的 A8/A9 底座加固已完成代码落地：
+  - graphdb HTTP 适配器已具备操作级查询语义（`getNode/queryNodes/queryEdges/findPath`）并接入运行时诊断追踪。
+  - 外部 ANN 连接器加固已落地候选归一化、表示一致性遥测传递与 prefilter 有效性信号。
+- 活跃推进重心切换到 Phase 2 的效果门禁（掌握闭环 + 发散学习回路质量阈值）。
+
 ## 当前仍需优先补齐的结构缺口
 
-1. 图存储深度不足：
-   - `src/learning/store.ts` 的 `graphdb` 当前仍依赖 `FileGraphDbSnapshotAdapter`。
-   - 具备 fallback 稳定性，但尚未达到“真实本地图数据库后端”目标。
-2. 向量检索独立性不足：
-   - `src/learning/queryBackend.ts` 目前是 `local_hybrid` 与 `keyword_only` 两路。
-   - 尚未接入独立向量索引后端。
+1. 真实 graph backend 闭环：
+   - 让默认 graphdb 路径超出 `local-file-graphdb`，
+   - 针对真实本地图引擎验证 ops-preferred 查询语义、fallback 一致性与持久化行为。
+2. 真实 ANN connector 闭环：
+   - 把 `external_stub` / `external_http` 从“脚手架状态”推进到至少一条生产级 connector 路径，
+   - 在宣称向量层可用于生产前完成 recall / latency 阈值校准。
+3. Phase-2 质量门禁：
+   - 将 query compare、staleness、learning-quality、session-plan-quality 一组 placeholder 运行面替换为 live telemetry，
+   - 仅在这些方法不再返回 placeholder 之后，才把趋势输出升级为发布阻断门禁。
+4. tutor routing 激活：
+   - 把 server bootstrap 从 `tutorAdapters` catalog-only 升级为默认 runtime 激活态 `tutorAdapter` / routing strategy，
+   - 同时保留显式 rule-engine fallback。
+5. 架构压力：
+   - 持续压缩 `server.ts`、`KnowledgeLearningPlatform.ts`、`path_app.js`、`app.js`、`routes/knowledge.ts`，避免“文档说已收口、代码仍在回涨”的结构漂移。
 
 ## 后续迭代决策规则
 
-1. 先补底座再扩功能：
-   - 优先完成 graph backend 与 vector backend 缺口，再扩大高层功能面。
-2. 证据优先：
-   - 新能力必须同时给出契约接线、运行时可观测信号、测试证据。
-3. 门禁先于演示：
-   - 趋势图可用于观察，但发布决策必须绑定阈值门禁结果。
+1. 真相先于“完成”：
+   - 只要仍有 placeholder 返回或 catalog-only wiring，就不能用“已闭环”描述该能力。
+2. 先补真实底座，再做 rollout 结论：
+   - 先完成 graphdb / ANN 的真实交付，再讨论底座已经生产级。
+3. 证据优先：
+   - 新能力必须同时给出契约接线、运行时可观测信号、以及新鲜测试证据。
+4. 门禁先于演示：
+   - 趋势输出可用于观察，但发布决策必须绑定非 placeholder 的阈值门禁结果。
+5. tutor routing 必须是“已激活”，不能只做到“可枚举”：
+   - 只有默认 server runtime 在真实执行中出现 adapter telemetry，才算多适配器导师路径闭环。
 
 ## 进度跟踪入口
 

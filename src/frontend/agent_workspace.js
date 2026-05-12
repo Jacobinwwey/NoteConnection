@@ -155,6 +155,11 @@
             method: 'GET',
             defaultResultPresentation: 'learning_quality_history_card',
         },
+        evaluate_learning_quality_baseline: {
+            endpoint: '/api/knowledge/quality/baseline/evaluate',
+            method: 'POST',
+            defaultResultPresentation: 'learning_quality_baseline_evaluation_card',
+        },
         fetch_session_plan_quality_trend: {
             endpoint: '/api/knowledge/session/plan/quality/trend',
             method: 'GET',
@@ -217,6 +222,7 @@
         fetch_tutor_trace_diagnostics: resolveTutorTraceDiagnosticsRequestPayload,
         fetch_learning_quality_trend: resolveLearningQualityTrendRequestPayload,
         fetch_learning_quality_history: resolveLearningQualityHistoryRequestPayload,
+        evaluate_learning_quality_baseline: resolveLearningQualityBaselineEvaluationRequestPayload,
         fetch_session_plan_quality_trend: resolveSessionPlanQualityTrendRequestPayload,
         fetch_session_plan_quality_history: resolveSessionPlanQualityHistoryRequestPayload,
         verify_runtime_capability_runbook: resolveRuntimeCapabilityRunbookVerifyRequestPayload,
@@ -1096,6 +1102,29 @@
         };
     }
 
+    function resolveLearningQualityBaselineEvaluationRequestPayload(_item, capability) {
+        const capabilityRequest = capability && typeof capability.request === 'object'
+            ? capability.request
+            : {};
+        const requestPayload = {
+            userId: getUserId(),
+            sampledAt: typeof capabilityRequest.learningBaselineSampledAt === 'string'
+                && capabilityRequest.learningBaselineSampledAt.trim()
+                ? capabilityRequest.learningBaselineSampledAt.trim()
+                : undefined,
+            historyWindowDays: Number.isFinite(Number(capabilityRequest.learningBaselineHistoryWindowDays))
+                ? Number(capabilityRequest.learningBaselineHistoryWindowDays)
+                : undefined,
+        };
+        if (capabilityRequest.currentSnapshot && typeof capabilityRequest.currentSnapshot === 'object') {
+            requestPayload.current = capabilityRequest.currentSnapshot;
+        }
+        if (capabilityRequest.thresholds && typeof capabilityRequest.thresholds === 'object') {
+            requestPayload.thresholds = capabilityRequest.thresholds;
+        }
+        return requestPayload;
+    }
+
     function resolveSessionPlanQualityHistoryRequestPayload(_item, capability) {
         const capabilityRequest = capability && typeof capability.request === 'object'
             ? capability.request
@@ -1934,6 +1963,55 @@
         };
     }
 
+    function buildLearningQualityBaselineEvaluationCardPayload(result) {
+        const summary = result && typeof result === 'object'
+            ? result
+            : {};
+        const baseline = summary && typeof summary.baseline === 'object'
+            ? summary.baseline
+            : {};
+        const baselineSnapshot = baseline && typeof baseline.snapshot === 'object'
+            ? baseline.snapshot
+            : {};
+        const currentSnapshotEnvelope = summary && typeof summary.currentSnapshot === 'object'
+            ? summary.currentSnapshot
+            : {};
+        const currentSnapshot = currentSnapshotEnvelope && typeof currentSnapshotEnvelope.snapshot === 'object'
+            ? currentSnapshotEnvelope.snapshot
+            : {};
+        const evaluation = summary && typeof summary.evaluation === 'object'
+            ? summary.evaluation
+            : {};
+        const failedGates = Array.isArray(evaluation.gates)
+            ? evaluation.gates.filter((gate) => gate && gate.passed === false)
+            : [];
+        const firstFailedGate = failedGates.length > 0 ? failedGates[0] : null;
+        return {
+            userId: String(summary.userId || '').trim() || String(baseline.userId || '').trim(),
+            baselineFound: baseline.found === true,
+            baselineStoredAt: String(baseline.storedAt || '').trim(),
+            baselineRetestPassRatePct: Number(Number(baselineSnapshot.retestPassRatePct || 0).toFixed(2)),
+            baselineEvidenceBackedSuggestionRatioPct: Number(
+                Number(baselineSnapshot.evidenceBackedSuggestionRatioPct || 0).toFixed(2)
+            ),
+            currentSampledAt: String(currentSnapshotEnvelope.sampledAt || '').trim(),
+            currentRetestPassRatePct: Number(Number(currentSnapshot.retestPassRatePct || 0).toFixed(2)),
+            currentEvidenceBackedSuggestionRatioPct: Number(
+                Number(currentSnapshot.evidenceBackedSuggestionRatioPct || 0).toFixed(2)
+            ),
+            overallPassed: evaluation.overallPassed === true,
+            failedGateCount: failedGates.length,
+            firstFailedGateId: String(firstFailedGate && firstFailedGate.gateId || '').trim(),
+            firstFailedGateObserved: Number(
+                Number(firstFailedGate && firstFailedGate.observedValue || 0).toFixed(4)
+            ),
+            firstFailedGateThreshold: Number(
+                Number(firstFailedGate && firstFailedGate.threshold || 0).toFixed(4)
+            ),
+            evaluatedAt: String(evaluation.evaluatedAt || '').trim(),
+        };
+    }
+
     function buildSessionPlanQualityHistoryCardPayload(result) {
         const summary = result && typeof result.summary === 'object'
             ? result.summary
@@ -2494,6 +2572,10 @@
             appendMethodName: 'appendLearningQualityHistoryCard',
             unavailableErrorCode: 'learning_quality_history_card_unavailable',
         },
+        learning_quality_baseline_evaluation_card: {
+            appendMethodName: 'appendLearningQualityBaselineEvaluationCard',
+            unavailableErrorCode: 'learning_quality_baseline_evaluation_card_unavailable',
+        },
         session_plan_quality_trend_card: {
             appendMethodName: 'appendSessionPlanQualityTrendCard',
             unavailableErrorCode: 'session_plan_quality_trend_card_unavailable',
@@ -2562,6 +2644,9 @@
         },
         learning_quality_history_card: function ({ result }) {
             return buildLearningQualityHistoryCardPayload(result);
+        },
+        learning_quality_baseline_evaluation_card: function ({ result }) {
+            return buildLearningQualityBaselineEvaluationCardPayload(result);
         },
         session_plan_quality_trend_card: function ({ result }) {
             return buildSessionPlanQualityTrendCardPayload(result);

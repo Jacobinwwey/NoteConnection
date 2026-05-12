@@ -36,6 +36,23 @@
 - 契约回归护栏：
   - `src/knowledge.api.contract.test.ts`
 
+## Agent Workspace 验证命令（v1.7.0+）
+
+- 运行时壳层与本地化检查：
+  - `npm run verify:agent-workspace:runtime`
+- 桌面/Tauri 契约检查：
+  - `npm run verify:agent-workspace:tauri`
+- 浏览器冒烟检查：
+  - `npm run verify:agent-workspace:browser`
+- Windows 兼容性说明：
+  - 为规避 Playwright CLI 的路径/命令参数长度漂移，Windows 默认以兼容模式执行浏览器冒烟断言。
+  - 如需启用严格关键可用性断言，请设置 `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_STRICT=1`。
+  - 如需启用确定性 UI 严格断言（壳层文案 + promotion + 本地化 fallback），请设置 `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1`。
+  - 如需进一步强制动态会话/请求卡片级断言，请在 `..._UI_STRICT=1` 基础上设置 `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_DYNAMIC_STRICT=1`。
+  - 动态 strict 现已对真实浏览器驱动的会话与能力执行链路执行阻断式校验：conversation、learning-path、study-session、tutor action、query-backend 对比/历史/趋势、learning-quality 趋势/历史、session-plan quality 趋势/历史、session history、runtime runbook checks/action queue，以及 conversation turn-cache alert trend。
+  - modular knowledge route 与 `KnowledgeLearningPlatform` 的方法面对齐也纳入该门禁；若 `/api/knowledge/*` 路由漂移，浏览器 strict 会直接失败，而不再被合成 snapshot 静默掩盖。
+  - 动态恢复仍保留为诊断性兜底，但缺失/失败的请求 trace 现已视为硬失败，而不是非阻断波动项。
+
 ## v1.6.0 关键运行时契约点
 
 - 前端运行时能力水合 invoke 契约：
@@ -331,6 +348,11 @@
   - 核心字段：`strategy`、`status`、`score`、`confidence`、`reason`
   - 窗口快照：`windows.recent` 与 `windows.previous`，包含 `sampleCount`、`executionCoveragePct`、`averageMasteryDeltaPct`
   - 策略增量：`deltas.executionCoverageDeltaPct`、`deltas.averageMasteryDeltaDeltaPct`
+- 学习质量基线管理端点现已可用：
+  - `GET /api/knowledge/quality/baseline?userId=<id>`
+  - `POST /api/knowledge/quality/baseline`（设置/更新基线快照）
+  - `POST /api/knowledge/quality/baseline/clear`（清空基线快照）
+  - `POST /api/knowledge/quality/baseline/evaluate`（基于已存基线评估当前质量）
 - `StudySessionResponse.signals.orchestration` 新增路径策略决策遥测：
   - `recommendedPathStrategy`
   - `pathStrategySelectionSource=explicit_request|strategy_trend|mode_fallback`

@@ -9,6 +9,15 @@
 - `focus mode` 与 `学习路径` 两个 pane 可以并排共存，
 - 两个 pane 都支持各自独立提升为全屏。
 
+## 2026-05-12 现实校准说明
+
+- Agent workspace 壳层、focus/path pane 编排、browser/runtime smoke 以及 typed capability contract 都已经是真实交付。
+- 但当前仍不能把“所有 capability 都已语义闭环”等同看待：
+  - tutor telemetry / tutor trace-provider trend / conversation memory / memory-policy diagnostics 已是真实后端实现；
+  - `compareQueryBackends`、query-backend comparison history/trend、staleness diagnostics、learning-quality history/trend、session-plan-quality evaluate/history/trend/runtime thresholds 等结果面在 `KnowledgeLearningPlatform.ts` 中仍带 placeholder；
+  - `server.ts` 默认 runtime 只配置了 `tutorAdapters` catalog，并未注入激活态 `tutorAdapter`，因此正常 tutor 执行仍以 rule-engine 为主，而不是多适配器真实路由。
+- 这意味着当前 L4 主线已具备“真实宿主壳层 + 真实 capability orchestration”，但其中一部分高层诊断卡片仍处于“契约可调用、语义未闭环”的阶段。
+
 这条主线之所以成为当前优先级，是因为它能把现有学习内核、Path Mode、Godot 学习路径与前端交互收敛成一个单一可发现入口，而不是继续分散在不同工作台与按钮路径中。
 
 ## 当前分支状态
@@ -29,7 +38,7 @@
 
 仍未完成：
 
-- Tauri strict 生命周期与窗口证据链已在当前分支闭环（`verify:agent-workspace:tauri:rust:strict`、`verify:agent-workspace:tauri:window-evidence:strict`、`verify:agent-workspace:tauri:evidence:index:strict`、`verify:agent-workspace:tauri:evidence:manifest:strict` 均通过）；后续工作转为“新环境预置依赖”这一运维前提，而非实现缺口（依赖：`javascriptcoregtk-4.1`、`libsoup-3.0`、`webkit2gtk-4.1`）。
+- Tauri strict 生命周期与窗口证据链在实现层面已经闭环，但在宿主层面仍依赖 Linux/CI 预装 `javascriptcoregtk-4.1`、`libsoup-3.0`、`webkit2gtk-4.1` 才能通过 `verify:agent-workspace:tauri:rust:strict`、`verify:agent-workspace:tauri:window-evidence:strict`、`verify:agent-workspace:tauri:evidence:index:strict`、`verify:agent-workspace:tauri:evidence:manifest:strict`；当前 Windows 宿主则主要证明 non-strict tauri/runtime 行为与 load-flow parity 路径。
 - 当前 `study_session_card` / `tutor_action_card` / `session_history_card` / `query_backend_comparison_card` / `query_backend_diagnostics_card` / `query_backend_comparison_history_card` / `query_backend_comparison_trend_card` / `tutor_adapter_telemetry_card` / `tutor_trace_diagnostics_card` / `learning_quality_trend_card` / `learning_quality_history_card` / `session_plan_quality_trend_card` / `session_plan_quality_history_card` 已支持语言切换后重渲，且已统一走注册表驱动；同时已新增源码级门禁测试校验 append-kind 与注册表键集合一致（`src/agent_workspace.frontend.test.ts`）。后续新增 card kind 时，需要默认通过该门禁。
 - 可执行 contract 已具备，且不再只停留在 quiz/recap，但仍需继续吸收更广的 tutor/query/session 动作。
 

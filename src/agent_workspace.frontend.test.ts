@@ -1651,6 +1651,48 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                 }),
             };
         }
+        if (String(url).startsWith('/api/knowledge/quality/baseline/evaluate')) {
+            const payload = init && typeof init.body === 'string'
+                ? JSON.parse(init.body)
+                : {};
+            return {
+                ok: true,
+                text: async () => JSON.stringify({
+                    success: true,
+                    result: {
+                        userId: String(payload.userId || 'path_user_default'),
+                        baseline: {
+                            userId: String(payload.userId || 'path_user_default'),
+                            found: true,
+                            storedAt: '2026-04-10T00:00:00.000Z',
+                            snapshot: {
+                                retestPassRatePct: 70,
+                                evidenceBackedSuggestionRatioPct: 75,
+                            },
+                        },
+                        currentSnapshot: {
+                            sampledAt: '2026-04-12T00:00:00.000Z',
+                            snapshot: {
+                                retestPassRatePct: 74,
+                                evidenceBackedSuggestionRatioPct: 79,
+                            },
+                        },
+                        evaluation: {
+                            evaluatedAt: '2026-04-12T00:00:00.000Z',
+                            overallPassed: false,
+                            gates: [
+                                {
+                                    gateId: 'query_p95',
+                                    passed: false,
+                                    observedValue: 310,
+                                    threshold: 280,
+                                },
+                            ],
+                        },
+                    },
+                }),
+            };
+        }
         if (String(url).startsWith('/api/knowledge/session/plan/quality/trend')) {
             return {
                 ok: true,
@@ -2204,6 +2246,7 @@ describe('agent workspace learning-path integration', () => {
         expect(diagnostics.operations).toContain('fetch_query_backend_diagnostics');
         expect(diagnostics.operations).toContain('fetch_tutor_adapter_telemetry');
         expect(diagnostics.operations).toContain('fetch_tutor_trace_diagnostics');
+        expect(diagnostics.operations).toContain('evaluate_learning_quality_baseline');
         expect(diagnostics.operations).toContain('verify_runtime_capability_runbook');
         expect(diagnostics.operations).toContain('fetch_runtime_capability_runbook_history');
         expect(diagnostics.operations).toContain('fetch_runtime_capability_runbook_checks');
@@ -2218,6 +2261,7 @@ describe('agent workspace learning-path integration', () => {
         expect(diagnostics.operationTransports).toContain('fetch_query_backend_diagnostics');
         expect(diagnostics.operationTransports).toContain('fetch_tutor_adapter_telemetry');
         expect(diagnostics.operationTransports).toContain('fetch_tutor_trace_diagnostics');
+        expect(diagnostics.operationTransports).toContain('evaluate_learning_quality_baseline');
         expect(diagnostics.operationTransports).toContain('verify_runtime_capability_runbook');
         expect(diagnostics.operationTransports).toContain('fetch_runtime_capability_runbook_history');
         expect(diagnostics.operationTransports).toContain('fetch_runtime_capability_runbook_checks');
@@ -2232,6 +2276,7 @@ describe('agent workspace learning-path integration', () => {
         expect(diagnostics.operationRequestBuilders).toContain('fetch_query_backend_diagnostics');
         expect(diagnostics.operationRequestBuilders).toContain('fetch_tutor_adapter_telemetry');
         expect(diagnostics.operationRequestBuilders).toContain('fetch_tutor_trace_diagnostics');
+        expect(diagnostics.operationRequestBuilders).toContain('evaluate_learning_quality_baseline');
         expect(diagnostics.operationRequestBuilders).toContain('verify_runtime_capability_runbook');
         expect(diagnostics.operationRequestBuilders).toContain('fetch_runtime_capability_runbook_history');
         expect(diagnostics.operationRequestBuilders).toContain('fetch_runtime_capability_runbook_checks');
@@ -2302,6 +2347,7 @@ describe('agent workspace learning-path integration', () => {
         expect(diagnostics.resultPresentations).toContain('query_backend_diagnostics_card');
         expect(diagnostics.resultPresentations).toContain('tutor_adapter_telemetry_card');
         expect(diagnostics.resultPresentations).toContain('tutor_trace_diagnostics_card');
+        expect(diagnostics.resultPresentations).toContain('learning_quality_baseline_evaluation_card');
         expect(diagnostics.resultPresentations).toContain('runtime_capability_runbook_verify_card');
         expect(diagnostics.resultPresentations).toContain('runtime_capability_runbook_history_card');
         expect(diagnostics.resultPresentations).toContain('runtime_capability_runbook_checks_card');
@@ -2314,6 +2360,7 @@ describe('agent workspace learning-path integration', () => {
         expect(diagnostics.cardResultPresentations).toContain('query_backend_diagnostics_card');
         expect(diagnostics.cardResultPresentations).toContain('tutor_adapter_telemetry_card');
         expect(diagnostics.cardResultPresentations).toContain('tutor_trace_diagnostics_card');
+        expect(diagnostics.cardResultPresentations).toContain('learning_quality_baseline_evaluation_card');
         expect(diagnostics.cardResultPresentations).toContain('runtime_capability_runbook_verify_card');
         expect(diagnostics.cardResultPresentations).toContain('runtime_capability_runbook_history_card');
         expect(diagnostics.cardResultPresentations).toContain('runtime_capability_runbook_checks_card');
@@ -2324,6 +2371,7 @@ describe('agent workspace learning-path integration', () => {
         expect(diagnostics.resultPresentationPayloadBuilders).toContain('query_backend_diagnostics_card');
         expect(diagnostics.resultPresentationPayloadBuilders).toContain('tutor_adapter_telemetry_card');
         expect(diagnostics.resultPresentationPayloadBuilders).toContain('tutor_trace_diagnostics_card');
+        expect(diagnostics.resultPresentationPayloadBuilders).toContain('learning_quality_baseline_evaluation_card');
         expect(diagnostics.resultPresentationPayloadBuilders).toContain('runtime_capability_runbook_verify_card');
         expect(diagnostics.resultPresentationPayloadBuilders).toContain('runtime_capability_runbook_history_card');
         expect(diagnostics.resultPresentationPayloadBuilders).toContain('runtime_capability_runbook_checks_card');
@@ -3628,6 +3676,59 @@ describe('agent workspace learning-path integration', () => {
         const card = document.querySelector('[data-agent-workspace-card-kind="learning-quality-history"]') as HTMLElement | null;
         expect(card).not.toBeNull();
         expect(card?.textContent).toContain('Learning Quality History');
+        expect(card?.textContent).toContain('Key Metrics');
+    });
+
+    test('executes learning-quality baseline evaluation capabilities through the generic knowledge operation path', async () => {
+        const {
+            document,
+            window,
+            fetchMock,
+        } = loadAgentWorkspaceHarness();
+
+        await (window as any).NoteConnectionAgentWorkspace.executeCapability({
+            atomId: 'atom_paths',
+            title: 'Learning Paths',
+        }, {
+            capabilityId: 'cap_learning_quality_baseline_evaluation_atom_paths',
+            actionId: 'evaluate_learning_quality_baseline',
+            targetAtomId: 'atom_paths',
+            label: 'Baseline Evaluate',
+            labelKey: 'agentWorkspace.actions.learningQualityBaselineEvaluate',
+            request: {
+                learningBaselineSampledAt: '2026-04-12T00:00:00.000Z',
+                learningBaselineHistoryWindowDays: 21,
+                currentSnapshot: {
+                    retestPassRatePct: 73.5,
+                    misconceptionRecurrenceRatePct: 18.2,
+                    evidenceBackedSuggestionRatioPct: 80.1,
+                    averagePathMasteryGainPct: 15.5,
+                    randomPathMasteryGainPct: 11.2,
+                    queryP95Ms: 250,
+                },
+            },
+            execution: {
+                kind: 'knowledge_operation',
+                operationId: 'evaluate_learning_quality_baseline',
+                resultPresentation: 'learning_quality_baseline_evaluation_card',
+            },
+            failure: {
+                messageKey: 'agentWorkspace.messages.learningQualityBaselineEvaluationFailed',
+                fallbackMessage: 'Learning quality baseline evaluation failed: {error}',
+            },
+        });
+
+        const fetchCall = fetchMock?.mock.calls[0];
+        expect(String(fetchCall?.[0] || '')).toContain('/api/knowledge/quality/baseline/evaluate');
+        const requestPayload = JSON.parse(String(fetchCall?.[1]?.body || '{}'));
+        expect(String(requestPayload.userId || '')).toBe('path_user_default');
+        expect(String(requestPayload.sampledAt || '')).toBe('2026-04-12T00:00:00.000Z');
+        expect(Number(requestPayload.historyWindowDays || 0)).toBe(21);
+        expect(Number(requestPayload.current?.retestPassRatePct || 0)).toBe(73.5);
+
+        const card = document.querySelector('[data-agent-workspace-card-kind="learning-quality-baseline-evaluation"]') as HTMLElement | null;
+        expect(card).not.toBeNull();
+        expect(card?.textContent).toContain('Learning Quality Baseline Evaluation');
         expect(card?.textContent).toContain('Key Metrics');
     });
 

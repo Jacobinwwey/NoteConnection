@@ -7,6 +7,13 @@ Current active migration decision/status tracking is maintained in:
 
 - `TODO.md` (release gate decisions and action checklist)
 - `TEST_REPORT.md` (verification evidence and risk status)
+- `open_goal_audit_2026-05-10.md` (cross-doc unresolved-goal status snapshot)
+- `implementation_plan.md` (current code-vs-plan realignment order for Phase-1/2/3 work)
+
+Additional note (2026-05-12):
+
+- Tauri migration closure does not mean the knowledge-mastery backbone is closed.
+- Real graph backend completion, production ANN delivery, non-placeholder quality gates, and active tutor routing are now tracked outside this historical taskboard.
 
 ---
 
@@ -28,9 +35,10 @@ Complete migration from Electron-primary runtime to Tauri-primary runtime while 
 - [x] PathBridge communication between backend and Godot is operational.
 - [x] Runtime path handling has been aligned for sidecar execution.
 - [x] Worker module resolution issues in sidecar runtime have been addressed.
-- [ ] Cache decision UX parity (reuse vs rebuild prompt) still needs locked regression validation.
-- [ ] Duplicate execution prevention for load flow still needs final startup-race hardening.
-- [ ] Godot history synchronization on center-switch interactions still needs final verification.
+- [x] Cache decision UX parity (reuse vs rebuild prompt) is now regression-locked by contract coverage.
+- [x] Duplicate execution prevention for load flow is now covered by startup/reconnect load-flow contract checks.
+- [x] Godot history synchronization on center-switch interactions is now covered by history contract verification.
+- [ ] Linux-host strict Tauri evidence still depends on preinstalled `webkit2gtk-4.1`, `javascriptcoregtk-4.1`, and `libsoup-3.0`; this is now a host-provisioning gate rather than an implementation gap.
 - [ ] Final Electron removal gate review remains pending.
 
 ### Remaining P1.5 Deliverables

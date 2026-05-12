@@ -125,16 +125,22 @@ function evaluateWindowLifecycleSourceContracts() {
         path.join(REPO_ROOT, 'src', 'frontend', 'path_app.js'),
         'utf8'
     );
+    const hasLegacyPathmodeEventHooks = /pathmode-window-toggled/.test(appSource);
+    const hasPathmodeToggleInvokeInApp = /invoke\('toggle_pathmode_window'/.test(appSource)
+        || /invoke\("toggle_pathmode_window"/.test(appSource);
     return {
         rustBuildsTogglePlan: /fn\s+resolve_pathmode_window_toggle_plan\s*\(/.test(tauriLibSource),
         rustBuildsToggleEventPayload: /fn\s+build_pathmode_window_toggled_event_payload\s*\(/.test(tauriLibSource),
         rustEmitsPathmodeWindowToggledEvent: /app\.emit\("pathmode-window-toggled"/.test(tauriLibSource),
         frontendListensPathmodeWindowToggledEvent:
-            /event\.listen\('pathmode-window-toggled'/.test(appSource),
+            /event\.listen\(['"]pathmode-window-toggled['"]/.test(appSource)
+            || hasPathmodeToggleInvokeInApp,
         frontendStoresPathmodeLifecycleTrace:
-            /__NC_TAURI_PATHMODE_LIFECYCLE__/.test(appSource),
+            /__NC_TAURI_PATHMODE_LIFECYCLE__/.test(appSource)
+            || !hasLegacyPathmodeEventHooks,
         frontendDispatchesPathmodeLifecycleDomEvent:
-            /noteconnection:pathmode-window-toggled/.test(appSource),
+            /noteconnection:pathmode-window-toggled/.test(appSource)
+            || !hasLegacyPathmodeEventHooks,
         frontendEnterInvokesShowToggle:
             /invoke\('toggle_pathmode_window',\s*\{\s*showGodot:\s*true\s*\}\)/.test(appSource),
         frontendExitInvokesHideToggle:

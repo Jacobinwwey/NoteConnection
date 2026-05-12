@@ -18,6 +18,8 @@
 - Archived: `TODO.en.md` + `TODO.zh.md` (moved to `docs/archive/`)
 
 > Updated 2026-05-05: Route migration 91.3% complete (73 modular + 7 terminal inline). All 7 domain classes with method body migration. Vite build 430ms. 7 ES modules extracted. 15 commits.
+>
+> Updated 2026-05-10: Added cross-doc unresolved-goal baseline page `docs/open_goal_audit_2026-05-10.md` and linked it into docs-site navigation.
 
 ### Bilingual Pairs
 

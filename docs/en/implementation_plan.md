@@ -1,3 +1,54 @@
+# 2026-05-12 v1.7.0 - HEAD Realignment Implementation Plan
+
+## English Document
+
+### Objective
+
+Bring code truth, active progress docs, and next execution order back into alignment after the branch accumulated real Phase-3 slices while still carrying unfinished Phase-1 and Phase-2 requirements.
+
+### Code-vs-Plan Reality Matrix
+
+| Area | Planned Expectation | Current HEAD Reality | Status |
+|---|---|---|---|
+| Phase-1 A8 graph backend | production-grade local graph backend | ops semantics exist, but default runtime still points to `local-file-graphdb` | Partial+ |
+| Phase-1 A9 ANN connector | production-grade ANN connector | prefilter/circuit/representation telemetry exists, but delivery still stops at `external_stub` / `external_http` scaffolding | Partial+ |
+| Phase-2 quality gates | live mastery/divergence quality trend gates | learning-quality and session-plan-quality runtime surfaces remain placeholder-backed in `KnowledgeLearningPlatform.ts` | Open |
+| Phase-3 tutor + memory | tutor and memory operating layer becomes real | tutor telemetry/trace/provider trends + conversation memory + memory-policy diagnostics are now real, but runtime tutor routing is not active by default | Early operational |
+| Architecture compaction | major monoliths reduced to sustainable size | `server.ts` 15,752, `KnowledgeLearningPlatform.ts` 6,281, `path_app.js` 5,012, `app.js` 5,211, `routes/knowledge.ts` 698 | Open |
+
+### Execution Order
+
+1. P0: Truth correction and gate reclassification
+   - keep progress docs aligned with actual code status,
+   - stop treating placeholder-backed or catalog-only surfaces as closed.
+2. P1: Real graph backend closure
+   - activate a non-file-only graph backend path for the production-ready baseline,
+   - preserve fallback behavior,
+   - add adapter/fallback consistency verification.
+3. P2: Production ANN closure
+   - replace scaffold-only ANN delivery with one proven connector path,
+   - benchmark recall/latency thresholds,
+   - keep runbook telemetry and failure semantics intact.
+4. P3: Phase-2 quality gate completion
+   - replace placeholder query/staleness/learning-quality/session-plan-quality methods with live telemetry-backed implementations,
+   - wire those outputs into release-significant threshold gates.
+5. P4: Phase-3 tutor routing activation
+   - inject an active `tutorAdapter` / routing strategy into normal server runtime,
+   - keep rule-engine fallback explicit and observable.
+6. P5: Architecture pressure reduction
+   - continue splitting `routes/knowledge.ts`,
+   - keep reducing `server.ts`, `KnowledgeLearningPlatform.ts`, `path_app.js`, and `app.js`.
+
+### Acceptance Criteria
+
+1. The default graph backend is no longer `local-file-graphdb` for the production-ready path.
+2. One ANN connector path is proven beyond scaffold status and passes runbook/telemetry checks under real requests.
+3. `KnowledgeLearningPlatform.ts` no longer returns placeholders for query comparison, staleness, learning-quality, and session-plan-quality runtime surfaces.
+4. Default runtime tutor execution emits non-zero adapter telemetry under real server execution.
+5. `docs:diataxis:check`, `docs:site:build`, `build:with-vite`, and targeted agent-workspace/KLP tests pass after each milestone.
+
+---
+
 # 2026-03-10 v1.5.38 - Multi-Terminal WASM Parity Implementation Plan (Mobile Bottleneck Closure)
 
 ### Goal

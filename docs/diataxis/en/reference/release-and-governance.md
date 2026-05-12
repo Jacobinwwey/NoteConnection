@@ -62,6 +62,10 @@ This page is the governance index for release pipelines, docs delivery, and lear
 
 - Learning quality endpoints:
   - `POST /api/knowledge/quality/snapshot`
+  - `GET /api/knowledge/quality/baseline?userId=<id>`
+  - `POST /api/knowledge/quality/baseline`
+  - `POST /api/knowledge/quality/baseline/clear`
+  - `POST /api/knowledge/quality/baseline/evaluate`
   - `GET /api/knowledge/quality/history`
   - `GET /api/knowledge/quality/trend`
   - `GET /api/knowledge/quality/thresholds`

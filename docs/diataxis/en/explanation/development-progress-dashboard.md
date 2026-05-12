@@ -3,6 +3,33 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-05-10 Open-Goal Sync
+
+- This page is aligned with the repository-wide audit in [Open Goal Audit (2026-05-10)](../../../open_goal_audit_2026-05-10.md).
+- Current unresolved-goal decisions should be read from:
+  - `docs/en/TODO.md`
+  - `docs/en/task.md`
+  - `docs/en/tauri_tasks.md`
+  - `docs/en/TEST_REPORT.md`
+- Historical checklists in archive/historical docs remain traceability context and are not the canonical release gate.
+
+## 2026-05-12 HEAD Reality Recalibration
+
+- The previous "Phase-1 closure" wording is too optimistic for current HEAD and is superseded by this section.
+- What is real at HEAD:
+  - graph/store operations semantics exist in `src/learning/store.ts`, including file-backed ops and HTTP adapter paths with fallback diagnostics,
+  - ANN-style prefilter, representation telemetry, circuit health, and `external_http` connector scaffolding exist in `src/learning/queryBackend.ts` and `src/learning/vectorAccelerationAdapter.ts`,
+  - Phase-3 tutor/memory diagnostics are now materially implemented in `src/learning/KnowledgeLearningPlatform.ts` for tutor telemetry, tutor trace/provider trends, conversation memory, and memory-policy diagnostics.
+- What is not closed yet:
+  - Phase-1 A8 remains `Partial+`, because the default runtime graph backend still points to `local-file-graphdb` in `src/server.ts`, not a real local graph database engine,
+  - Phase-1 A9 remains `Partial+`, because the ANN path still stops at `external_stub` / `external_http` scaffolds plus rollout telemetry rather than a proven production ANN backend,
+  - several query/quality/session/staleness surfaces are still placeholder-backed in `src/learning/KnowledgeLearningPlatform.ts`, including `compareQueryBackends`, query-backend comparison history/trend, staleness diagnostics/rebuild, learning-quality history/trend, session-plan quality evaluate/history/trend/runtime thresholds, `getLearningQualityThresholds`, and `getQueryBackendDiagnostics`,
+  - server bootstrap currently configures a `tutorAdapters` catalog but does not inject an active `tutorAdapter`, so default runtime tutor execution is still rule-engine-first rather than multi-adapter-routed.
+- Active execution focus therefore shifts to truth-first foundation recovery:
+  - close the real graph/vector backend gaps,
+  - replace placeholder diagnostics with live telemetry-backed implementations,
+  - then promote Phase-2 / Phase-3 gates as release-significant.
+
 ## Scope
 
 - Focus area: local-first knowledge mastery platform (ingest, retrieval, learning path, tutor, memory, governance).
@@ -11,6 +38,18 @@ It tracks what is already implemented, where the hard gaps remain, and how to ve
   - contract surface (`src/learning/api.ts`, `src/learning/types.ts`)
   - route wiring (`src/server.ts`)
   - behavior tests (`src/knowledge.api.contract.test.ts` and domain tests)
+
+## 2026-05-12 Architecture Metrics
+
+| File | Current Lines | Implication |
+|---|---:|---|
+| `src/server.ts` | 15,752 | routing is modularized, but the main server monolith is still large |
+| `src/learning/KnowledgeLearningPlatform.ts` | 6,281 | KLP still carries major implementation gravity despite domain extraction |
+| `src/frontend/path_app.js` | 5,012 | path workbench/controller split is incomplete |
+| `src/frontend/app.js` | 5,211 | graph runtime still keeps a large host-side control surface |
+| `src/routes/knowledge.ts` | 698 | knowledge routes need another split before claiming route-layer compaction |
+
+Use these numbers as the current HEAD truth. Older size-reduction tables later in this page remain useful as historical traceability, but they no longer describe the current branch state exactly.
 
 ## Current Delivery Focus
 
@@ -30,6 +69,8 @@ Current branch status for this slice:
 
 - the main frontend now contains an agent workspace shell (`src/frontend/index.html`, `src/frontend/styles.css`),
 - the conversation route now returns actionable local knowledge points with typed capability descriptors, including execution / failure / UI-hint metadata for `focus`, `learning path`, tutor-side actions (`generate_quiz`, `recap`, `generate_transfer`, `generate_counterexample`, `follow_up`), query-side `compare_query_backends` / `inspect_query_backend_diagnostics` / `inspect_query_backend_comparison_history` / `inspect_query_backend_comparison_trend`, tutor diagnostics `inspect_tutor_adapter_telemetry` / `inspect_tutor_trace_diagnostics`, quality/session diagnostics (`inspect_learning_quality_trend` / `inspect_learning_quality_history` / `inspect_session_plan_quality_trend` / `inspect_session_plan_quality_history`), session-side `inspect_session_history` / `build_study_session`, and conversation-memory recall `inspect_conversation_memory` (`src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/learning/types.ts`),
+- many capability actions are now contract-wired end to end, but several result surfaces are still placeholder-backed in `KnowledgeLearningPlatform.ts` (`compareQueryBackends`, query-backend comparison history/trend, staleness diagnostics/rebuild, learning-quality history/trend, session-plan quality evaluate/history/trend/runtime thresholds, `getLearningQualityThresholds`, and `getQueryBackendDiagnostics`),
+- runtime tutor catalog metadata now exists, but the default server bootstrap still does not activate a concrete `tutorAdapter`, so tutor execution remains rule-engine-first on the normal runtime path,
 - conversation knowledge points are now typed-only (`capabilities` is the single action source), and legacy `availableActions` fallback telemetry/synthesis has been removed from both backend response shape and pane rendering (`src/learning/types.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/workspace_panes.js`, `src/agent_workspace.frontend.test.ts`, `src/knowledge.api.contract.test.ts`),
 - agent workspace capability execution dispatch now enforces explicit execution-kind handlers without legacy action fallback execution; knowledge operations are split into independent transport and request-builder registries, while result presentation is split into custom presenters plus card-presentation descriptors and payload-builder registries with fail-fast `unsupported_result_presentation*` drift semantics, and parity/frontend diagnostics now cover transport/request-builder/custom-presentation/card-presentation/payload-builder/execution-kind completeness (`src/frontend/agent_workspace.js`, `src/agent_workspace.frontend.test.ts`, `src/agent_workspace.contract.parity.test.ts`),
 - clicking `Learning Path` now mounts the existing path workspace (`path-container` + sidebars) into the docked learning-path pane instead of stopping at a text-only preview (`src/frontend/workspace_panes.js`, `src/frontend/agent_workspace.js`),
@@ -37,6 +78,7 @@ Current branch status for this slice:
 - graph-focus fullscreen now promotes the real graph workspace instead of only enlarging a metadata card (`src/frontend/workspace_panes.js`, `src/frontend/styles.css`),
 - the new agent workspace shell now has i18n coverage for static shell strings plus runtime button/empty-state messaging, existing knowledge-card actions / localized system messages now re-render on language change instead of staying in the previous locale, conversation card rerender is now centralized through a card-kind renderer registry, and a source-level parity guard now checks append-kind vs registry alignment (`src/frontend/index.html`, `src/frontend/locales/en.json`, `src/frontend/locales/zh.json`, `src/frontend/workspace_panes.js`, `src/frontend/agent_workspace.js`, `src/agent_workspace.frontend.test.ts`),
 - locale governance now includes backend-to-frontend capability label-key parity blocking: emitted conversation capability `labelKey` values must resolve to non-empty bilingual `agentWorkspace.actions.*` entries (`src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/locales/en.json`, `src/frontend/locales/zh.json`, `src/agent_workspace.locale.contract.test.ts`),
+- modular knowledge-route closure now includes live browser strict proof instead of snapshot-only recovery: conversation response wiring, capability-triggered request routes, card-title localization, and graph-focus compatibility now pass `STRICT`, `UI_STRICT`, and `UI_DYNAMIC_STRICT` against real browser/network traces (`src/routes/knowledge.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/app.js`, `src/frontend/locales/en.json`, `src/frontend/locales/zh.json`, `scripts/verify-agent-workspace-browser.js`),
 - locale governance now also blocks capability failure-message drift: emitted `failure.messageKey` values must resolve to bilingual `agentWorkspace.messages.*` entries with aligned interpolation placeholders and stable fallback placeholder sets (`src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/locales/en.json`, `src/frontend/locales/zh.json`, `src/agent_workspace.locale.contract.test.ts`),
 - backend capability descriptor contract now enforces execution completeness for `knowledge_operation` capabilities (`operationId` + `resultPresentation`) and mandatory failure metadata (`messageKey` + `fallbackMessage`) in the emitted conversation capability payload (`src/learning/KnowledgeLearningPlatform.ts`, `src/agent_workspace.contract.parity.test.ts`),
 - frontend capability execution now enforces an operation-scoped result-presentation allowlist (default + explicit overrides such as `execute_tutor_action -> tutor_action_card`) and fails fast on unsupported combinations before backend request dispatch and renderer dispatch (`src/frontend/agent_workspace.js`, `src/agent_workspace.contract.parity.test.ts`, `src/agent_workspace.frontend.test.ts`),
@@ -77,12 +119,17 @@ Current branch status for this slice:
 - M10 rollout profile operator visibility is now wired end-to-end: runtime payload now exposes `rolloutProfile` (store/vector strictness + aggregate mode), `runtime-capability-matrix` plus runbook/verify/history/history-checks/action-queue/remediation-history/replay-schedule endpoints (including remediation POST flows: `event`/`replay`/`schedule`/`tick`) now echo the same profile, and learning-workbench runtime summary now surfaces `rollout=<mode>(...)` cue; integration/contract/frontend behavior coverage is in place (`src/server.ts`, `src/notemd.server.integration.test.ts`, `src/knowledge.api.contract.test.ts`, `src/frontend/path_app.js`, `src/path_app.runtime_trace_filter.behavior.test.ts`),
 - the legacy global Path Mode entry now clears the docked pane first so full-path entry remains deterministic (`src/frontend/app.js`).
 
-## Latest Validation Snapshot (2026-04-14)
+## Latest Validation Snapshot (2026-05-12)
 
-- Passed: `npm run test:agent-workspace:contracts`, `npm run verify:agent-workspace:runtime`, `npm run verify:agent-workspace:browser`, `npm run verify:agent-workspace:tauri`, `npm test -- src/knowledge.api.contract.test.ts --runInBand`, `npm run docs:diataxis:check`, `npm run docs:site:build`.
-- Strict evidence chain is now closed end-to-end: `npm run verify:agent-workspace:tauri:rust:strict`, `npm run verify:agent-workspace:tauri:window-evidence:strict`, `npm run verify:agent-workspace:tauri:evidence:index:strict`, and `npm run verify:agent-workspace:tauri:evidence:manifest:strict` all pass.
-- Closure work executed this round: installed host dependencies (`libjavascriptcoregtk-4.1-dev`, `libsoup-3.0-dev`, `libwebkit2gtk-4.1-dev`), restored Linux sidecar binaries, added a local `godot-x86_64-unknown-linux-gnu` host stub, and fixed `src-tauri` test compile gates (enable tauri `test` feature, add listener event type annotation, and normalize `app_handle().clone()` call sites).
-- Next operational step: bake the same dependency set into clean dev/CI host baselines so first-pass strict verification remains stable.
+- Passed on the current Windows host: `npm run test:agent-workspace:contracts`, `npm run verify:agent-workspace:runtime`, `npm run verify:agent-workspace:browser`, `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_STRICT=1 node scripts/verify-agent-workspace-browser.js`, `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1 node scripts/verify-agent-workspace-browser.js`, `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_DYNAMIC_STRICT=1 node scripts/verify-agent-workspace-browser.js`, `npm run verify:agent-workspace:tauri`, `node node_modules/jest/bin/jest.js src/source_manager.loadflow.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts --runInBand --no-cache`, `npm run verify:sidecar:supply`, `npm test -- src/knowledge.api.contract.test.ts --runInBand`, `npm run docs:diataxis:check`, `npm run docs:site:build`.
+- Tauri strict evidence is implementation-closed but still host-dependent:
+  - the current Windows host proves non-strict tauri/runtime behavior and load-flow parity,
+  - Linux strict evidence commands (`verify:agent-workspace:tauri:rust:strict`, `verify:agent-workspace:tauri:window-evidence:strict`, strict evidence index/manifest) still require provisioned `webkit2gtk-4.1`, `javascriptcoregtk-4.1`, and `libsoup-3.0`.
+- Sidecar/bootstrap readiness on the current Windows host is now `offline-ready`; remaining bootstrap work is policy hardening before strict no-LFS mode, not an immediate host-readiness blocker.
+- Practical Phase boundary:
+  - interaction/runtime verification infrastructure is strong enough to continue selective Phase-3 hardening in parallel,
+  - but neither Phase-1 backend closure nor Phase-2 quality-gate closure is actually done at HEAD,
+  - remaining work is not only ops/release prerequisites; it also includes unresolved application-layer implementation gaps around real graphdb/ANN delivery, non-placeholder quality/session/query diagnostics, and active tutor routing.
 
 Operational note:
 
@@ -97,13 +144,13 @@ Operational note:
 - there is now a tauri evidence manifest renderer, `npm run verify:agent-workspace:tauri:evidence:manifest`, which emits `output/tauri/agent-workspace-evidence-index/evidence-manifest-latest.json`, validates the payload against `schemas/agent-workspace-tauri-evidence-manifest.schema.json`, and includes strict-validation diagnostics over required evidence artifacts.
 - there is now a release-note publisher, `npm run verify:agent-workspace:tauri:evidence:publish-release-notes -- --tag <release_tag>`, which upserts the latest tauri evidence fragment into the target GitHub Release body via stable begin/end markers.
 
-## Phase Snapshot (2026-04-11)
+## Phase Snapshot (Revalidated 2026-05-12)
 
 | Phase | Plan Target | Current Status | Evidence |
 |---|---|---|---|
-| Phase 1 | Knowledge parsing + graph backbone + staleness governance | Partial | `src/learning/KnowledgeLearningPlatform.ts`, `src/learning/store.ts`, `src/learning/queryBackend.ts` |
-| Phase 2 | Mastery loop + divergence engine | In progress | `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/path_app.js` |
-| Phase 3 | Pluggable tutor + memory operating layer | In progress | `src/learning/tutorAdapter.ts`, `src/learning/runtimeCapability.ts`, `src/server.ts` |
+| Phase 1 | Knowledge parsing + graph backbone + staleness governance | Partial+ | `src/learning/store.ts`, `src/learning/queryBackend.ts`, `src/learning/vectorAccelerationAdapter.ts`, `src/server.ts` |
+| Phase 2 | Mastery loop + divergence engine | Partial | `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/path_app.js` |
+| Phase 3 | Pluggable tutor + memory operating layer | Early operational | `src/learning/KnowledgeLearningPlatform.ts`, `src/learning/tutorAdapter.ts`, `src/server.ts`, `src/routes/knowledge.ts` |
 
 ## Layer-by-Layer Implementation Matrix
 
@@ -111,10 +158,10 @@ Operational note:
 |---|---|---|---|
 | L0 Representation | Parse document content into atom/evidence units | Atom, evidence, source hash and staleness rebuild are implemented (`ingestKnowledge`, staleness APIs) | Add richer formula/code normalization and stronger parser telemetry granularity |
 | L1 Structure | Build relation + temporal graph for learning reasoning | `RelationEdge` with `provenance`, `TemporalEdge` with active validity window are implemented | Improve relation quality scoring and cross-document conflict handling |
-| L2 Retrieval | Evidence-first explainable retrieval | `local_hybrid`, `keyword_only`, and `local_vector` retrieval backends with traceable retrieval mode weights are implemented, including ANN-style prefilter baseline (`ann_prefilter`) with fallback to full scan and a pluggable acceleration adapter boundary | Calibrate ANN prefilter recall/latency thresholds and replace the current external adapter scaffold (`external_stub` / `external_http`) with production ANN connectors |
-| L3 Learning | Mastery diagnostics + actionable path generation | Mastery diagnostics, misconception summaries, dual-path recommendation and session execution pipeline are implemented | Tighten measurable effect loop (pass-rate gain and recurrence reduction as strict gate) |
-| L4 Interaction | Workbench for operations + tutoring + diagnostics | Learning Workbench is wired to session, quality, runbook, trace diagnostics APIs, including configurable remediation replay controls (`replayMode`, `replayLimit`, `dryRun`, `replaySelectionPolicy`, `replayMinRiskRatioPct`) plus schedule orchestration controls (`enabled`, `intervalMinutes`, `triggerPolicy`, thresholds) with persisted workbench preferences. The current branch also ships the first host-owned agent workspace shell, docked conversation actions, embedded learning-path-pane mounting of the existing path runtime, body-level graph-workspace promotion for focus fullscreen, bilingual shell coverage, browser smoke over real backend + real graph/path runtimes with evidence artifacts, a first real app/window-handle lifecycle evidence path, an always-on CI strict desktop evidence job in `migration-gates`, strict Linux release-gate evidence checks in `release-desktop-multi-os`, an accept-negotiated SSE turn-streaming baseline on `/api/knowledge/conversation`, replay-safe turn-id idempotency/recovery semantics for interrupted streams, operator-visible turn-cache diagnostics/tuning (`/api/knowledge/conversation/turn-cache/diagnostics` + env-tunable TTL/capacity), thresholded turn-cache alert governance (summary status + policy checks + threshold profile), turn-cache alert trend/history + escalation governance (`/api/knowledge/conversation/turn-cache/diagnostics/trend` with env-tunable sampling/window/streak policies), explicit trend index/export operator actions (`inspect_conversation_turn_cache_alert_trend_index` / `inspect_conversation_turn_cache_alert_trend_export`), replay-schedule recommendation telemetry (`telemetry.recommendations`), policy-template telemetry (`telemetry.policyTemplates`), config-time template application (`policyTemplate`), auto-execution safety gates + diagnostics (`config.autoExecution`, `telemetry.autoExecution`, parity/blocker semantics), and recommendation/template-aware status rendering, and an execution-capable conversation contract spanning `focus`, `learning path`, tutor-side `generate_quiz`/`recap`/`generate_transfer`/`generate_counterexample`/`follow_up`, query-side `compare_query_backends`/`inspect_query_backend_diagnostics`/`inspect_query_backend_comparison_history`/`inspect_query_backend_comparison_trend`, tutor diagnostics `inspect_tutor_adapter_telemetry`/`inspect_tutor_trace_diagnostics`, quality/session diagnostics `inspect_learning_quality_trend`/`inspect_learning_quality_history`/`inspect_session_plan_quality_trend`/`inspect_session_plan_quality_history`, session-side `inspect_session_history`/`build_study_session`, conversation-memory recall `inspect_conversation_memory`, and turn-cache operator inspection `inspect_conversation_turn_cache_diagnostics` / `inspect_conversation_turn_cache_alert_trend`, with structured `conversation_turn_cache_diagnostics_card`/`conversation_turn_cache_alert_trend_card`/`query_backend_comparison_card`/`query_backend_diagnostics_card`/`query_backend_comparison_history_card`/`query_backend_comparison_trend_card`/`tutor_adapter_telemetry_card`/`tutor_trace_diagnostics_card`/`learning_quality_trend_card`/`learning_quality_history_card`/`session_plan_quality_trend_card`/`session_plan_quality_history_card`/`session_history_card`/`study_session_card`/`tutor_action_card`/`assistant_message` result presentations. This interaction contract is now typed-only (`capabilities`) across backend and frontend, with legacy `availableActions` fallback removed. | Keep strict evidence artifact governance healthy, calibrate auto-execution recommendation/template quality under canary policy windows, and shift active implementation energy to Phase 1 foundation hardening (real graph backend adapter + production ANN connector rollout). |
-| L5 Governance | Runtime checks, trend gates, remediation loop | Runtime capability matrix + runbook + remediation event pipeline are implemented, including `query_backend_runtime_health`, `query_vector_index_*`, `store_graphdb_connector_health`, and `query_vector_acceleration_mode`/`query_vector_acceleration_health`/`query_vector_acceleration_prefilter_effectiveness`/`query_vector_acceleration_traceability`/`query_vector_acceleration_circuit_state` checks; circuit-state governance is now threshold-driven (short-circuit count/ratio, consecutive failures, half-open success rate), while prefilter-effectiveness governance detects persistent ANN fallback to `full_scan` under representative traffic | Harden threshold calibration and incident replay automation |
+| L2 Retrieval | Evidence-first explainable retrieval | `local_hybrid`, `keyword_only`, and `local_vector` retrieval backends exist with ANN-style prefilter, fallback telemetry, and external HTTP acceleration scaffolding | Close the real backend gap: default graphdb still resolves to `local-file-graphdb`, and ANN still needs a production connector plus benchmarked rollout thresholds |
+| L3 Learning | Mastery diagnostics + actionable path generation | Mastery diagnostics, misconception summaries, dual-path recommendation, and session execution primitives are implemented | Replace placeholder `learning quality` / `session plan quality` history-trend-evaluation surfaces with real telemetry-backed implementations before claiming Phase-2 gate closure |
+| L4 Interaction | Workbench for operations + tutoring + diagnostics | The agent workspace shell, focus/path panes, typed capability contract, runtime/browser smoke, and turn-cache operator surfaces are real | Keep the shell/runtime evidence healthy, but stop treating every card as feature-complete while query comparison, staleness, quality, and session-quality cards still depend on placeholder backend methods |
+| L5 Governance | Runtime checks, trend gates, remediation loop | Runtime capability matrix, connector/circuit telemetry, and remediation plumbing are real | Remove placeholder-fed governance inputs from release claims, and tie promotion decisions to non-empty live thresholds and adapter-backed telemetry |
 
 ## Architecture Refactoring Status (2026-05-05, FINAL)
 

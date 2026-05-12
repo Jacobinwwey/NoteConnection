@@ -17,6 +17,8 @@ This page indexes repository solution notes that capture durable implementation 
   在功能扩展或重构工作中以方案文档作为实施参考。
 - Refresh or supersede outdated solution notes when code behavior changes.
   当代码行为发生变化时，更新或废弃过时的方案笔记。
+- Use [Open Goal Audit (2026-05-10)](../open_goal_audit_2026-05-10.md) to align unresolved-goal status across tracker docs and docs-site pages.
+  用 [Open Goal Audit (2026-05-10)](../open_goal_audit_2026-05-10.md) 对齐看板文档与文档站点页面中的未完成目标状态。
 - Use progress dashboards to map solution notes to active implementation status:
   通过进度看板将方案笔记映射到活跃实施状态：
   - [EN Development Progress Dashboard](../diataxis/en/explanation/development-progress-dashboard.md)
