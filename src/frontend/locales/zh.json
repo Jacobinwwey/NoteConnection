@@ -459,6 +459,10 @@
       "metricsHeading": "关键指标",
       "none": "无"
     },
+    "runtimeRunbookVerify": {
+      "annIndexSyncLabel": "ANN 同步健康度",
+      "annIndexSyncCountsLabel": "ANN 同步计数"
+    },
     "runtimeRunbookActionQueue": {
       "cardTitle": "运行时动作队列",
       "summary": "优先级排序后的运行时修复队列。",

@@ -1532,6 +1532,10 @@
             : translate('agentWorkspace.runtimeRunbookVerify.autoFocusNotApplied', 'not applied');
         const firstEscalationAction = String(summary.firstEscalationAction || '').trim()
             || translate('agentWorkspace.runtimeRunbookVerify.none', 'none');
+        const annIndexSyncStatus = String(summary.annIndexSyncStatus || '').trim()
+            || translate('agentWorkspace.runtimeRunbookVerify.none', 'none');
+        const annIndexLastSyncAt = String(summary.annIndexLastSyncAt || '').trim()
+            || translate('agentWorkspace.runtimeRunbookVerify.none', 'none');
         const metrics = [
             {
                 title: translate('agentWorkspace.runtimeRunbookVerify.topRiskLabel', 'Top risk check'),
@@ -1564,6 +1568,14 @@
             {
                 title: translate('agentWorkspace.runtimeRunbookVerify.firstEscalationActionLabel', 'Top escalation action'),
                 value: firstEscalationAction,
+            },
+            {
+                title: translate('agentWorkspace.runtimeRunbookVerify.annIndexSyncLabel', 'ANN sync health'),
+                value: `${annIndexSyncStatus} (${String(summary.annIndexSyncMessage || '').trim() || translate('agentWorkspace.runtimeRunbookVerify.none', 'none')})`,
+            },
+            {
+                title: translate('agentWorkspace.runtimeRunbookVerify.annIndexSyncCountsLabel', 'ANN sync counts'),
+                value: `${String(summary.annIndexSyncRequestCount == null ? 0 : summary.annIndexSyncRequestCount)}/${String(summary.annIndexSyncSuccessCount == null ? 0 : summary.annIndexSyncSuccessCount)}/${String(summary.annIndexSyncFailureCount == null ? 0 : summary.annIndexSyncFailureCount)} | atoms ${String(summary.annIndexSyncedAtomCount == null ? 0 : summary.annIndexSyncedAtomCount)} | ${annIndexLastSyncAt}`,
             },
         ];
         const metricsHtml = metrics.map((metric) => `

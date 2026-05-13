@@ -258,6 +258,8 @@ function createI18nStub() {
             'agentWorkspace.runtimeRunbookVerify.remediationRiskRatioLabel': 'Remediation risk ratio',
             'agentWorkspace.runtimeRunbookVerify.autoFocusLabel': 'Auto focus',
             'agentWorkspace.runtimeRunbookVerify.firstEscalationActionLabel': 'Top escalation action',
+            'agentWorkspace.runtimeRunbookVerify.annIndexSyncLabel': 'ANN sync health',
+            'agentWorkspace.runtimeRunbookVerify.annIndexSyncCountsLabel': 'ANN sync counts',
             'agentWorkspace.runtimeRunbookVerify.autoFocusApplied': 'applied ({reason})',
             'agentWorkspace.runtimeRunbookVerify.autoFocusNotApplied': 'not applied',
             'agentWorkspace.runtimeRunbookVerify.none': 'none',
@@ -552,6 +554,8 @@ function createI18nStub() {
             'agentWorkspace.runtimeRunbookVerify.remediationRiskRatioLabel': '修复风险比率',
             'agentWorkspace.runtimeRunbookVerify.autoFocusLabel': '自动聚焦',
             'agentWorkspace.runtimeRunbookVerify.firstEscalationActionLabel': '首要升级动作',
+            'agentWorkspace.runtimeRunbookVerify.annIndexSyncLabel': 'ANN 同步健康度',
+            'agentWorkspace.runtimeRunbookVerify.annIndexSyncCountsLabel': 'ANN 同步计数',
             'agentWorkspace.runtimeRunbookVerify.autoFocusApplied': '已应用（{reason}）',
             'agentWorkspace.runtimeRunbookVerify.autoFocusNotApplied': '未应用',
             'agentWorkspace.runtimeRunbookVerify.none': '无',
@@ -1820,6 +1824,16 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                         selectedCheckRemediation: {
                             checkId: 'tutor_routing_dynamic_mode_alignment',
                             riskRatioPct: 41.67,
+                        },
+                        queryVectorAccelerationIndexSyncHealth: {
+                            checkId: 'query_vector_acceleration_index_sync_health',
+                            indexSyncStatus: 'ready',
+                            indexSyncMessage: 'external_http_index_synced:idx_sync_ok:atoms=128',
+                            syncRequestCount: 3,
+                            syncSuccessCount: 3,
+                            syncFailureCount: 0,
+                            syncedAtomCount: 128,
+                            lastSyncAt: '2026-04-12T00:00:00.000Z',
                         },
                         selectedCheckEscalation: 'watch',
                         selectedCheckEscalationActions: [
@@ -3821,6 +3835,8 @@ describe('agent workspace learning-path integration', () => {
         expect(card).not.toBeNull();
         expect(card?.textContent).toContain('Runtime Runbook Verify');
         expect(card?.textContent).toContain('Top risk check');
+        expect(card?.textContent).toContain('ANN sync health');
+        expect(card?.textContent).toContain('ready');
     });
 
     test('executes runtime runbook history capabilities through the generic knowledge operation path', async () => {

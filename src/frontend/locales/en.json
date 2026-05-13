@@ -459,6 +459,10 @@
       "metricsHeading": "Key Metrics",
       "none": "none"
     },
+    "runtimeRunbookVerify": {
+      "annIndexSyncLabel": "ANN sync health",
+      "annIndexSyncCountsLabel": "ANN sync counts"
+    },
     "runtimeRunbookActionQueue": {
       "cardTitle": "Runtime Action Queue",
       "summary": "Prioritized runtime remediation queue.",

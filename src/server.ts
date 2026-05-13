@@ -3474,6 +3474,7 @@ async function replayRuntimeRunbookVerificationForCheck(input: {
         trendStatus: RuntimeRunbookRemediationEventTrendStatus;
         riskRatioPct: number;
     };
+    queryVectorAccelerationIndexSyncHealth: RuntimeRunbookVectorAccelerationIndexSyncHealthSummary | null;
     verificationTargets: string[];
     traceSummary: {
         returnedRecords: number;
@@ -3579,6 +3580,9 @@ async function replayRuntimeRunbookVerificationForCheck(input: {
         source: '',
         limit: 200,
     });
+    const queryVectorAccelerationIndexSyncHealth = buildRuntimeRunbookVectorAccelerationIndexSyncHealthSummary(
+        runtimePayload.runtimeCapabilityMatrix
+    );
     return {
         replayedAt: generatedAt,
         requestedCheckId,
@@ -3609,6 +3613,9 @@ async function replayRuntimeRunbookVerificationForCheck(input: {
             trendStatus: selectedCheckRemediation.trendStatus,
             riskRatioPct: Number(Number(selectedCheckRemediation.riskRatioPct || 0).toFixed(4)),
         },
+        queryVectorAccelerationIndexSyncHealth: resolvedCheckId === 'query_vector_acceleration_index_sync_health'
+            ? queryVectorAccelerationIndexSyncHealth
+            : null,
         verificationTargets: Array.isArray(runbook.verificationTargets)
             ? runbook.verificationTargets
                 .map((item) => String(item || '').replace(/\s+/g, ' ').trim())

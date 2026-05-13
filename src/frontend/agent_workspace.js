@@ -2054,6 +2054,9 @@
         const selectedCheckRemediation = result && typeof result.selectedCheckRemediation === 'object'
             ? result.selectedCheckRemediation
             : {};
+        const indexSyncHealth = result && typeof result.queryVectorAccelerationIndexSyncHealth === 'object'
+            ? result.queryVectorAccelerationIndexSyncHealth
+            : {};
         const escalationActions = Array.isArray(result && result.selectedCheckEscalationActions)
             ? result.selectedCheckEscalationActions
                 .map((item) => String(item || '').trim())
@@ -2100,6 +2103,21 @@
                 : 0,
             historyTrendStatus: String(selectedCheckHistory.trendStatus || '').trim() || 'insufficient_data',
             remediationRiskRatioPct: Number(Number(selectedCheckRemediation.riskRatioPct || 0).toFixed(4)),
+            annIndexSyncStatus: String(indexSyncHealth.indexSyncStatus || '').trim(),
+            annIndexSyncMessage: String(indexSyncHealth.indexSyncMessage || '').trim(),
+            annIndexSyncRequestCount: Number.isFinite(Number(indexSyncHealth.syncRequestCount))
+                ? Number(indexSyncHealth.syncRequestCount)
+                : 0,
+            annIndexSyncSuccessCount: Number.isFinite(Number(indexSyncHealth.syncSuccessCount))
+                ? Number(indexSyncHealth.syncSuccessCount)
+                : 0,
+            annIndexSyncFailureCount: Number.isFinite(Number(indexSyncHealth.syncFailureCount))
+                ? Number(indexSyncHealth.syncFailureCount)
+                : 0,
+            annIndexSyncedAtomCount: Number.isFinite(Number(indexSyncHealth.syncedAtomCount))
+                ? Number(indexSyncHealth.syncedAtomCount)
+                : 0,
+            annIndexLastSyncAt: String(indexSyncHealth.lastSyncAt || '').trim(),
         };
     }
 
