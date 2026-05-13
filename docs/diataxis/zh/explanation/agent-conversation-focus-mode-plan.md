@@ -149,7 +149,7 @@
 
 - 实时 sidecar/frontend 服务读取的是 `dist/src/frontend`，因此 `src/frontend/*` 的修改只有在执行 `npm run build` 后才会进入真实运行时。
 - 可通过 `npm run verify:agent-workspace:runtime` 对复制后的前端壳层做真实临时 sidecar/server 校验，而不是继续依赖手动 `npm start` 检查。
-- 可通过 `npm run verify:agent-workspace:browser` 在真实浏览器中校验渲染后的 shell；该检查会先通过真实 ingest API 预热最小文档，并写入最小 `data.js` 以启动真实 graph/path runtime，再命中真实 `conversation/path/query-compare/quality/session` 后端链路（含 trend + history 诊断），覆盖语言切换、本地化卡片/消息重渲，以及 graph focus promotion 状态变化，并输出 screenshot / console / network-summary 证据路径。
+- 可通过 `npm run verify:agent-workspace:browser` 在真实浏览器中校验渲染后的 shell；该检查会先通过真实 ingest API 预热最小文档，并写入最小 `data.js` 以启动真实 graph/path runtime，再命中真实 `conversation/path/query-compare/quality/session/runbook` 后端链路（含 trend + history 诊断，以及 runbook verify/checks/action-queue），覆盖语言切换、本地化卡片/消息重渲、runbook 卡片中的 ANN sync-health 证据，以及 graph focus promotion 状态变化，并输出 screenshot / console / network-summary 证据路径。
 - 下一阶段的实现重点不再是“证明这条链路能跑”，而是收口 `conversation` 输出与前端动作编排之间的 capability contract。
 
 外部交互参考：

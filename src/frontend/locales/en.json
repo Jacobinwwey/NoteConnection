@@ -461,6 +461,10 @@
       "none": "none"
     },
     "runtimeRunbookVerify": {
+      "cardTitle": "Runtime Runbook Verify",
+      "summary": "Check {selectedCheckId}: status {selectedCheckStatus}, escalation {selectedCheckEscalation}.",
+      "metricsHeading": "Key Metrics",
+      "none": "none",
       "annIndexSyncLabel": "ANN sync health",
       "annIndexSyncCountsLabel": "ANN sync counts"
     },

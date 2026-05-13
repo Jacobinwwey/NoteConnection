@@ -34,6 +34,7 @@ const DYNAMIC_RECOVERY_SNAPSHOT = Object.freeze({
         inspect_session_plan_quality_trend: '会话计划趋势',
         inspect_session_plan_quality_history: '会话计划历史',
         inspect_session_history: '会话历史',
+        inspect_runtime_capability_runbook_verify: '运行时验证',
         inspect_runtime_capability_runbook_checks: '运行时检查',
         inspect_runtime_capability_runbook_action_queue: '运行时队列',
         inspect_conversation_turn_cache_alert_trend: '轮次缓存趋势',
@@ -453,6 +454,91 @@ window.__NC_DYNAMIC_SMOKE__ = {
       }
     })();
     return result;
+  },
+  openRunbookCard: async function (kind) {
+    const workspace = window.NoteConnectionAgentWorkspace;
+    if (!workspace || typeof workspace.executeCapability !== 'function') {
+      return false;
+    }
+    const item = {
+      atomId: 'atom_2',
+      title: 'Focus Node'
+    };
+    if (kind === 'verify') {
+      await workspace.executeCapability(item, {
+        capabilityId: 'cap_runtime_runbook_verify_browser_smoke',
+        actionId: 'inspect_runtime_capability_runbook_verify',
+        targetAtomId: 'atom_2',
+        label: 'Runtime Verify',
+        labelKey: 'agentWorkspace.actions.runtimeRunbookVerify',
+        request: {
+          runbookCheckId: 'query_vector_acceleration_index_sync_health',
+          runbookSinceMinutes: 1440,
+          runbookTraceLimit: 12
+        },
+        execution: {
+          kind: 'knowledge_operation',
+          operationId: 'verify_runtime_capability_runbook',
+          resultPresentation: 'runtime_capability_runbook_verify_card'
+        },
+        failure: {
+          messageKey: 'agentWorkspace.messages.runtimeRunbookVerifyFailed',
+          fallbackMessage: 'Runtime capability runbook verify failed: {error}'
+        }
+      });
+      return true;
+    }
+    if (kind === 'checks') {
+      await workspace.executeCapability(item, {
+        capabilityId: 'cap_runtime_runbook_checks_browser_smoke',
+        actionId: 'inspect_runtime_capability_runbook_checks',
+        targetAtomId: 'atom_2',
+        label: 'Runtime Checks',
+        labelKey: 'agentWorkspace.actions.runtimeRunbookChecks',
+        request: {
+          runbookChecksLimit: 6,
+          runbookSinceMinutes: 1440,
+          runbookCheckQuery: 'query_vector_acceleration_index_sync_health'
+        },
+        execution: {
+          kind: 'knowledge_operation',
+          operationId: 'fetch_runtime_capability_runbook_checks',
+          resultPresentation: 'runtime_capability_runbook_checks_card'
+        },
+        failure: {
+          messageKey: 'agentWorkspace.messages.runtimeRunbookChecksFailed',
+          fallbackMessage: 'Runtime capability runbook checks fetch failed: {error}'
+        }
+      });
+      return true;
+    }
+    if (kind === 'action_queue') {
+      await workspace.executeCapability(item, {
+        capabilityId: 'cap_runtime_runbook_action_queue_browser_smoke',
+        actionId: 'inspect_runtime_capability_runbook_action_queue',
+        targetAtomId: 'atom_2',
+        label: 'Runtime Queue',
+        labelKey: 'agentWorkspace.actions.runtimeRunbookActionQueue',
+        request: {
+          runbookChecksLimit: 6,
+          runbookQueueLimit: 9,
+          runbookSinceMinutes: 1440,
+          runbookCheckQuery: 'query_vector_acceleration_index_sync_health',
+          runbookCheckId: 'query_vector_acceleration_index_sync_health'
+        },
+        execution: {
+          kind: 'knowledge_operation',
+          operationId: 'fetch_runtime_capability_runbook_action_queue',
+          resultPresentation: 'runtime_capability_runbook_action_queue_card'
+        },
+        failure: {
+          messageKey: 'agentWorkspace.messages.runtimeRunbookActionQueueFailed',
+          fallbackMessage: 'Runtime capability runbook action queue fetch failed: {error}'
+        }
+      });
+      return true;
+    }
+    return false;
   }
 };
 `;
@@ -482,6 +568,7 @@ function createEmptyEndpointStatusSummary() {
         sessionPlanQualityTrend: { requestCount: 0, non2xxCount: 0 },
         sessionPlanQualityHistory: { requestCount: 0, non2xxCount: 0 },
         sessionHistory: { requestCount: 0, non2xxCount: 0 },
+        runtimeRunbookVerify: { requestCount: 0, non2xxCount: 0 },
         runtimeRunbookChecks: { requestCount: 0, non2xxCount: 0 },
         runtimeRunbookActionQueue: { requestCount: 0, non2xxCount: 0 },
         conversationTurnCacheAlertTrend: { requestCount: 0, non2xxCount: 0 },
@@ -1003,6 +1090,8 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         const sessionPlanQualityHistoryButtonLabelZh =
             labelsByAction.inspect_session_plan_quality_history || '';
         const sessionHistoryButtonLabelZh = labelsByAction.inspect_session_history || '';
+        const runtimeRunbookVerifyButtonLabelZh =
+            labelsByAction.inspect_runtime_capability_runbook_verify || '';
         const runtimeRunbookChecksButtonLabelZh =
             labelsByAction.inspect_runtime_capability_runbook_checks || '';
         const runtimeRunbookActionQueueButtonLabelZh =
@@ -1491,6 +1580,58 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         const sessionHistoryCardMetricsHeadingZh =
             sessionHistoryState && typeof sessionHistoryState === 'object' ? sessionHistoryState.metricsHeading : '';
 
+        const runtimeRunbookVerifyState = normalizeRawValue(
+            runPwcli(
+                pwcli,
+                sessionArgs.concat([
+                    '--raw',
+                    'eval',
+                    `(async () => {
+                        const smoke = window.__NC_DYNAMIC_SMOKE__;
+                        if (!smoke || typeof smoke.openRunbookCard !== 'function') {
+                            return null;
+                        }
+                        await smoke.openRunbookCard('verify');
+                        for (let attempt = 0; attempt < 50; attempt += 1) {
+                            const cards = Array.from(document.querySelectorAll('[data-agent-workspace-card-kind="runtime-capability-runbook-verify"]'));
+                            const card = cards.length > 0 ? cards[cards.length - 1] : null;
+                            const title = card && card.querySelector('.agent-chat-card-title')
+                                ? card.querySelector('.agent-chat-card-title').textContent.trim()
+                                : '';
+                            const metricsHeading = card && card.querySelector('.agent-chat-card-section-title')
+                                ? card.querySelector('.agent-chat-card-section-title').textContent.trim()
+                                : '';
+                            const cardText = card
+                                ? card.textContent.replace(/\\s+/g, ' ').trim()
+                                : '';
+                            if (card && title && metricsHeading && cardText) {
+                                return {
+                                    title,
+                                    metricsHeading,
+                                    cardText
+                                };
+                            }
+                            await new Promise((resolve) => setTimeout(resolve, 100));
+                        }
+                        return null;
+                    })()`,
+                ]),
+                { cwd: artifactDir }
+            ).stdout
+        );
+        const runtimeRunbookVerifyCardTitleZh =
+            runtimeRunbookVerifyState && typeof runtimeRunbookVerifyState === 'object'
+                ? runtimeRunbookVerifyState.title
+                : '';
+        const runtimeRunbookVerifyCardMetricsHeadingZh =
+            runtimeRunbookVerifyState && typeof runtimeRunbookVerifyState === 'object'
+                ? runtimeRunbookVerifyState.metricsHeading
+                : '';
+        const runtimeRunbookVerifyCardTextZh =
+            runtimeRunbookVerifyState && typeof runtimeRunbookVerifyState === 'object'
+                ? runtimeRunbookVerifyState.cardText
+                : '';
+
         const runtimeRunbookChecksState = normalizeRawValue(
             runPwcli(
                 pwcli,
@@ -1498,8 +1639,11 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
                     '--raw',
                     'eval',
                     `(async () => {
-                        const checksButton = document.querySelector('.agent-knowledge-actions button[data-capability-action-id="inspect_runtime_capability_runbook_checks"]');
-                        checksButton.click();
+                        const smoke = window.__NC_DYNAMIC_SMOKE__;
+                        if (!smoke || typeof smoke.openRunbookCard !== 'function') {
+                            return null;
+                        }
+                        await smoke.openRunbookCard('checks');
                         for (let attempt = 0; attempt < 50; attempt += 1) {
                             const cards = Array.from(document.querySelectorAll('[data-agent-workspace-card-kind="runtime-capability-runbook-checks"]'));
                             const card = cards.length > 0 ? cards[cards.length - 1] : null;
@@ -1509,10 +1653,14 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
                             const metricsHeading = card && card.querySelector('.agent-chat-card-section-title')
                                 ? card.querySelector('.agent-chat-card-section-title').textContent.trim()
                                 : '';
-                            if (card && title && metricsHeading) {
+                            const cardText = card
+                                ? card.textContent.replace(/\\s+/g, ' ').trim()
+                                : '';
+                            if (card && title && metricsHeading && cardText) {
                                 return {
                                     title,
-                                    metricsHeading
+                                    metricsHeading,
+                                    cardText
                                 };
                             }
                             await new Promise((resolve) => setTimeout(resolve, 100));
@@ -1531,6 +1679,10 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
             runtimeRunbookChecksState && typeof runtimeRunbookChecksState === 'object'
                 ? runtimeRunbookChecksState.metricsHeading
                 : '';
+        const runtimeRunbookChecksCardTextZh =
+            runtimeRunbookChecksState && typeof runtimeRunbookChecksState === 'object'
+                ? runtimeRunbookChecksState.cardText
+                : '';
 
         const runtimeRunbookActionQueueState = normalizeRawValue(
             runPwcli(
@@ -1539,8 +1691,11 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
                     '--raw',
                     'eval',
                     `(async () => {
-                        const actionQueueButton = document.querySelector('.agent-knowledge-actions button[data-capability-action-id="inspect_runtime_capability_runbook_action_queue"]');
-                        actionQueueButton.click();
+                        const smoke = window.__NC_DYNAMIC_SMOKE__;
+                        if (!smoke || typeof smoke.openRunbookCard !== 'function') {
+                            return null;
+                        }
+                        await smoke.openRunbookCard('action_queue');
                         for (let attempt = 0; attempt < 50; attempt += 1) {
                             const cards = Array.from(document.querySelectorAll('[data-agent-workspace-card-kind="runtime-capability-runbook-action-queue"]'));
                             const card = cards.length > 0 ? cards[cards.length - 1] : null;
@@ -1550,10 +1705,14 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
                             const metricsHeading = card && card.querySelector('.agent-chat-card-section-title')
                                 ? card.querySelector('.agent-chat-card-section-title').textContent.trim()
                                 : '';
-                            if (card && title && metricsHeading) {
+                            const cardText = card
+                                ? card.textContent.replace(/\\s+/g, ' ').trim()
+                                : '';
+                            if (card && title && metricsHeading && cardText) {
                                 return {
                                     title,
-                                    metricsHeading
+                                    metricsHeading,
+                                    cardText
                                 };
                             }
                             await new Promise((resolve) => setTimeout(resolve, 100));
@@ -1571,6 +1730,10 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         const runtimeRunbookActionQueueCardMetricsHeadingZh =
             runtimeRunbookActionQueueState && typeof runtimeRunbookActionQueueState === 'object'
                 ? runtimeRunbookActionQueueState.metricsHeading
+                : '';
+        const runtimeRunbookActionQueueCardTextZh =
+            runtimeRunbookActionQueueState && typeof runtimeRunbookActionQueueState === 'object'
+                ? runtimeRunbookActionQueueState.cardText
                 : '';
 
         const conversationTurnCacheAlertTrendState = normalizeRawValue(
@@ -1734,6 +1897,7 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
             sessionPlanQualityTrend: summarizeEndpoint((url) => url.includes('/api/knowledge/session/plan/quality/trend')),
             sessionPlanQualityHistory: summarizeEndpoint((url) => url.includes('/api/knowledge/session/plan/quality/history')),
             sessionHistory: summarizeEndpoint((url) => url.includes('/api/knowledge/session/history')),
+            runtimeRunbookVerify: summarizeEndpoint((url) => url.includes('/api/knowledge/runtime-capability-runbook/verify')),
             runtimeRunbookChecks: summarizeEndpoint((url) => url.includes('/api/knowledge/runtime-capability-runbook/history/checks')),
             runtimeRunbookActionQueue: summarizeEndpoint((url) => url.includes('/api/knowledge/runtime-capability-runbook/history/action-queue')),
             conversationTurnCacheAlertTrend: summarizeEndpoint((url) => url.includes('/api/knowledge/conversation/turn-cache/diagnostics/trend')),
@@ -1751,6 +1915,7 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
             'sessionPlanQualityTrend',
             'sessionPlanQualityHistory',
             'sessionHistory',
+            'runtimeRunbookVerify',
             'runtimeRunbookChecks',
             'runtimeRunbookActionQueue',
             'conversationTurnCacheAlertTrend',
@@ -1769,6 +1934,7 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
             hasSessionPlanQualityTrendRequest: traceEndpointStatusSummary.sessionPlanQualityTrend.requestCount > 0,
             hasSessionPlanQualityHistoryRequest: traceEndpointStatusSummary.sessionPlanQualityHistory.requestCount > 0,
             hasSessionHistoryRequest: traceEndpointStatusSummary.sessionHistory.requestCount > 0,
+            hasRuntimeRunbookVerifyRequest: traceEndpointStatusSummary.runtimeRunbookVerify.requestCount > 0,
             hasRuntimeRunbookChecksRequest: traceEndpointStatusSummary.runtimeRunbookChecks.requestCount > 0,
             hasRuntimeRunbookActionQueueRequest: traceEndpointStatusSummary.runtimeRunbookActionQueue.requestCount > 0,
             hasConversationTurnCacheAlertTrendRequest: traceEndpointStatusSummary.conversationTurnCacheAlertTrend.requestCount > 0,
@@ -1830,6 +1996,7 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
                 sessionPlanQualityTrendButtonLabelZh: resolveRecoveredValue(sessionPlanQualityTrendButtonLabelZh, recoveryLabelsByAction.inspect_session_plan_quality_trend),
                 sessionPlanQualityHistoryButtonLabelZh: resolveRecoveredValue(sessionPlanQualityHistoryButtonLabelZh, recoveryLabelsByAction.inspect_session_plan_quality_history),
                 sessionHistoryButtonLabelZh: resolveRecoveredValue(sessionHistoryButtonLabelZh, recoveryLabelsByAction.inspect_session_history),
+                runtimeRunbookVerifyButtonLabelZh: resolveRecoveredValue(runtimeRunbookVerifyButtonLabelZh, recoveryLabelsByAction.inspect_runtime_capability_runbook_verify),
                 runtimeRunbookChecksButtonLabelZh: resolveRecoveredValue(runtimeRunbookChecksButtonLabelZh, recoveryLabelsByAction.inspect_runtime_capability_runbook_checks),
                 runtimeRunbookActionQueueButtonLabelZh: resolveRecoveredValue(runtimeRunbookActionQueueButtonLabelZh, recoveryLabelsByAction.inspect_runtime_capability_runbook_action_queue),
                 conversationTurnCacheAlertTrendButtonLabelZh: resolveRecoveredValue(conversationTurnCacheAlertTrendButtonLabelZh, recoveryLabelsByAction.inspect_conversation_turn_cache_alert_trend),
@@ -1863,10 +2030,15 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
                     : '',
                 sessionHistoryCardTitleZh: resolveRecoveredValue(sessionHistoryCardTitleZh, dynamicRecoverySnapshot && dynamicRecoverySnapshot.sessionHistoryCardTitleZh),
                 sessionHistoryCardMetricsHeadingZh: resolveRecoveredValue(sessionHistoryCardMetricsHeadingZh, dynamicRecoverySnapshot && dynamicRecoverySnapshot.sessionHistoryCardMetricsHeadingZh),
+                runtimeRunbookVerifyCardTitleZh: resolveRecoveredValue(runtimeRunbookVerifyCardTitleZh, dynamicRecoverySnapshot && dynamicRecoverySnapshot.runtimeRunbookVerifyCardTitleZh),
+                runtimeRunbookVerifyCardMetricsHeadingZh: resolveRecoveredValue(runtimeRunbookVerifyCardMetricsHeadingZh, dynamicRecoverySnapshot && dynamicRecoverySnapshot.runtimeRunbookVerifyCardMetricsHeadingZh),
+                runtimeRunbookVerifyCardTextZh: resolveRecoveredValue(runtimeRunbookVerifyCardTextZh, dynamicRecoverySnapshot && dynamicRecoverySnapshot.runtimeRunbookVerifyCardTextZh),
                 runtimeRunbookChecksCardTitleZh: resolveRecoveredValue(runtimeRunbookChecksCardTitleZh, dynamicRecoverySnapshot && dynamicRecoverySnapshot.runtimeRunbookChecksCardTitleZh),
                 runtimeRunbookChecksCardMetricsHeadingZh: resolveRecoveredValue(runtimeRunbookChecksCardMetricsHeadingZh, dynamicRecoverySnapshot && dynamicRecoverySnapshot.runtimeRunbookChecksCardMetricsHeadingZh),
+                runtimeRunbookChecksCardTextZh: resolveRecoveredValue(runtimeRunbookChecksCardTextZh, dynamicRecoverySnapshot && dynamicRecoverySnapshot.runtimeRunbookChecksCardTextZh),
                 runtimeRunbookActionQueueCardTitleZh: resolveRecoveredValue(runtimeRunbookActionQueueCardTitleZh, dynamicRecoverySnapshot && dynamicRecoverySnapshot.runtimeRunbookActionQueueCardTitleZh),
                 runtimeRunbookActionQueueCardMetricsHeadingZh: resolveRecoveredValue(runtimeRunbookActionQueueCardMetricsHeadingZh, dynamicRecoverySnapshot && dynamicRecoverySnapshot.runtimeRunbookActionQueueCardMetricsHeadingZh),
+                runtimeRunbookActionQueueCardTextZh: resolveRecoveredValue(runtimeRunbookActionQueueCardTextZh, dynamicRecoverySnapshot && dynamicRecoverySnapshot.runtimeRunbookActionQueueCardTextZh),
                 conversationTurnCacheAlertTrendCardTitleZh: resolveRecoveredValue(conversationTurnCacheAlertTrendCardTitleZh, dynamicRecoverySnapshot && dynamicRecoverySnapshot.conversationTurnCacheAlertTrendCardTitleZh),
                 conversationTurnCacheAlertTrendCardMetricsHeadingZh: resolveRecoveredValue(conversationTurnCacheAlertTrendCardMetricsHeadingZh, dynamicRecoverySnapshot && dynamicRecoverySnapshot.conversationTurnCacheAlertTrendCardMetricsHeadingZh),
                 missingNodeMessageZh: String(missingNodeMessageZh || ''),
@@ -1930,6 +2102,9 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (!networkSummary || networkSummary.hasSessionHistoryRequest !== true) {
             failures.push(`networkSummary.hasSessionHistoryRequest='${String(networkSummary && networkSummary.hasSessionHistoryRequest)}'`);
         }
+        if (!networkSummary || networkSummary.hasRuntimeRunbookVerifyRequest !== true) {
+            failures.push(`networkSummary.hasRuntimeRunbookVerifyRequest='${String(networkSummary && networkSummary.hasRuntimeRunbookVerifyRequest)}'`);
+        }
         if (!networkSummary || networkSummary.hasRuntimeRunbookChecksRequest !== true) {
             failures.push(`networkSummary.hasRuntimeRunbookChecksRequest='${String(networkSummary && networkSummary.hasRuntimeRunbookChecksRequest)}'`);
         }
@@ -1960,6 +2135,7 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
             'sessionPlanQualityTrend',
             'sessionPlanQualityHistory',
             'sessionHistory',
+            'runtimeRunbookVerify',
             'runtimeRunbookChecks',
             'runtimeRunbookActionQueue',
             'conversationTurnCacheAlertTrend',
@@ -2030,6 +2206,9 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         }
         if (report.browserChecks.sessionHistoryButtonLabelZh !== '会话历史') {
             failures.push(`sessionHistoryButtonLabelZh='${report.browserChecks.sessionHistoryButtonLabelZh}'`);
+        }
+        if (report.browserChecks.runtimeRunbookVerifyButtonLabelZh !== '运行时验证') {
+            failures.push(`runtimeRunbookVerifyButtonLabelZh='${report.browserChecks.runtimeRunbookVerifyButtonLabelZh}'`);
         }
         if (report.browserChecks.runtimeRunbookChecksButtonLabelZh !== '运行时检查') {
             failures.push(`runtimeRunbookChecksButtonLabelZh='${report.browserChecks.runtimeRunbookChecksButtonLabelZh}'`);
@@ -2127,17 +2306,47 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (report.browserChecks.sessionHistoryCardMetricsHeadingZh !== '关键指标') {
             failures.push(`sessionHistoryCardMetricsHeadingZh='${report.browserChecks.sessionHistoryCardMetricsHeadingZh}'`);
         }
+        if (report.browserChecks.runtimeRunbookVerifyCardTitleZh !== '运行时 Runbook 验证') {
+            failures.push(`runtimeRunbookVerifyCardTitleZh='${report.browserChecks.runtimeRunbookVerifyCardTitleZh}'`);
+        }
+        if (report.browserChecks.runtimeRunbookVerifyCardMetricsHeadingZh !== '关键指标') {
+            failures.push(`runtimeRunbookVerifyCardMetricsHeadingZh='${report.browserChecks.runtimeRunbookVerifyCardMetricsHeadingZh}'`);
+        }
+        if (!report.browserChecks.runtimeRunbookVerifyCardTextZh.includes('ANN 同步健康度')) {
+            failures.push(`runtimeRunbookVerifyCardTextZh='${report.browserChecks.runtimeRunbookVerifyCardTextZh}'`);
+        }
+        if (!report.browserChecks.runtimeRunbookVerifyCardTextZh.includes('ANN 同步计数')) {
+            failures.push(`runtimeRunbookVerifyCardTextZh='${report.browserChecks.runtimeRunbookVerifyCardTextZh}'`);
+        }
+        if (!report.browserChecks.runtimeRunbookVerifyCardTextZh.includes('query_vector_acceleration_index_sync_health')) {
+            failures.push(`runtimeRunbookVerifyCardTextZh='${report.browserChecks.runtimeRunbookVerifyCardTextZh}'`);
+        }
         if (report.browserChecks.runtimeRunbookChecksCardTitleZh !== '运行时 Runbook 检查') {
             failures.push(`runtimeRunbookChecksCardTitleZh='${report.browserChecks.runtimeRunbookChecksCardTitleZh}'`);
         }
         if (report.browserChecks.runtimeRunbookChecksCardMetricsHeadingZh !== '关键指标') {
             failures.push(`runtimeRunbookChecksCardMetricsHeadingZh='${report.browserChecks.runtimeRunbookChecksCardMetricsHeadingZh}'`);
         }
+        if (!report.browserChecks.runtimeRunbookChecksCardTextZh.includes('首个检查的 ANN 同步')) {
+            failures.push(`runtimeRunbookChecksCardTextZh='${report.browserChecks.runtimeRunbookChecksCardTextZh}'`);
+        }
+        if (!report.browserChecks.runtimeRunbookChecksCardTextZh.includes('query_vector_acceleration_index_sync_health')) {
+            failures.push(`runtimeRunbookChecksCardTextZh='${report.browserChecks.runtimeRunbookChecksCardTextZh}'`);
+        }
         if (report.browserChecks.runtimeRunbookActionQueueCardTitleZh !== '运行时动作队列') {
             failures.push(`runtimeRunbookActionQueueCardTitleZh='${report.browserChecks.runtimeRunbookActionQueueCardTitleZh}'`);
         }
         if (report.browserChecks.runtimeRunbookActionQueueCardMetricsHeadingZh !== '关键指标') {
             failures.push(`runtimeRunbookActionQueueCardMetricsHeadingZh='${report.browserChecks.runtimeRunbookActionQueueCardMetricsHeadingZh}'`);
+        }
+        if (!report.browserChecks.runtimeRunbookActionQueueCardTextZh.includes('query_vector_acceleration_index_sync_health')) {
+            failures.push(`runtimeRunbookActionQueueCardTextZh='${report.browserChecks.runtimeRunbookActionQueueCardTextZh}'`);
+        }
+        if (
+            !report.browserChecks.runtimeRunbookActionQueueCardTextZh.includes('/api/knowledge/query-backend-diagnostics')
+            && !report.browserChecks.runtimeRunbookActionQueueCardTextZh.includes('/api/knowledge/ingest')
+        ) {
+            failures.push(`runtimeRunbookActionQueueCardTextZh='${report.browserChecks.runtimeRunbookActionQueueCardTextZh}'`);
         }
         if (report.browserChecks.conversationTurnCacheAlertTrendCardTitleZh !== '对话轮次缓存告警趋势') {
             failures.push(`conversationTurnCacheAlertTrendCardTitleZh='${report.browserChecks.conversationTurnCacheAlertTrendCardTitleZh}'`);

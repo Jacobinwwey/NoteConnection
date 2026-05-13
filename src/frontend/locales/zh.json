@@ -461,6 +461,10 @@
       "none": "无"
     },
     "runtimeRunbookVerify": {
+      "cardTitle": "运行时 Runbook 验证",
+      "summary": "检查 {selectedCheckId}：状态 {selectedCheckStatus}，升级级别 {selectedCheckEscalation}。",
+      "metricsHeading": "关键指标",
+      "none": "无",
       "annIndexSyncLabel": "ANN 同步健康度",
       "annIndexSyncCountsLabel": "ANN 同步计数"
     },

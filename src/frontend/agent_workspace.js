@@ -2054,7 +2054,7 @@
         const selectedCheckRemediation = result && typeof result.selectedCheckRemediation === 'object'
             ? result.selectedCheckRemediation
             : {};
-        const indexSyncHealth = result && typeof result.queryVectorAccelerationIndexSyncHealth === 'object'
+        const indexSyncHealth = result && result.queryVectorAccelerationIndexSyncHealth && typeof result.queryVectorAccelerationIndexSyncHealth === 'object'
             ? result.queryVectorAccelerationIndexSyncHealth
             : {};
         const escalationActions = Array.isArray(result && result.selectedCheckEscalationActions)
@@ -2182,7 +2182,7 @@
             ? result.checks
             : [];
         const firstCheck = checks.length > 0 ? checks[0] : null;
-        const firstCheckIndexSyncHealth = firstCheck && typeof firstCheck.queryVectorAccelerationIndexSyncHealth === 'object'
+        const firstCheckIndexSyncHealth = firstCheck && firstCheck.queryVectorAccelerationIndexSyncHealth && typeof firstCheck.queryVectorAccelerationIndexSyncHealth === 'object'
             ? firstCheck.queryVectorAccelerationIndexSyncHealth
             : {};
         return {

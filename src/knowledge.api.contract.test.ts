@@ -72,8 +72,8 @@ describe('Knowledge mastery API contract wiring', () => {
         });
     });
 
-    test('modular knowledge routes reference concrete platform methods', () => {
-        const requiredMethods = [
+    test('modular knowledge routes reference concrete platform methods or live runtime-runbook route ops', () => {
+        const platformMethods = [
             'agentConversation',
             'queryMasteryDiagnostics',
             'generateLearningPath',
@@ -82,18 +82,49 @@ describe('Knowledge mastery API contract wiring', () => {
             'getAgentConversationTurnCacheDiagnostics',
             'getAgentConversationTurnCacheTrend',
             'getRuntimeCapabilityMatrix',
-            'getRuntimeCapabilityRunbook',
-            'verifyRuntimeCapabilityRunbook',
-            'getRuntimeCapabilityRunbookHistory',
-            'queryRuntimeCapabilityRunbookChecks',
-            'queryRuntimeCapabilityRunbookActionQueue',
-            'getRuntimeCapabilityRunbookRemediationHistory',
-            'getRuntimeCapabilityRunbookReplaySchedule',
             'evaluateIngestGuardrail',
         ];
-        requiredMethods.forEach((methodName) => {
+        platformMethods.forEach((methodName) => {
             expect(knowledgeRoutesSource).toContain(`knowledgeLearningPlatform.${methodName}`);
             expect(learningPlatformSource).toContain(`${methodName}(`);
+        });
+
+        const runtimeRunbookOpsMethods = [
+            'getRunbook',
+            'verify',
+            'getHistory',
+            'getChecks',
+            'getActionQueue',
+            'getRemediationHistory',
+            'getReplaySchedule',
+            'recordRemediationEvent',
+            'replayRemediationEvent',
+            'updateReplaySchedule',
+            'tickReplaySchedule',
+        ];
+        runtimeRunbookOpsMethods.forEach((methodName) => {
+            expect(knowledgeRoutesSource).toContain(`runtimeRunbookOps?.${methodName}`);
+        });
+    });
+
+    test('runtime runbook modular routes forward live query parameters instead of dropping them', () => {
+        [
+            "params.get('checkId')",
+            "params.get('focus')",
+            "params.get('focusLimit')",
+            "params.get('sinceMinutes')",
+            "params.get('status')",
+            "params.get('checkQuery')",
+            "params.get('queueLimit')",
+            "params.get('priority')",
+            "params.get('category')",
+            "params.get('remediationStatus')",
+            "params.get('remediationTrend')",
+            'runtimeRunbookOps?.verify',
+            'runtimeRunbookOps?.getChecks',
+            'runtimeRunbookOps?.getActionQueue',
+        ].forEach((token) => {
+            expect(knowledgeRoutesSource).toContain(token);
         });
     });
 });

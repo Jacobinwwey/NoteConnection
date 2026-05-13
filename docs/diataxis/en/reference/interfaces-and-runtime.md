@@ -49,7 +49,8 @@ This reference tracks canonical API/runtime contracts.
   - Set `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_STRICT=1` to enforce strict critical availability assertions.
   - Set `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1` to enforce deterministic UI assertions (shell text + promotion + localized fallback messages).
   - Set `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_DYNAMIC_STRICT=1` together with `..._UI_STRICT=1` to additionally enforce dynamic conversation/request-card assertions.
-  - Dynamic strict now blocks on real browser-driven conversation + capability execution evidence: conversation, learning-path, study-session, tutor action, query-backend comparison/history/trend, learning-quality trend/history, session-plan quality trend/history, session history, runtime runbook checks/action queue, and conversation turn-cache alert trend.
+  - Dynamic strict now blocks on real browser-driven conversation + capability execution evidence: conversation, learning-path, study-session, tutor action, query-backend comparison/history/trend, learning-quality trend/history, session-plan quality trend/history, session history, runtime runbook verify/checks/action queue, and conversation turn-cache alert trend.
+  - The runtime runbook browser proof is content-aware, not open-card-only: ANN sync-health/counts must appear on the verify card, first-check ANN sync must appear on the checks card, and the action queue must expose the `query_vector_acceleration_index_sync_health` drilldown plus `/api/knowledge/query-backend-diagnostics`.
   - Modular knowledge-route parity is part of this gate: if `/api/knowledge/*` route wiring drifts from `KnowledgeLearningPlatform`, browser strict fails instead of silently falling back to synthetic snapshot data.
   - Dynamic recovery remains as a diagnostic fallback, but missing/failed request traces are now treated as hard failures rather than non-blocking variance.
 

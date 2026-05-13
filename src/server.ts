@@ -13211,6 +13211,178 @@ export const startServer = async (options: { port?: number, targetPath?: string 
     const STRICT_REGISTRY = process.env.NOTE_CONNECTION_STRICT_REGISTRY === '1';
 
     // --- Route Registry (modular dispatch for extracted route groups) ---
+    const runtimeRunbookOps = {
+        getRunbook: async (request: { checkId?: string } = {}) => {
+            const generatedAt = new Date().toISOString();
+            const runtimePayload = await buildKnowledgeRuntimePayload(generatedAt);
+            return buildRuntimeCapabilityRunbook(
+                runtimePayload.runtimeCapabilityMatrix,
+                String(request.checkId || '').trim()
+            );
+        },
+        verify: async (request: {
+            checkId?: string;
+            limit?: number;
+            sinceMinutes?: number;
+            status?: string;
+            checkQuery?: string;
+            focus?: string;
+            focusLimit?: number;
+        } = {}) => {
+            const requestedCheckId = normalizeRuntimeRunbookCheckIdToken(request.checkId || '');
+            const sinceMinutes = Math.max(0, Math.floor(Number(request.sinceMinutes || 1440)));
+            const traceLimit = Math.max(1, Math.floor(Number(request.limit || 20)));
+            const generatedAt = new Date().toISOString();
+            const runtimePayload = await buildKnowledgeRuntimePayload(generatedAt);
+            const runbook = buildRuntimeCapabilityRunbook(
+                runtimePayload.runtimeCapabilityMatrix,
+                requestedCheckId
+            );
+            const selectedCheckId = normalizeRuntimeRunbookCheckIdToken(
+                runbook.selectedCheck?.checkId || requestedCheckId
+            );
+            if (selectedCheckId) {
+                const replayResult = await replayRuntimeRunbookVerificationForCheck({
+                    checkId: selectedCheckId,
+                    sinceMinutes,
+                    traceLimit,
+                });
+                if (replayResult) {
+                    return {
+                        ...replayResult,
+                        selectedCheckId: replayResult.resolvedCheckId || selectedCheckId,
+                        effectiveCheckId: replayResult.resolvedCheckId || selectedCheckId,
+                    };
+                }
+            }
+            return {
+                generatedAt,
+                requestedCheckId,
+                selectedCheckId: '',
+                effectiveCheckId: '',
+                selectedCheckStatus: 'unknown',
+                selectedCheckEscalation: 'normal',
+                selectedCheckPriorityScore: 0,
+                selectedCheckMessage: 'No verification history available yet.',
+                verificationTargets: Array.isArray(runbook.verificationTargets)
+                    ? runbook.verificationTargets
+                    : [],
+                selectedCheckEscalationActions: [],
+                traceSummary: {
+                    returnedRecords: 0,
+                    errorRequests: 0,
+                    errorRatioPct: 0,
+                    p95DurationMs: 0,
+                },
+                selectedCheckHistory: {
+                    returnedRecords: 0,
+                    activeRiskStreak: 0,
+                    activeFailStreak: 0,
+                    trendStatus: 'insufficient_data',
+                },
+                selectedCheckRemediation: {
+                    latestStatus: '',
+                    trendStatus: 'insufficient_data',
+                    riskRatioPct: 0,
+                },
+                queryVectorAccelerationIndexSyncHealth: buildRuntimeRunbookVectorAccelerationIndexSyncHealthSummary(
+                    runtimePayload.runtimeCapabilityMatrix
+                ),
+            };
+        },
+        getHistory: async (request: {
+            limit?: number;
+            checkId?: string;
+            sinceMinutes?: number;
+            status?: string;
+        } = {}) => queryRuntimeRunbookVerificationHistory({
+            limit: parseRuntimeRunbookVerificationHistoryLimit(request.limit),
+            checkId: normalizeRuntimeRunbookCheckIdToken(request.checkId || ''),
+            sinceMinutes: parseRuntimeRunbookVerificationHistorySinceMinutes(request.sinceMinutes),
+            status: normalizeRuntimeRunbookVerificationStatusToken(request.status || ''),
+        }),
+        getChecks: async (request: {
+            limit?: number;
+            sinceMinutes?: number;
+            status?: string;
+            checkQuery?: string;
+        } = {}) => queryRuntimeRunbookVerificationHistoryByCheck({
+            limit: parseRuntimeRunbookVerificationHistoryByCheckLimit(request.limit),
+            sinceMinutes: parseRuntimeRunbookVerificationHistorySinceMinutes(request.sinceMinutes),
+            status: normalizeRuntimeRunbookVerificationStatusToken(request.status || ''),
+            checkQuery: String(request.checkQuery || '').trim(),
+        }),
+        getActionQueue: async (request: {
+            limit?: number;
+            sinceMinutes?: number;
+            status?: string;
+            checkQuery?: string;
+            queueLimit?: number;
+            priority?: string;
+            category?: string;
+            checkId?: string;
+            remediationStatus?: string;
+            remediationTrend?: string;
+        } = {}) => queryRuntimeRunbookVerificationActionQueue({
+            checksQuery: {
+                limit: parseRuntimeRunbookVerificationHistoryByCheckLimit(request.limit),
+                sinceMinutes: parseRuntimeRunbookVerificationHistorySinceMinutes(request.sinceMinutes),
+                status: normalizeRuntimeRunbookVerificationStatusToken(request.status || ''),
+                checkQuery: String(request.checkQuery || '').trim(),
+            },
+            queueLimit: parseRuntimeRunbookVerificationActionQueueLimit(request.queueLimit),
+            priorityFilter: normalizeRuntimeRunbookVerificationActionQueuePriorityFilterToken(request.priority || ''),
+            categoryFilter: normalizeRuntimeRunbookVerificationActionQueueCategoryFilterToken(request.category || ''),
+            checkIdFilter: normalizeRuntimeRunbookCheckIdToken(request.checkId || ''),
+            remediationStatusFilter: normalizeRuntimeRunbookVerificationActionQueueRemediationStatusFilterToken(
+                request.remediationStatus || ''
+            ),
+            remediationTrendFilter: normalizeRuntimeRunbookVerificationActionQueueRemediationTrendFilterToken(
+                request.remediationTrend || ''
+            ),
+        }),
+        getRemediationHistory: async (request: {
+            limit?: number;
+            sinceMinutes?: number;
+            status?: string;
+            source?: string;
+            checkId?: string;
+        } = {}) => queryRuntimeRunbookRemediationEventHistory({
+            limit: parseRuntimeRunbookRemediationEventLimit(request.limit),
+            sinceMinutes: parseRuntimeRunbookVerificationHistorySinceMinutes(request.sinceMinutes),
+            status: normalizeRuntimeRunbookRemediationEventStatusQueryToken(request.status || ''),
+            source: normalizeRuntimeRunbookRemediationEventSourceToken(request.source || ''),
+            checkId: normalizeRuntimeRunbookCheckIdToken(request.checkId || ''),
+        }),
+        getReplaySchedule: async () => getRuntimeRunbookRemediationReplayScheduleSnapshot(),
+        recordRemediationEvent: async (payload: unknown, requestId = '') => {
+            const record = normalizeRuntimeRunbookRemediationEventPayload(payload, requestId);
+            appendRuntimeRunbookRemediationEventRecord(record);
+            triggerRuntimeRunbookRemediationReplayScheduleFromEvent();
+            return {
+                record,
+                summary: {
+                    totalRecords: runtimeRunbookRemediationEventRecords.length,
+                },
+            };
+        },
+        replayRemediationEvent: async (payload: unknown) => {
+            const replayOptions = normalizeRuntimeRunbookRemediationReplayRequestPayload(payload);
+            return replayRuntimeRunbookRemediationEvents(replayOptions);
+        },
+        updateReplaySchedule: async (payload: unknown) => (
+            updateRuntimeRunbookRemediationReplayScheduleConfig(payload)
+        ),
+        tickReplaySchedule: async (payload: unknown = {}) => {
+            const tickOptions = normalizeRuntimeRunbookRemediationReplayScheduleTickPayload(payload);
+            return tickRuntimeRunbookRemediationReplaySchedule({
+                force: tickOptions.force,
+                dryRunOverride: tickOptions.dryRunOverride,
+                actor: 'modular_route',
+            });
+        },
+    };
+
     const routeContext: ServerContext = {
         knowledgeLearningPlatform,
         knowledgeIngestor,
@@ -13231,6 +13403,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         KNOWLEDGE_GRAPHDB_OPERATION_MODE,
         kbRoot: KB_ROOT,
         runtimeDataDir: RUNTIME_DATA_DIR,
+        runtimeRunbookOps,
     };
 
     // Route migration tracking

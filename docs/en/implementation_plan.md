@@ -21,6 +21,8 @@ Bring code truth, active progress docs, and next execution order back into align
   - runtime capability governance now treats ANN remote index sync as a first-class check: `query_vector_acceleration_index_sync_health` is emitted in the matrix/runbook alongside health, traceability, prefilter, and circuit checks.
   - `server.ts` now closes the runbook loop for that new gate: ANN index-sync health is included in verification escalation, remediation action-queue generation, and per-check history summaries.
   - the agent workspace runtime runbook surfaces now expose ANN sync-health metrics across verify/checks/action-queue flows, so the new gate is visible in the UI instead of staying backend-only.
+  - modular knowledge-route wiring for `runtime-capability-runbook/*` is now backed by live server-side runbook ops instead of KLP placeholder payloads, and the route layer now preserves `checkId` / `sinceMinutes` / queue-filter query params rather than dropping them.
+  - the real browser smoke gate now proves those verify/checks/action-queue surfaces end to end: strict browser evidence must show the ANN sync-health verify card, the first-check ANN sync metric, and the index-sync action-queue drilldown instead of only proving that the cards can open.
 - This changes the execution focus:
   - P3 placeholder replacement is implementation-complete for the current runtime surfaces.
   - P4 default tutor-routing activation is implementation-complete for the local-first baseline.
@@ -68,7 +70,7 @@ Bring code truth, active progress docs, and next execution order back into align
 2. One ANN connector path is proven beyond scaffold status under real sync/query traffic, and its workload/threshold calibration remains explicitly tracked rather than hidden.
 3. `KnowledgeLearningPlatform.ts` no longer returns placeholders for query comparison, staleness, learning-quality, and session-plan-quality runtime surfaces.
 4. Default runtime tutor execution emits non-zero adapter telemetry under real server execution.
-5. `docs:diataxis:check`, `docs:site:build`, `build:with-vite`, and targeted agent-workspace/KLP tests pass after each milestone.
+5. `docs:diataxis:check`, `docs:site:build`, `build:with-vite`, strict `verify:agent-workspace:browser` proof, and targeted agent-workspace/KLP tests pass after each milestone.
 
 ---
 

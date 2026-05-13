@@ -3947,6 +3947,83 @@ describe('agent workspace learning-path integration', () => {
         expect(card?.textContent).toContain('ready');
     });
 
+    test('renders runtime runbook checks cards when index-sync health telemetry is null', async () => {
+        const {
+            document,
+            window,
+            fetchMock,
+        } = loadAgentWorkspaceHarness();
+
+        expect(fetchMock).toBeDefined();
+        fetchMock!.mockImplementationOnce(async () => ({
+            ok: true,
+            text: async () => JSON.stringify({
+                success: true,
+                result: {
+                    summary: {
+                        totalRecords: 1,
+                        matchedRecords: 1,
+                        returnedChecks: 1,
+                        sinceMinutes: 1440,
+                        regressingChecks: 0,
+                        improvingChecks: 0,
+                        stableChecks: 0,
+                        insufficientDataChecks: 1,
+                        recommendedFocusCheckId: 'query_vector_acceleration_index_sync_health',
+                        recommendedFocusEscalation: 'normal',
+                        recommendedFocusReason: 'latest_activity',
+                        recommendedFocusTopAction: 'Inspect ANN sync telemetry.',
+                        actionQueueTotal: 3,
+                        actionQueueP0: 0,
+                        actionQueueP1: 2,
+                        actionQueueP2: 1,
+                        remediationRiskRatioPct: 0,
+                        remediationLatestRecordedAt: '',
+                    },
+                    checks: [
+                        {
+                            checkId: 'query_vector_acceleration_index_sync_health',
+                            latestStatus: 'pass',
+                            trendStatus: 'insufficient_data',
+                            queryVectorAccelerationIndexSyncHealth: null,
+                        },
+                    ],
+                },
+            }),
+        } as any));
+
+        await (window as any).NoteConnectionAgentWorkspace.executeCapability({
+            atomId: 'atom_paths',
+            title: 'Learning Paths',
+        }, {
+            capabilityId: 'cap_runtime_runbook_checks_null_index_sync_health',
+            actionId: 'inspect_runtime_capability_runbook_checks',
+            targetAtomId: 'atom_paths',
+            label: 'Runtime Checks',
+            labelKey: 'agentWorkspace.actions.runtimeRunbookChecks',
+            request: {
+                runbookChecksLimit: 6,
+                runbookSinceMinutes: 1440,
+                runbookCheckQuery: 'query_vector_acceleration_index_sync_health',
+            },
+            execution: {
+                kind: 'knowledge_operation',
+                operationId: 'fetch_runtime_capability_runbook_checks',
+                resultPresentation: 'runtime_capability_runbook_checks_card',
+            },
+            failure: {
+                messageKey: 'agentWorkspace.messages.runtimeRunbookChecksFailed',
+                fallbackMessage: 'Runtime capability runbook checks fetch failed: {error}',
+            },
+        });
+
+        const card = document.querySelector('[data-agent-workspace-card-kind="runtime-capability-runbook-checks"]') as HTMLElement | null;
+        expect(card).not.toBeNull();
+        expect(card?.textContent).toContain('Runtime Runbook Checks');
+        expect(card?.textContent).toContain('First check ANN sync');
+        expect(card?.textContent).toContain('none (0/0/0)');
+    });
+
     test('executes runtime runbook action-queue capabilities through the generic knowledge operation path', async () => {
         const {
             document,

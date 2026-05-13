@@ -13,6 +13,7 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
         KNOWLEDGE_GRAPHDB_ADAPTER_ID,
         KNOWLEDGE_GRAPHDB_FALLBACK_ENABLED,
         KNOWLEDGE_GRAPHDB_OPERATION_MODE,
+        runtimeRunbookOps,
     } = ctx;
 
     const api = (path: string) => `/api/knowledge${path}`;
@@ -308,9 +309,14 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
         {
             method: 'GET',
             path: api('/runtime-capability-runbook'),
-            handler: async (_req, res) => {
+            handler: async (req, res) => {
                 try {
-                    const runbook = await knowledgeLearningPlatform.getRuntimeCapabilityRunbook();
+                    const params = parseQuery(req);
+                    const runbook = runtimeRunbookOps?.getRunbook
+                        ? await runtimeRunbookOps.getRunbook({
+                            checkId: String(params.get('checkId') || '').trim(),
+                        })
+                        : await knowledgeLearningPlatform.getRuntimeCapabilityRunbook();
                     ok(res, { runbook });
                 } catch (e) { fail(res, e, 'GET /api/knowledge/runtime-capability-runbook'); }
             },
@@ -321,7 +327,18 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const params = parseQuery(req);
-                    const result = await knowledgeLearningPlatform.verifyRuntimeCapabilityRunbook({ limit: Number(params.get('limit')) || 20 });
+                    const request = {
+                        checkId: String(params.get('checkId') || '').trim(),
+                        focus: String(params.get('focus') || '').trim(),
+                        focusLimit: Number(params.get('focusLimit')) || 12,
+                        sinceMinutes: Number(params.get('sinceMinutes')) || 1440,
+                        status: String(params.get('status') || '').trim(),
+                        checkQuery: String(params.get('checkQuery') || '').trim(),
+                        limit: Number(params.get('limit')) || 20,
+                    };
+                    const result = runtimeRunbookOps?.verify
+                        ? await runtimeRunbookOps.verify(request)
+                        : await knowledgeLearningPlatform.verifyRuntimeCapabilityRunbook(request);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'GET /api/knowledge/runtime-capability-runbook/verify'); }
             },
@@ -332,7 +349,15 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const params = parseQuery(req);
-                    const result = await knowledgeLearningPlatform.getRuntimeCapabilityRunbookHistory({ limit: Number(params.get('limit')) || 20 });
+                    const request = {
+                        limit: Number(params.get('limit')) || 20,
+                        checkId: String(params.get('checkId') || '').trim(),
+                        sinceMinutes: Number(params.get('sinceMinutes')) || 10080,
+                        status: String(params.get('status') || '').trim(),
+                    };
+                    const result = runtimeRunbookOps?.getHistory
+                        ? await runtimeRunbookOps.getHistory(request)
+                        : await knowledgeLearningPlatform.getRuntimeCapabilityRunbookHistory(request);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'GET /api/knowledge/runtime-capability-runbook/history'); }
             },
@@ -343,12 +368,15 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const params = parseQuery(req);
-                    const result = await knowledgeLearningPlatform.queryRuntimeCapabilityRunbookChecks({
+                    const request = {
                         limit: Number(params.get('limit')) || 8,
                         sinceMinutes: Number(params.get('sinceMinutes')) || 10080,
                         status: String(params.get('status') || '').trim(),
                         checkQuery: String(params.get('checkQuery') || '').trim(),
-                    });
+                    };
+                    const result = runtimeRunbookOps?.getChecks
+                        ? await runtimeRunbookOps.getChecks(request)
+                        : await knowledgeLearningPlatform.queryRuntimeCapabilityRunbookChecks(request);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'GET /api/knowledge/runtime-capability-runbook/history/checks'); }
             },
@@ -359,7 +387,7 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const params = parseQuery(req);
-                    const result = await knowledgeLearningPlatform.queryRuntimeCapabilityRunbookActionQueue({
+                    const request = {
                         limit: Number(params.get('limit')) || 8,
                         sinceMinutes: Number(params.get('sinceMinutes')) || 10080,
                         status: String(params.get('status') || '').trim(),
@@ -370,7 +398,10 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
                         checkId: String(params.get('checkId') || '').trim(),
                         remediationStatus: String(params.get('remediationStatus') || '').trim(),
                         remediationTrend: String(params.get('remediationTrend') || '').trim(),
-                    });
+                    };
+                    const result = runtimeRunbookOps?.getActionQueue
+                        ? await runtimeRunbookOps.getActionQueue(request)
+                        : await knowledgeLearningPlatform.queryRuntimeCapabilityRunbookActionQueue(request);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'GET /api/knowledge/runtime-capability-runbook/history/action-queue'); }
             },
@@ -381,7 +412,16 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const params = parseQuery(req);
-                    const result = await knowledgeLearningPlatform.getRuntimeCapabilityRunbookRemediationHistory({ limit: Number(params.get('limit')) || 20 });
+                    const request = {
+                        limit: Number(params.get('limit')) || 20,
+                        sinceMinutes: Number(params.get('sinceMinutes')) || 10080,
+                        status: String(params.get('status') || '').trim(),
+                        source: String(params.get('source') || '').trim(),
+                        checkId: String(params.get('checkId') || '').trim(),
+                    };
+                    const result = runtimeRunbookOps?.getRemediationHistory
+                        ? await runtimeRunbookOps.getRemediationHistory(request)
+                        : await knowledgeLearningPlatform.getRuntimeCapabilityRunbookRemediationHistory(request);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'GET /api/knowledge/runtime-capability-runbook/remediation-history'); }
             },
@@ -391,7 +431,9 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             path: api('/runtime-capability-runbook/replay-schedule'),
             handler: async (_req, res) => {
                 try {
-                    const schedule = await knowledgeLearningPlatform.getRuntimeCapabilityRunbookReplaySchedule();
+                    const schedule = runtimeRunbookOps?.getReplaySchedule
+                        ? await runtimeRunbookOps.getReplaySchedule()
+                        : await knowledgeLearningPlatform.getRuntimeCapabilityRunbookReplaySchedule();
                     ok(res, { schedule });
                 } catch (e) { fail(res, e, 'GET /api/knowledge/runtime-capability-runbook/replay-schedule'); }
             },
@@ -601,7 +643,13 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
-                    const result = await knowledgeLearningPlatform.recordRuntimeCapabilityRemediationEvent(JSON.parse(body));
+                    const payload = JSON.parse(body);
+                    const result = runtimeRunbookOps?.recordRemediationEvent
+                        ? await runtimeRunbookOps.recordRemediationEvent(
+                            payload,
+                            String((req as any).requestId || req.headers['x-request-id'] || '')
+                        )
+                        : await knowledgeLearningPlatform.recordRuntimeCapabilityRemediationEvent(payload);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'POST /api/knowledge/runtime-capability-runbook/remediation-event'); }
             },
@@ -612,7 +660,10 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
-                    const result = await knowledgeLearningPlatform.replayRuntimeCapabilityRemediationEvent(JSON.parse(body));
+                    const payload = JSON.parse(body);
+                    const result = runtimeRunbookOps?.replayRemediationEvent
+                        ? await runtimeRunbookOps.replayRemediationEvent(payload)
+                        : await knowledgeLearningPlatform.replayRuntimeCapabilityRemediationEvent(payload);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'POST /api/knowledge/runtime-capability-runbook/remediation-event/replay'); }
             },
@@ -623,7 +674,10 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
-                    const result = await knowledgeLearningPlatform.updateRuntimeCapabilityReplaySchedule(JSON.parse(body));
+                    const payload = JSON.parse(body);
+                    const result = runtimeRunbookOps?.updateReplaySchedule
+                        ? await runtimeRunbookOps.updateReplaySchedule(payload)
+                        : await knowledgeLearningPlatform.updateRuntimeCapabilityReplaySchedule(payload);
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'POST /api/knowledge/runtime-capability-runbook/replay-schedule'); }
             },
@@ -631,9 +685,13 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
         {
             method: 'POST',
             path: api('/runtime-capability-runbook/replay-schedule/tick'),
-            handler: async (_req, res) => {
+            handler: async (req, res) => {
                 try {
-                    const result = await knowledgeLearningPlatform.tickRuntimeCapabilityReplaySchedule();
+                    const body = await readBody(req);
+                    const payload = body.trim() ? JSON.parse(body) : {};
+                    const result = runtimeRunbookOps?.tickReplaySchedule
+                        ? await runtimeRunbookOps.tickReplaySchedule(payload)
+                        : await knowledgeLearningPlatform.tickRuntimeCapabilityReplaySchedule();
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'POST /api/knowledge/runtime-capability-runbook/replay-schedule/tick'); }
             },

@@ -144,7 +144,7 @@ Runtime caveat:
 
 - the live sidecar/frontend server serves from `dist/src/frontend`, so changes under `src/frontend/*` only become runtime-visible after `npm run build`.
 - use `npm run verify:agent-workspace:runtime` to validate the copied frontend shell against a real temporary sidecar/server instead of relying on manual `npm start` checks.
-- use `npm run verify:agent-workspace:browser` to validate the rendered shell in a real browser after seeding a minimal document through the real ingest API and writing a minimal `data.js` seed; the check now exercises real graph/path runtimes, the real `conversation/path/query-compare/quality/session` backend slice (including trend + history diagnostics), localized card/message re-rendering, graph-focus promotion state changes, and emits screenshot/console/network-summary evidence paths.
+- use `npm run verify:agent-workspace:browser` to validate the rendered shell in a real browser after seeding a minimal document through the real ingest API and writing a minimal `data.js` seed; the check now exercises real graph/path runtimes, the real `conversation/path/query-compare/quality/session/runbook` backend slice (including trend + history diagnostics plus runbook verify/checks/action-queue), localized card/message re-rendering, graph-focus promotion state changes, ANN sync-health rendering evidence across runbook cards, and emits screenshot/console/network-summary evidence paths.
 - the next implementation priority is no longer proving that the shell can run; it is shrinking the contract gap between `conversation` output and frontend action orchestration.
 
 External UX references:
