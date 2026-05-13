@@ -7,7 +7,7 @@
 - [x] Agent-workspace browser/runtime/Tauri verification closure is real and repeatable on the current branch.
 - [x] Phase-3 tutor telemetry, tutor trace/provider trend diagnostics, conversation memory, and memory-policy diagnostics now have concrete backend implementations.
 - [~] Phase-1 A8 has advanced to an embedded `graphdb/sqlite` operational baseline and now has restart-durability proof across shutdown/fresh restart; packaged/runtime and workload hardening still remain before production closure.
-- [ ] Phase-1 A9 is still `Partial+`: ANN acceleration currently stops at `external_stub` / `external_http` scaffolding plus telemetry, not a proven production ANN backend.
+- [~] Phase-1 A9 now has a live `external_http` sync-backed connector baseline under real query traffic, but benchmark-backed rollout thresholds and larger-workload validation still remain before production closure.
 - [x] `KnowledgeLearningPlatform.ts` no longer uses placeholder-backed runtime surfaces for query comparison, staleness, learning-quality, and session-plan-quality diagnostics.
 - [x] Server bootstrap now injects an active local `tutorAdapter`; the remaining tutor gap is production-proven multi-provider routing rather than default activation.
 
@@ -22,15 +22,15 @@
 - [x] Runtime path adaptation has been integrated for sidecar and frontend data roots.
 - [x] Worker runtime resolution has been stabilized for packaged sidecar scenarios.
 - [ ] Packaged/runtime and heavier-workload verification for the embedded graph backend baseline remain pending.
-- [ ] Production ANN connector activation and benchmark-backed rollout thresholds remain pending.
-- [ ] Phase-2 quality/query/session diagnostics now need release-grade calibration on top of a non-`Partial+` graphdb/ANN baseline.
+- [ ] Production ANN connector workload and benchmark-backed rollout thresholds remain pending.
+- [ ] Phase-2 quality/query/session diagnostics now need release-grade calibration on top of a release-grade graphdb/ANN baseline.
 - [ ] Tutor routing now needs multi-provider hardening beyond the active local-first adapter path.
 - [ ] Final Electron decommission readiness checklist remains pending.
 
 ### Current Acceptance Targets
 
 1. Default graphdb runtime path is embedded `graphdb/sqlite` and survives restart with persistent query/store diagnostics.
-2. One ANN connector path is proven under real connector telemetry rather than only `external_stub` / `external_http` scaffolding.
-3. The live query comparison, staleness, learning-quality, and session-plan-quality diagnostics are calibrated on top of a non-`Partial+` graphdb/ANN baseline.
+2. The live `external_http` ANN connector path stays healthy under real sync/query telemetry, and its rollout thresholds are tightened for release use.
+3. The live query comparison, staleness, learning-quality, and session-plan-quality diagnostics are calibrated on top of a release-grade graphdb/ANN baseline.
 4. Tutor routing advances from local-first adapter execution into a production-proven multi-provider policy while keeping explicit fallback behavior.
 5. Tauri desktop + Android path remains documented, verified, and cleanly separated from historical Electron context.

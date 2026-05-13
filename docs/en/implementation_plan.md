@@ -16,19 +16,22 @@ Bring code truth, active progress docs, and next execution order back into align
   - `server.ts` now injects an active default local `tutorAdapter` while retaining the `local` + `cloud` adapter catalog.
   - embedded sqlite lifecycle hardening is now in place: server shutdown closes the graph store cleanly, and the sqlite adapter can reopen safely for later runtime use in the same process.
   - `src/notemd.server.integration.test.ts` now proves A8 restart durability through ingest -> shutdown -> fresh module reload -> store diagnostics/query/readiness continuity.
+  - `local_vector` external HTTP acceleration is no longer query-only scaffolding: the adapter now supports remote index sync, exposes sync telemetry in diagnostics, and preserves strict `fail_closed` plus representation-alignment semantics.
+  - `src/query_backend.external_http.integration.test.ts` now proves a live `external_http` connector path end to end: ingest -> remote index sync -> query -> diagnostics.
 - This changes the execution focus:
   - P3 placeholder replacement is implementation-complete for the current runtime surfaces.
   - P4 default tutor-routing activation is implementation-complete for the local-first baseline.
   - the remaining A8 gap is now narrower: packaged/runtime proof plus heavier workload hardening.
-  - the next phase after this restart-durability slice is P2 production-backed ANN closure, followed by release-grade Phase-2 gate promotion.
+  - P2 now has a real live-connector baseline for A9 instead of pure scaffolding.
+  - the next phase after this work is release-grade Phase-2 gate hardening, while A8 packaged/runtime closure and A9 workload/threshold calibration continue in parallel.
 
 ### Code-vs-Plan Reality Matrix
 
 | Area | Planned Expectation | Current HEAD Reality | Status |
 |---|---|---|---|
 | Phase-1 A8 graph backend | production-grade local graph backend | ops semantics exist, default runtime now targets embedded `graphdb/sqlite` with explicit file fallback, and restart durability is integration-proved; packaged/runtime proof and heavier-workload hardening are still open | Operational baseline |
-| Phase-1 A9 ANN connector | production-grade ANN connector | prefilter/circuit/representation telemetry exists, but delivery still stops at `external_stub` / `external_http` scaffolding | Partial+ |
-| Phase-2 quality gates | live mastery/divergence quality trend gates | query-backend comparison, staleness, learning-quality, and session-plan-quality runtime surfaces are now live in `KnowledgeLearningPlatform.ts`, but they are not yet release-closed because they still sit on top of the same `Partial+` Phase-1 graph/ANN baseline | Operational baseline |
+| Phase-1 A9 ANN connector | production-grade ANN connector | `external_http` now supports remote index sync plus live end-to-end query proof under strict failure/representation semantics, but recall/latency calibration and larger-workload validation are still open | Operational baseline |
+| Phase-2 quality gates | live mastery/divergence quality trend gates | query-backend comparison, staleness, learning-quality, and session-plan-quality runtime surfaces are now live in `KnowledgeLearningPlatform.ts`, but they are not yet release-closed because they still need release-grade calibration on top of the current graph/ANN operational baseline | Operational baseline |
 | Phase-3 tutor + memory | tutor and memory operating layer becomes real | tutor telemetry/trace/provider trends + conversation memory + memory-policy diagnostics are real, and default runtime now injects a local tutor adapter; production-proven multi-provider routing is still open | Operational baseline |
 | Architecture compaction | major monoliths reduced to sustainable size | `server.ts` 14,992, `KnowledgeLearningPlatform.ts` 7,706, `path_app.js` 4,649, `app.js` 4,713, `routes/knowledge.ts` 690 | Open |
 
@@ -41,13 +44,13 @@ Bring code truth, active progress docs, and next execution order back into align
    - validate the new embedded `graphdb/sqlite` default across packaged/runtime paths,
    - preserve fallback behavior,
    - keep expanding beyond the now-proved restart lifecycle into heavier durability/performance and adapter/fallback consistency verification.
-3. P2: Next phase after the current A8 durability slice - production ANN closure
-   - replace scaffold-only ANN delivery with one proven connector path,
+3. P2: ANN workload and rollout closure on top of the new live connector baseline
+   - keep the new sync-backed `external_http` connector healthy under real traffic,
    - benchmark recall/latency thresholds,
-   - keep runbook telemetry and failure semantics intact.
-4. P3: Phase-2 quality gate hardening
+   - expand workload validation before calling the ANN layer production-closed.
+4. P3: Next phase after this work - Phase-2 quality gate hardening
    - keep the new telemetry-backed query/staleness/learning-quality/session-plan-quality surfaces aligned with the same runtime truth,
-   - promote them into release-significant threshold gates only after Phase-1 backend closure is real.
+   - promote them into release-significant threshold gates only after the graph/ANN baseline is release-grade rather than merely operational.
 5. P4: Tutor routing hardening
    - keep the newly active default `tutorAdapter` observable,
    - extend from local-first routing into a production-proven multi-provider policy.
@@ -58,7 +61,7 @@ Bring code truth, active progress docs, and next execution order back into align
 ### Acceptance Criteria
 
 1. The default graph backend is no longer `local-file-graphdb`, and the embedded `graphdb/sqlite` baseline survives shutdown/restart with persistent query/store diagnostics.
-2. One ANN connector path is proven beyond scaffold status and passes runbook/telemetry checks under real requests.
+2. One ANN connector path is proven beyond scaffold status under real sync/query traffic, and its workload/threshold calibration remains explicitly tracked rather than hidden.
 3. `KnowledgeLearningPlatform.ts` no longer returns placeholders for query comparison, staleness, learning-quality, and session-plan-quality runtime surfaces.
 4. Default runtime tutor execution emits non-zero adapter telemetry under real server execution.
 5. `docs:diataxis:check`, `docs:site:build`, `build:with-vite`, and targeted agent-workspace/KLP tests pass after each milestone.

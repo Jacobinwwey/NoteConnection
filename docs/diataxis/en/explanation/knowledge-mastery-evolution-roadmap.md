@@ -55,10 +55,10 @@ This requires:
 - The branch now contains real Phase-3 tutor/memory slices, but current HEAD should not be described as "Phase-1 closed".
 - The accurate state is:
   - Phase-1 A8 has advanced into an embedded local-backend baseline: graph/store ops semantics, embedded SQLite graphdb persistence/query paths, and HTTP adapter paths exist, the default runtime now targets `graphdb/sqlite` with explicit file fallback, and restart durability is integration-proved; packaged/runtime proof and heavier workload hardening are still open.
-  - Phase-1 A9 is `Partial+`: ANN-style prefilter, representation telemetry, and `external_http` scaffolding exist, but there is still no proven production ANN backend wired into the default delivery path.
-  - Phase-2 now has an operational diagnostics baseline: `learning quality`, `session plan quality`, query comparison, staleness, query-backend config, and query-backend diagnostics are live in `KnowledgeLearningPlatform.ts`, but they are not yet release-closed because they still sit on top of the same `Partial+` Phase-1 graph/ANN delivery path.
+  - Phase-1 A9 has advanced into an ANN connector operational baseline: ANN-style prefilter, representation telemetry, remote index sync, and live `external_http` query proof now exist, but recall/latency calibration and larger-workload validation are still open.
+  - Phase-2 now has an operational diagnostics baseline: `learning quality`, `session plan quality`, query comparison, staleness, query-backend config, and query-backend diagnostics are live in `KnowledgeLearningPlatform.ts`, but they are not yet release-closed because they still require release-grade calibration on top of the current graph/ANN operational baseline.
   - Phase-3 is now operational-baseline rather than catalog-only: tutor telemetry, tutor trace/provider trends, conversation memory, memory-policy diagnostics, and default runtime tutor-adapter injection are real, but production-proven multi-provider routing policy is still open.
-- Active rollout focus therefore changes from "assume closure and move on" to "finish the remaining A8 packaged/runtime/workload closure, move next into A9 production ANN closure, then promote quality/tutor gates honestly."
+- Active rollout focus therefore changes from "assume closure and move on" to "finish the remaining A8 packaged/runtime closure plus A9 workload calibration, then move next into honest Phase-2 gate promotion."
 
 ## Primary Structural Gaps Still Open
 
@@ -66,7 +66,7 @@ This requires:
    - keep the new embedded `graphdb/sqlite` default alive across packaged/runtime paths,
    - treat restart durability as already proved and extend verification into ops-preferred query semantics, fallback consistency, packaged/runtime behavior, and heavier-workload durability against that local graph engine.
 2. Real ANN connector closure:
-   - replace `external_stub` / `external_http` scaffolding status with one production-backed ANN connector path,
+   - keep the new live `external_http` connector path healthy under real sync/query traffic,
    - benchmark recall/latency thresholds before calling the vector layer production-ready.
 3. Phase-2 quality gating:
    - keep the new `learning quality`, `session plan quality`, query-comparison, and staleness diagnostics aligned with the same runtime truth,

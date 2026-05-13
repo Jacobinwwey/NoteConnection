@@ -72,6 +72,14 @@ export interface GraphQueryBackendDiagnostics {
             enabled: boolean;
             mode: 'ann_prefilter' | 'full_scan';
             failureMode?: LocalVectorAccelerationFailureMode;
+            indexSyncStatus?: 'ready' | 'degraded' | 'unavailable' | 'unknown';
+            indexSyncMessage?: string;
+            lastSyncAt?: string;
+            syncRequestCount?: number;
+            syncSuccessCount?: number;
+            syncFailureCount?: number;
+            syncedIndexSignature?: string;
+            syncedAtomCount?: number;
             lastSelectionMode?: 'full_scan' | 'token_prefilter' | 'token_signature_prefilter';
             lastCandidateCount?: number;
             adapterId?: string;
@@ -217,6 +225,14 @@ export type LocalVectorAccelerationAdapterHealth = {
     status: 'ready' | 'degraded' | 'unavailable' | 'unknown';
     message?: string;
     checkedAt?: string;
+    indexSyncStatus?: 'ready' | 'degraded' | 'unavailable' | 'unknown';
+    indexSyncMessage?: string;
+    lastSyncAt?: string;
+    syncRequestCount?: number;
+    syncSuccessCount?: number;
+    syncFailureCount?: number;
+    syncedIndexSignature?: string;
+    syncedAtomCount?: number;
     circuitState?: 'closed' | 'open' | 'half_open' | 'unknown';
     consecutiveFailures?: number;
     requestCount?: number;
@@ -279,8 +295,34 @@ export type LocalVectorAccelerationSelectionOutput = {
     };
 };
 
+export type LocalVectorAccelerationIndexSyncInput = {
+    atomCount: number;
+    tokenToAtomIds: ReadonlyMap<string, string[]>;
+    signatureBuckets: ReadonlyMap<string, string[]>;
+    representationVersion?: string;
+    embeddingModelId?: string;
+    embeddingDimension?: number;
+    indexSignature?: string;
+};
+
+export type LocalVectorAccelerationIndexSyncOutput = {
+    synced: boolean;
+    atomCount?: number;
+    indexSignature?: string;
+    representation?: {
+        version?: string;
+        embeddingModelId?: string;
+        embeddingDimension?: number;
+        indexSignature?: string;
+        validated: boolean;
+    };
+};
+
 export interface LocalVectorAccelerationAdapter {
     id: string;
+    syncIndex?(
+        input: LocalVectorAccelerationIndexSyncInput
+    ): LocalVectorAccelerationIndexSyncOutput | Promise<LocalVectorAccelerationIndexSyncOutput>;
     selectCandidates(
         input: LocalVectorAccelerationSelectionInput
     ): LocalVectorAccelerationSelectionOutput | Promise<LocalVectorAccelerationSelectionOutput>;
@@ -825,11 +867,16 @@ function selectLocalVectorAnnCandidatesByDefaultStrategy(
 
 const DEFAULT_LOCAL_VECTOR_ACCELERATION_ADAPTER: LocalVectorAccelerationAdapter = {
     id: LOCAL_VECTOR_ACCELERATION_ADAPTER_ID,
+    syncIndex: () => ({
+        synced: true,
+    }),
     selectCandidates: selectLocalVectorAnnCandidatesByDefaultStrategy,
     getHealth: () => ({
         status: 'ready',
         message: 'local_ann_prefilter_active',
         checkedAt: new Date().toISOString(),
+        indexSyncStatus: 'ready',
+        indexSyncMessage: 'local_adapter_index_sync_not_required',
         representationVersion: LOCAL_VECTOR_REPRESENTATION_VERSION,
         embeddingModelId: LOCAL_VECTOR_EMBEDDING_MODEL_ID,
         representationStatus: 'aligned',
@@ -848,6 +895,17 @@ async function selectLocalVectorAnnCandidates(params: {
 }): Promise<LocalVectorAnnCandidateSelection> {
     const adapterId = String(params.accelerationAdapter?.id || '').trim() || LOCAL_VECTOR_ACCELERATION_ADAPTER_ID;
     try {
+        if (typeof params.accelerationAdapter.syncIndex === 'function') {
+            await params.accelerationAdapter.syncIndex({
+                atomCount: params.index.atomCount,
+                tokenToAtomIds: params.index.tokenToAtomIds,
+                signatureBuckets: params.index.signatureBuckets,
+                representationVersion: LOCAL_VECTOR_REPRESENTATION_VERSION,
+                embeddingModelId: LOCAL_VECTOR_EMBEDDING_MODEL_ID,
+                embeddingDimension: params.index.documentFrequency.size,
+                indexSignature: params.index.signature,
+            });
+        }
         const rawSelection = await params.accelerationAdapter.selectCandidates({
             atomCount: params.index.atomCount,
             queryTokens: [...params.queryTokens],
@@ -1038,6 +1096,22 @@ export class LocalVectorGraphQueryBackend implements GraphQueryBackend {
     private lastAnnAdapterHealthMessage: string | undefined;
 
     private lastAnnAdapterHealthCheckedAt: string | undefined;
+
+    private lastAnnIndexSyncStatus: 'ready' | 'degraded' | 'unavailable' | 'unknown' = 'unknown';
+
+    private lastAnnIndexSyncMessage: string | undefined;
+
+    private lastAnnIndexLastSyncAt: string | undefined;
+
+    private lastAnnIndexSyncRequestCount = 0;
+
+    private lastAnnIndexSyncSuccessCount = 0;
+
+    private lastAnnIndexSyncFailureCount = 0;
+
+    private lastAnnIndexSyncedSignature: string | undefined;
+
+    private lastAnnIndexSyncedAtomCount: number | undefined;
 
     private lastAnnAdapterCircuitState: 'closed' | 'open' | 'half_open' | 'unknown' = 'unknown';
 
@@ -1283,6 +1357,14 @@ export class LocalVectorGraphQueryBackend implements GraphQueryBackend {
                     enabled: this.localVectorAnnPrefilterEnabled,
                     mode: accelerationMode,
                     failureMode: this.localVectorAccelerationFailureMode,
+                    indexSyncStatus: this.lastAnnIndexSyncStatus,
+                    indexSyncMessage: this.lastAnnIndexSyncMessage,
+                    lastSyncAt: this.lastAnnIndexLastSyncAt,
+                    syncRequestCount: this.lastAnnIndexSyncRequestCount,
+                    syncSuccessCount: this.lastAnnIndexSyncSuccessCount,
+                    syncFailureCount: this.lastAnnIndexSyncFailureCount,
+                    syncedIndexSignature: this.lastAnnIndexSyncedSignature,
+                    syncedAtomCount: this.lastAnnIndexSyncedAtomCount,
                     lastSelectionMode: this.lastAnnSelectionMode,
                     lastCandidateCount: this.lastAnnCandidateCount,
                     adapterId: this.lastAnnAdapterId,
@@ -1329,6 +1411,14 @@ export class LocalVectorGraphQueryBackend implements GraphQueryBackend {
             this.lastAnnAdapterHealthStatus = 'unknown';
             this.lastAnnAdapterHealthMessage = 'adapter_health_not_reported';
             this.lastAnnAdapterHealthCheckedAt = new Date().toISOString();
+            this.lastAnnIndexSyncStatus = 'unknown';
+            this.lastAnnIndexSyncMessage = 'adapter_health_not_reported';
+            this.lastAnnIndexLastSyncAt = undefined;
+            this.lastAnnIndexSyncRequestCount = 0;
+            this.lastAnnIndexSyncSuccessCount = 0;
+            this.lastAnnIndexSyncFailureCount = 0;
+            this.lastAnnIndexSyncedSignature = undefined;
+            this.lastAnnIndexSyncedAtomCount = undefined;
             this.lastAnnAdapterCircuitState = 'unknown';
             this.lastAnnAdapterConsecutiveFailures = 0;
             this.lastAnnAdapterRequestCount = 0;
@@ -1363,6 +1453,31 @@ export class LocalVectorGraphQueryBackend implements GraphQueryBackend {
             ) ? normalizedStatus : 'unknown';
             this.lastAnnAdapterHealthMessage = String(health?.message || '').trim().slice(0, 240) || undefined;
             this.lastAnnAdapterHealthCheckedAt = String(health?.checkedAt || '').trim() || new Date().toISOString();
+            const normalizedIndexSyncStatus = String(health?.indexSyncStatus || '').trim().toLowerCase();
+            this.lastAnnIndexSyncStatus = (
+                normalizedIndexSyncStatus === 'ready'
+                || normalizedIndexSyncStatus === 'degraded'
+                || normalizedIndexSyncStatus === 'unavailable'
+                || normalizedIndexSyncStatus === 'unknown'
+            ) ? normalizedIndexSyncStatus : 'unknown';
+            this.lastAnnIndexSyncMessage = String(health?.indexSyncMessage || '').trim().slice(0, 240) || undefined;
+            this.lastAnnIndexLastSyncAt = String(health?.lastSyncAt || '').trim() || undefined;
+            this.lastAnnIndexSyncRequestCount = Math.max(
+                0,
+                Math.floor(Number(health?.syncRequestCount || 0))
+            );
+            this.lastAnnIndexSyncSuccessCount = Math.max(
+                0,
+                Math.floor(Number(health?.syncSuccessCount || 0))
+            );
+            this.lastAnnIndexSyncFailureCount = Math.max(
+                0,
+                Math.floor(Number(health?.syncFailureCount || 0))
+            );
+            this.lastAnnIndexSyncedSignature = String(health?.syncedIndexSignature || '').trim().slice(0, 200) || undefined;
+            this.lastAnnIndexSyncedAtomCount = Number.isFinite(Number(health?.syncedAtomCount))
+                ? Math.max(0, Math.floor(Number(health?.syncedAtomCount || 0)))
+                : undefined;
             const normalizedCircuitState = String(health?.circuitState || '').trim().toLowerCase();
             this.lastAnnAdapterCircuitState = (
                 normalizedCircuitState === 'closed'
@@ -1434,6 +1549,14 @@ export class LocalVectorGraphQueryBackend implements GraphQueryBackend {
             this.lastAnnAdapterHealthStatus = 'unavailable';
             this.lastAnnAdapterHealthMessage = String((error as Error)?.message || error).slice(0, 240);
             this.lastAnnAdapterHealthCheckedAt = new Date().toISOString();
+            this.lastAnnIndexSyncStatus = 'unknown';
+            this.lastAnnIndexSyncMessage = 'adapter_health_probe_failed';
+            this.lastAnnIndexLastSyncAt = undefined;
+            this.lastAnnIndexSyncRequestCount = 0;
+            this.lastAnnIndexSyncSuccessCount = 0;
+            this.lastAnnIndexSyncFailureCount = 0;
+            this.lastAnnIndexSyncedSignature = undefined;
+            this.lastAnnIndexSyncedAtomCount = undefined;
             this.lastAnnAdapterCircuitState = 'unknown';
             this.lastAnnAdapterConsecutiveFailures = 0;
             this.lastAnnAdapterRequestCount = 0;

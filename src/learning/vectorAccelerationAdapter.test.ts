@@ -135,6 +135,62 @@ describe('vector acceleration adapter', () => {
         expect(Number(adapter?.getHealth?.().embeddingDimension || 0)).toBe(512);
     });
 
+    test('external http adapter syncs remote index and caches matching signatures', async () => {
+        const fetchMock = jest.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            headers: {
+                get: (name: string) => {
+                    if (String(name || '').toLowerCase() === 'x-request-id') {
+                        return 'connector-sync-success';
+                    }
+                    return '';
+                },
+            },
+            json: async () => ({
+                synced: true,
+                atomCount: 180,
+                indexSignature: 'idx_sig_abc123',
+                representationVersion: 'local-vector-representation-v1',
+                embeddingModelId: 'local-semantic-tfidf-v1',
+                embeddingDimension: 512,
+                representationStatus: 'aligned',
+            }),
+        });
+        globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+        const adapter = createVectorAccelerationAdapter('external_http', {
+            externalHttp: {
+                endpoint: 'http://127.0.0.1:18080',
+            },
+        });
+
+        const syncResult = await adapter?.syncIndex?.(baseSelectionInput);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(String(fetchMock.mock.calls[0]?.[0] || '')).toContain('/sync-index');
+        const requestBody = JSON.parse(String((fetchMock.mock.calls[0]?.[1] as { body?: string } | undefined)?.body || '{}'));
+        expect(Number(requestBody.atomCount || 0)).toBe(180);
+        expect(String(requestBody.indexSignature || '')).toBe('idx_sig_abc123');
+        expect(Array.isArray(requestBody.tokenToAtomIds)).toBe(true);
+        expect(Array.isArray(requestBody.signatureBuckets)).toBe(true);
+        expect(syncResult?.synced).toBe(true);
+        expect(syncResult?.indexSignature).toBe('idx_sig_abc123');
+
+        const healthAfterSync = adapter?.getHealth?.();
+        expect(healthAfterSync?.status).toBe('ready');
+        expect(healthAfterSync?.indexSyncStatus).toBe('ready');
+        expect(healthAfterSync?.syncRequestCount).toBe(1);
+        expect(healthAfterSync?.syncSuccessCount).toBe(1);
+        expect(healthAfterSync?.syncFailureCount).toBe(0);
+        expect(healthAfterSync?.syncedIndexSignature).toBe('idx_sig_abc123');
+        expect(healthAfterSync?.syncedAtomCount).toBe(180);
+
+        const cachedSyncResult = await adapter?.syncIndex?.(baseSelectionInput);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(cachedSyncResult?.synced).toBe(true);
+        expect(adapter?.getHealth?.().indexSyncStatus).toBe('ready');
+    });
+
     test('external http adapter filters out-of-scope candidate ids and keeps only valid ids', async () => {
         const fetchMock = jest.fn().mockResolvedValue({
             ok: true,

@@ -12,7 +12,11 @@
   - PASS
 - [x] `node node_modules/jest/bin/jest.js src/notemd.server.integration.test.ts --runInBand --no-cache --testNamePattern="embedded sqlite graph runtime survives server restart and preserves query/store diagnostics"`
   - PASS
+- [x] `node node_modules/jest/bin/jest.js src/query_backend.external_http.integration.test.ts --runInBand --no-cache`
+  - PASS
 - [x] `node node_modules/jest/bin/jest.js src/notemd.server.integration.test.ts src/learning/store.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/knowledge.api.contract.test.ts src/agent_workspace.contract.parity.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.runtime.behavior.test.ts src/pkg.sidecar.contract.test.ts --runInBand --no-cache`
+  - PASS
+- [x] `node node_modules/jest/bin/jest.js src/notemd.server.integration.test.ts src/query_backend.external_http.integration.test.ts src/learning/queryBackend.test.ts src/learning/vectorAccelerationAdapter.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/knowledge.api.contract.test.ts src/pkg.sidecar.contract.test.ts --runInBand --no-cache`
   - PASS
 - [x] `npm run verify:agent-workspace:runtime`
   - PASS
@@ -36,9 +40,9 @@
    - memory-policy diagnostics/history/trend.
 2. These passes do **not** prove Phase-1 A8/A9 closure:
    - runtime no longer defaults to `local-file-graphdb`, and restart durability for the embedded `graphdb/sqlite` baseline is now integration-proved, but packaged/runtime proof and heavier workload hardening still remain,
-   - ANN still depends on scaffolded connector boundaries (`external_stub` / `external_http`) rather than a proven production backend.
+   - ANN no longer stops at query-only scaffolding: the `external_http` path now has remote index sync plus live end-to-end query proof, but workload and threshold calibration still remain before production closure.
 3. These passes do **not** prove Phase-2 quality-gate closure:
-   - query comparison, staleness, learning-quality, session-plan-quality, and query-backend diagnostics are now implementation-real, but they still sit on the same `Partial+` Phase-1 graph/ANN baseline and therefore are not release-closed yet.
+   - query comparison, staleness, learning-quality, session-plan-quality, and query-backend diagnostics are now implementation-real, but they still require release-grade calibration on top of the current graph/ANN operational baseline.
 4. Default runtime tutor execution now runs with an injected local `tutorAdapter`, but this is still a local-first baseline rather than a production-proven multi-provider routing policy.
 
 ### Phase 2 Verification Snapshot (2026-05-12)

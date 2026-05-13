@@ -10,8 +10,8 @@
 - [x] Default server runtime now injects an active local `tutorAdapter` while retaining the `local` + `cloud` adapter catalog.
 - [x] Default runtime graph backend is no longer `local-file-graphdb`: the server now targets embedded `graphdb/sqlite` with explicit file fallback.
 - [~] The new embedded `graphdb/sqlite` baseline is now restart-durability-proved, but packaged/runtime proof and heavier workload gates still remain before calling A8 production-closed.
-- [x] Phase-1 A9 is explicitly classified as `Partial+`: the current ANN path is scaffolded telemetry + `external_http` boundary, not a production-backed ANN service/engine.
-- [ ] Promote the new Phase-2 diagnostics from “implementation-real” to release-grade gates only after the same checks run on a non-`Partial+` graphdb/ANN baseline.
+- [~] Phase-1 A9 now has a live `external_http` connector baseline with remote index sync and end-to-end query proof, but recall/latency thresholds and larger-workload validation still remain before production closure.
+- [ ] Promote the new Phase-2 diagnostics from “implementation-real” to release-grade gates only after the same checks run on a release-grade graphdb/ANN baseline.
 - [ ] Extend tutor routing from the new local-first baseline into a production-proven multi-provider policy.
 - [ ] Continue FR-009 evidence freshness, Linux strict Tauri host provisioning, and final Electron decommission review.
 
@@ -33,12 +33,13 @@ After syncing the repository to the latest upstream `main` baseline, we re-audit
   - [x] ANN connector hardening does expose candidate normalization, representation telemetry, and prefilter effectiveness signals.
   - [x] Default runtime now targets an embedded `graphdb/sqlite` backend with explicit file fallback.
   - [x] Embedded sqlite restart durability is now covered by server integration proof (`ingest -> shutdown -> fresh module restart -> query/readiness continuity`).
+  - [x] The `external_http` ANN path now syncs a remote prefilter index and serves live query traffic under integration proof.
   - [ ] Packaged/runtime proof and heavier workload hardening still remain for A8.
-  - [ ] ANN still needs a production-backed connector path beyond scaffolding.
+  - [ ] ANN still needs workload/threshold calibration before production closure.
 - [ ] Next active implementation phase is now split:
   - [ ] finish the remaining A8 packaged/runtime + workload closure,
-  - [ ] move next into Phase-1 A9 production ANN closure,
-  - [ ] harden the now-live Phase-2 diagnostics into release-grade gates on top of a non-`Partial+` graphdb/ANN baseline,
+  - [ ] finish the remaining A9 workload/threshold closure on top of the live connector baseline,
+  - [ ] move next into Phase-2 release-grade gate hardening,
   - [ ] continue Phase-3 tutor/memory hardening in parallel.
   - [x] Agent Workspace browser/runtime route closure now passes real strict evidence (`STRICT`, `UI_STRICT`, `UI_DYNAMIC_STRICT`) with live conversation, capability buttons, and request-card flows.
   - [x] Current Windows host bootstrap reproducibility is engineering-ready (`npm run verify:sidecar:supply` => `offline-ready`).

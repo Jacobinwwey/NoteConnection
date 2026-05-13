@@ -7,10 +7,10 @@
 - 当前分支已经落入真实的 Phase-3 tutor/memory 切片，但不能继续沿用“Phase-1 已闭环”的说法。
 - 当前更准确的口径是：
   - Phase-1 A8 已推进到 embedded 本地图后端基线：graph/store ops 语义、embedded SQLite graphdb persistence/query 路径与 HTTP adapter 路径已经存在，默认 runtime 现在走 `graphdb/sqlite` 并保留显式 file fallback，且重启耐久性已有集成证明；但 packaged/runtime 证明与更重工作负载级加固仍未完成；
-  - Phase-1 A9 为 `Partial+`：ANN 风格 prefilter、representation telemetry 与 `external_http` 脚手架已经存在，但默认交付路径仍没有接上已验证的生产级 ANN 后端；
-  - Phase-2 现已具备运行级诊断基线：`learning quality`、`session plan quality`、query compare、staleness、query-backend config、query-backend diagnostics 都已接通真实实现，但由于仍建立在同一个 `Partial+` 的 Phase-1 graph/ANN 交付路径之上，因此还不能宣称发布级闭环；
+  - Phase-1 A9 已推进到 ANN connector operational baseline：ANN 风格 prefilter、representation telemetry、远端索引同步，以及 live `external_http` query 证明都已存在，但 recall/latency 校准与更大工作负载验证仍未完成；
+  - Phase-2 现已具备运行级诊断基线：`learning quality`、`session plan quality`、query compare、staleness、query-backend config、query-backend diagnostics 都已接通真实实现，但它们仍需要建立在当前 graph/ANN operational baseline 之上的发布级校准；
   - Phase-3 现已进入 operational baseline：导师遥测、导师 trace/provider trend、conversation memory、memory-policy diagnostics，以及默认 runtime tutor-adapter 注入都是真实实现，但生产级多适配器路由策略仍未闭环。
-- 因此下一轮推进不应再以“假定底座完成”为前提，而应先补齐 A8 剩余的 packaged/runtime + 工作负载闭环，随后转入 A9 生产级 ANN 闭环，再升级质量与导师门禁。
+- 因此下一轮推进不应再以“假定底座完成”为前提，而应先补齐 A8 剩余的 packaged/runtime 闭环与 A9 的工作负载校准，再进入诚实的 Phase-2 门禁升级。
 
 ## 战略总目标
 
@@ -73,7 +73,7 @@
    - 让新的 embedded `graphdb/sqlite` 默认基线在 packaged/runtime 路径中持续成立，
    - 将“重启耐久性已证明”继续扩展为 ops-preferred 查询语义、fallback 一致性、packaged/runtime 行为与更重工作负载级耐久性的完整验证。
 2. 真实 ANN connector 闭环：
-   - 把 `external_stub` / `external_http` 从“脚手架状态”推进到至少一条生产级 connector 路径，
+   - 让新的 live `external_http` connector 路径在真实 sync/query 流量下持续稳定，
    - 在宣称向量层可用于生产前完成 recall / latency 阈值校准。
 3. Phase-2 质量门禁：
    - 让新接通的 `learning quality`、`session plan quality`、query comparison、staleness 诊断与同一份运行时真相持续对齐，

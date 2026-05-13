@@ -453,6 +453,99 @@ describe('query backend factory', () => {
         expect(diagnostics?.vectorIndex?.acceleration?.mode).toBe('ann_prefilter');
     });
 
+    test('local vector backend syncs acceleration adapter index before candidate selection', async () => {
+        const callSequence: string[] = [];
+        const syncedIndexSignatures: string[] = [];
+        const backend = createGraphQueryBackend({
+            backend: 'local_vector',
+            localVectorAccelerationAdapter: {
+                id: 'sync-aware-adapter-v1',
+                syncIndex: (input) => {
+                    callSequence.push('sync');
+                    syncedIndexSignatures.push(String(input.indexSignature || ''));
+                    return {
+                        synced: true,
+                        atomCount: input.atomCount,
+                        indexSignature: String(input.indexSignature || ''),
+                        representation: {
+                            version: String(input.representationVersion || ''),
+                            embeddingModelId: String(input.embeddingModelId || ''),
+                            embeddingDimension: Number(input.embeddingDimension || 0),
+                            indexSignature: String(input.indexSignature || ''),
+                            validated: true,
+                        },
+                    };
+                },
+                selectCandidates: () => {
+                    callSequence.push('select');
+                    return {
+                        used: true,
+                        candidateAtomIds: ['atom_focus'],
+                        mode: 'token_prefilter',
+                    };
+                },
+                getHealth: () => ({
+                    status: 'ready',
+                    indexSyncStatus: 'ready',
+                    syncRequestCount: 1,
+                    syncSuccessCount: 1,
+                    syncedIndexSignature: syncedIndexSignatures[0] || '',
+                    syncedAtomCount: 161,
+                    representationVersion: 'local-vector-representation-v1',
+                    embeddingModelId: 'local-semantic-tfidf-v1',
+                    embeddingDimension: 3,
+                    indexSignature: syncedIndexSignatures[0] || '',
+                    representationStatus: 'aligned',
+                }),
+            },
+        });
+        const atoms: KnowledgeAtom[] = [];
+        for (let index = 0; index < 160; index += 1) {
+            atoms.push(
+                makeAtom(
+                    `atom_${index}`,
+                    `baseline topic ${index}`,
+                    `baseline mastery diagnostics coverage ${index}`,
+                    ['baseline', 'mastery']
+                )
+            );
+        }
+        atoms.push(
+            makeAtom(
+                'atom_focus',
+                'retrieval focus',
+                'retrieval mastery diagnostics critical note',
+                ['retrieval', 'mastery', 'diagnostics']
+            )
+        );
+
+        const result = await backend.query({
+            request: {
+                query: 'retrieval mastery diagnostics',
+                topK: 4,
+            },
+            query: 'retrieval mastery diagnostics',
+            queryTokens: ['retrieval', 'mastery', 'diagnostics'],
+            asOf: '2026-01-01T00:00:00.000Z',
+            topK: 4,
+            atoms,
+            activeEdges: [] as RelationEdge[],
+        });
+
+        expect(result.candidates.some((candidate) => candidate.atomId === 'atom_focus')).toBe(true);
+        expect(callSequence[0]).toBe('sync');
+        expect(callSequence[1]).toBe('select');
+        expect(String(syncedIndexSignatures[0] || '')).not.toBe('');
+
+        const diagnostics = backend.getDiagnostics?.();
+        expect(diagnostics?.vectorIndex?.acceleration?.indexSyncStatus).toBe('ready');
+        expect(diagnostics?.vectorIndex?.acceleration?.syncRequestCount).toBe(1);
+        expect(diagnostics?.vectorIndex?.acceleration?.syncSuccessCount).toBe(1);
+        expect(String(diagnostics?.vectorIndex?.acceleration?.syncedIndexSignature || '')).toBe(
+            String(syncedIndexSignatures[0] || '')
+        );
+    });
+
     test('local vector backend exposes adapter health telemetry in query trace vectorAcceleration', async () => {
         const backend = createGraphQueryBackend({
             backend: 'local_vector',

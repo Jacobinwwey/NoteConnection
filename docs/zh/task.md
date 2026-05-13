@@ -3,7 +3,7 @@
 - [x] agent-workspace 的 browser/runtime/Tauri 验证闭环已经是真实可重复的。
 - [x] Phase-3 中的 tutor telemetry、tutor trace/provider trend、conversation memory、memory-policy diagnostics 已有具体后端实现。
 - [~] Phase-1 A8 已推进到 embedded `graphdb/sqlite` operational baseline，并已具备 shutdown/fresh restart 的重启耐久性证明；但 packaged/runtime 与工作负载级加固仍未达到生产闭环。
-- [ ] Phase-1 A9 仍为 `Partial+`：ANN 路径当前仍停留在 `external_stub` / `external_http` 脚手架与 telemetry，尚非生产级 ANN 后端。
+- [~] Phase-1 A9 现已具备 live `external_http` sync-backed connector baseline，并在真实 query 流量下得到证明；但 benchmark rollout 阈值与更大工作负载验证仍未完成。
 - [x] `KnowledgeLearningPlatform.ts` 中 query compare / staleness / learning-quality / session-plan-quality 运行面已不再返回 placeholder。
 - [x] `server.ts` 已注入激活态本地 `tutorAdapter`；剩余导师缺口已不再是默认激活，而是生产级多 provider 路由。
 
@@ -18,16 +18,16 @@
 - [x] Sidecar 与前端数据根路径的运行时适配已集成。
 - [x] 打包 Sidecar 场景下的 Worker 路径解析已稳定。
 - [ ] embedded graph backend 基线的 packaged/runtime 与更重工作负载验证仍待完成。
-- [ ] 生产级 ANN connector 激活与基准阈值校准仍待完成。
-- [ ] query/quality/session 运行面虽已真实接通，但仍需在非 `Partial+` 的 graphdb/ANN 基线上完成发布级校准。
+- [ ] 生产级 ANN connector 的工作负载与基准阈值校准仍待完成。
+- [ ] query/quality/session 运行面虽已真实接通，但仍需在发布级 graphdb/ANN 基线上完成发布级校准。
 - [ ] tutor 运行路径接下来要从 local-first 激活态 adapter 扩展为生产级多 provider 路由。
 - [ ] Electron 下线前最终就绪清单仍待完成。
 
 ### 当前验收目标
 
 1. 默认 graphdb 交付路径已经是 embedded `graphdb/sqlite`，并且跨重启可保持 query/store diagnostics 连续性。
-2. 至少一条 ANN connector 路径在真实请求下超出脚手架阶段，并具备可用 runbook/telemetry 证据。
-3. 当前 live 的 query compare、staleness、learning-quality、session-plan-quality 诊断面已在非 `Partial+` 的 graphdb/ANN 基线上完成发布级校准。
+2. live `external_http` ANN connector 路径能够在真实 sync/query telemetry 下持续稳定，并完成发布级 rollout 阈值收敛。
+3. 当前 live 的 query compare、staleness、learning-quality、session-plan-quality 诊断面已在发布级 graphdb/ANN 基线上完成发布级校准。
 4. tutor routing 从 local-first adapter 执行推进到生产级多 provider 策略，同时保留明确的 fallback。
 5. Tauri 桌面与 Android 路径继续保持可验证、可文档化，并与历史 Electron 上下文清晰分层。
 

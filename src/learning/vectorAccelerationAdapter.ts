@@ -1,6 +1,8 @@
 import type {
     LocalVectorAccelerationAdapter,
     LocalVectorAccelerationAdapterHealth,
+    LocalVectorAccelerationIndexSyncInput,
+    LocalVectorAccelerationIndexSyncOutput,
     LocalVectorAccelerationSelectionInput,
     LocalVectorAccelerationSelectionOutput,
 } from './queryBackend';
@@ -432,11 +434,27 @@ export function createVectorAccelerationAdapter(
     if (provider === 'external_stub') {
         return {
             id: EXTERNAL_STUB_ADAPTER_ID,
+            syncIndex: (input: LocalVectorAccelerationIndexSyncInput): LocalVectorAccelerationIndexSyncOutput => ({
+                synced: true,
+                atomCount: input.atomCount,
+                indexSignature: String(input.indexSignature || '').trim() || undefined,
+                representation: {
+                    version: String(input.representationVersion || '').trim() || undefined,
+                    embeddingModelId: String(input.embeddingModelId || '').trim() || undefined,
+                    embeddingDimension: Number.isFinite(Number(input.embeddingDimension))
+                        ? Math.max(0, Math.floor(Number(input.embeddingDimension || 0)))
+                        : undefined,
+                    indexSignature: String(input.indexSignature || '').trim() || undefined,
+                    validated: true,
+                },
+            }),
             selectCandidates: selectCandidatesFromExternalStub,
             getHealth: () => ({
                 status: 'ready',
                 message: 'external_stub_adapter_ready',
                 checkedAt: new Date().toISOString(),
+                indexSyncStatus: 'ready',
+                indexSyncMessage: 'external_stub_index_sync_not_required',
                 representationVersion: EXTERNAL_STUB_REPRESENTATION_VERSION,
                 embeddingModelId: EXTERNAL_STUB_EMBEDDING_MODEL_ID,
                 representationStatus: 'unknown',
@@ -469,6 +487,14 @@ export function createVectorAccelerationAdapter(
     let lastRequestId = '';
     let lastErrorCode = '';
     let lastRetryAfterMs = 0;
+    let indexSyncStatus: 'ready' | 'degraded' | 'unavailable' | 'unknown' = endpoint ? 'unknown' : 'unavailable';
+    let indexSyncMessage = endpoint ? 'external_http_index_sync_pending' : 'external_http_endpoint_missing';
+    let lastSyncAt = '';
+    let syncRequestCount = 0;
+    let syncSuccessCount = 0;
+    let syncFailureCount = 0;
+    let syncedIndexSignature = '';
+    let syncedAtomCount = 0;
     let representationVersion = '';
     let embeddingModelId = '';
     let embeddingDimension = 0;
@@ -482,6 +508,14 @@ export function createVectorAccelerationAdapter(
         LocalVectorAccelerationAdapterHealth,
         'status' | 'message' | 'checkedAt'
     > => ({
+        indexSyncStatus,
+        indexSyncMessage: indexSyncMessage || undefined,
+        lastSyncAt: lastSyncAt || undefined,
+        syncRequestCount,
+        syncSuccessCount,
+        syncFailureCount,
+        syncedIndexSignature: syncedIndexSignature || undefined,
+        syncedAtomCount: syncedAtomCount > 0 ? syncedAtomCount : undefined,
         circuitState,
         consecutiveFailures,
         requestCount: selectionRequestCount,
@@ -534,6 +568,156 @@ export function createVectorAccelerationAdapter(
 
     return {
         id: EXTERNAL_HTTP_ADAPTER_ID,
+        async syncIndex(input: LocalVectorAccelerationIndexSyncInput): Promise<LocalVectorAccelerationIndexSyncOutput> {
+            const requestedRepresentationVersion = normalizeRepresentationVersion(input.representationVersion);
+            const requestedEmbeddingModelId = normalizeEmbeddingModelId(input.embeddingModelId);
+            const requestedEmbeddingDimension = normalizeEmbeddingDimension(input.embeddingDimension);
+            const requestedIndexSignature = normalizeIndexSignature(input.indexSignature);
+            const requestedAtomCount = Math.max(0, Math.floor(Number(input.atomCount || 0)));
+            if (requestedRepresentationVersion) {
+                representationVersion = requestedRepresentationVersion;
+            }
+            if (requestedEmbeddingModelId) {
+                embeddingModelId = requestedEmbeddingModelId;
+            }
+            if (requestedEmbeddingDimension > 0) {
+                embeddingDimension = requestedEmbeddingDimension;
+            }
+            if (requestedIndexSignature) {
+                indexSignature = requestedIndexSignature;
+            }
+            if (requestedIndexSignature && requestedIndexSignature === syncedIndexSignature && requestedAtomCount === syncedAtomCount) {
+                indexSyncStatus = 'ready';
+                indexSyncMessage = `external_http_index_sync_cached:${requestedIndexSignature}`;
+                return {
+                    synced: true,
+                    atomCount: syncedAtomCount,
+                    indexSignature: syncedIndexSignature || undefined,
+                    representation: {
+                        version: representationVersion || undefined,
+                        embeddingModelId: embeddingModelId || undefined,
+                        embeddingDimension: embeddingDimension > 0 ? embeddingDimension : undefined,
+                        indexSignature: syncedIndexSignature || undefined,
+                        validated: representationStatus !== 'mismatch',
+                    },
+                };
+            }
+            if (!endpoint) {
+                indexSyncStatus = 'unavailable';
+                indexSyncMessage = 'external_http_endpoint_missing';
+                syncFailureCount += 1;
+                throw new Error('external_http_endpoint_missing');
+            }
+            syncRequestCount += 1;
+            const clientRequestId = nextExternalHttpRequestId();
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const response = await fetch(`${endpoint}/sync-index`, {
+                    method: 'POST',
+                    headers: {
+                        'content-type': 'application/json',
+                        'x-request-id': clientRequestId,
+                        'x-correlation-id': clientRequestId,
+                    },
+                    body: JSON.stringify({
+                        atomCount: requestedAtomCount,
+                        indexSignature: requestedIndexSignature || undefined,
+                        representationVersion: requestedRepresentationVersion || undefined,
+                        embeddingModelId: requestedEmbeddingModelId || undefined,
+                        embeddingDimension: requestedEmbeddingDimension > 0 ? requestedEmbeddingDimension : undefined,
+                        tokenToAtomIds: Array.from(input.tokenToAtomIds.entries()),
+                        signatureBuckets: Array.from(input.signatureBuckets.entries()),
+                    }),
+                    signal: controller.signal,
+                });
+                const connectorRequestId = normalizeExternalHttpRequestId(
+                    response?.headers?.get?.('x-request-id'),
+                    clientRequestId
+                );
+                if (connectorRequestId) {
+                    lastRequestId = connectorRequestId;
+                }
+                if (!response.ok) {
+                    const statusCode = Math.max(0, Math.floor(Number(response.status || 0)));
+                    const connectorErrorCode = normalizeExternalHttpErrorCode(
+                        response?.headers?.get?.('x-error-code'),
+                        statusCode > 0 ? `http_${statusCode}` : 'http_error'
+                    );
+                    lastErrorCode = connectorErrorCode;
+                    syncFailureCount += 1;
+                    indexSyncStatus = 'degraded';
+                    indexSyncMessage = `external_http_sync_status_${statusCode}:errorCode=${connectorErrorCode}`;
+                    throw new Error(indexSyncMessage);
+                }
+                const payload = await response.json();
+                const responseRepresentationVersion = normalizeRepresentationVersion(payload?.representationVersion);
+                const responseEmbeddingModelId = normalizeEmbeddingModelId(payload?.embeddingModelId);
+                const responseEmbeddingDimension = normalizeEmbeddingDimension(payload?.embeddingDimension);
+                const responseIndexSignature = normalizeIndexSignature(payload?.indexSignature);
+                if (responseRepresentationVersion) {
+                    representationVersion = responseRepresentationVersion;
+                }
+                if (responseEmbeddingModelId) {
+                    embeddingModelId = responseEmbeddingModelId;
+                }
+                if (responseEmbeddingDimension > 0) {
+                    embeddingDimension = responseEmbeddingDimension;
+                }
+                if (responseIndexSignature) {
+                    indexSignature = responseIndexSignature;
+                }
+                const responseRepresentationStatus = normalizeRepresentationStatus(payload?.representationStatus);
+                const responseRepresentationStatusReason = truncateMessage(
+                    payload?.representationStatusReason,
+                    240
+                );
+                if (responseRepresentationStatus !== 'unknown') {
+                    representationStatus = responseRepresentationStatus;
+                    representationStatusReason = responseRepresentationStatusReason
+                        || (responseRepresentationStatus === 'aligned'
+                            ? 'external_http_representation_aligned'
+                            : 'external_http_representation_mismatch');
+                }
+                syncedIndexSignature = requestedIndexSignature || responseIndexSignature || indexSignature;
+                syncedAtomCount = requestedAtomCount;
+                lastSyncAt = new Date().toISOString();
+                syncSuccessCount += 1;
+                indexSyncStatus = 'ready';
+                indexSyncMessage = (
+                    `external_http_index_synced:${syncedIndexSignature || 'unknown'}:atoms=${syncedAtomCount}`
+                );
+                updateHealth({
+                    status: circuitState === 'open' ? 'degraded' : 'ready',
+                    message: 'external_http_adapter_ready',
+                    checkedAt: new Date().toISOString(),
+                });
+                return {
+                    synced: true,
+                    atomCount: syncedAtomCount,
+                    indexSignature: syncedIndexSignature || undefined,
+                    representation: {
+                        version: representationVersion || undefined,
+                        embeddingModelId: embeddingModelId || undefined,
+                        embeddingDimension: embeddingDimension > 0 ? embeddingDimension : undefined,
+                        indexSignature: syncedIndexSignature || undefined,
+                        validated: representationStatus !== 'mismatch',
+                    },
+                };
+            } catch (error) {
+                syncFailureCount += 1;
+                indexSyncStatus = endpoint ? 'degraded' : 'unavailable';
+                indexSyncMessage = truncateMessage((error as Error)?.message || error, 240) || 'external_http_index_sync_failed';
+                updateHealth({
+                    status: endpoint ? 'degraded' : 'unavailable',
+                    message: String(lastHealth.message || '').trim() || indexSyncMessage,
+                    checkedAt: new Date().toISOString(),
+                });
+                throw error;
+            } finally {
+                clearTimeout(timer);
+            }
+        },
         async selectCandidates(input: LocalVectorAccelerationSelectionInput): Promise<LocalVectorAccelerationSelectionOutput> {
             selectionRequestCount += 1;
             const requestedRepresentationVersion = normalizeRepresentationVersion(input.representationVersion);

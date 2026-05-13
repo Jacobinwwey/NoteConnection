@@ -7,11 +7,12 @@
 - This document remains a 2026-05-10 audit baseline and should not be read as current HEAD truth without this addendum.
 - HEAD has advanced beyond the 2026-05-12 revalidation note:
   - Phase-1 A8 is no longer "default local-file-graphdb": default runtime now targets embedded `graphdb/sqlite`, and server-restart durability is covered by integration proof.
+  - Phase-1 A9 is no longer pure connector scaffolding: the `external_http` path now supports remote index sync and live end-to-end query proof.
   - Phase-2 query/staleness/learning-quality/session-plan-quality surfaces are no longer placeholder-backed.
   - Phase-3 tutor routing is no longer catalog-only: default runtime now injects an active local tutor adapter.
 - Current still-open goals after the latest revalidation are:
   - remaining A8 packaged/runtime + heavier-workload closure,
-  - A9 production ANN closure,
+  - A9 workload/threshold closure on top of the live connector baseline,
   - Phase-2 release-grade gate calibration,
   - multi-provider tutor-routing hardening,
   - FR-009 operational evidence,
@@ -115,11 +116,12 @@
 - 本文仍是 2026-05-10 的审计基线；如果不结合本节补充说明，就不能把它当作当前 HEAD 的真实状态。
 - HEAD 已经超出 2026-05-12 的复核口径：
   - Phase-1 A8 已不再是“默认 local-file-graphdb”：默认 runtime 现已切到 embedded `graphdb/sqlite`，且跨 server restart 的耐久性已有集成证明。
+  - Phase-1 A9 也已不再是纯 connector scaffolding：`external_http` 路径现已支持远端索引同步与真实端到端 query 证明。
   - Phase-2 的 query/staleness/learning-quality/session-plan-quality 运行面已不再依赖 placeholder。
   - Phase-3 tutor routing 也不再是 catalog-only：默认 runtime 现已注入激活态本地 tutor adapter。
 - 截至最新复核，当前仍然开放的目标是：
   - A8 剩余的 packaged/runtime + 更重工作负载闭环，
-  - A9 生产级 ANN 闭环，
+  - A9 在 live connector baseline 之上的工作负载/阈值闭环，
   - Phase-2 发布级门禁校准，
   - 多 provider tutor-routing 加固，
   - FR-009 运维证据，

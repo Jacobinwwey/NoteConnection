@@ -15,19 +15,22 @@
   - `server.ts` 现已注入默认激活态本地 `tutorAdapter`，同时保留 `local` + `cloud` adapter catalog。
   - embedded sqlite 生命周期已补齐：server shutdown 会显式关闭 graph store，sqlite adapter 也能在同进程后续运行中安全重开。
   - `src/notemd.server.integration.test.ts` 现已证明 A8 的重启耐久性：覆盖 ingest -> shutdown -> fresh module reload -> store diagnostics/query/readiness 连续性。
+  - `local_vector` 的 external HTTP 加速已不再只是查询侧脚手架：适配器现已支持远端索引同步，在 diagnostics 中暴露 sync telemetry，并保留严格的 `fail_closed` 与 representation-alignment 语义。
+  - `src/query_backend.external_http.integration.test.ts` 现已证明一条真实的 `external_http` connector 路径：覆盖 ingest -> 远端索引同步 -> query -> diagnostics。
 - 这会改变执行重心：
   - P3 的“placeholder 替换”在当前 runtime 面上已经完成实现；
   - P4 的“默认 tutor-routing 激活”在本地优先基线上已经完成实现；
   - A8 剩余缺口已经收窄为 packaged/runtime 证明与更重工作负载级加固；
-  - 这个重启耐久性切片之后的下一阶段是 P2 生产级 ANN 闭环，随后才是发布级 Phase-2 门禁升级。
+  - P2 现在已经具备 A9 的真实 live connector baseline，而不再只是纯脚手架；
+  - 这个工作之后的下一阶段是发布级 Phase-2 门禁加固，同时并行继续 A8 的 packaged/runtime 闭环和 A9 的工作负载/阈值校准。
 
 ### 代码 vs 方案现状矩阵
 
 | 区域 | 方案期望 | 当前 HEAD 现实 | 状态 |
 |---|---|---|---|
 | Phase-1 A8 graph backend | 生产级本地图后端 | ops 语义已存在，默认 runtime 已切到 embedded `graphdb/sqlite` 并保留显式 file fallback，且重启耐久性已有集成证明；但 packaged/runtime 证明与更重工作负载级加固仍未完成 | Operational baseline |
-| Phase-1 A9 ANN connector | 生产级 ANN connector | prefilter / circuit / representation telemetry 已有，但默认交付仍停留在 `external_stub` / `external_http` 脚手架 | Partial+ |
-| Phase-2 quality gates | 真实掌握闭环 / 发散质量门禁 | query-backend comparison、staleness、learning-quality、session-plan-quality 运行面已在 `KnowledgeLearningPlatform.ts` 中接通真实实现，但由于仍建立在同一个 `Partial+` 的 Phase-1 graph/ANN 基线上，所以还不能宣称发布级闭环 | Operational baseline |
+| Phase-1 A9 ANN connector | 生产级 ANN connector | `external_http` 现已支持远端索引同步，并在严格 failure/representation 语义下通过真实端到端 query 证明；但 recall/latency 校准与更大工作负载验证仍未完成 | Operational baseline |
+| Phase-2 quality gates | 真实掌握闭环 / 发散质量门禁 | query-backend comparison、staleness、learning-quality、session-plan-quality 运行面已在 `KnowledgeLearningPlatform.ts` 中接通真实实现，但它们仍需要建立在当前 graph/ANN operational baseline 之上的发布级校准 | Operational baseline |
 | Phase-3 tutor + memory | 导师与记忆操作层真实落地 | tutor telemetry / trace-provider trend / conversation memory / memory-policy diagnostics 已真实，且默认 runtime 已注入本地 tutor adapter；生产级多 provider 路由仍待闭环 | Operational baseline |
 | 架构缩减 | 主单体下降到可持续体量 | `server.ts` 14,992、`KnowledgeLearningPlatform.ts` 7,706、`path_app.js` 4,649、`app.js` 4,713、`routes/knowledge.ts` 690 | Open |
 
@@ -40,13 +43,13 @@
    - 对新的 embedded `graphdb/sqlite` 默认基线补齐 packaged/runtime 级验证，
    - 保留 fallback，
    - 在已证明的重启生命周期之外，继续补齐更重耐久性/性能与 adapter / fallback 一致性验证。
-3. P2：当前 A8 耐久性切片之后的下一阶段 - 生产级 ANN 闭环
-   - 把 ANN 从脚手架路径推进到至少一条真实 connector 路径，
+3. P2：基于新 live connector baseline 的 ANN 工作负载与 rollout 闭环
+   - 让新的 sync-backed `external_http` connector 在真实流量下持续稳定，
    - 校准 recall / latency 阈值，
-   - 保持 runbook telemetry 与 failure semantics。
-4. P3：Phase-2 quality gate 加固
+   - 扩大工作负载验证后再谈 ANN 层生产闭环。
+4. P3：这个工作之后的下一阶段 - Phase-2 quality gate 加固
    - 让新接通的 query/staleness/learning-quality/session-plan-quality 诊断面始终与同一份 runtime 真相对齐，
-   - 只有在 Phase-1 backend 真正闭环后，才把它们升级为发布级门禁。
+   - 只有在 graph/ANN 基线达到发布级而不只是 operational baseline 后，才把它们升级为发布级门禁。
 5. P4：Phase-3 tutor routing 加固
    - 保持当前已激活的默认 `tutorAdapter` 可观测，
    - 从 local-first 继续推进到生产级多 provider 路由策略。
@@ -57,7 +60,7 @@
 ### 验收标准
 
 1. 默认 graph backend 不再是 `local-file-graphdb`，且 embedded `graphdb/sqlite` 基线已能在 shutdown/restart 后保持 query/store diagnostics 连续性。
-2. 至少一条 ANN connector 路径超出脚手架阶段，并在真实请求下通过 runbook / telemetry 验证。
+2. 至少一条 ANN connector 路径超出脚手架阶段，并在真实 sync/query 流量下得到证明，同时把剩余工作负载/阈值校准显式保留在计划中。
 3. `KnowledgeLearningPlatform.ts` 不再对 query compare、staleness、learning-quality、session-plan-quality 返回 placeholder。
 4. 默认 runtime tutor 执行在真实 server 路径下能产生非零 adapter telemetry。
 5. 每个里程碑后都能通过 `docs:diataxis:check`、`docs:site:build`、`build:with-vite`、以及 targeted agent-workspace / KLP tests。

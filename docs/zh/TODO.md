@@ -10,8 +10,8 @@
 - [x] 默认 server runtime 现已注入激活态本地 `tutorAdapter`，同时保留 `local` + `cloud` adapter catalog。
 - [x] 默认 runtime graph backend 已不再是 `local-file-graphdb`：server 现已切到 embedded `graphdb/sqlite`，同时保留显式 file fallback。
 - [~] 新的 embedded `graphdb/sqlite` 基线现已具备重启耐久性证明，但在宣称 A8 生产闭环前，仍需补齐 packaged/runtime 证明与更重工作负载门禁。
-- [x] Phase-1 A9 已被明确归类为 `Partial+`：当前 ANN 路径仍属于脚手架 telemetry + `external_http` 边界，而非生产级 ANN 服务/引擎。
-- [ ] 只有在同一套检查运行在非 `Partial+` 的 graphdb/ANN 基线上之后，才能把这批新的 Phase-2 诊断面升级为发布级门禁。
+- [~] Phase-1 A9 现已具备 live `external_http` connector baseline：包含远端索引同步与端到端 query 证明，但在宣称生产闭环前仍需补齐 recall/latency 阈值与更大工作负载验证。
+- [ ] 只有在同一套检查运行在发布级 graphdb/ANN 基线上之后，才能把这批新的 Phase-2 诊断面升级为发布级门禁。
 - [ ] 在当前 local-first 基线之上，把 tutor routing 继续推进到生产级多 provider 策略。
 - [ ] 持续推进 FR-009 证据新鲜度、Linux strict Tauri 宿主依赖预装、Electron 下线终审。
 
@@ -33,12 +33,13 @@
   - [x] ANN 连接器加固已具备候选集合归一化、表示一致性遥测与 prefilter 有效性信号。
   - [x] 默认 runtime 现在已经切到 embedded `graphdb/sqlite`，并保留显式 file fallback。
   - [x] embedded sqlite 的重启耐久性现已由 server integration 证明覆盖（`ingest -> shutdown -> fresh module restart -> query/readiness continuity`）。
+  - [x] `external_http` ANN 路径现已支持远端预筛选索引同步，并通过真实 query 流量的集成证明。
   - [ ] A8 仍需 packaged/runtime 证明与更重工作负载级加固。
-  - [ ] ANN 仍需从脚手架状态推进到生产级 connector 路径。
+  - [ ] ANN 仍需补齐工作负载/阈值校准后才能宣称生产闭环。
 - [ ] 下一活跃实施阶段现已拆分为：
   - [ ] 先补完 A8 剩余的 packaged/runtime + 工作负载闭环，
-  - [ ] 下一阶段转入 Phase-1 A9 生产级 ANN 闭环，
-  - [ ] 在非 `Partial+` 的 graphdb/ANN 基线上，把当前已接通的 Phase-2 诊断面继续加固为发布级门禁，
+  - [ ] 补完 A9 在 live connector baseline 之上的工作负载/阈值闭环，
+  - [ ] 下一阶段转入 Phase-2 发布级门禁加固，
   - [ ] 同时并行推进 Phase-3 tutor/memory 加固。
   - [x] Agent Workspace 浏览器/运行时路由闭环已通过真实严格证据（`STRICT`、`UI_STRICT`、`UI_DYNAMIC_STRICT`），覆盖真实会话、能力按钮与请求卡片链路。
   - [x] 当前 Windows 宿主的 sidecar/bootstrap 可复现性已具备工程闭环（`npm run verify:sidecar:supply` => `offline-ready`）。

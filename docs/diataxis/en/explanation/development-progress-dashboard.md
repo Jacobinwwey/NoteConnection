@@ -19,19 +19,19 @@ It tracks what is already implemented, where the hard gaps remain, and how to ve
 - What is real at HEAD:
   - graph/store operations semantics exist in `src/learning/store.ts`, including file-backed ops, embedded SQLite graphdb persistence/query paths, and HTTP adapter paths with fallback diagnostics,
   - the embedded sqlite baseline now also has restart-durability proof: shutdown closes the store cleanly, the adapter can reopen safely, and server integration covers ingest -> shutdown -> fresh module reload -> diagnostics/query/readiness continuity,
-  - ANN-style prefilter, representation telemetry, circuit health, and `external_http` connector scaffolding exist in `src/learning/queryBackend.ts` and `src/learning/vectorAccelerationAdapter.ts`,
+  - ANN-style prefilter, representation telemetry, circuit health, remote index sync, and live `external_http` connector proof now exist in `src/learning/queryBackend.ts` and `src/learning/vectorAccelerationAdapter.ts`,
   - Phase-2 runtime diagnostics are now materially implemented in `src/learning/KnowledgeLearningPlatform.ts` for query-backend comparison/history/trend, knowledge staleness diagnostics/rebuild planning, learning-quality history/trend, session-plan quality evaluation/history/trend/runtime-threshold diagnostics, query-backend config, and query-backend diagnostics,
   - Phase-3 tutor/memory diagnostics remain real and now include an active default runtime tutor adapter path in `src/server.ts`, so normal server execution can emit adapter telemetry instead of staying catalog-only.
 - What is not closed yet:
   - Phase-1 A8 has advanced beyond a file-only default: `src/server.ts` now defaults to `graphdb/sqlite` with explicit file fallback, and restart durability is already proved, but packaged/runtime proof and heavier-workload hardening are still open before calling the local graph backend production-closed,
-  - Phase-1 A9 remains `Partial+`, because the ANN path still stops at `external_stub` / `external_http` scaffolds plus rollout telemetry rather than a proven production ANN backend,
-  - Phase-2 quality/session/query observability is now real, but it is not yet release-closed because these gates still sit on top of the same `Partial+` Phase-1 graph/ANN baseline,
+  - Phase-1 A9 is now operational rather than scaffold-only, but recall/latency calibration and larger-workload validation are still open before calling the ANN layer production-closed,
+  - Phase-2 quality/session/query observability is now real, but it is not yet release-closed because these gates still require release-grade calibration on top of the current graph/ANN operational baseline,
   - default tutor routing is no longer catalog-only, but the runtime is still effectively `local`-first and retains explicit rule-engine fallback rather than a production-proven multi-provider routing policy.
 - Active execution focus therefore shifts to truth-first foundation recovery:
   - finish the remaining packaged/runtime + heavier-workload closure for the embedded graph backend baseline,
-  - move next into Phase-1 A9 production ANN closure,
+  - finish the remaining workload/threshold closure for the now-live ANN connector baseline,
   - keep the new diagnostic surfaces honest against the same runtime truth,
-  - then promote Phase-2 / Phase-3 gates as release-significant only after Phase-1 backend closure.
+  - then promote Phase-2 / Phase-3 gates as release-significant only after the graph/ANN baseline is release-grade.
 
 ## Scope
 
@@ -161,10 +161,10 @@ Operational note:
 |---|---|---|---|
 | L0 Representation | Parse document content into atom/evidence units | Atom, evidence, source hash and staleness rebuild are implemented (`ingestKnowledge`, staleness APIs) | Add richer formula/code normalization and stronger parser telemetry granularity |
 | L1 Structure | Build relation + temporal graph for learning reasoning | `RelationEdge` with `provenance`, `TemporalEdge` with active validity window are implemented | Improve relation quality scoring and cross-document conflict handling |
-| L2 Retrieval | Evidence-first explainable retrieval | `local_hybrid`, `keyword_only`, and `local_vector` retrieval backends exist with ANN-style prefilter, fallback telemetry, and external HTTP acceleration scaffolding; the default graph store baseline is now embedded `graphdb/sqlite` with restart-durability proof | Keep the remaining backend gap honest: packaged/runtime + heavier-workload hardening are still open for graphdb, and ANN still needs a production connector plus benchmarked rollout thresholds |
-| L3 Learning | Mastery diagnostics + actionable path generation | Mastery diagnostics, misconception summaries, dual-path recommendation, session execution primitives, and live quality/session-plan trend surfaces are implemented | Calibrate the now-live `learning quality` / `session plan quality` history-trend-evaluation surfaces on top of a non-`Partial+` graphdb/ANN baseline before claiming Phase-2 gate closure |
-| L4 Interaction | Workbench for operations + tutoring + diagnostics | The agent workspace shell, focus/path panes, typed capability contract, runtime/browser smoke, and turn-cache operator surfaces are real | Keep the shell/runtime evidence healthy, but stop treating observability cards as release-closed while they still depend on a `Partial+` Phase-1 graph/ANN baseline |
-| L5 Governance | Runtime checks, trend gates, remediation loop | Runtime capability matrix, connector/circuit telemetry, and remediation plumbing are real | Remove `Partial+`-baseline-fed promotion claims from release decisions, and tie governance upgrades to non-empty live thresholds plus adapter-backed telemetry |
+| L2 Retrieval | Evidence-first explainable retrieval | `local_hybrid`, `keyword_only`, and `local_vector` retrieval backends exist with ANN-style prefilter, fallback telemetry, and a live sync-backed `external_http` acceleration path; the default graph store baseline is now embedded `graphdb/sqlite` with restart-durability proof | Keep the remaining backend gap honest: packaged/runtime + heavier-workload hardening are still open for graphdb, and ANN still needs benchmarked rollout thresholds plus larger-workload validation |
+| L3 Learning | Mastery diagnostics + actionable path generation | Mastery diagnostics, misconception summaries, dual-path recommendation, session execution primitives, and live quality/session-plan trend surfaces are implemented | Calibrate the now-live `learning quality` / `session plan quality` history-trend-evaluation surfaces on top of a release-grade graphdb/ANN baseline before claiming Phase-2 gate closure |
+| L4 Interaction | Workbench for operations + tutoring + diagnostics | The agent workspace shell, focus/path panes, typed capability contract, runtime/browser smoke, and turn-cache operator surfaces are real | Keep the shell/runtime evidence healthy, but stop treating observability cards as release-closed while they still depend on an operational rather than release-grade graph/ANN baseline |
+| L5 Governance | Runtime checks, trend gates, remediation loop | Runtime capability matrix, connector/circuit telemetry, sync telemetry, and remediation plumbing are real | Tie governance upgrades to non-empty live thresholds plus adapter-backed telemetry on top of a release-grade graph/ANN baseline |
 
 ## Architecture Refactoring Status (2026-05-05, FINAL)
 
@@ -376,8 +376,8 @@ npm run verify:agent-workspace:tauri:evidence:publish-release-notes -- --tag <re
 
 1. Close CI coverage gaps for the agent-workspace contract suites: keep tauri strict evidence jobs, and add always-on parity/frontend contract gates (`src/agent_workspace.contract.parity.test.ts`, `src/agent_workspace.frontend.test.ts`, `src/agent_workspace.tauri.contract.test.ts`) as first-class CI blockers.
 2. Carry the embedded `graphdb/sqlite` baseline from restart-durability proof to packaged/runtime + heavier-workload closure while preserving explicit fail-open/fail-closed rollout semantics.
-3. Move next into ANN closure by promoting `ann_prefilter` + `external_*` from scaffold mode to a production connector baseline with health checks, timeout/retry/circuit controls, and explicit fallback observability.
-4. Promote the now-live Phase-2 diagnostics only after the same checks run on a non-`Partial+` graphdb/ANN baseline.
+3. Finish ANN release-grade closure by keeping the new sync-backed `external_http` path healthy under real traffic, then tightening workload/threshold calibration.
+4. Move next into Phase-2 gate promotion only after the same checks run on a release-grade graphdb/ANN baseline.
 5. Add CI-integrated durability checks for persisted turn-cache trend index/export consistency across restart flows.
 6. Continue strict evidence artifact governance improvements (retention/indexability/export) for operator audits, and keep i18n expansion as a lower-priority stream unless it directly unblocks contract/foundation risk.
 
