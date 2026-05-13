@@ -359,6 +359,9 @@ describe('runtime capability matrix', () => {
         const vectorAccelerationHealthCheck = matrix.checks.find(
             (check) => check.checkId === 'query_vector_acceleration_health'
         );
+        const vectorAccelerationIndexSyncCheck = matrix.checks.find(
+            (check) => check.checkId === 'query_vector_acceleration_index_sync_health'
+        );
         const vectorAccelerationTraceabilityCheck = matrix.checks.find(
             (check) => check.checkId === 'query_vector_acceleration_traceability'
         );
@@ -372,6 +375,7 @@ describe('runtime capability matrix', () => {
         expect(vectorAccelerationRepresentationCheck?.status).toBe('pass');
         expect(vectorAccelerationPrefilterCheck?.status).toBe('pass');
         expect(vectorAccelerationHealthCheck?.status).toBe('pass');
+        expect(vectorAccelerationIndexSyncCheck?.status).toBe('pass');
         expect(vectorAccelerationTraceabilityCheck?.status).toBe('pass');
         expect(vectorAccelerationCircuitCheck?.status).toBe('pass');
         expect(matrix.signals.queryBackendRuntimeReady).toBe(true);
@@ -386,6 +390,14 @@ describe('runtime capability matrix', () => {
         expect(matrix.signals.queryVectorIndexAccelerationAdapterId).toBe('local-vector-acceleration-ann-v1');
         expect(matrix.signals.queryVectorIndexAccelerationHealthStatus).toBe('ready');
         expect(matrix.signals.queryVectorIndexAccelerationHealthMessage).toBe('local_ann_prefilter_active');
+        expect(matrix.signals.queryVectorIndexAccelerationIndexSyncStatus).toBe('unknown');
+        expect(matrix.signals.queryVectorIndexAccelerationIndexSyncMessage).toBe('');
+        expect(matrix.signals.queryVectorIndexAccelerationLastSyncAt).toBe('');
+        expect(matrix.signals.queryVectorIndexAccelerationSyncRequestCount).toBe(0);
+        expect(matrix.signals.queryVectorIndexAccelerationSyncSuccessCount).toBe(0);
+        expect(matrix.signals.queryVectorIndexAccelerationSyncFailureCount).toBe(0);
+        expect(matrix.signals.queryVectorIndexAccelerationSyncedIndexSignature).toBe('');
+        expect(matrix.signals.queryVectorIndexAccelerationSyncedAtomCount).toBe(0);
         expect(matrix.signals.queryVectorIndexAccelerationRepresentationVersion).toBe(
             'local-vector-representation-v1'
         );
@@ -590,13 +602,18 @@ describe('runtime capability matrix', () => {
         const vectorAccelerationHealthCheck = matrix.checks.find(
             (check) => check.checkId === 'query_vector_acceleration_health'
         );
+        const vectorAccelerationIndexSyncCheck = matrix.checks.find(
+            (check) => check.checkId === 'query_vector_acceleration_index_sync_health'
+        );
         const vectorAccelerationTraceabilityCheck = matrix.checks.find(
             (check) => check.checkId === 'query_vector_acceleration_traceability'
         );
         expect(vectorAccelerationModeCheck?.status).toBe('pass');
         expect(vectorAccelerationHealthCheck?.status).toBe('fail');
+        expect(vectorAccelerationIndexSyncCheck?.status).toBe('warn');
         expect(vectorAccelerationTraceabilityCheck?.status).toBe('fail');
         expect(String(vectorAccelerationHealthCheck?.observed || '')).toContain('healthStatus=unavailable');
+        expect(String(vectorAccelerationIndexSyncCheck?.observed || '')).toContain('indexSyncStatus=unknown');
         expect(String(vectorAccelerationTraceabilityCheck?.observed || '')).toContain('externalConnector=true');
         expect(matrix.signals.queryVectorIndexAccelerationHealthStatus).toBe('unavailable');
         expect(matrix.signals.queryVectorIndexAccelerationHealthMessage).toBe('external_http_endpoint_missing');
@@ -3574,7 +3591,57 @@ describe('runtime capability matrix', () => {
         expect(runbook.traceFilter.pathPrefix).toBe('/api/knowledge/query-backend-diagnostics');
         expect(
             runbook.verificationTargets.some((item) =>
-                String(item || '').includes('acceleration.circuitState')
+                String(item || '').includes('query-backend-diagnostics')
+                && String(item || '').includes('vectorIndex')
+            )
+        ).toBe(true);
+    });
+
+    test('runtime runbook for vector acceleration index sync health includes sync telemetry verification target', () => {
+        const matrix = buildRuntimeCapabilityMatrix({
+            generatedAt: '2026-04-01T12:00:00.000Z',
+            configuredStoreBackend: 'file',
+            configuredQueryBackend: 'local_vector',
+            store: createStoreDiagnostics(),
+            queryDiagnostics: createQueryDiagnostics({
+                backendId: 'local-vector-v1',
+                runtime: {
+                    backendId: 'local-vector-v1',
+                    ready: true,
+                    vectorIndex: {
+                        enabled: true,
+                        status: 'ready',
+                        persisted: true,
+                        loadedFromDisk: true,
+                        acceleration: {
+                            enabled: true,
+                            mode: 'ann_prefilter',
+                            adapterId: 'external-http-vector-acceleration-v1',
+                            healthStatus: 'ready',
+                            indexSyncStatus: 'ready',
+                            syncRequestCount: 3,
+                            syncSuccessCount: 3,
+                            syncFailureCount: 0,
+                            syncedIndexSignature: 'idx_sync_ok',
+                            syncedAtomCount: 128,
+                            lastSyncAt: '2026-04-01T12:00:00.000Z',
+                            circuitState: 'closed',
+                            requestCount: 12,
+                            successCount: 12,
+                            failureCount: 0,
+                        },
+                    },
+                },
+            }),
+            queryCount: 20,
+        });
+
+        const runbook = buildRuntimeCapabilityRunbook(matrix, 'query_vector_acceleration_index_sync_health');
+        expect(runbook.selectedCheck?.checkId).toBe('query_vector_acceleration_index_sync_health');
+        expect(runbook.traceFilter.pathPrefix).toBe('/api/knowledge/query-backend-diagnostics');
+        expect(
+            runbook.verificationTargets.some((item) =>
+                String(item || '').includes('indexSyncStatus/indexSyncMessage/lastSyncAt')
             )
         ).toBe(true);
     });
@@ -3613,7 +3680,7 @@ describe('runtime capability matrix', () => {
         expect(runbook.traceFilter.pathPrefix).toBe('/api/knowledge/query-backend-diagnostics');
         expect(
             runbook.verificationTargets.some((item) =>
-                String(item || '').includes('lastRequestId/lastErrorCode/lastRetryAfterMs')
+                String(item || '').includes('diagnostics.runtime.vectorIndex.acceleration.healthStatus is ready|unknown')
             )
         ).toBe(true);
     });

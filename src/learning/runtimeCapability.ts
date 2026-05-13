@@ -447,6 +447,14 @@ export type RuntimeCapabilityMatrix = {
         queryVectorIndexAccelerationAdapterError: string;
         queryVectorIndexAccelerationHealthStatus: 'ready' | 'degraded' | 'unavailable' | 'unknown';
         queryVectorIndexAccelerationHealthMessage: string;
+        queryVectorIndexAccelerationIndexSyncStatus: 'ready' | 'degraded' | 'unavailable' | 'unknown';
+        queryVectorIndexAccelerationIndexSyncMessage: string;
+        queryVectorIndexAccelerationLastSyncAt: string;
+        queryVectorIndexAccelerationSyncRequestCount: number;
+        queryVectorIndexAccelerationSyncSuccessCount: number;
+        queryVectorIndexAccelerationSyncFailureCount: number;
+        queryVectorIndexAccelerationSyncedIndexSignature: string;
+        queryVectorIndexAccelerationSyncedAtomCount: number;
         queryVectorIndexAccelerationRepresentationVersion: string;
         queryVectorIndexAccelerationEmbeddingModelId: string;
         queryVectorIndexAccelerationEmbeddingDimension: number;
@@ -893,6 +901,15 @@ type RuntimeCapabilityRecommendedActionContext = {
     queryVectorIndexAccelerationAdapterError: string;
     queryVectorIndexAccelerationHealthStatus: RuntimeCapabilityMatrix['signals']['queryVectorIndexAccelerationHealthStatus'];
     queryVectorIndexAccelerationHealthMessage: string;
+    queryVectorIndexAccelerationIndexSyncStatus:
+        RuntimeCapabilityMatrix['signals']['queryVectorIndexAccelerationIndexSyncStatus'];
+    queryVectorIndexAccelerationIndexSyncMessage: string;
+    queryVectorIndexAccelerationLastSyncAt: string;
+    queryVectorIndexAccelerationSyncRequestCount: number;
+    queryVectorIndexAccelerationSyncSuccessCount: number;
+    queryVectorIndexAccelerationSyncFailureCount: number;
+    queryVectorIndexAccelerationSyncedIndexSignature: string;
+    queryVectorIndexAccelerationSyncedAtomCount: number;
     queryVectorIndexAccelerationRepresentationVersion: string;
     queryVectorIndexAccelerationEmbeddingModelId: string;
     queryVectorIndexAccelerationEmbeddingDimension: number;
@@ -1110,6 +1127,14 @@ function buildRuntimeCapabilityRecommendedActions(
             'For external_http provider, validate NOTE_CONNECTION_QUERY_VECTOR_ACCELERATION_HTTP_ENDPOINT reachability and timeout budget.',
             'Tune NOTE_CONNECTION_QUERY_VECTOR_ACCELERATION_HTTP_MAX_RETRIES / NOTE_CONNECTION_QUERY_VECTOR_ACCELERATION_HTTP_RETRY_DELAY_MS and circuit settings (NOTE_CONNECTION_QUERY_VECTOR_ACCELERATION_HTTP_CIRCUIT_FAILURE_THRESHOLD / NOTE_CONNECTION_QUERY_VECTOR_ACCELERATION_HTTP_CIRCUIT_COOLDOWN_MS).',
             'Issue representative /api/knowledge/query traffic and confirm acceleration health recovers to ready|unknown while fallback ratio remains controlled.',
+        ]);
+    }
+
+    if (checkId === 'query_vector_acceleration_index_sync_health') {
+        return normalizeRuntimeCapabilityRecommendedActions([
+            'Inspect /api/knowledge/query-backend-diagnostics and verify diagnostics.runtime.vectorIndex.acceleration.indexSyncStatus/indexSyncMessage/lastSyncAt fields.',
+            'Issue ingest + local_vector query traffic and confirm syncRequestCount/syncSuccessCount increment with syncedIndexSignature and syncedAtomCount populated.',
+            'If sync remains degraded/unavailable, validate /sync-index endpoint reachability and connector-side index refresh/persistence behavior before tightening ANN rollout gates.',
         ]);
     }
 
@@ -1956,6 +1981,40 @@ export function buildRuntimeCapabilityMatrix(params: RuntimeCapabilityMatrixInpu
     const queryVectorIndexAccelerationHealthMessage = String(
         params.queryDiagnostics.runtime?.vectorIndex?.acceleration?.healthMessage || ''
     ).trim().slice(0, 240);
+    const queryVectorIndexAccelerationIndexSyncStatusRaw = String(
+        params.queryDiagnostics.runtime?.vectorIndex?.acceleration?.indexSyncStatus || ''
+    ).trim().toLowerCase();
+    const queryVectorIndexAccelerationIndexSyncStatus: RuntimeCapabilityMatrix['signals']['queryVectorIndexAccelerationIndexSyncStatus'] = (
+        queryVectorIndexAccelerationIndexSyncStatusRaw === 'ready'
+        || queryVectorIndexAccelerationIndexSyncStatusRaw === 'degraded'
+        || queryVectorIndexAccelerationIndexSyncStatusRaw === 'unavailable'
+        || queryVectorIndexAccelerationIndexSyncStatusRaw === 'unknown'
+    ) ? queryVectorIndexAccelerationIndexSyncStatusRaw : 'unknown';
+    const queryVectorIndexAccelerationIndexSyncMessage = String(
+        params.queryDiagnostics.runtime?.vectorIndex?.acceleration?.indexSyncMessage || ''
+    ).trim().slice(0, 240);
+    const queryVectorIndexAccelerationLastSyncAt = String(
+        params.queryDiagnostics.runtime?.vectorIndex?.acceleration?.lastSyncAt || ''
+    ).trim().slice(0, 64);
+    const queryVectorIndexAccelerationSyncRequestCount = Math.max(
+        0,
+        Math.floor(Number(params.queryDiagnostics.runtime?.vectorIndex?.acceleration?.syncRequestCount || 0))
+    );
+    const queryVectorIndexAccelerationSyncSuccessCount = Math.max(
+        0,
+        Math.floor(Number(params.queryDiagnostics.runtime?.vectorIndex?.acceleration?.syncSuccessCount || 0))
+    );
+    const queryVectorIndexAccelerationSyncFailureCount = Math.max(
+        0,
+        Math.floor(Number(params.queryDiagnostics.runtime?.vectorIndex?.acceleration?.syncFailureCount || 0))
+    );
+    const queryVectorIndexAccelerationSyncedIndexSignature = String(
+        params.queryDiagnostics.runtime?.vectorIndex?.acceleration?.syncedIndexSignature || ''
+    ).trim().replace(/[^a-zA-Z0-9:_-]+/g, '').slice(0, 200);
+    const queryVectorIndexAccelerationSyncedAtomCount = Math.max(
+        0,
+        Math.floor(Number(params.queryDiagnostics.runtime?.vectorIndex?.acceleration?.syncedAtomCount || 0))
+    );
     const queryVectorIndexAccelerationRepresentationVersion = String(
         params.queryDiagnostics.runtime?.vectorIndex?.acceleration?.representationVersion || ''
     ).trim().slice(0, 160);
@@ -3540,6 +3599,84 @@ export function buildRuntimeCapabilityMatrix(params: RuntimeCapabilityMatrixInpu
             queryVectorIndexAccelerationAdapterId.length > 0
             && queryVectorIndexAccelerationAdapterId.toLowerCase().includes('external')
         );
+        const queryVectorAccelerationIndexSyncObserved = (
+            `adapterId=${queryVectorIndexAccelerationAdapterId || 'unknown'},`
+            + ` externalConnector=${queryVectorAccelerationExternalConnector},`
+            + ` indexSyncStatus=${queryVectorIndexAccelerationIndexSyncStatus},`
+            + ` syncRequestCount=${queryVectorIndexAccelerationSyncRequestCount},`
+            + ` syncSuccessCount=${queryVectorIndexAccelerationSyncSuccessCount},`
+            + ` syncFailureCount=${queryVectorIndexAccelerationSyncFailureCount},`
+            + ` syncedAtomCount=${queryVectorIndexAccelerationSyncedAtomCount},`
+            + ` syncedIndexSignature=${queryVectorIndexAccelerationSyncedIndexSignature || '<none>'},`
+            + ` lastSyncAt=${queryVectorIndexAccelerationLastSyncAt || '<none>'}`
+        );
+        if (!queryVectorIndexEnabled || queryVectorIndexStatus !== 'ready') {
+            checks.push({
+                checkId: 'query_vector_acceleration_index_sync_health',
+                status: 'warn',
+                message: 'Vector acceleration index sync health cannot be validated before vector index reaches ready state.',
+                observed: `vectorIndexEnabled=${queryVectorIndexEnabled}, vectorIndexStatus=${queryVectorIndexStatus}`,
+                expected: 'vectorIndexEnabled=true and vectorIndexStatus=ready',
+            });
+        } else if (!queryVectorIndexAccelerationEnabled) {
+            checks.push({
+                checkId: 'query_vector_acceleration_index_sync_health',
+                status: 'warn',
+                message: 'Vector acceleration index sync health is running in fallback mode because acceleration is disabled.',
+                observed: `accelerationEnabled=${queryVectorIndexAccelerationEnabled}, adapterId=${queryVectorIndexAccelerationAdapterId || 'unknown'}`,
+                expected: 'accelerationEnabled=true for sync-backed connector validation',
+            });
+        } else if (!queryVectorAccelerationExternalConnector) {
+            checks.push({
+                checkId: 'query_vector_acceleration_index_sync_health',
+                status: 'pass',
+                message: 'Vector acceleration is using local adapter path; external index sync is not required.',
+                observed: queryVectorAccelerationIndexSyncObserved,
+                expected: 'external connector adapters should report sync telemetry',
+            });
+        } else if (queryVectorIndexAccelerationIndexSyncStatus === 'unavailable') {
+            checks.push({
+                checkId: 'query_vector_acceleration_index_sync_health',
+                status: 'fail',
+                message: 'External vector acceleration index sync is unavailable.',
+                observed: queryVectorAccelerationIndexSyncObserved,
+                expected: 'indexSyncStatus=ready with syncedIndexSignature and syncedAtomCount populated',
+            });
+        } else if (
+            queryVectorIndexAccelerationIndexSyncStatus === 'degraded'
+            || queryVectorIndexAccelerationSyncFailureCount > 0
+        ) {
+            checks.push({
+                checkId: 'query_vector_acceleration_index_sync_health',
+                status: 'warn',
+                message: 'External vector acceleration index sync is degraded and needs stabilization before release-grade ANN rollout.',
+                observed: queryVectorAccelerationIndexSyncObserved,
+                expected: 'indexSyncStatus=ready with syncFailureCount=0',
+            });
+        } else if (
+            queryVectorIndexAccelerationIndexSyncStatus !== 'ready'
+            || queryVectorIndexAccelerationSyncRequestCount <= 0
+            || queryVectorIndexAccelerationSyncSuccessCount <= 0
+            || queryVectorIndexAccelerationSyncedAtomCount <= 0
+            || !queryVectorIndexAccelerationSyncedIndexSignature
+        ) {
+            checks.push({
+                checkId: 'query_vector_acceleration_index_sync_health',
+                status: 'warn',
+                message: 'External vector acceleration sync telemetry is incomplete for the latest runtime cycle.',
+                observed: queryVectorAccelerationIndexSyncObserved,
+                expected: 'indexSyncStatus=ready, syncRequestCount>0, syncSuccessCount>0, syncedIndexSignature!=empty, syncedAtomCount>0',
+            });
+        } else {
+            checks.push({
+                checkId: 'query_vector_acceleration_index_sync_health',
+                status: 'pass',
+                message: 'External vector acceleration index sync telemetry is healthy.',
+                observed: queryVectorAccelerationIndexSyncObserved,
+                expected: 'indexSyncStatus=ready with populated synced index telemetry',
+            });
+        }
+
         const queryVectorAccelerationHasCorrelationFields = (
             queryVectorIndexAccelerationLastRequestId.length > 0
             || queryVectorIndexAccelerationLastErrorCode.length > 0
@@ -3853,6 +3990,13 @@ export function buildRuntimeCapabilityMatrix(params: RuntimeCapabilityMatrixInpu
             checkId: 'query_vector_acceleration_health',
             status: 'pass',
             message: 'Local vector acceleration health check skipped because local_vector backend is not active.',
+            observed: `configuredQueryBackend=${params.configuredQueryBackend}`,
+            expected: 'configuredQueryBackend=local_vector',
+        });
+        checks.push({
+            checkId: 'query_vector_acceleration_index_sync_health',
+            status: 'pass',
+            message: 'Local vector acceleration index sync check skipped because local_vector backend is not active.',
             observed: `configuredQueryBackend=${params.configuredQueryBackend}`,
             expected: 'configuredQueryBackend=local_vector',
         });
@@ -5473,6 +5617,10 @@ export function buildRuntimeCapabilityMatrix(params: RuntimeCapabilityMatrixInpu
             pathPrefix: '/api/knowledge/query-backend-diagnostics',
             statusAtLeast: 400,
         }),
+        query_vector_acceleration_index_sync_health: normalizeRuntimeCapabilityDebugTraceHint({
+            pathPrefix: '/api/knowledge/query-backend-diagnostics',
+            statusAtLeast: 400,
+        }),
         query_vector_acceleration_traceability: normalizeRuntimeCapabilityDebugTraceHint({
             pathPrefix: '/api/knowledge/query-backend-diagnostics',
             statusAtLeast: 400,
@@ -5641,6 +5789,14 @@ export function buildRuntimeCapabilityMatrix(params: RuntimeCapabilityMatrixInpu
         queryVectorIndexAccelerationAdapterError,
         queryVectorIndexAccelerationHealthStatus,
         queryVectorIndexAccelerationHealthMessage,
+        queryVectorIndexAccelerationIndexSyncStatus,
+        queryVectorIndexAccelerationIndexSyncMessage,
+        queryVectorIndexAccelerationLastSyncAt,
+        queryVectorIndexAccelerationSyncRequestCount,
+        queryVectorIndexAccelerationSyncSuccessCount,
+        queryVectorIndexAccelerationSyncFailureCount,
+        queryVectorIndexAccelerationSyncedIndexSignature,
+        queryVectorIndexAccelerationSyncedAtomCount,
         queryVectorIndexAccelerationRepresentationVersion,
         queryVectorIndexAccelerationEmbeddingModelId,
         queryVectorIndexAccelerationEmbeddingDimension,
@@ -5747,6 +5903,14 @@ export function buildRuntimeCapabilityMatrix(params: RuntimeCapabilityMatrixInpu
             queryVectorIndexAccelerationAdapterError,
             queryVectorIndexAccelerationHealthStatus,
             queryVectorIndexAccelerationHealthMessage,
+            queryVectorIndexAccelerationIndexSyncStatus,
+            queryVectorIndexAccelerationIndexSyncMessage,
+            queryVectorIndexAccelerationLastSyncAt,
+            queryVectorIndexAccelerationSyncRequestCount,
+            queryVectorIndexAccelerationSyncSuccessCount,
+            queryVectorIndexAccelerationSyncFailureCount,
+            queryVectorIndexAccelerationSyncedIndexSignature,
+            queryVectorIndexAccelerationSyncedAtomCount,
             queryVectorIndexAccelerationRepresentationVersion,
             queryVectorIndexAccelerationEmbeddingModelId,
             queryVectorIndexAccelerationEmbeddingDimension,
@@ -6002,6 +6166,7 @@ function resolveRuntimeCapabilityRunbookVerificationTargets(
         || selectedCheck.checkId === 'query_vector_acceleration_representation_consistency'
         || selectedCheck.checkId === 'query_vector_acceleration_prefilter_effectiveness'
         || selectedCheck.checkId === 'query_vector_acceleration_health'
+        || selectedCheck.checkId === 'query_vector_acceleration_index_sync_health'
         || selectedCheck.checkId === 'query_vector_acceleration_traceability'
         || selectedCheck.checkId === 'query_vector_acceleration_circuit_state'
     ) {
@@ -6025,6 +6190,19 @@ function resolveRuntimeCapabilityRunbookVerificationTargets(
             );
             targets.push(
                 'If representationStrictMode=true, verify mismatch incidents are blocked and surfaced with vector_acceleration_representation_mismatch diagnostics evidence.'
+            );
+        }
+        if (
+            selectedCheck.checkId === 'query_vector_acceleration_index_sync_health'
+            || selectedCheck.checkId === 'query_vector_acceleration_health'
+            || selectedCheck.checkId === 'query_vector_acceleration_traceability'
+            || selectedCheck.checkId === 'query_vector_acceleration_circuit_state'
+            || selectedCheck.checkId === 'query_vector_acceleration_mode'
+            || selectedCheck.checkId === 'query_vector_index_status'
+            || selectedCheck.checkId === 'query_vector_index_persistence'
+        ) {
+            targets.push(
+                'For external connectors, verify diagnostics.runtime.vectorIndex.acceleration.indexSyncStatus/indexSyncMessage/lastSyncAt plus syncRequestCount/syncSuccessCount/syncFailureCount and syncedIndexSignature/syncedAtomCount after ingest-driven refreshes.'
             );
         }
         if (
