@@ -2,6 +2,21 @@
 
 ## English
 
+### 2026-05-13 Further Revalidation
+
+- This document remains a 2026-05-10 audit baseline and should not be read as current HEAD truth without this addendum.
+- HEAD has advanced beyond the 2026-05-12 revalidation note:
+  - Phase-1 A8 is no longer "default local-file-graphdb": default runtime now targets embedded `graphdb/sqlite`, and server-restart durability is covered by integration proof.
+  - Phase-2 query/staleness/learning-quality/session-plan-quality surfaces are no longer placeholder-backed.
+  - Phase-3 tutor routing is no longer catalog-only: default runtime now injects an active local tutor adapter.
+- Current still-open goals after the latest revalidation are:
+  - remaining A8 packaged/runtime + heavier-workload closure,
+  - A9 production ANN closure,
+  - Phase-2 release-grade gate calibration,
+  - multi-provider tutor-routing hardening,
+  - FR-009 operational evidence,
+  - Electron decommission review.
+
 ### 2026-05-12 HEAD Revalidation
 
 - The previous cross-doc conclusion ("only FR-009 + Electron review remain") is no longer sufficient for HEAD truth-tracking.
@@ -94,6 +109,21 @@
 | `docs/zh/TODO.md` | 160 |
 
 ## 中文
+
+### 2026-05-13 进一步复核
+
+- 本文仍是 2026-05-10 的审计基线；如果不结合本节补充说明，就不能把它当作当前 HEAD 的真实状态。
+- HEAD 已经超出 2026-05-12 的复核口径：
+  - Phase-1 A8 已不再是“默认 local-file-graphdb”：默认 runtime 现已切到 embedded `graphdb/sqlite`，且跨 server restart 的耐久性已有集成证明。
+  - Phase-2 的 query/staleness/learning-quality/session-plan-quality 运行面已不再依赖 placeholder。
+  - Phase-3 tutor routing 也不再是 catalog-only：默认 runtime 现已注入激活态本地 tutor adapter。
+- 截至最新复核，当前仍然开放的目标是：
+  - A8 剩余的 packaged/runtime + 更重工作负载闭环，
+  - A9 生产级 ANN 闭环，
+  - Phase-2 发布级门禁校准，
+  - 多 provider tutor-routing 加固，
+  - FR-009 运维证据，
+  - Electron 下线审查。
 
 ### 2026-05-12 HEAD 复核
 

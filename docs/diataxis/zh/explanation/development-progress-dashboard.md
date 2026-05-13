@@ -8,18 +8,20 @@
 - 先前“Phase-1 已收口”的表述对当前 HEAD 过于乐观，现以本节为准。
 - 当前已经真实落地的部分：
   - `src/learning/store.ts` 已具备 file-backed ops、embedded SQLite graphdb persistence/query 路径，以及 HTTP adapter 语义路径，
+  - embedded sqlite 基线现在还具备了重启耐久性证明：shutdown 会干净关闭 store，adapter 可安全重开，server integration 已覆盖 ingest -> shutdown -> fresh module reload -> diagnostics/query/readiness 连续性，
   - `src/learning/queryBackend.ts` / `src/learning/vectorAccelerationAdapter.ts` 已具备 ANN 风格 prefilter、representation telemetry、circuit health 与 `external_http` 连接器脚手架，
   - `src/learning/KnowledgeLearningPlatform.ts` 中的 Phase-2 运行时诊断面已接通真实实现，包括 query-backend comparison/history/trend、knowledge staleness diagnostics/rebuild planning、learning-quality history/trend、session-plan quality evaluate/history/trend/runtime-threshold diagnostics、query-backend config、query-backend diagnostics，
   - Phase-3 的导师/记忆诊断仍为真实实现，且 `src/server.ts` 现已注入默认激活态 tutor adapter，正常 server 路径可直接产出 adapter telemetry。
 - 当前仍未闭环的部分：
-  - Phase-1 A8 已经超出 file-only 默认态：`src/server.ts` 现在默认走 `graphdb/sqlite` 并保留显式 file fallback，但在宣布本地图后端达到生产闭环之前，packaged/runtime 证明、耐久性与工作负载级加固仍未完成；
+  - Phase-1 A8 已经超出 file-only 默认态：`src/server.ts` 现在默认走 `graphdb/sqlite` 并保留显式 file fallback，且重启耐久性已证明；但在宣布本地图后端达到生产闭环之前，packaged/runtime 证明与更重工作负载级加固仍未完成；
   - Phase-1 A9 仍是 `Partial+`：ANN 路径仍停留在 `external_stub` / `external_http` 脚手架与 rollout telemetry，尚未接通已验证的生产级 ANN 后端；
   - Phase-2 的 quality/session/query 可观测性已不再是空占位，但它们仍建立在同一个 `Partial+` 的 Phase-1 graph/ANN 基线之上，因此还不能宣称发布级闭环；
   - 默认 tutor routing 已不再只是 catalog-only，但当前 runtime 仍是 `local`-first，并保留显式 rule-engine fallback，而不是已验证的生产级多 provider 路由策略。
 - 因此当前活跃重心不是“默认认为 Phase-1 已完成然后推进上层”，而是：
-  1. 先把新的 embedded graph backend 基线继续加固，
-  2. 让这批新诊断面始终与同一份运行时真相保持一致，
-  3. 只有在 Phase-1 真正闭环后，才把 Phase-2 / Phase-3 门禁升级为发布级结论。
+  1. 先补完 embedded graph backend 基线剩余的 packaged/runtime + 更重工作负载闭环，
+  2. 下一阶段转入 Phase-1 A9 生产级 ANN 闭环，
+  3. 让这批新诊断面始终与同一份运行时真相保持一致，
+  4. 只有在 Phase-1 真正闭环后，才把 Phase-2 / Phase-3 门禁升级为发布级结论。
 
 ## 2026-05-12 当前架构体量
 
@@ -168,10 +170,10 @@
 |---|---|---|---|
 | L0 表示层 | 将文档解析为原子与证据 | 原子、证据、source hash 与 staleness 重建链路已实现（`ingestKnowledge`、staleness APIs） | 增强公式/代码归一化与解析遥测粒度 |
 | L1 结构层 | 构建关系 + 时序图 | `RelationEdge` 的 `provenance` 与 `TemporalEdge` 有效期机制已实现 | 提升关系质量评分与跨文档冲突处理 |
-| L2 检索层 | 证据优先、可解释检索 | `local_hybrid` / `keyword_only` / `local_vector` 已实现，并回传检索模式权重；`local_vector` 已落地 ANN 风格预筛选基线（`ann_prefilter`）且可自动回退全量扫描，并具备可插拔加速适配器边界 | 校准 ANN 预筛选的召回/时延阈值，并将当前外部适配器脚手架（`external_stub` / `external_http`）替换为生产级 ANN 连接器 |
-| L3 学习层 | 掌握诊断 + 动作编排 | 掌握诊断、误区汇总、双路径推荐、会话执行流水线已实现 | 将学习效果提升指标升级为硬门禁 |
-| L4 交互层 | 工作台统一操作与诊断 | Learning Workbench 已接入会话、质量、runbook、trace 诊断，已支持可配置整改回放控制（`replayMode`、`replayLimit`、`dryRun`、`replaySelectionPolicy`、`replayMinRiskRatioPct`）与调度编排控制（`enabled`、`intervalMinutes`、`triggerPolicy`、阈值）并持久化工作台偏好。当前分支还已落入第一版 host-owned agent workspace shell、停靠式 conversation action、现有 path runtime 的 learning-path-pane 嵌入挂载、graph workspace 级 focus fullscreen promotion、双语壳层覆盖、真实 backend + 真实 graph/path runtime 的 browser smoke 与证据产物、首条真实 app/window handle 生命周期证据路径、`migration-gates` 中的 CI strict 桌面证据常态化作业、`release-desktop-multi-os` 中 Linux 路径 strict 证据门禁、`/api/knowledge/conversation` 上 accept 协商的 SSE 回合流基线、可重放的 turnId 幂等恢复语义、可观测的 turn 缓存诊断与可调参数（`/api/knowledge/conversation/turn-cache/diagnostics` + TTL/容量 env 调参）、阈值化告警治理（汇总状态 + 策略检查 + 阈值画像）、以及告警趋势/历史与升级治理（`/api/knowledge/conversation/turn-cache/diagnostics/trend` + 采样/窗口/streak 策略可调），并已补齐显式 index/export operator 能力动作（`inspect_conversation_turn_cache_alert_trend_index` / `inspect_conversation_turn_cache_alert_trend_export`）、replay-schedule 建议遥测（`telemetry.recommendations`）、策略模板遥测（`telemetry.policyTemplates`）、配置期模板套用（`policyTemplate`）、自动执行安全门禁与诊断（`config.autoExecution`、`telemetry.autoExecution`、parity/blocker 决策语义）以及建议/模板驱动状态文案；并已具备可执行 conversation contract：覆盖 `focus`、`learning path`、tutor 侧 `generate_quiz` / `recap` / `generate_transfer` / `generate_counterexample` / `follow_up`、query 侧 `compare_query_backends` / `inspect_query_backend_diagnostics` / `inspect_query_backend_comparison_history` / `inspect_query_backend_comparison_trend`、导师诊断侧 `inspect_tutor_adapter_telemetry` / `inspect_tutor_trace_diagnostics`、质量/会话诊断侧 `inspect_learning_quality_trend` / `inspect_learning_quality_history` / `inspect_session_plan_quality_trend` / `inspect_session_plan_quality_history`、session 侧 `inspect_session_history` / `build_study_session`、对话记忆召回 `inspect_conversation_memory`、以及 turn-cache operator 诊断 `inspect_conversation_turn_cache_diagnostics` / `inspect_conversation_turn_cache_alert_trend`，同时已具备结构化 `conversation_turn_cache_diagnostics_card` / `conversation_turn_cache_alert_trend_card` / `query_backend_comparison_card` / `query_backend_diagnostics_card` / `query_backend_comparison_history_card` / `query_backend_comparison_trend_card` / `tutor_adapter_telemetry_card` / `tutor_trace_diagnostics_card` / `learning_quality_trend_card` / `learning_quality_history_card` / `session_plan_quality_trend_card` / `session_plan_quality_history_card` / `session_history_card` / `study_session_card` / `tutor_action_card` / `assistant_message` 结果呈现。该交互契约已完成 typed-only 收敛（统一使用 `capabilities`），legacy `availableActions` fallback 已从后端与前端主路径移除。 | 持续维持 strict 证据工件治理健康度，在灰度策略窗口内校准自动执行建议/模板质量，并将活跃实现重心切换到 Phase 2 质量门禁推进（基线约束下的掌握闭环 + 发散学习回路效果）。 |
-| L5 治理层 | 运行时检查、趋势门禁、整改闭环 | runtime capability matrix + runbook + remediation event 已实现，包含 `query_backend_runtime_health`、`query_vector_index_*`、`store_graphdb_connector_health` 与 `query_vector_acceleration_mode`/`query_vector_acceleration_health`/`query_vector_acceleration_prefilter_effectiveness`/`query_vector_acceleration_traceability`/`query_vector_acceleration_circuit_state` 检查；其中 circuit-state 已升级为阈值驱动（短路计数/比例、连续失败、半开探测成功率），prefilter-effectiveness 则用于识别代表性流量下 ANN 长期回退 `full_scan` 的失效场景 | 强化阈值校准与故障回放自动化 |
+| L2 检索层 | 证据优先、可解释检索 | `local_hybrid` / `keyword_only` / `local_vector` 已实现，并回传检索模式权重；`local_vector` 已落地 ANN 风格预筛选基线（`ann_prefilter`）且可自动回退全量扫描，并具备可插拔加速适配器边界；默认 graph store 基线现已是 embedded `graphdb/sqlite` 且具备重启耐久性证明 | 继续把剩余底座缺口写实：graphdb 仍需 packaged/runtime + 更重工作负载级加固，ANN 仍需把 `external_stub` / `external_http` 脚手架替换为生产级连接器 |
+| L3 学习层 | 掌握诊断 + 动作编排 | 掌握诊断、误区汇总、双路径推荐、会话执行流水线，以及 live 的 quality/session-plan trend 运行面均已实现 | 在非 `Partial+` 的 graphdb/ANN 基线上校准这些已接通的学习效果指标，再谈 Phase-2 硬门禁 |
+| L4 交互层 | 工作台统一操作与诊断 | Learning Workbench 已接入会话、质量、runbook、trace 诊断，已支持可配置整改回放控制（`replayMode`、`replayLimit`、`dryRun`、`replaySelectionPolicy`、`replayMinRiskRatioPct`）与调度编排控制（`enabled`、`intervalMinutes`、`triggerPolicy`、阈值）并持久化工作台偏好。当前分支还已落入第一版 host-owned agent workspace shell、停靠式 conversation action、现有 path runtime 的 learning-path-pane 嵌入挂载、graph workspace 级 focus fullscreen promotion、双语壳层覆盖、真实 backend + 真实 graph/path runtime 的 browser smoke 与证据产物、首条真实 app/window handle 生命周期证据路径、`migration-gates` 中的 CI strict 桌面证据常态化作业、`release-desktop-multi-os` 中 Linux 路径 strict 证据门禁、`/api/knowledge/conversation` 上 accept 协商的 SSE 回合流基线、可重放的 turnId 幂等恢复语义、可观测的 turn 缓存诊断与可调参数（`/api/knowledge/conversation/turn-cache/diagnostics` + TTL/容量 env 调参）、阈值化告警治理（汇总状态 + 策略检查 + 阈值画像）、以及告警趋势/历史与升级治理（`/api/knowledge/conversation/turn-cache/diagnostics/trend` + 采样/窗口/streak 策略可调），并已补齐显式 index/export operator 能力动作（`inspect_conversation_turn_cache_alert_trend_index` / `inspect_conversation_turn_cache_alert_trend_export`）、replay-schedule 建议遥测（`telemetry.recommendations`）、策略模板遥测（`telemetry.policyTemplates`）、配置期模板套用（`policyTemplate`）、自动执行安全门禁与诊断（`config.autoExecution`、`telemetry.autoExecution`、parity/blocker 决策语义）以及建议/模板驱动状态文案；并已具备可执行 conversation contract：覆盖 `focus`、`learning path`、tutor 侧 `generate_quiz` / `recap` / `generate_transfer` / `generate_counterexample` / `follow_up`、query 侧 `compare_query_backends` / `inspect_query_backend_diagnostics` / `inspect_query_backend_comparison_history` / `inspect_query_backend_comparison_trend`、导师诊断侧 `inspect_tutor_adapter_telemetry` / `inspect_tutor_trace_diagnostics`、质量/会话诊断侧 `inspect_learning_quality_trend` / `inspect_learning_quality_history` / `inspect_session_plan_quality_trend` / `inspect_session_plan_quality_history`、session 侧 `inspect_session_history` / `build_study_session`、对话记忆召回 `inspect_conversation_memory`、以及 turn-cache operator 诊断 `inspect_conversation_turn_cache_diagnostics` / `inspect_conversation_turn_cache_alert_trend`，同时已具备结构化 `conversation_turn_cache_diagnostics_card` / `conversation_turn_cache_alert_trend_card` / `query_backend_comparison_card` / `query_backend_diagnostics_card` / `query_backend_comparison_history_card` / `query_backend_comparison_trend_card` / `tutor_adapter_telemetry_card` / `tutor_trace_diagnostics_card` / `learning_quality_trend_card` / `learning_quality_history_card` / `session_plan_quality_trend_card` / `session_plan_quality_history_card` / `session_history_card` / `study_session_card` / `tutor_action_card` / `assistant_message` 结果呈现。该交互契约已完成 typed-only 收敛（统一使用 `capabilities`），legacy `availableActions` fallback 已从后端与前端主路径移除。 | 持续维持 strict 证据工件治理健康度，但不要把这批 observability/card 能力误写成“发布级闭环”，只因为它们的后端已不再是 placeholder |
+| L5 治理层 | 运行时检查、趋势门禁、整改闭环 | runtime capability matrix + runbook + remediation event 已实现，包含 `query_backend_runtime_health`、`query_vector_index_*`、`store_graphdb_connector_health` 与 `query_vector_acceleration_mode`/`query_vector_acceleration_health`/`query_vector_acceleration_prefilter_effectiveness`/`query_vector_acceleration_traceability`/`query_vector_acceleration_circuit_state` 检查；其中 circuit-state 已升级为阈值驱动（短路计数/比例、连续失败、半开探测成功率），prefilter-effectiveness 则用于识别代表性流量下 ANN 长期回退 `full_scan` 的失效场景 | 强化阈值校准与故障回放自动化，并停止基于 `Partial+` Phase-1 基线做治理升级结论 |
 
 ## 架构重构状态（2026-05-05，最终）
 
@@ -393,11 +395,11 @@ npm run verify:agent-workspace:tauri:evidence:publish-release-notes -- --tag <re
 ## 后续推进优先级
 
 1. 先补齐 agent-workspace 合同套件的 CI 常态覆盖缺口：在保留 tauri strict 证据作业的同时，把 `src/agent_workspace.contract.parity.test.ts`、`src/agent_workspace.frontend.test.ts`、`src/agent_workspace.tauri.contract.test.ts` 作为主线阻断门禁。
-2. 将 M10 从“rollout 引导”推进到“底座闭环”：把当前 file-backed graphdb 适配路径替换为真实图后端 adapter，同时保持 fail-open/fail-closed rollout 语义不破坏。
-3. 将 ANN 从脚手架形态（`ann_prefilter` + `external_*`）推进到生产连接器最小闭环，补齐健康检查、超时/重试/熔断与回退可观测性。
-4. 增补跨重启场景下 turn-cache 趋势持久化 index/export 一致性的 CI 验证。
-5. 持续加强 strict 证据工件治理（归档、可索引、可导出）以支持运维审计。
-6. i18n 长尾结构化卡片重渲继续保留为次优先级，除非其直接解除合同/底座风险。
+2. 把 embedded `graphdb/sqlite` 基线从“已证明重启耐久性”推进到 packaged/runtime + 更重工作负载闭环，同时保持 fail-open/fail-closed rollout 语义不破坏。
+3. 下一阶段转入 ANN 闭环：将 `ann_prefilter` + `external_*` 从脚手架形态推进到生产连接器最小闭环，补齐健康检查、超时/重试/熔断与回退可观测性。
+4. 只有在非 `Partial+` 的 graphdb/ANN 基线上，才把当前已接通的 Phase-2 诊断面升级为发布级门禁。
+5. 增补跨重启场景下 turn-cache 趋势持久化 index/export 一致性的 CI 验证。
+6. 持续加强 strict 证据工件治理（归档、可索引、可导出）以支持运维审计；i18n 长尾结构化卡片重渲继续保留为次优先级，除非其直接解除合同/底座风险。
 
 ## 跨平台架构优化（2026-05-02）
 

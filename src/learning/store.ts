@@ -515,6 +515,7 @@ export function createFileGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapte
 type NodeSqliteModuleLike = {
     DatabaseSync: new (location: string) => {
         exec(sql: string): void;
+        close(): void;
         prepare(sql: string): {
             run(...params: unknown[]): unknown;
             get(...params: unknown[]): Record<string, unknown> | undefined;
@@ -541,7 +542,8 @@ function createSqliteGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapterConf
         String(options?.sqlitePath || options?.filePath || '/tmp/notemd-kg-snapshot.sqlite')
     );
     fs.mkdirSync(path.dirname(sqlitePath), { recursive: true });
-    const db = new sqliteModule.DatabaseSync(sqlitePath);
+    let db: InstanceType<NodeSqliteModuleLike['DatabaseSync']> | null = null;
+    let closed = false;
     const adapterId = options?.id ?? 'embedded-sqlite-graphdb';
     let loaded = false;
     let lastLoadAt = '';
@@ -550,8 +552,16 @@ function createSqliteGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapterConf
     let lastReadPath = 'ops';
     let lastWritePath = 'ops';
 
+    const ensureDb = (): InstanceType<NodeSqliteModuleLike['DatabaseSync']> => {
+        if (!db || closed) {
+            db = new sqliteModule.DatabaseSync(sqlitePath);
+            closed = false;
+        }
+        return db;
+    };
+
     const ensureSchema = (): void => {
-        db.exec(`
+        ensureDb().exec(`
             PRAGMA journal_mode = WAL;
             PRAGMA synchronous = NORMAL;
             PRAGMA busy_timeout = 2000;
@@ -586,7 +596,7 @@ function createSqliteGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapterConf
 
     const loadSnapshotRow = (): Record<string, unknown> | undefined => {
         ensureSchema();
-        return db.prepare(`
+        return ensureDb().prepare(`
             SELECT schema_version, saved_at, payload_json
             FROM snapshot_store
             WHERE snapshot_id = 1
@@ -611,12 +621,13 @@ function createSqliteGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapterConf
 
     const replaceSnapshotData = (snapshot: KnowledgeGraphSnapshot): void => {
         ensureSchema();
-        db.exec('BEGIN IMMEDIATE TRANSACTION');
+        const activeDb = ensureDb();
+        activeDb.exec('BEGIN IMMEDIATE TRANSACTION');
         try {
-            db.exec('DELETE FROM snapshot_store');
-            db.exec('DELETE FROM atoms');
-            db.exec('DELETE FROM relation_edges');
-            db.prepare(`
+            activeDb.exec('DELETE FROM snapshot_store');
+            activeDb.exec('DELETE FROM atoms');
+            activeDb.exec('DELETE FROM relation_edges');
+            activeDb.prepare(`
                 INSERT INTO snapshot_store (snapshot_id, schema_version, saved_at, payload_json)
                 VALUES (1, ?, ?, ?)
             `).run(
@@ -624,7 +635,7 @@ function createSqliteGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapterConf
                 snapshot.savedAt,
                 JSON.stringify(snapshot)
             );
-            const insertAtom = db.prepare(`
+            const insertAtom = activeDb.prepare(`
                 INSERT INTO atoms (atom_id, stable_key, title, source_path, updated_at, raw_json)
                 VALUES (?, ?, ?, ?, ?, ?)
             `);
@@ -638,7 +649,7 @@ function createSqliteGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapterConf
                     JSON.stringify(atom)
                 );
             });
-            const insertRelationEdge = db.prepare(`
+            const insertRelationEdge = activeDb.prepare(`
                 INSERT INTO relation_edges (edge_id, source_atom_id, target_atom_id, relation_kind, confidence, raw_json)
                 VALUES (?, ?, ?, ?, ?, ?)
             `);
@@ -652,13 +663,13 @@ function createSqliteGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapterConf
                     JSON.stringify(edge)
                 );
             });
-            db.exec('COMMIT');
+            activeDb.exec('COMMIT');
             loaded = true;
             lastSaveAt = new Date().toISOString();
             lastError = '';
         } catch (error) {
             try {
-                db.exec('ROLLBACK');
+                activeDb.exec('ROLLBACK');
             } catch {
             }
             lastError = String((error as Error)?.message || error);
@@ -726,8 +737,9 @@ function createSqliteGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapterConf
             if (!snapshotRow) {
                 return null;
             }
-            const atomCountRow = db.prepare('SELECT COUNT(*) AS count FROM atoms').get();
-            const relationCountRow = db.prepare('SELECT COUNT(*) AS count FROM relation_edges').get();
+            const activeDb = ensureDb();
+            const atomCountRow = activeDb.prepare('SELECT COUNT(*) AS count FROM atoms').get();
+            const relationCountRow = activeDb.prepare('SELECT COUNT(*) AS count FROM relation_edges').get();
             const snapshot = loadSnapshotPayload();
             return {
                 schemaVersion: Number(snapshotRow.schema_version || snapshot?.schemaVersion || 1),
@@ -753,7 +765,7 @@ function createSqliteGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapterConf
             if (!normalizedId) {
                 return null;
             }
-            const row = db.prepare(`
+            const row = ensureDb().prepare(`
                 SELECT raw_json
                 FROM atoms
                 WHERE atom_id = ? OR stable_key = ?
@@ -788,7 +800,7 @@ function createSqliteGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapterConf
             if (filter.limit && filter.limit > 0) {
                 sql += ` LIMIT ${Math.max(1, Math.floor(filter.limit))}`;
             }
-            return mapNodeRows(db.prepare(sql).all(...params));
+            return mapNodeRows(ensureDb().prepare(sql).all(...params));
         },
         queryEdgesByOps: async (filter: EdgeQueryFilter) => {
             ensureSchema();
@@ -815,7 +827,7 @@ function createSqliteGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapterConf
             if (filter.limit && filter.limit > 0) {
                 sql += ` LIMIT ${Math.max(1, Math.floor(filter.limit))}`;
             }
-            return mapEdgeRows(db.prepare(sql).all(...params));
+            return mapEdgeRows(ensureDb().prepare(sql).all(...params));
         },
         findPathByOps: async (sourceId: string, targetId: string, maxDepth = 10) => {
             ensureSchema();
@@ -825,7 +837,7 @@ function createSqliteGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapterConf
             if (!source || !target) {
                 return { path: [], length: 0, edges: [], found: false };
             }
-            const rows = db.prepare(`
+            const rows = ensureDb().prepare(`
                 SELECT source_atom_id, target_atom_id, relation_kind
                 FROM relation_edges
             `).all();
@@ -897,8 +909,11 @@ function createSqliteGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapterConf
         }),
         close: () => {
             try {
-                (db as { close?: () => void }).close?.();
+                db?.close?.();
             } catch {
+            } finally {
+                db = null;
+                closed = true;
             }
         },
     };

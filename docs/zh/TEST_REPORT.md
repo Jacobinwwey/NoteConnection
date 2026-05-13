@@ -2,13 +2,17 @@
 
 > 状态同步说明（2026-05-10）：跨文档未完成目标基线统一见 [Open Goal Audit (2026-05-10)](../open_goal_audit_2026-05-10.md)。
 
-### 架构 / 阶段真实状态快照（2026-05-12）
+### 架构 / 阶段真实状态快照（2026-05-13）
 
 - [x] `node node_modules/jest/bin/jest.js src/agent_workspace.contract.parity.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.runtime.behavior.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
   - 通过
 - [x] `node node_modules/jest/bin/jest.js src/learning/store.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
   - 通过
 - [x] `node node_modules/jest/bin/jest.js src/knowledge.api.contract.test.ts src/agent_workspace.contract.parity.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand --no-cache`
+  - 通过
+- [x] `node node_modules/jest/bin/jest.js src/notemd.server.integration.test.ts --runInBand --no-cache --testNamePattern="embedded sqlite graph runtime survives server restart and preserves query/store diagnostics"`
+  - 通过
+- [x] `node node_modules/jest/bin/jest.js src/notemd.server.integration.test.ts src/learning/store.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/knowledge.api.contract.test.ts src/agent_workspace.contract.parity.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.runtime.behavior.test.ts src/pkg.sidecar.contract.test.ts --runInBand --no-cache`
   - 通过
 - [x] `npm run verify:agent-workspace:runtime`
   - 通过
@@ -31,7 +35,7 @@
    - conversation memory lifecycle，
    - memory-policy diagnostics/history/trend。
 2. 这些通过项**不等于** Phase-1 A8/A9 已闭环：
-   - runtime 已不再默认 `local-file-graphdb`，但新的 embedded `graphdb/sqlite` 基线仍需要 packaged/runtime 证明与工作负载级加固；
+   - runtime 已不再默认 `local-file-graphdb`，且 embedded `graphdb/sqlite` 基线的重启耐久性已由集成测试证明，但 packaged/runtime 证明与更重工作负载级加固仍待完成；
    - ANN 仍依赖 `external_stub` / `external_http` 脚手架边界，而不是已验证的生产级后端。
 3. 这些通过项**不等于** Phase-2 quality gate 已闭环：
    - query compare、staleness、learning-quality、session-plan-quality、query-backend diagnostics 这批运行面已经具备真实实现，但它们仍建立在同一个 `Partial+` 的 Phase-1 graph/ANN 基线之上，因此还不能宣称发布级闭环。

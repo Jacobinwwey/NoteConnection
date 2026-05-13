@@ -5,7 +5,7 @@
 
 在当前分支已经出现真实 Phase-3 切片、但 Phase-1 / Phase-2 仍存在关键缺口的背景下，把代码真相、活跃进度文档、以及后续执行顺序重新对齐。
 
-### 2026-05-12 本轮实现增量
+### 2026-05-12 到 2026-05-13 本轮实现增量
 
 - 本轮代码已完成：
   - `store.ts` 已新增 embedded SQLite graphdb adapter/provider，`server.ts` 默认 runtime 也已从 `local-file-graphdb` 切到 `graphdb/sqlite`，同时保留显式 file fallback。
@@ -13,16 +13,19 @@
   - `queryKnowledge()` 已改为遵循当前配置的 backend，并保留显式 runtime fallback 语义。
   - foundation readiness 与 backend baseline sufficiency 已改为根据真实 store/query/vector 信号判定，而不再是静态占位返回。
   - `server.ts` 现已注入默认激活态本地 `tutorAdapter`，同时保留 `local` + `cloud` adapter catalog。
+  - embedded sqlite 生命周期已补齐：server shutdown 会显式关闭 graph store，sqlite adapter 也能在同进程后续运行中安全重开。
+  - `src/notemd.server.integration.test.ts` 现已证明 A8 的重启耐久性：覆盖 ingest -> shutdown -> fresh module reload -> store diagnostics/query/readiness 连续性。
 - 这会改变执行重心：
   - P3 的“placeholder 替换”在当前 runtime 面上已经完成实现；
   - P4 的“默认 tutor-routing 激活”在本地优先基线上已经完成实现；
-  - 下一关键路径重新回到真实 Phase-1 graph backend 闭环、生产级 ANN 闭环，以及架构减压。
+  - A8 剩余缺口已经收窄为 packaged/runtime 证明与更重工作负载级加固；
+  - 这个重启耐久性切片之后的下一阶段是 P2 生产级 ANN 闭环，随后才是发布级 Phase-2 门禁升级。
 
 ### 代码 vs 方案现状矩阵
 
 | 区域 | 方案期望 | 当前 HEAD 现实 | 状态 |
 |---|---|---|---|
-| Phase-1 A8 graph backend | 生产级本地图后端 | ops 语义已存在，且默认 runtime 已切到 embedded `graphdb/sqlite` 并保留显式 file fallback，但 packaged/runtime 证明与工作负载级加固仍未完成 | Operational baseline |
+| Phase-1 A8 graph backend | 生产级本地图后端 | ops 语义已存在，默认 runtime 已切到 embedded `graphdb/sqlite` 并保留显式 file fallback，且重启耐久性已有集成证明；但 packaged/runtime 证明与更重工作负载级加固仍未完成 | Operational baseline |
 | Phase-1 A9 ANN connector | 生产级 ANN connector | prefilter / circuit / representation telemetry 已有，但默认交付仍停留在 `external_stub` / `external_http` 脚手架 | Partial+ |
 | Phase-2 quality gates | 真实掌握闭环 / 发散质量门禁 | query-backend comparison、staleness、learning-quality、session-plan-quality 运行面已在 `KnowledgeLearningPlatform.ts` 中接通真实实现，但由于仍建立在同一个 `Partial+` 的 Phase-1 graph/ANN 基线上，所以还不能宣称发布级闭环 | Operational baseline |
 | Phase-3 tutor + memory | 导师与记忆操作层真实落地 | tutor telemetry / trace-provider trend / conversation memory / memory-policy diagnostics 已真实，且默认 runtime 已注入本地 tutor adapter；生产级多 provider 路由仍待闭环 | Operational baseline |
@@ -36,8 +39,8 @@
 2. P1：真实 graph backend 闭环
    - 对新的 embedded `graphdb/sqlite` 默认基线补齐 packaged/runtime 级验证，
    - 保留 fallback，
-   - 补齐耐久性/性能与 adapter / fallback 一致性验证。
-3. P2：生产级 ANN 闭环
+   - 在已证明的重启生命周期之外，继续补齐更重耐久性/性能与 adapter / fallback 一致性验证。
+3. P2：当前 A8 耐久性切片之后的下一阶段 - 生产级 ANN 闭环
    - 把 ANN 从脚手架路径推进到至少一条真实 connector 路径，
    - 校准 recall / latency 阈值，
    - 保持 runbook telemetry 与 failure semantics。
@@ -53,7 +56,7 @@
 
 ### 验收标准
 
-1. 默认 graph backend 不再是 `local-file-graphdb`。
+1. 默认 graph backend 不再是 `local-file-graphdb`，且 embedded `graphdb/sqlite` 基线已能在 shutdown/restart 后保持 query/store diagnostics 连续性。
 2. 至少一条 ANN connector 路径超出脚手架阶段，并在真实请求下通过 runbook / telemetry 验证。
 3. `KnowledgeLearningPlatform.ts` 不再对 query compare、staleness、learning-quality、session-plan-quality 返回 placeholder。
 4. 默认 runtime tutor 执行在真实 server 路径下能产生非零 adapter telemetry。

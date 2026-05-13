@@ -123,11 +123,43 @@ describe('NoteMD server integration', () => {
   let temp: TempDir;
   let envRestorers: Array<() => void>;
   let server: Server;
+  let serverModule: {
+    startServer: (options?: { port?: number; targetPath?: string }) => Promise<Server>;
+  };
   let port: number;
   let kbFilePath: string;
   let runtimeDataDir: string;
   let appConfigPath: string;
   let originalArgv: string[];
+
+  function loadFreshServerModule(): {
+    startServer: (options?: { port?: number; targetPath?: string }) => Promise<Server>;
+  } {
+    jest.resetModules();
+    process.argv = process.argv.slice(0, 2);
+    jest.doMock('./index', () => ({
+      buildGraph: jest.fn().mockResolvedValue(undefined),
+    }));
+    jest.doMock('./core/PathBridge', () => ({
+      PathBridge: jest.fn().mockImplementation(() => ({})),
+    }));
+    jest.doMock('./reader_renderer', () => ({
+      renderMathPng: jest.fn().mockResolvedValue({
+        pngBase64: 'math',
+        width: 100,
+        height: 50,
+      }),
+      renderMermaidPng: jest.fn().mockResolvedValue({
+        pngBase64: 'mermaid',
+        width: 100,
+        height: 50,
+      }),
+    }));
+
+    return require('./server') as {
+      startServer: (options?: { port?: number; targetPath?: string }) => Promise<Server>;
+    };
+  }
 
   beforeAll(async () => {
     temp = new TempDir('noteconnection-notemd');
@@ -177,50 +209,31 @@ describe('NoteMD server integration', () => {
     envRestorers.push(setEnv('npm_config_static', undefined));
 
     port = await getFreePort();
-
-    jest.resetModules();
     originalArgv = [...process.argv];
-    process.argv = process.argv.slice(0, 2);
-    jest.doMock('./index', () => ({
-      buildGraph: jest.fn().mockResolvedValue(undefined),
-    }));
-    jest.doMock('./core/PathBridge', () => ({
-      PathBridge: jest.fn().mockImplementation(() => ({})),
-    }));
-    jest.doMock('./reader_renderer', () => ({
-      renderMathPng: jest.fn().mockResolvedValue({
-        pngBase64: 'math',
-        width: 100,
-        height: 50,
-      }),
-      renderMermaidPng: jest.fn().mockResolvedValue({
-        pngBase64: 'mermaid',
-        width: 100,
-        height: 50,
-      }),
-    }));
-
-    const serverModule = require('./server') as {
-      startServer: (options?: { port?: number; targetPath?: string }) => Promise<Server>;
-    };
+    serverModule = loadFreshServerModule();
     server = await serverModule.startServer({ port });
   });
 
-  afterAll(async () => {
-    if (server) {
-      if (typeof (server as any).closeAllConnections === 'function') {
-        (server as any).closeAllConnections();
-      }
-      await new Promise<void>((resolve, reject) => {
-        server.close((err) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          resolve();
-        });
-      });
+  async function shutdownServerInstance(instance: Server | null | undefined): Promise<void> {
+    if (!instance) {
+      return;
     }
+    if (typeof (instance as any).closeAllConnections === 'function') {
+      (instance as any).closeAllConnections();
+    }
+    await new Promise<void>((resolve, reject) => {
+      instance.close((err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+
+  afterAll(async () => {
+    await shutdownServerInstance(server);
 
     envRestorers.reverse().forEach((restore) => restore());
     process.argv = originalArgv;
@@ -557,6 +570,67 @@ describe('NoteMD server integration', () => {
       expect.objectContaining({
         passed: true,
         reason: 'embedding_ann',
+      })
+    );
+  });
+
+  test('embedded sqlite graph runtime survives server restart and preserves query/store diagnostics', async () => {
+    const sqliteStorePath = path.join(runtimeDataDir, 'knowledge_graph_store.graphdb.v1.sqlite');
+    const ingestResponse = await requestJson(port, 'POST', '/api/knowledge/ingest', {
+      incremental: true,
+      documents: [
+        {
+          documentId: 'doc_restart_runtime',
+          sourcePath: path.join(path.dirname(kbFilePath), 'restart_runtime.md'),
+          language: 'en',
+          content: '# Restart Runtime\n\nPersist this graph content across server restart for sqlite proof.',
+        },
+      ],
+    });
+    expect(ingestResponse.status).toBe(200);
+    expect(ingestResponse.body.success).toBe(true);
+    expect(fs.existsSync(sqliteStorePath)).toBe(true);
+
+    await shutdownServerInstance(server);
+    port = await getFreePort();
+    serverModule = loadFreshServerModule();
+    server = await serverModule.startServer({ port });
+
+    const diagnosticsResponse = await requestJson(port, 'GET', '/api/knowledge/store-diagnostics');
+    expect(diagnosticsResponse.status).toBe(200);
+    expect(diagnosticsResponse.body.success).toBe(true);
+    expect(diagnosticsResponse.body.store).toEqual(
+      expect.objectContaining({
+        storeType: 'graphdb',
+        storageEngine: 'sqlite',
+        backendReady: true,
+        usingFallback: false,
+      })
+    );
+
+    const queryResponse = await requestJson(port, 'POST', '/api/knowledge/query', {
+      query: 'persist graph content restart sqlite proof',
+      topK: 3,
+    });
+    expect(queryResponse.status).toBe(200);
+    expect(queryResponse.body.success).toBe(true);
+    expect(Array.isArray(queryResponse.body.result.items)).toBe(true);
+    expect(queryResponse.body.result.items.length).toBeGreaterThan(0);
+    expect(String(queryResponse.body.result.items[0]?.atom?.documentId || '')).toBe('doc_restart_runtime');
+
+    const readinessResponse = await requestJson(port, 'GET', '/api/knowledge/foundation/readiness');
+    expect(readinessResponse.status).toBe(200);
+    expect(readinessResponse.body.readiness).toEqual(
+      expect.objectContaining({
+        status: 'integrated',
+        decision: 'go',
+      })
+    );
+    expect(readinessResponse.body.readiness.baseline).toEqual(
+      expect.objectContaining({
+        storeType: 'sqlite',
+        graphBackendSignalKind: 'embedded_graphdb',
+        graphBackendIndependent: true,
       })
     );
   });

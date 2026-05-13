@@ -9,8 +9,8 @@
 - [x] Query-backend comparison/history/trend, staleness diagnostics/rebuild planning, learning-quality history/trend, session-plan quality evaluate/history/trend/runtime-threshold diagnostics, query-backend config, and query-backend diagnostics are now live in `src/learning/KnowledgeLearningPlatform.ts`.
 - [x] Default server runtime now injects an active local `tutorAdapter` while retaining the `local` + `cloud` adapter catalog.
 - [x] Default runtime graph backend is no longer `local-file-graphdb`: the server now targets embedded `graphdb/sqlite` with explicit file fallback.
-- [ ] Prove the new embedded `graphdb/sqlite` baseline across packaged/runtime paths and workload durability gates before calling A8 production-closed.
-- [ ] Reclassify Phase-1 A9 as `Partial+`: the current ANN path is scaffolded telemetry + `external_http` boundary, not a production-backed ANN service/engine.
+- [~] The new embedded `graphdb/sqlite` baseline is now restart-durability-proved, but packaged/runtime proof and heavier workload gates still remain before calling A8 production-closed.
+- [x] Phase-1 A9 is explicitly classified as `Partial+`: the current ANN path is scaffolded telemetry + `external_http` boundary, not a production-backed ANN service/engine.
 - [ ] Promote the new Phase-2 diagnostics from “implementation-real” to release-grade gates only after the same checks run on a non-`Partial+` graphdb/ANN baseline.
 - [ ] Extend tutor routing from the new local-first baseline into a production-proven multi-provider policy.
 - [ ] Continue FR-009 evidence freshness, Linux strict Tauri host provisioning, and final Electron decommission review.
@@ -32,9 +32,12 @@ After syncing the repository to the latest upstream `main` baseline, we re-audit
   - [x] Graph backend adapter paths do expose HTTP ops-ready semantics (node/edge/path query routes plus diagnostics telemetry).
   - [x] ANN connector hardening does expose candidate normalization, representation telemetry, and prefilter effectiveness signals.
   - [x] Default runtime now targets an embedded `graphdb/sqlite` backend with explicit file fallback.
+  - [x] Embedded sqlite restart durability is now covered by server integration proof (`ingest -> shutdown -> fresh module restart -> query/readiness continuity`).
+  - [ ] Packaged/runtime proof and heavier workload hardening still remain for A8.
   - [ ] ANN still needs a production-backed connector path beyond scaffolding.
 - [ ] Next active implementation phase is now split:
-  - [ ] finish real Phase-1 backend closure,
+  - [ ] finish the remaining A8 packaged/runtime + workload closure,
+  - [ ] move next into Phase-1 A9 production ANN closure,
   - [ ] harden the now-live Phase-2 diagnostics into release-grade gates on top of a non-`Partial+` graphdb/ANN baseline,
   - [ ] continue Phase-3 tutor/memory hardening in parallel.
   - [x] Agent Workspace browser/runtime route closure now passes real strict evidence (`STRICT`, `UI_STRICT`, `UI_DYNAMIC_STRICT`) with live conversation, capability buttons, and request-card flows.
