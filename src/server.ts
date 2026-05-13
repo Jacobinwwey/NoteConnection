@@ -409,6 +409,23 @@ type RuntimeRunbookVectorAccelerationCircuitBudgetSummary = {
 
 type RuntimeRunbookVectorAccelerationTraceabilityCoverage = 'none' | 'partial' | 'full';
 
+type RuntimeRunbookVectorAccelerationIndexSyncHealthSummary = {
+    checkId: 'query_vector_acceleration_index_sync_health';
+    mode: RuntimeCapabilityMatrix['signals']['queryVectorIndexAccelerationMode'];
+    healthStatus: RuntimeCapabilityMatrix['signals']['queryVectorIndexAccelerationHealthStatus'];
+    adapterId: string;
+    externalConnector: boolean;
+    indexSyncStatus: RuntimeCapabilityMatrix['signals']['queryVectorIndexAccelerationIndexSyncStatus'];
+    indexSyncMessage: string;
+    lastSyncAt: string;
+    syncRequestCount: number;
+    syncSuccessCount: number;
+    syncFailureCount: number;
+    syncedIndexSignature: string;
+    syncedAtomCount: number;
+    hasSyncedTelemetry: boolean;
+};
+
 type RuntimeRunbookVectorAccelerationPrefilterBudgetStatus = 'ok' | 'warn' | 'fail';
 
 type RuntimeRunbookVectorAccelerationPrefilterSummary = {
@@ -1889,7 +1906,8 @@ function resolveRuntimeRunbookVerificationEscalation(
     const activeFailStreak = Math.max(0, Math.floor(Number(activeFailStreakRaw || 0)));
     const selectedCheckId = normalizeRuntimeRunbookCheckIdToken(selectedCheckIdRaw);
     if (
-        selectedCheckId === 'query_vector_acceleration_circuit_state'
+        selectedCheckId === 'query_vector_acceleration_index_sync_health'
+        || selectedCheckId === 'query_vector_acceleration_circuit_state'
         || selectedCheckId === 'query_vector_acceleration_traceability'
     ) {
         if (status === 'fail' && activeFailStreak >= 1) {
@@ -2032,6 +2050,53 @@ function buildRuntimeRunbookVectorAccelerationTraceabilitySummary(
     };
 }
 
+function buildRuntimeRunbookVectorAccelerationIndexSyncHealthSummary(
+    matrixRaw: RuntimeCapabilityMatrix | null | undefined
+): RuntimeRunbookVectorAccelerationIndexSyncHealthSummary | null {
+    if (!matrixRaw || typeof matrixRaw !== 'object') {
+        return null;
+    }
+    const signals = matrixRaw.signals;
+    if (!signals || typeof signals !== 'object') {
+        return null;
+    }
+    const adapterId = String(signals.queryVectorIndexAccelerationAdapterId || '').trim();
+    const externalConnector = adapterId.length > 0 && adapterId.toLowerCase().includes('external');
+    const syncedIndexSignature = String(signals.queryVectorIndexAccelerationSyncedIndexSignature || '').trim();
+    const syncedAtomCount = Math.max(
+        0,
+        Math.floor(Number(signals.queryVectorIndexAccelerationSyncedAtomCount || 0))
+    );
+    const syncRequestCount = Math.max(
+        0,
+        Math.floor(Number(signals.queryVectorIndexAccelerationSyncRequestCount || 0))
+    );
+    const syncSuccessCount = Math.max(
+        0,
+        Math.floor(Number(signals.queryVectorIndexAccelerationSyncSuccessCount || 0))
+    );
+    const syncFailureCount = Math.max(
+        0,
+        Math.floor(Number(signals.queryVectorIndexAccelerationSyncFailureCount || 0))
+    );
+    return {
+        checkId: 'query_vector_acceleration_index_sync_health',
+        mode: signals.queryVectorIndexAccelerationMode,
+        healthStatus: signals.queryVectorIndexAccelerationHealthStatus,
+        adapterId,
+        externalConnector,
+        indexSyncStatus: signals.queryVectorIndexAccelerationIndexSyncStatus,
+        indexSyncMessage: String(signals.queryVectorIndexAccelerationIndexSyncMessage || '').trim(),
+        lastSyncAt: String(signals.queryVectorIndexAccelerationLastSyncAt || '').trim(),
+        syncRequestCount,
+        syncSuccessCount,
+        syncFailureCount,
+        syncedIndexSignature,
+        syncedAtomCount,
+        hasSyncedTelemetry: syncSuccessCount > 0 && syncedAtomCount > 0 && syncedIndexSignature.length > 0,
+    };
+}
+
 function buildRuntimeRunbookVectorAccelerationPrefilterSummary(
     matrixRaw: RuntimeCapabilityMatrix | null | undefined
 ): RuntimeRunbookVectorAccelerationPrefilterSummary | null {
@@ -2153,6 +2218,12 @@ const RUNTIME_RUNBOOK_PREFILTER_QUEUE_ACTION_IDS = new Set<string>([
     'verify_ann_prefilter_effectiveness_recovery',
 ]);
 
+const RUNTIME_RUNBOOK_INDEX_SYNC_QUEUE_ACTION_IDS = new Set<string>([
+    'inspect_ann_index_sync_telemetry',
+    'drive_ann_index_resync',
+    'verify_ann_index_sync_recovery',
+]);
+
 const RUNTIME_RUNBOOK_TURN_CACHE_ALERT_QUEUE_ACTION_IDS = new Set<string>([
     'inspect_conversation_turn_cache_alert_trend_index',
     'stabilize_conversation_turn_cache_alert_pressure',
@@ -2190,6 +2261,33 @@ function getRuntimeRunbookPrefilterQueueRiskBoost(item: RuntimeRunbookCheckActio
         boost += 28;
     } else if (actionId === 'verify_ann_prefilter_effectiveness_recovery') {
         boost += 20;
+    }
+    return boost;
+}
+
+function getRuntimeRunbookIndexSyncQueueRiskBoost(item: RuntimeRunbookCheckActionQueueItem): number {
+    const checkId = normalizeRuntimeRunbookCheckIdToken(item?.checkId);
+    if (checkId !== 'query_vector_acceleration_index_sync_health') {
+        return 0;
+    }
+    const actionId = String(item?.actionId || '').trim().toLowerCase();
+    if (!RUNTIME_RUNBOOK_INDEX_SYNC_QUEUE_ACTION_IDS.has(actionId)) {
+        return 0;
+    }
+    const latestStatus = normalizeRuntimeRunbookVerificationStatusToken(
+        item?.checkLatestStatus
+    ) || 'unknown';
+    if (latestStatus !== 'warn' && latestStatus !== 'fail') {
+        return 0;
+    }
+    let boost = latestStatus === 'fail' ? 300 : 210;
+    boost += getRuntimeRunbookVerificationEscalationRank(item?.checkLatestEscalation) * 35;
+    if (actionId === 'inspect_ann_index_sync_telemetry') {
+        boost += 34;
+    } else if (actionId === 'drive_ann_index_resync') {
+        boost += 26;
+    } else if (actionId === 'verify_ann_index_sync_recovery') {
+        boost += 18;
     }
     return boost;
 }
@@ -2510,6 +2608,31 @@ function resolveRuntimeRunbookVerificationEscalationActionItems(input: {
             endpointHint: '/api/knowledge/runtime-capability-runbook/verify',
             automationHint: 'verify_vector_acceleration_circuit_recovery',
         });
+    } else if (selectedCheckId === 'query_vector_acceleration_index_sync_health') {
+        addAction({
+            actionId: 'inspect_ann_index_sync_telemetry',
+            priority: escalation === 'critical' || escalation === 'high' ? 'p0' : 'p1',
+            category: 'evidence',
+            instruction: 'Inspect ANN sync telemetry (indexSyncStatus/indexSyncMessage/lastSyncAt/syncedIndexSignature/syncedAtomCount) and attach one representative diagnostics snapshot to the remediation note.',
+            endpointHint: '/api/knowledge/query-backend-diagnostics',
+            automationHint: 'inspect_ann_index_sync_telemetry',
+        });
+        addAction({
+            actionId: 'drive_ann_index_resync',
+            priority: escalation === 'critical' ? 'p0' : 'p1',
+            category: 'stabilize',
+            instruction: 'Issue ingest + local_vector query traffic and confirm the external connector performs a fresh /sync-index cycle before candidate selection.',
+            endpointHint: '/api/knowledge/ingest',
+            automationHint: 'drive_ann_index_resync',
+        });
+        addAction({
+            actionId: 'verify_ann_index_sync_recovery',
+            priority: 'p1',
+            category: 'verify',
+            instruction: 'Re-run runbook verify and confirm query_vector_acceleration_index_sync_health converges to pass with populated sync counters and synced index metadata.',
+            endpointHint: '/api/knowledge/runtime-capability-runbook/verify',
+            automationHint: 'verify_ann_index_sync_recovery',
+        });
     } else if (selectedCheckId === 'query_vector_acceleration_traceability') {
         addAction({
             actionId: 'collect_vector_acceleration_connector_correlation',
@@ -2768,6 +2891,11 @@ function buildRuntimeRunbookCheckActionQueue(inputChecks: Array<{
             - getRuntimeRunbookPrefilterQueueRiskBoost(left);
         if (prefilterRiskBoostDiff !== 0) {
             return prefilterRiskBoostDiff;
+        }
+        const indexSyncRiskBoostDiff = getRuntimeRunbookIndexSyncQueueRiskBoost(right)
+            - getRuntimeRunbookIndexSyncQueueRiskBoost(left);
+        if (indexSyncRiskBoostDiff !== 0) {
+            return indexSyncRiskBoostDiff;
         }
         const turnCacheAlertRiskBoostDiff = getRuntimeRunbookTurnCacheAlertQueueRiskBoost(right)
             - getRuntimeRunbookTurnCacheAlertQueueRiskBoost(left);
@@ -5084,6 +5212,7 @@ function queryRuntimeRunbookVerificationHistoryByCheck(
         recommendedFocusRemediationStatus: RuntimeRunbookRemediationEventStatus | '';
         recommendedFocusRemediationTrendStatus: RuntimeRunbookRemediationEventTrendStatus | '';
         queryVectorAccelerationCircuitBudget: RuntimeRunbookVectorAccelerationCircuitBudgetSummary | null;
+        queryVectorAccelerationIndexSyncHealth: RuntimeRunbookVectorAccelerationIndexSyncHealthSummary | null;
         queryVectorAccelerationTraceability: RuntimeRunbookVectorAccelerationTraceabilitySummary | null;
         queryVectorAccelerationPrefilter: RuntimeRunbookVectorAccelerationPrefilterSummary | null;
         generatedAt: string;
@@ -5109,6 +5238,7 @@ function queryRuntimeRunbookVerificationHistoryByCheck(
         escalationActions: string[];
         remediation: RuntimeRunbookRemediationCheckSummary;
         queryVectorAccelerationCircuitBudget: RuntimeRunbookVectorAccelerationCircuitBudgetSummary | null;
+        queryVectorAccelerationIndexSyncHealth: RuntimeRunbookVectorAccelerationIndexSyncHealthSummary | null;
         queryVectorAccelerationTraceability: RuntimeRunbookVectorAccelerationTraceabilitySummary | null;
         queryVectorAccelerationPrefilter: RuntimeRunbookVectorAccelerationPrefilterSummary | null;
     }>;
@@ -5130,6 +5260,9 @@ function queryRuntimeRunbookVerificationHistoryByCheck(
         grouped.set(checkId, [record]);
     });
     const queryVectorAccelerationCircuitBudget = buildRuntimeRunbookVectorAccelerationCircuitBudgetSummary(
+        options.runtimeCapabilityMatrix
+    );
+    const queryVectorAccelerationIndexSyncHealth = buildRuntimeRunbookVectorAccelerationIndexSyncHealthSummary(
         options.runtimeCapabilityMatrix
     );
     const queryVectorAccelerationTraceability = buildRuntimeRunbookVectorAccelerationTraceabilitySummary(
@@ -5244,6 +5377,9 @@ function queryRuntimeRunbookVerificationHistoryByCheck(
             remediation,
             queryVectorAccelerationCircuitBudget: checkId === 'query_vector_acceleration_circuit_state'
                 ? queryVectorAccelerationCircuitBudget
+                : null,
+            queryVectorAccelerationIndexSyncHealth: checkId === 'query_vector_acceleration_index_sync_health'
+                ? queryVectorAccelerationIndexSyncHealth
                 : null,
             queryVectorAccelerationTraceability: checkId === 'query_vector_acceleration_traceability'
                 ? queryVectorAccelerationTraceability
@@ -5495,6 +5631,7 @@ function queryRuntimeRunbookVerificationHistoryByCheck(
             recommendedFocusRemediationStatus,
             recommendedFocusRemediationTrendStatus,
             queryVectorAccelerationCircuitBudget,
+            queryVectorAccelerationIndexSyncHealth,
             queryVectorAccelerationTraceability,
             queryVectorAccelerationPrefilter,
             generatedAt: new Date().toISOString(),

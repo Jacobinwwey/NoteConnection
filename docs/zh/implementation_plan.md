@@ -18,12 +18,13 @@
   - `local_vector` 的 external HTTP 加速已不再只是查询侧脚手架：适配器现已支持远端索引同步，在 diagnostics 中暴露 sync telemetry，并保留严格的 `fail_closed` 与 representation-alignment 语义。
   - `src/query_backend.external_http.integration.test.ts` 现已证明一条真实的 `external_http` connector 路径：覆盖 ingest -> 远端索引同步 -> query -> diagnostics。
   - runtime capability 治理现在也把 ANN 远端索引同步当成一等检查：matrix/runbook 已新增 `query_vector_acceleration_index_sync_health`，与 health、traceability、prefilter、circuit 同级。
+  - `server.ts` 现已把这条新门禁接入完整 runbook 闭环：ANN index-sync health 已进入 verification escalation、remediation action queue、以及 per-check history summary。
 - 这会改变执行重心：
   - P3 的“placeholder 替换”在当前 runtime 面上已经完成实现；
   - P4 的“默认 tutor-routing 激活”在本地优先基线上已经完成实现；
   - A8 剩余缺口已经收窄为 packaged/runtime 证明与更重工作负载级加固；
   - P2 现在已经具备 A9 的真实 live connector baseline，而不再只是纯脚手架；
-  - 这个工作之后的下一阶段仍然是发布级 Phase-2 门禁加固，而本轮已经先落下第一条具体门禁：ANN index-sync health governance；同时并行继续 A8 的 packaged/runtime 闭环和 A9 的工作负载/阈值校准。
+  - 这个工作之后的下一阶段仍然是发布级 Phase-2 门禁加固，而本轮这条第一条具体门禁已经具备 server 侧 runbook/action-queue/history 闭环：ANN index-sync health governance；同时并行继续 A8 的 packaged/runtime 闭环和 A9 的工作负载/阈值校准。
 
 ### 代码 vs 方案现状矩阵
 

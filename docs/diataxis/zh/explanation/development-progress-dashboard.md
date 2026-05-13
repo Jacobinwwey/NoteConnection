@@ -11,6 +11,7 @@
   - embedded sqlite 基线现在还具备了重启耐久性证明：shutdown 会干净关闭 store，adapter 可安全重开，server integration 已覆盖 ingest -> shutdown -> fresh module reload -> diagnostics/query/readiness 连续性，
   - `src/learning/queryBackend.ts` / `src/learning/vectorAccelerationAdapter.ts` 现已具备 ANN 风格 prefilter、representation telemetry、circuit health、远端索引同步，以及 live `external_http` connector 证明，
   - runtime capability / runbook 治理也已新增显式的 ANN 远端索引同步健康度检查（`query_vector_acceleration_index_sync_health`），与 prefilter、health、traceability、circuit 并列，
+  - `server.ts` 现已补齐对应的 operator 闭环：该 sync-health 门禁已经进入 verification escalation、remediation action queue、以及 per-check runbook history summary，
   - `src/learning/KnowledgeLearningPlatform.ts` 中的 Phase-2 运行时诊断面已接通真实实现，包括 query-backend comparison/history/trend、knowledge staleness diagnostics/rebuild planning、learning-quality history/trend、session-plan quality evaluate/history/trend/runtime-threshold diagnostics、query-backend config、query-backend diagnostics，
   - Phase-3 的导师/记忆诊断仍为真实实现，且 `src/server.ts` 现已注入默认激活态 tutor adapter，正常 server 路径可直接产出 adapter telemetry。
 - 当前仍未闭环的部分：
@@ -301,7 +302,7 @@
   - 工作台新增整改回放调度编排控制（启用/间隔/触发策略/阈值），并接入后端调度快照与手动 tick
   - runtime summary 中向量加速治理可观测（`queryVectorAcceleration(...)` 同时展示实时计数、circuit 的 warn/fail 阈值元组，以及基于 matrix 信号的 prefilter 预算快照）
   - runbook `history/checks` 已在 summary 与 per-check 两级补充 `queryVectorAccelerationPrefilter` 结构化快照，便于按阈值预算做 ANN 预筛选故障分诊
-  - runbook 区域新增向量加速治理钻取面板（`query_vector_acceleration_circuit_state` 的状态/阈值/预算标志/动作清单结构化展示，`query_vector_acceleration_index_sync_health` 的远端 ANN sync-health 视图，`query_vector_acceleration_prefilter_effectiveness` 的预筛选选择模式/候选规模/阈值预算/整改动作展示，并补充 `query_vector_acceleration_traceability` 的关联字段覆盖率与整改动作视图）
+  - runbook 区域新增向量加速治理钻取面板（`query_vector_acceleration_circuit_state` 的状态/阈值/预算标志/动作清单结构化展示，`query_vector_acceleration_index_sync_health` 的远端 ANN sync-health 视图，`query_vector_acceleration_prefilter_effectiveness` 的预筛选选择模式/候选规模/阈值预算/整改动作展示，并补充 `query_vector_acceleration_traceability` 的关联字段覆盖率与整改动作视图）；同时 server 侧 history/action-queue 也已将该 sync-health gate 视为一等事故对象
   - path strategy 遥测与 session history 分析
 
 ## 实践 Runbook（工程流程）

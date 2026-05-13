@@ -19,12 +19,13 @@ Bring code truth, active progress docs, and next execution order back into align
   - `local_vector` external HTTP acceleration is no longer query-only scaffolding: the adapter now supports remote index sync, exposes sync telemetry in diagnostics, and preserves strict `fail_closed` plus representation-alignment semantics.
   - `src/query_backend.external_http.integration.test.ts` now proves a live `external_http` connector path end to end: ingest -> remote index sync -> query -> diagnostics.
   - runtime capability governance now treats ANN remote index sync as a first-class check: `query_vector_acceleration_index_sync_health` is emitted in the matrix/runbook alongside health, traceability, prefilter, and circuit checks.
+  - `server.ts` now closes the runbook loop for that new gate: ANN index-sync health is included in verification escalation, remediation action-queue generation, and per-check history summaries.
 - This changes the execution focus:
   - P3 placeholder replacement is implementation-complete for the current runtime surfaces.
   - P4 default tutor-routing activation is implementation-complete for the local-first baseline.
   - the remaining A8 gap is now narrower: packaged/runtime proof plus heavier workload hardening.
   - P2 now has a real live-connector baseline for A9 instead of pure scaffolding.
-  - the next phase after this work is still release-grade Phase-2 gate hardening, and the first concrete gate landed is ANN index-sync health governance, while A8 packaged/runtime closure and A9 workload/threshold calibration continue in parallel.
+  - the next phase after this work is still release-grade Phase-2 gate hardening, and the first concrete gate now has server-side runbook/action-queue/history closure through ANN index-sync health governance, while A8 packaged/runtime closure and A9 workload/threshold calibration continue in parallel.
 
 ### Code-vs-Plan Reality Matrix
 
