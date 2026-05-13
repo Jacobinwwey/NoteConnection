@@ -20,7 +20,7 @@ Bring code truth, active progress docs, and next execution order back into align
   - `src/query_backend.external_http.integration.test.ts` now proves a live `external_http` connector path end to end: ingest -> remote index sync -> query -> diagnostics.
   - runtime capability governance now treats ANN remote index sync as a first-class check: `query_vector_acceleration_index_sync_health` is emitted in the matrix/runbook alongside health, traceability, prefilter, and circuit checks.
   - `server.ts` now closes the runbook loop for that new gate: ANN index-sync health is included in verification escalation, remediation action-queue generation, and per-check history summaries.
-  - the agent workspace runtime runbook verify card now surfaces ANN sync-health metrics directly, so the new gate is visible in the UI instead of staying backend-only.
+  - the agent workspace runtime runbook surfaces now expose ANN sync-health metrics across verify/checks/action-queue flows, so the new gate is visible in the UI instead of staying backend-only.
 - This changes the execution focus:
   - P3 placeholder replacement is implementation-complete for the current runtime surfaces.
   - P4 default tutor-routing activation is implementation-complete for the local-first baseline.

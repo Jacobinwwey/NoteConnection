@@ -2182,6 +2182,9 @@
             ? result.checks
             : [];
         const firstCheck = checks.length > 0 ? checks[0] : null;
+        const firstCheckIndexSyncHealth = firstCheck && typeof firstCheck.queryVectorAccelerationIndexSyncHealth === 'object'
+            ? firstCheck.queryVectorAccelerationIndexSyncHealth
+            : {};
         return {
             totalRecords: Number.isFinite(Number(summary.totalRecords))
                 ? Number(summary.totalRecords)
@@ -2228,6 +2231,8 @@
             firstCheckId: String(firstCheck && firstCheck.checkId || '').trim(),
             firstCheckStatus: String(firstCheck && firstCheck.latestStatus || '').trim(),
             firstCheckTrendStatus: String(firstCheck && firstCheck.trendStatus || '').trim(),
+            firstCheckAnnIndexSyncStatus: String(firstCheckIndexSyncHealth.indexSyncStatus || '').trim(),
+            firstCheckAnnIndexSyncCounts: `${Number.isFinite(Number(firstCheckIndexSyncHealth.syncRequestCount)) ? Number(firstCheckIndexSyncHealth.syncRequestCount) : 0}/${Number.isFinite(Number(firstCheckIndexSyncHealth.syncSuccessCount)) ? Number(firstCheckIndexSyncHealth.syncSuccessCount) : 0}/${Number.isFinite(Number(firstCheckIndexSyncHealth.syncFailureCount)) ? Number(firstCheckIndexSyncHealth.syncFailureCount) : 0}`,
         };
     }
 

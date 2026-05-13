@@ -22,7 +22,7 @@ It tracks what is already implemented, where the hard gaps remain, and how to ve
   - ANN-style prefilter, representation telemetry, circuit health, remote index sync, and live `external_http` connector proof now exist in `src/learning/queryBackend.ts` and `src/learning/vectorAccelerationAdapter.ts`,
   - runtime capability/runbook governance now includes explicit ANN remote index-sync health (`query_vector_acceleration_index_sync_health`) in addition to prefilter, health, traceability, and circuit checks,
   - `server.ts` now closes the corresponding operator loop: the index-sync gate participates in verification escalation, remediation action-queue generation, and per-check runbook history summaries,
-  - the agent workspace runtime-runbook verify card now renders ANN sync-health metrics, so operators can see the gate directly from the frontend shell without drilling into raw JSON,
+  - the agent workspace runtime-runbook verify/checks/action-queue cards now render ANN sync-health metrics, so operators can see the gate directly from the frontend shell without drilling into raw JSON,
   - Phase-2 runtime diagnostics are now materially implemented in `src/learning/KnowledgeLearningPlatform.ts` for query-backend comparison/history/trend, knowledge staleness diagnostics/rebuild planning, learning-quality history/trend, session-plan quality evaluation/history/trend/runtime-threshold diagnostics, query-backend config, and query-backend diagnostics,
   - Phase-3 tutor/memory diagnostics remain real and now include an active default runtime tutor adapter path in `src/server.ts`, so normal server execution can emit adapter telemetry instead of staying catalog-only.
 - What is not closed yet:

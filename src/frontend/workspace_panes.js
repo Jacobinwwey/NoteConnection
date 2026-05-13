@@ -1687,6 +1687,10 @@
             || translate('agentWorkspace.runtimeRunbookChecks.none', 'none');
         const firstCheckStatus = String(summary.firstCheckStatus || '').trim() || 'unknown';
         const firstCheckTrendStatus = String(summary.firstCheckTrendStatus || '').trim() || 'insufficient_data';
+        const firstCheckAnnIndexSyncStatus = String(summary.firstCheckAnnIndexSyncStatus || '').trim()
+            || translate('agentWorkspace.runtimeRunbookChecks.none', 'none');
+        const firstCheckAnnIndexSyncCounts = String(summary.firstCheckAnnIndexSyncCounts || '').trim()
+            || translate('agentWorkspace.runtimeRunbookChecks.none', 'none');
         const latestRemediationAt = String(summary.remediationLatestRecordedAt || '').trim()
             || translate('agentWorkspace.runtimeRunbookChecks.none', 'none');
         const topAction = String(summary.recommendedFocusTopAction || '').trim()
@@ -1719,6 +1723,10 @@
             {
                 title: translate('agentWorkspace.runtimeRunbookChecks.topActionLabel', 'Top focus action'),
                 value: topAction,
+            },
+            {
+                title: translate('agentWorkspace.runtimeRunbookChecks.firstCheckAnnIndexSyncLabel', 'First check ANN sync'),
+                value: `${firstCheckAnnIndexSyncStatus} (${firstCheckAnnIndexSyncCounts})`,
             },
             {
                 title: translate('agentWorkspace.runtimeRunbookChecks.latestRemediationLabel', 'Latest remediation record'),

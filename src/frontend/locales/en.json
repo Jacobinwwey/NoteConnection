@@ -457,6 +457,7 @@
       "cardTitle": "Runtime Runbook Checks",
       "summary": "Focused check rollup from runtime verification history.",
       "metricsHeading": "Key Metrics",
+      "firstCheckAnnIndexSyncLabel": "First check ANN sync",
       "none": "none"
     },
     "runtimeRunbookVerify": {

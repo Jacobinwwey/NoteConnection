@@ -12,7 +12,7 @@
   - `src/learning/queryBackend.ts` / `src/learning/vectorAccelerationAdapter.ts` 现已具备 ANN 风格 prefilter、representation telemetry、circuit health、远端索引同步，以及 live `external_http` connector 证明，
   - runtime capability / runbook 治理也已新增显式的 ANN 远端索引同步健康度检查（`query_vector_acceleration_index_sync_health`），与 prefilter、health、traceability、circuit 并列，
   - `server.ts` 现已补齐对应的 operator 闭环：该 sync-health 门禁已经进入 verification escalation、remediation action queue、以及 per-check runbook history summary，
-  - agent workspace 的 runtime-runbook verify 卡片现在也会渲染 ANN sync-health 指标，运维侧不必再翻 raw JSON 才能看到这条门禁，
+  - agent workspace 的 runtime-runbook verify/checks/action-queue 卡片现在都会渲染 ANN sync-health 指标，运维侧不必再翻 raw JSON 才能看到这条门禁，
   - `src/learning/KnowledgeLearningPlatform.ts` 中的 Phase-2 运行时诊断面已接通真实实现，包括 query-backend comparison/history/trend、knowledge staleness diagnostics/rebuild planning、learning-quality history/trend、session-plan quality evaluate/history/trend/runtime-threshold diagnostics、query-backend config、query-backend diagnostics，
   - Phase-3 的导师/记忆诊断仍为真实实现，且 `src/server.ts` 现已注入默认激活态 tutor adapter，正常 server 路径可直接产出 adapter telemetry。
 - 当前仍未闭环的部分：

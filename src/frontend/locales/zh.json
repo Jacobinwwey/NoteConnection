@@ -457,6 +457,7 @@
       "cardTitle": "运行时 Runbook 检查",
       "summary": "运行时验证历史中的重点检查汇总。",
       "metricsHeading": "关键指标",
+      "firstCheckAnnIndexSyncLabel": "首个检查的 ANN 同步",
       "none": "无"
     },
     "runtimeRunbookVerify": {

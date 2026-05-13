@@ -19,7 +19,7 @@
   - `src/query_backend.external_http.integration.test.ts` 现已证明一条真实的 `external_http` connector 路径：覆盖 ingest -> 远端索引同步 -> query -> diagnostics。
   - runtime capability 治理现在也把 ANN 远端索引同步当成一等检查：matrix/runbook 已新增 `query_vector_acceleration_index_sync_health`，与 health、traceability、prefilter、circuit 同级。
   - `server.ts` 现已把这条新门禁接入完整 runbook 闭环：ANN index-sync health 已进入 verification escalation、remediation action queue、以及 per-check history summary。
-  - agent workspace 的 runtime runbook verify 卡片现在也会直接展示 ANN sync-health 指标，这条新门禁已经不再停留在后端 JSON。
+  - agent workspace 的 runtime runbook 界面现已在 verify/checks/action-queue 三条链路中展示 ANN sync-health 指标，这条新门禁已经不再停留在后端 JSON。
 - 这会改变执行重心：
   - P3 的“placeholder 替换”在当前 runtime 面上已经完成实现；
   - P4 的“默认 tutor-routing 激活”在本地优先基线上已经完成实现；

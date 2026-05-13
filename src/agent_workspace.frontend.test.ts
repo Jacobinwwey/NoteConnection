@@ -1870,12 +1870,26 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                             actionQueueP2: 1,
                             remediationRiskRatioPct: 41.67,
                             remediationLatestRecordedAt: '2026-04-12T00:00:00.000Z',
+                            queryVectorAccelerationIndexSyncHealthStatus: 'ready',
+                            queryVectorAccelerationIndexSyncRequestCount: 3,
+                            queryVectorAccelerationIndexSyncSuccessCount: 3,
+                            queryVectorAccelerationIndexSyncFailureCount: 0,
                         },
                         checks: [
                             {
-                                checkId: 'tutor_routing_dynamic_mode_alignment',
-                                latestStatus: 'warn',
-                                trendStatus: 'regressing',
+                                checkId: 'query_vector_acceleration_index_sync_health',
+                                latestStatus: 'pass',
+                                trendStatus: 'stable',
+                                queryVectorAccelerationIndexSyncHealth: {
+                                    checkId: 'query_vector_acceleration_index_sync_health',
+                                    indexSyncStatus: 'ready',
+                                    indexSyncMessage: 'external_http_index_synced:idx_sync_ok:atoms=128',
+                                    syncRequestCount: 3,
+                                    syncSuccessCount: 3,
+                                    syncFailureCount: 0,
+                                    syncedAtomCount: 128,
+                                    lastSyncAt: '2026-04-12T00:00:00.000Z',
+                                },
                             },
                         ],
                     },
@@ -1903,20 +1917,20 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                             categoryFilter: 'routing',
                             remediationStatusFilter: 'error',
                             remediationTrendFilter: 'regressing',
-                            recommendedFocusCheckId: 'tutor_routing_dynamic_mode_alignment',
+                            recommendedFocusCheckId: 'query_vector_acceleration_index_sync_health',
                             recommendedFocusEscalation: 'watch',
                         },
                         actionQueue: [
                             {
-                                checkId: 'tutor_routing_dynamic_mode_alignment',
-                                actionId: 'sync_dynamic_mode',
+                                checkId: 'query_vector_acceleration_index_sync_health',
+                                actionId: 'inspect_ann_index_sync_telemetry',
                                 priority: 'p0',
-                                category: 'routing',
+                                category: 'evidence',
                                 remediationLatestStatus: 'error',
                                 remediationTrendStatus: 'regressing',
-                                instruction: 'Set preferred mode to auto and re-run verify.',
-                                endpointHint: '/api/knowledge/session/orchestration/config',
-                                automationHint: 'sync_dynamic_mode',
+                                instruction: 'Inspect ANN sync telemetry and attach one diagnostics snapshot.',
+                                endpointHint: '/api/knowledge/query-backend-diagnostics',
+                                automationHint: 'inspect_ann_index_sync_telemetry',
                             },
                         ],
                     },
@@ -3929,6 +3943,8 @@ describe('agent workspace learning-path integration', () => {
         expect(card).not.toBeNull();
         expect(card?.textContent).toContain('Runtime Runbook Checks');
         expect(card?.textContent).toContain('Trend counts');
+        expect(card?.textContent).toContain('First check ANN sync');
+        expect(card?.textContent).toContain('ready');
     });
 
     test('executes runtime runbook action-queue capabilities through the generic knowledge operation path', async () => {
@@ -3988,7 +4004,8 @@ describe('agent workspace learning-path integration', () => {
         expect(card?.textContent).toContain('Runtime Action Queue');
         expect(card?.textContent).toContain('Priority counts');
         expect(card?.textContent).toContain('First item endpoint/automation');
-        expect(card?.textContent).toContain('/api/knowledge/session/orchestration/config');
+        expect(card?.textContent).toContain('query_vector_acceleration_index_sync_health');
+        expect(card?.textContent).toContain('/api/knowledge/query-backend-diagnostics');
     });
 
     test('renders capability failure message when runtime runbook checks request fails', async () => {
@@ -4852,7 +4869,8 @@ describe('agent workspace learning-path integration', () => {
         const cardAfter = document.querySelector('[data-agent-workspace-card-kind="runtime-capability-runbook-action-queue"]') as HTMLElement | null;
         expect(cardAfter?.textContent).toContain('运行时动作队列');
         expect(cardAfter?.textContent).toContain('关键指标');
-        expect(cardAfter?.textContent).toContain('/api/knowledge/session/orchestration/config');
+        expect(cardAfter?.textContent).toContain('query_vector_acceleration_index_sync_health');
+        expect(cardAfter?.textContent).toContain('/api/knowledge/query-backend-diagnostics');
     });
 
     test('executes study-session capabilities through the generic knowledge operation path', async () => {
