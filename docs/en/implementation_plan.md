@@ -23,6 +23,7 @@ Bring code truth, active progress docs, and next execution order back into align
   - the agent workspace runtime runbook surfaces now expose ANN sync-health metrics across verify/checks/action-queue flows, so the new gate is visible in the UI instead of staying backend-only.
   - modular knowledge-route wiring for `runtime-capability-runbook/*` is now backed by live server-side runbook ops instead of KLP placeholder payloads, and the route layer now preserves `checkId` / `sinceMinutes` / queue-filter query params rather than dropping them.
   - the real browser smoke gate now proves those verify/checks/action-queue surfaces end to end: strict browser evidence must show the ANN sync-health verify card, the first-check ANN sync metric, and the index-sync action-queue drilldown instead of only proving that the cards can open.
+  - agent-workspace locale hardening now covers the currently surfaced diagnostics cards/messages: source-referenced `agentWorkspace.*` keys are guarded by `src/agent_workspace.locale.contract.test.ts`, bilingual locale bundles now back the query/quality/runbook card labels that strict browser smoke actually exercises, and startup-time translate helpers defer `window.i18n.t()` until locale init to avoid false missing-key warnings before locales hydrate.
 - This changes the execution focus:
   - P3 placeholder replacement is implementation-complete for the current runtime surfaces.
   - P4 default tutor-routing activation is implementation-complete for the local-first baseline.

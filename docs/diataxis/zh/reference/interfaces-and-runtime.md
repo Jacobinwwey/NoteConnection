@@ -51,6 +51,7 @@
   - 如需进一步强制动态会话/请求卡片级断言，请在 `..._UI_STRICT=1` 基础上设置 `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_DYNAMIC_STRICT=1`。
   - 动态 strict 现已对真实浏览器驱动的会话与能力执行链路执行阻断式校验：conversation、learning-path、study-session、tutor action、query-backend 对比/历史/趋势、learning-quality 趋势/历史、session-plan quality 趋势/历史、session history、runtime runbook verify/checks/action queue，以及 conversation turn-cache alert trend。
   - runtime runbook 的浏览器证明现在不再只是“卡片能打开”：verify 卡必须出现 ANN sync-health/counts，checks 卡必须出现首个检查的 ANN sync，action queue 必须暴露 `query_vector_acceleration_index_sync_health` 钻取与 `/api/knowledge/query-backend-diagnostics`。
+  - 这里现在也把 locale / runtime hygiene 纳入门禁：`src/agent_workspace.locale.contract.test.ts` 会阻断 agent-workspace 前后端源码里引用到的 `agentWorkspace.*` locale key 缺失，而运行时 translate helper 也会避免在 locale hydrate 完成前过早调用 `window.i18n.t()`，从而消除启动期的误报 warning 噪音。
   - modular knowledge route 与 `KnowledgeLearningPlatform` 的方法面对齐也纳入该门禁；若 `/api/knowledge/*` 路由漂移，浏览器 strict 会直接失败，而不再被合成 snapshot 静默掩盖。
   - 动态恢复仍保留为诊断性兜底，但缺失/失败的请求 trace 现已视为硬失败，而不是非阻断波动项。
 

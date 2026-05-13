@@ -52,7 +52,11 @@
     }
 
     function translate(key, fallback, params) {
-        if (window.i18n && typeof window.i18n.t === 'function') {
+        if (
+            window.i18n
+            && window.i18n.isInitialized === true
+            && typeof window.i18n.t === 'function'
+        ) {
             const translated = window.i18n.t(key, params || {});
             if (typeof translated === 'string' && translated !== key) {
                 return translated;

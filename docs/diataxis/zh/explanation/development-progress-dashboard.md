@@ -15,6 +15,7 @@
   - agent workspace 的 runtime-runbook verify/checks/action-queue 卡片现在都会渲染 ANN sync-health 指标，运维侧不必再翻 raw JSON 才能看到这条门禁，
   - modular `src/routes/knowledge.ts` 的 runtime-runbook 路由面现在也会委托到真实 server 侧 runbook ops，并完整透传 query 参数，因此浏览器/运行时消费者不再命中旧的 KLP placeholder verify/history/checks/action-queue/remediation/schedule 响应，
   - 浏览器 strict smoke 现在也会用真实浏览器证据证明这批 ANN runbook 面：verify 卡的 ANN health/counts、checks 卡的首个检查 ANN sync，以及 action-queue 的 index-sync 钻取都已纳入端到端断言，而不再只停留在组件测试层，
+  - agent workspace 的 locale 治理现在也更严了：双语 locale bundle 已补齐 strict browser smoke 实际触达的 query/quality/runbook 卡片文案，`src/agent_workspace.locale.contract.test.ts` 会阻断源码引用的 `agentWorkspace.*` key 漂移，而启动期 `translate()` 也不再在 locale 初始化完成前发出误报式 missing-key warning，
   - `src/learning/KnowledgeLearningPlatform.ts` 中的 Phase-2 运行时诊断面已接通真实实现，包括 query-backend comparison/history/trend、knowledge staleness diagnostics/rebuild planning、learning-quality history/trend、session-plan quality evaluate/history/trend/runtime-threshold diagnostics、query-backend config、query-backend diagnostics，
   - Phase-3 的导师/记忆诊断仍为真实实现，且 `src/server.ts` 现已注入默认激活态 tutor adapter，正常 server 路径可直接产出 adapter telemetry。
 - 当前仍未闭环的部分：
