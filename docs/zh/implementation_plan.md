@@ -20,7 +20,7 @@
   - runtime capability 治理现在也把 ANN 远端索引同步当成一等检查：matrix/runbook 已新增 `query_vector_acceleration_index_sync_health`，与 health、traceability、prefilter、circuit 同级。
   - `server.ts` 现已把这条新门禁接入完整 runbook 闭环：ANN index-sync health 已进入 verification escalation、remediation action queue、以及 per-check history summary。
   - runtime capability 治理现在也有了显式的 ANN 校准前提门禁：`query_vector_acceleration_calibration_readiness` 会在同一运行时窗口内缺少 sync telemetry、稳定 connector、prefilter 样本就绪、可评估 candidate ratio、或外部 traceability 信号时阻断发布级阈值校准。
-  - agent workspace 的 runtime runbook 界面现已在 verify/checks/action-queue 三条链路中展示 ANN sync-health 指标，而且 verify/checks 卡片还进一步前推了 ANN 熔断预算、可追踪性、预筛选摘要以及阈值/信号钻取和校准就绪态，运维侧的 ANN 治理视图已不再停留在 `index_sync_health`。
+  - agent workspace 的 runtime runbook 界面现已在 verify/checks/action-queue 三条链路中展示 ANN sync-health 指标，而且 verify/checks 卡片还进一步前推了 ANN 熔断预算、可追踪性、预筛选摘要以及阈值/信号钻取、校准就绪态和显式门禁 `query_vector_acceleration_calibration_readiness`，运维侧的 ANN 治理视图已不再停留在 `index_sync_health`。
   - `runtime-capability-runbook/*` 这组 modular knowledge route 现已改为接入真实 server 侧 runbook ops，而不再返回 KLP placeholder payload；route 层现在也会保留 `checkId` / `sinceMinutes` / queue-filter 这类 query 参数，不再静默丢弃。
   - 真实浏览器 smoke 门禁现在也会端到端证明这三条链路：严格浏览器证据必须能看到 ANN sync-health verify 卡、新增的 verify/checks ANN 熔断/可追踪性/预筛选钻取、首个检查的 ANN sync 指标，以及 index-sync action-queue 钻取，而不再只是证明卡片“能打开”。
   - agent-workspace 的 locale 加固现在也覆盖了当前真实暴露出来的诊断卡片/消息空间：源码里引用到的 `agentWorkspace.*` key 已由 `src/agent_workspace.locale.contract.test.ts` 做门禁，双语 locale bundle 现已补齐 strict browser smoke 实际触达的 query/quality/runbook 卡片标签，并且启动期 `translate()` 会等 locale 完成初始化后再调用 `window.i18n.t()`，避免在 locale hydrate 前产生误报式 missing-key warning。

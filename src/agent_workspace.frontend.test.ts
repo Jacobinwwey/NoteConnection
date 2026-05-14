@@ -268,6 +268,7 @@ function createI18nStub() {
             'agentWorkspace.runtimeRunbookVerify.annPrefilterLabel': 'ANN prefilter',
             'agentWorkspace.runtimeRunbookVerify.annPrefilterThresholdsLabel': 'ANN prefilter thresholds',
             'agentWorkspace.runtimeRunbookVerify.annPrefilterCalibrationLabel': 'ANN prefilter calibration',
+            'agentWorkspace.runtimeRunbookVerify.annCalibrationReadinessLabel': 'ANN calibration readiness',
             'agentWorkspace.runtimeRunbookVerify.autoFocusApplied': 'applied ({reason})',
             'agentWorkspace.runtimeRunbookVerify.autoFocusNotApplied': 'not applied',
             'agentWorkspace.runtimeRunbookVerify.none': 'none',
@@ -294,6 +295,7 @@ function createI18nStub() {
             'agentWorkspace.runtimeRunbookChecks.annPrefilterLabel': 'ANN prefilter snapshot',
             'agentWorkspace.runtimeRunbookChecks.annPrefilterThresholdsLabel': 'ANN prefilter threshold snapshot',
             'agentWorkspace.runtimeRunbookChecks.annPrefilterCalibrationLabel': 'ANN prefilter calibration snapshot',
+            'agentWorkspace.runtimeRunbookChecks.annCalibrationReadinessLabel': 'ANN calibration readiness snapshot',
             'agentWorkspace.runtimeRunbookChecks.trendCountsLabel': 'Trend counts (regressing/improving/stable/insufficient)',
             'agentWorkspace.runtimeRunbookChecks.recommendedFocusLabel': 'Recommended focus reason',
             'agentWorkspace.runtimeRunbookChecks.recommendedEscalationLabel': 'Recommended escalation',
@@ -581,6 +583,7 @@ function createI18nStub() {
             'agentWorkspace.runtimeRunbookVerify.annPrefilterLabel': 'ANN 预筛选',
             'agentWorkspace.runtimeRunbookVerify.annPrefilterThresholdsLabel': 'ANN 预筛选阈值',
             'agentWorkspace.runtimeRunbookVerify.annPrefilterCalibrationLabel': 'ANN 预筛选校准',
+            'agentWorkspace.runtimeRunbookVerify.annCalibrationReadinessLabel': 'ANN 校准就绪态',
             'agentWorkspace.runtimeRunbookVerify.autoFocusApplied': '已应用（{reason}）',
             'agentWorkspace.runtimeRunbookVerify.autoFocusNotApplied': '未应用',
             'agentWorkspace.runtimeRunbookVerify.none': '无',
@@ -607,6 +610,7 @@ function createI18nStub() {
             'agentWorkspace.runtimeRunbookChecks.annPrefilterLabel': 'ANN 预筛选快照',
             'agentWorkspace.runtimeRunbookChecks.annPrefilterThresholdsLabel': 'ANN 预筛选阈值快照',
             'agentWorkspace.runtimeRunbookChecks.annPrefilterCalibrationLabel': 'ANN 预筛选校准快照',
+            'agentWorkspace.runtimeRunbookChecks.annCalibrationReadinessLabel': 'ANN 校准就绪态快照',
             'agentWorkspace.runtimeRunbookChecks.trendCountsLabel': '趋势计数（回归/改善/稳定/数据不足）',
             'agentWorkspace.runtimeRunbookChecks.recommendedFocusLabel': '推荐聚焦原因',
             'agentWorkspace.runtimeRunbookChecks.recommendedEscalationLabel': '推荐升级级别',
@@ -1919,6 +1923,20 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                                 failCandidateRatioPctLt: 60,
                             },
                         },
+                        queryVectorAccelerationCalibrationReadiness: {
+                            checkId: 'query_vector_acceleration_calibration_readiness',
+                            status: 'warn',
+                            mode: 'ann_prefilter',
+                            externalConnector: true,
+                            syncReady: true,
+                            sampleReady: true,
+                            selectionActive: true,
+                            stableConnector: true,
+                            canEvaluateCandidateRatio: true,
+                            traceabilityReady: false,
+                            circuitBudgetStatus: 'warn',
+                            prefilterBudgetStatus: 'ok',
+                        },
                         selectedCheckEscalation: 'watch',
                         selectedCheckEscalationActions: [
                             'Update preferred mode to auto and verify provider trend convergence.',
@@ -2004,6 +2022,20 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                                     warnCandidateRatioPctLt: 25,
                                     failCandidateRatioPctLt: 50,
                                 },
+                            },
+                            queryVectorAccelerationCalibrationReadiness: {
+                                checkId: 'query_vector_acceleration_calibration_readiness',
+                                status: 'pass',
+                                mode: 'ann_prefilter',
+                                externalConnector: true,
+                                syncReady: true,
+                                sampleReady: true,
+                                selectionActive: true,
+                                stableConnector: true,
+                                canEvaluateCandidateRatio: true,
+                                traceabilityReady: true,
+                                circuitBudgetStatus: 'ok',
+                                prefilterBudgetStatus: 'ok',
                             },
                         },
                         checks: [
@@ -3998,6 +4030,8 @@ describe('agent workspace learning-path integration', () => {
         expect(card?.textContent).toContain('sample>=8');
         expect(card?.textContent).toContain('ANN prefilter calibration');
         expect(card?.textContent).toContain('sample ready');
+        expect(card?.textContent).toContain('ANN calibration readiness');
+        expect(card?.textContent).toContain('traceability pending');
     });
 
     test('executes runtime runbook history capabilities through the generic knowledge operation path', async () => {
@@ -4108,6 +4142,8 @@ describe('agent workspace learning-path integration', () => {
         expect(card?.textContent).toContain('sample>=10');
         expect(card?.textContent).toContain('ANN prefilter calibration snapshot');
         expect(card?.textContent).toContain('selection active');
+        expect(card?.textContent).toContain('ANN calibration readiness snapshot');
+        expect(card?.textContent).toContain('traceability ready');
     });
 
     test('renders runtime runbook checks cards when index-sync health telemetry is null', async () => {

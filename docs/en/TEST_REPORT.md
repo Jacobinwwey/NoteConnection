@@ -56,7 +56,8 @@
    - action-queue continues to carry the index-sync incident drilldown.
 2. `query_vector_acceleration_prefilter_effectiveness` now shares the ANN fast-lane escalation path instead of using the slower generic escalation branch.
 3. Runtime capability governance now has explicit gate `query_vector_acceleration_calibration_readiness`, which fails or warns until the ANN path has representative sync/prefilter/traceability/stability telemetry in the same runtime window.
-4. This refresh still does **not** prove release-grade Phase-2 closure:
+4. The workspace verify/checks cards now surface that calibration-readiness gate directly, instead of forcing operators to infer it only from the underlying budget signals.
+5. This refresh still does **not** prove release-grade Phase-2 closure:
    - it closes visibility and browser/runtime proof for the new ANN governance summaries,
    - it does **not** close workload/threshold calibration for those budgets.
 

@@ -678,6 +678,7 @@
       "annPrefilterLabel": "ANN 预筛选快照",
       "annPrefilterThresholdsLabel": "ANN 预筛选阈值快照",
       "annPrefilterCalibrationLabel": "ANN 预筛选校准快照",
+      "annCalibrationReadinessLabel": "ANN 校准就绪态快照",
       "trendCountsLabel": "趋势计数（回归/改善/稳定/数据不足）",
       "recommendedFocusLabel": "推荐聚焦原因",
       "recommendedEscalationLabel": "推荐升级级别",
@@ -712,7 +713,8 @@
       "annTraceabilitySignalsLabel": "ANN 可追踪性信号",
       "annPrefilterLabel": "ANN 预筛选",
       "annPrefilterThresholdsLabel": "ANN 预筛选阈值",
-      "annPrefilterCalibrationLabel": "ANN 预筛选校准"
+      "annPrefilterCalibrationLabel": "ANN 预筛选校准",
+      "annCalibrationReadinessLabel": "ANN 校准就绪态"
     },
     "runtimeRunbookActionQueue": {
       "cardTitle": "运行时动作队列",

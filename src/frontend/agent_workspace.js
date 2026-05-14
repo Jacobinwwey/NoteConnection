@@ -2070,6 +2070,9 @@
         const prefilter = result && result.queryVectorAccelerationPrefilter && typeof result.queryVectorAccelerationPrefilter === 'object'
             ? result.queryVectorAccelerationPrefilter
             : {};
+        const calibrationReadiness = result && result.queryVectorAccelerationCalibrationReadiness && typeof result.queryVectorAccelerationCalibrationReadiness === 'object'
+            ? result.queryVectorAccelerationCalibrationReadiness
+            : {};
         const escalationActions = Array.isArray(result && result.selectedCheckEscalationActions)
             ? result.selectedCheckEscalationActions
                 .map((item) => String(item || '').trim())
@@ -2184,6 +2187,17 @@
             annPrefilterCanEvaluateCandidateRatio: Boolean(prefilter.canEvaluateCandidateRatio),
             annPrefilterWarnBudgetExceeded: Boolean(prefilter.warnBudgetExceeded),
             annPrefilterFailBudgetExceeded: Boolean(prefilter.failBudgetExceeded),
+            annCalibrationStatus: String(calibrationReadiness.status || '').trim(),
+            annCalibrationMode: String(calibrationReadiness.mode || '').trim(),
+            annCalibrationExternalConnector: Boolean(calibrationReadiness.externalConnector),
+            annCalibrationSyncReady: Boolean(calibrationReadiness.syncReady),
+            annCalibrationSampleReady: Boolean(calibrationReadiness.sampleReady),
+            annCalibrationSelectionActive: Boolean(calibrationReadiness.selectionActive),
+            annCalibrationStableConnector: Boolean(calibrationReadiness.stableConnector),
+            annCalibrationCanEvaluateCandidateRatio: Boolean(calibrationReadiness.canEvaluateCandidateRatio),
+            annCalibrationTraceabilityReady: Boolean(calibrationReadiness.traceabilityReady),
+            annCalibrationCircuitBudgetStatus: String(calibrationReadiness.circuitBudgetStatus || '').trim(),
+            annCalibrationPrefilterBudgetStatus: String(calibrationReadiness.prefilterBudgetStatus || '').trim(),
         };
     }
 
@@ -2259,6 +2273,9 @@
             : {};
         const prefilter = summary && summary.queryVectorAccelerationPrefilter && typeof summary.queryVectorAccelerationPrefilter === 'object'
             ? summary.queryVectorAccelerationPrefilter
+            : {};
+        const calibrationReadiness = summary && summary.queryVectorAccelerationCalibrationReadiness && typeof summary.queryVectorAccelerationCalibrationReadiness === 'object'
+            ? summary.queryVectorAccelerationCalibrationReadiness
             : {};
         return {
             totalRecords: Number.isFinite(Number(summary.totalRecords))
@@ -2356,6 +2373,17 @@
             annPrefilterCanEvaluateCandidateRatio: Boolean(prefilter.canEvaluateCandidateRatio),
             annPrefilterWarnBudgetExceeded: Boolean(prefilter.warnBudgetExceeded),
             annPrefilterFailBudgetExceeded: Boolean(prefilter.failBudgetExceeded),
+            annCalibrationStatus: String(calibrationReadiness.status || '').trim(),
+            annCalibrationMode: String(calibrationReadiness.mode || '').trim(),
+            annCalibrationExternalConnector: Boolean(calibrationReadiness.externalConnector),
+            annCalibrationSyncReady: Boolean(calibrationReadiness.syncReady),
+            annCalibrationSampleReady: Boolean(calibrationReadiness.sampleReady),
+            annCalibrationSelectionActive: Boolean(calibrationReadiness.selectionActive),
+            annCalibrationStableConnector: Boolean(calibrationReadiness.stableConnector),
+            annCalibrationCanEvaluateCandidateRatio: Boolean(calibrationReadiness.canEvaluateCandidateRatio),
+            annCalibrationTraceabilityReady: Boolean(calibrationReadiness.traceabilityReady),
+            annCalibrationCircuitBudgetStatus: String(calibrationReadiness.circuitBudgetStatus || '').trim(),
+            annCalibrationPrefilterBudgetStatus: String(calibrationReadiness.prefilterBudgetStatus || '').trim(),
         };
     }
 

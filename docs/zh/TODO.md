@@ -8,6 +8,7 @@
 - [x] `query_vector_acceleration_prefilter_effectiveness` 现已进入 ANN 快速升级路径，不再落后于其他 ANN 治理检查。
 - [x] agent-workspace 的 runbook verify/checks 现已进一步显式暴露 ANN 熔断预算标志与预筛选校准就绪态，预算调优不再依赖人工翻 raw JSON。
 - [x] runtime capability matrix/runbook 现已具备显式门禁 `query_vector_acceleration_calibration_readiness`，正式约束 ANN 阈值校准何时可以开始。
+- [x] agent-workspace 的 runbook verify/checks 现已把显式门禁 `query_vector_acceleration_calibration_readiness` 一并前推到前端，而不只是展示支撑它的预算信号。
 - [ ] 先把这批新暴露出来的 ANN 治理预算从“可见”推进到“可校准”，再在同一套检查运行在发布级 graphdb/ANN 基线之上后，把新的 Phase-2 诊断面升级为发布级门禁。
 
 - [x] agent-workspace 的 browser/runtime/Tauri 验证闭环已经是真实状态。

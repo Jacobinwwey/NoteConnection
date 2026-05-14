@@ -13,7 +13,7 @@
   - runtime capability / runbook 治理也已新增显式的 ANN 远端索引同步健康度检查（`query_vector_acceleration_index_sync_health`），与 prefilter、health、traceability、circuit 并列，
   - runtime capability 治理现在也新增了显式门禁 `query_vector_acceleration_calibration_readiness`，用来正式回答当前 ANN 路径是否已经具备进入发布级阈值校准的前提条件，
   - `server.ts` 现已补齐对应的 operator 闭环：该 sync-health 门禁已经进入 verification escalation、remediation action queue、以及 per-check runbook history summary，
-  - agent workspace 的 runtime-runbook 前端面现已把面向运维的 ANN 治理直接前推到壳层：verify/checks 不仅能看到 sync-health，还能看到熔断预算、可追踪性、预筛选摘要，并进一步看到用于校准的阈值/信号钻取和校准就绪态；action-queue 则继续承载 index-sync 事故钻取，
+  - agent workspace 的 runtime-runbook 前端面现已把面向运维的 ANN 治理直接前推到壳层：verify/checks 不仅能看到 sync-health，还能看到熔断预算、可追踪性、预筛选摘要，并进一步看到用于校准的阈值/信号钻取、校准就绪态以及显式校准门禁；action-queue 则继续承载 index-sync 事故钻取，
   - modular `src/routes/knowledge.ts` 的 runtime-runbook 路由面现在也会委托到真实 server 侧 runbook ops，并完整透传 query 参数，因此浏览器/运行时消费者不再命中旧的 KLP placeholder verify/history/checks/action-queue/remediation/schedule 响应，
   - 浏览器 strict smoke 现在也会用真实浏览器证据证明这批 ANN runbook 面：verify 卡的 ANN sync/熔断/可追踪性/预筛选内容及阈值/信号/校准就绪标签、checks 卡的首个检查 ANN sync 加熔断/可追踪性/预筛选快照，以及 action-queue 的 index-sync 钻取都已纳入端到端断言，而不再只停留在组件测试层，
   - agent workspace 的 locale 治理现在也更严了：双语 locale bundle 已补齐 strict browser smoke 实际触达的 query/quality/runbook 卡片文案，`src/agent_workspace.locale.contract.test.ts` 会阻断源码引用的 `agentWorkspace.*` key 漂移，而启动期 `translate()` 也不再在 locale 初始化完成前发出误报式 missing-key warning，

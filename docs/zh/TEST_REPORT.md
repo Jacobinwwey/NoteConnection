@@ -56,7 +56,8 @@
    - action-queue 继续承载 index-sync 事故钻取。
 2. `query_vector_acceleration_prefilter_effectiveness` 现已进入 ANN 快速升级路径，不再沿用较慢的通用升级分支。
 3. runtime capability 治理现在已经具备显式门禁 `query_vector_acceleration_calibration_readiness`，会在 ANN 路径尚未形成同窗口 sync/prefilter/traceability/stability 代表性遥测时直接给出 fail/warn。
-4. 这轮刷新仍然**不等于**发布级 Phase-2 闭环：
+4. workspace 的 verify/checks 卡片现在也会直接展示这条 calibration-readiness gate，而不再要求运维只从底层预算信号里自己推断。
+5. 这轮刷新仍然**不等于**发布级 Phase-2 闭环：
    - 它闭合的是新 ANN 治理摘要的可见性与 browser/runtime 证明，
    - 并**没有**闭合这些预算的工作负载/阈值校准。
 

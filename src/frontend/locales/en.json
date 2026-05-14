@@ -678,6 +678,7 @@
       "annPrefilterLabel": "ANN prefilter snapshot",
       "annPrefilterThresholdsLabel": "ANN prefilter threshold snapshot",
       "annPrefilterCalibrationLabel": "ANN prefilter calibration snapshot",
+      "annCalibrationReadinessLabel": "ANN calibration readiness snapshot",
       "trendCountsLabel": "Trend counts (regressing/improving/stable/insufficient)",
       "recommendedFocusLabel": "Recommended focus reason",
       "recommendedEscalationLabel": "Recommended escalation",
@@ -712,7 +713,8 @@
       "annTraceabilitySignalsLabel": "ANN traceability signals",
       "annPrefilterLabel": "ANN prefilter",
       "annPrefilterThresholdsLabel": "ANN prefilter thresholds",
-      "annPrefilterCalibrationLabel": "ANN prefilter calibration"
+      "annPrefilterCalibrationLabel": "ANN prefilter calibration",
+      "annCalibrationReadinessLabel": "ANN calibration readiness"
     },
     "runtimeRunbookActionQueue": {
       "cardTitle": "Runtime Action Queue",

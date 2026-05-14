@@ -15,6 +15,7 @@
 - [x] `query_vector_acceleration_prefilter_effectiveness` now shares the ANN fast-lane escalation path instead of lagging behind the other ANN governance checks.
 - [x] Agent-workspace runbook verify/checks now also surface ANN circuit budget flags and prefilter calibration-readiness cues, so budget tuning no longer depends on raw JSON inspection.
 - [x] Runtime capability matrix/runbook now has explicit gate `query_vector_acceleration_calibration_readiness` to formalize whether ANN threshold tuning can start.
+- [x] Agent-workspace runbook verify/checks now also surface the explicit `query_vector_acceleration_calibration_readiness` gate, not only the supporting budget signals.
 - [ ] Move the newly surfaced ANN governance budgets from visibility closure to workload/threshold calibration closure, then promote the new Phase-2 diagnostics to release-grade gates only after the same checks run on a release-grade graphdb/ANN baseline.
 - [ ] Extend tutor routing from the new local-first baseline into a production-proven multi-provider policy.
 - [ ] Continue FR-009 evidence freshness, Linux strict Tauri host provisioning, and final Electron decommission review.

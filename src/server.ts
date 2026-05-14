@@ -471,6 +471,23 @@ type RuntimeRunbookVectorAccelerationTraceabilitySummary = {
     missingFields: string[];
 };
 
+type RuntimeRunbookVectorAccelerationCalibrationReadinessSummary = {
+    checkId: 'query_vector_acceleration_calibration_readiness';
+    status: RuntimeRunbookVerificationStatus;
+    mode: RuntimeCapabilityMatrix['signals']['queryVectorIndexAccelerationMode'];
+    externalConnector: boolean;
+    syncReady: boolean;
+    sampleReady: boolean;
+    selectionActive: boolean;
+    stableConnector: boolean;
+    canEvaluateCandidateRatio: boolean;
+    traceabilityReady: boolean;
+    circuitBudgetStatus: RuntimeRunbookVectorAccelerationCircuitBudgetStatus;
+    prefilterBudgetStatus: RuntimeRunbookVectorAccelerationPrefilterBudgetStatus;
+    observed: string;
+    expected: string;
+};
+
 type RuntimeRunbookActionQueuePriorityFilter = RuntimeRunbookEscalationActionPriority | 'all';
 type RuntimeRunbookActionQueueCategoryFilter = RuntimeRunbookEscalationActionCategory | 'all';
 type RuntimeRunbookActionQueueRemediationStatusFilter = RuntimeRunbookRemediationEventStatus | 'all';
@@ -2187,6 +2204,54 @@ function buildRuntimeRunbookVectorAccelerationPrefilterSummary(
     };
 }
 
+function buildRuntimeRunbookVectorAccelerationCalibrationReadinessSummary(
+    matrixRaw: RuntimeCapabilityMatrix | null | undefined
+): RuntimeRunbookVectorAccelerationCalibrationReadinessSummary | null {
+    if (!matrixRaw || typeof matrixRaw !== 'object') {
+        return null;
+    }
+    const signals = matrixRaw.signals;
+    if (!signals || typeof signals !== 'object') {
+        return null;
+    }
+    const checks = Array.isArray(matrixRaw.checks) ? matrixRaw.checks : [];
+    const readinessCheck = checks.find(
+        (check) => String(check && check.checkId || '').trim() === 'query_vector_acceleration_calibration_readiness'
+    ) || null;
+    const adapterId = String(signals.queryVectorIndexAccelerationAdapterId || '').trim();
+    const externalConnector = adapterId.length > 0 && adapterId.toLowerCase().includes('external');
+    const prefilter = buildRuntimeRunbookVectorAccelerationPrefilterSummary(matrixRaw);
+    const circuitBudget = buildRuntimeRunbookVectorAccelerationCircuitBudgetSummary(matrixRaw);
+    const traceability = buildRuntimeRunbookVectorAccelerationTraceabilitySummary(matrixRaw);
+    const indexSync = buildRuntimeRunbookVectorAccelerationIndexSyncHealthSummary(matrixRaw);
+    const syncReady = !externalConnector || Boolean(indexSync && indexSync.hasSyncedTelemetry);
+    const traceabilityReady = !externalConnector || Boolean(
+        traceability
+        && traceability.hasCorrelationSignals
+        && traceability.correlationCoverage !== 'none'
+    );
+    return {
+        checkId: 'query_vector_acceleration_calibration_readiness',
+        status: normalizeRuntimeRunbookVerificationStatusToken(readinessCheck && readinessCheck.status || 'unknown') || 'unknown',
+        mode: signals.queryVectorIndexAccelerationMode,
+        externalConnector,
+        syncReady,
+        sampleReady: Boolean(prefilter && prefilter.sampleReady),
+        selectionActive: Boolean(prefilter && prefilter.selectionActive),
+        stableConnector: Boolean(prefilter && prefilter.stableConnector),
+        canEvaluateCandidateRatio: Boolean(prefilter && prefilter.canEvaluateCandidateRatio),
+        traceabilityReady,
+        circuitBudgetStatus: circuitBudget
+            ? normalizeRuntimeRunbookVectorAccelerationCircuitBudgetStatus(circuitBudget.budgetStatus)
+            : 'ok',
+        prefilterBudgetStatus: prefilter
+            ? prefilter.budgetStatus
+            : 'ok',
+        observed: String(readinessCheck && readinessCheck.observed || '').trim(),
+        expected: String(readinessCheck && readinessCheck.expected || '').trim(),
+    };
+}
+
 function getRuntimeRunbookVerificationEscalationRank(
     escalation: RuntimeRunbookVerificationEscalation | ''
 ): number {
@@ -3505,6 +3570,7 @@ async function replayRuntimeRunbookVerificationForCheck(input: {
     queryVectorAccelerationIndexSyncHealth: RuntimeRunbookVectorAccelerationIndexSyncHealthSummary | null;
     queryVectorAccelerationTraceability: RuntimeRunbookVectorAccelerationTraceabilitySummary | null;
     queryVectorAccelerationPrefilter: RuntimeRunbookVectorAccelerationPrefilterSummary | null;
+    queryVectorAccelerationCalibrationReadiness: RuntimeRunbookVectorAccelerationCalibrationReadinessSummary | null;
     verificationTargets: string[];
     traceSummary: {
         returnedRecords: number;
@@ -3622,6 +3688,9 @@ async function replayRuntimeRunbookVerificationForCheck(input: {
     const queryVectorAccelerationPrefilter = buildRuntimeRunbookVectorAccelerationPrefilterSummary(
         runtimePayload.runtimeCapabilityMatrix
     );
+    const queryVectorAccelerationCalibrationReadiness = buildRuntimeRunbookVectorAccelerationCalibrationReadinessSummary(
+        runtimePayload.runtimeCapabilityMatrix
+    );
     return {
         replayedAt: generatedAt,
         requestedCheckId,
@@ -3656,6 +3725,7 @@ async function replayRuntimeRunbookVerificationForCheck(input: {
         queryVectorAccelerationIndexSyncHealth,
         queryVectorAccelerationTraceability,
         queryVectorAccelerationPrefilter,
+        queryVectorAccelerationCalibrationReadiness,
         verificationTargets: Array.isArray(runbook.verificationTargets)
             ? runbook.verificationTargets
                 .map((item) => String(item || '').replace(/\s+/g, ' ').trim())
@@ -5262,6 +5332,7 @@ function queryRuntimeRunbookVerificationHistoryByCheck(
         queryVectorAccelerationIndexSyncHealth: RuntimeRunbookVectorAccelerationIndexSyncHealthSummary | null;
         queryVectorAccelerationTraceability: RuntimeRunbookVectorAccelerationTraceabilitySummary | null;
         queryVectorAccelerationPrefilter: RuntimeRunbookVectorAccelerationPrefilterSummary | null;
+        queryVectorAccelerationCalibrationReadiness: RuntimeRunbookVectorAccelerationCalibrationReadinessSummary | null;
         generatedAt: string;
     };
     checks: Array<{
@@ -5288,6 +5359,7 @@ function queryRuntimeRunbookVerificationHistoryByCheck(
         queryVectorAccelerationIndexSyncHealth: RuntimeRunbookVectorAccelerationIndexSyncHealthSummary | null;
         queryVectorAccelerationTraceability: RuntimeRunbookVectorAccelerationTraceabilitySummary | null;
         queryVectorAccelerationPrefilter: RuntimeRunbookVectorAccelerationPrefilterSummary | null;
+        queryVectorAccelerationCalibrationReadiness: RuntimeRunbookVectorAccelerationCalibrationReadinessSummary | null;
     }>;
     actionQueue: RuntimeRunbookCheckActionQueueItem[];
 } {
@@ -5316,6 +5388,9 @@ function queryRuntimeRunbookVerificationHistoryByCheck(
         options.runtimeCapabilityMatrix
     );
     const queryVectorAccelerationPrefilter = buildRuntimeRunbookVectorAccelerationPrefilterSummary(
+        options.runtimeCapabilityMatrix
+    );
+    const queryVectorAccelerationCalibrationReadiness = buildRuntimeRunbookVectorAccelerationCalibrationReadinessSummary(
         options.runtimeCapabilityMatrix
     );
 
@@ -5433,6 +5508,9 @@ function queryRuntimeRunbookVerificationHistoryByCheck(
                 : null,
             queryVectorAccelerationPrefilter: checkId === 'query_vector_acceleration_prefilter_effectiveness'
                 ? queryVectorAccelerationPrefilter
+                : null,
+            queryVectorAccelerationCalibrationReadiness: checkId === 'query_vector_acceleration_calibration_readiness'
+                ? queryVectorAccelerationCalibrationReadiness
                 : null,
         };
     });
@@ -5681,6 +5759,7 @@ function queryRuntimeRunbookVerificationHistoryByCheck(
             queryVectorAccelerationIndexSyncHealth,
             queryVectorAccelerationTraceability,
             queryVectorAccelerationPrefilter,
+            queryVectorAccelerationCalibrationReadiness,
             generatedAt: new Date().toISOString(),
         },
         checks: limitedChecks,

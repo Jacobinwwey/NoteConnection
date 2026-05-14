@@ -1592,6 +1592,19 @@
         const annPrefilterCalibrationSummary = annPrefilterCalibrationMissing
             ? translate('agentWorkspace.runtimeRunbookVerify.none', 'none')
             : `sample ${summary.annPrefilterSampleReady ? 'ready' : 'pending'} | selection ${summary.annPrefilterSelectionActive ? 'active' : 'inactive'} | connector ${summary.annPrefilterStableConnector ? 'stable' : 'unstable'} | ratio ${summary.annPrefilterCanEvaluateCandidateRatio ? 'evaluable' : 'blocked'} | warn ${summary.annPrefilterWarnBudgetExceeded ? 'exceeded' : 'clear'} | fail ${summary.annPrefilterFailBudgetExceeded ? 'exceeded' : 'clear'}`;
+        const annCalibrationSummary = !summary.annCalibrationStatus
+            ? translate('agentWorkspace.runtimeRunbookVerify.none', 'none')
+            : (
+                summary.annCalibrationStatus === 'pass'
+                && String(summary.annCalibrationMode || '').trim() !== 'ann_prefilter'
+            )
+                ? `${String(summary.annCalibrationStatus || 'unknown')} (mode ${String(summary.annCalibrationMode || '').trim() || translate('agentWorkspace.runtimeRunbookVerify.none', 'none')}, out_of_scope)`
+                : (
+                    summary.annCalibrationStatus === 'pass'
+                    && !summary.annCalibrationExternalConnector
+                )
+                    ? `${String(summary.annCalibrationStatus || 'unknown')} (local_adapter_path)`
+                    : `${String(summary.annCalibrationStatus || 'unknown')} (sync ${summary.annCalibrationSyncReady ? 'ready' : 'pending'} | sample ${summary.annCalibrationSampleReady ? 'ready' : 'pending'} | selection ${summary.annCalibrationSelectionActive ? 'active' : 'inactive'} | connector ${summary.annCalibrationStableConnector ? 'stable' : 'unstable'} | ratio ${summary.annCalibrationCanEvaluateCandidateRatio ? 'evaluable' : 'blocked'} | traceability ${summary.annCalibrationTraceabilityReady ? 'ready' : 'pending'} | circuit ${String(summary.annCalibrationCircuitBudgetStatus || 'unknown') || 'unknown'} | prefilter ${String(summary.annCalibrationPrefilterBudgetStatus || 'unknown') || 'unknown'})`;
         const metrics = [
             {
                 title: translate('agentWorkspace.runtimeRunbookVerify.topRiskLabel', 'Top risk check'),
@@ -1666,6 +1679,10 @@
             {
                 title: translate('agentWorkspace.runtimeRunbookVerify.annPrefilterCalibrationLabel', 'ANN prefilter calibration'),
                 value: annPrefilterCalibrationSummary,
+            },
+            {
+                title: translate('agentWorkspace.runtimeRunbookVerify.annCalibrationReadinessLabel', 'ANN calibration readiness'),
+                value: annCalibrationSummary,
             },
         ];
         const metricsHtml = metrics.map((metric) => `
@@ -1835,6 +1852,19 @@
         const annPrefilterCalibrationSummary = annPrefilterCalibrationMissing
             ? translate('agentWorkspace.runtimeRunbookChecks.none', 'none')
             : `sample ${summary.annPrefilterSampleReady ? 'ready' : 'pending'} | selection ${summary.annPrefilterSelectionActive ? 'active' : 'inactive'} | connector ${summary.annPrefilterStableConnector ? 'stable' : 'unstable'} | ratio ${summary.annPrefilterCanEvaluateCandidateRatio ? 'evaluable' : 'blocked'} | warn ${summary.annPrefilterWarnBudgetExceeded ? 'exceeded' : 'clear'} | fail ${summary.annPrefilterFailBudgetExceeded ? 'exceeded' : 'clear'}`;
+        const annCalibrationSummary = !summary.annCalibrationStatus
+            ? translate('agentWorkspace.runtimeRunbookChecks.none', 'none')
+            : (
+                summary.annCalibrationStatus === 'pass'
+                && String(summary.annCalibrationMode || '').trim() !== 'ann_prefilter'
+            )
+                ? `${String(summary.annCalibrationStatus || 'unknown')} (mode ${String(summary.annCalibrationMode || '').trim() || translate('agentWorkspace.runtimeRunbookChecks.none', 'none')}, out_of_scope)`
+                : (
+                    summary.annCalibrationStatus === 'pass'
+                    && !summary.annCalibrationExternalConnector
+                )
+                    ? `${String(summary.annCalibrationStatus || 'unknown')} (local_adapter_path)`
+                    : `${String(summary.annCalibrationStatus || 'unknown')} (sync ${summary.annCalibrationSyncReady ? 'ready' : 'pending'} | sample ${summary.annCalibrationSampleReady ? 'ready' : 'pending'} | selection ${summary.annCalibrationSelectionActive ? 'active' : 'inactive'} | connector ${summary.annCalibrationStableConnector ? 'stable' : 'unstable'} | ratio ${summary.annCalibrationCanEvaluateCandidateRatio ? 'evaluable' : 'blocked'} | traceability ${summary.annCalibrationTraceabilityReady ? 'ready' : 'pending'} | circuit ${String(summary.annCalibrationCircuitBudgetStatus || 'unknown') || 'unknown'} | prefilter ${String(summary.annCalibrationPrefilterBudgetStatus || 'unknown') || 'unknown'})`;
         const latestRemediationAt = String(summary.remediationLatestRecordedAt || '').trim()
             || translate('agentWorkspace.runtimeRunbookChecks.none', 'none');
         const topAction = String(summary.recommendedFocusTopAction || '').trim()
@@ -1905,6 +1935,10 @@
             {
                 title: translate('agentWorkspace.runtimeRunbookChecks.annPrefilterCalibrationLabel', 'ANN prefilter calibration snapshot'),
                 value: annPrefilterCalibrationSummary,
+            },
+            {
+                title: translate('agentWorkspace.runtimeRunbookChecks.annCalibrationReadinessLabel', 'ANN calibration readiness snapshot'),
+                value: annCalibrationSummary,
             },
             {
                 title: translate('agentWorkspace.runtimeRunbookChecks.latestRemediationLabel', 'Latest remediation record'),
