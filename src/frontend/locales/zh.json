@@ -672,10 +672,12 @@
       "firstCheckAnnIndexSyncLabel": "首个检查的 ANN 同步",
       "annCircuitLabel": "ANN 熔断快照",
       "annCircuitThresholdsLabel": "ANN 熔断阈值快照",
+      "annCircuitBudgetFlagsLabel": "ANN 熔断预算标志快照",
       "annTraceabilityLabel": "ANN 可追踪性快照",
       "annTraceabilitySignalsLabel": "ANN 可追踪性信号快照",
       "annPrefilterLabel": "ANN 预筛选快照",
       "annPrefilterThresholdsLabel": "ANN 预筛选阈值快照",
+      "annPrefilterCalibrationLabel": "ANN 预筛选校准快照",
       "trendCountsLabel": "趋势计数（回归/改善/稳定/数据不足）",
       "recommendedFocusLabel": "推荐聚焦原因",
       "recommendedEscalationLabel": "推荐升级级别",
@@ -705,10 +707,12 @@
       "annIndexSyncCountsLabel": "ANN 同步计数",
       "annCircuitLabel": "ANN 熔断预算",
       "annCircuitThresholdsLabel": "ANN 熔断阈值",
+      "annCircuitBudgetFlagsLabel": "ANN 熔断预算标志",
       "annTraceabilityLabel": "ANN 可追踪性",
       "annTraceabilitySignalsLabel": "ANN 可追踪性信号",
       "annPrefilterLabel": "ANN 预筛选",
-      "annPrefilterThresholdsLabel": "ANN 预筛选阈值"
+      "annPrefilterThresholdsLabel": "ANN 预筛选阈值",
+      "annPrefilterCalibrationLabel": "ANN 预筛选校准"
     },
     "runtimeRunbookActionQueue": {
       "cardTitle": "运行时动作队列",

@@ -2336,6 +2336,12 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (!report.browserChecks.runtimeRunbookVerifyCardTextZh.includes('ANN 预筛选阈值')) {
             failures.push(`runtimeRunbookVerifyCardTextZh='${report.browserChecks.runtimeRunbookVerifyCardTextZh}'`);
         }
+        if (!report.browserChecks.runtimeRunbookVerifyCardTextZh.includes('ANN 熔断预算标志')) {
+            failures.push(`runtimeRunbookVerifyCardTextZh='${report.browserChecks.runtimeRunbookVerifyCardTextZh}'`);
+        }
+        if (!report.browserChecks.runtimeRunbookVerifyCardTextZh.includes('ANN 预筛选校准')) {
+            failures.push(`runtimeRunbookVerifyCardTextZh='${report.browserChecks.runtimeRunbookVerifyCardTextZh}'`);
+        }
         if (!report.browserChecks.runtimeRunbookVerifyCardTextZh.includes('query_vector_acceleration_index_sync_health')) {
             failures.push(`runtimeRunbookVerifyCardTextZh='${report.browserChecks.runtimeRunbookVerifyCardTextZh}'`);
         }
@@ -2364,6 +2370,12 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
             failures.push(`runtimeRunbookChecksCardTextZh='${report.browserChecks.runtimeRunbookChecksCardTextZh}'`);
         }
         if (!report.browserChecks.runtimeRunbookChecksCardTextZh.includes('ANN 预筛选阈值快照')) {
+            failures.push(`runtimeRunbookChecksCardTextZh='${report.browserChecks.runtimeRunbookChecksCardTextZh}'`);
+        }
+        if (!report.browserChecks.runtimeRunbookChecksCardTextZh.includes('ANN 熔断预算标志快照')) {
+            failures.push(`runtimeRunbookChecksCardTextZh='${report.browserChecks.runtimeRunbookChecksCardTextZh}'`);
+        }
+        if (!report.browserChecks.runtimeRunbookChecksCardTextZh.includes('ANN 预筛选校准快照')) {
             failures.push(`runtimeRunbookChecksCardTextZh='${report.browserChecks.runtimeRunbookChecksCardTextZh}'`);
         }
         if (!report.browserChecks.runtimeRunbookChecksCardTextZh.includes('query_vector_acceleration_index_sync_health')) {

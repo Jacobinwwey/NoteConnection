@@ -2178,6 +2178,10 @@
                 : 0,
             annPrefilterWarnCandidateRatioPctLt: Number(Number(prefilter && prefilter.budget && prefilter.budget.warnCandidateRatioPctLt || 0).toFixed(4)),
             annPrefilterFailCandidateRatioPctLt: Number(Number(prefilter && prefilter.budget && prefilter.budget.failCandidateRatioPctLt || 0).toFixed(4)),
+            annPrefilterSampleReady: Boolean(prefilter.sampleReady),
+            annPrefilterSelectionActive: Boolean(prefilter.selectionActive),
+            annPrefilterStableConnector: Boolean(prefilter.stableConnector),
+            annPrefilterCanEvaluateCandidateRatio: Boolean(prefilter.canEvaluateCandidateRatio),
             annPrefilterWarnBudgetExceeded: Boolean(prefilter.warnBudgetExceeded),
             annPrefilterFailBudgetExceeded: Boolean(prefilter.failBudgetExceeded),
         };
@@ -2323,6 +2327,8 @@
                 ? Number(circuitBudget.budget.fail.consecutiveFailuresLt)
                 : 0,
             annCircuitFailBudgetHalfOpenSuccessRatePctGte: Number(Number(circuitBudget && circuitBudget.budget && circuitBudget.budget.fail && circuitBudget.budget.fail.halfOpenSuccessRatePctGte || 0).toFixed(4)),
+            annCircuitWarnBudgetExceeded: Boolean(circuitBudget.warnBudgetExceeded),
+            annCircuitFailBudgetExceeded: Boolean(circuitBudget.failBudgetExceeded),
             annTraceabilityCoverage: String(traceability.correlationCoverage || '').trim(),
             annTraceabilityMissingFieldCount: Array.isArray(traceability.missingFields)
                 ? traceability.missingFields.filter((item) => String(item || '').trim().length > 0).length
@@ -2344,6 +2350,12 @@
                 : 0,
             annPrefilterWarnCandidateRatioPctLt: Number(Number(prefilter && prefilter.budget && prefilter.budget.warnCandidateRatioPctLt || 0).toFixed(4)),
             annPrefilterFailCandidateRatioPctLt: Number(Number(prefilter && prefilter.budget && prefilter.budget.failCandidateRatioPctLt || 0).toFixed(4)),
+            annPrefilterSampleReady: Boolean(prefilter.sampleReady),
+            annPrefilterSelectionActive: Boolean(prefilter.selectionActive),
+            annPrefilterStableConnector: Boolean(prefilter.stableConnector),
+            annPrefilterCanEvaluateCandidateRatio: Boolean(prefilter.canEvaluateCandidateRatio),
+            annPrefilterWarnBudgetExceeded: Boolean(prefilter.warnBudgetExceeded),
+            annPrefilterFailBudgetExceeded: Boolean(prefilter.failBudgetExceeded),
         };
     }
 

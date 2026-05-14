@@ -13,6 +13,7 @@
 - [~] Phase-1 A9 now has a live `external_http` connector baseline with remote index sync and end-to-end query proof, but recall/latency thresholds and larger-workload validation still remain before production closure.
 - [x] Agent-workspace runbook verify/checks now surface ANN index-sync, circuit, traceability, and prefilter summaries plus threshold/signal drilldowns, while action-queue keeps the index-sync incident drilldown.
 - [x] `query_vector_acceleration_prefilter_effectiveness` now shares the ANN fast-lane escalation path instead of lagging behind the other ANN governance checks.
+- [x] Agent-workspace runbook verify/checks now also surface ANN circuit budget flags and prefilter calibration-readiness cues, so budget tuning no longer depends on raw JSON inspection.
 - [ ] Move the newly surfaced ANN governance budgets from visibility closure to workload/threshold calibration closure, then promote the new Phase-2 diagnostics to release-grade gates only after the same checks run on a release-grade graphdb/ANN baseline.
 - [ ] Extend tutor routing from the new local-first baseline into a production-proven multi-provider policy.
 - [ ] Continue FR-009 evidence freshness, Linux strict Tauri host provisioning, and final Electron decommission review.

@@ -50,6 +50,7 @@
 
 1. The Phase-2 ANN governance slice is now operator-visible through the frontend runbook shell, not only backend JSON:
    - verify/checks now surface ANN sync-health, circuit-budget, traceability, and prefilter summaries plus threshold/signal drilldowns,
+   - they now also surface ANN circuit budget flags and prefilter calibration-readiness cues,
    - action-queue continues to carry the index-sync incident drilldown.
 2. `query_vector_acceleration_prefilter_effectiveness` now shares the ANN fast-lane escalation path instead of using the slower generic escalation branch.
 3. This refresh still does **not** prove release-grade Phase-2 closure:

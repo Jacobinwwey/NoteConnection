@@ -262,10 +262,12 @@ function createI18nStub() {
             'agentWorkspace.runtimeRunbookVerify.annIndexSyncCountsLabel': 'ANN sync counts',
             'agentWorkspace.runtimeRunbookVerify.annCircuitLabel': 'ANN circuit budget',
             'agentWorkspace.runtimeRunbookVerify.annCircuitThresholdsLabel': 'ANN circuit thresholds',
+            'agentWorkspace.runtimeRunbookVerify.annCircuitBudgetFlagsLabel': 'ANN circuit budget flags',
             'agentWorkspace.runtimeRunbookVerify.annTraceabilityLabel': 'ANN traceability',
             'agentWorkspace.runtimeRunbookVerify.annTraceabilitySignalsLabel': 'ANN traceability signals',
             'agentWorkspace.runtimeRunbookVerify.annPrefilterLabel': 'ANN prefilter',
             'agentWorkspace.runtimeRunbookVerify.annPrefilterThresholdsLabel': 'ANN prefilter thresholds',
+            'agentWorkspace.runtimeRunbookVerify.annPrefilterCalibrationLabel': 'ANN prefilter calibration',
             'agentWorkspace.runtimeRunbookVerify.autoFocusApplied': 'applied ({reason})',
             'agentWorkspace.runtimeRunbookVerify.autoFocusNotApplied': 'not applied',
             'agentWorkspace.runtimeRunbookVerify.none': 'none',
@@ -286,10 +288,12 @@ function createI18nStub() {
             'agentWorkspace.runtimeRunbookChecks.firstCheckAnnIndexSyncLabel': 'First check ANN sync',
             'agentWorkspace.runtimeRunbookChecks.annCircuitLabel': 'ANN circuit snapshot',
             'agentWorkspace.runtimeRunbookChecks.annCircuitThresholdsLabel': 'ANN circuit threshold snapshot',
+            'agentWorkspace.runtimeRunbookChecks.annCircuitBudgetFlagsLabel': 'ANN circuit budget flag snapshot',
             'agentWorkspace.runtimeRunbookChecks.annTraceabilityLabel': 'ANN traceability snapshot',
             'agentWorkspace.runtimeRunbookChecks.annTraceabilitySignalsLabel': 'ANN traceability signal snapshot',
             'agentWorkspace.runtimeRunbookChecks.annPrefilterLabel': 'ANN prefilter snapshot',
             'agentWorkspace.runtimeRunbookChecks.annPrefilterThresholdsLabel': 'ANN prefilter threshold snapshot',
+            'agentWorkspace.runtimeRunbookChecks.annPrefilterCalibrationLabel': 'ANN prefilter calibration snapshot',
             'agentWorkspace.runtimeRunbookChecks.trendCountsLabel': 'Trend counts (regressing/improving/stable/insufficient)',
             'agentWorkspace.runtimeRunbookChecks.recommendedFocusLabel': 'Recommended focus reason',
             'agentWorkspace.runtimeRunbookChecks.recommendedEscalationLabel': 'Recommended escalation',
@@ -571,10 +575,12 @@ function createI18nStub() {
             'agentWorkspace.runtimeRunbookVerify.annIndexSyncCountsLabel': 'ANN 同步计数',
             'agentWorkspace.runtimeRunbookVerify.annCircuitLabel': 'ANN 熔断预算',
             'agentWorkspace.runtimeRunbookVerify.annCircuitThresholdsLabel': 'ANN 熔断阈值',
+            'agentWorkspace.runtimeRunbookVerify.annCircuitBudgetFlagsLabel': 'ANN 熔断预算标志',
             'agentWorkspace.runtimeRunbookVerify.annTraceabilityLabel': 'ANN 可追踪性',
             'agentWorkspace.runtimeRunbookVerify.annTraceabilitySignalsLabel': 'ANN 可追踪性信号',
             'agentWorkspace.runtimeRunbookVerify.annPrefilterLabel': 'ANN 预筛选',
             'agentWorkspace.runtimeRunbookVerify.annPrefilterThresholdsLabel': 'ANN 预筛选阈值',
+            'agentWorkspace.runtimeRunbookVerify.annPrefilterCalibrationLabel': 'ANN 预筛选校准',
             'agentWorkspace.runtimeRunbookVerify.autoFocusApplied': '已应用（{reason}）',
             'agentWorkspace.runtimeRunbookVerify.autoFocusNotApplied': '未应用',
             'agentWorkspace.runtimeRunbookVerify.none': '无',
@@ -595,10 +601,12 @@ function createI18nStub() {
             'agentWorkspace.runtimeRunbookChecks.firstCheckAnnIndexSyncLabel': '首个检查的 ANN 同步',
             'agentWorkspace.runtimeRunbookChecks.annCircuitLabel': 'ANN 熔断快照',
             'agentWorkspace.runtimeRunbookChecks.annCircuitThresholdsLabel': 'ANN 熔断阈值快照',
+            'agentWorkspace.runtimeRunbookChecks.annCircuitBudgetFlagsLabel': 'ANN 熔断预算标志快照',
             'agentWorkspace.runtimeRunbookChecks.annTraceabilityLabel': 'ANN 可追踪性快照',
             'agentWorkspace.runtimeRunbookChecks.annTraceabilitySignalsLabel': 'ANN 可追踪性信号快照',
             'agentWorkspace.runtimeRunbookChecks.annPrefilterLabel': 'ANN 预筛选快照',
             'agentWorkspace.runtimeRunbookChecks.annPrefilterThresholdsLabel': 'ANN 预筛选阈值快照',
+            'agentWorkspace.runtimeRunbookChecks.annPrefilterCalibrationLabel': 'ANN 预筛选校准快照',
             'agentWorkspace.runtimeRunbookChecks.trendCountsLabel': '趋势计数（回归/改善/稳定/数据不足）',
             'agentWorkspace.runtimeRunbookChecks.recommendedFocusLabel': '推荐聚焦原因',
             'agentWorkspace.runtimeRunbookChecks.recommendedEscalationLabel': '推荐升级级别',
@@ -1899,6 +1907,10 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                             candidateRatioPct: 24.5,
                             budgetStatus: 'ok',
                             fullScanFallback: false,
+                            sampleReady: true,
+                            selectionActive: true,
+                            stableConnector: true,
+                            canEvaluateCandidateRatio: true,
                             warnBudgetExceeded: false,
                             failBudgetExceeded: false,
                             budget: {
@@ -1951,6 +1963,8 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                                 circuitState: 'closed',
                                 shortCircuitRatioPct: 4.5,
                                 budgetStatus: 'ok',
+                                warnBudgetExceeded: false,
+                                failBudgetExceeded: false,
                                 budget: {
                                     warn: {
                                         shortCircuitCountLt: 2,
@@ -1979,6 +1993,12 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                                 selectionMode: 'token_signature_prefilter',
                                 candidateRatioPct: 18.2,
                                 budgetStatus: 'ok',
+                                sampleReady: true,
+                                selectionActive: true,
+                                stableConnector: true,
+                                canEvaluateCandidateRatio: true,
+                                warnBudgetExceeded: false,
+                                failBudgetExceeded: false,
                                 budget: {
                                     minRequestSampleGte: 10,
                                     warnCandidateRatioPctLt: 25,
@@ -3966,6 +3986,8 @@ describe('agent workspace learning-path integration', () => {
         expect(card?.textContent).toContain('half_open');
         expect(card?.textContent).toContain('ANN circuit thresholds');
         expect(card?.textContent).toContain('warn count<3');
+        expect(card?.textContent).toContain('ANN circuit budget flags');
+        expect(card?.textContent).toContain('warn exceeded');
         expect(card?.textContent).toContain('ANN traceability');
         expect(card?.textContent).toContain('partial');
         expect(card?.textContent).toContain('ANN traceability signals');
@@ -3974,6 +3996,8 @@ describe('agent workspace learning-path integration', () => {
         expect(card?.textContent).toContain('token_signature_prefilter');
         expect(card?.textContent).toContain('ANN prefilter thresholds');
         expect(card?.textContent).toContain('sample>=8');
+        expect(card?.textContent).toContain('ANN prefilter calibration');
+        expect(card?.textContent).toContain('sample ready');
     });
 
     test('executes runtime runbook history capabilities through the generic knowledge operation path', async () => {
@@ -4072,6 +4096,8 @@ describe('agent workspace learning-path integration', () => {
         expect(card?.textContent).toContain('closed');
         expect(card?.textContent).toContain('ANN circuit threshold snapshot');
         expect(card?.textContent).toContain('warn count<2');
+        expect(card?.textContent).toContain('ANN circuit budget flag snapshot');
+        expect(card?.textContent).toContain('warn clear');
         expect(card?.textContent).toContain('ANN traceability snapshot');
         expect(card?.textContent).toContain('full');
         expect(card?.textContent).toContain('ANN traceability signal snapshot');
@@ -4080,6 +4106,8 @@ describe('agent workspace learning-path integration', () => {
         expect(card?.textContent).toContain('token_signature_prefilter');
         expect(card?.textContent).toContain('ANN prefilter threshold snapshot');
         expect(card?.textContent).toContain('sample>=10');
+        expect(card?.textContent).toContain('ANN prefilter calibration snapshot');
+        expect(card?.textContent).toContain('selection active');
     });
 
     test('renders runtime runbook checks cards when index-sync health telemetry is null', async () => {

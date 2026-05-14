@@ -672,10 +672,12 @@
       "firstCheckAnnIndexSyncLabel": "First check ANN sync",
       "annCircuitLabel": "ANN circuit snapshot",
       "annCircuitThresholdsLabel": "ANN circuit threshold snapshot",
+      "annCircuitBudgetFlagsLabel": "ANN circuit budget flag snapshot",
       "annTraceabilityLabel": "ANN traceability snapshot",
       "annTraceabilitySignalsLabel": "ANN traceability signal snapshot",
       "annPrefilterLabel": "ANN prefilter snapshot",
       "annPrefilterThresholdsLabel": "ANN prefilter threshold snapshot",
+      "annPrefilterCalibrationLabel": "ANN prefilter calibration snapshot",
       "trendCountsLabel": "Trend counts (regressing/improving/stable/insufficient)",
       "recommendedFocusLabel": "Recommended focus reason",
       "recommendedEscalationLabel": "Recommended escalation",
@@ -705,10 +707,12 @@
       "annIndexSyncCountsLabel": "ANN sync counts",
       "annCircuitLabel": "ANN circuit budget",
       "annCircuitThresholdsLabel": "ANN circuit thresholds",
+      "annCircuitBudgetFlagsLabel": "ANN circuit budget flags",
       "annTraceabilityLabel": "ANN traceability",
       "annTraceabilitySignalsLabel": "ANN traceability signals",
       "annPrefilterLabel": "ANN prefilter",
-      "annPrefilterThresholdsLabel": "ANN prefilter thresholds"
+      "annPrefilterThresholdsLabel": "ANN prefilter thresholds",
+      "annPrefilterCalibrationLabel": "ANN prefilter calibration"
     },
     "runtimeRunbookActionQueue": {
       "cardTitle": "Runtime Action Queue",

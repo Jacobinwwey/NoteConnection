@@ -1578,11 +1578,20 @@
                 `halfOpen>=${String(summary.annCircuitFailBudgetHalfOpenSuccessRatePctGte == null ? 0 : summary.annCircuitFailBudgetHalfOpenSuccessRatePctGte)}%`,
             ].join(' ');
         const annTraceabilitySignalsSummary = `requests ${String(summary.annTraceabilityRequestCount == null ? 0 : summary.annTraceabilityRequestCount)} | short circuits ${String(summary.annTraceabilityShortCircuitCount == null ? 0 : summary.annTraceabilityShortCircuitCount)} | consecutive failures ${String(summary.annTraceabilityConsecutiveFailures == null ? 0 : summary.annTraceabilityConsecutiveFailures)}`;
+        const annCircuitBudgetFlagsSummary = `warn ${summary.annCircuitWarnBudgetExceeded ? 'exceeded' : 'clear'} | fail ${summary.annCircuitFailBudgetExceeded ? 'exceeded' : 'clear'}`;
         const annPrefilterThresholdsSummary = Number(summary.annPrefilterMinRequestSampleGte || 0) <= 0
             && Number(summary.annPrefilterWarnCandidateRatioPctLt || 0) <= 0
             && Number(summary.annPrefilterFailCandidateRatioPctLt || 0) <= 0
             ? translate('agentWorkspace.runtimeRunbookVerify.none', 'none')
             : `sample>=${String(summary.annPrefilterMinRequestSampleGte == null ? 0 : summary.annPrefilterMinRequestSampleGte)} | warn ratio<${String(summary.annPrefilterWarnCandidateRatioPctLt == null ? 0 : summary.annPrefilterWarnCandidateRatioPctLt)}% | fail ratio<${String(summary.annPrefilterFailCandidateRatioPctLt == null ? 0 : summary.annPrefilterFailCandidateRatioPctLt)}%`;
+        const annPrefilterCalibrationMissing = (
+            Number(summary.annPrefilterMinRequestSampleGte || 0) <= 0
+            && !summary.annPrefilterSelectionMode
+            && !summary.annPrefilterBudgetStatus
+        );
+        const annPrefilterCalibrationSummary = annPrefilterCalibrationMissing
+            ? translate('agentWorkspace.runtimeRunbookVerify.none', 'none')
+            : `sample ${summary.annPrefilterSampleReady ? 'ready' : 'pending'} | selection ${summary.annPrefilterSelectionActive ? 'active' : 'inactive'} | connector ${summary.annPrefilterStableConnector ? 'stable' : 'unstable'} | ratio ${summary.annPrefilterCanEvaluateCandidateRatio ? 'evaluable' : 'blocked'} | warn ${summary.annPrefilterWarnBudgetExceeded ? 'exceeded' : 'clear'} | fail ${summary.annPrefilterFailBudgetExceeded ? 'exceeded' : 'clear'}`;
         const metrics = [
             {
                 title: translate('agentWorkspace.runtimeRunbookVerify.topRiskLabel', 'Top risk check'),
@@ -1635,6 +1644,10 @@
                     : `${annCircuitThresholdsSummary} | ${annCircuitFailThresholdsSummary}`,
             },
             {
+                title: translate('agentWorkspace.runtimeRunbookVerify.annCircuitBudgetFlagsLabel', 'ANN circuit budget flags'),
+                value: annCircuitBudgetFlagsSummary,
+            },
+            {
                 title: translate('agentWorkspace.runtimeRunbookVerify.annTraceabilityLabel', 'ANN traceability'),
                 value: `${annTraceabilityCoverage} (${annTraceabilityMissingFields.length > 0 ? annTraceabilityMissingFields.join(', ') : (String(summary.annTraceabilityLastRequestId || '').trim() || translate('agentWorkspace.runtimeRunbookVerify.none', 'none'))})`,
             },
@@ -1649,6 +1662,10 @@
             {
                 title: translate('agentWorkspace.runtimeRunbookVerify.annPrefilterThresholdsLabel', 'ANN prefilter thresholds'),
                 value: annPrefilterThresholdsSummary,
+            },
+            {
+                title: translate('agentWorkspace.runtimeRunbookVerify.annPrefilterCalibrationLabel', 'ANN prefilter calibration'),
+                value: annPrefilterCalibrationSummary,
             },
         ];
         const metricsHtml = metrics.map((metric) => `
@@ -1797,11 +1814,27 @@
                 `halfOpen>=${String(summary.annCircuitFailBudgetHalfOpenSuccessRatePctGte == null ? 0 : summary.annCircuitFailBudgetHalfOpenSuccessRatePctGte)}%`,
             ].join(' ');
         const annTraceabilitySignalsSummary = `requests ${String(summary.annTraceabilityRequestCount == null ? 0 : summary.annTraceabilityRequestCount)} | short circuits ${String(summary.annTraceabilityShortCircuitCount == null ? 0 : summary.annTraceabilityShortCircuitCount)} | consecutive failures ${String(summary.annTraceabilityConsecutiveFailures == null ? 0 : summary.annTraceabilityConsecutiveFailures)}`;
+        const annCircuitBudgetFlagsSummary = (
+            Number(summary.annCircuitWarnBudgetShortCircuitCountLt || 0) <= 0
+            && Number(summary.annCircuitFailBudgetShortCircuitCountLt || 0) <= 0
+            && !summary.annCircuitWarnBudgetExceeded
+            && !summary.annCircuitFailBudgetExceeded
+        )
+            ? translate('agentWorkspace.runtimeRunbookChecks.none', 'none')
+            : `warn ${summary.annCircuitWarnBudgetExceeded ? 'exceeded' : 'clear'} | fail ${summary.annCircuitFailBudgetExceeded ? 'exceeded' : 'clear'}`;
         const annPrefilterThresholdsSummary = Number(summary.annPrefilterMinRequestSampleGte || 0) <= 0
             && Number(summary.annPrefilterWarnCandidateRatioPctLt || 0) <= 0
             && Number(summary.annPrefilterFailCandidateRatioPctLt || 0) <= 0
             ? translate('agentWorkspace.runtimeRunbookChecks.none', 'none')
             : `sample>=${String(summary.annPrefilterMinRequestSampleGte == null ? 0 : summary.annPrefilterMinRequestSampleGte)} | warn ratio<${String(summary.annPrefilterWarnCandidateRatioPctLt == null ? 0 : summary.annPrefilterWarnCandidateRatioPctLt)}% | fail ratio<${String(summary.annPrefilterFailCandidateRatioPctLt == null ? 0 : summary.annPrefilterFailCandidateRatioPctLt)}%`;
+        const annPrefilterCalibrationMissing = (
+            Number(summary.annPrefilterMinRequestSampleGte || 0) <= 0
+            && !summary.annPrefilterSelectionMode
+            && !summary.annPrefilterBudgetStatus
+        );
+        const annPrefilterCalibrationSummary = annPrefilterCalibrationMissing
+            ? translate('agentWorkspace.runtimeRunbookChecks.none', 'none')
+            : `sample ${summary.annPrefilterSampleReady ? 'ready' : 'pending'} | selection ${summary.annPrefilterSelectionActive ? 'active' : 'inactive'} | connector ${summary.annPrefilterStableConnector ? 'stable' : 'unstable'} | ratio ${summary.annPrefilterCanEvaluateCandidateRatio ? 'evaluable' : 'blocked'} | warn ${summary.annPrefilterWarnBudgetExceeded ? 'exceeded' : 'clear'} | fail ${summary.annPrefilterFailBudgetExceeded ? 'exceeded' : 'clear'}`;
         const latestRemediationAt = String(summary.remediationLatestRecordedAt || '').trim()
             || translate('agentWorkspace.runtimeRunbookChecks.none', 'none');
         const topAction = String(summary.recommendedFocusTopAction || '').trim()
@@ -1850,6 +1883,10 @@
                     : `${annCircuitThresholdsSummary} | ${annCircuitFailThresholdsSummary}`,
             },
             {
+                title: translate('agentWorkspace.runtimeRunbookChecks.annCircuitBudgetFlagsLabel', 'ANN circuit budget flag snapshot'),
+                value: annCircuitBudgetFlagsSummary,
+            },
+            {
                 title: translate('agentWorkspace.runtimeRunbookChecks.annTraceabilityLabel', 'ANN traceability snapshot'),
                 value: `${annTraceabilityCoverage} (${String(summary.annTraceabilityMissingFieldCount == null ? 0 : summary.annTraceabilityMissingFieldCount)} missing)`,
             },
@@ -1864,6 +1901,10 @@
             {
                 title: translate('agentWorkspace.runtimeRunbookChecks.annPrefilterThresholdsLabel', 'ANN prefilter threshold snapshot'),
                 value: annPrefilterThresholdsSummary,
+            },
+            {
+                title: translate('agentWorkspace.runtimeRunbookChecks.annPrefilterCalibrationLabel', 'ANN prefilter calibration snapshot'),
+                value: annPrefilterCalibrationSummary,
             },
             {
                 title: translate('agentWorkspace.runtimeRunbookChecks.latestRemediationLabel', 'Latest remediation record'),
