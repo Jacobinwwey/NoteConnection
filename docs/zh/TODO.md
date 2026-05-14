@@ -16,7 +16,8 @@
 - [x] `src/learning/KnowledgeLearningPlatform.ts` 中的 query-backend comparison/history/trend、staleness diagnostics/rebuild planning、learning-quality history/trend、session-plan quality evaluate/history/trend/runtime-threshold diagnostics、query-backend config、query-backend diagnostics 已全部接通真实实现。
 - [x] 默认 server runtime 现已注入激活态本地 `tutorAdapter`，同时保留 `local` + `cloud` adapter catalog。
 - [x] 默认 runtime graph backend 已不再是 `local-file-graphdb`：server 现已切到 embedded `graphdb/sqlite`，同时保留显式 file fallback。
-- [~] 新的 embedded `graphdb/sqlite` 基线现已具备重启耐久性证明，但在宣称 A8 生产闭环前，仍需补齐 packaged/runtime 证明与更重工作负载门禁。
+- [x] 现在已经有主机级 dist runtime + packaged sidecar 验证来证明 embedded `graphdb/sqlite` 基线在当前 Windows 宿主上可完成 ingest -> store diagnostics/foundation readiness -> restart -> query 连续性（`npm run verify:foundation:sqlite-runtime`）。
+- [~] 新的 embedded `graphdb/sqlite` 基线现已具备重启耐久性证明与主机级 runtime/packaging 证明，但在宣称 A8 生产闭环前，仍需补齐更重工作负载门禁。
 - [~] Phase-1 A9 现已具备 live `external_http` connector baseline：包含远端索引同步与端到端 query 证明，但在宣称生产闭环前仍需补齐 recall/latency 阈值与更大工作负载验证。
 - [ ] 只有在同一套检查运行在发布级 graphdb/ANN 基线上之后，才能把这批新的 Phase-2 诊断面升级为发布级门禁。
 - [ ] 在当前 local-first 基线之上，把 tutor routing 继续推进到生产级多 provider 策略。
@@ -40,11 +41,12 @@
   - [x] ANN 连接器加固已具备候选集合归一化、表示一致性遥测与 prefilter 有效性信号。
   - [x] 默认 runtime 现在已经切到 embedded `graphdb/sqlite`，并保留显式 file fallback。
   - [x] embedded sqlite 的重启耐久性现已由 server integration 证明覆盖（`ingest -> shutdown -> fresh module restart -> query/readiness continuity`）。
+  - [x] 主机级 dist runtime + packaged sidecar 验证现已证明同一条 embedded sqlite 基线可以完成 ingest/readiness/diagnostics/restart/query 连续性（`npm run verify:foundation:sqlite-runtime`）。
   - [x] `external_http` ANN 路径现已支持远端预筛选索引同步，并通过真实 query 流量的集成证明。
-  - [ ] A8 仍需 packaged/runtime 证明与更重工作负载级加固。
+  - [ ] A8 仍需更重工作负载级加固。
   - [ ] ANN 仍需补齐工作负载/阈值校准后才能宣称生产闭环。
 - [ ] 下一活跃实施阶段现已拆分为：
-  - [ ] 先补完 A8 剩余的 packaged/runtime + 工作负载闭环，
+  - [ ] 在新的 dist/runtime + packaged sidecar 证明之上，先补完 A8 剩余的更重工作负载闭环，
   - [ ] 补完 A9 在 live connector baseline 之上的工作负载/阈值闭环，
   - [ ] 下一阶段转入 Phase-2 发布级门禁加固，
   - [ ] 同时并行推进 Phase-3 tutor/memory 加固。

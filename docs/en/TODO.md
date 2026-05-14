@@ -9,7 +9,8 @@
 - [x] Query-backend comparison/history/trend, staleness diagnostics/rebuild planning, learning-quality history/trend, session-plan quality evaluate/history/trend/runtime-threshold diagnostics, query-backend config, and query-backend diagnostics are now live in `src/learning/KnowledgeLearningPlatform.ts`.
 - [x] Default server runtime now injects an active local `tutorAdapter` while retaining the `local` + `cloud` adapter catalog.
 - [x] Default runtime graph backend is no longer `local-file-graphdb`: the server now targets embedded `graphdb/sqlite` with explicit file fallback.
-- [~] The new embedded `graphdb/sqlite` baseline is now restart-durability-proved, but packaged/runtime proof and heavier workload gates still remain before calling A8 production-closed.
+- [x] Host-level dist runtime plus packaged sidecar verification now proves the embedded `graphdb/sqlite` baseline across ingest -> store diagnostics/foundation readiness -> restart -> query continuity on the current Windows host (`npm run verify:foundation:sqlite-runtime`).
+- [~] The new embedded `graphdb/sqlite` baseline is now restart-durability-proved and host-level runtime-packaging-proved, but heavier workload gates still remain before calling A8 production-closed.
 - [~] Phase-1 A9 now has a live `external_http` connector baseline with remote index sync and end-to-end query proof, but recall/latency thresholds and larger-workload validation still remain before production closure.
 - [x] Agent-workspace runbook verify/checks now surface ANN index-sync, circuit, traceability, and prefilter summaries plus threshold/signal drilldowns, while action-queue keeps the index-sync incident drilldown.
 - [x] `query_vector_acceleration_prefilter_effectiveness` now shares the ANN fast-lane escalation path instead of lagging behind the other ANN governance checks.
@@ -38,11 +39,12 @@ After syncing the repository to the latest upstream `main` baseline, we re-audit
   - [x] ANN connector hardening does expose candidate normalization, representation telemetry, and prefilter effectiveness signals.
   - [x] Default runtime now targets an embedded `graphdb/sqlite` backend with explicit file fallback.
   - [x] Embedded sqlite restart durability is now covered by server integration proof (`ingest -> shutdown -> fresh module restart -> query/readiness continuity`).
+  - [x] Host-level dist runtime + packaged sidecar verification now proves the same embedded sqlite baseline across ingest/readiness/diagnostics/restart/query continuity (`npm run verify:foundation:sqlite-runtime`).
   - [x] The `external_http` ANN path now syncs a remote prefilter index and serves live query traffic under integration proof.
-  - [ ] Packaged/runtime proof and heavier workload hardening still remain for A8.
+  - [ ] Heavier workload hardening still remains for A8.
   - [ ] ANN still needs workload/threshold calibration before production closure.
 - [ ] Next active implementation phase is now split:
-  - [ ] finish the remaining A8 packaged/runtime + workload closure,
+  - [ ] finish the remaining A8 heavier-workload closure on top of the new dist/runtime + packaged sidecar proof,
   - [ ] finish the remaining A9 workload/threshold closure on top of the live connector baseline,
   - [ ] move next into Phase-2 release-grade gate hardening,
   - [ ] continue Phase-3 tutor/memory hardening in parallel.

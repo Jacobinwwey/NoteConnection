@@ -1,0 +1,40 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
+type PackageJson = {
+  scripts?: Record<string, string>;
+};
+
+describe('foundation sqlite runtime verification contract', () => {
+  const repoRoot = path.resolve(__dirname, '..');
+  const packageJsonPath = path.join(repoRoot, 'package.json');
+  const scriptPath = path.join(repoRoot, 'scripts', 'verify-foundation-sqlite-runtime.js');
+
+  function readJson<T>(filePath: string): T {
+    const raw = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(raw) as T;
+  }
+
+  test('keeps the host-level sqlite runtime verifier wired in package scripts', () => {
+    const packageJson = readJson<PackageJson>(packageJsonPath);
+    expect(packageJson.scripts?.['verify:foundation:sqlite-runtime']).toBe(
+      'node scripts/verify-foundation-sqlite-runtime.js'
+    );
+  });
+
+  test('verifier script covers both dist runtime and packaged sidecar restart continuity', () => {
+    const source = fs.readFileSync(scriptPath, 'utf8');
+
+    expect(source).toContain('dist_node_runtime');
+    expect(source).toContain('packaged_sidecar');
+    expect(source).toContain('knowledge_graph_store.graphdb.v1.sqlite');
+    expect(source).toContain('/api/knowledge/ingest');
+    expect(source).toContain('/api/knowledge/store-diagnostics');
+    expect(source).toContain('/api/knowledge/foundation/readiness');
+    expect(source).toContain('/api/knowledge/query');
+    expect(source).toContain("graphBackendSignalKind === 'embedded_graphdb'");
+    expect(source).toContain("storageEngine === 'sqlite'");
+    expect(source).toContain("usingFallback !== true");
+    expect(source).toContain("query: 'persist graph content restart sqlite proof'");
+  });
+});
