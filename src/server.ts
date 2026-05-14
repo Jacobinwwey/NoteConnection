@@ -1908,6 +1908,7 @@ function resolveRuntimeRunbookVerificationEscalation(
     if (
         selectedCheckId === 'query_vector_acceleration_index_sync_health'
         || selectedCheckId === 'query_vector_acceleration_circuit_state'
+        || selectedCheckId === 'query_vector_acceleration_prefilter_effectiveness'
         || selectedCheckId === 'query_vector_acceleration_traceability'
     ) {
         if (status === 'fail' && activeFailStreak >= 1) {

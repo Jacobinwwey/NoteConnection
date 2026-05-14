@@ -1555,6 +1555,34 @@
             || translate('agentWorkspace.runtimeRunbookVerify.none', 'none');
         const annPrefilterBudgetStatus = String(summary.annPrefilterBudgetStatus || '').trim()
             || translate('agentWorkspace.runtimeRunbookVerify.none', 'none');
+        const annCircuitThresholdsMissing = (
+            Number(summary.annCircuitWarnBudgetShortCircuitCountLt || 0) <= 0
+            && Number(summary.annCircuitWarnBudgetShortCircuitRatioPctLt || 0) <= 0
+            && Number(summary.annCircuitFailBudgetShortCircuitCountLt || 0) <= 0
+            && Number(summary.annCircuitFailBudgetShortCircuitRatioPctLt || 0) <= 0
+        );
+        const annCircuitThresholdsSummary = annCircuitThresholdsMissing
+            ? translate('agentWorkspace.runtimeRunbookVerify.none', 'none')
+            : [
+                `warn count<${String(summary.annCircuitWarnBudgetShortCircuitCountLt == null ? 0 : summary.annCircuitWarnBudgetShortCircuitCountLt)}`,
+                `ratio<${String(summary.annCircuitWarnBudgetShortCircuitRatioPctLt == null ? 0 : summary.annCircuitWarnBudgetShortCircuitRatioPctLt)}%`,
+                `failStreak<${String(summary.annCircuitWarnBudgetConsecutiveFailuresLt == null ? 0 : summary.annCircuitWarnBudgetConsecutiveFailuresLt)}`,
+                `halfOpen>=${String(summary.annCircuitWarnBudgetHalfOpenSuccessRatePctGte == null ? 0 : summary.annCircuitWarnBudgetHalfOpenSuccessRatePctGte)}%`,
+            ].join(' ');
+        const annCircuitFailThresholdsSummary = annCircuitThresholdsMissing
+            ? ''
+            : [
+                `fail count<${String(summary.annCircuitFailBudgetShortCircuitCountLt == null ? 0 : summary.annCircuitFailBudgetShortCircuitCountLt)}`,
+                `ratio<${String(summary.annCircuitFailBudgetShortCircuitRatioPctLt == null ? 0 : summary.annCircuitFailBudgetShortCircuitRatioPctLt)}%`,
+                `failStreak<${String(summary.annCircuitFailBudgetConsecutiveFailuresLt == null ? 0 : summary.annCircuitFailBudgetConsecutiveFailuresLt)}`,
+                `halfOpen>=${String(summary.annCircuitFailBudgetHalfOpenSuccessRatePctGte == null ? 0 : summary.annCircuitFailBudgetHalfOpenSuccessRatePctGte)}%`,
+            ].join(' ');
+        const annTraceabilitySignalsSummary = `requests ${String(summary.annTraceabilityRequestCount == null ? 0 : summary.annTraceabilityRequestCount)} | short circuits ${String(summary.annTraceabilityShortCircuitCount == null ? 0 : summary.annTraceabilityShortCircuitCount)} | consecutive failures ${String(summary.annTraceabilityConsecutiveFailures == null ? 0 : summary.annTraceabilityConsecutiveFailures)}`;
+        const annPrefilterThresholdsSummary = Number(summary.annPrefilterMinRequestSampleGte || 0) <= 0
+            && Number(summary.annPrefilterWarnCandidateRatioPctLt || 0) <= 0
+            && Number(summary.annPrefilterFailCandidateRatioPctLt || 0) <= 0
+            ? translate('agentWorkspace.runtimeRunbookVerify.none', 'none')
+            : `sample>=${String(summary.annPrefilterMinRequestSampleGte == null ? 0 : summary.annPrefilterMinRequestSampleGte)} | warn ratio<${String(summary.annPrefilterWarnCandidateRatioPctLt == null ? 0 : summary.annPrefilterWarnCandidateRatioPctLt)}% | fail ratio<${String(summary.annPrefilterFailCandidateRatioPctLt == null ? 0 : summary.annPrefilterFailCandidateRatioPctLt)}%`;
         const metrics = [
             {
                 title: translate('agentWorkspace.runtimeRunbookVerify.topRiskLabel', 'Top risk check'),
@@ -1601,12 +1629,26 @@
                 value: `${annCircuitState} (${String(summary.annCircuitHealthStatus || '').trim() || translate('agentWorkspace.runtimeRunbookVerify.none', 'none')}, ${String(summary.annCircuitShortCircuitRatioPct == null ? 0 : summary.annCircuitShortCircuitRatioPct)}%, ${annCircuitBudgetStatus})`,
             },
             {
+                title: translate('agentWorkspace.runtimeRunbookVerify.annCircuitThresholdsLabel', 'ANN circuit thresholds'),
+                value: annCircuitThresholdsMissing
+                    ? annCircuitThresholdsSummary
+                    : `${annCircuitThresholdsSummary} | ${annCircuitFailThresholdsSummary}`,
+            },
+            {
                 title: translate('agentWorkspace.runtimeRunbookVerify.annTraceabilityLabel', 'ANN traceability'),
                 value: `${annTraceabilityCoverage} (${annTraceabilityMissingFields.length > 0 ? annTraceabilityMissingFields.join(', ') : (String(summary.annTraceabilityLastRequestId || '').trim() || translate('agentWorkspace.runtimeRunbookVerify.none', 'none'))})`,
             },
             {
+                title: translate('agentWorkspace.runtimeRunbookVerify.annTraceabilitySignalsLabel', 'ANN traceability signals'),
+                value: annTraceabilitySignalsSummary,
+            },
+            {
                 title: translate('agentWorkspace.runtimeRunbookVerify.annPrefilterLabel', 'ANN prefilter'),
                 value: `${annPrefilterSelectionMode} (${String(summary.annPrefilterCandidateRatioPct == null ? 0 : summary.annPrefilterCandidateRatioPct)}%, ${annPrefilterBudgetStatus}${summary.annPrefilterFullScanFallback ? ', full_scan' : ''})`,
+            },
+            {
+                title: translate('agentWorkspace.runtimeRunbookVerify.annPrefilterThresholdsLabel', 'ANN prefilter thresholds'),
+                value: annPrefilterThresholdsSummary,
             },
         ];
         const metricsHtml = metrics.map((metric) => `
@@ -1732,6 +1774,34 @@
             || translate('agentWorkspace.runtimeRunbookChecks.none', 'none');
         const annPrefilterBudgetStatus = String(summary.annPrefilterBudgetStatus || '').trim()
             || translate('agentWorkspace.runtimeRunbookChecks.none', 'none');
+        const annCircuitThresholdsMissing = (
+            Number(summary.annCircuitWarnBudgetShortCircuitCountLt || 0) <= 0
+            && Number(summary.annCircuitWarnBudgetShortCircuitRatioPctLt || 0) <= 0
+            && Number(summary.annCircuitFailBudgetShortCircuitCountLt || 0) <= 0
+            && Number(summary.annCircuitFailBudgetShortCircuitRatioPctLt || 0) <= 0
+        );
+        const annCircuitThresholdsSummary = annCircuitThresholdsMissing
+            ? translate('agentWorkspace.runtimeRunbookChecks.none', 'none')
+            : [
+                `warn count<${String(summary.annCircuitWarnBudgetShortCircuitCountLt == null ? 0 : summary.annCircuitWarnBudgetShortCircuitCountLt)}`,
+                `ratio<${String(summary.annCircuitWarnBudgetShortCircuitRatioPctLt == null ? 0 : summary.annCircuitWarnBudgetShortCircuitRatioPctLt)}%`,
+                `failStreak<${String(summary.annCircuitWarnBudgetConsecutiveFailuresLt == null ? 0 : summary.annCircuitWarnBudgetConsecutiveFailuresLt)}`,
+                `halfOpen>=${String(summary.annCircuitWarnBudgetHalfOpenSuccessRatePctGte == null ? 0 : summary.annCircuitWarnBudgetHalfOpenSuccessRatePctGte)}%`,
+            ].join(' ');
+        const annCircuitFailThresholdsSummary = annCircuitThresholdsMissing
+            ? ''
+            : [
+                `fail count<${String(summary.annCircuitFailBudgetShortCircuitCountLt == null ? 0 : summary.annCircuitFailBudgetShortCircuitCountLt)}`,
+                `ratio<${String(summary.annCircuitFailBudgetShortCircuitRatioPctLt == null ? 0 : summary.annCircuitFailBudgetShortCircuitRatioPctLt)}%`,
+                `failStreak<${String(summary.annCircuitFailBudgetConsecutiveFailuresLt == null ? 0 : summary.annCircuitFailBudgetConsecutiveFailuresLt)}`,
+                `halfOpen>=${String(summary.annCircuitFailBudgetHalfOpenSuccessRatePctGte == null ? 0 : summary.annCircuitFailBudgetHalfOpenSuccessRatePctGte)}%`,
+            ].join(' ');
+        const annTraceabilitySignalsSummary = `requests ${String(summary.annTraceabilityRequestCount == null ? 0 : summary.annTraceabilityRequestCount)} | short circuits ${String(summary.annTraceabilityShortCircuitCount == null ? 0 : summary.annTraceabilityShortCircuitCount)} | consecutive failures ${String(summary.annTraceabilityConsecutiveFailures == null ? 0 : summary.annTraceabilityConsecutiveFailures)}`;
+        const annPrefilterThresholdsSummary = Number(summary.annPrefilterMinRequestSampleGte || 0) <= 0
+            && Number(summary.annPrefilterWarnCandidateRatioPctLt || 0) <= 0
+            && Number(summary.annPrefilterFailCandidateRatioPctLt || 0) <= 0
+            ? translate('agentWorkspace.runtimeRunbookChecks.none', 'none')
+            : `sample>=${String(summary.annPrefilterMinRequestSampleGte == null ? 0 : summary.annPrefilterMinRequestSampleGte)} | warn ratio<${String(summary.annPrefilterWarnCandidateRatioPctLt == null ? 0 : summary.annPrefilterWarnCandidateRatioPctLt)}% | fail ratio<${String(summary.annPrefilterFailCandidateRatioPctLt == null ? 0 : summary.annPrefilterFailCandidateRatioPctLt)}%`;
         const latestRemediationAt = String(summary.remediationLatestRecordedAt || '').trim()
             || translate('agentWorkspace.runtimeRunbookChecks.none', 'none');
         const topAction = String(summary.recommendedFocusTopAction || '').trim()
@@ -1774,12 +1844,26 @@
                 value: `${annCircuitState} (${String(summary.annCircuitShortCircuitRatioPct == null ? 0 : summary.annCircuitShortCircuitRatioPct)}%, ${annCircuitBudgetStatus})`,
             },
             {
+                title: translate('agentWorkspace.runtimeRunbookChecks.annCircuitThresholdsLabel', 'ANN circuit threshold snapshot'),
+                value: annCircuitThresholdsMissing
+                    ? annCircuitThresholdsSummary
+                    : `${annCircuitThresholdsSummary} | ${annCircuitFailThresholdsSummary}`,
+            },
+            {
                 title: translate('agentWorkspace.runtimeRunbookChecks.annTraceabilityLabel', 'ANN traceability snapshot'),
                 value: `${annTraceabilityCoverage} (${String(summary.annTraceabilityMissingFieldCount == null ? 0 : summary.annTraceabilityMissingFieldCount)} missing)`,
             },
             {
+                title: translate('agentWorkspace.runtimeRunbookChecks.annTraceabilitySignalsLabel', 'ANN traceability signal snapshot'),
+                value: annTraceabilitySignalsSummary,
+            },
+            {
                 title: translate('agentWorkspace.runtimeRunbookChecks.annPrefilterLabel', 'ANN prefilter snapshot'),
                 value: `${annPrefilterSelectionMode} (${String(summary.annPrefilterCandidateRatioPct == null ? 0 : summary.annPrefilterCandidateRatioPct)}%, ${annPrefilterBudgetStatus})`,
+            },
+            {
+                title: translate('agentWorkspace.runtimeRunbookChecks.annPrefilterThresholdsLabel', 'ANN prefilter threshold snapshot'),
+                value: annPrefilterThresholdsSummary,
             },
             {
                 title: translate('agentWorkspace.runtimeRunbookChecks.latestRemediationLabel', 'Latest remediation record'),

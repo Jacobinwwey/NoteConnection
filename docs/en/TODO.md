@@ -11,7 +11,8 @@
 - [x] Default runtime graph backend is no longer `local-file-graphdb`: the server now targets embedded `graphdb/sqlite` with explicit file fallback.
 - [~] The new embedded `graphdb/sqlite` baseline is now restart-durability-proved, but packaged/runtime proof and heavier workload gates still remain before calling A8 production-closed.
 - [~] Phase-1 A9 now has a live `external_http` connector baseline with remote index sync and end-to-end query proof, but recall/latency thresholds and larger-workload validation still remain before production closure.
-- [x] Agent-workspace runbook verify/checks now surface ANN index-sync, circuit, traceability, and prefilter summaries, while action-queue keeps the index-sync incident drilldown.
+- [x] Agent-workspace runbook verify/checks now surface ANN index-sync, circuit, traceability, and prefilter summaries plus threshold/signal drilldowns, while action-queue keeps the index-sync incident drilldown.
+- [x] `query_vector_acceleration_prefilter_effectiveness` now shares the ANN fast-lane escalation path instead of lagging behind the other ANN governance checks.
 - [ ] Move the newly surfaced ANN governance budgets from visibility closure to workload/threshold calibration closure, then promote the new Phase-2 diagnostics to release-grade gates only after the same checks run on a release-grade graphdb/ANN baseline.
 - [ ] Extend tutor routing from the new local-first baseline into a production-proven multi-provider policy.
 - [ ] Continue FR-009 evidence freshness, Linux strict Tauri host provisioning, and final Electron decommission review.

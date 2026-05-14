@@ -49,9 +49,10 @@
 ### 这轮刷新新增证明了什么
 
 1. Phase-2 的 ANN 治理切片现已从“后端 JSON 可见”推进到“前端 runbook 壳层可见”：
-   - verify/checks 现在都会展示 ANN sync-health、熔断预算、可追踪性、预筛选摘要，
+   - verify/checks 现在都会展示 ANN sync-health、熔断预算、可追踪性、预筛选摘要及阈值/信号钻取，
    - action-queue 继续承载 index-sync 事故钻取。
-2. 这轮刷新仍然**不等于**发布级 Phase-2 闭环：
+2. `query_vector_acceleration_prefilter_effectiveness` 现已进入 ANN 快速升级路径，不再沿用较慢的通用升级分支。
+3. 这轮刷新仍然**不等于**发布级 Phase-2 闭环：
    - 它闭合的是新 ANN 治理摘要的可见性与 browser/runtime 证明，
    - 并**没有**闭合这些预算的工作负载/阈值校准。
 

@@ -2120,6 +2120,24 @@
             annCircuitState: String(circuitBudget.circuitState || '').trim(),
             annCircuitBudgetStatus: String(circuitBudget.budgetStatus || '').trim(),
             annCircuitShortCircuitRatioPct: Number(Number(circuitBudget.shortCircuitRatioPct || 0).toFixed(4)),
+            annCircuitWarnBudgetShortCircuitCountLt: Number.isFinite(Number(circuitBudget && circuitBudget.budget && circuitBudget.budget.warn && circuitBudget.budget.warn.shortCircuitCountLt))
+                ? Number(circuitBudget.budget.warn.shortCircuitCountLt)
+                : 0,
+            annCircuitWarnBudgetShortCircuitRatioPctLt: Number(Number(circuitBudget && circuitBudget.budget && circuitBudget.budget.warn && circuitBudget.budget.warn.shortCircuitRatioPctLt || 0).toFixed(4)),
+            annCircuitWarnBudgetConsecutiveFailuresLt: Number.isFinite(Number(circuitBudget && circuitBudget.budget && circuitBudget.budget.warn && circuitBudget.budget.warn.consecutiveFailuresLt))
+                ? Number(circuitBudget.budget.warn.consecutiveFailuresLt)
+                : 0,
+            annCircuitWarnBudgetHalfOpenSuccessRatePctGte: Number(Number(circuitBudget && circuitBudget.budget && circuitBudget.budget.warn && circuitBudget.budget.warn.halfOpenSuccessRatePctGte || 0).toFixed(4)),
+            annCircuitFailBudgetShortCircuitCountLt: Number.isFinite(Number(circuitBudget && circuitBudget.budget && circuitBudget.budget.fail && circuitBudget.budget.fail.shortCircuitCountLt))
+                ? Number(circuitBudget.budget.fail.shortCircuitCountLt)
+                : 0,
+            annCircuitFailBudgetShortCircuitRatioPctLt: Number(Number(circuitBudget && circuitBudget.budget && circuitBudget.budget.fail && circuitBudget.budget.fail.shortCircuitRatioPctLt || 0).toFixed(4)),
+            annCircuitFailBudgetConsecutiveFailuresLt: Number.isFinite(Number(circuitBudget && circuitBudget.budget && circuitBudget.budget.fail && circuitBudget.budget.fail.consecutiveFailuresLt))
+                ? Number(circuitBudget.budget.fail.consecutiveFailuresLt)
+                : 0,
+            annCircuitFailBudgetHalfOpenSuccessRatePctGte: Number(Number(circuitBudget && circuitBudget.budget && circuitBudget.budget.fail && circuitBudget.budget.fail.halfOpenSuccessRatePctGte || 0).toFixed(4)),
+            annCircuitWarnBudgetExceeded: Boolean(circuitBudget.warnBudgetExceeded),
+            annCircuitFailBudgetExceeded: Boolean(circuitBudget.failBudgetExceeded),
             annIndexSyncStatus: String(indexSyncHealth.indexSyncStatus || '').trim(),
             annIndexSyncMessage: String(indexSyncHealth.indexSyncMessage || '').trim(),
             annIndexSyncRequestCount: Number.isFinite(Number(indexSyncHealth.syncRequestCount))
@@ -2142,10 +2160,26 @@
                     .filter(Boolean)
                 : [],
             annTraceabilityLastRequestId: String(traceability.lastRequestId || '').trim(),
+            annTraceabilityRequestCount: Number.isFinite(Number(traceability.requestCount))
+                ? Number(traceability.requestCount)
+                : 0,
+            annTraceabilityConsecutiveFailures: Number.isFinite(Number(traceability.consecutiveFailures))
+                ? Number(traceability.consecutiveFailures)
+                : 0,
+            annTraceabilityShortCircuitCount: Number.isFinite(Number(traceability.shortCircuitCount))
+                ? Number(traceability.shortCircuitCount)
+                : 0,
             annPrefilterSelectionMode: String(prefilter.selectionMode || '').trim(),
             annPrefilterBudgetStatus: String(prefilter.budgetStatus || '').trim(),
             annPrefilterCandidateRatioPct: Number(Number(prefilter.candidateRatioPct || 0).toFixed(4)),
             annPrefilterFullScanFallback: Boolean(prefilter.fullScanFallback),
+            annPrefilterMinRequestSampleGte: Number.isFinite(Number(prefilter && prefilter.budget && prefilter.budget.minRequestSampleGte))
+                ? Number(prefilter.budget.minRequestSampleGte)
+                : 0,
+            annPrefilterWarnCandidateRatioPctLt: Number(Number(prefilter && prefilter.budget && prefilter.budget.warnCandidateRatioPctLt || 0).toFixed(4)),
+            annPrefilterFailCandidateRatioPctLt: Number(Number(prefilter && prefilter.budget && prefilter.budget.failCandidateRatioPctLt || 0).toFixed(4)),
+            annPrefilterWarnBudgetExceeded: Boolean(prefilter.warnBudgetExceeded),
+            annPrefilterFailBudgetExceeded: Boolean(prefilter.failBudgetExceeded),
         };
     }
 
@@ -2273,13 +2307,43 @@
             annCircuitState: String(circuitBudget.circuitState || '').trim(),
             annCircuitBudgetStatus: String(circuitBudget.budgetStatus || '').trim(),
             annCircuitShortCircuitRatioPct: Number(Number(circuitBudget.shortCircuitRatioPct || 0).toFixed(4)),
+            annCircuitWarnBudgetShortCircuitCountLt: Number.isFinite(Number(circuitBudget && circuitBudget.budget && circuitBudget.budget.warn && circuitBudget.budget.warn.shortCircuitCountLt))
+                ? Number(circuitBudget.budget.warn.shortCircuitCountLt)
+                : 0,
+            annCircuitWarnBudgetShortCircuitRatioPctLt: Number(Number(circuitBudget && circuitBudget.budget && circuitBudget.budget.warn && circuitBudget.budget.warn.shortCircuitRatioPctLt || 0).toFixed(4)),
+            annCircuitWarnBudgetConsecutiveFailuresLt: Number.isFinite(Number(circuitBudget && circuitBudget.budget && circuitBudget.budget.warn && circuitBudget.budget.warn.consecutiveFailuresLt))
+                ? Number(circuitBudget.budget.warn.consecutiveFailuresLt)
+                : 0,
+            annCircuitWarnBudgetHalfOpenSuccessRatePctGte: Number(Number(circuitBudget && circuitBudget.budget && circuitBudget.budget.warn && circuitBudget.budget.warn.halfOpenSuccessRatePctGte || 0).toFixed(4)),
+            annCircuitFailBudgetShortCircuitCountLt: Number.isFinite(Number(circuitBudget && circuitBudget.budget && circuitBudget.budget.fail && circuitBudget.budget.fail.shortCircuitCountLt))
+                ? Number(circuitBudget.budget.fail.shortCircuitCountLt)
+                : 0,
+            annCircuitFailBudgetShortCircuitRatioPctLt: Number(Number(circuitBudget && circuitBudget.budget && circuitBudget.budget.fail && circuitBudget.budget.fail.shortCircuitRatioPctLt || 0).toFixed(4)),
+            annCircuitFailBudgetConsecutiveFailuresLt: Number.isFinite(Number(circuitBudget && circuitBudget.budget && circuitBudget.budget.fail && circuitBudget.budget.fail.consecutiveFailuresLt))
+                ? Number(circuitBudget.budget.fail.consecutiveFailuresLt)
+                : 0,
+            annCircuitFailBudgetHalfOpenSuccessRatePctGte: Number(Number(circuitBudget && circuitBudget.budget && circuitBudget.budget.fail && circuitBudget.budget.fail.halfOpenSuccessRatePctGte || 0).toFixed(4)),
             annTraceabilityCoverage: String(traceability.correlationCoverage || '').trim(),
             annTraceabilityMissingFieldCount: Array.isArray(traceability.missingFields)
                 ? traceability.missingFields.filter((item) => String(item || '').trim().length > 0).length
                 : 0,
+            annTraceabilityRequestCount: Number.isFinite(Number(traceability.requestCount))
+                ? Number(traceability.requestCount)
+                : 0,
+            annTraceabilityConsecutiveFailures: Number.isFinite(Number(traceability.consecutiveFailures))
+                ? Number(traceability.consecutiveFailures)
+                : 0,
+            annTraceabilityShortCircuitCount: Number.isFinite(Number(traceability.shortCircuitCount))
+                ? Number(traceability.shortCircuitCount)
+                : 0,
             annPrefilterSelectionMode: String(prefilter.selectionMode || '').trim(),
             annPrefilterBudgetStatus: String(prefilter.budgetStatus || '').trim(),
             annPrefilterCandidateRatioPct: Number(Number(prefilter.candidateRatioPct || 0).toFixed(4)),
+            annPrefilterMinRequestSampleGte: Number.isFinite(Number(prefilter && prefilter.budget && prefilter.budget.minRequestSampleGte))
+                ? Number(prefilter.budget.minRequestSampleGte)
+                : 0,
+            annPrefilterWarnCandidateRatioPctLt: Number(Number(prefilter && prefilter.budget && prefilter.budget.warnCandidateRatioPctLt || 0).toFixed(4)),
+            annPrefilterFailCandidateRatioPctLt: Number(Number(prefilter && prefilter.budget && prefilter.budget.failCandidateRatioPctLt || 0).toFixed(4)),
         };
     }
 
