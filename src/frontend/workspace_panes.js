@@ -1536,9 +1536,24 @@
             : translate('agentWorkspace.runtimeRunbookVerify.autoFocusNotApplied', 'not applied');
         const firstEscalationAction = String(summary.firstEscalationAction || '').trim()
             || translate('agentWorkspace.runtimeRunbookVerify.none', 'none');
+        const annCircuitState = String(summary.annCircuitState || '').trim()
+            || translate('agentWorkspace.runtimeRunbookVerify.none', 'none');
+        const annCircuitBudgetStatus = String(summary.annCircuitBudgetStatus || '').trim()
+            || translate('agentWorkspace.runtimeRunbookVerify.none', 'none');
         const annIndexSyncStatus = String(summary.annIndexSyncStatus || '').trim()
             || translate('agentWorkspace.runtimeRunbookVerify.none', 'none');
         const annIndexLastSyncAt = String(summary.annIndexLastSyncAt || '').trim()
+            || translate('agentWorkspace.runtimeRunbookVerify.none', 'none');
+        const annTraceabilityCoverage = String(summary.annTraceabilityCoverage || '').trim()
+            || translate('agentWorkspace.runtimeRunbookVerify.none', 'none');
+        const annTraceabilityMissingFields = Array.isArray(summary.annTraceabilityMissingFields)
+            ? summary.annTraceabilityMissingFields
+                .map((item) => String(item || '').trim())
+                .filter(Boolean)
+            : [];
+        const annPrefilterSelectionMode = String(summary.annPrefilterSelectionMode || '').trim()
+            || translate('agentWorkspace.runtimeRunbookVerify.none', 'none');
+        const annPrefilterBudgetStatus = String(summary.annPrefilterBudgetStatus || '').trim()
             || translate('agentWorkspace.runtimeRunbookVerify.none', 'none');
         const metrics = [
             {
@@ -1580,6 +1595,18 @@
             {
                 title: translate('agentWorkspace.runtimeRunbookVerify.annIndexSyncCountsLabel', 'ANN sync counts'),
                 value: `${String(summary.annIndexSyncRequestCount == null ? 0 : summary.annIndexSyncRequestCount)}/${String(summary.annIndexSyncSuccessCount == null ? 0 : summary.annIndexSyncSuccessCount)}/${String(summary.annIndexSyncFailureCount == null ? 0 : summary.annIndexSyncFailureCount)} | atoms ${String(summary.annIndexSyncedAtomCount == null ? 0 : summary.annIndexSyncedAtomCount)} | ${annIndexLastSyncAt}`,
+            },
+            {
+                title: translate('agentWorkspace.runtimeRunbookVerify.annCircuitLabel', 'ANN circuit budget'),
+                value: `${annCircuitState} (${String(summary.annCircuitHealthStatus || '').trim() || translate('agentWorkspace.runtimeRunbookVerify.none', 'none')}, ${String(summary.annCircuitShortCircuitRatioPct == null ? 0 : summary.annCircuitShortCircuitRatioPct)}%, ${annCircuitBudgetStatus})`,
+            },
+            {
+                title: translate('agentWorkspace.runtimeRunbookVerify.annTraceabilityLabel', 'ANN traceability'),
+                value: `${annTraceabilityCoverage} (${annTraceabilityMissingFields.length > 0 ? annTraceabilityMissingFields.join(', ') : (String(summary.annTraceabilityLastRequestId || '').trim() || translate('agentWorkspace.runtimeRunbookVerify.none', 'none'))})`,
+            },
+            {
+                title: translate('agentWorkspace.runtimeRunbookVerify.annPrefilterLabel', 'ANN prefilter'),
+                value: `${annPrefilterSelectionMode} (${String(summary.annPrefilterCandidateRatioPct == null ? 0 : summary.annPrefilterCandidateRatioPct)}%, ${annPrefilterBudgetStatus}${summary.annPrefilterFullScanFallback ? ', full_scan' : ''})`,
             },
         ];
         const metricsHtml = metrics.map((metric) => `
@@ -1695,6 +1722,16 @@
             || translate('agentWorkspace.runtimeRunbookChecks.none', 'none');
         const firstCheckAnnIndexSyncCounts = String(summary.firstCheckAnnIndexSyncCounts || '').trim()
             || translate('agentWorkspace.runtimeRunbookChecks.none', 'none');
+        const annCircuitState = String(summary.annCircuitState || '').trim()
+            || translate('agentWorkspace.runtimeRunbookChecks.none', 'none');
+        const annCircuitBudgetStatus = String(summary.annCircuitBudgetStatus || '').trim()
+            || translate('agentWorkspace.runtimeRunbookChecks.none', 'none');
+        const annTraceabilityCoverage = String(summary.annTraceabilityCoverage || '').trim()
+            || translate('agentWorkspace.runtimeRunbookChecks.none', 'none');
+        const annPrefilterSelectionMode = String(summary.annPrefilterSelectionMode || '').trim()
+            || translate('agentWorkspace.runtimeRunbookChecks.none', 'none');
+        const annPrefilterBudgetStatus = String(summary.annPrefilterBudgetStatus || '').trim()
+            || translate('agentWorkspace.runtimeRunbookChecks.none', 'none');
         const latestRemediationAt = String(summary.remediationLatestRecordedAt || '').trim()
             || translate('agentWorkspace.runtimeRunbookChecks.none', 'none');
         const topAction = String(summary.recommendedFocusTopAction || '').trim()
@@ -1731,6 +1768,18 @@
             {
                 title: translate('agentWorkspace.runtimeRunbookChecks.firstCheckAnnIndexSyncLabel', 'First check ANN sync'),
                 value: `${firstCheckAnnIndexSyncStatus} (${firstCheckAnnIndexSyncCounts})`,
+            },
+            {
+                title: translate('agentWorkspace.runtimeRunbookChecks.annCircuitLabel', 'ANN circuit snapshot'),
+                value: `${annCircuitState} (${String(summary.annCircuitShortCircuitRatioPct == null ? 0 : summary.annCircuitShortCircuitRatioPct)}%, ${annCircuitBudgetStatus})`,
+            },
+            {
+                title: translate('agentWorkspace.runtimeRunbookChecks.annTraceabilityLabel', 'ANN traceability snapshot'),
+                value: `${annTraceabilityCoverage} (${String(summary.annTraceabilityMissingFieldCount == null ? 0 : summary.annTraceabilityMissingFieldCount)} missing)`,
+            },
+            {
+                title: translate('agentWorkspace.runtimeRunbookChecks.annPrefilterLabel', 'ANN prefilter snapshot'),
+                value: `${annPrefilterSelectionMode} (${String(summary.annPrefilterCandidateRatioPct == null ? 0 : summary.annPrefilterCandidateRatioPct)}%, ${annPrefilterBudgetStatus})`,
             },
             {
                 title: translate('agentWorkspace.runtimeRunbookChecks.latestRemediationLabel', 'Latest remediation record'),

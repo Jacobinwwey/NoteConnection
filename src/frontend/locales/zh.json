@@ -670,6 +670,9 @@
       "summary": "运行时验证历史中的重点检查汇总。",
       "metricsHeading": "关键指标",
       "firstCheckAnnIndexSyncLabel": "首个检查的 ANN 同步",
+      "annCircuitLabel": "ANN 熔断快照",
+      "annTraceabilityLabel": "ANN 可追踪性快照",
+      "annPrefilterLabel": "ANN 预筛选快照",
       "trendCountsLabel": "趋势计数（回归/改善/稳定/数据不足）",
       "recommendedFocusLabel": "推荐聚焦原因",
       "recommendedEscalationLabel": "推荐升级级别",
@@ -696,7 +699,10 @@
       "autoFocusApplied": "已应用（{reason}）",
       "autoFocusNotApplied": "未应用",
       "annIndexSyncLabel": "ANN 同步健康度",
-      "annIndexSyncCountsLabel": "ANN 同步计数"
+      "annIndexSyncCountsLabel": "ANN 同步计数",
+      "annCircuitLabel": "ANN 熔断预算",
+      "annTraceabilityLabel": "ANN 可追踪性",
+      "annPrefilterLabel": "ANN 预筛选"
     },
     "runtimeRunbookActionQueue": {
       "cardTitle": "运行时动作队列",

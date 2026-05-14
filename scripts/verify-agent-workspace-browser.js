@@ -2318,6 +2318,15 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (!report.browserChecks.runtimeRunbookVerifyCardTextZh.includes('ANN 同步计数')) {
             failures.push(`runtimeRunbookVerifyCardTextZh='${report.browserChecks.runtimeRunbookVerifyCardTextZh}'`);
         }
+        if (!report.browserChecks.runtimeRunbookVerifyCardTextZh.includes('ANN 熔断预算')) {
+            failures.push(`runtimeRunbookVerifyCardTextZh='${report.browserChecks.runtimeRunbookVerifyCardTextZh}'`);
+        }
+        if (!report.browserChecks.runtimeRunbookVerifyCardTextZh.includes('ANN 可追踪性')) {
+            failures.push(`runtimeRunbookVerifyCardTextZh='${report.browserChecks.runtimeRunbookVerifyCardTextZh}'`);
+        }
+        if (!report.browserChecks.runtimeRunbookVerifyCardTextZh.includes('ANN 预筛选')) {
+            failures.push(`runtimeRunbookVerifyCardTextZh='${report.browserChecks.runtimeRunbookVerifyCardTextZh}'`);
+        }
         if (!report.browserChecks.runtimeRunbookVerifyCardTextZh.includes('query_vector_acceleration_index_sync_health')) {
             failures.push(`runtimeRunbookVerifyCardTextZh='${report.browserChecks.runtimeRunbookVerifyCardTextZh}'`);
         }
@@ -2328,6 +2337,15 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
             failures.push(`runtimeRunbookChecksCardMetricsHeadingZh='${report.browserChecks.runtimeRunbookChecksCardMetricsHeadingZh}'`);
         }
         if (!report.browserChecks.runtimeRunbookChecksCardTextZh.includes('首个检查的 ANN 同步')) {
+            failures.push(`runtimeRunbookChecksCardTextZh='${report.browserChecks.runtimeRunbookChecksCardTextZh}'`);
+        }
+        if (!report.browserChecks.runtimeRunbookChecksCardTextZh.includes('ANN 熔断快照')) {
+            failures.push(`runtimeRunbookChecksCardTextZh='${report.browserChecks.runtimeRunbookChecksCardTextZh}'`);
+        }
+        if (!report.browserChecks.runtimeRunbookChecksCardTextZh.includes('ANN 可追踪性快照')) {
+            failures.push(`runtimeRunbookChecksCardTextZh='${report.browserChecks.runtimeRunbookChecksCardTextZh}'`);
+        }
+        if (!report.browserChecks.runtimeRunbookChecksCardTextZh.includes('ANN 预筛选快照')) {
             failures.push(`runtimeRunbookChecksCardTextZh='${report.browserChecks.runtimeRunbookChecksCardTextZh}'`);
         }
         if (!report.browserChecks.runtimeRunbookChecksCardTextZh.includes('query_vector_acceleration_index_sync_health')) {

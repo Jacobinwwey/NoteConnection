@@ -4,6 +4,9 @@
 
 ### 2026-05-12 HEAD 真实状态重分级
 
+- [x] agent-workspace 的 runbook verify/checks 现已显式暴露 ANN index-sync、熔断、可追踪性、预筛选摘要，action-queue 继续承载 index-sync 事故钻取。
+- [ ] 先把这批新暴露出来的 ANN 治理预算从“可见”推进到“可校准”，再在同一套检查运行在发布级 graphdb/ANN 基线之上后，把新的 Phase-2 诊断面升级为发布级门禁。
+
 - [x] agent-workspace 的 browser/runtime/Tauri 验证闭环已经是真实状态。
 - [x] tutor telemetry、tutor trace/provider trend、conversation memory、memory-policy diagnostics 已有真实后端实现。
 - [x] `src/learning/KnowledgeLearningPlatform.ts` 中的 query-backend comparison/history/trend、staleness diagnostics/rebuild planning、learning-quality history/trend、session-plan quality evaluate/history/trend/runtime-threshold diagnostics、query-backend config、query-backend diagnostics 已全部接通真实实现。

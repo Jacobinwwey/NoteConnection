@@ -12,9 +12,9 @@
   - `src/learning/queryBackend.ts` / `src/learning/vectorAccelerationAdapter.ts` 现已具备 ANN 风格 prefilter、representation telemetry、circuit health、远端索引同步，以及 live `external_http` connector 证明，
   - runtime capability / runbook 治理也已新增显式的 ANN 远端索引同步健康度检查（`query_vector_acceleration_index_sync_health`），与 prefilter、health、traceability、circuit 并列，
   - `server.ts` 现已补齐对应的 operator 闭环：该 sync-health 门禁已经进入 verification escalation、remediation action queue、以及 per-check runbook history summary，
-  - agent workspace 的 runtime-runbook verify/checks/action-queue 卡片现在都会渲染 ANN sync-health 指标，运维侧不必再翻 raw JSON 才能看到这条门禁，
+  - agent workspace 的 runtime-runbook 前端面现已把面向运维的 ANN 治理直接前推到壳层：verify/checks 不仅能看到 sync-health，还能看到熔断预算、可追踪性、预筛选摘要；action-queue 则继续承载 index-sync 事故钻取，
   - modular `src/routes/knowledge.ts` 的 runtime-runbook 路由面现在也会委托到真实 server 侧 runbook ops，并完整透传 query 参数，因此浏览器/运行时消费者不再命中旧的 KLP placeholder verify/history/checks/action-queue/remediation/schedule 响应，
-  - 浏览器 strict smoke 现在也会用真实浏览器证据证明这批 ANN runbook 面：verify 卡的 ANN health/counts、checks 卡的首个检查 ANN sync，以及 action-queue 的 index-sync 钻取都已纳入端到端断言，而不再只停留在组件测试层，
+  - 浏览器 strict smoke 现在也会用真实浏览器证据证明这批 ANN runbook 面：verify 卡的 ANN sync/熔断/可追踪性/预筛选内容、checks 卡的首个检查 ANN sync 加熔断/可追踪性/预筛选快照，以及 action-queue 的 index-sync 钻取都已纳入端到端断言，而不再只停留在组件测试层，
   - agent workspace 的 locale 治理现在也更严了：双语 locale bundle 已补齐 strict browser smoke 实际触达的 query/quality/runbook 卡片文案，`src/agent_workspace.locale.contract.test.ts` 会阻断源码引用的 `agentWorkspace.*` key 漂移，而启动期 `translate()` 也不再在 locale 初始化完成前发出误报式 missing-key warning，
   - `src/learning/KnowledgeLearningPlatform.ts` 中的 Phase-2 运行时诊断面已接通真实实现，包括 query-backend comparison/history/trend、knowledge staleness diagnostics/rebuild planning、learning-quality history/trend、session-plan quality evaluate/history/trend/runtime-threshold diagnostics、query-backend config、query-backend diagnostics，
   - Phase-3 的导师/记忆诊断仍为真实实现，且 `src/server.ts` 现已注入默认激活态 tutor adapter，正常 server 路径可直接产出 adapter telemetry。
@@ -26,8 +26,9 @@
 - 因此当前活跃重心不是“默认认为 Phase-1 已完成然后推进上层”，而是：
   1. 先补完 embedded graph backend 基线剩余的 packaged/runtime + 更重工作负载闭环，
   2. 补完当前 live ANN connector baseline 的工作负载与阈值闭环，
-  3. 让这批新诊断面始终与同一份运行时真相保持一致，
-  4. 只有在 graph/ANN 基线达到发布级后，才把 Phase-2 / Phase-3 门禁升级为发布级结论。
+  3. 把当前已前推到 runbook 卡片中的 ANN 指标可见性，继续推进为带工作负载校准的发布级门禁，
+  4. 让这批新诊断面始终与同一份运行时真相保持一致，
+  5. 只有在 graph/ANN 基线达到发布级后，才把 Phase-2 / Phase-3 门禁升级为发布级结论。
 
 ## 2026-05-12 当前架构体量
 
@@ -59,12 +60,12 @@
   - `docs/zh/TEST_REPORT.md`
 - 归档或历史清单仅用于追溯，不作为当前发布闸门的权威来源。
 
-## 2026-05-10 Phase-1 收口更新
+## 2026-05-10 Phase-1 收口更新（历史记录，已被 2026-05-12 HEAD 现实校准覆盖）
 
-- Phase-1 的 A8/A9 底座加固已完成实现收口：
+- 下列记录仅表示当时已经完成的实现增量，不再代表当前 HEAD 的发布级门禁结论：
   - 图后端适配器路径已具备 HTTP 操作级语义（`getNode/queryNodes/queryEdges/findPath`）并接入运行时诊断可追溯。
   - ANN 连接器加固已落地候选归一化、表示一致性遥测传递与 prefilter 有效性信号。
-- 当前活跃执行重心切换到 Phase 2 的质量门禁推进（掌握闭环 + 发散回路效果）。
+- 当前权威口径请回到本页顶部的“2026-05-12 HEAD 现实校准”，不要把本段历史记录解读为 A8/A9 已经发布级闭环。
 
 ## 范围
 
@@ -117,7 +118,7 @@
 - CI 已在 `.github/workflows/migration-gates.yml` 接入常态化 strict 桌面证据作业（`agent-workspace-tauri-strict-evidence`），会在 Linux 宿主安装 `javascriptcoregtk-4.1` / `libsoup-3.0` 依赖后执行 `verify:agent-workspace:tauri:rust:strict` 与 `verify:agent-workspace:tauri:window-evidence:strict`；release 流程 `.github/workflows/release-desktop-multi-os.yml` 也已在 Linux 桌面构建路径接入同等 strict 证据门禁（在 bundle 产物构建前执行）；两条流程会额外生成 strict 证据索引（`verify:agent-workspace:tauri:evidence:index:strict`）、执行 strict 证据清单门禁（`verify:agent-workspace:tauri:evidence:manifest:strict`），并上传 tauri 证据工件用于审计追溯（保留期固定 30 天），同时 Linux release 链路会将 `release-fragment-latest.md` 通过 marker 幂等 upsert 写入 GitHub Release notes，
 - `migration-gates` 现已新增常态化 `agent-workspace-contract-gates` 作业：执行 `test:agent-workspace:contracts`（parity/frontend/tauri 三类契约套件）与 `test:conversation-turn-cache:durability`（turn-cache trend index/export 跨重启一致性检查），用于补齐 agent-workspace 合同演进的 CI 漂移阻断能力，
 - 协议治理已新增许可证一致性门禁：`test:license:contract` 会校验 `LICENSE`、`README`、`package.json`、`src-tauri/Cargo.toml` 在主线持续保持 `GPL-3.0-only`，并已接入 `migration-gates` CI 作业，
-- browser smoke 已覆盖真实 `conversation/path/query-compare/quality/session/runbook` 后端切片（含 trend + history 诊断，以及 runbook verify/checks/action-queue）、真实 graph runtime、真实 path runtime，并会在输出 screenshot / console / network-summary 证据前，先断言 verify/checks/action-queue 卡片中的 ANN sync-health 内容已经真实渲染（`scripts/verify-agent-workspace-browser.js`、`src/agent_workspace.browser.contract.test.ts`），
+- browser smoke 已覆盖真实 `conversation/path/query-compare/quality/session/runbook` 后端切片（含 trend + history 诊断，以及 runbook verify/checks/action-queue）、真实 graph runtime、真实 path runtime，并会在输出 screenshot / console / network-summary 证据前，先断言 verify/checks 中的 ANN sync-health + 熔断/可追踪性/预筛选内容，以及 action-queue 的 index-sync 钻取都已经真实渲染（`scripts/verify-agent-workspace-browser.js`、`src/agent_workspace.browser.contract.test.ts`），
 - scoped conversation-memory 基线已完成端到端接线（typed contract、后端 normalizer/route、前端 operation registry、双语键、生命周期测试、runtime/browser 验证），端点为 `/api/knowledge/conversation-memory/{list,add,search,delete,feedback}`（`src/learning/api.ts`、`src/learning/types.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/server.ts`、`src/frontend/agent_workspace.js`、`src/knowledge.api.contract.test.ts`、`src/learning/KnowledgeLearningPlatform.test.ts`、`src/agent_workspace.frontend.test.ts`），
 - unified turn streaming 最小基线已落地：在 `/api/knowledge/conversation` 上通过 `Accept: text/event-stream` 协商输出事件流（`turn_started`/`capability_planned`/`capability_progress`/`capability_result`/`turn_completed`/`turn_failed`），前端采用 stream-first 并保留同步 JSON fallback（`src/server.ts`、`src/frontend/agent_workspace.js`、`src/knowledge.api.contract.test.ts`、`src/agent_workspace.frontend.test.ts`），
 - M8.2 恢复语义已落地：前端在 stream-first 与 sync fallback 间透传统一 `turnId`，`/api/knowledge/conversation` 已新增 turn 级重放窗口与去重/冲突保护（`turn_id_conflict`），中断后重试可回放缓存事件而不重复执行回合（`src/server.ts`、`src/frontend/agent_workspace.js`、`src/knowledge.api.contract.test.ts`、`src/agent_workspace.frontend.test.ts`），
@@ -140,9 +141,10 @@
 - M10 的 rollout profile 运维可观测性已打通：运行时 payload 新增 `rolloutProfile`（store/vector 严格度 + 聚合模式），`runtime-capability-matrix` 与 runbook/verify/history/history-checks/action-queue/remediation-history/replay-schedule 端点（含 remediation POST：`event`/`replay`/`schedule`/`tick`）同步回传该 profile；learning workbench runtime 摘要新增 `rollout=<mode>(...)` 提示，并已补齐集成/契约/前端行为测试覆盖（`src/server.ts`、`src/notemd.server.integration.test.ts`、`src/knowledge.api.contract.test.ts`、`src/frontend/path_app.js`、`src/path_app.runtime_trace_filter.behavior.test.ts`），
 - 旧的全局 Path Mode 入口在切入整屏路径工作区前会先释放停靠 pane，避免两条入口互相踩状态（`src/frontend/app.js`）。
 
-## 最新验证快照（2026-05-12）
+## 最新验证快照（2026-05-14）
 
-- 当前 Windows 宿主已通过：`npm run test:agent-workspace:contracts`、`npm run verify:agent-workspace:runtime`、`npm run verify:agent-workspace:browser`、`NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_STRICT=1 node scripts/verify-agent-workspace-browser.js`、`NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1 node scripts/verify-agent-workspace-browser.js`、`NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_DYNAMIC_STRICT=1 node scripts/verify-agent-workspace-browser.js`、`npm run verify:agent-workspace:tauri`、`node node_modules/jest/bin/jest.js src/source_manager.loadflow.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts --runInBand --no-cache`、`npm run verify:sidecar:supply`、`npm test -- src/knowledge.api.contract.test.ts --runInBand`、`npm run docs:diataxis:check`、`npm run docs:site:build`。
+- 本轮已在当前 Windows 宿主重新确认通过：`node node_modules/jest/bin/jest.js src/agent_workspace.frontend.test.ts --runInBand --no-cache`、`npm run test:agent-workspace:contracts`、`npm run build:with-vite`、`npm run docs:diataxis:check`、`npm run docs:site:build`、`NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_DYNAMIC_STRICT=1 node scripts/verify-agent-workspace-browser.js`。
+- 严格浏览器证据现在已显式校验本轮新增的双语 runtime-runbook verify/checks ANN 治理标签：不仅验证 sync-health，也验证熔断、可追踪性、预筛选摘要。
 - Tauri strict 证据链在实现层面已经闭环，但仍受宿主依赖约束：
   - 当前 Windows 宿主已经证明 non-strict tauri/runtime 行为与 load-flow parity，
   - Linux strict 证据命令（`verify:agent-workspace:tauri:rust:strict`、`verify:agent-workspace:tauri:window-evidence:strict` 及 strict evidence index/manifest）仍要求宿主预装 `webkit2gtk-4.1`、`javascriptcoregtk-4.1`、`libsoup-3.0`。
@@ -179,7 +181,7 @@
 | L2 检索层 | 证据优先、可解释检索 | `local_hybrid` / `keyword_only` / `local_vector` 已实现，并回传检索模式权重；`local_vector` 已落地 ANN 风格预筛选基线（`ann_prefilter`）且可自动回退全量扫描，并具备 live sync-backed `external_http` 加速路径；默认 graph store 基线现已是 embedded `graphdb/sqlite` 且具备重启耐久性证明 | 继续把剩余底座缺口写实：graphdb 仍需 packaged/runtime + 更重工作负载级加固，ANN 仍需补齐 rollout 阈值与更大工作负载验证 |
 | L3 学习层 | 掌握诊断 + 动作编排 | 掌握诊断、误区汇总、双路径推荐、会话执行流水线，以及 live 的 quality/session-plan trend 运行面均已实现 | 在发布级 graphdb/ANN 基线上校准这些已接通的学习效果指标，再谈 Phase-2 硬门禁 |
 | L4 交互层 | 工作台统一操作与诊断 | Learning Workbench 已接入会话、质量、runbook、trace 诊断，已支持可配置整改回放控制（`replayMode`、`replayLimit`、`dryRun`、`replaySelectionPolicy`、`replayMinRiskRatioPct`）与调度编排控制（`enabled`、`intervalMinutes`、`triggerPolicy`、阈值）并持久化工作台偏好。当前分支还已落入第一版 host-owned agent workspace shell、停靠式 conversation action、现有 path runtime 的 learning-path-pane 嵌入挂载、graph workspace 级 focus fullscreen promotion、双语壳层覆盖、真实 backend + 真实 graph/path runtime 的 browser smoke 与证据产物、首条真实 app/window handle 生命周期证据路径、`migration-gates` 中的 CI strict 桌面证据常态化作业、`release-desktop-multi-os` 中 Linux 路径 strict 证据门禁、`/api/knowledge/conversation` 上 accept 协商的 SSE 回合流基线、可重放的 turnId 幂等恢复语义、可观测的 turn 缓存诊断与可调参数（`/api/knowledge/conversation/turn-cache/diagnostics` + TTL/容量 env 调参）、阈值化告警治理（汇总状态 + 策略检查 + 阈值画像）、以及告警趋势/历史与升级治理（`/api/knowledge/conversation/turn-cache/diagnostics/trend` + 采样/窗口/streak 策略可调），并已补齐显式 index/export operator 能力动作（`inspect_conversation_turn_cache_alert_trend_index` / `inspect_conversation_turn_cache_alert_trend_export`）、replay-schedule 建议遥测（`telemetry.recommendations`）、策略模板遥测（`telemetry.policyTemplates`）、配置期模板套用（`policyTemplate`）、自动执行安全门禁与诊断（`config.autoExecution`、`telemetry.autoExecution`、parity/blocker 决策语义）以及建议/模板驱动状态文案；并已具备可执行 conversation contract：覆盖 `focus`、`learning path`、tutor 侧 `generate_quiz` / `recap` / `generate_transfer` / `generate_counterexample` / `follow_up`、query 侧 `compare_query_backends` / `inspect_query_backend_diagnostics` / `inspect_query_backend_comparison_history` / `inspect_query_backend_comparison_trend`、导师诊断侧 `inspect_tutor_adapter_telemetry` / `inspect_tutor_trace_diagnostics`、质量/会话诊断侧 `inspect_learning_quality_trend` / `inspect_learning_quality_history` / `inspect_session_plan_quality_trend` / `inspect_session_plan_quality_history`、session 侧 `inspect_session_history` / `build_study_session`、对话记忆召回 `inspect_conversation_memory`、以及 turn-cache operator 诊断 `inspect_conversation_turn_cache_diagnostics` / `inspect_conversation_turn_cache_alert_trend`，同时已具备结构化 `conversation_turn_cache_diagnostics_card` / `conversation_turn_cache_alert_trend_card` / `query_backend_comparison_card` / `query_backend_diagnostics_card` / `query_backend_comparison_history_card` / `query_backend_comparison_trend_card` / `tutor_adapter_telemetry_card` / `tutor_trace_diagnostics_card` / `learning_quality_trend_card` / `learning_quality_history_card` / `session_plan_quality_trend_card` / `session_plan_quality_history_card` / `session_history_card` / `study_session_card` / `tutor_action_card` / `assistant_message` 结果呈现。该交互契约已完成 typed-only 收敛（统一使用 `capabilities`），legacy `availableActions` fallback 已从后端与前端主路径移除。 | 持续维持 strict 证据工件治理健康度，但不要把这批 observability/card 能力误写成“发布级闭环”，只因为它们的后端已不再是 placeholder |
-| L5 治理层 | 运行时检查、趋势门禁、整改闭环 | runtime capability matrix + runbook + remediation event 已实现，包含 `query_backend_runtime_health`、`query_vector_index_*`、`store_graphdb_connector_health` 与 `query_vector_acceleration_mode`/`query_vector_acceleration_index_sync_health`/`query_vector_acceleration_health`/`query_vector_acceleration_prefilter_effectiveness`/`query_vector_acceleration_traceability`/`query_vector_acceleration_circuit_state` 检查；其中 circuit-state 已升级为阈值驱动（短路计数/比例、连续失败、半开探测成功率），prefilter-effectiveness 则用于识别代表性流量下 ANN 长期回退 `full_scan` 的失效场景 | 强化阈值校准与故障回放自动化，并把治理升级严格绑定到发布级 graph/ANN 基线之上 |
+| L5 治理层 | 运行时检查、趋势门禁、整改闭环 | runtime capability matrix + runbook + remediation event 已实现，包含 `query_backend_runtime_health`、`query_vector_index_*`、`store_graphdb_connector_health` 与 `query_vector_acceleration_mode`/`query_vector_acceleration_index_sync_health`/`query_vector_acceleration_health`/`query_vector_acceleration_prefilter_effectiveness`/`query_vector_acceleration_traceability`/`query_vector_acceleration_circuit_state` 检查；其中 circuit-state 已升级为阈值驱动（短路计数/比例、连续失败、半开探测成功率），prefilter-effectiveness 则用于识别代表性流量下 ANN 长期回退 `full_scan` 的失效场景，且前端 verify/checks 卡片现已直接暴露 sync/circuit/traceability/prefilter 摘要 | 强化阈值校准与故障回放自动化，并把治理升级严格绑定到发布级 graph/ANN 基线之上 |
 
 ## 架构重构状态（2026-05-05，最终）
 

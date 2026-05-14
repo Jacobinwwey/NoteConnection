@@ -31,6 +31,30 @@
 - [x] `npm run build:sidecar`
   - 通过（当 `pkg` 对当前依赖图要求 bytecode 时，会自动回退到不带 `--no-bytecode` 的重试路径）
 
+### Phase 2 验证刷新（2026-05-14）
+
+- [x] `node node_modules/jest/bin/jest.js src/agent_workspace.frontend.test.ts --runInBand --no-cache`
+  - 通过
+- [x] `npm run test:agent-workspace:contracts`
+  - 通过
+- [x] `npm run build:with-vite`
+  - 通过
+- [x] `npm run docs:diataxis:check`
+  - 通过
+- [x] `npm run docs:site:build`
+  - 通过（仍存在既有 MkDocs nav/link warning）
+- [x] `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_DYNAMIC_STRICT=1 node scripts/verify-agent-workspace-browser.js`
+  - 通过
+
+### 这轮刷新新增证明了什么
+
+1. Phase-2 的 ANN 治理切片现已从“后端 JSON 可见”推进到“前端 runbook 壳层可见”：
+   - verify/checks 现在都会展示 ANN sync-health、熔断预算、可追踪性、预筛选摘要，
+   - action-queue 继续承载 index-sync 事故钻取。
+2. 这轮刷新仍然**不等于**发布级 Phase-2 闭环：
+   - 它闭合的是新 ANN 治理摘要的可见性与 browser/runtime 证明，
+   - 并**没有**闭合这些预算的工作负载/阈值校准。
+
 ### 这些通过项实际证明了什么
 
 1. Phase-3 的 tutor/memory 切片已经真实落地于：

@@ -31,6 +31,30 @@
 - [x] `npm run build:sidecar`
   - PASS (with automatic retry without `--no-bytecode` when `pkg` requires bytecode for the current dependency graph)
 
+### Phase 2 Verification Refresh (2026-05-14)
+
+- [x] `node node_modules/jest/bin/jest.js src/agent_workspace.frontend.test.ts --runInBand --no-cache`
+  - PASS
+- [x] `npm run test:agent-workspace:contracts`
+  - PASS
+- [x] `npm run build:with-vite`
+  - PASS
+- [x] `npm run docs:diataxis:check`
+  - PASS
+- [x] `npm run docs:site:build`
+  - PASS (existing MkDocs nav/link warnings remain)
+- [x] `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_DYNAMIC_STRICT=1 node scripts/verify-agent-workspace-browser.js`
+  - PASS
+
+### What This Refresh Adds
+
+1. The Phase-2 ANN governance slice is now operator-visible through the frontend runbook shell, not only backend JSON:
+   - verify/checks now surface ANN sync-health, circuit-budget, traceability, and prefilter summaries,
+   - action-queue continues to carry the index-sync incident drilldown.
+2. This refresh still does **not** prove release-grade Phase-2 closure:
+   - it closes visibility and browser/runtime proof for the new ANN governance summaries,
+   - it does **not** close workload/threshold calibration for those budgets.
+
 ### What These Passes Prove
 
 1. The Phase-3 tutor/memory slice is now real for:

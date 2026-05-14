@@ -3474,7 +3474,10 @@ async function replayRuntimeRunbookVerificationForCheck(input: {
         trendStatus: RuntimeRunbookRemediationEventTrendStatus;
         riskRatioPct: number;
     };
+    queryVectorAccelerationCircuitBudget: RuntimeRunbookVectorAccelerationCircuitBudgetSummary | null;
     queryVectorAccelerationIndexSyncHealth: RuntimeRunbookVectorAccelerationIndexSyncHealthSummary | null;
+    queryVectorAccelerationTraceability: RuntimeRunbookVectorAccelerationTraceabilitySummary | null;
+    queryVectorAccelerationPrefilter: RuntimeRunbookVectorAccelerationPrefilterSummary | null;
     verificationTargets: string[];
     traceSummary: {
         returnedRecords: number;
@@ -3580,7 +3583,16 @@ async function replayRuntimeRunbookVerificationForCheck(input: {
         source: '',
         limit: 200,
     });
+    const queryVectorAccelerationCircuitBudget = buildRuntimeRunbookVectorAccelerationCircuitBudgetSummary(
+        runtimePayload.runtimeCapabilityMatrix
+    );
     const queryVectorAccelerationIndexSyncHealth = buildRuntimeRunbookVectorAccelerationIndexSyncHealthSummary(
+        runtimePayload.runtimeCapabilityMatrix
+    );
+    const queryVectorAccelerationTraceability = buildRuntimeRunbookVectorAccelerationTraceabilitySummary(
+        runtimePayload.runtimeCapabilityMatrix
+    );
+    const queryVectorAccelerationPrefilter = buildRuntimeRunbookVectorAccelerationPrefilterSummary(
         runtimePayload.runtimeCapabilityMatrix
     );
     return {
@@ -3613,9 +3625,10 @@ async function replayRuntimeRunbookVerificationForCheck(input: {
             trendStatus: selectedCheckRemediation.trendStatus,
             riskRatioPct: Number(Number(selectedCheckRemediation.riskRatioPct || 0).toFixed(4)),
         },
-        queryVectorAccelerationIndexSyncHealth: resolvedCheckId === 'query_vector_acceleration_index_sync_health'
-            ? queryVectorAccelerationIndexSyncHealth
-            : null,
+        queryVectorAccelerationCircuitBudget,
+        queryVectorAccelerationIndexSyncHealth,
+        queryVectorAccelerationTraceability,
+        queryVectorAccelerationPrefilter,
         verificationTargets: Array.isArray(runbook.verificationTargets)
             ? runbook.verificationTargets
                 .map((item) => String(item || '').replace(/\s+/g, ' ').trim())

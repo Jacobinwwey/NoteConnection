@@ -670,6 +670,9 @@
       "summary": "Focused check rollup from runtime verification history.",
       "metricsHeading": "Key Metrics",
       "firstCheckAnnIndexSyncLabel": "First check ANN sync",
+      "annCircuitLabel": "ANN circuit snapshot",
+      "annTraceabilityLabel": "ANN traceability snapshot",
+      "annPrefilterLabel": "ANN prefilter snapshot",
       "trendCountsLabel": "Trend counts (regressing/improving/stable/insufficient)",
       "recommendedFocusLabel": "Recommended focus reason",
       "recommendedEscalationLabel": "Recommended escalation",
@@ -696,7 +699,10 @@
       "autoFocusApplied": "applied ({reason})",
       "autoFocusNotApplied": "not applied",
       "annIndexSyncLabel": "ANN sync health",
-      "annIndexSyncCountsLabel": "ANN sync counts"
+      "annIndexSyncCountsLabel": "ANN sync counts",
+      "annCircuitLabel": "ANN circuit budget",
+      "annTraceabilityLabel": "ANN traceability",
+      "annPrefilterLabel": "ANN prefilter"
     },
     "runtimeRunbookActionQueue": {
       "cardTitle": "Runtime Action Queue",

@@ -260,6 +260,9 @@ function createI18nStub() {
             'agentWorkspace.runtimeRunbookVerify.firstEscalationActionLabel': 'Top escalation action',
             'agentWorkspace.runtimeRunbookVerify.annIndexSyncLabel': 'ANN sync health',
             'agentWorkspace.runtimeRunbookVerify.annIndexSyncCountsLabel': 'ANN sync counts',
+            'agentWorkspace.runtimeRunbookVerify.annCircuitLabel': 'ANN circuit budget',
+            'agentWorkspace.runtimeRunbookVerify.annTraceabilityLabel': 'ANN traceability',
+            'agentWorkspace.runtimeRunbookVerify.annPrefilterLabel': 'ANN prefilter',
             'agentWorkspace.runtimeRunbookVerify.autoFocusApplied': 'applied ({reason})',
             'agentWorkspace.runtimeRunbookVerify.autoFocusNotApplied': 'not applied',
             'agentWorkspace.runtimeRunbookVerify.none': 'none',
@@ -277,6 +280,10 @@ function createI18nStub() {
             'agentWorkspace.runtimeRunbookChecks.cardTitle': 'Runtime Runbook Checks',
             'agentWorkspace.runtimeRunbookChecks.summary': '{returnedChecks}/{matchedRecords} checks in {sinceMinutes} minutes; recommended focus {recommendedFocusCheckId}.',
             'agentWorkspace.runtimeRunbookChecks.metricsHeading': 'Key Metrics',
+            'agentWorkspace.runtimeRunbookChecks.firstCheckAnnIndexSyncLabel': 'First check ANN sync',
+            'agentWorkspace.runtimeRunbookChecks.annCircuitLabel': 'ANN circuit snapshot',
+            'agentWorkspace.runtimeRunbookChecks.annTraceabilityLabel': 'ANN traceability snapshot',
+            'agentWorkspace.runtimeRunbookChecks.annPrefilterLabel': 'ANN prefilter snapshot',
             'agentWorkspace.runtimeRunbookChecks.trendCountsLabel': 'Trend counts (regressing/improving/stable/insufficient)',
             'agentWorkspace.runtimeRunbookChecks.recommendedFocusLabel': 'Recommended focus reason',
             'agentWorkspace.runtimeRunbookChecks.recommendedEscalationLabel': 'Recommended escalation',
@@ -556,6 +563,9 @@ function createI18nStub() {
             'agentWorkspace.runtimeRunbookVerify.firstEscalationActionLabel': '首要升级动作',
             'agentWorkspace.runtimeRunbookVerify.annIndexSyncLabel': 'ANN 同步健康度',
             'agentWorkspace.runtimeRunbookVerify.annIndexSyncCountsLabel': 'ANN 同步计数',
+            'agentWorkspace.runtimeRunbookVerify.annCircuitLabel': 'ANN 熔断预算',
+            'agentWorkspace.runtimeRunbookVerify.annTraceabilityLabel': 'ANN 可追踪性',
+            'agentWorkspace.runtimeRunbookVerify.annPrefilterLabel': 'ANN 预筛选',
             'agentWorkspace.runtimeRunbookVerify.autoFocusApplied': '已应用（{reason}）',
             'agentWorkspace.runtimeRunbookVerify.autoFocusNotApplied': '未应用',
             'agentWorkspace.runtimeRunbookVerify.none': '无',
@@ -573,6 +583,10 @@ function createI18nStub() {
             'agentWorkspace.runtimeRunbookChecks.cardTitle': '运行时 Runbook 检查',
             'agentWorkspace.runtimeRunbookChecks.summary': '{sinceMinutes} 分钟内检查 {returnedChecks}/{matchedRecords}；推荐聚焦 {recommendedFocusCheckId}。',
             'agentWorkspace.runtimeRunbookChecks.metricsHeading': '关键指标',
+            'agentWorkspace.runtimeRunbookChecks.firstCheckAnnIndexSyncLabel': '首个检查的 ANN 同步',
+            'agentWorkspace.runtimeRunbookChecks.annCircuitLabel': 'ANN 熔断快照',
+            'agentWorkspace.runtimeRunbookChecks.annTraceabilityLabel': 'ANN 可追踪性快照',
+            'agentWorkspace.runtimeRunbookChecks.annPrefilterLabel': 'ANN 预筛选快照',
             'agentWorkspace.runtimeRunbookChecks.trendCountsLabel': '趋势计数（回归/改善/稳定/数据不足）',
             'agentWorkspace.runtimeRunbookChecks.recommendedFocusLabel': '推荐聚焦原因',
             'agentWorkspace.runtimeRunbookChecks.recommendedEscalationLabel': '推荐升级级别',
@@ -1835,6 +1849,26 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                             syncedAtomCount: 128,
                             lastSyncAt: '2026-04-12T00:00:00.000Z',
                         },
+                        queryVectorAccelerationCircuitBudget: {
+                            checkId: 'query_vector_acceleration_circuit_state',
+                            healthStatus: 'degraded',
+                            circuitState: 'half_open',
+                            shortCircuitRatioPct: 12.5,
+                            budgetStatus: 'warn',
+                        },
+                        queryVectorAccelerationTraceability: {
+                            checkId: 'query_vector_acceleration_traceability',
+                            correlationCoverage: 'partial',
+                            missingFields: ['lastErrorCode'],
+                            lastRequestId: 'connector-req-42',
+                        },
+                        queryVectorAccelerationPrefilter: {
+                            checkId: 'query_vector_acceleration_prefilter_effectiveness',
+                            selectionMode: 'token_signature_prefilter',
+                            candidateRatioPct: 24.5,
+                            budgetStatus: 'ok',
+                            fullScanFallback: false,
+                        },
                         selectedCheckEscalation: 'watch',
                         selectedCheckEscalationActions: [
                             'Update preferred mode to auto and verify provider trend convergence.',
@@ -1874,6 +1908,23 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                             queryVectorAccelerationIndexSyncRequestCount: 3,
                             queryVectorAccelerationIndexSyncSuccessCount: 3,
                             queryVectorAccelerationIndexSyncFailureCount: 0,
+                            queryVectorAccelerationCircuitBudget: {
+                                checkId: 'query_vector_acceleration_circuit_state',
+                                circuitState: 'closed',
+                                shortCircuitRatioPct: 4.5,
+                                budgetStatus: 'ok',
+                            },
+                            queryVectorAccelerationTraceability: {
+                                checkId: 'query_vector_acceleration_traceability',
+                                correlationCoverage: 'full',
+                                missingFields: [],
+                            },
+                            queryVectorAccelerationPrefilter: {
+                                checkId: 'query_vector_acceleration_prefilter_effectiveness',
+                                selectionMode: 'token_signature_prefilter',
+                                candidateRatioPct: 18.2,
+                                budgetStatus: 'ok',
+                            },
                         },
                         checks: [
                             {
@@ -3851,6 +3902,12 @@ describe('agent workspace learning-path integration', () => {
         expect(card?.textContent).toContain('Top risk check');
         expect(card?.textContent).toContain('ANN sync health');
         expect(card?.textContent).toContain('ready');
+        expect(card?.textContent).toContain('ANN circuit budget');
+        expect(card?.textContent).toContain('half_open');
+        expect(card?.textContent).toContain('ANN traceability');
+        expect(card?.textContent).toContain('partial');
+        expect(card?.textContent).toContain('ANN prefilter');
+        expect(card?.textContent).toContain('token_signature_prefilter');
     });
 
     test('executes runtime runbook history capabilities through the generic knowledge operation path', async () => {
@@ -3945,6 +4002,12 @@ describe('agent workspace learning-path integration', () => {
         expect(card?.textContent).toContain('Trend counts');
         expect(card?.textContent).toContain('First check ANN sync');
         expect(card?.textContent).toContain('ready');
+        expect(card?.textContent).toContain('ANN circuit snapshot');
+        expect(card?.textContent).toContain('closed');
+        expect(card?.textContent).toContain('ANN traceability snapshot');
+        expect(card?.textContent).toContain('full');
+        expect(card?.textContent).toContain('ANN prefilter snapshot');
+        expect(card?.textContent).toContain('token_signature_prefilter');
     });
 
     test('renders runtime runbook checks cards when index-sync health telemetry is null', async () => {

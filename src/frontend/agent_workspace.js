@@ -2058,8 +2058,17 @@
         const selectedCheckRemediation = result && typeof result.selectedCheckRemediation === 'object'
             ? result.selectedCheckRemediation
             : {};
+        const circuitBudget = result && result.queryVectorAccelerationCircuitBudget && typeof result.queryVectorAccelerationCircuitBudget === 'object'
+            ? result.queryVectorAccelerationCircuitBudget
+            : {};
         const indexSyncHealth = result && result.queryVectorAccelerationIndexSyncHealth && typeof result.queryVectorAccelerationIndexSyncHealth === 'object'
             ? result.queryVectorAccelerationIndexSyncHealth
+            : {};
+        const traceability = result && result.queryVectorAccelerationTraceability && typeof result.queryVectorAccelerationTraceability === 'object'
+            ? result.queryVectorAccelerationTraceability
+            : {};
+        const prefilter = result && result.queryVectorAccelerationPrefilter && typeof result.queryVectorAccelerationPrefilter === 'object'
+            ? result.queryVectorAccelerationPrefilter
             : {};
         const escalationActions = Array.isArray(result && result.selectedCheckEscalationActions)
             ? result.selectedCheckEscalationActions
@@ -2107,6 +2116,10 @@
                 : 0,
             historyTrendStatus: String(selectedCheckHistory.trendStatus || '').trim() || 'insufficient_data',
             remediationRiskRatioPct: Number(Number(selectedCheckRemediation.riskRatioPct || 0).toFixed(4)),
+            annCircuitHealthStatus: String(circuitBudget.healthStatus || '').trim(),
+            annCircuitState: String(circuitBudget.circuitState || '').trim(),
+            annCircuitBudgetStatus: String(circuitBudget.budgetStatus || '').trim(),
+            annCircuitShortCircuitRatioPct: Number(Number(circuitBudget.shortCircuitRatioPct || 0).toFixed(4)),
             annIndexSyncStatus: String(indexSyncHealth.indexSyncStatus || '').trim(),
             annIndexSyncMessage: String(indexSyncHealth.indexSyncMessage || '').trim(),
             annIndexSyncRequestCount: Number.isFinite(Number(indexSyncHealth.syncRequestCount))
@@ -2122,6 +2135,17 @@
                 ? Number(indexSyncHealth.syncedAtomCount)
                 : 0,
             annIndexLastSyncAt: String(indexSyncHealth.lastSyncAt || '').trim(),
+            annTraceabilityCoverage: String(traceability.correlationCoverage || '').trim(),
+            annTraceabilityMissingFields: Array.isArray(traceability.missingFields)
+                ? traceability.missingFields
+                    .map((item) => String(item || '').trim())
+                    .filter(Boolean)
+                : [],
+            annTraceabilityLastRequestId: String(traceability.lastRequestId || '').trim(),
+            annPrefilterSelectionMode: String(prefilter.selectionMode || '').trim(),
+            annPrefilterBudgetStatus: String(prefilter.budgetStatus || '').trim(),
+            annPrefilterCandidateRatioPct: Number(Number(prefilter.candidateRatioPct || 0).toFixed(4)),
+            annPrefilterFullScanFallback: Boolean(prefilter.fullScanFallback),
         };
     }
 
@@ -2186,8 +2210,17 @@
             ? result.checks
             : [];
         const firstCheck = checks.length > 0 ? checks[0] : null;
+        const circuitBudget = summary && summary.queryVectorAccelerationCircuitBudget && typeof summary.queryVectorAccelerationCircuitBudget === 'object'
+            ? summary.queryVectorAccelerationCircuitBudget
+            : {};
         const firstCheckIndexSyncHealth = firstCheck && firstCheck.queryVectorAccelerationIndexSyncHealth && typeof firstCheck.queryVectorAccelerationIndexSyncHealth === 'object'
             ? firstCheck.queryVectorAccelerationIndexSyncHealth
+            : {};
+        const traceability = summary && summary.queryVectorAccelerationTraceability && typeof summary.queryVectorAccelerationTraceability === 'object'
+            ? summary.queryVectorAccelerationTraceability
+            : {};
+        const prefilter = summary && summary.queryVectorAccelerationPrefilter && typeof summary.queryVectorAccelerationPrefilter === 'object'
+            ? summary.queryVectorAccelerationPrefilter
             : {};
         return {
             totalRecords: Number.isFinite(Number(summary.totalRecords))
@@ -2237,6 +2270,16 @@
             firstCheckTrendStatus: String(firstCheck && firstCheck.trendStatus || '').trim(),
             firstCheckAnnIndexSyncStatus: String(firstCheckIndexSyncHealth.indexSyncStatus || '').trim(),
             firstCheckAnnIndexSyncCounts: `${Number.isFinite(Number(firstCheckIndexSyncHealth.syncRequestCount)) ? Number(firstCheckIndexSyncHealth.syncRequestCount) : 0}/${Number.isFinite(Number(firstCheckIndexSyncHealth.syncSuccessCount)) ? Number(firstCheckIndexSyncHealth.syncSuccessCount) : 0}/${Number.isFinite(Number(firstCheckIndexSyncHealth.syncFailureCount)) ? Number(firstCheckIndexSyncHealth.syncFailureCount) : 0}`,
+            annCircuitState: String(circuitBudget.circuitState || '').trim(),
+            annCircuitBudgetStatus: String(circuitBudget.budgetStatus || '').trim(),
+            annCircuitShortCircuitRatioPct: Number(Number(circuitBudget.shortCircuitRatioPct || 0).toFixed(4)),
+            annTraceabilityCoverage: String(traceability.correlationCoverage || '').trim(),
+            annTraceabilityMissingFieldCount: Array.isArray(traceability.missingFields)
+                ? traceability.missingFields.filter((item) => String(item || '').trim().length > 0).length
+                : 0,
+            annPrefilterSelectionMode: String(prefilter.selectionMode || '').trim(),
+            annPrefilterBudgetStatus: String(prefilter.budgetStatus || '').trim(),
+            annPrefilterCandidateRatioPct: Number(Number(prefilter.candidateRatioPct || 0).toFixed(4)),
         };
     }
 
