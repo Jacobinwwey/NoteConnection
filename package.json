@@ -94,6 +94,7 @@
     "verify:agent-workspace:runtime": "node scripts/verify-agent-workspace-runtime.js",
     "verify:foundation:sqlite-runtime": "node scripts/verify-foundation-sqlite-runtime.js",
     "verify:foundation:sqlite-runtime:heavy": "node scripts/verify-foundation-sqlite-runtime.js --heavy",
+    "verify:foundation:sqlite-runtime:matrix": "node scripts/verify-foundation-sqlite-runtime.js --matrix",
     "verify:agent-workspace:browser": "node scripts/verify-agent-workspace-browser.js",
     "verify:agent-workspace:tauri": "node scripts/verify-agent-workspace-tauri.js",
     "verify:agent-workspace:tauri:window-evidence": "node scripts/verify-agent-workspace-tauri-window-evidence.js",

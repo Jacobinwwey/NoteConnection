@@ -16,7 +16,7 @@
   - embedded sqlite 生命周期已补齐：server shutdown 会显式关闭 graph store，sqlite adapter 也能在同进程后续运行中安全重开。
   - `src/notemd.server.integration.test.ts` 现已证明 A8 的重启耐久性：覆盖 ingest -> shutdown -> fresh module reload -> store diagnostics/query/readiness 连续性。
   - `scripts/verify-foundation-sqlite-runtime.js` 现已在当前 Windows 宿主上通过 `dist` runtime + packaged sidecar 双路径证明同一条 embedded sqlite 基线：覆盖 ingest -> store diagnostics/foundation readiness -> restart -> query 连续性。
-  - `scripts/verify-foundation-sqlite-runtime.js --heavy` 现在也会在同样两条 runtime 路径上证明更重的主机级 workload：覆盖 `180` 文档摄入、snapshot metadata 计数、restart 连续性与多点 query 连续性。
+  - `scripts/verify-foundation-sqlite-runtime.js --matrix` 现在也会在同样两条 runtime 路径上把主机级证明扩成 `smoke` / `medium` / `heavy` workload matrix：snapshot metadata、restart 连续性与多点 query 连续性都会持续为绿。
   - `local_vector` 的 external HTTP 加速已不再只是查询侧脚手架：适配器现已支持远端索引同步，在 diagnostics 中暴露 sync telemetry，并保留严格的 `fail_closed` 与 representation-alignment 语义。
   - `src/query_backend.external_http.integration.test.ts` 现已证明一条真实的 `external_http` connector 路径：覆盖 ingest -> 远端索引同步 -> query -> diagnostics。
   - runtime capability 治理现在也把 ANN 远端索引同步当成一等检查：matrix/runbook 已新增 `query_vector_acceleration_index_sync_health`，与 health、traceability、prefilter、circuit 同级。
@@ -29,15 +29,15 @@
 - 这会改变执行重心：
   - P3 的“placeholder 替换”在当前 runtime 面上已经完成实现；
   - P4 的“默认 tutor-routing 激活”在本地优先基线上已经完成实现；
-  - A8 剩余缺口已经收窄为：主机级 dist/runtime + packaged sidecar 证明已具备，`180` 文档级更重 workload smoke 也已具备，剩下的是更广工作负载包络、soak 与性能级加固；
+  - A8 剩余缺口已经收窄为：主机级 dist/runtime + packaged sidecar 证明已具备，而且 `smoke` / `medium` / `heavy` workload matrix 也已具备，剩下的是 soak、长时段与性能级加固；
   - P2 现在已经具备 A9 的真实 live connector baseline，而不再只是纯脚手架；
-  - 这个工作之后的下一阶段仍然是发布级 Phase-2 门禁加固，但本轮完成的是“可观测性闭环”而不是“校准闭环”：首个 ANN 门禁族群已经具备 server 侧 runbook/action-queue/history 闭环，`prefilter` 也已进入 ANN 快速升级路径，并在前端 verify/checks 中显式暴露 index-sync、熔断、可追踪性、预筛选治理摘要及阈值/信号上下文和校准就绪态；同时并行继续 A8 的更广工作负载闭环和 A9 的工作负载/阈值校准。
+  - 这个工作之后的下一阶段仍然是发布级 Phase-2 门禁加固，但本轮完成的是“可观测性闭环”而不是“校准闭环”：首个 ANN 门禁族群已经具备 server 侧 runbook/action-queue/history 闭环，`prefilter` 也已进入 ANN 快速升级路径，并在前端 verify/checks 中显式暴露 index-sync、熔断、可追踪性、预筛选治理摘要及阈值/信号上下文和校准就绪态；同时并行继续 A8 的 soak / 长时段 / 性能闭环和 A9 的工作负载/阈值校准。
 
 ### 代码 vs 方案现状矩阵
 
 | 区域 | 方案期望 | 当前 HEAD 现实 | 状态 |
 |---|---|---|---|
-| Phase-1 A8 graph backend | 生产级本地图后端 | ops 语义已存在，默认 runtime 已切到 embedded `graphdb/sqlite` 并保留显式 file fallback，重启耐久性已有集成证明，主机级 `dist` runtime + packaged sidecar 证明已自动化，而且 `180` 文档级主机端更重 workload smoke 已存在；但更广工作负载包络、soak 与性能级加固仍未完成 | Operational baseline |
+| Phase-1 A8 graph backend | 生产级本地图后端 | ops 语义已存在，默认 runtime 已切到 embedded `graphdb/sqlite` 并保留显式 file fallback，重启耐久性已有集成证明，主机级 `dist` runtime + packaged sidecar 证明已自动化，而且 `smoke` / `medium` / `heavy` 主机端 workload matrix 已存在；但 soak、长时段与性能级加固仍未完成 | Operational baseline |
 | Phase-1 A9 ANN connector | 生产级 ANN connector | `external_http` 现已支持远端索引同步，并在严格 failure/representation 语义下通过真实端到端 query 证明；但 recall/latency 校准与更大工作负载验证仍未完成 | Operational baseline |
 | Phase-2 quality gates | 真实掌握闭环 / 发散质量门禁 | query-backend comparison、staleness、learning-quality、session-plan-quality 运行面已在 `KnowledgeLearningPlatform.ts` 中接通真实实现；面向运维的 ANN 治理也已通过 runbook verify/checks 显式暴露 index-sync、熔断、可追踪性、预筛选摘要以及阈值/信号钻取和校准就绪态，且 runtime 已具备显式门禁 `query_vector_acceleration_calibration_readiness`；但整套门禁仍需要建立在当前 graph/ANN operational baseline 之上的发布级校准 | Operational baseline |
 | Phase-3 tutor + memory | 导师与记忆操作层真实落地 | tutor telemetry / trace-provider trend / conversation memory / memory-policy diagnostics 已真实，且默认 runtime 已注入本地 tutor adapter；生产级多 provider 路由仍待闭环 | Operational baseline |
@@ -50,9 +50,9 @@
    - 不再把 placeholder 返回或 catalog-only wiring 视为“已完成”。
 2. P1：真实 graph backend 闭环
    - 保持新的 embedded `graphdb/sqlite` 主机级 `dist` runtime + packaged sidecar 验证持续为绿，
-   - 保持新的 `180` 文档级主机端更重 workload 验证持续为绿，
+   - 保持新的主机级 workload matrix 验证持续为绿，
    - 保留 fallback，
-   - 在已证明的重启生命周期与 `180` 文档 smoke 之外，继续补齐更广耐久性/性能与 adapter / fallback 一致性验证。
+   - 在已证明的重启生命周期与 workload matrix 之外，继续补齐 soak、长时段耐久性/性能与 adapter / fallback 一致性验证。
 3. P2：基于新 live connector baseline 的 ANN 工作负载与 rollout 闭环
    - 让新的 sync-backed `external_http` connector 在真实流量下持续稳定，
    - 校准 recall / latency 阈值，

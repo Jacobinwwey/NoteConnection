@@ -23,13 +23,18 @@ describe('foundation sqlite runtime verification contract', () => {
     expect(packageJson.scripts?.['verify:foundation:sqlite-runtime:heavy']).toBe(
       'node scripts/verify-foundation-sqlite-runtime.js --heavy'
     );
+    expect(packageJson.scripts?.['verify:foundation:sqlite-runtime:matrix']).toBe(
+      'node scripts/verify-foundation-sqlite-runtime.js --matrix'
+    );
   });
 
-  test('verifier script covers smoke and heavy profiles across dist runtime and packaged sidecar restart continuity', () => {
+  test('verifier script covers smoke/medium/heavy profiles and matrix runs across dist runtime and packaged sidecar restart continuity', () => {
     const source = fs.readFileSync(scriptPath, 'utf8');
 
     expect(source).toContain('WORKLOAD_PROFILES');
+    expect(source).toContain("profileId: 'medium'");
     expect(source).toContain("profileId: 'heavy'");
+    expect(source).toContain("suiteKind: 'matrix'");
     expect(source).toContain('dist_node_runtime');
     expect(source).toContain('packaged_sidecar');
     expect(source).toContain('knowledge_graph_store.graphdb.v1.sqlite');
@@ -43,5 +48,6 @@ describe('foundation sqlite runtime verification contract', () => {
     expect(source).toContain("genericQuery: 'persist graph content restart sqlite proof'");
     expect(source).toContain('graphDbLastSnapshotMetadata');
     expect(source).toContain('heavy_runtime_anchor_');
+    expect(source).toContain("args.has('--matrix')");
   });
 });

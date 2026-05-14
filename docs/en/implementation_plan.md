@@ -17,7 +17,7 @@ Bring code truth, active progress docs, and next execution order back into align
   - embedded sqlite lifecycle hardening is now in place: server shutdown closes the graph store cleanly, and the sqlite adapter can reopen safely for later runtime use in the same process.
   - `src/notemd.server.integration.test.ts` now proves A8 restart durability through ingest -> shutdown -> fresh module reload -> store diagnostics/query/readiness continuity.
   - `scripts/verify-foundation-sqlite-runtime.js` now proves the same embedded sqlite baseline through both `dist` runtime and packaged sidecar flows on the current Windows host: ingest -> store diagnostics/foundation readiness -> restart -> query continuity.
-  - `scripts/verify-foundation-sqlite-runtime.js --heavy` now also proves a heavier host-level workload on the same two runtime paths: 180 ingested documents, snapshot metadata counts, restart continuity, and multi-point query continuity.
+  - `scripts/verify-foundation-sqlite-runtime.js --matrix` now broadens that host-level proof across `smoke` / `medium` / `heavy` workload profiles on the same two runtime paths: snapshot metadata counts, restart continuity, and multi-point query continuity all stay green.
   - `local_vector` external HTTP acceleration is no longer query-only scaffolding: the adapter now supports remote index sync, exposes sync telemetry in diagnostics, and preserves strict `fail_closed` plus representation-alignment semantics.
   - `src/query_backend.external_http.integration.test.ts` now proves a live `external_http` connector path end to end: ingest -> remote index sync -> query -> diagnostics.
   - runtime capability governance now treats ANN remote index sync as a first-class check: `query_vector_acceleration_index_sync_health` is emitted in the matrix/runbook alongside health, traceability, prefilter, and circuit checks.
@@ -30,15 +30,15 @@ Bring code truth, active progress docs, and next execution order back into align
 - This changes the execution focus:
   - P3 placeholder replacement is implementation-complete for the current runtime surfaces.
   - P4 default tutor-routing activation is implementation-complete for the local-first baseline.
-  - the remaining A8 gap is now narrower: host-level dist/runtime + packaged sidecar proof is in place, and a 180-document heavier-workload smoke is also in place; broader workload-envelope / soak / performance hardening still remains.
+  - the remaining A8 gap is now narrower: host-level dist/runtime + packaged sidecar proof is in place, and a host-level workload matrix across `smoke` / `medium` / `heavy` is also in place; soak / longer-duration / performance hardening still remains.
   - P2 now has a real live-connector baseline for A9 instead of pure scaffolding.
-  - the next phase after this work is still release-grade Phase-2 gate hardening, but the current slice is now visibility-complete rather than calibration-complete: the first ANN gate family has server-side runbook/action-queue/history closure, prefilter now shares the ANN fast-lane escalation path, and frontend verify/checks now expose index-sync, circuit, traceability, and prefilter governance with threshold/signal context plus calibration-readiness cues, while A8 broader-workload closure and A9 workload/threshold calibration continue in parallel.
+  - the next phase after this work is still release-grade Phase-2 gate hardening, but the current slice is now visibility-complete rather than calibration-complete: the first ANN gate family has server-side runbook/action-queue/history closure, prefilter now shares the ANN fast-lane escalation path, and frontend verify/checks now expose index-sync, circuit, traceability, and prefilter governance with threshold/signal context plus calibration-readiness cues, while A8 soak/performance closure and A9 workload/threshold calibration continue in parallel.
 
 ### Code-vs-Plan Reality Matrix
 
 | Area | Planned Expectation | Current HEAD Reality | Status |
 |---|---|---|---|
-| Phase-1 A8 graph backend | production-grade local graph backend | ops semantics exist, default runtime now targets embedded `graphdb/sqlite` with explicit file fallback, restart durability is integration-proved, host-level `dist` runtime + packaged sidecar proof is automated, and a 180-document host-level heavier-workload smoke now exists; broader workload-envelope / soak / performance hardening is still open | Operational baseline |
+| Phase-1 A8 graph backend | production-grade local graph backend | ops semantics exist, default runtime now targets embedded `graphdb/sqlite` with explicit file fallback, restart durability is integration-proved, host-level `dist` runtime + packaged sidecar proof is automated, and a host-level workload matrix now exists across `smoke` / `medium` / `heavy`; soak / longer-duration / performance hardening is still open | Operational baseline |
 | Phase-1 A9 ANN connector | production-grade ANN connector | `external_http` now supports remote index sync plus live end-to-end query proof under strict failure/representation semantics, but recall/latency calibration and larger-workload validation are still open | Operational baseline |
 | Phase-2 quality gates | live mastery/divergence quality trend gates | query-backend comparison, staleness, learning-quality, and session-plan-quality runtime surfaces are now live in `KnowledgeLearningPlatform.ts`; operator-facing ANN governance now surfaces index-sync, circuit, traceability, and prefilter summaries plus threshold/signal drilldowns and calibration-readiness cues through runbook verify/checks, and runtime now carries explicit gate `query_vector_acceleration_calibration_readiness`, but the full gate set still needs release-grade calibration on top of the current graph/ANN operational baseline | Operational baseline |
 | Phase-3 tutor + memory | tutor and memory operating layer becomes real | tutor telemetry/trace/provider trends + conversation memory + memory-policy diagnostics are real, and default runtime now injects a local tutor adapter; production-proven multi-provider routing is still open | Operational baseline |
@@ -51,9 +51,9 @@ Bring code truth, active progress docs, and next execution order back into align
    - stop treating placeholder-backed or catalog-only surfaces as closed.
 2. P1: Real graph backend closure
    - keep the new embedded `graphdb/sqlite` host-level `dist` runtime + packaged sidecar verifier green,
-   - keep the new 180-document host-level heavier-workload verifier green,
+   - keep the new host-level workload-matrix verifier green,
    - preserve fallback behavior,
-   - keep expanding beyond the now-proved restart lifecycle and 180-document smoke into broader durability/performance and adapter/fallback consistency verification.
+   - keep expanding beyond the now-proved restart lifecycle and workload matrix into soak, longer-duration durability/performance, and adapter/fallback consistency verification.
 3. P2: ANN workload and rollout closure on top of the new live connector baseline
    - keep the new sync-backed `external_http` connector healthy under real traffic,
    - benchmark recall/latency thresholds,

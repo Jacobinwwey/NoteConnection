@@ -45,7 +45,7 @@
   - PASS
 - [x] `npm run verify:foundation:sqlite-runtime`
   - PASS
-- [x] `npm run verify:foundation:sqlite-runtime:heavy`
+- [x] `npm run verify:foundation:sqlite-runtime:matrix`
   - PASS
 - [x] `npm run docs:diataxis:check`
   - PASS
@@ -59,8 +59,8 @@
 1. The embedded `graphdb/sqlite` baseline now also has repeatable host-level runtime proof on the current Windows machine:
    - `npm run verify:foundation:sqlite-runtime` covers both `dist` runtime and packaged sidecar flows,
    - both modes now prove ingest -> store diagnostics/foundation readiness -> restart -> query continuity on the same runtime data directory,
-   - `npm run verify:foundation:sqlite-runtime:heavy` now extends that proof to 180 ingested documents plus snapshot metadata counts and multi-point restart queries,
-   - A8 is therefore no longer blocked on missing packaged/runtime or host-level heavier-workload evidence; the remaining honest gap is broader workload-envelope / soak / performance hardening.
+   - `npm run verify:foundation:sqlite-runtime:matrix` now extends that proof across `smoke` / `medium` / `heavy` corpus sizes plus snapshot metadata counts and multi-point restart queries,
+   - A8 is therefore no longer blocked on missing packaged/runtime or host-level workload-envelope evidence; the remaining honest gap is soak / longer-duration / performance hardening.
 2. The Phase-2 ANN governance slice is now operator-visible through the frontend runbook shell, not only backend JSON:
    - verify/checks now surface ANN sync-health, circuit-budget, traceability, and prefilter summaries plus threshold/signal drilldowns,
    - they now also surface ANN circuit budget flags and prefilter calibration-readiness cues,
@@ -80,7 +80,7 @@
    - conversation memory lifecycle,
    - memory-policy diagnostics/history/trend.
 2. These passes do **not** prove Phase-1 A8/A9 closure:
-   - runtime no longer defaults to `local-file-graphdb`, restart durability for the embedded `graphdb/sqlite` baseline is integration-proved, host-level dist/runtime + packaged sidecar proof is now in place, and a 180-document host-level workload smoke now exists, but broader workload-envelope / soak / performance hardening still remains,
+   - runtime no longer defaults to `local-file-graphdb`, restart durability for the embedded `graphdb/sqlite` baseline is integration-proved, host-level dist/runtime + packaged sidecar proof is now in place, and a host-level workload matrix now exists across `smoke` / `medium` / `heavy`, but soak / longer-duration / performance hardening still remains,
    - ANN no longer stops at query-only scaffolding: the `external_http` path now has remote index sync plus live end-to-end query proof, but workload and threshold calibration still remain before production closure.
 3. These passes do **not** prove Phase-2 quality-gate closure:
    - query comparison, staleness, learning-quality, session-plan-quality, and query-backend diagnostics are now implementation-real, but they still require release-grade calibration on top of the current graph/ANN operational baseline.

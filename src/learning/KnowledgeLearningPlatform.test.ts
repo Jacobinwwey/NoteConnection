@@ -1821,6 +1821,10 @@ describe('KnowledgeLearningPlatform', () => {
                         gateId: 'foundation_runtime_heavy_proof',
                         command: 'npm run verify:foundation:sqlite-runtime:heavy',
                     }),
+                    expect.objectContaining({
+                        gateId: 'foundation_runtime_matrix_proof',
+                        command: 'npm run verify:foundation:sqlite-runtime:matrix',
+                    }),
                 ])
             );
 

@@ -54,17 +54,17 @@ This requires:
 
 - The branch now contains real Phase-3 tutor/memory slices, but current HEAD should not be described as "Phase-1 closed".
 - The accurate state is:
-  - Phase-1 A8 has advanced into an embedded local-backend baseline: graph/store ops semantics, embedded SQLite graphdb persistence/query paths, and HTTP adapter paths exist, the default runtime now targets `graphdb/sqlite` with explicit file fallback, restart durability is integration-proved, host-level dist/runtime + packaged sidecar proof is in place, and a 180-document host-level heavier-workload smoke is in place; broader workload-envelope / soak / performance hardening are still open.
+  - Phase-1 A8 has advanced into an embedded local-backend baseline: graph/store ops semantics, embedded SQLite graphdb persistence/query paths, and HTTP adapter paths exist, the default runtime now targets `graphdb/sqlite` with explicit file fallback, restart durability is integration-proved, host-level dist/runtime + packaged sidecar proof is in place, and a host-level workload matrix is in place across `smoke` / `medium` / `heavy`; soak / longer-duration / performance hardening are still open.
   - Phase-1 A9 has advanced into an ANN connector operational baseline: ANN-style prefilter, representation telemetry, remote index sync, and live `external_http` query proof now exist, but recall/latency calibration and larger-workload validation are still open.
   - Phase-2 now has an operational diagnostics baseline: `learning quality`, `session plan quality`, query comparison, staleness, query-backend config, and query-backend diagnostics are live in `KnowledgeLearningPlatform.ts`, but they are not yet release-closed because they still require release-grade calibration on top of the current graph/ANN operational baseline.
   - Phase-3 is now operational-baseline rather than catalog-only: tutor telemetry, tutor trace/provider trends, conversation memory, memory-policy diagnostics, and default runtime tutor-adapter injection are real, but production-proven multi-provider routing policy is still open.
-- Active rollout focus therefore changes from "assume closure and move on" to "keep the new A8 packaged/runtime and 180-document workload proofs green, finish the remaining broader A8 workload closure plus A9 workload calibration, then move next into honest Phase-2 gate promotion."
+- Active rollout focus therefore changes from "assume closure and move on" to "keep the new A8 packaged/runtime and workload-matrix proofs green, finish the remaining soak/performance A8 closure plus A9 workload calibration, then move next into honest Phase-2 gate promotion."
 
 ## Primary Structural Gaps Still Open
 
 1. Real graph backend closure:
    - keep the new embedded `graphdb/sqlite` default alive across packaged/runtime paths,
-   - treat restart durability, host-level packaged/runtime proof, and the new 180-document workload smoke as already proved, then extend verification into ops-preferred query semantics, fallback consistency, and broader heavier-workload durability against that local graph engine.
+   - treat restart durability, host-level packaged/runtime proof, and the new `smoke` / `medium` / `heavy` workload matrix as already proved, then extend verification into ops-preferred query semantics, fallback consistency, and soak/performance durability against that local graph engine.
 2. Real ANN connector closure:
    - keep the new live `external_http` connector path healthy under real sync/query traffic,
    - benchmark recall/latency thresholds before calling the vector layer production-ready.

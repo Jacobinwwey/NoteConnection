@@ -8290,6 +8290,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     command: 'npm run verify:foundation:sqlite-runtime:heavy',
                 },
                 {
+                    gateId: 'foundation_runtime_matrix_proof',
+                    command: 'npm run verify:foundation:sqlite-runtime:matrix',
+                },
+                {
                     gateId: 'documentation',
                     command: 'npm run docs:diataxis:check && npm run docs:site:build',
                 },

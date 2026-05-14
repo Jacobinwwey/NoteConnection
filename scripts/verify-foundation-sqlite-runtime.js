@@ -23,6 +23,15 @@ const WORKLOAD_PROFILES = {
         genericTopK: 3,
         minGenericResultCount: 1,
     },
+    medium: {
+        profileId: 'medium',
+        documentCount: 60,
+        minDocumentCount: 60,
+        minAtomCount: 60,
+        genericQuery: 'sqlite medium workload continuity shared retrieval token',
+        genericTopK: 8,
+        minGenericResultCount: 6,
+    },
     heavy: {
         profileId: 'heavy',
         documentCount: 180,
@@ -34,9 +43,30 @@ const WORKLOAD_PROFILES = {
     },
 };
 
-function parseProfileFromArgs(argv) {
+function parseCliOptions(argv) {
     const args = new Set(argv);
-    return args.has('--heavy') ? 'heavy' : 'smoke';
+    if (args.has('--matrix')) {
+        return {
+            suiteKind: 'matrix',
+            profileKeys: ['smoke', 'medium', 'heavy'],
+        };
+    }
+    if (args.has('--heavy')) {
+        return {
+            suiteKind: 'single',
+            profileKeys: ['heavy'],
+        };
+    }
+    if (args.has('--medium')) {
+        return {
+            suiteKind: 'single',
+            profileKeys: ['medium'],
+        };
+    }
+    return {
+        suiteKind: 'single',
+        profileKeys: ['smoke'],
+    };
 }
 
 function resolveHostSidecarBinaryPath() {
@@ -588,8 +618,7 @@ async function runScenario(mode, workloadProfile) {
 }
 
 async function main() {
-    const workloadProfileKey = parseProfileFromArgs(process.argv.slice(2));
-    const workloadProfile = WORKLOAD_PROFILES[workloadProfileKey];
+    const cliOptions = parseCliOptions(process.argv.slice(2));
     assertCondition(
         fs.existsSync(DIST_FRONTEND_DIR),
         `Missing dist frontend directory: ${DIST_FRONTEND_DIR}. Run npm run build first.`
@@ -601,17 +630,26 @@ async function main() {
             platform: process.platform,
             arch: process.arch,
         },
-        workloadProfile: {
-            profileId: workloadProfile.profileId,
-            documentCount: workloadProfile.documentCount,
-            minDocumentCount: workloadProfile.minDocumentCount,
-            minAtomCount: workloadProfile.minAtomCount,
-        },
-        modes: [],
+        suiteKind: cliOptions.suiteKind,
+        profileRuns: [],
     };
 
-    report.modes.push(await runScenario('dist_node_runtime', workloadProfile));
-    report.modes.push(await runScenario('packaged_sidecar', workloadProfile));
+    for (const profileKey of cliOptions.profileKeys) {
+        const workloadProfile = WORKLOAD_PROFILES[profileKey];
+        assertCondition(Boolean(workloadProfile), `Unknown workload profile: ${profileKey}`);
+        report.profileRuns.push({
+            workloadProfile: {
+                profileId: workloadProfile.profileId,
+                documentCount: workloadProfile.documentCount,
+                minDocumentCount: workloadProfile.minDocumentCount,
+                minAtomCount: workloadProfile.minAtomCount,
+            },
+            modes: [
+                await runScenario('dist_node_runtime', workloadProfile),
+                await runScenario('packaged_sidecar', workloadProfile),
+            ],
+        });
+    }
 
     console.log(JSON.stringify(report, null, 2));
     console.log('[foundation-sqlite-runtime] PASS');
