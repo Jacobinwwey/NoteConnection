@@ -21,6 +21,7 @@ It tracks what is already implemented, where the hard gaps remain, and how to ve
   - the embedded sqlite baseline now also has restart-durability proof: shutdown closes the store cleanly, the adapter can reopen safely, and server integration covers ingest -> shutdown -> fresh module reload -> diagnostics/query/readiness continuity,
   - ANN-style prefilter, representation telemetry, circuit health, remote index sync, and live `external_http` connector proof now exist in `src/learning/queryBackend.ts` and `src/learning/vectorAccelerationAdapter.ts`,
   - runtime capability/runbook governance now includes explicit ANN remote index-sync health (`query_vector_acceleration_index_sync_health`) in addition to prefilter, health, traceability, and circuit checks,
+  - runtime capability governance now also includes explicit gate `query_vector_acceleration_calibration_readiness`, which formalizes whether the ANN path is even ready for release-grade threshold tuning,
   - `server.ts` now closes the corresponding operator loop: the index-sync gate participates in verification escalation, remediation action-queue generation, and per-check runbook history summaries,
   - the agent workspace runtime-runbook surfaces now render operator-facing ANN governance directly in the frontend shell: verify/checks now expose sync-health plus circuit-budget, traceability, and prefilter summaries, and they now also show threshold/signal drilldowns plus calibration-readiness state needed for budget tuning work, while action-queue keeps the index-sync incident drilldown,
   - the modular `src/routes/knowledge.ts` runtime-runbook surfaces now delegate to live server-side runbook ops with full query-parameter passthrough, so browser/runtime consumers no longer hit the old KLP placeholder payloads for verify/history/checks/action-queue/remediation/schedule flows,
@@ -31,7 +32,7 @@ It tracks what is already implemented, where the hard gaps remain, and how to ve
 - What is not closed yet:
   - Phase-1 A8 has advanced beyond a file-only default: `src/server.ts` now defaults to `graphdb/sqlite` with explicit file fallback, and restart durability is already proved, but packaged/runtime proof and heavier-workload hardening are still open before calling the local graph backend production-closed,
   - Phase-1 A9 is now operational rather than scaffold-only, but recall/latency calibration and larger-workload validation are still open before calling the ANN layer production-closed,
-  - Phase-2 quality/session/query observability is now real, but it is not yet release-closed because these gates still require release-grade calibration on top of the current graph/ANN operational baseline,
+  - Phase-2 quality/session/query observability is now real, but it is not yet release-closed because these gates still require release-grade calibration on top of the current graph/ANN operational baseline; the new ANN calibration-readiness gate only formalizes prerequisites, not closure,
   - default tutor routing is no longer catalog-only, but the runtime is still effectively `local`-first and retains explicit rule-engine fallback rather than a production-proven multi-provider routing policy.
 - Active execution focus therefore shifts to truth-first foundation recovery:
   - finish the remaining packaged/runtime + heavier-workload closure for the embedded graph backend baseline,
@@ -131,7 +132,7 @@ Current branch status for this slice:
 
 ## Latest Validation Snapshot (2026-05-14)
 
-- Reconfirmed on the current Windows host in this turn: `node node_modules/jest/bin/jest.js src/agent_workspace.frontend.test.ts --runInBand --no-cache`, `npm run test:agent-workspace:contracts`, `npm run build:with-vite`, `npm run docs:diataxis:check`, `npm run docs:site:build`, `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_DYNAMIC_STRICT=1 node scripts/verify-agent-workspace-browser.js`.
+- Reconfirmed on the current Windows host in this turn: `node node_modules/jest/bin/jest.js src/learning/runtimeCapability.test.ts src/knowledge.api.contract.test.ts --runInBand --no-cache`, `node node_modules/jest/bin/jest.js src/agent_workspace.frontend.test.ts --runInBand --no-cache`, `npm run test:agent-workspace:contracts`, `npm run build:with-vite`, `npm run docs:diataxis:check`, `npm run docs:site:build`, `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_DYNAMIC_STRICT=1 node scripts/verify-agent-workspace-browser.js`.
 - The strict browser proof now explicitly verifies the bilingual runtime-runbook verify/checks ANN governance labels that were added in this slice: sync-health plus circuit, traceability, and prefilter summaries, along with the threshold/signal drilldowns and calibration-readiness cues that support budget-tuning work.
 - Tauri strict evidence is implementation-closed but still host-dependent:
   - the current Windows host proves non-strict tauri/runtime behavior and load-flow parity,

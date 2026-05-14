@@ -1121,6 +1121,15 @@ function buildRuntimeCapabilityRecommendedActions(
         ]);
     }
 
+    if (checkId === 'query_vector_acceleration_calibration_readiness') {
+        return normalizeRuntimeCapabilityRecommendedActions([
+            `Calibration readiness depends on representative ANN telemetry: syncStatus=${context.queryVectorIndexAccelerationIndexSyncStatus}, requestCount=${context.queryVectorIndexAccelerationRequestCount}, selectionMode=${context.queryVectorIndexAccelerationLastSelectionMode}, candidateCount=${context.queryVectorIndexAccelerationLastCandidateCount}, circuitState=${context.queryVectorIndexAccelerationCircuitState}, healthStatus=${context.queryVectorIndexAccelerationHealthStatus}.`,
+            'Drive ingest + representative /api/knowledge/query traffic until index-sync telemetry, prefilter selection telemetry, and connector correlation fields are all populated for the same runtime window.',
+            `Do not start release-grade ANN threshold tuning until circuit budget status is ok and prefilter sample size reaches ${context.thresholds.queryVectorAccelerationPrefilterMinRequestSample} with evaluable candidate telemetry.`,
+            'Once readiness prerequisites are satisfied, tighten ANN workload thresholds and re-run runtime-capability-runbook verify/history/checks before promoting the gate.',
+        ]);
+    }
+
     if (checkId === 'query_vector_acceleration_health') {
         return normalizeRuntimeCapabilityRecommendedActions([
             'Inspect /api/knowledge/query-backend-diagnostics and verify diagnostics.runtime.vectorIndex.acceleration.healthStatus/healthMessage fields.',
@@ -3950,6 +3959,110 @@ export function buildRuntimeCapabilityMatrix(params: RuntimeCapabilityMatrixInpu
                 expected: 'circuitState=closed|unknown',
             });
         }
+
+        const queryVectorAccelerationCalibrationObserved = (
+            `externalConnector=${queryVectorAccelerationExternalConnector},`
+            + ` healthStatus=${queryVectorIndexAccelerationHealthStatus},`
+            + ` circuitState=${queryVectorIndexAccelerationCircuitState},`
+            + ` circuitBudgetStatus=${queryVectorIndexAccelerationCircuitBudgetStatus},`
+            + ` indexSyncStatus=${queryVectorIndexAccelerationIndexSyncStatus},`
+            + ` syncSuccessCount=${queryVectorIndexAccelerationSyncSuccessCount},`
+            + ` syncedIndexSignature=${queryVectorIndexAccelerationSyncedIndexSignature || '<none>'},`
+            + ` syncedAtomCount=${queryVectorIndexAccelerationSyncedAtomCount},`
+            + ` sampleReady=${queryVectorAccelerationPrefilterSampleReady},`
+            + ` selectionActive=${queryVectorAccelerationPrefilterSelectionActive},`
+            + ` stableConnector=${queryVectorAccelerationStableConnector},`
+            + ` canEvaluateCandidateRatio=${queryVectorAccelerationCanEvaluatePrefilterReduction},`
+            + ` prefilterBudgetStatus=${queryVectorAccelerationPrefilterReductionSevere ? 'fail' : (queryVectorAccelerationPrefilterReductionWeak ? 'warn' : 'ok')},`
+            + ` hasCorrelationFields=${queryVectorAccelerationHasCorrelationFields}`
+        );
+        const queryVectorAccelerationIndexSyncReadyForCalibration = (
+            !queryVectorAccelerationExternalConnector
+            || (
+                queryVectorIndexAccelerationIndexSyncStatus === 'ready'
+                && queryVectorIndexAccelerationSyncRequestCount > 0
+                && queryVectorIndexAccelerationSyncSuccessCount > 0
+                && queryVectorIndexAccelerationSyncedAtomCount > 0
+                && queryVectorIndexAccelerationSyncedIndexSignature.length > 0
+            )
+        );
+        const queryVectorAccelerationTraceabilityReadyForCalibration = (
+            !queryVectorAccelerationExternalConnector
+            || queryVectorAccelerationHasCorrelationFields
+        );
+        const queryVectorAccelerationPrefilterBudgetStatus = (
+            queryVectorAccelerationPrefilterSampleReady
+            && queryVectorAccelerationPrefilterSelectionActive
+            && queryVectorAccelerationCanEvaluatePrefilterReduction
+        )
+            ? (
+                queryVectorAccelerationPrefilterReductionSevere
+                    ? 'fail'
+                    : (queryVectorAccelerationPrefilterReductionWeak ? 'warn' : 'ok')
+            )
+            : 'ok';
+        if (!queryVectorIndexEnabled || queryVectorIndexStatus !== 'ready') {
+            checks.push({
+                checkId: 'query_vector_acceleration_calibration_readiness',
+                status: 'warn',
+                message: 'ANN calibration readiness cannot be evaluated before the vector index reaches ready state.',
+                observed: `vectorIndexEnabled=${queryVectorIndexEnabled}, vectorIndexStatus=${queryVectorIndexStatus}`,
+                expected: 'vectorIndexEnabled=true and vectorIndexStatus=ready',
+            });
+        } else if (!queryVectorIndexAccelerationEnabled) {
+            checks.push({
+                checkId: 'query_vector_acceleration_calibration_readiness',
+                status: 'warn',
+                message: 'ANN calibration readiness is blocked because vector acceleration is disabled.',
+                observed: `accelerationEnabled=${queryVectorIndexAccelerationEnabled}, mode=${queryVectorIndexAccelerationMode}`,
+                expected: 'accelerationEnabled=true and mode=ann_prefilter',
+            });
+        } else if (queryVectorIndexAccelerationMode !== 'ann_prefilter') {
+            checks.push({
+                checkId: 'query_vector_acceleration_calibration_readiness',
+                status: 'warn',
+                message: 'ANN calibration readiness is pending because ann_prefilter mode is not active.',
+                observed: queryVectorAccelerationCalibrationObserved,
+                expected: 'mode=ann_prefilter with representative telemetry',
+            });
+        } else if (
+            queryVectorIndexAccelerationHealthStatus === 'unavailable'
+            || queryVectorIndexAccelerationCircuitBudgetStatus === 'fail'
+            || queryVectorAccelerationPrefilterBudgetStatus === 'fail'
+        ) {
+            checks.push({
+                checkId: 'query_vector_acceleration_calibration_readiness',
+                status: 'fail',
+                message: 'ANN calibration readiness is blocked by unstable connector or fail-budget telemetry.',
+                observed: queryVectorAccelerationCalibrationObserved,
+                expected: 'healthStatus=ready|unknown, circuitBudgetStatus=ok|warn, prefilterBudgetStatus=ok|warn',
+            });
+        } else if (
+            !queryVectorAccelerationIndexSyncReadyForCalibration
+            || !queryVectorAccelerationPrefilterSampleReady
+            || !queryVectorAccelerationPrefilterSelectionActive
+            || !queryVectorAccelerationStableConnector
+            || !queryVectorAccelerationCanEvaluatePrefilterReduction
+            || !queryVectorAccelerationTraceabilityReadyForCalibration
+            || queryVectorIndexAccelerationCircuitBudgetStatus === 'warn'
+            || queryVectorAccelerationPrefilterBudgetStatus === 'warn'
+        ) {
+            checks.push({
+                checkId: 'query_vector_acceleration_calibration_readiness',
+                status: 'warn',
+                message: 'ANN calibration readiness is not closed yet; collect stable representative telemetry before threshold tuning.',
+                observed: queryVectorAccelerationCalibrationObserved,
+                expected: 'sync telemetry ready, sampleReady=true, selectionActive=true, stableConnector=true, canEvaluateCandidateRatio=true, hasCorrelationFields=true when external, and budgets not exceeded',
+            });
+        } else {
+            checks.push({
+                checkId: 'query_vector_acceleration_calibration_readiness',
+                status: 'pass',
+                message: 'ANN calibration readiness prerequisites are satisfied for the current runtime window.',
+                observed: queryVectorAccelerationCalibrationObserved,
+                expected: 'representative ANN telemetry available with stable connector and evaluable budget signals',
+            });
+        }
     } else {
         checks.push({
             checkId: 'query_vector_index_status',
@@ -3983,6 +4096,13 @@ export function buildRuntimeCapabilityMatrix(params: RuntimeCapabilityMatrixInpu
             checkId: 'query_vector_acceleration_prefilter_effectiveness',
             status: 'pass',
             message: 'Local vector acceleration prefilter-effectiveness check skipped because local_vector backend is not active.',
+            observed: `configuredQueryBackend=${params.configuredQueryBackend}`,
+            expected: 'configuredQueryBackend=local_vector',
+        });
+        checks.push({
+            checkId: 'query_vector_acceleration_calibration_readiness',
+            status: 'pass',
+            message: 'Local vector acceleration calibration-readiness check skipped because local_vector backend is not active.',
             observed: `configuredQueryBackend=${params.configuredQueryBackend}`,
             expected: 'configuredQueryBackend=local_vector',
         });
@@ -5613,6 +5733,10 @@ export function buildRuntimeCapabilityMatrix(params: RuntimeCapabilityMatrixInpu
             pathPrefix: '/api/knowledge/query-backend-diagnostics',
             statusAtLeast: 400,
         }),
+        query_vector_acceleration_calibration_readiness: normalizeRuntimeCapabilityDebugTraceHint({
+            pathPrefix: '/api/knowledge/query-backend-diagnostics',
+            statusAtLeast: 400,
+        }),
         query_vector_acceleration_health: normalizeRuntimeCapabilityDebugTraceHint({
             pathPrefix: '/api/knowledge/query-backend-diagnostics',
             statusAtLeast: 400,
@@ -6165,6 +6289,7 @@ function resolveRuntimeCapabilityRunbookVerificationTargets(
         || selectedCheck.checkId === 'query_vector_acceleration_mode'
         || selectedCheck.checkId === 'query_vector_acceleration_representation_consistency'
         || selectedCheck.checkId === 'query_vector_acceleration_prefilter_effectiveness'
+        || selectedCheck.checkId === 'query_vector_acceleration_calibration_readiness'
         || selectedCheck.checkId === 'query_vector_acceleration_health'
         || selectedCheck.checkId === 'query_vector_acceleration_index_sync_health'
         || selectedCheck.checkId === 'query_vector_acceleration_traceability'
@@ -6182,6 +6307,14 @@ function resolveRuntimeCapabilityRunbookVerificationTargets(
         if (selectedCheck.checkId === 'query_vector_acceleration_prefilter_effectiveness') {
             targets.push(
                 'Verify diagnostics.runtime.vectorIndex.acceleration.lastSelectionMode is token_prefilter|token_signature_prefilter with non-zero lastCandidateCount under representative ANN traffic.'
+            );
+        }
+        if (selectedCheck.checkId === 'query_vector_acceleration_calibration_readiness') {
+            targets.push(
+                'Verify calibration prerequisites are all present in the same runtime window: sync telemetry ready, sampleReady=true, selectionActive=true, stableConnector=true, canEvaluateCandidateRatio=true, and correlation fields present for external connectors.'
+            );
+            targets.push(
+                'Delay threshold tuning until diagnostics show circuitBudgetStatus=ok and prefilter budget status is clear for representative ANN traffic.'
             );
         }
         if (selectedCheck.checkId === 'query_vector_acceleration_representation_consistency') {

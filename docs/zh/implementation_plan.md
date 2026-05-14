@@ -19,6 +19,7 @@
   - `src/query_backend.external_http.integration.test.ts` 现已证明一条真实的 `external_http` connector 路径：覆盖 ingest -> 远端索引同步 -> query -> diagnostics。
   - runtime capability 治理现在也把 ANN 远端索引同步当成一等检查：matrix/runbook 已新增 `query_vector_acceleration_index_sync_health`，与 health、traceability、prefilter、circuit 同级。
   - `server.ts` 现已把这条新门禁接入完整 runbook 闭环：ANN index-sync health 已进入 verification escalation、remediation action queue、以及 per-check history summary。
+  - runtime capability 治理现在也有了显式的 ANN 校准前提门禁：`query_vector_acceleration_calibration_readiness` 会在同一运行时窗口内缺少 sync telemetry、稳定 connector、prefilter 样本就绪、可评估 candidate ratio、或外部 traceability 信号时阻断发布级阈值校准。
   - agent workspace 的 runtime runbook 界面现已在 verify/checks/action-queue 三条链路中展示 ANN sync-health 指标，而且 verify/checks 卡片还进一步前推了 ANN 熔断预算、可追踪性、预筛选摘要以及阈值/信号钻取和校准就绪态，运维侧的 ANN 治理视图已不再停留在 `index_sync_health`。
   - `runtime-capability-runbook/*` 这组 modular knowledge route 现已改为接入真实 server 侧 runbook ops，而不再返回 KLP placeholder payload；route 层现在也会保留 `checkId` / `sinceMinutes` / queue-filter 这类 query 参数，不再静默丢弃。
   - 真实浏览器 smoke 门禁现在也会端到端证明这三条链路：严格浏览器证据必须能看到 ANN sync-health verify 卡、新增的 verify/checks ANN 熔断/可追踪性/预筛选钻取、首个检查的 ANN sync 指标，以及 index-sync action-queue 钻取，而不再只是证明卡片“能打开”。
@@ -36,7 +37,7 @@
 |---|---|---|---|
 | Phase-1 A8 graph backend | 生产级本地图后端 | ops 语义已存在，默认 runtime 已切到 embedded `graphdb/sqlite` 并保留显式 file fallback，且重启耐久性已有集成证明；但 packaged/runtime 证明与更重工作负载级加固仍未完成 | Operational baseline |
 | Phase-1 A9 ANN connector | 生产级 ANN connector | `external_http` 现已支持远端索引同步，并在严格 failure/representation 语义下通过真实端到端 query 证明；但 recall/latency 校准与更大工作负载验证仍未完成 | Operational baseline |
-| Phase-2 quality gates | 真实掌握闭环 / 发散质量门禁 | query-backend comparison、staleness、learning-quality、session-plan-quality 运行面已在 `KnowledgeLearningPlatform.ts` 中接通真实实现；面向运维的 ANN 治理也已通过 runbook verify/checks 显式暴露 index-sync、熔断、可追踪性、预筛选摘要以及阈值/信号钻取和校准就绪态；但整套门禁仍需要建立在当前 graph/ANN operational baseline 之上的发布级校准 | Operational baseline |
+| Phase-2 quality gates | 真实掌握闭环 / 发散质量门禁 | query-backend comparison、staleness、learning-quality、session-plan-quality 运行面已在 `KnowledgeLearningPlatform.ts` 中接通真实实现；面向运维的 ANN 治理也已通过 runbook verify/checks 显式暴露 index-sync、熔断、可追踪性、预筛选摘要以及阈值/信号钻取和校准就绪态，且 runtime 已具备显式门禁 `query_vector_acceleration_calibration_readiness`；但整套门禁仍需要建立在当前 graph/ANN operational baseline 之上的发布级校准 | Operational baseline |
 | Phase-3 tutor + memory | 导师与记忆操作层真实落地 | tutor telemetry / trace-provider trend / conversation memory / memory-policy diagnostics 已真实，且默认 runtime 已注入本地 tutor adapter；生产级多 provider 路由仍待闭环 | Operational baseline |
 | 架构缩减 | 主单体下降到可持续体量 | `server.ts` 14,992、`KnowledgeLearningPlatform.ts` 7,706、`path_app.js` 4,649、`app.js` 4,713、`routes/knowledge.ts` 690 | Open |
 

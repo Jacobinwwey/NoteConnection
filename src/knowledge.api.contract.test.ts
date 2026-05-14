@@ -132,6 +132,7 @@ describe('Knowledge mastery API contract wiring', () => {
         [
             "selectedCheckId === 'query_vector_acceleration_index_sync_health'",
             "selectedCheckId === 'query_vector_acceleration_circuit_state'",
+            "selectedCheckId === 'query_vector_acceleration_calibration_readiness'",
             "selectedCheckId === 'query_vector_acceleration_traceability'",
             "selectedCheckId === 'query_vector_acceleration_prefilter_effectiveness'",
         ].forEach((token) => {

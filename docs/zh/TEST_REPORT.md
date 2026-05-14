@@ -35,6 +35,8 @@
 
 - [x] `node node_modules/jest/bin/jest.js src/agent_workspace.frontend.test.ts --runInBand --no-cache`
   - 通过
+- [x] `node node_modules/jest/bin/jest.js src/learning/runtimeCapability.test.ts src/knowledge.api.contract.test.ts --runInBand --no-cache`
+  - 通过
 - [x] `npm run test:agent-workspace:contracts`
   - 通过
 - [x] `npm run build:with-vite`
@@ -53,7 +55,8 @@
    - 也会进一步展示 ANN 熔断预算标志与预筛选校准就绪态，
    - action-queue 继续承载 index-sync 事故钻取。
 2. `query_vector_acceleration_prefilter_effectiveness` 现已进入 ANN 快速升级路径，不再沿用较慢的通用升级分支。
-3. 这轮刷新仍然**不等于**发布级 Phase-2 闭环：
+3. runtime capability 治理现在已经具备显式门禁 `query_vector_acceleration_calibration_readiness`，会在 ANN 路径尚未形成同窗口 sync/prefilter/traceability/stability 代表性遥测时直接给出 fail/warn。
+4. 这轮刷新仍然**不等于**发布级 Phase-2 闭环：
    - 它闭合的是新 ANN 治理摘要的可见性与 browser/runtime 证明，
    - 并**没有**闭合这些预算的工作负载/阈值校准。
 

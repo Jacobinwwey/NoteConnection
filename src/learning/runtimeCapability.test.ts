@@ -316,7 +316,7 @@ describe('runtime capability matrix', () => {
                             enabled: true,
                             mode: 'ann_prefilter',
                             lastSelectionMode: 'token_signature_prefilter',
-                            lastCandidateCount: 96,
+                            lastCandidateCount: 12,
                             adapterId: 'local-vector-acceleration-ann-v1',
                             healthStatus: 'ready',
                             healthMessage: 'local_ann_prefilter_active',
@@ -356,6 +356,9 @@ describe('runtime capability matrix', () => {
         const vectorAccelerationPrefilterCheck = matrix.checks.find(
             (check) => check.checkId === 'query_vector_acceleration_prefilter_effectiveness'
         );
+        const vectorAccelerationCalibrationReadinessCheck = matrix.checks.find(
+            (check) => check.checkId === 'query_vector_acceleration_calibration_readiness'
+        );
         const vectorAccelerationHealthCheck = matrix.checks.find(
             (check) => check.checkId === 'query_vector_acceleration_health'
         );
@@ -374,6 +377,7 @@ describe('runtime capability matrix', () => {
         expect(vectorAccelerationCheck?.status).toBe('pass');
         expect(vectorAccelerationRepresentationCheck?.status).toBe('pass');
         expect(vectorAccelerationPrefilterCheck?.status).toBe('pass');
+        expect(vectorAccelerationCalibrationReadinessCheck?.status).toBe('pass');
         expect(vectorAccelerationHealthCheck?.status).toBe('pass');
         expect(vectorAccelerationIndexSyncCheck?.status).toBe('pass');
         expect(vectorAccelerationTraceabilityCheck?.status).toBe('pass');
@@ -386,7 +390,7 @@ describe('runtime capability matrix', () => {
         expect(matrix.signals.queryVectorIndexAccelerationEnabled).toBe(true);
         expect(matrix.signals.queryVectorIndexAccelerationMode).toBe('ann_prefilter');
         expect(matrix.signals.queryVectorIndexAccelerationLastSelectionMode).toBe('token_signature_prefilter');
-        expect(matrix.signals.queryVectorIndexAccelerationLastCandidateCount).toBe(96);
+        expect(matrix.signals.queryVectorIndexAccelerationLastCandidateCount).toBe(12);
         expect(matrix.signals.queryVectorIndexAccelerationAdapterId).toBe('local-vector-acceleration-ann-v1');
         expect(matrix.signals.queryVectorIndexAccelerationHealthStatus).toBe('ready');
         expect(matrix.signals.queryVectorIndexAccelerationHealthMessage).toBe('local_ann_prefilter_active');
@@ -540,6 +544,9 @@ describe('runtime capability matrix', () => {
         const vectorAccelerationPrefilterCheck = matrix.checks.find(
             (check) => check.checkId === 'query_vector_acceleration_prefilter_effectiveness'
         );
+        const vectorAccelerationCalibrationReadinessCheck = matrix.checks.find(
+            (check) => check.checkId === 'query_vector_acceleration_calibration_readiness'
+        );
         const vectorAccelerationHealthCheck = matrix.checks.find(
             (check) => check.checkId === 'query_vector_acceleration_health'
         );
@@ -553,6 +560,7 @@ describe('runtime capability matrix', () => {
         expect(vectorPersistenceCheck?.status).toBe('warn');
         expect(vectorAccelerationCheck?.status).toBe('warn');
         expect(vectorAccelerationPrefilterCheck?.status).toBe('warn');
+        expect(vectorAccelerationCalibrationReadinessCheck?.status).toBe('warn');
         expect(vectorAccelerationHealthCheck?.status).toBe('warn');
         expect(vectorAccelerationTraceabilityCheck?.status).toBe('warn');
         expect(vectorAccelerationCircuitCheck?.status).toBe('warn');
@@ -605,12 +613,16 @@ describe('runtime capability matrix', () => {
         const vectorAccelerationIndexSyncCheck = matrix.checks.find(
             (check) => check.checkId === 'query_vector_acceleration_index_sync_health'
         );
+        const vectorAccelerationCalibrationReadinessCheck = matrix.checks.find(
+            (check) => check.checkId === 'query_vector_acceleration_calibration_readiness'
+        );
         const vectorAccelerationTraceabilityCheck = matrix.checks.find(
             (check) => check.checkId === 'query_vector_acceleration_traceability'
         );
         expect(vectorAccelerationModeCheck?.status).toBe('pass');
         expect(vectorAccelerationHealthCheck?.status).toBe('fail');
         expect(vectorAccelerationIndexSyncCheck?.status).toBe('warn');
+        expect(vectorAccelerationCalibrationReadinessCheck?.status).toBe('fail');
         expect(vectorAccelerationTraceabilityCheck?.status).toBe('fail');
         expect(String(vectorAccelerationHealthCheck?.observed || '')).toContain('healthStatus=unavailable');
         expect(String(vectorAccelerationIndexSyncCheck?.observed || '')).toContain('indexSyncStatus=unknown');
@@ -712,8 +724,13 @@ describe('runtime capability matrix', () => {
         const vectorAccelerationPrefilterCheck = matrix.checks.find(
             (check) => check.checkId === 'query_vector_acceleration_prefilter_effectiveness'
         );
+        const vectorAccelerationCalibrationReadinessCheck = matrix.checks.find(
+            (check) => check.checkId === 'query_vector_acceleration_calibration_readiness'
+        );
         expect(vectorAccelerationPrefilterCheck?.status).toBe('pass');
+        expect(vectorAccelerationCalibrationReadinessCheck?.status).toBe('warn');
         expect(String(vectorAccelerationPrefilterCheck?.message || '')).toContain('deferred');
+        expect(String(vectorAccelerationCalibrationReadinessCheck?.message || '')).toContain('not closed yet');
         expect(matrix.signals.queryVectorIndexAccelerationLastSelectionMode).toBe('full_scan');
     });
 
@@ -3550,6 +3567,53 @@ describe('runtime capability matrix', () => {
         expect(
             runbook.verificationTargets.some((item) =>
                 String(item || '').includes('lastSelectionMode')
+            )
+        ).toBe(true);
+    });
+
+    test('runtime runbook for vector acceleration calibration readiness includes calibration verification targets', () => {
+        const matrix = buildRuntimeCapabilityMatrix({
+            generatedAt: '2026-04-01T12:00:00.000Z',
+            configuredStoreBackend: 'file',
+            configuredQueryBackend: 'local_vector',
+            store: createStoreDiagnostics(),
+            queryDiagnostics: createQueryDiagnostics({
+                backendId: 'local-vector-v1',
+                runtime: {
+                    backendId: 'local-vector-v1',
+                    ready: true,
+                    vectorIndex: {
+                        enabled: true,
+                        status: 'ready',
+                        persisted: true,
+                        loadedFromDisk: true,
+                        atomCount: 256,
+                        acceleration: {
+                            enabled: true,
+                            mode: 'ann_prefilter',
+                            lastSelectionMode: 'token_signature_prefilter',
+                            lastCandidateCount: 64,
+                            adapterId: 'external-http-vector-acceleration-v1',
+                            healthStatus: 'ready',
+                            circuitState: 'closed',
+                            requestCount: 20,
+                            syncRequestCount: 3,
+                            syncSuccessCount: 3,
+                            syncedIndexSignature: 'idx_sync_ok',
+                            syncedAtomCount: 128,
+                            lastRequestId: 'connector-req-42',
+                        },
+                    },
+                },
+            }),
+            queryCount: 20,
+        });
+
+        const runbook = buildRuntimeCapabilityRunbook(matrix, 'query_vector_acceleration_calibration_readiness');
+        expect(runbook.selectedCheck?.checkId).toBe('query_vector_acceleration_calibration_readiness');
+        expect(
+            runbook.verificationTargets.some((item) =>
+                String(item || '').includes('sync telemetry ready')
             )
         ).toBe(true);
     });

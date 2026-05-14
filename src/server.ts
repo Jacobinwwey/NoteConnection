@@ -1908,6 +1908,7 @@ function resolveRuntimeRunbookVerificationEscalation(
     if (
         selectedCheckId === 'query_vector_acceleration_index_sync_health'
         || selectedCheckId === 'query_vector_acceleration_circuit_state'
+        || selectedCheckId === 'query_vector_acceleration_calibration_readiness'
         || selectedCheckId === 'query_vector_acceleration_prefilter_effectiveness'
         || selectedCheckId === 'query_vector_acceleration_traceability'
     ) {
@@ -2683,6 +2684,31 @@ function resolveRuntimeRunbookVerificationEscalationActionItems(input: {
             instruction: 'Re-run runbook verify and confirm query_vector_acceleration_prefilter_effectiveness converges to pass before tightening ANN rollout gates.',
             endpointHint: '/api/knowledge/runtime-capability-runbook/verify',
             automationHint: 'verify_ann_prefilter_effectiveness_recovery',
+        });
+    } else if (selectedCheckId === 'query_vector_acceleration_calibration_readiness') {
+        addAction({
+            actionId: 'inspect_ann_calibration_prerequisites',
+            priority: escalation === 'critical' || escalation === 'high' ? 'p0' : 'p1',
+            category: 'evidence',
+            instruction: 'Inspect diagnostics for sync telemetry, prefilter sample readiness, connector stability, and correlation-field coverage before changing ANN thresholds.',
+            endpointHint: '/api/knowledge/query-backend-diagnostics',
+            automationHint: 'inspect_ann_calibration_prerequisites',
+        });
+        addAction({
+            actionId: 'drive_ann_calibration_window',
+            priority: escalation === 'critical' ? 'p0' : 'p1',
+            category: 'verify',
+            instruction: 'Issue ingest plus representative local_vector query traffic until the same runtime window shows sync-ready telemetry, active prefilter selection, evaluable candidate counts, and stable connector state.',
+            endpointHint: '/api/knowledge/query',
+            automationHint: 'drive_ann_calibration_window',
+        });
+        addAction({
+            actionId: 'verify_ann_calibration_readiness_recovery',
+            priority: 'p1',
+            category: 'verify',
+            instruction: 'Re-run runbook verify and confirm query_vector_acceleration_calibration_readiness converges to pass before tuning release-grade ANN thresholds.',
+            endpointHint: '/api/knowledge/runtime-capability-runbook/verify',
+            automationHint: 'verify_ann_calibration_readiness_recovery',
         });
     } else if (selectedCheckId === RUNTIME_RUNBOOK_CHECK_ID_CONVERSATION_TURN_CACHE_ALERT_TREND) {
         addAction({

@@ -35,6 +35,8 @@
 
 - [x] `node node_modules/jest/bin/jest.js src/agent_workspace.frontend.test.ts --runInBand --no-cache`
   - PASS
+- [x] `node node_modules/jest/bin/jest.js src/learning/runtimeCapability.test.ts src/knowledge.api.contract.test.ts --runInBand --no-cache`
+  - PASS
 - [x] `npm run test:agent-workspace:contracts`
   - PASS
 - [x] `npm run build:with-vite`
@@ -53,7 +55,8 @@
    - they now also surface ANN circuit budget flags and prefilter calibration-readiness cues,
    - action-queue continues to carry the index-sync incident drilldown.
 2. `query_vector_acceleration_prefilter_effectiveness` now shares the ANN fast-lane escalation path instead of using the slower generic escalation branch.
-3. This refresh still does **not** prove release-grade Phase-2 closure:
+3. Runtime capability governance now has explicit gate `query_vector_acceleration_calibration_readiness`, which fails or warns until the ANN path has representative sync/prefilter/traceability/stability telemetry in the same runtime window.
+4. This refresh still does **not** prove release-grade Phase-2 closure:
    - it closes visibility and browser/runtime proof for the new ANN governance summaries,
    - it does **not** close workload/threshold calibration for those budgets.
 
