@@ -54,7 +54,7 @@
     function translate(key, fallback, params) {
         if (
             window.i18n
-            && window.i18n.isInitialized === true
+            && window.i18n.isInitialized !== false
             && typeof window.i18n.t === 'function'
         ) {
             const translated = window.i18n.t(key, params || {});
