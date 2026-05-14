@@ -20,11 +20,16 @@ describe('foundation sqlite runtime verification contract', () => {
     expect(packageJson.scripts?.['verify:foundation:sqlite-runtime']).toBe(
       'node scripts/verify-foundation-sqlite-runtime.js'
     );
+    expect(packageJson.scripts?.['verify:foundation:sqlite-runtime:heavy']).toBe(
+      'node scripts/verify-foundation-sqlite-runtime.js --heavy'
+    );
   });
 
-  test('verifier script covers both dist runtime and packaged sidecar restart continuity', () => {
+  test('verifier script covers smoke and heavy profiles across dist runtime and packaged sidecar restart continuity', () => {
     const source = fs.readFileSync(scriptPath, 'utf8');
 
+    expect(source).toContain('WORKLOAD_PROFILES');
+    expect(source).toContain("profileId: 'heavy'");
     expect(source).toContain('dist_node_runtime');
     expect(source).toContain('packaged_sidecar');
     expect(source).toContain('knowledge_graph_store.graphdb.v1.sqlite');
@@ -35,6 +40,8 @@ describe('foundation sqlite runtime verification contract', () => {
     expect(source).toContain("graphBackendSignalKind === 'embedded_graphdb'");
     expect(source).toContain("storageEngine === 'sqlite'");
     expect(source).toContain("usingFallback !== true");
-    expect(source).toContain("query: 'persist graph content restart sqlite proof'");
+    expect(source).toContain("genericQuery: 'persist graph content restart sqlite proof'");
+    expect(source).toContain('graphDbLastSnapshotMetadata');
+    expect(source).toContain('heavy_runtime_anchor_');
   });
 });

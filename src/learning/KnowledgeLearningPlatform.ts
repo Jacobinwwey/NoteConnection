@@ -8282,6 +8282,14 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     command: 'npm run test:agent-workspace:contracts',
                 },
                 {
+                    gateId: 'foundation_runtime_proof',
+                    command: 'npm run verify:foundation:sqlite-runtime',
+                },
+                {
+                    gateId: 'foundation_runtime_heavy_proof',
+                    command: 'npm run verify:foundation:sqlite-runtime:heavy',
+                },
+                {
                     gateId: 'documentation',
                     command: 'npm run docs:diataxis:check && npm run docs:site:build',
                 },

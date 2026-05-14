@@ -9,7 +9,8 @@
 - 当前已经真实落地的部分：
   - `src/learning/store.ts` 已具备 file-backed ops、embedded SQLite graphdb persistence/query 路径，以及 HTTP adapter 语义路径，
   - embedded sqlite 基线现在还具备了重启耐久性证明：shutdown 会干净关闭 store，adapter 可安全重开，server integration 已覆盖 ingest -> shutdown -> fresh module reload -> diagnostics/query/readiness 连续性，
-  - 现在还有一条新的主机级验证器，会在当前 Windows 宿主上分别走 `dist` runtime 与 packaged sidecar 两条路径，证明同一条 embedded sqlite 基线可以完成 ingest -> store diagnostics/foundation readiness -> restart -> query 连续性（`scripts/verify-foundation-sqlite-runtime.js`），
+  - 现在已有一条主机级验证器，会在当前 Windows 宿主上分别走 `dist` runtime 与 packaged sidecar 两条路径，证明同一条 embedded sqlite 基线可以完成 ingest -> store diagnostics/foundation readiness -> restart -> query 连续性（`scripts/verify-foundation-sqlite-runtime.js`），
+  - 现在还有一条更重的主机级验证器，把同样的证明扩展到 `180` 文档 workload：在同样两条 runtime 路径上验证 snapshot metadata 计数、restart 连续性与多点 query 连续性（`scripts/verify-foundation-sqlite-runtime.js --heavy`），
   - `src/learning/queryBackend.ts` / `src/learning/vectorAccelerationAdapter.ts` 现已具备 ANN 风格 prefilter、representation telemetry、circuit health、远端索引同步，以及 live `external_http` connector 证明，
   - runtime capability / runbook 治理也已新增显式的 ANN 远端索引同步健康度检查（`query_vector_acceleration_index_sync_health`），与 prefilter、health、traceability、circuit 并列，
   - runtime capability 治理现在也新增了显式门禁 `query_vector_acceleration_calibration_readiness`，用来正式回答当前 ANN 路径是否已经具备进入发布级阈值校准的前提条件，
@@ -21,12 +22,12 @@
   - `src/learning/KnowledgeLearningPlatform.ts` 中的 Phase-2 运行时诊断面已接通真实实现，包括 query-backend comparison/history/trend、knowledge staleness diagnostics/rebuild planning、learning-quality history/trend、session-plan quality evaluate/history/trend/runtime-threshold diagnostics、query-backend config、query-backend diagnostics，
   - Phase-3 的导师/记忆诊断仍为真实实现，且 `src/server.ts` 现已注入默认激活态 tutor adapter，正常 server 路径可直接产出 adapter telemetry。
 - 当前仍未闭环的部分：
-  - Phase-1 A8 已经超出 file-only 默认态：`src/server.ts` 现在默认走 `graphdb/sqlite` 并保留显式 file fallback，重启耐久性已证明，而且主机级 dist/runtime + packaged sidecar 证明也已具备；但在宣布本地图后端达到生产闭环之前，更重工作负载级加固仍未完成；
+  - Phase-1 A8 已经超出 file-only 默认态：`src/server.ts` 现在默认走 `graphdb/sqlite` 并保留显式 file fallback，重启耐久性已证明，主机级 dist/runtime + packaged sidecar 证明也已具备，而且 `180` 文档级主机端 workload smoke 也已具备；但在宣布本地图后端达到生产闭环之前，更广工作负载包络、soak 与性能级加固仍未完成；
   - Phase-1 A9 现已进入 operational baseline，而不再只是 scaffolding：但在宣布 ANN 层达到生产闭环前，仍需补齐 recall/latency 校准与更大工作负载验证；
   - Phase-2 的 quality/session/query 可观测性已不再是空占位，但它们仍需要建立在当前 graph/ANN operational baseline 之上的发布级校准，因此还不能宣称发布级闭环；新的 ANN calibration-readiness gate 只是把前提条件正式化，并不等于校准完成；
   - 默认 tutor routing 已不再只是 catalog-only，但当前 runtime 仍是 `local`-first，并保留显式 rule-engine fallback，而不是已验证的生产级多 provider 路由策略。
 - 因此当前活跃重心不是“默认认为 Phase-1 已完成然后推进上层”，而是：
-  1. 在保持新的 dist/runtime + packaged sidecar 证明持续为绿的前提下，先补完 embedded graph backend 基线剩余的更重工作负载闭环，
+  1. 在保持新的 dist/runtime + packaged sidecar 证明以及 `180` 文档 workload smoke 持续为绿的前提下，先补完 embedded graph backend 基线剩余的更广工作负载闭环，
   2. 补完当前 live ANN connector baseline 的工作负载与阈值闭环，
   3. 把当前已前推到 runbook 卡片中的 ANN 指标可见性，继续推进为带工作负载校准的发布级门禁，
   4. 让这批新诊断面始终与同一份运行时真相保持一致，
@@ -146,9 +147,9 @@
 ## 最新验证快照（2026-05-14）
 
 - 本轮已在当前 Windows 宿主重新确认通过：`node node_modules/jest/bin/jest.js src/learning/runtimeCapability.test.ts src/knowledge.api.contract.test.ts --runInBand --no-cache`、`node node_modules/jest/bin/jest.js src/agent_workspace.frontend.test.ts --runInBand --no-cache`、`npm run test:agent-workspace:contracts`、`npm run build:with-vite`、`npm run docs:diataxis:check`、`npm run docs:site:build`、`NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_DYNAMIC_STRICT=1 node scripts/verify-agent-workspace-browser.js`。
-- 本轮已在当前 Windows 宿主重新确认通过：`npm run build:sidecar`、`npm run verify:foundation:sqlite-runtime`。
+- 本轮已在当前 Windows 宿主重新确认通过：`npm run build:sidecar`、`npm run verify:foundation:sqlite-runtime`、`npm run verify:foundation:sqlite-runtime:heavy`。
 - 严格浏览器证据现在已显式校验本轮新增的双语 runtime-runbook verify/checks ANN 治理标签：不仅验证 sync-health，也验证熔断、可追踪性、预筛选摘要，以及支撑校准工作的阈值/信号钻取和校准就绪态。
-- embedded sqlite 图基线现在也具备了 Jest 集成测试之外、可重复执行的主机级运行时证明：`dist` runtime 与 packaged sidecar 两条路径都会在同一个 runtime data 目录上保持 ingest -> diagnostics/readiness -> restart -> query 连续性。
+- embedded sqlite 图基线现在也具备了 Jest 集成测试之外、可重复执行的主机级运行时证明：轻载验证会让 `dist` runtime 与 packaged sidecar 两条路径持续保持 ingest -> diagnostics/readiness -> restart -> query 连续性，而更重验证则会在同样两条路径上证明 `180` 文档 workload 的 snapshot metadata / restart / 多点 query 连续性。
 - Tauri strict 证据链在实现层面已经闭环，但仍受宿主依赖约束：
   - 当前 Windows 宿主已经证明 non-strict tauri/runtime 行为与 load-flow parity，
   - Linux strict 证据命令（`verify:agent-workspace:tauri:rust:strict`、`verify:agent-workspace:tauri:window-evidence:strict` 及 strict evidence index/manifest）仍要求宿主预装 `webkit2gtk-4.1`、`javascriptcoregtk-4.1`、`libsoup-3.0`。

@@ -1811,6 +1811,18 @@ describe('KnowledgeLearningPlatform', () => {
                     'readiness_verifier_present',
                 ])
             );
+            expect(readiness.mandatoryChecks).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        gateId: 'foundation_runtime_proof',
+                        command: 'npm run verify:foundation:sqlite-runtime',
+                    }),
+                    expect.objectContaining({
+                        gateId: 'foundation_runtime_heavy_proof',
+                        command: 'npm run verify:foundation:sqlite-runtime:heavy',
+                    }),
+                ])
+            );
 
             const sufficiency = await readinessPlatform.getBackendBaselineSufficiency();
             expect(sufficiency.sufficient).toBe(true);

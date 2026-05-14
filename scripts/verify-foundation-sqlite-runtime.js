@@ -13,6 +13,31 @@ const SQLITE_FILENAME = 'knowledge_graph_store.graphdb.v1.sqlite';
 const LOOPBACK_HOST = '127.0.0.1';
 const STARTUP_TIMEOUT_MS = 30000;
 const SHUTDOWN_TIMEOUT_MS = 8000;
+const WORKLOAD_PROFILES = {
+    smoke: {
+        profileId: 'smoke',
+        documentCount: 1,
+        minDocumentCount: 1,
+        minAtomCount: 1,
+        genericQuery: 'persist graph content restart sqlite proof',
+        genericTopK: 3,
+        minGenericResultCount: 1,
+    },
+    heavy: {
+        profileId: 'heavy',
+        documentCount: 180,
+        minDocumentCount: 180,
+        minAtomCount: 180,
+        genericQuery: 'sqlite heavy workload continuity shared retrieval token',
+        genericTopK: 10,
+        minGenericResultCount: 5,
+    },
+};
+
+function parseProfileFromArgs(argv) {
+    const args = new Set(argv);
+    return args.has('--heavy') ? 'heavy' : 'smoke';
+}
 
 function resolveHostSidecarBinaryPath() {
     const binDir = path.join(REPO_ROOT, 'src-tauri', 'bin');
@@ -328,6 +353,9 @@ function assertStoreDiagnostics(response, mode, phase) {
         backendReady: Boolean(store.backendReady),
         usingFallback: Boolean(store.usingFallback),
         location: String(store.location || ''),
+        snapshotMetadata: store.graphDbLastSnapshotMetadata && typeof store.graphDbLastSnapshotMetadata === 'object'
+            ? store.graphDbLastSnapshotMetadata
+            : {},
     };
 }
 
@@ -357,41 +385,139 @@ function assertFoundationReadiness(response, mode, phase) {
     };
 }
 
-function assertQueryResponse(response, mode, phase, expectedDocumentId) {
+function assertQueryResponse(response, mode, phase, options) {
     assertCondition(response.status === 200, `[${mode}] ${phase}: query status=${response.status}`);
     const body = response.body || {};
     const items = body && body.result && Array.isArray(body.result.items)
         ? body.result.items
         : [];
     assertCondition(body.success === true, `[${mode}] ${phase}: query success!=true`);
-    assertCondition(items.length > 0, `[${mode}] ${phase}: query returned no items`);
-    const matched = items.find((item) => String(item && item.atom && item.atom.documentId || '') === expectedDocumentId);
-    assertCondition(Boolean(matched), `[${mode}] ${phase}: expected documentId ${expectedDocumentId} not found in query results`);
+    const minItemCount = Math.max(1, Number(options && options.minItemCount || 1));
+    assertCondition(items.length >= minItemCount, `[${mode}] ${phase}: query returned ${items.length} items, expected >= ${minItemCount}`);
+    const expectedDocumentId = String(options && options.expectedDocumentId || '').trim();
+    if (expectedDocumentId) {
+        const matched = items.find((item) => String(item && item.atom && item.atom.documentId || '') === expectedDocumentId);
+        assertCondition(Boolean(matched), `[${mode}] ${phase}: expected documentId ${expectedDocumentId} not found in query results`);
+    }
     return {
         itemCount: items.length,
-        matchedDocumentId: expectedDocumentId,
+        matchedDocumentId: expectedDocumentId || '',
     };
 }
 
-async function runScenario(mode) {
-    const fixture = createTempProject(`noteconnection-foundation-${mode}`);
-    const sqlitePath = path.join(fixture.runtimeDataDir, SQLITE_FILENAME);
-    const documentId = `doc_restart_runtime_${mode}`;
-    const sourcePath = path.join(fixture.kbRoot, `${documentId}.md`);
-    const ingestPayload = {
-        incremental: true,
-        documents: [
+function buildWorkloadDocuments(mode, workloadProfile) {
+    if (workloadProfile.profileId === 'smoke') {
+        const documentId = `doc_restart_runtime_${mode}`;
+        return [
             {
                 documentId,
-                sourcePath,
+                sourcePath: documentId + '.md',
                 language: 'en',
                 content: '# Restart Runtime\n\nPersist this graph content across server restart for sqlite proof.',
             },
-        ],
+        ];
+    }
+
+    return Array.from({ length: workloadProfile.documentCount }, (_unused, index) => {
+        const documentId = `doc_heavy_runtime_${mode}_${index}`;
+        const clusterId = index % 9;
+        const bandId = Math.floor(index / 30);
+        return {
+            documentId,
+            sourcePath: documentId + '.md',
+            language: 'en',
+            content: [
+                `# Heavy Runtime ${index}`,
+                '',
+                `sqlite heavy workload continuity shared retrieval token cluster_${clusterId} band_${bandId}`,
+                `heavy_runtime_anchor_${index} runtime_sqlite_restart continuity_band_${bandId} graph_backend_sqlite`,
+                `shared narrative ${index}: embedded sqlite graph backend should survive restart and preserve retrieval continuity under heavier workload slices.`,
+                `workload checksum ${index} ${index + 17} ${index + 37}`,
+            ].join('\n\n'),
+        };
+    });
+}
+
+function buildWorkloadQueries(mode, workloadProfile) {
+    if (workloadProfile.profileId === 'smoke') {
+        return [
+            {
+                phaseId: 'targeted',
+                request: {
+                    query: workloadProfile.genericQuery,
+                    topK: workloadProfile.genericTopK,
+                },
+                expectedDocumentId: `doc_restart_runtime_${mode}`,
+                minItemCount: 1,
+            },
+        ];
+    }
+
+    const targetIndexes = [0, Math.floor(workloadProfile.documentCount / 2), workloadProfile.documentCount - 1];
+    return [
+        {
+            phaseId: 'generic',
+            request: {
+                query: workloadProfile.genericQuery,
+                topK: workloadProfile.genericTopK,
+            },
+            expectedDocumentId: '',
+            minItemCount: workloadProfile.minGenericResultCount,
+        },
+        ...targetIndexes.map((index) => ({
+            phaseId: `anchor_${index}`,
+            request: {
+                query: `heavy_runtime_anchor_${index}`,
+                topK: 3,
+            },
+            expectedDocumentId: `doc_heavy_runtime_${mode}_${index}`,
+            minItemCount: 1,
+        })),
+    ];
+}
+
+function assertSnapshotMetadata(diagnosticsSummary, mode, phase, workloadProfile) {
+    const metadata = diagnosticsSummary && diagnosticsSummary.snapshotMetadata
+        ? diagnosticsSummary.snapshotMetadata
+        : {};
+    const documentCount = Math.max(0, Math.floor(Number(metadata.documentCount || 0)));
+    const atomCount = Math.max(0, Math.floor(Number(metadata.atomCount || 0)));
+    assertCondition(documentCount >= workloadProfile.minDocumentCount, `[${mode}] ${phase}: snapshot documentCount=${documentCount}, expected >= ${workloadProfile.minDocumentCount}`);
+    assertCondition(atomCount >= workloadProfile.minAtomCount, `[${mode}] ${phase}: snapshot atomCount=${atomCount}, expected >= ${workloadProfile.minAtomCount}`);
+    return {
+        documentCount,
+        atomCount,
+        relationEdgeCount: Math.max(0, Math.floor(Number(metadata.relationEdgeCount || 0))),
+        temporalEdgeCount: Math.max(0, Math.floor(Number(metadata.temporalEdgeCount || 0))),
     };
-    const queryPayload = {
-        query: 'persist graph content restart sqlite proof',
-        topK: 3,
+}
+
+async function runQueries(port, mode, phase, workloadQueries) {
+    const queryResults = [];
+    for (const queryPlan of workloadQueries) {
+        const queryResponse = await requestJson(port, 'POST', '/api/knowledge/query', queryPlan.request);
+        queryResults.push({
+            phaseId: queryPlan.phaseId,
+            ...assertQueryResponse(queryResponse, mode, `${phase}:${queryPlan.phaseId}`, {
+                expectedDocumentId: queryPlan.expectedDocumentId,
+                minItemCount: queryPlan.minItemCount,
+            }),
+        });
+    }
+    return queryResults;
+}
+
+async function runScenario(mode, workloadProfile) {
+    const fixture = createTempProject(`noteconnection-foundation-${mode}`);
+    const sqlitePath = path.join(fixture.runtimeDataDir, SQLITE_FILENAME);
+    const documents = buildWorkloadDocuments(mode, workloadProfile).map((document) => ({
+        ...document,
+        sourcePath: path.join(fixture.kbRoot, document.sourcePath),
+    }));
+    const workloadQueries = buildWorkloadQueries(mode, workloadProfile);
+    const ingestPayload = {
+        incremental: true,
+        documents,
     };
 
     let runtime = null;
@@ -399,6 +525,8 @@ async function runScenario(mode) {
     let bridgePort = await getFreePort();
     const result = {
         mode,
+        profileId: workloadProfile.profileId,
+        ingestedDocuments: documents.length,
         sqlitePath,
         firstPass: null,
         restartPass: null,
@@ -413,13 +541,17 @@ async function runScenario(mode) {
         assertCondition(ingestResponse.body && ingestResponse.body.success === true, `[${mode}] ingest success!=true`);
         assertCondition(fs.existsSync(sqlitePath), `[${mode}] sqlite store not created at ${sqlitePath}`);
 
-        const diagnosticsResponse = await requestJson(port, 'GET', '/api/knowledge/store-diagnostics');
+        const firstQueries = await runQueries(port, mode, 'first_pass', workloadQueries);
         const readinessResponse = await requestJson(port, 'GET', '/api/knowledge/foundation/readiness');
-        const queryResponse = await requestJson(port, 'POST', '/api/knowledge/query', queryPayload);
+        const diagnosticsResponse = await requestJson(port, 'GET', '/api/knowledge/store-diagnostics');
+        const firstDiagnostics = assertStoreDiagnostics(diagnosticsResponse, mode, 'first_pass');
         result.firstPass = {
-            diagnostics: assertStoreDiagnostics(diagnosticsResponse, mode, 'first_pass'),
+            diagnostics: {
+                ...firstDiagnostics,
+                snapshotMetadata: assertSnapshotMetadata(firstDiagnostics, mode, 'first_pass', workloadProfile),
+            },
             readiness: assertFoundationReadiness(readinessResponse, mode, 'first_pass'),
-            query: assertQueryResponse(queryResponse, mode, 'first_pass', documentId),
+            queries: firstQueries,
         };
 
         await stopRuntime(runtime);
@@ -431,13 +563,17 @@ async function runScenario(mode) {
         runtime = spawnRuntime(mode, { port, bridgePort, fixture });
         await waitForServer(port, STARTUP_TIMEOUT_MS);
 
-        const restartDiagnosticsResponse = await requestJson(port, 'GET', '/api/knowledge/store-diagnostics');
+        const restartQueries = await runQueries(port, mode, 'restart_pass', workloadQueries);
         const restartReadinessResponse = await requestJson(port, 'GET', '/api/knowledge/foundation/readiness');
-        const restartQueryResponse = await requestJson(port, 'POST', '/api/knowledge/query', queryPayload);
+        const restartDiagnosticsResponse = await requestJson(port, 'GET', '/api/knowledge/store-diagnostics');
+        const restartDiagnostics = assertStoreDiagnostics(restartDiagnosticsResponse, mode, 'restart_pass');
         result.restartPass = {
-            diagnostics: assertStoreDiagnostics(restartDiagnosticsResponse, mode, 'restart_pass'),
+            diagnostics: {
+                ...restartDiagnostics,
+                snapshotMetadata: assertSnapshotMetadata(restartDiagnostics, mode, 'restart_pass', workloadProfile),
+            },
             readiness: assertFoundationReadiness(restartReadinessResponse, mode, 'restart_pass'),
-            query: assertQueryResponse(restartQueryResponse, mode, 'restart_pass', documentId),
+            queries: restartQueries,
         };
 
         return result;
@@ -452,6 +588,8 @@ async function runScenario(mode) {
 }
 
 async function main() {
+    const workloadProfileKey = parseProfileFromArgs(process.argv.slice(2));
+    const workloadProfile = WORKLOAD_PROFILES[workloadProfileKey];
     assertCondition(
         fs.existsSync(DIST_FRONTEND_DIR),
         `Missing dist frontend directory: ${DIST_FRONTEND_DIR}. Run npm run build first.`
@@ -463,11 +601,17 @@ async function main() {
             platform: process.platform,
             arch: process.arch,
         },
+        workloadProfile: {
+            profileId: workloadProfile.profileId,
+            documentCount: workloadProfile.documentCount,
+            minDocumentCount: workloadProfile.minDocumentCount,
+            minAtomCount: workloadProfile.minAtomCount,
+        },
         modes: [],
     };
 
-    report.modes.push(await runScenario('dist_node_runtime'));
-    report.modes.push(await runScenario('packaged_sidecar'));
+    report.modes.push(await runScenario('dist_node_runtime', workloadProfile));
+    report.modes.push(await runScenario('packaged_sidecar', workloadProfile));
 
     console.log(JSON.stringify(report, null, 2));
     console.log('[foundation-sqlite-runtime] PASS');

@@ -6,7 +6,7 @@
 
 - [x] Agent-workspace browser/runtime/Tauri verification closure is real and repeatable on the current branch.
 - [x] Phase-3 tutor telemetry, tutor trace/provider trend diagnostics, conversation memory, and memory-policy diagnostics now have concrete backend implementations.
-- [~] Phase-1 A8 has advanced to an embedded `graphdb/sqlite` operational baseline and now has restart-durability proof across shutdown/fresh restart; packaged/runtime and workload hardening still remain before production closure.
+- [~] Phase-1 A8 has advanced to an embedded `graphdb/sqlite` operational baseline and now has restart-durability proof, host-level dist/runtime + packaged sidecar proof, and a 180-document heavier-workload smoke; broader workload-envelope / soak / performance hardening still remain before production closure.
 - [~] Phase-1 A9 now has a live `external_http` sync-backed connector baseline under real query traffic, but benchmark-backed rollout thresholds and larger-workload validation still remain before production closure.
 - [x] `KnowledgeLearningPlatform.ts` no longer uses placeholder-backed runtime surfaces for query comparison, staleness, learning-quality, and session-plan-quality diagnostics.
 - [x] Server bootstrap now injects an active local `tutorAdapter`; the remaining tutor gap is production-proven multi-provider routing rather than default activation.
@@ -21,7 +21,7 @@
 - [x] Bridge-first migration baseline is active (`Tauri + Node sidecar + Godot Path Mode`).
 - [x] Runtime path adaptation has been integrated for sidecar and frontend data roots.
 - [x] Worker runtime resolution has been stabilized for packaged sidecar scenarios.
-- [ ] Packaged/runtime and heavier-workload verification for the embedded graph backend baseline remain pending.
+- [ ] Broader workload-envelope / soak / performance hardening for the embedded graph backend baseline remain pending after the new packaged/runtime and 180-document host-level workload proofs.
 - [ ] Production ANN connector workload and benchmark-backed rollout thresholds remain pending.
 - [ ] Phase-2 quality/query/session diagnostics now need release-grade calibration on top of a release-grade graphdb/ANN baseline.
 - [ ] Tutor routing now needs multi-provider hardening beyond the active local-first adapter path.

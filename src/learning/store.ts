@@ -1241,6 +1241,14 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
                     }
                 }
                 await a.saveSnapshot!(snapshot);
+                if (typeof a.probeSnapshotMetadata === 'function') {
+                    try {
+                        opsState.lastProbeResult = await a.probeSnapshotMetadata();
+                        opsState.probed = true;
+                    } catch {
+                        /* ignore */
+                    }
+                }
             };
 
             const resolveOpsCapabilities = (): KnowledgeGraphOpsCapabilities => {

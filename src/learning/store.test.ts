@@ -698,7 +698,7 @@ describe('Knowledge graph store backend factory', () => {
             const restored = await store.loadSnapshot();
 
             expect(restored).toEqual(snapshot);
-            expect(probeCount).toBe(0);
+            expect(probeCount).toBeGreaterThanOrEqual(1);
             expect(loadCount).toBeGreaterThanOrEqual(1);
             expect(saveCount).toBeGreaterThanOrEqual(1);
             const diagnostics = store.getDiagnostics();
@@ -1055,6 +1055,78 @@ describe('Knowledge graph store backend factory', () => {
                 expect.arrayContaining(['load_snapshot', 'get_node', 'query_nodes', 'query_edges', 'find_path'])
             );
             expect((diagnostics as any).supportedWriteOperations).toEqual(['save_snapshot']);
+        } finally {
+            try {
+                adapter?.close?.();
+            } catch {
+            }
+            fs.rmSync(tempRoot, { recursive: true, force: true });
+        }
+    });
+
+    test('graphdb sqlite store diagnostics refresh snapshot metadata after snapshot writes', async () => {
+        const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowledge-store-sqlite-store-diag-'));
+        const sqlitePath = path.join(tempRoot, 'runtime_data', 'knowledge_graph_store.graphdb.v1.sqlite');
+        const fallbackPath = path.join(tempRoot, 'runtime_data', 'knowledge_graph_store.v1.json');
+        let adapter: ReturnType<typeof createGraphDbSnapshotAdapter> | null = null;
+
+        try {
+            adapter = createGraphDbSnapshotAdapter({
+                provider: 'sqlite',
+                sqlitePath,
+                adapterId: 'embedded-sqlite-graphdb-diagnostics-test',
+            });
+            expect(adapter).not.toBeNull();
+
+            const store = createKnowledgeGraphStore({
+                backend: 'graphdb',
+                filePath: fallbackPath,
+                graphdb: {
+                    adapter,
+                },
+                graphDbFallbackEnabled: false,
+                graphDbOperationMode: 'ops_preferred',
+            });
+
+            const snapshot = createSnapshot('sqlite_store_diag_user');
+            snapshot.atoms = [
+                createAtom('atom_diag_a', 'Diag Alpha'),
+                createAtom('atom_diag_b', 'Diag Beta'),
+            ];
+            snapshot.relationEdges = [
+                createRelation('edge_diag_a_b', 'atom_diag_a', 'atom_diag_b'),
+            ];
+            snapshot.documents = [
+                {
+                    documentId: 'doc_diag',
+                    sourcePath: '/diag/doc.md',
+                    sourceHash: 'doc_diag_hash',
+                    version: 1,
+                    updatedAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+                    atomStableKeyToId: [
+                        ['atom_diag_a_stable', 'atom_diag_a'],
+                        ['atom_diag_b_stable', 'atom_diag_b'],
+                    ],
+                    atomIds: ['atom_diag_a', 'atom_diag_b'],
+                    evidenceSpanIds: [],
+                    relationEdgeIds: ['edge_diag_a_b'],
+                    temporalEdgeIds: [],
+                },
+            ];
+
+            await store.saveSnapshot(snapshot);
+
+            const diagnostics = store.getDiagnostics();
+            expect(diagnostics.storeType).toBe('graphdb');
+            expect(diagnostics.storageEngine).toBe('sqlite');
+            expect(diagnostics.graphDbLastSnapshotMetadata).toEqual(
+                expect.objectContaining({
+                    schemaVersion: 1,
+                    atomCount: 2,
+                    relationEdgeCount: 1,
+                    documentCount: 1,
+                })
+            );
         } finally {
             try {
                 adapter?.close?.();

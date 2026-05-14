@@ -45,6 +45,8 @@
   - 通过
 - [x] `npm run verify:foundation:sqlite-runtime`
   - 通过
+- [x] `npm run verify:foundation:sqlite-runtime:heavy`
+  - 通过
 - [x] `npm run docs:diataxis:check`
   - 通过
 - [x] `npm run docs:site:build`
@@ -57,7 +59,8 @@
 1. embedded `graphdb/sqlite` 基线现在也具备了当前 Windows 宿主上的可重复主机级运行时证明：
    - `npm run verify:foundation:sqlite-runtime` 会同时覆盖 `dist` runtime 与 packaged sidecar 两条路径，
    - 两条路径都会在同一个 runtime data 目录上证明 ingest -> store diagnostics/foundation readiness -> restart -> query 连续性，
-   - 因而 A8 当前已不再卡在“缺 packaged/runtime 证据”，而是诚实地只剩更重工作负载加固。
+   - `npm run verify:foundation:sqlite-runtime:heavy` 现在会把同样的证明扩展到 `180` 文档 workload，并校验 snapshot metadata 计数与多点 restart query，
+   - 因而 A8 当前已不再卡在“缺 packaged/runtime 或主机级更重 workload 证据”，而是诚实地只剩更广工作负载包络、soak 与性能级加固。
 2. Phase-2 的 ANN 治理切片现已从“后端 JSON 可见”推进到“前端 runbook 壳层可见”：
    - verify/checks 现在都会展示 ANN sync-health、熔断预算、可追踪性、预筛选摘要及阈值/信号钻取，
    - 也会进一步展示 ANN 熔断预算标志与预筛选校准就绪态，
@@ -77,7 +80,7 @@
    - conversation memory lifecycle，
    - memory-policy diagnostics/history/trend。
 2. 这些通过项**不等于** Phase-1 A8/A9 已闭环：
-   - runtime 已不再默认 `local-file-graphdb`，embedded `graphdb/sqlite` 基线的重启耐久性已由集成测试证明，而且主机级 dist/runtime + packaged sidecar 证明也已具备，但更重工作负载级加固仍待完成；
+   - runtime 已不再默认 `local-file-graphdb`，embedded `graphdb/sqlite` 基线的重启耐久性已由集成测试证明，而且主机级 dist/runtime + packaged sidecar 证明与 `180` 文档 workload smoke 也已具备，但更广工作负载包络、soak 与性能级加固仍待完成；
    - ANN 已不再停留在 query-only 脚手架：`external_http` 路径现已具备远端索引同步与真实端到端 query 证明，但在宣称生产闭环前仍需补齐工作负载与阈值校准。
 3. 这些通过项**不等于** Phase-2 quality gate 已闭环：
    - query compare、staleness、learning-quality、session-plan-quality、query-backend diagnostics 这批运行面已经具备真实实现，但它们仍需要建立在当前 graph/ANN operational baseline 之上的发布级校准。

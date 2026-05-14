@@ -2,7 +2,7 @@
 
 - [x] agent-workspace 的 browser/runtime/Tauri 验证闭环已经是真实可重复的。
 - [x] Phase-3 中的 tutor telemetry、tutor trace/provider trend、conversation memory、memory-policy diagnostics 已有具体后端实现。
-- [~] Phase-1 A8 已推进到 embedded `graphdb/sqlite` operational baseline，并已具备 shutdown/fresh restart 的重启耐久性证明；但 packaged/runtime 与工作负载级加固仍未达到生产闭环。
+- [~] Phase-1 A8 已推进到 embedded `graphdb/sqlite` operational baseline，并已具备 shutdown/fresh restart 的重启耐久性证明、主机级 dist/runtime + packaged sidecar 证明，以及 `180` 文档级更重 workload smoke；但更广工作负载包络、soak 与性能级加固仍未达到生产闭环。
 - [~] Phase-1 A9 现已具备 live `external_http` sync-backed connector baseline，并在真实 query 流量下得到证明；但 benchmark rollout 阈值与更大工作负载验证仍未完成。
 - [x] `KnowledgeLearningPlatform.ts` 中 query compare / staleness / learning-quality / session-plan-quality 运行面已不再返回 placeholder。
 - [x] `server.ts` 已注入激活态本地 `tutorAdapter`；剩余导师缺口已不再是默认激活，而是生产级多 provider 路由。
@@ -17,7 +17,7 @@
 - [x] Bridge-first 迁移基线已启用（`Tauri + Node sidecar + Godot Path Mode`）。
 - [x] Sidecar 与前端数据根路径的运行时适配已集成。
 - [x] 打包 Sidecar 场景下的 Worker 路径解析已稳定。
-- [ ] embedded graph backend 基线的 packaged/runtime 与更重工作负载验证仍待完成。
+- [ ] embedded graph backend 基线在新的 packaged/runtime 与 `180` 文档主机级 workload 证明之外，仍待补齐更广工作负载包络、soak 与性能级加固。
 - [ ] 生产级 ANN connector 的工作负载与基准阈值校准仍待完成。
 - [ ] query/quality/session 运行面虽已真实接通，但仍需在发布级 graphdb/ANN 基线上完成发布级校准。
 - [ ] tutor 运行路径接下来要从 local-first 激活态 adapter 扩展为生产级多 provider 路由。
