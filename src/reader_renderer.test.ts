@@ -165,6 +165,38 @@ describe('reader_renderer', () => {
         expect(svg).toContain('Segoe UI');
     });
 
+    it('normalizes semicolon-chained Mermaid statements and quoted edge labels before rendering', () => {
+        const svg = runRenderer(
+            'renderMermaidSvg',
+            [
+                'graph TD;',
+                'P["入射波"] -- "入射角 θi" -- N; P -- "反射角 θr" -- R;',
+                'N --> T["透射波"]',
+            ].join('\n'),
+            { theme: 'dark' },
+        );
+
+        expect(svg.startsWith('<svg')).toBe(true);
+        expect(svg).toContain('入射波');
+        expect(svg).toContain('透射波');
+    });
+
+    it('wraps bare Mermaid node labels that contain html line breaks or mixed CJK text', () => {
+        const svg = runRenderer(
+            'renderMermaidSvg',
+            [
+                'graph TD',
+                'A[Incident Wave] --> I界面<br>Interface;',
+                'I --> R反射波<br>Reflected Wave;',
+            ].join('\n'),
+            { theme: 'dark' },
+        );
+
+        expect(svg.startsWith('<svg')).toBe(true);
+        expect(svg).toContain('Incident Wave');
+        expect(svg).toContain('Interface');
+    });
+
     it('does not leak JSDOM globals onto Node global scope after Mermaid rendering', () => {
         const scopeProbe = runRendererScopeProbe(
             ['flowchart TD', 'A[Start] --> B{Check}', 'B -->|Yes| C[Done]', 'B -->|No| D[Retry]'].join('\n'),

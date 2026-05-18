@@ -149,6 +149,120 @@
         return parsed > 0 ? parsed : Math.max(fontSize * 1.18, fontSize + 4);
     }
 
+    function normalizeBridgeMermaidLineBreaks(source) {
+        return String(source || '')
+            .replace(/\r\n?/g, '\n')
+            .replace(/<br\s*>/gi, '<br/>');
+    }
+
+    function splitBridgeMermaidTopLevelStatements(source) {
+        var text = normalizeBridgeMermaidLineBreaks(source);
+        var result = '';
+        var quote = false;
+        var squareDepth = 0;
+        var roundDepth = 0;
+        var curlyDepth = 0;
+
+        for (var index = 0; index < text.length; index += 1) {
+            var char = text.charAt(index);
+            if (char === '"' && text.charAt(index - 1) !== '\\') {
+                quote = !quote;
+                result += char;
+                continue;
+            }
+            if (!quote) {
+                if (char === '[') squareDepth += 1;
+                else if (char === ']') squareDepth = Math.max(0, squareDepth - 1);
+                else if (char === '(') roundDepth += 1;
+                else if (char === ')') roundDepth = Math.max(0, roundDepth - 1);
+                else if (char === '{') curlyDepth += 1;
+                else if (char === '}') curlyDepth = Math.max(0, curlyDepth - 1);
+                if (char === ';' && squareDepth === 0 && roundDepth === 0 && curlyDepth === 0) {
+                    result += '\n';
+                    continue;
+                }
+            }
+            result += char;
+        }
+        return result;
+    }
+
+    function sanitizeBridgeMermaidIdentifier(rawValue, fallbackPrefix, counter) {
+        var raw = String(rawValue || '').trim();
+        var prefixedMatch = raw.match(/^([A-Za-z][A-Za-z0-9_]*)/);
+        if (prefixedMatch && prefixedMatch[1]) {
+            return prefixedMatch[1];
+        }
+        return `${fallbackPrefix}${counter}`;
+    }
+
+    function escapeBridgeMermaidLabel(rawValue) {
+        return String(rawValue || '')
+            .replace(/\\/g, '\\\\')
+            .replace(/"/g, '\\"')
+            .trim();
+    }
+
+    function isBridgeMermaidControlLine(line) {
+        return /^\s*(?:graph|flowchart|subgraph|end|classDef|class|style|linkStyle|click|%%)\b/i.test(line);
+    }
+
+    function normalizeBridgeMermaidEdgeLabels(line) {
+        return String(line || '')
+            .replace(/--\s*"([^"\n]+)"\s*-->/g, '-->|$1|')
+            .replace(/--\s*"([^"\n]+)"\s*--\s*/g, ' -->|$1| ');
+    }
+
+    function normalizeBridgeMermaidEndpoint(rawValue, state) {
+        var raw = String(rawValue || '').trim();
+        if (!raw) return raw;
+        if (/^(?:\[|\{|\(|")/.test(raw)) return raw;
+        if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(raw)) return raw;
+        if (/^[A-Za-z_][A-Za-z0-9_]*\s*[\[\(\{].*$/.test(raw)) return raw;
+
+        var nodeId = state.labelToId.get(raw);
+        if (!nodeId) {
+            state.syntheticCounter += 1;
+            nodeId = sanitizeBridgeMermaidIdentifier(raw, 'AutoNode', state.syntheticCounter);
+            state.labelToId.set(raw, nodeId);
+        }
+        return `${nodeId}["${escapeBridgeMermaidLabel(raw)}"]`;
+    }
+
+    function normalizeBridgeMermaidEdgeLine(line, state) {
+        var next = normalizeBridgeMermaidEdgeLabels(line);
+        var match = /(.*?)(--(?:>|o|x)(?:\|[^|]*\|)?\s*)(.+)$/.exec(next);
+        if (!match) {
+            return next;
+        }
+        var left = String(match[1] || '');
+        var connector = String(match[2] || '');
+        var right = String(match[3] || '').trim();
+        if (!right) {
+            return next;
+        }
+        return `${left}${connector}${normalizeBridgeMermaidEndpoint(right, state)}`;
+    }
+
+    function normalizeBridgeMermaidDefinition(source) {
+        var split = splitBridgeMermaidTopLevelStatements(source);
+        var state = {
+            labelToId: new Map(),
+            syntheticCounter: 0
+        };
+        return split
+            .split('\n')
+            .map(function(line) {
+                if (isBridgeMermaidControlLine(line)) {
+                    return line.trimEnd();
+                }
+                return normalizeBridgeMermaidEdgeLine(line, state).trimEnd();
+            })
+            .join('\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+    }
+
     // ── State Factories (from path_state.mjs) ──
 
     function createPathGraphState() {
@@ -190,6 +304,7 @@
     window.pathModules = {
         utils: {
             normalizeBridgeInlineText: normalizeBridgeInlineText,
+            normalizeBridgeMermaidDefinition: normalizeBridgeMermaidDefinition,
             parseBridgeNumericAttribute: parseBridgeNumericAttribute,
             extractBridgeInlineStyleValue: extractBridgeInlineStyleValue,
             parseBridgeCssLength: parseBridgeCssLength,

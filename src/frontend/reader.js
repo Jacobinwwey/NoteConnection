@@ -231,6 +231,13 @@ class Reader {
         });
     }
 
+    normalizeMermaidDefinition(source) {
+        if (window.pathModules && window.pathModules.utils && typeof window.pathModules.utils.normalizeBridgeMermaidDefinition === 'function') {
+            return window.pathModules.utils.normalizeBridgeMermaidDefinition(source);
+        }
+        return String(source || '').trim();
+    }
+
     async tryRenderViaMarkdownProtocol(nodeLike, filePath, resolvedTarget, sessionId) {
         const config = this.getReadingProtocolConfig();
         if (String(config.markdownEngine || 'auto').toLowerCase() === 'legacy') {
@@ -778,7 +785,7 @@ class Reader {
         for (const block of mermaidBlocks) {
             const txt = document.createElement('textarea');
             txt.innerHTML = block.innerHTML;
-            const graphDefinition = txt.value;
+            const graphDefinition = this.normalizeMermaidDefinition(txt.value);
             const parentPre = block.parentElement;
             if (!parentPre || !parentPre.parentNode) continue;
 
@@ -859,7 +866,7 @@ class Reader {
     }
 
     async renderMermaidViaBackend(graphDefinition) {
-        const source = String(graphDefinition || '').trim();
+        const source = this.normalizeMermaidDefinition(graphDefinition || '');
         if (!source) {
             return null;
         }

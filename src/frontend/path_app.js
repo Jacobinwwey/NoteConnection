@@ -768,6 +768,13 @@ window.pathApp = {
         return String(text || '').replace(/\s+/g, ' ').trim();
     },
 
+    _normalizeBridgeMermaidDefinition: function(source) {
+        if (window._pathUtils && typeof window._pathUtils.normalizeBridgeMermaidDefinition === 'function') {
+            return window._pathUtils.normalizeBridgeMermaidDefinition(source);
+        }
+        return String(source || '').trim();
+    },
+
     _parseBridgeNumericAttribute: function(element, name, fallback = 0) {
         if (window._pathUtils) return window._pathUtils.parseBridgeNumericAttribute(element, name, fallback);
         const numeric = Number.parseFloat(String(element?.getAttribute?.(name) || ''));
@@ -1363,7 +1370,7 @@ window.pathApp = {
         }
 
         const requestId = String(payload?.requestId || '').trim();
-        const source = String(payload?.source || '').trim();
+        const source = this._normalizeBridgeMermaidDefinition(payload?.source || '');
         if (!requestId || !source) {
             throw new Error('Mermaid render request is missing a request id or source.');
         }

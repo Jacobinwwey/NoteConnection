@@ -140,6 +140,11 @@ const MERMAID_GLOBAL_BINDING_KEYS: MermaidGlobalBindingKey[] = [
     'getComputedStyle',
 ];
 
+type MermaidDefinitionNormalizationState = {
+    labelToId: Map<string, string>;
+    syntheticCounter: number;
+};
+
 export type RasterizedRender = {
     svg: string;
     pngBase64: string;
@@ -152,6 +157,122 @@ export type RasterizedMermaidRender = RasterizedRender;
 export type MermaidRenderStageSnapshot = RasterizedRender & {
     stage: 'raw' | 'styles_sanitized' | 'visual_normalized' | 'labels_fitted' | 'final';
 };
+
+function normalizeMermaidLineBreaks(source: string): string {
+    return String(source || '')
+        .replace(/\r\n?/g, '\n')
+        .replace(/<br\s*>/gi, '<br/>');
+}
+
+function splitMermaidTopLevelStatements(source: string): string {
+    const text = normalizeMermaidLineBreaks(source);
+    let result = '';
+    let quote = false;
+    let squareDepth = 0;
+    let roundDepth = 0;
+    let curlyDepth = 0;
+
+    for (let index = 0; index < text.length; index += 1) {
+        const char = text.charAt(index);
+        if (char === '"' && text.charAt(index - 1) !== '\\') {
+            quote = !quote;
+            result += char;
+            continue;
+        }
+        if (!quote) {
+            if (char === '[') squareDepth += 1;
+            else if (char === ']') squareDepth = Math.max(0, squareDepth - 1);
+            else if (char === '(') roundDepth += 1;
+            else if (char === ')') roundDepth = Math.max(0, roundDepth - 1);
+            else if (char === '{') curlyDepth += 1;
+            else if (char === '}') curlyDepth = Math.max(0, curlyDepth - 1);
+            if (char === ';' && squareDepth === 0 && roundDepth === 0 && curlyDepth === 0) {
+                result += '\n';
+                continue;
+            }
+        }
+        result += char;
+    }
+
+    return result;
+}
+
+function sanitizeMermaidIdentifier(rawValue: string, fallbackPrefix: string, counter: number): string {
+    const raw = String(rawValue || '').trim();
+    const prefixedMatch = raw.match(/^([A-Za-z][A-Za-z0-9_]*)/);
+    if (prefixedMatch && prefixedMatch[1]) {
+        return prefixedMatch[1];
+    }
+    return `${fallbackPrefix}${counter}`;
+}
+
+function escapeMermaidLabel(rawValue: string): string {
+    return String(rawValue || '')
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"')
+        .trim();
+}
+
+function isMermaidControlLine(line: string): boolean {
+    return /^\s*(?:graph|flowchart|subgraph|end|classDef|class|style|linkStyle|click|%%)\b/i.test(line);
+}
+
+function normalizeMermaidEdgeLabels(line: string): string {
+    return String(line || '')
+        .replace(/--\s*"([^"\n]+)"\s*-->/g, '-->|$1|')
+        .replace(/--\s*"([^"\n]+)"\s*--\s*/g, ' -->|$1| ');
+}
+
+function normalizeMermaidEndpoint(rawValue: string, state: MermaidDefinitionNormalizationState): string {
+    const raw = String(rawValue || '').trim();
+    if (!raw) return raw;
+    if (/^(?:\[|\{|\(|")/.test(raw)) return raw;
+    if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(raw)) return raw;
+    if (/^[A-Za-z_][A-Za-z0-9_]*\s*[\[\(\{].*$/.test(raw)) return raw;
+
+    let nodeId = state.labelToId.get(raw);
+    if (!nodeId) {
+        state.syntheticCounter += 1;
+        nodeId = sanitizeMermaidIdentifier(raw, 'AutoNode', state.syntheticCounter);
+        state.labelToId.set(raw, nodeId);
+    }
+    return `${nodeId}["${escapeMermaidLabel(raw)}"]`;
+}
+
+function normalizeMermaidEdgeLine(line: string, state: MermaidDefinitionNormalizationState): string {
+    const next = normalizeMermaidEdgeLabels(line);
+    const match = /(.*?)(--(?:>|o|x)(?:\|[^|]*\|)?\s*)(.+)$/.exec(next);
+    if (!match) {
+        return next;
+    }
+    const left = String(match[1] || '');
+    const connector = String(match[2] || '');
+    const right = String(match[3] || '').trim();
+    if (!right) {
+        return next;
+    }
+    return `${left}${connector}${normalizeMermaidEndpoint(right, state)}`;
+}
+
+export function normalizeMermaidDefinition(source: string): string {
+    const split = splitMermaidTopLevelStatements(source);
+    const state: MermaidDefinitionNormalizationState = {
+        labelToId: new Map<string, string>(),
+        syntheticCounter: 0,
+    };
+
+    return split
+        .split('\n')
+        .map((line) => {
+            if (isMermaidControlLine(line)) {
+                return line.trimEnd();
+            }
+            return normalizeMermaidEdgeLine(line, state).trimEnd();
+        })
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
 
 export async function renderMathSvg(source: string, options: MathRenderOptions = {}): Promise<string> {
     const trimmedSource = source.trim();
@@ -268,7 +389,7 @@ async function buildMermaidRenderArtifacts(trimmedSource: string, options: Merma
 }
 
 export async function renderMermaidSvg(source: string, options: MermaidRenderOptions = {}): Promise<string> {
-    const trimmedSource = source.trim();
+    const trimmedSource = normalizeMermaidDefinition(source);
     if (!trimmedSource) {
         throw new Error('Cannot render an empty Mermaid definition.');
     }
@@ -280,7 +401,7 @@ export async function renderMermaidSvg(source: string, options: MermaidRenderOpt
 }
 
 export async function collectMermaidRenderStageSnapshots(source: string, options: MermaidRenderOptions = {}): Promise<MermaidRenderStageSnapshot[]> {
-    const trimmedSource = source.trim();
+    const trimmedSource = normalizeMermaidDefinition(source);
     if (!trimmedSource) {
         throw new Error('Cannot render an empty Mermaid definition.');
     }
@@ -1593,7 +1714,6 @@ function isFiniteBounds(bounds: Bounds): boolean {
         && bounds.maxX >= bounds.minX
         && bounds.maxY >= bounds.minY;
 }
-
 
 
 
