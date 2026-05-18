@@ -7,6 +7,7 @@ describe('tauri sidecar cleanup integration', () => {
   const cleanupScriptPath = path.join(repoRoot, 'scripts', 'cleanup-tauri-sidecars.js');
   const sidecarEnsureScriptPath = path.join(repoRoot, 'scripts', 'ensure-sidecar-ready.js');
   const tauriBuildRunnerPath = path.join(repoRoot, 'scripts', 'run-tauri-build.js');
+  const tauriDevRunnerPath = path.join(repoRoot, 'scripts', 'run-tauri-dev.js');
   const tauriRunnerPath = path.join(repoRoot, 'scripts', 'run-tauri-tests.js');
 
   test('desktop tauri scripts run stale sidecar cleanup before cargo build flow', () => {
@@ -19,6 +20,8 @@ describe('tauri sidecar cleanup integration', () => {
     expect(pkg.scripts['tauri:dev:mini']).toContain('npm run cleanup:tauri:sidecars');
     expect(pkg.scripts['tauri:dev']).toContain('npm run ensure:sidecar:dev');
     expect(pkg.scripts['tauri:dev:mini']).toContain('npm run ensure:sidecar:dev');
+    expect(pkg.scripts['tauri:dev']).toContain('node scripts/run-tauri-dev.js');
+    expect(pkg.scripts['tauri:dev:mini']).toContain('node scripts/run-tauri-dev.js');
     expect(pkg.scripts['tauri:build']).toContain('npm run cleanup:tauri:sidecars');
     expect(pkg.scripts['tauri:build:mini']).toContain('npm run cleanup:tauri:sidecars');
     expect(pkg.scripts['tauri:build']).toContain('node scripts/run-tauri-build.js');
@@ -34,6 +37,14 @@ describe('tauri sidecar cleanup integration', () => {
     expect(tauriBuildRunner).toContain('CARGO_PROFILE_RELEASE_OPT_LEVEL');
     expect(tauriBuildRunner).toContain('CARGO_PROFILE_RELEASE_CODEGEN_UNITS');
     expect(tauriBuildRunner).toContain("['tauri', 'build', '--ci'");
+
+    const tauriDevRunner = fs.readFileSync(tauriDevRunnerPath, 'utf8');
+    expect(tauriDevRunner).toContain('CARGO_TARGET_DIR');
+    expect(tauriDevRunner).toContain('target-dev-lowmem');
+    expect(tauriDevRunner).toContain('CARGO_BUILD_JOBS');
+    expect(tauriDevRunner).toContain('CARGO_PROFILE_DEV_DEBUG');
+    expect(tauriDevRunner).toContain('CARGO_INCREMENTAL');
+    expect(tauriDevRunner).toContain("['tauri', 'dev'");
 
     const sidecarEnsureScript = fs.readFileSync(sidecarEnsureScriptPath, 'utf8');
     expect(sidecarEnsureScript).toContain('Sidecar binaries are valid and up-to-date');
