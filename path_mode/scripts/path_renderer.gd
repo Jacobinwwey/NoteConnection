@@ -38,8 +38,6 @@ var _last_applied_background_path: String = "__unset__"
 const DOUBLE_CLICK_THRESHOLD := 0.5
 const MAX_INITIAL_UI_SETTINGS_RETRIES := 8
 const INITIAL_UI_SETTINGS_RETRY_DELAY := 0.15
-const BACKGROUND_MAX_DIMENSION := 2048
-const BACKGROUND_MAX_BYTES_HINT := 64 * 1024 * 1024
 
 @onready var ui: PathModeUI = $"../UI"
 
@@ -896,37 +894,8 @@ func _load_hdr_background_safely(path: String) -> Texture2D:
 		push_warning("[PathRenderer] Failed to load imported HDR background resource: %s" % path)
 		return null
 
-	var image := (imported_tex as Texture2D).get_image()
-	if image == null:
-		push_warning("[PathRenderer] Failed to extract HDR image data from imported resource: %s" % path)
-		return null
-
-	var original_size := image.get_size()
-	if original_size.x <= 0 or original_size.y <= 0:
-		push_warning("[PathRenderer] Invalid HDR background dimensions for: %s" % path)
-		return null
-
-	if image.get_format() != Image.FORMAT_RGBA8:
-		image.convert(Image.FORMAT_RGBA8)
-
-	var largest_dimension := maxi(original_size.x, original_size.y)
-	if largest_dimension > BACKGROUND_MAX_DIMENSION:
-		var scale := float(BACKGROUND_MAX_DIMENSION) / float(largest_dimension)
-		var resized_width := maxi(1, int(round(original_size.x * scale)))
-		var resized_height := maxi(1, int(round(original_size.y * scale)))
-		image.resize(resized_width, resized_height, Image.INTERPOLATE_LANCZOS)
-		print("[PathRenderer] Downscaled HDR background from %s to %s to avoid large GPU uploads." % [str(original_size), str(image.get_size())])
-
-	var estimated_bytes := image.get_width() * image.get_height() * 4
-	if estimated_bytes > BACKGROUND_MAX_BYTES_HINT:
-		push_warning("[PathRenderer] HDR background still too large after resize (%s bytes): %s" % [estimated_bytes, path])
-		return null
-
-	var texture := ImageTexture.create_from_image(image)
-	if texture == null:
-		push_warning("[PathRenderer] Failed to create ImageTexture from HDR background: %s" % path)
-	else:
-		_background_texture_cache[path] = texture
+	var texture := imported_tex as Texture2D
+	_background_texture_cache[path] = texture
 	return texture
 
 

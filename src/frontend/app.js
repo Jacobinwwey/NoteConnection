@@ -457,6 +457,36 @@ async function persistStartupLayoutSnapshotRecord(record) {
     db.close();
 }
 
+async function deleteStartupLayoutSnapshotRecord(fingerprint) {
+    if (!fingerprint) {
+        return;
+    }
+
+    if (typeof localStorage !== 'undefined') {
+        try {
+            localStorage.removeItem(`${STARTUP_LAYOUT_SNAPSHOT_LS_PREFIX}${fingerprint}`);
+        } catch (_err) {
+            // Ignore localStorage cleanup failures.
+        }
+    }
+
+    const db = await openStartupLayoutSnapshotDb();
+    if (!db) {
+        return;
+    }
+
+    await new Promise((resolve, reject) => {
+        const tx = db.transaction(STARTUP_LAYOUT_SNAPSHOT_STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STARTUP_LAYOUT_SNAPSHOT_STORE_NAME);
+        store.delete(fingerprint);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error || new Error('indexedDB delete failed'));
+        tx.onabort = () => reject(tx.error || new Error('indexedDB delete aborted'));
+    });
+
+    db.close();
+}
+
 function collectStartupLayoutSnapshotRecord(reason = '') {
     if (!startupLayoutSnapshotState.fingerprint || !Array.isArray(nodes) || nodes.length === 0) {
         return null;
@@ -515,6 +545,44 @@ function validateStartupLayoutSnapshotRecord(record) {
         return { ok: false, reason: 'position-coverage-low', coverage: Number(coverage.toFixed(4)) };
     }
 
+    const finitePositions = record.positions.filter((item) => (
+        item &&
+        Number.isFinite(Number(item.x)) &&
+        Number.isFinite(Number(item.y))
+    ));
+    if (expectedNodeCount >= 10 && finitePositions.length > 0) {
+        let minX = Infinity;
+        let maxX = -Infinity;
+        let minY = Infinity;
+        let maxY = -Infinity;
+        const uniqueBuckets = new Set();
+
+        for (let index = 0; index < finitePositions.length; index += 1) {
+            const item = finitePositions[index];
+            const x = Number(item.x);
+            const y = Number(item.y);
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+            uniqueBuckets.add(`${Math.round(x)}:${Math.round(y)}`);
+        }
+
+        const spanX = maxX - minX;
+        const spanY = maxY - minY;
+        const uniqueRatio = uniqueBuckets.size / Math.max(1, finitePositions.length);
+        if ((spanX < 48 && spanY < 48) || uniqueRatio < 0.12) {
+            return {
+                ok: false,
+                reason: 'degenerate-layout',
+                purge: true,
+                spanX: Number(spanX.toFixed(2)),
+                spanY: Number(spanY.toFixed(2)),
+                uniqueRatio: Number(uniqueRatio.toFixed(4)),
+            };
+        }
+    }
+
     return {
         ok: true,
         coverage: Number(coverage.toFixed(4)),
@@ -568,8 +636,16 @@ function maybeApplyStartupWarmSnapshot(trigger = '') {
             recordFingerprint: record.fingerprint || null,
             recordNodeCount: record.nodeCount || 0,
             recordEdgeCount: record.edgeCount || 0,
-            positionCount: Array.isArray(record.positions) ? record.positions.length : 0
+            positionCount: Array.isArray(record.positions) ? record.positions.length : 0,
+            spanX: validation.spanX,
+            spanY: validation.spanY,
+            uniqueRatio: validation.uniqueRatio,
         });
+        if (validation.purge === true && record.fingerprint) {
+            deleteStartupLayoutSnapshotRecord(record.fingerprint).catch((error) => {
+                console.warn('[Startup Warm Snapshot] Failed to purge invalid snapshot record:', error && error.message ? error.message : String(error));
+            });
+        }
         startupLayoutSnapshotState.pendingRecord = null;
         return false;
     }
