@@ -33,6 +33,8 @@
 
 ### Phase 2 Verification Refresh (2026-05-18)
 
+- [x] `npm run verify:core-real-machine:clean`
+  - PASS (`output/verification/core-real-machine/2026-05-18T08-31-26-579Z/`; automated summary `6/6`; transient tracked `src-tauri/bin/server-x86_64-pc-windows-msvc.exe` dirtiness auto-restored)
 - [x] `node node_modules/jest/bin/jest.js src/agent_workspace.frontend.test.ts --runInBand --no-cache`
   - PASS
 - [x] `node node_modules/jest/bin/jest.js src/learning/runtimeCapability.test.ts src/knowledge.api.contract.test.ts --runInBand --no-cache`
@@ -80,6 +82,10 @@
 7. This refresh still does **not** prove release-grade Phase-2 closure:
    - it closes visibility and browser/runtime proof for the new ANN governance summaries,
    - it does **not** close workload/threshold calibration for those budgets.
+8. The current core real-machine test slice is now operationalized behind one repeatable entrypoint:
+   - `npm run verify:core-real-machine` runs the automated foundation/browser/Tauri slice and emits JSON + Markdown reports under `output/verification/core-real-machine/`,
+   - `npm run verify:core-real-machine:clean` runs the same slice and auto-restores transient tracked `src-tauri/bin/server-*` dirtiness introduced by that verification run,
+   - manual interactive real-machine commands remain intentionally separate: `npm run tauri:dev:mini:gpu` for desktop and `npm run tauri:android:dev` for Android.
 
 ### What These Passes Prove
 

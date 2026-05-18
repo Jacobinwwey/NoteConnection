@@ -37,6 +37,10 @@
 
 ### Core Real-Machine Test Commands
 
+- `npm run verify:core-real-machine`
+  - Unified orchestration entrypoint for the current core real-machine test slice. Runs the automated foundation/browser/Tauri checks sequentially and writes JSON + Markdown reports under `output/verification/core-real-machine/`.
+- `npm run verify:core-real-machine:clean`
+  - Same orchestration path, but also restores transient tracked `src-tauri/bin/server-*` dirtiness introduced by the current verification run so the worktree can be kept clean.
 - `npm run verify:foundation:sqlite-runtime:matrix`
   - Highest-value host/runtime proof for the embedded sqlite graph backend across `smoke` / `medium` / `heavy` workloads.
 - `npm run verify:foundation:ann-runtime:matrix`
@@ -49,3 +53,11 @@
   - Primary desktop real-machine interactive command when you want to manually drive the app in the mini GPU-enabled shell.
 - `npm run tauri:android:dev`
   - Primary Android real-device interactive command when you want to push the current app to a connected device.
+
+### Real-Machine Test Cautions
+
+- `verify:foundation:*` and `verify:core-real-machine*` are engineering-grade verification commands, not just lightweight smoke wrappers. Let them prepare `dist` and the host sidecar instead of manually skipping the prerequisite build path.
+- If `build:sidecar`, `ensure-sidecar-ready`, or runtime verification dirties tracked `src-tauri/bin/server-*` files, treat that as transient verification churn. Unless the current task is explicitly about sidecar build, supply, signing, or validation, restore those binary paths back to `HEAD` after the run. Prefer `npm run verify:core-real-machine:clean` when you want the verification flow to auto-restore transient sidecar dirtiness introduced by that run.
+- `verify:agent-workspace:browser` uses an isolated Playwright-managed browser session. Do not run it concurrently with other Playwright-driven browser jobs. It is intended to verify NoteConnection, not to take control of an already-open user Chrome window.
+- `npm run tauri:dev:mini:gpu` and `npm run tauri:android:dev` are manual interactive real-machine commands. Keep them outside automated CI, drive them manually, and close them yourself after collecting evidence.
+- The orchestration report is only trustworthy when the command exits `0` and the generated report under `output/verification/core-real-machine/` shows all automated steps as `PASS`.

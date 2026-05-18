@@ -33,6 +33,10 @@
 
 ### 核心实机测试命令
 
+- `npm run verify:core-real-machine`
+  - 当前“核心更新功能实机测试”的统一编排入口。会顺序执行 foundation/browser/Tauri 的自动化验证，并将 JSON + Markdown 报告写入 `output/verification/core-real-machine/`。
+- `npm run verify:core-real-machine:clean`
+  - 与上述统一编排相同，但会额外回滚本次验证新引入的受跟踪 `src-tauri/bin/server-*` 脏改动，用于保持工作区 clean。
 - `npm run verify:foundation:sqlite-runtime:matrix`
   - 当前 embedded sqlite 图后端最有价值的主机/runtime 证明，覆盖 `smoke` / `medium` / `heavy` 三档 workload。
 - `npm run verify:foundation:ann-runtime:matrix`
@@ -45,6 +49,14 @@
   - 你要做桌面端手动实机交互测试时，优先使用的 mini GPU 壳层命令。
 - `npm run tauri:android:dev`
   - 你要把当前应用推到已连接 Android 实机上做交互测试时，优先使用的命令。
+
+### 实机测试注意事项
+
+- `verify:foundation:*` 与 `verify:core-real-machine*` 是工程级验证命令，不只是轻量 smoke。执行时应允许它们自行准备 `dist` 与 host sidecar，不要手工跳过前置 build 路径。
+- 如果 `build:sidecar`、`ensure-sidecar-ready` 或运行时验证让受跟踪的 `src-tauri/bin/server-*` 产生脏改动，应将其视为“验证过程引入的临时 sidecar 二进制漂移”。除非当前任务明确就是 sidecar build / supply / signing / validation，否则测试完成后要把这些二进制路径恢复到 `HEAD`。若你希望统一验证命令自动清理本次新引入的 sidecar 脏改动，优先使用 `npm run verify:core-real-machine:clean`。
+- `verify:agent-workspace:browser` 使用的是 Playwright 管理的隔离浏览器会话，不要与其他 Playwright 浏览器任务并发执行。它的目标是验证 NoteConnection，而不是接管你已经打开的用户 Chrome 窗口。
+- `npm run tauri:dev:mini:gpu` 与 `npm run tauri:android:dev` 都是人工交互式实机命令，不应放进自动化 CI；需要你手动驱动并在取证后自行关闭。
+- 只有当命令以 `0` 退出、且 `output/verification/core-real-machine/` 下生成的报告显示所有自动化步骤均为 `PASS` 时，才能把该轮统一验证视为可信结果。
 
 ---
 

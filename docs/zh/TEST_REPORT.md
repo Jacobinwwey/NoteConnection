@@ -33,6 +33,8 @@
 
 ### Phase 2 验证刷新（2026-05-18）
 
+- [x] `npm run verify:core-real-machine:clean`
+  - 通过（`output/verification/core-real-machine/2026-05-18T08-31-26-579Z/`；自动化汇总 `6/6`；本轮引入的受跟踪 `src-tauri/bin/server-x86_64-pc-windows-msvc.exe` 脏改动已自动恢复）
 - [x] `node node_modules/jest/bin/jest.js src/agent_workspace.frontend.test.ts --runInBand --no-cache`
   - 通过
 - [x] `node node_modules/jest/bin/jest.js src/learning/runtimeCapability.test.ts src/knowledge.api.contract.test.ts --runInBand --no-cache`
@@ -80,6 +82,10 @@
 7. 这轮刷新仍然**不等于**发布级 Phase-2 闭环：
    - 它闭合的是新 ANN 治理摘要的可见性与 browser/runtime 证明，
    - 并**没有**闭合这些预算的工作负载/阈值校准。
+8. 当前“核心更新功能实机测试”已经被工程化为单一可重复入口：
+   - `npm run verify:core-real-machine` 会执行自动化 foundation/browser/Tauri 切片，并把 JSON + Markdown 报告落盘到 `output/verification/core-real-machine/`，
+   - `npm run verify:core-real-machine:clean` 会在执行同一自动化切片后，自动恢复该轮验证引入的受跟踪 `src-tauri/bin/server-*` 临时脏改动，
+   - 人工交互式实机命令仍保持分离：桌面端使用 `npm run tauri:dev:mini:gpu`，Android 实机使用 `npm run tauri:android:dev`。
 
 ### 这些通过项实际证明了什么
 
