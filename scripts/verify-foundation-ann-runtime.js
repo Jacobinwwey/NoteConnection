@@ -12,6 +12,9 @@ const DIST_FRONTEND_DIR = path.join(REPO_ROOT, 'dist', 'src', 'frontend');
 const LOOPBACK_HOST = '127.0.0.1';
 const STARTUP_TIMEOUT_MS = 30000;
 const SHUTDOWN_TIMEOUT_MS = 8000;
+const REQUEST_TIMEOUT_SCALE = Number.isFinite(Number(process.env.NOTE_CONNECTION_FOUNDATION_ANN_TIMEOUT_SCALE))
+    ? Math.max(0.5, Number(process.env.NOTE_CONNECTION_FOUNDATION_ANN_TIMEOUT_SCALE))
+    : 1;
 const WORKLOAD_PROFILES = {
     smoke: {
         profileId: 'smoke',
@@ -158,7 +161,29 @@ function getFreePort() {
     });
 }
 
-function requestJson(port, method, requestPath, body) {
+function computeRequestTimeoutMs(context = {}) {
+    const requestPath = String(context.requestPath || '').trim();
+    const workloadProfile = context.workloadProfile || { documentCount: 1 };
+    const documentCount = Math.max(1, Math.floor(Number(workloadProfile.documentCount || 1)));
+    const mode = String(context.mode || '').trim();
+    let timeoutMs = 6000;
+
+    if (requestPath === '/api/knowledge/ingest') {
+        timeoutMs = Math.max(20000, documentCount * 450);
+    } else if (requestPath === '/api/knowledge/query') {
+        timeoutMs = Math.max(8000, documentCount * 60);
+    } else if (requestPath === '/api/knowledge/query-backend-diagnostics') {
+        timeoutMs = Math.max(6000, documentCount * 30);
+    }
+
+    if (mode === 'packaged_sidecar') {
+        timeoutMs = Math.round(timeoutMs * 2);
+    }
+
+    return Math.max(2000, Math.round(timeoutMs * REQUEST_TIMEOUT_SCALE));
+}
+
+function requestJson(port, method, requestPath, body, timeoutMs = 6000) {
     return new Promise((resolve, reject) => {
         const payload = typeof body === 'undefined'
             ? null
@@ -199,7 +224,7 @@ function requestJson(port, method, requestPath, body) {
             }
         );
 
-        req.setTimeout(2000, () => {
+        req.setTimeout(timeoutMs, () => {
             req.destroy(new Error(`Timed out requesting ${requestPath}`));
         });
         req.once('error', reject);
@@ -354,12 +379,21 @@ async function startReferenceAnnService(port, state) {
     return server;
 }
 
-async function waitForServer(port, timeoutMs) {
+async function waitForServer(port, timeoutMs, context = {}) {
     const startedAt = Date.now();
     let lastError = null;
     while ((Date.now() - startedAt) < timeoutMs) {
         try {
-            const response = await requestJson(port, 'GET', '/api/knowledge/query-backend-diagnostics');
+            const response = await requestJson(
+                port,
+                'GET',
+                '/api/knowledge/query-backend-diagnostics',
+                undefined,
+                computeRequestTimeoutMs({
+                    ...context,
+                    requestPath: '/api/knowledge/query-backend-diagnostics',
+                })
+            );
             if (response.status >= 200 && response.status < 500) {
                 return;
             }
@@ -667,10 +701,20 @@ function assertAnnState(state, mode, phase, workloadProfile, minSelectCount) {
     };
 }
 
-async function runQueries(port, mode, phase, workloadQueries) {
+async function runQueries(port, mode, phase, workloadProfile, workloadQueries) {
     const queryResults = [];
     for (const queryPlan of workloadQueries) {
-        const queryResponse = await requestJson(port, 'POST', '/api/knowledge/query', queryPlan.request);
+        const queryResponse = await requestJson(
+            port,
+            'POST',
+            '/api/knowledge/query',
+            queryPlan.request,
+            computeRequestTimeoutMs({
+                requestPath: '/api/knowledge/query',
+                workloadProfile,
+                mode,
+            })
+        );
         queryResults.push({
             phaseId: queryPlan.phaseId,
             ...assertQueryResponse(queryResponse, mode, `${phase}:${queryPlan.phaseId}`, {
@@ -707,14 +751,34 @@ async function runScenario(mode, workloadProfile) {
 
     try {
         runtime = spawnRuntime(mode, { port, bridgePort, connectorPort, fixture });
-        await waitForServer(port, STARTUP_TIMEOUT_MS);
+        await waitForServer(port, STARTUP_TIMEOUT_MS, { workloadProfile, mode });
 
-        const ingestResponse = await requestJson(port, 'POST', '/api/knowledge/ingest', ingestPayload);
+        const ingestResponse = await requestJson(
+            port,
+            'POST',
+            '/api/knowledge/ingest',
+            ingestPayload,
+            computeRequestTimeoutMs({
+                requestPath: '/api/knowledge/ingest',
+                workloadProfile,
+                mode,
+            })
+        );
         assertCondition(ingestResponse.status === 200, `[${mode}] ingest status=${ingestResponse.status}`);
         assertCondition(ingestResponse.body && ingestResponse.body.success === true, `[${mode}] ingest success!=true`);
 
-        const firstQueries = await runQueries(port, mode, 'first_pass', workloadQueries);
-        const firstDiagnosticsResponse = await requestJson(port, 'GET', '/api/knowledge/query-backend-diagnostics');
+        const firstQueries = await runQueries(port, mode, 'first_pass', workloadProfile, workloadQueries);
+        const firstDiagnosticsResponse = await requestJson(
+            port,
+            'GET',
+            '/api/knowledge/query-backend-diagnostics',
+            undefined,
+            computeRequestTimeoutMs({
+                requestPath: '/api/knowledge/query-backend-diagnostics',
+                workloadProfile,
+                mode,
+            })
+        );
         const firstDiagnostics = assertDiagnostics(
             firstDiagnosticsResponse,
             mode,
@@ -737,10 +801,20 @@ async function runScenario(mode, workloadProfile) {
         port = await getFreePort();
         bridgePort = await getFreePort();
         runtime = spawnRuntime(mode, { port, bridgePort, connectorPort, fixture });
-        await waitForServer(port, STARTUP_TIMEOUT_MS);
+        await waitForServer(port, STARTUP_TIMEOUT_MS, { workloadProfile, mode });
 
-        const restartQueries = await runQueries(port, mode, 'restart_pass', workloadQueries);
-        const restartDiagnosticsResponse = await requestJson(port, 'GET', '/api/knowledge/query-backend-diagnostics');
+        const restartQueries = await runQueries(port, mode, 'restart_pass', workloadProfile, workloadQueries);
+        const restartDiagnosticsResponse = await requestJson(
+            port,
+            'GET',
+            '/api/knowledge/query-backend-diagnostics',
+            undefined,
+            computeRequestTimeoutMs({
+                requestPath: '/api/knowledge/query-backend-diagnostics',
+                workloadProfile,
+                mode,
+            })
+        );
         const restartDiagnostics = assertDiagnostics(
             restartDiagnosticsResponse,
             mode,

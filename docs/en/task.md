@@ -34,3 +34,18 @@
 3. The live query comparison, staleness, learning-quality, and session-plan-quality diagnostics are calibrated on top of a release-grade graphdb/ANN baseline.
 4. Tutor routing advances from local-first adapter execution into a production-proven multi-provider policy while keeping explicit fallback behavior.
 5. Tauri desktop + Android path remains documented, verified, and cleanly separated from historical Electron context.
+
+### Core Real-Machine Test Commands
+
+- `npm run verify:foundation:sqlite-runtime:matrix`
+  - Highest-value host/runtime proof for the embedded sqlite graph backend across `smoke` / `medium` / `heavy` workloads.
+- `npm run verify:foundation:ann-runtime:matrix`
+  - Highest-value host/runtime proof for the `external_http` ANN connector across `smoke` / `medium` / `heavy` workloads.
+- `npm run verify:agent-workspace:browser`
+  - Real browser smoke for agent workspace, runbook cards, query/quality/session surfaces, and focus/path flows.
+- `npm run verify:agent-workspace:tauri`
+  - Real desktop-shell smoke for the current Tauri app path.
+- `npm run tauri:dev:mini:gpu`
+  - Primary desktop real-machine interactive command when you want to manually drive the app in the mini GPU-enabled shell.
+- `npm run tauri:android:dev`
+  - Primary Android real-device interactive command when you want to push the current app to a connected device.

@@ -31,6 +31,21 @@
 4. tutor routing 从 local-first adapter 执行推进到生产级多 provider 策略，同时保留明确的 fallback。
 5. Tauri 桌面与 Android 路径继续保持可验证、可文档化，并与历史 Electron 上下文清晰分层。
 
+### 核心实机测试命令
+
+- `npm run verify:foundation:sqlite-runtime:matrix`
+  - 当前 embedded sqlite 图后端最有价值的主机/runtime 证明，覆盖 `smoke` / `medium` / `heavy` 三档 workload。
+- `npm run verify:foundation:ann-runtime:matrix`
+  - 当前 `external_http` ANN connector 最有价值的主机/runtime 证明，覆盖 `smoke` / `medium` / `heavy` 三档 workload。
+- `npm run verify:agent-workspace:browser`
+  - 真实浏览器 smoke，覆盖 agent workspace、runbook 卡片、query/quality/session 面板和 focus/path 流程。
+- `npm run verify:agent-workspace:tauri`
+  - 当前 Tauri 桌面壳层路径的真实 smoke。
+- `npm run tauri:dev:mini:gpu`
+  - 你要做桌面端手动实机交互测试时，优先使用的 mini GPU 壳层命令。
+- `npm run tauri:android:dev`
+  - 你要把当前应用推到已连接 Android 实机上做交互测试时，优先使用的命令。
+
 ---
 
 # Task: Refining Path Mode Visualization

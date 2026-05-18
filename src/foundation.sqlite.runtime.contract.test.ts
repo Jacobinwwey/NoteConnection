@@ -18,13 +18,13 @@ describe('foundation sqlite runtime verification contract', () => {
   test('keeps the host-level sqlite runtime verifier wired in package scripts', () => {
     const packageJson = readJson<PackageJson>(packageJsonPath);
     expect(packageJson.scripts?.['verify:foundation:sqlite-runtime']).toBe(
-      'node scripts/verify-foundation-sqlite-runtime.js'
+      'npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-sqlite-runtime.js'
     );
     expect(packageJson.scripts?.['verify:foundation:sqlite-runtime:heavy']).toBe(
-      'node scripts/verify-foundation-sqlite-runtime.js --heavy'
+      'npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-sqlite-runtime.js --heavy'
     );
     expect(packageJson.scripts?.['verify:foundation:sqlite-runtime:matrix']).toBe(
-      'node scripts/verify-foundation-sqlite-runtime.js --matrix'
+      'npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-sqlite-runtime.js --matrix'
     );
   });
 

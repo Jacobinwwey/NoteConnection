@@ -18,10 +18,10 @@ describe('foundation ann runtime verification contract', () => {
   test('keeps the host-level ann runtime verifier wired in package scripts', () => {
     const packageJson = readJson<PackageJson>(packageJsonPath);
     expect(packageJson.scripts?.['verify:foundation:ann-runtime']).toBe(
-      'node scripts/verify-foundation-ann-runtime.js'
+      'npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-ann-runtime.js'
     );
     expect(packageJson.scripts?.['verify:foundation:ann-runtime:matrix']).toBe(
-      'node scripts/verify-foundation-ann-runtime.js --matrix'
+      'npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-ann-runtime.js --matrix'
     );
   });
 
