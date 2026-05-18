@@ -492,7 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!folderSelect || !loadBtn) return;
     if (loadBtn.dataset.sourceManagerBound === '1') {
-        console.warn('[SourceManager] Already initialized, skipping duplicate binding.');
+        console.log('[SourceManager] Duplicate binding guard triggered; skipping re-initialization.');
         return;
     }
     loadBtn.dataset.sourceManagerBound = '1';
@@ -913,10 +913,10 @@ document.addEventListener('DOMContentLoaded', () => {
         updateRuntimeCapabilityNotice();
         updateKbPathControls();
 
-        // Start static graph/frontend bootstrap immediately so UI initialization
-        // does not block on sidecar ping retries.
+        if (window.__TAURI__ && runtimeCaps.supports_sidecar) {
+            await waitForSidecarReady();
+        }
         bootstrapScriptLoad();
-        await waitForSidecarReady();
 
         if (window.i18n && window.i18n.isInitialized) {
             await fetchFolders();

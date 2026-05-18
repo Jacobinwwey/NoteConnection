@@ -33,6 +33,8 @@ var _transition_tween: Tween = null
 var _click_timer: float = 0.0
 var _last_clicked_id: String = ""
 var _initial_ui_settings_retries: int = 0
+var _background_texture_cache: Dictionary = {}
+var _last_applied_background_path: String = "__unset__"
 const DOUBLE_CLICK_THRESHOLD := 0.5
 const MAX_INITIAL_UI_SETTINGS_RETRIES := 8
 const INITIAL_UI_SETTINGS_RETRY_DELAY := 0.15
@@ -843,8 +845,12 @@ func _apply_background_texture(path: String) -> void:
 	var sky_mat := world_env.environment.sky.sky_material as PanoramaSkyMaterial
 	if not sky_mat:
 		return
+
+	if _last_applied_background_path == path:
+		return
 		
 	if path == "":
+		_last_applied_background_path = path
 		_apply_default_background(world_env, sky_mat)
 		return
 
@@ -852,10 +858,12 @@ func _apply_background_texture(path: String) -> void:
 	if texture:
 		world_env.environment.background_mode = Environment.BG_SKY
 		sky_mat.panorama = texture
+		_last_applied_background_path = path
 		print("[PathRenderer] Applied background texture: ", path)
 		return
 
 	push_warning("[PathRenderer] Falling back to default background for: %s" % path)
+	_last_applied_background_path = ""
 
 	_apply_default_background(world_env, sky_mat)
 
@@ -878,10 +886,19 @@ func _load_background_texture_safely(path: String) -> Texture2D:
 
 
 func _load_hdr_background_safely(path: String) -> Texture2D:
-	var image := Image.new()
-	var image_error := image.load(path)
-	if image_error != OK:
-		push_warning("[PathRenderer] Failed to load HDR background image %s (error=%s)" % [path, image_error])
+	if _background_texture_cache.has(path):
+		var cached = _background_texture_cache.get(path)
+		if cached is Texture2D:
+			return cached
+
+	var imported_tex = ResourceLoader.load(path)
+	if not (imported_tex is Texture2D):
+		push_warning("[PathRenderer] Failed to load imported HDR background resource: %s" % path)
+		return null
+
+	var image := (imported_tex as Texture2D).get_image()
+	if image == null:
+		push_warning("[PathRenderer] Failed to extract HDR image data from imported resource: %s" % path)
 		return null
 
 	var original_size := image.get_size()
@@ -908,6 +925,8 @@ func _load_hdr_background_safely(path: String) -> Texture2D:
 	var texture := ImageTexture.create_from_image(image)
 	if texture == null:
 		push_warning("[PathRenderer] Failed to create ImageTexture from HDR background: %s" % path)
+	else:
+		_background_texture_cache[path] = texture
 	return texture
 
 

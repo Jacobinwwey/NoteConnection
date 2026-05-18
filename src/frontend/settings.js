@@ -9,6 +9,7 @@ const SETTINGS_STORAGE_KEY = "nc_settings";
 const FRONTEND_SETTINGS_ENDPOINT = "/api/frontend/settings";
 const RUNTIME_READY_TIMEOUT_MS = 2000;
 const REMOTE_SYNC_DEBOUNCE_MS = 200;
+const RUNTIME_REQUEST_RETRY_DELAY_MS = 180;
 
 const defaultSettings = {
     physics: {
@@ -55,6 +56,10 @@ function clampNumber(value, minValue, maxValue, fallback) {
         return fallback;
     }
     return Math.max(minValue, Math.min(maxValue, numeric));
+}
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function normalizeDegreeMode(value) {
@@ -290,20 +295,49 @@ class SettingsManager {
             });
         }
 
-        const response = await fetch(
-            this.buildUrl(FRONTEND_SETTINGS_ENDPOINT),
-            this.buildFetchOptions(requestInit)
-        );
-        if (!response.ok) {
-            const message = await response.text().catch(() => "");
-            throw new Error(message || `Frontend settings request failed (${method} ${response.status}).`);
+        const maxAttempts = (window.__TAURI__ && method === "GET") ? 12 : ((window.__TAURI__ && method === "POST") ? 8 : 1);
+        let lastError = null;
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+            try {
+                const response = await fetch(
+                    this.buildUrl(FRONTEND_SETTINGS_ENDPOINT),
+                    this.buildFetchOptions(requestInit)
+                );
+                if (!response.ok) {
+                    const message = await response.text().catch(() => "");
+                    const error = new Error(message || `Frontend settings request failed (${method} ${response.status}).`);
+                    error.status = response.status;
+                    throw error;
+                }
+
+                const payload = await response.json().catch(() => null);
+                if (!payload || payload.success !== true || !isObjectLike(payload.settings)) {
+                    throw new Error("Invalid frontend settings API response.");
+                }
+                return normalizeSettings(payload.settings);
+            } catch (error) {
+                lastError = error;
+                const status = Number(error && error.status);
+                const shouldRetry = Boolean(
+                    window.__TAURI__
+                    && attempt < maxAttempts
+                    && (
+                        !Number.isFinite(status)
+                        || status === 404
+                        || status === 502
+                        || status === 503
+                        || status === 504
+                    )
+                );
+                if (!shouldRetry) {
+                    throw error;
+                }
+                await sleep(Math.min(1000, RUNTIME_REQUEST_RETRY_DELAY_MS * attempt));
+            }
         }
 
-        const payload = await response.json().catch(() => null);
-        if (!payload || payload.success !== true || !isObjectLike(payload.settings)) {
-            throw new Error("Invalid frontend settings API response.");
-        }
-        return normalizeSettings(payload.settings);
+        throw lastError || new Error("Frontend settings request failed.");
     }
 
     async hydrateFromRuntime() {

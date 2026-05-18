@@ -30,6 +30,7 @@ ref
 
 # Tauri / Rust build outputs
 src-tauri/target/
+src-tauri/target-dev-lowmem/
 src-tauri/gen/
 src/backend/wasm/target/
 tools/markdown_worker/target/

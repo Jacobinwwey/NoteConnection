@@ -15,7 +15,12 @@ describe('pathmode background safety contract', () => {
   test('loads HDR backgrounds through the guarded resize-and-convert path', () => {
     const source = fs.readFileSync(pathRendererPath, 'utf8');
     expect(source).toContain('const BACKGROUND_MAX_DIMENSION := 2048');
+    expect(source).toContain('var _background_texture_cache: Dictionary = {}');
+    expect(source).toContain('var _last_applied_background_path: String = "__unset__"');
     expect(source).toContain('func _load_hdr_background_safely(path: String) -> Texture2D:');
+    expect(source).toContain('var imported_tex = ResourceLoader.load(path)');
+    expect(source).toContain('(imported_tex as Texture2D).get_image()');
+    expect(source).not.toContain('var image_error := image.load(path)');
     expect(source).toContain('image.convert(Image.FORMAT_RGBA8)');
     expect(source).toContain('image.resize(resized_width, resized_height, Image.INTERPOLATE_LANCZOS)');
   });

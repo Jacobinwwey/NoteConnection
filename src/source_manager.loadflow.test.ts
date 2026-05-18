@@ -51,6 +51,7 @@ describe('source manager load-flow guards', () => {
   test('waits for sidecar readiness and retries data.js fetch during tauri startup race', () => {
     const source = fs.readFileSync(sourceManagerPath, 'utf8');
     expect(source).toContain('const waitForSidecarReady = async () => {');
+    expect(source).toContain("if (window.__TAURI__ && runtimeCaps.supports_sidecar) {");
     expect(source).toContain('await waitForSidecarReady();');
     expect(source).toContain("data.js fetch raced sidecar startup, retrying");
     expect(source).toContain('const maxAttempts = (window.__TAURI__ && runtimeCaps.supports_sidecar) ? 20 : 1;');
@@ -89,6 +90,17 @@ describe('source manager load-flow guards', () => {
     expect(indexHtml).toContain('<script src="storage_provider.js"></script>');
     expect(indexHtml.indexOf('<script src="runtime_bridge.js"></script>')).toBeLessThan(indexHtml.indexOf('<script src="source_manager.js"></script>'));
     expect(indexHtml.indexOf('<script src="storage_provider.js"></script>')).toBeLessThan(indexHtml.indexOf('<script src="source_manager.js"></script>'));
+  });
+
+  test('disables ES module bootstrap when the legacy script chain is already active', () => {
+    const indexPath = path.join(repoRoot, 'src', 'frontend', 'index.html');
+    const mainModulePath = path.join(repoRoot, 'src', 'frontend', 'main.mjs');
+    const indexHtml = fs.readFileSync(indexPath, 'utf8');
+    const mainModule = fs.readFileSync(mainModulePath, 'utf8');
+    expect(indexHtml).toContain('window.__NC_DISABLE_MODULE_BOOT = true;');
+    expect(mainModule).toContain("if (typeof window !== 'undefined' && window.__NC_DISABLE_MODULE_BOOT === true)");
+    expect(mainModule).toContain("await import('./i18n.mjs');");
+    expect(mainModule).not.toContain("import './i18n.mjs';");
   });
 
   test('allows Tauri ipc localhost in frontend CSP without relying on meta frame-ancestors', () => {
