@@ -12,7 +12,9 @@
 - [x] Host-level dist runtime plus packaged sidecar verification now proves the embedded `graphdb/sqlite` baseline across ingest -> store diagnostics/foundation readiness -> restart -> query continuity on the current Windows host (`npm run verify:foundation:sqlite-runtime`).
 - [x] Host-level workload-matrix verification now proves the same sqlite baseline across `smoke` / `medium` / `heavy` corpus sizes, snapshot metadata counts, restart continuity, and multi-point retrieval checks in both `dist` runtime and packaged sidecar flows (`npm run verify:foundation:sqlite-runtime:matrix`).
 - [~] The new embedded `graphdb/sqlite` baseline is now restart-durability-proved, host-level runtime-packaging-proved, and host-level workload-envelope-proved across `smoke` / `medium` / `heavy`, but soak / longer-duration / performance hardening still remain before calling A8 production-closed.
-- [~] Phase-1 A9 now has a live `external_http` connector baseline with remote index sync and end-to-end query proof, but recall/latency thresholds and larger-workload validation still remain before production closure.
+- [x] Host-level ANN runtime verification now proves the `external_http` connector baseline across `dist` runtime and packaged sidecar flows with restart continuity and live query-backend diagnostics (`npm run verify:foundation:ann-runtime`).
+- [x] Host-level ANN workload-matrix verification now proves the same `external_http` baseline across `smoke` / `medium` / `heavy` corpus sizes, sync/select telemetry, aligned representation metadata, and restart continuity (`npm run verify:foundation:ann-runtime:matrix`).
+- [~] Phase-1 A9 now has a live `external_http` connector baseline with remote index sync, host-level runtime proof, and host-level workload-matrix proof, but recall/latency threshold convergence and release-grade calibration still remain before production closure.
 - [x] Agent-workspace runbook verify/checks now surface ANN index-sync, circuit, traceability, and prefilter summaries plus threshold/signal drilldowns, while action-queue keeps the index-sync incident drilldown.
 - [x] `query_vector_acceleration_prefilter_effectiveness` now shares the ANN fast-lane escalation path instead of lagging behind the other ANN governance checks.
 - [x] Agent-workspace runbook verify/checks now also surface ANN circuit budget flags and prefilter calibration-readiness cues, so budget tuning no longer depends on raw JSON inspection.
@@ -42,12 +44,14 @@ After syncing the repository to the latest upstream `main` baseline, we re-audit
   - [x] Embedded sqlite restart durability is now covered by server integration proof (`ingest -> shutdown -> fresh module restart -> query/readiness continuity`).
   - [x] Host-level dist runtime + packaged sidecar verification now proves the same embedded sqlite baseline across ingest/readiness/diagnostics/restart/query continuity (`npm run verify:foundation:sqlite-runtime`).
   - [x] Host-level workload-matrix verification now proves the same embedded sqlite baseline across `smoke` / `medium` / `heavy` corpus sizes plus snapshot metadata/restart/multi-query continuity (`npm run verify:foundation:sqlite-runtime:matrix`).
+  - [x] Host-level ANN runtime verification now proves the same `external_http` connector baseline across dist/runtime + packaged sidecar restart continuity (`npm run verify:foundation:ann-runtime`).
+  - [x] Host-level ANN workload-matrix verification now proves the same `external_http` connector baseline across `smoke` / `medium` / `heavy` corpus sizes plus sync/select telemetry, aligned representation metadata, and restart continuity (`npm run verify:foundation:ann-runtime:matrix`).
   - [x] The `external_http` ANN path now syncs a remote prefilter index and serves live query traffic under integration proof.
   - [ ] Soak / longer-duration / performance hardening still remains for A8 beyond the new host-level workload matrix proof.
-  - [ ] ANN still needs workload/threshold calibration before production closure.
+  - [ ] ANN still needs recall/latency threshold convergence and release-grade workload calibration before production closure.
 - [ ] Next active implementation phase is now split:
   - [ ] finish the remaining A8 soak / longer-duration / performance closure on top of the new dist/runtime + packaged sidecar + workload matrix proof,
-  - [ ] finish the remaining A9 workload/threshold closure on top of the live connector baseline,
+  - [ ] finish the remaining A9 workload/threshold closure on top of the live connector + host-level runtime + workload-matrix baseline,
   - [ ] move next into Phase-2 release-grade gate hardening,
   - [ ] continue Phase-3 tutor/memory hardening in parallel.
   - [x] Agent Workspace browser/runtime route closure now passes real strict evidence (`STRICT`, `UI_STRICT`, `UI_DYNAMIC_STRICT`) with live conversation, capability buttons, and request-card flows.

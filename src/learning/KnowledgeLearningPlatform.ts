@@ -8294,6 +8294,14 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     command: 'npm run verify:foundation:sqlite-runtime:matrix',
                 },
                 {
+                    gateId: 'vector_runtime_proof',
+                    command: 'npm run verify:foundation:ann-runtime',
+                },
+                {
+                    gateId: 'vector_runtime_matrix_proof',
+                    command: 'npm run verify:foundation:ann-runtime:matrix',
+                },
+                {
                     gateId: 'documentation',
                     command: 'npm run docs:diataxis:check && npm run docs:site:build',
                 },

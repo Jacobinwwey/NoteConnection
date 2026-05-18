@@ -7,7 +7,7 @@
 - [x] Agent-workspace browser/runtime/Tauri verification closure is real and repeatable on the current branch.
 - [x] Phase-3 tutor telemetry, tutor trace/provider trend diagnostics, conversation memory, and memory-policy diagnostics now have concrete backend implementations.
 - [~] Phase-1 A8 has advanced to an embedded `graphdb/sqlite` operational baseline and now has restart-durability proof, host-level dist/runtime + packaged sidecar proof, and a host-level workload matrix across `smoke` / `medium` / `heavy`; soak / longer-duration / performance hardening still remain before production closure.
-- [~] Phase-1 A9 now has a live `external_http` sync-backed connector baseline under real query traffic, but benchmark-backed rollout thresholds and larger-workload validation still remain before production closure.
+- [~] Phase-1 A9 now has a live `external_http` sync-backed connector baseline under real query traffic, host-level dist/runtime + packaged sidecar proof, and a host-level workload matrix across `smoke` / `medium` / `heavy`, but benchmark-backed rollout thresholds and release-grade calibration still remain before production closure.
 - [x] `KnowledgeLearningPlatform.ts` no longer uses placeholder-backed runtime surfaces for query comparison, staleness, learning-quality, and session-plan-quality diagnostics.
 - [x] Server bootstrap now injects an active local `tutorAdapter`; the remaining tutor gap is production-proven multi-provider routing rather than default activation.
 
@@ -22,7 +22,7 @@
 - [x] Runtime path adaptation has been integrated for sidecar and frontend data roots.
 - [x] Worker runtime resolution has been stabilized for packaged sidecar scenarios.
 - [ ] Soak / longer-duration / performance hardening for the embedded graph backend baseline remain pending after the new packaged/runtime and workload-matrix proofs.
-- [ ] Production ANN connector workload and benchmark-backed rollout thresholds remain pending.
+- [ ] Production ANN connector threshold convergence and release-grade calibration remain pending after the new host-level runtime and workload-matrix proofs.
 - [ ] Phase-2 quality/query/session diagnostics now need release-grade calibration on top of a release-grade graphdb/ANN baseline.
 - [ ] Tutor routing now needs multi-provider hardening beyond the active local-first adapter path.
 - [ ] Final Electron decommission readiness checklist remains pending.

@@ -31,7 +31,7 @@
 - [x] `npm run build:sidecar`
   - PASS (with automatic retry without `--no-bytecode` when `pkg` requires bytecode for the current dependency graph)
 
-### Phase 2 Verification Refresh (2026-05-14)
+### Phase 2 Verification Refresh (2026-05-18)
 
 - [x] `node node_modules/jest/bin/jest.js src/agent_workspace.frontend.test.ts --runInBand --no-cache`
   - PASS
@@ -42,6 +42,10 @@
 - [x] `npm run build:with-vite`
   - PASS
 - [x] `npm run build:sidecar`
+  - PASS
+- [x] `npm run verify:foundation:ann-runtime`
+  - PASS
+- [x] `npm run verify:foundation:ann-runtime:matrix`
   - PASS
 - [x] `npm run verify:foundation:sqlite-runtime`
   - PASS
@@ -61,14 +65,19 @@
    - both modes now prove ingest -> store diagnostics/foundation readiness -> restart -> query continuity on the same runtime data directory,
    - `npm run verify:foundation:sqlite-runtime:matrix` now extends that proof across `smoke` / `medium` / `heavy` corpus sizes plus snapshot metadata counts and multi-point restart queries,
    - A8 is therefore no longer blocked on missing packaged/runtime or host-level workload-envelope evidence; the remaining honest gap is soak / longer-duration / performance hardening.
-2. The Phase-2 ANN governance slice is now operator-visible through the frontend runbook shell, not only backend JSON:
+2. The `external_http` ANN connector baseline now also has repeatable host-level runtime proof on the current Windows machine:
+   - `npm run verify:foundation:ann-runtime` covers both `dist` runtime and packaged sidecar flows,
+   - both modes now prove ingest -> live query-backend diagnostics -> restart -> query continuity against the reference ANN service,
+   - `npm run verify:foundation:ann-runtime:matrix` now extends that proof across `smoke` / `medium` / `heavy` corpus sizes plus sync/select telemetry and aligned representation metadata,
+   - A9 is therefore no longer blocked on missing host-level runtime or larger-workload evidence; the remaining honest gap is recall/latency threshold convergence and release-grade calibration.
+3. The Phase-2 ANN governance slice is now operator-visible through the frontend runbook shell, not only backend JSON:
    - verify/checks now surface ANN sync-health, circuit-budget, traceability, and prefilter summaries plus threshold/signal drilldowns,
    - they now also surface ANN circuit budget flags and prefilter calibration-readiness cues,
    - action-queue continues to carry the index-sync incident drilldown.
-3. `query_vector_acceleration_prefilter_effectiveness` now shares the ANN fast-lane escalation path instead of using the slower generic escalation branch.
-4. Runtime capability governance now has explicit gate `query_vector_acceleration_calibration_readiness`, which fails or warns until the ANN path has representative sync/prefilter/traceability/stability telemetry in the same runtime window.
-5. The workspace verify/checks cards now surface that calibration-readiness gate directly, instead of forcing operators to infer it only from the underlying budget signals.
-6. This refresh still does **not** prove release-grade Phase-2 closure:
+4. `query_vector_acceleration_prefilter_effectiveness` now shares the ANN fast-lane escalation path instead of using the slower generic escalation branch.
+5. Runtime capability governance now has explicit gate `query_vector_acceleration_calibration_readiness`, which fails or warns until the ANN path has representative sync/prefilter/traceability/stability telemetry in the same runtime window.
+6. The workspace verify/checks cards now surface that calibration-readiness gate directly, instead of forcing operators to infer it only from the underlying budget signals.
+7. This refresh still does **not** prove release-grade Phase-2 closure:
    - it closes visibility and browser/runtime proof for the new ANN governance summaries,
    - it does **not** close workload/threshold calibration for those budgets.
 
@@ -81,7 +90,7 @@
    - memory-policy diagnostics/history/trend.
 2. These passes do **not** prove Phase-1 A8/A9 closure:
    - runtime no longer defaults to `local-file-graphdb`, restart durability for the embedded `graphdb/sqlite` baseline is integration-proved, host-level dist/runtime + packaged sidecar proof is now in place, and a host-level workload matrix now exists across `smoke` / `medium` / `heavy`, but soak / longer-duration / performance hardening still remains,
-   - ANN no longer stops at query-only scaffolding: the `external_http` path now has remote index sync plus live end-to-end query proof, but workload and threshold calibration still remain before production closure.
+   - ANN no longer stops at query-only scaffolding: the `external_http` path now has remote index sync plus live end-to-end query proof, host-level dist/runtime + packaged sidecar proof, and a host-level workload matrix across `smoke` / `medium` / `heavy`, but recall/latency threshold convergence and release-grade calibration still remain before production closure.
 3. These passes do **not** prove Phase-2 quality-gate closure:
    - query comparison, staleness, learning-quality, session-plan-quality, and query-backend diagnostics are now implementation-real, but they still require release-grade calibration on top of the current graph/ANN operational baseline.
 4. Default runtime tutor execution now runs with an injected local `tutorAdapter`, but this is still a local-first baseline rather than a production-proven multi-provider routing policy.

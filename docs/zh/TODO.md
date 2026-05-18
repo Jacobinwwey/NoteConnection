@@ -19,7 +19,9 @@
 - [x] 现在已经有主机级 dist runtime + packaged sidecar 验证来证明 embedded `graphdb/sqlite` 基线在当前 Windows 宿主上可完成 ingest -> store diagnostics/foundation readiness -> restart -> query 连续性（`npm run verify:foundation:sqlite-runtime`）。
 - [x] 现在也已经有主机级 workload matrix 验证：在 `dist` runtime 与 packaged sidecar 两条路径上，对同一条 sqlite 基线完成了 `smoke` / `medium` / `heavy` 三档语料规模下的 snapshot metadata、restart 连续性与多点 query 连续性证明（`npm run verify:foundation:sqlite-runtime:matrix`）。
 - [~] 新的 embedded `graphdb/sqlite` 基线现已具备重启耐久性证明、主机级 runtime/packaging 证明，以及主机级 workload envelope 证明；但在宣称 A8 生产闭环前，仍需补齐 soak、长时段与性能级加固。
-- [~] Phase-1 A9 现已具备 live `external_http` connector baseline：包含远端索引同步与端到端 query 证明，但在宣称生产闭环前仍需补齐 recall/latency 阈值与更大工作负载验证。
+- [x] 现在已经有主机级 ANN runtime 验证：`external_http` connector baseline 已在 `dist` runtime 与 packaged sidecar 两条路径上完成 restart 连续性与真实 query-backend diagnostics 证明（`npm run verify:foundation:ann-runtime`）。
+- [x] 现在也已经有主机级 ANN workload matrix 验证：`external_http` baseline 已在 `smoke` / `medium` / `heavy` 三档语料规模下证明 sync/select telemetry、aligned representation metadata 与 restart 连续性（`npm run verify:foundation:ann-runtime:matrix`）。
+- [~] Phase-1 A9 现已具备 live `external_http` connector baseline、主机级 runtime 证明和主机级 workload matrix 证明；但在宣称生产闭环前仍需补齐 recall/latency 阈值收敛与发布级校准。
 - [ ] 只有在同一套检查运行在发布级 graphdb/ANN 基线上之后，才能把这批新的 Phase-2 诊断面升级为发布级门禁。
 - [ ] 在当前 local-first 基线之上，把 tutor routing 继续推进到生产级多 provider 策略。
 - [ ] 持续推进 FR-009 证据新鲜度、Linux strict Tauri 宿主依赖预装、Electron 下线终审。
@@ -44,12 +46,14 @@
   - [x] embedded sqlite 的重启耐久性现已由 server integration 证明覆盖（`ingest -> shutdown -> fresh module restart -> query/readiness continuity`）。
   - [x] 主机级 dist runtime + packaged sidecar 验证现已证明同一条 embedded sqlite 基线可以完成 ingest/readiness/diagnostics/restart/query 连续性（`npm run verify:foundation:sqlite-runtime`）。
   - [x] 主机级 workload matrix 验证现已证明同一条 embedded sqlite 基线可以完成 `smoke` / `medium` / `heavy` 三档 workload 下的 snapshot metadata / restart / 多点 query 连续性（`npm run verify:foundation:sqlite-runtime:matrix`）。
+  - [x] 主机级 ANN runtime 验证现已证明同一条 `external_http` baseline 可以完成 dist/runtime + packaged sidecar 的 restart 连续性（`npm run verify:foundation:ann-runtime`）。
+  - [x] 主机级 ANN workload matrix 验证现已证明同一条 `external_http` baseline 可以完成 `smoke` / `medium` / `heavy` 三档 workload 下的 sync/select telemetry、aligned representation metadata 与 restart 连续性（`npm run verify:foundation:ann-runtime:matrix`）。
   - [x] `external_http` ANN 路径现已支持远端预筛选索引同步，并通过真实 query 流量的集成证明。
   - [ ] A8 在新的主机级 workload matrix 之外，仍需补齐 soak、长时段与性能级加固。
-  - [ ] ANN 仍需补齐工作负载/阈值校准后才能宣称生产闭环。
+  - [ ] ANN 仍需补齐 recall/latency 阈值收敛与发布级工作负载校准后才能宣称生产闭环。
 - [ ] 下一活跃实施阶段现已拆分为：
   - [ ] 在新的 dist/runtime + packaged sidecar + workload matrix 证明之上，先补完 A8 剩余的 soak / 长时段 / 性能闭环，
-  - [ ] 补完 A9 在 live connector baseline 之上的工作负载/阈值闭环，
+  - [ ] 补完 A9 在 live connector + 主机级 runtime + workload matrix baseline 之上的工作负载/阈值闭环，
   - [ ] 下一阶段转入 Phase-2 发布级门禁加固，
   - [ ] 同时并行推进 Phase-3 tutor/memory 加固。
   - [x] Agent Workspace 浏览器/运行时路由闭环已通过真实严格证据（`STRICT`、`UI_STRICT`、`UI_DYNAMIC_STRICT`），覆盖真实会话、能力按钮与请求卡片链路。

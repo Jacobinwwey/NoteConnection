@@ -20,6 +20,8 @@ Bring code truth, active progress docs, and next execution order back into align
   - `scripts/verify-foundation-sqlite-runtime.js --matrix` now broadens that host-level proof across `smoke` / `medium` / `heavy` workload profiles on the same two runtime paths: snapshot metadata counts, restart continuity, and multi-point query continuity all stay green.
   - `local_vector` external HTTP acceleration is no longer query-only scaffolding: the adapter now supports remote index sync, exposes sync telemetry in diagnostics, and preserves strict `fail_closed` plus representation-alignment semantics.
   - `src/query_backend.external_http.integration.test.ts` now proves a live `external_http` connector path end to end: ingest -> remote index sync -> query -> diagnostics.
+  - `scripts/verify-foundation-ann-runtime.js` now proves that same `external_http` connector baseline through both `dist` runtime and packaged sidecar flows on the current Windows host: ingest -> live query-backend diagnostics -> restart -> query continuity.
+  - `scripts/verify-foundation-ann-runtime.js --matrix` now broadens that ANN proof across `smoke` / `medium` / `heavy` workload profiles on the same two runtime paths: sync/select telemetry, aligned representation metadata, and restart continuity all stay green.
   - runtime capability governance now treats ANN remote index sync as a first-class check: `query_vector_acceleration_index_sync_health` is emitted in the matrix/runbook alongside health, traceability, prefilter, and circuit checks.
   - `server.ts` now closes the runbook loop for that new gate: ANN index-sync health is included in verification escalation, remediation action-queue generation, and per-check history summaries.
   - runtime capability governance now also has an explicit ANN calibration prerequisite gate: `query_vector_acceleration_calibration_readiness` blocks release-grade threshold tuning until sync telemetry, stable connector state, prefilter sample readiness, evaluable candidate ratios, and external traceability signals are all present in the same runtime window.
@@ -31,15 +33,15 @@ Bring code truth, active progress docs, and next execution order back into align
   - P3 placeholder replacement is implementation-complete for the current runtime surfaces.
   - P4 default tutor-routing activation is implementation-complete for the local-first baseline.
   - the remaining A8 gap is now narrower: host-level dist/runtime + packaged sidecar proof is in place, and a host-level workload matrix across `smoke` / `medium` / `heavy` is also in place; soak / longer-duration / performance hardening still remains.
-  - P2 now has a real live-connector baseline for A9 instead of pure scaffolding.
-  - the next phase after this work is still release-grade Phase-2 gate hardening, but the current slice is now visibility-complete rather than calibration-complete: the first ANN gate family has server-side runbook/action-queue/history closure, prefilter now shares the ANN fast-lane escalation path, and frontend verify/checks now expose index-sync, circuit, traceability, and prefilter governance with threshold/signal context plus calibration-readiness cues, while A8 soak/performance closure and A9 workload/threshold calibration continue in parallel.
+  - the remaining A9 gap is now narrower too: host-level dist/runtime + packaged sidecar proof is in place, and a host-level workload matrix across `smoke` / `medium` / `heavy` is also in place; recall/latency threshold convergence and release-grade calibration still remain.
+  - the next phase after this work is still release-grade Phase-2 gate hardening, but the current slice is now visibility-complete rather than calibration-complete: the first ANN gate family has server-side runbook/action-queue/history closure, prefilter now shares the ANN fast-lane escalation path, and frontend verify/checks now expose index-sync, circuit, traceability, and prefilter governance with threshold/signal context plus calibration-readiness cues, while A8 soak/performance closure and A9 threshold convergence continue in parallel.
 
 ### Code-vs-Plan Reality Matrix
 
 | Area | Planned Expectation | Current HEAD Reality | Status |
 |---|---|---|---|
 | Phase-1 A8 graph backend | production-grade local graph backend | ops semantics exist, default runtime now targets embedded `graphdb/sqlite` with explicit file fallback, restart durability is integration-proved, host-level `dist` runtime + packaged sidecar proof is automated, and a host-level workload matrix now exists across `smoke` / `medium` / `heavy`; soak / longer-duration / performance hardening is still open | Operational baseline |
-| Phase-1 A9 ANN connector | production-grade ANN connector | `external_http` now supports remote index sync plus live end-to-end query proof under strict failure/representation semantics, but recall/latency calibration and larger-workload validation are still open | Operational baseline |
+| Phase-1 A9 ANN connector | production-grade ANN connector | `external_http` now supports remote index sync plus live end-to-end query proof under strict failure/representation semantics; host-level `dist` runtime + packaged sidecar proof and a host-level workload matrix across `smoke` / `medium` / `heavy` are now in place, but recall/latency threshold convergence and release-grade calibration are still open | Operational baseline |
 | Phase-2 quality gates | live mastery/divergence quality trend gates | query-backend comparison, staleness, learning-quality, and session-plan-quality runtime surfaces are now live in `KnowledgeLearningPlatform.ts`; operator-facing ANN governance now surfaces index-sync, circuit, traceability, and prefilter summaries plus threshold/signal drilldowns and calibration-readiness cues through runbook verify/checks, and runtime now carries explicit gate `query_vector_acceleration_calibration_readiness`, but the full gate set still needs release-grade calibration on top of the current graph/ANN operational baseline | Operational baseline |
 | Phase-3 tutor + memory | tutor and memory operating layer becomes real | tutor telemetry/trace/provider trends + conversation memory + memory-policy diagnostics are real, and default runtime now injects a local tutor adapter; production-proven multi-provider routing is still open | Operational baseline |
 | Architecture compaction | major monoliths reduced to sustainable size | `server.ts` 14,992, `KnowledgeLearningPlatform.ts` 7,706, `path_app.js` 4,649, `app.js` 4,713, `routes/knowledge.ts` 690 | Open |
@@ -56,8 +58,8 @@ Bring code truth, active progress docs, and next execution order back into align
    - keep expanding beyond the now-proved restart lifecycle and workload matrix into soak, longer-duration durability/performance, and adapter/fallback consistency verification.
 3. P2: ANN workload and rollout closure on top of the new live connector baseline
    - keep the new sync-backed `external_http` connector healthy under real traffic,
-   - benchmark recall/latency thresholds,
-   - expand workload validation before calling the ANN layer production-closed.
+   - keep the new host-level ANN runtime + workload-matrix verifiers green,
+   - benchmark recall/latency thresholds and converge release-grade calibration before calling the ANN layer production-closed.
 4. P3: Next phase after this work - Phase-2 quality gate hardening
    - keep the new telemetry-backed query/staleness/learning-quality/session-plan-quality surfaces aligned with the same runtime truth,
    - move the ANN gate family from visibility closure to calibration closure by workload-testing the now-surfaced index-sync, circuit, traceability, and prefilter budgets,

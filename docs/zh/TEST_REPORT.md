@@ -31,7 +31,7 @@
 - [x] `npm run build:sidecar`
   - 通过（当 `pkg` 对当前依赖图要求 bytecode 时，会自动回退到不带 `--no-bytecode` 的重试路径）
 
-### Phase 2 验证刷新（2026-05-14）
+### Phase 2 验证刷新（2026-05-18）
 
 - [x] `node node_modules/jest/bin/jest.js src/agent_workspace.frontend.test.ts --runInBand --no-cache`
   - 通过
@@ -42,6 +42,10 @@
 - [x] `npm run build:with-vite`
   - 通过
 - [x] `npm run build:sidecar`
+  - 通过
+- [x] `npm run verify:foundation:ann-runtime`
+  - 通过
+- [x] `npm run verify:foundation:ann-runtime:matrix`
   - 通过
 - [x] `npm run verify:foundation:sqlite-runtime`
   - 通过
@@ -61,14 +65,19 @@
    - 两条路径都会在同一个 runtime data 目录上证明 ingest -> store diagnostics/foundation readiness -> restart -> query 连续性，
    - `npm run verify:foundation:sqlite-runtime:matrix` 现在会把同样的证明扩展到 `smoke` / `medium` / `heavy` 三档 workload，并校验 snapshot metadata 计数与多点 restart query，
    - 因而 A8 当前已不再卡在“缺 packaged/runtime 或主机级 workload envelope 证据”，而是诚实地只剩 soak、长时段与性能级加固。
-2. Phase-2 的 ANN 治理切片现已从“后端 JSON 可见”推进到“前端 runbook 壳层可见”：
+2. `external_http` ANN connector baseline 现在也具备了当前 Windows 宿主上的可重复主机级运行时证明：
+   - `npm run verify:foundation:ann-runtime` 会同时覆盖 `dist` runtime 与 packaged sidecar 两条路径，
+   - 两条路径都会对 reference ANN service 证明 ingest -> live query-backend diagnostics -> restart -> query 连续性，
+   - `npm run verify:foundation:ann-runtime:matrix` 现在会把同样的证明扩展到 `smoke` / `medium` / `heavy` 三档 workload，并校验 sync/select telemetry 与 aligned representation metadata，
+   - 因而 A9 当前已不再卡在“缺主机级 runtime 或更大 workload 证据”，而是诚实地只剩 recall/latency 阈值收敛与发布级校准。
+3. Phase-2 的 ANN 治理切片现已从“后端 JSON 可见”推进到“前端 runbook 壳层可见”：
    - verify/checks 现在都会展示 ANN sync-health、熔断预算、可追踪性、预筛选摘要及阈值/信号钻取，
    - 也会进一步展示 ANN 熔断预算标志与预筛选校准就绪态，
    - action-queue 继续承载 index-sync 事故钻取。
-3. `query_vector_acceleration_prefilter_effectiveness` 现已进入 ANN 快速升级路径，不再沿用较慢的通用升级分支。
-4. runtime capability 治理现在已经具备显式门禁 `query_vector_acceleration_calibration_readiness`，会在 ANN 路径尚未形成同窗口 sync/prefilter/traceability/stability 代表性遥测时直接给出 fail/warn。
-5. workspace 的 verify/checks 卡片现在也会直接展示这条 calibration-readiness gate，而不再要求运维只从底层预算信号里自己推断。
-6. 这轮刷新仍然**不等于**发布级 Phase-2 闭环：
+4. `query_vector_acceleration_prefilter_effectiveness` 现已进入 ANN 快速升级路径，不再沿用较慢的通用升级分支。
+5. runtime capability 治理现在已经具备显式门禁 `query_vector_acceleration_calibration_readiness`，会在 ANN 路径尚未形成同窗口 sync/prefilter/traceability/stability 代表性遥测时直接给出 fail/warn。
+6. workspace 的 verify/checks 卡片现在也会直接展示这条 calibration-readiness gate，而不再要求运维只从底层预算信号里自己推断。
+7. 这轮刷新仍然**不等于**发布级 Phase-2 闭环：
    - 它闭合的是新 ANN 治理摘要的可见性与 browser/runtime 证明，
    - 并**没有**闭合这些预算的工作负载/阈值校准。
 
@@ -81,7 +90,7 @@
    - memory-policy diagnostics/history/trend。
 2. 这些通过项**不等于** Phase-1 A8/A9 已闭环：
    - runtime 已不再默认 `local-file-graphdb`，embedded `graphdb/sqlite` 基线的重启耐久性已由集成测试证明，而且主机级 dist/runtime + packaged sidecar 证明与 `smoke` / `medium` / `heavy` workload matrix 也已具备，但 soak、长时段与性能级加固仍待完成；
-   - ANN 已不再停留在 query-only 脚手架：`external_http` 路径现已具备远端索引同步与真实端到端 query 证明，但在宣称生产闭环前仍需补齐工作负载与阈值校准。
+   - ANN 已不再停留在 query-only 脚手架：`external_http` 路径现已具备远端索引同步与真实端到端 query 证明、主机级 dist/runtime + packaged sidecar 证明，以及 `smoke` / `medium` / `heavy` workload matrix，但在宣称生产闭环前仍需补齐 recall/latency 阈值收敛与发布级校准。
 3. 这些通过项**不等于** Phase-2 quality gate 已闭环：
    - query compare、staleness、learning-quality、session-plan-quality、query-backend diagnostics 这批运行面已经具备真实实现，但它们仍需要建立在当前 graph/ANN operational baseline 之上的发布级校准。
 4. 默认 runtime tutor 执行现在已经注入本地 `tutorAdapter`，但当前仍只是 local-first 基线，而不是已验证的生产级多 provider 路由策略。
