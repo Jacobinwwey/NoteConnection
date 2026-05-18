@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://127.0.0.1:* http://localhost:* tauri://localhost http://tauri.localhost; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self';"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' ipc: http://127.0.0.1:* http://localhost:* http://ipc.localhost https://ipc.localhost tauri://localhost http://tauri.localhost https://tauri.localhost; object-src 'none'; base-uri 'self'; form-action 'self';"
     />
     <title>NoteMD Workspace</title>
     <link rel="stylesheet" href="notemd.css" />

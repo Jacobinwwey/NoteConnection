@@ -13047,6 +13047,13 @@ function getStaticContentType(filePath: string): string {
     }
 }
 
+function buildContentSecurityPolicy(contentType: string): string | null {
+    if (contentType === 'text/html') {
+        return "frame-ancestors 'none'";
+    }
+    return null;
+}
+
 // CLI Argument Parsing (v0.9.71 Fix)
 const args = process.argv.slice(2);
 let cliOptions: any = {};
@@ -14005,9 +14012,14 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         
                         try {
                             const content = await fs.promises.readFile(filePath);
-                            res.writeHead(200, { 'Content-Type': contentType });
-                            res.end(content);
-                            return;
+                    const headers: Record<string, string> = { 'Content-Type': contentType };
+                    const cspHeader = buildContentSecurityPolicy(contentType);
+                    if (cspHeader) {
+                        headers['Content-Security-Policy'] = cspHeader;
+                    }
+                    res.writeHead(200, headers);
+                    res.end(content);
+                    return;
                         } catch (err) {
                             CrashLogger.log(err, `AssetRead:${filename}`);
                             res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -14022,7 +14034,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             // GET /api/kb-path â€” Return current Knowledge Base root path
             // Legacy parity mapping: replaced historical desktop IPC getter.
             // è¿”å›žå½“å‰çŸ¥è¯†åº“æ ¹è·¯å¾„ï¼ˆåŽ†å² IPC getter çš„æ¡¥æŽ¥æ›¿ä»£å®žçŽ°ï¼‰ã€‚
-            if (req.url === '/api/kb-path') {
+            if (req.url?.startsWith('/api/kb-path')) {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ kbPath: KB_ROOT }));
                 return;
@@ -16053,7 +16065,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     res.end(JSON.stringify({ success: false, error: String(error) }));
                 }
                 return;
-            } else if (req.url === '/api/kb-path') {
+            } else if (req.url?.startsWith('/api/kb-path')) {
                 try {
                     const payload = await readJsonBody(req);
                     const kbPath = typeof payload.kbPath === 'string' ? payload.kbPath.trim() : '';

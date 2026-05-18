@@ -36,7 +36,7 @@ var _settings: Dictionary = {
 	"auto_reconstruct": true,
 	"retain_history": true,
 	"focus_mode": true,
-	"background": "belfast_sunset_puresky_4k.exr",
+	"background": "",
 	"bg_brightness": 1.0,
 	"reading_mode": "window",
 	"reader_render_mode": "render",

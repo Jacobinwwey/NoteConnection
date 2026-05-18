@@ -36,6 +36,8 @@ var _initial_ui_settings_retries: int = 0
 const DOUBLE_CLICK_THRESHOLD := 0.5
 const MAX_INITIAL_UI_SETTINGS_RETRIES := 8
 const INITIAL_UI_SETTINGS_RETRY_DELAY := 0.15
+const BACKGROUND_MAX_DIMENSION := 2048
+const BACKGROUND_MAX_BYTES_HINT := 64 * 1024 * 1024
 
 @onready var ui: PathModeUI = $"../UI"
 
@@ -845,20 +847,68 @@ func _apply_background_texture(path: String) -> void:
 	if path == "":
 		_apply_default_background(world_env, sky_mat)
 		return
-		
-	# EXR/HDR files natively import as CompressedTexture2D/Image in Godot 4 via ResourceLoader
-	if ResourceLoader.exists(path):
-		var tex = ResourceLoader.load(path)
-		if tex is Texture2D:
-			world_env.environment.background_mode = Environment.BG_SKY
-			sky_mat.panorama = tex
-			print("[PathRenderer] Applied background texture: ", path)
-			return
-		push_warning("[PathRenderer] Background resource is not a Texture2D: %s" % path)
-	else:
-		push_warning("[PathRenderer] Background file not found: %s" % path)
+
+	var texture = _load_background_texture_safely(path)
+	if texture:
+		world_env.environment.background_mode = Environment.BG_SKY
+		sky_mat.panorama = texture
+		print("[PathRenderer] Applied background texture: ", path)
+		return
+
+	push_warning("[PathRenderer] Falling back to default background for: %s" % path)
 
 	_apply_default_background(world_env, sky_mat)
+
+
+func _load_background_texture_safely(path: String) -> Texture2D:
+	if not ResourceLoader.exists(path):
+		push_warning("[PathRenderer] Background file not found: %s" % path)
+		return null
+
+	var extension := path.get_extension().to_lower()
+	if extension == "exr" or extension == "hdr":
+		return _load_hdr_background_safely(path)
+
+	var tex = ResourceLoader.load(path)
+	if tex is Texture2D:
+		return tex
+
+	push_warning("[PathRenderer] Background resource is not a Texture2D: %s" % path)
+	return null
+
+
+func _load_hdr_background_safely(path: String) -> Texture2D:
+	var image := Image.new()
+	var image_error := image.load(path)
+	if image_error != OK:
+		push_warning("[PathRenderer] Failed to load HDR background image %s (error=%s)" % [path, image_error])
+		return null
+
+	var original_size := image.get_size()
+	if original_size.x <= 0 or original_size.y <= 0:
+		push_warning("[PathRenderer] Invalid HDR background dimensions for: %s" % path)
+		return null
+
+	if image.get_format() != Image.FORMAT_RGBA8:
+		image.convert(Image.FORMAT_RGBA8)
+
+	var largest_dimension := maxi(original_size.x, original_size.y)
+	if largest_dimension > BACKGROUND_MAX_DIMENSION:
+		var scale := float(BACKGROUND_MAX_DIMENSION) / float(largest_dimension)
+		var resized_width := maxi(1, int(round(original_size.x * scale)))
+		var resized_height := maxi(1, int(round(original_size.y * scale)))
+		image.resize(resized_width, resized_height, Image.INTERPOLATE_LANCZOS)
+		print("[PathRenderer] Downscaled HDR background from %s to %s to avoid large GPU uploads." % [str(original_size), str(image.get_size())])
+
+	var estimated_bytes := image.get_width() * image.get_height() * 4
+	if estimated_bytes > BACKGROUND_MAX_BYTES_HINT:
+		push_warning("[PathRenderer] HDR background still too large after resize (%s bytes): %s" % [estimated_bytes, path])
+		return null
+
+	var texture := ImageTexture.create_from_image(image)
+	if texture == null:
+		push_warning("[PathRenderer] Failed to create ImageTexture from HDR background: %s" % path)
+	return texture
 
 
 func _schedule_initial_ui_settings_retry() -> void:

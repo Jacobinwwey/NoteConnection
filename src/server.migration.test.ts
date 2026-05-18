@@ -497,6 +497,16 @@ describe('server migration settings routes', () => {
     expect(response.body).toContain('const graphData');
   });
 
+  test('returns current KB path when cache-busting query string is present', async () => {
+    const response = await requestJson(port, 'GET', '/api/kb-path?v=12345');
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        kbPath: kbRoot,
+      })
+    );
+  });
+
   test('rejects static traversal attempts with raw parent-segment path', async () => {
     const response = await requestJson(port, 'GET', '/../../outside/sensitive.md');
     expect(response.status).toBe(403);

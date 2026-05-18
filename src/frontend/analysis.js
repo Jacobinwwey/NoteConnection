@@ -4,6 +4,15 @@ console.log("Analysis Module: Parsing...");
 document.addEventListener("DOMContentLoaded", () => {
     console.log("Analysis Module: DOMContentLoaded");
 
+    function getGraphDataSafe() {
+        if (typeof window === 'undefined') return null;
+        const candidate = window.graphData;
+        if (!candidate || !Array.isArray(candidate.nodes) || !Array.isArray(candidate.edges)) {
+            return null;
+        }
+        return candidate;
+    }
+
     const UI = {
         panel: document.getElementById("analysis-panel"),
         resizer: document.getElementById("analysis-resizer"),
@@ -38,7 +47,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- 0. Init Cluster Options ---
     function initClusters() {
-        if (!UI.clusterFilter || typeof graphData === 'undefined') return;
+        const graphData = getGraphDataSafe();
+        if (!UI.clusterFilter || !graphData) return;
         
         // Find unique clusters
         const clusters = new Set();
@@ -64,7 +74,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- 1. Quick Distribution (Immediate) ---
     function initQuickDist() {
         if (!UI.quickDist) return;
-        if (typeof graphData === 'undefined') return;
+        const graphData = getGraphDataSafe();
+        if (!graphData) return;
 
         const degrees = graphData.nodes.map(n => n.inDegree + n.outDegree);
         const maxDeg = Math.max(...degrees, 1);
@@ -283,7 +294,8 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // Get nodes filtered ONLY by cluster (ignore threshold for histogram context)
         // Guard: Check if graphData is available (may not be in MINI mode)
-        if (typeof graphData === 'undefined' || !graphData || !graphData.nodes) {
+        const graphData = getGraphDataSafe();
+        if (!graphData) {
             console.warn('[Analysis] graphData not available, skipping histogram render.');
             return;
         }
@@ -421,6 +433,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function showNodeDetails(nodeId) {
+        const graphData = getGraphDataSafe();
+        if (!graphData) return;
+
         // Open Panel if closed
         if (!UI.panel.classList.contains("open")) {
             UI.btn.click();
@@ -482,6 +497,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- 6. Export & Filter Logic ---
     function getFilteredData() {
+        const graphData = getGraphDataSafe();
+        if (!graphData) {
+            return { nodes: [], edges: [] };
+        }
+
         let nodes = graphData.nodes;
         
         // 1. Cluster Filter
@@ -515,7 +535,14 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateStats() {
         const { nodes } = getFilteredData();
         if (UI.count) {
-            const tot = graphData.nodes.length;
+            const graphData = getGraphDataSafe();
+            const tot = graphData ? graphData.nodes.length : 0;
+            if (tot <= 0) {
+                UI.count.innerText = "0 / 0 (0.0%)";
+                renderTable(nodes);
+                renderHistogram();
+                return;
+            }
             const pct = ((nodes.length/tot)*100).toFixed(1);
             // Use translation for "Selected:" label is handled in HTML, here just numbers
             // But wait, the label is separate <span data-i18n="selected">

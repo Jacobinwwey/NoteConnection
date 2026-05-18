@@ -91,6 +91,19 @@ describe('source manager load-flow guards', () => {
     expect(indexHtml.indexOf('<script src="storage_provider.js"></script>')).toBeLessThan(indexHtml.indexOf('<script src="source_manager.js"></script>'));
   });
 
+  test('allows Tauri ipc localhost in frontend CSP without relying on meta frame-ancestors', () => {
+    const indexPath = path.join(repoRoot, 'src', 'frontend', 'index.html');
+    const notemdPath = path.join(repoRoot, 'src', 'frontend', 'notemd.html');
+    const indexHtml = fs.readFileSync(indexPath, 'utf8');
+    const notemdHtml = fs.readFileSync(notemdPath, 'utf8');
+    expect(indexHtml).toContain("http://ipc.localhost");
+    expect(indexHtml).toContain("ipc:");
+    expect(indexHtml).not.toContain("frame-ancestors");
+    expect(notemdHtml).toContain("http://ipc.localhost");
+    expect(notemdHtml).toContain("ipc:");
+    expect(notemdHtml).not.toContain("frame-ancestors");
+  });
+
   test('loads runtime bridge before path_app on the dedicated path mode page', () => {
     const pathHtmlPath = path.join(repoRoot, 'src', 'frontend', 'path.html');
     const pathHtml = fs.readFileSync(pathHtmlPath, 'utf8');
@@ -112,5 +125,13 @@ describe('source manager load-flow guards', () => {
     expect(runtimeBridgeSource).toContain("invoke('get_sidecar_runtime_config')");
     expect(pathAppSource).toContain("bridge.whenReady()");
     expect(() => new (require('vm').Script)(pathAppSource)).not.toThrow();
+  });
+
+  test('keeps analysis panel resilient when graphData is not available yet', () => {
+    const analysisPath = path.join(repoRoot, 'src', 'frontend', 'analysis.js');
+    const analysisSource = fs.readFileSync(analysisPath, 'utf8');
+    expect(analysisSource).toContain('function getGraphDataSafe()');
+    expect(analysisSource).toContain('return { nodes: [], edges: [] };');
+    expect(analysisSource).toContain("const tot = graphData ? graphData.nodes.length : 0;");
   });
 });
