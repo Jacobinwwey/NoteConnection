@@ -9,6 +9,27 @@
  * the legacy payload scripts as side-effect imports.
  */
 
+function shouldSkipModuleBootstrap() {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    // Legacy IIFE bootstrap is the active production path on index.html.
+    // If it is already present, the module chain must stay dormant to avoid
+    // duplicate i18n/runtime/app initialization and graph state races.
+    if (window.i18n || window.NoteConnectionRuntime || window.settingsManager) {
+        return true;
+    }
+
+    const scriptTags = Array.from(document.querySelectorAll('script[src]'));
+    return scriptTags.some((tag) => {
+        const src = String(tag.getAttribute('src') || '').trim();
+        return src.endsWith('i18n.js')
+            || src.endsWith('runtime_bridge.js')
+            || src.endsWith('source_manager.js');
+    });
+}
+
 async function bootModuleFrontend() {
     // 1. Foundation modules (ES module versions with window backward compat)
     await import('./i18n.mjs');
@@ -23,17 +44,17 @@ async function bootModuleFrontend() {
     // 3. Legacy IIFE modules (loaded as side-effect scripts; these register on window.*)
     await import('./workspace_panes.js');
     await import('./agent_workspace.js');
+    await import('./storage_provider.js');
     await import('./settings.js');
     await import('./source_manager.js');
-    await import('./storage_provider.js');
 
     // 4. Large application payloads (loaded as side-effect modules)
     await import('./path_app.js');
     await import('./app.js');
 }
 
-if (typeof window !== 'undefined' && window.__NC_DISABLE_MODULE_BOOT === true) {
-    console.log('[main.mjs] Module frontend bootstrap disabled because legacy script bootstrap is active.');
+if (shouldSkipModuleBootstrap()) {
+    console.log('[main.mjs] Module frontend bootstrap skipped because the legacy script bootstrap is active.');
 } else {
     void bootModuleFrontend();
 }

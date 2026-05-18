@@ -232,7 +232,17 @@ class GPULinkForce {
         const nLinks = this._links.length;
         console.log(`[GPULink] Initializing for ${n} nodes, ${nLinks} links.`);
         
-        if (n === 0) return;
+        if (this.kernel) {
+            this.kernel.destroy();
+            this.kernel = null;
+        }
+
+        if (n === 0 || nLinks === 0) {
+            this.adjHead = new Float32Array(n);
+            this.adjCount = new Float32Array(n);
+            this.flatIndices = new Float32Array(0);
+            return;
+        }
 
         // Build Adjacency List (Source <-> Target)
         // D3 Link Force is symmetric: force acts on both ends.
@@ -295,8 +305,6 @@ class GPULinkForce {
         // Limit max neighbors width for texture if needed? 
         // gpu.js handles 1D arrays well.
         
-        if (this.kernel) this.kernel.destroy();
-
         // ---------------------------------------------------------
         // KERNEL
         // ---------------------------------------------------------
@@ -368,7 +376,7 @@ class GPULinkForce {
     }
 
     force(alpha) {
-        if (!this.available || this.nodes.length === 0) return;
+        if (!this.available || this.nodes.length === 0 || this._links.length === 0 || this.flatIndices.length === 0) return;
         
         const n = this.nodes.length;
         const posX = new Float32Array(n);

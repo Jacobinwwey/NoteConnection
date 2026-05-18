@@ -97,8 +97,11 @@ describe('source manager load-flow guards', () => {
     const mainModulePath = path.join(repoRoot, 'src', 'frontend', 'main.mjs');
     const indexHtml = fs.readFileSync(indexPath, 'utf8');
     const mainModule = fs.readFileSync(mainModulePath, 'utf8');
-    expect(indexHtml).toContain('window.__NC_DISABLE_MODULE_BOOT = true;');
-    expect(mainModule).toContain("if (typeof window !== 'undefined' && window.__NC_DISABLE_MODULE_BOOT === true)");
+    expect(indexHtml).toContain('<script type="module" src="./main.mjs"></script>');
+    expect(indexHtml).not.toContain('window.__NC_DISABLE_MODULE_BOOT = true;');
+    expect(mainModule).toContain('function shouldSkipModuleBootstrap()');
+    expect(mainModule).toContain('window.i18n || window.NoteConnectionRuntime || window.settingsManager');
+    expect(mainModule).toContain("src.endsWith('i18n.js')");
     expect(mainModule).toContain("await import('./i18n.mjs');");
     expect(mainModule).not.toContain("import './i18n.mjs';");
   });
