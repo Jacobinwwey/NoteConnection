@@ -1,6 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type {
+    AgentConversationInvocationRecord,
+    AgentConversationSessionRecord,
+    AgentConversationTurnRecord,
     EvidenceSpan,
     KnowledgeAtom,
     KnowledgeIngestResponse,
@@ -12,6 +15,12 @@ import type {
     TemporalEdge,
     TutorTrace,
 } from './types';
+import type { IndexLifecycleSnapshot } from '../indexing/types';
+import type { ResourceRegistrySnapshot } from '../resources/types';
+import type { SessionStateSnapshot } from '../session/types';
+import type { MemoryAuditRecord } from '../memory/types';
+import type { WorkflowArtifactSnapshot } from '../workflows/types';
+import type { WorkspaceRegistrySnapshot } from '../workspace/types';
 
 export interface SerializedDocumentSnapshot {
     documentId: string;
@@ -27,7 +36,7 @@ export interface SerializedDocumentSnapshot {
 }
 
 export interface KnowledgeGraphSnapshot {
-    schemaVersion: 1;
+    schemaVersion: 1 | 2;
     savedAt: string;
     idCounter: number;
     atoms: KnowledgeAtom[];
@@ -51,6 +60,15 @@ export interface KnowledgeGraphSnapshot {
     memoryPolicyDiagnosticsHistoryRecords?: Array<Record<string, unknown>>;
     queryBackendFallbackCount?: number;
     queryBackendLastError?: string;
+    conversationSessions?: AgentConversationSessionRecord[];
+    conversationTurns?: AgentConversationTurnRecord[];
+    conversationInvocations?: AgentConversationInvocationRecord[];
+    resourceRegistry?: ResourceRegistrySnapshot;
+    workspaceRegistry?: WorkspaceRegistrySnapshot;
+    indexLifecycle?: IndexLifecycleSnapshot;
+    sessionStateSnapshot?: SessionStateSnapshot;
+    workflowArtifacts?: WorkflowArtifactSnapshot;
+    memoryAuditRecords?: MemoryAuditRecord[];
     userMemory: Record<string, {
         session: MemoryEntry[];
         unit: MemoryEntry[];
@@ -313,7 +331,7 @@ export class FileBackedKnowledgeGraphStore implements KnowledgeGraphOpsAdapter {
         try {
             const content = await fs.promises.readFile(filePath, 'utf8');
             const parsed = JSON.parse(content) as Partial<KnowledgeGraphSnapshot>;
-            if (parsed.schemaVersion !== 1 || !Array.isArray(parsed.atoms) || !Array.isArray(parsed.documents)) {
+            if ((parsed.schemaVersion !== 1 && parsed.schemaVersion !== 2) || !Array.isArray(parsed.atoms) || !Array.isArray(parsed.documents)) {
                 throw new Error('Invalid knowledge graph snapshot schema.');
             }
             this.loaded = true;
@@ -610,7 +628,7 @@ function createSqliteGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapterConf
             return null;
         }
         const parsed = JSON.parse(String(row.payload_json)) as Partial<KnowledgeGraphSnapshot>;
-        if (parsed.schemaVersion !== 1 || !Array.isArray(parsed.atoms) || !Array.isArray(parsed.documents)) {
+        if ((parsed.schemaVersion !== 1 && parsed.schemaVersion !== 2) || !Array.isArray(parsed.atoms) || !Array.isArray(parsed.documents)) {
             throw new Error('Invalid sqlite knowledge graph snapshot schema.');
         }
         loaded = true;

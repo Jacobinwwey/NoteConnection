@@ -104,6 +104,44 @@ describe('KnowledgeLearningPlatform', () => {
         expect(queryResult.trace.evidenceCoverageRatio).toBeGreaterThan(0);
     });
 
+    test('query scope constrains retrieval by corpus, language, and source path prefix', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_scope_cn',
+                    sourcePath: 'Knowledge_Base/optics/absorption.md',
+                    language: 'zh',
+                    content: '# 吸收系数\n材料的吸收系数影响光学穿透深度与衰减。',
+                },
+                {
+                    documentId: 'doc_scope_en',
+                    sourcePath: 'Knowledge_Base/materials/absorption.md',
+                    language: 'en',
+                    content: '# Absorption Coefficient\nThe absorption coefficient affects penetration depth.',
+                },
+            ],
+        });
+
+        const queryResult = await platform.queryKnowledge({
+            query: '吸收系数 光学',
+            topK: 4,
+            scope: {
+                corpusId: 'optics',
+                languages: ['zh'],
+                sourcePathPrefixes: ['Knowledge_Base/optics'],
+            },
+        });
+
+        expect(queryResult.items.length).toBeGreaterThan(0);
+        expect(queryResult.items.every((item) => item.atom.documentId === 'doc_scope_cn')).toBe(true);
+        expect(queryResult.trace.totalAtomsInScope).toBeGreaterThan(0);
+        expect(queryResult.trace.scope).toEqual(expect.objectContaining({
+            source: 'scoped',
+            corpusId: 'optics',
+        }));
+    });
+
     test('ingest diff operations support delete and dynamic relation recompute', async () => {
         const seed = await platform.ingestKnowledge({
             incremental: true,
@@ -1350,6 +1388,46 @@ describe('KnowledgeLearningPlatform', () => {
             now: '2026-04-02T10:30:00.000Z',
         });
         expect(finalList.summary.returnedEntries).toBe(0);
+    });
+
+    test('agent conversation returns grounded citations and persists scoped turn state', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_agent_scope',
+                    sourcePath: 'Knowledge_Base/optics/absorption.md',
+                    language: 'zh',
+                    content: '# 吸收\n吸收系数与光学衰减共同决定材料中的能量损失。',
+                },
+            ],
+        });
+
+        const response = await platform.agentConversation({
+            userId: 'agent_scope_user',
+            sessionId: 'session_absorption',
+            message: '解释一下吸收系数和光学衰减',
+            scope: {
+                corpusId: 'optics',
+                languages: ['zh'],
+            },
+            persistMemory: true,
+        });
+
+        expect(response.answer).toContain('吸收');
+        expect(response.citations.length).toBeGreaterThan(0);
+        expect(response.trace.usedScope.corpusId).toBe('optics');
+        expect(response.summary.appliedMemoryCount).toBeGreaterThan(0);
+
+        const persistedMemory = await platform.searchConversationMemory({
+            userId: 'agent_scope_user',
+            namespace: 'conversation',
+            query: '吸收系数',
+            limit: 5,
+        });
+        expect(persistedMemory.results.length).toBeGreaterThan(0);
+        expect(Array.isArray(persistedMemory.results[0]?.tags)).toBe(true);
+        expect(persistedMemory.results[0]?.tags).toContain('scope_corpus:optics');
     });
 
     test('memory policy diagnostics records history and improving trend snapshots', async () => {

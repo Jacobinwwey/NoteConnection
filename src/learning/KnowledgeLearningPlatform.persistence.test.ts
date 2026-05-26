@@ -71,6 +71,16 @@ describe('KnowledgeLearningPlatform persistence', () => {
             query: 'persistence graph snapshots',
             topK: 2,
         });
+        const firstConversation = await platformA.agentConversation({
+            userId: 'user_persist',
+            sessionId: 'persist_session_scope',
+            message: 'Explain the persistence snapshot behavior.',
+            scope: {
+                sourcePathPrefixes: ['Knowledge_Base/persist'],
+            },
+            persistMemory: true,
+        });
+        expect(firstConversation.summary.appliedMemoryCount).toBeGreaterThan(0);
         await platformA.executeStudySessionAction({
             userId: 'user_persist',
             action: {
@@ -99,6 +109,22 @@ describe('KnowledgeLearningPlatform persistence', () => {
         });
 
         expect(fs.existsSync(snapshotPath)).toBe(true);
+        const snapshotJson = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
+        expect(Array.isArray(snapshotJson.conversationSessions)).toBe(true);
+        expect(Array.isArray(snapshotJson.conversationTurns)).toBe(true);
+        expect(Array.isArray(snapshotJson.conversationInvocations)).toBe(true);
+        expect(Array.isArray(snapshotJson.resourceRegistry?.resources)).toBe(true);
+        expect(Array.isArray(snapshotJson.resourceRegistry?.projections)).toBe(true);
+        expect(Array.isArray(snapshotJson.workspaceRegistry?.workspaces)).toBe(true);
+        expect(Array.isArray(snapshotJson.workspaceRegistry?.bindings)).toBe(true);
+        expect(Array.isArray(snapshotJson.indexLifecycle?.units)).toBe(true);
+        expect(Array.isArray(snapshotJson.indexLifecycle?.segments)).toBe(true);
+        expect(Array.isArray(snapshotJson.sessionStateSnapshot?.sessionStates)).toBe(true);
+        expect(Array.isArray(snapshotJson.workflowArtifacts?.artifacts)).toBe(true);
+        expect(Array.isArray(snapshotJson.memoryAuditRecords)).toBe(true);
+        expect(snapshotJson.conversationSessions.length).toBeGreaterThan(0);
+        expect(snapshotJson.conversationTurns.length).toBeGreaterThan(0);
+        expect(snapshotJson.conversationInvocations.length).toBeGreaterThan(0);
 
         nowIso = '2026-03-31T11:00:00.000Z';
         const platformB = new KnowledgeLearningPlatform({
@@ -123,6 +149,28 @@ describe('KnowledgeLearningPlatform persistence', () => {
             topK: 2,
         });
         expect(queryResult.items.length).toBeGreaterThan(0);
+
+        const restoredConversation = await platformB.agentConversation({
+            userId: 'user_persist',
+            sessionId: 'persist_session_scope',
+            message: 'Explain the persistence snapshot behavior again.',
+            scope: {
+                sourcePathPrefixes: ['Knowledge_Base/persist'],
+            },
+            persistMemory: false,
+        });
+        expect(restoredConversation.trace.recalledMemoryCount).toBeGreaterThan(0);
+
+        const restoredBundle = await platformB.buildWorkspaceExportBundle({
+            workspaceId: 'persist',
+            userId: 'user_persist',
+            exportProfileId: 'mobile-slim',
+        });
+        expect(restoredBundle.readiness.ready).toBe(true);
+        expect(restoredBundle.resources.length).toBeGreaterThan(0);
+        expect(restoredBundle.index.units.length).toBeGreaterThan(0);
+        expect(restoredBundle.runtime.workflowArtifacts.length).toBeGreaterThan(0);
+        expect(restoredBundle.memory.auditRecords.length).toBeGreaterThan(0);
 
         const storeDiagnostics = await platformB.getStoreDiagnostics();
         expect(storeDiagnostics.storeType).toBe('file');

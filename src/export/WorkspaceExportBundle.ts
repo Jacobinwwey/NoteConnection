@@ -1,0 +1,414 @@
+import { createHash } from 'crypto';
+import { resolvePlatformCapabilities } from '../platform/PlatformCapabilities';
+import { resolveRenderMaterializationDecision } from '../platform/RenderMaterializer';
+import type {
+    WorkspaceExportBundle,
+    WorkspaceExportBundleRequest,
+    WorkspaceScopedMemoryExportRecord,
+} from './types';
+import type { AgentConversationInvocationRecord, AgentConversationSessionRecord, AgentConversationTurnRecord, EvidenceSpan, KnowledgeAtom, RelationEdge, TemporalEdge } from '../learning/types';
+import type { IndexLifecycleSummary, IndexSegmentRecord, IndexUnitRecord } from '../indexing/types';
+import type { MemoryAuditRecord } from '../memory/types';
+import type { CanonicalResourceRecord, ResourceProjectionRecord } from '../resources/types';
+import type { LearningSessionStateRecord } from '../session/types';
+import type { WorkflowArtifactRecord } from '../workflows/types';
+import type { WorkspaceBindingRecord, WorkspaceRecord } from '../workspace/types';
+
+function compareStrings(left: string, right: string): number {
+    return String(left || '').localeCompare(String(right || ''));
+}
+
+function cloneJsonRecord<T extends Record<string, unknown>>(value: T): T {
+    return { ...value };
+}
+
+function sortAndCloneBindings(bindings: WorkspaceBindingRecord[]): WorkspaceBindingRecord[] {
+    return bindings
+        .slice()
+        .sort((left, right) => compareStrings(left.bindingId, right.bindingId))
+        .map((binding) => ({ ...binding }));
+}
+
+function sortAndCloneResources(resources: CanonicalResourceRecord[]): CanonicalResourceRecord[] {
+    return resources
+        .slice()
+        .sort((left, right) => compareStrings(left.resourceId, right.resourceId))
+        .map((resource) => ({
+            ...resource,
+            metadata: cloneJsonRecord(resource.metadata || {}),
+        }));
+}
+
+function sortAndCloneProjections(projections: ResourceProjectionRecord[]): ResourceProjectionRecord[] {
+    return projections
+        .slice()
+        .sort((left, right) => compareStrings(left.projectionId, right.projectionId))
+        .map((projection) => ({
+            ...projection,
+            metadata: cloneJsonRecord(projection.metadata || {}),
+        }));
+}
+
+function sortAndCloneUnits(units: IndexUnitRecord[]): IndexUnitRecord[] {
+    return units
+        .slice()
+        .sort((left, right) => compareStrings(left.unitId, right.unitId))
+        .map((unit) => ({
+            ...unit,
+            segmentIds: [...unit.segmentIds],
+        }));
+}
+
+function sortAndCloneSegments(segments: IndexSegmentRecord[]): IndexSegmentRecord[] {
+    return segments
+        .slice()
+        .sort((left, right) => compareStrings(left.segmentId, right.segmentId))
+        .map((segment) => ({ ...segment }));
+}
+
+function sortAndCloneAtoms(atoms: KnowledgeAtom[]): KnowledgeAtom[] {
+    return atoms
+        .slice()
+        .sort((left, right) => compareStrings(left.id, right.id))
+        .map((atom) => ({
+            ...atom,
+            keywords: [...atom.keywords],
+            evidenceSpanIds: [...atom.evidenceSpanIds],
+            metadata: {
+                ...atom.metadata,
+                sectionPath: [...atom.metadata.sectionPath],
+            },
+        }));
+}
+
+function sortAndCloneEvidenceSpans(evidenceSpans: EvidenceSpan[]): EvidenceSpan[] {
+    return evidenceSpans
+        .slice()
+        .sort((left, right) => compareStrings(left.id, right.id))
+        .map((span) => ({ ...span }));
+}
+
+function sortAndCloneRelationEdges(relationEdges: RelationEdge[]): RelationEdge[] {
+    return relationEdges
+        .slice()
+        .sort((left, right) => compareStrings(left.id, right.id))
+        .map((edge) => ({
+            ...edge,
+            evidenceSpanIds: [...edge.evidenceSpanIds],
+            temporal: { ...edge.temporal },
+        }));
+}
+
+function sortAndCloneTemporalEdges(temporalEdges: TemporalEdge[]): TemporalEdge[] {
+    return temporalEdges
+        .slice()
+        .sort((left, right) => compareStrings(left.id, right.id))
+        .map((edge) => ({ ...edge }));
+}
+
+function sortAndCloneSessionStates(sessionStates: LearningSessionStateRecord[]): LearningSessionStateRecord[] {
+    return sessionStates
+        .slice()
+        .sort((left, right) => compareStrings(left.sessionStateId, right.sessionStateId))
+        .map((state) => ({
+            ...state,
+            activeResourceIds: [...state.activeResourceIds],
+            activeProjectionIds: [...state.activeProjectionIds],
+            retrievalSettings: { ...state.retrievalSettings },
+            memorySettings: { ...state.memorySettings },
+            panelState: cloneJsonRecord(state.panelState || {}),
+        }));
+}
+
+function sortAndCloneConversationSessions(records: AgentConversationSessionRecord[]): AgentConversationSessionRecord[] {
+    return records
+        .slice()
+        .sort((left, right) => compareStrings(left.sessionId, right.sessionId))
+        .map((record) => ({
+            ...record,
+            turnIds: [...record.turnIds],
+        }));
+}
+
+function sortAndCloneConversationTurns(records: AgentConversationTurnRecord[]): AgentConversationTurnRecord[] {
+    return records
+        .slice()
+        .sort((left, right) => compareStrings(left.turnId, right.turnId))
+        .map((record) => ({
+            ...record,
+            request: { ...record.request },
+            response: {
+                ...record.response,
+                knowledgePoints: record.response.knowledgePoints.map((point) => ({
+                    ...point,
+                    capabilities: [...point.capabilities],
+                    citation: point.citation ? { ...point.citation } : null,
+                })),
+                citations: record.response.citations.map((citation) => ({ ...citation })),
+                recalledMemories: record.response.recalledMemories.map((memory) => ({
+                    ...memory,
+                    tags: [...memory.tags],
+                    references: [...memory.references],
+                })),
+                memoryActions: record.response.memoryActions.map((action) => ({ ...action })),
+                summary: { ...record.response.summary },
+                trace: {
+                    ...record.response.trace,
+                    retrieval: {
+                        ...record.response.trace.retrieval,
+                        retrievalModes: [...record.response.trace.retrieval.retrievalModes],
+                        modeWeights: { ...record.response.trace.retrieval.modeWeights },
+                        scope: record.response.trace.retrieval.scope ? {
+                            ...record.response.trace.retrieval.scope,
+                            documentIds: [...record.response.trace.retrieval.scope.documentIds],
+                            atomIds: [...record.response.trace.retrieval.scope.atomIds],
+                            sourcePathPrefixes: [...record.response.trace.retrieval.scope.sourcePathPrefixes],
+                            languages: [...record.response.trace.retrieval.scope.languages],
+                        } : undefined,
+                    },
+                    usedScope: {
+                        ...record.response.trace.usedScope,
+                        documentIds: [...record.response.trace.usedScope.documentIds],
+                        atomIds: [...record.response.trace.usedScope.atomIds],
+                        sourcePathPrefixes: [...record.response.trace.usedScope.sourcePathPrefixes],
+                        languages: [...record.response.trace.usedScope.languages],
+                    },
+                },
+            },
+        }));
+}
+
+function sortAndCloneConversationInvocations(records: AgentConversationInvocationRecord[]): AgentConversationInvocationRecord[] {
+    return records
+        .slice()
+        .sort((left, right) => compareStrings(left.invocationId, right.invocationId))
+        .map((record) => ({ ...record }));
+}
+
+function sortAndCloneWorkflowArtifacts(records: WorkflowArtifactRecord[]): WorkflowArtifactRecord[] {
+    return records
+        .slice()
+        .sort((left, right) => compareStrings(left.artifactId, right.artifactId))
+        .map((record) => ({
+            ...record,
+            sourceResourceIds: [...record.sourceResourceIds],
+            sourceProjectionIds: [...record.sourceProjectionIds],
+            payload: cloneJsonRecord(record.payload || {}),
+        }));
+}
+
+function sortAndCloneMemoryEntries(records: WorkspaceScopedMemoryExportRecord[]): WorkspaceScopedMemoryExportRecord[] {
+    return records
+        .slice()
+        .sort((left, right) => {
+            const userOrder = compareStrings(left.userId, right.userId);
+            if (userOrder !== 0) {
+                return userOrder;
+            }
+            const layerOrder = compareStrings(left.layer, right.layer);
+            if (layerOrder !== 0) {
+                return layerOrder;
+            }
+            return compareStrings(left.entry.key, right.entry.key);
+        })
+        .map((record) => ({
+            userId: record.userId,
+            layer: record.layer,
+            entry: {
+                ...record.entry,
+                tags: [...record.entry.tags],
+                references: [...record.entry.references],
+            },
+        }));
+}
+
+function sortAndCloneMemoryAuditRecords(records: MemoryAuditRecord[]): MemoryAuditRecord[] {
+    return records
+        .slice()
+        .sort((left, right) => compareStrings(left.auditId, right.auditId))
+        .map((record) => ({ ...record }));
+}
+
+export function buildWorkspaceExportBundle(input: {
+    request: WorkspaceExportBundleRequest;
+    workspace: WorkspaceRecord;
+    bindings: WorkspaceBindingRecord[];
+    resources: CanonicalResourceRecord[];
+    projections: ResourceProjectionRecord[];
+    indexSummary: IndexLifecycleSummary;
+    units: IndexUnitRecord[];
+    segments: IndexSegmentRecord[];
+    atoms: KnowledgeAtom[];
+    evidenceSpans: EvidenceSpan[];
+    relationEdges: RelationEdge[];
+    temporalEdges: TemporalEdge[];
+    sessionStates: LearningSessionStateRecord[];
+    conversationSessions: AgentConversationSessionRecord[];
+    conversationTurns: AgentConversationTurnRecord[];
+    conversationInvocations: AgentConversationInvocationRecord[];
+    workflowArtifacts: WorkflowArtifactRecord[];
+    memoryEntries: WorkspaceScopedMemoryExportRecord[];
+    memoryAuditRecords: MemoryAuditRecord[];
+    generatedAt: string;
+}): WorkspaceExportBundle {
+    const capabilities = resolvePlatformCapabilities({
+        exportProfileId: input.request.exportProfileId || input.workspace.exportProfileId,
+    });
+    const render = resolveRenderMaterializationDecision({
+        exportProfileId: capabilities.exportProfileId,
+        platformTarget: capabilities.platformTarget,
+        includeSvg: true,
+    });
+    const bindings = sortAndCloneBindings(input.bindings);
+    const resources = sortAndCloneResources(input.resources);
+    const projections = sortAndCloneProjections(input.projections);
+    const units = sortAndCloneUnits(input.units);
+    const segments = sortAndCloneSegments(input.segments);
+    const atoms = sortAndCloneAtoms(input.atoms);
+    const evidenceSpans = sortAndCloneEvidenceSpans(input.evidenceSpans);
+    const relationEdges = sortAndCloneRelationEdges(input.relationEdges);
+    const temporalEdges = sortAndCloneTemporalEdges(input.temporalEdges);
+    const sessionStates = sortAndCloneSessionStates(input.sessionStates);
+    const conversationSessions = sortAndCloneConversationSessions(input.conversationSessions);
+    const conversationTurns = sortAndCloneConversationTurns(input.conversationTurns);
+    const conversationInvocations = sortAndCloneConversationInvocations(input.conversationInvocations);
+    const workflowArtifacts = sortAndCloneWorkflowArtifacts(input.workflowArtifacts);
+    const memoryEntries = sortAndCloneMemoryEntries(input.memoryEntries);
+    const memoryAuditRecords = sortAndCloneMemoryAuditRecords(input.memoryAuditRecords);
+
+    const activeProjectionIds = projections
+        .filter((projection) => projection.status === 'active')
+        .map((projection) => projection.projectionId);
+    const indexedProjectionIds = new Set(
+        units
+            .filter((unit) => unit.state === 'indexed' && unit.segmentIds.length > 0)
+            .map((unit) => unit.projectionId)
+    );
+    const missingIndexedProjectionIds = activeProjectionIds.filter((projectionId) => !indexedProjectionIds.has(projectionId));
+    const reasons: string[] = [];
+    if (missingIndexedProjectionIds.length > 0) {
+        reasons.push(`Missing indexed segments for ${missingIndexedProjectionIds.length} active projection(s).`);
+    }
+    if (!render.responseArtifact || !capabilities.render.supportsPngArtifacts) {
+        reasons.push('Resolved export profile does not provide a render artifact path.');
+    }
+
+    const deterministicPayload = {
+        workspace: {
+            ...input.workspace,
+            languages: [...input.workspace.languages].sort(compareStrings),
+        },
+        capabilities,
+        render,
+        bindings,
+        resources,
+        projections,
+        index: {
+            summary: input.indexSummary,
+            units,
+            segments,
+        },
+        graph: {
+            atoms,
+            evidenceSpans,
+            relationEdges,
+            temporalEdges,
+        },
+        runtime: {
+            sessionStates,
+            conversationSessions,
+            conversationTurns,
+            conversationInvocations,
+            workflowArtifacts,
+        },
+        memory: {
+            entries: memoryEntries,
+            auditRecords: memoryAuditRecords,
+        },
+    };
+    const deterministicHash = createHash('sha256')
+        .update(JSON.stringify(deterministicPayload))
+        .digest('hex');
+    const bundleId = `workspace_export_${deterministicHash.slice(0, 12)}`;
+
+    return {
+        manifest: {
+            bundleId,
+            workspaceId: input.workspace.workspaceId,
+            corpusId: input.workspace.corpusId,
+            exportProfileId: capabilities.exportProfileId,
+            platformTarget: capabilities.platformTarget,
+            packagingMode: capabilities.retrieval.supportsSidecar ? 'full' : 'slim',
+            generatedAt: input.generatedAt,
+            deterministicHash,
+            counts: {
+                bindings: bindings.length,
+                resources: resources.length,
+                projections: projections.length,
+                units: units.length,
+                segments: segments.length,
+                atoms: atoms.length,
+                evidenceSpans: evidenceSpans.length,
+                relationEdges: relationEdges.length,
+                temporalEdges: temporalEdges.length,
+                sessionStates: sessionStates.length,
+                conversationSessions: conversationSessions.length,
+                conversationTurns: conversationTurns.length,
+                conversationInvocations: conversationInvocations.length,
+                workflowArtifacts: workflowArtifacts.length,
+                memoryEntries: memoryEntries.length,
+                memoryAuditRecords: memoryAuditRecords.length,
+            },
+        },
+        workspace: {
+            ...input.workspace,
+            languages: [...input.workspace.languages].sort(compareStrings),
+        },
+        capabilities,
+        readiness: {
+            ready: reasons.length <= 0,
+            reasons,
+            activeProjectionCount: activeProjectionIds.length,
+            indexedProjectionCount: indexedProjectionIds.size,
+            missingIndexedProjectionIds,
+            indexSummary: {
+                ...input.indexSummary,
+                states: { ...input.indexSummary.states },
+            },
+            render: {
+                responseArtifact: render.responseArtifact,
+                rendererPreference: render.rendererPreference,
+                includeSvg: render.includeSvg,
+                vectorSuppressed: render.vectorSuppressed,
+            },
+        },
+        bindings,
+        resources,
+        projections,
+        index: {
+            summary: {
+                ...input.indexSummary,
+                states: { ...input.indexSummary.states },
+            },
+            units,
+            segments,
+        },
+        graph: {
+            atoms,
+            evidenceSpans,
+            relationEdges,
+            temporalEdges,
+        },
+        runtime: {
+            sessionStates,
+            conversationSessions,
+            conversationTurns,
+            conversationInvocations,
+            workflowArtifacts,
+        },
+        memory: {
+            entries: memoryEntries,
+            auditRecords: memoryAuditRecords,
+        },
+    };
+}

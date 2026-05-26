@@ -9,6 +9,8 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - Use `npm run docs:site:serve` for local browsing during iterative doc updates.
 - Use [Working Docs / Brainstorms](brainstorms/index.md) and [Working Docs / Solutions](solutions/index.md) for in-progress alignment artifacts and durable solution notes.
 - Use [Open Goal Audit (2026-05-10)](open_goal_audit_2026-05-10.md) as the all-docs unresolved-goal snapshot.
+- Track the Program A-F substrate/export closure in [Development Progress Dashboard](diataxis/en/explanation/development-progress-dashboard.md) and [Deep Student Comparison Next-Phase Plan](brainstorms/2026-05-26-deep-student-comparison-next-phase-plan.md).
+- Program A-F 的 substrate / export 收口状态请查看 [Development Progress Dashboard](diataxis/en/explanation/development-progress-dashboard.md) 与 [Deep Student Comparison Next-Phase Plan](brainstorms/2026-05-26-deep-student-comparison-next-phase-plan.md)。
 
 ## English
 

@@ -3,6 +3,32 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
+## 2026-05-26 Program F 收口状态
+
+- 基于 deep-student 对照得出的下一阶段计划，当前 HEAD 已经实现到 Program F。
+- 这套 durable substrate 不再只是规划项，而已经真实落入代码：
+  - canonical resource 与 projection：`src/resources/`，
+  - unit / segment indexing lifecycle：`src/indexing/`，
+  - durable workspace / corpus entity：`src/workspace/`，
+  - session / workflow durability：`src/session/`、`src/workflows/`，
+  - typed memory governance 与 audit：`src/memory/MemoryGovernance.ts`，
+  - deterministic workspace export bundle：`src/export/WorkspaceExportBundle.ts`。
+- `KnowledgeLearningPlatform.ts` 现在会把这些 substrate 层与 graph、mastery、conversation、telemetry 状态一起持久化与恢复。
+- `POST /api/knowledge/export/workspace` 现已作为 Program F 的 bundle 导出入口暴露出来。
+- 平台导出语义也已经显式化，而不再依赖隐式推断：
+  - `src/platform/PlatformCapabilities.ts` 已描述 bundle packaging mode（`full` / `slim`）与 indexed-readiness 要求，
+  - `src/platform/RenderMaterializer.ts` 继续负责在 SVG 不安全的平台上强制 PNG-first materialization。
+
+这次收口的最新验证证据：
+
+- `npm.cmd run build:mini`
+- `npm.cmd test -- --runInBand src/resources/ResourceRegistry.test.ts src/workspace/WorkspaceRegistry.test.ts src/indexing/IndexLifecycle.test.ts src/session/SessionStateStore.test.ts src/workflows/WorkflowArtifactStore.test.ts src/memory/MemoryGovernance.test.ts src/export/WorkspaceExportBundle.test.ts src/platform/PlatformCapabilities.test.ts src/platform/RenderMaterializer.test.ts src/routes/registry.contract.test.ts src/learning/store.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts`
+
+工程含义：
+
+- mobile slim export 与 desktop export 现在已经收敛到同一套 workspace / resource / index / session / memory substrate，
+- lightweight local RAG 与多平台导出现在共享同一份 durable scope model，而不是各自维护一套 ad hoc 状态路径。
+
 ## 2026-05-12 HEAD 现实校准
 
 - 先前“Phase-1 已收口”的表述对当前 HEAD 过于乐观，现以本节为准。

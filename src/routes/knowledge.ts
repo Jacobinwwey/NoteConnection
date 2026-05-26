@@ -1,5 +1,6 @@
 import type { RouteEntry, ServerContext } from './types';
 import { CrashLogger } from '../backend/utils/CrashLogger';
+import { normalizeKnowledgeQueryRequestPayload } from '../learning/requestNormalization';
 
 export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
     const {
@@ -456,21 +457,11 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
-                    const result = await knowledgeQuerier.queryKnowledge(JSON.parse(body));
+                    const result = await knowledgeQuerier.queryKnowledge(
+                        normalizeKnowledgeQueryRequestPayload(JSON.parse(body))
+                    );
                     ok(res, { result, queryStats: knowledgeQuerier.getDiagnosticsSummary() });
                 } catch (e) { fail(res, e, 'POST /api/knowledge/query'); }
-            },
-        },
-        {
-            method: 'POST',
-            path: api('/conversation'),
-            handler: async (req, res) => {
-                try {
-                    const body = await readBody(req);
-                    const payload = JSON.parse(body);
-                    const result = await knowledgeLearningPlatform.agentConversation(payload);
-                    ok(res, { result });
-                } catch (e) { fail(res, e, 'POST /api/knowledge/conversation'); }
             },
         },
         {
@@ -515,6 +506,17 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
                     const result = await knowledgeLearningPlatform.executeStudySessionPlan(JSON.parse(body));
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'POST /api/knowledge/session/execute'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/export/workspace'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await knowledgeLearningPlatform.buildWorkspaceExportBundle(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'POST /api/knowledge/export/workspace'); }
             },
         },
         {

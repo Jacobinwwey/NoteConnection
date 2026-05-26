@@ -177,6 +177,10 @@ export interface KnowledgeDocumentInput {
     content: string;
     language?: string;
     updatedAt?: string;
+    workspaceId?: string;
+    corpusId?: string;
+    exportProfileId?: string;
+    metadata?: Record<string, unknown>;
 }
 
 export interface KnowledgeDocumentDeleteInput {
@@ -235,6 +239,7 @@ export interface KnowledgeQueryRequest {
     topK?: number;
     asOf?: string;
     queryBackend?: 'local_hybrid' | 'keyword_only' | 'local_vector' | string;
+    scope?: KnowledgeCorpusScope;
 }
 
 export interface KnowledgeQueryItem {
@@ -249,17 +254,56 @@ export interface KnowledgeQueryItem {
     };
 }
 
+export interface KnowledgeCorpusScope {
+    workspaceId?: string;
+    corpusId?: string;
+    documentIds?: string[];
+    atomIds?: string[];
+    sourcePathPrefixes?: string[];
+    languages?: string[];
+}
+
+export interface KnowledgeQueryResolvedScope {
+    source: 'global' | 'scoped';
+    workspaceId: string | null;
+    corpusId: string | null;
+    documentIds: string[];
+    atomIds: string[];
+    sourcePathPrefixes: string[];
+    languages: string[];
+    matchedAtomCount: number;
+}
+
+export interface KnowledgeQueryModeWeights {
+    keyword: number;
+    graph: number;
+    temporal: number;
+    semantic?: number;
+    vector?: number;
+    memory?: number;
+}
+
+export interface KnowledgeCitation {
+    citationId: string;
+    atomId: string;
+    documentId: string;
+    sourcePath: string;
+    title: string;
+    snippet: string;
+    startLine?: number;
+    endLine?: number;
+    score: number;
+}
+
 export interface KnowledgeQueryResponse {
     items: KnowledgeQueryItem[];
     trace: {
         retrievalModes: string[];
         asOf: string;
         totalActiveAtoms: number;
-        modeWeights: {
-            keyword: number;
-            graph: number;
-            temporal: number;
-        };
+        totalAtomsInScope?: number;
+        scope?: KnowledgeQueryResolvedScope;
+        modeWeights: KnowledgeQueryModeWeights;
         latencyMs: number;
         evidenceCoverageRatio: number;
     };
@@ -342,6 +386,7 @@ export type StudySessionExecutionKind = 'session' | 'retest' | 'custom';
 
 export interface StudySessionRequest {
     userId: string;
+    sessionId?: string;
     focusAtomIds?: string[];
     maxActions?: number;
     includeDivergence?: boolean;
@@ -358,6 +403,7 @@ export interface StudySessionAction extends LearningAction {
 
 export interface StudySessionResponse {
     userId: string;
+    sessionId?: string;
     generatedAt: string;
     actions: StudySessionAction[];
     signals: {
@@ -375,6 +421,7 @@ export interface StudySessionResponse {
 
 export interface StudySessionActionExecutionRequest {
     userId: string;
+    sessionId?: string;
     action: {
         atomId: string;
         kind: LearningActionKind;
@@ -399,10 +446,12 @@ export interface StudySessionActionExecutionRequest {
 }
 
 export interface StudySessionActionExecutionResponse {
+    sessionId?: string;
     executedAt: string;
     tutor: TutorActionResponse;
     answerAnalysis: TutorActionResponse | null;
     memory: MemoryPolicyResponse | null;
+    promotedMemory: MemoryPolicyResponse | null;
     mastery: MasteryDiagnosticsResponse | null;
     trace: {
         tutorActionKind: TutorActionKind;
@@ -417,6 +466,7 @@ export interface StudySessionActionExecutionResponse {
 
 export interface StudySessionPlanExecutionRequest {
     userId: string;
+    sessionId?: string;
     executionKind?: StudySessionExecutionKind;
     focusAtomIds?: string[];
     maxActions?: number;
@@ -530,6 +580,7 @@ export interface StudySessionHistoryResponse {
 
 export interface StudySessionPlanExecutionResponse {
     userId: string;
+    sessionId?: string;
     executedAt: string;
     sessionPlan: StudySessionResponse;
     items: StudySessionPlanExecutionItem[];
@@ -599,6 +650,11 @@ export interface MemoryEntry {
     tags: string[];
     confidence: number;
     references: string[];
+    memoryType?: string;
+    memoryPurpose?: string;
+    classificationConfidence?: number;
+    scopeWorkspaceId?: string;
+    scopeCorpusId?: string;
     createdAt: string;
     updatedAt: string;
     expiresAt?: string;
@@ -620,7 +676,7 @@ export interface MemoryPolicyRequest {
 
 export interface MemoryPolicyResponse {
     layer: MemoryLayer;
-    operation: 'write' | 'read' | 'evict' | 'snapshot' | 'retrain_plan';
+    operation: 'write' | 'read' | 'evict' | 'snapshot' | 'retrain_plan' | 'promote';
     entries: MemoryEntry[];
     evictedCount: number;
     recommendedActions?: LearningAction[];
@@ -871,7 +927,6 @@ export interface IngestGuardrailEvaluationResponse {
 // ── M8-M10 type aliases (pending full stabilization) ──
 
 export type KnowledgeQueryBackendDiagnostics = any;
-export type KnowledgeQueryModeWeights = any;
 export type KnowledgeStalenessDiagnosticsRequest = any;
 export type KnowledgeStalenessDiagnosticsResponse = any;
 export type KnowledgeStalenessRebuildRequest = any;
@@ -883,14 +938,187 @@ export type TutorAdapterRoutingStrategy = any;
 export type TutorTraceDiagnosticsRequest = any;
 export type TutorProviderTrendDiagnosticsRequest = any;
 export type TutorProviderTrendHistoryRequest = any;
-export type AgentConversationRequest = any;
-export type AgentConversationResponse = any;
-export type AgentConversationTurnEvent = any;
-export type ConversationMemoryAddRequest = any;
-export type ConversationMemoryDeleteRequest = any;
-export type ConversationMemoryFeedbackRequest = any;
-export type ConversationMemoryListRequest = any;
-export type ConversationMemorySearchRequest = any;
+export interface AgentConversationKnowledgePoint {
+    atomId: string;
+    title: string;
+    summary: string;
+    evidenceSnippet: string;
+    score: number;
+    citation: KnowledgeCitation | null;
+    capabilities: unknown[];
+}
+
+export interface AgentConversationMemoryRecord {
+    memoryId: string;
+    namespace: string;
+    layer: MemoryLayer;
+    content: string;
+    confidence: number;
+    tags: string[];
+    references: string[];
+    source: string;
+    memoryType?: string;
+    memoryPurpose?: string;
+    classificationConfidence?: number;
+    scopeWorkspaceId?: string | null;
+    scopeCorpusId?: string | null;
+    createdAt: string;
+    updatedAt: string;
+    expiresAt?: string;
+}
+
+export interface AgentConversationMemoryAction {
+    kind: 'persist_session_memory' | 'propose_long_term_memory' | 'persist_answer_summary';
+    status: 'applied' | 'proposed' | 'skipped';
+    layer: MemoryLayer;
+    namespace: string;
+    memoryId?: string;
+    reason: string;
+}
+
+export interface AgentConversationTrace {
+    sessionId: string;
+    invocationId: string;
+    retrieval: KnowledgeQueryResponse['trace'];
+    recalledMemoryCount: number;
+    appliedMemoryCount: number;
+    usedScope: KnowledgeQueryResolvedScope;
+}
+
+export interface AgentConversationRequest {
+    userId?: string;
+    sessionId?: string;
+    message?: string;
+    topK?: number;
+    asOf?: string;
+    scope?: KnowledgeCorpusScope;
+    persistMemory?: boolean;
+    memoryNamespace?: string;
+}
+
+export interface AgentConversationResponse {
+    userId: string;
+    sessionId: string;
+    assistantMessage: string;
+    answer: string;
+    knowledgePoints: AgentConversationKnowledgePoint[];
+    citations: KnowledgeCitation[];
+    recalledMemories: AgentConversationMemoryRecord[];
+    memoryActions: AgentConversationMemoryAction[];
+    summary: {
+        generatedAt: string;
+        topK: number;
+        returnedKnowledgePoints: number;
+        returnedCitations: number;
+        recalledMemoryCount: number;
+        appliedMemoryCount: number;
+        queryEvidenceCoverageRatioPct: number;
+    };
+    trace: AgentConversationTrace;
+}
+
+export interface AgentConversationTurnEvent {
+    type: 'turn_started' | 'capability_planned' | 'capability_progress' | 'capability_result' | 'turn_completed' | 'turn_failed';
+    turnId: string;
+    emittedAt: string;
+    request?: {
+        userId?: string;
+        sessionId?: string;
+        topK?: number;
+    };
+    capabilities?: string[];
+    stage?: string;
+    progressPct?: number;
+    summary?: Record<string, unknown>;
+    result?: AgentConversationResponse;
+    error?: string;
+    errorCode?: string;
+    failure?: {
+        error: string;
+        errorCode?: string;
+        statusCode?: number;
+    };
+}
+
+export interface ConversationMemoryAddRequest {
+    userId: string;
+    namespace?: string;
+    content: string;
+    tags?: string[];
+    references?: string[];
+    confidence?: number;
+    source?: string;
+    expiresAt?: string;
+    now?: string;
+    memoryId?: string;
+}
+
+export interface ConversationMemoryDeleteRequest {
+    userId: string;
+    namespace?: string;
+    memoryId: string;
+    now?: string;
+}
+
+export interface ConversationMemoryFeedbackRequest {
+    userId: string;
+    namespace?: string;
+    memoryId: string;
+    feedback?: 'upvote' | 'downvote' | 'correct' | string;
+    reason?: string;
+    correctedContent?: string;
+    now?: string;
+}
+
+export interface ConversationMemoryListRequest {
+    userId: string;
+    namespace?: string;
+    limit?: number;
+    now?: string;
+}
+
+export interface ConversationMemorySearchRequest {
+    userId: string;
+    namespace?: string;
+    query?: string;
+    limit?: number;
+    now?: string;
+}
+
+export interface AgentConversationSessionRecord {
+    sessionId: string;
+    userId: string;
+    workspaceId?: string | null;
+    corpusId?: string | null;
+    namespace: string;
+    createdAt: string;
+    updatedAt: string;
+    turnIds: string[];
+}
+
+export interface AgentConversationTurnRecord {
+    turnId: string;
+    invocationId: string;
+    sessionId: string;
+    userId: string;
+    createdAt: string;
+    updatedAt: string;
+    request: AgentConversationRequest;
+    response: AgentConversationResponse;
+}
+
+export interface AgentConversationInvocationRecord {
+    invocationId: string;
+    sessionId: string;
+    userId: string;
+    createdAt: string;
+    status: 'completed' | 'failed';
+    query: string;
+    returnedKnowledgePoints: number;
+    returnedCitations: number;
+    recalledMemoryCount: number;
+    appliedMemoryCount: number;
+}
 export type MemoryPolicyDiagnosticsHistoryRequest = any;
 export type MemoryPolicyDiagnosticsTrendRequest = any;
 export type StudySessionOrchestrationConfigUpdateRequest = any;

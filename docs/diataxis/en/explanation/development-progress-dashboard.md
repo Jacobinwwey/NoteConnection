@@ -3,6 +3,32 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-05-26 Program F Closure
+
+- The deep-student-derived next-phase program is now implemented through Program F at current HEAD.
+- The new durable substrate is no longer only a plan artifact. It now exists in code:
+  - canonical resources and projections: `src/resources/`,
+  - unit/segment indexing lifecycle: `src/indexing/`,
+  - durable workspace/corpus entities: `src/workspace/`,
+  - session/workflow durability: `src/session/`, `src/workflows/`,
+  - typed memory governance and audits: `src/memory/MemoryGovernance.ts`,
+  - deterministic workspace export bundles: `src/export/WorkspaceExportBundle.ts`.
+- `KnowledgeLearningPlatform.ts` now persists and restores those substrate layers alongside graph, mastery, conversation, and telemetry state.
+- `POST /api/knowledge/export/workspace` now exposes the Program F bundle path.
+- Platform export semantics are now explicit rather than inferred:
+  - `src/platform/PlatformCapabilities.ts` describes bundle packaging mode (`full` vs `slim`) and indexed-readiness requirements,
+  - `src/platform/RenderMaterializer.ts` continues to enforce PNG-first materialization where SVG is unsafe.
+
+Fresh verification evidence for this closure:
+
+- `npm.cmd run build:mini`
+- `npm.cmd test -- --runInBand src/resources/ResourceRegistry.test.ts src/workspace/WorkspaceRegistry.test.ts src/indexing/IndexLifecycle.test.ts src/session/SessionStateStore.test.ts src/workflows/WorkflowArtifactStore.test.ts src/memory/MemoryGovernance.test.ts src/export/WorkspaceExportBundle.test.ts src/platform/PlatformCapabilities.test.ts src/platform/RenderMaterializer.test.ts src/routes/registry.contract.test.ts src/learning/store.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts`
+
+Operational implication:
+
+- mobile slim export and desktop export now converge on the same workspace/resource/index/session/memory substrate,
+- lightweight local RAG and multi-platform export now share one durable scope model instead of parallel ad hoc state paths.
+
 ## 2026-05-10 Open-Goal Sync
 
 - This page is aligned with the repository-wide audit in [Open Goal Audit (2026-05-10)](../../../open_goal_audit_2026-05-10.md).

@@ -3,6 +3,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { KnowledgeLearningPlatformAPI } from './api';
 import type {
+    AgentConversationInvocationRecord,
+    AgentConversationKnowledgePoint,
+    AgentConversationMemoryAction,
+    AgentConversationMemoryRecord,
+    AgentConversationRequest,
+    AgentConversationResponse,
+    AgentConversationSessionRecord,
+    AgentConversationTurnRecord,
     DivergencePath,
     ErrorTagStat,
     EvidenceSpan,
@@ -29,7 +37,9 @@ import type {
     LearningQualitySnapshotRequest,
     LearningQualitySnapshotResponse,
     LearningQualityThresholds,
+    KnowledgeCitation,
     KnowledgeQueryItem,
+    KnowledgeQueryResolvedScope,
     KnowledgeQueryRequest,
     KnowledgeQueryResponse,
     KnowledgeRepresentationType,
@@ -89,6 +99,24 @@ import type {
     GraphQueryBackendResult,
     GraphQueryBackendType,
 } from './queryBackend';
+import { ResourceRegistry } from '../resources/ResourceRegistry';
+import type { CanonicalResourceRecord, ResourceProjectionRecord } from '../resources/types';
+import { WorkspaceRegistry } from '../workspace/WorkspaceRegistry';
+import type { WorkspaceBindingRecord, WorkspaceRecord } from '../workspace/types';
+import { IndexLifecycle } from '../indexing/IndexLifecycle';
+import type { IndexLifecycleSummary, IndexSegmentRecord, IndexUnitRecord } from '../indexing/types';
+import { SessionStateStore } from '../session/SessionStateStore';
+import type { LearningSessionStateRecord } from '../session/types';
+import { WorkflowArtifactStore } from '../workflows/WorkflowArtifactStore';
+import type { WorkflowArtifactRecord, WorkflowArtifactKind } from '../workflows/types';
+import { buildMemoryAuditRecord, classifyMemoryEntry, computeGovernedMemoryWeight } from '../memory/MemoryGovernance';
+import type { MemoryAuditRecord } from '../memory/types';
+import { buildWorkspaceExportBundle as assembleWorkspaceExportBundle } from '../export/WorkspaceExportBundle';
+import type {
+    WorkspaceExportBundle,
+    WorkspaceExportBundleRequest,
+    WorkspaceScopedMemoryExportRecord,
+} from '../export/types';
 
 type ParsedAtomDraft = {
     stableKey: string;
@@ -119,6 +147,18 @@ type DocumentSnapshot = {
     evidenceSpanIds: string[];
     relationEdgeIds: string[];
     temporalEdgeIds: string[];
+};
+
+type NormalizedKnowledgeDocumentInput = {
+    documentId: string;
+    sourcePath: string;
+    content: string;
+    language: string;
+    updatedAt: string;
+    workspaceId: string | null;
+    corpusId: string | null;
+    exportProfileId: string | null;
+    metadata: Record<string, unknown>;
 };
 
 type UserMemoryBank = {
@@ -338,6 +378,8 @@ const DEFAULT_INGEST_GUARDRAIL_THRESHOLDS: IngestGuardrailThresholds = {
 const QUERY_LATENCY_HISTORY_LIMIT = 2000;
 const INGEST_LATENCY_HISTORY_LIMIT = 2000;
 const SESSION_EXECUTION_HISTORY_LIMIT = 400;
+const CONVERSATION_TURN_HISTORY_LIMIT = 400;
+const CONVERSATION_INVOCATION_HISTORY_LIMIT = 400;
 
 function createEmptySessionActionTelemetry(): KnowledgeSystemState['sessionActionTelemetry'] {
     return {
@@ -443,6 +485,27 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     private readonly tutorTraces: TutorTrace[] = [];
 
     private readonly userMemory = new Map<string, UserMemoryBank>();
+
+    private readonly conversationSessions = new Map<string, AgentConversationSessionRecord>();
+
+    private readonly conversationTurns = new Map<string, AgentConversationTurnRecord>();
+
+    private readonly conversationInvocations: AgentConversationInvocationRecord[] = [];
+
+    private readonly resourceRegistry = new ResourceRegistry((prefix?: string) => this.nextId(prefix || 'resource'));
+
+    private readonly workspaceRegistry = new WorkspaceRegistry((prefix?: string) => this.nextId(prefix || 'workspace'));
+
+    private readonly indexLifecycle = new IndexLifecycle(
+        (prefix?: string) => this.nextId(prefix || 'index'),
+        (value: string) => this.computeHash(value)
+    );
+
+    private readonly sessionStateStore = new SessionStateStore((prefix?: string) => this.nextId(prefix || 'session_state'));
+
+    private readonly workflowArtifactStore = new WorkflowArtifactStore((prefix?: string) => this.nextId(prefix || 'workflow_artifact'));
+
+    private readonly memoryAuditRecords: MemoryAuditRecord[] = [];
 
     private readonly titleToAtomIds = new Map<string, Set<string>>();
 
@@ -625,6 +688,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             });
             changedDocIds.add(normalizedInput.documentId);
 
+            if (previousSnapshot) {
+                this.indexLifecycle.retireDocumentIndex(normalizedInput.documentId);
+            }
+
             const parsedDocument = this.parseDocument(normalizedInput);
             const snapshot: DocumentSnapshot = {
                 documentId: normalizedInput.documentId,
@@ -638,6 +705,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 relationEdgeIds: [],
                 temporalEdgeIds: [],
             };
+            const createdAtomsForIndex: KnowledgeAtom[] = [];
 
             if (previousSnapshot) {
                 invalidatedRelationEdges += this.retireRemovedStableKeys({
@@ -693,6 +761,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 responseAtoms.push(atom);
                 responseEvidence.push(evidenceSpan);
                 newAtomIds.push(atomId);
+                createdAtomsForIndex.push(atom);
 
                 const outgoingWikiLinks = parsedDocument.wikiLinksByStableKey.get(draft.stableKey) || [];
                 wikiLinksByAtomId.set(atomId, outgoingWikiLinks);
@@ -734,6 +803,22 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 }
             }
 
+            const resourceWorkspaceBinding = this.syncResourceAndWorkspaceForDocument({
+                document: normalizedInput,
+                sourceHash,
+                version: currentVersion,
+                updatedAt: ingestedAt,
+            });
+            this.syncIndexLifecycleForDocument({
+                document: normalizedInput,
+                sourceHash,
+                snapshot,
+                atoms: createdAtomsForIndex,
+                resource: resourceWorkspaceBinding.resource,
+                projection: resourceWorkspaceBinding.projection,
+                workspace: resourceWorkspaceBinding.workspace,
+                indexedAt: ingestedAt,
+            });
             this.documents.set(normalizedInput.documentId, snapshot);
         };
 
@@ -742,6 +827,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             if (!deleted.deleted || !deleted.documentId || !deleted.sourcePath) {
                 return;
             }
+            this.resourceRegistry.markDocumentProjectionDeleted(deleted.documentId, ingestedAt);
+            this.indexLifecycle.retireDocumentIndex(deleted.documentId);
             deletedDocIds.add(deleted.documentId);
             invalidatedRelationEdges += deleted.invalidatedRelationEdges;
             staleness.push({
@@ -1019,11 +1106,26 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             .sort((left, right) => right.priority - left.priority)
             .slice(0, 24);
 
-        return {
+        const response: LearningPathResponse = {
             masteryPaths,
             divergencePaths,
             recommendedActions,
         };
+        const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(focusAtomIds);
+        this.recordWorkflowArtifact({
+            kind: 'learning_path',
+            sessionId: null,
+            userId,
+            workspaceId: scopedWorkspace.workspaceId,
+            corpusId: scopedWorkspace.corpusId,
+            title: `Learning path for ${focusAtomIds[0] || 'global scope'}`,
+            sourceAtomIds: focusAtomIds,
+            summary: `Generated ${masteryPaths.length} mastery path(s), ${divergencePaths.length} divergence path(s), and ${recommendedActions.length} recommended action(s).`,
+            payload: response as unknown as Record<string, unknown>,
+            recordedAt: generatedAt,
+        });
+        await this.persistIfNeeded();
+        return response;
     }
 
     public async buildStudySession(request: StudySessionRequest): Promise<StudySessionResponse> {
@@ -1032,6 +1134,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         if (!userId) {
             throw new Error('StudySessionAPI requires a non-empty userId.');
         }
+        const sessionId = isNonEmptyString(request.sessionId) ? request.sessionId.trim() : undefined;
         const generatedAt = this.resolveTimestamp(request.generatedAt);
         const maxActions = clamp(Math.floor(Number(request.maxActions) || 12), 1, 80);
         const includeDivergence = request.includeDivergence !== false;
@@ -1139,8 +1242,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             : 1;
         const dueRetrainAtoms = Array.from(new Set(retrainActions.map((action) => action.atomId)));
 
-        return {
+        const response: StudySessionResponse = {
             userId,
+            sessionId,
             generatedAt,
             actions,
             signals: {
@@ -1155,6 +1259,43 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 evidenceCoverageRatio,
             },
         };
+        const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(candidateAtomIds);
+        if (sessionId) {
+            this.upsertConversationSessionState({
+                sessionId,
+                userId,
+                mode: 'study_session',
+                workspaceId: scopedWorkspace.workspaceId,
+                corpusId: scopedWorkspace.corpusId,
+                activeResourceIds: this.resolveSourceResourceIdsForAtomIds(candidateAtomIds),
+                activeProjectionIds: this.resolveSourceProjectionIdsForAtomIds(candidateAtomIds),
+                topK: maxActions,
+                queryBackend: null,
+                persistMemory: includeRetrain,
+                memoryNamespace: null,
+                exportProfileId: scopedWorkspace.exportProfileId,
+                panelState: {
+                    lastStudyPlanGeneratedAt: generatedAt,
+                    totalActions: actions.length,
+                    evidenceCoverageRatio,
+                },
+                recordedAt: generatedAt,
+            });
+        }
+        this.recordWorkflowArtifact({
+            kind: 'study_session',
+            sessionId: sessionId || null,
+            userId,
+            workspaceId: scopedWorkspace.workspaceId,
+            corpusId: scopedWorkspace.corpusId,
+            title: `Study session for ${candidateAtomIds[0] || 'global scope'}`,
+            sourceAtomIds: candidateAtomIds,
+            summary: `Built ${actions.length} study action(s) with evidence coverage ${Number((evidenceCoverageRatio * 100).toFixed(2))} pct.`,
+            payload: response as unknown as Record<string, unknown>,
+            recordedAt: generatedAt,
+        });
+        await this.persistIfNeeded();
+        return response;
     }
 
     public async queryStudySessionHistory(request: StudySessionHistoryRequest): Promise<StudySessionHistoryResponse> {
@@ -1262,9 +1403,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         if (!atomId || !this.activeAtomIds.has(atomId)) {
             throw new Error('StudySessionActionAPI requires a valid active atomId.');
         }
+        const sessionId = isNonEmptyString(request.sessionId) ? request.sessionId.trim() : undefined;
         const learningActionKind = action.kind;
         const tutorActionKind = this.resolveTutorActionKindFromLearningKind(learningActionKind);
         const executedAt = this.resolveTimestamp(request.executedAt);
+        const atomWorkspace = this.resolveWorkspaceContextForAtomIds([atomId]);
         const hasAnswer = isNonEmptyString(action.answer);
         const tutor = await this.executeTutorAction({
             userId,
@@ -1298,6 +1441,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
         const persistMemory = request.persistMemory !== false;
         let memory: MemoryPolicyResponse | null = null;
+        let promotedMemory: MemoryPolicyResponse | null = null;
+        let persistedMemoryEntry: MemoryEntry | null = null;
         if (persistMemory) {
             const memoryLayer: MemoryLayer = request.memoryLayer || 'session';
             const memoryKey = `session_action:${atomId}:${this.nextId('session')}`;
@@ -1335,7 +1480,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 ])),
                 createdAt: executedAt,
                 updatedAt: executedAt,
+                scopeWorkspaceId: atomWorkspace.workspaceId || undefined,
+                scopeCorpusId: atomWorkspace.corpusId || undefined,
             };
+            persistedMemoryEntry = memoryEntry;
             memory = await this.applyMemoryPolicy({
                 userId,
                 operation: 'write',
@@ -1343,6 +1491,21 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 entries: [memoryEntry],
                 now: executedAt,
             });
+            if (
+                request.autoPromoteMemory === true
+                && Number(memoryEntry.confidence || 0) >= clamp(Number(request.promoteMemoryMinConfidence ?? 0.8), 0, 1)
+            ) {
+                promotedMemory = await this.applyMemoryPolicy({
+                    userId,
+                    operation: 'promote',
+                    layer: memoryLayer,
+                    targetLayer: request.promoteMemoryTargetLayer || 'long_term',
+                    entries: [memoryEntry],
+                    minConfidence: request.promoteMemoryMinConfidence,
+                    removeFromSource: request.promoteMemoryRemoveFromSource,
+                    now: executedAt,
+                });
+            }
         }
 
         let mastery: MasteryDiagnosticsResponse | null = null;
@@ -1363,6 +1526,29 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 ],
             });
         }
+        if (sessionId) {
+            this.upsertConversationSessionState({
+                sessionId,
+                userId,
+                mode: 'study_session',
+                workspaceId: atomWorkspace.workspaceId,
+                corpusId: atomWorkspace.corpusId,
+                activeResourceIds: this.resolveSourceResourceIdsForAtomIds([atomId]),
+                activeProjectionIds: this.resolveSourceProjectionIdsForAtomIds([atomId]),
+                topK: 0,
+                queryBackend: null,
+                persistMemory,
+                memoryNamespace: null,
+                exportProfileId: atomWorkspace.exportProfileId,
+                panelState: {
+                    lastActionAtomId: atomId,
+                    lastActionKind: learningActionKind,
+                    lastExecutedAt: executedAt,
+                    persistedMemoryKey: persistedMemoryEntry?.key || null,
+                },
+                recordedAt: executedAt,
+            });
+        }
 
         this.recordSessionActionTelemetry({
             analyzedAnswer: answerAnalysis !== null,
@@ -1373,10 +1559,12 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         await this.persistIfNeeded();
 
         return {
+            sessionId,
             executedAt,
             tutor,
             answerAnalysis,
             memory,
+            promotedMemory,
             mastery,
             trace: {
                 tutorActionKind,
@@ -1400,6 +1588,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         }
         const executionKind = this.normalizeStudySessionExecutionKind(request.executionKind);
         const executedAt = this.resolveTimestamp(request.executedAt);
+        const explicitSessionId = isNonEmptyString(request.sessionId) ? request.sessionId.trim() : undefined;
         const maxActions = clamp(Math.floor(Number(request.maxActions) || 12), 1, 80);
         const actionLimitRequest = Number(request.actionLimit);
         const actionLimit = Number.isFinite(actionLimitRequest)
@@ -1441,6 +1630,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     : 1;
                 return {
                     userId,
+                    sessionId: isNonEmptyString(plan.sessionId) ? plan.sessionId : explicitSessionId,
                     generatedAt: isNonEmptyString(plan.generatedAt) ? plan.generatedAt : executedAt,
                     actions: safeActions,
                     signals: {
@@ -1466,12 +1656,14 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             })()
             : await this.buildStudySession({
                 userId,
+                sessionId: explicitSessionId,
                 focusAtomIds: request.focusAtomIds,
                 maxActions,
                 includeDivergence: request.includeDivergence,
                 includeRetrain: request.includeRetrain,
                 generatedAt: executedAt,
             });
+        const sessionId = isNonEmptyString(sessionPlan.sessionId) ? sessionPlan.sessionId : explicitSessionId;
         const selectedActions = sessionPlan.actions.slice(0, actionLimit);
         const comparedAtomIds = Array.from(new Set(
             selectedActions
@@ -1520,6 +1712,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             try {
                 const result = await this.executeStudySessionAction({
                     userId,
+                    sessionId,
                     action: {
                         atomId,
                         kind: action.kind,
@@ -1532,6 +1725,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     persistMemory: request.persistMemory,
                     memoryLayer: request.memoryLayer,
                     executedAt,
+                    autoPromoteMemory: request.autoPromoteMemory,
+                    promoteMemoryTargetLayer: request.promoteMemoryTargetLayer,
+                    promoteMemoryMinConfidence: request.promoteMemoryMinConfidence,
+                    promoteMemoryRemoveFromSource: request.promoteMemoryRemoveFromSource,
                 });
                 items.push({
                     action,
@@ -1732,10 +1929,59 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 ...learningQualitySnapshot.diagnostics,
             },
         });
+        const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(comparedAtomIds);
+        if (sessionId) {
+            this.upsertConversationSessionState({
+                sessionId,
+                userId,
+                mode: executionKind === 'custom' ? 'review_plan' : 'study_session',
+                workspaceId: scopedWorkspace.workspaceId,
+                corpusId: scopedWorkspace.corpusId,
+                activeResourceIds: this.resolveSourceResourceIdsForAtomIds(comparedAtomIds),
+                activeProjectionIds: this.resolveSourceProjectionIdsForAtomIds(comparedAtomIds),
+                topK: actionLimit,
+                queryBackend: null,
+                persistMemory: request.persistMemory !== false,
+                memoryNamespace: null,
+                exportProfileId: scopedWorkspace.exportProfileId,
+                panelState: {
+                    lastExecutionAt: executedAt,
+                    lastExecutionKind: executionKind,
+                    executedCount: executedItems.length,
+                    failedCount,
+                    retestActions: retestPlanActions.length,
+                },
+                recordedAt: executedAt,
+            });
+        }
+        this.recordWorkflowArtifact({
+            kind: 'review_plan',
+            sessionId: sessionId || null,
+            userId,
+            workspaceId: scopedWorkspace.workspaceId,
+            corpusId: scopedWorkspace.corpusId,
+            title: `Session execution ${executionKind} for ${comparedAtomIds[0] || 'global scope'}`,
+            sourceAtomIds: comparedAtomIds,
+            summary: `Executed ${executedItems.length}/${selectedActions.length} actions with average mastery delta ${averageMasteryDelta}.`,
+            payload: {
+                summary: {
+                    plannedActions: sessionPlan.actions.length,
+                    attemptedActions: selectedActions.length,
+                    executedCount: executedItems.length,
+                    skippedCount,
+                    failedCount,
+                    averageMasteryDelta,
+                    retestActions: retestPlanActions.length,
+                },
+                masteryDelta: masteryDeltaItems,
+            } as Record<string, unknown>,
+            recordedAt: executedAt,
+        });
         await this.persistIfNeeded();
 
         return {
             userId,
+            sessionId,
             executedAt,
             sessionPlan,
             items,
@@ -1978,30 +2224,52 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 }
                 const index = entries.findIndex((entry) => entry.key === incomingEntry.key);
                 if (index >= 0) {
-                    const current = entries[index];
-                    entries[index] = {
-                        ...current,
-                        value: incomingEntry.value,
-                        tags: Array.from(new Set(incomingEntry.tags || current.tags || [])),
-                        confidence: clamp(Number(incomingEntry.confidence ?? current.confidence ?? 0.5), 0, 1),
-                        references: Array.from(new Set(incomingEntry.references || current.references || [])),
-                        updatedAt: nowIso,
-                        expiresAt: incomingEntry.expiresAt || current.expiresAt,
-                    };
+                    entries[index] = this.buildGovernedMemoryEntry({
+                        entry: {
+                            ...incomingEntry,
+                            updatedAt: nowIso,
+                        },
+                        previous: entries[index],
+                    });
+                    this.appendMemoryAuditRecord({
+                        userId,
+                        operation: 'write',
+                        layer,
+                        entry: entries[index],
+                        reason: 'memory_policy_write:update',
+                        recordedAt: nowIso,
+                    });
                 } else {
-                    entries.push({
-                        key: incomingEntry.key,
-                        value: incomingEntry.value,
-                        tags: Array.from(new Set(incomingEntry.tags || [])),
-                        confidence: clamp(Number(incomingEntry.confidence ?? 0.5), 0, 1),
-                        references: Array.from(new Set(incomingEntry.references || [])),
-                        createdAt: incomingEntry.createdAt || nowIso,
-                        updatedAt: nowIso,
-                        expiresAt: incomingEntry.expiresAt,
+                    const governedEntry = this.buildGovernedMemoryEntry({
+                        entry: {
+                            ...incomingEntry,
+                            createdAt: incomingEntry.createdAt || nowIso,
+                            updatedAt: nowIso,
+                        },
+                    });
+                    entries.push(governedEntry);
+                    this.appendMemoryAuditRecord({
+                        userId,
+                        operation: 'write',
+                        layer,
+                        entry: governedEntry,
+                        reason: 'memory_policy_write:create',
+                        recordedAt: nowIso,
                     });
                 }
             }
-            evictedCount = this.evictMemoryLayer(bank, layer, nowIso);
+            const eviction = this.evictMemoryLayerDetailed(bank, layer, nowIso);
+            evictedCount = eviction.evictedCount;
+            eviction.evictedEntries.forEach((entry) => {
+                this.appendMemoryAuditRecord({
+                    userId,
+                    operation: 'evict',
+                    layer,
+                    entry,
+                    reason: 'memory_policy_write:capacity_or_expiry',
+                    recordedAt: nowIso,
+                });
+            });
             const response: MemoryPolicyResponse = {
                 layer,
                 operation,
@@ -2014,7 +2282,18 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         }
 
         if (operation === 'evict') {
-            evictedCount = this.evictMemoryLayer(bank, layer, nowIso);
+            const eviction = this.evictMemoryLayerDetailed(bank, layer, nowIso);
+            evictedCount = eviction.evictedCount;
+            eviction.evictedEntries.forEach((entry) => {
+                this.appendMemoryAuditRecord({
+                    userId,
+                    operation: 'evict',
+                    layer,
+                    entry,
+                    reason: 'memory_policy_evict:manual',
+                    recordedAt: nowIso,
+                });
+            });
             const response: MemoryPolicyResponse = {
                 layer,
                 operation,
@@ -2028,17 +2307,68 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
         if (operation === 'read') {
             const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 100);
+            const minConfidence = clamp(Number(request.minConfidence ?? 0), 0, 1);
+            const includeExpired = request.includeExpired === true;
             const queryTokens = tokenize(String(request.query || ''));
+            const requiredTokenHits = queryTokens.length <= 1
+                ? queryTokens.length
+                : Math.max(1, Math.ceil(queryTokens.length * 0.5));
             const selectedEntries = bank[layer]
                 .filter((entry) => {
+                    if (!includeExpired) {
+                        const expiresAt = this.resolveOptionalTimestamp(entry.expiresAt);
+                        if (expiresAt && Date.parse(expiresAt) <= Date.parse(nowIso)) {
+                            return false;
+                        }
+                    }
+                    if (Number(entry.confidence || 0) < minConfidence) {
+                        return false;
+                    }
                     if (!queryTokens.length) {
                         return true;
                     }
-                    const haystack = `${entry.key} ${entry.value} ${entry.tags.join(' ')}`.toLowerCase();
-                    return queryTokens.every((token) => haystack.includes(token));
+                    const haystack = normalizeWhitespace([
+                        entry.key,
+                        entry.value,
+                        ...(entry.tags || []),
+                        ...(entry.references || []),
+                    ].join(' ')).toLowerCase();
+                    const tokenHits = queryTokens.reduce((count, token) => count + (haystack.includes(token) ? 1 : 0), 0);
+                    return tokenHits >= requiredTokenHits;
                 })
-                .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+                .sort((left, right) => {
+                    const leftHaystack = normalizeWhitespace([
+                        left.key,
+                        left.value,
+                        ...(left.tags || []),
+                        ...(left.references || []),
+                    ].join(' ')).toLowerCase();
+                    const rightHaystack = normalizeWhitespace([
+                        right.key,
+                        right.value,
+                        ...(right.tags || []),
+                        ...(right.references || []),
+                    ].join(' ')).toLowerCase();
+                    const leftTokenHits = queryTokens.reduce((count, token) => count + (leftHaystack.includes(token) ? 1 : 0), 0);
+                    const rightTokenHits = queryTokens.reduce((count, token) => count + (rightHaystack.includes(token) ? 1 : 0), 0);
+                    const leftScore = leftTokenHits + Number(left.confidence || 0) + computeGovernedMemoryWeight(left);
+                    const rightScore = rightTokenHits + Number(right.confidence || 0) + computeGovernedMemoryWeight(right);
+                    if (rightScore !== leftScore) {
+                        return rightScore - leftScore;
+                    }
+                    return right.updatedAt.localeCompare(left.updatedAt);
+                })
                 .slice(0, limit);
+            selectedEntries.forEach((entry) => {
+                this.appendMemoryAuditRecord({
+                    userId,
+                    operation: 'read',
+                    layer,
+                    entry,
+                    reason: queryTokens.length > 0 ? `memory_policy_read:${queryTokens.join('|')}` : 'memory_policy_read:snapshot',
+                    recordedAt: nowIso,
+                });
+            });
             return {
                 layer,
                 operation,
@@ -2046,6 +2376,98 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 evictedCount: 0,
                 stats: this.collectMemoryStats(),
             };
+        }
+
+        if (operation === 'promote') {
+            const targetLayer = request.targetLayer || (layer === 'session' ? 'unit' : 'long_term');
+            const minConfidence = clamp(Number(request.minConfidence ?? 0.75), 0, 1);
+            const removeFromSource = request.removeFromSource === true && targetLayer !== layer;
+            const queryTokens = tokenize(String(request.query || ''));
+            const requestedKeys = new Set(
+                (Array.isArray(request.entries) ? request.entries : [])
+                    .map((entry) => String(entry?.key || '').trim())
+                    .filter(Boolean)
+            );
+            const sourceEntries = bank[layer]
+                .filter((entry) => Number(entry.confidence || 0) >= minConfidence)
+                .filter((entry) => {
+                    if (requestedKeys.size > 0) {
+                        return requestedKeys.has(entry.key);
+                    }
+                    if (queryTokens.length <= 0) {
+                        return true;
+                    }
+                    const haystack = normalizeWhitespace([
+                        entry.key,
+                        entry.value,
+                        ...(entry.tags || []),
+                        ...(entry.references || []),
+                    ].join(' ')).toLowerCase();
+                    return queryTokens.some((token) => haystack.includes(token));
+                });
+            const targetEntries = bank[targetLayer];
+            sourceEntries.forEach((entry) => {
+                const index = targetEntries.findIndex((candidate) => candidate.key === entry.key);
+                const promotedEntry = this.buildGovernedMemoryEntry({
+                    entry: {
+                        ...entry,
+                        tags: Array.from(new Set([...(entry.tags || []), `promoted_from:${layer}`])),
+                        updatedAt: nowIso,
+                    },
+                    previous: index >= 0 ? targetEntries[index] : null,
+                    fallbackScopeWorkspaceId: entry.scopeWorkspaceId,
+                    fallbackScopeCorpusId: entry.scopeCorpusId,
+                });
+                if (index >= 0) {
+                    targetEntries[index] = promotedEntry;
+                } else {
+                    targetEntries.push(promotedEntry);
+                }
+                this.appendMemoryAuditRecord({
+                    userId,
+                    operation: 'promote',
+                    layer: targetLayer,
+                    entry: promotedEntry,
+                    reason: `memory_policy_promote:${layer}_to_${targetLayer}`,
+                    recordedAt: nowIso,
+                });
+            });
+            if (removeFromSource && sourceEntries.length > 0) {
+                const promotedKeys = new Set(sourceEntries.map((entry) => entry.key));
+                bank[layer] = bank[layer].filter((entry) => !promotedKeys.has(entry.key));
+            }
+            const targetEviction = this.evictMemoryLayerDetailed(bank, targetLayer, nowIso);
+            targetEviction.evictedEntries.forEach((entry) => {
+                this.appendMemoryAuditRecord({
+                    userId,
+                    operation: 'evict',
+                    layer: targetLayer,
+                    entry,
+                    reason: 'memory_policy_promote:capacity_or_expiry',
+                    recordedAt: nowIso,
+                });
+            });
+            const sourceEviction = removeFromSource ? this.evictMemoryLayerDetailed(bank, layer, nowIso) : { evictedCount: 0, evictedEntries: [] as MemoryEntry[] };
+            sourceEviction.evictedEntries.forEach((entry) => {
+                this.appendMemoryAuditRecord({
+                    userId,
+                    operation: 'evict',
+                    layer,
+                    entry,
+                    reason: 'memory_policy_promote:source_cleanup',
+                    recordedAt: nowIso,
+                });
+            });
+            evictedCount = targetEviction.evictedCount + sourceEviction.evictedCount;
+            const response: MemoryPolicyResponse = {
+                layer: targetLayer,
+                operation,
+                entries: [...bank[targetLayer]],
+                evictedCount,
+                stats: this.collectMemoryStats(),
+            };
+            await this.persistIfNeeded();
+            return response;
         }
 
         if (operation === 'retrain_plan') {
@@ -2926,6 +3348,159 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         return 'local_hybrid';
     }
 
+    private normalizeScopePathPrefix(value: unknown): string {
+        return String(value || '')
+            .trim()
+            .replace(/\\/g, '/')
+            .replace(/\/{2,}/g, '/')
+            .replace(/\/+$/g, '')
+            .toLowerCase();
+    }
+
+    private extractCorpusIdFromSourcePath(sourcePath: string): string {
+        const normalized = String(sourcePath || '').replace(/\\/g, '/');
+        const segments = normalized.split('/').filter(Boolean);
+        const kbIndex = segments.findIndex((segment) => segment.toLowerCase() === 'knowledge_base');
+        if (kbIndex >= 0 && segments[kbIndex + 1]) {
+            return String(segments[kbIndex + 1]).trim().toLowerCase();
+        }
+        return segments[0] ? String(segments[0]).trim().toLowerCase() : '';
+    }
+
+    private normalizeKnowledgeCorpusScope(
+        scope: KnowledgeQueryRequest['scope'] | AgentConversationRequest['scope']
+    ): {
+        workspaceId: string | null;
+        corpusId: string | null;
+        documentIds: Set<string>;
+        atomIds: Set<string>;
+        sourcePathPrefixes: string[];
+        languages: Set<string>;
+        scoped: boolean;
+    } {
+        const documentIds = new Set<string>(
+            Array.isArray(scope?.documentIds)
+                ? scope.documentIds.map((value) => String(value || '').trim()).filter(Boolean)
+                : []
+        );
+        const atomIds = new Set<string>(
+            Array.isArray(scope?.atomIds)
+                ? scope.atomIds.map((value) => String(value || '').trim()).filter(Boolean)
+                : []
+        );
+        const sourcePathPrefixes = Array.from(new Set(
+            Array.isArray(scope?.sourcePathPrefixes)
+                ? scope.sourcePathPrefixes
+                    .map((value) => this.normalizeScopePathPrefix(value))
+                    .filter(Boolean)
+                : []
+        ));
+        const languages = new Set<string>(
+            Array.isArray(scope?.languages)
+                ? scope.languages.map((value) => String(value || '').trim().toLowerCase()).filter(Boolean)
+                : []
+        );
+        const workspaceId = isNonEmptyString(scope?.workspaceId) ? scope.workspaceId.trim().toLowerCase() : null;
+        const corpusId = isNonEmptyString(scope?.corpusId) ? scope.corpusId.trim().toLowerCase() : null;
+        return {
+            workspaceId,
+            corpusId,
+            documentIds,
+            atomIds,
+            sourcePathPrefixes,
+            languages,
+            scoped: Boolean(
+                workspaceId
+                || corpusId
+                || documentIds.size > 0
+                || atomIds.size > 0
+                || sourcePathPrefixes.length > 0
+                || languages.size > 0
+            ),
+        };
+    }
+
+    private filterAtomsByKnowledgeScope(
+        atoms: KnowledgeAtom[],
+        scope: KnowledgeQueryRequest['scope'] | AgentConversationRequest['scope']
+    ): {
+        atoms: KnowledgeAtom[];
+        resolvedScope: KnowledgeQueryResolvedScope;
+    } {
+        const normalizedScope = this.normalizeKnowledgeCorpusScope(scope);
+        const enforceIndexedCoverage = this.indexLifecycle.buildSummary().totalSegments > 0;
+        if (!normalizedScope.scoped) {
+            const indexedAtoms = enforceIndexedCoverage
+                ? atoms.filter((atom) => this.indexLifecycle.hasIndexedSegmentsForAtom(atom.id))
+                : atoms;
+            return {
+                atoms: indexedAtoms,
+                resolvedScope: {
+                    source: 'global',
+                    workspaceId: null,
+                    corpusId: null,
+                    documentIds: [],
+                    atomIds: [],
+                    sourcePathPrefixes: [],
+                    languages: [],
+                    matchedAtomCount: indexedAtoms.length,
+                },
+            };
+        }
+
+        const scopedAtoms = atoms.filter((atom) => {
+            if (normalizedScope.documentIds.size > 0 && !normalizedScope.documentIds.has(atom.documentId)) {
+                return false;
+            }
+            if (normalizedScope.atomIds.size > 0 && !normalizedScope.atomIds.has(atom.id) && !normalizedScope.atomIds.has(atom.stableKey)) {
+                return false;
+            }
+            const atomSourcePath = this.normalizeScopePathPrefix(atom.sourcePath);
+            if (
+                normalizedScope.sourcePathPrefixes.length > 0
+                && !normalizedScope.sourcePathPrefixes.some((prefix) => atomSourcePath.startsWith(prefix))
+            ) {
+                return false;
+            }
+            const atomLanguage = String(atom.metadata?.language || 'unknown').trim().toLowerCase();
+            if (normalizedScope.languages.size > 0 && !normalizedScope.languages.has(atomLanguage)) {
+                return false;
+            }
+            const binding = this.workspaceRegistry.resolveBindingByDocumentId(atom.documentId);
+            const scopedWorkspaceId = binding?.workspaceId || this.extractCorpusIdFromSourcePath(atom.sourcePath);
+            const scopedCorpusId = binding?.corpusId || this.extractCorpusIdFromSourcePath(atom.sourcePath);
+            if (normalizedScope.corpusId && scopedCorpusId !== normalizedScope.corpusId) {
+                return false;
+            }
+            if (normalizedScope.workspaceId && scopedWorkspaceId !== normalizedScope.workspaceId) {
+                return false;
+            }
+            if (enforceIndexedCoverage && !this.indexLifecycle.hasIndexedSegmentsForAtom(atom.id)) {
+                return false;
+            }
+            return true;
+        });
+
+        return {
+            atoms: scopedAtoms,
+            resolvedScope: {
+                source: 'scoped',
+                workspaceId: normalizedScope.workspaceId,
+                corpusId: normalizedScope.corpusId,
+                documentIds: Array.from(normalizedScope.documentIds.values()),
+                atomIds: Array.from(normalizedScope.atomIds.values()),
+                sourcePathPrefixes: [...normalizedScope.sourcePathPrefixes],
+                languages: Array.from(normalizedScope.languages.values()),
+                matchedAtomCount: scopedAtoms.length,
+            },
+        };
+    }
+
+    private filterRelationEdgesByScopedAtomIds(activeEdges: RelationEdge[], atoms: KnowledgeAtom[]): RelationEdge[] {
+        const scopedAtomIds = new Set(atoms.map((atom) => atom.id));
+        return activeEdges.filter((edge) => scopedAtomIds.has(edge.sourceAtomId) && scopedAtomIds.has(edge.targetAtomId));
+    }
+
     private buildQueryBackendContext(
         request: KnowledgeQueryRequest,
         backend: GraphQueryBackendType
@@ -2935,6 +3510,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         topK: number;
         activeEdges: RelationEdge[];
         atoms: KnowledgeAtom[];
+        resolvedScope: KnowledgeQueryResolvedScope;
         context: {
             request: KnowledgeQueryRequest;
             query: string;
@@ -2948,16 +3524,21 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const query = normalizeWhitespace(String(request.query || ''));
         const asOf = this.resolveTimestamp(request.asOf);
         const topK = clamp(Math.floor(Number(request.topK) || 5), 1, 20);
-        const activeEdges = this.collectActiveRelationEdges(asOf);
-        const atoms = Array.from(this.activeAtomIds.values())
+        const unscopedAtoms = Array.from(this.activeAtomIds.values())
             .map((atomId) => this.atoms.get(atomId))
             .filter((atom): atom is KnowledgeAtom => Boolean(atom));
+        const scopedAtomsResult = this.filterAtomsByKnowledgeScope(unscopedAtoms, request.scope);
+        const activeEdges = this.filterRelationEdgesByScopedAtomIds(
+            this.collectActiveRelationEdges(asOf),
+            scopedAtomsResult.atoms
+        );
         return {
             query,
             asOf,
             topK,
             activeEdges,
-            atoms,
+            atoms: scopedAtomsResult.atoms,
+            resolvedScope: scopedAtomsResult.resolvedScope,
             context: {
                 request: {
                     ...request,
@@ -2965,12 +3546,13 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     asOf,
                     topK,
                     queryBackend: backend,
+                    scope: request.scope,
                 },
                 query,
                 queryTokens: tokenize(query),
                 asOf,
                 topK,
-                atoms,
+                atoms: scopedAtomsResult.atoms,
                 activeEdges,
             },
         };
@@ -3066,6 +3648,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     : ['keyword', 'graph_traversal', 'temporal_filter'],
                 asOf: contextBundle.asOf,
                 totalActiveAtoms: this.activeAtomIds.size,
+                totalAtomsInScope: contextBundle.atoms.length,
+                scope: contextBundle.resolvedScope,
                 modeWeights: {
                     keyword: Number(
                         clamp(Number((rawModeWeights as Record<string, unknown>).keyword ?? (backend === 'keyword_only' ? 0.72 : 0.32)), 0, 1)
@@ -3528,7 +4112,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         }));
 
         return {
-            schemaVersion: 1,
+            schemaVersion: 2,
             savedAt,
             idCounter: this.idCounter,
             atoms: Array.from(this.atoms.values()),
@@ -3576,6 +4160,59 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             memoryPolicyDiagnosticsHistoryRecords: this.memoryPolicyDiagnosticsHistoryRecords.map((record) => ({ ...record })),
             queryBackendFallbackCount: this.queryBackendFallbackCount,
             queryBackendLastError: this.queryBackendLastError,
+            conversationSessions: Array.from(this.conversationSessions.values()).map((record) => ({
+                ...record,
+                turnIds: [...record.turnIds],
+            })),
+            conversationTurns: Array.from(this.conversationTurns.values()).map((record) => ({
+                ...record,
+                request: { ...record.request },
+                response: {
+                    ...record.response,
+                    knowledgePoints: record.response.knowledgePoints.map((point) => ({
+                        ...point,
+                        capabilities: [...point.capabilities],
+                        citation: point.citation ? { ...point.citation } : null,
+                    })),
+                    citations: record.response.citations.map((citation) => ({ ...citation })),
+                    recalledMemories: record.response.recalledMemories.map((memory) => ({
+                        ...memory,
+                        tags: [...memory.tags],
+                        references: [...memory.references],
+                    })),
+                    memoryActions: record.response.memoryActions.map((action) => ({ ...action })),
+                    summary: { ...record.response.summary },
+                    trace: {
+                        ...record.response.trace,
+                        retrieval: {
+                            ...record.response.trace.retrieval,
+                            retrievalModes: [...record.response.trace.retrieval.retrievalModes],
+                            modeWeights: { ...record.response.trace.retrieval.modeWeights },
+                            scope: record.response.trace.retrieval.scope ? {
+                                ...record.response.trace.retrieval.scope,
+                                documentIds: [...record.response.trace.retrieval.scope.documentIds],
+                                atomIds: [...record.response.trace.retrieval.scope.atomIds],
+                                sourcePathPrefixes: [...record.response.trace.retrieval.scope.sourcePathPrefixes],
+                                languages: [...record.response.trace.retrieval.scope.languages],
+                            } : undefined,
+                        },
+                        usedScope: {
+                            ...record.response.trace.usedScope,
+                            documentIds: [...record.response.trace.usedScope.documentIds],
+                            atomIds: [...record.response.trace.usedScope.atomIds],
+                            sourcePathPrefixes: [...record.response.trace.usedScope.sourcePathPrefixes],
+                            languages: [...record.response.trace.usedScope.languages],
+                        },
+                    },
+                },
+            })),
+            conversationInvocations: this.conversationInvocations.map((record) => ({ ...record })),
+            resourceRegistry: this.resourceRegistry.buildSnapshot(),
+            workspaceRegistry: this.workspaceRegistry.buildSnapshot(),
+            indexLifecycle: this.indexLifecycle.buildSnapshot(),
+            sessionStateSnapshot: this.sessionStateStore.buildSnapshot(),
+            workflowArtifacts: this.workflowArtifactStore.buildSnapshot(),
+            memoryAuditRecords: this.memoryAuditRecords.map((record) => ({ ...record })),
             userMemory,
             relationEdgeSignatures: Array.from(this.relationEdgeSignatures.values()),
         };
@@ -3838,6 +4475,109 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             });
         });
 
+        this.conversationSessions.clear();
+        (snapshot.conversationSessions || []).forEach((record) => {
+            if (!isNonEmptyString(record?.sessionId) || !isNonEmptyString(record?.userId)) {
+                return;
+            }
+            this.conversationSessions.set(record.sessionId, {
+                ...record,
+                turnIds: Array.isArray(record.turnIds) ? [...record.turnIds] : [],
+            });
+        });
+
+        this.conversationTurns.clear();
+        (snapshot.conversationTurns || []).forEach((record) => {
+            if (!isNonEmptyString(record?.turnId) || !isNonEmptyString(record?.sessionId) || !record?.response) {
+                return;
+            }
+            this.conversationTurns.set(record.turnId, {
+                ...record,
+                request: { ...(record.request || {}) },
+                response: {
+                    ...record.response,
+                    knowledgePoints: Array.isArray(record.response.knowledgePoints)
+                        ? record.response.knowledgePoints.map((point) => ({
+                            ...point,
+                            capabilities: Array.isArray(point.capabilities) ? [...point.capabilities] : [],
+                            citation: point.citation ? { ...point.citation } : null,
+                        }))
+                        : [],
+                    citations: Array.isArray(record.response.citations)
+                        ? record.response.citations.map((citation) => ({ ...citation }))
+                        : [],
+                    recalledMemories: Array.isArray(record.response.recalledMemories)
+                        ? record.response.recalledMemories.map((memory) => ({
+                            ...memory,
+                            tags: Array.isArray(memory.tags) ? [...memory.tags] : [],
+                            references: Array.isArray(memory.references) ? [...memory.references] : [],
+                        }))
+                        : [],
+                    memoryActions: Array.isArray(record.response.memoryActions)
+                        ? record.response.memoryActions.map((action) => ({ ...action }))
+                        : [],
+                    summary: { ...(record.response.summary || {}) },
+                    trace: {
+                        ...(record.response.trace || {}),
+                        retrieval: {
+                            ...(record.response.trace?.retrieval || {}),
+                            retrievalModes: Array.isArray(record.response.trace?.retrieval?.retrievalModes)
+                                ? [...record.response.trace.retrieval.retrievalModes]
+                                : [],
+                            modeWeights: { ...(record.response.trace?.retrieval?.modeWeights || {}) },
+                            scope: record.response.trace?.retrieval?.scope ? {
+                                ...record.response.trace.retrieval.scope,
+                                documentIds: [...(record.response.trace.retrieval.scope.documentIds || [])],
+                                atomIds: [...(record.response.trace.retrieval.scope.atomIds || [])],
+                                sourcePathPrefixes: [...(record.response.trace.retrieval.scope.sourcePathPrefixes || [])],
+                                languages: [...(record.response.trace.retrieval.scope.languages || [])],
+                            } : undefined,
+                        },
+                        usedScope: record.response.trace?.usedScope ? {
+                            ...record.response.trace.usedScope,
+                            documentIds: [...(record.response.trace.usedScope.documentIds || [])],
+                            atomIds: [...(record.response.trace.usedScope.atomIds || [])],
+                            sourcePathPrefixes: [...(record.response.trace.usedScope.sourcePathPrefixes || [])],
+                            languages: [...(record.response.trace.usedScope.languages || [])],
+                        } : {
+                            source: 'global',
+                            workspaceId: null,
+                            corpusId: null,
+                            documentIds: [],
+                            atomIds: [],
+                            sourcePathPrefixes: [],
+                            languages: [],
+                            matchedAtomCount: 0,
+                        },
+                    },
+                },
+            });
+        });
+
+        this.conversationInvocations.splice(0, this.conversationInvocations.length, ...(
+            Array.isArray(snapshot.conversationInvocations)
+                ? snapshot.conversationInvocations
+                    .filter((record) => isNonEmptyString(record?.invocationId) && isNonEmptyString(record?.sessionId))
+                    .map((record) => ({ ...record }))
+                : []
+        ));
+        this.resourceRegistry.restoreFromSnapshot(snapshot.resourceRegistry);
+        this.workspaceRegistry.restoreFromSnapshot(snapshot.workspaceRegistry);
+        this.indexLifecycle.restoreFromSnapshot(snapshot.indexLifecycle);
+        this.sessionStateStore.restoreFromSnapshot(snapshot.sessionStateSnapshot);
+        this.workflowArtifactStore.restoreFromSnapshot(snapshot.workflowArtifacts);
+        this.memoryAuditRecords.splice(
+            0,
+            this.memoryAuditRecords.length,
+            ...(
+                Array.isArray(snapshot.memoryAuditRecords)
+                    ? snapshot.memoryAuditRecords
+                        .filter((record) => isNonEmptyString(record?.auditId) && isNonEmptyString(record?.memoryKey))
+                        .map((record) => ({ ...record }))
+                    : []
+            )
+        );
+
         this.relationEdgeSignatures.clear();
         (snapshot.relationEdgeSignatures || []).forEach((signature) => {
             this.relationEdgeSignatures.add(signature);
@@ -3857,7 +4597,201 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         this.rebuildTitleIndex();
     }
 
-    private normalizeDocumentInput(input: KnowledgeDocumentInput): Required<KnowledgeDocumentInput> {
+    private deriveDocumentDisplayTitle(documentInput: NormalizedKnowledgeDocumentInput): string {
+        const normalizedPath = String(documentInput.sourcePath || '').replace(/\\/g, '/');
+        const pathSegments = normalizedPath.split('/').filter(Boolean);
+        const fileName = pathSegments.length > 0 ? pathSegments[pathSegments.length - 1] : documentInput.documentId;
+        return fileName.replace(/\.[^.]+$/g, '') || documentInput.documentId;
+    }
+
+    private syncResourceAndWorkspaceForDocument(params: {
+        document: NormalizedKnowledgeDocumentInput;
+        sourceHash: string;
+        version: number;
+        updatedAt: string;
+    }): {
+        workspace: WorkspaceRecord;
+        resource: CanonicalResourceRecord;
+        projection: ResourceProjectionRecord;
+        binding: WorkspaceBindingRecord;
+    } {
+        const workspace = this.workspaceRegistry.ensureWorkspace({
+            workspaceId: params.document.workspaceId,
+            corpusId: params.document.corpusId,
+            sourcePath: params.document.sourcePath,
+            language: params.document.language,
+            exportProfileId: params.document.exportProfileId,
+            createdAt: params.updatedAt,
+        });
+        const { resource, projection } = this.resourceRegistry.upsertKnowledgeDocument({
+            documentId: params.document.documentId,
+            sourcePath: params.document.sourcePath,
+            content: params.document.content,
+            sourceHash: params.sourceHash,
+            title: this.deriveDocumentDisplayTitle(params.document),
+            language: params.document.language,
+            version: params.version,
+            workspaceId: workspace.workspaceId,
+            corpusId: workspace.corpusId,
+            updatedAt: params.updatedAt,
+            metadata: {
+                ...params.document.metadata,
+                exportProfileId: workspace.exportProfileId,
+            },
+        });
+        const binding = this.workspaceRegistry.bindProjection({
+            workspaceId: workspace.workspaceId,
+            corpusId: workspace.corpusId,
+            resourceId: resource.resourceId,
+            projectionId: projection.projectionId,
+            documentId: params.document.documentId,
+            sourcePath: params.document.sourcePath,
+            boundAt: params.updatedAt,
+        });
+        return {
+            workspace,
+            resource,
+            projection,
+            binding,
+        };
+    }
+
+    private syncIndexLifecycleForDocument(params: {
+        document: NormalizedKnowledgeDocumentInput;
+        sourceHash: string;
+        snapshot: DocumentSnapshot;
+        atoms: KnowledgeAtom[];
+        resource: CanonicalResourceRecord;
+        projection: ResourceProjectionRecord;
+        workspace: WorkspaceRecord;
+        indexedAt: string;
+    }): {
+        units: IndexUnitRecord[];
+        segments: IndexSegmentRecord[];
+    } {
+        return this.indexLifecycle.syncDocumentIndex({
+            resourceId: params.resource.resourceId,
+            projectionId: params.projection.projectionId,
+            documentId: params.document.documentId,
+            sourcePath: params.document.sourcePath,
+            language: params.document.language,
+            workspaceId: params.workspace.workspaceId,
+            corpusId: params.workspace.corpusId,
+            title: this.deriveDocumentDisplayTitle(params.document),
+            content: params.document.content,
+            atoms: params.atoms,
+            indexedAt: params.indexedAt,
+        });
+    }
+
+    private resolveResourceAndProjectionByDocumentId(documentId: string): {
+        resource: CanonicalResourceRecord | null;
+        projection: ResourceProjectionRecord | null;
+        binding: WorkspaceBindingRecord | null;
+    } {
+        const projection = this.resourceRegistry.getProjectionByDocumentId(documentId);
+        const resource = projection ? this.resourceRegistry.getResourceById(projection.resourceId) : null;
+        const binding = this.workspaceRegistry.resolveBindingByDocumentId(documentId);
+        return { resource, projection, binding };
+    }
+
+    private resolveSourceResourceIdsForAtomIds(atomIds: string[]): string[] {
+        const resourceIds = new Set<string>();
+        atomIds.forEach((atomId) => {
+            const atom = this.atoms.get(atomId);
+            if (!atom) {
+                return;
+            }
+            const projection = this.resourceRegistry.getProjectionByDocumentId(atom.documentId);
+            if (projection) {
+                resourceIds.add(projection.resourceId);
+            }
+        });
+        return Array.from(resourceIds.values());
+    }
+
+    private resolveSourceProjectionIdsForAtomIds(atomIds: string[]): string[] {
+        const projectionIds = new Set<string>();
+        atomIds.forEach((atomId) => {
+            const atom = this.atoms.get(atomId);
+            if (!atom) {
+                return;
+            }
+            const projection = this.resourceRegistry.getProjectionByDocumentId(atom.documentId);
+            if (projection) {
+                projectionIds.add(projection.projectionId);
+            }
+        });
+        return Array.from(projectionIds.values());
+    }
+
+    private resolveWorkspaceContextForAtomIds(atomIds: string[]): {
+        workspaceId: string | null;
+        corpusId: string | null;
+        exportProfileId: string | null;
+    } {
+        for (const atomId of atomIds) {
+            const atom = this.atoms.get(atomId);
+            if (!atom) {
+                continue;
+            }
+            const binding = this.workspaceRegistry.resolveBindingByDocumentId(atom.documentId);
+            if (!binding) {
+                continue;
+            }
+            const workspace = this.workspaceRegistry.listActiveWorkspaces().find((item) => item.workspaceId === binding.workspaceId);
+            return {
+                workspaceId: binding.workspaceId,
+                corpusId: binding.corpusId,
+                exportProfileId: workspace?.exportProfileId || null,
+            };
+        }
+        return {
+            workspaceId: null,
+            corpusId: null,
+            exportProfileId: null,
+        };
+    }
+
+    private getWorkspaceById(workspaceId: string | null | undefined): WorkspaceRecord | null {
+        return isNonEmptyString(workspaceId)
+            ? this.workspaceRegistry.getWorkspaceById(workspaceId)
+            : null;
+    }
+
+    private resolveWorkspaceContextForReferences(references: string[]): {
+        workspaceId: string | null;
+        corpusId: string | null;
+        exportProfileId: string | null;
+    } {
+        const atomIds = references.filter((reference) => this.activeAtomIds.has(String(reference || '').trim()));
+        if (atomIds.length > 0) {
+            return this.resolveWorkspaceContextForAtomIds(atomIds);
+        }
+        for (const reference of references) {
+            const evidenceSpan = this.evidenceSpans.get(String(reference || '').trim());
+            if (!evidenceSpan) {
+                continue;
+            }
+            const binding = this.workspaceRegistry.resolveBindingByDocumentId(evidenceSpan.documentId);
+            if (!binding) {
+                continue;
+            }
+            const workspace = this.getWorkspaceById(binding.workspaceId);
+            return {
+                workspaceId: binding.workspaceId,
+                corpusId: binding.corpusId,
+                exportProfileId: workspace?.exportProfileId || null,
+            };
+        }
+        return {
+            workspaceId: null,
+            corpusId: null,
+            exportProfileId: null,
+        };
+    }
+
+    private normalizeDocumentInput(input: KnowledgeDocumentInput): NormalizedKnowledgeDocumentInput {
         const sourcePath = isNonEmptyString(input.sourcePath) ? input.sourcePath : `untitled_${this.nextId('doc')}.md`;
         const documentId = isNonEmptyString(input.documentId)
             ? input.documentId
@@ -3869,10 +4803,16 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             content: String(input.content || ''),
             language,
             updatedAt: this.resolveTimestamp(input.updatedAt),
+            workspaceId: isNonEmptyString(input.workspaceId) ? input.workspaceId.trim().toLowerCase() : null,
+            corpusId: isNonEmptyString(input.corpusId) ? input.corpusId.trim().toLowerCase() : null,
+            exportProfileId: isNonEmptyString(input.exportProfileId) ? input.exportProfileId.trim() : null,
+            metadata: input.metadata && typeof input.metadata === 'object'
+                ? { ...(input.metadata as Record<string, unknown>) }
+                : {},
         };
     }
 
-    private parseDocument(documentInput: Required<KnowledgeDocumentInput>): ParsedDocument {
+    private parseDocument(documentInput: NormalizedKnowledgeDocumentInput): ParsedDocument {
         const content = documentInput.content || '';
         const rawLines = content.length > 0 ? content.split('\n') : [''];
         const lineStartOffsets: number[] = [];
@@ -5120,6 +6060,76 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         return 0.81;
     }
 
+    private normalizeMemoryScopeValue(value: unknown): string | undefined {
+        const normalized = String(value || '').trim().toLowerCase();
+        return normalized || undefined;
+    }
+
+    private buildGovernedMemoryEntry(params: {
+        entry: MemoryEntry;
+        previous?: MemoryEntry | null;
+        fallbackScopeWorkspaceId?: string | null;
+        fallbackScopeCorpusId?: string | null;
+    }): MemoryEntry {
+        const previous = params.previous || null;
+        const merged: MemoryEntry = {
+            ...previous,
+            ...params.entry,
+            tags: Array.from(new Set(params.entry.tags || previous?.tags || [])),
+            references: Array.from(new Set(params.entry.references || previous?.references || [])),
+            confidence: clamp(Number(params.entry.confidence ?? previous?.confidence ?? 0.5), 0, 1),
+            createdAt: params.entry.createdAt || previous?.createdAt || this.resolveTimestamp(undefined),
+            updatedAt: params.entry.updatedAt || this.resolveTimestamp(undefined),
+            expiresAt: params.entry.expiresAt || previous?.expiresAt,
+        };
+        const derivedScope = this.resolveWorkspaceContextForReferences(merged.references);
+        const classification = classifyMemoryEntry(merged);
+        return {
+            ...merged,
+            memoryType: classification.memoryType,
+            memoryPurpose: classification.memoryPurpose,
+            classificationConfidence: classification.classificationConfidence,
+            scopeWorkspaceId: this.normalizeMemoryScopeValue(
+                merged.scopeWorkspaceId
+                || params.fallbackScopeWorkspaceId
+                || previous?.scopeWorkspaceId
+                || derivedScope.workspaceId
+            ),
+            scopeCorpusId: this.normalizeMemoryScopeValue(
+                merged.scopeCorpusId
+                || params.fallbackScopeCorpusId
+                || previous?.scopeCorpusId
+                || derivedScope.corpusId
+            ),
+        };
+    }
+
+    private appendMemoryAuditRecord(params: {
+        userId: string;
+        operation: MemoryAuditRecord['operation'];
+        layer: MemoryLayer;
+        entry: MemoryEntry;
+        reason: string;
+        recordedAt: string;
+    }): void {
+        this.memoryAuditRecords.unshift(buildMemoryAuditRecord(
+            (prefix?: string) => this.nextId(prefix || 'memory_audit'),
+            {
+                userId: params.userId,
+                operation: params.operation,
+                layer: params.layer,
+                entry: params.entry,
+                reason: params.reason,
+                scopeWorkspaceId: params.entry.scopeWorkspaceId || null,
+                scopeCorpusId: params.entry.scopeCorpusId || null,
+                recordedAt: params.recordedAt,
+            }
+        ));
+        if (this.memoryAuditRecords.length > SESSION_EXECUTION_HISTORY_LIMIT * 3) {
+            this.memoryAuditRecords.splice(SESSION_EXECUTION_HISTORY_LIMIT * 3);
+        }
+    }
+
     private ensureUserMemoryBank(userId: string): UserMemoryBank {
         if (!this.userMemory.has(userId)) {
             this.userMemory.set(userId, {
@@ -5131,9 +6141,17 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         return this.userMemory.get(userId) as UserMemoryBank;
     }
 
-    private evictMemoryLayer(bank: UserMemoryBank, layer: MemoryLayer, nowIso: string): number {
+    private evictMemoryLayerDetailed(
+        bank: UserMemoryBank,
+        layer: MemoryLayer,
+        nowIso: string
+    ): {
+        evictedCount: number;
+        evictedEntries: MemoryEntry[];
+    } {
         const entries = bank[layer];
-        const beforeCount = entries.length;
+        const beforeEntries = [...entries];
+        const beforeCount = beforeEntries.length;
         const nowTime = Date.parse(nowIso);
         const surviving = entries.filter((entry) => {
             if (!entry.expiresAt) {
@@ -5147,6 +6165,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         });
 
         surviving.sort((left, right) => {
+            const leftWeight = computeGovernedMemoryWeight(left);
+            const rightWeight = computeGovernedMemoryWeight(right);
+            if (leftWeight !== rightWeight) {
+                return leftWeight - rightWeight;
+            }
             if (left.confidence !== right.confidence) {
                 return left.confidence - right.confidence;
             }
@@ -5159,7 +6182,16 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         }
 
         bank[layer] = surviving;
-        return beforeCount - surviving.length;
+        const survivingSet = new Set(surviving);
+        const evictedEntries = beforeEntries.filter((entry) => !survivingSet.has(entry));
+        return {
+            evictedCount: beforeCount - surviving.length,
+            evictedEntries,
+        };
+    }
+
+    private evictMemoryLayer(bank: UserMemoryBank, layer: MemoryLayer, nowIso: string): number {
+        return this.evictMemoryLayerDetailed(bank, layer, nowIso).evictedCount;
     }
 
     private collectMemoryStats(): MemoryStats {
@@ -5327,6 +6359,13 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             tags,
             source,
             confidence: Number(clamp(Number(entry.confidence || 0), 0, 1).toFixed(4)),
+            memoryType: entry.memoryType || undefined,
+            memoryPurpose: entry.memoryPurpose || undefined,
+            classificationConfidence: entry.classificationConfidence !== undefined
+                ? Number(clamp(Number(entry.classificationConfidence || 0), 0, 1).toFixed(4))
+                : undefined,
+            scopeWorkspaceId: entry.scopeWorkspaceId || null,
+            scopeCorpusId: entry.scopeCorpusId || null,
             createdAt: entry.createdAt,
             updatedAt: entry.updatedAt,
             expiresAt: entry.expiresAt || null,
@@ -5987,64 +7026,585 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         ];
     }
 
-    public async agentConversation(request: {
-        userId?: unknown;
-        message?: unknown;
-        topK?: unknown;
-    } = {}): Promise<any> {
+    private buildKnowledgeCitation(item: KnowledgeQueryItem, index: number): KnowledgeCitation {
+        const atom = item.atom;
+        const evidence = item.evidenceSpans[0];
+        return {
+            citationId: String(evidence?.id || `citation_${atom.id}_${index + 1}`).trim(),
+            atomId: atom.id,
+            documentId: atom.documentId,
+            sourcePath: atom.sourcePath,
+            title: atom.title,
+            snippet: normalizeWhitespace(String(
+                evidence?.snippet
+                || atom.content
+                || atom.title
+                || ''
+            ).slice(0, 280)),
+            startLine: evidence?.startLine,
+            endLine: evidence?.endLine,
+            score: Number(Number(item.score || 0).toFixed(4)),
+        };
+    }
+
+    private buildAgentConversationKnowledgePoint(
+        item: KnowledgeQueryItem,
+        index: number
+    ): AgentConversationKnowledgePoint {
+        const atom = item.atom;
+        const citation = this.buildKnowledgeCitation(item, index);
+        const summary = normalizeWhitespace(String(atom.content || atom.title || '').slice(0, 240)) || atom.title;
+        return {
+            atomId: atom.id,
+            title: atom.title,
+            summary,
+            evidenceSnippet: citation.snippet || summary || atom.title,
+            score: Number(Number(item.score || 0).toFixed(4)),
+            citation,
+            capabilities: this.buildAgentWorkspaceCapabilities(atom.id),
+        };
+    }
+
+    private filterConversationMemoryRecordsByScope(
+        records: AgentConversationMemoryRecord[],
+        scope: KnowledgeQueryResolvedScope
+    ): AgentConversationMemoryRecord[] {
+        if (scope.source === 'global') {
+            return records;
+        }
+        return records.filter((record) => {
+            const tags = Array.isArray(record.tags) ? record.tags : [];
+            const scopedWorkspace = scope.workspaceId ? `scope_workspace:${scope.workspaceId}` : '';
+            const scopedCorpus = scope.corpusId ? `scope_corpus:${scope.corpusId}` : '';
+            const hasExplicitScopeTag = tags.some((tag) => tag.startsWith('scope_workspace:') || tag.startsWith('scope_corpus:'));
+            const recordWorkspaceId = this.normalizeMemoryScopeValue(record.scopeWorkspaceId);
+            const recordCorpusId = this.normalizeMemoryScopeValue(record.scopeCorpusId);
+            if (recordWorkspaceId || recordCorpusId) {
+                return Boolean(
+                    (scope.workspaceId && recordWorkspaceId === scope.workspaceId)
+                    || (scope.corpusId && recordCorpusId === scope.corpusId)
+                );
+            }
+            if (!hasExplicitScopeTag) {
+                return true;
+            }
+            return Boolean(
+                (scopedWorkspace && tags.includes(scopedWorkspace))
+                || (scopedCorpus && tags.includes(scopedCorpus))
+            );
+        });
+    }
+
+    private buildScopedConversationAnswer(params: {
+        message: string;
+        knowledgePoints: AgentConversationKnowledgePoint[];
+        citations: KnowledgeCitation[];
+        recalledMemories: AgentConversationMemoryRecord[];
+    }): string {
+        if (params.knowledgePoints.length <= 0) {
+            if (params.recalledMemories.length > 0) {
+                return `No scoped knowledge points matched "${params.message || 'your query'}", but I recovered ${params.recalledMemories.length} relevant conversation memory note(s). Refine the corpus scope or use the recalled memory as a follow-up anchor.`;
+            }
+            return `No scoped knowledge points matched "${params.message || 'your query'}". Refine the scope, add more notes to the corpus, or broaden the query terms.`;
+        }
+
+        const leadingPoint = params.knowledgePoints[0];
+        const evidenceLines = params.citations.slice(0, 3).map((citation, index) => (
+            `${index + 1}. ${citation.title} (${citation.sourcePath}${citation.startLine ? `:${citation.startLine}` : ''}) — ${citation.snippet}`
+        ));
+        const memoryPrefix = params.recalledMemories.length > 0
+            ? `I also recalled ${params.recalledMemories.length} scoped memory note(s). `
+            : '';
+        return `${memoryPrefix}The strongest scoped match is ${leadingPoint.title}. I found ${params.knowledgePoints.length} relevant knowledge point(s) and ${params.citations.length} citation(s).\n\nKey evidence:\n${evidenceLines.join('\n')}`;
+    }
+
+    private recordAgentConversationTurn(params: {
+        sessionId: string;
+        userId: string;
+        request: AgentConversationRequest;
+        response: AgentConversationResponse;
+    }): void {
+        const nowIso = this.nowProvider().toISOString();
+        const turnId = this.nextId('agent_turn');
+        const invocationId = params.response.trace.invocationId;
+        const existingSession = this.conversationSessions.get(params.sessionId);
+        const sessionRecord: AgentConversationSessionRecord = existingSession
+            ? {
+                ...existingSession,
+                updatedAt: nowIso,
+                turnIds: [...existingSession.turnIds, turnId].slice(-CONVERSATION_TURN_HISTORY_LIMIT),
+            }
+            : {
+                sessionId: params.sessionId,
+                userId: params.userId,
+                workspaceId: params.response.trace.usedScope.workspaceId,
+                corpusId: params.response.trace.usedScope.corpusId,
+                namespace: params.request.memoryNamespace || 'conversation',
+                createdAt: nowIso,
+                updatedAt: nowIso,
+                turnIds: [turnId],
+            };
+        this.conversationSessions.set(params.sessionId, sessionRecord);
+        this.conversationTurns.set(turnId, {
+            turnId,
+            invocationId,
+            sessionId: params.sessionId,
+            userId: params.userId,
+            createdAt: nowIso,
+            updatedAt: nowIso,
+            request: { ...params.request },
+            response: params.response,
+        });
+        while (this.conversationTurns.size > CONVERSATION_TURN_HISTORY_LIMIT) {
+            const oldestTurnId = this.conversationTurns.keys().next().value;
+            if (typeof oldestTurnId !== 'string') {
+                break;
+            }
+            this.conversationTurns.delete(oldestTurnId);
+        }
+        this.conversationInvocations.push({
+            invocationId,
+            sessionId: params.sessionId,
+            userId: params.userId,
+            createdAt: nowIso,
+            status: 'completed',
+            query: normalizeWhitespace(String(params.request.message || '')),
+            returnedKnowledgePoints: params.response.summary.returnedKnowledgePoints,
+            returnedCitations: params.response.summary.returnedCitations,
+            recalledMemoryCount: params.response.summary.recalledMemoryCount,
+            appliedMemoryCount: params.response.summary.appliedMemoryCount,
+        });
+        if (this.conversationInvocations.length > CONVERSATION_INVOCATION_HISTORY_LIMIT) {
+            this.conversationInvocations.splice(0, this.conversationInvocations.length - CONVERSATION_INVOCATION_HISTORY_LIMIT);
+        }
+    }
+
+    private upsertConversationSessionState(params: {
+        sessionId: string;
+        userId: string;
+        mode: LearningSessionStateRecord['mode'];
+        workspaceId: string | null;
+        corpusId: string | null;
+        activeResourceIds: string[];
+        activeProjectionIds: string[];
+        topK: number;
+        queryBackend: string | null;
+        persistMemory: boolean;
+        memoryNamespace: string | null;
+        exportProfileId?: string | null;
+        panelState?: Record<string, unknown>;
+        recordedAt: string;
+    }): void {
+        this.sessionStateStore.upsert({
+            sessionId: params.sessionId,
+            userId: params.userId,
+            workspaceId: params.workspaceId,
+            corpusId: params.corpusId,
+            mode: params.mode,
+            activeResourceIds: params.activeResourceIds,
+            activeProjectionIds: params.activeProjectionIds,
+            retrievalSettings: {
+                topK: params.topK,
+                queryBackend: params.queryBackend,
+                persistMemory: params.persistMemory,
+            },
+            memorySettings: {
+                namespace: params.memoryNamespace,
+                enabled: params.persistMemory,
+            },
+            exportProfileId: params.exportProfileId || null,
+            panelState: params.panelState || {},
+            recordedAt: params.recordedAt,
+        });
+    }
+
+    private recordWorkflowArtifact(params: {
+        kind: WorkflowArtifactKind;
+        sessionId?: string | null;
+        userId?: string | null;
+        workspaceId?: string | null;
+        corpusId?: string | null;
+        title: string;
+        sourceAtomIds?: string[];
+        summary: string;
+        payload: Record<string, unknown>;
+        recordedAt: string;
+    }): WorkflowArtifactRecord {
+        return this.workflowArtifactStore.recordArtifact({
+            kind: params.kind,
+            sessionId: params.sessionId || null,
+            userId: params.userId || null,
+            workspaceId: params.workspaceId || null,
+            corpusId: params.corpusId || null,
+            title: params.title,
+            sourceResourceIds: this.resolveSourceResourceIdsForAtomIds(params.sourceAtomIds || []),
+            sourceProjectionIds: this.resolveSourceProjectionIdsForAtomIds(params.sourceAtomIds || []),
+            summary: params.summary,
+            payload: params.payload,
+            status: 'active',
+            recordedAt: params.recordedAt,
+        });
+    }
+
+    private buildWorkspaceIndexSummary(units: IndexUnitRecord[], segments: IndexSegmentRecord[]): IndexLifecycleSummary {
+        const states: IndexLifecycleSummary['states'] = {
+            pending: 0,
+            indexing: 0,
+            indexed: 0,
+            failed: 0,
+            disabled: 0,
+        };
+        units.forEach((unit) => {
+            states[unit.state] += 1;
+        });
+        return {
+            totalUnits: units.length,
+            totalSegments: segments.length,
+            states,
+            activeDocuments: new Set(units.map((unit) => unit.documentId).filter(Boolean)).size,
+            activeAtomUnits: units.filter((unit) => unit.atomId !== null).length,
+        };
+    }
+
+    private doesMemoryEntryMatchWorkspace(
+        entry: MemoryEntry,
+        workspaceId: string,
+        corpusId: string,
+        workspaceAtomIds: Set<string>
+    ): boolean {
+        const entryWorkspaceId = this.normalizeMemoryScopeValue(entry.scopeWorkspaceId);
+        const entryCorpusId = this.normalizeMemoryScopeValue(entry.scopeCorpusId);
+        if (entryWorkspaceId) {
+            return entryWorkspaceId === workspaceId;
+        }
+        if (entryCorpusId) {
+            return entryCorpusId === corpusId;
+        }
+        return (entry.references || []).some((reference) => workspaceAtomIds.has(String(reference || '').trim()));
+    }
+
+    private collectWorkspaceMemoryExportRecords(params: {
+        workspaceId: string;
+        corpusId: string;
+        userId?: string | null;
+        workspaceAtomIds: Set<string>;
+    }): WorkspaceScopedMemoryExportRecord[] {
+        const normalizedUserId = String(params.userId || '').trim();
+        const records: WorkspaceScopedMemoryExportRecord[] = [];
+        this.userMemory.forEach((bank, userId) => {
+            if (normalizedUserId && userId !== normalizedUserId) {
+                return;
+            }
+            (['session', 'unit', 'long_term'] as MemoryLayer[]).forEach((layer) => {
+                bank[layer]
+                    .filter((entry) => this.doesMemoryEntryMatchWorkspace(entry, params.workspaceId, params.corpusId, params.workspaceAtomIds))
+                    .forEach((entry) => {
+                        records.push({
+                            userId,
+                            layer,
+                            entry: {
+                                ...entry,
+                                tags: [...entry.tags],
+                                references: [...entry.references],
+                            },
+                        });
+                    });
+            });
+        });
+        return records;
+    }
+
+    private collectWorkspaceMemoryAuditRecords(params: {
+        workspaceId: string;
+        corpusId: string;
+        userId?: string | null;
+    }): MemoryAuditRecord[] {
+        const normalizedUserId = String(params.userId || '').trim();
+        return this.memoryAuditRecords.filter((record) => {
+            if (normalizedUserId && record.userId !== normalizedUserId) {
+                return false;
+            }
+            if (this.normalizeMemoryScopeValue(record.scopeWorkspaceId) === params.workspaceId) {
+                return true;
+            }
+            return this.normalizeMemoryScopeValue(record.scopeCorpusId) === params.corpusId;
+        });
+    }
+
+    public async buildWorkspaceExportBundle(request: WorkspaceExportBundleRequest): Promise<WorkspaceExportBundle> {
+        await this.ensureHydrated();
+        const workspaceId = String(request.workspaceId || '').trim().toLowerCase();
+        if (!workspaceId) {
+            throw new Error('Workspace export requires a non-empty workspaceId.');
+        }
+        const workspace = this.workspaceRegistry.getWorkspaceById(workspaceId);
+        if (!workspace) {
+            throw new Error(`Workspace export could not find workspace "${workspaceId}".`);
+        }
+        const includeDeleted = request.includeDeleted === true;
+        const generatedAt = this.resolveTimestamp(request.generatedAt);
+        const bindings = this.workspaceRegistry.listBindingsByWorkspace(workspace.workspaceId);
+        const resourceIds = bindings.map((binding) => binding.resourceId);
+        const bindingProjectionIds = bindings.map((binding) => binding.projectionId);
+        const resources = this.resourceRegistry.listResourcesByIds(resourceIds, { includeDeleted });
+        const projections = this.resourceRegistry.listProjectionsByIds(bindingProjectionIds, { includeDeleted });
+        const projectionIds = projections.map((projection) => projection.projectionId);
+        const units = this.indexLifecycle.listUnitsByProjectionIds(projectionIds);
+        const segments = this.indexLifecycle.listSegmentsByUnitIds(units.map((unit) => unit.unitId));
+        const documentIds = new Set(
+            projections
+                .map((projection) => projection.documentId)
+                .filter((documentId): documentId is string => isNonEmptyString(documentId))
+        );
+        const atoms = Array.from(this.atoms.values()).filter((atom) => documentIds.has(atom.documentId));
+        const workspaceAtomIds = new Set(atoms.map((atom) => atom.id));
+        const evidenceSpanIds = new Set(atoms.flatMap((atom) => atom.evidenceSpanIds));
+        const evidenceSpans = Array.from(this.evidenceSpans.values()).filter((span) => evidenceSpanIds.has(span.id));
+        const relationEdges = this.collectActiveRelationEdges(generatedAt)
+            .filter((edge) => workspaceAtomIds.has(edge.sourceAtomId) && workspaceAtomIds.has(edge.targetAtomId));
+        const temporalEdges = Array.from(this.temporalEdges.values())
+            .filter((edge) => workspaceAtomIds.has(edge.sourceAtomId) && workspaceAtomIds.has(edge.targetAtomId));
+        const sessionStates = request.includeSessionState === false
+            ? []
+            : this.sessionStateStore.listByWorkspace(workspace.workspaceId, request.userId || null);
+        const sessionIds = new Set(sessionStates.map((state) => state.sessionId));
+        const conversationSessions = request.includeConversationHistory === false
+            ? []
+            : Array.from(this.conversationSessions.values()).filter((record) => sessionIds.has(record.sessionId));
+        const turnIds = new Set(conversationSessions.flatMap((record) => record.turnIds));
+        const conversationTurns = request.includeConversationHistory === false
+            ? []
+            : Array.from(this.conversationTurns.values()).filter((record) => turnIds.has(record.turnId));
+        const conversationInvocations = request.includeConversationHistory === false
+            ? []
+            : this.conversationInvocations.filter((record) => sessionIds.has(record.sessionId));
+        const workflowArtifacts = request.includeWorkflowArtifacts === false
+            ? []
+            : this.workflowArtifactStore.listByWorkspace(workspace.workspaceId, request.userId || null);
+        const memoryEntries = request.includeMemory === false
+            ? []
+            : this.collectWorkspaceMemoryExportRecords({
+                workspaceId: workspace.workspaceId,
+                corpusId: workspace.corpusId,
+                userId: request.userId || null,
+                workspaceAtomIds,
+            });
+        const memoryAuditRecords = request.includeMemory === false
+            ? []
+            : this.collectWorkspaceMemoryAuditRecords({
+                workspaceId: workspace.workspaceId,
+                corpusId: workspace.corpusId,
+                userId: request.userId || null,
+            });
+        return assembleWorkspaceExportBundle({
+            request,
+            workspace,
+            bindings,
+            resources,
+            projections,
+            indexSummary: this.buildWorkspaceIndexSummary(units, segments),
+            units,
+            segments,
+            atoms,
+            evidenceSpans,
+            relationEdges,
+            temporalEdges,
+            sessionStates,
+            conversationSessions,
+            conversationTurns,
+            conversationInvocations,
+            workflowArtifacts,
+            memoryEntries,
+            memoryAuditRecords,
+            generatedAt,
+        });
+    }
+
+    public async agentConversation(request: AgentConversationRequest = {}): Promise<AgentConversationResponse> {
         await this.ensureHydrated();
         const userId = isNonEmptyString(request.userId)
             ? request.userId.trim()
             : 'path_user_default';
+        const sessionId = isNonEmptyString(request.sessionId)
+            ? request.sessionId.trim()
+            : this.nextId('agent_session');
         const message = normalizeWhitespace(String(request.message || ''));
         const topK = clamp(Math.floor(Number(request.topK) || 6), 1, 18);
+        const generatedAt = this.resolveTimestamp(request.asOf);
+        const namespace = this.normalizeConversationMemoryNamespace(request.memoryNamespace);
         const queryResult = await this.queryKnowledge({
             query: message || 'local knowledge',
             topK,
+            asOf: generatedAt,
+            scope: request.scope,
         });
-        const knowledgePoints = queryResult.items.map((item) => {
-            const atom = item.atom;
-            const evidenceSnippet = String(
-                item.evidenceSpans[0]?.snippet
-                || atom.content
-                || atom.title
-                || ''
-            ).trim();
-            const summary = normalizeWhitespace(
-                String(atom.content || atom.title || '').slice(0, 240)
-            );
-            return {
-                atomId: atom.id,
-                title: atom.title,
-                summary: summary || atom.title,
-                evidenceSnippet: evidenceSnippet || summary || atom.title,
-                score: Number(Number(item.score || 0).toFixed(4)),
-                capabilities: this.buildAgentWorkspaceCapabilities(atom.id),
-            };
-        });
-        const firstPointTitle = String(knowledgePoints[0] && knowledgePoints[0].title || 'Focus Node').trim() || 'Focus Node';
-        return {
+        const knowledgePoints = queryResult.items.map((item, index) => this.buildAgentConversationKnowledgePoint(item, index));
+        const citations = knowledgePoints
+            .map((point) => point.citation)
+            .filter((citation): citation is KnowledgeCitation => Boolean(citation));
+        const recalledMemoryResult = await this.searchConversationMemory({
             userId,
-            assistantMessage: knowledgePoints.length > 0
-                ? `I found ${knowledgePoints.length} local knowledge point(s) relevant to your request. Start with ${firstPointTitle} and use the focus or learning path actions to inspect them.`
-                : `No local knowledge points matched "${message || 'your query'}".`,
+            namespace,
+            query: message || 'memory',
+            limit: 6,
+            now: generatedAt,
+        });
+        const recalledMemories = this.filterConversationMemoryRecordsByScope(
+            Array.isArray(recalledMemoryResult.entries) ? recalledMemoryResult.entries as AgentConversationMemoryRecord[] : [],
+            queryResult.trace.scope || {
+                source: 'global',
+                workspaceId: null,
+                corpusId: null,
+                documentIds: [],
+                atomIds: [],
+                sourcePathPrefixes: [],
+                languages: [],
+                matchedAtomCount: 0,
+            }
+        );
+
+        const memoryActions: AgentConversationMemoryAction[] = [];
+        if (request.persistMemory !== false && message) {
+            const scopeTags: string[] = [];
+            if (queryResult.trace.scope?.workspaceId) {
+                scopeTags.push(`scope_workspace:${queryResult.trace.scope.workspaceId}`);
+            }
+            if (queryResult.trace.scope?.corpusId) {
+                scopeTags.push(`scope_corpus:${queryResult.trace.scope.corpusId}`);
+            }
+            const persistedMemory = await this.addConversationMemory({
+                userId,
+                namespace,
+                content: `User focus: ${message}`,
+                tags: ['agent_turn', 'user_focus', ...scopeTags],
+                source: 'agent_conversation',
+                confidence: 0.82,
+                scopeWorkspaceId: queryResult.trace.scope?.workspaceId || null,
+                scopeCorpusId: queryResult.trace.scope?.corpusId || null,
+                now: generatedAt,
+            });
+            memoryActions.push({
+                kind: 'persist_session_memory',
+                status: persistedMemory.added === true ? 'applied' : 'skipped',
+                layer: persistedMemory.layer || this.resolveConversationMemoryLayer(namespace),
+                namespace,
+                memoryId: typeof persistedMemory.memory?.memoryId === 'string' ? persistedMemory.memory.memoryId : undefined,
+                reason: 'Persist the latest user focus to scoped conversation memory.',
+            });
+        }
+        if (citations.length > 0) {
+            memoryActions.push({
+                kind: 'propose_long_term_memory',
+                status: 'proposed',
+                layer: 'long_term',
+                namespace: 'project',
+                reason: `Promote ${citations[0].title} to long-term project memory if the same scope is recalled repeatedly.`,
+            });
+        }
+
+        const invocationId = this.nextId('agent_invocation');
+        const traceScope = queryResult.trace.scope || {
+            source: 'global',
+            workspaceId: null,
+            corpusId: null,
+            documentIds: [],
+            atomIds: [],
+            sourcePathPrefixes: [],
+            languages: [],
+            matchedAtomCount: queryResult.items.length,
+        };
+        const answer = this.buildScopedConversationAnswer({
+            message,
             knowledgePoints,
+            citations,
+            recalledMemories,
+        });
+        const response: AgentConversationResponse = {
+            userId,
+            sessionId,
+            assistantMessage: answer,
+            answer,
+            knowledgePoints,
+            citations,
+            recalledMemories,
+            memoryActions,
             summary: {
-                generatedAt: this.nowProvider().toISOString(),
+                generatedAt,
                 topK,
                 returnedKnowledgePoints: knowledgePoints.length,
+                returnedCitations: citations.length,
+                recalledMemoryCount: recalledMemories.length,
+                appliedMemoryCount: memoryActions.filter((action) => action.status === 'applied').length,
                 queryEvidenceCoverageRatioPct: Number(
                     (Number(queryResult.trace?.evidenceCoverageRatio || 0) * 100).toFixed(2)
                 ),
             },
+            trace: {
+                sessionId,
+                invocationId,
+                retrieval: queryResult.trace,
+                recalledMemoryCount: recalledMemories.length,
+                appliedMemoryCount: memoryActions.filter((action) => action.status === 'applied').length,
+                usedScope: traceScope,
+            },
         };
+        this.upsertConversationSessionState({
+            sessionId,
+            userId,
+            mode: 'grounded_conversation',
+            workspaceId: traceScope.workspaceId,
+            corpusId: traceScope.corpusId,
+            activeResourceIds: this.resolveSourceResourceIdsForAtomIds(knowledgePoints.map((point) => point.atomId)),
+            activeProjectionIds: this.resolveSourceProjectionIdsForAtomIds(knowledgePoints.map((point) => point.atomId)),
+            topK,
+            queryBackend: String(request.scope && queryResult.trace.modeWeights.vector ? 'local_vector' : '').trim() || null,
+            persistMemory: request.persistMemory !== false,
+            memoryNamespace: namespace,
+            exportProfileId: traceScope.workspaceId
+                ? this.workspaceRegistry.listActiveWorkspaces().find((workspace) => workspace.workspaceId === traceScope.workspaceId)?.exportProfileId || null
+                : null,
+            panelState: {
+                lastGroundedAnswerAt: generatedAt,
+                returnedKnowledgePoints: knowledgePoints.length,
+                returnedCitations: citations.length,
+            },
+            recordedAt: generatedAt,
+        });
+        this.recordAgentConversationTurn({
+            sessionId,
+            userId,
+            request: {
+                ...request,
+                userId,
+                sessionId,
+                message,
+                topK,
+                asOf: generatedAt,
+                memoryNamespace: namespace,
+            },
+            response,
+        });
+        this.recordWorkflowArtifact({
+            kind: 'research_report',
+            sessionId,
+            userId,
+            workspaceId: traceScope.workspaceId,
+            corpusId: traceScope.corpusId,
+            title: `Grounded conversation: ${String(message || 'local knowledge').slice(0, 64)}`,
+            sourceAtomIds: knowledgePoints.map((point) => point.atomId),
+            summary: answer,
+            payload: {
+                citations,
+                recalledMemories,
+                memoryActions,
+            },
+            recordedAt: generatedAt,
+        });
+        await this.persistIfNeeded();
+        return response;
     }
 
-    public async streamAgentConversation(request: {
-        userId?: unknown;
-        message?: unknown;
-        topK?: unknown;
-    } = {}): Promise<AsyncGenerator<any, void, void>> {
+    public async streamAgentConversation(request: AgentConversationRequest = {}): Promise<AsyncGenerator<any, void, void>> {
         const result = await this.agentConversation(request);
         const turnId = this.nextId('turn');
         const emittedAt = this.nowProvider().toISOString();
@@ -6783,24 +8343,46 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             'source:',
             String(request.source || 'manual').trim() || 'manual'
         );
-        const entry: MemoryEntry = {
-            key: String(request.memoryId || '').trim() || this.nextId('conv_memory'),
-            value: content,
-            tags,
-            confidence: clamp(Number(request.confidence ?? 0.72), 0, 1),
-            references,
-            createdAt: nowIso,
-            updatedAt: nowIso,
-            expiresAt: this.resolveOptionalTimestamp(request.expiresAt) || undefined,
-        };
+        const entry = this.buildGovernedMemoryEntry({
+            entry: {
+                key: String(request.memoryId || '').trim() || this.nextId('conv_memory'),
+                value: content,
+                tags,
+                confidence: clamp(Number(request.confidence ?? 0.72), 0, 1),
+                references,
+                createdAt: nowIso,
+                updatedAt: nowIso,
+                expiresAt: this.resolveOptionalTimestamp(request.expiresAt) || undefined,
+                scopeWorkspaceId: this.normalizeMemoryScopeValue(request.scopeWorkspaceId),
+                scopeCorpusId: this.normalizeMemoryScopeValue(request.scopeCorpusId),
+            },
+        });
         bank[layer].push(entry);
-        const evictedCount = this.evictMemoryLayer(bank, layer, nowIso);
+        const eviction = this.evictMemoryLayerDetailed(bank, layer, nowIso);
+        this.appendMemoryAuditRecord({
+            userId,
+            operation: 'write',
+            layer,
+            entry,
+            reason: 'conversation_memory:add',
+            recordedAt: nowIso,
+        });
+        eviction.evictedEntries.forEach((evictedEntry) => {
+            this.appendMemoryAuditRecord({
+                userId,
+                operation: 'evict',
+                layer,
+                entry: evictedEntry,
+                reason: 'conversation_memory:add:capacity_or_expiry',
+                recordedAt: nowIso,
+            });
+        });
         await this.persistIfNeeded();
         return {
             added: true,
             namespace,
             layer,
-            evictedCount,
+            evictedCount: eviction.evictedCount,
             memory: this.buildConversationMemoryRecord(entry, layer),
             stats: this.collectMemoryStats(),
         };
@@ -6849,6 +8431,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const query = String(request.query || '').trim();
         const queryLabel = query || 'memory';
         const queryTokens = tokenize(queryLabel);
+        const requiredTokenHits = queryTokens.length <= 1
+            ? queryTokens.length
+            : Math.max(1, Math.ceil(queryTokens.length * 0.5));
         const nowIso = this.resolveTimestamp(request.now);
         const nowTime = Date.parse(nowIso);
         const matchedEntries = this.collectConversationMemoryEntries(userId, namespace)
@@ -6866,7 +8451,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     ...(Array.isArray(entry.tags) ? entry.tags : []),
                     ...(Array.isArray(entry.references) ? entry.references : []),
                 ].join(' ')).toLowerCase();
-                return queryTokens.every((token) => haystack.includes(token));
+                const tokenHits = queryTokens.reduce((count, token) => count + (haystack.includes(token) ? 1 : 0), 0);
+                return tokenHits >= requiredTokenHits;
             })
             .map(({ layer, entry }) => {
                 const record = this.buildConversationMemoryRecord(entry, layer);
@@ -6879,7 +8465,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 const tokenHits = queryTokens.reduce((count, token) => count + (haystack.includes(token) ? 1 : 0), 0);
                 return {
                     record,
-                    score: Number((tokenHits + Number(record.confidence || 0)).toFixed(4)),
+                    score: Number((
+                        tokenHits
+                        + Number(record.confidence || 0)
+                        + computeGovernedMemoryWeight(entry)
+                    ).toFixed(4)),
                 };
             })
             .sort((left, right) => {
@@ -6889,6 +8479,34 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 return String(right.record.updatedAt || '').localeCompare(String(left.record.updatedAt || ''));
             });
         const results = matchedEntries.slice(0, limit).map((item) => item.record);
+        matchedEntries.slice(0, limit).forEach((item) => {
+            this.appendMemoryAuditRecord({
+                userId,
+                operation: 'recall',
+                layer: item.record.layer as MemoryLayer,
+                entry: this.buildGovernedMemoryEntry({
+                    entry: {
+                        key: String(item.record.memoryId || ''),
+                        value: String(item.record.content || ''),
+                        tags: Array.isArray(item.record.tags) ? item.record.tags.map((tag) => String(tag || '')) : [],
+                        confidence: Number(item.record.confidence || 0),
+                        references: Array.isArray(item.record.references)
+                            ? item.record.references.map((reference) => String(reference || ''))
+                            : [],
+                        createdAt: String(item.record.createdAt || nowIso),
+                        updatedAt: String(item.record.updatedAt || nowIso),
+                        expiresAt: isNonEmptyString(item.record.expiresAt) ? String(item.record.expiresAt) : undefined,
+                        memoryType: isNonEmptyString(item.record.memoryType) ? String(item.record.memoryType) : undefined,
+                        memoryPurpose: isNonEmptyString(item.record.memoryPurpose) ? String(item.record.memoryPurpose) : undefined,
+                        classificationConfidence: Number(item.record.classificationConfidence || 0),
+                        scopeWorkspaceId: this.normalizeMemoryScopeValue(item.record.scopeWorkspaceId),
+                        scopeCorpusId: this.normalizeMemoryScopeValue(item.record.scopeCorpusId),
+                    },
+                }),
+                reason: query ? `conversation_memory:recall:${query}` : 'conversation_memory:recall',
+                recordedAt: nowIso,
+            });
+        });
         const recallLines = results.map((record, index) => (
             `${index + 1}. [${String(record.namespace || 'conversation')}] ${String(record.content || '').trim()}`
         ));
@@ -6922,6 +8540,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const layer = this.resolveConversationMemoryLayer(namespace);
         const bank = this.ensureUserMemoryBank(userId);
         const beforeCount = bank[layer].length;
+        const deletedEntries = bank[layer].filter((entry) => (
+            entry.key === memoryId
+            && this.hasConversationMemoryDomainTag(entry)
+            && this.extractConversationMemoryTagValue(entry, 'namespace:') === namespace
+        ));
         bank[layer] = bank[layer].filter((entry) => (
             entry.key !== memoryId
             || !this.hasConversationMemoryDomainTag(entry)
@@ -6929,6 +8552,17 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         ));
         const deletedCount = beforeCount - bank[layer].length;
         if (deletedCount > 0) {
+            const recordedAt = this.resolveTimestamp(request.now);
+            deletedEntries.forEach((entry) => {
+                this.appendMemoryAuditRecord({
+                    userId,
+                    operation: 'evict',
+                    layer,
+                    entry,
+                    reason: 'conversation_memory:delete',
+                    recordedAt,
+                });
+            });
             await this.persistIfNeeded();
         }
         return {
@@ -6978,20 +8612,31 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         } else {
             nextConfidence = clamp(nextConfidence + 0.08, 0, 1);
         }
-        const updatedEntry: MemoryEntry = {
-            ...current,
-            value: feedback === 'correct' && isNonEmptyString(request.correctedContent)
-                ? String(request.correctedContent).trim()
-                : current.value,
-            tags: this.appendConversationMemoryFeedbackTag(
-                Array.isArray(current.tags) ? [...current.tags] : [],
-                feedback,
-                nowIso
-            ),
-            confidence: Number(nextConfidence.toFixed(4)),
-            updatedAt: nowIso,
-        };
+        const updatedEntry = this.buildGovernedMemoryEntry({
+            entry: {
+                ...current,
+                value: feedback === 'correct' && isNonEmptyString(request.correctedContent)
+                    ? String(request.correctedContent).trim()
+                    : current.value,
+                tags: this.appendConversationMemoryFeedbackTag(
+                    Array.isArray(current.tags) ? [...current.tags] : [],
+                    feedback,
+                    nowIso
+                ),
+                confidence: Number(nextConfidence.toFixed(4)),
+                updatedAt: nowIso,
+            },
+            previous: current,
+        });
         bank[layer][targetIndex] = updatedEntry;
+        this.appendMemoryAuditRecord({
+            userId,
+            operation: 'feedback',
+            layer,
+            entry: updatedEntry,
+            reason: `conversation_memory:feedback:${feedback}`,
+            recordedAt: nowIso,
+        });
         await this.persistIfNeeded();
         return {
             recorded: true,

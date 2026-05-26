@@ -6,7 +6,9 @@ import { registerAllRoutes, type ServerContext } from './index';
 
 function createMockContext(): ServerContext {
     return {
-        knowledgeLearningPlatform: {} as any,
+        knowledgeLearningPlatform: {
+            getKnowledgeState: async () => ({ documents: 0 })
+        } as any,
         knowledgeIngestor: { ingestKnowledge: async () => ({}), averageIngestLatencyMs: () => 0, getDiagnostics: () => ({}) } as any,
         knowledgeQuerier: { queryKnowledge: async () => ({}), getDiagnosticsSummary: () => ({}) } as any,
         conversationManager: { getDiagnosticsSummary: () => ({}) } as any,
@@ -52,7 +54,8 @@ describe('Route Registry', () => {
         expect(paths.has('GET /api/knowledge/state')).toBe(true);
         expect(paths.has('POST /api/knowledge/ingest')).toBe(true);
         expect(paths.has('POST /api/knowledge/query')).toBe(true);
-        expect(paths.has('POST /api/knowledge/conversation')).toBe(true);
+        expect(paths.has('POST /api/knowledge/export/workspace')).toBe(true);
+        expect(paths.has('POST /api/knowledge/conversation')).toBe(false);
     });
 
     test('notemd routes are registered', () => {

@@ -1,4 +1,6 @@
 import type {
+    AgentConversationRequest,
+    AgentConversationResponse,
     IngestGuardrailEvaluationRequest,
     IngestGuardrailEvaluationResponse,
     KnowledgeIngestRequest,
@@ -35,6 +37,7 @@ import type {
     TutorActionResponse,
     KnowledgeSystemState,
 } from './types';
+import type { WorkspaceExportBundle, WorkspaceExportBundleRequest } from '../export/types';
 
 export interface KnowledgeIngestAPI {
     ingestKnowledge(request: KnowledgeIngestRequest): Promise<KnowledgeIngestResponse>;
@@ -80,6 +83,10 @@ export interface MemoryPolicyAPI {
     applyMemoryPolicy(request: MemoryPolicyRequest): Promise<MemoryPolicyResponse>;
 }
 
+export interface AgentConversationAPI {
+    agentConversation(request: AgentConversationRequest): Promise<AgentConversationResponse>;
+}
+
 export interface LearningQualityGateAPI {
     evaluateLearningQuality(request: LearningQualityEvaluationRequest): Promise<LearningQualityEvaluationResponse>;
 }
@@ -105,6 +112,10 @@ export interface KnowledgeRuntimeStateAPI {
     getKnowledgeState(): KnowledgeSystemState;
 }
 
+export interface WorkspaceExportBundleAPI {
+    buildWorkspaceExportBundle(request: WorkspaceExportBundleRequest): Promise<WorkspaceExportBundle>;
+}
+
 export interface KnowledgeLearningPlatformAPI extends
     KnowledgeIngestAPI,
     KnowledgeQueryAPI,
@@ -117,9 +128,11 @@ export interface KnowledgeLearningPlatformAPI extends
     StudySessionPlanExecutionAPI,
     TutorActionAPI,
     MemoryPolicyAPI,
+    AgentConversationAPI,
     LearningQualityGateAPI,
     LearningQualitySnapshotAPI,
     LearningQualityBaselineAPI,
     IngestGuardrailAPI,
-    KnowledgeRuntimeStateAPI {
+    KnowledgeRuntimeStateAPI,
+    WorkspaceExportBundleAPI {
 }
