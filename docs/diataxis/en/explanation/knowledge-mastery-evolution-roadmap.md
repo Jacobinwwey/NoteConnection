@@ -60,6 +60,25 @@ This requires:
   - Phase-3 is now operational-baseline rather than catalog-only: tutor telemetry, tutor trace/provider trends, conversation memory, memory-policy diagnostics, and default runtime tutor-adapter injection are real, but production-proven multi-provider routing policy is still open.
 - Active rollout focus therefore changes from "assume closure and move on" to "keep the new A8 packaged/runtime and workload-matrix proofs green, keep the new A9 runtime and workload-matrix proofs green, finish the remaining soak/performance A8 closure plus A9 threshold convergence, then move next into honest Phase-2 gate promotion."
 
+## 2026-05-27 Tauri-First Interaction and CI Stabilization
+
+- The current branch now also has a real Tauri-first assistant-reply baseline:
+  - grounded conversation no longer stops at plain-text `assistantMessage` mounting,
+  - backward-compatible `assistantBlocks` now exist in the conversation response contract,
+  - a shared Reader-derived markdown/math/mermaid runtime now powers rich assistant replies in the Tauri workspace shell.
+- This does not change the strategic Phase-1 / Phase-2 / Phase-3 classification.
+  It changes the interaction baseline:
+  - Tauri is now the rich-render reference surface,
+  - Godot remains a later downgrade/materialization target rather than the feature-constraining baseline for assistant replies.
+- Remote CI has also been re-stabilized at current HEAD:
+  - `Migration Gates` and `Fixrisk Operational Readiness` were brought back to green after the strict PathBridge verifier was realigned with current brightness bounds,
+  - workflow Node.js baselines were upgraded from 20 to 24 so CI no longer relies on the forced-node24 compatibility override path.
+
+Practical implication:
+
+- the next work is no longer "make the Tauri shell capable of rich replies" because that baseline now exists,
+- the next work is to broaden rich assistant block coverage, keep the render substrate verified in real browser/Tauri runtime flows, and continue reducing architecture pressure while the graph/ANN substrate work proceeds.
+
 ## Primary Structural Gaps Still Open
 
 1. Real graph backend closure:

@@ -23,6 +23,7 @@ Additional note (2026-05-12):
 - [x] The Tauri agent reply area no longer depends only on plain-text assistant mounting; structured replies now render through typed blocks.
 - [x] Shared Reader-derived render-substrate reuse inside the agent workspace is now in place.
 - [x] HTML artifact isolation for rich assistant outputs is now in place through sandboxed preview.
+- [x] The remote `Migration Gates` and `Fixrisk Operational Readiness` workflows are back to green, and the workflow Node.js baseline has been raised to 24 to reduce future CI drift.
 
 Active execution references:
 

@@ -12,7 +12,6 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   NOTE_CONNECTION_SBOM_ATTESTATION_KEY_ID: ${{ secrets.SBOM_SIGNING_KEY_ID }}
   NOTE_CONNECTION_SBOM_SIGNING_PRIVATE_KEY_PEM: ${{ secrets.SBOM_SIGNING_PRIVATE_KEY_PEM }}
   NOTE_CONNECTION_SBOM_SIGNING_PUBLIC_KEY_PEM: ${{ secrets.SBOM_SIGNING_PUBLIC_KEY_PEM }}
@@ -40,7 +39,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
           cache: "npm"
 

@@ -23,6 +23,7 @@
 - [x] Tauri agent reply area 已不再只依赖纯文本挂载 assistant reply；结构化回复现在通过 typed blocks 渲染。
 - [x] Reader render substrate 在 agent workspace 内的共享复用已落地。
 - [x] 面向 rich assistant output 的 HTML artifact 隔离路径已通过 sandboxed preview 落地。
+- [x] remote `Migration Gates` 与 `Fixrisk Operational Readiness` 已恢复为绿色，workflow 的 Node.js 基线也已提升到 24，以降低后续 CI 漂移风险。
 
 当前执行参考：
 

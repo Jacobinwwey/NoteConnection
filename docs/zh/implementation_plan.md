@@ -22,7 +22,8 @@
   - 面向 `app_config.toml` 的 provider preset / template 流程，
   - conversation turn / resume 头的 CORS 闭环，
   - Reader 侧 Mermaid / KaTeX 加固与 leaked-error suppression，
-  - 一等的 Tauri runtime / webview / window debug capture 脚本。
+  - 一等的 Tauri runtime / webview / window debug capture 脚本，
+  - strict PathBridge / fixrisk 门禁族群的 remote CI 恢复，以及 workflow Node.js 基线升级到 24，不再依赖 forced-node24 兼容过渡开关。
 - 本轮已新落地：
   - Tauri agent workspace 中的 typed reply-rendering model，
   - Reader render substrate 在 agent reply surface 中的共享复用，
@@ -41,6 +42,9 @@
    - 保留 legacy fallback，
    - 保持现有 knowledge-point / capability orchestration 稳定，
    - 在渲染升级后补齐 docs / frontend contract / build-runtime 证明。
+4. **P6：CI 加固跟进**
+   - 持续保持 `Migration Gates` 与 `Fixrisk Operational Readiness` 在 `main` 上为绿，
+   - 把未来 workflow / runtime 漂移当作实现面的一部分处理，而不是事后补锅。
 
 #### 验收标准
 

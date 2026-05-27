@@ -12,6 +12,25 @@
   - Phase-3 现已进入 operational baseline：导师遥测、导师 trace/provider trend、conversation memory、memory-policy diagnostics，以及默认 runtime tutor-adapter 注入都是真实实现，但生产级多适配器路由策略仍未闭环。
 - 因此下一轮推进不应再以“假定底座完成”为前提，而应先保持 A8 新的 packaged/runtime 与 workload matrix 证明持续为绿，也保持 A9 新的 runtime 与 workload matrix 证明持续为绿，补齐剩余的 soak / 长时段 / 性能闭环与 A9 的阈值收敛，再进入诚实的 Phase-2 门禁升级。
 
+## 2026-05-27 Tauri-first 交互基线与 CI 稳定化
+
+- 当前分支现在也具备了真实的 Tauri-first assistant-reply 基线：
+  - grounded conversation 已不再停留在 plain-text `assistantMessage` 挂载，
+  - conversation response contract 已新增向前兼容的 `assistantBlocks`，
+  - 一套从 Reader 侧抽取出来的 markdown / math / mermaid 共享 runtime 已驱动 Tauri workspace shell 中的 rich assistant reply。
+- 这不会改变 Phase-1 / Phase-2 / Phase-3 的战略分级，
+  但会改变交互基线：
+  - Tauri 现在是 rich-render 的参考交互面，
+  - Godot 仍是后续的降级 / 物化目标，而不再反向约束当前 assistant reply 的功能基线。
+- 当前 HEAD 的 remote CI 也已重新稳定：
+  - `Migration Gates` 与 `Fixrisk Operational Readiness` 已在 strict PathBridge verifier 与当前亮度边界重新对齐后恢复为绿色，
+  - workflow 的 Node.js 基线也已从 20 升级到 24，不再依赖 forced-node24 兼容过渡开关。
+
+实际含义：
+
+- 下一阶段工作不再是“让 Tauri shell 具备 rich reply 能力”，因为这条基线已经存在，
+- 下一阶段工作应转向扩充 richer assistant block 覆盖面、保持 render substrate 在真实 browser/Tauri 运行时下持续可验证，并继续在 graph/ANN substrate 推进的同时压缩架构压力。
+
 ## 战略总目标
 
 路线图只围绕一个核心目标展开：

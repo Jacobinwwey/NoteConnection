@@ -5,6 +5,7 @@
 - [x] Reader 侧 markdown / KaTeX / Mermaid 加固与 Tauri 调试抓取工具链已在当前分支真实落地。
 - [x] Tauri agent workspace 已具备 typed rich-reply baseline，不再只是 `assistantMessage` 纯文本挂载。
 - [x] 这条 Tauri-first 路线已作为当前基线落地：在保持现有 knowledge-point / capability 兼容的前提下，引入了共享 Reader-aligned rich reply rendering。
+- [x] 先前失败的 remote `Migration Gates` 与 `Fixrisk Operational Readiness` 已在 strict PathBridge verifier 对齐和 workflow Node 24 加固后恢复为绿色。
 
 主要参考：
 

@@ -24,7 +24,6 @@ permissions:
   contents: write
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   GODOT_ALLOW_UPSTREAM_FALLBACK: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.allow_godot_upstream_fallback != 'false' }}
   GODOT_MIRROR_TAG: "godot-mirror-v4.3-stable"
   GODOT_UPSTREAM_BASE_URL: "https://github.com/godotengine/godot/releases/download/4.3-stable"
@@ -189,7 +188,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
 
       - name: Setup Rust toolchain
@@ -359,7 +358,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
 
       - name: Setup Java 23.0.1

@@ -21,7 +21,8 @@ Align the active implementation plan with current code reality:
   - provider preset/template flows for `app_config.toml`,
   - CORS closure for conversation turn/resume headers,
   - Reader-side Mermaid/KaTeX hardening and leaked-error suppression,
-  - first-party Tauri runtime/webview/window debug capture scripts.
+  - first-party Tauri runtime/webview/window debug capture scripts,
+  - remote CI recovery for the strict PathBridge / fixrisk gate family, with workflow Node.js baselines now moved to 24 instead of relying on the forced-node24 compatibility override.
 - Newly implemented in this slice:
   - a typed reply-rendering model in the Tauri agent workspace,
   - shared reuse of Reader-derived markdown/math/mermaid rendering inside the agent reply surface,
@@ -40,6 +41,9 @@ Align the active implementation plan with current code reality:
    - retain legacy fallback behavior,
    - preserve existing knowledge-point/capability orchestration,
    - verify docs, frontend contracts, and build/runtime proof after the rendering uplift.
+4. **P6: CI hardening follow-through**
+   - keep `Migration Gates` and `Fixrisk Operational Readiness` green on `main`,
+   - treat future workflow/runtime drift as part of the implementation surface rather than a separate afterthought.
 
 #### Acceptance criteria
 
