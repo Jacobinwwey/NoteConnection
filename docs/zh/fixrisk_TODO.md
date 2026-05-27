@@ -1,6 +1,6 @@
 # NoteConnection Fixrisk TODO（实时状态）
 
-最后更新：2026-03-22
+最后更新：2026-05-27
 
 ## 范围说明
 本文件只保留“当前可验证”的真实风险。只有当问题具备代码修复和契约测试（或明确的运维闸门）时，才标记为 `Closed`。
@@ -17,7 +17,7 @@
 | FR-007 | Canvas 读屏不可访问 | Critical | Closed | 无障碍契约已纳入测试集。 |
 | FR-008 | 隐私清单合规闸门缺失 | Critical | Closed | 已具备 Privacy Manifest 测试。 |
 | FR-009 | 真机证据未强绑定大图阈值 | High | Pending（运维证据） | 校验脚本已严格校验，并在 `docs/mobile-evidence` 缺少新鲜真机证据时阻断闭环。 |
-| FR-010 | Action 节点弃用 | Medium | Closed | 升级 Node 24 流程。 |
+| FR-010 | Action 节点弃用 | Medium | Closed | 仓库自有工作流现已固定为 `actions/setup-node@v4` + `node-version: "24"`，并由 verifier 校验“不再依赖过渡覆盖变量”；其余 marketplace action 的运行时注解仍作为非阻塞外部债务单独追踪。 |
 | FR-011 | Android 工具链漂移 | High | Closed | 强制 Java 21+。 |
 | FR-012 | App Store 拒审风险（缺少跟踪用途说明） | High | Closed | `ios/App/Info.plist` 已加入 `NSUserTrackingUsageDescription`，并由 `scripts/verify-privacy-manifest.js` 与 `src/privacy.manifest.contract.test.ts` 强制校验。 |
 | FR-013 | 无界限 localhost 端口回退 | Medium | Closed | 临时端口回退改为显式开关（`NOTE_CONNECTION_ALLOW_EPHEMERAL_PORT_FALLBACK=1`），并由 `src/server.port.fallback.contract.test.ts` 进行契约回归测试。 |

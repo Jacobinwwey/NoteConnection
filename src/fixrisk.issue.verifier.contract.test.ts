@@ -29,8 +29,10 @@ describe('fixrisk issue verifier contract', () => {
     expect(script).toContain("'FR-013'");
     expect(script).toContain("'FR-014'");
     expect(script).toContain("'FR-015'");
-    expect(script).toContain('actions/setup-java@v5');
+    expect(script).toContain('actions/setup-java@v4');
     expect(script).toContain('java-version');
+    expect(script).toContain('setup-node pins Node 24 baseline');
+    expect(script).toContain('no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override');
     expect(script).toContain('verify-capacitor-evidence-freshness.js');
     expect(script).toContain('NOTE_CONNECTION_REQUIRE_LARGE_GRAPH_EVIDENCE');
     expect(script).toContain('NOTE_CONNECTION_MIN_EVIDENCE_NODE_COUNT');

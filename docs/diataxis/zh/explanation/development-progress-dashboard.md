@@ -3,6 +3,33 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
+## 2026-05-27 工作流门禁重对齐与进度真相同步
+
+- 当前分支其实早已把仓库自有 workflow 迁移到 `actions/setup-node@v4` + `node-version: "24"`。
+- `main` 上真正的故障比旧文档描述得更窄：
+  - `scripts/verify-fixrisk-issues.js` 仍在强制要求已经移除的 `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` 过渡覆盖变量，
+  - 因而 `FR-010` 会在“workflow YAML 已经迁移完成”的前提下继续失败。
+- 本轮把三层真相一起对齐：
+  - verifier 现在校验的是当前 Node 24 / 无覆盖变量基线，
+  - fixrisk 实时状态文档现在准确描述该基线，
+  - 活跃进度 / task / implementation 文档不再把“某次曾经绿过”写成静态事实。
+
+这次修正的代码 / 方案现实矩阵：
+
+| 区域 | 先前期望 | 当前 HEAD 现实 | 状态 |
+|---|---|---|---|
+| FR-010 workflow 闭环 | 继续保留旧的 Node24 兼容覆盖变量 | 仓库自有 workflow 已经稳定在 `setup-node@v4` + `node-version: "24"`，且应继续保持“不依赖已删除覆盖变量” | Corrected |
+| Fixrisk code-level gate | workflow 迁移早已“算完成” | verifier 逻辑落后于 workflow 真相，需要同步升级到新基线 | Corrected |
+| 剩余 Node 20 预警 | 只要 `setup-node` 升到 24 就应完全消失 | 一部分注解仍来自 `upload-artifact`、release helper 等 marketplace action 运行时，属于外部非阻塞债务 | Tracked |
+| 进度文档口径 | 之前可以一直沿用“remote CI 已恢复为绿” | 现在必须区分仓库自有闭环、外部运行时债务与 live-run 状态 | Corrected |
+
+从这里出发的即时推进方向：
+
+- 持续保持 live `main` 上的 `Fixrisk Operational Readiness` 与 `Migration Gates` 为绿，
+- 在不破坏共享 Reader-derived render substrate 的前提下，继续扩展 Tauri-first rich reply，
+- 保持 Program F substrate 稳定，同时承认真正的工程前线仍是 Phase-1 / Phase-2 的发布级校准，
+- 持续推动架构缩减，因为 `server.ts`、`KnowledgeLearningPlatform.ts` 与前端宿主文件仍然过大。
+
 ## 2026-05-27 Tauri-first 对话渲染现实同步
 
 - 当前分支已经明显超出了上一次只强调 Program F 收口的状态快照。

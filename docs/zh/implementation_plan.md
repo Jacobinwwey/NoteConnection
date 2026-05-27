@@ -3,6 +3,44 @@
 
 ## 中文文档
 
+### 2026-05-27 工作流真相同步与后续主线重对齐
+
+#### 目标
+
+让实施计划重新与 `main` 上的真实状态对齐，重点覆盖三层真相：
+
+- 仓库自有 GitHub workflow 基线其实已经是 `actions/setup-node@v4` + `node-version: "24"`，
+- 旧的 `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` 过渡覆盖变量其实已经从 workflow 中移除，
+- 但 `scripts/verify-fixrisk-issues.js` 仍在校验这个已移除的过渡变量，而不是当前基线，因此 `FR-010` 会在“工作流已迁移”的前提下依旧失败。
+
+#### 根因与修正
+
+- 先前期望：
+  - FR-010 的闭环仍绑定在过渡期兼容覆盖变量上。
+- 当前代码真相：
+  - workflow YAML 已经迁移到“不依赖覆盖变量”的 Node 24 基线，
+  - 剩余的 Node 20 弃用注解来自 artifact/release helper 这类 marketplace action 运行时，而不是仓库自有 `setup-node` 配置。
+- 本轮修正：
+  - `scripts/verify-fixrisk-issues.js` 现在显式校验 `actions/setup-node@v4`，
+  - 在使用 `setup-node` 的 workflow 中强制 `node-version: "24"`，
+  - 同时把“必须存在 `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`”改成“必须移除该过时过渡变量”。
+
+#### 从当前 HEAD 出发的下一步执行顺序
+
+1. **P0：持续保持 workflow 真相、verifier 真相、docs 真相一致**
+   - 不再让过渡期假设重新进入 CI 门禁，
+   - fixrisk 的闭环标准始终绑定仓库可控现实。
+2. **P1：release-grade graph/store 加固**
+   - 把当前 `graphdb/sqlite` operational baseline 从重启/工作负载证明继续推进到 soak 与性能闭环。
+3. **P2：release-grade ANN 校准**
+   - 保持 `external_http` connector 在 workload proof 下稳定，再收口 recall/latency 阈值校准。
+4. **P3：Tauri-first reply/render surface 扩展**
+   - 继续以共享的 Reader-derived runtime 作为 Tauri 基线，在不破坏兼容性的前提下扩展 typed block 使用面。
+5. **P4：tutor routing 与 orchestration 加固**
+   - 从已激活的 local-first 路由推进到生产级多 provider 策略。
+6. **P5：架构压力缩减**
+   - 在保持向前兼容性的前提下，继续压缩 `server.ts`、`KnowledgeLearningPlatform.ts` 和大型前端宿主文件。
+
 ### 2026-05-27 Tauri-first Agent Reply Rendering 现实对齐
 
 #### 目标
@@ -23,7 +61,7 @@
   - conversation turn / resume 头的 CORS 闭环，
   - Reader 侧 Mermaid / KaTeX 加固与 leaked-error suppression，
   - 一等的 Tauri runtime / webview / window debug capture 脚本，
-  - strict PathBridge / fixrisk 门禁族群的 remote CI 恢复，以及 workflow Node.js 基线升级到 24，不再依赖 forced-node24 兼容过渡开关。
+  - 仓库自有 workflow 已迁移到“不依赖过渡覆盖变量”的 Node 24 基线，FR-010 现按 `setup-node@v4` + `node-version: "24"` 的当前真相进行门禁校验。
 - 本轮已新落地：
   - Tauri agent workspace 中的 typed reply-rendering model，
   - Reader render substrate 在 agent reply surface 中的共享复用，

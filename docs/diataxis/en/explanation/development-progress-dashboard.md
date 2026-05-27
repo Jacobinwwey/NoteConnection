@@ -3,6 +3,33 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-05-27 Workflow Gate Realignment and Progress Truth Sync
+
+- The current branch had already migrated repo-owned workflows to `actions/setup-node@v4` with `node-version: "24"`.
+- The actual failure on `main` was narrower than the old docs suggested:
+  - `scripts/verify-fixrisk-issues.js` was still enforcing the removed `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` transition override,
+  - so `FR-010` failed even though the workflow YAMLs themselves were already on the intended baseline.
+- This slice realigns three layers at once:
+  - the verifier now checks the current Node 24/no-override baseline,
+  - the fixrisk live-status docs now describe that baseline precisely,
+  - the active progress/task/implementation docs no longer treat “green once” as a timeless fact.
+
+Code-vs-plan reality for this correction:
+
+| Area | Prior expectation | Current HEAD reality | Status |
+|---|---|---|---|
+| FR-010 workflow closure | keep the old Node24 compatibility override in place | repo-owned workflows already run on `setup-node@v4` + `node-version: "24"` and should stay free of the removed override | Corrected |
+| Fixrisk code-level gate | workflow migration was already “done” | verifier logic lagged behind workflow reality and had to be updated to match the new baseline | Corrected |
+| Residual Node 20 warnings | all deprecation noise should disappear once `setup-node` moved to 24 | some annotations still come from marketplace action runtimes (`upload-artifact`, release helpers) and remain external non-blocking debt | Tracked |
+| Progress reporting | prior docs could keep saying remote CI was green again | active docs now need to separate repo-owned closure from remaining external/runtime debt and live-run status | Corrected |
+
+Immediate next direction from this point:
+
+- keep `Fixrisk Operational Readiness` and `Migration Gates` green on live `main` runs,
+- continue Tauri-first rich reply expansion without breaking the shared Reader-derived render substrate,
+- keep Program F substrate work stable while Phase-1/Phase-2 release-grade calibration remains the real engineering frontier,
+- keep architecture reduction active because `server.ts`, `KnowledgeLearningPlatform.ts`, and the frontend host files are still oversized.
+
 ## 2026-05-27 Tauri-First Conversation Rendering Reality Sync
 
 - The branch has moved materially beyond the last Program F-only status snapshot.

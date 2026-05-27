@@ -1,6 +1,6 @@
 # NoteConnection Fixrisk TODO (Live Status)
 
-Last updated: 2026-03-22
+Last updated: 2026-05-27
 
 ## Scope
 This document tracks only real, currently verifiable risks. Items are marked `Closed` only when backed by code + contract tests (or an explicit operational gate).
@@ -17,7 +17,7 @@ This document tracks only real, currently verifiable risks. Items are marked `Cl
 | FR-007 | Canvas graph semantics inaccessible to assistive tech | Critical | Closed | Accessibility contract in migration gate set. |
 | FR-008 | Privacy manifest compliance gate missing | Critical | Closed | iOS privacy manifest active. |
 | FR-009 | Physical-device evidence not explicitly tied to large-graph | High | Pending (Ops Evidence) | Strict verifier controls enforce constraints and block closure until fresh physical-device evidence exists under `docs/mobile-evidence`. |
-| FR-010 | Node 20 deprecation in GitHub Actions | Medium | Closed | Updated to Node 24. |
+| FR-010 | Node 20 deprecation in GitHub Actions | Medium | Closed | Repo-owned workflows now pin `actions/setup-node@v4` to `node-version: "24"` and the verifier enforces the no-override baseline; residual marketplace-action runtime annotations remain tracked as non-blocking external debt. |
 | FR-011 | Android/Tauri toolchain feasibility drift | High | Closed | Java 21+ enforcement. |
 | FR-012 | App Store rejection risk (missing tracking usage description) | High | Closed | `ios/App/Info.plist` now includes `NSUserTrackingUsageDescription`; verifier + contract enforce it (`scripts/verify-privacy-manifest.js`, `src/privacy.manifest.contract.test.ts`). |
 | FR-013 | Unbound localhost server port fallback | Medium | Closed | Ephemeral fallback requires explicit opt-in (`NOTE_CONNECTION_ALLOW_EPHEMERAL_PORT_FALLBACK=1`) and is contract-tested (`src/server.ts`, `src/server.port.fallback.contract.test.ts`). |

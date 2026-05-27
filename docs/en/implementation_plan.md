@@ -2,6 +2,44 @@
 
 ## English Document
 
+### 2026-05-27 Workflow Truth-Sync and Next-Step Realignment
+
+#### Objective
+
+Bring the implementation plan back in line with `main` reality at three levels:
+
+- the repo-owned GitHub workflow baseline is already `actions/setup-node@v4` + `node-version: "24"`,
+- the old `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` compatibility override has already been removed from the workflows,
+- but `scripts/verify-fixrisk-issues.js` was still verifying the removed override instead of the current baseline, which made `FR-010` fail even though the workflow files were already migrated.
+
+#### Root cause and correction
+
+- Prior expectation:
+  - FR-010 closure was tied to a transition-era compatibility override.
+- Current code truth:
+  - workflow YAMLs are already on the no-override Node 24 baseline,
+  - residual Node 20 deprecation annotations are coming from marketplace action runtimes such as artifact/release helpers, not from repo-owned `setup-node` configuration.
+- This slice corrects the repo-owned gate:
+  - `scripts/verify-fixrisk-issues.js` now validates `actions/setup-node@v4`,
+  - it now requires explicit `node-version: "24"` where `setup-node` is used,
+  - and it now enforces removal of the obsolete `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` override instead of requiring it.
+
+#### Next execution order from current HEAD
+
+1. **P0: keep workflow truth, verifier truth, and docs truth aligned**
+   - avoid reintroducing transition-only assumptions into CI gates,
+   - keep fixrisk closure criteria tied to repo-controlled reality.
+2. **P1: release-grade graph/store hardening**
+   - extend the current operational `graphdb/sqlite` baseline from restart/workload proof into soak and performance closure.
+3. **P2: release-grade ANN calibration**
+   - keep the `external_http` connector green under workload proof, then close recall/latency threshold calibration.
+4. **P3: Tauri-first reply/render surface expansion**
+   - keep the shared Reader-derived runtime as the Tauri baseline and continue widening typed block usage without breaking compatibility.
+5. **P4: tutor routing and orchestration hardening**
+   - move from active local-first routing toward a production-proven multi-provider policy.
+6. **P5: architecture pressure reduction**
+   - continue shrinking `server.ts`, `KnowledgeLearningPlatform.ts`, and the large frontend hosts while preserving forward compatibility.
+
 ### 2026-05-27 Tauri-First Agent Reply Rendering Realignment
 
 #### Objective
@@ -22,7 +60,7 @@ Align the active implementation plan with current code reality:
   - CORS closure for conversation turn/resume headers,
   - Reader-side Mermaid/KaTeX hardening and leaked-error suppression,
   - first-party Tauri runtime/webview/window debug capture scripts,
-  - remote CI recovery for the strict PathBridge / fixrisk gate family, with workflow Node.js baselines now moved to 24 instead of relying on the forced-node24 compatibility override.
+  - repo-owned workflow migration to the no-override Node 24 baseline, with FR-010 now enforced against `setup-node@v4` + `node-version: "24"` rather than the removed transition flag.
 - Newly implemented in this slice:
   - a typed reply-rendering model in the Tauri agent workspace,
   - shared reuse of Reader-derived markdown/math/mermaid rendering inside the agent reply surface,

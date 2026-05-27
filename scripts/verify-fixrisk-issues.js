@@ -359,8 +359,13 @@ function checkWorkflowNode24Migration() {
 
     const usesCheckout = source.includes('actions/checkout@');
     const usesSetupNode = source.includes('actions/setup-node@');
+    const nodeVersionMatches = Array.from(
+      source.matchAll(/node-version:\s*["']?([0-9]+(?:\.[0-9]+)?)["']?/g)
+    ).map((match) => match[1]);
+    const allNodeVersionsUse24 = nodeVersionMatches.length > 0 && nodeVersionMatches.every((value) => value.startsWith('24'));
     // v4 is the latest available version (v5 does not exist as of 2026-05).
-    // All workflows use @v4 with FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 for Node 24 compat.
+    // Current repo-owned baseline is actions/*@v4 plus explicit node-version 24,
+    // without relying on the legacy FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition flag.
     const hasCheckoutV4 = source.includes('actions/checkout@v4');
     const hasSetupNodeV4 = source.includes('actions/setup-node@v4');
     const hasNode24ForceFlag = source.includes('FORCE_JAVASCRIPT_ACTIONS_TO_NODE24');
@@ -386,15 +391,26 @@ function checkWorkflowNode24Migration() {
             : 'Expected actions/setup-node@v4 (v5 does not exist yet)'
         )
       );
+      checks.push(
+        makeStaticCheck(
+          `${workflowFile}: setup-node pins Node 24 baseline`,
+          allNodeVersionsUse24,
+          allNodeVersionsUse24
+            ? `node-version values: ${nodeVersionMatches.join(', ')}`
+            : nodeVersionMatches.length > 0
+              ? `Expected all setup-node node-version values to resolve to 24, found: ${nodeVersionMatches.join(', ')}`
+              : 'Expected at least one node-version entry alongside actions/setup-node'
+        )
+      );
     }
     if (usesCheckout || usesSetupNode) {
       checks.push(
         makeStaticCheck(
-          `${workflowFile}: Node24 force flag set`,
-          hasNode24ForceFlag,
-          hasNode24ForceFlag
-            ? 'FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present'
-            : 'FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 is missing'
+          `${workflowFile}: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override`,
+          !hasNode24ForceFlag,
+          !hasNode24ForceFlag
+            ? 'No legacy Node24 transition override present'
+            : 'Legacy FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 override should be removed from the current baseline'
         )
       );
     }
