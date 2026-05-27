@@ -13,6 +13,89 @@ This is the current product-facing priority because it connects the existing lea
 single, discoverable interaction loop instead of leaving tutor, path, and focus behaviors split
 across separate UI surfaces.
 
+## 2026-05-27 Tauri-First Reply Direction
+
+Current branch reality is now asymmetric:
+
+- the conversation contract is real,
+- the knowledge-point/action shell is real,
+- Tauri reader hardening is real,
+- scoped knowledge-workspace hydration is real,
+- but assistant reply rendering is still not real in the same sense.
+
+If Tauri is temporarily allowed to lead and Godot is treated as a later adaptation target, the
+correct architecture center shifts:
+
+- Tauri becomes the rich-render baseline,
+- the Reader markdown/math/mermaid pipeline becomes the render substrate,
+- Godot later consumes downgraded/materialized output instead of constraining Tauri-first UX now.
+
+### Current code gap
+
+The current backend/frontend contract is only partially product-complete:
+
+- `src/learning/KnowledgeLearningPlatform.ts` returns `assistantMessage`, `citations`, `knowledgePoints`, memory signals, and trace data.
+- `src/frontend/agent_workspace.js` still consumes `assistantMessage` as a flat string.
+- `src/frontend/workspace_panes.js` still mounts conversation messages through plain `textContent`.
+
+That means:
+
+- grounded retrieval works,
+- action orchestration works,
+- but markdown, KaTeX, Mermaid, and structured HTML do not yet reach the agent reply surface.
+
+### Tauri-first implementation program
+
+1. **Response contract evolution**
+   - Keep `assistantMessage` as a compatibility fallback.
+   - Add an `assistantBlocks` shape for typed reply rendering.
+   - Start with:
+     - `main_markdown`
+     - `citations`
+     - `knowledge_actions`
+     - `system_notice`
+     - optional `html_artifact`
+   - Primary touch points:
+     - `src/learning/api.ts`
+     - `src/learning/types.ts`
+     - `src/learning/KnowledgeLearningPlatform.ts`
+     - `src/server.ts`
+
+2. **Shared render runtime extraction**
+   - Reuse the mature Reader pipeline instead of creating a fourth markdown path.
+   - Extract the reusable markdown/math/mermaid runtime from:
+     - `src/frontend/reader.js`
+     - `src/frontend/app.js`
+     - `src/reader_renderer.ts`
+     - `src/routes/render.ts`
+   - The shared runtime should remain browser/Tauri-friendly and later support Godot materialization without being designed around it now.
+
+3. **Message block renderer in the agent workspace**
+   - Replace plain message mounting with a typed block renderer.
+   - Keep conversation-card/result-presentation registries intact.
+   - Introduce a dedicated assistant-reply renderer in:
+     - `src/frontend/agent_workspace.js`
+     - `src/frontend/workspace_panes.js`
+     - `src/frontend/index.html`
+     - `src/frontend/styles.css`
+
+4. **HTML artifact path**
+   - Do not inject arbitrary full HTML into the main chat DOM.
+   - Treat large HTML payloads as artifacts with a sandboxed preview flow.
+   - This should mirror the existing product direction already proven in external references like Cherry Studio, while staying stack-native to NoteConnection.
+
+5. **Streaming and transition safety**
+   - Keep current SSE + sync fallback behavior.
+   - Stream into `main_markdown` blocks rather than directly mutating plain-text message nodes.
+   - Preserve current `knowledgePoints` and capability execution behavior during the transition so the upgrade is forward-compatible rather than a rewrite.
+
+### Acceptance criteria for this next slice
+
+1. Tauri agent replies can render markdown headings, lists, tables, KaTeX, and Mermaid without leaving persistent error overlays in the visible chat surface.
+2. The reply surface still works when only legacy `assistantMessage` is present.
+3. Existing `knowledgePoints`, capability execution, and card registries remain backward-compatible.
+4. The same shared render substrate can later be materialized or downgraded for Godot instead of forcing Godot constraints into the Tauri-first UX now.
+
 ## Current Branch Status
 
 The branch has already crossed the "plan only" stage for this slice.

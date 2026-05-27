@@ -62,6 +62,82 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function hasExplicitRuntimeBackendBootstrap() {
+    if (typeof window === "undefined" || !window.__NC_SIDECAR_RUNTIME) {
+        return false;
+    }
+    const currentOrigin = String((window.location && window.location.origin) || "").trim().replace(/\/+$/, "");
+    const runtimeBaseUrl = String(window.__NC_SIDECAR_RUNTIME.baseUrl || "").trim().replace(/\/+$/, "");
+    return Boolean(currentOrigin && runtimeBaseUrl && currentOrigin === runtimeBaseUrl);
+}
+
+function isDetachedTauriCliPreviewPage() {
+    if (typeof window === "undefined" || window.__TAURI__) {
+        return false;
+    }
+    return Array.from(document.scripts || []).some((script) =>
+        /__tauri_cli/.test(String(script && (script.text || script.textContent) || ""))
+    );
+}
+
+function getRuntimeBaseOrigin() {
+    if (
+        !window.NoteConnectionRuntime ||
+        typeof window.NoteConnectionRuntime.getBaseUrl !== "function"
+    ) {
+        return "";
+    }
+    const baseUrl = String(window.NoteConnectionRuntime.getBaseUrl() || "").trim();
+    if (!baseUrl) {
+        return "";
+    }
+    try {
+        return new URL(baseUrl).origin;
+    } catch (_error) {
+        return "";
+    }
+}
+
+function isCapacitorNativeRuntime() {
+    if (typeof window === "undefined" || window.__TAURI__ || !window.Capacitor) {
+        return false;
+    }
+    try {
+        if (typeof window.Capacitor.getPlatform === "function") {
+            const platform = window.Capacitor.getPlatform();
+            if (platform && platform !== "web") {
+                return true;
+            }
+        }
+        if (typeof window.Capacitor.isNativePlatform === "function") {
+            return Boolean(window.Capacitor.isNativePlatform());
+        }
+    } catch (_error) {
+        return false;
+    }
+    return false;
+}
+
+function shouldEnableRuntimeSync() {
+    if (typeof window === "undefined") {
+        return false;
+    }
+    if (window.__TAURI__) {
+        return true;
+    }
+    if (isDetachedTauriCliPreviewPage() && window.location.origin !== getRuntimeBaseOrigin()) {
+        return false;
+    }
+    if (isCapacitorNativeRuntime()) {
+        return false;
+    }
+    if (hasExplicitRuntimeBackendBootstrap()) {
+        return true;
+    }
+    const origin = String((window.location && window.location.origin) || "").trim().toLowerCase();
+    return /^https?:\/\/(?:127\.0\.0\.1|localhost):3000$/.test(origin);
+}
+
 function normalizeDegreeMode(value) {
     return String(value || "").trim().toLowerCase() === "total" ? "total" : "visible";
 }
@@ -192,7 +268,12 @@ class SettingsManager {
         this.remoteSyncDeferred = false;
         this.isHydrationComplete = false;
         this.preHydrationPatches = [];
+        this.runtimeSyncEnabled = shouldEnableRuntimeSync();
         this.settings = this.loadLocalSnapshot();
+        if (!this.runtimeSyncEnabled) {
+            this.isHydrationComplete = true;
+            return;
+        }
         this.hydrateFromRuntime().catch((error) => {
             console.warn("[Settings] Runtime settings hydration failed; using local snapshot.", error);
         }).finally(() => {
@@ -393,6 +474,9 @@ class SettingsManager {
     }
 
     scheduleRuntimePersist() {
+        if (!this.runtimeSyncEnabled) {
+            return;
+        }
         if (!this.isHydrationComplete) {
             this.remoteSyncDeferred = true;
             return;

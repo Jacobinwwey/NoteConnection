@@ -1,10 +1,57 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const hasExplicitBrowserRuntimeBootstrap = () => {
+        if (typeof window === 'undefined' || !window.__NC_SIDECAR_RUNTIME) {
+            return false;
+        }
+        const currentOrigin = String((window.location && window.location.origin) || '').trim().replace(/\/+$/, '');
+        const runtimeBaseUrl = String(window.__NC_SIDECAR_RUNTIME.baseUrl || '').trim().replace(/\/+$/, '');
+        return Boolean(currentOrigin && runtimeBaseUrl && currentOrigin === runtimeBaseUrl);
+    };
+
+    const isDetachedTauriCliPreviewPage = () =>
+        !window.__TAURI__ &&
+        Array.from(document.scripts || []).some((script) =>
+            /__tauri_cli/.test(String(script && (script.text || script.textContent) || ''))
+        );
+
+    const getRuntimeBaseOrigin = () => {
+        const bridge = (typeof window !== 'undefined') ? window.NoteConnectionRuntime : null;
+        const baseUrl = bridge && typeof bridge.getBaseUrl === 'function'
+            ? String(bridge.getBaseUrl() || '').trim()
+            : '';
+        if (!baseUrl) {
+            return '';
+        }
+        try {
+            return new URL(baseUrl).origin;
+        } catch (_error) {
+            return '';
+        }
+    };
+
+    const isDetachedPreviewWithoutRuntimeBootstrap = () =>
+        isDetachedTauriCliPreviewPage() && window.location.origin !== getRuntimeBaseOrigin();
+
+    const canUseBrowserRuntimeBackend = () => {
+        if (typeof window === 'undefined' || window.__TAURI__) {
+            return false;
+        }
+        if (isDetachedPreviewWithoutRuntimeBootstrap()) {
+            return false;
+        }
+        if (hasExplicitBrowserRuntimeBootstrap()) {
+            return true;
+        }
+        const origin = String((window.location && window.location.origin) || '').trim().toLowerCase();
+        return /^https?:\/\/(?:127\.0\.0\.1|localhost):3000$/.test(origin);
+    };
+
     let runtimeCaps = {
         platform: 'web',
-        supports_sidecar: true,
-        supports_build: true,
-        supports_content_api: true,
-        supports_kb_runtime_change: true,
+        supports_sidecar: canUseBrowserRuntimeBackend(),
+        supports_build: canUseBrowserRuntimeBackend(),
+        supports_content_api: canUseBrowserRuntimeBackend(),
+        supports_kb_runtime_change: false,
         supports_native_pathmode: false,
         supports_mobile_wasm_compute: false,
         mobile_wasm_reason: 'non-mobile-runtime'
@@ -37,6 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return null;
     };
+
+    const isStandaloneFrontendPreviewRuntime = () =>
+        !window.__TAURI__ &&
+        !resolveCapacitorPlatform() &&
+        runtimeCaps.supports_sidecar !== true;
 
     const supportsCapacitorContentApi = () => {
         if (typeof window === 'undefined') {
@@ -190,6 +242,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     supports_mobile_wasm_compute: runtimeCaps.supports_mobile_wasm_compute,
                     mobile_wasm_reason: runtimeCaps.mobile_wasm_reason
                 });
+            } else {
+                const browserRuntimeBackend = canUseBrowserRuntimeBackend();
+                runtimeCaps = {
+                    ...runtimeCaps,
+                    platform: 'web',
+                    supports_sidecar: browserRuntimeBackend,
+                    supports_build: browserRuntimeBackend,
+                    supports_content_api: browserRuntimeBackend,
+                    supports_kb_runtime_change: false,
+                    supports_native_pathmode: false
+                };
+                if (!browserRuntimeBackend) {
+                    console.log('[SourceManager] Frontend preview runtime detected: backend-dependent APIs disabled until a runtime bootstrap is provided.');
+                }
             }
             exposeRuntimeCaps();
             return;
@@ -249,6 +315,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const parseGraphDataPayload = (text) => {
             const trimmed = text.trim();
             let parsed = null;
+            const extractAssignedJson = (sourceText, equalsIndex) => {
+                const textAfterEquals = sourceText.slice(equalsIndex + 1);
+                const openingIndex = textAfterEquals.search(/[\[{]/);
+                if (openingIndex < 0) {
+                    return '';
+                }
+                const startIndex = equalsIndex + 1 + openingIndex;
+                const openingChar = sourceText.charAt(startIndex);
+                const closingChar = openingChar === '{' ? '}' : ']';
+                let depth = 0;
+                let inString = false;
+
+                for (let cursor = startIndex; cursor < sourceText.length; cursor += 1) {
+                    const char = sourceText.charAt(cursor);
+                    const previous = sourceText.charAt(cursor - 1);
+                    if (char === '"' && previous !== '\\') {
+                        inString = !inString;
+                    }
+                    if (inString) {
+                        continue;
+                    }
+                    if (char === openingChar) {
+                        depth += 1;
+                    } else if (char === closingChar) {
+                        depth -= 1;
+                        if (depth === 0) {
+                            return sourceText.slice(startIndex, cursor + 1);
+                        }
+                    }
+                }
+
+                return '';
+            };
 
             // Expected format: const graphData = {...};
             if (
@@ -258,10 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ) {
                 const eqPos = trimmed.indexOf('=');
                 if (eqPos > -1) {
-                    let jsonText = trimmed.slice(eqPos + 1).trim();
-                    if (jsonText.endsWith(';')) {
-                        jsonText = jsonText.slice(0, -1);
-                    }
+                    const jsonText = extractAssignedJson(trimmed, eqPos);
                     parsed = JSON.parse(jsonText);
                 }
             } else if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
@@ -284,10 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (equalsIndex < 0) {
                         continue;
                     }
-                    let candidateJson = trimmed.slice(equalsIndex + 1).trim();
-                    if (candidateJson.endsWith(';')) {
-                        candidateJson = candidateJson.slice(0, -1).trim();
-                    }
+                    const candidateJson = extractAssignedJson(trimmed, equalsIndex);
                     if (!candidateJson) {
                         continue;
                     }
@@ -322,6 +415,23 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (providerErr) {
                 console.warn(`[Loader] Storage provider read failed for ${src}, falling back to runtime fetch strategy.`, providerErr);
             }
+        }
+
+        if (isDetachedPreviewWithoutRuntimeBootstrap()) {
+            throw new Error('Detached preview runtime has no sidecar-backed graph asset bootstrap.');
+        }
+
+        if (!window.__TAURI__ && runtimeCaps.supports_sidecar !== true) {
+            const previewUrl = `${src}?v=${Date.now()}`;
+            const response = await fetch(previewUrl, { cache: 'no-store' });
+            if (!response.ok) {
+                throw new Error(`Failed to fetch ${src}: HTTP ${response.status}`);
+            }
+            const text = await response.text();
+            const parsed = parseGraphDataPayload(text);
+            window.graphData = parsed;
+            console.log(`[Loader] Loaded ${src} via frontend preview asset: ${parsed.nodes.length} nodes`);
+            return;
         }
 
         // ─── Strategy 1: HTTP fetch from sidecar (works in browser, may fail in Tauri WebView) ───
@@ -379,10 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const loadScript = async (src) => {
         const isRuntimeGeneratedDataAsset = src.startsWith('data');
-        const useRuntimeGeneratedAssetFlow = Boolean(
-            isRuntimeGeneratedDataAsset &&
-            (window.__TAURI__ || (typeof runtimeCaps.platform === 'string' && runtimeCaps.platform.startsWith('capacitor-')))
-        );
+        const useRuntimeGeneratedAssetFlow = Boolean(isRuntimeGeneratedDataAsset);
         if (useRuntimeGeneratedAssetFlow) {
             await loadGraphDataFromSidecar(src);
             return;
@@ -452,6 +559,19 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const bootstrapScriptLoad = () => {
+        if (isDetachedPreviewWithoutRuntimeBootstrap()) {
+            console.log('[Loader] Detached preview runtime detected. Skipping runtime graph preload and loading app.js directly.');
+            triggerWelcomeModal(false);
+            loadScript('app.js')
+                .then(() => {
+                    console.log('[Loader] app.js loaded successfully');
+                })
+                .catch(err => {
+                    console.error('[Loader] Failed to load app.js (Critical Error):', err);
+                });
+            return;
+        }
+
         // Load data.js first (Critical Data), then app.js (Application Logic)
         loadScript('data.js')
             .then(() => {
@@ -608,6 +728,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const provider = getStorageProvider();
         return await provider.checkCache(target);
+    };
+
+    const ACTIVE_SOURCE_TARGET_EVENT = 'noteconnection:active-target-changed';
+
+    const normalizeActiveSourceTarget = (target) => {
+        const normalized = String(target || '').trim();
+        return normalized || 'ALL_FOLDERS';
+    };
+
+    const publishActiveSourceTarget = (target, source) => {
+        const normalizedTarget = normalizeActiveSourceTarget(target);
+        const payload = {
+            target: normalizedTarget,
+            source: String(source || 'source-manager').trim() || 'source-manager',
+            scope: normalizedTarget === 'ALL_FOLDERS'
+                ? null
+                : {
+                    workspaceId: normalizedTarget.toLowerCase(),
+                    corpusId: normalizedTarget.toLowerCase(),
+                    sourcePathPrefixes: [`Knowledge_Base/${normalizedTarget}`],
+                },
+        };
+        window.__NC_ACTIVE_SOURCE_TARGET = payload;
+        if (typeof window.dispatchEvent === 'function' && typeof window.CustomEvent === 'function') {
+            window.dispatchEvent(new CustomEvent(ACTIVE_SOURCE_TARGET_EVENT, { detail: payload }));
+        }
+        return payload;
     };
 
     const syncSidecarKbPath = async (kbPath) => {
@@ -775,7 +922,13 @@ document.addEventListener('DOMContentLoaded', () => {
             let folders = [];
             const inCapacitorRuntime = isCapacitorNativeRuntime();
 
-            if (inCapacitorRuntime) {
+            if (
+                isStandaloneFrontendPreviewRuntime() ||
+                isDetachedPreviewWithoutRuntimeBootstrap()
+            ) {
+                kbPath = t('source.previewPath');
+                folders = [];
+            } else if (inCapacitorRuntime) {
                 kbPath = t('source.capacitor.bundlePath');
                 const provider = getStorageProvider();
                 let listedFolders = [];
@@ -868,6 +1021,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 folderSelect.appendChild(packagedOption);
             }
 
+            if (folderSelect.options.length === 0 && isStandaloneFrontendPreviewRuntime()) {
+                const previewOption = document.createElement('option');
+                previewOption.value = '';
+                previewOption.disabled = true;
+                previewOption.selected = true;
+                previewOption.textContent = t('source.previewPath');
+                folderSelect.appendChild(previewOption);
+                loadBtn.disabled = true;
+                return;
+            }
+
             if (folderSelect.options.length === 0) {
                 const emptyOption = document.createElement('option');
                 emptyOption.value = '';
@@ -892,6 +1056,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 folderSelect.value = folderSelect.options[0].value;
             }
+            publishActiveSourceTarget(folderSelect.value, 'folder-bootstrap');
             console.log('[SourceManager] Folder dropdown populated with', folderSelect.options.length, 'options');
             
         } catch (err) {
@@ -938,6 +1103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (folderSelect.value) {
             localStorage.setItem(LAST_TARGET_KEY, folderSelect.value);
         }
+        publishActiveSourceTarget(folderSelect.value, 'folder-change');
     });
 
     // Add refresh functionality (will be triggered by IPC event from main process)
@@ -1039,6 +1205,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             localStorage.setItem(LAST_TARGET_KEY, target);
+            publishActiveSourceTarget(target, 'build-request');
 
             // Feature: Check for cached graph (Multi-Session Optimization)
             // Bridge-first runtime: sidecar HTTP path with Tauri IPC fallback.
@@ -1067,6 +1234,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const restoreSuccess = await storageProvider.restoreCache(target);
 
                         if (restoreSuccess) {
+                            publishActiveSourceTarget(target, 'cache-restore');
                             keepLockedForReload = requestSafeReload('cache-restore', { force: true });
                             return;
                         }
@@ -1134,6 +1302,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (success) {
+                publishActiveSourceTarget(target, 'build-success');
                 keepLockedForReload = true;
 
                 // v1.0.1: Pre-verify data.js is accessible before triggering reload.

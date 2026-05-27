@@ -18,6 +18,7 @@ describe('Knowledge mastery API contract wiring', () => {
             '/api/knowledge/ingest',
             '/api/knowledge/ingest-diff',
             '/api/knowledge/query',
+            '/api/knowledge/conversation',
             '/api/knowledge/mastery/diagnose',
             '/api/knowledge/mastery/misconceptions',
             '/api/knowledge/path',
@@ -74,7 +75,6 @@ describe('Knowledge mastery API contract wiring', () => {
 
     test('modular knowledge routes reference concrete platform methods or live runtime-runbook route ops', () => {
         const platformMethods = [
-            'agentConversation',
             'queryMasteryDiagnostics',
             'generateLearningPath',
             'queryKnowledgeQueryBackendComparisonHistory',

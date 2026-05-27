@@ -10,6 +10,7 @@ import { Translator } from './Translator';
 import { SearchManager } from './search/SearchManager';
 import { generateDiagramArtifact, DiagramGenerationOptions } from './diagram/diagramGenerationService';
 import { DiagramIntent } from './diagram/types';
+import { LlmProviderClient } from './LlmProvider';
 import {
     BatchProgress,
     BatchWorkflowRequest,
@@ -23,6 +24,7 @@ import {
     LlmDiagnoseRequest,
     LlmDiagnoseResult,
     LlmProviderConfig,
+    LlmProviderName,
     NotemdSettings,
     PreviewDiagramRequest,
     PreviewDiagramResult,
@@ -52,6 +54,7 @@ export class NotemdService {
     private readonly mermaidProcessor: MermaidProcessor;
     private readonly formulaFixer: FormulaFixer;
     private readonly duplicateDetector: DuplicateDetector;
+    private readonly llmProviderClient: LlmProviderClient;
 
     constructor(
         fileProcessor = new FileProcessor(),
@@ -59,7 +62,8 @@ export class NotemdService {
         contentGenerator = new ContentGenerator(),
         mermaidProcessor = new MermaidProcessor(),
         formulaFixer = new FormulaFixer(),
-        duplicateDetector = new DuplicateDetector()
+        duplicateDetector = new DuplicateDetector(),
+        llmProviderClient = new LlmProviderClient()
     ) {
         this.fileProcessor = fileProcessor;
         this.translator = translator;
@@ -67,6 +71,7 @@ export class NotemdService {
         this.mermaidProcessor = mermaidProcessor;
         this.formulaFixer = formulaFixer;
         this.duplicateDetector = duplicateDetector;
+        this.llmProviderClient = llmProviderClient;
     }
 
     public processFile(
@@ -703,6 +708,66 @@ export class NotemdService {
             const msg = e instanceof Error ? e.message : String(e);
             return { provider: providerName, model: modelName, status: 'error', latencyMs: Date.now() - startMs, error: msg };
         }
+    }
+
+    public async testLlmConnection(
+        request: Record<string, unknown>,
+        settings: NotemdSettings
+    ): Promise<{
+        success: boolean;
+        message: string;
+        provider: string;
+        model: string;
+    }> {
+        const requestedProvider = request && typeof request.provider === 'object'
+            ? (request.provider as Record<string, unknown>)
+            : null;
+        const requestedProviderName = String(
+            (request && typeof request.providerName === 'string' ? request.providerName : '') ||
+            (requestedProvider && typeof requestedProvider.name === 'string' ? requestedProvider.name : '') ||
+            settings.activeProvider ||
+            ''
+        ).trim();
+
+        const persistedProvider = settings.providers.find((provider) => provider.name === requestedProviderName);
+        if (!persistedProvider && !requestedProvider) {
+            throw new ValidationError(`Provider not found: ${requestedProviderName || settings.activeProvider}`);
+        }
+
+        const resolvedProviderName = String(
+            (persistedProvider && persistedProvider.name) ||
+            requestedProviderName ||
+            settings.activeProvider
+        ).trim() as LlmProviderName;
+
+        const provider: LlmProviderConfig = {
+            ...(persistedProvider || {
+                name: resolvedProviderName,
+                apiKey: '',
+                baseUrl: '',
+                model: '',
+                temperature: 0.5,
+                enabled: true,
+            }),
+            ...(requestedProvider ? {
+                name: resolvedProviderName,
+                apiKey: String(requestedProvider.apiKey || '').trim(),
+                baseUrl: String(requestedProvider.baseUrl || '').trim(),
+                model: String(requestedProvider.model || '').trim(),
+                temperature: Number.isFinite(Number(requestedProvider.temperature))
+                    ? Number(requestedProvider.temperature)
+                    : Number((persistedProvider && persistedProvider.temperature) || 0.5),
+                apiVersion: String(requestedProvider.apiVersion || '').trim(),
+            } : {}),
+        };
+
+        const result = await this.llmProviderClient.testConnection(provider);
+        return {
+            success: result.success,
+            message: result.message,
+            provider: provider.name,
+            model: provider.model,
+        };
     }
 
     // ── Extract original text (obsidian-notemd v1.8.4) ──

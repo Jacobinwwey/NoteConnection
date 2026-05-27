@@ -95,6 +95,8 @@ describe('app_config.toml adapters', () => {
   });
 
   test('path_mode settings are normalized and clamped', () => {
+    expect(DEFAULT_PATH_MODE_SETTINGS.background).toBe('');
+
     const nextConfig = applyPathModeSettingsToAppConfig(
       {},
       {
@@ -108,7 +110,7 @@ describe('app_config.toml adapters', () => {
     );
 
     const extracted = extractPathModeSettingsFromAppConfig(nextConfig);
-    expect(extracted.bg_brightness).toBe(10);
+    expect(extracted.bg_brightness).toBe(0.1);
     expect(extracted.reader_media_scale).toBe(0.1);
     expect(extracted.node_spacing).toBe(600);
     expect(extracted.reading_mode).toBe('window');

@@ -370,12 +370,13 @@ const SEMANTIC_CONTENT_TOKEN_LIMIT = 180;
 const SEMANTIC_TITLE_TOKEN_LIMIT = 24;
 const SEMANTIC_KEYWORD_TOKEN_LIMIT = 40;
 const SEMANTIC_QUERY_TOKEN_LIMIT = 48;
-const LOCAL_VECTOR_INDEX_SCHEMA_VERSION = 1;
+const SEMANTIC_CJK_NGRAM_LIMIT = 96;
+const LOCAL_VECTOR_INDEX_SCHEMA_VERSION = 2;
 const LOCAL_VECTOR_INDEX_BACKEND_ID = 'local-vector-v1';
-const LOCAL_VECTOR_INDEX_SIGNATURE_VERSION = 'local-vector-index-signature-v1';
+const LOCAL_VECTOR_INDEX_SIGNATURE_VERSION = 'local-vector-index-signature-v2';
 const LOCAL_VECTOR_ACCELERATION_ADAPTER_ID = 'local-vector-acceleration-ann-v1';
-const LOCAL_VECTOR_REPRESENTATION_VERSION = 'local-vector-representation-v1';
-const LOCAL_VECTOR_EMBEDDING_MODEL_ID = 'local-semantic-tfidf-v1';
+const LOCAL_VECTOR_REPRESENTATION_VERSION = 'local-vector-representation-v2';
+const LOCAL_VECTOR_EMBEDDING_MODEL_ID = 'local-semantic-tfidf-unicode-v2';
 const LOCAL_VECTOR_ANN_MIN_ATOMS = 96;
 const LOCAL_VECTOR_ANN_TOP_QUERY_TOKENS = 8;
 const LOCAL_VECTOR_ANN_CANDIDATE_MULTIPLIER = 28;
@@ -437,13 +438,18 @@ function normalizeSemanticToken(rawValue: unknown): string {
     return String(rawValue || '')
         .trim()
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '');
+        .normalize('NFKC')
+        .replace(/[^\p{L}\p{N}]+/gu, '');
 }
 
 function stemSemanticToken(rawValue: unknown): string {
     const token = normalizeSemanticToken(rawValue);
     if (!token) {
         return '';
+    }
+
+    if (!/^[a-z0-9]+$/.test(token)) {
+        return token;
     }
 
     if (token.endsWith('ies') && token.length > 4) {
@@ -470,14 +476,53 @@ function stemSemanticToken(rawValue: unknown): string {
     return token;
 }
 
+function buildCjkSemanticNgrams(rawText: unknown, limit: number): string[] {
+    if (limit <= 0) {
+        return [];
+    }
+    const segments = String(rawText || '')
+        .normalize('NFKC')
+        .match(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]+/gu) || [];
+    const tokens: string[] = [];
+    const seen = new Set<string>();
+    for (const segment of segments) {
+        const chars = Array.from(segment);
+        if (chars.length === 1) {
+            const token = chars[0];
+            if (!seen.has(token)) {
+                seen.add(token);
+                tokens.push(token);
+            }
+            continue;
+        }
+        for (const gramSize of [2, 3]) {
+            if (chars.length < gramSize) {
+                continue;
+            }
+            for (let index = 0; index <= chars.length - gramSize; index += 1) {
+                const token = chars.slice(index, index + gramSize).join('');
+                if (!token || seen.has(token)) {
+                    continue;
+                }
+                seen.add(token);
+                tokens.push(token);
+                if (tokens.length >= limit) {
+                    return tokens;
+                }
+            }
+        }
+    }
+    return tokens;
+}
+
 function extractSemanticTokens(rawText: unknown, limit: number): string[] {
     if (limit <= 0) {
         return [];
     }
     const tokens = String(rawText || '')
+        .normalize('NFKC')
         .toLowerCase()
-        .split(/[^a-z0-9]+/g)
-        .filter((token) => token.length > 0);
+        .match(/[\p{L}\p{N}]+(?:[_-][\p{L}\p{N}]+)*/gu) || [];
     const collected: string[] = [];
     const seen = new Set<string>();
     for (const token of tokens) {
@@ -487,6 +532,20 @@ function extractSemanticTokens(rawText: unknown, limit: number): string[] {
         }
         seen.add(normalized);
         collected.push(normalized);
+        if (collected.length >= limit) {
+            break;
+        }
+    }
+    if (collected.length >= limit) {
+        return collected;
+    }
+    const cjkTokens = buildCjkSemanticNgrams(rawText, Math.min(limit - collected.length, SEMANTIC_CJK_NGRAM_LIMIT));
+    for (const token of cjkTokens) {
+        if (!token || seen.has(token)) {
+            continue;
+        }
+        seen.add(token);
+        collected.push(token);
         if (collected.length >= limit) {
             break;
         }

@@ -1,3 +1,17 @@
+## 2026-05-27 活跃任务同步
+
+- [x] Scoped knowledge-workspace grounding 已在当前分支真实落地。
+- [x] Provider preset / TOML settings 交付已在当前分支真实落地。
+- [x] Reader 侧 markdown / KaTeX / Mermaid 加固与 Tauri 调试抓取工具链已在当前分支真实落地。
+- [ ] 当前优先级最高的未完成 Tauri 交互缺口，仍然是 agent workspace 内的 assistant reply rendering。
+- [ ] 下一条活跃实施路线应当保持 Tauri-first：在不破坏现有 knowledge-point / capability 流的前提下，从 `assistantMessage` 纯文本挂载升级到共享 Reader-aligned rich reply rendering。
+
+主要参考：
+
+- `docs/diataxis/zh/explanation/development-progress-dashboard.md`
+- `docs/diataxis/zh/explanation/agent-conversation-focus-mode-plan.md`
+- `docs/zh/implementation_plan.md`
+
 ## 2026-05-12 代码 / 方案现实快照
 
 - [x] agent-workspace 的 browser/runtime/Tauri 验证闭环已经是真实可重复的。

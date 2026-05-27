@@ -12,4 +12,15 @@ describe('Path Mode settings API contract', () => {
     expect(serverSource).toContain('extractPathModeSettingsFromAppConfig');
     expect(serverSource).toContain('applyPathModeSettingsToAppConfig');
   });
+
+  test('server path-mode settings loader does not short-circuit on stale in-memory cache', () => {
+    const loadStart = serverSource.indexOf('async function loadPathModeSettings(): Promise<PathModeSettings> {');
+    const loadEnd = serverSource.indexOf('async function persistPathModeSettings(settingsLike: unknown): Promise<PathModeSettings> {');
+    const loadSlice = serverSource.slice(loadStart, loadEnd);
+
+    expect(loadStart).toBeGreaterThanOrEqual(0);
+    expect(loadEnd).toBeGreaterThan(loadStart);
+    expect(loadSlice).toContain('const appConfig = await loadAppConfigToml();');
+    expect(loadSlice).not.toContain('if (cachedPathModeSettings)');
+  });
 });

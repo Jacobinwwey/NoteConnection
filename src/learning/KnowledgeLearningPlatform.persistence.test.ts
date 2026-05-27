@@ -160,6 +160,12 @@ describe('KnowledgeLearningPlatform persistence', () => {
             persistMemory: false,
         });
         expect(restoredConversation.trace.recalledMemoryCount).toBeGreaterThan(0);
+        expect(restoredConversation.trace.workspaceReadiness).toEqual(expect.objectContaining({
+            status: 'ready',
+        }));
+        expect(restoredConversation.trace.usedScope.readiness).toEqual(expect.objectContaining({
+            status: 'ready',
+        }));
 
         const restoredBundle = await platformB.buildWorkspaceExportBundle({
             workspaceId: 'persist',

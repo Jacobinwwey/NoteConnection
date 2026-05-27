@@ -33,6 +33,8 @@ const BG_UNLOCKED_ICON := "🔓"
 const BG_LOCKED_ICON := "🔒"
 const READER_DISPLAY_MATH_PREVIEW_MAX_SIZE := Vector2(560.0, 180.0)
 const READER_DISPLAY_MERMAID_PREVIEW_MAX_SIZE := Vector2(620.0, 420.0)
+const READER_DISPLAY_MATH_PREVIEW_MIN_SIZE := Vector2(320.0, 72.0)
+const READER_DISPLAY_MERMAID_PREVIEW_MIN_SIZE := Vector2(420.0, 220.0)
 const READER_MEDIA_PAGE_MARGIN := 72.0
 const READER_MEDIA_PAGE_MIN_WIDTH := 120.0
 const READER_MEDIA_PAGE_MAX_WIDTH := 760.0
@@ -205,6 +207,7 @@ var _reader_image_touch_points: Dictionary = {}
 var _reader_image_last_pinch_distance: float = 0.0
 var _reader_image_last_pinch_center: Vector2 = Vector2.ZERO
 var _reader_image_debug_capture_id: int = 0
+var _reader_debug_mermaid_export_counter: int = 0
 var _reader_render_client = null
 var _reader_render_revision: int = 0
 var _reader_renderable_blocks: Array[Dictionary] = []
@@ -1664,6 +1667,50 @@ func _save_reader_debug_texture(texture: Texture2D, file_name: String) -> void:
 	_save_reader_debug_image(image, file_name)
 
 
+func _write_reader_debug_text(file_name: String, content: String) -> void:
+	var debug_dir := _resolve_reader_image_debug_dir()
+	if debug_dir.is_empty():
+		return
+	var file := FileAccess.open("%s/%s" % [debug_dir, file_name], FileAccess.WRITE)
+	if file == null:
+		push_warning("PathModeUI: Failed to open reader debug text file: %s" % file_name)
+		return
+	file.store_string(content)
+
+
+func _export_reader_mermaid_block_debug_artifacts(source_text: String, texture: Texture2D, note_filepath: String, block_id: int) -> void:
+	if texture == null or not OS.is_debug_build() or not _is_reader_debug_enabled():
+		return
+	_reader_debug_mermaid_export_counter += 1
+	var prefix := "%04d-mermaid-%s" % [
+		_reader_debug_mermaid_export_counter,
+		_sanitize_reader_debug_slug(_reader_title_label.text if _reader_title_label != null else "reader")
+	]
+	if block_id >= 0:
+		prefix += "-block-%03d" % block_id
+	var image_name := "%s-preview.png" % prefix
+	var source_name := "%s-source.mmd" % prefix
+	var metadata_name := "%s-meta.json" % prefix
+	_save_reader_debug_texture(texture, image_name)
+	_write_reader_debug_text(source_name, source_text)
+	var debug_dir := _resolve_reader_image_debug_dir()
+	if debug_dir.is_empty():
+		return
+	var metadata := {
+		"kind": "mermaid",
+		"title": _reader_title_label.text if _reader_title_label != null else "",
+		"filePath": note_filepath,
+		"blockId": block_id,
+		"textureWidth": texture.get_width(),
+		"textureHeight": texture.get_height(),
+		"imagePath": "%s/%s" % [debug_dir, image_name],
+		"sourcePath": "%s/%s" % [debug_dir, source_name],
+		"renderRevision": _reader_render_revision,
+		"exportedAtUnix": Time.get_unix_time_from_system(),
+	}
+	_write_reader_debug_text(metadata_name, JSON.stringify(metadata, "  "))
+
+
 func _crop_reader_debug_image(image: Image, rect: Rect2) -> Image:
 	if image == null or image.is_empty():
 		return null
@@ -2173,11 +2220,13 @@ func _is_reader_zoom_shortcut(event: InputEventKey) -> bool:
 			return false
 
 func _start_reader_document_render(raw_content: String, note_filepath: String) -> void:
+	_reader_debug_mermaid_export_counter = 0
 	_reader_render_revision += 1
 	var render_revision := _reader_render_revision
 	_render_reader_document_async(raw_content, note_filepath, render_revision)
 
 func _start_reader_blocks_render(blocks: Array, note_filepath: String, target_block_id: int = -1) -> void:
+	_reader_debug_mermaid_export_counter = 0
 	_reader_render_revision += 1
 	var render_revision := _reader_render_revision
 	_render_reader_blocks_async(blocks, note_filepath, render_revision, target_block_id)
@@ -2256,7 +2305,12 @@ func _build_reader_block_async(block: Dictionary, note_filepath: String, render_
 	if block_type == "code":
 		var language := String(block.get("language", "")).strip_edges().to_lower()
 		if language == "mermaid":
-			return await _build_reader_mermaid_block_async(String(block.get("text", "")), render_revision)
+			return await _build_reader_mermaid_block_async(
+				String(block.get("text", "")),
+				note_filepath,
+				int(block.get("_protocol_block_id", -1)),
+				render_revision
+			)
 		if language == "math" or language == "latex":
 			return await _build_reader_math_block_async(String(block.get("text", "")), render_revision)
 	if _block_contains_inline_math(block):
@@ -2496,24 +2550,33 @@ func _block_contains_inline_math(block: Dictionary) -> bool:
 
 func _build_reader_math_block_async(source_text: String, render_revision: int) -> Control:
 	var accent_color := Color(0.42, 0.62, 0.96, 1.0)
+	var normalized_source := source_text.strip_edges()
+	if normalized_source.is_empty():
+		return _build_reader_renderable_block(
+			"Math",
+			"",
+			_make_reader_notice_block("Formula block is empty."),
+			null,
+			accent_color
+		)
 	if _reader_render_client == null:
-		return _build_reader_renderable_block("Math", source_text, _build_reader_math_block(source_text), null, accent_color)
+		return _build_reader_renderable_block("Math", normalized_source, _build_reader_math_block(normalized_source), null, accent_color)
 
 	var max_size: Vector2 = _get_reader_math_display_max_size()
-	var result: Dictionary = await _reader_render_client.render_math_texture(source_text, true, READER_DISPLAY_MATH_RENDER_SCALE, max_size)
+	var result: Dictionary = await _reader_render_client.render_math_texture(normalized_source, true, READER_DISPLAY_MATH_RENDER_SCALE, max_size)
 	if render_revision != _reader_render_revision:
 		return null
 	if bool(result.get("ok", false)):
 		var texture := result.get("texture", null) as Texture2D
 		if texture:
 			var render_panel := _build_reader_svg_panel(texture, "", "Formula", max_size, accent_color)
-			return _build_reader_renderable_block("Math", source_text, render_panel, texture, accent_color)
+			return _build_reader_renderable_block("Math", normalized_source, render_panel, texture, accent_color)
 	return _build_reader_renderable_block(
 		"Math",
-		source_text,
+		normalized_source,
 		_build_reader_render_failure_block(
 			"Math rendering is temporarily unavailable.",
-			source_text,
+			normalized_source,
 			String(result.get("error", "Unknown math render error.")),
 			true
 		),
@@ -2522,26 +2585,36 @@ func _build_reader_math_block_async(source_text: String, render_revision: int) -
 	)
 
 
-func _build_reader_mermaid_block_async(source_text: String, render_revision: int) -> Control:
+func _build_reader_mermaid_block_async(source_text: String, note_filepath: String, block_id: int, render_revision: int) -> Control:
 	var accent_color := Color(0.38, 0.82, 0.7, 1.0)
+	var normalized_source := source_text.strip_edges()
+	if normalized_source.is_empty():
+		return _build_reader_renderable_block(
+			"Mermaid",
+			"",
+			_make_reader_notice_block("Mermaid block is empty."),
+			null,
+			accent_color
+		)
 	if _reader_render_client == null:
-		return _build_reader_renderable_block("Mermaid", source_text, _build_mermaid_fallback_block(source_text), null, accent_color)
+		return _build_reader_renderable_block("Mermaid", normalized_source, _build_mermaid_fallback_block(normalized_source), null, accent_color)
 
 	var max_size: Vector2 = _get_reader_mermaid_display_max_size()
-	var result: Dictionary = await _reader_render_client.render_mermaid_texture(source_text, 3.0, max_size)
+	var result: Dictionary = await _reader_render_client.render_mermaid_texture(normalized_source, 3.0, max_size)
 	if render_revision != _reader_render_revision:
 		return null
 	if bool(result.get("ok", false)):
 		var texture := result.get("texture", null) as Texture2D
 		if texture:
+			_export_reader_mermaid_block_debug_artifacts(normalized_source, texture, note_filepath, block_id)
 			var render_panel := _build_reader_svg_panel(texture, "", "Mermaid Diagram", max_size, accent_color)
-			return _build_reader_renderable_block("Mermaid", source_text, render_panel, texture, accent_color)
+			return _build_reader_renderable_block("Mermaid", normalized_source, render_panel, texture, accent_color)
 	return _build_reader_renderable_block(
 		"Mermaid",
-		source_text,
+		normalized_source,
 		_build_reader_render_failure_block(
 			"Mermaid rendering is temporarily unavailable.",
-			source_text,
+			normalized_source,
 			String(result.get("error", "Unknown Mermaid render error.")),
 			false
 		),
@@ -2594,7 +2667,8 @@ func _build_reader_svg_panel(texture: Texture2D, badge_text: String, viewer_titl
 	texture_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	var resolved_max_size: Vector2 = _resolve_reader_requested_media_limit(max_size)
-	var preview_size: Vector2 = _fit_size_within(Vector2(texture.get_width(), texture.get_height()), resolved_max_size, false)
+	var preview_size: Vector2 = _fit_size_within(Vector2(texture.get_width(), texture.get_height()), resolved_max_size, true)
+	preview_size = _expand_reader_render_preview_size(preview_size, resolved_max_size, viewer_title)
 	texture_rect.custom_minimum_size = preview_size
 	# Scale from the already page-fitted preview size so the media slider
 	# actually changes visible size instead of being absorbed by max-size clamping.
@@ -2816,7 +2890,12 @@ func _build_reader_render_failure_block(title: String, source_text: String, erro
 	var wrapper := VBoxContainer.new()
 	wrapper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	wrapper.add_theme_constant_override("separation", 10)
-	wrapper.add_child(_make_reader_notice_block("%s\n\n%s" % [title, error_message]))
+	var notice_text := title
+	if _is_reader_debug_enabled():
+		var normalized_error := error_message.strip_edges()
+		if not normalized_error.is_empty():
+			notice_text = "%s\n\n%s" % [title, normalized_error]
+	wrapper.add_child(_make_reader_notice_block(notice_text))
 	if use_math_fallback:
 		wrapper.add_child(_build_reader_math_block(source_text))
 	else:
@@ -3231,6 +3310,9 @@ func _append_reader_inline_segments_async(label: RichTextLabel, segments: Array,
 		var styles_variant = segment.get("styles", {})
 		var styles: Dictionary = styles_variant if styles_variant is Dictionary else {}
 		if segment_type == "math":
+			segment_text = segment_text.strip_edges()
+			if segment_text.is_empty():
+				continue
 			var display_mode := bool(segment.get("display_mode", false))
 			if display_mode:
 				label.add_text("\n")
@@ -3467,23 +3549,27 @@ func _find_reader_inline_math_match(text: String, start_index: int) -> Dictionar
 	if paren_start != -1:
 		var paren_end := text.find("\\)", paren_start + 2)
 		if paren_end != -1:
-			best_match = _select_reader_inline_math_candidate(best_match, {
-				"start": paren_start,
-				"end": paren_end + 2,
-				"text": text.substr(paren_start + 2, paren_end - paren_start - 2),
-				"display_mode": false
-			})
+			var paren_text := text.substr(paren_start + 2, paren_end - paren_start - 2).strip_edges()
+			if not paren_text.is_empty():
+				best_match = _select_reader_inline_math_candidate(best_match, {
+					"start": paren_start,
+					"end": paren_end + 2,
+					"text": paren_text,
+					"display_mode": false
+				})
 
 	var bracket_start := text.find("\\[", start_index)
 	if bracket_start != -1:
 		var bracket_end := text.find("\\]", bracket_start + 2)
 		if bracket_end != -1:
-			best_match = _select_reader_inline_math_candidate(best_match, {
-				"start": bracket_start,
-				"end": bracket_end + 2,
-				"text": text.substr(bracket_start + 2, bracket_end - bracket_start - 2),
-				"display_mode": true
-			})
+			var bracket_text := text.substr(bracket_start + 2, bracket_end - bracket_start - 2).strip_edges()
+			if not bracket_text.is_empty():
+				best_match = _select_reader_inline_math_candidate(best_match, {
+					"start": bracket_start,
+					"end": bracket_end + 2,
+					"text": bracket_text,
+					"display_mode": true
+				})
 
 	var dollar_start := _find_inline_dollar_math_start(text, start_index)
 	if dollar_start != -1:
@@ -3621,10 +3707,14 @@ func _parse_markdown_blocks(markdown: String) -> Array:
 				index += 1
 			if index < lines.size():
 				index += 1
-			blocks.append({"type": "math", "text": _join_strings(math_lines, "\n").strip_edges()})
+			var block_math_text := _join_strings(math_lines, "\n").strip_edges()
+			if not block_math_text.is_empty():
+				blocks.append({"type": "math", "text": block_math_text})
 			continue
 		if trimmed.begins_with("$$") and trimmed.ends_with("$$") and trimmed.length() > 4:
-			blocks.append({"type": "math", "text": trimmed.substr(2, trimmed.length() - 4).strip_edges()})
+			var inline_block_math_text := trimmed.substr(2, trimmed.length() - 4).strip_edges()
+			if not inline_block_math_text.is_empty():
+				blocks.append({"type": "math", "text": inline_block_math_text})
 			index += 1
 			continue
 
@@ -4148,6 +4238,18 @@ func _resolve_reader_control_media_limit(control: Control) -> Vector2:
 	return _resolve_reader_requested_media_limit(requested_size)
 
 
+func _expand_reader_render_preview_size(content_size: Vector2, max_size: Vector2, viewer_title: String) -> Vector2:
+	if content_size.x <= 0.0 or content_size.y <= 0.0:
+		return content_size
+	var minimum_size := READER_DISPLAY_MATH_PREVIEW_MIN_SIZE if viewer_title == "Formula" else READER_DISPLAY_MERMAID_PREVIEW_MIN_SIZE
+	if content_size.x >= minimum_size.x and content_size.y >= minimum_size.y:
+		return content_size
+	var width_scale := minimum_size.x / content_size.x
+	var height_scale := minimum_size.y / content_size.y
+	var scale_factor := maxf(width_scale, height_scale)
+	return _fit_size_within(content_size * scale_factor, max_size, false)
+
+
 func _get_reader_math_display_max_size() -> Vector2:
 	var page_limit: Vector2 = _get_reader_media_page_limit()
 	return Vector2(
@@ -4359,7 +4461,7 @@ func _apply_reader_image_transform() -> void:
 
 	_sync_reader_image_render_viewport_size()
 	var safe_bounds: Vector2 = Vector2(maxf(160.0, viewport_size.x - 80.0), maxf(120.0, viewport_size.y - 60.0))
-	_reader_image_base_size = _fit_size_within(Vector2(_reader_image_current_texture.get_width(), _reader_image_current_texture.get_height()), safe_bounds, false)
+	_reader_image_base_size = _fit_size_within(Vector2(_reader_image_current_texture.get_width(), _reader_image_current_texture.get_height()), safe_bounds, true)
 	_reader_image_drawn_size = _reader_image_base_size * _reader_image_zoom
 	var surface_size := Vector2(maxf(viewport_size.x, _reader_image_drawn_size.x), maxf(viewport_size.y, _reader_image_drawn_size.y))
 	_reader_image_surface.custom_minimum_size = surface_size
@@ -4583,6 +4685,22 @@ func _on_settings_panel_changed(settings: Dictionary) -> void:
 		_apply_reader_mode_setting(String(settings.get("reading_mode", "window")))
 	if settings.has("reader_media_scale") or settings.has("reader_render_mode") or settings.has("reader_toggle_source_shortcut") or settings.has("reader_debug"):
 		_sync_reader_controls_from_settings()
+
+
+func apply_remote_runtime_settings(settings: Dictionary) -> void:
+	if settings.is_empty():
+		return
+	if _settings_panel and _settings_panel.has_method("_apply_remote_settings"):
+		_settings_panel.call("_apply_remote_settings", settings)
+		if _settings_panel.has_method("_update_ui"):
+			_settings_panel.call("_update_ui")
+	if _tree_view and _tree_view.has_method("update_settings"):
+		_tree_view.update_settings(settings)
+	if settings.has("reading_mode"):
+		_apply_reader_mode_setting(String(settings.get("reading_mode", "window")))
+	if settings.has("reader_media_scale") or settings.has("reader_render_mode") or settings.has("reader_toggle_source_shortcut") or settings.has("reader_debug"):
+		_sync_reader_controls_from_settings()
+	_update_reader_media_debug_overlay()
 
 
 func _setup_initial_state() -> void:

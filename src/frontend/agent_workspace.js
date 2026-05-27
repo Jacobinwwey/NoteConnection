@@ -13,8 +13,75 @@
         return value || 'path_user_default';
     }
 
+    function buildConversationSessionId(userId) {
+        const normalizedUserId = String(userId || '').trim() || 'path_user_default';
+        const timestamp = Date.now().toString(36);
+        const randomSuffix = Math.random().toString(36).slice(2, 10);
+        return `session_client_${normalizedUserId}_${timestamp}_${randomSuffix}`.replace(/[^a-zA-Z0-9._:-]+/g, '_');
+    }
+
+    function getOrCreateConversationSessionId(userId) {
+        const normalizedUserId = String(userId || '').trim() || 'path_user_default';
+        if (!window.__NC_AGENT_WORKSPACE_SESSION_BY_USER || typeof window.__NC_AGENT_WORKSPACE_SESSION_BY_USER !== 'object') {
+            window.__NC_AGENT_WORKSPACE_SESSION_BY_USER = {};
+        }
+        const sessionMap = window.__NC_AGENT_WORKSPACE_SESSION_BY_USER;
+        if (!sessionMap[normalizedUserId]) {
+            sessionMap[normalizedUserId] = buildConversationSessionId(normalizedUserId);
+        }
+        return String(sessionMap[normalizedUserId] || buildConversationSessionId(normalizedUserId));
+    }
+
     function getRuntime() {
         return window.NoteConnectionRuntime || null;
+    }
+
+    const ACTIVE_SOURCE_TARGET_STORAGE_KEY = 'nc_last_target';
+
+    function normalizeActiveSourceTarget(value) {
+        const normalized = String(value || '').trim();
+        return normalized || 'ALL_FOLDERS';
+    }
+
+    function getActiveSourceTargetSnapshot() {
+        if (window.__NC_ACTIVE_SOURCE_TARGET && typeof window.__NC_ACTIVE_SOURCE_TARGET === 'object') {
+            return window.__NC_ACTIVE_SOURCE_TARGET;
+        }
+        const folderSelect = getElement('folder-select');
+        const selectedTarget = folderSelect && typeof folderSelect.value === 'string'
+            ? folderSelect.value
+            : '';
+        const rememberedTarget = typeof localStorage !== 'undefined'
+            ? String(localStorage.getItem(ACTIVE_SOURCE_TARGET_STORAGE_KEY) || '').trim()
+            : '';
+        const target = normalizeActiveSourceTarget(selectedTarget || rememberedTarget);
+        return {
+            target,
+            scope: target === 'ALL_FOLDERS'
+                ? null
+                : {
+                    workspaceId: target.toLowerCase(),
+                    corpusId: target.toLowerCase(),
+                    sourcePathPrefixes: [`Knowledge_Base/${target}`],
+                },
+        };
+    }
+
+    function resolveKnowledgeWorkspaceRequestContext() {
+        const activeTargetSnapshot = getActiveSourceTargetSnapshot();
+        const target = normalizeActiveSourceTarget(activeTargetSnapshot && activeTargetSnapshot.target);
+        return {
+            activeTarget: target,
+            scope: activeTargetSnapshot && activeTargetSnapshot.scope
+                ? {
+                    workspaceId: activeTargetSnapshot.scope.workspaceId,
+                    corpusId: activeTargetSnapshot.scope.corpusId,
+                    sourcePathPrefixes: Array.isArray(activeTargetSnapshot.scope.sourcePathPrefixes)
+                        ? activeTargetSnapshot.scope.sourcePathPrefixes.slice()
+                        : [],
+                }
+                : undefined,
+        };
     }
 
     function translate(key, fallback, params) {
@@ -714,6 +781,19 @@
         });
     }
 
+    function appendLocalizedSystemMessage(key, fallback, params) {
+        const controller = getController();
+        if (!controller) {
+            return null;
+        }
+        return controller.appendConversationMessage({
+            role: 'system',
+            message: translate(key, fallback, params),
+            messageKey: key,
+            params: params || {},
+        });
+    }
+
     function appendUserMessage(message) {
         const controller = getController();
         if (!controller) {
@@ -723,6 +803,33 @@
             role: 'user',
             message,
         });
+    }
+
+    function appendGroundingSummaryMessage(result) {
+        const citationCount = Array.isArray(result && result.citations) ? result.citations.length : 0;
+        const memoryCount = Array.isArray(result && result.recalledMemories) ? result.recalledMemories.length : 0;
+        const memoryActionCount = Array.isArray(result && result.memoryActions) ? result.memoryActions.length : 0;
+        const usedScope = result && result.trace && result.trace.usedScope ? result.trace.usedScope : null;
+        const readiness = result && result.trace ? result.trace.workspaceReadiness : null;
+        const missDiagnostics = result && result.trace ? result.trace.missDiagnostics : null;
+        if (citationCount <= 0 && memoryCount <= 0 && memoryActionCount <= 0 && !readiness && !missDiagnostics) {
+            return null;
+        }
+        const scopeLabel = usedScope && usedScope.workspaceId
+            ? String(usedScope.workspaceId)
+            : (usedScope && usedScope.corpusId ? String(usedScope.corpusId) : 'global');
+        return appendLocalizedSystemMessage(
+            'agentWorkspace.messages.groundingSummary',
+            'Grounding: scope={scopeLabel}, {citationCount} citation(s), {memoryCount} recalled memory note(s), {memoryActionCount} memory action(s). {readinessMessage} {missMessage}',
+            {
+                scopeLabel,
+                citationCount,
+                memoryCount,
+                memoryActionCount,
+                readinessMessage: readiness && readiness.message ? String(readiness.message) : '',
+                missMessage: missDiagnostics && missDiagnostics.message ? String(missDiagnostics.message) : '',
+            }
+        );
     }
 
     function resolveLiveNodeById(nodeId) {
@@ -2700,7 +2807,7 @@
             }
             appendLocalizedAssistantMessage(
                 'agentWorkspace.messages.noResponse',
-                'No response.'
+                'No grounded response.'
             );
         },
     };
@@ -3050,10 +3157,16 @@
         input.value = '';
         appendUserMessage(message);
         try {
+            const userId = getUserId();
+            const requestContext = resolveKnowledgeWorkspaceRequestContext();
             const requestPayload = {
-                userId: getUserId(),
+                userId,
+                sessionId: getOrCreateConversationSessionId(userId),
+                activeTarget: requestContext.activeTarget,
                 message,
                 topK: 6,
+                memoryNamespace: 'conversation',
+                scope: requestContext.scope,
             };
             const result = await requestConversationWithStreamingFallback(requestPayload);
             const assistantMessage = String(result && result.assistantMessage || '').trim();
@@ -3062,9 +3175,10 @@
             } else {
                 appendLocalizedAssistantMessage(
                     'agentWorkspace.messages.noResponse',
-                    'No response.'
+                    'No grounded response.'
                 );
             }
+            appendGroundingSummaryMessage(result);
             const controller = getController();
             if (controller) {
                 controller.renderKnowledgePoints(
@@ -3079,7 +3193,7 @@
         } catch (error) {
             appendLocalizedAssistantMessage(
                 'agentWorkspace.messages.conversationFailed',
-                `Conversation request failed: ${String(error && error.message || error || 'unknown_error')}`,
+                `Grounded conversation request failed: ${String(error && error.message || error || 'unknown_error')}`,
                 { error: String(error && error.message || error || 'unknown_error') }
             );
         }
@@ -3101,12 +3215,62 @@
         });
     }
 
+    function setWorkspaceOpen(open) {
+        const isOpen = open === true;
+        const drawer = getElement('agent-workspace-drawer');
+        const backdrop = getElement('agent-workspace-backdrop');
+        if (document.body) {
+            document.body.classList.toggle('agent-workspace-open', isOpen);
+        }
+        if (drawer) {
+            drawer.setAttribute('data-open', isOpen ? 'true' : 'false');
+            drawer.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+        }
+        if (backdrop) {
+            backdrop.hidden = !isOpen;
+        }
+    }
+
+    function isWorkspaceOpen() {
+        return document.body ? document.body.classList.contains('agent-workspace-open') : false;
+    }
+
+    function bindWorkspaceDrawerChrome() {
+        const toggleButton = getElement('btn-open-agent-workspace');
+        const closeButton = getElement('btn-close-agent-workspace');
+        const backdrop = getElement('agent-workspace-backdrop');
+
+        if (toggleButton && typeof toggleButton.addEventListener === 'function') {
+            toggleButton.addEventListener('click', function () {
+                setWorkspaceOpen(!isWorkspaceOpen());
+            });
+        }
+        if (closeButton && typeof closeButton.addEventListener === 'function') {
+            closeButton.addEventListener('click', function () {
+                setWorkspaceOpen(false);
+            });
+        }
+        if (backdrop && typeof backdrop.addEventListener === 'function') {
+            backdrop.addEventListener('click', function () {
+                setWorkspaceOpen(false);
+            });
+        }
+        if (typeof document.addEventListener === 'function') {
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && isWorkspaceOpen()) {
+                    setWorkspaceOpen(false);
+                }
+            });
+        }
+    }
+
     function init() {
         const controller = getController();
         if (!controller) {
             return;
         }
         controller.init();
+        bindWorkspaceDrawerChrome();
         const sendButton = getElement('btn-agent-workspace-send');
         if (sendButton && typeof sendButton.addEventListener === 'function') {
             sendButton.addEventListener('click', function () {
@@ -3124,7 +3288,7 @@
         }
         appendLocalizedAssistantMessage(
             'agentWorkspace.messages.ready',
-            'Agent workspace ready. Ask for a concept, then open focus or learning path panes from local knowledge points.'
+            'Knowledge workspace ready. Start with a grounded question, then open focus or guided learning from cited knowledge matches.'
         );
     }
 
@@ -3135,6 +3299,8 @@
         openGraphFocus,
         openLearningPath,
         executeCapability,
+        setWorkspaceOpen,
+        isWorkspaceOpen,
         getCapabilityRegistryDiagnostics: function () {
             const invalidOverrideMap = resolveOperationInvalidResultPresentationOverrideMap();
             const unknownOverrideMap = resolveOperationUnknownResultPresentationOverrideMap();
@@ -3163,6 +3329,19 @@
                 legacyActionFallbacks: Object.keys(LEGACY_ACTION_FALLBACK_HANDLERS),
             };
         },
+    };
+
+    window.NoteConnectionAgentWorkspaceUi = {
+        open: function () {
+            setWorkspaceOpen(true);
+        },
+        close: function () {
+            setWorkspaceOpen(false);
+        },
+        toggle: function () {
+            setWorkspaceOpen(!isWorkspaceOpen());
+        },
+        isOpen: isWorkspaceOpen,
     };
 
     if (document.readyState === 'loading') {

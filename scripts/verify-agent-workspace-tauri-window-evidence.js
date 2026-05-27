@@ -67,7 +67,7 @@ function buildWindowEvidencePrerequisites() {
     if (cargoProbe.exitCode !== 0) {
         reasons.push('cargo-unavailable');
     }
-    if (dependencyCheck.missingDependencies.length > 0) {
+    if (process.platform === 'linux' && dependencyCheck.missingDependencies.length > 0) {
         reasons.push(
             `missing-system-dependencies:${dependencyCheck.missingDependencies.join(',')}`
         );

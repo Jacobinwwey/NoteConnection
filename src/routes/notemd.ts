@@ -6,7 +6,7 @@ import { listOperationDefinitions } from '../notemd/operations/registry';
 import type { NotemdAgentManifest, NotemdAgentOperation } from '../shared/types';
 
 export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
-    const { notemdService, loadNotemdSettings } = ctx;
+    const { notemdService, loadNotemdSettings, persistNotemdSettings } = ctx;
 
     const api = (path: string) => `/api/notemd${path}`;
 
@@ -48,8 +48,13 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
                 try {
                     const body = await readBody(req);
                     const payload = JSON.parse(body);
-                    const result = await notemdService.updateSettings(payload);
-                    ok(res, { result });
+                    const nextSettings = payload && typeof payload === 'object' && payload.settings !== undefined
+                        ? payload.settings
+                        : payload;
+                    const settings = persistNotemdSettings
+                        ? await persistNotemdSettings(nextSettings)
+                        : await notemdService.updateSettings(payload);
+                    ok(res, { settings });
                 } catch (e) { fail(res, e, 'API:POST /api/notemd/settings'); }
             },
         },

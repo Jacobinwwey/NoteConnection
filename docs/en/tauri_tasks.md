@@ -15,6 +15,21 @@ Additional note (2026-05-12):
 - Tauri migration closure does not mean the knowledge-mastery backbone is closed.
 - Real graph backend completion, production ANN delivery, non-placeholder quality gates, and active tutor routing are now tracked outside this historical taskboard.
 
+## 2026-05-27 Tauri-First Reply Rendering Task Sync
+
+- [x] Scoped knowledge-workspace selection, active-target propagation, and title-like selective hydration are now real on the current branch.
+- [x] Provider presets, TOML template materialization, and conversation turn/resume CORS closure are now real on the current branch.
+- [x] Reader-side markdown/KaTeX/Mermaid hardening plus first-party Tauri debug capture tooling are now real on the current branch.
+- [ ] The Tauri agent reply area still mounts assistant replies as plain text and remains the primary unfinished UX gap.
+- [ ] Shared Reader render-substrate reuse inside the agent workspace is still pending.
+- [ ] HTML artifact isolation for rich assistant outputs is still pending.
+
+Active execution references:
+
+- `docs/diataxis/en/explanation/development-progress-dashboard.md`
+- `docs/diataxis/en/explanation/agent-conversation-focus-mode-plan.md`
+- `docs/en/implementation_plan.md`
+
 ---
 
 # 2026-03-04 v1.5.13 - Tauri Taskboard Refresh (Desktop + Android + Godot Bridge)

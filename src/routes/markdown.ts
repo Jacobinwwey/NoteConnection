@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { RouteEntry, ServerContext } from './types';
 import { CrashLogger } from '../backend/utils/CrashLogger';
+import { normalizeMarkdownRuntimeConfig } from '../markdown/MarkdownGateway';
 
 interface MarkdownBlock {
     id: number;
@@ -120,6 +121,7 @@ function resolveWikiFromIndex(index: MarkdownIndex, wikiTarget: string): { match
 }
 
 export function registerMarkdownRoutes(_ctx: ServerContext): RouteEntry[] {
+    const ctx = _ctx;
     const api = (p: string) => `/api/markdown${p}`;
 
     const json = (res: any, code: number, data: unknown) => {
@@ -140,6 +142,14 @@ export function registerMarkdownRoutes(_ctx: ServerContext): RouteEntry[] {
             req.on('error', reject);
         });
 
+    const resolveRuntimeConfig = async () => {
+        if (ctx.loadFrontendSettings) {
+            const frontendSettings = await ctx.loadFrontendSettings();
+            return normalizeMarkdownRuntimeConfig(frontendSettings?.reading);
+        }
+        return normalizeMarkdownRuntimeConfig({});
+    };
+
     return [
         {
             method: 'POST',
@@ -149,6 +159,18 @@ export function registerMarkdownRoutes(_ctx: ServerContext): RouteEntry[] {
                     const body = await readBody(req);
                     const payload = JSON.parse(body);
                     const filePath = payload.filePath || payload.path || '';
+                    if (ctx.markdownGateway) {
+                        const runtimeConfig = await resolveRuntimeConfig();
+                        const result = await ctx.markdownGateway.buildIndex(
+                            {
+                                filePath,
+                                forceRebuild: payload.forceRebuild === true,
+                            },
+                            runtimeConfig
+                        );
+                        ok(res, result);
+                        return;
+                    }
                     if (!filePath || !fs.existsSync(filePath)) {
                         return fail(res, new Error('File not found: ' + filePath), 'API:POST /api/markdown/index');
                     }
@@ -169,6 +191,15 @@ export function registerMarkdownRoutes(_ctx: ServerContext): RouteEntry[] {
                 try {
                     const body = await readBody(req);
                     const payload = JSON.parse(body);
+                    if (ctx.markdownGateway) {
+                        const result = await ctx.markdownGateway.getChunk({
+                            indexId: String(payload.indexId || ''),
+                            startBlock: Number(payload.startBlock) || 0,
+                            blockCount: Number(payload.blockCount) || 1,
+                        });
+                        ok(res, result);
+                        return;
+                    }
                     const index = INDEXES.get(payload.indexId || '');
                     if (!index) return fail(res, new Error('Index not found'), 'API:POST /api/markdown/chunk');
                     const start = payload.startBlock || 0;
@@ -190,6 +221,18 @@ export function registerMarkdownRoutes(_ctx: ServerContext): RouteEntry[] {
                 try {
                     const body = await readBody(req);
                     const payload = JSON.parse(body);
+                    if (ctx.markdownGateway) {
+                        const runtimeConfig = await resolveRuntimeConfig();
+                        const result = await ctx.markdownGateway.resolveNode(
+                            {
+                                nodeId: String(payload.nodeId || ''),
+                                currentFilePath: String(payload.currentFilePath || '').trim() || undefined,
+                            },
+                            runtimeConfig
+                        );
+                        ok(res, result);
+                        return;
+                    }
                     const index = INDEXES.get(payload.indexId || '');
                     // Fallback: search all indexes
                     const searchIndex = index || [...INDEXES.values()].find(i => i.filePath === payload.currentFilePath);
@@ -209,6 +252,18 @@ export function registerMarkdownRoutes(_ctx: ServerContext): RouteEntry[] {
                 try {
                     const body = await readBody(req);
                     const payload = JSON.parse(body);
+                    if (ctx.markdownGateway) {
+                        const runtimeConfig = await resolveRuntimeConfig();
+                        const result = await ctx.markdownGateway.resolveWiki(
+                            {
+                                wikiTarget: String(payload.wikiTarget || ''),
+                                currentFilePath: String(payload.currentFilePath || ''),
+                            },
+                            runtimeConfig
+                        );
+                        ok(res, result);
+                        return;
+                    }
                     const index = INDEXES.get(payload.indexId || '');
                     const searchIndex = index || [...INDEXES.values()].find(i => i.filePath === payload.currentFilePath);
                     if (!searchIndex && INDEXES.size > 0) {

@@ -2,6 +2,20 @@
 
 ## English Document
 
+### 2026-05-27 Active Task Sync
+
+- [x] Scoped knowledge-workspace grounding is now real on the current branch.
+- [x] Provider preset/TOML settings delivery is now real on the current branch.
+- [x] Reader-side markdown/KaTeX/Mermaid hardening and Tauri debug capture tooling are now real on the current branch.
+- [ ] The highest-priority unfinished Tauri interaction gap is still assistant reply rendering inside the agent workspace.
+- [ ] The next active plan is Tauri-first: evolve from `assistantMessage` text mounting toward shared Reader-aligned rich reply rendering without breaking current knowledge-point/capability flows.
+
+Primary references:
+
+- `docs/diataxis/en/explanation/development-progress-dashboard.md`
+- `docs/diataxis/en/explanation/agent-conversation-focus-mode-plan.md`
+- `docs/en/implementation_plan.md`
+
 ### 2026-05-12 Code-vs-Plan Reality Snapshot
 
 - [x] Agent-workspace browser/runtime/Tauri verification closure is real and repeatable on the current branch.

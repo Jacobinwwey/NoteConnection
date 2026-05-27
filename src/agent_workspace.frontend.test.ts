@@ -25,7 +25,7 @@ function createI18nStub() {
     const dictionaries: Record<string, Record<string, string>> = {
         en: {
             'agentWorkspace.actions.focus': 'Focus',
-            'agentWorkspace.actions.learningPath': 'Learning Path',
+            'agentWorkspace.actions.learningPath': 'Guided Learning',
             'agentWorkspace.actions.quiz': 'Quiz',
             'agentWorkspace.actions.recap': 'Recap',
             'agentWorkspace.actions.transfer': 'Transfer Challenge',
@@ -48,13 +48,16 @@ function createI18nStub() {
             'agentWorkspace.actions.runtimeRunbookActionQueue': 'Runtime Queue',
             'agentWorkspace.actions.sessionHistory': 'Session History',
             'agentWorkspace.actions.studySession': 'Study Session',
-            'agentWorkspace.actions.conversationMemory': 'Conversation Memory',
-            'agentWorkspace.actions.conversationTurnCacheDiagnostics': 'Turn Cache',
-            'agentWorkspace.actions.conversationTurnCacheAlertTrend': 'Turn Cache Trend',
+            'agentWorkspace.actions.conversationMemory': 'Scoped Memory',
+            'agentWorkspace.actions.conversationTurnCacheDiagnostics': 'Conversation Cache',
+            'agentWorkspace.actions.conversationTurnCacheAlertTrend': 'Conversation Cache Trend',
             'agentWorkspace.actions.fullscreen': 'Fullscreen',
             'agentWorkspace.actions.restore': 'Restore',
-            'agentWorkspace.messages.ready': 'Agent workspace ready. Ask for a concept, then open focus or learning path panes from local knowledge points.',
+            'agentWorkspace.messages.ready': 'Knowledge workspace ready. Start with a grounded question, then open focus or guided learning from cited knowledge matches.',
             'agentWorkspace.messages.localNodeUnavailable': 'Local node {nodeId} is not currently available in the graph.',
+            'agentWorkspace.messages.groundingSummary': 'Grounding: scope={scopeLabel}, {citationCount} citation(s), {memoryCount} recalled memory note(s), {memoryActionCount} memory action(s). {readinessMessage} {missMessage}',
+            'agentWorkspace.knowledge.citation': 'Citation',
+            'agentWorkspace.knowledge.score': 'Score',
             'agentWorkspace.tutorAction.cardTitle': 'Tutor Action',
             'agentWorkspace.tutorAction.quizTitle': 'Quiz Prompt',
             'agentWorkspace.tutorAction.recapTitle': 'Recap',
@@ -2293,7 +2296,7 @@ describe('workspace panes controller', () => {
         const buttonsBefore = Array.from(
             document.querySelectorAll('.agent-knowledge-actions button')
         ).map((node) => node.textContent);
-        expect(buttonsBefore).toEqual(['Focus', 'Learning Path']);
+        expect(buttonsBefore).toEqual(['Focus', 'Guided Learning']);
 
         await window.i18n.setLanguage('zh');
 
@@ -2620,18 +2623,40 @@ describe('agent workspace learning-path integration', () => {
                     type: 'turn_completed',
                     turnId: 'turn_stream_1',
                     emittedAt: '2026-04-13T00:00:00.300Z',
-                    result: {
-                        assistantMessage: 'streamed assistant response',
-                        knowledgePoints: [
-                            {
-                                atomId: 'atom_stream',
-                                title: 'Stream Node',
-                                summary: 'Stream summary',
-                                evidenceSnippet: 'Stream evidence',
-                                score: 0.9,
-                                capabilities: [
-                                    {
-                                        capabilityId: 'cap_focus_atom_stream',
+                        result: {
+                            assistantMessage: 'streamed assistant response',
+                            citations: [
+                                {
+                                    citationId: 'citation_stream_1',
+                                    sourcePath: 'Knowledge_Base/optics/stream.md',
+                                    startLine: 12,
+                                },
+                            ],
+                            recalledMemories: [
+                                {
+                                    memoryId: 'memory_stream_1',
+                                },
+                            ],
+                            memoryActions: [
+                                {
+                                    kind: 'persist_session_memory',
+                                },
+                            ],
+                            knowledgePoints: [
+                                {
+                                    atomId: 'atom_stream',
+                                    title: 'Stream Node',
+                                    summary: 'Stream summary',
+                                    evidenceSnippet: 'Stream evidence',
+                                    score: 0.9,
+                                    citation: {
+                                        citationId: 'citation_stream_1',
+                                        sourcePath: 'Knowledge_Base/optics/stream.md',
+                                        startLine: 12,
+                                    },
+                                    capabilities: [
+                                        {
+                                            capabilityId: 'cap_focus_atom_stream',
                                         actionId: 'open_focus_mode',
                                         targetAtomId: 'atom_stream',
                                         label: 'Focus',
@@ -2654,6 +2679,14 @@ describe('agent workspace learning-path integration', () => {
             },
         ], { chunkSize: 29 }));
 
+        (window as any).__NC_ACTIVE_SOURCE_TARGET = {
+            target: 'waterglass',
+            scope: {
+                workspaceId: 'waterglass',
+                corpusId: 'waterglass',
+                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+            },
+        };
         const input = document.getElementById('agent-workspace-chat-input') as HTMLTextAreaElement;
         input.value = 'focus node';
         await (window as any).NoteConnectionAgentWorkspace.sendConversation();
@@ -2663,8 +2696,18 @@ describe('agent workspace learning-path integration', () => {
         expect(fetchCall?.[0]).toBe('/api/knowledge/conversation');
         const requestInit = fetchCall?.[1] || {};
         const requestHeaders = requestInit.headers || {};
+        const requestBody = JSON.parse(String(requestInit.body || '{}'));
         expect(String(requestHeaders.Accept || '')).toBe('text/event-stream');
         expect(String(requestHeaders['X-Agent-Conversation-Turn-Id'] || '')).toMatch(/^turn_client_/);
+        expect(String(requestBody.userId || '')).toBe('path_user_default');
+        expect(String(requestBody.sessionId || '')).toMatch(/^session_client_path_user_default_/);
+        expect(String(requestBody.activeTarget || '')).toBe('waterglass');
+        expect(String(requestBody.memoryNamespace || '')).toBe('conversation');
+        expect(requestBody.scope).toEqual({
+            workspaceId: 'waterglass',
+            corpusId: 'waterglass',
+            sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+        });
 
         const assistantMessages = Array.from(
             document.querySelectorAll('.agent-chat-message-assistant')
@@ -2672,9 +2715,20 @@ describe('agent workspace learning-path integration', () => {
         expect(
             assistantMessages.some((message) => message.includes('streamed assistant response'))
         ).toBe(true);
+        const systemMessages = Array.from(
+            document.querySelectorAll('.agent-chat-message-system')
+        ).map((node) => String(node.textContent || ''));
+        expect(
+            systemMessages.some((message) =>
+                message.includes('Grounding: scope=')
+                && message.includes('1 citation(s), 1 recalled memory note(s), 1 memory action(s).')
+            )
+        ).toBe(true);
         const knowledgeCards = Array.from(document.querySelectorAll('.agent-knowledge-card'));
         expect(knowledgeCards.length).toBeGreaterThan(0);
         expect(String(knowledgeCards[0]?.textContent || '')).toContain('Stream Node');
+        expect(String(knowledgeCards[0]?.textContent || '')).toContain('Citation');
+        expect(String(knowledgeCards[0]?.textContent || '')).toContain('Knowledge_Base/optics/stream.md:12');
     });
 
     test('falls back to sync conversation request when streamed turn payload is incomplete', async () => {
@@ -2723,6 +2777,8 @@ describe('agent workspace learning-path integration', () => {
         expect(secondCall?.[0]).toBe('/api/knowledge/conversation');
         const firstHeaders = firstCall?.[1]?.headers || {};
         const secondHeaders = secondCall?.[1]?.headers || {};
+        const firstBody = JSON.parse(String(firstCall?.[1]?.body || '{}'));
+        const secondBody = JSON.parse(String(secondCall?.[1]?.body || '{}'));
         expect(String(firstHeaders.Accept || '')).toBe('text/event-stream');
         expect(String(secondHeaders.Accept || '')).toBe('');
         const firstTurnId = String(firstHeaders['X-Agent-Conversation-Turn-Id'] || '');
@@ -2730,6 +2786,8 @@ describe('agent workspace learning-path integration', () => {
         expect(firstTurnId).toMatch(/^turn_client_/);
         expect(secondTurnId).toBe('turn_stream_incomplete');
         expect(String(secondHeaders['X-Agent-Conversation-Resume-Turn-Id'] || '')).toBe(secondTurnId);
+        expect(String(firstBody.sessionId || '')).toMatch(/^session_client_path_user_default_/);
+        expect(String(secondBody.sessionId || '')).toBe(String(firstBody.sessionId || ''));
 
         const assistantMessages = Array.from(
             document.querySelectorAll('.agent-chat-message-assistant')

@@ -60,6 +60,9 @@ export interface ServerContext {
     memoryPolicyManager: any;
     notemdService: any;
     loadNotemdSettings: () => Promise<any>;
+    persistNotemdSettings?: (settingsLike: unknown) => Promise<any>;
+    loadFrontendSettings?: () => Promise<any>;
+    markdownGateway?: any;
     LOOPBACK_HOST: string;
     finalPort: number;
     KNOWLEDGE_GRAPH_STORE_BACKEND: string;
@@ -70,6 +73,7 @@ export interface ServerContext {
     kbRoot: string;
     runtimeDataDir: string;
     runtimeRunbookOps?: RuntimeRunbookRouteOps;
+    getPathBridge?: () => any;
 }
 
 export type RouteHandler = (

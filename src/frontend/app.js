@@ -27,6 +27,385 @@ function readStartupPerfProfileOverride() {
     }
 }
 
+const mermaidErrorGuardState = {
+    observer: null,
+    toastHost: null,
+    seenAtBySignature: new Map(),
+    renderGuardInstalled: false,
+    periodicSweepHandle: null,
+    suppressedArtifacts: [],
+};
+
+function isMermaidErrorArtifactText(text) {
+    const normalized = String(text || '').toLowerCase();
+    if (!normalized) {
+        return false;
+    }
+    return (
+        normalized.includes('syntax error in text') ||
+        normalized.includes('lexical error on line') ||
+        normalized.includes('parse error on line') ||
+        normalized.includes('mermaid version') ||
+        normalized.includes('diagram syntax error')
+    );
+}
+
+function normalizeMermaidErrorArtifactText(text) {
+    return String(text || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 240);
+}
+
+function registerMermaidSuppressedArtifact(detail, context = {}) {
+    const signature = normalizeMermaidErrorArtifactText(detail);
+    if (!signature) {
+        return;
+    }
+    const entry = {
+        signature,
+        detectedAt: new Date().toISOString(),
+        context,
+    };
+    mermaidErrorGuardState.suppressedArtifacts.push(entry);
+    if (mermaidErrorGuardState.suppressedArtifacts.length > 20) {
+        mermaidErrorGuardState.suppressedArtifacts.shift();
+    }
+}
+
+function ensureMermaidErrorToastHost() {
+    if (mermaidErrorGuardState.toastHost && mermaidErrorGuardState.toastHost.isConnected) {
+        return mermaidErrorGuardState.toastHost;
+    }
+    const host = document.createElement('div');
+    host.id = 'mermaid-error-toast-stack';
+    host.className = 'mermaid-error-toast-stack';
+    document.body.appendChild(host);
+    mermaidErrorGuardState.toastHost = host;
+    return host;
+}
+
+function emitMermaidErrorToast(detail) {
+    const signature = normalizeMermaidErrorArtifactText(detail);
+    if (!signature) {
+        return;
+    }
+    const now = Date.now();
+    const lastSeenAt = mermaidErrorGuardState.seenAtBySignature.get(signature) || 0;
+    if ((now - lastSeenAt) < 8000) {
+        return;
+    }
+    mermaidErrorGuardState.seenAtBySignature.set(signature, now);
+
+    const host = ensureMermaidErrorToastHost();
+    const toast = document.createElement('div');
+    toast.className = 'mermaid-error-toast';
+
+    const title = document.createElement('div');
+    title.className = 'mermaid-error-toast-title';
+    title.textContent = 'Mermaid diagram skipped';
+    toast.appendChild(title);
+
+    const summary = document.createElement('div');
+    summary.className = 'mermaid-error-toast-summary';
+    summary.textContent = 'A malformed Mermaid block was suppressed to keep the workspace readable.';
+    toast.appendChild(summary);
+
+    const detailLine = document.createElement('div');
+    detailLine.className = 'mermaid-error-toast-detail';
+    detailLine.textContent = signature;
+    toast.appendChild(detailLine);
+
+    host.appendChild(toast);
+    while (host.childElementCount > 3) {
+        host.removeChild(host.firstElementChild);
+    }
+
+    window.setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 6500);
+}
+
+function createInlineMermaidErrorNotice(detail) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mermaid-inline-guard';
+
+    const title = document.createElement('div');
+    title.className = 'mermaid-inline-guard-title';
+    title.textContent = 'Mermaid diagram unavailable';
+    wrapper.appendChild(title);
+
+    const summary = document.createElement('div');
+    summary.className = 'mermaid-inline-guard-summary';
+    summary.textContent = 'Malformed Mermaid content was suppressed in this view.';
+    wrapper.appendChild(summary);
+
+    if (detail) {
+        const detailLine = document.createElement('div');
+        detailLine.className = 'mermaid-inline-guard-detail';
+        detailLine.textContent = normalizeMermaidErrorArtifactText(detail);
+        wrapper.appendChild(detailLine);
+    }
+
+    return wrapper;
+}
+
+function resolveMermaidErrorArtifactHost(node) {
+    if (!node || typeof node.closest !== 'function') {
+        return node;
+    }
+    return (
+        node.closest('.mermaid-render-host-offscreen') ||
+        node.closest('.mermaid-render-failed') ||
+        node.closest('.mermaid') ||
+        node.closest('.reader-block') ||
+        node.closest('svg') ||
+        node
+    );
+}
+
+function isProtectedMermaidSuppressionHost(host) {
+    if (!host || host.nodeType !== Node.ELEMENT_NODE) {
+        return true;
+    }
+    return (
+        host === document.body ||
+        host === document.documentElement ||
+        host === document.head ||
+        host.id === 'graph-wrapper' ||
+        host.id === 'path-container' ||
+        host.id === 'reading-window' ||
+        host.id === 'reading-content-box' ||
+        host.id === 'reading-body'
+    );
+}
+
+function collectMermaidErrorArtifactCandidates(root) {
+    const hosts = [];
+    const hostSet = new Set();
+    const candidates = [];
+
+    if (!root) {
+        return hosts;
+    }
+    if (
+        root.nodeType === Node.ELEMENT_NODE &&
+        root !== document.body &&
+        root !== document.documentElement &&
+        root !== document.head
+    ) {
+        candidates.push(root);
+    }
+
+    const queryRoot = root.nodeType === Node.ELEMENT_NODE ? root : document.body;
+    if (queryRoot && typeof queryRoot.querySelectorAll === 'function') {
+        queryRoot.querySelectorAll('svg, .mermaid, div, section, article, aside, img, foreignObject').forEach((node) => candidates.push(node));
+    }
+
+    candidates.forEach((candidate) => {
+        if (!candidate || candidate.nodeType !== Node.ELEMENT_NODE) {
+            return;
+        }
+        const element = candidate;
+        const text = normalizeMermaidErrorArtifactText(
+            element.textContent ||
+            element.getAttribute?.('alt') ||
+            element.getAttribute?.('aria-label') ||
+            ''
+        );
+        if (!isMermaidErrorArtifactText(text)) {
+            return;
+        }
+        const host = resolveMermaidErrorArtifactHost(element);
+        if (!host || hostSet.has(host) || isProtectedMermaidSuppressionHost(host)) {
+            return;
+        }
+        hostSet.add(host);
+        hosts.push(host);
+    });
+
+    return hosts;
+}
+
+function suppressMermaidErrorArtifacts(root, context = {}) {
+    if (!root) {
+        return;
+    }
+
+    const candidates = collectMermaidErrorArtifactCandidates(root);
+    candidates.forEach((candidate) => {
+        if (!candidate || candidate.dataset?.mermaidErrorSuppressed === '1') {
+            return;
+        }
+        const text = normalizeMermaidErrorArtifactText(candidate.textContent || '');
+        if (!isMermaidErrorArtifactText(text)) {
+            return;
+        }
+
+        const host = resolveMermaidErrorArtifactHost(candidate);
+        if (!host || host.dataset?.mermaidErrorSuppressed === '1') {
+            return;
+        }
+        if (host.dataset) {
+            host.dataset.mermaidErrorSuppressed = '1';
+        }
+        registerMermaidSuppressedArtifact(text, {
+            hostTag: host.tagName || '',
+            hostId: host.id || '',
+            hostClass: host.className || '',
+            ...context,
+        });
+
+        const shouldKeepInline = Boolean(
+            host.closest('#reading-window') ||
+            host.closest('#reading-body') ||
+            host.closest('.notemd-embed-shell')
+        );
+
+        if (shouldKeepInline) {
+            const inlineNotice = createInlineMermaidErrorNotice(text);
+            if (host.parentNode) {
+                host.parentNode.replaceChild(inlineNotice, host);
+            }
+        } else {
+            emitMermaidErrorToast(text);
+            if (host.parentNode) {
+                host.parentNode.removeChild(host);
+            } else {
+                host.style.display = 'none';
+            }
+        }
+    });
+}
+
+function installMermaidRuntimeGuards() {
+    const mermaid = window.mermaid;
+    if (!mermaid || mermaidErrorGuardState.renderGuardInstalled === true || mermaid.__noteConnectionErrorGuardInstalled === true) {
+        return;
+    }
+
+    if (typeof mermaid.render === 'function') {
+        const originalRender = mermaid.render.bind(mermaid);
+        mermaid.render = async function(...args) {
+            const result = await originalRender(...args);
+            if (result && typeof result.svg === 'string' && isMermaidErrorArtifactText(result.svg)) {
+                registerMermaidSuppressedArtifact(result.svg, {
+                    source: 'mermaid.render',
+                });
+                throw new Error('Suppressed Mermaid error SVG before it could be mounted.');
+            }
+            return result;
+        };
+    }
+
+    if (typeof mermaid.run === 'function') {
+        const originalRun = mermaid.run.bind(mermaid);
+        mermaid.run = async function(options) {
+            const result = await originalRun(options);
+            try {
+                if (options && Array.isArray(options.nodes) && options.nodes.length > 0) {
+                    options.nodes.forEach((node) => suppressMermaidErrorArtifacts(node, {
+                        source: 'mermaid.run.nodes',
+                    }));
+                } else {
+                    suppressMermaidErrorArtifacts(document.body, {
+                        source: 'mermaid.run.document',
+                    });
+                }
+            } catch (_error) {
+                // Guard should never break main rendering.
+            }
+            return result;
+        };
+    }
+
+    mermaid.__noteConnectionErrorGuardInstalled = true;
+    mermaidErrorGuardState.renderGuardInstalled = true;
+}
+
+function exposeMermaidDebugInterface() {
+    const existing = (window.__NC_DEBUG__ && typeof window.__NC_DEBUG__ === 'object')
+        ? window.__NC_DEBUG__
+        : {};
+    window.__NC_DEBUG__ = {
+        ...existing,
+        scanMermaidErrorArtifacts: () => collectMermaidErrorArtifactCandidates(document.body).map((host) => ({
+            tag: host.tagName || '',
+            id: host.id || '',
+            className: host.className || '',
+            text: normalizeMermaidErrorArtifactText(host.textContent || ''),
+        })),
+        suppressMermaidErrorArtifactsNow: () => {
+            suppressMermaidErrorArtifacts(document.body, { source: 'manual-debug-scan' });
+            return mermaidErrorGuardState.suppressedArtifacts.slice();
+        },
+        getMermaidGuardState: () => ({
+            renderGuardInstalled: mermaidErrorGuardState.renderGuardInstalled,
+            suppressedArtifacts: mermaidErrorGuardState.suppressedArtifacts.slice(),
+        }),
+        captureRuntimeState: () => ({
+            url: window.location.href,
+            title: document.title,
+            mermaidGuardState: {
+                renderGuardInstalled: mermaidErrorGuardState.renderGuardInstalled,
+                suppressedArtifacts: mermaidErrorGuardState.suppressedArtifacts.slice(),
+            },
+            activeMermaidErrors: collectMermaidErrorArtifactCandidates(document.body).map((host) => ({
+                tag: host.tagName || '',
+                id: host.id || '',
+                className: host.className || '',
+                text: normalizeMermaidErrorArtifactText(host.textContent || ''),
+            })),
+        }),
+    };
+}
+
+function installMermaidErrorArtifactObserver() {
+    installMermaidRuntimeGuards();
+    exposeMermaidDebugInterface();
+
+    if (mermaidErrorGuardState.observer || typeof MutationObserver === 'undefined') {
+        suppressMermaidErrorArtifacts(document.body, { source: 'observer-reuse' });
+        return;
+    }
+
+    mermaidErrorGuardState.observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+                    return;
+                }
+                suppressMermaidErrorArtifacts(node, { source: 'mutation-observer' });
+            });
+        });
+    });
+
+    mermaidErrorGuardState.observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+    });
+
+    suppressMermaidErrorArtifacts(document.body, { source: 'observer-install' });
+    window.setTimeout(() => {
+        installMermaidRuntimeGuards();
+        suppressMermaidErrorArtifacts(document.body, { source: 'delayed-sweep-1200' });
+    }, 1200);
+    window.setTimeout(() => {
+        installMermaidRuntimeGuards();
+        suppressMermaidErrorArtifacts(document.body, { source: 'delayed-sweep-3200' });
+    }, 3200);
+    if (mermaidErrorGuardState.periodicSweepHandle === null) {
+        mermaidErrorGuardState.periodicSweepHandle = window.setInterval(() => {
+            installMermaidRuntimeGuards();
+            suppressMermaidErrorArtifacts(document.body, { source: 'periodic-sweep' });
+        }, 750);
+    }
+}
+
+installMermaidErrorArtifactObserver();
+
 function resolveRuntimePlatform(runtimeCaps) {
     const rawPlatform = runtimeCaps && typeof runtimeCaps.platform === 'string'
         ? runtimeCaps.platform.trim().toLowerCase()
@@ -285,7 +664,9 @@ const startupLayoutSnapshotState = {
     pendingRecord: null,
     restorePromise: null,
     saveHandle: null,
-    lastSaveAtMs: 0
+    lastSaveAtMs: 0,
+    sourceLayoutSummary: null,
+    sourceLayoutById: null
 };
 
 function hashFNV1a32(input) {
@@ -330,6 +711,177 @@ function buildStartupGraphFingerprint(nodeList, linkList, graphPayload) {
     ].join('||');
 
     return `nc-layout-v${STARTUP_LAYOUT_SNAPSHOT_VERSION}-${hashFNV1a32(signature)}`;
+}
+
+function summarizeLayoutPositions(positionItems) {
+    const safeItems = Array.isArray(positionItems) ? positionItems : [];
+    const finitePositions = safeItems.filter((item) => (
+        item &&
+        Number.isFinite(Number(item.x)) &&
+        Number.isFinite(Number(item.y))
+    ));
+
+    if (finitePositions.length === 0) {
+        return {
+            finiteCount: 0,
+            minX: 0,
+            maxX: 0,
+            minY: 0,
+            maxY: 0,
+            spanX: 0,
+            spanY: 0,
+            uniqueRatio: 0
+        };
+    }
+
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    const uniqueBuckets = new Set();
+
+    for (let index = 0; index < finitePositions.length; index += 1) {
+        const item = finitePositions[index];
+        const x = Number(item.x);
+        const y = Number(item.y);
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+        uniqueBuckets.add(`${Math.round(x)}:${Math.round(y)}`);
+    }
+
+    return {
+        finiteCount: finitePositions.length,
+        minX,
+        maxX,
+        minY,
+        maxY,
+        spanX: maxX - minX,
+        spanY: maxY - minY,
+        uniqueRatio: uniqueBuckets.size / Math.max(1, finitePositions.length)
+    };
+}
+
+function isDegenerateLayoutSummary(summary) {
+    return Boolean(
+        summary &&
+        summary.finiteCount > 0 &&
+        ((summary.spanX < 48 && summary.spanY < 48) || summary.uniqueRatio < 0.12)
+    );
+}
+
+function isSnapshotLayoutCollapsedVsSource(summary, sourceSummary) {
+    if (!summary || !sourceSummary || sourceSummary.finiteCount < 10) {
+        return false;
+    }
+
+    const sourceWideX = sourceSummary.spanX >= 320;
+    const sourceWideY = sourceSummary.spanY >= 320;
+    if (!sourceWideX && !sourceWideY) {
+        return false;
+    }
+
+    const spanXTooSmall = sourceWideX && summary.spanX < Math.max(72, sourceSummary.spanX * 0.08);
+    const spanYTooSmall = sourceWideY && summary.spanY < Math.max(72, sourceSummary.spanY * 0.08);
+    return spanXTooSmall && spanYTooSmall;
+}
+
+function buildSourceLayoutById(nodeList) {
+    const map = new Map();
+    const safeNodes = Array.isArray(nodeList) ? nodeList : [];
+    for (let index = 0; index < safeNodes.length; index += 1) {
+        const node = safeNodes[index];
+        if (!node || node.id === undefined || node.id === null) {
+            continue;
+        }
+        const x = Number(node.x);
+        const y = Number(node.y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+            continue;
+        }
+        map.set(node.id, { x, y });
+    }
+    return map;
+}
+
+function restoreSourceLayoutOrJitterNodes(nodeList, viewportWidth, viewportHeight, reason = '') {
+    const safeNodes = Array.isArray(nodeList) ? nodeList : [];
+    if (safeNodes.length === 0) {
+        return false;
+    }
+
+    const currentSummary = summarizeLayoutPositions(safeNodes);
+    const sourceSummary = startupLayoutSnapshotState.sourceLayoutSummary;
+    const sourceLayoutById = startupLayoutSnapshotState.sourceLayoutById;
+    const shouldRestoreSource = Boolean(
+        sourceLayoutById instanceof Map &&
+        sourceLayoutById.size > 0 &&
+        isSnapshotLayoutCollapsedVsSource(currentSummary, sourceSummary)
+    );
+
+    if (!isDegenerateLayoutSummary(currentSummary) && !shouldRestoreSource) {
+        return false;
+    }
+
+    if (shouldRestoreSource) {
+        let restoredCount = 0;
+        for (let index = 0; index < safeNodes.length; index += 1) {
+            const node = safeNodes[index];
+            const sourcePos = sourceLayoutById.get(node.id);
+            if (!sourcePos) {
+                continue;
+            }
+            node.x = sourcePos.x;
+            node.y = sourcePos.y;
+            node.fx = null;
+            node.fy = null;
+            if (currentPositions && typeof currentPositions.set === 'function') {
+                currentPositions.set(node.id, { x: node.x, y: node.y });
+            }
+            restoredCount += 1;
+        }
+        console.warn('[Startup Warm Snapshot] Restored source layout because active positions collapsed relative to source.', {
+            reason,
+            restoredCount,
+            currentSpanX: Number(currentSummary.spanX.toFixed(2)),
+            currentSpanY: Number(currentSummary.spanY.toFixed(2)),
+            sourceSpanX: sourceSummary ? Number(sourceSummary.spanX.toFixed(2)) : null,
+            sourceSpanY: sourceSummary ? Number(sourceSummary.spanY.toFixed(2)) : null
+        });
+        return restoredCount > 0;
+    }
+
+    const centerX = Number.isFinite(Number(viewportWidth)) && Number(viewportWidth) > 0
+        ? Number(viewportWidth) / 2
+        : 400;
+    const centerY = Number.isFinite(Number(viewportHeight)) && Number(viewportHeight) > 0
+        ? Number(viewportHeight) / 2
+        : 300;
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+
+    for (let index = 0; index < safeNodes.length; index += 1) {
+        const node = safeNodes[index];
+        const rankOffset = Number.isFinite(Number(node.rank)) ? Number(node.rank) * 4 : 0;
+        const radius = 28 + (Math.sqrt(index + 1) * 18) + rankOffset;
+        const angle = (index * goldenAngle) + (rankOffset * 0.017);
+        node.x = centerX + (Math.cos(angle) * radius);
+        node.y = centerY + (Math.sin(angle) * radius);
+        node.fx = null;
+        node.fy = null;
+        if (currentPositions && typeof currentPositions.set === 'function') {
+            currentPositions.set(node.id, { x: node.x, y: node.y });
+        }
+    }
+
+    console.warn('[Startup Warm Snapshot] Re-seeded degenerate initial layout before simulation bootstrap.', {
+        reason,
+        nodeCount: safeNodes.length,
+        spanX: Number(currentSummary.spanX.toFixed(2)),
+        spanY: Number(currentSummary.spanY.toFixed(2)),
+        uniqueRatio: Number(currentSummary.uniqueRatio.toFixed(4))
+    });
+    return true;
 }
 
 function openStartupLayoutSnapshotDb() {
@@ -499,8 +1051,8 @@ function collectStartupLayoutSnapshotRecord(reason = '') {
             id: n.id,
             x: Number.isFinite(Number(n.x)) ? Number(n.x) : 0,
             y: Number.isFinite(Number(n.y)) ? Number(n.y) : 0,
-            fx: Number.isFinite(Number(n.fx)) ? Number(n.fx) : null,
-            fy: Number.isFinite(Number(n.fy)) ? Number(n.fy) : null
+            fx: null,
+            fy: null
         };
     }
 
@@ -545,40 +1097,33 @@ function validateStartupLayoutSnapshotRecord(record) {
         return { ok: false, reason: 'position-coverage-low', coverage: Number(coverage.toFixed(4)) };
     }
 
-    const finitePositions = record.positions.filter((item) => (
-        item &&
-        Number.isFinite(Number(item.x)) &&
-        Number.isFinite(Number(item.y))
-    ));
-    if (expectedNodeCount >= 10 && finitePositions.length > 0) {
-        let minX = Infinity;
-        let maxX = -Infinity;
-        let minY = Infinity;
-        let maxY = -Infinity;
-        const uniqueBuckets = new Set();
-
-        for (let index = 0; index < finitePositions.length; index += 1) {
-            const item = finitePositions[index];
-            const x = Number(item.x);
-            const y = Number(item.y);
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
-            uniqueBuckets.add(`${Math.round(x)}:${Math.round(y)}`);
-        }
-
-        const spanX = maxX - minX;
-        const spanY = maxY - minY;
-        const uniqueRatio = uniqueBuckets.size / Math.max(1, finitePositions.length);
-        if ((spanX < 48 && spanY < 48) || uniqueRatio < 0.12) {
+    const positionSummary = summarizeLayoutPositions(record.positions);
+    if (expectedNodeCount >= 10 && positionSummary.finiteCount > 0) {
+        if (isDegenerateLayoutSummary(positionSummary)) {
             return {
                 ok: false,
                 reason: 'degenerate-layout',
                 purge: true,
-                spanX: Number(spanX.toFixed(2)),
-                spanY: Number(spanY.toFixed(2)),
-                uniqueRatio: Number(uniqueRatio.toFixed(4)),
+                spanX: Number(positionSummary.spanX.toFixed(2)),
+                spanY: Number(positionSummary.spanY.toFixed(2)),
+                uniqueRatio: Number(positionSummary.uniqueRatio.toFixed(4)),
+            };
+        }
+
+        if (isSnapshotLayoutCollapsedVsSource(positionSummary, startupLayoutSnapshotState.sourceLayoutSummary)) {
+            return {
+                ok: false,
+                reason: 'degenerate-layout-vs-source',
+                purge: true,
+                spanX: Number(positionSummary.spanX.toFixed(2)),
+                spanY: Number(positionSummary.spanY.toFixed(2)),
+                uniqueRatio: Number(positionSummary.uniqueRatio.toFixed(4)),
+                sourceSpanX: startupLayoutSnapshotState.sourceLayoutSummary
+                    ? Number(startupLayoutSnapshotState.sourceLayoutSummary.spanX.toFixed(2))
+                    : null,
+                sourceSpanY: startupLayoutSnapshotState.sourceLayoutSummary
+                    ? Number(startupLayoutSnapshotState.sourceLayoutSummary.spanY.toFixed(2))
+                    : null
             };
         }
     }
@@ -607,8 +1152,8 @@ function applyStartupLayoutSnapshotRecord(record) {
         }
         n.x = Number.isFinite(saved.x) ? saved.x : n.x;
         n.y = Number.isFinite(saved.y) ? saved.y : n.y;
-        n.fx = Number.isFinite(saved.fx) ? saved.fx : null;
-        n.fy = Number.isFinite(saved.fy) ? saved.fy : null;
+        n.fx = null;
+        n.fy = null;
         if (currentPositions && typeof currentPositions.set === 'function') {
             currentPositions.set(n.id, { x: n.x, y: n.y });
         }
@@ -1170,6 +1715,17 @@ markStartupCheckpoint('T1 graph_preprocessed', {
     preprocessMs: Number(graphPreprocessElapsedMs.toFixed(2))
 });
 
+startupLayoutSnapshotState.sourceLayoutById = buildSourceLayoutById(nodes);
+startupLayoutSnapshotState.sourceLayoutSummary = summarizeLayoutPositions(nodes);
+if (startupLayoutSnapshotState.sourceLayoutSummary.finiteCount > 0) {
+    console.log('[Startup Warm Snapshot] Source layout summary prepared.', {
+        finiteCount: startupLayoutSnapshotState.sourceLayoutSummary.finiteCount,
+        spanX: Number(startupLayoutSnapshotState.sourceLayoutSummary.spanX.toFixed(2)),
+        spanY: Number(startupLayoutSnapshotState.sourceLayoutSummary.spanY.toFixed(2)),
+        uniqueRatio: Number(startupLayoutSnapshotState.sourceLayoutSummary.uniqueRatio.toFixed(4))
+    });
+}
+
 startupLayoutSnapshotState.fingerprint = buildStartupGraphFingerprint(nodes, links, runtimeGraphData);
 console.log('[Startup Warm Snapshot] Fingerprint prepared.', {
     fingerprint: startupLayoutSnapshotState.fingerprint,
@@ -1567,6 +2123,7 @@ const simulation = {
 const workerPayloadBuildStartTs = (typeof performance !== 'undefined' && typeof performance.now === 'function')
     ? performance.now()
     : Date.now();
+restoreSourceLayoutOrJitterNodes(nodes, width, height, 'worker-init');
 const workerNodes = new Array(nodes.length);
 for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex += 1) {
     const node = nodes[nodeIndex];
@@ -4477,12 +5034,18 @@ const workersSlider = document.getElementById('set-workers-slider');
     // --- Settings Integration ---
 function initSettingsUI() {
     const modal = document.getElementById('settings-modal');
+    const agentModal = document.getElementById('agent-settings-modal');
     const openBtn = document.getElementById('btn-open-settings');
-    const closeBtns = document.querySelectorAll('.modal-close');
+    const mainCloseBtns = modal ? modal.querySelectorAll('[data-settings-close="main"]') : [];
+    const agentCloseBtns = agentModal ? agentModal.querySelectorAll('[data-settings-close="agent"]') : [];
+    const openAgentSettingsBtn = document.getElementById('btn-open-agent-settings');
+    const agentSettingsBackBtn = document.getElementById('btn-agent-settings-back');
+    const agentSettingsBackFooterBtn = document.getElementById('btn-agent-settings-back-footer');
     const resetBtn = document.getElementById('btn-reset-settings');
     
-    // v0.9.41: Track modal state to freeze simulation
-    let isSettingsModalOpen = false;
+    // Track settings page state so simulation only resumes after every settings
+    // surface is actually closed.
+    let activeSettingsPage = null;
 
     // Controls
     const inputs = {
@@ -4503,6 +5066,7 @@ function initSettingsUI() {
     const workersSlider = document.getElementById('set-workers-slider');
     const workersInput = document.getElementById('set-workers-input');
     const gpuCheckbox = document.getElementById('set-gpu');
+    const staticModeCheckbox = document.getElementById('set-static-mode');
     const gpuRenderingCheckbox = document.getElementById('set-gpu-rendering');
     const memorySavingCheckbox = document.getElementById('set-memory-saving');
     const compactModeCheckbox = document.getElementById('set-compact-mode');
@@ -4510,6 +5074,615 @@ function initSettingsUI() {
     
     // Reader Settings
     const inputReadingMode = document.getElementById('set-reading-mode');
+
+    // Simplified NoteMD Provider Settings
+    const providerTemplateSelect = document.getElementById('set-notemd-provider-template');
+    const providerTemplateHint = document.getElementById('set-notemd-provider-template-hint');
+    const providerNameSelect = document.getElementById('set-notemd-provider-name');
+    const providerBaseUrlInput = document.getElementById('set-notemd-provider-base-url');
+    const providerModelInput = document.getElementById('set-notemd-provider-model');
+    const providerApiKeyInput = document.getElementById('set-notemd-provider-api-key');
+    const providerApiVersionInput = document.getElementById('set-notemd-provider-api-version');
+    const providerApiVersionRow = document.getElementById('set-notemd-provider-api-version-row');
+    const providerApiVersionHint = document.getElementById('set-notemd-provider-api-version-hint');
+    const providerStatus = document.getElementById('set-notemd-provider-status');
+    const providerConfigPath = document.getElementById('set-notemd-provider-config-path');
+    const applyProviderTemplateBtn = document.getElementById('btn-apply-notemd-provider-template');
+    const testProviderBtn = document.getElementById('btn-test-notemd-provider');
+    const saveProviderBtn = document.getElementById('btn-save-notemd-provider');
+    const materializeProviderTemplatesBtn = document.getElementById('btn-materialize-notemd-provider-templates');
+    const NOTEMD_PROVIDER_DRAFT_STORAGE_KEY = 'nc.notemdProviderDraft.v1';
+    const NOTEMD_PROVIDER_AUTOSAVE_DEBOUNCE_MS = 900;
+
+    const notemdProviderModalState = {
+        settings: null,
+        templates: [],
+        configPath: '',
+        loading: false,
+        autosaveTimer: null,
+        lastSavedFingerprint: '',
+        applyingDraft: false,
+    };
+
+    const t = (key, fallback, params) => {
+        if (window.i18n && typeof window.i18n.t === 'function') {
+            const translated = window.i18n.t(key, params);
+            if (translated && translated !== key) {
+                return translated;
+            }
+        }
+        return fallback;
+    };
+
+    const buildRuntimeUrl = (resourcePath) => {
+        if (window.NoteConnectionRuntime && typeof window.NoteConnectionRuntime.buildUrl === 'function') {
+            return window.NoteConnectionRuntime.buildUrl(resourcePath.replace(/^\/+/, ''));
+        }
+        return resourcePath;
+    };
+
+    const buildRuntimeFetchOptions = (init) => {
+        if (window.NoteConnectionRuntime && typeof window.NoteConnectionRuntime.buildFetchOptions === 'function') {
+            return window.NoteConnectionRuntime.buildFetchOptions(init);
+        }
+        return init;
+    };
+
+    const cloneJson = (value) => JSON.parse(JSON.stringify(value));
+
+    const clearProviderAutosaveTimer = () => {
+        if (notemdProviderModalState.autosaveTimer) {
+            clearTimeout(notemdProviderModalState.autosaveTimer);
+            notemdProviderModalState.autosaveTimer = null;
+        }
+    };
+
+    const readProviderDraftStore = () => {
+        try {
+            const raw = localStorage.getItem(NOTEMD_PROVIDER_DRAFT_STORAGE_KEY);
+            const parsed = raw ? JSON.parse(raw) : {};
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (_error) {
+            return {};
+        }
+    };
+
+    const writeProviderDraftStore = (draftStore) => {
+        try {
+            localStorage.setItem(NOTEMD_PROVIDER_DRAFT_STORAGE_KEY, JSON.stringify(draftStore || {}));
+        } catch (_error) {
+            // Best effort only.
+        }
+    };
+
+    const getProviderDraft = (providerName) => {
+        const draftStore = readProviderDraftStore();
+        const key = String(providerName || '').trim();
+        if (!key || !draftStore[key] || typeof draftStore[key] !== 'object') {
+            return null;
+        }
+        return draftStore[key];
+    };
+
+    const updateProviderDraft = (providerName, draftPatch) => {
+        const key = String(providerName || '').trim();
+        if (!key) {
+            return;
+        }
+        const draftStore = readProviderDraftStore();
+        const current = draftStore[key] && typeof draftStore[key] === 'object' ? draftStore[key] : {};
+        draftStore[key] = {
+            ...current,
+            ...draftPatch,
+            updatedAt: new Date().toISOString(),
+        };
+        writeProviderDraftStore(draftStore);
+    };
+
+    const removeProviderDraft = (providerName) => {
+        const key = String(providerName || '').trim();
+        if (!key) {
+            return;
+        }
+        const draftStore = readProviderDraftStore();
+        if (Object.prototype.hasOwnProperty.call(draftStore, key)) {
+            delete draftStore[key];
+            writeProviderDraftStore(draftStore);
+        }
+    };
+
+    const setProviderModalStatus = (message, tone = 'muted') => {
+        if (!providerStatus) {
+            return;
+        }
+        providerStatus.textContent = String(message || '');
+        providerStatus.style.color =
+            tone === 'error'
+                ? '#fca5a5'
+                : tone === 'success'
+                    ? '#93c5fd'
+                    : '#aeb7c3';
+    };
+
+    const setProviderModalBusy = (busy) => {
+        notemdProviderModalState.loading = busy === true;
+        const disabled = notemdProviderModalState.loading;
+        [
+            providerTemplateSelect,
+            providerNameSelect,
+            providerBaseUrlInput,
+            providerModelInput,
+            providerApiKeyInput,
+            providerApiVersionInput,
+            applyProviderTemplateBtn,
+            testProviderBtn,
+            saveProviderBtn,
+            materializeProviderTemplatesBtn,
+        ].forEach((element) => {
+            if (element) {
+                element.disabled = disabled;
+            }
+        });
+    };
+
+    const requestRuntimeJson = async (resourcePath, init = {}) => {
+        const response = await fetch(buildRuntimeUrl(resourcePath), buildRuntimeFetchOptions(init));
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload || payload.success !== true) {
+            const message = payload && payload.error ? String(payload.error) : `Request failed (${resourcePath} ${response.status})`;
+            throw new Error(message);
+        }
+        return payload;
+    };
+
+    const isAnySettingsPanelOpen = () => activeSettingsPage !== null;
+
+    const resumeSimulationIfAllowed = () => {
+        const isFrozen = document.getElementById('freeze-layout')
+            ? document.getElementById('freeze-layout').checked
+            : false;
+        if (!isFrozen) {
+            simulation.alpha(0.3).restart();
+        }
+    };
+
+    const showMainSettingsPage = () => {
+        if (modal) {
+            modal.style.display = 'flex';
+            const body = modal.querySelector('.settings-modal-body');
+            if (body) {
+                body.scrollTop = 0;
+            }
+        }
+        if (agentModal) {
+            agentModal.style.display = 'none';
+        }
+        activeSettingsPage = 'main';
+        simulation.stop();
+    };
+
+    const showAgentSettingsPage = async () => {
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        if (agentModal) {
+            agentModal.style.display = 'flex';
+            const body = agentModal.querySelector('.settings-modal-body');
+            if (body) {
+                body.scrollTop = 0;
+            }
+        }
+        activeSettingsPage = 'agent';
+        simulation.stop();
+        await loadNotemdProviderModalState();
+    };
+
+    const closeAllSettingsPages = () => {
+        clearProviderAutosaveTimer();
+        const nextFingerprint = getCurrentProviderFingerprint();
+        if (
+            activeSettingsPage === 'agent'
+            && nextFingerprint
+            && nextFingerprint !== notemdProviderModalState.lastSavedFingerprint
+            && !notemdProviderModalState.loading
+        ) {
+            void saveNotemdProviderModalState({ auto: true }).catch((error) => {
+                setProviderModalStatus(
+                    t('notemd_provider_autosave_failed', 'Auto-save failed: {error}', {
+                        error: error && error.message ? error.message : String(error),
+                    }),
+                    'error'
+                );
+            });
+        }
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        if (agentModal) {
+            agentModal.style.display = 'none';
+        }
+        activeSettingsPage = null;
+        resumeSimulationIfAllowed();
+    };
+
+    const getCurrentProviderFromModalState = () => {
+        if (!notemdProviderModalState.settings || !providerNameSelect) {
+            return null;
+        }
+        const providerName = String(providerNameSelect.value || '').trim();
+        return notemdProviderModalState.settings.providers.find((provider) => provider.name === providerName) || null;
+    };
+
+    const getCurrentProviderFingerprint = () => {
+        const providerName = String(providerNameSelect ? providerNameSelect.value : '').trim();
+        if (!providerName) {
+            return '';
+        }
+        return JSON.stringify({
+            providerName,
+            templateId: String(providerTemplateSelect ? providerTemplateSelect.value : '').trim(),
+            baseUrl: String(providerBaseUrlInput ? providerBaseUrlInput.value : '').trim(),
+            model: String(providerModelInput ? providerModelInput.value : '').trim(),
+            apiKey: String(providerApiKeyInput ? providerApiKeyInput.value : ''),
+            apiVersion: String(providerApiVersionInput ? providerApiVersionInput.value : '').trim(),
+        });
+    };
+
+    const buildCurrentProviderRequestPayload = () => {
+        const providerName = String(providerNameSelect ? providerNameSelect.value : '').trim();
+        const persistedProvider = getCurrentProviderFromModalState();
+        return {
+            provider: {
+                name: providerName,
+                baseUrl: String(providerBaseUrlInput ? providerBaseUrlInput.value : '').trim(),
+                model: String(providerModelInput ? providerModelInput.value : '').trim(),
+                apiKey: String(providerApiKeyInput ? providerApiKeyInput.value : ''),
+                apiVersion: String(providerApiVersionInput ? providerApiVersionInput.value : '').trim(),
+                temperature: Number.isFinite(Number(persistedProvider && persistedProvider.temperature))
+                    ? Number(persistedProvider.temperature)
+                    : 0.5,
+            },
+            providerName,
+        };
+    };
+
+    const syncCurrentProviderDraft = () => {
+        const providerName = String(providerNameSelect ? providerNameSelect.value : '').trim();
+        if (!providerName || notemdProviderModalState.applyingDraft) {
+            return;
+        }
+        updateProviderDraft(providerName, {
+            templateId: String(providerTemplateSelect ? providerTemplateSelect.value : '').trim(),
+            baseUrl: String(providerBaseUrlInput ? providerBaseUrlInput.value : '').trim(),
+            model: String(providerModelInput ? providerModelInput.value : '').trim(),
+            apiKey: String(providerApiKeyInput ? providerApiKeyInput.value : ''),
+            apiVersion: String(providerApiVersionInput ? providerApiVersionInput.value : '').trim(),
+        });
+    };
+
+    const findTemplateForProvider = (providerName) => {
+        const templates = Array.isArray(notemdProviderModalState.templates) ? notemdProviderModalState.templates : [];
+        return templates.find((template) => template.providerName === providerName) || null;
+    };
+
+    const updateProviderApiVersionVisibility = (provider) => {
+        if (!providerApiVersionRow) {
+            return;
+        }
+        const isAzure = provider && String(provider.name || '').trim() === 'Azure OpenAI';
+        providerApiVersionRow.style.display = isAzure ? '' : 'none';
+        if (providerApiVersionInput) {
+            providerApiVersionInput.placeholder = isAzure ? '2025-01-01-preview' : '';
+        }
+        if (providerApiVersionHint) {
+            providerApiVersionHint.textContent = isAzure
+                ? t('notemd_provider_api_version_required', 'Required for Azure OpenAI. Example: 2025-01-01-preview.')
+                : t('notemd_provider_api_version_optional', 'Optional. Leave blank for standard OpenAI-compatible endpoints. This is mainly used by Azure OpenAI.');
+        }
+    };
+
+    const applyProviderDraftToFields = (providerName) => {
+        const draft = getProviderDraft(providerName);
+        if (!draft) {
+            return;
+        }
+        notemdProviderModalState.applyingDraft = true;
+        try {
+            if (providerTemplateSelect && typeof draft.templateId === 'string' && draft.templateId) {
+                providerTemplateSelect.value = draft.templateId;
+                renderProviderTemplateHint();
+            }
+            if (providerBaseUrlInput && typeof draft.baseUrl === 'string') {
+                providerBaseUrlInput.value = draft.baseUrl;
+            }
+            if (providerModelInput && typeof draft.model === 'string') {
+                providerModelInput.value = draft.model;
+            }
+            if (providerApiKeyInput && typeof draft.apiKey === 'string') {
+                providerApiKeyInput.value = draft.apiKey;
+            }
+            if (providerApiVersionInput && typeof draft.apiVersion === 'string') {
+                providerApiVersionInput.value = draft.apiVersion;
+            }
+        } finally {
+            notemdProviderModalState.applyingDraft = false;
+        }
+    };
+
+    const renderProviderTemplateHint = () => {
+        if (!providerTemplateHint) {
+            return;
+        }
+        const templateId = providerTemplateSelect ? String(providerTemplateSelect.value || '').trim() : '';
+        const templates = Array.isArray(notemdProviderModalState.templates) ? notemdProviderModalState.templates : [];
+        const template = templates.find((item) => item.id === templateId) || null;
+        if (!template) {
+            providerTemplateHint.textContent = '';
+            return;
+        }
+        const noteSummary = Array.isArray(template.notes) ? template.notes.slice(0, 2).join(' ') : '';
+        providerTemplateHint.textContent = `${template.label} · ${template.category} · ${template.transport}. ${template.recommendedFor} ${template.hostHint} ${noteSummary}`.trim();
+    };
+
+    const renderSelectedProviderFields = () => {
+        const provider = getCurrentProviderFromModalState();
+        if (!provider) {
+            if (providerBaseUrlInput) providerBaseUrlInput.value = '';
+            if (providerModelInput) providerModelInput.value = '';
+            if (providerApiKeyInput) providerApiKeyInput.value = '';
+            if (providerApiVersionInput) providerApiVersionInput.value = '';
+            updateProviderApiVersionVisibility(null);
+            return;
+        }
+        if (providerBaseUrlInput) providerBaseUrlInput.value = String(provider.baseUrl || '');
+        if (providerModelInput) providerModelInput.value = String(provider.model || '');
+        if (providerApiKeyInput) providerApiKeyInput.value = String(provider.apiKey || '');
+        if (providerApiVersionInput) providerApiVersionInput.value = String(provider.apiVersion || '');
+        updateProviderApiVersionVisibility(provider);
+
+        const matchedTemplate = findTemplateForProvider(provider.name);
+        if (providerTemplateSelect && matchedTemplate) {
+            providerTemplateSelect.value = matchedTemplate.id;
+            renderProviderTemplateHint();
+        }
+        applyProviderDraftToFields(provider.name);
+    };
+
+    const populateProviderTemplateSelect = () => {
+        if (!providerTemplateSelect) {
+            return;
+        }
+        providerTemplateSelect.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = t('notemd_provider_template_select', 'Choose a preset template');
+        providerTemplateSelect.appendChild(placeholder);
+        const templates = Array.isArray(notemdProviderModalState.templates) ? notemdProviderModalState.templates : [];
+        templates.forEach((template) => {
+            const option = document.createElement('option');
+            option.value = template.id;
+            option.textContent = `${template.label} (${template.category})`;
+            providerTemplateSelect.appendChild(option);
+        });
+    };
+
+    const populateProviderSelect = () => {
+        if (!providerNameSelect) {
+            return;
+        }
+        providerNameSelect.innerHTML = '';
+        const settings = notemdProviderModalState.settings;
+        const providers = settings && Array.isArray(settings.providers) ? settings.providers : [];
+        providers.forEach((provider) => {
+            const option = document.createElement('option');
+            option.value = provider.name;
+            option.textContent = provider.name;
+            providerNameSelect.appendChild(option);
+        });
+        if (settings && settings.activeProvider) {
+            providerNameSelect.value = settings.activeProvider;
+        }
+        renderSelectedProviderFields();
+    };
+
+    const loadNotemdProviderModalState = async (options = {}) => {
+        if (notemdProviderModalState.loading) {
+            return;
+        }
+        setProviderModalBusy(true);
+        setProviderModalStatus(t('notemd_provider_loading', 'Loading provider settings...'));
+        try {
+            const templatesPayload = await requestRuntimeJson('/api/notemd/provider-templates?persist=1');
+            const settingsPayload = await requestRuntimeJson('/api/notemd/settings');
+            notemdProviderModalState.templates = Array.isArray(templatesPayload.templates)
+                ? cloneJson(templatesPayload.templates)
+                : [];
+            notemdProviderModalState.configPath = String(templatesPayload.configPath || '');
+            notemdProviderModalState.settings = cloneJson(settingsPayload.settings || {});
+            populateProviderTemplateSelect();
+            populateProviderSelect();
+            if (providerConfigPath) {
+                providerConfigPath.textContent = notemdProviderModalState.configPath
+                    ? `${t('notemd_provider_config_path', 'TOML path')}: ${notemdProviderModalState.configPath}`
+                    : '';
+            }
+            notemdProviderModalState.lastSavedFingerprint = getCurrentProviderFingerprint();
+            setProviderModalStatus(
+                t('notemd_provider_loaded', 'Provider presets and TOML templates are ready.'),
+                'success'
+            );
+        } catch (error) {
+            setProviderModalStatus(
+                t('notemd_provider_load_failed', 'Provider settings load failed: {error}', {
+                    error: error && error.message ? error.message : String(error),
+                }),
+                'error'
+            );
+        } finally {
+            setProviderModalBusy(false);
+        }
+    };
+
+    const saveNotemdProviderModalState = async (options = {}) => {
+        if (!notemdProviderModalState.settings || !providerNameSelect) {
+            return;
+        }
+        const auto = options.auto === true;
+        const nextSettings = cloneJson(notemdProviderModalState.settings);
+        const providerName = String(providerNameSelect.value || '').trim();
+        const nextProvider = nextSettings.providers.find((provider) => provider.name === providerName);
+        if (!nextProvider) {
+            throw new Error(`Unsupported provider: ${providerName}`);
+        }
+        nextSettings.activeProvider = providerName;
+        nextProvider.baseUrl = String(providerBaseUrlInput ? providerBaseUrlInput.value : '').trim();
+        nextProvider.model = String(providerModelInput ? providerModelInput.value : '').trim();
+        nextProvider.apiKey = String(providerApiKeyInput ? providerApiKeyInput.value : '');
+        nextProvider.apiVersion = String(providerApiVersionInput ? providerApiVersionInput.value : '').trim();
+        setProviderModalBusy(true);
+        setProviderModalStatus(
+            auto
+                ? t('notemd_provider_autosaving', 'Auto-saving provider settings...')
+                : t('notemd_provider_saving', 'Saving provider settings...')
+        );
+        try {
+            const payload = await requestRuntimeJson('/api/notemd/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ settings: nextSettings }),
+            });
+            notemdProviderModalState.settings = cloneJson(payload.settings || nextSettings);
+            populateProviderSelect();
+            notemdProviderModalState.lastSavedFingerprint = getCurrentProviderFingerprint();
+            removeProviderDraft(providerName);
+            setProviderModalStatus(
+                auto
+                    ? t('notemd_provider_autosaved', 'Provider settings auto-saved.')
+                    : t('notemd_provider_saved', 'Provider settings saved to app_config.toml.'),
+                'success'
+            );
+        } finally {
+            setProviderModalBusy(false);
+        }
+    };
+
+    const scheduleProviderAutosave = () => {
+        if (notemdProviderModalState.loading || notemdProviderModalState.applyingDraft) {
+            return;
+        }
+        const providerName = String(providerNameSelect ? providerNameSelect.value : '').trim();
+        if (!providerName || !notemdProviderModalState.settings) {
+            return;
+        }
+        const nextFingerprint = getCurrentProviderFingerprint();
+        if (!nextFingerprint || nextFingerprint === notemdProviderModalState.lastSavedFingerprint) {
+            return;
+        }
+        clearProviderAutosaveTimer();
+        notemdProviderModalState.autosaveTimer = setTimeout(() => {
+            notemdProviderModalState.autosaveTimer = null;
+            void saveNotemdProviderModalState({ auto: true }).catch((error) => {
+                setProviderModalStatus(
+                    t('notemd_provider_autosave_failed', 'Auto-save failed: {error}', {
+                        error: error && error.message ? error.message : String(error),
+                    }),
+                    'error'
+                );
+            });
+        }, NOTEMD_PROVIDER_AUTOSAVE_DEBOUNCE_MS);
+    };
+
+    const applyNotemdProviderTemplate = async () => {
+        if (!providerTemplateSelect) {
+            return;
+        }
+        const templateId = String(providerTemplateSelect.value || '').trim();
+        if (!templateId) {
+            setProviderModalStatus(t('notemd_provider_template_required', 'Choose a preset template first.'), 'error');
+            return;
+        }
+        setProviderModalBusy(true);
+        setProviderModalStatus(t('notemd_provider_template_applying', 'Applying provider preset...'));
+        try {
+            const payload = await requestRuntimeJson('/api/notemd/provider-templates/apply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ templateId }),
+            });
+            notemdProviderModalState.settings = cloneJson(payload.settings || {});
+            if (payload.configPath) {
+                notemdProviderModalState.configPath = String(payload.configPath);
+            }
+            populateProviderSelect();
+            if (providerConfigPath) {
+                providerConfigPath.textContent = notemdProviderModalState.configPath
+                    ? `${t('notemd_provider_config_path', 'TOML path')}: ${notemdProviderModalState.configPath}`
+                    : '';
+            }
+            notemdProviderModalState.lastSavedFingerprint = getCurrentProviderFingerprint();
+            removeProviderDraft(String(providerNameSelect ? providerNameSelect.value : '').trim());
+            setProviderModalStatus(
+                t('notemd_provider_template_applied', 'Preset applied and saved to app_config.toml.'),
+                'success'
+            );
+        } finally {
+            setProviderModalBusy(false);
+        }
+    };
+
+    const materializeNotemdProviderTemplates = async () => {
+        setProviderModalBusy(true);
+        setProviderModalStatus(t('notemd_provider_templates_writing', 'Writing TOML provider templates...'));
+        try {
+            const payload = await requestRuntimeJson('/api/notemd/provider-templates?persist=1');
+            notemdProviderModalState.templates = Array.isArray(payload.templates)
+                ? cloneJson(payload.templates)
+                : [];
+            notemdProviderModalState.configPath = String(payload.configPath || notemdProviderModalState.configPath || '');
+            populateProviderTemplateSelect();
+            renderProviderTemplateHint();
+            if (providerConfigPath) {
+                providerConfigPath.textContent = notemdProviderModalState.configPath
+                    ? `${t('notemd_provider_config_path', 'TOML path')}: ${notemdProviderModalState.configPath}`
+                    : '';
+            }
+            setProviderModalStatus(
+                payload.persisted
+                    ? t('notemd_provider_templates_written', 'Provider templates were written to app_config.toml.')
+                    : t('notemd_provider_templates_present', 'Provider templates are already present in app_config.toml.'),
+                'success'
+            );
+        } finally {
+            setProviderModalBusy(false);
+        }
+    };
+
+    const testNotemdProviderConnection = async () => {
+        const payload = buildCurrentProviderRequestPayload();
+        if (!payload.providerName) {
+            throw new Error('Provider name is required.');
+        }
+
+        setProviderModalBusy(true);
+        setProviderModalStatus(
+            t('btn_test_provider_connection', 'Test Connection') + '...',
+            'muted'
+        );
+        try {
+            const response = await requestRuntimeJson('/api/notemd/test-llm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const result = response.result || {};
+            setProviderModalStatus(
+                String(result.message || `Connected to ${payload.providerName}.`),
+                result.success === false ? 'error' : 'success'
+            );
+        } finally {
+            setProviderModalBusy(false);
+        }
+    };
 
     // Load initial values
     const updateUIFromSettings = (settings) => {
@@ -4551,6 +5724,9 @@ function initSettingsUI() {
             }
             if (settings.performance.enableGPU !== undefined) {
                 if (gpuCheckbox) gpuCheckbox.checked = settings.performance.enableGPU;
+            }
+            if (settings.performance.staticMode !== undefined) {
+                if (staticModeCheckbox) staticModeCheckbox.checked = settings.performance.staticMode;
             }
             if (settings.performance.gpuRendering !== undefined) {
                 if (gpuRenderingCheckbox) gpuRenderingCheckbox.checked = settings.performance.gpuRendering;
@@ -4614,6 +5790,12 @@ function initSettingsUI() {
         });
     }
 
+    if (staticModeCheckbox) {
+        staticModeCheckbox.addEventListener('change', (e) => {
+            settingsManager.set('performance', 'staticMode', e.target.checked);
+        });
+    }
+
     if (gpuRenderingCheckbox) {
         gpuRenderingCheckbox.addEventListener('change', (e) => {
             settingsManager.set('performance', 'gpuRendering', e.target.checked);
@@ -4659,32 +5841,131 @@ function initSettingsUI() {
         settingsManager.set('reading', 'mode', e.target.value);
     });
 
-    // Helper to close settings
-    const closeSettings = () => {
-        modal.style.display = 'none';
-        isSettingsModalOpen = false;
-        // Resume if not globally frozen
-        const isFrozen = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
-        if (!isFrozen) {
-            simulation.alpha(0.3).restart();
+    if (providerTemplateSelect) {
+        providerTemplateSelect.addEventListener('change', () => {
+            renderProviderTemplateHint();
+            syncCurrentProviderDraft();
+            scheduleProviderAutosave();
+        });
+    }
+
+    if (providerNameSelect) {
+        providerNameSelect.addEventListener('change', () => {
+            renderSelectedProviderFields();
+            syncCurrentProviderDraft();
+            scheduleProviderAutosave();
+        });
+    }
+
+    [
+        providerBaseUrlInput,
+        providerModelInput,
+        providerApiKeyInput,
+        providerApiVersionInput,
+    ].forEach((input) => {
+        if (!input) {
+            return;
         }
-    };
+        input.addEventListener('input', () => {
+            syncCurrentProviderDraft();
+            scheduleProviderAutosave();
+        });
+        input.addEventListener('change', () => {
+            syncCurrentProviderDraft();
+            scheduleProviderAutosave();
+        });
+    });
+
+    if (applyProviderTemplateBtn) {
+        applyProviderTemplateBtn.addEventListener('click', () => {
+            void applyNotemdProviderTemplate().catch((error) => {
+                setProviderModalStatus(
+                    t('notemd_provider_template_apply_failed', 'Provider preset apply failed: {error}', {
+                        error: error && error.message ? error.message : String(error),
+                    }),
+                    'error'
+                );
+            });
+        });
+    }
+
+    if (testProviderBtn) {
+        testProviderBtn.addEventListener('click', () => {
+            void testNotemdProviderConnection().catch((error) => {
+                setProviderModalStatus(
+                    error && error.message ? error.message : String(error),
+                    'error'
+                );
+            });
+        });
+    }
+
+    if (saveProviderBtn) {
+        saveProviderBtn.addEventListener('click', () => {
+            void saveNotemdProviderModalState().catch((error) => {
+                setProviderModalStatus(
+                    t('notemd_provider_save_failed', 'Provider save failed: {error}', {
+                        error: error && error.message ? error.message : String(error),
+                    }),
+                    'error'
+                );
+            });
+        });
+    }
+
+    if (materializeProviderTemplatesBtn) {
+        materializeProviderTemplatesBtn.addEventListener('click', () => {
+            void materializeNotemdProviderTemplates().catch((error) => {
+                setProviderModalStatus(
+                    t('notemd_provider_templates_write_failed', 'Template write failed: {error}', {
+                        error: error && error.message ? error.message : String(error),
+                    }),
+                    'error'
+                );
+            });
+        });
+    }
 
     // Modal Actions
-    // v0.9.42: When opening settings, update UI to reflect current mode's values
     openBtn.addEventListener('click', () => {
         updateUIFromSettings(settingsManager.settings);
-        modal.style.display = 'flex';
-        isSettingsModalOpen = true;
-        simulation.stop(); // v0.9.41: Force freeze to save resources
+        showMainSettingsPage();
     });
-    
-    closeBtns.forEach(btn => btn.addEventListener('click', closeSettings));
-    
-    // Close on click outside
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeSettings();
-    });
+
+    if (openAgentSettingsBtn) {
+        openAgentSettingsBtn.addEventListener('click', () => {
+            void showAgentSettingsPage().catch((error) => {
+                console.warn('[Settings] Failed to open agent settings.', error);
+            });
+        });
+    }
+
+    if (agentSettingsBackBtn) {
+        agentSettingsBackBtn.addEventListener('click', showMainSettingsPage);
+    }
+
+    if (agentSettingsBackFooterBtn) {
+        agentSettingsBackFooterBtn.addEventListener('click', showMainSettingsPage);
+    }
+
+    mainCloseBtns.forEach((btn) => btn.addEventListener('click', closeAllSettingsPages));
+    agentCloseBtns.forEach((btn) => btn.addEventListener('click', closeAllSettingsPages));
+
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeAllSettingsPages();
+            }
+        });
+    }
+
+    if (agentModal) {
+        agentModal.addEventListener('click', (e) => {
+            if (e.target === agentModal) {
+                closeAllSettingsPages();
+            }
+        });
+    }
 
     resetBtn.addEventListener('click', () => {
         settingsManager.reset();
@@ -4699,7 +5980,7 @@ function initSettingsUI() {
             
             // v0.9.40: Check Freeze Layout State before restarting
             const globalFreeze = document.getElementById('freeze-layout') ? document.getElementById('freeze-layout').checked : false;
-            const isFrozen = globalFreeze || isSettingsModalOpen;
+            const isFrozen = globalFreeze || isAnySettingsPanelOpen();
             
             if (!isFrozen) {
                 simulation.alpha(0.3).restart();

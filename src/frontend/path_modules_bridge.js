@@ -155,8 +155,21 @@
             .replace(/<br\s*>/gi, '<br/>');
     }
 
+    function stripBridgeWrappingQuotes(text) {
+        var trimmed = String(text || '').trim();
+        if (trimmed.length >= 2 && trimmed.charAt(0) === '"' && trimmed.charAt(trimmed.length - 1) === '"') {
+            return trimmed.slice(1, -1);
+        }
+        return trimmed;
+    }
+
     function splitBridgeMermaidTopLevelStatements(source) {
-        var text = normalizeBridgeMermaidLineBreaks(source);
+        var text = normalizeBridgeMermaidLineBreaks(source)
+            .split('\n')
+            .map(function(line) {
+                return rewriteBridgeQuotedLabelAfterSemicolonLine(line) || line;
+            })
+            .join('\n');
         var result = '';
         var quote = false;
         var squareDepth = 0;
@@ -187,6 +200,81 @@
         return result;
     }
 
+    function rewriteBridgeQuotedLabelAfterSemicolonLine(line) {
+        if (String(line || '').indexOf('-->') === -1) {
+            return null;
+        }
+        var match = String(line || '').match(/^(.*?)\s*(-->)\s*(.*?);\s*"([^"\n]+)"\s*$/);
+        if (!match) {
+            return null;
+        }
+        var source = String(match[1] || '').trim();
+        var arrow = String(match[2] || '').trim();
+        var target = String(match[3] || '').trim();
+        var label = String(match[4] || '').trim();
+        if (!source || !target || !label) {
+            return null;
+        }
+        return `${source} -- "${label}" ${arrow} ${target};`;
+    }
+
+    function mergeBridgeDoubleArrowLabelLine(line) {
+        var match = String(line || '').match(/^(.*?)\s*--\s*"([^"\n]+)"\s*--\s*"([^"\n]+)"\s*(-->|---)\s*(.*)$/);
+        if (!match) {
+            return null;
+        }
+        var start = String(match[1] || '').trim();
+        var labelLeft = String(match[2] || '').trim();
+        var labelRight = String(match[3] || '').trim();
+        var arrow = String(match[4] || '').trim();
+        var end = String(match[5] || '').trim();
+        if (!start || !labelLeft || !labelRight || !end) {
+            return null;
+        }
+        return `${start} -- "${labelLeft}<br/>${labelRight}" ${arrow} ${end}`;
+    }
+
+    function quoteBridgeUnquotedEdgeLabelLine(line) {
+        var match = String(line || '').match(/^(.*?)\s*--\s*([^"\n][^>\n]*?)\s*-->\s*(.*)$/);
+        if (!match) {
+            return null;
+        }
+        var start = String(match[1] || '').trim();
+        var label = String(match[2] || '').trim();
+        var end = String(match[3] || '').trim();
+        if (!start || !label || !end) {
+            return null;
+        }
+        if (
+            /^[A-Za-z_][A-Za-z0-9_]*$/.test(label)
+            || /^[A-Za-z_][A-Za-z0-9_]*\s*[\[\(\{].*$/.test(label)
+            || /^["[{(]/.test(label)
+        ) {
+            return null;
+        }
+        return `${start} -- "${label}" --> ${end}`;
+    }
+
+    function splitBridgeIntermediateNodeLine(line) {
+        var match = String(line || '').match(/^(.*?)\s*(-->|---)\s*([A-Za-z_][A-Za-z0-9_]*)\s*(\[[^\]]+\]|\([^)]+\)|\{[^}]+\})\s*(-->|---)\s*(.*)$/);
+        if (!match) {
+            return null;
+        }
+        var start = String(match[1] || '').trim();
+        var leftArrow = String(match[2] || '').trim();
+        var nodeId = String(match[3] || '').trim();
+        var nodeShape = String(match[4] || '').trim();
+        var rightArrow = String(match[5] || '').trim();
+        var end = String(match[6] || '').trim();
+        if (!start || !nodeId || !nodeShape || !end) {
+            return null;
+        }
+        return [
+            `${start} ${leftArrow} ${nodeId}${nodeShape}`,
+            `${nodeId} ${rightArrow} ${end}`
+        ];
+    }
+
     function sanitizeBridgeMermaidIdentifier(rawValue, fallbackPrefix, counter) {
         var raw = String(rawValue || '').trim();
         var prefixedMatch = raw.match(/^([A-Za-z][A-Za-z0-9_]*)/);
@@ -205,6 +293,32 @@
 
     function isBridgeMermaidControlLine(line) {
         return /^\s*(?:graph|flowchart|subgraph|end|classDef|class|style|linkStyle|click|%%)\b/i.test(line);
+    }
+
+    function convertBridgeNoteLine(line, state) {
+        var directionalMatch = String(line || '').match(/^\s*note\s+(?:right|left|top|bottom)\s+of\s+([A-Za-z0-9_]+)\s*:\s*(.+)$/i);
+        if (directionalMatch) {
+            state.syntheticCounter += 1;
+            var directionalNodeId = `AutoNote${state.syntheticCounter}`;
+            var directionalNodeText = escapeBridgeMermaidLabel(stripBridgeWrappingQuotes(directionalMatch[2]));
+            return [
+                `${directionalNodeId}["${directionalNodeText}"]`,
+                `${directionalMatch[1]} -.- ${directionalNodeId}`
+            ];
+        }
+
+        var targetedMatch = String(line || '').match(/^\s*note\s+([A-Za-z0-9_]+)\s+"(.+)"\s*$/i);
+        if (targetedMatch) {
+            state.syntheticCounter += 1;
+            var targetedNodeId = `AutoNote${state.syntheticCounter}`;
+            var targetedNodeText = escapeBridgeMermaidLabel(stripBridgeWrappingQuotes(targetedMatch[2]));
+            return [
+                `${targetedNodeId}["${targetedNodeText}"]`,
+                `${targetedMatch[1]} -.- ${targetedNodeId}`
+            ];
+        }
+
+        return null;
     }
 
     function normalizeBridgeMermaidEdgeLabels(line) {
@@ -244,20 +358,65 @@
         return `${left}${connector}${normalizeBridgeMermaidEndpoint(right, state)}`;
     }
 
+    function fixBridgeDanglingBracketedNodeLabelLine(line) {
+        var match = String(line || '').match(/^(\s*[A-Za-z_][A-Za-z0-9_]*)\["([^"\n]*)\["\s*;?\s*$/);
+        if (!match) {
+            return null;
+        }
+
+        var nodeId = String(match[1] || '').trim();
+        var label = String(match[2] || '').trim();
+        if (!nodeId || !label) {
+            return null;
+        }
+
+        return `${nodeId}["${escapeBridgeMermaidLabel(label)}"]`;
+    }
+
+    function applyBridgeLegacyMermaidRepairs(line, state) {
+        var noteLines = convertBridgeNoteLine(line, state);
+        if (noteLines) {
+            return noteLines;
+        }
+
+        var next = String(line || '');
+        next = rewriteBridgeQuotedLabelAfterSemicolonLine(next) || next;
+        next = mergeBridgeDoubleArrowLabelLine(next) || next;
+        next = quoteBridgeUnquotedEdgeLabelLine(next) || next;
+        next = fixBridgeDanglingBracketedNodeLabelLine(next) || next;
+
+        var splitIntermediate = splitBridgeIntermediateNodeLine(next);
+        if (splitIntermediate) {
+            return splitIntermediate;
+        }
+
+        return [next];
+    }
+
     function normalizeBridgeMermaidDefinition(source) {
         var split = splitBridgeMermaidTopLevelStatements(source);
         var state = {
             labelToId: new Map(),
             syntheticCounter: 0
         };
+
         return split
             .split('\n')
-            .map(function(line) {
-                if (isBridgeMermaidControlLine(line)) {
-                    return line.trimEnd();
+            .reduce(function(lines, rawLine) {
+                var repairedLines = applyBridgeLegacyMermaidRepairs(rawLine, state);
+                for (var index = 0; index < repairedLines.length; index += 1) {
+                    var line = repairedLines[index];
+                    if (!String(line || '').trim()) {
+                        continue;
+                    }
+                    if (isBridgeMermaidControlLine(line)) {
+                        lines.push(line.trimEnd());
+                    } else {
+                        lines.push(normalizeBridgeMermaidEdgeLine(line, state).trimEnd());
+                    }
                 }
-                return normalizeBridgeMermaidEdgeLine(line, state).trimEnd();
-            })
+                return lines;
+            }, [])
             .join('\n')
             .replace(/\n{3,}/g, '\n\n')
             .trim();

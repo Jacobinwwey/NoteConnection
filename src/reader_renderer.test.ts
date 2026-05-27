@@ -197,6 +197,92 @@ describe('reader_renderer', () => {
         expect(svg).toContain('Interface');
     });
 
+    it('rewrites quoted labels that were displaced after a semicolon into valid Mermaid edge labels', () => {
+        const svg = runRenderer(
+            'renderMermaidSvg',
+            [
+                'flowchart TD',
+                'A[Incident Wave] --> I[Interface]; "界面法线 Normal"',
+                'I --> R[Reflected Wave]',
+            ].join('\n'),
+            { theme: 'dark' },
+        );
+
+        expect(svg.startsWith('<svg')).toBe(true);
+        expect(svg).toContain('界面法线');
+        expect(svg).toContain('Reflected Wave');
+    });
+
+    it('converts directional note directives into note nodes instead of leaving parser-breaking legacy syntax', () => {
+        const svg = runRenderer(
+            'renderMermaidSvg',
+            [
+                'flowchart TD',
+                'A[Incident Wave] --> B[Interface]',
+                'note right of A : Important constraint',
+            ].join('\n'),
+            { theme: 'dark' },
+        );
+
+        expect(svg.startsWith('<svg')).toBe(true);
+        expect(svg).toContain('Important constraint');
+        expect(svg).toContain('Incident Wave');
+    });
+
+    it('repairs legacy double-dash labelled edges before rendering', () => {
+        const svg = runRenderer(
+            'renderMermaidSvg',
+            [
+                'graph TD;',
+                'P["Incident Wave"] -- "theta_i" -- N;',
+                'P -- "theta_r" -- R;',
+                'N --> T["Transmitted Wave"]',
+            ].join('\n'),
+            { theme: 'dark' },
+        );
+
+        expect(svg.startsWith('<svg')).toBe(true);
+        expect(svg).toContain('Incident Wave');
+        expect(svg).toContain('Transmitted Wave');
+        expect(svg).toContain('theta_i');
+        expect(svg).toContain('theta_r');
+    });
+
+    it('wraps spaced mixed-language html-break labels into Mermaid node syntax', () => {
+        const svg = runRenderer(
+            'renderMermaidSvg',
+            [
+                'flowchart TD',
+                'A[Incident Wave] --> I Interface<br/>Boundary;',
+                'I --> R Reflected<br/>Wave;',
+            ].join('\n'),
+            { theme: 'dark' },
+        );
+
+        expect(svg.startsWith('<svg')).toBe(true);
+        expect(svg).toContain('Incident Wave');
+        expect(svg).toContain('Interface');
+        expect(svg).toContain('Reflected');
+    });
+
+    it('repairs Mermaid nodes whose quoted labels end with a stray opening bracket', () => {
+        const svg = runRenderer(
+            'renderMermaidSvg',
+            [
+                'graph LR',
+                'IncidentWave["入射波 Incident Wave"]',
+                'InteractionPoint["作用点 Interaction Point["',
+                'IncidentWave --> InteractionPoint',
+                'InteractionPoint --> Absorption["吸收 Absorption"]',
+            ].join('\n'),
+            { theme: 'dark' },
+        );
+
+        expect(svg.startsWith('<svg')).toBe(true);
+        expect(svg).toContain('作用点');
+        expect(svg).toContain('吸收');
+    });
+
     it('does not leak JSDOM globals onto Node global scope after Mermaid rendering', () => {
         const scopeProbe = runRendererScopeProbe(
             ['flowchart TD', 'A[Start] --> B{Check}', 'B -->|Yes| C[Done]', 'B -->|No| D[Retry]'].join('\n'),

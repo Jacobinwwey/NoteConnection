@@ -265,13 +265,13 @@ func _create_bubble_material(is_central: bool, is_completed: bool) -> Material:
 		shader_mat.set_shader_parameter("rainbow_saturation", 0.85)
 		shader_mat.set_shader_parameter("iridescence_scale", 6.0)
 		
-		## Fresnel: more transparency in center, subtle rim
+		## Fresnel: keep the bubble readable against dark HDR backgrounds.
 		shader_mat.set_shader_parameter("fresnel_power", 3.5)
-		shader_mat.set_shader_parameter("rim_opacity", 0.35)
-		shader_mat.set_shader_parameter("center_opacity", 0.02)
+		shader_mat.set_shader_parameter("rim_opacity", 0.82 if is_central else 0.74)
+		shader_mat.set_shader_parameter("center_opacity", 0.32 if is_central else 0.24)
 		
 		## Bright specular highlights
-		shader_mat.set_shader_parameter("specular_intensity", 2.0)
+		shader_mat.set_shader_parameter("specular_intensity", 2.2)
 		shader_mat.set_shader_parameter("highlight_sharpness", 64.0)
 		
 		return shader_mat
@@ -561,6 +561,8 @@ func _on_ws_data_received(data: Dictionary) -> void:
 			_handle_path_status(payload)
 		"configure":
 			_handle_remote_configure(payload)
+		"openReader":
+			_handle_remote_open_reader(payload)
 
 
 func _handle_path_status(payload: Dictionary) -> void:
@@ -578,6 +580,27 @@ func _handle_remote_configure(payload: Dictionary) -> void:
 
 	if payload.has("language") and ui and ui.has_method("set_ui_language"):
 		ui.set_ui_language(String(payload.get("language", "en")))
+	if ui and ui.has_method("apply_remote_runtime_settings"):
+		ui.apply_remote_runtime_settings(payload)
+
+
+func _handle_remote_open_reader(payload) -> void:
+	var node_id := ""
+	if payload is Dictionary:
+		node_id = String((payload as Dictionary).get("nodeId", "")).strip_edges()
+	else:
+		node_id = String(payload).strip_edges()
+	if node_id.is_empty():
+		return
+
+	var reader_node := _find_reader_node(node_id)
+	if reader_node.is_empty():
+		reader_node = {
+			"id": node_id,
+			"label": node_id
+		}
+	if ui and ui.has_method("open_reader"):
+		ui.open_reader(reader_node)
 
 
 ## Handle bidirectional completion sync from Electron
@@ -815,6 +838,8 @@ func _on_settings_updated(settings: Dictionary) -> void:
 	print("[PathRenderer] Settings updated: ", settings)
 	if ws_client and ws_client.has_method("send_configure"):
 		ws_client.send_configure(settings)
+		if _settings_require_path_refresh(settings) and ws_client.has_method("send_request_path"):
+			ws_client.send_request_path()
 		
 	if settings.has("background"):
 		var bg_file = settings["background"]
@@ -828,6 +853,22 @@ func _on_settings_updated(settings: Dictionary) -> void:
 		var world_env := $"../WorldEnvironment" as WorldEnvironment
 		if world_env and world_env.environment:
 			world_env.environment.background_energy_multiplier = settings["bg_brightness"]
+
+func _settings_require_path_refresh(settings: Dictionary) -> bool:
+	for key in [
+		"mode",
+		"strategy",
+		"layout",
+		"targetId",
+		"target_id",
+		"targetIds",
+		"auto_reconstruct",
+		"retain_history",
+		"focus_mode"
+	]:
+		if settings.has(key):
+			return true
+	return false
 
 func _apply_default_background(world_env: WorldEnvironment, sky_mat: PanoramaSkyMaterial) -> void:
 	sky_mat.panorama = null
@@ -899,6 +940,10 @@ func _load_hdr_background_safely(path: String) -> Texture2D:
 	return texture
 
 
+func _filter_startup_settings(settings: Dictionary) -> Dictionary:
+	return settings.duplicate(true)
+
+
 func _schedule_initial_ui_settings_retry() -> void:
 	if _initial_ui_settings_retries >= MAX_INITIAL_UI_SETTINGS_RETRIES:
 		return
@@ -915,7 +960,7 @@ func _apply_initial_ui_settings() -> void:
 		var settings: Dictionary = ui.get_runtime_settings()
 		if not settings.is_empty():
 			_initial_ui_settings_retries = 0
-			_on_settings_updated(settings)
+			_on_settings_updated(_filter_startup_settings(settings))
 			return
 
 	if ui.has_method("get_setting"):
@@ -923,10 +968,10 @@ func _apply_initial_ui_settings() -> void:
 		var brightness = ui.get_setting("bg_brightness", null)
 		if background != null or brightness != null:
 			_initial_ui_settings_retries = 0
-			_on_settings_updated({
+			_on_settings_updated(_filter_startup_settings({
 				"background": background if background != null else "",
-				"bg_brightness": brightness if brightness != null else 1.0
-			})
+				"bg_brightness": brightness if brightness != null else 0.10
+			}))
 			return
 
 	_schedule_initial_ui_settings_retry()

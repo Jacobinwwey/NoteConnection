@@ -15,6 +15,21 @@
 - Tauri 迁移闭环并不等于 knowledge-mastery 底座闭环。
 - 真实 graph backend、生产级 ANN、非 placeholder 质量门禁、以及默认 runtime tutor routing，现已转入历史 Tauri 任务板之外的主线跟踪。
 
+## 2026-05-27 Tauri-first Reply Rendering 任务同步
+
+- [x] Scoped knowledge-workspace 选择、active-target 透传与 title-like selective hydration 已在当前分支真实落地。
+- [x] Provider 预设、TOML 模板落盘，以及 conversation turn / resume 头的 CORS 闭环已在当前分支真实落地。
+- [x] Reader 侧 markdown / KaTeX / Mermaid 加固，以及一等的 Tauri 调试抓取工具链已在当前分支真实落地。
+- [ ] Tauri agent reply area 仍然以纯文本挂载 assistant reply，仍是当前最主要的未完成 UX 缺口。
+- [ ] Reader render substrate 在 agent workspace 内的共享复用仍待完成。
+- [ ] 面向 rich assistant output 的 HTML artifact 隔离路径仍待完成。
+
+当前执行参考：
+
+- `docs/diataxis/zh/explanation/development-progress-dashboard.md`
+- `docs/diataxis/zh/explanation/agent-conversation-focus-mode-plan.md`
+- `docs/zh/implementation_plan.md`
+
 ---
 
 # 2026-03-04 v1.5.13 - Tauri Taskboard Refresh (Desktop + Android + Godot Bridge)

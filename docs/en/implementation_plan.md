@@ -2,6 +2,55 @@
 
 ## English Document
 
+### 2026-05-27 Tauri-First Agent Reply Rendering Realignment
+
+#### Objective
+
+Align the active implementation plan with current code reality:
+
+- scoped knowledge-workspace grounding is now real,
+- provider/TOML settings delivery is now real,
+- Reader markdown/math/mermaid hardening is now real,
+- but the Tauri agent reply area is still plain-text and therefore remains the most visible unfinished interaction gap.
+
+#### Code-vs-plan reality
+
+- Already implemented in code:
+  - active-target-aware workspace hydration and title-like selective document hydration,
+  - workspace readiness and miss diagnostics in conversation traces,
+  - provider preset/template flows for `app_config.toml`,
+  - CORS closure for conversation turn/resume headers,
+  - Reader-side Mermaid/KaTeX hardening and leaked-error suppression,
+  - first-party Tauri runtime/webview/window debug capture scripts.
+- Not yet implemented:
+  - a typed reply-rendering model in the Tauri agent workspace,
+  - shared reuse of the Reader render substrate inside the agent reply surface,
+  - artifact-style handling for large HTML assistant outputs.
+
+#### Next execution order
+
+1. **P0: Document truth sync**
+   - keep `development-progress-dashboard`, `agent-conversation-focus-mode-plan`, `implementation_plan`, and `tauri_tasks` aligned with current code rather than older Program F-only framing.
+2. **P1: Response contract evolution**
+   - extend the conversation response with backward-compatible `assistantBlocks` while preserving `assistantMessage`.
+3. **P2: Shared render substrate**
+   - extract reusable markdown/math/mermaid rendering from the Reader/runtime path instead of creating a new standalone chat renderer.
+4. **P3: Tauri reply renderer**
+   - replace plain-text assistant reply mounting with a typed block renderer in the agent workspace.
+5. **P4: HTML artifact isolation**
+   - keep inline markdown HTML constrained, but route full HTML outputs into sandboxed artifact preview instead of the main chat DOM.
+6. **P5: Compatibility + verification**
+   - retain legacy fallback behavior,
+   - preserve existing knowledge-point/capability orchestration,
+   - verify docs, frontend contracts, and build/runtime proof after the rendering uplift.
+
+#### Acceptance criteria
+
+1. The Tauri agent reply area can render markdown, KaTeX, and Mermaid using the shared Reader-aligned pipeline.
+2. The existing `assistantMessage`-only flow still works during transition.
+3. Existing `knowledgePoints`, capability execution, and conversation cards remain backward-compatible.
+4. The new render path keeps a clean downgrade/materialization boundary for later Godot work instead of baking Godot constraints into the Tauri-first UX.
+
 ### Objective
 
 Bring code truth, active progress docs, and next execution order back into alignment after the branch accumulated real Phase-3 slices while still carrying unfinished Phase-1 and Phase-2 requirements.

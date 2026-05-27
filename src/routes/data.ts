@@ -3,9 +3,11 @@ import type { RouteEntry, ServerContext } from './types';
 import { CrashLogger } from '../backend/utils/CrashLogger';
 import * as fs from 'fs';
 import * as path from 'path';
+import { buildGraph } from '../index';
+import { FileLoader } from '../backend/FileLoader';
 
 export function registerDataRoutes(ctx: ServerContext): RouteEntry[] {
-    const { LOOPBACK_HOST, finalPort, kbRoot } = ctx;
+    const { LOOPBACK_HOST, finalPort, kbRoot, runtimeDataDir, knowledgeLearningPlatform } = ctx;
 
     const json = (res: any, code: number, data: unknown) => {
         res.writeHead(code, { 'Content-Type': 'application/json' });
@@ -14,6 +16,47 @@ export function registerDataRoutes(ctx: ServerContext): RouteEntry[] {
     const ok = (res: any, data: unknown) => json(res, 200, { success: true, ...(data as any) });
     const fail = (res: any, error: unknown, label: string) => { console.error(error); CrashLogger.log(error, label); json(res, 500, { success: false, error: String(error) }); };
     const readBody = (req: any): Promise<string> => new Promise((resolve, reject) => { const chunks: Buffer[] = []; req.on('data', (c: Buffer) => chunks.push(c)); req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8'))); req.on('error', reject); });
+    const sanitizeTargetName = (target: string) => String(target || '').replace(/[^a-z0-9_\-]/gi, '_');
+    const generatedAssetPath = (filename: string) => path.join(runtimeDataDir, filename);
+    const readGeneratedAssetIfExists = async (filename: string): Promise<string | null> => {
+        const candidate = generatedAssetPath(filename);
+        try {
+            await fs.promises.access(candidate, fs.constants.F_OK);
+            return candidate;
+        } catch {
+            return null;
+        }
+    };
+    const buildKnowledgeDocumentPayloads = async (target: string) => {
+        const normalizedTarget = String(target || '').trim();
+        const targetPath = normalizedTarget && normalizedTarget !== 'ALL_FOLDERS'
+            ? path.join(kbRoot, normalizedTarget)
+            : kbRoot;
+        const files = await FileLoader.loadFiles(targetPath, ['.md']);
+        return files.map((file) => {
+            const relativePath = path.relative(kbRoot, file.filepath).replace(/\\/g, '/');
+            return {
+                sourcePath: `Knowledge_Base/${relativePath}`.replace(/\/{2,}/g, '/'),
+                content: file.content,
+                language: /[\u4e00-\u9fff]/.test(file.content) ? 'zh' : 'en',
+            };
+        });
+    };
+    const syncKnowledgeWorkspaceForTarget = async (target: string, reason: string) => {
+        const documents = await buildKnowledgeDocumentPayloads(target);
+        const result = await knowledgeLearningPlatform.ingestKnowledge({
+            incremental: true,
+            documents,
+            ingestedAt: new Date().toISOString(),
+            relationRecomputeMode: 'incremental',
+        });
+        return {
+            target,
+            reason,
+            documentCount: documents.length,
+            summary: result.summary,
+        };
+    };
 
     return [
         // ── GET routes ──
@@ -34,22 +77,44 @@ export function registerDataRoutes(ctx: ServerContext): RouteEntry[] {
         { method: 'GET', path: '/api/check-cache', handler: async (req, res) => {
             try {
                 const urlObj = new URL(req.url || '/', `http://${LOOPBACK_HOST}:${finalPort}`);
-                const target = urlObj.searchParams.get('target') || 'default';
-                const cacheDir = path.join(kbRoot, '..', 'cache');
-                const targetFile = path.join(cacheDir, `graph_${target}.json`);
-                const exists = fs.existsSync(targetFile);
-                const stat = exists ? fs.statSync(targetFile) : null;
-                json(res, 200, { cached: exists, target, cachePath: targetFile, sizeBytes: stat?.size ?? 0, modifiedAt: stat?.mtime?.toISOString() ?? null });
+                const target = urlObj.searchParams.get('target');
+                if (!target) { json(res, 200, null); return; }
+                if (target === 'ALL_FOLDERS') {
+                    const activeJsPath = await readGeneratedAssetIfExists('data.js');
+                    if (!activeJsPath) { json(res, 200, null); return; }
+                    const stat = await fs.promises.stat(activeJsPath);
+                    json(res, 200, { date: stat.mtime.toLocaleString(), size: stat.size, source: 'active' });
+                    return;
+                }
+                const targetFile = await readGeneratedAssetIfExists(`data_${sanitizeTargetName(target)}.js`);
+                if (!targetFile) { json(res, 200, null); return; }
+                const stat = await fs.promises.stat(targetFile);
+                json(res, 200, { date: stat.mtime.toLocaleString(), size: stat.size });
             } catch (e) { fail(res, e, 'GET /api/check-cache'); }
         }},
         { method: 'GET', path: '/api/restore-cache', handler: async (req, res) => {
             try {
                 const urlObj = new URL(req.url || '/', `http://${LOOPBACK_HOST}:${finalPort}`);
-                const target = urlObj.searchParams.get('target') || 'default';
-                const cacheDir = path.join(kbRoot, '..', 'cache');
-                const targetFile = path.join(cacheDir, `graph_${target}.json`);
-                if (!fs.existsSync(targetFile)) { json(res, 404, { restored: false, error: `No cache found for target: ${target}` }); return; }
-                json(res, 200, { restored: true, target, cachePath: targetFile });
+                const target = urlObj.searchParams.get('target');
+                if (!target) { json(res, 400, { success: false, error: 'Missing target' }); return; }
+                if (target === 'ALL_FOLDERS') {
+                    const activeJsPath = await readGeneratedAssetIfExists('data.js');
+                    if (!activeJsPath) { json(res, 200, { success: false, error: 'No active cache found' }); return; }
+                    const sync = await syncKnowledgeWorkspaceForTarget('ALL_FOLDERS', 'restore_cache');
+                    json(res, 200, { success: true, sync });
+                    return;
+                }
+                const targetName = sanitizeTargetName(target);
+                const cacheJs = await readGeneratedAssetIfExists(`data_${targetName}.js`);
+                const cacheJson = await readGeneratedAssetIfExists(`graph_data_${targetName}.json`);
+                if (!cacheJs) { json(res, 404, { restored: false, error: `No cache found for target: ${target}` }); return; }
+                await fs.promises.mkdir(runtimeDataDir, { recursive: true });
+                await fs.promises.copyFile(cacheJs, generatedAssetPath('data.js'));
+                if (cacheJson) {
+                    await fs.promises.copyFile(cacheJson, generatedAssetPath('graph_data.json'));
+                }
+                const sync = await syncKnowledgeWorkspaceForTarget(target, 'restore_cache');
+                json(res, 200, { success: true, sync });
             } catch (e) { fail(res, e, 'GET /api/restore-cache'); }
         }},
         { method: 'GET', path: '/api/folders', handler: async (_req, res) => {
@@ -80,7 +145,20 @@ export function registerDataRoutes(ctx: ServerContext): RouteEntry[] {
             try {
                 const body = await readBody(req);
                 const payload = JSON.parse(body);
-                json(res, 200, { success: true, message: 'Build request accepted', target: payload?.target || kbRoot, requestedAt: new Date().toISOString() });
+                const target = String(payload?.target || 'ALL_FOLDERS').trim() || 'ALL_FOLDERS';
+                const targetPath = target !== 'ALL_FOLDERS'
+                    ? path.join(kbRoot, target)
+                    : kbRoot;
+                await buildGraph({
+                    targetPath,
+                    maxWorkers: payload?.maxWorkers,
+                    enableGPU: payload?.enableGPU,
+                    enableGPULayout: payload?.enableGPULayout,
+                    memorySavingMode: payload?.memorySavingMode,
+                    deepDebug: payload?.deepDebug,
+                });
+                const sync = await syncKnowledgeWorkspaceForTarget(target, 'build_graph');
+                json(res, 200, { success: true, target, requestedAt: new Date().toISOString(), sync });
             } catch (e) { fail(res, e, 'POST /api/build'); }
         }},
     ];

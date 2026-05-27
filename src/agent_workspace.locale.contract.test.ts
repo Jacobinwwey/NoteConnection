@@ -81,4 +81,12 @@ describe('agent workspace locale contract', () => {
 
         expect(mismatched).toEqual([]);
     });
+
+    test('workspace semantics stay aligned with grounded conversation terminology', () => {
+        expect(getNestedStringValue(localeEn, 'agentWorkspace.title')).toBe('Knowledge Workspace');
+        expect(getNestedStringValue(localeEn, 'agentWorkspace.conversationTitle')).toBe('Grounded Conversation');
+        expect(getNestedStringValue(localeEn, 'agentWorkspace.actions.openWorkspace')).toBe('Knowledge Workspace');
+        expect(getNestedStringValue(localeEn, 'agentWorkspace.inputLabel')).toBe('Ask the scoped knowledge corpus');
+        expect(getNestedStringValue(localeZh, 'agentWorkspace.title')).not.toContain('Agent');
+    });
 });

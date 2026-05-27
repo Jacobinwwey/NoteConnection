@@ -12,6 +12,19 @@ describe('pathmode background safety contract', () => {
     expect(source).not.toContain('"background": "belfast_sunset_puresky_4k.exr"');
   });
 
+  test('startup path-mode restore keeps runtime background values intact', () => {
+    const source = fs.readFileSync(pathRendererPath, 'utf8');
+    expect(source).toContain('func _filter_startup_settings(settings: Dictionary) -> Dictionary:');
+    expect(source).toContain('return settings.duplicate(true)');
+  });
+
+  test('desktop settings panel prefers runtime TOML over local cfg during load', () => {
+    const source = fs.readFileSync(settingsPanelPath, 'utf8');
+    expect(source).toContain('if not _runtime_base_url.is_empty():');
+    expect(source).toContain('call_deferred("_load_settings_from_runtime_async")');
+    expect(source).toContain('_load_settings_local()');
+  });
+
   test('loads HDR backgrounds through the guarded resize-and-convert path', () => {
     const source = fs.readFileSync(pathRendererPath, 'utf8');
     expect(source).toContain('var _background_texture_cache: Dictionary = {}');
@@ -19,6 +32,7 @@ describe('pathmode background safety contract', () => {
     expect(source).toContain('func _load_hdr_background_safely(path: String) -> Texture2D:');
     expect(source).toContain('var imported_tex = ResourceLoader.load(path)');
     expect(source).toContain('var texture := imported_tex as Texture2D');
+    expect(source).not.toContain('MAX_SAFE_HDR_BACKGROUND_BYTES');
     expect(source).not.toContain('(imported_tex as Texture2D).get_image()');
     expect(source).not.toContain('var image_error := image.load(path)');
   });

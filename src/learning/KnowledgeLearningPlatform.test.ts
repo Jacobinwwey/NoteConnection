@@ -142,6 +142,48 @@ describe('KnowledgeLearningPlatform', () => {
         }));
     });
 
+    test('query planner resolves mixed-language title queries inside an explicit workspace scope', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_water_glass',
+                    sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                    language: 'zh',
+                    workspaceId: 'waterglass',
+                    corpusId: 'waterglass',
+                    content: '# 水杯 water glass\n水杯是由玻璃容器和内部液体组成的系统。',
+                },
+            ],
+        });
+
+        const queryResult = await platform.queryKnowledge({
+            query: '什么是water glass',
+            topK: 5,
+            scope: {
+                workspaceId: 'waterglass',
+                corpusId: 'waterglass',
+                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+            },
+        });
+
+        expect(queryResult.items.length).toBeGreaterThan(0);
+        expect(queryResult.trace.scope).toEqual(expect.objectContaining({
+            workspaceId: 'waterglass',
+            corpusId: 'waterglass',
+            scopeSource: 'explicit_request',
+        }));
+        expect(queryResult.trace.scope?.documentIds).toContain('doc_water_glass');
+        expect(queryResult.trace.scope?.readiness).toEqual(expect.objectContaining({
+            status: 'ready',
+            workspaceId: 'waterglass',
+        }));
+        expect(queryResult.trace.planner).toEqual(expect.objectContaining({
+            titleLikeQueries: expect.arrayContaining(['water glass', 'waterglass']),
+            titleHitDocumentIds: expect.arrayContaining(['doc_water_glass']),
+        }));
+    });
+
     test('ingest diff operations support delete and dynamic relation recompute', async () => {
         const seed = await platform.ingestKnowledge({
             incremental: true,
@@ -1428,6 +1470,28 @@ describe('KnowledgeLearningPlatform', () => {
         expect(persistedMemory.results.length).toBeGreaterThan(0);
         expect(Array.isArray(persistedMemory.results[0]?.tags)).toBe(true);
         expect(persistedMemory.results[0]?.tags).toContain('scope_corpus:optics');
+    });
+
+    test('agent conversation exposes readiness and miss diagnostics when scoped retrieval is empty', async () => {
+        const response = await platform.agentConversation({
+            userId: 'agent_miss_user',
+            sessionId: 'session_miss_scope',
+            message: '什么是water glass',
+            scope: {
+                workspaceId: 'waterglass',
+                corpusId: 'waterglass',
+                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+            },
+            persistMemory: false,
+        });
+
+        expect(response.trace.workspaceReadiness).toEqual(expect.objectContaining({
+            status: 'empty_store',
+        }));
+        expect(response.trace.missDiagnostics).toEqual(expect.objectContaining({
+            reason: 'empty_store',
+        }));
+        expect(response.answer).toContain('learning workspace store is empty');
     });
 
     test('memory policy diagnostics records history and improving trend snapshots', async () => {

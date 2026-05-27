@@ -123,6 +123,20 @@
         >
           NoteMD
         </button>
+        <button
+          id="btn-open-agent-workspace"
+          style="
+            background: #744210;
+            color: #fff8e1;
+            border: 1px solid #a16207;
+            padding: 2px 8px;
+            cursor: pointer;
+          "
+          data-i18n="agentWorkspace.actions.openWorkspace"
+          title="Open Knowledge Workspace"
+        >
+          Knowledge Workspace
+        </button>
         <span
           id="kb-current-path"
           style="
@@ -140,70 +154,95 @@
         ></span>
       </div>
 
-      <div id="agent-workspace-shell" class="agent-workspace-shell">
-        <section id="agent-chat-pane" class="agent-chat-pane">
-          <div class="agent-pane-header">
-            <h3 data-i18n="agentWorkspace.title">Agent Workspace</h3>
-            <span class="agent-pane-subtitle" data-i18n="agentWorkspace.subtitle">Conversation + local knowledge actions</span>
+      <div id="agent-workspace-backdrop" class="agent-workspace-backdrop" hidden></div>
+      <aside
+        id="agent-workspace-drawer"
+        class="agent-workspace-drawer"
+        aria-hidden="true"
+        data-open="false"
+      >
+        <div class="agent-workspace-drawer-frame">
+          <div class="agent-workspace-drawer-toolbar">
+            <div class="agent-workspace-drawer-heading">
+              <span class="agent-workspace-drawer-title" data-i18n="agentWorkspace.title">Knowledge Workspace</span>
+              <span class="agent-workspace-drawer-subtitle" data-i18n="agentWorkspace.subtitle">Grounded conversation, knowledge search, and guided learning</span>
+            </div>
+            <button
+              id="btn-close-agent-workspace"
+              type="button"
+              class="agent-workspace-drawer-close"
+              data-i18n="agentWorkspace.actions.closeWorkspace"
+            >
+              Close
+            </button>
           </div>
-          <div class="agent-pane-field">
-            <label for="agent-workspace-user-id" data-i18n="agentWorkspace.userId">Learner ID</label>
-            <input id="agent-workspace-user-id" type="text" value="path_user_default" />
-          </div>
-          <div id="agent-workspace-chat-messages" class="agent-chat-messages"></div>
-          <div class="agent-pane-field">
-            <label for="agent-workspace-chat-input" data-i18n="agentWorkspace.inputLabel">Ask the local learning graph</label>
-            <textarea
-              id="agent-workspace-chat-input"
-              rows="3"
-              placeholder="Ask about a concept, proof step, or prerequisite..."
-              data-i18n-placeholder="agentWorkspace.inputPlaceholder"
-            ></textarea>
-          </div>
-          <div class="agent-pane-actions">
-            <button id="btn-agent-workspace-send" type="button" data-i18n="agentWorkspace.actions.send">Send</button>
-          </div>
-          <div id="agent-workspace-knowledge-points" class="agent-knowledge-points">
-            <div class="agent-knowledge-empty" data-i18n="agentWorkspace.knowledge.emptyInitial">No local knowledge points yet.</div>
-          </div>
-        </section>
 
-        <div id="agent-side-work-area" class="agent-side-work-area">
-          <section
-            id="agent-graph-focus-pane"
-            class="agent-workspace-pane"
-            data-open="false"
-            data-fullscreen="false"
-          >
-            <div class="agent-workspace-pane-header">
-              <h4 data-i18n="agentWorkspace.graphFocus.title">Graph Focus</h4>
-              <div class="agent-pane-controls">
-                <button id="btn-agent-graph-focus-fullscreen" type="button" data-i18n="agentWorkspace.actions.fullscreen">Fullscreen</button>
+          <div id="agent-workspace-shell" class="agent-workspace-shell">
+            <section id="agent-chat-pane" class="agent-chat-pane">
+              <div class="agent-pane-header">
+                <h3 data-i18n="agentWorkspace.conversationTitle">Grounded Conversation</h3>
+                <span class="agent-pane-subtitle" data-i18n="agentWorkspace.conversationSubtitle">Scoped knowledge, citations, and guided learning actions</span>
               </div>
-            </div>
-            <div id="agent-graph-focus-body" class="agent-workspace-pane-body">
-              <div class="agent-pane-empty" data-i18n="agentWorkspace.graphFocus.emptyIdle">Graph focus pane is idle.</div>
-            </div>
-          </section>
+              <div class="agent-pane-field">
+                <label for="agent-workspace-user-id" data-i18n="agentWorkspace.userId">Learner ID</label>
+                <input id="agent-workspace-user-id" type="text" value="path_user_default" />
+              </div>
+              <div id="agent-workspace-chat-messages" class="agent-chat-messages"></div>
+              <div class="agent-pane-field">
+                <label for="agent-workspace-chat-input" data-i18n="agentWorkspace.inputLabel">Ask the scoped knowledge corpus</label>
+                <textarea
+                  id="agent-workspace-chat-input"
+                  rows="3"
+                  placeholder="Ask about a concept, citation, prerequisite, or study step..."
+                  data-i18n-placeholder="agentWorkspace.inputPlaceholder"
+                ></textarea>
+              </div>
+              <div class="agent-pane-actions">
+                <button id="btn-agent-workspace-send" type="button" data-i18n="agentWorkspace.actions.send">Send</button>
+              </div>
+              <div id="agent-workspace-knowledge-points" class="agent-knowledge-points">
+                  <div class="agent-knowledge-empty" data-i18n="agentWorkspace.knowledge.emptyInitial">No scoped knowledge matches yet.</div>
+                </div>
+            </section>
 
-          <section
-            id="agent-learning-path-pane"
-            class="agent-workspace-pane"
-            data-open="false"
-            data-fullscreen="false"
-          >
-            <div class="agent-workspace-pane-header">
-              <h4 data-i18n="agentWorkspace.learningPath.title">Learning Path</h4>
-              <div class="agent-pane-controls">
-                <button id="btn-agent-learning-path-fullscreen" type="button" data-i18n="agentWorkspace.actions.fullscreen">Fullscreen</button>
-              </div>
+            <div id="agent-side-work-area" class="agent-side-work-area">
+              <section
+                id="agent-graph-focus-pane"
+                class="agent-workspace-pane"
+                data-open="false"
+                data-fullscreen="false"
+              >
+                <div class="agent-workspace-pane-header">
+                  <h4 data-i18n="agentWorkspace.graphFocus.title">Knowledge Focus</h4>
+                  <div class="agent-pane-controls">
+                    <button id="btn-agent-graph-focus-fullscreen" type="button" data-i18n="agentWorkspace.actions.fullscreen">Fullscreen</button>
+                  </div>
+                </div>
+                <div id="agent-graph-focus-body" class="agent-workspace-pane-body">
+                  <div class="agent-pane-empty" data-i18n="agentWorkspace.graphFocus.emptyIdle">Graph focus pane is idle.</div>
+                </div>
+              </section>
+
+              <section
+                id="agent-learning-path-pane"
+                class="agent-workspace-pane"
+                data-open="false"
+                data-fullscreen="false"
+              >
+                <div class="agent-workspace-pane-header">
+                  <h4 data-i18n="agentWorkspace.learningPath.title">Guided Learning</h4>
+                  <div class="agent-pane-controls">
+                    <button id="btn-agent-learning-path-fullscreen" type="button" data-i18n="agentWorkspace.actions.fullscreen">Fullscreen</button>
+                  </div>
+                </div>
+                <div id="agent-learning-path-body" class="agent-workspace-pane-body">
+                  <div class="agent-pane-empty" data-i18n="agentWorkspace.learningPath.emptyIdle">Learning path pane is idle.</div>
+                </div>
+              </section>
             </div>
-            <div id="agent-learning-path-body" class="agent-workspace-pane-body">
-              <div class="agent-pane-empty" data-i18n="agentWorkspace.learningPath.emptyIdle">Learning path pane is idle.</div>
-            </div>
-          </section>
+          </div>
         </div>
-      </div>
+      </aside>
 
       <div id="controls">
         <h3
@@ -913,289 +952,244 @@
     </div>
 
     <!-- Settings Modal -->
-    <div id="settings-modal" class="modal-overlay" style="display: none">
-      <div class="modal-content">
+    <div
+      id="settings-modal"
+      class="modal-overlay settings-modal-overlay"
+      style="display: none"
+    >
+      <div class="modal-content modal-content-settings">
         <div class="modal-header">
-          <h2 data-i18n="settings_title">Settings</h2>
-          <button class="modal-close">&times;</button>
+          <div class="modal-header-copy">
+            <h2 data-i18n="settings_title">Visualization Settings</h2>
+            <p class="settings-modal-subtitle" data-i18n="settings_subtitle">
+              Keep graph, reading, and performance controls compact. Agent
+              provider setup lives on its own page.
+            </p>
+          </div>
+          <button class="modal-close" data-settings-close="main">&times;</button>
         </div>
-        <div class="modal-body">
-          <div class="settings-group">
-            <h3 data-i18n="grp_general">General</h3>
-            <div class="setting-item">
-              <label data-i18n="lbl_language">Language</label>
-              <select
-                id="set-language"
-                style="
-                  background: #444;
-                  color: white;
-                  border: 1px solid #555;
-                  padding: 2px;
-                "
-              >
-                <option value="en">English</option>
-                <option value="zh">中文</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="settings-group">
-            <h3 data-i18n="grp_physics">Physics</h3>
-            <div class="setting-item">
-              <label data-i18n="lbl_repulsion">Repulsion Strength</label>
-              <input
-                type="range"
-                id="set-charge"
-                min="-1000"
-                max="-50"
-                step="50"
-              />
-              <span class="value-display" id="val-charge"></span>
-            </div>
-            <div class="setting-item">
-              <label data-i18n="lbl_distance">Link Distance</label>
-              <input
-                type="range"
-                id="set-distance"
-                min="20"
-                max="900"
-                step="10"
-              />
-              <span class="value-display" id="val-distance"></span>
-            </div>
-            <div class="setting-item">
-              <label data-i18n="lbl_collision">Collision Radius</label>
-              <input
-                type="range"
-                id="set-collision"
-                min="5"
-                max="100"
-                step="5"
-              />
-              <span class="value-display" id="val-collision"></span>
-            </div>
-          </div>
-
-          <div class="settings-group">
-            <div class="setting-item">
-              <label
-                ><span data-i18n="lbl_inbound_count"
-                  >Inbound Count:</span
-                ></label
-              >
-              <select
-                id="set-degree-mode"
-                style="
-                  background: #444;
-                  color: white;
-                  border: 1px solid #555;
-                  padding: 2px;
-                "
-              >
-                <option value="visible" data-i18n="opt_visible">
-                  Visible Nodes (Default)
-                </option>
-                <option value="total" data-i18n="opt_total">
-                  Total Statistical
-                </option>
-              </select>
-            </div>
-
-            <h3 data-i18n="grp_performance">Performance</h3>
-            <div class="setting-item">
-              <label data-i18n="lbl_max_workers">Max Workers (Memory)</label>
-              <div style="display: flex; gap: 10px; align-items: center">
-                <input
-                  type="range"
-                  id="set-workers-slider"
-                  min="1"
-                  max="32"
-                  value="4"
-                  style="flex: 1"
-                />
-                <input
-                  type="number"
-                  id="set-workers-input"
-                  min="1"
-                  max="128"
-                  value="4"
-                  style="
-                    width: 50px;
-                    background: #333;
-                    color: white;
-                    border: 1px solid #555;
-                  "
-                />
+        <div class="modal-body settings-modal-body">
+          <div class="settings-page-grid">
+            <section class="settings-card">
+              <div class="settings-group">
+                <h3 data-i18n="grp_general">General</h3>
+                <div class="setting-item">
+                  <label data-i18n="lbl_language">Language</label>
+                  <select id="set-language" class="settings-select">
+                    <option value="en">English</option>
+                    <option value="zh">中文</option>
+                  </select>
+                </div>
               </div>
-              <div
-                style="font-size: 0.75rem; color: #888; margin-top: 2px"
-                data-i18n="desc_workers"
-              >
-                Lower this if Node.js runs out of memory.
-              </div>
-            </div>
+            </section>
 
-            <div class="setting-item">
-              <label
-                style="display: flex; align-items: center; cursor: pointer"
-              >
-                <input type="checkbox" id="set-gpu" checked />
-                <span style="margin-left: 10px" data-i18n="lbl_gpu"
-                  >Enable GPU Acceleration</span
+            <section class="settings-card">
+              <div class="settings-group">
+                <h3 data-i18n="grp_visuals">Visuals</h3>
+                <div class="setting-item">
+                  <label data-i18n="lbl_opacity">Edge Opacity</label>
+                  <input
+                    type="range"
+                    id="set-opacity"
+                    min="0.1"
+                    max="1.0"
+                    step="0.1"
+                  />
+                  <span class="value-display" id="val-opacity"></span>
+                </div>
+                <div class="setting-item">
+                  <label><span data-i18n="lbl_inbound_count">Inbound Count:</span></label>
+                  <select id="set-degree-mode" class="settings-select">
+                    <option value="visible" data-i18n="opt_visible">
+                      Visible Nodes (Default)
+                    </option>
+                    <option value="total" data-i18n="opt_total">
+                      Total Statistical
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            <section class="settings-card">
+              <div class="settings-group">
+                <h3 data-i18n="grp_physics">Physics</h3>
+                <div class="setting-item">
+                  <label data-i18n="lbl_repulsion">Repulsion Strength</label>
+                  <input
+                    type="range"
+                    id="set-charge"
+                    min="-1000"
+                    max="-50"
+                    step="50"
+                  />
+                  <span class="value-display" id="val-charge"></span>
+                </div>
+                <div class="setting-item">
+                  <label data-i18n="lbl_distance">Link Distance</label>
+                  <input
+                    type="range"
+                    id="set-distance"
+                    min="20"
+                    max="900"
+                    step="10"
+                  />
+                  <span class="value-display" id="val-distance"></span>
+                </div>
+                <div class="setting-item">
+                  <label data-i18n="lbl_collision">Collision Radius</label>
+                  <input
+                    type="range"
+                    id="set-collision"
+                    min="5"
+                    max="100"
+                    step="5"
+                  />
+                  <span class="value-display" id="val-collision"></span>
+                </div>
+              </div>
+            </section>
+
+            <section class="settings-card">
+              <div class="settings-group">
+                <h3 data-i18n="grp_performance">Performance</h3>
+                <div class="setting-item setting-item-stack">
+                  <label data-i18n="lbl_max_workers">Max Workers (Memory)</label>
+                  <div class="settings-inline-row">
+                    <input
+                      type="range"
+                      id="set-workers-slider"
+                      min="1"
+                      max="32"
+                      value="4"
+                      style="flex: 1"
+                    />
+                    <input
+                      type="number"
+                      id="set-workers-input"
+                      min="1"
+                      max="128"
+                      value="4"
+                      class="settings-number"
+                    />
+                  </div>
+                  <div class="settings-helper-block" data-i18n="desc_workers">
+                    Lower this if Node.js runs out of memory.
+                  </div>
+                </div>
+
+                <div class="setting-item setting-item-stack">
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="set-gpu" checked />
+                    <span data-i18n="lbl_gpu">Enable GPU Acceleration</span>
+                  </label>
+                  <div class="settings-helper-block" data-i18n="desc_gpu">
+                    Use GPU for similarity calculation (Requires page reload).
+                  </div>
+                </div>
+
+                <div class="setting-item setting-item-stack">
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="set-memory-saving" />
+                    <span data-i18n="lbl_memory_saving">Large File Memory Saving Strategy</span>
+                  </label>
+                  <div class="settings-helper-block" data-i18n="desc_memory_saving">
+                    Use lower precision strategies to prevent OOM on large files.
+                  </div>
+                </div>
+
+                <div class="setting-item setting-item-stack">
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="set-compact-mode" />
+                    <span data-i18n="lbl_compact_mode">Compact Mode (Hide Edges)</span>
+                  </label>
+                  <div class="settings-helper-block" data-i18n="desc_compact_mode">
+                    Don't load/render edges by default to improve performance for >5k nodes.
+                  </div>
+                </div>
+
+                <div class="setting-item setting-item-stack">
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="set-static-mode" />
+                    <span data-i18n="lbl_static_mode">Static Mode</span>
+                  </label>
+                  <div class="settings-helper-block" data-i18n="desc_static_mode">
+                    Stop simulation after 2 seconds. Recommended for large graphs.
+                  </div>
+                </div>
+
+                <div class="setting-item setting-item-stack">
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="set-gpu-rendering" />
+                    <span data-i18n="lbl_gpu_rendering">GPU Optimised Rendering</span>
+                  </label>
+                  <div class="settings-helper-block" data-i18n="desc_gpu_rendering">
+                    Enable AMDGPU acceleration for loading and positioning.
+                  </div>
+                </div>
+
+                <div class="setting-item setting-item-stack">
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="set-deep-debug" />
+                    <span data-i18n="lbl_deep_debug">Deep Debug</span>
+                  </label>
+                  <div class="settings-helper-block" data-i18n="desc_deep_debug">
+                    Enable detailed logging for debugging.
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="settings-card">
+              <div class="settings-group">
+                <h3 data-i18n="grp_reading">Reading</h3>
+                <div class="setting-item">
+                  <label data-i18n="lbl_reading_mode">Open Mode</label>
+                  <select id="set-reading-mode" class="settings-select">
+                    <option value="window" data-i18n="opt_window">Window</option>
+                    <option value="fullscreen" data-i18n="opt_fullscreen">
+                      Full Screen
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="settings-group">
+                <h3 data-i18n="grp_path_mode">Path Mode</h3>
+                <div class="setting-item setting-item-stack">
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="set-retain-history" checked />
+                    <span data-i18n="lbl_retain_history">Retain Learning History</span>
+                  </label>
+                  <div class="settings-helper-block" data-i18n="desc_retain_history">
+                    Keep learned nodes state across sessions.
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="settings-card settings-card-accent">
+              <div class="settings-card-callout">
+                <span class="settings-card-kicker" data-i18n="grp_ai_provider">AI Provider</span>
+                <h3 class="settings-card-title" data-i18n="settings_agent_title">
+                  Agent Settings
+                </h3>
+                <p class="settings-card-copy" data-i18n="settings_agent_description">
+                  Provider presets, API keys, models, and TOML template actions are isolated on a dedicated page.
+                </p>
+                <button
+                  type="button"
+                  id="btn-open-agent-settings"
+                  class="btn btn-primary"
+                  data-i18n="settings_open_agent"
                 >
-              </label>
-              <div
-                style="font-size: 0.75rem; color: #888; margin-top: 2px"
-                data-i18n="desc_gpu"
-              >
-                Use GPU for similarity calculation (Requires page reload).
+                  Open Agent Settings
+                </button>
               </div>
-            </div>
-
-            <div class="setting-item">
-              <label
-                style="display: flex; align-items: center; cursor: pointer"
-              >
-                <input type="checkbox" id="set-memory-saving" />
-                <span style="margin-left: 10px" data-i18n="lbl_memory_saving"
-                  >Large File Memory Saving Strategy</span
-                >
-              </label>
-              <div
-                style="font-size: 0.75rem; color: #888; margin-top: 2px"
-                data-i18n="desc_memory_saving"
-              >
-                Use lower precision strategies to prevent OOM on large files.
-              </div>
-            </div>
-
-            <div class="setting-item">
-              <label
-                style="display: flex; align-items: center; cursor: pointer"
-              >
-                <input type="checkbox" id="set-compact-mode" />
-                <span style="margin-left: 10px" data-i18n="lbl_compact_mode"
-                  >Compact Mode (Hide Edges)</span
-                >
-              </label>
-              <div
-                style="font-size: 0.75rem; color: #888; margin-top: 2px"
-                data-i18n="desc_compact_mode"
-              >
-                Don't load/render edges by default to improve performance for
-                >5k nodes.
-              </div>
-            </div>
-
-            <div class="setting-item">
-              <label
-                style="display: flex; align-items: center; cursor: pointer"
-              >
-                <input type="checkbox" id="set-static-mode" />
-                <span style="margin-left: 10px" data-i18n="lbl_static_mode"
-                  >Static Mode</span
-                >
-              </label>
-              <div
-                style="font-size: 0.75rem; color: #888; margin-top: 2px"
-                data-i18n="desc_static_mode"
-              >
-                Stop simulation after 2 seconds. Recommended for large graphs.
-              </div>
-            </div>
-
-            <div class="setting-item">
-              <label
-                style="display: flex; align-items: center; cursor: pointer"
-              >
-                <input type="checkbox" id="set-gpu-rendering" />
-                <span style="margin-left: 10px" data-i18n="lbl_gpu_rendering"
-                  >GPU Optimised Rendering</span
-                >
-              </label>
-              <div
-                style="font-size: 0.75rem; color: #888; margin-top: 2px"
-                data-i18n="desc_gpu_rendering"
-              >
-                Enable AMDGPU acceleration for loading and positioning.
-              </div>
-            </div>
-
-            <div class="setting-item">
-              <label
-                style="display: flex; align-items: center; cursor: pointer"
-              >
-                <input type="checkbox" id="set-deep-debug" />
-                <span style="margin-left: 10px" data-i18n="lbl_deep_debug"
-                  >Deep Debug</span
-                >
-              </label>
-              <div
-                style="font-size: 0.75rem; color: #888; margin-top: 2px"
-                data-i18n="desc_deep_debug"
-              >
-                Enable detailed logging for debugging.
-              </div>
-            </div>
-          </div>
-
-          <div class="settings-group">
-            <h3 data-i18n="grp_visuals">Visuals</h3>
-            <div class="setting-item">
-              <label data-i18n="lbl_opacity">Edge Opacity</label>
-              <input
-                type="range"
-                id="set-opacity"
-                min="0.1"
-                max="1.0"
-                step="0.1"
-              />
-              <span class="value-display" id="val-opacity"></span>
-            </div>
-          </div>
-
-          <div class="settings-group">
-            <h3 data-i18n="grp_path_mode">Path Mode</h3>
-            <div class="setting-item">
-              <label
-                style="display: flex; align-items: center; cursor: pointer"
-              >
-                <input type="checkbox" id="set-retain-history" checked />
-                <span style="margin-left: 10px" data-i18n="lbl_retain_history"
-                  >Retain Learning History</span
-                >
-              </label>
-              <div
-                style="font-size: 0.75rem; color: #888; margin-top: 2px"
-                data-i18n="desc_retain_history"
-              >
-                Keep learned nodes state across sessions.
-              </div>
-            </div>
-          </div>
-
-          <div class="settings-group">
-            <h3 data-i18n="grp_reading">Reading</h3>
-            <div class="setting-item">
-              <label data-i18n="lbl_reading_mode">Open Mode</label>
-              <select
-                id="set-reading-mode"
-                style="
-                  background: #444;
-                  color: white;
-                  border: 1px solid #555;
-                  padding: 2px;
-                "
-              >
-                <option value="window" data-i18n="opt_window">Window</option>
-                <option value="fullscreen" data-i18n="opt_fullscreen">
-                  Full Screen
-                </option>
-              </select>
-            </div>
+            </section>
           </div>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer modal-footer-settings">
           <button
             class="btn btn-secondary"
             id="btn-reset-settings"
@@ -1203,7 +1197,155 @@
           >
             Reset
           </button>
-          <button class="btn btn-primary modal-close" data-i18n="btn_done">
+          <button
+            class="btn btn-primary modal-close"
+            data-settings-close="main"
+            data-i18n="btn_done"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="agent-settings-modal"
+      class="modal-overlay settings-modal-overlay"
+      style="display: none"
+    >
+      <div class="modal-content modal-content-settings modal-content-agent-settings">
+        <div class="modal-header">
+          <div class="modal-header-copy">
+            <div class="settings-breadcrumb-row">
+              <button
+                type="button"
+                id="btn-agent-settings-back"
+                class="btn btn-secondary btn-inline-nav"
+                data-i18n="settings_back_to_general"
+              >
+                Back to Settings
+              </button>
+            </div>
+            <h2 data-i18n="settings_agent_title">Agent Settings</h2>
+            <p class="settings-modal-subtitle" data-i18n="settings_agent_subtitle">
+              Provider, model, API key, and TOML template controls for agent workflows.
+            </p>
+          </div>
+          <button class="modal-close" data-settings-close="agent">&times;</button>
+        </div>
+        <div class="modal-body settings-modal-body">
+          <div class="settings-page-grid settings-page-grid-single">
+            <section class="settings-card settings-card-wide">
+              <div class="settings-group">
+                <h3 data-i18n="grp_ai_provider">AI Provider</h3>
+                <div class="setting-item setting-item-stack">
+                  <label data-i18n="lbl_notemd_provider_template">Preset Template</label>
+                  <div class="settings-inline-row">
+                    <select id="set-notemd-provider-template" class="settings-select settings-select-grow"></select>
+                    <button
+                      type="button"
+                      id="btn-apply-notemd-provider-template"
+                      class="btn btn-secondary"
+                      data-i18n="btn_apply_provider_template"
+                    >
+                      Apply Preset
+                    </button>
+                  </div>
+                  <div
+                    id="set-notemd-provider-template-hint"
+                    class="settings-helper-block"
+                  ></div>
+                </div>
+
+                <div class="setting-item setting-item-stack">
+                  <label data-i18n="lbl_notemd_active_provider">Active Provider</label>
+                  <select id="set-notemd-provider-name" class="settings-select"></select>
+                </div>
+
+                <div class="setting-item setting-item-stack">
+                  <label data-i18n="lbl_notemd_provider_base_url">Base URL</label>
+                  <input type="text" id="set-notemd-provider-base-url" class="settings-text-input" />
+                </div>
+
+                <div class="setting-item setting-item-stack">
+                  <label data-i18n="lbl_notemd_provider_model">Model</label>
+                  <input type="text" id="set-notemd-provider-model" class="settings-text-input" />
+                </div>
+
+                <div class="setting-item setting-item-stack">
+                  <label data-i18n="lbl_notemd_provider_api_key">API Key</label>
+                  <input type="password" id="set-notemd-provider-api-key" class="settings-text-input" />
+                </div>
+
+                <div
+                  class="setting-item setting-item-stack"
+                  id="set-notemd-provider-api-version-row"
+                >
+                  <label data-i18n="lbl_notemd_provider_api_version">API Version</label>
+                  <input type="text" id="set-notemd-provider-api-version" class="settings-text-input" />
+                  <div
+                    id="set-notemd-provider-api-version-hint"
+                    class="settings-helper-block"
+                    data-i18n="notemd_provider_api_version_optional"
+                  >
+                    Optional. Leave blank for standard OpenAI-compatible endpoints. This is mainly used by Azure OpenAI.
+                  </div>
+                </div>
+
+                <div class="setting-item setting-item-stack">
+                  <div class="settings-inline-row">
+                    <button
+                      type="button"
+                      id="btn-test-notemd-provider"
+                      class="btn btn-secondary"
+                      data-i18n="btn_test_provider_connection"
+                    >
+                      Test Connection
+                    </button>
+                    <button
+                      type="button"
+                      id="btn-save-notemd-provider"
+                      class="btn btn-primary"
+                      data-i18n="btn_save_provider_config"
+                    >
+                      Save Provider
+                    </button>
+                    <button
+                      type="button"
+                      id="btn-materialize-notemd-provider-templates"
+                      class="btn btn-secondary"
+                      data-i18n="btn_write_provider_templates"
+                    >
+                      Write TOML Templates
+                    </button>
+                  </div>
+                  <div
+                    id="set-notemd-provider-status"
+                    class="settings-helper-block"
+                  ></div>
+                  <div
+                    id="set-notemd-provider-config-path"
+                    class="settings-helper-block settings-helper-code"
+                  ></div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+        <div class="modal-footer modal-footer-settings">
+          <button
+            type="button"
+            id="btn-agent-settings-back-footer"
+            class="btn btn-secondary"
+            data-i18n="settings_back_to_general"
+          >
+            Back to Settings
+          </button>
+          <button
+            class="btn btn-primary modal-close"
+            data-settings-close="agent"
+            data-i18n="btn_done"
+          >
             Done
           </button>
         </div>

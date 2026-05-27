@@ -1,7 +1,56 @@
 
 # 2026-05-12 v1.7.0 - HEAD 现实对齐实施计划
 
-### 目标
+## 中文文档
+
+### 2026-05-27 Tauri-first Agent Reply Rendering 现实对齐
+
+#### 目标
+
+让当前活跃实施计划重新与代码现实对齐：
+
+- scoped knowledge-workspace grounding 已是真实能力，
+- provider / TOML settings 交付已是真实能力，
+- Reader 的 markdown / math / mermaid 加固已是真实能力，
+- 但 Tauri agent reply area 仍停留在纯文本，因此它已成为当前最直观的未完成交互缺口。
+
+#### 代码 / 方案现实
+
+- 代码中已完成：
+  - active-target-aware workspace hydration 与 title-like selective document hydration，
+  - conversation trace 中的 workspace readiness 与 miss diagnostics，
+  - 面向 `app_config.toml` 的 provider preset / template 流程，
+  - conversation turn / resume 头的 CORS 闭环，
+  - Reader 侧 Mermaid / KaTeX 加固与 leaked-error suppression，
+  - 一等的 Tauri runtime / webview / window debug capture 脚本。
+- 尚未完成：
+  - Tauri agent workspace 中的 typed reply-rendering model，
+  - Reader render substrate 在 agent reply surface 中的共享复用，
+  - 面向大型 HTML assistant output 的 artifact-style 隔离路径。
+
+#### 下一步执行顺序
+
+1. **P0：文档真相同步**
+   - 保持 `development-progress-dashboard`、`agent-conversation-focus-mode-plan`、`implementation_plan`、`tauri_tasks` 与当前代码一致，而不再停留在 Program F-only 视角。
+2. **P1：响应契约演进**
+   - 在保留 `assistantMessage` 的同时，引入向前兼容的 `assistantBlocks`。
+3. **P2：共享渲染底座**
+   - 从 Reader / runtime 路径抽取可复用的 markdown / math / mermaid 渲染逻辑，而不是再造一套独立聊天渲染器。
+4. **P3：Tauri reply renderer**
+   - 在 agent workspace 中，用 typed block renderer 替换当前的 plain-text assistant reply mounting。
+5. **P4：HTML artifact 隔离**
+   - 限制 inline markdown HTML，同时把完整 HTML 输出导入 sandboxed artifact preview，而不是直接进入主聊天 DOM。
+6. **P5：兼容性 + 验证**
+   - 保留 legacy fallback，
+   - 保持现有 knowledge-point / capability orchestration 稳定，
+   - 在渲染升级后补齐 docs / frontend contract / build-runtime 证明。
+
+#### 验收标准
+
+1. Tauri agent reply area 可以通过共享的 Reader-aligned 渲染链显示 markdown、KaTeX 与 Mermaid。
+2. 仅有 `assistantMessage` 的旧路径在迁移期间仍可工作。
+3. 现有 `knowledgePoints`、capability execution 与 conversation card 保持向前兼容。
+4. 新渲染路径为后续 Godot 降级 / 物化保留明确边界，而不是在当前阶段让 Godot 约束反向主导 Tauri-first UX。
 
 在当前分支已经出现真实 Phase-3 切片、但 Phase-1 / Phase-2 仍存在关键缺口的背景下，把代码真相、活跃进度文档、以及后续执行顺序重新对齐。
 

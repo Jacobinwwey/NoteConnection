@@ -1,8 +1,8 @@
 shader_type spatial;
 render_mode blend_mix, depth_prepass_alpha, cull_back, specular_schlick_ggx;
 
-// Iridescent Soap Bubble Shader v2
-// Optimized for: visible rainbow iridescence, proper transparency
+// Smooth bubble shader
+// Optimized for: clean translucent bubbles without visible surface texture artifacts
 
 group_uniforms BubbleCore;
 uniform vec4 base_tint : source_color = vec4(0.9, 0.92, 1.0, 0.03);
@@ -10,23 +10,23 @@ uniform float bubble_thickness : hint_range(0.5, 3.0) = 1.5;
 uniform float ior : hint_range(1.0, 1.5) = 1.33;
 
 group_uniforms Iridescence;
-uniform float iridescence_strength : hint_range(0.0, 2.0) = 1.2;
+uniform float iridescence_strength : hint_range(0.0, 2.0) = 0.45;
 uniform float iridescence_scale : hint_range(2.0, 12.0) = 6.0;
 uniform float color_shift_speed : hint_range(0.0, 0.5) = 0.1;
-uniform float rainbow_saturation : hint_range(0.5, 1.0) = 0.85;
+uniform float rainbow_saturation : hint_range(0.0, 1.0) = 0.22;
 
 group_uniforms Fresnel;
 uniform float fresnel_power : hint_range(1.0, 8.0) = 2.5;
-uniform float rim_opacity : hint_range(0.1, 1.0) = 0.75;
-uniform float center_opacity : hint_range(0.0, 1.0) = 0.15;
+uniform float rim_opacity : hint_range(0.1, 1.0) = 0.84;
+uniform float center_opacity : hint_range(0.0, 1.0) = 0.34;
 
 group_uniforms Highlights;
-uniform float specular_intensity : hint_range(0.5, 3.0) = 2.0;
+uniform float specular_intensity : hint_range(0.5, 3.0) = 1.5;
 uniform float highlight_sharpness : hint_range(16.0, 96.0) = 64.0;
 
 group_uniforms Animation;
 uniform float time_scale : hint_range(0.0, 0.5) = 0.15;
-uniform float surface_wobble : hint_range(0.0, 0.05) = 0.01;
+uniform float surface_wobble : hint_range(0.0, 0.05) = 0.002;
 
 group_uniforms State;
 uniform bool is_central = true;
@@ -84,36 +84,6 @@ vec3 sp_spectral_filter(vec3 col, float filmwidth, float cosi) {
     return 4.0*(filt*col)/NN;
 }
 
-float hash(vec3 p) {
-    p = fract(p * 0.3183099 + 0.1);
-    p *= 17.0;
-    return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
-}
-float noise(vec3 x) {
-    vec3 i = floor(x);
-    vec3 f = fract(x);
-    f = f * f * (3.0 - 2.0 * f);
-    return mix(mix(mix(hash(i + vec3(0,0,0)), hash(i + vec3(1,0,0)), f.x),
-                   mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
-               mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x),
-                   mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y), f.z);
-}
-float fBm(vec3 p) {
-    float f = 0.0;
-    f += 0.5000 * noise(p); p = p * 2.02;
-    f += 0.2500 * noise(p); p = p * 2.03;
-    f += 0.1250 * noise(p);
-    return f;
-}
-float warpnoise3(vec3 p, float time) {
-    const float c1 = 0.06;
-    const float tc = 0.05;
-    vec3 q = vec3(fBm(p + tc*time), 
-                  fBm(p + vec3(5.1, 1.3, 2.2) + tc*time), 
-                  fBm(p + vec3(3.4, 4.8, 5.5) + tc*time));
-    return 1.2*fBm(p + c1*q);
-}
-
 varying vec3 v_world_normal;
 
 void vertex() {
@@ -123,8 +93,8 @@ void vertex() {
         breath = 1.0 + sin(TIME * time_scale * 3.0) * 0.012;
     }
     
-    // Organic surface wobble
-    float wobble = sin(VERTEX.x * 5.0 + TIME) * sin(VERTEX.y * 5.0 + TIME * 0.7) * surface_wobble;
+    // Keep a barely perceptible motion so the bubble still feels alive
+    float wobble = sin(VERTEX.x * 3.0 + TIME * 0.35) * sin(VERTEX.y * 3.0 + TIME * 0.2) * surface_wobble;
     VERTEX *= breath + wobble;
     
     v_world_normal = (MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz;
@@ -137,10 +107,11 @@ void fragment() {
     // Fresnel: 0 = facing camera, 1 = edge (grazing angle)
     float fresnel = pow(1.0 - abs(dot(normal, view_dir)), fresnel_power);
     
-    // Physically-based film thickness using 3D warp noise (150nm to 1000nm approximation)
-    // warpnoise3 returns approx 0.0 to 1.0
-    float noise_val = warpnoise3(v_world_normal * (iridescence_scale * 0.5), TIME * color_shift_speed * 5.0);
-    float filmwidth = mix(200.0, 900.0, clamp(noise_val, 0.0, 1.0));
+    // Use a smooth view-angle-driven thickness instead of noisy marbling.
+    float filmwidth = mix(420.0, 560.0, clamp(fresnel, 0.0, 1.0));
+    if (!is_central) {
+        filmwidth = mix(380.0, 500.0, clamp(fresnel, 0.0, 1.0));
+    }
     
     // Incident angle cosine for thin-film interference
     float cosi = abs(dot(normal, view_dir));
@@ -148,10 +119,10 @@ void fragment() {
     // Generate interference spectrum
     vec3 iridescent = sp_spectral_filter(vec3(1.0), filmwidth, cosi) * iridescence_strength;
     
-    // Clamp to avoid blown out colors, apply slight gamma/saturation tweak
-    iridescent = clamp(iridescent * 1.5, vec3(0.0), vec3(1.0));
+    // Clamp to avoid blown out colors and keep the rim subtle.
+    iridescent = clamp(iridescent * 0.95, vec3(0.0), vec3(1.0));
     float lum = dot(iridescent, vec3(0.299, 0.587, 0.114));
-    iridescent = mix(vec3(lum), iridescent, rainbow_saturation * 1.5);
+    iridescent = mix(vec3(lum), iridescent, rainbow_saturation);
     
     if (is_completed) {
         // Gold completed state
@@ -165,22 +136,24 @@ void fragment() {
         // Select tint based on central/peripheral
         vec3 tint = is_central ? central_tint.rgb : peripheral_tint.rgb;
         
-        // Bubble color: mostly iridescent with subtle tint
-        vec3 bubble_color = iridescent * (0.6 + fresnel * 0.4) + tint * 0.15;
+        // Smooth bubble color without visible noise texture.
+        vec3 base_color = mix(vec3(0.9, 0.94, 0.98), tint, is_central ? 0.24 : 0.18);
+        vec3 rim_color = mix(base_color, base_color + iridescent * 0.32, clamp(fresnel * 0.85, 0.0, 1.0));
+        vec3 bubble_color = rim_color;
         
         // Transparency: very transparent in center, slightly opaque at rim
-        float alpha = mix(center_opacity, rim_opacity, fresnel);
+        float alpha = mix(max(center_opacity, base_tint.a), rim_opacity, fresnel);
         
         // Peripheral bubbles slightly more transparent
         if (!is_central) {
-            alpha *= 0.85;
+            alpha *= 0.92;
         }
         
         ALBEDO = bubble_color;
-        ALPHA = clamp(alpha, 0.05, 0.95);
+        ALPHA = clamp(alpha, is_central ? 0.28 : 0.22, 0.98);
         
         // Soft emissive glow at rim with iridescent color
-        EMISSION = iridescent * fresnel * 0.3;
+        EMISSION = iridescent * (0.06 + fresnel * 0.18) + tint * 0.03;
         
         // Glass-like properties
         METALLIC = 0.0;
@@ -209,5 +182,5 @@ void light() {
     
     // Minimal diffuse for soap bubble
     float ndotl = max(dot(NORMAL, LIGHT), 0.0);
-    DIFFUSE_LIGHT += ALBEDO * LIGHT_COLOR * ndotl * 0.08 * ATTENUATION;
+    DIFFUSE_LIGHT += ALBEDO * LIGHT_COLOR * ndotl * 0.12 * ATTENUATION;
 }

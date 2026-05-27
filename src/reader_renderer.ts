@@ -164,8 +164,19 @@ function normalizeMermaidLineBreaks(source: string): string {
         .replace(/<br\s*>/gi, '<br/>');
 }
 
+function stripWrappingDoubleQuotes(text: string): string {
+    const trimmed = String(text || '').trim();
+    if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
+        return trimmed.slice(1, -1);
+    }
+    return trimmed;
+}
+
 function splitMermaidTopLevelStatements(source: string): string {
-    const text = normalizeMermaidLineBreaks(source);
+    const text = normalizeMermaidLineBreaks(source)
+        .split('\n')
+        .map((line) => rewriteQuotedLabelAfterSemicolonLine(line) || line)
+        .join('\n');
     let result = '';
     let quote = false;
     let squareDepth = 0;
@@ -197,6 +208,179 @@ function splitMermaidTopLevelStatements(source: string): string {
     return result;
 }
 
+function rewriteQuotedLabelAfterSemicolonLine(line: string): string | null {
+    if (!line.includes('-->')) {
+        return null;
+    }
+
+    const match = line.match(/^(.*?)\s*(-->)\s*(.*?);\s*"([^"\n]+)"\s*$/);
+    if (!match) {
+        return null;
+    }
+
+    const source = String(match[1] || '').trim();
+    const arrow = String(match[2] || '').trim();
+    const target = String(match[3] || '').trim();
+    const label = String(match[4] || '').trim();
+    if (!source || !target || !label) {
+        return null;
+    }
+
+    return `${source} -- "${label}" ${arrow} ${target};`;
+}
+
+function rewriteSingleDoubleDashLabelLine(line: string): string | null {
+    const match = line.match(/^(.*?)\s*(?<!-)--(?!>|-)\s*"([^"\n]+)"\s*(?<!-)--(?!>|-)\s*(.+?)\s*;?\s*$/);
+    if (!match) {
+        return null;
+    }
+
+    const start = String(match[1] || '').trim();
+    const label = String(match[2] || '').trim();
+    const end = String(match[3] || '').trim();
+    if (!start || !label || !end || /^"/.test(end)) {
+        return null;
+    }
+
+    return `${start} -- "${label}" --> ${end};`;
+}
+
+function mergeDoubleArrowLabelLine(line: string): string | null {
+    const match = line.match(/^(.*?)\s*--\s*"([^"\n]+)"\s*--\s*"([^"\n]+)"\s*(-->|---)\s*(.*)$/);
+    if (!match) {
+        return null;
+    }
+
+    const start = String(match[1] || '').trim();
+    const labelLeft = String(match[2] || '').trim();
+    const labelRight = String(match[3] || '').trim();
+    const arrow = String(match[4] || '').trim();
+    const end = String(match[5] || '').trim();
+    if (!start || !labelLeft || !labelRight || !end) {
+        return null;
+    }
+
+    return `${start} -- "${labelLeft}<br/>${labelRight}" ${arrow} ${end}`;
+}
+
+function quoteUnquotedEdgeLabelLine(line: string): string | null {
+    const match = line.match(/^(.*?)\s*--\s*([^"\n][^>\n]*?)\s*-->\s*(.*)$/);
+    if (!match) {
+        return null;
+    }
+
+    const start = String(match[1] || '').trim();
+    const label = String(match[2] || '').trim();
+    const end = String(match[3] || '').trim();
+    if (!start || !label || !end) {
+        return null;
+    }
+    if (
+        /^[A-Za-z_][A-Za-z0-9_]*$/.test(label)
+        || /^[A-Za-z_][A-Za-z0-9_]*\s*[\[\(\{].*$/.test(label)
+        || /^["[{(]/.test(label)
+    ) {
+        return null;
+    }
+
+    return `${start} -- "${label}" --> ${end}`;
+}
+
+function normalizeSubgraphLine(line: string): { next: string; changed: boolean } {
+    const match = /^(\s*subgraph\s+)(.+)$/i.exec(line);
+    if (!match) {
+        return { next: line, changed: false };
+    }
+
+    const prefix = match[1];
+    const rawTitle = match[2].trim();
+    if (!rawTitle || rawTitle.startsWith('"') || rawTitle.startsWith("'")) {
+        return { next: line, changed: false };
+    }
+
+    if (/[\s()[\]{}:;,-]/.test(rawTitle)) {
+        return {
+            next: `${prefix}"${rawTitle.replace(/"/g, '\\"')}"`,
+            changed: true,
+        };
+    }
+
+    return { next: line, changed: false };
+}
+
+function splitIntermediateNodeLine(line: string): string[] | null {
+    const match = line.match(/^(.*?)\s*(-->|---)\s*([A-Za-z_][A-Za-z0-9_]*)\s*(\[[^\]]+\]|\([^)]+\)|\{[^}]+\})\s*(-->|---)\s*(.*)$/);
+    if (!match) {
+        return null;
+    }
+
+    const start = String(match[1] || '').trim();
+    const leftArrow = String(match[2] || '').trim();
+    const nodeId = String(match[3] || '').trim();
+    const nodeShape = String(match[4] || '').trim();
+    const rightArrow = String(match[5] || '').trim();
+    const end = String(match[6] || '').trim();
+    if (!start || !nodeId || !nodeShape || !end) {
+        return null;
+    }
+
+    return [
+        `${start} ${leftArrow} ${nodeId}${nodeShape}`,
+        `${nodeId} ${rightArrow} ${end}`,
+    ];
+}
+
+function normalizeMermaidPipes(content: string): string {
+    return String(content || '')
+        .replace(/\|""\|"/g, '')
+        .replace(/"\[\]"/g, '');
+}
+
+function fixExcessiveBrackets(content: string): string {
+    return String(content || '')
+        .replace(/\]{3,}/g, ']')
+        .replace(/\[""\]/g, '')
+        .replace(/\["\]/g, ']')
+        .replace(/\[\/\["/g, '["')
+        .replace(/\["\/\]/g, '"]');
+}
+
+function normalizeMermaidComments(content: string): string {
+    return String(content || '')
+        .split('\n')
+        .map((line) => {
+            const hashCommentMatch = line.match(/^(\s*[A-Za-z0-9_()[\]{}"'\s.-]+?)\s*-->\s*([A-Za-z0-9_()[\]{}"'\s.-]+?)\s*;\s*#(.*)$/);
+            if (hashCommentMatch) {
+                return `${hashCommentMatch[1].trim()} -- "${hashCommentMatch[3].trim()}" --> ${hashCommentMatch[2].trim()};`;
+            }
+            const percentCommentMatch = line.match(/^(\s*[A-Za-z0-9_()[\]{}"'\s.-]+?)\s*-->\s*([A-Za-z0-9_()[\]{}"'\s.-]+?)\s*;\s*%(.*)$/);
+            if (percentCommentMatch) {
+                return `${percentCommentMatch[1].trim()} -- "${percentCommentMatch[3].trim()}" --> ${percentCommentMatch[2].trim()};`;
+            }
+            const slashCommentMatch = line.match(/^(\s*[A-Za-z0-9_()[\]{}"'\s.-]+?)\s*-->\s*([A-Za-z0-9_()[\]{}"'\s.-]+?)\s*;\s*\/\/(.*)$/);
+            if (slashCommentMatch) {
+                return `${slashCommentMatch[1].trim()} -- "${slashCommentMatch[3].trim()}" --> ${slashCommentMatch[2].trim()};`;
+            }
+            return line;
+        })
+        .join('\n');
+}
+
+function fixDanglingBracketedNodeLabelLine(line: string): string | null {
+    const match = line.match(/^(\s*[A-Za-z_][A-Za-z0-9_]*)\["([^"\n]*)\["\s*;?\s*$/);
+    if (!match) {
+        return null;
+    }
+
+    const nodeId = String(match[1] || '').trim();
+    const label = String(match[2] || '').trim();
+    if (!nodeId || !label) {
+        return null;
+    }
+
+    return `${nodeId}["${escapeMermaidLabel(label)}"]`;
+}
+
 function sanitizeMermaidIdentifier(rawValue: string, fallbackPrefix: string, counter: number): string {
     const raw = String(rawValue || '').trim();
     const prefixedMatch = raw.match(/^([A-Za-z][A-Za-z0-9_]*)/);
@@ -217,10 +401,83 @@ function isMermaidControlLine(line: string): boolean {
     return /^\s*(?:graph|flowchart|subgraph|end|classDef|class|style|linkStyle|click|%%)\b/i.test(line);
 }
 
+function convertNoteLine(
+    line: string,
+    state: MermaidDefinitionNormalizationState
+): string[] | null {
+    const directionalMatch = line.match(/^\s*note\s+(?:right|left|top|bottom)\s+of\s+([A-Za-z0-9_]+)\s*:\s*(.+)$/i);
+    if (directionalMatch) {
+        state.syntheticCounter += 1;
+        const noteId = `AutoNote${state.syntheticCounter}`;
+        const noteText = escapeMermaidLabel(stripWrappingDoubleQuotes(directionalMatch[2]));
+        return [
+            `${noteId}["${noteText}"]`,
+            `${directionalMatch[1]} -.- ${noteId}`,
+        ];
+    }
+
+    const targetedMatch = line.match(/^\s*note\s+([A-Za-z0-9_]+)\s+"(.+)"\s*$/i);
+    if (targetedMatch) {
+        state.syntheticCounter += 1;
+        const noteId = `AutoNote${state.syntheticCounter}`;
+        const noteText = escapeMermaidLabel(stripWrappingDoubleQuotes(targetedMatch[2]));
+        return [
+            `${noteId}["${noteText}"]`,
+            `${targetedMatch[1]} -.- ${noteId}`,
+        ];
+    }
+
+    return null;
+}
+
 function normalizeMermaidEdgeLabels(line: string): string {
     return String(line || '')
         .replace(/--\s*"([^"\n]+)"\s*-->/g, '-->|$1|')
         .replace(/--\s*"([^"\n]+)"\s*--\s*/g, ' -->|$1| ');
+}
+
+function normalizeMermaidHtmlLineBreakLabels(line: string): string {
+    const text = String(line || '');
+    const arrowMatch = text.match(/^(.*?(?:-->|---|-\.->|\-.-))\s*([A-Za-z_][A-Za-z0-9_]*)\s+(.+?)\s*;?\s*$/);
+    if (!arrowMatch) {
+        return text;
+    }
+    const prefix = String(arrowMatch[1] || '');
+    const nodeId = String(arrowMatch[2] || '').trim();
+    const label = String(arrowMatch[3] || '').trim();
+    if (!nodeId || !label || !label.includes('<br/>')) {
+        return text;
+    }
+    if (/^[\[\(\{"]/.test(label)) {
+        return text;
+    }
+    if (/(?:-->|---|-\.->|\-.-)/.test(label)) {
+        return text;
+    }
+    return `${prefix} ${nodeId}["${escapeMermaidLabel(stripWrappingDoubleQuotes(label))}"]`;
+}
+
+function fixMalformedMermaidArrows(line: string): string {
+    return String(line || '')
+        .replace(/--\|>/g, '-->')
+        .replace(/<--/g, '-->')
+        .replace(/-- >/g, '-->')
+        .replace(/--\s*"([^"\n]+)"\s*--\s*([A-Za-z_][A-Za-z0-9_]*)\s*;/g, '-- "$1" --> $2;');
+}
+
+function isMermaidErrorSvgMarkup(markup: string): boolean {
+    const text = String(markup || '').toLowerCase();
+    if (!text) {
+        return false;
+    }
+    return (
+        text.includes('syntax error in text') ||
+        text.includes('lexical error on line') ||
+        text.includes('parse error on line') ||
+        text.includes('mermaid version') ||
+        text.includes('class="error-icon"') ||
+        text.includes('id="error-icon"')
+    );
 }
 
 function normalizeMermaidEndpoint(rawValue: string, state: MermaidDefinitionNormalizationState): string {
@@ -254,6 +511,35 @@ function normalizeMermaidEdgeLine(line: string, state: MermaidDefinitionNormaliz
     return `${left}${connector}${normalizeMermaidEndpoint(right, state)}`;
 }
 
+function applyLegacyMermaidRepairs(
+    line: string,
+    state: MermaidDefinitionNormalizationState
+): string[] {
+    const subgraphNormalized = normalizeSubgraphLine(line);
+    let next = String(subgraphNormalized.next || '');
+    next = normalizeMermaidComments(next);
+    next = fixExcessiveBrackets(normalizeMermaidPipes(next));
+    const noteLines = convertNoteLine(next, state);
+    if (noteLines) {
+        return noteLines;
+    }
+
+    next = fixMalformedMermaidArrows(next);
+    next = rewriteQuotedLabelAfterSemicolonLine(next) || next;
+    next = mergeDoubleArrowLabelLine(next) || next;
+    next = rewriteSingleDoubleDashLabelLine(next) || next;
+    next = quoteUnquotedEdgeLabelLine(next) || next;
+    next = normalizeMermaidHtmlLineBreakLabels(next);
+    next = fixDanglingBracketedNodeLabelLine(next) || next;
+
+    const splitIntermediate = splitIntermediateNodeLine(next);
+    if (splitIntermediate) {
+        return splitIntermediate;
+    }
+
+    return [next];
+}
+
 export function normalizeMermaidDefinition(source: string): string {
     const split = splitMermaidTopLevelStatements(source);
     const state: MermaidDefinitionNormalizationState = {
@@ -263,12 +549,20 @@ export function normalizeMermaidDefinition(source: string): string {
 
     return split
         .split('\n')
-        .map((line) => {
-            if (isMermaidControlLine(line)) {
-                return line.trimEnd();
-            }
-            return normalizeMermaidEdgeLine(line, state).trimEnd();
-        })
+        .reduce<string[]>((lines, rawLine) => {
+            const repairedLines = applyLegacyMermaidRepairs(rawLine, state);
+            repairedLines.forEach((line) => {
+                if (!String(line || '').trim()) {
+                    return;
+                }
+                if (isMermaidControlLine(line)) {
+                    lines.push(line.trimEnd());
+                    return;
+                }
+                lines.push(normalizeMermaidEdgeLine(line, state).trimEnd());
+            });
+            return lines;
+        }, [])
         .join('\n')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
@@ -345,6 +639,9 @@ async function buildMermaidRenderArtifacts(trimmedSource: string, options: Merma
     const result = await withMermaidDomGlobals(environment.window, async () =>
         environment.mermaid.render(renderId, trimmedSource, host)
     );
+    if (result && typeof result.svg === 'string' && isMermaidErrorSvgMarkup(result.svg)) {
+        throw new Error('Mermaid renderer produced an error SVG instead of a diagram.');
+    }
     const svgMarkup = sanitizeSvgMarkup(result.svg);
     const svgDom = new JSDOM(svgMarkup, { contentType: 'image/svg+xml' });
     installSvgMeasurementPolyfills(svgDom.window);
@@ -608,7 +905,7 @@ function getMermaidConfig(theme: 'dark' | 'default') {
         securityLevel: 'loose',
         theme,
         fontFamily: MERMAID_FONT_FAMILY,
-        // Keep Mermaid output in pure SVG text so Godot's SVG loader can render it reliably.
+        // Keep Mermaid output free of HTML label nodes so rasterization stays deterministic.
         htmlLabels: false,
         markdownAutoWrap: true,
         maxTextSize: 200000,
@@ -1714,6 +2011,3 @@ function isFiniteBounds(bounds: Bounds): boolean {
         && bounds.maxX >= bounds.minX
         && bounds.maxY >= bounds.minY;
 }
-
-
-

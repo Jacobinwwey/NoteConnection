@@ -53,6 +53,15 @@ function runCommand(command, args, options = {}) {
 }
 
 function detectMissingSystemDependencies() {
+    if (process.platform !== 'linux') {
+        return {
+            missingDependencies: [],
+            pkgConfigAvailable: false,
+            probe: null,
+            skippedForPlatform: process.platform,
+        };
+    }
+
     const probe = runCommand('pkg-config', ['--version'], { timeoutMs: 10000 });
     if (probe.exitCode !== 0) {
         return {

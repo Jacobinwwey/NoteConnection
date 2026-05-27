@@ -148,7 +148,7 @@ func _handle_open_state() -> void:
 		_flush_pending_messages()
 		
 		## Request initial path data
-		send_message({"type": "requestPath", "payload": {}})
+		send_request_path()
 	
 	while _socket.get_available_packet_count() > 0:
 		var packet := _socket.get_packet()
@@ -279,6 +279,12 @@ func send_configure(config: Dictionary) -> void:
 	send_message({
 		"type": "configure",
 		"payload": config
+	})
+
+func send_request_path() -> void:
+	send_message({
+		"type": "requestPath",
+		"payload": {}
 	})
 
 func send_toggle_collapse(node_id: String) -> void:

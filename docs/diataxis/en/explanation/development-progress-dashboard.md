@@ -3,6 +3,53 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-05-27 Tauri-First Conversation Rendering Reality Sync
+
+- The branch has moved materially beyond the last Program F-only status snapshot.
+- Current code truth now spans five distinct slices that the older dashboard under-reported:
+  - scoped knowledge-workspace grounding is now real rather than graph-only optimistic,
+  - Tauri reader markdown/math/mermaid rendering is materially hardened,
+  - provider settings and TOML template management are now productized in the frontend,
+  - conversation preflight/CORS compatibility is fixed for turn-resume headers,
+  - desktop/runtime debug capture tooling is now part of the repo rather than an ad hoc local workflow.
+
+Implemented now at current HEAD:
+
+- Knowledge workspace closure:
+  - `src/frontend/source_manager.js` now publishes the active source target,
+  - `src/frontend/agent_workspace.js` now forwards `activeTarget` and scoped prefixes with conversation requests,
+  - `src/server.ts` now performs active-target-aware workspace hydration plus selective title-like hydration,
+  - `src/routes/data.ts` no longer shadows the real build / restore-cache path with stub behavior,
+  - `src/learning/KnowledgeLearningPlatform.ts` now exposes `workspaceReadiness`, `missDiagnostics`, title-hit planning, and request inspection helpers.
+- Reader/runtime rendering hardening:
+  - `src/frontend/reader.js` now renders raw markdown, KaTeX, and Mermaid through one runtime path, with frontend render first and backend PNG fallback retained,
+  - `src/frontend/app.js` now suppresses leaked Mermaid error artifacts so long-lived error blocks stop occupying the visible Tauri surface,
+  - `src/notemd/MermaidProcessor.ts`, `src/reader_renderer.ts`, and `src/routes/render.ts` now strengthen parity and render-service behavior around Mermaid/Math handoff.
+- Provider and settings delivery:
+  - `src/frontend/index.html`, `src/frontend/settings.js`, `src/notemd/AppConfigToml.ts`, `src/notemd/providerTemplates.ts`, and the locale bundles now expose a dedicated agent/provider settings page with preset templates and TOML materialization support,
+  - the API-version field is now documented in-product instead of being left as unexplained raw config.
+- Runtime transport compatibility:
+  - `src/middleware/cors.ts` now explicitly allows `x-agent-conversation-turn-id` and `x-agent-conversation-resume-turn-id`, which closes the preflight failure that previously broke browser/Tauri conversation retries.
+- Debug and evidence tooling:
+  - the repository now ships runtime/webview/window capture helpers plus Mermaid stage/export tooling under `scripts/`, so live Tauri failures can be inspected with first-party evidence commands instead of one-off manual probing.
+
+Current Tauri product gap:
+
+- The agent reply area is still plain-text oriented.
+- `src/frontend/agent_workspace.js` still consumes `assistantMessage` as a flat string, and `src/frontend/workspace_panes.js` still mounts conversation messages via `node.textContent = message`.
+- This means the current Tauri chat shell can issue grounded requests and action cards, but it still does not reuse the mature Reader markdown/math/mermaid rendering path for assistant replies.
+- The next delivery step is therefore not another generic shell expansion. It is a Tauri-first reply-rendering upgrade that preserves the current contract while introducing a richer message model.
+
+Code-vs-plan reality for this slice:
+
+| Area | Prior expectation | Current HEAD reality | Status |
+|---|---|---|---|
+| Knowledge workspace grounding | scoped queries should resolve the selected corpus instead of only the loaded graph | active target, scope prefixes, title-like hydration, workspace readiness, and miss diagnostics are now wired across frontend, server, and KLP | Operational |
+| Tauri markdown reader parity | markdown, math, and Mermaid should survive real runtime conditions without persistent error overlays | reader/runtime paths now render Mermaid with frontend-first + backend-PNG fallback and suppress leaked error artifacts | Operational |
+| Provider settings | provider/model/API-key controls should be isolated and write durable TOML configuration | dedicated agent/provider settings surface plus preset/TOML template helpers are now present | Operational |
+| Conversation retry transport | turn/replay headers should survive browser/Tauri preflight | CORS now allows both conversation turn headers | Closed |
+| Tauri agent reply rendering | assistant replies should render rich markdown instead of plain text | reply area still uses `assistantMessage` + `textContent` and therefore remains rendering-incomplete | Open |
+
 ## 2026-05-26 Program F Closure
 
 - The deep-student-derived next-phase program is now implemented through Program F at current HEAD.
@@ -84,10 +131,12 @@ Operational implication:
 
 | File | Current Lines | Implication |
 |---|---:|---|
-| `src/server.ts` | 14,992 | routing is modularized, but the main server monolith is still large |
-| `src/learning/KnowledgeLearningPlatform.ts` | 7,706 | KLP still carries major implementation gravity despite domain extraction |
-| `src/frontend/path_app.js` | 4,649 | path workbench/controller split is incomplete |
-| `src/frontend/app.js` | 4,713 | graph runtime still keeps a large host-side control surface |
+| `src/server.ts` | 15,920 | routing is modularized, but the main server monolith is still large and now also carries more runtime orchestration |
+| `src/learning/KnowledgeLearningPlatform.ts` | 10,043 | KLP remains the dominant implementation gravity well and now also carries workspace-readiness and planner logic |
+| `src/frontend/path_app.js` | 4,943 | path workbench/controller split is still incomplete and now additionally carries reader-parity responsibilities |
+| `src/frontend/app.js` | 5,953 | graph runtime still keeps a large host-side control surface and now also carries Mermaid error-guard behavior |
+| `src/frontend/reader.js` | 1,334 | reader/runtime rendering is now a first-class subsystem rather than a lightweight helper |
+| `src/frontend/agent_workspace.js` | 3,214 | agent orchestration exists, but reply rendering still has not crossed from text shell to rich message surface |
 | `src/routes/knowledge.ts` | 690 | knowledge routes need another split before claiming route-layer compaction |
 
 Use these numbers as the current HEAD truth. Older size-reduction tables later in this page remain useful as historical traceability, but they no longer describe the current branch state exactly.
@@ -101,6 +150,7 @@ It is the end-to-end delivery of:
 - local knowledge-point listing,
 - docked Tauri graph `focus mode` pane,
 - docked learning-path pane that can coexist with graph focus and be promoted fullscreen.
+- Tauri-first assistant reply rendering that can reuse the mature Reader markdown/math/mermaid pipeline.
 
 Execution reference:
 
@@ -117,7 +167,10 @@ Current branch status for this slice:
 - clicking `Learning Path` now mounts the existing path workspace (`path-container` + sidebars) into the docked learning-path pane instead of stopping at a text-only preview (`src/frontend/workspace_panes.js`, `src/frontend/agent_workspace.js`),
 - the graph surface now reserves workspace width so conversation + graph-focus + learning-path can coexist in one host-owned layout (`src/frontend/styles.css`),
 - graph-focus fullscreen now promotes the real graph workspace instead of only enlarging a metadata card (`src/frontend/workspace_panes.js`, `src/frontend/styles.css`),
+- the scoped-knowledge conversation flow is now materially more honest about corpus readiness: active folder target flows into the request contract, the server selectively hydrates likely title-matching documents into the workspace, and conversation traces now include readiness + miss diagnostics instead of only returning an empty top-k result (`src/frontend/source_manager.js`, `src/frontend/agent_workspace.js`, `src/server.ts`, `src/routes/data.ts`, `src/learning/KnowledgeLearningPlatform.ts`),
 - the new agent workspace shell now has i18n coverage for static shell strings plus runtime button/empty-state messaging, existing knowledge-card actions / localized system messages now re-render on language change instead of staying in the previous locale, conversation card rerender is now centralized through a card-kind renderer registry, and a source-level parity guard now checks append-kind vs registry alignment (`src/frontend/index.html`, `src/frontend/locales/en.json`, `src/frontend/locales/zh.json`, `src/frontend/workspace_panes.js`, `src/frontend/agent_workspace.js`, `src/agent_workspace.frontend.test.ts`),
+- provider/model/API-key settings are now isolated into a dedicated agent settings page with preset-template and TOML-template flows, but reply rendering in that same workspace still remains plain-text and is therefore the next obvious Tauri-first closure item (`src/frontend/index.html`, `src/frontend/settings.js`, `src/notemd/AppConfigToml.ts`, `src/notemd/providerTemplates.ts`),
+- the reader/runtime render stack is now substantially more robust for Tauri markdown usage: raw markdown, KaTeX, Mermaid frontend render, Mermaid backend PNG fallback, and leaked Mermaid error suppression are all present; the missing step is to reuse that stack inside the agent reply surface instead of keeping it isolated to the Reader (`src/frontend/reader.js`, `src/frontend/app.js`, `src/reader_renderer.ts`, `src/routes/render.ts`, `src/notemd/MermaidProcessor.ts`),
 - locale governance now includes backend-to-frontend capability label-key parity blocking: emitted conversation capability `labelKey` values must resolve to non-empty bilingual `agentWorkspace.actions.*` entries (`src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/locales/en.json`, `src/frontend/locales/zh.json`, `src/agent_workspace.locale.contract.test.ts`),
 - modular knowledge-route closure now includes live browser strict proof instead of snapshot-only recovery: conversation response wiring, capability-triggered request routes, card-title localization, and graph-focus compatibility now pass `STRICT`, `UI_STRICT`, and `UI_DYNAMIC_STRICT` against real browser/network traces (`src/routes/knowledge.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/app.js`, `src/frontend/locales/en.json`, `src/frontend/locales/zh.json`, `scripts/verify-agent-workspace-browser.js`),
 - locale governance now also blocks capability failure-message drift: emitted `failure.messageKey` values must resolve to bilingual `agentWorkspace.messages.*` entries with aligned interpolation placeholders and stable fallback placeholder sets (`src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/locales/en.json`, `src/frontend/locales/zh.json`, `src/agent_workspace.locale.contract.test.ts`),

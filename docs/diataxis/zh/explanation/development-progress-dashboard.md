@@ -3,6 +3,53 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
+## 2026-05-27 Tauri-first 对话渲染现实同步
+
+- 当前分支已经明显超出了上一次只强调 Program F 收口的状态快照。
+- 目前代码真相至少覆盖了五个此前文档低估的切片：
+  - scoped knowledge workspace grounding 已经真实落地，而不再只是“图已加载”的乐观假设，
+  - Tauri Reader 的 markdown / math / mermaid 渲染链已经显著加固，
+  - provider settings 与 TOML template 管理已经产品化进入前端，
+  - conversation turn / resume 头的 CORS 兼容性已修复，
+  - 桌面运行时调试与证据采集工具已成为仓库内正式能力，而不是一次性手工流程。
+
+当前 HEAD 已真实落地：
+
+- Knowledge workspace 闭环：
+  - `src/frontend/source_manager.js` 现已发布 active source target，
+  - `src/frontend/agent_workspace.js` 现已随 conversation 请求发送 `activeTarget` 与 scoped prefixes，
+  - `src/server.ts` 现已执行 active-target-aware workspace hydration 与 selective title-like hydration，
+  - `src/routes/data.ts` 不再用 stub 行为遮蔽真实 build / restore-cache 链路，
+  - `src/learning/KnowledgeLearningPlatform.ts` 现已暴露 `workspaceReadiness`、`missDiagnostics`、title-hit planner 与 request inspection 辅助能力。
+- Reader / runtime 渲染加固：
+  - `src/frontend/reader.js` 现已在一条统一 runtime 路径中处理 raw markdown、KaTeX 与 Mermaid，并保留 frontend render first + backend PNG fallback，
+  - `src/frontend/app.js` 现已抑制泄漏出的 Mermaid 错误工件，避免长时间错误块占据 Tauri 前台视窗，
+  - `src/notemd/MermaidProcessor.ts`、`src/reader_renderer.ts` 与 `src/routes/render.ts` 已强化 Mermaid / Math 的 parity 与 render-service 行为。
+- Provider / settings 交付：
+  - `src/frontend/index.html`、`src/frontend/settings.js`、`src/notemd/AppConfigToml.ts`、`src/notemd/providerTemplates.ts` 与 locale bundles 现已提供独立的 agent/provider 设置页、预设模板与 TOML 模板落盘能力，
+  - `API version` 字段也已经在产品层有解释，不再只是暴露一个没有说明的原始配置项。
+- Runtime transport 兼容性：
+  - `src/middleware/cors.ts` 现已显式允许 `x-agent-conversation-turn-id` 与 `x-agent-conversation-resume-turn-id`，从而关闭之前破坏 browser/Tauri conversation retry 的 preflight 故障。
+- 调试与取证链路：
+  - 仓库现在正式提供 page / webview / window 抓取工具与 Mermaid 分阶段导出脚本，Tauri 运行时故障可通过一等调试命令取证，而不再依赖一次性人工排查。
+
+当前 Tauri 产品缺口：
+
+- agent 回复区仍然是偏纯文本实现。
+- `src/frontend/agent_workspace.js` 仍以 `assistantMessage` 平铺消费结果，而 `src/frontend/workspace_panes.js` 仍通过 `node.textContent = message` 挂载消息。
+- 这意味着当前 Tauri chat shell 虽然已经具备 grounded request、knowledge cards 与 action orchestration，但 assistant reply 仍未复用成熟的 Reader markdown / math / mermaid 渲染链。
+- 因此下一步不应再做泛化壳层扩展，而应转入 Tauri-first reply rendering 升级：在保持当前契约可回退的前提下，引入 richer message model。
+
+这条切片的代码 / 方案现实矩阵：
+
+| 区域 | 先前期望 | 当前 HEAD 现实 | 状态 |
+|---|---|---|---|
+| Knowledge workspace grounding | scoped query 应命中当前选中的 corpus，而不是只依赖已加载图数据 | active target、scope prefixes、title-like hydration、workspace readiness 与 miss diagnostics 已贯通前端、server 与 KLP | Operational |
+| Tauri markdown reader parity | markdown、公式与 Mermaid 应能在真实运行时稳定显示且不留下持久错误遮罩 | Reader / runtime 现已支持 Mermaid frontend-first + backend-PNG fallback，并抑制泄漏错误工件 | Operational |
+| Provider settings | provider / model / API key 控件应独立成页并可写入 durable TOML 配置 | 专用 agent/provider 设置页与 preset/TOML template helpers 已落地 | Operational |
+| Conversation retry transport | turn / replay 头应能通过 browser/Tauri preflight | CORS 已允许两类 conversation turn 头 | Closed |
+| Tauri agent reply rendering | assistant reply 应能显示 rich markdown，而非纯文本 | 回复区仍使用 `assistantMessage` + `textContent`，渲染尚未闭环 | Open |
+
 ## 2026-05-26 Program F 收口状态
 
 - 基于 deep-student 对照得出的下一阶段计划，当前 HEAD 已经实现到 Program F。
@@ -65,10 +112,12 @@
 
 | 文件 | 当前行数 | 含义 |
 |---|---:|---|
-| `src/server.ts` | 14,992 | 路由虽已模块化，但主服务单体仍然偏大 |
-| `src/learning/KnowledgeLearningPlatform.ts` | 7,706 | KLP 仍然承载了大量实现重心 |
-| `src/frontend/path_app.js` | 4,649 | path workbench / controller 仍未拆完 |
-| `src/frontend/app.js` | 4,713 | graph host 侧控制面仍较厚 |
+| `src/server.ts` | 15,920 | 路由虽已模块化，但主服务单体仍然偏大，而且承载了更多运行时编排 |
+| `src/learning/KnowledgeLearningPlatform.ts` | 10,043 | KLP 仍是最主要的实现重心，并继续吸纳 workspace-readiness / planner 逻辑 |
+| `src/frontend/path_app.js` | 4,943 | path workbench / controller 仍未拆完，且额外承载了 reader-parity 责任 |
+| `src/frontend/app.js` | 5,953 | graph host 侧控制面仍较厚，并新增 Mermaid error-guard 行为 |
+| `src/frontend/reader.js` | 1,334 | Reader / runtime render 已从轻量辅助逻辑演化为一等子系统 |
+| `src/frontend/agent_workspace.js` | 3,214 | agent orchestration 已存在，但 reply rendering 仍未从 text shell 升级到 rich message surface |
 | `src/routes/knowledge.ts` | 690 | knowledge route 还需要进一步拆分 |
 
 > 本节数字是当前 HEAD 的权威口径。下方较早的重构缩减表仍可保留作历史追溯，但不再等同于当前分支真实状态。
@@ -114,7 +163,8 @@
 - 前端 agent chat，
 - 本地知识点列表，
 - 停靠式 Tauri 图界面 `focus mode` pane，
-- 可与 graph focus 并排存在并支持全屏提升的 learning-path pane。
+- 可与 graph focus 并排存在并支持全屏提升的 learning-path pane，
+- 以及能够复用 Reader markdown / math / mermaid 管线的 Tauri-first assistant reply rendering。
 
 执行参考：
 
@@ -129,7 +179,10 @@
 - 点击 `Learning Path` 不再停在文本预览，而是会把现有 path workspace（`path-container` + sidebars）挂入停靠式 learning-path pane（`src/frontend/workspace_panes.js`、`src/frontend/agent_workspace.js`），
 - 主图谱区域已经为 workspace 预留真实宽度，使 conversation + graph focus + learning path 可以在同一 host-owned 布局中并存（`src/frontend/styles.css`），
 - graph focus 的 fullscreen 已升级为真实 graph workspace promotion，而不是只把右侧元信息卡片放大（`src/frontend/workspace_panes.js`、`src/frontend/styles.css`），
+- scoped-knowledge conversation 流现在也更诚实了：active folder target 会进入 request contract，server 会 selective hydrate 可能 title-match 的文档进入 workspace，conversation trace 也会返回 readiness + miss diagnostics，而不再只是给出一个空 top-k（`src/frontend/source_manager.js`、`src/frontend/agent_workspace.js`、`src/server.ts`、`src/routes/data.ts`、`src/learning/KnowledgeLearningPlatform.ts`），
 - 新增 agent workspace 已补齐静态壳层与运行时按钮/空态提示的双语覆盖，且已有知识卡片动作按钮与带参数系统消息会在语言切换时重渲，而不是停留在旧语言；conversation card 的重渲也已集中到 card-kind 渲染注册表，并新增源码级一致性门禁测试校验 append-kind 与注册表键集合对齐，降低后续新增卡片的漏改风险（`src/frontend/index.html`、`src/frontend/locales/en.json`、`src/frontend/locales/zh.json`、`src/frontend/workspace_panes.js`、`src/frontend/agent_workspace.js`、`src/agent_workspace.frontend.test.ts`），
+- provider / model / API-key 设置现在已独立成 agent settings 页面，并支持 preset-template / TOML-template 流程；但同一 workspace 里的 reply rendering 仍是纯文本，因此它已成为最明显的下一个 Tauri-first 收口点（`src/frontend/index.html`、`src/frontend/settings.js`、`src/notemd/AppConfigToml.ts`、`src/notemd/providerTemplates.ts`），
+- Reader / runtime 渲染栈已对 Tauri markdown 使用场景显著加固：raw markdown、KaTeX、Mermaid frontend render、Mermaid backend PNG fallback 与 leaked Mermaid error suppression 都已到位；缺的只是把这套链路复用到 agent reply surface，而不是继续让它只存在于 Reader（`src/frontend/reader.js`、`src/frontend/app.js`、`src/reader_renderer.ts`、`src/routes/render.ts`、`src/notemd/MermaidProcessor.ts`），
 - locale 治理已新增后端到前端的能力标签键一致性门禁：conversation capability 发出的 `labelKey` 必须映射到非空的双语 `agentWorkspace.actions.*` 文案（`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/locales/en.json`、`src/frontend/locales/zh.json`、`src/agent_workspace.locale.contract.test.ts`），
 - modular knowledge route 闭环现在已经具备真实浏览器 strict 证据，而不再依赖 snapshot 式恢复通过：conversation 返回结构、capability 触发请求路由、卡片标题本地化、graph-focus 兼容 API 已在真实浏览器/网络 trace 下通过 `STRICT`、`UI_STRICT`、`UI_DYNAMIC_STRICT`（`src/routes/knowledge.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/app.js`、`src/frontend/locales/en.json`、`src/frontend/locales/zh.json`、`scripts/verify-agent-workspace-browser.js`），
 - locale 治理现已同时阻断能力失败文案漂移：conversation capability 发出的 `failure.messageKey` 必须映射到双语 `agentWorkspace.messages.*` 文案，且中英占位符集合与 fallback 占位符集合必须一致（`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/locales/en.json`、`src/frontend/locales/zh.json`、`src/agent_workspace.locale.contract.test.ts`），

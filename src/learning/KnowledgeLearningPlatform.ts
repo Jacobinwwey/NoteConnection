@@ -161,6 +161,18 @@ type NormalizedKnowledgeDocumentInput = {
     metadata: Record<string, unknown>;
 };
 
+type KnowledgeWorkspaceReadiness = {
+    status: 'ready' | 'empty_store' | 'workspace_not_found' | 'workspace_unbound' | 'workspace_unindexed';
+    message: string;
+    workspaceId: string | null;
+    corpusId: string | null;
+    activeResourceCount: number;
+    activeProjectionCount: number;
+    indexedUnitCount: number;
+    indexedSegmentCount: number;
+    matchedDocumentCount: number;
+};
+
 type UserMemoryBank = {
     session: MemoryEntry[];
     unit: MemoryEntry[];
@@ -934,6 +946,41 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
         await this.persistIfNeeded();
         return response;
+    }
+
+    public async inspectKnowledgeWorkspaceRequest(request: {
+        query?: string;
+        scope?: KnowledgeQueryRequest['scope'];
+        queryBackend?: KnowledgeQueryRequest['queryBackend'];
+    } = {}): Promise<{
+        readiness: KnowledgeWorkspaceReadiness;
+        resolvedScope: KnowledgeQueryResolvedScope;
+        planner: {
+            plannerQuery: string | null;
+            titleLikeQueries: string[];
+            titleHitDocumentIds: string[];
+        };
+        totalAtomsInScope: number;
+        totalActiveAtoms: number;
+    }> {
+        await this.ensureHydrated();
+        const backend = normalizeGraphQueryBackendType(request.queryBackend || this.currentGraphQueryBackendType);
+        const contextBundle = this.buildQueryBackendContext({
+            query: String(request.query || '').trim(),
+            scope: request.scope,
+            queryBackend: backend,
+        }, backend);
+        return {
+            readiness: contextBundle.readiness,
+            resolvedScope: contextBundle.resolvedScope,
+            planner: {
+                plannerQuery: contextBundle.titleLikeQueries[0] || null,
+                titleLikeQueries: contextBundle.titleLikeQueries,
+                titleHitDocumentIds: contextBundle.titleHitDocumentIds,
+            },
+            totalAtomsInScope: contextBundle.atoms.length,
+            totalActiveAtoms: this.activeAtomIds.size,
+        };
     }
 
     public async diagnoseMastery(request: MasteryDiagnosticsRequest): Promise<MasteryDiagnosticsResponse> {
@@ -3357,6 +3404,221 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             .toLowerCase();
     }
 
+    private normalizeQueryForPlanning(value: unknown): string {
+        return String(value || '')
+            .normalize('NFKC')
+            .replace(/[？?！!。.,;:]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
+    }
+
+    private derivePlannerTitleLikeQueries(query: string): string[] {
+        const normalized = this.normalizeQueryForPlanning(query);
+        if (!normalized) {
+            return [];
+        }
+        const baseCandidates = new Set<string>([normalized]);
+        const stripped = normalized
+            .replace(/^(what is|what are|define|explain|tell me about|what's)\s+/i, '')
+            .replace(/^(什么是|解释一下|介绍一下|请解释|请介绍)\s*/i, '')
+            .trim();
+        if (stripped) {
+            baseCandidates.add(stripped);
+        }
+        const compact = stripped.replace(/\s+/g, '');
+        if (compact) {
+            baseCandidates.add(compact);
+        }
+        const spaced = compact.replace(/([a-z])([A-Z])/g, '$1 $2').trim().toLowerCase();
+        if (spaced) {
+            baseCandidates.add(spaced);
+        }
+        if (compact === 'waterglass' || stripped === 'water glass' || normalized.includes('water glass')) {
+            baseCandidates.add('water glass');
+            baseCandidates.add('waterglass');
+            baseCandidates.add('水玻璃');
+            baseCandidates.add('水杯');
+        }
+        return Array.from(baseCandidates.values()).filter(Boolean);
+    }
+
+    private findDocumentIdsByTitleLikeQueries(titleLikeQueries: string[]): string[] {
+        if (titleLikeQueries.length <= 0) {
+            return [];
+        }
+        const loweredQueries = titleLikeQueries.map((entry) => this.normalizeQueryForPlanning(entry)).filter(Boolean);
+        if (loweredQueries.length <= 0) {
+            return [];
+        }
+        const exactMatches = new Set<string>();
+        const fuzzyMatches = new Set<string>();
+        this.documents.forEach((snapshot) => {
+            const normalizedPath = String(snapshot.sourcePath || '').replace(/\\/g, '/');
+            const fileName = path.basename(normalizedPath).replace(/\.[^.]+$/g, '');
+            const normalizedDocumentId = this.normalizeQueryForPlanning(snapshot.documentId);
+            const normalizedFileName = this.normalizeQueryForPlanning(fileName);
+            const normalizedPathValue = this.normalizeQueryForPlanning(normalizedPath);
+            const candidateHaystacks = [normalizedDocumentId, normalizedFileName, normalizedPathValue].filter(Boolean);
+            if (candidateHaystacks.some((haystack) => loweredQueries.some((query) => haystack === query))) {
+                exactMatches.add(snapshot.documentId);
+                return;
+            }
+            if (candidateHaystacks.some((haystack) => loweredQueries.some((query) => haystack.includes(query)))) {
+                fuzzyMatches.add(snapshot.documentId);
+            }
+        });
+        if (exactMatches.size > 0) {
+            return Array.from(exactMatches.values());
+        }
+        return Array.from(fuzzyMatches.values());
+    }
+
+    private buildWorkspaceReadiness(scope: {
+        workspaceId?: string | null;
+        corpusId?: string | null;
+    }): KnowledgeWorkspaceReadiness {
+        const totalResources = this.resourceRegistry.listActiveResources().length;
+        if (totalResources <= 0 || this.documents.size <= 0 || this.activeAtomIds.size <= 0) {
+            return {
+                status: 'empty_store',
+                message: 'The learning workspace store is empty. Sync or ingest the active knowledge target first.',
+                workspaceId: null,
+                corpusId: null,
+                activeResourceCount: 0,
+                activeProjectionCount: 0,
+                indexedUnitCount: 0,
+                indexedSegmentCount: 0,
+                matchedDocumentCount: 0,
+            };
+        }
+        const workspaceId = isNonEmptyString(scope.workspaceId) ? scope.workspaceId.trim().toLowerCase() : null;
+        const corpusId = isNonEmptyString(scope.corpusId) ? scope.corpusId.trim().toLowerCase() : null;
+        if (!workspaceId && !corpusId) {
+            const summary = this.indexLifecycle.buildSummary();
+            return {
+                status: 'ready',
+                message: 'Global learning workspace query path is ready.',
+                workspaceId: null,
+                corpusId: null,
+                activeResourceCount: totalResources,
+                activeProjectionCount: this.resourceRegistry.listActiveProjections().length,
+                indexedUnitCount: summary.totalUnits,
+                indexedSegmentCount: summary.totalSegments,
+                matchedDocumentCount: this.documents.size,
+            };
+        }
+        const resolvedWorkspace = workspaceId
+            ? this.workspaceRegistry.getWorkspaceById(workspaceId)
+            : (
+                corpusId
+                    ? this.workspaceRegistry.listActiveWorkspaces().find((workspace) => workspace.corpusId === corpusId) || null
+                    : null
+            );
+        if (workspaceId && !resolvedWorkspace) {
+            return {
+                status: 'workspace_not_found',
+                message: `Workspace "${workspaceId}" is not hydrated in the learning workspace store.`,
+                workspaceId,
+                corpusId,
+                activeResourceCount: totalResources,
+                activeProjectionCount: this.resourceRegistry.listActiveProjections().length,
+                indexedUnitCount: 0,
+                indexedSegmentCount: 0,
+                matchedDocumentCount: 0,
+            };
+        }
+        const effectiveWorkspaceId = resolvedWorkspace?.workspaceId || workspaceId || null;
+        const effectiveCorpusId = resolvedWorkspace?.corpusId || corpusId || null;
+        const bindings = effectiveWorkspaceId
+            ? this.workspaceRegistry.listBindingsByWorkspace(effectiveWorkspaceId)
+            : [];
+        if (bindings.length <= 0) {
+            return {
+                status: 'workspace_unbound',
+                message: `Workspace "${effectiveWorkspaceId || effectiveCorpusId || 'unknown'}" has no bound knowledge projections.`,
+                workspaceId: effectiveWorkspaceId,
+                corpusId: effectiveCorpusId,
+                activeResourceCount: totalResources,
+                activeProjectionCount: 0,
+                indexedUnitCount: 0,
+                indexedSegmentCount: 0,
+                matchedDocumentCount: 0,
+            };
+        }
+        const projectionIds = bindings.map((binding) => binding.projectionId);
+        const units = this.indexLifecycle.listUnitsByProjectionIds(projectionIds);
+        const segments = this.indexLifecycle.listSegmentsByUnitIds(units.map((unit) => unit.unitId));
+        const matchedDocumentIds = new Set(bindings.map((binding) => binding.documentId).filter(Boolean));
+        if (segments.length <= 0 || units.length <= 0) {
+            return {
+                status: 'workspace_unindexed',
+                message: `Workspace "${effectiveWorkspaceId || effectiveCorpusId || 'unknown'}" is bound but has no indexed learning units yet.`,
+                workspaceId: effectiveWorkspaceId,
+                corpusId: effectiveCorpusId,
+                activeResourceCount: new Set(bindings.map((binding) => binding.resourceId)).size,
+                activeProjectionCount: projectionIds.length,
+                indexedUnitCount: units.length,
+                indexedSegmentCount: segments.length,
+                matchedDocumentCount: matchedDocumentIds.size,
+            };
+        }
+        return {
+            status: 'ready',
+            message: `Workspace "${effectiveWorkspaceId || effectiveCorpusId || 'global'}" is ready for scoped learning queries.`,
+            workspaceId: effectiveWorkspaceId,
+            corpusId: effectiveCorpusId,
+            activeResourceCount: new Set(bindings.map((binding) => binding.resourceId)).size,
+            activeProjectionCount: projectionIds.length,
+            indexedUnitCount: units.length,
+            indexedSegmentCount: segments.length,
+            matchedDocumentCount: matchedDocumentIds.size,
+        };
+    }
+
+    private buildMissDiagnostics(params: {
+        query: string;
+        resolvedScope: KnowledgeQueryResolvedScope;
+        readiness: KnowledgeWorkspaceReadiness;
+        plannerQuery?: string;
+        titleLikeQueries?: string[];
+        titleHitDocumentIds?: string[];
+        indexedScopeAtomCount?: number;
+    }): NonNullable<KnowledgeQueryResolvedScope['missDiagnostics']> {
+        const normalizedQuery = this.normalizeQueryForPlanning(params.query);
+        let reason: NonNullable<KnowledgeQueryResolvedScope['missDiagnostics']>['reason'] = 'none';
+        let message = 'Scoped retrieval produced no matching knowledge points.';
+        if (params.readiness.status === 'empty_store') {
+            reason = 'empty_store';
+            message = params.readiness.message;
+        } else if (params.readiness.status === 'workspace_not_found') {
+            reason = 'workspace_not_found';
+            message = params.readiness.message;
+        } else if (params.readiness.status === 'workspace_unbound') {
+            reason = 'workspace_unbound';
+            message = params.readiness.message;
+        } else if ((params.indexedScopeAtomCount || 0) <= 0) {
+            reason = 'scope_has_no_indexed_segments';
+            message = 'The active scope resolved to zero indexed atoms.';
+        } else if ((params.titleHitDocumentIds || []).length <= 0) {
+            reason = 'query_no_title_or_alias_hit';
+            message = 'The query planner could not find a title or alias hit in the active scope.';
+        } else {
+            reason = 'retrieval_candidates_below_threshold';
+            message = 'The planner found likely documents, but retrieval did not return evidence-bearing candidates.';
+        }
+        return {
+            reason,
+            message,
+            query: params.query,
+            normalizedQuery,
+            plannerQuery: params.plannerQuery,
+            titleLikeQueries: params.titleLikeQueries || [],
+            titleHitDocumentIds: params.titleHitDocumentIds || [],
+            indexedScopeAtomCount: params.indexedScopeAtomCount || 0,
+        };
+    }
+
     private extractCorpusIdFromSourcePath(sourcePath: string): string {
         const normalized = String(sourcePath || '').replace(/\\/g, '/');
         const segments = normalized.split('/').filter(Boolean);
@@ -3520,14 +3782,47 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             atoms: KnowledgeAtom[];
             activeEdges: RelationEdge[];
         };
+        titleLikeQueries: string[];
+        titleHitDocumentIds: string[];
+        readiness: KnowledgeWorkspaceReadiness;
     } {
         const query = normalizeWhitespace(String(request.query || ''));
         const asOf = this.resolveTimestamp(request.asOf);
         const topK = clamp(Math.floor(Number(request.topK) || 5), 1, 20);
+        const normalizedRequestScope = request.scope || {};
+        const readiness = this.buildWorkspaceReadiness({
+            workspaceId: normalizedRequestScope.workspaceId || null,
+            corpusId: normalizedRequestScope.corpusId || null,
+        });
+        const titleLikeQueries = this.derivePlannerTitleLikeQueries(query);
+        const titleHitDocumentIds = this.findDocumentIdsByTitleLikeQueries(titleLikeQueries);
+        let effectiveScope = request.scope;
+        if (titleHitDocumentIds.length > 0) {
+            if (effectiveScope) {
+                const existingDocumentIds = Array.isArray(effectiveScope.documentIds)
+                    ? effectiveScope.documentIds.map((documentId) => String(documentId || '').trim()).filter(Boolean)
+                    : [];
+                effectiveScope = {
+                    ...effectiveScope,
+                    documentIds: Array.from(new Set([
+                        ...existingDocumentIds,
+                        ...titleHitDocumentIds,
+                    ])),
+                };
+            } else {
+                effectiveScope = {
+                    documentIds: titleHitDocumentIds,
+                };
+            }
+        }
         const unscopedAtoms = Array.from(this.activeAtomIds.values())
             .map((atomId) => this.atoms.get(atomId))
             .filter((atom): atom is KnowledgeAtom => Boolean(atom));
-        const scopedAtomsResult = this.filterAtomsByKnowledgeScope(unscopedAtoms, request.scope);
+        const scopedAtomsResult = this.filterAtomsByKnowledgeScope(unscopedAtoms, effectiveScope);
+        scopedAtomsResult.resolvedScope.scopeSource = effectiveScope
+            ? (request.scope ? 'explicit_request' : 'planner_fallback')
+            : 'global_default';
+        scopedAtomsResult.resolvedScope.readiness = readiness;
         const activeEdges = this.filterRelationEdgesByScopedAtomIds(
             this.collectActiveRelationEdges(asOf),
             scopedAtomsResult.atoms
@@ -3539,6 +3834,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             activeEdges,
             atoms: scopedAtomsResult.atoms,
             resolvedScope: scopedAtomsResult.resolvedScope,
+            titleLikeQueries,
+            titleHitDocumentIds,
+            readiness,
             context: {
                 request: {
                     ...request,
@@ -3546,7 +3844,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     asOf,
                     topK,
                     queryBackend: backend,
-                    scope: request.scope,
+                    scope: effectiveScope,
                 },
                 query,
                 queryTokens: tokenize(query),
@@ -3562,11 +3860,12 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         result: GraphQueryBackendResult,
         asOf: string,
         activeEdges: RelationEdge[],
-        topK: number
+        topK: number,
+        candidateLimit?: number
     ): KnowledgeQueryItem[] {
         return result.candidates
             .filter((candidate) => this.activeAtomIds.has(candidate.atomId))
-            .slice(0, topK)
+            .slice(0, Math.max(topK, candidateLimit || topK))
             .map((candidate) => {
                 const atom = this.atoms.get(candidate.atomId);
                 if (!atom) {
@@ -3611,6 +3910,50 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
     }
 
+    private rerankQueryItemsForPlanner(
+        items: KnowledgeQueryItem[],
+        planner: {
+            titleLikeQueries: string[];
+            titleHitDocumentIds: string[];
+        }
+    ): KnowledgeQueryItem[] {
+        const normalizedTitleQueries = planner.titleLikeQueries
+            .map((entry) => this.normalizeQueryForPlanning(entry))
+            .filter(Boolean);
+        const titleHitDocumentIds = new Set(planner.titleHitDocumentIds);
+        if (normalizedTitleQueries.length <= 0 || titleHitDocumentIds.size <= 0) {
+            return items;
+        }
+        const ranked = items
+            .map((item) => {
+                const normalizedTitle = this.normalizeQueryForPlanning(item.atom.title);
+                const titleExactHit = normalizedTitleQueries.some((query) => normalizedTitle === query);
+                const titleContainsHit = titleExactHit
+                    ? false
+                    : normalizedTitleQueries.some((query) => normalizedTitle.includes(query));
+                const plannerDocumentBoost = titleHitDocumentIds.has(item.atom.documentId) ? 1.2 : 0;
+                const plannerTitleBoost = titleExactHit
+                    ? 2.4
+                    : (titleContainsHit ? 1.1 : 0);
+                const representationBoost = item.atom.representationType === 'text' ? 0.08 : 0;
+                return {
+                    item,
+                    adjustedScore: Number((item.score + plannerDocumentBoost + plannerTitleBoost + representationBoost).toFixed(4)),
+                };
+            })
+            .sort((left, right) => {
+                if (right.adjustedScore !== left.adjustedScore) {
+                    return right.adjustedScore - left.adjustedScore;
+                }
+                return right.item.score - left.item.score;
+            })
+            .map((entry) => ({
+                ...entry.item,
+                score: entry.adjustedScore,
+            }));
+        return ranked;
+    }
+
     private async executeQueryBackend(
         request: KnowledgeQueryRequest,
         backend: GraphQueryBackendType,
@@ -3637,11 +3980,32 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 backendResult,
                 contextBundle.asOf,
                 contextBundle.activeEdges,
-                contextBundle.topK
+                contextBundle.topK,
+                contextBundle.titleHitDocumentIds.length > 0
+                    ? Math.max(contextBundle.topK * 6, 24)
+                    : contextBundle.topK
             );
-            const metrics = this.summarizeQueryItems(items);
+            const rerankedItems = this.rerankQueryItemsForPlanner(items, {
+                titleLikeQueries: contextBundle.titleLikeQueries,
+                titleHitDocumentIds: contextBundle.titleHitDocumentIds,
+            }).slice(0, contextBundle.topK);
+            const metrics = this.summarizeQueryItems(rerankedItems);
             const latencyMs = Date.now() - startedAtMs;
             const rawModeWeights = backendResult.trace?.modeWeights || {};
+            const resolvedScope: KnowledgeQueryResolvedScope = {
+                ...contextBundle.resolvedScope,
+                missDiagnostics: rerankedItems.length <= 0
+                    ? this.buildMissDiagnostics({
+                        query: contextBundle.query,
+                        resolvedScope: contextBundle.resolvedScope,
+                        readiness: contextBundle.readiness,
+                        plannerQuery: contextBundle.titleLikeQueries[0] || contextBundle.resolvedScope.workspaceId || contextBundle.resolvedScope.corpusId || '',
+                        titleLikeQueries: contextBundle.titleLikeQueries,
+                        titleHitDocumentIds: contextBundle.titleHitDocumentIds,
+                        indexedScopeAtomCount: contextBundle.atoms.length,
+                    })
+                    : undefined,
+            };
             const trace = {
                 retrievalModes: Array.isArray(backendResult.trace?.retrievalModes)
                     ? [...backendResult.trace.retrievalModes]
@@ -3649,7 +4013,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 asOf: contextBundle.asOf,
                 totalActiveAtoms: this.activeAtomIds.size,
                 totalAtomsInScope: contextBundle.atoms.length,
-                scope: contextBundle.resolvedScope,
+                scope: resolvedScope,
                 modeWeights: {
                     keyword: Number(
                         clamp(Number((rawModeWeights as Record<string, unknown>).keyword ?? (backend === 'keyword_only' ? 0.72 : 0.32)), 0, 1)
@@ -3666,6 +4030,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 },
                 latencyMs,
                 evidenceCoverageRatio: metrics.evidenceCoverageRatio,
+                planner: {
+                    plannerQuery: contextBundle.titleLikeQueries[0] || null,
+                    titleLikeQueries: [...contextBundle.titleLikeQueries],
+                    titleHitDocumentIds: [...contextBundle.titleHitDocumentIds],
+                },
                 ...(backendResult.trace?.vectorAcceleration
                     ? { vectorAcceleration: backendResult.trace.vectorAcceleration }
                     : {}),
@@ -3674,7 +4043,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             return {
                 backend,
                 backendId: String(backendInstance.id || backend).trim() || backend,
-                items,
+                items: rerankedItems,
                 trace,
                 latencyMs,
                 evidenceCoverageRatio: metrics.evidenceCoverageRatio,
@@ -4188,6 +4557,13 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                             ...record.response.trace.retrieval,
                             retrievalModes: [...record.response.trace.retrieval.retrievalModes],
                             modeWeights: { ...record.response.trace.retrieval.modeWeights },
+                            planner: record.response.trace.retrieval.planner
+                                ? {
+                                    ...record.response.trace.retrieval.planner,
+                                    titleLikeQueries: [...(record.response.trace.retrieval.planner.titleLikeQueries || [])],
+                                    titleHitDocumentIds: [...(record.response.trace.retrieval.planner.titleHitDocumentIds || [])],
+                                }
+                                : undefined,
                             scope: record.response.trace.retrieval.scope ? {
                                 ...record.response.trace.retrieval.scope,
                                 documentIds: [...record.response.trace.retrieval.scope.documentIds],
@@ -4202,7 +4578,34 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                             atomIds: [...record.response.trace.usedScope.atomIds],
                             sourcePathPrefixes: [...record.response.trace.usedScope.sourcePathPrefixes],
                             languages: [...record.response.trace.usedScope.languages],
+                            readiness: record.response.trace.usedScope.readiness
+                                ? { ...record.response.trace.usedScope.readiness }
+                                : undefined,
+                            missDiagnostics: record.response.trace.usedScope.missDiagnostics
+                                ? {
+                                    ...record.response.trace.usedScope.missDiagnostics,
+                                    titleLikeQueries: [...(record.response.trace.usedScope.missDiagnostics.titleLikeQueries || [])],
+                                    titleHitDocumentIds: [...(record.response.trace.usedScope.missDiagnostics.titleHitDocumentIds || [])],
+                                }
+                                : undefined,
                         },
+                        workspaceReadiness: record.response.trace.workspaceReadiness
+                            ? { ...record.response.trace.workspaceReadiness }
+                            : undefined,
+                        missDiagnostics: record.response.trace.missDiagnostics
+                            ? {
+                                ...record.response.trace.missDiagnostics,
+                                titleLikeQueries: [...(record.response.trace.missDiagnostics.titleLikeQueries || [])],
+                                titleHitDocumentIds: [...(record.response.trace.missDiagnostics.titleHitDocumentIds || [])],
+                            }
+                            : undefined,
+                        planner: record.response.trace.planner
+                            ? {
+                                ...record.response.trace.planner,
+                                titleLikeQueries: [...(record.response.trace.planner.titleLikeQueries || [])],
+                                titleHitDocumentIds: [...(record.response.trace.planner.titleHitDocumentIds || [])],
+                            }
+                            : undefined,
                     },
                 },
             })),
@@ -4525,6 +4928,13 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                                 ? [...record.response.trace.retrieval.retrievalModes]
                                 : [],
                             modeWeights: { ...(record.response.trace?.retrieval?.modeWeights || {}) },
+                            planner: record.response.trace?.retrieval?.planner
+                                ? {
+                                    ...record.response.trace.retrieval.planner,
+                                    titleLikeQueries: [...(record.response.trace.retrieval.planner.titleLikeQueries || [])],
+                                    titleHitDocumentIds: [...(record.response.trace.retrieval.planner.titleHitDocumentIds || [])],
+                                }
+                                : undefined,
                             scope: record.response.trace?.retrieval?.scope ? {
                                 ...record.response.trace.retrieval.scope,
                                 documentIds: [...(record.response.trace.retrieval.scope.documentIds || [])],
@@ -4539,6 +4949,16 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                             atomIds: [...(record.response.trace.usedScope.atomIds || [])],
                             sourcePathPrefixes: [...(record.response.trace.usedScope.sourcePathPrefixes || [])],
                             languages: [...(record.response.trace.usedScope.languages || [])],
+                            readiness: record.response.trace.usedScope.readiness
+                                ? { ...record.response.trace.usedScope.readiness }
+                                : undefined,
+                            missDiagnostics: record.response.trace.usedScope.missDiagnostics
+                                ? {
+                                    ...record.response.trace.usedScope.missDiagnostics,
+                                    titleLikeQueries: [...(record.response.trace.usedScope.missDiagnostics.titleLikeQueries || [])],
+                                    titleHitDocumentIds: [...(record.response.trace.usedScope.missDiagnostics.titleHitDocumentIds || [])],
+                                }
+                                : undefined,
                         } : {
                             source: 'global',
                             workspaceId: null,
@@ -4549,6 +4969,23 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                             languages: [],
                             matchedAtomCount: 0,
                         },
+                        workspaceReadiness: record.response.trace?.workspaceReadiness
+                            ? { ...record.response.trace.workspaceReadiness }
+                            : undefined,
+                        missDiagnostics: record.response.trace?.missDiagnostics
+                            ? {
+                                ...record.response.trace.missDiagnostics,
+                                titleLikeQueries: [...(record.response.trace.missDiagnostics.titleLikeQueries || [])],
+                                titleHitDocumentIds: [...(record.response.trace.missDiagnostics.titleHitDocumentIds || [])],
+                            }
+                            : undefined,
+                        planner: record.response.trace?.planner
+                            ? {
+                                ...record.response.trace.planner,
+                                titleLikeQueries: [...(record.response.trace.planner.titleLikeQueries || [])],
+                                titleHitDocumentIds: [...(record.response.trace.planner.titleHitDocumentIds || [])],
+                            }
+                            : undefined,
                     },
                 },
             });
@@ -7100,12 +7537,15 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         knowledgePoints: AgentConversationKnowledgePoint[];
         citations: KnowledgeCitation[];
         recalledMemories: AgentConversationMemoryRecord[];
+        usedScope: KnowledgeQueryResolvedScope;
     }): string {
         if (params.knowledgePoints.length <= 0) {
+            const readinessMessage = String(params.usedScope.readiness?.message || '').trim();
+            const missMessage = String(params.usedScope.missDiagnostics?.message || '').trim();
             if (params.recalledMemories.length > 0) {
-                return `No scoped knowledge points matched "${params.message || 'your query'}", but I recovered ${params.recalledMemories.length} relevant conversation memory note(s). Refine the corpus scope or use the recalled memory as a follow-up anchor.`;
+                return `No scoped knowledge points matched "${params.message || 'your query'}", but I recovered ${params.recalledMemories.length} relevant conversation memory note(s). ${missMessage || readinessMessage || 'Refine the corpus scope or use the recalled memory as a follow-up anchor.'}`;
             }
-            return `No scoped knowledge points matched "${params.message || 'your query'}". Refine the scope, add more notes to the corpus, or broaden the query terms.`;
+            return `No scoped knowledge points matched "${params.message || 'your query'}". ${missMessage || readinessMessage || 'Refine the scope, add more notes to the corpus, or broaden the query terms.'}`;
         }
 
         const leadingPoint = params.knowledgePoints[0];
@@ -7518,6 +7958,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             knowledgePoints,
             citations,
             recalledMemories,
+            usedScope: traceScope,
         });
         const response: AgentConversationResponse = {
             userId,
@@ -7546,6 +7987,13 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 recalledMemoryCount: recalledMemories.length,
                 appliedMemoryCount: memoryActions.filter((action) => action.status === 'applied').length,
                 usedScope: traceScope,
+                workspaceReadiness: traceScope.readiness,
+                missDiagnostics: traceScope.missDiagnostics,
+                planner: {
+                    plannerQuery: queryResult.trace.planner?.plannerQuery || null,
+                    titleLikeQueries: queryResult.trace.planner?.titleLikeQueries || [],
+                    titleHitDocumentIds: queryResult.trace.planner?.titleHitDocumentIds || [],
+                },
             },
         };
         this.upsertConversationSessionState({

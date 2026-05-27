@@ -12,12 +12,19 @@ const READER_MEDIA_SCALE_MAX := 3.00
 const READER_MEDIA_SCALE_STEP := 0.01
 const READER_MEDIA_SCALE_DEFAULT := 1.50
 const READER_MEDIA_SCALE_MIGRATION_KEY := "reader_media_scale_migrated_20260308"
+const BG_BRIGHTNESS_ACTUAL_MIN := 0.0
+const BG_BRIGHTNESS_ACTUAL_MAX := 0.10
+const BG_BRIGHTNESS_UI_MIN := 0.0
+const BG_BRIGHTNESS_UI_MAX := 100.0
+const BG_BRIGHTNESS_UI_STEP := 0.1
 
 @onready var _auto_reconstruct_check: CheckBox = $MarginContainer/VBoxContainer/AutoReconstructCheck
 
 var _retain_history_check: CheckBox
 var _focus_mode_check: CheckBox
 var _background_option: OptionButton
+var _brightness_slider: HSlider
+var _brightness_value_label: Label
 var _reading_mode_option: OptionButton
 var _reader_render_mode_option: OptionButton
 var _reader_shortcut_input: LineEdit
@@ -37,7 +44,7 @@ var _settings: Dictionary = {
 	"retain_history": true,
 	"focus_mode": true,
 	"background": "",
-	"bg_brightness": 1.0,
+	"bg_brightness": 0.10,
 	"reading_mode": "window",
 	"reader_render_mode": "render",
 	"reader_toggle_source_shortcut": DEFAULT_READER_TOGGLE_SHORTCUT,
@@ -92,23 +99,24 @@ func _ready() -> void:
 		bright_label.custom_minimum_size = Vector2(85, 0)
 		bright_hbox.add_child(bright_label)
 
-		var brightness_slider := HSlider.new()
-		brightness_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		brightness_slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		brightness_slider.min_value = 0.01
-		brightness_slider.max_value = 10.0
-		brightness_slider.step = 0.05
-		brightness_slider.value = float(_settings.get("bg_brightness", 1.0))
-		bright_hbox.add_child(brightness_slider)
+		_brightness_slider = HSlider.new()
+		_brightness_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_brightness_slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		_brightness_slider.min_value = BG_BRIGHTNESS_UI_MIN
+		_brightness_slider.max_value = BG_BRIGHTNESS_UI_MAX
+		_brightness_slider.step = BG_BRIGHTNESS_UI_STEP
+		_brightness_slider.value = _brightness_actual_to_ui(float(_settings.get("bg_brightness", BG_BRIGHTNESS_ACTUAL_MAX)))
+		bright_hbox.add_child(_brightness_slider)
 
-		var bright_val_label := Label.new()
-		bright_val_label.text = "%.1fx" % brightness_slider.value
-		bright_val_label.custom_minimum_size = Vector2(42, 0)
-		bright_val_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		bright_hbox.add_child(bright_val_label)
+		_brightness_value_label = Label.new()
+		_brightness_value_label.text = _format_brightness_ui_value(_brightness_slider.value)
+		_brightness_value_label.custom_minimum_size = Vector2(52, 0)
+		_brightness_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		bright_hbox.add_child(_brightness_value_label)
 
-		brightness_slider.value_changed.connect(func(value: float):
-			bright_val_label.text = "%.1fx" % value
+		_brightness_slider.value_changed.connect(func(value: float):
+			if _brightness_value_label:
+				_brightness_value_label.text = _format_brightness_ui_value(value)
 			_on_brightness_changed(value)
 		)
 
@@ -263,6 +271,10 @@ func _update_ui() -> void:
 		_focus_mode_check.button_pressed = bool(_settings.get("focus_mode", true))
 	if _background_option:
 		_populate_background_options()
+	if _brightness_slider:
+		_brightness_slider.value = _brightness_actual_to_ui(float(_settings.get("bg_brightness", BG_BRIGHTNESS_ACTUAL_MAX)))
+	if _brightness_value_label and _brightness_slider:
+		_brightness_value_label.text = _format_brightness_ui_value(_brightness_slider.value)
 	if _reading_mode_option:
 		var reading_mode_value: String = String(_settings.get("reading_mode", "window"))
 		_reading_mode_option.select(1 if reading_mode_value == "fullscreen" else 0)
@@ -302,7 +314,7 @@ func _on_background_selected(index: int) -> void:
 	_save_and_emit()
 
 func _on_brightness_changed(value: float) -> void:
-	_settings["bg_brightness"] = value
+	_settings["bg_brightness"] = _brightness_ui_to_actual(value)
 	_save_and_emit()
 
 func _on_reading_mode_selected(index: int) -> void:
@@ -405,9 +417,10 @@ func _save_settings_local() -> void:
 	config.save(SETTINGS_FILE)
 
 func _load_settings() -> void:
-	_load_settings_local()
 	if not _runtime_base_url.is_empty():
 		call_deferred("_load_settings_from_runtime_async")
+		return
+	_load_settings_local()
 
 func _load_settings_local() -> void:
 	var config := ConfigFile.new()
@@ -432,7 +445,11 @@ func _normalize_settings_values() -> void:
 	_settings["retain_history"] = bool(_settings.get("retain_history", true))
 	_settings["focus_mode"] = bool(_settings.get("focus_mode", true))
 	_settings["background"] = String(_settings.get("background", ""))
-	_settings["bg_brightness"] = clampf(float(_settings.get("bg_brightness", 1.0)), 0.01, 10.0)
+	_settings["bg_brightness"] = clampf(
+		float(_settings.get("bg_brightness", BG_BRIGHTNESS_ACTUAL_MAX)),
+		BG_BRIGHTNESS_ACTUAL_MIN,
+		BG_BRIGHTNESS_ACTUAL_MAX
+	)
 
 	var reading_mode := String(_settings.get("reading_mode", "window")).to_lower()
 	_settings["reading_mode"] = "fullscreen" if reading_mode == "fullscreen" else "window"
@@ -450,6 +467,19 @@ func _normalize_settings_values() -> void:
 	)
 	_settings["reader_debug"] = bool(_settings.get("reader_debug", false))
 	_settings["node_spacing"] = clampf(float(_settings.get("node_spacing", 240.0)), 100.0, 600.0)
+
+func _brightness_actual_to_ui(value: float) -> float:
+	if BG_BRIGHTNESS_ACTUAL_MAX <= BG_BRIGHTNESS_ACTUAL_MIN:
+		return BG_BRIGHTNESS_UI_MIN
+	var normalized := (clampf(value, BG_BRIGHTNESS_ACTUAL_MIN, BG_BRIGHTNESS_ACTUAL_MAX) - BG_BRIGHTNESS_ACTUAL_MIN) / (BG_BRIGHTNESS_ACTUAL_MAX - BG_BRIGHTNESS_ACTUAL_MIN)
+	return clampf(normalized * BG_BRIGHTNESS_UI_MAX, BG_BRIGHTNESS_UI_MIN, BG_BRIGHTNESS_UI_MAX)
+
+func _brightness_ui_to_actual(value: float) -> float:
+	var normalized := clampf(value, BG_BRIGHTNESS_UI_MIN, BG_BRIGHTNESS_UI_MAX) / BG_BRIGHTNESS_UI_MAX
+	return lerpf(BG_BRIGHTNESS_ACTUAL_MIN, BG_BRIGHTNESS_ACTUAL_MAX, normalized)
+
+func _format_brightness_ui_value(value: float) -> String:
+	return "%.1f" % clampf(value, BG_BRIGHTNESS_UI_MIN, BG_BRIGHTNESS_UI_MAX)
 
 func _resolve_runtime_base_url() -> String:
 	var explicit_base := OS.get_environment("NOTE_CONNECTION_BASE_URL").strip_edges()
@@ -539,6 +569,9 @@ func _load_settings_from_runtime_async() -> void:
 	var result: Dictionary = await _request_runtime_json(PATH_MODE_SETTINGS_ENDPOINT, HTTPClient.METHOD_GET)
 	if not bool(result.get("ok", false)):
 		push_warning("[SettingsPanel] Failed to load TOML path_mode settings: %s" % String(result.get("error", "unknown")))
+		_load_settings_local()
+		_update_ui()
+		settings_changed.emit(_settings.duplicate(true))
 		return
 
 	var payload: Dictionary = result.get("data", {})

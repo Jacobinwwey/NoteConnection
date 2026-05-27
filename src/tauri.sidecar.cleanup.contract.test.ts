@@ -41,6 +41,8 @@ describe('tauri sidecar cleanup integration', () => {
     const tauriDevRunner = fs.readFileSync(tauriDevRunnerPath, 'utf8');
     expect(tauriDevRunner).toContain('CARGO_TARGET_DIR');
     expect(tauriDevRunner).toContain('target-dev-lowmem');
+    expect(tauriDevRunner).toContain('process.pid');
+    expect(tauriDevRunner).toContain('Date.now().toString(36)');
     expect(tauriDevRunner).toContain('CARGO_BUILD_JOBS');
     expect(tauriDevRunner).toContain('CARGO_PROFILE_DEV_DEBUG');
     expect(tauriDevRunner).toContain('CARGO_INCREMENTAL');
@@ -54,9 +56,18 @@ describe('tauri sidecar cleanup integration', () => {
 
   test('cleanup script targets copied tauri sidecars in debug and release outputs', () => {
     const script = fs.readFileSync(cleanupScriptPath, 'utf8');
+    expect(script).toContain("const defaultTargetRoots = [");
+    expect(script).toContain("path.join(repoRoot, 'src-tauri', 'target')");
+    expect(script).toContain("path.join(repoRoot, 'src-tauri', 'target-dev-lowmem')");
     expect(script).toContain("const targetModes = ['debug', 'release'];");
     expect(script).toContain("const sidecarNames = ['server', 'godot', 'markdown-worker'];");
+    expect(script).toContain('function resolveTargetRoots()');
+    expect(script).toContain('process.env.CARGO_TARGET_DIR');
     expect(script).toContain("targetRoot, mode, `${name}.exe`");
+    expect(script).toContain('function removeExistingArtifacts(targetPaths)');
+    expect(script).toContain('function runPowerShellNameFallbackCleanup(targetPath)');
+    expect(script).toContain('KILLED_BY_NAME|');
+    expect(script).toContain('[Tauri Sidecar Cleanup] REMOVED|');
     expect(script).toContain('Failed to terminate stale copied sidecars');
   });
 });

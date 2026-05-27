@@ -62,6 +62,7 @@ describe('source manager load-flow guards', () => {
 
   test('parses graph payload fallback without runtime eval', () => {
     const source = fs.readFileSync(sourceManagerPath, 'utf8');
+    expect(source).toContain('const extractAssignedJson = (sourceText, equalsIndex) => {');
     expect(source).toContain('const assignmentTargets = [');
     expect(source).not.toContain('new Function(');
     expect(source).toContain('Invalid graph data payload from sidecar (unsupported format).');
@@ -148,5 +149,18 @@ describe('source manager load-flow guards', () => {
     expect(analysisSource).toContain('function getGraphDataSafe()');
     expect(analysisSource).toContain('return { nodes: [], edges: [] };');
     expect(analysisSource).toContain("const tot = graphData ? graphData.nodes.length : 0;");
+  });
+
+  test('treats detached frontend preview pages as backend-less runtimes and loads data assets via validated text parsing', () => {
+    const source = fs.readFileSync(sourceManagerPath, 'utf8');
+    const enLocale = fs.readFileSync(path.join(repoRoot, 'src', 'frontend', 'locales', 'en.json'), 'utf8');
+    const zhLocale = fs.readFileSync(path.join(repoRoot, 'src', 'frontend', 'locales', 'zh.json'), 'utf8');
+    expect(source).toContain('const canUseBrowserRuntimeBackend = () => {');
+    expect(source).toContain("Frontend preview runtime detected: backend-dependent APIs disabled");
+    expect(source).toContain('const isStandaloneFrontendPreviewRuntime = () =>');
+    expect(source).toContain('Loaded ${src} via frontend preview asset');
+    expect(source).toContain("previewOption.textContent = t('source.previewPath')");
+    expect(enLocale).toContain('"previewPath"');
+    expect(zhLocale).toContain('"previewPath"');
   });
 });

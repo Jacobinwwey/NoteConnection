@@ -272,6 +272,35 @@ export interface KnowledgeQueryResolvedScope {
     sourcePathPrefixes: string[];
     languages: string[];
     matchedAtomCount: number;
+    scopeSource?: 'explicit_request' | 'active_workspace_target' | 'workspace_hydration' | 'planner_fallback' | 'global_default';
+    readiness?: {
+        status: 'ready' | 'empty_store' | 'workspace_not_found' | 'workspace_unbound' | 'workspace_unindexed';
+        message: string;
+        workspaceId: string | null;
+        corpusId: string | null;
+        activeResourceCount: number;
+        activeProjectionCount: number;
+        indexedUnitCount: number;
+        indexedSegmentCount: number;
+        matchedDocumentCount: number;
+    };
+    missDiagnostics?: {
+        reason:
+            | 'none'
+            | 'empty_store'
+            | 'workspace_not_found'
+            | 'workspace_unbound'
+            | 'scope_has_no_indexed_segments'
+            | 'query_no_title_or_alias_hit'
+            | 'retrieval_candidates_below_threshold';
+        message: string;
+        query: string;
+        normalizedQuery: string;
+        plannerQuery?: string;
+        titleLikeQueries?: string[];
+        titleHitDocumentIds?: string[];
+        indexedScopeAtomCount?: number;
+    };
 }
 
 export interface KnowledgeQueryModeWeights {
@@ -306,6 +335,11 @@ export interface KnowledgeQueryResponse {
         modeWeights: KnowledgeQueryModeWeights;
         latencyMs: number;
         evidenceCoverageRatio: number;
+        planner?: {
+            plannerQuery: string | null;
+            titleLikeQueries: string[];
+            titleHitDocumentIds: string[];
+        };
     };
 }
 
@@ -983,11 +1017,19 @@ export interface AgentConversationTrace {
     recalledMemoryCount: number;
     appliedMemoryCount: number;
     usedScope: KnowledgeQueryResolvedScope;
+    workspaceReadiness?: KnowledgeQueryResolvedScope['readiness'];
+    missDiagnostics?: KnowledgeQueryResolvedScope['missDiagnostics'];
+    planner?: {
+        plannerQuery: string | null;
+        titleLikeQueries: string[];
+        titleHitDocumentIds: string[];
+    };
 }
 
 export interface AgentConversationRequest {
     userId?: string;
     sessionId?: string;
+    activeTarget?: string;
     message?: string;
     topK?: number;
     asOf?: string;

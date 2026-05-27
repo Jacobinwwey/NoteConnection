@@ -141,7 +141,7 @@ describe('path bridge handshake and transport verification contracts', () => {
     const invalidConfigureBrightness = parseBridgeInboundEnvelope({
       type: 'configure',
       payload: {
-        bg_brightness: 20,
+        bg_brightness: 0.2,
       },
     });
     expect(invalidConfigureBrightness.ok).toBe(false);
@@ -177,7 +177,7 @@ describe('path bridge handshake and transport verification contracts', () => {
         retain_history: true,
         focus_mode: false,
         background: 'belfast_sunset_puresky_4k.exr',
-        bg_brightness: 1.2,
+        bg_brightness: 0.08,
         reading_mode: 'window',
         reader_render_mode: 'render',
         reader_toggle_source_shortcut: 'Ctrl+Shift+M',

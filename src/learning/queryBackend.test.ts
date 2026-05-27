@@ -8,7 +8,7 @@ import {
 } from './queryBackend';
 import type { KnowledgeAtom, RelationEdge } from './types';
 
-function makeAtom(id: string, title: string, content: string, keywords: string[]): KnowledgeAtom {
+function makeAtom(id: string, title: string, content: string, keywords: string[], language = 'en'): KnowledgeAtom {
     return {
         id,
         stableKey: id,
@@ -25,7 +25,7 @@ function makeAtom(id: string, title: string, content: string, keywords: string[]
             sectionPath: [title],
             version: 1,
             sourceHash: 'hash',
-            language: 'en',
+            language,
         },
     };
 }
@@ -150,10 +150,46 @@ describe('query backend factory', () => {
         expect(result.candidates.length).toBeGreaterThan(0);
         expect(result.trace?.retrievalModes).toContain('vector_similarity');
         expect(result.trace?.modeWeights?.vector).toBeGreaterThan(0);
-        expect(result.trace?.vectorAcceleration?.representationVersion).toBe('local-vector-representation-v1');
-        expect(result.trace?.vectorAcceleration?.embeddingModelId).toBe('local-semantic-tfidf-v1');
+        expect(result.trace?.vectorAcceleration?.representationVersion).toBe('local-vector-representation-v2');
+        expect(result.trace?.vectorAcceleration?.embeddingModelId).toBe('local-semantic-tfidf-unicode-v2');
         expect(result.trace?.vectorAcceleration?.representationStatus).toBe('aligned');
         expect(typeof result.trace?.vectorAcceleration?.embeddingDimension).toBe('number');
+    });
+
+    test('local vector backend matches Chinese semantic overlap without ASCII-only token loss', async () => {
+        const backend = createGraphQueryBackend({ backend: 'local_vector' });
+        const atoms: KnowledgeAtom[] = [
+            makeAtom(
+                'atom_cn',
+                '吸收系数',
+                '材料的吸收系数决定光在介质中的衰减与穿透深度。',
+                ['吸收', '系数', '光学'],
+                'zh'
+            ),
+            makeAtom(
+                'atom_other',
+                '散射机制',
+                '散射描述光线偏离原始传播方向的过程。',
+                ['散射'],
+                'zh'
+            ),
+        ];
+        const result = await backend.query({
+            request: {
+                query: '吸收系数 光学',
+                topK: 3,
+            },
+            query: '吸收系数 光学',
+            queryTokens: ['吸收系数', '光学'],
+            asOf: '2026-01-01T00:00:00.000Z',
+            topK: 3,
+            atoms,
+            activeEdges: [],
+        });
+
+        expect(result.candidates.length).toBeGreaterThan(0);
+        expect(result.candidates[0]?.atomId).toBe('atom_cn');
+        expect(result.trace?.retrievalModes).toContain('vector_similarity');
     });
 
     test('local vector backend persists and reuses vector index snapshot', async () => {
@@ -191,7 +227,7 @@ describe('query backend factory', () => {
             expect(firstDiagnostics?.vectorIndex?.loadedFromDisk).toBe(false);
             expect(firstDiagnostics?.vectorIndex?.acceleration?.representationStatus).toBe('aligned');
             expect(firstDiagnostics?.vectorIndex?.acceleration?.representationVersion).toBe(
-                'local-vector-representation-v1'
+                'local-vector-representation-v2'
             );
             const signature = firstDiagnostics?.vectorIndex?.signature;
 
@@ -209,7 +245,7 @@ describe('query backend factory', () => {
             expect(secondDiagnostics?.vectorIndex?.location).toBe(path.resolve(indexPath));
             expect(secondDiagnostics?.vectorIndex?.acceleration?.representationStatus).toBe('aligned');
             expect(secondDiagnostics?.vectorIndex?.acceleration?.embeddingModelId).toBe(
-                'local-semantic-tfidf-v1'
+                'local-semantic-tfidf-unicode-v2'
             );
         } finally {
             fs.rmSync(tempDir, { recursive: true, force: true });
@@ -491,8 +527,8 @@ describe('query backend factory', () => {
                     syncSuccessCount: 1,
                     syncedIndexSignature: syncedIndexSignatures[0] || '',
                     syncedAtomCount: 161,
-                    representationVersion: 'local-vector-representation-v1',
-                    embeddingModelId: 'local-semantic-tfidf-v1',
+            representationVersion: 'local-vector-representation-v2',
+            embeddingModelId: 'local-semantic-tfidf-unicode-v2',
                     embeddingDimension: 3,
                     indexSignature: syncedIndexSignatures[0] || '',
                     representationStatus: 'aligned',

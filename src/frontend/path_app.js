@@ -362,6 +362,31 @@ window.pathApp = {
         return true;
     },
 
+    _isDetachedPreviewWithoutRuntimeBootstrap: function() {
+        if (typeof window === 'undefined' || window.__TAURI__) {
+            return false;
+        }
+        const hasDetachedPreviewScript = Array.from(document.scripts || []).some((script) =>
+            /__tauri_cli/.test(String(script && (script.text || script.textContent) || ''))
+        );
+        if (!hasDetachedPreviewScript) {
+            return false;
+        }
+        if (!window.NoteConnectionRuntime || typeof window.NoteConnectionRuntime.getBaseUrl !== 'function') {
+            return true;
+        }
+        const currentOrigin = String((window.location && window.location.origin) || '').trim().replace(/\/+$/, '');
+        const baseUrl = String(window.NoteConnectionRuntime.getBaseUrl() || '').trim();
+        if (!currentOrigin || !baseUrl) {
+            return true;
+        }
+        try {
+            return currentOrigin !== new URL(baseUrl).origin;
+        } catch (_error) {
+            return true;
+        }
+    },
+
     _getBridgeWsUrl: function() {
         if (typeof window !== 'undefined' && window.NoteConnectionRuntime && typeof window.NoteConnectionRuntime.getBridgeWsUrl === 'function') {
             return window.NoteConnectionRuntime.getBridgeWsUrl('frontend');
@@ -637,6 +662,313 @@ window.pathApp = {
         };
     },
 
+    _getReaderLikeMermaidConfig: function(theme = 'dark') {
+        return {
+            startOnLoad: false,
+            theme,
+            securityLevel: 'loose',
+            htmlLabels: true,
+        };
+    },
+
+    _getBridgeTextMeasureContext: function() {
+        if (!this._bridgeTextMeasureCanvas) {
+            this._bridgeTextMeasureCanvas = document.createElement('canvas');
+        }
+        if (!this._bridgeTextMeasureContext) {
+            this._bridgeTextMeasureContext = this._bridgeTextMeasureCanvas.getContext('2d');
+        }
+        return this._bridgeTextMeasureContext;
+    },
+
+    _measureBridgeCanvasTextWidth: function(text, fontDescriptor) {
+        const context = this._getBridgeTextMeasureContext();
+        if (!context) {
+            return this._estimateBridgeTextLineWidth(text, fontDescriptor.fontSize || 16);
+        }
+        context.font = [
+            fontDescriptor.fontStyle || 'normal',
+            fontDescriptor.fontWeight || '400',
+            `${fontDescriptor.fontSize || 16}px`,
+            fontDescriptor.fontFamily || '"trebuchet ms", verdana, arial, sans-serif',
+        ].join(' ');
+        return context.measureText(String(text || '')).width;
+    },
+
+    _extractBridgeForeignObjectSourceLines: function(foreignObject) {
+        const htmlRoot = foreignObject && (
+            foreignObject.querySelector('div, span, p')
+            || foreignObject.firstElementChild
+            || foreignObject
+        );
+        if (!htmlRoot) {
+            return { lines: [], fromRenderedLayout: false };
+        }
+
+        const collectNormalizedLines = (value) => String(value || '')
+            .split(/\r?\n/)
+            .map((line) => this._normalizeBridgeInlineText(line))
+            .filter(Boolean);
+
+        // Prefer the browser's actual rendered line layout so the bridge mirrors
+        // the reader's foreignObject wrapping instead of guessing it again.
+        const renderedText = typeof htmlRoot.innerText === 'string' ? htmlRoot.innerText : '';
+        const renderedLines = collectNormalizedLines(renderedText);
+        if (renderedLines.length > 0) {
+            return {
+                lines: renderedLines,
+                fromRenderedLayout: true,
+            };
+        }
+
+        const paragraphs = Array.from(htmlRoot.querySelectorAll('p'));
+        const htmlSegments = paragraphs.length > 0
+            ? paragraphs.map((paragraph) => String(paragraph.innerHTML || ''))
+            : [String(htmlRoot.innerHTML || htmlRoot.textContent || '')];
+        const scratch = document.createElement('div');
+        const lines = [];
+        htmlSegments.forEach((segment) => {
+            scratch.innerHTML = String(segment || '').replace(/<br\s*\/?>/gi, '\n');
+            collectNormalizedLines(scratch.innerText || scratch.textContent || '')
+                .forEach((line) => lines.push(line));
+        });
+        return {
+            lines,
+            fromRenderedLayout: false,
+        };
+    },
+
+    _wrapBridgeForeignObjectLines: function(lines, fontDescriptor, maxWidth, whiteSpaceMode) {
+        const safeLines = Array.isArray(lines) ? lines.filter((line) => String(line || '').trim()) : [];
+        if (safeLines.length === 0) {
+            return [];
+        }
+        if (String(whiteSpaceMode || '').toLowerCase() === 'nowrap') {
+            return safeLines;
+        }
+
+        const wrapped = [];
+        const hardMaxLines = 24;
+        const measure = (text) => this._measureBridgeCanvasTextWidth(text, fontDescriptor);
+
+        safeLines.forEach((line) => {
+            const normalized = this._normalizeBridgeInlineText(line);
+            if (!normalized) {
+                return;
+            }
+            if (measure(normalized) <= maxWidth) {
+                wrapped.push(normalized);
+                return;
+            }
+
+            const tokens = /\s/.test(normalized)
+                ? normalized.split(/\s+/).filter(Boolean)
+                : Array.from(normalized);
+            let current = '';
+            const pushCurrent = () => {
+                if (current) {
+                    wrapped.push(current);
+                    current = '';
+                }
+            };
+
+            for (const token of tokens) {
+                const candidate = !current
+                    ? token
+                    : (/\s/.test(normalized) ? `${current} ${token}` : `${current}${token}`);
+                if (!current || measure(candidate) <= maxWidth) {
+                    current = candidate;
+                    continue;
+                }
+                pushCurrent();
+                if (measure(token) <= maxWidth) {
+                    current = token;
+                    continue;
+                }
+                let fragment = '';
+                for (const char of Array.from(token)) {
+                    const fragmentCandidate = fragment + char;
+                    if (!fragment || measure(fragmentCandidate) <= maxWidth) {
+                        fragment = fragmentCandidate;
+                        continue;
+                    }
+                    wrapped.push(fragment);
+                    fragment = char;
+                    if (wrapped.length >= hardMaxLines) {
+                        break;
+                    }
+                }
+                if (fragment && wrapped.length < hardMaxLines) {
+                    current = fragment;
+                }
+                if (wrapped.length >= hardMaxLines) {
+                    break;
+                }
+            }
+            pushCurrent();
+        });
+
+        return wrapped.slice(0, hardMaxLines);
+    },
+
+    _convertBridgeForeignObjectToSvgText: function(svgElement, foreignObject) {
+        if (!foreignObject || !foreignObject.parentNode) {
+            return;
+        }
+
+        const extracted = this._extractBridgeForeignObjectSourceLines(foreignObject);
+        if (!extracted || extracted.lines.length === 0) {
+            foreignObject.remove();
+            return;
+        }
+
+        const styleNode = foreignObject.querySelector('.nodeLabel, .edgeLabel, span, div, p') || foreignObject.firstElementChild || foreignObject;
+        const computedStyle = window.getComputedStyle(styleNode);
+        const fontSize = Number.parseFloat(computedStyle.fontSize || '') || 16;
+        const fontFamily = computedStyle.fontFamily || '"trebuchet ms", verdana, arial, sans-serif';
+        const fontWeight = computedStyle.fontWeight || '400';
+        const fontStyle = computedStyle.fontStyle || 'normal';
+        const lineHeight = Number.parseFloat(computedStyle.lineHeight || '') || (fontSize * 1.5);
+        const textAlign = String(computedStyle.textAlign || '').trim().toLowerCase();
+        const whiteSpace = String(computedStyle.whiteSpace || '').trim().toLowerCase();
+        const fill = computedStyle.color || '#ccc';
+
+        const x = this._parseBridgeNumericAttribute(foreignObject, 'x', 0);
+        const y = this._parseBridgeNumericAttribute(foreignObject, 'y', 0);
+        const width = this._parseBridgeNumericAttribute(foreignObject, 'width', 0);
+        const height = this._parseBridgeNumericAttribute(foreignObject, 'height', 0);
+        const horizontalPadding = 6;
+        const verticalPadding = 4;
+        const usableWidth = Math.max(12, width - horizontalPadding * 2);
+        const fontDescriptor = { fontSize, fontFamily, fontWeight, fontStyle };
+        const wrappedLines = extracted.fromRenderedLayout
+            ? extracted.lines.slice(0, 24)
+            : this._wrapBridgeForeignObjectLines(extracted.lines, fontDescriptor, usableWidth, whiteSpace);
+        if (wrappedLines.length === 0) {
+            foreignObject.remove();
+            return;
+        }
+
+        const totalHeight = (wrappedLines.length - 1) * lineHeight + fontSize;
+        const startY = y + Math.max(verticalPadding + fontSize * 0.85, (height - totalHeight) * 0.5 + fontSize * 0.85);
+        let anchor = 'middle';
+        let textX = x + (width * 0.5);
+        if (textAlign === 'left' || textAlign === 'start') {
+            anchor = 'start';
+            textX = x + horizontalPadding;
+        } else if (textAlign === 'right' || textAlign === 'end') {
+            anchor = 'end';
+            textX = x + width - horizontalPadding;
+        }
+
+        const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        textElement.setAttribute('fill', fill);
+        textElement.setAttribute('font-size', `${fontSize}`);
+        textElement.setAttribute('font-family', fontFamily);
+        textElement.setAttribute('font-weight', fontWeight);
+        textElement.setAttribute('font-style', fontStyle);
+        textElement.setAttribute('text-anchor', anchor);
+        textElement.setAttribute('dominant-baseline', 'alphabetic');
+
+        wrappedLines.forEach((line, index) => {
+            const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+            tspan.textContent = line;
+            tspan.setAttribute('x', `${textX}`);
+            if (index === 0) {
+                tspan.setAttribute('y', `${startY}`);
+            } else {
+                tspan.setAttribute('dy', `${lineHeight}`);
+            }
+            textElement.appendChild(tspan);
+        });
+
+        foreignObject.parentNode.insertBefore(textElement, foreignObject);
+        foreignObject.remove();
+    },
+
+    _convertBridgeForeignObjectsToSvgText: function(svgElement) {
+        const foreignObjects = Array.from(svgElement.querySelectorAll('foreignObject'));
+        foreignObjects.forEach((foreignObject) => this._convertBridgeForeignObjectToSvgText(svgElement, foreignObject));
+    },
+
+    _renderParityMermaidSvg: async function(sourceText, options = {}) {
+        if (!window.mermaid) {
+            throw new Error('Mermaid runtime is unavailable in the frontend renderer.');
+        }
+
+        const source = this._normalizeBridgeMermaidDefinition(sourceText || '');
+        if (!source) {
+            throw new Error('Mermaid render request is missing source.');
+        }
+
+        const theme = String(options.theme || 'dark') === 'default' ? 'default' : 'dark';
+        window.mermaid.initialize(this._getReaderLikeMermaidConfig(theme));
+
+        const requestedWidth = Number.isFinite(Number(options.maxWidth)) && Number(options.maxWidth) > 0
+            ? Math.floor(Number(options.maxWidth))
+            : 620;
+        const requestedHeight = Number.isFinite(Number(options.maxHeight)) && Number(options.maxHeight) > 0
+            ? Math.floor(Number(options.maxHeight))
+            : 860;
+        const hostWidth = Math.max(240, requestedWidth);
+        const host = document.createElement('div');
+        host.className = 'mermaid-render-host-offscreen';
+        host.style.position = 'fixed';
+        host.style.left = '-20000px';
+        host.style.top = '0';
+        host.style.width = String(hostWidth) + 'px';
+        host.style.minWidth = String(hostWidth) + 'px';
+        host.style.height = 'auto';
+        host.style.overflow = 'visible';
+        host.style.opacity = '0';
+        host.style.pointerEvents = 'none';
+        host.style.background = 'transparent';
+        host.style.fontFamily = '"Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Segoe UI", sans-serif';
+        document.body.appendChild(host);
+
+        try {
+            const renderId = 'parity-mermaid-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+            const result = await window.mermaid.render(renderId, source, host);
+            if (result && typeof result.svg === 'string' && this._isBridgeMermaidErrorSvgMarkup(result.svg)) {
+                throw new Error('Frontend Mermaid parity renderer returned an error SVG instead of a diagram.');
+            }
+            let svgElement = host.querySelector('svg');
+            if (!svgElement) {
+                const parser = new DOMParser();
+                const documentSvg = parser.parseFromString(result.svg, 'image/svg+xml');
+                const parsedSvg = documentSvg.querySelector('svg');
+                if (!parsedSvg) {
+                    throw new Error('Frontend Mermaid parity renderer did not produce an SVG root.');
+                }
+                host.replaceChildren(parsedSvg);
+                svgElement = host.querySelector('svg');
+            }
+            if (!svgElement) {
+                throw new Error('Frontend Mermaid parity renderer did not produce an SVG root.');
+            }
+
+            svgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            svgElement.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+            this._convertBridgeForeignObjectsToSvgText(svgElement);
+            const naturalSize = this._tightenBridgeMermaidSvgBounds(svgElement);
+            const clampedSize = this._clampBridgeMermaidSize(naturalSize.width, naturalSize.height, requestedWidth, requestedHeight);
+            svgElement.setAttribute('width', String(clampedSize.width));
+            svgElement.setAttribute('height', String(clampedSize.height));
+            svgElement.style.maxWidth = '100%';
+            svgElement.style.height = 'auto';
+            svgElement.style.background = 'transparent';
+
+            return {
+                source,
+                svg: this._serializeBridgeMermaidSvg(svgElement),
+                width: Math.max(1, Math.round(clampedSize.width)),
+                height: Math.max(1, Math.round(clampedSize.height))
+            };
+        } finally {
+            host.remove();
+        }
+    },
+
     _upsertBridgeMermaidOverrideStyle: function(svgElement) {
         const styleId = 'noteconnection-mermaid-overrides';
         let styleNode = svgElement.querySelector('#' + styleId);
@@ -773,6 +1105,21 @@ window.pathApp = {
             return window._pathUtils.normalizeBridgeMermaidDefinition(source);
         }
         return String(source || '').trim();
+    },
+
+    _isBridgeMermaidErrorSvgMarkup: function(markup) {
+        const text = String(markup || '').toLowerCase();
+        if (!text) {
+            return false;
+        }
+        return (
+            text.includes('syntax error in text') ||
+            text.includes('lexical error on line') ||
+            text.includes('parse error on line') ||
+            text.includes('mermaid version') ||
+            text.includes('class="error-icon"') ||
+            text.includes('id="error-icon"')
+        );
     },
 
     _parseBridgeNumericAttribute: function(element, name, fallback = 0) {
@@ -1365,79 +1712,38 @@ window.pathApp = {
     },
 
     _renderMermaidForBridge: async function(payload) {
-        if (!window.mermaid) {
-            throw new Error('Mermaid runtime is unavailable in the frontend renderer.');
-        }
-
         const requestId = String(payload?.requestId || '').trim();
-        const source = this._normalizeBridgeMermaidDefinition(payload?.source || '');
-        if (!requestId || !source) {
+        if (!requestId) {
             throw new Error('Mermaid render request is missing a request id or source.');
         }
 
         const includeStages = payload?.includeStages === true;
         const includeSvg = includeStages || payload?.includeSvg === true;
         const stageSnapshots = [];
-        const theme = String(payload?.theme || 'dark') === 'default' ? 'default' : 'dark';
-        window.mermaid.initialize(this._getBridgeMermaidConfig(theme));
-
-        const requestedWidth = Number.isFinite(Number(payload?.maxWidth)) && Number(payload.maxWidth) > 0 ? Math.floor(Number(payload.maxWidth)) : 1600;
-        const hostWidth = Math.max(480, requestedWidth);
-        const host = document.createElement('div');
-        host.style.position = 'fixed';
-        host.style.left = '-20000px';
-        host.style.top = '0';
-        host.style.width = String(hostWidth) + 'px';
-        host.style.minWidth = String(hostWidth) + 'px';
-        host.style.height = 'auto';
-        host.style.overflow = 'visible';
-        host.style.opacity = '0';
-        host.style.pointerEvents = 'none';
-        host.style.background = 'transparent';
-        host.style.fontFamily = '"Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Segoe UI", sans-serif';
-        document.body.appendChild(host);
 
         let objectUrl = null;
         try {
-            const renderId = 'bridge-mermaid-' + Date.now() + '-' + Math.random().toString(16).slice(2);
-            const result = await window.mermaid.render(renderId, source, host);
-            let svgElement = host.querySelector('svg');
+            const parity = await this._renderParityMermaidSvg(payload?.source || '', {
+                theme: payload?.theme || 'dark',
+                maxWidth: payload?.maxWidth,
+                maxHeight: payload?.maxHeight
+            });
+            const parser = new DOMParser();
+            const documentSvg = parser.parseFromString(parity.svg, 'image/svg+xml');
+            const svgElement = documentSvg.querySelector('svg');
             if (!svgElement) {
-                const parser = new DOMParser();
-                const documentSvg = parser.parseFromString(result.svg, 'image/svg+xml');
-                const parsedSvg = documentSvg.querySelector('svg');
-                if (!parsedSvg) {
-                    throw new Error('Frontend Mermaid renderer did not produce an SVG root.');
-                }
-                host.replaceChildren(parsedSvg);
-                svgElement = host.querySelector('svg');
+                throw new Error('Frontend Mermaid parity renderer did not produce an SVG root.');
             }
-            if (!svgElement) {
-                throw new Error('Frontend Mermaid renderer did not produce an SVG root.');
-            }
-
-            svgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-            svgElement.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
             if (includeStages) {
                 stageSnapshots.push(this._captureBridgeMermaidStage('raw', svgElement));
-            }
-
-            this._normalizeBridgeMermaidSvg(svgElement);
-            if (includeStages) {
                 stageSnapshots.push(this._captureBridgeMermaidStage('visual_normalized', svgElement));
-            }
-
-            this._fitBridgeMermaidLabelShapes(svgElement);
-            if (includeStages) {
                 stageSnapshots.push(this._captureBridgeMermaidStage('labels_fitted', svgElement));
             }
 
-            const naturalSize = this._tightenBridgeMermaidSvgBounds(svgElement);
-            const clampedSize = this._clampBridgeMermaidSize(naturalSize.width, naturalSize.height, payload?.maxWidth, payload?.maxHeight);
             const requestedRenderScale = Number.isFinite(Number(payload?.renderScale)) && Number(payload.renderScale) > 0 ? Number(payload.renderScale) : 1;
             const rasterScale = Math.min(4, Math.max(1, requestedRenderScale));
-            const rasterWidth = Math.max(1, Math.round(clampedSize.width * rasterScale));
-            const rasterHeight = Math.max(1, Math.round(clampedSize.height * rasterScale));
+            const rasterWidth = Math.max(1, Math.round(parity.width * rasterScale));
+            const rasterHeight = Math.max(1, Math.round(parity.height * rasterScale));
             svgElement.setAttribute('width', String(rasterWidth));
             svgElement.setAttribute('height', String(rasterHeight));
             svgElement.style.maxWidth = String(rasterWidth) + 'px';
@@ -1488,7 +1794,6 @@ window.pathApp = {
             if (objectUrl) {
                 URL.revokeObjectURL(objectUrl);
             }
-            host.remove();
         }
     },
 
@@ -4877,6 +5182,11 @@ window.pathApp = {
         const bridge = (typeof window !== 'undefined') ? window.NoteConnectionRuntime : null;
         const waitForRuntime = this._isTauriMode() && bridge && typeof bridge.whenReady === 'function';
 
+        if (this._isDetachedPreviewWithoutRuntimeBootstrap() && !forceDesktop) {
+            console.log('[PathApp] Detached preview runtime detected; skipping early WebSocket bootstrap.');
+            return;
+        }
+
         if (this._isTauriMode() && !forceDesktop) {
             // In normal Tauri flow, avoid idle early bridge sockets unless the desktop shell explicitly asks for one.
             return;
@@ -5004,7 +5314,12 @@ window.pathApp = {
 // This runs as soon as path_app.js is loaded, before init() is called.
 (function() {
     const isTauri = !!(window.pathApp && typeof window.pathApp._isTauriMode === 'function' && window.pathApp._isTauriMode());
-    if (isTauri) {
+    const isDetachedPreview = !!(
+        window.pathApp &&
+        typeof window.pathApp._isDetachedPreviewWithoutRuntimeBootstrap === 'function' &&
+        window.pathApp._isDetachedPreviewWithoutRuntimeBootstrap()
+    );
+    if (isTauri || isDetachedPreview) {
         // Bridge-first Tauri: only connect when Path Mode is explicitly initialized.
         return;
     }

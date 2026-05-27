@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as TOML from '@iarna/toml';
 import { DEFAULT_SETTINGS } from './constants';
 import { LlmProviderConfig, LlmProviderName, NotemdSettings, TaskKey } from './types';
+import { mergeProviderTemplatesIntoNotemdSection } from './providerTemplates';
 
 type AppConfigRecord = Record<string, unknown>;
 
@@ -122,8 +123,8 @@ export const DEFAULT_PATH_MODE_SETTINGS: PathModeSettings = {
     auto_reconstruct: true,
     retain_history: true,
     focus_mode: true,
-    background: 'belfast_sunset_puresky_4k.exr',
-    bg_brightness: 1.0,
+    background: '',
+    bg_brightness: 0.1,
     reading_mode: 'window',
     reader_render_mode: 'render',
     reader_toggle_source_shortcut: 'Ctrl+M',
@@ -563,7 +564,7 @@ function normalizePathModeSettingsValue(raw: unknown): PathModeSettings {
 
     const brightness = readNumber(section, 'bg_brightness');
     if (typeof brightness === 'number') {
-        merged.bg_brightness = clampNumber(brightness, 0.01, 10.0);
+        merged.bg_brightness = clampNumber(brightness, 0.0, 0.1);
     }
 
     merged.reading_mode = normalizePathModeReadingMode(
@@ -858,7 +859,7 @@ export function applyNotemdSettingsToAppConfig(
     appConfig: AppConfigRecord,
     settings: NotemdSettings
 ): AppConfigRecord {
-    const nextNotemdSection = isObjectRecord(appConfig.notemd) ? { ...appConfig.notemd } : {};
+    let nextNotemdSection = isObjectRecord(appConfig.notemd) ? { ...appConfig.notemd } : {};
     const activeProvider =
         settings.providers.find((provider) => provider.name === settings.activeProvider) ||
         settings.providers[0] ||
@@ -928,6 +929,8 @@ export function applyNotemdSettingsToAppConfig(
         api_version: activeProvider.apiVersion || '',
         temperature: activeProvider.temperature,
     };
+
+    nextNotemdSection = mergeProviderTemplatesIntoNotemdSection(nextNotemdSection);
 
     return {
         ...appConfig,

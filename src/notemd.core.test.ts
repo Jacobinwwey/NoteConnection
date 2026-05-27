@@ -79,6 +79,50 @@ describe('NoteMD core primitives', () => {
     expect(result.content).toContain('Torque -.- NoteTorque');
   });
 
+  test('fixMermaidSyntax repairs displaced quoted labels and legacy double-dash edge labels', () => {
+    const source = [
+      '```mermaid',
+      'graph TD;',
+      'A --> B; "Interface Normal"',
+      'P -- "theta_i" -- N;',
+      '```',
+    ].join('\n');
+
+    const result = fixMermaidSyntax(source);
+    expect(result.changed).toBe(true);
+    expect(result.content).toContain('A -- "Interface Normal" --> B');
+    expect(result.content).toContain('P -- "theta_i" --> N;');
+  });
+
+  test('fixMermaidSyntax wraps bare html-break node labels into Mermaid node syntax', () => {
+    const source = [
+      '```mermaid',
+      'flowchart TD',
+      'A[Incident Wave] --> I Interface<br/>Boundary;',
+      'I --> R Reflected<br/>Wave;',
+      '```',
+    ].join('\n');
+
+    const result = fixMermaidSyntax(source);
+    expect(result.changed).toBe(true);
+    expect(result.content).toContain('I["Interface<br/>Boundary"]');
+    expect(result.content).toContain('R["Reflected<br/>Wave"]');
+  });
+
+  test('fixMermaidSyntax closes Mermaid node labels that end with a stray opening bracket', () => {
+    const source = [
+      '```mermaid',
+      'graph LR',
+      'InteractionPoint["作用点 Interaction Point["',
+      'InteractionPoint --> Absorption["吸收 Absorption"]',
+      '```',
+    ].join('\n');
+
+    const result = fixMermaidSyntax(source);
+    expect(result.changed).toBe(true);
+    expect(result.content).toContain('InteractionPoint["作用点 Interaction Point"]');
+  });
+
   test('DuplicateDetector reports repeated terms and wiki-links', () => {
     const detector = new DuplicateDetector();
     const content = 'Graph graph graph [[Node]] [[Node]] [[Edge]]';

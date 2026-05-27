@@ -7,6 +7,7 @@ import type { Server } from 'http';
 type JsonResponse = {
   status: number;
   body: any;
+  headers?: http.IncomingHttpHeaders;
 };
 
 type Deferred = {
@@ -88,7 +89,13 @@ function deferred(): Deferred {
   return { promise, resolve };
 }
 
-function requestJson(port: number, method: 'GET' | 'POST', requestPath: string, body?: unknown): Promise<JsonResponse> {
+function requestJson(
+  port: number,
+  method: 'GET' | 'POST',
+  requestPath: string,
+  body?: unknown,
+  extraHeaders?: Record<string, string>
+): Promise<JsonResponse> {
   return new Promise((resolve, reject) => {
     const payload = typeof body === 'undefined' ? undefined : JSON.stringify(body);
     const req = http.request(
@@ -100,9 +107,10 @@ function requestJson(port: number, method: 'GET' | 'POST', requestPath: string, 
         headers: payload
           ? {
               'Content-Type': 'application/json',
-              'Content-Length': Buffer.byteLength(payload)
+              'Content-Length': Buffer.byteLength(payload),
+              ...(extraHeaders || {})
             }
-          : undefined
+          : (extraHeaders || undefined)
       },
       (res) => {
         let text = '';
@@ -121,7 +129,8 @@ function requestJson(port: number, method: 'GET' | 'POST', requestPath: string, 
           }
           resolve({
             status: res.statusCode || 0,
-            body: parsed
+            body: parsed,
+            headers: res.headers
           });
         });
       }
@@ -177,7 +186,8 @@ function requestRaw(
           }
           resolve({
             status: res.statusCode || 0,
-            body: parsed
+            body: parsed,
+            headers: res.headers
           });
         });
       }
@@ -229,7 +239,8 @@ function requestBinary(
           }
           resolve({
             status: res.statusCode || 0,
-            body: parsed
+            body: parsed,
+            headers: res.headers
           });
         });
       }
@@ -256,7 +267,10 @@ describe('server migration settings routes', () => {
   let buildGraphMock: jest.Mock;
   let renderMathPngMock: jest.Mock;
   let renderMermaidPngMock: jest.Mock;
+  let collectMermaidRenderStageSnapshotsMock: jest.Mock;
+  let normalizeMermaidDefinitionMock: jest.Mock;
   let copyPngToClipboardMock: jest.Mock;
+  let requestFrontendMermaidRenderMock: jest.Mock;
   let originalArgv: string[];
 
   beforeAll(async () => {
@@ -302,7 +316,32 @@ describe('server migration settings routes', () => {
       width: 640,
       height: 360
     });
+    collectMermaidRenderStageSnapshotsMock = jest.fn().mockResolvedValue([
+      {
+        stage: 'raw',
+        svg: '<svg xmlns="http://www.w3.org/2000/svg"></svg>',
+        pngBase64: 'raw-stage-png-base64',
+        width: 640,
+        height: 360
+      }
+    ]);
+    normalizeMermaidDefinitionMock = jest.fn((source: string) => source);
     copyPngToClipboardMock = jest.fn().mockResolvedValue(undefined);
+    requestFrontendMermaidRenderMock = jest.fn().mockResolvedValue({
+      pngBase64: 'frontend-bridge-png-base64',
+      svg: '<svg xmlns="http://www.w3.org/2000/svg"><text>frontend</text></svg>',
+      width: 800,
+      height: 480,
+      renderer: 'frontend-bridge',
+      stages: [
+        {
+          stage: 'final',
+          svg: '<svg xmlns="http://www.w3.org/2000/svg"><text>frontend</text></svg>',
+          width: 800,
+          height: 480,
+        }
+      ]
+    });
     jest.resetModules();
     originalArgv = [...process.argv];
     process.argv = process.argv.slice(0, 2);
@@ -310,11 +349,15 @@ describe('server migration settings routes', () => {
       buildGraph: buildGraphMock
     }));
     jest.doMock('./core/PathBridge', () => ({
-      PathBridge: jest.fn().mockImplementation(() => ({}))
+      PathBridge: jest.fn().mockImplementation(() => ({
+        requestFrontendMermaidRender: requestFrontendMermaidRenderMock
+      }))
     }));
     jest.doMock('./reader_renderer', () => ({
       renderMathPng: renderMathPngMock,
-      renderMermaidPng: renderMermaidPngMock
+      renderMermaidPng: renderMermaidPngMock,
+      collectMermaidRenderStageSnapshots: collectMermaidRenderStageSnapshotsMock,
+      normalizeMermaidDefinition: normalizeMermaidDefinitionMock
     }));
     jest.doMock('./native_clipboard', () => ({
       copyPngToClipboard: copyPngToClipboardMock
@@ -634,7 +677,7 @@ describe('server migration settings routes', () => {
     );
   });
 
-  test.skip('omits svg from /api/render/mermaid by default to keep payloads PNG-focused', async () => {
+  test('omits svg from /api/render/mermaid by default to keep payloads PNG-focused', async () => {
     const response = await requestJson(port, 'POST', '/api/render/mermaid', {
       source: 'graph TD; A-->B',
       renderer: 'local'
@@ -653,7 +696,172 @@ describe('server migration settings routes', () => {
     expect(renderMermaidPngMock).toHaveBeenCalled();
   });
 
-  test.skip('returns svg from /api/render/mermaid when includeSvg is explicitly enabled', async () => {
+  test('prefers frontend bridge for /api/render/mermaid when renderer is auto and a frontend bridge is available', async () => {
+    requestFrontendMermaidRenderMock.mockClear();
+    renderMermaidPngMock.mockClear();
+    const response = await requestJson(port, 'POST', '/api/render/mermaid', {
+      source: 'graph TD; A-->B',
+      renderer: 'auto'
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        pngBase64: 'frontend-bridge-png-base64',
+        width: 800,
+        height: 480,
+        renderer: 'frontend-bridge'
+      })
+    );
+    expect(requestFrontendMermaidRenderMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'graph TD; A-->B',
+        theme: 'dark',
+        includeStages: false,
+        includeSvg: false
+      })
+    );
+    expect(renderMermaidPngMock).not.toHaveBeenCalled();
+  });
+
+  test('suppresses svg for Godot export profile even when includeSvg is requested', async () => {
+    const response = await requestJson(port, 'POST', '/api/render/mermaid', {
+      source: 'graph TD; A-->B',
+      renderer: 'local',
+      includeSvg: true,
+      exportProfileId: 'godot-path-mode'
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.svg).toBeUndefined();
+    expect(response.body.materialization).toEqual(expect.objectContaining({
+      exportProfileId: 'godot-path-mode',
+      vectorSuppressed: true,
+      responseArtifact: 'png'
+    }));
+  });
+
+  test('conversation route uses turn-cache inline flow with scoped grounded response and replay headers', async () => {
+    const ingestResponse = await requestJson(port, 'POST', '/api/knowledge/ingest', {
+      incremental: true,
+      documents: [
+        {
+          documentId: 'doc_server_conversation',
+          sourcePath: 'Knowledge_Base/optics/absorption.md',
+          language: 'zh',
+          content: '# 吸收\n吸收系数与光学衰减决定材料中的能量损失。'
+        }
+      ]
+    });
+    expect(ingestResponse.status).toBe(200);
+
+    const turnId = 'turn_test_conversation_scope';
+    const firstResponse = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      {
+        userId: 'server_conversation_user',
+        sessionId: 'server_session_scope',
+        message: '解释吸收系数和光学衰减',
+        scope: {
+          corpusId: 'optics',
+          languages: ['zh']
+        },
+        persistMemory: true
+      },
+      {
+        'X-Agent-Conversation-Turn-Id': turnId
+      }
+    );
+    expect(firstResponse.status).toBe(200);
+    expect(firstResponse.headers?.['x-agent-conversation-turn-id']).toBe(turnId);
+    expect(firstResponse.headers?.['x-agent-conversation-replay']).toBe('miss');
+    expect(firstResponse.body.result.trace.usedScope).toEqual(expect.objectContaining({
+      corpusId: 'optics',
+      source: 'scoped'
+    }));
+    expect(firstResponse.body.result.citations.length).toBeGreaterThan(0);
+    expect(firstResponse.body.result.summary.appliedMemoryCount).toBeGreaterThan(0);
+
+    const replayResponse = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      {
+        userId: 'server_conversation_user',
+        sessionId: 'server_session_scope',
+        message: '解释吸收系数和光学衰减',
+        scope: {
+          corpusId: 'optics',
+          languages: ['zh']
+        },
+        persistMemory: true
+      },
+      {
+        'X-Agent-Conversation-Turn-Id': turnId
+      }
+    );
+    expect(replayResponse.status).toBe(200);
+    expect(replayResponse.headers?.['x-agent-conversation-replay']).toBe('hit');
+  });
+
+  test('conversation route auto-hydrates the active knowledge target when the learning workspace store is empty', async () => {
+    temp.mkdir(path.join('project', 'Knowledge_Base', 'waterglass'));
+    temp.file(
+      path.join('project', 'Knowledge_Base', 'waterglass', 'water glass.md'),
+      '# Water Glass\nwater glass 是一个装有水的玻璃容器系统。'
+    );
+
+    const response = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      {
+        userId: 'server_auto_hydrate_user',
+        sessionId: 'server_auto_hydrate_session',
+        activeTarget: 'waterglass',
+        message: '什么是water glass',
+        persistMemory: false
+      },
+      {
+        'X-Agent-Conversation-Turn-Id': 'turn_auto_hydrate_scope'
+      }
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.result.trace.usedScope).toEqual(expect.objectContaining({
+      workspaceId: 'waterglass',
+      corpusId: 'waterglass',
+      source: 'scoped',
+    }));
+    expect(response.body.result.trace.workspaceReadiness).toEqual(expect.objectContaining({
+      status: 'ready',
+      workspaceId: 'waterglass',
+    }));
+    expect(response.body.result.trace.planner).toEqual(expect.objectContaining({
+      titleLikeQueries: expect.arrayContaining(['water glass', 'waterglass']),
+    }));
+    expect(response.body.result.citations.length).toBeGreaterThan(0);
+    expect(String(response.body.result.answer || '')).toContain('Water Glass');
+  });
+
+  test('returns 400 from /api/render/math when expression is empty', async () => {
+    const response = await requestJson(port, 'POST', '/api/render/math', {
+      expression: '   '
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        success: false,
+        error: 'Missing expression'
+      })
+    );
+    expect(renderMathPngMock).not.toHaveBeenCalled();
+  });
+
+  test('returns svg from /api/render/mermaid when includeSvg is explicitly enabled', async () => {
     const response = await requestJson(port, 'POST', '/api/render/mermaid', {
       source: 'graph TD; A-->B',
       renderer: 'local',
@@ -664,7 +872,7 @@ describe('server migration settings routes', () => {
     expect(response.body.svg).toContain('<svg');
   });
 
-  test.skip('auto-includes svg when includeStages is enabled for diagnostics compatibility', async () => {
+  test('auto-includes svg when includeStages is enabled for diagnostics compatibility', async () => {
     const response = await requestJson(port, 'POST', '/api/render/mermaid', {
       source: 'graph TD; A-->B',
       renderer: 'local',

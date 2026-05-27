@@ -32,10 +32,17 @@ import {
     extractPathModeSettingsFromAppConfig,
     extractNotemdSettingsFromAppConfig,
     loadAppConfigToml,
+    resolveAppConfigPath,
     type FrontendSettings,
     type PathModeSettings,
     saveAppConfigToml,
 } from './notemd/AppConfigToml';
+import {
+    NOTEMD_PROVIDER_TEMPLATES,
+    applyProviderTemplateToSettings,
+    getNotemdProviderTemplate,
+    mergeProviderTemplatesIntoNotemdSection,
+} from './notemd/providerTemplates';
 import {
     MarkdownGateway,
     MARKDOWN_PROTOCOL_VERSION,
@@ -191,6 +198,20 @@ const REQUEST_ID_HEADER = 'x-request-id';
 const ERROR_CODE_HEADER = 'x-error-code';
 const AGENT_CONVERSATION_TURN_ID_HEADER = 'x-agent-conversation-turn-id';
 const AGENT_CONVERSATION_RESUME_TURN_ID_HEADER = 'x-agent-conversation-resume-turn-id';
+const CORS_ALLOWED_HEADER_NAMES = [
+    'Content-Type',
+    'Authorization',
+    'X-NoteConnection-Token',
+    'X-Request-Id',
+    'X-Agent-Conversation-Turn-Id',
+    'X-Agent-Conversation-Resume-Turn-Id',
+];
+const CORS_EXPOSED_HEADER_NAMES = [
+    'X-Request-Id',
+    'X-Error-Code',
+    'X-Agent-Conversation-Turn-Id',
+    'X-Agent-Conversation-Replay',
+];
 const AGENT_CONVERSATION_TURN_CACHE_TTL_MS = resolveAgentConversationTurnCacheTtlMs(process.env);
 const AGENT_CONVERSATION_TURN_CACHE_MAX_ENTRIES = resolveAgentConversationTurnCacheMaxEntries(process.env);
 const AGENT_CONVERSATION_TURN_CACHE_MAX_EVENTS_PER_TURN = 64;
@@ -257,9 +278,26 @@ const AGENT_WORKSPACE_DIAGNOSTICS_TRIAGE_TOP_LIMIT_MAX = 10;
 const REQUEST_BODY_SPOOL_DIR = path.join(runtimePaths.projectRoot, 'tmp', 'request-bodies');
 let KB_ROOT = runtimePaths.kbRoot;
 let activeBuildKey: string | null = null;
-let activeBuildPromise: Promise<void> | null = null;
+let activeBuildPromise: Promise<unknown> | null = null;
+let ACTIVE_GRAPH_TARGET = 'ALL_FOLDERS';
 let lastRestoreKey: string | null = null;
 let lastRestoreTs = 0;
+const activeKnowledgeWorkspaceSyncs = new Map<string, Promise<{
+    target: string;
+    documentCount: number;
+    summary: {
+        ingestedDocuments: number;
+        changedDocuments: number;
+        deletedDocuments: number;
+        activeAtoms: number;
+        activeRelationEdges: number;
+        recomputedDynamicRelations: boolean;
+        invalidatedRelationEdges: number;
+        regeneratedRelationEdges: number;
+        resolvedRelationRecomputeMode: string;
+        relationRecomputeLatencyMs: number;
+    };
+}>>();
 const SIDECAR_RUNTIME_MANIFEST = path.join(runtimePaths.projectRoot, 'tmp', 'active-sidecar-runtime.json');
 const notemdService = new NotemdService();
 const notemdLlmClient = new LlmProviderClient();
@@ -9382,9 +9420,9 @@ function applyCorsHeaders(req: http.IncomingMessage, res: http.ServerResponse): 
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
     res.setHeader(
         'Access-Control-Allow-Headers',
-        'Content-Type, Authorization, X-NoteConnection-Token, X-Request-Id'
+        CORS_ALLOWED_HEADER_NAMES.join(', ')
     );
-    res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id, X-Error-Code');
+    res.setHeader('Access-Control-Expose-Headers', CORS_EXPOSED_HEADER_NAMES.join(', '));
     res.setHeader('Access-Control-Max-Age', '86400');
 
     if (!originHeader) {
@@ -10100,22 +10138,73 @@ function normalizeKnowledgeQueryRequestPayload(payload: unknown): KnowledgeQuery
     const topKValue = parsePositiveIntegerValue(readFirstPresentValue(record, ['topK', 'k', 'limit']));
     const asOf = readFirstNonEmptyString(record, ['asOf', 'as_of', 'timestamp']);
     const queryBackend = readFirstNonEmptyString(record, ['queryBackend', 'backend', 'query_backend']);
+    const nestedScope = isObjectRecord(record.scope) ? record.scope : {};
+    const normalizeStringList = (value: unknown, transform?: (entry: string) => string): string[] => {
+        const entries = Array.isArray(value) ? value : [];
+        return Array.from(new Set(
+            entries
+                .map((entry) => String(entry || '').trim())
+                .map((entry) => transform ? transform(entry) : entry)
+                .filter(Boolean)
+        ));
+    };
+    const normalizePathPrefix = (value: string): string => (
+        value.replace(/\\/g, '/').replace(/\/{2,}/g, '/').replace(/\/+$/g, '')
+    );
+    const workspaceId = readFirstNonEmptyString(record, ['workspaceId', 'workspace_id'])
+        || readFirstNonEmptyString(nestedScope, ['workspaceId', 'workspace_id']);
+    const corpusId = readFirstNonEmptyString(record, ['corpusId', 'corpus_id'])
+        || readFirstNonEmptyString(nestedScope, ['corpusId', 'corpus_id']);
+    const documentIds = normalizeStringList(
+        readFirstPresentValue(record, ['documentIds', 'document_ids'])
+        ?? readFirstPresentValue(nestedScope, ['documentIds', 'document_ids'])
+    );
+    const atomIds = normalizeStringList(
+        readFirstPresentValue(record, ['atomIds', 'atom_ids'])
+        ?? readFirstPresentValue(nestedScope, ['atomIds', 'atom_ids'])
+    );
+    const sourcePathPrefixes = normalizeStringList(
+        readFirstPresentValue(record, ['sourcePathPrefixes', 'source_path_prefixes'])
+        ?? readFirstPresentValue(nestedScope, ['sourcePathPrefixes', 'source_path_prefixes']),
+        normalizePathPrefix
+    );
+    const languages = normalizeStringList(
+        readFirstPresentValue(record, ['languages', 'languageScope'])
+        ?? readFirstPresentValue(nestedScope, ['languages', 'languageScope']),
+        (entry) => entry.toLowerCase()
+    );
     return {
         query,
         topK: topKValue > 0 ? topKValue : undefined,
         asOf,
         queryBackend,
+        scope: workspaceId || corpusId || documentIds.length > 0 || atomIds.length > 0 || sourcePathPrefixes.length > 0 || languages.length > 0
+            ? {
+                workspaceId: workspaceId || undefined,
+                corpusId: corpusId || undefined,
+                documentIds: documentIds.length > 0 ? documentIds : undefined,
+                atomIds: atomIds.length > 0 ? atomIds : undefined,
+                sourcePathPrefixes: sourcePathPrefixes.length > 0 ? sourcePathPrefixes : undefined,
+                languages: languages.length > 0 ? languages : undefined,
+            }
+            : undefined,
     };
 }
 
 function normalizeAgentConversationRequestPayload(payload: unknown): AgentConversationRequest {
     const record = isObjectRecord(payload) ? payload : {};
     const topKValue = parsePositiveIntegerValue(readFirstPresentValue(record, ['topK', 'k', 'limit']));
+    const normalizedQueryRequest = normalizeKnowledgeQueryRequestPayload(payload);
     return {
         userId: String(readFirstPresentValue(record, ['userId', 'user_id', 'learnerId']) || '').trim(),
+        sessionId: readFirstNonEmptyString(record, ['sessionId', 'session_id']),
+        activeTarget: readFirstNonEmptyString(record, ['activeTarget', 'active_target', 'target']),
         message: readFirstNonEmptyString(record, ['message', 'prompt', 'query', 'q', 'text']) || '',
         topK: topKValue > 0 ? topKValue : undefined,
         asOf: readFirstNonEmptyString(record, ['asOf', 'as_of', 'timestamp', 'now']),
+        persistMemory: readFirstPresentValue(record, ['persistMemory', 'persist_memory']) !== false,
+        memoryNamespace: readFirstNonEmptyString(record, ['memoryNamespace', 'memory_namespace']),
+        scope: normalizedQueryRequest.scope,
     };
 }
 
@@ -10331,6 +10420,20 @@ async function ensureAgentConversationTurnExecution(
         });
 
         try {
+            const hydration = await ensureLearningWorkspaceHydratedForConversationRequest(requestPayload);
+            emit({
+                type: 'capability_result',
+                turnId: record.turnId,
+                emittedAt: nowIso(),
+                stage: 'workspace_readiness_gate',
+                summary: {
+                    hydrated: hydration.hydrated,
+                    target: hydration.target,
+                    reason: hydration.reason,
+                    workspaceId: hydration.scope?.workspaceId || null,
+                    corpusId: hydration.scope?.corpusId || null,
+                },
+            });
             const result = await knowledgeLearningPlatform.runAgentConversation(requestPayload);
             record.status = 'completed';
             record.result = result;
@@ -12238,6 +12341,26 @@ async function persistNotemdWorkspacePatch(workspacePatch: unknown): Promise<Not
     return extractNotemdWorkspaceState(persisted);
 }
 
+async function ensureNotemdProviderTemplatesPersisted(): Promise<{
+    configPath: string;
+    persisted: boolean;
+}> {
+    const appConfig = await loadAppConfigToml();
+    const currentNotemdSection = isObjectRecord(appConfig.notemd) ? appConfig.notemd : {};
+    const nextNotemdSection = mergeProviderTemplatesIntoNotemdSection(currentNotemdSection);
+    const persisted = JSON.stringify(currentNotemdSection) !== JSON.stringify(nextNotemdSection);
+    if (persisted) {
+        await saveAppConfigToml({
+            ...appConfig,
+            notemd: nextNotemdSection,
+        });
+    }
+    return {
+        configPath: resolveAppConfigPath(),
+        persisted,
+    };
+}
+
 function clonePathModeSettings(settings: PathModeSettings): PathModeSettings {
     return JSON.parse(JSON.stringify(settings)) as PathModeSettings;
 }
@@ -12247,10 +12370,6 @@ function cloneFrontendSettings(settings: FrontendSettings): FrontendSettings {
 }
 
 async function loadPathModeSettings(): Promise<PathModeSettings> {
-    if (cachedPathModeSettings) {
-        return clonePathModeSettings(cachedPathModeSettings);
-    }
-
     try {
         const appConfig = await loadAppConfigToml();
         cachedPathModeSettings = extractPathModeSettingsFromAppConfig(appConfig);
@@ -12272,10 +12391,6 @@ async function persistPathModeSettings(settingsLike: unknown): Promise<PathModeS
 }
 
 async function loadFrontendSettings(): Promise<FrontendSettings> {
-    if (cachedFrontendSettings) {
-        return cloneFrontendSettings(cachedFrontendSettings);
-    }
-
     try {
         const appConfig = await loadAppConfigToml();
         cachedFrontendSettings = extractFrontendSettingsFromAppConfig(appConfig);
@@ -12871,6 +12986,304 @@ async function collectAvailableTargetsFromPath(kbRoot: string): Promise<string[]
     }
 
     return Array.from(targets).sort((a, b) => a.localeCompare(b));
+}
+
+function normalizeLearningWorkspaceTarget(value: unknown): string {
+    const normalized = String(value || '').trim();
+    return normalized || 'ALL_FOLDERS';
+}
+
+function deriveWorkspaceTargetScope(target: string): AgentConversationRequest['scope'] | undefined {
+    const normalizedTarget = normalizeLearningWorkspaceTarget(target);
+    if (!normalizedTarget || normalizedTarget === 'ALL_FOLDERS') {
+        return undefined;
+    }
+    const normalizedPathPrefix = `Knowledge_Base/${normalizedTarget}`.replace(/\\/g, '/');
+    return {
+        workspaceId: normalizedTarget.toLowerCase(),
+        corpusId: normalizedTarget.toLowerCase(),
+        sourcePathPrefixes: [normalizedPathPrefix],
+    };
+}
+
+function resolveKnowledgeWorkspaceTargetFromConversationRequest(requestPayload: AgentConversationRequest): string {
+    const activeTarget = normalizeLearningWorkspaceTarget(requestPayload.activeTarget);
+    if (activeTarget && activeTarget !== 'ALL_FOLDERS') {
+        return activeTarget;
+    }
+    const scope = requestPayload.scope;
+    const workspaceId = String(scope?.workspaceId || '').trim();
+    if (workspaceId) {
+        return workspaceId;
+    }
+    const corpusId = String(scope?.corpusId || '').trim();
+    if (corpusId) {
+        return corpusId;
+    }
+    const firstPrefix = Array.isArray(scope?.sourcePathPrefixes) ? String(scope?.sourcePathPrefixes[0] || '').trim() : '';
+    if (firstPrefix) {
+        const normalizedPrefix = firstPrefix.replace(/\\/g, '/').replace(/^\/+/, '');
+        const marker = 'Knowledge_Base/';
+        if (normalizedPrefix.toLowerCase().startsWith(marker.toLowerCase())) {
+            const rest = normalizedPrefix.slice(marker.length);
+            const [segment] = rest.split('/').filter(Boolean);
+            if (segment) {
+                return segment;
+            }
+        }
+    }
+    return activeTarget;
+}
+
+function buildKnowledgeDocumentPayloadFromFile(
+    file: { filepath: string; content: string }
+): NonNullable<KnowledgeIngestRequest['documents']>[number] {
+    const relativePath = path.relative(KB_ROOT, file.filepath).replace(/\\/g, '/');
+    const sourcePath = `Knowledge_Base/${relativePath}`.replace(/\/{2,}/g, '/');
+    const language = /[\u4e00-\u9fff]/.test(file.content) ? 'zh' : 'en';
+    return {
+        sourcePath,
+        content: file.content,
+        language,
+    };
+}
+
+async function collectMarkdownFilePaths(targetPath: string): Promise<string[]> {
+    const collected: string[] = [];
+    const scan = async (currentPath: string): Promise<void> => {
+        const entries = await readDirEntriesSafe(currentPath);
+        for (const entry of entries) {
+            const fullPath = path.join(currentPath, entry.name);
+            if (entry.isDirectory()) {
+                await scan(fullPath);
+                continue;
+            }
+            if (entry.isFile() && path.extname(entry.name).toLowerCase() === '.md') {
+                collected.push(fullPath);
+            }
+        }
+    };
+    await scan(targetPath);
+    return collected;
+}
+
+function normalizeKnowledgeTargetLookupQuery(value: unknown): string {
+    return String(value || '')
+        .normalize('NFKC')
+        .replace(/[？?！!。.,;:]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+}
+
+function deriveKnowledgeTargetLookupQueries(query: string): string[] {
+    const normalized = normalizeKnowledgeTargetLookupQuery(query);
+    if (!normalized) {
+        return [];
+    }
+    const candidates = new Set([normalized]);
+    const stripped = normalized
+        .replace(/^(what is|what are|define|explain|tell me about|what's)\s+/i, '')
+        .replace(/^(什么是|解释一下|介绍一下|请解释|请介绍)\s*/i, '')
+        .trim();
+    if (stripped) {
+        candidates.add(stripped);
+        candidates.add(stripped.replace(/\s+/g, ''));
+    }
+    if (normalized.includes('water glass') || stripped === 'waterglass') {
+        candidates.add('water glass');
+        candidates.add('waterglass');
+        candidates.add('水玻璃');
+        candidates.add('水杯');
+    }
+    return Array.from(candidates.values()).filter(Boolean);
+}
+
+async function findKnowledgeFilesByTitleLikeQueries(targetPath: string, titleLikeQueries: string[]): Promise<string[]> {
+    if (titleLikeQueries.length <= 0) {
+        return [];
+    }
+    const normalizedQueries = titleLikeQueries.map((entry) => normalizeKnowledgeTargetLookupQuery(entry)).filter(Boolean);
+    const markdownFiles = await collectMarkdownFilePaths(targetPath);
+    const exactMatches = markdownFiles.filter((filePath) => {
+        const normalizedBaseName = normalizeKnowledgeTargetLookupQuery(path.basename(filePath, path.extname(filePath)));
+        return normalizedQueries.some((query) => normalizedBaseName === query);
+    });
+    if (exactMatches.length > 0) {
+        return exactMatches;
+    }
+    return markdownFiles.filter((filePath) => {
+        const normalizedBaseName = normalizeKnowledgeTargetLookupQuery(path.basename(filePath, path.extname(filePath)));
+        return normalizedQueries.some((query) => normalizedBaseName.includes(query));
+    });
+}
+
+async function buildKnowledgeDocumentPayloadsFromPaths(filePaths: string[]): Promise<NonNullable<KnowledgeIngestRequest['documents']>> {
+    const documents: NonNullable<KnowledgeIngestRequest['documents']> = [];
+    for (const filePath of filePaths) {
+        const content = await fs.promises.readFile(filePath, 'utf8');
+        documents.push(buildKnowledgeDocumentPayloadFromFile({ filepath: filePath, content }));
+    }
+    return documents;
+}
+
+async function syncLearningWorkspaceForDocumentPaths(params: {
+    target: string;
+    filePaths: string[];
+    reason: string;
+}): Promise<{
+    target: string;
+    documentCount: number;
+    summary: {
+        ingestedDocuments: number;
+        changedDocuments: number;
+        deletedDocuments: number;
+        activeAtoms: number;
+        activeRelationEdges: number;
+        recomputedDynamicRelations: boolean;
+        invalidatedRelationEdges: number;
+        regeneratedRelationEdges: number;
+        resolvedRelationRecomputeMode: string;
+        relationRecomputeLatencyMs: number;
+    };
+}> {
+    const documents = await buildKnowledgeDocumentPayloadsFromPaths(params.filePaths);
+    const result = await knowledgeLearningPlatform.ingestKnowledge({
+        incremental: true,
+        documents,
+        ingestedAt: new Date().toISOString(),
+        relationRecomputeMode: 'incremental',
+    });
+    logDiagnostic('[Learning Workspace] Synced selected documents into knowledge workspace.', {
+        target: params.target,
+        reason: params.reason,
+        documentCount: documents.length,
+        changedDocuments: result.summary.changedDocuments,
+        activeAtoms: result.summary.activeAtoms,
+    });
+    return {
+        target: params.target,
+        documentCount: documents.length,
+        summary: {
+            ...result.summary,
+            resolvedRelationRecomputeMode: String(result.summary.resolvedRelationRecomputeMode || 'none'),
+        },
+    };
+}
+
+async function syncLearningWorkspaceForTarget(target: string, reason: string): Promise<{
+    target: string;
+    documentCount: number;
+    summary: {
+        ingestedDocuments: number;
+        changedDocuments: number;
+        deletedDocuments: number;
+        activeAtoms: number;
+        activeRelationEdges: number;
+        recomputedDynamicRelations: boolean;
+        invalidatedRelationEdges: number;
+        regeneratedRelationEdges: number;
+        resolvedRelationRecomputeMode: string;
+        relationRecomputeLatencyMs: number;
+    };
+}> {
+    const normalizedTarget = normalizeLearningWorkspaceTarget(target);
+    const syncKey = normalizedTarget.toLowerCase();
+    const existing = activeKnowledgeWorkspaceSyncs.get(syncKey);
+    if (existing) {
+        return existing;
+    }
+    const syncPromise = (async () => {
+        let resolvedTargetName = normalizedTarget;
+        if (normalizedTarget !== 'ALL_FOLDERS') {
+            const availableTargets = await collectAvailableTargetsFromPath(KB_ROOT);
+            const matchedTarget = availableTargets.find((entry) => entry.toLowerCase() === normalizedTarget.toLowerCase());
+            if (matchedTarget) {
+                resolvedTargetName = matchedTarget;
+            }
+        }
+        const targetPath = resolvedTargetName === 'ALL_FOLDERS'
+            ? KB_ROOT
+            : path.join(KB_ROOT, resolvedTargetName);
+        const files = await collectMarkdownFilePaths(targetPath);
+        return await syncLearningWorkspaceForDocumentPaths({
+            target: resolvedTargetName,
+            filePaths: files,
+            reason,
+        });
+    })();
+    activeKnowledgeWorkspaceSyncs.set(syncKey, syncPromise);
+    try {
+        return await syncPromise;
+    } finally {
+        activeKnowledgeWorkspaceSyncs.delete(syncKey);
+    }
+}
+
+async function ensureLearningWorkspaceHydratedForConversationRequest(
+    requestPayload: AgentConversationRequest
+): Promise<{
+    hydrated: boolean;
+    target: string;
+    scope: AgentConversationRequest['scope'];
+    reason: string;
+}> {
+    const target = resolveKnowledgeWorkspaceTargetFromConversationRequest(requestPayload);
+    const derivedScope = requestPayload.scope || deriveWorkspaceTargetScope(target);
+    requestPayload.scope = derivedScope;
+    const readinessBeforeSync = await knowledgeLearningPlatform.inspectKnowledgeWorkspaceRequest({
+        query: requestPayload.message,
+        scope: derivedScope,
+    });
+    if (readinessBeforeSync.readiness.status === 'ready') {
+        return {
+            hydrated: false,
+            target,
+            scope: derivedScope,
+            reason: 'existing_store_ready',
+        };
+    }
+    if (!target || target === 'ALL_FOLDERS') {
+        const explicitAllFoldersTarget = String(requestPayload.activeTarget || '').trim().toUpperCase() === 'ALL_FOLDERS';
+        if (explicitAllFoldersTarget) {
+            await syncLearningWorkspaceForTarget('ALL_FOLDERS', 'conversation_auto_hydration_all_folders');
+            return {
+                hydrated: true,
+                target: 'ALL_FOLDERS',
+                scope: derivedScope,
+                reason: 'conversation_auto_hydration_all_folders',
+            };
+        }
+        return {
+            hydrated: false,
+            target,
+            scope: derivedScope,
+            reason: readinessBeforeSync.readiness.status,
+        };
+    }
+    const targetPath = path.join(KB_ROOT, target);
+    const titleLikeQueries = deriveKnowledgeTargetLookupQueries(String(requestPayload.message || ''));
+    const candidateFiles = await findKnowledgeFilesByTitleLikeQueries(targetPath, titleLikeQueries);
+    if (candidateFiles.length > 0) {
+        await syncLearningWorkspaceForDocumentPaths({
+            target,
+            filePaths: candidateFiles,
+            reason: 'conversation_selective_title_hydration',
+        });
+        return {
+            hydrated: true,
+            target,
+            scope: derivedScope,
+            reason: 'conversation_selective_title_hydration',
+        };
+    }
+    await syncLearningWorkspaceForTarget(target, 'conversation_auto_hydration');
+    return {
+        hydrated: true,
+        target,
+        scope: derivedScope,
+        reason: 'conversation_auto_hydration',
+    };
 }
 
 async function pathExists(candidatePath: string): Promise<boolean> {
@@ -13520,6 +13933,9 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         memoryPolicyManager,
         notemdService,
         loadNotemdSettings,
+        persistNotemdSettings,
+        loadFrontendSettings,
+        markdownGateway,
         LOOPBACK_HOST,
         finalPort,
         KNOWLEDGE_GRAPH_STORE_BACKEND,
@@ -13530,6 +13946,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         kbRoot: KB_ROOT,
         runtimeDataDir: RUNTIME_DATA_DIR,
         runtimeRunbookOps,
+        getPathBridge: () => pathBridge,
     };
 
     // Route migration tracking
@@ -13697,6 +14114,34 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 } catch (error) {
                     writeApiErrorResponse(res, error, {
                         context: 'API:GET /api/notemd/settings',
+                        requestId,
+                    });
+                }
+                return;
+            }
+
+            if (getPathname === '/api/notemd/provider-templates') {
+                try {
+                    const urlObj = new URL(req.url || '/', `http://${LOOPBACK_HOST}:${finalPort}`);
+                    const persistTemplates = ['1', 'true', 'yes'].includes(
+                        String(urlObj.searchParams.get('persist') || '').trim().toLowerCase()
+                    );
+                    let persistence = { configPath: resolveAppConfigPath(), persisted: false };
+                    if (persistTemplates) {
+                        persistence = await ensureNotemdProviderTemplatesPersisted();
+                    }
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(
+                        JSON.stringify({
+                            success: true,
+                            templates: NOTEMD_PROVIDER_TEMPLATES,
+                            configPath: persistence.configPath,
+                            persisted: persistence.persisted,
+                        })
+                    );
+                } catch (error) {
+                    writeApiErrorResponse(res, error, {
+                        context: 'API:GET /api/notemd/provider-templates',
                         requestId,
                     });
                 }
@@ -14123,6 +14568,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     if (target === 'ALL_FOLDERS') {
                         const activeJsPath = await resolveGeneratedAssetForReadAsync('data.js');
                         if (activeJsPath) {
+                            ACTIVE_GRAPH_TARGET = 'ALL_FOLDERS';
                             res.writeHead(200, { 'Content-Type': 'application/json' });
                             res.end(JSON.stringify({ success: true }));
                         } else {
@@ -14145,8 +14591,10 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         if (cacheJson) {
                             await fs.promises.copyFile(cacheJson, targetJson);
                         }
+                        ACTIVE_GRAPH_TARGET = target;
+                        const syncResult = await syncLearningWorkspaceForTarget(target, 'restore_cache');
                         res.writeHead(200, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: true }));
+                        res.end(JSON.stringify({ success: true, sync: syncResult }));
                     } else {
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ success: false, error: 'Cache not found' }));
@@ -14846,6 +15294,45 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 } catch (error) {
                     writeApiErrorResponse(res, error, {
                         context: 'API:POST /api/notemd/settings',
+                        requestId,
+                    });
+                }
+                return;
+            }
+
+            if (postPathname === '/api/notemd/provider-templates/apply') {
+                try {
+                    const payload = await readJsonBody(req);
+                    const rawTemplateId = isObjectRecord(payload)
+                        ? String(payload.templateId || payload.template_id || '').trim()
+                        : '';
+                    if (!rawTemplateId) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: 'Missing templateId.' }));
+                        return;
+                    }
+                    const template = getNotemdProviderTemplate(rawTemplateId);
+                    if (!template) {
+                        res.writeHead(404, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: `Unknown provider template: ${rawTemplateId}` }));
+                        return;
+                    }
+
+                    const settings = await loadNotemdSettings();
+                    const updatedSettings = applyProviderTemplateToSettings(settings, rawTemplateId);
+                    const persistedSettings = await persistNotemdSettings(updatedSettings);
+                    const persistence = await ensureNotemdProviderTemplatesPersisted();
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: true,
+                        template,
+                        settings: persistedSettings,
+                        configPath: persistence.configPath,
+                        persistedTemplates: persistence.persisted,
+                    }));
+                } catch (error) {
+                    writeApiErrorResponse(res, error, {
+                        context: 'API:POST /api/notemd/provider-templates/apply',
                         requestId,
                     });
                 }
@@ -16029,20 +16516,25 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     } else {
                         targetToBuild = KB_ROOT;
                     }
-                    
-                    const buildPromise = buildGraph({
-                        targetPath: targetToBuild,
-                        maxWorkers,
-                        enableGPU,
-                        enableGPULayout,
-                        memorySavingMode,
-                        deepDebug
-                    }).then(() => undefined);
+                    const normalizedRuntimeTarget = buildTarget || 'ALL_FOLDERS';
+                    const buildPromise = (async () => {
+                        await buildGraph({
+                            targetPath: targetToBuild,
+                            maxWorkers,
+                            enableGPU,
+                            enableGPULayout,
+                            memorySavingMode,
+                            deepDebug
+                        });
+                        ACTIVE_GRAPH_TARGET = normalizedRuntimeTarget;
+                        return await syncLearningWorkspaceForTarget(normalizedRuntimeTarget, 'build_graph');
+                    })();
                     activeBuildKey = buildKey;
                     activeBuildPromise = buildPromise;
 
+                    let syncResult = null;
                     try {
-                        await buildPromise;
+                        syncResult = await buildPromise;
                     } finally {
                         if (activeBuildPromise === buildPromise) {
                             activeBuildPromise = null;
@@ -16053,6 +16545,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({
                         success: true,
+                        sync: syncResult,
                         computeModes: collectComputeModeSnapshot()
                     }));
                 } catch (error) {

@@ -5,7 +5,9 @@ const DEFAULT_HOST := "127.0.0.1"
 const DEFAULT_PORT := 3000
 const JSON_HEADERS := ["Content-Type: application/json"]
 const BINARY_PNG_HEADERS := ["Content-Type: image/png"]
-const CACHE_VERSION := "reader-v7"
+const CACHE_VERSION := "reader-v8"
+const RENDERED_IMAGE_TRIM_PADDING := 16
+const RENDERED_IMAGE_BACKGROUND := Color8(5, 7, 11, 255)
 const SVG_MAX_DIMENSION := 16384.0
 const SVG_MIN_SCALE := 0.1
 const DEFAULT_RUNTIME_MANIFEST_PATH := "res://../tmp/active-sidecar-runtime.json"
@@ -192,7 +194,55 @@ func _decode_png_texture(png_base64: String) -> Texture2D:
 	if load_error != OK:
 		push_warning("ReaderRenderClient: Unable to decode rendered PNG (%s)." % error_string(load_error))
 		return null
+	var trimmed_image := _trim_rendered_image(image)
+	if trimmed_image != null:
+		image = trimmed_image
 	return ImageTexture.create_from_image(image)
+
+
+func _trim_rendered_image(image: Image) -> Image:
+	if image == null or image.is_empty():
+		return image
+	if image.get_width() <= 2 or image.get_height() <= 2:
+		return image
+
+	var left := image.get_width()
+	var top := image.get_height()
+	var right := -1
+	var bottom := -1
+
+	for y in range(image.get_height()):
+		for x in range(image.get_width()):
+			if _is_rendered_content_pixel(image.get_pixel(x, y)):
+				left = mini(left, x)
+				top = mini(top, y)
+				right = maxi(right, x)
+				bottom = maxi(bottom, y)
+
+	if right < left or bottom < top:
+		return image
+
+	left = maxi(0, left - RENDERED_IMAGE_TRIM_PADDING)
+	top = maxi(0, top - RENDERED_IMAGE_TRIM_PADDING)
+	right = mini(image.get_width() - 1, right + RENDERED_IMAGE_TRIM_PADDING)
+	bottom = mini(image.get_height() - 1, bottom + RENDERED_IMAGE_TRIM_PADDING)
+
+	var trimmed_rect := Rect2i(left, top, right - left + 1, bottom - top + 1)
+	if trimmed_rect.size.x <= 0 or trimmed_rect.size.y <= 0:
+		return image
+	if trimmed_rect.position == Vector2i.ZERO and trimmed_rect.size.x == image.get_width() and trimmed_rect.size.y == image.get_height():
+		return image
+
+	return image.get_region(trimmed_rect)
+
+
+func _is_rendered_content_pixel(pixel: Color) -> bool:
+	if pixel.a <= 0.03:
+		return false
+	var diff_r := absf(pixel.r - RENDERED_IMAGE_BACKGROUND.r)
+	var diff_g := absf(pixel.g - RENDERED_IMAGE_BACKGROUND.g)
+	var diff_b := absf(pixel.b - RENDERED_IMAGE_BACKGROUND.b)
+	return maxf(diff_r, maxf(diff_g, diff_b)) > 0.03
 
 
 func _post_json(endpoint: String, payload: Dictionary) -> Dictionary:

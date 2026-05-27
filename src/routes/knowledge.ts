@@ -466,6 +466,22 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
         },
         {
             method: 'POST',
+            path: api('/workspace-readiness'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const payload = JSON.parse(body);
+                    const result = await knowledgeLearningPlatform.inspectKnowledgeWorkspaceRequest({
+                        query: String(payload?.query || '').trim(),
+                        scope: payload?.scope,
+                        queryBackend: payload?.queryBackend,
+                    });
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'POST /api/knowledge/workspace-readiness'); }
+            },
+        },
+        {
+            method: 'POST',
             path: api('/mastery/diagnostics'),
             handler: async (req, res) => {
                 try {

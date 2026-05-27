@@ -65,6 +65,15 @@
         return formatTemplate(fallback, params || {});
     }
 
+    function ensureWorkspaceVisible() {
+        if (
+            window.NoteConnectionAgentWorkspaceUi
+            && typeof window.NoteConnectionAgentWorkspaceUi.open === 'function'
+        ) {
+            window.NoteConnectionAgentWorkspaceUi.open();
+        }
+    }
+
     const CONVERSATION_CARD_RENDERERS = Object.freeze({
         'study-session': renderStudySessionCard,
         'tutor-action': renderTutorActionCard,
@@ -2440,6 +2449,7 @@
             return JSON.parse(JSON.stringify(state));
         },
         openGraphFocusPane: function (payload) {
+            ensureWorkspaceVisible();
             state.panes['graph-focus'].open = true;
             state.panes['graph-focus'].payload = payload || null;
             renderGraphFocusBody(payload || {});
@@ -2461,6 +2471,7 @@
             updatePaneControlLabels();
         },
         openLearningPathPane: function (payload) {
+            ensureWorkspaceVisible();
             state.panes['learning-path'].open = true;
             state.panes['learning-path'].payload = payload || null;
             renderLearningPathBody(payload || {});
@@ -2797,16 +2808,36 @@
             state.knowledgePoints.items = normalizedItems.slice();
             state.knowledgePoints.handlers = handlers || null;
             if (normalizedItems.length <= 0) {
-                container.innerHTML = `<div class="agent-knowledge-empty">${escapeHtml(translate('agentWorkspace.knowledge.empty', 'No local knowledge points.'))}</div>`;
+                container.innerHTML = `<div class="agent-knowledge-empty">${escapeHtml(translate('agentWorkspace.knowledge.empty', 'No scoped knowledge matches.'))}</div>`;
                 return;
             }
             container.innerHTML = '';
             normalizedItems.forEach((item) => {
+                const evidenceSnippet = String(item && item.evidenceSnippet || '').trim();
+                const citation = item && typeof item.citation === 'object' ? item.citation : null;
+                const citationPath = citation
+                    ? `${String(citation.sourcePath || '').trim()}${citation.startLine ? `:${citation.startLine}` : ''}`
+                    : '';
+                const score = Number.isFinite(Number(item && item.score)) ? Number(item.score) : null;
                 const card = document.createElement('div');
                 card.className = 'agent-knowledge-card';
                 card.innerHTML = `
                     <div class="agent-knowledge-title">${escapeHtml(String(item.title || item.atomId || ''))}</div>
                     <div class="agent-knowledge-summary">${escapeHtml(String(item.summary || ''))}</div>
+                    ${evidenceSnippet && evidenceSnippet !== String(item.summary || '').trim()
+                        ? `<div class="agent-knowledge-summary">${escapeHtml(evidenceSnippet)}</div>`
+                        : ''}
+                    ${(citationPath || score !== null)
+                        ? `<div class="agent-knowledge-summary">
+                            ${citationPath
+                                ? `<span data-agent-knowledge-citation="true">${escapeHtml(translate('agentWorkspace.knowledge.citation', 'Citation'))}: ${escapeHtml(citationPath)}</span>`
+                                : ''}
+                            ${citationPath && score !== null ? ' · ' : ''}
+                            ${score !== null
+                                ? `<span data-agent-knowledge-score="true">${escapeHtml(translate('agentWorkspace.knowledge.score', 'Score'))}: ${escapeHtml(score.toFixed(4))}</span>`
+                                : ''}
+                        </div>`
+                        : ''}
                 `;
                 const actions = document.createElement('div');
                 actions.className = 'agent-knowledge-actions';
