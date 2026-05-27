@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { KnowledgeLearningPlatformAPI } from './api';
 import type {
+    AgentConversationAssistantBlock,
     AgentConversationInvocationRecord,
     AgentConversationKnowledgePoint,
     AgentConversationMemoryAction,
@@ -3284,6 +3285,69 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         return clone;
     }
 
+    private cloneAgentConversationAssistantBlocks(
+        blocks: AgentConversationAssistantBlock[] | undefined
+    ): AgentConversationAssistantBlock[] {
+        if (!Array.isArray(blocks) || blocks.length <= 0) {
+            return [];
+        }
+        return blocks.map((block) => {
+            if (!block || typeof block !== 'object') {
+                return {
+                    blockId: 'assistant_block_unknown',
+                    type: 'system_notice',
+                    text: '',
+                } satisfies AgentConversationAssistantBlock;
+            }
+            switch (block.type) {
+                case 'main_markdown':
+                    return {
+                        blockId: String(block.blockId || 'assistant_block_markdown'),
+                        type: 'main_markdown',
+                        markdown: String(block.markdown || ''),
+                    } satisfies AgentConversationAssistantBlock;
+                case 'system_notice':
+                    return {
+                        blockId: String(block.blockId || 'assistant_block_notice'),
+                        type: 'system_notice',
+                        text: String(block.text || ''),
+                    } satisfies AgentConversationAssistantBlock;
+                case 'html_artifact':
+                    return {
+                        blockId: String(block.blockId || 'assistant_block_html'),
+                        type: 'html_artifact',
+                        title: typeof block.title === 'string' ? block.title : undefined,
+                        summary: typeof block.summary === 'string' ? block.summary : undefined,
+                        html: String(block.html || ''),
+                    } satisfies AgentConversationAssistantBlock;
+                case 'citations':
+                    return {
+                        blockId: String(block.blockId || 'assistant_block_citations'),
+                        type: 'citations',
+                        title: typeof block.title === 'string' ? block.title : undefined,
+                        citations: Array.isArray(block.citations)
+                            ? block.citations.map((citation) => ({ ...citation }))
+                            : [],
+                    } satisfies AgentConversationAssistantBlock;
+                case 'knowledge_actions':
+                    return {
+                        blockId: String(block.blockId || 'assistant_block_actions'),
+                        type: 'knowledge_actions',
+                        title: typeof block.title === 'string' ? block.title : undefined,
+                        atomIds: Array.isArray(block.atomIds)
+                            ? block.atomIds.map((atomId) => String(atomId || '')).filter(Boolean)
+                            : [],
+                    } satisfies AgentConversationAssistantBlock;
+                default:
+                    return {
+                        blockId: String((block as AgentConversationAssistantBlock).blockId || 'assistant_block_unknown'),
+                        type: 'system_notice',
+                        text: '',
+                    } satisfies AgentConversationAssistantBlock;
+            }
+        });
+    }
+
     private resolveLearningQualityThresholds(
         overrides: Partial<LearningQualityThresholds> | undefined
     ): LearningQualityThresholds {
@@ -4538,6 +4602,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 request: { ...record.request },
                 response: {
                     ...record.response,
+                    assistantBlocks: this.cloneAgentConversationAssistantBlocks(record.response.assistantBlocks),
                     knowledgePoints: record.response.knowledgePoints.map((point) => ({
                         ...point,
                         capabilities: [...point.capabilities],
@@ -4899,6 +4964,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 request: { ...(record.request || {}) },
                 response: {
                     ...record.response,
+                    assistantBlocks: this.cloneAgentConversationAssistantBlocks(record.response.assistantBlocks),
                     knowledgePoints: Array.isArray(record.response.knowledgePoints)
                         ? record.response.knowledgePoints.map((point) => ({
                             ...point,
@@ -7558,6 +7624,37 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         return `${memoryPrefix}The strongest scoped match is ${leadingPoint.title}. I found ${params.knowledgePoints.length} relevant knowledge point(s) and ${params.citations.length} citation(s).\n\nKey evidence:\n${evidenceLines.join('\n')}`;
     }
 
+    private buildScopedConversationAssistantBlocks(params: {
+        answer: string;
+        citations: KnowledgeCitation[];
+        knowledgePoints: AgentConversationKnowledgePoint[];
+    }): AgentConversationAssistantBlock[] {
+        const blocks: AgentConversationAssistantBlock[] = [
+            {
+                blockId: this.nextId('assistant_block'),
+                type: 'main_markdown',
+                markdown: String(params.answer || ''),
+            },
+        ];
+        if (params.citations.length > 0) {
+            blocks.push({
+                blockId: this.nextId('assistant_block'),
+                type: 'citations',
+                title: 'Citations',
+                citations: params.citations.map((citation) => ({ ...citation })),
+            });
+        }
+        if (params.knowledgePoints.length > 0) {
+            blocks.push({
+                blockId: this.nextId('assistant_block'),
+                type: 'knowledge_actions',
+                title: 'Knowledge Actions',
+                atomIds: params.knowledgePoints.map((point) => point.atomId).filter(Boolean),
+            });
+        }
+        return blocks;
+    }
+
     private recordAgentConversationTurn(params: {
         sessionId: string;
         userId: string;
@@ -7960,11 +8057,17 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             recalledMemories,
             usedScope: traceScope,
         });
+        const assistantBlocks = this.buildScopedConversationAssistantBlocks({
+            answer,
+            citations,
+            knowledgePoints,
+        });
         const response: AgentConversationResponse = {
             userId,
             sessionId,
             assistantMessage: answer,
             answer,
+            assistantBlocks,
             knowledgePoints,
             citations,
             recalledMemories,

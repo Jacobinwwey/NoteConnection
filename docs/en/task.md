@@ -7,8 +7,8 @@
 - [x] Scoped knowledge-workspace grounding is now real on the current branch.
 - [x] Provider preset/TOML settings delivery is now real on the current branch.
 - [x] Reader-side markdown/KaTeX/Mermaid hardening and Tauri debug capture tooling are now real on the current branch.
-- [ ] The highest-priority unfinished Tauri interaction gap is still assistant reply rendering inside the agent workspace.
-- [ ] The next active plan is Tauri-first: evolve from `assistantMessage` text mounting toward shared Reader-aligned rich reply rendering without breaking current knowledge-point/capability flows.
+- [x] The Tauri agent workspace now has a typed rich-reply baseline instead of `assistantMessage`-only text mounting.
+- [x] The Tauri-first plan to evolve toward shared Reader-aligned rich reply rendering is now implemented as the current baseline while preserving knowledge-point/capability compatibility.
 
 Primary references:
 

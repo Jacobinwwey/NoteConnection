@@ -791,6 +791,18 @@
       "counterexampleTitle": "反例挑战",
       "evidenceHeading": "证据",
       "emptyEvidence": "暂无证据片段。"
+    },
+    "reply": {
+      "citations": "引用",
+      "citationsEmpty": "未返回引用。",
+      "citationUntitled": "未命名引用",
+      "citationSourceUnavailable": "来源路径不可用",
+      "htmlArtifact": "HTML 工件",
+      "htmlArtifactEmpty": "未返回 HTML 内容。",
+      "preview": "预览",
+      "knowledgeActions": "知识动作",
+      "knowledgeActionsSummary": "请使用下方的 scoped knowledge cards，继续对 {count} 个节点执行聚焦模式或引导式学习。",
+      "knowledgeActionsEmpty": "未返回可执行的知识节点。"
     }
   }
 }

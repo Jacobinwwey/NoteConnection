@@ -3,8 +3,8 @@
 - [x] Scoped knowledge-workspace grounding 已在当前分支真实落地。
 - [x] Provider preset / TOML settings 交付已在当前分支真实落地。
 - [x] Reader 侧 markdown / KaTeX / Mermaid 加固与 Tauri 调试抓取工具链已在当前分支真实落地。
-- [ ] 当前优先级最高的未完成 Tauri 交互缺口，仍然是 agent workspace 内的 assistant reply rendering。
-- [ ] 下一条活跃实施路线应当保持 Tauri-first：在不破坏现有 knowledge-point / capability 流的前提下，从 `assistantMessage` 纯文本挂载升级到共享 Reader-aligned rich reply rendering。
+- [x] Tauri agent workspace 已具备 typed rich-reply baseline，不再只是 `assistantMessage` 纯文本挂载。
+- [x] 这条 Tauri-first 路线已作为当前基线落地：在保持现有 knowledge-point / capability 兼容的前提下，引入了共享 Reader-aligned rich reply rendering。
 
 主要参考：
 

@@ -1038,11 +1038,53 @@ export interface AgentConversationRequest {
     memoryNamespace?: string;
 }
 
+export interface AgentConversationAssistantMarkdownBlock {
+    blockId: string;
+    type: 'main_markdown';
+    markdown: string;
+}
+
+export interface AgentConversationAssistantSystemNoticeBlock {
+    blockId: string;
+    type: 'system_notice';
+    text: string;
+}
+
+export interface AgentConversationAssistantHtmlArtifactBlock {
+    blockId: string;
+    type: 'html_artifact';
+    title?: string;
+    summary?: string;
+    html: string;
+}
+
+export interface AgentConversationAssistantCitationsBlock {
+    blockId: string;
+    type: 'citations';
+    title?: string;
+    citations: KnowledgeCitation[];
+}
+
+export interface AgentConversationAssistantKnowledgeActionsBlock {
+    blockId: string;
+    type: 'knowledge_actions';
+    title?: string;
+    atomIds: string[];
+}
+
+export type AgentConversationAssistantBlock =
+    | AgentConversationAssistantMarkdownBlock
+    | AgentConversationAssistantSystemNoticeBlock
+    | AgentConversationAssistantHtmlArtifactBlock
+    | AgentConversationAssistantCitationsBlock
+    | AgentConversationAssistantKnowledgeActionsBlock;
+
 export interface AgentConversationResponse {
     userId: string;
     sessionId: string;
     assistantMessage: string;
     answer: string;
+    assistantBlocks?: AgentConversationAssistantBlock[];
     knowledgePoints: AgentConversationKnowledgePoint[];
     citations: KnowledgeCitation[];
     recalledMemories: AgentConversationMemoryRecord[];

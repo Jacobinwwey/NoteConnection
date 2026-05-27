@@ -175,6 +175,18 @@
             }
             node.textContent = translate(key, String(node.textContent || ''), params);
         });
+        container.querySelectorAll('[data-agent-workspace-rendered-block-payload]').forEach((node) => {
+            const rawPayload = node.getAttribute('data-agent-workspace-rendered-block-payload');
+            if (!rawPayload) {
+                return;
+            }
+            try {
+                const payload = JSON.parse(rawPayload);
+                void renderConversationBlocksIntoNode(node, payload);
+            } catch (_error) {
+                // Ignore malformed rerender payloads.
+            }
+        });
         rerenderLocalizedConversationCards(container);
     }
 
@@ -2388,6 +2400,194 @@
         updateConversationMessageTranslations();
     }
 
+    function resolveMarkdownRuntime() {
+        const runtime = window.NoteConnectionMarkdownRuntime;
+        if (!runtime || typeof runtime !== 'object') {
+            return null;
+        }
+        return runtime;
+    }
+
+    function createHtmlArtifactPreview(block) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'agent-chat-inline-artifact';
+
+        const title = document.createElement('div');
+        title.className = 'agent-chat-inline-artifact-title';
+        title.textContent = String(
+            block && block.title
+            || translate('agentWorkspace.reply.htmlArtifact', 'HTML Artifact')
+        ).trim();
+        wrapper.appendChild(title);
+
+        const summaryText = String(block && block.summary || '').trim();
+        if (summaryText) {
+            const summary = document.createElement('div');
+            summary.className = 'agent-chat-inline-artifact-summary';
+            summary.textContent = summaryText;
+            wrapper.appendChild(summary);
+        }
+
+        const htmlSource = String(block && block.html || '').trim();
+        if (!htmlSource) {
+            const empty = document.createElement('div');
+            empty.className = 'agent-chat-inline-artifact-summary';
+            empty.textContent = translate('agentWorkspace.reply.htmlArtifactEmpty', 'No HTML content was returned.');
+            wrapper.appendChild(empty);
+            return wrapper;
+        }
+
+        const details = document.createElement('details');
+        details.className = 'agent-chat-inline-artifact-details';
+        const summary = document.createElement('summary');
+        summary.textContent = translate('agentWorkspace.reply.preview', 'Preview');
+        details.appendChild(summary);
+
+        const frame = document.createElement('iframe');
+        frame.className = 'agent-chat-inline-artifact-frame';
+        frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms');
+        frame.setAttribute('loading', 'lazy');
+        frame.srcdoc = htmlSource;
+        details.appendChild(frame);
+
+        wrapper.appendChild(details);
+        return wrapper;
+    }
+
+    function createCitationsBlockNode(block) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'agent-chat-inline-card';
+
+        const title = document.createElement('div');
+        title.className = 'agent-chat-inline-card-title';
+        title.textContent = String(
+            block && block.title
+            || translate('agentWorkspace.reply.citations', 'Citations')
+        ).trim();
+        wrapper.appendChild(title);
+
+        const citations = Array.isArray(block && block.citations) ? block.citations : [];
+        if (citations.length <= 0) {
+            const empty = document.createElement('div');
+            empty.className = 'agent-chat-inline-card-summary';
+            empty.textContent = translate('agentWorkspace.reply.citationsEmpty', 'No citations were returned.');
+            wrapper.appendChild(empty);
+            return wrapper;
+        }
+
+        const list = document.createElement('ul');
+        list.className = 'agent-chat-inline-card-list';
+        citations.forEach((citation, index) => {
+            const item = document.createElement('li');
+            item.className = 'agent-chat-inline-card-item';
+
+            const label = document.createElement('div');
+            label.className = 'agent-chat-inline-card-item-title';
+            label.textContent = `${index + 1}. ${String(citation && citation.title || '').trim() || translate('agentWorkspace.reply.citationUntitled', 'Untitled citation')}`;
+            item.appendChild(label);
+
+            const meta = document.createElement('div');
+            meta.className = 'agent-chat-inline-card-summary';
+            const sourcePath = String(citation && citation.sourcePath || '').trim();
+            const startLine = Number(citation && citation.startLine);
+            meta.textContent = sourcePath
+                ? `${sourcePath}${Number.isFinite(startLine) && startLine > 0 ? `:${startLine}` : ''}`
+                : translate('agentWorkspace.reply.citationSourceUnavailable', 'Source path unavailable');
+            item.appendChild(meta);
+
+            const snippet = String(citation && citation.snippet || '').trim();
+            if (snippet) {
+                const snippetNode = document.createElement('div');
+                snippetNode.className = 'agent-chat-inline-card-summary';
+                snippetNode.textContent = snippet;
+                item.appendChild(snippetNode);
+            }
+
+            list.appendChild(item);
+        });
+        wrapper.appendChild(list);
+        return wrapper;
+    }
+
+    function createKnowledgeActionsBlockNode(block) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'agent-chat-inline-card';
+
+        const title = document.createElement('div');
+        title.className = 'agent-chat-inline-card-title';
+        title.textContent = String(
+            block && block.title
+            || translate('agentWorkspace.reply.knowledgeActions', 'Knowledge Actions')
+        ).trim();
+        wrapper.appendChild(title);
+
+        const atomIds = Array.isArray(block && block.atomIds) ? block.atomIds.filter(Boolean) : [];
+        const summary = document.createElement('div');
+        summary.className = 'agent-chat-inline-card-summary';
+        summary.textContent = atomIds.length > 0
+            ? translate(
+                'agentWorkspace.reply.knowledgeActionsSummary',
+                'Open the scoped knowledge cards below to continue with focus mode or guided learning for {count} node(s).',
+                { count: String(atomIds.length) }
+            )
+            : translate('agentWorkspace.reply.knowledgeActionsEmpty', 'No actionable knowledge nodes were returned.');
+        wrapper.appendChild(summary);
+        return wrapper;
+    }
+
+    async function renderConversationBlocksIntoNode(node, entry) {
+        const blocks = Array.isArray(entry && entry.blocks) ? entry.blocks : [];
+        const markdownRuntime = resolveMarkdownRuntime();
+        node.textContent = '';
+        if (blocks.length <= 0) {
+            node.textContent = String(entry && (entry.fallbackMessage || entry.message) || '').trim();
+            return;
+        }
+
+        for (const block of blocks) {
+            if (!block || typeof block !== 'object') {
+                continue;
+            }
+            const type = String(block.type || '').trim();
+            const blockNode = document.createElement('div');
+            blockNode.className = `agent-chat-render-block agent-chat-render-block-${type || 'unknown'}`;
+            blockNode.setAttribute('data-agent-workspace-block-type', type || 'unknown');
+            node.appendChild(blockNode);
+
+            if (type === 'main_markdown') {
+                blockNode.classList.add('agent-chat-markdown');
+                const markdown = String(block.markdown || '').trim();
+                if (markdownRuntime && typeof markdownRuntime.renderMarkdownInto === 'function') {
+                    await markdownRuntime.renderMarkdownInto(blockNode, markdown);
+                } else {
+                    blockNode.textContent = markdown;
+                }
+                continue;
+            }
+            if (type === 'system_notice') {
+                blockNode.textContent = String(block.text || '').trim();
+                continue;
+            }
+            if (type === 'html_artifact') {
+                blockNode.appendChild(createHtmlArtifactPreview(block));
+                continue;
+            }
+            if (type === 'citations') {
+                blockNode.appendChild(createCitationsBlockNode(block));
+                continue;
+            }
+            if (type === 'knowledge_actions') {
+                blockNode.appendChild(createKnowledgeActionsBlockNode(block));
+                continue;
+            }
+            blockNode.textContent = String(entry && entry.fallbackMessage || '').trim();
+        }
+
+        if (!node.textContent.trim() && String(entry && entry.fallbackMessage || '').trim()) {
+            node.textContent = String(entry.fallbackMessage || '').trim();
+        }
+    }
+
     function init() {
         if (state.initialized) {
             return api;
@@ -2537,6 +2737,26 @@
                 }
             }
             container.appendChild(node);
+            return node;
+        },
+        appendConversationBlocks: async function (entry) {
+            const container = getElement('agent-workspace-chat-messages');
+            if (!container) {
+                return null;
+            }
+            const role = String(entry && entry.role || 'assistant').trim() || 'assistant';
+            const node = document.createElement('div');
+            node.className = `agent-chat-message agent-chat-message-${role} agent-chat-message-rendered`;
+            node.setAttribute(
+                'data-agent-workspace-rendered-block-payload',
+                JSON.stringify({
+                    role,
+                    blocks: Array.isArray(entry && entry.blocks) ? entry.blocks : [],
+                    fallbackMessage: String(entry && entry.fallbackMessage || entry && entry.message || ''),
+                })
+            );
+            container.appendChild(node);
+            await renderConversationBlocksIntoNode(node, entry || {});
             return node;
         },
         appendStudySessionCard: function (payload) {

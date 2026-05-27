@@ -340,6 +340,16 @@ function createI18nStub() {
             'agentWorkspace.messages.executionKindUnsupported': 'Unsupported capability execution kind: {executionKind}',
             'agentWorkspace.messages.operationResultPresentationUnsupported': 'Unsupported result presentation {resultPresentation} for operation {operationId}; allowed: {allowedResultPresentations}',
             'agentWorkspace.messages.capabilityActionUnsupported': 'Unsupported capability action: {actionId}',
+            'agentWorkspace.reply.citations': 'Citations',
+            'agentWorkspace.reply.citationsEmpty': 'No citations were returned.',
+            'agentWorkspace.reply.citationUntitled': 'Untitled citation',
+            'agentWorkspace.reply.citationSourceUnavailable': 'Source path unavailable',
+            'agentWorkspace.reply.htmlArtifact': 'HTML Artifact',
+            'agentWorkspace.reply.htmlArtifactEmpty': 'No HTML content was returned.',
+            'agentWorkspace.reply.preview': 'Preview',
+            'agentWorkspace.reply.knowledgeActions': 'Knowledge Actions',
+            'agentWorkspace.reply.knowledgeActionsSummary': 'Open the scoped knowledge cards below to continue with focus mode or guided learning for {count} node(s).',
+            'agentWorkspace.reply.knowledgeActionsEmpty': 'No actionable knowledge nodes were returned.',
         },
         zh: {
             'agentWorkspace.actions.focus': '聚焦',
@@ -655,6 +665,16 @@ function createI18nStub() {
             'agentWorkspace.messages.executionKindUnsupported': '不支持的能力执行类型：{executionKind}',
             'agentWorkspace.messages.operationResultPresentationUnsupported': '操作 {operationId} 不支持结果呈现 {resultPresentation}；允许：{allowedResultPresentations}',
             'agentWorkspace.messages.capabilityActionUnsupported': '不支持的能力动作：{actionId}',
+            'agentWorkspace.reply.citations': '引用',
+            'agentWorkspace.reply.citationsEmpty': '未返回引用。',
+            'agentWorkspace.reply.citationUntitled': '未命名引用',
+            'agentWorkspace.reply.citationSourceUnavailable': '来源路径不可用',
+            'agentWorkspace.reply.htmlArtifact': 'HTML 工件',
+            'agentWorkspace.reply.htmlArtifactEmpty': '未返回 HTML 内容。',
+            'agentWorkspace.reply.preview': '预览',
+            'agentWorkspace.reply.knowledgeActions': '知识动作',
+            'agentWorkspace.reply.knowledgeActionsSummary': '请使用下方的 scoped knowledge cards，继续对 {count} 个节点执行聚焦模式或引导式学习。',
+            'agentWorkspace.reply.knowledgeActionsEmpty': '未返回可执行的知识节点。',
         },
     };
 
@@ -848,6 +868,7 @@ function createSseResponse(events: Array<{ event: string; payload: unknown }>, o
 
 function loadWorkspacePanesHarness(options: { withI18n?: boolean } = {}): HarnessResult {
     const repoRoot = path.resolve(__dirname, '..');
+    const markdownRuntimeScriptPath = path.join(repoRoot, 'src', 'frontend', 'markdown_runtime.js');
     const scriptPath = path.join(repoRoot, 'src', 'frontend', 'workspace_panes.js');
     const dom = new JSDOM(createWorkspaceHtml(), {
         url: 'http://127.0.0.1:3000',
@@ -857,6 +878,7 @@ function loadWorkspacePanesHarness(options: { withI18n?: boolean } = {}): Harnes
         sandbox.window.i18n = createI18nStub();
     }
 
+    loadScriptIntoSandbox(sandbox, markdownRuntimeScriptPath, 'markdown_runtime.js');
     loadScriptIntoSandbox(sandbox, scriptPath, 'workspace_panes.js');
 
     const controller = sandbox.window.NoteConnectionWorkspacePanes;
@@ -873,6 +895,7 @@ function loadWorkspacePanesHarness(options: { withI18n?: boolean } = {}): Harnes
 
 function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): HarnessResult {
     const repoRoot = path.resolve(__dirname, '..');
+    const markdownRuntimeScriptPath = path.join(repoRoot, 'src', 'frontend', 'markdown_runtime.js');
     const workspaceScriptPath = path.join(repoRoot, 'src', 'frontend', 'workspace_panes.js');
     const agentScriptPath = path.join(repoRoot, 'src', 'frontend', 'agent_workspace.js');
     const dom = new JSDOM(createWorkspaceHtml(), {
@@ -2177,6 +2200,7 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
         },
     };
 
+    loadScriptIntoSandbox(sandbox, markdownRuntimeScriptPath, 'markdown_runtime.js');
     loadScriptIntoSandbox(sandbox, workspaceScriptPath, 'workspace_panes.js');
     loadScriptIntoSandbox(sandbox, agentScriptPath, 'agent_workspace.js');
     dispatchDomReady(dom.window.document);
@@ -2729,6 +2753,143 @@ describe('agent workspace learning-path integration', () => {
         expect(String(knowledgeCards[0]?.textContent || '')).toContain('Stream Node');
         expect(String(knowledgeCards[0]?.textContent || '')).toContain('Citation');
         expect(String(knowledgeCards[0]?.textContent || '')).toContain('Knowledge_Base/optics/stream.md:12');
+    });
+
+    test('renders structured assistant blocks without breaking scoped conversation flow', async () => {
+        const {
+            document,
+            window,
+            fetchMock,
+        } = loadAgentWorkspaceHarness({ withI18n: true });
+        if (!fetchMock) {
+            throw new Error('expected fetch mock');
+        }
+
+        const renderMathInElement = jest.fn();
+        const mermaidRender = jest.fn(async () => ({
+            svg: '<svg><text>Rendered Mermaid</text></svg>',
+        }));
+        (window as any).marked = {
+            parse: jest.fn(() => (
+                '<h2>Scoped Answer</h2>'
+                + '<p>Inline math $E=mc^2$ and a diagram:</p>'
+                + '<pre><code class="language-mermaid">graph TD;A-->B;</code></pre>'
+            )),
+        };
+        (window as any).renderMathInElement = renderMathInElement;
+        (window as any).mermaid = {
+            initialize: jest.fn(),
+            parse: jest.fn(async () => true),
+            render: mermaidRender,
+            run: jest.fn(),
+        };
+
+        fetchMock.mockImplementationOnce(async () => createSseResponse([
+            {
+                event: 'turn_completed',
+                payload: {
+                    type: 'turn_completed',
+                    turnId: 'turn_blocks_1',
+                    emittedAt: '2026-04-13T00:01:00.000Z',
+                    result: {
+                        assistantMessage: 'Scoped Answer',
+                        answer: 'Scoped Answer',
+                        assistantBlocks: [
+                            {
+                                blockId: 'block_main_1',
+                                type: 'main_markdown',
+                                markdown: '## Scoped Answer\n\nInline math $E=mc^2$ and a diagram:\n\n```mermaid\ngraph TD;A-->B;\n```',
+                            },
+                            {
+                                blockId: 'block_citations_1',
+                                type: 'citations',
+                                title: 'Citations',
+                                citations: [
+                                    {
+                                        citationId: 'citation_blocks_1',
+                                        atomId: 'atom_blocks_1',
+                                        documentId: 'doc_blocks_1',
+                                        sourcePath: 'Knowledge_Base/optics/blocks.md',
+                                        title: 'Blocks Citation',
+                                        snippet: 'Scoped snippet',
+                                        startLine: 18,
+                                        endLine: 21,
+                                        score: 0.88,
+                                    },
+                                ],
+                            },
+                        ],
+                        citations: [
+                            {
+                                citationId: 'citation_blocks_1',
+                                atomId: 'atom_blocks_1',
+                                documentId: 'doc_blocks_1',
+                                sourcePath: 'Knowledge_Base/optics/blocks.md',
+                                title: 'Blocks Citation',
+                                snippet: 'Scoped snippet',
+                                startLine: 18,
+                                endLine: 21,
+                                score: 0.88,
+                            },
+                        ],
+                        knowledgePoints: [],
+                        recalledMemories: [],
+                        memoryActions: [],
+                        summary: {
+                            generatedAt: '2026-04-13T00:01:00.000Z',
+                            topK: 6,
+                            returnedKnowledgePoints: 0,
+                            returnedCitations: 1,
+                            recalledMemoryCount: 0,
+                            appliedMemoryCount: 0,
+                            queryEvidenceCoverageRatioPct: 90,
+                        },
+                        trace: {
+                            sessionId: 'session_blocks_1',
+                            invocationId: 'invocation_blocks_1',
+                            retrieval: {
+                                retrievalModes: ['keyword'],
+                                asOf: '2026-04-13T00:01:00.000Z',
+                                totalActiveAtoms: 1,
+                                modeWeights: {
+                                    keyword: 1,
+                                    graph: 0,
+                                    temporal: 0,
+                                },
+                                latencyMs: 3,
+                                evidenceCoverageRatio: 0.9,
+                            },
+                            recalledMemoryCount: 0,
+                            appliedMemoryCount: 0,
+                            usedScope: {
+                                source: 'scoped',
+                                workspaceId: 'waterglass',
+                                corpusId: 'waterglass',
+                                documentIds: [],
+                                atomIds: [],
+                                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+                                languages: [],
+                                matchedAtomCount: 1,
+                            },
+                        },
+                    },
+                },
+            },
+        ]));
+
+        const input = document.getElementById('agent-workspace-chat-input') as HTMLTextAreaElement;
+        input.value = 'render rich reply';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+
+        const assistantNode = document.querySelector('.agent-chat-message-rendered.agent-chat-message-assistant');
+        expect(assistantNode).not.toBeNull();
+        expect(assistantNode?.querySelector('h2')?.textContent).toBe('Scoped Answer');
+        expect(renderMathInElement).toHaveBeenCalled();
+        expect((window as any).mermaid.initialize).toHaveBeenCalled();
+        expect(mermaidRender).toHaveBeenCalled();
+        expect(String(assistantNode?.textContent || '')).toContain('Blocks Citation');
+        expect(String(assistantNode?.textContent || '')).toContain('Knowledge_Base/optics/blocks.md:18');
+        expect(assistantNode?.querySelector('.mermaid svg text')?.textContent).toBe('Rendered Mermaid');
     });
 
     test('falls back to sync conversation request when streamed turn payload is incomplete', async () => {

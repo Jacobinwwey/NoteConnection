@@ -22,24 +22,21 @@ Align the active implementation plan with current code reality:
   - CORS closure for conversation turn/resume headers,
   - Reader-side Mermaid/KaTeX hardening and leaked-error suppression,
   - first-party Tauri runtime/webview/window debug capture scripts.
-- Not yet implemented:
+- Newly implemented in this slice:
   - a typed reply-rendering model in the Tauri agent workspace,
-  - shared reuse of the Reader render substrate inside the agent reply surface,
-  - artifact-style handling for large HTML assistant outputs.
+  - shared reuse of Reader-derived markdown/math/mermaid rendering inside the agent reply surface,
+  - artifact-style handling for large HTML assistant outputs through sandboxed preview.
 
 #### Next execution order
 
 1. **P0: Document truth sync**
    - keep `development-progress-dashboard`, `agent-conversation-focus-mode-plan`, `implementation_plan`, and `tauri_tasks` aligned with current code rather than older Program F-only framing.
-2. **P1: Response contract evolution**
-   - extend the conversation response with backward-compatible `assistantBlocks` while preserving `assistantMessage`.
-3. **P2: Shared render substrate**
-   - extract reusable markdown/math/mermaid rendering from the Reader/runtime path instead of creating a new standalone chat renderer.
-4. **P3: Tauri reply renderer**
-   - replace plain-text assistant reply mounting with a typed block renderer in the agent workspace.
-5. **P4: HTML artifact isolation**
-   - keep inline markdown HTML constrained, but route full HTML outputs into sandboxed artifact preview instead of the main chat DOM.
-6. **P5: Compatibility + verification**
+2. **P1-P4: Delivered in current code**
+   - the conversation response now carries backward-compatible `assistantBlocks`,
+   - Reader-derived markdown/math/mermaid rendering is now reused in the agent reply surface,
+   - plain-text assistant reply mounting is replaced by a typed block renderer when structured payloads are present,
+   - full HTML outputs now have a sandboxed artifact preview path.
+3. **P5: Compatibility + verification**
    - retain legacy fallback behavior,
    - preserve existing knowledge-point/capability orchestration,
    - verify docs, frontend contracts, and build/runtime proof after the rendering uplift.

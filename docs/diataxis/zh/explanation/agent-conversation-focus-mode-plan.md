@@ -9,42 +9,30 @@
 - `focus mode` 与 `学习路径` 两个 pane 可以并排共存，
 - 两个 pane 都支持各自独立提升为全屏。
 
-## 2026-05-27 Tauri-first 回复渲染方向
+## 2026-05-27 Tauri-first 回复渲染交付
 
-当前分支现实已经出现明显不对称：
+Tauri-first reply-rendering baseline 现已实现。
 
-- conversation contract 已经是真实的，
-- knowledge-point / action shell 已经是真实的，
-- Tauri Reader 渲染加固已经是真实的，
-- scoped knowledge workspace hydration 已经是真实的，
-- 但 assistant reply rendering 还没有以同样强度变成“真实产品能力”。
+当前已交付：
 
-如果暂时允许 Tauri 优先、把 Godot 视为后续适配目标，那么正确的架构重心应调整为：
+- `src/learning/types.ts` 与 `src/learning/KnowledgeLearningPlatform.ts` 现已在保留 legacy `assistantMessage` 的同时返回向前兼容的 `assistantBlocks`，
+- `src/frontend/markdown_runtime.js` 现已提供一套从 Reader 侧逻辑抽取出来的共享 markdown / math / mermaid runtime，
+- `src/frontend/workspace_panes.js` 现已在结构化载荷存在时通过 typed blocks 挂载 assistant reply，而不再只走纯文本，
+- `src/frontend/agent_workspace.js` 继续保留 legacy fallback，因此旧的 `assistantMessage`-only 响应仍可显示，
+- `html_artifact` 现已具备 sandboxed preview 路径，而不再需要把任意完整 HTML 直接注入主聊天 DOM。
 
-- 以 Tauri 作为 rich-render baseline，
-- 以 Reader 的 markdown / math / mermaid 渲染链作为主渲染 substrate，
-- Godot 未来消费的是降级 / 物化后的输出，而不是反过来在当前阶段约束 Tauri 的交互体验。
+如果暂时允许 Tauri 优先、把 Godot 视为后续适配目标，那么架构重心现在已经按预期对齐：
 
-### 当前代码缺口
+- Tauri 是 rich-render baseline，
+- Reader 的 markdown / math / mermaid 管线是主渲染 substrate，
+- Godot 未来消费的是降级 / 物化后的输出，而不是继续反向约束当前 Tauri UX。
 
-目前后端 / 前端契约只完成了一半：
-
-- `src/learning/KnowledgeLearningPlatform.ts` 已返回 `assistantMessage`、`citations`、`knowledgePoints`、memory signals 与 trace data，
-- `src/frontend/agent_workspace.js` 仍把 `assistantMessage` 当作平铺字符串消费，
-- `src/frontend/workspace_panes.js` 仍通过普通 `textContent` 挂载 conversation 消息。
-
-这意味着：
-
-- grounded retrieval 已经成立，
-- action orchestration 已经成立，
-- 但 markdown、KaTeX、Mermaid 与结构化 HTML 还没有真正进入 agent reply surface。
-
-### Tauri-first 实施方案
+### 已交付实施方案
 
 1. **响应契约演进**
-   - 保留 `assistantMessage` 作为兼容回退字段，
-   - 增加 `assistantBlocks` 作为 typed reply rendering 载体，
-   - 第一批 block 类型建议至少包含：
+   - `assistantMessage` 继续作为兼容回退字段保留，
+   - `assistantBlocks` 已作为 typed reply rendering 载体落地，
+   - 当前 block 基线包含：
      - `main_markdown`
      - `citations`
      - `knowledge_actions`
@@ -57,32 +45,37 @@
      - `src/server.ts`
 
 2. **共享渲染运行时抽取**
-   - 直接复用 Reader 成熟链路，而不是再造第四套 markdown 路径，
-   - 从以下位置抽取可复用的 markdown / math / mermaid runtime：
+   - 已直接复用 Reader 成熟链路，而不是再造第四套 markdown 路径，
+   - 可复用的 markdown / math / mermaid runtime 已从以下位置抽取：
      - `src/frontend/reader.js`
      - `src/frontend/app.js`
      - `src/reader_renderer.ts`
      - `src/routes/render.ts`
-   - 该共享 runtime 需要首先服务 browser/Tauri，同时保留未来为 Godot 做物化输出的能力，但当前不应被 Godot-first 设计反向约束。
+   - 这套共享 runtime 现已首先服务 browser/Tauri，同时保留未来为 Godot 做物化输出的边界。
 
 3. **agent workspace 中的消息块渲染器**
-   - 用 typed block renderer 替换当前的 plain message mounting，
-   - 保持现有 conversation-card / result-presentation registry 继续可用，
-   - 在以下文件中引入专用 assistant-reply renderer：
+   - 结构化载荷存在时，已用 typed block renderer 替换当前的 plain message mounting，
+   - 现有 conversation-card / result-presentation registry 继续保持可用，
+   - assistant-reply renderer 现已落在以下文件中：
      - `src/frontend/agent_workspace.js`
      - `src/frontend/workspace_panes.js`
      - `src/frontend/index.html`
      - `src/frontend/styles.css`
 
 4. **HTML artifact 路径**
-   - 不要把任意完整 HTML 直接注入主聊天 DOM，
-   - 对较大 HTML 结果采用 artifact 语义，并通过 sandboxed preview 路径展示，
-   - 这条产品方向可以参考 Cherry Studio 的思路，但实现必须保持 NoteConnection 当前栈内生，而不是复制外部架构。
+   - 任意完整 HTML 不会直接注入主聊天 DOM，
+   - 较大 HTML 输出会通过 artifact 语义与 sandboxed preview 路径展示。
 
 5. **流式输出与迁移安全**
-   - 保留当前 SSE + sync fallback 行为，
-   - 将流式内容写入 `main_markdown` block，而不是直接操作纯文本消息节点，
-   - 在迁移期间保持现有 `knowledgePoints` 与 capability execution 行为不变，使这次升级成为 forward-compatible 演进，而不是推倒重来。
+   - 当前 SSE + sync fallback 行为已保留，
+   - 结构化回复现已通过 `main_markdown` block 进入渲染链，而 legacy 回复仍能平滑回退，
+   - 现有 `knowledgePoints` 与 capability execution 行为保持向前兼容。
+
+### 剩余跟进项
+
+- 当更多端点开始返回 richer assistant payload 时，继续扩充 block 覆盖面，
+- 让新的共享 render substrate 在真实 browser/Tauri 运行时下持续经受验证，
+- 后续再决定是否让 Reader 本体进一步委托更多内部 helper 给这套共享 runtime，而不是只共享已抽取逻辑。
 
 ### 本阶段验收标准
 

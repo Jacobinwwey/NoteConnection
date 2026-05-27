@@ -768,6 +768,36 @@
         });
     }
 
+    function appendAssistantConversationResult(result) {
+        const controller = getController();
+        const assistantBlocks = Array.isArray(result && result.assistantBlocks)
+            ? result.assistantBlocks.filter((block) => block && typeof block === 'object')
+            : [];
+        const fallbackMessage = String(
+            result && (
+                result.assistantMessage
+                || result.answer
+                || result.message
+            )
+            || ''
+        ).trim();
+        if (
+            controller
+            && assistantBlocks.length > 0
+            && typeof controller.appendConversationBlocks === 'function'
+        ) {
+            return controller.appendConversationBlocks({
+                role: 'assistant',
+                blocks: assistantBlocks,
+                fallbackMessage,
+            });
+        }
+        if (fallbackMessage) {
+            return appendAssistantMessage(fallbackMessage);
+        }
+        return null;
+    }
+
     function appendLocalizedAssistantMessage(key, fallback, params) {
         const controller = getController();
         if (!controller) {
@@ -2797,12 +2827,8 @@
             presentLearningPathResult(item, capability, result, requestPayload);
         },
         assistant_message: function ({ result }) {
-            const assistantMessage = String(
-                result && result.message
-                || ''
-            ).trim();
-            if (assistantMessage) {
-                appendAssistantMessage(assistantMessage);
+            const appended = appendAssistantConversationResult(result);
+            if (appended) {
                 return;
             }
             appendLocalizedAssistantMessage(
@@ -3169,10 +3195,8 @@
                 scope: requestContext.scope,
             };
             const result = await requestConversationWithStreamingFallback(requestPayload);
-            const assistantMessage = String(result && result.assistantMessage || '').trim();
-            if (assistantMessage) {
-                appendAssistantMessage(assistantMessage);
-            } else {
+            const appendedAssistant = await appendAssistantConversationResult(result);
+            if (!appendedAssistant) {
                 appendLocalizedAssistantMessage(
                     'agentWorkspace.messages.noResponse',
                     'No grounded response.'

@@ -791,6 +791,18 @@
       "counterexampleTitle": "Counterexample",
       "evidenceHeading": "Evidence",
       "emptyEvidence": "No evidence snippets available."
+    },
+    "reply": {
+      "citations": "Citations",
+      "citationsEmpty": "No citations were returned.",
+      "citationUntitled": "Untitled citation",
+      "citationSourceUnavailable": "Source path unavailable",
+      "htmlArtifact": "HTML Artifact",
+      "htmlArtifactEmpty": "No HTML content was returned.",
+      "preview": "Preview",
+      "knowledgeActions": "Knowledge Actions",
+      "knowledgeActionsSummary": "Open the scoped knowledge cards below to continue with focus mode or guided learning for {count} node(s).",
+      "knowledgeActionsEmpty": "No actionable knowledge nodes were returned."
     }
   }
 }

@@ -33,12 +33,18 @@
 - 调试与取证链路：
   - 仓库现在正式提供 page / webview / window 抓取工具与 Mermaid 分阶段导出脚本，Tauri 运行时故障可通过一等调试命令取证，而不再依赖一次性人工排查。
 
-当前 Tauri 产品缺口：
+Tauri-first reply rendering 基线已交付：
 
-- agent 回复区仍然是偏纯文本实现。
-- `src/frontend/agent_workspace.js` 仍以 `assistantMessage` 平铺消费结果，而 `src/frontend/workspace_panes.js` 仍通过 `node.textContent = message` 挂载消息。
-- 这意味着当前 Tauri chat shell 虽然已经具备 grounded request、knowledge cards 与 action orchestration，但 assistant reply 仍未复用成熟的 Reader markdown / math / mermaid 渲染链。
-- 因此下一步不应再做泛化壳层扩展，而应转入 Tauri-first reply rendering 升级：在保持当前契约可回退的前提下，引入 richer message model。
+- `src/learning/types.ts` 与 `src/learning/KnowledgeLearningPlatform.ts` 现已在保留 legacy `assistantMessage` 的同时返回向前兼容的 `assistantBlocks`，
+- `src/frontend/markdown_runtime.js` 现已承载一套从 Reader 侧逻辑抽取出来的共享 markdown / math / mermaid runtime，
+- `src/frontend/workspace_panes.js` 现已在结构化载荷存在时通过 typed blocks 挂载 assistant reply，而不再只走纯文本，
+- `src/frontend/agent_workspace.js` 继续保留 legacy fallback，因此旧的 `assistantMessage`-only 路径仍然可显示。
+
+当前剩余缺口已经收窄为：
+
+- 当更多端点开始返回 richer assistant payload 时，继续扩充 block 覆盖面，
+- 让新的共享 render substrate 在真实 browser/Tauri 运行时下持续经受验证，
+- 为后续 Godot 降级 / 物化保留干净边界，而不是重新把 Godot 约束塞回当前 Tauri UX。
 
 这条切片的代码 / 方案现实矩阵：
 
@@ -48,7 +54,7 @@
 | Tauri markdown reader parity | markdown、公式与 Mermaid 应能在真实运行时稳定显示且不留下持久错误遮罩 | Reader / runtime 现已支持 Mermaid frontend-first + backend-PNG fallback，并抑制泄漏错误工件 | Operational |
 | Provider settings | provider / model / API key 控件应独立成页并可写入 durable TOML 配置 | 专用 agent/provider 设置页与 preset/TOML template helpers 已落地 | Operational |
 | Conversation retry transport | turn / replay 头应能通过 browser/Tauri preflight | CORS 已允许两类 conversation turn 头 | Closed |
-| Tauri agent reply rendering | assistant reply 应能显示 rich markdown，而非纯文本 | 回复区仍使用 `assistantMessage` + `textContent`，渲染尚未闭环 | Open |
+| Tauri agent reply rendering | assistant reply 应能显示 rich markdown，而非纯文本 | backward-compatible `assistantBlocks` 与共享 markdown runtime 已驱动 rich assistant reply，legacy `assistantMessage` 仍然保留 | Operational |
 
 ## 2026-05-26 Program F 收口状态
 
@@ -181,8 +187,8 @@
 - graph focus 的 fullscreen 已升级为真实 graph workspace promotion，而不是只把右侧元信息卡片放大（`src/frontend/workspace_panes.js`、`src/frontend/styles.css`），
 - scoped-knowledge conversation 流现在也更诚实了：active folder target 会进入 request contract，server 会 selective hydrate 可能 title-match 的文档进入 workspace，conversation trace 也会返回 readiness + miss diagnostics，而不再只是给出一个空 top-k（`src/frontend/source_manager.js`、`src/frontend/agent_workspace.js`、`src/server.ts`、`src/routes/data.ts`、`src/learning/KnowledgeLearningPlatform.ts`），
 - 新增 agent workspace 已补齐静态壳层与运行时按钮/空态提示的双语覆盖，且已有知识卡片动作按钮与带参数系统消息会在语言切换时重渲，而不是停留在旧语言；conversation card 的重渲也已集中到 card-kind 渲染注册表，并新增源码级一致性门禁测试校验 append-kind 与注册表键集合对齐，降低后续新增卡片的漏改风险（`src/frontend/index.html`、`src/frontend/locales/en.json`、`src/frontend/locales/zh.json`、`src/frontend/workspace_panes.js`、`src/frontend/agent_workspace.js`、`src/agent_workspace.frontend.test.ts`），
-- provider / model / API-key 设置现在已独立成 agent settings 页面，并支持 preset-template / TOML-template 流程；但同一 workspace 里的 reply rendering 仍是纯文本，因此它已成为最明显的下一个 Tauri-first 收口点（`src/frontend/index.html`、`src/frontend/settings.js`、`src/notemd/AppConfigToml.ts`、`src/notemd/providerTemplates.ts`），
-- Reader / runtime 渲染栈已对 Tauri markdown 使用场景显著加固：raw markdown、KaTeX、Mermaid frontend render、Mermaid backend PNG fallback 与 leaked Mermaid error suppression 都已到位；缺的只是把这套链路复用到 agent reply surface，而不是继续让它只存在于 Reader（`src/frontend/reader.js`、`src/frontend/app.js`、`src/reader_renderer.ts`、`src/routes/render.ts`、`src/notemd/MermaidProcessor.ts`），
+- provider / model / API-key 设置现在已独立成 agent settings 页面，并支持 preset-template / TOML-template 流程；同一 agent workspace 现在也已具备 typed rich-reply 基线，而不再停留在 plain-text-only（`src/frontend/index.html`、`src/frontend/settings.js`、`src/notemd/AppConfigToml.ts`、`src/notemd/providerTemplates.ts`、`src/frontend/markdown_runtime.js`、`src/frontend/workspace_panes.js`、`src/frontend/agent_workspace.js`），
+- Reader / runtime 渲染栈已对 Tauri markdown 使用场景显著加固：raw markdown、KaTeX、Mermaid frontend render、Mermaid backend PNG fallback、leaked Mermaid error suppression，以及面向 agent reply 的共享 markdown runtime 都已到位（`src/frontend/reader.js`、`src/frontend/app.js`、`src/frontend/markdown_runtime.js`、`src/reader_renderer.ts`、`src/routes/render.ts`、`src/notemd/MermaidProcessor.ts`），
 - locale 治理已新增后端到前端的能力标签键一致性门禁：conversation capability 发出的 `labelKey` 必须映射到非空的双语 `agentWorkspace.actions.*` 文案（`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/locales/en.json`、`src/frontend/locales/zh.json`、`src/agent_workspace.locale.contract.test.ts`），
 - modular knowledge route 闭环现在已经具备真实浏览器 strict 证据，而不再依赖 snapshot 式恢复通过：conversation 返回结构、capability 触发请求路由、卡片标题本地化、graph-focus 兼容 API 已在真实浏览器/网络 trace 下通过 `STRICT`、`UI_STRICT`、`UI_DYNAMIC_STRICT`（`src/routes/knowledge.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/app.js`、`src/frontend/locales/en.json`、`src/frontend/locales/zh.json`、`scripts/verify-agent-workspace-browser.js`），
 - locale 治理现已同时阻断能力失败文案漂移：conversation capability 发出的 `failure.messageKey` 必须映射到双语 `agentWorkspace.messages.*` 文案，且中英占位符集合与 fallback 占位符集合必须一致（`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/locales/en.json`、`src/frontend/locales/zh.json`、`src/agent_workspace.locale.contract.test.ts`），

@@ -20,9 +20,9 @@ Additional note (2026-05-12):
 - [x] Scoped knowledge-workspace selection, active-target propagation, and title-like selective hydration are now real on the current branch.
 - [x] Provider presets, TOML template materialization, and conversation turn/resume CORS closure are now real on the current branch.
 - [x] Reader-side markdown/KaTeX/Mermaid hardening plus first-party Tauri debug capture tooling are now real on the current branch.
-- [ ] The Tauri agent reply area still mounts assistant replies as plain text and remains the primary unfinished UX gap.
-- [ ] Shared Reader render-substrate reuse inside the agent workspace is still pending.
-- [ ] HTML artifact isolation for rich assistant outputs is still pending.
+- [x] The Tauri agent reply area no longer depends only on plain-text assistant mounting; structured replies now render through typed blocks.
+- [x] Shared Reader-derived render-substrate reuse inside the agent workspace is now in place.
+- [x] HTML artifact isolation for rich assistant outputs is now in place through sandboxed preview.
 
 Active execution references:
 
