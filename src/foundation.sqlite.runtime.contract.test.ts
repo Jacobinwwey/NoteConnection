@@ -26,15 +26,20 @@ describe('foundation sqlite runtime verification contract', () => {
     expect(packageJson.scripts?.['verify:foundation:sqlite-runtime:matrix']).toBe(
       'npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-sqlite-runtime.js --matrix'
     );
+    expect(packageJson.scripts?.['verify:foundation:sqlite-runtime:soak']).toBe(
+      'npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-sqlite-runtime.js --soak'
+    );
   });
 
-  test('verifier script covers smoke/medium/heavy profiles and matrix runs across dist runtime and packaged sidecar restart continuity', () => {
+  test('verifier script covers smoke/medium/heavy profiles, soak gates, and matrix runs across dist runtime and packaged sidecar restart continuity', () => {
     const source = fs.readFileSync(scriptPath, 'utf8');
 
     expect(source).toContain('WORKLOAD_PROFILES');
     expect(source).toContain("profileId: 'medium'");
     expect(source).toContain("profileId: 'heavy'");
-    expect(source).toContain("suiteKind: 'matrix'");
+    expect(source).toContain("arg === '--matrix'");
+    expect(source).toContain("arg === '--soak'");
+    expect(source).toContain('--soak-cycles');
     expect(source).toContain('dist_node_runtime');
     expect(source).toContain('packaged_sidecar');
     expect(source).toContain('knowledge_graph_store.graphdb.v1.sqlite');
@@ -48,6 +53,11 @@ describe('foundation sqlite runtime verification contract', () => {
     expect(source).toContain("genericQuery: 'persist graph content restart sqlite proof'");
     expect(source).toContain('graphDbLastSnapshotMetadata');
     expect(source).toContain('heavy_runtime_anchor_');
-    expect(source).toContain("args.has('--matrix')");
+    expect(source).toContain("options.suiteKind === 'matrix'");
+    expect(source).toContain('foundation-sqlite-runtime-report-latest.json');
+    expect(source).toContain('restartCycles');
+    expect(source).toContain('maxStartupP95Ms');
+    expect(source).toContain('maxQueryMaxMs');
+    expect(source).toContain('computeRequestTimeoutMs');
   });
 });

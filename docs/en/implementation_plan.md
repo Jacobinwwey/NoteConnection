@@ -30,7 +30,8 @@ Bring the implementation plan back in line with `main` reality at three levels:
    - avoid reintroducing transition-only assumptions into CI gates,
    - keep fixrisk closure criteria tied to repo-controlled reality.
 2. **P1: release-grade graph/store hardening**
-   - extend the current operational `graphdb/sqlite` baseline from restart/workload proof into soak and performance closure.
+   - extend the current operational `graphdb/sqlite` baseline from restart/workload proof into soak and performance closure,
+   - keep a dedicated host-level soak gate (`verify:foundation:sqlite-runtime:soak`) so release-grade evidence is not diluted into the lighter matrix proof.
 3. **P2: release-grade ANN calibration**
    - keep the `external_http` connector green under workload proof, then close recall/latency threshold calibration.
 4. **P3: Tauri-first reply/render surface expansion**

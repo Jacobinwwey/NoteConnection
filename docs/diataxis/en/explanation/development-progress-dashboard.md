@@ -73,6 +73,26 @@ The next gap is narrower now:
 - keep the new render substrate honest under real browser/Tauri runtime verification,
 - preserve a clean downgrade/materialization boundary for later Godot reuse.
 
+## 2026-05-27 Phase-1 SQLite Soak Gate Baseline
+
+- The embedded `graphdb/sqlite` baseline no longer stops at restart continuity plus workload-envelope proof.
+- Current HEAD now also carries a dedicated host-level soak/performance verifier:
+  - `npm run verify:foundation:sqlite-runtime:soak`
+  - emits structured JSON reports under `output/verification/foundation-sqlite-runtime/`,
+  - keeps release-grade evidence separate from the lighter `smoke` / `medium` / `heavy` matrix path.
+
+What this newly proves:
+
+- repeated restart cycles on both `dist` runtime and packaged sidecar paths,
+- structured startup / ingest / readiness / diagnostics / query duration summaries,
+- threshold-gated p95 / max latency checks for the sqlite baseline.
+
+What it still does not prove:
+
+- long-horizon multi-host evidence,
+- calibrated final release thresholds across heterogeneous machines,
+- a declaration that A8 is fully production-closed.
+
 Code-vs-plan reality for this slice:
 
 | Area | Prior expectation | Current HEAD reality | Status |

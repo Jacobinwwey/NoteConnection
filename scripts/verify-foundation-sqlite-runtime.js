@@ -9,10 +9,25 @@ const { spawn, spawnSync } = require('child_process');
 const REPO_ROOT = path.resolve(__dirname, '..');
 const DIST_SERVER_ENTRY = path.join(REPO_ROOT, 'dist', 'src', 'server.js');
 const DIST_FRONTEND_DIR = path.join(REPO_ROOT, 'dist', 'src', 'frontend');
+const OUTPUT_ROOT = path.join(REPO_ROOT, 'output', 'verification', 'foundation-sqlite-runtime');
 const SQLITE_FILENAME = 'knowledge_graph_store.graphdb.v1.sqlite';
 const LOOPBACK_HOST = '127.0.0.1';
 const STARTUP_TIMEOUT_MS = 30000;
 const SHUTDOWN_TIMEOUT_MS = 8000;
+const REQUEST_TIMEOUT_SCALE = Number.isFinite(Number(process.env.NOTE_CONNECTION_FOUNDATION_SQLITE_TIMEOUT_SCALE))
+    ? Math.max(0.5, Number(process.env.NOTE_CONNECTION_FOUNDATION_SQLITE_TIMEOUT_SCALE))
+    : 1;
+const SOAK_THRESHOLD_DEFAULTS = Object.freeze({
+    maxStartupP95Ms: 12000,
+    maxStartupMaxMs: 18000,
+    maxIngestP95Ms: 18000,
+    maxIngestMaxMs: 32000,
+    maxReadinessP95Ms: 4500,
+    maxDiagnosticsP95Ms: 4500,
+    maxQueryP95Ms: 2500,
+    maxQueryMaxMs: 6000,
+    packagedModeMultiplier: 1.25,
+});
 const WORKLOAD_PROFILES = {
     smoke: {
         profileId: 'smoke',
@@ -43,29 +58,160 @@ const WORKLOAD_PROFILES = {
     },
 };
 
-function parseCliOptions(argv) {
-    const args = new Set(argv);
-    if (args.has('--matrix')) {
+function ensureDir(dirPath) {
+    fs.mkdirSync(dirPath, { recursive: true });
+    return dirPath;
+}
+
+function toFilenameTimestamp(isoText) {
+    return String(isoText || '').replace(/[:.]/g, '-');
+}
+
+function parsePositiveInt(rawValue, fallback, minimum, maximum) {
+    const parsed = Number(rawValue);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+        return fallback;
+    }
+    const rounded = Math.floor(parsed);
+    return Math.min(maximum, Math.max(minimum, rounded));
+}
+
+function parseOptionalPositiveNumber(rawValue) {
+    if (rawValue === null || typeof rawValue === 'undefined' || rawValue === '') {
+        return null;
+    }
+    const parsed = Number(rawValue);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+        return null;
+    }
+    return parsed;
+}
+
+function normalizeProfileKey(rawValue, fallback = 'smoke') {
+    const normalized = String(rawValue || '').trim().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(WORKLOAD_PROFILES, normalized)
+        ? normalized
+        : fallback;
+}
+
+function roundMetric(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric < 0) {
+        return 0;
+    }
+    return Number(numeric.toFixed(4));
+}
+
+function computePercentile(sortedSamples, percentile) {
+    if (sortedSamples.length === 0) {
+        return 0;
+    }
+    if (sortedSamples.length === 1) {
+        return sortedSamples[0];
+    }
+    const clampedPercentile = Math.min(1, Math.max(0, percentile));
+    const rank = (sortedSamples.length - 1) * clampedPercentile;
+    const lower = Math.floor(rank);
+    const upper = Math.ceil(rank);
+    if (lower === upper) {
+        return sortedSamples[lower];
+    }
+    const weight = rank - lower;
+    return (sortedSamples[lower] * (1 - weight)) + (sortedSamples[upper] * weight);
+}
+
+function summarizeDurations(samplesMs) {
+    const sanitized = samplesMs
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value) && value >= 0)
+        .sort((left, right) => left - right);
+    if (sanitized.length === 0) {
         return {
-            suiteKind: 'matrix',
-            profileKeys: ['smoke', 'medium', 'heavy'],
+            count: 0,
+            minMs: 0,
+            p50Ms: 0,
+            p95Ms: 0,
+            p99Ms: 0,
+            maxMs: 0,
+            meanMs: 0,
         };
     }
-    if (args.has('--heavy')) {
-        return {
-            suiteKind: 'single',
-            profileKeys: ['heavy'],
-        };
-    }
-    if (args.has('--medium')) {
-        return {
-            suiteKind: 'single',
-            profileKeys: ['medium'],
-        };
-    }
+    const sum = sanitized.reduce((accumulator, value) => accumulator + value, 0);
     return {
+        count: sanitized.length,
+        minMs: roundMetric(sanitized[0]),
+        p50Ms: roundMetric(computePercentile(sanitized, 0.5)),
+        p95Ms: roundMetric(computePercentile(sanitized, 0.95)),
+        p99Ms: roundMetric(computePercentile(sanitized, 0.99)),
+        maxMs: roundMetric(sanitized[sanitized.length - 1]),
+        meanMs: roundMetric(sum / sanitized.length),
+    };
+}
+
+function buildSoakThresholds() {
+    return {
+        maxStartupP95Ms: parseOptionalPositiveNumber(process.env.NOTE_CONNECTION_FOUNDATION_SQLITE_MAX_STARTUP_P95_MS)
+            ?? SOAK_THRESHOLD_DEFAULTS.maxStartupP95Ms,
+        maxStartupMaxMs: parseOptionalPositiveNumber(process.env.NOTE_CONNECTION_FOUNDATION_SQLITE_MAX_STARTUP_MAX_MS)
+            ?? SOAK_THRESHOLD_DEFAULTS.maxStartupMaxMs,
+        maxIngestP95Ms: parseOptionalPositiveNumber(process.env.NOTE_CONNECTION_FOUNDATION_SQLITE_MAX_INGEST_P95_MS)
+            ?? SOAK_THRESHOLD_DEFAULTS.maxIngestP95Ms,
+        maxIngestMaxMs: parseOptionalPositiveNumber(process.env.NOTE_CONNECTION_FOUNDATION_SQLITE_MAX_INGEST_MAX_MS)
+            ?? SOAK_THRESHOLD_DEFAULTS.maxIngestMaxMs,
+        maxReadinessP95Ms: parseOptionalPositiveNumber(process.env.NOTE_CONNECTION_FOUNDATION_SQLITE_MAX_READINESS_P95_MS)
+            ?? SOAK_THRESHOLD_DEFAULTS.maxReadinessP95Ms,
+        maxDiagnosticsP95Ms: parseOptionalPositiveNumber(process.env.NOTE_CONNECTION_FOUNDATION_SQLITE_MAX_DIAGNOSTICS_P95_MS)
+            ?? SOAK_THRESHOLD_DEFAULTS.maxDiagnosticsP95Ms,
+        maxQueryP95Ms: parseOptionalPositiveNumber(process.env.NOTE_CONNECTION_FOUNDATION_SQLITE_MAX_QUERY_P95_MS)
+            ?? SOAK_THRESHOLD_DEFAULTS.maxQueryP95Ms,
+        maxQueryMaxMs: parseOptionalPositiveNumber(process.env.NOTE_CONNECTION_FOUNDATION_SQLITE_MAX_QUERY_MAX_MS)
+            ?? SOAK_THRESHOLD_DEFAULTS.maxQueryMaxMs,
+        packagedModeMultiplier: parseOptionalPositiveNumber(process.env.NOTE_CONNECTION_FOUNDATION_SQLITE_SOAK_PACKAGED_MODE_MULTIPLIER)
+            ?? SOAK_THRESHOLD_DEFAULTS.packagedModeMultiplier,
+    };
+}
+
+function parseCliOptions(argv) {
+    const options = {
         suiteKind: 'single',
-        profileKeys: ['smoke'],
+        selectedProfileKey: 'smoke',
+        soakProfileKey: normalizeProfileKey(process.env.NOTE_CONNECTION_FOUNDATION_SQLITE_SOAK_PROFILE, 'heavy'),
+        soakCycles: parsePositiveInt(process.env.NOTE_CONNECTION_FOUNDATION_SQLITE_SOAK_CYCLES, 5, 1, 20),
+        soakThresholds: buildSoakThresholds(),
+    };
+
+    for (let index = 0; index < argv.length; index += 1) {
+        const arg = argv[index];
+        if (arg === '--matrix') {
+            options.suiteKind = 'matrix';
+            continue;
+        }
+        if (arg === '--soak') {
+            options.suiteKind = 'soak';
+            continue;
+        }
+        if (arg === '--smoke' || arg === '--medium' || arg === '--heavy') {
+            options.selectedProfileKey = arg.slice(2);
+            continue;
+        }
+        if (arg === '--soak-profile' && argv[index + 1]) {
+            options.soakProfileKey = normalizeProfileKey(argv[index + 1], options.soakProfileKey);
+            index += 1;
+            continue;
+        }
+        if (arg === '--soak-cycles' && argv[index + 1]) {
+            options.soakCycles = parsePositiveInt(argv[index + 1], options.soakCycles, 1, 20);
+            index += 1;
+        }
+    }
+
+    return {
+        suiteKind: options.suiteKind,
+        profileKeys: options.suiteKind === 'matrix'
+            ? ['smoke', 'medium', 'heavy']
+            : [options.suiteKind === 'soak' ? options.soakProfileKey : options.selectedProfileKey],
+        soakCycles: options.soakCycles,
+        soakThresholds: options.soakThresholds,
     };
 }
 
@@ -127,6 +273,28 @@ function assertCondition(condition, message) {
     }
 }
 
+function computeRequestTimeoutMs(context = {}) {
+    const requestPath = String(context.requestPath || '').trim();
+    const workloadProfile = context.workloadProfile || { documentCount: 1 };
+    const documentCount = Math.max(1, Math.floor(Number(workloadProfile.documentCount || 1)));
+    const mode = String(context.mode || '').trim();
+    let timeoutMs = 4000;
+
+    if (requestPath === '/api/knowledge/ingest') {
+        timeoutMs = Math.max(20000, documentCount * 400);
+    } else if (requestPath === '/api/knowledge/query') {
+        timeoutMs = Math.max(6000, documentCount * 50);
+    } else if (requestPath === '/api/knowledge/store-diagnostics' || requestPath === '/api/knowledge/foundation/readiness') {
+        timeoutMs = Math.max(4000, documentCount * 20);
+    }
+
+    if (mode === 'packaged_sidecar') {
+        timeoutMs = Math.round(timeoutMs * 1.35);
+    }
+
+    return Math.max(2000, Math.round(timeoutMs * REQUEST_TIMEOUT_SCALE));
+}
+
 function getFreePort() {
     return new Promise((resolve, reject) => {
         const probe = http.createServer();
@@ -148,8 +316,9 @@ function getFreePort() {
     });
 }
 
-function requestJson(port, method, requestPath, body) {
+function requestJson(port, method, requestPath, body, timeoutMs = 2000) {
     return new Promise((resolve, reject) => {
+        const startedAtMs = Date.now();
         const payload = typeof body === 'undefined'
             ? null
             : Buffer.from(JSON.stringify(body), 'utf8');
@@ -184,12 +353,13 @@ function requestJson(port, method, requestPath, body) {
                     resolve({
                         status: res.statusCode || 0,
                         body: parsed,
+                        durationMs: Date.now() - startedAtMs,
                     });
                 });
             }
         );
 
-        req.setTimeout(2000, () => {
+        req.setTimeout(timeoutMs, () => {
             req.destroy(new Error(`Timed out requesting ${requestPath}`));
         });
         req.once('error', reject);
@@ -203,11 +373,16 @@ function requestJson(port, method, requestPath, body) {
 async function waitForServer(port, timeoutMs) {
     const startedAt = Date.now();
     let lastError = null;
+    let probeCount = 0;
     while ((Date.now() - startedAt) < timeoutMs) {
+        probeCount += 1;
         try {
             const response = await requestJson(port, 'GET', '/api/knowledge/store-diagnostics');
             if (response.status >= 200 && response.status < 500) {
-                return;
+                return {
+                    startupDurationMs: Date.now() - startedAt,
+                    probeCount,
+                };
             }
             lastError = new Error(`Unexpected status ${response.status} while waiting for server.`);
         } catch (error) {
@@ -525,19 +700,167 @@ function assertSnapshotMetadata(diagnosticsSummary, mode, phase, workloadProfile
 async function runQueries(port, mode, phase, workloadQueries) {
     const queryResults = [];
     for (const queryPlan of workloadQueries) {
-        const queryResponse = await requestJson(port, 'POST', '/api/knowledge/query', queryPlan.request);
+        const queryResponse = await requestJson(
+            port,
+            'POST',
+            '/api/knowledge/query',
+            queryPlan.request,
+            computeRequestTimeoutMs({ requestPath: '/api/knowledge/query', mode, workloadProfile: queryPlan.workloadProfile })
+        );
         queryResults.push({
             phaseId: queryPlan.phaseId,
             ...assertQueryResponse(queryResponse, mode, `${phase}:${queryPlan.phaseId}`, {
                 expectedDocumentId: queryPlan.expectedDocumentId,
                 minItemCount: queryPlan.minItemCount,
             }),
+            durationMs: roundMetric(queryResponse.durationMs),
         });
     }
     return queryResults;
 }
 
-async function runScenario(mode, workloadProfile) {
+function collectScenarioPerformance(result) {
+    const initialPass = result.firstPass || {};
+    const restartCycles = Array.isArray(result.restartCycles) ? result.restartCycles : [];
+    const startupSamples = [
+        Number(initialPass.startupDurationMs || 0),
+        ...restartCycles.map((cycle) => Number(cycle.startupDurationMs || 0)),
+    ];
+    const ingestSamples = [Number(initialPass.ingestDurationMs || 0)];
+    const readinessSamples = [
+        Number(initialPass.readiness && initialPass.readiness.durationMs || 0),
+        ...restartCycles.map((cycle) => Number(cycle.readiness && cycle.readiness.durationMs || 0)),
+    ];
+    const diagnosticsSamples = [
+        Number(initialPass.diagnostics && initialPass.diagnostics.durationMs || 0),
+        ...restartCycles.map((cycle) => Number(cycle.diagnostics && cycle.diagnostics.durationMs || 0)),
+    ];
+    const querySamples = [
+        ...(Array.isArray(initialPass.queries) ? initialPass.queries : []).map((query) => Number(query.durationMs || 0)),
+        ...restartCycles.flatMap((cycle) => (Array.isArray(cycle.queries) ? cycle.queries : []).map((query) => Number(query.durationMs || 0))),
+    ];
+
+    return {
+        startupDurationMs: summarizeDurations(startupSamples),
+        ingestDurationMs: summarizeDurations(ingestSamples),
+        readinessDurationMs: summarizeDurations(readinessSamples),
+        diagnosticsDurationMs: summarizeDurations(diagnosticsSamples),
+        queryDurationMs: summarizeDurations(querySamples),
+    };
+}
+
+function resolveSoakThreshold(soakThresholds, key, mode) {
+    const raw = Number(soakThresholds[key] || 0);
+    const multiplier = mode === 'packaged_sidecar'
+        ? Number(soakThresholds.packagedModeMultiplier || 1)
+        : 1;
+    return roundMetric(raw * multiplier);
+}
+
+function createSoakGateResult(gateId, label, observedMs, maxAllowedMs, sampleCount) {
+    const observed = roundMetric(observedMs);
+    const allowed = roundMetric(maxAllowedMs);
+    return {
+        gateId,
+        label,
+        passed: sampleCount > 0 && observed <= allowed,
+        observedMs: observed,
+        maxAllowedMs: allowed,
+        sampleCount,
+    };
+}
+
+function buildSoakPerformanceSummary(mode, workloadProfile, performance, soakThresholds, restartCycleCount) {
+    const gates = [
+        createSoakGateResult(
+            'startup_p95',
+            'Startup p95 must stay within soak budget.',
+            performance.startupDurationMs.p95Ms,
+            resolveSoakThreshold(soakThresholds, 'maxStartupP95Ms', mode),
+            performance.startupDurationMs.count
+        ),
+        createSoakGateResult(
+            'startup_max',
+            'Startup max must stay within soak budget.',
+            performance.startupDurationMs.maxMs,
+            resolveSoakThreshold(soakThresholds, 'maxStartupMaxMs', mode),
+            performance.startupDurationMs.count
+        ),
+        createSoakGateResult(
+            'ingest_p95',
+            'Ingest p95 must stay within soak budget.',
+            performance.ingestDurationMs.p95Ms,
+            resolveSoakThreshold(soakThresholds, 'maxIngestP95Ms', mode),
+            performance.ingestDurationMs.count
+        ),
+        createSoakGateResult(
+            'ingest_max',
+            'Ingest max must stay within soak budget.',
+            performance.ingestDurationMs.maxMs,
+            resolveSoakThreshold(soakThresholds, 'maxIngestMaxMs', mode),
+            performance.ingestDurationMs.count
+        ),
+        createSoakGateResult(
+            'readiness_p95',
+            'Foundation readiness p95 must stay within soak budget.',
+            performance.readinessDurationMs.p95Ms,
+            resolveSoakThreshold(soakThresholds, 'maxReadinessP95Ms', mode),
+            performance.readinessDurationMs.count
+        ),
+        createSoakGateResult(
+            'diagnostics_p95',
+            'Store diagnostics p95 must stay within soak budget.',
+            performance.diagnosticsDurationMs.p95Ms,
+            resolveSoakThreshold(soakThresholds, 'maxDiagnosticsP95Ms', mode),
+            performance.diagnosticsDurationMs.count
+        ),
+        createSoakGateResult(
+            'query_p95',
+            'Query p95 must stay within soak budget.',
+            performance.queryDurationMs.p95Ms,
+            resolveSoakThreshold(soakThresholds, 'maxQueryP95Ms', mode),
+            performance.queryDurationMs.count
+        ),
+        createSoakGateResult(
+            'query_max',
+            'Query max must stay within soak budget.',
+            performance.queryDurationMs.maxMs,
+            resolveSoakThreshold(soakThresholds, 'maxQueryMaxMs', mode),
+            performance.queryDurationMs.count
+        ),
+    ];
+
+    return {
+        profileId: workloadProfile.profileId,
+        restartCycleCount,
+        thresholds: {
+            maxStartupP95Ms: resolveSoakThreshold(soakThresholds, 'maxStartupP95Ms', mode),
+            maxStartupMaxMs: resolveSoakThreshold(soakThresholds, 'maxStartupMaxMs', mode),
+            maxIngestP95Ms: resolveSoakThreshold(soakThresholds, 'maxIngestP95Ms', mode),
+            maxIngestMaxMs: resolveSoakThreshold(soakThresholds, 'maxIngestMaxMs', mode),
+            maxReadinessP95Ms: resolveSoakThreshold(soakThresholds, 'maxReadinessP95Ms', mode),
+            maxDiagnosticsP95Ms: resolveSoakThreshold(soakThresholds, 'maxDiagnosticsP95Ms', mode),
+            maxQueryP95Ms: resolveSoakThreshold(soakThresholds, 'maxQueryP95Ms', mode),
+            maxQueryMaxMs: resolveSoakThreshold(soakThresholds, 'maxQueryMaxMs', mode),
+        },
+        metrics: performance,
+        gates,
+        pass: gates.every((gate) => gate.passed),
+    };
+}
+
+function writeStructuredReport(report) {
+    ensureDir(OUTPUT_ROOT);
+    const timestamp = toFilenameTimestamp(report.verifiedAt);
+    const latestPath = path.join(OUTPUT_ROOT, 'foundation-sqlite-runtime-report-latest.json');
+    const datedPath = path.join(OUTPUT_ROOT, `foundation-sqlite-runtime-report-${timestamp}.json`);
+    const serialized = `${JSON.stringify(report, null, 2)}\n`;
+    fs.writeFileSync(latestPath, serialized, 'utf8');
+    fs.writeFileSync(datedPath, serialized, 'utf8');
+    return { latestPath, datedPath };
+}
+
+async function runScenario(mode, workloadProfile, cliOptions) {
     const fixture = createTempProject(`noteconnection-foundation-${mode}`);
     const sqlitePath = path.join(fixture.runtimeDataDir, SQLITE_FILENAME);
     const documents = buildWorkloadDocuments(mode, workloadProfile).map((document) => ({
@@ -549,6 +872,7 @@ async function runScenario(mode, workloadProfile) {
         incremental: true,
         documents,
     };
+    const restartCycleCount = cliOptions.suiteKind === 'soak' ? cliOptions.soakCycles : 1;
 
     let runtime = null;
     let port = await getFreePort();
@@ -556,31 +880,62 @@ async function runScenario(mode, workloadProfile) {
     const result = {
         mode,
         profileId: workloadProfile.profileId,
+        suiteKind: cliOptions.suiteKind,
+        restartCycleCount,
         ingestedDocuments: documents.length,
         sqlitePath,
         firstPass: null,
         restartPass: null,
+        restartCycles: [],
+        performance: null,
+        soak: null,
     };
 
     try {
         runtime = spawnRuntime(mode, { port, bridgePort, fixture });
-        await waitForServer(port, STARTUP_TIMEOUT_MS);
+        const firstStartup = await waitForServer(port, STARTUP_TIMEOUT_MS);
 
-        const ingestResponse = await requestJson(port, 'POST', '/api/knowledge/ingest', ingestPayload);
+        const ingestResponse = await requestJson(
+            port,
+            'POST',
+            '/api/knowledge/ingest',
+            ingestPayload,
+            computeRequestTimeoutMs({ requestPath: '/api/knowledge/ingest', mode, workloadProfile })
+        );
         assertCondition(ingestResponse.status === 200, `[${mode}] ingest status=${ingestResponse.status}`);
         assertCondition(ingestResponse.body && ingestResponse.body.success === true, `[${mode}] ingest success!=true`);
         assertCondition(fs.existsSync(sqlitePath), `[${mode}] sqlite store not created at ${sqlitePath}`);
 
-        const firstQueries = await runQueries(port, mode, 'first_pass', workloadQueries);
-        const readinessResponse = await requestJson(port, 'GET', '/api/knowledge/foundation/readiness');
-        const diagnosticsResponse = await requestJson(port, 'GET', '/api/knowledge/store-diagnostics');
+        const timedWorkloadQueries = workloadQueries.map((queryPlan) => ({ ...queryPlan, workloadProfile }));
+        const firstQueries = await runQueries(port, mode, 'first_pass', timedWorkloadQueries);
+        const readinessResponse = await requestJson(
+            port,
+            'GET',
+            '/api/knowledge/foundation/readiness',
+            undefined,
+            computeRequestTimeoutMs({ requestPath: '/api/knowledge/foundation/readiness', mode, workloadProfile })
+        );
+        const diagnosticsResponse = await requestJson(
+            port,
+            'GET',
+            '/api/knowledge/store-diagnostics',
+            undefined,
+            computeRequestTimeoutMs({ requestPath: '/api/knowledge/store-diagnostics', mode, workloadProfile })
+        );
         const firstDiagnostics = assertStoreDiagnostics(diagnosticsResponse, mode, 'first_pass');
         result.firstPass = {
+            startupDurationMs: roundMetric(firstStartup.startupDurationMs),
+            startupProbeCount: firstStartup.probeCount,
+            ingestDurationMs: roundMetric(ingestResponse.durationMs),
             diagnostics: {
                 ...firstDiagnostics,
+                durationMs: roundMetric(diagnosticsResponse.durationMs),
                 snapshotMetadata: assertSnapshotMetadata(firstDiagnostics, mode, 'first_pass', workloadProfile),
             },
-            readiness: assertFoundationReadiness(readinessResponse, mode, 'first_pass'),
+            readiness: {
+                ...assertFoundationReadiness(readinessResponse, mode, 'first_pass'),
+                durationMs: roundMetric(readinessResponse.durationMs),
+            },
             queries: firstQueries,
         };
 
@@ -588,23 +943,67 @@ async function runScenario(mode, workloadProfile) {
         await assertPortFree(port);
         runtime = null;
 
-        port = await getFreePort();
-        bridgePort = await getFreePort();
-        runtime = spawnRuntime(mode, { port, bridgePort, fixture });
-        await waitForServer(port, STARTUP_TIMEOUT_MS);
+        for (let cycleIndex = 1; cycleIndex <= restartCycleCount; cycleIndex += 1) {
+            port = await getFreePort();
+            bridgePort = await getFreePort();
+            runtime = spawnRuntime(mode, { port, bridgePort, fixture });
+            const restartStartup = await waitForServer(port, STARTUP_TIMEOUT_MS);
 
-        const restartQueries = await runQueries(port, mode, 'restart_pass', workloadQueries);
-        const restartReadinessResponse = await requestJson(port, 'GET', '/api/knowledge/foundation/readiness');
-        const restartDiagnosticsResponse = await requestJson(port, 'GET', '/api/knowledge/store-diagnostics');
-        const restartDiagnostics = assertStoreDiagnostics(restartDiagnosticsResponse, mode, 'restart_pass');
-        result.restartPass = {
-            diagnostics: {
-                ...restartDiagnostics,
-                snapshotMetadata: assertSnapshotMetadata(restartDiagnostics, mode, 'restart_pass', workloadProfile),
-            },
-            readiness: assertFoundationReadiness(restartReadinessResponse, mode, 'restart_pass'),
-            queries: restartQueries,
-        };
+            const restartQueries = await runQueries(port, mode, `restart_cycle_${cycleIndex}`, timedWorkloadQueries);
+            const restartReadinessResponse = await requestJson(
+                port,
+                'GET',
+                '/api/knowledge/foundation/readiness',
+                undefined,
+                computeRequestTimeoutMs({ requestPath: '/api/knowledge/foundation/readiness', mode, workloadProfile })
+            );
+            const restartDiagnosticsResponse = await requestJson(
+                port,
+                'GET',
+                '/api/knowledge/store-diagnostics',
+                undefined,
+                computeRequestTimeoutMs({ requestPath: '/api/knowledge/store-diagnostics', mode, workloadProfile })
+            );
+            const restartDiagnostics = assertStoreDiagnostics(restartDiagnosticsResponse, mode, `restart_cycle_${cycleIndex}`);
+            const restartCycle = {
+                cycleIndex,
+                startupDurationMs: roundMetric(restartStartup.startupDurationMs),
+                startupProbeCount: restartStartup.probeCount,
+                diagnostics: {
+                    ...restartDiagnostics,
+                    durationMs: roundMetric(restartDiagnosticsResponse.durationMs),
+                    snapshotMetadata: assertSnapshotMetadata(restartDiagnostics, mode, `restart_cycle_${cycleIndex}`, workloadProfile),
+                },
+                readiness: {
+                    ...assertFoundationReadiness(restartReadinessResponse, mode, `restart_cycle_${cycleIndex}`),
+                    durationMs: roundMetric(restartReadinessResponse.durationMs),
+                },
+                queries: restartQueries,
+            };
+            result.restartCycles.push(restartCycle);
+            if (cycleIndex === 1) {
+                result.restartPass = restartCycle;
+            }
+
+            await stopRuntime(runtime);
+            await assertPortFree(port);
+            runtime = null;
+        }
+
+        result.performance = collectScenarioPerformance(result);
+        if (cliOptions.suiteKind === 'soak') {
+            result.soak = buildSoakPerformanceSummary(
+                mode,
+                workloadProfile,
+                result.performance,
+                cliOptions.soakThresholds,
+                restartCycleCount
+            );
+            assertCondition(
+                result.soak.pass,
+                `[${mode}] soak performance gates failed: ${result.soak.gates.filter((gate) => !gate.passed).map((gate) => gate.gateId).join(', ')}`
+            );
+        }
 
         return result;
     } catch (error) {
@@ -631,6 +1030,7 @@ async function main() {
             arch: process.arch,
         },
         suiteKind: cliOptions.suiteKind,
+        soakCycles: cliOptions.soakCycles,
         profileRuns: [],
     };
 
@@ -645,13 +1045,20 @@ async function main() {
                 minAtomCount: workloadProfile.minAtomCount,
             },
             modes: [
-                await runScenario('dist_node_runtime', workloadProfile),
-                await runScenario('packaged_sidecar', workloadProfile),
+                await runScenario('dist_node_runtime', workloadProfile, cliOptions),
+                await runScenario('packaged_sidecar', workloadProfile, cliOptions),
             ],
         });
     }
 
+    const reportPaths = writeStructuredReport(report);
     console.log(JSON.stringify(report, null, 2));
+    console.log(
+        `[foundation-sqlite-runtime] Report written: ${path.relative(REPO_ROOT, reportPaths.latestPath).replace(/\\/g, '/')}`
+    );
+    console.log(
+        `[foundation-sqlite-runtime] Timestamped report written: ${path.relative(REPO_ROOT, reportPaths.datedPath).replace(/\\/g, '/')}`
+    );
     console.log('[foundation-sqlite-runtime] PASS');
 }
 

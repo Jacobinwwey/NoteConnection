@@ -73,6 +73,26 @@ Tauri-first reply rendering 基线已交付：
 - 让新的共享 render substrate 在真实 browser/Tauri 运行时下持续经受验证，
 - 为后续 Godot 降级 / 物化保留干净边界，而不是重新把 Godot 约束塞回当前 Tauri UX。
 
+## 2026-05-27 Phase-1 SQLite Soak Gate 基线
+
+- embedded `graphdb/sqlite` 基线现在不再只停留在“重启连续性 + workload envelope”证明。
+- 当前 HEAD 还新增了一条专用的主机级 soak/performance verifier：
+  - `npm run verify:foundation:sqlite-runtime:soak`
+  - 会把结构化 JSON 报告写入 `output/verification/foundation-sqlite-runtime/`，
+  - 并把发布级证据与较轻量的 `smoke` / `medium` / `heavy` 矩阵验证分开。
+
+这条新门禁当前能够证明：
+
+- `dist` runtime 与 packaged sidecar 两条路径上的重复重启周期，
+- startup / ingest / readiness / diagnostics / query 五类时延统计摘要，
+- 面向 sqlite 基线的 p95 / max latency 阈值门禁。
+
+这条门禁当前仍不能单独证明：
+
+- 跨多宿主、长时间窗口的稳定证据，
+- 面向异构机器的最终发布阈值校准，
+- A8 已经完全达到 production-closed。
+
 这条切片的代码 / 方案现实矩阵：
 
 | 区域 | 先前期望 | 当前 HEAD 现实 | 状态 |

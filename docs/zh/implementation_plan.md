@@ -31,7 +31,8 @@
    - 不再让过渡期假设重新进入 CI 门禁，
    - fixrisk 的闭环标准始终绑定仓库可控现实。
 2. **P1：release-grade graph/store 加固**
-   - 把当前 `graphdb/sqlite` operational baseline 从重启/工作负载证明继续推进到 soak 与性能闭环。
+   - 把当前 `graphdb/sqlite` operational baseline 从重启/工作负载证明继续推进到 soak 与性能闭环，
+   - 保留独立的主机级 soak 门禁（`verify:foundation:sqlite-runtime:soak`），避免把发布级证据稀释到较轻量的矩阵验证里。
 3. **P2：release-grade ANN 校准**
    - 保持 `external_http` connector 在 workload proof 下稳定，再收口 recall/latency 阈值校准。
 4. **P3：Tauri-first reply/render surface 扩展**
