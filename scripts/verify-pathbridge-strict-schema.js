@@ -131,7 +131,7 @@ function main() {
       retain_history: true,
       focus_mode: false,
       background: 'belfast_sunset_puresky_4k.exr',
-      bg_brightness: 1.0,
+      bg_brightness: 0.1,
       reading_mode: 'window',
       reader_render_mode: 'render',
       reader_toggle_source_shortcut: 'Ctrl+M',
