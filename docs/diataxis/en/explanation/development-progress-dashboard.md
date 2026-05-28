@@ -67,6 +67,12 @@ Tauri-first reply rendering baseline delivered:
 - `src/frontend/workspace_panes.js` now mounts assistant replies through typed blocks instead of only plain text when structured payloads are present,
 - `src/frontend/agent_workspace.js` keeps legacy fallback behavior intact, so older `assistantMessage`-only flows still render.
 
+The next real improvement beyond that baseline is now also in code:
+
+- `src/learning/KnowledgeLearningPlatform.ts` no longer treats `assistantBlocks` as a thin transport wrapper around the same old answer string,
+- the scoped conversation reply is now organized into explicit overview / explanation / evidence summary / memory notice / action guidance sections before citations and knowledge-action affordances are appended,
+- which means the Tauri agent surface can now look materially different even when the underlying knowledge result set is unchanged.
+
 The next gap is narrower now:
 
 - broaden block coverage where future endpoints emit richer assistant payloads,

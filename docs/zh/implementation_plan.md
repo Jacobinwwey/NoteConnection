@@ -36,7 +36,9 @@
 3. **P2：release-grade ANN 校准**
    - 保持 `external_http` connector 在 workload proof 下稳定，再收口 recall/latency 阈值校准。
 4. **P3：Tauri-first reply/render surface 扩展**
-   - 继续以共享的 Reader-derived runtime 作为 Tauri 基线，在不破坏兼容性的前提下扩展 typed block 使用面。
+   - 继续以共享的 Reader-derived runtime 作为 Tauri 基线，
+   - 把 `assistantBlocks` 从“legacy answer 的薄包装层”推进为真正的回复组织层，
+   - 在不破坏兼容性的前提下继续扩展 typed block 使用面。
 5. **P4：tutor routing 与 orchestration 加固**
    - 从已激活的 local-first 路由推进到生产级多 provider 策略。
 6. **P5：架构压力缩减**
@@ -67,6 +69,7 @@
   - Tauri agent workspace 中的 typed reply-rendering model，
   - Reader render substrate 在 agent reply surface 中的共享复用，
   - 面向大型 HTML assistant output 的 artifact-style 隔离路径（sandboxed preview）。
+  - assistant 输出现在按 overview / explanation / evidence summary / memory notice / action guidance 分块组织，而不再只是单个 markdown answer 的包装。
 
 #### 下一步执行顺序
 

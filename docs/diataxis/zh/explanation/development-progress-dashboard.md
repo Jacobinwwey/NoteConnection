@@ -67,6 +67,12 @@ Tauri-first reply rendering 基线已交付：
 - `src/frontend/workspace_panes.js` 现已在结构化载荷存在时通过 typed blocks 挂载 assistant reply，而不再只走纯文本，
 - `src/frontend/agent_workspace.js` 继续保留 legacy fallback，因此旧的 `assistantMessage`-only 路径仍然可显示。
 
+在这条基线之上，当前代码又前进了一步：
+
+- `src/learning/KnowledgeLearningPlatform.ts` 不再把 `assistantBlocks` 当成“同一段旧 answer 的运输包装层”，
+- scoped conversation reply 现在会先组织成明确的 overview / explanation / evidence summary / memory notice / action guidance，再追加 citations 与 knowledge-action affordance，
+- 这意味着即便底层知识命中集合没变，Tauri 中的 agent 输出也已经可以在结构上明显不同。
+
 当前剩余缺口已经收窄为：
 
 - 当更多端点开始返回 richer assistant payload 时，继续扩充 block 覆盖面，

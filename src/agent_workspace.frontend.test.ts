@@ -2770,11 +2770,25 @@ describe('agent workspace learning-path integration', () => {
             svg: '<svg><text>Rendered Mermaid</text></svg>',
         }));
         (window as any).marked = {
-            parse: jest.fn(() => (
-                '<h2>Scoped Answer</h2>'
-                + '<p>Inline math $E=mc^2$ and a diagram:</p>'
-                + '<pre><code class="language-mermaid">graph TD;A-->B;</code></pre>'
-            )),
+            parse: jest.fn((markdown: string) => {
+                if (markdown.includes('## Scoped Answer')) {
+                    return (
+                        '<h2>Scoped Answer</h2>'
+                        + '<ul><li>Relevant knowledge points: <strong>1</strong></li></ul>'
+                    );
+                }
+                if (markdown.includes('## Evidence Summary')) {
+                    return (
+                        '<h2>Evidence Summary</h2>'
+                        + '<p>Blocks Citation</p>'
+                    );
+                }
+                return (
+                    '<h2>Explanation</h2>'
+                    + '<p>Inline math $E=mc^2$ and a diagram:</p>'
+                    + '<pre><code class="language-mermaid">graph TD;A-->B;</code></pre>'
+                );
+            }),
         };
         (window as any).renderMathInElement = renderMathInElement;
         (window as any).mermaid = {
@@ -2796,9 +2810,24 @@ describe('agent workspace learning-path integration', () => {
                         answer: 'Scoped Answer',
                         assistantBlocks: [
                             {
+                                blockId: 'block_overview_1',
+                                type: 'main_markdown',
+                                markdown: '## Scoped Answer\n\n- Relevant knowledge points: **1**\n- Citations returned: **1**\n- Scoped memories recalled: **0**',
+                            },
+                            {
                                 blockId: 'block_main_1',
                                 type: 'main_markdown',
-                                markdown: '## Scoped Answer\n\nInline math $E=mc^2$ and a diagram:\n\n```mermaid\ngraph TD;A-->B;\n```',
+                                markdown: '## Explanation\n\nInline math $E=mc^2$ and a diagram:\n\n```mermaid\ngraph TD;A-->B;\n```',
+                            },
+                            {
+                                blockId: 'block_evidence_1',
+                                type: 'main_markdown',
+                                markdown: '## Evidence Summary\n\n1. **Blocks Citation** (Knowledge_Base/optics/blocks.md:18)\n   - Scoped snippet',
+                            },
+                            {
+                                blockId: 'block_notice_1',
+                                type: 'system_notice',
+                                text: 'No scoped memory note was recalled for this turn.',
                             },
                             {
                                 blockId: 'block_citations_1',
@@ -2884,6 +2913,9 @@ describe('agent workspace learning-path integration', () => {
         const assistantNode = document.querySelector('.agent-chat-message-rendered.agent-chat-message-assistant');
         expect(assistantNode).not.toBeNull();
         expect(assistantNode?.querySelector('h2')?.textContent).toBe('Scoped Answer');
+        expect(String(assistantNode?.textContent || '')).toContain('Relevant knowledge points');
+        expect(String(assistantNode?.textContent || '')).toContain('No scoped memory note was recalled for this turn.');
+        expect(String(assistantNode?.textContent || '')).toContain('Evidence Summary');
         expect(renderMathInElement).toHaveBeenCalled();
         expect((window as any).mermaid.initialize).toHaveBeenCalled();
         expect(mermaidRender).toHaveBeenCalled();

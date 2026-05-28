@@ -1458,6 +1458,21 @@ describe('KnowledgeLearningPlatform', () => {
 
         expect(response.answer).toContain('吸收');
         expect(response.citations.length).toBeGreaterThan(0);
+        expect(Array.isArray(response.assistantBlocks)).toBe(true);
+        expect(response.assistantBlocks?.map((block) => block.type)).toEqual(
+            expect.arrayContaining(['main_markdown', 'system_notice', 'citations', 'knowledge_actions'])
+        );
+        const markdownBlocks = (response.assistantBlocks || []).filter((block) => block.type === 'main_markdown');
+        expect(markdownBlocks.length).toBeGreaterThanOrEqual(3);
+        expect(
+            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('## Scoped Answer'))
+        ).toBe(true);
+        expect(
+            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('## Explanation'))
+        ).toBe(true);
+        expect(
+            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('## Evidence Summary'))
+        ).toBe(true);
         expect(response.trace.usedScope.corpusId).toBe('optics');
         expect(response.summary.appliedMemoryCount).toBeGreaterThan(0);
 

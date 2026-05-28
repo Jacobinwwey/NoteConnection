@@ -35,7 +35,9 @@ Bring the implementation plan back in line with `main` reality at three levels:
 3. **P2: release-grade ANN calibration**
    - keep the `external_http` connector green under workload proof, then close recall/latency threshold calibration.
 4. **P3: Tauri-first reply/render surface expansion**
-   - keep the shared Reader-derived runtime as the Tauri baseline and continue widening typed block usage without breaking compatibility.
+   - keep the shared Reader-derived runtime as the Tauri baseline,
+   - move `assistantBlocks` from a thin wrapper around the legacy answer string into a real reply-organization layer,
+   - continue widening typed block usage without breaking compatibility.
 5. **P4: tutor routing and orchestration hardening**
    - move from active local-first routing toward a production-proven multi-provider policy.
 6. **P5: architecture pressure reduction**
@@ -66,6 +68,7 @@ Align the active implementation plan with current code reality:
   - a typed reply-rendering model in the Tauri agent workspace,
   - shared reuse of Reader-derived markdown/math/mermaid rendering inside the agent reply surface,
   - artifact-style handling for large HTML assistant outputs through sandboxed preview.
+  - structured reply composition now splits the assistant output into overview / explanation / evidence summary / memory notice / action guidance blocks instead of emitting only one wrapped markdown answer.
 
 #### Next execution order
 

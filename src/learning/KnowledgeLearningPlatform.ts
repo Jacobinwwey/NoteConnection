@@ -7624,18 +7624,112 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         return `${memoryPrefix}The strongest scoped match is ${leadingPoint.title}. I found ${params.knowledgePoints.length} relevant knowledge point(s) and ${params.citations.length} citation(s).\n\nKey evidence:\n${evidenceLines.join('\n')}`;
     }
 
+    private buildScopedConversationOverviewMarkdown(params: {
+        knowledgePoints: AgentConversationKnowledgePoint[];
+        citations: KnowledgeCitation[];
+        recalledMemories: AgentConversationMemoryRecord[];
+    }): string {
+        const strongestPoint = params.knowledgePoints[0];
+        const lines = [
+            '## Scoped Answer',
+            '',
+        ];
+        if (strongestPoint) {
+            lines.push(`The strongest scoped match is **${strongestPoint.title}**.`, '');
+        } else {
+            lines.push('No scoped knowledge point produced a strong match for the current request.', '');
+        }
+        lines.push(
+            `- Relevant knowledge points: **${params.knowledgePoints.length}**`,
+            `- Citations returned: **${params.citations.length}**`,
+            `- Scoped memories recalled: **${params.recalledMemories.length}**`
+        );
+        return lines.join('\n');
+    }
+
+    private buildScopedConversationEvidenceMarkdown(params: {
+        citations: KnowledgeCitation[];
+    }): string {
+        const evidenceLines = params.citations.slice(0, 3).map((citation, index) => (
+            `${index + 1}. **${citation.title}** (${citation.sourcePath}${citation.startLine ? `:${citation.startLine}` : ''})\n   - ${citation.snippet}`
+        ));
+        if (evidenceLines.length <= 0) {
+            return '## Evidence Summary\n\nNo scoped citations were returned.';
+        }
+        return [
+            '## Evidence Summary',
+            '',
+            ...evidenceLines,
+        ].join('\n');
+    }
+
+    private buildScopedConversationMemoryNotice(params: {
+        recalledMemories: AgentConversationMemoryRecord[];
+    }): string {
+        if (params.recalledMemories.length <= 0) {
+            return 'No scoped memory note was recalled for this turn.';
+        }
+        if (params.recalledMemories.length === 1) {
+            return '1 scoped memory note was recalled and merged into the answer context.';
+        }
+        return `${params.recalledMemories.length} scoped memory notes were recalled and merged into the answer context.`;
+    }
+
+    private buildScopedConversationActionGuideMarkdown(params: {
+        knowledgePoints: AgentConversationKnowledgePoint[];
+    }): string {
+        if (params.knowledgePoints.length <= 0) {
+            return '## Next Actions\n\nNo actionable scoped knowledge card is available for this turn.';
+        }
+        return [
+            '## Next Actions',
+            '',
+            'Use the scoped knowledge cards below to continue with focus mode or guided learning for the highest-signal nodes:',
+            ...params.knowledgePoints.slice(0, 3).map((point) => `- ${point.title}`),
+        ].join('\n');
+    }
+
     private buildScopedConversationAssistantBlocks(params: {
         answer: string;
         citations: KnowledgeCitation[];
         knowledgePoints: AgentConversationKnowledgePoint[];
+        recalledMemories: AgentConversationMemoryRecord[];
     }): AgentConversationAssistantBlock[] {
-        const blocks: AgentConversationAssistantBlock[] = [
-            {
+        const blocks: AgentConversationAssistantBlock[] = [];
+        const overviewMarkdown = this.buildScopedConversationOverviewMarkdown(params);
+        const normalizedAnswer = String(params.answer || '').trim();
+        const evidenceMarkdown = this.buildScopedConversationEvidenceMarkdown(params);
+        const memoryNotice = this.buildScopedConversationMemoryNotice(params);
+        const actionGuideMarkdown = this.buildScopedConversationActionGuideMarkdown(params);
+
+        if (overviewMarkdown) {
+            blocks.push({
                 blockId: this.nextId('assistant_block'),
                 type: 'main_markdown',
-                markdown: String(params.answer || ''),
-            },
-        ];
+                markdown: overviewMarkdown,
+            });
+        }
+        if (normalizedAnswer) {
+            blocks.push({
+                blockId: this.nextId('assistant_block'),
+                type: 'main_markdown',
+                markdown: `## Explanation\n\n${normalizedAnswer}`,
+            });
+        }
+        if (evidenceMarkdown) {
+            blocks.push({
+                blockId: this.nextId('assistant_block'),
+                type: 'main_markdown',
+                markdown: evidenceMarkdown,
+            });
+        }
+        if (memoryNotice) {
+            blocks.push({
+                blockId: this.nextId('assistant_block'),
+                type: 'system_notice',
+                text: memoryNotice,
+            });
+        }
         if (params.citations.length > 0) {
             blocks.push({
                 blockId: this.nextId('assistant_block'),
@@ -7645,6 +7739,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             });
         }
         if (params.knowledgePoints.length > 0) {
+            blocks.push({
+                blockId: this.nextId('assistant_block'),
+                type: 'main_markdown',
+                markdown: actionGuideMarkdown,
+            });
             blocks.push({
                 blockId: this.nextId('assistant_block'),
                 type: 'knowledge_actions',
@@ -8061,6 +8160,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             answer,
             citations,
             knowledgePoints,
+            recalledMemories,
         });
         const response: AgentConversationResponse = {
             userId,

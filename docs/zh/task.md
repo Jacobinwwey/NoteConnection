@@ -5,6 +5,7 @@
 - [x] Reader 侧 markdown / KaTeX / Mermaid 加固与 Tauri 调试抓取工具链已在当前分支真实落地。
 - [x] Tauri agent workspace 已具备 typed rich-reply baseline，不再只是 `assistantMessage` 纯文本挂载。
 - [x] 这条 Tauri-first 路线已作为当前基线落地：在保持现有 knowledge-point / capability 兼容的前提下，引入了共享 Reader-aligned rich reply rendering。
+- [x] 后端回复组织层现在已经把 `assistantBlocks` 用成真正的 Tauri 输出结构：overview、explanation、evidence summary、memory notice、next-action guidance 已分块输出，而不再只是旧 answer 文本的包装。
 - [x] FR-010 现已按当前工作流现实治理，而不是继续沿用已删除的过渡期假设：仓库自有工作流固定为 `actions/setup-node@v4` + Node 24，且不再依赖 `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`。
 - [~] remote CI 是否闭环仍以 `main` 上的实时 `Fixrisk Operational Readiness` 结果为准；其余 marketplace action 带来的 Node 20 弃用注解继续作为非阻塞外部债务记录。
 
