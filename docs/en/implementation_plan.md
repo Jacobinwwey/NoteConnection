@@ -69,6 +69,7 @@ Align the active implementation plan with current code reality:
   - shared reuse of Reader-derived markdown/math/mermaid rendering inside the agent reply surface,
   - artifact-style handling for large HTML assistant outputs through sandboxed preview.
   - structured reply composition now splits the assistant output into overview / explanation / evidence summary / memory notice / action guidance blocks instead of emitting only one wrapped markdown answer.
+  - those sections are now also semantically richer: the explanation is anchored to the strongest scoped knowledge point, the evidence summary reflects real scoped citations, and next-action guidance incorporates both scoped nodes and memory-action follow-through.
 
 #### Next execution order
 

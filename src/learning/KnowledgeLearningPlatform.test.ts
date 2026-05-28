@@ -1473,6 +1473,15 @@ describe('KnowledgeLearningPlatform', () => {
         expect(
             markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('## Evidence Summary'))
         ).toBe(true);
+        expect(
+            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('best scoped anchor'))
+        ).toBe(true);
+        expect(
+            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('## Next Actions'))
+        ).toBe(true);
+        expect(
+            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('Persist the latest user focus to scoped conversation memory'))
+        ).toBe(true);
         expect(response.trace.usedScope.corpusId).toBe('optics');
         expect(response.summary.appliedMemoryCount).toBeGreaterThan(0);
 

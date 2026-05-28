@@ -7647,6 +7647,49 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         return lines.join('\n');
     }
 
+    private buildScopedConversationExplanationMarkdown(params: {
+        knowledgePoints: AgentConversationKnowledgePoint[];
+        citations: KnowledgeCitation[];
+        recalledMemories: AgentConversationMemoryRecord[];
+    }): string {
+        if (params.knowledgePoints.length <= 0) {
+            return '## Explanation\n\nThe current scope did not return a strong enough knowledge point to explain the request directly.';
+        }
+        const strongestPoint = params.knowledgePoints[0];
+        const explanationLines = [
+            '## Explanation',
+            '',
+            `**${strongestPoint.title}** is the current best scoped anchor.`,
+        ];
+        const summary = normalizeWhitespace(String(strongestPoint.summary || strongestPoint.evidenceSnippet || '').trim());
+        if (summary) {
+            explanationLines.push('', summary);
+        }
+        const supportingTitles = params.knowledgePoints
+            .slice(1, 3)
+            .map((point) => normalizeWhitespace(String(point.title || '').trim()))
+            .filter(Boolean);
+        if (supportingTitles.length > 0) {
+            explanationLines.push(
+                '',
+                `Supporting scoped nodes: ${supportingTitles.join(', ')}.`
+            );
+        }
+        if (params.recalledMemories.length > 0) {
+            explanationLines.push(
+                '',
+                `Scoped memory recall contributed ${params.recalledMemories.length} prior note(s) to this explanation.`
+            );
+        }
+        if (params.citations.length > 0) {
+            explanationLines.push(
+                '',
+                `The explanation is grounded by ${params.citations.length} citation(s) from the current scope.`
+            );
+        }
+        return explanationLines.join('\n');
+    }
+
     private buildScopedConversationEvidenceMarkdown(params: {
         citations: KnowledgeCitation[];
     }): string {
@@ -7677,27 +7720,39 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     private buildScopedConversationActionGuideMarkdown(params: {
         knowledgePoints: AgentConversationKnowledgePoint[];
+        memoryActions: AgentConversationMemoryAction[];
     }): string {
         if (params.knowledgePoints.length <= 0) {
             return '## Next Actions\n\nNo actionable scoped knowledge card is available for this turn.';
         }
+        const topTitles = params.knowledgePoints
+            .slice(0, 3)
+            .map((point) => `- ${point.title}`);
+        const actionHints = params.memoryActions
+            .slice(0, 2)
+            .map((action) => normalizeWhitespace(String(action.reason || '').trim()))
+            .filter(Boolean)
+            .map((reason) => `- ${reason}`);
         return [
             '## Next Actions',
             '',
             'Use the scoped knowledge cards below to continue with focus mode or guided learning for the highest-signal nodes:',
-            ...params.knowledgePoints.slice(0, 3).map((point) => `- ${point.title}`),
+            ...topTitles,
+            ...(actionHints.length > 0
+                ? ['', 'Suggested follow-through from the current turn:', ...actionHints]
+                : []),
         ].join('\n');
     }
 
     private buildScopedConversationAssistantBlocks(params: {
-        answer: string;
         citations: KnowledgeCitation[];
         knowledgePoints: AgentConversationKnowledgePoint[];
         recalledMemories: AgentConversationMemoryRecord[];
+        memoryActions: AgentConversationMemoryAction[];
     }): AgentConversationAssistantBlock[] {
         const blocks: AgentConversationAssistantBlock[] = [];
         const overviewMarkdown = this.buildScopedConversationOverviewMarkdown(params);
-        const normalizedAnswer = String(params.answer || '').trim();
+        const explanationMarkdown = this.buildScopedConversationExplanationMarkdown(params);
         const evidenceMarkdown = this.buildScopedConversationEvidenceMarkdown(params);
         const memoryNotice = this.buildScopedConversationMemoryNotice(params);
         const actionGuideMarkdown = this.buildScopedConversationActionGuideMarkdown(params);
@@ -7709,11 +7764,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 markdown: overviewMarkdown,
             });
         }
-        if (normalizedAnswer) {
+        if (explanationMarkdown) {
             blocks.push({
                 blockId: this.nextId('assistant_block'),
                 type: 'main_markdown',
-                markdown: `## Explanation\n\n${normalizedAnswer}`,
+                markdown: explanationMarkdown,
             });
         }
         if (evidenceMarkdown) {
@@ -8157,10 +8212,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             usedScope: traceScope,
         });
         const assistantBlocks = this.buildScopedConversationAssistantBlocks({
-            answer,
             citations,
             knowledgePoints,
             recalledMemories,
+            memoryActions,
         });
         const response: AgentConversationResponse = {
             userId,

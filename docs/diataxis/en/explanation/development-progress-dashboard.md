@@ -71,6 +71,7 @@ The next real improvement beyond that baseline is now also in code:
 
 - `src/learning/KnowledgeLearningPlatform.ts` no longer treats `assistantBlocks` as a thin transport wrapper around the same old answer string,
 - the scoped conversation reply is now organized into explicit overview / explanation / evidence summary / memory notice / action guidance sections before citations and knowledge-action affordances are appended,
+- those sections now also consume real scoped data instead of only templated filler: explanation is anchored to the strongest scoped point, evidence summary reflects actual citations, and action guidance now carries memory follow-through hints,
 - which means the Tauri agent surface can now look materially different even when the underlying knowledge result set is unchanged.
 
 The next gap is narrower now:

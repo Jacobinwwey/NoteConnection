@@ -71,6 +71,7 @@ Tauri-first reply rendering 基线已交付：
 
 - `src/learning/KnowledgeLearningPlatform.ts` 不再把 `assistantBlocks` 当成“同一段旧 answer 的运输包装层”，
 - scoped conversation reply 现在会先组织成明确的 overview / explanation / evidence summary / memory notice / action guidance，再追加 citations 与 knowledge-action affordance，
+- 这些 section 现在也会吃进真实 scoped 数据，而不再只是模板填充：explanation 会锚定最强 scoped point，evidence summary 反映真实 citation，action guidance 还会带上 memory follow-through hint，
 - 这意味着即便底层知识命中集合没变，Tauri 中的 agent 输出也已经可以在结构上明显不同。
 
 当前剩余缺口已经收窄为：

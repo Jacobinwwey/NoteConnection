@@ -70,6 +70,7 @@
   - Reader render substrate 在 agent reply surface 中的共享复用，
   - 面向大型 HTML assistant output 的 artifact-style 隔离路径（sandboxed preview）。
   - assistant 输出现在按 overview / explanation / evidence summary / memory notice / action guidance 分块组织，而不再只是单个 markdown answer 的包装。
+  - 这些 section 现在也具备更实在的语义内容：explanation 会锚定最强 scoped knowledge point，evidence summary 会反映真实 scoped citation，next-action guidance 也会吸收 scoped node 与 memory action 的 follow-through 建议。
 
 #### 下一步执行顺序
 

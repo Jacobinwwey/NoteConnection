@@ -2783,8 +2783,15 @@ describe('agent workspace learning-path integration', () => {
                         + '<p>Blocks Citation</p>'
                     );
                 }
+                if (markdown.includes('## Next Actions')) {
+                    return (
+                        '<h2>Next Actions</h2>'
+                        + '<p>Persist the latest user focus to scoped conversation memory.</p>'
+                    );
+                }
                 return (
                     '<h2>Explanation</h2>'
+                    + '<p>Blocks Citation is the current best scoped anchor.</p>'
                     + '<p>Inline math $E=mc^2$ and a diagram:</p>'
                     + '<pre><code class="language-mermaid">graph TD;A-->B;</code></pre>'
                 );
@@ -2817,7 +2824,7 @@ describe('agent workspace learning-path integration', () => {
                             {
                                 blockId: 'block_main_1',
                                 type: 'main_markdown',
-                                markdown: '## Explanation\n\nInline math $E=mc^2$ and a diagram:\n\n```mermaid\ngraph TD;A-->B;\n```',
+                                markdown: '## Explanation\n\n**Blocks Citation** is the current best scoped anchor.\n\nInline math $E=mc^2$ and a diagram:\n\n```mermaid\ngraph TD;A-->B;\n```',
                             },
                             {
                                 blockId: 'block_evidence_1',
@@ -2828,6 +2835,11 @@ describe('agent workspace learning-path integration', () => {
                                 blockId: 'block_notice_1',
                                 type: 'system_notice',
                                 text: 'No scoped memory note was recalled for this turn.',
+                            },
+                            {
+                                blockId: 'block_actions_1',
+                                type: 'main_markdown',
+                                markdown: '## Next Actions\n\nUse the scoped knowledge cards below to continue with focus mode or guided learning for the highest-signal nodes:\n- Blocks Citation\n\nSuggested follow-through from the current turn:\n- Persist the latest user focus to scoped conversation memory.',
                             },
                             {
                                 blockId: 'block_citations_1',
@@ -2916,6 +2928,8 @@ describe('agent workspace learning-path integration', () => {
         expect(String(assistantNode?.textContent || '')).toContain('Relevant knowledge points');
         expect(String(assistantNode?.textContent || '')).toContain('No scoped memory note was recalled for this turn.');
         expect(String(assistantNode?.textContent || '')).toContain('Evidence Summary');
+        expect(String(assistantNode?.textContent || '')).toContain('best scoped anchor');
+        expect(String(assistantNode?.textContent || '')).toContain('Persist the latest user focus to scoped conversation memory.');
         expect(renderMathInElement).toHaveBeenCalled();
         expect((window as any).mermaid.initialize).toHaveBeenCalled();
         expect(mermaidRender).toHaveBeenCalled();
