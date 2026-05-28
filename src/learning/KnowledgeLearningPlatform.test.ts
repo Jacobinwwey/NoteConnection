@@ -1496,6 +1496,81 @@ describe('KnowledgeLearningPlatform', () => {
         expect(persistedMemory.results[0]?.tags).toContain('scope_corpus:optics');
     });
 
+    test('agent conversation explanation and next actions adapt to comparison-style queries', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_compare_scope',
+                    sourcePath: 'Knowledge_Base/optics/reflection.md',
+                    language: 'en',
+                    content: '# Reflection\nReflection and absorption differ in how optical energy is redirected versus dissipated.',
+                },
+                {
+                    documentId: 'doc_compare_scope_2',
+                    sourcePath: 'Knowledge_Base/optics/transmission.md',
+                    language: 'en',
+                    content: '# Transmission\nTransmission complements reflection when comparing optical interface behavior.',
+                },
+            ],
+        });
+
+        const response = await platform.agentConversation({
+            userId: 'agent_compare_user',
+            sessionId: 'session_compare_scope',
+            message: 'compare reflection vs absorption',
+            scope: {
+                corpusId: 'optics',
+                languages: ['en'],
+            },
+            persistMemory: true,
+        });
+
+        const markdownBlocks = (response.assistantBlocks || []).filter((block) => block.type === 'main_markdown');
+        expect(
+            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('comparison baseline'))
+        ).toBe(true);
+        expect(
+            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('Supporting comparison nodes'))
+        ).toBe(true);
+        expect(
+            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('inspect the strongest nodes side by side'))
+        ).toBe(true);
+    });
+
+    test('agent conversation explanation and next actions adapt to how-to queries', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_howto_scope',
+                    sourcePath: 'Knowledge_Base/optics/calibration.md',
+                    language: 'en',
+                    content: '# Calibration\nCalibration sequence requires establishing a baseline measurement, then validating response drift.',
+                },
+            ],
+        });
+
+        const response = await platform.agentConversation({
+            userId: 'agent_howto_user',
+            sessionId: 'session_howto_scope',
+            message: 'how to calibrate optical response',
+            scope: {
+                corpusId: 'optics',
+                languages: ['en'],
+            },
+            persistMemory: true,
+        });
+
+        const markdownBlocks = (response.assistantBlocks || []).filter((block) => block.type === 'main_markdown');
+        expect(
+            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('starting anchor for the next concrete steps'))
+        ).toBe(true);
+        expect(
+            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('move from explanation into concrete guided-learning or focus-mode steps'))
+        ).toBe(true);
+    });
+
     test('agent conversation exposes readiness and miss diagnostics when scoped retrieval is empty', async () => {
         const response = await platform.agentConversation({
             userId: 'agent_miss_user',

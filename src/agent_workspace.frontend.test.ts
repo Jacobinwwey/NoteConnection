@@ -2784,6 +2784,12 @@ describe('agent workspace learning-path integration', () => {
                     );
                 }
                 if (markdown.includes('## Next Actions')) {
+                    if (markdown.includes('side by side')) {
+                        return (
+                            '<h2>Next Actions</h2>'
+                            + '<p>inspect the strongest nodes side by side</p>'
+                        );
+                    }
                     return (
                         '<h2>Next Actions</h2>'
                         + '<p>Persist the latest user focus to scoped conversation memory.</p>'

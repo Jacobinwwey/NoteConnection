@@ -70,6 +70,7 @@ Align the active implementation plan with current code reality:
   - artifact-style handling for large HTML assistant outputs through sandboxed preview.
   - structured reply composition now splits the assistant output into overview / explanation / evidence summary / memory notice / action guidance blocks instead of emitting only one wrapped markdown answer.
   - those sections are now also semantically richer: the explanation is anchored to the strongest scoped knowledge point, the evidence summary reflects real scoped citations, and next-action guidance incorporates both scoped nodes and memory-action follow-through.
+  - reply composition is now intent-aware as well: comparison-style and how-to-style prompts no longer reuse the exact same explanation/action phrasing as plain explanatory prompts.
 
 #### Next execution order
 

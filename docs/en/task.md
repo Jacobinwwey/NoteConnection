@@ -11,6 +11,7 @@
 - [x] The Tauri-first plan to evolve toward shared Reader-aligned rich reply rendering is now implemented as the current baseline while preserving knowledge-point/capability compatibility.
 - [x] The backend reply composer now uses `assistantBlocks` as a real organization layer in Tauri: overview, explanation, evidence summary, memory notice, and next-action guidance are emitted as distinct blocks instead of only wrapping the old answer text.
 - [x] The new Tauri reply sections are no longer template-only: explanation, evidence, and next-action guidance now derive from actual knowledge points, citations, and memory-action hints.
+- [x] The reply policy is now intent-aware for Tauri agent output: comparison-style and how-to-style prompts can yield different explanation/action phrasing instead of one generic section style.
 - [x] FR-010 is now governed by the current workflow reality instead of the removed transition-era assumption: repo-owned workflows pin `actions/setup-node@v4` to Node 24 and no longer rely on `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`.
 - [~] Remote CI closure remains a live release bar rather than a static claim: `Fixrisk Operational Readiness` must stay green on `main`, while residual Node 20 deprecation annotations from marketplace actions remain documented as non-blocking external debt.
 

@@ -7624,6 +7624,45 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         return `${memoryPrefix}The strongest scoped match is ${leadingPoint.title}. I found ${params.knowledgePoints.length} relevant knowledge point(s) and ${params.citations.length} citation(s).\n\nKey evidence:\n${evidenceLines.join('\n')}`;
     }
 
+    private classifyScopedConversationIntent(message: string): 'explain' | 'compare' | 'how_to' | 'generic' {
+        const normalized = String(message || '').trim().toLowerCase();
+        if (!normalized) {
+            return 'generic';
+        }
+        if (
+            normalized.includes('compare')
+            || normalized.includes('difference')
+            || normalized.includes('vs')
+            || normalized.includes('区别')
+            || normalized.includes('对比')
+        ) {
+            return 'compare';
+        }
+        if (
+            normalized.includes('how to')
+            || normalized.includes('how do')
+            || normalized.includes('steps')
+            || normalized.includes('plan')
+            || normalized.includes('如何')
+            || normalized.includes('怎么')
+            || normalized.includes('步骤')
+            || normalized.includes('方案')
+        ) {
+            return 'how_to';
+        }
+        if (
+            normalized.includes('what is')
+            || normalized.includes('why')
+            || normalized.includes('explain')
+            || normalized.includes('解释')
+            || normalized.includes('什么是')
+            || normalized.includes('为什么')
+        ) {
+            return 'explain';
+        }
+        return 'generic';
+    }
+
     private buildScopedConversationOverviewMarkdown(params: {
         knowledgePoints: AgentConversationKnowledgePoint[];
         citations: KnowledgeCitation[];
@@ -7648,6 +7687,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     private buildScopedConversationExplanationMarkdown(params: {
+        message: string;
         knowledgePoints: AgentConversationKnowledgePoint[];
         citations: KnowledgeCitation[];
         recalledMemories: AgentConversationMemoryRecord[];
@@ -7655,12 +7695,21 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         if (params.knowledgePoints.length <= 0) {
             return '## Explanation\n\nThe current scope did not return a strong enough knowledge point to explain the request directly.';
         }
+        const intent = this.classifyScopedConversationIntent(params.message);
         const strongestPoint = params.knowledgePoints[0];
         const explanationLines = [
             '## Explanation',
             '',
-            `**${strongestPoint.title}** is the current best scoped anchor.`,
         ];
+        if (intent === 'compare') {
+            explanationLines.push(`Use **${strongestPoint.title}** as the comparison baseline inside the current scope.`);
+        } else if (intent === 'how_to') {
+            explanationLines.push(`Use **${strongestPoint.title}** as the starting anchor for the next concrete steps.`);
+        } else if (intent === 'explain') {
+            explanationLines.push(`**${strongestPoint.title}** is the current best scoped anchor for the explanation.`);
+        } else {
+            explanationLines.push(`**${strongestPoint.title}** is the current best scoped anchor.`);
+        }
         const summary = normalizeWhitespace(String(strongestPoint.summary || strongestPoint.evidenceSnippet || '').trim());
         if (summary) {
             explanationLines.push('', summary);
@@ -7672,7 +7721,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         if (supportingTitles.length > 0) {
             explanationLines.push(
                 '',
-                `Supporting scoped nodes: ${supportingTitles.join(', ')}.`
+                intent === 'compare'
+                    ? `Supporting comparison nodes: ${supportingTitles.join(', ')}.`
+                    : `Supporting scoped nodes: ${supportingTitles.join(', ')}.`
             );
         }
         if (params.recalledMemories.length > 0) {
@@ -7719,12 +7770,14 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     private buildScopedConversationActionGuideMarkdown(params: {
+        message: string;
         knowledgePoints: AgentConversationKnowledgePoint[];
         memoryActions: AgentConversationMemoryAction[];
     }): string {
         if (params.knowledgePoints.length <= 0) {
             return '## Next Actions\n\nNo actionable scoped knowledge card is available for this turn.';
         }
+        const intent = this.classifyScopedConversationIntent(params.message);
         const topTitles = params.knowledgePoints
             .slice(0, 3)
             .map((point) => `- ${point.title}`);
@@ -7736,7 +7789,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         return [
             '## Next Actions',
             '',
-            'Use the scoped knowledge cards below to continue with focus mode or guided learning for the highest-signal nodes:',
+            intent === 'compare'
+                ? 'Use the scoped knowledge cards below to inspect the strongest nodes side by side before deciding which distinctions matter most:'
+                : intent === 'how_to'
+                    ? 'Use the scoped knowledge cards below to move from explanation into concrete guided-learning or focus-mode steps:'
+                    : 'Use the scoped knowledge cards below to continue with focus mode or guided learning for the highest-signal nodes:',
             ...topTitles,
             ...(actionHints.length > 0
                 ? ['', 'Suggested follow-through from the current turn:', ...actionHints]
@@ -7745,6 +7802,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     private buildScopedConversationAssistantBlocks(params: {
+        message: string;
         citations: KnowledgeCitation[];
         knowledgePoints: AgentConversationKnowledgePoint[];
         recalledMemories: AgentConversationMemoryRecord[];
@@ -8212,6 +8270,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             usedScope: traceScope,
         });
         const assistantBlocks = this.buildScopedConversationAssistantBlocks({
+            message,
             citations,
             knowledgePoints,
             recalledMemories,
