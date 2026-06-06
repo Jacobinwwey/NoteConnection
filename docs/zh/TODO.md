@@ -2,6 +2,19 @@
 
 ## 中文文档
 
+### 2026-06-06 主线架构 TODO 重新分类
+
+- [x] 已将 2026-06-06 双语代码 / 方案对比落盘到 `docs/solutions/architecture-progress-alignment-2026-06-06.md`。
+- [x] 已将 Program A-F substrate 重新标记为“已实现”，不再只是规划项。
+- [x] 已将 scoped retrieval 与 grounded conversation 重新标记为具备向前兼容响应演进的 operational baseline。
+- [x] 继续将 Godot/mobile 禁止直接依赖 SVG 导入作为活跃兼容规则，并通过 PNG-first render materialization 维持。
+- [~] graphdb/sqlite 在多轮 soak、阈值与性能证据达标前，仍按 operational baseline 处理。
+- [~] ANN/external connector 在 recall/latency 阈值与 workload 校准完成前，仍按 operational baseline 处理。
+- [ ] 只有当 Phase-2 diagnostics 运行在发布级 graphdb/ANN 基线上后，才能从“可见性闭环”升级为 release gate。
+- [ ] 将 server 中的 conversation turn-cache、alert trend、runbook bridge、rollout profile、connector-helper 逻辑抽到明确模块。
+- [ ] 继续拆分 KLP 领域所有权，但避免新增只转发调用的 facade 层。
+- [ ] 实现状态变化时，同步 README、Interface Document、task、implementation plan 与 dashboard 文档。
+
 ### 2026-05-12 HEAD 真实状态重分级
 
 - [x] agent-workspace 的 runbook verify/checks 现已显式暴露 ANN index-sync、熔断、可追踪性、预筛选摘要及阈值/信号钻取，action-queue 继续承载 index-sync 事故钻取。

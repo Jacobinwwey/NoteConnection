@@ -44,6 +44,30 @@
 - `.github/workflows/release-desktop-multi-os.yml`
 - `.github/workflows/npm-publish.yml`
 
+## 0.0A 知识运行时契约补充（2026-06-06）
+
+本补充段记录当前已经有代码支撑的知识运行时契约，不改变公开 API。
+
+当前契约面：
+
+- `KnowledgeQueryRequest.scope` 接受 `KnowledgeCorpusScope`，支持 workspace、corpus、document、atom、source-path-prefix 与 language 约束。
+- `AgentConversationResponse` 保持向前兼容：
+  - `assistantMessage` 对旧客户端仍有效，
+  - `answer`、`citations`、`knowledgePoints`、`memoryActions`、`summary`、`trace` 暴露 grounded conversation 状态，
+  - 可选 `assistantBlocks` 为能渲染 typed reply 的客户端提供 richer 分块回复。
+- `/api/knowledge/conversation` 支持当前会话路径，包括 stream-first 客户端与 sync fallback 行为。
+- `/api/knowledge/conversation-memory/{list,add,search,delete,feedback}` 暴露 scoped conversation memory 操作。
+- `/api/knowledge/workspace-readiness` 暴露用于 scoped runtime 决策的 workspace/corpus readiness。
+- `POST /api/knowledge/export/workspace` 暴露 deterministic workspace export bundle，其数据来自 resource、index、workspace、session、workflow、memory 与 render-materialization 状态。
+- 运行时治理端点与 payload 暴露 graphdb/vector rollout 上下文，包括 `rolloutProfile`、graphdb connector health、vector acceleration strictness 与 runbook checks。
+
+兼容性规则：
+
+- 新响应字段必须保持 additive 且 optional。
+- 除非同一变更同时落地兼容 shim 与测试，否则不得改变现有 endpoint 名称与 legacy 字段。
+- Godot/mobile 渲染路径必须继续消费 PNG-first materialized artifacts；直接 SVG 导入不能成为必需运行时依赖。
+- graphdb 与 ANN 状态描述必须区分 operational baseline 与 production closure；没有发布级阈值与多轮证据时不得宣称生产闭环。
+
 ## 0. 开发前速查入口（Godot + NoteMD + Markdown）
 
 进入下一阶段集成功能开发前，请先以以下文档为执行基线：
@@ -93,9 +117,9 @@
 - SVG 仅保留用于诊断/调试快照，不得作为 Godot 运行时回退路径。
 - 原因：当前 Godot 的 SVG 处理存在非确定性失败（跨设备文本/布局/栅格不稳定）。
 - 变更规则：后续 Godot 渲染优化必须保持 PNG 解码主路径（`pngBase64` 必填）；缺失 PNG 视为失败。
-- Obsidian 兼容性基线：Mermaid 的标准 Markdown 输入为 fenced code，起始 \`\`\`mermaid 与结束 \`\`\` 必须各自独占一行。
-- 任意同行拼接 fence（例如 `$$```mermaid`）都属于 malformed 输入，不在标准兼容基线内。
-- Reader 运行时护栏：打开 Markdown 阅读器时执行轻量自检，并在解析/渲染前自动将 `$$```mermaid` 修复为换行分隔形式。
+- Obsidian 兼容性基线：Mermaid 的标准 Markdown 输入为 fenced code，起始行为三个反引号后接 `mermaid`，结束行为三个反引号，且两者必须各自独占一行。
+- 任意将数学分隔符与 Mermaid 起始 fence 同行拼接的模式都属于 malformed 输入，不在标准兼容基线内。
+- Reader 运行时护栏：打开 Markdown 阅读器时执行轻量自检，并在解析/渲染前自动将这类 malformed 模式修复为换行分隔形式。
 
 ## 0.2 NoteMD 模块接口契约（v1.6.0）
 

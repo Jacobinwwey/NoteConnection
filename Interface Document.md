@@ -48,6 +48,16 @@ Audit flow:
 - Reason: current Godot SVG handling can fail non-deterministically (text/layout/raster instability across devices).
 - Change-control rule: any future Godot renderer optimization must preserve PNG decode as the primary path (`pngBase64` required); missing PNG is a hard failure.
 
+## 0.2 Knowledge Runtime Contract Addendum (2026-06-06)
+
+- Scoped retrieval is now represented by `KnowledgeQueryRequest.scope` and `KnowledgeCorpusScope`.
+- `AgentConversationResponse` remains backward-compatible: `assistantMessage` is still valid, while `answer`, `citations`, `memoryActions`, `trace`, and optional `assistantBlocks` provide richer grounded conversation state.
+- `/api/knowledge/conversation` remains the conversation entrypoint and supports current stream/sync compatibility behavior.
+- `/api/knowledge/conversation-memory/{list,add,search,delete,feedback}` exposes scoped conversation memory operations.
+- `POST /api/knowledge/export/workspace` exposes deterministic workspace export bundles backed by resource, index, workspace, session, workflow, memory, and render-materialization state.
+- Runtime governance payloads expose graphdb/vector rollout context, including `rolloutProfile`, graphdb connector health, vector acceleration strictness, and runbook checks.
+- Compatibility rule: new response fields must remain additive and optional; Godot/mobile paths must continue to use PNG-first materialized render artifacts instead of requiring direct SVG import.
+
 ---
 
 ## 1. Runtime and Path Contracts
@@ -786,6 +796,16 @@ This section records interface changes added after `v1.4.5`, keeping all previou
 - SVG 仅保留用于诊断/调试快照，不得作为 Godot 运行时回退路径。
 - 原因：当前 Godot 的 SVG 处理存在非确定性失败（跨设备文本/布局/栅格不稳定）。
 - 变更规则：后续 Godot 渲染优化必须保持 PNG 解码主路径（`pngBase64` 必填）；缺失 PNG 视为失败。
+
+## 0.2 知识运行时契约补充（2026-06-06）
+
+- Scoped retrieval 现在由 `KnowledgeQueryRequest.scope` 与 `KnowledgeCorpusScope` 表达。
+- `AgentConversationResponse` 保持向前兼容：`assistantMessage` 仍有效，同时 `answer`、`citations`、`memoryActions`、`trace` 与可选 `assistantBlocks` 提供 richer grounded conversation 状态。
+- `/api/knowledge/conversation` 仍是会话入口，并支持当前 stream/sync 兼容行为。
+- `/api/knowledge/conversation-memory/{list,add,search,delete,feedback}` 暴露 scoped conversation memory 操作。
+- `POST /api/knowledge/export/workspace` 暴露 deterministic workspace export bundle，其数据来自 resource、index、workspace、session、workflow、memory 与 render-materialization 状态。
+- 运行时治理 payload 暴露 graphdb/vector rollout 上下文，包括 `rolloutProfile`、graphdb connector health、vector acceleration strictness 与 runbook checks。
+- 兼容性规则：新响应字段必须保持 additive 且 optional；Godot/mobile 路径必须继续使用 PNG-first materialized render artifacts，不能依赖直接 SVG 导入。
 
 ---
 

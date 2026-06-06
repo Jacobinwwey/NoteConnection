@@ -21,6 +21,16 @@
 
 ---
 
+## 当前主线架构状态（2026-06-06）
+
+- 当前 `main` 已具备代码支撑的 scoped retrieval、grounded conversation、持久化 resource/index/workspace/session/memory/export 底座、显式 export profiles，以及 Godot/mobile PNG-first 渲染物化边界。
+- graphdb/sqlite 与 ANN/external connector 目前是 operational baseline。生产闭环仍需要多轮 soak 证据、工作负载阈值、recall/latency 校准与 strict rollout 证明。
+- 兼容性保持 additive：新客户端可以使用 richer `assistantBlocks`，legacy `assistantMessage` 仍有效。
+- 下一阶段架构工作是缩减 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts` 与大型前端宿主文件中的所有权压力。
+- 当前代码 / 方案详细对齐请查看 [架构推进对齐与主线推进方案（2026-06-06）](../solutions/architecture-progress-alignment-2026-06-06.md) 与 [开发进度看板](../diataxis/zh/explanation/development-progress-dashboard.md)。
+
+---
+
 <a id="key-features-zh"></a>
 
 ## 🚀 核心特性

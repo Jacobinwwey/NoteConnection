@@ -1,3 +1,22 @@
+## 2026-06-06 活跃任务同步
+
+- [x] 本文档切片已确认 `main` 与 `origin/main` 同步。
+- [x] 当前代码已经与 5 月 RAG / agent / export 方案完成对比，结果已落盘到 `docs/solutions/architecture-progress-alignment-2026-06-06.md`。
+- [x] Scoped retrieval、grounded conversation、Program A-F 底座、export profiles、Godot/mobile PNG-first materialization 与 rollout governance 已按当前代码证据分别标注为“已实现”或“operational baseline”。
+- [~] graphdb/sqlite 与 ANN/external connector 路径仍是 operational baseline，不是 production closure；仍待 soak 多轮证据、工作负载阈值、recall/latency 校准与 strict rollout 证明。
+- [~] 架构缩减是下一阶段结构性压力点：`src/server.ts`、`KnowledgeLearningPlatform.ts` 与大型前端宿主仍需要所有权切分。
+- [ ] 将 sqlite soak verification 推进为多轮 release evidence。
+- [ ] 完成 ANN recall/latency 与 connector-budget 校准后，再把 Phase-2 diagnostics 升级为发布门禁。
+- [ ] 将 conversation turn-cache、alert-trend、runbook bridge、rollout-profile、connector-helper 等逻辑从 `server.ts` 抽到明确模块。
+- [ ] 只在新 owner 能隐藏状态或强制不变量时，继续拆分 learning-platform 领域所有权。
+- [ ] 扩展可选 typed `assistantBlocks` 覆盖面时，继续保留 `assistantMessage` 兼容。
+
+主要参考：
+
+- `docs/solutions/architecture-progress-alignment-2026-06-06.md`
+- `docs/diataxis/zh/explanation/development-progress-dashboard.md`
+- `docs/zh/implementation_plan.md`
+
 ## 2026-05-27 活跃任务同步
 
 - [x] Scoped knowledge-workspace grounding 已在当前分支真实落地。

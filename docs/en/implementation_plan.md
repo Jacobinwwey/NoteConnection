@@ -2,6 +2,50 @@
 
 ## English Document
 
+### 2026-06-06 Mainline Architecture Alignment Plan
+
+#### Objective
+
+Land the current code-vs-plan assessment into the active implementation plan while keeping the repo on `main`, preserving backward compatibility, and avoiding runtime changes in this documentation-only slice.
+
+#### Current code truth
+
+- Scoped retrieval is now code-backed: `KnowledgeQueryRequest.scope`, `KnowledgeCorpusScope`, workspace readiness, miss diagnostics, active-target hydration, and workspace/export substrate are present.
+- Grounded conversation is operational: `AgentConversationResponse` carries `answer`, citations, memory actions, trace, and optional `assistantBlocks`; legacy `assistantMessage` remains valid.
+- Program A-F substrate is implemented in `src/resources/`, `src/indexing/`, `src/workspace/`, `src/session/`, `src/workflows/`, `src/memory/`, and `src/export/`.
+- Platform/export boundaries are explicit through `PlatformCapabilities`, `RenderMaterializer`, render routes, and deterministic workspace export bundles.
+- graphdb/sqlite and ANN/external connector paths are operational baselines, but production closure still requires soak, repeated host evidence, workload thresholds, recall/latency calibration, and strict rollout proof.
+- Architecture reduction remains behind target: `src/server.ts` and `src/learning/KnowledgeLearningPlatform.ts` remain the main implementation gravity wells.
+
+#### Execution order from current `main`
+
+1. **P0: Documentation truth synchronization**
+   - Keep the 2026-06-06 solution note, development progress dashboards, task docs, TODO docs, README, and interface docs aligned.
+   - Do not convert operational-baseline wording into production-closed wording without release-grade evidence.
+2. **P1: Release-grade graphdb/ANN closure**
+   - Convert sqlite soak verification into repeated evidence.
+   - Tighten graphdb connector health/budget thresholds.
+   - Complete ANN recall/latency calibration before promoting Phase-2 diagnostics to release gates.
+3. **P2: `server.ts` ownership reduction**
+   - Extract turn-cache, alert-trend, runbook bridge, rollout-profile, and connector helper logic behind explicit modules.
+   - Preserve endpoint names and response compatibility while moving ownership.
+4. **P3: Learning-platform domain extraction**
+   - Continue extracting ingest/query/conversation/mastery/quality/tutor/memory ownership only when the new owner hides state or enforces invariants.
+   - Avoid pass-through facades around `KnowledgeLearningPlatform.ts`.
+5. **P4: Agent workspace contract hardening**
+   - Keep stream-first + sync fallback + replay compatibility.
+   - Expand typed `assistantBlocks` coverage only through optional payloads and parity-tested capabilities.
+6. **P5: Platform/export compatibility**
+   - Keep Godot/mobile PNG-first materialization and export profile semantics explicit.
+   - Keep core retrieval/synthesis free of shell-specific branches.
+
+#### Acceptance criteria
+
+1. All active planning docs point to the same 2026-06-06 status and next-step sequence.
+2. No runtime API is changed by this documentation slice.
+3. Future code work can start from a clear priority order: release-grade foundation closure first, then ownership reduction, then richer agent output.
+4. Worktree is clean after the documentation commit.
+
 ### 2026-05-27 Workflow Truth-Sync and Next-Step Realignment
 
 #### Objective

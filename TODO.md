@@ -1,3 +1,33 @@
+# 2026-06-06 v1.7.0 - Architecture Progress Alignment and Mainline TODO
+
+## English Document
+
+### Objective
+Keep the root TODO aligned with the 2026-06-06 code-vs-plan reconciliation on `main`.
+
+### Current Status
+- [x] Detailed bilingual alignment landed in `docs/solutions/architecture-progress-alignment-2026-06-06.md`.
+- [x] Scoped retrieval, grounded conversation, Program A-F substrate, platform/export profiles, and rollout governance are documented as current code-backed baselines.
+- [~] graphdb/sqlite and ANN/external connector paths remain operational baselines until release-grade soak, workload, recall/latency, and strict rollout evidence are complete.
+- [ ] Reduce `src/server.ts` ownership pressure by extracting conversation turn-cache, alert-trend, runbook bridge, rollout-profile, and connector-helper logic into explicit modules.
+- [ ] Continue `KnowledgeLearningPlatform.ts` domain extraction only where the new owner enforces invariants or owns durable state.
+- [ ] Keep `assistantMessage` compatibility while expanding optional typed `assistantBlocks`.
+
+## 中文文档
+
+### 目标
+让根目录 TODO 与 `main` 上 2026-06-06 的代码 / 方案对齐结论保持一致。
+
+### 当前状态
+- [x] 已将详细双语对齐结果落盘到 `docs/solutions/architecture-progress-alignment-2026-06-06.md`。
+- [x] Scoped retrieval、grounded conversation、Program A-F 底座、platform/export profile 与 rollout governance 已按当前代码证据记录为有效基线。
+- [~] graphdb/sqlite 与 ANN/external connector 在发布级 soak、workload、recall/latency、strict rollout 证据完成前，仍按 operational baseline 处理。
+- [ ] 将 conversation turn-cache、alert-trend、runbook bridge、rollout-profile、connector-helper 等逻辑从 `src/server.ts` 抽到明确模块。
+- [ ] 继续拆分 `KnowledgeLearningPlatform.ts`，但只在新 owner 能强制不变量或拥有持久状态时推进。
+- [ ] 扩展可选 typed `assistantBlocks` 时，继续保持 `assistantMessage` 兼容。
+
+---
+
 # 2026-03-19 v1.5.58 - Godot Path UI Enhancements (Layout & Interactivity)
 
 ## English Document

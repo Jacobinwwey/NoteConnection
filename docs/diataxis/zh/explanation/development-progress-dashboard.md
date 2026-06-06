@@ -3,6 +3,54 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
+## 2026-06-06 主线架构推进与代码 / 方案对齐
+
+本次更新将当前 `main` 代码与 5 月架构方案重新对齐，并明确覆盖旧口径中的一个关键误差：Program F 交付不等于底座已经达到 release-grade production closure。
+
+当前权威参考：
+
+- 双语详细方案：[架构推进对齐与主线推进方案（2026-06-06）](../../../solutions/architecture-progress-alignment-2026-06-06.md)
+- 先前 RAG / agent 方案：[多平台轻量级 RAG 与 Agent 架构推进计划](../../../brainstorms/2026-05-25-multiplatform-lightweight-rag-agent-architecture-plan.md)
+- 先前 substrate 方案：[Deep Student Comparison Next-Phase Plan](../../../brainstorms/2026-05-26-deep-student-comparison-next-phase-plan.md)
+
+代码 / 方案对齐结果：
+
+| 方案要求 | 当前 `main` 代码证据 | 进度判断 |
+|---|---|---|
+| Scoped retrieval 与 workspace/corpus 边界 | `src/learning/types.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/workspace/`、`src/export/` 中已经存在 `KnowledgeQueryRequest.scope`、`KnowledgeCorpusScope`、workspace readiness、miss diagnostics、active-target hydration 与 workspace/export 底座。 | 已有实现基线 |
+| Lightweight RAG 与 grounded conversation | `AgentConversationResponse` 已包含 `answer`、citation、memory action、trace 和向前兼容的 `assistantBlocks`；Tauri workspace 在结构化块存在时渲染 typed blocks，并继续支持 legacy `assistantMessage`。 | Operational baseline |
+| Resource/index/workspace/session/memory/export 持久化底座 | Program A-F 已在 `src/resources/`、`src/indexing/`、`src/workspace/`、`src/session/`、`src/workflows/`、`src/memory/`、`src/export/` 中落地。 | 已实现 |
+| 平台壳层分离 | `PlatformCapabilities`、`RenderMaterializer`、render routes、workspace export bundle 已显式化桌面/Godot/mobile materialization 决策。Godot 仍保持 PNG-first，因为直接 SVG 导入不可靠。 | 已实现 |
+| graphdb/ANN 运行时生产闭环 | graphdb/sqlite、external graphdb HTTP、local-vector rollout controls、external HTTP vector acceleration、runtime capability checks 与 rollout profile payloads 已存在。 | Operational，但未 production-closed |
+| 唯一路由 / 运行时所有权 | modular route registration 已存在，但 conversation、runbook、turn-cache、rollout、fallback 编排仍大量留在 `src/server.ts`。 | 部分完成 |
+| 架构缩减 | 当前行数扫描显示 `src/server.ts` 约 15,920 行、`src/learning/KnowledgeLearningPlatform.ts` 约 10,351 行；主要前端宿主文件仍偏大。 | 落后于目标 |
+
+架构推进图：
+
+| 层级 | 当前成熟度 | 下一步 |
+|---|---|---|
+| 图谱 / Path 核心 | 成熟 operational baseline | 保持兼容，避免无关重构。 |
+| 运行时存储 / 检索 | Operational baseline | 将 sqlite/ANN workload 证明推进为多轮 release-grade 校准证据。 |
+| Scoped RAG / conversation | Operational baseline | 在不删除 legacy 响应字段的前提下，从 `server.ts` 切出所有权。 |
+| Memory / session / workflow | 已实现底座 | 先加固 policy、audit 与 workflow artifact 质量，不堆 UI-only 状态。 |
+| Export / platform shell | 已实现基线 | 继续显式维护 Godot/mobile materialization 与 export profile 规则。 |
+| Governance / CI | 强，但依赖部分宿主证据 | 将 FR-009、Linux strict Tauri 证据、graphdb/ANN 校准和文档真相作为分开的门禁。 |
+
+即时推进方向：
+
+1. 让本看板、task、implementation plan、TODO、README、接口文档与新增 solution note 保持同一套文档真相。
+2. 完成 graphdb 与 ANN 发布级闭环：sqlite soak 多轮证据、graphdb connector budget、ANN recall/latency 阈值、strict rollout 证据。
+3. 从 `server.ts` 切出 turn-cache、alert trend、runbook bridge、rollout helper 等所有权压力。
+4. 继续拆分 `KnowledgeLearningPlatform.ts`，但只在新 owner 能隐藏状态或强制不变量时提取。
+5. 通过 typed optional payload 扩展 assistant block 覆盖面，同时保留 `assistantMessage` 与 stream/sync/replay 兼容。
+6. 将 Godot/mobile 约束留在平台 adapter 边界，尤其保持“不直接依赖 SVG 导入”的规则。
+
+本次文档切片的验证位置：
+
+- 本次仅修改文档，不改变运行时行为。
+- 本切片所需门禁是：Diataxis 映射校验、文档站点构建、Mermaid fence 护栏、diff review，以及提交后工作区 clean。
+- 后续代码切片仍必须继续执行活跃 task 文档中的运行时门禁，尤其是 `verify:foundation:sqlite-runtime:soak`、`verify:foundation:ann-runtime:matrix`、`test:agent-workspace:contracts` 与 `verify:core-real-machine:clean`。
+
 ## 2026-05-27 工作流门禁重对齐与进度真相同步
 
 - 当前分支其实早已把仓库自有 workflow 迁移到 `actions/setup-node@v4` + `node-version: "24"`。

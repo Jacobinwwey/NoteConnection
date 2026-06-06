@@ -302,13 +302,13 @@ Runtime behavior:
 Obsidian compatibility baseline:
 
 - Canonical Mermaid source format is fenced Markdown:
-  - opening fence on its own line: \`\`\`mermaid
-  - closing fence on its own line: \`\`\`
+  - opening fence on its own line: three backticks followed by `mermaid`
+  - closing fence on its own line: three backticks
 - This baseline must remain compatible in the markdown index/chunk pipeline and in Godot/Web reader rendering flows.
-- Inline concatenation patterns such as `$$```mermaid` are malformed content (not valid canonical fenced start) and are expected to fail block-type detection.
-- Recommended remediation for `$$```mermaid`: split into two lines (`$$` then ` ```mermaid`), or run:
+- Inline concatenation patterns where a math delimiter is immediately followed by a Mermaid opening fence are malformed content (not valid canonical fenced start) and are expected to fail block-type detection.
+- Recommended remediation: split the math delimiter and Mermaid opening fence into two lines, or run:
   - `npm run fix:markdown:mermaid:fence -- Knowledge_Base/testconcept`
-- Reader-side fast self-check: when opening markdown reader content, runtime applies lightweight auto-heal for `$$```mermaid` before block parsing/rendering.
+- Reader-side fast self-check: when opening markdown reader content, runtime applies lightweight auto-heal for the same math-delimiter-plus-Mermaid-fence pattern before block parsing/rendering.
 
 ## 5.3 Clipboard routes
 

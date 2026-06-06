@@ -3,6 +3,54 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-06-06 Mainline Architecture Progress and Code-vs-Plan Reconciliation
+
+This update reconciles the current `main` codebase against the May architecture plans and supersedes any stale reading that treats Program F delivery as the same thing as release-grade foundation closure.
+
+Current source-of-truth references:
+
+- Detailed bilingual plan: [Architecture Progress Alignment and Mainline Plan (2026-06-06)](../../../solutions/architecture-progress-alignment-2026-06-06.md)
+- Prior RAG/agent plan: [Multiplatform Lightweight RAG and Agent Architecture Plan](../../../brainstorms/2026-05-25-multiplatform-lightweight-rag-agent-architecture-plan.md)
+- Prior substrate plan: [Deep Student Comparison Next-Phase Plan](../../../brainstorms/2026-05-26-deep-student-comparison-next-phase-plan.md)
+
+Code-vs-plan reconciliation:
+
+| Plan requirement | Current `main` evidence | Progress call |
+|---|---|---|
+| Scoped retrieval and workspace/corpus boundaries | `KnowledgeQueryRequest.scope`, `KnowledgeCorpusScope`, workspace readiness, miss diagnostics, active-target hydration, and workspace/export substrate exist across `src/learning/types.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/workspace/`, and `src/export/`. | Implemented baseline |
+| Lightweight RAG and grounded conversation | `AgentConversationResponse` carries `answer`, citations, memory actions, trace, and backward-compatible `assistantBlocks`; frontend Tauri workspace renders typed blocks when present and still supports legacy `assistantMessage`. | Operational baseline |
+| Durable resource/index/workspace/session/memory/export substrate | Program A-F code exists under `src/resources/`, `src/indexing/`, `src/workspace/`, `src/session/`, `src/workflows/`, `src/memory/`, and `src/export/`. | Implemented |
+| Platform shell separation | `PlatformCapabilities`, `RenderMaterializer`, render routes, and workspace export bundles keep desktop/Godot/mobile materialization decisions explicit. Godot remains PNG-first because direct SVG import is unsafe. | Implemented |
+| Runtime graphdb/ANN production closure | graphdb/sqlite, external graphdb HTTP, local-vector rollout controls, external HTTP vector acceleration, runtime capability checks, and rollout profile payloads exist. | Operational, not production-closed |
+| Single route/runtime ownership | modular route registration exists, but conversation, runbook, turn-cache, rollout, and fallback orchestration still carry heavy ownership inside `src/server.ts`. | Partially complete |
+| Architecture reduction | Current line-count scan shows `src/server.ts` about 15,920 lines and `src/learning/KnowledgeLearningPlatform.ts` about 10,351 lines; major frontend hosts remain large. | Behind target |
+
+Architecture progress map:
+
+| Layer | Current maturity | Next move |
+|---|---|---|
+| Graph/path core | Mature operational baseline | Preserve compatibility and avoid unrelated churn. |
+| Runtime storage/retrieval | Operational baseline | Convert sqlite/ANN workload proofs into repeated release-grade calibration evidence. |
+| Scoped RAG/conversation | Operational baseline | Extract ownership from `server.ts` without removing legacy response fields. |
+| Memory/session/workflow | Implemented substrate | Harden policy, audit, and workflow artifact quality before adding UI-only state. |
+| Export/platform shell | Implemented baseline | Keep Godot/mobile materialization and export profile rules explicit. |
+| Governance/CI | Strong but host-dependent | Keep FR-009, Linux strict Tauri evidence, graphdb/ANN calibration, and docs truth as separate gates. |
+
+Immediate next direction:
+
+1. Keep docs truth synchronized across this dashboard, task, implementation plan, TODO, README, interface docs, and the new solution note.
+2. Finish release-grade graphdb and ANN closure: sqlite soak repetition, graphdb connector budgets, ANN recall/latency thresholds, and strict rollout evidence.
+3. Reduce `server.ts` ownership pressure by moving turn-cache, alert trend, runbook bridge, and rollout helper logic behind explicit modules.
+4. Continue `KnowledgeLearningPlatform.ts` domain extraction only when the new owner hides state or enforces a real invariant.
+5. Expand assistant block coverage through typed, optional payloads while preserving `assistantMessage` and stream/sync/replay compatibility.
+6. Keep Godot/mobile constraints at platform adapter boundaries, especially the no-direct-SVG rule.
+
+Verification position for this documentation slice:
+
+- This update is documentation-only and does not change runtime behavior.
+- Required gate for this slice: docs map validation, docs site build, Mermaid fence guard, diff review, and clean worktree after commit.
+- Code slices that follow must continue to use the runtime gates listed in the active task docs, especially `verify:foundation:sqlite-runtime:soak`, `verify:foundation:ann-runtime:matrix`, `test:agent-workspace:contracts`, and `verify:core-real-machine:clean`.
+
 ## 2026-05-27 Workflow Gate Realignment and Progress Truth Sync
 
 - The current branch had already migrated repo-owned workflows to `actions/setup-node@v4` with `node-version: "24"`.

@@ -91,6 +91,7 @@ This page is an indexed catalog for **all Markdown docs** under `docs/`.
 - [`release_notes_v1.6.7.md`](release_notes_v1.6.7.md)
 - [`release_notes_v1.6.8.md`](release_notes_v1.6.8.md)
 - [`release_notes_v1.7.0.md`](release_notes_v1.7.0.md)
+- [`solutions/architecture-progress-alignment-2026-06-06.md`](solutions/architecture-progress-alignment-2026-06-06.md)
 - [`solutions/documentation-gaps/learning-platform-api-workbench-contract-gap-2026-04-02.md`](solutions/documentation-gaps/learning-platform-api-workbench-contract-gap-2026-04-02.md)
 - [`solutions/index.md`](solutions/index.md)
 - [`tauri_brainstorming.md`](tauri_brainstorming.md)

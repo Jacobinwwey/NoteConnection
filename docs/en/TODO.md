@@ -2,6 +2,19 @@
 
 ## English Document
 
+### 2026-06-06 Mainline Architecture TODO Reclassification
+
+- [x] Land the bilingual 2026-06-06 code-vs-plan comparison in `docs/solutions/architecture-progress-alignment-2026-06-06.md`.
+- [x] Reclassify Program A-F substrate as implemented rather than merely planned.
+- [x] Reclassify scoped retrieval and grounded conversation as operational baselines with backward-compatible response evolution.
+- [x] Keep Godot/mobile direct-SVG avoidance as an active compatibility rule through PNG-first render materialization.
+- [~] Treat graphdb/sqlite as operational until repeated soak, threshold, and performance evidence make it release-grade.
+- [~] Treat ANN/external connector support as operational until recall/latency thresholds and workload calibration are complete.
+- [ ] Move Phase-2 diagnostics from visibility to release-gate status only after they run on release-grade graphdb/ANN baselines.
+- [ ] Extract server-owned conversation turn-cache, alert trend, runbook bridge, rollout profile, and connector-helper logic into explicit modules.
+- [ ] Continue KLP domain extraction without adding pass-through facade layers.
+- [ ] Keep README, Interface Document, task, implementation plan, and dashboard docs aligned whenever the implementation status changes.
+
 ### 2026-05-12 HEAD Truth Reclassification
 
 - [x] Agent-workspace browser/runtime/Tauri verification closure is real on the current branch.

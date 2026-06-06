@@ -25,6 +25,16 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
+## Current Mainline Architecture Status (2026-06-06)
+
+- Current `main` has code-backed scoped retrieval, grounded conversation, durable resource/index/workspace/session/memory/export substrate, explicit export profiles, and PNG-first Godot/mobile render materialization.
+- graphdb/sqlite and ANN/external connector paths are operational baselines. Production closure still requires repeated soak evidence, workload thresholds, recall/latency calibration, and strict rollout proof.
+- Compatibility remains additive: rich `assistantBlocks` can be used by newer clients while legacy `assistantMessage` stays valid.
+- The next architecture work is ownership reduction in `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, and large frontend host files.
+- Current code-vs-plan details: [Architecture Progress Alignment and Mainline Plan (2026-06-06)](../solutions/architecture-progress-alignment-2026-06-06.md) and [Development Progress Dashboard](../diataxis/en/explanation/development-progress-dashboard.md).
+
+---
+
 <a id="key-features-en"></a>
 
 ## 🚀 Key Features

@@ -3,6 +3,50 @@
 
 ## 中文文档
 
+### 2026-06-06 主线架构对齐实施计划
+
+#### 目标
+
+将当前代码 / 方案评估落入活跃实施计划，同时保持仓库位于 `main`，保持向前兼容，并且本次仅更新文档，不修改运行时行为。
+
+#### 当前代码真相
+
+- Scoped retrieval 已有代码支撑：`KnowledgeQueryRequest.scope`、`KnowledgeCorpusScope`、workspace readiness、miss diagnostics、active-target hydration 与 workspace/export substrate 已存在。
+- Grounded conversation 已进入 operational 状态：`AgentConversationResponse` 携带 `answer`、citation、memory action、trace 和可选 `assistantBlocks`；legacy `assistantMessage` 仍有效。
+- Program A-F 底座已在 `src/resources/`、`src/indexing/`、`src/workspace/`、`src/session/`、`src/workflows/`、`src/memory/`、`src/export/` 中实现。
+- 平台 / 导出边界已通过 `PlatformCapabilities`、`RenderMaterializer`、render routes 与 deterministic workspace export bundle 显式化。
+- graphdb/sqlite 与 ANN/external connector 目前是 operational baseline；生产闭环仍需要 soak、多轮主机证据、工作负载阈值、recall/latency 校准与 strict rollout 证明。
+- 架构缩减仍落后于目标：`src/server.ts` 与 `src/learning/KnowledgeLearningPlatform.ts` 仍是最主要的实现重心。
+
+#### 从当前 `main` 出发的执行顺序
+
+1. **P0：文档真相同步**
+   - 保持 2026-06-06 solution note、development progress dashboard、task、TODO、README、interface docs 使用同一口径。
+   - 没有发布级证据时，不把 operational-baseline 表述改写为 production-closed。
+2. **P1：release-grade graphdb/ANN 闭环**
+   - 将 sqlite soak verifier 推进为多轮证据。
+   - 收紧 graphdb connector health/budget 阈值。
+   - 完成 ANN recall/latency 校准后，再把 Phase-2 diagnostics 升级为发布门禁。
+3. **P2：`server.ts` 所有权缩减**
+   - 将 turn-cache、alert-trend、runbook bridge、rollout-profile、connector helper 等逻辑迁入明确模块。
+   - 在迁移所有权时保留 endpoint 名称与响应兼容性。
+4. **P3：学习平台领域拆分**
+   - 只有当新 owner 能隐藏状态或强制不变量时，才继续拆分 ingest/query/conversation/mastery/quality/tutor/memory 所有权。
+   - 避免给 `KnowledgeLearningPlatform.ts` 包一层只转发的 facade。
+5. **P4：Agent Workspace 合同加固**
+   - 保持 stream-first + sync fallback + replay 兼容。
+   - 只通过可选 payload 与 parity-tested capability 扩展 typed `assistantBlocks` 覆盖面。
+6. **P5：平台 / 导出兼容性**
+   - 保持 Godot/mobile PNG-first materialization 与 export profile 语义显式化。
+   - 保持核心 retrieval/synthesis 不包含 shell-specific 分支。
+
+#### 验收标准
+
+1. 活跃规划文档都指向同一份 2026-06-06 状态与后续顺序。
+2. 本文档切片不修改任何运行时 API。
+3. 后续代码工作可以按明确优先级启动：先发布级底座闭环，再所有权缩减，再 richer agent output。
+4. 文档提交后工作区保持 clean。
+
 ### 2026-05-27 工作流真相同步与后续主线重对齐
 
 #### 目标

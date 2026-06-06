@@ -27,6 +27,16 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
+## Current Mainline Architecture Status (2026-06-06)
+
+- The current `main` branch has code-backed scoped retrieval, grounded conversation, durable resource/index/workspace/session/memory/export substrate, explicit export profiles, and PNG-first Godot/mobile render materialization.
+- graphdb/sqlite and ANN/external connector paths are operational baselines, not production-closed release claims. Release closure still depends on repeated soak evidence, workload thresholds, recall/latency calibration, and strict rollout proof.
+- Backward compatibility is preserved through additive response evolution: `assistantBlocks` can carry richer Tauri agent replies while legacy `assistantMessage` remains valid.
+- The current architecture pressure is ownership reduction: `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, and large frontend host files remain the next simplification targets.
+- Current code-vs-plan details are tracked in [Architecture Progress Alignment and Mainline Plan (2026-06-06)](docs/solutions/architecture-progress-alignment-2026-06-06.md) and [Development Progress Dashboard](docs/diataxis/en/explanation/development-progress-dashboard.md).
+
+---
+
 <a id="key-features-en"></a>
 
 ## 🚀 Key Features
@@ -1001,6 +1011,16 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 <img width="2784" height="2034" alt="image" src="https://github.com/user-attachments/assets/0ea42609-4296-42ea-978d-c6cb7d448068" />
 <img width="3543" height="2159" alt="image" src="https://github.com/user-attachments/assets/0b2d80f5-ec8c-4ac1-9607-b925d4ab5f82" />
+
+---
+
+## 当前主线架构状态（2026-06-06）
+
+- 当前 `main` 已具备代码支撑的 scoped retrieval、grounded conversation、持久化 resource/index/workspace/session/memory/export 底座、显式 export profiles，以及 Godot/mobile PNG-first 渲染物化边界。
+- graphdb/sqlite 与 ANN/external connector 目前是 operational baseline，不是 production-closed 发布结论。发布闭环仍依赖多轮 soak 证据、工作负载阈值、recall/latency 校准与 strict rollout 证明。
+- 向前兼容通过 additive response evolution 保持：`assistantBlocks` 可以承载更丰富的 Tauri agent 回复，同时 legacy `assistantMessage` 仍有效。
+- 当前架构压力是所有权缩减：`src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts` 与大型前端宿主文件是下一阶段简化目标。
+- 代码 / 方案详细对齐请查看 [架构推进对齐与主线推进方案（2026-06-06）](docs/solutions/architecture-progress-alignment-2026-06-06.md) 与 [开发进度看板](docs/diataxis/zh/explanation/development-progress-dashboard.md)。
 
 ---
 

@@ -379,7 +379,7 @@
 
 ## Mermaid 标准兼容基线（Obsidian）
 
-- 标准兼容格式：fenced code block，起始行为 ` ```mermaid`，结束行为 ` ``` `。
+- 标准兼容格式：fenced code block，起始行为三个反引号后接 `mermaid`，结束行为三个反引号。
 - Godot 运行时渲染保持 PNG-first；Mermaid 渲染偏好需允许回退（`auto`），避免仅 bridge 可用时才成功。
 - 字段级路由与契约细节：
   - [Godot + NoteMD + Markdown 接口](./godot-notemd-markdown-interfaces.md)

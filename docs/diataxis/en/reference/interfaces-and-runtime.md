@@ -379,7 +379,7 @@ This reference tracks canonical API/runtime contracts.
 
 ## Mermaid Canonical Baseline (Obsidian)
 
-- Standard compatible format: fenced code block using ` ```mermaid` (opening line) and ` ``` ` (closing line).
+- Standard compatible format: fenced code block whose opening line is three backticks followed by `mermaid`, and whose closing line is three backticks.
 - Godot runtime rendering remains PNG-first; Mermaid renderer preference should allow fallback (`auto`) to avoid bridge-only hard failures.
 - Detailed field and route contracts:
   - [Godot + NoteMD + Markdown Interfaces](./godot-notemd-markdown-interfaces.md)

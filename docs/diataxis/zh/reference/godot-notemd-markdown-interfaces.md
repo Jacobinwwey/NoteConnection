@@ -302,13 +302,13 @@ SSE 事件类型：
 Obsidian 兼容性基线：
 
 - Mermaid 的权威输入格式为 fenced Markdown：
-  - 起始 fence 独占一行：\`\`\`mermaid
-  - 结束 fence 独占一行：\`\`\`
+  - 起始 fence 独占一行：三个反引号后接 `mermaid`
+  - 结束 fence 独占一行：三个反引号
 - 该基线必须在 markdown 索引/分块管线，以及 Godot/Web Reader 渲染链路中持续兼容。
-- `$$```mermaid` 这类同行拼接属于 malformed 内容（非标准 fenced 起始），预期会导致块类型识别失败。
-- 推荐修复方式：将 `$$```mermaid` 拆成两行（先 `$$`，再 ` ```mermaid`），或执行：
+- 数学分隔符后立即拼接 Mermaid 起始 fence 的同行模式属于 malformed 内容（非标准 fenced 起始），预期会导致块类型识别失败。
+- 推荐修复方式：将数学分隔符与 Mermaid 起始 fence 拆成两行，或执行：
   - `npm run fix:markdown:mermaid:fence -- Knowledge_Base/testconcept`
-- Reader 运行时快速自检：打开 Markdown 阅读器时，渲染前会对 `$$```mermaid` 做轻量自动修复。
+- Reader 运行时快速自检：打开 Markdown 阅读器时，渲染前会对这类数学分隔符加 Mermaid fence 的同行拼接做轻量自动修复。
 
 ## 5.3 剪贴板接口
 

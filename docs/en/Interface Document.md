@@ -45,6 +45,30 @@ Build-surface files verified for this addendum:
 - `.github/workflows/release-desktop-multi-os.yml`
 - `.github/workflows/npm-publish.yml`
 
+## 0.0A Knowledge Runtime Contract Addendum (2026-06-06)
+
+This addendum records the current code-backed knowledge runtime contracts without changing the public API.
+
+Current contract surfaces:
+
+- `KnowledgeQueryRequest.scope` accepts `KnowledgeCorpusScope` with workspace, corpus, document, atom, source-path-prefix, and language constraints.
+- `AgentConversationResponse` remains backward-compatible:
+  - `assistantMessage` is still valid for legacy clients,
+  - `answer`, `citations`, `knowledgePoints`, `memoryActions`, `summary`, and `trace` expose grounded conversation state,
+  - optional `assistantBlocks` carries richer typed reply sections for clients that can render them.
+- `/api/knowledge/conversation` supports the current conversation path, including stream-first clients and sync fallback behavior.
+- `/api/knowledge/conversation-memory/{list,add,search,delete,feedback}` exposes scoped conversation memory operations.
+- `/api/knowledge/workspace-readiness` exposes workspace/corpus readiness for scoped runtime decisions.
+- `POST /api/knowledge/export/workspace` exposes deterministic workspace export bundles backed by resource, index, workspace, session, workflow, memory, and render-materialization state.
+- Runtime governance endpoints and payloads expose graphdb/vector rollout context, including `rolloutProfile`, graphdb connector health, vector acceleration strictness, and runbook checks.
+
+Compatibility rules:
+
+- New response fields must remain additive and optional.
+- Existing endpoint names and legacy fields must remain stable unless a compatibility shim and tests land in the same change.
+- Godot/mobile render paths must continue to consume PNG-first materialized artifacts; direct SVG import must not become a required runtime dependency.
+- graphdb and ANN status wording must distinguish operational baselines from production closure until release-grade thresholds and repeated evidence exist.
+
 ## 0. Fast Track Links (Godot + NoteMD + Markdown)
 
 Before starting the next integrated feature slice, execute against these docs first:
@@ -94,9 +118,9 @@ Audit flow:
 - SVG payload is retained only for diagnostics/debug snapshots and must not be used as runtime fallback in Godot.
 - Reason: current Godot SVG handling can fail non-deterministically (text/layout/raster instability across devices).
 - Change-control rule: any future Godot renderer optimization must preserve PNG decode as the primary path (`pngBase64` required); missing PNG is a hard failure.
-- Obsidian compatibility baseline: canonical Mermaid markdown is fenced code with opening \`\`\`mermaid on its own line and closing \`\`\` on its own line.
-- Any inline-concatenated fence pattern (for example `$$```mermaid`) is malformed input and outside the canonical compatibility baseline.
-- Reader runtime guardrail: markdown reader performs a lightweight self-check on open and auto-heals `$$```mermaid` to newline-split form before parsing/rendering.
+- Obsidian compatibility baseline: canonical Mermaid markdown is fenced code whose opening line is three backticks followed by `mermaid`, and whose closing line is three backticks.
+- Any inline-concatenated pattern where a math delimiter is immediately followed by a Mermaid opening fence is malformed input and outside the canonical compatibility baseline.
+- Reader runtime guardrail: markdown reader performs a lightweight self-check on open and auto-heals that malformed pattern to newline-split form before parsing/rendering.
 
 ## 0.2 NoteMD Module Interface Contracts (v1.6.0)
 
