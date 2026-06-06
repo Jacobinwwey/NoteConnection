@@ -395,13 +395,22 @@
     "userId": "学习者 ID",
     "inputLabel": "向当前限定知识域提问",
     "inputPlaceholder": "可以询问概念、引用依据、先修依赖或学习步骤...",
+    "scope": {
+      "label": "知识范围",
+      "allFolders": "所有文件夹",
+      "summaryAll": "所有文件夹",
+      "summaryScoped": "范围：{scope}"
+    },
     "knowledge": {
       "emptyInitial": "当前还没有命中限定范围内的知识结果。",
       "empty": "当前没有命中限定范围内的知识结果。",
       "citation": "引用",
       "memory": "记忆",
       "score": "得分",
-      "matchedEvidence": "命中依据"
+      "matchedEvidence": "命中依据",
+      "openFile": "打开命中的知识点：{file}",
+      "actionsMenu": "知识点操作",
+      "untitled": "未命名知识点"
     },
     "apiStatus": {
       "idle": "空闲",

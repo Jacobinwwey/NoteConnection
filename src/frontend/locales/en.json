@@ -395,13 +395,22 @@
     "userId": "Learner ID",
     "inputLabel": "Ask the scoped knowledge corpus",
     "inputPlaceholder": "Ask about a concept, citation, prerequisite, or study step...",
+    "scope": {
+      "label": "Knowledge Scope",
+      "allFolders": "All folders",
+      "summaryAll": "All folders",
+      "summaryScoped": "Scope: {scope}"
+    },
     "knowledge": {
       "emptyInitial": "No scoped knowledge matches yet.",
       "empty": "No scoped knowledge matches.",
       "citation": "Citation",
       "memory": "Memory",
       "score": "Score",
-      "matchedEvidence": "Matched evidence"
+      "matchedEvidence": "Matched evidence",
+      "openFile": "Open matched knowledge point: {file}",
+      "actionsMenu": "Knowledge point actions",
+      "untitled": "Untitled knowledge point"
     },
     "apiStatus": {
       "idle": "Idle",

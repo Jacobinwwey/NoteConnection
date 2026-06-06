@@ -37,6 +37,7 @@
     }
 
     const ACTIVE_SOURCE_TARGET_STORAGE_KEY = 'nc_last_target';
+    const ACTIVE_SOURCE_TARGET_EVENT = 'noteconnection:active-target-changed';
     const AGENT_CONVERSATION_ENDPOINT = '/api/knowledge/conversation';
 
     function normalizeActiveSourceTarget(value) {
@@ -83,6 +84,142 @@
                 }
                 : undefined,
         };
+    }
+
+    function buildScopeForTarget(target) {
+        const normalizedTarget = normalizeActiveSourceTarget(target);
+        return normalizedTarget === 'ALL_FOLDERS'
+            ? null
+            : {
+                workspaceId: normalizedTarget.toLowerCase(),
+                corpusId: normalizedTarget.toLowerCase(),
+                sourcePathPrefixes: [`Knowledge_Base/${normalizedTarget}`],
+            };
+    }
+
+    function buildActiveSourceTargetPayload(target, source) {
+        const normalizedTarget = normalizeActiveSourceTarget(target);
+        return {
+            target: normalizedTarget,
+            source: String(source || 'agent-workspace').trim() || 'agent-workspace',
+            scope: buildScopeForTarget(normalizedTarget),
+        };
+    }
+
+    function publishWorkspaceScopeTarget(target, source) {
+        const payload = buildActiveSourceTargetPayload(target, source);
+        if (typeof localStorage !== 'undefined') {
+            localStorage.setItem(ACTIVE_SOURCE_TARGET_STORAGE_KEY, payload.target);
+        }
+        window.__NC_ACTIVE_SOURCE_TARGET = payload;
+        if (typeof window.dispatchEvent === 'function' && typeof window.CustomEvent === 'function') {
+            window.dispatchEvent(new CustomEvent(ACTIVE_SOURCE_TARGET_EVENT, { detail: payload }));
+        }
+        return payload;
+    }
+
+    function getAvailableWorkspaceScopeOptions() {
+        const folderSelect = getElement('folder-select');
+        const options = folderSelect && folderSelect.options
+            ? Array.from(folderSelect.options)
+                .map((option) => ({
+                    value: normalizeActiveSourceTarget(option.value),
+                    label: String(option.textContent || option.value || '').trim() || normalizeActiveSourceTarget(option.value),
+                    disabled: option.disabled === true,
+                }))
+                .filter((option) => option.value && !option.disabled)
+            : [];
+        if (options.length > 0) {
+            return options;
+        }
+        const activeTarget = resolveKnowledgeWorkspaceRequestContext().activeTarget;
+        return [{
+            value: activeTarget,
+            label: activeTarget === 'ALL_FOLDERS'
+                ? translate('agentWorkspace.scope.allFolders', 'All folders')
+                : activeTarget,
+            disabled: false,
+        }];
+    }
+
+    function updateWorkspaceScopeSummary(target) {
+        const summary = getElement('agent-workspace-scope-summary');
+        if (!summary) {
+            return;
+        }
+        const normalizedTarget = normalizeActiveSourceTarget(target);
+        summary.textContent = normalizedTarget === 'ALL_FOLDERS'
+            ? translate('agentWorkspace.scope.summaryAll', 'All folders')
+            : translate('agentWorkspace.scope.summaryScoped', 'Scope: {scope}', { scope: normalizedTarget });
+    }
+
+    function renderWorkspaceScopeSelector() {
+        const scopeSelect = getElement('agent-workspace-scope-select');
+        if (!scopeSelect) {
+            return;
+        }
+        const options = getAvailableWorkspaceScopeOptions();
+        const activeTarget = resolveKnowledgeWorkspaceRequestContext().activeTarget;
+        const previousValue = scopeSelect.value;
+        scopeSelect.innerHTML = '';
+        options.forEach((option) => {
+            const node = document.createElement('option');
+            node.value = option.value;
+            node.textContent = option.label;
+            scopeSelect.appendChild(node);
+        });
+        const optionValues = new Set(options.map((option) => option.value));
+        scopeSelect.value = optionValues.has(activeTarget)
+            ? activeTarget
+            : (optionValues.has(previousValue) ? previousValue : (options[0] && options[0].value || 'ALL_FOLDERS'));
+        updateWorkspaceScopeSummary(scopeSelect.value);
+    }
+
+    function syncGlobalFolderSelectFromWorkspace(target) {
+        const folderSelect = getElement('folder-select');
+        if (!folderSelect || !folderSelect.options) {
+            return false;
+        }
+        const normalizedTarget = normalizeActiveSourceTarget(target);
+        const hasOption = Array.from(folderSelect.options).some((option) => option.value === normalizedTarget);
+        if (!hasOption) {
+            return false;
+        }
+        if (folderSelect.value !== normalizedTarget) {
+            folderSelect.value = normalizedTarget;
+            if (typeof folderSelect.dispatchEvent === 'function') {
+                folderSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+        return true;
+    }
+
+    function bindWorkspaceScopeSelector() {
+        const scopeSelect = getElement('agent-workspace-scope-select');
+        if (!scopeSelect || scopeSelect.getAttribute('data-agent-scope-bound') === 'true') {
+            return;
+        }
+        scopeSelect.setAttribute('data-agent-scope-bound', 'true');
+        scopeSelect.addEventListener('change', function () {
+            const target = normalizeActiveSourceTarget(scopeSelect.value);
+            syncGlobalFolderSelectFromWorkspace(target);
+            publishWorkspaceScopeTarget(target, 'agent-workspace-scope');
+            renderWorkspaceScopeSelector();
+        });
+    }
+
+    function observeGlobalScopeOptions() {
+        const folderSelect = getElement('folder-select');
+        if (!folderSelect || folderSelect.getAttribute('data-agent-scope-observed') === 'true') {
+            return;
+        }
+        folderSelect.setAttribute('data-agent-scope-observed', 'true');
+        if (typeof MutationObserver === 'function') {
+            const observer = new MutationObserver(function () {
+                renderWorkspaceScopeSelector();
+            });
+            observer.observe(folderSelect, { childList: true, subtree: true, attributes: true });
+        }
     }
 
     function translate(key, fallback, params) {
@@ -3413,6 +3550,9 @@
         }
         controller.init();
         bindWorkspaceDrawerChrome();
+        bindWorkspaceScopeSelector();
+        observeGlobalScopeOptions();
+        renderWorkspaceScopeSelector();
         updateConversationApiStatus({
             state: 'idle',
             endpoint: AGENT_CONVERSATION_ENDPOINT,
@@ -3430,6 +3570,11 @@
                     event.preventDefault();
                     void sendConversation();
                 }
+            });
+        }
+        if (typeof window.addEventListener === 'function') {
+            window.addEventListener(ACTIVE_SOURCE_TARGET_EVENT, function () {
+                renderWorkspaceScopeSelector();
             });
         }
         appendLocalizedAssistantMessage(

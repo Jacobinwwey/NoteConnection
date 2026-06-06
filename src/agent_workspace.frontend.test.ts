@@ -700,10 +700,20 @@ function createWorkspaceHtml() {
         <!doctype html>
         <html>
           <body>
+            <select id="folder-select">
+              <option value="ALL_FOLDERS">All folders</option>
+              <option value="financial">financial</option>
+              <option value="waterglass">waterglass</option>
+            </select>
             <div id="graph-wrapper">
               <div id="agent-workspace-shell">
                 <section id="agent-chat-pane">
                   <input id="agent-workspace-user-id" value="path_user_default" />
+                  <div class="agent-scope-control">
+                    <label for="agent-workspace-scope-select">Scope</label>
+                    <select id="agent-workspace-scope-select"></select>
+                    <div id="agent-workspace-scope-summary"></div>
+                  </div>
                   <div id="agent-workspace-chat-messages"></div>
                   <textarea id="agent-workspace-chat-input"></textarea>
                   <button id="btn-agent-workspace-send"></button>
@@ -2331,8 +2341,8 @@ describe('workspace panes controller', () => {
         expect(buttonsAfter).toEqual(['聚焦', '学习路径']);
     });
 
-    test('renders grouped knowledge-point hit spans inside a single card', () => {
-        const { controller, document } = loadWorkspacePanesHarness();
+    test('renders knowledge hits as file entries and opens matched spans in the focus pane', () => {
+        const { controller, document, window } = loadWorkspacePanesHarness();
         controller.init();
 
         controller.renderKnowledgePoints([
@@ -2361,7 +2371,16 @@ describe('workspace panes controller', () => {
                         score: 0.81,
                     },
                 ],
-                capabilities: [],
+                capabilities: [
+                    {
+                        actionId: 'open_focus_mode',
+                        label: 'Focus',
+                    },
+                    {
+                        actionId: 'open_learning_path',
+                        label: 'Guided Learning',
+                    },
+                ],
             },
         ], {
             onCapability: jest.fn(),
@@ -2369,13 +2388,40 @@ describe('workspace panes controller', () => {
 
         const cards = Array.from(document.querySelectorAll('.agent-knowledge-card'));
         expect(cards).toHaveLength(1);
-        const cardText = String(cards[0]?.textContent || '');
-        expect(cardText).toContain('Matched evidence');
-        expect(cardText).toContain('Definition');
-        expect(cardText).toContain('Thermal exchange');
-        expect(cardText).toContain('Knowledge_Base/waterglass/water glass.md:1');
-        expect(cardText).toContain('Knowledge_Base/waterglass/water glass.md:6');
-        expect(cards[0]?.querySelectorAll('.agent-knowledge-hit')).toHaveLength(2);
+        const fileButton = cards[0]?.querySelector('.agent-knowledge-file-button') as HTMLButtonElement;
+        expect(fileButton).not.toBeNull();
+        expect(String(fileButton?.textContent || '')).toBe('water glass.md');
+        expect(cards[0]?.querySelector('.agent-knowledge-summary')).toBeNull();
+        expect(cards[0]?.querySelectorAll('.agent-knowledge-hit')).toHaveLength(0);
+
+        const actionMenu = cards[0]?.querySelector('.agent-knowledge-actions-menu') as HTMLElement;
+        expect(actionMenu).not.toBeNull();
+        expect(actionMenu.hidden).toBe(true);
+        expect(actionMenu.querySelectorAll('button')).toHaveLength(2);
+
+        fileButton.dispatchEvent(new window.MouseEvent('contextmenu', {
+            bubbles: true,
+            cancelable: true,
+        }));
+        expect(actionMenu.hidden).toBe(false);
+        expect(fileButton.getAttribute('aria-expanded')).toBe('true');
+        fileButton.dispatchEvent(new window.KeyboardEvent('keydown', {
+            key: 'Escape',
+            bubbles: true,
+        }));
+        expect(actionMenu.hidden).toBe(true);
+
+        fileButton.click();
+
+        const graphPane = document.getElementById('agent-graph-focus-pane');
+        const graphBody = document.getElementById('agent-graph-focus-body');
+        expect(graphPane?.getAttribute('data-open')).toBe('true');
+        const focusText = String(graphBody?.textContent || '');
+        expect(focusText).toContain('Water Glass');
+        expect(focusText).toContain('Definition');
+        expect(focusText).toContain('A water glass is a physical system');
+        expect(focusText).toContain('Thermal exchange');
+        expect(focusText).toContain('The water glass exchanges heat');
     });
 
     test('keeps conversation card append kinds aligned with rerender registry', () => {
@@ -2656,6 +2702,68 @@ describe('agent workspace learning-path integration', () => {
         expect(diagnostics.legacyActionFallbacks).toEqual([]);
     });
 
+    test('shows a workspace scope selector and uses it for conversation requests', async () => {
+        const {
+            document,
+            window,
+            fetchMock,
+        } = loadAgentWorkspaceHarness();
+        if (!fetchMock) {
+            throw new Error('expected fetch mock');
+        }
+
+        fetchMock.mockImplementationOnce(async () => createSseResponse([
+            {
+                event: 'turn_completed',
+                payload: {
+                    type: 'turn_completed',
+                    turnId: 'turn_scope_selector',
+                    emittedAt: '2026-04-13T00:00:00.100Z',
+                    result: {
+                        assistantMessage: 'scoped selector response',
+                        citations: [],
+                        recalledMemories: [],
+                        memoryActions: [],
+                        knowledgePoints: [],
+                        summary: {
+                            generatedAt: '2026-04-13T00:00:00.100Z',
+                            topK: 6,
+                            returnedKnowledgePoints: 0,
+                            returnedCitations: 0,
+                            recalledMemoryCount: 0,
+                            queryEvidenceCoverageRatioPct: 0,
+                        },
+                    },
+                },
+            },
+        ]));
+
+        const scopeSelect = document.getElementById('agent-workspace-scope-select') as HTMLSelectElement;
+        expect(scopeSelect).not.toBeNull();
+        expect(Array.from(scopeSelect.options).map((option) => option.value)).toEqual([
+            'ALL_FOLDERS',
+            'financial',
+            'waterglass',
+        ]);
+        scopeSelect.value = 'waterglass';
+        scopeSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+
+        const scopeSummary = document.getElementById('agent-workspace-scope-summary');
+        expect(String(scopeSummary?.textContent || '')).toContain('waterglass');
+
+        const input = document.getElementById('agent-workspace-chat-input') as HTMLTextAreaElement;
+        input.value = 'what is water glass?';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+
+        const requestBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body || '{}'));
+        expect(requestBody.activeTarget).toBe('waterglass');
+        expect(requestBody.scope).toEqual({
+            workspaceId: 'waterglass',
+            corpusId: 'waterglass',
+            sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+        });
+    });
+
     test('prefers SSE turn streaming for conversation and renders the completed turn payload', async () => {
         const {
             document,
@@ -2798,9 +2906,10 @@ describe('agent workspace learning-path integration', () => {
         ).toBe(true);
         const knowledgeCards = Array.from(document.querySelectorAll('.agent-knowledge-card'));
         expect(knowledgeCards.length).toBeGreaterThan(0);
-        expect(String(knowledgeCards[0]?.textContent || '')).toContain('Stream Node');
-        expect(String(knowledgeCards[0]?.textContent || '')).toContain('Citation');
-        expect(String(knowledgeCards[0]?.textContent || '')).toContain('Knowledge_Base/optics/stream.md:12');
+        const fileButton = knowledgeCards[0]?.querySelector('.agent-knowledge-file-button') as HTMLButtonElement;
+        expect(String(fileButton?.textContent || '')).toBe('stream.md');
+        expect(knowledgeCards[0]?.querySelector('.agent-knowledge-summary')).toBeNull();
+        expect(knowledgeCards[0]?.querySelectorAll('.agent-knowledge-hit')).toHaveLength(0);
     });
 
     test('renders structured assistant blocks without breaking scoped conversation flow', async () => {

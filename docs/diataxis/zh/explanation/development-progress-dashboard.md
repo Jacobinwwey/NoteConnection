@@ -3,6 +3,31 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
+## 2026-06-06 知识工作区 scope 切换器与证据聚焦命中 UI
+
+本切片关闭的是知识工作区前端可用性缺口：旧实现依赖全局文件夹选择器和请求载荷状态，用户在知识工作区内提问时，无法在同一任务窗口中直接确认当前 RAG 检索边界。
+同时，旧命中卡片会把摘要、引用、命中 section 与动作按钮全部铺在首层，导致结果返回后提问 / 回复区域容易被挤出视野，也让用户在第一层面对过多选择。
+
+本切片的代码 / 方案对齐结果：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| 在知识工作区窗口内默认显示并可切换 scope | `src/frontend/index.html` 现在在工作区内加入 `agent-workspace-scope-select`；`src/frontend/agent_workspace.js` 会镜像全局 `folder-select`，发布同一 active-target 事件，更新 `localStorage.nc_last_target`，并在 conversation 请求中发送 `activeTarget` 与 `scope`。 | 已实现 |
+| 命中返回后仍保持提问 / 回复区域可见 | `src/frontend/styles.css` 为聊天消息区设置稳定 flex 下限，并限制知识命中列表最大高度，使对话流和输入框不会被结果卡片挤出当前工作区。 | 已实现 |
+| 首层命中内容只显示可交互的知识点文件名 | `src/frontend/workspace_panes.js` 现在将每个知识点渲染为文件按钮，文件名来自 `sourcePath`、`citation.sourcePath` 或 `matchedSpans[0].sourcePath`；摘要、得分、引用与命中片段不再作为首层卡片内容。 | 已实现 |
+| 其他动作进入长按 / 右键菜单 | typed capability 按钮继续保持向前兼容，但默认隐藏在 `agent-knowledge-actions-menu` 中，只在长按、右键或键盘 context-menu 操作时展开。 | 已实现 |
+| 点击知识点后在右侧高亮命中段落 | 点击文件名会打开 graph-focus 面板，展示知识点标题与 `matchedSpans`，每个命中段落作为高亮证据渲染。 | 已实现 |
+| 双语文案与契约兼容 | `agentWorkspace.scope.*` 与新增知识点操作文案已经同步到中英 locale bundle，并由 locale contract 测试校验 key 覆盖与占位符一致性。 | 已保留 |
+
+本切片验证：
+
+- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts -t "scope selector|knowledge hits as file entries" --runInBand`
+- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts --runInBand`
+- `npm.cmd exec -- jest src/agent_workspace.locale.contract.test.ts --runInBand`
+- `node --check src/frontend/agent_workspace.js`
+- `node --check src/frontend/workspace_panes.js`
+- `npm.cmd run build`
+
 ## 2026-06-06 active scope miss recovery 与 document-augmented RAG 修复
 
 本次补丁修复了 WebView 已在 `npm run tauri:dev:mini:gpu` 中运行时复现的 “what is water glass?” 失败。

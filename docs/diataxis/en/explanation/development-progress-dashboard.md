@@ -3,6 +3,32 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-06-06 Knowledge Workspace Scope Switcher and Evidence-Focused Hit UI
+
+This slice closes the frontend usability gap that made the active RAG scope hard to see from inside the Knowledge Workspace itself.
+The prior implementation depended on the global folder selector and request payload state, so users could ask a scoped question without a local, task-adjacent confirmation of the actual retrieval boundary.
+It also rendered summaries, citations, matched sections, and actions in every hit card, which pushed the question/reply area out of view after results returned and increased first-level choice density.
+
+Code-vs-plan reconciliation for this slice:
+
+| Requirement | Current implementation evidence | Progress call |
+|---|---|---|
+| Show and switch the Knowledge Workspace scope in the workspace window | `src/frontend/index.html` now includes an in-pane `agent-workspace-scope-select`; `src/frontend/agent_workspace.js` mirrors the global `folder-select`, publishes the same active-target event, updates `localStorage.nc_last_target`, and sends `activeTarget` plus `scope` with conversation requests. | Implemented |
+| Keep the question/reply area visible after hits return | `src/frontend/styles.css` gives chat messages a stable flex floor and caps the knowledge-hit list height, so the conversation stream and input remain part of the active workspace instead of being displaced by result cards. | Implemented |
+| Show only interactive knowledge-point filenames at the first level | `src/frontend/workspace_panes.js` now renders each knowledge point as a file button resolved from `sourcePath`, `citation.sourcePath`, or `matchedSpans[0].sourcePath`; summaries, scores, citations, and matched section snippets are no longer first-level card content. | Implemented |
+| Move secondary actions behind a long-press/context menu | Typed capability buttons remain backward-compatible, but are hidden in `agent-knowledge-actions-menu` until long-press, context menu, or keyboard context-menu activation opens them. | Implemented |
+| Highlight matched passages in the right pane | Clicking the filename opens the graph-focus pane with the knowledge point title and `matchedSpans`, rendering each matched passage as highlighted evidence. | Implemented |
+| Bilingual locale and contract compatibility | `agentWorkspace.scope.*` and new knowledge action labels are present in both frontend locale bundles, and the locale contract test verifies key coverage and placeholder parity. | Preserved |
+
+Verification for this slice:
+
+- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts -t "scope selector|knowledge hits as file entries" --runInBand`
+- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts --runInBand`
+- `npm.cmd exec -- jest src/agent_workspace.locale.contract.test.ts --runInBand`
+- `node --check src/frontend/agent_workspace.js`
+- `node --check src/frontend/workspace_panes.js`
+- `npm.cmd run build`
+
 ## 2026-06-06 Active-Scope Miss Recovery and Document-Augmented RAG Patch
 
 This patch resolves the live "what is water glass?" failure that reproduced while the WebView was already running on `npm run tauri:dev:mini:gpu`.

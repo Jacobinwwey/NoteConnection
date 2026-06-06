@@ -213,13 +213,84 @@
             || translate('agentWorkspace.graphFocus.title', 'Graph Focus')
         ).trim();
         const summary = String(payload.summary || '').trim();
+        const matchedSpans = Array.isArray(payload.matchedSpans)
+            ? payload.matchedSpans
+                .map((span) => span && typeof span === 'object' ? span : null)
+                .filter(Boolean)
+            : [];
+        const matchedSpanHtml = matchedSpans.length > 0
+            ? `
+                <div class="agent-focus-hit-list">
+                    <div class="agent-focus-hit-heading">${escapeHtml(translate('agentWorkspace.knowledge.matchedEvidence', 'Matched evidence'))}</div>
+                    ${matchedSpans.map((span) => {
+                        const spanTitle = String(span.title || '').trim();
+                        const spanSnippet = String(span.snippet || '').trim();
+                        const spanSourcePath = String(span.sourcePath || '').trim();
+                        const spanLocation = spanSourcePath
+                            ? `${spanSourcePath}${span.startLine ? `:${span.startLine}` : ''}`
+                            : '';
+                        return `
+                            <article class="agent-focus-hit" data-agent-focus-hit="true">
+                                ${spanTitle ? `<div class="agent-focus-hit-title">${escapeHtml(spanTitle)}</div>` : ''}
+                                ${spanSnippet ? `<div class="agent-focus-hit-snippet">${escapeHtml(spanSnippet)}</div>` : ''}
+                                ${spanLocation ? `<div class="agent-focus-hit-meta">${escapeHtml(spanLocation)}</div>` : ''}
+                            </article>
+                        `;
+                    }).join('')}
+                </div>
+            `
+            : '';
         body.innerHTML = `
             <div class="agent-pane-block">
                 <div class="agent-pane-title">${escapeHtml(title)}</div>
                 <div class="agent-pane-meta">${escapeHtml(String(payload.atomId || payload.nodeId || ''))}</div>
                 <p class="agent-pane-summary">${escapeHtml(summary || translate('agentWorkspace.graphFocus.noSummary', 'No summary available.'))}</p>
+                ${matchedSpanHtml}
             </div>
         `;
+    }
+
+    function resolveKnowledgePointSourcePath(item) {
+        const sourcePath = String(item && item.sourcePath || '').trim();
+        if (sourcePath) {
+            return sourcePath;
+        }
+        const citation = item && typeof item.citation === 'object' ? item.citation : null;
+        const citationPath = String(citation && citation.sourcePath || '').trim();
+        if (citationPath) {
+            return citationPath;
+        }
+        const matchedSpans = Array.isArray(item && item.matchedSpans) ? item.matchedSpans : [];
+        const firstMatchedSpanPath = String(matchedSpans[0] && matchedSpans[0].sourcePath || '').trim();
+        return firstMatchedSpanPath;
+    }
+
+    function resolveKnowledgePointFileName(item) {
+        const sourcePath = resolveKnowledgePointSourcePath(item);
+        if (sourcePath) {
+            const normalized = sourcePath.replace(/\\/g, '/');
+            return normalized.split('/').filter(Boolean).pop() || normalized;
+        }
+        return String(item && (item.title || item.atomId) || '').trim()
+            || translate('agentWorkspace.knowledge.untitled', 'Untitled knowledge point');
+    }
+
+    function buildKnowledgePointFocusPayload(item) {
+        const matchedSpans = Array.isArray(item && item.matchedSpans)
+            ? item.matchedSpans
+                .map((span) => span && typeof span === 'object' ? span : null)
+                .filter(Boolean)
+            : [];
+        const atomIds = Array.isArray(item && item.atomIds) && item.atomIds.length > 0
+            ? item.atomIds
+            : [item && item.atomId].filter(Boolean);
+        return {
+            atomId: String(atomIds[0] || item && item.documentId || '').trim(),
+            nodeId: String(item && item.documentId || atomIds[0] || '').trim(),
+            title: String(item && item.title || resolveKnowledgePointFileName(item)).trim(),
+            summary: String(item && (item.summary || item.evidenceSnippet) || '').trim(),
+            matchedSpans,
+        };
     }
 
     function renderLearningPathBody(payload) {
@@ -3032,74 +3103,106 @@
                 return;
             }
             container.innerHTML = '';
-            normalizedItems.forEach((item) => {
-                const evidenceSnippet = String(item && item.evidenceSnippet || '').trim();
-                const matchedSpans = Array.isArray(item && item.matchedSpans)
-                    ? item.matchedSpans
-                        .map((span) => span && typeof span === 'object' ? span : null)
-                        .filter(Boolean)
-                    : [];
-                const citation = item && typeof item.citation === 'object' ? item.citation : null;
-                const citationPath = citation
-                    ? `${String(citation.sourcePath || '').trim()}${citation.startLine ? `:${citation.startLine}` : ''}`
-                    : '';
-                const score = Number.isFinite(Number(item && item.score)) ? Number(item.score) : null;
-                const matchedSpanHtml = matchedSpans.length > 0
-                    ? `
-                        <div class="agent-knowledge-hit-list" data-agent-knowledge-hit-list="true">
-                            <div class="agent-knowledge-hit-heading">${escapeHtml(translate('agentWorkspace.knowledge.matchedEvidence', 'Matched evidence'))}</div>
-                            ${matchedSpans.map((span) => {
-                                const spanTitle = String(span.title || '').trim();
-                                const spanSnippet = String(span.snippet || '').trim();
-                                const spanSourcePath = String(span.sourcePath || '').trim();
-                                const spanLocation = spanSourcePath
-                                    ? `${spanSourcePath}${span.startLine ? `:${span.startLine}` : ''}`
-                                    : '';
-                                const spanScore = Number.isFinite(Number(span.score)) ? Number(span.score) : null;
-                                return `
-                                    <div class="agent-knowledge-hit">
-                                        ${spanTitle ? `<div class="agent-knowledge-hit-title">${escapeHtml(spanTitle)}</div>` : ''}
-                                        ${spanSnippet ? `<div class="agent-knowledge-hit-snippet">${escapeHtml(spanSnippet)}</div>` : ''}
-                                        ${(spanLocation || spanScore !== null)
-                                            ? `<div class="agent-knowledge-hit-meta">
-                                                ${spanLocation ? `<span>${escapeHtml(spanLocation)}</span>` : ''}
-                                                ${spanLocation && spanScore !== null ? ' | ' : ''}
-                                                ${spanScore !== null ? `<span>${escapeHtml(translate('agentWorkspace.knowledge.score', 'Score'))}: ${escapeHtml(spanScore.toFixed(4))}</span>` : ''}
-                                            </div>`
-                                            : ''}
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    `
-                    : '';
+            normalizedItems.forEach((item, index) => {
                 const card = document.createElement('div');
                 card.className = 'agent-knowledge-card';
-                card.innerHTML = `
-                    <div class="agent-knowledge-title">${escapeHtml(String(item.title || item.atomId || ''))}</div>
-                    <div class="agent-knowledge-summary">${escapeHtml(String(item.summary || ''))}</div>
-                    ${evidenceSnippet && evidenceSnippet !== String(item.summary || '').trim()
-                        ? `<div class="agent-knowledge-summary">${escapeHtml(evidenceSnippet)}</div>`
-                        : ''}
-                    ${(citationPath || score !== null)
-                        ? `<div class="agent-knowledge-summary">
-                            ${citationPath
-                                ? `<span data-agent-knowledge-citation="true">${escapeHtml(translate('agentWorkspace.knowledge.citation', 'Citation'))}: ${escapeHtml(citationPath)}</span>`
-                                : ''}
-                            ${citationPath && score !== null ? ' · ' : ''}
-                            ${score !== null
-                                ? `<span data-agent-knowledge-score="true">${escapeHtml(translate('agentWorkspace.knowledge.score', 'Score'))}: ${escapeHtml(score.toFixed(4))}</span>`
-                                : ''}
-                        </div>`
-                        : ''}
-                    ${matchedSpanHtml}
-                `;
+                const fileName = resolveKnowledgePointFileName(item);
+                card.setAttribute('data-agent-knowledge-card', 'true');
+                const fileButton = document.createElement('button');
+                fileButton.type = 'button';
+                fileButton.className = 'agent-knowledge-file-button';
+                fileButton.textContent = fileName;
+                fileButton.setAttribute('aria-haspopup', 'menu');
+                fileButton.setAttribute('aria-expanded', 'false');
+                fileButton.setAttribute(
+                    'aria-label',
+                    translate('agentWorkspace.knowledge.openFile', 'Open matched knowledge point: {file}', {
+                        file: fileName,
+                    })
+                );
+                card.appendChild(fileButton);
                 const actions = document.createElement('div');
-                actions.className = 'agent-knowledge-actions';
+                const actionsId = `agent-knowledge-actions-${index}`;
+                actions.id = actionsId;
+                actions.className = 'agent-knowledge-actions agent-knowledge-actions-menu';
+                actions.hidden = true;
+                actions.setAttribute('role', 'menu');
+                actions.setAttribute('aria-label', translate('agentWorkspace.knowledge.actionsMenu', 'Knowledge point actions'));
+                fileButton.setAttribute('aria-controls', actionsId);
                 const capabilities = resolveCapabilities(item);
+                let longPressTimer = null;
+                let suppressNextClick = false;
+                const closeActionsMenu = function () {
+                    actions.hidden = true;
+                    card.removeAttribute('data-actions-open');
+                    fileButton.setAttribute('aria-expanded', 'false');
+                };
+                const openActionsMenu = function (options) {
+                    if (capabilities.length <= 0) {
+                        return;
+                    }
+                    suppressNextClick = Boolean(options && options.suppressNextClick);
+                    actions.hidden = false;
+                    card.setAttribute('data-actions-open', 'true');
+                    fileButton.setAttribute('aria-expanded', 'true');
+                };
+                const cancelLongPress = function () {
+                    if (longPressTimer) {
+                        clearTimeout(longPressTimer);
+                        longPressTimer = null;
+                    }
+                };
+                fileButton.addEventListener('click', function () {
+                    if (suppressNextClick) {
+                        suppressNextClick = false;
+                        return;
+                    }
+                    closeActionsMenu();
+                    api.openGraphFocusPane(buildKnowledgePointFocusPayload(item));
+                });
+                fileButton.addEventListener('pointerdown', function (event) {
+                    if (event && event.button && event.button !== 0) {
+                        return;
+                    }
+                    cancelLongPress();
+                    longPressTimer = setTimeout(function () {
+                        longPressTimer = null;
+                        openActionsMenu({ suppressNextClick: true });
+                    }, 520);
+                });
+                ['pointerup', 'pointercancel', 'pointerleave'].forEach((eventName) => {
+                    fileButton.addEventListener(eventName, cancelLongPress);
+                });
+                fileButton.addEventListener('contextmenu', function (event) {
+                    event.preventDefault();
+                    cancelLongPress();
+                    openActionsMenu();
+                });
+                fileButton.addEventListener('keydown', function (event) {
+                    if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+                        event.preventDefault();
+                        openActionsMenu();
+                        const firstAction = actions.querySelector('button');
+                        if (firstAction && typeof firstAction.focus === 'function') {
+                            firstAction.focus();
+                        }
+                        return;
+                    }
+                    if (event.key === 'Escape') {
+                        closeActionsMenu();
+                    }
+                });
+                actions.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
+                        closeActionsMenu();
+                        fileButton.focus();
+                    }
+                });
                 capabilities.forEach((capability) => {
                     const actionButton = document.createElement('button');
                     actionButton.type = 'button';
+                    actionButton.setAttribute('role', 'menuitem');
                     const uiHint = capability && typeof capability.uiHint === 'object'
                         ? capability.uiHint
                         : {};
@@ -3118,6 +3221,7 @@
                         String(capability && capability.label || capability && capability.actionId || 'Action')
                     );
                     actionButton.addEventListener('click', function () {
+                        closeActionsMenu();
                         if (handlers && typeof handlers.onCapability === 'function') {
                             handlers.onCapability(item, capability);
                             return;

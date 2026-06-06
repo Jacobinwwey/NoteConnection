@@ -183,6 +183,15 @@
                 <h3 data-i18n="agentWorkspace.conversationTitle">Grounded Conversation</h3>
                 <span class="agent-pane-subtitle" data-i18n="agentWorkspace.conversationSubtitle">Scoped knowledge, citations, and guided learning actions</span>
               </div>
+              <div class="agent-scope-control">
+                <label for="agent-workspace-scope-select" data-i18n="agentWorkspace.scope.label">Knowledge Scope</label>
+                <select id="agent-workspace-scope-select" aria-describedby="agent-workspace-scope-summary"></select>
+                <div
+                  id="agent-workspace-scope-summary"
+                  class="agent-scope-summary"
+                  data-i18n="agentWorkspace.scope.summaryAll"
+                >All folders</div>
+              </div>
               <div class="agent-pane-field">
                 <label for="agent-workspace-user-id" data-i18n="agentWorkspace.userId">Learner ID</label>
                 <input id="agent-workspace-user-id" type="text" value="path_user_default" />
