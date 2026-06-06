@@ -30,7 +30,7 @@ Architecture progress map:
 | Layer | Current maturity | Next move |
 |---|---|---|
 | Graph/path core | Mature operational baseline | Preserve compatibility and avoid unrelated churn. |
-| Runtime storage/retrieval | Operational baseline | Convert sqlite/ANN workload proofs into repeated release-grade calibration evidence. |
+| Runtime storage/retrieval | Operational baseline | Convert sqlite soak and ANN release-gate workload proofs into repeated release-grade calibration evidence. |
 | Scoped RAG/conversation | Operational baseline | Extract ownership from `server.ts` without removing legacy response fields. |
 | Memory/session/workflow | Implemented substrate | Harden policy, audit, and workflow artifact quality before adding UI-only state. |
 | Export/platform shell | Implemented baseline | Keep Godot/mobile materialization and export profile rules explicit. |
@@ -39,7 +39,7 @@ Architecture progress map:
 Immediate next direction:
 
 1. Keep docs truth synchronized across this dashboard, task, implementation plan, TODO, README, interface docs, and the new solution note.
-2. Finish release-grade graphdb and ANN closure: sqlite soak repetition, graphdb connector budgets, ANN recall/latency thresholds, and strict rollout evidence.
+2. Finish release-grade graphdb and ANN closure: sqlite soak repetition, graphdb connector budgets, ANN release-gate matrix calibration, recall/latency thresholds, and strict rollout evidence.
 3. Reduce `server.ts` ownership pressure by moving turn-cache, alert trend, runbook bridge, and rollout helper logic behind explicit modules.
 4. Continue `KnowledgeLearningPlatform.ts` domain extraction only when the new owner hides state or enforces a real invariant.
 5. Expand assistant block coverage through typed, optional payloads while preserving `assistantMessage` and stream/sync/replay compatibility.
@@ -50,6 +50,7 @@ Verification position for this documentation slice:
 - This update is documentation-only and does not change runtime behavior.
 - Required gate for this slice: docs map validation, docs site build, Mermaid fence guard, diff review, and clean worktree after commit.
 - Code slices that follow must continue to use the runtime gates listed in the active task docs, especially `verify:foundation:sqlite-runtime:soak`, `verify:foundation:ann-runtime:matrix`, `test:agent-workspace:contracts`, and `verify:core-real-machine:clean`.
+- ANN release calibration slices should use `verify:foundation:ann-runtime:release`; the full matrix release-gate path now has fresh Windows-host evidence, while repeated multi-host release evidence remains a follow-up gate.
 
 ## 2026-05-27 Workflow Gate Realignment and Progress Truth Sync
 
@@ -205,6 +206,7 @@ Operational implication:
   - a host-level workload-matrix verifier now extends that proof across `smoke` / `medium` / `heavy` profiles on the same two runtime paths, including snapshot metadata counts plus restart and multi-point query continuity (`scripts/verify-foundation-sqlite-runtime.js --matrix`),
   - a host-level ANN verifier now proves the `external_http` connector baseline on the same Windows host through both `dist` runtime and packaged sidecar flows: ingest -> live query-backend diagnostics -> restart -> query continuity (`scripts/verify-foundation-ann-runtime.js`),
   - a host-level ANN workload-matrix verifier now extends that proof across `smoke` / `medium` / `heavy` profiles on the same two runtime paths, including sync/select telemetry, aligned representation metadata, and restart continuity (`scripts/verify-foundation-ann-runtime.js --matrix`),
+  - the ANN verifier now also has a release-gate mode and structured report output: `scripts/verify-foundation-ann-runtime.js --release-gates` records startup / ingest / diagnostics / query duration summaries plus targeted-query recall under `output/verification/foundation-ann-runtime/`, and `npm run verify:foundation:ann-runtime:release` wires the full matrix release path,
   - ANN-style prefilter, representation telemetry, circuit health, remote index sync, and live `external_http` connector proof now exist in `src/learning/queryBackend.ts` and `src/learning/vectorAccelerationAdapter.ts`,
   - runtime capability/runbook governance now includes explicit ANN remote index-sync health (`query_vector_acceleration_index_sync_health`) in addition to prefilter, health, traceability, and circuit checks,
   - runtime capability governance now also includes explicit gate `query_vector_acceleration_calibration_readiness`, which formalizes whether the ANN path is even ready for release-grade threshold tuning,
@@ -217,7 +219,7 @@ Operational implication:
   - Phase-3 tutor/memory diagnostics remain real and now include an active default runtime tutor adapter path in `src/server.ts`, so normal server execution can emit adapter telemetry instead of staying catalog-only.
 - What is not closed yet:
   - Phase-1 A8 has advanced beyond a file-only default: `src/server.ts` now defaults to `graphdb/sqlite` with explicit file fallback, restart durability is already proved, host-level dist/runtime + packaged sidecar proof is in place, and a host-level workload matrix is now in place across `smoke` / `medium` / `heavy`, but soak / longer-duration / performance hardening is still open before calling the local graph backend production-closed,
-  - Phase-1 A9 is now operational rather than scaffold-only: host-level runtime proof and a host-level workload matrix are now in place, but recall/latency threshold convergence and release-grade calibration are still open before calling the ANN layer production-closed,
+  - Phase-1 A9 is now operational rather than scaffold-only: host-level runtime proof, a host-level workload matrix, and matrix release-gate evidence are now in place, but repeated multi-host calibration and threshold convergence are still open before calling the ANN layer production-closed,
   - Phase-2 quality/session/query observability is now real, but it is not yet release-closed because these gates still require release-grade calibration on top of the current graph/ANN operational baseline; the new ANN calibration-readiness gate only formalizes prerequisites, not closure,
   - default tutor routing is no longer catalog-only, but the runtime is still effectively `local`-first and retains explicit rule-engine fallback rather than a production-proven multi-provider routing policy.
 - Active execution focus therefore shifts to truth-first foundation recovery:

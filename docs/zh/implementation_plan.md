@@ -159,6 +159,7 @@
   - `src/query_backend.external_http.integration.test.ts` 现已证明一条真实的 `external_http` connector 路径：覆盖 ingest -> 远端索引同步 -> query -> diagnostics。
   - `scripts/verify-foundation-ann-runtime.js` 现已在当前 Windows 宿主上通过 `dist` runtime + packaged sidecar 双路径证明同一条 `external_http` connector baseline：覆盖 ingest -> live query-backend diagnostics -> restart -> query 连续性。
   - `scripts/verify-foundation-ann-runtime.js --matrix` 现在也会在同样两条 runtime 路径上把 ANN 主机级证明扩成 `smoke` / `medium` / `heavy` workload matrix：sync/select telemetry、aligned representation metadata 与 restart 连续性都会持续为绿。
+  - `scripts/verify-foundation-ann-runtime.js --release-gates` 现在会把结构化 JSON 证据写入 `output/verification/foundation-ann-runtime/`，并对 startup、ingest、diagnostics、query latency 与 targeted-query recall 执行门禁。`npm run verify:foundation:ann-runtime:release` 已在当前 Windows 宿主上通过完整 matrix 发布级门禁路径。
   - runtime capability 治理现在也把 ANN 远端索引同步当成一等检查：matrix/runbook 已新增 `query_vector_acceleration_index_sync_health`，与 health、traceability、prefilter、circuit 同级。
   - `server.ts` 现已把这条新门禁接入完整 runbook 闭环：ANN index-sync health 已进入 verification escalation、remediation action queue、以及 per-check history summary。
   - runtime capability 治理现在也有了显式的 ANN 校准前提门禁：`query_vector_acceleration_calibration_readiness` 会在同一运行时窗口内缺少 sync telemetry、稳定 connector、prefilter 样本就绪、可评估 candidate ratio、或外部 traceability 信号时阻断发布级阈值校准。
@@ -170,7 +171,7 @@
   - P3 的“placeholder 替换”在当前 runtime 面上已经完成实现；
   - P4 的“默认 tutor-routing 激活”在本地优先基线上已经完成实现；
   - A8 剩余缺口已经收窄为：主机级 dist/runtime + packaged sidecar 证明已具备，而且 `smoke` / `medium` / `heavy` workload matrix 也已具备，剩下的是 soak、长时段与性能级加固；
-  - A9 剩余缺口现在也已收窄：主机级 dist/runtime + packaged sidecar 证明已具备，而且 `smoke` / `medium` / `heavy` workload matrix 也已具备，剩下的是 recall/latency 阈值收敛与发布级校准；
+  - A9 剩余缺口现在也已收窄：主机级 dist/runtime + packaged sidecar 证明已具备，`smoke` / `medium` / `heavy` workload matrix 也已具备，并且已有 matrix release-gate 证据；剩下的是多轮阈值收敛与多宿主校准；
   - 这个工作之后的下一阶段仍然是发布级 Phase-2 门禁加固，但本轮完成的是“可观测性闭环”而不是“校准闭环”：首个 ANN 门禁族群已经具备 server 侧 runbook/action-queue/history 闭环，`prefilter` 也已进入 ANN 快速升级路径，并在前端 verify/checks 中显式暴露 index-sync、熔断、可追踪性、预筛选治理摘要及阈值/信号上下文和校准就绪态；同时并行继续 A8 的 soak / 长时段 / 性能闭环和 A9 的阈值收敛。
 
 ### 代码 vs 方案现状矩阵

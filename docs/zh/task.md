@@ -42,7 +42,7 @@
 - [x] Phase-3 中的 tutor telemetry、tutor trace/provider trend、conversation memory、memory-policy diagnostics 已有具体后端实现。
 - [~] Phase-1 A8 已推进到 embedded `graphdb/sqlite` operational baseline，并已具备 shutdown/fresh restart 的重启耐久性证明、主机级 dist/runtime + packaged sidecar 证明，以及覆盖 `smoke` / `medium` / `heavy` 的主机级 workload matrix；但 soak、长时段与性能级加固仍未达到生产闭环。
 - [~] Phase-1 A8 现在也新增了独立的主机级 soak/performance verifier（`verify:foundation:sqlite-runtime:soak`）并输出结构化报告，但发布级闭环仍需要持续阈值校准与多轮主机证据，而不是单次通过命令就结束。
-- [~] Phase-1 A9 现已具备 live `external_http` sync-backed connector baseline，并在真实 query 流量下得到证明；主机级 dist/runtime + packaged sidecar 证明和 `smoke` / `medium` / `heavy` workload matrix 也已具备；但 benchmark rollout 阈值与发布级校准仍未完成。
+- [~] Phase-1 A9 现已具备 live `external_http` sync-backed connector baseline，并在真实 query 流量下得到证明；主机级 dist/runtime + packaged sidecar 证明、`smoke` / `medium` / `heavy` workload matrix 和 matrix release-gate 证据也已具备；但多轮发布级校准仍未完成。
 - [x] `KnowledgeLearningPlatform.ts` 中 query compare / staleness / learning-quality / session-plan-quality 运行面已不再返回 placeholder。
 - [x] `server.ts` 已注入激活态本地 `tutorAdapter`；剩余导师缺口已不再是默认激活，而是生产级多 provider 路由。
 
@@ -58,7 +58,7 @@
 - [x] 打包 Sidecar 场景下的 Worker 路径解析已稳定。
 - [ ] embedded graph backend 基线在新的 packaged/runtime 与主机级 workload matrix 证明之外，仍待补齐 soak、长时段与性能级加固。
 - [ ] 把新的 sqlite soak verifier 从“初始主机门禁”继续推进为“可持续的发布级证据”，补齐多轮运行与阈值调优。
-- [ ] 生产级 ANN connector 在新的主机级 runtime 与 workload matrix 证明之外，仍待补齐阈值收敛与发布级校准。
+- [ ] 生产级 ANN connector 在新的主机级 runtime、workload matrix 与 matrix release-gate 证明之外，仍待补齐阈值收敛与多宿主发布级校准。
 - [ ] query/quality/session 运行面虽已真实接通，但仍需在发布级 graphdb/ANN 基线上完成发布级校准。
 - [ ] tutor 运行路径接下来要从 local-first 激活态 adapter 扩展为生产级多 provider 路由。
 - [ ] Electron 下线前最终就绪清单仍待完成。
@@ -83,6 +83,8 @@
   - 面向 P1 的专用 embedded sqlite 主机/runtime soak 与性能门禁，会把结构化 JSON 报告写到 `output/verification/foundation-sqlite-runtime/`。
 - `npm run verify:foundation:ann-runtime:matrix`
   - 当前 `external_http` ANN connector 最有价值的主机/runtime 证明，覆盖 `smoke` / `medium` / `heavy` 三档 workload。
+- `npm run verify:foundation:ann-runtime:release`
+  - 当前 `external_http` ANN connector 的完整 matrix 发布级门禁路径；会将结构化 JSON 报告写入 `output/verification/foundation-ann-runtime/`，并对 startup、ingest、diagnostics、query latency 与 targeted-query recall 执行门禁。
 - `npm run verify:agent-workspace:browser`
   - 真实浏览器 smoke，覆盖 agent workspace、runbook 卡片、query/quality/session 面板和 focus/path 流程。
 - `npm run verify:agent-workspace:tauri`

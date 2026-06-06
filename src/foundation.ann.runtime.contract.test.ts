@@ -23,15 +23,19 @@ describe('foundation ann runtime verification contract', () => {
     expect(packageJson.scripts?.['verify:foundation:ann-runtime:matrix']).toBe(
       'npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-ann-runtime.js --matrix'
     );
+    expect(packageJson.scripts?.['verify:foundation:ann-runtime:release']).toBe(
+      'npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-ann-runtime.js --matrix --release-gates'
+    );
   });
 
-  test('verifier script covers smoke/medium/heavy ann profiles across dist runtime and packaged sidecar restart continuity', () => {
+  test('verifier script covers smoke/medium/heavy ann profiles, report evidence, release gates, and restart continuity', () => {
     const source = fs.readFileSync(scriptPath, 'utf8');
 
     expect(source).toContain('WORKLOAD_PROFILES');
     expect(source).toContain("profileId: 'medium'");
     expect(source).toContain("profileId: 'heavy'");
-    expect(source).toContain("suiteKind: 'matrix'");
+    expect(source).toContain("options.suiteKind = 'matrix'");
+    expect(source).toContain("arg === '--release-gates'");
     expect(source).toContain('startReferenceAnnService');
     expect(source).toContain('/sync-index');
     expect(source).toContain('/select-candidates');
@@ -46,5 +50,12 @@ describe('foundation ann runtime verification contract', () => {
     expect(source).toContain("String(acceleration.adapterId || '') === 'external-http-vector-acceleration-v1'");
     expect(source).toContain("String(acceleration.representationStatus || '') === 'aligned'");
     expect(source).toContain('anchorkey');
+    expect(source).toContain('foundation-ann-runtime-report-latest.json');
+    expect(source).toContain('writeStructuredReport');
+    expect(source).toContain('collectScenarioPerformance');
+    expect(source).toContain('buildReleaseGateSummary');
+    expect(source).toContain('minExpectedRecall');
+    expect(source).toContain('maxQueryP95Ms');
+    expect(source).toContain('queryDurationMs');
   });
 });

@@ -91,7 +91,8 @@ Primary plan evidence:
 
 - Promote the sqlite soak verifier into repeated release evidence, not a one-off host proof.
 - Tighten graphdb connector health/budget thresholds with representative workloads.
-- Calibrate ANN recall/latency and external connector behavior under workload matrices before promoting Phase-2 diagnostics to release gates.
+- Use the new ANN release-gate verifier path (`verify:foundation:ann-runtime:release`) as the structured evidence entry point for startup, ingest, diagnostics, query latency, and targeted-query recall.
+- Calibrate ANN recall/latency and external connector behavior under full workload matrices before promoting Phase-2 diagnostics to release gates.
 
 #### P2: Cut ownership pressure out of `server.ts`
 
@@ -141,6 +142,7 @@ Runtime and test gates for future code slices remain:
 - `npm run verify:foundation:sqlite-runtime:soak`
 - `npm run verify:foundation:sqlite-runtime:matrix`
 - `npm run verify:foundation:ann-runtime:matrix`
+- `npm run verify:foundation:ann-runtime:release`
 - `npm run test:agent-workspace:contracts`
 - `npm run test:migration`
 - `npm run verify:core-real-machine:clean`
@@ -226,7 +228,8 @@ Runtime and test gates for future code slices remain:
 
 - 把 sqlite soak verifier 推进为多轮 release evidence，而不是单次主机证明。
 - 用代表性 workload 收紧 graphdb connector health/budget 阈值。
-- 在把 Phase-2 diagnostics 升级为发布门禁之前，完成 ANN recall/latency 与 external connector 行为校准。
+- 将新的 ANN release-gate verifier 路径（`verify:foundation:ann-runtime:release`）作为 startup、ingest、diagnostics、query latency 与 targeted-query recall 的结构化证据入口。
+- 在把 Phase-2 diagnostics 升级为发布门禁之前，基于完整 workload matrix 完成 ANN recall/latency 与 external connector 行为校准。
 
 #### P2：从 `server.ts` 切出所有权压力
 
@@ -276,6 +279,7 @@ Runtime and test gates for future code slices remain:
 - `npm run verify:foundation:sqlite-runtime:soak`
 - `npm run verify:foundation:sqlite-runtime:matrix`
 - `npm run verify:foundation:ann-runtime:matrix`
+- `npm run verify:foundation:ann-runtime:release`
 - `npm run test:agent-workspace:contracts`
 - `npm run test:migration`
 - `npm run verify:core-real-machine:clean`

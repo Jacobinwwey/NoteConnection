@@ -9,12 +9,22 @@ const { spawn, spawnSync } = require('child_process');
 const REPO_ROOT = path.resolve(__dirname, '..');
 const DIST_SERVER_ENTRY = path.join(REPO_ROOT, 'dist', 'src', 'server.js');
 const DIST_FRONTEND_DIR = path.join(REPO_ROOT, 'dist', 'src', 'frontend');
+const OUTPUT_ROOT = path.join(REPO_ROOT, 'output', 'verification', 'foundation-ann-runtime');
 const LOOPBACK_HOST = '127.0.0.1';
 const STARTUP_TIMEOUT_MS = 30000;
 const SHUTDOWN_TIMEOUT_MS = 8000;
 const REQUEST_TIMEOUT_SCALE = Number.isFinite(Number(process.env.NOTE_CONNECTION_FOUNDATION_ANN_TIMEOUT_SCALE))
     ? Math.max(0.5, Number(process.env.NOTE_CONNECTION_FOUNDATION_ANN_TIMEOUT_SCALE))
     : 1;
+const RELEASE_THRESHOLD_DEFAULTS = Object.freeze({
+    maxStartupP95Ms: 18000,
+    maxIngestP95Ms: 90000,
+    maxDiagnosticsP95Ms: 9000,
+    maxQueryP95Ms: 12000,
+    maxQueryMaxMs: 20000,
+    minExpectedRecall: 1,
+    packagedModeMultiplier: 1.5,
+});
 const WORKLOAD_PROFILES = {
     smoke: {
         profileId: 'smoke',
@@ -42,30 +52,135 @@ const WORKLOAD_PROFILES = {
     },
 };
 
-function parseCliOptions(argv) {
-    const args = new Set(argv);
-    if (args.has('--matrix')) {
+function ensureDir(dirPath) {
+    fs.mkdirSync(dirPath, { recursive: true });
+    return dirPath;
+}
+
+function toFilenameTimestamp(isoText) {
+    return String(isoText || '').replace(/[:.]/g, '-');
+}
+
+function parseOptionalPositiveNumber(rawValue) {
+    if (rawValue === null || typeof rawValue === 'undefined' || rawValue === '') {
+        return null;
+    }
+    const parsed = Number(rawValue);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+        return null;
+    }
+    return parsed;
+}
+
+function roundMetric(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric < 0) {
+        return 0;
+    }
+    return Number(numeric.toFixed(4));
+}
+
+function computePercentile(sortedSamples, percentile) {
+    if (sortedSamples.length === 0) {
+        return 0;
+    }
+    if (sortedSamples.length === 1) {
+        return sortedSamples[0];
+    }
+    const clampedPercentile = Math.min(1, Math.max(0, percentile));
+    const rank = (sortedSamples.length - 1) * clampedPercentile;
+    const lower = Math.floor(rank);
+    const upper = Math.ceil(rank);
+    if (lower === upper) {
+        return sortedSamples[lower];
+    }
+    const weight = rank - lower;
+    return (sortedSamples[lower] * (1 - weight)) + (sortedSamples[upper] * weight);
+}
+
+function summarizeDurations(samplesMs) {
+    const sanitized = samplesMs
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value) && value >= 0)
+        .sort((left, right) => left - right);
+    if (sanitized.length === 0) {
         return {
-            suiteKind: 'matrix',
-            profileKeys: ['smoke', 'medium', 'heavy'],
+            count: 0,
+            minMs: 0,
+            p50Ms: 0,
+            p95Ms: 0,
+            p99Ms: 0,
+            maxMs: 0,
+            meanMs: 0,
         };
     }
-    if (args.has('--heavy')) {
-        return {
-            suiteKind: 'single',
-            profileKeys: ['heavy'],
-        };
-    }
-    if (args.has('--medium')) {
-        return {
-            suiteKind: 'single',
-            profileKeys: ['medium'],
-        };
-    }
+    const sum = sanitized.reduce((accumulator, value) => accumulator + value, 0);
     return {
+        count: sanitized.length,
+        minMs: roundMetric(sanitized[0]),
+        p50Ms: roundMetric(computePercentile(sanitized, 0.5)),
+        p95Ms: roundMetric(computePercentile(sanitized, 0.95)),
+        p99Ms: roundMetric(computePercentile(sanitized, 0.99)),
+        maxMs: roundMetric(sanitized[sanitized.length - 1]),
+        meanMs: roundMetric(sum / sanitized.length),
+    };
+}
+
+function buildReleaseThresholds() {
+    return {
+        maxStartupP95Ms: parseOptionalPositiveNumber(process.env.NOTE_CONNECTION_FOUNDATION_ANN_MAX_STARTUP_P95_MS)
+            ?? RELEASE_THRESHOLD_DEFAULTS.maxStartupP95Ms,
+        maxIngestP95Ms: parseOptionalPositiveNumber(process.env.NOTE_CONNECTION_FOUNDATION_ANN_MAX_INGEST_P95_MS)
+            ?? RELEASE_THRESHOLD_DEFAULTS.maxIngestP95Ms,
+        maxDiagnosticsP95Ms: parseOptionalPositiveNumber(process.env.NOTE_CONNECTION_FOUNDATION_ANN_MAX_DIAGNOSTICS_P95_MS)
+            ?? RELEASE_THRESHOLD_DEFAULTS.maxDiagnosticsP95Ms,
+        maxQueryP95Ms: parseOptionalPositiveNumber(process.env.NOTE_CONNECTION_FOUNDATION_ANN_MAX_QUERY_P95_MS)
+            ?? RELEASE_THRESHOLD_DEFAULTS.maxQueryP95Ms,
+        maxQueryMaxMs: parseOptionalPositiveNumber(process.env.NOTE_CONNECTION_FOUNDATION_ANN_MAX_QUERY_MAX_MS)
+            ?? RELEASE_THRESHOLD_DEFAULTS.maxQueryMaxMs,
+        minExpectedRecall: parseOptionalPositiveNumber(process.env.NOTE_CONNECTION_FOUNDATION_ANN_MIN_EXPECTED_RECALL)
+            ?? RELEASE_THRESHOLD_DEFAULTS.minExpectedRecall,
+        packagedModeMultiplier: parseOptionalPositiveNumber(process.env.NOTE_CONNECTION_FOUNDATION_ANN_RELEASE_PACKAGED_MODE_MULTIPLIER)
+            ?? RELEASE_THRESHOLD_DEFAULTS.packagedModeMultiplier,
+    };
+}
+
+function parseCliOptions(argv) {
+    const options = {
         suiteKind: 'single',
         profileKeys: ['smoke'],
+        releaseGates: String(process.env.NOTE_CONNECTION_FOUNDATION_ANN_RELEASE_GATES || '').trim() === '1',
+        releaseThresholds: buildReleaseThresholds(),
     };
+
+    for (let index = 0; index < argv.length; index += 1) {
+        const arg = argv[index];
+        if (arg === '--matrix') {
+            options.suiteKind = 'matrix';
+            options.profileKeys = ['smoke', 'medium', 'heavy'];
+            continue;
+        }
+        if (arg === '--release-gates') {
+            options.releaseGates = true;
+            continue;
+        }
+        if (arg === '--heavy') {
+            options.suiteKind = 'single';
+            options.profileKeys = ['heavy'];
+            continue;
+        }
+        if (arg === '--medium') {
+            options.suiteKind = 'single';
+            options.profileKeys = ['medium'];
+            continue;
+        }
+        if (arg === '--smoke') {
+            options.suiteKind = 'single';
+            options.profileKeys = ['smoke'];
+        }
+    }
+
+    return options;
 }
 
 function resolveHostSidecarBinaryPath() {
@@ -185,6 +300,7 @@ function computeRequestTimeoutMs(context = {}) {
 
 function requestJson(port, method, requestPath, body, timeoutMs = 6000) {
     return new Promise((resolve, reject) => {
+        const startedAtMs = Date.now();
         const payload = typeof body === 'undefined'
             ? null
             : Buffer.from(JSON.stringify(body), 'utf8');
@@ -219,6 +335,7 @@ function requestJson(port, method, requestPath, body, timeoutMs = 6000) {
                     resolve({
                         status: res.statusCode || 0,
                         body: parsed,
+                        durationMs: Date.now() - startedAtMs,
                     });
                 });
             }
@@ -382,7 +499,9 @@ async function startReferenceAnnService(port, state) {
 async function waitForServer(port, timeoutMs, context = {}) {
     const startedAt = Date.now();
     let lastError = null;
+    let probeCount = 0;
     while ((Date.now() - startedAt) < timeoutMs) {
+        probeCount += 1;
         try {
             const response = await requestJson(
                 port,
@@ -395,7 +514,10 @@ async function waitForServer(port, timeoutMs, context = {}) {
                 })
             );
             if (response.status >= 200 && response.status < 500) {
-                return;
+                return {
+                    startupDurationMs: Date.now() - startedAt,
+                    probeCount,
+                };
             }
             lastError = new Error(`Unexpected status ${response.status} while waiting for server.`);
         } catch (error) {
@@ -620,13 +742,17 @@ function assertQueryResponse(response, mode, phase, options) {
     const minItemCount = Math.max(1, Number(options && options.minItemCount || 1));
     assertCondition(items.length >= minItemCount, `[${mode}] ${phase}: query returned ${items.length} items, expected >= ${minItemCount}`);
     const expectedDocumentId = String(options && options.expectedDocumentId || '').trim();
+    let targetMatched = false;
     if (expectedDocumentId) {
         const matched = items.find((item) => String(item && item.atom && item.atom.documentId || '') === expectedDocumentId);
+        targetMatched = Boolean(matched);
         assertCondition(Boolean(matched), `[${mode}] ${phase}: expected documentId ${expectedDocumentId} not found in query results`);
     }
     return {
         itemCount: items.length,
-        matchedDocumentId: expectedDocumentId || '',
+        expectedDocumentId,
+        matchedDocumentId: targetMatched ? expectedDocumentId : '',
+        targetMatched,
     };
 }
 
@@ -721,12 +847,158 @@ async function runQueries(port, mode, phase, workloadProfile, workloadQueries) {
                 expectedDocumentId: queryPlan.expectedDocumentId,
                 minItemCount: queryPlan.minItemCount,
             }),
+            durationMs: roundMetric(queryResponse.durationMs),
         });
     }
     return queryResults;
 }
 
-async function runScenario(mode, workloadProfile) {
+function collectScenarioPerformance(result) {
+    const firstPass = result.firstPass || {};
+    const restartPass = result.restartPass || {};
+    const startupSamples = [
+        Number(firstPass.startupDurationMs || 0),
+        Number(restartPass.startupDurationMs || 0),
+    ];
+    const ingestSamples = [Number(firstPass.ingestDurationMs || 0)];
+    const diagnosticsSamples = [
+        Number(firstPass.diagnostics && firstPass.diagnostics.durationMs || 0),
+        Number(restartPass.diagnostics && restartPass.diagnostics.durationMs || 0),
+    ];
+    const querySamples = [
+        ...(Array.isArray(firstPass.queries) ? firstPass.queries : []).map((query) => Number(query.durationMs || 0)),
+        ...(Array.isArray(restartPass.queries) ? restartPass.queries : []).map((query) => Number(query.durationMs || 0)),
+    ];
+
+    return {
+        startupDurationMs: summarizeDurations(startupSamples),
+        ingestDurationMs: summarizeDurations(ingestSamples),
+        diagnosticsDurationMs: summarizeDurations(diagnosticsSamples),
+        queryDurationMs: summarizeDurations(querySamples),
+    };
+}
+
+function computeExpectedRecall(result) {
+    const queryResults = [
+        ...(Array.isArray(result.firstPass && result.firstPass.queries) ? result.firstPass.queries : []),
+        ...(Array.isArray(result.restartPass && result.restartPass.queries) ? result.restartPass.queries : []),
+    ];
+    const expectedQueries = queryResults.filter((query) => String(query.expectedDocumentId || '').trim().length > 0);
+    const matchedQueries = expectedQueries.filter((query) => query.targetMatched === true);
+    const expectedQueryCount = expectedQueries.length;
+    const matchedQueryCount = matchedQueries.length;
+    return {
+        expectedQueryCount,
+        matchedQueryCount,
+        ratio: expectedQueryCount > 0
+            ? roundMetric(matchedQueryCount / expectedQueryCount)
+            : 0,
+    };
+}
+
+function resolveReleaseThreshold(releaseThresholds, key, mode) {
+    const raw = Number(releaseThresholds[key] || 0);
+    const multiplier = mode === 'packaged_sidecar'
+        ? Number(releaseThresholds.packagedModeMultiplier || 1)
+        : 1;
+    return roundMetric(raw * multiplier);
+}
+
+function createReleaseGateResult(gateId, label, observedValue, requiredValue, comparison, sampleCount) {
+    const observed = roundMetric(observedValue);
+    const required = roundMetric(requiredValue);
+    return {
+        gateId,
+        label,
+        comparison,
+        passed: sampleCount > 0 && (comparison === 'gte' ? observed >= required : observed <= required),
+        observed,
+        required,
+        sampleCount,
+    };
+}
+
+function buildReleaseGateSummary(mode, workloadProfile, performance, expectedRecall, releaseThresholds) {
+    const gates = [
+        createReleaseGateResult(
+            'startup_p95',
+            'Startup p95 must stay within release budget.',
+            performance.startupDurationMs.p95Ms,
+            resolveReleaseThreshold(releaseThresholds, 'maxStartupP95Ms', mode),
+            'lte',
+            performance.startupDurationMs.count
+        ),
+        createReleaseGateResult(
+            'ingest_p95',
+            'Ingest p95 must stay within release budget.',
+            performance.ingestDurationMs.p95Ms,
+            resolveReleaseThreshold(releaseThresholds, 'maxIngestP95Ms', mode),
+            'lte',
+            performance.ingestDurationMs.count
+        ),
+        createReleaseGateResult(
+            'diagnostics_p95',
+            'Query-backend diagnostics p95 must stay within release budget.',
+            performance.diagnosticsDurationMs.p95Ms,
+            resolveReleaseThreshold(releaseThresholds, 'maxDiagnosticsP95Ms', mode),
+            'lte',
+            performance.diagnosticsDurationMs.count
+        ),
+        createReleaseGateResult(
+            'query_p95',
+            'Query p95 must stay within release budget.',
+            performance.queryDurationMs.p95Ms,
+            resolveReleaseThreshold(releaseThresholds, 'maxQueryP95Ms', mode),
+            'lte',
+            performance.queryDurationMs.count
+        ),
+        createReleaseGateResult(
+            'query_max',
+            'Query max must stay within release budget.',
+            performance.queryDurationMs.maxMs,
+            resolveReleaseThreshold(releaseThresholds, 'maxQueryMaxMs', mode),
+            'lte',
+            performance.queryDurationMs.count
+        ),
+        createReleaseGateResult(
+            'expected_recall',
+            'Targeted ANN queries must retrieve their expected documents.',
+            expectedRecall.ratio,
+            releaseThresholds.minExpectedRecall,
+            'gte',
+            expectedRecall.expectedQueryCount
+        ),
+    ];
+
+    return {
+        profileId: workloadProfile.profileId,
+        thresholds: {
+            maxStartupP95Ms: resolveReleaseThreshold(releaseThresholds, 'maxStartupP95Ms', mode),
+            maxIngestP95Ms: resolveReleaseThreshold(releaseThresholds, 'maxIngestP95Ms', mode),
+            maxDiagnosticsP95Ms: resolveReleaseThreshold(releaseThresholds, 'maxDiagnosticsP95Ms', mode),
+            maxQueryP95Ms: resolveReleaseThreshold(releaseThresholds, 'maxQueryP95Ms', mode),
+            maxQueryMaxMs: resolveReleaseThreshold(releaseThresholds, 'maxQueryMaxMs', mode),
+            minExpectedRecall: roundMetric(releaseThresholds.minExpectedRecall),
+        },
+        metrics: performance,
+        expectedRecall,
+        gates,
+        pass: gates.every((gate) => gate.passed),
+    };
+}
+
+function writeStructuredReport(report) {
+    ensureDir(OUTPUT_ROOT);
+    const timestamp = toFilenameTimestamp(report.verifiedAt);
+    const latestPath = path.join(OUTPUT_ROOT, 'foundation-ann-runtime-report-latest.json');
+    const datedPath = path.join(OUTPUT_ROOT, `foundation-ann-runtime-report-${timestamp}.json`);
+    const serialized = `${JSON.stringify(report, null, 2)}\n`;
+    fs.writeFileSync(latestPath, serialized, 'utf8');
+    fs.writeFileSync(datedPath, serialized, 'utf8');
+    return { latestPath, datedPath };
+}
+
+async function runScenario(mode, workloadProfile, cliOptions) {
     const fixture = createTempProject(`noteconnection-foundation-ann-${mode}`);
     const state = createReferenceAnnState();
     const connectorPort = await getFreePort();
@@ -747,11 +1019,13 @@ async function runScenario(mode, workloadProfile) {
         ingestedDocuments: documents.length,
         firstPass: null,
         restartPass: null,
+        performance: null,
+        releaseGates: null,
     };
 
     try {
         runtime = spawnRuntime(mode, { port, bridgePort, connectorPort, fixture });
-        await waitForServer(port, STARTUP_TIMEOUT_MS, { workloadProfile, mode });
+        const firstStartup = await waitForServer(port, STARTUP_TIMEOUT_MS, { workloadProfile, mode });
 
         const ingestResponse = await requestJson(
             port,
@@ -788,7 +1062,13 @@ async function runScenario(mode, workloadProfile) {
         );
         const firstAnnState = assertAnnState(state, mode, 'first_pass', workloadProfile, workloadQueries.length);
         result.firstPass = {
-            diagnostics: firstDiagnostics,
+            startupDurationMs: roundMetric(firstStartup.startupDurationMs),
+            startupProbeCount: firstStartup.probeCount,
+            ingestDurationMs: roundMetric(ingestResponse.durationMs),
+            diagnostics: {
+                ...firstDiagnostics,
+                durationMs: roundMetric(firstDiagnosticsResponse.durationMs),
+            },
             queries: firstQueries,
             annState: firstAnnState,
         };
@@ -801,7 +1081,7 @@ async function runScenario(mode, workloadProfile) {
         port = await getFreePort();
         bridgePort = await getFreePort();
         runtime = spawnRuntime(mode, { port, bridgePort, connectorPort, fixture });
-        await waitForServer(port, STARTUP_TIMEOUT_MS, { workloadProfile, mode });
+        const restartStartup = await waitForServer(port, STARTUP_TIMEOUT_MS, { workloadProfile, mode });
 
         const restartQueries = await runQueries(port, mode, 'restart_pass', workloadProfile, workloadQueries);
         const restartDiagnosticsResponse = await requestJson(
@@ -830,10 +1110,30 @@ async function runScenario(mode, workloadProfile) {
             restartSelectBaseline + workloadQueries.length
         );
         result.restartPass = {
-            diagnostics: restartDiagnostics,
+            startupDurationMs: roundMetric(restartStartup.startupDurationMs),
+            startupProbeCount: restartStartup.probeCount,
+            diagnostics: {
+                ...restartDiagnostics,
+                durationMs: roundMetric(restartDiagnosticsResponse.durationMs),
+            },
             queries: restartQueries,
             annState: restartAnnState,
         };
+        result.performance = collectScenarioPerformance(result);
+        result.expectedRecall = computeExpectedRecall(result);
+        if (cliOptions.releaseGates) {
+            result.releaseGates = buildReleaseGateSummary(
+                mode,
+                workloadProfile,
+                result.performance,
+                result.expectedRecall,
+                cliOptions.releaseThresholds
+            );
+            assertCondition(
+                result.releaseGates.pass,
+                `[${mode}] release gates failed: ${result.releaseGates.gates.filter((gate) => !gate.passed).map((gate) => gate.gateId).join(', ')}`
+            );
+        }
 
         return result;
     } catch (error) {
@@ -861,6 +1161,8 @@ async function main() {
             arch: process.arch,
         },
         suiteKind: cliOptions.suiteKind,
+        releaseGatesEnabled: cliOptions.releaseGates,
+        releaseThresholds: cliOptions.releaseThresholds,
         profileRuns: [],
     };
 
@@ -874,13 +1176,20 @@ async function main() {
                 minSyncedAtomCount: workloadProfile.minSyncedAtomCount,
             },
             modes: [
-                await runScenario('dist_node_runtime', workloadProfile),
-                await runScenario('packaged_sidecar', workloadProfile),
+                await runScenario('dist_node_runtime', workloadProfile, cliOptions),
+                await runScenario('packaged_sidecar', workloadProfile, cliOptions),
             ],
         });
     }
 
+    const reportPaths = writeStructuredReport(report);
     console.log(JSON.stringify(report, null, 2));
+    console.log(
+        `[foundation-ann-runtime] Report written: ${path.relative(REPO_ROOT, reportPaths.latestPath).replace(/\\/g, '/')}`
+    );
+    console.log(
+        `[foundation-ann-runtime] Timestamped report written: ${path.relative(REPO_ROOT, reportPaths.datedPath).replace(/\\/g, '/')}`
+    );
     console.log('[foundation-ann-runtime] PASS');
 }
 

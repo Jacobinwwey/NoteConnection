@@ -46,7 +46,7 @@ Primary references:
 - [x] Phase-3 tutor telemetry, tutor trace/provider trend diagnostics, conversation memory, and memory-policy diagnostics now have concrete backend implementations.
 - [~] Phase-1 A8 has advanced to an embedded `graphdb/sqlite` operational baseline and now has restart-durability proof, host-level dist/runtime + packaged sidecar proof, and a host-level workload matrix across `smoke` / `medium` / `heavy`; soak / longer-duration / performance hardening still remain before production closure.
 - [~] Phase-1 A8 now also has a dedicated host-level soak/performance verifier path (`verify:foundation:sqlite-runtime:soak`) with structured report output, but release-grade closure still requires sustained threshold tuning and repeated host evidence rather than one passing command.
-- [~] Phase-1 A9 now has a live `external_http` sync-backed connector baseline under real query traffic, host-level dist/runtime + packaged sidecar proof, and a host-level workload matrix across `smoke` / `medium` / `heavy`, but benchmark-backed rollout thresholds and release-grade calibration still remain before production closure.
+- [~] Phase-1 A9 now has a live `external_http` sync-backed connector baseline under real query traffic, host-level dist/runtime + packaged sidecar proof, a host-level workload matrix across `smoke` / `medium` / `heavy`, and matrix release-gate evidence, but repeated release-grade calibration still remains before production closure.
 - [x] `KnowledgeLearningPlatform.ts` no longer uses placeholder-backed runtime surfaces for query comparison, staleness, learning-quality, and session-plan-quality diagnostics.
 - [x] Server bootstrap now injects an active local `tutorAdapter`; the remaining tutor gap is production-proven multi-provider routing rather than default activation.
 
@@ -62,7 +62,7 @@ Primary references:
 - [x] Worker runtime resolution has been stabilized for packaged sidecar scenarios.
 - [ ] Soak / longer-duration / performance hardening for the embedded graph backend baseline remain pending after the new packaged/runtime and workload-matrix proofs.
 - [ ] Promote the new sqlite soak verifier from initial host-level gate to sustained release evidence with repeated runs and tuned thresholds.
-- [ ] Production ANN connector threshold convergence and release-grade calibration remain pending after the new host-level runtime and workload-matrix proofs.
+- [ ] Production ANN connector threshold convergence and multi-host release-grade calibration remain pending after the new host-level runtime, workload-matrix, and matrix release-gate proofs.
 - [ ] Phase-2 quality/query/session diagnostics now need release-grade calibration on top of a release-grade graphdb/ANN baseline.
 - [ ] Tutor routing now needs multi-provider hardening beyond the active local-first adapter path.
 - [ ] Final Electron decommission readiness checklist remains pending.
@@ -87,6 +87,8 @@ Primary references:
   - Dedicated P1 host/runtime soak and performance gate for the embedded sqlite graph backend. Writes structured JSON reports under `output/verification/foundation-sqlite-runtime/`.
 - `npm run verify:foundation:ann-runtime:matrix`
   - Highest-value host/runtime proof for the `external_http` ANN connector across `smoke` / `medium` / `heavy` workloads.
+- `npm run verify:foundation:ann-runtime:release`
+  - Full matrix release-gate path for the `external_http` ANN connector. It writes structured JSON reports under `output/verification/foundation-ann-runtime/` and gates startup, ingest, diagnostics, query latency, and targeted-query recall.
 - `npm run verify:agent-workspace:browser`
   - Real browser smoke for agent workspace, runbook cards, query/quality/session surfaces, and focus/path flows.
 - `npm run verify:agent-workspace:tauri`

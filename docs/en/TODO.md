@@ -9,7 +9,7 @@
 - [x] Reclassify scoped retrieval and grounded conversation as operational baselines with backward-compatible response evolution.
 - [x] Keep Godot/mobile direct-SVG avoidance as an active compatibility rule through PNG-first render materialization.
 - [~] Treat graphdb/sqlite as operational until repeated soak, threshold, and performance evidence make it release-grade.
-- [~] Treat ANN/external connector support as operational until recall/latency thresholds and workload calibration are complete.
+- [~] Treat ANN/external connector support as operational until repeated release-gated recall/latency thresholds and workload calibration are complete; the new matrix release-gate evidence is an entry point, not production closure.
 - [ ] Move Phase-2 diagnostics from visibility to release-gate status only after they run on release-grade graphdb/ANN baselines.
 - [ ] Extract server-owned conversation turn-cache, alert trend, runbook bridge, rollout profile, and connector-helper logic into explicit modules.
 - [ ] Continue KLP domain extraction without adding pass-through facade layers.
@@ -27,7 +27,8 @@
 - [~] The new embedded `graphdb/sqlite` baseline is now restart-durability-proved, host-level runtime-packaging-proved, and host-level workload-envelope-proved across `smoke` / `medium` / `heavy`, but soak / longer-duration / performance hardening still remain before calling A8 production-closed.
 - [x] Host-level ANN runtime verification now proves the `external_http` connector baseline across `dist` runtime and packaged sidecar flows with restart continuity and live query-backend diagnostics (`npm run verify:foundation:ann-runtime`).
 - [x] Host-level ANN workload-matrix verification now proves the same `external_http` baseline across `smoke` / `medium` / `heavy` corpus sizes, sync/select telemetry, aligned representation metadata, and restart continuity (`npm run verify:foundation:ann-runtime:matrix`).
-- [~] Phase-1 A9 now has a live `external_http` connector baseline with remote index sync, host-level runtime proof, and host-level workload-matrix proof, but recall/latency threshold convergence and release-grade calibration still remain before production closure.
+- [x] Host-level ANN matrix release-gate verification now writes structured reports under `output/verification/foundation-ann-runtime/` and gates startup, ingest, diagnostics, query latency, and targeted-query recall (`npm run verify:foundation:ann-runtime:release`).
+- [~] Phase-1 A9 now has a live `external_http` connector baseline with remote index sync, host-level runtime proof, host-level workload-matrix proof, and matrix release-gate evidence, but repeated threshold convergence and multi-host calibration still remain before production closure.
 - [x] Agent-workspace runbook verify/checks now surface ANN index-sync, circuit, traceability, and prefilter summaries plus threshold/signal drilldowns, while action-queue keeps the index-sync incident drilldown.
 - [x] `query_vector_acceleration_prefilter_effectiveness` now shares the ANN fast-lane escalation path instead of lagging behind the other ANN governance checks.
 - [x] Agent-workspace runbook verify/checks now also surface ANN circuit budget flags and prefilter calibration-readiness cues, so budget tuning no longer depends on raw JSON inspection.
