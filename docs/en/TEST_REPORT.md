@@ -71,16 +71,18 @@
 
 This refresh adds a stable release-named sqlite soak command and exposes both sqlite and ANN release verifier commands through `getFoundationReadiness().mandatoryChecks`. It does not reclassify the graphdb/ANN baseline as production-closed; repeated and multi-host release evidence remains the closure bar.
 
-### Foundation Release Evidence Freshness Refresh (2026-06-06)
+### Foundation Release Evidence Freshness and History Refresh (2026-06-06)
 
 - [x] `npm test -- src/foundation.release.evidence.contract.test.ts --runInBand`
-  - PASS
+  - PASS; covers default env parsing, package-script wiring, latest-report freshness, strict `minReportCount`, timestamped sqlite/ANN history acceptance, strict insufficient-history rejection, and default warning behavior for old stale or non-release history reports.
 - [x] `npm test -- src/learning/KnowledgeLearningPlatform.test.ts --runInBand --testNamePattern="foundation readiness"`
   - PASS
 - [x] `npm run verify:foundation:release-evidence`
-  - PASS; reads latest sqlite and ANN release reports, validates bounded freshness, required profiles, both runtime modes, sqlite soak gates, ANN release gates, and expected recall, then writes `output/verification/foundation-release-evidence/foundation-release-evidence-report-latest.json`.
+  - PASS; reads latest sqlite and ANN release reports, validates bounded freshness, required profiles, both runtime modes, sqlite soak gates, ANN release gates, and expected recall, counts at least 1 valid fresh report per component by default, warns on stale/non-release history reports, then writes `output/verification/foundation-release-evidence/foundation-release-evidence-report-latest.json`.
+- [~] `npm run verify:foundation:release-evidence:strict`
+  - Expected current-host failure: available but not treated as a current passing gate until repeated sqlite soak and ANN release-gate reports have been generated. The current local probe reports `2/3` valid fresh reports for sqlite and `2/3` for ANN, with old stale/non-release history files retained as warnings.
 - [x] `npm run test:migration`
-  - PASS (`53` suites, `267` tests passed, `13` skipped; includes `src/foundation.release.evidence.contract.test.ts`)
+  - PASS (`53` suites, `271` tests passed, `13` skipped, `284` total; includes `src/foundation.release.evidence.contract.test.ts`)
 - [x] `git diff --check`
   - PASS
 - [x] `npm run docs:diataxis:check`
@@ -90,7 +92,7 @@ This refresh adds a stable release-named sqlite soak command and exposes both sq
 - [x] `npm run docs:site:build`
   - PASS with existing MkDocs nav warnings and the pre-existing missing `../ref/GitNexus/README.md` documentation link warning.
 
-This refresh adds an audit gate after the heavy sqlite/ANN release report producers. It verifies that current-host release evidence is fresh and passing, but it still does not replace repeated multi-run and multi-host calibration evidence.
+This refresh adds an audit gate after the heavy sqlite/ANN release report producers and a strict history gate for repeated evidence. The default command verifies that current-host release evidence is fresh and passing without failing on old irrelevant history; the strict command exposes whether the repository already has enough repeated valid release reports. It still does not replace multi-run and multi-host calibration evidence.
 
 ### What This Refresh Adds
 

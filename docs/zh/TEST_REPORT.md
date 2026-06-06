@@ -71,16 +71,18 @@
 
 本次刷新新增了稳定的 sqlite soak release 命令名，并让 `getFoundationReadiness().mandatoryChecks` 同时暴露 sqlite 与 ANN 的 release verifier 命令。这不等于把 graphdb/ANN baseline 重新归类为 production-closed；多轮、多宿主的发布级证据仍是闭环标准。
 
-### Foundation Release Evidence 新鲜度刷新（2026-06-06）
+### Foundation Release Evidence 新鲜度与历史证据刷新（2026-06-06）
 
 - [x] `npm test -- src/foundation.release.evidence.contract.test.ts --runInBand`
-  - 通过
+  - 通过；覆盖默认环境变量解析、package script 接线、latest 报告新鲜度、严格 `minReportCount`、带时间戳 sqlite/ANN 历史报告接受、严格历史报告不足时拒绝、以及默认审计下旧的过期或非 release 历史报告只作为 warning 的行为。
 - [x] `npm test -- src/learning/KnowledgeLearningPlatform.test.ts --runInBand --testNamePattern="foundation readiness"`
   - 通过
 - [x] `npm run verify:foundation:release-evidence`
-  - 通过；会读取最新 sqlite 与 ANN release 报告，校验有界新鲜度、必需 profile、两条 runtime mode、sqlite soak gates、ANN release gates 与 expected recall，并写出 `output/verification/foundation-release-evidence/foundation-release-evidence-report-latest.json`。
+  - 通过；会读取最新 sqlite 与 ANN release 报告，校验有界新鲜度、必需 profile、两条 runtime mode、sqlite soak gates、ANN release gates 与 expected recall，默认每个组件至少计入 1 份有效新鲜报告，对过期或非 release 历史报告只输出 warning，并写出 `output/verification/foundation-release-evidence/foundation-release-evidence-report-latest.json`。
+- [~] `npm run verify:foundation:release-evidence:strict`
+  - 当前宿主预期失败：命令已可用，但在 sqlite soak 与 ANN release-gate 报告完成多轮生成之前，不把它作为当前必须通过的门禁。本地探针显示 sqlite 与 ANN 当前各有 `2/3` 份有效新鲜报告，旧的过期或非 release 历史文件继续作为 warning。
 - [x] `npm run test:migration`
-  - 通过（`53` 个 suites、`267` 项测试通过、`13` 项 skipped；包含 `src/foundation.release.evidence.contract.test.ts`）
+  - 通过（`53` 个 suites、`271` 项测试通过、`13` 项 skipped、总计 `284` 项；包含 `src/foundation.release.evidence.contract.test.ts`）
 - [x] `git diff --check`
   - 通过
 - [x] `npm run docs:diataxis:check`
@@ -90,7 +92,7 @@
 - [x] `npm run docs:site:build`
   - 通过；仍有既有 MkDocs nav warning 与既有 `../ref/GitNexus/README.md` 文档链接缺失 warning。
 
-本次刷新在重型 sqlite/ANN release 报告生成命令之后增加了一道审计门禁。它可以证明当前宿主的 release evidence 新鲜且通过，但仍不替代多轮、多宿主的校准证据。
+本次刷新在重型 sqlite/ANN release 报告生成命令之后增加了一道审计门禁，并补上严格历史证据门禁。默认命令可以证明当前宿主的 release evidence 新鲜且通过，同时不会被旧的无关历史报告打断；严格命令会暴露仓库是否已有足够多轮有效 release 报告。它仍不替代多轮、多宿主的校准证据。
 
 ### 这轮刷新新增证明了什么
 

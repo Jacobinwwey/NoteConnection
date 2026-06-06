@@ -67,7 +67,7 @@
 - 除非同一变更同时落地兼容 shim 与测试，否则不得改变现有 endpoint 名称与 legacy 字段。
 - Godot/mobile 渲染路径必须继续消费 PNG-first materialized artifacts；直接 SVG 导入不能成为必需运行时依赖。
 - graphdb 与 ANN 状态描述必须区分 operational baseline 与 production closure；没有发布级阈值与多轮证据时不得宣称生产闭环。
-- 发布 runbook 应在生成 sqlite 与 ANN release 报告后执行 `verify:foundation:release-evidence`，先确认 latest evidence 新鲜、必需 runtime mode 存在且 release gates 通过，再把该宿主证据作为当前有效证据。
+- 发布 runbook 应在生成 sqlite 与 ANN release 报告后执行 `verify:foundation:release-evidence`，先确认 latest evidence 新鲜、必需 runtime mode 存在且 release gates 通过，再把该宿主证据作为当前有效证据。需要 repeated evidence 时使用 `verify:foundation:release-evidence:strict`；只有每个组件都具备足够数量、且满足当前 release contract 的新鲜报告时它才会通过。
 
 ## 0. 开发前速查入口（Godot + NoteMD + Markdown）
 

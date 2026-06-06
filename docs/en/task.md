@@ -4,14 +4,15 @@
 
 ### 2026-06-06 Active Task Sync
 
-- [x] `main` is synced to `origin/main` for this documentation slice.
+- [x] Work continues directly on `main` for this P1 continuation slice; remote sync/push status is tracked separately from local implementation progress.
 - [x] Current code has been compared against the May RAG/agent/export plans and the result is now landed in `docs/solutions/architecture-progress-alignment-2026-06-06.md`.
 - [x] Scoped retrieval, grounded conversation, Program A-F substrate, export profiles, PNG-first Godot/mobile materialization, and rollout governance are documented as implemented or operational baselines according to current code evidence.
 - [~] graphdb/sqlite and ANN/external connector paths remain operational baselines, not production closure, until soak repetition, workload thresholds, recall/latency calibration, and strict rollout evidence are complete.
 - [x] Foundation readiness now exposes release-grade verifier commands for both sqlite soak evidence and ANN matrix release gates, so runtime operators no longer have to infer release checks from docs-only task lists.
 - [x] A unified foundation release-evidence freshness verifier now checks the latest sqlite soak and ANN release-gate JSON reports, and foundation readiness exposes it as `verify:foundation:release-evidence`.
+- [x] A strict foundation release-evidence history verifier is now wired as `verify:foundation:release-evidence:strict`; it requires at least 3 fresh release-contract reports per component and is the next evidence-collection gate, not a production-closure claim.
 - [~] Architecture reduction is the next structural pressure point: `src/server.ts`, `KnowledgeLearningPlatform.ts`, and large frontend hosts still need ownership cuts.
-- [~] Convert sqlite soak verification into repeated release evidence; latest-report freshness is now automated, while repeated multi-run and multi-host evidence remains pending.
+- [~] Convert sqlite soak verification into repeated release evidence; latest-report freshness is now automated and strict multi-report auditing exists, while repeated multi-run and multi-host evidence collection remains pending.
 - [ ] Complete ANN recall/latency and connector-budget calibration before promoting Phase-2 diagnostics to release gates.
 - [ ] Extract conversation turn-cache, alert-trend, runbook bridge, rollout-profile, and connector-helper logic out of `server.ts` behind explicit modules.
 - [ ] Continue learning-platform domain extraction only where the new owner hides state or enforces invariants.
@@ -95,7 +96,9 @@ Primary references:
 - `npm run verify:foundation:ann-runtime:release`
   - Full matrix release-gate path for the `external_http` ANN connector. It writes structured JSON reports under `output/verification/foundation-ann-runtime/` and gates startup, ingest, diagnostics, query latency, and targeted-query recall.
 - `npm run verify:foundation:release-evidence`
-  - Reads the latest sqlite soak and ANN release-gate JSON reports, enforces bounded freshness through `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MAX_AGE_HOURS`, verifies both `dist_node_runtime` and `packaged_sidecar` evidence, and writes a compact summary under `output/verification/foundation-release-evidence/`.
+  - Default backward-compatible audit. Reads the latest sqlite soak and ANN release-gate JSON reports, enforces bounded freshness through `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MAX_AGE_HOURS`, verifies both `dist_node_runtime` and `packaged_sidecar` evidence, counts at least 1 valid fresh report per component, ignores stale/non-release historical reports as warnings, and writes a compact summary under `output/verification/foundation-release-evidence/`.
+- `npm run verify:foundation:release-evidence:strict`
+  - Strict history audit for release runbooks that need repeated evidence. Runs the same verifier with `--min-report-count 3` and fails until each component has at least 3 fresh reports that satisfy the current sqlite soak or ANN release-gate contract. The minimum can also be tuned through `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_REPORT_COUNT`.
 - `npm run verify:agent-workspace:browser`
   - Real browser smoke for agent workspace, runbook cards, query/quality/session surfaces, and focus/path flows.
 - `npm run verify:agent-workspace:tauri`

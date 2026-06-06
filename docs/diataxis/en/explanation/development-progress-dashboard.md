@@ -30,7 +30,7 @@ Architecture progress map:
 | Layer | Current maturity | Next move |
 |---|---|---|
 | Graph/path core | Mature operational baseline | Preserve compatibility and avoid unrelated churn. |
-| Runtime storage/retrieval | Operational baseline | Convert sqlite soak and ANN release-gate workload proofs into repeated release-grade calibration evidence. |
+| Runtime storage/retrieval | Operational baseline | Use the new strict release-evidence history audit to convert sqlite soak and ANN release-gate workload proofs into repeated release-grade calibration evidence. |
 | Scoped RAG/conversation | Operational baseline | Extract ownership from `server.ts` without removing legacy response fields. |
 | Memory/session/workflow | Implemented substrate | Harden policy, audit, and workflow artifact quality before adding UI-only state. |
 | Export/platform shell | Implemented baseline | Keep Godot/mobile materialization and export profile rules explicit. |
@@ -39,18 +39,18 @@ Architecture progress map:
 Immediate next direction:
 
 1. Keep docs truth synchronized across this dashboard, task, implementation plan, TODO, README, interface docs, and the new solution note.
-2. Finish release-grade graphdb and ANN closure: sqlite soak repetition, graphdb connector budgets, ANN release-gate matrix calibration, recall/latency thresholds, and strict rollout evidence.
+2. Finish release-grade graphdb and ANN closure: sqlite soak repetition, strict release-evidence history passing, graphdb connector budgets, ANN release-gate matrix calibration, recall/latency thresholds, and strict rollout evidence.
 3. Reduce `server.ts` ownership pressure by moving turn-cache, alert trend, runbook bridge, and rollout helper logic behind explicit modules.
 4. Continue `KnowledgeLearningPlatform.ts` domain extraction only when the new owner hides state or enforces a real invariant.
 5. Expand assistant block coverage through typed, optional payloads while preserving `assistantMessage` and stream/sync/replay compatibility.
 6. Keep Godot/mobile constraints at platform adapter boundaries, especially the no-direct-SVG rule.
 
-Verification position for this documentation slice:
+Verification position for the 2026-06-06 alignment and P1 evidence slices:
 
-- This update is documentation-only and does not change runtime behavior.
-- Required gate for this slice: docs map validation, docs site build, Mermaid fence guard, diff review, and clean worktree after commit.
+- The initial alignment update was documentation-only; the current P1 evidence-history slice changes verifier tooling and package scripts only, not public runtime APIs.
+- Required gate for this slice: foundation release-evidence contract tests, default release-evidence verification, migration tests, docs map validation, docs site build, Mermaid fence guard, diff review, and clean worktree after commit.
 - Code slices that follow must continue to use the runtime gates listed in the active task docs, especially `verify:foundation:sqlite-runtime:soak`, `verify:foundation:ann-runtime:matrix`, `verify:foundation:release-evidence`, `test:agent-workspace:contracts`, and `verify:core-real-machine:clean`.
-- ANN release calibration slices should use `verify:foundation:ann-runtime:release`; the full matrix release-gate path now has fresh Windows-host evidence, and `verify:foundation:release-evidence` now checks whether the latest sqlite/ANN release reports are still fresh before they are used as release context. Repeated multi-host release evidence remains a follow-up gate.
+- ANN release calibration slices should use `verify:foundation:ann-runtime:release`; the full matrix release-gate path now has fresh Windows-host evidence, and `verify:foundation:release-evidence` checks whether latest sqlite/ANN release reports are still fresh before they are used as release context. `verify:foundation:release-evidence:strict` now checks whether at least 3 fresh release-contract reports exist per component, so repeated multi-run and multi-host release evidence is explicit rather than implied.
 
 ## 2026-05-27 Workflow Gate Realignment and Progress Truth Sync
 
@@ -208,7 +208,7 @@ Operational implication:
   - a host-level ANN verifier now proves the `external_http` connector baseline on the same Windows host through both `dist` runtime and packaged sidecar flows: ingest -> live query-backend diagnostics -> restart -> query continuity (`scripts/verify-foundation-ann-runtime.js`),
   - a host-level ANN workload-matrix verifier now extends that proof across `smoke` / `medium` / `heavy` profiles on the same two runtime paths, including sync/select telemetry, aligned representation metadata, and restart continuity (`scripts/verify-foundation-ann-runtime.js --matrix`),
   - the ANN verifier now also has a release-gate mode and structured report output: `scripts/verify-foundation-ann-runtime.js --release-gates` records startup / ingest / diagnostics / query duration summaries plus targeted-query recall under `output/verification/foundation-ann-runtime/`, and `npm run verify:foundation:ann-runtime:release` wires the full matrix release path,
-  - `scripts/verify-foundation-release-evidence.js` now reads the latest sqlite soak and ANN release-gate reports, verifies bounded freshness, required profiles, both runtime modes, sqlite soak gates, ANN release gates, and expected recall, then writes a compact release-evidence summary under `output/verification/foundation-release-evidence/`,
+  - `scripts/verify-foundation-release-evidence.js` now reads the latest sqlite soak and ANN release-gate reports, verifies bounded freshness, required profiles, both runtime modes, sqlite soak gates, ANN release gates, and expected recall, scans timestamped history reports, and writes a compact release-evidence summary under `output/verification/foundation-release-evidence/`; the default audit requires 1 valid fresh report per component, while `verify:foundation:release-evidence:strict` requires 3,
   - ANN-style prefilter, representation telemetry, circuit health, remote index sync, and live `external_http` connector proof now exist in `src/learning/queryBackend.ts` and `src/learning/vectorAccelerationAdapter.ts`,
   - runtime capability/runbook governance now includes explicit ANN remote index-sync health (`query_vector_acceleration_index_sync_health`) in addition to prefilter, health, traceability, and circuit checks,
   - runtime capability governance now also includes explicit gate `query_vector_acceleration_calibration_readiness`, which formalizes whether the ANN path is even ready for release-grade threshold tuning,

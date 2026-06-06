@@ -25,10 +25,25 @@ const MAX_AGE_HOURS_RANGE = Object.freeze({
     max: 24 * 30,
     default: 24 * 7,
 });
+const MIN_REPORT_COUNT_RANGE = Object.freeze({
+    min: 1,
+    max: 30,
+    default: 1,
+});
 const FUTURE_CLOCK_TOLERANCE_MS = 5 * 60 * 1000;
 const REQUIRED_RUNTIME_MODES = Object.freeze(['dist_node_runtime', 'packaged_sidecar']);
 const REQUIRED_SQLITE_PROFILES = Object.freeze(['heavy']);
 const REQUIRED_ANN_PROFILES = Object.freeze(['smoke', 'medium', 'heavy']);
+const REPORT_FILE_CONTRACTS = Object.freeze({
+    sqlite: {
+        latestFilename: 'foundation-sqlite-runtime-report-latest.json',
+        prefix: 'foundation-sqlite-runtime-report-',
+    },
+    ann: {
+        latestFilename: 'foundation-ann-runtime-report-latest.json',
+        prefix: 'foundation-ann-runtime-report-',
+    },
+});
 const EVIDENCE_COMMANDS = Object.freeze({
     sqlite: 'npm run verify:foundation:sqlite-runtime:release',
     ann: 'npm run verify:foundation:ann-runtime:release',
@@ -50,7 +65,11 @@ function normalizeRepoPath(filePath) {
 }
 
 function parseBoundedInteger(rawValue, range) {
-    const parsed = Number(String(rawValue || '').trim());
+    const normalizedRaw = String(rawValue ?? '').trim();
+    if (!normalizedRaw) {
+        return range.default;
+    }
+    const parsed = Number(normalizedRaw);
     if (!Number.isFinite(parsed)) {
         return range.default;
     }
@@ -70,6 +89,11 @@ function parseCliOptions(argv) {
         const arg = argv[index];
         if (arg === '--max-age-hours' && argv[index + 1]) {
             options.maxAgeHours = parseBoundedInteger(argv[index + 1], MAX_AGE_HOURS_RANGE);
+            index += 1;
+            continue;
+        }
+        if (arg === '--min-report-count' && argv[index + 1]) {
+            options.minReportCount = parseBoundedInteger(argv[index + 1], MIN_REPORT_COUNT_RANGE);
             index += 1;
             continue;
         }
@@ -94,10 +118,10 @@ function resolveReportPath(optionPath, envName, fallbackPath) {
     return envPath ? path.resolve(REPO_ROOT, envPath) : fallbackPath;
 }
 
-function readJsonReport(reportPath, componentId, errors) {
+function readJsonReport(reportPath, componentId, errors, reportKind = 'latest') {
     if (!fs.existsSync(reportPath)) {
         errors.push(
-            `${componentId} latest release evidence report is missing: ${normalizeRepoPath(reportPath)}. ` +
+            `${componentId} ${reportKind} release evidence report is missing: ${normalizeRepoPath(reportPath)}. ` +
             `Run ${EVIDENCE_COMMANDS[componentId]} first.`
         );
         return null;
@@ -106,11 +130,109 @@ function readJsonReport(reportPath, componentId, errors) {
         return JSON.parse(fs.readFileSync(reportPath, 'utf8'));
     } catch (error) {
         errors.push(
-            `${componentId} latest release evidence report is not valid JSON: ${normalizeRepoPath(reportPath)}. ` +
+            `${componentId} ${reportKind} release evidence report is not valid JSON: ${normalizeRepoPath(reportPath)}. ` +
             `${String(error && error.message ? error.message : error)}`
         );
         return null;
     }
+}
+
+function resolveComparablePath(filePath) {
+    return path.resolve(filePath).toLowerCase();
+}
+
+function listReleaseReportPaths(componentId, latestReportPath) {
+    const contract = REPORT_FILE_CONTRACTS[componentId];
+    const reportDirectory = path.dirname(latestReportPath);
+    const uniquePaths = new Map();
+    if (fs.existsSync(latestReportPath)) {
+        uniquePaths.set(resolveComparablePath(latestReportPath), path.resolve(latestReportPath));
+    }
+    if (!contract || !fs.existsSync(reportDirectory)) {
+        return Array.from(uniquePaths.values());
+    }
+
+    fs.readdirSync(reportDirectory, { withFileTypes: true })
+        .filter((entry) => entry.isFile())
+        .map((entry) => entry.name)
+        .filter((fileName) => fileName.startsWith(contract.prefix) && fileName.endsWith('.json'))
+        .forEach((fileName) => {
+            const reportPath = path.join(reportDirectory, fileName);
+            uniquePaths.set(resolveComparablePath(reportPath), reportPath);
+        });
+
+    return Array.from(uniquePaths.values()).sort((left, right) => {
+        const leftStat = fs.statSync(left);
+        const rightStat = fs.statSync(right);
+        return rightStat.mtimeMs - leftStat.mtimeMs;
+    });
+}
+
+function readHistoryJsonReport(reportPath, componentId, warnings) {
+    try {
+        return JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+    } catch (error) {
+        warnings.push(
+            `${componentId} release evidence history report ignored: ${normalizeRepoPath(reportPath)}; ` +
+            `not valid JSON (${String(error && error.message ? error.message : error)}).`
+        );
+        return null;
+    }
+}
+
+function evaluateReportForHistory(componentId, report, reportPath, options) {
+    const errors = [];
+    const warnings = [];
+    validateFreshnessWindow(componentId, report, reportPath, options, errors, warnings);
+    if (componentId === 'sqlite') {
+        validateSqliteReleaseReport(report, errors);
+    } else {
+        validateAnnReleaseReport(report, errors);
+    }
+    return {
+        valid: errors.length === 0,
+        errors,
+        warnings,
+    };
+}
+
+function validateReleaseReportHistory(componentId, latestReportPath, latestReport, options, errors, warnings) {
+    const latestComparablePath = resolveComparablePath(latestReportPath);
+    const reportPaths = listReleaseReportPaths(componentId, latestReportPath);
+    const validReportPaths = [];
+
+    reportPaths.forEach((reportPath) => {
+        const isLatestReport = resolveComparablePath(reportPath) === latestComparablePath;
+        const report = isLatestReport ? latestReport : readHistoryJsonReport(reportPath, componentId, warnings);
+        if (!report || typeof report !== 'object') {
+            return;
+        }
+        const evaluation = evaluateReportForHistory(componentId, report, reportPath, options);
+        if (evaluation.valid) {
+            validReportPaths.push(reportPath);
+            warnings.push(...evaluation.warnings);
+            return;
+        }
+        if (!isLatestReport) {
+            warnings.push(
+                `${componentId} release evidence history report ignored: ${normalizeRepoPath(reportPath)}; ` +
+                evaluation.errors.join('; ')
+            );
+        }
+    });
+
+    if (validReportPaths.length < options.minimumReportCount) {
+        errors.push(
+            `${componentId} release evidence history has ${validReportPaths.length} report(s), ` +
+            `expected at least ${options.minimumReportCount}. Run ${EVIDENCE_COMMANDS[componentId]} repeatedly.`
+        );
+    }
+
+    return {
+        minimumReportCount: options.minimumReportCount,
+        reportCount: validReportPaths.length,
+        reportPaths: validReportPaths.map(normalizeRepoPath),
+    };
 }
 
 function roundMetric(value) {
@@ -396,9 +518,16 @@ function resolveVerifierOptions(options = {}) {
             process.env.NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MAX_AGE_HOURS,
             MAX_AGE_HOURS_RANGE
         );
+    const minimumReportCount = Number.isFinite(Number(options.minReportCount))
+        ? parseBoundedInteger(options.minReportCount, MIN_REPORT_COUNT_RANGE)
+        : parseBoundedInteger(
+            process.env.NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_REPORT_COUNT,
+            MIN_REPORT_COUNT_RANGE
+        );
     return {
         now,
         maxAgeHours,
+        minimumReportCount,
         sqliteReportPath: resolveReportPath(
             options.sqliteReportPath,
             'NOTE_CONNECTION_FOUNDATION_SQLITE_RELEASE_REPORT_PATH',
@@ -462,6 +591,22 @@ function verifyFoundationReleaseEvidence(options = {}) {
         requiredProfiles: [...REQUIRED_ANN_PROFILES],
         profileRuns: [],
     };
+    const sqliteHistory = validateReleaseReportHistory(
+        'sqlite',
+        resolvedOptions.sqliteReportPath,
+        sqliteReport,
+        resolvedOptions,
+        errors,
+        warnings
+    );
+    const annHistory = validateReleaseReportHistory(
+        'ann',
+        resolvedOptions.annReportPath,
+        annReport,
+        resolvedOptions,
+        errors,
+        warnings
+    );
 
     return {
         ok: errors.length === 0,
@@ -473,12 +618,14 @@ function verifyFoundationReleaseEvidence(options = {}) {
             sqlite: {
                 reportPath: normalizeRepoPath(resolvedOptions.sqliteReportPath),
                 evidenceCommand: EVIDENCE_COMMANDS.sqlite,
+                ...sqliteHistory,
                 ...sqliteFreshness,
                 ...sqliteSummary,
             },
             ann: {
                 reportPath: normalizeRepoPath(resolvedOptions.annReportPath),
                 evidenceCommand: EVIDENCE_COMMANDS.ann,
+                ...annHistory,
                 ...annFreshness,
                 ...annSummary,
             },
@@ -543,8 +690,10 @@ if (require.main === module) {
 
 module.exports = {
     MAX_AGE_HOURS_RANGE,
+    MIN_REPORT_COUNT_RANGE,
     ANN_LATEST_REPORT_PATH,
     SQLITE_LATEST_REPORT_PATH,
+    listReleaseReportPaths,
     parseBoundedInteger,
     validateAnnReleaseReport,
     validateSqliteReleaseReport,

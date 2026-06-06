@@ -96,6 +96,7 @@
     "verify:foundation:ann-runtime:matrix": "npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-ann-runtime.js --matrix",
     "verify:foundation:ann-runtime:release": "npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-ann-runtime.js --matrix --release-gates",
     "verify:foundation:release-evidence": "node scripts/verify-foundation-release-evidence.js",
+    "verify:foundation:release-evidence:strict": "node scripts/verify-foundation-release-evidence.js --min-report-count 3",
     "verify:foundation:sqlite-runtime": "npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-sqlite-runtime.js",
     "verify:foundation:sqlite-runtime:heavy": "npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-sqlite-runtime.js --heavy",
     "verify:foundation:sqlite-runtime:matrix": "npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-sqlite-runtime.js --matrix",

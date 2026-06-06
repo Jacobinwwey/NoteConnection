@@ -7,7 +7,7 @@
 
 #### 目标
 
-将当前代码 / 方案评估落入活跃实施计划，同时保持仓库位于 `main`，保持向前兼容，并且本次仅更新文档，不修改运行时行为。
+将当前代码 / 方案评估落入活跃实施计划，同时保持仓库位于 `main` 并保持向前兼容。初始对齐切片仅更新文档；后续 P1 证据切片可以调整 release verifier tooling，但不得改变公开运行时 API。
 
 #### 当前代码真相
 
@@ -43,26 +43,29 @@
 #### 验收标准
 
 1. 活跃规划文档都指向同一份 2026-06-06 状态与后续顺序。
-2. 本文档切片不修改任何运行时 API。
+2. 当前对齐与 release-evidence 切片不修改任何公开运行时 API。
 3. 后续代码工作可以按明确优先级启动：先发布级底座闭环，再所有权缩减，再 richer agent output。
 4. 文档提交后工作区保持 clean。
 
-### 2026-06-06 P1 Foundation Release Evidence 新鲜度切片
+### 2026-06-06 P1 Foundation Release Evidence 新鲜度与历史证据切片
 
 #### 目标
 
-把 sqlite 与 ANN 的 release evidence 路径从“各自产出报告”推进为一个统一的发布侧新鲜度校验入口；该命令本身不重新执行重型 runtime 验证，也不把当前 baseline 宣称为 production closure。
+把 sqlite 与 ANN 的 release evidence 路径从“各自产出报告”推进为一个统一的发布侧新鲜度校验入口，并提供更严格的 repeated evidence 审计；该审计命令本身不重新执行重型 runtime 验证，也不把当前 baseline 宣称为 production closure。
 
 #### 已落地代码路径
 
 - 新增 `scripts/verify-foundation-release-evidence.js`。
 - 新增 `npm run verify:foundation:release-evidence`。
+- 新增 `npm run verify:foundation:release-evidence:strict`，它会用 `--min-report-count 3` 执行同一个校验器。
 - 新增 `src/foundation.release.evidence.contract.test.ts`，并纳入 `test:migration`。
 - 在 `getFoundationReadiness().mandatoryChecks` 中新增 `foundation_release_evidence_freshness`。
+- 通过 `--min-report-count` 与 `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_REPORT_COUNT` 新增 repeated evidence 的 CLI/env 控制。
+- 新增对 `foundation-sqlite-runtime-report-*.json` 与 `foundation-ann-runtime-report-*.json` 时间戳历史报告的扫描。
 
 #### 证据契约
 
-新鲜度校验器读取：
+默认新鲜度校验器读取：
 
 - `output/verification/foundation-sqlite-runtime/foundation-sqlite-runtime-report-latest.json`
 - `output/verification/foundation-ann-runtime/foundation-ann-runtime-report-latest.json`
@@ -73,9 +76,11 @@
 - sqlite 必须是 `suiteKind: soak`，包含 heavy profile、`dist_node_runtime`、`packaged_sidecar`、正数 soak cycles、通过的 soak gates 与 query samples；
 - ANN 必须是 `suiteKind: matrix`，`releaseGatesEnabled: true`，包含 `smoke` / `medium` / `heavy`、两条 runtime mode、通过的 release gates、query samples，并且 expected recall 不低于报告阈值。
 
+默认命令保持向前兼容：每个组件至少需要 1 份有效且新鲜的 release-contract 报告；旧的过期或非 release 历史文件只作为 warning 忽略。严格命令则要求每个组件至少有 3 份有效新鲜报告后才会通过。
+
 #### 剩余 P1 推进方向
 
-本切片让 release evidence 更容易审计，但不替代多轮 runtime evidence。下一步 P1 仍是 sqlite 多轮多宿主 soak 证据、ANN 阈值收敛、connector budget 校准，并且只有在 graphdb/ANN baseline 达到发布级之后，才推进 Phase-2 gate promotion。
+本切片让 release evidence 更容易审计，也给发布 runbook 增加了严格 repeated evidence 门禁，但它本身并不会生成缺失的多轮 runtime evidence。下一步 P1 仍是跨多轮、多宿主重新生成 sqlite soak 与 ANN release-gate 报告、完成 ANN 阈值收敛、connector budget 校准，并且只有在 graphdb/ANN baseline 达到发布级之后，才推进 Phase-2 gate promotion。
 
 ### 2026-05-27 工作流真相同步与后续主线重对齐
 

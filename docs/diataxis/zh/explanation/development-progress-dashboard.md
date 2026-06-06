@@ -30,7 +30,7 @@
 | 层级 | 当前成熟度 | 下一步 |
 |---|---|---|
 | 图谱 / Path 核心 | 成熟 operational baseline | 保持兼容，避免无关重构。 |
-| 运行时存储 / 检索 | Operational baseline | 将 sqlite soak 与 ANN release-gate workload 证明推进为多轮 release-grade 校准证据。 |
+| 运行时存储 / 检索 | Operational baseline | 使用新的严格 release-evidence 历史审计，把 sqlite soak 与 ANN release-gate workload 证明推进为多轮 release-grade 校准证据。 |
 | Scoped RAG / conversation | Operational baseline | 在不删除 legacy 响应字段的前提下，从 `server.ts` 切出所有权。 |
 | Memory / session / workflow | 已实现底座 | 先加固 policy、audit 与 workflow artifact 质量，不堆 UI-only 状态。 |
 | Export / platform shell | 已实现基线 | 继续显式维护 Godot/mobile materialization 与 export profile 规则。 |
@@ -39,18 +39,18 @@
 即时推进方向：
 
 1. 让本看板、task、implementation plan、TODO、README、接口文档与新增 solution note 保持同一套文档真相。
-2. 完成 graphdb 与 ANN 发布级闭环：sqlite soak 多轮证据、graphdb connector budget、ANN release-gate matrix 校准、recall/latency 阈值、strict rollout 证据。
+2. 完成 graphdb 与 ANN 发布级闭环：sqlite soak 多轮证据、严格 release-evidence 历史审计通过、graphdb connector budget、ANN release-gate matrix 校准、recall/latency 阈值、strict rollout 证据。
 3. 从 `server.ts` 切出 turn-cache、alert trend、runbook bridge、rollout helper 等所有权压力。
 4. 继续拆分 `KnowledgeLearningPlatform.ts`，但只在新 owner 能隐藏状态或强制不变量时提取。
 5. 通过 typed optional payload 扩展 assistant block 覆盖面，同时保留 `assistantMessage` 与 stream/sync/replay 兼容。
 6. 将 Godot/mobile 约束留在平台 adapter 边界，尤其保持“不直接依赖 SVG 导入”的规则。
 
-本次文档切片的验证位置：
+2026-06-06 对齐与 P1 证据切片的验证位置：
 
-- 本次仅修改文档，不改变运行时行为。
-- 本切片所需门禁是：Diataxis 映射校验、文档站点构建、Mermaid fence 护栏、diff review，以及提交后工作区 clean。
+- 初始对齐更新仅修改文档；当前 P1 evidence-history 切片只修改 verifier tooling 与 package scripts，不改变公开运行时 API。
+- 当前切片需要执行：foundation release-evidence 契约测试、默认 release-evidence 校验、migration tests、docs map 校验、docs site build、Mermaid fence 护栏、diff review，以及提交后 clean worktree。
 - 后续代码切片仍必须继续执行活跃 task 文档中的运行时门禁，尤其是 `verify:foundation:sqlite-runtime:soak`、`verify:foundation:ann-runtime:matrix`、`verify:foundation:release-evidence`、`test:agent-workspace:contracts` 与 `verify:core-real-machine:clean`。
-- ANN 发布级校准切片应使用 `verify:foundation:ann-runtime:release`；完整 matrix release-gate 路径已有 Windows 宿主新鲜证据，`verify:foundation:release-evidence` 现在会在这些报告被作为发布上下文前确认最新 sqlite/ANN release 报告仍然新鲜。多轮多宿主 release 证据仍是后续门禁。
+- ANN 发布级校准切片应使用 `verify:foundation:ann-runtime:release`；完整 matrix release-gate 路径已有 Windows 宿主新鲜证据，`verify:foundation:release-evidence` 会在这些报告被作为发布上下文前确认最新 sqlite/ANN release 报告仍然新鲜。`verify:foundation:release-evidence:strict` 现在会检查每个组件是否至少已有 3 份新鲜且满足 release contract 的报告，因此多轮、多宿主 release 证据不再只是隐含要求。
 
 ## 2026-05-27 工作流门禁重对齐与进度真相同步
 
@@ -198,7 +198,7 @@ Tauri-first reply rendering 基线已交付：
   - 现在也已有一条主机级 ANN 验证器，会在当前 Windows 宿主上分别走 `dist` runtime 与 packaged sidecar 两条路径，证明同一条 `external_http` connector baseline 可以完成 ingest -> live query-backend diagnostics -> restart -> query 连续性（`scripts/verify-foundation-ann-runtime.js`），
   - 现在还有一条主机级 ANN workload matrix 验证器，把同样的证明扩展到 `smoke` / `medium` / `heavy` 三档语料规模：在同样两条 runtime 路径上验证 sync/select telemetry、aligned representation metadata 与 restart 连续性（`scripts/verify-foundation-ann-runtime.js --matrix`），
   - ANN verifier 现在也新增了 release-gate 模式与结构化报告输出：`scripts/verify-foundation-ann-runtime.js --release-gates` 会把 startup / ingest / diagnostics / query duration summary 与 targeted-query recall 写入 `output/verification/foundation-ann-runtime/`，`npm run verify:foundation:ann-runtime:release` 则接入完整 matrix 发布路径，
-  - `scripts/verify-foundation-release-evidence.js` 现在会读取最新 sqlite soak 与 ANN release-gate 报告，校验有界新鲜度、必需 profile、两条 runtime mode、sqlite soak gates、ANN release gates 与 expected recall，并把聚合 release-evidence 摘要写入 `output/verification/foundation-release-evidence/`，
+  - `scripts/verify-foundation-release-evidence.js` 现在会读取最新 sqlite soak 与 ANN release-gate 报告，校验有界新鲜度、必需 profile、两条 runtime mode、sqlite soak gates、ANN release gates 与 expected recall，扫描带时间戳的历史报告，并把聚合 release-evidence 摘要写入 `output/verification/foundation-release-evidence/`；默认审计每个组件要求 1 份有效新鲜报告，`verify:foundation:release-evidence:strict` 要求 3 份，
   - `src/learning/queryBackend.ts` / `src/learning/vectorAccelerationAdapter.ts` 现已具备 ANN 风格 prefilter、representation telemetry、circuit health、远端索引同步，以及 live `external_http` connector 证明，
   - runtime capability / runbook 治理也已新增显式的 ANN 远端索引同步健康度检查（`query_vector_acceleration_index_sync_health`），与 prefilter、health、traceability、circuit 并列，
   - runtime capability 治理现在也新增了显式门禁 `query_vector_acceleration_calibration_readiness`，用来正式回答当前 ANN 路径是否已经具备进入发布级阈值校准的前提条件，

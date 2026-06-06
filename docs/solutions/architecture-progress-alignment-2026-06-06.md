@@ -28,7 +28,7 @@ The goal is to make the current `main` truth explicit:
 Current branch and workspace state used for this alignment:
 
 - branch: `main`
-- upstream sync: `origin/main` is up to date at the time of this document update
+- upstream sync: the initial alignment started from a synced baseline; later local P1 continuation commits may leave `main` ahead of `origin/main` until an explicit push
 - initial worktree state: clean
 - source files and route registries were re-read from the current workspace, not inferred from older plans
 
@@ -92,6 +92,8 @@ Primary plan evidence:
 - Promote the sqlite soak verifier into repeated release evidence, not a one-off host proof.
 - Keep `verify:foundation:sqlite-runtime:release` as the release-facing alias for sqlite soak evidence, and keep foundation readiness mandatory checks aligned with both sqlite and ANN release gates.
 - Add and keep `verify:foundation:release-evidence` as the lightweight release-evidence freshness check that reads the latest sqlite soak and ANN release-gate reports before operators treat host evidence as current.
+- Keep `verify:foundation:release-evidence` backward-compatible with a minimum of 1 fresh release-contract report per component, and use `verify:foundation:release-evidence:strict` / `--min-report-count` when a release runbook needs repeated evidence.
+- Treat old stale or non-release historical reports as warnings in the default audit, while counting only fresh reports that still satisfy the current sqlite soak or ANN release-gate contract.
 - Tighten graphdb connector health/budget thresholds with representative workloads.
 - Use the new ANN release-gate verifier path (`verify:foundation:ann-runtime:release`) as the structured evidence entry point for startup, ingest, diagnostics, query latency, and targeted-query recall.
 - Calibrate ANN recall/latency and external connector behavior under full workload matrices before promoting Phase-2 diagnostics to release gates.
@@ -131,13 +133,20 @@ Primary plan evidence:
 
 ### Current Verification Position
 
-This slice is documentation-only. The appropriate verification gate is:
+The initial 2026-06-06 alignment slice was documentation-only. The current P1 continuation changes verifier tooling, package scripts, tests, and documentation while preserving public runtime API compatibility.
 
+The appropriate verification gate for this continuation is:
+
+- foundation release-evidence contract test,
+- default foundation release-evidence audit,
+- migration test suite,
 - docs map validation,
 - docs site build,
 - markdown/Mermaid fence guard,
 - git diff review,
 - final clean worktree after commit.
+
+`verify:foundation:release-evidence:strict` is intentionally a strict repeated-evidence gate. It may fail until sqlite soak and ANN release-gate reports have been regenerated enough times to provide at least 3 fresh valid reports per component.
 
 Runtime and test gates for future code slices remain:
 
@@ -168,7 +177,7 @@ Runtime and test gates for future code slices remain:
 本次对齐所依据的分支与工作区状态：
 
 - 分支：`main`
-- 远端同步：更新本文档时 `origin/main` 已是最新
+- 远端同步：初始对齐从已同步基线开始；后续本地 P1 延续提交可能会让 `main` 暂时领先 `origin/main`，直到显式 push
 - 初始工作区：clean
 - 本次从当前工作区重新读取源码与路由注册表，不沿用旧方案中的推断
 
@@ -232,6 +241,8 @@ Runtime and test gates for future code slices remain:
 - 把 sqlite soak verifier 推进为多轮 release evidence，而不是单次主机证明。
 - 将 `verify:foundation:sqlite-runtime:release` 保持为 sqlite soak 证据的发布侧别名，并让 foundation readiness mandatory checks 持续对齐 sqlite 与 ANN 两条 release gate。
 - 新增并持续保留 `verify:foundation:release-evidence`，作为轻量 release-evidence 新鲜度校验：在运维把主机证据视为当前有效证据前，先读取最新 sqlite soak 与 ANN release-gate 报告并验证其仍然新鲜且通过。
+- 保持 `verify:foundation:release-evidence` 向前兼容：默认每个组件只要求 1 份新鲜且满足 release contract 的报告；当发布 runbook 需要 repeated evidence 时，使用 `verify:foundation:release-evidence:strict` / `--min-report-count`。
+- 默认审计把旧的过期或非 release 历史报告作为 warning 处理；只有仍然新鲜、且满足当前 sqlite soak 或 ANN release-gate contract 的报告才计入有效数量。
 - 用代表性 workload 收紧 graphdb connector health/budget 阈值。
 - 将新的 ANN release-gate verifier 路径（`verify:foundation:ann-runtime:release`）作为 startup、ingest、diagnostics、query latency 与 targeted-query recall 的结构化证据入口。
 - 在把 Phase-2 diagnostics 升级为发布门禁之前，基于完整 workload matrix 完成 ANN recall/latency 与 external connector 行为校准。
@@ -271,13 +282,20 @@ Runtime and test gates for future code slices remain:
 
 ### 当前验证位置
 
-本切片仅修改文档。当前合适的验证门禁是：
+2026-06-06 初始对齐切片仅修改文档。当前 P1 延续切片会修改 verifier tooling、package scripts、测试与文档，但保持公开运行时 API 向前兼容。
 
+当前延续切片的合适验证门禁是：
+
+- foundation release-evidence 契约测试；
+- 默认 foundation release-evidence 审计；
+- migration test suite；
 - Diataxis 映射校验；
 - 文档站点构建；
 - Markdown/Mermaid fence 护栏；
 - git diff review；
 - 提交后工作区 clean。
+
+`verify:foundation:release-evidence:strict` 是有意严格的 repeated-evidence 门禁。在 sqlite soak 与 ANN release-gate 报告尚未多轮重跑、每个组件尚未具备至少 3 份新鲜有效报告前，它可以失败。
 
 后续代码切片仍应执行：
 

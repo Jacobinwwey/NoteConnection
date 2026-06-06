@@ -6,7 +6,7 @@
 
 #### Objective
 
-Land the current code-vs-plan assessment into the active implementation plan while keeping the repo on `main`, preserving backward compatibility, and avoiding runtime changes in this documentation-only slice.
+Land the current code-vs-plan assessment into the active implementation plan while keeping the repo on `main` and preserving backward compatibility. The initial alignment was documentation-only; later P1 evidence slices may change release verifier tooling, but must not change public runtime APIs.
 
 #### Current code truth
 
@@ -42,26 +42,29 @@ Land the current code-vs-plan assessment into the active implementation plan whi
 #### Acceptance criteria
 
 1. All active planning docs point to the same 2026-06-06 status and next-step sequence.
-2. No runtime API is changed by this documentation slice.
+2. No public runtime API is changed by the alignment and release-evidence slices.
 3. Future code work can start from a clear priority order: release-grade foundation closure first, then ownership reduction, then richer agent output.
 4. Worktree is clean after the documentation commit.
 
-### 2026-06-06 P1 Foundation Release Evidence Freshness Slice
+### 2026-06-06 P1 Foundation Release Evidence Freshness and History Slice
 
 #### Objective
 
-Promote the sqlite and ANN release evidence paths from separate report producers into a single release-facing freshness check, without re-running heavy runtime verification inside the freshness command and without claiming production closure.
+Promote the sqlite and ANN release evidence paths from separate report producers into a single release-facing freshness check and a stricter repeated-evidence audit, without re-running heavy runtime verification inside the audit command and without claiming production closure.
 
 #### Implemented code path
 
 - Added `scripts/verify-foundation-release-evidence.js`.
 - Added `npm run verify:foundation:release-evidence`.
+- Added `npm run verify:foundation:release-evidence:strict`, which runs the same verifier with `--min-report-count 3`.
 - Added `src/foundation.release.evidence.contract.test.ts` and included it in `test:migration`.
 - Added `foundation_release_evidence_freshness` to `getFoundationReadiness().mandatoryChecks`.
+- Added CLI/env control for repeated evidence through `--min-report-count` and `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_REPORT_COUNT`.
+- Added timestamped history scanning for `foundation-sqlite-runtime-report-*.json` and `foundation-ann-runtime-report-*.json`.
 
 #### Evidence contract
 
-The freshness verifier reads:
+The default freshness verifier reads:
 
 - `output/verification/foundation-sqlite-runtime/foundation-sqlite-runtime-report-latest.json`
 - `output/verification/foundation-ann-runtime/foundation-ann-runtime-report-latest.json`
@@ -72,9 +75,11 @@ It validates:
 - sqlite `suiteKind: soak`, heavy profile, `dist_node_runtime`, `packaged_sidecar`, positive soak cycles, passing soak gates, and query samples,
 - ANN `suiteKind: matrix`, `releaseGatesEnabled: true`, `smoke` / `medium` / `heavy`, both runtime modes, passing release gates, query samples, and expected recall at or above the report threshold.
 
+The default command remains backward-compatible: it requires at least 1 valid fresh release-contract report per component and ignores stale or non-release historical files as warnings. The strict command requires at least 3 valid fresh reports per component before it passes.
+
 #### Remaining P1 movement
 
-This slice makes release evidence easier to audit, but it does not replace repeated runtime evidence. The next P1 work remains multi-run and multi-host sqlite soak evidence, ANN threshold convergence, connector budget calibration, and then Phase-2 gate promotion only after graphdb/ANN baselines are release-grade.
+This slice makes release evidence easier to audit and gives release runbooks a strict repeated-evidence gate, but it does not itself create the missing repeated runtime evidence. The next P1 work remains regenerating sqlite soak and ANN release-gate reports across multiple runs and hosts, ANN threshold convergence, connector budget calibration, and then Phase-2 gate promotion only after graphdb/ANN baselines are release-grade.
 
 ### 2026-05-27 Workflow Truth-Sync and Next-Step Realignment
 
