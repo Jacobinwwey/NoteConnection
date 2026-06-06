@@ -373,73 +373,86 @@
         });
     }
 
-    async function hydrateRuntimeFromTauri() {
-        if (runtimeHydrationPromise) {
-            return runtimeHydrationPromise;
+    function dispatchRuntimeReadyEvent() {
+        if (typeof window.dispatchEvent !== 'function' || typeof window.CustomEvent !== 'function') {
+            return;
+        }
+        window.dispatchEvent(new CustomEvent('noteconnection:runtime-ready', {
+            detail: {
+                runtime: syncGlobalState(),
+                caps: window.__NC_RUNTIME_CAPS || null,
+                appConfig: syncGlobalAppState()
+            }
+        }));
+    }
+
+    async function syncRuntimeFromTauri() {
+        const invoke = getTauriInvoke();
+        if (!invoke) {
+            return syncGlobalState();
         }
 
-        runtimeHydrationPromise = (async () => {
-            const invoke = getTauriInvoke();
-            if (!invoke) {
-                return finalizeRuntimeReady();
+        try {
+            const caps = await invokeTauriWithTimeout(
+                () => invoke('get_runtime_capabilities'),
+                'get_runtime_capabilities',
+                TAURI_RUNTIME_HYDRATE_TIMEOUT_MS
+            );
+            if (caps && typeof caps === 'object') {
+                window.__NC_RUNTIME_CAPS = {
+                    ...(window.__NC_RUNTIME_CAPS || {}),
+                    ...caps
+                };
             }
 
-            try {
-                const caps = await invokeTauriWithTimeout(
-                    () => invoke('get_runtime_capabilities'),
-                    'get_runtime_capabilities',
+        } catch (error) {
+            console.warn('[RuntimeBridge] Failed to hydrate runtime capabilities from Tauri. Using runtime bridge defaults.', error);
+        }
+
+        try {
+            const runtimeCaps = window.__NC_RUNTIME_CAPS || {};
+            if (runtimeCaps.supports_sidecar) {
+                const runtimeConfig = await invokeTauriWithTimeout(
+                    () => invoke('get_sidecar_runtime_config'),
+                    'get_sidecar_runtime_config',
                     TAURI_RUNTIME_HYDRATE_TIMEOUT_MS
                 );
-                if (caps && typeof caps === 'object') {
-                    window.__NC_RUNTIME_CAPS = {
-                        ...(window.__NC_RUNTIME_CAPS || {}),
-                        ...caps
-                    };
-                }
-
-            } catch (error) {
-                console.warn('[RuntimeBridge] Failed to hydrate runtime capabilities from Tauri. Using runtime bridge defaults.', error);
+                setRuntimeConfig(runtimeConfig);
             }
+        } catch (error) {
+            console.warn('[RuntimeBridge] Failed to hydrate sidecar runtime config from Tauri. Using runtime bridge defaults.', error);
+        }
 
-            try {
-                const runtimeCaps = window.__NC_RUNTIME_CAPS || {};
-                if (runtimeCaps.supports_sidecar) {
-                    const runtimeConfig = await invokeTauriWithTimeout(
-                        () => invoke('get_sidecar_runtime_config'),
-                        'get_sidecar_runtime_config',
-                        TAURI_RUNTIME_HYDRATE_TIMEOUT_MS
-                    );
-                    setRuntimeConfig(runtimeConfig);
-                }
-            } catch (error) {
-                console.warn('[RuntimeBridge] Failed to hydrate sidecar runtime config from Tauri. Using runtime bridge defaults.', error);
-            }
+        try {
+            const appConfig = await invokeTauriWithTimeout(
+                () => invoke('get_app_runtime_config'),
+                'get_app_runtime_config',
+                TAURI_RUNTIME_HYDRATE_TIMEOUT_MS
+            );
+            setAppRuntimeConfig(appConfig);
+        } catch (error) {
+            console.warn('[RuntimeBridge] Failed to hydrate app runtime config from Tauri. Using runtime defaults.', error);
+        }
 
-            try {
-                const appConfig = await invokeTauriWithTimeout(
-                    () => invoke('get_app_runtime_config'),
-                    'get_app_runtime_config',
-                    TAURI_RUNTIME_HYDRATE_TIMEOUT_MS
-                );
-                setAppRuntimeConfig(appConfig);
-            } catch (error) {
-                console.warn('[RuntimeBridge] Failed to hydrate app runtime config from Tauri. Using runtime defaults.', error);
-            }
+        dispatchRuntimeReadyEvent();
+        return syncGlobalState();
+    }
 
-            if (typeof window.dispatchEvent === 'function' && typeof window.CustomEvent === 'function') {
-                window.dispatchEvent(new CustomEvent('noteconnection:runtime-ready', {
-                    detail: {
-                        runtime: syncGlobalState(),
-                        caps: window.__NC_RUNTIME_CAPS || null,
-                        appConfig: syncGlobalAppState()
-                    }
-                }));
-            }
-
-            return finalizeRuntimeReady();
-        })();
+    async function hydrateRuntimeFromTauri() {
+        if (!runtimeHydrationPromise) {
+            runtimeHydrationPromise = syncRuntimeFromTauri().then(() => {
+                finalizeRuntimeReady();
+                return syncGlobalState();
+            });
+        }
 
         return runtimeHydrationPromise;
+    }
+
+    async function refreshRuntimeFromTauri() {
+        await syncRuntimeFromTauri();
+        finalizeRuntimeReady();
+        return syncGlobalState();
     }
 
     function whenReady() {
@@ -463,7 +476,7 @@
         parseBridgeEnvelope,
         sendBridgeMessage,
         whenReady,
-        refreshFromTauri: hydrateRuntimeFromTauri,
+        refreshFromTauri: refreshRuntimeFromTauri,
         getBaseUrl: function () {
             return state.baseUrl;
         },

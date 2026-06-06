@@ -5225,14 +5225,64 @@ function initSettingsUI() {
         });
     };
 
-    const requestRuntimeJson = async (resourcePath, init = {}) => {
+    const ensureRuntimeBridgeReady = async () => {
+        if (
+            window.NoteConnectionRuntime
+            && typeof window.NoteConnectionRuntime.whenReady === 'function'
+        ) {
+            await window.NoteConnectionRuntime.whenReady();
+        }
+    };
+
+    const refreshRuntimeBridgeFromTauri = async () => {
+        if (
+            !window.NoteConnectionRuntime
+            || typeof window.NoteConnectionRuntime.refreshFromTauri !== 'function'
+        ) {
+            return false;
+        }
+        try {
+            await window.NoteConnectionRuntime.refreshFromTauri();
+            return true;
+        } catch (error) {
+            console.warn('[Settings] Runtime bridge refresh failed before retrying agent settings request.', error);
+            return false;
+        }
+    };
+
+    const fetchRuntimeJsonOnce = async (resourcePath, init) => {
+        await ensureRuntimeBridgeReady();
         const response = await fetch(buildRuntimeUrl(resourcePath), buildRuntimeFetchOptions(init));
         const payload = await response.json().catch(() => null);
-        if (!response.ok || !payload || payload.success !== true) {
-            const message = payload && payload.error ? String(payload.error) : `Request failed (${resourcePath} ${response.status})`;
-            throw new Error(message);
+        return { response, payload };
+    };
+
+    const isSuccessfulRuntimeJsonResponse = ({ response, payload }) => (
+        response.ok && payload && payload.success === true
+    );
+
+    const buildRuntimeJsonError = (resourcePath, { response, payload }) => {
+        const message = payload && payload.error
+            ? String(payload.error)
+            : `Request failed (${resourcePath} ${response.status})`;
+        return new Error(message);
+    };
+
+    const requestRuntimeJson = async (resourcePath, init = {}) => {
+        const firstAttempt = await fetchRuntimeJsonOnce(resourcePath, init);
+        if (isSuccessfulRuntimeJsonResponse(firstAttempt)) {
+            return firstAttempt.payload;
         }
-        return payload;
+
+        if (firstAttempt.response.status === 401 && await refreshRuntimeBridgeFromTauri()) {
+            const secondAttempt = await fetchRuntimeJsonOnce(resourcePath, init);
+            if (isSuccessfulRuntimeJsonResponse(secondAttempt)) {
+                return secondAttempt.payload;
+            }
+            throw buildRuntimeJsonError(resourcePath, secondAttempt);
+        }
+
+        throw buildRuntimeJsonError(resourcePath, firstAttempt);
     };
 
     const isAnySettingsPanelOpen = () => activeSettingsPage !== null;
