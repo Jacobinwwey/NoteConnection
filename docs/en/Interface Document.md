@@ -56,11 +56,15 @@ Current contract surfaces:
   - `assistantMessage` is still valid for legacy clients,
   - `answer`, `citations`, `knowledgePoints`, `memoryActions`, `summary`, and `trace` expose grounded conversation state,
   - optional `assistantBlocks` carries richer typed reply sections for clients that can render them.
+- `AgentConversationKnowledgePoint` may now include grouped/document-augmented fields such as `atomIds`, `documentId`, `sourcePath`, `citations`, `matchedSpans`, and `matchCount`.
+- Scoped query resolution may now expose `scopeSource: planner_scope_recovery` when a title-like recovery path intentionally leaves the original explicit corpus boundary and switches to a document-only recovery scope.
 - `/api/knowledge/conversation` supports the current conversation path, including stream-first clients and sync fallback behavior.
 - `/api/knowledge/conversation-memory/{list,add,search,delete,feedback}` exposes scoped conversation memory operations.
 - `/api/knowledge/workspace-readiness` exposes workspace/corpus readiness for scoped runtime decisions.
 - `POST /api/knowledge/export/workspace` exposes deterministic workspace export bundles backed by resource, index, workspace, session, workflow, memory, and render-materialization state.
 - Runtime governance endpoints and payloads expose graphdb/vector rollout context, including `rolloutProfile`, graphdb connector health, vector acceleration strictness, and runbook checks.
+- The Knowledge Workspace frontend contract now also includes an in-pane scope selector, a compact `/api/knowledge/conversation` status strip, grouped file-first hit rendering, and matched-span evidence rendering in the focus pane.
+- `assistantBlocks` are no longer only thin transport wrappers around the same plain answer string. Tauri-capable clients should now expect intent-aware overview / explanation / evidence / memory / action sections while still treating `assistantMessage` as the compatibility fallback.
 
 Compatibility rules:
 

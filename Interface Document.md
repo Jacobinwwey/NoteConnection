@@ -52,10 +52,14 @@ Audit flow:
 
 - Scoped retrieval is now represented by `KnowledgeQueryRequest.scope` and `KnowledgeCorpusScope`.
 - `AgentConversationResponse` remains backward-compatible: `assistantMessage` is still valid, while `answer`, `citations`, `memoryActions`, `trace`, and optional `assistantBlocks` provide richer grounded conversation state.
+- `AgentConversationKnowledgePoint` may now carry grouped/document-augmented evidence fields such as `atomIds`, `documentId`, `sourcePath`, `citations`, `matchedSpans`, and `matchCount`, while preserving the original top-level title/summary/citation shape.
+- Scoped query traces may now report `scopeSource: planner_scope_recovery` when title-like recovery intentionally switches from an incompatible explicit scope to a document-only recovery scope.
 - `/api/knowledge/conversation` remains the conversation entrypoint and supports current stream/sync compatibility behavior.
 - `/api/knowledge/conversation-memory/{list,add,search,delete,feedback}` exposes scoped conversation memory operations.
 - `POST /api/knowledge/export/workspace` exposes deterministic workspace export bundles backed by resource, index, workspace, session, workflow, memory, and render-materialization state.
 - Runtime governance payloads expose graphdb/vector rollout context, including `rolloutProfile`, graphdb connector health, vector acceleration strictness, and runbook checks.
+- The Knowledge Workspace frontend contract now also includes an in-pane scope selector, a compact conversation API status strip, file-first grouped hit rendering, and matched-span evidence rendering inside the focus pane. These are additive UI/runtime contracts over the existing backend payloads, not a replacement of public response fields.
+- `assistantBlocks` are no longer only transport wrappers around the same legacy answer string. Current Tauri-capable clients should expect intent-aware overview / explanation / evidence / memory / action sections while still honoring `assistantMessage` as the compatibility fallback.
 - Compatibility rule: new response fields must remain additive and optional; Godot/mobile paths must continue to use PNG-first materialized render artifacts instead of requiring direct SVG import.
 
 ---

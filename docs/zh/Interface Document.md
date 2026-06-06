@@ -55,11 +55,15 @@
   - `assistantMessage` 对旧客户端仍有效，
   - `answer`、`citations`、`knowledgePoints`、`memoryActions`、`summary`、`trace` 暴露 grounded conversation 状态，
   - 可选 `assistantBlocks` 为能渲染 typed reply 的客户端提供 richer 分块回复。
+- `AgentConversationKnowledgePoint` 现在还可以携带按知识点/文档聚合后的字段，例如 `atomIds`、`documentId`、`sourcePath`、`citations`、`matchedSpans` 与 `matchCount`。
+- scoped query 解析现在也可能返回 `scopeSource: planner_scope_recovery`：当 title-like recovery 故意离开原始显式 corpus 边界、切到 document-only recovery scope 时，会通过该字段显式暴露。
 - `/api/knowledge/conversation` 支持当前会话路径，包括 stream-first 客户端与 sync fallback 行为。
 - `/api/knowledge/conversation-memory/{list,add,search,delete,feedback}` 暴露 scoped conversation memory 操作。
 - `/api/knowledge/workspace-readiness` 暴露用于 scoped runtime 决策的 workspace/corpus readiness。
 - `POST /api/knowledge/export/workspace` 暴露 deterministic workspace export bundle，其数据来自 resource、index、workspace、session、workflow、memory 与 render-materialization 状态。
 - 运行时治理端点与 payload 暴露 graphdb/vector rollout 上下文，包括 `rolloutProfile`、graphdb connector health、vector acceleration strictness 与 runbook checks。
+- Knowledge Workspace 前端契约现在也包括工作区内 scope 切换器、紧凑的 `/api/knowledge/conversation` 状态条、按文件优先的 grouped hit 渲染，以及 focus pane 中的 matched-span 证据渲染。
+- `assistantBlocks` 已不再只是对同一段 plain answer 的薄运输包装。对于支持 Tauri rich reply 的客户端，现在应预期 intent-aware 的 overview / explanation / evidence / memory / action 分块，同时继续把 `assistantMessage` 视为兼容性 fallback。
 
 兼容性规则：
 

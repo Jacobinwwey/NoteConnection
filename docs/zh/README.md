@@ -24,8 +24,10 @@
 ## 当前主线架构状态（2026-06-06）
 
 - 当前 `main` 已具备代码支撑的 scoped retrieval、grounded conversation、持久化 resource/index/workspace/session/memory/export 底座、显式 export profiles，以及 Godot/mobile PNG-first 渲染物化边界。
+- 知识工作区已经不再只是套在全局文件夹选择器外面的薄壳：现在具备工作区内 scope 切换器、紧凑的 conversation API 状态条、按知识点聚合后的文件优先命中列表、focus pane 内的 matched-span 证据渲染，以及触发 `planner_scope_recovery` 时的 recovered source 可见性。
 - graphdb/sqlite 与 ANN/external connector 目前是 operational baseline。生产闭环仍需要多轮 soak 证据、工作负载阈值、recall/latency 校准与 strict rollout 证明。
 - 兼容性保持 additive：新客户端可以使用 richer `assistantBlocks`，legacy `assistantMessage` 仍有效。
+- Tauri reply 组织层现在已经是 intent-aware 的 section 化输出：overview、explanation、evidence summary、memory notice 与 next-action guidance 作为结构化块发出，而不再只有一段平铺 answer。
 - 下一阶段架构工作是缩减 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts` 与大型前端宿主文件中的所有权压力。
 - 当前代码 / 方案详细对齐请查看 [架构推进对齐与主线推进方案（2026-06-06）](../solutions/architecture-progress-alignment-2026-06-06.md) 与 [开发进度看板](../diataxis/zh/explanation/development-progress-dashboard.md)。
 

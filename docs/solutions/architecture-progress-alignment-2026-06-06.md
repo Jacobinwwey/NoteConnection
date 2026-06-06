@@ -79,6 +79,34 @@ Primary plan evidence:
 | Export/platform shell | Implemented baseline | export profiles, render materializer, workspace export bundle | Keep mobile/Godot export constraints explicit and test-backed. |
 | Governance and CI | Strong but not complete | docs gates, route/agent contracts, runtime verifiers, SBOM/sidecar gates | Keep evidence freshness and host-specific release gates separate from implementation-complete claims. |
 
+### Follow-Through on Current `main`
+
+The current local `main` has already moved beyond the initial 2026-06-06 documentation-only alignment slice.
+Subsequent local mainline commits, still preserving public runtime compatibility, added four concrete execution follow-through tracks:
+
+1. **Foundation release evidence**
+   - default freshness audit,
+   - strict repeated-evidence audit,
+   - opt-in multi-host audit,
+   - readiness-exposed release aliases and repeated-evidence checks.
+2. **Frontend/runtime auth recovery**
+   - stale sidecar settings authentication recovery in the frontend runtime bridge path.
+3. **Knowledge Workspace grounded-answer UX**
+   - compact API health/status strip,
+   - grouped document-level knowledge hits with `matchedSpans`,
+   - direct evidence-first top-level answers instead of the old repeated “strongest match” template.
+4. **Scoped-retrieval recovery and workspace-local scope UX**
+   - `planner_scope_recovery` when title-like hits exist outside the originally selected scope,
+   - in-pane scope switching inside the Knowledge Workspace,
+   - explicit recovered-source visibility when recovery is used.
+
+These do not change the main planning order.
+They do change the current progress reading:
+
+- P1 is no longer only “release evidence exists”; it now includes freshness, strict repeated evidence, and opt-in multi-host audit tooling.
+- P3/P4 are no longer only “assistant blocks exist”; they now include intent-aware section composition plus knowledge-workspace scope and grouped-hit UX that makes scoped grounded conversation materially usable in Tauri.
+- P2 and deeper ownership reduction are still the next structural pressure point, because these newer capabilities remain largely orchestrated through `src/server.ts`, `src/frontend/agent_workspace.js`, `src/frontend/workspace_panes.js`, and `KnowledgeLearningPlatform.ts`.
+
 ### Concrete Mainline Plan
 
 #### P0: Keep documentation truth synchronized
