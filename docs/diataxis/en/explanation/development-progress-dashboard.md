@@ -49,8 +49,8 @@ Verification position for this documentation slice:
 
 - This update is documentation-only and does not change runtime behavior.
 - Required gate for this slice: docs map validation, docs site build, Mermaid fence guard, diff review, and clean worktree after commit.
-- Code slices that follow must continue to use the runtime gates listed in the active task docs, especially `verify:foundation:sqlite-runtime:soak`, `verify:foundation:ann-runtime:matrix`, `test:agent-workspace:contracts`, and `verify:core-real-machine:clean`.
-- ANN release calibration slices should use `verify:foundation:ann-runtime:release`; the full matrix release-gate path now has fresh Windows-host evidence, while repeated multi-host release evidence remains a follow-up gate.
+- Code slices that follow must continue to use the runtime gates listed in the active task docs, especially `verify:foundation:sqlite-runtime:soak`, `verify:foundation:ann-runtime:matrix`, `verify:foundation:release-evidence`, `test:agent-workspace:contracts`, and `verify:core-real-machine:clean`.
+- ANN release calibration slices should use `verify:foundation:ann-runtime:release`; the full matrix release-gate path now has fresh Windows-host evidence, and `verify:foundation:release-evidence` now checks whether the latest sqlite/ANN release reports are still fresh before they are used as release context. Repeated multi-host release evidence remains a follow-up gate.
 
 ## 2026-05-27 Workflow Gate Realignment and Progress Truth Sync
 
@@ -204,10 +204,11 @@ Operational implication:
   - the embedded sqlite baseline now also has restart-durability proof: shutdown closes the store cleanly, the adapter can reopen safely, and server integration covers ingest -> shutdown -> fresh module reload -> diagnostics/query/readiness continuity,
   - a host-level verifier now exercises that same embedded sqlite baseline through both `dist` runtime and packaged sidecar flows on the current Windows host: ingest -> store diagnostics/foundation readiness -> restart -> query continuity (`scripts/verify-foundation-sqlite-runtime.js`),
   - a host-level workload-matrix verifier now extends that proof across `smoke` / `medium` / `heavy` profiles on the same two runtime paths, including snapshot metadata counts plus restart and multi-point query continuity (`scripts/verify-foundation-sqlite-runtime.js --matrix`),
-  - foundation readiness mandatory checks now include the release-facing sqlite soak alias (`verify:foundation:sqlite-runtime:release`) and the ANN matrix release gate (`verify:foundation:ann-runtime:release`), so operator-facing readiness output matches the package scripts used for release evidence,
+  - foundation readiness mandatory checks now include the release-facing sqlite soak alias (`verify:foundation:sqlite-runtime:release`), the ANN matrix release gate (`verify:foundation:ann-runtime:release`), and the release-evidence freshness verifier (`verify:foundation:release-evidence`), so operator-facing readiness output matches the package scripts used for release evidence,
   - a host-level ANN verifier now proves the `external_http` connector baseline on the same Windows host through both `dist` runtime and packaged sidecar flows: ingest -> live query-backend diagnostics -> restart -> query continuity (`scripts/verify-foundation-ann-runtime.js`),
   - a host-level ANN workload-matrix verifier now extends that proof across `smoke` / `medium` / `heavy` profiles on the same two runtime paths, including sync/select telemetry, aligned representation metadata, and restart continuity (`scripts/verify-foundation-ann-runtime.js --matrix`),
   - the ANN verifier now also has a release-gate mode and structured report output: `scripts/verify-foundation-ann-runtime.js --release-gates` records startup / ingest / diagnostics / query duration summaries plus targeted-query recall under `output/verification/foundation-ann-runtime/`, and `npm run verify:foundation:ann-runtime:release` wires the full matrix release path,
+  - `scripts/verify-foundation-release-evidence.js` now reads the latest sqlite soak and ANN release-gate reports, verifies bounded freshness, required profiles, both runtime modes, sqlite soak gates, ANN release gates, and expected recall, then writes a compact release-evidence summary under `output/verification/foundation-release-evidence/`,
   - ANN-style prefilter, representation telemetry, circuit health, remote index sync, and live `external_http` connector proof now exist in `src/learning/queryBackend.ts` and `src/learning/vectorAccelerationAdapter.ts`,
   - runtime capability/runbook governance now includes explicit ANN remote index-sync health (`query_vector_acceleration_index_sync_health`) in addition to prefilter, health, traceability, and circuit checks,
   - runtime capability governance now also includes explicit gate `query_vector_acceleration_calibration_readiness`, which formalizes whether the ANN path is even ready for release-grade threshold tuning,
@@ -582,7 +583,7 @@ npm run verify:agent-workspace:tauri:evidence:publish-release-notes -- --tag <re
 ## Next Increments (Priority Order)
 
 1. Close CI coverage gaps for the agent-workspace contract suites: keep tauri strict evidence jobs, and add always-on parity/frontend contract gates (`src/agent_workspace.contract.parity.test.ts`, `src/agent_workspace.frontend.test.ts`, `src/agent_workspace.tauri.contract.test.ts`) as first-class CI blockers.
-2. Carry the embedded `graphdb/sqlite` baseline from restart-durability proof to packaged/runtime + heavier-workload closure while preserving explicit fail-open/fail-closed rollout semantics.
+2. Carry the embedded `graphdb/sqlite` baseline from restart-durability proof to packaged/runtime + heavier-workload closure while preserving explicit fail-open/fail-closed rollout semantics; use `verify:foundation:release-evidence` after release report generation to confirm host evidence is still fresh.
 3. Finish ANN release-grade closure by keeping the new sync-backed `external_http` path healthy under real traffic, then tightening workload/threshold calibration.
 4. Move next into Phase-2 gate promotion only after the same checks run on a release-grade graphdb/ANN baseline.
 5. Add CI-integrated durability checks for persisted turn-cache trend index/export consistency across restart flows.

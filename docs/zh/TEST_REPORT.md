@@ -71,6 +71,27 @@
 
 本次刷新新增了稳定的 sqlite soak release 命令名，并让 `getFoundationReadiness().mandatoryChecks` 同时暴露 sqlite 与 ANN 的 release verifier 命令。这不等于把 graphdb/ANN baseline 重新归类为 production-closed；多轮、多宿主的发布级证据仍是闭环标准。
 
+### Foundation Release Evidence 新鲜度刷新（2026-06-06）
+
+- [x] `npm test -- src/foundation.release.evidence.contract.test.ts --runInBand`
+  - 通过
+- [x] `npm test -- src/learning/KnowledgeLearningPlatform.test.ts --runInBand --testNamePattern="foundation readiness"`
+  - 通过
+- [x] `npm run verify:foundation:release-evidence`
+  - 通过；会读取最新 sqlite 与 ANN release 报告，校验有界新鲜度、必需 profile、两条 runtime mode、sqlite soak gates、ANN release gates 与 expected recall，并写出 `output/verification/foundation-release-evidence/foundation-release-evidence-report-latest.json`。
+- [x] `npm run test:migration`
+  - 通过（`53` 个 suites、`267` 项测试通过、`13` 项 skipped；包含 `src/foundation.release.evidence.contract.test.ts`）
+- [x] `git diff --check`
+  - 通过
+- [x] `npm run docs:diataxis:check`
+  - 通过
+- [x] `npm run verify:markdown:mermaid:fence -- docs`
+  - 通过
+- [x] `npm run docs:site:build`
+  - 通过；仍有既有 MkDocs nav warning 与既有 `../ref/GitNexus/README.md` 文档链接缺失 warning。
+
+本次刷新在重型 sqlite/ANN release 报告生成命令之后增加了一道审计门禁。它可以证明当前宿主的 release evidence 新鲜且通过，但仍不替代多轮、多宿主的校准证据。
+
 ### 这轮刷新新增证明了什么
 
 1. embedded `graphdb/sqlite` 基线现在也具备了当前 Windows 宿主上的可重复主机级运行时证明：

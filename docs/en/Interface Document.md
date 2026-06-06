@@ -68,6 +68,7 @@ Compatibility rules:
 - Existing endpoint names and legacy fields must remain stable unless a compatibility shim and tests land in the same change.
 - Godot/mobile render paths must continue to consume PNG-first materialized artifacts; direct SVG import must not become a required runtime dependency.
 - graphdb and ANN status wording must distinguish operational baselines from production closure until release-grade thresholds and repeated evidence exist.
+- Release runbooks should use `verify:foundation:release-evidence` after generating sqlite and ANN release reports to confirm latest evidence freshness, required runtime modes, and release gates before treating host evidence as current.
 
 ## 0. Fast Track Links (Godot + NoteMD + Markdown)
 

@@ -49,8 +49,8 @@
 
 - 本次仅修改文档，不改变运行时行为。
 - 本切片所需门禁是：Diataxis 映射校验、文档站点构建、Mermaid fence 护栏、diff review，以及提交后工作区 clean。
-- 后续代码切片仍必须继续执行活跃 task 文档中的运行时门禁，尤其是 `verify:foundation:sqlite-runtime:soak`、`verify:foundation:ann-runtime:matrix`、`test:agent-workspace:contracts` 与 `verify:core-real-machine:clean`。
-- ANN 发布级校准切片应使用 `verify:foundation:ann-runtime:release`；完整 matrix release-gate 路径已有 Windows 宿主新鲜证据，多轮多宿主 release 证据仍是后续门禁。
+- 后续代码切片仍必须继续执行活跃 task 文档中的运行时门禁，尤其是 `verify:foundation:sqlite-runtime:soak`、`verify:foundation:ann-runtime:matrix`、`verify:foundation:release-evidence`、`test:agent-workspace:contracts` 与 `verify:core-real-machine:clean`。
+- ANN 发布级校准切片应使用 `verify:foundation:ann-runtime:release`；完整 matrix release-gate 路径已有 Windows 宿主新鲜证据，`verify:foundation:release-evidence` 现在会在这些报告被作为发布上下文前确认最新 sqlite/ANN release 报告仍然新鲜。多轮多宿主 release 证据仍是后续门禁。
 
 ## 2026-05-27 工作流门禁重对齐与进度真相同步
 
@@ -194,10 +194,11 @@ Tauri-first reply rendering 基线已交付：
   - embedded sqlite 基线现在还具备了重启耐久性证明：shutdown 会干净关闭 store，adapter 可安全重开，server integration 已覆盖 ingest -> shutdown -> fresh module reload -> diagnostics/query/readiness 连续性，
   - 现在已有一条主机级验证器，会在当前 Windows 宿主上分别走 `dist` runtime 与 packaged sidecar 两条路径，证明同一条 embedded sqlite 基线可以完成 ingest -> store diagnostics/foundation readiness -> restart -> query 连续性（`scripts/verify-foundation-sqlite-runtime.js`），
   - 现在还有一条主机级 workload matrix 验证器，把同样的证明扩展到 `smoke` / `medium` / `heavy` 三档语料规模：在同样两条 runtime 路径上验证 snapshot metadata 计数、restart 连续性与多点 query 连续性（`scripts/verify-foundation-sqlite-runtime.js --matrix`），
-  - foundation readiness mandatory checks 现在已包含面向发布的 sqlite soak 别名（`verify:foundation:sqlite-runtime:release`）与 ANN matrix release gate（`verify:foundation:ann-runtime:release`），因此运维侧 readiness 输出与发布证据使用的 package scripts 保持一致，
+  - foundation readiness mandatory checks 现在已包含面向发布的 sqlite soak 别名（`verify:foundation:sqlite-runtime:release`）、ANN matrix release gate（`verify:foundation:ann-runtime:release`）与 release-evidence 新鲜度校验器（`verify:foundation:release-evidence`），因此运维侧 readiness 输出与发布证据使用的 package scripts 保持一致，
   - 现在也已有一条主机级 ANN 验证器，会在当前 Windows 宿主上分别走 `dist` runtime 与 packaged sidecar 两条路径，证明同一条 `external_http` connector baseline 可以完成 ingest -> live query-backend diagnostics -> restart -> query 连续性（`scripts/verify-foundation-ann-runtime.js`），
   - 现在还有一条主机级 ANN workload matrix 验证器，把同样的证明扩展到 `smoke` / `medium` / `heavy` 三档语料规模：在同样两条 runtime 路径上验证 sync/select telemetry、aligned representation metadata 与 restart 连续性（`scripts/verify-foundation-ann-runtime.js --matrix`），
   - ANN verifier 现在也新增了 release-gate 模式与结构化报告输出：`scripts/verify-foundation-ann-runtime.js --release-gates` 会把 startup / ingest / diagnostics / query duration summary 与 targeted-query recall 写入 `output/verification/foundation-ann-runtime/`，`npm run verify:foundation:ann-runtime:release` 则接入完整 matrix 发布路径，
+  - `scripts/verify-foundation-release-evidence.js` 现在会读取最新 sqlite soak 与 ANN release-gate 报告，校验有界新鲜度、必需 profile、两条 runtime mode、sqlite soak gates、ANN release gates 与 expected recall，并把聚合 release-evidence 摘要写入 `output/verification/foundation-release-evidence/`，
   - `src/learning/queryBackend.ts` / `src/learning/vectorAccelerationAdapter.ts` 现已具备 ANN 风格 prefilter、representation telemetry、circuit health、远端索引同步，以及 live `external_http` connector 证明，
   - runtime capability / runbook 治理也已新增显式的 ANN 远端索引同步健康度检查（`query_vector_acceleration_index_sync_health`），与 prefilter、health、traceability、circuit 并列，
   - runtime capability 治理现在也新增了显式门禁 `query_vector_acceleration_calibration_readiness`，用来正式回答当前 ANN 路径是否已经具备进入发布级阈值校准的前提条件，
@@ -602,7 +603,7 @@ npm run verify:agent-workspace:tauri:evidence:publish-release-notes -- --tag <re
 ## 后续推进优先级
 
 1. 先补齐 agent-workspace 合同套件的 CI 常态覆盖缺口：在保留 tauri strict 证据作业的同时，把 `src/agent_workspace.contract.parity.test.ts`、`src/agent_workspace.frontend.test.ts`、`src/agent_workspace.tauri.contract.test.ts` 作为主线阻断门禁。
-2. 把 embedded `graphdb/sqlite` 基线从“已证明重启耐久性”推进到 packaged/runtime + 更重工作负载闭环，同时保持 fail-open/fail-closed rollout 语义不破坏。
+2. 把 embedded `graphdb/sqlite` 基线从“已证明重启耐久性”推进到 packaged/runtime + 更重工作负载闭环，同时保持 fail-open/fail-closed rollout 语义不破坏；release 报告生成后使用 `verify:foundation:release-evidence` 确认主机证据仍然新鲜。
 3. 完成 ANN 的发布级闭环：让新的 sync-backed `external_http` 路径在真实流量下持续稳定，并收紧工作负载/阈值校准。
 4. 下一阶段再把当前已接通的 Phase-2 诊断面升级为发布级门禁，但前提是 graphdb/ANN 基线已经达到发布级。
 5. 增补跨重启场景下 turn-cache 趋势持久化 index/export 一致性的 CI 验证。

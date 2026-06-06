@@ -10,6 +10,7 @@
 - [x] 继续将 Godot/mobile 禁止直接依赖 SVG 导入作为活跃兼容规则，并通过 PNG-first render materialization 维持。
 - [~] graphdb/sqlite 在多轮 soak、阈值与性能证据达标前，仍按 operational baseline 处理。
 - [~] ANN/external connector 在多轮 release-gated recall/latency 阈值与 workload 校准完成前，仍按 operational baseline 处理；新增 matrix release-gate 证据只是入口，不等于生产闭环。
+- [x] 新增统一的 foundation release-evidence 新鲜度校验器：读取最新 sqlite soak 与 ANN release-gate 报告，并验证报告年龄、必需 profile、两条 runtime mode、soak gates、release gates 与 ANN expected recall。
 - [ ] 只有当 Phase-2 diagnostics 运行在发布级 graphdb/ANN 基线上后，才能从“可见性闭环”升级为 release gate。
 - [ ] 将 server 中的 conversation turn-cache、alert trend、runbook bridge、rollout profile、connector-helper 逻辑抽到明确模块。
 - [ ] 继续拆分 KLP 领域所有权，但避免新增只转发调用的 facade 层。
@@ -37,6 +38,7 @@
 - [x] 现在也已经有主机级 ANN workload matrix 验证：`external_http` baseline 已在 `smoke` / `medium` / `heavy` 三档语料规模下证明 sync/select telemetry、aligned representation metadata 与 restart 连续性（`npm run verify:foundation:ann-runtime:matrix`）。
 - [x] 现在已经有主机级 ANN matrix release-gate 验证：会把结构化报告写到 `output/verification/foundation-ann-runtime/`，并对 startup、ingest、diagnostics、query latency 与 targeted-query recall 执行门禁（`npm run verify:foundation:ann-runtime:release`）。
 - [x] Foundation readiness mandatory checks 现在已把 ANN matrix release gate（`npm run verify:foundation:ann-runtime:release`）与 baseline / matrix proofs 一起暴露。
+- [x] Foundation readiness mandatory checks 现在也已暴露 release-evidence 新鲜度校验器（`npm run verify:foundation:release-evidence`），发布 runbook 可以先确认最新 sqlite 与 ANN 报告仍然新鲜，再把主机证据当作当前有效证据。
 - [~] Phase-1 A9 现已具备 live `external_http` connector baseline、主机级 runtime 证明、主机级 workload matrix 证明和 matrix release-gate 证据；但在宣称生产闭环前仍需补齐多轮阈值收敛与多宿主校准。
 - [ ] 只有在同一套检查运行在发布级 graphdb/ANN 基线上之后，才能把这批新的 Phase-2 诊断面升级为发布级门禁。
 - [ ] 在当前 local-first 基线之上，把 tutor routing 继续推进到生产级多 provider 策略。

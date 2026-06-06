@@ -71,6 +71,27 @@
 
 This refresh adds a stable release-named sqlite soak command and exposes both sqlite and ANN release verifier commands through `getFoundationReadiness().mandatoryChecks`. It does not reclassify the graphdb/ANN baseline as production-closed; repeated and multi-host release evidence remains the closure bar.
 
+### Foundation Release Evidence Freshness Refresh (2026-06-06)
+
+- [x] `npm test -- src/foundation.release.evidence.contract.test.ts --runInBand`
+  - PASS
+- [x] `npm test -- src/learning/KnowledgeLearningPlatform.test.ts --runInBand --testNamePattern="foundation readiness"`
+  - PASS
+- [x] `npm run verify:foundation:release-evidence`
+  - PASS; reads latest sqlite and ANN release reports, validates bounded freshness, required profiles, both runtime modes, sqlite soak gates, ANN release gates, and expected recall, then writes `output/verification/foundation-release-evidence/foundation-release-evidence-report-latest.json`.
+- [x] `npm run test:migration`
+  - PASS (`53` suites, `267` tests passed, `13` skipped; includes `src/foundation.release.evidence.contract.test.ts`)
+- [x] `git diff --check`
+  - PASS
+- [x] `npm run docs:diataxis:check`
+  - PASS
+- [x] `npm run verify:markdown:mermaid:fence -- docs`
+  - PASS
+- [x] `npm run docs:site:build`
+  - PASS with existing MkDocs nav warnings and the pre-existing missing `../ref/GitNexus/README.md` documentation link warning.
+
+This refresh adds an audit gate after the heavy sqlite/ANN release report producers. It verifies that current-host release evidence is fresh and passing, but it still does not replace repeated multi-run and multi-host calibration evidence.
+
 ### What This Refresh Adds
 
 1. The embedded `graphdb/sqlite` baseline now also has repeatable host-level runtime proof on the current Windows machine:

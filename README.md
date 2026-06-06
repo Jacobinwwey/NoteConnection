@@ -31,6 +31,7 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 - The current `main` branch has code-backed scoped retrieval, grounded conversation, durable resource/index/workspace/session/memory/export substrate, explicit export profiles, and PNG-first Godot/mobile render materialization.
 - graphdb/sqlite and ANN/external connector paths are operational baselines, not production-closed release claims. Release closure still depends on repeated soak evidence, workload thresholds, recall/latency calibration, and strict rollout proof.
+- `npm run verify:foundation:release-evidence` now audits the latest sqlite soak and ANN release-gate JSON reports for freshness and passing gates before current-host evidence is used as release context.
 - Backward compatibility is preserved through additive response evolution: `assistantBlocks` can carry richer Tauri agent replies while legacy `assistantMessage` remains valid.
 - The current architecture pressure is ownership reduction: `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, and large frontend host files remain the next simplification targets.
 - Current code-vs-plan details are tracked in [Architecture Progress Alignment and Mainline Plan (2026-06-06)](docs/solutions/architecture-progress-alignment-2026-06-06.md) and [Development Progress Dashboard](docs/diataxis/en/explanation/development-progress-dashboard.md).

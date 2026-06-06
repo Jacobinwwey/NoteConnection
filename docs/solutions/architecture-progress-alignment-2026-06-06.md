@@ -14,7 +14,7 @@ version: 2026.06.06
 
 ### Objective
 
-This document records the concrete mainline plan after re-reading the current code, the active progress dashboards, and the prior architecture plans. It is intentionally a documentation and governance slice: no runtime behavior or public API is changed here.
+This document records the concrete mainline plan after re-reading the current code, the active progress dashboards, and the prior architecture plans. The initial 2026-06-06 slice was documentation and governance only; subsequent P1 updates in this same note record release-evidence tooling progress without changing public runtime APIs.
 
 The goal is to make the current `main` truth explicit:
 
@@ -91,6 +91,7 @@ Primary plan evidence:
 
 - Promote the sqlite soak verifier into repeated release evidence, not a one-off host proof.
 - Keep `verify:foundation:sqlite-runtime:release` as the release-facing alias for sqlite soak evidence, and keep foundation readiness mandatory checks aligned with both sqlite and ANN release gates.
+- Add and keep `verify:foundation:release-evidence` as the lightweight release-evidence freshness check that reads the latest sqlite soak and ANN release-gate reports before operators treat host evidence as current.
 - Tighten graphdb connector health/budget thresholds with representative workloads.
 - Use the new ANN release-gate verifier path (`verify:foundation:ann-runtime:release`) as the structured evidence entry point for startup, ingest, diagnostics, query latency, and targeted-query recall.
 - Calibrate ANN recall/latency and external connector behavior under full workload matrices before promoting Phase-2 diagnostics to release gates.
@@ -144,6 +145,7 @@ Runtime and test gates for future code slices remain:
 - `npm run verify:foundation:sqlite-runtime:matrix`
 - `npm run verify:foundation:ann-runtime:matrix`
 - `npm run verify:foundation:ann-runtime:release`
+- `npm run verify:foundation:release-evidence`
 - `npm run test:agent-workspace:contracts`
 - `npm run test:migration`
 - `npm run verify:core-real-machine:clean`
@@ -152,7 +154,7 @@ Runtime and test gates for future code slices remain:
 
 ### 目标
 
-本文档在重新阅读当前代码、活跃进度看板和先前架构方案之后，落盘当前 `main` 主线的具体推进方案。本次是文档与治理切片，不改变运行时行为，也不改变公开 API。
+本文档在重新阅读当前代码、活跃进度看板和先前架构方案之后，落盘当前 `main` 主线的具体推进方案。2026-06-06 首个切片是文档与治理切片；同一文档中的后续 P1 更新会记录 release-evidence 工具推进，但不改变公开运行时 API。
 
 目标是明确当前真实状态：
 
@@ -229,6 +231,7 @@ Runtime and test gates for future code slices remain:
 
 - 把 sqlite soak verifier 推进为多轮 release evidence，而不是单次主机证明。
 - 将 `verify:foundation:sqlite-runtime:release` 保持为 sqlite soak 证据的发布侧别名，并让 foundation readiness mandatory checks 持续对齐 sqlite 与 ANN 两条 release gate。
+- 新增并持续保留 `verify:foundation:release-evidence`，作为轻量 release-evidence 新鲜度校验：在运维把主机证据视为当前有效证据前，先读取最新 sqlite soak 与 ANN release-gate 报告并验证其仍然新鲜且通过。
 - 用代表性 workload 收紧 graphdb connector health/budget 阈值。
 - 将新的 ANN release-gate verifier 路径（`verify:foundation:ann-runtime:release`）作为 startup、ingest、diagnostics、query latency 与 targeted-query recall 的结构化证据入口。
 - 在把 Phase-2 diagnostics 升级为发布门禁之前，基于完整 workload matrix 完成 ANN recall/latency 与 external connector 行为校准。
@@ -282,6 +285,7 @@ Runtime and test gates for future code slices remain:
 - `npm run verify:foundation:sqlite-runtime:matrix`
 - `npm run verify:foundation:ann-runtime:matrix`
 - `npm run verify:foundation:ann-runtime:release`
+- `npm run verify:foundation:release-evidence`
 - `npm run test:agent-workspace:contracts`
 - `npm run test:migration`
 - `npm run verify:core-real-machine:clean`

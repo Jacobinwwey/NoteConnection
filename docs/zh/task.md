@@ -5,8 +5,9 @@
 - [x] Scoped retrieval、grounded conversation、Program A-F 底座、export profiles、Godot/mobile PNG-first materialization 与 rollout governance 已按当前代码证据分别标注为“已实现”或“operational baseline”。
 - [~] graphdb/sqlite 与 ANN/external connector 路径仍是 operational baseline，不是 production closure；仍待 soak 多轮证据、工作负载阈值、recall/latency 校准与 strict rollout 证明。
 - [x] Foundation readiness 现在会同时暴露 sqlite soak 证据与 ANN matrix release gate 的发布级 verifier 命令，运行时运维人员不再需要只从 docs-only task list 推断 release 检查。
+- [x] 现在新增统一的 foundation release-evidence 新鲜度校验器，会读取最新 sqlite soak 与 ANN release-gate JSON 报告，并通过 `verify:foundation:release-evidence` 暴露到 foundation readiness。
 - [~] 架构缩减是下一阶段结构性压力点：`src/server.ts`、`KnowledgeLearningPlatform.ts` 与大型前端宿主仍需要所有权切分。
-- [ ] 将 sqlite soak verification 推进为多轮 release evidence。
+- [~] 将 sqlite soak verification 推进为多轮 release evidence；latest 报告的新鲜度已自动化，多轮多宿主证据仍待补齐。
 - [ ] 完成 ANN recall/latency 与 connector-budget 校准后，再把 Phase-2 diagnostics 升级为发布门禁。
 - [ ] 将 conversation turn-cache、alert-trend、runbook bridge、rollout-profile、connector-helper 等逻辑从 `server.ts` 抽到明确模块。
 - [ ] 只在新 owner 能隐藏状态或强制不变量时，继续拆分 learning-platform 领域所有权。
@@ -89,6 +90,8 @@
   - 当前 `external_http` ANN connector 最有价值的主机/runtime 证明，覆盖 `smoke` / `medium` / `heavy` 三档 workload。
 - `npm run verify:foundation:ann-runtime:release`
   - 当前 `external_http` ANN connector 的完整 matrix 发布级门禁路径；会将结构化 JSON 报告写入 `output/verification/foundation-ann-runtime/`，并对 startup、ingest、diagnostics、query latency 与 targeted-query recall 执行门禁。
+- `npm run verify:foundation:release-evidence`
+  - 读取最新 sqlite soak 与 ANN release-gate JSON 报告，通过 `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MAX_AGE_HOURS` 执行有界新鲜度校验，确认 `dist_node_runtime` 与 `packaged_sidecar` 两条证据都存在并通过，同时把聚合摘要写入 `output/verification/foundation-release-evidence/`。
 - `npm run verify:agent-workspace:browser`
   - 真实浏览器 smoke，覆盖 agent workspace、runbook 卡片、query/quality/session 面板和 focus/path 流程。
 - `npm run verify:agent-workspace:tauri`

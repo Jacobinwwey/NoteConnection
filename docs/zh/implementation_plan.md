@@ -47,6 +47,36 @@
 3. 后续代码工作可以按明确优先级启动：先发布级底座闭环，再所有权缩减，再 richer agent output。
 4. 文档提交后工作区保持 clean。
 
+### 2026-06-06 P1 Foundation Release Evidence 新鲜度切片
+
+#### 目标
+
+把 sqlite 与 ANN 的 release evidence 路径从“各自产出报告”推进为一个统一的发布侧新鲜度校验入口；该命令本身不重新执行重型 runtime 验证，也不把当前 baseline 宣称为 production closure。
+
+#### 已落地代码路径
+
+- 新增 `scripts/verify-foundation-release-evidence.js`。
+- 新增 `npm run verify:foundation:release-evidence`。
+- 新增 `src/foundation.release.evidence.contract.test.ts`，并纳入 `test:migration`。
+- 在 `getFoundationReadiness().mandatoryChecks` 中新增 `foundation_release_evidence_freshness`。
+
+#### 证据契约
+
+新鲜度校验器读取：
+
+- `output/verification/foundation-sqlite-runtime/foundation-sqlite-runtime-report-latest.json`
+- `output/verification/foundation-ann-runtime/foundation-ann-runtime-report-latest.json`
+
+它会验证：
+
+- 通过 `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MAX_AGE_HOURS` 执行有界新鲜度校验；
+- sqlite 必须是 `suiteKind: soak`，包含 heavy profile、`dist_node_runtime`、`packaged_sidecar`、正数 soak cycles、通过的 soak gates 与 query samples；
+- ANN 必须是 `suiteKind: matrix`，`releaseGatesEnabled: true`，包含 `smoke` / `medium` / `heavy`、两条 runtime mode、通过的 release gates、query samples，并且 expected recall 不低于报告阈值。
+
+#### 剩余 P1 推进方向
+
+本切片让 release evidence 更容易审计，但不替代多轮 runtime evidence。下一步 P1 仍是 sqlite 多轮多宿主 soak 证据、ANN 阈值收敛、connector budget 校准，并且只有在 graphdb/ANN baseline 达到发布级之后，才推进 Phase-2 gate promotion。
+
 ### 2026-05-27 工作流真相同步与后续主线重对齐
 
 #### 目标

@@ -2082,6 +2082,10 @@ describe('KnowledgeLearningPlatform', () => {
                         gateId: 'vector_runtime_release_proof',
                         command: 'npm run verify:foundation:ann-runtime:release',
                     }),
+                    expect.objectContaining({
+                        gateId: 'foundation_release_evidence_freshness',
+                        command: 'npm run verify:foundation:release-evidence',
+                    }),
                 ])
             );
 

@@ -46,6 +46,36 @@ Land the current code-vs-plan assessment into the active implementation plan whi
 3. Future code work can start from a clear priority order: release-grade foundation closure first, then ownership reduction, then richer agent output.
 4. Worktree is clean after the documentation commit.
 
+### 2026-06-06 P1 Foundation Release Evidence Freshness Slice
+
+#### Objective
+
+Promote the sqlite and ANN release evidence paths from separate report producers into a single release-facing freshness check, without re-running heavy runtime verification inside the freshness command and without claiming production closure.
+
+#### Implemented code path
+
+- Added `scripts/verify-foundation-release-evidence.js`.
+- Added `npm run verify:foundation:release-evidence`.
+- Added `src/foundation.release.evidence.contract.test.ts` and included it in `test:migration`.
+- Added `foundation_release_evidence_freshness` to `getFoundationReadiness().mandatoryChecks`.
+
+#### Evidence contract
+
+The freshness verifier reads:
+
+- `output/verification/foundation-sqlite-runtime/foundation-sqlite-runtime-report-latest.json`
+- `output/verification/foundation-ann-runtime/foundation-ann-runtime-report-latest.json`
+
+It validates:
+
+- bounded freshness through `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MAX_AGE_HOURS`,
+- sqlite `suiteKind: soak`, heavy profile, `dist_node_runtime`, `packaged_sidecar`, positive soak cycles, passing soak gates, and query samples,
+- ANN `suiteKind: matrix`, `releaseGatesEnabled: true`, `smoke` / `medium` / `heavy`, both runtime modes, passing release gates, query samples, and expected recall at or above the report threshold.
+
+#### Remaining P1 movement
+
+This slice makes release evidence easier to audit, but it does not replace repeated runtime evidence. The next P1 work remains multi-run and multi-host sqlite soak evidence, ANN threshold convergence, connector budget calibration, and then Phase-2 gate promotion only after graphdb/ANN baselines are release-grade.
+
 ### 2026-05-27 Workflow Truth-Sync and Next-Step Realignment
 
 #### Objective
