@@ -6,9 +6,9 @@
 - [~] graphdb/sqlite 与 ANN/external connector 路径仍是 operational baseline，不是 production closure；仍待多宿主 soak 证据、工作负载阈值、recall/latency 校准与 strict rollout 证明。
 - [x] Foundation readiness 现在会同时暴露 sqlite soak 证据与 ANN matrix release gate 的发布级 verifier 命令，运行时运维人员不再需要只从 docs-only task list 推断 release 检查。
 - [x] 现在新增统一的 foundation release-evidence 新鲜度校验器，会读取最新 sqlite soak 与 ANN release-gate JSON 报告，并通过 `verify:foundation:release-evidence` 暴露到 foundation readiness。
-- [x] 现在也已接入严格的 foundation release-evidence 历史校验器：当前 Windows 宿主的 sqlite 与 ANN 都已有 3/3 份新鲜且满足 release contract 的报告，`verify:foundation:release-evidence:strict` 已可在本机通过；这只是 repeated-evidence 门禁通过，不是 production closure 结论。
+- [x] 现在也已接入严格的 foundation release-evidence 历史校验器，并通过 `foundation_release_evidence_history` 暴露到 foundation readiness：当前 Windows 宿主的 sqlite 与 ANN 都已有 3/3 份新鲜且满足 release contract 的报告，`verify:foundation:release-evidence:strict` 已可在本机通过；这只是 repeated-evidence 门禁通过，不是 production closure 结论。
 - [~] 架构缩减是下一阶段结构性压力点：`src/server.ts`、`KnowledgeLearningPlatform.ts` 与大型前端宿主仍需要所有权切分。
-- [~] 将 sqlite soak verification 推进为多轮 release evidence；latest 报告的新鲜度与当前 Windows 宿主 strict 3/3 审计已自动化，但多宿主证据与阈值校准仍待补齐。
+- [~] 将 sqlite soak verification 推进为多轮 release evidence；latest 报告的新鲜度、readiness 已暴露的严格历史审计、以及当前 Windows 宿主 strict 3/3 证据都已自动化，但多宿主证据与阈值校准仍待补齐。
 - [ ] 完成 ANN recall/latency 与 connector-budget 校准后，再把 Phase-2 diagnostics 升级为发布门禁。
 - [ ] 将 conversation turn-cache、alert-trend、runbook bridge、rollout-profile、connector-helper 等逻辑从 `server.ts` 抽到明确模块。
 - [ ] 只在新 owner 能隐藏状态或强制不变量时，继续拆分 learning-platform 领域所有权。

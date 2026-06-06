@@ -30,7 +30,7 @@
 | 层级 | 当前成熟度 | 下一步 |
 |---|---|---|
 | 图谱 / Path 核心 | 成熟 operational baseline | 保持兼容，避免无关重构。 |
-| 运行时存储 / 检索 | Operational baseline | 当前 Windows 宿主的严格 release-evidence 历史审计已经在 sqlite 与 ANN 两侧都达到 3/3 并通过；下一步是多宿主证据与阈值校准。 |
+| 运行时存储 / 检索 | Operational baseline | 当前 Windows 宿主的严格 release-evidence 历史审计已经在 sqlite 与 ANN 两侧都达到 3/3 并通过，且 readiness 已通过 `foundation_release_evidence_history` 暴露该门禁；下一步是多宿主证据与阈值校准。 |
 | Scoped RAG / conversation | Operational baseline | 在不删除 legacy 响应字段的前提下，从 `server.ts` 切出所有权。 |
 | Memory / session / workflow | 已实现底座 | 先加固 policy、audit 与 workflow artifact 质量，不堆 UI-only 状态。 |
 | Export / platform shell | 已实现基线 | 继续显式维护 Godot/mobile materialization 与 export profile 规则。 |
@@ -47,10 +47,10 @@
 
 2026-06-06 对齐与 P1 证据切片的验证位置：
 
-- 初始对齐更新仅修改文档；当前 P1 evidence-history 切片只修改 verifier tooling 与 package scripts，不改变公开运行时 API。
-- 当前切片需要执行：foundation release-evidence 契约测试、默认 release-evidence 校验、migration tests、docs map 校验、docs site build、Mermaid fence 护栏、diff review，以及提交后 clean worktree。
-- 后续代码切片仍必须继续执行活跃 task 文档中的运行时门禁，尤其是 `verify:foundation:sqlite-runtime:soak`、`verify:foundation:ann-runtime:matrix`、`verify:foundation:release-evidence`、`test:agent-workspace:contracts` 与 `verify:core-real-machine:clean`。
-- ANN 发布级校准切片应使用 `verify:foundation:ann-runtime:release`；完整 matrix release-gate 路径已有 Windows 宿主新鲜证据，`verify:foundation:release-evidence` 会在这些报告被作为发布上下文前确认最新 sqlite/ANN release 报告仍然新鲜。`verify:foundation:release-evidence:strict` 当前已在 Windows 宿主上以 sqlite `3/3` 与 ANN `3/3` 通过，因此剩余证据缺口是多宿主 release evidence 与校准，而不是本地报告数量。
+- 初始对齐更新仅修改文档；当前 P1 evidence-history/readiness 切片会修改 verifier tooling、package scripts、测试与 readiness mandatory checks，不改变公开运行时 API。
+- 当前切片需要执行：foundation release-evidence 契约测试、foundation readiness 回归测试、默认/严格 release-evidence 校验、migration tests、docs map 校验、docs site build、Mermaid fence 护栏、diff review，以及提交后 clean worktree。
+- 后续代码切片仍必须继续执行活跃 task 文档中的运行时门禁，尤其是 `verify:foundation:sqlite-runtime:soak`、`verify:foundation:ann-runtime:matrix`、`verify:foundation:release-evidence`、`verify:foundation:release-evidence:strict`、`test:agent-workspace:contracts` 与 `verify:core-real-machine:clean`。
+- ANN 发布级校准切片应使用 `verify:foundation:ann-runtime:release`；完整 matrix release-gate 路径已有 Windows 宿主新鲜证据，`verify:foundation:release-evidence` 会在这些报告被作为发布上下文前确认最新 sqlite/ANN release 报告仍然新鲜，readiness 也已通过 `foundation_release_evidence_history` 暴露严格历史审计。`verify:foundation:release-evidence:strict` 当前已在 Windows 宿主上以 sqlite `3/3` 与 ANN `3/3` 通过，因此剩余证据缺口是多宿主 release evidence 与校准，而不是本地报告数量。
 
 ## 2026-05-27 工作流门禁重对齐与进度真相同步
 
@@ -194,7 +194,7 @@ Tauri-first reply rendering 基线已交付：
   - embedded sqlite 基线现在还具备了重启耐久性证明：shutdown 会干净关闭 store，adapter 可安全重开，server integration 已覆盖 ingest -> shutdown -> fresh module reload -> diagnostics/query/readiness 连续性，
   - 现在已有一条主机级验证器，会在当前 Windows 宿主上分别走 `dist` runtime 与 packaged sidecar 两条路径，证明同一条 embedded sqlite 基线可以完成 ingest -> store diagnostics/foundation readiness -> restart -> query 连续性（`scripts/verify-foundation-sqlite-runtime.js`），
   - 现在还有一条主机级 workload matrix 验证器，把同样的证明扩展到 `smoke` / `medium` / `heavy` 三档语料规模：在同样两条 runtime 路径上验证 snapshot metadata 计数、restart 连续性与多点 query 连续性（`scripts/verify-foundation-sqlite-runtime.js --matrix`），
-  - foundation readiness mandatory checks 现在已包含面向发布的 sqlite soak 别名（`verify:foundation:sqlite-runtime:release`）、ANN matrix release gate（`verify:foundation:ann-runtime:release`）与 release-evidence 新鲜度校验器（`verify:foundation:release-evidence`），因此运维侧 readiness 输出与发布证据使用的 package scripts 保持一致，
+  - foundation readiness mandatory checks 现在已包含面向发布的 sqlite soak 别名（`verify:foundation:sqlite-runtime:release`）、ANN matrix release gate（`verify:foundation:ann-runtime:release`）、release-evidence 新鲜度校验器（`verify:foundation:release-evidence`）与严格 release-evidence 历史校验器（`verify:foundation:release-evidence:strict`），因此运维侧 readiness 输出与发布证据使用的 package scripts 保持一致，
   - 现在也已有一条主机级 ANN 验证器，会在当前 Windows 宿主上分别走 `dist` runtime 与 packaged sidecar 两条路径，证明同一条 `external_http` connector baseline 可以完成 ingest -> live query-backend diagnostics -> restart -> query 连续性（`scripts/verify-foundation-ann-runtime.js`），
   - 现在还有一条主机级 ANN workload matrix 验证器，把同样的证明扩展到 `smoke` / `medium` / `heavy` 三档语料规模：在同样两条 runtime 路径上验证 sync/select telemetry、aligned representation metadata 与 restart 连续性（`scripts/verify-foundation-ann-runtime.js --matrix`），
   - ANN verifier 现在也新增了 release-gate 模式与结构化报告输出：`scripts/verify-foundation-ann-runtime.js --release-gates` 会把 startup / ingest / diagnostics / query duration summary 与 targeted-query recall 写入 `output/verification/foundation-ann-runtime/`，`npm run verify:foundation:ann-runtime:release` 则接入完整 matrix 发布路径，

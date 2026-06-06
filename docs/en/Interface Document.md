@@ -68,7 +68,7 @@ Compatibility rules:
 - Existing endpoint names and legacy fields must remain stable unless a compatibility shim and tests land in the same change.
 - Godot/mobile render paths must continue to consume PNG-first materialized artifacts; direct SVG import must not become a required runtime dependency.
 - graphdb and ANN status wording must distinguish operational baselines from production closure until release-grade thresholds and repeated evidence exist.
-- Release runbooks should use `verify:foundation:release-evidence` after generating sqlite and ANN release reports to confirm latest evidence freshness, required runtime modes, and release gates before treating host evidence as current. Use `verify:foundation:release-evidence:strict` when repeated evidence is required; the current Windows host passes with sqlite `3/3` and ANN `3/3`, but each release host/window must regenerate enough fresh reports that satisfy the current release contract.
+- Release runbooks should use `verify:foundation:release-evidence` after generating sqlite and ANN release reports to confirm latest evidence freshness, required runtime modes, and release gates before treating host evidence as current. Use `verify:foundation:release-evidence:strict` when repeated evidence is required. Foundation readiness exposes both commands through `foundation_release_evidence_freshness` and `foundation_release_evidence_history`; the current Windows host passes the strict gate with sqlite `3/3` and ANN `3/3`, but each release host/window must regenerate enough fresh reports that satisfy the current release contract.
 
 ## 0. Fast Track Links (Godot + NoteMD + Markdown)
 

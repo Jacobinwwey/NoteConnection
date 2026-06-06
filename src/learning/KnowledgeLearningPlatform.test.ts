@@ -2086,6 +2086,10 @@ describe('KnowledgeLearningPlatform', () => {
                         gateId: 'foundation_release_evidence_freshness',
                         command: 'npm run verify:foundation:release-evidence',
                     }),
+                    expect.objectContaining({
+                        gateId: 'foundation_release_evidence_history',
+                        command: 'npm run verify:foundation:release-evidence:strict',
+                    }),
                 ])
             );
 

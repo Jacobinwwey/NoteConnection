@@ -31,7 +31,7 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 - The current `main` branch has code-backed scoped retrieval, grounded conversation, durable resource/index/workspace/session/memory/export substrate, explicit export profiles, and PNG-first Godot/mobile render materialization.
 - graphdb/sqlite and ANN/external connector paths are operational baselines, not production-closed release claims. Release closure still depends on repeated soak evidence, workload thresholds, recall/latency calibration, and strict rollout proof.
-- `npm run verify:foundation:release-evidence` now audits the latest sqlite soak and ANN release-gate JSON reports for freshness and passing gates before current-host evidence is used as release context; `npm run verify:foundation:release-evidence:strict` additionally requires repeated fresh valid history reports and now passes on the current Windows host with sqlite `3/3` and ANN `3/3`.
+- `npm run verify:foundation:release-evidence` now audits the latest sqlite soak and ANN release-gate JSON reports for freshness and passing gates before current-host evidence is used as release context; `npm run verify:foundation:release-evidence:strict` additionally requires repeated fresh valid history reports, is exposed in foundation readiness as `foundation_release_evidence_history`, and now passes on the current Windows host with sqlite `3/3` and ANN `3/3`.
 - Backward compatibility is preserved through additive response evolution: `assistantBlocks` can carry richer Tauri agent replies while legacy `assistantMessage` remains valid.
 - The current architecture pressure is ownership reduction: `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, and large frontend host files remain the next simplification targets.
 - Current code-vs-plan details are tracked in [Architecture Progress Alignment and Mainline Plan (2026-06-06)](docs/solutions/architecture-progress-alignment-2026-06-06.md) and [Development Progress Dashboard](docs/diataxis/en/explanation/development-progress-dashboard.md).
@@ -1019,7 +1019,7 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 - 当前 `main` 已具备代码支撑的 scoped retrieval、grounded conversation、持久化 resource/index/workspace/session/memory/export 底座、显式 export profiles，以及 Godot/mobile PNG-first 渲染物化边界。
 - graphdb/sqlite 与 ANN/external connector 目前是 operational baseline，不是 production-closed 发布结论。发布闭环仍依赖多轮 soak 证据、工作负载阈值、recall/latency 校准与 strict rollout 证明。
-- `npm run verify:foundation:release-evidence` 现在会在当前宿主证据被作为 release context 前审计最新 sqlite soak 与 ANN release-gate JSON 报告的新鲜度和通过状态；`npm run verify:foundation:release-evidence:strict` 还会要求多份新鲜有效历史报告，并且当前 Windows 宿主已达到 sqlite `3/3` 与 ANN `3/3` 通过状态。
+- `npm run verify:foundation:release-evidence` 现在会在当前宿主证据被作为 release context 前审计最新 sqlite soak 与 ANN release-gate JSON 报告的新鲜度和通过状态；`npm run verify:foundation:release-evidence:strict` 还会要求多份新鲜有效历史报告，已通过 `foundation_release_evidence_history` 暴露到 foundation readiness，并且当前 Windows 宿主已达到 sqlite `3/3` 与 ANN `3/3` 通过状态。
 - 向前兼容通过 additive response evolution 保持：`assistantBlocks` 可以承载更丰富的 Tauri agent 回复，同时 legacy `assistantMessage` 仍有效。
 - 当前架构压力是所有权缩减：`src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts` 与大型前端宿主文件是下一阶段简化目标。
 - 代码 / 方案详细对齐请查看 [架构推进对齐与主线推进方案（2026-06-06）](docs/solutions/architecture-progress-alignment-2026-06-06.md) 与 [开发进度看板](docs/diataxis/zh/explanation/development-progress-dashboard.md)。

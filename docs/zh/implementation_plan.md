@@ -60,6 +60,7 @@
 - 新增 `npm run verify:foundation:release-evidence:strict`，它会用 `--min-report-count 3` 执行同一个校验器。
 - 新增 `src/foundation.release.evidence.contract.test.ts`，并纳入 `test:migration`。
 - 在 `getFoundationReadiness().mandatoryChecks` 中新增 `foundation_release_evidence_freshness`。
+- 在 `getFoundationReadiness().mandatoryChecks` 中新增 `foundation_release_evidence_history`，指向 `npm run verify:foundation:release-evidence:strict`，同时保留既有 freshness 门禁。
 - 通过 `--min-report-count` 与 `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_REPORT_COUNT` 新增 repeated evidence 的 CLI/env 控制。
 - 新增对 `foundation-sqlite-runtime-report-*.json` 与 `foundation-ann-runtime-report-*.json` 时间戳历史报告的扫描。
 
@@ -90,7 +91,7 @@
 
 #### 剩余 P1 推进方向
 
-本切片让 release evidence 更容易审计，也给发布 runbook 增加了严格 repeated evidence 门禁。当前 Windows 宿主已满足该严格门禁，因此下一步 P1 转向多宿主证据收集、ANN 阈值收敛、connector budget 校准，并且只有在 graphdb/ANN baseline 达到发布级之后，才推进 Phase-2 gate promotion。
+本切片让 release evidence 更容易审计，也给发布 runbook 增加了严格 repeated evidence 门禁。Foundation readiness 现在同时把默认 freshness 审计与严格 history 审计暴露为 mandatory checks。当前 Windows 宿主已满足该严格门禁，因此下一步 P1 转向多宿主证据收集、ANN 阈值收敛、connector budget 校准，并且只有在 graphdb/ANN baseline 达到发布级之后，才推进 Phase-2 gate promotion。
 
 ### 2026-05-27 工作流真相同步与后续主线重对齐
 

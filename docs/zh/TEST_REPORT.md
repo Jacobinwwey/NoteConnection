@@ -106,6 +106,8 @@
   - 通过（`8` 项测试）。
 - [x] `npm run test:migration`
   - 通过（`53` 个 suites、`271` 项测试通过、`13` 项 skipped、总计 `284` 项）。
+- [x] `npm run test:agent-workspace:contracts`
+  - 通过（`3` 个 suites、`111` 项测试通过、`13` 项 skipped、总计 `124` 项）。
 - [x] `git diff --check`
   - 通过。
 - [x] `npm run docs:diataxis:check`
@@ -116,6 +118,27 @@
   - 通过；仍有既有 MkDocs Material 2.0 warning、既有未纳入 nav 的页面清单，以及既有 `../ref/GitNexus/README.md` 文档链接缺失 warning。
 
 这关闭了当前 Windows 宿主的严格 repeated-evidence 审计；仍不关闭多宿主证据、ANN recall/latency 阈值收敛、connector-budget 校准或 production closure。
+
+### Foundation 严格证据 Readiness 接线刷新（2026-06-06）
+
+- [x] `npm test -- src/learning/KnowledgeLearningPlatform.test.ts --runInBand --testNamePattern="foundation readiness"`
+  - 已完成 RED/GREEN 确认：测试先新增对 `foundation_release_evidence_history` 的期望，并在实现前失败；随后将 mandatory check 接到 `npm run verify:foundation:release-evidence:strict` 后通过。
+- [x] `npm test -- src/foundation.release.evidence.contract.test.ts --runInBand`
+  - 通过（`8` 项测试）。
+- [x] `npm run verify:foundation:release-evidence:strict`
+  - 通过；过期 sqlite 历史报告与旧的非 release ANN 报告仍只作为 warning。
+- [x] `npm run test:migration`
+  - 通过（`53` 个 suites、`271` 项测试通过、`13` 项 skipped、总计 `284` 项）。
+- [x] `git diff --check`
+  - 通过。
+- [x] `npm run docs:diataxis:check`
+  - 通过。
+- [x] `npm run verify:markdown:mermaid:fence -- docs`
+  - 通过。
+- [x] `npm run docs:site:build`
+  - 通过；仍有既有 MkDocs Material 2.0 warning、既有未纳入 nav 的页面清单，以及既有 `../ref/GitNexus/README.md` 文档链接缺失 warning。
+
+本次刷新把严格 repeated-evidence 审计暴露到 `getFoundationReadiness().mandatoryChecks`，但不改变公开 readiness payload 形状，也不改变默认 1 份报告即可通过的 freshness 审计语义。
 
 ### 这轮刷新新增证明了什么
 

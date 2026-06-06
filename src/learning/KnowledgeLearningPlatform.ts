@@ -10724,6 +10724,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     command: 'npm run verify:foundation:release-evidence',
                 },
                 {
+                    gateId: 'foundation_release_evidence_history',
+                    command: 'npm run verify:foundation:release-evidence:strict',
+                },
+                {
                     gateId: 'documentation',
                     command: 'npm run docs:diataxis:check && npm run docs:site:build',
                 },

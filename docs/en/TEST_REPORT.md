@@ -106,6 +106,8 @@ This refresh adds an audit gate after the heavy sqlite/ANN release report produc
   - PASS (`8` tests).
 - [x] `npm run test:migration`
   - PASS (`53` suites, `271` tests passed, `13` skipped, `284` total).
+- [x] `npm run test:agent-workspace:contracts`
+  - PASS (`3` suites, `111` tests passed, `13` skipped, `124` total).
 - [x] `git diff --check`
   - PASS.
 - [x] `npm run docs:diataxis:check`
@@ -116,6 +118,27 @@ This refresh adds an audit gate after the heavy sqlite/ANN release report produc
   - PASS with existing MkDocs Material 2.0 warning, existing non-nav page list, and the pre-existing missing `../ref/GitNexus/README.md` documentation link warning.
 
 This closes the current Windows-host strict repeated-evidence audit. It still does not close multi-host evidence, ANN recall/latency threshold convergence, connector-budget calibration, or production closure.
+
+### Foundation Strict Evidence Readiness Wiring Refresh (2026-06-06)
+
+- [x] `npm test -- src/learning/KnowledgeLearningPlatform.test.ts --runInBand --testNamePattern="foundation readiness"`
+  - RED/GREEN confirmed: after the test expected `foundation_release_evidence_history`, it failed before implementation; after wiring the mandatory check to `npm run verify:foundation:release-evidence:strict`, it passed.
+- [x] `npm test -- src/foundation.release.evidence.contract.test.ts --runInBand`
+  - PASS (`8` tests).
+- [x] `npm run verify:foundation:release-evidence:strict`
+  - PASS; stale sqlite history reports and the old non-release ANN report remain warnings only.
+- [x] `npm run test:migration`
+  - PASS (`53` suites, `271` tests passed, `13` skipped, `284` total).
+- [x] `git diff --check`
+  - PASS.
+- [x] `npm run docs:diataxis:check`
+  - PASS.
+- [x] `npm run verify:markdown:mermaid:fence -- docs`
+  - PASS.
+- [x] `npm run docs:site:build`
+  - PASS with the existing MkDocs Material 2.0 warning, existing non-nav page list, and the pre-existing missing `../ref/GitNexus/README.md` documentation link warning.
+
+This refresh exposes the strict repeated-evidence audit through `getFoundationReadiness().mandatoryChecks` without changing the public readiness payload shape or the default one-report freshness audit.
 
 ### What This Refresh Adds
 

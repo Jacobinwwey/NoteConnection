@@ -59,6 +59,7 @@ Promote the sqlite and ANN release evidence paths from separate report producers
 - Added `npm run verify:foundation:release-evidence:strict`, which runs the same verifier with `--min-report-count 3`.
 - Added `src/foundation.release.evidence.contract.test.ts` and included it in `test:migration`.
 - Added `foundation_release_evidence_freshness` to `getFoundationReadiness().mandatoryChecks`.
+- Added `foundation_release_evidence_history` to `getFoundationReadiness().mandatoryChecks`, pointing to `npm run verify:foundation:release-evidence:strict` while preserving the existing freshness gate.
 - Added CLI/env control for repeated evidence through `--min-report-count` and `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_REPORT_COUNT`.
 - Added timestamped history scanning for `foundation-sqlite-runtime-report-*.json` and `foundation-ann-runtime-report-*.json`.
 
@@ -89,7 +90,7 @@ This closes the current-host repeated-evidence gate only. It does not close mult
 
 #### Remaining P1 movement
 
-This slice makes release evidence easier to audit and gives release runbooks a strict repeated-evidence gate. The current Windows host now satisfies that strict gate, so the next P1 work shifts to multi-host evidence collection, ANN threshold convergence, connector budget calibration, and then Phase-2 gate promotion only after graphdb/ANN baselines are release-grade.
+This slice makes release evidence easier to audit and gives release runbooks a strict repeated-evidence gate. Foundation readiness now surfaces both the default freshness audit and the strict history audit as mandatory checks. The current Windows host now satisfies that strict gate, so the next P1 work shifts to multi-host evidence collection, ANN threshold convergence, connector budget calibration, and then Phase-2 gate promotion only after graphdb/ANN baselines are release-grade.
 
 ### 2026-05-27 Workflow Truth-Sync and Next-Step Realignment
 
