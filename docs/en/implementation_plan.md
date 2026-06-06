@@ -57,10 +57,12 @@ Promote the sqlite and ANN release evidence paths from separate report producers
 - Added `scripts/verify-foundation-release-evidence.js`.
 - Added `npm run verify:foundation:release-evidence`.
 - Added `npm run verify:foundation:release-evidence:strict`, which runs the same verifier with `--min-report-count 3`.
+- Added `npm run verify:foundation:release-evidence:multi-host`, which runs the same verifier with `--min-report-count 3 --min-host-count 2`.
 - Added `src/foundation.release.evidence.contract.test.ts` and included it in `test:migration`.
 - Added `foundation_release_evidence_freshness` to `getFoundationReadiness().mandatoryChecks`.
 - Added `foundation_release_evidence_history` to `getFoundationReadiness().mandatoryChecks`, pointing to `npm run verify:foundation:release-evidence:strict` while preserving the existing freshness gate.
 - Added CLI/env control for repeated evidence through `--min-report-count` and `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_REPORT_COUNT`.
+- Added CLI/env control for host-diversity evidence through `--min-host-count` and `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_HOST_COUNT`.
 - Added timestamped history scanning for `foundation-sqlite-runtime-report-*.json` and `foundation-ann-runtime-report-*.json`.
 
 #### Evidence contract
@@ -76,7 +78,7 @@ It validates:
 - sqlite `suiteKind: soak`, heavy profile, `dist_node_runtime`, `packaged_sidecar`, positive soak cycles, passing soak gates, and query samples,
 - ANN `suiteKind: matrix`, `releaseGatesEnabled: true`, `smoke` / `medium` / `heavy`, both runtime modes, passing release gates, query samples, and expected recall at or above the report threshold.
 
-The default command remains backward-compatible: it requires at least 1 valid fresh release-contract report per component and ignores stale or non-release historical files as warnings. The strict command requires at least 3 valid fresh reports per component before it passes.
+The default command remains backward-compatible: it requires at least 1 valid fresh release-contract report and 1 host key per component, and ignores stale or non-release historical files as warnings. The strict command requires at least 3 valid fresh reports per component before it passes. The opt-in multi-host command additionally requires at least 2 distinct host keys per component, derived from explicit report host identifiers when present and otherwise from `platform/arch`.
 
 #### Current evidence position
 
@@ -86,11 +88,11 @@ The current Windows host now has a passing strict repeated-evidence audit:
 - ANN release-gate report refreshed at `2026-06-06T03:19:22.368Z`,
 - `verify:foundation:release-evidence:strict` checked at `2026-06-06T03:21:04.144Z` with sqlite `3/3` and ANN `3/3`.
 
-This closes the current-host repeated-evidence gate only. It does not close multi-host evidence, ANN threshold convergence, connector budget calibration, or production closure.
+This closes the current-host repeated-evidence gate only. Multi-host audit tooling is now executable, but current Windows evidence is still single-host evidence. This does not close multi-host evidence, ANN threshold convergence, connector budget calibration, or production closure.
 
 #### Remaining P1 movement
 
-This slice makes release evidence easier to audit and gives release runbooks a strict repeated-evidence gate. Foundation readiness now surfaces both the default freshness audit and the strict history audit as mandatory checks. The current Windows host now satisfies that strict gate, so the next P1 work shifts to multi-host evidence collection, ANN threshold convergence, connector budget calibration, and then Phase-2 gate promotion only after graphdb/ANN baselines are release-grade.
+This slice makes release evidence easier to audit and gives release runbooks strict repeated-evidence and opt-in multi-host gates. Foundation readiness surfaces both the default freshness audit and the strict history audit as mandatory checks. The current Windows host now satisfies the strict repeated-evidence gate, so the next P1 work shifts to collecting real multi-host evidence, ANN threshold convergence, connector budget calibration, and then Phase-2 gate promotion only after graphdb/ANN baselines are release-grade.
 
 ### 2026-05-27 Workflow Truth-Sync and Next-Step Realignment
 

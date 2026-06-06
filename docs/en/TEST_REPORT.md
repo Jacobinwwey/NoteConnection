@@ -140,6 +140,29 @@ This closes the current Windows-host strict repeated-evidence audit. It still do
 
 This refresh exposes the strict repeated-evidence audit through `getFoundationReadiness().mandatoryChecks` without changing the public readiness payload shape or the default one-report freshness audit.
 
+### Foundation Multi-Host Evidence Gate Wiring Refresh (2026-06-06)
+
+- [x] `npm test -- src/foundation.release.evidence.contract.test.ts --runInBand`
+  - RED/GREEN confirmed: tests first required `verify:foundation:release-evidence:multi-host`, `--min-host-count`, `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_HOST_COUNT`, host-count summary fields, a passing two-host fixture, and a failing same-host fixture. The final rerun passed (`10` tests).
+- [x] `npm run verify:foundation:release-evidence`
+  - PASS; default freshness behavior remains backward-compatible at `minimumReportCount=1` and `minimumHostCount=1`. Existing stale sqlite history and the old non-release ANN report remain warnings only.
+- [x] `npm run verify:foundation:release-evidence:strict`
+  - PASS; strict repeated evidence still passes on the current Windows host with sqlite `3/3` and ANN `3/3`, while preserving the same historical warnings.
+- [~] `npm run verify:foundation:release-evidence:multi-host`
+  - Expected current-host evidence gap: the command failed because sqlite and ANN release history each cover `1` host key, while the opt-in gate requires at least `2`. This proves the new gate detects missing host diversity; it is not a default or strict-gate regression.
+- [x] `npm run test:migration`
+  - PASS (`53` suites, `273` tests passed, `13` skipped, `286` total).
+- [x] `npm run test:agent-workspace:contracts`
+  - PASS (`3` suites, `111` tests passed, `13` skipped, `124` total).
+- [x] `git diff --check`
+  - PASS.
+- [x] `npm run docs:diataxis:check`
+  - PASS (`18` entries, `36` Diataxis paths, `64` canonical refs).
+- [x] `npm run verify:markdown:mermaid:fence -- docs`
+  - PASS (`126` Markdown files scanned, `5` Mermaid fences, no inline fence issues).
+
+This refresh adds an opt-in multi-host release-evidence audit without changing default freshness behavior or the current strict repeated-evidence gate. Current Windows-host evidence remains single-host evidence; release owners still need fresh sqlite and ANN reports from additional hosts before relying on the multi-host gate.
+
 ### What This Refresh Adds
 
 1. The embedded `graphdb/sqlite` baseline now also has repeatable host-level runtime proof on the current Windows machine:

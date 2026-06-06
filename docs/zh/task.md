@@ -7,8 +7,9 @@
 - [x] Foundation readiness 现在会同时暴露 sqlite soak 证据与 ANN matrix release gate 的发布级 verifier 命令，运行时运维人员不再需要只从 docs-only task list 推断 release 检查。
 - [x] 现在新增统一的 foundation release-evidence 新鲜度校验器，会读取最新 sqlite soak 与 ANN release-gate JSON 报告，并通过 `verify:foundation:release-evidence` 暴露到 foundation readiness。
 - [x] 现在也已接入严格的 foundation release-evidence 历史校验器，并通过 `foundation_release_evidence_history` 暴露到 foundation readiness：当前 Windows 宿主的 sqlite 与 ANN 都已有 3/3 份新鲜且满足 release contract 的报告，`verify:foundation:release-evidence:strict` 已可在本机通过；这只是 repeated-evidence 门禁通过，不是 production closure 结论。
+- [x] 现在新增 opt-in 的多宿主 release-evidence 门禁：`verify:foundation:release-evidence:multi-host` 会通过 `--min-host-count 2` / `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_HOST_COUNT` 审计有效新鲜 sqlite 与 ANN release 报告是否覆盖足够宿主。
 - [~] 架构缩减是下一阶段结构性压力点：`src/server.ts`、`KnowledgeLearningPlatform.ts` 与大型前端宿主仍需要所有权切分。
-- [~] 将 sqlite soak verification 推进为多轮 release evidence；latest 报告的新鲜度、readiness 已暴露的严格历史审计、以及当前 Windows 宿主 strict 3/3 证据都已自动化，但多宿主证据与阈值校准仍待补齐。
+- [~] 将 sqlite soak verification 推进为多轮 release evidence；latest 报告的新鲜度、readiness 已暴露的严格历史审计、当前 Windows 宿主 strict 3/3 证据、以及 opt-in 多宿主审计工具都已自动化，但实际多宿主证据与阈值校准仍待补齐。
 - [ ] 完成 ANN recall/latency 与 connector-budget 校准后，再把 Phase-2 diagnostics 升级为发布门禁。
 - [ ] 将 conversation turn-cache、alert-trend、runbook bridge、rollout-profile、connector-helper 等逻辑从 `server.ts` 抽到明确模块。
 - [ ] 只在新 owner 能隐藏状态或强制不变量时，继续拆分 learning-platform 领域所有权。
@@ -95,6 +96,8 @@
   - 默认向前兼容审计命令。读取最新 sqlite soak 与 ANN release-gate JSON 报告，通过 `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MAX_AGE_HOURS` 执行有界新鲜度校验，确认 `dist_node_runtime` 与 `packaged_sidecar` 两条证据都存在并通过，每个组件至少计入 1 份有效新鲜报告；旧的过期或非 release 历史报告只作为 warning 忽略，并把聚合摘要写入 `output/verification/foundation-release-evidence/`。
 - `npm run verify:foundation:release-evidence:strict`
   - 面向发布 runbook 的严格历史审计命令。它用 `--min-report-count 3` 执行同一校验器，要求 sqlite 与 ANN 各自至少有 3 份新鲜且满足当前 sqlite soak / ANN release-gate contract 的报告。当前 Windows 宿主证据已达到 sqlite `3/3` 与 ANN `3/3`；最低报告数也可通过 `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_REPORT_COUNT` 调整。
+- `npm run verify:foundation:release-evidence:multi-host`
+  - 面向需要宿主多样性的 release window 的 opt-in 多宿主审计命令。它用 `--min-report-count 3 --min-host-count 2` 执行同一校验器；最低宿主数也可通过 `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_HOST_COUNT` 调整。当前 Windows 宿主证据仍是单宿主证据，因此发布负责人仍需在额外宿主上重新生成有效 sqlite/ANN release 报告后才能依赖该门禁。
 - `npm run verify:agent-workspace:browser`
   - 真实浏览器 smoke，覆盖 agent workspace、runbook 卡片、query/quality/session 面板和 focus/path 流程。
 - `npm run verify:agent-workspace:tauri`

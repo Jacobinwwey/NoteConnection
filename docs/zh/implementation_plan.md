@@ -58,10 +58,12 @@
 - 新增 `scripts/verify-foundation-release-evidence.js`。
 - 新增 `npm run verify:foundation:release-evidence`。
 - 新增 `npm run verify:foundation:release-evidence:strict`，它会用 `--min-report-count 3` 执行同一个校验器。
+- 新增 `npm run verify:foundation:release-evidence:multi-host`，它会用 `--min-report-count 3 --min-host-count 2` 执行同一个校验器。
 - 新增 `src/foundation.release.evidence.contract.test.ts`，并纳入 `test:migration`。
 - 在 `getFoundationReadiness().mandatoryChecks` 中新增 `foundation_release_evidence_freshness`。
 - 在 `getFoundationReadiness().mandatoryChecks` 中新增 `foundation_release_evidence_history`，指向 `npm run verify:foundation:release-evidence:strict`，同时保留既有 freshness 门禁。
 - 通过 `--min-report-count` 与 `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_REPORT_COUNT` 新增 repeated evidence 的 CLI/env 控制。
+- 通过 `--min-host-count` 与 `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_HOST_COUNT` 新增 host-diversity evidence 的 CLI/env 控制。
 - 新增对 `foundation-sqlite-runtime-report-*.json` 与 `foundation-ann-runtime-report-*.json` 时间戳历史报告的扫描。
 
 #### 证据契约
@@ -77,7 +79,7 @@
 - sqlite 必须是 `suiteKind: soak`，包含 heavy profile、`dist_node_runtime`、`packaged_sidecar`、正数 soak cycles、通过的 soak gates 与 query samples；
 - ANN 必须是 `suiteKind: matrix`，`releaseGatesEnabled: true`，包含 `smoke` / `medium` / `heavy`、两条 runtime mode、通过的 release gates、query samples，并且 expected recall 不低于报告阈值。
 
-默认命令保持向前兼容：每个组件至少需要 1 份有效且新鲜的 release-contract 报告；旧的过期或非 release 历史文件只作为 warning 忽略。严格命令则要求每个组件至少有 3 份有效新鲜报告后才会通过。
+默认命令保持向前兼容：每个组件至少需要 1 份有效且新鲜的 release-contract 报告和 1 个 host key；旧的过期或非 release 历史文件只作为 warning 忽略。严格命令要求每个组件至少有 3 份有效新鲜报告后才会通过。opt-in 多宿主命令还要求每个组件至少覆盖 2 个不同 host key；host key 优先来自报告中的显式宿主标识，缺省时退回 `platform/arch`。
 
 #### 当前证据位置
 
@@ -87,11 +89,11 @@
 - ANN release-gate 报告刷新于 `2026-06-06T03:19:22.368Z`；
 - `verify:foundation:release-evidence:strict` 于 `2026-06-06T03:21:04.144Z` 校验通过，sqlite 为 `3/3`，ANN 为 `3/3`。
 
-这只关闭当前宿主的 repeated-evidence 门禁，不关闭多宿主证据、ANN 阈值收敛、connector budget 校准或 production closure。
+这只关闭当前宿主的 repeated-evidence 门禁。多宿主审计工具现在已经可执行，但当前 Windows 证据仍是单宿主证据。这不关闭多宿主证据、ANN 阈值收敛、connector budget 校准或 production closure。
 
 #### 剩余 P1 推进方向
 
-本切片让 release evidence 更容易审计，也给发布 runbook 增加了严格 repeated evidence 门禁。Foundation readiness 现在同时把默认 freshness 审计与严格 history 审计暴露为 mandatory checks。当前 Windows 宿主已满足该严格门禁，因此下一步 P1 转向多宿主证据收集、ANN 阈值收敛、connector budget 校准，并且只有在 graphdb/ANN baseline 达到发布级之后，才推进 Phase-2 gate promotion。
+本切片让 release evidence 更容易审计，也给发布 runbook 增加了严格 repeated evidence 与 opt-in 多宿主门禁。Foundation readiness 现在同时把默认 freshness 审计与严格 history 审计暴露为 mandatory checks。当前 Windows 宿主已满足严格 repeated-evidence 门禁，因此下一步 P1 转向真实多宿主证据收集、ANN 阈值收敛、connector budget 校准，并且只有在 graphdb/ANN baseline 达到发布级之后，才推进 Phase-2 gate promotion。
 
 ### 2026-05-27 工作流真相同步与后续主线重对齐
 

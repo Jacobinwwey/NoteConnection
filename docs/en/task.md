@@ -11,8 +11,9 @@
 - [x] Foundation readiness now exposes release-grade verifier commands for both sqlite soak evidence and ANN matrix release gates, so runtime operators no longer have to infer release checks from docs-only task lists.
 - [x] A unified foundation release-evidence freshness verifier now checks the latest sqlite soak and ANN release-gate JSON reports, and foundation readiness exposes it as `verify:foundation:release-evidence`.
 - [x] A strict foundation release-evidence history verifier is now wired as `verify:foundation:release-evidence:strict`, and foundation readiness exposes it as `foundation_release_evidence_history`; the current Windows host now has 3/3 fresh release-contract reports for sqlite and ANN, so this repeated-evidence gate passes locally without becoming a production-closure claim.
+- [x] An opt-in multi-host release-evidence gate is now wired as `verify:foundation:release-evidence:multi-host`, using `--min-host-count 2` / `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_HOST_COUNT` to audit host diversity across valid fresh sqlite and ANN release reports.
 - [~] Architecture reduction is the next structural pressure point: `src/server.ts`, `KnowledgeLearningPlatform.ts`, and large frontend hosts still need ownership cuts.
-- [~] Convert sqlite soak verification into repeated release evidence; latest-report freshness, readiness-exposed strict history auditing, and current Windows-host strict 3/3 evidence are now automated, while multi-host evidence and threshold calibration remain pending.
+- [~] Convert sqlite soak verification into repeated release evidence; latest-report freshness, readiness-exposed strict history auditing, current Windows-host strict 3/3 evidence, and opt-in multi-host audit tooling are now automated, while actual multi-host evidence and threshold calibration remain pending.
 - [ ] Complete ANN recall/latency and connector-budget calibration before promoting Phase-2 diagnostics to release gates.
 - [ ] Extract conversation turn-cache, alert-trend, runbook bridge, rollout-profile, and connector-helper logic out of `server.ts` behind explicit modules.
 - [ ] Continue learning-platform domain extraction only where the new owner hides state or enforces invariants.
@@ -99,6 +100,8 @@ Primary references:
   - Default backward-compatible audit. Reads the latest sqlite soak and ANN release-gate JSON reports, enforces bounded freshness through `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MAX_AGE_HOURS`, verifies both `dist_node_runtime` and `packaged_sidecar` evidence, counts at least 1 valid fresh report per component, ignores stale/non-release historical reports as warnings, and writes a compact summary under `output/verification/foundation-release-evidence/`.
 - `npm run verify:foundation:release-evidence:strict`
   - Strict history audit for release runbooks that need repeated evidence. Runs the same verifier with `--min-report-count 3` and requires each component to have at least 3 fresh reports that satisfy the current sqlite soak or ANN release-gate contract. The current Windows-host evidence passes with sqlite `3/3` and ANN `3/3`; the minimum can also be tuned through `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_REPORT_COUNT`.
+- `npm run verify:foundation:release-evidence:multi-host`
+  - Opt-in multi-host release audit for release windows that need host diversity. Runs the same verifier with `--min-report-count 3 --min-host-count 2`; host count can also be tuned through `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_HOST_COUNT`. Current Windows-host evidence is still single-host, so release owners must regenerate valid sqlite/ANN release reports on additional hosts before relying on this gate.
 - `npm run verify:agent-workspace:browser`
   - Real browser smoke for agent workspace, runbook cards, query/quality/session surfaces, and focus/path flows.
 - `npm run verify:agent-workspace:tauri`

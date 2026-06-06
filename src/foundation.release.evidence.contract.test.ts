@@ -35,9 +35,13 @@ describe('foundation release evidence freshness contract', () => {
     fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
   }
 
-  function buildPassingSqliteReport(verifiedAt: string): Record<string, unknown> {
+  function buildPassingSqliteReport(
+    verifiedAt: string,
+    host: Record<string, unknown> = { platform: 'win32', arch: 'x64', evidenceHostId: 'windows-ci-a' }
+  ): Record<string, unknown> {
     return {
       verifiedAt,
+      host,
       suiteKind: 'soak',
       soakCycles: 5,
       profileRuns: [
@@ -85,9 +89,13 @@ describe('foundation release evidence freshness contract', () => {
     };
   }
 
-  function buildPassingAnnReport(verifiedAt: string): Record<string, unknown> {
+  function buildPassingAnnReport(
+    verifiedAt: string,
+    host: Record<string, unknown> = { platform: 'win32', arch: 'x64', evidenceHostId: 'windows-ci-a' }
+  ): Record<string, unknown> {
     return {
       verifiedAt,
+      host,
       suiteKind: 'matrix',
       releaseGatesEnabled: true,
       releaseThresholds: {
@@ -153,6 +161,9 @@ describe('foundation release evidence freshness contract', () => {
     expect(packageJson.scripts?.['verify:foundation:release-evidence:strict']).toBe(
       'node scripts/verify-foundation-release-evidence.js --min-report-count 3'
     );
+    expect(packageJson.scripts?.['verify:foundation:release-evidence:multi-host']).toBe(
+      'node scripts/verify-foundation-release-evidence.js --min-report-count 3 --min-host-count 2'
+    );
     expect(packageJson.scripts?.['test:migration']).toContain('src/foundation.release.evidence.contract.test.ts');
   });
 
@@ -164,7 +175,9 @@ describe('foundation release evidence freshness contract', () => {
     expect(source).toContain('foundation-release-evidence-report-latest.json');
     expect(source).toContain('NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MAX_AGE_HOURS');
     expect(source).toContain('NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_REPORT_COUNT');
+    expect(source).toContain('NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_HOST_COUNT');
     expect(source).toContain('--min-report-count');
+    expect(source).toContain('--min-host-count');
     expect(source).toContain('foundation-sqlite-runtime-report-');
     expect(source).toContain('foundation-ann-runtime-report-');
     expect(source).toContain('verify:foundation:sqlite-runtime:release');
@@ -174,6 +187,7 @@ describe('foundation release evidence freshness contract', () => {
     expect(source).toContain('releaseGatesEnabled');
     expect(source).toContain('expectedRecall');
     expect(source).toContain('minimumReportCount');
+    expect(source).toContain('minimumHostCount');
     expect(source).toContain('dist_node_runtime');
     expect(source).toContain('packaged_sidecar');
   });
@@ -280,6 +294,92 @@ describe('foundation release evidence freshness contract', () => {
         minimumReportCount: 2,
         reportCount: 2,
       });
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('accepts multi-host release evidence when enough fresh reports cover distinct hosts', () => {
+    const verifier = require(scriptPath) as FoundationReleaseEvidenceModule;
+    const tempRoot = createTempReportRoot();
+    const sqliteReportPath = path.join(tempRoot, 'sqlite', 'foundation-sqlite-runtime-report-latest.json');
+    const annReportPath = path.join(tempRoot, 'ann', 'foundation-ann-runtime-report-latest.json');
+    const windowsHost = { platform: 'win32', arch: 'x64', evidenceHostId: 'windows-ci-a' };
+    const linuxHost = { platform: 'linux', arch: 'x64', evidenceHostId: 'linux-ci-b' };
+    const now = new Date('2026-06-06T00:00:00.000Z');
+
+    try {
+      writeJson(sqliteReportPath, buildPassingSqliteReport('2026-06-05T23:00:00.000Z', windowsHost));
+      writeJson(
+        path.join(tempRoot, 'sqlite', 'foundation-sqlite-runtime-report-2026-06-05T22-30-00-000Z.json'),
+        buildPassingSqliteReport('2026-06-05T22:30:00.000Z', linuxHost)
+      );
+      writeJson(annReportPath, buildPassingAnnReport('2026-06-05T22:00:00.000Z', windowsHost));
+      writeJson(
+        path.join(tempRoot, 'ann', 'foundation-ann-runtime-report-2026-06-05T21-30-00-000Z.json'),
+        buildPassingAnnReport('2026-06-05T21:30:00.000Z', linuxHost)
+      );
+
+      const result = verifier.verifyFoundationReleaseEvidence({
+        sqliteReportPath,
+        annReportPath,
+        now,
+        maxAgeHours: 24,
+        minReportCount: 2,
+        minHostCount: 2,
+      });
+
+      expect(result.ok).toBe(true);
+      expect(result.errors).toEqual([]);
+      expect(result.summary.sqlite).toMatchObject({
+        minimumReportCount: 2,
+        reportCount: 2,
+        minimumHostCount: 2,
+        hostCount: 2,
+      });
+      expect(result.summary.ann).toMatchObject({
+        minimumReportCount: 2,
+        reportCount: 2,
+        minimumHostCount: 2,
+        hostCount: 2,
+      });
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('rejects multi-host release evidence when repeated reports come from one host', () => {
+    const verifier = require(scriptPath) as FoundationReleaseEvidenceModule;
+    const tempRoot = createTempReportRoot();
+    const sqliteReportPath = path.join(tempRoot, 'sqlite', 'foundation-sqlite-runtime-report-latest.json');
+    const annReportPath = path.join(tempRoot, 'ann', 'foundation-ann-runtime-report-latest.json');
+    const windowsHost = { platform: 'win32', arch: 'x64', evidenceHostId: 'windows-ci-a' };
+    const now = new Date('2026-06-06T00:00:00.000Z');
+
+    try {
+      writeJson(sqliteReportPath, buildPassingSqliteReport('2026-06-05T23:00:00.000Z', windowsHost));
+      writeJson(
+        path.join(tempRoot, 'sqlite', 'foundation-sqlite-runtime-report-2026-06-05T22-30-00-000Z.json'),
+        buildPassingSqliteReport('2026-06-05T22:30:00.000Z', windowsHost)
+      );
+      writeJson(annReportPath, buildPassingAnnReport('2026-06-05T22:00:00.000Z', windowsHost));
+      writeJson(
+        path.join(tempRoot, 'ann', 'foundation-ann-runtime-report-2026-06-05T21-30-00-000Z.json'),
+        buildPassingAnnReport('2026-06-05T21:30:00.000Z', windowsHost)
+      );
+
+      const result = verifier.verifyFoundationReleaseEvidence({
+        sqliteReportPath,
+        annReportPath,
+        now,
+        maxAgeHours: 24,
+        minReportCount: 2,
+        minHostCount: 2,
+      });
+
+      expect(result.ok).toBe(false);
+      expect(result.errors.join('\n')).toContain('sqlite release evidence history covers 1 host(s), expected at least 2');
+      expect(result.errors.join('\n')).toContain('ann release evidence history covers 1 host(s), expected at least 2');
     } finally {
       fs.rmSync(tempRoot, { recursive: true, force: true });
     }

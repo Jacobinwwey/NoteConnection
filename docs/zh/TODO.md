@@ -14,6 +14,8 @@
 - [x] 新增严格的 release-evidence 历史校验能力：通过 `verify:foundation:release-evidence:strict`、`--min-report-count` 与 `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_REPORT_COUNT` 要求多份有效证据。
 - [x] 通过重新生成 sqlite soak 与 ANN release-gate 报告，已让当前 Windows 宿主的 `verify:foundation:release-evidence:strict` 达到 sqlite `3/3` 与 ANN `3/3` 并通过。
 - [x] Foundation readiness mandatory checks 现在通过 `foundation_release_evidence_history` 暴露严格 release-evidence 历史审计，并指向 `npm run verify:foundation:release-evidence:strict`。
+- [x] 新增 opt-in 的多宿主 release-evidence 校验能力：通过 `verify:foundation:release-evidence:multi-host`、`--min-host-count` 与 `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_HOST_COUNT` 要求 host diversity。
+- [ ] 至少在两个宿主上采集有效新鲜 sqlite 与 ANN release 报告后，才把某个 release window 的 multi-host 门禁视为已满足。
 - [ ] 只有当 Phase-2 diagnostics 运行在发布级 graphdb/ANN 基线上后，才能从“可见性闭环”升级为 release gate。
 - [ ] 将 server 中的 conversation turn-cache、alert trend、runbook bridge、rollout profile、connector-helper 逻辑抽到明确模块。
 - [ ] 继续拆分 KLP 领域所有权，但避免新增只转发调用的 facade 层。
@@ -45,6 +47,7 @@
 - [x] release-evidence 校验现在会扫描带时间戳的 sqlite/ANN 历史报告，并且只把新鲜、满足当前 release contract 的报告计入有效数量；默认审计下，旧的过期或非 release 历史文件只作为 warning。
 - [x] `npm run verify:foundation:release-evidence:strict` 已在当前 Windows 宿主证据上通过：sqlite 与 ANN 均有 3 份有效新鲜报告。
 - [x] Foundation readiness mandatory checks 现在也已暴露严格 release-evidence 历史校验器（`npm run verify:foundation:release-evidence:strict`），因此运维侧 readiness 会同时显示 latest evidence freshness 与 repeated-evidence 状态。
+- [x] release-evidence 校验现在会输出 `minimumHostCount`、`hostCount` 与 `hostKeys`；新增 `verify:foundation:release-evidence:multi-host` 脚本要求每个组件至少有 3 份新鲜有效报告并覆盖 2 个不同 host key。
 - [~] 在把 graphdb/ANN baseline 视为发布级之前，还需要把 repeated release evidence 扩展到当前 Windows 宿主之外。
 - [~] Phase-1 A9 现已具备 live `external_http` connector baseline、主机级 runtime 证明、主机级 workload matrix 证明和 matrix release-gate 证据；但在宣称生产闭环前仍需补齐多轮阈值收敛与多宿主校准。
 - [ ] 只有在同一套检查运行在发布级 graphdb/ANN 基线上之后，才能把这批新的 Phase-2 诊断面升级为发布级门禁。

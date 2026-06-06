@@ -30,6 +30,11 @@ const MIN_REPORT_COUNT_RANGE = Object.freeze({
     max: 30,
     default: 1,
 });
+const MIN_HOST_COUNT_RANGE = Object.freeze({
+    min: 1,
+    max: 10,
+    default: 1,
+});
 const FUTURE_CLOCK_TOLERANCE_MS = 5 * 60 * 1000;
 const REQUIRED_RUNTIME_MODES = Object.freeze(['dist_node_runtime', 'packaged_sidecar']);
 const REQUIRED_SQLITE_PROFILES = Object.freeze(['heavy']);
@@ -94,6 +99,11 @@ function parseCliOptions(argv) {
         }
         if (arg === '--min-report-count' && argv[index + 1]) {
             options.minReportCount = parseBoundedInteger(argv[index + 1], MIN_REPORT_COUNT_RANGE);
+            index += 1;
+            continue;
+        }
+        if (arg === '--min-host-count' && argv[index + 1]) {
+            options.minHostCount = parseBoundedInteger(argv[index + 1], MIN_HOST_COUNT_RANGE);
             index += 1;
             continue;
         }
@@ -196,10 +206,34 @@ function evaluateReportForHistory(componentId, report, reportPath, options) {
     };
 }
 
+function normalizeHostToken(value) {
+    return String(value ?? '').trim();
+}
+
+function readHostEvidenceKey(report) {
+    const host = report && report.host && typeof report.host === 'object' ? report.host : {};
+    const explicitHostId = normalizeHostToken(
+        host.evidenceHostId
+        || host.hostId
+        || host.id
+        || host.fingerprint
+    );
+    if (explicitHostId) {
+        return explicitHostId;
+    }
+    const platform = normalizeHostToken(host.platform);
+    const arch = normalizeHostToken(host.arch);
+    if (platform || arch) {
+        return `${platform || 'unknown-platform'}/${arch || 'unknown-arch'}`;
+    }
+    return 'unknown-host';
+}
+
 function validateReleaseReportHistory(componentId, latestReportPath, latestReport, options, errors, warnings) {
     const latestComparablePath = resolveComparablePath(latestReportPath);
     const reportPaths = listReleaseReportPaths(componentId, latestReportPath);
     const validReportPaths = [];
+    const validHostKeys = new Set();
 
     reportPaths.forEach((reportPath) => {
         const isLatestReport = resolveComparablePath(reportPath) === latestComparablePath;
@@ -210,6 +244,7 @@ function validateReleaseReportHistory(componentId, latestReportPath, latestRepor
         const evaluation = evaluateReportForHistory(componentId, report, reportPath, options);
         if (evaluation.valid) {
             validReportPaths.push(reportPath);
+            validHostKeys.add(readHostEvidenceKey(report));
             warnings.push(...evaluation.warnings);
             return;
         }
@@ -227,11 +262,20 @@ function validateReleaseReportHistory(componentId, latestReportPath, latestRepor
             `expected at least ${options.minimumReportCount}. Run ${EVIDENCE_COMMANDS[componentId]} repeatedly.`
         );
     }
+    if (validHostKeys.size < options.minimumHostCount) {
+        errors.push(
+            `${componentId} release evidence history covers ${validHostKeys.size} host(s), ` +
+            `expected at least ${options.minimumHostCount}. Regenerate release evidence on additional hosts.`
+        );
+    }
 
     return {
         minimumReportCount: options.minimumReportCount,
         reportCount: validReportPaths.length,
         reportPaths: validReportPaths.map(normalizeRepoPath),
+        minimumHostCount: options.minimumHostCount,
+        hostCount: validHostKeys.size,
+        hostKeys: Array.from(validHostKeys).sort(),
     };
 }
 
@@ -524,10 +568,17 @@ function resolveVerifierOptions(options = {}) {
             process.env.NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_REPORT_COUNT,
             MIN_REPORT_COUNT_RANGE
         );
+    const minimumHostCount = Number.isFinite(Number(options.minHostCount))
+        ? parseBoundedInteger(options.minHostCount, MIN_HOST_COUNT_RANGE)
+        : parseBoundedInteger(
+            process.env.NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_HOST_COUNT,
+            MIN_HOST_COUNT_RANGE
+        );
     return {
         now,
         maxAgeHours,
         minimumReportCount,
+        minimumHostCount,
         sqliteReportPath: resolveReportPath(
             options.sqliteReportPath,
             'NOTE_CONNECTION_FOUNDATION_SQLITE_RELEASE_REPORT_PATH',
@@ -690,6 +741,7 @@ if (require.main === module) {
 
 module.exports = {
     MAX_AGE_HOURS_RANGE,
+    MIN_HOST_COUNT_RANGE,
     MIN_REPORT_COUNT_RANGE,
     ANN_LATEST_REPORT_PATH,
     SQLITE_LATEST_REPORT_PATH,

@@ -92,7 +92,8 @@ Primary plan evidence:
 - Promote the sqlite soak verifier into repeated release evidence, not a one-off host proof.
 - Keep `verify:foundation:sqlite-runtime:release` as the release-facing alias for sqlite soak evidence, and keep foundation readiness mandatory checks aligned with both sqlite and ANN release gates.
 - Add and keep `verify:foundation:release-evidence` as the lightweight release-evidence freshness check that reads the latest sqlite soak and ANN release-gate reports before operators treat host evidence as current.
-- Keep `verify:foundation:release-evidence` backward-compatible with a minimum of 1 fresh release-contract report per component, and use `verify:foundation:release-evidence:strict` / `--min-report-count` when a release runbook needs repeated evidence; foundation readiness exposes that strict audit as `foundation_release_evidence_history`.
+- Keep `verify:foundation:release-evidence` backward-compatible with a minimum of 1 fresh release-contract report per component, use `verify:foundation:release-evidence:strict` / `--min-report-count` when a release runbook needs repeated evidence, and use `verify:foundation:release-evidence:multi-host` / `--min-host-count` when a release window needs host diversity; foundation readiness exposes the strict repeated-evidence audit as `foundation_release_evidence_history`.
+- Treat the new multi-host audit as an executable gate for future release windows, not as a claim that current Windows-host evidence already spans multiple hosts.
 - Treat old stale or non-release historical reports as warnings in the default audit, while counting only fresh reports that still satisfy the current sqlite soak or ANN release-gate contract.
 - Current Windows-host strict evidence now passes with sqlite `3/3` and ANN `3/3`; this closes local repeated evidence, not multi-host calibration or production closure.
 - Tighten graphdb connector health/budget thresholds with representative workloads.
@@ -147,7 +148,7 @@ The appropriate verification gate for this continuation is:
 - git diff review,
 - final clean worktree after commit.
 
-`verify:foundation:release-evidence:strict` is intentionally a strict repeated-evidence gate, and `getFoundationReadiness().mandatoryChecks` exposes it as `foundation_release_evidence_history`. It now passes on the current Windows host after refreshed sqlite and ANN reports, with sqlite `3/3` and ANN `3/3`. Other hosts or future release windows must regenerate their own report history before relying on the strict gate.
+`verify:foundation:release-evidence:strict` is intentionally a strict repeated-evidence gate, and `getFoundationReadiness().mandatoryChecks` exposes it as `foundation_release_evidence_history`. It now passes on the current Windows host after refreshed sqlite and ANN reports, with sqlite `3/3` and ANN `3/3`. `verify:foundation:release-evidence:multi-host` is now available for release windows that require at least two host keys per component. Other hosts or future release windows must regenerate their own report history before relying on the strict or multi-host gates.
 
 Runtime and test gates for future code slices remain:
 
@@ -157,6 +158,7 @@ Runtime and test gates for future code slices remain:
 - `npm run verify:foundation:ann-runtime:release`
 - `npm run verify:foundation:release-evidence`
 - `npm run verify:foundation:release-evidence:strict`
+- `npm run verify:foundation:release-evidence:multi-host`
 - `npm run test:agent-workspace:contracts`
 - `npm run test:migration`
 - `npm run verify:core-real-machine:clean`
@@ -243,7 +245,8 @@ Runtime and test gates for future code slices remain:
 - 把 sqlite soak verifier 推进为多轮 release evidence，而不是单次主机证明。
 - 将 `verify:foundation:sqlite-runtime:release` 保持为 sqlite soak 证据的发布侧别名，并让 foundation readiness mandatory checks 持续对齐 sqlite 与 ANN 两条 release gate。
 - 新增并持续保留 `verify:foundation:release-evidence`，作为轻量 release-evidence 新鲜度校验：在运维把主机证据视为当前有效证据前，先读取最新 sqlite soak 与 ANN release-gate 报告并验证其仍然新鲜且通过。
-- 保持 `verify:foundation:release-evidence` 向前兼容：默认每个组件只要求 1 份新鲜且满足 release contract 的报告；当发布 runbook 需要 repeated evidence 时，使用 `verify:foundation:release-evidence:strict` / `--min-report-count`，且 foundation readiness 会通过 `foundation_release_evidence_history` 暴露这条严格审计。
+- 保持 `verify:foundation:release-evidence` 向前兼容：默认每个组件只要求 1 份新鲜且满足 release contract 的报告；当发布 runbook 需要 repeated evidence 时，使用 `verify:foundation:release-evidence:strict` / `--min-report-count`；当 release window 需要宿主多样性时，使用 `verify:foundation:release-evidence:multi-host` / `--min-host-count`；foundation readiness 会通过 `foundation_release_evidence_history` 暴露严格 repeated-evidence 审计。
+- 把新的 multi-host 审计视为未来 release window 的可执行门禁，而不是当前 Windows 宿主证据已经覆盖多宿主的结论。
 - 默认审计把旧的过期或非 release 历史报告作为 warning 处理；只有仍然新鲜、且满足当前 sqlite soak 或 ANN release-gate contract 的报告才计入有效数量。
 - 当前 Windows 宿主的 strict evidence 已经以 sqlite `3/3` 与 ANN `3/3` 通过；这只关闭本地 repeated evidence，不关闭多宿主校准或 production closure。
 - 用代表性 workload 收紧 graphdb connector health/budget 阈值。
@@ -298,7 +301,7 @@ Runtime and test gates for future code slices remain:
 - git diff review；
 - 提交后工作区 clean。
 
-`verify:foundation:release-evidence:strict` 是有意严格的 repeated-evidence 门禁，`getFoundationReadiness().mandatoryChecks` 已通过 `foundation_release_evidence_history` 暴露它。当前 Windows 宿主在刷新 sqlite 与 ANN 报告后已经以 sqlite `3/3` 与 ANN `3/3` 通过。其他宿主或未来 release window 仍必须重新生成自己的历史报告后才能依赖该严格门禁。
+`verify:foundation:release-evidence:strict` 是有意严格的 repeated-evidence 门禁，`getFoundationReadiness().mandatoryChecks` 已通过 `foundation_release_evidence_history` 暴露它。当前 Windows 宿主在刷新 sqlite 与 ANN 报告后已经以 sqlite `3/3` 与 ANN `3/3` 通过。`verify:foundation:release-evidence:multi-host` 现在可用于要求每个组件至少覆盖两个 host key 的 release window。其他宿主或未来 release window 仍必须重新生成自己的历史报告后才能依赖严格或多宿主门禁。
 
 后续代码切片仍应执行：
 
@@ -308,6 +311,7 @@ Runtime and test gates for future code slices remain:
 - `npm run verify:foundation:ann-runtime:release`
 - `npm run verify:foundation:release-evidence`
 - `npm run verify:foundation:release-evidence:strict`
+- `npm run verify:foundation:release-evidence:multi-host`
 - `npm run test:agent-workspace:contracts`
 - `npm run test:migration`
 - `npm run verify:core-real-machine:clean`

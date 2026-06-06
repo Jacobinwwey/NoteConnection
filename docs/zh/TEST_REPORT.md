@@ -140,6 +140,29 @@
 
 本次刷新把严格 repeated-evidence 审计暴露到 `getFoundationReadiness().mandatoryChecks`，但不改变公开 readiness payload 形状，也不改变默认 1 份报告即可通过的 freshness 审计语义。
 
+### Foundation 多宿主证据门禁接线刷新（2026-06-06）
+
+- [x] `npm test -- src/foundation.release.evidence.contract.test.ts --runInBand`
+  - 已完成 RED/GREEN 确认：测试先要求 `verify:foundation:release-evidence:multi-host`、`--min-host-count`、`NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_HOST_COUNT`、host-count summary 字段、两宿主通过 fixture、以及单宿主失败 fixture。最终重跑通过（`10` 项测试）。
+- [x] `npm run verify:foundation:release-evidence`
+  - 通过；默认 freshness 行为保持向前兼容，仍为 `minimumReportCount=1` 与 `minimumHostCount=1`。既有过期 sqlite 历史报告与旧的非 release ANN 报告仍只作为 warning。
+- [x] `npm run verify:foundation:release-evidence:strict`
+  - 通过；当前 Windows 宿主上的严格 repeated evidence 仍以 sqlite `3/3` 与 ANN `3/3` 通过，同时保留相同历史 warning。
+- [~] `npm run verify:foundation:release-evidence:multi-host`
+  - 当前宿主证据缺口符合预期：命令失败是因为 sqlite 与 ANN release history 都只覆盖 `1` 个 host key，而 opt-in 门禁要求至少 `2` 个。这证明新门禁能识别宿主多样性缺失，不是默认或严格门禁回归。
+- [x] `npm run test:migration`
+  - 通过（`53` 个 suites、`273` 项测试通过、`13` 项 skipped、总计 `286` 项）。
+- [x] `npm run test:agent-workspace:contracts`
+  - 通过（`3` 个 suites、`111` 项测试通过、`13` 项 skipped、总计 `124` 项）。
+- [x] `git diff --check`
+  - 通过。
+- [x] `npm run docs:diataxis:check`
+  - 通过（`18` 个 entries、`36` 条 Diataxis paths、`64` 个 canonical refs）。
+- [x] `npm run verify:markdown:mermaid:fence -- docs`
+  - 通过（扫描 `126` 个 Markdown 文件、`5` 个 Mermaid fence，无 inline fence 问题）。
+
+本次刷新新增 opt-in 的多宿主 release-evidence 审计，但不改变默认 freshness 行为，也不改变当前严格 repeated-evidence 门禁。当前 Windows 宿主证据仍是单宿主证据；发布负责人仍需在额外宿主上生成新鲜 sqlite 与 ANN 报告后，才能依赖 multi-host 门禁。
+
 ### 这轮刷新新增证明了什么
 
 1. embedded `graphdb/sqlite` 基线现在也具备了当前 Windows 宿主上的可重复主机级运行时证明：
