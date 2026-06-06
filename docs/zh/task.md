@@ -3,12 +3,12 @@
 - [x] 本轮 P1 延续切片继续直接在 `main` 上推进；远端同步 / push 状态与本地实现进度分开记录。
 - [x] 当前代码已经与 5 月 RAG / agent / export 方案完成对比，结果已落盘到 `docs/solutions/architecture-progress-alignment-2026-06-06.md`。
 - [x] Scoped retrieval、grounded conversation、Program A-F 底座、export profiles、Godot/mobile PNG-first materialization 与 rollout governance 已按当前代码证据分别标注为“已实现”或“operational baseline”。
-- [~] graphdb/sqlite 与 ANN/external connector 路径仍是 operational baseline，不是 production closure；仍待 soak 多轮证据、工作负载阈值、recall/latency 校准与 strict rollout 证明。
+- [~] graphdb/sqlite 与 ANN/external connector 路径仍是 operational baseline，不是 production closure；仍待多宿主 soak 证据、工作负载阈值、recall/latency 校准与 strict rollout 证明。
 - [x] Foundation readiness 现在会同时暴露 sqlite soak 证据与 ANN matrix release gate 的发布级 verifier 命令，运行时运维人员不再需要只从 docs-only task list 推断 release 检查。
 - [x] 现在新增统一的 foundation release-evidence 新鲜度校验器，会读取最新 sqlite soak 与 ANN release-gate JSON 报告，并通过 `verify:foundation:release-evidence` 暴露到 foundation readiness。
-- [x] 现在也已接入严格的 foundation release-evidence 历史校验器：`verify:foundation:release-evidence:strict` 要求每个组件至少有 3 份新鲜且满足 release contract 的报告；它是下一步证据收集门禁，不是 production closure 结论。
+- [x] 现在也已接入严格的 foundation release-evidence 历史校验器：当前 Windows 宿主的 sqlite 与 ANN 都已有 3/3 份新鲜且满足 release contract 的报告，`verify:foundation:release-evidence:strict` 已可在本机通过；这只是 repeated-evidence 门禁通过，不是 production closure 结论。
 - [~] 架构缩减是下一阶段结构性压力点：`src/server.ts`、`KnowledgeLearningPlatform.ts` 与大型前端宿主仍需要所有权切分。
-- [~] 将 sqlite soak verification 推进为多轮 release evidence；latest 报告的新鲜度已自动化，严格多报告审计也已存在，但多轮多宿主证据仍待补齐。
+- [~] 将 sqlite soak verification 推进为多轮 release evidence；latest 报告的新鲜度与当前 Windows 宿主 strict 3/3 审计已自动化，但多宿主证据与阈值校准仍待补齐。
 - [ ] 完成 ANN recall/latency 与 connector-budget 校准后，再把 Phase-2 diagnostics 升级为发布门禁。
 - [ ] 将 conversation turn-cache、alert-trend、runbook bridge、rollout-profile、connector-helper 等逻辑从 `server.ts` 抽到明确模块。
 - [ ] 只在新 owner 能隐藏状态或强制不变量时，继续拆分 learning-platform 领域所有权。
@@ -94,7 +94,7 @@
 - `npm run verify:foundation:release-evidence`
   - 默认向前兼容审计命令。读取最新 sqlite soak 与 ANN release-gate JSON 报告，通过 `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MAX_AGE_HOURS` 执行有界新鲜度校验，确认 `dist_node_runtime` 与 `packaged_sidecar` 两条证据都存在并通过，每个组件至少计入 1 份有效新鲜报告；旧的过期或非 release 历史报告只作为 warning 忽略，并把聚合摘要写入 `output/verification/foundation-release-evidence/`。
 - `npm run verify:foundation:release-evidence:strict`
-  - 面向发布 runbook 的严格历史审计命令。它用 `--min-report-count 3` 执行同一校验器，只有当 sqlite 与 ANN 各自至少有 3 份新鲜且满足当前 sqlite soak / ANN release-gate contract 的报告时才会通过。最低报告数也可通过 `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_REPORT_COUNT` 调整。
+  - 面向发布 runbook 的严格历史审计命令。它用 `--min-report-count 3` 执行同一校验器，要求 sqlite 与 ANN 各自至少有 3 份新鲜且满足当前 sqlite soak / ANN release-gate contract 的报告。当前 Windows 宿主证据已达到 sqlite `3/3` 与 ANN `3/3`；最低报告数也可通过 `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_REPORT_COUNT` 调整。
 - `npm run verify:agent-workspace:browser`
   - 真实浏览器 smoke，覆盖 agent workspace、runbook 卡片、query/quality/session 面板和 focus/path 流程。
 - `npm run verify:agent-workspace:tauri`

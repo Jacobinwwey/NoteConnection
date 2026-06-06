@@ -77,9 +77,19 @@ It validates:
 
 The default command remains backward-compatible: it requires at least 1 valid fresh release-contract report per component and ignores stale or non-release historical files as warnings. The strict command requires at least 3 valid fresh reports per component before it passes.
 
+#### Current evidence position
+
+The current Windows host now has a passing strict repeated-evidence audit:
+
+- sqlite release report refreshed at `2026-06-06T03:17:45.083Z`,
+- ANN release-gate report refreshed at `2026-06-06T03:19:22.368Z`,
+- `verify:foundation:release-evidence:strict` checked at `2026-06-06T03:21:04.144Z` with sqlite `3/3` and ANN `3/3`.
+
+This closes the current-host repeated-evidence gate only. It does not close multi-host evidence, ANN threshold convergence, connector budget calibration, or production closure.
+
 #### Remaining P1 movement
 
-This slice makes release evidence easier to audit and gives release runbooks a strict repeated-evidence gate, but it does not itself create the missing repeated runtime evidence. The next P1 work remains regenerating sqlite soak and ANN release-gate reports across multiple runs and hosts, ANN threshold convergence, connector budget calibration, and then Phase-2 gate promotion only after graphdb/ANN baselines are release-grade.
+This slice makes release evidence easier to audit and gives release runbooks a strict repeated-evidence gate. The current Windows host now satisfies that strict gate, so the next P1 work shifts to multi-host evidence collection, ANN threshold convergence, connector budget calibration, and then Phase-2 gate promotion only after graphdb/ANN baselines are release-grade.
 
 ### 2026-05-27 Workflow Truth-Sync and Next-Step Realignment
 

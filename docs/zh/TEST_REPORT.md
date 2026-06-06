@@ -80,7 +80,7 @@
 - [x] `npm run verify:foundation:release-evidence`
   - 通过；会读取最新 sqlite 与 ANN release 报告，校验有界新鲜度、必需 profile、两条 runtime mode、sqlite soak gates、ANN release gates 与 expected recall，默认每个组件至少计入 1 份有效新鲜报告，对过期或非 release 历史报告只输出 warning，并写出 `output/verification/foundation-release-evidence/foundation-release-evidence-report-latest.json`。
 - [~] `npm run verify:foundation:release-evidence:strict`
-  - 当前宿主预期失败：命令已可用，但在 sqlite soak 与 ANN release-gate 报告完成多轮生成之前，不把它作为当前必须通过的门禁。本地探针显示 sqlite 与 ANN 当前各有 `2/3` 份有效新鲜报告，旧的过期或非 release 历史文件继续作为 warning。
+  - 较早的当前宿主探针在 sqlite `2/3` 与 ANN `2/3` 处失败；这是生成第三轮 sqlite/ANN release 报告之前的预期缺口。
 - [x] `npm run test:migration`
   - 通过（`53` 个 suites、`271` 项测试通过、`13` 项 skipped、总计 `284` 项；包含 `src/foundation.release.evidence.contract.test.ts`）
 - [x] `git diff --check`
@@ -93,6 +93,29 @@
   - 通过；仍有既有 MkDocs nav warning 与既有 `../ref/GitNexus/README.md` 文档链接缺失 warning。
 
 本次刷新在重型 sqlite/ANN release 报告生成命令之后增加了一道审计门禁，并补上严格历史证据门禁。默认命令可以证明当前宿主的 release evidence 新鲜且通过，同时不会被旧的无关历史报告打断；严格命令会暴露仓库是否已有足够多轮有效 release 报告。它仍不替代多轮、多宿主的校准证据。
+
+### Foundation Strict Release Evidence 闭环（2026-06-06）
+
+- [x] `npm run verify:foundation:sqlite-runtime:release`
+  - 通过；刷新 sqlite soak 证据于 `2026-06-06T03:17:45.083Z`，并写入 `output/verification/foundation-sqlite-runtime/foundation-sqlite-runtime-report-2026-06-06T03-17-45-083Z.json`。
+- [x] `npm run verify:foundation:ann-runtime:release`
+  - 通过；刷新 ANN matrix release-gate 证据于 `2026-06-06T03:19:22.368Z`，并写入 `output/verification/foundation-ann-runtime/foundation-ann-runtime-report-2026-06-06T03-19-22-368Z.json`。
+- [x] `npm run verify:foundation:release-evidence:strict`
+  - 于 `2026-06-06T03:21:04.144Z` 通过；严格历史摘要显示 sqlite `3/3`、ANN `3/3`。既有过期 sqlite 历史报告与旧的非 release ANN 历史报告仍只作为 warning。
+- [x] `npm test -- src/foundation.release.evidence.contract.test.ts --runInBand`
+  - 通过（`8` 项测试）。
+- [x] `npm run test:migration`
+  - 通过（`53` 个 suites、`271` 项测试通过、`13` 项 skipped、总计 `284` 项）。
+- [x] `git diff --check`
+  - 通过。
+- [x] `npm run docs:diataxis:check`
+  - 通过。
+- [x] `npm run verify:markdown:mermaid:fence -- docs`
+  - 通过。
+- [x] `npm run docs:site:build`
+  - 通过；仍有既有 MkDocs Material 2.0 warning、既有未纳入 nav 的页面清单，以及既有 `../ref/GitNexus/README.md` 文档链接缺失 warning。
+
+这关闭了当前 Windows 宿主的严格 repeated-evidence 审计；仍不关闭多宿主证据、ANN recall/latency 阈值收敛、connector-budget 校准或 production closure。
 
 ### 这轮刷新新增证明了什么
 

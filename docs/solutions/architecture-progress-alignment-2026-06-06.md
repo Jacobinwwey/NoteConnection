@@ -94,6 +94,7 @@ Primary plan evidence:
 - Add and keep `verify:foundation:release-evidence` as the lightweight release-evidence freshness check that reads the latest sqlite soak and ANN release-gate reports before operators treat host evidence as current.
 - Keep `verify:foundation:release-evidence` backward-compatible with a minimum of 1 fresh release-contract report per component, and use `verify:foundation:release-evidence:strict` / `--min-report-count` when a release runbook needs repeated evidence.
 - Treat old stale or non-release historical reports as warnings in the default audit, while counting only fresh reports that still satisfy the current sqlite soak or ANN release-gate contract.
+- Current Windows-host strict evidence now passes with sqlite `3/3` and ANN `3/3`; this closes local repeated evidence, not multi-host calibration or production closure.
 - Tighten graphdb connector health/budget thresholds with representative workloads.
 - Use the new ANN release-gate verifier path (`verify:foundation:ann-runtime:release`) as the structured evidence entry point for startup, ingest, diagnostics, query latency, and targeted-query recall.
 - Calibrate ANN recall/latency and external connector behavior under full workload matrices before promoting Phase-2 diagnostics to release gates.
@@ -146,7 +147,7 @@ The appropriate verification gate for this continuation is:
 - git diff review,
 - final clean worktree after commit.
 
-`verify:foundation:release-evidence:strict` is intentionally a strict repeated-evidence gate. It may fail until sqlite soak and ANN release-gate reports have been regenerated enough times to provide at least 3 fresh valid reports per component.
+`verify:foundation:release-evidence:strict` is intentionally a strict repeated-evidence gate. It now passes on the current Windows host after refreshed sqlite and ANN reports, with sqlite `3/3` and ANN `3/3`. Other hosts or future release windows must regenerate their own report history before relying on the strict gate.
 
 Runtime and test gates for future code slices remain:
 
@@ -243,6 +244,7 @@ Runtime and test gates for future code slices remain:
 - 新增并持续保留 `verify:foundation:release-evidence`，作为轻量 release-evidence 新鲜度校验：在运维把主机证据视为当前有效证据前，先读取最新 sqlite soak 与 ANN release-gate 报告并验证其仍然新鲜且通过。
 - 保持 `verify:foundation:release-evidence` 向前兼容：默认每个组件只要求 1 份新鲜且满足 release contract 的报告；当发布 runbook 需要 repeated evidence 时，使用 `verify:foundation:release-evidence:strict` / `--min-report-count`。
 - 默认审计把旧的过期或非 release 历史报告作为 warning 处理；只有仍然新鲜、且满足当前 sqlite soak 或 ANN release-gate contract 的报告才计入有效数量。
+- 当前 Windows 宿主的 strict evidence 已经以 sqlite `3/3` 与 ANN `3/3` 通过；这只关闭本地 repeated evidence，不关闭多宿主校准或 production closure。
 - 用代表性 workload 收紧 graphdb connector health/budget 阈值。
 - 将新的 ANN release-gate verifier 路径（`verify:foundation:ann-runtime:release`）作为 startup、ingest、diagnostics、query latency 与 targeted-query recall 的结构化证据入口。
 - 在把 Phase-2 diagnostics 升级为发布门禁之前，基于完整 workload matrix 完成 ANN recall/latency 与 external connector 行为校准。
@@ -295,7 +297,7 @@ Runtime and test gates for future code slices remain:
 - git diff review；
 - 提交后工作区 clean。
 
-`verify:foundation:release-evidence:strict` 是有意严格的 repeated-evidence 门禁。在 sqlite soak 与 ANN release-gate 报告尚未多轮重跑、每个组件尚未具备至少 3 份新鲜有效报告前，它可以失败。
+`verify:foundation:release-evidence:strict` 是有意严格的 repeated-evidence 门禁。当前 Windows 宿主在刷新 sqlite 与 ANN 报告后已经以 sqlite `3/3` 与 ANN `3/3` 通过。其他宿主或未来 release window 仍必须重新生成自己的历史报告后才能依赖该严格门禁。
 
 后续代码切片仍应执行：
 

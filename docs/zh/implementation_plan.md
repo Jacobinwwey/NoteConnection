@@ -78,9 +78,19 @@
 
 默认命令保持向前兼容：每个组件至少需要 1 份有效且新鲜的 release-contract 报告；旧的过期或非 release 历史文件只作为 warning 忽略。严格命令则要求每个组件至少有 3 份有效新鲜报告后才会通过。
 
+#### 当前证据位置
+
+当前 Windows 宿主已经具备通过的严格 repeated-evidence 审计：
+
+- sqlite release 报告刷新于 `2026-06-06T03:17:45.083Z`；
+- ANN release-gate 报告刷新于 `2026-06-06T03:19:22.368Z`；
+- `verify:foundation:release-evidence:strict` 于 `2026-06-06T03:21:04.144Z` 校验通过，sqlite 为 `3/3`，ANN 为 `3/3`。
+
+这只关闭当前宿主的 repeated-evidence 门禁，不关闭多宿主证据、ANN 阈值收敛、connector budget 校准或 production closure。
+
 #### 剩余 P1 推进方向
 
-本切片让 release evidence 更容易审计，也给发布 runbook 增加了严格 repeated evidence 门禁，但它本身并不会生成缺失的多轮 runtime evidence。下一步 P1 仍是跨多轮、多宿主重新生成 sqlite soak 与 ANN release-gate 报告、完成 ANN 阈值收敛、connector budget 校准，并且只有在 graphdb/ANN baseline 达到发布级之后，才推进 Phase-2 gate promotion。
+本切片让 release evidence 更容易审计，也给发布 runbook 增加了严格 repeated evidence 门禁。当前 Windows 宿主已满足该严格门禁，因此下一步 P1 转向多宿主证据收集、ANN 阈值收敛、connector budget 校准，并且只有在 graphdb/ANN baseline 达到发布级之后，才推进 Phase-2 gate promotion。
 
 ### 2026-05-27 工作流真相同步与后续主线重对齐
 
