@@ -3,6 +3,30 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-06-06 Active-Scope Miss Recovery and Document-Augmented RAG Patch
+
+This patch resolves the live "what is water glass?" failure that reproduced while the WebView was already running on `npm run tauri:dev:mini:gpu`.
+
+Runtime probes showed that the current sidecar could answer correctly when called with an explicit `waterglass` scope: it returned one grouped knowledge point, eight citations, and `matchedSpans`.
+The WebView, however, had `folder-select=financial`, `localStorage.nc_last_target=financial`, and `window.__NC_ACTIVE_SOURCE_TARGET.scope.sourcePathPrefixes=["Knowledge_Base/financial"]`.
+The user question was therefore sent as a scoped financial query. The existing planner found the global title-like `water glass` document, but then intersected that document id with the explicit financial workspace/corpus/prefix scope, reducing the retrieval candidate set to zero indexed atoms.
+
+Code-vs-plan reconciliation for this patch:
+
+| Requirement | Current implementation evidence | Progress call |
+|---|---|---|
+| Positive answer when the selected scope misses but the query clearly names another knowledge point | `buildQueryBackendContext()` now distinguishes title hits inside the requested scope from title hits outside it. If an explicit scope has no compatible title hit but a document title/alias hit exists elsewhere, retrieval switches to a document-only `planner_scope_recovery` scope instead of intersecting incompatible corpus constraints. | Implemented |
+| Return results by knowledge point, not duplicated sections | The prior document-level conversation grouping remains intact. The recovery query still returns segment-level evidence internally, then `mergeAgentConversationKnowledgePoints()` groups hits by `documentId` and exposes `matchedSpans` inside the single knowledge-point card. | Implemented |
+| RSE + document augmentation direction | The implementation keeps Relevant Segment Extraction behavior at retrieval time while adding document augmentation at planning time: title-like queries can recover the target document, and section hits inside that document become marked evidence spans rather than duplicated cards. | Operational baseline |
+| User-visible diagnosis of scope behavior | The Knowledge Workspace API status strip now includes the active scope label and, when recovery is used, the recovered source path. This directly exposes cases such as "Scope: financial" plus "Recovered: Knowledge_Base/waterglass/water glass.md". | Implemented |
+| Backward compatibility | Public response fields remain additive. Existing `assistantMessage`, `answer`, `assistantBlocks`, citations, and legacy sync/SSE flows remain supported. `scopeSource` gains a new optional value, `planner_scope_recovery`, without removing existing values. | Preserved |
+
+Verification for this patch:
+
+- Red/green backend regression: `KnowledgeLearningPlatform.test.ts` now covers `financial` active scope plus a `water glass` title-like query recovering the `waterglass` document and returning one grouped knowledge point with multiple matched spans.
+- Red/green frontend regression: `agent_workspace.frontend.test.ts` now covers status-strip scope and recovered-source visibility.
+- Live root-cause evidence: CDP showed the running WebView was scoped to `financial`; direct sidecar probing with `waterglass` scope returned grouped evidence correctly.
+
 ## 2026-06-06 Knowledge Workspace RAG Answering and API Observability Slice
 
 This update closes a practical Knowledge Workspace gap observed while `npm run tauri:dev:mini:gpu` was already running: the live sidecar could retrieve scoped `waterglass` evidence after hydration, but the user-facing answer still used the old "strongest scoped match" template and returned repeated section-level cards from the same knowledge point.

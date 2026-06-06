@@ -634,8 +634,19 @@
             ? Math.max(0, Math.round(Number(status.latencyMs)))
             : null;
         const error = String(status && status.error || '').trim();
+        const activeTarget = String(status && status.activeTarget || '').trim();
         const result = status && typeof status.result === 'object' ? status.result : null;
         const summary = result && typeof result.summary === 'object' ? result.summary : {};
+        const trace = result && typeof result.trace === 'object' ? result.trace : {};
+        const retrievalTrace = trace && typeof trace.retrieval === 'object' ? trace.retrieval : {};
+        const scopeRecovery = retrievalTrace && typeof retrievalTrace.scopeRecovery === 'object'
+            ? retrievalTrace.scopeRecovery
+            : null;
+        const recoveredSourcePaths = Array.isArray(scopeRecovery && scopeRecovery.recoveredSourcePaths)
+            ? scopeRecovery.recoveredSourcePaths
+                .map((sourcePath) => String(sourcePath || '').trim())
+                .filter(Boolean)
+            : [];
         const knowledgePointCount = Number.isFinite(Number(summary.returnedKnowledgePoints))
             ? Number(summary.returnedKnowledgePoints)
             : (Array.isArray(result && result.knowledgePoints) ? result.knowledgePoints.length : 0);
@@ -656,9 +667,17 @@
             endpoint,
             transport,
             latencyMs !== null ? `${latencyMs} ms` : '',
+            activeTarget
+                ? translate('agentWorkspace.apiStatus.scope', 'Scope: {scope}', { scope: activeTarget })
+                : '',
             state === 'ok' ? pluralizeApiStatusCount(knowledgePointCount, 'knowledge point', 'knowledge points') : '',
             state === 'ok' ? pluralizeApiStatusCount(citationCount, 'citation', 'citations') : '',
             state === 'ok' ? pluralizeApiStatusCount(memoryCount, 'memory', 'memories') : '',
+            state === 'ok' && recoveredSourcePaths.length > 0
+                ? translate('agentWorkspace.apiStatus.recovered', 'Recovered: {sources}', {
+                    sources: recoveredSourcePaths.slice(0, 2).join(', '),
+                })
+                : '',
             error,
         ].filter(Boolean);
         node.setAttribute('data-api-state', state);
@@ -3255,9 +3274,11 @@
         input.value = '';
         appendUserMessage(message);
         const sendStartedAt = Date.now();
+        let requestActiveTarget = '';
         try {
             const userId = getUserId();
             const requestContext = resolveKnowledgeWorkspaceRequestContext();
+            requestActiveTarget = requestContext.activeTarget;
             const requestPayload = {
                 userId,
                 sessionId: getOrCreateConversationSessionId(userId),
@@ -3271,6 +3292,7 @@
                 state: 'pending',
                 endpoint: AGENT_CONVERSATION_ENDPOINT,
                 transport: 'SSE',
+                activeTarget: requestContext.activeTarget,
             });
             const conversationCall = await requestConversationWithStreamingFallback(requestPayload);
             const result = conversationCall && typeof conversationCall === 'object' && conversationCall.result
@@ -3281,6 +3303,7 @@
                 endpoint: AGENT_CONVERSATION_ENDPOINT,
                 transport: String(conversationCall && conversationCall.transport || 'SSE'),
                 latencyMs: Number(conversationCall && conversationCall.latencyMs),
+                activeTarget: requestContext.activeTarget,
                 result,
             });
             const appendedAssistant = await appendAssistantConversationResult(result);
@@ -3307,6 +3330,7 @@
                 state: 'error',
                 endpoint: AGENT_CONVERSATION_ENDPOINT,
                 latencyMs: Date.now() - sendStartedAt,
+                activeTarget: requestActiveTarget,
                 error: String(error && error.message || error || 'unknown_error'),
             });
             appendLocalizedAssistantMessage(

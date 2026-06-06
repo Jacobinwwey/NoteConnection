@@ -407,7 +407,9 @@
       "idle": "空闲",
       "pending": "检测中",
       "ok": "可用",
-      "error": "失败"
+      "error": "失败",
+      "scope": "范围：{scope}",
+      "recovered": "已扩展：{sources}"
     },
     "graphFocus": {
       "title": "知识聚焦",

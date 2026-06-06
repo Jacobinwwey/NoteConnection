@@ -407,7 +407,9 @@
       "idle": "Idle",
       "pending": "Checking",
       "ok": "Available",
-      "error": "Failed"
+      "error": "Failed",
+      "scope": "Scope: {scope}",
+      "recovered": "Recovered: {sources}"
     },
     "graphFocus": {
       "title": "Knowledge Focus",

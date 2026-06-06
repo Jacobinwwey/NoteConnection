@@ -3001,6 +3001,15 @@ describe('agent workspace learning-path integration', () => {
         if (!fetchMock) {
             throw new Error('expected fetch mock');
         }
+        (window as any).__NC_ACTIVE_SOURCE_TARGET = {
+            target: 'financial',
+            source: 'test',
+            scope: {
+                workspaceId: 'financial',
+                corpusId: 'financial',
+                sourcePathPrefixes: ['Knowledge_Base/financial'],
+            },
+        };
 
         fetchMock.mockImplementationOnce(async () => createSseResponse([
             {
@@ -3041,6 +3050,27 @@ describe('agent workspace learning-path integration', () => {
                             recalledMemoryCount: 0,
                             queryEvidenceCoverageRatioPct: 100,
                         },
+                        trace: {
+                            usedScope: {
+                                source: 'scoped',
+                                workspaceId: null,
+                                corpusId: null,
+                                documentIds: ['doc_status'],
+                                atomIds: [],
+                                sourcePathPrefixes: [],
+                                languages: [],
+                                matchedAtomCount: 1,
+                                scopeSource: 'planner_scope_recovery',
+                            },
+                            retrieval: {
+                                retrievalModes: ['keyword', 'planner_scope_recovery'],
+                                scopeRecovery: {
+                                    reason: 'title_like_document_hit_outside_requested_scope',
+                                    recoveredDocumentIds: ['doc_status'],
+                                    recoveredSourcePaths: ['Knowledge_Base/waterglass/water glass.md'],
+                                },
+                            },
+                        },
                     },
                 },
             },
@@ -3058,6 +3088,8 @@ describe('agent workspace learning-path integration', () => {
         expect(statusText).toContain('SSE');
         expect(statusText).toContain('1 knowledge point');
         expect(statusText).toContain('1 citation');
+        expect(statusText).toContain('Scope: financial');
+        expect(statusText).toContain('Recovered: Knowledge_Base/waterglass/water glass.md');
         expect(statusText).toMatch(/\d+ ms/);
     });
 

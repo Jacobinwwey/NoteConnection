@@ -1553,6 +1553,65 @@ describe('KnowledgeLearningPlatform', () => {
         );
     });
 
+    test('agent conversation recovers a title-like knowledge point when the active scope misses another corpus', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_financial_scope',
+                    sourcePath: 'Knowledge_Base/financial/liquidity.md',
+                    language: 'en',
+                    workspaceId: 'financial',
+                    corpusId: 'financial',
+                    content: '# Liquidity\nLiquidity analysis explains cash conversion and working capital timing.',
+                },
+                {
+                    documentId: 'doc_water_glass_scope_recovery',
+                    sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                    language: 'en',
+                    workspaceId: 'waterglass',
+                    corpusId: 'waterglass',
+                    content: [
+                        '# Water Glass',
+                        'A water glass is a transparent drinking vessel that contains water for use.',
+                        '',
+                        '## Material role',
+                        'The water glass body provides a boundary between the liquid and the environment.',
+                    ].join('\n'),
+                },
+            ],
+        });
+
+        const response = await platform.agentConversation({
+            userId: 'agent_scope_recovery_user',
+            sessionId: 'session_scope_recovery',
+            message: 'what is water glass?',
+            scope: {
+                workspaceId: 'financial',
+                corpusId: 'financial',
+                sourcePathPrefixes: ['Knowledge_Base/financial'],
+            },
+            topK: 8,
+            persistMemory: false,
+        });
+
+        expect(response.answer).toMatch(/^A water glass is/i);
+        expect(response.knowledgePoints).toHaveLength(1);
+        expect(response.summary.returnedKnowledgePoints).toBe(1);
+        expect(response.summary.returnedCitations).toBeGreaterThanOrEqual(2);
+        expect(response.trace.usedScope.scopeSource).toBe('planner_scope_recovery');
+        expect(response.trace.retrieval.retrievalModes).toContain('planner_scope_recovery');
+        expect(response.trace.planner?.titleHitDocumentIds).toContain('doc_water_glass_scope_recovery');
+
+        const recoveredPoint = response.knowledgePoints[0] as any;
+        expect(recoveredPoint.documentId).toBe('doc_water_glass_scope_recovery');
+        expect(recoveredPoint.sourcePath).toBe('Knowledge_Base/waterglass/water glass.md');
+        expect(recoveredPoint.matchCount).toBeGreaterThanOrEqual(2);
+        expect(recoveredPoint.matchedSpans.map((span: any) => span.title)).toEqual(
+            expect.arrayContaining(['Water Glass', 'Material role'])
+        );
+    });
+
     test('agent conversation explanation and next actions adapt to comparison-style queries', async () => {
         await platform.ingestKnowledge({
             incremental: true,

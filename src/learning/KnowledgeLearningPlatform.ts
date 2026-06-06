@@ -211,6 +211,10 @@ type QueryBackendExecutionResult = {
     error: string | null;
 };
 
+type QueryScopeRecoveryPlan = NonNullable<KnowledgeQueryResponse['trace']['scopeRecovery']> & {
+    recoveryScope: KnowledgeQueryRequest['scope'];
+};
+
 type QueryBackendComparisonSide = {
     backend: GraphQueryBackendType;
     backendId: string;
@@ -3746,6 +3750,23 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
     }
 
+    private mergeKnowledgeScopeDocumentIds(
+        scope: KnowledgeQueryRequest['scope'] | AgentConversationRequest['scope'],
+        documentIds: string[]
+    ): KnowledgeQueryRequest['scope'] {
+        const existingDocumentIds = Array.isArray(scope?.documentIds)
+            ? scope.documentIds.map((documentId) => String(documentId || '').trim()).filter(Boolean)
+            : [];
+        const mergedDocumentIds = Array.from(new Set([
+            ...existingDocumentIds,
+            ...documentIds.map((documentId) => String(documentId || '').trim()).filter(Boolean),
+        ]));
+        return {
+            ...(scope || {}),
+            documentIds: mergedDocumentIds,
+        };
+    }
+
     private filterAtomsByKnowledgeScope(
         atoms: KnowledgeAtom[],
         scope: KnowledgeQueryRequest['scope'] | AgentConversationRequest['scope']
@@ -3849,6 +3870,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         titleLikeQueries: string[];
         titleHitDocumentIds: string[];
         readiness: KnowledgeWorkspaceReadiness;
+        scopeRecovery?: QueryScopeRecoveryPlan;
     } {
         const query = normalizeWhitespace(String(request.query || ''));
         const asOf = this.resolveTimestamp(request.asOf);
@@ -3860,32 +3882,56 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         });
         const titleLikeQueries = this.derivePlannerTitleLikeQueries(query);
         const titleHitDocumentIds = this.findDocumentIdsByTitleLikeQueries(titleLikeQueries);
+        const unscopedAtoms = Array.from(this.activeAtomIds.values())
+            .map((atomId) => this.atoms.get(atomId))
+            .filter((atom): atom is KnowledgeAtom => Boolean(atom));
+        const requestedScopeAtomsResult = this.filterAtomsByKnowledgeScope(unscopedAtoms, request.scope);
         let effectiveScope = request.scope;
+        let effectiveScopeSource: NonNullable<KnowledgeQueryResolvedScope['scopeSource']> = effectiveScope
+            ? 'explicit_request'
+            : 'global_default';
+        let scopeRecovery: QueryScopeRecoveryPlan | undefined;
         if (titleHitDocumentIds.length > 0) {
-            if (effectiveScope) {
-                const existingDocumentIds = Array.isArray(effectiveScope.documentIds)
-                    ? effectiveScope.documentIds.map((documentId) => String(documentId || '').trim()).filter(Boolean)
-                    : [];
-                effectiveScope = {
-                    ...effectiveScope,
-                    documentIds: Array.from(new Set([
-                        ...existingDocumentIds,
-                        ...titleHitDocumentIds,
-                    ])),
-                };
+            if (request.scope) {
+                const titleHitDocumentIdSet = new Set(titleHitDocumentIds);
+                const scopedTitleHitDocumentIds = Array.from(new Set(
+                    requestedScopeAtomsResult.atoms
+                        .map((atom) => atom.documentId)
+                        .filter((documentId) => titleHitDocumentIdSet.has(documentId))
+                ));
+                if (scopedTitleHitDocumentIds.length > 0) {
+                    effectiveScope = this.mergeKnowledgeScopeDocumentIds(request.scope, scopedTitleHitDocumentIds);
+                } else {
+                    const recoveryScope: KnowledgeQueryRequest['scope'] = {
+                        documentIds: titleHitDocumentIds,
+                    };
+                    if (Array.isArray(request.scope.languages) && request.scope.languages.length > 0) {
+                        recoveryScope.languages = request.scope.languages
+                            .map((language) => String(language || '').trim())
+                            .filter(Boolean);
+                    }
+                    const recoveryAtomsResult = this.filterAtomsByKnowledgeScope(unscopedAtoms, recoveryScope);
+                    if (recoveryAtomsResult.atoms.length > 0) {
+                        const recoveredDocumentIds = Array.from(new Set(recoveryAtomsResult.atoms.map((atom) => atom.documentId)));
+                        const recoveredSourcePaths = Array.from(new Set(recoveryAtomsResult.atoms.map((atom) => atom.sourcePath)));
+                        scopeRecovery = {
+                            reason: 'title_like_document_hit_outside_requested_scope',
+                            requestedScope: requestedScopeAtomsResult.resolvedScope,
+                            recoveredDocumentIds,
+                            recoveredSourcePaths,
+                            recoveryScope,
+                        };
+                    }
+                }
             } else {
                 effectiveScope = {
                     documentIds: titleHitDocumentIds,
                 };
+                effectiveScopeSource = 'planner_fallback';
             }
         }
-        const unscopedAtoms = Array.from(this.activeAtomIds.values())
-            .map((atomId) => this.atoms.get(atomId))
-            .filter((atom): atom is KnowledgeAtom => Boolean(atom));
         const scopedAtomsResult = this.filterAtomsByKnowledgeScope(unscopedAtoms, effectiveScope);
-        scopedAtomsResult.resolvedScope.scopeSource = effectiveScope
-            ? (request.scope ? 'explicit_request' : 'planner_fallback')
-            : 'global_default';
+        scopedAtomsResult.resolvedScope.scopeSource = effectiveScopeSource;
         scopedAtomsResult.resolvedScope.readiness = readiness;
         const activeEdges = this.filterRelationEdgesByScopedAtomIds(
             this.collectActiveRelationEdges(asOf),
@@ -3901,6 +3947,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             titleLikeQueries,
             titleHitDocumentIds,
             readiness,
+            scopeRecovery,
             context: {
                 request: {
                     ...request,
@@ -4036,47 +4083,85 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                         ...this.graphQueryBackendFactoryOptions,
                         backend,
                     })
-            );
+        );
         const startedAtMs = Date.now();
         try {
-            const backendResult = await backendInstance.query(contextBundle.context);
-            const items = this.materializeQueryBackendItems(
-                backendResult,
-                contextBundle.asOf,
-                contextBundle.activeEdges,
-                contextBundle.topK,
-                contextBundle.titleHitDocumentIds.length > 0
-                    ? Math.max(contextBundle.topK * 6, 24)
-                    : contextBundle.topK
+            let effectiveContextBundle = contextBundle;
+            let effectiveBackendResult = await backendInstance.query(contextBundle.context);
+            let materializedItems = this.materializeQueryBackendItems(
+                effectiveBackendResult,
+                effectiveContextBundle.asOf,
+                effectiveContextBundle.activeEdges,
+                effectiveContextBundle.topK,
+                effectiveContextBundle.titleHitDocumentIds.length > 0
+                    ? Math.max(effectiveContextBundle.topK * 6, 24)
+                    : effectiveContextBundle.topK
             );
-            const rerankedItems = this.rerankQueryItemsForPlanner(items, {
-                titleLikeQueries: contextBundle.titleLikeQueries,
-                titleHitDocumentIds: contextBundle.titleHitDocumentIds,
-            }).slice(0, contextBundle.topK);
+            let rerankedItems = this.rerankQueryItemsForPlanner(materializedItems, {
+                titleLikeQueries: effectiveContextBundle.titleLikeQueries,
+                titleHitDocumentIds: effectiveContextBundle.titleHitDocumentIds,
+            }).slice(0, effectiveContextBundle.topK);
+            let appliedScopeRecovery: QueryScopeRecoveryPlan | undefined;
+            if (rerankedItems.length <= 0 && contextBundle.scopeRecovery) {
+                const recoveryContextBundle = this.buildQueryBackendContext({
+                    ...request,
+                    scope: contextBundle.scopeRecovery.recoveryScope,
+                }, backend);
+                const recoveryBackendResult = await backendInstance.query(recoveryContextBundle.context);
+                const recoveryItems = this.materializeQueryBackendItems(
+                    recoveryBackendResult,
+                    recoveryContextBundle.asOf,
+                    recoveryContextBundle.activeEdges,
+                    recoveryContextBundle.topK,
+                    recoveryContextBundle.titleHitDocumentIds.length > 0
+                        ? Math.max(recoveryContextBundle.topK * 6, 24)
+                        : recoveryContextBundle.topK
+                );
+                const recoveryRerankedItems = this.rerankQueryItemsForPlanner(recoveryItems, {
+                    titleLikeQueries: recoveryContextBundle.titleLikeQueries,
+                    titleHitDocumentIds: recoveryContextBundle.titleHitDocumentIds,
+                }).slice(0, recoveryContextBundle.topK);
+                if (recoveryRerankedItems.length > 0) {
+                    effectiveContextBundle = {
+                        ...recoveryContextBundle,
+                        scopeRecovery: contextBundle.scopeRecovery,
+                    };
+                    effectiveBackendResult = recoveryBackendResult;
+                    materializedItems = recoveryItems;
+                    rerankedItems = recoveryRerankedItems;
+                    appliedScopeRecovery = contextBundle.scopeRecovery;
+                }
+            }
             const metrics = this.summarizeQueryItems(rerankedItems);
             const latencyMs = Date.now() - startedAtMs;
-            const rawModeWeights = backendResult.trace?.modeWeights || {};
+            const rawModeWeights = effectiveBackendResult.trace?.modeWeights || {};
+            const retrievalModes = Array.isArray(effectiveBackendResult.trace?.retrievalModes)
+                ? [...effectiveBackendResult.trace.retrievalModes]
+                : ['keyword', 'graph_traversal', 'temporal_filter'];
             const resolvedScope: KnowledgeQueryResolvedScope = {
-                ...contextBundle.resolvedScope,
+                ...effectiveContextBundle.resolvedScope,
+                scopeSource: appliedScopeRecovery
+                    ? 'planner_scope_recovery'
+                    : effectiveContextBundle.resolvedScope.scopeSource,
                 missDiagnostics: rerankedItems.length <= 0
                     ? this.buildMissDiagnostics({
-                        query: contextBundle.query,
-                        resolvedScope: contextBundle.resolvedScope,
-                        readiness: contextBundle.readiness,
-                        plannerQuery: contextBundle.titleLikeQueries[0] || contextBundle.resolvedScope.workspaceId || contextBundle.resolvedScope.corpusId || '',
-                        titleLikeQueries: contextBundle.titleLikeQueries,
-                        titleHitDocumentIds: contextBundle.titleHitDocumentIds,
-                        indexedScopeAtomCount: contextBundle.atoms.length,
+                        query: effectiveContextBundle.query,
+                        resolvedScope: effectiveContextBundle.resolvedScope,
+                        readiness: effectiveContextBundle.readiness,
+                        plannerQuery: effectiveContextBundle.titleLikeQueries[0] || effectiveContextBundle.resolvedScope.workspaceId || effectiveContextBundle.resolvedScope.corpusId || '',
+                        titleLikeQueries: effectiveContextBundle.titleLikeQueries,
+                        titleHitDocumentIds: effectiveContextBundle.titleHitDocumentIds,
+                        indexedScopeAtomCount: effectiveContextBundle.atoms.length,
                     })
                     : undefined,
             };
             const trace = {
-                retrievalModes: Array.isArray(backendResult.trace?.retrievalModes)
-                    ? [...backendResult.trace.retrievalModes]
-                    : ['keyword', 'graph_traversal', 'temporal_filter'],
-                asOf: contextBundle.asOf,
+                retrievalModes: appliedScopeRecovery
+                    ? Array.from(new Set([...retrievalModes, 'planner_scope_recovery']))
+                    : retrievalModes,
+                asOf: effectiveContextBundle.asOf,
                 totalActiveAtoms: this.activeAtomIds.size,
-                totalAtomsInScope: contextBundle.atoms.length,
+                totalAtomsInScope: effectiveContextBundle.atoms.length,
                 scope: resolvedScope,
                 modeWeights: {
                     keyword: Number(
@@ -4095,12 +4180,28 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 latencyMs,
                 evidenceCoverageRatio: metrics.evidenceCoverageRatio,
                 planner: {
-                    plannerQuery: contextBundle.titleLikeQueries[0] || null,
-                    titleLikeQueries: [...contextBundle.titleLikeQueries],
-                    titleHitDocumentIds: [...contextBundle.titleHitDocumentIds],
+                    plannerQuery: effectiveContextBundle.titleLikeQueries[0] || null,
+                    titleLikeQueries: [...effectiveContextBundle.titleLikeQueries],
+                    titleHitDocumentIds: [...effectiveContextBundle.titleHitDocumentIds],
                 },
-                ...(backendResult.trace?.vectorAcceleration
-                    ? { vectorAcceleration: backendResult.trace.vectorAcceleration }
+                ...(appliedScopeRecovery
+                    ? {
+                        scopeRecovery: {
+                            reason: appliedScopeRecovery.reason,
+                            requestedScope: {
+                                ...appliedScopeRecovery.requestedScope,
+                                documentIds: [...appliedScopeRecovery.requestedScope.documentIds],
+                                atomIds: [...appliedScopeRecovery.requestedScope.atomIds],
+                                sourcePathPrefixes: [...appliedScopeRecovery.requestedScope.sourcePathPrefixes],
+                                languages: [...appliedScopeRecovery.requestedScope.languages],
+                            },
+                            recoveredDocumentIds: [...appliedScopeRecovery.recoveredDocumentIds],
+                            recoveredSourcePaths: [...appliedScopeRecovery.recoveredSourcePaths],
+                        },
+                    }
+                    : {}),
+                ...(effectiveBackendResult.trace?.vectorAcceleration
+                    ? { vectorAcceleration: effectiveBackendResult.trace.vectorAcceleration }
                     : {}),
             } as KnowledgeQueryResponse['trace'] & Record<string, unknown>;
             this.queryBackendLastError = '';

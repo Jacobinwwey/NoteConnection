@@ -3,6 +3,30 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
+## 2026-06-06 active scope miss recovery 与 document-augmented RAG 修复
+
+本次补丁修复了 WebView 已在 `npm run tauri:dev:mini:gpu` 中运行时复现的 “what is water glass?” 失败。
+
+运行时探针显示：当前 sidecar 如果显式使用 `waterglass` scope 调用，会正确返回 1 个按知识点合并后的结果、8 条引用以及 `matchedSpans`。
+但 WebView 当前状态是 `folder-select=financial`、`localStorage.nc_last_target=financial`，并且 `window.__NC_ACTIVE_SOURCE_TARGET.scope.sourcePathPrefixes=["Knowledge_Base/financial"]`。
+因此用户问题实际上被发送成了 financial 限定范围内的 scoped query。旧 planner 虽然能在全局找到 `water glass` 的 title-like 文档命中，但随后把该 document id 与显式 financial workspace/corpus/prefix scope 做交集，最终把候选集压成 0 个 indexed atoms。
+
+本补丁的代码 / 方案对齐结果：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| 当前 scope 未命中但问题明确指向另一个知识点时仍能正面回答 | `buildQueryBackendContext()` 现在会区分 title hit 是否落在请求 scope 内。如果显式 scope 内没有兼容 title hit，但其他位置存在明确文档标题 / 别名命中，检索会切换到 document-only 的 `planner_scope_recovery` scope，而不是继续相交不兼容的 corpus 约束。 | 已实现 |
+| 按知识点返回，而不是重复返回 section | 之前的 document-level conversation grouping 继续保留。recovery query 内部仍保留 segment-level evidence，然后由 `mergeAgentConversationKnowledgePoints()` 按 `documentId` 合并，并把命中的 section 作为单一知识点卡片内的 `matchedSpans` 展示。 | 已实现 |
+| RSE + document augmentation 推进方向 | 当前实现把 Relevant Segment Extraction 留在检索阶段，同时在 planning 阶段加入 document augmentation：title-like query 可以恢复目标文档，文档内 section 命中会成为标注证据片段，而不是重复卡片。 | Operational baseline |
+| 用户可见 scope 诊断 | Knowledge Workspace API 状态条现在会显示 active scope；如果触发 recovery，还会显示恢复到的 source path。用户可以直接看到类似 “Scope: financial” 与 “Recovered: Knowledge_Base/waterglass/water glass.md” 的状态。 | 已实现 |
+| 向前兼容 | 公共响应字段只做加法。既有 `assistantMessage`、`answer`、`assistantBlocks`、citations、legacy sync/SSE 流程都继续保留。`scopeSource` 仅新增可选值 `planner_scope_recovery`，不删除旧值。 | 已保留 |
+
+本补丁验证：
+
+- Red/green 后端回归：`KnowledgeLearningPlatform.test.ts` 现在覆盖 active scope 为 `financial`、title-like query 为 `water glass` 时恢复到 `waterglass` 文档，并返回 1 个包含多个 matched spans 的合并知识点。
+- Red/green 前端回归：`agent_workspace.frontend.test.ts` 现在覆盖状态条中的 active scope 与 recovered source 可见性。
+- 运行时根因证据：CDP 显示当前 WebView scope 是 `financial`；直接用 `waterglass` scope 探针调用 sidecar 时，后端已能正确返回分组证据。
+
 ## 2026-06-06 知识工作区 RAG 回答与 API 可观测性切片
 
 本次更新修复的是 `npm run tauri:dev:mini:gpu` 已经运行时暴露出的实际知识工作区问题：运行中的 sidecar 在完成 hydration 后已经可以召回 `waterglass` 作用域证据，但用户可见回答仍使用旧的 “strongest scoped match” 模板，并且会把同一知识点文档内的多个 section 命中渲染成重复知识点卡片。

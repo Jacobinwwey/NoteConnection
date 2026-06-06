@@ -272,7 +272,13 @@ export interface KnowledgeQueryResolvedScope {
     sourcePathPrefixes: string[];
     languages: string[];
     matchedAtomCount: number;
-    scopeSource?: 'explicit_request' | 'active_workspace_target' | 'workspace_hydration' | 'planner_fallback' | 'global_default';
+    scopeSource?:
+        | 'explicit_request'
+        | 'active_workspace_target'
+        | 'workspace_hydration'
+        | 'planner_fallback'
+        | 'planner_scope_recovery'
+        | 'global_default';
     readiness?: {
         status: 'ready' | 'empty_store' | 'workspace_not_found' | 'workspace_unbound' | 'workspace_unindexed';
         message: string;
@@ -339,6 +345,12 @@ export interface KnowledgeQueryResponse {
             plannerQuery: string | null;
             titleLikeQueries: string[];
             titleHitDocumentIds: string[];
+        };
+        scopeRecovery?: {
+            reason: 'title_like_document_hit_outside_requested_scope';
+            requestedScope: KnowledgeQueryResolvedScope;
+            recoveredDocumentIds: string[];
+            recoveredSourcePaths: string[];
         };
     };
 }
