@@ -707,6 +707,7 @@ function createWorkspaceHtml() {
                   <div id="agent-workspace-chat-messages"></div>
                   <textarea id="agent-workspace-chat-input"></textarea>
                   <button id="btn-agent-workspace-send"></button>
+                  <div id="agent-workspace-api-status"></div>
                   <div id="agent-workspace-knowledge-points"></div>
                 </section>
                 <div id="agent-side-work-area">
@@ -2330,6 +2331,53 @@ describe('workspace panes controller', () => {
         expect(buttonsAfter).toEqual(['聚焦', '学习路径']);
     });
 
+    test('renders grouped knowledge-point hit spans inside a single card', () => {
+        const { controller, document } = loadWorkspacePanesHarness();
+        controller.init();
+
+        controller.renderKnowledgePoints([
+            {
+                atomId: 'atom_water_glass',
+                documentId: 'doc_water_glass',
+                title: 'Water Glass',
+                summary: 'A water glass is a transparent container plus water.',
+                evidenceSnippet: 'A water glass is a transparent container plus water.',
+                matchCount: 2,
+                matchedSpans: [
+                    {
+                        atomId: 'atom_water_glass',
+                        title: 'Definition',
+                        snippet: 'A water glass is a physical system made of a transparent container and water.',
+                        sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                        startLine: 1,
+                        score: 0.94,
+                    },
+                    {
+                        atomId: 'atom_water_glass_thermal',
+                        title: 'Thermal exchange',
+                        snippet: 'The water glass exchanges heat with the environment.',
+                        sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                        startLine: 6,
+                        score: 0.81,
+                    },
+                ],
+                capabilities: [],
+            },
+        ], {
+            onCapability: jest.fn(),
+        });
+
+        const cards = Array.from(document.querySelectorAll('.agent-knowledge-card'));
+        expect(cards).toHaveLength(1);
+        const cardText = String(cards[0]?.textContent || '');
+        expect(cardText).toContain('Matched evidence');
+        expect(cardText).toContain('Definition');
+        expect(cardText).toContain('Thermal exchange');
+        expect(cardText).toContain('Knowledge_Base/waterglass/water glass.md:1');
+        expect(cardText).toContain('Knowledge_Base/waterglass/water glass.md:6');
+        expect(cards[0]?.querySelectorAll('.agent-knowledge-hit')).toHaveLength(2);
+    });
+
     test('keeps conversation card append kinds aligned with rerender registry', () => {
         const repoRoot = path.resolve(__dirname, '..');
         const source = fs.readFileSync(
@@ -2942,6 +2990,75 @@ describe('agent workspace learning-path integration', () => {
         expect(String(assistantNode?.textContent || '')).toContain('Blocks Citation');
         expect(String(assistantNode?.textContent || '')).toContain('Knowledge_Base/optics/blocks.md:18');
         expect(assistantNode?.querySelector('.mermaid svg text')?.textContent).toBe('Rendered Mermaid');
+    });
+
+    test('updates the knowledge API status panel after a successful conversation call', async () => {
+        const {
+            document,
+            window,
+            fetchMock,
+        } = loadAgentWorkspaceHarness();
+        if (!fetchMock) {
+            throw new Error('expected fetch mock');
+        }
+
+        fetchMock.mockImplementationOnce(async () => createSseResponse([
+            {
+                event: 'turn_completed',
+                payload: {
+                    type: 'turn_completed',
+                    turnId: 'turn_api_status',
+                    emittedAt: '2026-04-13T00:00:00.120Z',
+                    result: {
+                        assistantMessage: 'grounded status response',
+                        citations: [
+                            {
+                                citationId: 'citation_status_1',
+                                sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                                startLine: 3,
+                            },
+                        ],
+                        recalledMemories: [],
+                        memoryActions: [],
+                        knowledgePoints: [
+                            {
+                                atomId: 'atom_status',
+                                documentId: 'doc_status',
+                                title: 'Water Glass',
+                                summary: 'A water glass is a physical system.',
+                                evidenceSnippet: 'A water glass is a physical system.',
+                                matchCount: 1,
+                                matchedSpans: [],
+                                score: 0.9,
+                                capabilities: [],
+                            },
+                        ],
+                        summary: {
+                            generatedAt: '2026-04-13T00:00:00.120Z',
+                            topK: 6,
+                            returnedKnowledgePoints: 1,
+                            returnedCitations: 1,
+                            recalledMemoryCount: 0,
+                            queryEvidenceCoverageRatioPct: 100,
+                        },
+                    },
+                },
+            },
+        ]));
+
+        const input = document.getElementById('agent-workspace-chat-input') as HTMLTextAreaElement;
+        input.value = 'what is water glass?';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+
+        const status = document.getElementById('agent-workspace-api-status');
+        expect(status).not.toBeNull();
+        expect(status?.getAttribute('data-api-state')).toBe('ok');
+        const statusText = String(status?.textContent || '');
+        expect(statusText).toContain('/api/knowledge/conversation');
+        expect(statusText).toContain('SSE');
+        expect(statusText).toContain('1 knowledge point');
+        expect(statusText).toContain('1 citation');
+        expect(statusText).toMatch(/\d+ ms/);
     });
 
     test('falls back to sync conversation request when streamed turn payload is incomplete', async () => {

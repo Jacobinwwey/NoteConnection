@@ -400,7 +400,14 @@
       "empty": "当前没有命中限定范围内的知识结果。",
       "citation": "引用",
       "memory": "记忆",
-      "score": "得分"
+      "score": "得分",
+      "matchedEvidence": "命中依据"
+    },
+    "apiStatus": {
+      "idle": "空闲",
+      "pending": "检测中",
+      "ok": "可用",
+      "error": "失败"
     },
     "graphFocus": {
       "title": "知识聚焦",

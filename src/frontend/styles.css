@@ -1636,6 +1636,55 @@ body.agent-workspace-open .agent-workspace-drawer {
   padding: 10px 14px;
 }
 
+.agent-api-status {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.46);
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.agent-api-status-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #94a3b8;
+}
+
+.agent-api-status-label {
+  color: #f8fbff;
+  font-weight: 700;
+}
+
+.agent-api-status-detail {
+  min-width: 0;
+  color: #9fb0c2;
+  overflow-wrap: anywhere;
+}
+
+.agent-api-status[data-api-state="pending"] .agent-api-status-dot {
+  background: #facc15;
+}
+
+.agent-api-status[data-api-state="ok"] .agent-api-status-dot {
+  background: #22c55e;
+}
+
+.agent-api-status[data-api-state="error"] {
+  border-color: rgba(248, 113, 113, 0.34);
+}
+
+.agent-api-status[data-api-state="error"] .agent-api-status-dot {
+  background: #f87171;
+}
+
 .agent-chat-messages,
 .agent-knowledge-points,
 .agent-workspace-pane-body {
@@ -1901,6 +1950,47 @@ body.agent-workspace-open .agent-workspace-drawer {
   border: 1px dashed rgba(255, 255, 255, 0.12);
   color: #a9b6c4;
   background: rgba(255, 255, 255, 0.02);
+}
+
+.agent-knowledge-hit-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.agent-knowledge-hit-heading {
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.agent-knowledge-hit {
+  padding: 8px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.46);
+}
+
+.agent-knowledge-hit-title {
+  color: #f8fbff;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.agent-knowledge-hit-snippet {
+  margin-top: 4px;
+  color: #dbe7f3;
+  font-size: 0.82rem;
+  line-height: 1.48;
+}
+
+.agent-knowledge-hit-meta {
+  margin-top: 5px;
+  color: #93a4b8;
+  font-size: 0.76rem;
+  line-height: 1.35;
 }
 
 .agent-side-work-area {

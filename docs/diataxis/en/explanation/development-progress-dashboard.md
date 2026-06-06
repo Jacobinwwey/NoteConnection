@@ -3,6 +3,25 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-06-06 Knowledge Workspace RAG Answering and API Observability Slice
+
+This update closes a practical Knowledge Workspace gap observed while `npm run tauri:dev:mini:gpu` was already running: the live sidecar could retrieve scoped `waterglass` evidence after hydration, but the user-facing answer still used the old "strongest scoped match" template and returned repeated section-level cards from the same knowledge point.
+
+Code-vs-plan reconciliation for this slice:
+
+| Requirement | Current implementation evidence | Progress call |
+|---|---|---|
+| User-visible API call status | The Knowledge Workspace now renders a compact API status strip for `/api/knowledge/conversation`, including idle/pending/ok/error state, transport (`SSE` or sync fallback), latency, knowledge-point count, citation count, and memory count (`src/frontend/index.html`, `src/frontend/agent_workspace.js`, `src/frontend/styles.css`). | Implemented |
+| Direct grounded answers | `agentConversation()` now composes the top-level `answer` and `Scoped Answer` block from the best retrieved evidence sentence first, then appends grounding counts and citations. It no longer forces successful explanation turns to start with "The strongest scoped match is..." (`src/learning/KnowledgeLearningPlatform.ts`). | Implemented |
+| Knowledge-point grouping | Conversation responses preserve low-level `queryKnowledge()` atom granularity internally, but group user-facing `knowledgePoints` by `documentId`, exposing optional `atomIds`, `documentId`, `sourcePath`, `matchedSpans`, `citations`, and `matchCount` for document-augmented UI rendering (`src/learning/types.ts`, `src/learning/KnowledgeLearningPlatform.ts`). | Implemented |
+| RSE/document augmentation direction | The response shape now separates retrieval evidence spans from the knowledge-point card identity, so repeated hits inside one document are shown as matched spans inside one card rather than duplicate cards. This is the current lightweight RSE-style boundary: retrieval remains segment-level; answer/UI presentation becomes evidence-grouped and document-augmented. | Operational baseline |
+| Runtime caveat | A running `server.exe` sidecar does not hot-swap TypeScript/backend changes. `npm run build` and `npm run ensure:sidecar:dev` prepare the fixed dev sidecar, but the currently open `tauri:dev:mini:gpu` window must be restarted to load the rebuilt backend binary. | Operational note |
+
+Verification for this slice:
+
+- Red/green regression coverage: `KnowledgeLearningPlatform.test.ts` now verifies direct `water glass` answering plus grouped matched spans; `agent_workspace.frontend.test.ts` verifies grouped hit rendering and the API status panel.
+- Reconfirmed locally: `npm.cmd exec -- jest src/learning/KnowledgeLearningPlatform.test.ts --runInBand`, `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts --runInBand`, `npm.cmd exec -- jest src/server.migration.test.ts -t "conversation route auto-hydrates|knowledge/conversation" --runInBand`, `npm.cmd exec -- jest src/agent_workspace.contract.parity.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand`, `node --check src/frontend/agent_workspace.js`, `node --check src/frontend/workspace_panes.js`, `npm.cmd run build`, and `npm.cmd run ensure:sidecar:dev`.
+
 ## 2026-06-06 Mainline Architecture Progress and Code-vs-Plan Reconciliation
 
 This update reconciles the current `main` codebase against the May architecture plans and supersedes any stale reading that treats Program F delivery as the same thing as release-grade foundation closure.

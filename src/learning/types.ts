@@ -974,11 +974,26 @@ export type TutorProviderTrendDiagnosticsRequest = any;
 export type TutorProviderTrendHistoryRequest = any;
 export interface AgentConversationKnowledgePoint {
     atomId: string;
+    atomIds?: string[];
+    documentId?: string;
+    sourcePath?: string;
     title: string;
     summary: string;
     evidenceSnippet: string;
     score: number;
     citation: KnowledgeCitation | null;
+    citations?: KnowledgeCitation[];
+    matchedSpans?: Array<{
+        atomId: string;
+        title: string;
+        snippet: string;
+        sourcePath: string;
+        startLine?: number;
+        endLine?: number;
+        score: number;
+        citation: KnowledgeCitation | null;
+    }>;
+    matchCount?: number;
     capabilities: unknown[];
 }
 

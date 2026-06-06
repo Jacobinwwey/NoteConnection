@@ -37,6 +37,7 @@
     }
 
     const ACTIVE_SOURCE_TARGET_STORAGE_KEY = 'nc_last_target';
+    const AGENT_CONVERSATION_ENDPOINT = '/api/knowledge/conversation';
 
     function normalizeActiveSourceTarget(value) {
         const normalized = String(value || '').trim();
@@ -111,6 +112,15 @@
                 ? String(params[name] == null ? '' : params[name])
                 : '';
         });
+    }
+
+    function escapeHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     function normalizeConversationMemoryNamespaceToken(value) {
@@ -377,7 +387,7 @@
             requestHeaders[AGENT_CONVERSATION_TURN_ID_HEADER] = turnId;
             requestHeaders[AGENT_CONVERSATION_RESUME_TURN_ID_HEADER] = turnId;
         }
-        return requestJson('/api/knowledge/conversation', {
+        return requestJson(AGENT_CONVERSATION_ENDPOINT, {
             method: 'POST',
             headers: requestHeaders,
             body: JSON.stringify(requestPayload),
@@ -415,7 +425,7 @@
 
     async function requestConversationStream(requestPayload, requestOptions) {
         const runtime = getRuntime();
-        const endpoint = '/api/knowledge/conversation';
+        const endpoint = AGENT_CONVERSATION_ENDPOINT;
         const url = runtime && typeof runtime.buildUrl === 'function'
             ? runtime.buildUrl(endpoint)
             : endpoint;
@@ -585,16 +595,78 @@
 
     async function requestConversationWithStreamingFallback(requestPayload) {
         const initialTurnId = buildConversationClientTurnId();
+        const startedAt = Date.now();
         try {
-            return await requestConversationStream(requestPayload, {
+            const result = await requestConversationStream(requestPayload, {
                 turnId: initialTurnId,
             });
+            return {
+                result,
+                transport: 'SSE',
+                latencyMs: Date.now() - startedAt,
+            };
         } catch (streamError) {
             const resumeTurnId = resolveConversationResumeTurnId(streamError, initialTurnId);
-            return requestConversationSync(requestPayload, {
+            const result = await requestConversationSync(requestPayload, {
                 turnId: resumeTurnId,
             });
+            return {
+                result,
+                transport: resumeTurnId ? 'Sync fallback' : 'Sync',
+                latencyMs: Date.now() - startedAt,
+            };
         }
+    }
+
+    function pluralizeApiStatusCount(count, singular, plural) {
+        return `${count} ${count === 1 ? singular : plural}`;
+    }
+
+    function updateConversationApiStatus(status) {
+        const node = getElement('agent-workspace-api-status');
+        if (!node) {
+            return;
+        }
+        const state = String(status && status.state || 'idle').trim() || 'idle';
+        const endpoint = String(status && status.endpoint || AGENT_CONVERSATION_ENDPOINT).trim();
+        const transport = String(status && status.transport || '').trim();
+        const latencyMs = Number.isFinite(Number(status && status.latencyMs))
+            ? Math.max(0, Math.round(Number(status.latencyMs)))
+            : null;
+        const error = String(status && status.error || '').trim();
+        const result = status && typeof status.result === 'object' ? status.result : null;
+        const summary = result && typeof result.summary === 'object' ? result.summary : {};
+        const knowledgePointCount = Number.isFinite(Number(summary.returnedKnowledgePoints))
+            ? Number(summary.returnedKnowledgePoints)
+            : (Array.isArray(result && result.knowledgePoints) ? result.knowledgePoints.length : 0);
+        const citationCount = Number.isFinite(Number(summary.returnedCitations))
+            ? Number(summary.returnedCitations)
+            : (Array.isArray(result && result.citations) ? result.citations.length : 0);
+        const memoryCount = Number.isFinite(Number(summary.recalledMemoryCount))
+            ? Number(summary.recalledMemoryCount)
+            : (Array.isArray(result && result.recalledMemories) ? result.recalledMemories.length : 0);
+        const stateLabel = state === 'pending'
+            ? translate('agentWorkspace.apiStatus.pending', 'Checking')
+            : state === 'ok'
+                ? translate('agentWorkspace.apiStatus.ok', 'Available')
+                : state === 'error'
+                    ? translate('agentWorkspace.apiStatus.error', 'Failed')
+                    : translate('agentWorkspace.apiStatus.idle', 'Idle');
+        const details = [
+            endpoint,
+            transport,
+            latencyMs !== null ? `${latencyMs} ms` : '',
+            state === 'ok' ? pluralizeApiStatusCount(knowledgePointCount, 'knowledge point', 'knowledge points') : '',
+            state === 'ok' ? pluralizeApiStatusCount(citationCount, 'citation', 'citations') : '',
+            state === 'ok' ? pluralizeApiStatusCount(memoryCount, 'memory', 'memories') : '',
+            error,
+        ].filter(Boolean);
+        node.setAttribute('data-api-state', state);
+        node.innerHTML = `
+            <span class="agent-api-status-dot" aria-hidden="true"></span>
+            <span class="agent-api-status-label">${escapeHtml(stateLabel)}</span>
+            <span class="agent-api-status-detail">${escapeHtml(details.join(' | '))}</span>
+        `;
     }
 
     function resolveKnowledgeOperationTransportDescriptor(operationId) {
@@ -3182,6 +3254,7 @@
         }
         input.value = '';
         appendUserMessage(message);
+        const sendStartedAt = Date.now();
         try {
             const userId = getUserId();
             const requestContext = resolveKnowledgeWorkspaceRequestContext();
@@ -3194,7 +3267,22 @@
                 memoryNamespace: 'conversation',
                 scope: requestContext.scope,
             };
-            const result = await requestConversationWithStreamingFallback(requestPayload);
+            updateConversationApiStatus({
+                state: 'pending',
+                endpoint: AGENT_CONVERSATION_ENDPOINT,
+                transport: 'SSE',
+            });
+            const conversationCall = await requestConversationWithStreamingFallback(requestPayload);
+            const result = conversationCall && typeof conversationCall === 'object' && conversationCall.result
+                ? conversationCall.result
+                : conversationCall;
+            updateConversationApiStatus({
+                state: 'ok',
+                endpoint: AGENT_CONVERSATION_ENDPOINT,
+                transport: String(conversationCall && conversationCall.transport || 'SSE'),
+                latencyMs: Number(conversationCall && conversationCall.latencyMs),
+                result,
+            });
             const appendedAssistant = await appendAssistantConversationResult(result);
             if (!appendedAssistant) {
                 appendLocalizedAssistantMessage(
@@ -3215,6 +3303,12 @@
                 );
             }
         } catch (error) {
+            updateConversationApiStatus({
+                state: 'error',
+                endpoint: AGENT_CONVERSATION_ENDPOINT,
+                latencyMs: Date.now() - sendStartedAt,
+                error: String(error && error.message || error || 'unknown_error'),
+            });
             appendLocalizedAssistantMessage(
                 'agentWorkspace.messages.conversationFailed',
                 `Grounded conversation request failed: ${String(error && error.message || error || 'unknown_error')}`,
@@ -3295,6 +3389,10 @@
         }
         controller.init();
         bindWorkspaceDrawerChrome();
+        updateConversationApiStatus({
+            state: 'idle',
+            endpoint: AGENT_CONVERSATION_ENDPOINT,
+        });
         const sendButton = getElement('btn-agent-workspace-send');
         if (sendButton && typeof sendButton.addEventListener === 'function') {
             sendButton.addEventListener('click', function () {

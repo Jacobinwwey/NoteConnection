@@ -7559,13 +7559,134 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const summary = normalizeWhitespace(String(atom.content || atom.title || '').slice(0, 240)) || atom.title;
         return {
             atomId: atom.id,
+            atomIds: [atom.id],
+            documentId: atom.documentId,
+            sourcePath: atom.sourcePath,
             title: atom.title,
             summary,
             evidenceSnippet: citation.snippet || summary || atom.title,
             score: Number(Number(item.score || 0).toFixed(4)),
             citation,
+            citations: citation ? [citation] : [],
+            matchedSpans: [
+                {
+                    atomId: atom.id,
+                    title: atom.title,
+                    snippet: citation.snippet || summary || atom.title,
+                    sourcePath: atom.sourcePath,
+                    startLine: citation.startLine,
+                    endLine: citation.endLine,
+                    score: Number(Number(item.score || 0).toFixed(4)),
+                    citation,
+                },
+            ],
+            matchCount: 1,
             capabilities: this.buildAgentWorkspaceCapabilities(atom.id),
         };
+    }
+
+    private mergeAgentConversationKnowledgePoints(items: KnowledgeQueryItem[]): AgentConversationKnowledgePoint[] {
+        const groups = new Map<string, {
+            point: AgentConversationKnowledgePoint;
+            atomIds: Set<string>;
+            citationKeys: Set<string>;
+            spanKeys: Set<string>;
+        }>();
+
+        items.forEach((item, index) => {
+            const atom = item.atom;
+            const groupKey = String(atom.documentId || atom.id || `atom_${index}`).trim();
+            const citation = this.buildKnowledgeCitation(item, index);
+            const snippet = citation.snippet
+                || normalizeWhitespace(String(atom.content || atom.title || '').slice(0, 280))
+                || atom.title;
+            let group = groups.get(groupKey);
+            if (!group) {
+                const point = this.buildAgentConversationKnowledgePoint(item, index);
+                point.citation = citation;
+                point.citations = [];
+                point.matchedSpans = [];
+                point.atomIds = [];
+                point.matchCount = 0;
+                group = {
+                    point,
+                    atomIds: new Set<string>(),
+                    citationKeys: new Set<string>(),
+                    spanKeys: new Set<string>(),
+                };
+                groups.set(groupKey, group);
+            }
+
+            group.atomIds.add(atom.id);
+            group.point.atomIds = Array.from(group.atomIds.values());
+            group.point.score = Math.max(group.point.score, Number(Number(item.score || 0).toFixed(4)));
+
+            const citationKey = [
+                citation.documentId,
+                citation.sourcePath,
+                citation.startLine || '',
+                citation.endLine || '',
+                citation.snippet,
+            ].join('|');
+            if (!group.citationKeys.has(citationKey)) {
+                group.citationKeys.add(citationKey);
+                group.point.citations = [...(group.point.citations || []), citation];
+                if (!group.point.citation) {
+                    group.point.citation = citation;
+                }
+            }
+
+            const spanKey = [
+                atom.id,
+                citation.startLine || '',
+                citation.endLine || '',
+                snippet,
+            ].join('|');
+            if (!group.spanKeys.has(spanKey)) {
+                group.spanKeys.add(spanKey);
+                group.point.matchedSpans = [
+                    ...(group.point.matchedSpans || []),
+                    {
+                        atomId: atom.id,
+                        title: atom.title,
+                        snippet,
+                        sourcePath: atom.sourcePath,
+                        startLine: citation.startLine,
+                        endLine: citation.endLine,
+                        score: Number(Number(item.score || 0).toFixed(4)),
+                        citation,
+                    },
+                ];
+                group.point.matchCount = group.point.matchedSpans.length;
+            }
+        });
+
+        return Array.from(groups.values()).map((group) => {
+            const citations = group.point.citations || [];
+            const spans = group.point.matchedSpans || [];
+            return {
+                ...group.point,
+                citation: group.point.citation || citations[0] || null,
+                citations,
+                matchedSpans: spans,
+                matchCount: spans.length,
+                evidenceSnippet: spans[0]?.snippet || group.point.evidenceSnippet,
+            };
+        });
+    }
+
+    private collectAgentConversationAtomIds(knowledgePoints: AgentConversationKnowledgePoint[]): string[] {
+        const atomIds = new Set<string>();
+        knowledgePoints.forEach((point) => {
+            const groupedAtomIds = Array.isArray(point.atomIds) && point.atomIds.length > 0
+                ? point.atomIds
+                : [point.atomId];
+            groupedAtomIds
+                .map((atomId) => String(atomId || '').trim())
+                .filter(Boolean)
+                .forEach((atomId) => atomIds.add(atomId));
+        });
+        return Array.from(atomIds.values());
     }
 
     private filterConversationMemoryRecordsByScope(
@@ -7598,6 +7719,64 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         });
     }
 
+    private escapeRegExpLiteral(value: string): string {
+        return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    private cleanConversationAnswerCandidate(value: string, point: AgentConversationKnowledgePoint): string {
+        let cleaned = String(value || '')
+            .replace(/```[\s\S]*?```/g, ' ')
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+            .replace(/[*_~`>#|]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        const title = normalizeWhitespace(String(point.title || '').replace(/[#*_~`]/g, ' '));
+        if (title) {
+            cleaned = cleaned
+                .replace(new RegExp(`^${this.escapeRegExpLiteral(title)}\\s*[:\\uFF1A.\\-\\u2014]*\\s*`, 'i'), '')
+                .trim();
+        }
+        return cleaned;
+    }
+
+    private selectScopedConversationDirectSentence(params: {
+        message: string;
+        point: AgentConversationKnowledgePoint;
+    }): string {
+        const point = params.point;
+        const candidates = [
+            ...(Array.isArray(point.matchedSpans) ? point.matchedSpans.map((span) => span.snippet) : []),
+            point.summary,
+            point.evidenceSnippet,
+        ]
+            .map((candidate) => this.cleanConversationAnswerCandidate(String(candidate || ''), point))
+            .filter(Boolean);
+        for (const candidate of candidates) {
+            const sentences = candidate.match(/[^.!?\u3002\uFF01\uFF1F]+[.!?\u3002\uFF01\uFF1F]?/g) || [candidate];
+            const directSentence = sentences
+                .map((sentence) => normalizeWhitespace(sentence))
+                .find((sentence) => {
+                    const lower = sentence.toLowerCase();
+                    return (
+                        lower.includes(' is ')
+                        || lower.includes(' are ')
+                        || lower.includes(' refers to ')
+                        || lower.includes(' means ')
+                        || sentence.includes('\u662f')
+                        || sentence.includes('\u6307')
+                    ) && sentence.length >= 12;
+                });
+            if (directSentence) {
+                return directSentence;
+            }
+            const firstSentence = normalizeWhitespace(sentences[0] || '');
+            if (firstSentence.length >= 12) {
+                return firstSentence;
+            }
+        }
+        return normalizeWhitespace(String(point.summary || point.evidenceSnippet || point.title || ''));
+    }
+
     private buildScopedConversationAnswer(params: {
         message: string;
         knowledgePoints: AgentConversationKnowledgePoint[];
@@ -7615,13 +7794,24 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         }
 
         const leadingPoint = params.knowledgePoints[0];
+        const directSentence = this.selectScopedConversationDirectSentence({
+            message: params.message,
+            point: leadingPoint,
+        });
         const evidenceLines = params.citations.slice(0, 3).map((citation, index) => (
             `${index + 1}. ${citation.title} (${citation.sourcePath}${citation.startLine ? `:${citation.startLine}` : ''}) — ${citation.snippet}`
         ));
-        const memoryPrefix = params.recalledMemories.length > 0
-            ? `I also recalled ${params.recalledMemories.length} scoped memory note(s). `
+        const memoryLine = params.recalledMemories.length > 0
+            ? `I also recalled ${params.recalledMemories.length} scoped memory note(s) and kept them secondary to the cited knowledge evidence.`
             : '';
-        return `${memoryPrefix}The strongest scoped match is ${leadingPoint.title}. I found ${params.knowledgePoints.length} relevant knowledge point(s) and ${params.citations.length} citation(s).\n\nKey evidence:\n${evidenceLines.join('\n')}`;
+        return [
+            directSentence || `${leadingPoint.title}: ${leadingPoint.evidenceSnippet}`,
+            memoryLine,
+            `Grounded by ${params.knowledgePoints.length} knowledge point(s) and ${params.citations.length} citation(s).`,
+            '',
+            'Key evidence:',
+            ...evidenceLines,
+        ].filter((line) => line !== '').join('\n');
     }
 
     private classifyScopedConversationIntent(message: string): 'explain' | 'compare' | 'how_to' | 'generic' {
@@ -7664,6 +7854,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     private buildScopedConversationOverviewMarkdown(params: {
+        message: string;
         knowledgePoints: AgentConversationKnowledgePoint[];
         citations: KnowledgeCitation[];
         recalledMemories: AgentConversationMemoryRecord[];
@@ -7674,7 +7865,14 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             '',
         ];
         if (strongestPoint) {
-            lines.push(`The strongest scoped match is **${strongestPoint.title}**.`, '');
+            const directSentence = this.selectScopedConversationDirectSentence({
+                message: params.message,
+                point: strongestPoint,
+            });
+            if (directSentence) {
+                lines.push(directSentence, '');
+            }
+            lines.push(`Best scoped anchor: **${strongestPoint.title}**.`, '');
         } else {
             lines.push('No scoped knowledge point produced a strong match for the current request.', '');
         }
@@ -7861,7 +8059,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 blockId: this.nextId('assistant_block'),
                 type: 'knowledge_actions',
                 title: 'Knowledge Actions',
-                atomIds: params.knowledgePoints.map((point) => point.atomId).filter(Boolean),
+                atomIds: this.collectAgentConversationAtomIds(params.knowledgePoints),
             });
         }
         return blocks;
@@ -8187,9 +8385,13 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             asOf: generatedAt,
             scope: request.scope,
         });
-        const knowledgePoints = queryResult.items.map((item, index) => this.buildAgentConversationKnowledgePoint(item, index));
+        const knowledgePoints = this.mergeAgentConversationKnowledgePoints(queryResult.items);
         const citations = knowledgePoints
-            .map((point) => point.citation)
+            .flatMap((point) => (
+                Array.isArray(point.citations) && point.citations.length > 0
+                    ? point.citations
+                    : (point.citation ? [point.citation] : [])
+            ))
             .filter((citation): citation is KnowledgeCitation => Boolean(citation));
         const recalledMemoryResult = await this.searchConversationMemory({
             userId,
@@ -8313,14 +8515,15 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 },
             },
         };
+        const activeConversationAtomIds = this.collectAgentConversationAtomIds(knowledgePoints);
         this.upsertConversationSessionState({
             sessionId,
             userId,
             mode: 'grounded_conversation',
             workspaceId: traceScope.workspaceId,
             corpusId: traceScope.corpusId,
-            activeResourceIds: this.resolveSourceResourceIdsForAtomIds(knowledgePoints.map((point) => point.atomId)),
-            activeProjectionIds: this.resolveSourceProjectionIdsForAtomIds(knowledgePoints.map((point) => point.atomId)),
+            activeResourceIds: this.resolveSourceResourceIdsForAtomIds(activeConversationAtomIds),
+            activeProjectionIds: this.resolveSourceProjectionIdsForAtomIds(activeConversationAtomIds),
             topK,
             queryBackend: String(request.scope && queryResult.trace.modeWeights.vector ? 'local_vector' : '').trim() || null,
             persistMemory: request.persistMemory !== false,

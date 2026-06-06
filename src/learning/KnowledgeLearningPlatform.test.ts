@@ -1496,6 +1496,63 @@ describe('KnowledgeLearningPlatform', () => {
         expect(persistedMemory.results[0]?.tags).toContain('scope_corpus:optics');
     });
 
+    test('agent conversation groups matched sections under one knowledge point with evidence spans', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_water_glass_grouped',
+                    sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                    language: 'en',
+                    workspaceId: 'waterglass',
+                    corpusId: 'waterglass',
+                    content: [
+                        '# Water Glass',
+                        'A water glass is a physical system made of a transparent container and water.',
+                        '',
+                        '## Material boundary',
+                        'The water glass boundary is commonly soda-lime glass that contains the liquid.',
+                        '',
+                        '## Thermal exchange',
+                        'The water glass exchanges heat with the environment through conduction and convection.',
+                    ].join('\n'),
+                },
+            ],
+        });
+
+        const response = await platform.agentConversation({
+            userId: 'agent_grouped_user',
+            sessionId: 'session_water_glass_grouped',
+            message: 'what is water glass?',
+            scope: {
+                workspaceId: 'waterglass',
+                corpusId: 'waterglass',
+                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+            },
+            topK: 8,
+            persistMemory: false,
+        });
+
+        expect(response.answer).toMatch(/^A water glass is/i);
+        expect(response.answer).not.toContain('The strongest scoped match is');
+        expect(response.knowledgePoints).toHaveLength(1);
+        expect(response.summary.returnedKnowledgePoints).toBe(1);
+        expect(response.citations.length).toBeGreaterThanOrEqual(2);
+
+        const groupedPoint = response.knowledgePoints[0] as any;
+        expect(groupedPoint.title).toBe('Water Glass');
+        expect(groupedPoint.documentId).toBe('doc_water_glass_grouped');
+        expect(groupedPoint.matchCount).toBeGreaterThanOrEqual(2);
+        expect(groupedPoint.matchedSpans.length).toBeGreaterThanOrEqual(2);
+        expect(groupedPoint.matchedSpans.map((span: any) => span.title)).toEqual(
+            expect.arrayContaining(['Water Glass', 'Material boundary'])
+        );
+        expect(groupedPoint.citations.length).toBeGreaterThanOrEqual(2);
+        expect(new Set(groupedPoint.citations.map((citation: any) => citation.documentId))).toEqual(
+            new Set(['doc_water_glass_grouped'])
+        );
+    });
+
     test('agent conversation explanation and next actions adapt to comparison-style queries', async () => {
         await platform.ingestKnowledge({
             incremental: true,

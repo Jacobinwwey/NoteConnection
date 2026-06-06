@@ -3,6 +3,25 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
+## 2026-06-06 知识工作区 RAG 回答与 API 可观测性切片
+
+本次更新修复的是 `npm run tauri:dev:mini:gpu` 已经运行时暴露出的实际知识工作区问题：运行中的 sidecar 在完成 hydration 后已经可以召回 `waterglass` 作用域证据，但用户可见回答仍使用旧的 “strongest scoped match” 模板，并且会把同一知识点文档内的多个 section 命中渲染成重复知识点卡片。
+
+本切片的代码 / 方案对齐结果：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| 用户可见 API 调用状态 | 知识工作区新增 `/api/knowledge/conversation` 紧凑状态条，显示 idle/pending/ok/error、传输方式（`SSE` 或 sync fallback）、延迟、知识点数、引用数与记忆数（`src/frontend/index.html`、`src/frontend/agent_workspace.js`、`src/frontend/styles.css`）。 | 已实现 |
+| 正面 grounded answer | `agentConversation()` 现在优先用最强证据句生成顶层 `answer` 和 `Scoped Answer` 块，再追加 grounding 计数与引用；成功解释型回合不再强制以 “The strongest scoped match is...” 开头（`src/learning/KnowledgeLearningPlatform.ts`）。 | 已实现 |
+| 按知识点合并返回 | 底层 `queryKnowledge()` 仍保留 atom/section 级召回粒度，但面向用户的 conversation `knowledgePoints` 已按 `documentId` 分组，并向前兼容地新增可选 `atomIds`、`documentId`、`sourcePath`、`matchedSpans`、`citations`、`matchCount` 字段（`src/learning/types.ts`、`src/learning/KnowledgeLearningPlatform.ts`）。 | 已实现 |
+| RSE / document augmentation 推进 | 响应结构现在把“检索证据片段”和“知识点卡片身份”分开：同一文档内重复命中会作为同一卡片内的 matched spans 展示，而不是重复卡片。这是当前轻量 RSE 边界：召回保持 segment-level，回答与 UI 呈现升级为 evidence-grouped + document-augmented。 | Operational baseline |
+| 运行态注意事项 | 已运行的 `server.exe` sidecar 不会热替换 TypeScript/backend 变更。`npm run build` 与 `npm run ensure:sidecar:dev` 已准备好修复后的 dev sidecar，但当前打开的 `tauri:dev:mini:gpu` 窗口需要重启才能加载新的后端二进制。 | 运维说明 |
+
+本切片验证：
+
+- Red/green 回归覆盖：`KnowledgeLearningPlatform.test.ts` 现在验证 `water glass` 的直接回答与 matched spans 分组；`agent_workspace.frontend.test.ts` 验证同一卡片命中渲染和 API 状态面板。
+- 本地已复核：`npm.cmd exec -- jest src/learning/KnowledgeLearningPlatform.test.ts --runInBand`、`npm.cmd exec -- jest src/agent_workspace.frontend.test.ts --runInBand`、`npm.cmd exec -- jest src/server.migration.test.ts -t "conversation route auto-hydrates|knowledge/conversation" --runInBand`、`npm.cmd exec -- jest src/agent_workspace.contract.parity.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand`、`node --check src/frontend/agent_workspace.js`、`node --check src/frontend/workspace_panes.js`、`npm.cmd run build`、`npm.cmd run ensure:sidecar:dev`。
+
 ## 2026-06-06 主线架构推进与代码 / 方案对齐
 
 本次更新将当前 `main` 代码与 5 月架构方案重新对齐，并明确覆盖旧口径中的一个关键误差：Program F 交付不等于底座已经达到 release-grade production closure。

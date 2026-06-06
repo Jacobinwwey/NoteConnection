@@ -400,7 +400,14 @@
       "empty": "No scoped knowledge matches.",
       "citation": "Citation",
       "memory": "Memory",
-      "score": "Score"
+      "score": "Score",
+      "matchedEvidence": "Matched evidence"
+    },
+    "apiStatus": {
+      "idle": "Idle",
+      "pending": "Checking",
+      "ok": "Available",
+      "error": "Failed"
     },
     "graphFocus": {
       "title": "Knowledge Focus",

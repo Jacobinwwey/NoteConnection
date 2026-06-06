@@ -3034,11 +3034,45 @@
             container.innerHTML = '';
             normalizedItems.forEach((item) => {
                 const evidenceSnippet = String(item && item.evidenceSnippet || '').trim();
+                const matchedSpans = Array.isArray(item && item.matchedSpans)
+                    ? item.matchedSpans
+                        .map((span) => span && typeof span === 'object' ? span : null)
+                        .filter(Boolean)
+                    : [];
                 const citation = item && typeof item.citation === 'object' ? item.citation : null;
                 const citationPath = citation
                     ? `${String(citation.sourcePath || '').trim()}${citation.startLine ? `:${citation.startLine}` : ''}`
                     : '';
                 const score = Number.isFinite(Number(item && item.score)) ? Number(item.score) : null;
+                const matchedSpanHtml = matchedSpans.length > 0
+                    ? `
+                        <div class="agent-knowledge-hit-list" data-agent-knowledge-hit-list="true">
+                            <div class="agent-knowledge-hit-heading">${escapeHtml(translate('agentWorkspace.knowledge.matchedEvidence', 'Matched evidence'))}</div>
+                            ${matchedSpans.map((span) => {
+                                const spanTitle = String(span.title || '').trim();
+                                const spanSnippet = String(span.snippet || '').trim();
+                                const spanSourcePath = String(span.sourcePath || '').trim();
+                                const spanLocation = spanSourcePath
+                                    ? `${spanSourcePath}${span.startLine ? `:${span.startLine}` : ''}`
+                                    : '';
+                                const spanScore = Number.isFinite(Number(span.score)) ? Number(span.score) : null;
+                                return `
+                                    <div class="agent-knowledge-hit">
+                                        ${spanTitle ? `<div class="agent-knowledge-hit-title">${escapeHtml(spanTitle)}</div>` : ''}
+                                        ${spanSnippet ? `<div class="agent-knowledge-hit-snippet">${escapeHtml(spanSnippet)}</div>` : ''}
+                                        ${(spanLocation || spanScore !== null)
+                                            ? `<div class="agent-knowledge-hit-meta">
+                                                ${spanLocation ? `<span>${escapeHtml(spanLocation)}</span>` : ''}
+                                                ${spanLocation && spanScore !== null ? ' | ' : ''}
+                                                ${spanScore !== null ? `<span>${escapeHtml(translate('agentWorkspace.knowledge.score', 'Score'))}: ${escapeHtml(spanScore.toFixed(4))}</span>` : ''}
+                                            </div>`
+                                            : ''}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `
+                    : '';
                 const card = document.createElement('div');
                 card.className = 'agent-knowledge-card';
                 card.innerHTML = `
@@ -3058,6 +3092,7 @@
                                 : ''}
                         </div>`
                         : ''}
+                    ${matchedSpanHtml}
                 `;
                 const actions = document.createElement('div');
                 actions.className = 'agent-knowledge-actions';
