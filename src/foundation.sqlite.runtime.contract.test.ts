@@ -29,6 +29,9 @@ describe('foundation sqlite runtime verification contract', () => {
     expect(packageJson.scripts?.['verify:foundation:sqlite-runtime:soak']).toBe(
       'npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-sqlite-runtime.js --soak'
     );
+    expect(packageJson.scripts?.['verify:foundation:sqlite-runtime:release']).toBe(
+      'npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-sqlite-runtime.js --soak'
+    );
   });
 
   test('verifier script covers smoke/medium/heavy profiles, soak gates, and matrix runs across dist runtime and packaged sidecar restart continuity', () => {

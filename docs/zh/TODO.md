@@ -31,10 +31,12 @@
 - [x] 默认 runtime graph backend 已不再是 `local-file-graphdb`：server 现已切到 embedded `graphdb/sqlite`，同时保留显式 file fallback。
 - [x] 现在已经有主机级 dist runtime + packaged sidecar 验证来证明 embedded `graphdb/sqlite` 基线在当前 Windows 宿主上可完成 ingest -> store diagnostics/foundation readiness -> restart -> query 连续性（`npm run verify:foundation:sqlite-runtime`）。
 - [x] 现在也已经有主机级 workload matrix 验证：在 `dist` runtime 与 packaged sidecar 两条路径上，对同一条 sqlite 基线完成了 `smoke` / `medium` / `heavy` 三档语料规模下的 snapshot metadata、restart 连续性与多点 query 连续性证明（`npm run verify:foundation:sqlite-runtime:matrix`）。
+- [x] Foundation readiness mandatory checks 现在已暴露 sqlite release alias（`npm run verify:foundation:sqlite-runtime:release`），发布 runbook 可以直接引用该 soak 门禁。
 - [~] 新的 embedded `graphdb/sqlite` 基线现已具备重启耐久性证明、主机级 runtime/packaging 证明，以及主机级 workload envelope 证明；但在宣称 A8 生产闭环前，仍需补齐 soak、长时段与性能级加固。
 - [x] 现在已经有主机级 ANN runtime 验证：`external_http` connector baseline 已在 `dist` runtime 与 packaged sidecar 两条路径上完成 restart 连续性与真实 query-backend diagnostics 证明（`npm run verify:foundation:ann-runtime`）。
 - [x] 现在也已经有主机级 ANN workload matrix 验证：`external_http` baseline 已在 `smoke` / `medium` / `heavy` 三档语料规模下证明 sync/select telemetry、aligned representation metadata 与 restart 连续性（`npm run verify:foundation:ann-runtime:matrix`）。
 - [x] 现在已经有主机级 ANN matrix release-gate 验证：会把结构化报告写到 `output/verification/foundation-ann-runtime/`，并对 startup、ingest、diagnostics、query latency 与 targeted-query recall 执行门禁（`npm run verify:foundation:ann-runtime:release`）。
+- [x] Foundation readiness mandatory checks 现在已把 ANN matrix release gate（`npm run verify:foundation:ann-runtime:release`）与 baseline / matrix proofs 一起暴露。
 - [~] Phase-1 A9 现已具备 live `external_http` connector baseline、主机级 runtime 证明、主机级 workload matrix 证明和 matrix release-gate 证据；但在宣称生产闭环前仍需补齐多轮阈值收敛与多宿主校准。
 - [ ] 只有在同一套检查运行在发布级 graphdb/ANN 基线上之后，才能把这批新的 Phase-2 诊断面升级为发布级门禁。
 - [ ] 在当前 local-first 基线之上，把 tutor routing 继续推进到生产级多 provider 策略。

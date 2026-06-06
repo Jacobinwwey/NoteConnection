@@ -155,6 +155,7 @@
   - `src/notemd.server.integration.test.ts` 现已证明 A8 的重启耐久性：覆盖 ingest -> shutdown -> fresh module reload -> store diagnostics/query/readiness 连续性。
   - `scripts/verify-foundation-sqlite-runtime.js` 现已在当前 Windows 宿主上通过 `dist` runtime + packaged sidecar 双路径证明同一条 embedded sqlite 基线：覆盖 ingest -> store diagnostics/foundation readiness -> restart -> query 连续性。
   - `scripts/verify-foundation-sqlite-runtime.js --matrix` 现在也会在同样两条 runtime 路径上把主机级证明扩成 `smoke` / `medium` / `heavy` workload matrix：snapshot metadata、restart 连续性与多点 query 连续性都会持续为绿。
+  - `verify:foundation:sqlite-runtime:release` 现在为既有 sqlite soak 门禁提供稳定的 release 命名别名；foundation readiness mandatory checks 也已把 sqlite release proof 与 ANN matrix release proof 同较轻量的 baseline / matrix 命令一起暴露。
   - `local_vector` 的 external HTTP 加速已不再只是查询侧脚手架：适配器现已支持远端索引同步，在 diagnostics 中暴露 sync telemetry，并保留严格的 `fail_closed` 与 representation-alignment 语义。
   - `src/query_backend.external_http.integration.test.ts` 现已证明一条真实的 `external_http` connector 路径：覆盖 ingest -> 远端索引同步 -> query -> diagnostics。
   - `scripts/verify-foundation-ann-runtime.js` 现已在当前 Windows 宿主上通过 `dist` runtime + packaged sidecar 双路径证明同一条 `external_http` connector baseline：覆盖 ingest -> live query-backend diagnostics -> restart -> query 连续性。

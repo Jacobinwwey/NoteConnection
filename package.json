@@ -99,6 +99,7 @@
     "verify:foundation:sqlite-runtime:heavy": "npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-sqlite-runtime.js --heavy",
     "verify:foundation:sqlite-runtime:matrix": "npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-sqlite-runtime.js --matrix",
     "verify:foundation:sqlite-runtime:soak": "npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-sqlite-runtime.js --soak",
+    "verify:foundation:sqlite-runtime:release": "npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-sqlite-runtime.js --soak",
     "verify:core-real-machine": "node scripts/verify-core-real-machine-tests.js",
     "verify:core-real-machine:clean": "node scripts/verify-core-real-machine-tests.js --restore-sidecar-binaries",
     "verify:agent-workspace:browser": "node scripts/verify-agent-workspace-browser.js",

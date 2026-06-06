@@ -60,6 +60,17 @@
 - [x] `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_DYNAMIC_STRICT=1 node scripts/verify-agent-workspace-browser.js`
   - 通过
 
+### Foundation 发布门禁接线刷新（2026-06-06）
+
+- [x] `npm run verify:foundation:sqlite-runtime:release`
+  - 通过（`heavy` soak profile、5 个 restart cycles、`dist` runtime + packaged sidecar，结构化报告写入 `output/verification/foundation-sqlite-runtime/`）
+- [x] `npm test -- src/foundation.sqlite.runtime.contract.test.ts --runInBand`
+  - 通过
+- [x] `npm test -- src/learning/KnowledgeLearningPlatform.test.ts --runInBand --testNamePattern="foundation readiness"`
+  - 通过
+
+本次刷新新增了稳定的 sqlite soak release 命令名，并让 `getFoundationReadiness().mandatoryChecks` 同时暴露 sqlite 与 ANN 的 release verifier 命令。这不等于把 graphdb/ANN baseline 重新归类为 production-closed；多轮、多宿主的发布级证据仍是闭环标准。
+
 ### 这轮刷新新增证明了什么
 
 1. embedded `graphdb/sqlite` 基线现在也具备了当前 Windows 宿主上的可重复主机级运行时证明：

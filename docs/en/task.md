@@ -8,6 +8,7 @@
 - [x] Current code has been compared against the May RAG/agent/export plans and the result is now landed in `docs/solutions/architecture-progress-alignment-2026-06-06.md`.
 - [x] Scoped retrieval, grounded conversation, Program A-F substrate, export profiles, PNG-first Godot/mobile materialization, and rollout governance are documented as implemented or operational baselines according to current code evidence.
 - [~] graphdb/sqlite and ANN/external connector paths remain operational baselines, not production closure, until soak repetition, workload thresholds, recall/latency calibration, and strict rollout evidence are complete.
+- [x] Foundation readiness now exposes release-grade verifier commands for both sqlite soak evidence and ANN matrix release gates, so runtime operators no longer have to infer release checks from docs-only task lists.
 - [~] Architecture reduction is the next structural pressure point: `src/server.ts`, `KnowledgeLearningPlatform.ts`, and large frontend hosts still need ownership cuts.
 - [ ] Convert sqlite soak verification into repeated release evidence.
 - [ ] Complete ANN recall/latency and connector-budget calibration before promoting Phase-2 diagnostics to release gates.
@@ -46,6 +47,7 @@ Primary references:
 - [x] Phase-3 tutor telemetry, tutor trace/provider trend diagnostics, conversation memory, and memory-policy diagnostics now have concrete backend implementations.
 - [~] Phase-1 A8 has advanced to an embedded `graphdb/sqlite` operational baseline and now has restart-durability proof, host-level dist/runtime + packaged sidecar proof, and a host-level workload matrix across `smoke` / `medium` / `heavy`; soak / longer-duration / performance hardening still remain before production closure.
 - [~] Phase-1 A8 now also has a dedicated host-level soak/performance verifier path (`verify:foundation:sqlite-runtime:soak`) with structured report output, but release-grade closure still requires sustained threshold tuning and repeated host evidence rather than one passing command.
+- [x] Foundation readiness mandatory checks now include `verify:foundation:sqlite-runtime:release` and `verify:foundation:ann-runtime:release`, keeping operator-facing release checks aligned with package scripts.
 - [~] Phase-1 A9 now has a live `external_http` sync-backed connector baseline under real query traffic, host-level dist/runtime + packaged sidecar proof, a host-level workload matrix across `smoke` / `medium` / `heavy`, and matrix release-gate evidence, but repeated release-grade calibration still remains before production closure.
 - [x] `KnowledgeLearningPlatform.ts` no longer uses placeholder-backed runtime surfaces for query comparison, staleness, learning-quality, and session-plan-quality diagnostics.
 - [x] Server bootstrap now injects an active local `tutorAdapter`; the remaining tutor gap is production-proven multi-provider routing rather than default activation.
@@ -85,6 +87,8 @@ Primary references:
   - Highest-value host/runtime proof for the embedded sqlite graph backend across `smoke` / `medium` / `heavy` workloads.
 - `npm run verify:foundation:sqlite-runtime:soak`
   - Dedicated P1 host/runtime soak and performance gate for the embedded sqlite graph backend. Writes structured JSON reports under `output/verification/foundation-sqlite-runtime/`.
+- `npm run verify:foundation:sqlite-runtime:release`
+  - Release-named alias for the sqlite soak gate, intended for foundation readiness and release runbooks that need a stable release command name.
 - `npm run verify:foundation:ann-runtime:matrix`
   - Highest-value host/runtime proof for the `external_http` ANN connector across `smoke` / `medium` / `heavy` workloads.
 - `npm run verify:foundation:ann-runtime:release`

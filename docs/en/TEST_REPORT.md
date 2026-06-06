@@ -60,6 +60,17 @@
 - [x] `NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1 NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_DYNAMIC_STRICT=1 node scripts/verify-agent-workspace-browser.js`
   - PASS
 
+### Foundation Release Gate Wiring Refresh (2026-06-06)
+
+- [x] `npm run verify:foundation:sqlite-runtime:release`
+  - PASS (`heavy` soak profile, 5 restart cycles, `dist` runtime + packaged sidecar, structured report under `output/verification/foundation-sqlite-runtime/`)
+- [x] `npm test -- src/foundation.sqlite.runtime.contract.test.ts --runInBand`
+  - PASS
+- [x] `npm test -- src/learning/KnowledgeLearningPlatform.test.ts --runInBand --testNamePattern="foundation readiness"`
+  - PASS
+
+This refresh adds a stable release-named sqlite soak command and exposes both sqlite and ANN release verifier commands through `getFoundationReadiness().mandatoryChecks`. It does not reclassify the graphdb/ANN baseline as production-closed; repeated and multi-host release evidence remains the closure bar.
+
 ### What This Refresh Adds
 
 1. The embedded `graphdb/sqlite` baseline now also has repeatable host-level runtime proof on the current Windows machine:

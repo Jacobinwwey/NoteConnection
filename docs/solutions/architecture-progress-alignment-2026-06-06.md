@@ -90,6 +90,7 @@ Primary plan evidence:
 #### P1: Finish release-grade graphdb and ANN closure
 
 - Promote the sqlite soak verifier into repeated release evidence, not a one-off host proof.
+- Keep `verify:foundation:sqlite-runtime:release` as the release-facing alias for sqlite soak evidence, and keep foundation readiness mandatory checks aligned with both sqlite and ANN release gates.
 - Tighten graphdb connector health/budget thresholds with representative workloads.
 - Use the new ANN release-gate verifier path (`verify:foundation:ann-runtime:release`) as the structured evidence entry point for startup, ingest, diagnostics, query latency, and targeted-query recall.
 - Calibrate ANN recall/latency and external connector behavior under full workload matrices before promoting Phase-2 diagnostics to release gates.
@@ -227,6 +228,7 @@ Runtime and test gates for future code slices remain:
 #### P1：完成 graphdb 与 ANN 的发布级闭环
 
 - 把 sqlite soak verifier 推进为多轮 release evidence，而不是单次主机证明。
+- 将 `verify:foundation:sqlite-runtime:release` 保持为 sqlite soak 证据的发布侧别名，并让 foundation readiness mandatory checks 持续对齐 sqlite 与 ANN 两条 release gate。
 - 用代表性 workload 收紧 graphdb connector health/budget 阈值。
 - 将新的 ANN release-gate verifier 路径（`verify:foundation:ann-runtime:release`）作为 startup、ingest、diagnostics、query latency 与 targeted-query recall 的结构化证据入口。
 - 在把 Phase-2 diagnostics 升级为发布门禁之前，基于完整 workload matrix 完成 ANN recall/latency 与 external connector 行为校准。

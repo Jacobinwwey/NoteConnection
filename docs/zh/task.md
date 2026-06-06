@@ -4,6 +4,7 @@
 - [x] 当前代码已经与 5 月 RAG / agent / export 方案完成对比，结果已落盘到 `docs/solutions/architecture-progress-alignment-2026-06-06.md`。
 - [x] Scoped retrieval、grounded conversation、Program A-F 底座、export profiles、Godot/mobile PNG-first materialization 与 rollout governance 已按当前代码证据分别标注为“已实现”或“operational baseline”。
 - [~] graphdb/sqlite 与 ANN/external connector 路径仍是 operational baseline，不是 production closure；仍待 soak 多轮证据、工作负载阈值、recall/latency 校准与 strict rollout 证明。
+- [x] Foundation readiness 现在会同时暴露 sqlite soak 证据与 ANN matrix release gate 的发布级 verifier 命令，运行时运维人员不再需要只从 docs-only task list 推断 release 检查。
 - [~] 架构缩减是下一阶段结构性压力点：`src/server.ts`、`KnowledgeLearningPlatform.ts` 与大型前端宿主仍需要所有权切分。
 - [ ] 将 sqlite soak verification 推进为多轮 release evidence。
 - [ ] 完成 ANN recall/latency 与 connector-budget 校准后，再把 Phase-2 diagnostics 升级为发布门禁。
@@ -42,6 +43,7 @@
 - [x] Phase-3 中的 tutor telemetry、tutor trace/provider trend、conversation memory、memory-policy diagnostics 已有具体后端实现。
 - [~] Phase-1 A8 已推进到 embedded `graphdb/sqlite` operational baseline，并已具备 shutdown/fresh restart 的重启耐久性证明、主机级 dist/runtime + packaged sidecar 证明，以及覆盖 `smoke` / `medium` / `heavy` 的主机级 workload matrix；但 soak、长时段与性能级加固仍未达到生产闭环。
 - [~] Phase-1 A8 现在也新增了独立的主机级 soak/performance verifier（`verify:foundation:sqlite-runtime:soak`）并输出结构化报告，但发布级闭环仍需要持续阈值校准与多轮主机证据，而不是单次通过命令就结束。
+- [x] Foundation readiness mandatory checks 现在已包含 `verify:foundation:sqlite-runtime:release` 与 `verify:foundation:ann-runtime:release`，让运维侧 release checks 与 package scripts 保持一致。
 - [~] Phase-1 A9 现已具备 live `external_http` sync-backed connector baseline，并在真实 query 流量下得到证明；主机级 dist/runtime + packaged sidecar 证明、`smoke` / `medium` / `heavy` workload matrix 和 matrix release-gate 证据也已具备；但多轮发布级校准仍未完成。
 - [x] `KnowledgeLearningPlatform.ts` 中 query compare / staleness / learning-quality / session-plan-quality 运行面已不再返回 placeholder。
 - [x] `server.ts` 已注入激活态本地 `tutorAdapter`；剩余导师缺口已不再是默认激活，而是生产级多 provider 路由。
@@ -81,6 +83,8 @@
   - 当前 embedded sqlite 图后端最有价值的主机/runtime 证明，覆盖 `smoke` / `medium` / `heavy` 三档 workload。
 - `npm run verify:foundation:sqlite-runtime:soak`
   - 面向 P1 的专用 embedded sqlite 主机/runtime soak 与性能门禁，会把结构化 JSON 报告写到 `output/verification/foundation-sqlite-runtime/`。
+- `npm run verify:foundation:sqlite-runtime:release`
+  - sqlite soak 门禁的 release 命名别名，用于 foundation readiness 和发布 runbook 中需要稳定 release 命令名的场景。
 - `npm run verify:foundation:ann-runtime:matrix`
   - 当前 `external_http` ANN connector 最有价值的主机/runtime 证明，覆盖 `smoke` / `medium` / `heavy` 三档 workload。
 - `npm run verify:foundation:ann-runtime:release`
