@@ -2135,6 +2135,29 @@ body.agent-workspace-open .agent-workspace-drawer {
   overflow-wrap: anywhere;
 }
 
+.agent-pane-block--graph-focus {
+  display: grid;
+  gap: 12px;
+}
+
+.agent-focus-rendered-markdown {
+  color: #dbe7f3;
+  font-size: 0.9rem;
+  line-height: 1.62;
+}
+
+.agent-focus-rendered-markdown :is(h1, h2, h3, h4, h5, h6) {
+  color: #f8fbff;
+}
+
+.agent-focus-rendered-markdown [data-agent-focus-highlight="true"],
+.agent-focus-rendered-markdown .agent-focus-match {
+  background: rgba(125, 211, 252, 0.14);
+  box-shadow: inset 3px 0 0 rgba(125, 211, 252, 0.55);
+  border-radius: 4px;
+  padding-inline: 6px;
+}
+
 .agent-side-work-area {
   display: grid;
   grid-template-columns: 1fr;

@@ -29,12 +29,15 @@ Land the current code-vs-plan assessment into the active implementation plan whi
 3. **P2: `server.ts` ownership reduction**
    - Extract turn-cache, alert-trend, runbook bridge, rollout-profile, and connector helper logic behind explicit modules.
    - Preserve endpoint names and response compatibility while moving ownership.
+   - `src/routes/runtimeRunbookRouteOps.ts` now owns runtime runbook modular-route operation assembly; remaining P2 work should keep peeling route-layer composition out of `server.ts` without introducing pass-through facades around stateful logic.
+   - Apply the same ownership-reduction rule to oversized learning-runtime helpers when they are pure data composers; agent conversation reply composition is now a candidate/module boundary rather than permanent KLP inline logic.
 4. **P3: Learning-platform domain extraction**
    - Continue extracting ingest/query/conversation/mastery/quality/tutor/memory ownership only when the new owner hides state or enforces invariants.
    - Avoid pass-through facades around `KnowledgeLearningPlatform.ts`.
 5. **P4: Agent workspace contract hardening**
    - Keep stream-first + sync fallback + replay compatibility.
    - Expand typed `assistantBlocks` coverage only through optional payloads and parity-tested capabilities.
+   - Treat evidence rendering and evidence persistence as separate concerns: the current graph-focus pane now renders source markdown with in-place highlights, but future work still needs a durable evidence/claim surface rather than turn-local snippets only.
 6. **P5: Platform/export compatibility**
    - Keep Godot/mobile PNG-first materialization and export profile semantics explicit.
    - Keep core retrieval/synthesis free of shell-specific branches.
@@ -163,6 +166,8 @@ Align the active implementation plan with current code reality:
   - structured reply composition now splits the assistant output into overview / explanation / evidence summary / memory notice / action guidance blocks instead of emitting only one wrapped markdown answer.
   - those sections are now also semantically richer: the explanation is anchored to the strongest scoped knowledge point, the evidence summary reflects real scoped citations, and next-action guidance incorporates both scoped nodes and memory-action follow-through.
   - reply composition is now intent-aware as well: comparison-style and how-to-style prompts no longer reuse the exact same explanation/action phrasing as plain explanatory prompts.
+  - reply-composition ownership is now explicitly treated as extractable architecture surface rather than permanent `KnowledgeLearningPlatform.ts` inline logic, and the current `conversationComposer` module boundary exists to reduce KLP gravity without changing the public response contract.
+  - the grouped-knowledge-point and scoped-reply-section assembly path now has an explicit code owner in `src/learning/conversationComposer.ts`, so `KnowledgeLearningPlatform.ts` no longer has to own both session/runtime state and reply-composition detail in the same file.
 
 #### Next execution order
 

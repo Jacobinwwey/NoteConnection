@@ -9,11 +9,16 @@
 - [x] 现在也已接入严格的 foundation release-evidence 历史校验器，并通过 `foundation_release_evidence_history` 暴露到 foundation readiness：当前 Windows 宿主的 sqlite 与 ANN 都已有 3/3 份新鲜且满足 release contract 的报告，`verify:foundation:release-evidence:strict` 已可在本机通过；这只是 repeated-evidence 门禁通过，不是 production closure 结论。
 - [x] 现在新增 opt-in 的多宿主 release-evidence 门禁：`verify:foundation:release-evidence:multi-host` 会通过 `--min-host-count 2` / `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_HOST_COUNT` 审计有效新鲜 sqlite 与 ANN release 报告是否覆盖足够宿主。
 - [~] 架构缩减是下一阶段结构性压力点：`src/server.ts`、`KnowledgeLearningPlatform.ts` 与大型前端宿主仍需要所有权切分。
+- [x] agent conversation 的 reply composition 已不再要求永久内联在 `KnowledgeLearningPlatform.ts` 中；当前 `conversationComposer` 边界是 reply-synthesis 路径上的第一刀所有权切分。
+- [x] grouped knowledge point 与 scoped reply section 的组装路径现在已经有独立模块 owner：`src/learning/conversationComposer.ts`，并保持现有 `AgentConversationResponse` 契约与 Tauri/browser 渲染行为不变。
+- [x] runtime runbook 的 modular-route composition 已不再只以内联形式存在于 `src/server.ts`；`src/routes/runtimeRunbookRouteOps.ts` 现在负责 `/api/knowledge/runtime-capability-runbook/*` 的 route-op 组装，并保持当前响应契约不变。
+- [x] graph-focus 右侧 pane 现在会通过共享 markdown runtime 渲染原始知识点正文，并在原文内高亮命中段落，而不再只显示摘录列表。
 - [~] 将 sqlite soak verification 推进为多轮 release evidence；latest 报告的新鲜度、readiness 已暴露的严格历史审计、当前 Windows 宿主 strict 3/3 证据、以及 opt-in 多宿主审计工具都已自动化，但实际多宿主证据与阈值校准仍待补齐。
 - [ ] 完成 ANN recall/latency 与 connector-budget 校准后，再把 Phase-2 diagnostics 升级为发布门禁。
-- [ ] 将 conversation turn-cache、alert-trend、runbook bridge、rollout-profile、connector-helper 等逻辑从 `server.ts` 抽到明确模块。
+- [~] 将 conversation turn-cache、alert-trend、runbook bridge、rollout-profile、connector-helper 等逻辑从 `server.ts` 抽到明确模块。runtime runbook route-op owner 已经抽出，剩余的是更重的有状态 helper 面。
 - [ ] 只在新 owner 能隐藏状态或强制不变量时，继续拆分 learning-platform 领域所有权。
 - [ ] 扩展可选 typed `assistantBlocks` 覆盖面时，继续保留 `assistantMessage` 兼容。
+- [ ] 基于 `ref/ahadiff` 的对比结果，构建 durable evidence / claim projection 与 learning-loop follow-up surface，把 agent 的 evidence、runtime validation 与 review-state 治理推到更成熟层级。
 
 主要参考：
 

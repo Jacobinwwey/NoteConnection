@@ -30,12 +30,15 @@
 3. **P2：`server.ts` 所有权缩减**
    - 将 turn-cache、alert-trend、runbook bridge、rollout-profile、connector helper 等逻辑迁入明确模块。
    - 在迁移所有权时保留 endpoint 名称与响应兼容性。
+   - `src/routes/runtimeRunbookRouteOps.ts` 现在负责 runtime runbook 的 modular-route operation assembly；后续 P2 应继续把 route-layer composition 从 `server.ts` 中剥离出来，但不要给有状态逻辑加只转发的 facade。
+   - 对于体量过大的学习运行时 helper，同样适用这一规则：纯数据组装逻辑不应永久内联在 KLP 中，agent conversation reply composition 已经进入可独立模块化的边界。
 4. **P3：学习平台领域拆分**
    - 只有当新 owner 能隐藏状态或强制不变量时，才继续拆分 ingest/query/conversation/mastery/quality/tutor/memory 所有权。
    - 避免给 `KnowledgeLearningPlatform.ts` 包一层只转发的 facade。
 5. **P4：Agent Workspace 合同加固**
    - 保持 stream-first + sync fallback + replay 兼容。
    - 只通过可选 payload 与 parity-tested capability 扩展 typed `assistantBlocks` 覆盖面。
+   - 将 evidence rendering 与 evidence persistence 分开推进：当前 graph-focus pane 已经能在原文中高亮命中段落，但后续仍需要 durable evidence / claim surface，而不是只停留在单轮 snippet 载荷里。
 6. **P5：平台 / 导出兼容性**
    - 保持 Godot/mobile PNG-first materialization 与 export profile 语义显式化。
    - 保持核心 retrieval/synthesis 不包含 shell-specific 分支。
@@ -164,6 +167,8 @@
   - assistant 输出现在按 overview / explanation / evidence summary / memory notice / action guidance 分块组织，而不再只是单个 markdown answer 的包装。
   - 这些 section 现在也具备更实在的语义内容：explanation 会锚定最强 scoped knowledge point，evidence summary 会反映真实 scoped citation，next-action guidance 也会吸收 scoped node 与 memory action 的 follow-through 建议。
   - reply composition 现在也具备 query intent awareness：comparison-style 与 how-to-style prompt 不再复用与普通 explanatory prompt 完全相同的 explanation / action phrasing。
+  - reply composition 的所有权现在也已明确进入可抽取架构面：`conversationComposer` 模块边界用于降低 `KnowledgeLearningPlatform.ts` 重力井，同时不改变公开响应契约。
+  - grouped knowledge point 与 scoped reply section 的组装路径现在已有显式代码 owner：`src/learning/conversationComposer.ts`，因此 `KnowledgeLearningPlatform.ts` 不再需要在同一文件里同时承载 session/runtime state 与 reply-composition 细节。
 
 #### 下一步执行顺序
 

@@ -13,11 +13,16 @@
 - [x] A strict foundation release-evidence history verifier is now wired as `verify:foundation:release-evidence:strict`, and foundation readiness exposes it as `foundation_release_evidence_history`; the current Windows host now has 3/3 fresh release-contract reports for sqlite and ANN, so this repeated-evidence gate passes locally without becoming a production-closure claim.
 - [x] An opt-in multi-host release-evidence gate is now wired as `verify:foundation:release-evidence:multi-host`, using `--min-host-count 2` / `NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_HOST_COUNT` to audit host diversity across valid fresh sqlite and ANN release reports.
 - [~] Architecture reduction is the next structural pressure point: `src/server.ts`, `KnowledgeLearningPlatform.ts`, and large frontend hosts still need ownership cuts.
+- [x] Agent conversation reply composition is no longer required to live permanently inline inside `KnowledgeLearningPlatform.ts`; the current `conversationComposer` boundary is the first ownership cut on the reply-synthesis path.
+- [x] The grouped knowledge-point and scoped reply-section composition path now has a dedicated module owner in `src/learning/conversationComposer.ts`, while preserving the existing `AgentConversationResponse` contract and Tauri/browser rendering behavior.
+- [x] Runtime runbook modular-route composition is no longer inline-only inside `src/server.ts`; `src/routes/runtimeRunbookRouteOps.ts` now owns `/api/knowledge/runtime-capability-runbook/*` route-op assembly while preserving the current response contract.
+- [x] Graph-focus now renders the original markdown knowledge point through the shared markdown runtime and highlights matched passages in-place, instead of showing only a snippet list in the right pane.
 - [~] Convert sqlite soak verification into repeated release evidence; latest-report freshness, readiness-exposed strict history auditing, current Windows-host strict 3/3 evidence, and opt-in multi-host audit tooling are now automated, while actual multi-host evidence and threshold calibration remain pending.
 - [ ] Complete ANN recall/latency and connector-budget calibration before promoting Phase-2 diagnostics to release gates.
-- [ ] Extract conversation turn-cache, alert-trend, runbook bridge, rollout-profile, and connector-helper logic out of `server.ts` behind explicit modules.
+- [~] Extract conversation turn-cache, alert-trend, runbook bridge, rollout-profile, and connector-helper logic out of `server.ts` behind explicit modules. The runtime runbook route-op owner is now extracted; the remaining work is the heavier stateful helper surface.
 - [ ] Continue learning-platform domain extraction only where the new owner hides state or enforces invariants.
 - [ ] Preserve `assistantMessage` compatibility while expanding optional typed `assistantBlocks` coverage.
+- [ ] Build a durable evidence / claim projection and learning-loop follow-up surface, using the `ref/ahadiff` comparison as the new reference bar for agent evidence, runtime validation, and review-state maturity.
 
 Primary references:
 

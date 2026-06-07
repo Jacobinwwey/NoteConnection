@@ -28,6 +28,48 @@
 - `node --check src/frontend/workspace_panes.js`
 - `npm.cmd run build`
 
+## 2026-06-07 Graph-focus 原文渲染与 AhaDiff 对比
+
+本切片修正的是知识工作区右侧 graph-focus pane 的剩余交互偏差。
+此前虽然右侧 pane 会收到 `matchedSpans`，但实际只渲染了一组紧凑的命中摘录列表。
+这意味着用户看不到“原知识点的正常渲染结果”，也就无法在原文语境内查看命中段落是否被正确高亮。
+
+本切片的代码 / 方案对齐结果：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| 右侧 pane 渲染原知识点正文 | `src/frontend/workspace_panes.js` 现在会解析 `sourcePath`，通过 `NoteConnectionStorage.readContent()` 读取原始 markdown，再经共享的 `NoteConnectionMarkdownRuntime.renderMarkdownInto()` 渲染，而不再只显示摘录卡片。 | 已实现 |
+| 在正常渲染的原文中高亮命中段落 | graph-focus pane 现在会用 `matchedSpans[].snippet` 对渲染后的段落/块进行评分匹配，并在 `src/frontend/styles.css` 中通过 `.agent-focus-match` / `data-agent-focus-highlight` 施加适度高亮。 | 已实现 |
+| 保留 source 渲染不可用时的降级路径 | 当 source markdown、storage access 或 markdown runtime 不可用时，仍然保留旧的 summary + evidence list fallback，不破坏现有交互。 | 已保留 |
+| 保持与现有 Reader-aligned 渲染基底一致 | graph-focus pane 复用了当前 Tauri 回复区域已在使用的 markdown runtime owner，而不是再造一套独立的 markdown / mermaid / math 渲染链。 | 已实现 |
+
+本切片验证：
+
+- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts -t "graph focus|knowledge hits as file entries" --runInBand --no-cache`
+- `npm.cmd exec -- tsc --noEmit`
+
+### AhaDiff 对比与推进含义
+
+最新版 `ref/ahadiff` 对本项目后续推进最有价值的地方，不是某个单点 UI，而是它把 claims、evidence、runtime validation、review state 都做成了一等产品面，而不是隐藏在后端或一次性结果中的细节。
+
+1. 它把 evidence 当成可验证的产品对象，而不是回答字符串的附属说明。
+   `ref/ahadiff/src/ahadiff/claims/verify.py` 会把 claim 严格绑定到 file/hunk anchor，而不是接受松散文本解释。
+   `ref/ahadiff/viewer/src/api/schemas.ts` 也把 viewer 的 API 边界做成 runtime validation，而不是只信 TypeScript。
+2. 它把 review/challenge/adapt 做成 durable learning loop，而不是一次性输出。
+   `review.sqlite` 在 `ref/ahadiff/src/ahadiff/review/database.py` 中是明确的持久化边界，`ref/ahadiff/src/ahadiff/challenge/engine.py` 会把“没学会的点”重新转成后续学习信号。
+3. 它的 UI 结构按任务面和状态面分离，typed API + typed store + page/component owner 更清晰。
+   Shell、API schema、store、page/component 被拆开，避免一个大型宿主文件同时拥有太多产品状态与交互逻辑。
+
+这对本项目的推进方向意味着以下缺口更清晰：
+
+| 领域 | 当前 NoteConnection 位置 | 相比 AhaDiff 式成熟度的不足 | 下一步 |
+|---|---|---|---|
+| Evidence 模型 | 已有 scoped citation 与 `matchedSpans`，但 evidence 仍主要停留在单轮回答载荷里。 | 缺少能跨回合、跨学习任务复用的第一类 evidence ledger。 | 为 agent answer / 学习产物引入 durable evidence/claim projection。 |
+| Runtime contract validation | 已有 TypeScript 契约，但前端运行时边界的 schema validation 仍不均匀。 | UI 仍可能过度信任结构漂移的 payload。 | 在 agent-workspace API 边界继续扩展 runtime schema validation，尤其是 richer assistant payload 和后续学习状态端点。 |
+| Durable learning loop | 已有 conversation memory，但 challenge/review/adapt 的学习回路还很浅。 | 缺少把“未理解 / 弱回答”自动回写成后续学习任务或复习信号的机制。 | 构建显式 agent learning loop：answer -> inspect evidence -> mark confusion/gap -> schedule guided follow-up。 |
+| UI 信息架构 | Tauri workspace 正在改善，但大型 host 仍承载过多 orchestration，且 retrieval/action/diagnostics surface 仍较密。 | 交互面拆分与状态所有权还不如 AhaDiff 清晰。 | 继续从大型 workspace host 中抽离清晰 owner，并把高密度 diagnostics/learning surface 推向 typed state 模块。 |
+| 跨运行质量治理 | foundation 与 runbook gate 已存在，但 answer quality 与 learning effectiveness 还缺同等级持久治理。 | 缺少能稳定推动 agent 学习质量上升的 quality ratchet。 | 增加持久化的 answer-quality / evidence-coverage / follow-up-effectiveness history，用它驱动策略而不只做快照展示。 |
+
 ## 2026-06-06 active scope miss recovery 与 document-augmented RAG 修复
 
 本次补丁修复了 WebView 已在 `npm run tauri:dev:mini:gpu` 中运行时复现的 “what is water glass?” 失败。
@@ -90,7 +132,7 @@
 | Resource/index/workspace/session/memory/export 持久化底座 | Program A-F 已在 `src/resources/`、`src/indexing/`、`src/workspace/`、`src/session/`、`src/workflows/`、`src/memory/`、`src/export/` 中落地。 | 已实现 |
 | 平台壳层分离 | `PlatformCapabilities`、`RenderMaterializer`、render routes、workspace export bundle 已显式化桌面/Godot/mobile materialization 决策。Godot 仍保持 PNG-first，因为直接 SVG 导入不可靠。 | 已实现 |
 | graphdb/ANN 运行时生产闭环 | graphdb/sqlite、external graphdb HTTP、local-vector rollout controls、external HTTP vector acceleration、runtime capability checks 与 rollout profile payloads 已存在。 | Operational，但未 production-closed |
-| 唯一路由 / 运行时所有权 | modular route registration 已存在，但 conversation、runbook、turn-cache、rollout、fallback 编排仍大量留在 `src/server.ts`。 | 部分完成 |
+| 唯一路由 / 运行时所有权 | modular route registration 已存在，runtime runbook 的 modular-route operation 现在也已有独立 owner `src/routes/runtimeRunbookRouteOps.ts`，但 conversation、turn-cache、rollout、fallback 编排仍大量留在 `src/server.ts`。 | 部分完成 |
 | 架构缩减 | 当前行数扫描显示 `src/server.ts` 约 15,920 行、`src/learning/KnowledgeLearningPlatform.ts` 约 10,351 行；主要前端宿主文件仍偏大。 | 落后于目标 |
 
 架构推进图：
@@ -191,6 +233,13 @@ Tauri-first reply rendering 基线已交付：
 - 这些 section 现在也会吃进真实 scoped 数据，而不再只是模板填充：explanation 会锚定最强 scoped point，evidence summary 反映真实 citation，action guidance 还会带上 memory follow-through hint，
 - reply policy 现在也具备 intent awareness，因此 comparison-style 与 how-to-style prompt 可以把 explanation 和 next-action section 引导成不同语气与用途，
 - 这意味着即便底层知识命中集合没变，Tauri 中的 agent 输出也已经可以在结构上明显不同。
+
+在这条渲染/语义基线之上，当前架构质量也向前推进了一步：
+
+- agent-conversation reply composition 已不再被视为永久内联在 `KnowledgeLearningPlatform.ts` 中的所有权，
+- 新的 `src/learning/conversationComposer.ts` 现在负责 grouped knowledge-point 组装与 scoped reply section synthesis，
+- 这在不改变公开 `AgentConversationResponse` 契约、也不改现有 Tauri/browser 渲染路径的前提下，降低了 KLP 的局部压力。
+- 这次抽取刻意保持为“小而明确的所有权切分”，而不是再加一层抽象：KLP 继续持有 runtime state 与 persistence，新的模块只持有纯数据组合逻辑。
 
 当前剩余缺口已经收窄为：
 

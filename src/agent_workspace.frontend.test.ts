@@ -888,9 +888,16 @@ function loadWorkspacePanesHarness(options: { withI18n?: boolean } = {}): Harnes
     if (options.withI18n) {
         sandbox.window.i18n = createI18nStub();
     }
+    sandbox.window.__NC_RUNTIME_CAPS = {};
 
     loadScriptIntoSandbox(sandbox, markdownRuntimeScriptPath, 'markdown_runtime.js');
     loadScriptIntoSandbox(sandbox, scriptPath, 'workspace_panes.js');
+
+    sandbox.window.NoteConnectionStorage = {
+        createProvider: () => ({
+            readContent: jest.fn(async () => ''),
+        }),
+    };
 
     const controller = sandbox.window.NoteConnectionWorkspacePanes;
     if (!controller) {
@@ -2419,9 +2426,64 @@ describe('workspace panes controller', () => {
         const focusText = String(graphBody?.textContent || '');
         expect(focusText).toContain('Water Glass');
         expect(focusText).toContain('Definition');
-        expect(focusText).toContain('A water glass is a physical system');
         expect(focusText).toContain('Thermal exchange');
-        expect(focusText).toContain('The water glass exchanges heat');
+        expect(focusText).toContain('Knowledge_Base/waterglass/water glass.md:1');
+    });
+
+    test('renders graph focus from source markdown and highlights matched passages in place', async () => {
+        const { controller, document, window } = loadWorkspacePanesHarness();
+        const readContent = jest.fn(async () => [
+            '# Definition',
+            '',
+            'A water glass is a physical system often used in basic thermodynamics examples.',
+            '',
+            'The water glass exchanges heat with the environment.',
+        ].join('\n'));
+        const renderMarkdownInto = jest.fn(async (container: HTMLElement, markdown: string) => {
+            container.innerHTML = `
+                <article class="reader-block">
+                    <h2>Definition</h2>
+                    <p>A water glass is a physical system often used in basic thermodynamics examples.</p>
+                    <p>The water glass exchanges heat with the environment.</p>
+                </article>
+            `;
+        });
+
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({
+                readContent,
+            }),
+        };
+        const markdownRuntime = (window as any).NoteConnectionMarkdownRuntime || {};
+        markdownRuntime.renderMarkdownInto = renderMarkdownInto;
+        (window as any).NoteConnectionMarkdownRuntime = markdownRuntime;
+
+        controller.init();
+        controller.openGraphFocusPane({
+            atomId: 'atom_water_glass',
+            title: 'Water Glass',
+            sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            matchedSpans: [
+                {
+                    title: 'Definition',
+                    snippet: 'A water glass is a physical system often used in basic thermodynamics examples.',
+                    sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                    startLine: 3,
+                },
+            ],
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        expect(readContent).toHaveBeenCalledWith('Knowledge_Base/waterglass/water glass.md');
+        expect(renderMarkdownInto).toHaveBeenCalled();
+
+        const graphBody = document.getElementById('agent-graph-focus-body');
+        expect(String(graphBody?.textContent || '')).toContain('A water glass is a physical system often used in basic thermodynamics examples.');
+        const highlighted = Array.from(graphBody?.querySelectorAll('[data-agent-focus-highlight="true"]') || []);
+        expect(highlighted.length).toBeGreaterThan(0);
+        expect(String(highlighted[0]?.textContent || '')).toContain('A water glass is a physical system');
     });
 
     test('keeps conversation card append kinds aligned with rerender registry', () => {

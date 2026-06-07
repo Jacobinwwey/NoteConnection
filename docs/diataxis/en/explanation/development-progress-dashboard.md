@@ -29,6 +29,48 @@ Verification for this slice:
 - `node --check src/frontend/workspace_panes.js`
 - `npm.cmd run build`
 
+## 2026-06-07 Graph-Focus Source Rendering and AhaDiff Comparison
+
+This slice corrects a remaining mismatch between the intended Knowledge Workspace interaction and the actual right-side graph-focus pane behavior.
+The earlier implementation opened the right pane with `matchedSpans`, but only rendered a compact evidence list.
+That meant the user could not inspect the original knowledge point in its normal rendered form and therefore could not see matched passages highlighted in-place.
+
+Code-vs-plan reconciliation for this slice:
+
+| Requirement | Current implementation evidence | Progress call |
+|---|---|---|
+| Render the original knowledge point in the right pane | `src/frontend/workspace_panes.js` now resolves `sourcePath`, reads the original markdown through `NoteConnectionStorage.readContent()`, and renders it through the shared `NoteConnectionMarkdownRuntime.renderMarkdownInto()` path instead of falling back to a snippet-only card. | Implemented |
+| Highlight matched passages inside the normal rendered document | The graph-focus pane now scores rendered paragraphs/blocks against `matchedSpans[].snippet` terms and applies a restrained highlight style in `src/frontend/styles.css` via `.agent-focus-match` / `data-agent-focus-highlight`. | Implemented |
+| Preserve backward compatibility when source rendering is unavailable | The previous summary + evidence-list view remains the fallback path when source markdown, storage access, or markdown runtime rendering is unavailable. | Preserved |
+| Keep the pane inside the same Reader-aligned rendering substrate | The focus pane reuses the same markdown runtime owner already used by the Tauri reply surface rather than creating a second markdown/mermaid/math render stack. | Implemented |
+
+Verification for this slice:
+
+- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts -t "graph focus|knowledge hits as file entries" --runInBand --no-cache`
+- `npm.cmd exec -- tsc --noEmit`
+
+### AhaDiff comparison and implications
+
+The latest `ref/ahadiff` codebase makes three moves that are directly relevant to this project's next phase.
+
+1. It treats claims, evidence, runtime validation, and review state as first-class product surfaces, not hidden backend details.
+   Evidence in `ref/ahadiff/src/ahadiff/claims/verify.py` is verified against concrete file/hunk anchors instead of being treated as a loose text summary problem.
+   Viewer-side API boundaries are runtime-validated in `ref/ahadiff/viewer/src/api/schemas.ts`, which prevents UI drift from silently accepting malformed payloads.
+2. It productizes memory/review/challenge loops as durable state, not just one-shot outputs.
+   `review.sqlite` is guarded as a real persistence boundary in `ref/ahadiff/src/ahadiff/review/database.py`, and the challenge loop in `ref/ahadiff/src/ahadiff/challenge/engine.py` converts missed understanding back into new learning signals.
+3. Its UI is organized around explicit task surfaces with typed stores, typed API clients, and route-level product pages.
+   The viewer separates shell, API schemas, Zustand state, and focused pages/components rather than letting one large host file own too much of the interaction model.
+
+For this project, that comparison sharpens the next gaps:
+
+| Area | Current NoteConnection position | Gap vs AhaDiff-style maturity | Next move |
+|---|---|---|---|
+| Evidence model | Scoped citations and `matchedSpans` exist, but evidence is still mostly conversation-output metadata. | Missing a first-class evidence ledger that can survive beyond one answer turn and be reused by later agent flows. | Introduce a durable evidence/claim projection for agent answers and learning artifacts. |
+| Runtime contract validation | TypeScript contracts exist, but runtime response validation is still uneven across the frontend boundary. | UI can still trust structurally malformed payloads too often. | Expand runtime schema validation at the agent-workspace API boundary, especially for richer assistant payloads and future learning-state endpoints. |
+| Durable learning loop | Conversation memory exists, but challenge/review/adaptation loops are still shallow. | Missing a mechanism that turns failed understanding or weak answers back into future tasks/review signals. | Build an explicit agent learning loop: answer -> inspect evidence -> mark confusion/gap -> schedule guided follow-up. |
+| UI information architecture | Tauri workspace is improving, but large host files still own too much orchestration and the workspace still mixes retrieval, action, and diagnostics surfaces densely. | Interaction surfaces are less modular and less stateful than AhaDiff's page/store split. | Continue extracting workspace surfaces behind clear owners and move high-density diagnostics/learning views toward typed state modules. |
+| Cross-run quality governance | Foundation and runbook gates exist, but answer quality and learning effectiveness are not yet tracked with the same durability. | Missing a stable quality ratchet for agent-grounded learning outcomes. | Add persistent answer-quality / evidence-coverage / follow-up-effectiveness history that can drive policy rather than just reporting snapshots. |
+
 ## 2026-06-06 Active-Scope Miss Recovery and Document-Augmented RAG Patch
 
 This patch resolves the live "what is water glass?" failure that reproduced while the WebView was already running on `npm run tauri:dev:mini:gpu`.
@@ -91,7 +133,7 @@ Code-vs-plan reconciliation:
 | Durable resource/index/workspace/session/memory/export substrate | Program A-F code exists under `src/resources/`, `src/indexing/`, `src/workspace/`, `src/session/`, `src/workflows/`, `src/memory/`, and `src/export/`. | Implemented |
 | Platform shell separation | `PlatformCapabilities`, `RenderMaterializer`, render routes, and workspace export bundles keep desktop/Godot/mobile materialization decisions explicit. Godot remains PNG-first because direct SVG import is unsafe. | Implemented |
 | Runtime graphdb/ANN production closure | graphdb/sqlite, external graphdb HTTP, local-vector rollout controls, external HTTP vector acceleration, runtime capability checks, and rollout profile payloads exist. | Operational, not production-closed |
-| Single route/runtime ownership | modular route registration exists, but conversation, runbook, turn-cache, rollout, and fallback orchestration still carry heavy ownership inside `src/server.ts`. | Partially complete |
+| Single route/runtime ownership | modular route registration exists, and runtime runbook modular-route operations now have a dedicated owner in `src/routes/runtimeRunbookRouteOps.ts`, but conversation, turn-cache, rollout, and other stateful fallback/orchestration logic still carry heavy ownership inside `src/server.ts`. | Partially complete |
 | Architecture reduction | Current line-count scan shows `src/server.ts` about 15,920 lines and `src/learning/KnowledgeLearningPlatform.ts` about 10,351 lines; major frontend hosts remain large. | Behind target |
 
 Architecture progress map:
@@ -192,6 +234,13 @@ The next real improvement beyond that baseline is now also in code:
 - those sections now also consume real scoped data instead of only templated filler: explanation is anchored to the strongest scoped point, evidence summary reflects actual citations, and action guidance now carries memory follow-through hints,
 - the reply policy is now also intent-aware, so comparison-style and how-to-style prompts can shape the explanation and next-action sections differently,
 - which means the Tauri agent surface can now look materially different even when the underlying knowledge result set is unchanged.
+
+The next architecture-quality improvement beyond that rendering/semantics baseline is also now started:
+
+- the agent-conversation reply composition path is no longer treated as permanent inline `KnowledgeLearningPlatform.ts` ownership,
+- a dedicated `src/learning/conversationComposer.ts` module now owns grouped knowledge-point composition plus scoped reply-section synthesis,
+- which lowers KLP pressure without changing the public `AgentConversationResponse` contract or the existing Tauri/browser rendering path.
+- this is intentionally a small, ownership-oriented extraction rather than a new abstraction layer: KLP still owns runtime state and persistence, while the new module owns pure data composition only.
 
 The next gap is narrower now:
 

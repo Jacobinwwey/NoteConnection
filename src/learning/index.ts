@@ -6,5 +6,6 @@ export * from './tutorAdapter';
 export * from './queryBackend';
 export * from './vectorAccelerationAdapter';
 export * from './runtimeCapability';
+export * from './conversationComposer';
 export * from './errors';
 export * from './domains';

@@ -201,53 +201,192 @@
         }
     }
 
-    function renderGraphFocusBody(payload) {
-        const body = getPaneBodyElement('graph-focus');
-        if (!body) {
-            return;
+    function getStorageProvider() {
+        if (!window.NoteConnectionStorage || typeof window.NoteConnectionStorage.createProvider !== 'function') {
+            return null;
         }
-        const title = String(
+        return window.NoteConnectionStorage.createProvider({
+            runtimeCaps: window.__NC_RUNTIME_CAPS || {},
+        });
+    }
+
+    function normalizeMatchedSpans(spans) {
+        return Array.isArray(spans)
+            ? spans
+                .map((span) => span && typeof span === 'object' ? span : null)
+                .filter(Boolean)
+            : [];
+    }
+
+    function buildGraphFocusTitle(payload) {
+        return String(
             payload.title
             || payload.atomId
             || payload.nodeId
             || translate('agentWorkspace.graphFocus.title', 'Graph Focus')
         ).trim();
-        const summary = String(payload.summary || '').trim();
-        const matchedSpans = Array.isArray(payload.matchedSpans)
-            ? payload.matchedSpans
-                .map((span) => span && typeof span === 'object' ? span : null)
-                .filter(Boolean)
-            : [];
-        const matchedSpanHtml = matchedSpans.length > 0
-            ? `
-                <div class="agent-focus-hit-list">
-                    <div class="agent-focus-hit-heading">${escapeHtml(translate('agentWorkspace.knowledge.matchedEvidence', 'Matched evidence'))}</div>
-                    ${matchedSpans.map((span) => {
-                        const spanTitle = String(span.title || '').trim();
-                        const spanSnippet = String(span.snippet || '').trim();
-                        const spanSourcePath = String(span.sourcePath || '').trim();
-                        const spanLocation = spanSourcePath
-                            ? `${spanSourcePath}${span.startLine ? `:${span.startLine}` : ''}`
-                            : '';
-                        return `
-                            <article class="agent-focus-hit" data-agent-focus-hit="true">
-                                ${spanTitle ? `<div class="agent-focus-hit-title">${escapeHtml(spanTitle)}</div>` : ''}
-                                ${spanSnippet ? `<div class="agent-focus-hit-snippet">${escapeHtml(spanSnippet)}</div>` : ''}
-                                ${spanLocation ? `<div class="agent-focus-hit-meta">${escapeHtml(spanLocation)}</div>` : ''}
-                            </article>
-                        `;
-                    }).join('')}
-                </div>
-            `
-            : '';
-        body.innerHTML = `
-            <div class="agent-pane-block">
-                <div class="agent-pane-title">${escapeHtml(title)}</div>
-                <div class="agent-pane-meta">${escapeHtml(String(payload.atomId || payload.nodeId || ''))}</div>
-                <p class="agent-pane-summary">${escapeHtml(summary || translate('agentWorkspace.graphFocus.noSummary', 'No summary available.'))}</p>
-                ${matchedSpanHtml}
+    }
+
+    function buildGraphFocusEvidenceListHtml(matchedSpans) {
+        if (matchedSpans.length <= 0) {
+            return '';
+        }
+        return `
+            <div class="agent-focus-hit-list">
+                <div class="agent-focus-hit-heading">${escapeHtml(translate('agentWorkspace.knowledge.matchedEvidence', 'Matched evidence'))}</div>
+                ${matchedSpans.map((span) => {
+                    const spanTitle = String(span.title || '').trim();
+                    const spanSourcePath = String(span.sourcePath || '').trim();
+                    const spanLocation = spanSourcePath
+                        ? `${spanSourcePath}${span.startLine ? `:${span.startLine}` : ''}`
+                        : '';
+                    return `
+                        <article class="agent-focus-hit" data-agent-focus-hit="true">
+                            ${spanTitle ? `<div class="agent-focus-hit-title">${escapeHtml(spanTitle)}</div>` : ''}
+                            ${spanLocation ? `<div class="agent-focus-hit-meta">${escapeHtml(spanLocation)}</div>` : ''}
+                        </article>
+                    `;
+                }).join('')}
             </div>
         `;
+    }
+
+    function buildGraphFocusFallbackHtml(payload, matchedSpans) {
+        const summary = String(payload.summary || '').trim();
+        return `
+            <div class="agent-pane-block">
+                <div class="agent-pane-title">${escapeHtml(buildGraphFocusTitle(payload))}</div>
+                <div class="agent-pane-meta">${escapeHtml(String(payload.atomId || payload.nodeId || ''))}</div>
+                <p class="agent-pane-summary">${escapeHtml(summary || translate('agentWorkspace.graphFocus.noSummary', 'No summary available.'))}</p>
+                ${buildGraphFocusEvidenceListHtml(matchedSpans)}
+            </div>
+        `;
+    }
+
+    function buildGraphFocusLoadingHtml(payload) {
+        return `
+            <div class="agent-pane-block">
+                <div class="agent-pane-title">${escapeHtml(buildGraphFocusTitle(payload))}</div>
+                <div class="agent-pane-meta">${escapeHtml(String(payload.sourcePath || payload.atomId || payload.nodeId || ''))}</div>
+                <p class="agent-pane-summary">${escapeHtml(translate('reader_loading', 'Loading reader content...'))}</p>
+            </div>
+        `;
+    }
+
+    function buildGraphFocusRenderedHtml(payload, matchedSpans) {
+        return `
+            <div class="agent-pane-block agent-pane-block--graph-focus">
+                <div class="agent-pane-title">${escapeHtml(buildGraphFocusTitle(payload))}</div>
+                <div class="agent-pane-meta">${escapeHtml(String(payload.sourcePath || payload.atomId || payload.nodeId || ''))}</div>
+                <div class="agent-focus-rendered-markdown" data-agent-focus-rendered-markdown="true"></div>
+                ${buildGraphFocusEvidenceListHtml(matchedSpans)}
+            </div>
+        `;
+    }
+
+    function collectGraphFocusHighlightTerms(matchedSpans) {
+        return matchedSpans
+            .map((span) => String(span && span.snippet || '').replace(/\s+/g, ' ').trim())
+            .filter((snippet) => snippet.length >= 8)
+            .map((snippet) => snippet.slice(0, 240));
+    }
+
+    function scoreGraphFocusNodeText(text, terms) {
+        const normalizedText = String(text || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        if (!normalizedText) {
+            return 0;
+        }
+        let score = 0;
+        terms.forEach((term) => {
+            const normalizedTerm = String(term || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            if (!normalizedTerm) {
+                return;
+            }
+            if (normalizedText.includes(normalizedTerm)) {
+                score += normalizedTerm.length + 1000;
+                return;
+            }
+            normalizedTerm
+                .split(/[.;,:()[\]{}]/)
+                .map((part) => part.trim())
+                .filter((part) => part.length >= 8)
+                .forEach((fragment) => {
+                    if (normalizedText.includes(fragment)) {
+                        score += fragment.length;
+                    }
+                });
+        });
+        return score;
+    }
+
+    function highlightGraphFocusRenderedMarkdown(container, matchedSpans) {
+        if (!container) {
+            return 0;
+        }
+        const highlightTerms = collectGraphFocusHighlightTerms(matchedSpans);
+        if (highlightTerms.length <= 0) {
+            return 0;
+        }
+        const candidates = Array.from(container.querySelectorAll('p, li, blockquote, pre, .reader-block, h1, h2, h3, h4, h5, h6'));
+        let highlighted = 0;
+        candidates.forEach((candidate) => {
+            candidate.classList.remove('agent-focus-match');
+            candidate.removeAttribute('data-agent-focus-highlight');
+            const score = scoreGraphFocusNodeText(candidate.textContent || '', highlightTerms);
+            if (score <= 0) {
+                return;
+            }
+            candidate.classList.add('agent-focus-match');
+            candidate.setAttribute('data-agent-focus-highlight', 'true');
+            highlighted += 1;
+        });
+        return highlighted;
+    }
+
+    async function renderGraphFocusSourceMarkdown(body, payload, matchedSpans, renderToken) {
+        const sourcePath = String(payload.sourcePath || '').trim();
+        const markdownRuntime = resolveMarkdownRuntime();
+        const storageProvider = getStorageProvider();
+        if (!body || !sourcePath || !markdownRuntime || typeof markdownRuntime.renderMarkdownInto !== 'function' || !storageProvider || typeof storageProvider.readContent !== 'function') {
+            return false;
+        }
+
+        body.innerHTML = buildGraphFocusRenderedHtml(payload, matchedSpans);
+        const renderedHost = body.querySelector('[data-agent-focus-rendered-markdown="true"]');
+        if (!renderedHost) {
+            return false;
+        }
+
+        try {
+            const markdownSource = await storageProvider.readContent(sourcePath);
+            if (renderToken !== state.graphFocusRenderToken || !state.panes['graph-focus'].open) {
+                return true;
+            }
+            await markdownRuntime.renderMarkdownInto(renderedHost, String(markdownSource || ''));
+            if (renderToken !== state.graphFocusRenderToken || !state.panes['graph-focus'].open) {
+                return true;
+            }
+            highlightGraphFocusRenderedMarkdown(renderedHost, matchedSpans);
+            return true;
+        } catch (_error) {
+            return false;
+        }
+    }
+
+    async function renderGraphFocusBody(payload) {
+        const body = getPaneBodyElement('graph-focus');
+        if (!body) {
+            return;
+        }
+        const matchedSpans = normalizeMatchedSpans(payload.matchedSpans);
+        state.graphFocusRenderToken += 1;
+        const renderToken = state.graphFocusRenderToken;
+        body.innerHTML = buildGraphFocusLoadingHtml(payload);
+        const rendered = await renderGraphFocusSourceMarkdown(body, payload, matchedSpans, renderToken);
+        if (rendered || renderToken !== state.graphFocusRenderToken || !state.panes['graph-focus'].open) {
+            return;
+        }
+        body.innerHTML = buildGraphFocusFallbackHtml(payload, matchedSpans);
     }
 
     function resolveKnowledgePointSourcePath(item) {
@@ -289,6 +428,7 @@
             nodeId: String(item && item.documentId || atomIds[0] || '').trim(),
             title: String(item && item.title || resolveKnowledgePointFileName(item)).trim(),
             summary: String(item && (item.summary || item.evidenceSnippet) || '').trim(),
+            sourcePath: resolveKnowledgePointSourcePath(item),
             matchedSpans,
         };
     }
@@ -2367,6 +2507,7 @@
     const state = {
         initialized: false,
         promotionPane: null,
+        graphFocusRenderToken: 0,
         learningPathWorkspace: {
             mounted: false,
             nodes: {},

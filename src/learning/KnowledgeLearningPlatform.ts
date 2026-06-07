@@ -118,6 +118,11 @@ import type {
     WorkspaceExportBundleRequest,
     WorkspaceScopedMemoryExportRecord,
 } from '../export/types';
+import {
+    buildScopedConversationReply,
+    collectAgentConversationAtomIds,
+    mergeAgentConversationKnowledgePoints,
+} from './conversationComposer';
 
 type ParsedAtomDraft = {
     stableKey: string;
@@ -7630,166 +7635,6 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         ];
     }
 
-    private buildKnowledgeCitation(item: KnowledgeQueryItem, index: number): KnowledgeCitation {
-        const atom = item.atom;
-        const evidence = item.evidenceSpans[0];
-        return {
-            citationId: String(evidence?.id || `citation_${atom.id}_${index + 1}`).trim(),
-            atomId: atom.id,
-            documentId: atom.documentId,
-            sourcePath: atom.sourcePath,
-            title: atom.title,
-            snippet: normalizeWhitespace(String(
-                evidence?.snippet
-                || atom.content
-                || atom.title
-                || ''
-            ).slice(0, 280)),
-            startLine: evidence?.startLine,
-            endLine: evidence?.endLine,
-            score: Number(Number(item.score || 0).toFixed(4)),
-        };
-    }
-
-    private buildAgentConversationKnowledgePoint(
-        item: KnowledgeQueryItem,
-        index: number
-    ): AgentConversationKnowledgePoint {
-        const atom = item.atom;
-        const citation = this.buildKnowledgeCitation(item, index);
-        const summary = normalizeWhitespace(String(atom.content || atom.title || '').slice(0, 240)) || atom.title;
-        return {
-            atomId: atom.id,
-            atomIds: [atom.id],
-            documentId: atom.documentId,
-            sourcePath: atom.sourcePath,
-            title: atom.title,
-            summary,
-            evidenceSnippet: citation.snippet || summary || atom.title,
-            score: Number(Number(item.score || 0).toFixed(4)),
-            citation,
-            citations: citation ? [citation] : [],
-            matchedSpans: [
-                {
-                    atomId: atom.id,
-                    title: atom.title,
-                    snippet: citation.snippet || summary || atom.title,
-                    sourcePath: atom.sourcePath,
-                    startLine: citation.startLine,
-                    endLine: citation.endLine,
-                    score: Number(Number(item.score || 0).toFixed(4)),
-                    citation,
-                },
-            ],
-            matchCount: 1,
-            capabilities: this.buildAgentWorkspaceCapabilities(atom.id),
-        };
-    }
-
-    private mergeAgentConversationKnowledgePoints(items: KnowledgeQueryItem[]): AgentConversationKnowledgePoint[] {
-        const groups = new Map<string, {
-            point: AgentConversationKnowledgePoint;
-            atomIds: Set<string>;
-            citationKeys: Set<string>;
-            spanKeys: Set<string>;
-        }>();
-
-        items.forEach((item, index) => {
-            const atom = item.atom;
-            const groupKey = String(atom.documentId || atom.id || `atom_${index}`).trim();
-            const citation = this.buildKnowledgeCitation(item, index);
-            const snippet = citation.snippet
-                || normalizeWhitespace(String(atom.content || atom.title || '').slice(0, 280))
-                || atom.title;
-            let group = groups.get(groupKey);
-            if (!group) {
-                const point = this.buildAgentConversationKnowledgePoint(item, index);
-                point.citation = citation;
-                point.citations = [];
-                point.matchedSpans = [];
-                point.atomIds = [];
-                point.matchCount = 0;
-                group = {
-                    point,
-                    atomIds: new Set<string>(),
-                    citationKeys: new Set<string>(),
-                    spanKeys: new Set<string>(),
-                };
-                groups.set(groupKey, group);
-            }
-
-            group.atomIds.add(atom.id);
-            group.point.atomIds = Array.from(group.atomIds.values());
-            group.point.score = Math.max(group.point.score, Number(Number(item.score || 0).toFixed(4)));
-
-            const citationKey = [
-                citation.documentId,
-                citation.sourcePath,
-                citation.startLine || '',
-                citation.endLine || '',
-                citation.snippet,
-            ].join('|');
-            if (!group.citationKeys.has(citationKey)) {
-                group.citationKeys.add(citationKey);
-                group.point.citations = [...(group.point.citations || []), citation];
-                if (!group.point.citation) {
-                    group.point.citation = citation;
-                }
-            }
-
-            const spanKey = [
-                atom.id,
-                citation.startLine || '',
-                citation.endLine || '',
-                snippet,
-            ].join('|');
-            if (!group.spanKeys.has(spanKey)) {
-                group.spanKeys.add(spanKey);
-                group.point.matchedSpans = [
-                    ...(group.point.matchedSpans || []),
-                    {
-                        atomId: atom.id,
-                        title: atom.title,
-                        snippet,
-                        sourcePath: atom.sourcePath,
-                        startLine: citation.startLine,
-                        endLine: citation.endLine,
-                        score: Number(Number(item.score || 0).toFixed(4)),
-                        citation,
-                    },
-                ];
-                group.point.matchCount = group.point.matchedSpans.length;
-            }
-        });
-
-        return Array.from(groups.values()).map((group) => {
-            const citations = group.point.citations || [];
-            const spans = group.point.matchedSpans || [];
-            return {
-                ...group.point,
-                citation: group.point.citation || citations[0] || null,
-                citations,
-                matchedSpans: spans,
-                matchCount: spans.length,
-                evidenceSnippet: spans[0]?.snippet || group.point.evidenceSnippet,
-            };
-        });
-    }
-
-    private collectAgentConversationAtomIds(knowledgePoints: AgentConversationKnowledgePoint[]): string[] {
-        const atomIds = new Set<string>();
-        knowledgePoints.forEach((point) => {
-            const groupedAtomIds = Array.isArray(point.atomIds) && point.atomIds.length > 0
-                ? point.atomIds
-                : [point.atomId];
-            groupedAtomIds
-                .map((atomId) => String(atomId || '').trim())
-                .filter(Boolean)
-                .forEach((atomId) => atomIds.add(atomId));
-        });
-        return Array.from(atomIds.values());
-    }
-
     private filterConversationMemoryRecordsByScope(
         records: AgentConversationMemoryRecord[],
         scope: KnowledgeQueryResolvedScope
@@ -7818,352 +7663,6 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 || (scopedCorpus && tags.includes(scopedCorpus))
             );
         });
-    }
-
-    private escapeRegExpLiteral(value: string): string {
-        return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    }
-
-    private cleanConversationAnswerCandidate(value: string, point: AgentConversationKnowledgePoint): string {
-        let cleaned = String(value || '')
-            .replace(/```[\s\S]*?```/g, ' ')
-            .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-            .replace(/[*_~`>#|]/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-        const title = normalizeWhitespace(String(point.title || '').replace(/[#*_~`]/g, ' '));
-        if (title) {
-            cleaned = cleaned
-                .replace(new RegExp(`^${this.escapeRegExpLiteral(title)}\\s*[:\\uFF1A.\\-\\u2014]*\\s*`, 'i'), '')
-                .trim();
-        }
-        return cleaned;
-    }
-
-    private selectScopedConversationDirectSentence(params: {
-        message: string;
-        point: AgentConversationKnowledgePoint;
-    }): string {
-        const point = params.point;
-        const candidates = [
-            ...(Array.isArray(point.matchedSpans) ? point.matchedSpans.map((span) => span.snippet) : []),
-            point.summary,
-            point.evidenceSnippet,
-        ]
-            .map((candidate) => this.cleanConversationAnswerCandidate(String(candidate || ''), point))
-            .filter(Boolean);
-        for (const candidate of candidates) {
-            const sentences = candidate.match(/[^.!?\u3002\uFF01\uFF1F]+[.!?\u3002\uFF01\uFF1F]?/g) || [candidate];
-            const directSentence = sentences
-                .map((sentence) => normalizeWhitespace(sentence))
-                .find((sentence) => {
-                    const lower = sentence.toLowerCase();
-                    return (
-                        lower.includes(' is ')
-                        || lower.includes(' are ')
-                        || lower.includes(' refers to ')
-                        || lower.includes(' means ')
-                        || sentence.includes('\u662f')
-                        || sentence.includes('\u6307')
-                    ) && sentence.length >= 12;
-                });
-            if (directSentence) {
-                return directSentence;
-            }
-            const firstSentence = normalizeWhitespace(sentences[0] || '');
-            if (firstSentence.length >= 12) {
-                return firstSentence;
-            }
-        }
-        return normalizeWhitespace(String(point.summary || point.evidenceSnippet || point.title || ''));
-    }
-
-    private buildScopedConversationAnswer(params: {
-        message: string;
-        knowledgePoints: AgentConversationKnowledgePoint[];
-        citations: KnowledgeCitation[];
-        recalledMemories: AgentConversationMemoryRecord[];
-        usedScope: KnowledgeQueryResolvedScope;
-    }): string {
-        if (params.knowledgePoints.length <= 0) {
-            const readinessMessage = String(params.usedScope.readiness?.message || '').trim();
-            const missMessage = String(params.usedScope.missDiagnostics?.message || '').trim();
-            if (params.recalledMemories.length > 0) {
-                return `No scoped knowledge points matched "${params.message || 'your query'}", but I recovered ${params.recalledMemories.length} relevant conversation memory note(s). ${missMessage || readinessMessage || 'Refine the corpus scope or use the recalled memory as a follow-up anchor.'}`;
-            }
-            return `No scoped knowledge points matched "${params.message || 'your query'}". ${missMessage || readinessMessage || 'Refine the scope, add more notes to the corpus, or broaden the query terms.'}`;
-        }
-
-        const leadingPoint = params.knowledgePoints[0];
-        const directSentence = this.selectScopedConversationDirectSentence({
-            message: params.message,
-            point: leadingPoint,
-        });
-        const evidenceLines = params.citations.slice(0, 3).map((citation, index) => (
-            `${index + 1}. ${citation.title} (${citation.sourcePath}${citation.startLine ? `:${citation.startLine}` : ''}) — ${citation.snippet}`
-        ));
-        const memoryLine = params.recalledMemories.length > 0
-            ? `I also recalled ${params.recalledMemories.length} scoped memory note(s) and kept them secondary to the cited knowledge evidence.`
-            : '';
-        return [
-            directSentence || `${leadingPoint.title}: ${leadingPoint.evidenceSnippet}`,
-            memoryLine,
-            `Grounded by ${params.knowledgePoints.length} knowledge point(s) and ${params.citations.length} citation(s).`,
-            '',
-            'Key evidence:',
-            ...evidenceLines,
-        ].filter((line) => line !== '').join('\n');
-    }
-
-    private classifyScopedConversationIntent(message: string): 'explain' | 'compare' | 'how_to' | 'generic' {
-        const normalized = String(message || '').trim().toLowerCase();
-        if (!normalized) {
-            return 'generic';
-        }
-        if (
-            normalized.includes('compare')
-            || normalized.includes('difference')
-            || normalized.includes('vs')
-            || normalized.includes('区别')
-            || normalized.includes('对比')
-        ) {
-            return 'compare';
-        }
-        if (
-            normalized.includes('how to')
-            || normalized.includes('how do')
-            || normalized.includes('steps')
-            || normalized.includes('plan')
-            || normalized.includes('如何')
-            || normalized.includes('怎么')
-            || normalized.includes('步骤')
-            || normalized.includes('方案')
-        ) {
-            return 'how_to';
-        }
-        if (
-            normalized.includes('what is')
-            || normalized.includes('why')
-            || normalized.includes('explain')
-            || normalized.includes('解释')
-            || normalized.includes('什么是')
-            || normalized.includes('为什么')
-        ) {
-            return 'explain';
-        }
-        return 'generic';
-    }
-
-    private buildScopedConversationOverviewMarkdown(params: {
-        message: string;
-        knowledgePoints: AgentConversationKnowledgePoint[];
-        citations: KnowledgeCitation[];
-        recalledMemories: AgentConversationMemoryRecord[];
-    }): string {
-        const strongestPoint = params.knowledgePoints[0];
-        const lines = [
-            '## Scoped Answer',
-            '',
-        ];
-        if (strongestPoint) {
-            const directSentence = this.selectScopedConversationDirectSentence({
-                message: params.message,
-                point: strongestPoint,
-            });
-            if (directSentence) {
-                lines.push(directSentence, '');
-            }
-            lines.push(`Best scoped anchor: **${strongestPoint.title}**.`, '');
-        } else {
-            lines.push('No scoped knowledge point produced a strong match for the current request.', '');
-        }
-        lines.push(
-            `- Relevant knowledge points: **${params.knowledgePoints.length}**`,
-            `- Citations returned: **${params.citations.length}**`,
-            `- Scoped memories recalled: **${params.recalledMemories.length}**`
-        );
-        return lines.join('\n');
-    }
-
-    private buildScopedConversationExplanationMarkdown(params: {
-        message: string;
-        knowledgePoints: AgentConversationKnowledgePoint[];
-        citations: KnowledgeCitation[];
-        recalledMemories: AgentConversationMemoryRecord[];
-    }): string {
-        if (params.knowledgePoints.length <= 0) {
-            return '## Explanation\n\nThe current scope did not return a strong enough knowledge point to explain the request directly.';
-        }
-        const intent = this.classifyScopedConversationIntent(params.message);
-        const strongestPoint = params.knowledgePoints[0];
-        const explanationLines = [
-            '## Explanation',
-            '',
-        ];
-        if (intent === 'compare') {
-            explanationLines.push(`Use **${strongestPoint.title}** as the comparison baseline inside the current scope.`);
-        } else if (intent === 'how_to') {
-            explanationLines.push(`Use **${strongestPoint.title}** as the starting anchor for the next concrete steps.`);
-        } else if (intent === 'explain') {
-            explanationLines.push(`**${strongestPoint.title}** is the current best scoped anchor for the explanation.`);
-        } else {
-            explanationLines.push(`**${strongestPoint.title}** is the current best scoped anchor.`);
-        }
-        const summary = normalizeWhitespace(String(strongestPoint.summary || strongestPoint.evidenceSnippet || '').trim());
-        if (summary) {
-            explanationLines.push('', summary);
-        }
-        const supportingTitles = params.knowledgePoints
-            .slice(1, 3)
-            .map((point) => normalizeWhitespace(String(point.title || '').trim()))
-            .filter(Boolean);
-        if (supportingTitles.length > 0) {
-            explanationLines.push(
-                '',
-                intent === 'compare'
-                    ? `Supporting comparison nodes: ${supportingTitles.join(', ')}.`
-                    : `Supporting scoped nodes: ${supportingTitles.join(', ')}.`
-            );
-        }
-        if (params.recalledMemories.length > 0) {
-            explanationLines.push(
-                '',
-                `Scoped memory recall contributed ${params.recalledMemories.length} prior note(s) to this explanation.`
-            );
-        }
-        if (params.citations.length > 0) {
-            explanationLines.push(
-                '',
-                `The explanation is grounded by ${params.citations.length} citation(s) from the current scope.`
-            );
-        }
-        return explanationLines.join('\n');
-    }
-
-    private buildScopedConversationEvidenceMarkdown(params: {
-        citations: KnowledgeCitation[];
-    }): string {
-        const evidenceLines = params.citations.slice(0, 3).map((citation, index) => (
-            `${index + 1}. **${citation.title}** (${citation.sourcePath}${citation.startLine ? `:${citation.startLine}` : ''})\n   - ${citation.snippet}`
-        ));
-        if (evidenceLines.length <= 0) {
-            return '## Evidence Summary\n\nNo scoped citations were returned.';
-        }
-        return [
-            '## Evidence Summary',
-            '',
-            ...evidenceLines,
-        ].join('\n');
-    }
-
-    private buildScopedConversationMemoryNotice(params: {
-        recalledMemories: AgentConversationMemoryRecord[];
-    }): string {
-        if (params.recalledMemories.length <= 0) {
-            return 'No scoped memory note was recalled for this turn.';
-        }
-        if (params.recalledMemories.length === 1) {
-            return '1 scoped memory note was recalled and merged into the answer context.';
-        }
-        return `${params.recalledMemories.length} scoped memory notes were recalled and merged into the answer context.`;
-    }
-
-    private buildScopedConversationActionGuideMarkdown(params: {
-        message: string;
-        knowledgePoints: AgentConversationKnowledgePoint[];
-        memoryActions: AgentConversationMemoryAction[];
-    }): string {
-        if (params.knowledgePoints.length <= 0) {
-            return '## Next Actions\n\nNo actionable scoped knowledge card is available for this turn.';
-        }
-        const intent = this.classifyScopedConversationIntent(params.message);
-        const topTitles = params.knowledgePoints
-            .slice(0, 3)
-            .map((point) => `- ${point.title}`);
-        const actionHints = params.memoryActions
-            .slice(0, 2)
-            .map((action) => normalizeWhitespace(String(action.reason || '').trim()))
-            .filter(Boolean)
-            .map((reason) => `- ${reason}`);
-        return [
-            '## Next Actions',
-            '',
-            intent === 'compare'
-                ? 'Use the scoped knowledge cards below to inspect the strongest nodes side by side before deciding which distinctions matter most:'
-                : intent === 'how_to'
-                    ? 'Use the scoped knowledge cards below to move from explanation into concrete guided-learning or focus-mode steps:'
-                    : 'Use the scoped knowledge cards below to continue with focus mode or guided learning for the highest-signal nodes:',
-            ...topTitles,
-            ...(actionHints.length > 0
-                ? ['', 'Suggested follow-through from the current turn:', ...actionHints]
-                : []),
-        ].join('\n');
-    }
-
-    private buildScopedConversationAssistantBlocks(params: {
-        message: string;
-        citations: KnowledgeCitation[];
-        knowledgePoints: AgentConversationKnowledgePoint[];
-        recalledMemories: AgentConversationMemoryRecord[];
-        memoryActions: AgentConversationMemoryAction[];
-    }): AgentConversationAssistantBlock[] {
-        const blocks: AgentConversationAssistantBlock[] = [];
-        const overviewMarkdown = this.buildScopedConversationOverviewMarkdown(params);
-        const explanationMarkdown = this.buildScopedConversationExplanationMarkdown(params);
-        const evidenceMarkdown = this.buildScopedConversationEvidenceMarkdown(params);
-        const memoryNotice = this.buildScopedConversationMemoryNotice(params);
-        const actionGuideMarkdown = this.buildScopedConversationActionGuideMarkdown(params);
-
-        if (overviewMarkdown) {
-            blocks.push({
-                blockId: this.nextId('assistant_block'),
-                type: 'main_markdown',
-                markdown: overviewMarkdown,
-            });
-        }
-        if (explanationMarkdown) {
-            blocks.push({
-                blockId: this.nextId('assistant_block'),
-                type: 'main_markdown',
-                markdown: explanationMarkdown,
-            });
-        }
-        if (evidenceMarkdown) {
-            blocks.push({
-                blockId: this.nextId('assistant_block'),
-                type: 'main_markdown',
-                markdown: evidenceMarkdown,
-            });
-        }
-        if (memoryNotice) {
-            blocks.push({
-                blockId: this.nextId('assistant_block'),
-                type: 'system_notice',
-                text: memoryNotice,
-            });
-        }
-        if (params.citations.length > 0) {
-            blocks.push({
-                blockId: this.nextId('assistant_block'),
-                type: 'citations',
-                title: 'Citations',
-                citations: params.citations.map((citation) => ({ ...citation })),
-            });
-        }
-        if (params.knowledgePoints.length > 0) {
-            blocks.push({
-                blockId: this.nextId('assistant_block'),
-                type: 'main_markdown',
-                markdown: actionGuideMarkdown,
-            });
-            blocks.push({
-                blockId: this.nextId('assistant_block'),
-                type: 'knowledge_actions',
-                title: 'Knowledge Actions',
-                atomIds: this.collectAgentConversationAtomIds(params.knowledgePoints),
-            });
-        }
-        return blocks;
     }
 
     private recordAgentConversationTurn(params: {
@@ -8486,7 +7985,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             asOf: generatedAt,
             scope: request.scope,
         });
-        const knowledgePoints = this.mergeAgentConversationKnowledgePoints(queryResult.items);
+        const knowledgePoints = mergeAgentConversationKnowledgePoints(
+            queryResult.items,
+            (atomId) => this.buildAgentWorkspaceCapabilities(atomId)
+        );
         const citations = knowledgePoints
             .flatMap((point) => (
                 Array.isArray(point.citations) && point.citations.length > 0
@@ -8565,26 +8067,21 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             languages: [],
             matchedAtomCount: queryResult.items.length,
         };
-        const answer = this.buildScopedConversationAnswer({
+        const reply = buildScopedConversationReply({
             message,
             knowledgePoints,
             citations,
-            recalledMemories,
-            usedScope: traceScope,
-        });
-        const assistantBlocks = this.buildScopedConversationAssistantBlocks({
-            message,
-            citations,
-            knowledgePoints,
             recalledMemories,
             memoryActions,
+            usedScope: traceScope,
+            nextBlockId: () => this.nextId('assistant_block'),
         });
         const response: AgentConversationResponse = {
             userId,
             sessionId,
-            assistantMessage: answer,
-            answer,
-            assistantBlocks,
+            assistantMessage: reply.answer,
+            answer: reply.answer,
+            assistantBlocks: reply.assistantBlocks,
             knowledgePoints,
             citations,
             recalledMemories,
@@ -8616,7 +8113,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 },
             },
         };
-        const activeConversationAtomIds = this.collectAgentConversationAtomIds(knowledgePoints);
+        const activeConversationAtomIds = collectAgentConversationAtomIds(knowledgePoints);
         this.upsertConversationSessionState({
             sessionId,
             userId,
@@ -8661,7 +8158,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             corpusId: traceScope.corpusId,
             title: `Grounded conversation: ${String(message || 'local knowledge').slice(0, 64)}`,
             sourceAtomIds: knowledgePoints.map((point) => point.atomId),
-            summary: answer,
+            summary: reply.answer,
             payload: {
                 citations,
                 recalledMemories,
