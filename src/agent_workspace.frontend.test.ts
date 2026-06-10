@@ -56,6 +56,32 @@ function createI18nStub() {
             'agentWorkspace.messages.ready': 'Knowledge workspace ready. Start with a grounded question, then open focus or guided learning from cited knowledge matches.',
             'agentWorkspace.messages.localNodeUnavailable': 'Local node {nodeId} is not currently available in the graph.',
             'agentWorkspace.messages.groundingSummary': 'Grounding: scope={scopeLabel}, {citationCount} citation(s), {memoryCount} recalled memory note(s), {memoryActionCount} memory action(s). {readinessMessage} {missMessage}',
+            'agentWorkspace.evidence.title': 'Evidence Inspector',
+            'agentWorkspace.evidence.emptyIdle': 'Evidence pane is idle.',
+            'agentWorkspace.evidence.groundingTitle': 'Grounding Inspector',
+            'agentWorkspace.evidence.scopeLabel': 'Scope',
+            'agentWorkspace.evidence.citationsLabel': 'Citations',
+            'agentWorkspace.evidence.memoriesLabel': 'Recalled memories',
+            'agentWorkspace.evidence.memoryActionsLabel': 'Memory actions',
+            'agentWorkspace.evidence.readinessLabel': 'Workspace readiness',
+            'agentWorkspace.evidence.missLabel': 'Scope recovery',
+            'agentWorkspace.evidence.graphContextLabel': 'Graph context',
+            'agentWorkspace.evidence.graphAnchorLabel': 'Anchor',
+            'agentWorkspace.evidence.graphAnchorAtomIdLabel': 'Anchor atom',
+            'agentWorkspace.evidence.graphAnchorDocumentLabel': 'Anchor document',
+            'agentWorkspace.evidence.graphRelationKindsLabel': 'Relation kinds',
+            'agentWorkspace.evidence.graphSupportingTitlesLabel': 'Supporting titles',
+            'agentWorkspace.evidence.graphSupportingAtomsLabel': 'Supporting atoms',
+            'agentWorkspace.evidence.graphRelationSummariesLabel': 'Relation summaries',
+            'agentWorkspace.evidence.graphRelationTargetsLabel': 'Targets: {count}',
+            'agentWorkspace.evidence.graphRelationConfidenceLabel': 'Avg confidence: {confidence}',
+            'agentWorkspace.evidence.graphTemporalLabel': 'Temporal validity',
+            'agentWorkspace.evidence.graphTemporalStatusLabel': 'Status',
+            'agentWorkspace.evidence.graphTemporalCheckedAtLabel': 'Checked at',
+            'agentWorkspace.evidence.graphTemporalReasonsLabel': 'Warning reasons',
+            'agentWorkspace.evidence.graphTemporalInvalidTitlesLabel': 'Invalid knowledge points',
+            'agentWorkspace.evidence.graphTemporalValid': 'valid',
+            'agentWorkspace.evidence.graphTemporalWarning': 'warning',
             'agentWorkspace.knowledge.citation': 'Citation',
             'agentWorkspace.knowledge.score': 'Score',
             'agentWorkspace.knowledge.togglePreview': 'Toggle matched knowledge preview: {file}',
@@ -757,6 +783,32 @@ function createI18nStub() {
             'agentWorkspace.messages.executionKindUnsupported': '不支持的能力执行类型：{executionKind}',
             'agentWorkspace.messages.operationResultPresentationUnsupported': '操作 {operationId} 不支持结果呈现 {resultPresentation}；允许：{allowedResultPresentations}',
             'agentWorkspace.messages.capabilityActionUnsupported': '不支持的能力动作：{actionId}',
+            'agentWorkspace.evidence.title': '证据面板',
+            'agentWorkspace.evidence.emptyIdle': '证据面板当前为空。',
+            'agentWorkspace.evidence.groundingTitle': '依据检查器',
+            'agentWorkspace.evidence.scopeLabel': '范围',
+            'agentWorkspace.evidence.citationsLabel': '引用数',
+            'agentWorkspace.evidence.memoriesLabel': '召回记忆',
+            'agentWorkspace.evidence.memoryActionsLabel': '记忆动作',
+            'agentWorkspace.evidence.readinessLabel': '工作区就绪状态',
+            'agentWorkspace.evidence.missLabel': '范围恢复',
+            'agentWorkspace.evidence.graphContextLabel': '图结构上下文',
+            'agentWorkspace.evidence.graphAnchorLabel': '锚点',
+            'agentWorkspace.evidence.graphAnchorAtomIdLabel': '锚点原子',
+            'agentWorkspace.evidence.graphAnchorDocumentLabel': '锚点文档',
+            'agentWorkspace.evidence.graphRelationKindsLabel': '关系类型',
+            'agentWorkspace.evidence.graphSupportingTitlesLabel': '支撑标题',
+            'agentWorkspace.evidence.graphSupportingAtomsLabel': '支撑原子',
+            'agentWorkspace.evidence.graphRelationSummariesLabel': '关系摘要',
+            'agentWorkspace.evidence.graphRelationTargetsLabel': '目标数：{count}',
+            'agentWorkspace.evidence.graphRelationConfidenceLabel': '平均置信度：{confidence}',
+            'agentWorkspace.evidence.graphTemporalLabel': '时序有效性',
+            'agentWorkspace.evidence.graphTemporalStatusLabel': '状态',
+            'agentWorkspace.evidence.graphTemporalCheckedAtLabel': '检查时间',
+            'agentWorkspace.evidence.graphTemporalReasonsLabel': '告警原因',
+            'agentWorkspace.evidence.graphTemporalInvalidTitlesLabel': '失效知识点',
+            'agentWorkspace.evidence.graphTemporalValid': '有效',
+            'agentWorkspace.evidence.graphTemporalWarning': '告警',
             'agentWorkspace.knowledge.togglePreview': '切换命中知识预览：{file}',
             'agentWorkspace.knowledge.previewLoading': '正在加载源文档预览...',
             'agentWorkspace.knowledge.previewUnavailable': '源文档预览不可用。',
@@ -2995,6 +3047,34 @@ describe('workspace panes controller', () => {
             memoryActionCount: 2,
             readinessMessage: 'Workspace hydrated.',
             missMessage: 'Recovered document outside requested scope.',
+            graphContext: {
+                anchorAtomId: 'atom_reflection',
+                anchorTitle: 'Reflection',
+                anchorDocumentId: 'doc_reflection',
+                supportingAtomIds: ['atom_phase', 'atom_interference'],
+                supportingTitles: ['Phase Matching', 'Interference'],
+                relationKinds: ['prerequisite', 'reference'],
+                relationSummaries: [
+                    {
+                        relationKind: 'prerequisite',
+                        edgeIds: ['edge_prereq_1'],
+                        targetAtomIds: ['atom_phase'],
+                        averageConfidence: 0.92,
+                    },
+                    {
+                        relationKind: 'reference',
+                        edgeIds: ['edge_ref_1'],
+                        targetAtomIds: ['atom_interference'],
+                        averageConfidence: 0.8,
+                    },
+                ],
+                temporalValidity: {
+                    checkedAt: '2026-06-10T09:00:00.000Z',
+                    allPointsValid: false,
+                    warningReasons: ['temporal_edge_expired'],
+                    invalidKnowledgePointTitles: ['Reflection'],
+                },
+            },
         });
 
         const evidencePane = document.getElementById('agent-evidence-pane');
@@ -3004,6 +3084,13 @@ describe('workspace panes controller', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('waterglass');
         expect(String(evidenceBody?.textContent || '')).toContain('Workspace hydrated.');
         expect(String(evidenceBody?.textContent || '')).toContain('Recovered document outside requested scope.');
+        expect(String(evidenceBody?.textContent || '')).toContain('Graph context');
+        expect(String(evidenceBody?.textContent || '')).toContain('Reflection');
+        expect(String(evidenceBody?.textContent || '')).toContain('Phase Matching');
+        expect(String(evidenceBody?.textContent || '')).toContain('Targets: 1');
+        expect(String(evidenceBody?.textContent || '')).toContain('Avg confidence: 92%');
+        expect(String(evidenceBody?.textContent || '')).toContain('temporal_edge_expired');
+        expect(String(evidenceBody?.textContent || '')).toContain('warning');
 
         controller.openEvidencePane({
             kind: 'knowledge_run',
@@ -3020,6 +3107,56 @@ describe('workspace panes controller', () => {
         controller.clearEvidencePane();
         expect(evidencePane?.getAttribute('data-open')).toBe('false');
         expect(String(evidenceBody?.textContent || '')).toContain('Evidence pane is idle.');
+    });
+
+    test('rerenders grounding evidence panes with localized graph-context labels when language changes', async () => {
+        const { controller, document, window } = loadWorkspacePanesHarness({ withI18n: true });
+        controller.init();
+
+        controller.openEvidencePane({
+            kind: 'grounding',
+            title: 'Grounding Inspector',
+            scopeLabel: 'waterglass',
+            citationCount: 1,
+            memoryCount: 0,
+            memoryActionCount: 0,
+            graphContext: {
+                anchorAtomId: 'atom_reflection',
+                anchorTitle: 'Reflection',
+                anchorDocumentId: 'doc_reflection',
+                supportingAtomIds: ['atom_phase'],
+                supportingTitles: ['Phase Matching'],
+                relationKinds: ['prerequisite'],
+                relationSummaries: [
+                    {
+                        relationKind: 'prerequisite',
+                        edgeIds: ['edge_prereq_1'],
+                        targetAtomIds: ['atom_phase'],
+                        averageConfidence: 0.92,
+                    },
+                ],
+                temporalValidity: {
+                    checkedAt: '2026-06-10T09:00:00.000Z',
+                    allPointsValid: true,
+                    warningReasons: [],
+                    invalidKnowledgePointTitles: [],
+                },
+            },
+        });
+
+        const evidenceBody = document.getElementById('agent-evidence-body');
+        expect(String(evidenceBody?.textContent || '')).toContain('Graph context');
+        expect(String(evidenceBody?.textContent || '')).toContain('Anchor');
+        expect(String(evidenceBody?.textContent || '')).toContain('Relation summaries');
+        expect(String(evidenceBody?.textContent || '')).toContain('Temporal validity');
+
+        await window.i18n.setLanguage('zh');
+
+        expect(String(evidenceBody?.textContent || '')).toContain('图结构上下文');
+        expect(String(evidenceBody?.textContent || '')).toContain('锚点');
+        expect(String(evidenceBody?.textContent || '')).toContain('关系摘要');
+        expect(String(evidenceBody?.textContent || '')).toContain('时序有效性');
+        expect(String(evidenceBody?.textContent || '')).toContain('有效');
     });
 
     test('mounts the existing path workspace into the learning-path pane and restores it on clear', () => {
@@ -3897,6 +4034,183 @@ describe('agent workspace learning-path integration', () => {
         expect(readContent).toHaveBeenCalledWith('Knowledge_Base/optics/stream.md');
         expect(renderMarkdownInto).toHaveBeenCalled();
         expect(String(document.getElementById('agent-graph-focus-body')?.textContent || '')).toContain('Stream evidence');
+    });
+
+    test('surfaces graph context in the evidence pane even when grounding only comes from trace.graphContext', async () => {
+        const {
+            document,
+            window,
+            fetchMock,
+        } = loadAgentWorkspaceHarness({ withI18n: true });
+        if (!fetchMock) {
+            throw new Error('expected fetch mock');
+        }
+
+        fetchMock.mockImplementationOnce(async () => createSseResponse([
+            {
+                event: 'turn_completed',
+                payload: {
+                    type: 'turn_completed',
+                    turnId: 'turn_graph_context_only',
+                    emittedAt: '2026-06-10T09:00:00.000Z',
+                    result: {
+                        assistantMessage: 'graph aware response',
+                        citations: [],
+                        recalledMemories: [],
+                        memoryActions: [],
+                        knowledgePoints: [],
+                        summary: {
+                            generatedAt: '2026-06-10T09:00:00.000Z',
+                            topK: 6,
+                            returnedKnowledgePoints: 0,
+                            returnedCitations: 0,
+                            recalledMemoryCount: 0,
+                            queryEvidenceCoverageRatioPct: 0,
+                        },
+                        trace: {
+                            graphContext: {
+                                anchorAtomId: 'atom_reflection',
+                                anchorTitle: 'Reflection',
+                                anchorDocumentId: 'doc_reflection',
+                                supportingAtomIds: ['atom_phase'],
+                                supportingTitles: ['Phase Matching'],
+                                relationKinds: ['prerequisite'],
+                                relationSummaries: [
+                                    {
+                                        relationKind: 'prerequisite',
+                                        edgeIds: ['edge_prereq_1'],
+                                        targetAtomIds: ['atom_phase'],
+                                        averageConfidence: 0.92,
+                                    },
+                                ],
+                                temporalValidity: {
+                                    checkedAt: '2026-06-10T09:00:00.000Z',
+                                    allPointsValid: true,
+                                    warningReasons: [],
+                                    invalidKnowledgePointTitles: [],
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        ]));
+
+        const input = document.getElementById('agent-workspace-chat-input') as HTMLTextAreaElement;
+        input.value = 'show graph context';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+
+        expect((window as any).NoteConnectionAgentWorkspace.getLastConversationGrounding()).toEqual(
+            expect.objectContaining({
+                scopeLabel: 'global',
+                graphContext: expect.objectContaining({
+                    anchorTitle: 'Reflection',
+                    supportingTitles: ['Phase Matching'],
+                }),
+            })
+        );
+
+        const status = document.getElementById('agent-workspace-api-status') as HTMLElement | null;
+        expect(status?.getAttribute('data-agent-inspectable')).toBe('true');
+        status?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        const evidenceBody = document.getElementById('agent-evidence-body');
+        expect(String(evidenceBody?.textContent || '')).toContain('Graph context');
+        expect(String(evidenceBody?.textContent || '')).toContain('Reflection');
+        expect(String(evidenceBody?.textContent || '')).toContain('Phase Matching');
+        expect(String(evidenceBody?.textContent || '')).toContain('Temporal validity');
+    });
+
+    test('clears stale grounding state when a later conversation turn returns no grounding payload', async () => {
+        const {
+            document,
+            window,
+            fetchMock,
+        } = loadAgentWorkspaceHarness();
+        if (!fetchMock) {
+            throw new Error('expected fetch mock');
+        }
+
+        fetchMock.mockImplementationOnce(async () => createSseResponse([
+            {
+                event: 'turn_completed',
+                payload: {
+                    type: 'turn_completed',
+                    turnId: 'turn_grounding_present',
+                    emittedAt: '2026-06-10T09:00:00.000Z',
+                    result: {
+                        assistantMessage: 'grounded response',
+                        citations: [
+                            {
+                                citationId: 'citation_grounding_present',
+                                sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                                startLine: 2,
+                            },
+                        ],
+                        recalledMemories: [],
+                        memoryActions: [],
+                        knowledgePoints: [],
+                        summary: {
+                            generatedAt: '2026-06-10T09:00:00.000Z',
+                            topK: 6,
+                            returnedKnowledgePoints: 0,
+                            returnedCitations: 1,
+                            recalledMemoryCount: 0,
+                            queryEvidenceCoverageRatioPct: 100,
+                        },
+                    },
+                },
+            },
+        ]));
+        fetchMock.mockImplementationOnce(async () => createSseResponse([
+            {
+                event: 'turn_completed',
+                payload: {
+                    type: 'turn_completed',
+                    turnId: 'turn_grounding_absent',
+                    emittedAt: '2026-06-10T09:01:00.000Z',
+                    result: {
+                        assistantMessage: 'ungrounded response',
+                        citations: [],
+                        recalledMemories: [],
+                        memoryActions: [],
+                        knowledgePoints: [],
+                        summary: {
+                            generatedAt: '2026-06-10T09:01:00.000Z',
+                            topK: 6,
+                            returnedKnowledgePoints: 0,
+                            returnedCitations: 0,
+                            recalledMemoryCount: 0,
+                            queryEvidenceCoverageRatioPct: 0,
+                        },
+                    },
+                },
+            },
+        ]));
+
+        const input = document.getElementById('agent-workspace-chat-input') as HTMLTextAreaElement;
+        input.value = 'first turn';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+        expect((window as any).NoteConnectionAgentWorkspace.getLastConversationGrounding()).toEqual(
+            expect.objectContaining({
+                citationCount: 1,
+            })
+        );
+
+        const status = document.getElementById('agent-workspace-api-status') as HTMLElement | null;
+        expect(status?.getAttribute('data-agent-inspectable')).toBe('true');
+
+        input.value = 'second turn';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+
+        expect((window as any).NoteConnectionAgentWorkspace.getLastConversationGrounding()).toBeNull();
+        expect(status?.getAttribute('data-agent-inspectable')).toBe('false');
+        status?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+        expect(document.getElementById('agent-evidence-pane')?.getAttribute('data-open')).not.toBe('true');
     });
 
     test('renders structured assistant blocks without breaking scoped conversation flow', async () => {

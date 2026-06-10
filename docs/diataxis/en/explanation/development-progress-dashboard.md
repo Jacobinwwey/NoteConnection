@@ -17,7 +17,9 @@ The key result is that the current code has moved further than the old plan word
 - a dedicated evidence pane now carries grounding inspection plus durable `knowledge_run` and `flashcard_batch` inspection,
 - grouped conversation knowledge points now retain relation-path and temporal-validity signals,
 - the composer now materializes an explicit `graphContext`,
-- and that `graphContext` now survives through conversation trace, snapshot persistence, and workspace export.
+- that `graphContext` now survives through conversation trace, snapshot persistence, and workspace export,
+- the grounding inspector now renders that persisted `graphContext` as structured graph evidence,
+- and grounding inspectability is now normalized per turn so later turns without grounding payload do not keep stale evidence-pane state alive.
 
 At the same time, the product surface is still behind the intended final behavior:
 
@@ -35,13 +37,13 @@ Code-vs-plan reconciliation for this slice:
 | Right-pane evidence reading | Graph focus reuses the shared markdown runtime and highlights matched spans in rendered source markdown. | Implemented baseline |
 | Answer area contraction to a single targeted answer | `agent_workspace.js` now keeps the full conversation result in runtime state while only rendering user-facing answer blocks (`structured_answer`, `main_markdown`, `html_artifact`) in the main chat surface. | Implemented current slice |
 | Hide developer-heavy evidence from the primary hit list | `workspace_panes.js` no longer renders inline knowledge previews or visible typed capability buttons in the left-side hit list; those flows now route into graph focus or the dedicated evidence pane. | Implemented current slice |
-| Durable evidence/claim inspector | `workspace_panes.js` now exposes a dedicated evidence pane for grounding metadata, `knowledge_run`, `knowledge_run_history`, `knowledge_run_compare`, and `flashcard_batch`; `agent_workspace.js` wires the API status strip into grounding inspection. | Implemented current slice |
-| DAG-native answer planning | `AgentConversationKnowledgePoint` now carries grouped `relationPath`, `relationKinds`, `relationPathAtomIds`, and `temporalValidity`; `conversationComposer.ts` now materializes an explicit `graphContext`; `KnowledgeLearningPlatform.ts` and `WorkspaceExportBundle.ts` now preserve it through trace, persistence, and export surfaces. | Implemented partial slice |
+| Durable evidence/claim inspector | `workspace_panes.js` now exposes a dedicated evidence pane for grounding metadata, `knowledge_run`, `knowledge_run_history`, `knowledge_run_compare`, and `flashcard_batch`; `agent_workspace.js` wires the API status strip into grounding inspection and normalizes per-turn inspectability so stale grounding is cleared on later turns without evidence payloads. | Implemented broader current slice |
+| DAG-native answer planning | `AgentConversationKnowledgePoint` now carries grouped `relationPath`, `relationKinds`, `relationPathAtomIds`, and `temporalValidity`; `conversationComposer.ts` now materializes an explicit `graphContext`; `KnowledgeLearningPlatform.ts` and `WorkspaceExportBundle.ts` now preserve it through trace, persistence, and export surfaces; `workspace_panes.js` now renders that persisted `graphContext` in the evidence pane as a structured graph explanation surface. | Implemented broader partial slice |
 
 Immediate next direction from this point:
 
-1. Extend the new DAG-aware conversation slice into a dedicated graph-conditioned context-assembly layer instead of relying on grouped relation hints and a thin `graphContext` alone.
-2. Preserve the new primary answer / right-pane-first interaction contract while growing the evidence pane and `graphContext` toward a broader durable evidence ledger and graph explanation surface.
+1. Extend the new DAG-aware conversation slice into a dedicated graph-conditioned context-assembly layer instead of relying on grouped relation hints and the current thin `graphContext` alone.
+2. Build on the new evidence-pane graph projection by adding richer predecessor/successor/path semantics and temporal replacement handling without expanding the primary chat transcript.
 3. Continue ownership reduction across `src/server.ts`, `KnowledgeLearningPlatform.ts`, `agent_workspace.js`, and `workspace_panes.js`.
 
 Verification for the current code-backed alignment:
@@ -49,6 +51,7 @@ Verification for the current code-backed alignment:
 - `npm.cmd exec -- tsc --noEmit`
 - `node --check src/frontend/agent_workspace.js`
 - `node --check src/frontend/workspace_panes.js`
+- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/agent_workspace.contract.parity.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- jest src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`

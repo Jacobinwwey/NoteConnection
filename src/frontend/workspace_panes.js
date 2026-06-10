@@ -532,6 +532,160 @@
         `;
     }
 
+    function humanizeEvidenceRelationKind(value) {
+        return String(value || '')
+            .trim()
+            .replace(/_/g, ' ');
+    }
+
+    function formatEvidenceConfidence(value) {
+        const numericValue = Number(value);
+        if (!Number.isFinite(numericValue)) {
+            return translate('agentWorkspace.reply.knowledgeRunNone', 'none');
+        }
+        const pctValue = numericValue <= 1
+            ? numericValue * 100
+            : numericValue;
+        return `${String(Number(pctValue.toFixed(1)))}%`;
+    }
+
+    function buildEvidenceMetricListHtml(metrics) {
+        return metrics.map((metric) => `
+            <li class="agent-pane-list-item">
+                <span class="agent-pane-list-label">${escapeHtml(metric.title)}</span>
+                <span class="agent-pane-meta">${escapeHtml(metric.value)}</span>
+            </li>
+        `).join('');
+    }
+
+    function buildEvidenceGraphContextHtml(payload) {
+        const graphContext = payload && typeof payload.graphContext === 'object'
+            ? payload.graphContext
+            : null;
+        if (!graphContext) {
+            return '';
+        }
+
+        const noneLabel = translate('agentWorkspace.reply.knowledgeRunNone', 'none');
+        const anchorTitle = String(graphContext.anchorTitle || '').trim() || noneLabel;
+        const anchorAtomId = String(graphContext.anchorAtomId || '').trim() || noneLabel;
+        const anchorDocumentId = String(graphContext.anchorDocumentId || '').trim() || noneLabel;
+        const relationKinds = Array.isArray(graphContext.relationKinds)
+            ? graphContext.relationKinds
+                .map((item) => humanizeEvidenceRelationKind(item))
+                .filter(Boolean)
+            : [];
+        const supportingTitles = Array.isArray(graphContext.supportingTitles)
+            ? graphContext.supportingTitles
+                .map((item) => String(item || '').trim())
+                .filter(Boolean)
+            : [];
+        const supportingAtomIds = Array.isArray(graphContext.supportingAtomIds)
+            ? graphContext.supportingAtomIds
+                .map((item) => String(item || '').trim())
+                .filter(Boolean)
+            : [];
+        const relationSummaries = Array.isArray(graphContext.relationSummaries)
+            ? graphContext.relationSummaries
+                .map((item) => item && typeof item === 'object' ? item : null)
+                .filter(Boolean)
+            : [];
+        const temporalValidity = graphContext.temporalValidity && typeof graphContext.temporalValidity === 'object'
+            ? graphContext.temporalValidity
+            : null;
+
+        const contextMetrics = [
+            {
+                title: translate('agentWorkspace.evidence.graphAnchorLabel', 'Anchor'),
+                value: anchorTitle,
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphAnchorAtomIdLabel', 'Anchor atom'),
+                value: anchorAtomId,
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphAnchorDocumentLabel', 'Anchor document'),
+                value: anchorDocumentId,
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphRelationKindsLabel', 'Relation kinds'),
+                value: relationKinds.length > 0 ? relationKinds.join(', ') : noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphSupportingTitlesLabel', 'Supporting titles'),
+                value: supportingTitles.length > 0 ? supportingTitles.join(', ') : noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphSupportingAtomsLabel', 'Supporting atoms'),
+                value: supportingAtomIds.length > 0 ? supportingAtomIds.join(', ') : noneLabel,
+            },
+        ];
+
+        const relationSummaryHtml = relationSummaries.length > 0
+            ? relationSummaries.map((summary) => {
+                const targetAtomIds = Array.isArray(summary.targetAtomIds)
+                    ? summary.targetAtomIds
+                        .map((item) => String(item || '').trim())
+                        .filter(Boolean)
+                    : [];
+                const targetSummary = translate(
+                    'agentWorkspace.evidence.graphRelationTargetsLabel',
+                    'Targets: {count}',
+                    { count: String(targetAtomIds.length) }
+                );
+                const confidenceSummary = translate(
+                    'agentWorkspace.evidence.graphRelationConfidenceLabel',
+                    'Avg confidence: {confidence}',
+                    { confidence: formatEvidenceConfidence(summary.averageConfidence) }
+                );
+                return `
+                    <li class="agent-pane-list-item">
+                        <div>
+                            <div class="agent-pane-list-label">${escapeHtml(humanizeEvidenceRelationKind(summary.relationKind))}</div>
+                            <div class="agent-pane-summary">${escapeHtml(targetSummary)}${targetAtomIds.length > 0 ? ` | ${escapeHtml(targetAtomIds.join(', '))}` : ''}</div>
+                        </div>
+                        <span class="agent-pane-meta">${escapeHtml(confidenceSummary)}</span>
+                    </li>
+                `;
+            }).join('')
+            : `<li class="agent-pane-list-empty">${escapeHtml(noneLabel)}</li>`;
+
+        const temporalMetrics = temporalValidity
+            ? [
+                {
+                    title: translate('agentWorkspace.evidence.graphTemporalStatusLabel', 'Status'),
+                    value: temporalValidity.allPointsValid === false
+                        ? translate('agentWorkspace.evidence.graphTemporalWarning', 'warning')
+                        : translate('agentWorkspace.evidence.graphTemporalValid', 'valid'),
+                },
+                {
+                    title: translate('agentWorkspace.evidence.graphTemporalCheckedAtLabel', 'Checked at'),
+                    value: String(temporalValidity.checkedAt || '').trim() || noneLabel,
+                },
+                {
+                    title: translate('agentWorkspace.evidence.graphTemporalReasonsLabel', 'Warning reasons'),
+                    value: Array.isArray(temporalValidity.warningReasons) && temporalValidity.warningReasons.length > 0
+                        ? temporalValidity.warningReasons.join(', ')
+                        : noneLabel,
+                },
+                {
+                    title: translate('agentWorkspace.evidence.graphTemporalInvalidTitlesLabel', 'Invalid knowledge points'),
+                    value: Array.isArray(temporalValidity.invalidKnowledgePointTitles) && temporalValidity.invalidKnowledgePointTitles.length > 0
+                        ? temporalValidity.invalidKnowledgePointTitles.join(', ')
+                        : noneLabel,
+                },
+            ]
+            : [];
+
+        return `
+            <div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphContextLabel', 'Graph context'))}</div>
+            <ul class="agent-pane-list">${buildEvidenceMetricListHtml(contextMetrics)}</ul>
+            <div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphRelationSummariesLabel', 'Relation summaries'))}</div>
+            <ul class="agent-pane-list">${relationSummaryHtml}</ul>
+            ${temporalMetrics.length > 0 ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphTemporalLabel', 'Temporal validity'))}</div><ul class="agent-pane-list">${buildEvidenceMetricListHtml(temporalMetrics)}</ul>` : ''}
+        `;
+    }
+
     function renderEvidenceGroundingBody(body, payload) {
         const title = String(
             payload.title
@@ -559,18 +713,15 @@
                 value: String(payload.memoryActionCount == null ? 0 : payload.memoryActionCount),
             },
         ];
-        const metricsHtml = metrics.map((metric) => `
-            <li class="agent-pane-list-item">
-                <span class="agent-pane-list-label">${escapeHtml(metric.title)}</span>
-                <span class="agent-pane-meta">${escapeHtml(metric.value)}</span>
-            </li>
-        `).join('');
+        const metricsHtml = buildEvidenceMetricListHtml(metrics);
+        const graphContextHtml = buildEvidenceGraphContextHtml(payload);
         body.innerHTML = `
             <div class="agent-pane-block">
                 <div class="agent-pane-title">${escapeHtml(title)}</div>
                 <ul class="agent-pane-list">${metricsHtml}</ul>
                 ${readinessMessage ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.readinessLabel', 'Workspace readiness'))}</div><div class="agent-pane-summary">${escapeHtml(readinessMessage)}</div>` : ''}
                 ${missMessage ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.missLabel', 'Scope recovery'))}</div><div class="agent-pane-summary">${escapeHtml(missMessage)}</div>` : ''}
+                ${graphContextHtml}
             </div>
         `;
     }

@@ -789,6 +789,40 @@
         return `${count} ${count === 1 ? singular : plural}`;
     }
 
+    function buildConversationGroundingPayload(result) {
+        const citationCount = Array.isArray(result && result.citations) ? result.citations.length : 0;
+        const memoryCount = Array.isArray(result && result.recalledMemories) ? result.recalledMemories.length : 0;
+        const memoryActionCount = Array.isArray(result && result.memoryActions) ? result.memoryActions.length : 0;
+        const usedScope = result && result.trace && result.trace.usedScope ? result.trace.usedScope : null;
+        const readiness = result && result.trace ? result.trace.workspaceReadiness : null;
+        const missDiagnostics = result && result.trace ? result.trace.missDiagnostics : null;
+        const graphContext = result && result.trace && result.trace.graphContext ? result.trace.graphContext : null;
+        if (citationCount <= 0 && memoryCount <= 0 && memoryActionCount <= 0 && !readiness && !missDiagnostics && !graphContext) {
+            return null;
+        }
+        const requestContext = resolveKnowledgeWorkspaceRequestContext();
+        const scopeLabel = usedScope && usedScope.workspaceId
+            ? String(usedScope.workspaceId)
+            : usedScope && usedScope.corpusId
+                ? String(usedScope.corpusId)
+                : requestContext.scope && requestContext.scope.workspaceId
+                    ? String(requestContext.scope.workspaceId)
+                    : requestContext.activeTarget && requestContext.activeTarget !== 'ALL_FOLDERS'
+                        ? String(requestContext.activeTarget)
+                        : 'global';
+        return {
+            scopeLabel,
+            citationCount,
+            memoryCount,
+            memoryActionCount,
+            readinessMessage: readiness && readiness.message ? String(readiness.message) : '',
+            missMessage: missDiagnostics && missDiagnostics.message ? String(missDiagnostics.message) : '',
+            graphContext: graphContext && typeof graphContext === 'object'
+                ? graphContext
+                : null,
+        };
+    }
+
     function updateConversationApiStatus(status) {
         const node = getElement('agent-workspace-api-status');
         if (!node) {
@@ -803,6 +837,7 @@
         const error = String(status && status.error || '').trim();
         const activeTarget = String(status && status.activeTarget || '').trim();
         const result = status && typeof status.result === 'object' ? status.result : null;
+        const groundingPayload = result ? buildConversationGroundingPayload(result) : null;
         const summary = result && typeof result.summary === 'object' ? result.summary : {};
         const trace = result && typeof result.trace === 'object' ? result.trace : {};
         const retrievalTrace = trace && typeof trace.retrieval === 'object' ? trace.retrieval : {};
@@ -847,12 +882,19 @@
                 : '',
             error,
         ].filter(Boolean);
+        if (window && typeof window === 'object') {
+            window.__NC_LAST_AGENT_CONVERSATION_GROUNDING = (
+                state === 'ok' && groundingPayload
+            )
+                ? groundingPayload
+                : null;
+        }
         node.setAttribute('data-api-state', state);
         node.setAttribute(
             'data-agent-inspectable',
             (
                 state === 'ok'
-                && Boolean(window.__NC_LAST_AGENT_CONVERSATION_GROUNDING)
+                && Boolean(groundingPayload)
             )
                 ? 'true'
                 : 'false'
@@ -1122,34 +1164,9 @@
     }
 
     function appendGroundingSummaryMessage(result) {
-        const citationCount = Array.isArray(result && result.citations) ? result.citations.length : 0;
-        const memoryCount = Array.isArray(result && result.recalledMemories) ? result.recalledMemories.length : 0;
-        const memoryActionCount = Array.isArray(result && result.memoryActions) ? result.memoryActions.length : 0;
-        const usedScope = result && result.trace && result.trace.usedScope ? result.trace.usedScope : null;
-        const readiness = result && result.trace ? result.trace.workspaceReadiness : null;
-        const missDiagnostics = result && result.trace ? result.trace.missDiagnostics : null;
-        if (citationCount <= 0 && memoryCount <= 0 && memoryActionCount <= 0 && !readiness && !missDiagnostics) {
-            return null;
-        }
-        const requestContext = resolveKnowledgeWorkspaceRequestContext();
-        const scopeLabel = usedScope && usedScope.workspaceId
-            ? String(usedScope.workspaceId)
-            : usedScope && usedScope.corpusId
-                ? String(usedScope.corpusId)
-                : requestContext.scope && requestContext.scope.workspaceId
-                    ? String(requestContext.scope.workspaceId)
-                    : requestContext.activeTarget && requestContext.activeTarget !== 'ALL_FOLDERS'
-                        ? String(requestContext.activeTarget)
-                        : 'global';
+        const groundingPayload = buildConversationGroundingPayload(result);
         if (window && typeof window === 'object') {
-            window.__NC_LAST_AGENT_CONVERSATION_GROUNDING = {
-                scopeLabel,
-                citationCount,
-                memoryCount,
-                memoryActionCount,
-                readinessMessage: readiness && readiness.message ? String(readiness.message) : '',
-                missMessage: missDiagnostics && missDiagnostics.message ? String(missDiagnostics.message) : '',
-            };
+            window.__NC_LAST_AGENT_CONVERSATION_GROUNDING = groundingPayload;
         }
         return null;
     }
