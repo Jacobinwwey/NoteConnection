@@ -3,6 +3,28 @@
 
 ## 中文文档
 
+### 2026-06-10 知识工作区与 DAG 实施计划
+
+#### 目标
+
+在现有主线对齐计划基础上，补充一层专门面向知识工作区与现有 DAG 学习底座的代码现实判断。
+
+#### 当前代码真相
+
+- 当前分支已经具备结构化 grounded conversation、按文档聚合的 knowledge point、durable `flashcard_batch` / `knowledge_run` artifact，以及 workflow-artifact review follow-up。
+- 当前 DAG 学习底座已经在代码中落地：`KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query 与 prerequisite 驱动学习流都已存在。
+- 当前最主要缺层，是 retrieval 与 answer synthesis 之间的 graph-conditioned context assembly。
+- 当前最主要产品面缺口，仍是主回答区收缩与 left-hit -> right-pane 阅读收敛。
+
+#### 下一步执行顺序
+
+1. 让新的 2026-06-10 知识工作区 / DAG 对齐文档持续同步到所有活跃入口文档。
+2. 收缩用户可见回答区，优先只显示 targeted answer。
+3. 让左侧 knowledge hit 收敛为 right-pane-first 阅读模型。
+4. 把 `knowledge_run` 与 `flashcard_batch` 视为第一批 durable evidence surface。
+5. 补 graph-conditioned context assembly。
+6. 继续缩减主要 server 与 frontend host 文件的所有权压力。
+
 ### 2026-06-06 主线架构对齐实施计划
 
 #### 目标

@@ -1,3 +1,21 @@
+## 2026-06-10 知识工作区与 DAG 活跃任务同步
+
+- [x] 已重新按源码审计当前代码与此前 lightweight-RAG、agent-workspace 和主线架构方案的对应关系。
+- [x] 本轮对账结果已沉淀为独立主线文档：`docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md`。
+- [x] 结构化 grounded conversation、按文档聚合的 knowledge point、durable `flashcard_batch` / `knowledge_run` artifact、workflow-artifact review follow-up，以及 graph-focus 原文渲染都已经有代码支撑。
+- [x] 当前 DAG 学习底座已在代码中确认存在：`KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query 与 prerequisite 驱动的学习流都已落地。
+- [~] 用户可见回答区仍需继续收缩为“targeted answer 优先，supporting block 退居次级表面”。
+- [~] 左侧 knowledge hit 虽已是 file-first，但仍需继续收敛为 right-pane-first 阅读模型。
+- [ ] 需要在 retrieval 与 answer synthesis 之间补一个 graph-conditioned context-assembly layer，让当前 DAG 成为一等 answer-planning substrate。
+- [ ] 继续缩减 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js`、`src/frontend/workspace_panes.js` 的所有权压力。
+
+### 当前验收目标
+
+1. 所有活跃看板文档都指向同一份 2026-06-10 知识工作区 / DAG 对齐说明。
+2. 文档能明确区分“已经代码落地的基线”和“仍未满足的产品行为”。
+3. 当前分支完成验证、推进到 `main`、推送并在结束后保持工作区 clean。
+4. 向前兼容性保持明确：legacy `assistantMessage` 与当前公开运行时 API 不发生破坏性变化。
+
 ## 2026-06-06 活跃任务同步
 
 - [x] 本轮 P1 延续切片继续直接在 `main` 上推进；远端同步 / push 状态与本地实现进度分开记录。

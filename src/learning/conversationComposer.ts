@@ -7,6 +7,13 @@ import type {
     KnowledgeCitation,
     KnowledgeQueryItem,
     KnowledgeQueryResolvedScope,
+    KnowledgeRun,
+    KnowledgeRunEvidenceClaim,
+    KnowledgeRunQuality,
+    KnowledgeRunQualityGate,
+    KnowledgeRunQualityStatus,
+    KnowledgeRunReviewCard,
+    KnowledgeRunReviewState,
 } from './types';
 
 export type BuildAgentWorkspaceCapabilities = (atomId: string) => unknown[];
@@ -18,11 +25,41 @@ export type ScopedConversationReplyParams = {
     recalledMemories: AgentConversationMemoryRecord[];
     memoryActions: AgentConversationMemoryAction[];
     usedScope: KnowledgeQueryResolvedScope;
+    generatedAt?: string;
     nextBlockId: () => string;
+    nextRunId?: () => string;
 };
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function clampUnit(value: number): number {
+    if (!Number.isFinite(value)) {
+        return 0;
+    }
+    return Number(Math.max(0, Math.min(1, value)).toFixed(4));
+}
+
+function addDaysIso(value: string, days: number): string {
+    const parsed = Date.parse(value);
+    const baseTimestamp = Number.isFinite(parsed) ? parsed : 0;
+    return new Date(baseTimestamp + days * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function buildFallbackKnowledgeRunId(params: ScopedConversationReplyParams, generatedAt: string): string {
+    const seed = [
+        generatedAt,
+        params.message,
+        params.usedScope.workspaceId || '',
+        params.usedScope.corpusId || '',
+        params.citations.map((citation) => citation.citationId).join('|'),
+    ].join('|');
+    let hash = 0;
+    for (let index = 0; index < seed.length; index += 1) {
+        hash = ((hash << 5) - hash + seed.charCodeAt(index)) | 0;
+    }
+    return `knowledge_run_${Math.abs(hash) || 1}`;
 }
 
 function escapeRegExpLiteral(value: string): string {
@@ -165,6 +202,7 @@ export function mergeAgentConversationKnowledgePoints(
             ];
             group.point.matchCount = group.point.matchedSpans.length;
         }
+
     });
 
     return Array.from(groups.values()).map((group) => {
@@ -315,14 +353,10 @@ function buildScopedConversationAnswer(params: ScopedConversationReplyParams): s
 function buildScopedConversationOverviewMarkdown(params: ScopedConversationReplyParams): string {
     const strongestPoint = params.knowledgePoints[0];
     const lines = [
-        '## Scoped Answer',
+        '## Answer Context',
         '',
     ];
     if (strongestPoint) {
-        const directSentence = selectScopedConversationDirectSentence(params.message, strongestPoint);
-        if (directSentence) {
-            lines.push(directSentence, '');
-        }
         lines.push(`Best scoped anchor: **${strongestPoint.title}**.`, '');
     } else {
         lines.push('No scoped knowledge point produced a strong match for the current request.', '');
@@ -437,39 +471,296 @@ function buildScopedConversationActionGuideMarkdown(params: ScopedConversationRe
     ].join('\n');
 }
 
+function buildKnowledgeRunClaimFromCitation(
+    runId: string,
+    citation: KnowledgeCitation,
+    index: number
+): KnowledgeRunEvidenceClaim {
+    const snippet = normalizeWhitespace(String(citation.snippet || '').trim());
+    const hasSourcePath = normalizeWhitespace(String(citation.sourcePath || '')).length > 0;
+    const hasLine = Number.isFinite(Number(citation.startLine)) && Number(citation.startLine) > 0;
+    const status = hasSourcePath && snippet && hasLine
+        ? 'verified'
+        : hasSourcePath && snippet
+            ? 'weak'
+            : 'not_proven';
+    return {
+        claimId: `${runId}_claim_${index + 1}`,
+        status,
+        title: normalizeWhitespace(String(citation.title || '').trim()) || `Evidence claim ${index + 1}`,
+        statement: snippet || normalizeWhitespace(String(citation.title || '').trim()) || 'Citation evidence was returned.',
+        citationId: citation.citationId,
+        atomId: citation.atomId,
+        documentId: citation.documentId,
+        sourcePath: citation.sourcePath,
+        startLine: citation.startLine,
+        endLine: citation.endLine,
+        snippet,
+        confidence: clampUnit(Number(citation.score || 0)),
+        reason: status === 'verified'
+            ? 'The claim is backed by a cited source span with a concrete line reference.'
+            : status === 'weak'
+                ? 'The claim has a cited source path and snippet, but no concrete line reference.'
+                : 'The citation is missing enough source-span detail to prove the claim.',
+    };
+}
+
+function buildKnowledgeRunClaimFromPoint(
+    runId: string,
+    point: AgentConversationKnowledgePoint,
+    index: number
+): KnowledgeRunEvidenceClaim {
+    const snippet = normalizeWhitespace(String(point.evidenceSnippet || point.summary || '').trim());
+    return {
+        claimId: `${runId}_claim_${index + 1}`,
+        status: 'not_proven',
+        title: normalizeWhitespace(String(point.title || '').trim()) || `Knowledge point ${index + 1}`,
+        statement: snippet || normalizeWhitespace(String(point.title || '').trim()) || 'A knowledge point was returned without citation evidence.',
+        atomId: point.atomId,
+        documentId: point.documentId,
+        sourcePath: point.sourcePath,
+        snippet,
+        confidence: clampUnit(Number(point.score || 0)),
+        reason: 'The answer can point to a retrieved knowledge node, but no explicit citation span was returned.',
+    };
+}
+
+function buildRejectedKnowledgeRunClaim(runId: string, message: string): KnowledgeRunEvidenceClaim {
+    return {
+        claimId: `${runId}_claim_1`,
+        status: 'rejected',
+        title: 'No scoped evidence',
+        statement: `No scoped evidence proved the request: ${normalizeWhitespace(message || 'local knowledge request')}`,
+        snippet: '',
+        confidence: 0,
+        reason: 'No citation or retrieved knowledge point was available for this turn.',
+    };
+}
+
+function buildKnowledgeRunEvidenceClaims(
+    runId: string,
+    params: ScopedConversationReplyParams
+): KnowledgeRunEvidenceClaim[] {
+    const seenCitationKeys = new Set<string>();
+    const citationClaims = params.citations
+        .filter((citation) => {
+            const citationKey = [
+                citation.citationId,
+                citation.documentId,
+                citation.sourcePath,
+                citation.startLine || '',
+                citation.endLine || '',
+                citation.snippet,
+            ].join('|');
+            if (seenCitationKeys.has(citationKey)) {
+                return false;
+            }
+            seenCitationKeys.add(citationKey);
+            return true;
+        })
+        .map((citation, index) => buildKnowledgeRunClaimFromCitation(runId, citation, index));
+    if (citationClaims.length > 0) {
+        return citationClaims;
+    }
+    const pointClaims = params.knowledgePoints
+        .slice(0, 3)
+        .map((point, index) => buildKnowledgeRunClaimFromPoint(runId, point, index));
+    if (pointClaims.length > 0) {
+        return pointClaims;
+    }
+    return [buildRejectedKnowledgeRunClaim(runId, params.message)];
+}
+
+function buildKnowledgeRunEvidenceRef(claim: KnowledgeRunEvidenceClaim): string {
+    const sourcePath = normalizeWhitespace(String(claim.sourcePath || '').trim());
+    if (!sourcePath) {
+        return '';
+    }
+    const startLine = Number(claim.startLine);
+    return Number.isFinite(startLine) && startLine > 0
+        ? `${sourcePath}:${startLine}`
+        : sourcePath;
+}
+
+function buildKnowledgeRunReviewCards(
+    runId: string,
+    generatedAt: string,
+    claims: KnowledgeRunEvidenceClaim[]
+): KnowledgeRunReviewCard[] {
+    return claims
+        .filter((claim) => claim.status === 'verified' || claim.status === 'weak')
+        .slice(0, 3)
+        .map((claim, index) => {
+            const evidenceRef = buildKnowledgeRunEvidenceRef(claim);
+            return {
+                cardId: `${runId}_card_${index + 1}`,
+                sourceClaimId: claim.claimId,
+                atomId: claim.atomId,
+                suggestedActionKind: 'review',
+                prompt: `What does the cited source establish about ${claim.title}?`,
+                expectedAnswer: claim.snippet || claim.statement,
+                evidenceRefs: evidenceRef ? [evidenceRef] : [],
+                nextReviewAt: addDaysIso(generatedAt, 1),
+            };
+        });
+}
+
+function buildKnowledgeRunQuality(
+    claims: KnowledgeRunEvidenceClaim[],
+    reviewCards: KnowledgeRunReviewCard[],
+    params: ScopedConversationReplyParams
+): KnowledgeRunQuality {
+    const coveredClaimCount = claims.filter((claim) => claim.status === 'verified' || claim.status === 'weak').length;
+    const evidenceCoverage = claims.length > 0 ? coveredClaimCount / claims.length : 0;
+    const scopeDiscipline = params.usedScope.source === 'scoped'
+        || (
+            params.usedScope.documentIds.length <= 0
+            && params.usedScope.atomIds.length <= 0
+            && params.usedScope.sourcePathPrefixes.length <= 0
+        );
+    const memoryActionsGoverned = params.memoryActions.every((action) => (
+        Boolean(action.kind)
+        && Boolean(action.status)
+        && Boolean(action.layer)
+        && Boolean(action.namespace)
+    ));
+    const gates: KnowledgeRunQualityGate[] = [
+        {
+            gateId: 'evidence_coverage',
+            passed: evidenceCoverage >= 0.8,
+            observedValue: Number(evidenceCoverage.toFixed(4)),
+            threshold: 0.8,
+            message: coveredClaimCount > 0
+                ? `${coveredClaimCount} of ${claims.length} claim(s) have citation evidence.`
+                : 'No claim has enough citation evidence.',
+        },
+        {
+            gateId: 'scope_discipline',
+            passed: scopeDiscipline,
+            observedValue: scopeDiscipline ? 1 : 0,
+            threshold: 1,
+            message: scopeDiscipline
+                ? 'The answer stayed inside the resolved scope contract.'
+                : 'The answer used a global result while scoped filters were active.',
+        },
+        {
+            gateId: 'recall_transfer',
+            passed: reviewCards.length > 0,
+            observedValue: reviewCards.length,
+            threshold: 1,
+            message: reviewCards.length > 0
+                ? `${reviewCards.length} review card(s) were generated from cited claims.`
+                : 'No active-recall card could be generated from the available evidence.',
+        },
+        {
+            gateId: 'memory_governance',
+            passed: memoryActionsGoverned,
+            observedValue: memoryActionsGoverned ? 1 : 0,
+            threshold: 1,
+            message: memoryActionsGoverned
+                ? 'Memory actions include the governance fields needed for audit.'
+                : 'At least one memory action is missing governance metadata.',
+        },
+    ];
+    const passedGateCount = gates.filter((gate) => gate.passed).length;
+    const score = Number(((passedGateCount / gates.length) * 100).toFixed(2));
+    const status: KnowledgeRunQualityStatus = gates.every((gate) => gate.passed)
+        ? 'pass'
+        : gates[0].passed && gates[1].passed
+            ? 'caution'
+            : 'fail';
+    return {
+        score,
+        status,
+        gates,
+    };
+}
+
+function buildKnowledgeRunReviewState(reviewCards: KnowledgeRunReviewCard[]): KnowledgeRunReviewState {
+    const totalReviewCards = reviewCards.length;
+    return {
+        consumedCardIds: [],
+        completedReviewCardCount: 0,
+        remainingReviewCardCount: totalReviewCards,
+        completedAt: null,
+    };
+}
+
+function buildKnowledgeRun(params: ScopedConversationReplyParams): KnowledgeRun {
+    const generatedAt = String(params.generatedAt || new Date().toISOString()).trim();
+    const runId = params.nextRunId ? params.nextRunId() : buildFallbackKnowledgeRunId(params, generatedAt);
+    const evidenceClaims = buildKnowledgeRunEvidenceClaims(runId, params);
+    const reviewCards = buildKnowledgeRunReviewCards(runId, generatedAt, evidenceClaims);
+    const reviewState = buildKnowledgeRunReviewState(reviewCards);
+    const quality = buildKnowledgeRunQuality(evidenceClaims, reviewCards, params);
+    const countStatus = (status: KnowledgeRunEvidenceClaim['status']) => (
+        evidenceClaims.filter((claim) => claim.status === status).length
+    );
+    return {
+        runId,
+        generatedAt,
+        status: quality.status,
+        scope: {
+            source: params.usedScope.source,
+            workspaceId: params.usedScope.workspaceId,
+            corpusId: params.usedScope.corpusId,
+            documentIds: [...params.usedScope.documentIds],
+            atomIds: [...params.usedScope.atomIds],
+            sourcePathPrefixes: [...params.usedScope.sourcePathPrefixes],
+            languages: [...params.usedScope.languages],
+            matchedAtomCount: params.usedScope.matchedAtomCount,
+            scopeSource: params.usedScope.scopeSource,
+        },
+        evidenceClaims,
+        quality,
+        reviewCards,
+        reviewState,
+        summary: {
+            claimCount: evidenceClaims.length,
+            verifiedClaimCount: countStatus('verified'),
+            weakClaimCount: countStatus('weak'),
+            notProvenClaimCount: countStatus('not_proven'),
+            rejectedClaimCount: countStatus('rejected'),
+            reviewCardCount: reviewCards.length,
+            completedReviewCardCount: reviewState.completedReviewCardCount,
+            remainingReviewCardCount: reviewState.remainingReviewCardCount,
+        },
+    };
+}
+
 export function buildScopedConversationReply(params: ScopedConversationReplyParams): {
     answer: string;
     assistantBlocks: AgentConversationAssistantBlock[];
+    knowledgeRun: KnowledgeRun;
 } {
     const blocks: AgentConversationAssistantBlock[] = [];
     const answer = buildScopedConversationAnswer(params);
+    const knowledgeRun = buildKnowledgeRun(params);
     const overviewMarkdown = buildScopedConversationOverviewMarkdown(params);
     const explanationMarkdown = buildScopedConversationExplanationMarkdown(params);
     const evidenceMarkdown = buildScopedConversationEvidenceMarkdown(params);
     const memoryNotice = buildScopedConversationMemoryNotice(params);
     const actionGuideMarkdown = buildScopedConversationActionGuideMarkdown(params);
 
-    if (overviewMarkdown) {
-        blocks.push({
-            blockId: params.nextBlockId(),
-            type: 'main_markdown',
-            markdown: overviewMarkdown,
-        });
-    }
-    if (explanationMarkdown) {
-        blocks.push({
-            blockId: params.nextBlockId(),
-            type: 'main_markdown',
-            markdown: explanationMarkdown,
-        });
-    }
-    if (evidenceMarkdown) {
-        blocks.push({
-            blockId: params.nextBlockId(),
-            type: 'main_markdown',
-            markdown: evidenceMarkdown,
-        });
-    }
+    blocks.push({
+        blockId: params.nextBlockId(),
+        type: 'structured_answer',
+        title: 'Grounded Answer',
+        directAnswer: answer,
+        overviewMarkdown,
+        explanationMarkdown,
+        evidenceMarkdown,
+        nextActionsMarkdown: params.knowledgePoints.length > 0 ? actionGuideMarkdown : undefined,
+        knowledgePointCount: params.knowledgePoints.length,
+        citationCount: params.citations.length,
+        recalledMemoryCount: params.recalledMemories.length,
+    });
+    blocks.push({
+        blockId: params.nextBlockId(),
+        type: 'knowledge_run_summary',
+        title: 'Knowledge Run',
+        knowledgeRun,
+    });
     if (memoryNotice) {
         blocks.push({
             blockId: params.nextBlockId(),
@@ -488,11 +779,6 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
     if (params.knowledgePoints.length > 0) {
         blocks.push({
             blockId: params.nextBlockId(),
-            type: 'main_markdown',
-            markdown: actionGuideMarkdown,
-        });
-        blocks.push({
-            blockId: params.nextBlockId(),
             type: 'knowledge_actions',
             title: 'Knowledge Actions',
             atomIds: collectAgentConversationAtomIds(params.knowledgePoints),
@@ -501,5 +787,6 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
     return {
         answer,
         assistantBlocks: blocks,
+        knowledgeRun,
     };
 }

@@ -1,5 +1,22 @@
 ## 中文文档
 
+### 2026-06-10 知识工作区运行演练
+
+1. 用户选择或继承一个 scoped workspace/corpus target。
+2. `agent_workspace.js` 会把 `activeTarget` 与 `scope` 一并发送到 conversation 请求中。
+3. `KnowledgeLearningPlatform.agentConversation()` 解析 scoped retrieval、grouped knowledge point、citation、memory action 与 durable `knowledgeRun`。
+4. `conversationComposer.ts` 会把 grounded reply 组织为结构化 block，同时继续保留 legacy `assistantMessage`。
+5. 前端渲染回答，并展示按文件优先的 grouped knowledge hit。
+6. 原始 markdown 可在 graph-focus pane 中打开，并在原文内高亮 matched span。
+7. `flashcard_batch` 与 `knowledge_run` 这类 durable workflow artifact 现在也可以通过独立运行时端点进行查询与 follow-up。
+
+### 当前这意味着什么
+
+- 结构化 grounded conversation 已进入可运行状态。
+- graph focus 已经是 reader-aligned 的证据阅读面。
+- durable artifact 驱动的 review loop 已经进入运行时。
+- 当前 DAG 学习底座是真实存在的，但回答规划层仍缺 dedicated graph-conditioned context layer。
+
 ### 当前运行链路说明
 
 本补充说明记录了迁移后 Bridge-first 的当前运行流程：

@@ -1,3 +1,47 @@
+# 2026-06-10 v1.7.0 - Knowledge Workspace and DAG Task Sync
+
+## English Document
+
+### Active Task Snapshot
+
+- [x] Current code has been re-audited against the earlier lightweight-RAG, agent-workspace, and mainline architecture plans.
+- [x] The reconciliation now has a dedicated source-of-truth note at `docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md`.
+- [x] Structured grounded conversation, grouped knowledge points, durable `flashcard_batch` / `knowledge_run` artifacts, workflow-artifact review follow-up, and graph-focus source rendering are all code-backed in the current branch.
+- [x] The current DAG-backed learning substrate is confirmed in code: `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, and prerequisite-driven learning flows already exist.
+- [~] The visible answer area still needs contraction so users see the targeted answer first and supporting blocks move to secondary surfaces.
+- [~] Left-side knowledge hits are file-first, but still need to converge on a right-pane-first reading model.
+- [ ] Add a graph-conditioned context-assembly layer between retrieval and answer synthesis so the current DAG becomes a first-class answer-planning substrate.
+- [ ] Continue ownership reduction in `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/agent_workspace.js`, and `src/frontend/workspace_panes.js`.
+
+### Current Acceptance Targets
+
+1. All active tracker docs point to the same 2026-06-10 Knowledge Workspace and DAG alignment note.
+2. The documented current state distinguishes implemented code-backed baselines from unfinished product-surface behavior.
+3. The current branch is verified, promoted to `main`, pushed, and the worktree is clean afterward.
+4. Backward compatibility remains explicit: legacy `assistantMessage` and current public runtime APIs are unchanged.
+
+## 中文文档
+
+### 当前任务快照
+
+- [x] 已重新按源码审计当前代码与此前 lightweight-RAG、agent-workspace 和主线架构方案的对应关系。
+- [x] 本轮对账结果已沉淀为独立主线文档：`docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md`。
+- [x] 结构化 grounded conversation、按文档聚合的 knowledge point、durable `flashcard_batch` / `knowledge_run` artifact、workflow-artifact review follow-up，以及 graph-focus 原文渲染都已经有代码支撑。
+- [x] 当前 DAG 学习底座已在代码中确认存在：`KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query 与 prerequisite 驱动的学习流都已落地。
+- [~] 用户可见回答区仍需继续收缩为“targeted answer 优先，supporting block 退居次级表面”。
+- [~] 左侧 knowledge hit 虽已是 file-first，但仍需继续收敛为 right-pane-first 阅读模型。
+- [ ] 需要在 retrieval 与 answer synthesis 之间补一个 graph-conditioned context-assembly layer，让当前 DAG 成为一等 answer-planning substrate。
+- [ ] 继续缩减 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js`、`src/frontend/workspace_panes.js` 的所有权压力。
+
+### 当前验收目标
+
+1. 所有活跃看板文档都指向同一份 2026-06-10 知识工作区 / DAG 对齐说明。
+2. 文档能明确区分“已经代码落地的基线”和“仍未满足的产品行为”。
+3. 当前分支完成验证、推进到 `main`、推送并在结束后保持工作区 clean。
+4. 向前兼容性保持明确：legacy `assistantMessage` 与当前公开运行时 API 不发生破坏性变化。
+
+---
+
 # 2026-03-04 v1.5.13 - Tauri Migration Task Consolidation
 
 ## English Document

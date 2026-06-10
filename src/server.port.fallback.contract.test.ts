@@ -114,6 +114,52 @@ function loadStartServer(): StartServer {
   return serverModule.startServer;
 }
 
+function loadStartServerWithPathBridgeFallbackProbe(): StartServer {
+  jest.resetModules();
+  jest.doMock('./index', () => ({
+    buildGraph: jest.fn().mockResolvedValue(undefined)
+  }));
+  jest.doMock('./core/PathBridge', () => {
+    class MockPathBridge {
+      private readonly port: number;
+
+      constructor(options: { port?: number }) {
+        const requestedPort = Number(options?.port || 9876);
+        if (requestedPort === 48765) {
+          const error = new Error('permission denied') as NodeJS.ErrnoException;
+          error.code = 'EACCES';
+          throw error;
+        }
+        this.port = requestedPort;
+      }
+
+      getPort(): number {
+        return this.port;
+      }
+
+      getStatus(): { port: number } {
+        return { port: this.port };
+      }
+    }
+
+    return { PathBridge: MockPathBridge };
+  });
+  jest.doMock('./reader_renderer', () => ({
+    renderMathPng: jest.fn().mockResolvedValue({
+      pngBase64: 'math',
+      width: 1,
+      height: 1
+    }),
+    renderMermaidPng: jest.fn().mockResolvedValue({
+      pngBase64: 'mermaid',
+      width: 1,
+      height: 1
+    })
+  }));
+  const serverModule = require('./server') as { startServer: StartServer };
+  return serverModule.startServer;
+}
+
 describe('server ephemeral port fallback policy contract', () => {
   let tempProject: { root: string; cleanup: () => void } | null = null;
   let envRestorers: Array<() => void> = [];
@@ -140,6 +186,8 @@ describe('server ephemeral port fallback policy contract', () => {
       setEnv('NOTE_CONNECTION_KB_ROOT', kbRoot),
       setEnv('NOTE_CONNECTION_AUTH_TOKEN', undefined),
       setEnv('NOTE_CONNECTION_PORT', undefined),
+      setEnv('NOTE_CONNECTION_BRIDGE_PORT', undefined),
+      setEnv('NOTE_CONNECTION_ALLOW_EPHEMERAL_BRIDGE_PORT_FALLBACK', undefined),
       setEnv('PORT', undefined)
     ];
     originalArgv = [...process.argv];
@@ -197,6 +245,29 @@ describe('server ephemeral port fallback policy contract', () => {
     } finally {
       await closeServer(appServer);
       await closeServer(blocker);
+    }
+  });
+
+  test('falls back from an unavailable PathBridge port and publishes the effective bridge port', async () => {
+    if (!tempProject) {
+      throw new Error('missing temp project');
+    }
+    const projectRoot = path.join(tempProject.root, 'project');
+    const manifestPath = path.join(projectRoot, 'tmp', 'active-sidecar-runtime.json');
+    envRestorers.push(setEnv('NOTE_CONNECTION_BRIDGE_PORT', '48765'));
+    envRestorers.push(setEnv('NOTE_CONNECTION_ALLOW_EPHEMERAL_BRIDGE_PORT_FALLBACK', '1'));
+
+    const startServer = loadStartServerWithPathBridgeFallbackProbe();
+    let appServer: Server | null = null;
+    try {
+      appServer = await startServer({ port: 0 });
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+
+      expect(manifest.bridgePort).not.toBe(48765);
+      expect(manifest.bridgePort).toBeGreaterThan(0);
+      expect(manifest.bridgeWsUrl).toBe(`ws://127.0.0.1:${manifest.bridgePort}`);
+    } finally {
+      await closeServer(appServer);
     }
   });
 });

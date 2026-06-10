@@ -3,6 +3,50 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-06-10 Knowledge Workspace Durable Artifact and DAG Alignment
+
+This slice reconciles the current codebase against the earlier lightweight-RAG and agent-workspace plans, with special focus on the existing DAG-backed learning substrate.
+
+The key result is that the current code has moved further than the old plan wording suggested:
+
+- the Knowledge Workspace is no longer just a thin scoped-chat shell,
+- workflow artifacts now include durable `flashcard_batch` and `knowledge_run` records,
+- reply rendering now has a typed structured-answer path,
+- workflow-artifact review follow-up is part of the runtime surface,
+- graph focus can render original markdown with matched-span highlighting.
+
+At the same time, the product surface is still behind the intended final behavior:
+
+- the visible answer area still renders supporting blocks that should eventually move out of the primary answer surface,
+- left-side knowledge hits are file-first but still carry preview/action behavior that should converge on a right-pane-first reading model,
+- the existing DAG substrate is real, but answer synthesis still behaves more like evidence-grouped text RAG than graph-native answer planning.
+
+Code-vs-plan reconciliation for this slice:
+
+| Requirement | Current implementation evidence | Progress call |
+|---|---|---|
+| Structured grounded conversation with backward compatibility | `src/learning/types.ts`, `src/learning/conversationComposer.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/agent_workspace.js`, and `src/frontend/workspace_panes.js` now support `answer`, `assistantBlocks`, `knowledgeRun`, grouped `knowledgePoints`, citations, and legacy `assistantMessage`. | Implemented baseline |
+| Durable learning/review artifacts | `src/workflows/WorkflowArtifactStore.ts`, `src/learning/KnowledgeLearningPlatform.ts`, and `src/routes/knowledge.ts` now support durable `flashcard_batch` / `knowledge_run` artifacts plus `/api/knowledge/workflow-artifacts` and `/api/knowledge/workflow-artifacts/review-follow-up`. | Implemented baseline |
+| File-first scoped knowledge hits | `workspace_panes.js` renders grouped knowledge hits by source file and preserves matched-span source references. | Implemented baseline |
+| Right-pane evidence reading | Graph focus reuses the shared markdown runtime and highlights matched spans in rendered source markdown. | Implemented baseline |
+| Answer area contraction to a single targeted answer | The codebase has the structured-answer owner and enough artifact separation to support this, but the current visible answer surface still renders support blocks. | Not complete |
+| DAG-native answer planning | The system already has `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, mastery-path logic, and `KnowledgeQueryItem.relationPath`, but conversation synthesis still does not have a dedicated graph-conditioned context-assembly layer. | Not complete |
+
+Immediate next direction from this point:
+
+1. Contract the primary visible answer area so it shows the targeted answer first and treats supporting blocks as secondary surfaces.
+2. Converge left-side knowledge hits on a right-pane-first reading flow.
+3. Treat `knowledge_run` and `flashcard_batch` as the first durable evidence/claim surfaces instead of inventing a second review substrate.
+4. Insert a graph-conditioned context-assembly layer between retrieval and answer synthesis so the current DAG becomes a first-class answer-planning substrate.
+5. Continue ownership reduction across `src/server.ts`, `KnowledgeLearningPlatform.ts`, `agent_workspace.js`, and `workspace_panes.js`.
+
+Verification for the current code-backed alignment:
+
+- `npm.cmd exec -- tsc --noEmit`
+- `node --check src/frontend/agent_workspace.js`
+- `node --check src/frontend/workspace_panes.js`
+- `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
+
 ## 2026-06-06 Knowledge Workspace Scope Switcher and Evidence-Focused Hit UI
 
 This slice closes the frontend usability gap that made the active RAG scope hard to see from inside the Knowledge Workspace itself.

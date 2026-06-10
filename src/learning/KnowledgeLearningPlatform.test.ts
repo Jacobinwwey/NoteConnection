@@ -1460,28 +1460,42 @@ describe('KnowledgeLearningPlatform', () => {
         expect(response.citations.length).toBeGreaterThan(0);
         expect(Array.isArray(response.assistantBlocks)).toBe(true);
         expect(response.assistantBlocks?.map((block) => block.type)).toEqual(
-            expect.arrayContaining(['main_markdown', 'system_notice', 'citations', 'knowledge_actions'])
+            expect.arrayContaining(['structured_answer', 'system_notice', 'citations', 'knowledge_actions', 'knowledge_run_summary'])
         );
-        const markdownBlocks = (response.assistantBlocks || []).filter((block) => block.type === 'main_markdown');
-        expect(markdownBlocks.length).toBeGreaterThanOrEqual(3);
+        const structuredBlock = (response.assistantBlocks || []).find((block) => block.type === 'structured_answer');
+        expect(structuredBlock).toEqual(expect.objectContaining({
+            type: 'structured_answer',
+        }));
         expect(
-            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('## Scoped Answer'))
-        ).toBe(true);
+            structuredBlock && 'overviewMarkdown' in structuredBlock
+                ? String(structuredBlock.overviewMarkdown || '')
+                : ''
+        ).toContain('## Answer Context');
         expect(
-            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('## Explanation'))
-        ).toBe(true);
+            structuredBlock && 'explanationMarkdown' in structuredBlock
+                ? String(structuredBlock.explanationMarkdown || '')
+                : ''
+        ).toContain('## Explanation');
         expect(
-            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('## Evidence Summary'))
-        ).toBe(true);
+            structuredBlock && 'evidenceMarkdown' in structuredBlock
+                ? String(structuredBlock.evidenceMarkdown || '')
+                : ''
+        ).toContain('## Evidence Summary');
         expect(
-            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('best scoped anchor'))
-        ).toBe(true);
+            structuredBlock && 'explanationMarkdown' in structuredBlock
+                ? String(structuredBlock.explanationMarkdown || '')
+                : ''
+        ).toContain('best scoped anchor');
         expect(
-            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('## Next Actions'))
-        ).toBe(true);
+            structuredBlock && 'nextActionsMarkdown' in structuredBlock
+                ? String(structuredBlock.nextActionsMarkdown || '')
+                : ''
+        ).toContain('## Next Actions');
         expect(
-            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('Persist the latest user focus to scoped conversation memory'))
-        ).toBe(true);
+            structuredBlock && 'nextActionsMarkdown' in structuredBlock
+                ? String(structuredBlock.nextActionsMarkdown || '')
+                : ''
+        ).toContain('Persist the latest user focus to scoped conversation memory');
         expect(response.trace.usedScope.corpusId).toBe('optics');
         expect(response.summary.appliedMemoryCount).toBeGreaterThan(0);
 
@@ -1612,6 +1626,84 @@ describe('KnowledgeLearningPlatform', () => {
         );
     });
 
+    test('workflow artifact review follow-up consumes review cards and archives completed batches', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_follow_up',
+                    sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                    language: 'en',
+                    workspaceId: 'waterglass',
+                    corpusId: 'waterglass',
+                    content: '# Water Glass\nA water glass is a transparent drinking vessel that contains water for use.',
+                },
+            ],
+        });
+
+        const conversation = await platform.agentConversation({
+            userId: 'follow_up_user',
+            sessionId: 'follow_up_session',
+            message: 'what is water glass?',
+            scope: {
+                workspaceId: 'waterglass',
+                corpusId: 'waterglass',
+                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+            },
+            persistMemory: false,
+        });
+
+        const artifacts = await platform.queryWorkflowArtifacts({
+            workspaceId: 'waterglass',
+            userId: 'follow_up_user',
+            artifactKinds: ['flashcard_batch', 'knowledge_run'],
+            limit: 10,
+        });
+        const flashcardArtifact = artifacts.artifacts.find((artifact) => artifact.kind === 'flashcard_batch');
+        const knowledgeRunArtifact = artifacts.artifacts.find((artifact) => artifact.kind === 'knowledge_run');
+        expect(flashcardArtifact).toBeDefined();
+        expect(knowledgeRunArtifact).toBeDefined();
+
+        const reviewCards = ((flashcardArtifact?.payload || {}) as any).reviewCards || [];
+        expect(reviewCards).toHaveLength(1);
+
+        const followUp = await platform.executeWorkflowArtifactReviewFollowUp({
+            userId: 'follow_up_user',
+            sessionId: 'follow_up_session',
+            artifactId: String(flashcardArtifact?.artifactId || ''),
+            cardId: String(reviewCards[0]?.cardId || ''),
+            action: {
+                atomId: String(reviewCards[0]?.atomId || conversation.knowledgePoints[0]?.atomId || ''),
+                kind: 'review',
+                source: 'flashcard_batch',
+                prompt: String(reviewCards[0]?.prompt || ''),
+            },
+            persistMemory: false,
+        });
+
+        expect(followUp.consumedCardId).toBe(String(reviewCards[0]?.cardId || ''));
+        expect(followUp.completedReviewCardCount).toBe(1);
+        expect(followUp.remainingReviewCardCount).toBe(0);
+        expect(followUp.archivedArtifact).toBe(true);
+        expect(followUp.artifact.status).toBe('archived');
+        expect((followUp.artifact.payload.reviewState as any).consumedCardIds).toEqual([
+            String(reviewCards[0]?.cardId || ''),
+        ]);
+        expect(followUp.relatedKnowledgeRunArtifact?.status).toBe('archived');
+        expect(((followUp.relatedKnowledgeRunArtifact?.payload || {}) as any).knowledgeRun.summary.completedReviewCardCount).toBe(1);
+        expect(((followUp.relatedKnowledgeRunArtifact?.payload || {}) as any).knowledgeRun.summary.remainingReviewCardCount).toBe(0);
+
+        const refreshedArtifacts = await platform.queryWorkflowArtifacts({
+            workspaceId: 'waterglass',
+            userId: 'follow_up_user',
+            artifactKinds: ['flashcard_batch'],
+            limit: 10,
+        });
+        const refreshedFlashcardArtifact = refreshedArtifacts.artifacts.find((artifact) => artifact.artifactId === flashcardArtifact?.artifactId);
+        expect(refreshedFlashcardArtifact?.status).toBe('archived');
+        expect((refreshedFlashcardArtifact?.payload.reviewState as any).remainingReviewCardCount).toBe(0);
+    });
+
     test('agent conversation explanation and next actions adapt to comparison-style queries', async () => {
         await platform.ingestKnowledge({
             incremental: true,
@@ -1642,16 +1734,22 @@ describe('KnowledgeLearningPlatform', () => {
             persistMemory: true,
         });
 
-        const markdownBlocks = (response.assistantBlocks || []).filter((block) => block.type === 'main_markdown');
+        const structuredBlock = (response.assistantBlocks || []).find((block) => block.type === 'structured_answer');
         expect(
-            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('comparison baseline'))
-        ).toBe(true);
+            structuredBlock && 'explanationMarkdown' in structuredBlock
+                ? String(structuredBlock.explanationMarkdown || '')
+                : ''
+        ).toContain('comparison baseline');
         expect(
-            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('Supporting comparison nodes'))
-        ).toBe(true);
+            structuredBlock && 'explanationMarkdown' in structuredBlock
+                ? String(structuredBlock.explanationMarkdown || '')
+                : ''
+        ).toContain('Supporting comparison nodes');
         expect(
-            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('inspect the strongest nodes side by side'))
-        ).toBe(true);
+            structuredBlock && 'nextActionsMarkdown' in structuredBlock
+                ? String(structuredBlock.nextActionsMarkdown || '')
+                : ''
+        ).toContain('inspect the strongest nodes side by side');
     });
 
     test('agent conversation explanation and next actions adapt to how-to queries', async () => {
@@ -1678,13 +1776,17 @@ describe('KnowledgeLearningPlatform', () => {
             persistMemory: true,
         });
 
-        const markdownBlocks = (response.assistantBlocks || []).filter((block) => block.type === 'main_markdown');
+        const structuredBlock = (response.assistantBlocks || []).find((block) => block.type === 'structured_answer');
         expect(
-            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('starting anchor for the next concrete steps'))
-        ).toBe(true);
+            structuredBlock && 'explanationMarkdown' in structuredBlock
+                ? String(structuredBlock.explanationMarkdown || '')
+                : ''
+        ).toContain('starting anchor for the next concrete steps');
         expect(
-            markdownBlocks.some((block) => String((block as { markdown?: string }).markdown || '').includes('move from explanation into concrete guided-learning or focus-mode steps'))
-        ).toBe(true);
+            structuredBlock && 'nextActionsMarkdown' in structuredBlock
+                ? String(structuredBlock.nextActionsMarkdown || '')
+                : ''
+        ).toContain('move from explanation into concrete guided-learning or focus-mode steps');
     });
 
     test('agent conversation exposes readiness and miss diagnostics when scoped retrieval is empty', async () => {

@@ -4,6 +4,7 @@ export type WorkflowArtifactKind =
     | 'review_plan'
     | 'question_set'
     | 'flashcard_batch'
+    | 'knowledge_run'
     | 'research_report';
 
 export type WorkflowArtifactStatus = 'active' | 'archived';

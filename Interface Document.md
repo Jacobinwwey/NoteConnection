@@ -62,6 +62,26 @@ Audit flow:
 - `assistantBlocks` are no longer only transport wrappers around the same legacy answer string. Current Tauri-capable clients should expect intent-aware overview / explanation / evidence / memory / action sections while still honoring `assistantMessage` as the compatibility fallback.
 - Compatibility rule: new response fields must remain additive and optional; Godot/mobile paths must continue to use PNG-first materialized render artifacts instead of requiring direct SVG import.
 
+## 0.2B Knowledge Workspace and DAG Alignment Addendum (2026-06-10)
+
+- The Knowledge Workspace runtime now includes durable workflow-artifact paths for `flashcard_batch` and `knowledge_run`, exposed through `/api/knowledge/workflow-artifacts` and `/api/knowledge/workflow-artifacts/review-follow-up`.
+- Runtime compatibility remains additive:
+  - `assistantMessage` stays valid,
+  - `answer`, `assistantBlocks`, `knowledgeRun`, grouped `knowledgePoints`, citations, memory actions, and trace coexist with legacy clients.
+- The codebase already contains a real DAG-backed learning substrate:
+  - `KnowledgeAtom`
+  - `RelationEdge`
+  - `TemporalEdge`
+  - path queries
+  - prerequisite-driven mastery/session flows
+  - `KnowledgeQueryItem.relationPath`
+- Current architecture reading:
+  - graph-backed retrieval and learning-path/session logic are implemented,
+  - graph-native answer planning is not yet complete because retrieval and answer synthesis still lack a dedicated graph-conditioned context-assembly layer.
+- Current product-surface reading:
+  - grouped file-first knowledge hits and right-pane source highlighting are implemented,
+  - the visible answer area still needs future contraction so targeted answers lead and supporting blocks move to secondary surfaces.
+
 ---
 
 ## 1. Runtime and Path Contracts

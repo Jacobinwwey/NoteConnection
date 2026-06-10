@@ -91,6 +91,10 @@
         'learning-quality-history': renderLearningQualityHistoryCard,
         'learning-quality-baseline-evaluation': renderLearningQualityBaselineEvaluationCard,
         'session-plan-quality-history': renderSessionPlanQualityHistoryCard,
+        'flashcard-batch': renderFlashcardBatchCard,
+        'knowledge-run': renderKnowledgeRunCard,
+        'knowledge-run-history': renderKnowledgeRunHistoryCard,
+        'knowledge-run-compare': renderKnowledgeRunCompareCard,
         'runtime-capability-runbook-verify': renderRuntimeCapabilityRunbookVerifyCard,
         'runtime-capability-runbook-history': renderRuntimeCapabilityRunbookHistoryCard,
         'runtime-capability-runbook-checks': renderRuntimeCapabilityRunbookChecksCard,
@@ -218,6 +222,23 @@
             : [];
     }
 
+    function resolveMarkdownPreviewRuntime() {
+        const markdownRuntime = resolveMarkdownRuntime();
+        const storageProvider = getStorageProvider();
+        if (
+            !markdownRuntime
+            || typeof markdownRuntime.renderMarkdownInto !== 'function'
+            || !storageProvider
+            || typeof storageProvider.readContent !== 'function'
+        ) {
+            return null;
+        }
+        return {
+            markdownRuntime,
+            storageProvider,
+        };
+    }
+
     function buildGraphFocusTitle(payload) {
         return String(
             payload.title
@@ -343,11 +364,37 @@
         return highlighted;
     }
 
+    async function renderMarkdownPreviewIntoHost(renderedHost, sourcePath, matchedSpans, renderToken) {
+        const previewRuntime = resolveMarkdownPreviewRuntime();
+        if (!renderedHost || !sourcePath || !previewRuntime) {
+            return false;
+        }
+
+        try {
+            const markdownSource = await previewRuntime.storageProvider.readContent(sourcePath);
+            if (
+                !renderedHost.isConnected
+                || String(renderedHost.getAttribute('data-agent-preview-render-token') || '') !== String(renderToken)
+            ) {
+                return true;
+            }
+            await previewRuntime.markdownRuntime.renderMarkdownInto(renderedHost, String(markdownSource || ''));
+            if (
+                !renderedHost.isConnected
+                || String(renderedHost.getAttribute('data-agent-preview-render-token') || '') !== String(renderToken)
+            ) {
+                return true;
+            }
+            highlightGraphFocusRenderedMarkdown(renderedHost, matchedSpans);
+            return true;
+        } catch (_error) {
+            return false;
+        }
+    }
+
     async function renderGraphFocusSourceMarkdown(body, payload, matchedSpans, renderToken) {
         const sourcePath = String(payload.sourcePath || '').trim();
-        const markdownRuntime = resolveMarkdownRuntime();
-        const storageProvider = getStorageProvider();
-        if (!body || !sourcePath || !markdownRuntime || typeof markdownRuntime.renderMarkdownInto !== 'function' || !storageProvider || typeof storageProvider.readContent !== 'function') {
+        if (!body || !sourcePath) {
             return false;
         }
 
@@ -356,21 +403,12 @@
         if (!renderedHost) {
             return false;
         }
-
-        try {
-            const markdownSource = await storageProvider.readContent(sourcePath);
-            if (renderToken !== state.graphFocusRenderToken || !state.panes['graph-focus'].open) {
-                return true;
-            }
-            await markdownRuntime.renderMarkdownInto(renderedHost, String(markdownSource || ''));
-            if (renderToken !== state.graphFocusRenderToken || !state.panes['graph-focus'].open) {
-                return true;
-            }
-            highlightGraphFocusRenderedMarkdown(renderedHost, matchedSpans);
+        renderedHost.setAttribute('data-agent-preview-render-token', String(renderToken));
+        const rendered = await renderMarkdownPreviewIntoHost(renderedHost, sourcePath, matchedSpans, renderToken);
+        if (rendered && (renderToken !== state.graphFocusRenderToken || !state.panes['graph-focus'].open)) {
             return true;
-        } catch (_error) {
-            return false;
         }
+        return rendered;
     }
 
     async function renderGraphFocusBody(payload) {
@@ -430,6 +468,30 @@
             summary: String(item && (item.summary || item.evidenceSnippet) || '').trim(),
             sourcePath: resolveKnowledgePointSourcePath(item),
             matchedSpans,
+        };
+    }
+
+    function buildKnowledgeRunClaimFocusPayload(claim, summary) {
+        const sourcePath = String(claim && claim.sourcePath || '').trim();
+        const snippet = String(claim && claim.snippet || '').trim();
+        return {
+            atomId: String(claim && claim.atomId || summary && summary.runId || '').trim(),
+            nodeId: String(claim && claim.atomId || summary && summary.runId || '').trim(),
+            title: String(claim && claim.title || summary && summary.artifactTitle || summary && summary.runId || '').trim(),
+            summary: String(claim && claim.reason || snippet || '').trim(),
+            sourcePath,
+            matchedSpans: sourcePath
+                ? [
+                    {
+                        atomId: String(claim && claim.atomId || '').trim(),
+                        title: String(claim && claim.title || '').trim(),
+                        snippet,
+                        sourcePath,
+                        startLine: Number.isFinite(Number(claim && claim.startLine)) ? Number(claim.startLine) : undefined,
+                        endLine: Number.isFinite(Number(claim && claim.endLine)) ? Number(claim.endLine) : undefined,
+                    },
+                ]
+                : [],
         };
     }
 
@@ -555,6 +617,431 @@
             {
                 title: translate('agentWorkspace.sessionHistory.latestExecutedAtLabel', 'Latest executed at'),
                 value: latestDisplay,
+            },
+        ];
+        const metricsHtml = metrics.map((metric) => `
+            <li class="agent-chat-card-list-item">
+                <div class="agent-chat-card-list-title">${escapeHtml(metric.title)}</div>
+                <div class="agent-chat-card-list-meta">${escapeHtml(metric.value)}</div>
+            </li>
+        `).join('');
+        node.innerHTML = `
+            <div class="agent-chat-card">
+                <div class="agent-chat-card-title">${escapeHtml(title)}</div>
+                <div class="agent-chat-card-summary">${escapeHtml(summaryText)}</div>
+                <div class="agent-chat-card-section-title">${escapeHtml(metricsHeading)}</div>
+                <ul class="agent-chat-card-list">${metricsHtml}</ul>
+            </div>
+        `;
+    }
+
+    function renderFlashcardBatchCard(node, payload) {
+        const summary = payload && typeof payload === 'object' ? payload : {};
+        const title = translate(
+            'agentWorkspace.reply.flashcardBatch.cardTitle',
+            'Review Card Batch'
+        );
+        const summaryText = translate(
+            'agentWorkspace.reply.flashcardBatch.summary',
+            '{returnedArtifacts} artifact(s), {remainingCards}/{totalCards} review card(s) remaining.',
+            {
+                returnedArtifacts: String(summary.returnedArtifacts == null ? 0 : summary.returnedArtifacts),
+                remainingCards: String(summary.remainingCards == null ? 0 : summary.remainingCards),
+                totalCards: String(summary.totalCards == null ? 0 : summary.totalCards),
+            }
+        );
+        const metricsHeading = translate(
+            'agentWorkspace.reply.flashcardBatch.metricsHeading',
+            'Key Metrics'
+        );
+        const noneLabel = translate(
+            'agentWorkspace.reply.flashcardBatch.none',
+            'none'
+        );
+        const artifactStatusToken = String(summary.artifactStatus || '').trim().toLowerCase();
+        const artifactStatusLabel = artifactStatusToken === 'archived'
+            ? translate('agentWorkspace.reply.flashcardBatch.statusArchived', 'archived')
+            : artifactStatusToken === 'active'
+                ? translate('agentWorkspace.reply.flashcardBatch.statusActive', 'active')
+                : (String(summary.artifactStatusLabel || '').trim() || noneLabel);
+        const metrics = [
+            {
+                title: translate(
+                    'agentWorkspace.reply.flashcardBatch.artifactKindsLabel',
+                    'Artifact kinds'
+                ),
+                value: String(summary.artifactKinds || '').trim() || noneLabel,
+            },
+            {
+                title: translate(
+                    'agentWorkspace.reply.flashcardBatch.topPromptLabel',
+                    'Top prompt'
+                ),
+                value: String(summary.topPrompt || '').trim() || noneLabel,
+            },
+            {
+                title: translate(
+                    'agentWorkspace.reply.flashcardBatch.topEvidenceLabel',
+                    'Top evidence'
+                ),
+                value: String(summary.topEvidenceRef || '').trim() || noneLabel,
+            },
+            {
+                title: translate(
+                    'agentWorkspace.reply.flashcardBatch.completedLabel',
+                    'Completed cards'
+                ),
+                value: String(summary.completedCards == null ? 0 : summary.completedCards),
+            },
+            {
+                title: translate(
+                    'agentWorkspace.reply.flashcardBatch.remainingLabel',
+                    'Remaining cards'
+                ),
+                value: String(summary.remainingCards == null ? 0 : summary.remainingCards),
+            },
+            {
+                title: translate(
+                    'agentWorkspace.reply.flashcardBatch.statusLabel',
+                    'Artifact status'
+                ),
+                value: artifactStatusLabel,
+            },
+        ];
+        const metricsHtml = metrics.map((metric) => `
+            <li class="agent-chat-card-list-item">
+                <div class="agent-chat-card-list-title">${escapeHtml(metric.title)}</div>
+                <div class="agent-chat-card-list-meta">${escapeHtml(metric.value)}</div>
+            </li>
+        `).join('');
+        const nextCapability = summary && summary.nextCapability && typeof summary.nextCapability === 'object'
+            ? summary.nextCapability
+            : null;
+        node.innerHTML = `
+            <div class="agent-chat-card">
+                <div class="agent-chat-card-title">${escapeHtml(title)}</div>
+                <div class="agent-chat-card-summary">${escapeHtml(summaryText)}</div>
+                <div class="agent-chat-card-section-title">${escapeHtml(metricsHeading)}</div>
+                <ul class="agent-chat-card-list">${metricsHtml}</ul>
+                ${nextCapability ? `<div class="agent-chat-card-actions"><button type="button" data-agent-flashcard-follow-up="true">${escapeHtml(translate('agentWorkspace.reply.flashcardBatch.reviewNow', 'Review Now'))}</button></div>` : ''}
+            </div>
+        `;
+        if (nextCapability) {
+            const followUpButton = node.querySelector('[data-agent-flashcard-follow-up="true"]');
+            if (followUpButton && typeof followUpButton.addEventListener === 'function') {
+                followUpButton.addEventListener('click', function () {
+                    if (!window.NoteConnectionAgentWorkspace || typeof window.NoteConnectionAgentWorkspace.executeCapability !== 'function') {
+                        return;
+                    }
+                    void window.NoteConnectionAgentWorkspace.executeCapability({
+                        atomId: String(nextCapability.targetAtomId || '').trim(),
+                        title: String(summary.topPrompt || title).trim() || title,
+                    }, nextCapability, {
+                        conversationCardNode: node,
+                    });
+                });
+            }
+        }
+    }
+
+    function renderKnowledgeRunCard(node, payload) {
+        const summary = payload && typeof payload === 'object' ? payload : {};
+        const title = translate('agentWorkspace.reply.knowledgeRunCardTitle', 'Knowledge Run Details');
+        const qualityStatus = String(summary.qualityStatus || '').trim()
+            || translate('agentWorkspace.reply.knowledgeRunNone', 'none');
+        const qualityScore = Number(summary.qualityScore);
+        const summaryText = Number.isFinite(qualityScore)
+            ? translate(
+                'agentWorkspace.reply.knowledgeRunCardSummary',
+                'Run {runId}: {claimCount} claims, quality {qualityStatus}/{qualityScore}.',
+                {
+                    runId: String(summary.runId || '').trim() || translate('agentWorkspace.reply.knowledgeRunNone', 'none'),
+                    claimCount: String(summary.claimCount == null ? 0 : summary.claimCount),
+                    qualityStatus,
+                    qualityScore: String(qualityScore),
+                }
+            )
+            : translate(
+                'agentWorkspace.reply.knowledgeRunCardSummaryNoScore',
+                'Run {runId}: {claimCount} claims, quality {qualityStatus}.',
+                {
+                    runId: String(summary.runId || '').trim() || translate('agentWorkspace.reply.knowledgeRunNone', 'none'),
+                    claimCount: String(summary.claimCount == null ? 0 : summary.claimCount),
+                    qualityStatus,
+                }
+            );
+        const metricsHeading = translate(
+            'agentWorkspace.reply.knowledgeRunMetricsHeading',
+            'Key Metrics'
+        );
+        const noneLabel = translate(
+            'agentWorkspace.reply.knowledgeRunNone',
+            'none'
+        );
+        const artifactStatusToken = String(summary.artifactStatus || '').trim().toLowerCase();
+        const artifactStatusLabel = artifactStatusToken === 'archived'
+            ? translate('agentWorkspace.reply.flashcardBatch.statusArchived', 'archived')
+            : artifactStatusToken === 'active'
+                ? translate('agentWorkspace.reply.flashcardBatch.statusActive', 'active')
+                : (artifactStatusToken || noneLabel);
+        const metrics = [
+            {
+                title: translate('agentWorkspace.reply.knowledgeRun', 'Knowledge Run'),
+                value: String(summary.artifactTitle || '').trim() || noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunScopeLabel', 'Scope'),
+                value: String(summary.scopeLabel || '').trim() || noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunScopeSourceLabel', 'Scope source'),
+                value: String(summary.scopeSource || '').trim() || noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunArtifactStatusLabel', 'Artifact status'),
+                value: artifactStatusLabel,
+            },
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunTopClaimSourceLabel', 'Top claim source'),
+                value: String(summary.topClaimSourceRef || '').trim() || noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunReviewProgressLabel', 'Review progress'),
+                value: `${String(summary.completedReviewCardCount == null ? 0 : summary.completedReviewCardCount)}/${String(summary.reviewCardCount == null ? 0 : summary.reviewCardCount)}`,
+            },
+        ];
+        const metricsHtml = metrics.map((metric) => `
+            <li class="agent-chat-card-list-item">
+                <div class="agent-chat-card-list-title">${escapeHtml(metric.title)}</div>
+                <div class="agent-chat-card-list-meta">${escapeHtml(metric.value)}</div>
+            </li>
+        `).join('');
+
+        const claims = Array.isArray(summary.claims) ? summary.claims : [];
+        const claimsHeading = translate('agentWorkspace.reply.knowledgeRunClaims', 'Evidence claims');
+        const claimsHtml = claims.length > 0
+            ? claims.map((claim, index) => `
+                <li class="agent-chat-card-list-item">
+                    <div class="agent-chat-card-list-title">${escapeHtml(`${index + 1}. ${String(claim.title || '').trim() || noneLabel} (${String(claim.status || '').trim() || 'unknown'})`)}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(String(claim.sourceRef || '').trim() || noneLabel)}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(String(claim.snippet || '').trim() || noneLabel)}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(String(claim.reason || '').trim() || noneLabel)}</div>
+                    ${String(claim.sourcePath || '').trim() ? `<div class="agent-chat-card-actions"><button type="button" data-agent-knowledge-run-claim-inspect="${index}">${escapeHtml(translate('agentWorkspace.reply.knowledgeRunInspectEvidence', 'Inspect Evidence'))}</button></div>` : ''}
+                </li>
+            `).join('')
+            : `<li class="agent-chat-card-list-empty">${escapeHtml(noneLabel)}</li>`;
+
+        const gates = Array.isArray(summary.qualityGates) ? summary.qualityGates : [];
+        const gatesHeading = translate('agentWorkspace.reply.knowledgeRunQualityGatesLabel', 'Quality gates');
+        const gatesHtml = gates.length > 0
+            ? gates.map((gate) => `
+                <li class="agent-chat-card-list-item">
+                    <div class="agent-chat-card-list-title">${escapeHtml(`${gate.passed ? 'PASS' : 'CHECK'} ${String(gate.gateId || '').trim()}`)}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(String(gate.message || '').trim() || noneLabel)}</div>
+                </li>
+            `).join('')
+            : `<li class="agent-chat-card-list-empty">${escapeHtml(noneLabel)}</li>`;
+
+        const reviewCards = Array.isArray(summary.reviewCards) ? summary.reviewCards : [];
+        const reviewCardsHeading = translate('agentWorkspace.reply.knowledgeRunReviewCards', 'Review cards');
+        const reviewCardsHtml = reviewCards.length > 0
+            ? reviewCards.map((card, index) => `
+                <li class="agent-chat-card-list-item">
+                    <div class="agent-chat-card-list-title">${escapeHtml(`${index + 1}. ${String(card.prompt || '').trim() || noneLabel}`)}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(Array.isArray(card.evidenceRefs) ? card.evidenceRefs.join(', ') : noneLabel)}</div>
+                </li>
+            `).join('')
+            : `<li class="agent-chat-card-list-empty">${escapeHtml(noneLabel)}</li>`;
+
+        node.innerHTML = `
+            <div class="agent-chat-card">
+                <div class="agent-chat-card-title">${escapeHtml(title)}</div>
+                <div class="agent-chat-card-summary">${escapeHtml(summaryText)}</div>
+                <div class="agent-chat-card-section-title">${escapeHtml(metricsHeading)}</div>
+                <ul class="agent-chat-card-list">${metricsHtml}</ul>
+                <div class="agent-chat-card-section-title">${escapeHtml(claimsHeading)}</div>
+                <ul class="agent-chat-card-list">${claimsHtml}</ul>
+                <div class="agent-chat-card-section-title">${escapeHtml(gatesHeading)}</div>
+                <ul class="agent-chat-card-list">${gatesHtml}</ul>
+                <div class="agent-chat-card-section-title">${escapeHtml(reviewCardsHeading)}</div>
+                <ul class="agent-chat-card-list">${reviewCardsHtml}</ul>
+            </div>
+        `;
+
+        claims.forEach((claim, index) => {
+            if (!String(claim && claim.sourcePath || '').trim()) {
+                return;
+            }
+            const inspectButton = node.querySelector(`[data-agent-knowledge-run-claim-inspect="${index}"]`);
+            if (inspectButton && typeof inspectButton.addEventListener === 'function') {
+                inspectButton.addEventListener('click', function () {
+                    ensureWorkspaceVisible();
+                    api.openGraphFocusPane(buildKnowledgeRunClaimFocusPayload(claim, summary));
+                });
+            }
+        });
+    }
+
+    function renderKnowledgeRunHistoryCard(node, payload) {
+        const summary = payload && typeof payload === 'object' ? payload : {};
+        const title = translate('agentWorkspace.reply.knowledgeRunHistoryCardTitle', 'Knowledge Run History');
+        const summaryText = translate(
+            'agentWorkspace.reply.knowledgeRunHistoryCardSummary',
+            '{returnedArtifacts} run artifact(s) returned.',
+            {
+                returnedArtifacts: String(summary.returnedArtifacts == null ? 0 : summary.returnedArtifacts),
+            }
+        );
+        const noneLabel = translate('agentWorkspace.reply.knowledgeRunNone', 'none');
+        const runsHeading = translate('agentWorkspace.reply.knowledgeRunHistoryRunsHeading', 'Recent Runs');
+        const runs = Array.isArray(summary.runs) ? summary.runs : [];
+        const latestRun = runs[0] && typeof runs[0] === 'object' ? runs[0] : null;
+        const runsHtml = runs.length > 0
+            ? runs.map((run, index) => `
+                <li class="agent-chat-card-list-item">
+                    <div class="agent-chat-card-list-title">${escapeHtml(`${index + 1}. ${String(run.runId || '').trim() || noneLabel}`)}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(String(run.artifactTitle || '').trim() || noneLabel)}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(String(run.scopeLabel || '').trim() || noneLabel)}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(`claims ${String(run.claimCount == null ? 0 : run.claimCount)}, quality ${String(run.qualityStatus || '').trim() || noneLabel}${Number.isFinite(Number(run.qualityScore)) ? `/${String(run.qualityScore)}` : ''}`)}</div>
+                    ${String(run.artifactId || '').trim() ? `<div class="agent-chat-card-actions"><button type="button" data-agent-knowledge-run-history-inspect="${index}">${escapeHtml(translate('agentWorkspace.reply.knowledgeRunHistoryInspectRun', 'Inspect Run'))}</button>${latestRun && index > 0 ? `<button type="button" data-agent-knowledge-run-history-compare="${index}">${escapeHtml(translate('agentWorkspace.reply.knowledgeRunHistoryCompareLatest', 'Compare Latest'))}</button>` : ''}</div>` : ''}
+                </li>
+            `).join('')
+            : `<li class="agent-chat-card-list-empty">${escapeHtml(noneLabel)}</li>`;
+
+        node.innerHTML = `
+            <div class="agent-chat-card">
+                <div class="agent-chat-card-title">${escapeHtml(title)}</div>
+                <div class="agent-chat-card-summary">${escapeHtml(summaryText)}</div>
+                <div class="agent-chat-card-section-title">${escapeHtml(runsHeading)}</div>
+                <ul class="agent-chat-card-list">${runsHtml}</ul>
+            </div>
+        `;
+
+        runs.forEach((run, index) => {
+            if (!String(run && run.artifactId || '').trim()) {
+                return;
+            }
+            const inspectButton = node.querySelector(`[data-agent-knowledge-run-history-inspect="${index}"]`);
+            if (inspectButton && typeof inspectButton.addEventListener === 'function') {
+                inspectButton.addEventListener('click', function () {
+                    if (!window.NoteConnectionAgentWorkspace || typeof window.NoteConnectionAgentWorkspace.executeCapability !== 'function') {
+                        return;
+                    }
+                    void window.NoteConnectionAgentWorkspace.executeCapability({
+                        atomId: '',
+                        title: String(run && run.runId || title).trim() || title,
+                    }, {
+                        capabilityId: `cap_inspect_knowledge_run_history_${String(run.artifactId || '').trim() || index}`,
+                        actionId: 'inspect_knowledge_run',
+                        label: 'Inspect Run',
+                        request: {
+                            artifactKinds: ['knowledge_run'],
+                            artifactId: String(run && run.artifactId || '').trim() || undefined,
+                            runId: String(run && run.runId || '').trim() || undefined,
+                            workspaceId: String(run && run.workspaceId || '').trim() || undefined,
+                            limit: 1,
+                        },
+                        execution: {
+                            kind: 'knowledge_operation',
+                            operationId: 'fetch_workflow_artifacts',
+                            resultPresentation: 'knowledge_run_card',
+                        },
+                    });
+                });
+            }
+            if (latestRun && index > 0) {
+                const compareButton = node.querySelector(`[data-agent-knowledge-run-history-compare="${index}"]`);
+                if (compareButton && typeof compareButton.addEventListener === 'function') {
+                    compareButton.addEventListener('click', function () {
+                        api.appendKnowledgeRunCompareCard(buildKnowledgeRunComparePayload(latestRun, run));
+                    });
+                }
+            }
+        });
+    }
+
+    function formatKnowledgeRunCompareDelta(value) {
+        const numeric = Number(value || 0);
+        if (!Number.isFinite(numeric) || numeric === 0) {
+            return '0';
+        }
+        return numeric > 0 ? `+${numeric}` : String(numeric);
+    }
+
+    function buildKnowledgeRunComparePayload(latestRun, comparedRun) {
+        const safeLatest = latestRun && typeof latestRun === 'object' ? latestRun : {};
+        const safeCompared = comparedRun && typeof comparedRun === 'object' ? comparedRun : {};
+        const latestQualityScore = Number.isFinite(Number(safeLatest.qualityScore)) ? Number(safeLatest.qualityScore) : null;
+        const comparedQualityScore = Number.isFinite(Number(safeCompared.qualityScore)) ? Number(safeCompared.qualityScore) : null;
+        return {
+            latestRunId: String(safeLatest.runId || '').trim(),
+            latestArtifactTitle: String(safeLatest.artifactTitle || '').trim(),
+            latestQualityStatus: String(safeLatest.qualityStatus || '').trim(),
+            latestQualityScore,
+            latestClaimCount: Number.isFinite(Number(safeLatest.claimCount)) ? Number(safeLatest.claimCount) : 0,
+            latestWeakClaimCount: Number.isFinite(Number(safeLatest.weakClaimCount)) ? Number(safeLatest.weakClaimCount) : 0,
+            latestRemainingReviewCardCount: Number.isFinite(Number(safeLatest.remainingReviewCardCount)) ? Number(safeLatest.remainingReviewCardCount) : 0,
+            comparedRunId: String(safeCompared.runId || '').trim(),
+            comparedArtifactTitle: String(safeCompared.artifactTitle || '').trim(),
+            comparedQualityStatus: String(safeCompared.qualityStatus || '').trim(),
+            comparedQualityScore,
+            comparedClaimCount: Number.isFinite(Number(safeCompared.claimCount)) ? Number(safeCompared.claimCount) : 0,
+            comparedWeakClaimCount: Number.isFinite(Number(safeCompared.weakClaimCount)) ? Number(safeCompared.weakClaimCount) : 0,
+            comparedRemainingReviewCardCount: Number.isFinite(Number(safeCompared.remainingReviewCardCount)) ? Number(safeCompared.remainingReviewCardCount) : 0,
+            qualityScoreDelta: latestQualityScore != null && comparedQualityScore != null
+                ? Number((comparedQualityScore - latestQualityScore).toFixed(2))
+                : null,
+            claimCountDelta: (Number.isFinite(Number(safeCompared.claimCount)) ? Number(safeCompared.claimCount) : 0)
+                - (Number.isFinite(Number(safeLatest.claimCount)) ? Number(safeLatest.claimCount) : 0),
+            weakClaimCountDelta: (Number.isFinite(Number(safeCompared.weakClaimCount)) ? Number(safeCompared.weakClaimCount) : 0)
+                - (Number.isFinite(Number(safeLatest.weakClaimCount)) ? Number(safeLatest.weakClaimCount) : 0),
+            remainingReviewCardCountDelta: (Number.isFinite(Number(safeCompared.remainingReviewCardCount)) ? Number(safeCompared.remainingReviewCardCount) : 0)
+                - (Number.isFinite(Number(safeLatest.remainingReviewCardCount)) ? Number(safeLatest.remainingReviewCardCount) : 0),
+        };
+    }
+
+    function renderKnowledgeRunCompareCard(node, payload) {
+        const summary = payload && typeof payload === 'object' ? payload : {};
+        const title = translate('agentWorkspace.reply.knowledgeRunCompareCardTitle', 'Knowledge Run Comparison');
+        const latestRunId = String(summary.latestRunId || '').trim();
+        const comparedRunId = String(summary.comparedRunId || '').trim();
+        const summaryText = translate(
+            'agentWorkspace.reply.knowledgeRunCompareCardSummary',
+            'Comparing {comparedRunId} against latest {latestRunId}.',
+            {
+                comparedRunId: comparedRunId || translate('agentWorkspace.reply.knowledgeRunNone', 'none'),
+                latestRunId: latestRunId || translate('agentWorkspace.reply.knowledgeRunNone', 'none'),
+            }
+        );
+        const noneLabel = translate('agentWorkspace.reply.knowledgeRunNone', 'none');
+        const metricsHeading = translate('agentWorkspace.reply.knowledgeRunMetricsHeading', 'Key Metrics');
+        const qualityDelta = summary.qualityScoreDelta == null
+            ? noneLabel
+            : formatKnowledgeRunCompareDelta(summary.qualityScoreDelta);
+        const metrics = [
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunCompareLatestLabel', 'Latest run'),
+                value: `${latestRunId || noneLabel} (${String(summary.latestQualityStatus || '').trim() || noneLabel}${summary.latestQualityScore != null ? `/${String(summary.latestQualityScore)}` : ''})`,
+            },
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunCompareCandidateLabel', 'Compared run'),
+                value: `${comparedRunId || noneLabel} (${String(summary.comparedQualityStatus || '').trim() || noneLabel}${summary.comparedQualityScore != null ? `/${String(summary.comparedQualityScore)}` : ''})`,
+            },
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunCompareQualityDeltaLabel', 'Quality delta'),
+                value: qualityDelta,
+            },
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunCompareClaimDeltaLabel', 'Claim delta'),
+                value: formatKnowledgeRunCompareDelta(summary.claimCountDelta),
+            },
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunCompareWeakClaimDeltaLabel', 'Weak-claim delta'),
+                value: formatKnowledgeRunCompareDelta(summary.weakClaimCountDelta),
+            },
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunCompareRemainingReviewDeltaLabel', 'Remaining review delta'),
+                value: formatKnowledgeRunCompareDelta(summary.remainingReviewCardCountDelta),
             },
         ];
         const metricsHtml = metrics.map((metric) => `
@@ -2527,8 +3014,112 @@
         knowledgePoints: {
             items: [],
             handlers: null,
+            expandedByKey: {},
+            previewRenderToken: 0,
+            resultSetKey: '',
         },
     };
+
+    function buildKnowledgePointPreviewKey(item, index) {
+        const sourcePath = resolveKnowledgePointSourcePath(item);
+        if (sourcePath) {
+            return `source:${sourcePath.toLowerCase()}`;
+        }
+        const atomId = String(item && item.atomId || item && item.documentId || '').trim();
+        return `atom:${atomId || index}`;
+    }
+
+    function isKnowledgePointPreviewExpanded(item, index) {
+        const previewKey = buildKnowledgePointPreviewKey(item, index);
+        return state.knowledgePoints.expandedByKey[previewKey] === true;
+    }
+
+    function setKnowledgePointPreviewExpanded(item, index, expanded) {
+        const previewKey = buildKnowledgePointPreviewKey(item, index);
+        if (expanded) {
+            state.knowledgePoints.expandedByKey[previewKey] = true;
+            return;
+        }
+        delete state.knowledgePoints.expandedByKey[previewKey];
+    }
+
+    function buildKnowledgePointResultSetKey(items, handlers) {
+        const explicitKey = String(handlers && handlers.resultSetKey || '').trim();
+        if (explicitKey) {
+            return explicitKey;
+        }
+        if (!Array.isArray(items) || items.length <= 0) {
+            return '';
+        }
+        return items
+            .slice(0, 8)
+            .map((item, index) => {
+                const previewKey = buildKnowledgePointPreviewKey(item, index);
+                const title = String(item && item.title || '').trim();
+                const matchCount = Number.isFinite(Number(item && item.matchCount)) ? Number(item.matchCount) : 0;
+                return `${previewKey}|${title}|${matchCount}`;
+            })
+            .join('||');
+    }
+
+    function resolveKnowledgePointAutoExpandedKeys(items) {
+        const firstPreviewableIndex = Array.isArray(items)
+            ? items.findIndex((item) => Boolean(resolveKnowledgePointSourcePath(item)))
+            : -1;
+        if (firstPreviewableIndex < 0) {
+            return {};
+        }
+        const firstItem = items[firstPreviewableIndex];
+        return {
+            [buildKnowledgePointPreviewKey(firstItem, firstPreviewableIndex)]: true,
+        };
+    }
+
+    function shouldAutoExpandKnowledgePreview(handlers) {
+        return Boolean(handlers && handlers.autoExpandFirstPreview === true);
+    }
+
+    function buildKnowledgePointPreviewLoadingHtml(sourcePath) {
+        return `
+            <div class="agent-knowledge-preview-loading">
+                ${escapeHtml(translate('agentWorkspace.knowledge.previewLoading', 'Loading source preview...'))}
+                ${sourcePath ? `<div class="agent-knowledge-preview-path">${escapeHtml(sourcePath)}</div>` : ''}
+            </div>
+        `;
+    }
+
+    function buildKnowledgePointPreviewFallbackHtml(item) {
+        const sourcePath = resolveKnowledgePointSourcePath(item);
+        const summary = String(item && (item.summary || item.evidenceSnippet) || '').trim();
+        return `
+            <div class="agent-knowledge-preview-fallback">
+                <div class="agent-knowledge-preview-fallback-text">${escapeHtml(summary || translate('agentWorkspace.knowledge.previewUnavailable', 'Source preview unavailable.'))}</div>
+                ${sourcePath ? `<div class="agent-knowledge-preview-path">${escapeHtml(sourcePath)}</div>` : ''}
+            </div>
+        `;
+    }
+
+    async function renderKnowledgePointPreview(previewBody, item) {
+        const sourcePath = resolveKnowledgePointSourcePath(item);
+        const matchedSpans = normalizeMatchedSpans(item && item.matchedSpans);
+        if (!previewBody || !sourcePath) {
+            previewBody.innerHTML = buildKnowledgePointPreviewFallbackHtml(item);
+            return false;
+        }
+        state.knowledgePoints.previewRenderToken += 1;
+        const renderToken = state.knowledgePoints.previewRenderToken;
+        previewBody.innerHTML = `
+            <div class="agent-knowledge-rendered-markdown" data-agent-knowledge-rendered-markdown="true" data-agent-preview-render-token="${String(renderToken)}">
+                ${buildKnowledgePointPreviewLoadingHtml(sourcePath)}
+            </div>
+        `;
+        const renderedHost = previewBody.querySelector('[data-agent-knowledge-rendered-markdown="true"]');
+        const rendered = await renderMarkdownPreviewIntoHost(renderedHost, sourcePath, matchedSpans, renderToken);
+        if (!rendered && renderedHost && renderedHost.isConnected) {
+            previewBody.innerHTML = buildKnowledgePointPreviewFallbackHtml(item);
+        }
+        return rendered;
+    }
 
     function rememberLearningPathWorkspaceNode(id) {
         if (Object.prototype.hasOwnProperty.call(state.learningPathWorkspace.nodes, id)) {
@@ -2666,6 +3257,73 @@
         return wrapper;
     }
 
+    async function renderStructuredAnswerMarkdownSection(container, markdownRuntime, markdown) {
+        const normalizedMarkdown = String(markdown || '').trim();
+        if (!normalizedMarkdown) {
+            return false;
+        }
+        if (markdownRuntime && typeof markdownRuntime.renderMarkdownInto === 'function') {
+            await markdownRuntime.renderMarkdownInto(container, normalizedMarkdown);
+        } else {
+            container.textContent = normalizedMarkdown;
+        }
+        return true;
+    }
+
+    async function createStructuredAnswerBlockNode(block, markdownRuntime) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'agent-chat-inline-card agent-chat-structured-answer-card';
+
+        const title = document.createElement('div');
+        title.className = 'agent-chat-inline-card-title';
+        title.textContent = String(
+            block && block.title
+            || translate('agentWorkspace.reply.structuredAnswer', 'Grounded Answer')
+        ).trim();
+        wrapper.appendChild(title);
+
+        const directAnswer = String(block && block.directAnswer || '').trim();
+        if (directAnswer) {
+            const summary = document.createElement('div');
+            summary.className = 'agent-chat-inline-card-summary agent-chat-structured-answer-direct';
+            summary.textContent = directAnswer;
+            wrapper.appendChild(summary);
+        }
+
+        const sections = [
+            {
+                key: 'overviewMarkdown',
+                className: 'agent-chat-structured-answer-overview',
+            },
+            {
+                key: 'explanationMarkdown',
+                className: 'agent-chat-structured-answer-explanation',
+            },
+            {
+                key: 'evidenceMarkdown',
+                className: 'agent-chat-structured-answer-evidence',
+            },
+            {
+                key: 'nextActionsMarkdown',
+                className: 'agent-chat-structured-answer-next-actions',
+            },
+        ];
+
+        for (const section of sections) {
+            const markdown = String(block && block[section.key] || '').trim();
+            if (!markdown) {
+                continue;
+            }
+            const sectionNode = document.createElement('div');
+            sectionNode.className = `agent-chat-markdown agent-chat-structured-answer-section ${section.className}`;
+            sectionNode.setAttribute('data-structured-answer-section', section.key);
+            await renderStructuredAnswerMarkdownSection(sectionNode, markdownRuntime, markdown);
+            wrapper.appendChild(sectionNode);
+        }
+
+        return wrapper;
+    }
+
     function createCitationsBlockNode(block) {
         const wrapper = document.createElement('div');
         wrapper.className = 'agent-chat-inline-card';
@@ -2747,6 +3405,209 @@
         return wrapper;
     }
 
+    function formatKnowledgeRunSourceRef(value) {
+        const sourcePath = String(value && value.sourcePath || '').trim();
+        if (!sourcePath) {
+            return '';
+        }
+        const startLine = Number(value && value.startLine);
+        return Number.isFinite(startLine) && startLine > 0
+            ? `${sourcePath}:${startLine}`
+            : sourcePath;
+    }
+
+    function createKnowledgeRunSummaryBlockNode(block) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'agent-chat-inline-card agent-chat-knowledge-run-card';
+        const run = block && block.knowledgeRun && typeof block.knowledgeRun === 'object'
+            ? block.knowledgeRun
+            : {};
+        const quality = run.quality && typeof run.quality === 'object' ? run.quality : {};
+
+        const title = document.createElement('div');
+        title.className = 'agent-chat-inline-card-title';
+        title.textContent = String(
+            block && block.title
+            || translate('agentWorkspace.reply.knowledgeRun', 'Knowledge Run')
+        ).trim();
+        wrapper.appendChild(title);
+
+        const status = String(run.status || quality.status || 'unknown').trim();
+        const score = Number(quality.score);
+        const summary = document.createElement('div');
+        summary.className = 'agent-chat-inline-card-summary';
+        summary.textContent = Number.isFinite(score)
+            ? translate(
+                'agentWorkspace.reply.knowledgeRunSummary',
+                'Status: {status}. Quality score: {score}.',
+                { status, score: String(score) }
+            )
+            : translate(
+                'agentWorkspace.reply.knowledgeRunStatusOnly',
+                'Status: {status}.',
+                { status }
+            );
+        wrapper.appendChild(summary);
+
+        const gates = Array.isArray(quality.gates) ? quality.gates : [];
+        if (gates.length > 0) {
+            const gateList = document.createElement('ul');
+            gateList.className = 'agent-chat-inline-card-list agent-chat-knowledge-run-gates';
+            gates.forEach((gate) => {
+                const item = document.createElement('li');
+                item.className = 'agent-chat-inline-card-item';
+                const label = document.createElement('div');
+                label.className = 'agent-chat-inline-card-item-title';
+                label.textContent = `${gate && gate.passed ? 'PASS' : 'CHECK'} ${String(gate && gate.gateId || '').trim()}`;
+                item.appendChild(label);
+                const message = String(gate && gate.message || '').trim();
+                if (message) {
+                    const messageNode = document.createElement('div');
+                    messageNode.className = 'agent-chat-inline-card-summary';
+                    messageNode.textContent = message;
+                    item.appendChild(messageNode);
+                }
+                gateList.appendChild(item);
+            });
+            wrapper.appendChild(gateList);
+        }
+
+        const claims = Array.isArray(run.evidenceClaims) ? run.evidenceClaims : [];
+        if (claims.length > 0) {
+            const claimsTitle = document.createElement('div');
+            claimsTitle.className = 'agent-chat-inline-card-summary';
+            claimsTitle.textContent = translate('agentWorkspace.reply.knowledgeRunClaims', 'Evidence claims');
+            wrapper.appendChild(claimsTitle);
+
+            const claimList = document.createElement('ul');
+            claimList.className = 'agent-chat-inline-card-list agent-chat-knowledge-run-claims';
+            claims.slice(0, 3).forEach((claim, index) => {
+                const item = document.createElement('li');
+                item.className = 'agent-chat-inline-card-item';
+                const label = document.createElement('div');
+                label.className = 'agent-chat-inline-card-item-title';
+                label.textContent = `${index + 1}. ${String(claim && claim.title || '').trim() || translate('agentWorkspace.reply.knowledgeRunClaimUntitled', 'Untitled claim')} (${String(claim && claim.status || 'unknown').trim()})`;
+                item.appendChild(label);
+                const ref = formatKnowledgeRunSourceRef(claim);
+                if (ref) {
+                    const refNode = document.createElement('div');
+                    refNode.className = 'agent-chat-inline-card-summary';
+                    refNode.textContent = ref;
+                    item.appendChild(refNode);
+                }
+                const snippet = String(claim && (claim.snippet || claim.statement) || '').trim();
+                if (snippet) {
+                    const snippetNode = document.createElement('div');
+                    snippetNode.className = 'agent-chat-inline-card-summary';
+                    snippetNode.textContent = snippet;
+                    item.appendChild(snippetNode);
+                }
+                claimList.appendChild(item);
+            });
+            wrapper.appendChild(claimList);
+        }
+
+        const reviewCards = Array.isArray(run.reviewCards) ? run.reviewCards : [];
+        if (reviewCards.length > 0) {
+            const reviewTitle = document.createElement('div');
+            reviewTitle.className = 'agent-chat-inline-card-summary';
+            reviewTitle.textContent = translate('agentWorkspace.reply.knowledgeRunReviewCards', 'Review cards');
+            wrapper.appendChild(reviewTitle);
+
+            const reviewList = document.createElement('ul');
+            reviewList.className = 'agent-chat-inline-card-list agent-chat-knowledge-run-review-cards';
+            reviewCards.slice(0, 3).forEach((card, index) => {
+                const item = document.createElement('li');
+                item.className = 'agent-chat-inline-card-item';
+                const prompt = document.createElement('div');
+                prompt.className = 'agent-chat-inline-card-item-title';
+                prompt.textContent = `${index + 1}. ${String(card && card.prompt || '').trim() || translate('agentWorkspace.reply.knowledgeRunReviewPrompt', 'Review the cited claim.')}`;
+                item.appendChild(prompt);
+                const refs = Array.isArray(card && card.evidenceRefs) ? card.evidenceRefs.filter(Boolean) : [];
+                if (refs.length > 0) {
+                    const refsNode = document.createElement('div');
+                    refsNode.className = 'agent-chat-inline-card-summary';
+                    refsNode.textContent = refs.join(', ');
+                    item.appendChild(refsNode);
+                }
+                reviewList.appendChild(item);
+            });
+            wrapper.appendChild(reviewList);
+        }
+
+        const artifactId = String(block && block.artifactId || '').trim();
+        const runId = String(run && run.runId || '').trim();
+        const workspaceId = String(run && run.scope && run.scope.workspaceId || '').trim();
+        if (artifactId || runId) {
+            const actions = document.createElement('div');
+            actions.className = 'agent-chat-card-actions';
+            const inspectButton = document.createElement('button');
+            inspectButton.type = 'button';
+            inspectButton.textContent = translate('agentWorkspace.reply.knowledgeRunInspectRun', 'Inspect Run');
+            inspectButton.setAttribute('data-agent-knowledge-run-inspect', 'true');
+            inspectButton.addEventListener('click', function () {
+                if (!window.NoteConnectionAgentWorkspace || typeof window.NoteConnectionAgentWorkspace.executeCapability !== 'function') {
+                    return;
+                }
+                void window.NoteConnectionAgentWorkspace.executeCapability({
+                    atomId: String((run.evidenceClaims && run.evidenceClaims[0] && run.evidenceClaims[0].atomId) || '').trim(),
+                    title: String(block && block.title || 'Knowledge Run').trim(),
+                }, {
+                    capabilityId: `cap_inspect_knowledge_run_${artifactId || runId || 'unknown'}`,
+                    actionId: 'inspect_knowledge_run',
+                    label: 'Inspect Run',
+                    request: {
+                        artifactKinds: ['knowledge_run'],
+                        artifactId: artifactId || undefined,
+                        runId: runId || undefined,
+                        workspaceId: String(run.scope && run.scope.workspaceId || '').trim() || undefined,
+                        sessionId: undefined,
+                        limit: 1,
+                    },
+                    execution: {
+                        kind: 'knowledge_operation',
+                        operationId: 'fetch_workflow_artifacts',
+                        resultPresentation: 'knowledge_run_card',
+                    },
+                });
+            });
+            actions.appendChild(inspectButton);
+            if (workspaceId) {
+                const historyButton = document.createElement('button');
+                historyButton.type = 'button';
+                historyButton.textContent = translate('agentWorkspace.reply.knowledgeRunBrowseRuns', 'Recent Runs');
+                historyButton.setAttribute('data-agent-knowledge-run-history', 'true');
+                historyButton.addEventListener('click', function () {
+                    if (!window.NoteConnectionAgentWorkspace || typeof window.NoteConnectionAgentWorkspace.executeCapability !== 'function') {
+                        return;
+                    }
+                    void window.NoteConnectionAgentWorkspace.executeCapability({
+                        atomId: String((run.evidenceClaims && run.evidenceClaims[0] && run.evidenceClaims[0].atomId) || '').trim(),
+                        title: String(block && block.title || 'Knowledge Run').trim(),
+                    }, {
+                        capabilityId: `cap_browse_knowledge_runs_${workspaceId}`,
+                        actionId: 'browse_knowledge_runs',
+                        label: 'Recent Runs',
+                        request: {
+                            artifactKinds: ['knowledge_run'],
+                            workspaceId,
+                            limit: 6,
+                        },
+                        execution: {
+                            kind: 'knowledge_operation',
+                            operationId: 'fetch_workflow_artifacts',
+                            resultPresentation: 'knowledge_run_history_card',
+                        },
+                    });
+                });
+                actions.appendChild(historyButton);
+            }
+            wrapper.appendChild(actions);
+        }
+
+        return wrapper;
+    }
+
     async function renderConversationBlocksIntoNode(node, entry) {
         const blocks = Array.isArray(entry && entry.blocks) ? entry.blocks : [];
         const markdownRuntime = resolveMarkdownRuntime();
@@ -2766,6 +3627,10 @@
             blockNode.setAttribute('data-agent-workspace-block-type', type || 'unknown');
             node.appendChild(blockNode);
 
+            if (type === 'structured_answer') {
+                blockNode.appendChild(await createStructuredAnswerBlockNode(block, markdownRuntime));
+                continue;
+            }
             if (type === 'main_markdown') {
                 blockNode.classList.add('agent-chat-markdown');
                 const markdown = String(block.markdown || '').trim();
@@ -2790,6 +3655,10 @@
             }
             if (type === 'knowledge_actions') {
                 blockNode.appendChild(createKnowledgeActionsBlockNode(block));
+                continue;
+            }
+            if (type === 'knowledge_run_summary') {
+                blockNode.appendChild(createKnowledgeRunSummaryBlockNode(block));
                 continue;
             }
             blockNode.textContent = String(entry && entry.fallbackMessage || '').trim();
@@ -3166,6 +4035,67 @@
             container.appendChild(node);
             return node;
         },
+        appendFlashcardBatchCard: function (payload) {
+            const container = getElement('agent-workspace-chat-messages');
+            if (!container) {
+                return null;
+            }
+            const node = document.createElement('div');
+            node.className = 'agent-chat-message agent-chat-message-assistant agent-chat-message-card';
+            node.setAttribute('data-agent-workspace-card-kind', 'flashcard-batch');
+            node.setAttribute('data-agent-workspace-card-payload', JSON.stringify(payload || {}));
+            renderFlashcardBatchCard(node, payload || {});
+            container.appendChild(node);
+            return node;
+        },
+        appendKnowledgeRunCard: function (payload) {
+            const container = getElement('agent-workspace-chat-messages');
+            if (!container) {
+                return null;
+            }
+            const node = document.createElement('div');
+            node.className = 'agent-chat-message agent-chat-message-assistant agent-chat-message-card';
+            node.setAttribute('data-agent-workspace-card-kind', 'knowledge-run');
+            node.setAttribute('data-agent-workspace-card-payload', JSON.stringify(payload || {}));
+            renderKnowledgeRunCard(node, payload || {});
+            container.appendChild(node);
+            return node;
+        },
+        appendKnowledgeRunHistoryCard: function (payload) {
+            const container = getElement('agent-workspace-chat-messages');
+            if (!container) {
+                return null;
+            }
+            const node = document.createElement('div');
+            node.className = 'agent-chat-message agent-chat-message-assistant agent-chat-message-card';
+            node.setAttribute('data-agent-workspace-card-kind', 'knowledge-run-history');
+            node.setAttribute('data-agent-workspace-card-payload', JSON.stringify(payload || {}));
+            renderKnowledgeRunHistoryCard(node, payload || {});
+            container.appendChild(node);
+            return node;
+        },
+        appendKnowledgeRunCompareCard: function (payload) {
+            const container = getElement('agent-workspace-chat-messages');
+            if (!container) {
+                return null;
+            }
+            const node = document.createElement('div');
+            node.className = 'agent-chat-message agent-chat-message-assistant agent-chat-message-card';
+            node.setAttribute('data-agent-workspace-card-kind', 'knowledge-run-compare');
+            node.setAttribute('data-agent-workspace-card-payload', JSON.stringify(payload || {}));
+            renderKnowledgeRunCompareCard(node, payload || {});
+            container.appendChild(node);
+            return node;
+        },
+        updateFlashcardBatchCard: function (node, payload) {
+            if (!node) {
+                return null;
+            }
+            node.setAttribute('data-agent-workspace-card-kind', 'flashcard-batch');
+            node.setAttribute('data-agent-workspace-card-payload', JSON.stringify(payload || {}));
+            renderFlashcardBatchCard(node, payload || {});
+            return node;
+        },
         appendSessionPlanQualityHistoryCard: function (payload) {
             const container = getElement('agent-workspace-chat-messages');
             if (!container) {
@@ -3237,9 +4167,18 @@
                 return;
             }
             const normalizedItems = Array.isArray(items) ? items : [];
+            const resultSetKey = buildKnowledgePointResultSetKey(normalizedItems, handlers);
+            if (resultSetKey !== state.knowledgePoints.resultSetKey) {
+                state.knowledgePoints.resultSetKey = resultSetKey;
+                state.knowledgePoints.expandedByKey = shouldAutoExpandKnowledgePreview(handlers)
+                    ? resolveKnowledgePointAutoExpandedKeys(normalizedItems)
+                    : {};
+            }
             state.knowledgePoints.items = normalizedItems.slice();
             state.knowledgePoints.handlers = handlers || null;
             if (normalizedItems.length <= 0) {
+                state.knowledgePoints.resultSetKey = '';
+                state.knowledgePoints.expandedByKey = {};
                 container.innerHTML = `<div class="agent-knowledge-empty">${escapeHtml(translate('agentWorkspace.knowledge.empty', 'No scoped knowledge matches.'))}</div>`;
                 return;
             }
@@ -3249,136 +4188,91 @@
                 card.className = 'agent-knowledge-card';
                 const fileName = resolveKnowledgePointFileName(item);
                 card.setAttribute('data-agent-knowledge-card', 'true');
+                const sourcePath = resolveKnowledgePointSourcePath(item);
+                const expanded = isKnowledgePointPreviewExpanded(item, index);
                 const fileButton = document.createElement('button');
                 fileButton.type = 'button';
                 fileButton.className = 'agent-knowledge-file-button';
                 fileButton.textContent = fileName;
-                fileButton.setAttribute('aria-haspopup', 'menu');
-                fileButton.setAttribute('aria-expanded', 'false');
+                fileButton.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                const previewId = `agent-knowledge-preview-${index}`;
+                fileButton.setAttribute('aria-controls', previewId);
                 fileButton.setAttribute(
                     'aria-label',
-                    translate('agentWorkspace.knowledge.openFile', 'Open matched knowledge point: {file}', {
+                    translate('agentWorkspace.knowledge.togglePreview', 'Toggle matched knowledge preview: {file}', {
                         file: fileName,
                     })
                 );
                 card.appendChild(fileButton);
-                const actions = document.createElement('div');
-                const actionsId = `agent-knowledge-actions-${index}`;
-                actions.id = actionsId;
-                actions.className = 'agent-knowledge-actions agent-knowledge-actions-menu';
-                actions.hidden = true;
-                actions.setAttribute('role', 'menu');
-                actions.setAttribute('aria-label', translate('agentWorkspace.knowledge.actionsMenu', 'Knowledge point actions'));
-                fileButton.setAttribute('aria-controls', actionsId);
                 const capabilities = resolveCapabilities(item);
-                let longPressTimer = null;
-                let suppressNextClick = false;
-                const closeActionsMenu = function () {
-                    actions.hidden = true;
-                    card.removeAttribute('data-actions-open');
-                    fileButton.setAttribute('aria-expanded', 'false');
-                };
-                const openActionsMenu = function (options) {
-                    if (capabilities.length <= 0) {
-                        return;
-                    }
-                    suppressNextClick = Boolean(options && options.suppressNextClick);
-                    actions.hidden = false;
-                    card.setAttribute('data-actions-open', 'true');
-                    fileButton.setAttribute('aria-expanded', 'true');
-                };
-                const cancelLongPress = function () {
-                    if (longPressTimer) {
-                        clearTimeout(longPressTimer);
-                        longPressTimer = null;
-                    }
-                };
                 fileButton.addEventListener('click', function () {
-                    if (suppressNextClick) {
-                        suppressNextClick = false;
-                        return;
-                    }
-                    closeActionsMenu();
-                    api.openGraphFocusPane(buildKnowledgePointFocusPayload(item));
-                });
-                fileButton.addEventListener('pointerdown', function (event) {
-                    if (event && event.button && event.button !== 0) {
-                        return;
-                    }
-                    cancelLongPress();
-                    longPressTimer = setTimeout(function () {
-                        longPressTimer = null;
-                        openActionsMenu({ suppressNextClick: true });
-                    }, 520);
-                });
-                ['pointerup', 'pointercancel', 'pointerleave'].forEach((eventName) => {
-                    fileButton.addEventListener(eventName, cancelLongPress);
-                });
-                fileButton.addEventListener('contextmenu', function (event) {
-                    event.preventDefault();
-                    cancelLongPress();
-                    openActionsMenu();
+                    const nextExpanded = !isKnowledgePointPreviewExpanded(item, index);
+                    setKnowledgePointPreviewExpanded(item, index, nextExpanded);
+                    api.renderKnowledgePoints(state.knowledgePoints.items, state.knowledgePoints.handlers);
                 });
                 fileButton.addEventListener('keydown', function (event) {
-                    if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+                    if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
-                        openActionsMenu();
-                        const firstAction = actions.querySelector('button');
-                        if (firstAction && typeof firstAction.focus === 'function') {
-                            firstAction.focus();
-                        }
-                        return;
-                    }
-                    if (event.key === 'Escape') {
-                        closeActionsMenu();
+                        fileButton.click();
                     }
                 });
-                actions.addEventListener('keydown', function (event) {
-                    if (event.key === 'Escape') {
-                        event.preventDefault();
-                        closeActionsMenu();
-                        fileButton.focus();
-                    }
-                });
-                capabilities.forEach((capability) => {
-                    const actionButton = document.createElement('button');
-                    actionButton.type = 'button';
-                    actionButton.setAttribute('role', 'menuitem');
-                    const uiHint = capability && typeof capability.uiHint === 'object'
-                        ? capability.uiHint
-                        : {};
-                    if (uiHint && typeof uiHint.group === 'string' && uiHint.group.trim()) {
-                        actionButton.setAttribute('data-capability-group', uiHint.group.trim());
-                    }
-                    if (uiHint && typeof uiHint.emphasis === 'string' && uiHint.emphasis.trim()) {
-                        actionButton.setAttribute('data-capability-emphasis', uiHint.emphasis.trim());
-                    }
-                    actionButton.setAttribute(
-                        'data-capability-action-id',
-                        String(capability && capability.actionId || '').trim()
-                    );
-                    actionButton.textContent = translate(
-                        String(capability && capability.labelKey || ''),
-                        String(capability && capability.label || capability && capability.actionId || 'Action')
-                    );
-                    actionButton.addEventListener('click', function () {
-                        closeActionsMenu();
-                        if (handlers && typeof handlers.onCapability === 'function') {
-                            handlers.onCapability(item, capability);
-                            return;
+                if (sourcePath) {
+                    const pathNode = document.createElement('div');
+                    pathNode.className = 'agent-knowledge-source-path';
+                    pathNode.textContent = sourcePath;
+                    card.appendChild(pathNode);
+                }
+                if (capabilities.length > 0) {
+                    const actions = document.createElement('div');
+                    actions.className = 'agent-knowledge-actions';
+                    actions.setAttribute('aria-label', translate('agentWorkspace.knowledge.actionsMenu', 'Knowledge point actions'));
+                    capabilities.forEach((capability) => {
+                        const actionButton = document.createElement('button');
+                        actionButton.type = 'button';
+                        const uiHint = capability && typeof capability.uiHint === 'object'
+                            ? capability.uiHint
+                            : {};
+                        if (uiHint && typeof uiHint.group === 'string' && uiHint.group.trim()) {
+                            actionButton.setAttribute('data-capability-group', uiHint.group.trim());
                         }
-                        const actionId = String(capability && capability.actionId || '').trim();
-                        if (actionId === 'open_focus_mode' && handlers && typeof handlers.onFocus === 'function') {
-                            handlers.onFocus(item, capability);
-                            return;
+                        if (uiHint && typeof uiHint.emphasis === 'string' && uiHint.emphasis.trim()) {
+                            actionButton.setAttribute('data-capability-emphasis', uiHint.emphasis.trim());
                         }
-                        if (actionId === 'open_learning_path' && handlers && typeof handlers.onLearningPath === 'function') {
-                            handlers.onLearningPath(item, capability);
-                        }
+                        actionButton.setAttribute(
+                            'data-capability-action-id',
+                            String(capability && capability.actionId || '').trim()
+                        );
+                        actionButton.textContent = translate(
+                            String(capability && capability.labelKey || ''),
+                            String(capability && capability.label || capability && capability.actionId || 'Action')
+                        );
+                        actionButton.addEventListener('click', function () {
+                            if (handlers && typeof handlers.onCapability === 'function') {
+                                handlers.onCapability(item, capability);
+                                return;
+                            }
+                            const actionId = String(capability && capability.actionId || '').trim();
+                            if (actionId === 'open_focus_mode' && handlers && typeof handlers.onFocus === 'function') {
+                                handlers.onFocus(item, capability);
+                                return;
+                            }
+                            if (actionId === 'open_learning_path' && handlers && typeof handlers.onLearningPath === 'function') {
+                                handlers.onLearningPath(item, capability);
+                            }
+                        });
+                        actions.appendChild(actionButton);
                     });
-                    actions.appendChild(actionButton);
-                });
-                card.appendChild(actions);
+                    card.appendChild(actions);
+                }
+                const previewBody = document.createElement('div');
+                previewBody.id = previewId;
+                previewBody.className = 'agent-knowledge-preview';
+                previewBody.hidden = !expanded;
+                previewBody.setAttribute('data-agent-knowledge-preview', expanded ? 'true' : 'false');
+                card.appendChild(previewBody);
+                if (expanded) {
+                    void renderKnowledgePointPreview(previewBody, item);
+                }
                 container.appendChild(card);
             });
         },

@@ -52,6 +52,8 @@ describe('Route Registry', () => {
         // Verify key endpoints exist
         const paths = new Set(knowledgeRoutes.map(r => `${r.method} ${r.path}`));
         expect(paths.has('GET /api/knowledge/state')).toBe(true);
+        expect(paths.has('GET /api/knowledge/workflow-artifacts')).toBe(true);
+        expect(paths.has('POST /api/knowledge/workflow-artifacts/review-follow-up')).toBe(true);
         expect(paths.has('POST /api/knowledge/ingest')).toBe(true);
         expect(paths.has('POST /api/knowledge/query')).toBe(true);
         expect(paths.has('POST /api/knowledge/export/workspace')).toBe(true);

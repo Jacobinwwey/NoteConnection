@@ -194,6 +194,7 @@ const LOOPBACK_HOST = '127.0.0.1';
 const DEFAULT_PORT = 3000;
 const PORT = Number(process.env.NOTE_CONNECTION_PORT || process.env.PORT || DEFAULT_PORT);
 const PATH_BRIDGE_PORT = Number(process.env.NOTE_CONNECTION_BRIDGE_PORT || 9876);
+let effectivePathBridgePort = PATH_BRIDGE_PORT;
 const AUTH_TOKEN = String(process.env.NOTE_CONNECTION_AUTH_TOKEN || '').trim();
 const REQUEST_ID_HEADER = 'x-request-id';
 const ERROR_CODE_HEADER = 'x-error-code';
@@ -11734,6 +11735,14 @@ function normalizeStudySessionActionSource(
     ) {
         return 'misconception_remediation';
     }
+    if (
+        normalized === 'flashcard_batch'
+        || normalized === 'flashcard-batch'
+        || normalized === 'flashcard'
+        || normalized === 'review_card_batch'
+    ) {
+        return 'flashcard_batch';
+    }
     return fallbackSource;
 }
 
@@ -12861,8 +12870,8 @@ async function writeSidecarRuntimeManifest(finalPort: number): Promise<void> {
                 host: LOOPBACK_HOST,
                 port: finalPort,
                 baseUrl: `http://${LOOPBACK_HOST}:${finalPort}`,
-                bridgePort: PATH_BRIDGE_PORT,
-                bridgeWsUrl: `ws://${LOOPBACK_HOST}:${PATH_BRIDGE_PORT}`,
+                bridgePort: effectivePathBridgePort,
+                bridgeWsUrl: `ws://${LOOPBACK_HOST}:${effectivePathBridgePort}`,
                 authToken: AUTH_TOKEN,
                 projectRoot: runtimePaths.projectRoot,
                 runtimeDataDir: RUNTIME_DATA_DIR,
@@ -12873,6 +12882,71 @@ async function writeSidecarRuntimeManifest(finalPort: number): Promise<void> {
         );
     } catch (error) {
         warnDiagnostic('[Sidecar] Failed to write runtime manifest:', error);
+    }
+}
+
+function resolvePathBridgePort(candidate: unknown, fallbackPort: number): number {
+    const resolvedPort = Number(candidate);
+    return Number.isFinite(resolvedPort) && resolvedPort > 0
+        ? Math.floor(resolvedPort)
+        : fallbackPort;
+}
+
+function resolvePathBridgeInstancePort(candidate: unknown, fallbackPort: number): number {
+    const bridgeLike = candidate as {
+        getPort?: () => unknown;
+        getStatus?: () => { port?: unknown } | undefined;
+    } | null | undefined;
+    if (bridgeLike && typeof bridgeLike.getPort === 'function') {
+        return resolvePathBridgePort(bridgeLike.getPort(), fallbackPort);
+    }
+    if (bridgeLike && typeof bridgeLike.getStatus === 'function') {
+        const status = bridgeLike.getStatus();
+        return resolvePathBridgePort(status?.port, fallbackPort);
+    }
+    return fallbackPort;
+}
+
+function isPathBridgeBindDeniedError(error: unknown): boolean {
+    const code = (error as NodeJS.ErrnoException | undefined)?.code;
+    return code === 'EACCES' || code === 'EPERM' || code === 'EADDRINUSE';
+}
+
+async function initializePathBridgeWithFallback(): Promise<void> {
+    const allowEphemeralBridgeFallback = parseBooleanFlag(
+        process.env.NOTE_CONNECTION_ALLOW_EPHEMERAL_BRIDGE_PORT_FALLBACK
+    );
+    const createBridge = async (bridgePort: number): Promise<void> => {
+        pathBridge = new PathBridge({
+            port: bridgePort,
+            host: LOOPBACK_HOST,
+            authToken: AUTH_TOKEN,
+        });
+        if (pathBridge && typeof (pathBridge as any).waitUntilReady === 'function') {
+            await (pathBridge as any).waitUntilReady();
+        }
+        effectivePathBridgePort = resolvePathBridgeInstancePort(pathBridge, bridgePort);
+    };
+
+    try {
+        await createBridge(PATH_BRIDGE_PORT);
+    } catch (error) {
+        if (!allowEphemeralBridgeFallback || !isPathBridgeBindDeniedError(error)) {
+            throw error;
+        }
+        try {
+            if (pathBridge && typeof (pathBridge as any).close === 'function') {
+                (pathBridge as any).close();
+            }
+        } catch (_closeError) {
+            // Closing a failed bridge is best-effort; the fallback bind below is the authoritative recovery path.
+        }
+        pathBridge = null;
+        warnDiagnostic(
+            `[Sidecar] PathBridge port ${PATH_BRIDGE_PORT} is unavailable. ` +
+            'Retrying with an ephemeral loopback bridge port.'
+        );
+        await createBridge(0);
     }
 }
 async function renderMermaidWithPreference(
@@ -14114,7 +14188,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         runtime: {
                             host: LOOPBACK_HOST,
                             port: runtimePort,
-                            bridgePort: PATH_BRIDGE_PORT,
+                            bridgePort: effectivePathBridgePort,
                             kbRoot: KB_ROOT,
                             frontendDir: FRONTEND_DIR,
                             runtimeDataDir: RUNTIME_DATA_DIR,
@@ -16479,8 +16553,6 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             runtimePort = resolvedPort;
             await ensureRuntimeDataDir();
             const turnCacheAlertHistoryLoadResult = await loadAgentConversationTurnCacheAlertHistoryFromDisk();
-            await writeSidecarRuntimeManifest(resolvedPort);
-            logDiagnostic(`[Sidecar] Runtime Manifest: ${SIDECAR_RUNTIME_MANIFEST}`);
             logDiagnostic(`Server running at http://${LOOPBACK_HOST}:${resolvedPort}/`);
             logDiagnostic(`Knowledge Base Root: ${KB_ROOT}`);
             logDiagnostic(`Frontend Root: ${FRONTEND_DIR}`);
@@ -16491,15 +16563,14 @@ export const startServer = async (options: { port?: number, targetPath?: string 
 
             // Initialize PathBridge
             try {
-                pathBridge = new PathBridge({
-                    port: PATH_BRIDGE_PORT,
-                    host: LOOPBACK_HOST,
-                    authToken: AUTH_TOKEN,
-                });
-                logDiagnostic(`[Sidecar] PathBridge initialized on ws://${LOOPBACK_HOST}:${PATH_BRIDGE_PORT}`);
+                await initializePathBridgeWithFallback();
+                logDiagnostic(`[Sidecar] PathBridge initialized on ws://${LOOPBACK_HOST}:${effectivePathBridgePort}`);
             } catch (e) {
                 console.error(`[Sidecar] Failed to initialize PathBridge:`, e);
+                effectivePathBridgePort = PATH_BRIDGE_PORT;
             }
+            await writeSidecarRuntimeManifest(resolvedPort);
+            logDiagnostic(`[Sidecar] Runtime Manifest: ${SIDECAR_RUNTIME_MANIFEST}`);
 
             if (hasCliBuild) {
                     logDiagnostic('[CLI] Ready.');

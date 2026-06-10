@@ -2,6 +2,70 @@
 
 ## English Document
 
+### 2026-06-10 Knowledge Workspace and DAG Implementation Direction
+
+#### Objective
+
+Record the current code-backed state of the Knowledge Workspace and the existing DAG-backed learning substrate, then make the next implementation order explicit without overstating unfinished product-surface work.
+
+#### Current code truth
+
+- Structured grounded conversation is implemented through `answer`, `assistantBlocks`, grouped `knowledgePoints`, `knowledgeRun`, citations, memory actions, and backward-compatible `assistantMessage`.
+- Durable workflow artifacts are implemented for `flashcard_batch` and `knowledge_run`, including query and review-follow-up runtime paths.
+- The current codebase already contains a real DAG-backed learning substrate: `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, and prerequisite-driven learning flows are all present.
+- The primary gap is no longer “add graph data.” The primary gap is “add graph-conditioned context assembly between retrieval and answer synthesis.”
+- The current architecture pressure remains concentrated in `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/agent_workspace.js`, and `src/frontend/workspace_panes.js`.
+
+#### Next execution order
+
+1. P0: Keep the 2026-06-10 Knowledge Workspace and DAG alignment note synchronized across all active progress docs.
+2. P1: Contract the primary answer surface so the visible answer area prioritizes the targeted answer over supporting blocks.
+3. P2: Converge left-side knowledge hits on a right-pane-first reading model.
+4. P3: Treat `knowledge_run` and `flashcard_batch` as the first durable evidence/claim surfaces rather than inventing a second review substrate.
+5. P4: Add a graph-conditioned context-assembly layer between retrieval and answer synthesis.
+6. P5: Continue ownership reduction across the major server and frontend host files.
+
+#### Acceptance criteria
+
+1. Active planning docs reflect the same 2026-06-10 current-state reading.
+2. Code-backed capabilities and product-surface gaps are clearly separated.
+3. Backward compatibility remains explicit for legacy response fields and existing runtime APIs.
+
+---
+
+## 中文文档
+
+### 2026-06-10 知识工作区与 DAG 实施方向
+
+#### 目标
+
+记录当前知识工作区与现有 DAG 学习底座的真实代码状态，并在不夸大未完成产品面的前提下，明确下一阶段实施顺序。
+
+#### 当前代码真相
+
+- 结构化 grounded conversation 已通过 `answer`、`assistantBlocks`、按文档聚合的 `knowledgePoints`、`knowledgeRun`、citations、memory actions 与向前兼容的 `assistantMessage` 落地。
+- `flashcard_batch` 与 `knowledge_run` 的 durable workflow artifact 已实现，且已具备查询与 review-follow-up 的运行时路径。
+- 当前代码已经具备真实的 DAG 学习底座：`KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query 与 prerequisite 驱动学习流都已存在。
+- 主要缺口已经不再是“补图数据”，而是“在 retrieval 与 answer synthesis 之间补 graph-conditioned context assembly”。
+- 当前架构压力仍集中在 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js` 与 `src/frontend/workspace_panes.js`。
+
+#### 下一步执行顺序
+
+1. P0：保持 2026-06-10 的知识工作区 / DAG 对齐结论在所有活跃进度文档中同步。
+2. P1：收缩主回答面，让用户可见回答区优先显示 targeted answer，而不是 supporting block。
+3. P2：让左侧 knowledge hit 收敛为 right-pane-first 阅读模型。
+4. P3：把 `knowledge_run` 与 `flashcard_batch` 当作第一批 durable evidence / claim surface，而不是再造第二套 review substrate。
+5. P4：在 retrieval 与 answer synthesis 之间补 graph-conditioned context-assembly layer。
+6. P5：继续缩减主要 server 与 frontend host 文件中的所有权压力。
+
+#### 验收标准
+
+1. 活跃规划文档都反映同一份 2026-06-10 当前状态判断。
+2. “已经代码落地的能力”和“仍未满足的产品面要求”被明确区分。
+3. 向前兼容性对 legacy 响应字段与既有运行时 API 继续保持明确。
+
+---
+
 ### Goal
 Use a single WASM compute strategy to reduce mobile-inherent bottlenecks while preserving deterministic behavior across desktop web, Tauri desktop, Capacitor mobile, and Tauri Android runtimes.
 

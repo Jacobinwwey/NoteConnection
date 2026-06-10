@@ -260,6 +260,17 @@
             .replace(/'/g, '&#39;');
     }
 
+    function formatKnowledgeRunSourceRef(value) {
+        const sourcePath = String(value && value.sourcePath || value && value.sourceRef || '').trim();
+        if (!sourcePath) {
+            return '';
+        }
+        const startLine = Number(value && value.startLine);
+        return Number.isFinite(startLine) && startLine > 0
+            ? `${sourcePath}:${startLine}`
+            : sourcePath;
+    }
+
     function normalizeConversationMemoryNamespaceToken(value) {
         const normalized = String(value || '').trim().toLowerCase();
         if (normalized === 'conversation') {
@@ -413,6 +424,21 @@
             method: 'POST',
             defaultResultPresentation: 'session_history_card',
         },
+        fetch_workflow_artifacts: {
+            endpoint: '/api/knowledge/workflow-artifacts',
+            method: 'GET',
+            defaultResultPresentation: 'flashcard_batch_card',
+        },
+        execute_workflow_artifact_review_follow_up: {
+            endpoint: '/api/knowledge/workflow-artifacts/review-follow-up',
+            method: 'POST',
+            defaultResultPresentation: 'workflow_artifact_review_follow_up',
+        },
+        execute_study_session_action: {
+            endpoint: '/api/knowledge/session/action',
+            method: 'POST',
+            defaultResultPresentation: 'assistant_message',
+        },
         build_study_session: {
             endpoint: '/api/knowledge/session/plan',
             method: 'POST',
@@ -448,11 +474,15 @@
         fetch_runtime_capability_runbook_checks: resolveRuntimeCapabilityRunbookChecksRequestPayload,
         fetch_runtime_capability_runbook_action_queue: resolveRuntimeCapabilityRunbookActionQueueRequestPayload,
         fetch_session_history: resolveSessionHistoryRequestPayload,
+        fetch_workflow_artifacts: resolveWorkflowArtifactsRequestPayload,
+        execute_workflow_artifact_review_follow_up: resolveWorkflowArtifactReviewFollowUpRequestPayload,
+        execute_study_session_action: resolveStudySessionActionRequestPayload,
         build_study_session: resolveStudySessionRequestPayload,
         execute_tutor_action: resolveTutorActionRequestPayload,
     };
 
     const KNOWLEDGE_OPERATION_RESULT_PRESENTATION_OVERRIDES = {
+        fetch_workflow_artifacts: ['knowledge_run_card', 'knowledge_run_history_card'],
         execute_tutor_action: ['tutor_action_card'],
     };
 
@@ -1295,6 +1325,107 @@
             refreshSource: typeof capabilityRequest.refreshSource === 'string' && capabilityRequest.refreshSource.trim()
                 ? capabilityRequest.refreshSource.trim()
                 : 'manual',
+        };
+    }
+
+    function resolveWorkflowArtifactsRequestPayload(_item, capability) {
+        const capabilityRequest = capability && typeof capability.request === 'object'
+            ? capability.request
+            : {};
+        const artifactKinds = Array.isArray(capabilityRequest.artifactKinds)
+            ? capabilityRequest.artifactKinds.map((kind) => String(kind || '').trim()).filter(Boolean)
+            : ['flashcard_batch'];
+        const requestContext = resolveKnowledgeWorkspaceRequestContext();
+        const explicitWorkspaceId = typeof capabilityRequest.workspaceId === 'string' && capabilityRequest.workspaceId.trim()
+            ? capabilityRequest.workspaceId.trim()
+            : '';
+        const explicitSessionId = typeof capabilityRequest.sessionId === 'string' && capabilityRequest.sessionId.trim()
+            ? capabilityRequest.sessionId.trim()
+            : '';
+        const artifactId = typeof capabilityRequest.artifactId === 'string' && capabilityRequest.artifactId.trim()
+            ? capabilityRequest.artifactId.trim()
+            : undefined;
+        const runId = typeof capabilityRequest.runId === 'string' && capabilityRequest.runId.trim()
+            ? capabilityRequest.runId.trim()
+            : undefined;
+        return {
+            workspaceId: explicitWorkspaceId || (requestContext.scope && requestContext.scope.workspaceId) || undefined,
+            sessionId: explicitSessionId
+                ? explicitSessionId
+                : (artifactId || runId ? undefined : getOrCreateConversationSessionId(getUserId())),
+            userId: getUserId(),
+            artifactId,
+            runId,
+            artifactKinds: artifactKinds.join(','),
+            limit: Number.isFinite(Number(capabilityRequest.limit))
+                ? Number(capabilityRequest.limit)
+                : 8,
+        };
+    }
+
+    function resolveStudySessionActionRequestPayload(item, capability) {
+        const capabilityRequest = capability && typeof capability.request === 'object'
+            ? capability.request
+            : {};
+        const targetAtomId = resolveCapabilityTargetAtomId(item, capability);
+        return {
+            userId: getUserId(),
+            sessionId: getOrCreateConversationSessionId(getUserId()),
+            action: {
+                atomId: targetAtomId,
+                kind: typeof capabilityRequest.learningActionKind === 'string' && capabilityRequest.learningActionKind.trim()
+                    ? capabilityRequest.learningActionKind.trim()
+                    : 'review',
+                source: typeof capabilityRequest.actionSource === 'string' && capabilityRequest.actionSource.trim()
+                    ? capabilityRequest.actionSource.trim()
+                    : 'misconception_remediation',
+                prompt: typeof capabilityRequest.prompt === 'string' && capabilityRequest.prompt.trim()
+                    ? capabilityRequest.prompt.trim()
+                    : undefined,
+                answer: typeof capabilityRequest.answer === 'string' && capabilityRequest.answer.trim()
+                    ? capabilityRequest.answer.trim()
+                    : undefined,
+            },
+            persistMemory: capabilityRequest.persistMemory !== false,
+            autoAnalyzeAnswer: capabilityRequest.autoAnalyzeAnswer !== false,
+            autoUpdateMasteryFromAnswer: capabilityRequest.autoUpdateMasteryFromAnswer !== false,
+        };
+    }
+
+    function resolveWorkflowArtifactReviewFollowUpRequestPayload(item, capability) {
+        const capabilityRequest = capability && typeof capability.request === 'object'
+            ? capability.request
+            : {};
+        const targetAtomId = resolveCapabilityTargetAtomId(item, capability);
+        return {
+            userId: getUserId(),
+            sessionId: typeof capabilityRequest.sessionId === 'string' && capabilityRequest.sessionId.trim()
+                ? capabilityRequest.sessionId.trim()
+                : getOrCreateConversationSessionId(getUserId()),
+            artifactId: typeof capabilityRequest.artifactId === 'string' && capabilityRequest.artifactId.trim()
+                ? capabilityRequest.artifactId.trim()
+                : '',
+            cardId: typeof capabilityRequest.cardId === 'string' && capabilityRequest.cardId.trim()
+                ? capabilityRequest.cardId.trim()
+                : '',
+            action: {
+                atomId: targetAtomId,
+                kind: typeof capabilityRequest.learningActionKind === 'string' && capabilityRequest.learningActionKind.trim()
+                    ? capabilityRequest.learningActionKind.trim()
+                    : 'review',
+                source: typeof capabilityRequest.actionSource === 'string' && capabilityRequest.actionSource.trim()
+                    ? capabilityRequest.actionSource.trim()
+                    : 'flashcard_batch',
+                prompt: typeof capabilityRequest.prompt === 'string' && capabilityRequest.prompt.trim()
+                    ? capabilityRequest.prompt.trim()
+                    : undefined,
+                answer: typeof capabilityRequest.answer === 'string' && capabilityRequest.answer.trim()
+                    ? capabilityRequest.answer.trim()
+                    : undefined,
+            },
+            persistMemory: capabilityRequest.persistMemory !== false,
+            autoAnalyzeAnswer: capabilityRequest.autoAnalyzeAnswer !== false,
+            autoUpdateMasteryFromAnswer: capabilityRequest.autoUpdateMasteryFromAnswer !== false,
         };
     }
 
@@ -2879,6 +3010,257 @@
         };
     }
 
+    function buildFlashcardBatchCardPayloadFromArtifacts(artifacts, returnedArtifacts) {
+        const normalizedArtifacts = Array.isArray(artifacts)
+            ? artifacts.filter((artifact) => artifact && typeof artifact === 'object')
+            : [];
+        const flashcardArtifacts = normalizedArtifacts.filter((artifact) => String(artifact.kind || '').trim() === 'flashcard_batch');
+        const normalizedArtifactCards = flashcardArtifacts.map(function (artifact) {
+            const payload = artifact && typeof artifact.payload === 'object'
+                ? artifact.payload
+                : {};
+            const reviewCards = Array.isArray(payload.reviewCards)
+                ? payload.reviewCards.filter((card) => card && typeof card === 'object')
+                : [];
+            const reviewState = payload.reviewState && typeof payload.reviewState === 'object'
+                ? payload.reviewState
+                : {};
+            const consumedCardIds = Array.isArray(reviewState.consumedCardIds)
+                ? new Set(reviewState.consumedCardIds.map((value) => String(value || '').trim()).filter(Boolean))
+                : new Set();
+            const pendingCards = reviewCards.filter((card) => !consumedCardIds.has(String(card.cardId || '').trim()));
+            return {
+                artifact,
+                reviewCards,
+                consumedCardIds,
+                pendingCards,
+                completedCards: Number.isFinite(Number(reviewState.completedReviewCardCount))
+                    ? Number(reviewState.completedReviewCardCount)
+                    : consumedCardIds.size,
+                remainingCards: Number.isFinite(Number(reviewState.remainingReviewCardCount))
+                    ? Number(reviewState.remainingReviewCardCount)
+                    : pendingCards.length,
+            };
+        });
+        const totalCards = normalizedArtifactCards.reduce(function (sum, entry) {
+            return sum + entry.reviewCards.length;
+        }, 0);
+        const completedCards = normalizedArtifactCards.reduce(function (sum, entry) {
+            return sum + entry.completedCards;
+        }, 0);
+        const remainingCards = normalizedArtifactCards.reduce(function (sum, entry) {
+            return sum + entry.remainingCards;
+        }, 0);
+        const firstPendingEntry = normalizedArtifactCards.find((entry) => entry.pendingCards.length > 0) || null;
+        const firstArtifactEntry = firstPendingEntry || normalizedArtifactCards[0] || null;
+        const firstCard = firstPendingEntry && firstPendingEntry.pendingCards[0] && typeof firstPendingEntry.pendingCards[0] === 'object'
+            ? firstPendingEntry.pendingCards[0]
+            : (
+                firstArtifactEntry && firstArtifactEntry.reviewCards[0] && typeof firstArtifactEntry.reviewCards[0] === 'object'
+                    ? firstArtifactEntry.reviewCards[0]
+                    : {}
+            );
+        const firstArtifact = firstArtifactEntry ? firstArtifactEntry.artifact : (flashcardArtifacts[0] || {});
+        const artifactKinds = Array.from(new Set(normalizedArtifacts.map((artifact) => String(artifact.kind || '').trim()).filter(Boolean)));
+        const topEvidenceRef = Array.isArray(firstCard.evidenceRefs)
+            ? firstCard.evidenceRefs.map((value) => String(value || '').trim()).filter(Boolean)[0] || ''
+            : '';
+        const topAtomId = String(firstCard.atomId || '').trim();
+        const artifactId = String(firstArtifact && firstArtifact.artifactId || '').trim();
+        const cardId = String(firstCard.cardId || '').trim();
+        const artifactStatus = String(firstArtifact && firstArtifact.status || '').trim().toLowerCase();
+        return {
+            returnedArtifacts: Number.isFinite(Number(returnedArtifacts))
+                ? Number(returnedArtifacts)
+                : normalizedArtifacts.length,
+            totalCards,
+            completedCards,
+            remainingCards,
+            artifactKinds: artifactKinds.join(', '),
+            artifactStatus,
+            artifactId,
+            cardId,
+            topPrompt: String(firstCard.prompt || '').trim(),
+            topEvidenceRef,
+            nextCapability: firstPendingEntry && topAtomId && artifactId && cardId
+                ? {
+                    capabilityId: `cap_execute_flashcard_review_${artifactId}_${cardId}`,
+                    actionId: 'execute_flashcard_review',
+                    targetAtomId: topAtomId,
+                    label: 'Review Now',
+                    request: {
+                        artifactId,
+                        cardId,
+                        learningActionKind: String(firstCard.suggestedActionKind || '').trim() || 'review',
+                        actionSource: 'flashcard_batch',
+                        prompt: String(firstCard.prompt || '').trim(),
+                    },
+                    execution: {
+                        kind: 'knowledge_operation',
+                        operationId: 'execute_workflow_artifact_review_follow_up',
+                        resultPresentation: 'workflow_artifact_review_follow_up',
+                    },
+                }
+                : null,
+        };
+    }
+
+    function buildFlashcardBatchCardPayload(result) {
+        const summary = result && typeof result === 'object'
+            ? result
+            : {};
+        return buildFlashcardBatchCardPayloadFromArtifacts(summary.artifacts, summary.returnedArtifacts);
+    }
+
+    function buildKnowledgeRunCardPayload(result) {
+        const summary = result && typeof result === 'object'
+            ? result
+            : {};
+        const artifacts = Array.isArray(summary.artifacts)
+            ? summary.artifacts.filter((artifact) => artifact && typeof artifact === 'object')
+            : [];
+        const knowledgeRunArtifact = artifacts.find((artifact) => String(artifact.kind || '').trim() === 'knowledge_run') || {};
+        const artifactPayload = knowledgeRunArtifact && typeof knowledgeRunArtifact.payload === 'object'
+            ? knowledgeRunArtifact.payload
+            : {};
+        const knowledgeRun = artifactPayload.knowledgeRun && typeof artifactPayload.knowledgeRun === 'object'
+            ? artifactPayload.knowledgeRun
+            : {};
+        const runSummary = knowledgeRun.summary && typeof knowledgeRun.summary === 'object'
+            ? knowledgeRun.summary
+            : {};
+        const reviewState = knowledgeRun.reviewState && typeof knowledgeRun.reviewState === 'object'
+            ? knowledgeRun.reviewState
+            : {};
+        const quality = knowledgeRun.quality && typeof knowledgeRun.quality === 'object'
+            ? knowledgeRun.quality
+            : {};
+        const scope = knowledgeRun.scope && typeof knowledgeRun.scope === 'object'
+            ? knowledgeRun.scope
+            : {};
+        const claims = Array.isArray(knowledgeRun.evidenceClaims)
+            ? knowledgeRun.evidenceClaims.filter((claim) => claim && typeof claim === 'object')
+            : [];
+        const reviewCards = Array.isArray(knowledgeRun.reviewCards)
+            ? knowledgeRun.reviewCards.filter((card) => card && typeof card === 'object')
+            : [];
+        const qualityGates = Array.isArray(quality.gates)
+            ? quality.gates.filter((gate) => gate && typeof gate === 'object')
+            : [];
+        const firstClaim = claims[0] && typeof claims[0] === 'object' ? claims[0] : {};
+        const scopeLabel = [
+            String(scope.workspaceId || '').trim(),
+            String(scope.corpusId || '').trim(),
+        ].filter(Boolean).join(' / ')
+            || String(scope.source || '').trim()
+            || 'global';
+        return {
+            returnedArtifacts: Number.isFinite(Number(summary.returnedArtifacts))
+                ? Number(summary.returnedArtifacts)
+                : artifacts.length,
+            artifactId: String(knowledgeRunArtifact.artifactId || '').trim(),
+            artifactStatus: String(knowledgeRunArtifact.status || '').trim().toLowerCase(),
+            runId: String(knowledgeRun.runId || artifactPayload.runId || '').trim(),
+            artifactTitle: String(knowledgeRunArtifact.title || '').trim(),
+            scopeLabel,
+            scopeSource: String(scope.scopeSource || scope.source || '').trim(),
+            qualityStatus: String(quality.status || knowledgeRun.status || '').trim(),
+            qualityScore: Number.isFinite(Number(quality.score)) ? Number(quality.score) : null,
+            claimCount: Number.isFinite(Number(runSummary.claimCount)) ? Number(runSummary.claimCount) : claims.length,
+            verifiedClaimCount: Number.isFinite(Number(runSummary.verifiedClaimCount)) ? Number(runSummary.verifiedClaimCount) : 0,
+            weakClaimCount: Number.isFinite(Number(runSummary.weakClaimCount)) ? Number(runSummary.weakClaimCount) : 0,
+            notProvenClaimCount: Number.isFinite(Number(runSummary.notProvenClaimCount)) ? Number(runSummary.notProvenClaimCount) : 0,
+            rejectedClaimCount: Number.isFinite(Number(runSummary.rejectedClaimCount)) ? Number(runSummary.rejectedClaimCount) : 0,
+            reviewCardCount: Number.isFinite(Number(runSummary.reviewCardCount)) ? Number(runSummary.reviewCardCount) : reviewCards.length,
+            completedReviewCardCount: Number.isFinite(Number(runSummary.completedReviewCardCount))
+                ? Number(runSummary.completedReviewCardCount)
+                : Number(reviewState.completedReviewCardCount || 0),
+            remainingReviewCardCount: Number.isFinite(Number(runSummary.remainingReviewCardCount))
+                ? Number(runSummary.remainingReviewCardCount)
+                : Number(reviewState.remainingReviewCardCount || 0),
+            topClaimSourceRef: formatKnowledgeRunSourceRef(firstClaim),
+            artifactSummary: String(knowledgeRunArtifact.summary || '').trim(),
+            claims: claims.slice(0, 5).map(function (claim) {
+                return {
+                    atomId: String(claim.atomId || '').trim(),
+                    title: String(claim.title || '').trim(),
+                    status: String(claim.status || '').trim(),
+                    confidencePct: Number((Number(claim.confidence || 0) * 100).toFixed(2)),
+                    sourcePath: String(claim.sourcePath || '').trim(),
+                    startLine: Number.isFinite(Number(claim.startLine)) ? Number(claim.startLine) : null,
+                    endLine: Number.isFinite(Number(claim.endLine)) ? Number(claim.endLine) : null,
+                    sourceRef: formatKnowledgeRunSourceRef(claim),
+                    snippet: String(claim.snippet || claim.statement || '').trim(),
+                    reason: String(claim.reason || '').trim(),
+                };
+            }),
+            qualityGates: qualityGates.slice(0, 4).map(function (gate) {
+                return {
+                    gateId: String(gate.gateId || '').trim(),
+                    passed: gate.passed === true,
+                    message: String(gate.message || '').trim(),
+                };
+            }),
+            reviewCards: reviewCards.slice(0, 4).map(function (card) {
+                return {
+                    prompt: String(card.prompt || '').trim(),
+                    evidenceRefs: Array.isArray(card.evidenceRefs)
+                        ? card.evidenceRefs.map((value) => String(value || '').trim()).filter(Boolean)
+                        : [],
+                };
+            }),
+        };
+    }
+
+    function buildKnowledgeRunHistoryCardPayload(result) {
+        const summary = result && typeof result === 'object'
+            ? result
+            : {};
+        const artifacts = Array.isArray(summary.artifacts)
+            ? summary.artifacts.filter((artifact) => artifact && typeof artifact === 'object')
+            : [];
+        const knowledgeRunArtifacts = artifacts.filter((artifact) => String(artifact.kind || '').trim() === 'knowledge_run');
+        return {
+            returnedArtifacts: Number.isFinite(Number(summary.returnedArtifacts))
+                ? Number(summary.returnedArtifacts)
+                : knowledgeRunArtifacts.length,
+            runs: knowledgeRunArtifacts.slice(0, 8).map((artifact) => {
+                const payload = artifact && typeof artifact.payload === 'object'
+                    ? artifact.payload
+                    : {};
+                const knowledgeRun = payload.knowledgeRun && typeof payload.knowledgeRun === 'object'
+                    ? payload.knowledgeRun
+                    : {};
+                const runSummary = knowledgeRun.summary && typeof knowledgeRun.summary === 'object'
+                    ? knowledgeRun.summary
+                    : {};
+                const quality = knowledgeRun.quality && typeof knowledgeRun.quality === 'object'
+                    ? knowledgeRun.quality
+                    : {};
+                const scope = knowledgeRun.scope && typeof knowledgeRun.scope === 'object'
+                    ? knowledgeRun.scope
+                    : {};
+                return {
+                    artifactId: String(artifact.artifactId || '').trim(),
+                    workspaceId: String(artifact.workspaceId || '').trim(),
+                    runId: String(knowledgeRun.runId || payload.runId || '').trim(),
+                    generatedAt: String(knowledgeRun.generatedAt || artifact.updatedAt || artifact.createdAt || '').trim(),
+                    artifactTitle: String(artifact.title || '').trim(),
+                    scopeLabel: [
+                        String(scope.workspaceId || '').trim(),
+                        String(scope.corpusId || '').trim(),
+                    ].filter(Boolean).join(' / ') || String(scope.source || '').trim() || 'global',
+                    qualityStatus: String(quality.status || knowledgeRun.status || '').trim(),
+                    qualityScore: Number.isFinite(Number(quality.score)) ? Number(quality.score) : null,
+                    claimCount: Number.isFinite(Number(runSummary.claimCount)) ? Number(runSummary.claimCount) : 0,
+                    weakClaimCount: Number.isFinite(Number(runSummary.weakClaimCount)) ? Number(runSummary.weakClaimCount) : 0,
+                    reviewCardCount: Number.isFinite(Number(runSummary.reviewCardCount)) ? Number(runSummary.reviewCardCount) : 0,
+                    remainingReviewCardCount: Number.isFinite(Number(runSummary.remainingReviewCardCount)) ? Number(runSummary.remainingReviewCardCount) : 0,
+                };
+            }),
+        };
+    }
+
     function buildTutorActionCardPayload(item, capability, result) {
         const trace = result && typeof result.trace === 'object'
             ? result.trace
@@ -3064,6 +3446,48 @@
                 'No grounded response.'
             );
         },
+        workflow_artifact_review_follow_up: function ({ result, executionContext }) {
+            const followUpResult = result && typeof result === 'object'
+                ? result
+                : {};
+            const studySessionAction = followUpResult.studySessionAction && typeof followUpResult.studySessionAction === 'object'
+                ? followUpResult.studySessionAction
+                : {};
+            const tutor = studySessionAction.tutor && typeof studySessionAction.tutor === 'object'
+                ? studySessionAction.tutor
+                : {};
+            const tutorMessage = String(tutor.message || '').trim();
+            if (tutorMessage) {
+                appendAssistantMessage(tutorMessage);
+            } else {
+                appendLocalizedAssistantMessage(
+                    'agentWorkspace.messages.noResponse',
+                    'No grounded response.'
+                );
+            }
+            const artifact = followUpResult.artifact && typeof followUpResult.artifact === 'object'
+                ? followUpResult.artifact
+                : null;
+            if (!artifact) {
+                return;
+            }
+            const payload = buildFlashcardBatchCardPayloadFromArtifacts([artifact], 1);
+            const controller = getController();
+            const cardNode = executionContext && executionContext.conversationCardNode
+                ? executionContext.conversationCardNode
+                : null;
+            if (
+                controller
+                && cardNode
+                && typeof controller.updateFlashcardBatchCard === 'function'
+            ) {
+                controller.updateFlashcardBatchCard(cardNode, payload);
+                return;
+            }
+            if (controller && typeof controller.appendFlashcardBatchCard === 'function') {
+                controller.appendFlashcardBatchCard(payload);
+            }
+        },
     };
 
     const CARD_RESULT_PRESENTATION_REGISTRY = {
@@ -3139,6 +3563,18 @@
             appendMethodName: 'appendSessionHistoryCard',
             unavailableErrorCode: 'session_history_card_unavailable',
         },
+        flashcard_batch_card: {
+            appendMethodName: 'appendFlashcardBatchCard',
+            unavailableErrorCode: 'flashcard_batch_card_unavailable',
+        },
+        knowledge_run_card: {
+            appendMethodName: 'appendKnowledgeRunCard',
+            unavailableErrorCode: 'knowledge_run_card_unavailable',
+        },
+        knowledge_run_history_card: {
+            appendMethodName: 'appendKnowledgeRunHistoryCard',
+            unavailableErrorCode: 'knowledge_run_history_card_unavailable',
+        },
         study_session_card: {
             appendMethodName: 'appendStudySessionCard',
             unavailableErrorCode: 'study_session_card_unavailable',
@@ -3204,6 +3640,15 @@
         session_history_card: function ({ result }) {
             return buildSessionHistoryCardPayload(result);
         },
+        flashcard_batch_card: function ({ result }) {
+            return buildFlashcardBatchCardPayload(result);
+        },
+        knowledge_run_card: function ({ result }) {
+            return buildKnowledgeRunCardPayload(result);
+        },
+        knowledge_run_history_card: function ({ result }) {
+            return buildKnowledgeRunHistoryCardPayload(result);
+        },
         study_session_card: function ({ item, result }) {
             return buildStudySessionCardPayload(item, result);
         },
@@ -3268,9 +3713,9 @@
         presentCardResultPresentation(cardDescriptor, payloadBuilder(context), context.capability);
     }
 
-    function invokeCapabilityHandler(handler, item, capability) {
+    function invokeCapabilityHandler(handler, item, capability, executionContext) {
         try {
-            return Promise.resolve(handler(item, capability));
+            return Promise.resolve(handler(item, capability, executionContext));
         } catch (error) {
             appendCapabilityFailureMessage(capability, {
                 error: String(error && error.message || error || 'unknown_error'),
@@ -3279,7 +3724,7 @@
         }
     }
 
-    async function executeKnowledgeOperation(item, capability) {
+    async function executeKnowledgeOperation(item, capability, executionContext) {
         const execution = capability && typeof capability.execution === 'object'
             ? capability.execution
             : {};
@@ -3351,6 +3796,7 @@
                 result,
                 responseEnvelope,
                 requestPayload,
+                executionContext: executionContext || null,
             });
         } catch (error) {
             const errorMessage = String(error && error.message || error || 'unknown_error');
@@ -3367,7 +3813,7 @@
         }
     }
 
-    function executeCapability(item, capability) {
+    function executeCapability(item, capability, executionContext) {
         const executionKind = String(capability && capability.execution && capability.execution.kind || '').trim();
         const actionId = String(capability && capability.actionId || '').trim();
         if (executionKind) {
@@ -3384,7 +3830,8 @@
             return invokeCapabilityHandler(
                 CAPABILITY_EXECUTION_KIND_HANDLERS[executionKind],
                 item,
-                capability
+                capability,
+                executionContext
             );
         }
         const missingExecutionKind = 'missing_execution';
@@ -3453,9 +3900,21 @@
             appendGroundingSummaryMessage(result);
             const controller = getController();
             if (controller) {
+                const trace = result && typeof result.trace === 'object' ? result.trace : {};
+                const summary = result && typeof result.summary === 'object' ? result.summary : {};
+                const resultSetKey = String(
+                    trace && (
+                        trace.invocationId
+                        || trace.sessionId
+                    )
+                    || summary.generatedAt
+                    || ''
+                ).trim();
                 controller.renderKnowledgePoints(
                     Array.isArray(result && result.knowledgePoints) ? result.knowledgePoints : [],
                     {
+                        autoExpandFirstPreview: true,
+                        resultSetKey: resultSetKey || undefined,
                         onCapability: function (item, capability) {
                             executeCapability(item, capability);
                         },

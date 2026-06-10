@@ -1,3 +1,71 @@
+# 2026-06-10 v1.7.0 - Knowledge Workspace and DAG Alignment Verification
+
+## English Document
+
+### Verification Objective
+
+Verify that the current Knowledge Workspace and DAG alignment reading matches the actual code state before promoting the current branch to `main`.
+
+### Verified Scope
+
+- structured grounded conversation and grouped knowledge points
+- durable `flashcard_batch` / `knowledge_run` workflow artifacts
+- workflow-artifact review follow-up runtime path
+- graph-focus source rendering with matched-span highlighting
+- additive compatibility for current conversation/runtime payloads
+
+### Executed Verification (2026-06-10)
+
+- [x] `npm.cmd exec -- tsc --noEmit`
+  - PASS
+- [x] `node --check src/frontend/agent_workspace.js`
+  - PASS
+- [x] `node --check src/frontend/workspace_panes.js`
+  - PASS
+- [x] `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
+  - PASS (`10` suites, `155` tests)
+
+### Conclusion
+
+- The current code-backed Knowledge Workspace and DAG alignment slice is internally consistent.
+- The current branch is ready for documentation-backed promotion to `main`.
+- This verification confirms current code truth; it does not claim that answer planning is already fully graph-native.
+
+---
+
+## 中文文档
+
+### 验证目标
+
+在把当前分支推进到 `main` 之前，确认这次“知识工作区 + DAG 对齐”结论与真实代码状态一致。
+
+### 本轮验证范围
+
+- 结构化 grounded conversation 与 grouped knowledge point
+- durable `flashcard_batch` / `knowledge_run` workflow artifact
+- workflow-artifact review follow-up 运行时路径
+- graph-focus 原始 markdown 渲染与 matched-span 高亮
+- 当前 conversation/runtime payload 的 additive compatibility
+
+### 已执行验证（2026-06-10）
+
+- [x] `npm.cmd exec -- tsc --noEmit`
+  - 通过
+- [x] `node --check src/frontend/agent_workspace.js`
+  - 通过
+- [x] `node --check src/frontend/workspace_panes.js`
+  - 通过
+- [x] `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
+  - 通过（`10` 个 suites，`155` 项测试）
+
+### 结论
+
+- 当前代码支撑的“知识工作区 + DAG 对齐”切片在内部是一致的。
+- 当前分支已具备以文档为依据推进到 `main` 的条件。
+- 本轮验证确认的是当前代码真相，不等于回答规划已经完全进入 graph-native 状态。
+
+---
+
 # 2026-03-10 v1.5.38 - Multi-Terminal WASM Readiness Slice Verification (Mobile Capability Probe + Build-Mode Telemetry)
 
 ### Test Objective

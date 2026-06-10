@@ -1875,6 +1875,68 @@ body.agent-workspace-open .agent-workspace-drawer {
   color: #c3cfdb;
 }
 
+.agent-chat-structured-answer-card {
+  display: grid;
+  gap: 12px;
+  background:
+    linear-gradient(180deg, rgba(18, 26, 38, 0.94) 0%, rgba(8, 12, 18, 0.88) 100%);
+  border-color: rgba(143, 226, 247, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.agent-chat-structured-answer-direct {
+  margin-top: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(14, 116, 144, 0.22) 0%, rgba(30, 41, 59, 0.18) 100%);
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  color: #f8fbff;
+  font-size: 0.96rem;
+  line-height: 1.62;
+  font-weight: 600;
+}
+
+.agent-chat-structured-answer-section {
+  margin-top: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.agent-chat-structured-answer-section h1,
+.agent-chat-structured-answer-section h2,
+.agent-chat-structured-answer-section h3 {
+  margin-top: 0;
+}
+
+.agent-chat-structured-answer-section > :last-child {
+  margin-bottom: 0;
+}
+
+.agent-chat-structured-answer-overview {
+  border-left: 3px solid rgba(148, 163, 184, 0.7);
+}
+
+.agent-chat-structured-answer-explanation {
+  border-left: 3px solid rgba(125, 211, 252, 0.78);
+  background:
+    linear-gradient(180deg, rgba(14, 116, 144, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+}
+
+.agent-chat-structured-answer-evidence {
+  border-left: 3px solid rgba(34, 197, 94, 0.78);
+  background:
+    linear-gradient(180deg, rgba(21, 128, 61, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
+}
+
+.agent-chat-structured-answer-next-actions {
+  border-left: 3px solid rgba(245, 158, 11, 0.82);
+  background:
+    linear-gradient(180deg, rgba(146, 64, 14, 0.12) 0%, rgba(255, 255, 255, 0.02) 100%);
+}
+
 .agent-chat-inline-card-list {
   list-style: none;
   margin: 10px 0 0;
@@ -1994,6 +2056,7 @@ body.agent-workspace-open .agent-workspace-drawer {
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 8px;
   background: rgba(15, 23, 42, 0.42);
+  overflow: hidden;
 }
 
 .agent-knowledge-file-button {
@@ -2023,18 +2086,22 @@ body.agent-workspace-open .agent-workspace-drawer {
   outline-offset: -1px;
 }
 
-.agent-knowledge-actions-menu[hidden] {
-  display: none !important;
+.agent-knowledge-source-path {
+  padding: 0 12px 10px;
+  color: #93a4b8;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
-.agent-knowledge-card[data-actions-open="true"] .agent-knowledge-actions-menu {
+.agent-knowledge-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 0 10px 10px;
+  padding: 0 12px 12px;
 }
 
-.agent-knowledge-actions-menu button {
+.agent-knowledge-actions button {
   min-height: 36px;
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 8px;
@@ -2042,6 +2109,58 @@ body.agent-workspace-open .agent-workspace-drawer {
   color: #dbeafe;
   cursor: pointer;
   padding: 7px 10px;
+}
+
+.agent-knowledge-actions button:hover,
+.agent-knowledge-actions button:focus-visible {
+  background: rgba(14, 116, 144, 0.22);
+  border-color: rgba(125, 211, 252, 0.38);
+}
+
+.agent-knowledge-preview[hidden] {
+  display: none !important;
+}
+
+.agent-knowledge-preview {
+  padding: 0 12px 12px;
+}
+
+.agent-knowledge-rendered-markdown,
+.agent-knowledge-preview-loading,
+.agent-knowledge-preview-fallback {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 8px;
+  background: rgba(2, 6, 12, 0.46);
+  padding: 12px;
+}
+
+.agent-knowledge-rendered-markdown {
+  color: #dbe7f3;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.agent-knowledge-rendered-markdown :is(h1, h2, h3, h4, h5, h6) {
+  color: #f8fbff;
+}
+
+.agent-knowledge-preview-loading,
+.agent-knowledge-preview-fallback {
+  color: #cbd5e1;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.agent-knowledge-preview-fallback-text {
+  color: #dbe7f3;
+}
+
+.agent-knowledge-preview-path {
+  margin-top: 8px;
+  color: #93a4b8;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .agent-knowledge-empty,
@@ -2150,6 +2269,8 @@ body.agent-workspace-open .agent-workspace-drawer {
   color: #f8fbff;
 }
 
+.agent-knowledge-rendered-markdown [data-agent-focus-highlight="true"],
+.agent-knowledge-rendered-markdown .agent-focus-match,
 .agent-focus-rendered-markdown [data-agent-focus-highlight="true"],
 .agent-focus-rendered-markdown .agent-focus-match {
   background: rgba(125, 211, 252, 0.14);

@@ -1,3 +1,5 @@
+import type { WorkflowArtifactRecord } from '../workflows/types';
+
 export type RelationKind =
     | 'prerequisite'
     | 'analogy'
@@ -426,7 +428,8 @@ export type StudySessionActionSource =
     | 'mastery_path'
     | 'divergence_path'
     | 'retrain_plan'
-    | 'misconception_remediation';
+    | 'misconception_remediation'
+    | 'flashcard_batch';
 
 export type StudySessionExecutionKind = 'session' | 'retest' | 'custom';
 
@@ -508,6 +511,44 @@ export interface StudySessionActionExecutionResponse {
         effectiveOutcome: MasteryOutcome | null;
         effectiveErrorTag: MasteryErrorTag | string | null;
     };
+}
+
+export interface WorkflowArtifactReviewFollowUpRequest {
+    userId: string;
+    sessionId?: string;
+    artifactId: string;
+    cardId: string;
+    action?: {
+        atomId?: string;
+        kind?: LearningActionKind;
+        source?: StudySessionActionSource;
+        prompt?: string;
+        answer?: string;
+    };
+    outcome?: MasteryOutcome;
+    errorTag?: MasteryErrorTag | string;
+    autoAnalyzeAnswer?: boolean;
+    autoUpdateMasteryFromAnswer?: boolean;
+    executedAt?: string;
+    persistMemory?: boolean;
+    memoryLayer?: MemoryLayer;
+    tutorAdapterId?: string;
+    tutorProviderName?: string;
+    tutorProviderMode?: string;
+    autoPromoteMemory?: boolean;
+    promoteMemoryTargetLayer?: MemoryLayer;
+    promoteMemoryMinConfidence?: number;
+    promoteMemoryRemoveFromSource?: boolean;
+}
+
+export interface WorkflowArtifactReviewFollowUpResponse {
+    artifact: WorkflowArtifactRecord;
+    relatedKnowledgeRunArtifact: WorkflowArtifactRecord | null;
+    studySessionAction: StudySessionActionExecutionResponse;
+    consumedCardId: string;
+    completedReviewCardCount: number;
+    remainingReviewCardCount: number;
+    archivedArtifact: boolean;
 }
 
 export interface StudySessionPlanExecutionRequest {
@@ -1071,6 +1112,20 @@ export interface AgentConversationAssistantMarkdownBlock {
     markdown: string;
 }
 
+export interface AgentConversationAssistantStructuredAnswerBlock {
+    blockId: string;
+    type: 'structured_answer';
+    title?: string;
+    directAnswer: string;
+    overviewMarkdown?: string;
+    explanationMarkdown?: string;
+    evidenceMarkdown?: string;
+    nextActionsMarkdown?: string;
+    knowledgePointCount: number;
+    citationCount: number;
+    recalledMemoryCount: number;
+}
+
 export interface AgentConversationAssistantSystemNoticeBlock {
     blockId: string;
     type: 'system_notice';
@@ -1099,12 +1154,112 @@ export interface AgentConversationAssistantKnowledgeActionsBlock {
     atomIds: string[];
 }
 
+export type KnowledgeRunClaimStatus = 'verified' | 'weak' | 'not_proven' | 'rejected';
+
+export type KnowledgeRunQualityStatus = 'pass' | 'caution' | 'fail';
+
+export type KnowledgeRunQualityGateId =
+    | 'evidence_coverage'
+    | 'scope_discipline'
+    | 'recall_transfer'
+    | 'memory_governance';
+
+export interface KnowledgeRunEvidenceClaim {
+    claimId: string;
+    status: KnowledgeRunClaimStatus;
+    title: string;
+    statement: string;
+    citationId?: string;
+    atomId?: string;
+    documentId?: string;
+    sourcePath?: string;
+    startLine?: number;
+    endLine?: number;
+    snippet: string;
+    confidence: number;
+    reason: string;
+}
+
+export interface KnowledgeRunQualityGate {
+    gateId: KnowledgeRunQualityGateId;
+    passed: boolean;
+    observedValue: number;
+    threshold: number;
+    message: string;
+}
+
+export interface KnowledgeRunQuality {
+    score: number;
+    status: KnowledgeRunQualityStatus;
+    gates: KnowledgeRunQualityGate[];
+}
+
+export interface KnowledgeRunReviewCard {
+    cardId: string;
+    sourceClaimId: string;
+    atomId?: string;
+    suggestedActionKind?: LearningActionKind;
+    prompt: string;
+    expectedAnswer: string;
+    evidenceRefs: string[];
+    nextReviewAt: string;
+}
+
+export interface KnowledgeRunReviewState {
+    consumedCardIds: string[];
+    completedReviewCardCount: number;
+    remainingReviewCardCount: number;
+    completedAt?: string | null;
+}
+
+export interface KnowledgeRun {
+    runId: string;
+    generatedAt: string;
+    status: KnowledgeRunQualityStatus;
+    scope: Pick<
+        KnowledgeQueryResolvedScope,
+        | 'source'
+        | 'workspaceId'
+        | 'corpusId'
+        | 'documentIds'
+        | 'atomIds'
+        | 'sourcePathPrefixes'
+        | 'languages'
+        | 'matchedAtomCount'
+        | 'scopeSource'
+    >;
+    evidenceClaims: KnowledgeRunEvidenceClaim[];
+    quality: KnowledgeRunQuality;
+    reviewCards: KnowledgeRunReviewCard[];
+    reviewState: KnowledgeRunReviewState;
+    summary: {
+        claimCount: number;
+        verifiedClaimCount: number;
+        weakClaimCount: number;
+        notProvenClaimCount: number;
+        rejectedClaimCount: number;
+        reviewCardCount: number;
+        completedReviewCardCount: number;
+        remainingReviewCardCount: number;
+    };
+}
+
+export interface AgentConversationAssistantKnowledgeRunSummaryBlock {
+    blockId: string;
+    type: 'knowledge_run_summary';
+    title?: string;
+    artifactId?: string;
+    knowledgeRun: KnowledgeRun;
+}
+
 export type AgentConversationAssistantBlock =
+    | AgentConversationAssistantStructuredAnswerBlock
     | AgentConversationAssistantMarkdownBlock
     | AgentConversationAssistantSystemNoticeBlock
     | AgentConversationAssistantHtmlArtifactBlock
     | AgentConversationAssistantCitationsBlock
-    | AgentConversationAssistantKnowledgeActionsBlock;
+    | AgentConversationAssistantKnowledgeActionsBlock
+    | AgentConversationAssistantKnowledgeRunSummaryBlock;
 
 export interface AgentConversationResponse {
     userId: string;
@@ -1112,6 +1267,7 @@ export interface AgentConversationResponse {
     assistantMessage: string;
     answer: string;
     assistantBlocks?: AgentConversationAssistantBlock[];
+    knowledgeRun?: KnowledgeRun;
     knowledgePoints: AgentConversationKnowledgePoint[];
     citations: KnowledgeCitation[];
     recalledMemories: AgentConversationMemoryRecord[];

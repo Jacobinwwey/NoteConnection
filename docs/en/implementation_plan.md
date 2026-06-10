@@ -2,6 +2,28 @@
 
 ## English Document
 
+### 2026-06-10 Knowledge Workspace and DAG Implementation Plan
+
+#### Objective
+
+Extend the current mainline alignment with a Knowledge Workspace and DAG-specific reading of the codebase.
+
+#### Current code truth
+
+- The current branch already has structured grounded conversation, grouped knowledge points, durable `flashcard_batch` / `knowledge_run` artifacts, and workflow-artifact review follow-up.
+- The current DAG-backed learning substrate already exists in code through `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, and prerequisite-driven learning flows.
+- The primary missing layer is graph-conditioned context assembly between retrieval and answer synthesis.
+- The primary product-surface gap is still answer-surface contraction and right-pane-first knowledge reading.
+
+#### Next execution order
+
+1. Keep the new 2026-06-10 Knowledge Workspace and DAG alignment note synchronized across active docs.
+2. Contract the visible answer area toward a single targeted answer.
+3. Converge left-side knowledge hits on a right-pane-first reading model.
+4. Treat `knowledge_run` and `flashcard_batch` as the first durable evidence surfaces.
+5. Add graph-conditioned context assembly.
+6. Continue ownership reduction across the major server and frontend hosts.
+
 ### 2026-06-06 Mainline Architecture Alignment Plan
 
 #### Objective

@@ -7,6 +7,7 @@ import {
   buildBridgePathTransportSummary,
   computeBridgePathFingerprint,
   parseBridgeInboundEnvelope,
+  PathBridge,
   resolveBridgeInboundLimitConfig,
   resolveBridgeInboundSchemaPolicy,
   validateBridgePathPayload,
@@ -22,6 +23,20 @@ describe('path bridge handshake and transport verification contracts', () => {
   const pathModeUiPath = path.join(repoRoot, 'path_mode', 'scripts', 'path_mode_ui.gd');
   const readerRenderClientPath = path.join(repoRoot, 'path_mode', 'scripts', 'reader_render_client.gd');
   const pathRendererPath = path.join(repoRoot, 'path_mode', 'scripts', 'path_renderer.gd');
+
+  test('path bridge preserves explicit port zero for ephemeral bind fallback', async () => {
+    const bridge = new PathBridge({
+      port: 0,
+      host: '127.0.0.1',
+    });
+    try {
+      await bridge.waitUntilReady();
+      expect(bridge.getPort()).toBeGreaterThan(0);
+      expect(bridge.getPort()).not.toBe(9876);
+    } finally {
+      bridge.close();
+    }
+  });
 
   test('path bridge supports explicit identify handshake and client tagging', () => {
     const bridge = fs.readFileSync(bridgePath, 'utf8');

@@ -93,6 +93,8 @@ describe('KnowledgeLearningPlatform Program F integration', () => {
         expect(bundle.graph.atoms.length).toBeGreaterThan(0);
         expect(bundle.runtime.sessionStates.some((state) => state.sessionId === 'program_f_session')).toBe(true);
         expect(bundle.runtime.workflowArtifacts.some((artifact) => artifact.kind === 'research_report')).toBe(true);
+        expect(bundle.runtime.workflowArtifacts.some((artifact) => artifact.kind === 'knowledge_run')).toBe(true);
+        expect(bundle.runtime.workflowArtifacts.some((artifact) => artifact.kind === 'flashcard_batch')).toBe(true);
         expect(bundle.runtime.workflowArtifacts.some((artifact) => artifact.kind === 'study_session')).toBe(true);
         expect(bundle.runtime.workflowArtifacts.some((artifact) => artifact.kind === 'review_plan')).toBe(true);
         expect(bundle.memory.entries.length).toBeGreaterThan(0);

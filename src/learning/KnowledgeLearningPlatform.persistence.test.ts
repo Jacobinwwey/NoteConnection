@@ -125,6 +125,8 @@ describe('KnowledgeLearningPlatform persistence', () => {
         expect(snapshotJson.conversationSessions.length).toBeGreaterThan(0);
         expect(snapshotJson.conversationTurns.length).toBeGreaterThan(0);
         expect(snapshotJson.conversationInvocations.length).toBeGreaterThan(0);
+        expect(snapshotJson.workflowArtifacts.artifacts.some((artifact: { kind?: string }) => artifact.kind === 'knowledge_run')).toBe(true);
+        expect(snapshotJson.workflowArtifacts.artifacts.some((artifact: { kind?: string }) => artifact.kind === 'flashcard_batch')).toBe(true);
 
         nowIso = '2026-03-31T11:00:00.000Z';
         const platformB = new KnowledgeLearningPlatform({
@@ -176,6 +178,8 @@ describe('KnowledgeLearningPlatform persistence', () => {
         expect(restoredBundle.resources.length).toBeGreaterThan(0);
         expect(restoredBundle.index.units.length).toBeGreaterThan(0);
         expect(restoredBundle.runtime.workflowArtifacts.length).toBeGreaterThan(0);
+        expect(restoredBundle.runtime.workflowArtifacts.some((artifact) => artifact.kind === 'knowledge_run')).toBe(true);
+        expect(restoredBundle.runtime.workflowArtifacts.some((artifact) => artifact.kind === 'flashcard_batch')).toBe(true);
         expect(restoredBundle.memory.auditRecords.length).toBeGreaterThan(0);
 
         const storeDiagnostics = await platformB.getStoreDiagnostics();

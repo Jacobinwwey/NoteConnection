@@ -65,6 +65,26 @@
 - Knowledge Workspace 前端契约现在也包括工作区内 scope 切换器、紧凑的 `/api/knowledge/conversation` 状态条、按文件优先的 grouped hit 渲染，以及 focus pane 中的 matched-span 证据渲染。
 - `assistantBlocks` 已不再只是对同一段 plain answer 的薄运输包装。对于支持 Tauri rich reply 的客户端，现在应预期 intent-aware 的 overview / explanation / evidence / memory / action 分块，同时继续把 `assistantMessage` 视为兼容性 fallback。
 
+## 0.0B 知识工作区与 DAG 对齐补充（2026-06-10）
+
+- 当前 Knowledge Workspace 运行时现在已经包含 durable workflow-artifact 路径：`flashcard_batch` 与 `knowledge_run`，并通过 `/api/knowledge/workflow-artifacts` 与 `/api/knowledge/workflow-artifacts/review-follow-up` 暴露。
+- 运行时兼容性仍保持 additive：
+  - `assistantMessage` 继续有效，
+  - `answer`、`assistantBlocks`、`knowledgeRun`、按文档聚合的 `knowledgePoints`、citations、memory actions 与 trace 与旧客户端共存。
+- 当前代码已经具备真实的 DAG 学习底座：
+  - `KnowledgeAtom`
+  - `RelationEdge`
+  - `TemporalEdge`
+  - path query
+  - prerequisite 驱动 mastery/session 流
+  - `KnowledgeQueryItem.relationPath`
+- 当前架构判断：
+  - graph-backed retrieval 与 learning-path/session logic 已实现，
+  - graph-native answer planning 仍未完成，因为 retrieval 与 answer synthesis 之间还缺 dedicated graph-conditioned context-assembly layer。
+- 当前产品面判断：
+  - 按文件优先的 grouped knowledge hit 与右侧原文高亮阅读已经实现，
+  - 用户可见回答区未来仍需继续收缩，让 targeted answer 优先、supporting block 退到次级表面。
+
 兼容性规则：
 
 - 新响应字段必须保持 additive 且 optional。

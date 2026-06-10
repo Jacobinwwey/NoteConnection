@@ -2,6 +2,26 @@
 
 Tracking progress toward all-green CI. Inspired by paseo's CI_STATUS.md.
 
+## 2026-06-10 Knowledge Workspace and DAG Alignment Sync
+
+- Current branch state has been re-audited against the earlier lightweight-RAG, agent-workspace, and mainline architecture plans.
+- The source-of-truth reconciliation note is now `docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md`.
+- Code-backed current-state confirmations for this slice:
+  - structured grounded conversation with additive compatibility,
+  - grouped knowledge points,
+  - durable `flashcard_batch` / `knowledge_run` workflow artifacts,
+  - workflow-artifact review follow-up runtime path,
+  - graph-focus source rendering with matched-span highlighting.
+- Local verification executed for this slice:
+  - `npm.cmd exec -- tsc --noEmit`
+  - `node --check src/frontend/agent_workspace.js`
+  - `node --check src/frontend/workspace_panes.js`
+  - `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
+- Remaining architecture gaps from this slice are product-surface and answer-planning gaps, not missing substrate:
+  - contract the visible answer area toward a single targeted answer,
+  - converge knowledge-hit interaction on a right-pane-first model,
+  - add graph-conditioned context assembly between retrieval and answer synthesis.
+
 ## CI Gates
 
 | Gate | Workflow | Status | Notes |

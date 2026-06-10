@@ -1,3 +1,57 @@
+# 2026-06-10 v1.7.0 - Knowledge Workspace and DAG Walkthrough Addendum
+
+## English Document
+
+### Knowledge Workspace Runtime Walkthrough (Current)
+
+1. The user selects or inherits a scoped workspace/corpus target.
+2. `agent_workspace.js` sends the conversation request with `activeTarget` and `scope`.
+3. `KnowledgeLearningPlatform.agentConversation()` resolves scoped retrieval, grouped knowledge points, citations, memory actions, and a durable `knowledgeRun`.
+4. `conversationComposer.ts` organizes the grounded reply into structured blocks while preserving legacy `assistantMessage`.
+5. The frontend renders the reply and presents grouped file-first knowledge hits.
+6. Clicking a grouped knowledge hit can open source markdown in the graph-focus pane, where matched spans are highlighted in-place.
+7. Workflow artifacts such as `flashcard_batch` and `knowledge_run` can be queried and followed up through dedicated runtime endpoints.
+
+### What Is Working
+
+- Structured grounded conversation is operational with additive compatibility.
+- Graph focus can render original markdown knowledge sources with matched-span highlighting.
+- Durable workflow artifacts now exist for review loops and knowledge-run inspection.
+- The current DAG-backed learning substrate already exists underneath retrieval and learning-path/session flows.
+
+### What Still Needs Convergence
+
+- The visible answer area is still richer than the final intended product surface and should contract toward a single targeted answer.
+- Left-side knowledge hits still need to converge on a right-pane-first reading model.
+- The current DAG still needs a dedicated graph-conditioned context-assembly layer before answer synthesis can be called graph-native.
+
+## 中文文档
+
+### 当前知识工作区运行链路
+
+1. 用户选择或继承一个 scoped workspace/corpus target。
+2. `agent_workspace.js` 会把 `activeTarget` 与 `scope` 一起发送到会话请求中。
+3. `KnowledgeLearningPlatform.agentConversation()` 解析 scoped retrieval、grouped knowledge point、citation、memory action 与 durable `knowledgeRun`。
+4. `conversationComposer.ts` 会把 grounded reply 组织为结构化 block，同时继续保留 legacy `assistantMessage`。
+5. 前端渲染回答，并展示按文件优先的 grouped knowledge hit。
+6. 点击 grouped knowledge hit 后，可在 graph-focus pane 中打开原始 markdown，并在原文内高亮 matched span。
+7. `flashcard_batch` 与 `knowledge_run` 这类 workflow artifact 现在也可以通过独立运行时端点进行查询与 follow-up。
+
+### 已可用能力
+
+- 结构化 grounded conversation 已进入可运行状态，并保持 additive compatibility。
+- graph focus 已能渲染原始知识 markdown，并在原文中高亮 matched span。
+- 用于 review loop 与 knowledge-run inspection 的 durable workflow artifact 已经存在。
+- 当前 DAG 学习底座已经在 retrieval 与 learning-path/session 流水线下方真实存在。
+
+### 仍需继续收敛的点
+
+- 用户可见回答区仍比最终目标产品面更重，仍需继续收缩为“一个 targeted answer 优先”。
+- 左侧 knowledge hit 仍需进一步收敛为 right-pane-first 阅读模型。
+- 现有 DAG 仍需 dedicated graph-conditioned context-assembly layer，才能让 answer synthesis 进入真正 graph-native 状态。
+
+---
+
 # 2026-03-04 v1.5.13 - Tauri/Godot Migration Walkthrough Addendum
 
 ## English Document

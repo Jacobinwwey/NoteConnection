@@ -58,6 +58,50 @@ function createI18nStub() {
             'agentWorkspace.messages.groundingSummary': 'Grounding: scope={scopeLabel}, {citationCount} citation(s), {memoryCount} recalled memory note(s), {memoryActionCount} memory action(s). {readinessMessage} {missMessage}',
             'agentWorkspace.knowledge.citation': 'Citation',
             'agentWorkspace.knowledge.score': 'Score',
+            'agentWorkspace.knowledge.togglePreview': 'Toggle matched knowledge preview: {file}',
+            'agentWorkspace.knowledge.previewLoading': 'Loading source preview...',
+            'agentWorkspace.knowledge.previewUnavailable': 'Source preview unavailable.',
+            'agentWorkspace.reply.flashcardBatch.cardTitle': 'Review Card Batch',
+            'agentWorkspace.reply.flashcardBatch.summary': '{returnedArtifacts} artifact(s), {remainingCards}/{totalCards} review card(s) remaining.',
+            'agentWorkspace.reply.flashcardBatch.metricsHeading': 'Key Metrics',
+            'agentWorkspace.reply.flashcardBatch.artifactKindsLabel': 'Artifact kinds',
+            'agentWorkspace.reply.flashcardBatch.topPromptLabel': 'Top prompt',
+            'agentWorkspace.reply.flashcardBatch.topEvidenceLabel': 'Top evidence',
+            'agentWorkspace.reply.flashcardBatch.completedLabel': 'Completed cards',
+            'agentWorkspace.reply.flashcardBatch.remainingLabel': 'Remaining cards',
+            'agentWorkspace.reply.flashcardBatch.statusLabel': 'Artifact status',
+            'agentWorkspace.reply.flashcardBatch.statusActive': 'active',
+            'agentWorkspace.reply.flashcardBatch.statusArchived': 'archived',
+            'agentWorkspace.reply.flashcardBatch.reviewNow': 'Review Now',
+            'agentWorkspace.reply.flashcardBatch.none': 'none',
+            'agentWorkspace.reply.structuredAnswer': 'Grounded Answer',
+            'agentWorkspace.reply.knowledgeRunInspectRun': 'Inspect Run',
+            'agentWorkspace.reply.knowledgeRunCardTitle': 'Knowledge Run Details',
+            'agentWorkspace.reply.knowledgeRunCardSummary': 'Run {runId}: {claimCount} claims, quality {qualityStatus}/{qualityScore}.',
+            'agentWorkspace.reply.knowledgeRunCardSummaryNoScore': 'Run {runId}: {claimCount} claims, quality {qualityStatus}.',
+            'agentWorkspace.reply.knowledgeRunMetricsHeading': 'Key Metrics',
+            'agentWorkspace.reply.knowledgeRunQualityGatesLabel': 'Quality gates',
+            'agentWorkspace.reply.knowledgeRunScopeLabel': 'Scope',
+            'agentWorkspace.reply.knowledgeRunScopeSourceLabel': 'Scope source',
+            'agentWorkspace.reply.knowledgeRunArtifactStatusLabel': 'Artifact status',
+            'agentWorkspace.reply.knowledgeRunTopClaimSourceLabel': 'Top claim source',
+            'agentWorkspace.reply.knowledgeRunReviewProgressLabel': 'Review progress',
+            'agentWorkspace.reply.knowledgeRunInspectEvidence': 'Inspect Evidence',
+            'agentWorkspace.reply.knowledgeRunBrowseRuns': 'Recent Runs',
+            'agentWorkspace.reply.knowledgeRunHistoryCardTitle': 'Knowledge Run History',
+            'agentWorkspace.reply.knowledgeRunHistoryCardSummary': '{returnedArtifacts} run artifact(s) returned.',
+            'agentWorkspace.reply.knowledgeRunHistoryRunsHeading': 'Recent Runs',
+            'agentWorkspace.reply.knowledgeRunHistoryInspectRun': 'Inspect Run',
+            'agentWorkspace.reply.knowledgeRunHistoryCompareLatest': 'Compare Latest',
+            'agentWorkspace.reply.knowledgeRunCompareCardTitle': 'Knowledge Run Comparison',
+            'agentWorkspace.reply.knowledgeRunCompareCardSummary': 'Comparing {comparedRunId} against latest {latestRunId}.',
+            'agentWorkspace.reply.knowledgeRunCompareLatestLabel': 'Latest run',
+            'agentWorkspace.reply.knowledgeRunCompareCandidateLabel': 'Compared run',
+            'agentWorkspace.reply.knowledgeRunCompareQualityDeltaLabel': 'Quality delta',
+            'agentWorkspace.reply.knowledgeRunCompareClaimDeltaLabel': 'Claim delta',
+            'agentWorkspace.reply.knowledgeRunCompareWeakClaimDeltaLabel': 'Weak-claim delta',
+            'agentWorkspace.reply.knowledgeRunCompareRemainingReviewDeltaLabel': 'Remaining review delta',
+            'agentWorkspace.reply.knowledgeRunNone': 'none',
             'agentWorkspace.tutorAction.cardTitle': 'Tutor Action',
             'agentWorkspace.tutorAction.quizTitle': 'Quiz Prompt',
             'agentWorkspace.tutorAction.recapTitle': 'Recap',
@@ -350,6 +394,13 @@ function createI18nStub() {
             'agentWorkspace.reply.knowledgeActions': 'Knowledge Actions',
             'agentWorkspace.reply.knowledgeActionsSummary': 'Open the scoped knowledge cards below to continue with focus mode or guided learning for {count} node(s).',
             'agentWorkspace.reply.knowledgeActionsEmpty': 'No actionable knowledge nodes were returned.',
+            'agentWorkspace.reply.knowledgeRun': 'Knowledge Run',
+            'agentWorkspace.reply.knowledgeRunSummary': 'Status: {status}. Quality score: {score}.',
+            'agentWorkspace.reply.knowledgeRunStatusOnly': 'Status: {status}.',
+            'agentWorkspace.reply.knowledgeRunClaims': 'Evidence claims',
+            'agentWorkspace.reply.knowledgeRunClaimUntitled': 'Untitled claim',
+            'agentWorkspace.reply.knowledgeRunReviewCards': 'Review cards',
+            'agentWorkspace.reply.knowledgeRunReviewPrompt': 'Review the cited claim.',
         },
         zh: {
             'agentWorkspace.actions.focus': '聚焦',
@@ -383,6 +434,47 @@ function createI18nStub() {
             'agentWorkspace.actions.restore': '还原',
             'agentWorkspace.messages.ready': 'Agent 工作区已就绪。先提一个概念问题，然后从本地知识点里打开聚焦或学习路径 pane。',
             'agentWorkspace.messages.localNodeUnavailable': '本地图中当前找不到节点 {nodeId}。',
+            'agentWorkspace.reply.flashcardBatch.cardTitle': '复习卡片批次',
+            'agentWorkspace.reply.flashcardBatch.summary': '{returnedArtifacts} 个 artifact，剩余 {remainingCards}/{totalCards} 张复习卡片。',
+            'agentWorkspace.reply.flashcardBatch.metricsHeading': '关键指标',
+            'agentWorkspace.reply.flashcardBatch.artifactKindsLabel': 'Artifact 类型',
+            'agentWorkspace.reply.flashcardBatch.topPromptLabel': '首张提示',
+            'agentWorkspace.reply.flashcardBatch.topEvidenceLabel': '首条证据',
+            'agentWorkspace.reply.flashcardBatch.completedLabel': '已完成卡片',
+            'agentWorkspace.reply.flashcardBatch.remainingLabel': '剩余卡片',
+            'agentWorkspace.reply.flashcardBatch.statusLabel': 'Artifact 状态',
+            'agentWorkspace.reply.flashcardBatch.statusActive': '活跃',
+            'agentWorkspace.reply.flashcardBatch.statusArchived': '已归档',
+            'agentWorkspace.reply.flashcardBatch.reviewNow': '立即复习',
+            'agentWorkspace.reply.flashcardBatch.none': '无',
+            'agentWorkspace.reply.structuredAnswer': '可信回答',
+            'agentWorkspace.reply.knowledgeRunInspectRun': '检查运行',
+            'agentWorkspace.reply.knowledgeRunCardTitle': '知识运行详情',
+            'agentWorkspace.reply.knowledgeRunCardSummary': '运行 {runId}：{claimCount} 条主张，质量 {qualityStatus}/{qualityScore}。',
+            'agentWorkspace.reply.knowledgeRunCardSummaryNoScore': '运行 {runId}：{claimCount} 条主张，质量 {qualityStatus}。',
+            'agentWorkspace.reply.knowledgeRunMetricsHeading': '关键指标',
+            'agentWorkspace.reply.knowledgeRunQualityGatesLabel': '质量门',
+            'agentWorkspace.reply.knowledgeRunScopeLabel': '范围',
+            'agentWorkspace.reply.knowledgeRunScopeSourceLabel': '范围来源',
+            'agentWorkspace.reply.knowledgeRunArtifactStatusLabel': 'Artifact 状态',
+            'agentWorkspace.reply.knowledgeRunTopClaimSourceLabel': '首条主张来源',
+            'agentWorkspace.reply.knowledgeRunReviewProgressLabel': '复习进度',
+            'agentWorkspace.reply.knowledgeRunInspectEvidence': '检查证据',
+            'agentWorkspace.reply.knowledgeRunBrowseRuns': '最近运行',
+            'agentWorkspace.reply.knowledgeRunHistoryCardTitle': '知识运行历史',
+            'agentWorkspace.reply.knowledgeRunHistoryCardSummary': '返回 {returnedArtifacts} 条运行 artifact。',
+            'agentWorkspace.reply.knowledgeRunHistoryRunsHeading': '最近运行',
+            'agentWorkspace.reply.knowledgeRunHistoryInspectRun': '检查运行',
+            'agentWorkspace.reply.knowledgeRunHistoryCompareLatest': '对比最新运行',
+            'agentWorkspace.reply.knowledgeRunCompareCardTitle': '知识运行对比',
+            'agentWorkspace.reply.knowledgeRunCompareCardSummary': '将 {comparedRunId} 与最新运行 {latestRunId} 对比。',
+            'agentWorkspace.reply.knowledgeRunCompareLatestLabel': '最新运行',
+            'agentWorkspace.reply.knowledgeRunCompareCandidateLabel': '对比运行',
+            'agentWorkspace.reply.knowledgeRunCompareQualityDeltaLabel': '质量差值',
+            'agentWorkspace.reply.knowledgeRunCompareClaimDeltaLabel': '主张差值',
+            'agentWorkspace.reply.knowledgeRunCompareWeakClaimDeltaLabel': '弱主张差值',
+            'agentWorkspace.reply.knowledgeRunCompareRemainingReviewDeltaLabel': '剩余复习差值',
+            'agentWorkspace.reply.knowledgeRunNone': '无',
             'agentWorkspace.tutorAction.cardTitle': '导师动作',
             'agentWorkspace.tutorAction.quizTitle': '测验提示',
             'agentWorkspace.tutorAction.recapTitle': '回顾',
@@ -665,6 +757,9 @@ function createI18nStub() {
             'agentWorkspace.messages.executionKindUnsupported': '不支持的能力执行类型：{executionKind}',
             'agentWorkspace.messages.operationResultPresentationUnsupported': '操作 {operationId} 不支持结果呈现 {resultPresentation}；允许：{allowedResultPresentations}',
             'agentWorkspace.messages.capabilityActionUnsupported': '不支持的能力动作：{actionId}',
+            'agentWorkspace.knowledge.togglePreview': '切换命中知识预览：{file}',
+            'agentWorkspace.knowledge.previewLoading': '正在加载源文档预览...',
+            'agentWorkspace.knowledge.previewUnavailable': '源文档预览不可用。',
             'agentWorkspace.reply.citations': '引用',
             'agentWorkspace.reply.citationsEmpty': '未返回引用。',
             'agentWorkspace.reply.citationUntitled': '未命名引用',
@@ -675,6 +770,13 @@ function createI18nStub() {
             'agentWorkspace.reply.knowledgeActions': '知识动作',
             'agentWorkspace.reply.knowledgeActionsSummary': '请使用下方的 scoped knowledge cards，继续对 {count} 个节点执行聚焦模式或引导式学习。',
             'agentWorkspace.reply.knowledgeActionsEmpty': '未返回可执行的知识节点。',
+            'agentWorkspace.reply.knowledgeRun': '知识运行',
+            'agentWorkspace.reply.knowledgeRunSummary': '状态：{status}。质量分：{score}。',
+            'agentWorkspace.reply.knowledgeRunStatusOnly': '状态：{status}。',
+            'agentWorkspace.reply.knowledgeRunClaims': '证据主张',
+            'agentWorkspace.reply.knowledgeRunClaimUntitled': '未命名主张',
+            'agentWorkspace.reply.knowledgeRunReviewCards': '复习卡片',
+            'agentWorkspace.reply.knowledgeRunReviewPrompt': '复习被引用的主张。',
         },
     };
 
@@ -1281,6 +1383,588 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                                 unknown: 0,
                             },
                             pathStrategyOutcomeByStrategy: [],
+                        },
+                    },
+                }),
+            };
+        }
+        if (url === '/api/knowledge/workflow-artifacts/review-follow-up') {
+            let parsedBody: Record<string, unknown> = {};
+            if (init && typeof init.body === 'string' && init.body.trim().length > 0) {
+                try {
+                    parsedBody = JSON.parse(init.body);
+                } catch (_error) {
+                    parsedBody = {};
+                }
+            }
+            const action = parsedBody.action && typeof parsedBody.action === 'object'
+                ? parsedBody.action as Record<string, unknown>
+                : {};
+            return {
+                ok: true,
+                text: async () => JSON.stringify({
+                    success: true,
+                    result: {
+                        artifact: {
+                            artifactId: String(parsedBody.artifactId || 'workflow_artifact_flashcard_batch_1'),
+                            kind: 'flashcard_batch',
+                            sessionId: String(parsedBody.sessionId || 'session_client_path_user_default_test'),
+                            userId: 'path_user_default',
+                            workspaceId: 'waterglass',
+                            corpusId: 'waterglass',
+                            title: 'Knowledge run review cards: Water Glass',
+                            sourceResourceIds: ['resource_1'],
+                            sourceProjectionIds: ['projection_1'],
+                            summary: 'Prepared 1 review card(s); 1 completed and 0 remaining.',
+                            status: 'archived',
+                            createdAt: '2026-04-12T00:20:00.000Z',
+                            updatedAt: '2026-04-12T00:21:00.000Z',
+                            payload: {
+                                runId: 'knowledge_run_1',
+                                reviewCards: [
+                                    {
+                                        cardId: 'knowledge_run_1_card_1',
+                                        sourceClaimId: 'knowledge_run_1_claim_1',
+                                        atomId: 'atom_water_glass',
+                                        suggestedActionKind: 'review',
+                                        prompt: 'What does the cited source establish about Water Glass?',
+                                        expectedAnswer: 'A water glass is a physical system.',
+                                        evidenceRefs: ['Knowledge_Base/waterglass/water glass.md:3'],
+                                        nextReviewAt: '2026-04-13T00:20:00.000Z',
+                                    },
+                                ],
+                                evidenceClaims: [
+                                    {
+                                        claimId: 'knowledge_run_1_claim_1',
+                                        title: 'Water Glass',
+                                        status: 'verified',
+                                    },
+                                ],
+                                reviewState: {
+                                    consumedCardIds: [String(parsedBody.cardId || 'knowledge_run_1_card_1')],
+                                    completedReviewCardCount: 1,
+                                    remainingReviewCardCount: 0,
+                                    completedAt: '2026-04-12T00:21:00.000Z',
+                                },
+                            },
+                        },
+                        relatedKnowledgeRunArtifact: {
+                            artifactId: 'workflow_artifact_knowledge_run_1',
+                            kind: 'knowledge_run',
+                            sessionId: String(parsedBody.sessionId || 'session_client_path_user_default_test'),
+                            userId: 'path_user_default',
+                            workspaceId: 'waterglass',
+                            corpusId: 'waterglass',
+                            title: 'Knowledge run: Water Glass',
+                            sourceResourceIds: ['resource_1'],
+                            sourceProjectionIds: ['projection_1'],
+                            summary: 'Generated 1 evidence claim(s); 1 review card(s) completed and 0 remaining.',
+                            status: 'archived',
+                            createdAt: '2026-04-12T00:20:00.000Z',
+                            updatedAt: '2026-04-12T00:21:00.000Z',
+                            payload: {},
+                        },
+                        studySessionAction: {
+                            sessionId: String(parsedBody.sessionId || 'session_client_path_user_default_test'),
+                            executedAt: '2026-04-12T00:21:00.000Z',
+                            tutor: {
+                                message: `Reviewed ${String(action.atomId || '')} via ${String(action.kind || '')}.`,
+                                suggestedActions: [],
+                                evidenceSpans: [
+                                    {
+                                        id: 'ev_review_1',
+                                        snippet: 'A water glass is a physical system.',
+                                    },
+                                ],
+                                trace: {
+                                    actionKind: 'recap',
+                                    confidence: 0.88,
+                                    evidenceSpanIds: ['ev_review_1'],
+                                    relationPathAtomIds: [String(action.atomId || '')],
+                                    source: 'rule-engine',
+                                    notes: 'review execution',
+                                    traceId: 'trace_review_1',
+                                },
+                            },
+                            answerAnalysis: null,
+                            memory: null,
+                            promotedMemory: null,
+                            mastery: null,
+                            trace: {
+                                tutorActionKind: 'recap',
+                                persistedMemory: true,
+                                updatedMastery: false,
+                                analyzedAnswer: false,
+                                masterySource: 'none',
+                                effectiveOutcome: null,
+                                effectiveErrorTag: null,
+                            },
+                        },
+                        consumedCardId: String(parsedBody.cardId || 'knowledge_run_1_card_1'),
+                        completedReviewCardCount: 1,
+                        remainingReviewCardCount: 0,
+                        archivedArtifact: true,
+                    },
+                }),
+            };
+        }
+        if (String(url).startsWith('/api/knowledge/workflow-artifacts')) {
+            const parsedUrl = new URL(String(url), 'http://127.0.0.1:3000');
+            const artifactKinds = String(parsedUrl.searchParams.get('artifactKinds') || '').split(',').map((value) => value.trim()).filter(Boolean);
+            const artifactIdFilter = String(parsedUrl.searchParams.get('artifactId') || '').trim();
+            const runIdFilter = String(parsedUrl.searchParams.get('runId') || '').trim();
+            const wantsKnowledgeRunHistory = artifactKinds.includes('knowledge_run')
+                && !artifactIdFilter
+                && !runIdFilter;
+            const wantsKnowledgeRunBlocks1 = artifactKinds.includes('knowledge_run')
+                || artifactIdFilter === 'workflow_artifact_knowledge_run_blocks_1'
+                || runIdFilter === 'knowledge_run_blocks_1';
+            const wantsKnowledgeRunBlocks2 = artifactIdFilter === 'workflow_artifact_knowledge_run_blocks_2'
+                || runIdFilter === 'knowledge_run_blocks_2';
+            return {
+                ok: true,
+                text: async () => JSON.stringify({
+                    success: true,
+                    result: {
+                        generatedAt: '2026-04-12T00:20:00.000Z',
+                        workspaceId: 'waterglass',
+                        sessionId: 'session_client_path_user_default_test',
+                        userId: 'path_user_default',
+                        returnedArtifacts: 1,
+                        artifacts: wantsKnowledgeRunHistory
+                            ? [
+                                {
+                                    artifactId: 'workflow_artifact_knowledge_run_blocks_1',
+                                    kind: 'knowledge_run',
+                                    sessionId: 'session_blocks_1',
+                                    userId: 'path_user_default',
+                                    workspaceId: 'waterglass',
+                                    corpusId: 'waterglass',
+                                    title: 'Knowledge run: Blocks Citation',
+                                    sourceResourceIds: ['resource_blocks_1'],
+                                    sourceProjectionIds: ['projection_blocks_1'],
+                                    summary: 'Generated 1 evidence claim(s) and 1 review card(s) with status pass.',
+                                    status: 'active',
+                                    createdAt: '2026-04-13T00:01:00.000Z',
+                                    updatedAt: '2026-04-13T00:01:00.000Z',
+                                    payload: {
+                                        knowledgeRun: {
+                                            runId: 'knowledge_run_blocks_1',
+                                            generatedAt: '2026-04-13T00:01:00.000Z',
+                                            status: 'pass',
+                                            scope: {
+                                                source: 'scoped',
+                                                workspaceId: 'waterglass',
+                                                corpusId: 'waterglass',
+                                                documentIds: [],
+                                                atomIds: [],
+                                                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+                                                languages: [],
+                                                matchedAtomCount: 1,
+                                                scopeSource: 'explicit_request',
+                                            },
+                                            evidenceClaims: [],
+                                            quality: {
+                                                score: 100,
+                                                status: 'pass',
+                                                gates: [],
+                                            },
+                                            reviewCards: [],
+                                            reviewState: {
+                                                consumedCardIds: [],
+                                                completedReviewCardCount: 0,
+                                                remainingReviewCardCount: 1,
+                                                completedAt: null,
+                                            },
+                                            summary: {
+                                                claimCount: 1,
+                                                verifiedClaimCount: 1,
+                                                weakClaimCount: 0,
+                                                notProvenClaimCount: 0,
+                                                rejectedClaimCount: 0,
+                                                reviewCardCount: 1,
+                                                completedReviewCardCount: 0,
+                                                remainingReviewCardCount: 1,
+                                            },
+                                        },
+                                    },
+                                },
+                                {
+                                    artifactId: 'workflow_artifact_knowledge_run_blocks_2',
+                                    kind: 'knowledge_run',
+                                    sessionId: 'session_blocks_2',
+                                    userId: 'path_user_default',
+                                    workspaceId: 'waterglass',
+                                    corpusId: 'waterglass',
+                                    title: 'Knowledge run: Absorption',
+                                    sourceResourceIds: ['resource_blocks_2'],
+                                    sourceProjectionIds: ['projection_blocks_2'],
+                                    summary: 'Generated 2 evidence claim(s) and 1 review card(s) with status caution.',
+                                    status: 'active',
+                                    createdAt: '2026-04-12T23:55:00.000Z',
+                                    updatedAt: '2026-04-12T23:55:00.000Z',
+                                    payload: {
+                                        knowledgeRun: {
+                                            runId: 'knowledge_run_blocks_2',
+                                            generatedAt: '2026-04-12T23:55:00.000Z',
+                                            status: 'caution',
+                                            scope: {
+                                                source: 'scoped',
+                                                workspaceId: 'waterglass',
+                                                corpusId: 'waterglass',
+                                                documentIds: [],
+                                                atomIds: [],
+                                                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+                                                languages: [],
+                                                matchedAtomCount: 2,
+                                                scopeSource: 'explicit_request',
+                                            },
+                                            evidenceClaims: [],
+                                            quality: {
+                                                score: 75,
+                                                status: 'caution',
+                                                gates: [],
+                                            },
+                                            reviewCards: [],
+                                            reviewState: {
+                                                consumedCardIds: [],
+                                                completedReviewCardCount: 0,
+                                                remainingReviewCardCount: 1,
+                                                completedAt: null,
+                                            },
+                                            summary: {
+                                                claimCount: 2,
+                                                verifiedClaimCount: 1,
+                                                weakClaimCount: 1,
+                                                notProvenClaimCount: 0,
+                                                rejectedClaimCount: 0,
+                                                reviewCardCount: 1,
+                                                completedReviewCardCount: 0,
+                                                remainingReviewCardCount: 1,
+                                            },
+                                        },
+                                    },
+                                },
+                            ]
+                            : wantsKnowledgeRunBlocks2
+                            ? [
+                                {
+                                    artifactId: 'workflow_artifact_knowledge_run_blocks_2',
+                                    kind: 'knowledge_run',
+                                    sessionId: 'session_blocks_2',
+                                    userId: 'path_user_default',
+                                    workspaceId: 'waterglass',
+                                    corpusId: 'waterglass',
+                                    title: 'Knowledge run: Absorption',
+                                    sourceResourceIds: ['resource_blocks_2'],
+                                    sourceProjectionIds: ['projection_blocks_2'],
+                                    summary: 'Generated 2 evidence claim(s) and 1 review card(s) with status caution.',
+                                    status: 'active',
+                                    createdAt: '2026-04-12T23:55:00.000Z',
+                                    updatedAt: '2026-04-12T23:55:00.000Z',
+                                    payload: {
+                                        knowledgeRun: {
+                                            runId: 'knowledge_run_blocks_2',
+                                            generatedAt: '2026-04-12T23:55:00.000Z',
+                                            status: 'caution',
+                                            scope: {
+                                                source: 'scoped',
+                                                workspaceId: 'waterglass',
+                                                corpusId: 'waterglass',
+                                                documentIds: [],
+                                                atomIds: [],
+                                                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+                                                languages: [],
+                                                matchedAtomCount: 2,
+                                                scopeSource: 'explicit_request',
+                                            },
+                                            evidenceClaims: [
+                                                {
+                                                    claimId: 'knowledge_run_blocks_2_claim_1',
+                                                    status: 'verified',
+                                                    title: 'Absorption',
+                                                    statement: 'Absorption depends on material interaction with incident radiation.',
+                                                    citationId: 'citation_blocks_2_1',
+                                                    atomId: 'atom_blocks_2',
+                                                    documentId: 'doc_blocks_2',
+                                                    sourcePath: 'Knowledge_Base/optics/absorption.md',
+                                                    startLine: 9,
+                                                    endLine: 12,
+                                                    snippet: 'Absorption depends on material interaction with incident radiation.',
+                                                    confidence: 0.82,
+                                                    reason: 'The primary claim is backed by a direct source span.',
+                                                },
+                                                {
+                                                    claimId: 'knowledge_run_blocks_2_claim_2',
+                                                    status: 'weak',
+                                                    title: 'Attenuation coupling',
+                                                    statement: 'Absorption contributes to attenuation alongside scattering effects.',
+                                                    citationId: 'citation_blocks_2_2',
+                                                    atomId: 'atom_blocks_2_aux',
+                                                    documentId: 'doc_blocks_2',
+                                                    sourcePath: 'Knowledge_Base/optics/absorption.md',
+                                                    startLine: 18,
+                                                    endLine: 22,
+                                                    snippet: 'Absorption contributes to attenuation alongside scattering effects.',
+                                                    confidence: 0.61,
+                                                    reason: 'The secondary claim is grounded, but its support is partial.',
+                                                },
+                                            ],
+                                            quality: {
+                                                score: 75,
+                                                status: 'caution',
+                                                gates: [
+                                                    {
+                                                        gateId: 'evidence_coverage',
+                                                        passed: true,
+                                                        observedValue: 1,
+                                                        threshold: 0.8,
+                                                        message: '2 of 2 claim(s) have citation evidence.',
+                                                    },
+                                                    {
+                                                        gateId: 'claim_strength',
+                                                        passed: false,
+                                                        observedValue: 0.5,
+                                                        threshold: 0.75,
+                                                        message: 'One claim remains weak and should be reviewed.',
+                                                    },
+                                                ],
+                                            },
+                                            reviewCards: [
+                                                {
+                                                    cardId: 'knowledge_run_blocks_2_card_1',
+                                                    sourceClaimId: 'knowledge_run_blocks_2_claim_2',
+                                                    prompt: 'Why is the attenuation coupling claim marked weak?',
+                                                    expectedAnswer: 'Its support is only partial relative to the cited span.',
+                                                    evidenceRefs: ['Knowledge_Base/optics/absorption.md:18'],
+                                                    nextReviewAt: '2026-04-13T23:55:00.000Z',
+                                                },
+                                            ],
+                                            reviewState: {
+                                                consumedCardIds: [],
+                                                completedReviewCardCount: 0,
+                                                remainingReviewCardCount: 1,
+                                                completedAt: null,
+                                            },
+                                            summary: {
+                                                claimCount: 2,
+                                                verifiedClaimCount: 1,
+                                                weakClaimCount: 1,
+                                                notProvenClaimCount: 0,
+                                                rejectedClaimCount: 0,
+                                                reviewCardCount: 1,
+                                                completedReviewCardCount: 0,
+                                                remainingReviewCardCount: 1,
+                                            },
+                                        },
+                                    },
+                                },
+                            ]
+                            : wantsKnowledgeRunBlocks1
+                            ? [
+                                {
+                                    artifactId: 'workflow_artifact_knowledge_run_blocks_1',
+                                    kind: 'knowledge_run',
+                                    sessionId: 'session_blocks_1',
+                                    userId: 'path_user_default',
+                                    workspaceId: 'waterglass',
+                                    corpusId: 'waterglass',
+                                    title: 'Knowledge run: Blocks Citation',
+                                    sourceResourceIds: ['resource_blocks_1'],
+                                    sourceProjectionIds: ['projection_blocks_1'],
+                                    summary: 'Generated 1 evidence claim(s) and 1 review card(s) with status pass.',
+                                    status: 'active',
+                                    createdAt: '2026-04-13T00:01:00.000Z',
+                                    updatedAt: '2026-04-13T00:01:00.000Z',
+                                    payload: {
+                                        knowledgeRun: {
+                                            runId: 'knowledge_run_blocks_1',
+                                            generatedAt: '2026-04-13T00:01:00.000Z',
+                                            status: 'pass',
+                                            scope: {
+                                                source: 'scoped',
+                                                workspaceId: 'waterglass',
+                                                corpusId: 'waterglass',
+                                                documentIds: [],
+                                                atomIds: [],
+                                                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+                                                languages: [],
+                                                matchedAtomCount: 1,
+                                                scopeSource: 'explicit_request',
+                                            },
+                                            evidenceClaims: [
+                                                {
+                                                    claimId: 'knowledge_run_blocks_1_claim_1',
+                                                    status: 'verified',
+                                                    title: 'Blocks Citation',
+                                                    statement: 'Scoped snippet',
+                                                    citationId: 'citation_blocks_1',
+                                                    atomId: 'atom_blocks_1',
+                                                    documentId: 'doc_blocks_1',
+                                                    sourcePath: 'Knowledge_Base/optics/blocks.md',
+                                                    startLine: 18,
+                                                    endLine: 21,
+                                                    snippet: 'Scoped snippet',
+                                                    confidence: 0.88,
+                                                    reason: 'The claim is backed by a cited source span with a concrete line reference.',
+                                                },
+                                            ],
+                                            quality: {
+                                                score: 100,
+                                                status: 'pass',
+                                                gates: [
+                                                    {
+                                                        gateId: 'evidence_coverage',
+                                                        passed: true,
+                                                        observedValue: 1,
+                                                        threshold: 0.8,
+                                                        message: '1 of 1 claim(s) have citation evidence.',
+                                                    },
+                                                    {
+                                                        gateId: 'scope_discipline',
+                                                        passed: true,
+                                                        observedValue: 1,
+                                                        threshold: 1,
+                                                        message: 'The answer stayed inside the resolved scope contract.',
+                                                    },
+                                                    {
+                                                        gateId: 'recall_transfer',
+                                                        passed: true,
+                                                        observedValue: 1,
+                                                        threshold: 1,
+                                                        message: '1 review card(s) were generated from cited claims.',
+                                                    },
+                                                ],
+                                            },
+                                            reviewCards: [
+                                                {
+                                                    cardId: 'knowledge_run_blocks_1_card_1',
+                                                    sourceClaimId: 'knowledge_run_blocks_1_claim_1',
+                                                    prompt: 'What does the cited source establish about Blocks Citation?',
+                                                    expectedAnswer: 'Scoped snippet',
+                                                    evidenceRefs: ['Knowledge_Base/optics/blocks.md:18'],
+                                                    nextReviewAt: '2026-04-14T00:01:00.000Z',
+                                                },
+                                            ],
+                                            reviewState: {
+                                                consumedCardIds: [],
+                                                completedReviewCardCount: 0,
+                                                remainingReviewCardCount: 1,
+                                                completedAt: null,
+                                            },
+                                            summary: {
+                                                claimCount: 1,
+                                                verifiedClaimCount: 1,
+                                                weakClaimCount: 0,
+                                                notProvenClaimCount: 0,
+                                                rejectedClaimCount: 0,
+                                                reviewCardCount: 1,
+                                                completedReviewCardCount: 0,
+                                                remainingReviewCardCount: 1,
+                                            },
+                                        },
+                                    },
+                                },
+                            ]
+                            : [
+                                {
+                                    artifactId: 'workflow_artifact_flashcard_batch_1',
+                                    kind: 'flashcard_batch',
+                                    sessionId: 'session_client_path_user_default_test',
+                                    userId: 'path_user_default',
+                                    workspaceId: 'waterglass',
+                                    corpusId: 'waterglass',
+                                    title: 'Knowledge run review cards: Water Glass',
+                                    sourceResourceIds: ['resource_1'],
+                                    sourceProjectionIds: ['projection_1'],
+                                    summary: 'Prepared 1 review card from cited claims.',
+                                    status: 'active',
+                                    createdAt: '2026-04-12T00:20:00.000Z',
+                                    updatedAt: '2026-04-12T00:20:00.000Z',
+                                    payload: {
+                                        runId: 'knowledge_run_1',
+                                        reviewCards: [
+                                            {
+                                                cardId: 'knowledge_run_1_card_1',
+                                                sourceClaimId: 'knowledge_run_1_claim_1',
+                                                atomId: 'atom_water_glass',
+                                                suggestedActionKind: 'review',
+                                                prompt: 'What does the cited source establish about Water Glass?',
+                                                expectedAnswer: 'A water glass is a physical system.',
+                                                evidenceRefs: ['Knowledge_Base/waterglass/water glass.md:3'],
+                                                nextReviewAt: '2026-04-13T00:20:00.000Z',
+                                            },
+                                        ],
+                                        evidenceClaims: [
+                                            {
+                                                claimId: 'knowledge_run_1_claim_1',
+                                                title: 'Water Glass',
+                                                status: 'verified',
+                                            },
+                                        ],
+                                        reviewState: {
+                                            consumedCardIds: [],
+                                            completedReviewCardCount: 0,
+                                            remainingReviewCardCount: 1,
+                                            completedAt: null,
+                                        },
+                                    },
+                                },
+                            ],
+                    },
+                }),
+            };
+        }
+        if (url === '/api/knowledge/session/action') {
+            let parsedBody: Record<string, unknown> = {};
+            if (init && typeof init.body === 'string' && init.body.trim().length > 0) {
+                try {
+                    parsedBody = JSON.parse(init.body);
+                } catch (_error) {
+                    parsedBody = {};
+                }
+            }
+            const action = parsedBody.action && typeof parsedBody.action === 'object'
+                ? parsedBody.action as Record<string, unknown>
+                : {};
+            return {
+                ok: true,
+                text: async () => JSON.stringify({
+                    success: true,
+                    result: {
+                        sessionId: String(parsedBody.sessionId || 'session_client_path_user_default_test'),
+                        executedAt: '2026-04-12T00:21:00.000Z',
+                        tutor: {
+                            message: `Reviewed ${String(action.atomId || '')} via ${String(action.kind || '')}.`,
+                            suggestedActions: [],
+                            evidenceSpans: [
+                                {
+                                    id: 'ev_review_1',
+                                    snippet: 'A water glass is a physical system.',
+                                },
+                            ],
+                            trace: {
+                                actionKind: 'recap',
+                                confidence: 0.88,
+                                evidenceSpanIds: ['ev_review_1'],
+                                relationPathAtomIds: [String(action.atomId || '')],
+                                source: 'rule-engine',
+                                notes: 'review execution',
+                                traceId: 'trace_review_1',
+                            },
+                        },
+                        answerAnalysis: null,
+                        memory: null,
+                        promotedMemory: null,
+                        mastery: null,
+                        trace: {
+                            tutorActionKind: 'recap',
+                            persistedMemory: true,
+                            updatedMastery: false,
+                            analyzedAnswer: false,
+                            masterySource: 'none',
+                            effectiveOutcome: null,
+                            effectiveErrorTag: null,
                         },
                     },
                 }),
@@ -2348,8 +3032,33 @@ describe('workspace panes controller', () => {
         expect(buttonsAfter).toEqual(['聚焦', '学习路径']);
     });
 
-    test('renders knowledge hits as file entries and opens matched spans in the focus pane', () => {
+    test('renders knowledge hits as file entries, expands inline preview, and routes actions through handlers', async () => {
         const { controller, document, window } = loadWorkspacePanesHarness();
+        const readContent = jest.fn(async () => [
+            '# Water Glass',
+            '',
+            'A water glass is a physical system made of a transparent container and water.',
+            '',
+            'The water glass exchanges heat with the environment.',
+        ].join('\n'));
+        const renderMarkdownInto = jest.fn(async (container: HTMLElement, _markdown: string) => {
+            container.innerHTML = `
+                <article class="reader-block">
+                    <h2>Water Glass</h2>
+                    <p>A water glass is a physical system made of a transparent container and water.</p>
+                    <p>The water glass exchanges heat with the environment.</p>
+                </article>
+            `;
+        });
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({
+                readContent,
+            }),
+        };
+        const markdownRuntime = (window as any).NoteConnectionMarkdownRuntime || {};
+        markdownRuntime.renderMarkdownInto = renderMarkdownInto;
+        (window as any).NoteConnectionMarkdownRuntime = markdownRuntime;
+        const onCapability = jest.fn();
         controller.init();
 
         controller.renderKnowledgePoints([
@@ -2390,7 +3099,7 @@ describe('workspace panes controller', () => {
                 ],
             },
         ], {
-            onCapability: jest.fn(),
+            onCapability,
         });
 
         const cards = Array.from(document.querySelectorAll('.agent-knowledge-card'));
@@ -2400,34 +3109,118 @@ describe('workspace panes controller', () => {
         expect(String(fileButton?.textContent || '')).toBe('water glass.md');
         expect(cards[0]?.querySelector('.agent-knowledge-summary')).toBeNull();
         expect(cards[0]?.querySelectorAll('.agent-knowledge-hit')).toHaveLength(0);
-
-        const actionMenu = cards[0]?.querySelector('.agent-knowledge-actions-menu') as HTMLElement;
-        expect(actionMenu).not.toBeNull();
-        expect(actionMenu.hidden).toBe(true);
-        expect(actionMenu.querySelectorAll('button')).toHaveLength(2);
-
-        fileButton.dispatchEvent(new window.MouseEvent('contextmenu', {
-            bubbles: true,
-            cancelable: true,
-        }));
-        expect(actionMenu.hidden).toBe(false);
-        expect(fileButton.getAttribute('aria-expanded')).toBe('true');
-        fileButton.dispatchEvent(new window.KeyboardEvent('keydown', {
-            key: 'Escape',
-            bubbles: true,
-        }));
-        expect(actionMenu.hidden).toBe(true);
+        expect(String(cards[0]?.querySelector('.agent-knowledge-source-path')?.textContent || '')).toContain(
+            'Knowledge_Base/waterglass/water glass.md'
+        );
 
         fileButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
 
-        const graphPane = document.getElementById('agent-graph-focus-pane');
-        const graphBody = document.getElementById('agent-graph-focus-body');
-        expect(graphPane?.getAttribute('data-open')).toBe('true');
-        const focusText = String(graphBody?.textContent || '');
-        expect(focusText).toContain('Water Glass');
-        expect(focusText).toContain('Definition');
-        expect(focusText).toContain('Thermal exchange');
-        expect(focusText).toContain('Knowledge_Base/waterglass/water glass.md:1');
+        const refreshedCard = document.querySelector('.agent-knowledge-card') as HTMLElement | null;
+        const refreshedButton = refreshedCard?.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
+        expect(refreshedButton?.getAttribute('aria-expanded')).toBe('true');
+        expect(readContent).toHaveBeenCalledWith('Knowledge_Base/waterglass/water glass.md');
+        expect(renderMarkdownInto).toHaveBeenCalled();
+        const preview = refreshedCard?.querySelector('.agent-knowledge-preview') as HTMLElement | null;
+        expect(preview).not.toBeNull();
+        expect(preview?.hidden).toBe(false);
+        expect(String(preview?.textContent || '')).toContain('A water glass is a physical system made of a transparent container and water.');
+        const highlighted = Array.from(preview?.querySelectorAll('[data-agent-focus-highlight="true"]') || []);
+        expect(highlighted.length).toBeGreaterThan(0);
+        expect(String(highlighted[0]?.textContent || '')).toContain('A water glass is a physical system');
+
+        const actionButtons = Array.from(refreshedCard?.querySelectorAll('.agent-knowledge-actions button') || []) as HTMLButtonElement[];
+        expect(actionButtons.map((button) => button.textContent)).toEqual(['Focus', 'Guided Learning']);
+        actionButtons[0]?.click();
+        expect(onCapability).toHaveBeenCalledWith(
+            expect.objectContaining({ atomId: 'atom_water_glass' }),
+            expect.objectContaining({ actionId: 'open_focus_mode' })
+        );
+    });
+
+    test('preserves manual preview collapse across rerenders for the same result set', async () => {
+        const { controller, document, window } = loadWorkspacePanesHarness({ withI18n: true });
+        const readContent = jest.fn(async () => [
+            '# Water Glass',
+            '',
+            'A water glass is a physical system made of a transparent container and water.',
+        ].join('\n'));
+        const renderMarkdownInto = jest.fn(async (container: HTMLElement) => {
+            container.innerHTML = `
+                <article class="reader-block">
+                    <h2>Water Glass</h2>
+                    <p>A water glass is a physical system made of a transparent container and water.</p>
+                </article>
+            `;
+        });
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({
+                readContent,
+            }),
+        };
+        const markdownRuntime = (window as any).NoteConnectionMarkdownRuntime || {};
+        markdownRuntime.renderMarkdownInto = renderMarkdownInto;
+        (window as any).NoteConnectionMarkdownRuntime = markdownRuntime;
+        controller.init();
+
+        const items = [
+            {
+                atomId: 'atom_water_glass',
+                documentId: 'doc_water_glass',
+                title: 'Water Glass',
+                summary: 'A water glass is a transparent container plus water.',
+                evidenceSnippet: 'A water glass is a transparent container plus water.',
+                matchedSpans: [
+                    {
+                        atomId: 'atom_water_glass',
+                        title: 'Definition',
+                        snippet: 'A water glass is a physical system made of a transparent container and water.',
+                        sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                        startLine: 1,
+                    },
+                ],
+                capabilities: [],
+            },
+        ];
+        const handlers = {
+            autoExpandFirstPreview: true,
+            resultSetKey: 'result_set_waterglass_1',
+        };
+
+        controller.renderKnowledgePoints(items, handlers);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        let fileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
+        let preview = document.querySelector('.agent-knowledge-preview') as HTMLElement | null;
+        expect(fileButton?.getAttribute('aria-expanded')).toBe('true');
+        expect(preview?.hidden).toBe(false);
+
+        fileButton?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        fileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
+        preview = document.querySelector('.agent-knowledge-preview') as HTMLElement | null;
+        expect(fileButton?.getAttribute('aria-expanded')).toBe('false');
+        expect(preview?.hidden).toBe(true);
+
+        controller.renderKnowledgePoints(items, handlers);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        fileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
+        preview = document.querySelector('.agent-knowledge-preview') as HTMLElement | null;
+        expect(fileButton?.getAttribute('aria-expanded')).toBe('false');
+        expect(preview?.hidden).toBe(true);
+
+        await window.i18n.setLanguage('zh');
+
+        fileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
+        preview = document.querySelector('.agent-knowledge-preview') as HTMLElement | null;
+        expect(fileButton?.getAttribute('aria-expanded')).toBe('false');
+        expect(preview?.hidden).toBe(true);
     });
 
     test('renders graph focus from source markdown and highlights matched passages in place', async () => {
@@ -2625,6 +3418,7 @@ describe('agent workspace learning-path integration', () => {
         expect(diagnostics.operations).toContain('fetch_runtime_capability_runbook_history');
         expect(diagnostics.operations).toContain('fetch_runtime_capability_runbook_checks');
         expect(diagnostics.operations).toContain('fetch_runtime_capability_runbook_action_queue');
+        expect(diagnostics.operations).toContain('fetch_workflow_artifacts');
         expect(diagnostics.operationTransports).toContain('build_learning_path');
         expect(diagnostics.operationTransports).toContain('search_conversation_memory');
         expect(diagnostics.operationTransports).toContain('fetch_conversation_turn_cache_diagnostics');
@@ -2640,6 +3434,8 @@ describe('agent workspace learning-path integration', () => {
         expect(diagnostics.operationTransports).toContain('fetch_runtime_capability_runbook_history');
         expect(diagnostics.operationTransports).toContain('fetch_runtime_capability_runbook_checks');
         expect(diagnostics.operationTransports).toContain('fetch_runtime_capability_runbook_action_queue');
+        expect(diagnostics.operationTransports).toContain('fetch_workflow_artifacts');
+        expect(diagnostics.operationTransports).toContain('execute_workflow_artifact_review_follow_up');
         expect(diagnostics.operationRequestBuilders).toContain('build_learning_path');
         expect(diagnostics.operationRequestBuilders).toContain('search_conversation_memory');
         expect(diagnostics.operationRequestBuilders).toContain('fetch_conversation_turn_cache_diagnostics');
@@ -2655,9 +3451,15 @@ describe('agent workspace learning-path integration', () => {
         expect(diagnostics.operationRequestBuilders).toContain('fetch_runtime_capability_runbook_history');
         expect(diagnostics.operationRequestBuilders).toContain('fetch_runtime_capability_runbook_checks');
         expect(diagnostics.operationRequestBuilders).toContain('fetch_runtime_capability_runbook_action_queue');
+        expect(diagnostics.operationRequestBuilders).toContain('fetch_workflow_artifacts');
+        expect(diagnostics.operationRequestBuilders).toContain('execute_workflow_artifact_review_follow_up');
         expect(diagnostics.operationResultPresentationOverrides).toContain('execute_tutor_action');
+        expect(diagnostics.operationResultPresentationOverrides).toContain('fetch_workflow_artifacts');
         expect(diagnostics.operationResultPresentationOverrideMap.execute_tutor_action).toEqual(
             ['tutor_action_card']
+        );
+        expect(diagnostics.operationResultPresentationOverrideMap.fetch_workflow_artifacts).toEqual(
+            ['knowledge_run_card', 'knowledge_run_history_card']
         );
         expect(diagnostics.operationInvalidResultPresentationOverrideMap).toEqual({});
         expect(diagnostics.operationUnknownResultPresentationOverrideMap).toEqual({});
@@ -2669,6 +3471,14 @@ describe('agent workspace learning-path integration', () => {
             expect.arrayContaining(['assistant_message', 'tutor_action_card'])
         );
         expect(diagnostics.operationAllowedResultPresentations.build_study_session).toEqual(['study_session_card']);
+        expect(diagnostics.operationAllowedResultPresentations.fetch_workflow_artifacts).toEqual([
+            'flashcard_batch_card',
+            'knowledge_run_card',
+            'knowledge_run_history_card',
+        ]);
+        expect(diagnostics.operationAllowedResultPresentations.execute_workflow_artifact_review_follow_up).toEqual([
+            'workflow_artifact_review_follow_up',
+        ]);
         expect(new Set(diagnostics.operationResultPresentationOverrides)).toEqual(
             new Set(Object.keys(diagnostics.operationResultPresentationOverrideMap))
         );
@@ -2739,6 +3549,8 @@ describe('agent workspace learning-path integration', () => {
         expect(diagnostics.cardResultPresentations).toContain('runtime_capability_runbook_history_card');
         expect(diagnostics.cardResultPresentations).toContain('runtime_capability_runbook_checks_card');
         expect(diagnostics.cardResultPresentations).toContain('runtime_capability_runbook_action_queue_card');
+        expect(diagnostics.cardResultPresentations).toContain('knowledge_run_card');
+        expect(diagnostics.cardResultPresentations).toContain('knowledge_run_history_card');
         expect(diagnostics.resultPresentationPayloadBuilders).toContain('tutor_action_card');
         expect(diagnostics.resultPresentationPayloadBuilders).toContain('conversation_turn_cache_diagnostics_card');
         expect(diagnostics.resultPresentationPayloadBuilders).toContain('conversation_turn_cache_alert_trend_card');
@@ -2750,6 +3562,8 @@ describe('agent workspace learning-path integration', () => {
         expect(diagnostics.resultPresentationPayloadBuilders).toContain('runtime_capability_runbook_history_card');
         expect(diagnostics.resultPresentationPayloadBuilders).toContain('runtime_capability_runbook_checks_card');
         expect(diagnostics.resultPresentationPayloadBuilders).toContain('runtime_capability_runbook_action_queue_card');
+        expect(diagnostics.resultPresentationPayloadBuilders).toContain('knowledge_run_card');
+        expect(diagnostics.resultPresentationPayloadBuilders).toContain('knowledge_run_history_card');
         expect(new Set(diagnostics.resultPresentations)).toEqual(
             new Set([
                 ...diagnostics.customResultPresentations,
@@ -2835,6 +3649,28 @@ describe('agent workspace learning-path integration', () => {
         if (!fetchMock) {
             throw new Error('expected fetch mock');
         }
+
+        const readContent = jest.fn(async () => [
+            '# Stream Node',
+            '',
+            'Stream evidence',
+        ].join('\n'));
+        const renderMarkdownInto = jest.fn(async (container: HTMLElement) => {
+            container.innerHTML = `
+                <article class="reader-block">
+                    <h2>Stream Node</h2>
+                    <p>Stream evidence</p>
+                </article>
+            `;
+        });
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({
+                readContent,
+            }),
+        };
+        const markdownRuntime = (window as any).NoteConnectionMarkdownRuntime || {};
+        markdownRuntime.renderMarkdownInto = renderMarkdownInto;
+        (window as any).NoteConnectionMarkdownRuntime = markdownRuntime;
 
         fetchMock.mockImplementationOnce(async () => createSseResponse([
             {
@@ -2972,6 +3808,14 @@ describe('agent workspace learning-path integration', () => {
         expect(String(fileButton?.textContent || '')).toBe('stream.md');
         expect(knowledgeCards[0]?.querySelector('.agent-knowledge-summary')).toBeNull();
         expect(knowledgeCards[0]?.querySelectorAll('.agent-knowledge-hit')).toHaveLength(0);
+        const preview = knowledgeCards[0]?.querySelector('.agent-knowledge-preview') as HTMLElement | null;
+        expect(fileButton?.getAttribute('aria-expanded')).toBe('true');
+        expect(preview?.hidden).toBe(false);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+        expect(readContent).toHaveBeenCalledWith('Knowledge_Base/optics/stream.md');
+        expect(renderMarkdownInto).toHaveBeenCalled();
+        expect(String(preview?.textContent || '')).toContain('Stream evidence');
     });
 
     test('renders structured assistant blocks without breaking scoped conversation flow', async () => {
@@ -2990,9 +3834,9 @@ describe('agent workspace learning-path integration', () => {
         }));
         (window as any).marked = {
             parse: jest.fn((markdown: string) => {
-                if (markdown.includes('## Scoped Answer')) {
+                if (markdown.includes('## Answer Context')) {
                     return (
-                        '<h2>Scoped Answer</h2>'
+                        '<h2>Answer Context</h2>'
                         + '<ul><li>Relevant knowledge points: <strong>1</strong></li></ul>'
                     );
                 }
@@ -3042,19 +3886,17 @@ describe('agent workspace learning-path integration', () => {
                         answer: 'Scoped Answer',
                         assistantBlocks: [
                             {
-                                blockId: 'block_overview_1',
-                                type: 'main_markdown',
-                                markdown: '## Scoped Answer\n\n- Relevant knowledge points: **1**\n- Citations returned: **1**\n- Scoped memories recalled: **0**',
-                            },
-                            {
-                                blockId: 'block_main_1',
-                                type: 'main_markdown',
-                                markdown: '## Explanation\n\n**Blocks Citation** is the current best scoped anchor.\n\nInline math $E=mc^2$ and a diagram:\n\n```mermaid\ngraph TD;A-->B;\n```',
-                            },
-                            {
-                                blockId: 'block_evidence_1',
-                                type: 'main_markdown',
-                                markdown: '## Evidence Summary\n\n1. **Blocks Citation** (Knowledge_Base/optics/blocks.md:18)\n   - Scoped snippet',
+                                blockId: 'block_structured_answer_1',
+                                type: 'structured_answer',
+                                title: 'Grounded Answer',
+                                directAnswer: 'Scoped Answer',
+                                overviewMarkdown: '## Answer Context\n\n- Relevant knowledge points: **1**\n- Citations returned: **1**\n- Scoped memories recalled: **0**',
+                                explanationMarkdown: '## Explanation\n\n**Blocks Citation** is the current best scoped anchor.\n\nInline math $E=mc^2$ and a diagram:\n\n```mermaid\ngraph TD;A-->B;\n```',
+                                evidenceMarkdown: '## Evidence Summary\n\n1. **Blocks Citation** (Knowledge_Base/optics/blocks.md:18)\n   - Scoped snippet',
+                                nextActionsMarkdown: '## Next Actions\n\nUse the scoped knowledge cards below to continue with focus mode or guided learning for the highest-signal nodes:\n- Blocks Citation\n\nSuggested follow-through from the current turn:\n- Persist the latest user focus to scoped conversation memory.',
+                                knowledgePointCount: 1,
+                                citationCount: 1,
+                                recalledMemoryCount: 0,
                             },
                             {
                                 blockId: 'block_notice_1',
@@ -3062,9 +3904,95 @@ describe('agent workspace learning-path integration', () => {
                                 text: 'No scoped memory note was recalled for this turn.',
                             },
                             {
-                                blockId: 'block_actions_1',
-                                type: 'main_markdown',
-                                markdown: '## Next Actions\n\nUse the scoped knowledge cards below to continue with focus mode or guided learning for the highest-signal nodes:\n- Blocks Citation\n\nSuggested follow-through from the current turn:\n- Persist the latest user focus to scoped conversation memory.',
+                                blockId: 'block_knowledge_run_1',
+                                type: 'knowledge_run_summary',
+                                title: 'Knowledge Run',
+                                artifactId: 'workflow_artifact_knowledge_run_blocks_1',
+                                knowledgeRun: {
+                                    runId: 'knowledge_run_blocks_1',
+                                    generatedAt: '2026-04-13T00:01:00.000Z',
+                                    status: 'pass',
+                                    scope: {
+                                        source: 'scoped',
+                                        workspaceId: 'waterglass',
+                                        corpusId: 'waterglass',
+                                        documentIds: [],
+                                        atomIds: [],
+                                        sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+                                        languages: [],
+                                        matchedAtomCount: 1,
+                                    },
+                                    evidenceClaims: [
+                                        {
+                                            claimId: 'knowledge_run_blocks_1_claim_1',
+                                            status: 'verified',
+                                            title: 'Blocks Citation',
+                                            statement: 'Scoped snippet',
+                                            citationId: 'citation_blocks_1',
+                                            atomId: 'atom_blocks_1',
+                                            documentId: 'doc_blocks_1',
+                                            sourcePath: 'Knowledge_Base/optics/blocks.md',
+                                            startLine: 18,
+                                            endLine: 21,
+                                            snippet: 'Scoped snippet',
+                                            confidence: 0.88,
+                                            reason: 'The claim is backed by a cited source span with a concrete line reference.',
+                                        },
+                                    ],
+                                    quality: {
+                                        score: 100,
+                                        status: 'pass',
+                                        gates: [
+                                            {
+                                                gateId: 'evidence_coverage',
+                                                passed: true,
+                                                observedValue: 1,
+                                                threshold: 0.8,
+                                                message: '1 of 1 claim(s) have citation evidence.',
+                                            },
+                                            {
+                                                gateId: 'scope_discipline',
+                                                passed: true,
+                                                observedValue: 1,
+                                                threshold: 1,
+                                                message: 'The answer stayed inside the resolved scope contract.',
+                                            },
+                                            {
+                                                gateId: 'recall_transfer',
+                                                passed: true,
+                                                observedValue: 1,
+                                                threshold: 1,
+                                                message: '1 review card(s) were generated from cited claims.',
+                                            },
+                                        ],
+                                    },
+                                    reviewCards: [
+                                        {
+                                            cardId: 'knowledge_run_blocks_1_card_1',
+                                            sourceClaimId: 'knowledge_run_blocks_1_claim_1',
+                                            prompt: 'What does the cited source establish about Blocks Citation?',
+                                            expectedAnswer: 'Scoped snippet',
+                                            evidenceRefs: ['Knowledge_Base/optics/blocks.md:18'],
+                                            nextReviewAt: '2026-04-14T00:01:00.000Z',
+                                        },
+                                    ],
+                                    summary: {
+                                        claimCount: 1,
+                                        verifiedClaimCount: 1,
+                                        weakClaimCount: 0,
+                                        notProvenClaimCount: 0,
+                                        rejectedClaimCount: 0,
+                                        reviewCardCount: 1,
+                                        completedReviewCardCount: 0,
+                                        remainingReviewCardCount: 1,
+                                    },
+                                    reviewState: {
+                                        consumedCardIds: [],
+                                        completedReviewCardCount: 0,
+                                        remainingReviewCardCount: 1,
+                                        completedAt: null,
+                                    },
+                                },
                             },
                             {
                                 blockId: 'block_citations_1',
@@ -3149,7 +4077,9 @@ describe('agent workspace learning-path integration', () => {
 
         const assistantNode = document.querySelector('.agent-chat-message-rendered.agent-chat-message-assistant');
         expect(assistantNode).not.toBeNull();
-        expect(assistantNode?.querySelector('h2')?.textContent).toBe('Scoped Answer');
+        expect(assistantNode?.querySelector('.agent-chat-inline-card-title')?.textContent).toBe('Grounded Answer');
+        expect(String(assistantNode?.textContent || '')).toContain('Scoped Answer');
+        expect(assistantNode?.querySelector('h2')?.textContent).toBe('Answer Context');
         expect(String(assistantNode?.textContent || '')).toContain('Relevant knowledge points');
         expect(String(assistantNode?.textContent || '')).toContain('No scoped memory note was recalled for this turn.');
         expect(String(assistantNode?.textContent || '')).toContain('Evidence Summary');
@@ -3159,8 +4089,386 @@ describe('agent workspace learning-path integration', () => {
         expect((window as any).mermaid.initialize).toHaveBeenCalled();
         expect(mermaidRender).toHaveBeenCalled();
         expect(String(assistantNode?.textContent || '')).toContain('Blocks Citation');
+        expect(String(assistantNode?.textContent || '')).toContain('Knowledge Run');
+        expect(String(assistantNode?.textContent || '')).toContain('Status: pass. Quality score: 100.');
+        expect(String(assistantNode?.textContent || '')).toContain('evidence_coverage');
+        expect(String(assistantNode?.textContent || '')).toContain('Evidence claims');
+        expect(String(assistantNode?.textContent || '')).toContain('Review cards');
+        expect(String(assistantNode?.textContent || '')).toContain('What does the cited source establish about Blocks Citation?');
         expect(String(assistantNode?.textContent || '')).toContain('Knowledge_Base/optics/blocks.md:18');
         expect(assistantNode?.querySelector('.mermaid svg text')?.textContent).toBe('Rendered Mermaid');
+        expect(String(assistantNode?.textContent || '')).toContain('Inspect Run');
+    });
+
+    test('inspects durable knowledge-run artifacts from structured conversation blocks', async () => {
+        const {
+            document,
+            window,
+            fetchMock,
+        } = loadAgentWorkspaceHarness({ withI18n: true });
+        if (!fetchMock) {
+            throw new Error('expected fetch mock');
+        }
+
+        const readContent = jest.fn(async () => [
+            '# Blocks Citation',
+            '',
+            'Scoped snippet',
+            '',
+            'Supporting explanation for the cited block.',
+        ].join('\n'));
+        const renderMarkdownInto = jest.fn(async (container: HTMLElement, _markdown: string) => {
+            container.innerHTML = `
+                <article class="reader-block">
+                    <h2>Blocks Citation</h2>
+                    <p>Scoped snippet</p>
+                    <p>Supporting explanation for the cited block.</p>
+                </article>
+            `;
+        });
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({
+                readContent,
+            }),
+        };
+        const markdownRuntime = (window as any).NoteConnectionMarkdownRuntime || {};
+        markdownRuntime.renderMarkdownInto = renderMarkdownInto;
+        (window as any).NoteConnectionMarkdownRuntime = markdownRuntime;
+
+        fetchMock.mockImplementationOnce(async () => createSseResponse([
+            {
+                event: 'turn_completed',
+                payload: {
+                    type: 'turn_completed',
+                    turnId: 'turn_blocks_inspect',
+                    emittedAt: '2026-04-13T00:01:00.000Z',
+                    result: {
+                        assistantMessage: 'Scoped Answer',
+                        answer: 'Scoped Answer',
+                        assistantBlocks: [
+                            {
+                                blockId: 'block_knowledge_run_1',
+                                type: 'knowledge_run_summary',
+                                title: 'Knowledge Run',
+                                artifactId: 'workflow_artifact_knowledge_run_blocks_1',
+                                knowledgeRun: {
+                                    runId: 'knowledge_run_blocks_1',
+                                    generatedAt: '2026-04-13T00:01:00.000Z',
+                                    status: 'pass',
+                                    scope: {
+                                        source: 'scoped',
+                                        workspaceId: 'waterglass',
+                                        corpusId: 'waterglass',
+                                        documentIds: [],
+                                        atomIds: [],
+                                        sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+                                        languages: [],
+                                        matchedAtomCount: 1,
+                                    },
+                                    evidenceClaims: [
+                                        {
+                                            claimId: 'knowledge_run_blocks_1_claim_1',
+                                            status: 'verified',
+                                            title: 'Blocks Citation',
+                                            statement: 'Scoped snippet',
+                                            atomId: 'atom_blocks_1',
+                                            sourcePath: 'Knowledge_Base/optics/blocks.md',
+                                            startLine: 18,
+                                            endLine: 21,
+                                            snippet: 'Scoped snippet',
+                                            confidence: 0.88,
+                                            reason: 'The claim is backed by a cited source span with a concrete line reference.',
+                                        },
+                                    ],
+                                    quality: {
+                                        score: 100,
+                                        status: 'pass',
+                                        gates: [
+                                            {
+                                                gateId: 'evidence_coverage',
+                                                passed: true,
+                                                observedValue: 1,
+                                                threshold: 0.8,
+                                                message: '1 of 1 claim(s) have citation evidence.',
+                                            },
+                                        ],
+                                    },
+                                    reviewCards: [
+                                        {
+                                            cardId: 'knowledge_run_blocks_1_card_1',
+                                            sourceClaimId: 'knowledge_run_blocks_1_claim_1',
+                                            prompt: 'What does the cited source establish about Blocks Citation?',
+                                            expectedAnswer: 'Scoped snippet',
+                                            evidenceRefs: ['Knowledge_Base/optics/blocks.md:18'],
+                                            nextReviewAt: '2026-04-14T00:01:00.000Z',
+                                        },
+                                    ],
+                                    reviewState: {
+                                        consumedCardIds: [],
+                                        completedReviewCardCount: 0,
+                                        remainingReviewCardCount: 1,
+                                        completedAt: null,
+                                    },
+                                    summary: {
+                                        claimCount: 1,
+                                        verifiedClaimCount: 1,
+                                        weakClaimCount: 0,
+                                        notProvenClaimCount: 0,
+                                        rejectedClaimCount: 0,
+                                        reviewCardCount: 1,
+                                        completedReviewCardCount: 0,
+                                        remainingReviewCardCount: 1,
+                                    },
+                                },
+                            },
+                        ],
+                        citations: [],
+                        knowledgePoints: [],
+                        recalledMemories: [],
+                        memoryActions: [],
+                        summary: {
+                            generatedAt: '2026-04-13T00:01:00.000Z',
+                            topK: 6,
+                            returnedKnowledgePoints: 0,
+                            returnedCitations: 0,
+                            recalledMemoryCount: 0,
+                            appliedMemoryCount: 0,
+                            queryEvidenceCoverageRatioPct: 90,
+                        },
+                        trace: {
+                            sessionId: 'session_blocks_1',
+                            invocationId: 'invocation_blocks_1',
+                            retrieval: {
+                                retrievalModes: ['keyword'],
+                                asOf: '2026-04-13T00:01:00.000Z',
+                                totalActiveAtoms: 1,
+                                modeWeights: {
+                                    keyword: 1,
+                                    graph: 0,
+                                    temporal: 0,
+                                },
+                                latencyMs: 3,
+                                evidenceCoverageRatio: 0.9,
+                            },
+                            recalledMemoryCount: 0,
+                            appliedMemoryCount: 0,
+                            usedScope: {
+                                source: 'scoped',
+                                workspaceId: 'waterglass',
+                                corpusId: 'waterglass',
+                                documentIds: [],
+                                atomIds: [],
+                                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+                                languages: [],
+                                matchedAtomCount: 1,
+                            },
+                        },
+                    },
+                },
+            },
+        ]));
+
+        const input = document.getElementById('agent-workspace-chat-input') as HTMLTextAreaElement;
+        input.value = 'inspect knowledge run';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+
+        const inspectButton = document.querySelector('[data-agent-knowledge-run-inspect="true"]') as HTMLButtonElement | null;
+        expect(inspectButton).not.toBeNull();
+        inspectButton?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        const fetchCall = fetchMock.mock.calls.find((call) => String(call?.[0] || '').startsWith('/api/knowledge/workflow-artifacts?'));
+        expect(String(fetchCall?.[0] || '')).toContain('artifactKinds=knowledge_run');
+        expect(String(fetchCall?.[0] || '')).toContain('artifactId=workflow_artifact_knowledge_run_blocks_1');
+
+        const card = document.querySelector('[data-agent-workspace-card-kind="knowledge-run"]') as HTMLElement | null;
+        expect(card).not.toBeNull();
+        expect(card?.textContent).toContain('Knowledge Run Details');
+        expect(card?.textContent).toContain('Run knowledge_run_blocks_1: 1 claims, quality pass/100.');
+        expect(card?.textContent).toContain('Blocks Citation');
+        expect(card?.textContent).toContain('Knowledge_Base/optics/blocks.md:18');
+        expect(card?.textContent).toContain('Quality gates');
+        expect(card?.textContent).toContain('Review cards');
+
+        const inspectEvidenceButton = card?.querySelector('[data-agent-knowledge-run-claim-inspect="0"]') as HTMLButtonElement | null;
+        expect(inspectEvidenceButton).not.toBeNull();
+        inspectEvidenceButton?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        expect(readContent).toHaveBeenCalledWith('Knowledge_Base/optics/blocks.md');
+        expect(renderMarkdownInto).toHaveBeenCalled();
+        const graphPane = document.getElementById('agent-graph-focus-pane');
+        const graphBody = document.getElementById('agent-graph-focus-body');
+        expect(graphPane?.getAttribute('data-open')).toBe('true');
+        expect(String(graphBody?.textContent || '')).toContain('Blocks Citation');
+        expect(String(graphBody?.textContent || '')).toContain('Scoped snippet');
+        const highlighted = Array.from(graphBody?.querySelectorAll('[data-agent-focus-highlight="true"]') || []);
+        expect(highlighted.length).toBeGreaterThan(0);
+        expect(String(highlighted[0]?.textContent || '')).toContain('Scoped snippet');
+    });
+
+    test('browses recent durable knowledge runs and inspects a selected run', async () => {
+        const {
+            document,
+            window,
+            fetchMock,
+        } = loadAgentWorkspaceHarness({ withI18n: true });
+        if (!fetchMock) {
+            throw new Error('expected fetch mock');
+        }
+
+        fetchMock.mockImplementationOnce(async () => createSseResponse([
+            {
+                event: 'turn_completed',
+                payload: {
+                    type: 'turn_completed',
+                    turnId: 'turn_blocks_history',
+                    emittedAt: '2026-04-13T00:01:00.000Z',
+                    result: {
+                        assistantMessage: 'Scoped Answer',
+                        answer: 'Scoped Answer',
+                        assistantBlocks: [
+                            {
+                                blockId: 'block_knowledge_run_1',
+                                type: 'knowledge_run_summary',
+                                title: 'Knowledge Run',
+                                artifactId: 'workflow_artifact_knowledge_run_blocks_1',
+                                knowledgeRun: {
+                                    runId: 'knowledge_run_blocks_1',
+                                    generatedAt: '2026-04-13T00:01:00.000Z',
+                                    status: 'pass',
+                                    scope: {
+                                        source: 'scoped',
+                                        workspaceId: 'waterglass',
+                                        corpusId: 'waterglass',
+                                        documentIds: [],
+                                        atomIds: [],
+                                        sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+                                        languages: [],
+                                        matchedAtomCount: 1,
+                                    },
+                                    evidenceClaims: [],
+                                    quality: {
+                                        score: 100,
+                                        status: 'pass',
+                                        gates: [],
+                                    },
+                                    reviewCards: [],
+                                    reviewState: {
+                                        consumedCardIds: [],
+                                        completedReviewCardCount: 0,
+                                        remainingReviewCardCount: 1,
+                                        completedAt: null,
+                                    },
+                                    summary: {
+                                        claimCount: 1,
+                                        verifiedClaimCount: 1,
+                                        weakClaimCount: 0,
+                                        notProvenClaimCount: 0,
+                                        rejectedClaimCount: 0,
+                                        reviewCardCount: 1,
+                                        completedReviewCardCount: 0,
+                                        remainingReviewCardCount: 1,
+                                    },
+                                },
+                            },
+                        ],
+                        citations: [],
+                        knowledgePoints: [],
+                        recalledMemories: [],
+                        memoryActions: [],
+                        summary: {
+                            generatedAt: '2026-04-13T00:01:00.000Z',
+                            topK: 6,
+                            returnedKnowledgePoints: 0,
+                            returnedCitations: 0,
+                            recalledMemoryCount: 0,
+                            appliedMemoryCount: 0,
+                            queryEvidenceCoverageRatioPct: 90,
+                        },
+                        trace: {
+                            sessionId: 'session_blocks_1',
+                            invocationId: 'invocation_blocks_1',
+                            retrieval: {
+                                retrievalModes: ['keyword'],
+                                asOf: '2026-04-13T00:01:00.000Z',
+                                totalActiveAtoms: 1,
+                                modeWeights: {
+                                    keyword: 1,
+                                    graph: 0,
+                                    temporal: 0,
+                                },
+                                latencyMs: 3,
+                                evidenceCoverageRatio: 0.9,
+                            },
+                            recalledMemoryCount: 0,
+                            appliedMemoryCount: 0,
+                            usedScope: {
+                                source: 'scoped',
+                                workspaceId: 'waterglass',
+                                corpusId: 'waterglass',
+                                documentIds: [],
+                                atomIds: [],
+                                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+                                languages: [],
+                                matchedAtomCount: 1,
+                            },
+                        },
+                    },
+                },
+            },
+        ]));
+
+        const input = document.getElementById('agent-workspace-chat-input') as HTMLTextAreaElement;
+        input.value = 'browse recent runs';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+
+        const historyButton = document.querySelector('[data-agent-knowledge-run-history="true"]') as HTMLButtonElement | null;
+        expect(historyButton).not.toBeNull();
+        historyButton?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        const historyFetchCall = fetchMock.mock.calls.find((call) => String(call?.[0] || '').includes('artifactKinds=knowledge_run') && !String(call?.[0] || '').includes('artifactId=workflow_artifact_knowledge_run_blocks_1'));
+        expect(String(historyFetchCall?.[0] || '')).toContain('workspaceId=waterglass');
+
+        const historyCard = document.querySelector('[data-agent-workspace-card-kind="knowledge-run-history"]') as HTMLElement | null;
+        expect(historyCard).not.toBeNull();
+        expect(historyCard?.textContent).toContain('Knowledge Run History');
+        expect(historyCard?.textContent).toContain('knowledge_run_blocks_1');
+        expect(historyCard?.textContent).toContain('knowledge_run_blocks_2');
+        expect(historyCard?.textContent).toContain('Recent Runs');
+
+        const compareButton = historyCard?.querySelector('[data-agent-knowledge-run-history-compare="1"]') as HTMLButtonElement | null;
+        expect(compareButton).not.toBeNull();
+        compareButton?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        const compareCard = document.querySelector('[data-agent-workspace-card-kind="knowledge-run-compare"]') as HTMLElement | null;
+        expect(compareCard).not.toBeNull();
+        expect(compareCard?.textContent).toContain('Knowledge Run Comparison');
+        expect(compareCard?.textContent).toContain('knowledge_run_blocks_2');
+        expect(compareCard?.textContent).toContain('knowledge_run_blocks_1');
+        expect(compareCard?.textContent).toContain('Quality delta');
+        expect(compareCard?.textContent).toContain('Weak-claim delta');
+        expect(compareCard?.textContent).toContain('+1');
+
+        const historyInspectButton = historyCard?.querySelector('[data-agent-knowledge-run-history-inspect="1"]') as HTMLButtonElement | null;
+        expect(historyInspectButton).not.toBeNull();
+        historyInspectButton?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        const detailFetchCall = fetchMock.mock.calls.find((call) => String(call?.[0] || '').includes('artifactId=workflow_artifact_knowledge_run_blocks_2'));
+        expect(String(detailFetchCall?.[0] || '')).toContain('runId=knowledge_run_blocks_2');
+
+        const knowledgeRunCards = Array.from(document.querySelectorAll('[data-agent-workspace-card-kind="knowledge-run"]'));
+        expect(knowledgeRunCards.length).toBeGreaterThanOrEqual(1);
+        const latestKnowledgeRunCard = knowledgeRunCards[knowledgeRunCards.length - 1] as HTMLElement;
+        expect(String(latestKnowledgeRunCard.textContent || '')).toContain('knowledge_run_blocks_2');
     });
 
     test('updates the knowledge API status panel after a successful conversation call', async () => {
@@ -5076,6 +6384,76 @@ describe('agent workspace learning-path integration', () => {
         expect(card?.textContent).toContain('Session History');
         expect(card?.textContent).toContain('1 sessions in last 10080 minutes');
         expect(card?.textContent).toContain('Key Metrics');
+    });
+
+    test('executes workflow-artifact follow-up capabilities through the generic knowledge operation path', async () => {
+        const {
+            document,
+            window,
+            fetchMock,
+        } = loadAgentWorkspaceHarness();
+
+        await (window as any).NoteConnectionAgentWorkspace.executeCapability({
+            atomId: 'atom_water_glass',
+            title: 'Water Glass',
+        }, {
+            capabilityId: 'cap_flashcard_batch_atom_water_glass',
+            actionId: 'inspect_flashcard_batch',
+            targetAtomId: 'atom_water_glass',
+            label: 'Review Cards',
+            request: {
+                workspaceId: 'waterglass',
+                artifactKinds: ['flashcard_batch'],
+                limit: 8,
+            },
+            execution: {
+                kind: 'knowledge_operation',
+                operationId: 'fetch_workflow_artifacts',
+                resultPresentation: 'flashcard_batch_card',
+            },
+        });
+
+        const fetchCall = fetchMock?.mock.calls.find((call) => String(call?.[0] || '').startsWith('/api/knowledge/workflow-artifacts'));
+        expect(String(fetchCall?.[0] || '')).toContain('/api/knowledge/workflow-artifacts');
+        expect(String(fetchCall?.[0] || '')).toContain('workspaceId=waterglass');
+        expect(String(fetchCall?.[0] || '')).toContain('artifactKinds=flashcard_batch');
+
+        const card = document.querySelector('[data-agent-workspace-card-kind="flashcard-batch"]') as HTMLElement | null;
+        expect(card).not.toBeNull();
+        expect(card?.textContent).toContain('Review Card Batch');
+        expect(card?.textContent).toContain('1 artifact(s), 1/1 review card(s) remaining.');
+        expect(card?.textContent).toContain('What does the cited source establish about Water Glass?');
+        expect(card?.textContent).toContain('Knowledge_Base/waterglass/water glass.md:3');
+        expect(card?.textContent).toContain('Completed cards');
+        expect(card?.textContent).toContain('Remaining cards');
+        expect(card?.textContent).toContain('Artifact status');
+
+        const followUpButton = card?.querySelector('[data-agent-flashcard-follow-up="true"]') as HTMLButtonElement | null;
+        expect(followUpButton).not.toBeNull();
+        followUpButton?.click();
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            await Promise.resolve();
+        }
+
+        const followUpFetchCall = fetchMock?.mock.calls.find((call) => String(call?.[0] || '') === '/api/knowledge/workflow-artifacts/review-follow-up');
+        expect(followUpFetchCall?.[0]).toBe('/api/knowledge/workflow-artifacts/review-follow-up');
+        const followUpInit = followUpFetchCall?.[1] || {};
+        const followUpBody = JSON.parse(String(followUpInit.body || '{}'));
+        expect(followUpBody.userId).toBe('path_user_default');
+        expect(followUpBody.artifactId).toBe('workflow_artifact_flashcard_batch_1');
+        expect(followUpBody.cardId).toBe('knowledge_run_1_card_1');
+        expect(followUpBody.action.atomId).toBe('atom_water_glass');
+        expect(followUpBody.action.kind).toBe('review');
+        expect(followUpBody.action.source).toBe('flashcard_batch');
+        expect(followUpBody.action.prompt).toBe('What does the cited source establish about Water Glass?');
+
+        const assistantMessages = Array.from(document.querySelectorAll('.agent-chat-message-assistant')).map((node) => String(node.textContent || ''));
+        expect(assistantMessages.length).toBeGreaterThan(0);
+        expect(assistantMessages.some((message) => message.includes('unsupported_operation') || message.includes('Unsupported'))).toBe(false);
+        expect(card?.textContent).toContain('1 artifact(s), 0/1 review card(s) remaining.');
+        expect(card?.textContent).toContain('archived');
+        expect(card?.querySelector('[data-agent-flashcard-follow-up="true"]')).toBeNull();
     });
 
     test('rerenders tutor-action assistant cards when language changes', async () => {

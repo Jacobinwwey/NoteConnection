@@ -3,6 +3,52 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
+## 2026-06-10 知识工作区与 DAG 对齐切片
+
+本切片将当前代码库与此前的 lightweight RAG、agent-workspace 和主线架构推进方案重新对齐，重点聚焦于现有 DAG 学习底座与知识工作区的真实实现状态。
+
+核心结论是：当前代码推进得比旧方案文字描述更远，但产品面与架构面仍有明确缺口。
+
+已经明确有代码支撑的能力包括：
+
+- Knowledge Workspace 不再只是一个薄 scoped-chat 壳层；
+- workflow artifact 已包含 durable 的 `flashcard_batch` 与 `knowledge_run`；
+- reply rendering 已具备 typed structured-answer 路径；
+- workflow-artifact review follow-up 已进入运行时表面；
+- graph focus 已能渲染原始 markdown 并高亮 matched span。
+
+但当前产品面仍未完全达到目标行为：
+
+- 可见回答区仍会渲染本应退出主回答面的支持性块；
+- 左侧知识命中虽然已是 file-first，但 preview/action 交互仍未完全收敛为 right-pane-first 阅读模型；
+- 现有 DAG 底座是真实存在的，但 answer synthesis 仍更像 evidence-grouped text RAG，而不是 graph-native answer planning。
+
+本切片的代码 / 方案对齐结果：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| 结构化 grounded conversation 且保持向前兼容 | `src/learning/types.ts`、`src/learning/conversationComposer.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js`、`src/frontend/workspace_panes.js` 现已支持 `answer`、`assistantBlocks`、`knowledgeRun`、按文档聚合的 `knowledgePoints`、citations 与 legacy `assistantMessage`。 | 已实现基线 |
+| durable learning/review artifact | `src/workflows/WorkflowArtifactStore.ts`、`src/learning/KnowledgeLearningPlatform.ts` 与 `src/routes/knowledge.ts` 现已支持 durable `flashcard_batch` / `knowledge_run`，以及 `/api/knowledge/workflow-artifacts`、`/api/knowledge/workflow-artifacts/review-follow-up`。 | 已实现基线 |
+| file-first scoped knowledge hit | `workspace_panes.js` 已按 source file 渲染 grouped knowledge hit，并保留 matched-span source 引用。 | 已实现基线 |
+| 右侧证据阅读面 | graph focus 已复用共享 markdown runtime，并在原始 markdown 中高亮 matched span。 | 已实现基线 |
+| 主回答区收缩为单一 targeted answer | 当前代码已经具备 structured-answer owner 与 artifact 分层基础，但可见回答区仍会渲染 supporting block。 | 尚未完成 |
+| DAG-native answer planning | 系统已具备 `KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query、mastery-path 逻辑与 `KnowledgeQueryItem.relationPath`，但 conversation synthesis 仍缺 dedicated graph-conditioned context-assembly layer。 | 尚未完成 |
+
+从这里出发的即时推进方向：
+
+1. 先收缩主回答区，只保留 targeted answer，把 supporting block 退到次级表面。
+2. 让左侧 knowledge hit 收敛为 right-pane-first 阅读流。
+3. 把 `knowledge_run` 与 `flashcard_batch` 当作第一批 durable evidence / claim surface，而不是再造第二套 review substrate。
+4. 在 retrieval 与 answer synthesis 之间补一个 graph-conditioned context-assembly layer，让当前 DAG 真正进入 answer planning。
+5. 继续缩减 `src/server.ts`、`KnowledgeLearningPlatform.ts`、`agent_workspace.js`、`workspace_panes.js` 的所有权压力。
+
+当前代码对齐切片的本地验证：
+
+- `npm.cmd exec -- tsc --noEmit`
+- `node --check src/frontend/agent_workspace.js`
+- `node --check src/frontend/workspace_panes.js`
+- `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
+
 ## 2026-06-06 知识工作区 scope 切换器与证据聚焦命中 UI
 
 本切片关闭的是知识工作区前端可用性缺口：旧实现依赖全局文件夹选择器和请求载荷状态，用户在知识工作区内提问时，无法在同一任务窗口中直接确认当前 RAG 检索边界。

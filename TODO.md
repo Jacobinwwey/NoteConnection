@@ -1,3 +1,37 @@
+# 2026-06-10 v1.7.0 - Knowledge Workspace and DAG Alignment TODO
+
+## English Document
+
+### Objective
+Keep the root TODO aligned with the 2026-06-10 Knowledge Workspace and DAG code-vs-plan reconciliation on `main`.
+
+### Current Status
+- [x] A new mainline alignment note for this slice now exists at `docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md`.
+- [x] The current codebase already supports structured grounded conversation, grouped knowledge points, durable `flashcard_batch` / `knowledge_run` artifacts, and workflow-artifact review follow-up.
+- [x] The current codebase already has a real DAG-backed learning substrate: `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, and mastery/session graph logic are implemented.
+- [~] The visible answer area is still richer than the intended final product surface. The primary answer still needs contraction so users see the targeted answer first and supporting blocks move to secondary surfaces.
+- [~] Knowledge-hit interaction is file-first, but still not fully right-pane-first. Left-side preview/action behavior should converge on the right pane as the canonical reading surface.
+- [ ] Add a graph-conditioned context-assembly layer between retrieval and answer synthesis so the current DAG becomes a first-class answer-planning substrate rather than only a retrieval-side aid.
+- [ ] Continue ownership reduction in `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/agent_workspace.js`, and `src/frontend/workspace_panes.js`.
+- [ ] Keep `assistantMessage` compatibility while evolving richer optional `assistantBlocks` and durable artifact inspection surfaces.
+
+## 中文文档
+
+### 目标
+让根目录 TODO 与 `main` 上 2026-06-10 的“知识工作区 + DAG 对齐”代码 / 方案结论保持一致。
+
+### 当前状态
+- [x] 本轮主线对齐结果已新增到 `docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md`。
+- [x] 当前代码已经支持结构化 grounded conversation、按文档聚合的 knowledge point、durable `flashcard_batch` / `knowledge_run` artifact，以及 workflow-artifact review follow-up。
+- [x] 当前代码已经具备真实的 DAG 学习底座：`KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query、mastery/session 图逻辑都已落地。
+- [~] 用户可见回答区仍比目标产品面更重；主回答区仍需继续收缩为“用户先看到 targeted answer，supporting block 退到次级表面”。
+- [~] 知识命中已经是 file-first，但还没有完全收敛为 right-pane-first；左侧 preview/action 行为仍需向“右侧 pane 才是权威阅读面”继续收口。
+- [ ] 在 retrieval 与 answer synthesis 之间补一个 graph-conditioned context-assembly layer，让当前 DAG 成为一等 answer-planning substrate，而不只是 retrieval 侧辅助信号。
+- [ ] 继续缩减 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js`、`src/frontend/workspace_panes.js` 的所有权压力。
+- [ ] 在演进 richer optional `assistantBlocks` 与 durable artifact inspection surface 时，继续保持 `assistantMessage` 兼容。
+
+---
+
 # 2026-06-06 v1.7.0 - Architecture Progress Alignment and Mainline TODO
 
 ## English Document

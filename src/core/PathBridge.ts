@@ -1059,18 +1059,38 @@ export class PathBridge {
     private unauthorizedClientTimers: Map<WebSocket, NodeJS.Timeout> = new Map();
     private outboundQueueState: Map<WebSocket, ClientOutboundQueueState> = new Map();
     private nextMermaidRenderRequestId = 1;
+    private readyPromise: Promise<void>;
+    private readySettled = false;
 
     constructor(options: number | PathBridgeOptions = 9876) {
         const resolvedOptions: PathBridgeOptions = typeof options === 'number'
             ? { port: options }
             : (options || {});
-        this.port = resolvedOptions.port || 9876;
+        this.port = Number.isFinite(Number(resolvedOptions.port))
+            ? Number(resolvedOptions.port)
+            : 9876;
         this.host = resolvedOptions.host || '127.0.0.1';
         this.authToken = typeof resolvedOptions.authToken === 'string' ? resolvedOptions.authToken.trim() : '';
         this.wss = new WebSocketServer({
             port: this.port,
             host: this.host,
             maxPayload: MAX_INBOUND_MESSAGE_BYTES,
+        });
+        this.readyPromise = new Promise((resolve, reject) => {
+            this.wss.once('listening', () => {
+                this.readySettled = true;
+                const address = this.wss.address();
+                if (address && typeof address === 'object') {
+                    this.port = Number(address.port || this.port);
+                }
+                resolve();
+            });
+            this.wss.once('error', (error) => {
+                if (!this.readySettled) {
+                    this.readySettled = true;
+                    reject(error);
+                }
+            });
         });
 
         console.log(`[PathBridge] WebSocket Server started on ws://${this.host}:${this.port}`);
@@ -2052,6 +2072,14 @@ export class PathBridge {
         this.wss.close();
         this.clients.clear();
         this.clientMeta.clear();
+    }
+
+    public waitUntilReady(): Promise<void> {
+        return this.readyPromise;
+    }
+
+    public getPort(): number {
+        return this.port;
     }
 }
 

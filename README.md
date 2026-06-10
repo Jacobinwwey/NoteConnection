@@ -27,16 +27,16 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
-## Current Mainline Architecture Status (2026-06-06)
+## Current Mainline Architecture Status (2026-06-10)
 
 - The current `main` branch has code-backed scoped retrieval, grounded conversation, durable resource/index/workspace/session/memory/export substrate, explicit export profiles, and PNG-first Godot/mobile render materialization.
-- The Knowledge Workspace is no longer only a thin chat shell over the global folder selector: it now has an in-pane scope switcher, a compact `/api/knowledge/conversation` status strip, grouped knowledge-point hits rendered as file-first entries, matched-span rendering in the focus pane, and explicit recovered-source visibility when `planner_scope_recovery` is used.
-- graphdb/sqlite and ANN/external connector paths are operational baselines, not production-closed release claims. Release closure still depends on repeated soak evidence, workload thresholds, recall/latency calibration, and strict rollout proof.
-- `npm run verify:foundation:release-evidence` now audits the latest sqlite soak and ANN release-gate JSON reports for freshness and passing gates before current-host evidence is used as release context; `npm run verify:foundation:release-evidence:strict` additionally requires repeated fresh valid history reports, is exposed in foundation readiness as `foundation_release_evidence_history`, and now passes on the current Windows host with sqlite `3/3` and ANN `3/3`. `npm run verify:foundation:release-evidence:multi-host` is now available when a release window needs at least two host keys per component, but current Windows-host evidence remains single-host.
-- Backward compatibility is preserved through additive response evolution: `assistantBlocks` can carry richer Tauri agent replies while legacy `assistantMessage` remains valid.
-- Tauri agent replies are now materially richer than the old plain-text path: the backend emits intent-aware overview / explanation / evidence summary / memory notice / next-action sections, while still preserving the old `assistantMessage` field for legacy clients.
-- The current architecture pressure is ownership reduction: `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, and large frontend host files remain the next simplification targets.
-- Current code-vs-plan details are tracked in [Architecture Progress Alignment and Mainline Plan (2026-06-06)](docs/solutions/architecture-progress-alignment-2026-06-06.md) and [Development Progress Dashboard](docs/diataxis/en/explanation/development-progress-dashboard.md).
+- The Knowledge Workspace now includes an in-pane scope switcher, a compact `/api/knowledge/conversation` status strip, grouped file-first knowledge hits, source-markdown rendering with matched-span highlighting in the focus pane, and durable workflow artifacts for `flashcard_batch` and `knowledge_run`.
+- Agent conversation runtime is no longer limited to one flat string: `answer`, `assistantBlocks`, `knowledgeRun`, grouped knowledge points, citations, memory actions, and trace are all present while legacy `assistantMessage` remains valid.
+- The current DAG-backed learning substrate is real: `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, mastery-path/session logic, and `KnowledgeQueryItem.relationPath` already exist. The remaining gap is not “having a graph,” but letting answer planning consume it through a dedicated graph-conditioned context layer.
+- graphdb/sqlite and ANN/external connector paths remain operational baselines, not production-closed claims. Release closure still depends on repeated soak evidence, workload thresholds, recall/latency calibration, strict rollout proof, and multi-host evidence.
+- `npm run verify:foundation:release-evidence` audits the latest sqlite soak and ANN release-gate reports for freshness and passing gates before host evidence is used as release context; `npm run verify:foundation:release-evidence:strict` requires repeated fresh valid history and is exposed in foundation readiness as `foundation_release_evidence_history`; `npm run verify:foundation:release-evidence:multi-host` is available for release windows that require host diversity.
+- The current architecture pressure remains ownership reduction: `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/agent_workspace.js`, and `src/frontend/workspace_panes.js` remain the main simplification targets.
+- Current code-vs-plan details are tracked in [Knowledge Workspace and DAG Alignment Plan (2026-06-10)](docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md), [Architecture Progress Alignment and Mainline Plan (2026-06-06)](docs/solutions/architecture-progress-alignment-2026-06-06.md), and the [Development Progress Dashboard](docs/diataxis/en/explanation/development-progress-dashboard.md).
 
 ---
 
@@ -1017,14 +1017,16 @@ For optimal performance with "GPU Optimised Rendering", especially on AMD RDNA c
 
 ---
 
-## 当前主线架构状态（2026-06-06）
+## 当前主线架构状态（2026-06-10）
 
 - 当前 `main` 已具备代码支撑的 scoped retrieval、grounded conversation、持久化 resource/index/workspace/session/memory/export 底座、显式 export profiles，以及 Godot/mobile PNG-first 渲染物化边界。
-- graphdb/sqlite 与 ANN/external connector 目前是 operational baseline，不是 production-closed 发布结论。发布闭环仍依赖多轮 soak 证据、工作负载阈值、recall/latency 校准与 strict rollout 证明。
-- `npm run verify:foundation:release-evidence` 现在会在当前宿主证据被作为 release context 前审计最新 sqlite soak 与 ANN release-gate JSON 报告的新鲜度和通过状态；`npm run verify:foundation:release-evidence:strict` 还会要求多份新鲜有效历史报告，已通过 `foundation_release_evidence_history` 暴露到 foundation readiness，并且当前 Windows 宿主已达到 sqlite `3/3` 与 ANN `3/3` 通过状态。当 release window 需要每个组件至少覆盖两个 host key 时，可以使用 `npm run verify:foundation:release-evidence:multi-host`，但当前 Windows 宿主证据仍是单宿主证据。
-- 向前兼容通过 additive response evolution 保持：`assistantBlocks` 可以承载更丰富的 Tauri agent 回复，同时 legacy `assistantMessage` 仍有效。
-- 当前架构压力是所有权缩减：`src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts` 与大型前端宿主文件是下一阶段简化目标。
-- 代码 / 方案详细对齐请查看 [架构推进对齐与主线推进方案（2026-06-06）](docs/solutions/architecture-progress-alignment-2026-06-06.md) 与 [开发进度看板](docs/diataxis/zh/explanation/development-progress-dashboard.md)。
+- 知识工作区除了工作区内 scope 切换器、conversation API 状态条、按文件优先的 grouped knowledge hit 与 focus pane 中的 matched-span 高亮之外，还已经具备 durable workflow artifact：`flashcard_batch` 与 `knowledge_run`。
+- agent conversation 运行时已经不再只是单一回答字符串：`answer`、`assistantBlocks`、`knowledgeRun`、按文档聚合的 `knowledgePoints`、citations、memory actions 与 trace 已进入当前兼容性表面，同时保留 legacy `assistantMessage`。
+- 现有 DAG 学习底座是真实存在的：`KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query、mastery-path/session 逻辑以及 `KnowledgeQueryItem.relationPath` 都已落地。真正剩余的缺口不是“有没有图”，而是“回答规划层还没有 dedicated graph-conditioned context layer”。
+- graphdb/sqlite 与 ANN/external connector 仍是 operational baseline。生产闭环仍需要多轮 soak 证据、工作负载阈值、recall/latency 校准、strict rollout proof 与多宿主证据。
+- 当前 release-evidence 审计面已由 `verify:foundation:release-evidence`、`verify:foundation:release-evidence:strict` 与 `verify:foundation:release-evidence:multi-host` 统一。
+- 下一阶段架构工作仍是缩减 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js` 与 `src/frontend/workspace_panes.js` 的所有权压力。
+- 当前代码 / 方案详细对齐请查看 [知识工作区与 DAG 对齐推进方案（2026-06-10）](docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md)、[架构推进对齐与主线推进方案（2026-06-06）](docs/solutions/architecture-progress-alignment-2026-06-06.md) 与 [开发进度看板](docs/diataxis/zh/explanation/development-progress-dashboard.md)。
 
 ---
 

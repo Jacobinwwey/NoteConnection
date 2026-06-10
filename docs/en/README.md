@@ -25,15 +25,16 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
-## Current Mainline Architecture Status (2026-06-06)
+## Current Mainline Architecture Status (2026-06-10)
 
 - Current `main` has code-backed scoped retrieval, grounded conversation, durable resource/index/workspace/session/memory/export substrate, explicit export profiles, and PNG-first Godot/mobile render materialization.
-- The Knowledge Workspace now includes an in-pane scope switcher, a compact conversation API status strip, grouped file-first knowledge-point hits, matched-span rendering in the focus pane, and explicit recovered-source visibility when `planner_scope_recovery` is used.
-- graphdb/sqlite and ANN/external connector paths are operational baselines. Production closure still requires repeated soak evidence, workload thresholds, recall/latency calibration, and strict rollout proof.
-- Compatibility remains additive: rich `assistantBlocks` can be used by newer clients while legacy `assistantMessage` stays valid.
-- Tauri reply organization is now intent-aware and section-based: overview, explanation, evidence summary, memory notice, and next-action guidance are emitted as structured blocks rather than one flat answer string.
-- The next architecture work is ownership reduction in `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, and large frontend host files.
-- Current code-vs-plan details: [Architecture Progress Alignment and Mainline Plan (2026-06-06)](../solutions/architecture-progress-alignment-2026-06-06.md) and [Development Progress Dashboard](../diataxis/en/explanation/development-progress-dashboard.md).
+- The Knowledge Workspace now includes an in-pane scope switcher, a compact conversation API status strip, grouped file-first knowledge hits, source-markdown rendering with matched-span highlighting in the focus pane, and durable workflow artifacts for `flashcard_batch` and `knowledge_run`.
+- Agent conversation runtime is no longer limited to one flat answer string: `answer`, `assistantBlocks`, `knowledgeRun`, grouped knowledge points, citations, memory actions, and trace are all present while legacy `assistantMessage` remains valid.
+- The current DAG-backed learning substrate is real: `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, mastery-path/session logic, and `KnowledgeQueryItem.relationPath` already exist. The remaining gap is not “having a graph,” but letting answer planning consume it through a dedicated graph-conditioned context layer.
+- graphdb/sqlite and ANN/external connector paths remain operational baselines. Release closure still depends on repeated soak evidence, workload thresholds, recall/latency calibration, strict rollout proof, and multi-host evidence.
+- `verify:foundation:release-evidence`, `verify:foundation:release-evidence:strict`, and `verify:foundation:release-evidence:multi-host` now define the release-evidence audit surface for sqlite and ANN runtime reports.
+- The next architecture work remains ownership reduction in `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/agent_workspace.js`, and `src/frontend/workspace_panes.js`.
+- Current code-vs-plan details: [Knowledge Workspace and DAG Alignment Plan (2026-06-10)](../solutions/knowledge-workspace-dag-alignment-2026-06-10.md), [Architecture Progress Alignment and Mainline Plan (2026-06-06)](../solutions/architecture-progress-alignment-2026-06-06.md), and the [Development Progress Dashboard](../diataxis/en/explanation/development-progress-dashboard.md).
 
 ---
 

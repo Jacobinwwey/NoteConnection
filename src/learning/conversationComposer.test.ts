@@ -215,15 +215,138 @@ describe('conversationComposer', () => {
 
         expect(reply.answer).toContain('Grounded by 1 knowledge point');
         expect(reply.assistantBlocks.map((block) => block.type)).toEqual(
-            expect.arrayContaining(['main_markdown', 'system_notice', 'citations', 'knowledge_actions'])
+            expect.arrayContaining(['structured_answer', 'system_notice', 'citations', 'knowledge_actions', 'knowledge_run_summary'])
         );
-        const markdownBlocks = reply.assistantBlocks.filter((block) => block.type === 'main_markdown');
-        expect(markdownBlocks.some((block) => block.markdown.includes('## Scoped Answer'))).toBe(true);
-        expect(markdownBlocks.some((block) => block.markdown.includes('comparison baseline'))).toBe(true);
-        expect(markdownBlocks.some((block) => block.markdown.includes('inspect the strongest nodes side by side'))).toBe(true);
-        expect(markdownBlocks.some((block) => block.markdown.includes('Persist the latest user focus to scoped conversation memory'))).toBe(true);
+        const structuredBlock = reply.assistantBlocks.find((block) => block.type === 'structured_answer');
+        expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').toContain('Grounded by 1 knowledge point');
+        expect(structuredBlock && 'overviewMarkdown' in structuredBlock ? structuredBlock.overviewMarkdown : '').toContain('## Answer Context');
+        expect(structuredBlock && 'explanationMarkdown' in structuredBlock ? structuredBlock.explanationMarkdown : '').toContain('comparison baseline');
+        expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('inspect the strongest nodes side by side');
+        expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Persist the latest user focus to scoped conversation memory');
         const actionBlock = reply.assistantBlocks.find((block) => block.type === 'knowledge_actions');
         expect(actionBlock && 'atomIds' in actionBlock ? actionBlock.atomIds : []).toEqual(['atom_a', 'atom_b']);
         expect(collectAgentConversationAtomIds(knowledgePoints)).toEqual(['atom_a', 'atom_b']);
+    });
+
+    test('builds a verified knowledge run with evidence quality gates and review cards', () => {
+        const knowledgePoints: AgentConversationKnowledgePoint[] = [
+            {
+                atomId: 'atom_verified',
+                atomIds: ['atom_verified'],
+                documentId: 'doc_verified',
+                sourcePath: 'Knowledge_Base/test/evidence.md',
+                title: 'Evidence Ledger',
+                summary: 'An evidence ledger links each answer claim back to source spans.',
+                evidenceSnippet: 'An evidence ledger links each answer claim back to source spans.',
+                score: 0.94,
+                citation: {
+                    citationId: 'citation_verified',
+                    atomId: 'atom_verified',
+                    documentId: 'doc_verified',
+                    sourcePath: 'Knowledge_Base/test/evidence.md',
+                    title: 'Evidence Ledger',
+                    snippet: 'An evidence ledger links each answer claim back to source spans.',
+                    startLine: 12,
+                    endLine: 12,
+                    score: 0.94,
+                },
+                citations: [
+                    {
+                        citationId: 'citation_verified',
+                        atomId: 'atom_verified',
+                        documentId: 'doc_verified',
+                        sourcePath: 'Knowledge_Base/test/evidence.md',
+                        title: 'Evidence Ledger',
+                        snippet: 'An evidence ledger links each answer claim back to source spans.',
+                        startLine: 12,
+                        endLine: 12,
+                        score: 0.94,
+                    },
+                ],
+                matchedSpans: [
+                    {
+                        atomId: 'atom_verified',
+                        title: 'Evidence Ledger',
+                        snippet: 'An evidence ledger links each answer claim back to source spans.',
+                        sourcePath: 'Knowledge_Base/test/evidence.md',
+                        startLine: 12,
+                        endLine: 12,
+                        score: 0.94,
+                        citation: {
+                            citationId: 'citation_verified',
+                            atomId: 'atom_verified',
+                            documentId: 'doc_verified',
+                            sourcePath: 'Knowledge_Base/test/evidence.md',
+                            title: 'Evidence Ledger',
+                            snippet: 'An evidence ledger links each answer claim back to source spans.',
+                            startLine: 12,
+                            endLine: 12,
+                            score: 0.94,
+                        },
+                    },
+                ],
+                matchCount: 1,
+                capabilities: [{ actionId: 'open_focus_mode' }],
+            },
+        ];
+        let blockCounter = 0;
+        let runCounter = 0;
+
+        const reply = buildScopedConversationReply({
+            message: 'How should knowledge answers prove their claims?',
+            knowledgePoints,
+            citations: knowledgePoints[0].citations || [],
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: {
+                ...globalScope,
+                source: 'scoped',
+                workspaceId: 'workspace_verified',
+                corpusId: 'corpus_verified',
+                matchedAtomCount: 1,
+                sourcePathPrefixes: ['Knowledge_Base/test'],
+            },
+            generatedAt: '2026-06-08T00:00:00.000Z',
+            nextBlockId: () => `assistant_block_${++blockCounter}`,
+            nextRunId: () => `knowledge_run_${++runCounter}`,
+        });
+
+        expect(reply.knowledgeRun.runId).toBe('knowledge_run_1');
+        expect(reply.knowledgeRun.status).toBe('pass');
+        expect(reply.knowledgeRun.evidenceClaims).toHaveLength(1);
+        expect(reply.knowledgeRun.evidenceClaims[0]).toMatchObject({
+            status: 'verified',
+            citationId: 'citation_verified',
+            sourcePath: 'Knowledge_Base/test/evidence.md',
+            startLine: 12,
+        });
+        expect(reply.knowledgeRun.quality.gates).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({ gateId: 'evidence_coverage', passed: true }),
+                expect.objectContaining({ gateId: 'scope_discipline', passed: true }),
+                expect.objectContaining({ gateId: 'recall_transfer', passed: true }),
+            ])
+        );
+        expect(reply.knowledgeRun.reviewCards).toEqual([
+            expect.objectContaining({
+                cardId: 'knowledge_run_1_card_1',
+                sourceClaimId: reply.knowledgeRun.evidenceClaims[0].claimId,
+                evidenceRefs: ['Knowledge_Base/test/evidence.md:12'],
+            }),
+        ]);
+        expect(reply.knowledgeRun.reviewState).toEqual({
+            consumedCardIds: [],
+            completedReviewCardCount: 0,
+            remainingReviewCardCount: 1,
+            completedAt: null,
+        });
+        expect(reply.knowledgeRun.summary.completedReviewCardCount).toBe(0);
+        expect(reply.knowledgeRun.summary.remainingReviewCardCount).toBe(1);
+        const runBlock = reply.assistantBlocks.find((block) => block.type === 'knowledge_run_summary');
+        expect(runBlock).toEqual(expect.objectContaining({
+            type: 'knowledge_run_summary',
+            title: 'Knowledge Run',
+            knowledgeRun: reply.knowledgeRun,
+        }));
     });
 });

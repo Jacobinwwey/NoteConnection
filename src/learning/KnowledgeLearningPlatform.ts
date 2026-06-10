@@ -44,6 +44,9 @@ import type {
     KnowledgeQueryRequest,
     KnowledgeQueryResponse,
     KnowledgeRepresentationType,
+    KnowledgeRun,
+    KnowledgeRunReviewCard,
+    KnowledgeRunReviewState,
     KnowledgeSystemState,
     LearnerConceptState,
     LearningAction,
@@ -82,7 +85,10 @@ import type {
     TutorActionKind,
     TutorActionResponse,
     TutorTrace,
+    WorkflowArtifactReviewFollowUpRequest,
+    WorkflowArtifactReviewFollowUpResponse,
 } from './types';
+import type { WorkflowArtifactQueryRequest, WorkflowArtifactQueryResponse } from './api';
 import type {
     KnowledgeGraphSnapshot,
     KnowledgeGraphStore,
@@ -1670,6 +1676,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                             || sourceRaw === 'divergence_path'
                             || sourceRaw === 'retrain_plan'
                             || sourceRaw === 'misconception_remediation'
+                            || sourceRaw === 'flashcard_batch'
                         )
                             ? sourceRaw as StudySessionAction['source']
                             : sourceFallback;
@@ -3309,6 +3316,20 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 } satisfies AgentConversationAssistantBlock;
             }
             switch (block.type) {
+                case 'structured_answer':
+                    return {
+                        blockId: String(block.blockId || 'assistant_block_structured_answer'),
+                        type: 'structured_answer',
+                        title: typeof block.title === 'string' ? block.title : undefined,
+                        directAnswer: String(block.directAnswer || ''),
+                        overviewMarkdown: typeof block.overviewMarkdown === 'string' ? block.overviewMarkdown : undefined,
+                        explanationMarkdown: typeof block.explanationMarkdown === 'string' ? block.explanationMarkdown : undefined,
+                        evidenceMarkdown: typeof block.evidenceMarkdown === 'string' ? block.evidenceMarkdown : undefined,
+                        nextActionsMarkdown: typeof block.nextActionsMarkdown === 'string' ? block.nextActionsMarkdown : undefined,
+                        knowledgePointCount: Number.isFinite(Number(block.knowledgePointCount)) ? Number(block.knowledgePointCount) : 0,
+                        citationCount: Number.isFinite(Number(block.citationCount)) ? Number(block.citationCount) : 0,
+                        recalledMemoryCount: Number.isFinite(Number(block.recalledMemoryCount)) ? Number(block.recalledMemoryCount) : 0,
+                    } satisfies AgentConversationAssistantBlock;
                 case 'main_markdown':
                     return {
                         blockId: String(block.blockId || 'assistant_block_markdown'),
@@ -3347,6 +3368,14 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                             ? block.atomIds.map((atomId) => String(atomId || '')).filter(Boolean)
                             : [],
                     } satisfies AgentConversationAssistantBlock;
+                case 'knowledge_run_summary':
+                    return {
+                        blockId: String(block.blockId || 'assistant_block_knowledge_run'),
+                        type: 'knowledge_run_summary',
+                        title: typeof block.title === 'string' ? block.title : undefined,
+                        artifactId: typeof block.artifactId === 'string' ? block.artifactId : undefined,
+                        knowledgeRun: this.cloneKnowledgeRun(block.knowledgeRun),
+                    } satisfies AgentConversationAssistantBlock;
                 default:
                     return {
                         blockId: String((block as AgentConversationAssistantBlock).blockId || 'assistant_block_unknown'),
@@ -3355,6 +3384,115 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     } satisfies AgentConversationAssistantBlock;
             }
         });
+    }
+
+    private cloneKnowledgeRun(run: KnowledgeRun | undefined): KnowledgeRun {
+        const safeRun = run || {
+            runId: 'knowledge_run_unknown',
+            generatedAt: new Date(0).toISOString(),
+            status: 'fail',
+            scope: {
+                source: 'global',
+                workspaceId: null,
+                corpusId: null,
+                documentIds: [],
+                atomIds: [],
+                sourcePathPrefixes: [],
+                languages: [],
+                matchedAtomCount: 0,
+            },
+            evidenceClaims: [],
+            quality: {
+                score: 0,
+                status: 'fail',
+                gates: [],
+            },
+            reviewCards: [],
+            reviewState: {
+                consumedCardIds: [],
+                completedReviewCardCount: 0,
+                remainingReviewCardCount: 0,
+                completedAt: null,
+            },
+            summary: {
+                claimCount: 0,
+                verifiedClaimCount: 0,
+                weakClaimCount: 0,
+                notProvenClaimCount: 0,
+                rejectedClaimCount: 0,
+                reviewCardCount: 0,
+                completedReviewCardCount: 0,
+                remainingReviewCardCount: 0,
+            },
+        } satisfies KnowledgeRun;
+        const reviewCards = safeRun.reviewCards.map((card) => ({
+            ...card,
+            evidenceRefs: [...card.evidenceRefs],
+        }));
+        const reviewState = this.buildKnowledgeRunReviewState(
+            reviewCards,
+            safeRun.reviewState && typeof safeRun.reviewState === 'object'
+                ? safeRun.reviewState.consumedCardIds
+                : [],
+            safeRun.reviewState && typeof safeRun.reviewState === 'object'
+                ? safeRun.reviewState.completedAt
+                : null
+        );
+        return {
+            ...safeRun,
+            scope: {
+                ...safeRun.scope,
+                documentIds: [...safeRun.scope.documentIds],
+                atomIds: [...safeRun.scope.atomIds],
+                sourcePathPrefixes: [...safeRun.scope.sourcePathPrefixes],
+                languages: [...safeRun.scope.languages],
+            },
+            evidenceClaims: safeRun.evidenceClaims.map((claim) => ({ ...claim })),
+            quality: {
+                ...safeRun.quality,
+                gates: safeRun.quality.gates.map((gate) => ({ ...gate })),
+            },
+            reviewCards,
+            reviewState,
+            summary: {
+                ...safeRun.summary,
+                reviewCardCount: reviewCards.length,
+                completedReviewCardCount: reviewState.completedReviewCardCount,
+                remainingReviewCardCount: reviewState.remainingReviewCardCount,
+            },
+        };
+    }
+
+    private attachKnowledgeRunArtifactIdToBlocks(
+        blocks: AgentConversationAssistantBlock[] | undefined,
+        artifactId: string
+    ): AgentConversationAssistantBlock[] | undefined {
+        if (!Array.isArray(blocks) || !isNonEmptyString(artifactId)) {
+            return blocks;
+        }
+        return blocks.map((block) => {
+            if (!block || typeof block !== 'object' || block.type !== 'knowledge_run_summary') {
+                return block;
+            }
+            return {
+                ...block,
+                artifactId,
+            } satisfies AgentConversationAssistantBlock;
+        });
+    }
+
+    private resolveWorkflowArtifactRunId(artifact: WorkflowArtifactRecord): string {
+        const payload = artifact.payload && typeof artifact.payload === 'object'
+            ? artifact.payload as Record<string, unknown>
+            : {};
+        const directRunId = String(payload.runId || '').trim();
+        if (directRunId) {
+            return directRunId;
+        }
+        const knowledgeRun = payload.knowledgeRun && typeof payload.knowledgeRun === 'object'
+            ? payload.knowledgeRun as Record<string, unknown>
+            : null;
+        return knowledgeRun ? String(knowledgeRun.runId || '').trim() : '';
     }
 
     private resolveLearningQualityThresholds(
@@ -4709,6 +4847,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 response: {
                     ...record.response,
                     assistantBlocks: this.cloneAgentConversationAssistantBlocks(record.response.assistantBlocks),
+                    knowledgeRun: record.response.knowledgeRun
+                        ? this.cloneKnowledgeRun(record.response.knowledgeRun)
+                        : undefined,
                     knowledgePoints: record.response.knowledgePoints.map((point) => ({
                         ...point,
                         capabilities: [...point.capabilities],
@@ -5071,6 +5212,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 response: {
                     ...record.response,
                     assistantBlocks: this.cloneAgentConversationAssistantBlocks(record.response.assistantBlocks),
+                    knowledgeRun: record.response.knowledgeRun
+                        ? this.cloneKnowledgeRun(record.response.knowledgeRun)
+                        : undefined,
                     knowledgePoints: Array.isArray(record.response.knowledgePoints)
                         ? record.response.knowledgePoints.map((point) => ({
                             ...point,
@@ -7793,6 +7937,314 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         });
     }
 
+    private cloneArtifactPayload<T extends Record<string, unknown>>(payload: T): T {
+        return JSON.parse(JSON.stringify(payload || {})) as T;
+    }
+
+    private normalizeKnowledgeRunReviewCards(value: unknown): KnowledgeRunReviewCard[] {
+        const cards = Array.isArray(value) ? value : [];
+        return cards
+            .filter((card): card is Record<string, unknown> => Boolean(card && typeof card === 'object'))
+            .map((card) => ({
+                cardId: String(card.cardId || '').trim(),
+                sourceClaimId: String(card.sourceClaimId || '').trim(),
+                atomId: isNonEmptyString(card.atomId) ? String(card.atomId).trim() : undefined,
+                suggestedActionKind: isNonEmptyString(card.suggestedActionKind)
+                    ? card.suggestedActionKind as LearningActionKind
+                    : undefined,
+                prompt: String(card.prompt || '').trim(),
+                expectedAnswer: String(card.expectedAnswer || '').trim(),
+                evidenceRefs: Array.isArray(card.evidenceRefs)
+                    ? card.evidenceRefs.map((item) => String(item || '').trim()).filter(Boolean)
+                    : [],
+                nextReviewAt: String(card.nextReviewAt || '').trim(),
+            }))
+            .filter((card) => isNonEmptyString(card.cardId));
+    }
+
+    private buildKnowledgeRunReviewState(
+        reviewCards: KnowledgeRunReviewCard[],
+        consumedCardIdsRaw: unknown,
+        completedAtRaw: unknown,
+        fallbackCompletedAt: string | null = null
+    ): KnowledgeRunReviewState {
+        const validCardIds = new Set(reviewCards.map((card) => card.cardId));
+        const consumedCardIds = Array.isArray(consumedCardIdsRaw)
+            ? Array.from(new Set(
+                consumedCardIdsRaw
+                    .map((value) => String(value || '').trim())
+                    .filter((value) => validCardIds.has(value))
+            ))
+            : [];
+        const completedReviewCardCount = consumedCardIds.length;
+        const remainingReviewCardCount = Math.max(0, reviewCards.length - completedReviewCardCount);
+        const completedAt = remainingReviewCardCount <= 0
+            ? (
+                isNonEmptyString(completedAtRaw)
+                    ? String(completedAtRaw).trim()
+                    : (fallbackCompletedAt || null)
+            )
+            : null;
+        return {
+            consumedCardIds,
+            completedReviewCardCount,
+            remainingReviewCardCount,
+            completedAt,
+        };
+    }
+
+    private updateKnowledgeRunSummaryReviewProgress(
+        knowledgeRun: KnowledgeRun,
+        reviewState: KnowledgeRunReviewState
+    ): KnowledgeRun {
+        return {
+            ...knowledgeRun,
+            reviewState,
+            summary: {
+                ...knowledgeRun.summary,
+                reviewCardCount: knowledgeRun.reviewCards.length,
+                completedReviewCardCount: reviewState.completedReviewCardCount,
+                remainingReviewCardCount: reviewState.remainingReviewCardCount,
+            },
+        };
+    }
+
+    private buildFlashcardBatchArtifactSummary(
+        reviewCards: KnowledgeRunReviewCard[],
+        reviewState: KnowledgeRunReviewState
+    ): string {
+        return `Prepared ${reviewCards.length} review card(s); ${reviewState.completedReviewCardCount} completed and ${reviewState.remainingReviewCardCount} remaining.`;
+    }
+
+    private resolveRelatedKnowledgeRunArtifact(
+        flashcardArtifact: WorkflowArtifactRecord,
+        runId: string
+    ): WorkflowArtifactRecord | null {
+        if (!isNonEmptyString(runId)) {
+            return null;
+        }
+        const candidateArtifacts = flashcardArtifact.sessionId
+            ? this.workflowArtifactStore.listBySession(flashcardArtifact.sessionId)
+            : flashcardArtifact.workspaceId
+                ? this.workflowArtifactStore.listByWorkspace(flashcardArtifact.workspaceId, flashcardArtifact.userId)
+                : [];
+        return candidateArtifacts.find((artifact) => {
+            if (artifact.kind !== 'knowledge_run') {
+                return false;
+            }
+            const payload = artifact.payload as Record<string, unknown>;
+            const knowledgeRunRecord = payload.knowledgeRun && typeof payload.knowledgeRun === 'object'
+                ? payload.knowledgeRun as Record<string, unknown>
+                : null;
+            return knowledgeRunRecord !== null && String(knowledgeRunRecord.runId || '').trim() === runId;
+        }) || null;
+    }
+
+    public async executeWorkflowArtifactReviewFollowUp(
+        request: WorkflowArtifactReviewFollowUpRequest
+    ): Promise<WorkflowArtifactReviewFollowUpResponse> {
+        await this.ensureHydrated();
+        const userId = String(request.userId || '').trim();
+        if (!userId) {
+            throw new Error('WorkflowArtifactReviewFollowUpAPI requires a non-empty userId.');
+        }
+        const artifactId = String(request.artifactId || '').trim();
+        const cardId = String(request.cardId || '').trim();
+        if (!artifactId || !cardId) {
+            throw new Error('WorkflowArtifactReviewFollowUpAPI requires non-empty artifactId and cardId.');
+        }
+        const artifact = this.workflowArtifactStore.getArtifactById(artifactId);
+        if (!artifact) {
+            throw new Error(`Workflow artifact "${artifactId}" was not found.`);
+        }
+        if (artifact.kind !== 'flashcard_batch') {
+            throw new Error(`Workflow artifact "${artifactId}" is not a flashcard batch.`);
+        }
+        if (artifact.userId && artifact.userId !== userId) {
+            throw new Error(`Workflow artifact "${artifactId}" does not belong to user "${userId}".`);
+        }
+        const artifactPayload = this.cloneArtifactPayload(artifact.payload || {});
+        const reviewCards = this.normalizeKnowledgeRunReviewCards(artifactPayload.reviewCards);
+        const targetCard = reviewCards.find((card) => card.cardId === cardId);
+        if (!targetCard) {
+            throw new Error(`Workflow artifact "${artifactId}" does not contain review card "${cardId}".`);
+        }
+        const currentReviewState = this.buildKnowledgeRunReviewState(
+            reviewCards,
+            (artifactPayload.reviewState as Record<string, unknown> | undefined)?.consumedCardIds,
+            (artifactPayload.reviewState as Record<string, unknown> | undefined)?.completedAt,
+        );
+        if (currentReviewState.consumedCardIds.includes(cardId)) {
+            throw new Error(`Workflow artifact review card "${cardId}" has already been consumed.`);
+        }
+
+        const actionAtomId = isNonEmptyString(request.action?.atomId)
+            ? String(request.action?.atomId).trim()
+            : String(targetCard.atomId || '').trim();
+        if (!actionAtomId || !this.activeAtomIds.has(actionAtomId)) {
+            throw new Error(`Workflow artifact review card "${cardId}" does not resolve to an active atom.`);
+        }
+        const actionKind = request.action?.kind || targetCard.suggestedActionKind || 'review';
+        const studySessionAction = await this.executeStudySessionAction({
+            userId,
+            sessionId: isNonEmptyString(request.sessionId)
+                ? request.sessionId.trim()
+                : (artifact.sessionId || undefined),
+            action: {
+                atomId: actionAtomId,
+                kind: actionKind,
+                source: request.action?.source || 'flashcard_batch',
+                prompt: isNonEmptyString(request.action?.prompt) ? request.action?.prompt : targetCard.prompt,
+                answer: isNonEmptyString(request.action?.answer) ? request.action?.answer : undefined,
+            },
+            outcome: request.outcome,
+            errorTag: request.errorTag,
+            autoAnalyzeAnswer: request.autoAnalyzeAnswer,
+            autoUpdateMasteryFromAnswer: request.autoUpdateMasteryFromAnswer,
+            executedAt: request.executedAt,
+            persistMemory: request.persistMemory,
+            memoryLayer: request.memoryLayer,
+            tutorAdapterId: request.tutorAdapterId,
+            tutorProviderName: request.tutorProviderName,
+            tutorProviderMode: request.tutorProviderMode,
+            autoPromoteMemory: request.autoPromoteMemory,
+            promoteMemoryTargetLayer: request.promoteMemoryTargetLayer,
+            promoteMemoryMinConfidence: request.promoteMemoryMinConfidence,
+            promoteMemoryRemoveFromSource: request.promoteMemoryRemoveFromSource,
+        });
+
+        const updatedReviewState = this.buildKnowledgeRunReviewState(
+            reviewCards,
+            [...currentReviewState.consumedCardIds, cardId],
+            currentReviewState.completedAt,
+            studySessionAction.executedAt
+        );
+        const archivedArtifact = updatedReviewState.remainingReviewCardCount <= 0;
+        const updatedArtifact = this.workflowArtifactStore.updateArtifact(artifactId, (current) => ({
+            ...current,
+            status: archivedArtifact ? 'archived' : current.status,
+            updatedAt: studySessionAction.executedAt,
+            summary: this.buildFlashcardBatchArtifactSummary(reviewCards, updatedReviewState),
+            payload: {
+                ...this.cloneArtifactPayload(current.payload || {}),
+                runId: String(artifactPayload.runId || '').trim(),
+                reviewCards,
+                evidenceClaims: Array.isArray(artifactPayload.evidenceClaims)
+                    ? artifactPayload.evidenceClaims
+                    : [],
+                reviewState: updatedReviewState,
+            },
+        }));
+        if (!updatedArtifact) {
+            throw new Error(`Workflow artifact "${artifactId}" could not be updated.`);
+        }
+
+        const runId = String(artifactPayload.runId || '').trim();
+        const relatedKnowledgeRunArtifact = this.resolveRelatedKnowledgeRunArtifact(updatedArtifact, runId);
+        const updatedKnowledgeRunArtifact = relatedKnowledgeRunArtifact
+            ? this.workflowArtifactStore.updateArtifact(relatedKnowledgeRunArtifact.artifactId, (current) => {
+                const payload = this.cloneArtifactPayload(current.payload || {});
+                const rawKnowledgeRun = payload.knowledgeRun as KnowledgeRun | undefined;
+                if (!rawKnowledgeRun) {
+                    return current;
+                }
+                const normalizedKnowledgeRunCards = this.normalizeKnowledgeRunReviewCards(rawKnowledgeRun.reviewCards);
+                const knowledgeRunReviewState = this.buildKnowledgeRunReviewState(
+                    normalizedKnowledgeRunCards,
+                    [...updatedReviewState.consumedCardIds],
+                    updatedReviewState.completedAt,
+                    studySessionAction.executedAt
+                );
+                const updatedKnowledgeRun = this.updateKnowledgeRunSummaryReviewProgress(
+                    {
+                        ...rawKnowledgeRun,
+                        reviewCards: normalizedKnowledgeRunCards,
+                    },
+                    knowledgeRunReviewState
+                );
+                return {
+                    ...current,
+                    status: archivedArtifact ? 'archived' : current.status,
+                    updatedAt: studySessionAction.executedAt,
+                    summary: `Generated ${updatedKnowledgeRun.summary.claimCount} evidence claim(s); ${updatedKnowledgeRun.summary.completedReviewCardCount} review card(s) completed and ${updatedKnowledgeRun.summary.remainingReviewCardCount} remaining.`,
+                    payload: {
+                        ...payload,
+                        knowledgeRun: updatedKnowledgeRun,
+                    },
+                };
+            })
+            : null;
+
+        await this.persistIfNeeded();
+
+        return {
+            artifact: updatedArtifact,
+            relatedKnowledgeRunArtifact: updatedKnowledgeRunArtifact,
+            studySessionAction,
+            consumedCardId: cardId,
+            completedReviewCardCount: updatedReviewState.completedReviewCardCount,
+            remainingReviewCardCount: updatedReviewState.remainingReviewCardCount,
+            archivedArtifact,
+        };
+    }
+
+    public async queryWorkflowArtifacts(request: WorkflowArtifactQueryRequest = {}): Promise<WorkflowArtifactQueryResponse> {
+        await this.ensureHydrated();
+        const generatedAt = this.resolveTimestamp(undefined);
+        const workspaceId = isNonEmptyString(request.workspaceId) ? request.workspaceId.trim().toLowerCase() : null;
+        const sessionId = isNonEmptyString(request.sessionId) ? request.sessionId.trim() : null;
+        const userId = isNonEmptyString(request.userId) ? request.userId.trim() : null;
+        const artifactId = isNonEmptyString(request.artifactId) ? request.artifactId.trim() : null;
+        const runId = isNonEmptyString(request.runId) ? request.runId.trim() : null;
+        const limit = clamp(Math.floor(Number(request.limit) || 12), 1, 100);
+        const artifactKinds = Array.isArray(request.artifactKinds)
+            ? request.artifactKinds
+                .map((kind) => String(kind || '').trim())
+                .filter(Boolean)
+            : [];
+
+        let artifacts = workspaceId
+            ? this.workflowArtifactStore.listByWorkspace(workspaceId, userId)
+            : sessionId
+                ? this.workflowArtifactStore.listBySession(sessionId)
+                : this.workflowArtifactStore.listAll();
+
+        if (!workspaceId && sessionId && userId) {
+            artifacts = artifacts.filter((artifact) => artifact.userId === userId);
+        }
+        if (!workspaceId && !sessionId && userId) {
+            artifacts = artifacts.filter((artifact) => artifact.userId === userId);
+        }
+        if (artifactId) {
+            artifacts = artifacts.filter((artifact) => artifact.artifactId === artifactId);
+        }
+        if (runId) {
+            artifacts = artifacts.filter((artifact) => this.resolveWorkflowArtifactRunId(artifact) === runId);
+        }
+        if (artifactKinds.length > 0) {
+            const allowedKinds = new Set(artifactKinds);
+            artifacts = artifacts.filter((artifact) => allowedKinds.has(artifact.kind));
+        }
+
+        const normalizedArtifacts = artifacts
+            .slice(0, limit)
+            .map((artifact) => ({
+                ...artifact,
+                sourceResourceIds: [...artifact.sourceResourceIds],
+                sourceProjectionIds: [...artifact.sourceProjectionIds],
+                payload: this.cloneArtifactPayload(artifact.payload || {}),
+            }));
+
+        return {
+            generatedAt,
+            workspaceId,
+            sessionId,
+            userId,
+            returnedArtifacts: normalizedArtifacts.length,
+            artifacts: normalizedArtifacts,
+        };
+    }
+
     private buildWorkspaceIndexSummary(units: IndexUnitRecord[], segments: IndexSegmentRecord[]): IndexLifecycleSummary {
         const states: IndexLifecycleSummary['states'] = {
             pending: 0,
@@ -8067,6 +8519,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             languages: [],
             matchedAtomCount: queryResult.items.length,
         };
+        const activeConversationAtomIds = collectAgentConversationAtomIds(knowledgePoints);
+        const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(activeConversationAtomIds);
+        const effectiveWorkspaceId = traceScope.workspaceId || scopedWorkspace.workspaceId;
+        const effectiveCorpusId = traceScope.corpusId || scopedWorkspace.corpusId;
         const reply = buildScopedConversationReply({
             message,
             knowledgePoints,
@@ -8074,7 +8530,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             recalledMemories,
             memoryActions,
             usedScope: traceScope,
+            generatedAt,
             nextBlockId: () => this.nextId('assistant_block'),
+            nextRunId: () => this.nextId('knowledge_run'),
         });
         const response: AgentConversationResponse = {
             userId,
@@ -8082,6 +8540,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             assistantMessage: reply.answer,
             answer: reply.answer,
             assistantBlocks: reply.assistantBlocks,
+            knowledgeRun: reply.knowledgeRun,
             knowledgePoints,
             citations,
             recalledMemories,
@@ -8113,22 +8572,42 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 },
             },
         };
-        const activeConversationAtomIds = collectAgentConversationAtomIds(knowledgePoints);
+        const knowledgeRunArtifact = this.recordWorkflowArtifact({
+            kind: 'knowledge_run',
+            sessionId,
+            userId,
+            workspaceId: effectiveWorkspaceId,
+            corpusId: effectiveCorpusId,
+            title: `Knowledge run: ${String(message || 'local knowledge').slice(0, 64)}`,
+            sourceAtomIds: activeConversationAtomIds,
+            summary: `Generated ${reply.knowledgeRun.summary.claimCount} evidence claim(s) and ${reply.knowledgeRun.summary.reviewCardCount} review card(s) with status ${reply.knowledgeRun.status}.`,
+            payload: {
+                knowledgeRun: reply.knowledgeRun,
+                citations,
+                recalledMemories,
+                memoryActions,
+            },
+            recordedAt: generatedAt,
+        });
+        response.assistantBlocks = this.attachKnowledgeRunArtifactIdToBlocks(
+            response.assistantBlocks,
+            knowledgeRunArtifact.artifactId
+        );
         this.upsertConversationSessionState({
             sessionId,
             userId,
             mode: 'grounded_conversation',
-            workspaceId: traceScope.workspaceId,
-            corpusId: traceScope.corpusId,
+            workspaceId: effectiveWorkspaceId,
+            corpusId: effectiveCorpusId,
             activeResourceIds: this.resolveSourceResourceIdsForAtomIds(activeConversationAtomIds),
             activeProjectionIds: this.resolveSourceProjectionIdsForAtomIds(activeConversationAtomIds),
             topK,
             queryBackend: String(request.scope && queryResult.trace.modeWeights.vector ? 'local_vector' : '').trim() || null,
             persistMemory: request.persistMemory !== false,
             memoryNamespace: namespace,
-            exportProfileId: traceScope.workspaceId
-                ? this.workspaceRegistry.listActiveWorkspaces().find((workspace) => workspace.workspaceId === traceScope.workspaceId)?.exportProfileId || null
-                : null,
+            exportProfileId: effectiveWorkspaceId
+                ? this.workspaceRegistry.listActiveWorkspaces().find((workspace) => workspace.workspaceId === effectiveWorkspaceId)?.exportProfileId || null
+                : scopedWorkspace.exportProfileId,
             panelState: {
                 lastGroundedAnswerAt: generatedAt,
                 returnedKnowledgePoints: knowledgePoints.length,
@@ -8150,12 +8629,31 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             },
             response,
         });
+        if (reply.knowledgeRun.reviewCards.length > 0) {
+            this.recordWorkflowArtifact({
+                kind: 'flashcard_batch',
+                sessionId,
+                userId,
+                workspaceId: effectiveWorkspaceId,
+                corpusId: effectiveCorpusId,
+                title: `Knowledge run review cards: ${String(message || 'local knowledge').slice(0, 64)}`,
+                sourceAtomIds: activeConversationAtomIds,
+                summary: `Prepared ${reply.knowledgeRun.reviewCards.length} review card(s) from ${reply.knowledgeRun.summary.verifiedClaimCount + reply.knowledgeRun.summary.weakClaimCount} evidenced claim(s).`,
+                payload: {
+                    runId: reply.knowledgeRun.runId,
+                    reviewCards: reply.knowledgeRun.reviewCards,
+                    evidenceClaims: reply.knowledgeRun.evidenceClaims,
+                    reviewState: reply.knowledgeRun.reviewState,
+                },
+                recordedAt: generatedAt,
+            });
+        }
         this.recordWorkflowArtifact({
             kind: 'research_report',
             sessionId,
             userId,
-            workspaceId: traceScope.workspaceId,
-            corpusId: traceScope.corpusId,
+            workspaceId: effectiveWorkspaceId,
+            corpusId: effectiveCorpusId,
             title: `Grounded conversation: ${String(message || 'local knowledge').slice(0, 64)}`,
             sourceAtomIds: knowledgePoints.map((point) => point.atomId),
             summary: reply.answer,
@@ -8163,6 +8661,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 citations,
                 recalledMemories,
                 memoryActions,
+                knowledgeRun: reply.knowledgeRun,
             },
             recordedAt: generatedAt,
         });

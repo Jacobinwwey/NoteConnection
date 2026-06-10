@@ -2,6 +2,23 @@
 
 ## English Document
 
+### 2026-06-10 Knowledge Workspace Runtime Walkthrough
+
+1. The user selects or inherits a scoped workspace/corpus target.
+2. `agent_workspace.js` sends the conversation request with `activeTarget` and `scope`.
+3. `KnowledgeLearningPlatform.agentConversation()` resolves scoped retrieval, grouped knowledge points, citations, memory actions, and a durable `knowledgeRun`.
+4. `conversationComposer.ts` organizes the grounded reply into structured blocks while preserving legacy `assistantMessage`.
+5. The frontend renders the reply and presents grouped file-first knowledge hits.
+6. Source markdown can be opened in the graph-focus pane, where matched spans are highlighted in-place.
+7. Durable workflow artifacts such as `flashcard_batch` and `knowledge_run` can be queried and followed up through dedicated runtime endpoints.
+
+### What This Means Now
+
+- Structured grounded conversation is operational.
+- Graph focus is already a reader-aligned evidence surface.
+- Durable artifact-backed review loops now exist in the runtime.
+- The current DAG-backed learning substrate is real, but answer planning still lacks a dedicated graph-conditioned context layer.
+
 ### Runtime Walkthrough (Current)
 
 This addendum documents the current Bridge-first runtime flow after migration progress:

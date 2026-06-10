@@ -2,6 +2,17 @@
 
 ## 中文文档
 
+### 2026-06-10 知识工作区与 DAG TODO 重新分类
+
+- [x] 已将 2026-06-10 的知识工作区 / DAG 主线对齐结果落盘到 `docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md`。
+- [x] 已将结构化 grounded conversation、按文档聚合的 knowledge point、durable `flashcard_batch` / `knowledge_run` artifact，以及 workflow-artifact review follow-up 重新标记为当前代码已落地基线。
+- [x] 已将现有 DAG 学习底座重新标记为“已在代码中真实存在”，而不再只是后续意图：`KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query 与 prerequisite 驱动学习流都已落地。
+- [~] 当前用户可见回答区仍应视为部分完成：后端/运行时表面已经领先于产品表面，主回答区仍需继续收缩为单一 targeted answer。
+- [~] 左侧 knowledge-hit 交互仍应视为部分完成：已经是 file-first，但还未完全收敛为 right-pane-first 阅读模型。
+- [ ] 需要在 retrieval 与 answer synthesis 之间补一个 graph-conditioned context-assembly layer，让当前 DAG 成为一等 answer-planning substrate。
+- [ ] 继续缩减 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js`、`src/frontend/workspace_panes.js` 的所有权压力。
+- [ ] 当本切片状态变化时，继续同步根目录与 `docs/en|zh` 的 README、TODO、task、implementation plan、walkthrough、Interface、dashboard 与 TEST_REPORT 文档。
+
 ### 2026-06-06 主线架构 TODO 重新分类
 
 - [x] 已将 2026-06-06 双语代码 / 方案对比落盘到 `docs/solutions/architecture-progress-alignment-2026-06-06.md`。

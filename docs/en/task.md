@@ -2,6 +2,24 @@
 
 ## English Document
 
+### 2026-06-10 Active Knowledge Workspace and DAG Task Sync
+
+- [x] The current codebase has been re-audited against the earlier lightweight-RAG, agent-workspace, and mainline architecture plans.
+- [x] The reconciliation now has a dedicated source-of-truth note at `docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md`.
+- [x] Structured grounded conversation, grouped knowledge points, durable `flashcard_batch` / `knowledge_run` artifacts, workflow-artifact review follow-up, and graph-focus source rendering are all code-backed in the current branch.
+- [x] The current DAG-backed learning substrate is confirmed in code: `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, and prerequisite-driven learning flows already exist.
+- [~] The visible answer area still needs contraction so users see the targeted answer first and supporting blocks move to secondary surfaces.
+- [~] Left-side knowledge hits are file-first, but still need to converge on a right-pane-first reading model.
+- [ ] Add a graph-conditioned context-assembly layer between retrieval and answer synthesis so the current DAG becomes a first-class answer-planning substrate.
+- [ ] Continue ownership reduction in `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/agent_workspace.js`, and `src/frontend/workspace_panes.js`.
+
+### Current Acceptance Targets
+
+1. All active tracker docs point to the same 2026-06-10 Knowledge Workspace and DAG alignment note.
+2. The documented current state distinguishes implemented code-backed baselines from unfinished product-surface behavior.
+3. The current branch is verified, promoted to `main`, pushed, and the worktree is clean afterward.
+4. Backward compatibility remains explicit: legacy `assistantMessage` and current public runtime APIs are unchanged.
+
 ### 2026-06-06 Active Task Sync
 
 - [x] Work continues directly on `main` for this P1 continuation slice; remote sync/push status is tracked separately from local implementation progress.

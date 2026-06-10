@@ -2,6 +2,19 @@
 
 > Status sync note (2026-05-10): unresolved-goal cross-doc baseline is tracked in [Open Goal Audit (2026-05-10)](../open_goal_audit_2026-05-10.md).
 
+### Knowledge Workspace and DAG Alignment Refresh (2026-06-10)
+
+- [x] `npm.cmd exec -- tsc --noEmit`
+  - PASS
+- [x] `node --check src/frontend/agent_workspace.js`
+  - PASS
+- [x] `node --check src/frontend/workspace_panes.js`
+  - PASS
+- [x] `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
+  - PASS (`10` suites, `155` tests)
+
+This refresh confirms that the current branch state behind the 2026-06-10 Knowledge Workspace and DAG alignment note is internally consistent before promotion to `main`.
+
 ### Architecture / Phase Truth Snapshot (2026-05-13)
 
 - [x] `node node_modules/jest/bin/jest.js src/agent_workspace.contract.parity.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.runtime.behavior.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`

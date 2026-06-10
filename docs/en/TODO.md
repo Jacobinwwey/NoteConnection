@@ -2,6 +2,17 @@
 
 ## English Document
 
+### 2026-06-10 Knowledge Workspace and DAG TODO Reclassification
+
+- [x] Land the 2026-06-10 Knowledge Workspace and DAG alignment note in `docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md`.
+- [x] Reclassify structured grounded conversation, grouped knowledge points, durable `flashcard_batch` / `knowledge_run` artifacts, and workflow-artifact review follow-up as code-backed current-state baselines.
+- [x] Reclassify the existing DAG-backed learning substrate as implemented reality rather than future intent: `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, and prerequisite-driven learning flows already exist in code.
+- [~] Treat the current visible answer area as partially complete: the backend/runtime surface is ahead of the product surface, and the main answer area still needs contraction toward a single targeted answer.
+- [~] Treat left-side knowledge-hit interaction as partially complete: it is file-first, but still not fully converged on a right-pane-first reading model.
+- [ ] Add a graph-conditioned context-assembly layer between retrieval and answer synthesis so the current DAG becomes a first-class answer-planning substrate.
+- [ ] Continue reducing ownership pressure in `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/agent_workspace.js`, and `src/frontend/workspace_panes.js`.
+- [ ] Keep root/docs bilingual README, TODO, task, implementation plan, walkthrough, interface, dashboard, and test-report docs aligned whenever this slice changes.
+
 ### 2026-06-06 Mainline Architecture TODO Reclassification
 
 - [x] Land the bilingual 2026-06-06 code-vs-plan comparison in `docs/solutions/architecture-progress-alignment-2026-06-06.md`.

@@ -35,9 +35,12 @@ import type {
     LearningQualitySnapshotResponse,
     TutorActionRequest,
     TutorActionResponse,
+    WorkflowArtifactReviewFollowUpRequest,
+    WorkflowArtifactReviewFollowUpResponse,
     KnowledgeSystemState,
 } from './types';
 import type { WorkspaceExportBundle, WorkspaceExportBundleRequest } from '../export/types';
+import type { WorkflowArtifactRecord } from '../workflows/types';
 
 export interface KnowledgeIngestAPI {
     ingestKnowledge(request: KnowledgeIngestRequest): Promise<KnowledgeIngestResponse>;
@@ -69,6 +72,12 @@ export interface StudySessionHistoryAPI {
 
 export interface StudySessionActionAPI {
     executeStudySessionAction(request: StudySessionActionExecutionRequest): Promise<StudySessionActionExecutionResponse>;
+}
+
+export interface WorkflowArtifactReviewFollowUpAPI {
+    executeWorkflowArtifactReviewFollowUp(
+        request: WorkflowArtifactReviewFollowUpRequest
+    ): Promise<WorkflowArtifactReviewFollowUpResponse>;
 }
 
 export interface StudySessionPlanExecutionAPI {
@@ -116,6 +125,25 @@ export interface WorkspaceExportBundleAPI {
     buildWorkspaceExportBundle(request: WorkspaceExportBundleRequest): Promise<WorkspaceExportBundle>;
 }
 
+export interface WorkflowArtifactQueryRequest {
+    workspaceId?: string;
+    sessionId?: string;
+    userId?: string;
+    artifactId?: string;
+    runId?: string;
+    artifactKinds?: string[];
+    limit?: number;
+}
+
+export interface WorkflowArtifactQueryResponse {
+    generatedAt: string;
+    workspaceId: string | null;
+    sessionId: string | null;
+    userId: string | null;
+    returnedArtifacts: number;
+    artifacts: WorkflowArtifactRecord[];
+}
+
 export interface KnowledgeLearningPlatformAPI extends
     KnowledgeIngestAPI,
     KnowledgeQueryAPI,
@@ -125,6 +153,7 @@ export interface KnowledgeLearningPlatformAPI extends
     StudySessionAPI,
     StudySessionHistoryAPI,
     StudySessionActionAPI,
+    WorkflowArtifactReviewFollowUpAPI,
     StudySessionPlanExecutionAPI,
     TutorActionAPI,
     MemoryPolicyAPI,
@@ -135,4 +164,5 @@ export interface KnowledgeLearningPlatformAPI extends
     IngestGuardrailAPI,
     KnowledgeRuntimeStateAPI,
     WorkspaceExportBundleAPI {
+    queryWorkflowArtifacts?(request: WorkflowArtifactQueryRequest): Promise<WorkflowArtifactQueryResponse>;
 }

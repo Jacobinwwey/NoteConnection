@@ -1,6 +1,9 @@
 import type { RouteEntry, ServerContext } from './types';
 import { CrashLogger } from '../backend/utils/CrashLogger';
-import { normalizeKnowledgeQueryRequestPayload } from '../learning/requestNormalization';
+import {
+    normalizeKnowledgeQueryRequestPayload,
+    normalizeWorkflowArtifactReviewFollowUpRequestPayload,
+} from '../learning/requestNormalization';
 
 export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
     const {
@@ -219,6 +222,31 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
                     });
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'GET /api/knowledge/session/history'); }
+            },
+        },
+        {
+            method: 'GET',
+            path: api('/workflow-artifacts'),
+            handler: async (req, res) => {
+                try {
+                    const params = parseQuery(req);
+                    const artifactKinds = String(params.get('artifactKinds') || '').trim()
+                        ? String(params.get('artifactKinds') || '')
+                            .split(',')
+                            .map((value) => String(value || '').trim())
+                            .filter(Boolean)
+                        : undefined;
+                    const result = await knowledgeLearningPlatform.queryWorkflowArtifacts?.({
+                        workspaceId: String(params.get('workspaceId') || '').trim() || undefined,
+                        sessionId: String(params.get('sessionId') || '').trim() || undefined,
+                        userId: String(params.get('userId') || '').trim() || undefined,
+                        artifactId: String(params.get('artifactId') || '').trim() || undefined,
+                        runId: String(params.get('runId') || '').trim() || undefined,
+                        artifactKinds,
+                        limit: Number(params.get('limit')) || 12,
+                    });
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'GET /api/knowledge/workflow-artifacts'); }
             },
         },
         {
@@ -522,6 +550,19 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
                     const result = await knowledgeLearningPlatform.executeStudySessionPlan(JSON.parse(body));
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'POST /api/knowledge/session/execute'); }
+            },
+        },
+        {
+            method: 'POST',
+            path: api('/workflow-artifacts/review-follow-up'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await knowledgeLearningPlatform.executeWorkflowArtifactReviewFollowUp(
+                        normalizeWorkflowArtifactReviewFollowUpRequestPayload(JSON.parse(body))
+                    );
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'POST /api/knowledge/workflow-artifacts/review-follow-up'); }
             },
         },
         {

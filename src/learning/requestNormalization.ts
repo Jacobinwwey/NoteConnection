@@ -2,6 +2,7 @@ import type {
     AgentConversationRequest,
     KnowledgeCorpusScope,
     KnowledgeQueryRequest,
+    WorkflowArtifactReviewFollowUpRequest,
 } from './types';
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
@@ -113,5 +114,114 @@ export function normalizeAgentConversationRequestPayload(payload: unknown): Agen
         persistMemory: readFirstPresentValue(record, ['persistMemory', 'persist_memory']) !== false,
         memoryNamespace: readFirstNonEmptyString(record, ['memoryNamespace', 'memory_namespace']),
         scope: normalizeKnowledgeCorpusScopePayload(record),
+    };
+}
+
+function normalizeBooleanFlagOrUndefined(value: unknown): boolean | undefined {
+    if (typeof value === 'boolean') {
+        return value;
+    }
+    const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+    if (!normalized) {
+        return undefined;
+    }
+    if (normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on') {
+        return true;
+    }
+    if (normalized === 'false' || normalized === '0' || normalized === 'no' || normalized === 'off') {
+        return false;
+    }
+    return undefined;
+}
+
+function normalizeMemoryLayerValue(value: unknown): WorkflowArtifactReviewFollowUpRequest['memoryLayer'] {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'session') {
+        return 'session';
+    }
+    if (normalized === 'unit') {
+        return 'unit';
+    }
+    if (normalized === 'long_term' || normalized === 'long-term' || normalized === 'longterm') {
+        return 'long_term';
+    }
+    return undefined;
+}
+
+export function normalizeWorkflowArtifactReviewFollowUpRequestPayload(
+    payload: unknown
+): WorkflowArtifactReviewFollowUpRequest {
+    const record = isObjectRecord(payload) ? payload : {};
+    const actionRecord = isObjectRecord(record.action) ? record.action : {};
+    const actionSource = readFirstNonEmptyString(actionRecord, ['source', 'actionSource'])
+        || readFirstNonEmptyString(record, ['source', 'actionSource']);
+    const actionKind = readFirstNonEmptyString(actionRecord, ['kind', 'learningActionKind', 'actionKind'])
+        || readFirstNonEmptyString(record, ['kind', 'learningActionKind', 'actionKind']);
+    const outcome = readFirstNonEmptyString(record, ['outcome']);
+
+    return {
+        userId: String(readFirstPresentValue(record, ['userId', 'user_id', 'learnerId']) || '').trim(),
+        sessionId: readFirstNonEmptyString(record, ['sessionId', 'session_id']),
+        artifactId: readFirstNonEmptyString(record, ['artifactId', 'artifact_id']),
+        cardId: readFirstNonEmptyString(record, ['cardId', 'card_id']),
+        action: {
+            atomId: readFirstNonEmptyString(actionRecord, ['atomId', 'atom_id'])
+                || readFirstNonEmptyString(record, ['atomId', 'atom_id']),
+            kind: actionKind
+                ? actionKind as NonNullable<WorkflowArtifactReviewFollowUpRequest['action']>['kind']
+                : undefined,
+            source: (actionSource || 'flashcard_batch') as NonNullable<WorkflowArtifactReviewFollowUpRequest['action']>['source'],
+            prompt: readFirstNonEmptyString(actionRecord, ['prompt'])
+                || readFirstNonEmptyString(record, ['prompt']),
+            answer: readFirstNonEmptyString(actionRecord, ['answer'])
+                || readFirstNonEmptyString(record, ['answer']),
+        },
+        outcome: outcome
+            ? outcome as WorkflowArtifactReviewFollowUpRequest['outcome']
+            : undefined,
+        errorTag: readFirstNonEmptyString(record, ['errorTag', 'mistakeTag', 'misconceptionTag']),
+        autoAnalyzeAnswer: normalizeBooleanFlagOrUndefined(readFirstPresentValue(record, ['autoAnalyzeAnswer', 'analyzeAnswer'])),
+        autoUpdateMasteryFromAnswer: normalizeBooleanFlagOrUndefined(readFirstPresentValue(record, [
+            'autoUpdateMasteryFromAnswer',
+            'updateMasteryFromAnswer',
+            'inferMasteryFromAnswer',
+        ])),
+        executedAt: readFirstNonEmptyString(record, ['executedAt', 'timestamp', 'now']),
+        persistMemory: normalizeBooleanFlagOrUndefined(readFirstPresentValue(record, ['persistMemory', 'persist', 'persist_memory'])),
+        memoryLayer: normalizeMemoryLayerValue(readFirstPresentValue(record, ['memoryLayer', 'layer'])),
+        tutorAdapterId: readFirstNonEmptyString(record, ['tutorAdapterId', 'adapterId']),
+        tutorProviderName: readFirstNonEmptyString(record, ['tutorProviderName', 'providerName']),
+        tutorProviderMode: readFirstNonEmptyString(record, ['tutorProviderMode', 'providerMode']),
+        autoPromoteMemory: normalizeBooleanFlagOrUndefined(readFirstPresentValue(record, [
+            'autoPromoteMemory',
+            'promoteMemory',
+            'autoPromote',
+            'promote_memory',
+        ])),
+        promoteMemoryTargetLayer: normalizeMemoryLayerValue(readFirstPresentValue(record, [
+            'promoteMemoryTargetLayer',
+            'promoteTargetLayer',
+            'targetLayer',
+            'toLayer',
+        ])),
+        promoteMemoryMinConfidence: Number.isFinite(Number(readFirstPresentValue(record, [
+            'promoteMemoryMinConfidence',
+            'promoteMinConfidence',
+            'minPromotionConfidence',
+            'minConfidence',
+        ])))
+            ? Number(readFirstPresentValue(record, [
+                'promoteMemoryMinConfidence',
+                'promoteMinConfidence',
+                'minPromotionConfidence',
+                'minConfidence',
+            ]))
+            : undefined,
+        promoteMemoryRemoveFromSource: normalizeBooleanFlagOrUndefined(readFirstPresentValue(record, [
+            'promoteMemoryRemoveFromSource',
+            'promoteRemoveFromSource',
+            'removeFromSource',
+            'remove_source',
+        ])),
     };
 }

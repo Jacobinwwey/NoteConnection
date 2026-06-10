@@ -2,6 +2,19 @@
 
 > 状态同步说明（2026-05-10）：跨文档未完成目标基线统一见 [Open Goal Audit (2026-05-10)](../open_goal_audit_2026-05-10.md)。
 
+### 知识工作区与 DAG 对齐刷新（2026-06-10）
+
+- [x] `npm.cmd exec -- tsc --noEmit`
+  - 通过
+- [x] `node --check src/frontend/agent_workspace.js`
+  - 通过
+- [x] `node --check src/frontend/workspace_panes.js`
+  - 通过
+- [x] `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
+  - 通过（`10` 个 suites，`155` 项测试）
+
+本次刷新确认：2026-06-10 的知识工作区 / DAG 对齐说明所对应的当前分支状态，在推进到 `main` 前已达到内部自洽。
+
 ### 架构 / 阶段真实状态快照（2026-05-13）
 
 - [x] `node node_modules/jest/bin/jest.js src/agent_workspace.contract.parity.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.runtime.behavior.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
