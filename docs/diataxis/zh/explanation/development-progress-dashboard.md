@@ -17,7 +17,9 @@
 - workflow-artifact review follow-up 已进入运行时表面；
 - graph focus 已能渲染原始 markdown 并高亮 matched span；
 - 独立 evidence pane 现已承接 grounding inspection 以及 durable `knowledge_run` / `flashcard_batch` 检查；
-- grouped conversation knowledge point 现已保留 relation-path 与 temporal-validity 信号，composer 也开始把这些 DAG 信号写进结构化 explanation / next actions。
+- grouped conversation knowledge point 现已保留 relation-path 与 temporal-validity 信号；
+- composer 现在会显式构建 `graphContext`；
+- 该 `graphContext` 现在也会沿着 conversation trace、snapshot persistence 与 workspace export 一起传播。
 
 但当前产品面仍未完全达到目标行为：
 
@@ -36,12 +38,12 @@
 | 主回答区收缩为单一 targeted answer | `agent_workspace.js` 现在会保留完整 conversation result 到 runtime state，但主聊天面仅渲染用户面的回答块（`structured_answer`、`main_markdown`、`html_artifact`）。 | 当前切片已实现 |
 | 主命中列表不暴露开发者导向 evidence / action | `workspace_panes.js` 已不再在左侧命中列表中渲染 inline preview 或可见 typed capability button；这些流程现在会路由到 graph focus 或专门的 evidence pane。 | 当前切片已实现 |
 | durable evidence / claim inspector | `workspace_panes.js` 现已提供专门的 evidence pane，用于承接 grounding metadata、`knowledge_run`、`knowledge_run_history`、`knowledge_run_compare` 与 `flashcard_batch`；`agent_workspace.js` 也已把 API 状态条接成 grounding inspection 入口。 | 当前切片已实现 |
-| DAG-native answer planning | `AgentConversationKnowledgePoint` 现已保留 grouped `relationPath`、`relationKinds`、`relationPathAtomIds` 与 `temporalValidity`，`conversationComposer.ts` 也已在 overview / explanation / next actions 中消费这些信号。 | 当前切片已部分实现 |
+| DAG-native answer planning | `AgentConversationKnowledgePoint` 现已保留 grouped `relationPath`、`relationKinds`、`relationPathAtomIds` 与 `temporalValidity`；`conversationComposer.ts` 现已显式构建 `graphContext`；`KnowledgeLearningPlatform.ts` 与 `WorkspaceExportBundle.ts` 也已在 trace / persistence / export 中保留它。 | 当前切片已部分实现 |
 
 从这里出发的即时推进方向：
 
-1. 把当前 DAG-aware 对话切片继续扩展成专门的 graph-conditioned context-assembly layer，而不是停留在 grouped relation hint 层。
-2. 在保持新的主回答区与 right-pane-first 主交互契约稳定的前提下，把 evidence pane 继续扩展成更广义的 durable evidence ledger。
+1. 把当前 DAG-aware 对话切片继续扩展成专门的 graph-conditioned context-assembly layer，而不是停留在 grouped relation hint 与薄 `graphContext` 层。
+2. 在保持新的主回答区与 right-pane-first 主交互契约稳定的前提下，把 evidence pane 与 `graphContext` 继续扩展成更广义的 durable evidence ledger / graph explanation surface。
 3. 继续缩减 `src/server.ts`、`KnowledgeLearningPlatform.ts`、`agent_workspace.js`、`workspace_panes.js` 的所有权压力。
 
 当前代码对齐切片的本地验证：
@@ -52,6 +54,7 @@
 - `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/agent_workspace.contract.parity.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- jest src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/export/WorkspaceExportBundle.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts --runInBand --no-cache`
 - `npm.cmd run test:agent-workspace:contracts`
 - `npm.cmd run build`
 

@@ -1760,6 +1760,18 @@ describe('KnowledgeLearningPlatform', () => {
                 ? String(structuredBlock.nextActionsMarkdown || '')
                 : ''
         ).toContain('inspect the strongest nodes side by side');
+        expect(response.trace.graphContext).toEqual(expect.objectContaining({
+            anchorTitle: 'Reflection',
+            relationKinds: expect.arrayContaining(['reference']),
+            temporalValidity: expect.objectContaining({
+                allPointsValid: true,
+            }),
+        }));
+        expect((response.trace.graphContext as any).relationSummaries).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                relationKind: 'reference',
+            }),
+        ]));
         expect((response.knowledgePoints[0] as any).relationKinds).toContain('reference');
     });
 

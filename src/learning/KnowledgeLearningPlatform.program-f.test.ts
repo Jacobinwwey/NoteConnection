@@ -100,5 +100,6 @@ describe('KnowledgeLearningPlatform Program F integration', () => {
         expect(bundle.memory.entries.length).toBeGreaterThan(0);
         expect(bundle.memory.entries.some((record) => Boolean(record.entry.memoryType))).toBe(true);
         expect(bundle.memory.auditRecords.length).toBeGreaterThan(0);
+        expect(bundle.runtime.conversationTurns.some((turn) => Boolean((turn as any).response.trace.graphContext))).toBe(true);
     });
 });

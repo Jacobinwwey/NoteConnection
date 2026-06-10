@@ -290,6 +290,29 @@ describe('conversationComposer', () => {
             expect.arrayContaining(['structured_answer', 'system_notice', 'citations', 'knowledge_actions', 'knowledge_run_summary'])
         );
         const structuredBlock = reply.assistantBlocks.find((block) => block.type === 'structured_answer');
+        expect(reply.graphContext).not.toBeNull();
+        const graphContext = reply.graphContext as NonNullable<typeof reply.graphContext>;
+        expect(graphContext).toEqual(expect.objectContaining({
+            anchorAtomId: 'atom_a',
+            anchorTitle: 'Reflection',
+            relationKinds: expect.arrayContaining(['prerequisite', 'contrast']),
+            supportingAtomIds: expect.arrayContaining(['atom_prerequisite', 'atom_contrast']),
+            temporalValidity: expect.objectContaining({
+                allPointsValid: false,
+                warningReasons: ['temporal_edge_expired'],
+                invalidKnowledgePointTitles: ['Reflection'],
+            }),
+        }));
+        expect(graphContext.relationSummaries).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                relationKind: 'prerequisite',
+                targetAtomIds: ['atom_prerequisite'],
+            }),
+            expect.objectContaining({
+                relationKind: 'contrast',
+                targetAtomIds: ['atom_contrast'],
+            }),
+        ]));
         expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').toContain('Grounded by 1 knowledge point');
         expect(structuredBlock && 'overviewMarkdown' in structuredBlock ? structuredBlock.overviewMarkdown : '').toContain('## Answer Context');
         expect(structuredBlock && 'overviewMarkdown' in structuredBlock ? structuredBlock.overviewMarkdown : '').toContain('Graph-supported relations');

@@ -1064,6 +1064,31 @@ export interface AgentConversationKnowledgePoint {
     capabilities: unknown[];
 }
 
+export interface AgentConversationGraphRelationSummary {
+    relationKind: RelationKind;
+    edgeIds: string[];
+    targetAtomIds: string[];
+    averageConfidence: number;
+}
+
+export interface AgentConversationGraphTemporalContext {
+    checkedAt: string;
+    allPointsValid: boolean;
+    warningReasons: string[];
+    invalidKnowledgePointTitles: string[];
+}
+
+export interface AgentConversationGraphContext {
+    anchorAtomId: string;
+    anchorTitle: string;
+    anchorDocumentId?: string;
+    supportingAtomIds: string[];
+    supportingTitles: string[];
+    relationKinds: RelationKind[];
+    relationSummaries: AgentConversationGraphRelationSummary[];
+    temporalValidity: AgentConversationGraphTemporalContext;
+}
+
 export interface AgentConversationMemoryRecord {
     memoryId: string;
     namespace: string;
@@ -1106,6 +1131,7 @@ export interface AgentConversationTrace {
         titleLikeQueries: string[];
         titleHitDocumentIds: string[];
     };
+    graphContext?: AgentConversationGraphContext;
 }
 
 export interface AgentConversationRequest {

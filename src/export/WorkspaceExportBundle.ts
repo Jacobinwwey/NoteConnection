@@ -184,6 +184,13 @@ function sortAndCloneConversationTurns(records: AgentConversationTurnRecord[]): 
                         ...record.response.trace.retrieval,
                         retrievalModes: [...record.response.trace.retrieval.retrievalModes],
                         modeWeights: { ...record.response.trace.retrieval.modeWeights },
+                        planner: record.response.trace.retrieval.planner
+                            ? {
+                                ...record.response.trace.retrieval.planner,
+                                titleLikeQueries: [...(record.response.trace.retrieval.planner.titleLikeQueries || [])],
+                                titleHitDocumentIds: [...(record.response.trace.retrieval.planner.titleHitDocumentIds || [])],
+                            }
+                            : undefined,
                         scope: record.response.trace.retrieval.scope ? {
                             ...record.response.trace.retrieval.scope,
                             documentIds: [...record.response.trace.retrieval.scope.documentIds],
@@ -198,7 +205,66 @@ function sortAndCloneConversationTurns(records: AgentConversationTurnRecord[]): 
                         atomIds: [...record.response.trace.usedScope.atomIds],
                         sourcePathPrefixes: [...record.response.trace.usedScope.sourcePathPrefixes],
                         languages: [...record.response.trace.usedScope.languages],
+                        readiness: record.response.trace.usedScope.readiness
+                            ? { ...record.response.trace.usedScope.readiness }
+                            : undefined,
+                        missDiagnostics: record.response.trace.usedScope.missDiagnostics
+                            ? {
+                                ...record.response.trace.usedScope.missDiagnostics,
+                                titleLikeQueries: [...(record.response.trace.usedScope.missDiagnostics.titleLikeQueries || [])],
+                                titleHitDocumentIds: [...(record.response.trace.usedScope.missDiagnostics.titleHitDocumentIds || [])],
+                            }
+                            : undefined,
                     },
+                    workspaceReadiness: record.response.trace.workspaceReadiness
+                        ? { ...record.response.trace.workspaceReadiness }
+                        : undefined,
+                    missDiagnostics: record.response.trace.missDiagnostics
+                        ? {
+                            ...record.response.trace.missDiagnostics,
+                            titleLikeQueries: [...(record.response.trace.missDiagnostics.titleLikeQueries || [])],
+                            titleHitDocumentIds: [...(record.response.trace.missDiagnostics.titleHitDocumentIds || [])],
+                        }
+                        : undefined,
+                    planner: record.response.trace.planner
+                        ? {
+                            ...record.response.trace.planner,
+                            titleLikeQueries: [...(record.response.trace.planner.titleLikeQueries || [])],
+                            titleHitDocumentIds: [...(record.response.trace.planner.titleHitDocumentIds || [])],
+                        }
+                        : undefined,
+                    graphContext: (record.response.trace as any).graphContext
+                        ? {
+                            ...(record.response.trace as any).graphContext,
+                            supportingAtomIds: Array.isArray((record.response.trace as any).graphContext.supportingAtomIds)
+                                ? [...(record.response.trace as any).graphContext.supportingAtomIds]
+                                : [],
+                            supportingTitles: Array.isArray((record.response.trace as any).graphContext.supportingTitles)
+                                ? [...(record.response.trace as any).graphContext.supportingTitles]
+                                : [],
+                            relationKinds: Array.isArray((record.response.trace as any).graphContext.relationKinds)
+                                ? [...(record.response.trace as any).graphContext.relationKinds]
+                                : [],
+                            relationSummaries: Array.isArray((record.response.trace as any).graphContext.relationSummaries)
+                                ? (record.response.trace as any).graphContext.relationSummaries.map((summary: any) => ({
+                                    ...summary,
+                                    edgeIds: Array.isArray(summary.edgeIds) ? [...summary.edgeIds] : [],
+                                    targetAtomIds: Array.isArray(summary.targetAtomIds) ? [...summary.targetAtomIds] : [],
+                                }))
+                                : [],
+                            temporalValidity: (record.response.trace as any).graphContext.temporalValidity
+                                ? {
+                                    ...(record.response.trace as any).graphContext.temporalValidity,
+                                    warningReasons: Array.isArray((record.response.trace as any).graphContext.temporalValidity.warningReasons)
+                                        ? [...(record.response.trace as any).graphContext.temporalValidity.warningReasons]
+                                        : [],
+                                    invalidKnowledgePointTitles: Array.isArray((record.response.trace as any).graphContext.temporalValidity.invalidKnowledgePointTitles)
+                                        ? [...(record.response.trace as any).graphContext.temporalValidity.invalidKnowledgePointTitles]
+                                        : [],
+                                }
+                                : undefined,
+                        }
+                        : undefined,
                 },
             },
         }));

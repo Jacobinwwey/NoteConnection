@@ -127,6 +127,7 @@ describe('KnowledgeLearningPlatform persistence', () => {
         expect(snapshotJson.conversationInvocations.length).toBeGreaterThan(0);
         expect(snapshotJson.workflowArtifacts.artifacts.some((artifact: { kind?: string }) => artifact.kind === 'knowledge_run')).toBe(true);
         expect(snapshotJson.workflowArtifacts.artifacts.some((artifact: { kind?: string }) => artifact.kind === 'flashcard_batch')).toBe(true);
+        expect(snapshotJson.conversationTurns[0]?.response?.trace?.graphContext).toBeDefined();
 
         nowIso = '2026-03-31T11:00:00.000Z';
         const platformB = new KnowledgeLearningPlatform({
@@ -168,6 +169,9 @@ describe('KnowledgeLearningPlatform persistence', () => {
         expect(restoredConversation.trace.usedScope.readiness).toEqual(expect.objectContaining({
             status: 'ready',
         }));
+        expect(restoredConversation.trace.graphContext).toEqual(expect.objectContaining({
+            anchorAtomId: atomId,
+        }));
 
         const restoredBundle = await platformB.buildWorkspaceExportBundle({
             workspaceId: 'persist',
@@ -181,6 +185,7 @@ describe('KnowledgeLearningPlatform persistence', () => {
         expect(restoredBundle.runtime.workflowArtifacts.some((artifact) => artifact.kind === 'knowledge_run')).toBe(true);
         expect(restoredBundle.runtime.workflowArtifacts.some((artifact) => artifact.kind === 'flashcard_batch')).toBe(true);
         expect(restoredBundle.memory.auditRecords.length).toBeGreaterThan(0);
+        expect(restoredBundle.runtime.conversationTurns.some((turn) => Boolean((turn as any).response.trace.graphContext))).toBe(true);
 
         const storeDiagnostics = await platformB.getStoreDiagnostics();
         expect(storeDiagnostics.storeType).toBe('file');

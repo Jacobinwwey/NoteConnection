@@ -35,6 +35,7 @@ Primary code evidence reread for this alignment:
 - `src/learning/types.ts`
 - `src/routes/knowledge.ts`
 - `src/workflows/WorkflowArtifactStore.ts`
+- `src/export/WorkspaceExportBundle.ts`
 - `src/core/PathBridge.ts`
 
 Planning and progress context reread for comparison:
@@ -48,10 +49,10 @@ Planning and progress context reread for comparison:
 Current implementation pressure points measured from the workspace:
 
 - `src/server.ts`: 15,850 lines
-- `src/learning/KnowledgeLearningPlatform.ts`: 10,657 lines
+- `src/learning/KnowledgeLearningPlatform.ts`: 10,730 lines
 - `src/frontend/agent_workspace.js`: 3,995 lines
 - `src/frontend/workspace_panes.js`: 4,182 lines
-- `src/learning/conversationComposer.ts`: 851 lines
+- `src/learning/conversationComposer.ts`: 989 lines
 
 ### Current Code-Backed State
 
@@ -168,18 +169,25 @@ What the current slice now adds:
   - `relationKinds`
   - `relationPathAtomIds`
   - `temporalValidity`
+- `AgentConversationTrace` can now carry a first-class `graphContext` object with:
+  - anchor atom/document identity
+  - grouped relation summaries
+  - supporting atom ids/titles
+  - temporal warning aggregation
 - `mergeAgentConversationKnowledgePoints()` now preserves grouped DAG evidence instead of dropping it at the conversation boundary.
 - `buildScopedConversationReply()` now uses that grouped DAG evidence to:
   - summarize graph-supported relation kinds in `overviewMarkdown`,
   - surface graph-support sentences in `explanationMarkdown`,
   - add graph-aware next-action guidance when prerequisite chains or temporal validity warnings are present.
+- `KnowledgeLearningPlatform.ts` now persists and restores that `graphContext` across conversation turn history and snapshot reload.
+- `WorkspaceExportBundle.ts` now carries `graphContext` through workspace export/runtime turn serialization.
 
 What is still missing:
 
 - a dedicated graph-conditioned context assembly layer between retrieval and answer synthesis,
-- richer use of predecessor/successor chains beyond top-level grouped relation hints,
+- richer use of predecessor/successor chains beyond grouped relation summaries,
 - answer-time use of temporal replacement / supersession beyond warning text,
-- a first-class graph explanation object that survives into the frontend as a durable inspection surface.
+- frontend/runtime use of the persisted `graphContext` as a durable graph explanation surface rather than markdown-only guidance.
 
 Progress call:
 
@@ -196,7 +204,7 @@ Progress call:
 | Durable learning/review loop | Implemented through workflow artifacts, knowledge runs, review follow-up, flashcard batch persistence, and a pane-backed evidence inspector for durable artifact inspection | Implemented current slice | Still lacks a broader durable evidence ledger and challenge-loop product surface |
 | File-first scoped knowledge hits | Implemented and now routed directly into graph focus from file-only entries | Implemented current slice | Graph-focus and evidence-pane cohesion now matters more than entry-point cleanup |
 | Hide developer-heavy evidence from the main user-facing answer | Implemented in the primary chat and hit-list surfaces, with grounding and durable artifact inspection moved into a dedicated evidence pane | Implemented current slice | Secondary surfaces still share large frontend owners |
-| Use current DAG as a first-class answer-planning substrate | `AgentConversationKnowledgePoint` now carries grouped `relationPath` / `relationKinds` / `relationPathAtomIds` / `temporalValidity`, and `conversationComposer.ts` now uses those signals in overview, explanation, and next-action guidance | Implemented partial slice | Missing a dedicated graph-conditioned context assembly layer and richer graph explanation object |
+| Use current DAG as a first-class answer-planning substrate | `AgentConversationKnowledgePoint` now carries grouped `relationPath` / `relationKinds` / `relationPathAtomIds` / `temporalValidity`; `conversationComposer.ts` now materializes an explicit `graphContext`; `KnowledgeLearningPlatform.ts` and `WorkspaceExportBundle.ts` now preserve it through trace/persistence/export surfaces | Implemented partial slice | Missing a dedicated graph-conditioned context assembly layer and richer downstream use of the graph context |
 | Ownership reduction in runtime and frontend hosts | Not complete | Behind target | `server.ts`, `KnowledgeLearningPlatform.ts`, `agent_workspace.js`, and `workspace_panes.js` still own too much |
 
 ### Current Risks
@@ -219,7 +227,7 @@ The project already has DAG-shaped data and learning-path logic.
 That can create the false impression that the conversation system is already graph-native.
 
 It is no longer completely absent from answer planning, but it is still not graph-native in the full intended sense.
-Today the graph now influences grouped explanation and next-step guidance.
+Today the graph now influences grouped explanation, next-step guidance, and a persisted/exported graph context object.
 It still does not control answer organization strongly enough to be treated as complete.
 
 #### 3. Ownership concentration risk
@@ -286,13 +294,14 @@ Partially implemented in the current slice.
 Shipped characteristics:
 
 - grouped conversation knowledge points now retain `relationPath`, `relationKinds`, `relationPathAtomIds`, and `temporalValidity`,
-- structured answer overview/explanation/next-actions now use those grouped DAG signals additively.
+- structured answer overview/explanation/next-actions now use those grouped DAG signals additively,
+- the resulting `graphContext` now survives through conversation trace, snapshot persistence, and workspace export.
 
 Remaining requirements:
 
 - consume `relationPath`, `TemporalEdge`, and prerequisite structure explicitly,
 - build anchor/support/path context before final answer synthesis,
-- preserve additive response compatibility while introducing a richer internal context object.
+- preserve additive response compatibility while extending `graphContext` from grouped hints into a richer internal context object.
 
 This remains the correct layer for “make the current DAG truly help the LLM.”
 
@@ -318,6 +327,7 @@ Verified locally against the current code-backed slice:
 - `npm.cmd run test:agent-workspace:contracts`
 - `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/agent_workspace.contract.parity.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- jest src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/export/WorkspaceExportBundle.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts --runInBand --no-cache`
 - `npm.cmd run build`
 
 These checks validate that the current implementation slice is internally consistent before it is promoted to `main`.
@@ -347,6 +357,7 @@ These checks validate that the current implementation slice is internally consis
 - `src/learning/types.ts`
 - `src/routes/knowledge.ts`
 - `src/workflows/WorkflowArtifactStore.ts`
+- `src/export/WorkspaceExportBundle.ts`
 - `src/core/PathBridge.ts`
 
 本次重新核对的规划与进度文档：
@@ -360,10 +371,10 @@ These checks validate that the current implementation slice is internally consis
 当前工作区测得的实现压力点：
 
 - `src/server.ts`: 15,850 行
-- `src/learning/KnowledgeLearningPlatform.ts`: 10,657 行
+- `src/learning/KnowledgeLearningPlatform.ts`: 10,730 行
 - `src/frontend/agent_workspace.js`: 3,995 行
 - `src/frontend/workspace_panes.js`: 4,182 行
-- `src/learning/conversationComposer.ts`: 851 行
+- `src/learning/conversationComposer.ts`: 989 行
 
 ### 当前已落地的真实代码状态
 
@@ -479,18 +490,25 @@ These checks validate that the current implementation slice is internally consis
   - `relationKinds`
   - `relationPathAtomIds`
   - `temporalValidity`
+- `AgentConversationTrace` 现在也可以携带一等的 `graphContext` 对象，其中包含：
+  - anchor atom/document 身份
+  - 按关系类型分组的 relation summaries
+  - supporting atom ids / titles
+  - temporal warning 聚合结果
 - `mergeAgentConversationKnowledgePoints()` 现在不会在对话边界把这些 DAG 信号丢掉。
 - `buildScopedConversationReply()` 现在会用这些 DAG 信号去：
   - 在 `overviewMarkdown` 中总结图关系类型，
   - 在 `explanationMarkdown` 中补充图支持句子，
   - 在存在 prerequisite 链或 temporal warning 时追加 graph-aware 的 next actions。
+- `KnowledgeLearningPlatform.ts` 现在会在 conversation turn 历史与 snapshot restore 里保留这个 `graphContext`。
+- `WorkspaceExportBundle.ts` 现在也会在 workspace export/runtime turn 序列化里保留这个 `graphContext`。
 
 仍缺少的层：
 
 - retrieval 与 answer synthesis 之间的专门 graph-conditioned context assembly，
 - 对 predecessor / successor 链路更丰富的 explanation policy，
 - 回答阶段对 temporal replacement / supersession 的更强利用，
-- 能稳定流入前端的 graph explanation object。
+- 把当前已持久化/可导出的 `graphContext` 真正变成前端可消费的 durable graph explanation surface。
 
 进度判断：
 
@@ -507,7 +525,7 @@ These checks validate that the current implementation slice is internally consis
 | durable learning / review loop | 已通过 workflow artifact、knowledge run、review-follow-up、flashcard batch 与 pane-backed evidence inspector 落地 | 当前切片已实现 | 仍缺更广义的 durable evidence ledger 与 challenge-loop 产品面 |
 | file-first scoped knowledge hits | 已实现，且现已通过文件入口直接路由到 graph focus | 当前切片已实现 | graph focus 与 evidence pane 的职责边界仍需持续保持清晰 |
 | 主回答区不暴露开发者导向 evidence 细节 | 已在主对话面与主命中列表中实现，grounding 与 durable artifact 检查也已迁入专门的 evidence pane | 当前切片已实现 | 次级 surface 仍与大型前端宿主共享较多所有权 |
-| 让现有 DAG 成为真正的一等回答规划底座 | `AgentConversationKnowledgePoint` 现已保留 grouped `relationPath` / `relationKinds` / `relationPathAtomIds` / `temporalValidity`，`conversationComposer.ts` 也已在 overview / explanation / next-actions 中消费这些信号 | 当前切片已部分实现 | 仍缺专门的 graph-conditioned context assembly 层与更丰富的 graph explanation object |
+| 让现有 DAG 成为真正的一等回答规划底座 | `AgentConversationKnowledgePoint` 现已保留 grouped `relationPath` / `relationKinds` / `relationPathAtomIds` / `temporalValidity`，`conversationComposer.ts` 已显式构建 `graphContext`，`KnowledgeLearningPlatform.ts` 与 `WorkspaceExportBundle.ts` 也已在 trace / persistence / export 中保留它 | 当前切片已部分实现 | 仍缺专门的 graph-conditioned context assembly 层与对 `graphContext` 的更丰富下游使用 |
 | 缩减运行时与前端宿主文件所有权压力 | 尚未完成 | 落后于目标 | `server.ts`、`KnowledgeLearningPlatform.ts`、`agent_workspace.js`、`workspace_panes.js` 仍过重 |
 
 ### 当前风险
@@ -535,6 +553,7 @@ These checks validate that the current implementation slice is internally consis
 - grouped explanation，
 - graph-aware 的 next-step guidance，
 - temporal warning 的显式暴露，
+- 持久化/导出的 graph context object，
 
 但它仍没有强力控制 answer organization 到可以视为“完成”的程度。
 
@@ -602,13 +621,14 @@ These checks validate that the current implementation slice is internally consis
 已交付特征：
 
 - grouped conversation knowledge point 现在保留了 `relationPath`、`relationKinds`、`relationPathAtomIds` 与 `temporalValidity`，
-- 结构化回答的 overview / explanation / next-actions 现在会加法式使用这些 DAG 信号。
+- 结构化回答的 overview / explanation / next-actions 现在会加法式使用这些 DAG 信号，
+- 生成出来的 `graphContext` 现在会沿着 trace、snapshot persistence 与 workspace export 一起传播。
 
 剩余要求：
 
 - 显式消费 `relationPath`、`TemporalEdge` 和 prerequisite 结构，
 - 在最终 answer synthesis 前先构建 anchor/support/path context，
-- 在保持 additive response compatibility 的前提下引入更丰富的内部 context object。
+- 在保持 additive response compatibility 的前提下把当前 `graphContext` 扩展成更丰富的内部 context object。
 
 这仍然是“让当前 DAG 真正帮助 LLM”的正确落点。
 
@@ -634,6 +654,7 @@ These checks validate that the current implementation slice is internally consis
 - `npm.cmd run test:agent-workspace:contracts`
 - `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/agent_workspace.contract.parity.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- jest src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/export/WorkspaceExportBundle.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts --runInBand --no-cache`
 - `npm.cmd run build`
 
 这些检查确认：当前实现切片在推进到 `main` 前已经达到内部自洽状态。

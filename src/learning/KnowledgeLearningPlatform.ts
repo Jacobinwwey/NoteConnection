@@ -3463,6 +3463,86 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
     }
 
+    private cloneAgentConversationGraphContext(
+        value: AgentConversationResponse['trace']['graphContext']
+    ): AgentConversationResponse['trace']['graphContext'] {
+        if (!value || typeof value !== 'object') {
+            return undefined;
+        }
+        return {
+            anchorAtomId: String(value.anchorAtomId || '').trim(),
+            anchorTitle: String(value.anchorTitle || '').trim(),
+            anchorDocumentId: typeof value.anchorDocumentId === 'string' ? value.anchorDocumentId : undefined,
+            supportingAtomIds: Array.isArray(value.supportingAtomIds)
+                ? value.supportingAtomIds.map((atomId) => String(atomId || '').trim()).filter(Boolean)
+                : [],
+            supportingTitles: Array.isArray(value.supportingTitles)
+                ? value.supportingTitles.map((title) => String(title || '').trim()).filter(Boolean)
+                : [],
+            relationKinds: Array.isArray(value.relationKinds)
+                ? value.relationKinds.slice()
+                : [],
+            relationSummaries: Array.isArray(value.relationSummaries)
+                ? value.relationSummaries.map((summary) => ({
+                    relationKind: summary.relationKind,
+                    edgeIds: Array.isArray(summary.edgeIds) ? summary.edgeIds.map((edgeId) => String(edgeId || '').trim()).filter(Boolean) : [],
+                    targetAtomIds: Array.isArray(summary.targetAtomIds) ? summary.targetAtomIds.map((atomId) => String(atomId || '').trim()).filter(Boolean) : [],
+                    averageConfidence: Number.isFinite(Number(summary.averageConfidence)) ? Number(summary.averageConfidence) : 0,
+                }))
+                : [],
+            temporalValidity: value.temporalValidity && typeof value.temporalValidity === 'object'
+                ? {
+                    checkedAt: String(value.temporalValidity.checkedAt || '').trim(),
+                    allPointsValid: value.temporalValidity.allPointsValid !== false,
+                    warningReasons: Array.isArray(value.temporalValidity.warningReasons)
+                        ? value.temporalValidity.warningReasons.map((reason) => String(reason || '').trim()).filter(Boolean)
+                        : [],
+                    invalidKnowledgePointTitles: Array.isArray(value.temporalValidity.invalidKnowledgePointTitles)
+                        ? value.temporalValidity.invalidKnowledgePointTitles.map((title) => String(title || '').trim()).filter(Boolean)
+                        : [],
+                }
+                : {
+                    checkedAt: '',
+                    allPointsValid: true,
+                    warningReasons: [],
+                    invalidKnowledgePointTitles: [],
+                },
+        };
+    }
+
+    private cloneAgentConversationKnowledgePoint(point: AgentConversationKnowledgePoint): AgentConversationKnowledgePoint {
+        return {
+            ...point,
+            atomIds: Array.isArray(point.atomIds) ? [...point.atomIds] : point.atomIds,
+            capabilities: Array.isArray(point.capabilities) ? [...point.capabilities] : [],
+            citation: point.citation ? { ...point.citation } : null,
+            citations: Array.isArray(point.citations)
+                ? point.citations.map((citation) => ({ ...citation }))
+                : point.citations,
+            matchedSpans: Array.isArray(point.matchedSpans)
+                ? point.matchedSpans.map((span) => ({
+                    ...span,
+                    citation: span.citation ? { ...span.citation } : null,
+                }))
+                : point.matchedSpans,
+            relationPath: Array.isArray(point.relationPath)
+                ? point.relationPath.map((edge) => ({ ...edge }))
+                : point.relationPath,
+            relationPathAtomIds: Array.isArray(point.relationPathAtomIds)
+                ? [...point.relationPathAtomIds]
+                : point.relationPathAtomIds,
+            relationKinds: Array.isArray(point.relationKinds)
+                ? point.relationKinds.slice()
+                : point.relationKinds,
+            temporalValidity: point.temporalValidity
+                ? {
+                    ...point.temporalValidity,
+                    reasons: Array.isArray(point.temporalValidity.reasons) ? [...point.temporalValidity.reasons] : [],
+                }
+                : point.temporalValidity,
+        };
+    }
+
     private attachKnowledgeRunArtifactIdToBlocks(
         blocks: AgentConversationAssistantBlock[] | undefined,
         artifactId: string
@@ -4850,11 +4930,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     knowledgeRun: record.response.knowledgeRun
                         ? this.cloneKnowledgeRun(record.response.knowledgeRun)
                         : undefined,
-                    knowledgePoints: record.response.knowledgePoints.map((point) => ({
-                        ...point,
-                        capabilities: [...point.capabilities],
-                        citation: point.citation ? { ...point.citation } : null,
-                    })),
+                    knowledgePoints: record.response.knowledgePoints.map((point) => this.cloneAgentConversationKnowledgePoint(point)),
                     citations: record.response.citations.map((citation) => ({ ...citation })),
                     recalledMemories: record.response.recalledMemories.map((memory) => ({
                         ...memory,
@@ -4918,6 +4994,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                                 titleHitDocumentIds: [...(record.response.trace.planner.titleHitDocumentIds || [])],
                             }
                             : undefined,
+                        graphContext: this.cloneAgentConversationGraphContext(record.response.trace.graphContext),
                     },
                 },
             })),
@@ -5216,11 +5293,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                         ? this.cloneKnowledgeRun(record.response.knowledgeRun)
                         : undefined,
                     knowledgePoints: Array.isArray(record.response.knowledgePoints)
-                        ? record.response.knowledgePoints.map((point) => ({
-                            ...point,
-                            capabilities: Array.isArray(point.capabilities) ? [...point.capabilities] : [],
-                            citation: point.citation ? { ...point.citation } : null,
-                        }))
+                        ? record.response.knowledgePoints.map((point) => this.cloneAgentConversationKnowledgePoint(point))
                         : [],
                     citations: Array.isArray(record.response.citations)
                         ? record.response.citations.map((citation) => ({ ...citation }))
@@ -5302,6 +5375,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                                 titleHitDocumentIds: [...(record.response.trace.planner.titleHitDocumentIds || [])],
                             }
                             : undefined,
+                        graphContext: this.cloneAgentConversationGraphContext(record.response.trace?.graphContext),
                     },
                 },
             });
@@ -8570,6 +8644,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     titleLikeQueries: queryResult.trace.planner?.titleLikeQueries || [],
                     titleHitDocumentIds: queryResult.trace.planner?.titleHitDocumentIds || [],
                 },
+                graphContext: reply.graphContext || undefined,
             },
         };
         const knowledgeRunArtifact = this.recordWorkflowArtifact({

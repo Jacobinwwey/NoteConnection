@@ -1,5 +1,7 @@
 import type {
     AgentConversationAssistantBlock,
+    AgentConversationGraphContext,
+    AgentConversationGraphRelationSummary,
     AgentConversationKnowledgePoint,
     AgentConversationMemoryAction,
     AgentConversationMemoryRecord,
@@ -30,6 +32,103 @@ export type ScopedConversationReplyParams = {
     nextBlockId: () => string;
     nextRunId?: () => string;
 };
+
+function buildAgentConversationGraphContext(
+    knowledgePoints: AgentConversationKnowledgePoint[]
+): AgentConversationGraphContext | null {
+    const anchorPoint = knowledgePoints[0];
+    if (!anchorPoint) {
+        return null;
+    }
+
+    const relationPath = Array.isArray(anchorPoint.relationPath) ? anchorPoint.relationPath : [];
+    const relationKinds = Array.from(new Set(
+        relationPath
+            .map((edge) => edge.relationKind)
+            .filter(Boolean)
+    )) as RelationKind[];
+    const relationSummaryMap = new Map<RelationKind, {
+        edgeIds: Set<string>;
+        targetAtomIds: Set<string>;
+        confidenceValues: number[];
+    }>();
+    const anchorAtomId = String(anchorPoint.atomId || '').trim();
+
+    relationPath.forEach((edge) => {
+        if (!edge || !edge.relationKind) {
+            return;
+        }
+        const summary = relationSummaryMap.get(edge.relationKind) || {
+            edgeIds: new Set<string>(),
+            targetAtomIds: new Set<string>(),
+            confidenceValues: [],
+        };
+        if (edge.edgeId) {
+            summary.edgeIds.add(String(edge.edgeId));
+        }
+        const targetAtomIds = [
+            String(edge.sourceAtomId || '').trim(),
+            String(edge.targetAtomId || '').trim(),
+        ].filter(Boolean).filter((atomId) => atomId !== anchorAtomId);
+        targetAtomIds.forEach((atomId) => summary.targetAtomIds.add(atomId));
+        if (Number.isFinite(Number(edge.confidence))) {
+            summary.confidenceValues.push(Number(edge.confidence));
+        }
+        relationSummaryMap.set(edge.relationKind, summary);
+    });
+
+    const relationSummaries: AgentConversationGraphRelationSummary[] = Array.from(relationSummaryMap.entries()).map(([relationKind, summary]) => ({
+        relationKind,
+        edgeIds: Array.from(summary.edgeIds.values()),
+        targetAtomIds: Array.from(summary.targetAtomIds.values()),
+        averageConfidence: summary.confidenceValues.length > 0
+            ? Number((summary.confidenceValues.reduce((sum, value) => sum + value, 0) / summary.confidenceValues.length).toFixed(4))
+            : 0,
+    }));
+
+    const supportingAtomIds = Array.isArray(anchorPoint.relationPathAtomIds)
+        ? anchorPoint.relationPathAtomIds.map((atomId) => String(atomId || '').trim()).filter(Boolean)
+        : relationSummaries.flatMap((summary) => summary.targetAtomIds);
+    const supportingAtomIdSet = new Set(supportingAtomIds);
+    const supportingTitles = knowledgePoints
+        .filter((point, index) => index > 0 || supportingAtomIdSet.has(String(point.atomId || '').trim()))
+        .map((point) => normalizeWhitespace(String(point.title || '').trim()))
+        .filter(Boolean);
+
+    const temporalCheckedAt = knowledgePoints
+        .map((point) => String(point.temporalValidity && point.temporalValidity.checkedAt || '').trim())
+        .filter(Boolean)
+        .sort()
+        .pop() || '';
+    const invalidKnowledgePoints = knowledgePoints.filter((point) => point.temporalValidity && point.temporalValidity.isValid === false);
+    const warningReasons = Array.from(new Set(
+        invalidKnowledgePoints.flatMap((point) => (
+            Array.isArray(point.temporalValidity && point.temporalValidity.reasons)
+                ? point.temporalValidity!.reasons
+                : []
+        ))
+            .map((reason) => String(reason || '').trim())
+            .filter(Boolean)
+    ));
+
+    return {
+        anchorAtomId,
+        anchorTitle: normalizeWhitespace(String(anchorPoint.title || '').trim()) || anchorAtomId,
+        anchorDocumentId: anchorPoint.documentId,
+        supportingAtomIds: Array.from(new Set(supportingAtomIds)),
+        supportingTitles: Array.from(new Set(supportingTitles)),
+        relationKinds,
+        relationSummaries,
+        temporalValidity: {
+            checkedAt: temporalCheckedAt,
+            allPointsValid: invalidKnowledgePoints.length <= 0,
+            warningReasons,
+            invalidKnowledgePointTitles: invalidKnowledgePoints
+                .map((point) => normalizeWhitespace(String(point.title || '').trim()))
+                .filter(Boolean),
+        },
+    };
+}
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -451,7 +550,10 @@ function buildScopedConversationAnswer(params: ScopedConversationReplyParams): s
     ].filter((line) => line !== '').join('\n');
 }
 
-function buildScopedConversationOverviewMarkdown(params: ScopedConversationReplyParams): string {
+function buildScopedConversationOverviewMarkdown(
+    params: ScopedConversationReplyParams,
+    graphContext: AgentConversationGraphContext | null
+): string {
     const strongestPoint = params.knowledgePoints[0];
     const lines = [
         '## Answer Context',
@@ -467,20 +569,23 @@ function buildScopedConversationOverviewMarkdown(params: ScopedConversationReply
         `- Citations returned: **${params.citations.length}**`,
         `- Scoped memories recalled: **${params.recalledMemories.length}**`
     );
-    if (strongestPoint && Array.isArray(strongestPoint.relationKinds) && strongestPoint.relationKinds.length > 0) {
+    if (graphContext && graphContext.relationKinds.length > 0) {
         lines.push(
-            `- Graph-supported relations: **${strongestPoint.relationKinds.join(', ')}**`
+            `- Graph-supported relations: **${graphContext.relationKinds.join(', ')}**`
         );
     }
-    if (strongestPoint && strongestPoint.temporalValidity) {
+    if (graphContext) {
         lines.push(
-            `- Temporal validity: **${strongestPoint.temporalValidity.isValid ? 'valid' : 'warning'}**`
+            `- Temporal validity: **${graphContext.temporalValidity.allPointsValid ? 'valid' : 'warning'}**`
         );
     }
     return lines.join('\n');
 }
 
-function buildScopedConversationExplanationMarkdown(params: ScopedConversationReplyParams): string {
+function buildScopedConversationExplanationMarkdown(
+    params: ScopedConversationReplyParams,
+    graphContext: AgentConversationGraphContext | null
+): string {
     if (params.knowledgePoints.length <= 0) {
         return '## Explanation\n\nThe current scope did not return a strong enough knowledge point to explain the request directly.';
     }
@@ -503,15 +608,15 @@ function buildScopedConversationExplanationMarkdown(params: ScopedConversationRe
     if (summary) {
         explanationLines.push('', summary);
     }
-    if (Array.isArray(strongestPoint.relationKinds) && strongestPoint.relationKinds.length > 0) {
+    if (graphContext && graphContext.relationKinds.length > 0) {
         explanationLines.push(
             '',
-            `Graph support around **${strongestPoint.title}** includes: ${strongestPoint.relationKinds.join(', ')}.`
+            `Graph support around **${graphContext.anchorTitle}** includes: ${graphContext.relationKinds.join(', ')}.`
         );
     }
-    if (strongestPoint.temporalValidity && strongestPoint.temporalValidity.isValid === false) {
-        const reasonSummary = strongestPoint.temporalValidity.reasons.length > 0
-            ? strongestPoint.temporalValidity.reasons.join(', ')
+    if (graphContext && graphContext.temporalValidity.allPointsValid === false) {
+        const reasonSummary = graphContext.temporalValidity.warningReasons.length > 0
+            ? graphContext.temporalValidity.warningReasons.join(', ')
             : 'temporal validity checks reported a warning';
         explanationLines.push(
             '',
@@ -569,7 +674,10 @@ function buildScopedConversationMemoryNotice(params: ScopedConversationReplyPara
     return `${params.recalledMemories.length} scoped memory notes were recalled and merged into the answer context.`;
 }
 
-function buildScopedConversationActionGuideMarkdown(params: ScopedConversationReplyParams): string {
+function buildScopedConversationActionGuideMarkdown(
+    params: ScopedConversationReplyParams,
+    graphContext: AgentConversationGraphContext | null
+): string {
     if (params.knowledgePoints.length <= 0) {
         return '## Next Actions\n\nNo actionable scoped knowledge card is available for this turn.';
     }
@@ -582,12 +690,11 @@ function buildScopedConversationActionGuideMarkdown(params: ScopedConversationRe
         .map((action) => normalizeWhitespace(String(action.reason || '').trim()))
         .filter(Boolean)
         .map((reason) => `- ${reason}`);
-    const strongestPoint = params.knowledgePoints[0];
     const graphActionHints: string[] = [];
-    if (strongestPoint && Array.isArray(strongestPoint.relationKinds) && strongestPoint.relationKinds.includes('prerequisite')) {
+    if (graphContext && graphContext.relationKinds.includes('prerequisite')) {
         graphActionHints.push('- Inspect prerequisite-linked concepts in focus mode before guided learning.');
     }
-    if (strongestPoint && strongestPoint.temporalValidity && strongestPoint.temporalValidity.isValid === false) {
+    if (graphContext && graphContext.temporalValidity.allPointsValid === false) {
         graphActionHints.push('- Validate whether a fresher or superseding note should replace this anchor before promotion.');
     }
     return [
@@ -867,15 +974,17 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
     answer: string;
     assistantBlocks: AgentConversationAssistantBlock[];
     knowledgeRun: KnowledgeRun;
+    graphContext: AgentConversationGraphContext | null;
 } {
     const blocks: AgentConversationAssistantBlock[] = [];
     const answer = buildScopedConversationAnswer(params);
     const knowledgeRun = buildKnowledgeRun(params);
-    const overviewMarkdown = buildScopedConversationOverviewMarkdown(params);
-    const explanationMarkdown = buildScopedConversationExplanationMarkdown(params);
+    const graphContext = buildAgentConversationGraphContext(params.knowledgePoints);
+    const overviewMarkdown = buildScopedConversationOverviewMarkdown(params, graphContext);
+    const explanationMarkdown = buildScopedConversationExplanationMarkdown(params, graphContext);
     const evidenceMarkdown = buildScopedConversationEvidenceMarkdown(params);
     const memoryNotice = buildScopedConversationMemoryNotice(params);
-    const actionGuideMarkdown = buildScopedConversationActionGuideMarkdown(params);
+    const actionGuideMarkdown = buildScopedConversationActionGuideMarkdown(params, graphContext);
 
     blocks.push({
         blockId: params.nextBlockId(),
@@ -923,5 +1032,6 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
         answer,
         assistantBlocks: blocks,
         knowledgeRun,
+        graphContext,
     };
 }
