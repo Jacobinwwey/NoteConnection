@@ -1047,6 +1047,20 @@ export interface AgentConversationKnowledgePoint {
         citation: KnowledgeCitation | null;
     }>;
     matchCount?: number;
+    relationPath?: Array<{
+        edgeId: string;
+        sourceAtomId: string;
+        targetAtomId: string;
+        relationKind: RelationKind;
+        confidence: number;
+    }>;
+    relationPathAtomIds?: string[];
+    relationKinds?: RelationKind[];
+    temporalValidity?: {
+        isValid: boolean;
+        checkedAt: string;
+        reasons: string[];
+    };
     capabilities: unknown[];
 }
 

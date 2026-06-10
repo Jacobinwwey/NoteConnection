@@ -51,7 +51,7 @@ Current implementation pressure points measured from the workspace:
 - `src/learning/KnowledgeLearningPlatform.ts`: 10,657 lines
 - `src/frontend/agent_workspace.js`: 3,995 lines
 - `src/frontend/workspace_panes.js`: 4,182 lines
-- `src/learning/conversationComposer.ts`: 753 lines
+- `src/learning/conversationComposer.ts`: 851 lines
 
 ### Current Code-Backed State
 
@@ -140,7 +140,7 @@ Progress call:
 - The remaining gap is no longer the absence of a secondary owner.
 - The remaining gap is extending this pane-backed inspection model into a broader durable evidence ledger and DAG-aware answer-planning flow.
 
-#### 4. The codebase already contains DAG-capable data, but the answer layer still underuses it
+#### 4. The codebase already contains DAG-capable data, and the answer layer has now started to consume it
 
 This is the most important architectural reconciliation point.
 
@@ -161,17 +161,32 @@ But the current conversation path still mainly behaves like:
 - summarize them into citations and sections,
 - synthesize answer text from the strongest evidence snippet.
 
+What the current slice now adds:
+
+- `AgentConversationKnowledgePoint` can now carry:
+  - `relationPath`
+  - `relationKinds`
+  - `relationPathAtomIds`
+  - `temporalValidity`
+- `mergeAgentConversationKnowledgePoints()` now preserves grouped DAG evidence instead of dropping it at the conversation boundary.
+- `buildScopedConversationReply()` now uses that grouped DAG evidence to:
+  - summarize graph-supported relation kinds in `overviewMarkdown`,
+  - surface graph-support sentences in `explanationMarkdown`,
+  - add graph-aware next-action guidance when prerequisite chains or temporal validity warnings are present.
+
 What is still missing:
 
-- a graph-conditioned context assembly layer between retrieval and answer synthesis,
-- explicit use of predecessor/successor chains in explanation policy,
-- answer-time use of temporal replacement / supersession beyond diagnostics,
-- a first-class graph explanation object that survives into the frontend.
+- a dedicated graph-conditioned context assembly layer between retrieval and answer synthesis,
+- richer use of predecessor/successor chains beyond top-level grouped relation hints,
+- answer-time use of temporal replacement / supersession beyond warning text,
+- a first-class graph explanation object that survives into the frontend as a durable inspection surface.
 
 Progress call:
 
 - The DAG substrate is real.
-- The answer surface is still mostly evidence-grouped text RAG, not DAG-native answer planning.
+- The answer surface is no longer purely evidence-grouped text RAG.
+- It now has a minimal DAG-aware planning slice.
+- It is still not yet fully DAG-native answer planning.
 
 ### Code-vs-Plan Reconciliation
 
@@ -181,7 +196,7 @@ Progress call:
 | Durable learning/review loop | Implemented through workflow artifacts, knowledge runs, review follow-up, flashcard batch persistence, and a pane-backed evidence inspector for durable artifact inspection | Implemented current slice | Still lacks a broader durable evidence ledger and challenge-loop product surface |
 | File-first scoped knowledge hits | Implemented and now routed directly into graph focus from file-only entries | Implemented current slice | Graph-focus and evidence-pane cohesion now matters more than entry-point cleanup |
 | Hide developer-heavy evidence from the main user-facing answer | Implemented in the primary chat and hit-list surfaces, with grounding and durable artifact inspection moved into a dedicated evidence pane | Implemented current slice | Secondary surfaces still share large frontend owners |
-| Use current DAG as a first-class answer-planning substrate | Not fully implemented | Partial | Missing graph-conditioned context assembly layer |
+| Use current DAG as a first-class answer-planning substrate | `AgentConversationKnowledgePoint` now carries grouped `relationPath` / `relationKinds` / `relationPathAtomIds` / `temporalValidity`, and `conversationComposer.ts` now uses those signals in overview, explanation, and next-action guidance | Implemented partial slice | Missing a dedicated graph-conditioned context assembly layer and richer graph explanation object |
 | Ownership reduction in runtime and frontend hosts | Not complete | Behind target | `server.ts`, `KnowledgeLearningPlatform.ts`, `agent_workspace.js`, and `workspace_panes.js` still own too much |
 
 ### Current Risks
@@ -198,14 +213,14 @@ Examples:
 - durable evidence and grounding now have a pane-backed inspection surface,
 - but graph focus, evidence inspection, and future DAG-aware answer-planning can still drift into overlapping owners if the next slice is not explicit.
 
-#### 2. False “graph-native” confidence risk
+#### 2. Halfway graph-native risk
 
 The project already has DAG-shaped data and learning-path logic.
 That can create the false impression that the conversation system is already graph-native.
 
-It is not yet graph-native in the answer-planning sense.
-Today the graph mostly improves retrieval scoring and downstream learning workflows.
-It does not yet control answer organization strongly enough.
+It is no longer completely absent from answer planning, but it is still not graph-native in the full intended sense.
+Today the graph now influences grouped explanation and next-step guidance.
+It still does not control answer organization strongly enough to be treated as complete.
 
 #### 3. Ownership concentration risk
 
@@ -266,15 +281,20 @@ Follow-on requirement:
 
 #### P4: DAG-aware context assembly
 
-Add a dedicated layer between retrieval and answer synthesis.
+Partially implemented in the current slice.
 
-Requirements:
+Shipped characteristics:
+
+- grouped conversation knowledge points now retain `relationPath`, `relationKinds`, `relationPathAtomIds`, and `temporalValidity`,
+- structured answer overview/explanation/next-actions now use those grouped DAG signals additively.
+
+Remaining requirements:
 
 - consume `relationPath`, `TemporalEdge`, and prerequisite structure explicitly,
 - build anchor/support/path context before final answer synthesis,
 - preserve additive response compatibility while introducing a richer internal context object.
 
-This is the correct layer for “make the current DAG truly help the LLM.”
+This remains the correct layer for “make the current DAG truly help the LLM.”
 
 #### P5: Ownership reduction
 
@@ -297,6 +317,7 @@ Verified locally against the current code-backed slice:
 - `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
 - `npm.cmd run test:agent-workspace:contracts`
 - `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/agent_workspace.contract.parity.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- jest src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`
 - `npm.cmd run build`
 
 These checks validate that the current implementation slice is internally consistent before it is promoted to `main`.
@@ -342,7 +363,7 @@ These checks validate that the current implementation slice is internally consis
 - `src/learning/KnowledgeLearningPlatform.ts`: 10,657 行
 - `src/frontend/agent_workspace.js`: 3,995 行
 - `src/frontend/workspace_panes.js`: 4,182 行
-- `src/learning/conversationComposer.ts`: 753 行
+- `src/learning/conversationComposer.ts`: 851 行
 
 ### 当前已落地的真实代码状态
 
@@ -430,7 +451,7 @@ These checks validate that the current implementation slice is internally consis
 - 次级 evidence / claim inspector 已经真实存在，并且以 pane owner 形式落地。
 - 当前剩余缺口不再是“没有二级 owner”，而是要把该 pane-backed inspection 模型继续扩展成更广义的 durable evidence ledger，以及 DAG-aware 的回答规划链路。
 
-#### 4. 现有代码已经有 DAG 结构数据，但回答层仍未充分利用
+#### 4. 现有代码已经有 DAG 结构数据，而且回答层现在已经开始消费这些信号
 
 这是当前最关键的架构对齐点。
 
@@ -451,17 +472,32 @@ These checks validate that the current implementation slice is internally consis
 - 转成 citation 与 section 证据，
 - 再从最强 evidence snippet 里合成回答文本。
 
+当前切片新增的内容是：
+
+- `AgentConversationKnowledgePoint` 现在可以携带：
+  - `relationPath`
+  - `relationKinds`
+  - `relationPathAtomIds`
+  - `temporalValidity`
+- `mergeAgentConversationKnowledgePoints()` 现在不会在对话边界把这些 DAG 信号丢掉。
+- `buildScopedConversationReply()` 现在会用这些 DAG 信号去：
+  - 在 `overviewMarkdown` 中总结图关系类型，
+  - 在 `explanationMarkdown` 中补充图支持句子，
+  - 在存在 prerequisite 链或 temporal warning 时追加 graph-aware 的 next actions。
+
 仍缺少的层：
 
-- retrieval 与 answer synthesis 之间的 graph-conditioned context assembly，
-- explanation policy 对 predecessor / successor 链路的显式消费，
+- retrieval 与 answer synthesis 之间的专门 graph-conditioned context assembly，
+- 对 predecessor / successor 链路更丰富的 explanation policy，
 - 回答阶段对 temporal replacement / supersession 的更强利用，
-- 可持续流入前端的 graph explanation object。
+- 能稳定流入前端的 graph explanation object。
 
 进度判断：
 
 - DAG 底座是真的。
-- 当前回答面仍主要是 evidence-grouped text RAG，而不是 DAG-native answer planning。
+- 当前回答面已经不再是纯 evidence-grouped text RAG。
+- 它已经具备最小的 DAG-aware planning 切片。
+- 但它仍不是完全意义上的 DAG-native answer planning。
 
 ### 代码 / 方案对账结论
 
@@ -471,7 +507,7 @@ These checks validate that the current implementation slice is internally consis
 | durable learning / review loop | 已通过 workflow artifact、knowledge run、review-follow-up、flashcard batch 与 pane-backed evidence inspector 落地 | 当前切片已实现 | 仍缺更广义的 durable evidence ledger 与 challenge-loop 产品面 |
 | file-first scoped knowledge hits | 已实现，且现已通过文件入口直接路由到 graph focus | 当前切片已实现 | graph focus 与 evidence pane 的职责边界仍需持续保持清晰 |
 | 主回答区不暴露开发者导向 evidence 细节 | 已在主对话面与主命中列表中实现，grounding 与 durable artifact 检查也已迁入专门的 evidence pane | 当前切片已实现 | 次级 surface 仍与大型前端宿主共享较多所有权 |
-| 让现有 DAG 成为真正的一等回答规划底座 | 尚未完全实现 | 部分完成 | 缺 graph-conditioned context assembly 层 |
+| 让现有 DAG 成为真正的一等回答规划底座 | `AgentConversationKnowledgePoint` 现已保留 grouped `relationPath` / `relationKinds` / `relationPathAtomIds` / `temporalValidity`，`conversationComposer.ts` 也已在 overview / explanation / next-actions 中消费这些信号 | 当前切片已部分实现 | 仍缺专门的 graph-conditioned context assembly 层与更丰富的 graph explanation object |
 | 缩减运行时与前端宿主文件所有权压力 | 尚未完成 | 落后于目标 | `server.ts`、`KnowledgeLearningPlatform.ts`、`agent_workspace.js`、`workspace_panes.js` 仍过重 |
 
 ### 当前风险
@@ -488,18 +524,19 @@ These checks validate that the current implementation slice is internally consis
 - durable evidence 与 grounding 现在已经有 pane-backed inspection surface，
 - 但如果下一步不显式约束 owner，graph focus、evidence inspection 与未来 DAG-aware answer planning 仍可能重新出现职责重叠。
 
-#### 2. 假性 graph-native 信心风险
+#### 2. 半程 graph-native 风险
 
 项目里已经存在 DAG 结构和 learning-path 逻辑，这很容易让人误以为 conversation 已经 graph-native。
 
-其实还没有。
+现在它已经不再完全缺席于回答规划，但仍没有达到最终目标。
 
-当前图结构更多是在：
+当前图结构现在已经会影响：
 
-- 改善 retrieval scoring，
-- 支撑后续学习路径与 session workflow，
+- grouped explanation，
+- graph-aware 的 next-step guidance，
+- temporal warning 的显式暴露，
 
-而不是强力控制 answer organization。
+但它仍没有强力控制 answer organization 到可以视为“完成”的程度。
 
 #### 3. 所有权集中风险
 
@@ -560,15 +597,20 @@ These checks validate that the current implementation slice is internally consis
 
 #### P4：补图结构上下文装配层
 
-在 retrieval 与 answer synthesis 之间加入 dedicated layer。
+当前切片已部分实现。
 
-要求：
+已交付特征：
+
+- grouped conversation knowledge point 现在保留了 `relationPath`、`relationKinds`、`relationPathAtomIds` 与 `temporalValidity`，
+- 结构化回答的 overview / explanation / next-actions 现在会加法式使用这些 DAG 信号。
+
+剩余要求：
 
 - 显式消费 `relationPath`、`TemporalEdge` 和 prerequisite 结构，
 - 在最终 answer synthesis 前先构建 anchor/support/path context，
 - 在保持 additive response compatibility 的前提下引入更丰富的内部 context object。
 
-这才是“让当前 DAG 真正帮助 LLM”的正确落点。
+这仍然是“让当前 DAG 真正帮助 LLM”的正确落点。
 
 #### P5：继续缩减所有权压力
 
@@ -591,6 +633,7 @@ These checks validate that the current implementation slice is internally consis
 - `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
 - `npm.cmd run test:agent-workspace:contracts`
 - `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/agent_workspace.contract.parity.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- jest src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`
 - `npm.cmd run build`
 
 这些检查确认：当前实现切片在推进到 `main` 前已经达到内部自洽状态。

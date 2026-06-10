@@ -7,6 +7,7 @@ import type {
     KnowledgeCitation,
     KnowledgeQueryItem,
     KnowledgeQueryResolvedScope,
+    RelationKind,
     KnowledgeRun,
     KnowledgeRunEvidenceClaim,
     KnowledgeRunQuality,
@@ -119,6 +120,22 @@ function buildAgentConversationKnowledgePoint(
             },
         ],
         matchCount: 1,
+        relationPath: item.relationPath.map((edge) => ({
+            edgeId: edge.id,
+            sourceAtomId: edge.sourceAtomId,
+            targetAtomId: edge.targetAtomId,
+            relationKind: edge.relationKind,
+            confidence: Number(Number(edge.confidence || 0).toFixed(4)),
+        })),
+        relationPathAtomIds: Array.from(new Set(
+            item.relationPath.flatMap((edge) => [edge.sourceAtomId, edge.targetAtomId])
+        )).filter((atomId) => atomId !== atom.id),
+        relationKinds: Array.from(new Set(item.relationPath.map((edge) => edge.relationKind))),
+        temporalValidity: {
+            isValid: item.temporalValidity.isValid,
+            checkedAt: item.temporalValidity.checkedAt,
+            reasons: [...item.temporalValidity.reasons],
+        },
         capabilities: buildCapabilities(atom.id),
     };
 }
@@ -128,6 +145,11 @@ type KnowledgePointGroup = {
     atomIds: Set<string>;
     citationKeys: Set<string>;
     spanKeys: Set<string>;
+    relationEdgeIds: Set<string>;
+    relationPathAtomIds: Set<string>;
+    relationKinds: Set<RelationKind>;
+    temporalValidityCheckedAt: string;
+    temporalValidityReasons: Set<string>;
 };
 
 export function mergeAgentConversationKnowledgePoints(
@@ -151,11 +173,20 @@ export function mergeAgentConversationKnowledgePoints(
             point.matchedSpans = [];
             point.atomIds = [];
             point.matchCount = 0;
+            point.relationPath = [];
+            point.relationPathAtomIds = [];
+            point.relationKinds = [];
+            point.temporalValidity = undefined;
             group = {
                 point,
                 atomIds: new Set<string>(),
                 citationKeys: new Set<string>(),
                 spanKeys: new Set<string>(),
+                relationEdgeIds: new Set<string>(),
+                relationPathAtomIds: new Set<string>(),
+                relationKinds: new Set<RelationKind>(),
+                temporalValidityCheckedAt: String(item.temporalValidity.checkedAt || ''),
+                temporalValidityReasons: new Set<string>(),
             };
             groups.set(groupKey, group);
         }
@@ -203,6 +234,66 @@ export function mergeAgentConversationKnowledgePoints(
             group.point.matchCount = group.point.matchedSpans.length;
         }
 
+        const relationPath = Array.isArray(item.relationPath) ? item.relationPath : [];
+        relationPath.forEach((edge) => {
+            const edgeId = String(edge && edge.id || '').trim();
+            if (!edgeId) {
+                return;
+            }
+            if (!Array.isArray(group.point.relationPath)) {
+                group.point.relationPath = [];
+            }
+            if (!group.relationEdgeIds.has(edgeId)) {
+                group.relationEdgeIds.add(edgeId);
+                group.point.relationPath.push({
+                    edgeId,
+                    sourceAtomId: String(edge.sourceAtomId || '').trim(),
+                    targetAtomId: String(edge.targetAtomId || '').trim(),
+                    relationKind: edge.relationKind,
+                    confidence: Number(Number(edge.confidence || 0).toFixed(4)),
+                });
+            }
+            [edge.sourceAtomId, edge.targetAtomId]
+                .map((candidateAtomId) => String(candidateAtomId || '').trim())
+                .filter(Boolean)
+                .filter((candidateAtomId) => !group.atomIds.has(candidateAtomId))
+                .forEach((candidateAtomId) => group.relationPathAtomIds.add(candidateAtomId));
+            if (edge.relationKind) {
+                group.relationKinds.add(edge.relationKind);
+            }
+        });
+
+        const temporalValidity = item.temporalValidity && typeof item.temporalValidity === 'object'
+            ? item.temporalValidity
+            : null;
+        if (temporalValidity) {
+            const checkedAt = String(temporalValidity.checkedAt || '').trim();
+            if (checkedAt && checkedAt > group.temporalValidityCheckedAt) {
+                group.temporalValidityCheckedAt = checkedAt;
+            }
+            if (temporalValidity.isValid === false) {
+                group.point.temporalValidity = group.point.temporalValidity || {
+                    isValid: true,
+                    checkedAt: checkedAt,
+                    reasons: [],
+                };
+                group.point.temporalValidity.isValid = false;
+            }
+            if (!group.point.temporalValidity) {
+                group.point.temporalValidity = {
+                    isValid: temporalValidity.isValid !== false,
+                    checkedAt,
+                    reasons: [],
+                };
+            } else if (temporalValidity.isValid === false) {
+                group.point.temporalValidity.isValid = false;
+            }
+            (Array.isArray(temporalValidity.reasons) ? temporalValidity.reasons : [])
+                .map((reason) => String(reason || '').trim())
+                .filter(Boolean)
+                .forEach((reason) => group.temporalValidityReasons.add(reason));
+        }
+
     });
 
     return Array.from(groups.values()).map((group) => {
@@ -215,6 +306,16 @@ export function mergeAgentConversationKnowledgePoints(
             matchedSpans: spans,
             matchCount: spans.length,
             evidenceSnippet: spans[0]?.snippet || group.point.evidenceSnippet,
+            relationPath: Array.isArray(group.point.relationPath) ? group.point.relationPath : [],
+            relationPathAtomIds: Array.from(group.relationPathAtomIds.values()),
+            relationKinds: Array.from(group.relationKinds.values()),
+            temporalValidity: group.point.temporalValidity
+                ? {
+                    isValid: group.point.temporalValidity.isValid !== false,
+                    checkedAt: group.temporalValidityCheckedAt || group.point.temporalValidity.checkedAt,
+                    reasons: Array.from(group.temporalValidityReasons.values()),
+                }
+                : undefined,
         };
     });
 }
@@ -366,6 +467,16 @@ function buildScopedConversationOverviewMarkdown(params: ScopedConversationReply
         `- Citations returned: **${params.citations.length}**`,
         `- Scoped memories recalled: **${params.recalledMemories.length}**`
     );
+    if (strongestPoint && Array.isArray(strongestPoint.relationKinds) && strongestPoint.relationKinds.length > 0) {
+        lines.push(
+            `- Graph-supported relations: **${strongestPoint.relationKinds.join(', ')}**`
+        );
+    }
+    if (strongestPoint && strongestPoint.temporalValidity) {
+        lines.push(
+            `- Temporal validity: **${strongestPoint.temporalValidity.isValid ? 'valid' : 'warning'}**`
+        );
+    }
     return lines.join('\n');
 }
 
@@ -391,6 +502,21 @@ function buildScopedConversationExplanationMarkdown(params: ScopedConversationRe
     const summary = normalizeWhitespace(String(strongestPoint.summary || strongestPoint.evidenceSnippet || '').trim());
     if (summary) {
         explanationLines.push('', summary);
+    }
+    if (Array.isArray(strongestPoint.relationKinds) && strongestPoint.relationKinds.length > 0) {
+        explanationLines.push(
+            '',
+            `Graph support around **${strongestPoint.title}** includes: ${strongestPoint.relationKinds.join(', ')}.`
+        );
+    }
+    if (strongestPoint.temporalValidity && strongestPoint.temporalValidity.isValid === false) {
+        const reasonSummary = strongestPoint.temporalValidity.reasons.length > 0
+            ? strongestPoint.temporalValidity.reasons.join(', ')
+            : 'temporal validity checks reported a warning';
+        explanationLines.push(
+            '',
+            `Temporal validity warning: ${reasonSummary}.`
+        );
     }
     const supportingTitles = params.knowledgePoints
         .slice(1, 3)
@@ -456,6 +582,14 @@ function buildScopedConversationActionGuideMarkdown(params: ScopedConversationRe
         .map((action) => normalizeWhitespace(String(action.reason || '').trim()))
         .filter(Boolean)
         .map((reason) => `- ${reason}`);
+    const strongestPoint = params.knowledgePoints[0];
+    const graphActionHints: string[] = [];
+    if (strongestPoint && Array.isArray(strongestPoint.relationKinds) && strongestPoint.relationKinds.includes('prerequisite')) {
+        graphActionHints.push('- Inspect prerequisite-linked concepts in focus mode before guided learning.');
+    }
+    if (strongestPoint && strongestPoint.temporalValidity && strongestPoint.temporalValidity.isValid === false) {
+        graphActionHints.push('- Validate whether a fresher or superseding note should replace this anchor before promotion.');
+    }
     return [
         '## Next Actions',
         '',
@@ -465,6 +599,7 @@ function buildScopedConversationActionGuideMarkdown(params: ScopedConversationRe
                 ? 'Use the scoped knowledge cards below to move from explanation into concrete guided-learning or focus-mode steps:'
                 : 'Use the scoped knowledge cards below to continue with focus mode or guided learning for the highest-signal nodes:',
         ...topTitles,
+        ...(graphActionHints.length > 0 ? ['', 'Graph-aware follow-through:', ...graphActionHints] : []),
         ...(actionHints.length > 0
             ? ['', 'Suggested follow-through from the current turn:', ...actionHints]
             : []),

@@ -1712,7 +1712,7 @@ describe('KnowledgeLearningPlatform', () => {
                     documentId: 'doc_compare_scope',
                     sourcePath: 'Knowledge_Base/optics/reflection.md',
                     language: 'en',
-                    content: '# Reflection\nReflection and absorption differ in how optical energy is redirected versus dissipated.',
+                    content: '# Reflection\nReflection and absorption differ in how optical energy is redirected versus dissipated.\n\n## Support\nSee [[Transmission]].',
                 },
                 {
                     documentId: 'doc_compare_scope_2',
@@ -1741,15 +1741,26 @@ describe('KnowledgeLearningPlatform', () => {
                 : ''
         ).toContain('comparison baseline');
         expect(
+            structuredBlock && 'overviewMarkdown' in structuredBlock
+                ? String(structuredBlock.overviewMarkdown || '')
+                : ''
+        ).toContain('Graph-supported relations');
+        expect(
             structuredBlock && 'explanationMarkdown' in structuredBlock
                 ? String(structuredBlock.explanationMarkdown || '')
                 : ''
         ).toContain('Supporting comparison nodes');
         expect(
+            structuredBlock && 'explanationMarkdown' in structuredBlock
+                ? String(structuredBlock.explanationMarkdown || '')
+                : ''
+        ).toContain('Graph support around');
+        expect(
             structuredBlock && 'nextActionsMarkdown' in structuredBlock
                 ? String(structuredBlock.nextActionsMarkdown || '')
                 : ''
         ).toContain('inspect the strongest nodes side by side');
+        expect((response.knowledgePoints[0] as any).relationKinds).toContain('reference');
     });
 
     test('agent conversation explanation and next actions adapt to how-to queries', async () => {

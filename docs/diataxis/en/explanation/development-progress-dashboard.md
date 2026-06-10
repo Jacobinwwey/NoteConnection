@@ -14,7 +14,8 @@ The key result is that the current code has moved further than the old plan word
 - reply rendering now has a typed structured-answer path,
 - workflow-artifact review follow-up is part of the runtime surface,
 - graph focus can render original markdown with matched-span highlighting,
-- a dedicated evidence pane now carries grounding inspection plus durable `knowledge_run` and `flashcard_batch` inspection.
+- a dedicated evidence pane now carries grounding inspection plus durable `knowledge_run` and `flashcard_batch` inspection,
+- grouped conversation knowledge points now retain relation-path and temporal-validity signals, and the composer uses them in structured explanation/next-action text.
 
 At the same time, the product surface is still behind the intended final behavior:
 
@@ -33,11 +34,11 @@ Code-vs-plan reconciliation for this slice:
 | Answer area contraction to a single targeted answer | `agent_workspace.js` now keeps the full conversation result in runtime state while only rendering user-facing answer blocks (`structured_answer`, `main_markdown`, `html_artifact`) in the main chat surface. | Implemented current slice |
 | Hide developer-heavy evidence from the primary hit list | `workspace_panes.js` no longer renders inline knowledge previews or visible typed capability buttons in the left-side hit list; those flows now route into graph focus or the dedicated evidence pane. | Implemented current slice |
 | Durable evidence/claim inspector | `workspace_panes.js` now exposes a dedicated evidence pane for grounding metadata, `knowledge_run`, `knowledge_run_history`, `knowledge_run_compare`, and `flashcard_batch`; `agent_workspace.js` wires the API status strip into grounding inspection. | Implemented current slice |
-| DAG-native answer planning | The system already has `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, mastery-path logic, and `KnowledgeQueryItem.relationPath`, but conversation synthesis still does not have a dedicated graph-conditioned context-assembly layer. | Not complete |
+| DAG-native answer planning | `AgentConversationKnowledgePoint` now carries grouped `relationPath`, `relationKinds`, `relationPathAtomIds`, and `temporalValidity`, and `conversationComposer.ts` now uses those signals in overview, explanation, and next-action guidance. | Implemented partial slice |
 
 Immediate next direction from this point:
 
-1. Insert a graph-conditioned context-assembly layer between retrieval and answer synthesis so the current DAG becomes a first-class answer-planning substrate.
+1. Extend the new DAG-aware conversation slice into a dedicated graph-conditioned context-assembly layer instead of relying on grouped relation hints alone.
 2. Preserve the new primary answer / right-pane-first interaction contract while growing the evidence pane toward a broader durable evidence ledger.
 3. Continue ownership reduction across `src/server.ts`, `KnowledgeLearningPlatform.ts`, `agent_workspace.js`, and `workspace_panes.js`.
 
@@ -48,6 +49,7 @@ Verification for the current code-backed alignment:
 - `node --check src/frontend/workspace_panes.js`
 - `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/agent_workspace.contract.parity.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- jest src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`
 - `npm.cmd run test:agent-workspace:contracts`
 - `npm.cmd run build`
 

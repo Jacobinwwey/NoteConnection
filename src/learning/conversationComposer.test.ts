@@ -11,6 +11,7 @@ import type {
     KnowledgeAtom,
     KnowledgeQueryItem,
     KnowledgeQueryResolvedScope,
+    RelationEdge,
 } from './types';
 
 function makeAtom(overrides: Partial<KnowledgeAtom> = {}): KnowledgeAtom {
@@ -55,6 +56,8 @@ function makeQueryItem(overrides: {
     atom?: Partial<KnowledgeAtom>;
     evidence?: Partial<EvidenceSpan>;
     score?: number;
+    relationPath?: Partial<RelationEdge>[];
+    temporalValidity?: Partial<KnowledgeQueryItem['temporalValidity']>;
 } = {}): KnowledgeQueryItem {
     const atom = makeAtom(overrides.atom);
     const evidence = makeEvidenceSpan({
@@ -66,11 +69,29 @@ function makeQueryItem(overrides: {
         atom,
         score: overrides.score == null ? 0.91 : overrides.score,
         evidenceSpans: [evidence],
-        relationPath: [],
+        relationPath: Array.isArray(overrides.relationPath)
+            ? overrides.relationPath.map((edge, index) => ({
+                id: String(edge && edge.id || `edge_${atom.id}_${index + 1}`),
+                sourceAtomId: String(edge && edge.sourceAtomId || atom.id),
+                targetAtomId: String(edge && edge.targetAtomId || `support_${index + 1}`),
+                relationKind: (edge && edge.relationKind) || 'reference',
+                provenance: (edge && edge.provenance) || 'fact',
+                confidence: Number.isFinite(Number(edge && edge.confidence)) ? Number(edge && edge.confidence) : 0.8,
+                evidenceSpanIds: Array.isArray(edge?.evidenceSpanIds) ? edge.evidenceSpanIds.slice() : [evidence.id],
+                temporal: {
+                    validFrom: String(edge && edge.temporal && edge.temporal.validFrom || '2026-06-06T00:00:00.000Z'),
+                    validTo: edge && edge.temporal && edge.temporal.validTo ? String(edge.temporal.validTo) : undefined,
+                },
+            }))
+            : [],
         temporalValidity: {
-            isValid: true,
-            checkedAt: '2026-06-06T00:00:00.000Z',
-            reasons: [],
+            isValid: overrides.temporalValidity && typeof overrides.temporalValidity.isValid === 'boolean'
+                ? overrides.temporalValidity.isValid
+                : true,
+            checkedAt: String(overrides.temporalValidity && overrides.temporalValidity.checkedAt || '2026-06-06T00:00:00.000Z'),
+            reasons: Array.isArray(overrides.temporalValidity?.reasons)
+                ? overrides.temporalValidity.reasons.slice()
+                : [],
         },
     };
 }
@@ -103,6 +124,14 @@ describe('conversationComposer', () => {
                     snippet: 'A water glass is a transparent vessel.',
                 },
                 score: 0.9,
+                relationPath: [
+                    {
+                        id: 'edge_grouped_1',
+                        sourceAtomId: 'atom_a',
+                        targetAtomId: 'atom_support_1',
+                        relationKind: 'prerequisite',
+                    },
+                ],
             }),
             makeQueryItem({
                 atom: {
@@ -118,6 +147,19 @@ describe('conversationComposer', () => {
                     snippet: 'The water glass body provides a boundary between the liquid and the environment.',
                 },
                 score: 0.82,
+                relationPath: [
+                    {
+                        id: 'edge_grouped_2',
+                        sourceAtomId: 'atom_b',
+                        targetAtomId: 'atom_support_2',
+                        relationKind: 'contrast',
+                    },
+                ],
+                temporalValidity: {
+                    isValid: false,
+                    checkedAt: '2026-06-06T02:00:00.000Z',
+                    reasons: ['temporal_edge_expired'],
+                },
             }),
         ];
 
@@ -128,10 +170,17 @@ describe('conversationComposer', () => {
         expect(points[0].citations?.length).toBe(2);
         expect(points[0].matchedSpans?.length).toBe(2);
         expect(points[0].matchCount).toBe(2);
+        expect((points[0] as any).relationPath).toHaveLength(2);
+        expect((points[0] as any).relationKinds).toEqual(expect.arrayContaining(['prerequisite', 'contrast']));
+        expect((points[0] as any).relationPathAtomIds).toEqual(expect.arrayContaining(['atom_support_1', 'atom_support_2']));
+        expect((points[0] as any).temporalValidity).toEqual(expect.objectContaining({
+            isValid: false,
+            checkedAt: '2026-06-06T02:00:00.000Z',
+        }));
     });
 
     test('builds intent-aware scoped reply blocks and preserves additive compatibility shape', () => {
-        const knowledgePoints: AgentConversationKnowledgePoint[] = [
+        const knowledgePoints = [
             {
                 atomId: 'atom_a',
                 atomIds: ['atom_a', 'atom_b'],
@@ -188,9 +237,32 @@ describe('conversationComposer', () => {
                     },
                 ],
                 matchCount: 1,
+                relationPath: [
+                    {
+                        edgeId: 'edge_reflection_1',
+                        sourceAtomId: 'atom_a',
+                        targetAtomId: 'atom_prerequisite',
+                        relationKind: 'prerequisite',
+                        confidence: 0.9,
+                    },
+                    {
+                        edgeId: 'edge_reflection_2',
+                        sourceAtomId: 'atom_a',
+                        targetAtomId: 'atom_contrast',
+                        relationKind: 'contrast',
+                        confidence: 0.82,
+                    },
+                ],
+                relationPathAtomIds: ['atom_prerequisite', 'atom_contrast'],
+                relationKinds: ['prerequisite', 'contrast'],
+                temporalValidity: {
+                    isValid: false,
+                    checkedAt: '2026-06-06T06:00:00.000Z',
+                    reasons: ['temporal_edge_expired'],
+                },
                 capabilities: [{ actionId: 'open_focus_mode' }],
             },
-        ];
+        ] as AgentConversationKnowledgePoint[];
         const citations = knowledgePoints[0].citations || [];
         const recalledMemories: AgentConversationMemoryRecord[] = [];
         const memoryActions: AgentConversationMemoryAction[] = [
@@ -220,9 +292,15 @@ describe('conversationComposer', () => {
         const structuredBlock = reply.assistantBlocks.find((block) => block.type === 'structured_answer');
         expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').toContain('Grounded by 1 knowledge point');
         expect(structuredBlock && 'overviewMarkdown' in structuredBlock ? structuredBlock.overviewMarkdown : '').toContain('## Answer Context');
+        expect(structuredBlock && 'overviewMarkdown' in structuredBlock ? structuredBlock.overviewMarkdown : '').toContain('Graph-supported relations');
+        expect(structuredBlock && 'overviewMarkdown' in structuredBlock ? structuredBlock.overviewMarkdown : '').toContain('Temporal validity');
         expect(structuredBlock && 'explanationMarkdown' in structuredBlock ? structuredBlock.explanationMarkdown : '').toContain('comparison baseline');
+        expect(structuredBlock && 'explanationMarkdown' in structuredBlock ? structuredBlock.explanationMarkdown : '').toContain('Graph support around **Reflection** includes');
+        expect(structuredBlock && 'explanationMarkdown' in structuredBlock ? structuredBlock.explanationMarkdown : '').toContain('Temporal validity warning');
         expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('inspect the strongest nodes side by side');
         expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Persist the latest user focus to scoped conversation memory');
+        expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Inspect prerequisite-linked concepts in focus mode before guided learning');
+        expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Validate whether a fresher or superseding note should replace this anchor before promotion');
         const actionBlock = reply.assistantBlocks.find((block) => block.type === 'knowledge_actions');
         expect(actionBlock && 'atomIds' in actionBlock ? actionBlock.atomIds : []).toEqual(['atom_a', 'atom_b']);
         expect(collectAgentConversationAtomIds(knowledgePoints)).toEqual(['atom_a', 'atom_b']);

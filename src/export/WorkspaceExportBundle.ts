@@ -143,6 +143,32 @@ function sortAndCloneConversationTurns(records: AgentConversationTurnRecord[]): 
                     ...point,
                     capabilities: [...point.capabilities],
                     citation: point.citation ? { ...point.citation } : null,
+                    citations: Array.isArray(point.citations)
+                        ? point.citations.map((citation) => ({ ...citation }))
+                        : point.citations,
+                    matchedSpans: Array.isArray(point.matchedSpans)
+                        ? point.matchedSpans.map((span) => ({
+                            ...span,
+                            citation: span.citation ? { ...span.citation } : null,
+                        }))
+                        : point.matchedSpans,
+                    relationPath: Array.isArray((point as any).relationPath)
+                        ? (point as any).relationPath.map((edge: any) => ({ ...edge }))
+                        : (point as any).relationPath,
+                    relationPathAtomIds: Array.isArray((point as any).relationPathAtomIds)
+                        ? [...(point as any).relationPathAtomIds]
+                        : (point as any).relationPathAtomIds,
+                    relationKinds: Array.isArray((point as any).relationKinds)
+                        ? [...(point as any).relationKinds]
+                        : (point as any).relationKinds,
+                    temporalValidity: (point as any).temporalValidity
+                        ? {
+                            ...(point as any).temporalValidity,
+                            reasons: Array.isArray((point as any).temporalValidity.reasons)
+                                ? [...(point as any).temporalValidity.reasons]
+                                : [],
+                        }
+                        : (point as any).temporalValidity,
                 })),
                 citations: record.response.citations.map((citation) => ({ ...citation })),
                 recalledMemories: record.response.recalledMemories.map((memory) => ({
