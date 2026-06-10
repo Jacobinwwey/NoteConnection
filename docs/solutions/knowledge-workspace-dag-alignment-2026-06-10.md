@@ -49,8 +49,8 @@ Current implementation pressure points measured from the workspace:
 
 - `src/server.ts`: 15,850 lines
 - `src/learning/KnowledgeLearningPlatform.ts`: 10,657 lines
-- `src/frontend/agent_workspace.js`: 3,943 lines
-- `src/frontend/workspace_panes.js`: 4,140 lines
+- `src/frontend/agent_workspace.js`: 3,961 lines
+- `src/frontend/workspace_panes.js`: 4,084 lines
 - `src/learning/conversationComposer.ts`: 753 lines
 
 ### Current Code-Backed State
@@ -110,29 +110,25 @@ Progress call:
 - Durable answer-adjacent artifacts are implemented.
 - This is the strongest current substrate for future evidence-ledger and review-loop work.
 
-#### 3. Knowledge-hit rendering is now file-first, but still not at the final target UX
+#### 3. Knowledge-hit rendering is now file-first and right-pane-first at the primary interaction layer
 
 Implemented evidence:
 
 - `workspace_panes.js` renders grouped knowledge points as file-first cards.
-- It can open source markdown previews through the shared markdown runtime.
+- clicking a file button now routes directly into graph focus through `openGraphFocusPane(buildKnowledgePointFocusPayload(item))`.
+- inline previews and visible typed capability buttons no longer render in the primary hit list.
 - Graph-focus can render original markdown and highlight matched evidence.
-
-But current code still behaves like this:
-
-- left-side knowledge hits still support inline preview expansion,
-- `autoExpandFirstPreview` is still wired from `agent_workspace.js`,
-- typed capability actions are still visibly rendered on the left-side card,
-- the answer area still renders developer/supporting blocks such as citations and knowledge-run summaries.
+- `agent_workspace.js` no longer auto-expands the first knowledge preview and keeps the full conversation result plus grounding summary in runtime getters for follow-up flows.
 
 Progress call:
 
-- The interaction has moved significantly toward the intended design.
-- It is not yet aligned with the stricter target behavior of:
+- The primary interaction now matches the stricter target behavior:
   - one targeted answer in the visible answer area,
   - left-side hit list as file-only entry points,
   - right-side pane as the canonical rendered-reading surface,
-  - hidden supporting evidence/actions outside the primary answer area.
+  - supporting evidence/actions removed from the primary answer and hit-list surfaces.
+- The remaining gap is not the primary interaction anymore.
+- The remaining gap is the lack of a first-class secondary evidence/claim inspector for durable artifacts and reply grounding.
 
 #### 4. The codebase already contains DAG-capable data, but the answer layer still underuses it
 
@@ -171,25 +167,26 @@ Progress call:
 
 | Requirement from prior plans | Current code reality | Status | Main gap |
 |---|---|---|---|
-| Rich grounded conversation with compatibility fallback | Implemented through `assistantMessage` + `answer` + `assistantBlocks` + `knowledgeRun` | Implemented baseline | Primary answer area still too crowded |
+| Rich grounded conversation with compatibility fallback | Implemented through `assistantMessage` + `answer` + `assistantBlocks` + `knowledgeRun`, with the primary assistant area now limited to user-facing blocks (`structured_answer`, `main_markdown`, `html_artifact`) | Implemented current slice | Supporting artifacts still need a dedicated inspection surface |
 | Durable learning/review loop | Implemented through workflow artifacts, knowledge runs, review follow-up, flashcard batch persistence | Implemented baseline | Needs better frontend information architecture |
-| File-first scoped knowledge hits | Implemented | Implemented baseline | Still not fully right-pane-first |
-| Hide developer-heavy evidence from the main user-facing answer | Not fully implemented | Partial | Visible answer area still renders support blocks |
+| File-first scoped knowledge hits | Implemented and now routed directly into graph focus from file-only entries | Implemented current slice | Secondary evidence inspection still depends on separate follow-up surfaces |
+| Hide developer-heavy evidence from the main user-facing answer | Implemented in the primary chat and hit-list surfaces | Implemented current slice | Supporting evidence currently lives behind explicit capability execution and runtime getters instead of a dedicated inspector UI |
 | Use current DAG as a first-class answer-planning substrate | Not fully implemented | Partial | Missing graph-conditioned context assembly layer |
 | Ownership reduction in runtime and frontend hosts | Not complete | Behind target | `server.ts`, `KnowledgeLearningPlatform.ts`, `agent_workspace.js`, and `workspace_panes.js` still own too much |
 
 ### Current Risks
 
-#### 1. Product-surface mismatch risk
+#### 1. Secondary-surface drift risk
 
-The biggest current risk is not missing infrastructure.
-It is mismatch between implemented surfaces and intended product behavior.
+The biggest current product risk has shifted.
+The primary answer surface is now much closer to the intended behavior, but the secondary inspection surfaces are not yet productized enough.
 
 Examples:
 
 - the backend can produce durable learning artifacts,
-- but the frontend still exposes too much support detail in the same answer flow,
-- which makes the product feel like a developer tool instead of a guided knowledge agent.
+- the primary frontend no longer dumps support detail into the main answer flow,
+- but durable evidence and grounding are still surfaced mainly through explicit capability execution and runtime state,
+- which risks splitting the product into a clean user surface plus a developer-only inspection path.
 
 #### 2. False “graph-native” confidence risk
 
@@ -214,26 +211,33 @@ Without a tighter owner split, every next improvement in answer policy, artifact
 
 #### P1: Answer-surface contraction
 
-Make the primary visible answer area strictly user-facing.
+Completed in the current slice.
 
-Requirements:
+Shipped characteristics:
 
 - render only the targeted answer by default,
 - keep `assistantBlocks` additive for compatibility,
-- stop treating citations, knowledge-run summaries, and action hints as mandatory visible answer content.
+- stop treating citations, knowledge-run summaries, and action hints as mandatory visible answer content,
+- keep the full conversation payload available for explicit follow-up flows without re-expanding the primary answer area.
 
-This is a product-architecture step, not a transport step.
+Follow-on requirement:
+
+- keep this contract stable while the durable evidence inspector is introduced.
 
 #### P2: Right-pane-first knowledge-hit interaction
 
-Make left-side knowledge hits act as navigation entries, not mini readers.
+Completed in the current slice.
 
-Requirements:
+Shipped characteristics:
 
 - click hit -> open right-side pane,
 - render original markdown there,
 - highlight matched spans there,
-- keep inline preview only as fallback or remove it after parity confirmation.
+- remove inline preview and visible capability clutter from the primary hit list.
+
+Follow-on requirement:
+
+- keep graph-focus as the canonical reading surface while adding durable evidence/claim inspection beside it rather than back inside the hit list.
 
 #### P3: Durable evidence/claim inspector
 
@@ -276,8 +280,9 @@ Verified locally against the current code-backed slice:
 - `node --check src/frontend/agent_workspace.js`
 - `node --check src/frontend/workspace_panes.js`
 - `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
+- `npm.cmd run test:agent-workspace:contracts`
 
-These checks validate that the current uncommitted implementation slice is internally consistent before it is promoted to `main`.
+These checks validate that the current implementation slice is internally consistent before it is promoted to `main`.
 
 ## 中文文档
 
@@ -318,8 +323,8 @@ These checks validate that the current uncommitted implementation slice is inter
 
 - `src/server.ts`: 15,850 行
 - `src/learning/KnowledgeLearningPlatform.ts`: 10,657 行
-- `src/frontend/agent_workspace.js`: 3,943 行
-- `src/frontend/workspace_panes.js`: 4,140 行
+- `src/frontend/agent_workspace.js`: 3,961 行
+- `src/frontend/workspace_panes.js`: 4,084 行
 - `src/learning/conversationComposer.ts`: 753 行
 
 ### 当前已落地的真实代码状态
@@ -379,29 +384,25 @@ These checks validate that the current uncommitted implementation slice is inter
 - durable answer-adjacent artifact 已实现。
 - 这是后续 evidence ledger 与 review-loop 最重要的当前基础设施。
 
-#### 3. 知识命中已经是 file-first，但仍未达到最终目标交互
+#### 3. 知识命中在主交互层已经收敛为 file-first + right-pane-first
 
 已实现证据：
 
 - `workspace_panes.js` 已按文件优先方式渲染 grouped knowledge points。
-- 它已能通过共享 markdown runtime 打开 source markdown 预览。
+- 点击文件按钮现在会通过 `openGraphFocusPane(buildKnowledgePointFocusPayload(item))` 直接路由到 graph focus。
+- inline preview 与可见 typed capability 按钮已不再出现在主命中列表中。
 - graph-focus 已能渲染原始 markdown 并高亮命中段落。
-
-但当前代码仍保留以下行为：
-
-- 左侧知识命中仍支持 inline preview 展开，
-- `agent_workspace.js` 仍通过 `autoExpandFirstPreview` 驱动首个预览自动展开，
-- typed capability action 仍直接显示在左侧 knowledge card 上，
-- 回答区仍会把 citation、knowledge run summary 等支持性块一起渲染出来。
+- `agent_workspace.js` 已不再自动展开首个 knowledge preview，并把完整 conversation result 与 grounding summary 保留在 runtime getter 中供 follow-up flow 使用。
 
 进度判断：
 
-- 交互已经明显朝目标方向推进。
-- 但它还没有收敛到更严格的目标行为：
+- 当前主交互已经收敛到更严格的目标行为：
   - 用户可见回答区只保留一个 targeted answer，
   - 左侧命中列表仅作为文件入口，
   - 右侧 pane 才是权威阅读面，
-  - supporting evidence / actions 默认不继续堆在主回答区。
+  - supporting evidence / actions 已退出主回答区与主命中列表。
+- 当前剩余缺口已不再是主交互本身。
+- 当前剩余缺口是 durable artifact 与 reply grounding 还没有一等的次级 evidence / claim inspector。
 
 #### 4. 现有代码已经有 DAG 结构数据，但回答层仍未充分利用
 
@@ -440,24 +441,26 @@ These checks validate that the current uncommitted implementation slice is inter
 
 | 先前方案要求 | 当前代码现实 | 状态 | 主要缺口 |
 |---|---|---|---|
-| richer grounded conversation 且保留兼容 fallback | 已通过 `assistantMessage` + `answer` + `assistantBlocks` + `knowledgeRun` 落地 | 已实现基线 | 主回答区仍过于拥挤 |
+| richer grounded conversation 且保留兼容 fallback | 已通过 `assistantMessage` + `answer` + `assistantBlocks` + `knowledgeRun` 落地，且主回答区已收缩为用户面块（`structured_answer`、`main_markdown`、`html_artifact`） | 当前切片已实现 | supporting artifact 仍需专门 inspection surface |
 | durable learning / review loop | 已通过 workflow artifact、knowledge run、review follow-up、flashcard batch 落地 | 已实现基线 | 前端信息架构仍需收敛 |
-| file-first scoped knowledge hits | 已实现 | 已实现基线 | 仍未完全收敛为 right-pane-first |
-| 主回答区不暴露开发者导向 evidence 细节 | 尚未完全实现 | 部分完成 | citations / knowledge run / actions 仍在主对话面可见 |
+| file-first scoped knowledge hits | 已实现，且现已通过文件入口直接路由到 graph focus | 当前切片已实现 | 次级 evidence inspection 仍依赖独立 follow-up surface |
+| 主回答区不暴露开发者导向 evidence 细节 | 已在主对话面与主命中列表中实现 | 当前切片已实现 | supporting evidence 目前仍主要依赖显式 capability 执行与 runtime getter，而不是专用 inspector UI |
 | 让现有 DAG 成为真正的一等回答规划底座 | 尚未完全实现 | 部分完成 | 缺 graph-conditioned context assembly 层 |
 | 缩减运行时与前端宿主文件所有权压力 | 尚未完成 | 落后于目标 | `server.ts`、`KnowledgeLearningPlatform.ts`、`agent_workspace.js`、`workspace_panes.js` 仍过重 |
 
 ### 当前风险
 
-#### 1. 产品面对齐风险
+#### 1. 次级表面漂移风险
 
-当前最大的风险已经不是“没有基础设施”，而是“已实现能力与预期产品行为不一致”。
+当前最大的产品风险已经发生转移。
+主回答面已经更接近预期，但次级 inspection surface 还不够产品化。
 
 例如：
 
 - 后端已经能产出 durable learning artifact，
-- 但前端仍把过多 supporting detail 暴露在同一主回答流里，
-- 这会让产品更像开发者工具，而不是 guided knowledge agent。
+- 主前端已经不再把 supporting detail 堆到同一主回答流里，
+- 但 durable evidence 与 grounding 目前仍主要通过显式 capability 执行与 runtime state 暴露，
+- 这会带来“用户面很干净，但 inspectability 更像开发者路径”的分裂风险。
 
 #### 2. 假性 graph-native 信心风险
 
@@ -486,26 +489,33 @@ These checks validate that the current uncommitted implementation slice is inter
 
 #### P1：收缩回答主表面
 
-让主回答区严格回归用户面。
+当前切片已完成。
 
-要求：
+已交付特征：
 
 - 默认只显示 targeted answer，
 - `assistantBlocks` 继续保持 additive compatibility，
-- citation、knowledge run summary、action hint 不再视为必须出现在主回答面。
+- citation、knowledge run summary、action hint 不再视为必须出现在主回答面，
+- 完整 conversation payload 仍可用于显式 follow-up flow，而不会重新把主回答面撑开。
 
-这是产品架构动作，不是传输层动作。
+后续要求：
+
+- 在引入 durable evidence inspector 时继续保持这个主回答面契约稳定。
 
 #### P2：命中交互改成 right-pane-first
 
-让左侧知识命中只承担“导航入口”，而不是“迷你阅读器”。
+当前切片已完成。
 
-要求：
+已交付特征：
 
 - 点击命中 -> 打开右侧 pane，
 - 在右侧渲染原始 markdown，
 - 在右侧高亮 matched span，
-- inline preview 在完成 parity 验证后降级为 fallback 或彻底退出主交互。
+- inline preview 与可见 capability clutter 已退出主命中列表。
+
+后续要求：
+
+- 在后续加入 durable evidence / claim inspection 时，继续保持 graph-focus 是权威阅读面，而不是把复杂度重新塞回命中列表。
 
 #### P3：建设 durable evidence / claim inspector
 
@@ -548,5 +558,6 @@ These checks validate that the current uncommitted implementation slice is inter
 - `node --check src/frontend/agent_workspace.js`
 - `node --check src/frontend/workspace_panes.js`
 - `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
+- `npm.cmd run test:agent-workspace:contracts`
 
-这些检查确认：当前未提交实现切片在推进到 `main` 前已经达到内部自洽状态。
+这些检查确认：当前实现切片在推进到 `main` 前已经达到内部自洽状态。

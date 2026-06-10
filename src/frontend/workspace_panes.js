@@ -3288,6 +3288,7 @@
             summary.className = 'agent-chat-inline-card-summary agent-chat-structured-answer-direct';
             summary.textContent = directAnswer;
             wrapper.appendChild(summary);
+            return wrapper;
         }
 
         const sections = [
@@ -4183,32 +4184,26 @@
                 return;
             }
             container.innerHTML = '';
-            normalizedItems.forEach((item, index) => {
+            normalizedItems.forEach((item) => {
                 const card = document.createElement('div');
                 card.className = 'agent-knowledge-card';
                 const fileName = resolveKnowledgePointFileName(item);
                 card.setAttribute('data-agent-knowledge-card', 'true');
                 const sourcePath = resolveKnowledgePointSourcePath(item);
-                const expanded = isKnowledgePointPreviewExpanded(item, index);
                 const fileButton = document.createElement('button');
                 fileButton.type = 'button';
                 fileButton.className = 'agent-knowledge-file-button';
                 fileButton.textContent = fileName;
-                fileButton.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-                const previewId = `agent-knowledge-preview-${index}`;
-                fileButton.setAttribute('aria-controls', previewId);
                 fileButton.setAttribute(
                     'aria-label',
-                    translate('agentWorkspace.knowledge.togglePreview', 'Toggle matched knowledge preview: {file}', {
+                    translate('agentWorkspace.knowledge.togglePreview', 'Open matched knowledge: {file}', {
                         file: fileName,
                     })
                 );
                 card.appendChild(fileButton);
-                const capabilities = resolveCapabilities(item);
                 fileButton.addEventListener('click', function () {
-                    const nextExpanded = !isKnowledgePointPreviewExpanded(item, index);
-                    setKnowledgePointPreviewExpanded(item, index, nextExpanded);
-                    api.renderKnowledgePoints(state.knowledgePoints.items, state.knowledgePoints.handlers);
+                    ensureWorkspaceVisible();
+                    api.openGraphFocusPane(buildKnowledgePointFocusPayload(item));
                 });
                 fileButton.addEventListener('keydown', function (event) {
                     if (event.key === 'Enter' || event.key === ' ') {
@@ -4221,57 +4216,6 @@
                     pathNode.className = 'agent-knowledge-source-path';
                     pathNode.textContent = sourcePath;
                     card.appendChild(pathNode);
-                }
-                if (capabilities.length > 0) {
-                    const actions = document.createElement('div');
-                    actions.className = 'agent-knowledge-actions';
-                    actions.setAttribute('aria-label', translate('agentWorkspace.knowledge.actionsMenu', 'Knowledge point actions'));
-                    capabilities.forEach((capability) => {
-                        const actionButton = document.createElement('button');
-                        actionButton.type = 'button';
-                        const uiHint = capability && typeof capability.uiHint === 'object'
-                            ? capability.uiHint
-                            : {};
-                        if (uiHint && typeof uiHint.group === 'string' && uiHint.group.trim()) {
-                            actionButton.setAttribute('data-capability-group', uiHint.group.trim());
-                        }
-                        if (uiHint && typeof uiHint.emphasis === 'string' && uiHint.emphasis.trim()) {
-                            actionButton.setAttribute('data-capability-emphasis', uiHint.emphasis.trim());
-                        }
-                        actionButton.setAttribute(
-                            'data-capability-action-id',
-                            String(capability && capability.actionId || '').trim()
-                        );
-                        actionButton.textContent = translate(
-                            String(capability && capability.labelKey || ''),
-                            String(capability && capability.label || capability && capability.actionId || 'Action')
-                        );
-                        actionButton.addEventListener('click', function () {
-                            if (handlers && typeof handlers.onCapability === 'function') {
-                                handlers.onCapability(item, capability);
-                                return;
-                            }
-                            const actionId = String(capability && capability.actionId || '').trim();
-                            if (actionId === 'open_focus_mode' && handlers && typeof handlers.onFocus === 'function') {
-                                handlers.onFocus(item, capability);
-                                return;
-                            }
-                            if (actionId === 'open_learning_path' && handlers && typeof handlers.onLearningPath === 'function') {
-                                handlers.onLearningPath(item, capability);
-                            }
-                        });
-                        actions.appendChild(actionButton);
-                    });
-                    card.appendChild(actions);
-                }
-                const previewBody = document.createElement('div');
-                previewBody.id = previewId;
-                previewBody.className = 'agent-knowledge-preview';
-                previewBody.hidden = !expanded;
-                previewBody.setAttribute('data-agent-knowledge-preview', expanded ? 'true' : 'false');
-                card.appendChild(previewBody);
-                if (expanded) {
-                    void renderKnowledgePointPreview(previewBody, item);
                 }
                 container.appendChild(card);
             });

@@ -2982,7 +2982,7 @@ describe('workspace panes controller', () => {
         expect(pathContainer?.style.display).toBe('none');
     });
 
-    test('rerenders existing knowledge-card action labels when language changes', async () => {
+    test('does not render knowledge-card action buttons in the primary hit list', async () => {
         const { controller, document, window } = loadWorkspacePanesHarness({ withI18n: true });
         controller.init();
         controller.renderKnowledgePoints([
@@ -3022,17 +3022,17 @@ describe('workspace panes controller', () => {
         const buttonsBefore = Array.from(
             document.querySelectorAll('.agent-knowledge-actions button')
         ).map((node) => node.textContent);
-        expect(buttonsBefore).toEqual(['Focus', 'Guided Learning']);
+        expect(buttonsBefore).toEqual([]);
 
         await window.i18n.setLanguage('zh');
 
         const buttonsAfter = Array.from(
             document.querySelectorAll('.agent-knowledge-actions button')
         ).map((node) => node.textContent);
-        expect(buttonsAfter).toEqual(['聚焦', '学习路径']);
+        expect(buttonsAfter).toEqual([]);
     });
 
-    test('renders knowledge hits as file entries, expands inline preview, and routes actions through handlers', async () => {
+    test('renders knowledge hits as file entries and opens graph focus from the right pane', async () => {
         const { controller, document, window } = loadWorkspacePanesHarness();
         const readContent = jest.fn(async () => [
             '# Water Glass',
@@ -3119,27 +3119,23 @@ describe('workspace panes controller', () => {
 
         const refreshedCard = document.querySelector('.agent-knowledge-card') as HTMLElement | null;
         const refreshedButton = refreshedCard?.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
-        expect(refreshedButton?.getAttribute('aria-expanded')).toBe('true');
+        expect(refreshedButton?.getAttribute('aria-expanded')).toBeNull();
         expect(readContent).toHaveBeenCalledWith('Knowledge_Base/waterglass/water glass.md');
         expect(renderMarkdownInto).toHaveBeenCalled();
-        const preview = refreshedCard?.querySelector('.agent-knowledge-preview') as HTMLElement | null;
-        expect(preview).not.toBeNull();
-        expect(preview?.hidden).toBe(false);
-        expect(String(preview?.textContent || '')).toContain('A water glass is a physical system made of a transparent container and water.');
-        const highlighted = Array.from(preview?.querySelectorAll('[data-agent-focus-highlight="true"]') || []);
+        expect(refreshedCard?.querySelector('.agent-knowledge-preview')).toBeNull();
+        const graphPane = document.getElementById('agent-graph-focus-pane');
+        const graphBody = document.getElementById('agent-graph-focus-body');
+        expect(graphPane?.getAttribute('data-open')).toBe('true');
+        expect(String(graphBody?.textContent || '')).toContain('A water glass is a physical system made of a transparent container and water.');
+        const highlighted = Array.from(graphBody?.querySelectorAll('[data-agent-focus-highlight="true"]') || []);
         expect(highlighted.length).toBeGreaterThan(0);
         expect(String(highlighted[0]?.textContent || '')).toContain('A water glass is a physical system');
-
-        const actionButtons = Array.from(refreshedCard?.querySelectorAll('.agent-knowledge-actions button') || []) as HTMLButtonElement[];
-        expect(actionButtons.map((button) => button.textContent)).toEqual(['Focus', 'Guided Learning']);
-        actionButtons[0]?.click();
-        expect(onCapability).toHaveBeenCalledWith(
-            expect.objectContaining({ atomId: 'atom_water_glass' }),
-            expect.objectContaining({ actionId: 'open_focus_mode' })
-        );
+        const actionButtons = Array.from(refreshedCard?.querySelectorAll('.agent-knowledge-actions button') || []);
+        expect(actionButtons).toHaveLength(0);
+        expect(onCapability).not.toHaveBeenCalled();
     });
 
-    test('preserves manual preview collapse across rerenders for the same result set', async () => {
+    test('keeps file-first hit rendering stable across rerenders for the same result set', async () => {
         const { controller, document, window } = loadWorkspacePanesHarness({ withI18n: true });
         const readContent = jest.fn(async () => [
             '# Water Glass',
@@ -3184,7 +3180,6 @@ describe('workspace panes controller', () => {
             },
         ];
         const handlers = {
-            autoExpandFirstPreview: true,
             resultSetKey: 'result_set_waterglass_1',
         };
 
@@ -3193,34 +3188,29 @@ describe('workspace panes controller', () => {
         await Promise.resolve();
 
         let fileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
-        let preview = document.querySelector('.agent-knowledge-preview') as HTMLElement | null;
-        expect(fileButton?.getAttribute('aria-expanded')).toBe('true');
-        expect(preview?.hidden).toBe(false);
+        expect(fileButton?.getAttribute('aria-expanded')).toBeNull();
+        expect(document.querySelector('.agent-knowledge-preview')).toBeNull();
 
         fileButton?.click();
         await new Promise((resolve) => setTimeout(resolve, 0));
         await Promise.resolve();
 
-        fileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
-        preview = document.querySelector('.agent-knowledge-preview') as HTMLElement | null;
-        expect(fileButton?.getAttribute('aria-expanded')).toBe('false');
-        expect(preview?.hidden).toBe(true);
+        expect(readContent).toHaveBeenCalledWith('Knowledge_Base/waterglass/water glass.md');
+        expect(renderMarkdownInto).toHaveBeenCalled();
 
         controller.renderKnowledgePoints(items, handlers);
         await new Promise((resolve) => setTimeout(resolve, 0));
         await Promise.resolve();
 
         fileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
-        preview = document.querySelector('.agent-knowledge-preview') as HTMLElement | null;
-        expect(fileButton?.getAttribute('aria-expanded')).toBe('false');
-        expect(preview?.hidden).toBe(true);
+        expect(fileButton?.getAttribute('aria-expanded')).toBeNull();
+        expect(document.querySelector('.agent-knowledge-preview')).toBeNull();
 
         await window.i18n.setLanguage('zh');
 
         fileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
-        preview = document.querySelector('.agent-knowledge-preview') as HTMLElement | null;
-        expect(fileButton?.getAttribute('aria-expanded')).toBe('false');
-        expect(preview?.hidden).toBe(true);
+        expect(fileButton?.getAttribute('aria-expanded')).toBeNull();
+        expect(document.querySelector('.agent-knowledge-preview')).toBeNull();
     });
 
     test('renders graph focus from source markdown and highlights matched passages in place', async () => {
@@ -3337,7 +3327,7 @@ describe('workspace panes controller', () => {
         expect(actionButtons.length).toBe(0);
     });
 
-    test('renders actions only for cards with typed capabilities when mixed with legacy fields', () => {
+    test('keeps typed capabilities out of the primary knowledge-hit list even when mixed with legacy fields', () => {
         const { controller, document } = loadWorkspacePanesHarness({ withI18n: true });
         controller.init();
 
@@ -3375,8 +3365,7 @@ describe('workspace panes controller', () => {
         const firstCardButtons = cards[0]?.querySelectorAll('.agent-knowledge-actions button') || [];
         const secondCardButtons = cards[1]?.querySelectorAll('.agent-knowledge-actions button') || [];
         expect(firstCardButtons.length).toBe(0);
-        expect(secondCardButtons.length).toBe(1);
-        expect((secondCardButtons[0] as HTMLButtonElement).textContent).toBe('Focus');
+        expect(secondCardButtons.length).toBe(0);
     });
 });
 
@@ -3797,25 +3786,29 @@ describe('agent workspace learning-path integration', () => {
             document.querySelectorAll('.agent-chat-message-system')
         ).map((node) => String(node.textContent || ''));
         expect(
-            systemMessages.some((message) =>
-                message.includes('Grounding: scope=')
-                && message.includes('1 citation(s), 1 recalled memory note(s), 1 memory action(s).')
-            )
-        ).toBe(true);
+            systemMessages.some((message) => message.includes('Grounding: scope='))
+        ).toBe(false);
+        expect((window as any).NoteConnectionAgentWorkspace.getLastConversationGrounding()).toEqual(
+            expect.objectContaining({
+                scopeLabel: 'waterglass',
+                citationCount: 1,
+                memoryCount: 1,
+                memoryActionCount: 1,
+            })
+        );
         const knowledgeCards = Array.from(document.querySelectorAll('.agent-knowledge-card'));
         expect(knowledgeCards.length).toBeGreaterThan(0);
         const fileButton = knowledgeCards[0]?.querySelector('.agent-knowledge-file-button') as HTMLButtonElement;
         expect(String(fileButton?.textContent || '')).toBe('stream.md');
         expect(knowledgeCards[0]?.querySelector('.agent-knowledge-summary')).toBeNull();
         expect(knowledgeCards[0]?.querySelectorAll('.agent-knowledge-hit')).toHaveLength(0);
-        const preview = knowledgeCards[0]?.querySelector('.agent-knowledge-preview') as HTMLElement | null;
-        expect(fileButton?.getAttribute('aria-expanded')).toBe('true');
-        expect(preview?.hidden).toBe(false);
+        expect(knowledgeCards[0]?.querySelector('.agent-knowledge-preview')).toBeNull();
+        fileButton?.click();
         await new Promise((resolve) => setTimeout(resolve, 0));
         await Promise.resolve();
         expect(readContent).toHaveBeenCalledWith('Knowledge_Base/optics/stream.md');
         expect(renderMarkdownInto).toHaveBeenCalled();
-        expect(String(preview?.textContent || '')).toContain('Stream evidence');
+        expect(String(document.getElementById('agent-graph-focus-body')?.textContent || '')).toContain('Stream evidence');
     });
 
     test('renders structured assistant blocks without breaking scoped conversation flow', async () => {
@@ -4079,25 +4072,23 @@ describe('agent workspace learning-path integration', () => {
         expect(assistantNode).not.toBeNull();
         expect(assistantNode?.querySelector('.agent-chat-inline-card-title')?.textContent).toBe('Grounded Answer');
         expect(String(assistantNode?.textContent || '')).toContain('Scoped Answer');
-        expect(assistantNode?.querySelector('h2')?.textContent).toBe('Answer Context');
-        expect(String(assistantNode?.textContent || '')).toContain('Relevant knowledge points');
-        expect(String(assistantNode?.textContent || '')).toContain('No scoped memory note was recalled for this turn.');
-        expect(String(assistantNode?.textContent || '')).toContain('Evidence Summary');
-        expect(String(assistantNode?.textContent || '')).toContain('best scoped anchor');
-        expect(String(assistantNode?.textContent || '')).toContain('Persist the latest user focus to scoped conversation memory.');
-        expect(renderMathInElement).toHaveBeenCalled();
-        expect((window as any).mermaid.initialize).toHaveBeenCalled();
-        expect(mermaidRender).toHaveBeenCalled();
-        expect(String(assistantNode?.textContent || '')).toContain('Blocks Citation');
-        expect(String(assistantNode?.textContent || '')).toContain('Knowledge Run');
-        expect(String(assistantNode?.textContent || '')).toContain('Status: pass. Quality score: 100.');
-        expect(String(assistantNode?.textContent || '')).toContain('evidence_coverage');
-        expect(String(assistantNode?.textContent || '')).toContain('Evidence claims');
-        expect(String(assistantNode?.textContent || '')).toContain('Review cards');
-        expect(String(assistantNode?.textContent || '')).toContain('What does the cited source establish about Blocks Citation?');
-        expect(String(assistantNode?.textContent || '')).toContain('Knowledge_Base/optics/blocks.md:18');
-        expect(assistantNode?.querySelector('.mermaid svg text')?.textContent).toBe('Rendered Mermaid');
-        expect(String(assistantNode?.textContent || '')).toContain('Inspect Run');
+        expect(assistantNode?.querySelector('h2')).toBeNull();
+        expect(String(assistantNode?.textContent || '')).not.toContain('Answer Context');
+        expect(String(assistantNode?.textContent || '')).not.toContain('Evidence Summary');
+        expect(String(assistantNode?.textContent || '')).not.toContain('Knowledge Run');
+        expect(String(assistantNode?.textContent || '')).not.toContain('Inspect Run');
+        expect(renderMathInElement).not.toHaveBeenCalled();
+        expect((window as any).mermaid.initialize).not.toHaveBeenCalled();
+        expect(mermaidRender).not.toHaveBeenCalled();
+        expect((window as any).NoteConnectionAgentWorkspace.getLastConversationResult()).toEqual(
+            expect.objectContaining({
+                answer: 'Scoped Answer',
+                assistantBlocks: expect.arrayContaining([
+                    expect.objectContaining({ type: 'structured_answer' }),
+                    expect.objectContaining({ type: 'knowledge_run_summary' }),
+                ]),
+            })
+        );
     });
 
     test('inspects durable knowledge-run artifacts from structured conversation blocks', async () => {
@@ -4272,9 +4263,32 @@ describe('agent workspace learning-path integration', () => {
         input.value = 'inspect knowledge run';
         await (window as any).NoteConnectionAgentWorkspace.sendConversation();
 
-        const inspectButton = document.querySelector('[data-agent-knowledge-run-inspect="true"]') as HTMLButtonElement | null;
-        expect(inspectButton).not.toBeNull();
-        inspectButton?.click();
+        const runtimeResult = (window as any).NoteConnectionAgentWorkspace.getLastConversationResult();
+        expect(runtimeResult).toBeTruthy();
+        const runBlock = Array.isArray(runtimeResult?.assistantBlocks)
+            ? runtimeResult.assistantBlocks.find((block: any) => block && block.type === 'knowledge_run_summary')
+            : null;
+        expect(runBlock).toBeTruthy();
+        await (window as any).NoteConnectionAgentWorkspace.executeCapability({
+            atomId: 'atom_blocks_1',
+            title: 'Knowledge Run',
+        }, {
+            capabilityId: 'cap_inspect_knowledge_run_blocks_1',
+            actionId: 'inspect_knowledge_run',
+            label: 'Inspect Run',
+            request: {
+                artifactKinds: ['knowledge_run'],
+                artifactId: String(runBlock?.artifactId || 'workflow_artifact_knowledge_run_blocks_1'),
+                runId: String(runBlock?.knowledgeRun?.runId || 'knowledge_run_blocks_1'),
+                workspaceId: 'waterglass',
+                limit: 1,
+            },
+            execution: {
+                kind: 'knowledge_operation',
+                operationId: 'fetch_workflow_artifacts',
+                resultPresentation: 'knowledge_run_card',
+            },
+        });
         await new Promise((resolve) => setTimeout(resolve, 0));
         await Promise.resolve();
 
@@ -4425,9 +4439,29 @@ describe('agent workspace learning-path integration', () => {
         input.value = 'browse recent runs';
         await (window as any).NoteConnectionAgentWorkspace.sendConversation();
 
-        const historyButton = document.querySelector('[data-agent-knowledge-run-history="true"]') as HTMLButtonElement | null;
-        expect(historyButton).not.toBeNull();
-        historyButton?.click();
+        const runtimeResult = (window as any).NoteConnectionAgentWorkspace.getLastConversationResult();
+        const runBlock = Array.isArray(runtimeResult?.assistantBlocks)
+            ? runtimeResult.assistantBlocks.find((block: any) => block && block.type === 'knowledge_run_summary')
+            : null;
+        expect(runBlock).toBeTruthy();
+        await (window as any).NoteConnectionAgentWorkspace.executeCapability({
+            atomId: 'atom_blocks_1',
+            title: 'Knowledge Run',
+        }, {
+            capabilityId: 'cap_browse_knowledge_runs_waterglass',
+            actionId: 'browse_knowledge_runs',
+            label: 'Recent Runs',
+            request: {
+                artifactKinds: ['knowledge_run'],
+                workspaceId: 'waterglass',
+                limit: 6,
+            },
+            execution: {
+                kind: 'knowledge_operation',
+                operationId: 'fetch_workflow_artifacts',
+                resultPresentation: 'knowledge_run_history_card',
+            },
+        });
         await new Promise((resolve) => setTimeout(resolve, 0));
         await Promise.resolve();
 

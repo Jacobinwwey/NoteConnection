@@ -7,7 +7,7 @@
 
 本切片将当前代码库与此前的 lightweight RAG、agent-workspace 和主线架构推进方案重新对齐，重点聚焦于现有 DAG 学习底座与知识工作区的真实实现状态。
 
-核心结论是：当前代码推进得比旧方案文字描述更远，但产品面与架构面仍有明确缺口。
+核心结论是：当前代码推进得比旧方案文字描述更远，而且本轮切片已经把 P1/P2 的主交互目标推到了当前代码现实里，但产品面与架构面仍有明确缺口。
 
 已经明确有代码支撑的能力包括：
 
@@ -19,28 +19,28 @@
 
 但当前产品面仍未完全达到目标行为：
 
-- 可见回答区仍会渲染本应退出主回答面的支持性块；
-- 左侧知识命中虽然已是 file-first，但 preview/action 交互仍未完全收敛为 right-pane-first 阅读模型；
+- 主回答区现已收缩为只显示用户面的回答块；
+- 左侧知识命中现已作为 file-only 入口直接路由到 graph focus；
 - 现有 DAG 底座是真实存在的，但 answer synthesis 仍更像 evidence-grouped text RAG，而不是 graph-native answer planning。
 
 本切片的代码 / 方案对齐结果：
 
 | 要求 | 当前实现证据 | 进度判断 |
 |---|---|---|
-| 结构化 grounded conversation 且保持向前兼容 | `src/learning/types.ts`、`src/learning/conversationComposer.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js`、`src/frontend/workspace_panes.js` 现已支持 `answer`、`assistantBlocks`、`knowledgeRun`、按文档聚合的 `knowledgePoints`、citations 与 legacy `assistantMessage`。 | 已实现基线 |
+| 结构化 grounded conversation 且保持向前兼容 | `src/learning/types.ts`、`src/learning/conversationComposer.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js`、`src/frontend/workspace_panes.js` 现已支持 `answer`、`assistantBlocks`、`knowledgeRun`、按文档聚合的 `knowledgePoints`、citations 与 legacy `assistantMessage`，且主回答区现已只渲染用户面的回答块。 | 当前切片已实现 |
 | durable learning/review artifact | `src/workflows/WorkflowArtifactStore.ts`、`src/learning/KnowledgeLearningPlatform.ts` 与 `src/routes/knowledge.ts` 现已支持 durable `flashcard_batch` / `knowledge_run`，以及 `/api/knowledge/workflow-artifacts`、`/api/knowledge/workflow-artifacts/review-follow-up`。 | 已实现基线 |
-| file-first scoped knowledge hit | `workspace_panes.js` 已按 source file 渲染 grouped knowledge hit，并保留 matched-span source 引用。 | 已实现基线 |
+| file-first scoped knowledge hit | `workspace_panes.js` 已按 source file 渲染 grouped knowledge hit，并把文件入口直接路由到 graph focus，而不是继续走 inline preview / action 扩展。 | 当前切片已实现 |
 | 右侧证据阅读面 | graph focus 已复用共享 markdown runtime，并在原始 markdown 中高亮 matched span。 | 已实现基线 |
-| 主回答区收缩为单一 targeted answer | 当前代码已经具备 structured-answer owner 与 artifact 分层基础，但可见回答区仍会渲染 supporting block。 | 尚未完成 |
+| 主回答区收缩为单一 targeted answer | `agent_workspace.js` 现在会保留完整 conversation result 到 runtime state，但主聊天面仅渲染用户面的回答块（`structured_answer`、`main_markdown`、`html_artifact`）。 | 当前切片已实现 |
+| 主命中列表不暴露开发者导向 evidence / action | `workspace_panes.js` 已不再在左侧命中列表中渲染 inline preview 或可见 typed capability button；这些流程转入显式 follow-up path。 | 当前切片已实现 |
 | DAG-native answer planning | 系统已具备 `KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query、mastery-path 逻辑与 `KnowledgeQueryItem.relationPath`，但 conversation synthesis 仍缺 dedicated graph-conditioned context-assembly layer。 | 尚未完成 |
 
 从这里出发的即时推进方向：
 
-1. 先收缩主回答区，只保留 targeted answer，把 supporting block 退到次级表面。
-2. 让左侧 knowledge hit 收敛为 right-pane-first 阅读流。
-3. 把 `knowledge_run` 与 `flashcard_batch` 当作第一批 durable evidence / claim surface，而不是再造第二套 review substrate。
-4. 在 retrieval 与 answer synthesis 之间补一个 graph-conditioned context-assembly layer，让当前 DAG 真正进入 answer planning。
-5. 继续缩减 `src/server.ts`、`KnowledgeLearningPlatform.ts`、`agent_workspace.js`、`workspace_panes.js` 的所有权压力。
+1. 为 `knowledge_run`、`flashcard_batch` 与 grounding metadata 建设专门的 durable evidence / claim inspector，而不是继续把这类能力留在显式 capability 执行与 runtime getter 后面。
+2. 在 retrieval 与 answer synthesis 之间补一个 graph-conditioned context-assembly layer，让当前 DAG 真正进入 answer planning。
+3. 在扩展次级 inspection surface 的同时，保持新的主回答区与 right-pane-first 主交互契约稳定。
+4. 继续缩减 `src/server.ts`、`KnowledgeLearningPlatform.ts`、`agent_workspace.js`、`workspace_panes.js` 的所有权压力。
 
 当前代码对齐切片的本地验证：
 
@@ -48,6 +48,7 @@
 - `node --check src/frontend/agent_workspace.js`
 - `node --check src/frontend/workspace_panes.js`
 - `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
+- `npm.cmd run test:agent-workspace:contracts`
 
 ## 2026-06-06 知识工作区 scope 切换器与证据聚焦命中 UI
 

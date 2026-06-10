@@ -1028,9 +1028,16 @@
 
     function appendAssistantConversationResult(result) {
         const controller = getController();
+        if (window && typeof window === 'object') {
+            window.__NC_LAST_AGENT_CONVERSATION_RESULT = result || null;
+        }
         const assistantBlocks = Array.isArray(result && result.assistantBlocks)
             ? result.assistantBlocks.filter((block) => block && typeof block === 'object')
             : [];
+        const visibleAssistantBlocks = assistantBlocks.filter((block) => {
+            const type = String(block && block.type || '').trim();
+            return type === 'structured_answer' || type === 'main_markdown' || type === 'html_artifact';
+        });
         const fallbackMessage = String(
             result && (
                 result.assistantMessage
@@ -1041,12 +1048,12 @@
         ).trim();
         if (
             controller
-            && assistantBlocks.length > 0
+            && visibleAssistantBlocks.length > 0
             && typeof controller.appendConversationBlocks === 'function'
         ) {
             return controller.appendConversationBlocks({
                 role: 'assistant',
-                blocks: assistantBlocks,
+                blocks: visibleAssistantBlocks,
                 fallbackMessage,
             });
         }
@@ -1103,21 +1110,27 @@
         if (citationCount <= 0 && memoryCount <= 0 && memoryActionCount <= 0 && !readiness && !missDiagnostics) {
             return null;
         }
+        const requestContext = resolveKnowledgeWorkspaceRequestContext();
         const scopeLabel = usedScope && usedScope.workspaceId
             ? String(usedScope.workspaceId)
-            : (usedScope && usedScope.corpusId ? String(usedScope.corpusId) : 'global');
-        return appendLocalizedSystemMessage(
-            'agentWorkspace.messages.groundingSummary',
-            'Grounding: scope={scopeLabel}, {citationCount} citation(s), {memoryCount} recalled memory note(s), {memoryActionCount} memory action(s). {readinessMessage} {missMessage}',
-            {
+            : usedScope && usedScope.corpusId
+                ? String(usedScope.corpusId)
+                : requestContext.scope && requestContext.scope.workspaceId
+                    ? String(requestContext.scope.workspaceId)
+                    : requestContext.activeTarget && requestContext.activeTarget !== 'ALL_FOLDERS'
+                        ? String(requestContext.activeTarget)
+                        : 'global';
+        if (window && typeof window === 'object') {
+            window.__NC_LAST_AGENT_CONVERSATION_GROUNDING = {
                 scopeLabel,
                 citationCount,
                 memoryCount,
                 memoryActionCount,
                 readinessMessage: readiness && readiness.message ? String(readiness.message) : '',
                 missMessage: missDiagnostics && missDiagnostics.message ? String(missDiagnostics.message) : '',
-            }
-        );
+            };
+        }
+        return null;
     }
 
     function resolveLiveNodeById(nodeId) {
@@ -3913,7 +3926,6 @@
                 controller.renderKnowledgePoints(
                     Array.isArray(result && result.knowledgePoints) ? result.knowledgePoints : [],
                     {
-                        autoExpandFirstPreview: true,
                         resultSetKey: resultSetKey || undefined,
                         onCapability: function (item, capability) {
                             executeCapability(item, capability);
@@ -4049,6 +4061,12 @@
         openGraphFocus,
         openLearningPath,
         executeCapability,
+        getLastConversationResult: function () {
+            return window.__NC_LAST_AGENT_CONVERSATION_RESULT || null;
+        },
+        getLastConversationGrounding: function () {
+            return window.__NC_LAST_AGENT_CONVERSATION_GROUNDING || null;
+        },
         setWorkspaceOpen,
         isWorkspaceOpen,
         getCapabilityRegistryDiagnostics: function () {
