@@ -848,6 +848,15 @@
             error,
         ].filter(Boolean);
         node.setAttribute('data-api-state', state);
+        node.setAttribute(
+            'data-agent-inspectable',
+            (
+                state === 'ok'
+                && Boolean(window.__NC_LAST_AGENT_CONVERSATION_GROUNDING)
+            )
+                ? 'true'
+                : 'false'
+        );
         node.innerHTML = `
             <span class="agent-api-status-dot" aria-hidden="true"></span>
             <span class="agent-api-status-label">${escapeHtml(stateLabel)}</span>
@@ -1087,6 +1096,18 @@
             messageKey: key,
             params: params || {},
         });
+    }
+
+    function openGroundingInspector() {
+        const controller = getController();
+        const grounding = window.__NC_LAST_AGENT_CONVERSATION_GROUNDING;
+        if (!controller || typeof controller.openEvidencePane !== 'function' || !grounding || typeof grounding !== 'object') {
+            return;
+        }
+        controller.openEvidencePane(Object.assign({
+            kind: 'grounding',
+            title: translate('agentWorkspace.evidence.groundingTitle', 'Grounding Inspector'),
+        }, grounding));
     }
 
     function appendUserMessage(message) {
@@ -3989,6 +4010,7 @@
         const toggleButton = getElement('btn-open-agent-workspace');
         const closeButton = getElement('btn-close-agent-workspace');
         const backdrop = getElement('agent-workspace-backdrop');
+        const apiStatus = getElement('agent-workspace-api-status');
 
         if (toggleButton && typeof toggleButton.addEventListener === 'function') {
             toggleButton.addEventListener('click', function () {
@@ -4004,6 +4026,19 @@
             backdrop.addEventListener('click', function () {
                 setWorkspaceOpen(false);
             });
+        }
+        if (apiStatus && typeof apiStatus.addEventListener === 'function') {
+            apiStatus.addEventListener('click', function () {
+                openGroundingInspector();
+            });
+            apiStatus.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openGroundingInspector();
+                }
+            });
+            apiStatus.setAttribute('role', 'button');
+            apiStatus.setAttribute('tabindex', '0');
         }
         if (typeof document.addEventListener === 'function') {
             document.addEventListener('keydown', function (event) {

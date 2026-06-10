@@ -428,6 +428,17 @@
       "emptyIdle": "Graph focus pane is idle.",
       "noSummary": "No summary available."
     },
+    "evidence": {
+      "title": "Evidence Inspector",
+      "emptyIdle": "Evidence pane is idle.",
+      "groundingTitle": "Grounding Inspector",
+      "scopeLabel": "Scope",
+      "citationsLabel": "Citations",
+      "memoriesLabel": "Recalled memories",
+      "memoryActionsLabel": "Memory actions",
+      "readinessLabel": "Workspace readiness",
+      "missLabel": "Scope recovery"
+    },
     "learningPath": {
       "title": "Guided Learning",
       "emptyIdle": "Learning path pane is idle.",

@@ -428,6 +428,17 @@
       "emptyIdle": "图谱聚焦面板当前为空。",
       "noSummary": "暂无摘要。"
     },
+    "evidence": {
+      "title": "证据面板",
+      "emptyIdle": "证据面板当前为空。",
+      "groundingTitle": "依据检查器",
+      "scopeLabel": "范围",
+      "citationsLabel": "引用数",
+      "memoriesLabel": "召回记忆",
+      "memoryActionsLabel": "记忆动作",
+      "readinessLabel": "工作区就绪状态",
+      "missLabel": "范围恢复"
+    },
     "learningPath": {
       "title": "引导式学习",
       "emptyIdle": "学习路径面板当前为空。",

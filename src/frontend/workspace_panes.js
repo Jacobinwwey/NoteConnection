@@ -1,5 +1,5 @@
 (function () {
-    const PANE_KEYS = ['graph-focus', 'learning-path'];
+    const PANE_KEYS = ['graph-focus', 'evidence', 'learning-path'];
     const PROMOTION_ATTRIBUTE = 'data-agent-workspace-promotion';
     const LEARNING_PATH_WORKSPACE_ELEMENT_IDS = [
         'path-container',
@@ -23,6 +23,9 @@
         if (paneKey === 'graph-focus') {
             return getElement('agent-graph-focus-pane');
         }
+        if (paneKey === 'evidence') {
+            return getElement('agent-evidence-pane');
+        }
         if (paneKey === 'learning-path') {
             return getElement('agent-learning-path-pane');
         }
@@ -32,6 +35,9 @@
     function getPaneBodyElement(paneKey) {
         if (paneKey === 'graph-focus') {
             return getElement('agent-graph-focus-body');
+        }
+        if (paneKey === 'evidence') {
+            return getElement('agent-evidence-body');
         }
         if (paneKey === 'learning-path') {
             return getElement('agent-learning-path-body');
@@ -137,6 +143,9 @@
     function getFullscreenButtonElement(paneKey) {
         if (paneKey === 'graph-focus') {
             return getElement('btn-agent-graph-focus-fullscreen');
+        }
+        if (paneKey === 'evidence') {
+            return getElement('btn-agent-evidence-fullscreen');
         }
         if (paneKey === 'learning-path') {
             return getElement('btn-agent-learning-path-fullscreen');
@@ -523,6 +532,91 @@
         `;
     }
 
+    function renderEvidenceGroundingBody(body, payload) {
+        const title = String(
+            payload.title
+            || translate('agentWorkspace.evidence.groundingTitle', 'Grounding Inspector')
+        ).trim();
+        const scopeLabel = String(payload.scopeLabel || '').trim()
+            || translate('agentWorkspace.reply.knowledgeRunNone', 'none');
+        const readinessMessage = String(payload.readinessMessage || '').trim();
+        const missMessage = String(payload.missMessage || '').trim();
+        const metrics = [
+            {
+                title: translate('agentWorkspace.evidence.scopeLabel', 'Scope'),
+                value: scopeLabel,
+            },
+            {
+                title: translate('agentWorkspace.evidence.citationsLabel', 'Citations'),
+                value: String(payload.citationCount == null ? 0 : payload.citationCount),
+            },
+            {
+                title: translate('agentWorkspace.evidence.memoriesLabel', 'Recalled memories'),
+                value: String(payload.memoryCount == null ? 0 : payload.memoryCount),
+            },
+            {
+                title: translate('agentWorkspace.evidence.memoryActionsLabel', 'Memory actions'),
+                value: String(payload.memoryActionCount == null ? 0 : payload.memoryActionCount),
+            },
+        ];
+        const metricsHtml = metrics.map((metric) => `
+            <li class="agent-pane-list-item">
+                <span class="agent-pane-list-label">${escapeHtml(metric.title)}</span>
+                <span class="agent-pane-meta">${escapeHtml(metric.value)}</span>
+            </li>
+        `).join('');
+        body.innerHTML = `
+            <div class="agent-pane-block">
+                <div class="agent-pane-title">${escapeHtml(title)}</div>
+                <ul class="agent-pane-list">${metricsHtml}</ul>
+                ${readinessMessage ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.readinessLabel', 'Workspace readiness'))}</div><div class="agent-pane-summary">${escapeHtml(readinessMessage)}</div>` : ''}
+                ${missMessage ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.missLabel', 'Scope recovery'))}</div><div class="agent-pane-summary">${escapeHtml(missMessage)}</div>` : ''}
+            </div>
+        `;
+    }
+
+    function renderEvidenceCardBody(body, payload, renderCard) {
+        if (!body || typeof renderCard !== 'function') {
+            return;
+        }
+        body.innerHTML = '';
+        const node = document.createElement('div');
+        node.className = 'agent-chat-message agent-chat-message-assistant agent-chat-message-card';
+        node.setAttribute('data-agent-workspace-card-kind', String(payload && payload.kind || 'evidence').trim() || 'evidence');
+        node.setAttribute('data-agent-workspace-card-payload', JSON.stringify(payload || {}));
+        body.appendChild(node);
+        renderCard(node, payload || {});
+    }
+
+    function renderEvidenceBody(payload) {
+        const body = getPaneBodyElement('evidence');
+        if (!body) {
+            return;
+        }
+        const kind = String(payload && payload.kind || '').trim();
+        if (kind === 'grounding') {
+            renderEvidenceGroundingBody(body, payload || {});
+            return;
+        }
+        if (kind === 'flashcard_batch') {
+            renderEvidenceCardBody(body, payload, renderFlashcardBatchCard);
+            return;
+        }
+        if (kind === 'knowledge_run') {
+            renderEvidenceCardBody(body, payload, renderKnowledgeRunCard);
+            return;
+        }
+        if (kind === 'knowledge_run_history') {
+            renderEvidenceCardBody(body, payload, renderKnowledgeRunHistoryCard);
+            return;
+        }
+        if (kind === 'knowledge_run_compare') {
+            renderEvidenceCardBody(body, payload, renderKnowledgeRunCompareCard);
+            return;
+        }
+        body.innerHTML = `<div class="agent-pane-empty">${escapeHtml(translate('agentWorkspace.evidence.emptyIdle', 'Evidence pane is idle.'))}</div>`;
+    }
+
     function escapeHtml(value) {
         return String(value || '')
             .replace(/&/g, '&amp;')
@@ -746,7 +840,8 @@
 
     function renderKnowledgeRunCard(node, payload) {
         const summary = payload && typeof payload === 'object' ? payload : {};
-        const title = translate('agentWorkspace.reply.knowledgeRunCardTitle', 'Knowledge Run Details');
+        const title = String(summary.title || '').trim()
+            || translate('agentWorkspace.reply.knowledgeRunCardTitle', 'Knowledge Run Details');
         const qualityStatus = String(summary.qualityStatus || '').trim()
             || translate('agentWorkspace.reply.knowledgeRunNone', 'none');
         const qualityScore = Number(summary.qualityScore);
@@ -3005,6 +3100,11 @@
                 fullscreen: false,
                 payload: null,
             },
+            'evidence': {
+                open: false,
+                fullscreen: false,
+                payload: null,
+            },
             'learning-path': {
                 open: false,
                 fullscreen: false,
@@ -3185,6 +3285,14 @@
         updatePaneControlLabels();
         if (state.panes['graph-focus'].open) {
             renderGraphFocusBody(state.panes['graph-focus'].payload || {});
+        }
+        if (state.panes['evidence'].open) {
+            renderEvidenceBody(state.panes['evidence'].payload || {});
+        } else {
+            const body = getPaneBodyElement('evidence');
+            if (body) {
+                body.innerHTML = `<div class="agent-pane-empty">${escapeHtml(translate('agentWorkspace.evidence.emptyIdle', 'Evidence pane is idle.'))}</div>`;
+            }
         }
         if (state.panes['learning-path'].open) {
             renderLearningPathBody(state.panes['learning-path'].payload || {});
@@ -3689,6 +3797,13 @@
             });
         }
 
+        const evidenceFullscreenButton = getElement('btn-agent-evidence-fullscreen');
+        if (evidenceFullscreenButton && typeof evidenceFullscreenButton.addEventListener === 'function') {
+            evidenceFullscreenButton.addEventListener('click', function () {
+                api.setPaneFullscreen('evidence', !state.panes.evidence.fullscreen);
+            });
+        }
+
         const learningFullscreenButton = getElement('btn-agent-learning-path-fullscreen');
         if (learningFullscreenButton && typeof learningFullscreenButton.addEventListener === 'function') {
             learningFullscreenButton.addEventListener('click', function () {
@@ -3737,6 +3852,14 @@
             renderGraphFocusBody(payload || {});
             syncPaneState('graph-focus');
         },
+        openEvidencePane: function (payload) {
+            ensureWorkspaceVisible();
+            state.panes.evidence.open = true;
+            state.panes.evidence.payload = payload || null;
+            renderEvidenceBody(payload || {});
+            syncPaneState('evidence');
+            updatePaneControlLabels();
+        },
         clearGraphFocusPane: function () {
             if (state.promotionPane === 'graph-focus') {
                 state.promotionPane = null;
@@ -3750,6 +3873,21 @@
                 body.innerHTML = `<div class="agent-pane-empty">${escapeHtml(translate('agentWorkspace.graphFocus.emptyIdle', 'Graph focus pane is idle.'))}</div>`;
             }
             syncPaneState('graph-focus');
+            updatePaneControlLabels();
+        },
+        clearEvidencePane: function () {
+            if (state.promotionPane === 'evidence') {
+                state.promotionPane = null;
+                syncBodyPromotionState();
+            }
+            state.panes.evidence.open = false;
+            state.panes.evidence.fullscreen = false;
+            state.panes.evidence.payload = null;
+            const body = getPaneBodyElement('evidence');
+            if (body) {
+                body.innerHTML = `<div class="agent-pane-empty">${escapeHtml(translate('agentWorkspace.evidence.emptyIdle', 'Evidence pane is idle.'))}</div>`;
+            }
+            syncPaneState('evidence');
             updatePaneControlLabels();
         },
         openLearningPathPane: function (payload) {
@@ -4037,65 +4175,29 @@
             return node;
         },
         appendFlashcardBatchCard: function (payload) {
-            const container = getElement('agent-workspace-chat-messages');
-            if (!container) {
-                return null;
-            }
-            const node = document.createElement('div');
-            node.className = 'agent-chat-message agent-chat-message-assistant agent-chat-message-card';
-            node.setAttribute('data-agent-workspace-card-kind', 'flashcard-batch');
-            node.setAttribute('data-agent-workspace-card-payload', JSON.stringify(payload || {}));
-            renderFlashcardBatchCard(node, payload || {});
-            container.appendChild(node);
-            return node;
+            const panePayload = Object.assign({ kind: 'flashcard_batch' }, payload || {});
+            api.openEvidencePane(panePayload);
+            return getPaneBodyElement('evidence');
         },
         appendKnowledgeRunCard: function (payload) {
-            const container = getElement('agent-workspace-chat-messages');
-            if (!container) {
-                return null;
-            }
-            const node = document.createElement('div');
-            node.className = 'agent-chat-message agent-chat-message-assistant agent-chat-message-card';
-            node.setAttribute('data-agent-workspace-card-kind', 'knowledge-run');
-            node.setAttribute('data-agent-workspace-card-payload', JSON.stringify(payload || {}));
-            renderKnowledgeRunCard(node, payload || {});
-            container.appendChild(node);
-            return node;
+            const panePayload = Object.assign({ kind: 'knowledge_run' }, payload || {});
+            api.openEvidencePane(panePayload);
+            return getPaneBodyElement('evidence');
         },
         appendKnowledgeRunHistoryCard: function (payload) {
-            const container = getElement('agent-workspace-chat-messages');
-            if (!container) {
-                return null;
-            }
-            const node = document.createElement('div');
-            node.className = 'agent-chat-message agent-chat-message-assistant agent-chat-message-card';
-            node.setAttribute('data-agent-workspace-card-kind', 'knowledge-run-history');
-            node.setAttribute('data-agent-workspace-card-payload', JSON.stringify(payload || {}));
-            renderKnowledgeRunHistoryCard(node, payload || {});
-            container.appendChild(node);
-            return node;
+            const panePayload = Object.assign({ kind: 'knowledge_run_history' }, payload || {});
+            api.openEvidencePane(panePayload);
+            return getPaneBodyElement('evidence');
         },
         appendKnowledgeRunCompareCard: function (payload) {
-            const container = getElement('agent-workspace-chat-messages');
-            if (!container) {
-                return null;
-            }
-            const node = document.createElement('div');
-            node.className = 'agent-chat-message agent-chat-message-assistant agent-chat-message-card';
-            node.setAttribute('data-agent-workspace-card-kind', 'knowledge-run-compare');
-            node.setAttribute('data-agent-workspace-card-payload', JSON.stringify(payload || {}));
-            renderKnowledgeRunCompareCard(node, payload || {});
-            container.appendChild(node);
-            return node;
+            const panePayload = Object.assign({ kind: 'knowledge_run_compare' }, payload || {});
+            api.openEvidencePane(panePayload);
+            return getPaneBodyElement('evidence');
         },
         updateFlashcardBatchCard: function (node, payload) {
-            if (!node) {
-                return null;
-            }
-            node.setAttribute('data-agent-workspace-card-kind', 'flashcard-batch');
-            node.setAttribute('data-agent-workspace-card-payload', JSON.stringify(payload || {}));
-            renderFlashcardBatchCard(node, payload || {});
-            return node;
+            const panePayload = Object.assign({ kind: 'flashcard_batch' }, payload || {});
+            api.openEvidencePane(panePayload);
+            return getPaneBodyElement('evidence');
         },
         appendSessionPlanQualityHistoryCard: function (payload) {
             const container = getElement('agent-workspace-chat-messages');

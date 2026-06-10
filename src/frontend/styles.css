@@ -2009,6 +2009,13 @@ body.agent-workspace-open .agent-workspace-drawer {
   font-weight: 600;
 }
 
+.agent-pane-section-title {
+  margin-top: 12px;
+  margin-bottom: 8px;
+  color: #e5ecf4;
+  font-weight: 600;
+}
+
 .agent-chat-card-list,
 .agent-pane-list {
   margin: 0;
@@ -2318,14 +2325,22 @@ body.agent-workspace-open .agent-workspace-drawer {
 }
 
 body[data-agent-workspace-promotion="graph-focus"] #agent-learning-path-pane,
+body[data-agent-workspace-promotion="graph-focus"] #agent-evidence-pane,
+body[data-agent-workspace-promotion="evidence"] #agent-graph-focus-pane,
+body[data-agent-workspace-promotion="evidence"] #agent-learning-path-pane,
 body[data-agent-workspace-promotion="learning-path"] #agent-graph-focus-pane {
   display: none !important;
 }
 
 body[data-agent-workspace-promotion="graph-focus"] #agent-graph-focus-pane,
+body[data-agent-workspace-promotion="evidence"] #agent-evidence-pane,
 body[data-agent-workspace-promotion="learning-path"] #agent-learning-path-pane {
   display: flex !important;
   min-height: calc(100vh - 170px);
+}
+
+#agent-workspace-api-status[data-agent-inspectable="true"] {
+  cursor: pointer;
 }
 
 @media (max-width: 1180px) {

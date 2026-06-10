@@ -49,8 +49,8 @@ Current implementation pressure points measured from the workspace:
 
 - `src/server.ts`: 15,850 lines
 - `src/learning/KnowledgeLearningPlatform.ts`: 10,657 lines
-- `src/frontend/agent_workspace.js`: 3,961 lines
-- `src/frontend/workspace_panes.js`: 4,084 lines
+- `src/frontend/agent_workspace.js`: 3,995 lines
+- `src/frontend/workspace_panes.js`: 4,182 lines
 - `src/learning/conversationComposer.ts`: 753 lines
 
 ### Current Code-Backed State
@@ -103,14 +103,21 @@ Implemented evidence:
 - `agent_workspace.js` now supports:
   - workflow artifact fetch
   - workflow artifact review follow-up
-  - knowledge-run card/history/compare rendering paths
+  - workflow artifact result routing into the secondary evidence pane
+- `workspace_panes.js` now exposes a dedicated `evidence` pane owner for:
+  - grounding inspection
+  - `flashcard_batch`
+  - `knowledge_run`
+  - `knowledge_run_history`
+  - `knowledge_run_compare`
 
 Progress call:
 
 - Durable answer-adjacent artifacts are implemented.
+- They now have a productized secondary inspection surface instead of depending only on visible chat cards or runtime getters.
 - This is the strongest current substrate for future evidence-ledger and review-loop work.
 
-#### 3. Knowledge-hit rendering is now file-first and right-pane-first at the primary interaction layer
+#### 3. Knowledge-hit rendering is now file-first and right-pane-first at the primary interaction layer, and secondary evidence now has a pane-backed owner
 
 Implemented evidence:
 
@@ -119,6 +126,8 @@ Implemented evidence:
 - inline previews and visible typed capability buttons no longer render in the primary hit list.
 - Graph-focus can render original markdown and highlight matched evidence.
 - `agent_workspace.js` no longer auto-expands the first knowledge preview and keeps the full conversation result plus grounding summary in runtime getters for follow-up flows.
+- the conversation API status strip now opens a grounding inspector in the evidence pane.
+- `knowledge_run`, `knowledge_run_history`, `knowledge_run_compare`, and `flashcard_batch` inspections now open in the evidence pane instead of appending new primary chat cards.
 
 Progress call:
 
@@ -127,8 +136,9 @@ Progress call:
   - left-side hit list as file-only entry points,
   - right-side pane as the canonical rendered-reading surface,
   - supporting evidence/actions removed from the primary answer and hit-list surfaces.
-- The remaining gap is not the primary interaction anymore.
-- The remaining gap is the lack of a first-class secondary evidence/claim inspector for durable artifacts and reply grounding.
+- The secondary evidence/claim inspector is now real and pane-backed.
+- The remaining gap is no longer the absence of a secondary owner.
+- The remaining gap is extending this pane-backed inspection model into a broader durable evidence ledger and DAG-aware answer-planning flow.
 
 #### 4. The codebase already contains DAG-capable data, but the answer layer still underuses it
 
@@ -167,26 +177,26 @@ Progress call:
 
 | Requirement from prior plans | Current code reality | Status | Main gap |
 |---|---|---|---|
-| Rich grounded conversation with compatibility fallback | Implemented through `assistantMessage` + `answer` + `assistantBlocks` + `knowledgeRun`, with the primary assistant area now limited to user-facing blocks (`structured_answer`, `main_markdown`, `html_artifact`) | Implemented current slice | Supporting artifacts still need a dedicated inspection surface |
-| Durable learning/review loop | Implemented through workflow artifacts, knowledge runs, review follow-up, flashcard batch persistence | Implemented baseline | Needs better frontend information architecture |
-| File-first scoped knowledge hits | Implemented and now routed directly into graph focus from file-only entries | Implemented current slice | Secondary evidence inspection still depends on separate follow-up surfaces |
-| Hide developer-heavy evidence from the main user-facing answer | Implemented in the primary chat and hit-list surfaces | Implemented current slice | Supporting evidence currently lives behind explicit capability execution and runtime getters instead of a dedicated inspector UI |
+| Rich grounded conversation with compatibility fallback | Implemented through `assistantMessage` + `answer` + `assistantBlocks` + `knowledgeRun`, with the primary assistant area now limited to user-facing blocks (`structured_answer`, `main_markdown`, `html_artifact`) | Implemented current slice | Answer planning still underuses the DAG |
+| Durable learning/review loop | Implemented through workflow artifacts, knowledge runs, review follow-up, flashcard batch persistence, and a pane-backed evidence inspector for durable artifact inspection | Implemented current slice | Still lacks a broader durable evidence ledger and challenge-loop product surface |
+| File-first scoped knowledge hits | Implemented and now routed directly into graph focus from file-only entries | Implemented current slice | Graph-focus and evidence-pane cohesion now matters more than entry-point cleanup |
+| Hide developer-heavy evidence from the main user-facing answer | Implemented in the primary chat and hit-list surfaces, with grounding and durable artifact inspection moved into a dedicated evidence pane | Implemented current slice | Secondary surfaces still share large frontend owners |
 | Use current DAG as a first-class answer-planning substrate | Not fully implemented | Partial | Missing graph-conditioned context assembly layer |
 | Ownership reduction in runtime and frontend hosts | Not complete | Behind target | `server.ts`, `KnowledgeLearningPlatform.ts`, `agent_workspace.js`, and `workspace_panes.js` still own too much |
 
 ### Current Risks
 
-#### 1. Secondary-surface drift risk
+#### 1. Secondary-surface cohesion risk
 
-The biggest current product risk has shifted.
-The primary answer surface is now much closer to the intended behavior, but the secondary inspection surfaces are not yet productized enough.
+The biggest current product risk has shifted again.
+The primary answer surface is now much closer to the intended behavior, and the secondary inspection surface is now real, but the split between graph focus and evidence inspection must stay coherent as the system grows.
 
 Examples:
 
 - the backend can produce durable learning artifacts,
 - the primary frontend no longer dumps support detail into the main answer flow,
-- but durable evidence and grounding are still surfaced mainly through explicit capability execution and runtime state,
-- which risks splitting the product into a clean user surface plus a developer-only inspection path.
+- durable evidence and grounding now have a pane-backed inspection surface,
+- but graph focus, evidence inspection, and future DAG-aware answer-planning can still drift into overlapping owners if the next slice is not explicit.
 
 #### 2. False “graph-native” confidence risk
 
@@ -241,13 +251,18 @@ Follow-on requirement:
 
 #### P3: Durable evidence/claim inspector
 
-Use the existing workflow-artifact substrate instead of inventing a second evidence system.
+Completed in the current slice.
 
-Requirements:
+Shipped characteristics:
 
 - treat `knowledge_run` and `flashcard_batch` as the first durable evidence surfaces,
 - give them a separate inspection path from the primary answer area,
-- prepare the frontend for future evidence-ledger and challenge-loop work.
+- expose grounding metadata through the same pane-backed inspection model,
+- keep workflow-artifact review follow-up updating the evidence surface in place.
+
+Follow-on requirement:
+
+- grow this pane-backed owner into a broader durable evidence ledger without collapsing the primary answer surface back into a developer-heavy chat transcript.
 
 #### P4: DAG-aware context assembly
 
@@ -281,6 +296,8 @@ Verified locally against the current code-backed slice:
 - `node --check src/frontend/workspace_panes.js`
 - `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
 - `npm.cmd run test:agent-workspace:contracts`
+- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/agent_workspace.contract.parity.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand --no-cache`
+- `npm.cmd run build`
 
 These checks validate that the current implementation slice is internally consistent before it is promoted to `main`.
 
@@ -323,8 +340,8 @@ These checks validate that the current implementation slice is internally consis
 
 - `src/server.ts`: 15,850 行
 - `src/learning/KnowledgeLearningPlatform.ts`: 10,657 行
-- `src/frontend/agent_workspace.js`: 3,961 行
-- `src/frontend/workspace_panes.js`: 4,084 行
+- `src/frontend/agent_workspace.js`: 3,995 行
+- `src/frontend/workspace_panes.js`: 4,182 行
 - `src/learning/conversationComposer.ts`: 753 行
 
 ### 当前已落地的真实代码状态
@@ -377,14 +394,21 @@ These checks validate that the current implementation slice is internally consis
 - `agent_workspace.js` 已支持：
   - workflow artifact 拉取
   - workflow artifact review follow-up
-  - knowledge-run card/history/compare 的结果呈现路径
+  - workflow artifact 结果路由到次级 evidence pane
+- `workspace_panes.js` 现已提供专门的 `evidence` pane owner，用于承接：
+  - grounding inspection
+  - `flashcard_batch`
+  - `knowledge_run`
+  - `knowledge_run_history`
+  - `knowledge_run_compare`
 
 进度判断：
 
 - durable answer-adjacent artifact 已实现。
+- 它们现在已经有了产品化的次级 inspection surface，而不再只依赖可见聊天卡片或 runtime getter。
 - 这是后续 evidence ledger 与 review-loop 最重要的当前基础设施。
 
-#### 3. 知识命中在主交互层已经收敛为 file-first + right-pane-first
+#### 3. 知识命中在主交互层已经收敛为 file-first + right-pane-first，次级 evidence 也已经有 pane-backed owner
 
 已实现证据：
 
@@ -393,6 +417,8 @@ These checks validate that the current implementation slice is internally consis
 - inline preview 与可见 typed capability 按钮已不再出现在主命中列表中。
 - graph-focus 已能渲染原始 markdown 并高亮命中段落。
 - `agent_workspace.js` 已不再自动展开首个 knowledge preview，并把完整 conversation result 与 grounding summary 保留在 runtime getter 中供 follow-up flow 使用。
+- conversation API 状态条现在可以打开 grounding inspector。
+- `knowledge_run`、`knowledge_run_history`、`knowledge_run_compare` 与 `flashcard_batch` 检查现在都会打开 evidence pane，而不是继续向主聊天区附加新卡片。
 
 进度判断：
 
@@ -401,8 +427,8 @@ These checks validate that the current implementation slice is internally consis
   - 左侧命中列表仅作为文件入口，
   - 右侧 pane 才是权威阅读面，
   - supporting evidence / actions 已退出主回答区与主命中列表。
-- 当前剩余缺口已不再是主交互本身。
-- 当前剩余缺口是 durable artifact 与 reply grounding 还没有一等的次级 evidence / claim inspector。
+- 次级 evidence / claim inspector 已经真实存在，并且以 pane owner 形式落地。
+- 当前剩余缺口不再是“没有二级 owner”，而是要把该 pane-backed inspection 模型继续扩展成更广义的 durable evidence ledger，以及 DAG-aware 的回答规划链路。
 
 #### 4. 现有代码已经有 DAG 结构数据，但回答层仍未充分利用
 
@@ -441,26 +467,26 @@ These checks validate that the current implementation slice is internally consis
 
 | 先前方案要求 | 当前代码现实 | 状态 | 主要缺口 |
 |---|---|---|---|
-| richer grounded conversation 且保留兼容 fallback | 已通过 `assistantMessage` + `answer` + `assistantBlocks` + `knowledgeRun` 落地，且主回答区已收缩为用户面块（`structured_answer`、`main_markdown`、`html_artifact`） | 当前切片已实现 | supporting artifact 仍需专门 inspection surface |
-| durable learning / review loop | 已通过 workflow artifact、knowledge run、review follow-up、flashcard batch 落地 | 已实现基线 | 前端信息架构仍需收敛 |
-| file-first scoped knowledge hits | 已实现，且现已通过文件入口直接路由到 graph focus | 当前切片已实现 | 次级 evidence inspection 仍依赖独立 follow-up surface |
-| 主回答区不暴露开发者导向 evidence 细节 | 已在主对话面与主命中列表中实现 | 当前切片已实现 | supporting evidence 目前仍主要依赖显式 capability 执行与 runtime getter，而不是专用 inspector UI |
+| richer grounded conversation 且保留兼容 fallback | 已通过 `assistantMessage` + `answer` + `assistantBlocks` + `knowledgeRun` 落地，且主回答区已收缩为用户面块（`structured_answer`、`main_markdown`、`html_artifact`） | 当前切片已实现 | 回答规划仍未充分利用 DAG |
+| durable learning / review loop | 已通过 workflow artifact、knowledge run、review-follow-up、flashcard batch 与 pane-backed evidence inspector 落地 | 当前切片已实现 | 仍缺更广义的 durable evidence ledger 与 challenge-loop 产品面 |
+| file-first scoped knowledge hits | 已实现，且现已通过文件入口直接路由到 graph focus | 当前切片已实现 | graph focus 与 evidence pane 的职责边界仍需持续保持清晰 |
+| 主回答区不暴露开发者导向 evidence 细节 | 已在主对话面与主命中列表中实现，grounding 与 durable artifact 检查也已迁入专门的 evidence pane | 当前切片已实现 | 次级 surface 仍与大型前端宿主共享较多所有权 |
 | 让现有 DAG 成为真正的一等回答规划底座 | 尚未完全实现 | 部分完成 | 缺 graph-conditioned context assembly 层 |
 | 缩减运行时与前端宿主文件所有权压力 | 尚未完成 | 落后于目标 | `server.ts`、`KnowledgeLearningPlatform.ts`、`agent_workspace.js`、`workspace_panes.js` 仍过重 |
 
 ### 当前风险
 
-#### 1. 次级表面漂移风险
+#### 1. 次级表面协同风险
 
-当前最大的产品风险已经发生转移。
-主回答面已经更接近预期，但次级 inspection surface 还不够产品化。
+当前最大的产品风险又发生了转移。
+主回答面已经更接近预期，次级 inspection surface 也已经真实存在，但 graph focus 与 evidence inspection 的协同边界必须在后续推进中持续保持清晰。
 
 例如：
 
 - 后端已经能产出 durable learning artifact，
 - 主前端已经不再把 supporting detail 堆到同一主回答流里，
-- 但 durable evidence 与 grounding 目前仍主要通过显式 capability 执行与 runtime state 暴露，
-- 这会带来“用户面很干净，但 inspectability 更像开发者路径”的分裂风险。
+- durable evidence 与 grounding 现在已经有 pane-backed inspection surface，
+- 但如果下一步不显式约束 owner，graph focus、evidence inspection 与未来 DAG-aware answer planning 仍可能重新出现职责重叠。
 
 #### 2. 假性 graph-native 信心风险
 
@@ -519,13 +545,18 @@ These checks validate that the current implementation slice is internally consis
 
 #### P3：建设 durable evidence / claim inspector
 
-优先复用现有 workflow-artifact 底座，而不是再造一套第二证据系统。
+当前切片已完成。
 
-要求：
+已交付特征：
 
 - 把 `knowledge_run` 和 `flashcard_batch` 视为当前第一批 durable evidence surface，
 - 让它们走与主回答区分离的 inspection path，
-- 为后续 evidence ledger / challenge loop 做准备。
+- 让 grounding metadata 也走同一套 pane-backed inspection 模型，
+- 让 workflow-artifact review follow-up 可以原位更新 evidence surface。
+
+后续要求：
+
+- 在不破坏主回答区契约的前提下，把这个 pane-backed owner 继续扩展成更广义的 durable evidence ledger。
 
 #### P4：补图结构上下文装配层
 
@@ -559,5 +590,7 @@ These checks validate that the current implementation slice is internally consis
 - `node --check src/frontend/workspace_panes.js`
 - `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
 - `npm.cmd run test:agent-workspace:contracts`
+- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/agent_workspace.contract.parity.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand --no-cache`
+- `npm.cmd run build`
 
 这些检查确认：当前实现切片在推进到 `main` 前已经达到内部自洽状态。

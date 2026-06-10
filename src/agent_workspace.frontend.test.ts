@@ -829,6 +829,12 @@ function createWorkspaceHtml() {
                     </div>
                     <div id="agent-graph-focus-body"></div>
                   </section>
+                  <section id="agent-evidence-pane" class="agent-workspace-pane">
+                    <div class="agent-workspace-pane-header">
+                      <button id="btn-agent-evidence-fullscreen"></button>
+                    </div>
+                    <div id="agent-evidence-body"></div>
+                  </section>
                   <section id="agent-learning-path-pane" class="agent-workspace-pane">
                     <div class="agent-workspace-pane-header">
                       <button id="btn-agent-learning-path-fullscreen"></button>
@@ -2918,7 +2924,7 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
 }
 
 describe('workspace panes controller', () => {
-    test('supports parallel graph-focus and learning-path panes with exclusive workspace promotion state', () => {
+    test('supports parallel graph-focus, evidence, and learning-path panes with exclusive workspace promotion state', () => {
         const { controller, document } = loadWorkspacePanesHarness();
         controller.init();
 
@@ -2926,6 +2932,14 @@ describe('workspace panes controller', () => {
             atomId: 'atom_retrieval',
             title: 'Retrieval Foundations',
             summary: 'Evidence-first retrieval keeps answers grounded.',
+        });
+        controller.openEvidencePane({
+            kind: 'grounding',
+            title: 'Grounding Inspector',
+            scopeLabel: 'waterglass',
+            citationCount: 2,
+            memoryCount: 1,
+            memoryActionCount: 1,
         });
         controller.openLearningPathPane({
             atomId: 'atom_paths',
@@ -2936,25 +2950,76 @@ describe('workspace panes controller', () => {
         });
 
         const graphPane = document.getElementById('agent-graph-focus-pane');
+        const evidencePane = document.getElementById('agent-evidence-pane');
         const learningPane = document.getElementById('agent-learning-path-pane');
         expect(graphPane?.getAttribute('data-open')).toBe('true');
+        expect(evidencePane?.getAttribute('data-open')).toBe('true');
         expect(learningPane?.getAttribute('data-open')).toBe('true');
         expect(document.body.getAttribute('data-agent-workspace-layout')).toBe('split');
 
         controller.setPaneFullscreen('graph-focus', true);
         expect(graphPane?.getAttribute('data-fullscreen')).toBe('true');
+        expect(evidencePane?.getAttribute('data-fullscreen')).toBe('false');
         expect(learningPane?.getAttribute('data-fullscreen')).toBe('false');
         expect(document.body.getAttribute('data-agent-workspace-promotion')).toBe('graph-focus');
 
+        controller.setPaneFullscreen('evidence', true);
+        expect(graphPane?.getAttribute('data-fullscreen')).toBe('false');
+        expect(evidencePane?.getAttribute('data-fullscreen')).toBe('true');
+        expect(learningPane?.getAttribute('data-fullscreen')).toBe('false');
+        expect(document.body.getAttribute('data-agent-workspace-promotion')).toBe('evidence');
+
         controller.setPaneFullscreen('learning-path', true);
         expect(graphPane?.getAttribute('data-fullscreen')).toBe('false');
+        expect(evidencePane?.getAttribute('data-fullscreen')).toBe('false');
         expect(learningPane?.getAttribute('data-fullscreen')).toBe('true');
         expect(document.body.getAttribute('data-agent-workspace-promotion')).toBe('learning-path');
 
         controller.setPaneFullscreen('learning-path', false);
         expect(graphPane?.getAttribute('data-fullscreen')).toBe('false');
+        expect(evidencePane?.getAttribute('data-fullscreen')).toBe('false');
         expect(learningPane?.getAttribute('data-fullscreen')).toBe('false');
         expect(document.body.hasAttribute('data-agent-workspace-promotion')).toBe(false);
+    });
+
+    test('opens and clears the evidence pane with grounding and artifact payloads', () => {
+        const { controller, document } = loadWorkspacePanesHarness({ withI18n: true });
+        controller.init();
+
+        controller.openEvidencePane({
+            kind: 'grounding',
+            title: 'Grounding Inspector',
+            scopeLabel: 'waterglass',
+            citationCount: 3,
+            memoryCount: 1,
+            memoryActionCount: 2,
+            readinessMessage: 'Workspace hydrated.',
+            missMessage: 'Recovered document outside requested scope.',
+        });
+
+        const evidencePane = document.getElementById('agent-evidence-pane');
+        const evidenceBody = document.getElementById('agent-evidence-body');
+        expect(evidencePane?.getAttribute('data-open')).toBe('true');
+        expect(String(evidenceBody?.textContent || '')).toContain('Grounding Inspector');
+        expect(String(evidenceBody?.textContent || '')).toContain('waterglass');
+        expect(String(evidenceBody?.textContent || '')).toContain('Workspace hydrated.');
+        expect(String(evidenceBody?.textContent || '')).toContain('Recovered document outside requested scope.');
+
+        controller.openEvidencePane({
+            kind: 'knowledge_run',
+            title: 'Knowledge Run Inspector',
+            runId: 'knowledge_run_blocks_1',
+            qualityStatus: 'pass',
+            qualityScore: 100,
+            claimCount: 1,
+        });
+        expect(String(evidenceBody?.textContent || '')).toContain('Knowledge Run Inspector');
+        expect(String(evidenceBody?.textContent || '')).toContain('knowledge_run_blocks_1');
+        expect(String(evidenceBody?.textContent || '')).toContain('pass');
+
+        controller.clearEvidencePane();
+        expect(evidencePane?.getAttribute('data-open')).toBe('false');
+        expect(String(evidenceBody?.textContent || '')).toContain('Evidence pane is idle.');
     });
 
     test('mounts the existing path workspace into the learning-path pane and restores it on clear', () => {
@@ -3269,7 +3334,7 @@ describe('workspace panes controller', () => {
         expect(String(highlighted[0]?.textContent || '')).toContain('A water glass is a physical system');
     });
 
-    test('keeps conversation card append kinds aligned with rerender registry', () => {
+    test('keeps reusable card renderers aligned with chat and evidence owners', () => {
         const repoRoot = path.resolve(__dirname, '..');
         const source = fs.readFileSync(
             path.join(repoRoot, 'src', 'frontend', 'workspace_panes.js'),
@@ -3292,7 +3357,20 @@ describe('workspace panes controller', () => {
         const uniqueSorted = (values: string[]) =>
             Array.from(new Set(values)).sort((left, right) => left.localeCompare(right));
 
-        expect(uniqueSorted(registryKinds)).toEqual(uniqueSorted(appendKinds));
+        const evidenceOwnedKinds = [
+            'flashcard-batch',
+            'knowledge-run',
+            'knowledge-run-history',
+            'knowledge-run-compare',
+        ];
+        const expectedChatAppendKinds = uniqueSorted(
+            registryKinds.filter((kind) => evidenceOwnedKinds.indexOf(kind) < 0)
+        );
+
+        expect(uniqueSorted(appendKinds)).toEqual(expectedChatAppendKinds);
+        evidenceOwnedKinds.forEach((kind) => {
+            expect(registryKinds).toContain(kind);
+        });
     });
 
     test('ignores legacy action fields when typed capabilities are missing', () => {
@@ -3796,6 +3874,16 @@ describe('agent workspace learning-path integration', () => {
                 memoryActionCount: 1,
             })
         );
+        const status = document.getElementById('agent-workspace-api-status') as HTMLElement | null;
+        status?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+        const evidencePane = document.getElementById('agent-evidence-pane');
+        const evidenceBody = document.getElementById('agent-evidence-body');
+        expect(evidencePane?.getAttribute('data-open')).toBe('true');
+        expect(String(evidenceBody?.textContent || '')).toContain('waterglass');
+        expect(String(evidenceBody?.textContent || '')).toContain('1');
+        expect(String(evidenceBody?.textContent || '')).toContain('Recalled memories');
         const knowledgeCards = Array.from(document.querySelectorAll('.agent-knowledge-card'));
         expect(knowledgeCards.length).toBeGreaterThan(0);
         const fileButton = knowledgeCards[0]?.querySelector('.agent-knowledge-file-button') as HTMLButtonElement;
@@ -4296,16 +4384,17 @@ describe('agent workspace learning-path integration', () => {
         expect(String(fetchCall?.[0] || '')).toContain('artifactKinds=knowledge_run');
         expect(String(fetchCall?.[0] || '')).toContain('artifactId=workflow_artifact_knowledge_run_blocks_1');
 
-        const card = document.querySelector('[data-agent-workspace-card-kind="knowledge-run"]') as HTMLElement | null;
-        expect(card).not.toBeNull();
-        expect(card?.textContent).toContain('Knowledge Run Details');
-        expect(card?.textContent).toContain('Run knowledge_run_blocks_1: 1 claims, quality pass/100.');
-        expect(card?.textContent).toContain('Blocks Citation');
-        expect(card?.textContent).toContain('Knowledge_Base/optics/blocks.md:18');
-        expect(card?.textContent).toContain('Quality gates');
-        expect(card?.textContent).toContain('Review cards');
+        const evidencePane = document.getElementById('agent-evidence-pane');
+        const evidenceBody = document.getElementById('agent-evidence-body');
+        expect(evidencePane?.getAttribute('data-open')).toBe('true');
+        expect(String(evidenceBody?.textContent || '')).toContain('Knowledge Run Details');
+        expect(String(evidenceBody?.textContent || '')).toContain('Run knowledge_run_blocks_1: 1 claims, quality pass/100.');
+        expect(String(evidenceBody?.textContent || '')).toContain('Blocks Citation');
+        expect(String(evidenceBody?.textContent || '')).toContain('Knowledge_Base/optics/blocks.md:18');
+        expect(String(evidenceBody?.textContent || '')).toContain('Quality gates');
+        expect(String(evidenceBody?.textContent || '')).toContain('Review cards');
 
-        const inspectEvidenceButton = card?.querySelector('[data-agent-knowledge-run-claim-inspect="0"]') as HTMLButtonElement | null;
+        const inspectEvidenceButton = evidenceBody?.querySelector('[data-agent-knowledge-run-claim-inspect="0"]') as HTMLButtonElement | null;
         expect(inspectEvidenceButton).not.toBeNull();
         inspectEvidenceButton?.click();
         await new Promise((resolve) => setTimeout(resolve, 0));
@@ -4468,29 +4557,49 @@ describe('agent workspace learning-path integration', () => {
         const historyFetchCall = fetchMock.mock.calls.find((call) => String(call?.[0] || '').includes('artifactKinds=knowledge_run') && !String(call?.[0] || '').includes('artifactId=workflow_artifact_knowledge_run_blocks_1'));
         expect(String(historyFetchCall?.[0] || '')).toContain('workspaceId=waterglass');
 
-        const historyCard = document.querySelector('[data-agent-workspace-card-kind="knowledge-run-history"]') as HTMLElement | null;
-        expect(historyCard).not.toBeNull();
-        expect(historyCard?.textContent).toContain('Knowledge Run History');
-        expect(historyCard?.textContent).toContain('knowledge_run_blocks_1');
-        expect(historyCard?.textContent).toContain('knowledge_run_blocks_2');
-        expect(historyCard?.textContent).toContain('Recent Runs');
+        const evidencePane = document.getElementById('agent-evidence-pane');
+        const evidenceBody = document.getElementById('agent-evidence-body');
+        expect(evidencePane?.getAttribute('data-open')).toBe('true');
+        expect(String(evidenceBody?.textContent || '')).toContain('Knowledge Run History');
+        expect(String(evidenceBody?.textContent || '')).toContain('knowledge_run_blocks_1');
+        expect(String(evidenceBody?.textContent || '')).toContain('knowledge_run_blocks_2');
+        expect(String(evidenceBody?.textContent || '')).toContain('Recent Runs');
 
-        const compareButton = historyCard?.querySelector('[data-agent-knowledge-run-history-compare="1"]') as HTMLButtonElement | null;
+        const compareButton = evidenceBody?.querySelector('[data-agent-knowledge-run-history-compare="1"]') as HTMLButtonElement | null;
         expect(compareButton).not.toBeNull();
         compareButton?.click();
         await new Promise((resolve) => setTimeout(resolve, 0));
         await Promise.resolve();
 
-        const compareCard = document.querySelector('[data-agent-workspace-card-kind="knowledge-run-compare"]') as HTMLElement | null;
-        expect(compareCard).not.toBeNull();
-        expect(compareCard?.textContent).toContain('Knowledge Run Comparison');
-        expect(compareCard?.textContent).toContain('knowledge_run_blocks_2');
-        expect(compareCard?.textContent).toContain('knowledge_run_blocks_1');
-        expect(compareCard?.textContent).toContain('Quality delta');
-        expect(compareCard?.textContent).toContain('Weak-claim delta');
-        expect(compareCard?.textContent).toContain('+1');
+        expect(String(evidenceBody?.textContent || '')).toContain('Knowledge Run Comparison');
+        expect(String(evidenceBody?.textContent || '')).toContain('knowledge_run_blocks_2');
+        expect(String(evidenceBody?.textContent || '')).toContain('knowledge_run_blocks_1');
+        expect(String(evidenceBody?.textContent || '')).toContain('Quality delta');
+        expect(String(evidenceBody?.textContent || '')).toContain('Weak-claim delta');
+        expect(String(evidenceBody?.textContent || '')).toContain('+1');
 
-        const historyInspectButton = historyCard?.querySelector('[data-agent-knowledge-run-history-inspect="1"]') as HTMLButtonElement | null;
+        await (window as any).NoteConnectionAgentWorkspace.executeCapability({
+            atomId: 'atom_blocks_1',
+            title: 'Knowledge Run',
+        }, {
+            capabilityId: 'cap_browse_knowledge_runs_waterglass',
+            actionId: 'browse_knowledge_runs',
+            label: 'Recent Runs',
+            request: {
+                artifactKinds: ['knowledge_run'],
+                workspaceId: 'waterglass',
+                limit: 6,
+            },
+            execution: {
+                kind: 'knowledge_operation',
+                operationId: 'fetch_workflow_artifacts',
+                resultPresentation: 'knowledge_run_history_card',
+            },
+        });
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        const historyInspectButton = evidenceBody?.querySelector('[data-agent-knowledge-run-history-inspect="1"]') as HTMLButtonElement | null;
         expect(historyInspectButton).not.toBeNull();
         historyInspectButton?.click();
         await new Promise((resolve) => setTimeout(resolve, 0));
@@ -4499,10 +4608,8 @@ describe('agent workspace learning-path integration', () => {
         const detailFetchCall = fetchMock.mock.calls.find((call) => String(call?.[0] || '').includes('artifactId=workflow_artifact_knowledge_run_blocks_2'));
         expect(String(detailFetchCall?.[0] || '')).toContain('runId=knowledge_run_blocks_2');
 
-        const knowledgeRunCards = Array.from(document.querySelectorAll('[data-agent-workspace-card-kind="knowledge-run"]'));
-        expect(knowledgeRunCards.length).toBeGreaterThanOrEqual(1);
-        const latestKnowledgeRunCard = knowledgeRunCards[knowledgeRunCards.length - 1] as HTMLElement;
-        expect(String(latestKnowledgeRunCard.textContent || '')).toContain('knowledge_run_blocks_2');
+        expect(String(evidenceBody?.textContent || '')).toContain('Knowledge Run Details');
+        expect(String(evidenceBody?.textContent || '')).toContain('knowledge_run_blocks_2');
     });
 
     test('updates the knowledge API status panel after a successful conversation call', async () => {
@@ -6452,17 +6559,18 @@ describe('agent workspace learning-path integration', () => {
         expect(String(fetchCall?.[0] || '')).toContain('workspaceId=waterglass');
         expect(String(fetchCall?.[0] || '')).toContain('artifactKinds=flashcard_batch');
 
-        const card = document.querySelector('[data-agent-workspace-card-kind="flashcard-batch"]') as HTMLElement | null;
-        expect(card).not.toBeNull();
-        expect(card?.textContent).toContain('Review Card Batch');
-        expect(card?.textContent).toContain('1 artifact(s), 1/1 review card(s) remaining.');
-        expect(card?.textContent).toContain('What does the cited source establish about Water Glass?');
-        expect(card?.textContent).toContain('Knowledge_Base/waterglass/water glass.md:3');
-        expect(card?.textContent).toContain('Completed cards');
-        expect(card?.textContent).toContain('Remaining cards');
-        expect(card?.textContent).toContain('Artifact status');
+        const evidencePane = document.getElementById('agent-evidence-pane');
+        const evidenceBody = document.getElementById('agent-evidence-body');
+        expect(evidencePane?.getAttribute('data-open')).toBe('true');
+        expect(String(evidenceBody?.textContent || '')).toContain('Review Card Batch');
+        expect(String(evidenceBody?.textContent || '')).toContain('1 artifact(s), 1/1 review card(s) remaining.');
+        expect(String(evidenceBody?.textContent || '')).toContain('What does the cited source establish about Water Glass?');
+        expect(String(evidenceBody?.textContent || '')).toContain('Knowledge_Base/waterglass/water glass.md:3');
+        expect(String(evidenceBody?.textContent || '')).toContain('Completed cards');
+        expect(String(evidenceBody?.textContent || '')).toContain('Remaining cards');
+        expect(String(evidenceBody?.textContent || '')).toContain('Artifact status');
 
-        const followUpButton = card?.querySelector('[data-agent-flashcard-follow-up="true"]') as HTMLButtonElement | null;
+        const followUpButton = evidenceBody?.querySelector('[data-agent-flashcard-follow-up="true"]') as HTMLButtonElement | null;
         expect(followUpButton).not.toBeNull();
         followUpButton?.click();
         for (let attempt = 0; attempt < 6; attempt += 1) {
@@ -6485,9 +6593,9 @@ describe('agent workspace learning-path integration', () => {
         const assistantMessages = Array.from(document.querySelectorAll('.agent-chat-message-assistant')).map((node) => String(node.textContent || ''));
         expect(assistantMessages.length).toBeGreaterThan(0);
         expect(assistantMessages.some((message) => message.includes('unsupported_operation') || message.includes('Unsupported'))).toBe(false);
-        expect(card?.textContent).toContain('1 artifact(s), 0/1 review card(s) remaining.');
-        expect(card?.textContent).toContain('archived');
-        expect(card?.querySelector('[data-agent-flashcard-follow-up="true"]')).toBeNull();
+        expect(String(evidenceBody?.textContent || '')).toContain('1 artifact(s), 0/1 review card(s) remaining.');
+        expect(String(evidenceBody?.textContent || '')).toContain('archived');
+        expect(evidenceBody?.querySelector('[data-agent-flashcard-follow-up="true"]')).toBeNull();
     });
 
     test('rerenders tutor-action assistant cards when language changes', async () => {

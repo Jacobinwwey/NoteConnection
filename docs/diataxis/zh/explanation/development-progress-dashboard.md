@@ -15,7 +15,8 @@
 - workflow artifact 已包含 durable 的 `flashcard_batch` 与 `knowledge_run`；
 - reply rendering 已具备 typed structured-answer 路径；
 - workflow-artifact review follow-up 已进入运行时表面；
-- graph focus 已能渲染原始 markdown 并高亮 matched span。
+- graph focus 已能渲染原始 markdown 并高亮 matched span；
+- 独立 evidence pane 现已承接 grounding inspection 以及 durable `knowledge_run` / `flashcard_batch` 检查。
 
 但当前产品面仍未完全达到目标行为：
 
@@ -28,19 +29,19 @@
 | 要求 | 当前实现证据 | 进度判断 |
 |---|---|---|
 | 结构化 grounded conversation 且保持向前兼容 | `src/learning/types.ts`、`src/learning/conversationComposer.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js`、`src/frontend/workspace_panes.js` 现已支持 `answer`、`assistantBlocks`、`knowledgeRun`、按文档聚合的 `knowledgePoints`、citations 与 legacy `assistantMessage`，且主回答区现已只渲染用户面的回答块。 | 当前切片已实现 |
-| durable learning/review artifact | `src/workflows/WorkflowArtifactStore.ts`、`src/learning/KnowledgeLearningPlatform.ts` 与 `src/routes/knowledge.ts` 现已支持 durable `flashcard_batch` / `knowledge_run`，以及 `/api/knowledge/workflow-artifacts`、`/api/knowledge/workflow-artifacts/review-follow-up`。 | 已实现基线 |
+| durable learning/review artifact | `src/workflows/WorkflowArtifactStore.ts`、`src/learning/KnowledgeLearningPlatform.ts` 与 `src/routes/knowledge.ts` 现已支持 durable `flashcard_batch` / `knowledge_run`，以及 `/api/knowledge/workflow-artifacts`、`/api/knowledge/workflow-artifacts/review-follow-up`；`workspace_panes.js` 现已把它们的检查路由到专门的 evidence pane。 | 当前切片已实现 |
 | file-first scoped knowledge hit | `workspace_panes.js` 已按 source file 渲染 grouped knowledge hit，并把文件入口直接路由到 graph focus，而不是继续走 inline preview / action 扩展。 | 当前切片已实现 |
 | 右侧证据阅读面 | graph focus 已复用共享 markdown runtime，并在原始 markdown 中高亮 matched span。 | 已实现基线 |
 | 主回答区收缩为单一 targeted answer | `agent_workspace.js` 现在会保留完整 conversation result 到 runtime state，但主聊天面仅渲染用户面的回答块（`structured_answer`、`main_markdown`、`html_artifact`）。 | 当前切片已实现 |
-| 主命中列表不暴露开发者导向 evidence / action | `workspace_panes.js` 已不再在左侧命中列表中渲染 inline preview 或可见 typed capability button；这些流程转入显式 follow-up path。 | 当前切片已实现 |
+| 主命中列表不暴露开发者导向 evidence / action | `workspace_panes.js` 已不再在左侧命中列表中渲染 inline preview 或可见 typed capability button；这些流程现在会路由到 graph focus 或专门的 evidence pane。 | 当前切片已实现 |
+| durable evidence / claim inspector | `workspace_panes.js` 现已提供专门的 evidence pane，用于承接 grounding metadata、`knowledge_run`、`knowledge_run_history`、`knowledge_run_compare` 与 `flashcard_batch`；`agent_workspace.js` 也已把 API 状态条接成 grounding inspection 入口。 | 当前切片已实现 |
 | DAG-native answer planning | 系统已具备 `KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query、mastery-path 逻辑与 `KnowledgeQueryItem.relationPath`，但 conversation synthesis 仍缺 dedicated graph-conditioned context-assembly layer。 | 尚未完成 |
 
 从这里出发的即时推进方向：
 
-1. 为 `knowledge_run`、`flashcard_batch` 与 grounding metadata 建设专门的 durable evidence / claim inspector，而不是继续把这类能力留在显式 capability 执行与 runtime getter 后面。
-2. 在 retrieval 与 answer synthesis 之间补一个 graph-conditioned context-assembly layer，让当前 DAG 真正进入 answer planning。
-3. 在扩展次级 inspection surface 的同时，保持新的主回答区与 right-pane-first 主交互契约稳定。
-4. 继续缩减 `src/server.ts`、`KnowledgeLearningPlatform.ts`、`agent_workspace.js`、`workspace_panes.js` 的所有权压力。
+1. 在 retrieval 与 answer synthesis 之间补一个 graph-conditioned context-assembly layer，让当前 DAG 真正进入 answer planning。
+2. 在保持新的主回答区与 right-pane-first 主交互契约稳定的前提下，把 evidence pane 继续扩展成更广义的 durable evidence ledger。
+3. 继续缩减 `src/server.ts`、`KnowledgeLearningPlatform.ts`、`agent_workspace.js`、`workspace_panes.js` 的所有权压力。
 
 当前代码对齐切片的本地验证：
 
@@ -48,7 +49,9 @@
 - `node --check src/frontend/agent_workspace.js`
 - `node --check src/frontend/workspace_panes.js`
 - `npm.cmd exec -- jest src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/KnowledgeLearningPlatform.program-f.test.ts src/agent_workspace.frontend.test.ts src/knowledge.api.contract.test.ts src/routes/registry.contract.test.ts src/pathbridge.handshake.contract.test.ts src/server.port.fallback.contract.test.ts src/workflows/WorkflowArtifactStore.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/agent_workspace.contract.parity.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand --no-cache`
 - `npm.cmd run test:agent-workspace:contracts`
+- `npm.cmd run build`
 
 ## 2026-06-06 知识工作区 scope 切换器与证据聚焦命中 UI
 
