@@ -21,6 +21,9 @@
 - composer 现在会显式构建 `graphContext`；
 - 该 `graphContext` 现在也会沿着 conversation trace、snapshot persistence 与 workspace export 一起传播；
 - grounding inspector 现在会把持久化的 `graphContext` 渲染为结构化图解释面；
+- 关系聚合现在已覆盖整批 grouped knowledge points，而不再只看首个 anchor 的局部提示；
+- 时序有效性聚合现在除 warning text 外，还会保留 temporal edge kind/detail；
+- supersession 细节现在也会影响 explanation / next-action 文本，而不再只停留在 warning-only evidence；
 - grounding 检查入口现在按当前回合标准化判断，因此后续无 grounding payload 的回合不会继续保留陈旧的 evidence pane 状态。
 
 但当前产品面仍未完全达到目标行为：
@@ -40,12 +43,12 @@
 | 主回答区收缩为单一 targeted answer | `agent_workspace.js` 现在会保留完整 conversation result 到 runtime state，但主聊天面仅渲染用户面的回答块（`structured_answer`、`main_markdown`、`html_artifact`）。 | 当前切片已实现 |
 | 主命中列表不暴露开发者导向 evidence / action | `workspace_panes.js` 已不再在左侧命中列表中渲染 inline preview 或可见 typed capability button；这些流程现在会路由到 graph focus 或专门的 evidence pane。 | 当前切片已实现 |
 | durable evidence / claim inspector | `workspace_panes.js` 现已提供专门的 evidence pane，用于承接 grounding metadata、`knowledge_run`、`knowledge_run_history`、`knowledge_run_compare` 与 `flashcard_batch`；`agent_workspace.js` 也已把 API 状态条接成 grounding inspection 入口，并按当前回合规范清理陈旧 grounding 状态。 | 当前切片已更完整实现 |
-| DAG-native answer planning | `AgentConversationKnowledgePoint` 现已保留 grouped `relationPath`、`relationKinds`、`relationPathAtomIds` 与 `temporalValidity`；`conversationComposer.ts` 现已显式构建 `graphContext`；`KnowledgeLearningPlatform.ts` 与 `WorkspaceExportBundle.ts` 也已在 trace / persistence / export 中保留它；`workspace_panes.js` 现在会在 evidence pane 中把该 `graphContext` 渲染成结构化图解释面。 | 当前切片已更宽的部分实现 |
+| DAG-native answer planning | `AgentConversationKnowledgePoint` 现已保留 grouped `relationPath`、`relationKinds`、`relationPathAtomIds` 与 `temporalValidity`；`conversationComposer.ts` 现已显式构建 `graphContext`；`KnowledgeLearningPlatform.ts` 与 `WorkspaceExportBundle.ts` 也已在 trace / persistence / export 中保留它；`workspace_panes.js` 现在会在 evidence pane 中把该 `graphContext` 渲染成结构化图解释面；关系与时序聚合也已扩展到整批 grouped knowledge points，并保留 source-atom 与 temporal-edge 细节；supersession 细节现在也会进入 explanation / next-action 文本。 | 当前切片已更宽的部分实现 |
 
 从这里出发的即时推进方向：
 
 1. 把当前 DAG-aware 对话切片继续扩展成专门的 graph-conditioned context-assembly layer，而不是停留在 grouped relation hint 与当前仍较薄的 `graphContext` 层。
-2. 以当前新增的 evidence-pane 图解释面为基础，继续补 predecessor / successor / path 语义与 temporal replacement 处理，同时不把复杂度重新塞回主聊天区。
+2. 以当前新增的“整批命中点关系/时序聚合 + evidence-pane 图解释面”为基础，继续补 predecessor / successor / path 语义与 explicit supersession 处理，同时不把复杂度重新塞回主聊天区。
 3. 继续缩减 `src/server.ts`、`KnowledgeLearningPlatform.ts`、`agent_workspace.js`、`workspace_panes.js` 的所有权压力。
 
 当前代码对齐切片的本地验证：

@@ -92,6 +92,17 @@ function makeQueryItem(overrides: {
             reasons: Array.isArray(overrides.temporalValidity?.reasons)
                 ? overrides.temporalValidity.reasons.slice()
                 : [],
+            details: Array.isArray((overrides.temporalValidity as any)?.details)
+                ? (overrides.temporalValidity as any).details.map((detail: any) => ({
+                    edgeId: String(detail && detail.edgeId || ''),
+                    edgeKind: detail && detail.edgeKind,
+                    sourceAtomId: String(detail && detail.sourceAtomId || ''),
+                    targetAtomId: String(detail && detail.targetAtomId || ''),
+                    validFrom: String(detail && detail.validFrom || '2026-06-06T00:00:00.000Z'),
+                    validTo: detail && detail.validTo ? String(detail.validTo) : undefined,
+                    isActive: detail && detail.isActive !== false,
+                }))
+                : [],
         },
     };
 }
@@ -327,6 +338,121 @@ describe('conversationComposer', () => {
         const actionBlock = reply.assistantBlocks.find((block) => block.type === 'knowledge_actions');
         expect(actionBlock && 'atomIds' in actionBlock ? actionBlock.atomIds : []).toEqual(['atom_a', 'atom_b']);
         expect(collectAgentConversationAtomIds(knowledgePoints)).toEqual(['atom_a', 'atom_b']);
+    });
+
+    test('aggregates graph context across multiple knowledge points and preserves temporal edge details', () => {
+        const knowledgePoints = [
+            {
+                atomId: 'atom_anchor',
+                atomIds: ['atom_anchor'],
+                documentId: 'doc_anchor',
+                sourcePath: 'Knowledge_Base/test/anchor.md',
+                title: 'Anchor Point',
+                summary: 'Anchor summary.',
+                evidenceSnippet: 'Anchor summary.',
+                score: 0.95,
+                citation: null,
+                citations: [],
+                matchedSpans: [],
+                matchCount: 0,
+                relationPath: [],
+                relationPathAtomIds: [],
+                relationKinds: [],
+                temporalValidity: {
+                    isValid: true,
+                    checkedAt: '2026-06-10T09:00:00.000Z',
+                    reasons: ['atom_active'],
+                    details: [],
+                } as any,
+                capabilities: [],
+            },
+            {
+                atomId: 'atom_support',
+                atomIds: ['atom_support'],
+                documentId: 'doc_support',
+                sourcePath: 'Knowledge_Base/test/support.md',
+                title: 'Support Point',
+                summary: 'Support summary.',
+                evidenceSnippet: 'Support summary.',
+                score: 0.88,
+                citation: null,
+                citations: [],
+                matchedSpans: [],
+                matchCount: 0,
+                relationPath: [
+                    {
+                        edgeId: 'edge_support_reference',
+                        sourceAtomId: 'atom_support',
+                        targetAtomId: 'atom_external',
+                        relationKind: 'reference',
+                        confidence: 0.84,
+                    },
+                ],
+                relationPathAtomIds: ['atom_external'],
+                relationKinds: ['reference'],
+                temporalValidity: {
+                    isValid: false,
+                    checkedAt: '2026-06-10T10:00:00.000Z',
+                    reasons: ['temporal_edge_expired'],
+                    details: [
+                        {
+                            edgeId: 'temporal_support_supersedes',
+                            edgeKind: 'supersedes',
+                            sourceAtomId: 'atom_support_older',
+                            targetAtomId: 'atom_support',
+                            validFrom: '2026-06-09T00:00:00.000Z',
+                            isActive: true,
+                        },
+                    ],
+                } as any,
+                capabilities: [],
+            },
+        ] as AgentConversationKnowledgePoint[];
+
+        let blockCounter = 0;
+        const reply = buildScopedConversationReply({
+            message: 'explain the support point',
+            knowledgePoints,
+            citations: [],
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            nextBlockId: () => `assistant_block_${++blockCounter}`,
+        });
+
+        expect(reply.graphContext).not.toBeNull();
+        const graphContext = reply.graphContext as NonNullable<typeof reply.graphContext>;
+        expect(graphContext.relationKinds).toEqual(expect.arrayContaining(['reference']));
+        expect(graphContext.relationSummaries).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                relationKind: 'reference',
+                targetAtomIds: ['atom_external'],
+            }),
+        ]));
+        expect(graphContext.supportingAtomIds).toEqual(expect.arrayContaining(['atom_external']));
+        expect(graphContext.supportingTitles).toEqual(expect.arrayContaining(['Support Point']));
+        expect(graphContext.temporalValidity).toEqual(expect.objectContaining({
+            checkedAt: '2026-06-10T10:00:00.000Z',
+            allPointsValid: false,
+            warningReasons: ['temporal_edge_expired'],
+            invalidKnowledgePointTitles: ['Support Point'],
+        }));
+        expect((graphContext.temporalValidity as any).edgeKinds).toEqual(expect.arrayContaining(['supersedes']));
+        expect((graphContext.temporalValidity as any).details).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                edgeId: 'temporal_support_supersedes',
+                edgeKind: 'supersedes',
+                sourceAtomId: 'atom_support_older',
+                targetAtomId: 'atom_support',
+            }),
+        ]));
+
+        const structuredBlock = reply.assistantBlocks.find((block) => block.type === 'structured_answer');
+        expect(structuredBlock && 'overviewMarkdown' in structuredBlock ? structuredBlock.overviewMarkdown : '').toContain('Graph-supported relations');
+        expect(structuredBlock && 'explanationMarkdown' in structuredBlock ? structuredBlock.explanationMarkdown : '').toContain('Graph support around **Anchor Point** includes');
+        expect(structuredBlock && 'explanationMarkdown' in structuredBlock ? structuredBlock.explanationMarkdown : '').toContain('supersedes 1 earlier revision');
+        expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Validate whether a fresher or superseding note should replace this anchor before promotion');
+        expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Trace the superseded lineage before promoting this answer');
     });
 
     test('builds a verified knowledge run with evidence quality gates and review cards', () => {

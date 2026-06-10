@@ -249,6 +249,7 @@ describe('WorkspaceExportBundle', () => {
                                     {
                                         relationKind: 'reference',
                                         edgeIds: ['edge_reflection_reference'],
+                                        sourceAtomIds: ['atom_reflection'],
                                         targetAtomIds: ['atom_transmission'],
                                         averageConfidence: 0.8,
                                     },
@@ -258,6 +259,17 @@ describe('WorkspaceExportBundle', () => {
                                     allPointsValid: true,
                                     warningReasons: [],
                                     invalidKnowledgePointTitles: [],
+                                    edgeKinds: ['supersedes'],
+                                    details: [
+                                        {
+                                            edgeId: 'temporal_reflection_supersedes',
+                                            edgeKind: 'supersedes',
+                                            sourceAtomId: 'atom_reflection_old',
+                                            targetAtomId: 'atom_reflection',
+                                            validFrom: '2026-05-25T00:00:00.000Z',
+                                            isActive: true,
+                                        },
+                                    ],
                                 },
                             },
                         },
@@ -276,6 +288,22 @@ describe('WorkspaceExportBundle', () => {
             expect.objectContaining({
                 anchorAtomId: 'atom_reflection',
                 relationKinds: ['reference'],
+                relationSummaries: expect.arrayContaining([
+                    expect.objectContaining({
+                        relationKind: 'reference',
+                        sourceAtomIds: ['atom_reflection'],
+                    }),
+                ]),
+                temporalValidity: expect.objectContaining({
+                    edgeKinds: ['supersedes'],
+                    details: expect.arrayContaining([
+                        expect.objectContaining({
+                            edgeId: 'temporal_reflection_supersedes',
+                            edgeKind: 'supersedes',
+                            sourceAtomId: 'atom_reflection_old',
+                        }),
+                    ]),
+                }),
             })
         );
     });

@@ -253,7 +253,18 @@ export interface KnowledgeQueryItem {
         isValid: boolean;
         checkedAt: string;
         reasons: string[];
+        details?: KnowledgeQueryTemporalDetail[];
     };
+}
+
+export interface KnowledgeQueryTemporalDetail {
+    edgeId: string;
+    edgeKind: TemporalEdgeKind;
+    sourceAtomId: string;
+    targetAtomId: string;
+    validFrom: string;
+    validTo?: string;
+    isActive: boolean;
 }
 
 export interface KnowledgeCorpusScope {
@@ -1060,6 +1071,7 @@ export interface AgentConversationKnowledgePoint {
         isValid: boolean;
         checkedAt: string;
         reasons: string[];
+        details?: KnowledgeQueryTemporalDetail[];
     };
     capabilities: unknown[];
 }
@@ -1067,6 +1079,7 @@ export interface AgentConversationKnowledgePoint {
 export interface AgentConversationGraphRelationSummary {
     relationKind: RelationKind;
     edgeIds: string[];
+    sourceAtomIds?: string[];
     targetAtomIds: string[];
     averageConfidence: number;
 }
@@ -1076,6 +1089,8 @@ export interface AgentConversationGraphTemporalContext {
     allPointsValid: boolean;
     warningReasons: string[];
     invalidKnowledgePointTitles: string[];
+    edgeKinds?: TemporalEdgeKind[];
+    details?: KnowledgeQueryTemporalDetail[];
 }
 
 export interface AgentConversationGraphContext {

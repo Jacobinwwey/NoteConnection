@@ -104,6 +104,54 @@ describe('KnowledgeLearningPlatform', () => {
         expect(queryResult.trace.evidenceCoverageRatio).toBeGreaterThan(0);
     });
 
+    test('query temporal validity preserves supersession edge details after document updates', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_temporal_detail',
+                    sourcePath: 'Knowledge_Base/temporal/detail.md',
+                    language: 'en',
+                    content: '# Temporal Detail\nInitial revision for temporal detail checks.',
+                },
+            ],
+        });
+
+        nowIso = '2026-03-31T08:45:00.000Z';
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_temporal_detail',
+                    sourcePath: 'Knowledge_Base/temporal/detail.md',
+                    language: 'en',
+                    content: '# Temporal Detail\nUpdated revision for temporal detail checks with supersession lineage.',
+                },
+            ],
+        });
+
+        const queryResult = await platform.queryKnowledge({
+            query: 'temporal detail supersession lineage',
+            topK: 3,
+            asOf: '2026-03-31T08:50:00.000Z',
+            scope: {
+                sourcePathPrefixes: ['Knowledge_Base/temporal'],
+            },
+        });
+
+        expect(queryResult.items.length).toBeGreaterThan(0);
+        expect(queryResult.items[0].temporalValidity).toEqual(expect.objectContaining({
+            checkedAt: '2026-03-31T08:50:00.000Z',
+        }));
+        expect((queryResult.items[0].temporalValidity as any).details).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                edgeKind: 'supersedes',
+                targetAtomId: queryResult.items[0].atom.id,
+                isActive: true,
+            }),
+        ]));
+    });
+
     test('query scope constrains retrieval by corpus, language, and source path prefix', async () => {
         await platform.ingestKnowledge({
             incremental: true,

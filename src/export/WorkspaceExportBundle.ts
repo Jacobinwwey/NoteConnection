@@ -167,6 +167,9 @@ function sortAndCloneConversationTurns(records: AgentConversationTurnRecord[]): 
                             reasons: Array.isArray((point as any).temporalValidity.reasons)
                                 ? [...(point as any).temporalValidity.reasons]
                                 : [],
+                            details: Array.isArray((point as any).temporalValidity.details)
+                                ? (point as any).temporalValidity.details.map((detail: any) => ({ ...detail }))
+                                : [],
                         }
                         : (point as any).temporalValidity,
                 })),
@@ -249,6 +252,7 @@ function sortAndCloneConversationTurns(records: AgentConversationTurnRecord[]): 
                                 ? (record.response.trace as any).graphContext.relationSummaries.map((summary: any) => ({
                                     ...summary,
                                     edgeIds: Array.isArray(summary.edgeIds) ? [...summary.edgeIds] : [],
+                                    sourceAtomIds: Array.isArray(summary.sourceAtomIds) ? [...summary.sourceAtomIds] : [],
                                     targetAtomIds: Array.isArray(summary.targetAtomIds) ? [...summary.targetAtomIds] : [],
                                 }))
                                 : [],
@@ -260,6 +264,12 @@ function sortAndCloneConversationTurns(records: AgentConversationTurnRecord[]): 
                                         : [],
                                     invalidKnowledgePointTitles: Array.isArray((record.response.trace as any).graphContext.temporalValidity.invalidKnowledgePointTitles)
                                         ? [...(record.response.trace as any).graphContext.temporalValidity.invalidKnowledgePointTitles]
+                                        : [],
+                                    edgeKinds: Array.isArray((record.response.trace as any).graphContext.temporalValidity.edgeKinds)
+                                        ? [...(record.response.trace as any).graphContext.temporalValidity.edgeKinds]
+                                        : [],
+                                    details: Array.isArray((record.response.trace as any).graphContext.temporalValidity.details)
+                                        ? (record.response.trace as any).graphContext.temporalValidity.details.map((detail: any) => ({ ...detail }))
                                         : [],
                                 }
                                 : undefined,

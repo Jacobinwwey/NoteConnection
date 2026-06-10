@@ -74,12 +74,15 @@ function createI18nStub() {
             'agentWorkspace.evidence.graphSupportingAtomsLabel': 'Supporting atoms',
             'agentWorkspace.evidence.graphRelationSummariesLabel': 'Relation summaries',
             'agentWorkspace.evidence.graphRelationTargetsLabel': 'Targets: {count}',
+            'agentWorkspace.evidence.graphRelationSourcesLabel': 'Sources: {sources}',
             'agentWorkspace.evidence.graphRelationConfidenceLabel': 'Avg confidence: {confidence}',
             'agentWorkspace.evidence.graphTemporalLabel': 'Temporal validity',
             'agentWorkspace.evidence.graphTemporalStatusLabel': 'Status',
             'agentWorkspace.evidence.graphTemporalCheckedAtLabel': 'Checked at',
             'agentWorkspace.evidence.graphTemporalReasonsLabel': 'Warning reasons',
             'agentWorkspace.evidence.graphTemporalInvalidTitlesLabel': 'Invalid knowledge points',
+            'agentWorkspace.evidence.graphTemporalEdgeKindsLabel': 'Temporal edge kinds',
+            'agentWorkspace.evidence.graphTemporalDetailsLabel': 'Temporal edge details',
             'agentWorkspace.evidence.graphTemporalValid': 'valid',
             'agentWorkspace.evidence.graphTemporalWarning': 'warning',
             'agentWorkspace.knowledge.citation': 'Citation',
@@ -801,12 +804,15 @@ function createI18nStub() {
             'agentWorkspace.evidence.graphSupportingAtomsLabel': '支撑原子',
             'agentWorkspace.evidence.graphRelationSummariesLabel': '关系摘要',
             'agentWorkspace.evidence.graphRelationTargetsLabel': '目标数：{count}',
+            'agentWorkspace.evidence.graphRelationSourcesLabel': '来源：{sources}',
             'agentWorkspace.evidence.graphRelationConfidenceLabel': '平均置信度：{confidence}',
             'agentWorkspace.evidence.graphTemporalLabel': '时序有效性',
             'agentWorkspace.evidence.graphTemporalStatusLabel': '状态',
             'agentWorkspace.evidence.graphTemporalCheckedAtLabel': '检查时间',
             'agentWorkspace.evidence.graphTemporalReasonsLabel': '告警原因',
             'agentWorkspace.evidence.graphTemporalInvalidTitlesLabel': '失效知识点',
+            'agentWorkspace.evidence.graphTemporalEdgeKindsLabel': '时序边类型',
+            'agentWorkspace.evidence.graphTemporalDetailsLabel': '时序边细节',
             'agentWorkspace.evidence.graphTemporalValid': '有效',
             'agentWorkspace.evidence.graphTemporalWarning': '告警',
             'agentWorkspace.knowledge.togglePreview': '切换命中知识预览：{file}',
@@ -3073,6 +3079,17 @@ describe('workspace panes controller', () => {
                     allPointsValid: false,
                     warningReasons: ['temporal_edge_expired'],
                     invalidKnowledgePointTitles: ['Reflection'],
+                    edgeKinds: ['supersedes'],
+                    details: [
+                        {
+                            edgeId: 'temporal_support_supersedes',
+                            edgeKind: 'supersedes',
+                            sourceAtomId: 'atom_support_older',
+                            targetAtomId: 'atom_support',
+                            validFrom: '2026-06-09T00:00:00.000Z',
+                            isActive: true,
+                        },
+                    ],
                 },
             },
         });
@@ -3091,6 +3108,8 @@ describe('workspace panes controller', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('Avg confidence: 92%');
         expect(String(evidenceBody?.textContent || '')).toContain('temporal_edge_expired');
         expect(String(evidenceBody?.textContent || '')).toContain('warning');
+        expect(String(evidenceBody?.textContent || '')).toContain('supersedes');
+        expect(String(evidenceBody?.textContent || '')).toContain('atom_support_older');
 
         controller.openEvidencePane({
             kind: 'knowledge_run',
@@ -3140,6 +3159,17 @@ describe('workspace panes controller', () => {
                     allPointsValid: true,
                     warningReasons: [],
                     invalidKnowledgePointTitles: [],
+                    edgeKinds: ['supersedes'],
+                    details: [
+                        {
+                            edgeId: 'temporal_support_supersedes',
+                            edgeKind: 'supersedes',
+                            sourceAtomId: 'atom_support_older',
+                            targetAtomId: 'atom_phase',
+                            validFrom: '2026-06-09T00:00:00.000Z',
+                            isActive: true,
+                        },
+                    ],
                 },
             },
         });
@@ -3157,6 +3187,7 @@ describe('workspace panes controller', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('关系摘要');
         expect(String(evidenceBody?.textContent || '')).toContain('时序有效性');
         expect(String(evidenceBody?.textContent || '')).toContain('有效');
+        expect(String(evidenceBody?.textContent || '')).toContain('supersedes');
     });
 
     test('mounts the existing path workspace into the learning-path pane and restores it on clear', () => {

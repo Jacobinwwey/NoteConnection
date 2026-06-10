@@ -633,6 +633,16 @@
                     'Targets: {count}',
                     { count: String(targetAtomIds.length) }
                 );
+                const sourceAtomIds = Array.isArray(summary.sourceAtomIds)
+                    ? summary.sourceAtomIds
+                        .map((item) => String(item || '').trim())
+                        .filter(Boolean)
+                    : [];
+                const sourceSummary = sourceAtomIds.length > 0
+                    ? ` | ${escapeHtml(translate('agentWorkspace.evidence.graphRelationSourcesLabel', 'Sources: {sources}', {
+                        sources: sourceAtomIds.join(', '),
+                    }))}`
+                    : '';
                 const confidenceSummary = translate(
                     'agentWorkspace.evidence.graphRelationConfidenceLabel',
                     'Avg confidence: {confidence}',
@@ -642,7 +652,7 @@
                     <li class="agent-pane-list-item">
                         <div>
                             <div class="agent-pane-list-label">${escapeHtml(humanizeEvidenceRelationKind(summary.relationKind))}</div>
-                            <div class="agent-pane-summary">${escapeHtml(targetSummary)}${targetAtomIds.length > 0 ? ` | ${escapeHtml(targetAtomIds.join(', '))}` : ''}</div>
+                            <div class="agent-pane-summary">${escapeHtml(targetSummary)}${targetAtomIds.length > 0 ? ` | ${escapeHtml(targetAtomIds.join(', '))}` : ''}${sourceSummary}</div>
                         </div>
                         <span class="agent-pane-meta">${escapeHtml(confidenceSummary)}</span>
                     </li>
@@ -650,6 +660,16 @@
             }).join('')
             : `<li class="agent-pane-list-empty">${escapeHtml(noneLabel)}</li>`;
 
+        const temporalEdgeKinds = temporalValidity && Array.isArray(temporalValidity.edgeKinds)
+            ? temporalValidity.edgeKinds
+                .map((item) => String(item || '').trim())
+                .filter(Boolean)
+            : [];
+        const temporalDetails = temporalValidity && Array.isArray(temporalValidity.details)
+            ? temporalValidity.details
+                .map((item) => item && typeof item === 'object' ? item : null)
+                .filter(Boolean)
+            : [];
         const temporalMetrics = temporalValidity
             ? [
                 {
@@ -674,8 +694,25 @@
                         ? temporalValidity.invalidKnowledgePointTitles.join(', ')
                         : noneLabel,
                 },
+                {
+                    title: translate('agentWorkspace.evidence.graphTemporalEdgeKindsLabel', 'Temporal edge kinds'),
+                    value: temporalEdgeKinds.length > 0
+                        ? temporalEdgeKinds.join(', ')
+                        : noneLabel,
+                },
             ]
             : [];
+        const temporalDetailHtml = temporalDetails.length > 0
+            ? temporalDetails.map((detail) => `
+                <li class="agent-pane-list-item">
+                    <div>
+                        <div class="agent-pane-list-label">${escapeHtml(String(detail.edgeKind || noneLabel))}</div>
+                        <div class="agent-pane-summary">${escapeHtml(String(detail.sourceAtomId || noneLabel))} -> ${escapeHtml(String(detail.targetAtomId || noneLabel))}</div>
+                    </div>
+                    <span class="agent-pane-meta">${escapeHtml(String(detail.edgeId || noneLabel))}</span>
+                </li>
+            `).join('')
+            : '';
 
         return `
             <div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphContextLabel', 'Graph context'))}</div>
@@ -683,6 +720,7 @@
             <div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphRelationSummariesLabel', 'Relation summaries'))}</div>
             <ul class="agent-pane-list">${relationSummaryHtml}</ul>
             ${temporalMetrics.length > 0 ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphTemporalLabel', 'Temporal validity'))}</div><ul class="agent-pane-list">${buildEvidenceMetricListHtml(temporalMetrics)}</ul>` : ''}
+            ${temporalDetailHtml ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphTemporalDetailsLabel', 'Temporal edge details'))}</div><ul class="agent-pane-list">${temporalDetailHtml}</ul>` : ''}
         `;
     }
 

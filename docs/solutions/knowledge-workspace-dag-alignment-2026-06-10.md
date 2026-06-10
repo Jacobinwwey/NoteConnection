@@ -174,27 +174,36 @@ What the current slice now adds:
 - `AgentConversationTrace` can now carry a first-class `graphContext` object with:
   - anchor atom/document identity
   - grouped relation summaries
+  - grouped relation source atom ids
   - supporting atom ids/titles
   - temporal warning aggregation
+  - temporal edge kinds/details
 - `mergeAgentConversationKnowledgePoints()` now preserves grouped DAG evidence instead of dropping it at the conversation boundary.
 - `buildScopedConversationReply()` now uses that grouped DAG evidence to:
   - summarize graph-supported relation kinds in `overviewMarkdown`,
   - surface graph-support sentences in `explanationMarkdown`,
-  - add graph-aware next-action guidance when prerequisite chains or temporal validity warnings are present.
+  - add graph-aware next-action guidance when prerequisite chains or temporal validity warnings are present,
+  - surface supersession lineage cues in explanation/next-action text when temporal edge details show explicit replacement history.
 - `KnowledgeLearningPlatform.ts` now persists and restores that `graphContext` across conversation turn history and snapshot reload.
 - `WorkspaceExportBundle.ts` now carries `graphContext` through workspace export/runtime turn serialization.
+- `buildAgentConversationGraphContext()` is no longer limited to the leading grouped knowledge point's local relation hints:
+  - it now aggregates `relationPath` signals across the whole grouped knowledge-point set,
+  - relation summaries now preserve `sourceAtomIds` as well as `targetAtomIds`,
+  - supporting atom ids are assembled from the whole grouped set instead of the leading anchor only.
 - `workspace_panes.js` now projects that persisted `graphContext` into the evidence pane as a structured graph explanation surface:
   - anchor identity
   - relation kinds and relation summaries
+  - relation source atoms
   - supporting titles and atom ids
   - temporal-validity status and warning reasons
+  - temporal edge kinds and temporal edge details
 - `agent_workspace.js` now normalizes grounding payload construction in one place and clears stale grounding state when a later turn returns no grounding payload.
 
 What is still missing:
 
 - a dedicated graph-conditioned context assembly layer between retrieval and answer synthesis,
 - richer use of predecessor/successor chains beyond grouped relation summaries,
-- answer-time use of temporal replacement / supersession beyond warning text,
+- broader answer-time use of temporal replacement / supersession beyond the current explanation/next-action cues,
 - broader frontend/runtime reuse of the persisted `graphContext` beyond the current evidence-pane projection.
 
 Progress call:
@@ -212,7 +221,7 @@ Progress call:
 | Durable learning/review loop | Implemented through workflow artifacts, knowledge runs, review follow-up, flashcard batch persistence, and a pane-backed evidence inspector for durable artifact inspection | Implemented current slice | Still lacks a broader durable evidence ledger and challenge-loop product surface |
 | File-first scoped knowledge hits | Implemented and now routed directly into graph focus from file-only entries | Implemented current slice | Graph-focus and evidence-pane cohesion now matters more than entry-point cleanup |
 | Hide developer-heavy evidence from the main user-facing answer | Implemented in the primary chat and hit-list surfaces, with grounding and durable artifact inspection moved into a dedicated evidence pane | Implemented current slice | Secondary surfaces still share large frontend owners |
-| Use current DAG as a first-class answer-planning substrate | `AgentConversationKnowledgePoint` now carries grouped `relationPath` / `relationKinds` / `relationPathAtomIds` / `temporalValidity`; `conversationComposer.ts` now materializes an explicit `graphContext`; `KnowledgeLearningPlatform.ts` and `WorkspaceExportBundle.ts` now preserve it through trace/persistence/export surfaces; `workspace_panes.js` now exposes that `graphContext` in the evidence pane as a structured graph explanation surface | Implemented broader partial slice | Missing a dedicated graph-conditioned context assembly layer and richer downstream use of the graph context |
+| Use current DAG as a first-class answer-planning substrate | `AgentConversationKnowledgePoint` now carries grouped `relationPath` / `relationKinds` / `relationPathAtomIds` / `temporalValidity`; `conversationComposer.ts` now materializes an explicit `graphContext`; `KnowledgeLearningPlatform.ts` and `WorkspaceExportBundle.ts` now preserve it through trace/persistence/export surfaces; `workspace_panes.js` now exposes that `graphContext` in the evidence pane as a structured graph explanation surface; relation and temporal detail aggregation now spans the whole grouped knowledge-point set instead of only the leading anchor's local hint set | Implemented broader partial slice | Missing a dedicated graph-conditioned context assembly layer and richer downstream use of the graph context |
 | Ownership reduction in runtime and frontend hosts | Not complete | Behind target | `server.ts`, `KnowledgeLearningPlatform.ts`, `agent_workspace.js`, and `workspace_panes.js` still own too much |
 
 ### Current Risks
@@ -305,6 +314,8 @@ Shipped characteristics:
 - structured answer overview/explanation/next-actions now use those grouped DAG signals additively,
 - the resulting `graphContext` now survives through conversation trace, snapshot persistence, and workspace export.
 - the evidence pane now renders that `graphContext` directly for user inspection,
+- relation aggregation now spans the whole grouped knowledge-point set and preserves relation source atoms,
+- temporal-validity aggregation now preserves temporal edge kinds/details in addition to warning text,
 - grounding-pane state now clears cleanly when a later turn has no grounding payload.
 
 Remaining requirements:

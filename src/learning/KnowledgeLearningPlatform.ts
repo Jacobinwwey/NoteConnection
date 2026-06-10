@@ -3486,6 +3486,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 ? value.relationSummaries.map((summary) => ({
                     relationKind: summary.relationKind,
                     edgeIds: Array.isArray(summary.edgeIds) ? summary.edgeIds.map((edgeId) => String(edgeId || '').trim()).filter(Boolean) : [],
+                    sourceAtomIds: Array.isArray(summary.sourceAtomIds) ? summary.sourceAtomIds.map((atomId) => String(atomId || '').trim()).filter(Boolean) : [],
                     targetAtomIds: Array.isArray(summary.targetAtomIds) ? summary.targetAtomIds.map((atomId) => String(atomId || '').trim()).filter(Boolean) : [],
                     averageConfidence: Number.isFinite(Number(summary.averageConfidence)) ? Number(summary.averageConfidence) : 0,
                 }))
@@ -3500,12 +3501,28 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     invalidKnowledgePointTitles: Array.isArray(value.temporalValidity.invalidKnowledgePointTitles)
                         ? value.temporalValidity.invalidKnowledgePointTitles.map((title) => String(title || '').trim()).filter(Boolean)
                         : [],
+                    edgeKinds: Array.isArray(value.temporalValidity.edgeKinds)
+                        ? value.temporalValidity.edgeKinds.slice()
+                        : [],
+                    details: Array.isArray(value.temporalValidity.details)
+                        ? value.temporalValidity.details.map((detail) => ({
+                            edgeId: String(detail.edgeId || '').trim(),
+                            edgeKind: detail.edgeKind,
+                            sourceAtomId: String(detail.sourceAtomId || '').trim(),
+                            targetAtomId: String(detail.targetAtomId || '').trim(),
+                            validFrom: String(detail.validFrom || '').trim(),
+                            validTo: detail.validTo ? String(detail.validTo).trim() : undefined,
+                            isActive: detail.isActive !== false,
+                        }))
+                        : [],
                 }
                 : {
                     checkedAt: '',
                     allPointsValid: true,
                     warningReasons: [],
                     invalidKnowledgePointTitles: [],
+                    edgeKinds: [],
+                    details: [],
                 },
         };
     }
@@ -3538,6 +3555,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 ? {
                     ...point.temporalValidity,
                     reasons: Array.isArray(point.temporalValidity.reasons) ? [...point.temporalValidity.reasons] : [],
+                    details: Array.isArray(point.temporalValidity.details)
+                        ? point.temporalValidity.details.map((detail) => ({ ...detail }))
+                        : [],
                 }
                 : point.temporalValidity,
         };
@@ -6173,6 +6193,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     private evaluateTemporalValidity(atomId: string, asOfIso: string): KnowledgeQueryItem['temporalValidity'] {
         const reasons: string[] = [];
+        const details: KnowledgeQueryItem['temporalValidity']['details'] = [];
         if (!this.activeAtomIds.has(atomId)) {
             reasons.push('atom_not_active');
         } else {
@@ -6184,6 +6205,15 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             if (edge.targetAtomId !== atomId) {
                 return;
             }
+            details.push({
+                edgeId: edge.id,
+                edgeKind: edge.edgeKind,
+                sourceAtomId: edge.sourceAtomId,
+                targetAtomId: edge.targetAtomId,
+                validFrom: edge.validFrom,
+                validTo: edge.validTo,
+                isActive: edge.isActive !== false,
+            });
             const validFromTime = Date.parse(edge.validFrom);
             if (Number.isFinite(validFromTime) && validFromTime > asOfTime) {
                 reasons.push('temporal_edge_not_started');
@@ -6200,6 +6230,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             isValid: reasons.every((reason) => !reason.endsWith('expired') && reason !== 'atom_not_active'),
             checkedAt: asOfIso,
             reasons,
+            details,
         };
     }
 

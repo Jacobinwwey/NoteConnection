@@ -5,6 +5,7 @@ import type {
     AgentConversationKnowledgePoint,
     AgentConversationMemoryAction,
     AgentConversationMemoryRecord,
+    KnowledgeQueryTemporalDetail,
     KnowledgeAtom,
     KnowledgeCitation,
     KnowledgeQueryItem,
@@ -41,7 +42,11 @@ function buildAgentConversationGraphContext(
         return null;
     }
 
-    const relationPath = Array.isArray(anchorPoint.relationPath) ? anchorPoint.relationPath : [];
+    const relationPath = knowledgePoints.flatMap((point) => (
+        Array.isArray(point.relationPath)
+            ? point.relationPath
+            : []
+    ));
     const relationKinds = Array.from(new Set(
         relationPath
             .map((edge) => edge.relationKind)
@@ -49,10 +54,21 @@ function buildAgentConversationGraphContext(
     )) as RelationKind[];
     const relationSummaryMap = new Map<RelationKind, {
         edgeIds: Set<string>;
+        sourceAtomIds: Set<string>;
         targetAtomIds: Set<string>;
         confidenceValues: number[];
     }>();
     const anchorAtomId = String(anchorPoint.atomId || '').trim();
+    const knowledgePointAtomIds = new Set(
+        knowledgePoints
+            .flatMap((point) => (
+                Array.isArray(point.atomIds) && point.atomIds.length > 0
+                    ? point.atomIds
+                    : [point.atomId]
+            ))
+            .map((atomId) => String(atomId || '').trim())
+            .filter(Boolean)
+    );
 
     relationPath.forEach((edge) => {
         if (!edge || !edge.relationKind) {
@@ -60,16 +76,24 @@ function buildAgentConversationGraphContext(
         }
         const summary = relationSummaryMap.get(edge.relationKind) || {
             edgeIds: new Set<string>(),
+            sourceAtomIds: new Set<string>(),
             targetAtomIds: new Set<string>(),
             confidenceValues: [],
         };
         if (edge.edgeId) {
             summary.edgeIds.add(String(edge.edgeId));
         }
+        const sourceAtomId = String(edge.sourceAtomId || '').trim();
+        const targetAtomId = String(edge.targetAtomId || '').trim();
+        if (sourceAtomId) {
+            summary.sourceAtomIds.add(sourceAtomId);
+        }
         const targetAtomIds = [
-            String(edge.sourceAtomId || '').trim(),
-            String(edge.targetAtomId || '').trim(),
-        ].filter(Boolean).filter((atomId) => atomId !== anchorAtomId);
+            sourceAtomId,
+            targetAtomId,
+        ]
+            .filter(Boolean)
+            .filter((atomId) => atomId !== anchorAtomId && !knowledgePointAtomIds.has(atomId));
         targetAtomIds.forEach((atomId) => summary.targetAtomIds.add(atomId));
         if (Number.isFinite(Number(edge.confidence))) {
             summary.confidenceValues.push(Number(edge.confidence));
@@ -80,15 +104,23 @@ function buildAgentConversationGraphContext(
     const relationSummaries: AgentConversationGraphRelationSummary[] = Array.from(relationSummaryMap.entries()).map(([relationKind, summary]) => ({
         relationKind,
         edgeIds: Array.from(summary.edgeIds.values()),
+        sourceAtomIds: Array.from(summary.sourceAtomIds.values()),
         targetAtomIds: Array.from(summary.targetAtomIds.values()),
         averageConfidence: summary.confidenceValues.length > 0
             ? Number((summary.confidenceValues.reduce((sum, value) => sum + value, 0) / summary.confidenceValues.length).toFixed(4))
             : 0,
     }));
 
-    const supportingAtomIds = Array.isArray(anchorPoint.relationPathAtomIds)
-        ? anchorPoint.relationPathAtomIds.map((atomId) => String(atomId || '').trim()).filter(Boolean)
-        : relationSummaries.flatMap((summary) => summary.targetAtomIds);
+    const supportingAtomIds = Array.from(new Set(
+        knowledgePoints.flatMap((point) => (
+            Array.isArray(point.relationPathAtomIds)
+                ? point.relationPathAtomIds
+                : []
+        ))
+            .map((atomId) => String(atomId || '').trim())
+            .filter(Boolean)
+            .concat(relationSummaries.flatMap((summary) => summary.targetAtomIds))
+    ));
     const supportingAtomIdSet = new Set(supportingAtomIds);
     const supportingTitles = knowledgePoints
         .filter((point, index) => index > 0 || supportingAtomIdSet.has(String(point.atomId || '').trim()))
@@ -101,6 +133,11 @@ function buildAgentConversationGraphContext(
         .sort()
         .pop() || '';
     const invalidKnowledgePoints = knowledgePoints.filter((point) => point.temporalValidity && point.temporalValidity.isValid === false);
+    const temporalDetails = knowledgePoints.flatMap((point) => (
+        Array.isArray(point.temporalValidity && point.temporalValidity.details)
+            ? point.temporalValidity!.details
+            : []
+    ));
     const warningReasons = Array.from(new Set(
         invalidKnowledgePoints.flatMap((point) => (
             Array.isArray(point.temporalValidity && point.temporalValidity.reasons)
@@ -110,6 +147,34 @@ function buildAgentConversationGraphContext(
             .map((reason) => String(reason || '').trim())
             .filter(Boolean)
     ));
+    const normalizedTemporalDetails = temporalDetails
+        .filter((detail): detail is KnowledgeQueryTemporalDetail => Boolean(detail && typeof detail === 'object'));
+    const temporalEdgeKinds = Array.from(new Set(
+        normalizedTemporalDetails
+            .map((detail) => detail.edgeKind)
+            .filter(Boolean)
+    ));
+    const dedupedTemporalDetails = Array.from(new Map<string, KnowledgeQueryTemporalDetail>(
+        normalizedTemporalDetails.map((detail) => [
+            [
+                String(detail.edgeId || '').trim(),
+                String(detail.edgeKind || '').trim(),
+                String(detail.sourceAtomId || '').trim(),
+                String(detail.targetAtomId || '').trim(),
+                String(detail.validFrom || '').trim(),
+                String(detail.validTo || '').trim(),
+            ].join('|'),
+            {
+                edgeId: String(detail.edgeId || '').trim(),
+                edgeKind: detail.edgeKind,
+                sourceAtomId: String(detail.sourceAtomId || '').trim(),
+                targetAtomId: String(detail.targetAtomId || '').trim(),
+                validFrom: String(detail.validFrom || '').trim(),
+                validTo: detail.validTo ? String(detail.validTo).trim() : undefined,
+                isActive: detail.isActive !== false,
+            } satisfies KnowledgeQueryTemporalDetail,
+        ])
+    ).values());
 
     return {
         anchorAtomId,
@@ -126,6 +191,8 @@ function buildAgentConversationGraphContext(
             invalidKnowledgePointTitles: invalidKnowledgePoints
                 .map((point) => normalizeWhitespace(String(point.title || '').trim()))
                 .filter(Boolean),
+            edgeKinds: temporalEdgeKinds,
+            details: dedupedTemporalDetails,
         },
     };
 }
@@ -234,6 +301,9 @@ function buildAgentConversationKnowledgePoint(
             isValid: item.temporalValidity.isValid,
             checkedAt: item.temporalValidity.checkedAt,
             reasons: [...item.temporalValidity.reasons],
+            details: Array.isArray(item.temporalValidity.details)
+                ? item.temporalValidity.details.map((detail) => ({ ...detail }))
+                : [],
         },
         capabilities: buildCapabilities(atom.id),
     };
@@ -249,6 +319,7 @@ type KnowledgePointGroup = {
     relationKinds: Set<RelationKind>;
     temporalValidityCheckedAt: string;
     temporalValidityReasons: Set<string>;
+    temporalValidityDetails: Map<string, KnowledgeQueryTemporalDetail>;
 };
 
 export function mergeAgentConversationKnowledgePoints(
@@ -286,6 +357,7 @@ export function mergeAgentConversationKnowledgePoints(
                 relationKinds: new Set<RelationKind>(),
                 temporalValidityCheckedAt: String(item.temporalValidity.checkedAt || ''),
                 temporalValidityReasons: new Set<string>(),
+                temporalValidityDetails: new Map<string, KnowledgeQueryTemporalDetail>(),
             };
             groups.set(groupKey, group);
         }
@@ -375,6 +447,7 @@ export function mergeAgentConversationKnowledgePoints(
                     isValid: true,
                     checkedAt: checkedAt,
                     reasons: [],
+                    details: [],
                 };
                 group.point.temporalValidity.isValid = false;
             }
@@ -383,6 +456,7 @@ export function mergeAgentConversationKnowledgePoints(
                     isValid: temporalValidity.isValid !== false,
                     checkedAt,
                     reasons: [],
+                    details: [],
                 };
             } else if (temporalValidity.isValid === false) {
                 group.point.temporalValidity.isValid = false;
@@ -391,6 +465,29 @@ export function mergeAgentConversationKnowledgePoints(
                 .map((reason) => String(reason || '').trim())
                 .filter(Boolean)
                 .forEach((reason) => group.temporalValidityReasons.add(reason));
+            (Array.isArray(temporalValidity.details) ? temporalValidity.details : [])
+                .filter((detail): detail is KnowledgeQueryTemporalDetail => Boolean(detail && typeof detail === 'object'))
+                .forEach((detail) => {
+                    const detailKey = [
+                        String(detail.edgeId || '').trim(),
+                        String(detail.edgeKind || '').trim(),
+                        String(detail.sourceAtomId || '').trim(),
+                        String(detail.targetAtomId || '').trim(),
+                        String(detail.validFrom || '').trim(),
+                        String(detail.validTo || '').trim(),
+                    ].join('|');
+                    if (!group.temporalValidityDetails.has(detailKey)) {
+                        group.temporalValidityDetails.set(detailKey, {
+                            edgeId: String(detail.edgeId || '').trim(),
+                            edgeKind: detail.edgeKind,
+                            sourceAtomId: String(detail.sourceAtomId || '').trim(),
+                            targetAtomId: String(detail.targetAtomId || '').trim(),
+                            validFrom: String(detail.validFrom || '').trim(),
+                            validTo: detail.validTo ? String(detail.validTo).trim() : undefined,
+                            isActive: detail.isActive !== false,
+                        });
+                    }
+                });
         }
 
     });
@@ -413,6 +510,7 @@ export function mergeAgentConversationKnowledgePoints(
                     isValid: group.point.temporalValidity.isValid !== false,
                     checkedAt: group.temporalValidityCheckedAt || group.point.temporalValidity.checkedAt,
                     reasons: Array.from(group.temporalValidityReasons.values()),
+                    details: Array.from(group.temporalValidityDetails.values()),
                 }
                 : undefined,
         };
@@ -623,6 +721,17 @@ function buildScopedConversationExplanationMarkdown(
             `Temporal validity warning: ${reasonSummary}.`
         );
     }
+    const supersedesCount = graphContext
+        ? (Array.isArray(graphContext.temporalValidity.details)
+            ? graphContext.temporalValidity.details.filter((detail) => detail.edgeKind === 'supersedes').length
+            : 0)
+        : 0;
+    if (supersedesCount > 0) {
+        explanationLines.push(
+            '',
+            `Temporal lineage indicates this anchor supersedes ${supersedesCount} earlier revision${supersedesCount === 1 ? '' : 's'}.`
+        );
+    }
     const supportingTitles = params.knowledgePoints
         .slice(1, 3)
         .map((point) => normalizeWhitespace(String(point.title || '').trim()))
@@ -696,6 +805,14 @@ function buildScopedConversationActionGuideMarkdown(
     }
     if (graphContext && graphContext.temporalValidity.allPointsValid === false) {
         graphActionHints.push('- Validate whether a fresher or superseding note should replace this anchor before promotion.');
+    }
+    const supersedesCount = graphContext
+        ? (Array.isArray(graphContext.temporalValidity.details)
+            ? graphContext.temporalValidity.details.filter((detail) => detail.edgeKind === 'supersedes').length
+            : 0)
+        : 0;
+    if (supersedesCount > 0) {
+        graphActionHints.push('- Trace the superseded lineage before promoting this answer.');
     }
     return [
         '## Next Actions',
