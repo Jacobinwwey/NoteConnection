@@ -1820,6 +1820,23 @@ describe('KnowledgeLearningPlatform', () => {
                 relationKind: 'reference',
             }),
         ]));
+        expect((response.trace.graphContext as any).knowledgePointRelations).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                relationKind: 'reference',
+                sourceTitle: 'Reflection',
+                targetTitle: 'Transmission',
+            }),
+        ]));
+        expect(
+            structuredBlock && 'explanationMarkdown' in structuredBlock
+                ? String(structuredBlock.explanationMarkdown || '')
+                : ''
+        ).toContain('Reflection -> reference -> Transmission');
+        expect(
+            structuredBlock && 'nextActionsMarkdown' in structuredBlock
+                ? String(structuredBlock.nextActionsMarkdown || '')
+                : ''
+        ).toContain('Follow the direct graph path between Reflection and Transmission');
         expect((response.knowledgePoints[0] as any).relationKinds).toContain('reference');
     });
 

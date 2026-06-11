@@ -1,6 +1,7 @@
 import type {
     AgentConversationAssistantBlock,
     AgentConversationGraphContext,
+    AgentConversationGraphKnowledgePointRelation,
     AgentConversationGraphRelationSummary,
     AgentConversationKnowledgePoint,
     AgentConversationMemoryAction,
@@ -59,6 +60,10 @@ function buildAgentConversationGraphContext(
         confidenceValues: number[];
     }>();
     const anchorAtomId = String(anchorPoint.atomId || '').trim();
+    const atomToKnowledgePoint = new Map<string, {
+        pointAtomId: string;
+        title: string;
+    }>();
     const knowledgePointAtomIds = new Set(
         knowledgePoints
             .flatMap((point) => (
@@ -69,6 +74,22 @@ function buildAgentConversationGraphContext(
             .map((atomId) => String(atomId || '').trim())
             .filter(Boolean)
     );
+    knowledgePoints.forEach((point) => {
+        const pointTitle = normalizeWhitespace(String(point.title || '').trim());
+        const groupedAtomIds = Array.isArray(point.atomIds) && point.atomIds.length > 0
+            ? point.atomIds
+            : [point.atomId];
+        groupedAtomIds
+            .map((atomId) => String(atomId || '').trim())
+            .filter(Boolean)
+            .forEach((atomId) => {
+                atomToKnowledgePoint.set(atomId, {
+                    pointAtomId: String(point.atomId || '').trim(),
+                    title: pointTitle || atomId,
+                });
+            });
+    });
+    const knowledgePointRelationMap = new Map<string, AgentConversationGraphKnowledgePointRelation>();
 
     relationPath.forEach((edge) => {
         if (!edge || !edge.relationKind) {
@@ -97,6 +118,33 @@ function buildAgentConversationGraphContext(
         targetAtomIds.forEach((atomId) => summary.targetAtomIds.add(atomId));
         if (Number.isFinite(Number(edge.confidence))) {
             summary.confidenceValues.push(Number(edge.confidence));
+        }
+        if (sourceAtomId && targetAtomId) {
+            const sourcePoint = atomToKnowledgePoint.get(sourceAtomId);
+            const targetPoint = atomToKnowledgePoint.get(targetAtomId);
+            if (
+                sourcePoint
+                && targetPoint
+                && sourcePoint.pointAtomId
+                && targetPoint.pointAtomId
+                && sourcePoint.pointAtomId !== targetPoint.pointAtomId
+            ) {
+                const relationKey = [
+                    String(edge.edgeId || '').trim(),
+                    sourcePoint.pointAtomId,
+                    targetPoint.pointAtomId,
+                    edge.relationKind,
+                ].join('|');
+                knowledgePointRelationMap.set(relationKey, {
+                    edgeId: String(edge.edgeId || '').trim(),
+                    relationKind: edge.relationKind,
+                    sourceAtomId: sourcePoint.pointAtomId,
+                    sourceTitle: sourcePoint.title,
+                    targetAtomId: targetPoint.pointAtomId,
+                    targetTitle: targetPoint.title,
+                    confidence: Number(Number(edge.confidence || 0).toFixed(4)),
+                });
+            }
         }
         relationSummaryMap.set(edge.relationKind, summary);
     });
@@ -184,6 +232,7 @@ function buildAgentConversationGraphContext(
         supportingTitles: Array.from(new Set(supportingTitles)),
         relationKinds,
         relationSummaries,
+        knowledgePointRelations: Array.from(knowledgePointRelationMap.values()),
         temporalValidity: {
             checkedAt: temporalCheckedAt,
             allPointsValid: invalidKnowledgePoints.length <= 0,
@@ -712,6 +761,16 @@ function buildScopedConversationExplanationMarkdown(
             `Graph support around **${graphContext.anchorTitle}** includes: ${graphContext.relationKinds.join(', ')}.`
         );
     }
+    if (graphContext && Array.isArray(graphContext.knowledgePointRelations) && graphContext.knowledgePointRelations.length > 0) {
+        const relationPreview = graphContext.knowledgePointRelations
+            .slice(0, 2)
+            .map((relation) => `${relation.sourceTitle} -> ${relation.relationKind} -> ${relation.targetTitle}`)
+            .join('; ');
+        explanationLines.push(
+            '',
+            `Direct graph links inside the current result set: ${relationPreview}.`
+        );
+    }
     if (graphContext && graphContext.temporalValidity.allPointsValid === false) {
         const reasonSummary = graphContext.temporalValidity.warningReasons.length > 0
             ? graphContext.temporalValidity.warningReasons.join(', ')
@@ -813,6 +872,12 @@ function buildScopedConversationActionGuideMarkdown(
         : 0;
     if (supersedesCount > 0) {
         graphActionHints.push('- Trace the superseded lineage before promoting this answer.');
+    }
+    if (graphContext && Array.isArray(graphContext.knowledgePointRelations) && graphContext.knowledgePointRelations.length > 0) {
+        const firstRelation = graphContext.knowledgePointRelations[0];
+        graphActionHints.push(
+            `- Follow the direct graph path between ${firstRelation.sourceTitle} and ${firstRelation.targetTitle} before branching to external support nodes.`
+        );
     }
     return [
         '## Next Actions',

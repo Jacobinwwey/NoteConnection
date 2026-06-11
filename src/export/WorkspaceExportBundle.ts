@@ -256,6 +256,11 @@ function sortAndCloneConversationTurns(records: AgentConversationTurnRecord[]): 
                                     targetAtomIds: Array.isArray(summary.targetAtomIds) ? [...summary.targetAtomIds] : [],
                                 }))
                                 : [],
+                            knowledgePointRelations: Array.isArray((record.response.trace as any).graphContext.knowledgePointRelations)
+                                ? (record.response.trace as any).graphContext.knowledgePointRelations.map((relation: any) => ({
+                                    ...relation,
+                                }))
+                                : [],
                             temporalValidity: (record.response.trace as any).graphContext.temporalValidity
                                 ? {
                                     ...(record.response.trace as any).graphContext.temporalValidity,

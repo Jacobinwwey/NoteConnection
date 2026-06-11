@@ -381,6 +381,13 @@ describe('conversationComposer', () => {
                 matchCount: 0,
                 relationPath: [
                     {
+                        edgeId: 'edge_support_anchor',
+                        sourceAtomId: 'atom_support',
+                        targetAtomId: 'atom_anchor',
+                        relationKind: 'reference',
+                        confidence: 0.87,
+                    },
+                    {
                         edgeId: 'edge_support_reference',
                         sourceAtomId: 'atom_support',
                         targetAtomId: 'atom_external',
@@ -429,6 +436,15 @@ describe('conversationComposer', () => {
                 targetAtomIds: ['atom_external'],
             }),
         ]));
+        expect((graphContext as any).knowledgePointRelations).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                relationKind: 'reference',
+                sourceAtomId: 'atom_support',
+                sourceTitle: 'Support Point',
+                targetAtomId: 'atom_anchor',
+                targetTitle: 'Anchor Point',
+            }),
+        ]));
         expect(graphContext.supportingAtomIds).toEqual(expect.arrayContaining(['atom_external']));
         expect(graphContext.supportingTitles).toEqual(expect.arrayContaining(['Support Point']));
         expect(graphContext.temporalValidity).toEqual(expect.objectContaining({
@@ -450,9 +466,11 @@ describe('conversationComposer', () => {
         const structuredBlock = reply.assistantBlocks.find((block) => block.type === 'structured_answer');
         expect(structuredBlock && 'overviewMarkdown' in structuredBlock ? structuredBlock.overviewMarkdown : '').toContain('Graph-supported relations');
         expect(structuredBlock && 'explanationMarkdown' in structuredBlock ? structuredBlock.explanationMarkdown : '').toContain('Graph support around **Anchor Point** includes');
+        expect(structuredBlock && 'explanationMarkdown' in structuredBlock ? structuredBlock.explanationMarkdown : '').toContain('Support Point -> reference -> Anchor Point');
         expect(structuredBlock && 'explanationMarkdown' in structuredBlock ? structuredBlock.explanationMarkdown : '').toContain('supersedes 1 earlier revision');
         expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Validate whether a fresher or superseding note should replace this anchor before promotion');
         expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Trace the superseded lineage before promoting this answer');
+        expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Follow the direct graph path between Support Point and Anchor Point before branching to external support nodes');
     });
 
     test('builds a verified knowledge run with evidence quality gates and review cards', () => {

@@ -254,6 +254,17 @@ describe('WorkspaceExportBundle', () => {
                                         averageConfidence: 0.8,
                                     },
                                 ],
+                                knowledgePointRelations: [
+                                    {
+                                        edgeId: 'edge_reflection_reference',
+                                        relationKind: 'reference',
+                                        sourceAtomId: 'atom_reflection',
+                                        sourceTitle: 'Reflection',
+                                        targetAtomId: 'atom_transmission',
+                                        targetTitle: 'Transmission',
+                                        confidence: 0.8,
+                                    },
+                                ],
                                 temporalValidity: {
                                     checkedAt: '2026-05-26T00:00:00.000Z',
                                     allPointsValid: true,
@@ -292,6 +303,13 @@ describe('WorkspaceExportBundle', () => {
                     expect.objectContaining({
                         relationKind: 'reference',
                         sourceAtomIds: ['atom_reflection'],
+                    }),
+                ]),
+                knowledgePointRelations: expect.arrayContaining([
+                    expect.objectContaining({
+                        relationKind: 'reference',
+                        sourceTitle: 'Reflection',
+                        targetTitle: 'Transmission',
                     }),
                 ]),
                 temporalValidity: expect.objectContaining({

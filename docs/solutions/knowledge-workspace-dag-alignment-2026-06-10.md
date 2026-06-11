@@ -189,10 +189,12 @@ What the current slice now adds:
 - `buildAgentConversationGraphContext()` is no longer limited to the leading grouped knowledge point's local relation hints:
   - it now aggregates `relationPath` signals across the whole grouped knowledge-point set,
   - relation summaries now preserve `sourceAtomIds` as well as `targetAtomIds`,
+  - direct relations between grouped knowledge points are now materialized as first-class `knowledgePointRelations`,
   - supporting atom ids are assembled from the whole grouped set instead of the leading anchor only.
 - `workspace_panes.js` now projects that persisted `graphContext` into the evidence pane as a structured graph explanation surface:
   - anchor identity
   - relation kinds and relation summaries
+  - direct grouped-knowledge-point relations
   - relation source atoms
   - supporting titles and atom ids
   - temporal-validity status and warning reasons
@@ -315,6 +317,7 @@ Shipped characteristics:
 - the resulting `graphContext` now survives through conversation trace, snapshot persistence, and workspace export.
 - the evidence pane now renders that `graphContext` directly for user inspection,
 - relation aggregation now spans the whole grouped knowledge-point set and preserves relation source atoms,
+- direct grouped-knowledge-point relations are now preserved and surfaced through the same `graphContext`,
 - temporal-validity aggregation now preserves temporal edge kinds/details in addition to warning text,
 - grounding-pane state now clears cleanly when a later turn has no grounding payload.
 

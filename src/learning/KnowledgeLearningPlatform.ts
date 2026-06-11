@@ -3491,6 +3491,17 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     averageConfidence: Number.isFinite(Number(summary.averageConfidence)) ? Number(summary.averageConfidence) : 0,
                 }))
                 : [],
+            knowledgePointRelations: Array.isArray(value.knowledgePointRelations)
+                ? value.knowledgePointRelations.map((relation) => ({
+                    edgeId: String(relation.edgeId || '').trim(),
+                    relationKind: relation.relationKind,
+                    sourceAtomId: String(relation.sourceAtomId || '').trim(),
+                    sourceTitle: String(relation.sourceTitle || '').trim(),
+                    targetAtomId: String(relation.targetAtomId || '').trim(),
+                    targetTitle: String(relation.targetTitle || '').trim(),
+                    confidence: Number.isFinite(Number(relation.confidence)) ? Number(relation.confidence) : 0,
+                }))
+                : [],
             temporalValidity: value.temporalValidity && typeof value.temporalValidity === 'object'
                 ? {
                     checkedAt: String(value.temporalValidity.checkedAt || '').trim(),

@@ -1084,6 +1084,16 @@ export interface AgentConversationGraphRelationSummary {
     averageConfidence: number;
 }
 
+export interface AgentConversationGraphKnowledgePointRelation {
+    edgeId: string;
+    relationKind: RelationKind;
+    sourceAtomId: string;
+    sourceTitle: string;
+    targetAtomId: string;
+    targetTitle: string;
+    confidence: number;
+}
+
 export interface AgentConversationGraphTemporalContext {
     checkedAt: string;
     allPointsValid: boolean;
@@ -1101,6 +1111,7 @@ export interface AgentConversationGraphContext {
     supportingTitles: string[];
     relationKinds: RelationKind[];
     relationSummaries: AgentConversationGraphRelationSummary[];
+    knowledgePointRelations?: AgentConversationGraphKnowledgePointRelation[];
     temporalValidity: AgentConversationGraphTemporalContext;
 }
 

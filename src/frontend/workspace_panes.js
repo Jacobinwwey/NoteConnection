@@ -590,6 +590,11 @@
                 .map((item) => item && typeof item === 'object' ? item : null)
                 .filter(Boolean)
             : [];
+        const knowledgePointRelations = Array.isArray(graphContext.knowledgePointRelations)
+            ? graphContext.knowledgePointRelations
+                .map((item) => item && typeof item === 'object' ? item : null)
+                .filter(Boolean)
+            : [];
         const temporalValidity = graphContext.temporalValidity && typeof graphContext.temporalValidity === 'object'
             ? graphContext.temporalValidity
             : null;
@@ -659,6 +664,21 @@
                 `;
             }).join('')
             : `<li class="agent-pane-list-empty">${escapeHtml(noneLabel)}</li>`;
+        const knowledgePointRelationHtml = knowledgePointRelations.length > 0
+            ? knowledgePointRelations.map((relation) => {
+                const relationLabel = `${String(relation.sourceTitle || noneLabel)} -> ${humanizeEvidenceRelationKind(relation.relationKind)} -> ${String(relation.targetTitle || noneLabel)}`;
+                const relationAtoms = `${String(relation.sourceAtomId || noneLabel)} -> ${String(relation.targetAtomId || noneLabel)}`;
+                return `
+                    <li class="agent-pane-list-item">
+                        <div>
+                            <div class="agent-pane-list-label">${escapeHtml(relationLabel)}</div>
+                            <div class="agent-pane-summary">${escapeHtml(relationAtoms)}</div>
+                        </div>
+                        <span class="agent-pane-meta">${escapeHtml(formatEvidenceConfidence(relation.confidence))}</span>
+                    </li>
+                `;
+            }).join('')
+            : '';
 
         const temporalEdgeKinds = temporalValidity && Array.isArray(temporalValidity.edgeKinds)
             ? temporalValidity.edgeKinds
@@ -719,6 +739,7 @@
             <ul class="agent-pane-list">${buildEvidenceMetricListHtml(contextMetrics)}</ul>
             <div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphRelationSummariesLabel', 'Relation summaries'))}</div>
             <ul class="agent-pane-list">${relationSummaryHtml}</ul>
+            ${knowledgePointRelationHtml ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphKnowledgePointRelationsLabel', 'Knowledge-point relations'))}</div><ul class="agent-pane-list">${knowledgePointRelationHtml}</ul>` : ''}
             ${temporalMetrics.length > 0 ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphTemporalLabel', 'Temporal validity'))}</div><ul class="agent-pane-list">${buildEvidenceMetricListHtml(temporalMetrics)}</ul>` : ''}
             ${temporalDetailHtml ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphTemporalDetailsLabel', 'Temporal edge details'))}</div><ul class="agent-pane-list">${temporalDetailHtml}</ul>` : ''}
         `;
