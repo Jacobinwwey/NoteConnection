@@ -3,6 +3,36 @@
 
 ## 中文文档
 
+### 2026-06-17 Agent Knowledge DAG 实施计划
+
+#### 目标
+
+将已澄清的 DAG 要求转成可执行顺序：使用现有 learning graph 作为 answer-planning substrate，同时保持公开回答聚焦与运行时兼容。
+
+#### 当前代码真相
+
+- 当前图底座是项目内部已有结构：`KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、evidence spans、store ops 与 `findPath`。
+- 当前切片已经把可选 explicit `connectionPaths` 接入 graph context，并贯穿 trace/export/evidence rendering。
+- 当前持久化会在自动保存重建 snapshot 时保留仍然有效的 store 侧 relation/temporal edges，避免 read-side query/conversation 流程在装配 `connectionPaths` 前丢掉外部增强 DAG 结构。
+- 当前 retrieval 路径仍未完全 graph-native；relation degree 只是浅层 ranking feature。
+- prompt-framework 研究应指导 contract 与 evaluation，不应把 Python framework 拉入 app runtime。
+
+#### 下一步执行顺序
+
+1. 稳定当前 optional `connectionPaths` surface，并保持 additive。
+2. 在 retrieval 与 answer synthesis 之间抽出有界 graph-conditioned context assembler。
+3. 将 graph-aware ranking features 从 relation-degree bonus 扩展出去。
+4. 将 graph/debug/evidence 细节留在 evidence/export surface，而不是公开回答区。
+5. 增加图专项回答质量门禁，覆盖 ordering、comparison、temporal validity、fallback 与 large-graph budgeting。
+6. 只有当新模块拥有真实决策或不变量时，才继续做 owner reduction。
+
+#### 验收标准
+
+1. `assistantMessage` 与现有 conversation client 仍然有效。
+2. graph ops 失败时能带 diagnostics 回退到当前 retrieval-grounded behavior。
+3. 右侧文件命中继续保留 source markdown 与 matched-span highlight 行为。
+4. 不向 Tauri/Node runtime 引入新的宽 prompt-framework 依赖。
+
 ### 2026-06-10 知识工作区与 DAG 实施计划
 
 #### 目标
@@ -14,12 +44,12 @@
 - 当前分支已经具备结构化 grounded conversation、按文档聚合的 knowledge point、durable `flashcard_batch` / `knowledge_run` artifact，以及 workflow-artifact review follow-up。
 - 当前 DAG 学习底座已经在代码中落地：`KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query 与 prerequisite 驱动学习流都已存在。
 - 当前最主要缺层，是 retrieval 与 answer synthesis 之间的 graph-conditioned context assembly。
-- 当前最主要产品面缺口，仍是主回答区收缩与 left-hit -> right-pane 阅读收敛。
+- 主回答区收缩切片已经在 composer/frontend 边界落地；剩余产品面缺口主要是 right-pane-first 知识阅读与 durable evidence review。
 
 #### 下一步执行顺序
 
 1. 让新的 2026-06-10 知识工作区 / DAG 对齐文档持续同步到所有活跃入口文档。
-2. 收缩用户可见回答区，优先只显示 targeted answer。
+2. 保持已收缩的用户可见回答契约，同时把 supporting graph/evidence data 路由到次级表面。
 3. 让左侧 knowledge hit 收敛为 right-pane-first 阅读模型。
 4. 把 `knowledge_run` 与 `flashcard_batch` 视为第一批 durable evidence surface。
 5. 补 graph-conditioned context assembly。

@@ -261,6 +261,16 @@ function sortAndCloneConversationTurns(records: AgentConversationTurnRecord[]): 
                                     ...relation,
                                 }))
                                 : [],
+                            connectionPaths: Array.isArray((record.response.trace as any).graphContext.connectionPaths)
+                                ? (record.response.trace as any).graphContext.connectionPaths.map((connectionPath: any) => ({
+                                    ...connectionPath,
+                                    pathAtomIds: Array.isArray(connectionPath.pathAtomIds) ? [...connectionPath.pathAtomIds] : [],
+                                    pathTitles: Array.isArray(connectionPath.pathTitles) ? [...connectionPath.pathTitles] : [],
+                                    pathEdges: Array.isArray(connectionPath.pathEdges)
+                                        ? connectionPath.pathEdges.map((edge: any) => ({ ...edge }))
+                                        : [],
+                                }))
+                                : [],
                             temporalValidity: (record.response.trace as any).graphContext.temporalValidity
                                 ? {
                                     ...(record.response.trace as any).graphContext.temporalValidity,

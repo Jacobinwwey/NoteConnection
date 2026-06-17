@@ -1840,6 +1840,135 @@ describe('KnowledgeLearningPlatform', () => {
         expect((response.knowledgePoints[0] as any).relationKinds).toContain('reference');
     });
 
+    test('agent conversation enriches graph context with explicit store path chains between returned knowledge points', async () => {
+        const tempDir = fs.mkdtempSync(path.join(process.cwd(), 'tmp-agent-conversation-paths-'));
+        const storePath = path.join(tempDir, 'knowledge_graph.snapshot.json');
+        const opsStore = createKnowledgeGraphStore({
+            backend: 'file',
+            filePath: storePath,
+        });
+        const opsPlatform = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date('2026-06-13T00:00:00.000Z'),
+            store: opsStore,
+            autoPersist: true,
+        });
+
+        try {
+            await opsPlatform.ingestKnowledge({
+                incremental: true,
+                documents: [
+                    {
+                        documentId: 'doc_foundation',
+                        sourcePath: 'Knowledge_Base/optics/foundation.md',
+                        language: 'en',
+                        content: '# Foundation Note\nFoundation note stabilizes the optics chain.',
+                    },
+                    {
+                        documentId: 'doc_bridge',
+                        sourcePath: 'Knowledge_Base/optics/bridge.md',
+                        language: 'en',
+                        content: '# Bridge Layer\nBridge layer links the foundation into the target concept.\n\nSee [[Ground State]].',
+                    },
+                    {
+                        documentId: 'doc_target',
+                        sourcePath: 'Knowledge_Base/optics/ground-state.md',
+                        language: 'en',
+                        content: '# Ground State\nGround state is the target optical state.\n\nSee [[Foundation Note]].',
+                    },
+                ],
+            });
+
+            const snapshot = await opsStore.loadSnapshot();
+            expect(snapshot).not.toBeNull();
+            if (!snapshot) {
+                throw new Error('Expected persisted snapshot for path query test.');
+            }
+
+            const foundationAtom = snapshot.atoms.find((atom) => atom.title === 'Foundation Note');
+            const bridgeAtom = snapshot.atoms.find((atom) => atom.title === 'Bridge Layer');
+            const targetAtom = snapshot.atoms.find((atom) => atom.title === 'Ground State');
+            expect(foundationAtom).toBeDefined();
+            expect(bridgeAtom).toBeDefined();
+            expect(targetAtom).toBeDefined();
+
+            snapshot.relationEdges.push(
+                {
+                    id: 'edge_foundation_bridge',
+                    sourceAtomId: String(foundationAtom?.id || ''),
+                    targetAtomId: String(bridgeAtom?.id || ''),
+                    relationKind: 'prerequisite',
+                    provenance: 'fact',
+                    confidence: 0.91,
+                    evidenceSpanIds: [],
+                    temporal: {
+                        validFrom: '2026-06-13T00:00:00.000Z',
+                    },
+                },
+                {
+                    id: 'edge_bridge_target',
+                    sourceAtomId: String(bridgeAtom?.id || ''),
+                    targetAtomId: String(targetAtom?.id || ''),
+                    relationKind: 'reference',
+                    provenance: 'fact',
+                    confidence: 0.88,
+                    evidenceSpanIds: [],
+                    temporal: {
+                        validFrom: '2026-06-13T00:00:00.000Z',
+                    },
+                },
+            );
+            await opsStore.saveSnapshot(snapshot);
+
+            const response = await opsPlatform.agentConversation({
+                userId: 'agent_path_user',
+                sessionId: 'session_path_user',
+                message: 'explain ground state foundation chain',
+                scope: {
+                    corpusId: 'optics',
+                    sourcePathPrefixes: ['Knowledge_Base/optics'],
+                    documentIds: ['doc_foundation', 'doc_target'],
+                },
+                persistMemory: false,
+            });
+
+            expect((response.trace.graphContext as any)?.connectionPaths).toEqual(expect.arrayContaining([
+                expect.objectContaining({
+                    sourceTitle: 'Foundation Note',
+                    targetTitle: 'Ground State',
+                    pathTitles: ['Foundation Note', 'Bridge Layer', 'Ground State'],
+                    length: 2,
+                    pathEdges: expect.arrayContaining([
+                        expect.objectContaining({
+                            fromAtomId: String(foundationAtom?.id || ''),
+                            toAtomId: String(bridgeAtom?.id || ''),
+                            relationKind: 'prerequisite',
+                        }),
+                        expect.objectContaining({
+                            fromAtomId: String(bridgeAtom?.id || ''),
+                            toAtomId: String(targetAtom?.id || ''),
+                            relationKind: 'reference',
+                        }),
+                    ]),
+                }),
+            ]));
+
+            const structuredBlock = (response.assistantBlocks || []).find((block) => block.type === 'structured_answer');
+            expect(
+                structuredBlock && 'explanationMarkdown' in structuredBlock
+                    ? String(structuredBlock.explanationMarkdown || '')
+                    : ''
+            ).toContain('Foundation Note -> prerequisite -> Bridge Layer -> reference -> Ground State');
+            expect(
+                structuredBlock && 'nextActionsMarkdown' in structuredBlock
+                    ? String(structuredBlock.nextActionsMarkdown || '')
+                    : ''
+            ).toContain('Review the path order: Foundation Note -> Bridge Layer -> Ground State');
+        } finally {
+            opsStore.close?.();
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        }
+    });
+
     test('agent conversation explanation and next actions adapt to how-to queries', async () => {
         await platform.ingestKnowledge({
             incremental: true,

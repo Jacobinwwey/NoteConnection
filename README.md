@@ -27,6 +27,30 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
+## Current Mainline Architecture Status (2026-06-17)
+
+### English
+
+- The current DAG clarification is now explicit: "graph structure" means this project's existing DAG-shaped `KnowledgeAtom` / `RelationEdge` / `TemporalEdge` substrate, not a generic graph database integration target.
+- The 2026-06-17 agent-knowledge slice adds an additive graph-context path surface: explicit store-backed `connectionPaths` now flow through conversation trace, structured answer composition, evidence-pane rendering, workspace export, and focused regression tests while preserving legacy `assistantMessage` compatibility.
+- Persistence is guarded for this slice: before auto-saving a rebuilt learning snapshot, `KnowledgeLearningPlatform` merges still-valid store-side relation/temporal edges into the new snapshot so read-side query/conversation flows do not erase externally enriched DAG edges before path enrichment can inspect them.
+- The correct next architecture move is a bounded graph-conditioned context assembly layer between retrieval and answer synthesis. Current retrieval still mainly uses keyword/vector/hybrid scoring plus shallow relation-degree bonuses; the DAG should next control anchor/support/path/temporal context selection before final composition.
+- The public answer contract is now enforced in the current composer path: `answer` / `directAnswer` stays to the targeted response, while citations, connection paths, temporal details, durable artifacts, and developer traces belong in the evidence pane or export payload unless the user explicitly asks to inspect them.
+- The prior DSPy / Guidance / Semantic Kernel / LangChain Core / LiteLLM review is retained as design input only. The main runtime should stay TypeScript-native and use local graph store operations instead of importing Python prompt frameworks into the Tauri/Node path.
+- Current code-vs-plan details are tracked in [Agent Knowledge DAG Answer Contract Plan (2026-06-17)](docs/solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md), [Knowledge Workspace and DAG Alignment Plan (2026-06-10)](docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md), and the [Development Progress Dashboard](docs/diataxis/en/explanation/development-progress-dashboard.md).
+
+### 中文
+
+- 当前已明确：这里的“图结构”指本项目现有 DAG 形态的 `KnowledgeAtom` / `RelationEdge` / `TemporalEdge` 底座，不是泛化的图数据库接入目标。
+- 2026-06-17 agent knowledge 切片新增了向前兼容的 graph-context 路径表面：store 支撑的显式 `connectionPaths` 现在会贯穿 conversation trace、结构化回答组织、evidence pane 渲染、workspace export 与聚焦回归测试，同时保留 legacy `assistantMessage` 兼容。
+- 当前切片也补了持久化保护：`KnowledgeLearningPlatform` 在自动保存重建后的 learning snapshot 前，会把仍然有效的 store 侧 relation/temporal edges 合并回新快照，避免 read-side query/conversation 流程在路径增强读取前抹掉外部增强的 DAG 边。
+- 下一步正确的架构动作是在 retrieval 与 answer synthesis 之间补一个有界 graph-conditioned context assembly layer。当前检索仍主要依赖 keyword/vector/hybrid scoring 与浅层关系度数加分；后续应让 DAG 在最终回答合成前参与 anchor/support/path/temporal context 选择。
+- 公开回答契约已在当前 composer 路径中强制收缩：`answer` / `directAnswer` 只保留 targeted response；citation、connection path、temporal detail、durable artifact 与 developer trace 默认进入 evidence pane 或 export payload，除非用户显式要求查看。
+- 先前对 DSPy / Guidance / Semantic Kernel / LangChain Core / LiteLLM 的研究继续作为设计输入，不作为运行时依赖引入。主运行时应保持 TypeScript-native，并优先使用本地图 store operations。
+- 当前代码 / 方案对齐详情见 [Agent Knowledge DAG Answer Contract Plan (2026-06-17)](docs/solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md)、[Knowledge Workspace and DAG Alignment Plan (2026-06-10)](docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md) 与 [Development Progress Dashboard](docs/diataxis/en/explanation/development-progress-dashboard.md)。
+
+---
+
 ## Current Mainline Architecture Status (2026-06-10)
 
 - The current `main` branch has code-backed scoped retrieval, grounded conversation, durable resource/index/workspace/session/memory/export substrate, explicit export profiles, and PNG-first Godot/mobile render materialization.

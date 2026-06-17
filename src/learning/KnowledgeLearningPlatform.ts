@@ -106,6 +106,7 @@ import type {
     GraphQueryBackendResult,
     GraphQueryBackendType,
 } from './queryBackend';
+import { isOpsAdapter } from './store';
 import { ResourceRegistry } from '../resources/ResourceRegistry';
 import type { CanonicalResourceRecord, ResourceProjectionRecord } from '../resources/types';
 import { WorkspaceRegistry } from '../workspace/WorkspaceRegistry';
@@ -129,6 +130,7 @@ import {
     collectAgentConversationAtomIds,
     mergeAgentConversationKnowledgePoints,
 } from './conversationComposer';
+import type { AgentConversationGraphConnectionPath, AgentConversationGraphContext } from './types';
 
 type ParsedAtomDraft = {
     stableKey: string;
@@ -3502,6 +3504,28 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     confidence: Number.isFinite(Number(relation.confidence)) ? Number(relation.confidence) : 0,
                 }))
                 : [],
+            connectionPaths: Array.isArray((value as any).connectionPaths)
+                ? (value as any).connectionPaths.map((connectionPath: any) => ({
+                    sourceAtomId: String(connectionPath.sourceAtomId || '').trim(),
+                    sourceTitle: String(connectionPath.sourceTitle || '').trim(),
+                    targetAtomId: String(connectionPath.targetAtomId || '').trim(),
+                    targetTitle: String(connectionPath.targetTitle || '').trim(),
+                    pathAtomIds: Array.isArray(connectionPath.pathAtomIds)
+                        ? connectionPath.pathAtomIds.map((atomId: unknown) => String(atomId || '').trim()).filter(Boolean)
+                        : [],
+                    pathTitles: Array.isArray(connectionPath.pathTitles)
+                        ? connectionPath.pathTitles.map((title: unknown) => String(title || '').trim()).filter(Boolean)
+                        : [],
+                    pathEdges: Array.isArray(connectionPath.pathEdges)
+                        ? connectionPath.pathEdges.map((edge: any) => ({
+                            fromAtomId: String(edge.fromAtomId || '').trim(),
+                            toAtomId: String(edge.toAtomId || '').trim(),
+                            relationKind: edge.relationKind,
+                        }))
+                        : [],
+                    length: Math.max(0, Math.floor(Number(connectionPath.length || 0))),
+                }))
+                : [],
             temporalValidity: value.temporalValidity && typeof value.temporalValidity === 'object'
                 ? {
                     checkedAt: String(value.temporalValidity.checkedAt || '').trim(),
@@ -3571,6 +3595,97 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                         : [],
                 }
                 : point.temporalValidity,
+        };
+    }
+
+    private async buildAgentConversationConnectionPaths(
+        knowledgePoints: AgentConversationKnowledgePoint[]
+    ): Promise<AgentConversationGraphConnectionPath[]> {
+        if (!this.store || !isOpsAdapter(this.store) || knowledgePoints.length <= 1) {
+            return [];
+        }
+        const opsStore = this.store;
+        const anchorPoint = knowledgePoints[0];
+        const anchorAtomId = String(anchorPoint?.atomId || '').trim();
+        if (!anchorAtomId) {
+            return [];
+        }
+
+        const titleByAtomId = new Map<string, string>();
+        knowledgePoints.forEach((point) => {
+            const title = normalizeWhitespace(String(point.title || '').trim());
+            const groupedAtomIds = Array.isArray(point.atomIds) && point.atomIds.length > 0
+                ? point.atomIds
+                : [point.atomId];
+            groupedAtomIds
+                .map((atomId) => String(atomId || '').trim())
+                .filter(Boolean)
+                .forEach((atomId) => {
+                    titleByAtomId.set(atomId, title || atomId);
+                });
+        });
+
+        const connectionPaths: AgentConversationGraphConnectionPath[] = [];
+        for (const point of knowledgePoints.slice(1, 4)) {
+            const sourceAtomIds = Array.isArray(point.atomIds) && point.atomIds.length > 0
+                ? point.atomIds
+                : [point.atomId];
+            for (const sourceAtomIdCandidate of sourceAtomIds) {
+                const sourceAtomId = String(sourceAtomIdCandidate || '').trim();
+                if (!sourceAtomId || sourceAtomId === anchorAtomId) {
+                    continue;
+                }
+                const pathResult = await this.store.findPath(sourceAtomId, anchorAtomId, 6);
+                if (!pathResult.found || !Array.isArray(pathResult.path) || pathResult.path.length <= 1) {
+                    continue;
+                }
+                const pathAtomIds = pathResult.path.map((atomId) => String(atomId || '').trim()).filter(Boolean);
+                const pathTitles = await Promise.all(pathAtomIds.map(async (atomId) => {
+                    if (titleByAtomId.has(atomId)) {
+                        return String(titleByAtomId.get(atomId) || atomId).trim();
+                    }
+                    const atom = await opsStore.getNode(atomId);
+                    const resolvedTitle = normalizeWhitespace(String(atom?.title || '').trim()) || atomId;
+                    titleByAtomId.set(atomId, resolvedTitle);
+                    return resolvedTitle;
+                }));
+                connectionPaths.push({
+                    sourceAtomId,
+                    sourceTitle: normalizeWhitespace(String(point.title || '').trim()) || sourceAtomId,
+                    targetAtomId: anchorAtomId,
+                    targetTitle: normalizeWhitespace(String(anchorPoint.title || '').trim()) || anchorAtomId,
+                    pathAtomIds,
+                    pathTitles,
+                    pathEdges: Array.isArray(pathResult.edges)
+                        ? pathResult.edges.map((edge) => ({
+                            fromAtomId: String(edge.from || '').trim(),
+                            toAtomId: String(edge.to || '').trim(),
+                            relationKind: edge.relation as any,
+                        }))
+                        : [],
+                    length: Math.max(0, Math.floor(Number(pathResult.length || 0))),
+                });
+                break;
+            }
+        }
+
+        return connectionPaths;
+    }
+
+    private async buildAgentConversationGraphContext(
+        knowledgePoints: AgentConversationKnowledgePoint[],
+        replyGraphContext: AgentConversationGraphContext | null
+    ): Promise<AgentConversationGraphContext | null> {
+        if (!replyGraphContext) {
+            return null;
+        }
+        const connectionPaths = await this.buildAgentConversationConnectionPaths(knowledgePoints);
+        if (connectionPaths.length <= 0) {
+            return replyGraphContext;
+        }
+        return {
+            ...replyGraphContext,
+            connectionPaths,
         };
     }
 
@@ -4867,8 +4982,80 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         if (!this.store || !this.autoPersist) {
             return;
         }
-        const snapshot = this.buildSnapshot();
+        const snapshot = await this.buildSnapshotForPersist();
         await this.store.saveSnapshot(snapshot);
+    }
+
+    private async buildSnapshotForPersist(): Promise<KnowledgeGraphSnapshot> {
+        const snapshot = this.buildSnapshot();
+        if (!this.store || !isOpsAdapter(this.store)) {
+            return snapshot;
+        }
+        try {
+            const existingSnapshot = await this.store.loadSnapshot();
+            return this.mergeStoreGraphEdgesIntoSnapshot(snapshot, existingSnapshot);
+        } catch (_error) {
+            return snapshot;
+        }
+    }
+
+    private mergeStoreGraphEdgesIntoSnapshot(
+        snapshot: KnowledgeGraphSnapshot,
+        existingSnapshot: KnowledgeGraphSnapshot | null
+    ): KnowledgeGraphSnapshot {
+        if (!existingSnapshot) {
+            return snapshot;
+        }
+        const activeAtomIds = new Set(snapshot.atoms.map((atom) => atom.id));
+        const relationEdgeIds = new Set(snapshot.relationEdges.map((edge) => edge.id));
+        const relationEdgeSignatures = new Set(snapshot.relationEdgeSignatures || []);
+        const preservedRelationEdges = (existingSnapshot.relationEdges || []).filter((edge) => {
+            if (
+                !edge
+                || !isNonEmptyString(edge.id)
+                || relationEdgeIds.has(edge.id)
+                || !activeAtomIds.has(edge.sourceAtomId)
+                || !activeAtomIds.has(edge.targetAtomId)
+            ) {
+                return false;
+            }
+            const signature = this.buildRelationSignature({
+                sourceAtomId: edge.sourceAtomId,
+                targetAtomId: edge.targetAtomId,
+                relationKind: edge.relationKind,
+                provenance: edge.provenance,
+            });
+            if (relationEdgeSignatures.has(signature)) {
+                return false;
+            }
+            relationEdgeSignatures.add(signature);
+            return true;
+        });
+
+        const temporalEdgeIds = new Set(snapshot.temporalEdges.map((edge) => edge.id));
+        const preservedTemporalEdges = (existingSnapshot.temporalEdges || []).filter((edge) => (
+            edge
+            && isNonEmptyString(edge.id)
+            && !temporalEdgeIds.has(edge.id)
+            && activeAtomIds.has(edge.sourceAtomId)
+            && activeAtomIds.has(edge.targetAtomId)
+        ));
+
+        if (preservedRelationEdges.length <= 0 && preservedTemporalEdges.length <= 0) {
+            return snapshot;
+        }
+        return {
+            ...snapshot,
+            relationEdges: [
+                ...snapshot.relationEdges,
+                ...preservedRelationEdges.map((edge) => ({ ...edge })),
+            ],
+            temporalEdges: [
+                ...snapshot.temporalEdges,
+                ...preservedTemporalEdges.map((edge) => ({ ...edge })),
+            ],
+            relationEdgeSignatures: Array.from(relationEdgeSignatures.values()),
+        };
     }
 
     private buildSnapshot(): KnowledgeGraphSnapshot {
@@ -8639,7 +8826,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(activeConversationAtomIds);
         const effectiveWorkspaceId = traceScope.workspaceId || scopedWorkspace.workspaceId;
         const effectiveCorpusId = traceScope.corpusId || scopedWorkspace.corpusId;
-        const reply = buildScopedConversationReply({
+        const baseReply = buildScopedConversationReply({
             message,
             knowledgePoints,
             citations,
@@ -8650,6 +8837,21 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             nextBlockId: () => this.nextId('assistant_block'),
             nextRunId: () => this.nextId('knowledge_run'),
         });
+        const graphContext = await this.buildAgentConversationGraphContext(knowledgePoints, baseReply.graphContext || null);
+        const reply = graphContext && graphContext !== baseReply.graphContext
+            ? buildScopedConversationReply({
+                message,
+                knowledgePoints,
+                citations,
+                recalledMemories,
+                memoryActions,
+                usedScope: traceScope,
+                generatedAt,
+                nextBlockId: () => this.nextId('assistant_block'),
+                nextRunId: () => baseReply.knowledgeRun.runId,
+                graphContext,
+            })
+            : baseReply;
         const response: AgentConversationResponse = {
             userId,
             sessionId,
@@ -8686,7 +8888,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     titleLikeQueries: queryResult.trace.planner?.titleLikeQueries || [],
                     titleHitDocumentIds: queryResult.trace.planner?.titleHitDocumentIds || [],
                 },
-                graphContext: reply.graphContext || undefined,
+                graphContext: graphContext || reply.graphContext || undefined,
             },
         };
         const knowledgeRunArtifact = this.recordWorkflowArtifact({

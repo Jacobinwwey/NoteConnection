@@ -83,7 +83,18 @@
   - graph-native answer planning 仍未完成，因为 retrieval 与 answer synthesis 之间还缺 dedicated graph-conditioned context-assembly layer。
 - 当前产品面判断：
   - 按文件优先的 grouped knowledge hit 与右侧原文高亮阅读已经实现，
-  - 用户可见回答区未来仍需继续收缩，让 targeted answer 优先、supporting block 退到次级表面。
+  - 用户可见回答区现在已在 composer/frontend 边界收缩：`answer` 与 `directAnswer` 保持 targeted，graph path、citation、memory note、diagnostic 与 durable artifact 进入次级 evidence/export surface。
+
+## 0.0C Agent Knowledge DAG 回答契约补充（2026-06-17）
+
+- agent knowledge graph context 指本项目现有 DAG 形态的学习底座，不是泛化图数据库替换方案。
+- `AgentConversationGraphContext.connectionPaths` 是可选 additive 字段，用于显式 store-backed atom paths。
+  - 每条路径携带 source/target atom 身份、有序 atom ID/title、边关系类型与长度。
+  - 客户端与导出路径必须继续接受不包含该字段的 graph context。
+- conversation 兼容性不变：`assistantMessage` 仍有效，`answer`、`assistantBlocks`、按文档聚合的 `knowledgePoints`、citations、memory actions、workflow artifacts 与 `trace.graphContext` 继续作为增量字段共存。
+- evidence pane 渲染与 workspace export 可以把 connection paths 暴露为次级 inspection material；公开回答渲染应继续只针对用户问题。
+- 后续 graph-native answer planning 应在 retrieval 与 answer synthesis 之间实现有界 graph-conditioned context assembly，并使用 `KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、evidence spans 与 store-level path operations。
+- graph ops 不可用或失败时，运行时必须带 diagnostics fail open 到当前 retrieval-grounded answer 路径。
 
 兼容性规则：
 

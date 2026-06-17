@@ -1,5 +1,6 @@
 import type {
     AgentConversationAssistantBlock,
+    AgentConversationGraphConnectionPath,
     AgentConversationGraphContext,
     AgentConversationGraphKnowledgePointRelation,
     AgentConversationGraphRelationSummary,
@@ -33,6 +34,7 @@ export type ScopedConversationReplyParams = {
     generatedAt?: string;
     nextBlockId: () => string;
     nextRunId?: () => string;
+    graphContext?: AgentConversationGraphContext | null;
 };
 
 function buildAgentConversationGraphContext(
@@ -248,6 +250,31 @@ function buildAgentConversationGraphContext(
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function humanizeRelationKind(value: RelationKind | string): string {
+    return normalizeWhitespace(String(value || '').replace(/_/g, ' '));
+}
+
+function formatGraphConnectionPath(connectionPath: AgentConversationGraphConnectionPath): string {
+    const titles = Array.isArray(connectionPath.pathTitles)
+        ? connectionPath.pathTitles.map((title) => normalizeWhitespace(String(title || '').trim())).filter(Boolean)
+        : [];
+    const edges = Array.isArray(connectionPath.pathEdges)
+        ? connectionPath.pathEdges
+        : [];
+    if (titles.length <= 1 || edges.length <= 0) {
+        return titles.join(' -> ');
+    }
+    const segments: string[] = [titles[0]];
+    edges.forEach((edge, index) => {
+        const nextTitle = titles[index + 1];
+        if (!nextTitle) {
+            return;
+        }
+        segments.push(humanizeRelationKind(edge && edge.relationKind ? edge.relationKind : 'link'), nextTitle);
+    });
+    return segments.join(' -> ');
 }
 
 function clampUnit(value: number): number {
@@ -585,15 +612,24 @@ function cleanConversationAnswerCandidate(value: string, point: AgentConversatio
         .replace(/```[\s\S]*?```/g, ' ')
         .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
         .replace(/[*_~`>#|]/g, ' ')
-        .replace(/\s+/g, ' ')
         .trim();
     const title = normalizeWhitespace(String(point.title || '').replace(/[#*_~`]/g, ' '));
     if (title) {
         cleaned = cleaned
-            .replace(new RegExp(`^${escapeRegExpLiteral(title)}\\s*[:\\uFF1A.\\-\\u2014]*\\s*`, 'i'), '')
+            .replace(new RegExp(`^${escapeRegExpLiteral(title)}\\s*(?:[:\\uFF1A.\\-\\u2014]|\\r?\\n)+\\s*`, 'i'), '')
             .trim();
+        const flattenedHeadingMatch = cleaned.match(new RegExp(`^${escapeRegExpLiteral(title)}\\s+(.+)$`, 'i'));
+        if (flattenedHeadingMatch) {
+            const remainder = normalizeWhitespace(flattenedHeadingMatch[1] || '');
+            const titleWordCount = title.split(/\s+/).filter(Boolean).length;
+            const repeatsTitle = new RegExp(`^${escapeRegExpLiteral(title)}(?:\\b|\\s)`, 'i').test(remainder);
+            const startsWithArticle = /^(?:a|an|the)\s+/i.test(remainder);
+            if (repeatsTitle || (titleWordCount > 1 && startsWithArticle)) {
+                cleaned = remainder;
+            }
+        }
     }
-    return cleaned;
+    return normalizeWhitespace(cleaned);
 }
 
 function selectScopedConversationDirectSentence(message: string, point: AgentConversationKnowledgePoint): string {
@@ -681,20 +717,15 @@ function buildScopedConversationAnswer(params: ScopedConversationReplyParams): s
 
     const leadingPoint = params.knowledgePoints[0];
     const directSentence = selectScopedConversationDirectSentence(params.message, leadingPoint);
-    const evidenceLines = params.citations.slice(0, 3).map((citation, index) => (
-        `${index + 1}. ${citation.title} (${citation.sourcePath}${citation.startLine ? `:${citation.startLine}` : ''}) — ${citation.snippet}`
-    ));
-    const memoryLine = params.recalledMemories.length > 0
-        ? `I also recalled ${params.recalledMemories.length} scoped memory note(s) and kept them secondary to the cited knowledge evidence.`
-        : '';
-    return [
-        directSentence || `${leadingPoint.title}: ${leadingPoint.evidenceSnippet}`,
-        memoryLine,
-        `Grounded by ${params.knowledgePoints.length} knowledge point(s) and ${params.citations.length} citation(s).`,
-        '',
-        'Key evidence:',
-        ...evidenceLines,
-    ].filter((line) => line !== '').join('\n');
+    if (directSentence) {
+        return directSentence;
+    }
+    const title = normalizeWhitespace(String(leadingPoint.title || '').trim());
+    const fallback = normalizeWhitespace(String(leadingPoint.evidenceSnippet || leadingPoint.summary || '').trim());
+    if (title && fallback && title !== fallback) {
+        return `${title}: ${fallback}`;
+    }
+    return fallback || title || normalizeWhitespace(String(params.message || ''));
 }
 
 function buildScopedConversationOverviewMarkdown(
@@ -725,6 +756,9 @@ function buildScopedConversationOverviewMarkdown(
         lines.push(
             `- Temporal validity: **${graphContext.temporalValidity.allPointsValid ? 'valid' : 'warning'}**`
         );
+    }
+    if (graphContext && Array.isArray(graphContext.connectionPaths) && graphContext.connectionPaths.length > 0) {
+        lines.push(`- Explicit connection paths: **${graphContext.connectionPaths.length}**`);
     }
     return lines.join('\n');
 }
@@ -769,6 +803,12 @@ function buildScopedConversationExplanationMarkdown(
         explanationLines.push(
             '',
             `Direct graph links inside the current result set: ${relationPreview}.`
+        );
+    }
+    if (graphContext && Array.isArray(graphContext.connectionPaths) && graphContext.connectionPaths.length > 0) {
+        explanationLines.push(
+            '',
+            `Explicit graph path: ${formatGraphConnectionPath(graphContext.connectionPaths[0])}.`
         );
     }
     if (graphContext && graphContext.temporalValidity.allPointsValid === false) {
@@ -878,6 +918,15 @@ function buildScopedConversationActionGuideMarkdown(
         graphActionHints.push(
             `- Follow the direct graph path between ${firstRelation.sourceTitle} and ${firstRelation.targetTitle} before branching to external support nodes.`
         );
+    }
+    if (graphContext && Array.isArray(graphContext.connectionPaths) && graphContext.connectionPaths.length > 0) {
+        const firstConnectionPath = graphContext.connectionPaths[0];
+        const titles = Array.isArray(firstConnectionPath.pathTitles)
+            ? firstConnectionPath.pathTitles.map((title) => normalizeWhitespace(String(title || '').trim())).filter(Boolean)
+            : [];
+        if (titles.length > 1) {
+            graphActionHints.push(`- Review the path order: ${titles.join(' -> ')}.`);
+        }
     }
     return [
         '## Next Actions',
@@ -1161,7 +1210,7 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
     const blocks: AgentConversationAssistantBlock[] = [];
     const answer = buildScopedConversationAnswer(params);
     const knowledgeRun = buildKnowledgeRun(params);
-    const graphContext = buildAgentConversationGraphContext(params.knowledgePoints);
+    const graphContext = params.graphContext || buildAgentConversationGraphContext(params.knowledgePoints);
     const overviewMarkdown = buildScopedConversationOverviewMarkdown(params, graphContext);
     const explanationMarkdown = buildScopedConversationExplanationMarkdown(params, graphContext);
     const evidenceMarkdown = buildScopedConversationEvidenceMarkdown(params);

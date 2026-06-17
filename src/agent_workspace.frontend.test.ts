@@ -74,6 +74,8 @@ function createI18nStub() {
             'agentWorkspace.evidence.graphSupportingAtomsLabel': 'Supporting atoms',
             'agentWorkspace.evidence.graphRelationSummariesLabel': 'Relation summaries',
             'agentWorkspace.evidence.graphKnowledgePointRelationsLabel': 'Knowledge-point relations',
+            'agentWorkspace.evidence.graphConnectionPathsLabel': 'Connection paths',
+            'agentWorkspace.evidence.graphConnectionPathLengthLabel': 'Length: {length}',
             'agentWorkspace.evidence.graphRelationTargetsLabel': 'Targets: {count}',
             'agentWorkspace.evidence.graphRelationSourcesLabel': 'Sources: {sources}',
             'agentWorkspace.evidence.graphRelationConfidenceLabel': 'Avg confidence: {confidence}',
@@ -805,6 +807,8 @@ function createI18nStub() {
             'agentWorkspace.evidence.graphSupportingAtomsLabel': '支撑原子',
             'agentWorkspace.evidence.graphRelationSummariesLabel': '关系摘要',
             'agentWorkspace.evidence.graphKnowledgePointRelationsLabel': '知识点关系',
+            'agentWorkspace.evidence.graphConnectionPathsLabel': '连接路径',
+            'agentWorkspace.evidence.graphConnectionPathLengthLabel': '长度：{length}',
             'agentWorkspace.evidence.graphRelationTargetsLabel': '目标数：{count}',
             'agentWorkspace.evidence.graphRelationSourcesLabel': '来源：{sources}',
             'agentWorkspace.evidence.graphRelationConfidenceLabel': '平均置信度：{confidence}',
@@ -3076,6 +3080,29 @@ describe('workspace panes controller', () => {
                         averageConfidence: 0.8,
                     },
                 ],
+                connectionPaths: [
+                    {
+                        sourceAtomId: 'atom_foundation',
+                        sourceTitle: 'Foundation Note',
+                        targetAtomId: 'atom_reflection',
+                        targetTitle: 'Reflection',
+                        pathAtomIds: ['atom_foundation', 'atom_bridge', 'atom_reflection'],
+                        pathTitles: ['Foundation Note', 'Bridge Layer', 'Reflection'],
+                        pathEdges: [
+                            {
+                                fromAtomId: 'atom_foundation',
+                                toAtomId: 'atom_bridge',
+                                relationKind: 'prerequisite',
+                            },
+                            {
+                                fromAtomId: 'atom_bridge',
+                                toAtomId: 'atom_reflection',
+                                relationKind: 'reference',
+                            },
+                        ],
+                        length: 2,
+                    },
+                ],
                 temporalValidity: {
                     checkedAt: '2026-06-10T09:00:00.000Z',
                     allPointsValid: false,
@@ -3106,6 +3133,9 @@ describe('workspace panes controller', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('Graph context');
         expect(String(evidenceBody?.textContent || '')).toContain('Reflection');
         expect(String(evidenceBody?.textContent || '')).toContain('Phase Matching');
+        expect(String(evidenceBody?.textContent || '')).toContain('Connection paths');
+        expect(String(evidenceBody?.textContent || '')).toContain('Foundation Note -> Bridge Layer -> Reflection');
+        expect(String(evidenceBody?.textContent || '')).toContain('Length: 2');
         expect(String(evidenceBody?.textContent || '')).toContain('Targets: 1');
         expect(String(evidenceBody?.textContent || '')).toContain('Avg confidence: 92%');
         expect(String(evidenceBody?.textContent || '')).toContain('temporal_edge_expired');
@@ -3156,6 +3186,29 @@ describe('workspace panes controller', () => {
                         averageConfidence: 0.92,
                     },
                 ],
+                connectionPaths: [
+                    {
+                        sourceAtomId: 'atom_foundation',
+                        sourceTitle: 'Foundation Note',
+                        targetAtomId: 'atom_reflection',
+                        targetTitle: 'Reflection',
+                        pathAtomIds: ['atom_foundation', 'atom_phase', 'atom_reflection'],
+                        pathTitles: ['Foundation Note', 'Phase Matching', 'Reflection'],
+                        pathEdges: [
+                            {
+                                fromAtomId: 'atom_foundation',
+                                toAtomId: 'atom_phase',
+                                relationKind: 'prerequisite',
+                            },
+                            {
+                                fromAtomId: 'atom_phase',
+                                toAtomId: 'atom_reflection',
+                                relationKind: 'reference',
+                            },
+                        ],
+                        length: 2,
+                    },
+                ],
                 temporalValidity: {
                     checkedAt: '2026-06-10T09:00:00.000Z',
                     allPointsValid: true,
@@ -3180,6 +3233,7 @@ describe('workspace panes controller', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('Graph context');
         expect(String(evidenceBody?.textContent || '')).toContain('Anchor');
         expect(String(evidenceBody?.textContent || '')).toContain('Relation summaries');
+        expect(String(evidenceBody?.textContent || '')).toContain('Connection paths');
         expect(String(evidenceBody?.textContent || '')).toContain('Temporal validity');
 
         await window.i18n.setLanguage('zh');
@@ -3187,6 +3241,7 @@ describe('workspace panes controller', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('图结构上下文');
         expect(String(evidenceBody?.textContent || '')).toContain('锚点');
         expect(String(evidenceBody?.textContent || '')).toContain('关系摘要');
+        expect(String(evidenceBody?.textContent || '')).toContain('连接路径');
         expect(String(evidenceBody?.textContent || '')).toContain('时序有效性');
         expect(String(evidenceBody?.textContent || '')).toContain('有效');
         expect(String(evidenceBody?.textContent || '')).toContain('supersedes');
@@ -4116,6 +4171,29 @@ describe('agent workspace learning-path integration', () => {
                                         averageConfidence: 0.92,
                                     },
                                 ],
+                                connectionPaths: [
+                                    {
+                                        sourceAtomId: 'atom_foundation',
+                                        sourceTitle: 'Foundation Note',
+                                        targetAtomId: 'atom_reflection',
+                                        targetTitle: 'Reflection',
+                                        pathAtomIds: ['atom_foundation', 'atom_phase', 'atom_reflection'],
+                                        pathTitles: ['Foundation Note', 'Phase Matching', 'Reflection'],
+                                        pathEdges: [
+                                            {
+                                                fromAtomId: 'atom_foundation',
+                                                toAtomId: 'atom_phase',
+                                                relationKind: 'prerequisite',
+                                            },
+                                            {
+                                                fromAtomId: 'atom_phase',
+                                                toAtomId: 'atom_reflection',
+                                                relationKind: 'reference',
+                                            },
+                                        ],
+                                        length: 2,
+                                    },
+                                ],
                                 temporalValidity: {
                                     checkedAt: '2026-06-10T09:00:00.000Z',
                                     allPointsValid: true,
@@ -4153,6 +4231,7 @@ describe('agent workspace learning-path integration', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('Graph context');
         expect(String(evidenceBody?.textContent || '')).toContain('Reflection');
         expect(String(evidenceBody?.textContent || '')).toContain('Phase Matching');
+        expect(String(evidenceBody?.textContent || '')).toContain('Foundation Note -> Phase Matching -> Reflection');
         expect(String(evidenceBody?.textContent || '')).toContain('Temporal validity');
     });
 

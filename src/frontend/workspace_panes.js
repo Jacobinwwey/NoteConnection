@@ -595,6 +595,11 @@
                 .map((item) => item && typeof item === 'object' ? item : null)
                 .filter(Boolean)
             : [];
+        const connectionPaths = Array.isArray(graphContext.connectionPaths)
+            ? graphContext.connectionPaths
+                .map((item) => item && typeof item === 'object' ? item : null)
+                .filter(Boolean)
+            : [];
         const temporalValidity = graphContext.temporalValidity && typeof graphContext.temporalValidity === 'object'
             ? graphContext.temporalValidity
             : null;
@@ -679,6 +684,28 @@
                 `;
             }).join('')
             : '';
+        const connectionPathHtml = connectionPaths.length > 0
+            ? connectionPaths.map((connectionPath) => {
+                const pathTitles = Array.isArray(connectionPath.pathTitles)
+                    ? connectionPath.pathTitles.map((item) => String(item || '').trim()).filter(Boolean)
+                    : [];
+                const pathSummary = pathTitles.length > 0 ? pathTitles.join(' -> ') : noneLabel;
+                const pathLengthLabel = translate(
+                    'agentWorkspace.evidence.graphConnectionPathLengthLabel',
+                    'Length: {length}',
+                    { length: String(Number(connectionPath.length || 0)) }
+                );
+                return `
+                    <li class="agent-pane-list-item">
+                        <div>
+                            <div class="agent-pane-list-label">${escapeHtml(pathSummary)}</div>
+                            <div class="agent-pane-summary">${escapeHtml(String(connectionPath.sourceTitle || noneLabel))} -> ${escapeHtml(String(connectionPath.targetTitle || noneLabel))}</div>
+                        </div>
+                        <span class="agent-pane-meta">${escapeHtml(pathLengthLabel)}</span>
+                    </li>
+                `;
+            }).join('')
+            : '';
 
         const temporalEdgeKinds = temporalValidity && Array.isArray(temporalValidity.edgeKinds)
             ? temporalValidity.edgeKinds
@@ -740,6 +767,7 @@
             <div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphRelationSummariesLabel', 'Relation summaries'))}</div>
             <ul class="agent-pane-list">${relationSummaryHtml}</ul>
             ${knowledgePointRelationHtml ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphKnowledgePointRelationsLabel', 'Knowledge-point relations'))}</div><ul class="agent-pane-list">${knowledgePointRelationHtml}</ul>` : ''}
+            ${connectionPathHtml ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphConnectionPathsLabel', 'Connection paths'))}</div><ul class="agent-pane-list">${connectionPathHtml}</ul>` : ''}
             ${temporalMetrics.length > 0 ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphTemporalLabel', 'Temporal validity'))}</div><ul class="agent-pane-list">${buildEvidenceMetricListHtml(temporalMetrics)}</ul>` : ''}
             ${temporalDetailHtml ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphTemporalDetailsLabel', 'Temporal edge details'))}</div><ul class="agent-pane-list">${temporalDetailHtml}</ul>` : ''}
         `;

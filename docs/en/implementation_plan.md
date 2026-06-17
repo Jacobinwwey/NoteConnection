@@ -2,6 +2,36 @@
 
 ## English Document
 
+### 2026-06-17 Agent Knowledge DAG Implementation Plan
+
+#### Objective
+
+Turn the clarified DAG requirement into an implementation sequence that uses the existing learning graph as an answer-planning substrate while keeping the public answer focused and the runtime compatible.
+
+#### Current code truth
+
+- The existing graph substrate is local to the project: `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, evidence spans, store ops, and `findPath`.
+- The current slice already adds optional explicit `connectionPaths` to graph context and preserves them through trace/export/evidence rendering.
+- Persistence now preserves still-valid store-side relation/temporal edges during auto-save snapshot rebuilds, which prevents read-side query/conversation flows from discarding externally enriched DAG structure before `connectionPaths` are assembled.
+- The current retrieval path is still not fully graph-native; relation degree is only a shallow ranking feature.
+- Prompt-framework research should guide contracts and evaluation, not pull Python frameworks into the app runtime.
+
+#### Next execution order
+
+1. Stabilize the current optional `connectionPaths` surface and keep it additive.
+2. Extract a bounded graph-conditioned context assembler between retrieval and answer synthesis.
+3. Expand graph-aware ranking features beyond relation-degree bonus.
+4. Keep graph/debug/evidence detail in evidence/export surfaces, not in the public answer.
+5. Add graph-specific answer quality gates for ordering, comparison, temporal validity, fallback, and large-graph budgeting.
+6. Continue owner reduction only when the new module owns real decisions or invariants.
+
+#### Acceptance criteria
+
+1. `assistantMessage` and existing conversation clients remain valid.
+2. Graph ops failure falls back to current retrieval-grounded behavior with diagnostics.
+3. Right-pane file hits keep source markdown and matched-span highlight behavior.
+4. No new broad prompt-framework dependency is introduced into the Tauri/Node runtime.
+
 ### 2026-06-10 Knowledge Workspace and DAG Implementation Plan
 
 #### Objective
@@ -13,12 +43,12 @@ Extend the current mainline alignment with a Knowledge Workspace and DAG-specifi
 - The current branch already has structured grounded conversation, grouped knowledge points, durable `flashcard_batch` / `knowledge_run` artifacts, and workflow-artifact review follow-up.
 - The current DAG-backed learning substrate already exists in code through `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, and prerequisite-driven learning flows.
 - The primary missing layer is graph-conditioned context assembly between retrieval and answer synthesis.
-- The primary product-surface gap is still answer-surface contraction and right-pane-first knowledge reading.
+- The answer-surface contraction slice is now implemented at the composer/frontend boundary; the remaining product-surface gap is right-pane-first knowledge reading and durable evidence review.
 
 #### Next execution order
 
 1. Keep the new 2026-06-10 Knowledge Workspace and DAG alignment note synchronized across active docs.
-2. Contract the visible answer area toward a single targeted answer.
+2. Preserve the contracted visible answer contract while routing supporting graph/evidence data to secondary surfaces.
 3. Converge left-side knowledge hits on a right-pane-first reading model.
 4. Treat `knowledge_run` and `flashcard_batch` as the first durable evidence surfaces.
 5. Add graph-conditioned context assembly.

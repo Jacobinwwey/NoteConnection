@@ -843,7 +843,10 @@ describe('server migration settings routes', () => {
       titleLikeQueries: expect.arrayContaining(['water glass', 'waterglass']),
     }));
     expect(response.body.result.citations.length).toBeGreaterThan(0);
-    expect(String(response.body.result.answer || '')).toContain('Water Glass');
+    const answer = String(response.body.result.answer || '');
+    expect(answer.toLowerCase()).toContain('water glass');
+    expect(answer).not.toContain('Grounded by');
+    expect(answer).not.toContain('Key evidence');
   });
 
   test('returns 400 from /api/render/math when expression is empty', async () => {

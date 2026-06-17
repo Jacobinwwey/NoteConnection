@@ -265,6 +265,29 @@ describe('WorkspaceExportBundle', () => {
                                         confidence: 0.8,
                                     },
                                 ],
+                                connectionPaths: [
+                                    {
+                                        sourceAtomId: 'atom_foundation',
+                                        sourceTitle: 'Foundation Note',
+                                        targetAtomId: 'atom_reflection',
+                                        targetTitle: 'Reflection',
+                                        pathAtomIds: ['atom_foundation', 'atom_bridge', 'atom_reflection'],
+                                        pathTitles: ['Foundation Note', 'Bridge Layer', 'Reflection'],
+                                        pathEdges: [
+                                            {
+                                                fromAtomId: 'atom_foundation',
+                                                toAtomId: 'atom_bridge',
+                                                relationKind: 'prerequisite',
+                                            },
+                                            {
+                                                fromAtomId: 'atom_bridge',
+                                                toAtomId: 'atom_reflection',
+                                                relationKind: 'reference',
+                                            },
+                                        ],
+                                        length: 2,
+                                    },
+                                ],
                                 temporalValidity: {
                                     checkedAt: '2026-05-26T00:00:00.000Z',
                                     allPointsValid: true,
@@ -310,6 +333,14 @@ describe('WorkspaceExportBundle', () => {
                         relationKind: 'reference',
                         sourceTitle: 'Reflection',
                         targetTitle: 'Transmission',
+                    }),
+                ]),
+                connectionPaths: expect.arrayContaining([
+                    expect.objectContaining({
+                        sourceTitle: 'Foundation Note',
+                        targetTitle: 'Reflection',
+                        pathTitles: ['Foundation Note', 'Bridge Layer', 'Reflection'],
+                        length: 2,
                     }),
                 ]),
                 temporalValidity: expect.objectContaining({

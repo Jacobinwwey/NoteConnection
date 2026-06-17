@@ -3,6 +3,40 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-06-17 Agent Knowledge DAG Answer Contract
+
+This slice updates the Knowledge Workspace graph/RAG direction after clarifying that "graph structure" means the project's existing DAG-shaped learning data, not a generic graph database replacement.
+
+Implemented or documented in this slice:
+
+- the new bilingual source-of-truth note is `docs/solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md`,
+- the open-source review boundary is explicit: DSPy, Guidance, Semantic Kernel, LangChain Core, and LiteLLM are design references under `ref/`, not runtime dependencies,
+- `AgentConversationGraphContext` now has an optional `connectionPaths` surface,
+- `KnowledgeLearningPlatform` can enrich conversation graph context with explicit store-backed paths between returned knowledge points and the anchor when an ops-capable store is available,
+- `conversationComposer` now keeps public `answer` / `directAnswer` output narrow instead of embedding citation lists, graph paths, memory notices, or knowledge-run diagnostics,
+- `conversationComposer` can use those explicit paths in structured answer sections,
+- `workspace_panes.js` renders connection paths in the evidence pane,
+- `WorkspaceExportBundle` preserves connection paths in exported conversation trace graph context,
+- focused tests cover graph-path composition, platform enrichment, frontend evidence rendering, locale labels, and export serialization.
+
+Code-vs-plan reconciliation:
+
+| Requirement | Current implementation evidence | Progress call |
+|---|---|---|
+| Public answer should not dump every internal artifact | `answer` / `directAnswer` now stays targeted; graph connection paths, citations, temporal detail, and knowledge-run diagnostics are secondary inspection data. | Implemented current slice |
+| Hide developer-heavy support material for now | Graph paths, temporal details, citations, and traces belong in evidence/export surfaces unless explicitly requested. | Preserved direction |
+| File hit opens right pane with highlighted source | Existing graph-focus source rendering and matched-span highlighting remain the canonical path. | Implemented baseline; diagnostics still needed |
+| Use the current DAG | `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, store ops, and `findPath` are the active graph substrate. | Confirmed |
+| Let the LLM inspect graph structure | Explicit connection paths now reach the answer composer and evidence pane. | Partial: still post-retrieval enrichment |
+| Full DAG-native answer planning | Dedicated graph-conditioned context assembly is not yet extracted. | Pending |
+
+Immediate next direction:
+
+1. Extract a bounded graph-conditioned context assembler between retrieval and answer synthesis.
+2. Add graph-aware ranking features beyond relation-degree bonuses: graph distance, path confidence, prerequisite depth, temporal validity, and relation-kind intent.
+3. Add graph-specific quality gates for prerequisite ordering, comparison branches, supersession warnings, graph-op fallback, and deterministic large-graph budgeting.
+4. Keep the public answer focused while graph/evidence/developer detail remains inspectable through evidence panes, traces, artifacts, and export bundles.
+
 ## 2026-06-10 Knowledge Workspace Durable Artifact and DAG Alignment
 
 This slice reconciles the current codebase against the earlier lightweight-RAG and agent-workspace plans, with special focus on the existing DAG-backed learning substrate.
@@ -39,7 +73,7 @@ Code-vs-plan reconciliation for this slice:
 | Durable learning/review artifacts | `src/workflows/WorkflowArtifactStore.ts`, `src/learning/KnowledgeLearningPlatform.ts`, and `src/routes/knowledge.ts` now support durable `flashcard_batch` / `knowledge_run` artifacts plus `/api/knowledge/workflow-artifacts` and `/api/knowledge/workflow-artifacts/review-follow-up`; `workspace_panes.js` now routes their inspection into a dedicated evidence pane. | Implemented current slice |
 | File-first scoped knowledge hits | `workspace_panes.js` renders grouped knowledge hits by source file and routes file selection into graph focus instead of inline preview/action expansion. | Implemented current slice |
 | Right-pane evidence reading | Graph focus reuses the shared markdown runtime and highlights matched spans in rendered source markdown. | Implemented baseline |
-| Answer area contraction to a single targeted answer | `agent_workspace.js` now keeps the full conversation result in runtime state while only rendering user-facing answer blocks (`structured_answer`, `main_markdown`, `html_artifact`) in the main chat surface. | Implemented current slice |
+| Answer area contraction to a single targeted answer | `conversationComposer.ts` now keeps `answer` / `directAnswer` targeted, and `agent_workspace.js` keeps the full conversation result in runtime state while only rendering user-facing answer blocks (`structured_answer`, `main_markdown`, `html_artifact`) in the main chat surface. | Implemented current slice |
 | Hide developer-heavy evidence from the primary hit list | `workspace_panes.js` no longer renders inline knowledge previews or visible typed capability buttons in the left-side hit list; those flows now route into graph focus or the dedicated evidence pane. | Implemented current slice |
 | Durable evidence/claim inspector | `workspace_panes.js` now exposes a dedicated evidence pane for grounding metadata, `knowledge_run`, `knowledge_run_history`, `knowledge_run_compare`, and `flashcard_batch`; `agent_workspace.js` wires the API status strip into grounding inspection and normalizes per-turn inspectability so stale grounding is cleared on later turns without evidence payloads. | Implemented broader current slice |
 | DAG-native answer planning | `AgentConversationKnowledgePoint` now carries grouped `relationPath`, `relationKinds`, `relationPathAtomIds`, and `temporalValidity`; `conversationComposer.ts` now materializes an explicit `graphContext`; `KnowledgeLearningPlatform.ts` and `WorkspaceExportBundle.ts` now preserve it through trace, persistence, and export surfaces; `workspace_panes.js` now renders that persisted `graphContext` in the evidence pane as a structured graph explanation surface; relation and temporal aggregation now span the whole grouped knowledge-point set and preserve source-atom plus temporal-edge detail; direct grouped-knowledge-point relations are now preserved and surfaced; supersession details now also flow into explanation and next-action text. | Implemented broader partial slice |

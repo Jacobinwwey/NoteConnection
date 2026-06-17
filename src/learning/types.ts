@@ -1094,6 +1094,23 @@ export interface AgentConversationGraphKnowledgePointRelation {
     confidence: number;
 }
 
+export interface AgentConversationGraphConnectionPathEdge {
+    fromAtomId: string;
+    toAtomId: string;
+    relationKind?: RelationKind;
+}
+
+export interface AgentConversationGraphConnectionPath {
+    sourceAtomId: string;
+    sourceTitle: string;
+    targetAtomId: string;
+    targetTitle: string;
+    pathAtomIds: string[];
+    pathTitles: string[];
+    pathEdges: AgentConversationGraphConnectionPathEdge[];
+    length: number;
+}
+
 export interface AgentConversationGraphTemporalContext {
     checkedAt: string;
     allPointsValid: boolean;
@@ -1112,6 +1129,7 @@ export interface AgentConversationGraphContext {
     relationKinds: RelationKind[];
     relationSummaries: AgentConversationGraphRelationSummary[];
     knowledgePointRelations?: AgentConversationGraphKnowledgePointRelation[];
+    connectionPaths?: AgentConversationGraphConnectionPath[];
     temporalValidity: AgentConversationGraphTemporalContext;
 }
 

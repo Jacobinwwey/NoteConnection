@@ -84,7 +84,18 @@ Current contract surfaces:
   - graph-native answer planning is not yet complete because retrieval and answer synthesis still lack a dedicated graph-conditioned context-assembly layer.
 - Current product-surface reading:
   - grouped file-first knowledge hits and right-pane source highlighting are implemented,
-  - the visible answer area still needs future contraction so targeted answers lead and supporting blocks move to secondary surfaces.
+  - the visible answer area is now contracted at the composer/frontend boundary: `answer` and `directAnswer` stay targeted, while graph paths, citations, memory notes, diagnostics, and durable artifacts move to secondary evidence/export surfaces.
+
+## 0.0C Agent Knowledge DAG Answer Contract Addendum (2026-06-17)
+
+- Agent knowledge graph context refers to the project's existing DAG-shaped learning substrate, not a generic graph database replacement.
+- `AgentConversationGraphContext.connectionPaths` is an optional additive field for explicit store-backed atom paths.
+  - Each path carries source/target atom identity, ordered atom IDs/titles, edge relation kinds, and length.
+  - Clients and exports must continue to accept graph contexts without this field.
+- Conversation compatibility remains unchanged: `assistantMessage` is still valid, while `answer`, `assistantBlocks`, grouped `knowledgePoints`, citations, memory actions, workflow artifacts, and `trace.graphContext` remain additive.
+- Evidence-pane rendering and workspace export may expose connection paths as secondary inspection material; public answer rendering should remain targeted to the user's question.
+- Future graph-native answer planning should be implemented as bounded graph-conditioned context assembly between retrieval and answer synthesis, using `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, evidence spans, and store-level path operations.
+- If graph ops are unavailable or fail, the runtime must fail open to the current retrieval-grounded answer path with observable diagnostics.
 
 Compatibility rules:
 

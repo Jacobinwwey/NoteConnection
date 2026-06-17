@@ -25,6 +25,18 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
+## Current Mainline Architecture Status (2026-06-17)
+
+- The agent knowledge graph requirement is now narrowed to this project's existing DAG-shaped `KnowledgeAtom` / `RelationEdge` / `TemporalEdge` substrate.
+- The current slice adds optional `AgentConversationGraphContext.connectionPaths` and carries explicit store-backed graph paths through conversation trace, structured answer composition, evidence-pane rendering, workspace export, and focused tests.
+- Auto-save persistence now keeps the graph substrate from regressing: rebuilt learning snapshots merge still-valid store-side relation/temporal edges so query/conversation reads do not erase externally enriched DAG paths before graph-context enrichment runs.
+- Public answer rendering is now contracted at both composer and frontend boundaries: `answer` / `directAnswer` stays targeted, while graph paths, temporal detail, citations, durable artifacts, and developer traces belong in secondary evidence/export surfaces unless requested.
+- The next architecture move is bounded graph-conditioned context assembly between retrieval and answer synthesis, followed by graph-aware ranking features and graph-specific quality gates.
+- DSPy, Guidance, Semantic Kernel, LangChain Core, and LiteLLM remain researched design references under `ref/`; the app runtime should stay TypeScript-native.
+- Current code-vs-plan details: [Agent Knowledge DAG Answer Contract Plan (2026-06-17)](../solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md), [Knowledge Workspace and DAG Alignment Plan (2026-06-10)](../solutions/knowledge-workspace-dag-alignment-2026-06-10.md), and the [Development Progress Dashboard](../diataxis/en/explanation/development-progress-dashboard.md).
+
+---
+
 ## Current Mainline Architecture Status (2026-06-10)
 
 - Current `main` has code-backed scoped retrieval, grounded conversation, durable resource/index/workspace/session/memory/export substrate, explicit export profiles, and PNG-first Godot/mobile render materialization.

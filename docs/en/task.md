@@ -2,13 +2,31 @@
 
 ## English Document
 
+### 2026-06-17 Active Agent Knowledge DAG Task Sync
+
+- [x] The graph-structure requirement is now clarified as the existing project DAG, not a generic graph database.
+- [x] The 2026-06-17 source-of-truth note is `docs/solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md`.
+- [x] The current implementation carries optional explicit graph connection paths through graph context, answer composition, evidence-pane rendering, export serialization, and regression tests.
+- [x] The open-source review has a firm boundary: use DSPy / Guidance / Semantic Kernel / LangChain Core / LiteLLM patterns without adding those frameworks to the app runtime.
+- [~] Current DAG-aware answer planning is partial; connection paths are a useful graph-inspection surface but not the final graph-conditioned context assembly layer.
+- [~] Right-pane source/highlight behavior is implemented baseline but still needs diagnostics for path and snippet mismatches.
+- [ ] Next active task: extract a bounded graph-conditioned context assembler between retrieval and answer synthesis.
+- [ ] Keep the public answer contracted while routing graph evidence, temporal details, and developer trace to secondary surfaces.
+
+### Current Acceptance Targets
+
+1. Active docs distinguish existing DAG data from generic graph database architecture.
+2. Public conversation compatibility remains additive: `assistantMessage` stays valid and new graph context fields are optional.
+3. Evidence-pane/export surfaces preserve graph connection paths without crowding the main answer.
+4. Follow-up implementation starts from context assembly and graph-specific tests, not from prompt-framework adoption.
+
 ### 2026-06-10 Active Knowledge Workspace and DAG Task Sync
 
 - [x] The current codebase has been re-audited against the earlier lightweight-RAG, agent-workspace, and mainline architecture plans.
 - [x] The reconciliation now has a dedicated source-of-truth note at `docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md`.
 - [x] Structured grounded conversation, grouped knowledge points, durable `flashcard_batch` / `knowledge_run` artifacts, workflow-artifact review follow-up, and graph-focus source rendering are all code-backed in the current branch.
 - [x] The current DAG-backed learning substrate is confirmed in code: `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, and prerequisite-driven learning flows already exist.
-- [~] The visible answer area still needs contraction so users see the targeted answer first and supporting blocks move to secondary surfaces.
+- [x] The visible answer area is contracted in the current slice: users see the targeted `answer` / `directAnswer` first, while graph paths, evidence, diagnostics, and durable artifacts stay on secondary surfaces.
 - [~] Left-side knowledge hits are file-first, but still need to converge on a right-pane-first reading model.
 - [ ] Add a graph-conditioned context-assembly layer between retrieval and answer synthesis so the current DAG becomes a first-class answer-planning substrate.
 - [ ] Continue ownership reduction in `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/agent_workspace.js`, and `src/frontend/workspace_panes.js`.

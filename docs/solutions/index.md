@@ -5,6 +5,7 @@ This page indexes repository solution notes that capture durable implementation 
 
 ## Architecture & Cross-Platform / 架构与跨平台
 
+- [Agent Knowledge DAG Answer Contract Plan (2026-06-17)](agent-knowledge-dag-answer-contract-plan-2026-06-17.md) — Agent knowledge DAG 回答契约方案
 - [Knowledge Workspace and DAG Alignment Plan (2026-06-10)](knowledge-workspace-dag-alignment-2026-06-10.md) — 知识工作区与 DAG 对齐推进方案
 - [Architecture Progress Alignment and Mainline Plan (2026-06-06)](architecture-progress-alignment-2026-06-06.md) — 架构推进对齐与主线推进方案
 - [Cross-Platform Architecture Refinement Plan (2026-05-02)](cross-platform-architecture-refinement-2026-05-02.md) — 跨平台架构优化方案

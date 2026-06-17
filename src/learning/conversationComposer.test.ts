@@ -296,7 +296,9 @@ describe('conversationComposer', () => {
             nextBlockId: () => `assistant_block_${++blockCounter}`,
         });
 
-        expect(reply.answer).toContain('Grounded by 1 knowledge point');
+        expect(reply.answer).toContain('Reflection and absorption differ');
+        expect(reply.answer).not.toContain('Grounded by');
+        expect(reply.answer).not.toContain('Key evidence');
         expect(reply.assistantBlocks.map((block) => block.type)).toEqual(
             expect.arrayContaining(['structured_answer', 'system_notice', 'citations', 'knowledge_actions', 'knowledge_run_summary'])
         );
@@ -324,7 +326,9 @@ describe('conversationComposer', () => {
                 targetAtomIds: ['atom_contrast'],
             }),
         ]));
-        expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').toContain('Grounded by 1 knowledge point');
+        expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').toContain('Reflection and absorption differ');
+        expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').not.toContain('Grounded by');
+        expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').not.toContain('Key evidence');
         expect(structuredBlock && 'overviewMarkdown' in structuredBlock ? structuredBlock.overviewMarkdown : '').toContain('## Answer Context');
         expect(structuredBlock && 'overviewMarkdown' in structuredBlock ? structuredBlock.overviewMarkdown : '').toContain('Graph-supported relations');
         expect(structuredBlock && 'overviewMarkdown' in structuredBlock ? structuredBlock.overviewMarkdown : '').toContain('Temporal validity');
@@ -471,6 +475,110 @@ describe('conversationComposer', () => {
         expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Validate whether a fresher or superseding note should replace this anchor before promotion');
         expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Trace the superseded lineage before promoting this answer');
         expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Follow the direct graph path between Support Point and Anchor Point before branching to external support nodes');
+    });
+
+    test('uses explicit graph connection paths when provided by the runtime graph context', () => {
+        const knowledgePoints = [
+            {
+                atomId: 'atom_anchor',
+                atomIds: ['atom_anchor'],
+                documentId: 'doc_anchor',
+                sourcePath: 'Knowledge_Base/test/anchor.md',
+                title: 'Ground State',
+                summary: 'Ground state is the anchor concept.',
+                evidenceSnippet: 'Ground state is the anchor concept.',
+                score: 0.95,
+                citation: null,
+                citations: [],
+                matchedSpans: [],
+                matchCount: 0,
+                relationPath: [],
+                relationPathAtomIds: [],
+                relationKinds: [],
+                temporalValidity: {
+                    isValid: true,
+                    checkedAt: '2026-06-10T09:00:00.000Z',
+                    reasons: [],
+                    details: [],
+                } as any,
+                capabilities: [],
+            },
+        ] as AgentConversationKnowledgePoint[];
+
+        let blockCounter = 0;
+        const reply = buildScopedConversationReply({
+            message: 'explain ground state from the current graph context',
+            knowledgePoints,
+            citations: [],
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            nextBlockId: () => `assistant_block_${++blockCounter}`,
+            graphContext: {
+                anchorAtomId: 'atom_anchor',
+                anchorTitle: 'Ground State',
+                anchorDocumentId: 'doc_anchor',
+                supportingAtomIds: ['atom_bridge'],
+                supportingTitles: ['Bridge Layer'],
+                relationKinds: ['prerequisite'],
+                relationSummaries: [
+                    {
+                        relationKind: 'prerequisite',
+                        edgeIds: ['edge_bridge_anchor'],
+                        sourceAtomIds: ['atom_bridge'],
+                        targetAtomIds: ['atom_anchor'],
+                        averageConfidence: 0.9,
+                    },
+                ],
+                knowledgePointRelations: [],
+                connectionPaths: [
+                    {
+                        sourceAtomId: 'atom_foundation',
+                        sourceTitle: 'Foundation Note',
+                        targetAtomId: 'atom_anchor',
+                        targetTitle: 'Ground State',
+                        pathAtomIds: ['atom_foundation', 'atom_bridge', 'atom_anchor'],
+                        pathTitles: ['Foundation Note', 'Bridge Layer', 'Ground State'],
+                        pathEdges: [
+                            {
+                                fromAtomId: 'atom_foundation',
+                                toAtomId: 'atom_bridge',
+                                relationKind: 'prerequisite',
+                            },
+                            {
+                                fromAtomId: 'atom_bridge',
+                                toAtomId: 'atom_anchor',
+                                relationKind: 'reference',
+                            },
+                        ],
+                        length: 2,
+                    },
+                ],
+                temporalValidity: {
+                    checkedAt: '2026-06-10T09:00:00.000Z',
+                    allPointsValid: true,
+                    warningReasons: [],
+                    invalidKnowledgePointTitles: [],
+                    edgeKinds: [],
+                    details: [],
+                },
+            } as any,
+        } as any);
+
+        expect((reply.graphContext as any)?.connectionPaths).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                sourceTitle: 'Foundation Note',
+                targetTitle: 'Ground State',
+                pathTitles: ['Foundation Note', 'Bridge Layer', 'Ground State'],
+                length: 2,
+            }),
+        ]));
+
+        const structuredBlock = reply.assistantBlocks.find((block) => block.type === 'structured_answer');
+        expect(structuredBlock && 'overviewMarkdown' in structuredBlock ? structuredBlock.overviewMarkdown : '').toContain('Explicit connection paths');
+        expect(structuredBlock && 'explanationMarkdown' in structuredBlock ? structuredBlock.explanationMarkdown : '').toContain('Explicit graph path');
+        expect(structuredBlock && 'explanationMarkdown' in structuredBlock ? structuredBlock.explanationMarkdown : '').toContain('Foundation Note -> prerequisite -> Bridge Layer -> reference -> Ground State');
+        expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Review the path order: Foundation Note -> Bridge Layer -> Ground State');
     });
 
     test('builds a verified knowledge run with evidence quality gates and review cards', () => {

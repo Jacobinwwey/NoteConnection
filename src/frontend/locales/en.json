@@ -447,6 +447,8 @@
       "graphSupportingAtomsLabel": "Supporting atoms",
       "graphRelationSummariesLabel": "Relation summaries",
       "graphKnowledgePointRelationsLabel": "Knowledge-point relations",
+      "graphConnectionPathsLabel": "Connection paths",
+      "graphConnectionPathLengthLabel": "Length: {length}",
       "graphRelationTargetsLabel": "Targets: {count}",
       "graphRelationSourcesLabel": "Sources: {sources}",
       "graphRelationConfidenceLabel": "Avg confidence: {confidence}",

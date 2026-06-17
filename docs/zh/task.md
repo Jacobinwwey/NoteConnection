@@ -1,10 +1,28 @@
+## 2026-06-17 Agent Knowledge DAG 活跃任务同步
+
+- [x] 图结构需求已明确为本项目现有 DAG，而不是泛化图数据库。
+- [x] 2026-06-17 当前事实源文档为 `docs/solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md`。
+- [x] 当前实现已经让可选 explicit graph connection paths 贯穿 graph context、回答组织、evidence pane 渲染、export serialization 与回归测试。
+- [x] 开源库研究边界已明确：借鉴 DSPy / Guidance / Semantic Kernel / LangChain Core / LiteLLM 的模式，但不把这些框架加入 app runtime。
+- [~] 当前 DAG-aware answer planning 仍是部分完成；connection paths 是有价值的图检查表面，但还不是最终 graph-conditioned context assembly layer。
+- [~] 右侧原文/高亮行为按已实现基线处理，但仍需要补路径与 snippet mismatch 诊断。
+- [ ] 下一活跃任务：在 retrieval 与 answer synthesis 之间抽出有界 graph-conditioned context assembler。
+- [ ] 继续保持公开回答区收缩，把 graph evidence、temporal details 与 developer trace 路由到次级表面。
+
+### 当前验收目标
+
+1. 活跃文档明确区分“现有 DAG 数据”与“泛化图数据库架构”。
+2. 公开 conversation 兼容性保持 additive：`assistantMessage` 仍有效，新增 graph context 字段均为可选。
+3. evidence pane / export surface 能保留 graph connection paths，同时不挤占主回答区。
+4. 后续实现从 context assembly 与图专项测试启动，而不是从引入 prompt framework 启动。
+
 ## 2026-06-10 知识工作区与 DAG 活跃任务同步
 
 - [x] 已重新按源码审计当前代码与此前 lightweight-RAG、agent-workspace 和主线架构方案的对应关系。
 - [x] 本轮对账结果已沉淀为独立主线文档：`docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md`。
 - [x] 结构化 grounded conversation、按文档聚合的 knowledge point、durable `flashcard_batch` / `knowledge_run` artifact、workflow-artifact review follow-up，以及 graph-focus 原文渲染都已经有代码支撑。
 - [x] 当前 DAG 学习底座已在代码中确认存在：`KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query 与 prerequisite 驱动的学习流都已落地。
-- [~] 用户可见回答区仍需继续收缩为“targeted answer 优先，supporting block 退居次级表面”。
+- [x] 用户可见回答区已在当前切片完成收缩：用户优先看到 targeted `answer` / `directAnswer`，graph path、evidence、diagnostic 与 durable artifact 保持在次级表面。
 - [~] 左侧 knowledge hit 虽已是 file-first，但仍需继续收敛为 right-pane-first 阅读模型。
 - [ ] 需要在 retrieval 与 answer synthesis 之间补一个 graph-conditioned context-assembly layer，让当前 DAG 成为一等 answer-planning substrate。
 - [ ] 继续缩减 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js`、`src/frontend/workspace_panes.js` 的所有权压力。

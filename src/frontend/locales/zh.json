@@ -447,6 +447,8 @@
       "graphSupportingAtomsLabel": "支撑原子",
       "graphRelationSummariesLabel": "关系摘要",
       "graphKnowledgePointRelationsLabel": "知识点关系",
+      "graphConnectionPathsLabel": "连接路径",
+      "graphConnectionPathLengthLabel": "长度：{length}",
       "graphRelationTargetsLabel": "目标数：{count}",
       "graphRelationSourcesLabel": "来源：{sources}",
       "graphRelationConfidenceLabel": "平均置信度：{confidence}",

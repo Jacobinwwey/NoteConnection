@@ -9,8 +9,10 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - Use `npm run docs:site:serve` for local browsing during iterative doc updates.
 - Use [Working Docs / Brainstorms](brainstorms/index.md) and [Working Docs / Solutions](solutions/index.md) for in-progress alignment artifacts and durable solution notes.
 - Use [Open Goal Audit (2026-05-10)](open_goal_audit_2026-05-10.md) as the all-docs unresolved-goal snapshot.
+- Use [Agent Knowledge DAG Answer Contract Plan (2026-06-17)](solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md) for the clarified existing-DAG answer contract and graph-conditioned context assembly direction.
 - Use [Architecture Progress Alignment and Mainline Plan (2026-06-06)](solutions/architecture-progress-alignment-2026-06-06.md) for the current code-vs-plan comparison and next mainline sequence.
 - Track the Program A-F substrate/export closure in [Development Progress Dashboard](diataxis/en/explanation/development-progress-dashboard.md) and [Deep Student Comparison Next-Phase Plan](brainstorms/2026-05-26-deep-student-comparison-next-phase-plan.md).
+- 当前 agent knowledge 的现有 DAG 回答契约与 graph-conditioned context assembly 方向请查看 [Agent Knowledge DAG 回答契约方案（2026-06-17）](solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md)。
 - 当前代码 / 方案对比与后续主线顺序请查看 [架构推进对齐与主线推进方案（2026-06-06）](solutions/architecture-progress-alignment-2026-06-06.md)。
 - Program A-F 的 substrate / export 收口状态请查看 [Development Progress Dashboard](diataxis/en/explanation/development-progress-dashboard.md) 与 [Deep Student Comparison Next-Phase Plan](brainstorms/2026-05-26-deep-student-comparison-next-phase-plan.md)。
 
@@ -33,6 +35,7 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - Use [Development Progress Dashboard](diataxis/en/explanation/development-progress-dashboard.md) for implementation status, code evidence anchors, and operational runbook flow.
 - Use [Brainstorms](brainstorms/index.md) for current requirement-alignment outputs before planning.
 - Use [Solutions](solutions/index.md) for baseline implementation decisions and recovery patterns.
+- Use [Agent Knowledge DAG Answer Contract Plan (2026-06-17)](solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md) when deciding how the existing DAG should feed agent answers without polluting the public answer surface.
 - Use [Architecture Progress Alignment and Mainline Plan (2026-06-06)](solutions/architecture-progress-alignment-2026-06-06.md) when deciding whether a previous architecture requirement is implemented, operational-only, or still pending.
 - Use [Git LFS Asset Migration](diataxis/en/explanation/git-lfs-asset-migration.md) for the phased repository/runtime decoupling strategy.
 - Use [Sidecar Supply Feasibility](diataxis/en/explanation/sidecar-supply-feasibility.md) for the cost/user-friction/maintainer-burden decision matrix behind mirror choices.
@@ -58,6 +61,7 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - 需要查看实现进度、代码证据与调试链路请查看 [开发进度看板](diataxis/zh/explanation/development-progress-dashboard.md)。
 - 需求对齐与规划前输出请查看 [Brainstorms](brainstorms/index.md)。
 - 沉淀的解决方案基线请查看 [Solutions](solutions/index.md)。
+- 判断现有 DAG 应如何进入 agent answer、且不污染公开回答区时，请查看 [Agent Knowledge DAG 回答契约方案（2026-06-17）](solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md)。
 - 判断先前架构要求是“已实现”“仅为 operational baseline”还是“仍待推进”时，请查看 [架构推进对齐与主线推进方案（2026-06-06）](solutions/architecture-progress-alignment-2026-06-06.md)。
 - 仓库与运行时资产解耦迁移请查看 [Git LFS 资产迁移](diataxis/zh/explanation/git-lfs-asset-migration.md)。
 - 镜像方案的成本 / 用户门槛 / 维护负担矩阵请查看 [Sidecar 供给可行性](diataxis/zh/explanation/sidecar-supply-feasibility.md)。

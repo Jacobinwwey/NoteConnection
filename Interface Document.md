@@ -80,7 +80,22 @@ Audit flow:
   - graph-native answer planning is not yet complete because retrieval and answer synthesis still lack a dedicated graph-conditioned context-assembly layer.
 - Current product-surface reading:
   - grouped file-first knowledge hits and right-pane source highlighting are implemented,
-  - the visible answer area still needs future contraction so targeted answers lead and supporting blocks move to secondary surfaces.
+  - the visible answer area is now contracted at the composer/frontend boundary: `answer` and `directAnswer` stay targeted, while graph paths, citations, memory notes, diagnostics, and durable artifacts move to secondary evidence/export surfaces.
+
+## 0.2C Agent Knowledge DAG Answer Contract Addendum (2026-06-17)
+
+- The graph context referenced by the agent knowledge runtime is this project's existing DAG-structured learning data, not a generic external graph database abstraction.
+- `AgentConversationGraphContext` may now carry optional `connectionPaths`.
+  - Each connection path contains source/target atom identity, ordered `pathAtomIds`, display `pathTitles`, edge relation kinds, and path length.
+  - The field is additive and optional; clients must continue to accept graph contexts without connection paths.
+- `/api/knowledge/conversation` remains backward-compatible:
+  - `assistantMessage` remains valid,
+  - `answer`, `assistantBlocks`, `trace.graphContext`, grouped `knowledgePoints`, citations, memory actions, and workflow artifacts remain additive.
+- Workspace export preserves graph connection paths when they are present in conversation trace graph context.
+- The Knowledge Workspace evidence pane may render connection paths as secondary inspection material. Public answer rendering must remain targeted to the user question and must not treat graph evidence/debug detail as mandatory visible answer content.
+- Right-pane graph-focus source rendering remains the canonical interaction for file hits. File-hit payloads should preserve source path and matched-span data so the pane can read source markdown and highlight evidence in place.
+- Architecture rule: future graph-native answer planning should be implemented as a bounded graph-conditioned context assembly layer between retrieval and answer synthesis. It should consume existing `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, evidence spans, and store-level path operations instead of introducing a broad prompt-framework dependency into the runtime.
+- Compatibility rule: when graph ops are unavailable or fail, the conversation path must fail open to the existing retrieval-grounded behavior with observable diagnostics rather than breaking the public answer endpoint.
 
 ---
 
@@ -830,6 +845,21 @@ This section records interface changes added after `v1.4.5`, keeping all previou
 - `POST /api/knowledge/export/workspace` 暴露 deterministic workspace export bundle，其数据来自 resource、index、workspace、session、workflow、memory 与 render-materialization 状态。
 - 运行时治理 payload 暴露 graphdb/vector rollout 上下文，包括 `rolloutProfile`、graphdb connector health、vector acceleration strictness 与 runbook checks。
 - 兼容性规则：新响应字段必须保持 additive 且 optional；Godot/mobile 路径必须继续使用 PNG-first materialized render artifacts，不能依赖直接 SVG 导入。
+
+## 0.2C Agent Knowledge DAG 回答契约补充（2026-06-17）
+
+- agent knowledge runtime 中提到的 graph context 指本项目现有 DAG 结构化学习数据，不是泛化外部图数据库抽象。
+- `AgentConversationGraphContext` 现在可以携带可选 `connectionPaths`。
+  - 每条 connection path 包含 source/target atom 身份、有序 `pathAtomIds`、展示用 `pathTitles`、边关系类型与路径长度。
+  - 该字段是 additive 且 optional；客户端必须继续接受没有 connection paths 的 graph context。
+- `/api/knowledge/conversation` 保持向前兼容：
+  - `assistantMessage` 仍有效；
+  - `answer`、`assistantBlocks`、`trace.graphContext`、按文档聚合的 `knowledgePoints`、citations、memory actions 与 workflow artifacts 均继续作为增量字段共存。
+- workspace export 会在 conversation trace graph context 中存在 connection paths 时保留它们。
+- Knowledge Workspace evidence pane 可以把 connection paths 渲染为次级 inspection material。公开回答渲染必须继续针对用户问题，不得把 graph evidence/debug detail 当成必须展示在主回答区的内容。
+- 右侧 graph-focus source rendering 仍是文件命中的权威交互路径。file-hit payload 应保留 source path 与 matched-span 数据，以便 pane 读取 source markdown 并在原文中高亮证据。
+- 架构规则：后续 graph-native answer planning 应在 retrieval 与 answer synthesis 之间实现一个有界 graph-conditioned context assembly layer。该层应消费现有 `KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、evidence spans 与 store-level path operations，而不是把宽 prompt framework 作为运行时依赖引入。
+- 兼容规则：graph ops 不可用或失败时，conversation path 必须 fail open 到现有 retrieval-grounded 行为，并通过 diagnostics 可观测，而不是破坏公开回答端点。
 
 ---
 

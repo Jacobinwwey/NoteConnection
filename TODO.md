@@ -1,3 +1,41 @@
+# 2026-06-17 v1.7.0 - Agent Knowledge DAG Answer Contract TODO
+
+## English Document
+
+### Objective
+Keep the active TODO aligned with the 2026-06-17 agent knowledge DAG answer contract and the clarified requirement that graph structure means this project's existing DAG data.
+
+### Current Status
+- [x] The current DAG clarification is documented in `docs/solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md`.
+- [x] The referenced DSPy, Guidance, Semantic Kernel, LangChain Core, and LiteLLM repositories are retained under `ref/` as research inputs; they should inform patterns, not become runtime dependencies.
+- [x] The current implementation slice adds optional `AgentConversationGraphContext.connectionPaths` and preserves explicit path chains through conversation trace, structured answer composition, evidence-pane rendering, workspace export, and regression tests.
+- [x] The primary answer surface now enforces the targeted-answer contract in `answer` / `directAnswer`; graph/evidence/developer details stay in typed blocks, the evidence pane, trace, or export unless explicitly requested.
+- [~] The current DAG use is now stronger than shallow relation hints, but it is still partial: explicit connection paths are post-retrieval enrichment, not yet a complete graph-conditioned context assembly stage.
+- [~] Right-pane source rendering and matched-span highlighting exist, but failures should be diagnosed through source-path canonicalization, storage-provider, markdown-render, and highlight-hit telemetry before changing UI shape.
+- [ ] Extract a bounded graph-conditioned context assembler between retrieval and answer synthesis.
+- [ ] Extend ranking beyond relation-degree bonuses with graph distance, path confidence, prerequisite depth, temporal validity, and relation-kind intent features.
+- [ ] Add graph-specific quality gates for prerequisite ordering, comparison branches, supersession warnings, graph-op failure fallback, and deterministic large-graph budgeting.
+- [ ] Continue reducing ownership pressure in `KnowledgeLearningPlatform.ts`, `conversationComposer.ts`, `agent_workspace.js`, and `workspace_panes.js` only where a new owner enforces real decisions or invariants.
+
+## 中文文档
+
+### 目标
+让活跃 TODO 与 2026-06-17 agent knowledge DAG 回答契约保持一致，并明确这里的图结构指本项目现有 DAG 数据。
+
+### 当前状态
+- [x] 当前 DAG 澄清已落盘到 `docs/solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md`。
+- [x] DSPy、Guidance、Semantic Kernel、LangChain Core 与 LiteLLM 仓库保留在 `ref/` 下作为研究输入；它们用于借鉴模式，不应成为运行时依赖。
+- [x] 当前实现切片新增了可选 `AgentConversationGraphContext.connectionPaths`，并让显式路径链贯穿 conversation trace、结构化回答组织、evidence pane 渲染、workspace export 与回归测试。
+- [x] 主回答区现在已在 `answer` / `directAnswer` 中强制执行 targeted-answer 契约；graph/evidence/developer 细节默认留在 typed blocks、evidence pane、trace 或 export 中，除非用户显式要求查看。
+- [~] 当前 DAG 使用已经比浅层 relation hint 更强，但仍是部分实现：显式 connection paths 仍属于 retrieval 之后的增强，还不是完整 graph-conditioned context assembly 阶段。
+- [~] 右侧原文渲染与 matched-span 高亮已经存在，但遇到失败时应先通过 source-path canonicalization、storage provider、markdown render 与 highlight hit telemetry 定位，而不是直接改 UI 形态。
+- [ ] 在 retrieval 与 answer synthesis 之间抽出有界 graph-conditioned context assembler。
+- [ ] 将排序能力从 relation-degree bonus 扩展到 graph distance、path confidence、prerequisite depth、temporal validity 与 relation-kind intent features。
+- [ ] 增加图回答质量门禁，覆盖 prerequisite ordering、comparison branch、supersession warning、graph-op failure fallback 与大图确定性预算裁剪。
+- [ ] 继续缩减 `KnowledgeLearningPlatform.ts`、`conversationComposer.ts`、`agent_workspace.js`、`workspace_panes.js` 的所有权压力，但只在新 owner 能做真实决策或强制不变量时推进。
+
+---
+
 # 2026-06-10 v1.7.0 - Knowledge Workspace and DAG Alignment TODO
 
 ## English Document
@@ -9,7 +47,7 @@ Keep the root TODO aligned with the 2026-06-10 Knowledge Workspace and DAG code-
 - [x] A new mainline alignment note for this slice now exists at `docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md`.
 - [x] The current codebase already supports structured grounded conversation, grouped knowledge points, durable `flashcard_batch` / `knowledge_run` artifacts, and workflow-artifact review follow-up.
 - [x] The current codebase already has a real DAG-backed learning substrate: `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, and mastery/session graph logic are implemented.
-- [~] The visible answer area is still richer than the intended final product surface. The primary answer still needs contraction so users see the targeted answer first and supporting blocks move to secondary surfaces.
+- [x] The visible answer area is now contracted to the targeted answer path; supporting blocks remain available through secondary panes, traces, artifacts, and exports.
 - [~] Knowledge-hit interaction is file-first, but still not fully right-pane-first. Left-side preview/action behavior should converge on the right pane as the canonical reading surface.
 - [ ] Add a graph-conditioned context-assembly layer between retrieval and answer synthesis so the current DAG becomes a first-class answer-planning substrate rather than only a retrieval-side aid.
 - [ ] Continue ownership reduction in `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/agent_workspace.js`, and `src/frontend/workspace_panes.js`.
@@ -24,7 +62,7 @@ Keep the root TODO aligned with the 2026-06-10 Knowledge Workspace and DAG code-
 - [x] 本轮主线对齐结果已新增到 `docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md`。
 - [x] 当前代码已经支持结构化 grounded conversation、按文档聚合的 knowledge point、durable `flashcard_batch` / `knowledge_run` artifact，以及 workflow-artifact review follow-up。
 - [x] 当前代码已经具备真实的 DAG 学习底座：`KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query、mastery/session 图逻辑都已落地。
-- [~] 用户可见回答区仍比目标产品面更重；主回答区仍需继续收缩为“用户先看到 targeted answer，supporting block 退到次级表面”。
+- [x] 用户可见回答区现在已收缩到 targeted answer 路径；supporting block 继续通过次级 pane、trace、artifact 与 export 保留。
 - [~] 知识命中已经是 file-first，但还没有完全收敛为 right-pane-first；左侧 preview/action 行为仍需向“右侧 pane 才是权威阅读面”继续收口。
 - [ ] 在 retrieval 与 answer synthesis 之间补一个 graph-conditioned context-assembly layer，让当前 DAG 成为一等 answer-planning substrate，而不只是 retrieval 侧辅助信号。
 - [ ] 继续缩减 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js`、`src/frontend/workspace_panes.js` 的所有权压力。

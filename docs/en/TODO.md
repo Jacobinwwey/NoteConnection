@@ -2,12 +2,24 @@
 
 ## English Document
 
+### 2026-06-17 Agent Knowledge DAG TODO Reclassification
+
+- [x] Land the 2026-06-17 agent knowledge DAG answer contract note in `docs/solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md`.
+- [x] Reclassify the project graph requirement as use of the existing DAG-shaped `KnowledgeAtom` / `RelationEdge` / `TemporalEdge` substrate, not a generic graph database replacement.
+- [x] Treat DSPy, Guidance, Semantic Kernel, LangChain Core, and LiteLLM as researched design references under `ref/`, not app-runtime dependencies.
+- [x] Preserve optional `AgentConversationGraphContext.connectionPaths` through conversation trace, structured answer composition, evidence-pane rendering, workspace export, and focused regression tests.
+- [~] Treat the current graph-aware answer behavior as partial: explicit connection paths are now visible and exportable, but the dedicated graph-conditioned context assembly layer is still pending.
+- [~] Treat right-pane source rendering as implemented but still needing diagnostics around path canonicalization, storage-provider reads, markdown render fallback, and highlight matching.
+- [ ] Extract bounded graph-conditioned context assembly between retrieval and answer synthesis.
+- [ ] Move ranking beyond relation-degree bonuses into distance/path-confidence/prerequisite-depth/temporal-validity/relation-intent features.
+- [ ] Add graph-specific answer quality gates before calling DAG-native answer planning complete.
+
 ### 2026-06-10 Knowledge Workspace and DAG TODO Reclassification
 
 - [x] Land the 2026-06-10 Knowledge Workspace and DAG alignment note in `docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md`.
 - [x] Reclassify structured grounded conversation, grouped knowledge points, durable `flashcard_batch` / `knowledge_run` artifacts, and workflow-artifact review follow-up as code-backed current-state baselines.
 - [x] Reclassify the existing DAG-backed learning substrate as implemented reality rather than future intent: `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, and prerequisite-driven learning flows already exist in code.
-- [~] Treat the current visible answer area as partially complete: the backend/runtime surface is ahead of the product surface, and the main answer area still needs contraction toward a single targeted answer.
+- [x] Treat the current visible answer area as contracted for this slice: `answer` / `directAnswer` now stays targeted while supporting blocks remain available through secondary panes, traces, artifacts, and exports.
 - [~] Treat left-side knowledge-hit interaction as partially complete: it is file-first, but still not fully converged on a right-pane-first reading model.
 - [ ] Add a graph-conditioned context-assembly layer between retrieval and answer synthesis so the current DAG becomes a first-class answer-planning substrate.
 - [ ] Continue reducing ownership pressure in `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/agent_workspace.js`, and `src/frontend/workspace_panes.js`.

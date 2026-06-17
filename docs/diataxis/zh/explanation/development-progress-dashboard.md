@@ -3,6 +3,40 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
+## 2026-06-17 Agent Knowledge DAG 回答契约
+
+本切片在澄清“图结构”指本项目现有 DAG 形态学习数据、而不是泛化图数据库替换方案之后，更新知识工作区 graph/RAG 推进方向。
+
+本切片已实现或已落盘：
+
+- 新的双语事实源文档为 `docs/solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md`；
+- 开源库研究边界已明确：DSPy、Guidance、Semantic Kernel、LangChain Core 与 LiteLLM 是 `ref/` 下的设计参考，不是运行时依赖；
+- `AgentConversationGraphContext` 现在有可选 `connectionPaths` 表面；
+- 当 store 具备 ops 能力时，`KnowledgeLearningPlatform` 可以用 store-backed path 查询，把返回 knowledge points 与 anchor 之间的显式路径补入 conversation graph context；
+- `conversationComposer` 现在会保持公开 `answer` / `directAnswer` 窄口径，不再嵌入 citation list、graph path、memory notice 或 knowledge-run diagnostics；
+- `conversationComposer` 可以在结构化回答 section 中使用这些 explicit paths；
+- `workspace_panes.js` 会在 evidence pane 中渲染 connection paths；
+- `WorkspaceExportBundle` 会在导出的 conversation trace graph context 中保留 connection paths；
+- 聚焦测试覆盖 graph-path composition、platform enrichment、frontend evidence rendering、locale labels 与 export serialization。
+
+代码 / 方案对齐：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| 公开回答区不能堆内部产物 | `answer` / `directAnswer` 现在保持 targeted；graph connection paths、citations、temporal detail 与 knowledge-run diagnostics 属于次级 inspection 数据。 | 当前切片已实现 |
+| 暂时隐藏开发者导向 support material | graph paths、temporal details、citations 与 traces 默认进入 evidence/export surface，除非用户显式要求查看。 | 方向保持 |
+| 文件命中打开右侧 pane 并高亮原文 | 现有 graph-focus source rendering 与 matched-span highlighting 仍是权威路径。 | 已实现基线；仍需诊断 |
+| 使用当前 DAG | `KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、store ops 与 `findPath` 是当前活跃图底座。 | 已确认 |
+| 让 LLM 查阅图结构 | explicit connection paths 现在已经进入 answer composer 与 evidence pane。 | 部分完成：仍是 retrieval 后增强 |
+| 完整 DAG-native answer planning | 专门 graph-conditioned context assembly 尚未抽出。 | 待推进 |
+
+即时后续方向：
+
+1. 在 retrieval 与 answer synthesis 之间抽出有界 graph-conditioned context assembler。
+2. 增加 relation-degree bonus 之外的 graph-aware ranking features：graph distance、path confidence、prerequisite depth、temporal validity 与 relation-kind intent。
+3. 增加图专项质量门禁，覆盖 prerequisite ordering、comparison branches、supersession warnings、graph-op fallback 与大图确定性预算裁剪。
+4. 继续保持公开回答聚焦，同时让 graph/evidence/developer detail 通过 evidence pane、trace、artifact 与 export bundle 可检查。
+
 ## 2026-06-10 知识工作区与 DAG 对齐切片
 
 本切片将当前代码库与此前的 lightweight RAG、agent-workspace 和主线架构推进方案重新对齐，重点聚焦于现有 DAG 学习底座与知识工作区的真实实现状态。
@@ -41,7 +75,7 @@
 | durable learning/review artifact | `src/workflows/WorkflowArtifactStore.ts`、`src/learning/KnowledgeLearningPlatform.ts` 与 `src/routes/knowledge.ts` 现已支持 durable `flashcard_batch` / `knowledge_run`，以及 `/api/knowledge/workflow-artifacts`、`/api/knowledge/workflow-artifacts/review-follow-up`；`workspace_panes.js` 现已把它们的检查路由到专门的 evidence pane。 | 当前切片已实现 |
 | file-first scoped knowledge hit | `workspace_panes.js` 已按 source file 渲染 grouped knowledge hit，并把文件入口直接路由到 graph focus，而不是继续走 inline preview / action 扩展。 | 当前切片已实现 |
 | 右侧证据阅读面 | graph focus 已复用共享 markdown runtime，并在原始 markdown 中高亮 matched span。 | 已实现基线 |
-| 主回答区收缩为单一 targeted answer | `agent_workspace.js` 现在会保留完整 conversation result 到 runtime state，但主聊天面仅渲染用户面的回答块（`structured_answer`、`main_markdown`、`html_artifact`）。 | 当前切片已实现 |
+| 主回答区收缩为单一 targeted answer | `conversationComposer.ts` 现在让 `answer` / `directAnswer` 保持 targeted；`agent_workspace.js` 会保留完整 conversation result 到 runtime state，但主聊天面仅渲染用户面的回答块（`structured_answer`、`main_markdown`、`html_artifact`）。 | 当前切片已实现 |
 | 主命中列表不暴露开发者导向 evidence / action | `workspace_panes.js` 已不再在左侧命中列表中渲染 inline preview 或可见 typed capability button；这些流程现在会路由到 graph focus 或专门的 evidence pane。 | 当前切片已实现 |
 | durable evidence / claim inspector | `workspace_panes.js` 现已提供专门的 evidence pane，用于承接 grounding metadata、`knowledge_run`、`knowledge_run_history`、`knowledge_run_compare` 与 `flashcard_batch`；`agent_workspace.js` 也已把 API 状态条接成 grounding inspection 入口，并按当前回合规范清理陈旧 grounding 状态。 | 当前切片已更完整实现 |
 | DAG-native answer planning | `AgentConversationKnowledgePoint` 现已保留 grouped `relationPath`、`relationKinds`、`relationPathAtomIds` 与 `temporalValidity`；`conversationComposer.ts` 现已显式构建 `graphContext`；`KnowledgeLearningPlatform.ts` 与 `WorkspaceExportBundle.ts` 也已在 trace / persistence / export 中保留它；`workspace_panes.js` 现在会在 evidence pane 中把该 `graphContext` 渲染成结构化图解释面；关系与时序聚合也已扩展到整批 grouped knowledge points，并保留 source-atom 与 temporal-edge 细节；grouped knowledge points 之间的直接关系现在也会被保留并展示；supersession 细节现在也会进入 explanation / next-action 文本。 | 当前切片已更宽的部分实现 |

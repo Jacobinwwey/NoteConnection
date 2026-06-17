@@ -21,6 +21,18 @@
 
 ---
 
+## 当前主线架构状态（2026-06-17）
+
+- agent knowledge 图结构需求现在已收敛为本项目现有 DAG 形态的 `KnowledgeAtom` / `RelationEdge` / `TemporalEdge` 底座。
+- 当前切片新增可选 `AgentConversationGraphContext.connectionPaths`，并让显式 store-backed graph paths 贯穿 conversation trace、结构化回答组织、evidence pane 渲染、workspace export 与聚焦测试。
+- 自动保存持久化现在不会让图底座回退：重建 learning snapshot 时会合并仍然有效的 store 侧 relation/temporal edges，避免 query/conversation 读路径在 graph-context enrichment 执行前抹掉外部增强的 DAG 路径。
+- 公开回答渲染现在已在 composer 与前端边界同时收缩：`answer` / `directAnswer` 保持 targeted，graph paths、temporal detail、citations、durable artifacts 与 developer traces 默认进入次级 evidence/export surfaces，除非用户显式要求查看。
+- 下一步架构动作是在 retrieval 与 answer synthesis 之间补有界 graph-conditioned context assembly，随后扩展 graph-aware ranking features 与图专项质量门禁。
+- DSPy、Guidance、Semantic Kernel、LangChain Core 与 LiteLLM 继续作为 `ref/` 下的已研究设计参考；app runtime 应保持 TypeScript-native。
+- 当前代码 / 方案详细对齐请查看 [Agent Knowledge DAG 回答契约方案（2026-06-17）](../solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md)、[知识工作区与 DAG 对齐推进方案（2026-06-10）](../solutions/knowledge-workspace-dag-alignment-2026-06-10.md) 与 [开发进度看板](../diataxis/zh/explanation/development-progress-dashboard.md)。
+
+---
+
 ## 当前主线架构状态（2026-06-10）
 
 - 当前 `main` 已具备代码支撑的 scoped retrieval、grounded conversation、持久化 resource/index/workspace/session/memory/export 底座、显式 export profiles，以及 Godot/mobile PNG-first 渲染物化边界。
