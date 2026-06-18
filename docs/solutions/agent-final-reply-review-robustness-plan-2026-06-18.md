@@ -31,6 +31,7 @@ The target is not another prompt framework. The target is a deterministic releas
 - `src/learning/answerReleaseReview.ts` now also adds `query_intent_alignment`, so definition-style queries revise meta-documentary drafts such as `本技术文档旨在...` into direct grounded definitions before release.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_containment_consistency`, so grounded drafts that keep the same explicit containment relation but swap the contained material, such as `Water glass contains water` to `Water glass contains oil`, are revised before release.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_composition_consistency`, so grounded drafts that keep the same explicit `composed of` / `由...组成` relation but swap the supported components, such as `water and a glass cup` to `oil and a plastic cup`, are revised before release.
+- `src/learning/answerReleaseReview.ts` now also adds `claim_purpose_consistency`, so grounded drafts that keep the same explicit `used for` / `用于` relation but swap the supported use, such as `drinking water` to `storing motor oil`, are revised before release.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_subject_consistency`, so drafts that preserve a supported fact tail but swap the grounded subject, such as `Water density` to `Glass density`, are revised before release.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_attribute_consistency`, so grounded drafts that keep the same subject and explicit `has` / `具有` attribute frame but swap the supported attribute, such as `moderate thermal insulation` to `high thermal insulation`, are revised before release.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_graph_causal_consistency`, so grounded drafts that reverse DAG-backed cause/effect direction, such as `Pressure Rise causes Thermal Expansion`, are revised before release with deterministic English/Chinese correction sentences.
@@ -109,6 +110,7 @@ The correct architecture is a pipeline of owners, not a single "RAG" blob:
    - attribute consistency,
    - containment consistency,
    - composition consistency,
+   - purpose consistency,
    - public-surface contraction,
    - internal diagnostic leakage,
    - subject consistency,
@@ -181,6 +183,7 @@ Best-practice conclusion:
 | Grounded drafts must also be checked for deterministic structured fact conflicts | Reviewer now enforces `claim_structured_consistency`, revising grounded drafts when numeric or year facts conflict with support even though topical lexical overlap still passes. | Implemented baseline |
 | Grounded drafts must also be checked for explicit containment/content contradictions | Reviewer now enforces `claim_containment_consistency`, revising grounded drafts when the same grounded subject keeps the same explicit containment relation but swaps the supported contained material in English or Chinese. | Implemented baseline |
 | Grounded drafts must also be checked for explicit composition contradictions | Reviewer now enforces `claim_composition_consistency`, revising grounded drafts when the same grounded subject keeps the same explicit `composed of` / `由...组成` relation but swaps the supported components while still allowing compatible order/refinement. | Implemented baseline |
+| Grounded drafts must also be checked for explicit purpose/use contradictions | Reviewer now enforces `claim_purpose_consistency`, revising grounded drafts when the same grounded subject keeps the same explicit `used for` / `用于` relation but swaps the supported use while still allowing supported-purpose refinements. | Implemented baseline |
 | Grounded drafts must also be checked for grounded-subject drift even when the supported fact tail still matches | Reviewer now enforces `claim_subject_consistency`, revising drafts that keep the supported fact tail but swap the subject/entity from the grounded support. | Implemented baseline |
 | Grounded drafts must also be checked for same-subject explicit attribute drift | Reviewer now enforces `claim_attribute_consistency`, revising grounded drafts when the same subject keeps an explicit `has` / `具有` frame but swaps the supported attribute value. | Implemented baseline |
 | Grounded drafts must also be checked for same-subject state contradictions | Reviewer now enforces `claim_state_consistency`, revising grounded drafts when comparable definition/copula state claims conflict with grounded support in English or Chinese. | Implemented baseline |
@@ -593,6 +596,26 @@ Attached additively to:
   - the system already knew how to revise document-framing drift,
   - but it still needed an explicit owner for `same subject, same composition relation, wrong components`.
 
+#### Phase-21 purpose/use contradiction hardening landed on top of the composition slice
+
+- `src/learning/answerReleaseReview.ts` now adds an eleventh contradiction-oriented reviewer gate: `claim_purpose_consistency`.
+- This gate keeps the same narrow-owner discipline:
+  - it only compares explicit purpose/use frames such as `used for`, `used to`, `designed for`, `designed to`, `serves to`, and `用于`,
+  - it reuses the same local lexical feature substrate instead of introducing a second semantic runtime,
+  - it stays conservative when no comparable purpose frame exists.
+- The supported contradiction family is intentionally concrete:
+  - English: `Water glass is used for drinking water` vs `Water glass is used for storing motor oil`,
+  - Chinese: `水杯用于饮水` vs `水杯用于储存机油`.
+- False-positive control is explicit:
+  - same-subject purpose frames remain comparable because the explicit relation already carries high confidence,
+  - supported-purpose refinements such as `serving cold water` under `drinking water and serving cold water` still `release`,
+  - purpose sentences are now excluded from the narrower `claim_state_consistency` slice, so `is used for ...` no longer misfires as a state contradiction.
+- `src/learning/answerReleaseReview.test.ts` now pins three important behaviors:
+  - English purpose contradiction forces `revise`,
+  - Chinese purpose contradiction forces `revise`,
+  - supported-purpose refinement still `release`s cleanly.
+- This phase matters architecturally because it closes another explicit-relation contradiction family without widening the reviewer into a generic semantic judge.
+
 ### Why the Earlier Framework Proposals Were Insufficient
 
 Reviewed references under `ref/`:
@@ -670,7 +693,7 @@ The first two decide capability. The third decides trust.
 
 ### Next Direction
 
-1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + query-intent + structured-fact + attribute + containment + composition + subject + state + polarity + graph-causal + graph-order + graph-comparison gate stack, but only where the new checks can stay deterministic enough to avoid false-positive churn.
+1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + query-intent + structured-fact + attribute + containment + composition + purpose + subject + state + polarity + graph-causal + graph-order + graph-comparison gate stack, but only where the new checks can stay deterministic enough to avoid false-positive churn.
 2. Keep expanding the corpus with real cross-scope, compact-alias, and synonym failures before widening reviewer policy again.
 3. Treat the current block-level markdown source mapping plus `source_line_provenance` -> source-authenticated fragment projection -> `line_window` -> `snippet_fallback` graph-focus stack as the implemented baseline, then focus the next provenance step on repeated-fragment disambiguation via explicit offsets or richer AST provenance.
 4. Keep compare-ready drilldowns on the existing reviewer telemetry path and resist creating a second audit owner for richer operator slices.
@@ -705,6 +728,7 @@ The first two decide capability. The third decides trust.
 - `src/learning/answerReleaseReview.ts` 现在也新增 `query_intent_alignment`，因此定义型问题会把 `本技术文档旨在...` 这类元文档草稿改写成直接定义句后再 release。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_containment_consistency`，因此像把 `Water glass contains water` 偷换成 `Water glass contains oil` 这类“同一主体、同一显式容纳关系、但内容物漂移”的草稿会在 release 前被拦截并改写。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_composition_consistency`，因此像把 `water and a glass cup` 偷换成 `oil and a plastic cup` 这类“同一主体、同一显式组成关系、但组件漂移”的草稿会在 release 前被拦截并改写。
+- `src/learning/answerReleaseReview.ts` 现在也新增 `claim_purpose_consistency`，因此像把 `drinking water` 偷换成 `storing motor oil` 这类“同一主体、同一显式用途关系、但用途漂移”的草稿会在 release 前被拦截并改写。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_subject_consistency`，因此像把 `Water density` 偷换成 `Glass density` 这种“事实尾部还对，但 grounded subject 已漂移”的草稿会在 release 前被拦截并改写。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_attribute_consistency`，因此像把 `中等热绝缘性能` 偷换成 `高热绝缘性能` 这种“同一主体、同一显式属性框架、但属性值漂移”的草稿会在 release 前被拦截并改写。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_graph_causal_consistency`，因此像把 `Pressure Rise causes Thermal Expansion` 这样与 DAG 因果方向相反的草稿，会在 release 前被中英文确定性纠正句拦截并改写。
@@ -854,6 +878,7 @@ The first two decide capability. The third decides trust.
 | grounded draft 还必须检查确定性的结构化事实冲突 | reviewer 现在会执行 `claim_structured_consistency`：即使 topical lexical overlap 仍然通过，只要数值或年份事实与支撑冲突，也会触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查显式容纳关系里的内容物矛盾 | reviewer 现在会执行 `claim_containment_consistency`：对于中英文可比容纳关系，只要主体不变、关系不变、但内容物被偷换，就会触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查显式组成关系里的组件矛盾 | reviewer 现在会执行 `claim_composition_consistency`：对于可比的 `由...组成` / `composed of` 关系，只要主体不变、关系不变、但支撑组件被偷换，就会触发 revise，同时兼容组件顺序调整与兼容细化。 | 已实现基线 |
+| grounded draft 还必须检查显式用途关系里的用途矛盾 | reviewer 现在会执行 `claim_purpose_consistency`：对于可比的 `used for` / `用于` 关系，只要主体不变、关系不变、但支撑用途被偷换，就会触发 revise，同时兼容支撑用途细化。 | 已实现基线 |
 | grounded draft 还必须检查“事实尾部一致但主体漂移”的 grounded-subject 冲突 | reviewer 现在会执行 `claim_subject_consistency`：即使数值/事实尾部仍与支撑一致，只要 grounded subject / entity 被偷换，也会触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查同主体显式属性漂移 | reviewer 现在会执行 `claim_attribute_consistency`：对于可比的 `has` / `have` / `具有` 属性框架，只要主体不变但属性值被偷换，就会触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查同主体状态矛盾 | reviewer 现在会执行 `claim_state_consistency`：对于中英文可比的 definition/copula 状态断言，只要同主体状态与支撑冲突，就会触发 revise。 | 已实现基线 |
@@ -1266,6 +1291,26 @@ The first two decide capability. The third decides trust.
   - 系统之前已经知道如何改写文档自述型漂移，
   - 但现在才拥有“同一主体、同一组成关系、错误组件”这一类显式 owner。
 
+#### 在组成关系切片之上继续落地的 Phase-21 用途关系矛盾加固
+
+- `src/learning/answerReleaseReview.ts` 现在新增了第十一个面向矛盾检测的 reviewer gate：`claim_purpose_consistency`。
+- 这个 gate 继续保持比泛化语义 verifier 更窄的边界：
+  - 它只比较显式 `used for`、`used to`、`designed for`、`designed to`、`serves to` 与 `用于` 用途关系，
+  - 它继续复用本地 lexical feature substrate，而不是再引入第二套语义运行时，
+  - 当没有可比用途框架时，它仍然保持保守。
+- 当前支持的矛盾族群同样保持具体：
+  - 英文：`Water glass is used for drinking water` vs `Water glass is used for storing motor oil`，
+  - 中文：`水杯用于饮水` vs `水杯用于储存机油`。
+- 防误报控制这次也被显式写进实现：
+  - 只要显式用途关系与主体都成立，就可以进入高置信度可比断言集合，
+  - `serving cold water` 这类被支撑用途细化仍然允许 `release`，
+  - `is used for ...` 这类用途句现在还会主动跳过 `claim_state_consistency`，避免被错误识别成状态矛盾。
+- `src/learning/answerReleaseReview.test.ts` 现在已经固定三类关键行为：
+  - 英文用途关系矛盾必须 `revise`；
+  - 中文用途关系矛盾必须 `revise`；
+  - 支撑用途细化仍然 clean `release`。
+- 这个 Phase 在架构上的意义也很直接：它继续沿着“显式关系、确定性 owner、窄口径误报控制”的路线，把 final-answer reviewer 从主题级收缩推进到更可审计的用途级纠错。
+
 ### 为什么先前那些框架方案不够
 
 已分析的 `ref/` 参考：
@@ -1343,7 +1388,7 @@ The first two decide capability. The third decides trust.
 
 ### 后续方向
 
-1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + query-intent + structured-fact + attribute + containment + composition + subject + state + polarity + graph-causal + graph-order + graph-comparison gate 栈之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
+1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + query-intent + structured-fact + attribute + containment + composition + purpose + subject + state + polarity + graph-causal + graph-order + graph-comparison gate 栈之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
 2. 继续把语料从当前 4 个用例扩展到更多真实 cross-scope、compact-alias 与同义表达失败案例，再决定是否继续扩大 reviewer policy。
 3. 把当前 block-level markdown source mapping 与 `source_line_provenance` -> source-authenticated fragment projection -> `line_window` -> `snippet_fallback` 的 graph-focus 栈视为已落地基线；后续重点转到基于显式 offset 或更丰富 AST provenance 的重复片段去歧义。
 4. compare-ready drilldown 继续坚持复用现有 reviewer telemetry path，不再平行新增第二个 audit owner。

@@ -891,6 +891,122 @@ describe('answerReleaseReview', () => {
         ]));
     });
 
+    test('revises grounded answers when purpose claims conflict with cited support', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass Purpose',
+            summary: 'Water glass is used for drinking water and serving cold water.',
+            evidenceSnippet: 'Water glass is used for drinking water and serving cold water.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Glass Purpose',
+                snippet: 'Water glass is used for drinking water and serving cold water.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Water Glass Purpose',
+                    snippet: 'Water glass is used for drinking water and serving cold water.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'what is water glass used for',
+            draftAnswer: 'Water glass is used for storing motor oil.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T04:15:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_purpose_consistency');
+        expect(review.publicAnswer).toBe('Water Glass Purpose: Water glass is used for drinking water and serving cold water.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_purpose_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('revises grounded answers when Chinese purpose claims conflict with cited support', () => {
+        const point = makeKnowledgePoint({
+            title: '水杯用途',
+            summary: '水杯用于饮水和盛放冷水。',
+            evidenceSnippet: '水杯用于饮水和盛放冷水。',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: '水杯用途',
+                snippet: '水杯用于饮水和盛放冷水。',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: '水杯用途',
+                    snippet: '水杯用于饮水和盛放冷水。',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: '水杯有什么用途？',
+            draftAnswer: '水杯用于储存机油。',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T04:20:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_purpose_consistency');
+        expect(review.publicAnswer).toBe('水杯用途: 水杯用于饮水和盛放冷水。');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_purpose_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('does not raise a purpose conflict when the draft keeps a supported purpose refinement', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass Purpose',
+            summary: 'Water glass is used for drinking water and serving cold water.',
+            evidenceSnippet: 'Water glass is used for drinking water and serving cold water.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Glass Purpose',
+                snippet: 'Water glass is used for drinking water and serving cold water.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Water Glass Purpose',
+                    snippet: 'Water glass is used for drinking water and serving cold water.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'what is water glass used for',
+            draftAnswer: 'Water glass is used for serving cold water.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T04:25:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('claim_purpose_consistency');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_purpose_consistency',
+                passed: true,
+            }),
+        ]));
+    });
+
     test('revises grounded answers when same-subject state conflicts with cited support', () => {
         const point = makeKnowledgePoint({
             title: 'Water Glass Thermodynamics',

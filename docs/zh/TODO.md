@@ -27,13 +27,14 @@
 - [x] 已把 reviewer 从 lexical + structured-fact 检查继续扩展到确定性的 `claim_attribute_consistency`，覆盖 `中等热绝缘性能` vs `高热绝缘性能` 这类同主体显式属性矛盾，并用中英文防误报单测与兼容细化控制用例约束。
 - [x] 已把 reviewer 从 lexical + structured-fact 检查继续扩展到确定性的 `claim_containment_consistency`，覆盖 `contains water` vs `contains oil` 这类同主体显式容纳/内容关系矛盾，并用中英文防误报单测约束。
 - [x] 已把 reviewer 从 lexical + structured-fact 检查继续扩展到确定性的 `claim_composition_consistency`，覆盖 `由水和玻璃杯组成` vs `由机油和塑料杯组成` 这类同主体显式组成关系矛盾，并用中英文防误报单测与兼容顺序控制用例约束。
+- [x] 已把 reviewer 从 lexical + structured-fact 检查继续扩展到确定性的 `claim_purpose_consistency`，覆盖 `用于饮水` vs `用于储存机油` 这类同主体显式用途矛盾，并用中英文防误报单测与支撑用途细化控制用例约束。
 - [x] 已把 reviewer 从 lexical + structured-fact 检查继续扩展到确定性的 `claim_subject_consistency`，覆盖“事实尾部不变但 grounded subject 漂移”的冲突，并保证这类草稿会在 release 前被改写。
 - [x] 已把 reviewer 从 lexical + structured-fact 门禁继续扩展到确定性的 `claim_polarity_consistency`，覆盖显式正反断言反转，并用防误报单测约束。
 - [x] 已把 reviewer 从 lexical + structured-fact + polarity 门禁继续扩展到确定性的 `claim_graph_causal_consistency`，覆盖与已装配 DAG 相矛盾的 `causal` 因果方向反转，并用中英文防误报单测约束。
 - [x] 已把 reviewer 从 lexical + structured-fact + polarity 门禁继续扩展到确定性的 `claim_graph_order_consistency`，覆盖与已装配 DAG 相矛盾的 `prerequisite` / `sequence` 方向反转，并用防误报单测约束。
 - [x] 已把 reviewer 从 lexical + structured-fact + polarity + DAG 顺序门禁继续扩展到确定性的 `claim_graph_comparison_consistency`，覆盖与已装配 DAG 相矛盾的 `contrast` / `analogy` 对比分支反转，并用中英文防误报单测约束。
 - [x] 已新增确定性的 `query_intent_alignment`：当 `what is` / `什么是` 类问题命中了定义证据，但草稿回答成了“本文档旨在……”这类文档自述时，reviewer 会在 release 前强制改写成直接定义句。
-- [ ] 在当前 lexical + query-intent + structured-fact + attribute + containment + composition + subject + state + polarity + graph-causal + graph-order + graph-comparison 门禁之上，继续扩展到更广的 claim-vs-citation / claim-vs-evidence 矛盾检测，并控制 false positive。
+- [ ] 在当前 lexical + query-intent + structured-fact + attribute + containment + composition + purpose + subject + state + polarity + graph-causal + graph-order + graph-comparison 门禁之上，继续扩展到更广的 claim-vs-citation / claim-vs-evidence 矛盾检测，并控制 false positive。
 - [x] 加固 graph-focus payload 契约，让右侧原文预览 / 命中高亮在 candidate-path fallback 噪声下仍保持确定性。
 - [x] 已把 graph-focus 高亮进一步收紧到 payload 稳定性之上：可信 `line_window` 优先，行号缺失或陈旧时回退到 `snippet_fallback`，并保留 additive `highlightStrategy` 诊断。
 - [x] 已把 block-level markdown source provenance 下沉到 `src/frontend/markdown_runtime.js`，并让 graph focus 在渲染节点 source range 与可信 span 重叠时优先使用 `source_line_provenance`，之后才回退到 `line_window` / `snippet_fallback`。

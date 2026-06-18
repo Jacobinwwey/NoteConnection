@@ -115,6 +115,25 @@ type CompositionFrameConflict = {
     supportFrame: CompositionFrame & { label: string };
 };
 
+type PurposeFramePart = {
+    surface: string;
+    features: string[];
+};
+
+type PurposeFrame = {
+    surface: string;
+    subject: string;
+    subjectFeatures: string[];
+    purpose: string;
+    purposeFeatures: string[];
+    purposeParts: PurposeFramePart[];
+};
+
+type PurposeFrameConflict = {
+    answerFrame: PurposeFrame;
+    supportFrame: PurposeFrame & { label: string };
+};
+
 type SentencePolarity = 'positive' | 'negative';
 
 type PolaritySentence = {
@@ -282,7 +301,7 @@ const POLARITY_NEGATION_NORMALIZATION_RULES: Array<[RegExp, string]> = [
     [/\b([a-z]+)n['’]t\b/gi, '$1 not'],
 ];
 
-const STATE_FRAME_SKIP_VALUE_PATTERN = /\b(?:prerequisite|before|after|depends?\s+on|requires?|sequence)\b|先于|早于|之前|之后|前置条件|前提|依赖/u;
+const STATE_FRAME_SKIP_VALUE_PATTERN = /\b(?:prerequisite|before|after|depends?\s+on|requires?|sequence|used\s+for|used\s+to|designed\s+for|designed\s+to|serv(?:es|ed|e)\s+(?:to|for))\b|先于|早于|之前|之后|前置条件|前提|依赖|用于|用来|用作/u;
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -1110,6 +1129,13 @@ function buildCompositionFrameFeatures(value: string): string[] {
         .filter((feature) => !STRUCTURED_ANCHOR_STOPWORDS.has(feature));
 }
 
+function buildPurposeFrameFeatures(value: string): string[] {
+    return collectOrderedLexicalFeatures(value)
+        .map((feature) => String(feature || '').trim().toLowerCase())
+        .filter((feature) => feature.length >= 2)
+        .filter((feature) => !STRUCTURED_ANCHOR_STOPWORDS.has(feature));
+}
+
 function normalizeStateFrameSubject(value: string): string {
     return normalizeWhitespace(String(value || ''))
         .replace(/^(?:a|an|the)\s+/i, '')
@@ -1193,6 +1219,36 @@ function normalizeCompositionFrameComponents(value: string): string {
         .trim();
 }
 
+function normalizePurposeFrameSubject(value: string): string {
+    return normalizeWhitespace(String(value || ''))
+        .replace(/^(?:a|an|the)\s+/i, '')
+        .replace(/^(?:此处的|这里的|该|这个|這個)/u, '')
+        .replace(/[“”"'`]+/gu, '')
+        .replace(/[,:;]+$/g, '')
+        .trim();
+}
+
+function normalizePurposeFramePart(value: string): string {
+    return normalizeWhitespace(String(value || ''))
+        .replace(/^(?:a|an|the)\s+/i, '')
+        .replace(/^(?:to)\s+/iu, '')
+        .replace(/^(?:用于|用来|用於|用來|用作|作为|作為)/u, '')
+        .replace(/[“”"'`]+/gu, '')
+        .replace(/[,:;]+$/g, '')
+        .trim();
+}
+
+function normalizePurposeFrameValue(value: string): string {
+    return normalizeWhitespace(String(value || ''))
+        .replace(/^(?:to|for)\s+/iu, '')
+        .replace(/^(?:用于|用来|用於|用來|用作|作为|作為)/u, '')
+        .replace(/\s+(?:during|under|within|inside|outside|near|around|across|throughout|through|at|on|in)\s+.+$/iu, '')
+        .replace(/(?:在|于).+$/u, '')
+        .replace(/[“”"'`]+/gu, '')
+        .replace(/[,:;]+$/g, '')
+        .trim();
+}
+
 function splitCompositionFrameParts(value: string): CompositionFramePart[] {
     const normalizedValue = normalizeCompositionFrameComponents(value);
     if (!normalizedValue) {
@@ -1213,6 +1269,38 @@ function splitCompositionFrameParts(value: string): CompositionFramePart[] {
             return;
         }
         const features = buildCompositionFrameFeatures(part);
+        if (features.length <= 0) {
+            return;
+        }
+        seen.add(key);
+        uniqueParts.push({
+            surface: part,
+            features,
+        });
+    });
+    return uniqueParts;
+}
+
+function splitPurposeFrameParts(value: string): PurposeFramePart[] {
+    const normalizedValue = normalizePurposeFrameValue(value);
+    if (!normalizedValue) {
+        return [];
+    }
+    const parts = normalizedValue
+        .split(/\s*(?:,|;|\band\b|\bor\b|以及|及|和|与|與|或|或者|、)\s*/iu)
+        .map((part) => normalizePurposeFramePart(part))
+        .filter((part) => part.length > 0);
+    if (parts.length <= 0) {
+        return [];
+    }
+    const uniqueParts: PurposeFramePart[] = [];
+    const seen = new Set<string>();
+    parts.forEach((part) => {
+        const key = part.toLowerCase();
+        if (!key || seen.has(key)) {
+            return;
+        }
+        const features = buildPurposeFrameFeatures(part);
         if (features.length <= 0) {
             return;
         }
@@ -1457,6 +1545,36 @@ function buildCompositionFrame(
     };
 }
 
+function buildPurposeFrame(
+    surface: string,
+    subject: string,
+    purpose: string
+): PurposeFrame | null {
+    const normalizedSurface = normalizeWhitespace(surface);
+    const normalizedSubject = normalizePurposeFrameSubject(subject);
+    const normalizedPurpose = normalizePurposeFrameValue(purpose);
+    if (!normalizedSurface || !normalizedSubject || !normalizedPurpose) {
+        return null;
+    }
+    if (/\d/u.test(normalizedPurpose)) {
+        return null;
+    }
+    const subjectFeatures = buildPurposeFrameFeatures(normalizedSubject);
+    const purposeFeatures = buildPurposeFrameFeatures(normalizedPurpose);
+    const purposeParts = splitPurposeFrameParts(normalizedPurpose);
+    if (subjectFeatures.length <= 0 || purposeFeatures.length <= 0 || purposeParts.length <= 0) {
+        return null;
+    }
+    return {
+        surface: normalizedSurface,
+        subject: normalizedSubject,
+        subjectFeatures,
+        purpose: normalizedPurpose,
+        purposeFeatures,
+        purposeParts,
+    };
+}
+
 function extractContainmentFrames(value: string): ContainmentFrame[] {
     const patterns: RegExp[] = [
         /^(.{1,80}?)\s+contains?\s+(.+)$/iu,
@@ -1474,6 +1592,38 @@ function extractContainmentFrames(value: string): ContainmentFrame[] {
                     continue;
                 }
                 const frame = buildContainmentFrame(
+                    sentence,
+                    String(match[1] || ''),
+                    String(match[2] || '')
+                );
+                return frame ? [frame] : [];
+            }
+            return [];
+        });
+}
+
+function extractPurposeFrames(value: string): PurposeFrame[] {
+    const patterns: RegExp[] = [
+        /^(.{1,80}?)\s+(?:is|are|was|were|can\s+be|may\s+be)?\s*used\s+for\s+(.+)$/iu,
+        /^(.{1,80}?)\s+(?:is|are|was|were|can\s+be|may\s+be)?\s*used\s+to\s+(.+)$/iu,
+        /^(.{1,80}?)\s+(?:is|are|was|were)\s+designed\s+for\s+(.+)$/iu,
+        /^(.{1,80}?)\s+(?:is|are|was|were)\s+designed\s+to\s+(.+)$/iu,
+        /^(.{1,80}?)\s+serv(?:es|ed|e)\s+(?:to|for)\s+(.+)$/iu,
+        /^(.{1,24}?)(?:可)?用于(.+)$/u,
+        /^(.{1,24}?)(?:可)?用来(.+)$/u,
+        /^(.{1,24}?)(?:被)?用作(.+)$/u,
+    ];
+    return String(value || '')
+        .split(POLARITY_SENTENCE_SPLIT_PATTERN)
+        .map((sentence) => normalizeWhitespace(sentence))
+        .filter((sentence) => sentence.length >= 8 || (containsCjk(sentence) && sentence.length >= 5))
+        .flatMap((sentence) => {
+            for (const pattern of patterns) {
+                const match = sentence.match(pattern);
+                if (!match) {
+                    continue;
+                }
+                const frame = buildPurposeFrame(
                     sentence,
                     String(match[1] || ''),
                     String(match[2] || '')
@@ -1755,6 +1905,88 @@ function buildCompositionConflictMessage(conflicts: CompositionFrameConflict[]):
         `"${conflict.answerFrame.surface}" conflicted with "${conflict.supportFrame.surface}" (${conflict.supportFrame.label})`
     ));
     return `Draft answer contradicted comparable grounded composition claims: ${fragments.join('; ')}.`;
+}
+
+function purposeFrameSubjectsComparable(answerFrame: PurposeFrame, supportFrame: PurposeFrame): boolean {
+    const normalizedAnswerSubject = normalizeWhitespace(answerFrame.subject).toLowerCase();
+    const normalizedSupportSubject = normalizeWhitespace(supportFrame.subject).toLowerCase();
+    if (!normalizedAnswerSubject || !normalizedSupportSubject) {
+        return false;
+    }
+    if (
+        normalizedAnswerSubject.includes(normalizedSupportSubject)
+        || normalizedSupportSubject.includes(normalizedAnswerSubject)
+    ) {
+        return true;
+    }
+    return computeFeatureOverlapRatio(answerFrame.subjectFeatures, supportFrame.subjectFeatures) >= 0.6;
+}
+
+function purposeFramePartsEquivalent(answerPart: PurposeFramePart, supportPart: PurposeFramePart): boolean {
+    const normalizedAnswerPart = normalizeWhitespace(answerPart.surface).toLowerCase();
+    const normalizedSupportPart = normalizeWhitespace(supportPart.surface).toLowerCase();
+    if (!normalizedAnswerPart || !normalizedSupportPart) {
+        return false;
+    }
+    if (
+        normalizedAnswerPart === normalizedSupportPart
+        || normalizedSupportPart.includes(normalizedAnswerPart)
+    ) {
+        return true;
+    }
+    return (
+        computeFeatureOverlapRatio(answerPart.features, supportPart.features) >= 0.75
+        || computeFeatureOverlapRatio(supportPart.features, answerPart.features) === 1
+        || computeFeatureJaccard(answerPart.features, supportPart.features) >= 0.75
+    );
+}
+
+function purposeFramePartsCovered(
+    sourceParts: PurposeFramePart[],
+    targetParts: PurposeFramePart[]
+): boolean {
+    if (sourceParts.length <= 0 || targetParts.length <= 0) {
+        return false;
+    }
+    return sourceParts.every((sourcePart) => (
+        targetParts.some((targetPart) => purposeFramePartsEquivalent(sourcePart, targetPart))
+    ));
+}
+
+function purposeFrameValuesEquivalent(answerFrame: PurposeFrame, supportFrame: PurposeFrame): boolean {
+    const normalizedAnswerPurpose = normalizeWhitespace(answerFrame.purpose).toLowerCase();
+    const normalizedSupportPurpose = normalizeWhitespace(supportFrame.purpose).toLowerCase();
+    if (!normalizedAnswerPurpose || !normalizedSupportPurpose) {
+        return false;
+    }
+    if (
+        normalizedAnswerPurpose === normalizedSupportPurpose
+        || normalizedSupportPurpose.includes(normalizedAnswerPurpose)
+    ) {
+        return true;
+    }
+    return (
+        purposeFramePartsCovered(answerFrame.purposeParts, supportFrame.purposeParts)
+        || computeFeatureOverlapRatio(answerFrame.purposeFeatures, supportFrame.purposeFeatures) === 1
+    );
+}
+
+function purposeFrameValueOverlap(answerFrame: PurposeFrame, supportFrame: PurposeFrame): number {
+    return Math.max(
+        computeFeatureOverlapRatio(answerFrame.purposeFeatures, supportFrame.purposeFeatures),
+        computeFeatureOverlapRatio(supportFrame.purposeFeatures, answerFrame.purposeFeatures),
+        computeFeatureJaccard(answerFrame.purposeFeatures, supportFrame.purposeFeatures)
+    );
+}
+
+function buildPurposeConflictMessage(conflicts: PurposeFrameConflict[]): string {
+    if (conflicts.length <= 0) {
+        return 'Draft answer stayed purpose-consistent with the grounded support that could be compared.';
+    }
+    const fragments = conflicts.slice(0, 2).map((conflict) => (
+        `"${conflict.answerFrame.surface}" conflicted with "${conflict.supportFrame.surface}" (${conflict.supportFrame.label})`
+    ));
+    return `Draft answer contradicted comparable grounded purpose claims: ${fragments.join('; ')}.`;
 }
 
 function stateFrameSubjectsComparable(answerFrame: StateFrame, supportFrame: StateFrame): boolean {
@@ -2293,6 +2525,61 @@ function evaluateCompositionConsistency(context: AnswerReleaseReviewContext): {
     };
 }
 
+function evaluatePurposeConsistency(context: AnswerReleaseReviewContext): {
+    passed: boolean;
+    comparableFrameCount: number;
+    conflicts: PurposeFrameConflict[];
+} {
+    const answerFrames = extractPurposeFrames(context.draftAnswer);
+    if (answerFrames.length <= 0) {
+        return {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
+    }
+    const supportFrames = buildSupportCandidates(context).flatMap((candidate) => (
+        extractPurposeFrames(candidate.text).map((frame) => ({
+            ...frame,
+            label: candidate.label,
+        }))
+    ));
+    if (supportFrames.length <= 0) {
+        return {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
+    }
+    const conflicts: PurposeFrameConflict[] = [];
+    let comparableFrameCount = 0;
+    answerFrames.forEach((answerFrame) => {
+        const comparableSupportFrames = supportFrames.filter((supportFrame) => (
+            purposeFrameSubjectsComparable(answerFrame, supportFrame)
+        ));
+        if (comparableSupportFrames.length <= 0) {
+            return;
+        }
+        comparableFrameCount += 1;
+        if (comparableSupportFrames.some((supportFrame) => purposeFrameValuesEquivalent(answerFrame, supportFrame))) {
+            return;
+        }
+        conflicts.push({
+            answerFrame,
+            supportFrame: comparableSupportFrames
+                .slice()
+                .sort((left, right) => (
+                    purposeFrameValueOverlap(answerFrame, right) - purposeFrameValueOverlap(answerFrame, left)
+                ))[0],
+        });
+    });
+    return {
+        passed: conflicts.length <= 0,
+        comparableFrameCount,
+        conflicts: conflicts.filter((conflict) => Boolean(conflict.supportFrame)),
+    };
+}
+
 function evaluateStateConsistency(context: AnswerReleaseReviewContext): {
     passed: boolean;
     comparableFrameCount: number;
@@ -2562,6 +2849,7 @@ function buildDecision(
     attributeConsistencyPassed: boolean,
     containmentConsistencyPassed: boolean,
     compositionConsistencyPassed: boolean,
+    purposeConsistencyPassed: boolean,
     subjectConsistencyPassed: boolean,
     stateConsistencyPassed: boolean,
     polarityConsistencyPassed: boolean,
@@ -2581,6 +2869,7 @@ function buildDecision(
         || !attributeConsistencyPassed
         || !containmentConsistencyPassed
         || !compositionConsistencyPassed
+        || !purposeConsistencyPassed
         || !subjectConsistencyPassed
         || !stateConsistencyPassed
         || !polarityConsistencyPassed
@@ -2675,6 +2964,16 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             comparableFrameCount: 0,
             conflicts: [],
         };
+    const purposeConsistency = groundedEvidenceAvailable
+        ? evaluatePurposeConsistency({
+            ...context,
+            draftAnswer,
+        })
+        : {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
     const subjectConsistency = groundedEvidenceAvailable
         ? evaluateSubjectConsistency({
             ...context,
@@ -2752,6 +3051,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         attributeConsistency.passed,
         containmentConsistency.passed,
         compositionConsistency.passed,
+        purposeConsistency.passed,
         subjectConsistency.passed,
         stateConsistency.passed,
         polarityConsistency.passed,
@@ -2873,6 +3173,17 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                         : 'No comparable composition frame was available, so composition contradiction checking stayed conservative.'
                 )
                 : 'No evidence was available, so composition contradiction checking was not evaluated.',
+        },
+        {
+            gateId: 'claim_purpose_consistency',
+            passed: purposeConsistency.passed,
+            message: groundedEvidenceAvailable
+                ? (
+                    purposeConsistency.comparableFrameCount > 0
+                        ? buildPurposeConflictMessage(purposeConsistency.conflicts)
+                        : 'No comparable purpose frame was available, so purpose contradiction checking stayed conservative.'
+                )
+                : 'No evidence was available, so purpose contradiction checking was not evaluated.',
         },
         {
             gateId: 'claim_subject_consistency',
