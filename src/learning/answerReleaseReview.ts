@@ -57,6 +57,19 @@ type StateFrameConflict = {
     supportFrame: StateFrame & { label: string };
 };
 
+type SubjectFrame = {
+    surface: string;
+    subject: string;
+    subjectFeatures: string[];
+    tail: string;
+    tailFeatures: string[];
+};
+
+type SubjectFrameConflict = {
+    answerFrame: SubjectFrame;
+    supportFrame: SubjectFrame & { label: string };
+};
+
 type SentencePolarity = 'positive' | 'negative';
 
 type PolaritySentence = {
@@ -771,6 +784,13 @@ function buildStateFrameFeatures(value: string): string[] {
         .filter((feature) => !STRUCTURED_ANCHOR_STOPWORDS.has(feature));
 }
 
+function buildSubjectFrameFeatures(value: string): string[] {
+    return collectOrderedLexicalFeatures(value)
+        .map((feature) => String(feature || '').trim().toLowerCase())
+        .filter((feature) => feature.length >= 2)
+        .filter((feature) => !STRUCTURED_ANCHOR_STOPWORDS.has(feature));
+}
+
 function normalizeStateFrameSubject(value: string): string {
     return normalizeWhitespace(String(value || ''))
         .replace(/^(?:a|an|the)\s+/i, '')
@@ -778,7 +798,21 @@ function normalizeStateFrameSubject(value: string): string {
         .trim();
 }
 
+function normalizeSubjectFrameSubject(value: string): string {
+    return normalizeWhitespace(String(value || ''))
+        .replace(/^(?:a|an|the)\s+/i, '')
+        .replace(/[,:;]+$/g, '')
+        .trim();
+}
+
 function normalizeStateFrameValue(value: string): string {
+    return normalizeWhitespace(String(value || ''))
+        .replace(/^(?:a|an|the)\s+/i, '')
+        .replace(/[,:;]+$/g, '')
+        .trim();
+}
+
+function normalizeSubjectFrameTail(value: string): string {
     return normalizeWhitespace(String(value || ''))
         .replace(/^(?:a|an|the)\s+/i, '')
         .replace(/[,:;]+$/g, '')
@@ -855,6 +889,89 @@ function extractStateFrames(value: string): StateFrame[] {
             }
             return [];
         });
+}
+
+function buildSubjectFrame(
+    surface: string,
+    subject: string,
+    tail: string
+): SubjectFrame | null {
+    const normalizedSurface = normalizeWhitespace(surface);
+    const normalizedSubject = normalizeSubjectFrameSubject(subject);
+    const normalizedTail = normalizeSubjectFrameTail(tail);
+    if (!normalizedSurface || !normalizedSubject || !normalizedTail) {
+        return null;
+    }
+    const subjectFeatures = buildSubjectFrameFeatures(normalizedSubject);
+    const tailFeatures = buildSubjectFrameFeatures(normalizedTail);
+    if (subjectFeatures.length <= 0 || tailFeatures.length <= 0) {
+        return null;
+    }
+    return {
+        surface: normalizedSurface,
+        subject: normalizedSubject,
+        subjectFeatures,
+        tail: normalizedTail,
+        tailFeatures,
+    };
+}
+
+function extractSubjectFrames(value: string): SubjectFrame[] {
+    const patterns: RegExp[] = [
+        /^(.{1,80}?)\s+(?:is|are|was|were|remains|stays|equals|means|refers to|belongs to|has|contains)\s+(.+)$/iu,
+        /^(.{1,24}?)(?:是|为|等于|指|属于|有|包含)(.+)$/u,
+    ];
+    return String(value || '')
+        .split(POLARITY_SENTENCE_SPLIT_PATTERN)
+        .map((sentence) => normalizeWhitespace(sentence))
+        .filter((sentence) => sentence.length >= 8 || (containsCjk(sentence) && sentence.length >= 5))
+        .flatMap((sentence) => {
+            for (const pattern of patterns) {
+                const match = sentence.match(pattern);
+                if (!match) {
+                    continue;
+                }
+                const frame = buildSubjectFrame(
+                    sentence,
+                    String(match[1] || ''),
+                    String(match[2] || '')
+                );
+                return frame ? [frame] : [];
+            }
+            return [];
+        });
+}
+
+function subjectFramesShareTail(answerFrame: SubjectFrame, supportFrame: SubjectFrame): boolean {
+    const overlapRatio = computeFeatureOverlapRatio(answerFrame.tailFeatures, supportFrame.tailFeatures);
+    const jaccard = computeFeatureJaccard(answerFrame.tailFeatures, supportFrame.tailFeatures);
+    return overlapRatio >= 0.75 || jaccard >= 0.7;
+}
+
+function subjectFramesEquivalent(answerFrame: SubjectFrame, supportFrame: SubjectFrame): boolean {
+    const normalizedAnswerSubject = normalizeWhitespace(answerFrame.subject).toLowerCase();
+    const normalizedSupportSubject = normalizeWhitespace(supportFrame.subject).toLowerCase();
+    if (!normalizedAnswerSubject || !normalizedSupportSubject) {
+        return false;
+    }
+    if (normalizedAnswerSubject === normalizedSupportSubject) {
+        return true;
+    }
+    return computeFeatureOverlapRatio(answerFrame.subjectFeatures, supportFrame.subjectFeatures) >= 0.75;
+}
+
+function computeSubjectFrameTailOverlap(answerFrame: SubjectFrame, supportFrame: SubjectFrame): number {
+    return computeFeatureOverlapRatio(answerFrame.tailFeatures, supportFrame.tailFeatures);
+}
+
+function buildSubjectConflictMessage(conflicts: SubjectFrameConflict[]): string {
+    if (conflicts.length <= 0) {
+        return 'Draft answer stayed subject-consistent with the grounded support that could be compared.';
+    }
+    const fragments = conflicts.slice(0, 2).map((conflict) => (
+        `"${conflict.answerFrame.surface}" kept the supported fact tail but changed the subject from "${conflict.supportFrame.subject}" (${conflict.supportFrame.label})`
+    ));
+    return `Draft answer changed the grounded subject of comparable support: ${fragments.join('; ')}.`;
 }
 
 function stateFrameSubjectsComparable(answerFrame: StateFrame, supportFrame: StateFrame): boolean {
@@ -1171,6 +1288,62 @@ function evaluateStructuredConsistency(context: AnswerReleaseReviewContext): {
     };
 }
 
+function evaluateSubjectConsistency(context: AnswerReleaseReviewContext): {
+    passed: boolean;
+    comparableFrameCount: number;
+    conflicts: SubjectFrameConflict[];
+} {
+    const answerFrames = extractSubjectFrames(context.draftAnswer);
+    if (answerFrames.length <= 0) {
+        return {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
+    }
+    const supportFrames = buildSupportCandidates(context).flatMap((candidate) => (
+        extractSubjectFrames(candidate.text).map((frame) => ({
+            ...frame,
+            label: candidate.label,
+        }))
+    ));
+    if (supportFrames.length <= 0) {
+        return {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
+    }
+    const conflicts: SubjectFrameConflict[] = [];
+    let comparableFrameCount = 0;
+    answerFrames.forEach((answerFrame) => {
+        const comparableSupportFrames = supportFrames.filter((supportFrame) => (
+            subjectFramesShareTail(answerFrame, supportFrame)
+        ));
+        if (comparableSupportFrames.length <= 0) {
+            return;
+        }
+        comparableFrameCount += 1;
+        if (comparableSupportFrames.some((supportFrame) => subjectFramesEquivalent(answerFrame, supportFrame))) {
+            return;
+        }
+        conflicts.push({
+            answerFrame,
+            supportFrame: comparableSupportFrames
+                .slice()
+                .sort((left, right) => (
+                    computeSubjectFrameTailOverlap(answerFrame, right)
+                    - computeSubjectFrameTailOverlap(answerFrame, left)
+                ))[0],
+        });
+    });
+    return {
+        passed: conflicts.length <= 0,
+        comparableFrameCount,
+        conflicts: conflicts.filter((conflict) => Boolean(conflict.supportFrame)),
+    };
+}
+
 function evaluateStateConsistency(context: AnswerReleaseReviewContext): {
     passed: boolean;
     comparableFrameCount: number;
@@ -1344,6 +1517,7 @@ function buildDecision(
     groundingAlignmentPassed: boolean,
     queryIntentAlignmentPassed: boolean,
     structuredConsistencyPassed: boolean,
+    subjectConsistencyPassed: boolean,
     stateConsistencyPassed: boolean,
     polarityConsistencyPassed: boolean,
     graphOrderConsistencyPassed: boolean,
@@ -1357,6 +1531,7 @@ function buildDecision(
         !groundingAlignmentPassed
         || !queryIntentAlignmentPassed
         || !structuredConsistencyPassed
+        || !subjectConsistencyPassed
         || !stateConsistencyPassed
         || !polarityConsistencyPassed
         || !graphOrderConsistencyPassed
@@ -1418,6 +1593,16 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             comparableFactCount: 0,
             conflicts: [],
         };
+    const subjectConsistency = groundedEvidenceAvailable
+        ? evaluateSubjectConsistency({
+            ...context,
+            draftAnswer,
+        })
+        : {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
     const stateConsistency = groundedEvidenceAvailable
         ? evaluateStateConsistency({
             ...context,
@@ -1462,6 +1647,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         groundingAlignment.passed,
         queryIntentAlignment.passed,
         structuredConsistency.passed,
+        subjectConsistency.passed,
         stateConsistency.passed,
         polarityConsistency.passed,
         graphOrderConsistency.passed,
@@ -1541,6 +1727,17 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                         : 'No high-confidence structured fact comparison was available, so contradiction checking stayed conservative.'
                 )
                 : 'No evidence was available, so structured contradiction checking was not evaluated.',
+        },
+        {
+            gateId: 'claim_subject_consistency',
+            passed: subjectConsistency.passed,
+            message: groundedEvidenceAvailable
+                ? (
+                    subjectConsistency.comparableFrameCount > 0
+                        ? buildSubjectConflictMessage(subjectConsistency.conflicts)
+                        : 'No comparable subject frame was available, so subject contradiction checking stayed conservative.'
+                )
+                : 'No evidence was available, so subject contradiction checking was not evaluated.',
         },
         {
             gateId: 'claim_state_consistency',

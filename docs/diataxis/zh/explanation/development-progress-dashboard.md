@@ -17,6 +17,7 @@
   - release-review 阶段由 `claim_graph_order_consistency` 消费，
 - `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_state_consistency`，因此 `open system` vs `closed system` 这类同主体状态反转会在进入公开回答前被改写，
 - `src/learning/answerReleaseReview.ts` 现在还会执行 `query_intent_alignment`，因此 `什么是waterglass?` 这类定义型问题在已有定义证据时，会把“本技术文档旨在……”这类文档自述草稿改写成直接定义句后再发布，
+- `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_subject_consistency`，因此像把 `Water density` 偷换成 `Glass density` 这种“事实尾部还对、主体却串了”的草稿，也会在 release 前被改写，
 - 共享 alias/scope 回归语料现在也不再把这一步中间改写过程错误地钉死到所有 fixture 上：
   - 对内存态的简化语料，只要最终公开回答已经 grounded 且收缩，`release` 与 `revise` 都是允许结果，
   - 对真实截图派生的运行时用例 `waterglass_explicit_scope_compact_zh`，则继续强制要求 `revise`，并且 failed gate 必须包含 `query_intent_alignment`，
@@ -44,13 +45,14 @@
 | 最终公开回答审核必须有耐久的后端 owner | `src/learning/answerReleaseReview.ts` 已经在 answer synthesis 之后持有 `release` / `revise` / `abstain` 决策。 | 已实现 |
 | 现有 DAG 必须参与回答正确性，而不只是 retrieval 排序 | `graphContextAssembler.ts` 在 synthesis 前装配图上下文，`claim_graph_order_consistency` 在 release 时消费 DAG 证据。 | 已实现基线 |
 | 定义型问题不得把文档自述草稿直接放行 | `answerReleaseReview.ts` 现在会执行 `query_intent_alignment`：当 `what is` / `什么是` 问题已有 grounded definition frame，但草稿仍然是 `This technical document...` / `本技术文档旨在...` 时，会在 release 前改写。 | 已实现基线 |
+| grounded draft 不得保留正确事实尾部却偷换 grounded subject | `answerReleaseReview.ts` 现在会对可比的 subject-tail frame 执行 `claim_subject_consistency`，因此即使数值尾部仍与支撑一致，`Water density` -> `Glass density` 这类主体漂移也会被改写。 | 已实现基线 |
 | 同主体状态矛盾必须在 release 前改写 | `answerReleaseReview.ts` 现在会对中英文可比 definition/copula 断言执行 `claim_state_consistency`。 | 已实现基线 |
 | 右侧原文预览必须在可用时消费 source-to-render provenance | `markdown_runtime.js` 现在会给渲染 block 标注 source-line 元数据，`workspace_panes.js` 则优先使用 `source_line_provenance`，并输出 provenance 覆盖计数。 | 已实现基线 |
 | 右侧原文预览必须高亮命中片段，而不只是整段 | `workspace_panes.js` 现在会在选中节点内部投影命中的 evidence fragment，在已认证 block 内优先使用 snippet 尺度的 source-authenticated fragment projection，并输出 `inlineHighlightCount` 与 `inlineHighlightStrategy`。 | 已实现基线 |
 | 右侧原文预览在 snippet 重复时仍必须高亮正确段落 | `workspace_panes.js` 现在优先使用可信 `line_window` 锚点，并用 specificity/container penalty 给候选节点打分。 | 已实现基线 |
 | 陈旧行号不能强行把高亮带偏 | `workspace_panes.js` 现在会主动怀疑 stale line window，并回退到 `snippet_fallback`；前端测试已固定这类失败模式。 | 已实现基线 |
 | 截图驱动的 `waterglass` 失败必须继续作为正式验收项 | `scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh` 现在要求 grounded 输出、reviewer/public-answer 一致性、无诊断泄漏，并且不能再退化成 `本技术文档旨在` 这类元文档回答。 | 已实现 |
-| 当前剩余缺口必须明确转移到更广矛盾检测与更窄但仍未关闭的 provenance | 现有代码仍需继续补超出 lexical + query-intent + structured + state + polarity + graph-order 栈的 claim-vs-citation / claim-vs-evidence conflict 检测，以及用于同一已认证 block 内重复片段去歧义的显式 span offset 或更丰富 AST provenance。 | 未完成 |
+| 当前剩余缺口必须明确转移到更广矛盾检测与更窄但仍未关闭的 provenance | 现有代码仍需继续补超出 lexical + query-intent + structured + subject + state + polarity + graph-order 栈的 claim-vs-citation / claim-vs-evidence conflict 检测，以及用于同一已认证 block 内重复片段去歧义的显式 span offset 或更丰富 AST provenance。 | 未完成 |
 
 本次复审验证：
 

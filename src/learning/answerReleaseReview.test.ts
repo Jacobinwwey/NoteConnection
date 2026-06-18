@@ -402,6 +402,83 @@ describe('answerReleaseReview', () => {
         expect(review.publicAnswer).toBe('The Glass-Steagall Act was enacted in 1933.');
     });
 
+    test('revises grounded answers when the subject changes but the supported fact tail stays the same', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Density',
+            summary: 'Water density is 999.8 kg/m3 at STP.',
+            evidenceSnippet: 'Water density is 999.8 kg/m3 at STP.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Density',
+                snippet: 'Water density is 999.8 kg/m3 at STP.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Water Density',
+                    snippet: 'Water density is 999.8 kg/m3 at STP.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'what is the density of water',
+            draftAnswer: 'Glass density is 999.8 kg/m3 at STP.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T02:00:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_subject_consistency');
+        expect(review.publicAnswer).toBe('Water density is 999.8 kg/m3 at STP.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_subject_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('does not raise a subject conflict when the supported subject and draft subject are still the same entity', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass',
+            summary: 'Water glass is a transparent container filled with water.',
+            evidenceSnippet: 'Water glass is a transparent container filled with water.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Glass',
+                snippet: 'Water glass is a transparent container filled with water.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Water Glass',
+                    snippet: 'Water glass is a transparent container filled with water.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'what is water glass',
+            draftAnswer: 'A water glass is a transparent container filled with water.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T02:05:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('claim_subject_consistency');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_subject_consistency',
+                passed: true,
+            }),
+        ]));
+    });
+
     test('revises grounded answers when same-subject state conflicts with cited support', () => {
         const point = makeKnowledgePoint({
             title: 'Water Glass Thermodynamics',
