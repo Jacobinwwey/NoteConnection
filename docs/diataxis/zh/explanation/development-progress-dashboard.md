@@ -107,6 +107,49 @@
 - `npm.cmd exec -- tsc`
 - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
 
+## 2026-06-19 正反断言矛盾门禁
+
+结构化事实之后，下一个仍然适合用确定性方式补上的矛盾缺口，是“主题词没变、实体没变，但把支撑明确说反了”：例如 evidence 说 `is`，draft 却说 `is not`。
+
+这个缺口现在已经在 `src/learning/answerReleaseReview.ts` 中被部分补上，对应的新 gate 是 `claim_polarity_consistency`。
+
+当前代码已经成立的事实：
+
+- reviewer 现在会提取可比的 answer/support sentence，并识别窄口径的正负极性信号：
+  - 英文否定路径，例如 `is not`、`do not`、`cannot`，以及归一化后的缩写形式；
+  - 中文否定路径，例如 `不是`、`并非`、`没有`、`不能`、`无法`。
+- 这个 gate 刻意保持约束：
+  - 只比较 feature overlap 足够高、可视为“同一断言骨架”的句子；
+  - 只要存在一个 polarity 相同的可比 support sentence，就不会误判冲突；
+  - support 里出现无关否定句，本身不会被当作矛盾。
+- 新 gate 仍然是 additive 的：
+  - `src/learning/types.ts` 现在已经把 `claim_polarity_consistency` 纳入 `AnswerReleaseGateId`；
+  - export 与 operator surface 继续保持兼容，因为它们本来就是按通用 gate ID 消费 reviewer 结果。
+- 现在即使 lexical alignment 仍然通过，只要草稿把 support 明确说反，也会触发 revise。
+
+为什么这一步重要：
+
+- lexical alignment 负责抓 topic drift；
+- structured consistency 负责抓“主题没偏，但数字/年份错了”；
+- polarity consistency 则负责抓“主题没偏、实体没偏，但断言方向说反了”。 
+
+代码 / 方案对齐：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| reviewer 矛盾覆盖必须纳入显式正反反转 | `answerReleaseReview.ts` 现在已经会对高 overlap 的可比句子执行 `claim_polarity_consistency`。 | 已实现基线 |
+| 英文显式正反反转必须触发改写 | `answerReleaseReview.test.ts` 现在固定了 `Water glass is not ...` 对上 grounded `Water glass is ...` 的用例。 | 已实现 |
+| 中文显式正反反转也必须触发改写 | `answerReleaseReview.test.ts` 现在固定了 `水杯不是...` 对上 grounded `水杯是...` 的用例。 | 已实现 |
+| support 中的无关否定句不能制造可避免的误报 | `answerReleaseReview.test.ts` 现在固定了一条 support 含 `Water glass is not plastic`，但主回答正确表述 `Water glass is a transparent container filled with water.` 的防误报用例。 | 已实现 |
+
+本切片验证：
+
+- `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc --noEmit`
+- `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/export/WorkspaceExportBundle.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/learning/KnowledgeWorkspaceConversationRegression.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc`
+- `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
+
 ## 2026-06-18 共享 alias/scope 回归语料与 soft-miss 恢复
 
 截图驱动的 `waterglass` 失败现在已经不再被当作一次性人工检查。项目已经有了共享的确定性回归语料 `src/learning/KnowledgeWorkspaceConversationRegression.ts`，而这批语料的重要性在于两点：

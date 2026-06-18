@@ -39,6 +39,19 @@ type StructuredFactConflict = {
     supportFacts: Array<StructuredFact & { label: string }>;
 };
 
+type SentencePolarity = 'positive' | 'negative';
+
+type PolaritySentence = {
+    surface: string;
+    polarity: SentencePolarity;
+    comparableFeatures: string[];
+};
+
+type PolaritySentenceConflict = {
+    answerSentence: PolaritySentence;
+    supportSentence: PolaritySentence & { label: string };
+};
+
 const INTERNAL_DIAGNOSTIC_FRAGMENTS = [
     'No scoped knowledge points matched',
     'retrieval_candidates_below_threshold',
@@ -121,6 +134,18 @@ const STRUCTURED_ANCHOR_STOPWORDS = new Set([
     '和',
     '的',
 ]);
+
+const POLARITY_SENTENCE_SPLIT_PATTERN = /[.!?\u3002\uFF01\uFF1F;\n\r]+/u;
+
+const ENGLISH_POLARITY_NEGATION_PATTERN = /\b(?:not|never|no|none|cannot|is not|are not|was not|were not|do not|does not|did not|can not|could not|should not|would not|will not)\b/i;
+const CHINESE_POLARITY_NEGATION_PATTERN = /不是|并非|并不|没有|不能|无法/u;
+
+const POLARITY_NEGATION_NORMALIZATION_RULES: Array<[RegExp, string]> = [
+    [/\b(can)(?:not|'t)\b/gi, '$1 not'],
+    [/\b(won)(?:'t)\b/gi, 'will not'],
+    [/\b(shan)(?:'t)\b/gi, 'shall not'],
+    [/\b([a-z]+)n['’]t\b/gi, '$1 not'],
+];
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -287,6 +312,73 @@ function buildSupportCandidates(
         }
     });
     return candidates;
+}
+
+function normalizePolaritySentenceSource(value: string): string {
+    return POLARITY_NEGATION_NORMALIZATION_RULES.reduce(
+        (current, [pattern, replacement]) => current.replace(pattern, replacement),
+        String(value || '')
+    );
+}
+
+function classifySentencePolarity(value: string): SentencePolarity {
+    const normalized = normalizePolaritySentenceSource(value)
+        .replace(/\bnot only\b/gi, ' only ')
+        .replace(/不仅仅?|不只是/gu, ' ');
+    if (
+        ENGLISH_POLARITY_NEGATION_PATTERN.test(normalized)
+        || CHINESE_POLARITY_NEGATION_PATTERN.test(normalized)
+    ) {
+        return 'negative';
+    }
+    return 'positive';
+}
+
+function buildPolarityComparableFeatures(value: string): string[] {
+    const normalized = normalizePolaritySentenceSource(value)
+        .replace(/\bnot only\b/gi, ' only ')
+        .replace(/不仅仅?|不只是/gu, ' ')
+        .replace(ENGLISH_POLARITY_NEGATION_PATTERN, ' ')
+        .replace(CHINESE_POLARITY_NEGATION_PATTERN, ' ');
+    return collectLexicalFeatures(normalized)
+        .map((feature) => String(feature || '').trim().toLowerCase())
+        .filter((feature) => feature.length >= 2)
+        .filter((feature) => !STRUCTURED_ANCHOR_STOPWORDS.has(feature));
+}
+
+function extractPolaritySentences(value: string): PolaritySentence[] {
+    return String(value || '')
+        .split(POLARITY_SENTENCE_SPLIT_PATTERN)
+        .map((sentence) => normalizeWhitespace(sentence))
+        .filter((sentence) => sentence.length >= 8)
+        .map((sentence) => ({
+            surface: sentence,
+            polarity: classifySentencePolarity(sentence),
+            comparableFeatures: buildPolarityComparableFeatures(sentence),
+        }))
+        .filter((sentence) => sentence.comparableFeatures.length >= 2);
+}
+
+function computePolarityFeatureOverlap(
+    answerSentence: PolaritySentence,
+    supportSentence: PolaritySentence
+): number {
+    if (answerSentence.comparableFeatures.length <= 0 || supportSentence.comparableFeatures.length <= 0) {
+        return 0;
+    }
+    const supportFeatureSet = new Set(supportSentence.comparableFeatures);
+    const overlapCount = answerSentence.comparableFeatures.filter((feature) => supportFeatureSet.has(feature)).length;
+    return Number((overlapCount / answerSentence.comparableFeatures.length).toFixed(4));
+}
+
+function buildPolarityConflictMessage(conflicts: PolaritySentenceConflict[]): string {
+    if (conflicts.length <= 0) {
+        return 'Draft answer stayed polarity-consistent with the grounded support that could be compared.';
+    }
+    const fragments = conflicts.slice(0, 2).map((conflict) => (
+        `"${conflict.answerSentence.surface}" conflicted with "${conflict.supportSentence.surface}" (${conflict.supportSentence.label})`
+    ));
+    return `Draft answer reversed the grounded polarity of comparable support: ${fragments.join('; ')}.`;
 }
 
 function collectLeakedInternalFragments(answer: string): string[] {
@@ -514,6 +606,60 @@ function evaluateStructuredConsistency(context: AnswerReleaseReviewContext): {
     };
 }
 
+function evaluatePolarityConsistency(context: AnswerReleaseReviewContext): {
+    passed: boolean;
+    comparableSentenceCount: number;
+    conflicts: PolaritySentenceConflict[];
+} {
+    const answerSentences = extractPolaritySentences(context.draftAnswer);
+    if (answerSentences.length <= 0) {
+        return {
+            passed: true,
+            comparableSentenceCount: 0,
+            conflicts: [],
+        };
+    }
+    const supportSentences = buildSupportCandidates(context).flatMap((candidate) => (
+        extractPolaritySentences(candidate.text).map((sentence) => ({
+            ...sentence,
+            label: candidate.label,
+        }))
+    ));
+    if (supportSentences.length <= 0) {
+        return {
+            passed: true,
+            comparableSentenceCount: 0,
+            conflicts: [],
+        };
+    }
+    const conflicts: PolaritySentenceConflict[] = [];
+    let comparableSentenceCount = 0;
+    answerSentences.forEach((answerSentence) => {
+        const comparableSupportSentences = supportSentences.filter((supportSentence) => (
+            computePolarityFeatureOverlap(answerSentence, supportSentence) >= 0.6
+        ));
+        if (comparableSupportSentences.length <= 0) {
+            return;
+        }
+        comparableSentenceCount += 1;
+        if (comparableSupportSentences.some((supportSentence) => supportSentence.polarity === answerSentence.polarity)) {
+            return;
+        }
+        const conflictingSupportSentence = comparableSupportSentences[0];
+        if (conflictingSupportSentence) {
+            conflicts.push({
+                answerSentence,
+                supportSentence: conflictingSupportSentence,
+            });
+        }
+    });
+    return {
+        passed: conflicts.length <= 0,
+        comparableSentenceCount,
+        conflicts,
+    };
+}
+
 function checkPublicSurfaceContraction(answer: string): boolean {
     const normalizedAnswer = String(answer || '');
     if (normalizeWhitespace(normalizedAnswer).length > 320) {
@@ -531,6 +677,7 @@ function buildDecision(
     groundedEvidenceAvailable: boolean,
     groundingAlignmentPassed: boolean,
     structuredConsistencyPassed: boolean,
+    polarityConsistencyPassed: boolean,
     leakedInternalFragments: string[],
     publicSurfaceContracted: boolean
 ): AnswerReleaseDecision {
@@ -540,6 +687,7 @@ function buildDecision(
     if (
         !groundingAlignmentPassed
         || !structuredConsistencyPassed
+        || !polarityConsistencyPassed
         || leakedInternalFragments.length > 0
         || !publicSurfaceContracted
     ) {
@@ -587,6 +735,16 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             comparableFactCount: 0,
             conflicts: [],
         };
+    const polarityConsistency = groundedEvidenceAvailable
+        ? evaluatePolarityConsistency({
+            ...context,
+            draftAnswer,
+        })
+        : {
+            passed: true,
+            comparableSentenceCount: 0,
+            conflicts: [],
+        };
     const publicSurfaceContracted = checkPublicSurfaceContraction(draftAnswer);
     const graphSupportCount = context.graphContext
         ? (
@@ -600,6 +758,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         groundedEvidenceAvailable,
         groundingAlignment.passed,
         structuredConsistency.passed,
+        polarityConsistency.passed,
         leakedInternalFragments,
         publicSurfaceContracted
     );
@@ -652,6 +811,17 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                         : 'No high-confidence structured fact comparison was available, so contradiction checking stayed conservative.'
                 )
                 : 'No evidence was available, so structured contradiction checking was not evaluated.',
+        },
+        {
+            gateId: 'claim_polarity_consistency',
+            passed: polarityConsistency.passed,
+            message: groundedEvidenceAvailable
+                ? (
+                    polarityConsistency.comparableSentenceCount > 0
+                        ? buildPolarityConflictMessage(polarityConsistency.conflicts)
+                        : 'No polarity-comparable support sentence was available, so contradiction checking stayed conservative.'
+                )
+                : 'No evidence was available, so polarity contradiction checking was not evaluated.',
         },
         {
             gateId: 'public_surface_contraction',

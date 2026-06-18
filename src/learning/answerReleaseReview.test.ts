@@ -274,4 +274,94 @@ describe('answerReleaseReview', () => {
         expect(review.failedGateIds).toContain('claim_structured_consistency');
         expect(review.publicAnswer).toBe('The Glass-Steagall Act was enacted in 1933.');
     });
+
+    test('revises grounded answers when draft polarity conflicts with cited support', () => {
+        const review = reviewAnswerRelease({
+            message: 'what is water glass',
+            draftAnswer: 'Water glass is not a transparent container filled with water.',
+            knowledgePoints: [makeKnowledgePoint()],
+            citations: [makeKnowledgePoint().citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T01:00:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_polarity_consistency');
+        expect(review.publicAnswer).toBe('Water glass is a transparent container filled with water.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_polarity_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('does not raise a polarity conflict when support includes an unrelated negative sentence', () => {
+        const point = makeKnowledgePoint({
+            summary: 'Water glass is not plastic. Water glass is a transparent container filled with water.',
+            evidenceSnippet: 'Water glass is not plastic. Water glass is a transparent container filled with water.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                snippet: 'Water glass is not plastic. Water glass is a transparent container filled with water.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    snippet: 'Water glass is not plastic. Water glass is a transparent container filled with water.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'what is water glass',
+            draftAnswer: 'Water glass is a transparent container filled with water.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T01:10:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('claim_polarity_consistency');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_polarity_consistency',
+                passed: true,
+            }),
+        ]));
+    });
+
+    test('revises grounded answers when Chinese polarity conflicts with cited support', () => {
+        const point = makeKnowledgePoint({
+            title: '水杯',
+            summary: '水杯是透明的盛水容器。',
+            evidenceSnippet: '水杯是透明的盛水容器。',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: '水杯',
+                snippet: '水杯是透明的盛水容器。',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: '水杯',
+                    snippet: '水杯是透明的盛水容器。',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: '什么是水杯',
+            draftAnswer: '水杯不是透明的盛水容器。',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T01:20:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_polarity_consistency');
+        expect(review.publicAnswer).toBe('水杯是透明的盛水容器。');
+    });
 });

@@ -22,7 +22,8 @@
 - [x] Drive both Jest and `scripts/verify-knowledge-workspace-runtime.js` from that same deterministic corpus so alias/scope expectations stay aligned across unit and runtime verification.
 - [x] Fix the soft-miss planner-scope-recovery bug in `KnowledgeLearningPlatform.ts`: recovery now also runs when noisy in-scope candidates survive reranking but none of them belong to planner title-hit documents.
 - [x] Extend the reviewer beyond lexical grounding overlap with a deterministic `claim_structured_consistency` gate for numeric/year contradictions, and cover it with false-positive-resistant unit cases.
-- [ ] Extend contradiction coverage beyond the current lexical + structured-fact gates into broader claim-vs-citation / claim-vs-evidence conflicts without raising false positives.
+- [x] Extend the reviewer beyond lexical + structured-fact overlap with a deterministic `claim_polarity_consistency` gate for explicit positive/negative claim reversals, and cover it with false-positive-resistant unit cases.
+- [ ] Extend contradiction coverage beyond the current lexical + structured-fact + polarity gates into broader claim-vs-citation / claim-vs-evidence conflicts without raising false positives.
 
 ### 2026-06-17 Agent Knowledge DAG TODO Reclassification
 

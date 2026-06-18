@@ -107,6 +107,49 @@ Verification for this slice:
 - `npm.cmd exec -- tsc`
 - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
 
+## 2026-06-19 Polarity Contradiction Gate
+
+The next contradiction gap after structured facts was still deterministic: a draft can keep the same topic words and even the same entity, but explicitly reverse the support by saying `is not` where the evidence says `is`.
+
+That gap is now partially closed in `src/learning/answerReleaseReview.ts` by `claim_polarity_consistency`.
+
+What is now true in code:
+
+- the reviewer now extracts comparable answer/support sentences and classifies a narrow positive/negative polarity signal:
+  - English negation paths such as `is not`, `do not`, `cannot`, and normalized contraction forms,
+  - narrow Chinese negation paths such as `不是`, `并非`, `没有`, `不能`, `无法`.
+- the gate is deliberately constrained:
+  - it only compares sentences whose feature overlap is high enough to suggest the same claim skeleton,
+  - if a comparable support sentence exists with the same polarity, it does not raise a conflict,
+  - unrelated negative wording in support does not count as a contradiction by itself.
+- the new gate is additive:
+  - `src/learning/types.ts` now includes `claim_polarity_consistency` in `AnswerReleaseGateId`,
+  - export and operator surfaces continue to work because they already consume gate IDs generically.
+- grounded drafts are now revised when they explicitly reverse supported polarity even though lexical alignment still passes.
+
+Why this matters:
+
+- lexical alignment catches topic drift,
+- structured consistency catches `same topic, wrong number/year`,
+- polarity consistency catches `same topic, same entity, but the claim was said backwards`.
+
+Code-vs-plan reconciliation:
+
+| Requirement | Current implementation evidence | Progress call |
+|---|---|---|
+| Reviewer contradiction coverage must include explicit positive/negative reversals | `answerReleaseReview.ts` now evaluates `claim_polarity_consistency` on high-overlap comparable sentences. | Implemented baseline |
+| English explicit polarity reversals must trigger revision | `answerReleaseReview.test.ts` now pins `Water glass is not ...` against grounded `Water glass is ...`. | Implemented |
+| Chinese explicit polarity reversals must also trigger revision | `answerReleaseReview.test.ts` now pins `水杯不是...` against grounded `水杯是...`. | Implemented |
+| Unrelated support negation must not create an avoidable false positive | `answerReleaseReview.test.ts` now pins a case where support includes `Water glass is not plastic` but the public answer correctly states `Water glass is a transparent container filled with water.` | Implemented |
+
+Verification for this slice:
+
+- `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc --noEmit`
+- `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/export/WorkspaceExportBundle.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/learning/KnowledgeWorkspaceConversationRegression.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc`
+- `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
+
 ## 2026-06-18 Shared Alias/Scope Regression Corpus and Soft-Miss Recovery
 
 The screenshot-backed `waterglass` failure is no longer treated as a one-off manual check. The project now has a shared deterministic regression corpus at `src/learning/KnowledgeWorkspaceConversationRegression.ts`, and the first corpus matters for two reasons:

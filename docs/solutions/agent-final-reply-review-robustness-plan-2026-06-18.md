@@ -122,6 +122,7 @@ The first fix restores evidence. The second fix restores robustness.
 | Empty-result answers must abstain cleanly instead of exposing runtime detail | Reviewer now downgrades unsupported drafts into concise abstentions. | Implemented |
 | Grounded drafts must stay aligned with their cited/knowledge-point support | Reviewer now enforces `claim_grounding_alignment` and revises drafts when lexical evidence overlap shows claim drift. | Implemented |
 | Grounded drafts must also be checked for deterministic structured fact conflicts | Reviewer now enforces `claim_structured_consistency`, revising grounded drafts when numeric or year facts conflict with support even though topical lexical overlap still passes. | Implemented baseline |
+| Grounded drafts must also be checked for explicit polarity reversals | Reviewer now enforces `claim_polarity_consistency`, revising grounded drafts when they say `is not` / `不是` against support that still affirms the same claim skeleton. | Implemented baseline |
 | Final review state must be inspectable by developers | `answerReleaseReview` is now stored additively on `AgentConversationResponse`, `AgentConversationTrace`, and `KnowledgeRun`. | Implemented |
 | Operator surfaces must expose reviewer state without widening the main answer area | `src/frontend/agent_workspace.js` sanitizes `answerReleaseReview`, and `src/frontend/workspace_panes.js` renders release-review detail/history inside `knowledge_run` cards. | Implemented |
 | Reviewer telemetry must survive export/replay surfaces | `src/export/WorkspaceExportBundle.ts` now emits compact `runtime.knowledgeRunReports[*].answerReleaseReview` summaries for durable replay and operator audit. | Implemented |
@@ -274,6 +275,29 @@ Attached additively to:
   - lexical alignment catches topic drift,
   - structured consistency catches `same topic, wrong number/year`.
 
+#### Phase-9 polarity contradiction hardening landed on top of the structured slice
+
+- `src/learning/answerReleaseReview.ts` now adds a third contradiction-oriented reviewer gate: `claim_polarity_consistency`.
+- This gate is also intentionally narrow:
+  - it does not try to infer general semantic opposition,
+  - it only compares answer/support sentences whose feature overlap is high enough to suggest the same claim skeleton.
+- The first supported contradiction family is explicit positive/negative reversal:
+  - English forms such as `is not`, `do not`, `cannot`, plus normalized contractions,
+  - narrow Chinese forms such as `不是`, `并非`, `没有`, `不能`, `无法`.
+- The gate is deliberately conservative for false-positive control:
+  - if there is no comparable support sentence, it does nothing,
+  - if support contains a comparable sentence with the same polarity, it does not raise a conflict,
+  - unrelated negative wording in support is not enough to trigger revision.
+- `src/learning/answerReleaseReview.test.ts` now pins three important behaviors:
+  - English polarity reversal forces `revise`,
+  - Chinese polarity reversal forces `revise`,
+  - unrelated negative support wording still `release`s cleanly.
+- This phase does not replace the earlier lexical or structured-fact gates.
+- The reviewer now covers three distinct contradiction classes:
+  - lexical alignment catches topic drift,
+  - structured consistency catches `same topic, wrong number/year`,
+  - polarity consistency catches `same topic, same entity, but the claim was said backwards`.
+
 ### Why the Earlier Framework Proposals Were Insufficient
 
 Reviewed references under `ref/`:
@@ -350,7 +374,7 @@ The first two decide capability. The third decides trust.
 
 ### Next Direction
 
-1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + structured-fact gates, but only where the new checks can stay deterministic enough to avoid false-positive churn.
+1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + structured-fact + polarity gates, but only where the new checks can stay deterministic enough to avoid false-positive churn.
 2. Keep expanding the corpus with real cross-scope, compact-alias, and synonym failures before widening reviewer policy again.
 3. Keep compare-ready drilldowns on the existing reviewer telemetry path and resist creating a second audit owner for richer operator slices.
 4. Continue owner reduction in `KnowledgeLearningPlatform.ts` and `agent_workspace.js` only where the new module owns real invariants.
@@ -475,6 +499,7 @@ The first two decide capability. The third decides trust.
 | 空结果回答必须 clean abstain，而不是暴露 runtime 细节 | reviewer 现在会把 unsupported draft 降级成简洁 abstention。 | 已实现 |
 | grounded draft 必须与 citation/knowledge-point 支撑保持一致 | reviewer 现在会执行 `claim_grounding_alignment`，在词法证据重叠不足时强制改写漂移主张。 | 已实现 |
 | grounded draft 还必须检查确定性的结构化事实冲突 | reviewer 现在会执行 `claim_structured_consistency`：即使 topical lexical overlap 仍然通过，只要数值或年份事实与支撑冲突，也会触发 revise。 | 已实现基线 |
+| grounded draft 还必须检查显式正反断言反转 | reviewer 现在会执行 `claim_polarity_consistency`：即使 topical lexical overlap 仍然通过，只要把 `is` / `不是` 这类断言方向明确说反，也会触发 revise。 | 已实现基线 |
 | 最终审核结果必须可供开发者检查 | `answerReleaseReview` 已加到 `AgentConversationResponse`、`AgentConversationTrace`、`KnowledgeRun`。 | 已实现 |
 | 运维表面必须能看到 reviewer 状态且不扩大主回答区 | `src/frontend/agent_workspace.js` 会净化 `answerReleaseReview`，`src/frontend/workspace_panes.js` 会在 `knowledge_run` 卡片中渲染 release-review 明细 / 历史。 | 已实现 |
 | reviewer 遥测必须能跨 export/replay 表面保留 | `src/export/WorkspaceExportBundle.ts` 现在会在 `runtime.knowledgeRunReports[*].answerReleaseReview` 中输出紧凑 reviewer 摘要，供离线回放与运维审计使用。 | 已实现 |
@@ -627,6 +652,29 @@ The first two decide capability. The third decides trust.
   - lexical alignment 负责抓 topic drift，
   - structured consistency 负责抓“主题没偏，但数字/年份错了”。
 
+#### 在结构化矛盾切片之上继续落地的 Phase-9 正反断言矛盾加固
+
+- `src/learning/answerReleaseReview.ts` 现在新增了第三个面向矛盾检测的 reviewer gate：`claim_polarity_consistency`。
+- 这个 gate 同样刻意保持窄口径：
+  - 它不会试图推断泛化语义对立；
+  - 它只比较 feature overlap 足够高、可视为“同一断言骨架”的 answer/support sentence。
+- 当前支持的第一批矛盾类型是显式正反断言反转：
+  - 英文形式，例如 `is not`、`do not`、`cannot`，以及归一化后的缩写形式；
+  - 中文形式，例如 `不是`、`并非`、`没有`、`不能`、`无法`。
+- 这个 gate 的保守性同样是刻意设计出来的：
+  - 如果没有可比 support sentence，它什么也不做；
+  - 如果存在 polarity 一致的可比 support sentence，它不会报冲突；
+  - support 里出现无关否定句，本身不足以触发 revise。
+- `src/learning/answerReleaseReview.test.ts` 现在已经固定了三类关键行为：
+  - 英文 polarity reversal 必须 `revise`；
+  - 中文 polarity reversal 必须 `revise`；
+  - 无关否定 support 仍然要 clean `release`。
+- 这个 Phase 也不替代之前的 lexical 或 structured-fact gate。
+- reviewer 现在覆盖三类互补的矛盾：
+  - lexical alignment 负责抓 topic drift，
+  - structured consistency 负责抓“主题没偏，但数字/年份错了”，
+  - polarity consistency 负责抓“主题没偏、实体没偏，但断言方向说反了”。
+
 ### 为什么先前那些框架方案不够
 
 已分析的 `ref/` 参考：
@@ -703,7 +751,7 @@ The first two decide capability. The third decides trust.
 
 ### 后续方向
 
-1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + structured-fact gate 之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
+1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + structured-fact + polarity gate 之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
 2. 继续把语料从当前 4 个用例扩展到更多真实 cross-scope、compact-alias 与同义表达失败案例，再决定是否继续扩大 reviewer policy。
 3. compare-ready drilldown 继续坚持复用现有 reviewer telemetry path，不再平行新增第二个 audit owner。
 4. 继续缩减 `KnowledgeLearningPlatform.ts` 与 `agent_workspace.js` 的 owner 压力，但前提仍然是“新模块拥有真实不变量”。
