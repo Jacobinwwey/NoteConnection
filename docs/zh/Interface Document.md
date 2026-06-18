@@ -100,7 +100,7 @@
 
 - `AnswerReleaseReview` 现在已经是一级运行时契约，而不是方案占位。
   - `AnswerReleaseDecision` 继续保持 `release` | `revise` | `abstain`。
-- 当前 gate 覆盖 `evidence_sufficiency`、`graph_support_sufficiency`、`claim_grounding_alignment`、`query_intent_alignment`、`claim_structured_consistency`、`claim_attribute_consistency`、`claim_containment_consistency`、`claim_subject_consistency`、`claim_state_consistency`、`claim_polarity_consistency`、`claim_graph_causal_consistency`、`claim_graph_order_consistency`、`claim_graph_comparison_consistency`、`public_surface_contraction`、`internal_diagnostic_leakage` 与 `abstention_hygiene`。
+- 当前 gate 覆盖 `evidence_sufficiency`、`graph_support_sufficiency`、`claim_grounding_alignment`、`query_intent_alignment`、`claim_structured_consistency`、`claim_attribute_consistency`、`claim_containment_consistency`、`claim_composition_consistency`、`claim_subject_consistency`、`claim_state_consistency`、`claim_polarity_consistency`、`claim_graph_causal_consistency`、`claim_graph_order_consistency`、`claim_graph_comparison_consistency`、`public_surface_contraction`、`internal_diagnostic_leakage` 与 `abstention_hygiene`。
 - `src/learning/conversationComposer.ts` 在对外暴露 public `answer` / `directAnswer` 之前，必须把 scoped draft answer、按文档聚合的 knowledge points、citations、resolved scope 与可选 graph context 一并送入 `reviewAnswerRelease(...)`。
 - `src/learning/KnowledgeLearningPlatform.ts`、workspace export 与前端 reply 渲染必须把 answer-release telemetry 视为 additive inspection material：
   - public answer text，

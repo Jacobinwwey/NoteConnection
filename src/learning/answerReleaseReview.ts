@@ -96,6 +96,25 @@ type ContainmentFrameConflict = {
     supportFrame: ContainmentFrame & { label: string };
 };
 
+type CompositionFramePart = {
+    surface: string;
+    features: string[];
+};
+
+type CompositionFrame = {
+    surface: string;
+    subject: string;
+    subjectFeatures: string[];
+    components: string;
+    componentFeatures: string[];
+    componentParts: CompositionFramePart[];
+};
+
+type CompositionFrameConflict = {
+    answerFrame: CompositionFrame;
+    supportFrame: CompositionFrame & { label: string };
+};
+
 type SentencePolarity = 'positive' | 'negative';
 
 type PolaritySentence = {
@@ -1084,6 +1103,13 @@ function buildContainmentFrameFeatures(value: string): string[] {
         .filter((feature) => !STRUCTURED_ANCHOR_STOPWORDS.has(feature));
 }
 
+function buildCompositionFrameFeatures(value: string): string[] {
+    return collectOrderedLexicalFeatures(value)
+        .map((feature) => String(feature || '').trim().toLowerCase())
+        .filter((feature) => feature.length >= 2)
+        .filter((feature) => !STRUCTURED_ANCHOR_STOPWORDS.has(feature));
+}
+
 function normalizeStateFrameSubject(value: string): string {
     return normalizeWhitespace(String(value || ''))
         .replace(/^(?:a|an|the)\s+/i, '')
@@ -1140,6 +1166,63 @@ function normalizeContainmentFrameObject(value: string): string {
         .replace(/(?:在|于).+$/u, '')
         .replace(/[,:;]+$/g, '')
         .trim();
+}
+
+function normalizeCompositionFrameSubject(value: string): string {
+    return normalizeWhitespace(String(value || ''))
+        .replace(/^(?:a|an|the)\s+/i, '')
+        .replace(/^(?:此处的|这里的|该|这个|這個)/u, '')
+        .replace(/[“”"'`]+/gu, '')
+        .replace(/[,:;]+$/g, '')
+        .trim();
+}
+
+function normalizeCompositionComponentPart(value: string): string {
+    return normalizeWhitespace(String(value || ''))
+        .replace(/^(?:a|an|the)\s+/i, '')
+        .replace(/^(?:一个|一种|一個|该|這個|这个)/u, '')
+        .replace(/[“”"'`]+/gu, '')
+        .replace(/[,:;]+$/g, '')
+        .trim();
+}
+
+function normalizeCompositionFrameComponents(value: string): string {
+    return normalizeWhitespace(String(value || ''))
+        .replace(/[“”"'`]+/gu, '')
+        .replace(/[,:;]+$/g, '')
+        .trim();
+}
+
+function splitCompositionFrameParts(value: string): CompositionFramePart[] {
+    const normalizedValue = normalizeCompositionFrameComponents(value);
+    if (!normalizedValue) {
+        return [];
+    }
+    const parts = normalizedValue
+        .split(/\s*(?:,|;|\band\b|\bplus\b|\bwith\b|以及|及|和|与|與|、)\s*/iu)
+        .map((part) => normalizeCompositionComponentPart(part))
+        .filter((part) => part.length > 0);
+    if (parts.length <= 0) {
+        return [];
+    }
+    const uniqueParts: CompositionFramePart[] = [];
+    const seen = new Set<string>();
+    parts.forEach((part) => {
+        const key = part.toLowerCase();
+        if (!key || seen.has(key)) {
+            return;
+        }
+        const features = buildCompositionFrameFeatures(part);
+        if (features.length <= 0) {
+            return;
+        }
+        seen.add(key);
+        uniqueParts.push({
+            surface: part,
+            features,
+        });
+    });
+    return uniqueParts;
 }
 
 function buildStateFrame(
@@ -1347,6 +1430,33 @@ function buildContainmentFrame(
     };
 }
 
+function buildCompositionFrame(
+    surface: string,
+    subject: string,
+    components: string
+): CompositionFrame | null {
+    const normalizedSurface = normalizeWhitespace(surface);
+    const normalizedSubject = normalizeCompositionFrameSubject(subject);
+    const normalizedComponents = normalizeCompositionFrameComponents(components);
+    if (!normalizedSurface || !normalizedSubject || !normalizedComponents) {
+        return null;
+    }
+    const subjectFeatures = buildCompositionFrameFeatures(normalizedSubject);
+    const componentFeatures = buildCompositionFrameFeatures(normalizedComponents);
+    const componentParts = splitCompositionFrameParts(normalizedComponents);
+    if (subjectFeatures.length <= 0 || componentFeatures.length <= 0 || componentParts.length <= 0) {
+        return null;
+    }
+    return {
+        surface: normalizedSurface,
+        subject: normalizedSubject,
+        subjectFeatures,
+        components: normalizedComponents,
+        componentFeatures,
+        componentParts,
+    };
+}
+
 function extractContainmentFrames(value: string): ContainmentFrame[] {
     const patterns: RegExp[] = [
         /^(.{1,80}?)\s+contains?\s+(.+)$/iu,
@@ -1364,6 +1474,37 @@ function extractContainmentFrames(value: string): ContainmentFrame[] {
                     continue;
                 }
                 const frame = buildContainmentFrame(
+                    sentence,
+                    String(match[1] || ''),
+                    String(match[2] || '')
+                );
+                return frame ? [frame] : [];
+            }
+            return [];
+        });
+}
+
+function extractCompositionFrames(value: string): CompositionFrame[] {
+    const patterns: RegExp[] = [
+        /^(.{1,80}?)\s+consists?\s+of\s+(.+)$/iu,
+        /^(.{1,80}?)\s+(?:is|are|was|were)\s+composed\s+of\s+(.+)$/iu,
+        /^(.{1,80}?)\s+(?:is|are|was|were)\s+made\s+of\s+(.+)$/iu,
+        /^(.{1,80}?)\s+(?:is|are|was|were)\s+.+?\bcomposed\s+of\s+(.+)$/iu,
+        /^(.{1,80}?)\s+(?:is|are|was|were)\s+.+?\bmade\s+of\s+(.+)$/iu,
+        /^(.{1,24}?)(?:是)?由(.+?)(?:组成|构成|構成)(?:的.+)?$/u,
+        /^(.{1,24}?)(?:被定义为|定义为|被定義為|定義為).+?由(.+?)(?:组成|构成|構成)(?:的.+)?$/u,
+    ];
+    return String(value || '')
+        .split(POLARITY_SENTENCE_SPLIT_PATTERN)
+        .map((sentence) => normalizeWhitespace(sentence))
+        .filter((sentence) => sentence.length >= 8 || (containsCjk(sentence) && sentence.length >= 5))
+        .flatMap((sentence) => {
+            for (const pattern of patterns) {
+                const match = sentence.match(pattern);
+                if (!match) {
+                    continue;
+                }
+                const frame = buildCompositionFrame(
                     sentence,
                     String(match[1] || ''),
                     String(match[2] || '')
@@ -1522,6 +1663,98 @@ function buildContainmentConflictMessage(conflicts: ContainmentFrameConflict[]):
         `"${conflict.answerFrame.surface}" conflicted with "${conflict.supportFrame.surface}" (${conflict.supportFrame.label})`
     ));
     return `Draft answer contradicted comparable grounded containment relations: ${fragments.join('; ')}.`;
+}
+
+function compositionFrameSubjectsComparable(
+    answerFrame: CompositionFrame,
+    supportFrame: CompositionFrame
+): boolean {
+    const normalizedAnswerSubject = normalizeWhitespace(answerFrame.subject).toLowerCase();
+    const normalizedSupportSubject = normalizeWhitespace(supportFrame.subject).toLowerCase();
+    if (!normalizedAnswerSubject || !normalizedSupportSubject) {
+        return false;
+    }
+    if (
+        normalizedAnswerSubject.includes(normalizedSupportSubject)
+        || normalizedSupportSubject.includes(normalizedAnswerSubject)
+    ) {
+        return true;
+    }
+    return computeFeatureOverlapRatio(answerFrame.subjectFeatures, supportFrame.subjectFeatures) >= 0.6;
+}
+
+function compositionFramePartsEquivalent(
+    answerPart: CompositionFramePart,
+    supportPart: CompositionFramePart
+): boolean {
+    const normalizedAnswerPart = normalizeWhitespace(answerPart.surface).toLowerCase();
+    const normalizedSupportPart = normalizeWhitespace(supportPart.surface).toLowerCase();
+    if (!normalizedAnswerPart || !normalizedSupportPart) {
+        return false;
+    }
+    if (
+        normalizedAnswerPart === normalizedSupportPart
+        || normalizedAnswerPart.includes(normalizedSupportPart)
+        || normalizedSupportPart.includes(normalizedAnswerPart)
+    ) {
+        return true;
+    }
+    return (
+        computeFeatureOverlapRatio(answerPart.features, supportPart.features) >= 0.75
+        || computeFeatureOverlapRatio(supportPart.features, answerPart.features) >= 0.75
+        || computeFeatureJaccard(answerPart.features, supportPart.features) >= 0.75
+    );
+}
+
+function compositionFramePartsCovered(
+    sourceParts: CompositionFramePart[],
+    targetParts: CompositionFramePart[]
+): boolean {
+    if (sourceParts.length <= 0 || targetParts.length <= 0) {
+        return false;
+    }
+    return sourceParts.every((sourcePart) => (
+        targetParts.some((targetPart) => compositionFramePartsEquivalent(sourcePart, targetPart))
+    ));
+}
+
+function compositionFrameComponentsEquivalent(
+    answerFrame: CompositionFrame,
+    supportFrame: CompositionFrame
+): boolean {
+    const normalizedAnswerComponents = normalizeWhitespace(answerFrame.components).toLowerCase();
+    const normalizedSupportComponents = normalizeWhitespace(supportFrame.components).toLowerCase();
+    if (!normalizedAnswerComponents || !normalizedSupportComponents) {
+        return false;
+    }
+    if (normalizedAnswerComponents === normalizedSupportComponents) {
+        return true;
+    }
+    return (
+        compositionFramePartsCovered(answerFrame.componentParts, supportFrame.componentParts)
+        && compositionFramePartsCovered(supportFrame.componentParts, answerFrame.componentParts)
+    );
+}
+
+function compositionFrameComponentOverlap(
+    answerFrame: CompositionFrame,
+    supportFrame: CompositionFrame
+): number {
+    return Math.max(
+        computeFeatureOverlapRatio(answerFrame.componentFeatures, supportFrame.componentFeatures),
+        computeFeatureOverlapRatio(supportFrame.componentFeatures, answerFrame.componentFeatures),
+        computeFeatureJaccard(answerFrame.componentFeatures, supportFrame.componentFeatures)
+    );
+}
+
+function buildCompositionConflictMessage(conflicts: CompositionFrameConflict[]): string {
+    if (conflicts.length <= 0) {
+        return 'Draft answer stayed composition-consistent with the grounded support that could be compared.';
+    }
+    const fragments = conflicts.slice(0, 2).map((conflict) => (
+        `"${conflict.answerFrame.surface}" conflicted with "${conflict.supportFrame.surface}" (${conflict.supportFrame.label})`
+    ));
+    return `Draft answer contradicted comparable grounded composition claims: ${fragments.join('; ')}.`;
 }
 
 function stateFrameSubjectsComparable(answerFrame: StateFrame, supportFrame: StateFrame): boolean {
@@ -2004,6 +2237,62 @@ function evaluateContainmentConsistency(context: AnswerReleaseReviewContext): {
     };
 }
 
+function evaluateCompositionConsistency(context: AnswerReleaseReviewContext): {
+    passed: boolean;
+    comparableFrameCount: number;
+    conflicts: CompositionFrameConflict[];
+} {
+    const answerFrames = extractCompositionFrames(context.draftAnswer);
+    if (answerFrames.length <= 0) {
+        return {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
+    }
+    const supportFrames = buildSupportCandidates(context).flatMap((candidate) => (
+        extractCompositionFrames(candidate.text).map((frame) => ({
+            ...frame,
+            label: candidate.label,
+        }))
+    ));
+    if (supportFrames.length <= 0) {
+        return {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
+    }
+    const conflicts: CompositionFrameConflict[] = [];
+    let comparableFrameCount = 0;
+    answerFrames.forEach((answerFrame) => {
+        const comparableSupportFrames = supportFrames.filter((supportFrame) => (
+            compositionFrameSubjectsComparable(answerFrame, supportFrame)
+        ));
+        if (comparableSupportFrames.length <= 0) {
+            return;
+        }
+        comparableFrameCount += 1;
+        if (comparableSupportFrames.some((supportFrame) => compositionFrameComponentsEquivalent(answerFrame, supportFrame))) {
+            return;
+        }
+        conflicts.push({
+            answerFrame,
+            supportFrame: comparableSupportFrames
+                .slice()
+                .sort((left, right) => (
+                    compositionFrameComponentOverlap(answerFrame, right)
+                    - compositionFrameComponentOverlap(answerFrame, left)
+                ))[0],
+        });
+    });
+    return {
+        passed: conflicts.length <= 0,
+        comparableFrameCount,
+        conflicts: conflicts.filter((conflict) => Boolean(conflict.supportFrame)),
+    };
+}
+
 function evaluateStateConsistency(context: AnswerReleaseReviewContext): {
     passed: boolean;
     comparableFrameCount: number;
@@ -2272,6 +2561,7 @@ function buildDecision(
     structuredConsistencyPassed: boolean,
     attributeConsistencyPassed: boolean,
     containmentConsistencyPassed: boolean,
+    compositionConsistencyPassed: boolean,
     subjectConsistencyPassed: boolean,
     stateConsistencyPassed: boolean,
     polarityConsistencyPassed: boolean,
@@ -2290,6 +2580,7 @@ function buildDecision(
         || !structuredConsistencyPassed
         || !attributeConsistencyPassed
         || !containmentConsistencyPassed
+        || !compositionConsistencyPassed
         || !subjectConsistencyPassed
         || !stateConsistencyPassed
         || !polarityConsistencyPassed
@@ -2374,6 +2665,16 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             comparableFrameCount: 0,
             conflicts: [],
         };
+    const compositionConsistency = groundedEvidenceAvailable
+        ? evaluateCompositionConsistency({
+            ...context,
+            draftAnswer,
+        })
+        : {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
     const subjectConsistency = groundedEvidenceAvailable
         ? evaluateSubjectConsistency({
             ...context,
@@ -2450,6 +2751,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         structuredConsistency.passed,
         attributeConsistency.passed,
         containmentConsistency.passed,
+        compositionConsistency.passed,
         subjectConsistency.passed,
         stateConsistency.passed,
         polarityConsistency.passed,
@@ -2560,6 +2862,17 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                         : 'No comparable containment relation was available, so containment contradiction checking stayed conservative.'
                 )
                 : 'No evidence was available, so containment contradiction checking was not evaluated.',
+        },
+        {
+            gateId: 'claim_composition_consistency',
+            passed: compositionConsistency.passed,
+            message: groundedEvidenceAvailable
+                ? (
+                    compositionConsistency.comparableFrameCount > 0
+                        ? buildCompositionConflictMessage(compositionConsistency.conflicts)
+                        : 'No comparable composition frame was available, so composition contradiction checking stayed conservative.'
+                )
+                : 'No evidence was available, so composition contradiction checking was not evaluated.',
         },
         {
             gateId: 'claim_subject_consistency',

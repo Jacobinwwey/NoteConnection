@@ -775,6 +775,122 @@ describe('answerReleaseReview', () => {
         ]));
     });
 
+    test('revises grounded answers when composition claims conflict with cited support', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass Composition',
+            summary: 'Water glass is composed of water and a transparent glass cup.',
+            evidenceSnippet: 'Water glass is composed of water and a transparent glass cup.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Glass Composition',
+                snippet: 'Water glass is composed of water and a transparent glass cup.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Water Glass Composition',
+                    snippet: 'Water glass is composed of water and a transparent glass cup.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'what is water glass made of',
+            draftAnswer: 'Water glass is composed of oil and a plastic cup.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T04:00:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_composition_consistency');
+        expect(review.publicAnswer).toBe('Water Glass Composition: Water glass is composed of water and a transparent glass cup.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_composition_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('revises grounded answers when Chinese composition claims conflict with cited support', () => {
+        const point = makeKnowledgePoint({
+            title: '水杯组成',
+            summary: '水杯由水和玻璃杯组成。',
+            evidenceSnippet: '水杯由水和玻璃杯组成。',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: '水杯组成',
+                snippet: '水杯由水和玻璃杯组成。',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: '水杯组成',
+                    snippet: '水杯由水和玻璃杯组成。',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: '水杯由什么组成？',
+            draftAnswer: '水杯由机油和塑料杯组成。',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T04:05:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_composition_consistency');
+        expect(review.publicAnswer).toBe('水杯组成: 水杯由水和玻璃杯组成。');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_composition_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('does not raise a composition conflict when the draft keeps the supported components in a compatible order', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass Composition',
+            summary: 'Water glass consists of water and a transparent glass cup.',
+            evidenceSnippet: 'Water glass consists of water and a transparent glass cup.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Glass Composition',
+                snippet: 'Water glass consists of water and a transparent glass cup.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Water Glass Composition',
+                    snippet: 'Water glass consists of water and a transparent glass cup.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'what is water glass composed of',
+            draftAnswer: 'Water glass is composed of a glass cup and water.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T04:10:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('claim_composition_consistency');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_composition_consistency',
+                passed: true,
+            }),
+        ]));
+    });
+
     test('revises grounded answers when same-subject state conflicts with cited support', () => {
         const point = makeKnowledgePoint({
             title: 'Water Glass Thermodynamics',
