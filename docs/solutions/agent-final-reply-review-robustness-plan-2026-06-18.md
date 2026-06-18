@@ -123,6 +123,7 @@ The first fix restores evidence. The second fix restores robustness.
 | Grounded drafts must stay aligned with their cited/knowledge-point support | Reviewer now enforces `claim_grounding_alignment` and revises drafts when lexical evidence overlap shows claim drift. | Implemented |
 | Final review state must be inspectable by developers | `answerReleaseReview` is now stored additively on `AgentConversationResponse`, `AgentConversationTrace`, and `KnowledgeRun`. | Implemented |
 | Operator surfaces must expose reviewer state without widening the main answer area | `src/frontend/agent_workspace.js` sanitizes `answerReleaseReview`, and `src/frontend/workspace_panes.js` renders release-review detail/history inside `knowledge_run` cards. | Implemented |
+| Reviewer telemetry must survive export/replay surfaces | `src/export/WorkspaceExportBundle.ts` now emits compact `runtime.knowledgeRunReports[*].answerReleaseReview` summaries for durable replay and operator audit. | Implemented |
 | Screenshot-backed `waterglass` case must become a formal acceptance requirement | `scripts/verify-knowledge-workspace-runtime.js` now requires `answerReleaseReview`, rejects empty-scope debug text in the public answer, and verifies `publicAnswer === result.answer`. | Implemented |
 | DAG structure must inform the answer before release review | Existing `graphContextAssembler.ts` remains the structure source; the new review layer consumes that output instead of replacing it. | Preserved |
 | Backward compatibility must remain explicit | `assistantMessage`, `answer`, `assistantBlocks`, and existing clients remain valid; `answerReleaseReview` is additive. | Preserved |
@@ -172,6 +173,16 @@ Attached additively to:
 - Scoped Chinese misses now produce Chinese abstentions instead of leaking English diagnostic-heavy fallback text. This matters because the screenshot-backed `waterglass` regression came from a Chinese query path.
 - Operator inspection now exposes reviewer state in `knowledge_run` detail/history cards through sanitized `answerReleaseReview` payloads. The public answer area stays contracted; the richer release decision moves to developer/operator surfaces instead.
 - The user-provided screenshot evidence (`1781782257390.jpg`) is now treated as a formal acceptance case through the `waterglass` runtime verifier, not as an informal anecdote.
+
+#### Phase-3 export/audit hardening landed on top of the operator-surface slice
+
+- `WorkspaceExportBundle.ts` now projects a compact reviewer summary into `runtime.knowledgeRunReports[*].answerReleaseReview`.
+- That summary intentionally stays narrow: `reviewedAt`, `decision`, `revised`, `failedGateIds`, `leakedInternalFragmentCount`, and `reason`.
+- The export report does not duplicate full original/public answer text into the compare-ready summary surface. Those heavier details remain available in workflow artifacts and conversation traces for deeper developer inspection.
+- `WorkspaceExportBundle.test.ts` now covers three states explicitly:
+  - `release` summary export,
+  - `revise` summary export with payload-level fallback,
+  - backward-compatible omission when review data is absent.
 
 ### Why the Earlier Framework Proposals Were Insufficient
 
@@ -250,7 +261,7 @@ The first two decide capability. The third decides trust.
 ### Next Direction
 
 1. Add deeper contradiction checks beyond the current lexical grounding alignment, but only after building an explicit regression corpus for false-positive control.
-2. Extend reviewer summaries from current `knowledge_run` inspection into export summaries and longer-horizon operator audits.
+2. Build longer-horizon operator audits on top of the new exported reviewer summaries instead of adding another parallel telemetry path.
 3. Expand regression corpus beyond `waterglass` using real alias/scope failures.
 4. Continue owner reduction in `KnowledgeLearningPlatform.ts` and `agent_workspace.js` only where the new module owns real invariants.
 
@@ -375,6 +386,7 @@ The first two decide capability. The third decides trust.
 | grounded draft 必须与 citation/knowledge-point 支撑保持一致 | reviewer 现在会执行 `claim_grounding_alignment`，在词法证据重叠不足时强制改写漂移主张。 | 已实现 |
 | 最终审核结果必须可供开发者检查 | `answerReleaseReview` 已加到 `AgentConversationResponse`、`AgentConversationTrace`、`KnowledgeRun`。 | 已实现 |
 | 运维表面必须能看到 reviewer 状态且不扩大主回答区 | `src/frontend/agent_workspace.js` 会净化 `answerReleaseReview`，`src/frontend/workspace_panes.js` 会在 `knowledge_run` 卡片中渲染 release-review 明细 / 历史。 | 已实现 |
+| reviewer 遥测必须能跨 export/replay 表面保留 | `src/export/WorkspaceExportBundle.ts` 现在会在 `runtime.knowledgeRunReports[*].answerReleaseReview` 中输出紧凑 reviewer 摘要，供离线回放与运维审计使用。 | 已实现 |
 | `waterglass` 截图必须成为正式验收项 | `scripts/verify-knowledge-workspace-runtime.js` 现在要求 reviewer 存在、拒绝公开回答中的 empty-scope debug 文本，并校验 `publicAnswer === result.answer`。 | 已实现 |
 | DAG 结构必须在 review 前参与回答构建 | 现有 `graphContextAssembler.ts` 继续提供结构化证据，新 reviewer 只消费结果，不替代 DAG owner。 | 已保持 |
 | 向前兼容必须显式 | `assistantMessage`、`answer`、`assistantBlocks` 和现有 client 都不破；`answerReleaseReview` 是 additive 字段。 | 已保持 |
@@ -424,6 +436,16 @@ The first two decide capability. The third decides trust.
 - 中文 scoped miss 现在会返回中文 abstention，而不是退化成 English diagnostic-heavy fallback。这个细节重要，因为截图驱动的 `waterglass` 回归本身就来自中文提问路径。
 - 运维检查面现在已经能通过净化后的 `answerReleaseReview` 在 `knowledge_run` 明细 / 历史卡片中查看 reviewer 状态。主回答区继续保持收缩， richer release decision 进入 developer/operator surface。
 - 用户提供的截图证据（`1781782257390.jpg`）现在已经被提升为正式验收用例，而不再只是口头描述：`waterglass` 运行时 verifier 会对这条回归路径做强制校验。
+
+#### 在运维检查面之后继续落地的 Phase-3 export/audit 加固
+
+- `WorkspaceExportBundle.ts` 现在会把紧凑 reviewer 摘要投影到 `runtime.knowledgeRunReports[*].answerReleaseReview`。
+- 这个摘要有意保持窄口径：只保留 `reviewedAt`、`decision`、`revised`、`failedGateIds`、`leakedInternalFragmentCount` 与 `reason`。
+- export report 不会把完整 original/public answer 文本重复塞进 compare-ready summary surface；这些较重细节仍保留在 workflow artifact 与 conversation trace 中供开发者深查。
+- `WorkspaceExportBundle.test.ts` 现在显式覆盖三种状态：
+  - `release` 摘要导出，
+  - 带 payload-level fallback 的 `revise` 摘要导出，
+  - review 数据缺失时的向前兼容省略行为。
 
 ### 为什么先前那些框架方案不够
 
@@ -502,7 +524,7 @@ The first two decide capability. The third decides trust.
 ### 后续方向
 
 1. 在显式回归语料具备之前，不扩大 gate 列表；先把当前 lexical grounding alignment 之外的更深矛盾检测建立在可控 false-positive 语料上。
-2. 把 reviewer 摘要从当前 `knowledge_run` 检查面继续扩展到 export summary 与更长周期的运维审计。
+2. 以当前已经导出的 reviewer summary 为底座，继续建设更长周期的运维审计，而不是再平行新增一条 telemetry 路径。
 3. 把 alias/scope 回归语料从 `waterglass` 扩到更多真实失败案例。
 4. 继续缩减 `KnowledgeLearningPlatform.ts` 与 `agent_workspace.js` 的 owner 压力，但前提仍然是“新模块拥有真实不变量”。
 

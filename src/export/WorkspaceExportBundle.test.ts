@@ -465,6 +465,17 @@ describe('WorkspaceExportBundle', () => {
                     sourceProjectionIds: ['projection_absorption'],
                     summary: 'Generated 2 evidence claim(s) and 1 review card(s) with status caution.',
                     payload: {
+                        answerReleaseReview: {
+                            reviewedAt: '2026-05-27T00:00:00.000Z',
+                            decision: 'revise',
+                            revised: true,
+                            originalAnswer: 'No scoped knowledge points matched "Absorption".',
+                            publicAnswer: 'Absorption: optical energy is attenuated inside the material.',
+                            reason: 'Draft answer had usable evidence but required contraction before public release.',
+                            failedGateIds: ['claim_grounding_alignment', 'internal_diagnostic_leakage'],
+                            leakedInternalFragments: ['No scoped knowledge points matched'],
+                            gates: [],
+                        },
                         knowledgeRun: {
                             runId: 'knowledge_run_2',
                             generatedAt: '2026-05-27T00:00:00.000Z',
@@ -567,6 +578,17 @@ describe('WorkspaceExportBundle', () => {
                                 completedReviewCardCount: 0,
                                 remainingReviewCardCount: 1,
                             },
+                            answerReleaseReview: {
+                                reviewedAt: '2026-05-28T00:00:00.000Z',
+                                decision: 'release',
+                                revised: false,
+                                originalAnswer: 'Reflection redirects optical energy.',
+                                publicAnswer: 'Reflection redirects optical energy.',
+                                reason: 'Draft answer satisfied the public-release gates.',
+                                failedGateIds: [],
+                                leakedInternalFragments: [],
+                                gates: [],
+                            },
                         },
                         graphContext: {
                             anchorAtomId: 'atom_reflection',
@@ -633,6 +655,14 @@ describe('WorkspaceExportBundle', () => {
                 runId: 'knowledge_run_1',
                 qualityStatus: 'pass',
                 qualityScore: 100,
+                answerReleaseReview: expect.objectContaining({
+                    reviewedAt: '2026-05-28T00:00:00.000Z',
+                    decision: 'release',
+                    revised: false,
+                    failedGateIds: [],
+                    leakedInternalFragmentCount: 0,
+                    reason: 'Draft answer satisfied the public-release gates.',
+                }),
                 graphSignal: expect.objectContaining({
                     graphOpsAvailable: true,
                     usedFallback: false,
@@ -646,6 +676,14 @@ describe('WorkspaceExportBundle', () => {
                 runId: 'knowledge_run_2',
                 qualityStatus: 'caution',
                 qualityScore: 72,
+                answerReleaseReview: expect.objectContaining({
+                    reviewedAt: '2026-05-27T00:00:00.000Z',
+                    decision: 'revise',
+                    revised: true,
+                    failedGateIds: ['claim_grounding_alignment', 'internal_diagnostic_leakage'],
+                    leakedInternalFragmentCount: 1,
+                    reason: 'Draft answer had usable evidence but required contraction before public release.',
+                }),
                 graphSignal: expect.objectContaining({
                     graphOpsAvailable: false,
                     usedFallback: true,
@@ -655,6 +693,132 @@ describe('WorkspaceExportBundle', () => {
                 }),
             }),
         ]);
+    });
+
+    test('keeps knowledge-run export reports backward-compatible when answer release review is absent', () => {
+        const bundle = buildWorkspaceExportBundle({
+            request: {
+                workspaceId: 'optics',
+                exportProfileId: 'mobile-slim',
+            },
+            workspace: {
+                workspaceId: 'optics',
+                corpusId: 'optics',
+                name: 'optics',
+                sourcePathPrefix: 'knowledge_base/optics',
+                languages: ['zh', 'en'],
+                exportProfileId: 'mobile-slim',
+                status: 'active',
+                createdAt: '2026-05-28T00:00:00.000Z',
+                updatedAt: '2026-05-28T00:00:00.000Z',
+            },
+            bindings: [],
+            resources: [],
+            projections: [],
+            indexSummary: {
+                totalUnits: 0,
+                totalSegments: 0,
+                states: {
+                    pending: 0,
+                    indexing: 0,
+                    indexed: 0,
+                    failed: 0,
+                    disabled: 0,
+                },
+                activeDocuments: 0,
+                activeAtomUnits: 0,
+            },
+            units: [],
+            segments: [],
+            atoms: [],
+            evidenceSpans: [],
+            relationEdges: [],
+            temporalEdges: [],
+            sessionStates: [],
+            conversationSessions: [],
+            conversationTurns: [],
+            conversationInvocations: [],
+            workflowArtifacts: [
+                {
+                    artifactId: 'workflow_artifact_knowledge_run_without_review',
+                    kind: 'knowledge_run',
+                    sessionId: 'session_knowledge_run_without_review',
+                    userId: 'user_optics',
+                    workspaceId: 'optics',
+                    corpusId: 'optics',
+                    title: 'Knowledge run: No review',
+                    sourceResourceIds: [],
+                    sourceProjectionIds: [],
+                    summary: 'Generated 1 evidence claim(s) with legacy payload shape.',
+                    payload: {
+                        knowledgeRun: {
+                            runId: 'knowledge_run_without_review',
+                            generatedAt: '2026-05-28T00:00:00.000Z',
+                            status: 'pass',
+                            scope: {
+                                source: 'scoped',
+                                workspaceId: 'optics',
+                                corpusId: 'optics',
+                                documentIds: [],
+                                atomIds: [],
+                                sourcePathPrefixes: ['Knowledge_Base/optics'],
+                                languages: ['en'],
+                                matchedAtomCount: 1,
+                                scopeSource: 'explicit_request',
+                            },
+                            quality: {
+                                score: 90,
+                                status: 'pass',
+                                gates: [],
+                            },
+                            summary: {
+                                claimCount: 1,
+                                weakClaimCount: 0,
+                                reviewCardCount: 0,
+                                completedReviewCardCount: 0,
+                                remainingReviewCardCount: 0,
+                            },
+                        },
+                        graphContext: {
+                            diagnostics: {
+                                graphOpsAvailable: true,
+                                usedFallback: false,
+                                selectedAnchorReason: 'title_mention',
+                                supportNodeCount: 0,
+                                supportNodeLimit: 0,
+                                pathDepthLimit: 0,
+                                missingConnectionPathSourceAtomIds: [],
+                                missingPredecessorAtomIds: [],
+                                missingSuccessorAtomIds: [],
+                            },
+                            temporalValidity: {
+                                checkedAt: '2026-05-28T00:00:00.000Z',
+                                allPointsValid: true,
+                                warningReasons: [],
+                                invalidKnowledgePointTitles: [],
+                            },
+                        },
+                    },
+                    status: 'active',
+                    createdAt: '2026-05-28T00:00:00.000Z',
+                    updatedAt: '2026-05-28T00:00:00.000Z',
+                },
+            ],
+            memoryEntries: [],
+            memoryAuditRecords: [],
+            generatedAt: '2026-05-28T00:00:00.000Z',
+        });
+
+        expect((bundle.runtime as any).knowledgeRunReports).toHaveLength(1);
+        expect((bundle.runtime as any).knowledgeRunReports[0]).toEqual(
+            expect.objectContaining({
+                artifactId: 'workflow_artifact_knowledge_run_without_review',
+                runId: 'knowledge_run_without_review',
+                qualityStatus: 'pass',
+                qualityScore: 90,
+            })
+        );
+        expect(Object.prototype.hasOwnProperty.call((bundle.runtime as any).knowledgeRunReports[0], 'answerReleaseReview')).toBe(false);
     });
 
     test('derives graph-focus reports from session-state panel diagnostics', () => {

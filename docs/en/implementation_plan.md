@@ -19,13 +19,14 @@ Add a deterministic final-answer release-review layer between answer synthesis a
 - Cross-language abstention hygiene is now explicit: scoped Chinese misses no longer fall back to English diagnostic-heavy abstentions.
 - `KnowledgeLearningPlatform.ts` now persists the review decision into response payloads, traces, and workflow artifacts.
 - Operator-facing inspection now surfaces reviewer state without widening the public answer area: `src/frontend/agent_workspace.js` maps sanitized `answerReleaseReview` payloads, and `src/frontend/workspace_panes.js` renders release-review details in `knowledge_run` detail/history cards.
+- `WorkspaceExportBundle.ts` now projects compact reviewer summaries into `runtime.knowledgeRunReports[*].answerReleaseReview`, so export/replay surfaces can audit release decisions without duplicating full answer text.
 - `scripts/verify-knowledge-workspace-runtime.js` now treats reviewer presence and public-answer hygiene as runtime acceptance gates for the screenshot-backed `waterglass` case.
 
 #### Next execution order
 
 1. Keep the reviewer deterministic and narrowly scoped to release invariants; do not let prompt templates reclaim ownership of release policy.
 2. Broaden contradiction coverage beyond the current lexical grounding check only after explicit regression corpora exist for false-positive control.
-3. Extend reviewer telemetry from current `knowledge_run` detail/history panes into export summaries and longer-horizon operator audits.
+3. Build longer-horizon operator audits on top of the new exported reviewer summaries instead of adding another parallel telemetry surface.
 4. Extend the alias/scope regression corpus beyond `waterglass`.
 5. Continue owner reduction only when the new owner hides real decisions or invariants.
 
@@ -34,8 +35,9 @@ Add a deterministic final-answer release-review layer between answer synthesis a
 1. Unsupported draft answers do not leak internal diagnostics such as `No scoped knowledge points matched` or `retrieval_candidates_below_threshold` into the public answer.
 2. `AgentConversationResponse`, trace, and `KnowledgeRun` all retain additive `answerReleaseReview` state.
 3. Operator inspection surfaces render reviewer decision, failed gates, and original/public answer deltas without widening the primary answer area.
-4. `npm run verify:knowledge-workspace:runtime` passes the `waterglass` compact/spaced matrix and confirms reviewer/public-answer parity.
-5. Existing `assistantMessage`, `answer`, `assistantBlocks`, and downstream clients remain backward-compatible.
+4. Workspace export knowledge-run reports carry compact reviewer summaries for `release` / `revise` flows and stay backward-compatible when review data is absent.
+5. `npm run verify:knowledge-workspace:runtime` passes the `waterglass` compact/spaced matrix and confirms reviewer/public-answer parity.
+6. Existing `assistantMessage`, `answer`, `assistantBlocks`, and downstream clients remain backward-compatible.
 
 ### 2026-06-17 Agent Knowledge DAG Implementation Plan
 

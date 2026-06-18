@@ -4,6 +4,7 @@ import { resolveRenderMaterializationDecision } from '../platform/RenderMaterial
 import type {
     WorkspaceExportBundle,
     WorkspaceExportGraphFocusReport,
+    WorkspaceExportKnowledgeRunAnswerReleaseReviewReport,
     WorkspaceExportKnowledgeRunReport,
     WorkspaceExportBundleRequest,
     WorkspaceScopedMemoryExportRecord,
@@ -369,6 +370,38 @@ function normalizeStringArray(value: unknown): string[] {
         : [];
 }
 
+function buildAnswerReleaseReviewSummary(
+    value: unknown
+): WorkspaceExportKnowledgeRunAnswerReleaseReviewReport | null {
+    if (!isRecord(value)) {
+        return null;
+    }
+    const reviewedAt = normalizeString(value.reviewedAt);
+    const decision = normalizeString(value.decision).toLowerCase();
+    const revised = normalizeBoolean(value.revised);
+    const failedGateIds = normalizeStringArray(value.failedGateIds);
+    const leakedInternalFragmentCount = normalizeStringArray(value.leakedInternalFragments).length;
+    const reason = normalizeString(value.reason);
+    if (
+        !reviewedAt
+        && !decision
+        && revised !== true
+        && failedGateIds.length <= 0
+        && leakedInternalFragmentCount <= 0
+        && !reason
+    ) {
+        return null;
+    }
+    return {
+        reviewedAt,
+        decision,
+        revised,
+        failedGateIds,
+        leakedInternalFragmentCount,
+        reason,
+    };
+}
+
 function buildKnowledgeRunReports(records: WorkflowArtifactRecord[]): WorkspaceExportKnowledgeRunReport[] {
     return records
         .filter((record) => record.kind === 'knowledge_run')
@@ -388,6 +421,9 @@ function buildKnowledgeRunReports(records: WorkflowArtifactRecord[]): WorkspaceE
             const scope = knowledgeRun.scope && typeof knowledgeRun.scope === 'object'
                 ? knowledgeRun.scope as Record<string, unknown>
                 : {};
+            const answerReleaseReview = buildAnswerReleaseReviewSummary(
+                knowledgeRun.answerReleaseReview ?? payload.answerReleaseReview
+            );
             const graphContext = payload.graphContext && typeof payload.graphContext === 'object'
                 ? payload.graphContext as Record<string, unknown>
                 : {};
@@ -443,6 +479,7 @@ function buildKnowledgeRunReports(records: WorkflowArtifactRecord[]): WorkspaceE
                         : null,
                     missingLookupCount,
                 },
+                ...(answerReleaseReview ? { answerReleaseReview } : {}),
             };
         });
 }

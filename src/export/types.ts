@@ -2,6 +2,8 @@ import type {
     AgentConversationInvocationRecord,
     AgentConversationSessionRecord,
     AgentConversationTurnRecord,
+    AnswerReleaseDecision,
+    AnswerReleaseGateId,
     EvidenceSpan,
     KnowledgeAtom,
     MemoryEntry,
@@ -88,6 +90,15 @@ export interface WorkspaceExportKnowledgeRunGraphSignal {
     missingLookupCount: number;
 }
 
+export interface WorkspaceExportKnowledgeRunAnswerReleaseReviewReport {
+    reviewedAt: string;
+    decision: AnswerReleaseDecision | string;
+    revised: boolean;
+    failedGateIds: Array<AnswerReleaseGateId | string>;
+    leakedInternalFragmentCount: number;
+    reason: string;
+}
+
 export interface WorkspaceExportKnowledgeRunReport {
     artifactId: string;
     runId: string;
@@ -105,6 +116,7 @@ export interface WorkspaceExportKnowledgeRunReport {
     remainingReviewCardCount: number;
     scopeSource: string;
     graphSignal: WorkspaceExportKnowledgeRunGraphSignal;
+    answerReleaseReview?: WorkspaceExportKnowledgeRunAnswerReleaseReviewReport;
 }
 
 export interface WorkspaceExportGraphFocusSignal {

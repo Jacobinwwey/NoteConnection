@@ -20,13 +20,14 @@
 - cross-language abstention hygiene 现在已显式化：中文 scoped miss 不再退化成 English diagnostic-heavy abstention。
 - `KnowledgeLearningPlatform.ts` 现在会把 review 决策写入 response、trace 与 workflow artifact。
 - 运维检查面现在已经能查看 reviewer 状态，但不会重新挤占主回答区：`src/frontend/agent_workspace.js` 会映射并净化 `answerReleaseReview`，`src/frontend/workspace_panes.js` 会在 `knowledge_run` 明细 / 历史卡片中渲染 release-review 结果。
+- `WorkspaceExportBundle.ts` 现在会把紧凑 reviewer 摘要投影到 `runtime.knowledgeRunReports[*].answerReleaseReview`，因此 export/replay 面也能审计 release decision，而不必重复携带完整回答文本。
 - `scripts/verify-knowledge-workspace-runtime.js` 现在已经把 reviewer 存在性与主回答卫生要求纳入 `waterglass` 截图场景的正式运行时验收。
 
 #### 下一步执行顺序
 
 1. 保持 reviewer 窄口径，只拥有 release invariant，不让 prompt template 重新接管 release policy。
 2. 只有在显式回归语料存在后，才继续扩大 claim-vs-citation / claim-vs-evidence 的更深矛盾检测，并控制 false positive。
-3. 把 reviewer telemetry 从当前 `knowledge_run` 明细 / 历史检查面继续扩展到 export summary 与更长周期的运维审计面。
+3. 以当前已导出的 reviewer summary 为底座继续建设更长周期的运维审计，而不是再新增一条平行 telemetry 表面。
 4. 把 alias/scope 回归语料从 `waterglass` 扩展到更多真实失败案例。
 5. 继续做 owner reduction，但前提仍然是“新 owner 持有真实决策或不变量”。
 
@@ -35,8 +36,9 @@
 1. 不支持的草稿回答不能再把 `No scoped knowledge points matched` 或 `retrieval_candidates_below_threshold` 这类内部诊断泄漏到主回答区。
 2. `AgentConversationResponse`、trace 与 `KnowledgeRun` 都必须保留 additive 的 `answerReleaseReview` 状态。
 3. 运维检查面必须能渲染 reviewer decision、failed gates 与 original/public answer 差异，同时不扩大主回答区。
-4. `npm run verify:knowledge-workspace:runtime` 必须通过 `waterglass` 的 compact/spaced 双查询矩阵，并确认 reviewer/public-answer 一致性。
-5. 现有 `assistantMessage`、`answer`、`assistantBlocks` 与下游 client 必须保持向前兼容。
+4. Workspace export 的 knowledge-run report 必须能为 `release` / `revise` 流程保留紧凑 reviewer 摘要，并在 review 数据缺失时保持向前兼容。
+5. `npm run verify:knowledge-workspace:runtime` 必须通过 `waterglass` 的 compact/spaced 双查询矩阵，并确认 reviewer/public-answer 一致性。
+6. 现有 `assistantMessage`、`answer`、`assistantBlocks` 与下游 client 必须保持向前兼容。
 
 ### 2026-06-17 Agent Knowledge DAG 实施计划
 

@@ -14,8 +14,9 @@
 - [x] `KnowledgeLearningPlatform.ts` 与 workflow artifact payload 现在已经保留 reviewer 状态。
 - [x] 截图驱动的 `waterglass` 失败现在已经升级为正式运行时验收规则：`scripts/verify-knowledge-workspace-runtime.js` 要求 reviewer 存在，并拒绝主回答中的诊断泄漏。
 - [x] reviewer 状态现在已经通过 `knowledge_run` 明细 / 历史卡片暴露到运维 evidence pane，但不会重新挤占主回答区。
+- [x] 现在已通过 `runtime.knowledgeRunReports[*].answerReleaseReview` 导出紧凑 reviewer 摘要，使 replay/audit 表面可以检查 release decision，而不必重复携带完整回答文本。
 - [ ] 在显式回归语料存在后，将 reviewer 从当前 lexical grounding check 继续扩展到更深的 claim-vs-citation 矛盾检测。
-- [ ] 把 reviewer 摘要从当前运维检查面继续扩展到 export 摘要与更长周期的运维审计。
+- [ ] 以当前已导出的 reviewer summary 为底座，继续建设更长周期的运维审计，而不是再新增第二条 telemetry 路径。
 
 ### 2026-06-17 Agent Knowledge DAG TODO 重新分类
 

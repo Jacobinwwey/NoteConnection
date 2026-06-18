@@ -27,6 +27,8 @@ What is now true in code:
   - `KnowledgeRun.answerReleaseReview`.
 - `KnowledgeLearningPlatform.ts` persists that state into runtime responses and workflow-artifact payloads.
 - operator-facing inspection now surfaces sanitized reviewer state in `knowledge_run` detail/history cards through `src/frontend/agent_workspace.js` and `src/frontend/workspace_panes.js`, without widening the main answer surface.
+- `WorkspaceExportBundle.ts` now projects compact reviewer summaries into `runtime.knowledgeRunReports[*].answerReleaseReview`.
+- that exported summary intentionally keeps only `reviewedAt`, `decision`, `revised`, `failedGateIds`, `leakedInternalFragmentCount`, and `reason`; full original/public answer text stays in workflow artifacts and traces instead of the compare-ready report surface.
 - `scripts/verify-knowledge-workspace-runtime.js` now treats reviewer presence and `publicAnswer === result.answer` parity as part of the runtime contract.
 
 Why this matters:
@@ -44,6 +46,7 @@ Code-vs-plan reconciliation:
 | Grounded draft claims must stay aligned with their own support | `claim_grounding_alignment` now revises grounded drafts when lexical support overlap shows the answer drifting away from citations/knowledge points. | Implemented |
 | Developers must be able to inspect the release decision | Review state is now stored on response, trace, and `KnowledgeRun`. | Implemented |
 | Operators must see reviewer state without widening the main answer area | `agent_workspace.js` sanitizes `answerReleaseReview`, and `workspace_panes.js` renders release-review detail/history inside `knowledge_run` cards. | Implemented |
+| Replay/export surfaces must retain reviewer state durably | `WorkspaceExportBundle.ts` now emits compact `answerReleaseReview` summaries inside `runtime.knowledgeRunReports`. | Implemented |
 | `waterglass` screenshot must become a formal regression gate | Runtime verifier now requires reviewer presence and rejects public-answer diagnostic leakage. | Implemented |
 | Backward compatibility must remain explicit | `assistantMessage`, `answer`, and `assistantBlocks` remain valid; reviewer fields are additive. | Preserved |
 
@@ -51,6 +54,7 @@ Verification for this slice:
 
 - `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- jest src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- tsc --noEmit`
 - `npm run verify:knowledge-workspace:runtime`
 
