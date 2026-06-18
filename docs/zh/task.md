@@ -10,8 +10,9 @@
 - [x] 截图驱动的 `waterglass` 运行时场景现在已经纳入正式 verifier：验收要求 reviewer 存在，并拒绝公开回答中的诊断泄漏。
 - [x] reviewer 结果现在已经进入 `knowledge_run` 明细 / 历史检查卡片，但不会重新塞回主回答区。
 - [x] reviewer 摘要现在已经通过 `runtime.knowledgeRunReports[*].answerReleaseReview` 进入 export，用于 durable replay/audit，同时保持摘要面紧凑。
+- [x] 聚合 reviewer 审计遥测现在已经通过 `runtime.knowledgeRunAnswerReleaseAuditSummary` 导出，`knowledge_run` 历史卡片也会渲染同一份多 run audit 形态。
 - [ ] 下一活跃任务：在显式回归语料存在后，继续把当前 lexical grounding check 扩展为更深的 claim/citation/evidence 矛盾检测。
-- [ ] 下一活跃任务：以当前已导出的 reviewer summary 为底座建设更长周期的运维审计，而不是再新增第二条 telemetry 路径。
+- [ ] 下一活跃任务：在当前聚合 reviewer 审计之上继续补 trend window、gate aging 与 compare-ready operator drilldown，而不是再新增第二条 telemetry 路径。
 
 ### 当前验收目标
 
@@ -19,7 +20,8 @@
 2. reviewer 决策必须保持 additive，并继续对现有 client 向前兼容。
 3. 运维检查面必须能看到 reviewer decision、failed gates 与 original/public answer 差异，同时不扩大主回答区。
 4. 导出的 `knowledgeRunReports` 必须能为 `release` / `revise` 流程保留紧凑 reviewer 摘要，并在 review 数据缺失时干净省略该字段。
-5. `waterglass` 的 compact/spaced 双查询运行时验证必须通过，并确认 `answerReleaseReview.publicAnswer === result.answer`。
+5. 导出的运行时状态还必须在 `runtime.knowledgeRunAnswerReleaseAuditSummary` 中保留 additive 的聚合 reviewer 审计遥测，并且 `knowledge_run` 历史卡片要渲染同一份 audit 形态。
+6. `waterglass` 的 compact/spaced 双查询运行时验证必须通过，并确认 `answerReleaseReview.publicAnswer === result.answer`。
 
 ## 2026-06-17 Agent Knowledge DAG 活跃任务同步
 

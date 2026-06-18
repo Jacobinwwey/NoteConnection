@@ -4,6 +4,7 @@ import { resolveRenderMaterializationDecision } from '../platform/RenderMaterial
 import type {
     WorkspaceExportBundle,
     WorkspaceExportGraphFocusReport,
+    WorkspaceExportKnowledgeRunAnswerReleaseAuditSummary,
     WorkspaceExportKnowledgeRunAnswerReleaseReviewReport,
     WorkspaceExportKnowledgeRunReport,
     WorkspaceExportBundleRequest,
@@ -484,6 +485,94 @@ function buildKnowledgeRunReports(records: WorkflowArtifactRecord[]): WorkspaceE
         });
 }
 
+function normalizeAnswerReleaseDecisionBucket(
+    decisionLike: unknown
+): 'release' | 'revise' | 'abstain' | 'other' {
+    const normalized = normalizeString(decisionLike).toLowerCase();
+    if (normalized === 'release' || normalized === 'revise' || normalized === 'abstain') {
+        return normalized;
+    }
+    return 'other';
+}
+
+function buildKnowledgeRunAnswerReleaseAuditSummary(
+    reports: WorkspaceExportKnowledgeRunReport[]
+): WorkspaceExportKnowledgeRunAnswerReleaseAuditSummary {
+    const decisionCounts = {
+        release: 0,
+        revise: 0,
+        abstain: 0,
+        other: 0,
+    };
+    const failedGateCounts = new Map<string, number>();
+    let reviewedRunCount = 0;
+    let revisedRunCount = 0;
+    let runsWithFailedGates = 0;
+    let runsWithLeakedInternalFragments = 0;
+    let leakedInternalFragmentTotalCount = 0;
+    let latestReviewedAt = '';
+
+    reports.forEach((report) => {
+        const review = report && typeof report.answerReleaseReview === 'object'
+            ? report.answerReleaseReview
+            : null;
+        if (!review) {
+            return;
+        }
+        reviewedRunCount += 1;
+        decisionCounts[normalizeAnswerReleaseDecisionBucket(review.decision)] += 1;
+        if (review.revised === true) {
+            revisedRunCount += 1;
+        }
+
+        const uniqueFailedGateIds = Array.from(new Set(
+            (Array.isArray(review.failedGateIds) ? review.failedGateIds : [])
+                .map((gateId) => normalizeString(gateId))
+                .filter(Boolean)
+        ));
+        if (uniqueFailedGateIds.length > 0) {
+            runsWithFailedGates += 1;
+            uniqueFailedGateIds.forEach((gateId) => {
+                failedGateCounts.set(gateId, (failedGateCounts.get(gateId) || 0) + 1);
+            });
+        }
+
+        const leakedInternalFragmentCount = normalizeCount(review.leakedInternalFragmentCount);
+        if (leakedInternalFragmentCount > 0) {
+            runsWithLeakedInternalFragments += 1;
+            leakedInternalFragmentTotalCount += leakedInternalFragmentCount;
+        }
+
+        const reviewedAt = normalizeString(review.reviewedAt);
+        if (reviewedAt && (!latestReviewedAt || compareStrings(reviewedAt, latestReviewedAt) > 0)) {
+            latestReviewedAt = reviewedAt;
+        }
+    });
+
+    return {
+        totalRuns: reports.length,
+        reviewedRunCount,
+        unreviewedRunCount: Math.max(0, reports.length - reviewedRunCount),
+        decisionCounts,
+        revisedRunCount,
+        runsWithFailedGates,
+        runsWithLeakedInternalFragments,
+        leakedInternalFragmentTotalCount,
+        failedGateCounts: Array.from(failedGateCounts.entries())
+            .map(([gateId, count]) => ({
+                gateId,
+                count,
+            }))
+            .sort((left, right) => {
+                if (left.count !== right.count) {
+                    return right.count - left.count;
+                }
+                return compareStrings(left.gateId, right.gateId);
+            }),
+        latestReviewedAt,
+    };
+}
+
 function buildGraphFocusReports(sessionStates: LearningSessionStateRecord[]): WorkspaceExportGraphFocusReport[] {
     return sessionStates
         .flatMap((state) => {
@@ -612,6 +701,7 @@ export function buildWorkspaceExportBundle(input: {
     const conversationInvocations = sortAndCloneConversationInvocations(input.conversationInvocations);
     const workflowArtifacts = sortAndCloneWorkflowArtifacts(input.workflowArtifacts);
     const knowledgeRunReports = buildKnowledgeRunReports(workflowArtifacts);
+    const knowledgeRunAnswerReleaseAuditSummary = buildKnowledgeRunAnswerReleaseAuditSummary(knowledgeRunReports);
     const graphFocusReports = buildGraphFocusReports(sessionStates);
     const memoryEntries = sortAndCloneMemoryEntries(input.memoryEntries);
     const memoryAuditRecords = sortAndCloneMemoryAuditRecords(input.memoryAuditRecords);
@@ -661,6 +751,7 @@ export function buildWorkspaceExportBundle(input: {
             conversationInvocations,
             workflowArtifacts,
             knowledgeRunReports,
+            knowledgeRunAnswerReleaseAuditSummary,
             graphFocusReports,
         },
         memory: {
@@ -748,6 +839,7 @@ export function buildWorkspaceExportBundle(input: {
             conversationInvocations,
             workflowArtifacts,
             knowledgeRunReports,
+            knowledgeRunAnswerReleaseAuditSummary,
             graphFocusReports,
         },
         memory: {

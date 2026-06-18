@@ -99,6 +99,31 @@ export interface WorkspaceExportKnowledgeRunAnswerReleaseReviewReport {
     reason: string;
 }
 
+export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditDecisionCounts {
+    release: number;
+    revise: number;
+    abstain: number;
+    other: number;
+}
+
+export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditFailedGateCount {
+    gateId: AnswerReleaseGateId | string;
+    count: number;
+}
+
+export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditSummary {
+    totalRuns: number;
+    reviewedRunCount: number;
+    unreviewedRunCount: number;
+    decisionCounts: WorkspaceExportKnowledgeRunAnswerReleaseAuditDecisionCounts;
+    revisedRunCount: number;
+    runsWithFailedGates: number;
+    runsWithLeakedInternalFragments: number;
+    leakedInternalFragmentTotalCount: number;
+    failedGateCounts: WorkspaceExportKnowledgeRunAnswerReleaseAuditFailedGateCount[];
+    latestReviewedAt: string;
+}
+
 export interface WorkspaceExportKnowledgeRunReport {
     artifactId: string;
     runId: string;
@@ -174,6 +199,7 @@ export interface WorkspaceExportBundle {
         conversationInvocations: AgentConversationInvocationRecord[];
         workflowArtifacts: WorkflowArtifactRecord[];
         knowledgeRunReports: WorkspaceExportKnowledgeRunReport[];
+        knowledgeRunAnswerReleaseAuditSummary: WorkspaceExportKnowledgeRunAnswerReleaseAuditSummary;
         graphFocusReports: WorkspaceExportGraphFocusReport[];
     };
     memory: {

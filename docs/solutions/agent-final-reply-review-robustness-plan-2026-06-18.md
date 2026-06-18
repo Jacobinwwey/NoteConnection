@@ -124,6 +124,7 @@ The first fix restores evidence. The second fix restores robustness.
 | Final review state must be inspectable by developers | `answerReleaseReview` is now stored additively on `AgentConversationResponse`, `AgentConversationTrace`, and `KnowledgeRun`. | Implemented |
 | Operator surfaces must expose reviewer state without widening the main answer area | `src/frontend/agent_workspace.js` sanitizes `answerReleaseReview`, and `src/frontend/workspace_panes.js` renders release-review detail/history inside `knowledge_run` cards. | Implemented |
 | Reviewer telemetry must survive export/replay surfaces | `src/export/WorkspaceExportBundle.ts` now emits compact `runtime.knowledgeRunReports[*].answerReleaseReview` summaries for durable replay and operator audit. | Implemented |
+| Longer-horizon operator audit must reuse the same reviewer telemetry path | `WorkspaceExportBundle.ts` now derives `runtime.knowledgeRunAnswerReleaseAuditSummary`, and the history card renders the same multi-run audit shape from returned knowledge runs. | Implemented baseline |
 | Screenshot-backed `waterglass` case must become a formal acceptance requirement | `scripts/verify-knowledge-workspace-runtime.js` now requires `answerReleaseReview`, rejects empty-scope debug text in the public answer, and verifies `publicAnswer === result.answer`. | Implemented |
 | DAG structure must inform the answer before release review | Existing `graphContextAssembler.ts` remains the structure source; the new review layer consumes that output instead of replacing it. | Preserved |
 | Backward compatibility must remain explicit | `assistantMessage`, `answer`, `assistantBlocks`, and existing clients remain valid; `answerReleaseReview` is additive. | Preserved |
@@ -183,6 +184,22 @@ Attached additively to:
   - `release` summary export,
   - `revise` summary export with payload-level fallback,
   - backward-compatible omission when review data is absent.
+
+#### Phase-4 aggregate audit hardening landed on top of the export slice
+
+- `WorkspaceExportBundle.ts` now derives `runtime.knowledgeRunAnswerReleaseAuditSummary` from the already-built `knowledgeRunReports` instead of introducing a second telemetry owner.
+- The aggregate summary covers:
+  - reviewed vs unreviewed run counts,
+  - decision buckets (`release` / `revise` / `abstain` / `other`),
+  - revised-run count,
+  - runs with failed gates,
+  - runs with leaked internal fragments,
+  - total leaked-fragment count,
+  - deterministic failed-gate frequency summaries,
+  - latest reviewed timestamp.
+- `src/frontend/agent_workspace.js` now builds the same aggregate release-audit summary from the returned knowledge-run history payload before trimming the visible run list, so the history card shows the full audit window instead of only the first rendered entries.
+- `src/frontend/workspace_panes.js` now renders an operator-only `Release audit` block inside `knowledge_run` history, keeping the public answer area unchanged.
+- `src/export/WorkspaceExportBundle.test.ts` and `src/agent_workspace.frontend.test.ts` now cover both the exported aggregate and the operator-history rendering path.
 
 ### Why the Earlier Framework Proposals Were Insufficient
 
@@ -261,7 +278,7 @@ The first two decide capability. The third decides trust.
 ### Next Direction
 
 1. Add deeper contradiction checks beyond the current lexical grounding alignment, but only after building an explicit regression corpus for false-positive control.
-2. Build longer-horizon operator audits on top of the new exported reviewer summaries instead of adding another parallel telemetry path.
+2. Extend the new aggregate reviewer audit into trend windows, gate-aging views, and compare-ready drilldowns instead of adding another parallel telemetry path.
 3. Expand regression corpus beyond `waterglass` using real alias/scope failures.
 4. Continue owner reduction in `KnowledgeLearningPlatform.ts` and `agent_workspace.js` only where the new module owns real invariants.
 
@@ -387,6 +404,7 @@ The first two decide capability. The third decides trust.
 | 最终审核结果必须可供开发者检查 | `answerReleaseReview` 已加到 `AgentConversationResponse`、`AgentConversationTrace`、`KnowledgeRun`。 | 已实现 |
 | 运维表面必须能看到 reviewer 状态且不扩大主回答区 | `src/frontend/agent_workspace.js` 会净化 `answerReleaseReview`，`src/frontend/workspace_panes.js` 会在 `knowledge_run` 卡片中渲染 release-review 明细 / 历史。 | 已实现 |
 | reviewer 遥测必须能跨 export/replay 表面保留 | `src/export/WorkspaceExportBundle.ts` 现在会在 `runtime.knowledgeRunReports[*].answerReleaseReview` 中输出紧凑 reviewer 摘要，供离线回放与运维审计使用。 | 已实现 |
+| 更长周期的运维审计必须复用同一条 reviewer 遥测路径 | `WorkspaceExportBundle.ts` 现在会派生 `runtime.knowledgeRunAnswerReleaseAuditSummary`，历史卡片也会基于返回的 knowledge run 渲染同一份多 run audit 形态。 | 已实现基线 |
 | `waterglass` 截图必须成为正式验收项 | `scripts/verify-knowledge-workspace-runtime.js` 现在要求 reviewer 存在、拒绝公开回答中的 empty-scope debug 文本，并校验 `publicAnswer === result.answer`。 | 已实现 |
 | DAG 结构必须在 review 前参与回答构建 | 现有 `graphContextAssembler.ts` 继续提供结构化证据，新 reviewer 只消费结果，不替代 DAG owner。 | 已保持 |
 | 向前兼容必须显式 | `assistantMessage`、`answer`、`assistantBlocks` 和现有 client 都不破；`answerReleaseReview` 是 additive 字段。 | 已保持 |
@@ -446,6 +464,22 @@ The first two decide capability. The third decides trust.
   - `release` 摘要导出，
   - 带 payload-level fallback 的 `revise` 摘要导出，
   - review 数据缺失时的向前兼容省略行为。
+
+#### 在 export 切片之上继续落地的 Phase-4 聚合审计加固
+
+- `WorkspaceExportBundle.ts` 现在会基于已构建的 `knowledgeRunReports` 派生 `runtime.knowledgeRunAnswerReleaseAuditSummary`，而不是再引入第二个 reviewer telemetry owner。
+- 这份聚合摘要覆盖：
+  - reviewed / unreviewed run 计数，
+  - decision bucket（`release` / `revise` / `abstain` / `other`），
+  - revised run 数量，
+  - failed gate run 数量，
+  - internal leakage run 数量，
+  - leaked fragment 总数，
+  - 确定性 failed-gate 频次摘要，
+  - 最新 reviewed 时间戳。
+- `src/frontend/agent_workspace.js` 现在会先基于返回的 knowledge-run history 计算同一份聚合 release audit，再裁剪可见 run 列表，因此历史卡片看到的是完整审计窗口，而不是仅对首批渲染项做统计。
+- `src/frontend/workspace_panes.js` 现在会在 `knowledge_run` 历史卡片中渲染一个仅面向运维的 `Release audit` 区块，同时保持主回答区不变。
+- `src/export/WorkspaceExportBundle.test.ts` 与 `src/agent_workspace.frontend.test.ts` 现在都覆盖了聚合导出与历史卡片渲染路径。
 
 ### 为什么先前那些框架方案不够
 
@@ -524,7 +558,7 @@ The first two decide capability. The third decides trust.
 ### 后续方向
 
 1. 在显式回归语料具备之前，不扩大 gate 列表；先把当前 lexical grounding alignment 之外的更深矛盾检测建立在可控 false-positive 语料上。
-2. 以当前已经导出的 reviewer summary 为底座，继续建设更长周期的运维审计，而不是再平行新增一条 telemetry 路径。
+2. 在当前聚合 reviewer 审计之上继续补 trend window、gate aging 与 compare-ready drilldown，而不是再平行新增一条 telemetry 路径。
 3. 把 alias/scope 回归语料从 `waterglass` 扩到更多真实失败案例。
 4. 继续缩减 `KnowledgeLearningPlatform.ts` 与 `agent_workspace.js` 的 owner 压力，但前提仍然是“新模块拥有真实不变量”。
 

@@ -15,8 +15,9 @@
 - [x] Promote the screenshot-backed `waterglass` failure into a runtime acceptance rule by requiring reviewer presence and by rejecting public-answer diagnostic leakage in `scripts/verify-knowledge-workspace-runtime.js`.
 - [x] Surface reviewer state inside operator evidence panes through `knowledge_run` detail/history cards without widening the public answer area.
 - [x] Export compact reviewer summaries through `runtime.knowledgeRunReports[*].answerReleaseReview` so replay/audit surfaces can inspect release decisions without duplicating full answer text.
+- [x] Build the first longer-horizon operator audit on top of the exported reviewer summaries: `runtime.knowledgeRunAnswerReleaseAuditSummary` now aggregates reviewer counts, decisions, failed gates, and leakage signals, and the `knowledge_run` history card renders the same multi-run audit shape.
 - [ ] Extend the reviewer from the current lexical grounding check into deeper claim-vs-citation contradiction detection once an explicit regression corpus exists.
-- [ ] Build longer-horizon operator audits on top of the exported reviewer summaries instead of adding a second telemetry path.
+- [ ] Extend the current aggregate reviewer audit into trend windows, gate-aging views, and compare-ready operator drilldowns instead of adding a second telemetry path.
 
 ### 2026-06-17 Agent Knowledge DAG TODO Reclassification
 

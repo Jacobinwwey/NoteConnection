@@ -3559,6 +3559,98 @@
         };
     }
 
+    function normalizeAnswerReleaseDecisionBucket(decisionLike) {
+        const decision = String(decisionLike || '').trim().toLowerCase();
+        if (decision === 'release' || decision === 'revise' || decision === 'abstain') {
+            return decision;
+        }
+        return 'other';
+    }
+
+    function buildKnowledgeRunAnswerReleaseAuditSummary(runs) {
+        const safeRuns = Array.isArray(runs)
+            ? runs.filter((run) => run && typeof run === 'object')
+            : [];
+        const decisionCounts = {
+            release: 0,
+            revise: 0,
+            abstain: 0,
+            other: 0,
+        };
+        const failedGateCounts = {};
+        let reviewedRunCount = 0;
+        let revisedRunCount = 0;
+        let runsWithFailedGates = 0;
+        let runsWithLeakedInternalFragments = 0;
+        let leakedInternalFragmentTotalCount = 0;
+        let latestReviewedAt = '';
+
+        safeRuns.forEach((run) => {
+            const review = run && run.answerReleaseReview && typeof run.answerReleaseReview === 'object'
+                ? run.answerReleaseReview
+                : null;
+            if (!review) {
+                return;
+            }
+            reviewedRunCount += 1;
+            decisionCounts[normalizeAnswerReleaseDecisionBucket(review.decision)] += 1;
+            if (review.revised === true) {
+                revisedRunCount += 1;
+            }
+
+            const uniqueFailedGateIds = Array.from(new Set(
+                (Array.isArray(review.failedGateIds) ? review.failedGateIds : [])
+                    .map((gateId) => String(gateId || '').trim())
+                    .filter(Boolean)
+            ));
+            if (uniqueFailedGateIds.length > 0) {
+                runsWithFailedGates += 1;
+                uniqueFailedGateIds.forEach((gateId) => {
+                    failedGateCounts[gateId] = Number(failedGateCounts[gateId] || 0) + 1;
+                });
+            }
+
+            const leakedInternalFragmentCount = Array.isArray(review.leakedInternalFragments)
+                ? review.leakedInternalFragments
+                    .map((fragment) => String(fragment || '').trim())
+                    .filter(Boolean)
+                    .length
+                : 0;
+            if (leakedInternalFragmentCount > 0) {
+                runsWithLeakedInternalFragments += 1;
+                leakedInternalFragmentTotalCount += leakedInternalFragmentCount;
+            }
+
+            const reviewedAt = String(review.reviewedAt || '').trim();
+            if (reviewedAt && (!latestReviewedAt || reviewedAt.localeCompare(latestReviewedAt) > 0)) {
+                latestReviewedAt = reviewedAt;
+            }
+        });
+
+        return {
+            totalRuns: safeRuns.length,
+            reviewedRunCount,
+            unreviewedRunCount: Math.max(0, safeRuns.length - reviewedRunCount),
+            decisionCounts,
+            revisedRunCount,
+            runsWithFailedGates,
+            runsWithLeakedInternalFragments,
+            leakedInternalFragmentTotalCount,
+            failedGateCounts: Object.keys(failedGateCounts)
+                .map((gateId) => ({
+                    gateId,
+                    count: Number(failedGateCounts[gateId] || 0),
+                }))
+                .sort((left, right) => {
+                    if (left.count !== right.count) {
+                        return right.count - left.count;
+                    }
+                    return String(left.gateId || '').localeCompare(String(right.gateId || ''));
+                }),
+            latestReviewedAt,
+        };
+    }
+
     function buildKnowledgeRunHistoryCardPayload(result) {
         const summary = result && typeof result === 'object'
             ? result
@@ -3567,55 +3659,57 @@
             ? summary.artifacts.filter((artifact) => artifact && typeof artifact === 'object')
             : [];
         const knowledgeRunArtifacts = artifacts.filter((artifact) => String(artifact.kind || '').trim() === 'knowledge_run');
+        const runs = knowledgeRunArtifacts.map((artifact) => {
+            const payload = artifact && typeof artifact.payload === 'object'
+                ? artifact.payload
+                : {};
+            const knowledgeRun = payload.knowledgeRun && typeof payload.knowledgeRun === 'object'
+                ? payload.knowledgeRun
+                : {};
+            const runSummary = knowledgeRun.summary && typeof knowledgeRun.summary === 'object'
+                ? knowledgeRun.summary
+                : {};
+            const quality = knowledgeRun.quality && typeof knowledgeRun.quality === 'object'
+                ? knowledgeRun.quality
+                : {};
+            const scope = knowledgeRun.scope && typeof knowledgeRun.scope === 'object'
+                ? knowledgeRun.scope
+                : {};
+            const graphSignal = summarizeKnowledgeRunGraphSignal(payload);
+            const answerReleaseReview = sanitizeAnswerReleaseReview(
+                knowledgeRun.answerReleaseReview || payload.answerReleaseReview || null
+            );
+            return {
+                artifactId: String(artifact.artifactId || '').trim(),
+                workspaceId: String(artifact.workspaceId || '').trim(),
+                runId: String(knowledgeRun.runId || payload.runId || '').trim(),
+                generatedAt: String(knowledgeRun.generatedAt || artifact.updatedAt || artifact.createdAt || '').trim(),
+                artifactTitle: String(artifact.title || '').trim(),
+                scopeLabel: [
+                    String(scope.workspaceId || '').trim(),
+                    String(scope.corpusId || '').trim(),
+                ].filter(Boolean).join(' / ') || String(scope.source || '').trim() || 'global',
+                qualityStatus: String(quality.status || knowledgeRun.status || '').trim(),
+                qualityScore: Number.isFinite(Number(quality.score)) ? Number(quality.score) : null,
+                claimCount: Number.isFinite(Number(runSummary.claimCount)) ? Number(runSummary.claimCount) : 0,
+                weakClaimCount: Number.isFinite(Number(runSummary.weakClaimCount)) ? Number(runSummary.weakClaimCount) : 0,
+                reviewCardCount: Number.isFinite(Number(runSummary.reviewCardCount)) ? Number(runSummary.reviewCardCount) : 0,
+                remainingReviewCardCount: Number.isFinite(Number(runSummary.remainingReviewCardCount)) ? Number(runSummary.remainingReviewCardCount) : 0,
+                graphOpsAvailable: graphSignal.graphOpsAvailable,
+                usedFallback: graphSignal.usedFallback,
+                connectionPathCount: graphSignal.connectionPathCount,
+                temporalWarningCount: graphSignal.temporalWarningCount,
+                selectedAnchorReason: graphSignal.selectedAnchorReason,
+                graphSignalSummary: graphSignal.graphSignalSummary,
+                answerReleaseReview,
+            };
+        });
         return {
             returnedArtifacts: Number.isFinite(Number(summary.returnedArtifacts))
                 ? Number(summary.returnedArtifacts)
                 : knowledgeRunArtifacts.length,
-            runs: knowledgeRunArtifacts.slice(0, 8).map((artifact) => {
-                const payload = artifact && typeof artifact.payload === 'object'
-                    ? artifact.payload
-                    : {};
-                const knowledgeRun = payload.knowledgeRun && typeof payload.knowledgeRun === 'object'
-                    ? payload.knowledgeRun
-                    : {};
-                const runSummary = knowledgeRun.summary && typeof knowledgeRun.summary === 'object'
-                    ? knowledgeRun.summary
-                    : {};
-                const quality = knowledgeRun.quality && typeof knowledgeRun.quality === 'object'
-                    ? knowledgeRun.quality
-                    : {};
-                const scope = knowledgeRun.scope && typeof knowledgeRun.scope === 'object'
-                    ? knowledgeRun.scope
-                    : {};
-                const graphSignal = summarizeKnowledgeRunGraphSignal(payload);
-                const answerReleaseReview = sanitizeAnswerReleaseReview(
-                    knowledgeRun.answerReleaseReview || payload.answerReleaseReview || null
-                );
-                return {
-                    artifactId: String(artifact.artifactId || '').trim(),
-                    workspaceId: String(artifact.workspaceId || '').trim(),
-                    runId: String(knowledgeRun.runId || payload.runId || '').trim(),
-                    generatedAt: String(knowledgeRun.generatedAt || artifact.updatedAt || artifact.createdAt || '').trim(),
-                    artifactTitle: String(artifact.title || '').trim(),
-                    scopeLabel: [
-                        String(scope.workspaceId || '').trim(),
-                        String(scope.corpusId || '').trim(),
-                    ].filter(Boolean).join(' / ') || String(scope.source || '').trim() || 'global',
-                    qualityStatus: String(quality.status || knowledgeRun.status || '').trim(),
-                    qualityScore: Number.isFinite(Number(quality.score)) ? Number(quality.score) : null,
-                    claimCount: Number.isFinite(Number(runSummary.claimCount)) ? Number(runSummary.claimCount) : 0,
-                    weakClaimCount: Number.isFinite(Number(runSummary.weakClaimCount)) ? Number(runSummary.weakClaimCount) : 0,
-                    reviewCardCount: Number.isFinite(Number(runSummary.reviewCardCount)) ? Number(runSummary.reviewCardCount) : 0,
-                    remainingReviewCardCount: Number.isFinite(Number(runSummary.remainingReviewCardCount)) ? Number(runSummary.remainingReviewCardCount) : 0,
-                    graphOpsAvailable: graphSignal.graphOpsAvailable,
-                    usedFallback: graphSignal.usedFallback,
-                    connectionPathCount: graphSignal.connectionPathCount,
-                    temporalWarningCount: graphSignal.temporalWarningCount,
-                    selectedAnchorReason: graphSignal.selectedAnchorReason,
-                    graphSignalSummary: graphSignal.graphSignalSummary,
-                    answerReleaseReview,
-                };
-            }),
+            answerReleaseAuditSummary: buildKnowledgeRunAnswerReleaseAuditSummary(runs),
+            runs: runs.slice(0, 8),
         };
     }
 

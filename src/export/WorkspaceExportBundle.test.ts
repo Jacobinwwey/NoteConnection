@@ -693,6 +693,32 @@ describe('WorkspaceExportBundle', () => {
                 }),
             }),
         ]);
+        expect((bundle.runtime as any).knowledgeRunAnswerReleaseAuditSummary).toEqual({
+            totalRuns: 2,
+            reviewedRunCount: 2,
+            unreviewedRunCount: 0,
+            decisionCounts: {
+                release: 1,
+                revise: 1,
+                abstain: 0,
+                other: 0,
+            },
+            revisedRunCount: 1,
+            runsWithFailedGates: 1,
+            runsWithLeakedInternalFragments: 1,
+            leakedInternalFragmentTotalCount: 1,
+            failedGateCounts: [
+                {
+                    gateId: 'claim_grounding_alignment',
+                    count: 1,
+                },
+                {
+                    gateId: 'internal_diagnostic_leakage',
+                    count: 1,
+                },
+            ],
+            latestReviewedAt: '2026-05-28T00:00:00.000Z',
+        });
     });
 
     test('keeps knowledge-run export reports backward-compatible when answer release review is absent', () => {
@@ -819,6 +845,23 @@ describe('WorkspaceExportBundle', () => {
             })
         );
         expect(Object.prototype.hasOwnProperty.call((bundle.runtime as any).knowledgeRunReports[0], 'answerReleaseReview')).toBe(false);
+        expect((bundle.runtime as any).knowledgeRunAnswerReleaseAuditSummary).toEqual({
+            totalRuns: 1,
+            reviewedRunCount: 0,
+            unreviewedRunCount: 1,
+            decisionCounts: {
+                release: 0,
+                revise: 0,
+                abstain: 0,
+                other: 0,
+            },
+            revisedRunCount: 0,
+            runsWithFailedGates: 0,
+            runsWithLeakedInternalFragments: 0,
+            leakedInternalFragmentTotalCount: 0,
+            failedGateCounts: [],
+            latestReviewedAt: '',
+        });
     });
 
     test('derives graph-focus reports from session-state panel diagnostics', () => {

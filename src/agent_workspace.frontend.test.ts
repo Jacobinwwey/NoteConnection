@@ -146,10 +146,21 @@ function createI18nStub() {
             'agentWorkspace.reply.answerReleaseDecisionRelease': 'release',
             'agentWorkspace.reply.answerReleaseDecisionRevise': 'revise',
             'agentWorkspace.reply.answerReleaseDecisionAbstain': 'abstain',
+            'agentWorkspace.reply.answerReleaseDecisionOther': 'other',
             'agentWorkspace.reply.answerReleaseBoolYes': 'yes',
             'agentWorkspace.reply.answerReleaseBoolNo': 'no',
             'agentWorkspace.reply.knowledgeRunHistoryCardTitle': 'Knowledge Run History',
             'agentWorkspace.reply.knowledgeRunHistoryCardSummary': '{returnedArtifacts} run artifact(s) returned.',
+            'agentWorkspace.reply.answerReleaseAuditSummaryHeading': 'Release audit',
+            'agentWorkspace.reply.answerReleaseAuditReviewedRunsLabel': 'Reviewed runs',
+            'agentWorkspace.reply.answerReleaseAuditReviewedRunsSummary': '{reviewed}/{total} reviewed; {unreviewed} unreviewed',
+            'agentWorkspace.reply.answerReleaseAuditDecisionCountsLabel': 'Decision counts',
+            'agentWorkspace.reply.answerReleaseAuditRevisedRunsLabel': 'Revised runs',
+            'agentWorkspace.reply.answerReleaseAuditLeakSummaryLabel': 'Leak summary',
+            'agentWorkspace.reply.answerReleaseAuditLeakSummary': '{runs} run(s); {fragments} fragment(s)',
+            'agentWorkspace.reply.answerReleaseAuditFailedGatesLabel': 'Failed gates',
+            'agentWorkspace.reply.answerReleaseAuditFailedGatesSummary': '{runs} run(s); {gates}',
+            'agentWorkspace.reply.answerReleaseAuditLatestReviewedAtLabel': 'Latest reviewed at',
             'agentWorkspace.reply.knowledgeRunHistoryRunsHeading': 'Recent Runs',
             'agentWorkspace.reply.knowledgeRunHistoryGraphSignalLabel': 'Graph signal',
             'agentWorkspace.reply.knowledgeRunHistoryInspectRun': 'Inspect Run',
@@ -905,8 +916,19 @@ function createI18nStub() {
             'agentWorkspace.reply.answerReleaseDecisionRelease': '放行',
             'agentWorkspace.reply.answerReleaseDecisionRevise': '改写',
             'agentWorkspace.reply.answerReleaseDecisionAbstain': '拒答',
+            'agentWorkspace.reply.answerReleaseDecisionOther': '其他',
             'agentWorkspace.reply.answerReleaseBoolYes': '是',
             'agentWorkspace.reply.answerReleaseBoolNo': '否',
+            'agentWorkspace.reply.answerReleaseAuditSummaryHeading': '发布审计',
+            'agentWorkspace.reply.answerReleaseAuditReviewedRunsLabel': '已审核运行',
+            'agentWorkspace.reply.answerReleaseAuditReviewedRunsSummary': '已审核 {reviewed}/{total}；未审核 {unreviewed}',
+            'agentWorkspace.reply.answerReleaseAuditDecisionCountsLabel': '决策计数',
+            'agentWorkspace.reply.answerReleaseAuditRevisedRunsLabel': '改写运行',
+            'agentWorkspace.reply.answerReleaseAuditLeakSummaryLabel': '泄漏汇总',
+            'agentWorkspace.reply.answerReleaseAuditLeakSummary': '{runs} 次运行；{fragments} 个片段',
+            'agentWorkspace.reply.answerReleaseAuditFailedGatesLabel': '失败门禁',
+            'agentWorkspace.reply.answerReleaseAuditFailedGatesSummary': '{runs} 次运行；{gates}',
+            'agentWorkspace.reply.answerReleaseAuditLatestReviewedAtLabel': '最近审核时间',
             'agentWorkspace.reply.answerReleaseHistoryLabel': '发布审核',
             'agentWorkspace.reply.answerReleaseHistorySummary': '{decision}；已改写 {revised}；失败门禁 {failedGates}',
         },
@@ -5471,6 +5493,12 @@ describe('agent workspace learning-path integration', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('Knowledge Run History');
         expect(String(evidenceBody?.textContent || '')).toContain('knowledge_run_blocks_1');
         expect(String(evidenceBody?.textContent || '')).toContain('knowledge_run_blocks_2');
+        expect(String(evidenceBody?.textContent || '')).toContain('Release audit');
+        expect(String(evidenceBody?.textContent || '')).toContain('2/2 reviewed; 0 unreviewed');
+        expect(String(evidenceBody?.textContent || '')).toContain('release 1, revise 1, abstain 0, other 0');
+        expect(String(evidenceBody?.textContent || '')).toContain('0 run(s); 0 fragment(s)');
+        expect(String(evidenceBody?.textContent || '')).toContain('1 run(s); public_surface_contraction (1)');
+        expect(String(evidenceBody?.textContent || '')).toContain('2026-04-13T00:01:01.000Z');
         expect(String(evidenceBody?.textContent || '')).toContain('Recent Runs');
         expect(String(evidenceBody?.textContent || '')).toContain('Graph signal');
         expect(String(evidenceBody?.textContent || '')).toContain('Release review');

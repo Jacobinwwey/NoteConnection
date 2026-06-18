@@ -29,6 +29,8 @@ What is now true in code:
 - operator-facing inspection now surfaces sanitized reviewer state in `knowledge_run` detail/history cards through `src/frontend/agent_workspace.js` and `src/frontend/workspace_panes.js`, without widening the main answer surface.
 - `WorkspaceExportBundle.ts` now projects compact reviewer summaries into `runtime.knowledgeRunReports[*].answerReleaseReview`.
 - that exported summary intentionally keeps only `reviewedAt`, `decision`, `revised`, `failedGateIds`, `leakedInternalFragmentCount`, and `reason`; full original/public answer text stays in workflow artifacts and traces instead of the compare-ready report surface.
+- `WorkspaceExportBundle.ts` now also derives `runtime.knowledgeRunAnswerReleaseAuditSummary`, a longer-horizon aggregate built from the exported knowledge-run reports rather than from a second telemetry path.
+- the operator history surface now renders the same aggregate `Release audit` shape from returned runs, covering reviewed/unreviewed counts, decision buckets, failed-gate counts, leak counts, revised runs, and latest review time.
 - `scripts/verify-knowledge-workspace-runtime.js` now treats reviewer presence and `publicAnswer === result.answer` parity as part of the runtime contract.
 
 Why this matters:
@@ -47,6 +49,7 @@ Code-vs-plan reconciliation:
 | Developers must be able to inspect the release decision | Review state is now stored on response, trace, and `KnowledgeRun`. | Implemented |
 | Operators must see reviewer state without widening the main answer area | `agent_workspace.js` sanitizes `answerReleaseReview`, and `workspace_panes.js` renders release-review detail/history inside `knowledge_run` cards. | Implemented |
 | Replay/export surfaces must retain reviewer state durably | `WorkspaceExportBundle.ts` now emits compact `answerReleaseReview` summaries inside `runtime.knowledgeRunReports`. | Implemented |
+| Longer-horizon operator audit must reuse exported reviewer telemetry instead of adding another telemetry path | `WorkspaceExportBundle.ts` now derives `runtime.knowledgeRunAnswerReleaseAuditSummary`, and the history card renders the same multi-run release-audit shape. | Implemented baseline |
 | `waterglass` screenshot must become a formal regression gate | Runtime verifier now requires reviewer presence and rejects public-answer diagnostic leakage. | Implemented |
 | Backward compatibility must remain explicit | `assistantMessage`, `answer`, and `assistantBlocks` remain valid; reviewer fields are additive. | Preserved |
 
@@ -54,7 +57,7 @@ Verification for this slice:
 
 - `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
-- `npm.cmd exec -- jest src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- jest src/export/WorkspaceExportBundle.test.ts src/agent_workspace.frontend.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- tsc --noEmit`
 - `npm run verify:knowledge-workspace:runtime`
 

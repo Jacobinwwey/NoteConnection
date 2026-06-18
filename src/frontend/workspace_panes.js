@@ -1453,6 +1453,9 @@
             if (decision === 'abstain') {
                 return translate('agentWorkspace.reply.answerReleaseDecisionAbstain', 'abstain');
             }
+            if (decision === 'other') {
+                return translate('agentWorkspace.reply.answerReleaseDecisionOther', 'other');
+            }
             return decision || noneLabel;
         };
         const answerReleaseReview = summary.answerReleaseReview && typeof summary.answerReleaseReview === 'object'
@@ -1705,6 +1708,9 @@
         const runsHeading = translate('agentWorkspace.reply.knowledgeRunHistoryRunsHeading', 'Recent Runs');
         const runs = Array.isArray(summary.runs) ? summary.runs : [];
         const latestRun = runs[0] && typeof runs[0] === 'object' ? runs[0] : null;
+        const answerReleaseAuditSummary = summary.answerReleaseAuditSummary && typeof summary.answerReleaseAuditSummary === 'object'
+            ? summary.answerReleaseAuditSummary
+            : {};
         const formatAnswerReleaseDecision = (decisionLike) => {
             const decision = String(decisionLike || '').trim().toLowerCase();
             if (decision === 'release') {
@@ -1715,6 +1721,9 @@
             }
             if (decision === 'abstain') {
                 return translate('agentWorkspace.reply.answerReleaseDecisionAbstain', 'abstain');
+            }
+            if (decision === 'other') {
+                return translate('agentWorkspace.reply.answerReleaseDecisionOther', 'other');
             }
             return decision || noneLabel;
         };
@@ -1740,6 +1749,83 @@
                 }
             );
         };
+        const decisionCounts = answerReleaseAuditSummary && typeof answerReleaseAuditSummary.decisionCounts === 'object'
+            ? answerReleaseAuditSummary.decisionCounts
+            : {};
+        const failedGateCounts = Array.isArray(answerReleaseAuditSummary.failedGateCounts)
+            ? answerReleaseAuditSummary.failedGateCounts.filter((entry) => entry && typeof entry === 'object')
+            : [];
+        const totalRuns = Number.isFinite(Number(answerReleaseAuditSummary.totalRuns))
+            ? Number(answerReleaseAuditSummary.totalRuns)
+            : runs.length;
+        const reviewedRunCount = Number.isFinite(Number(answerReleaseAuditSummary.reviewedRunCount))
+            ? Number(answerReleaseAuditSummary.reviewedRunCount)
+            : 0;
+        const unreviewedRunCount = Number.isFinite(Number(answerReleaseAuditSummary.unreviewedRunCount))
+            ? Number(answerReleaseAuditSummary.unreviewedRunCount)
+            : Math.max(0, totalRuns - reviewedRunCount);
+        const auditHeading = translate('agentWorkspace.reply.answerReleaseAuditSummaryHeading', 'Release audit');
+        const auditItems = [
+            {
+                title: translate('agentWorkspace.reply.answerReleaseAuditReviewedRunsLabel', 'Reviewed runs'),
+                value: translate(
+                    'agentWorkspace.reply.answerReleaseAuditReviewedRunsSummary',
+                    '{reviewed}/{total} reviewed; {unreviewed} unreviewed',
+                    {
+                        reviewed: String(reviewedRunCount),
+                        total: String(totalRuns),
+                        unreviewed: String(unreviewedRunCount),
+                    }
+                ),
+            },
+            {
+                title: translate('agentWorkspace.reply.answerReleaseAuditDecisionCountsLabel', 'Decision counts'),
+                value: [
+                    `${translate('agentWorkspace.reply.answerReleaseDecisionRelease', 'release')} ${String(Number.isFinite(Number(decisionCounts.release)) ? Number(decisionCounts.release) : 0)}`,
+                    `${translate('agentWorkspace.reply.answerReleaseDecisionRevise', 'revise')} ${String(Number.isFinite(Number(decisionCounts.revise)) ? Number(decisionCounts.revise) : 0)}`,
+                    `${translate('agentWorkspace.reply.answerReleaseDecisionAbstain', 'abstain')} ${String(Number.isFinite(Number(decisionCounts.abstain)) ? Number(decisionCounts.abstain) : 0)}`,
+                    `${translate('agentWorkspace.reply.answerReleaseDecisionOther', 'other')} ${String(Number.isFinite(Number(decisionCounts.other)) ? Number(decisionCounts.other) : 0)}`,
+                ].join(', '),
+            },
+            {
+                title: translate('agentWorkspace.reply.answerReleaseAuditRevisedRunsLabel', 'Revised runs'),
+                value: String(Number.isFinite(Number(answerReleaseAuditSummary.revisedRunCount)) ? Number(answerReleaseAuditSummary.revisedRunCount) : 0),
+            },
+            {
+                title: translate('agentWorkspace.reply.answerReleaseAuditLeakSummaryLabel', 'Leak summary'),
+                value: translate(
+                    'agentWorkspace.reply.answerReleaseAuditLeakSummary',
+                    '{runs} run(s); {fragments} fragment(s)',
+                    {
+                        runs: String(Number.isFinite(Number(answerReleaseAuditSummary.runsWithLeakedInternalFragments)) ? Number(answerReleaseAuditSummary.runsWithLeakedInternalFragments) : 0),
+                        fragments: String(Number.isFinite(Number(answerReleaseAuditSummary.leakedInternalFragmentTotalCount)) ? Number(answerReleaseAuditSummary.leakedInternalFragmentTotalCount) : 0),
+                    }
+                ),
+            },
+            {
+                title: translate('agentWorkspace.reply.answerReleaseAuditFailedGatesLabel', 'Failed gates'),
+                value: failedGateCounts.length > 0
+                    ? translate(
+                        'agentWorkspace.reply.answerReleaseAuditFailedGatesSummary',
+                        '{runs} run(s); {gates}',
+                        {
+                            runs: String(Number.isFinite(Number(answerReleaseAuditSummary.runsWithFailedGates)) ? Number(answerReleaseAuditSummary.runsWithFailedGates) : 0),
+                            gates: failedGateCounts.map((entry) => `${String(entry.gateId || '').trim() || noneLabel} (${String(Number.isFinite(Number(entry.count)) ? Number(entry.count) : 0)})`).join(', '),
+                        }
+                    )
+                    : noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.reply.answerReleaseAuditLatestReviewedAtLabel', 'Latest reviewed at'),
+                value: String(answerReleaseAuditSummary.latestReviewedAt || '').trim() || noneLabel,
+            },
+        ];
+        const auditHtml = auditItems.map((item) => `
+            <li class="agent-chat-card-list-item">
+                <div class="agent-chat-card-list-title">${escapeHtml(item.title)}</div>
+                <div class="agent-chat-card-list-meta">${escapeHtml(item.value)}</div>
+            </li>
+        `).join('');
         const runsHtml = runs.length > 0
             ? runs.map((run, index) => `
                 <li class="agent-chat-card-list-item">
@@ -1758,6 +1844,8 @@
             <div class="agent-chat-card">
                 <div class="agent-chat-card-title">${escapeHtml(title)}</div>
                 <div class="agent-chat-card-summary">${escapeHtml(summaryText)}</div>
+                <div class="agent-chat-card-section-title">${escapeHtml(auditHeading)}</div>
+                <ul class="agent-chat-card-list">${auditHtml}</ul>
                 <div class="agent-chat-card-section-title">${escapeHtml(runsHeading)}</div>
                 <ul class="agent-chat-card-list">${runsHtml}</ul>
             </div>
