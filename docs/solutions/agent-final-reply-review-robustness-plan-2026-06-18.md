@@ -125,6 +125,7 @@ The first fix restores evidence. The second fix restores robustness.
 | Operator surfaces must expose reviewer state without widening the main answer area | `src/frontend/agent_workspace.js` sanitizes `answerReleaseReview`, and `src/frontend/workspace_panes.js` renders release-review detail/history inside `knowledge_run` cards. | Implemented |
 | Reviewer telemetry must survive export/replay surfaces | `src/export/WorkspaceExportBundle.ts` now emits compact `runtime.knowledgeRunReports[*].answerReleaseReview` summaries for durable replay and operator audit. | Implemented |
 | Longer-horizon operator audit must reuse the same reviewer telemetry path | `WorkspaceExportBundle.ts` now derives `runtime.knowledgeRunAnswerReleaseAuditSummary`, and the history card renders the same multi-run audit shape from returned knowledge runs. | Implemented baseline |
+| Trend windows and gate aging must also be derived from the same reviewer telemetry path | `runtime.knowledgeRunAnswerReleaseAuditSummary` now carries `reviewTrend` and `failedGateAging`, and the history card renders both without introducing another audit owner. | Implemented baseline |
 | Screenshot-backed `waterglass` case must become a formal acceptance requirement | `scripts/verify-knowledge-workspace-runtime.js` now requires `answerReleaseReview`, rejects empty-scope debug text in the public answer, and verifies `publicAnswer === result.answer`. | Implemented |
 | DAG structure must inform the answer before release review | Existing `graphContextAssembler.ts` remains the structure source; the new review layer consumes that output instead of replacing it. | Preserved |
 | Backward compatibility must remain explicit | `assistantMessage`, `answer`, `assistantBlocks`, and existing clients remain valid; `answerReleaseReview` is additive. | Preserved |
@@ -200,6 +201,18 @@ Attached additively to:
 - `src/frontend/agent_workspace.js` now builds the same aggregate release-audit summary from the returned knowledge-run history payload before trimming the visible run list, so the history card shows the full audit window instead of only the first rendered entries.
 - `src/frontend/workspace_panes.js` now renders an operator-only `Release audit` block inside `knowledge_run` history, keeping the public answer area unchanged.
 - `src/export/WorkspaceExportBundle.test.ts` and `src/agent_workspace.frontend.test.ts` now cover both the exported aggregate and the operator-history rendering path.
+
+#### Phase-5 trend/gate-aging hardening landed on top of the aggregate slice
+
+- `runtime.knowledgeRunAnswerReleaseAuditSummary` now also carries:
+  - `reviewTrend`, with a deterministic two-window view over the latest reviewed runs,
+  - `failedGateAging`, with per-gate failure count, last-seen review timestamp, and reviewed-run distance from the latest failure.
+- The trend baseline is intentionally narrow:
+  - it does not invent model-owned "improving/regressing" judgments yet,
+  - it exposes deterministic reviewed-run windows first,
+  - it keeps the next step open for compare-ready operator drilldowns once more corpus breadth exists.
+- `src/frontend/workspace_panes.js` now renders `Review trend` and `Gate aging` sections inside the operator-only knowledge-run history card.
+- `src/export/WorkspaceExportBundle.test.ts`, `src/agent_workspace.frontend.test.ts`, and `src/agent_workspace.locale.contract.test.ts` now pin the new contract surface.
 
 ### Why the Earlier Framework Proposals Were Insufficient
 
@@ -278,7 +291,7 @@ The first two decide capability. The third decides trust.
 ### Next Direction
 
 1. Add deeper contradiction checks beyond the current lexical grounding alignment, but only after building an explicit regression corpus for false-positive control.
-2. Extend the new aggregate reviewer audit into trend windows, gate-aging views, and compare-ready drilldowns instead of adding another parallel telemetry path.
+2. Extend the current trend-window and gate-aging baseline into compare-ready operator drilldowns instead of adding another parallel telemetry path.
 3. Expand regression corpus beyond `waterglass` using real alias/scope failures.
 4. Continue owner reduction in `KnowledgeLearningPlatform.ts` and `agent_workspace.js` only where the new module owns real invariants.
 
@@ -405,6 +418,7 @@ The first two decide capability. The third decides trust.
 | 运维表面必须能看到 reviewer 状态且不扩大主回答区 | `src/frontend/agent_workspace.js` 会净化 `answerReleaseReview`，`src/frontend/workspace_panes.js` 会在 `knowledge_run` 卡片中渲染 release-review 明细 / 历史。 | 已实现 |
 | reviewer 遥测必须能跨 export/replay 表面保留 | `src/export/WorkspaceExportBundle.ts` 现在会在 `runtime.knowledgeRunReports[*].answerReleaseReview` 中输出紧凑 reviewer 摘要，供离线回放与运维审计使用。 | 已实现 |
 | 更长周期的运维审计必须复用同一条 reviewer 遥测路径 | `WorkspaceExportBundle.ts` 现在会派生 `runtime.knowledgeRunAnswerReleaseAuditSummary`，历史卡片也会基于返回的 knowledge run 渲染同一份多 run audit 形态。 | 已实现基线 |
+| 趋势窗口与门禁老化也必须继续复用同一条 reviewer 遥测路径 | `runtime.knowledgeRunAnswerReleaseAuditSummary` 现在会进一步派生 `reviewTrend` 与 `failedGateAging`，历史卡片也会渲染这两类摘要，而不是再发明第二个审计 owner。 | 已实现基线 |
 | `waterglass` 截图必须成为正式验收项 | `scripts/verify-knowledge-workspace-runtime.js` 现在要求 reviewer 存在、拒绝公开回答中的 empty-scope debug 文本，并校验 `publicAnswer === result.answer`。 | 已实现 |
 | DAG 结构必须在 review 前参与回答构建 | 现有 `graphContextAssembler.ts` 继续提供结构化证据，新 reviewer 只消费结果，不替代 DAG owner。 | 已保持 |
 | 向前兼容必须显式 | `assistantMessage`、`answer`、`assistantBlocks` 和现有 client 都不破；`answerReleaseReview` 是 additive 字段。 | 已保持 |
@@ -480,6 +494,18 @@ The first two decide capability. The third decides trust.
 - `src/frontend/agent_workspace.js` 现在会先基于返回的 knowledge-run history 计算同一份聚合 release audit，再裁剪可见 run 列表，因此历史卡片看到的是完整审计窗口，而不是仅对首批渲染项做统计。
 - `src/frontend/workspace_panes.js` 现在会在 `knowledge_run` 历史卡片中渲染一个仅面向运维的 `Release audit` 区块，同时保持主回答区不变。
 - `src/export/WorkspaceExportBundle.test.ts` 与 `src/agent_workspace.frontend.test.ts` 现在都覆盖了聚合导出与历史卡片渲染路径。
+
+#### 在聚合审计切片之上继续落地的 Phase-5 趋势 / 老化加固
+
+- `runtime.knowledgeRunAnswerReleaseAuditSummary` 现在还会派生：
+  - `reviewTrend`：对最近已审运行做确定性的双窗口趋势视图，
+  - `failedGateAging`：按 gate 汇总失败次数、最近失败时间，以及距离最新一次失败已经过去多少个已审运行。
+- 这版趋势基线刻意保持窄口径：
+  - 还不急着给出 model-owned 的 improving/regressing 判词，
+  - 先把确定性的 reviewed-run 窗口做实，
+  - 以便下一步在更宽回归语料基础上继续补 compare-ready operator drilldown。
+- `src/frontend/workspace_panes.js` 现在会在 operator-only 的 knowledge-run history 卡片中继续渲染 `Review trend` 与 `Gate aging` 两个区块。
+- `src/export/WorkspaceExportBundle.test.ts`、`src/agent_workspace.frontend.test.ts` 与 `src/agent_workspace.locale.contract.test.ts` 现在都对这条新契约做了约束。
 
 ### 为什么先前那些框架方案不够
 
@@ -558,7 +584,7 @@ The first two decide capability. The third decides trust.
 ### 后续方向
 
 1. 在显式回归语料具备之前，不扩大 gate 列表；先把当前 lexical grounding alignment 之外的更深矛盾检测建立在可控 false-positive 语料上。
-2. 在当前聚合 reviewer 审计之上继续补 trend window、gate aging 与 compare-ready drilldown，而不是再平行新增一条 telemetry 路径。
+2. 在当前 trend-window 与 gate-aging 基线之上继续补 compare-ready drilldown，而不是再平行新增一条 telemetry 路径。
 3. 把 alias/scope 回归语料从 `waterglass` 扩到更多真实失败案例。
 4. 继续缩减 `KnowledgeLearningPlatform.ts` 与 `agent_workspace.js` 的 owner 压力，但前提仍然是“新模块拥有真实不变量”。
 

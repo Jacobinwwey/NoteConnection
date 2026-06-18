@@ -22,14 +22,15 @@
 - 运维检查面现在已经能查看 reviewer 状态，但不会重新挤占主回答区：`src/frontend/agent_workspace.js` 会映射并净化 `answerReleaseReview`，`src/frontend/workspace_panes.js` 会在 `knowledge_run` 明细 / 历史卡片中渲染 release-review 结果。
 - `WorkspaceExportBundle.ts` 现在会把紧凑 reviewer 摘要投影到 `runtime.knowledgeRunReports[*].answerReleaseReview`，因此 export/replay 面也能审计 release decision，而不必重复携带完整回答文本。
 - `WorkspaceExportBundle.ts` 现在还会在 `runtime.knowledgeRunAnswerReleaseAuditSummary` 中派生一份 durable 的聚合 reviewer 审计摘要，覆盖 reviewed/unreviewed 计数、decision bucket、改写次数、failed-gate 次数、泄漏次数与最近审核时间。
-- 运维侧的 `knowledge_run` history 现在会渲染同一套长周期 release-audit 形态，因此多次运行之间的 reviewer 漂移已经可见，同时不扩大主回答区，也不再发明第二条 telemetry 路径。
+- 聚合 reviewer 审计现在还会补出 `reviewTrend` 趋势窗口与 `failedGateAging` 门禁老化摘要，两者都继续复用同一条 reviewer telemetry 路径，而不是再引入第二个审计 owner。
+- 运维侧的 `knowledge_run` history 现在会渲染同一套长周期 release-audit 形态，包括 review trend window 与 gate-aging 摘要，因此多次运行之间的 reviewer 漂移已经可见，同时不扩大主回答区，也不再发明第二条 telemetry 路径。
 - `scripts/verify-knowledge-workspace-runtime.js` 现在已经把 reviewer 存在性与主回答卫生要求纳入 `waterglass` 截图场景的正式运行时验收。
 
 #### 下一步执行顺序
 
 1. 保持 reviewer 窄口径，只拥有 release invariant，不让 prompt template 重新接管 release policy。
 2. 只有在显式回归语料存在后，才继续扩大 claim-vs-citation / claim-vs-evidence 的更深矛盾检测，并控制 false positive。
-3. 在当前已经落地的聚合 reviewer-audit 摘要之上，继续扩展 trend window、gate-aging view 与 compare-ready operator drilldown，而不是再新增一条平行 telemetry 表面。
+3. 在当前已经落地的 trend-window 与 gate-aging 基线之上，继续扩展 compare-ready operator drilldown，而不是再新增一条平行 telemetry 表面。
 4. 把 alias/scope 回归语料从 `waterglass` 扩展到更多真实失败案例。
 5. 继续做 owner reduction，但前提仍然是“新 owner 持有真实决策或不变量”。
 
@@ -39,7 +40,7 @@
 2. `AgentConversationResponse`、trace 与 `KnowledgeRun` 都必须保留 additive 的 `answerReleaseReview` 状态。
 3. 运维检查面必须能渲染 reviewer decision、failed gates 与 original/public answer 差异，同时不扩大主回答区。
 4. Workspace export 的 knowledge-run report 必须能为 `release` / `revise` 流程保留紧凑 reviewer 摘要，并在 review 数据缺失时保持向前兼容。
-5. Workspace export 还必须在 `runtime.knowledgeRunAnswerReleaseAuditSummary` 中保留 additive 的聚合 reviewer 审计摘要，运维 history 卡片也必须渲染同一套审计形态。
+5. Workspace export 还必须在 `runtime.knowledgeRunAnswerReleaseAuditSummary` 中保留 additive 的聚合 reviewer 审计摘要，以及同一路径派生出的 review-trend / gate-aging 摘要；运维 history 卡片也必须渲染同一套审计形态。
 6. `npm run verify:knowledge-workspace:runtime` 必须通过 `waterglass` 的 compact/spaced 双查询矩阵，并确认 reviewer/public-answer 一致性。
 7. 现有 `assistantMessage`、`answer`、`assistantBlocks` 与下游 client 必须保持向前兼容。
 

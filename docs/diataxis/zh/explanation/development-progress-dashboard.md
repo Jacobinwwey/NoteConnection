@@ -31,6 +31,7 @@
 - 这个导出摘要有意只保留 `reviewedAt`、`decision`、`revised`、`failedGateIds`、`leakedInternalFragmentCount` 与 `reason`；完整 original/public answer 文本继续留在 workflow artifact 与 trace，而不进入 compare-ready report 表面。
 - `WorkspaceExportBundle.ts` 现在还会派生 `runtime.knowledgeRunAnswerReleaseAuditSummary`；这是一份基于已导出 knowledge-run report 的长周期聚合审计，而不是第二条平行 telemetry。
 - 运维历史检查面现在也会从返回的 runs 渲染同一份聚合 `Release audit` 形态，覆盖 reviewed/unreviewed 计数、decision bucket、failed gate 频次、leak 计数、revised run 数量与最新 review 时间。
+- 同一条聚合路径现在还会补出 `reviewTrend` 趋势窗口与 `failedGateAging` 门禁老化摘要，因此 reviewer 漂移不再只是总数，而是可检查的序列信号。
 - `scripts/verify-knowledge-workspace-runtime.js` 现在已经把 reviewer 存在性与 `publicAnswer === result.answer` 一致性纳入运行时契约。
 
 这件事为什么重要：
@@ -50,6 +51,7 @@
 | 运维侧必须能看到 reviewer 状态且不扩大主回答区 | `agent_workspace.js` 会净化 `answerReleaseReview`，`workspace_panes.js` 会在 `knowledge_run` 卡片里渲染 release-review 明细 / 历史。 | 已实现 |
 | replay/export 表面必须能耐久保留 reviewer 状态 | `WorkspaceExportBundle.ts` 现在会在 `runtime.knowledgeRunReports` 中输出紧凑 `answerReleaseReview` 摘要。 | 已实现 |
 | 更长周期的运维审计必须复用已导出的 reviewer 遥测，而不是再新增第二条路径 | `WorkspaceExportBundle.ts` 现在会派生 `runtime.knowledgeRunAnswerReleaseAuditSummary`，历史卡片也会渲染同一份多 run release-audit 形态。 | 已实现基线 |
+| 审核趋势与门禁老化也必须继续留在同一条审计路径上 | `runtime.knowledgeRunAnswerReleaseAuditSummary` 现在还会派生 `reviewTrend` 与 `failedGateAging`，历史卡片也会渲染两者。 | 已实现基线 |
 | `waterglass` 截图必须成为正式回归门禁 | runtime verifier 现在要求 reviewer 存在，并拒绝公开回答中的诊断泄漏。 | 已实现 |
 | 向前兼容必须保持显式 | `assistantMessage`、`answer`、`assistantBlocks` 保持有效；reviewer 字段都是 additive。 | 已保持 |
 

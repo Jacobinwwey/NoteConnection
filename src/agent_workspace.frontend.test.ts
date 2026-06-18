@@ -161,6 +161,12 @@ function createI18nStub() {
             'agentWorkspace.reply.answerReleaseAuditFailedGatesLabel': 'Failed gates',
             'agentWorkspace.reply.answerReleaseAuditFailedGatesSummary': '{runs} run(s); {gates}',
             'agentWorkspace.reply.answerReleaseAuditLatestReviewedAtLabel': 'Latest reviewed at',
+            'agentWorkspace.reply.answerReleaseAuditTrendHeading': 'Review trend',
+            'agentWorkspace.reply.answerReleaseAuditTrendRecentWindowLabel': 'Recent reviewed window',
+            'agentWorkspace.reply.answerReleaseAuditTrendPriorWindowLabel': 'Prior reviewed window',
+            'agentWorkspace.reply.answerReleaseAuditTrendWindowSummary': '{reviewed} run(s); {decisions}; revised {revised}; failed {failed}; leaked {leaked}; {latest} -> {earliest}',
+            'agentWorkspace.reply.answerReleaseAuditGateAgingHeading': 'Gate aging',
+            'agentWorkspace.reply.answerReleaseAuditGateAgingSummary': '{count} fail(s); recent {latest}; since last failure {runsSince}; recent window {windowCount}',
             'agentWorkspace.reply.knowledgeRunHistoryRunsHeading': 'Recent Runs',
             'agentWorkspace.reply.knowledgeRunHistoryGraphSignalLabel': 'Graph signal',
             'agentWorkspace.reply.knowledgeRunHistoryInspectRun': 'Inspect Run',
@@ -929,6 +935,12 @@ function createI18nStub() {
             'agentWorkspace.reply.answerReleaseAuditFailedGatesLabel': '失败门禁',
             'agentWorkspace.reply.answerReleaseAuditFailedGatesSummary': '{runs} 次运行；{gates}',
             'agentWorkspace.reply.answerReleaseAuditLatestReviewedAtLabel': '最近审核时间',
+            'agentWorkspace.reply.answerReleaseAuditTrendHeading': '审核趋势',
+            'agentWorkspace.reply.answerReleaseAuditTrendRecentWindowLabel': '近期已审窗口',
+            'agentWorkspace.reply.answerReleaseAuditTrendPriorWindowLabel': '前序已审窗口',
+            'agentWorkspace.reply.answerReleaseAuditTrendWindowSummary': '{reviewed} 次运行；{decisions}；改写 {revised}；失败 {failed}；泄漏 {leaked}；{latest} -> {earliest}',
+            'agentWorkspace.reply.answerReleaseAuditGateAgingHeading': '门禁老化',
+            'agentWorkspace.reply.answerReleaseAuditGateAgingSummary': '{count} 次失败；最近 {latest}；距上次失败 {runsSince} 次已审运行；近期窗口 {windowCount}',
             'agentWorkspace.reply.answerReleaseHistoryLabel': '发布审核',
             'agentWorkspace.reply.answerReleaseHistorySummary': '{decision}；已改写 {revised}；失败门禁 {failedGates}',
         },
@@ -5499,6 +5511,12 @@ describe('agent workspace learning-path integration', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('0 run(s); 0 fragment(s)');
         expect(String(evidenceBody?.textContent || '')).toContain('1 run(s); public_surface_contraction (1)');
         expect(String(evidenceBody?.textContent || '')).toContain('2026-04-13T00:01:01.000Z');
+        expect(String(evidenceBody?.textContent || '')).toContain('Review trend');
+        expect(String(evidenceBody?.textContent || '')).toContain('Recent reviewed window');
+        expect(String(evidenceBody?.textContent || '')).toContain('2 run(s); release 1, revise 1, abstain 0, other 0; revised 1; failed 1; leaked 0; 2026-04-13T00:01:01.000Z -> 2026-04-12T23:55:01.000Z');
+        expect(String(evidenceBody?.textContent || '')).toContain('Prior reviewed window');
+        expect(String(evidenceBody?.textContent || '')).toContain('Gate aging');
+        expect(String(evidenceBody?.textContent || '')).toContain('1 fail(s); recent 2026-04-12T23:55:01.000Z; since last failure 1; recent window 1');
         expect(String(evidenceBody?.textContent || '')).toContain('Recent Runs');
         expect(String(evidenceBody?.textContent || '')).toContain('Graph signal');
         expect(String(evidenceBody?.textContent || '')).toContain('Release review');

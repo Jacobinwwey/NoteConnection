@@ -1755,6 +1755,18 @@
         const failedGateCounts = Array.isArray(answerReleaseAuditSummary.failedGateCounts)
             ? answerReleaseAuditSummary.failedGateCounts.filter((entry) => entry && typeof entry === 'object')
             : [];
+        const reviewTrend = answerReleaseAuditSummary && typeof answerReleaseAuditSummary.reviewTrend === 'object'
+            ? answerReleaseAuditSummary.reviewTrend
+            : {};
+        const recentTrendWindow = reviewTrend && typeof reviewTrend.recentWindow === 'object'
+            ? reviewTrend.recentWindow
+            : {};
+        const priorTrendWindow = reviewTrend && typeof reviewTrend.priorWindow === 'object'
+            ? reviewTrend.priorWindow
+            : {};
+        const failedGateAging = Array.isArray(answerReleaseAuditSummary.failedGateAging)
+            ? answerReleaseAuditSummary.failedGateAging.filter((entry) => entry && typeof entry === 'object')
+            : [];
         const totalRuns = Number.isFinite(Number(answerReleaseAuditSummary.totalRuns))
             ? Number(answerReleaseAuditSummary.totalRuns)
             : runs.length;
@@ -1765,6 +1777,43 @@
             ? Number(answerReleaseAuditSummary.unreviewedRunCount)
             : Math.max(0, totalRuns - reviewedRunCount);
         const auditHeading = translate('agentWorkspace.reply.answerReleaseAuditSummaryHeading', 'Release audit');
+        const trendHeading = translate('agentWorkspace.reply.answerReleaseAuditTrendHeading', 'Review trend');
+        const gateAgingHeading = translate('agentWorkspace.reply.answerReleaseAuditGateAgingHeading', 'Gate aging');
+        const buildDecisionCountsSummary = (countsLike) => {
+            const counts = countsLike && typeof countsLike === 'object'
+                ? countsLike
+                : {};
+            return [
+                `${translate('agentWorkspace.reply.answerReleaseDecisionRelease', 'release')} ${String(Number.isFinite(Number(counts.release)) ? Number(counts.release) : 0)}`,
+                `${translate('agentWorkspace.reply.answerReleaseDecisionRevise', 'revise')} ${String(Number.isFinite(Number(counts.revise)) ? Number(counts.revise) : 0)}`,
+                `${translate('agentWorkspace.reply.answerReleaseDecisionAbstain', 'abstain')} ${String(Number.isFinite(Number(counts.abstain)) ? Number(counts.abstain) : 0)}`,
+                `${translate('agentWorkspace.reply.answerReleaseDecisionOther', 'other')} ${String(Number.isFinite(Number(counts.other)) ? Number(counts.other) : 0)}`,
+            ].join(', ');
+        };
+        const buildTrendWindowSummary = (windowLike) => {
+            const windowSummary = windowLike && typeof windowLike === 'object'
+                ? windowLike
+                : {};
+            const windowReviewedRunCount = Number.isFinite(Number(windowSummary.reviewedRunCount))
+                ? Number(windowSummary.reviewedRunCount)
+                : 0;
+            if (windowReviewedRunCount <= 0) {
+                return noneLabel;
+            }
+            return translate(
+                'agentWorkspace.reply.answerReleaseAuditTrendWindowSummary',
+                '{reviewed} run(s); {decisions}; revised {revised}; failed {failed}; leaked {leaked}; {latest} -> {earliest}',
+                {
+                    reviewed: String(windowReviewedRunCount),
+                    decisions: buildDecisionCountsSummary(windowSummary.decisionCounts),
+                    revised: String(Number.isFinite(Number(windowSummary.revisedRunCount)) ? Number(windowSummary.revisedRunCount) : 0),
+                    failed: String(Number.isFinite(Number(windowSummary.runsWithFailedGates)) ? Number(windowSummary.runsWithFailedGates) : 0),
+                    leaked: String(Number.isFinite(Number(windowSummary.runsWithLeakedInternalFragments)) ? Number(windowSummary.runsWithLeakedInternalFragments) : 0),
+                    latest: String(windowSummary.latestReviewedAt || '').trim() || noneLabel,
+                    earliest: String(windowSummary.earliestReviewedAt || '').trim() || noneLabel,
+                }
+            );
+        };
         const auditItems = [
             {
                 title: translate('agentWorkspace.reply.answerReleaseAuditReviewedRunsLabel', 'Reviewed runs'),
@@ -1780,12 +1829,7 @@
             },
             {
                 title: translate('agentWorkspace.reply.answerReleaseAuditDecisionCountsLabel', 'Decision counts'),
-                value: [
-                    `${translate('agentWorkspace.reply.answerReleaseDecisionRelease', 'release')} ${String(Number.isFinite(Number(decisionCounts.release)) ? Number(decisionCounts.release) : 0)}`,
-                    `${translate('agentWorkspace.reply.answerReleaseDecisionRevise', 'revise')} ${String(Number.isFinite(Number(decisionCounts.revise)) ? Number(decisionCounts.revise) : 0)}`,
-                    `${translate('agentWorkspace.reply.answerReleaseDecisionAbstain', 'abstain')} ${String(Number.isFinite(Number(decisionCounts.abstain)) ? Number(decisionCounts.abstain) : 0)}`,
-                    `${translate('agentWorkspace.reply.answerReleaseDecisionOther', 'other')} ${String(Number.isFinite(Number(decisionCounts.other)) ? Number(decisionCounts.other) : 0)}`,
-                ].join(', '),
+                value: buildDecisionCountsSummary(decisionCounts),
             },
             {
                 title: translate('agentWorkspace.reply.answerReleaseAuditRevisedRunsLabel', 'Revised runs'),
@@ -1826,6 +1870,39 @@
                 <div class="agent-chat-card-list-meta">${escapeHtml(item.value)}</div>
             </li>
         `).join('');
+        const trendItems = [
+            {
+                title: translate('agentWorkspace.reply.answerReleaseAuditTrendRecentWindowLabel', 'Recent reviewed window'),
+                value: buildTrendWindowSummary(recentTrendWindow),
+            },
+            {
+                title: translate('agentWorkspace.reply.answerReleaseAuditTrendPriorWindowLabel', 'Prior reviewed window'),
+                value: buildTrendWindowSummary(priorTrendWindow),
+            },
+        ];
+        const trendHtml = trendItems.map((item) => `
+            <li class="agent-chat-card-list-item">
+                <div class="agent-chat-card-list-title">${escapeHtml(item.title)}</div>
+                <div class="agent-chat-card-list-meta">${escapeHtml(item.value)}</div>
+            </li>
+        `).join('');
+        const gateAgingHtml = failedGateAging.length > 0
+            ? failedGateAging.map((entry) => `
+                <li class="agent-chat-card-list-item">
+                    <div class="agent-chat-card-list-title">${escapeHtml(String(entry.gateId || '').trim() || noneLabel)}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(translate(
+                        'agentWorkspace.reply.answerReleaseAuditGateAgingSummary',
+                        '{count} fail(s); recent {latest}; since last failure {runsSince}; recent window {windowCount}',
+                        {
+                            count: String(Number.isFinite(Number(entry.failureCount)) ? Number(entry.failureCount) : 0),
+                            latest: String(entry.latestReviewedAt || '').trim() || noneLabel,
+                            runsSince: String(Number.isFinite(Number(entry.reviewedRunsSinceLastFailure)) ? Number(entry.reviewedRunsSinceLastFailure) : 0),
+                            windowCount: String(Number.isFinite(Number(entry.occurrencesInRecentWindow)) ? Number(entry.occurrencesInRecentWindow) : 0),
+                        }
+                    ))}</div>
+                </li>
+            `).join('')
+            : `<li class="agent-chat-card-list-empty">${escapeHtml(noneLabel)}</li>`;
         const runsHtml = runs.length > 0
             ? runs.map((run, index) => `
                 <li class="agent-chat-card-list-item">
@@ -1846,6 +1923,10 @@
                 <div class="agent-chat-card-summary">${escapeHtml(summaryText)}</div>
                 <div class="agent-chat-card-section-title">${escapeHtml(auditHeading)}</div>
                 <ul class="agent-chat-card-list">${auditHtml}</ul>
+                <div class="agent-chat-card-section-title">${escapeHtml(trendHeading)}</div>
+                <ul class="agent-chat-card-list">${trendHtml}</ul>
+                <div class="agent-chat-card-section-title">${escapeHtml(gateAgingHeading)}</div>
+                <ul class="agent-chat-card-list">${gateAgingHtml}</ul>
                 <div class="agent-chat-card-section-title">${escapeHtml(runsHeading)}</div>
                 <ul class="agent-chat-card-list">${runsHtml}</ul>
             </div>

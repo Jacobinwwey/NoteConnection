@@ -15,8 +15,9 @@
 - [x] Reviewer results are now surfaced in operator inspection through `knowledge_run` detail/history cards without widening the primary answer area.
 - [x] Reviewer summaries are now exported through `runtime.knowledgeRunReports[*].answerReleaseReview` for durable replay/audit, while keeping the summary surface compact.
 - [x] Aggregate reviewer audit telemetry is now exported through `runtime.knowledgeRunAnswerReleaseAuditSummary`, and the `knowledge_run` history card renders the same multi-run audit shape for operators.
+- [x] The aggregate reviewer audit now also carries review-trend windows and gate-aging summaries, and the operator history card renders both from the same telemetry path.
 - [ ] Next active task: deepen contradiction detection beyond the current lexical grounding check once an explicit regression corpus exists.
-- [ ] Next active task: extend the current aggregate reviewer audit into trend windows, gate-aging views, and compare-ready operator drilldowns instead of adding a second telemetry path.
+- [ ] Next active task: extend the current trend-window and gate-aging baseline into compare-ready operator drilldowns instead of adding a second telemetry path.
 
 ### Current Acceptance Targets
 
@@ -24,7 +25,7 @@
 2. Reviewer decisions remain additive and backward-compatible for all current clients.
 3. Operator inspection surfaces show reviewer decision, failed gates, and original/public answer deltas without widening the main answer area.
 4. Exported `knowledgeRunReports` carry compact reviewer summaries for `release` / `revise` flows and omit the field cleanly when review data is absent.
-5. Exported runtime state also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, and the operator history card surfaces the same audit shape.
+5. Exported runtime state also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows and gate-aging summaries, and the operator history card surfaces the same audit shape.
 6. Runtime verification on `waterglass` passes for both compact and spaced aliases and confirms `answerReleaseReview.publicAnswer === result.answer`.
 
 ### 2026-06-17 Active Agent Knowledge DAG Task Sync

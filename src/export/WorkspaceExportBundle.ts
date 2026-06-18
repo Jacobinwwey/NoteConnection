@@ -4,7 +4,10 @@ import { resolveRenderMaterializationDecision } from '../platform/RenderMaterial
 import type {
     WorkspaceExportBundle,
     WorkspaceExportGraphFocusReport,
+    WorkspaceExportKnowledgeRunAnswerReleaseAuditGateAging,
     WorkspaceExportKnowledgeRunAnswerReleaseAuditSummary,
+    WorkspaceExportKnowledgeRunAnswerReleaseAuditTrend,
+    WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow,
     WorkspaceExportKnowledgeRunAnswerReleaseReviewReport,
     WorkspaceExportKnowledgeRunReport,
     WorkspaceExportBundleRequest,
@@ -495,15 +498,190 @@ function normalizeAnswerReleaseDecisionBucket(
     return 'other';
 }
 
-function buildKnowledgeRunAnswerReleaseAuditSummary(
-    reports: WorkspaceExportKnowledgeRunReport[]
-): WorkspaceExportKnowledgeRunAnswerReleaseAuditSummary {
-    const decisionCounts = {
+const ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE = 4;
+
+type AnswerReleaseAuditTimelineEntry = {
+    artifactId: string;
+    runId: string;
+    generatedAt: string;
+    reviewedAt: string;
+    sortTimestamp: string;
+    review: WorkspaceExportKnowledgeRunAnswerReleaseReviewReport;
+    uniqueFailedGateIds: string[];
+    leakedInternalFragmentCount: number;
+};
+
+function buildEmptyAnswerReleaseDecisionCounts(): WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow['decisionCounts'] {
+    return {
         release: 0,
         revise: 0,
         abstain: 0,
         other: 0,
     };
+}
+
+function buildEmptyAnswerReleaseAuditWindow(): WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow {
+    return {
+        reviewedRunCount: 0,
+        decisionCounts: buildEmptyAnswerReleaseDecisionCounts(),
+        revisedRunCount: 0,
+        runsWithFailedGates: 0,
+        runsWithLeakedInternalFragments: 0,
+        latestReviewedAt: '',
+        earliestReviewedAt: '',
+    };
+}
+
+function buildAnswerReleaseAuditTimelineEntries(
+    reports: WorkspaceExportKnowledgeRunReport[]
+): AnswerReleaseAuditTimelineEntry[] {
+    return reports
+        .flatMap((report) => {
+            const review = report && typeof report.answerReleaseReview === 'object'
+                ? report.answerReleaseReview
+                : null;
+            if (!review) {
+                return [];
+            }
+            const reviewedAt = normalizeString(review.reviewedAt);
+            const uniqueFailedGateIds = Array.from(new Set(
+                (Array.isArray(review.failedGateIds) ? review.failedGateIds : [])
+                    .map((gateId) => normalizeString(gateId))
+                    .filter(Boolean)
+            ));
+            const leakedInternalFragmentCount = normalizeCount(review.leakedInternalFragmentCount);
+            return [{
+                artifactId: normalizeString(report.artifactId),
+                runId: normalizeString(report.runId),
+                generatedAt: normalizeString(report.generatedAt),
+                reviewedAt,
+                sortTimestamp: reviewedAt || normalizeString(report.generatedAt),
+                review,
+                uniqueFailedGateIds,
+                leakedInternalFragmentCount,
+            }];
+        })
+        .sort((left, right) => {
+            const timestampOrder = compareStrings(right.sortTimestamp, left.sortTimestamp);
+            if (timestampOrder !== 0) {
+                return timestampOrder;
+            }
+            const reviewedAtOrder = compareStrings(right.reviewedAt, left.reviewedAt);
+            if (reviewedAtOrder !== 0) {
+                return reviewedAtOrder;
+            }
+            const generatedAtOrder = compareStrings(right.generatedAt, left.generatedAt);
+            if (generatedAtOrder !== 0) {
+                return generatedAtOrder;
+            }
+            const runIdOrder = compareStrings(left.runId, right.runId);
+            if (runIdOrder !== 0) {
+                return runIdOrder;
+            }
+            return compareStrings(left.artifactId, right.artifactId);
+        });
+}
+
+function buildAnswerReleaseAuditWindow(
+    entries: AnswerReleaseAuditTimelineEntry[]
+): WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow {
+    if (entries.length <= 0) {
+        return buildEmptyAnswerReleaseAuditWindow();
+    }
+    const decisionCounts = buildEmptyAnswerReleaseDecisionCounts();
+    let revisedRunCount = 0;
+    let runsWithFailedGates = 0;
+    let runsWithLeakedInternalFragments = 0;
+
+    entries.forEach((entry) => {
+        decisionCounts[normalizeAnswerReleaseDecisionBucket(entry.review.decision)] += 1;
+        if (entry.review.revised === true) {
+            revisedRunCount += 1;
+        }
+        if (entry.uniqueFailedGateIds.length > 0) {
+            runsWithFailedGates += 1;
+        }
+        if (entry.leakedInternalFragmentCount > 0) {
+            runsWithLeakedInternalFragments += 1;
+        }
+    });
+
+    return {
+        reviewedRunCount: entries.length,
+        decisionCounts,
+        revisedRunCount,
+        runsWithFailedGates,
+        runsWithLeakedInternalFragments,
+        latestReviewedAt: entries[0].reviewedAt,
+        earliestReviewedAt: entries[entries.length - 1].reviewedAt,
+    };
+}
+
+function buildAnswerReleaseAuditTrend(
+    entries: AnswerReleaseAuditTimelineEntry[]
+): WorkspaceExportKnowledgeRunAnswerReleaseAuditTrend {
+    const recentWindowEntries = entries.slice(0, ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE);
+    const priorWindowEntries = entries.slice(
+        ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE,
+        ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE * 2
+    );
+    return {
+        windowSize: ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE,
+        recentWindow: buildAnswerReleaseAuditWindow(recentWindowEntries),
+        priorWindow: buildAnswerReleaseAuditWindow(priorWindowEntries),
+    };
+}
+
+function buildAnswerReleaseAuditGateAging(
+    entries: AnswerReleaseAuditTimelineEntry[]
+): WorkspaceExportKnowledgeRunAnswerReleaseAuditGateAging[] {
+    const gateAging = new Map<string, WorkspaceExportKnowledgeRunAnswerReleaseAuditGateAging>();
+    entries.forEach((entry, index) => {
+        if (entry.uniqueFailedGateIds.length <= 0) {
+            return;
+        }
+        entry.uniqueFailedGateIds.forEach((gateId) => {
+            const existing = gateAging.get(gateId);
+            if (!existing) {
+                gateAging.set(gateId, {
+                    gateId,
+                    failureCount: 1,
+                    latestReviewedAt: entry.reviewedAt,
+                    oldestReviewedAt: entry.reviewedAt,
+                    reviewedRunsSinceLastFailure: index,
+                    occurrencesInRecentWindow: index < ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE ? 1 : 0,
+                });
+                return;
+            }
+            existing.failureCount += 1;
+            existing.oldestReviewedAt = entry.reviewedAt || existing.oldestReviewedAt;
+            if (index < ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE) {
+                existing.occurrencesInRecentWindow += 1;
+            }
+        });
+    });
+    return Array.from(gateAging.values()).sort((left, right) => {
+        if (left.reviewedRunsSinceLastFailure !== right.reviewedRunsSinceLastFailure) {
+            return left.reviewedRunsSinceLastFailure - right.reviewedRunsSinceLastFailure;
+        }
+        if (left.occurrencesInRecentWindow !== right.occurrencesInRecentWindow) {
+            return right.occurrencesInRecentWindow - left.occurrencesInRecentWindow;
+        }
+        if (left.failureCount !== right.failureCount) {
+            return right.failureCount - left.failureCount;
+        }
+        const latestReviewedAtOrder = compareStrings(right.latestReviewedAt, left.latestReviewedAt);
+        if (latestReviewedAtOrder !== 0) {
+            return latestReviewedAtOrder;
+        }
+        return compareStrings(left.gateId, right.gateId);
+    });
+}
+
+function buildKnowledgeRunAnswerReleaseAuditSummary(
+    reports: WorkspaceExportKnowledgeRunReport[]
+): WorkspaceExportKnowledgeRunAnswerReleaseAuditSummary {
+    const decisionCounts = buildEmptyAnswerReleaseDecisionCounts();
     const failedGateCounts = new Map<string, number>();
     let reviewedRunCount = 0;
     let revisedRunCount = 0;
@@ -511,6 +689,7 @@ function buildKnowledgeRunAnswerReleaseAuditSummary(
     let runsWithLeakedInternalFragments = 0;
     let leakedInternalFragmentTotalCount = 0;
     let latestReviewedAt = '';
+    const timelineEntries = buildAnswerReleaseAuditTimelineEntries(reports);
 
     reports.forEach((report) => {
         const review = report && typeof report.answerReleaseReview === 'object'
@@ -570,6 +749,8 @@ function buildKnowledgeRunAnswerReleaseAuditSummary(
                 return compareStrings(left.gateId, right.gateId);
             }),
         latestReviewedAt,
+        reviewTrend: buildAnswerReleaseAuditTrend(timelineEntries),
+        failedGateAging: buildAnswerReleaseAuditGateAging(timelineEntries),
     };
 }
 

@@ -31,6 +31,7 @@ What is now true in code:
 - that exported summary intentionally keeps only `reviewedAt`, `decision`, `revised`, `failedGateIds`, `leakedInternalFragmentCount`, and `reason`; full original/public answer text stays in workflow artifacts and traces instead of the compare-ready report surface.
 - `WorkspaceExportBundle.ts` now also derives `runtime.knowledgeRunAnswerReleaseAuditSummary`, a longer-horizon aggregate built from the exported knowledge-run reports rather than from a second telemetry path.
 - the operator history surface now renders the same aggregate `Release audit` shape from returned runs, covering reviewed/unreviewed counts, decision buckets, failed-gate counts, leak counts, revised runs, and latest review time.
+- that same aggregate path now also carries `reviewTrend` windows and `failedGateAging` entries, so reviewer drift can be inspected as sequence data instead of only totals.
 - `scripts/verify-knowledge-workspace-runtime.js` now treats reviewer presence and `publicAnswer === result.answer` parity as part of the runtime contract.
 
 Why this matters:
@@ -50,6 +51,7 @@ Code-vs-plan reconciliation:
 | Operators must see reviewer state without widening the main answer area | `agent_workspace.js` sanitizes `answerReleaseReview`, and `workspace_panes.js` renders release-review detail/history inside `knowledge_run` cards. | Implemented |
 | Replay/export surfaces must retain reviewer state durably | `WorkspaceExportBundle.ts` now emits compact `answerReleaseReview` summaries inside `runtime.knowledgeRunReports`. | Implemented |
 | Longer-horizon operator audit must reuse exported reviewer telemetry instead of adding another telemetry path | `WorkspaceExportBundle.ts` now derives `runtime.knowledgeRunAnswerReleaseAuditSummary`, and the history card renders the same multi-run release-audit shape. | Implemented baseline |
+| Review trends and gate aging must also stay on the same audit path | `runtime.knowledgeRunAnswerReleaseAuditSummary` now carries `reviewTrend` and `failedGateAging`, and the history card renders both. | Implemented baseline |
 | `waterglass` screenshot must become a formal regression gate | Runtime verifier now requires reviewer presence and rejects public-answer diagnostic leakage. | Implemented |
 | Backward compatibility must remain explicit | `assistantMessage`, `answer`, and `assistantBlocks` remain valid; reviewer fields are additive. | Preserved |
 

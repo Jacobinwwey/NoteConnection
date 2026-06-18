@@ -718,6 +718,55 @@ describe('WorkspaceExportBundle', () => {
                 },
             ],
             latestReviewedAt: '2026-05-28T00:00:00.000Z',
+            reviewTrend: {
+                windowSize: 4,
+                recentWindow: {
+                    reviewedRunCount: 2,
+                    decisionCounts: {
+                        release: 1,
+                        revise: 1,
+                        abstain: 0,
+                        other: 0,
+                    },
+                    revisedRunCount: 1,
+                    runsWithFailedGates: 1,
+                    runsWithLeakedInternalFragments: 1,
+                    latestReviewedAt: '2026-05-28T00:00:00.000Z',
+                    earliestReviewedAt: '2026-05-27T00:00:00.000Z',
+                },
+                priorWindow: {
+                    reviewedRunCount: 0,
+                    decisionCounts: {
+                        release: 0,
+                        revise: 0,
+                        abstain: 0,
+                        other: 0,
+                    },
+                    revisedRunCount: 0,
+                    runsWithFailedGates: 0,
+                    runsWithLeakedInternalFragments: 0,
+                    latestReviewedAt: '',
+                    earliestReviewedAt: '',
+                },
+            },
+            failedGateAging: [
+                {
+                    gateId: 'claim_grounding_alignment',
+                    failureCount: 1,
+                    latestReviewedAt: '2026-05-27T00:00:00.000Z',
+                    oldestReviewedAt: '2026-05-27T00:00:00.000Z',
+                    reviewedRunsSinceLastFailure: 1,
+                    occurrencesInRecentWindow: 1,
+                },
+                {
+                    gateId: 'internal_diagnostic_leakage',
+                    failureCount: 1,
+                    latestReviewedAt: '2026-05-27T00:00:00.000Z',
+                    oldestReviewedAt: '2026-05-27T00:00:00.000Z',
+                    reviewedRunsSinceLastFailure: 1,
+                    occurrencesInRecentWindow: 1,
+                },
+            ],
         });
     });
 
@@ -861,6 +910,38 @@ describe('WorkspaceExportBundle', () => {
             leakedInternalFragmentTotalCount: 0,
             failedGateCounts: [],
             latestReviewedAt: '',
+            reviewTrend: {
+                windowSize: 4,
+                recentWindow: {
+                    reviewedRunCount: 0,
+                    decisionCounts: {
+                        release: 0,
+                        revise: 0,
+                        abstain: 0,
+                        other: 0,
+                    },
+                    revisedRunCount: 0,
+                    runsWithFailedGates: 0,
+                    runsWithLeakedInternalFragments: 0,
+                    latestReviewedAt: '',
+                    earliestReviewedAt: '',
+                },
+                priorWindow: {
+                    reviewedRunCount: 0,
+                    decisionCounts: {
+                        release: 0,
+                        revise: 0,
+                        abstain: 0,
+                        other: 0,
+                    },
+                    revisedRunCount: 0,
+                    runsWithFailedGates: 0,
+                    runsWithLeakedInternalFragments: 0,
+                    latestReviewedAt: '',
+                    earliestReviewedAt: '',
+                },
+            },
+            failedGateAging: [],
         });
     });
 

@@ -111,6 +111,31 @@ export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditFailedGateCount {
     count: number;
 }
 
+export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow {
+    reviewedRunCount: number;
+    decisionCounts: WorkspaceExportKnowledgeRunAnswerReleaseAuditDecisionCounts;
+    revisedRunCount: number;
+    runsWithFailedGates: number;
+    runsWithLeakedInternalFragments: number;
+    latestReviewedAt: string;
+    earliestReviewedAt: string;
+}
+
+export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditTrend {
+    windowSize: number;
+    recentWindow: WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow;
+    priorWindow: WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow;
+}
+
+export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditGateAging {
+    gateId: AnswerReleaseGateId | string;
+    failureCount: number;
+    latestReviewedAt: string;
+    oldestReviewedAt: string;
+    reviewedRunsSinceLastFailure: number;
+    occurrencesInRecentWindow: number;
+}
+
 export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditSummary {
     totalRuns: number;
     reviewedRunCount: number;
@@ -122,6 +147,8 @@ export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditSummary {
     leakedInternalFragmentTotalCount: number;
     failedGateCounts: WorkspaceExportKnowledgeRunAnswerReleaseAuditFailedGateCount[];
     latestReviewedAt: string;
+    reviewTrend: WorkspaceExportKnowledgeRunAnswerReleaseAuditTrend;
+    failedGateAging: WorkspaceExportKnowledgeRunAnswerReleaseAuditGateAging[];
 }
 
 export interface WorkspaceExportKnowledgeRunReport {
